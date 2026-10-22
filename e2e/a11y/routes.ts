@@ -91,13 +91,13 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/subscribe/success', as: 'member', stripe: true, ready: 'subscribe-success-page' },
 
   // Admin (`/admin` itself redirects to `/admin/users`)
-  { path: '/admin/users', as: 'admin', ready: 'admin-users-heading' },
+  { path: '/admin/users', as: 'admin', ready: 'admin-users-header' },
   {
     path: '/admin/users',
     as: 'admin',
     state: 'role filter open',
-    ready: 'users-filter-role',
-    setup: (page) => openWith(page, 'users-filter-role', 'users-filter-role-option-admin'),
+    ready: 'admin-users-filters-filter-role',
+    setup: (page) => openWith(page, 'admin-users-filters-filter-role', 'admin-users-filters-filter-role-option-admin'),
   },
   // Its Visits and Rewind table count the share visit the public share route records.
   { path: `/admin/users/${regularId}`, as: 'admin', ready: 'admin-user-header', reset: clearA11yShareVisits },
@@ -114,16 +114,19 @@ export const A11Y_ROUTES: A11yRoute[] = [
     path: '/admin/invites',
     as: 'admin',
     state: 'confirm dialog open',
-    ready: `admin-invites-delete-${VISUAL_INVITE_IDS.valid}`,
-    setup: (page) => openWith(page, `admin-invites-delete-${VISUAL_INVITE_IDS.valid}`, 'admin-invites-delete-dialog'),
+    ready: `admin-invites-actions-${VISUAL_INVITE_IDS.valid}`,
+    setup: async (page) => {
+      await openWith(page, `admin-invites-actions-${VISUAL_INVITE_IDS.valid}`, `admin-invites-actions-${VISUAL_INVITE_IDS.valid}-delete`);
+      await openWith(page, `admin-invites-actions-${VISUAL_INVITE_IDS.valid}-delete`, 'admin-invites-delete-dialog');
+    },
   },
-  { path: `/admin/invites/${VISUAL_INVITE_IDS.valid}`, as: 'admin', ready: 'admin-invite-details-heading' },
+  { path: `/admin/invites/${VISUAL_INVITE_IDS.valid}`, as: 'admin', ready: 'admin-invite-header' },
   { path: '/admin/announcements', as: 'admin', ready: 'admin-announcements-header' },
   { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-header' },
   { path: '/admin/discord', as: 'admin', ready: 'discord-status' },
   { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },
   { path: '/admin/queues', as: 'admin', ready: 'queue-status' },
-  { path: '/admin/settings', as: 'admin', ready: 'stripe-settings-card' },
+  { path: '/admin/settings', as: 'admin', ready: 'settings-stripe-section' },
   // The public share route records a visit; a worker restart's re-seed drops it.
   { path: '/admin/shares', as: 'admin', ready: 'admin-shares-header', reset: clearA11yShareVisits },
   { path: '/admin/llm-usage', as: 'admin', ready: 'admin-llm-usage-header' },

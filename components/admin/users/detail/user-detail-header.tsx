@@ -1,29 +1,27 @@
 import Link from "next/link"
 
-import { ChangeUserRoleButton } from "@/components/admin/users/change-user-role-button"
-import { DisableUserButton } from "@/components/admin/users/disable-user-button"
-import { UserActionsMenu } from "@/components/admin/users/user-actions-menu"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { userRewind } from "@/lib/admin/routes"
-import type { UserDetailHeaderData } from "@/lib/admin/user-detail"
-import { rewindRowState } from "@/lib/admin/user-detail-tabs"
+import { detailUserTarget, type UserDetailHeaderData } from "@/lib/admin/user-detail"
+import { rewindRowState } from "@/lib/admin/can-regenerate"
 
 import { RewindStateBadge } from "./rewind-state-badge"
+import { UserDetailActions } from "./user-detail-actions"
 
 interface UserDetailHeaderProps {
   header: UserDetailHeaderData
   stripeDashboardBaseUrl: string | null
+  /** The Regenerate confirm's cost line. */
+  estimateCopy: string
   /** Server time of the render, for the stuck rule. */
   now: number
 }
 
-const ACCESS = { shared: true, notShared: false, unknown: null } as const
-
 /** The member's name as the h1, their status badges and the actions (P10.6). */
-export function UserDetailHeader({ header, stripeDashboardBaseUrl, now }: UserDetailHeaderProps) {
+export function UserDetailHeader({ header, stripeDashboardBaseUrl, estimateCopy, now }: UserDetailHeaderProps) {
   const { season } = header
   const role = header.isOwner ? "owner" : header.isAdmin ? "admin" : "user"
 
@@ -60,23 +58,12 @@ export function UserDetailHeader({ header, stripeDashboardBaseUrl, now }: UserDe
           <Button variant="outline" nativeButton={false} render={<Link href={userRewind(header.id, season.year)} />} data-testid="admin-user-view-rewind">
             View Rewind {season.year}
           </Button>
-          <DisableUserButton userId={header.id} userName={header.name} disabled={header.disabledAt !== null} />
-          <ChangeUserRoleButton userId={header.id} userName={header.name} currentIsAdmin={header.isAdmin} />
-          <UserActionsMenu
-            user={{
-              id: header.id,
-              name: header.name,
-              plexUserId: header.plexUserId,
-              isAdmin: header.isAdmin,
-              hasPlexAccess: ACCESS[header.plexAccess],
-              wrappedStatus: season.status,
-              wrappedRunStartedAt: season.runStartedAt,
-              subscriptionStatus: header.subscription?.status ?? null,
-              isExempt: header.isExempt,
-              stripeCustomerId: header.subscription?.stripeCustomerId ?? null,
-            }}
+          <UserDetailActions
+            user={detailUserTarget(header)}
             year={season.year}
+            stripeEnabled={header.stripeEnabled}
             stripeDashboardBaseUrl={stripeDashboardBaseUrl}
+            estimateCopy={estimateCopy}
           />
         </>
       }

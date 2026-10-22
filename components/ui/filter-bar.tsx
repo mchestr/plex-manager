@@ -31,7 +31,10 @@ interface FilterSelectProps extends FilterDef {
   "data-testid"?: string
 }
 
-/** P3.5's Select bound to one query param, with its FieldLabel (UI-13). Changing it goes back to page 1. */
+/**
+ * P3.5's Select bound to one query param, with its FieldLabel (UI-13). Changing it goes back to page 1.
+ * Options carry `${testId}-option-<value>`.
+ */
 function FilterSelect({ param, label, options, defaultValue = "all", className, ...props }: FilterSelectProps) {
   const { searchParams, replace } = useReplaceParams()
   const value = searchParams.get(param) ?? defaultValue
@@ -51,7 +54,12 @@ function FilterSelect({ param, label, options, defaultValue = "all", className, 
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
-            <SelectItem key={option.value} value={option.value} label={option.label}>
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              label={option.label}
+              data-testid={props["data-testid"] && `${props["data-testid"]}-option-${option.value}`}
+            >
               {option.label}
             </SelectItem>
           ))}

@@ -1,16 +1,19 @@
 /**
  * The LLM provider form (P2.12): each provider shows its own fields, and each
  * model shows only the settings it supports, with its price and retirement.
+ * Since P10.19 it is always open inside the AI section, one tab per purpose.
  */
 
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { listLLMModels, updateWrappedLLMProvider } from '@/actions/admin'
-import { LLMProviderForm } from '@/components/admin/settings/llm-provider-form'
+import { AiSection } from '@/components/admin/settings/sections/ai-section'
 
 jest.mock('@/actions/admin', () => ({
   listLLMModels: jest.fn(),
+  setLLMDisabled: jest.fn(),
+  updateLlmCaps: jest.fn(),
   updateChatLLMProvider: jest.fn(),
   updateWrappedLLMProvider: jest.fn(),
 }))
@@ -31,7 +34,7 @@ const mockSave = updateWrappedLLMProvider as jest.Mock
 const STORED = {
   provider: 'openai',
   model: 'gpt-4o',
-  hasApiKey: true,
+  secret: { last4: '', origin: 'https://api.openai.com' },
   baseUrl: null,
   effort: null,
   temperature: 0.8,
@@ -46,11 +49,18 @@ beforeEach(() => {
 
 afterEach(() => jest.useRealTimers())
 
+const HEALTH = { status: 'ok' as const, code: null, checkedAt: null }
+const CAPS = { perUserUsd: 1, adminUsd: 5, serverUsd: 20 }
+
+function renderSection(provider: typeof STORED | null = null) {
+  return render(<AiSection chat={null} wrapped={provider} llmDisabled={false} caps={CAPS} health={HEALTH} />)
+}
+
 async function openForm(provider: typeof STORED | null = null) {
   const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
-  render(<LLMProviderForm provider={provider} purpose="wrapped" />)
-  await user.click(screen.getByTestId('llm-edit-wrapped'))
-  // Opening a stored provider loads its model list first
+  renderSection(provider)
+  await user.click(screen.getByRole('tab', { name: 'Rewind generation' }))
+  await waitFor(() => expect(screen.queryByTestId('llm-provider-form-chat')).not.toBeInTheDocument())
   await waitFor(() => expect(screen.getByTestId('llm-provider-select')).toBeEnabled())
   return user
 }
@@ -66,10 +76,23 @@ async function choose(user: ReturnType<typeof userEvent.setup>, select: string, 
 }
 
 describe('LLMProviderForm', () => {
-  it('shows the read-only summary until Edit is pressed', () => {
-    render(<LLMProviderForm provider={null} purpose="wrapped" />)
-    expect(screen.getByText('No LLM provider configured')).toBeInTheDocument()
-    expect(screen.queryByTestId('llm-provider-select')).not.toBeInTheDocument()
+  it('is always open, with Save disabled until a field changes (UI-31)', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    renderSection(STORED)
+
+    expect(screen.getByTestId('llm-provider-form-chat')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('settings-ai-save')).toBeDisabled()
+
+    await user.click(screen.getByRole('tab', { name: 'Rewind generation' }))
+    await waitFor(() => expect(screen.queryByTestId('llm-provider-form-chat')).not.toBeInTheDocument())
+    await user.clear(screen.getByTestId('llm-max-tokens-input'))
+    await user.type(screen.getByTestId('llm-max-tokens-input'), '7000')
+    expect(screen.getByTestId('settings-ai-save')).toBeEnabled()
+    expect(screen.getByTestId('settings-ai-unsaved')).toBeInTheDocument()
+
+    await user.click(screen.getByTestId('settings-ai-discard'))
+    expect(screen.getByTestId('llm-max-tokens-input')).toHaveValue(6000)
   })
 
   it('changes the fields when the provider changes, and a preset fills the base URL', async () => {
@@ -129,7 +152,7 @@ describe('LLMProviderForm', () => {
     await choose(user, 'llm-model-select', 'claude-sonnet-5-5')
     await choose(user, 'llm-effort-select', 'low')
     await user.type(screen.getByTestId('llm-api-key-input'), 'ant-key')
-    await user.click(screen.getByTestId('llm-save'))
+    await user.click(screen.getByTestId('settings-ai-save'))
 
     expect(mockSave).toHaveBeenCalledWith({
       provider: 'anthropic',
@@ -149,7 +172,9 @@ describe('LLMProviderForm', () => {
     const user = await openForm(STORED)
 
     expect(mockList).toHaveBeenCalledWith({ purpose: 'wrapped', provider: 'openai', apiKey: undefined, baseUrl: undefined })
-    expect(screen.getByTestId('llm-api-key-input')).toHaveAttribute('placeholder', 'Leave blank to keep the current key')
+    // P10.20: the saved key is a masked placeholder, never a value
+    expect(screen.getByTestId('llm-api-key-input')).toHaveAttribute('placeholder', '••••••••••••')
+    expect(screen.getByTestId('llm-api-key-input')).toHaveValue('')
     expect(screen.getByTestId('llm-temperature-input')).toHaveValue(0.8)
 
     await user.click(screen.getByTestId('llm-model-select'))
@@ -166,8 +191,8 @@ describe('LLMProviderForm', () => {
     await user.click(screen.getByTestId('llm-model-select-option-gpt-4o'))
     await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
 
-    await user.click(screen.getByTestId('llm-test-connection'))
-    expect(await screen.findByTestId('llm-test-result')).toHaveTextContent('Connected: 3 models available')
+    await user.click(screen.getByTestId('settings-ai-test'))
+    await waitFor(() => expect(screen.getByTestId('settings-ai-test-result')).toHaveTextContent('Connected: 3 models available'))
   })
 
   it('asks for the key again after the provider changes', async () => {
@@ -175,7 +200,10 @@ describe('LLMProviderForm', () => {
 
     await choose(user, 'llm-provider-select', 'google')
 
-    expect(screen.getByTestId('llm-api-key-input')).toHaveAttribute('placeholder', 'Enter the API key')
+    // The saved key only goes to the old provider (SEC-31): re-enter, and Save waits for it
+    expect(screen.getByTestId('llm-api-key-input')).toHaveAttribute('data-state', 'reenter-required')
     expect(screen.getByTestId('llm-api-key-input')).toBeRequired()
+    expect(screen.getByTestId('settings-ai-save')).toBeDisabled()
+    expect(screen.getByTestId('settings-ai-unsaved')).toHaveTextContent('Enter the API key to test or save')
   })
 })

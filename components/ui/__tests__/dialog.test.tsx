@@ -13,7 +13,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { ModalShell } from "@/components/ui/modal-shell"
 import { PortalContainerProvider, usePopupLayer } from "@/components/ui/portal-container"
 
 expect.extend(toHaveNoViolations)
@@ -135,37 +134,5 @@ describe("Dialog", () => {
     expect(container).toContainElement(dialog)
     expect(dialog).toHaveAttribute("data-field", "paper")
     container.remove()
-  })
-})
-
-describe("ModalShell adapter", () => {
-  it("renders Dialog with the old props", async () => {
-    const user = userEvent.setup()
-    const onClose = jest.fn()
-    render(
-      <ModalShell isOpen onClose={onClose} maxWidth="lg" labelledBy="t" describedBy="d" testId="shell">
-        <h2 id="t">New announcement</h2>
-        <p id="d">Shown on every member&apos;s home page.</p>
-        <button type="button">Save</button>
-      </ModalShell>
-    )
-
-    const dialog = await screen.findByRole("dialog", { name: "New announcement" })
-    expect(dialog).toHaveAccessibleDescription("Shown on every member's home page.")
-    expect(dialog).toHaveAttribute("data-testid", "shell")
-    expect(dialog).toHaveClass("md:max-w-lg")
-    expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument()
-
-    await user.keyboard("{Escape}")
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
-
-  it("renders nothing while closed", () => {
-    render(
-      <ModalShell isOpen={false} onClose={jest.fn()}>
-        <p>Hidden</p>
-      </ModalShell>
-    )
-    expect(screen.queryByText("Hidden")).not.toBeInTheDocument()
   })
 })

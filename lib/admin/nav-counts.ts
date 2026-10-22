@@ -3,6 +3,7 @@ import "server-only"
 import { Queue } from "bullmq"
 import { unstable_cache } from "next/cache"
 
+import { inviteStatusWhere } from "@/lib/admin/invites/queries"
 import type { NavCounts } from "@/lib/admin/nav"
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { prisma } from "@/lib/prisma"
@@ -66,12 +67,7 @@ export const getAdminNavCounts = unstable_cache(
     const now = new Date()
     const [users, activeInvites, failed] = await Promise.all([
       prisma.user.count(),
-      prisma.invite.count({
-        where: {
-          useCount: { lt: prisma.invite.fields.maxUses },
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-        },
-      }),
+      prisma.invite.count({ where: inviteStatusWhere("active", now) }),
       failedJobs(),
     ])
     return { users, activeInvites, failedJobs: failed }

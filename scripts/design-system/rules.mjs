@@ -26,6 +26,10 @@ const PREFIXES =
 const REWIND_PATHS = ['app/(app)/rewind/', 'components/rewind/', 'lib/rewind/']
 const outsideRewind = (path) => !REWIND_PATHS.some((prefix) => path.startsWith(prefix))
 
+/** Inline SVG is allowed for drawn charts and Rewind art; icons come from lucide (P10.15). */
+const SVG_ART = [/^components\/ui\/chart/, /(?:^|\/)charts?\//]
+const outsideSvgArt = (path) => outsideRewind(path) && !SVG_ART.some((re) => re.test(path))
+
 /** The Rewind block of `app/globals.css` (P3.1 adds the markers). */
 const REWIND_BLOCK = /\/\* rewind-scope:start \*\/[\s\S]*?\/\* rewind-scope:end \*\//g
 
@@ -71,6 +75,17 @@ export const RULES = [
     ast: 'jsx-text',
   },
   { id: 'zoom-lock', description: 'Viewport zoom lock', pattern: /maximumScale|userScalable/g },
+  {
+    id: 'inline-spinner',
+    description: 'Hand-drawn spinner SVGs instead of Spinner or Button loading',
+    pattern: /M4 12a8 8 0 018-8V0C5\.373/g,
+  },
+  {
+    id: 'inline-svg',
+    description: 'Inline <svg> outside charts and Rewind art; icons render through Icon',
+    pattern: /<svg\b/g,
+    scope: outsideSvgArt,
+  },
 ]
 
 function countIn(pattern, texts) {
@@ -96,4 +111,4 @@ export function countFile(path, source) {
   return sortKeys(counts)
 }
 
-export { compare, update, nonZero, sortKeys, totals } from './baseline.mjs'
+export { addRules, compare, update, nonZero, sortKeys, totals } from './baseline.mjs'

@@ -1,11 +1,14 @@
 "use server"
 
 import { Prisma } from "@/lib/generated/prisma/client"
+import type { SavedSecret } from "@/lib/security/saved-secret"
+import { describeSecret } from "@/lib/security/secret-reuse"
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
+import { CONNECTION_HEALTH_TAG } from "@/lib/settings/connection-status"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { parseStripeLibrarySectionIds, parseStripePriceIds } from "@/lib/stripe/config"
 import { clearOfferedPricesCache } from "@/lib/stripe/prices"
@@ -75,6 +78,7 @@ const NON_SECRET_CONFIG_SELECT = {
   llmDailyCapPerUserUsd: true,
   llmDailyCapAdminUsd: true,
   llmDailyCapServerUsd: true,
+  lightThemeEnabled: true,
   updatedAt: true,
   updatedBy: true,
 } as const
@@ -137,6 +141,7 @@ export async function getConfig() {
       llmDailyCapPerUserUsd: 0.5,
       llmDailyCapAdminUsd: 5,
       llmDailyCapServerUsd: 5,
+      lightThemeEnabled: false,
       updatedAt: new Date(),
       updatedBy: null,
     }
@@ -159,6 +164,8 @@ export const setLLMDisabled = adminAction({
     })
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("llm", before, { llmDisabled: disabled }))
+    // The cached AI check reads the flag too (P10.19)
+    updateTag(CONNECTION_HEALTH_TAG)
     return ok(null)
   },
 })
@@ -207,40 +214,33 @@ const serverTimeZoneSchema = z
 /**
  * Set the server time zone, `Config.timezone` (admin only). The value is
  * stored under its canonical IANA name, so `US/Pacific` is saved as
- * `America/Los_Angeles`; it overrides the `TZ` environment variable.
+ * `America/Los_Angeles`; it overrides the `TZ` environment variable. Audited
+ * as `SERVER_TIMEZONE_CHANGED` with `section: "timezone"`, which the settings
+ * footer reads (P10.20).
  */
-export async function updateServerTimeZone(timezone: string) {
-  const session = await requireAdmin()
-
-  const validated = serverTimeZoneSchema.safeParse(timezone)
-  if (!validated.success) {
-    return { success: false, error: validated.error.issues[0]?.message ?? "Invalid time zone" }
-  }
-  const zone = validated.data
-
-  try {
+export const updateServerTimeZone = adminAction({
+  input: serverTimeZoneSchema,
+  fallbackError: "Failed to update the server time zone",
+  handler: async (zone, { userId }) => {
     const previous = await prisma.config.findUnique({ where: { id: "config" }, select: { timezone: true } })
     await prisma.config.upsert({
       where: { id: "config" },
-      update: { timezone: zone, updatedBy: session.user.id },
-      create: { id: "config", timezone: zone, updatedBy: session.user.id },
+      update: { timezone: zone, updatedBy: userId },
+      create: { id: "config", timezone: zone, updatedBy: userId },
       select: { id: true },
     })
 
-    logAuditEvent(AuditEventType.SERVER_TIMEZONE_CHANGED, session.user.id, {
+    logAuditEvent(AuditEventType.SERVER_TIMEZONE_CHANGED, userId, {
+      section: "timezone",
       from: previous?.timezone ?? null,
       to: zone,
     })
     // Every page that shows a time or the season reads the zone
     updateTag(APP_SETTINGS_TAG)
     revalidatePath("/", "layout")
-
-    return { success: true, timezone: zone }
-  } catch (error) {
-    logger.error("Error updating the server time zone", error)
-    return { success: false, error: "Failed to update the server time zone" }
-  }
-}
+    return ok({ timezone: zone })
+  },
+})
 
 /**
  * Non-secret view of the Stripe configuration used to determine whether the
@@ -250,6 +250,8 @@ export interface StripeConfigStatus {
   enabled: boolean
   hasSecretKey: boolean
   hasWebhookSecret: boolean
+  /** The stored keys' last four for `SecretInput` (P10.20); both go only to Stripe, so no origin. */
+  saved: { secretKey: SavedSecret | null; webhookSecret: SavedSecret | null }
   /** Whether `REDIS_URL` is set, so the queue that processes webhooks can run. */
   hasJobQueue: boolean
   priceIds: string[]
@@ -314,6 +316,7 @@ export async function getStripeConfig(): Promise<StripeConfigStatus> {
       enabled: config.stripeEnabled,
       hasSecretKey: Boolean(config.stripeSecretKey),
       hasWebhookSecret: Boolean(config.stripeWebhookSecret),
+      saved: { secretKey: describeSecret(config.stripeSecretKey), webhookSecret: describeSecret(config.stripeWebhookSecret) },
       hasJobQueue: isRedisConfigured(),
       priceIds: parseStripePriceIds(config.stripePriceIds),
       librarySectionIds: parseStripeLibrarySectionIds(config.stripeLibrarySectionIds),
@@ -330,6 +333,7 @@ function emptyStripeConfigStatus(): StripeConfigStatus {
     enabled: false,
     hasSecretKey: false,
     hasWebhookSecret: false,
+    saved: { secretKey: null, webhookSecret: null },
     hasJobQueue: isRedisConfigured(),
     priceIds: [],
     librarySectionIds: [],

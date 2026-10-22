@@ -25,7 +25,8 @@ jest.mock('@/lib/prisma', () => ({
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
-jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), unstable_cache: (fn: () => unknown) => fn }))
+jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), updateTag: jest.fn(), unstable_cache: (fn: () => unknown) => fn }))
+jest.mock('@/lib/security/audit-log', () => ({ ...jest.requireActual('@/lib/security/audit-log'), logAuditEvent: jest.fn() }))
 
 // Connection/validation modules are dynamically imported by the actions.
 jest.mock('@/lib/connections/tautulli', () => ({
@@ -143,7 +144,7 @@ describe('updateDiscordIntegrationSettings leave-blank-to-keep', () => {
       clientSecret: '',
     })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(mockPrisma.discordIntegration.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: expect.objectContaining({ clientSecret: 'stored-discord-secret' }),
@@ -220,7 +221,7 @@ describe('updateDiscordIntegrationSettings botToken leave-blank-to-keep', () => 
       botToken: '',
     })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(mockPrisma.discordIntegration.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: expect.objectContaining({ botToken: 'stored-bot-token' }),

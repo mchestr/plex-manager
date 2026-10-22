@@ -196,7 +196,7 @@ describe('DevModeBanner', () => {
     it('should have hidden icon with aria-hidden="true"', () => {
       render(<DevModeBanner devDefaults={devDefaults} />)
 
-      const svg = document.querySelector('svg')
+      const svg = document.querySelector('[data-slot="icon"]')
       expect(svg).toHaveAttribute('aria-hidden', 'true')
     })
 
@@ -254,7 +254,7 @@ describe('DevModeBanner', () => {
     it('should have warning icon with amber color', () => {
       render(<DevModeBanner devDefaults={devDefaults} />)
 
-      const svg = document.querySelector('svg')
+      const svg = document.querySelector('[data-slot="icon"]')
       expect(svg).toHaveClass('text-amber-400')
     })
 

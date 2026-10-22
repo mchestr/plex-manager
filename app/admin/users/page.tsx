@@ -1,43 +1,68 @@
 import { getAllUsersWithWrapped } from "@/actions/users"
 import { ImportPlexUsersButton } from "@/components/admin/users/import-plex-users-button"
-import { UsersList } from "@/components/admin/users/users-list"
-import { UsersStatsSummary } from "@/components/admin/users/users-stats-summary"
+import { PlexDownAlert } from "@/components/admin/users/plex-down-alert"
+import { UsersStatGrid } from "@/components/admin/users/users-stat-grid"
+import { UsersTable } from "@/components/admin/users/users-table"
+import { PageHeader } from "@/components/ui/page-header"
+import { regenerateEstimateCopy } from "@/lib/admin/user-detail-tabs"
+import { filterUsers, parseUsersFilter, sortUsers, USERS_DEFAULT_SORT, USERS_SORTS, usersStats } from "@/lib/admin/users-filter"
+import { prisma } from "@/lib/prisma"
+import { getFormat } from "@/lib/settings/app-settings"
 import { getStripeDashboardBaseUrl } from "@/lib/stripe/client"
+import { parseTableParams } from "@/lib/ui/table-params"
 import { getSeasonYear } from "@/lib/wrapped/season"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
-export default async function UsersPage() {
-  const currentYear = await getSeasonYear()
-  const [allUsers, stripeDashboardBaseUrl] = await Promise.all([
-    getAllUsersWithWrapped(currentYear),
+type Params = Record<string, string | string[] | undefined>
+
+/**
+ * The admin users list, the reference list page (P10.18, ui-design-system
+ * 6.3): every member is read once, then filtered, sorted and paged here from
+ * the URL, so filters default to All and Plex being down never hides anyone.
+ */
+export default async function UsersPage({ searchParams }: { searchParams: Promise<Params> }) {
+  const [params, seasonYear, f] = await Promise.all([searchParams, getSeasonYear(), getFormat()])
+  const [{ users, plexCheck }, stripeDashboardBaseUrl, config, estimateCopy] = await Promise.all([
+    getAllUsersWithWrapped(seasonYear),
     getStripeDashboardBaseUrl(),
+    prisma.config.findUnique({ where: { id: "config" }, select: { stripeEnabled: true } }),
+    regenerateEstimateCopy(seasonYear, f),
   ])
+  const stripeEnabled = Boolean(config?.stripeEnabled)
+
+  const filter = parseUsersFilter(params)
+  const table = parseTableParams(params, { sortable: USERS_SORTS, defaultSort: USERS_DEFAULT_SORT })
+  const matching = sortUsers(filterUsers(users, filter), table.sort)
+  const page = Math.min(table.page, Math.max(1, Math.ceil(matching.length / table.pageSize)))
+  const rows = matching.slice((page - 1) * table.pageSize, page * table.pageSize)
+
+  const stats = usersStats(users, plexCheck)
+  const checkedAgo = f.relative(plexCheck.checkedAt, new Date())
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative">
-            <div>
-              <h1 data-testid="admin-users-heading" className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Users</h1>
-              <p className="text-sm text-muted-foreground">
-                {allUsers.length} user{allUsers.length !== 1 ? "s" : ""} in database
-              </p>
-            </div>
-            <ImportPlexUsersButton />
-          </div>
-        </div>
-
-        <UsersList
-          users={allUsers}
-          currentYear={currentYear}
-          stripeDashboardBaseUrl={stripeDashboardBaseUrl}
-        />
-
-        <UsersStatsSummary users={allUsers} />
-      </div>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-users-page">
+      <PageHeader
+        title="Users"
+        description="Everyone with an account, with their Plex access, billing and Rewind."
+        actions={<ImportPlexUsersButton />}
+        data-testid="admin-users-header"
+      />
+      <UsersStatGrid stats={stats} year={seasonYear} stripeEnabled={stripeEnabled} f={f} />
+      {stats.plexDown && <PlexDownAlert notVerified={stats.notVerified} checkedAgo={checkedAgo} />}
+      <UsersTable
+        rows={rows}
+        total={matching.length}
+        memberCount={users.length}
+        page={page}
+        pageSize={table.pageSize}
+        sort={table.sort}
+        year={seasonYear}
+        stripeEnabled={stripeEnabled}
+        stripeDashboardBaseUrl={stripeDashboardBaseUrl}
+        estimateCopy={estimateCopy}
+        unknownSub={stats.plexDown ? `Last checked ${checkedAgo}` : undefined}
+      />
     </div>
   )
 }
-

@@ -75,11 +75,11 @@ test.describe('Admin user detail', () => {
 
   test('opens from the users list by keyboard and switches tabs through the URL', async ({ adminPage }) => {
     await adminPage.goto('/admin/users');
-    // The list starts on "Plex access: Yes", and no seeded member is shared on a live Plex server
-    await adminPage.getByTestId('users-filter-plex-access').click();
-    await adminPage.getByTestId('users-filter-plex-access-option-all').click();
-    const link = adminPage.getByTestId(`user-name-link-${MEMBER.id}`);
+    const link = adminPage.getByTestId(`admin-users-name-${MEMBER.id}`);
+    // The list streams in behind loading.tsx; focus() on its still-hidden copy is a no-op
+    await expect(link).toBeVisible();
     await link.focus();
+    await expect(link).toBeFocused();
     await adminPage.keyboard.press('Enter');
 
     await expect(adminPage).toHaveURL(new RegExp(`/admin/users/${MEMBER.id}$`));

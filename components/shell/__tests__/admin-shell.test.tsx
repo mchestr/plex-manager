@@ -10,11 +10,14 @@ import { signOut } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
 
 import { AdminShell } from '@/components/shell/admin-shell'
+import { ToastProvider } from '@/components/ui/toast'
 import type { NavCounts } from '@/lib/admin/nav'
+import { AppearanceProvider } from '@/lib/appearance-context'
 
 expect.extend(toHaveNoViolations)
 
 jest.mock('next-auth/react', () => ({ signOut: jest.fn().mockResolvedValue(undefined) }))
+jest.mock('@/actions/appearance', () => ({ setAppearance: jest.fn() }))
 jest.mock('@/actions/chatbot', () => ({ chatWithAdminBot: jest.fn() }))
 
 const push = jest.fn()
@@ -170,5 +173,32 @@ describe('AdminShell', () => {
     expect(screen.getByTestId('admin-tab-bar')).toBeInTheDocument()
     expect(screen.queryByTestId('admin-chat-toggle')).not.toBeInTheDocument()
     expect(screen.queryByTestId('admin-chat-toggle-mobile')).not.toBeInTheDocument()
+  })
+
+  it('offers Appearance beside Sign out only while the light theme flag is on (P10.10)', async () => {
+    const user = userEvent.setup()
+    const { unmount } = renderShell()
+    expect(screen.queryByTestId('admin-appearance-trigger')).not.toBeInTheDocument()
+    unmount()
+
+    render(
+      <AppearanceProvider value={{ enabled: true, theme: 'dark' }}>
+        <ToastProvider>
+          <AdminShell
+            serverName="Northfield Plex"
+            user={{ name: 'Dana Whitfield', initials: 'DW' }}
+            navCounts={{ users: 0, activeInvites: 0, failedJobs: 0 }}
+            assistant={false}
+          >
+            <p>Page</p>
+          </AdminShell>
+        </ToastProvider>
+      </AppearanceProvider>
+    )
+    await user.click(screen.getByRole('button', { name: 'Appearance' }))
+    const menu = await screen.findByRole('menu')
+
+    expect(within(menu).getByRole('menuitemradio', { name: 'Dark' })).toHaveAttribute('aria-checked', 'true')
+    expect(within(menu).getByRole('menuitemradio', { name: 'Light' })).toHaveAttribute('aria-checked', 'false')
   })
 })

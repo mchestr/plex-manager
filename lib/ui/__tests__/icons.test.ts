@@ -43,6 +43,11 @@ describe("icons", () => {
     ["error", "CircleX"],
     ["warning", "TriangleAlert"],
     ["info", "Info"],
+    ["done", "Check"],
+    ["close", "X"],
+    ["chevronDown", "ChevronDown"],
+    ["chevronLeft", "ChevronLeft"],
+    ["chevronRight", "ChevronRight"],
   ] as const)("maps %s to lucide %s", (concept, name) => {
     expect(icons[concept]).toBe(lucide[name])
   })

@@ -3,13 +3,19 @@
  *
  * The root metadata (P3.9): titles end in the server name, and the icons come
  * from the file-based routes, not a static `icons` field. The viewport (P3.2)
- * allows zoom.
+ * allows zoom, and its theme colour follows the resolved theme (P10.10).
  */
 
-import { generateMetadata, viewport } from "@/app/layout"
+import { generateMetadata, generateViewport } from "@/app/layout"
 import { getAppSettings } from "@/lib/settings/app-settings"
 
 jest.mock("@/lib/settings/app-settings", () => ({ getAppSettings: jest.fn() }))
+let mockThemeCookie: string | undefined
+jest.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: (name: string) => (name === "pm-theme" && mockThemeCookie ? { name, value: mockThemeCookie } : undefined),
+  }),
+}))
 jest.mock("@/lib/providers", () => ({ Providers: () => null }))
 jest.mock("@/app/fonts", () => ({ plexFontClassNames: "" }))
 jest.mock("@/components/ui/flash-from-query", () => ({ FlashFromQuery: () => null }))
@@ -44,10 +50,27 @@ describe("generateMetadata", () => {
 
     expect(String((await generateMetadata()).metadataBase)).toBe("https://plex.example.com/")
   })
+})
 
-  it("keeps zoom available on the canvas colour (UI-11)", () => {
+describe("generateViewport", () => {
+  const withCookie = (value: string | undefined) => {
+    mockThemeCookie = value
+  }
+
+  it("keeps zoom available on the dark canvas colour (UI-11)", async () => {
+    settings.mockResolvedValue({ timeZone: "UTC", locale: "en-US", serverName: null, lightThemeEnabled: false })
+    withCookie("light")
+    const viewport = await generateViewport()
+
     expect(viewport).toEqual({ width: "device-width", initialScale: 1, themeColor: "#1a1c1e" })
     expect(viewport).not.toHaveProperty("maximumScale")
     expect(viewport).not.toHaveProperty("userScalable")
+  })
+
+  it("takes the light canvas colour when the flag is on and the member chose Light", async () => {
+    settings.mockResolvedValue({ timeZone: "UTC", locale: "en-US", serverName: null, lightThemeEnabled: true })
+    withCookie("light")
+
+    expect((await generateViewport()).themeColor).toBe("#f9fafb")
   })
 })

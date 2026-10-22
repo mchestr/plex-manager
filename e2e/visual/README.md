@@ -36,6 +36,25 @@ above the scale floor the spec also fails on text under 12 px or a control
 whose hit area is under 44x44 px; below it the article offer must open. See
 the Rewind section of `e2e/README.md` for its seed.
 
+The light theme (P10.10) has its own projects. `light-theme-setup` turns
+`Config.lightThemeEnabled` on through the settings Switch (its teardown turns
+it off again), and each light project holds the `pm-theme=light` cookie
+(`e2e/helpers/light-theme.ts`):
+
+- `visual-light-desktop` and `visual-light-mobile` run the member, admin and
+  primitives screens plus `light-routes.visual.spec.ts`, every route in
+  `e2e/a11y/routes.ts`. Review them against the mockups
+  `home--desktop-light.png` and `admin-users--desktop-light.png`.
+- `visual-light-rewind` runs `rewind.spec.ts` on the chromium phone against
+  the **dark** `rewind-visual-phone-chromium` baselines: the Rewind scope
+  re-declares its tokens, so the story must match pixel for pixel.
+- `a11y-light` runs `e2e/accessibility.spec.ts` in light against the same
+  axe baseline.
+
+They are not in CI's project lists. Take their baselines with the workflow's
+`light` suite; a file with a design-debt count shows up as a light-mode bug, so
+burn its counts to zero before its baseline.
+
 ## How the screens are kept stable
 
 - **Production build only.** The specs skip unless `E2E_SERVER=prod`, which
@@ -84,8 +103,8 @@ description with a one-line reason. Reviewers look at every changed image.
 
 1. Push your branch (a branch of this repository; forks cannot use it).
 2. Actions, **Visual Baselines**, **Run workflow**, enter the branch name and
-   pick the suite: `app` (the P1.6 screens), `rewind` (the story pages) or
-   `all`.
+   pick the suite: `app` (the P1.6 screens), `rewind` (the story pages),
+   `light` (the light theme's screens, P10.10) or `all` (app and rewind).
 3. The workflow runs those visual projects with `--update-snapshots=all` in the
    Playwright container and commits any changed images to the branch as
    `test(visual): update visual baselines`.

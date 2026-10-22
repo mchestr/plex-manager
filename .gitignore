@@ -54,3 +54,6 @@ playwright-report/
 
 # Token codemod review list (scripts/codemods/tokens.ts, P10.13)
 /codemod-review.md
+# Spinner and icon codemod review lists (scripts/codemods/{spinners,icons}.ts, P10.15)
+/codemod-spinners-review.md
+/codemod-icons-review.md

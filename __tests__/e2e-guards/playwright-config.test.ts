@@ -141,11 +141,30 @@ describe("playwright.config.ts database guard", () => {
       "rewind-visual-desktop-webkit",
       "rewind-visual-phone-chromium",
       "rewind-visual-phone-webkit",
+      // P10.10: the light theme compared with the dark Rewind baselines
+      "visual-light-rewind",
     ])
     expect(owners("/repo/e2e/a11y/rewind.a11y.spec.ts")).toEqual(["rewind-a11y-chromium", "rewind-a11y-firefox", "rewind-a11y-webkit"])
     expect(owners("/repo/e2e/perf/rewind.perf.spec.ts")).toEqual(["rewind-perf"])
     expect(owners("/repo/e2e/rewind/story.spec.ts")).toEqual(["rewind-e2e-chromium", "rewind-e2e-webkit"])
     expect(owners("/repo/e2e/rewind-routes.spec.ts")).toEqual(["chromium"])
     expect(projects.find((project) => project.name === "rewind-a11y-firefox")?.grep).toEqual(/@article/)
+  })
+
+  it("runs the light projects after the flag is on, with the light cookie (P10.10)", () => {
+    env.E2E_DATABASE_URL = TEST_URL
+    const projects = loadConfig().projects ?? []
+    const byName = (name: string) => projects.find((project) => project.name === name)
+
+    expect(byName("light-theme-setup")?.teardown).toBe("light-theme-teardown")
+    for (const name of ["visual-light-desktop", "visual-light-mobile", "visual-light-rewind", "a11y-light"]) {
+      const project = byName(name)
+      expect(project?.dependencies).toEqual(["light-theme-setup"])
+      expect(project?.use?.storageState).toEqual({
+        cookies: [expect.objectContaining({ name: "pm-theme", value: "light", path: "/" })],
+        origins: [],
+      })
+    }
+    expect(byName("visual-light-rewind")?.snapshotPathTemplate).toContain("/rewind-visual-phone-chromium/")
   })
 })

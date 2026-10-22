@@ -33,7 +33,7 @@ import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
-jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
+jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), updateTag: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 jest.mock('@/lib/security/audit-log', () => ({
   ...jest.requireActual('@/lib/security/audit-log'),
@@ -49,7 +49,7 @@ function sendsSecret(secretField: 'apiKey' | 'token') {
 }
 
 jest.mock('@/lib/connections/plex', () => ({ testPlexConnection: jest.fn(), getPlexUserInfo: jest.fn() }))
-jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn(), getJellyfinLibraries: jest.fn() }))
+jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn() }))
 jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn() }))
 jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
 jest.mock('@/lib/connections/sonarr', () => ({ testSonarrConnection: jest.fn() }))
@@ -168,6 +168,8 @@ describe.each(SERVICES)('$name: a stored secret never goes to a new address', (s
       success: false,
       code: 'SECRET_REQUIRED',
       error: 'Enter the API key again to use it with the new address.',
+      // P10.20: the form shows it on the field
+      fieldErrors: { [service.secretField]: ['Enter the API key again to use it with the new address.'] },
     })
     expect(service.test).not.toHaveBeenCalled()
     expect(mockFetch).not.toHaveBeenCalled()
@@ -231,7 +233,7 @@ describe.each(SERVICES)('$name: a stored secret never goes to a new address', (s
 
     const result = await service.save({ name: 'First', url: STORED_URL })
 
-    expect(result).toMatchObject({ success: false, code: 'VALIDATION' })
+    expect(result).toMatchObject({ success: false, code: 'VALIDATION', fieldErrors: { [service.secretField]: [expect.any(String)] } })
     expect(mockFetch).not.toHaveBeenCalled()
   })
 
@@ -242,12 +244,16 @@ describe.each(SERVICES)('$name: a stored secret never goes to a new address', (s
     expect(service.delegate().findFirst).not.toHaveBeenCalled()
   })
 
-  it('returns the connection error without saving', async () => {
+  it('returns the connection failure as code copy on the secret field, without saving', async () => {
     service.test.mockResolvedValue({ success: false, error: 'Invalid API key' })
 
     const result = await service.save({ name: 'X', url: STORED_URL })
 
-    expect(result).toEqual({ success: false, code: 'UPSTREAM_UNAVAILABLE', error: 'Invalid API key' })
+    expect(result).toMatchObject({
+      success: false,
+      code: 'UPSTREAM_UNAVAILABLE',
+      fieldErrors: { [service.secretField]: [expect.stringMatching(/^The server refused this/)] },
+    })
     expect(service.delegate().create).not.toHaveBeenCalled()
     expect(mockAudit).not.toHaveBeenCalled()
   })

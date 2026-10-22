@@ -1,8 +1,10 @@
 /**
- * The app's settings: the server zone, `Config.locale` and the server name.
+ * The app's settings: the server zone, `Config.locale`, the server name and
+ * the light-theme flag.
  *
  * Read once per request (React `cache()`) over a 60-second data cache tagged
- * `app-settings`; saving the zone or the locale calls `updateTag("app-settings")`.
+ * `app-settings`; saving the zone, the locale or the flag calls
+ * `updateTag("app-settings")`.
  *
  * @module lib/settings/app-settings
  */
@@ -31,6 +33,8 @@ export interface AppSettings extends FormatSettings {
    * in `lib/brand.ts`, which falls back to the product name.
    */
   serverName: string | null
+  /** `Config.lightThemeEnabled`: members may pick the light theme (P10.10). */
+  lightThemeEnabled: boolean
 }
 
 /** The stored locale when `Intl` accepts it, else en-US. */
@@ -50,29 +54,40 @@ const loadAppSettings = unstable_cache(
   async (): Promise<AppSettings> => {
     const [timeZone, config, plex, jellyfin] = await Promise.all([
       serverZone(),
-      prisma.config.findUnique({ where: { id: "config" }, select: { locale: true, serverName: true } }),
+      prisma.config.findUnique({ where: { id: "config" }, select: { locale: true, serverName: true, lightThemeEnabled: true } }),
       prisma.plexServer.findFirst(activeServer),
       prisma.jellyfinServer.findFirst(activeServer),
     ])
     const serverName = [config?.serverName, plex?.name, jellyfin?.name].map((name) => name?.trim()).find(Boolean)
-    return { timeZone, locale: normalizeLocale(config?.locale), serverName: serverName ?? null }
+    return {
+      timeZone,
+      locale: normalizeLocale(config?.locale),
+      serverName: serverName ?? null,
+      lightThemeEnabled: config?.lightThemeEnabled ?? false,
+    }
   },
   [APP_SETTINGS_TAG],
   { tags: [APP_SETTINGS_TAG], revalidate: 60 },
 )
 
 /**
- * `{ timeZone, locale }` for every formatter in `lib/utils/format.ts`, and the
- * server name for `lib/brand.ts`. The root layout reads it on every page, so a
- * database outage falls back to `TZ`, en-US and no name instead of failing
- * the page.
+ * `{ timeZone, locale }` for every formatter in `lib/utils/format.ts`, the
+ * server name for `lib/brand.ts` and the light-theme flag for
+ * `lib/design/theme.ts`. The root layout reads it on every page, so a
+ * database outage falls back to `TZ`, en-US, no name and dark instead of
+ * failing the page.
  */
 export const getAppSettings = cache(async (): Promise<AppSettings> => {
   try {
     return await loadAppSettings()
   } catch (error) {
     logger.warn("Falling back to default app settings", { error })
-    return { timeZone: normalizeTimeZone(process.env.TZ) ?? "UTC", locale: DEFAULT_LOCALE, serverName: null }
+    return {
+      timeZone: normalizeTimeZone(process.env.TZ) ?? "UTC",
+      locale: DEFAULT_LOCALE,
+      serverName: null,
+      lightThemeEnabled: false,
+    }
   }
 })
 

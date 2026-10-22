@@ -5,21 +5,16 @@
   "admin /admin/invites": {},
   "admin /admin/invites [confirm dialog open]": {},
   "admin /admin/invites [create dialog open]": {},
-  "admin /admin/invites/visual-invite-ok": {
-    "color-contrast|incomplete": 2,
-    "heading-order|moderate": 1
-  },
+  "admin /admin/invites/visual-invite-ok": {},
   "admin /admin/llm-usage": {},
   "admin /admin/llm-usage/conversation/a11y-conversation": {},
   "admin /admin/llm-usage/visual-llm-usage-1": {},
   "admin /admin/prompts": {},
   "admin /admin/prompts/new": {
-    "color-contrast|incomplete": 2
-  },
-  "admin /admin/prompts/visual-prompt-active": {},
-  "admin /admin/prompts/visual-prompt-active/edit": {
     "color-contrast|incomplete": 1
   },
+  "admin /admin/prompts/visual-prompt-active": {},
+  "admin /admin/prompts/visual-prompt-active/edit": {},
   "admin /admin/queues": {},
   "admin /admin/rewind/playground": {},
   "admin /admin/settings": {},

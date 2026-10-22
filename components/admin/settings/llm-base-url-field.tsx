@@ -1,32 +1,33 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { StyledInput } from "@/components/ui/styled-input"
+import { Input } from "@/components/ui/input"
 import { OPENAI_COMPATIBLE_PRESETS } from "@/lib/llm/provider-presets"
 
 interface LLMBaseUrlFieldProps {
-  id: string
   value: string
   onChange: (value: string) => void
   disabled?: boolean
 }
 
-/** The base URL of an OpenAI-compatible server, with one-click presets. The form renders its label. */
-export function LLMBaseUrlField({ id, value, onChange, disabled }: LLMBaseUrlFieldProps) {
+/**
+ * The base URL of an OpenAI-compatible server, with one-click presets. It
+ * sits in a `FormField`, which labels it and shows its description.
+ */
+export function LLMBaseUrlField({ value, onChange, disabled }: LLMBaseUrlFieldProps) {
   return (
-    <div>
-      <StyledInput
-        id={id}
+    <div className="flex flex-col gap-2">
+      <Input
         type="url"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onValueChange={onChange}
         placeholder={OPENAI_COMPATIBLE_PRESETS.ollama.baseUrl}
         required
         disabled={disabled}
         autoComplete="off"
         data-testid="llm-base-url-input"
       />
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {Object.entries(OPENAI_COMPATIBLE_PRESETS).map(([key, preset]) => (
           <Button
             key={key}
@@ -41,9 +42,6 @@ export function LLMBaseUrlField({ id, value, onChange, disabled }: LLMBaseUrlFie
           </Button>
         ))}
       </div>
-      <p className="mt-1 text-xs opacity-70">
-        The server&apos;s OpenAI-compatible API, including its path (usually /v1).
-      </p>
     </div>
   )
 }

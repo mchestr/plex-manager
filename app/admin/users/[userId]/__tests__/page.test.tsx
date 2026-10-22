@@ -17,6 +17,7 @@ jest.mock('@/lib/stripe/client', () => ({ getStripeDashboardBaseUrl: async () =>
 jest.mock('@/lib/settings/app-settings', () => ({
   getFormat: async () => (await import('@/lib/utils/format')).bindFormat({ timeZone: 'America/Chicago', locale: 'en-US' }),
 }))
+jest.mock('@/lib/admin/user-detail-tabs', () => ({ regenerateEstimateCopy: async () => '' }))
 jest.mock('@/lib/admin/user-detail', () => ({
   ...jest.requireActual('@/lib/admin/user-detail'),
   getUserDetailHeader: jest.fn(),

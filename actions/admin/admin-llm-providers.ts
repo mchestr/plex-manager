@@ -27,7 +27,7 @@ import { loadProviderModels, testLLMProviderConnection } from "@/lib/connections
 import type { LLMProvider } from "@/lib/generated/prisma/client"
 import { requireAdmin } from "@/lib/admin"
 import { lookupModel, normalizeModelId } from "@/lib/llm/models"
-import { LLM_PROVIDER_IDS } from "@/lib/llm/provider-presets"
+import { LLM_PROVIDER_IDS, llmKeyDestination } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
@@ -71,17 +71,6 @@ type ListResult =
 
 type SaveResult = ActionResult<null, ActionErrorCode | SecretRequiredCode>
 
-/** Where each hosted provider's key is sent. An OpenAI-compatible key goes to its base URL. */
-const HOSTED_API_ORIGINS: Record<string, string> = {
-  openai: "https://api.openai.com",
-  anthropic: "https://api.anthropic.com",
-  google: "https://generativelanguage.googleapis.com",
-}
-
-function keyDestination(provider: string, baseUrl: string | null | undefined): string {
-  return (provider === "openai-compatible" ? baseUrl : HOSTED_API_ORIGINS[provider]) ?? ""
-}
-
 /**
  * The stored key, when it may be reused: same provider, and the same
  * destination origin.
@@ -92,8 +81,8 @@ function reusableKey(stored: LLMProvider | null, provider: string, baseUrl: stri
   if (!stored || stored.provider !== provider) return undefined
   const resolution = resolveSecretForOrigin({
     submitted: undefined,
-    stored: { secret: stored.apiKey, url: keyDestination(stored.provider, stored.baseUrl) },
-    submittedUrl: keyDestination(provider, baseUrl),
+    stored: { secret: stored.apiKey, url: llmKeyDestination(stored.provider, stored.baseUrl) },
+    submittedUrl: llmKeyDestination(provider, baseUrl),
   })
   return resolution.ok ? resolution.secret : undefined
 }
@@ -164,9 +153,11 @@ async function updateLLMProviderForPurpose(
     // A blank key that cannot be reused reads as "API key is required"; say why
     const keyIssue = parsed.error.issues.some((issue) => issue.path[0] === "apiKey")
     if (keyIssue && !submittedKey && stored?.apiKey) {
-      return { success: false, code: "SECRET_REQUIRED", error: "Enter the API key again: the provider or its address changed." }
+      const error = "Enter the API key again: the provider or its address changed."
+      return { success: false, code: "SECRET_REQUIRED", error, fieldErrors: { apiKey: [error] } }
     }
-    return { success: false, code: "VALIDATION", error: message }
+    const field = parsed.error.issues[0]?.path[0]
+    return { success: false, code: "VALIDATION", error: message, ...(typeof field === "string" && { fieldErrors: { [field]: [message] } }) }
   }
   const validated = parsed.data
   const validatedBaseUrl = validated.provider === "openai-compatible" ? validated.baseUrl : null

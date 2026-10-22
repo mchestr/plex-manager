@@ -11,7 +11,11 @@
  * - `RewindErrorCode` from `lib/wrapped/generation-errors.ts` (stored failures);
  * - `ActionErrorCode` from `lib/actions/result.ts` (Server Action results);
  * - `FlashErrorCode` from `lib/ui/flash-codes.ts` (redirects that carry a code);
- * - `RewindPanelCode`, the states `/rewind/<year>` shows on a status panel (P5.1).
+ * - `RewindPanelCode`, the states `/rewind/<year>` shows on a status panel (P5.1);
+ * - `SECRET_REQUIRED` from `lib/security/secret-reuse.ts` (a stored secret refused for a new address).
+ *
+ * {@link connectionTestCopy} maps a connection test's code to the field it
+ * belongs to and an Alert with the fix (P10.20).
  *
  * The map `satisfies Record<AppErrorCode, ...>`, so a new code without copy is
  * a type error. Anything that is not a known code, including an exception's
@@ -26,6 +30,8 @@
 import type { ActionErrorCode } from "@/lib/actions/result"
 import { authErrorKind, type AuthErrorKind } from "@/lib/auth-errors"
 import type { ErrorCode } from "@/lib/security/error-handler"
+import type { SecretRequiredCode } from "@/lib/security/secret-reuse"
+import type { ProbeFailureCode } from "@/lib/settings/connection-status"
 import type { FlashErrorCode } from "@/lib/ui/flash-codes"
 import { rewindInfraMessage, type RewindInfraCode } from "@/lib/rewind/infra-copy"
 import type { RewindErrorCode } from "@/lib/wrapped/generation-errors"
@@ -40,7 +46,7 @@ export type RewindPanelCode =
   | "REWIND_NOT_ELIGIBLE"
   | RewindInfraCode
 
-type AppErrorCode = `${ErrorCode}` | RewindErrorCode | ActionErrorCode | FlashErrorCode | RewindPanelCode
+type AppErrorCode = `${ErrorCode}` | RewindErrorCode | ActionErrorCode | FlashErrorCode | RewindPanelCode | SecretRequiredCode
 
 interface ErrorCopy {
   title: string
@@ -134,6 +140,14 @@ const COPY = {
     },
   },
   INTERNAL,
+
+  // lib/security/secret-reuse.ts: a blank secret refused for a new address (SEC-31)
+  SECRET_REQUIRED: {
+    member: {
+      title: "Enter the key again",
+      description: "The address changed, so the saved key can't be used with it. Enter the key again.",
+    },
+  },
 
   // lib/wrapped/generation-errors.ts RewindErrorCode
   TAUTULLI_USER_NOT_FOUND: rewind(
@@ -280,4 +294,69 @@ export function boundaryCopy(error: Error & { digest?: string }): BoundaryCopy {
   if (auth) return { auth, ...AUTH_COPY[auth] }
   const copy = errorCopy(error.digest, { audience: "member" })
   return error.digest ? { auth: null, ...copy, code: error.digest } : { auth: null, ...copy }
+}
+
+/** Why a connection test or a save's check failed (P10.20). */
+export type ConnectionTestCode = ProbeFailureCode | SecretRequiredCode
+
+export interface ConnectionTestCopy {
+  /** The field the error belongs on. */
+  field: "url" | "secret"
+  /** The short line under that field. */
+  fieldError: string
+  /** The inline Alert: what happened, and the fix. */
+  title: string
+  fix: string
+}
+
+/**
+ * A connection test's code as copy: a line for the URL or secret field and
+ * an inline Alert with the fix. The tester's own message is never shown.
+ *
+ * @param noun - what the secret is called in this form ("API key", "Plex token")
+ *
+ * @example
+ * ```ts
+ * connectionTestCopy("NOT_FOUND").fieldError // "Nothing answered at this address"
+ * connectionTestCopy("UNAUTHORIZED", "Plex token").field // "secret"
+ * ```
+ */
+export function connectionTestCopy(code: ConnectionTestCode, noun = "API key"): ConnectionTestCopy {
+  switch (code) {
+    case "TIMEOUT":
+      return {
+        field: "url",
+        fieldError: "Nothing answered within 5 seconds",
+        title: "The server didn't answer in time",
+        fix: "Check that it's running and that this server can reach the address.",
+      }
+    case "NOT_FOUND":
+      return {
+        field: "url",
+        fieldError: "Nothing answered at this address",
+        title: "Nothing answered at this address",
+        fix: "Check the scheme, host and port, and that the service is running.",
+      }
+    case "UNREACHABLE":
+      return {
+        field: "url",
+        fieldError: "Can't connect to this address",
+        title: "Couldn't connect",
+        fix: "Check the address and port, and any firewall or reverse proxy in between.",
+      }
+    case "UNAUTHORIZED":
+      return {
+        field: "secret",
+        fieldError: `The server refused this ${noun}`,
+        title: `The ${noun} was refused`,
+        fix: `Copy the ${noun} again from the service's settings.`,
+      }
+    case "SECRET_REQUIRED":
+      return {
+        field: "secret",
+        fieldError: `Enter the ${noun} again to use it with the new address`,
+        title: `Enter the ${noun} again`,
+        fix: `The saved ${noun} is only sent to the address it was saved with.`,
+      }
+  }
 }

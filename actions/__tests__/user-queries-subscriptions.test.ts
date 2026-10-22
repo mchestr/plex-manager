@@ -97,7 +97,7 @@ describe('getAllUsersWithWrapped - subscription attach', () => {
       }),
     ])
 
-    const result = await getAllUsersWithWrapped(2024)
+    const { users: result } = await getAllUsersWithWrapped(2024)
 
     const user1 = result.find((u) => u.id === 'user-1')!
     expect(user1.subscriptionStatus).toBe('ACTIVE')
@@ -120,7 +120,7 @@ describe('getAllUsersWithWrapped - subscription attach', () => {
     ]
     mockPrisma.user.findMany.mockResolvedValue(users)
 
-    const result = await getAllUsersWithWrapped(2024)
+    const { users: result } = await getAllUsersWithWrapped(2024)
 
     const exemptUser = result.find((u) => u.id === 'user-1')!
     expect(exemptUser.isExempt).toBe(true)
@@ -135,7 +135,7 @@ describe('getAllUsersWithWrapped - subscription attach', () => {
     const users = [makePrismaUser({ id: 'user-1', isExempt: false, exemptReason: null })]
     mockPrisma.user.findMany.mockResolvedValue(users)
 
-    const result = await getAllUsersWithWrapped(2024)
+    const { users: result } = await getAllUsersWithWrapped(2024)
 
     const user = result[0]
     expect(user.id).toBe('user-1')

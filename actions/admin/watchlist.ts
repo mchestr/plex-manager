@@ -12,35 +12,6 @@ import { globalWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
 const logger = createLogger("ADMIN_WATCHLIST_ACTIONS")
 
 /**
- * Get global watchlist sync settings (admin only)
- */
-export async function getGlobalWatchlistSyncSettings() {
-  // requireAdmin() throws (caught by the error boundary) for non-admins.
-  await requireAdmin()
-
-  try {
-    const config = await prisma.config.findUnique({
-      where: { id: "config" },
-      select: {
-        watchlistSyncEnabled: true,
-        watchlistSyncIntervalMinutes: true,
-      },
-    })
-
-    return {
-      success: true as const,
-      data: {
-        watchlistSyncEnabled: config?.watchlistSyncEnabled ?? false,
-        watchlistSyncIntervalMinutes: config?.watchlistSyncIntervalMinutes ?? 60,
-      },
-    }
-  } catch (error) {
-    logger.error("Error fetching global watchlist sync settings", error)
-    return { success: false as const, error: "Failed to fetch settings" }
-  }
-}
-
-/**
  * Update global watchlist sync settings (admin only)
  */
 export const updateGlobalWatchlistSyncSettings = adminAction({

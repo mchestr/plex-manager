@@ -1,18 +1,10 @@
 {
   "schema": 1,
-  "commit": "e30fd63620742346675c7a3671014afc975c5641",
-  "generatedAt": "2026-10-22T15:17:05.602Z",
+  "commit": "f741a92794593f090016cfd765386ba152bacb80",
+  "generatedAt": "2026-10-22T17:10:37.289Z",
   "files": {
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "copy": 1
-    },
-    "components/admin/invites/invite-details-client.tsx": {
-      "caps-eyebrow": 6,
-      "raw-palette": 65
-    },
-    "components/admin/invites/invites-page-client.tsx": {
-      "caps-eyebrow": 6,
-      "raw-palette": 108
     },
     "components/setup/setup-wizard/dev-mode-banner.tsx": {
       "raw-palette": 8
@@ -25,6 +17,7 @@
       "gradient": 1,
       "gradient-text": 2,
       "infinite-motion": 2,
+      "inline-svg": 1,
       "raw-palette": 8
     },
     "components/setup/setup-wizard/llm-provider-form.tsx": {
@@ -238,11 +231,12 @@
   "totals": {
     "arbitrary-type-z": 24,
     "blur": 13,
-    "caps-eyebrow": 38,
+    "caps-eyebrow": 26,
     "copy": 4,
     "gradient": 45,
     "gradient-text": 28,
     "infinite-motion": 19,
-    "raw-palette": 611
+    "inline-svg": 1,
+    "raw-palette": 438
   }
 }

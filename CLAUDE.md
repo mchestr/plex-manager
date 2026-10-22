@@ -692,6 +692,9 @@ if (!stripe) return { error: 'Stripe is not configured' }
 - **Config**: `stripeEnabled`, `stripeSecretKey` (ENCRYPTED), `stripeWebhookSecret`
   (ENCRYPTED), and `stripePriceIds` (JSON array) live on `Config`. Secrets are
   registered in `ENCRYPTED_FIELDS` (`lib/prisma.ts`).
+- **Settings form**: the keys are `SecretInput`s in the saved state only
+  (`getStripeConfig().saved` carries `{ last4 }`, never a key). Both go only to
+  Stripe, so a blank field keeps the stored key and never asks for re-entry.
 - **Hosted UI**: no in-app card handling — Checkout (subscribe) and Billing
   Portal (manage/cancel) are Stripe-hosted.
 - **API version**: `apiVersion` is intentionally NOT hard-pinned in

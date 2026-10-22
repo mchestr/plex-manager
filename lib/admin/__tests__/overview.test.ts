@@ -39,9 +39,9 @@ beforeEach(() => {
   jest.mocked(getConnectionHealth).mockResolvedValue({
     checkedAt: NOW.toISOString(),
     connections: [
-      { id: "plex", label: "Plex", status: "ok" },
-      { id: "tautulli", label: "Tautulli", status: "unreachable" },
-      { id: "sonarr", label: "Sonarr", status: "notConfigured" },
+      { id: "plex", label: "Plex", status: "ok", code: null },
+      { id: "tautulli", label: "Tautulli", status: "unreachable", code: "UNREACHABLE" },
+      { id: "sonarr", label: "Sonarr", status: "notConfigured", code: null },
     ],
   })
   jest.mocked(checkDependencies).mockResolvedValue({ database: "ok", redis: "ok" })
@@ -71,7 +71,7 @@ describe("getAdminOverview", () => {
       total: 4,
       attention: 0,
       broken: 1,
-      worst: { id: "tautulli", label: "Tautulli", status: "unreachable" },
+      worst: { id: "tautulli", label: "Tautulli", status: "unreachable", code: "UNREACHABLE" },
     })
     expect(overview.queues).toEqual({ redisConfigured: true, redisConnected: true, workerRunning: true, failed: 2, waiting: 3 })
     expect(overview.rewind).toMatchObject({ year: 2026, isOpen: true, ready: 64, members: 70, opened: 0 })

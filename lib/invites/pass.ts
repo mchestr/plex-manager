@@ -25,6 +25,7 @@ import "server-only"
 
 import { cache } from "react"
 
+import type { Prisma } from "@/lib/generated/prisma/client"
 import { monogramFor, serverName as brandServerName } from "@/lib/brand"
 import { inviteLibraryNames } from "@/lib/invites/library-names"
 import { prisma } from "@/lib/prisma"
@@ -35,7 +36,8 @@ import type { InvitePassData, InviteState } from "@/types/invite"
 
 export type InvitePassLookup = { ok: true; pass: InvitePassData } | { ok: false; code: "RATE_LIMITED" }
 
-const inviteSelect = {
+/** What the pass reads from an invite row; the admin detail query selects it too. */
+export const invitePassSelect = {
   code: true,
   serverType: true,
   maxUses: true,
@@ -44,7 +46,7 @@ const inviteSelect = {
   createdBy: true,
   librarySectionIds: true,
   jellyfinLibraryIds: true,
-} as const
+} as const satisfies Prisma.InviteSelect
 
 function stateOf(invite: { expiresAt: Date | null; useCount: number; maxUses: number }, now: Date): InviteState {
   if (invite.expiresAt && invite.expiresAt < now) return "expired"
@@ -97,13 +99,27 @@ export const getInvitePass = cache(async (code: string): Promise<InvitePassLooku
   const parsed = inviteCodeSchema.safeParse(code)
   if (!parsed.success) return { ok: true, pass: unknownPass("", brand) }
 
-  const invite = await prisma.invite.findUnique({ where: { code: parsed.data }, select: inviteSelect })
+  const invite = await prisma.invite.findUnique({ where: { code: parsed.data }, select: invitePassSelect })
   if (!invite) return { ok: true, pass: unknownPass(parsed.data, brand) }
 
-  let serverName = brand
+  return { ok: true, pass: await invitePassFor(invite, brand) }
+})
+
+/** The invite row fields the pass reads. */
+type InvitePassSource = Prisma.InviteGetPayload<{ select: typeof invitePassSelect }>
+
+/**
+ * The InvitePass for an invite row, as its invitee sees it. P10.1's admin
+ * detail page previews it with this; it spends no limiter point.
+ *
+ * @param brand - `serverName()`, when the caller already read it
+ */
+export async function invitePassFor(invite: InvitePassSource, brand?: string): Promise<InvitePassData> {
+  const plexName = brand ?? (await brandServerName())
+  let serverName = plexName
   if (invite.serverType === "JELLYFIN") {
     const jellyfinName = await activeJellyfinName()
-    if (!jellyfinName) return { ok: true, pass: unknownPass(invite.code, brand) }
+    if (!jellyfinName) return unknownPass(invite.code, plexName)
     serverName = jellyfinName
   }
 
@@ -114,17 +130,14 @@ export const getInvitePass = cache(async (code: string): Promise<InvitePassLooku
   ])
 
   return {
-    ok: true,
-    pass: {
-      state: stateOf(invite, new Date()),
-      code: invite.code,
-      serverType: invite.serverType,
-      serverName,
-      monogram: monogramFor(serverName),
-      inviter,
-      libraries,
-      usesLeft: { left: Math.max(0, invite.maxUses - invite.useCount), total: invite.maxUses },
-      expiresOn: invite.expiresAt ? format.date(invite.expiresAt, "long") : null,
-    },
+    state: stateOf(invite, new Date()),
+    code: invite.code,
+    serverType: invite.serverType,
+    serverName,
+    monogram: monogramFor(serverName),
+    inviter,
+    libraries,
+    usesLeft: { left: Math.max(0, invite.maxUses - invite.useCount), total: invite.maxUses },
+    expiresOn: invite.expiresAt ? format.date(invite.expiresAt, "long") : null,
   }
-})
+}

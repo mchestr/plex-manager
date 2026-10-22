@@ -1,14 +1,16 @@
 "use client"
 
+import { useRouter } from "next/navigation"
+import { useMemo, useState, useSyncExternalStore } from "react"
+
 import { updateServerTimeZone } from "@/actions/admin"
-import { Button } from "@/components/ui/button"
+import { FormField } from "@/components/ui/form-field"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { useToast } from "@/components/ui/toast"
+import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 import { normalizeTimeZone, timeZoneOptions } from "@/lib/utils/zoned-time"
-import { useRouter } from "next/navigation"
-import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
-interface ServerTimeZoneFormProps {
+export interface ServerTimeZone {
   /** `Config.timezone`, or null when it was never set. */
   configured: string | null
   /** The zone in effect (`serverZone()`): the setting, else `TZ`, else UTC. */
@@ -29,64 +31,47 @@ function zoneGroups() {
 }
 
 /**
- * The server time zone setting. While none is stored, the browser's zone is
- * pre-selected; it is read only after hydration, so the server and the first
- * client render agree.
+ * The server time zone as part of the System section's form (UI-31). While
+ * none is stored, the browser's zone is shown selected; it is read only after
+ * hydration, so the server and the first client render agree.
  */
-export function ServerTimeZoneForm({ configured, effective }: ServerTimeZoneFormProps) {
+export function useTimeZoneForm({ configured, effective }: ServerTimeZone) {
   const router = useRouter()
   const toast = useToast()
-  const [isPending, startTransition] = useTransition()
-  const [chosen, setChosen] = useState<string | null>(null)
+  const [error, setError] = useState<string>()
   const detected = useSyncExternalStore(noSubscription, browserZone, () => null)
+  const settings = useSettingsForm({ zone: configured ?? "" }, async ({ zone }) => {
+    const result = await updateServerTimeZone(zone || detected || effective)
+    if (!result.success) {
+      setError(result.fieldErrors ? result.error : undefined)
+      if (!result.fieldErrors) toast.showError(result.error)
+      return
+    }
+    setError(undefined)
+    toast.showSuccess(`Server time zone set to ${result.data.timezone}`)
+    router.refresh()
+  })
+  return { ...settings, error, shown: settings.values.zone || detected || effective, configured, effective }
+}
+
+/** The zone picker, with what is in effect now and where it comes from. */
+export function ServerTimeZoneField({ state }: { state: ReturnType<typeof useTimeZoneForm> }) {
   const optgroups = useMemo(() => zoneGroups(), [])
-
-  const value = chosen ?? configured ?? detected ?? effective
-
-  const save = () => {
-    startTransition(async () => {
-      const result = await updateServerTimeZone(value)
-      if (result.success) {
-        setChosen(null)
-        toast.showSuccess(`Server time zone set to ${result.timezone}`)
-        router.refresh()
-      } else {
-        toast.showError(result.error || "Failed to update the server time zone")
-      }
-    })
-  }
+  const description = state.configured
+    ? `In effect: ${state.effective}. Season dates, announcement expiry and Rewind times use it.`
+    : `In effect: ${state.effective}, from the TZ environment variable or UTC. Saving a zone here overrides it. Season dates, announcement expiry and Rewind times use it.`
 
   return (
-    <div className="flex flex-col gap-2" data-testid="server-time-zone-form">
-      <label htmlFor="server-time-zone" className="text-xs font-medium">
-        Server time zone
-      </label>
-      <p className="text-xs" data-testid="server-time-zone-effective">
-        {configured
-          ? `In effect: ${effective}.`
-          : `In effect: ${effective}, from the TZ environment variable or UTC. Saving a zone here overrides it.`}{" "}
-        Season dates, announcement expiry and Rewind times use it.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-2">
+    <div data-testid="server-time-zone-form">
+      <FormField name="server-time-zone" label="Server time zone" description={<span data-testid="server-time-zone-effective">{description}</span>} error={state.error}>
         <StyledDropdown
-          id="server-time-zone"
-          value={value}
-          onChange={setChosen}
+          value={state.shown}
+          onChange={(zone) => state.set({ zone })}
           optgroups={optgroups}
-          disabled={isPending}
-          className="flex-1"
+          disabled={state.form.isPending}
           data-testid="server-time-zone-select"
         />
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={save}
-          disabled={isPending || value === configured}
-          data-testid="server-time-zone-save-button"
-        >
-          {isPending ? "Saving..." : "Save time zone"}
-        </Button>
-      </div>
+      </FormField>
     </div>
   )
 }

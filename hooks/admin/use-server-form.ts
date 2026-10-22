@@ -1,0 +1,173 @@
+"use client"
+
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+
+import {
+  updateJellyfinServer,
+  updateOverseerr,
+  updatePlexServer,
+  updatePrometheus,
+  updateRadarr,
+  updateSonarr,
+  updateTautulli,
+} from "@/actions/admin"
+import { testServiceConnection } from "@/actions/admin/test-connection"
+import type { TestResult } from "@/components/ui/settings-section"
+import { useToast } from "@/components/ui/toast"
+import { useSettingsForm } from "@/hooks/admin/use-settings-form"
+import { needsSecretReentry, safeOrigin, type SavedSecret } from "@/lib/security/saved-secret"
+import { connectionTestCopy, errorCopy, type ConnectionTestCode } from "@/lib/ui/error-copy"
+
+export type ServerType = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus"
+
+/**
+ * The active server config, with its secret replaced by `{ last4, origin }`
+ * (`describeSecret`), so a blank secret field keeps it for that origin only.
+ */
+export interface StoredServer {
+  name: string
+  url: string
+  publicUrl?: string | null
+  query?: string
+  secret?: SavedSecret | null
+}
+
+export interface ServerFormValues {
+  name: string
+  url: string
+  publicUrl: string
+  /** The Plex token or the API key, as typed; blank keeps the stored one. */
+  secret: string
+  query: string
+}
+
+type Field = keyof ServerFormValues
+export type ServerFormErrors = Partial<Record<Field, string>>
+
+export const SERVER_LABELS: Record<ServerType, string> = {
+  plex: "Plex",
+  jellyfin: "Jellyfin",
+  tautulli: "Tautulli",
+  overseerr: "Overseerr",
+  sonarr: "Sonarr",
+  radarr: "Radarr",
+  prometheus: "Prometheus",
+}
+
+/** "Plex token" or "API key", for labels and copy. */
+export const secretNoun = (type: ServerType) => (type === "plex" ? "Plex token" : "API key")
+
+const API_KEY_ACTIONS = {
+  jellyfin: updateJellyfinServer,
+  tautulli: updateTautulli,
+  overseerr: updateOverseerr,
+  sonarr: updateSonarr,
+  radarr: updateRadarr,
+}
+
+function save(type: ServerType, values: ServerFormValues) {
+  const secret = values.secret.trim() || undefined
+  const publicUrl = values.publicUrl || undefined
+  if (type === "plex") return updatePlexServer({ name: values.name, url: values.url, token: secret, publicUrl })
+  if (type === "prometheus") return updatePrometheus({ name: values.name, url: values.url, query: values.query })
+  return API_KEY_ACTIONS[type]({ name: values.name, url: values.url, apiKey: secret, publicUrl })
+}
+
+const FIELDS: readonly Field[] = ["name", "url", "publicUrl", "secret", "query"]
+
+/** The form field an action's field error belongs to: `token` and `apiKey` are the secret. */
+function fieldOf(key: string): Field | undefined {
+  if (key === "token" || key === "apiKey") return "secret"
+  return FIELDS.find((field) => field === key)
+}
+
+/** An action's `fieldErrors`, keyed by the form's fields. */
+function formErrors(fieldErrors: Record<string, string[]> | undefined): ServerFormErrors {
+  const errors: ServerFormErrors = {}
+  for (const [key, messages] of Object.entries(fieldErrors ?? {})) {
+    const field = fieldOf(key)
+    if (field && messages[0]) errors[field] = messages[0]
+  }
+  return errors
+}
+
+/**
+ * One service's always-open form (UI-31): values, dirty state, Discard and
+ * Save, field errors from the actions, and Test connection with the typed
+ * values (`testServiceConnection`).
+ *
+ * While the URL's origin differs from the one the secret was saved for and
+ * nothing is typed, `form.blockedReason` disables Test and Save (SEC-31); the
+ * server refuses the same case with `SECRET_REQUIRED` on the secret field.
+ */
+export function useServerForm(type: ServerType, server: StoredServer | null) {
+  const router = useRouter()
+  const toast = useToast()
+  const [errors, setErrors] = useState<ServerFormErrors>({})
+  const noun = secretNoun(type)
+  const initial: ServerFormValues = {
+    name: server?.name ?? "",
+    url: server?.url ?? "",
+    publicUrl: server?.publicUrl ?? "",
+    secret: "",
+    query: server?.query ?? "",
+  }
+
+  const settings = useSettingsForm(initial, async (values) => {
+    const result = await save(type, values)
+    if (!result.success) {
+      const fieldErrors = formErrors(result.fieldErrors)
+      setErrors(fieldErrors)
+      // A field error says it where it belongs; the toast is for the rest
+      if (Object.keys(fieldErrors).length === 0) toast.showError(result.error)
+      return
+    }
+    setErrors({})
+    toast.showSuccess(`${SERVER_LABELS[type]} settings saved`)
+    router.refresh()
+    return { ...values, secret: "" }
+  })
+
+  const currentOrigin = safeOrigin(settings.values.url)
+  const blocked = type !== "prometheus" && needsSecretReentry(server?.secret, currentOrigin, settings.values.secret)
+
+  /** Changes fields and clears their errors. */
+  const set = (patch: Partial<ServerFormValues>) => {
+    settings.set(patch)
+    setErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([field]) => !(field in patch))))
+  }
+
+  const test = async (): Promise<TestResult> => {
+    const { values } = settings
+    const result = await testServiceConnection({
+      service: type,
+      url: values.url,
+      secret: values.secret.trim() || undefined,
+      query: type === "prometheus" ? values.query : undefined,
+    })
+    const failed = (code: ConnectionTestCode): TestResult => {
+      const copy = connectionTestCopy(code, noun)
+      setErrors({ [copy.field]: copy.fieldError })
+      return { ok: false, message: copy.title, detail: copy.fix }
+    }
+    if (result.success) {
+      if (result.data.status === "unreachable") return failed(result.data.code)
+      setErrors({})
+      return { ok: true, message: `Connected to ${SERVER_LABELS[type]} with these settings.` }
+    }
+    if (result.code === "SECRET_REQUIRED") return failed("SECRET_REQUIRED")
+    setErrors(formErrors(result.fieldErrors))
+    const copy = errorCopy(result.code, { audience: "admin" })
+    return { ok: false, message: copy.title, detail: copy.description }
+  }
+
+  return {
+    values: settings.values,
+    set,
+    errors,
+    currentOrigin,
+    test,
+    form: { ...settings.form, blockedReason: blocked ? `Enter the ${type === "plex" ? "token" : "API key"} to test or save` : undefined },
+  }
+}

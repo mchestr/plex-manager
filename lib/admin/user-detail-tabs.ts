@@ -9,15 +9,14 @@
 import "server-only"
 
 import { activeRunStarts } from "@/lib/admin/active-runs"
-import { canRegenerate, REGENERATE_STALE_AFTER_MS } from "@/lib/admin/can-regenerate"
+import { canRegenerate, type RewindRowState, rewindRowState } from "@/lib/admin/can-regenerate"
 import { lookupModel } from "@/lib/llm/models"
 import { isLLMProviderId } from "@/lib/llm/provider-presets"
 import { usageTotalsByUser } from "@/lib/llm/usage-totals"
 import { prisma } from "@/lib/prisma"
+import type { BoundFormat } from "@/lib/utils/format"
 import { estimateSeasonCost } from "@/lib/wrapped/admin/estimate"
 import { getSeasonBudget } from "@/lib/wrapped/admin/season-estimate"
-
-export type RewindRowState = "ready" | "generating" | "stuck" | "failed" | "notStarted"
 
 export interface UserRewindRow {
   wrappedId: string
@@ -33,14 +32,6 @@ export interface UserRewindRow {
   canRegenerate: boolean
   /** Stored LLM generations, newest first, for the history pages. */
   versions: { id: string; createdAt: Date }[]
-}
-
-/** A year's state from its `PlexWrapped.status` and any active run's start. */
-export function rewindRowState(status: string | null, runStartedAt: Date | null | undefined, now: number): RewindRowState {
-  if (runStartedAt) return now - runStartedAt.getTime() > REGENERATE_STALE_AFTER_MS ? "stuck" : "generating"
-  if (status === "completed") return "ready"
-  if (status === "failed") return "failed"
-  return status === "generating" ? "generating" : "notStarted"
 }
 
 /** Every year of the member's Rewind, newest first. */
@@ -100,7 +91,7 @@ export async function getUserRewindRows(userId: string, seasonYear: number, now:
  * What one member's regeneration would cost, from P7.8's estimate: one full
  * copy call at the Rewind model's price, or nothing when copy is template only.
  */
-export async function getRegenerateEstimate(year: number): Promise<{ costUsd: number; budgetUsd: number }> {
+async function getRegenerateEstimate(year: number): Promise<{ costUsd: number; budgetUsd: number }> {
   const [config, provider, budget] = await Promise.all([
     prisma.config.findUnique({ where: { id: "config" }, select: { rewindLlmMode: true, llmDisabled: true } }),
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" }, select: { provider: true, model: true } }),
@@ -114,6 +105,17 @@ export async function getRegenerateEstimate(year: number): Promise<{ costUsd: nu
     budgetLeftUsd: budget.budgetUsd - budget.spentUsd,
   })
   return { costUsd: estimate.costUsd, budgetUsd: budget.budgetUsd }
+}
+
+/**
+ * The Regenerate confirm's cost line, shared by the Rewind tab, the user
+ * detail header and the users list: "About $0.02 of the $5.00 season budget."
+ */
+export async function regenerateEstimateCopy(year: number, f: BoundFormat): Promise<string> {
+  const estimate = await getRegenerateEstimate(year)
+  return estimate.costUsd > 0
+    ? `About ${f.money(estimate.costUsd)} of the ${f.money(estimate.budgetUsd)} season budget.`
+    : "It uses template copy, so it costs nothing."
 }
 
 export interface UserUsageData {

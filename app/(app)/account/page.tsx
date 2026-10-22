@@ -3,11 +3,13 @@ import Link from "next/link"
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 
+import { AppearancePicker } from "@/components/account/appearance-picker"
 import { NotifySwitch } from "@/components/account/notify-switch"
 import { TimezoneField } from "@/components/account/timezone-field"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authOptions } from "@/lib/auth"
+import { getAppSettings } from "@/lib/settings/app-settings"
 import { discordHandleFor } from "@/lib/member/shell"
 import { prisma } from "@/lib/prisma"
 import { serverZone } from "@/lib/utils/server-zone"
@@ -30,19 +32,20 @@ async function rewindNotify(userId: string): Promise<boolean> {
 
 /**
  * The member's account settings (ui-design-system 6.1, UI-30): Discord,
- * the Rewind ready notification, and the time zone. Appearance takes its
- * place after Time zone once P10.10 adds the light theme.
+ * the Rewind ready notification, the time zone, and Appearance while the
+ * light theme's flag is on (P10.10).
  */
 export default async function AccountPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect("/")
   const userId = session.user.id
 
-  const [user, discordHandle, notify, zone] = await Promise.all([
+  const [user, discordHandle, notify, zone, { lightThemeEnabled }] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
     discordHandleFor(userId),
     rewindNotify(userId),
     serverZone(),
+    getAppSettings(),
   ])
 
   return (
@@ -90,7 +93,16 @@ export default async function AccountPage() {
           </CardContent>
         </Card>
 
-        {/* Appearance: P10.10 adds it here, behind the light-theme flag. */}
+        {lightThemeEnabled && (
+          <Card data-testid="account-appearance">
+            <CardHeader>
+              <CardTitle as="h2">Appearance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AppearancePicker testId="account-appearance-picker" />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

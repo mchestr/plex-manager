@@ -36,7 +36,31 @@
 
 import "server-only"
 
+import { safeOrigin, type SavedSecret } from "@/lib/security/saved-secret"
 import { parseServerUrl } from "@/lib/utils"
+
+/** Secrets shorter than this show no last four, so the hint never gives most of one away. */
+const MIN_LENGTH_FOR_LAST4 = 12
+
+/**
+ * What a settings form may know about a stored secret: its last four (only
+ * for a secret of 12 characters or more) and the origin it may be sent to,
+ * or null when none is stored. `url` is left out for a fixed destination.
+ *
+ * @example
+ * ```ts
+ * describeSecret("abcdefgh12345678", "http://tautulli.lan:8181/x")
+ * // { last4: "5678", origin: "http://tautulli.lan:8181" }
+ * describeSecret("", "http://tautulli.lan:8181") // null
+ * ```
+ */
+export function describeSecret(secret: string | null | undefined, url?: string | null): SavedSecret | null {
+  if (!secret) return null
+  return {
+    last4: secret.length >= MIN_LENGTH_FOR_LAST4 ? secret.slice(-4) : "",
+    origin: url === undefined ? null : safeOrigin(url),
+  }
+}
 
 /** The refusal code, and the copy settings and setup show with it. */
 export type SecretRequiredCode = "SECRET_REQUIRED"

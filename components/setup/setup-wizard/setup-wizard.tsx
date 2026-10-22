@@ -13,6 +13,8 @@ import { RadarrForm } from "@/components/setup/setup-wizard/radarr-form"
 import { SonarrForm } from "@/components/setup/setup-wizard/sonarr-form"
 import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
 import { TautulliForm } from "@/components/setup/setup-wizard/tautulli-form"
+import { Icon } from "@/components/ui/icon"
+import { icons } from "@/lib/ui/icons"
 import { SETUP_STEPS } from "@/types/setup"
 import { AnimatePresence, motion } from "motion/react"
 import { useRouter } from "next/navigation"
@@ -190,13 +192,7 @@ export function SetupWizard({ currentStep: initialStep }: SetupWizardProps) {
                       aria-hidden="true"
                     >
                       {isComplete ? (
-                        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
+                        <Icon icon={icons.done} size={16} />
                       ) : (
                         step.id
                       )}

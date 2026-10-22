@@ -113,13 +113,12 @@ test.describe('Hydration across zones and locales', () => {
     expect(errors).toEqual([]);
   });
 
-  test('users, All filter', async ({ page }) => {
+  test('users, Role filter', async ({ page }) => {
     const errors = collectHydrationErrors(page);
     await page.goto('/admin/users');
-    // The filter renders once per layout (phone and desktop); use the visible one.
-    await page.getByTestId('users-filter-plex-access').filter({ visible: true }).click();
-    await page.getByTestId('users-filter-plex-access-option-all').filter({ visible: true }).click();
-    await expect(page.getByTestId(`user-row-${TEST_USERS.ADMIN.id}`)).toBeVisible();
+    await page.getByTestId('admin-users-filters-filter-role').click();
+    await page.getByTestId('admin-users-filters-filter-role-option-admin').click();
+    await expect(page.getByTestId(`admin-users-row-${TEST_USERS.ADMIN.id}`)).toBeVisible();
     await page.waitForLoadState('networkidle');
     expect(errors).toEqual([]);
   });

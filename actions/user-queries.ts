@@ -17,8 +17,10 @@ import { readStoredError, toStoredError } from "@/lib/wrapped/generation-errors"
 import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
 import { decodeActivityCursor, loadActivityTimeline } from "@/lib/admin/activity-timeline"
 import { activeRunStarts } from "@/lib/admin/active-runs"
-import {
+import type {
+  AdminUsersList,
   AdminUserWithWrappedStats,
+  PlexAccessCheck,
   UserActivityTimelineData,
 } from "@/types/admin"
 
@@ -88,75 +90,69 @@ export const getUserPlexWrapped = memberAction({
 })
 
 /**
- * Get all users with their wrapped status for `year` (the caller passes the
- * season year; there is no calendar default).
+ * Every user with their Rewind status for `year` (the caller passes the
+ * season year; there is no calendar default), and whether Plex could be asked
+ * about their access (P10.18).
+ *
+ * Plex being down never hides anyone: each non-owner's `hasPlexAccess` is
+ * null and `plexCheck.status` is `unreachable`, so the page can say why. A
+ * database failure throws to the admin error boundary rather than rendering
+ * an empty list.
  */
-export async function getAllUsersWithWrapped(year: number): Promise<AdminUserWithWrappedStats[]> {
-  // Admin-only: enumerates every user's PII. Placed before the try so the auth
-  // error propagates rather than being swallowed into an empty array.
+export async function getAllUsersWithWrapped(year: number): Promise<AdminUsersList> {
+  // Admin-only: enumerates every user's PII.
   await requireAdmin()
 
-  try {
-    // 1. Fetch users and their wrapped data
-    const users = await fetchUsersWithWrappedData(year)
+  const users = await fetchUsersWithWrappedData(year)
+  const userIds = users.map((u) => u.id)
+  const wrappedIds = users.flatMap((u) => u.plexWrapped.map((w) => w.id))
+  // Aggregate queries in one round; no N+1
+  const [access, shareStatsMap, subscriptionMap, totalUsageMap, yearUsageMap, runStarts] = await Promise.all([
+    buildPlexAccessMap(users),
+    fetchShareStatsMap(userIds),
+    fetchSubscriptionMap(userIds),
+    usageTotalsByUser(userIds),
+    usageTotalsForWrapped(wrappedIds),
+    activeRunStarts(userIds, year),
+  ])
+  const ownerPlexId = access.adminPlexUserId ? String(access.adminPlexUserId).trim() : null
 
-    // 2. Build Plex access map
-    const accessMap = await buildPlexAccessMap(users)
+  const rows = users.map((user): AdminUserWithWrappedStats => {
+    const wrapped = user.plexWrapped[0]
+    const shareStatsForUser = shareStatsMap.get(user.id) || { totalShares: 0, totalVisits: 0 }
+    const subscription = subscriptionMap.get(user.id) ?? null
 
-    // 3. Fetch share statistics for all users
-    const shareStatsMap = await fetchShareStatsMap(users.map(u => u.id))
-
-    // 4. Batch-load subscriptions and LLM usage totals (aggregate queries; no N+1)
-    const userIds = users.map((u) => u.id)
-    const wrappedIds = users.flatMap((u) => u.plexWrapped.map((w) => w.id))
-    const [subscriptionMap, totalUsageMap, yearUsageMap, runStarts] = await Promise.all([
-      fetchSubscriptionMap(userIds),
-      usageTotalsByUser(userIds),
-      usageTotalsForWrapped(wrappedIds),
-      activeRunStarts(userIds, year),
-    ])
-
-    // 5. Map users to DTO
-    return users.map((user) => {
-      const wrapped = user.plexWrapped[0]
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      plexUserId: user.plexUserId,
+      isAdmin: user.isAdmin,
+      isOwner: Boolean(ownerPlexId && user.plexUserId && String(user.plexUserId).trim() === ownerPlexId),
+      disabledAt: user.disabledAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      wrappedStatus: wrapped?.status || null,
+      wrappedGeneratedAt: wrapped?.generatedAt || null,
+      wrappedRunStartedAt: runStarts.get(user.id) ?? null,
+      totalWrappedCount: user._count.plexWrapped,
+      totalShares: shareStatsForUser.totalShares,
+      totalVisits: shareStatsForUser.totalVisits,
+      hasPlexAccess: access.map.get(user.id) ?? null,
       // This year's Rewind (regenerations included), and every call across all years
-      const currentYearUsage = (wrapped && yearUsageMap.get(wrapped.id)) ?? null
-      const totalUsage = totalUsageMap.get(user.id) ?? null
+      llmUsage: (wrapped && yearUsageMap.get(wrapped.id)) ?? null,
+      totalLlmUsage: totalUsageMap.get(user.id) ?? null,
+      subscriptionStatus: subscription?.status ?? null,
+      currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
+      cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
+      isExempt: user.isExempt,
+      exemptReason: user.exemptReason,
+      stripeCustomerId: subscription?.stripeCustomerId ?? null,
+    }
+  })
 
-      const hasPlexAccess = accessMap.get(user.id) ?? null
-      const shareStatsForUser = shareStatsMap.get(user.id) || { totalShares: 0, totalVisits: 0 }
-      const subscription = subscriptionMap.get(user.id) ?? null
-
-      return {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        image: user.image,
-        plexUserId: user.plexUserId,
-        isAdmin: user.isAdmin,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        wrappedStatus: wrapped?.status || null,
-        wrappedGeneratedAt: wrapped?.generatedAt || null,
-        wrappedRunStartedAt: runStarts.get(user.id) ?? null,
-        totalWrappedCount: user._count.plexWrapped,
-        totalShares: shareStatsForUser.totalShares,
-        totalVisits: shareStatsForUser.totalVisits,
-        hasPlexAccess,
-        llmUsage: currentYearUsage, // Current year's usage
-        totalLlmUsage: totalUsage, // Total usage across all years
-        subscriptionStatus: subscription?.status ?? null,
-        currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
-        cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
-        isExempt: user.isExempt,
-        exemptReason: user.exemptReason,
-        stripeCustomerId: subscription?.stripeCustomerId ?? null,
-      }
-    })
-  } catch (error) {
-    logger.error("Error getting all users", error)
-    return []
-  }
+  return { users: rows, plexCheck: { status: access.status, checkedAt: new Date() } }
 }
 
 /** Admin copy for each unshare failure; Plex's own text is never shown. */
@@ -271,7 +267,18 @@ async function fetchUsersWithWrappedData(year: number) {
   })
 }
 
-async function buildPlexAccessMap(users: { id: string; plexUserId: string | null }[]): Promise<Map<string, boolean | null>> {
+interface PlexAccessResult {
+  map: Map<string, boolean | null>
+  status: PlexAccessCheck["status"]
+  adminPlexUserId: string | null
+}
+
+/**
+ * Each user's access to the active Plex server: true, false, or null when it
+ * can't be known (no Plex account, or Plex didn't answer). The owner is
+ * always true, from the stored `adminPlexUserId`, even with Plex down.
+ */
+async function buildPlexAccessMap(users: { id: string; plexUserId: string | null }[]): Promise<PlexAccessResult> {
   const accessMap = new Map<string, boolean | null>()
 
   const plexServer = await prisma.plexServer.findFirst({
@@ -280,7 +287,16 @@ async function buildPlexAccessMap(users: { id: string; plexUserId: string | null
 
   if (!plexServer) {
     users.forEach(user => accessMap.set(user.id, null))
-    return accessMap
+    return { map: accessMap, status: "not-configured", adminPlexUserId: null }
+  }
+
+  const adminPlexUserId = plexServer.adminPlexUserId
+  const normalizedAdminId = adminPlexUserId ? String(adminPlexUserId).trim() : null
+  const isOwner = (plexUserId: string | null) =>
+    Boolean(normalizedAdminId && plexUserId && String(plexUserId).trim() === normalizedAdminId)
+  const unknown = (): PlexAccessResult => {
+    users.forEach(user => accessMap.set(user.id, isOwner(user.plexUserId) ? true : null))
+    return { map: accessMap, status: "unreachable", adminPlexUserId }
   }
 
   try {
@@ -289,71 +305,33 @@ async function buildPlexAccessMap(users: { id: string; plexUserId: string | null
       url: plexServer.url,
       token: plexServer.token,
     })
+    if (!identityResult.success || !identityResult.machineIdentifier) return unknown()
 
-    if (identityResult.success && identityResult.machineIdentifier) {
-      // Fetch all users from Plex.tv API once
-      const usersResult = await getPlexUsers(plexServer.token)
+    // Fetch all users from Plex.tv API once
+    const usersResult = await getPlexUsers(plexServer.token)
+    if (!usersResult.success || !usersResult.data) return unknown()
 
-      if (usersResult.success && usersResult.data) {
-        // Create a map of users by ID for efficient lookup
-        const plexUserMap = new Map<string, { id: string; username: string; servers: Array<{ machineIdentifier: string }> }>()
-        for (const plexUser of usersResult.data) {
-          plexUserMap.set(plexUser.id, plexUser)
-        }
-
-        const machineIdentifier = identityResult.machineIdentifier
-        const adminPlexUserId = plexServer.adminPlexUserId
-
-        // Ensure admin user has their server in their servers list
-        if (adminPlexUserId && machineIdentifier) {
-          const normalizedAdminId = String(adminPlexUserId).trim()
-          const adminUser = plexUserMap.get(normalizedAdminId)
-          if (adminUser) {
-            const hasServer = adminUser.servers.some((server) => server.machineIdentifier === machineIdentifier)
-            if (!hasServer) {
-              adminUser.servers.push({ machineIdentifier })
-            }
-          }
-        }
-
-        // Check access for each user using the fetched data
-        for (const user of users) {
-          if (!user.plexUserId) {
-            accessMap.set(user.id, null)
-            continue
-          }
-
-          const normalizedPlexUserId = String(user.plexUserId).trim()
-
-          // Check if user is admin
-          if (adminPlexUserId && normalizedPlexUserId === String(adminPlexUserId).trim()) {
-            accessMap.set(user.id, true)
-            continue
-          }
-
-          // Check if user exists in the map
-          const plexUser = plexUserMap.get(normalizedPlexUserId)
-          if (!plexUser) {
-            accessMap.set(user.id, false)
-            continue
-          }
-
-          // Check if user has access to the server by machine identifier
-          const hasAccess = plexUser.servers.some((server) => server.machineIdentifier === machineIdentifier)
-          accessMap.set(user.id, hasAccess)
-        }
-      } else {
-        users.forEach(user => accessMap.set(user.id, null))
-      }
-    } else {
-      users.forEach(user => accessMap.set(user.id, null))
+    const plexUserMap = new Map<string, { servers: Array<{ machineIdentifier: string }> }>()
+    for (const plexUser of usersResult.data) {
+      plexUserMap.set(plexUser.id, plexUser)
     }
+    const machineIdentifier = identityResult.machineIdentifier
+
+    for (const user of users) {
+      if (!user.plexUserId) {
+        accessMap.set(user.id, null)
+      } else if (isOwner(user.plexUserId)) {
+        accessMap.set(user.id, true)
+      } else {
+        const plexUser = plexUserMap.get(String(user.plexUserId).trim())
+        accessMap.set(user.id, Boolean(plexUser?.servers.some((server) => server.machineIdentifier === machineIdentifier)))
+      }
+    }
+    return { map: accessMap, status: "ok", adminPlexUserId }
   } catch (error) {
     logger.error("Error checking Plex access for users", error)
-    users.forEach(user => accessMap.set(user.id, null))
+    return unknown()
   }
-
-  return accessMap
 }
 
 async function fetchShareStatsMap(userIds: string[]): Promise<Map<string, { totalShares: number; totalVisits: number }>> {

@@ -3,12 +3,14 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+import { AppearancePicker } from "@/components/account/appearance-picker"
 import { AssistantTrigger } from "@/components/admin/chatbot/assistant-sheet"
 import { CommandMenuKeyHint, CommandMenuTrigger } from "@/components/admin/command-menu"
 import { AdminChrome } from "@/components/shell/admin-chrome"
 import { useSignOut } from "@/components/shell/use-sign-out"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Icon } from "@/components/ui/icon"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Wordmark } from "@/components/ui/wordmark"
@@ -22,6 +24,7 @@ import {
   type NavCounts,
 } from "@/lib/admin/nav"
 import type { AdminShellUser } from "@/lib/admin/shell"
+import { useAppearance } from "@/lib/appearance-context"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 
@@ -29,6 +32,34 @@ const itemClasses = cn(
   "relative flex h-8 items-center justify-center gap-3 rounded-md px-2 text-ui font-medium text-sidebar-foreground lg:justify-start",
   "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
 )
+
+/** The Appearance menu beside Sign out, only while the light theme's flag is on (P10.10). */
+function AppearanceMenu() {
+  const { enabled } = useAppearance()
+  if (!enabled) return null
+  return (
+    <DropdownMenu>
+      <RailTip label="Appearance">
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 text-sidebar-foreground"
+              aria-label="Appearance"
+              data-testid="admin-appearance-trigger"
+            />
+          }
+        >
+          <Icon icon={icons.appearance} />
+        </DropdownMenuTrigger>
+      </RailTip>
+      <DropdownMenuContent side="top" align="end" className="w-48" data-testid="admin-appearance-menu">
+        <AppearancePicker variant="menu" testId="admin-appearance" />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 /** A rail tooltip at `md`; from `lg` the label is visible, so the tooltip is not drawn. */
 function RailTip({ label, children }: { label: string; children: React.ReactElement }) {
@@ -157,7 +188,7 @@ export function AdminSidebar({ serverName, user, navCounts, assistant }: AdminSi
             <span className="sr-only lg:not-sr-only lg:flex-1">Back to home</span>
           </Link>
         </RailTip>
-        <div className="flex items-center justify-center gap-2 px-0 py-1 lg:justify-start lg:px-2">
+        <div className="flex flex-col items-center justify-center gap-2 px-0 py-1 lg:flex-row lg:justify-start lg:px-2">
           <span
             aria-hidden="true"
             className="hidden size-7 shrink-0 items-center justify-center rounded-full border border-border-strong bg-secondary text-caption text-secondary-foreground lg:flex"
@@ -168,6 +199,7 @@ export function AdminSidebar({ serverName, user, navCounts, assistant }: AdminSi
             <span className="truncate text-ui font-medium text-sidebar-accent-foreground">{user.name}</span>
             <span className="text-caption text-muted-foreground">Admin</span>
           </span>
+          <AppearanceMenu />
           <RailTip label="Sign out">
             <Button
               variant="ghost"

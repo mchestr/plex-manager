@@ -1,5 +1,5 @@
 import { StatusBadge } from "@/components/ui/status-badge"
-import type { RewindRowState } from "@/lib/admin/user-detail-tabs"
+import type { RewindRowState } from "@/lib/admin/can-regenerate"
 import { resolveStatus } from "@/lib/ui/status"
 
 /** The rewind-domain word for a row; "Stuck" is a run past the 15-minute rule. */

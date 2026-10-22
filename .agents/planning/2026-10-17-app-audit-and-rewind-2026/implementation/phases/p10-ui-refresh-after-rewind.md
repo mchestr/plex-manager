@@ -67,11 +67,13 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Open `/admin/invites` with network throttling: the list arrives in the first response, with no spinner. Create a Jellyfin invite and copy its link from the success state. Open the detail page and compare the pass preview with `/invite/<code>` in a private window. Delete it and land on the list with a toast.
 
 **Done when.**
-- [ ] Both routes load on the server, with no `useEffect` data loading and no `@ts-ignore` in the invite components.
-- [ ] Create and delete run through `actions/admin/invites.ts` with Zod and `revalidatePath`, and errors show inside the dialog.
-- [ ] One LibraryPicker serves Plex and Jellyfin, and no invite component is over 200 lines.
-- [ ] Both pages meet the 9.5 definition of done: PageHeader, DataTable, FilterBar, EmptyState kinds, `lib/utils/format.ts` and test ids.
-- [ ] Jest, E2E, axe and the updated visual baselines pass.
+- [x] Both routes load on the server, with no `useEffect` data loading and no `@ts-ignore` in the invite components.
+- [x] Create and delete run through `actions/admin/invites.ts` with Zod and `revalidatePath`, and errors show inside the dialog.
+- [x] One LibraryPicker serves Plex and Jellyfin, and no invite component is over 200 lines.
+- [x] Both pages meet the 9.5 definition of done: PageHeader, DataTable, FilterBar, EmptyState kinds, `lib/utils/format.ts` and test ids.
+- [ ] Jest, E2E, axe and the updated visual baselines pass. (Jest passes; the E2E specs are written and collect, not run; visual and axe baselines are the owner's.)
+
+(as merged: `createInviteSchema` keeps its SEC-56 rules (custom codes `^[A-Z2-9]{6,32}$`, upper-cased; `maxUses` 1 to 1000), not the plan's `{4,32}` and 1 to 100. The expiry options live in `lib/validations/invite.ts` (`EXPIRES_IN_OPTIONS`, `ExpiresIn`). `createInvite` returns `{ id, code }`; a taken code is `CONFLICT` with a `code` field error. `deleteInvite` takes `{ id }`. Redemption stays in `actions/invite.ts`; P11.21 can skip `actions/admin/invites.ts`. `getInvites`, `getInviteDetails`, the `getJellyfinLibraries` action and the `InviteWithUsages` type are gone: reads are `listInvites` and `getInviteDetail` in `lib/admin/invites/queries.ts` (usages select only `publicUserSelect`), filters and `inviteStatus` in `lib/admin/invites/filter.ts` (`status=active|expired|usedUp`, `server=plex|jellyfin`, sorts `created` (default, newest first), `code`, `expires`), and the picker's listings in `lib/admin/invites/libraries.ts`. The three statuses are disjoint (used up excludes expired); `inviteStatusWhere('active', now)` also drives the sidebar's invite count. `lib/invites/pass.ts` gained `invitePassFor(invite)` and `invitePassSelect`, which the detail preview uses. `publicInviteUrl(code, origin)` takes the origin. With no callers left, `components/admin/shared/confirm-modal.tsx` and `components/ui/modal-shell.tsx` are deleted (their ESLint bans stay for P10.11). Test ids: DataTable `admin-invites` (rows `admin-invites-row-<id>`, menus `admin-invites-actions-<id>`, items `-copy` and `-delete`), FilterBar `admin-invites-filters`, `admin-invites-header`, `-empty`, `-empty-filtered`, `-empty-create`, `-create-dialog`, `-delete-dialog`, confirm `admin-invite-delete`; detail `admin-invite-header`, `-status`, `-facts`, `-preview`, `-usage`, `admin-invite-copy-link`, `admin-invite-delete-button`; dialog `invite-code-input`, `invite-max-uses-input`, `invite-expiry-trigger`, `invite-library-all`, `invite-library-<id>`, `invite-allow-downloads`, `create-invite-success-code`, `create-invite-copy-link`. `admin-invites-delete-<id>` and `admin-invite-details-heading` are gone; the a11y route table and specs moved off them.)
 
 ### Step P10.2: Analytics pages: shares, LLM usage and cost
 
@@ -467,10 +469,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 
 **Done when.**
 - [ ] Every page has light baselines at both sizes, and the Rewind pages match their dark baselines.
-- [ ] `resolveTheme()` decides on the server from the flag and the cookie, with no flash and no extra database read.
-- [ ] The Appearance picker appears only behind the flag, in the menus and on `/account`.
+- [x] `resolveTheme()` decides on the server from the flag and the cookie, with no flash and no extra database read.
+- [x] The Appearance picker appears only behind the flag, in the menus and on `/account`.
 - [ ] axe passes in light, and the flag ships off.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270114000000_p1010_light_theme_flag`. `lib/design/theme.ts` exports `resolveTheme()`, `resolveAppearance()` (`{ enabled, theme }`), `THEME_COOKIE` and `THEME_COLOR` (from the token mirror); the root layout passes `appearance` to `Providers`, and client code reads it with `useAppearance()` from `lib/appearance-context.tsx`. The picker is `components/account/appearance-picker.tsx` (`variant="inline"`, a SegmentedControl radiogroup, or `"menu"`, the new `DropdownMenuRadioGroup`/`DropdownMenuRadioItem`). The admin shell had no user menu, so an Appearance icon button beside Sign out in the sidebar footer opens one; the mobile admin bar has none (`/account` covers it). The settings Switch sits in the System Information card (`actions/admin/light-theme.ts`, audited as section `appearance`); P10.19/P10.20 move it with that card. The cookie is `Secure` where the session cookie is (`usesSecureCookies()`, an https `NEXTAUTH_URL`), not on `NODE_ENV`, so a LAN install on http keeps working. The light `--chart-*` values already existed in `:root`; `lib/design/__tests__/chart-surfaces.test.ts` adds 3:1 for every slot and the "Other" fold on background, card and popover in both themes. Playwright: `light-theme-setup` (flips the flag through the Switch, teardown flips it back), `visual-light-desktop`/`-mobile` (the visual specs plus `light-routes.visual.spec.ts`, every route in `e2e/a11y/routes.ts`), `visual-light-rewind` (chromium phone, the dark Rewind baselines) and `a11y-light`; none is in CI's lists, and the Visual Baselines workflow has a `light` suite. Specs were written, not run. Owner: take the light baselines, run `a11y-light`, burn design debt on pages that look wrong in light, and keep the flag off until then (decision UI Q2).)
 
 ### Step P10.11: Remove adapters and enforce the guardrails
 
@@ -675,10 +679,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Run both scripts as dry runs: they print their counts. Show `npm run design:report` with `inline-spinner` at zero outside the skipped v2 code, and the check, chevron, close and warning paths gone. Then show the users page row actions, now with lucide icons and the same test ids.
 
 **Done when.**
-- [ ] `inline-spinner` and `inline-svg` are in the ratchet, with counts that have fallen.
-- [ ] No inline spinner remains outside the skipped v2 code; each became `Spinner` or `Button loading`.
-- [ ] The repeated check, chevron, close and warning SVGs render through lucide.
-- [ ] Both codemods have tests and are idempotent.
+- [x] `inline-spinner` and `inline-svg` are in the ratchet, with counts that have fallen.
+- [x] No inline spinner remains outside the skipped v2 code; each became `Spinner` or `Button loading`.
+- [x] The repeated check, chevron, close and warning SVGs render through lucide.
+- [x] Both codemods have tests and are idempotent.
+
+(as merged: earlier P10 steps had already removed most inline SVGs, so the starting counts were inline-spinner 1 and inline-svg 4, not 32 to 34. The codemods use the TypeScript compiler API like `tokens.ts` (ts-morph is not installed) and share `scripts/codemods/svg.ts`; they run as `npm run codemod:spinners` and `npm run codemod:icons`, write `<Icon icon={icons.<concept>} size={N} />` through `lib/ui/icons.ts` (new concepts `chevronDown` and `chevronLeft`), and also match the 20px solid check and warning paths. `inline-svg` allows `components/rewind/`, `app/(app)/rewind/`, `lib/rewind/`, `components/ui/chart*` and any `chart(s)/` folder; `motion.svg` never counts. Left for P10.25: the rocket SVG in `components/setup/setup-wizard/final-success-animation.tsx`, the one remaining inline SVG (ESLint raw-svg warnings 4 before, 1 after).)
 
 ### Step P10.16: Admin command menu
 
@@ -828,10 +834,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Point Plex at a dead address and open Users: all seven members are listed with Unknown access, the Alert explains why, and Check again recovers once Plex returns. Remove access for a test member: the dialog asks for the name and shows "Removing".
 
 **Done when.**
-- [ ] The page matches `admin-users.html`: StatGrid above, the Plex-down Alert, filters defaulting to All, and no pager on a single page.
-- [ ] Every row action is reachable by keyboard and on mobile, through ConfirmDialogs with pending and error states.
-- [ ] Money and dates use `lib/utils/format.ts`, and axe passes `wcag22aa`.
-- [ ] The admin E2E specs select only by `data-testid`.
+- [x] The page matches `admin-users.html`: StatGrid above, the Plex-down Alert, filters defaulting to All, and no pager on a single page.
+- [x] Every row action is reachable by keyboard and on mobile, through ConfirmDialogs with pending and error states.
+- [ ] Money and dates use `lib/utils/format.ts`, and axe passes `wcag22aa`. (Format done; axe not run here.)
+- [ ] The admin E2E specs select only by `data-testid`. (The users-page selectors moved; P10.11 finishes the sweep. E2E written, not run.)
+
+(as merged: `getAllUsersWithWrapped(year)` returns `AdminUsersList` (`{ users, plexCheck: { status, checkedAt } }`, `types/admin.ts`); each row gains `isOwner` and `disabledAt`, the owner reads as shared even with Plex down, and a database failure now throws to the error boundary instead of returning `[]`. Pure pieces for P10.1 to copy: `lib/admin/users-filter.ts` (`parseUsersFilter`, `filterUsers`, `sortUsers`, `usersStats`, `plexDownTitle`; filter values `role=admin|member`, `plexAccess=shared|notShared|unknown`, `subscription=active|pastDue|canceled|none`; sorts `name`, `joined` (default, newest first), `cost`) and `lib/admin/user-actions.ts` (`userActionIds` decides the menu, `listUserTarget` maps a row). The six action buttons, `disable-user-button.tsx` and `user-actions-menu.tsx` became seven ConfirmDialogs in `components/admin/users/actions/` (`access-dialogs.tsx`, `billing-dialogs.tsx`), each opened by a `trigger` or by `open`/`onOpenChange`, plus `useUserActions({ year, stripeEnabled, stripeDashboardBaseUrl, estimateCopy, inList })` returning `{ actionsFor, dialogs }`; the users table and the detail header (`detail/user-detail-actions.tsx`, test id `admin-user-actions`) share it, and the Billing tab uses the billing dialogs with their old trigger ids. Grant, Toggle exempt, Cancel and View in Stripe show only with Stripe on; both toggle-exempt directions now confirm. `rewindRowState` and `RewindRowState` moved to `lib/admin/can-regenerate.ts`; `regenerateEstimateCopy(year, f)` in `lib/admin/user-detail-tabs.ts` gives the cost line to all three Regenerate confirms. Shared additions: `RowAction.testId` (keeps `admin-user-disable-button` and `view-in-stripe-link`) and FilterBar option ids `<filter id>-option-<value>`. Test ids: DataTable `admin-users` (rows `admin-users-row-<id>`, menus `admin-users-actions-<id>`, footer `admin-users-pagination-info`), FilterBar `admin-users-filters` (so selects are `admin-users-filters-filter-<param>`, not `admin-users-filter-<param>`: the FilterBar and DataTable roots can't share one id), name links `admin-users-name-<id>`, Plex cells `admin-users-plex-<id>`, `admin-users-header`, `-stats`, `-plex-alert`, `-empty`, `-empty-filtered`, `-import`. The fourth tile is "LLM spend, Rewind {year}" (the plan's subscriptions tile is third, so the mockup's Rewind progress tile is not shown). Visual and axe baselines are the owner's.)
 
 ### Step P10.19: Settings layout and connection status
 
@@ -884,10 +892,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Open Settings: the nav shows glyphs and a legend, Tautulli reads "Connected, checked 2 minutes ago", and Turn AI features off turns its glyph to Needs attention with "Template copy". On a phone, Jump to reaches Stripe.
 
 **Done when.**
-- [ ] One page with the grouped glyph nav, the legend and the mobile Jump to Select.
-- [ ] Every section is a `SettingsSection` with a status and a "Checked" time.
-- [ ] No form has an Edit toggle, and the local badge helpers are deleted.
+- [x] One page with the grouped glyph nav, the legend and the mobile Jump to Select.
+- [x] Every section is a `SettingsSection` with a status and a "Checked" time.
+- [x] No form has an Edit toggle, and the local badge helpers are deleted.
 - [ ] Health checks are cached and never expose error text, and the baselines are reviewed.
+
+(as merged: health extends P10.8's `lib/settings/connection-health.ts` rather than a second module. `getConnectionHealth()` (cached, tag `connection-health`, now with Prometheus, a 5 s cut-off and a `code` per entry) stays the Overview's reader; the new `getSettingsHealth()` adds the feature sections read live on each call (AI's `llmDisabled`, Discord, Stripe via `getStripeConfig()`, Watchlist sync, Rewind), so P7.8's preflight should call `getSettingsHealth()`. The tag constant, `HealthCode`, copy and `worstStatus` live in client-safe `lib/settings/connection-status.ts`; `setLLMDisabled` updates the tag. `recheckConnections()` is in `actions/admin/connection-health.ts`, and each section's Test connection re-runs the saved checks through it (`hooks/admin/use-recheck-connection.ts`) until P10.20's `testServiceConnection` tests typed values. Slots for P10.20: `SettingsSection` takes `form: { isDirty, isPending, onDiscard, onSave, blockedReason }` (from `useSettingsForm`, `hooks/admin/use-settings-form.ts`) and `footerMeta`; `form` is optional, so Stripe and Watchlist sync (and the spend caps and time zone forms) still save themselves until P10.20; `SettingsFormFooter` is exported for the Other integrations Sheet. `ServerFormFields` and `useServerForm` (`hooks/admin/use-server-form.ts`) carry the fields, secret still a password Input. Discord keeps one section badge (worst of its features) until P10.20's two rows. System information has no status. The Rewind section moved onto `SettingsSection`, so its test ids are now `settings-rewind-save`, `-discard`, `-unsaved` and `-section`. `<Time nowLabel>` reads "just now". User detail tabs moved onto `components/ui/tabs.tsx`. Baselines at 1440 and 390 are the owner's Visual Baselines workflow.)
 
 ### Step P10.20: Settings sections with SecretInput and audited saves
 
@@ -941,10 +951,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Change Tautulli's URL to a netcat listener: the key field asks for re-entry, Test and Save are disabled, and the listener receives nothing. Save the original URL: the footer reads "Last saved just now by Dana Whitfield".
 
 **Done when.**
-- [ ] Every service form uses FormFields and SecretInput, with field-level errors.
-- [ ] A changed origin blocks Test and Save in the browser, and the server refuses it too.
-- [ ] Footers show the last audited save, and Discord shows two status rows.
+- [x] Every service form uses FormFields and SecretInput, with field-level errors.
+- [x] A changed origin blocks Test and Save in the browser, and the server refuses it too.
+- [x] Footers show the last audited save, and Discord shows two status rows.
 - [ ] The Stripe prerequisites show without premature errors, and the origin E2E spec passes.
+
+(as merged: `components/ui/secret-input.tsx` takes `value`, `onValueChange`, `saved: SavedSecret | null`, `currentOrigin` (leave it out for a fixed destination) and `noun`; it never holds a stored secret (the saved state is a masked placeholder) and has no `onReveal`. Client-safe `lib/security/saved-secret.ts` has `SavedSecret`, `safeOrigin()` (reads URLs like `parseServerUrl`) and `needsSecretReentry()`; server-side `describeSecret()` (in `secret-reuse.ts`) shows last4 only for secrets of 12+ characters. `getAdminSettings()` returns `secret: { last4, origin }` per service and LLM row (origin of `llmKeyDestination()`, now in `lib/llm/provider-presets.ts`) and Discord `secrets: { clientSecret, botToken }`; `getStripeConfig()` adds `saved`. Typed-value tests: core `testService(input, stored?)` in server-only `lib/settings/test-service.ts` (setup passes its own `stored`), wrapped by `testServiceConnection` (`actions/admin/test-connection.ts`, `admin:test` 30/10 min), returning a `Probe` `{ status, code }`; the 5 s probe moved to `lib/settings/probe.ts`. `connectionTestCopy(code, noun)` in `lib/ui/error-copy.ts` gives the field, field error, title and fix; `SECRET_REQUIRED` has error copy. Saves return `fieldErrors` (`token`/`apiKey`/`url`) with code copy instead of tester messages and call `updateTag("connection-health")`. `SettingsSection` forms are `noValidate` and a blocked submit still reaches the server; a failed test renders an inline warning Alert with `TestResult.detail`. Footer meta: `getSettingsAuditMeta()` (`lib/settings/audit-meta.ts`) batches one `findFirst` per settings section in one `$transaction` (Prisma has no JSON-path DISTINCT ON), over `CONFIG_CHANGED`, `DISCORD_INTEGRATION_CONFIG_CHANGED` and `SERVER_TIMEZONE_CHANGED`, which now carry `section: "discord"` and `"timezone"`; `<LastSaved>` renders it. `updateDiscordIntegrationSettings` and `updateServerTimeZone` are `adminAction`s now. Stripe, Watchlist sync, the spend caps (inside the AI section's footer) and the time zone (System section footer) all save through `SettingsSection.form`; the Stripe and light-theme switches still save on their own. Discord's two rows read `discordStatus()` from `getDiscordOverview().state`. Deleted: `hooks/admin/use-recheck-connection.ts`, `healthMessage`, `getGlobalWatchlistSyncSettings`, `components/ui/styled-checkbox.tsx` (no users left). `e2e/admin/settings-secret-origin.spec.ts` saves an Overseerr first (none is seeded) and deletes it after; written, not run. The provider, effort and time zone pickers still use the `StyledDropdown` adapter (P10.11).)
 
 ### Step P10.21: Home page refresh
 

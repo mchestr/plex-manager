@@ -1,38 +1,44 @@
 "use server"
 
 import { requireAdmin } from "@/lib/admin"
+import { llmKeyDestination } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
+import type { SavedSecret } from "@/lib/security/saved-secret"
+import { describeSecret } from "@/lib/security/secret-reuse"
 import { getConfig } from "./admin-config"
 
 /**
- * Removes a decrypted secret field from a row and replaces it with a
- * `has<Field>` boolean.
+ * Replaces a row's decrypted secret with what the form may know about it:
+ * `secret: { last4, origin } | null` (`describeSecret`, SEC-31).
  *
- * The Prisma extension decrypts secret columns (API keys, tokens, client
- * secrets) on read, so returning a row verbatim from this Server Action would
- * leak the plaintext secret into the RSC payload sent to the client settings
- * forms. The admin UI only needs to know whether a secret is set (to render a
- * "leave blank to keep current value" field), never the value itself.
+ * The Prisma extension decrypts secret columns (API keys, tokens) on read, so
+ * returning a row verbatim from this Server Action would leak the plaintext
+ * into the RSC payload sent to the settings forms. `destination` gives the
+ * address the secret may be sent to, whose origin `SecretInput` compares with
+ * the URL being typed.
  *
  * @internal
  */
-function omitSecret<T extends Record<string, unknown>, K extends keyof T, F extends string>(
+function omitSecret<T extends Record<string, unknown>, K extends keyof T>(
   row: T | null,
   secretField: K,
-  flag: F,
-): (Omit<T, K> & { [P in F]: boolean }) | null {
+  destination: (row: T) => string | null
+): (Omit<T, K> & { secret: SavedSecret | null }) | null {
   if (!row) return null
   const { [secretField]: secret, ...rest } = row
-  return { ...rest, [flag]: Boolean(secret) } as Omit<T, K> & { [P in F]: boolean }
+  return { ...rest, secret: describeSecret(typeof secret === "string" ? secret : null, destination(row)) }
 }
+
+const serverUrl = (row: { url: string }) => row.url
+const llmDestination = (row: { provider: string; baseUrl: string | null }) => llmKeyDestination(row.provider, row.baseUrl)
 
 /**
  * Get all admin settings (admin only).
  *
  * Never returns raw secrets (server tokens/API keys, LLM API keys, the Discord
- * client secret). Each secret-bearing row has its secret stripped and replaced
- * with a `has*` boolean (see {@link omitSecret}) so client settings forms can
- * indicate a secret is configured without receiving its value.
+ * client secret and bot token). Each one is replaced by its last four and the
+ * origin it may be sent to (see {@link omitSecret}), so `SecretInput` can show
+ * that one is saved without receiving its value.
  */
 export async function getAdminSettings() {
   await requireAdmin()
@@ -65,21 +71,15 @@ export async function getAdminSettings() {
     prisma.discordConnection.count({ where: { revokedAt: null } }),
   ])
 
-  const sanitizedChatLLMProvider = omitSecret(chatLLMProvider, "apiKey", "hasApiKey")
-  const sanitizedWrappedLLMProvider = omitSecret(wrappedLLMProvider, "apiKey", "hasApiKey")
+  const sanitizedChatLLMProvider = omitSecret(chatLLMProvider, "apiKey", llmDestination)
+  const sanitizedWrappedLLMProvider = omitSecret(wrappedLLMProvider, "apiKey", llmDestination)
 
-  // Strip both Discord secrets (client secret + bot token) in one pass, exposing
-  // only has* booleans. supportChannelId / supportThreadIds are non-secret and
-  // pass through unchanged. Done explicitly (rather than nesting omitSecret) so
-  // the returned type stays flat and readable.
+  // Both Discord secrets go only to Discord (a fixed destination), so neither
+  // carries an origin. The support channel and threads are not secret.
   const sanitizedDiscordIntegration = discordIntegration
     ? (() => {
         const { clientSecret, botToken, ...rest } = discordIntegration
-        return {
-          ...rest,
-          hasClientSecret: Boolean(clientSecret),
-          hasBotToken: Boolean(botToken),
-        }
+        return { ...rest, secrets: { clientSecret: describeSecret(clientSecret), botToken: describeSecret(botToken) } }
       })()
     : null
 
@@ -89,12 +89,12 @@ export async function getAdminSettings() {
     wrappedLLMProvider: sanitizedWrappedLLMProvider,
     // Keep llmProvider for backward compatibility (returns wrapped provider)
     llmProvider: sanitizedWrappedLLMProvider,
-    plexServer: omitSecret(plexServer, "token", "hasToken"),
-    jellyfinServer: omitSecret(jellyfinServer, "apiKey", "hasApiKey"),
-    tautulli: omitSecret(tautulli, "apiKey", "hasApiKey"),
-    overseerr: omitSecret(overseerr, "apiKey", "hasApiKey"),
-    sonarr: omitSecret(sonarr, "apiKey", "hasApiKey"),
-    radarr: omitSecret(radarr, "apiKey", "hasApiKey"),
+    plexServer: omitSecret(plexServer, "token", serverUrl),
+    jellyfinServer: omitSecret(jellyfinServer, "apiKey", serverUrl),
+    tautulli: omitSecret(tautulli, "apiKey", serverUrl),
+    overseerr: omitSecret(overseerr, "apiKey", serverUrl),
+    sonarr: omitSecret(sonarr, "apiKey", serverUrl),
+    radarr: omitSecret(radarr, "apiKey", serverUrl),
     prometheus,
     discordIntegration: sanitizedDiscordIntegration,
     discordLinkedCount,

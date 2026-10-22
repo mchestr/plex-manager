@@ -8,7 +8,7 @@
  * fall, carrying them across renames.
  */
 
-import { compare, countFile, RULES, totals, update } from "../design-system/rules.mjs"
+import { addRules, compare, countFile, RULES, totals, update } from "../design-system/rules.mjs"
 
 const FILE = "components/admin/example.tsx"
 
@@ -28,6 +28,8 @@ describe("rules", () => {
         "gradient",
         "gradient-text",
         "infinite-motion",
+        "inline-spinner",
+        "inline-svg",
         "raw-palette",
         "rewind-only",
         "zoom-lock",
@@ -47,6 +49,8 @@ describe("rules", () => {
     ["rewind-only", '<Button variant="ink" />', '<Button variant="primary" />'],
     ["copy", "<p>Your Wrapped</p>", "<WrappedViewer wrappedId={id} />"],
     ["zoom-lock", "export const viewport = { maximumScale: 1 }", "export const viewport = { width: 'device-width' }"],
+    ["inline-spinner", '<path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />', '<Spinner className="size-4" />'],
+    ["inline-svg", '<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" /></svg>', "<Icon icon={icons.done} />"],
   ]
 
   it.each(cases)("%s counts the matching fixture only", (rule, matching, nonMatching) => {
@@ -97,6 +101,14 @@ describe("rules", () => {
       "/* rewind-scope:end */",
     ].join("\n")
     expect(count(css, "app/globals.css")).toEqual({ "raw-palette": 1, "rewind-only": 1 })
+  })
+
+  it("leaves inline SVG to charts and Rewind art", () => {
+    const svg = '<svg viewBox="0 0 10 10" />'
+    expect(count(svg, "components/rewind/pages/clock.tsx")["inline-svg"]).toBeUndefined()
+    expect(count(svg, "components/admin/charts/bars.tsx")["inline-svg"]).toBeUndefined()
+    expect(count(svg, "components/admin/users/row.tsx")["inline-svg"]).toBe(1)
+    expect(count("<motion.svg />")["inline-svg"]).toBeUndefined()
   })
 
   it("runs no AST rule on CSS", () => {
@@ -172,5 +184,32 @@ describe("update", () => {
     const result = update(baseline, { "b.tsx": { gradient: 1 }, "clean.tsx": {} }, [["a.tsx", "b.tsx"]])
     expect(result).toMatchObject({ ok: true, files: { "b.tsx": { gradient: 1 } } })
     expect(totals(result.files)).toEqual({ gradient: 1 })
+  })
+})
+
+describe("addRules", () => {
+  const baseline = { "a.tsx": { gradient: 2 } }
+
+  it("records a rule new to the baseline", () => {
+    const result = addRules(baseline, { "a.tsx": { gradient: 2, "inline-svg": 3 }, "b.tsx": { "inline-svg": 1 } }, ["inline-svg"])
+    expect(result).toMatchObject({
+      ok: true,
+      files: { "a.tsx": { gradient: 2, "inline-svg": 3 }, "b.tsx": { "inline-svg": 1 } },
+    })
+  })
+
+  it("still refuses any other rise", () => {
+    const result = addRules(baseline, { "a.tsx": { gradient: 3, "inline-svg": 1 } }, ["inline-svg"])
+    expect(result).toMatchObject({ ok: false, result: { rises: [{ file: "a.tsx", rule: "gradient", was: 2, now: 3 }] } })
+    expect(addRules(baseline, { "a.tsx": { gradient: 2 }, "b.tsx": { blur: 1 } }, ["inline-svg"]).ok).toBe(false)
+  })
+
+  it("refuses a rule the baseline already counts", () => {
+    expect(addRules(baseline, { "a.tsx": { gradient: 2 } }, ["gradient"])).toEqual({ ok: false, known: ["gradient"] })
+  })
+
+  it("seeds a renamed file under the path it came from", () => {
+    const result = addRules(baseline, { "b.tsx": { gradient: 1, "inline-svg": 2 } }, ["inline-svg"], [["a.tsx", "b.tsx"]])
+    expect(result).toMatchObject({ ok: true, files: { "b.tsx": { gradient: 1, "inline-svg": 2 } } })
   })
 })
