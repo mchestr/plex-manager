@@ -5,6 +5,7 @@ import {
   type AutocompleteInteraction,
 } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
+import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import type { InteractionContext, SlashCommand } from "./registry"
 import { requireLinkedUser } from "./require-linked-user"
 
@@ -58,7 +59,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
     name: "/assistant",
     aliases: [],
     description:
-      "Ask the AI assistant a question (`ask prompt:<text>`), or start over with `reset`",
+      "Ask the AI assistant a question (`ask prompt:<text>`), or start over with `reset`. Server admins can review assistant conversations",
     syntax: "/assistant ask prompt:<text> | /assistant reset",
     examples: [
       "/assistant ask prompt:How do I request a movie?",
@@ -278,7 +279,7 @@ const AUTOCOMPLETE_CHOICE_LIMIT = 25
  *
  * @internal
  */
-function buildFullHelpEmbed(): EmbedBuilder {
+function buildFullHelpEmbed(disclosure: string): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle("Available Commands")
     .setDescription(
@@ -305,6 +306,9 @@ function buildFullHelpEmbed(): EmbedBuilder {
       value,
     })
   }
+
+  // The assistant disclosure (P11.16, GAP-32)
+  embed.addFields({ name: "Privacy", value: disclosure })
 
   return embed
 }
@@ -387,7 +391,7 @@ export const helpCommand: SlashCommand = {
     }
 
     await ctx.interaction.reply({
-      embeds: [buildFullHelpEmbed()],
+      embeds: [buildFullHelpEmbed(await getAssistantDisclosure())],
       flags: MessageFlags.Ephemeral,
     })
   },

@@ -45,6 +45,7 @@ function createMockCommandLog(
     commandType: "CHAT" as DiscordCommandType,
     commandName: "!assistant",
     commandArgs: "help me",
+    argsLength: null,
     channelId: "channel-123",
     channelType: "support-channel",
     guildId: "guild-123",
@@ -71,8 +72,8 @@ describe("createCommandLog", () => {
       discordUserId: "discord-user-123",
       discordUsername: "testuser#1234",
       userId: "user-123",
-      commandType: "CHAT" as DiscordCommandType,
-      commandName: "!assistant",
+      commandType: "MEDIA_MARK" as DiscordCommandType,
+      commandName: "/mark finished",
       commandArgs: "help me",
       channelId: "channel-123",
       channelType: "support-channel",
@@ -86,9 +87,10 @@ describe("createCommandLog", () => {
         discordUserId: "discord-user-123",
         discordUsername: "testuser#1234",
         userId: "user-123",
-        commandType: "CHAT",
-        commandName: "!assistant",
+        commandType: "MEDIA_MARK",
+        commandName: "/mark finished",
         commandArgs: "help me",
+        argsLength: undefined,
         channelId: "channel-123",
         channelType: "support-channel",
         guildId: "guild-123",
@@ -125,7 +127,8 @@ describe("createCommandLog", () => {
         userId: undefined,
         commandType: "MEDIA_MARK",
         commandName: "!finished",
-        commandArgs: undefined,
+        commandArgs: null,
+        argsLength: undefined,
         channelId: "channel-123",
         channelType: "dm",
         guildId: undefined,
@@ -134,6 +137,24 @@ describe("createCommandLog", () => {
       },
     })
     expect(result).toEqual(mockLog)
+  })
+
+  it("never stores a CHAT row's text, only its length (GAP-32)", async () => {
+    mockCreate.mockResolvedValue(createMockCommandLog({ commandArgs: null, argsLength: 7 }))
+
+    await createCommandLog({
+      discordUserId: "discord-user-123",
+      commandType: "CHAT" as DiscordCommandType,
+      commandName: "dm",
+      commandArgs: "help me",
+      argsLength: 7,
+      channelId: "channel-123",
+      channelType: "dm",
+    })
+
+    expect(mockCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ commandArgs: null, argsLength: 7 }),
+    })
   })
 
   it("should return null and log error on database failure", async () => {
@@ -177,8 +198,8 @@ describe("createCommandLog", () => {
 
       const result = await createCommandLog({
         discordUserId: "discord-123",
-        commandType: "CHAT" as DiscordCommandType,
-        commandName: "!assistant",
+        commandType: "MEDIA_MARK" as DiscordCommandType,
+        commandName: "/mark finished",
         commandArgs: specialArgs,
         channelId: "channel-123",
         channelType: "dm",
@@ -300,7 +321,8 @@ describe("logCommandExecution", () => {
         userId: "user-123",
         commandType: "LINK_REQUEST",
         commandName: "link_request",
-        commandArgs: undefined,
+        commandArgs: null,
+        argsLength: undefined,
         channelId: "channel-123",
         channelType: "dm",
         guildId: undefined,

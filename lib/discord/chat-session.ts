@@ -50,6 +50,8 @@ export interface ResolvedSession {
   chatConversationId: string
   /** Coerced, trimmed history for the (possibly freshly reset) session. */
   history: ChatMessage[]
+  /** True when this call started the session (new, or reset after idling), so its first reply carries the disclosure. */
+  created: boolean
 }
 
 /** True for a Prisma serialization-conflict error (transaction should retry). */
@@ -137,6 +139,7 @@ export async function getOrCreateSession({
             id: existing.id,
             chatConversationId: existing.chatConversationId,
             history: trimHistory(coerceHistory(existing.messages)),
+            created: false,
           }
         }
 
@@ -165,6 +168,7 @@ export async function getOrCreateSession({
           id: session.id,
           chatConversationId: session.chatConversationId,
           history: [],
+          created: true,
         }
       },
       {

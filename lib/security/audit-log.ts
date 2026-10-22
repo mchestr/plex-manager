@@ -10,12 +10,16 @@
  *   so a database outage cannot fail the action it audits.
  * - {@link recordAuditEvent} awaits the write and throws when it fails, for
  *   callers that write inside a `$transaction` or must know the row landed.
+ * - {@link auditMemberRead} and {@link auditMemberListed} record admin reads of
+ *   member content, at most once an hour per admin, member and surface, through
+ *   the `audit:read` rate limit, so browsing does not flood the table.
  *
  * @module lib/security/audit-log
  */
 
 import type { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import { consume } from "@/lib/security/rate-limit"
 import { sanitizeValue } from "@/lib/utils/log-redaction"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -121,6 +125,18 @@ export enum AuditEventType {
   // An admin restored a member's previous Rewind (P7.9). Details carry the
   // target user, the year, the source generation and the new one.
   REWIND_ROLLED_BACK = "REWIND_ROLLED_BACK",
+  // An admin removed a member's share of the Plex server (P11.16, GAP-33).
+  // Details carry whether the share was already gone.
+  MEMBER_UNSHARED = "MEMBER_UNSHARED",
+  // An admin imported the Plex server's members (P11.16, GAP-33). Details carry
+  // the counts and the created user ids.
+  MEMBERS_IMPORTED = "MEMBERS_IMPORTED",
+  // An admin read one member's content (P11.16, GAP-33): one row per admin,
+  // member and surface per hour. Details carry the surface.
+  MEMBER_CONTENT_VIEWED = "MEMBER_CONTENT_VIEWED",
+  // An admin opened a page listing many members' content (P11.16): one row per
+  // admin and surface per hour. Details carry the surface and the filters.
+  MEMBER_CONTENT_LISTED = "MEMBER_CONTENT_LISTED",
   // A credential, settings, setup or prompt-template change. Details carry the
   // redacted diff from lib/security/config-diff.ts: changed field names, whether
   // a secret changed, and URL origins only.
@@ -199,4 +215,53 @@ export async function recordAuditEvent(
   const entry = buildEntry(type, userId, details)
   writeStdout(entry)
   await persist(entry, db)
+}
+
+/** The admin surfaces that show one member's content (GAP-33's inventory, as it stands after P11.5). */
+export type MemberReadSurface =
+  | "activity-timeline"
+  | "llm-usage-detail"
+  | "llm-conversation"
+  | "rewind-history"
+  | "chatbot-tautulli"
+
+/** The admin pages that list many members' content. */
+export type MemberListSurface = "discord-activity" | "watchlist-panel"
+
+/** True the first time `key` is seen in the hour; a limiter failure counts as first, so a read is never lost. */
+async function firstThisHour(key: string): Promise<boolean> {
+  try {
+    return (await consume("audit:read", key)).ok
+  } catch (error) {
+    auditLogger.warn("audit.read_limit_failed", { error: String(error) })
+    return true
+  }
+}
+
+/**
+ * Record that admin `actorUserId` read `targetUserId`'s content on `surface`
+ * (`MEMBER_CONTENT_VIEWED`). Writes at most one row per admin, member and
+ * surface per hour; later reads in the hour write nothing. Never throws.
+ */
+export async function auditMemberRead(
+  surface: MemberReadSurface,
+  targetUserId: string,
+  actorUserId: string
+): Promise<void> {
+  if (!(await firstThisHour(`${actorUserId}:${surface}:${targetUserId}`))) return
+  logAuditEvent(AuditEventType.MEMBER_CONTENT_VIEWED, actorUserId, { targetUserId, surface })
+}
+
+/**
+ * Record that admin `actorUserId` opened a page listing many members' content
+ * (`MEMBER_CONTENT_LISTED`), with the page's filters. One row per admin and
+ * surface per hour, whatever the filters. Never throws.
+ */
+export async function auditMemberListed(
+  surface: MemberListSurface,
+  actorUserId: string,
+  filters: Record<string, unknown> = {}
+): Promise<void> {
+  if (!(await firstThisHour(`${actorUserId}:${surface}`))) return
+  logAuditEvent(AuditEventType.MEMBER_CONTENT_LISTED, actorUserId, { surface, filters })
 }

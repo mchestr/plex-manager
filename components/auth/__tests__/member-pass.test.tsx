@@ -20,7 +20,14 @@ const AUTH_URL = 'https://app.plex.tv/auth#?code=ABC123'
 function renderPass(props: Partial<Parameters<typeof MemberPass>[0]> = {}) {
   return render(
     <main>
-      <MemberPass serverName="Northfield Plex" monogram="N" plex jellyfin={false} {...props} />
+      <MemberPass
+        serverName="Northfield Plex"
+        monogram="N"
+        plex
+        jellyfin={false}
+        assistantDisclosure="Server admins can review assistant conversations, and messages are processed by OpenAI."
+        {...props}
+      />
     </main>
   )
 }
@@ -130,6 +137,10 @@ describe('MemberPass', () => {
     )
     expect(screen.getByTestId('member-pass-privacy')).toHaveTextContent(
       'Server admins can see your watch activity and your Rewind. Some Rewind text is written by an AI service.'
+    )
+    // The assistant disclosure (P11.16)
+    expect(screen.getByTestId('member-pass-privacy')).toHaveTextContent(
+      'Server admins can review assistant conversations, and messages are processed by OpenAI.'
     )
   })
 

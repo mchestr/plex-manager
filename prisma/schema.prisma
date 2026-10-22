@@ -716,7 +716,8 @@ model DiscordCommandLog {
   // Command details
   commandType DiscordCommandType
   commandName String // e.g., "!finished", "!assistant", "!clear"
-  commandArgs String? // Arguments passed to the command
+  commandArgs String? // Arguments passed to the command; always null for CHAT rows (GAP-32)
+  argsLength  Int? // Characters a member typed to the assistant (CHAT rows), never the text
 
   // Context
   channelId   String

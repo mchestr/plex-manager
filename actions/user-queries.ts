@@ -7,6 +7,7 @@ import { type ActionErrorCode, type ActionResult, fail, ok } from "@/lib/actions
 import { unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { type PlexUnshareErrorCode } from "@/lib/connections/plex-invitations"
 import { prisma } from "@/lib/prisma"
+import { AuditEventType, auditMemberRead, logAuditEvent } from "@/lib/security/audit-log"
 import { endUserSessions } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
 import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
@@ -132,6 +133,7 @@ export const unshareUserLibrary = adminAction({
     }
 
     await endUserSessions(user.id, "unshared", actorId)
+    logAuditEvent(AuditEventType.MEMBER_UNSHARED, actorId, { targetUserId: user.id, status: result.status })
 
     logger.info("Unshared user library", { userId: user.id, status: result.status })
 
@@ -166,9 +168,14 @@ export const getUserActivityTimeline = adminAction({
     pageSize: z.number().int().min(1).max(50).default(10),
   }),
   fallbackError: "Could not load the activity",
-  handler: async ({ userId, cursor: rawCursor, pageSize }): Promise<ActionResult<UserActivityTimelineData>> => {
+  handler: async (
+    { userId, cursor: rawCursor, pageSize },
+    { userId: adminId }
+  ): Promise<ActionResult<UserActivityTimelineData>> => {
     const cursor = rawCursor === undefined ? null : decodeActivityCursor(rawCursor)
     if (rawCursor !== undefined && !cursor) return fail("VALIDATION", BAD_PAGE)
-    return ok(await loadActivityTimeline(userId, { cursor, pageSize }))
+    const timeline = await loadActivityTimeline(userId, { cursor, pageSize })
+    await auditMemberRead("activity-timeline", userId, adminId)
+    return ok(timeline)
   },
 })

@@ -49,6 +49,7 @@ function createMockLog(): DiscordCommandLog {
     commandType: "CHAT" as DiscordCommandType,
     commandName: "dm",
     commandArgs: null,
+    argsLength: null,
     channelId: "dm-channel-1",
     channelType: "dm",
     guildId: null,
@@ -255,6 +256,18 @@ describe("routeDirectMessage", () => {
       "log-1",
       expect.objectContaining({ status: "SUCCESS" })
     )
+  })
+
+  it("logs a CHAT row with the message length and never its text (GAP-32)", async () => {
+    const deps = makeDeps()
+    const { message } = createMockMessage({ content: "  what should I watch tonight?  " })
+
+    await routeDirectMessage(message, deps)
+
+    const params = mockCreate.mock.calls[0][0]
+    expect(params).toMatchObject({ commandType: "CHAT", argsLength: "what should I watch tonight?".length })
+    expect(params.commandArgs).toBeUndefined()
+    expect(JSON.stringify(params)).not.toContain("watch tonight")
   })
 
   it("records a CLEAR_CONTEXT audit log around a reset", async () => {

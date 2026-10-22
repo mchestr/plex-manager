@@ -9,6 +9,7 @@ import { TimezoneField } from "@/components/account/timezone-field"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authOptions } from "@/lib/auth"
+import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import { getAppSettings } from "@/lib/settings/app-settings"
 import { discordHandleFor } from "@/lib/member/shell"
 import { prisma } from "@/lib/prisma"
@@ -32,20 +33,21 @@ async function rewindNotify(userId: string): Promise<boolean> {
 
 /**
  * The member's account settings (ui-design-system 6.1, UI-30): Discord,
- * the Rewind ready notification, the time zone, and Appearance while the
- * light theme's flag is on (P10.10).
+ * the Rewind ready notification, the time zone, Appearance while the
+ * light theme's flag is on (P10.10), and what admins can see (P11.16).
  */
 export default async function AccountPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect("/")
   const userId = session.user.id
 
-  const [user, discordHandle, notify, zone, { lightThemeEnabled }] = await Promise.all([
+  const [user, discordHandle, notify, zone, { lightThemeEnabled }, assistantDisclosure] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
     discordHandleFor(userId),
     rewindNotify(userId),
     serverZone(),
     getAppSettings(),
+    getAssistantDisclosure(),
   ])
 
   return (
@@ -103,6 +105,15 @@ export default async function AccountPage() {
             </CardContent>
           </Card>
         )}
+
+        <Card data-testid="account-your-data">
+          <CardHeader>
+            <CardTitle as="h2">Your data</CardTitle>
+            <CardDescription>
+              Server admins can see your watch activity and your Rewind. {assistantDisclosure}
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     </div>
   )

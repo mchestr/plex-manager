@@ -2,6 +2,7 @@ import "server-only"
 
 import { findTautulliUser, getTautulliActivity, getTautulliHistory, getTautulliHomeStat, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliServerInfo, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
+import { auditMemberRead } from "@/lib/security/audit-log"
 import { z } from "zod"
 import { withoutPersonalFields } from "./personal-fields"
 import { toToolOutput } from "./tool-output"
@@ -35,6 +36,17 @@ async function scopeActivityToCaller(config: TautulliConfig, data: unknown, user
   const tautulliUserId = String(lookup.user.user_id)
   const sessions = activity.data.sessions.filter((session) => String(session.user_id) === tautulliUserId)
   return { session_count: sessions.length, sessions, scope: "caller" }
+}
+
+/**
+ * Audit an admin's per-member Tautulli read (P11.16, GAP-33). Tautulli's user
+ * id is the Plex account id, so the member is the app user with that Plex id;
+ * a Plex user with no account here has nothing to attach the row to.
+ */
+async function auditTautulliMemberRead(tautulliUserId: number | undefined, actorUserId: string | undefined) {
+  if (tautulliUserId === undefined || !actorUserId) return
+  const member = await prisma.user.findFirst({ where: { plexUserId: String(tautulliUserId) }, select: { id: true } })
+  if (member && member.id !== actorUserId) await auditMemberRead("chatbot-tautulli", member.id, actorUserId)
 }
 
 export async function executeTautulliTool(
@@ -100,6 +112,7 @@ export async function executeTautulliTool(
       if (!historyResult.success) {
         return JSON.stringify({ error: historyResult.error })
       }
+      await auditTautulliMemberRead(tautulliUserId, userId)
       return JSON.stringify(withoutPersonalFields(historyResult.data))
     }
     case "get_tautulli_recently_watched": {
@@ -128,6 +141,7 @@ export async function executeTautulliTool(
       if (!statsResult.success) {
         return JSON.stringify({ error: statsResult.error })
       }
+      await auditTautulliMemberRead(tautulliUserId, userId)
       return JSON.stringify(statsResult.data)
     }
     default:

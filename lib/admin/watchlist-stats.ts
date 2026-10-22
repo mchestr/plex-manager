@@ -1,6 +1,8 @@
 import "server-only"
 
+import { assertAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { auditMemberListed } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("ADMIN_WATCHLIST")
@@ -44,8 +46,12 @@ export type WatchlistSyncStats = Awaited<ReturnType<typeof readStats>>
  * no longer an action the section called on mount). The settings page starts
  * it without awaiting and the section reads it inside Suspense, so the page
  * never waits for it. A failed read gives null, which hides the figures.
+ * The latest titles are members' content, so a read is audited as a listing
+ * (P11.16).
  */
 export async function getWatchlistSyncStats(): Promise<WatchlistSyncStats | null> {
+  const session = await assertAdmin()
+  await auditMemberListed("watchlist-panel", session.user.id)
   try {
     return await readStats()
   } catch (error) {

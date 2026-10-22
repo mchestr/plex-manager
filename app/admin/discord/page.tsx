@@ -94,6 +94,7 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
     discordUserId: log.discordUserId,
     userId: log.userId,
     commandName: log.commandName,
+    argsLength: log.argsLength,
     status: log.status,
     responseTimeMs: log.responseTimeMs,
     createdAt: log.createdAt,
