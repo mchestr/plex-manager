@@ -4,6 +4,7 @@ import { useReducedMotion } from "motion/react"
 import { RacePage } from "@/components/rewind/pages/race"
 import { StagePage } from "@/components/rewind/stage/stage-page"
 import { issueContext, type FixtureIssue } from "@/lib/rewind/__tests__/helpers/fixture-issue"
+import { rewindFeatureFlags } from "@/lib/rewind/features"
 import type { RaceData } from "@/lib/rewind/pages/race.schema"
 import { registry } from "@/lib/rewind/registry"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
@@ -39,7 +40,7 @@ function Stage({ issue, data, current, scrubber = false }: { issue: FixtureIssue
   const context = issueContext(issue)
   return (
     <StagePage index={1} current={current} previous={null} ink={ink} label="Page 2 of 2: The race">
-      <RacePage data={data} issue={scrubber ? { ...context, features: { ...context.features, "race.scrubber": true } } : context} />
+      <RacePage data={data} issue={scrubber ? { ...context, features: { ...rewindFeatureFlags(null), "race.scrubber": true } } : context} />
     </StagePage>
   )
 }
