@@ -1,5 +1,6 @@
 "use client"
 
+import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { useFormat } from "@/lib/format-context"
 
 interface UsersStatsSummaryProps {
@@ -25,42 +26,18 @@ export function UsersStatsSummary({ users }: UsersStatsSummaryProps) {
     .reduce((sum, u) => sum + (u.totalLlmUsage?.cost || 0), 0)
 
   return (
-    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-        <div className="text-sm text-slate-400 mb-1">Total Users</div>
-        <div className="text-2xl font-bold text-white">{users.length}</div>
-      </div>
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-        <div className="text-sm text-slate-400 mb-1">Completed Wrapped</div>
-        <div className="text-2xl font-bold text-green-400">{completedCount}</div>
-      </div>
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-        <div className="text-sm text-slate-400 mb-1">Generating</div>
-        <div className="text-2xl font-bold text-yellow-400">{generatingCount}</div>
-      </div>
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-        <div className="text-sm text-slate-400 mb-1">Not Generated</div>
-        <div className="text-2xl font-bold text-slate-400">{notGeneratedCount}</div>
-      </div>
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-        <div className="text-sm text-slate-400 mb-1">Total Tokens</div>
-        <div className="text-2xl font-bold text-cyan-400">
-          {f.number(totalTokens)}
-        </div>
-        <div className="text-xs text-muted-foreground mt-1">
-          Across all years & regenerations
-        </div>
-      </div>
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-        <div className="text-sm text-slate-400 mb-1">Total Cost</div>
-        <div className="text-2xl font-bold text-green-400">
-          {f.money(totalCost)}
-        </div>
-        <div className="text-xs text-muted-foreground mt-1">
-          Across all years & regenerations
-        </div>
-      </div>
-    </div>
+    <StatGrid className="mt-6 md:grid-cols-3 lg:grid-cols-6">
+      <StatTile label="Total Users" value={users.length} />
+      <StatTile label="Completed Wrapped" value={completedCount} />
+      <StatTile label="Generating" value={generatingCount} />
+      <StatTile label="Not Generated" value={notGeneratedCount} />
+      <StatTile
+        label="Total Tokens"
+        value={f.number(totalTokens)}
+        meta="Across all years & regenerations"
+        data-testid="users-stat-total-tokens"
+      />
+      <StatTile label="Total Cost" value={f.money(totalCost)} meta="Across all years & regenerations" />
+    </StatGrid>
   )
 }
-

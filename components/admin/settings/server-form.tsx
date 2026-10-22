@@ -122,35 +122,32 @@ export function ServerForm({ type, server }: ServerFormProps) {
           {server ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
               <div>
-                <div className="text-xs text-slate-400 mb-1">Name</div>
-                <div className="text-white">{server.name}</div>
+                <div className="text-xs text-muted-foreground mb-1">Name</div>
+                <div className="text-foreground">{server.name}</div>
               </div>
               <div>
-                <div className="text-xs text-slate-400 mb-1">Local URL</div>
-                <div className="text-white font-mono text-xs">{server.url}</div>
+                <div className="text-xs text-muted-foreground mb-1">Local URL</div>
+                <div className="text-foreground font-mono text-xs">{server.url}</div>
               </div>
               {type === "prometheus" ? (
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">Query</div>
-                  <div className="text-white font-mono text-xs truncate" title={server.query}>{server.query || "Not set"}</div>
+                  <div className="text-xs text-muted-foreground mb-1">Query</div>
+                  <div className="text-foreground font-mono text-xs truncate" title={server.query}>{server.query || "Not set"}</div>
                 </div>
               ) : (
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">Public URL</div>
-                  <div className="text-white font-mono text-xs">{server.publicUrl || "Not set"}</div>
+                  <div className="text-xs text-muted-foreground mb-1">Public URL</div>
+                  <div className="text-foreground font-mono text-xs">{server.publicUrl || "Not set"}</div>
                 </div>
               )}
             </div>
           ) : (
-            <div className="text-sm text-slate-400">No {type} server configured</div>
+            <div className="text-sm text-muted-foreground">No {type} server configured</div>
           )}
         </div>
-        <button
-          onClick={() => setIsEditing(true)}
-          className="ml-4 px-3 py-1 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-cyan-500/50 text-slate-300 hover:text-white text-xs font-medium rounded transition-all whitespace-nowrap flex items-center"
-        >
+        <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)} className="ml-4 whitespace-nowrap">
           Edit
-        </button>
+        </Button>
       </div>
     )
   }
@@ -159,7 +156,7 @@ export function ServerForm({ type, server }: ServerFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">Name</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Name</label>
           <StyledInput
             type="text"
             value={formData.name}
@@ -170,7 +167,7 @@ export function ServerForm({ type, server }: ServerFormProps) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">Local URL</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Local URL</label>
           <StyledInput
             type="text"
             value={formData.url}
@@ -182,7 +179,7 @@ export function ServerForm({ type, server }: ServerFormProps) {
         </div>
         {type === "prometheus" ? (
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-slate-400 mb-1">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
               PromQL Query <span className="text-muted-foreground font-normal">(e.g. up{`{job="plex"}`})</span>
             </label>
             <StyledInput
@@ -197,7 +194,7 @@ export function ServerForm({ type, server }: ServerFormProps) {
         ) : (
           <>
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-slate-400 mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Public URL <span className="text-muted-foreground font-normal">(optional, e.g. https://{type}.example.com)</span>
               </label>
               <StyledInput
@@ -210,7 +207,7 @@ export function ServerForm({ type, server }: ServerFormProps) {
             </div>
             {type === "plex" ? (
               <div className="md:col-span-2">
-                <label className="block text-xs font-medium text-slate-400 mb-1">Plex Token</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Plex Token</label>
                 <StyledInput
                   type="password"
                   value={formData.token}
@@ -223,7 +220,7 @@ export function ServerForm({ type, server }: ServerFormProps) {
               </div>
             ) : (
               <div className="md:col-span-2">
-                <label className="block text-xs font-medium text-slate-400 mb-1">API Key</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">API Key</label>
                 <StyledInput
                   type="password"
                   value={formData.apiKey}

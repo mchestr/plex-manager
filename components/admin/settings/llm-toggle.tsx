@@ -34,7 +34,7 @@ export function LLMToggle({ disabled }: LLMToggleProps) {
         size="sm"
         onClick={handleToggle}
         disabled={isPending}
-        className="hover:border-cyan-500/50 hover:text-white whitespace-nowrap"
+        className="whitespace-nowrap"
       >
         {isPending ? "Updating..." : disabled ? "Enable LLM" : "Disable LLM"}
       </Button>

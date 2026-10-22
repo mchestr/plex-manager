@@ -54,11 +54,11 @@ export function GrantAccessButton({
         onClick={() => setShowConfirmModal(true)}
         disabled={isGranting}
         data-testid="grant-access-button"
-        className="w-full flex items-center gap-2 text-sm text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full flex items-center gap-2 text-sm text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         title="Grant comp access (invite + exempt)"
       >
         <svg
-          className="w-4 h-4 text-green-400"
+          className="w-4 h-4 text-success"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -81,7 +81,6 @@ export function GrantAccessButton({
         message={`Grant complimentary access to ${userName || "this user"}? They will be invited to the Plex server and marked exempt from the subscription requirement.`}
         confirmText="Grant Access"
         cancelText="Cancel"
-        confirmButtonClass="bg-green-600 hover:bg-green-700"
       />
     </>
   )
