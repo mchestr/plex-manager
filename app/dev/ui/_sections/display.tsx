@@ -44,10 +44,6 @@ export function CardSpecimen() {
             </Button>
           </CardFooter>
         </Card>
-        <Card padding="md" className="flex flex-col gap-2">
-          <p className="text-h3">Legacy padding</p>
-          <p className="text-ui text-muted-foreground">The deprecated padding prop wraps the children in CardContent.</p>
-        </Card>
       </div>
     </Specimen>
   )

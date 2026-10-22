@@ -6,7 +6,6 @@ import { openBillingPortal } from "@/actions/subscription"
 import { redirectTo } from "@/lib/utils/navigation"
 import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useToast } from "@/components/ui/toast"
 
 interface ManageSubscriptionButtonProps {
@@ -79,20 +78,14 @@ export function ManageSubscriptionButton({
       type="button"
       variant={variant}
       size={size}
-      disabled={isPending}
+      loading={isPending}
+      loadingLabel="Opening..."
       onClick={handleClick}
       className={className}
       aria-describedby={description ? descriptionId : undefined}
       data-testid={testId}
     >
-      {isPending ? (
-        <>
-          <LoadingSpinner size="sm" />
-          Opening...
-        </>
-      ) : (
-        label
-      )}
+      {label}
     </Button>
   )
 

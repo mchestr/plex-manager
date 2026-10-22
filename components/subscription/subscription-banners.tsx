@@ -21,7 +21,7 @@ export function SubscriptionBanners({ notice }: SubscriptionBannersProps) {
     <div data-testid="subscription-banners">
       {notice === "past-due" ? (
         <Alert
-          tone="danger"
+          tone="destructive"
           title="Payment failed"
           action={
             <ManageSubscriptionButton
