@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { getUserActivityTimeline } from "@/actions/user-queries"
 import { UserActivityTimeline } from "@/components/admin/users/user-activity-timeline"
 import { ErrorState } from "@/components/ui/error-state"
+import { RemoveMemberDialog } from "@/components/admin/users/detail/remove-member-dialog"
 import type { UserDetailHeaderData } from "@/lib/admin/user-detail"
 import type { BoundFormat } from "@/lib/utils/format"
 
@@ -19,7 +20,7 @@ function Item({ label, children, testId }: { label: string; children: ReactNode;
   )
 }
 
-/** The member's account facts and their activity timeline (P10.6). */
+/** The member's account facts, their activity timeline (P10.6) and the danger zone (P11.13). */
 export async function OverviewTab({ header, f }: { header: UserDetailHeaderData; f: BoundFormat }) {
   const timeline = await getUserActivityTimeline({ userId: header.id, pageSize: 10 })
   const { discord } = header
@@ -56,6 +57,24 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
           <ErrorState title="Couldn't load the activity" message={timeline.error} />
         )}
       </section>
+
+      {!header.isOwner && (
+        <section
+          aria-labelledby="admin-user-danger-heading"
+          className="flex flex-col gap-3 rounded-lg border border-destructive/40 p-4 sm:flex-row sm:items-center sm:justify-between"
+          data-testid="admin-user-danger-zone"
+        >
+          <div className="flex flex-col gap-1">
+            <h2 id="admin-user-danger-heading" className="text-h3">
+              Danger zone
+            </h2>
+            <p className="text-ui text-muted-foreground">
+              Removing a member cancels their subscription, removes their server access and deletes their data here.
+            </p>
+          </div>
+          <RemoveMemberDialog userId={header.id} name={header.name} />
+        </section>
+      )}
     </div>
   )
 }

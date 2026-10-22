@@ -295,6 +295,20 @@ export async function removeJob(jobId: string): Promise<void> {
 }
 
 /**
+ * Removes the job a deduplication id points at, when it is still waiting or
+ * delayed, and frees the id. A running job cannot be removed and is left to
+ * finish. Returns whether a job was removed.
+ */
+export async function removeDeduplicatedJob(deduplicationId: string): Promise<boolean> {
+  const q = getQueue()
+  const jobId = await q.getDeduplicationJobId(deduplicationId)
+  if (!jobId) return false
+  const removed = await q.remove(jobId)
+  if (removed > 0) await q.removeDeduplicationKey(deduplicationId)
+  return removed > 0
+}
+
+/**
  * Pause the queue (stops processing new jobs)
  */
 export async function pauseQueue(): Promise<void> {

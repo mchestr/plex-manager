@@ -29,6 +29,9 @@ export enum AuditEventType {
   // An admin disabled or re-enabled a user's account (User.disabledAt).
   USER_DISABLED = "USER_DISABLED",
   USER_ENABLED = "USER_ENABLED",
+  // An admin removed a member and their data (P11.13). Details carry the row
+  // counts, the external outcomes and the Stripe customer id, never a name or email.
+  MEMBER_ERASED = "MEMBER_ERASED",
   // Invite processing events
   INVITE_CONSUMED = "INVITE_CONSUMED",
   INVITE_PLEX_FAILURE = "INVITE_PLEX_FAILURE",

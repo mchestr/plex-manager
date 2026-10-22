@@ -655,11 +655,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Remove a seeded member who has a subscription, a Discord link, marks, a Rewind with a public link and watchlist sync on. The dialog shows the counts. After confirming: Stripe shows the subscription cancelled, the Plex share is gone, the Discord role and grant are revoked, the public link returns 404, and a query over the inventory finds no rows for the member.
 
 **Done when.**
-- [ ] Unshare and revoke stop watchlist sync and clear the stored Plex token.
-- [ ] `eraseMember` runs the external effects, deletes or anonymises every inventory row, and audits the removal with ids only.
-- [ ] The admin action needs the member's name typed, refuses protected members, and shows dry-run counts.
-- [ ] `DiscordCommandLog` has its foreign key, and `docs/privacy.md` holds the inventory checked by a test.
+- [x] Unshare and revoke stop watchlist sync and clear the stored Plex token.
+- [x] `eraseMember` runs the external effects, deletes or anonymises every inventory row, and audits the removal with ids only.
+- [x] The admin action needs the member's name typed, refuses protected members, and shows dry-run counts.
+- [x] `DiscordCommandLog` has its foreign key, and `docs/privacy.md` holds the inventory checked by a test.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270116000003_p1113_discord_command_log_user_fk`. P11.10 and P11.11 had not merged, so this step wrote the smallest versions of their helpers at the plan's paths, for them to replace or extend: `memberServices` in `lib/members/service.ts`, `revokeServiceAccess(user)` in `lib/members/access-actions.ts` (Plex unshare, Jellyfin disable; returns `{ success, plex?, jellyfin? }` or a code: `PLEX_AUTH`, `PLEX_UNAVAILABLE`, `JELLYFIN_ADMIN`, `JELLYFIN_UNAVAILABLE`), and `setJellyfinAccountDisabled(config, id, disabled)` appended to `lib/connections/jellyfin-users.ts` (merges the policy, refuses an administrator, a 404 is `not_found`). `actions/admin/member-access.ts` holds `previewMemberRemoval` (the dry run the dialog loads) and `removeMember`; P11.10's `setMemberJellyfinAccess` joins it. `stopSyncAndClearPlexToken` (`lib/members/offboard.ts`) runs in `unshareUserLibrary` and `processPlexAccessRevoke`; `isPlexServerOwner` moved to `lib/members/owner.ts`. `NO_ACCESS` is a missing member or access level `none`; `lapsed` stays `NOT_ENTITLED`. `clearDiscordRoleForUser` itself revokes the grant (`revokeDiscordToken`, refresh token first) and deletes the Discord id's chat sessions, so a member's own unlink revokes too; it returns `{ linked, roleCleared, grantRevoked }`, and Discord failures never stop a removal. Removal also refuses a queued Rewind generation, not only a running one; it anonymises admin LLM rows found by `wrappedId` as well as `generationId`; sessions end before the queued jobs (`watchlist:user:<id>`, `discord:role:<id>`) are removed, so the role sync that `endUserSessions` queues is dropped too. The danger zone is at the foot of the Overview tab; its dialog is `RemoveMemberDialog` with test ids `admin-remove-member-open`, `-confirm-input`, `-button`, `-preview` and `-count-<table>`. Rate limit `admin:remove-member` (10 an hour); audit type `MEMBER_ERASED`; session reason `removed`; flash `member_removed`. The E2E spec was written but not run.)
 
 ### Step P11.14: Retention jobs for content tables
 

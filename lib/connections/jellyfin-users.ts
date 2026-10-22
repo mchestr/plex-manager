@@ -423,3 +423,60 @@ export async function getJellyfinUsers(
     return { success: false, error: "Failed to fetch Jellyfin users" }
   }
 }
+
+/** The outcome of {@link setJellyfinAccountDisabled}. */
+export type JellyfinDisableResult =
+  | { success: true; status: "changed" | "unchanged" | "not_found" }
+  | { success: false; code: "JELLYFIN_ADMIN" | "JELLYFIN_UNAVAILABLE" }
+
+/**
+ * Turns a Jellyfin account off or on. It reads the user and posts their own
+ * policy back with only `IsDisabled` changed, so libraries and roles stay as
+ * they are (`setJellyfinUserPolicy` resets them). A Jellyfin administrator is
+ * never disabled (`JELLYFIN_ADMIN`). An account Jellyfin no longer has is
+ * `not_found`, which counts as done; a user without a policy is unknown, so
+ * nothing changes (`JELLYFIN_UNAVAILABLE`).
+ *
+ * @param config - The active Jellyfin server.
+ * @param jellyfinUserId - The member's Jellyfin user id.
+ * @param disabled - True turns the account off.
+ */
+export async function setJellyfinAccountDisabled(
+  config: JellyfinConfig,
+  jellyfinUserId: string,
+  disabled: boolean
+): Promise<JellyfinDisableResult> {
+  try {
+    const read = await fetchWithTimeout(`${config.url}/Users/${jellyfinUserId}`, {
+      method: "GET",
+      headers: getJellyfinHeaders(config.apiKey),
+      timeoutMs: 5000,
+    })
+    if (read.status === 404) return { success: true, status: "not_found" }
+    if (!read.ok) return { success: false, code: "JELLYFIN_UNAVAILABLE" }
+
+    const user: JellyfinUser = await read.json()
+    const policy = user.Policy
+    if (!policy) return { success: false, code: "JELLYFIN_UNAVAILABLE" }
+    if (disabled && policy.IsAdministrator) return { success: false, code: "JELLYFIN_ADMIN" }
+    if (policy.IsDisabled === disabled) return { success: true, status: "unchanged" }
+
+    const write = await fetchWithTimeout(`${config.url}/Users/${jellyfinUserId}/Policy`, {
+      method: "POST",
+      headers: getJellyfinHeaders(config.apiKey),
+      body: JSON.stringify({ ...policy, IsDisabled: disabled }),
+      timeoutMs: 10000,
+    })
+    if (!write.ok) {
+      logger.warn("Failed to change the Jellyfin account state", { userId: jellyfinUserId, status: write.status })
+      return { success: false, code: "JELLYFIN_UNAVAILABLE" }
+    }
+    return { success: true, status: "changed" }
+  } catch (error) {
+    logger.warn("Error changing the Jellyfin account state", {
+      userId: jellyfinUserId,
+      error: error instanceof Error ? error.name : "unknown",
+    })
+    return { success: false, code: "JELLYFIN_UNAVAILABLE" }
+  }
+}

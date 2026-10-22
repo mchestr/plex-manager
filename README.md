@@ -453,6 +453,7 @@ All integrations are configured through the setup wizard or admin panel, with va
 - **Audit logging** - Tracking of admin actions and security events
 - **Encryption at rest** - External-service API keys/tokens are AES-256-GCM encrypted when `ENCRYPTION_KEY` is set
 - **Signed webhooks** - Stripe webhooks are verified against the raw request body (no admin auth needed)
+- **Member removal** - Admins can remove a member: their access, sessions, Stripe subscription, Discord grant and stored data go. [docs/privacy.md](docs/privacy.md) lists every table of personal data and what removal does to it
 
 See [CLAUDE.md](CLAUDE.md) for detailed security best practices.
 

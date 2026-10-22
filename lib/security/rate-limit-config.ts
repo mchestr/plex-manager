@@ -38,6 +38,8 @@ export const LIMITS = {
   "admin:queue": { points: 30, duration: MINUTE },
   // Invite create and delete per admin (P11.5)
   "admin:invites": { points: 30, duration: 10 * MINUTE },
+  // Member removals per admin (P11.13)
+  "admin:remove-member": { points: 10, duration: HOUR },
   checkout: { points: 10, duration: MINUTE },
   portal: { points: 10, duration: MINUTE },
   "discord-link": { points: 5, duration: 5 * MINUTE },
