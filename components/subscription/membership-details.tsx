@@ -7,20 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StatusBadge } from "@/components/ui/status-badge"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import type { Membership, MembershipSubscription } from "@/lib/member/membership"
-import { bindFormat, formatNumber, type FormatSettings } from "@/lib/utils/format"
+import { formatPlanAmount } from "@/lib/stripe/price-format"
+import { bindFormat, type FormatSettings } from "@/lib/utils/format"
 
 type Format = ReturnType<typeof bindFormat>
 
 /** "$5.00 a month", or null for custom pricing. */
 function priceLine(subscription: MembershipSubscription, f: Format): string | null {
-  const { amount, currency, interval } = subscription
-  if (amount === null || !currency) return null
-  const major = amount / 100
-  const money =
-    currency.toLowerCase() === "usd"
-      ? f.money(major, "prose")
-      : formatNumber(major, f.settings, { style: "currency", currency: currency.toUpperCase() })
-  return interval ? `${money} a ${interval}` : money
+  const money = formatPlanAmount(subscription.amount, subscription.currency, f.settings)
+  if (!money) return null
+  return subscription.interval ? `${money} a ${subscription.interval}` : money
 }
 
 /** "Renews November 6, 2026", "Retrying Nov 6", "Ended ..." or a fallback without a date. */

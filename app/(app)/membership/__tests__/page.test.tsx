@@ -54,6 +54,8 @@ beforeEach(() => {
     currency: 'usd',
     interval: 'month',
     productName: 'Supporter plan',
+    features: [],
+    recommended: false,
   })
 })
 

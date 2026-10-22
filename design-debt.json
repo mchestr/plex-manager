@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "7141df188f5ec72542d9be0dedfb2916c8e1146b",
-  "generatedAt": "2026-10-21T22:48:30.723Z",
+  "commit": "dd802f8d8d57fb5875f9587a2038686a5c969287",
+  "generatedAt": "2026-10-22T15:00:06.998Z",
   "files": {
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "copy": 1
@@ -19,12 +19,6 @@
       "gradient": 3,
       "gradient-text": 4,
       "raw-palette": 26
-    },
-    "app/subscribe/page.tsx": {
-      "raw-palette": 4
-    },
-    "app/subscribe/success/page.tsx": {
-      "raw-palette": 3
     },
     "components/admin/invites/invite-details-client.tsx": {
       "caps-eyebrow": 6,
@@ -335,6 +329,6 @@
     "gradient": 51,
     "gradient-text": 32,
     "infinite-motion": 23,
-    "raw-palette": 1031
+    "raw-palette": 1024
   }
 }

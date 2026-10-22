@@ -4,9 +4,11 @@ import { z } from "zod"
 
 import { memberAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionErrorCode, type ActionResult } from "@/lib/actions/result"
+import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getStripe } from "@/lib/stripe/client"
 import { createCheckoutSession } from "@/lib/stripe/checkout"
+import { parseStripeLibrarySectionIds } from "@/lib/stripe/config"
 import { getOfferedPrices } from "@/lib/stripe/prices"
 import { getBaseUrl } from "@/lib/env"
 import { createLogger } from "@/lib/utils/logger"
@@ -170,5 +172,44 @@ export const openBillingPortal = memberAction({
     })
 
     return ok({ url: portalSession.url })
+  },
+})
+
+/** Where a member's new subscription is: status fields only, never ids or secrets. */
+export interface SubscriptionProvisioning {
+  /** Null until the webhook has written the member's subscription row. */
+  status: SubscriptionStatus | null
+  /** `accepted`, `pending` (accept the invite by email), or null while the grant runs. */
+  plexInviteStatus: string | null
+  /** How many libraries subscribers get; null means every library. */
+  libraryCount: number | null
+  memberSince: Date | null
+  currentPeriodEnd: Date | null
+}
+
+/**
+ * The success page's live checklist (UI-40): the caller's own subscription
+ * status, Plex invite status and period, and how many libraries subscribers
+ * get. Requires a session; reads only the caller's row.
+ */
+export const getSubscriptionProvisioning = memberAction({
+  fallbackError: "Could not check your subscription.",
+  handler: async (_input, { userId }): Promise<ActionResult<SubscriptionProvisioning>> => {
+    const [subscription, config] = await Promise.all([
+      prisma.subscription.findUnique({
+        where: { userId },
+        select: { status: true, plexInviteStatus: true, createdAt: true, currentPeriodEnd: true },
+      }),
+      prisma.config.findUnique({ where: { id: "config" }, select: { stripeLibrarySectionIds: true } }),
+    ])
+    const libraries = parseStripeLibrarySectionIds(config?.stripeLibrarySectionIds)
+
+    return ok({
+      status: subscription?.status ?? null,
+      plexInviteStatus: subscription?.plexInviteStatus ?? null,
+      libraryCount: libraries.length > 0 ? libraries.length : null,
+      memberSince: subscription?.createdAt ?? null,
+      currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
+    })
   },
 })

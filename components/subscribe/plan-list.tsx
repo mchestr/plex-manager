@@ -1,134 +1,82 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { startCheckout } from "@/actions/subscription"
-import { useFormat } from "@/lib/format-context"
-import { cn } from "@/lib/utils"
-import { formatNumber } from "@/lib/utils/format"
-import { redirectTo } from "@/lib/utils/navigation"
-import type { OfferedPrice } from "@/lib/stripe/prices"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { PlanCard } from "@/components/subscribe/plan-card"
 import { useToast } from "@/components/ui/toast"
+import { useFormat } from "@/lib/format-context"
+import type { OfferedPrice } from "@/lib/stripe/prices"
+import { cn } from "@/lib/utils"
+import { redirectTo } from "@/lib/utils/navigation"
 
 interface PlanListProps {
   plans: OfferedPrice[]
 }
 
-/**
- * Formats a Stripe amount (in the smallest currency unit, e.g. cents) into a
- * currency string in the app locale. Returns a friendly fallback for custom
- * pricing (`amount === null`).
- */
-function formatPrice(amount: number | null, currency: string, locale: string): string {
-  if (amount === null) {
-    return "Custom"
-  }
-
-  try {
-    return formatNumber(amount / 100, { locale }, { style: "currency", currency: currency.toUpperCase() })
-  } catch {
-    // Unknown currency code — fall back to a plain number + upper-cased code.
-    return `${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`
-  }
+/** The one primary plan (ui-design-system 7.5): the recommended price, else the first. */
+function primaryPriceId(plans: OfferedPrice[]): string | undefined {
+  return (plans.find((plan) => plan.recommended) ?? plans[0])?.priceId
 }
 
 /**
- * Client-side list of subscribe-able plans.
- *
- * Renders one card per offered price with a Subscribe button that calls the
- * `startCheckout` server action and redirects the browser to the returned Stripe
- * Checkout URL. A per-plan loading state is shown while the action runs, and
- * errors are surfaced via a toast (the user stays on the page).
+ * The offered plans on `/subscribe`. Subscribe calls `startCheckout` and sends
+ * the browser to Stripe Checkout. A failure shows in a toast and inline in
+ * its card (UI-10); `ALREADY_SUBSCRIBED` also refreshes the page, which then
+ * shows the entitled screen.
  */
 export function PlanList({ plans }: PlanListProps) {
   const toast = useToast()
+  const router = useRouter()
   const f = useFormat()
   const [pendingPriceId, setPendingPriceId] = useState<string | null>(null)
+  const [error, setError] = useState<{ priceId: string; message: string } | null>(null)
+  const primary = primaryPriceId(plans)
+
+  const fail = (priceId: string, message: string) => {
+    toast.showError(message)
+    setError({ priceId, message })
+    setPendingPriceId(null)
+  }
 
   const handleSubscribe = async (priceId: string) => {
     // Ignore repeat clicks while a checkout is already starting.
-    if (pendingPriceId) {
-      return
-    }
+    if (pendingPriceId) return
 
     setPendingPriceId(priceId)
+    setError(null)
     try {
       const result = await startCheckout({ priceId })
       if (!result.success) {
-        toast.showError(result.error)
-        setPendingPriceId(null)
+        fail(priceId, result.error)
+        if (result.code === "ALREADY_SUBSCRIBED") router.refresh()
         return
       }
-
-      // Redirect to Stripe Checkout. Leave the loading state active so the
-      // button stays disabled until the navigation happens.
+      // Stay busy until the navigation to Stripe happens.
       redirectTo(result.data.url)
     } catch {
-      toast.showError("Could not start checkout. Please try again.")
-      setPendingPriceId(null)
+      fail(priceId, "Could not start checkout. Please try again.")
     }
   }
 
-  // A single plan is centered in a constrained column; multiple plans flow into
-  // a responsive two-column grid. Using `sm:grid-cols-2` unconditionally would
-  // leave a lone plan stranded in the left column.
-  const isSingle = plans.length === 1
-
   return (
     <div
-      className={cn(
-        "grid w-full gap-4",
-        isSingle ? "max-w-sm" : "max-w-3xl sm:grid-cols-2"
-      )}
+      className={cn("grid w-full gap-4", plans.length > 1 && "sm:grid-cols-2")}
       data-testid="subscribe-plan-list"
     >
-      {plans.map((plan) => {
-        const isPending = pendingPriceId === plan.priceId
-        return (
-          <Card
-            key={plan.priceId}
-            padding="md"
-            className="flex flex-col gap-4 text-left"
-            data-testid={`subscribe-plan-${plan.priceId}`}
-          >
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">
-                {plan.productName || "Plex Access"}
-              </h2>
-              <p className="mt-1 flex items-baseline gap-1">
-                <span
-                  className="text-2xl font-bold text-foreground"
-                  data-testid={`subscribe-plan-price-${plan.priceId}`}
-                >
-                  {formatPrice(plan.amount, plan.currency, f.settings.locale)}
-                </span>
-                {plan.interval && (
-                  <span className="text-sm text-muted-foreground">/ {plan.interval}</span>
-                )}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="primary"
-              disabled={isPending}
-              onClick={() => handleSubscribe(plan.priceId)}
-              data-testid={`subscribe-button-${plan.priceId}`}
-            >
-              {isPending ? (
-                <>
-                  <LoadingSpinner size="sm" />
-                  Redirecting...
-                </>
-              ) : (
-                "Subscribe"
-              )}
-            </Button>
-          </Card>
-        )
-      })}
+      {plans.map((plan) => (
+        <PlanCard
+          key={plan.priceId}
+          plan={plan}
+          primary={plan.priceId === primary}
+          pending={pendingPriceId === plan.priceId}
+          disabled={pendingPriceId !== null && pendingPriceId !== plan.priceId}
+          error={error?.priceId === plan.priceId ? error.message : null}
+          settings={f.settings}
+          onSubscribe={handleSubscribe}
+        />
+      ))}
     </div>
   )
 }

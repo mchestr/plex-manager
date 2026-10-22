@@ -1356,7 +1356,9 @@ No confetti and no space background.
 **Demo.** As an entitled member, open `/subscribe`: "You already have access" with Manage billing. As a gated member: "Join Northfield Plex" with the Supporter plan at $5.00 per month and one primary button. After a test checkout, the success checklist ticks Payment confirmed, then Sharing.
 
 **Done when.**
-- [ ] Entitled members get the "You already have access" screen.
-- [ ] The plan cards show names, prices and benefits, never raw ids, with one primary action.
-- [ ] Sign out is always present, and checkout errors render inline.
-- [ ] The success page polls a live checklist, and the tests pass.
+- [x] Entitled members get the "You already have access" screen.
+- [x] The plan cards show names, prices and benefits, never raw ids, with one primary action.
+- [x] Sign out is always present, and checkout errors render inline.
+- [x] The success page polls a live checklist, and the tests pass.
+
+(as merged: the entitled screen's Manage billing links to P10.22's `/membership` rather than opening the portal itself; the unavailable state is a StatusScreen (`subscribe-unavailable`, "Ask on Discord" or Sign out), not an EmptyState. `OfferedPrice` gained `features` and `recommended`; `lib/stripe/price-format.ts` (`formatPlanAmount`) now formats prices for both the plan cards and `/membership`. `getSubscriptionProvisioning` returns `{ status, plexInviteStatus, libraryCount (null = every library), memberSince, currentPeriodEnd }`. The prices tests stayed in `__tests__/lib/stripe/prices.test.ts`; the old `components/__tests__/subscribe-*.test.tsx` moved next to the pages and components. Checkout's `cancel_url` is unchanged, so a canceled checkout lands back on the plans.)

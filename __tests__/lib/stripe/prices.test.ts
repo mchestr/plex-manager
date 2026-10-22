@@ -89,6 +89,8 @@ describe('getOfferedPrices', () => {
         currency: 'usd',
         interval: 'month',
         productName: 'Plex Access',
+        features: [],
+        recommended: false,
       },
       {
         priceId: 'price_year',
@@ -96,6 +98,8 @@ describe('getOfferedPrices', () => {
         currency: 'usd',
         interval: 'year',
         productName: 'Plex Access Annual',
+        features: [],
+        recommended: false,
       },
     ])
     expect(stripe.prices.retrieve).toHaveBeenCalledWith('price_month', {
@@ -192,7 +196,42 @@ describe('getOfferedPrices', () => {
       currency: 'usd',
       interval: null,
       productName: 'prod_expanded_string',
+      features: [],
+      recommended: false,
     })
+  })
+
+  // P10.28: the plan cards' benefits and their one primary
+  it("reads features from the product's marketing_features, capped at three", async () => {
+    mockFindUnique.mockResolvedValue({ stripeEnabled: true, stripePriceIds: ['price_123'] })
+    const stripe = makeStripeMock()
+    stripe.prices.retrieve.mockResolvedValueOnce(
+      makeStripePrice({
+        product: {
+          name: 'Supporter',
+          deleted: false,
+          marketing_features: [{ name: 'Every library' }, { name: ' ' }, {}, { name: '4K streams' }, { name: 'Rewind' }, { name: 'Fourth' }],
+        },
+      })
+    )
+    mockGetStripe.mockResolvedValue(stripe)
+
+    const [price] = await getOfferedPrices()
+
+    expect(price.features).toEqual(['Every library', '4K streams', 'Rewind'])
+  })
+
+  it('marks a price recommended from metadata.recommended === "true"', async () => {
+    mockFindUnique.mockResolvedValue({ stripeEnabled: true, stripePriceIds: ['price_a', 'price_b'] })
+    const stripe = makeStripeMock()
+    stripe.prices.retrieve
+      .mockResolvedValueOnce(makeStripePrice({ id: 'price_a', metadata: { recommended: 'yes' } }))
+      .mockResolvedValueOnce(makeStripePrice({ id: 'price_b', metadata: { recommended: 'true' } }))
+    mockGetStripe.mockResolvedValue(stripe)
+
+    const prices = await getOfferedPrices()
+
+    expect(prices.map((price) => price.recommended)).toEqual([false, true])
   })
 })
 
