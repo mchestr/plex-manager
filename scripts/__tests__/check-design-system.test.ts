@@ -200,8 +200,7 @@ describe("addRules", () => {
 
   it("still refuses any other rise", () => {
     const result = addRules(baseline, { "a.tsx": { gradient: 3, "inline-svg": 1 } }, ["inline-svg"])
-    expect(result.ok).toBe(false)
-    expect(result.result.rises).toEqual([{ file: "a.tsx", rule: "gradient", was: 2, now: 3 }])
+    expect(result).toMatchObject({ ok: false, result: { rises: [{ file: "a.tsx", rule: "gradient", was: 2, now: 3 }] } })
     expect(addRules(baseline, { "a.tsx": { gradient: 2 }, "b.tsx": { blur: 1 } }, ["inline-svg"]).ok).toBe(false)
   })
 

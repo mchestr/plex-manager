@@ -1,14 +1,10 @@
 {
   "schema": 1,
-  "commit": "32d9b2dd92b49d7523ed99e3fc8b2e223db0e00b",
-  "generatedAt": "2026-10-22T17:03:28.213Z",
+  "commit": "debfc6925d9c4b3208d20db4c74d1ecf57a9b0bc",
+  "generatedAt": "2026-10-22T17:05:58.295Z",
   "files": {
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "copy": 1
-    },
-    "components/auth/jellyfin-sign-in-button.tsx": {
-      "inline-spinner": 1,
-      "inline-svg": 1
     },
     "components/setup/setup-wizard/dev-mode-banner.tsx": {
       "inline-svg": 1,
@@ -242,8 +238,7 @@
     "gradient": 45,
     "gradient-text": 28,
     "infinite-motion": 19,
-    "inline-spinner": 1,
-    "inline-svg": 4,
+    "inline-svg": 3,
     "raw-palette": 438
   }
 }
