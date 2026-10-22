@@ -32,8 +32,32 @@ const outsideRewind = (path) => !REWIND_PATHS.some((prefix) => path.startsWith(p
 const SVG_ART = [/^components\/ui\/chart/, /(?:^|\/)charts?\//]
 const outsideSvgArt = (path) => outsideRewind(path) && !SVG_ART.some((re) => re.test(path))
 
-/** A `'use client'` directive as the module's first statement. */
-const CLIENT_DIRECTIVE = /^(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*['"]use client['"]/
+const DIRECTIVE = /^['"]use client['"]/
+
+/**
+ * The source after a leading `'use client'` directive, or null when the module
+ * has none. Leading whitespace and comments are skipped by hand: a regex with
+ * a repeated comment alternative backtracks exponentially on `/*` runs.
+ */
+function afterClientDirective(source) {
+  let at = 0
+  for (;;) {
+    while (at < source.length && /\s/.test(source[at])) at++
+    if (source.startsWith('//', at)) {
+      const end = source.indexOf('\n', at)
+      if (end === -1) return null
+      at = end + 1
+    } else if (source.startsWith('/*', at)) {
+      const end = source.indexOf('*/', at + 2)
+      if (end === -1) return null
+      at = end + 2
+    } else break
+  }
+  const rest = source.slice(at)
+  const match = DIRECTIVE.exec(rest)
+  return match ? rest.slice(match[0].length) : null
+}
+
 /**
  * What makes a module need the client: hooks, handlers, browser globals,
  * motion, or an element `render` prop (a Base UI trigger merges its children
@@ -48,7 +72,8 @@ const CLIENT_NEEDS = /\buse[A-Z]\w*|\bon[A-Z]\w*=|\b(?:window|document)\.|\bmoti
  * client, which the heuristic cannot see; such files keep a count.
  */
 function unneededClientMarker(source) {
-  return CLIENT_DIRECTIVE.test(source) && !CLIENT_NEEDS.test(source.replace(CLIENT_DIRECTIVE, '')) ? 1 : 0
+  const rest = afterClientDirective(source)
+  return rest !== null && !CLIENT_NEEDS.test(rest) ? 1 : 0
 }
 
 /** The Rewind block of `app/globals.css` (P3.1 adds the markers). */
