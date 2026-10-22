@@ -9,6 +9,11 @@ jest.mock('@/actions/import-plex-users', () => ({
   importPlexUsers: jest.fn(),
 }))
 
+const mockRefresh = jest.fn()
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: mockRefresh }),
+}))
+
 // Mock the toast hook
 jest.mock('@/components/ui/toast', () => ({
   useToast: jest.fn(),
@@ -28,7 +33,7 @@ describe('ImportPlexUsersButton', () => {
 
   it('should render the import button', () => {
     render(<ImportPlexUsersButton />)
-    expect(screen.getByText('Import Plex Users')).toBeInTheDocument()
+    expect(screen.getByText('Import from Plex')).toBeInTheDocument()
   })
 
   it('should disable button during import', async () => {
@@ -40,7 +45,7 @@ describe('ImportPlexUsersButton', () => {
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockReturnValue(importPromise as any)
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     // Click the button - this starts the transition
     await user.click(button)
@@ -76,12 +81,14 @@ describe('ImportPlexUsersButton', () => {
     })
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     await user.click(button)
 
     await waitFor(() => {
       expect(mockShowSuccess).toHaveBeenCalledWith('Imported 5 users', 5000)
+      // The new members show without a reload
+      expect(mockRefresh).toHaveBeenCalled()
     })
   })
 
@@ -95,7 +102,7 @@ describe('ImportPlexUsersButton', () => {
     })
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     await user.click(button)
 
@@ -114,7 +121,7 @@ describe('ImportPlexUsersButton', () => {
     })
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     await user.click(button)
 
@@ -136,7 +143,7 @@ describe('ImportPlexUsersButton', () => {
     })
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     await user.click(button)
 
@@ -156,7 +163,7 @@ describe('ImportPlexUsersButton', () => {
     })
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     await user.click(button)
 
@@ -177,7 +184,7 @@ describe('ImportPlexUsersButton', () => {
     })
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     await user.click(button)
 
@@ -196,7 +203,7 @@ describe('ImportPlexUsersButton', () => {
     })
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     await user.click(button)
 
@@ -215,7 +222,7 @@ describe('ImportPlexUsersButton', () => {
     })
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     await user.click(button)
 
@@ -234,7 +241,7 @@ describe('ImportPlexUsersButton', () => {
     })
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     await user.click(button)
 
@@ -256,7 +263,7 @@ describe('ImportPlexUsersButton', () => {
     })
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     await user.click(button)
 
@@ -280,7 +287,7 @@ describe('ImportPlexUsersButton', () => {
     })
 
     render(<ImportPlexUsersButton />)
-    const button = screen.getByText('Import Plex Users')
+    const button = screen.getByText('Import from Plex')
 
     await user.click(button)
 
@@ -297,7 +304,7 @@ describe('ImportPlexUsersButton', () => {
   it('renders as the primary button', () => {
     render(<ImportPlexUsersButton />)
 
-    expect(screen.getByRole('button', { name: 'Import Plex Users' })).toHaveClass('bg-primary')
+    expect(screen.getByRole('button', { name: 'Import from Plex' })).toHaveClass('bg-primary')
   })
 })
 

@@ -117,7 +117,7 @@ test.describe('Accessibility', () => {
     await signIn(TEST_USERS.ADMIN.id);
     await page.goto('/admin/users');
     await settlePage(page);
-    await expect(page.getByTestId('admin-users-heading')).toBeVisible();
+    await expect(page.getByTestId('admin-users-header')).toBeVisible();
 
     const builder = new AxeBuilder({ page }).withRules(['button-name']).exclude('nextjs-portal');
     const results = await analyzeAtRest(page, builder);

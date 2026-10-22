@@ -9,6 +9,7 @@
 import "server-only"
 
 import { activeRunStarts } from "@/lib/admin/active-runs"
+import type { UserActionTarget } from "@/lib/admin/user-actions"
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
@@ -119,4 +120,22 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
 /** Billing shows when Stripe is on or the member has a subscription row. */
 export function billingVisible(header: Pick<UserDetailHeaderData, "stripeEnabled" | "subscription">): boolean {
   return header.stripeEnabled || header.subscription !== null
+}
+
+/** The member as the shared action menu and dialogs see them (P10.18). */
+export function detailUserTarget(header: UserDetailHeaderData): UserActionTarget {
+  return {
+    id: header.id,
+    name: header.name,
+    plexUserId: header.plexUserId,
+    isAdmin: header.isAdmin,
+    isOwner: header.isOwner,
+    disabled: header.disabledAt !== null,
+    plexAccess: header.plexAccess,
+    wrappedStatus: header.season.status,
+    wrappedRunStartedAt: header.season.runStartedAt,
+    subscriptionStatus: header.subscription?.status ?? null,
+    isExempt: header.isExempt,
+    stripeCustomerId: header.subscription?.stripeCustomerId ?? null,
+  }
 }

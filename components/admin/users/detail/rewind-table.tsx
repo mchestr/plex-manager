@@ -14,7 +14,7 @@ import type { RowAction } from "@/components/ui/data-table/row-actions"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useToast } from "@/components/ui/toast"
 import { rewindHistory, userRewind } from "@/lib/admin/routes"
-import type { RewindRowState } from "@/lib/admin/user-detail-tabs"
+import type { RewindRowState } from "@/lib/admin/can-regenerate"
 
 import { RewindStateBadge } from "./rewind-state-badge"
 

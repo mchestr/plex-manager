@@ -53,6 +53,8 @@ export const makeAdminUserWithStats = (
   image: 'https://example.com/avatar.jpg',
   plexUserId: 'plex-123',
   isAdmin: false,
+  isOwner: false,
+  disabledAt: null,
   createdAt: new Date('2024-01-01T00:00:00Z'),
   updatedAt: new Date('2024-01-01T00:00:00Z'),
   wrappedStatus: 'completed',

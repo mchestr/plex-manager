@@ -1,7 +1,7 @@
 import { getUserPlexWrapped, getAllUsersWithWrapped, unshareUserLibrary } from '@/actions/user-queries'
 import { requireAdmin } from '@/lib/admin'
-import { unshareUserFromPlexServer } from '@/lib/connections/plex'
-import { buildUser } from '@/__tests__/helpers/factories'
+import { getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from '@/lib/connections/plex'
+import { buildPlexServer, buildUser } from '@/__tests__/helpers/factories'
 import { aggregateLlmUsage } from '@/lib/utils'
 import { usageTotalsByUser, usageTotalsForWrapped } from '@/lib/llm/usage-totals'
 import { getServerSession } from 'next-auth'
@@ -279,7 +279,7 @@ describe('getAllUsersWithWrapped', () => {
     jest.mocked(usageTotalsForWrapped).mockResolvedValueOnce(new Map([['wrapped-1', totals]]))
     jest.mocked(usageTotalsByUser).mockResolvedValueOnce(new Map([['user-1', totals]]))
 
-    const result = await getAllUsersWithWrapped(2024)
+    const { users: result } = await getAllUsersWithWrapped(2024)
 
     expect(usageTotalsForWrapped).toHaveBeenCalledWith(['wrapped-1'])
     expect(usageTotalsByUser).toHaveBeenCalledWith(['user-1'])
@@ -352,7 +352,7 @@ describe('getAllUsersWithWrapped', () => {
     mockPrisma.user.findMany.mockResolvedValue(mockUsers as any)
     mockPrisma.plexWrapped.findMany.mockResolvedValue([])
 
-    const result = await getAllUsersWithWrapped(2024)
+    const { users: result } = await getAllUsersWithWrapped(2024)
 
     expect(result).toHaveLength(1)
     expect(result[0]).toMatchObject({
@@ -421,7 +421,7 @@ describe('getAllUsersWithWrapped', () => {
       new Map([['wrapped-1', { totalTokens: 3000, promptTokens: 1500, completionTokens: 1500, cost: 0.03, provider: 'openai', model: 'gpt-4', count: 2 }]])
     )
 
-    const result = await getAllUsersWithWrapped(2024)
+    const { users: result } = await getAllUsersWithWrapped(2024)
 
     expect(result[0].llmUsage).toMatchObject({
       totalTokens: 3000,
@@ -432,12 +432,73 @@ describe('getAllUsersWithWrapped', () => {
     })
   })
 
-  it('should return empty array on error', async () => {
+  it('throws a database failure to the error boundary instead of listing nobody (P10.18)', async () => {
     mockPrisma.user.findMany.mockRejectedValue(new Error('Database error'))
 
-    const result = await getAllUsersWithWrapped(2024)
+    await expect(getAllUsersWithWrapped(2024)).rejects.toThrow('Database error')
+  })
 
-    expect(result).toEqual([])
+  describe('Plex access check (P10.18)', () => {
+    const SERVER = buildPlexServer({ url: 'http://127.0.0.1:9', adminPlexUserId: 'plex-owner' })
+    const member = (id: string, plexUserId: string | null, isAdmin = false) => ({
+      ...buildUser({ id, plexUserId, isAdmin }),
+      plexWrapped: [],
+      _count: { plexWrapped: 0 },
+    })
+
+    beforeEach(() => {
+      mockPrisma.plexWrapped.findMany.mockResolvedValue([])
+      mockPrisma.user.findMany.mockResolvedValue([
+        member('owner', 'plex-owner', true),
+        member('shared', 'plex-shared'),
+        member('gone', 'plex-gone'),
+        member('local', null),
+      ])
+    })
+
+    it('reports not-configured with no active server, and every access unknown', async () => {
+      mockPrisma.plexServer.findFirst.mockResolvedValue(null)
+
+      const { users, plexCheck } = await getAllUsersWithWrapped(2024)
+
+      expect(plexCheck.status).toBe('not-configured')
+      expect(users.map((u) => u.hasPlexAccess)).toEqual([null, null, null, null])
+      expect(users.every((u) => !u.isOwner)).toBe(true)
+    })
+
+    it('keeps every member, unknown but the owner, when Plex does not answer', async () => {
+      mockPrisma.plexServer.findFirst.mockResolvedValue(SERVER)
+      jest.mocked(getPlexServerIdentity).mockResolvedValue({ success: false, error: 'ECONNREFUSED' })
+
+      const { users, plexCheck } = await getAllUsersWithWrapped(2024)
+
+      expect(plexCheck.status).toBe('unreachable')
+      expect(plexCheck.checkedAt).toEqual(new Date('2024-06-01T12:00:00Z'))
+      expect(users).toHaveLength(4)
+      expect(users.map((u) => [u.id, u.isOwner, u.hasPlexAccess])).toEqual([
+        ['owner', true, true],
+        ['shared', false, null],
+        ['gone', false, null],
+        ['local', false, null],
+      ])
+    })
+
+    it('reads each share from Plex when it answers', async () => {
+      mockPrisma.plexServer.findFirst.mockResolvedValue(SERVER)
+      jest.mocked(getPlexServerIdentity).mockResolvedValue({ success: true, machineIdentifier: 'machine-1' })
+      jest.mocked(getPlexUsers).mockResolvedValue({
+        success: true,
+        data: [
+          { id: 'plex-shared', username: 'shared', servers: [{ machineIdentifier: 'machine-1' }] },
+          { id: 'plex-gone', username: 'gone', servers: [{ machineIdentifier: 'other' }] },
+        ],
+      })
+
+      const { users, plexCheck } = await getAllUsersWithWrapped(2024)
+
+      expect(plexCheck.status).toBe('ok')
+      expect(users.map((u) => u.hasPlexAccess)).toEqual([true, true, false, null])
+    })
   })
 
   it('should calculate share and visit counts correctly', async () => {
@@ -480,7 +541,7 @@ describe('getAllUsersWithWrapped', () => {
       },
     ] as any)
 
-    const result = await getAllUsersWithWrapped(2024)
+    const { users: result } = await getAllUsersWithWrapped(2024)
 
     expect(result[0].totalShares).toBe(2) // Only wraps with shareToken
     expect(result[0].totalVisits).toBe(17) // Sum of all visits

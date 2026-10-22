@@ -1,4 +1,4 @@
-import { getRegenerateEstimate, getUserRewindRows } from "@/lib/admin/user-detail-tabs"
+import { getUserRewindRows, regenerateEstimateCopy } from "@/lib/admin/user-detail-tabs"
 import type { BoundFormat } from "@/lib/utils/format"
 
 import { RewindTable, type RewindTableRow } from "./rewind-table"
@@ -16,7 +16,7 @@ interface RewindTabProps {
 /** Every year of the member's Rewind, with Preview, Roll back and Regenerate (P10.6). */
 export async function RewindTab({ userId, name, seasonYear, f, now }: RewindTabProps) {
   const rows = await getUserRewindRows(userId, seasonYear, now)
-  const estimate = rows.some((row) => row.canRegenerate) ? await getRegenerateEstimate(seasonYear) : null
+  const estimateCopy = rows.some((row) => row.canRegenerate) ? await regenerateEstimateCopy(seasonYear, f) : ""
 
   const tableRows: RewindTableRow[] = rows.map((row) => ({
     wrappedId: row.wrappedId,
@@ -30,12 +30,6 @@ export async function RewindTab({ userId, name, seasonYear, f, now }: RewindTabP
     canRegenerate: row.canRegenerate,
     versions: row.versions.map((version) => ({ id: version.id, label: `Version of ${f.dateTime(version.createdAt, { zoneLabel: true })}` })),
   }))
-
-  const estimateCopy = estimate
-    ? estimate.costUsd > 0
-      ? `About ${f.money(estimate.costUsd)} of the ${f.money(estimate.budgetUsd)} season budget.`
-      : "It uses template copy, so it costs nothing."
-    : ""
 
   return <RewindTable userId={userId} name={name} rows={tableRows} estimateCopy={estimateCopy} />
 }

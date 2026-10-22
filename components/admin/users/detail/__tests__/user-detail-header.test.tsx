@@ -5,10 +5,12 @@ import type { UserDetailHeaderData } from '@/lib/admin/user-detail'
 
 jest.mock('server-only', () => ({}))
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))
-jest.mock('@/components/admin/users/disable-user-button', () => ({ DisableUserButton: () => <button type="button">Disable account</button> }))
-jest.mock('@/components/admin/users/change-user-role-button', () => ({ ChangeUserRoleButton: () => <button type="button">Make admin</button> }))
-jest.mock('@/components/admin/users/user-actions-menu', () => ({
-  UserActionsMenu: ({ user }: { user: { name: string } }) => <button type="button">Actions for {user.name}</button>,
+jest.mock('@/components/admin/users/detail/user-detail-actions', () => ({
+  UserDetailActions: ({ user }: { user: { name: string; disabled: boolean } }) => (
+    <button type="button" data-disabled={String(user.disabled)}>
+      Actions for {user.name}
+    </button>
+  ),
 }))
 
 const NOW = Date.parse('2026-12-03T12:00:00Z')
@@ -37,7 +39,7 @@ function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeader
 
 describe('UserDetailHeader', () => {
   it('uses the name as the h1, breadcrumbs back to Users and the email below', () => {
-    render(<UserDetailHeader header={header()} stripeDashboardBaseUrl={null} now={NOW} />)
+    render(<UserDetailHeader header={header()} stripeDashboardBaseUrl={null} estimateCopy="" now={NOW} />)
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Morgan Lee')
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Users/Morgan Lee')
@@ -46,7 +48,7 @@ describe('UserDetailHeader', () => {
   })
 
   it('renders the role, Plex access and Rewind badges, and the subscription only with Stripe on', () => {
-    const { rerender } = render(<UserDetailHeader header={header()} stripeDashboardBaseUrl={null} now={NOW} />)
+    const { rerender } = render(<UserDetailHeader header={header()} stripeDashboardBaseUrl={null} estimateCopy="" now={NOW} />)
 
     expect(screen.getByTestId('admin-user-role-badge')).toHaveTextContent('Member')
     expect(screen.getByTestId('admin-user-plex-badge')).toHaveTextContent('Shared')
@@ -57,6 +59,7 @@ describe('UserDetailHeader', () => {
       <UserDetailHeader
         header={header({ isAdmin: true, isOwner: true, plexAccess: 'unknown', stripeEnabled: true, subscription: { status: 'PAST_DUE', currentPeriodEnd: null, cancelAtPeriodEnd: false, stripeCustomerId: null } })}
         stripeDashboardBaseUrl={null}
+        estimateCopy=""
         now={NOW}
       />
     )
@@ -70,10 +73,14 @@ describe('UserDetailHeader', () => {
       <UserDetailHeader
         header={header({ disabledAt: new Date(NOW), season: { year: 2026, status: 'generating', runStartedAt: new Date(NOW - 20 * 60_000) } })}
         stripeDashboardBaseUrl={null}
+        estimateCopy=""
         now={NOW}
       />
     )
     expect(screen.getByTestId('admin-user-rewind-badge')).toHaveTextContent('Rewind 2026: Stuck')
     expect(screen.getByTestId('admin-user-disabled-badge')).toHaveTextContent('Disabled')
+    // The shared users-list menu replaces P10.6's Disable and Change role buttons (P10.18)
+    expect(screen.getByRole('button', { name: 'Actions for Morgan Lee' })).toHaveAttribute('data-disabled', 'true')
+    expect(screen.queryByRole('button', { name: 'Disable account' })).not.toBeInTheDocument()
   })
 })

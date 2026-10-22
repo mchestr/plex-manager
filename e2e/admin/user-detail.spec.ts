@@ -75,10 +75,7 @@ test.describe('Admin user detail', () => {
 
   test('opens from the users list by keyboard and switches tabs through the URL', async ({ adminPage }) => {
     await adminPage.goto('/admin/users');
-    // The list starts on "Plex access: Yes", and no seeded member is shared on a live Plex server
-    await adminPage.getByTestId('users-filter-plex-access').click();
-    await adminPage.getByTestId('users-filter-plex-access-option-all').click();
-    const link = adminPage.getByTestId(`user-name-link-${MEMBER.id}`);
+    const link = adminPage.getByTestId(`admin-users-name-${MEMBER.id}`);
     await link.focus();
     await adminPage.keyboard.press('Enter');
 

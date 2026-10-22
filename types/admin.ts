@@ -18,6 +18,10 @@ export interface AdminUserWithWrappedStats {
   image: string | null
   plexUserId: string | null
   isAdmin: boolean
+  /** The Plex account that owns the configured server (`PlexServer.adminPlexUserId`). */
+  isOwner: boolean
+  /** Set while the account is disabled (P4.7). */
+  disabledAt: Date | null
   createdAt: Date
   updatedAt: Date
   wrappedStatus: string | null
@@ -36,6 +40,21 @@ export interface AdminUserWithWrappedStats {
   isExempt: boolean
   exemptReason: string | null
   stripeCustomerId: string | null
+}
+
+/**
+ * Whether the users list could check Plex access (P10.18): `unreachable`
+ * leaves every non-owner's `hasPlexAccess` null, and the page says so instead
+ * of hiding members.
+ */
+export interface PlexAccessCheck {
+  status: "ok" | "unreachable" | "not-configured"
+  checkedAt: Date
+}
+
+export interface AdminUsersList {
+  users: AdminUserWithWrappedStats[]
+  plexCheck: PlexAccessCheck
 }
 
 // Activity Timeline Types

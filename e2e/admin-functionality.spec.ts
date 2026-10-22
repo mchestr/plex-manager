@@ -14,7 +14,7 @@ test.describe('Admin Functionality', () => {
 
   test('should access admin settings', async ({ adminPage }) => {
     // Use in-app navigation instead of forcing a new navigation
-    await adminPage.locator('aside').getByTestId('admin-nav-settings').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
     await waitForAdminContent(adminPage, [
       { type: 'heading', value: 'Settings' },
       { type: 'text', value: 'Application Settings' },
@@ -23,24 +23,13 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin users list', async ({ adminPage }) => {
-    // /admin is the Overview (P10.8), so open Users from the nav
-    await adminPage.locator('aside').getByTestId('admin-nav-users').first().click();
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Users' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-users').first().click();
+    await expect(adminPage.getByTestId('admin-users-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
-    // The default filter is "Plex Access: Yes", which may filter out the admin user
-    // Change filter to "All" to see all users including admin
-    const plexAccessFilter = adminPage.getByTestId('users-filter-plex-access');
-    await plexAccessFilter.click();
-
-    // Wait for dropdown to open and click "All" option
-    await adminPage.getByTestId('users-filter-plex-access-option-all').click();
-
-    // Wait for filtered results to appear - should now show all users
+    // Every filter defaults to All (P10.18, UI-05), so both seeded users are listed.
     // Scoped to the rows: the admin sidebar shows the signed-in admin's name too
-    const adminRow = adminPage.getByTestId('user-row-admin-user-id');
-    const regularRow = adminPage.getByTestId('user-row-regular-user-id');
+    const adminRow = adminPage.getByTestId('admin-users-row-admin-user-id');
+    const regularRow = adminPage.getByTestId('admin-users-row-regular-user-id');
     await expect(adminRow).toContainText('Admin User', { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
     await expect(adminRow).toContainText('admin@example.com');
     await expect(regularRow).toContainText('Regular User');
@@ -48,7 +37,7 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin cost analysis', async ({ adminPage }) => {
-    await adminPage.locator('aside').getByTestId('admin-nav-cost-analysis').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-cost-analysis').first().click();
     await waitForAdminContent(adminPage, [
       { type: 'selector', value: '[data-testid="admin-cost-analysis-header"]' },
       { type: 'heading', value: 'Cost analysis', level: 1 }
@@ -56,7 +45,7 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin LLM usage', async ({ adminPage }) => {
-    await adminPage.locator('aside').getByTestId('admin-nav-llm-usage').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-llm-usage').first().click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
     // Wait for page content to be visible (not just accessible)
@@ -64,7 +53,7 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin playground', async ({ adminPage }) => {
-    await adminPage.locator('aside').getByTestId('admin-nav-playground').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-playground').first().click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
     // Wait for page content to be visible (not just accessible)
@@ -72,7 +61,7 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin invites', async ({ adminPage }) => {
-    await adminPage.locator('aside').getByTestId('admin-nav-invites').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
     // Wait for page content to be visible (not just accessible)
@@ -80,7 +69,7 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin shares', async ({ adminPage }) => {
-    await adminPage.locator('aside').getByTestId('admin-nav-share-analytics').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-share-analytics').first().click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
     // Wait for page content to be visible (not just accessible)
@@ -89,7 +78,7 @@ test.describe('Admin Functionality', () => {
 
   test('should toggle Jellyfin login visibility in settings', async ({ adminPage }) => {
     // Navigate to settings
-    await adminPage.locator('aside').getByTestId('admin-nav-settings').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
     await waitForAdminContent(adminPage, [
       { type: 'heading', value: 'Settings' }
     ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
@@ -147,7 +136,8 @@ test.describe('Admin Functionality', () => {
 
       await adminPage.goto(`/admin/users/${memberId}`);
       await waitForAdminPageReady(adminPage);
-      await expect(adminPage.getByTestId('admin-user-disable-button')).toHaveCount(1);
+      // Disable sits in the header's action menu, the users list's row menu (P10.18)
+      await adminPage.getByTestId('admin-user-actions').click();
       await adminPage.getByTestId('admin-user-disable-button').click();
       await adminPage.getByTestId('admin-user-disable-confirm').click();
       await expect(adminPage.getByTestId('admin-user-disabled-badge')).toBeVisible({

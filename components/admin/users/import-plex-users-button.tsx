@@ -1,13 +1,19 @@
 "use client"
 
-import { importPlexUsers } from "@/actions/import-plex-users"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/toast"
+import { Download } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 
+import { importPlexUsers } from "@/actions/import-plex-users"
+import { Button } from "@/components/ui/button"
+import { Icon } from "@/components/ui/icon"
+import { useToast } from "@/components/ui/toast"
+
+/** The users page's primary action: adds every Plex friend who has no account yet. */
 export function ImportPlexUsersButton() {
   const [isPending, startTransition] = useTransition()
   const toast = useToast()
+  const router = useRouter()
 
   const handleImport = () => {
     startTransition(async () => {
@@ -23,18 +29,10 @@ export function ImportPlexUsersButton() {
         }
 
         toast.showSuccess(parts.join(", "), 5000)
-
-        // Show errors separately if any
-        if (importResult.errors.length > 0) {
-          importResult.errors.forEach((error) => {
-            toast.showError(error, 6000)
-          })
-        }
+        importResult.errors.forEach((error) => toast.showError(error, 6000))
+        router.refresh()
       } else {
-        const errorMessage = importResult.errors.length > 0
-          ? importResult.errors[0]
-          : "Failed to import Plex users"
-        toast.showError(errorMessage)
+        toast.showError(importResult.errors[0] ?? "Failed to import Plex users")
       }
     })
   }
@@ -43,10 +41,12 @@ export function ImportPlexUsersButton() {
     <Button
       variant="primary"
       onClick={handleImport}
-      disabled={isPending}
+      loading={isPending}
+      loadingLabel="Importing"
+      icon={<Icon icon={Download} />}
+      data-testid="admin-users-import"
     >
-      {isPending ? "Importing..." : "Import Plex Users"}
+      Import from Plex
     </Button>
   )
 }
-

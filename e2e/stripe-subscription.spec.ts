@@ -288,7 +288,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
     });
 
     test('admin can enable Stripe from settings once configured', async ({ adminPage }) => {
-      await adminPage.locator('aside').getByTestId('admin-nav-settings').first().click();
+      await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
       await waitForAdminContent(
         adminPage,
         [{ type: 'heading', value: 'Settings' }],
@@ -320,16 +320,14 @@ test.describe('Stripe subscription gate & admin visibility', () => {
     test('users page shows the subscription column and filter', async ({ adminPage }) => {
       await setStripeEnabled(true, { configure: true });
 
-      await adminPage.locator('aside').getByTestId('admin-nav-users').first().click();
-      await waitForAdminContent(
-        adminPage,
-        [{ type: 'heading', value: 'Users' }],
-        { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION }
-      );
+      await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-users').first().click();
+      await expect(adminPage.getByTestId('admin-users-header')).toBeVisible({
+        timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION,
+      });
 
       // The subscription-state filter is part of the users list controls.
       await expect(
-        adminPage.getByTestId('users-filter-subscription')
+        adminPage.getByTestId('admin-users-filters-filter-subscription')
       ).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
       // The Subscription column header is present.

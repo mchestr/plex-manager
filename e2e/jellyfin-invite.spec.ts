@@ -225,7 +225,7 @@ test.describe('Jellyfin Invite Flow', () => {
 
   test.describe('Admin Invite Management', () => {
     test('admin can access invites page', async ({ adminPage }) => {
-      await adminPage.locator('aside').getByTestId('admin-nav-invites').first().click();
+      await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
       await waitForLoadingGone(adminPage);
 
       await expect(adminPage.getByRole('heading', { name: 'Invites', exact: true })).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
@@ -233,7 +233,7 @@ test.describe('Jellyfin Invite Flow', () => {
     });
 
     test('admin can open create invite modal', async ({ adminPage }) => {
-      await adminPage.locator('aside').getByTestId('admin-nav-invites').first().click();
+      await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
       await waitForLoadingGone(adminPage);
 
       await adminPage.getByTestId('generate-invite-button').click();
@@ -264,7 +264,7 @@ test.describe('Jellyfin Invite Flow', () => {
         expect(invite.maxUses).toBe(5);
 
         // Navigate to invites page and verify
-        await adminPage.locator('aside').getByTestId('admin-nav-invites').first().click();
+        await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
         await waitForLoadingGone(adminPage);
 
         // The invite should appear in the list
@@ -306,7 +306,7 @@ test.describe('Jellyfin Invite Flow', () => {
         });
 
         // Navigate to invites page
-        await adminPage.locator('aside').getByTestId('admin-nav-invites').first().click();
+        await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
         await waitForLoadingGone(adminPage);
 
         // Both invites should appear with correct badges
