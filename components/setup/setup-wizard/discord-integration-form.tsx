@@ -1,12 +1,12 @@
 "use client"
 
 import { saveDiscordIntegration } from "@/actions/setup"
-import { StyledInput } from "@/components/ui/styled-input"
-import { StyledTextarea } from "@/components/ui/styled-textarea"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type DiscordIntegrationInput } from "@/lib/validations/discord"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import type { DevDefaults } from "@/types/setup"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 interface DiscordIntegrationFormProps {
   onComplete: () => void
@@ -159,7 +159,7 @@ export function DiscordIntegrationForm({ onComplete, onBack, devDefaults }: Disc
           <label className="block text-sm font-medium text-cyan-400 mb-2">
             Client ID {formData.isEnabled && <span className="text-red-400">*</span>}
           </label>
-          <StyledInput
+          <Input
             type="text"
             name="clientId"
             data-testid="setup-input-clientId"
@@ -168,14 +168,13 @@ export function DiscordIntegrationForm({ onComplete, onBack, devDefaults }: Disc
             placeholder="Discord application client ID"
             required={formData.isEnabled}
             disabled={isPending}
-            size="md"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-cyan-400 mb-2">
             Client Secret {formData.isEnabled && <span className="text-red-400">*</span>}
           </label>
-          <StyledInput
+          <Input
             type="password"
             name="clientSecret"
             data-testid="setup-input-clientSecret"
@@ -184,14 +183,13 @@ export function DiscordIntegrationForm({ onComplete, onBack, devDefaults }: Disc
             placeholder="Discord application client secret"
             required={formData.isEnabled}
             disabled={isPending}
-            size="md"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-cyan-400 mb-2">
             Guild ID <span className="text-slate-500 font-normal">(optional)</span>
           </label>
-          <StyledInput
+          <Input
             type="text"
             name="guildId"
             data-testid="setup-input-guildId"
@@ -199,7 +197,6 @@ export function DiscordIntegrationForm({ onComplete, onBack, devDefaults }: Disc
             onChange={handleChange}
             placeholder="Discord server/guild ID"
             disabled={isPending}
-            size="md"
           />
           <p className="mt-1 text-xs text-slate-400">
             Provide this to limit linking to a single Discord server.
@@ -209,7 +206,7 @@ export function DiscordIntegrationForm({ onComplete, onBack, devDefaults }: Disc
           <label className="block text-sm font-medium text-cyan-400 mb-2">
             Platform Name <span className="text-slate-500 font-normal">(optional)</span>
           </label>
-          <StyledInput
+          <Input
             type="text"
             name="platformName"
             data-testid="setup-input-platformName"
@@ -217,7 +214,6 @@ export function DiscordIntegrationForm({ onComplete, onBack, devDefaults }: Disc
             onChange={handleChange}
             placeholder="Shown in Discord profile (e.g. Plex Wrapped)"
             disabled={isPending}
-            size="md"
           />
         </div>
       </div>
@@ -226,16 +222,14 @@ export function DiscordIntegrationForm({ onComplete, onBack, devDefaults }: Disc
         <label className="block text-sm font-medium text-cyan-400 mb-2">
           Internal Instructions <span className="text-slate-500 font-normal">(optional)</span>
         </label>
-        <StyledTextarea
+        <Textarea
           name="instructions"
           data-testid="setup-input-instructions"
           value={formData.instructions}
           onChange={handleChange}
           placeholder="Share notes for other admins on how to deploy and test the Discord bot."
           disabled={isPending}
-          resize="none"
-          className="min-h-[120px]"
-          size="md"
+          className="resize-none min-h-[120px]"
         />
       </div>
 

@@ -1,14 +1,17 @@
 "use client"
 
 import { saveChatLLMProvider, saveLLMProvider } from "@/actions/setup"
-import { StyledDropdown } from "@/components/ui/styled-dropdown"
-import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { listKnownModels } from "@/lib/llm/models"
 import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/provider-presets"
 import { type SetupLLMProviderInput } from "@/lib/validations/llm-provider"
 import { useEffect, useRef, useState, useTransition } from "react"
 import type { DevDefaults } from "@/types/setup"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+const PROVIDER_ITEMS: { value: "openai"; label: string }[] = [{ value: "openai", label: "OpenAI" }]
+const CUSTOM_MODEL = "__custom__"
 
 interface LLMProviderFormProps {
   purpose: "chat" | "wrapped"
@@ -44,6 +47,11 @@ function isFormComplete(data: SetupLLMProviderInput): boolean {
 
 /** The OpenAI models from the static catalogue (P10.7): choosing one asks the provider for nothing. */
 const CATALOGUE_MODELS = listKnownModels("openai").map((info) => info.id)
+const modelItems = [
+  { value: "", label: "Select a model (optional)" },
+  ...CATALOGUE_MODELS.map((model) => ({ value: model, label: model })),
+  { value: CUSTOM_MODEL, label: "Enter custom model..." },
+]
 
 export function LLMProviderForm({ purpose, onComplete, onBack, devDefaults }: LLMProviderFormProps) {
   const config = PURPOSE_CONFIG[purpose]
@@ -60,7 +68,6 @@ export function LLMProviderForm({ purpose, onComplete, onBack, devDefaults }: LL
     temperature: llmDefaults?.temperature ?? config.defaultTemperature,
     maxTokens: llmDefaults?.maxTokens ?? config.defaultMaxTokens,
   }))
-  const availableModels = CATALOGUE_MODELS
   // A pre-filled model outside the catalogue shows in the custom field
   const [useCustomModel, setUseCustomModel] = useState(() => Boolean(llmDefaults?.model?.trim()) && !CATALOGUE_MODELS.includes(llmDefaults?.model ?? ""))
   const autoSubmitTriggered = useRef(false)
@@ -146,28 +153,26 @@ export function LLMProviderForm({ purpose, onComplete, onBack, devDefaults }: LL
         >
           Provider
         </label>
-        <StyledDropdown
-          id="provider"
-          name="provider"
+        <Select
+          items={PROVIDER_ITEMS}
           value={formData.provider}
-          onChange={(value) => {
-            setFormData((prev) => {
-              const updated = {
-                ...prev,
-                provider: value as "openai",
-              }
-              // Reset model when provider changes
-              updated.model = ""
-              setUseCustomModel(false)
-              return updated
-            })
+          onValueChange={(value) => {
+            if (value === null) return
+            setFormData((prev) => ({ ...prev, provider: value, model: "" }))
+            setUseCustomModel(false)
           }}
-          options={[
-            { value: "openai", label: "OpenAI" },
-          ]}
-          size="md"
-          className="mt-1"
-        />
+        >
+          <SelectTrigger id="provider" className="mt-1" data-testid="setup-input-provider">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PROVIDER_ITEMS.map((item) => (
+              <SelectItem key={item.value} value={item.value} label={item.label} data-testid={`setup-input-provider-option-${item.value}`}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <p className="mt-1 text-xs text-slate-400">
           OpenAI is currently the supported provider for this experience.
         </p>
@@ -180,7 +185,8 @@ export function LLMProviderForm({ purpose, onComplete, onBack, devDefaults }: LL
         >
           API Key
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-apiKey"
           type="password"
           id="apiKey"
           name="apiKey"
@@ -188,9 +194,8 @@ export function LLMProviderForm({ purpose, onComplete, onBack, devDefaults }: LL
           value={formData.apiKey}
           onChange={handleChange}
           placeholder={`Your ${currentProvider.name} API key`}
-          size="md"
           className="mt-1"
-          error={!!errors.apiKey}
+          aria-invalid={!!errors.apiKey || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           {currentProvider.apiKeyHelp}
@@ -207,36 +212,39 @@ export function LLMProviderForm({ purpose, onComplete, onBack, devDefaults }: LL
         >
           Default Model <span className="text-slate-500 text-xs">(Optional)</span>
         </label>
-        {!useCustomModel && availableModels.length > 0 ? (
-          <StyledDropdown
-            id="model"
-            name="model"
+        {!useCustomModel && CATALOGUE_MODELS.length > 0 ? (
+          <Select
+            items={modelItems}
             value={formData.model || ""}
-            onChange={(value) => {
-              if (value === "__custom__") {
+            onValueChange={(value) => {
+              if (value === CUSTOM_MODEL) {
                 setUseCustomModel(true)
                 setFormData({ ...formData, model: "" })
               } else {
-                setFormData({ ...formData, model: value })
+                setFormData({ ...formData, model: value ?? "" })
               }
             }}
-            options={[
-              { value: "", label: "Select a model (optional)" },
-              ...availableModels.map((model) => ({ value: model, label: model })),
-              { value: "__custom__", label: "Enter custom model..." },
-            ]}
-            size="md"
-            className="mt-1"
-          />
+          >
+            <SelectTrigger id="model" className="mt-1" data-testid="setup-input-model">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {modelItems.map((item) => (
+                <SelectItem key={item.value} value={item.value} label={item.label} data-testid={`setup-input-model-option-${item.value}`}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         ) : (
-          <StyledInput
+          <Input
+            data-testid="setup-input-model"
             type="text"
             id="model"
             name="model"
             value={formData.model || ""}
             onChange={handleChange}
             placeholder={currentProvider.modelPlaceholder}
-            size="md"
             className="mt-1"
           />
         )}
@@ -256,7 +264,8 @@ export function LLMProviderForm({ purpose, onComplete, onBack, devDefaults }: LL
           {config.temperatureLabel}{" "}
           <span className="text-slate-500 text-xs">(Optional, default: {config.defaultTemperature})</span>
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-temperature"
           type="number"
           id="temperature"
           name="temperature"
@@ -271,7 +280,6 @@ export function LLMProviderForm({ purpose, onComplete, onBack, devDefaults }: LL
             })
           }
           placeholder={config.defaultTemperature.toString()}
-          size="md"
           className="mt-1"
         />
         <p className="mt-1 text-xs text-slate-400">
@@ -286,7 +294,8 @@ export function LLMProviderForm({ purpose, onComplete, onBack, devDefaults }: LL
         >
           Max Tokens <span className="text-slate-500 text-xs">(Optional, default: {config.defaultMaxTokens})</span>
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-maxTokens"
           type="number"
           id="maxTokens"
           name="maxTokens"
@@ -301,7 +310,6 @@ export function LLMProviderForm({ purpose, onComplete, onBack, devDefaults }: LL
             })
           }
           placeholder={config.defaultMaxTokens.toString()}
-          size="md"
           className="mt-1"
         />
         <p className="mt-1 text-xs text-slate-400">

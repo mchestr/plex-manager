@@ -1,11 +1,11 @@
 "use client"
 
 import { savePrometheus } from "@/actions/setup"
-import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type PrometheusInput } from "@/lib/validations/prometheus"
 import { useEffect, useRef, useState, useTransition } from "react"
 import type { DevDefaults } from "@/types/setup"
+import { Input } from "@/components/ui/input"
 
 interface PrometheusFormProps {
   onComplete: () => void
@@ -93,7 +93,8 @@ export function PrometheusForm({ onComplete, onBack, devDefaults }: PrometheusFo
         >
           Service Name
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-name"
           type="text"
           id="name"
           name="name"
@@ -101,9 +102,8 @@ export function PrometheusForm({ onComplete, onBack, devDefaults }: PrometheusFo
           value={formData.name}
           onChange={handleChange}
           placeholder="Plex Server"
-          size="md"
           className="mt-1"
-          error={!!errors.name}
+          aria-invalid={!!errors.name || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Display name for the service being monitored
@@ -120,7 +120,8 @@ export function PrometheusForm({ onComplete, onBack, devDefaults }: PrometheusFo
         >
           Prometheus URL
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-url"
           type="text"
           id="url"
           name="url"
@@ -128,9 +129,8 @@ export function PrometheusForm({ onComplete, onBack, devDefaults }: PrometheusFo
           value={formData.url}
           onChange={handleChange}
           placeholder="http://prometheus.example.com:9090 or http://192.168.1.100:9090"
-          size="md"
           className="mt-1"
-          error={!!errors.url}
+          aria-invalid={!!errors.url || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Include protocol (http:// or https://) and port number
@@ -147,7 +147,8 @@ export function PrometheusForm({ onComplete, onBack, devDefaults }: PrometheusFo
         >
           PromQL Query
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-query"
           type="text"
           id="query"
           name="query"
@@ -155,9 +156,8 @@ export function PrometheusForm({ onComplete, onBack, devDefaults }: PrometheusFo
           value={formData.query}
           onChange={handleChange}
           placeholder='up{job="plex"}'
-          size="md"
           className="mt-1"
-          error={!!errors.query}
+          aria-invalid={!!errors.query || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Query that returns data when the service is up (e.g., up&#123;job=&quot;plex&quot;&#125;)

@@ -1,11 +1,11 @@
 "use client"
 
 import { saveRadarr } from "@/actions/setup"
-import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type RadarrInput } from "@/lib/validations/radarr"
 import { useEffect, useRef, useState, useTransition } from "react"
 import type { DevDefaults } from "@/types/setup"
+import { Input } from "@/components/ui/input"
 
 interface RadarrFormProps {
   onComplete: () => void
@@ -94,7 +94,8 @@ export function RadarrForm({ onComplete, onBack, devDefaults }: RadarrFormProps)
         >
           Server Name
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-name"
           type="text"
           id="name"
           name="name"
@@ -102,9 +103,8 @@ export function RadarrForm({ onComplete, onBack, devDefaults }: RadarrFormProps)
           value={formData.name}
           onChange={handleChange}
           placeholder="My Radarr Server"
-          size="md"
           className="mt-1"
-          error={!!errors.name}
+          aria-invalid={!!errors.name || undefined}
         />
         {errors.name && (
           <p className="mt-1 text-sm text-red-400">{errors.name}</p>
@@ -118,7 +118,8 @@ export function RadarrForm({ onComplete, onBack, devDefaults }: RadarrFormProps)
         >
           Server URL
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-url"
           type="text"
           id="url"
           name="url"
@@ -126,9 +127,8 @@ export function RadarrForm({ onComplete, onBack, devDefaults }: RadarrFormProps)
           value={formData.url}
           onChange={handleChange}
           placeholder="http://radarr.example.com:7878 or http://192.168.1.100:7878"
-          size="md"
           className="mt-1"
-          error={!!errors.url}
+          aria-invalid={!!errors.url || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Include protocol (http:// or https://) and port number
@@ -145,16 +145,16 @@ export function RadarrForm({ onComplete, onBack, devDefaults }: RadarrFormProps)
         >
           Public Server URL <span className="text-slate-500 font-normal">(optional)</span>
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-publicUrl"
           type="text"
           id="publicUrl"
           name="publicUrl"
           value={formData.publicUrl || ""}
           onChange={handleChange}
           placeholder="https://radarr.example.com"
-          size="md"
           className="mt-1"
-          error={!!errors.publicUrl}
+          aria-invalid={!!errors.publicUrl || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           The public URL for Radarr (for links/redirects)
@@ -171,7 +171,8 @@ export function RadarrForm({ onComplete, onBack, devDefaults }: RadarrFormProps)
         >
           API Key
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-apiKey"
           type="password"
           id="apiKey"
           name="apiKey"
@@ -179,9 +180,8 @@ export function RadarrForm({ onComplete, onBack, devDefaults }: RadarrFormProps)
           value={formData.apiKey}
           onChange={handleChange}
           placeholder="Your Radarr API key"
-          size="md"
           className="mt-1"
-          error={!!errors.apiKey}
+          aria-invalid={!!errors.apiKey || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Find your API key in Radarr Settings → General → Security → API Key
