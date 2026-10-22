@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 
-import { setLLMDisabled } from "@/actions/admin"
+import { setLLMDisabled } from "@/actions/admin/admin-config"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/toast"
 

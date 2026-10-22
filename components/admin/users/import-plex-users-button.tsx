@@ -15,28 +15,29 @@ export function ImportPlexUsersButton() {
 
   const handleImport = () => {
     startTransition(async () => {
-      const importResult = await importPlexUsers()
-
-      if (importResult.success) {
-        const parts = [`Imported ${importResult.imported} user${importResult.imported !== 1 ? "s" : ""}`]
-        if (importResult.managed > 0) {
-          parts.push(`${importResult.managed} managed`)
-        }
-        if (importResult.skipped > 0) {
-          parts.push(`${importResult.skipped} skipped (already exist)`)
-        }
-        if (importResult.pending > 0) {
-          parts.push(`${importResult.pending} pending invite${importResult.pending !== 1 ? "s" : ""} left out`)
-        }
-        if (importResult.errors.length > 0) {
-          parts.push(`${importResult.errors.length} error${importResult.errors.length !== 1 ? "s" : ""}`)
-        }
-
-        toast.showSuccess(parts.join(", "))
-        importResult.errors.forEach((error) => toast.showError(error))
-      } else {
-        toast.showError(importResult.errors[0] ?? "Failed to import Plex users")
+      const result = await importPlexUsers()
+      if (!result.success) {
+        toast.showError(result.error)
+        return
       }
+
+      const { imported, skipped, managed, pending, errors } = result.data
+      const parts = [`Imported ${imported} user${imported !== 1 ? "s" : ""}`]
+      if (managed > 0) {
+        parts.push(`${managed} managed`)
+      }
+      if (skipped > 0) {
+        parts.push(`${skipped} skipped (already exist)`)
+      }
+      if (pending > 0) {
+        parts.push(`${pending} pending invite${pending !== 1 ? "s" : ""} left out`)
+      }
+      if (errors.length > 0) {
+        parts.push(`${errors.length} error${errors.length !== 1 ? "s" : ""}`)
+      }
+
+      toast.showSuccess(parts.join(", "))
+      errors.forEach((error) => toast.showError(error))
     })
   }
 

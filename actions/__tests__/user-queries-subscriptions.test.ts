@@ -1,5 +1,5 @@
 /**
- * Tests for actions/user-queries.ts - getAllUsersWithWrapped subscription attach
+ * Tests for lib/data/admin-users.ts - getAllUsersWithWrapped subscription attach
  *
  * Tests cover:
  * - Batched subscription loading (single query, no N+1)
@@ -7,13 +7,14 @@
  * - Existing DTO fields remaining intact
  */
 
-import { getAllUsersWithWrapped } from '@/actions/user-queries'
-import { requireAdmin } from '@/lib/admin'
+import { getServerSession } from 'next-auth'
+
+import { getAllUsersWithWrapped } from '@/lib/data/admin-users'
 import { makeAdminSession, makePrismaUser, makePrismaSubscription } from '@/__tests__/utils/test-builders'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-// user-queries.ts imports getServerSession/authOptions; mock them so the module
+// The loader reads the session; mock next-auth so the module
 // doesn't pull in the full NextAuth (ESM `jose`) chain, which Jest can't parse.
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -21,10 +22,6 @@ jest.mock('next-auth', () => ({
 
 jest.mock('@/lib/auth', () => ({
   authOptions: {},
-}))
-
-jest.mock('@/lib/admin', () => ({
-  requireAdmin: jest.fn(),
 }))
 
 // Mock the Plex connection helpers used by buildPlexAccessMap. We return no
@@ -47,13 +44,12 @@ jest.mock('@/lib/llm/usage-totals', () => {
 
 beforeEach(() => mockReset(prismaMock))
 
-const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
 const mockPrisma = prismaMock
 
 describe('getAllUsersWithWrapped - subscription attach', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockRequireAdmin.mockResolvedValue(makeAdminSession())
+    jest.mocked(getServerSession).mockResolvedValue(makeAdminSession())
     // No active Plex server → access map is null for everyone.
     mockPrisma.plexServer.findFirst.mockResolvedValue(null)
     // No share stats by default.

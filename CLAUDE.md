@@ -61,7 +61,9 @@ hooks/                  # Shared client hooks
 lib/                    # Utilities, helpers, business logic
 ├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
 ├── charts/            # Chart slot map (var(--chart-n)) and generated text summaries for ChartCard
+├── chatbot/           # Admin assistant: tools, executors, prompts and the conversation loop (server-only)
 ├── connections/       # External API clients (Plex, Tautulli, Overseerr, etc.)
+├── data/              # Server-only admin loaders, each checking assertAdmin() next to its data
 ├── design/            # Token mirror of app/globals.css and colour contrast helpers
 ├── discord/           # Discord bot, commands and linking
 ├── llm/               # LLM chat client and pricing
@@ -147,7 +149,8 @@ export const renameThing = memberAction({
 
 - Never return `error.message`; ESLint bans `error instanceof Error ? error.message : ...` in `actions/` and `app/api/`.
 - Route handlers validate params with `parseRouteParams` / `parseSearchParams` (`@/lib/actions/route`) and the schemas in `@/lib/validations/params`.
-- Admin modules still on `requireAdmin()` move onto `adminAction` in P11.5.
+- Every export of a `'use server'` module is an endpoint, so each is built by the helper (or `formAction`), which brands it; `__tests__/security/use-server-exports.test.ts` fails on a raw export. The admin and users action barrels are gone (ESLint bans them): import from the defining module.
+- Server-side reads are loaders, not actions: `lib/data/*` (`import 'server-only'`) start with `assertAdmin()` from `@/lib/admin`, which throws the `PM_FORBIDDEN` / `PM_UNAUTHENTICATED` digests the error boundaries render. A layout is not an authorisation boundary.
 
 ### Styling
 - **Tailwind utility classes** - No custom CSS unless absolutely necessary

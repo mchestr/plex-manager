@@ -7,9 +7,9 @@
 import { render, screen, within } from '@testing-library/react'
 
 import LLMConversationPage from '@/app/admin/llm-usage/conversation/[conversationId]/page'
-import { getLLMUsageRecords } from '@/actions/admin'
+import { getLLMUsageRecords } from '@/lib/data/llm-usage'
 
-jest.mock('@/actions/admin', () => ({ getLLMUsageRecords: jest.fn() }))
+jest.mock('@/lib/data/llm-usage', () => ({ getLLMUsageRecords: jest.fn() }))
 jest.mock('@/lib/settings/app-settings', () => ({
   getFormat: async () => (await import('@/lib/utils/format')).bindFormat({ timeZone: 'America/Chicago', locale: 'en-US' }),
 }))

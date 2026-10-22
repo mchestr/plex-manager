@@ -1,4 +1,4 @@
-import { getRewindSeasonDataPreparedAt } from "@/actions/admin/rewind-season"
+import { getRewindSeasonDataPreparedAt } from "@/lib/data/rewind-season"
 import { SeasonActions } from "@/components/admin/rewind/season-actions"
 import { SeasonFacts } from "@/components/admin/rewind/season-facts"
 import { SeasonMeasures } from "@/components/admin/rewind/season-measures"

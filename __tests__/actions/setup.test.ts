@@ -2,9 +2,9 @@
  * Tests for actions/setup.ts - setup wizard actions
  */
 
+import { getSetupStatus } from '@/lib/setup/status'
 import {
     completeSetup,
-    getSetupStatus,
     saveLLMProvider,
     saveOverseerr,
     savePlexServer,
@@ -60,9 +60,7 @@ jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }))
 
-jest.mock('@/lib/admin', () => ({
-  requireAdmin: jest.fn(),
-}))
+jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 
 const mockPrisma = prismaMock
 const mockTestPlexConnection = testPlexConnection as jest.MockedFunction<typeof testPlexConnection>
@@ -169,7 +167,7 @@ describe('Setup Actions', () => {
       const result = await savePlexServer(plexInput)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Connection failed')
+      expect(result).toMatchObject({ error: expect.stringContaining('Connection failed') })
       expect(mockPrisma.$transaction).not.toHaveBeenCalled()
     })
 
@@ -183,7 +181,7 @@ describe('Setup Actions', () => {
       const result = await savePlexServer(plexInput)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Failed to fetch user info from Plex token')
+      expect(result).toMatchObject({ error: expect.stringContaining('Failed to fetch user info from Plex token') })
     })
 
     it('should update existing setup record', async () => {
@@ -265,7 +263,7 @@ describe('Setup Actions', () => {
       const result = await saveTautulli(tautulliInput)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Connection failed')
+      expect(result).toMatchObject({ error: expect.stringContaining('Connection failed') })
     })
   })
 
@@ -357,7 +355,7 @@ describe('Setup Actions', () => {
       const result = await savePrometheus(prometheusInput)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Connection failed')
+      expect(result).toMatchObject({ error: expect.stringContaining('Connection failed') })
     })
   })
 
@@ -439,7 +437,7 @@ describe('Setup Actions', () => {
       const result = await saveLLMProvider(llmInput)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Invalid API key')
+      expect(result).toMatchObject({ error: expect.stringContaining('Invalid API key') })
     })
   })
 
@@ -521,7 +519,7 @@ describe('setup saves keep a stored secret only for its own address (P4.6)', () 
 
     const result = await saveTautulli({ name: 'Renamed', url: 'http://tautulli.lan:8181/' })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(mockTestTautulliConnection).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'stored-tautulli-key' }))
   })
 

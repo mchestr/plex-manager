@@ -2,15 +2,7 @@
 
 import { useState } from "react"
 
-import {
-  updateJellyfinServer,
-  updateOverseerr,
-  updatePlexServer,
-  updatePrometheus,
-  updateRadarr,
-  updateSonarr,
-  updateTautulli,
-} from "@/actions/admin"
+import { updateJellyfinServer, updateOverseerr, updatePlexServer, updatePrometheus, updateRadarr, updateSonarr, updateTautulli } from "@/actions/admin/admin-servers"
 import { testServiceConnection } from "@/actions/admin/test-connection"
 import type { TestResult } from "@/components/ui/settings-section"
 import { useToast } from "@/components/ui/toast"

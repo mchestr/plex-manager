@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react"
 
-import { type ChatMessage } from "@/actions/chatbot/types"
+import type { ChatMessage } from "@/lib/chatbot/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"

@@ -239,7 +239,7 @@ describe("what each kind of file gets from eslint.config.mjs", () => {
   ].join("\n")
 
   it.each([
-    ["actions/admin/fixture.ts", { formatting: ["warn"], errorText: ["warn"] }],
+    ["actions/admin/fixture.ts", { formatting: ["error"], errorText: ["error"] }],
     ["actions/invite.ts", { formatting: ["error"], errorText: ["error"] }],
     ["app/api/fixture/route.ts", { formatting: ["error"], errorText: ["error"] }],
     ["lib/fixture.ts", { formatting: ["warn"], errorText: [] }],

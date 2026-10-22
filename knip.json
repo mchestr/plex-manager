@@ -10,6 +10,7 @@
     "scripts/codemods/spinners.ts!",
     "scripts/codemods/icons.ts!",
     "scripts/codemods/adapters.ts!",
+    "scripts/codemods/barrel-imports.ts!",
     "scripts/design-system/rewind-motion.mjs!",
     "lib/wrapped/facts/*.ts!",
     "lib/wrapped/archetypes/*.ts!",

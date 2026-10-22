@@ -62,7 +62,7 @@ describe('UserActivityTimeline', () => {
     await user.click(screen.getByTestId('activity-show-older'))
 
     expect(await screen.findByTestId('activity-item-m-older')).toBeInTheDocument()
-    expect(mockTimeline).toHaveBeenCalledWith('user-1', { cursor: 'cursor-1', pageSize: 10 })
+    expect(mockTimeline).toHaveBeenCalledWith({ userId: 'user-1', cursor: 'cursor-1', pageSize: 10 })
     expect(screen.getByTestId('activity-count')).toHaveTextContent('Showing 3 of 3')
     expect(screen.queryByTestId('activity-show-older')).not.toBeInTheDocument()
   })

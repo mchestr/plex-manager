@@ -24,6 +24,11 @@ const chartImportBans = [
   { name: "chart.js", message: "Chart.js is retired (P10.9); use ChartCard." },
   { name: "react-chartjs-2", message: "Chart.js is retired (P10.9); use ChartCard." },
 ];
+/** The action barrels P11.5 deleted (DUP-16): import from the defining module. */
+const barrelImportBans = [
+  { name: "@/actions/admin", message: "The admin barrel is gone (P11.5): import from the module that defines the action." },
+  { name: "@/actions/users", message: "The users barrel is gone (P11.5): import from actions/user-queries or lib/data/admin-users." },
+];
 const chartPatternBans = [
   { group: ["recharts/*", "chart.js/*"], message: "Draw charts with ChartCard (components/ui/chart-card.tsx)." },
 ];
@@ -105,11 +110,12 @@ export default defineConfig([
   })),
   {
     // Charts are ChartCard specs on shadcn Chart (P10.9): Recharts stays in
-    // components/ui/chart*, and Chart.js does not come back.
+    // components/ui/chart*, and Chart.js does not come back. The deleted
+    // action barrels stay gone (P11.5).
     files: ["**/*.{js,jsx,mjs,ts,tsx}"],
     ignores: ["components/ui/chart.tsx", "components/ui/chart-card/**"],
     rules: {
-      "no-restricted-imports": ["error", { paths: chartImportBans, patterns: chartPatternBans }],
+      "no-restricted-imports": ["error", { paths: [...chartImportBans, ...barrelImportBans], patterns: chartPatternBans }],
     },
   },
   {

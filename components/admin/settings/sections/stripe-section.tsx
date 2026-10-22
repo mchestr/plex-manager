@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 
-import type { StripeConfigStatus } from "@/actions/admin/admin-config"
+import type { StripeConfigStatus } from "@/types/admin"
 import { StripeSettingsFields, useStripeForm } from "@/components/admin/settings/stripe-settings-form"
 import { SettingsSection } from "@/components/ui/settings-section"
 import type { SectionHealth } from "@/lib/settings/connection-status"

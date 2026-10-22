@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import { listLLMModels, updateChatLLMProvider, updateWrappedLLMProvider } from "@/actions/admin"
+import { listLLMModels, updateChatLLMProvider, updateWrappedLLMProvider } from "@/actions/admin/admin-llm-providers"
 import type { TestResult } from "@/components/ui/settings-section"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
@@ -154,11 +154,11 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
     setIsLoading(true)
     try {
       const result = await listLLMModels(listRequest(purpose, form))
-      setLiveModels(result.success ? result.models : null)
+      setLiveModels(result.success ? result.data.models : null)
       if (!result.success) return { ok: false, message: result.error }
-      const listed = !form.model || form.custom || result.models.includes(form.model)
+      const listed = !form.model || form.custom || result.data.models.includes(form.model)
       return listed
-        ? { ok: true, message: `Connected: ${result.models.length} models available` }
+        ? { ok: true, message: `Connected: ${result.data.models.length} models available` }
         : { ok: false, message: `Connected, but the provider does not list ${form.model}` }
     } finally {
       setIsLoading(false)

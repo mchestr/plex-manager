@@ -1,64 +1,46 @@
 "use server"
 
-import { requireAdmin } from "@/lib/admin"
+import { revalidatePath } from "next/cache"
+
+import { adminAction } from "@/lib/actions/define-action"
+import { fail, ok } from "@/lib/actions/result"
 import { getAllPlexServerUsers } from "@/lib/connections/plex"
+import { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { revalidatePath } from "next/cache"
 
 const logger = createLogger("IMPORT_PLEX_USERS")
 
+/** Why one Plex user was not created, in words an admin can act on; the database's text is only logged. */
+function importFailure(error: unknown): string {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    return "another account already uses their email"
+  }
+  return "could not be created"
+}
+
 /**
- * Import this server's Plex members into the database (GAP-06): users with an
- * accepted share of this server and the owner's managed users (created
- * without an email). A pending invite is reported, not imported, and friends
- * who share only another server are never seen.
+ * Import this server's Plex members into the database (GAP-06, admin only):
+ * users with an accepted share of this server and the owner's managed users
+ * (created without an email). A pending invite is reported, not imported, and
+ * friends who share only another server are never seen. A user who fails is
+ * reported in `errors` and the rest still import.
  */
-export async function importPlexUsers(): Promise<{
-  success: boolean
-  imported: number
-  skipped: number
-  /** Managed users among the imported ones. */
-  managed: number
-  /** Pending invites, left out until they are accepted. */
-  pending: number
-  errors: string[]
-}> {
-  try {
-    await requireAdmin()
-
-    // Get active Plex server configuration
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
-
+export const importPlexUsers = adminAction({
+  fallbackError: "Failed to import users",
+  handler: async () => {
+    const plexServer = await prisma.plexServer.findFirst({ where: { isActive: true } })
     if (!plexServer) {
-      return {
-        success: false,
-        imported: 0,
-        skipped: 0,
-        managed: 0,
-        pending: 0,
-        errors: ["No active Plex server configured"],
-      }
+      return fail("NOT_FOUND", "No active Plex server configured")
     }
 
-    // Fetch users from Plex server
     const usersResult = await getAllPlexServerUsers({
       url: plexServer.url,
       token: plexServer.token,
       machineIdentifier: plexServer.machineIdentifier,
     })
-
     if (!usersResult.success || !usersResult.data) {
-      return {
-        success: false,
-        imported: 0,
-        skipped: 0,
-        managed: 0,
-        pending: 0,
-        errors: [usersResult.error || "Failed to fetch Plex users"],
-      }
+      return fail("UPSTREAM_UNAVAILABLE", "Plex didn't return its users. Try again in a few minutes.")
     }
 
     const plexUsers = usersResult.data.filter((plexUser) => !plexUser.pending)
@@ -77,16 +59,11 @@ export async function importPlexUsers(): Promise<{
 
     // One create per user, so an email collision is reported for that user only
     for (const plexUser of plexUsers) {
+      if (existingIds.has(plexUser.id)) {
+        skipped++
+        continue
+      }
       try {
-        if (existingIds.has(plexUser.id)) {
-          skipped++
-          continue
-        }
-
-        // Check if this user is the admin
-        const isAdmin = plexServer.adminPlexUserId === plexUser.id
-
-        // Create new user
         await prisma.user.create({
           data: {
             plexUserId: plexUser.id,
@@ -94,38 +71,18 @@ export async function importPlexUsers(): Promise<{
             // A managed user has no plex.tv account, so no email
             email: plexUser.managed ? null : plexUser.email || null,
             image: plexUser.thumb || null,
-            isAdmin,
+            isAdmin: plexServer.adminPlexUserId === plexUser.id,
           },
         })
-
         imported++
         if (plexUser.managed) managed++
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error"
-        errors.push(`${plexUser.name} (${plexUser.id}): ${errorMessage}`)
+        logger.warn("Could not import a Plex user", { plexUserId: plexUser.id, error })
+        errors.push(`${plexUser.name} (${plexUser.id}): ${importFailure(error)}`)
       }
     }
 
-    // Revalidate the users page
     revalidatePath("/admin/users")
-
-    return {
-      success: true,
-      imported,
-      skipped,
-      managed,
-      pending,
-      errors,
-    }
-  } catch (error) {
-    logger.error("Error importing Plex users", error)
-    return {
-      success: false,
-      imported: 0,
-      skipped: 0,
-      managed: 0,
-      pending: 0,
-      errors: [error instanceof Error ? error.message : "Failed to import users"],
-    }
-  }
-}
+    return ok({ imported, skipped, managed, pending, errors })
+  },
+})
