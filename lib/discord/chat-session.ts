@@ -24,7 +24,7 @@
  * {@link appendTurn}.
  */
 
-import { type ChatMessage } from "@/actions/chatbot/types"
+import { type ChatMessage } from "@/lib/chatbot/types"
 import { coerceHistory, trimHistory } from "@/lib/discord/chat-history"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"

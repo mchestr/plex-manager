@@ -1,0 +1,5 @@
+{
+  "status": 405,
+  "contentType": "text/html",
+  "body": "<html><head><title>Method Not Allowed</title></head><body><h1>405 Method Not Allowed</h1></body></html>"
+}

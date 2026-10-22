@@ -1,127 +1,43 @@
 /**
- * Security tests for admin pages
- * Tests that admin pages properly enforce authorization and show error pages
+ * Security tests for admin pages: a page or loader that checks next to its
+ * data calls `assertAdmin()`, whose errors carry the digests the error
+ * boundaries render as the sign-in and Unauthorized screens (BP-27, P11.5).
  */
 
 import { getServerSession } from 'next-auth'
-import { requireAdmin, UnauthorizedAdminError, UnauthenticatedError } from '@/lib/admin'
 
-// Mock dependencies
-jest.mock('next-auth', () => ({
-  getServerSession: jest.fn(),
-  authOptions: {},
-}))
+import { assertAdmin } from '@/lib/admin'
+import { authErrorKind } from '@/lib/auth-errors'
 
-describe('Admin Pages Security', () => {
-  const mockAdminSession = {
-    user: {
-      id: 'admin-user-id',
-      email: 'admin@example.com',
-      name: 'Admin User',
-      isAdmin: true,
-    },
-  }
+jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
+jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 
-  const mockRegularUserSession = {
-    user: {
-      id: 'regular-user-id',
-      email: 'user@example.com',
-      name: 'Regular User',
-      isAdmin: false,
-    },
-  }
+const session = jest.mocked(getServerSession)
 
-  beforeEach(() => {
-    jest.clearAllMocks()
+beforeEach(() => jest.clearAllMocks())
+
+describe('assertAdmin', () => {
+  it('returns the session for an admin', async () => {
+    const admin = { user: { id: 'admin-user-id', isAdmin: true }, expires: '' }
+    session.mockResolvedValue(admin)
+
+    await expect(assertAdmin()).resolves.toEqual(admin)
   })
 
-  describe('requireAdmin', () => {
-    it('should return session for admin user', async () => {
-      ;(getServerSession as jest.Mock).mockResolvedValue(mockAdminSession)
+  it('throws an error the boundaries read as forbidden for a member', async () => {
+    session.mockResolvedValue({ user: { id: 'regular-user-id', isAdmin: false }, expires: '' })
 
-      const session = await requireAdmin()
+    const error = await assertAdmin().catch((thrown: Error & { digest?: string }) => thrown)
 
-      expect(session).toEqual(mockAdminSession)
-    })
-
-    it('should throw UnauthenticatedError for unauthenticated user', async () => {
-      ;(getServerSession as jest.Mock).mockResolvedValue(null)
-
-      await expect(requireAdmin()).rejects.toThrow(UnauthenticatedError)
-      await expect(requireAdmin()).rejects.toThrow('UNAUTHENTICATED')
-    })
-
-    it('should throw UnauthorizedAdminError for non-admin user', async () => {
-      ;(getServerSession as jest.Mock).mockResolvedValue(mockRegularUserSession)
-
-      await expect(requireAdmin()).rejects.toThrow(UnauthorizedAdminError)
-      await expect(requireAdmin()).rejects.toThrow('UNAUTHORIZED')
-    })
-
-    it('should throw error with correct name', async () => {
-      ;(getServerSession as jest.Mock).mockResolvedValue(mockRegularUserSession)
-
-      try {
-        await requireAdmin()
-        fail('Expected requireAdmin to throw')
-      } catch (error) {
-        expect(error).toBeInstanceOf(UnauthorizedAdminError)
-        expect((error as Error).name).toBe('UnauthorizedAdminError')
-        expect((error as Error).message).toBe('UNAUTHORIZED')
-      }
-    })
-
-    it('should handle session with undefined isAdmin', async () => {
-      const sessionWithUndefinedAdmin = {
-        user: {
-          id: 'user-id',
-          email: 'user@example.com',
-          name: 'User',
-          isAdmin: undefined,
-        },
-      }
-      ;(getServerSession as jest.Mock).mockResolvedValue(sessionWithUndefinedAdmin)
-
-      await expect(requireAdmin()).rejects.toThrow(UnauthorizedAdminError)
-    })
+    expect(error).toBeInstanceOf(Error)
+    expect(authErrorKind(error as Error & { digest?: string })).toBe('forbidden')
   })
 
-  describe('UnauthorizedAdminError', () => {
-    it('should create error with default message', () => {
-      const error = new UnauthorizedAdminError()
-      expect(error.message).toBe('Admin access required')
-      expect(error.name).toBe('UnauthorizedAdminError')
-    })
+  it('throws an error the boundaries read as unauthenticated without a session', async () => {
+    session.mockResolvedValue(null)
 
-    it('should create error with custom message', () => {
-      const error = new UnauthorizedAdminError('Custom message')
-      expect(error.message).toBe('Custom message')
-      expect(error.name).toBe('UnauthorizedAdminError')
-    })
+    const error = await assertAdmin().catch((thrown: Error & { digest?: string }) => thrown)
 
-    it('should be instance of Error', () => {
-      const error = new UnauthorizedAdminError()
-      expect(error).toBeInstanceOf(Error)
-    })
-  })
-
-  describe('UnauthenticatedError', () => {
-    it('should create error with default message', () => {
-      const error = new UnauthenticatedError()
-      expect(error.message).toBe('Authentication required')
-      expect(error.name).toBe('UnauthenticatedError')
-    })
-
-    it('should create error with custom message', () => {
-      const error = new UnauthenticatedError('Custom message')
-      expect(error.message).toBe('Custom message')
-      expect(error.name).toBe('UnauthenticatedError')
-    })
-
-    it('should be instance of Error', () => {
-      const error = new UnauthenticatedError()
-      expect(error).toBeInstanceOf(Error)
-    })
+    expect(authErrorKind(error as Error & { digest?: string })).toBe('unauthenticated')
   })
 })
-

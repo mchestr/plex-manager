@@ -24,7 +24,7 @@
 
 import "server-only"
 
-import { getUserPlexWrapped } from "@/actions/users"
+import { getUserPlexWrapped } from "@/actions/user-queries"
 import { prisma } from "@/lib/prisma"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { generationBlocker } from "@/lib/rewind/generation-guards"

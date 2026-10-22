@@ -27,7 +27,7 @@ import { minimalV3 } from '@/lib/wrapped/data/__tests__/v3-row'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
-jest.mock('@/lib/admin', () => ({ requireAdmin: jest.fn() }))
+jest.mock('@/lib/admin', () => ({ assertAdmin: jest.fn() }))
 jest.mock('@/lib/connections/plex', () => ({}))
 jest.mock('@/lib/connections/tautulli', () => ({ findTautulliUser: jest.fn() }))
 
@@ -41,9 +41,7 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
-jest.mock('@/actions/users', () => ({
-  getUserPlexWrapped: jest.requireActual('@/actions/user-queries').getUserPlexWrapped,
-}))
+jest.mock('@/actions/user-queries', () => ({ getUserPlexWrapped: jest.requireActual('@/actions/user-queries').getUserPlexWrapped }))
 jest.mock('@/components/rewind/rewind-generating-watch', () => ({
   RewindGeneratingWatch: () => <p data-testid="generating-watch" />,
 }))

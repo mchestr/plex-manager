@@ -30,6 +30,7 @@ import "server-only"
 
 import { z } from "zod"
 
+import { brandAction } from "@/lib/actions/define-action"
 import type { FormState } from "@/lib/actions/form-state"
 import type { ActionResult } from "@/lib/actions/result"
 
@@ -55,7 +56,7 @@ export function formAction<S extends z.ZodType, I, T, C extends string>(
   action: (input: I) => Promise<ActionResult<T, C>>,
   { schema, toInput, keep }: FormActionOptions<S, I>
 ): (previous: FormState<T>, form: FormData) => Promise<FormState<T>> {
-  return async (_previous, form) => {
+  return brandAction(async (_previous: FormState<T>, form: FormData): Promise<FormState<T>> => {
     const fields = fieldsOf(form)
     const values = Object.fromEntries(keep.map((name) => [name, fields[name] ?? ""]))
 
@@ -76,5 +77,5 @@ export function formAction<S extends z.ZodType, I, T, C extends string>(
       return { status: "error", data: null, error: result.error, fieldErrors: result.fieldErrors ?? {}, values }
     }
     return { status: "success", data: result.data, error: null, fieldErrors: {}, values }
-  }
+  })
 }

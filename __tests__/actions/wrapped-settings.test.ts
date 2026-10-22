@@ -4,18 +4,14 @@
  * that edits the window is P7.12's `updateRewindSettings`.
  */
 
-import { getWrappedSettings, updateServerTimeZone } from '@/actions/admin'
-import { requireAdmin } from '@/lib/admin'
+import { getWrappedSettings } from '@/lib/wrapped/generation-settings'
+import { updateServerTimeZone } from '@/actions/admin/admin-config'
 import { getServerSession } from 'next-auth'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/admin', () => ({
-  requireAdmin: jest.fn(),
-}))
-
-// `@/actions/admin` also exports actions built on the action helper, which reads the session
+// The time zone action is built on the action helper, which reads the session
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 
@@ -42,7 +38,6 @@ jest.mock('next/cache', () => ({
   unstable_cache: (fn: unknown) => fn,
 }))
 
-const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
 const mockFindUnique = prismaMock.config.findUnique as jest.Mock
 const mockUpsert = prismaMock.config.upsert as jest.Mock
 
@@ -66,7 +61,6 @@ function storedConfig(row: { wrappedEnabled?: boolean; opens?: string; closes?: 
 beforeEach(() => {
   mockReset(prismaMock)
   jest.clearAllMocks()
-  mockRequireAdmin.mockResolvedValue(mockAdminSession)
   ;(getServerSession as jest.Mock).mockResolvedValue(mockAdminSession)
 })
 

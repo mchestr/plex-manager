@@ -7,7 +7,16 @@ import {
   markPlexItemWatched,
   searchPlexMedia,
 } from '@/lib/connections/plex'
+import { readFileSync } from 'fs'
+import path from 'path'
+
 import { makePlexServerConfig } from '../../../__tests__/utils/test-builders'
+
+const SCROBBLE_405 = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'pms', 'scrobble-405.json'), 'utf8')) as {
+  status: number
+  contentType: string
+  body: string
+}
 
 describe('Plex Marking and Search', () => {
   beforeEach(() => {
@@ -19,7 +28,7 @@ describe('Plex Marking and Search', () => {
     const config = makePlexServerConfig()
     const ratingKey = '12345'
 
-    it('should successfully mark item as watched', async () => {
+    it('should successfully mark item as watched with PUT /:/scrobble', async () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -30,14 +39,37 @@ describe('Plex Marking and Search', () => {
 
       expect(result.success).toBe(true)
       expect(result.error).toBeUndefined()
+      expect(global.fetch).toHaveBeenCalledTimes(1)
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/:/scrobble'),
         expect.objectContaining({
-          method: 'GET',
+          method: 'PUT',
           redirect: 'manual',
           headers: expect.objectContaining({ 'X-Plex-Token': config.token }),
         })
       )
+    })
+
+    it('retries once with GET when an older PMS answers the PUT with 405', async () => {
+      const recorded = SCROBBLE_405
+      ;(global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ ok: false, status: recorded.status, text: async () => recorded.body })
+        .mockResolvedValueOnce({ ok: true, status: 200, text: async () => '' })
+
+      const result = await markPlexItemWatched(config, ratingKey)
+
+      expect(result).toEqual({ success: true })
+      const methods = (global.fetch as jest.Mock).mock.calls.map(([, init]) => init.method)
+      expect(methods).toEqual(['PUT', 'GET'])
+    })
+
+    it('does not fall back to GET on any other failure', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 500, text: async () => '' })
+
+      const result = await markPlexItemWatched(config, ratingKey)
+
+      expect(result.success).toBe(false)
+      expect(global.fetch).toHaveBeenCalledTimes(1)
     })
 
     it('should construct correct URL with rating key, and send the token as a header only', async () => {
@@ -426,7 +458,7 @@ describe('Plex Marking and Search', () => {
         expect(result.data?.[0].ratingKey).toBe('12345')
       })
 
-      it('should handle missing ratingKey gracefully', async () => {
+      it('should leave out a result without a ratingKey', async () => {
         const mockResponse = {
           MediaContainer: {
             Metadata: [
@@ -447,7 +479,7 @@ describe('Plex Marking and Search', () => {
         const result = await searchPlexMedia(config, 'Test')
 
         expect(result.success).toBe(true)
-        expect(result.data?.[0].ratingKey).toBe('')
+        expect(result.data).toEqual([])
       })
     })
 

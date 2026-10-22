@@ -327,6 +327,11 @@ export async function syncDiscordRoleConnection(
     { id: user.id, plexUserId: user.plexUserId, lastWatchedHours: connection.lastWatchedHours },
     options
   )
+  if (!metadata) {
+    // Plex could not answer: push nothing, so Discord keeps the stored role (GAP-05)
+    logger.warn("Discord role sync skipped: Plex access unknown", { userId })
+    return
+  }
 
   await updateDiscordRoleConnection({
     accessToken: connection.accessToken,

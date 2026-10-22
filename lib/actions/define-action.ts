@@ -85,6 +85,28 @@ type Action<S extends z.ZodType | undefined, T, C extends string> = S extends z.
 
 const DEFAULT_FALLBACK = "Something went wrong. Please try again."
 
+/**
+ * Marks a function this module built (P11.5). Every export of a `'use server'`
+ * module must carry it (`__tests__/security/use-server-exports.test.ts`), so a
+ * raw read helper can never be exposed as an endpoint again.
+ */
+const ACTION_BRAND = Symbol.for("__pmAction")
+
+/** Brands `fn` with a non-enumerable {@link ACTION_BRAND}; `formAction` brands its adapters too. */
+export function brandAction<F extends (...args: never[]) => unknown>(fn: F): F {
+  Object.defineProperty(fn, ACTION_BRAND, { value: true, enumerable: false })
+  return fn
+}
+
+/**
+ * Whether `value` was built by {@link defineAction} or `formAction`.
+ *
+ * @internal
+ */
+export function isBrandedAction(value: unknown): boolean {
+  return typeof value === "function" && (value as unknown as Record<symbol, unknown>)[ACTION_BRAND] === true
+}
+
 async function guard<A extends AuthLevel>(
   auth: A,
   entitlement: Entitlement | undefined
@@ -151,7 +173,7 @@ export function defineAction<
       return toActionError(error, def.fallbackError ?? DEFAULT_FALLBACK)
     }
   }
-  return action as Action<S, T, C>
+  return brandAction(action) as Action<S, T, C>
 }
 
 type AliasDefinition<A extends AuthLevel, S extends z.ZodType | undefined, T, C extends string> = Omit<

@@ -20,7 +20,7 @@ import { adminAction } from "@/lib/actions/define-action"
 import { ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
 import { testJellyfinConnection } from "@/lib/connections/jellyfin"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
-import { getPlexUserInfo, testPlexConnection } from "@/lib/connections/plex"
+import { getPlexServerIdentity, getPlexUserInfo, testPlexConnection } from "@/lib/connections/plex"
 import { testPrometheusConnection, validatePrometheusQuery } from "@/lib/connections/prometheus"
 import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
@@ -161,6 +161,7 @@ export const updatePlexServer = adminAction({
       return { success: false, code: "UPSTREAM_UNAVAILABLE", error: `${copy.title}. ${copy.fix}`, fieldErrors: { token: [copy.fieldError] } }
     }
     const adminPlexUserId = userInfoResult.data.id
+    const identity = await getPlexServerIdentity(validated)
 
     await prisma.$transaction((tx) =>
       replaceActiveRow(tx.plexServer, {
@@ -169,6 +170,7 @@ export const updatePlexServer = adminAction({
         token: validated.token,
         publicUrl: validated.publicUrl,
         adminPlexUserId,
+        machineIdentifier: identity.machineIdentifier ?? null,
         isActive: true,
       })
     )

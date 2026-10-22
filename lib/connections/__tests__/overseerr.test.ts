@@ -56,7 +56,7 @@ describe("chatbot reads", () => {
       "http://overseerr.local:5055/api/v1/discover/movies?page=2&sortBy=popularity.desc%26take%3D999",
       "http://overseerr.local:5055/api/v1/discover/tv?page=1&sortBy=popularity.desc",
       "http://overseerr.local:5055/api/v1/movie/603",
-      "http://overseerr.local:5055/api/v1/user",
+      "http://overseerr.local:5055/api/v1/user?take=100&skip=0",
       "http://overseerr.local:5055/api/v1/request?take=10&sort=added",
     ])
     for (const [, init] of mockFetch.mock.calls) {
@@ -131,6 +131,52 @@ describe("submitOverseerrRequest", () => {
         headers: expect.objectContaining({ "Content-Type": "application/json", "X-Api-Key": "overseerr-key" }),
       })
     )
+  })
+
+  it("asks for every season of a show when no list is given (GAP-03)", async () => {
+    mockFetch.mockResolvedValueOnce(respond(404)).mockResolvedValueOnce(respond(201, { id: 78, status: 1 }))
+
+    await submitOverseerrRequest(config, { mediaType: "tv", mediaId: 1396 }, member)
+
+    expect(mockFetch.mock.calls[1][1].body).toBe(JSON.stringify({ mediaType: "tv", mediaId: 1396, seasons: "all" }))
+  })
+
+  it("reads the 4K status for a 4K request", async () => {
+    const mediaInfo = { mediaInfo: { status: 5, status4k: 1, requests: [] } }
+    mockFetch.mockResolvedValueOnce(respond(200, mediaInfo)).mockResolvedValueOnce(respond(201, { id: 79 }))
+
+    expect(await submitOverseerrRequest(config, { ...payload, is4k: true }, member)).toEqual({
+      success: true,
+      requestId: 79,
+      status: "created",
+    })
+
+    mockFetch.mockResolvedValueOnce(respond(200, mediaInfo))
+    expect(await submitOverseerrRequest(config, payload, member)).toEqual({ success: true, status: "already_available" })
+  })
+
+  it("maps a 202 to already requested without an id, and a 403 to not permitted with the message", async () => {
+    mockFetch
+      .mockResolvedValueOnce(respond(404))
+      .mockResolvedValueOnce(respond(202, { message: "No seasons available to request" }))
+    expect(await submitOverseerrRequest(config, payload, member)).toEqual({ success: true, status: "already_requested" })
+
+    mockFetch.mockResolvedValueOnce(respond(404)).mockResolvedValueOnce(respond(403, { message: "Movie Quota Exceeded" }))
+    expect(await submitOverseerrRequest(config, payload, member)).toEqual({
+      success: false,
+      status: "not_permitted",
+      error: "Movie Quota Exceeded",
+    })
+  })
+
+  it("fails a 201 whose body is not a MediaRequest", async () => {
+    mockFetch.mockResolvedValueOnce(respond(404)).mockResolvedValueOnce(respond(201, { message: "ok" }))
+
+    expect(await submitOverseerrRequest(config, payload, member)).toEqual({
+      success: false,
+      error: "Overseerr sent an unexpected response",
+      status: "failed",
+    })
   })
 
   it("treats HTTP 409 as already requested", async () => {

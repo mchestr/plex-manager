@@ -40,6 +40,7 @@ function settings(
       totalItemsRequested: 0,
     },
     recentHistory: [],
+    counts: null,
     ...overrides,
   }
 }
@@ -114,5 +115,45 @@ describe('WatchlistSyncCard', () => {
     await user.click(screen.getByTestId('watchlist-sync-now-button'))
 
     expect(mockShowInfo).toHaveBeenCalledWith(WATCHLIST_SKIP_COPY.OVERSEERR_USER_NOT_FOUND)
+  })
+
+  it('reports requested, available, already requested, skipped and refused items (GAP-02)', () => {
+    const counts = { requested: 3, available: 12, alreadyRequested: 4, skipped: 2, notPermitted: 1 }
+    render(<WatchlistSyncCard initialSettings={settings('success', null, { counts })} service="plex" />)
+
+    expect(screen.getByTestId('watchlist-sync-counts')).toHaveTextContent(
+      'Requested 3, already on the server 12, already requested 4, skipped 2 (no TMDB match), not allowed 1'
+    )
+    expect(screen.getByTestId('watchlist-sync-result-requested')).toHaveTextContent('Requested 3')
+    expect(screen.getByTestId('watchlist-sync-result-available')).toHaveTextContent('already on the server 12')
+    expect(screen.getByTestId('watchlist-sync-result-already-requested')).toHaveTextContent('already requested 4')
+    expect(screen.getByTestId('watchlist-sync-result-skipped')).toHaveTextContent('skipped 2 (no TMDB match)')
+    expect(screen.getByTestId('watchlist-sync-result-not-permitted')).toHaveTextContent('not allowed 1')
+  })
+
+  it('shows no counts before anything was synced', () => {
+    const counts = { requested: 0, available: 0, alreadyRequested: 0, skipped: 0, notPermitted: 0 }
+    render(<WatchlistSyncCard initialSettings={settings('success', null, { counts })} service="plex" />)
+
+    expect(screen.queryByTestId('watchlist-sync-counts')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    [
+      'the run counts',
+      { queued: false as const, counts: { requested: 2, available: 1, alreadyRequested: 0, skipped: 1, notPermitted: 0 } },
+      'Requested 2, already on the server 1, already requested 0, skipped 1 (no TMDB match), not allowed 0',
+    ],
+    ['an unchanged watchlist', { queued: false as const, notModified: true }, 'Your watchlist has not changed since the last sync'],
+  ])('tells the member %s after a direct sync, never "up to date"', async (_case, data, message) => {
+    const user = userEvent.setup()
+    jest.mocked(getWatchlistSyncSettings).mockResolvedValue({ success: true, data: settings('success', null) })
+    jest.mocked(triggerWatchlistSync).mockResolvedValue({ success: true, data })
+
+    render(<WatchlistSyncCard initialSettings={settings('success', null)} service="plex" />)
+    await user.click(screen.getByTestId('watchlist-sync-now-button'))
+
+    expect(mockShowInfo).toHaveBeenCalledWith(message)
+    expect(mockShowInfo).not.toHaveBeenCalledWith('Watchlist is up to date')
   })
 })

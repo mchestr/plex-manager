@@ -1,6 +1,6 @@
 import "server-only"
 
-import { getSetupStatus } from "@/actions/setup"
+import { getSetupStatus } from "@/lib/setup/status"
 import type { DevDefaults, DiscordDefaults, LLMDefaults, PrometheusDefaults, ServiceDefaults } from "@/types/setup"
 
 // Valid LLM provider values

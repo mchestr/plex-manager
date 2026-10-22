@@ -22,6 +22,8 @@ export interface PlexServerConfig {
   token: string
   publicUrl?: string
   adminPlexUserId: string | null
+  /** The stored PMS machine identifier, or null until it is known (P11.8). */
+  machineIdentifier: string | null
 }
 
 /**
@@ -41,5 +43,6 @@ export async function getActivePlexServerConfig(): Promise<PlexServerConfig | nu
     token: server.token,
     publicUrl: server.publicUrl || undefined,
     adminPlexUserId: server.adminPlexUserId ?? null,
+    machineIdentifier: server.machineIdentifier ?? null,
   }
 }

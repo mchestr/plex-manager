@@ -12,7 +12,7 @@ import { getServerSession } from "next-auth"
 import { chatWithAdminBot } from "@/actions/chatbot"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { buildConfig } from "@/__tests__/helpers/factories"
-import { executeOverseerrTool } from "@/actions/chatbot/executors/overseerr"
+import { executeOverseerrTool } from "@/lib/chatbot/executors/overseerr"
 import { getOverseerrRequests, getOverseerrUsers } from "@/lib/connections/overseerr"
 import type { ChatConversation, LLMProvider, Overseerr } from "@/lib/generated/prisma/client"
 import { chatWithTools, type ChatWithToolsResult } from "@/lib/llm/chat"
@@ -95,6 +95,7 @@ describe("an injected Overseerr display name", () => {
     expect(value).not.toMatch(/@example\.com|victim@|plexUsername/)
     expect(JSON.parse(value)).toEqual({
       untrusted_data: {
+        total: 2,
         users: [
           { id: 7, displayName: PAYLOAD.slice(0, 64), requestCount: 3, permissions: 32 },
           { id: 8, displayName: "Sam", requestCount: 0, permissions: 2 },

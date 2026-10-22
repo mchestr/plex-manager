@@ -1,6 +1,7 @@
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
+import type { SavedSecret } from "@/lib/security/saved-secret"
 
-/** @internal */
+/** LLM usage summed over some calls; `aggregateLlmUsage` builds one from rows. */
 export interface LlmUsageStats {
   totalTokens: number
   promptTokens: number
@@ -91,4 +92,20 @@ export interface UserActivityTimelineData {
   items: UserActivityItem[]
   total: number
   nextCursor: string | null
+}
+
+/**
+ * Non-secret view of the Stripe configuration used to determine whether the
+ * feature can be enabled. Never contains raw secret values.
+ */
+export interface StripeConfigStatus {
+  enabled: boolean
+  hasSecretKey: boolean
+  hasWebhookSecret: boolean
+  /** The stored keys' last four for `SecretInput` (P10.20); both go only to Stripe, so no origin. */
+  saved: { secretKey: SavedSecret | null; webhookSecret: SavedSecret | null }
+  /** Whether `REDIS_URL` is set, so the queue that processes webhooks can run. */
+  hasJobQueue: boolean
+  priceIds: string[]
+  librarySectionIds: number[]
 }

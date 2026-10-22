@@ -34,6 +34,7 @@ describe("getActivePlexServerConfig", () => {
       token: "test-token",
       publicUrl: "https://plex.example.com",
       adminPlexUserId: "admin-123",
+      machineIdentifier: "machine-1",
       isActive: true,
     })
 
@@ -45,6 +46,7 @@ describe("getActivePlexServerConfig", () => {
       token: "test-token",
       publicUrl: "https://plex.example.com",
       adminPlexUserId: "admin-123",
+      machineIdentifier: "machine-1",
     })
   })
 
@@ -67,6 +69,7 @@ describe("getActivePlexServerConfig", () => {
       token: "test-token",
       publicUrl: undefined,
       adminPlexUserId: null,
+      machineIdentifier: null,
     })
   })
 

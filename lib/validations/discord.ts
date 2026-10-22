@@ -83,12 +83,3 @@ export const discordIntegrationSchema = z.object({
 
 /** Parsed (output) shape — transforms applied, defaults resolved. */
 export type DiscordIntegrationInput = z.infer<typeof discordIntegrationSchema>
-
-/**
- * Pre-parse (input) shape. Optional fields are truly optional keys here (unlike
- * the inferred output type, where a `.optional().transform()` field becomes a
- * required `| undefined` key). Use this to type callers that build a payload to
- * hand to `discordIntegrationSchema.parse()`.
- */
-export type DiscordIntegrationInputData = z.input<typeof discordIntegrationSchema>
-

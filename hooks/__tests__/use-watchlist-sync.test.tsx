@@ -32,6 +32,7 @@ function settings(syncEnabled: boolean): WatchlistSyncSettings {
       totalItemsRequested: 0,
     },
     recentHistory: [],
+    counts: null,
   }
 }
 

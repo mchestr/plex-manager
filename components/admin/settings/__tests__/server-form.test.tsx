@@ -7,20 +7,12 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { updateOverseerr } from "@/actions/admin"
+import { updateOverseerr } from "@/actions/admin/admin-servers"
 import { testServiceConnection } from "@/actions/admin/test-connection"
 import { ServiceSection } from "@/components/admin/settings/sections/service-section"
 import { ServerForm } from "@/components/admin/settings/server-form"
 
-jest.mock("@/actions/admin", () => ({
-  updateJellyfinServer: jest.fn(),
-  updateOverseerr: jest.fn(),
-  updatePlexServer: jest.fn(),
-  updatePrometheus: jest.fn(),
-  updateRadarr: jest.fn(),
-  updateSonarr: jest.fn(),
-  updateTautulli: jest.fn(),
-}))
+jest.mock("@/actions/admin/admin-servers", () => ({ updateJellyfinServer: jest.fn(), updateOverseerr: jest.fn(), updatePlexServer: jest.fn(), updatePrometheus: jest.fn(), updateRadarr: jest.fn(), updateSonarr: jest.fn(), updateTautulli: jest.fn() }))
 jest.mock("@/actions/admin/test-connection", () => ({ testServiceConnection: jest.fn() }))
 
 const mockRefresh = jest.fn()

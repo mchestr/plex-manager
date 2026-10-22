@@ -8,11 +8,8 @@
  * - getStripeConfig: returns only non-secret status (no secret leakage)
  */
 
-import {
-  getStripeConfig,
-  setStripeEnabled,
-  updateStripeSettings,
-} from '@/actions/admin/admin-config'
+import { setStripeEnabled, updateStripeSettings } from '@/actions/admin/admin-config'
+import { getStripeConfig } from '@/lib/data/admin-settings'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 import { clearOfferedPricesCache } from '@/lib/stripe/prices'
 import { getServerSession } from 'next-auth'

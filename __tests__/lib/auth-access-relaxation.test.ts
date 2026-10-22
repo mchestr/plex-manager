@@ -50,6 +50,7 @@ const PLEX_SERVER = {
   url: 'https://plex.example.com:32400',
   token: 'server-token',
   adminPlexUserId: 'admin-plex-id',
+  machineIdentifier: 'this-server-machine-id',
   isActive: true,
 }
 
@@ -85,11 +86,7 @@ describe('Plex authorize access relaxation', () => {
   })
 
   it('throws access_denied for a non-member when stripe is disabled', async () => {
-    mockCheckUserServerAccess.mockResolvedValue({
-      success: true,
-      hasAccess: false,
-      error: 'User does not have access to this server',
-    })
+    mockCheckUserServerAccess.mockResolvedValue({ status: 'denied' })
     mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: false })
 
     await expect(signInWithPlexToken('tok')).rejects.toThrow('access_denied')
@@ -97,14 +94,14 @@ describe('Plex authorize access relaxation', () => {
   })
 
   it('throws access_denied for a non-member when config row is missing', async () => {
-    mockCheckUserServerAccess.mockResolvedValue({ success: true, hasAccess: false })
+    mockCheckUserServerAccess.mockResolvedValue({ status: 'denied' })
     mockPrisma.config.findUnique.mockResolvedValue(null)
 
     await expect(signInWithPlexToken('tok')).rejects.toThrow('access_denied')
   })
 
   it('allows a non-member session when stripe is enabled (creates user)', async () => {
-    mockCheckUserServerAccess.mockResolvedValue({ success: true, hasAccess: false })
+    mockCheckUserServerAccess.mockResolvedValue({ status: 'denied' })
     mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true })
     mockPrisma.user.findUnique.mockResolvedValue(null)
     mockPrisma.user.create.mockResolvedValue({
@@ -121,23 +118,19 @@ describe('Plex authorize access relaxation', () => {
     expect(mockPrisma.user.create).toHaveBeenCalled()
   })
 
-  it('throws access_denied when the access check fails (API error), regardless of flag', async () => {
-    mockCheckUserServerAccess.mockResolvedValue({
-      success: false,
-      hasAccess: false,
-      error: 'Failed to fetch users',
-    })
-    // Even with stripe enabled, a failed check must not admit the user.
+  it('throws plex_unavailable, not access_denied, when Plex cannot answer, regardless of flag', async () => {
+    mockCheckUserServerAccess.mockResolvedValue({ status: 'unknown', reason: 'plex_unavailable' })
+    // Even with stripe enabled, an unknown check must not admit the user.
     mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true })
 
-    await expect(signInWithPlexToken('tok')).rejects.toThrow('access_denied')
+    await expect(signInWithPlexToken('tok')).rejects.toThrow('plex_unavailable')
     // Config should not even be consulted for a hard failure.
     expect(mockPrisma.config.findUnique).not.toHaveBeenCalled()
     expect(mockPrisma.user.create).not.toHaveBeenCalled()
   })
 
   it('signs in a member normally and does not consult the stripe flag', async () => {
-    mockCheckUserServerAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckUserServerAccess.mockResolvedValue({ status: 'granted' })
     mockPrisma.user.findUnique.mockResolvedValue(null)
     mockPrisma.user.create.mockResolvedValue({
       id: 'db-user-1',

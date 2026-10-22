@@ -55,6 +55,7 @@ import {
   acceptPlexInvite,
   unshareUserFromPlexServer,
 } from "@/lib/connections/plex-invitations"
+import { withMachineIdentifier } from "@/lib/connections/plex-machine-id"
 import { checkUserServerAccess } from "@/lib/connections/plex-user-access"
 import { enqueueRoleSync } from "@/lib/discord/role-sync"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
@@ -489,14 +490,15 @@ export async function processPlexAccessGrant(
     return { userId, granted: false, skipped: skipReason ?? undefined }
   }
 
-  const plexServer = await prisma.plexServer.findFirst({
+  const activeServer = await prisma.plexServer.findFirst({
     where: { isActive: true },
   })
 
-  if (!plexServer) {
+  if (!activeServer) {
     // Configuration error: surfaced via a thrown error so it is retried/visible.
     throw new Error("No active Plex server configured")
   }
+  const plexServer = await withMachineIdentifier(activeServer)
 
   if (!user.email) {
     throw new Error(`User ${userId} has no email; cannot grant Plex access`)
@@ -504,10 +506,15 @@ export async function processPlexAccessGrant(
 
   if (user.plexUserId) {
     const access = await checkUserServerAccess(
-      { url: plexServer.url, token: plexServer.token, adminPlexUserId: plexServer.adminPlexUserId },
+      {
+        url: plexServer.url,
+        token: plexServer.token,
+        adminPlexUserId: plexServer.adminPlexUserId,
+        machineIdentifier: plexServer.machineIdentifier,
+      },
       user.plexUserId
     )
-    if (access.success && access.hasAccess) {
+    if (access.status === "granted") {
       await prisma.subscription.updateMany({
         where: { userId },
         data: { plexInviteStatus: "accepted" },
@@ -529,7 +536,7 @@ export async function processPlexAccessGrant(
   )
 
   const inviteResult = await inviteUserToPlexServer(
-    { url: plexServer.url, token: plexServer.token },
+    { url: plexServer.url, token: plexServer.token, machineIdentifier: plexServer.machineIdentifier },
     user.email,
     librarySectionIds.length > 0 ? { librarySectionIds } : undefined
   )
@@ -737,17 +744,18 @@ export async function processPlexAccessRevoke(
     return { userId, revoked: false }
   }
 
-  const plexServer = await prisma.plexServer.findFirst({
+  const activeServer = await prisma.plexServer.findFirst({
     where: { isActive: true },
   })
 
-  if (!plexServer) {
+  if (!activeServer) {
     // Configuration error: surfaced via a thrown error so it is retried/visible.
     throw new Error("No active Plex server configured")
   }
+  const plexServer = await withMachineIdentifier(activeServer)
 
   const unshareResult = await unshareUserFromPlexServer(
-    { url: plexServer.url, token: plexServer.token },
+    { url: plexServer.url, token: plexServer.token, machineIdentifier: plexServer.machineIdentifier },
     user.plexUserId
   )
 

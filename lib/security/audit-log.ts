@@ -36,6 +36,10 @@ export enum AuditEventType {
   INVITE_ROLLBACK = "INVITE_ROLLBACK",
   INVITE_ROLLBACK_FAILED = "INVITE_ROLLBACK_FAILED",
   INVITE_TRANSACTION_CONFLICT = "INVITE_TRANSACTION_CONFLICT",
+  // An admin created or deleted an invite (P11.5). Details carry the invite id,
+  // its server type, uses and expiry; the code is the credential, so never it.
+  INVITE_CREATED = "INVITE_CREATED",
+  INVITE_DELETED = "INVITE_DELETED",
   // Announcement events
   ANNOUNCEMENT_CREATED = "ANNOUNCEMENT_CREATED",
   ANNOUNCEMENT_UPDATED = "ANNOUNCEMENT_UPDATED",

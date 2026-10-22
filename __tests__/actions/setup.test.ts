@@ -2,9 +2,9 @@
  * Tests for actions/setup.ts - setup wizard actions
  */
 
+import { getSetupStatus } from '@/lib/setup/status'
 import {
     completeSetup,
-    getSetupStatus,
     saveLLMProvider,
     saveOverseerr,
     savePlexServer,
@@ -33,6 +33,7 @@ beforeEach(() => {
 jest.mock('@/lib/connections/plex', () => ({
   testPlexConnection: jest.fn(),
   getPlexUserInfo: jest.fn(),
+  getPlexServerIdentity: jest.fn().mockResolvedValue({ success: true, machineIdentifier: 'machine-abc' }),
 }))
 
 jest.mock('@/lib/connections/tautulli', () => ({
@@ -59,9 +60,7 @@ jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }))
 
-jest.mock('@/lib/admin', () => ({
-  requireAdmin: jest.fn(),
-}))
+jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 
 const mockPrisma = prismaMock
 const mockTestPlexConnection = testPlexConnection as jest.MockedFunction<typeof testPlexConnection>
@@ -150,6 +149,8 @@ describe('Setup Actions', () => {
           token: plexInput.token,
           publicUrl: plexInput.publicUrl,
           adminPlexUserId: 'plex-user-123',
+          // Stored on save, so sign-in needs no /identity call (P11.8)
+          machineIdentifier: 'machine-abc',
           isActive: true,
         }),
       })
@@ -166,7 +167,7 @@ describe('Setup Actions', () => {
       const result = await savePlexServer(plexInput)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Connection failed')
+      expect(result).toMatchObject({ error: expect.stringContaining('Connection failed') })
       expect(mockPrisma.$transaction).not.toHaveBeenCalled()
     })
 
@@ -180,7 +181,7 @@ describe('Setup Actions', () => {
       const result = await savePlexServer(plexInput)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Failed to fetch user info from Plex token')
+      expect(result).toMatchObject({ error: expect.stringContaining('Failed to fetch user info from Plex token') })
     })
 
     it('should update existing setup record', async () => {
@@ -262,7 +263,7 @@ describe('Setup Actions', () => {
       const result = await saveTautulli(tautulliInput)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Connection failed')
+      expect(result).toMatchObject({ error: expect.stringContaining('Connection failed') })
     })
   })
 
@@ -354,7 +355,7 @@ describe('Setup Actions', () => {
       const result = await savePrometheus(prometheusInput)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Connection failed')
+      expect(result).toMatchObject({ error: expect.stringContaining('Connection failed') })
     })
   })
 
@@ -436,7 +437,7 @@ describe('Setup Actions', () => {
       const result = await saveLLMProvider(llmInput)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Invalid API key')
+      expect(result).toMatchObject({ error: expect.stringContaining('Invalid API key') })
     })
   })
 
@@ -518,7 +519,7 @@ describe('setup saves keep a stored secret only for its own address (P4.6)', () 
 
     const result = await saveTautulli({ name: 'Renamed', url: 'http://tautulli.lan:8181/' })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(mockTestTautulliConnection).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'stored-tautulli-key' }))
   })
 
@@ -530,6 +531,7 @@ describe('setup saves keep a stored secret only for its own address (P4.6)', () 
       publicUrl: null,
       token: 'stored-plex-token',
       adminPlexUserId: null,
+      machineIdentifier: null,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),

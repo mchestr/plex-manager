@@ -8,7 +8,8 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { setStripeEnabled, updateStripeSettings, type StripeConfigStatus } from "@/actions/admin/admin-config"
+import { setStripeEnabled, updateStripeSettings } from "@/actions/admin/admin-config"
+import type { StripeConfigStatus } from "@/types/admin"
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 
 jest.mock("@/actions/admin/admin-config", () => ({ updateStripeSettings: jest.fn(), setStripeEnabled: jest.fn() }))

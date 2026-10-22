@@ -202,7 +202,7 @@ describe("what each kind of file gets from eslint.config.mjs", () => {
     ["app/dev/ui/fixture.tsx", { formatting: ["error"], button: [], svg: [] }],
     ["components/rewind/fixture.tsx", { formatting: ["error"], button: [], svg: [] }],
     ["app/api/fixture/route.tsx", { formatting: ["error"], button: [], svg: [] }],
-    ["components/wrapped/fixture.tsx", { formatting: ["warn"], button: ["warn"], svg: [] }],
+    ["components/wrapped/fixture.tsx", { formatting: ["error"], button: ["error"], svg: ["error"] }],
     ["components/setup/setup-wizard/fixture.tsx", { formatting: ["error"], button: ["warn"], svg: ["warn"] }],
     ["lib/fixture.tsx", { formatting: ["warn"], button: [], svg: [] }],
   ])("%s", (file, expected) => {
@@ -239,7 +239,7 @@ describe("what each kind of file gets from eslint.config.mjs", () => {
   ].join("\n")
 
   it.each([
-    ["actions/admin/fixture.ts", { formatting: ["warn"], errorText: ["warn"] }],
+    ["actions/admin/fixture.ts", { formatting: ["error"], errorText: ["error"] }],
     ["actions/invite.ts", { formatting: ["error"], errorText: ["error"] }],
     ["app/api/fixture/route.ts", { formatting: ["error"], errorText: ["error"] }],
     ["lib/fixture.ts", { formatting: ["warn"], errorText: [] }],

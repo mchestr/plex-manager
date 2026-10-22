@@ -30,9 +30,12 @@
  * ## Special Cases
  *
  * - **Not entitled** → `is_subscribed` is `false`, and Plex is not asked.
- * - **Plex access indeterminate** → `is_subscribed` is `false`. If no active
- *   Plex server is configured, the user has no `plexUserId`, the access check
- *   fails, or the lookup throws, the user is treated as *not* subscribed.
+ * - **No Plex identity** → `is_subscribed` is `false` when no active Plex
+ *   server is configured or the user has no `plexUserId`.
+ * - **Plex access unknown** → when plex.tv or the PMS cannot answer (the
+ *   access check is `unknown`, or it throws), `metadata` is `null`: the caller
+ *   pushes nothing and Discord keeps the stored values, so a timeout never
+ *   removes a role (GAP-05).
  * - **Tautulli unavailable / failing** → the stored hours are reused; with
  *   none stored, `watched_hours` is omitted (never emitted as `0` on failure).
  *
@@ -86,7 +89,8 @@ export interface RoleMetadataOptions {
 }
 
 export interface RoleMetadataResult {
-  metadata: Record<string, boolean | number>
+  /** Null when Plex access is unknown: push nothing and keep Discord's stored values. */
+  metadata: Record<string, boolean | number> | null
   /** The hours pushed, to store back as `lastWatchedHours`; null when unknown. */
   watchedHours: number | null
 }
@@ -94,49 +98,41 @@ export interface RoleMetadataResult {
 /**
  * Resolves whether a user currently has access to the active Plex server.
  *
- * Kept local to this module rather than shared with the admin user-list copy
- * (`actions/user-queries.ts`): that copy returns `boolean | null` (leaving
- * "indeterminate" distinct from "no access") and lives inside a larger admin
- * query, whereas Linked-Roles needs a plain boolean and collapses
- * "indeterminate" to `false`. Sharing would change one caller's null handling,
- * so we keep the small duplication instead.
- *
  * @param user - The user's Plex identity.
- * @returns `true` only when the user demonstrably has access; `false` when
- *   access cannot be determined for any reason.
+ * @returns `true` when access is granted, `false` when it is denied or the
+ *   user has no Plex identity, and `null` when Plex could not answer.
  *
  * @internal
  */
-async function resolvePlexAccess(user: RoleMetadataUser): Promise<boolean> {
+async function resolvePlexAccess(user: RoleMetadataUser): Promise<boolean | null> {
   try {
     const plexServer = await getActivePlexServerConfig()
+    if (!plexServer || !user.plexUserId) return false
 
-    if (plexServer && user.plexUserId) {
-      const accessResult = await checkUserServerAccess(
-        {
-          url: plexServer.url,
-          token: plexServer.token,
-          adminPlexUserId: plexServer.adminPlexUserId,
-        },
-        user.plexUserId
-      )
-
-      if (accessResult.success) {
-        return accessResult.hasAccess
-      }
+    const access = await checkUserServerAccess(
+      {
+        url: plexServer.url,
+        token: plexServer.token,
+        adminPlexUserId: plexServer.adminPlexUserId,
+        machineIdentifier: plexServer.machineIdentifier,
+      },
+      user.plexUserId
+    )
+    if (access.status === "unknown") {
+      logger.warn("Plex access unknown; keeping the stored Discord metadata", { userId: user.id, reason: access.reason })
+      return null
     }
+    return access.status === "granted"
   } catch (error) {
     logger.warn("Failed to determine Plex access for Discord metadata", {
       error: error instanceof Error ? error.message : "unknown",
     })
+    return null
   }
-
-  // If we can't determine access from Plex, treat as not subscribed.
-  return false
 }
 
-/** Plex access counts only for an entitled member (SEC-47). @internal */
-async function resolveSubscribed(user: RoleMetadataUser): Promise<boolean> {
+/** Plex access counts only for an entitled member (SEC-47). Null when Plex could not answer. @internal */
+async function resolveSubscribed(user: RoleMetadataUser): Promise<boolean | null> {
   if ((await getAccessLevel(user.id)) !== "full") {
     return false
   }
@@ -188,8 +184,9 @@ async function resolveWatchedHours(
 /**
  * Computes the Discord Linked-Roles metadata for a user.
  *
- * Returns `{ is_subscribed }` always, plus `{ watched_hours }` when it is
- * known. See the module JSDoc for the two fields and their edge cases.
+ * Returns `{ is_subscribed }`, plus `{ watched_hours }` when it is known, or
+ * `metadata: null` when Plex access is unknown. See the module JSDoc for the
+ * two fields and their edge cases.
  *
  * @param user - The user, with their stored hours.
  * @param options - Whether to refresh the hours, and the limiter for Tautulli.
@@ -209,9 +206,11 @@ export async function computeRoleMetadata(
   user: RoleMetadataUser,
   { refreshHours, limiter = directLimiter, signal }: RoleMetadataOptions
 ): Promise<RoleMetadataResult> {
-  const metadata: Record<string, boolean | number> = {}
+  const subscribed = await resolveSubscribed(user)
+  if (subscribed === null) return { metadata: null, watchedHours: user.lastWatchedHours }
 
-  metadata[IS_SUBSCRIBED_KEY] = await resolveSubscribed(user)
+  const metadata: Record<string, boolean | number> = {}
+  metadata[IS_SUBSCRIBED_KEY] = subscribed
 
   const refreshed = refreshHours ? await resolveWatchedHours(user, limiter, signal) : undefined
   const watchedHours = refreshed ?? user.lastWatchedHours

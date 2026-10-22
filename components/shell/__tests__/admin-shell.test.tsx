@@ -94,6 +94,7 @@ describe('AdminShell', () => {
       'Season',
       'Playground',
       'Gallery',
+      'Evals',
       'Prompts',
       'Share analytics',
     ])

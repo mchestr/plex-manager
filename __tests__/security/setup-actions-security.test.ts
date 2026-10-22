@@ -1,504 +1,145 @@
 /**
- * Security tests for setup actions
- * Tests that setup actions properly enforce admin authorization when setup is complete
- * This is critical because these actions modify critical system configuration
+ * Security tests for the setup actions: anyone may run them during the first
+ * run, and only an admin once setup is complete. A refusal is a coded result
+ * (P11.5), never a throw, and nothing is tested or written.
  */
 
-import { requireAdmin } from '@/lib/admin'
-import {
-  savePlexServer,
-  saveTautulli,
-  saveOverseerr,
-  saveLLMProvider,
-  completeSetup,
-} from '@/actions/setup'
-import { prisma } from '@/lib/prisma'
-import { testPlexConnection, getPlexUserInfo } from '@/lib/connections/plex'
-import { testTautulliConnection } from '@/lib/connections/tautulli'
-import { testOverseerrConnection } from '@/lib/connections/overseerr'
-import { testLLMProviderConnection } from '@/lib/connections/llm-provider'
-import { UnauthorizedAdminError, UnauthenticatedError } from '@/lib/admin'
 import { mockDeep, mockReset } from 'jest-mock-extended'
-import type { Prisma } from '@/lib/generated/prisma/client'
+import { getServerSession } from 'next-auth'
+
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { completeSetup, saveLLMProvider, saveOverseerr, savePlexServer, saveTautulli } from '@/actions/setup'
+import { testLLMProviderConnection } from '@/lib/connections/llm-provider'
+import { testOverseerrConnection } from '@/lib/connections/overseerr'
+import { getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
+import { testTautulliConnection } from '@/lib/connections/tautulli'
+import type { Prisma } from '@/lib/generated/prisma/client'
 
-// Mock dependencies
-jest.mock('@/lib/admin', () => ({
-  requireAdmin: jest.fn(),
-  getAdminStatus: jest.fn(),
-  UnauthorizedAdminError: class UnauthorizedAdminError extends Error {
-    constructor(message: string = 'Admin access required') {
-      super(message)
-      this.name = 'UnauthorizedAdminError'
-    }
-  },
-  UnauthenticatedError: class UnauthenticatedError extends Error {
-    constructor(message: string = 'Authentication required') {
-      super(message)
-      this.name = 'UnauthenticatedError'
-    }
-  },
-}))
-
+jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
+jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
-
-beforeEach(() => {
-  mockReset(prismaMock)
-  // Each transaction runs against a fresh client whose delegates resolve to undefined.
-  prismaMock.$transaction.mockImplementation((callback) => callback(mockDeep<Prisma.TransactionClient>()))
-})
-
 jest.mock('@/lib/connections/plex', () => ({
   testPlexConnection: jest.fn(),
   getPlexUserInfo: jest.fn(),
+  getPlexServerIdentity: jest.fn().mockResolvedValue({ success: true, machineIdentifier: 'machine-1' }),
 }))
+jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn() }))
+jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
+jest.mock('@/lib/connections/llm-provider', () => ({ testLLMProviderConnection: jest.fn() }))
+jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
 
-jest.mock('@/lib/connections/tautulli', () => ({
-  testTautulliConnection: jest.fn(),
-}))
+const session = jest.mocked(getServerSession)
+const ADMIN = { user: { id: 'admin-user-id', isAdmin: true }, expires: '' }
+const MEMBER = { user: { id: 'member-1', isAdmin: false }, expires: '' }
 
-jest.mock('@/lib/connections/overseerr', () => ({
-  testOverseerrConnection: jest.fn(),
-}))
-
-jest.mock('@/lib/connections/llm-provider', () => ({
-  testLLMProviderConnection: jest.fn(),
-}))
-
-jest.mock('next/cache', () => ({
-  revalidatePath: jest.fn(),
-}))
-
-const mockAdminSession = {
-  user: {
-    id: 'admin-user-id',
-    email: 'admin@example.com',
-    name: 'Admin User',
-    isAdmin: true,
-  },
+function setupComplete(isComplete: boolean) {
+  prismaMock.setup.findFirst.mockResolvedValue({ id: 'setup-1', isComplete, currentStep: 5 } as never)
 }
 
-describe('Setup Actions Security', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
+const ACTIONS = [
+  {
+    name: 'savePlexServer',
+    call: () => savePlexServer({ name: 'My Plex Server', url: 'https://plex.example.com:32400', token: 'plex-token' }),
+    tester: testPlexConnection,
+  },
+  {
+    name: 'saveTautulli',
+    call: () => saveTautulli({ name: 'Tautulli', url: 'http://tautulli.example.com:8181', apiKey: 'tautulli-key' }),
+    tester: testTautulliConnection,
+  },
+  {
+    name: 'saveOverseerr',
+    call: () => saveOverseerr({ name: 'Overseerr', url: 'http://overseerr.example.com:5055', apiKey: 'overseerr-key' }),
+    tester: testOverseerrConnection,
+  },
+  {
+    name: 'saveLLMProvider',
+    call: () => saveLLMProvider({ provider: 'openai', apiKey: 'sk-test', model: 'gpt-4o' }),
+    tester: testLLMProviderConnection,
+  },
+]
+
+beforeEach(() => {
+  jest.clearAllMocks()
+  mockReset(prismaMock)
+  prismaMock.$transaction.mockImplementation((callback) => callback(mockDeep<Prisma.TransactionClient>()))
+  session.mockResolvedValue(null)
+  jest.mocked(testPlexConnection).mockResolvedValue({ success: true })
+  jest.mocked(getPlexUserInfo).mockResolvedValue({ success: true, data: { id: 'plex-user-123' } } as never)
+  jest.mocked(testTautulliConnection).mockResolvedValue({ success: true })
+  jest.mocked(testOverseerrConnection).mockResolvedValue({ success: true })
+  jest.mocked(testLLMProviderConnection).mockResolvedValue({ success: true })
+})
+
+describe.each(ACTIONS)('$name', ({ call, tester }) => {
+  it('runs for anyone during the first run', async () => {
+    setupComplete(false)
+
+    await expect(call()).resolves.toEqual({ success: true, data: null })
+    expect(tester).toHaveBeenCalled()
   })
 
-  describe('savePlexServer', () => {
-    const plexInput = {
-      name: 'My Plex Server',
-      url: 'https://plex.example.com:32400',
-      token: 'plex-token',
-    }
+  it('runs for an admin once setup is complete', async () => {
+    setupComplete(true)
+    session.mockResolvedValue(ADMIN)
 
-    it('should allow admin when setup is complete', async () => {
-      // Setup is complete
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: true,
-        currentStep: 5,
-      })
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
-      ;(testPlexConnection as jest.Mock).mockResolvedValue({ success: true })
-      ;(getPlexUserInfo as jest.Mock).mockResolvedValue({
-        success: true,
-        data: { id: 'plex-user-123' },
-      })
-
-      const mockTx = {
-        setup: {
-          findFirst: jest.fn().mockResolvedValue({ id: 'setup-1' }),
-          update: jest.fn(),
-        },
-        plexServer: {
-          create: jest.fn().mockResolvedValue({ id: 'plex-1' }),
-        },
-      }
-      ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback: any) => {
-        return callback(mockTx)
-      })
-
-      const result = await savePlexServer(plexInput)
-
-      expect(requireAdmin).toHaveBeenCalled()
-      expect(result.success).toBe(true)
-    })
-
-    it('should allow non-admin during initial setup (setup not complete)', async () => {
-      // Setup is NOT complete - initial setup
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: false,
-        currentStep: 1,
-      })
-      ;(testPlexConnection as jest.Mock).mockResolvedValue({ success: true })
-      ;(getPlexUserInfo as jest.Mock).mockResolvedValue({
-        success: true,
-        data: { id: 'plex-user-123' },
-      })
-
-      const mockTx = {
-        setup: {
-          findFirst: jest.fn().mockResolvedValue(null),
-          create: jest.fn(),
-        },
-        plexServer: {
-          create: jest.fn().mockResolvedValue({ id: 'plex-1' }),
-        },
-      }
-      ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback: any) => {
-        return callback(mockTx)
-      })
-
-      const result = await savePlexServer(plexInput)
-
-      expect(requireAdmin).not.toHaveBeenCalled()
-      expect(result.success).toBe(true)
-    })
-
-    it('should reject non-admin when setup is complete', async () => {
-      // Setup is complete
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: true,
-        currentStep: 5,
-      })
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        throw new UnauthorizedAdminError('UNAUTHORIZED')
-      })
-
-      const result = await savePlexServer(plexInput)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBeTruthy()
-      expect(testPlexConnection).not.toHaveBeenCalled()
-    })
-
-    it('should reject unauthenticated user when setup is complete', async () => {
-      // Setup is complete
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: true,
-        currentStep: 5,
-      })
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        throw new UnauthenticatedError('UNAUTHENTICATED')
-      })
-
-      const result = await savePlexServer(plexInput)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBeTruthy()
-      expect(testPlexConnection).not.toHaveBeenCalled()
-    })
+    await expect(call()).resolves.toEqual({ success: true, data: null })
   })
 
-  describe('saveTautulli', () => {
-    const tautulliInput = {
-      name: 'Tautulli',
-      url: 'http://tautulli.example.com:8181',
-      apiKey: 'tautulli-key',
-    }
+  it('refuses a member once setup is complete, before any connection test', async () => {
+    setupComplete(true)
+    session.mockResolvedValue(MEMBER)
 
-    it('should require admin when setup is complete', async () => {
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: true,
-        currentStep: 5,
-      })
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
-      ;(testTautulliConnection as jest.Mock).mockResolvedValue({ success: true })
-
-      const mockTx = {
-        setup: {
-          findFirst: jest.fn().mockResolvedValue(null),
-          create: jest.fn(),
-        },
-        tautulli: {
-          create: jest.fn().mockResolvedValue({ id: 'tautulli-1' }),
-        },
-      }
-      ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback: any) => {
-        return callback(mockTx)
-      })
-
-      const result = await saveTautulli(tautulliInput)
-
-      expect(requireAdmin).toHaveBeenCalled()
-      expect(result.success).toBe(true)
-    })
-
-    it('should allow non-admin during initial setup', async () => {
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: false,
-        currentStep: 2,
-      })
-      ;(testTautulliConnection as jest.Mock).mockResolvedValue({ success: true })
-
-      const mockTx = {
-        setup: {
-          findFirst: jest.fn().mockResolvedValue(null),
-          create: jest.fn(),
-        },
-        tautulli: {
-          create: jest.fn().mockResolvedValue({ id: 'tautulli-1' }),
-        },
-      }
-      ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback: any) => {
-        return callback(mockTx)
-      })
-
-      const result = await saveTautulli(tautulliInput)
-
-      expect(requireAdmin).not.toHaveBeenCalled()
-      expect(result.success).toBe(true)
-    })
-
-    it('should reject non-admin when setup is complete', async () => {
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: true,
-        currentStep: 5,
-      })
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        throw new UnauthorizedAdminError('UNAUTHORIZED')
-      })
-
-      const result = await saveTautulli(tautulliInput)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBeTruthy()
-      expect(testTautulliConnection).not.toHaveBeenCalled()
-    })
+    await expect(call()).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+    expect(tester).not.toHaveBeenCalled()
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
   })
 
-  describe('saveOverseerr', () => {
-    const overseerrInput = {
-      name: 'Overseerr',
-      url: 'https://overseerr.example.com:5055',
-      apiKey: 'overseerr-key',
-    }
+  it('refuses a signed-out caller once setup is complete', async () => {
+    setupComplete(true)
 
-    it('should require admin when setup is complete', async () => {
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: true,
-        currentStep: 5,
-      })
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
-      ;(testOverseerrConnection as jest.Mock).mockResolvedValue({ success: true })
-
-      const mockTx = {
-        setup: {
-          findFirst: jest.fn().mockResolvedValue(null),
-          create: jest.fn(),
-        },
-        overseerr: {
-          create: jest.fn().mockResolvedValue({ id: 'overseerr-1' }),
-        },
-      }
-      ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback: any) => {
-        return callback(mockTx)
-      })
-
-      const result = await saveOverseerr(overseerrInput)
-
-      expect(requireAdmin).toHaveBeenCalled()
-      expect(result.success).toBe(true)
-    })
-
-    it('should allow non-admin during initial setup', async () => {
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: false,
-        currentStep: 3,
-      })
-      ;(testOverseerrConnection as jest.Mock).mockResolvedValue({ success: true })
-
-      const mockTx = {
-        setup: {
-          findFirst: jest.fn().mockResolvedValue(null),
-          create: jest.fn(),
-        },
-        overseerr: {
-          create: jest.fn().mockResolvedValue({ id: 'overseerr-1' }),
-        },
-      }
-      ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback: any) => {
-        return callback(mockTx)
-      })
-
-      const result = await saveOverseerr(overseerrInput)
-
-      expect(requireAdmin).not.toHaveBeenCalled()
-      expect(result.success).toBe(true)
-    })
-
-    it('should reject non-admin when setup is complete', async () => {
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: true,
-        currentStep: 5,
-      })
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        throw new UnauthorizedAdminError('UNAUTHORIZED')
-      })
-
-      const result = await saveOverseerr(overseerrInput)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBeTruthy()
-      expect(testOverseerrConnection).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('saveLLMProvider', () => {
-    const llmInput = {
-      provider: 'openai' as const,
-      apiKey: 'openai-key',
-      model: 'gpt-4',
-    }
-
-    it('should require admin when setup is complete', async () => {
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: true,
-        currentStep: 5,
-      })
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
-      ;(testLLMProviderConnection as jest.Mock).mockResolvedValue({ success: true })
-
-      const mockTx = {
-        setup: {
-          findFirst: jest.fn().mockResolvedValue(null),
-          create: jest.fn(),
-        },
-        lLMProvider: {
-          updateMany: jest.fn(),
-          create: jest.fn().mockResolvedValue({ id: 'llm-1' }),
-        },
-      }
-      ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback: any) => {
-        return callback(mockTx)
-      })
-
-      const result = await saveLLMProvider(llmInput)
-
-      expect(requireAdmin).toHaveBeenCalled()
-      expect(result.success).toBe(true)
-    })
-
-    it('should allow non-admin during initial setup', async () => {
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: false,
-        currentStep: 4,
-      })
-      ;(testLLMProviderConnection as jest.Mock).mockResolvedValue({ success: true })
-
-      const mockTx = {
-        setup: {
-          findFirst: jest.fn().mockResolvedValue(null),
-          create: jest.fn(),
-        },
-        lLMProvider: {
-          updateMany: jest.fn(),
-          create: jest.fn().mockResolvedValue({ id: 'llm-1' }),
-        },
-      }
-      ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback: any) => {
-        return callback(mockTx)
-      })
-
-      const result = await saveLLMProvider(llmInput)
-
-      expect(requireAdmin).not.toHaveBeenCalled()
-      expect(result.success).toBe(true)
-    })
-
-    it('should reject non-admin when setup is complete', async () => {
-      ;(prisma.setup.findFirst as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: true,
-        currentStep: 5,
-      })
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        throw new UnauthorizedAdminError('UNAUTHORIZED')
-      })
-
-      const result = await saveLLMProvider(llmInput)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBeTruthy()
-      expect(testLLMProviderConnection).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('completeSetup', () => {
-    it('should require admin when setup is already complete', async () => {
-      ;(prisma.setup.findFirst as jest.Mock)
-        .mockResolvedValueOnce({
-          id: 'setup-1',
-          isComplete: true,
-          currentStep: 5,
-        })
-        .mockResolvedValueOnce({
-          id: 'setup-1',
-          isComplete: true,
-          currentStep: 5,
-        })
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
-      ;(prisma.setup.update as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: true,
-        completedAt: new Date(),
-      })
-
-      const result = await completeSetup()
-
-      expect(requireAdmin).toHaveBeenCalled()
-      expect(result.success).toBe(true)
-    })
-
-    it('should allow non-admin during initial setup', async () => {
-      ;(prisma.setup.findFirst as jest.Mock)
-        .mockResolvedValueOnce({
-          id: 'setup-1',
-          isComplete: false,
-          currentStep: 4,
-        })
-        .mockResolvedValueOnce({
-          id: 'setup-1',
-          isComplete: false,
-          currentStep: 4,
-        })
-      ;(prisma.setup.update as jest.Mock).mockResolvedValue({
-        id: 'setup-1',
-        isComplete: true,
-        completedAt: new Date(),
-      })
-
-      const result = await completeSetup()
-
-      expect(requireAdmin).not.toHaveBeenCalled()
-      expect(result.success).toBe(true)
-    })
-
-    it('should reject non-admin when setup is already complete', async () => {
-      ;(prisma.setup.findFirst as jest.Mock)
-        .mockResolvedValueOnce({
-          id: 'setup-1',
-          isComplete: true,
-          currentStep: 5,
-        })
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        throw new UnauthorizedAdminError('UNAUTHORIZED')
-      })
-
-      // completeSetup doesn't have try-catch, so it will throw
-      await expect(completeSetup()).rejects.toThrow(UnauthorizedAdminError)
-      expect(prisma.setup.update).not.toHaveBeenCalled()
-    })
+    await expect(call()).resolves.toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
+    expect(tester).not.toHaveBeenCalled()
   })
 })
 
+describe('completeSetup', () => {
+  it('completes the first run without a session', async () => {
+    setupComplete(false)
+
+    await expect(completeSetup()).resolves.toEqual({ success: true, data: null })
+    expect(prismaMock.setup.update).toHaveBeenCalledWith({
+      where: { id: 'setup-1' },
+      data: { isComplete: true, completedAt: expect.any(Date) },
+    })
+  })
+
+  it('refuses a member once setup is complete', async () => {
+    setupComplete(true)
+    session.mockResolvedValue(MEMBER)
+
+    await expect(completeSetup()).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+    expect(prismaMock.setup.update).not.toHaveBeenCalled()
+  })
+})
+
+it('reports a failed connection test without the save', async () => {
+  setupComplete(false)
+  jest.mocked(testTautulliConnection).mockResolvedValue({ success: false, error: 'Tautulli rejected the API key' })
+
+  await expect(ACTIONS[1].call()).resolves.toEqual({
+    success: false,
+    code: 'UPSTREAM_UNAVAILABLE',
+    error: 'Tautulli rejected the API key',
+  })
+  expect(prismaMock.$transaction).not.toHaveBeenCalled()
+})
+
+it('refuses invalid input with VALIDATION and field errors', async () => {
+  setupComplete(false)
+
+  const result = await saveTautulli({ name: '', url: 'not a url', apiKey: 'k' })
+
+  expect(result).toMatchObject({ success: false, code: 'VALIDATION', fieldErrors: { name: expect.any(Array) } })
+  expect(testTautulliConnection).not.toHaveBeenCalled()
+})

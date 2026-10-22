@@ -12,7 +12,7 @@ import {
   getClientIdentifier,
   type InviteSettings,
 } from "./plex-core"
-import { getPlexServerIdentity } from "./plex-connection"
+import { resolveMachineIdentifier } from "./plex-connection"
 import { getPlexUsers } from "./plex-user-info"
 
 /**
@@ -21,13 +21,13 @@ import { getPlexUsers } from "./plex-user-info"
  * Returns the invite ID if successful
  */
 export async function inviteUserToPlexServer(
-  serverConfig: { url: string; token: string },
+  serverConfig: { url: string; token: string; machineIdentifier?: string | null },
   email: string,
   inviteSettings?: InviteSettings
 ): Promise<{ success: boolean; inviteID?: number; error?: string }> {
   try {
-    // 1. Get the server's machine identifier
-    const identityResult = await getPlexServerIdentity(serverConfig)
+    // 1. The server's machine identifier: stored, or from the PMS
+    const identityResult = await resolveMachineIdentifier(serverConfig)
     if (!identityResult.success || !identityResult.machineIdentifier) {
       return { success: false, error: identityResult.error || "Failed to get server machine identifier" }
     }
@@ -279,7 +279,7 @@ function authOrUnavailable(status: number | undefined): PlexUnshareErrorCode {
  *
  * ## Process
  *
- * 1. Resolve this server's machine identifier from its `/identity`.
+ * 1. This server's machine identifier: the stored one, or its `/identity`.
  * 2. Read the owner's plex.tv user list and find the user's `<Server>` entry
  *    for that machine identifier. No user, or no entry (managed home users
  *    have none), is `already_removed` without a DELETE.
@@ -295,10 +295,10 @@ function authOrUnavailable(status: number | undefined): PlexUnshareErrorCode {
  * returned or logged.
  */
 export async function unshareUserFromPlexServer(
-  serverConfig: { url: string; token: string },
+  serverConfig: { url: string; token: string; machineIdentifier?: string | null },
   plexUserId: string
 ): Promise<PlexUnshareResult> {
-  const identity = await getPlexServerIdentity(serverConfig)
+  const identity = await resolveMachineIdentifier(serverConfig)
   if (!identity.success || !identity.machineIdentifier) {
     logger.warn("plex.unshare_failed", { plexUserId, step: "identity", url: sanitizeUrlForLogging(serverConfig.url) })
     return { success: false, code: "PLEX_UNAVAILABLE" }

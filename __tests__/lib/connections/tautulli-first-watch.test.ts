@@ -6,7 +6,6 @@
  * Server Action, so no client can ask about another member (SEC-19).
  */
 
-import * as actionsUsers from '@/actions/users'
 import * as userQueries from '@/actions/user-queries'
 import { getFirstWatchDate } from '@/lib/connections/tautulli-first-watch'
 import { prisma } from '@/lib/prisma'
@@ -99,7 +98,6 @@ describe('getFirstWatchDate', () => {
   })
 
   it('is not exposed as a Server Action that takes another member\'s ID', () => {
-    expect(actionsUsers).not.toHaveProperty('getUserFirstWatchDate')
     expect(userQueries).not.toHaveProperty('getUserFirstWatchDate')
   })
 })

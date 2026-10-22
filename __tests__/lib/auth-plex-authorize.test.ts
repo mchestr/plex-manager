@@ -66,6 +66,7 @@ const PLEX_SERVER = {
   publicUrl: null,
   token: 'server-token',
   adminPlexUserId: 'plex-owner',
+  machineIdentifier: 'this-server-machine-id',
   isActive: true,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -79,8 +80,8 @@ beforeEach(() => {
   mockReset(prismaMock)
   mockReadPin.mockResolvedValue(readyPin(PLEX_TOKEN))
   mockGetPlexUserInfo.mockResolvedValue({ success: true, data: PLEX_USER })
-  mockCheckUserServerAccess.mockResolvedValue({ success: true, hasAccess: true })
-  mockWaitForInvitedAccess.mockResolvedValue({ success: true, hasAccess: true })
+  mockCheckUserServerAccess.mockResolvedValue({ status: 'granted' })
+  mockWaitForInvitedAccess.mockResolvedValue({ status: 'granted' })
   mockRedeemPlexInvite.mockResolvedValue({ success: true, data: null })
   prismaMock.plexServer.findFirst.mockResolvedValue(PLEX_SERVER)
   prismaMock.user.findUnique.mockResolvedValue(MEMBER_ROW)
@@ -140,7 +141,7 @@ describe('Plex authorize reads the PIN cookie', () => {
   })
 
   it('throws access_denied for a member without access (Stripe off)', async () => {
-    mockCheckUserServerAccess.mockResolvedValue({ success: true, hasAccess: false })
+    mockCheckUserServerAccess.mockResolvedValue({ status: 'denied' })
     prismaMock.config.findUnique.mockResolvedValue(null)
 
     await expect(authorize(undefined, plexPinRequest())).rejects.toThrow('access_denied')

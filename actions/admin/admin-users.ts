@@ -2,26 +2,15 @@
 
 import { adminAction } from "@/lib/actions/define-action"
 import { ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
-import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { enqueueRoleSync } from "@/lib/discord/role-sync"
 import { endUserSessions } from "@/lib/session-revocation"
-import { createLogger } from "@/lib/utils/logger"
 import { userIdSchema } from "@/lib/validations/shared-schemas"
 import { z } from "zod"
 
-const logger = createLogger("ADMIN")
-
 /** Why an admin action on a user was refused. */
 type UserActionRefusal = "SELF" | "OWNER" | "LAST_ADMIN" | "NOT_FOUND"
-
-interface UserActionResult {
-  success: boolean
-  error?: string
-  code?: UserActionRefusal
-  message?: string
-}
 
 /** Whether `plexUserId` owns the active Plex server, whom every login promotes. */
 async function isPlexServerOwner(plexUserId: string | null): Promise<boolean> {
@@ -41,100 +30,63 @@ async function revalidateUserPages(userId: string) {
   revalidatePath("/admin/users")
 }
 
+/** The action codes plus the refusals the user admin actions return. */
+type UserActionCode = ActionErrorCode | UserActionRefusal
+
 /**
- * Update user admin status (admin only).
+ * Update user admin status (admin only, audited).
  *
  * Refuses to demote the caller (`SELF`), the Plex server owner, whom the next
  * login would promote again (`OWNER`), and the last remaining admin
- * (`LAST_ADMIN`). A demotion ends the user's sessions.
+ * (`LAST_ADMIN`). A demotion ends the user's sessions. Setting the status the
+ * user already has succeeds without a change.
  */
-export async function updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<UserActionResult> {
-  const session = await requireAdmin()
-
-  try {
-    // Prevent users from removing their own admin status
-    if (session.user.id === userId && !isAdmin) {
-      return {
-        success: false,
-        code: "SELF",
-        error: "You cannot remove your own admin privileges",
-      }
+export const updateUserAdminStatus = adminAction({
+  input: z.object({ userId: userIdSchema, isAdmin: z.boolean() }),
+  fallbackError: "Failed to update user admin status",
+  handler: async ({ userId, isAdmin }, { userId: actorId }): Promise<ActionResult<null, UserActionCode>> => {
+    if (actorId === userId && !isAdmin) {
+      return refused("SELF", "You cannot remove your own admin privileges")
     }
 
-    // Get current user to check if status is changing
     const currentUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { isAdmin: true, plexUserId: true },
     })
-
     if (!currentUser) {
-      return {
-        success: false,
-        code: "NOT_FOUND",
-        error: "User not found",
-      }
+      return refused("NOT_FOUND", "User not found")
     }
 
-    // Only update if status is actually changing
     if (currentUser.isAdmin === isAdmin) {
-      return {
-        success: true,
-        message: `User is already ${isAdmin ? "an admin" : "a regular user"}`,
-      }
+      return ok(null)
     }
 
     if (!isAdmin) {
       if (await isPlexServerOwner(currentUser.plexUserId)) {
-        return {
-          success: false,
-          code: "OWNER",
-          error: "The Plex server owner is always an admin",
-        }
+        return refused("OWNER", "The Plex server owner is always an admin")
       }
       if ((await prisma.user.count({ where: { isAdmin: true } })) <= 1) {
-        return {
-          success: false,
-          code: "LAST_ADMIN",
-          error: "You cannot remove the last admin",
-        }
+        return refused("LAST_ADMIN", "You cannot remove the last admin")
       }
     }
 
-    // Update user admin status
-    await prisma.user.update({
-      where: { id: userId },
-      data: { isAdmin },
+    await prisma.user.update({ where: { id: userId }, data: { isAdmin } })
+
+    logAuditEvent(isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED, actorId, {
+      targetUserId: userId,
+      previousAdminStatus: !isAdmin,
+      newAdminStatus: isAdmin,
     })
 
-    // Log audit event
-    logAuditEvent(
-      isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED,
-      session.user.id,
-      {
-        targetUserId: userId,
-        previousAdminStatus: !isAdmin,
-        newAdminStatus: isAdmin,
-      }
-    )
-
     if (!isAdmin) {
-      await endUserSessions(userId, "demoted", session.user.id)
+      await endUserSessions(userId, "demoted", actorId)
     }
 
     await revalidateUserPages(userId)
 
-    return { success: true }
-  } catch (error) {
-    logger.error("Error updating user admin status", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update user admin status",
-    }
-  }
-}
-
-/** The action codes plus the refusals the user admin actions return. */
-type UserActionCode = ActionErrorCode | UserActionRefusal
+    return ok(null)
+  },
+})
 
 /**
  * Disable or re-enable a user's account (admin only, audited).

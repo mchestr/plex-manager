@@ -7,7 +7,7 @@ import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 import { serverZone } from "@/lib/utils/server-zone"
 import { recordIdSchema } from "@/lib/validations/params"
-import { announcementSchema } from "@/lib/validations/announcement"
+import { announcementSchema, announcementUpdateSchema } from "@/lib/validations/announcement"
 import { wallTimeToInstant } from "@/lib/utils/zoned-time"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -107,7 +107,7 @@ export const createAnnouncement = adminAction({
 
 /** Update an announcement (admin only); a missing row is `NOT_FOUND`. */
 export const updateAnnouncement = adminAction({
-  input: announcementSchema.extend({ id: recordIdSchema }),
+  input: announcementUpdateSchema,
   fallbackError: "Couldn't save the announcement",
   handler: async ({ id, title, content, priority, isActive, expiresAt }, { userId }) => {
     await prisma.announcement.update({

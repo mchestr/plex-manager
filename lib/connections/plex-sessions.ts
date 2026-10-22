@@ -16,13 +16,14 @@ type PlexResult = { success: boolean; data?: any; error?: string }
  *
  * @param serverConfig - Plex server URL + token.
  * @param path - Path beginning with `/`, query string already appended.
+ * @param headers - Extra headers, such as the container paging ones.
  * @internal
  */
-async function plexGet(serverConfig: PlexServerConfig, path: string): Promise<PlexResult> {
+async function plexGet(serverConfig: PlexServerConfig, path: string, headers: Record<string, string> = {}): Promise<PlexResult> {
   const result = await serviceFetch({
     service: "Plex",
     url: `${serverConfig.url}${path}`,
-    headers: { "X-Plex-Token": serverConfig.token },
+    headers: { "X-Plex-Token": serverConfig.token, ...headers },
     schema: z.unknown(),
   })
   return result.ok ? { success: true, data: result.data } : { success: false, error: serviceErrorMessage("Plex", result) }
@@ -43,18 +44,44 @@ export async function getPlexLibrarySections(serverConfig: PlexServerConfig): Pr
   return plexGet(serverConfig, "/library/sections")
 }
 
-/**
- * Get recently added content from Plex server
- */
-export async function getPlexRecentlyAdded(serverConfig: PlexServerConfig, limit = 20): Promise<PlexResult> {
-  return plexGet(serverConfig, `/library/recentlyAdded?limit=${limit}`)
+/** The page size for PMS listings that page with the container headers. */
+export const PLEX_PAGE_SIZE = 50
+
+/** `X-Plex-Container-Start` and `X-Plex-Container-Size`, the PMS's paging (GAP-10). */
+export function containerPage(size: number, start = 0): Record<string, string> {
+  return { "X-Plex-Container-Start": String(start), "X-Plex-Container-Size": String(size) }
 }
 
 /**
- * Get on deck content from Plex server
+ * Get recently added content from Plex server, `limit` items, paged with the
+ * container headers (the PMS ignores a `?limit=` parameter).
+ */
+export async function getPlexRecentlyAdded(serverConfig: PlexServerConfig, limit = 20): Promise<PlexResult> {
+  return plexGet(serverConfig, "/library/recentlyAdded", containerPage(limit))
+}
+
+/**
+ * Get on deck content from Plex server, the first page of 50.
  */
 export async function getPlexOnDeck(serverConfig: PlexServerConfig): Promise<PlexResult> {
-  return plexGet(serverConfig, "/library/onDeck")
+  return plexGet(serverConfig, "/library/onDeck", containerPage(PLEX_PAGE_SIZE))
+}
+
+/** The `User` PMS reports on a session, and the older flat `user_id`. */
+export interface PlexSessionUserRef {
+  User?: { id?: string | number }
+  user_id?: string | number
+}
+
+/**
+ * Whether a PMS session belongs to a member (GAP-08). The PMS reports the
+ * server owner's own streams as user `1`, so the owner (whose `plexUserId`
+ * equals `PlexServer.adminPlexUserId`) also matches `User.id === "1"`;
+ * everyone else matches by their plex.tv account id.
+ */
+export function matchesSessionUser(session: PlexSessionUserRef, member: { plexUserId: string; isOwner: boolean }): boolean {
+  const ids = [session.User?.id, session.user_id].filter((id) => id !== undefined && id !== null).map(String)
+  return ids.includes(member.plexUserId) || (member.isOwner && ids.includes("1"))
 }
 
 /** One title in a section listing; Plex sends many more fields. */
@@ -109,8 +136,7 @@ export async function getPlexSectionRecent(
     url: `${serverConfig.url}/library/sections/${encodeURIComponent(sectionId)}/all?${params}`,
     headers: {
       "X-Plex-Token": serverConfig.token,
-      "X-Plex-Container-Start": "0",
-      "X-Plex-Container-Size": String(size),
+      ...containerPage(size),
     },
     schema: plexSectionPageSchema,
     timeoutMs,

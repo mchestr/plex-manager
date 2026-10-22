@@ -75,7 +75,7 @@ export function returningRange(now: Date, year: number): { from: string; to: str
  * ```
  */
 export async function fetchSeasonPremieres(config: SonarrEndpoint, range: { from: string; to: string }): Promise<SeasonPremiere[] | null> {
-  const result = await getSonarrCalendar({ ...config, publicUrl: config.publicUrl ?? undefined }, range.from, range.to, { includeSeries: true })
+  const result = await getSonarrCalendar({ ...config, publicUrl: config.publicUrl ?? undefined }, range.from, range.to)
   if (!result.success) {
     logger.warn("Sonarr calendar failed; Next year's returning part is left out")
     return null

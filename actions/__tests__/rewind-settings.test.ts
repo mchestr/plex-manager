@@ -13,7 +13,7 @@ import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
 
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
-import { getConfig } from '@/actions/admin/admin-config'
+import { getConfig } from '@/lib/data/admin-settings'
 import { updateRewindSettings } from '@/actions/admin/rewind-settings'
 import { Prisma } from '@/lib/generated/prisma/client'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'

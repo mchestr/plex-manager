@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/toast"
 import { useWatchlistSync, type WatchlistSyncSettings } from "@/hooks/use-watchlist-sync"
 import { icons } from "@/lib/ui/icons"
 import { WATCHLIST_SKIP_COPY } from "@/lib/watchlist/skip"
+import { WATCHLIST_COUNT_PARTS, watchlistCountsText, type WatchlistCounts } from "@/lib/watchlist/summary"
 import type { AuthService } from "@/types/onboarding"
 
 type BadgeVariant = "success" | "warning" | "destructive" | "info" | "neutral"
@@ -31,6 +32,24 @@ const ITEM_STATUS: Record<string, { label: string; variant: BadgeVariant }> = {
   ALREADY_REQUESTED: { label: "Pending", variant: "neutral" },
   FAILED: { label: "Failed", variant: "destructive" },
   SYNCED: { label: "Synced", variant: "neutral" },
+  SKIPPED_NO_EXTERNAL_ID: { label: "No TMDB match", variant: "neutral" },
+  NOT_PERMITTED: { label: "Not allowed", variant: "warning" },
+}
+
+const hasCounts = (counts: WatchlistCounts) => Object.values(counts).some((count) => count > 0)
+
+/** Requested, available, already requested, skipped and refused, each with its test id. */
+function SyncCounts({ counts }: { counts: WatchlistCounts }) {
+  return (
+    <span className="tabular-nums" data-testid="watchlist-sync-counts">
+      {WATCHLIST_COUNT_PARTS.map((part, index) => (
+        <span key={part.key} data-testid={part.testId}>
+          {index > 0 && ", "}
+          {part.text(counts[part.key])}
+        </span>
+      ))}
+    </span>
+  )
 }
 
 /**
@@ -81,15 +100,13 @@ export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCar
       if (result.data.queued) {
         showSuccess(result.data.message)
       } else {
-        const { skipped, itemsSynced, itemsRequested, itemsFailed } = result.data
+        const { skipped, notModified, counts, itemsFailed } = result.data
         if (skipped) {
           showInfo(WATCHLIST_SKIP_COPY[skipped])
-        } else if (itemsRequested && itemsRequested > 0) {
-          showSuccess(`Synced ${itemsSynced} items, requested ${itemsRequested} new items`)
-        } else if (itemsSynced && itemsSynced > 0) {
-          showInfo(`Synced ${itemsSynced} items (all already available or requested)`)
-        } else {
-          showInfo("Watchlist is up to date")
+        } else if (notModified) {
+          showInfo("Your watchlist has not changed since the last sync")
+        } else if (counts) {
+          showInfo(hasCounts(counts) ? watchlistCountsText(counts) : "No new items on your watchlist")
         }
         if (itemsFailed && itemsFailed > 0) showError(`${itemsFailed} items failed to sync`)
       }
@@ -144,10 +161,8 @@ export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCar
                 </span>
                 {lastStatus && <Badge variant={lastStatus.variant}>{lastStatus.label}</Badge>}
               </span>
-              {sync && (sync.totalItemsSynced > 0 || sync.totalItemsRequested > 0) && (
-                <span className="tabular-nums">
-                  {sync.totalItemsSynced} items synced, {sync.totalItemsRequested} requested
-                </span>
+              {settings.counts && hasCounts(settings.counts) && (
+                <SyncCounts counts={settings.counts} />
               )}
             </div>
             <Button

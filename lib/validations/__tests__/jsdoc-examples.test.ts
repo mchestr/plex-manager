@@ -1,5 +1,6 @@
 import { safeCallbackPath } from '@/lib/validations/callback-path'
 import { yearParamSchema } from '@/lib/validations/params'
+import { createServiceSchema } from '@/lib/validations/shared-schemas'
 import { readYearParam } from '@/lib/validations/year-range'
 
 describe('JSDoc Documentation Examples', () => {
@@ -21,5 +22,10 @@ describe('JSDoc Documentation Examples', () => {
     expect(safeCallbackPath('https://evil.example/')).toBeNull()
     expect(safeCallbackPath('//evil.example')).toBeNull()
     expect(safeCallbackPath('/a/..//evil.example')).toBeNull()
+  })
+
+  it('createServiceSchema normalises the server URL', () => {
+    const sonarr = createServiceSchema({ defaultPort: '8989', publicExample: 'sonarr.example.com' })
+    expect(sonarr.parse({ name: 'Sonarr', url: 'http://sonarr.lan:8989/', apiKey: 'k' }).url).toBe('http://sonarr.lan:8989')
   })
 })

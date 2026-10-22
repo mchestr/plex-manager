@@ -61,15 +61,16 @@ model Setup {
 }
 
 model PlexServer {
-  id              String   @id @default(cuid())
-  name            String
-  url             String // Full URL including protocol, hostname, and port (e.g. https://plex.example.com:32400)
-  publicUrl       String? // Public facing URL (e.g. https://plex.example.com)
-  token           String
-  adminPlexUserId String? // Plex user ID of the admin (user who configured this server)
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String   @id @default(cuid())
+  name              String
+  url               String // Full URL including protocol, hostname, and port (e.g. https://plex.example.com:32400)
+  publicUrl         String? // Public facing URL (e.g. https://plex.example.com)
+  token             String
+  adminPlexUserId   String? // Plex user ID of the admin (user who configured this server)
+  machineIdentifier String? // PMS /identity machineIdentifier: written on save, filled lazily on the first identity call (P11.8)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@index([isActive])
   @@index([adminPlexUserId])
@@ -476,7 +477,7 @@ model Config {
   llmDailyCapAdminUsd          Float     @default(5) // Daily assistant spend per admin
   llmDailyCapServerUsd         Float     @default(5) // Daily assistant spend for the whole server
   lightThemeEnabled            Boolean   @default(false) // Members may pick the light theme (P10.10, ui-design-system 3.3)
-  updatedAt                   DateTime  @updatedAt
+  updatedAt                    DateTime  @updatedAt
   updatedBy                    String? // User ID who last updated this config
 }
 
@@ -788,6 +789,8 @@ model WatchlistSyncSettings {
   itemsRequested      Int       @default(0) // Items requested in last sync
   totalItemsSynced    Int       @default(0) // Cumulative total items synced
   totalItemsRequested Int       @default(0) // Cumulative total requests created
+  itemsSkipped        Int       @default(0) // Items with no TMDB match in last sync
+  watchlistEtag       String? // ETag of the last complete watchlist read; a 304 skips the run
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -835,8 +838,10 @@ enum WatchlistSyncStatus {
   REQUESTED // Submitted to Overseerr
   ALREADY_AVAILABLE // Already in library
   ALREADY_REQUESTED // Already has pending request
-  FAILED // Request submission failed
+  FAILED // Request submission failed; retried on the next sync
   REMOVED_FROM_WATCHLIST // Removed from Plex watchlist
+  SKIPPED_NO_EXTERNAL_ID // Plex metadata has no TMDB id, so nothing can be requested
+  NOT_PERMITTED // Overseerr refused the request (403: quota or permission); terminal
 }
 
 // Stripe Subscriptions - one-to-one with User

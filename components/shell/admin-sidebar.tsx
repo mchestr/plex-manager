@@ -29,7 +29,7 @@ import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 
 const itemClasses = cn(
-  "relative flex h-8 items-center justify-center gap-3 rounded-md px-2 text-ui font-medium text-sidebar-foreground lg:justify-start",
+  "relative flex h-8 short:h-7 items-center justify-center gap-3 rounded-md px-2 text-ui font-medium text-sidebar-foreground lg:justify-start",
   "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
 )
 
@@ -116,6 +116,8 @@ interface AdminSidebarProps {
  * The admin sidebar (ui-design-system 6.2): 248px from `lg`, a 56px icon rail
  * with tooltips at `md`, hidden below. The current item gets
  * `aria-current="page"`, the accent fill and a 3px strip at the left edge.
+ * In a window 800px tall or less (`short:`) the items and groups tighten, so
+ * at 720px every item stays within the viewport while the nav scrolls.
  */
 export function AdminSidebar({ serverName, user, navCounts, assistant }: AdminSidebarProps) {
   const pathname = usePathname() ?? "/admin"
@@ -165,13 +167,13 @@ export function AdminSidebar({ serverName, user, navCounts, assistant }: AdminSi
         </AdminChrome>
       )}
       <nav aria-label="Admin" className="flex-1 overflow-y-auto px-2 py-2">
-        <ul className="mb-4 flex flex-col gap-0.5">
+        <ul className="mb-4 flex flex-col gap-0.5 short:mb-3">
           {itemsIn(null, ADMIN_NAV).map((item) => (
             <NavLink key={item.id} item={item} counts={navCounts} pathname={pathname} />
           ))}
         </ul>
         {ADMIN_NAV_GROUPS.map((group) => (
-          <div key={group} className="mb-4 border-t border-sidebar-border pt-3 first:border-t-0 first:pt-0 lg:border-t-0 lg:pt-0">
+          <div key={group} className="mb-4 border-t border-sidebar-border pt-3 first:border-t-0 first:pt-0 short:mb-3 lg:border-t-0 lg:pt-0">
             <h2 className="hidden px-2 pb-1 text-caption font-medium text-muted-foreground lg:block">{group}</h2>
             <ul className="flex flex-col gap-0.5" aria-label={group}>
               {itemsIn(group, ADMIN_NAV).map((item) => (

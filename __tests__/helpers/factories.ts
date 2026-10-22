@@ -171,6 +171,7 @@ export function buildPlexServer(overrides: Partial<PlexServer> = {}): PlexServer
     publicUrl: null,
     token: 'plex-token',
     adminPlexUserId: null,
+    machineIdentifier: null,
     isActive: true,
     createdAt: fixedDate(),
     updatedAt: fixedDate(),
