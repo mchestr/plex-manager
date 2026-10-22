@@ -310,8 +310,10 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Name a migration `latest`: the name check fails inside `schema-drift`. Locally, run the app with `?schema=pm_test` after migrating into it: the home page loads.
 
 **Done when.**
-- [ ] New migration names are checked, and the docs describe the `--create-only` workflow.
-- [ ] A valid `?schema=` reaches the runtime adapter, and an invalid one stops boot.
+- [x] New migration names are checked, and the docs describe the `--create-only` workflow.
+- [x] A valid `?schema=` reaches the runtime adapter, and an invalid one stops boot.
+
+(as merged: the baseline `.legacy-names.json` lists all 51 folders on the start point, including both `20270115000000_*` folders; every later folder must be later than the newest of them and than the folder before it. A timestamp may run up to 180 days ahead of the clock, because plan-calendar timestamps (2027) are ahead of the build date. Names fail only when every word is deny-listed (`latest_changes`), so `fix_invite_expiry` passes. The env issue is `DATABASE_URL` `schema_invalid`, and `createPrismaClient()` (now exported, `@internal`) also throws on an invalid name outside production; `prisma/seed.ts` passes the schema too. `20251122201244_combined_schema_updates` was edited (`table_schema = 'public'` to `current_schema()`): without it no migration into a non-public schema could finish. `migrate deploy`/`status` ignore the new checksum; `migrate dev` on an existing contributor database asks for a reset, or run `UPDATE "_prisma_migrations" SET checksum = 'af13d7e87e9a3687266696b8daa07909e189c98a5fe6b548cf5f098680e8a83a' WHERE migration_name = '20251122201244_combined_schema_updates'`.)
 
 ### Step P11.7: Discord bot lifecycle and command registration
 
