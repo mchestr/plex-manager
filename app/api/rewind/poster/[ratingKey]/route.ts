@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
-import { parseRouteParams, parseSearchParams, requireEntitlement } from "@/lib/actions/route"
+import { parseRouteParams, parseSearchParams, requireEntitlement, withRequestContext } from "@/lib/actions/route"
 import { authOptions } from "@/lib/auth"
 import { rewindInks, type InkName } from "@/lib/design/tokens"
 import { prisma } from "@/lib/prisma"
@@ -102,7 +102,7 @@ function posterResponse(body: Buffer, servedAs: "private" | "share") {
  *   minutes so a page falls back to its title cards at once.
  * - **Errors** (400, 401, 500) send `private, no-store`.
  */
-export async function GET(request: NextRequest, context: { params: Promise<{ ratingKey: string }> }) {
+async function handleGet(request: NextRequest, context: { params: Promise<{ ratingKey: string }> }) {
   try {
     const params = parseRouteParams(paramsSchema, await context.params, { "Cache-Control": ERROR_CACHE_CONTROL })
     if (!params.ok) return params.response
@@ -197,3 +197,5 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rat
     return errorResponse(ErrorCode.INTERNAL_ERROR, "Failed to fetch poster")
   }
 }
+
+export const GET = withRequestContext(handleGet)

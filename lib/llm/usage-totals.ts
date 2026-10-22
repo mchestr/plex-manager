@@ -43,6 +43,23 @@ export async function getRewindSeasonSpend(year: number): Promise<number> {
 }
 
 /**
+ * LLM spend since `since`, in USD, by purpose: assistant calls (`chat`, which
+ * always attach a conversation) and everything else (`wrapped`). Two
+ * `aggregate()`s; `/api/metrics` reads it (P11.4).
+ */
+export async function llmSpendSince(since: Date): Promise<{ wrapped: number; chat: number }> {
+  const [all, chat] = await Promise.all([
+    prisma.lLMUsage.aggregate({ where: { createdAt: { gte: since } }, _sum: { cost: true } }),
+    prisma.lLMUsage.aggregate({
+      where: { createdAt: { gte: since }, chatConversationId: { not: null } },
+      _sum: { cost: true },
+    }),
+  ])
+  const chatCost = chat._sum.cost ?? 0
+  return { wrapped: Math.max(0, (all._sum.cost ?? 0) - chatCost), chat: chatCost }
+}
+
+/**
  * Each member's most recent provider and model, from one `distinct` query.
  *
  * @internal until P10.8's Overview reads it; `usageTotalsByUser` uses it today

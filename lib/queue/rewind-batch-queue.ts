@@ -14,6 +14,7 @@ import { Queue, type JobsOptions } from "bullmq"
 
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { getRequestPathRedis, readyWithin } from "@/lib/queue/connection"
+import { traceQueue } from "@/lib/queue/job-meta"
 import { JOB_TYPES, type JobPayloadMap } from "@/lib/queue/types"
 
 const READY_WAIT_MS = 2000
@@ -22,7 +23,7 @@ let queue: Queue | null = null
 
 function batchQueue(): Queue {
   if (!queue) {
-    const created = new Queue("rewind-batch", { connection: getRequestPathRedis() })
+    const created = traceQueue(new Queue("rewind-batch", { connection: getRequestPathRedis() }))
     onShutdown("rewind-batch-queue", "close", () => created.close())
     queue = created
   }

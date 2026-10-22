@@ -1,3 +1,5 @@
+import type { Instrumentation } from "next"
+
 export async function register() {
   // Only run on Node.js runtime (not Edge)
   // Also check if process.on is available (not available in Edge Runtime)
@@ -26,4 +28,13 @@ export async function register() {
 async function logBootError(error: unknown) {
   const { createLogger } = await import("./lib/utils/logger")
   createLogger("INSTRUMENTATION").error("Background start failed", error)
+}
+
+/**
+ * Logs every error Next could not handle as `request.unhandled_error`, with
+ * its digest, route and request id (P11.4); `lib/instrumentation/on-request-error.ts`.
+ */
+export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
+  const { logUnhandledRequestError } = await import("./lib/instrumentation/on-request-error")
+  await logUnhandledRequestError(error, request, context)
 }

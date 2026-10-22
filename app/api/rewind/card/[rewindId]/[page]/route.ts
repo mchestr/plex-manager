@@ -11,6 +11,7 @@ import { recordIdSchema } from "@/lib/validations/params"
 import { choosable } from "@/lib/wrapped/data/share-safe"
 import { loadShareContext } from "@/lib/wrapped/data/share-context"
 import { CardFactIdSchema, SharePageTypeSchema } from "@/lib/wrapped/data/share-safe-schema"
+import { withRequestContext } from "@/lib/actions/route"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -48,7 +49,7 @@ function query(url: URL) {
  * may choose (`cardFactOptions`, P8.4); `square` is refused until FR-27. Anything
  * unauthorised, unknown or unpublished is a 404.
  */
-export async function GET(request: NextRequest, context: { params: Promise<{ rewindId: string; page: string }> }) {
+async function handleGet(request: NextRequest, context: { params: Promise<{ rewindId: string; page: string }> }) {
   try {
     const params = paramsSchema.safeParse(await context.params)
     if (!params.success) return cardNotFound()
@@ -85,3 +86,5 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rew
     return cardError()
   }
 }
+
+export const GET = withRequestContext(handleGet)

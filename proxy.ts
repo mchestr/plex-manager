@@ -1,6 +1,10 @@
 /**
- * Next.js proxy (formerly middleware) for request logging and request ID tracking
- * Logs incoming HTTP requests and sets up request context for async operations
+ * Next.js proxy (formerly middleware) for request logging and request IDs.
+ *
+ * Every request gets an id (BP-17, P11.4): a reverse proxy's `x-request-id`
+ * when it is valid, otherwise a new one. The proxy forwards it to the page,
+ * action or route handler as the `x-request-id` request header and returns it
+ * as `X-Request-ID`; the action and route helpers put it on every log line.
  *
  * It also keeps members below full access out of the `(app)` pages on every
  * request, client-side navigations and prefetches included, which the
@@ -18,9 +22,10 @@ import { getAccessLevel } from "@/lib/access"
 import { isMemberAppPath, needsSubscribeRedirect } from "@/lib/access-paths"
 import { getEnv, usesSecureCookies } from "@/lib/env"
 import { hasMembershipPage } from "@/lib/member/membership-page"
-import { PATHNAME_HEADER } from "@/lib/request-headers"
+import { isValidRequestId, PATHNAME_HEADER, REQUEST_ID_HEADER } from "@/lib/request-headers"
 import { sanitizeText } from "@/lib/utils/log-redaction"
-import { createLogger, generateRequestId, runWithRequestContext } from "@/lib/utils/logger"
+import { generateRequestId, runWithRequestContext } from "@/lib/utils/log-context"
+import { createLogger } from "@/lib/utils/logger"
 import { gateSharePath } from "@/lib/rewind/share/share-gate"
 import { SHARE_RETRY_AFTER_S, shareStatusHtml } from "@/lib/rewind/share/status-html"
 import { yearParamSchema } from "@/lib/validations/params"
@@ -114,10 +119,15 @@ async function needsMemberRedirect(request: NextRequest): Promise<boolean> {
   }
 }
 
-/** The request headers a page receives: the client's, with the proxy's {@link PATHNAME_HEADER} in place of any value the client sent. */
-function pageRequestHeaders(headers: Headers, pathname: string): Headers {
+/**
+ * The request headers a page receives: the client's, with the proxy's
+ * {@link PATHNAME_HEADER} and {@link REQUEST_ID_HEADER} in place of any value
+ * the client sent.
+ */
+function pageRequestHeaders(headers: Headers, pathname: string, requestId: string): Headers {
   const next = new Headers(headers)
   next.set(PATHNAME_HEADER, pathname)
+  next.set(REQUEST_ID_HEADER, requestId)
   return next
 }
 
@@ -138,17 +148,19 @@ function shareStatusResponse(pathname: string, status: 429 | 503): NextResponse 
   })
 }
 
+/** The incoming `x-request-id` when a reverse proxy set a valid one, otherwise a new id. */
+function requestIdOf(request: NextRequest): string {
+  const incoming = request.headers.get(REQUEST_ID_HEADER)
+  return isValidRequestId(incoming) ? incoming : generateRequestId()
+}
+
 /**
- * Proxy handler to log HTTP requests and set up request context
+ * Proxy handler: logs the request, gates it, and forwards it with its id.
  */
 export async function proxy(request: NextRequest) {
-  const requestId = generateRequestId()
+  const requestId = requestIdOf(request)
 
-  // Extract user ID from session if available (set by auth callbacks)
-  let userId: string | undefined
-
-  // Run the request within a context
-  return runWithRequestContext(requestId, userId, async () => {
+  return runWithRequestContext(requestId, undefined, async () => {
     const { pathname } = request.nextUrl
 
     // No URL, client IP or query beyond the allow-list: the bearer segment of
@@ -180,7 +192,7 @@ export async function proxy(request: NextRequest) {
 
     // Create response: the same page, with a 404 status for an invalid Rewind
     // year, a share token that shares nothing or a membership page the member lacks
-    const init = { request: { headers: pageRequestHeaders(request.headers, pathname) } }
+    const init = { request: { headers: pageRequestHeaders(request.headers, pathname, requestId) } }
     const notFound =
       isInvalidRewindYearPath(pathname) || share === "missing" || (await isMissingMembershipPage(request))
     const response = notFound

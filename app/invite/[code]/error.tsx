@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button"
 import { StatusScreen } from "@/components/ui/status-screen"
 import { boundaryCopy } from "@/lib/ui/error-copy"
 import { icons } from "@/lib/ui/icons"
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("error-boundary")
 
 /** The invite page's boundary, inside the invite PublicShell (ui-design-system 6.7). */
 export default function Error({
@@ -17,7 +20,7 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error("Invite page error:", error)
+    logger.error("Invite page error", error, { digest: error.digest })
   }, [error])
 
   return (

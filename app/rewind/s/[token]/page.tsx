@@ -18,6 +18,7 @@ import { rewindFontVariables } from "@/lib/rewind/fonts"
 import { registry } from "@/lib/rewind/registry"
 import { saveDataRequested } from "@/lib/rewind/stage/low-end"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
+import { getRequestId } from "@/lib/observability/request-context"
 import { clientIp } from "@/lib/security/client-ip"
 import { getAppSettings } from "@/lib/settings/app-settings"
 import { cn } from "@/lib/utils"
@@ -74,13 +75,13 @@ function publicUntil(expiresAt: Date | null, settings: { locale: string; timeZon
 }
 
 /** Counts the visit after the response: v3 once per visitor a day (no IP stored), v2 as P0.11 did. */
-function recordVisit(found: ShareSafeLookup, ip: string) {
+function recordVisit(found: ShareSafeLookup, ip: string, requestId: string | null) {
   after(async () => {
     try {
       if (found.kind === "v2") await prisma.wrappedShareVisit.create({ data: { wrappedId: found.wrappedId } })
       else if (isRedisConfigured()) await recordShareVisit(found.shareId, ip)
     } catch (error) {
-      logger.error("Failed to record the share visit", error)
+      logger.error("Failed to record the share visit", error, { requestId })
     }
   })
 }
@@ -101,7 +102,7 @@ export default async function SharedRewindPage({ params }: ShareParams) {
   if (!found) notFound()
 
   const [session, requestHeaders, settings] = await Promise.all([getServerSession(authOptions), headers(), getAppSettings()])
-  recordVisit(found, clientIp(requestHeaders))
+  recordVisit(found, clientIp(requestHeaders), await getRequestId())
   const viewerId = session?.user?.id ?? null
   const isOwner = viewerId === found.ownerUserId
   const until = publicUntil(found.kind === "v3" ? found.expiresAt : null, settings)

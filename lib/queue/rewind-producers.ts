@@ -4,7 +4,8 @@
  * The queues run on the fail-fast request-path client (`getRequestPathRedis`),
  * so an add while Redis is down fails within about two seconds instead of
  * hanging the request (BP-20, FR-50). The Workers that consume these queues
- * live in `lib/queue/rewind-queues.ts`.
+ * live in `lib/queue/rewind-queues.ts`. Jobs added in a request, or in a job,
+ * carry its id (`lib/queue/job-meta.ts`).
  *
  * @module
  */
@@ -13,6 +14,7 @@ import { Queue } from "bullmq"
 
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { getRequestPathRedis } from "@/lib/queue/connection"
+import { traceQueue } from "@/lib/queue/job-meta"
 import type { RewindQueueName } from "@/lib/queue/rewind-queues"
 
 const queues = new Map<RewindQueueName, Queue>()
@@ -21,13 +23,15 @@ const queues = new Map<RewindQueueName, Queue>()
 export function getRewindQueue(name: RewindQueueName): Queue {
   let queue = queues.get(name)
   if (!queue) {
-    queue = new Queue(name, {
-      connection: getRequestPathRedis(),
-      defaultJobOptions: {
-        removeOnComplete: { age: 24 * 60 * 60 },
-        removeOnFail: { age: 7 * 24 * 60 * 60 },
-      },
-    })
+    queue = traceQueue(
+      new Queue(name, {
+        connection: getRequestPathRedis(),
+        defaultJobOptions: {
+          removeOnComplete: { age: 24 * 60 * 60 },
+          removeOnFail: { age: 7 * 24 * 60 * 60 },
+        },
+      })
+    )
     if (queues.size === 0) {
       onShutdown("rewind-producers", "close", async () => {
         const open = [...queues.values()]

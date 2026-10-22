@@ -96,10 +96,12 @@ export default defineConfig([
     },
   },
   {
-    files: ["lib/**", "actions/**", "app/api/**"],
-    ignores: ["lib/utils/logger.ts"],
+    // Everything logs through createLogger (BP-37, P11.4); command-line
+    // scripts print to the terminal.
+    files: ["**/*.{js,jsx,mjs,cjs,ts,tsx}"],
+    ignores: ["scripts/**", "evals/**", "prisma/seed.ts", "lib/utils/logger.ts"],
     rules: {
-      "no-console": "warn",
+      "no-console": "error",
     },
   },
   ...restrictedSyntaxBlocks.map(({ files, ignores, level, selectors }) => ({
@@ -119,10 +121,10 @@ export default defineConfig([
     },
   },
   {
-    // The centralized logger conditionally requires Winston/Chalk at runtime
+    // The centralized logger conditionally requires winston and async_hooks at runtime
     // (Node-only), which legitimately needs CommonJS require(). Scope the
     // require-imports exception to that file rather than disabling it globally.
-    files: ["lib/utils/logger.ts"],
+    files: ["lib/utils/logger.ts", "lib/utils/log-context.ts"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
     },

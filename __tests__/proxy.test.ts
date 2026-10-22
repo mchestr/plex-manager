@@ -169,6 +169,47 @@ describe('proxy x-pm-pathname header (P4.5)', () => {
   })
 })
 
+describe('proxy request id (BP-17, P11.4)', () => {
+  it('generates an id and forwards it on the request and the response', async () => {
+    const response = await proxy(request('/'))
+
+    const id = response.headers.get('X-Request-ID')
+    expect(id).toMatch(/^[A-Za-z0-9._-]{8,64}$/)
+    expect(forwardedHeader(response, 'x-request-id')).toBe(id)
+  })
+
+  it('keeps a valid id a reverse proxy set', async () => {
+    const response = await proxy(request('/admin/users', { 'x-request-id': 'demo-1234abcd' }))
+
+    expect(response.headers.get('X-Request-ID')).toBe('demo-1234abcd')
+    expect(forwardedHeader(response, 'x-request-id')).toBe('demo-1234abcd')
+  })
+
+  it.each(['<script>alert(1)</script>', 'short', 'a'.repeat(65), 'has space in it'])(
+    'replaces %s with a generated id',
+    async (incoming) => {
+      const response = await proxy(request('/', { 'x-request-id': incoming }))
+
+      const id = response.headers.get('X-Request-ID')
+      expect(id).not.toBe(incoming)
+      expect(id).toMatch(/^[A-Za-z0-9._-]{8,64}$/)
+      expect(forwardedHeader(response, 'x-request-id')).toBe(id)
+    }
+  )
+
+  it('puts the id on the proxy log line', async () => {
+    const { getLogContext } = jest.requireActual<typeof import('@/lib/utils/log-context')>('@/lib/utils/log-context')
+    let seen: string | undefined
+    mockLogDebug.mockImplementationOnce(() => {
+      seen = getLogContext()?.requestId
+    })
+
+    await proxy(request('/', { 'x-request-id': 'demo-1234abcd' }))
+
+    expect(seen).toBe('demo-1234abcd')
+  })
+})
+
 describe('proxy lapsed-member redirect (P4.5, FR-51)', () => {
   function signedIn(accessLevel: 'full' | 'lapsed' | 'none' | undefined, current = accessLevel) {
     mockGetToken.mockResolvedValue({ sub: 'member-1', isAdmin: false, accessLevel })

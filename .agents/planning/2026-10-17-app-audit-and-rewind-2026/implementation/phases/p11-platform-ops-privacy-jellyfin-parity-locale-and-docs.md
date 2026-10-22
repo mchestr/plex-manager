@@ -220,10 +220,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Send an action with `x-request-id: demo-1234abcd` that enqueues a sync and fails: every log line, the job's included, carries `demo-1234abcd`. A server error page's digest matches the `request.unhandled_error` line. `curl -H "Authorization: Bearer $METRICS_TOKEN" .../api/metrics` shows the queue gauges, which a local Prometheus scrapes.
 
 **Done when.**
-- [ ] Request IDs reach every log line in actions, route handlers and jobs, and `onRequestError` logs the digest.
-- [ ] `/api/metrics` reports queue depth, job failures and LLM spend behind a token.
-- [ ] `lib/utils/logger.ts` keeps only used exports and has no chalk path or `@ts-ignore`.
-- [ ] No `console.*` call remains outside scripts, and `no-console` is enforced.
+- [x] Request IDs reach every log line in actions, route handlers and jobs, and `onRequestError` logs the digest.
+- [x] `/api/metrics` reports queue depth, job failures and LLM spend behind a token.
+- [x] `lib/utils/logger.ts` keeps only used exports and has no chalk path or `@ts-ignore`.
+- [x] No `console.*` call remains outside scripts, and `no-console` is enforced.
+
+(as merged: the AsyncLocalStorage store, `runWithRequestContext` and `generateRequestId` live in `lib/utils/log-context.ts`, not the logger, because 144 test files mock `@/lib/utils/logger`; the logger reads it. `getBaseLogger` stays as an `@internal` export for `__tests__/helpers/log-capture.ts`. The id header and its check are `REQUEST_ID_HEADER`/`isValidRequestId` in `lib/request-headers.ts` (the proxy cannot import server-only modules); `getRequestId()` is `lib/observability/request-context.ts`. Route handlers: `withRequestContext(handler)` in `lib/actions/route.ts` wraps every `route.ts` export (`export const GET = withRequestContext(handleGet)`) and carries the request id only, not a user id. There was no `enqueueFromRequest`: `traceQueue()` (`lib/queue/job-meta.ts`) patches `add`/`addBulk` on the three producer queues (`lib/queue/client.ts`, `rewind-producers.ts`, `rewind-batch-queue.ts`), so every enqueue in a request or a job stamps `_meta.requestId`; `runJobInContext` wraps both Workers' processors, and their `completed`/`failed` handlers log `requestId: jobRequestId(job)`. Failures: `recordJobFailure` (`lib/observability/job-failures.ts`) counts every failed attempt, retries included. Metrics: BullMQ 6 has no `paused` job state, so the gauges cover waiting, active, completed, failed, delayed and prioritized; the spend purposes are `chat` (rows with a `chatConversationId`) and `wrapped` (the rest), from `llmSpendSince()` in `lib/llm/usage-totals.ts`; the loop metric is `plex_manager_event_loop_delay_p99_seconds`, reset each scrape. `BUILD_COMMIT` is a new optional variable (Dockerfile `ARG`, `docker-publish.yml` passes `github.sha`). `no-console` is an error everywhere but `scripts/**`, `evals/**`, `prisma/seed.ts` and the logger; the only calls left were the five client error boundaries, now on `createLogger("error-boundary")` with the digest. The redaction masks the share segment of a `routePath` too (`/rewind/s/[masked]`). E2E specs were not run.)
 
 ### Step P11.5: Admin actions on the action helper; server-only boundaries
 

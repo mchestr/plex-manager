@@ -201,7 +201,7 @@ describe("a v3 link", () => {
     await renderPage(V3_TOKEN)
     await settleAfterTasks()
     expect(screen.getByTestId("rewind-share-cards")).toBeInTheDocument()
-    expect(mockLogError).toHaveBeenCalledWith("Failed to record the share visit", expect.any(Error))
+    expect(mockLogError).toHaveBeenCalledWith("Failed to record the share visit", expect.any(Error), { requestId: null })
   })
 
   it("sets noindex, ogText and the OG card of the first published page by asset key", async () => {

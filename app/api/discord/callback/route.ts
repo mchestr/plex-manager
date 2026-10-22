@@ -11,6 +11,7 @@ import { createLogger } from "@/lib/utils/logger"
 import { getServerSession } from "next-auth"
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
+import { withRequestContext } from "@/lib/actions/route"
 
 const logger = createLogger("DISCORD_CALLBACK")
 
@@ -91,7 +92,7 @@ async function linkFromCallback(request: NextRequest, userId: string | undefined
   }
 }
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   const session = await getServerSession(authOptions)
   const userId = session?.user?.id
 
@@ -104,3 +105,5 @@ export async function GET(request: NextRequest) {
   response.cookies.set(clearedDiscordOAuthCookie())
   return response
 }
+
+export const GET = withRequestContext(handleGet)

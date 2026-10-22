@@ -1,3 +1,4 @@
+import { withRequestContext } from "@/lib/actions/route"
 import { authOptions } from "@/lib/auth"
 import { clientIp } from "@/lib/security/client-ip"
 import { consume, type LimitName } from "@/lib/security/rate-limit"
@@ -34,7 +35,7 @@ function rateLimitedSignIn(request: NextRequest, retryAfterSec: number): NextRes
  * Limits the Plex and Jellyfin credential callbacks per client IP before
  * next-auth runs them. The Jellyfin username limit lives in its `authorize`.
  */
-async function POST(request: NextRequest, context: NextAuthRouteContext): Promise<Response> {
+async function handlePost(request: NextRequest, context: NextAuthRouteContext): Promise<Response> {
   const [action, providerId] = (await context.params).nextauth
   const limit = action === "callback" ? CALLBACK_LIMITS.get(providerId) : undefined
 
@@ -48,4 +49,7 @@ async function POST(request: NextRequest, context: NextAuthRouteContext): Promis
   return handler(request, context)
 }
 
-export { handler as GET, POST }
+export const GET = withRequestContext((request: NextRequest, context: NextAuthRouteContext): Promise<Response> =>
+  handler(request, context)
+)
+export const POST = withRequestContext(handlePost)

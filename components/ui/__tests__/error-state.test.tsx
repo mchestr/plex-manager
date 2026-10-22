@@ -116,11 +116,11 @@ describe('ErrorState', () => {
   })
 
   describe('logging', () => {
-    it('logs the error to the console', () => {
+    it('logs the error and its digest through the logger (console in the browser)', () => {
       const error = new Error('Test error')
       render(<ErrorState error={error} />)
 
-      expect(console.error).toHaveBeenCalledWith('Route Error:', error)
+      expect(console.error).toHaveBeenCalledWith('[error-boundary]', 'Route Error', expect.objectContaining({ err: expect.objectContaining({ message: 'Test error' }) }))
     })
 
     it('does not log without an error', () => {

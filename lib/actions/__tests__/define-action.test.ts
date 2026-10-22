@@ -3,6 +3,7 @@
  */
 
 import { getServerSession } from 'next-auth'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
@@ -12,9 +13,11 @@ import { fail, ok } from '@/lib/actions/result'
 import { Prisma } from '@/lib/generated/prisma/client'
 import { actionClientIp, consume } from '@/lib/security/rate-limit'
 import { RATE_LIMITED_MESSAGE } from '@/lib/security/rate-limit-messages'
+import { getLogContext } from '@/lib/utils/log-context'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
+jest.mock('next/headers', () => ({ headers: jest.fn() }))
 jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn(), actionClientIp: jest.fn() }))
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
@@ -200,5 +203,27 @@ describe('results carry no secrets', () => {
     ['an internal error', memberAction({ handler: async () => Promise.reject(new Error('token=abc')) })],
   ])('%s passes assertNoSecretKeys', async (_label, action) => {
     assertNoSecretKeys(await action())
+  })
+})
+
+describe('request context (P11.4)', () => {
+  /** The context a log line inside the handler would carry (lib/utils/logger.ts reads it). */
+  const contextSeen = () => memberAction({ handler: async () => ok(getLogContext()) })
+
+  it("runs the handler with the proxy's x-request-id and the caller's user id", async () => {
+    jest.mocked(headers).mockResolvedValue(new Headers({ 'x-request-id': 'demo-1234abcd' }) as never)
+
+    await expect(contextSeen()()).resolves.toEqual({
+      success: true,
+      data: { requestId: 'demo-1234abcd', userId: 'member-1' },
+    })
+  })
+
+  it('generates an id outside a proxied request', async () => {
+    jest.mocked(headers).mockRejectedValue(new Error('headers() outside a request'))
+
+    const result = await contextSeen()()
+
+    expect(result.success && result.data?.requestId).toMatch(/^[0-9a-f-]{32,36}$/)
   })
 })

@@ -1,12 +1,6 @@
-import {
-  generateRequestId,
-  runWithRequestContext,
-  setRequestUserId,
-  sanitizeUrlForLogging,
-  sanitizeForLogging,
-  createLogger,
-  getBaseLogger,
-} from '@/lib/utils/logger'
+import { generateRequestId, runWithRequestContext } from '@/lib/utils/log-context'
+import { sanitizeValue as sanitizeForLogging } from '@/lib/utils/log-redaction'
+import { createLogger, getBaseLogger, sanitizeUrlForLogging } from '@/lib/utils/logger'
 
 describe('generateRequestId', () => {
   it('should generate a request ID', () => {
@@ -22,13 +16,8 @@ describe('generateRequestId', () => {
     expect(id1).not.toBe(id2)
   })
 
-  it('should generate UUID or client format', () => {
-    const id = generateRequestId()
-    // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-    // Or client format: client-timestamp-randomstring
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    const clientPattern = /^client-\d+-[a-z0-9]+$/
-    expect(id).toMatch(uuidPattern.test(id) || clientPattern.test(id) ? /.+/ : /^$/)
+  it('should generate a UUID, or 32 hex digits without randomUUID, both valid request ids', () => {
+    expect(generateRequestId()).toMatch(/^([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|[0-9a-f]{32})$/i)
   })
 
   it('should generate many unique IDs without collision', () => {
@@ -98,24 +87,6 @@ describe('runWithRequestContext', () => {
   })
 })
 
-describe('setRequestUserId', () => {
-  it('should not throw when setting user ID', () => {
-    expect(() => setRequestUserId('user-123')).not.toThrow()
-  })
-
-  it('should handle empty string', () => {
-    expect(() => setRequestUserId('')).not.toThrow()
-  })
-
-  it('should handle special characters', () => {
-    expect(() => setRequestUserId('user-with-special-chars-!@#$')).not.toThrow()
-  })
-
-  it('should handle very long user ID', () => {
-    const longId = 'user-' + 'a'.repeat(1000)
-    expect(() => setRequestUserId(longId)).not.toThrow()
-  })
-})
 
 describe('sanitizeUrlForLogging', () => {
   const originalEnv = process.env.NODE_ENV
@@ -363,9 +334,6 @@ describe('createLogger', () => {
     expect(typeof logger.info).toBe('function')
     expect(typeof logger.warn).toBe('function')
     expect(typeof logger.error).toBe('function')
-    expect(typeof logger.child).toBe('function')
-    expect(typeof logger.time).toBe('function')
-    expect(typeof logger.timeSync).toBe('function')
   })
 
   it('should create logger with different contexts', () => {
@@ -397,56 +365,6 @@ describe('createLogger', () => {
   it('should log errors with string errors', () => {
     const logger = createLogger('test')
     expect(() => logger.error('Error occurred', 'string error')).not.toThrow()
-  })
-
-  it('should create child logger', () => {
-    const logger = createLogger('parent')
-    const child = logger.child({ childKey: 'childValue' })
-    expect(child).toBeDefined()
-    expect(typeof child.info).toBe('function')
-  })
-
-  it('should create nested child loggers', () => {
-    const logger = createLogger('parent')
-    const child1 = logger.child({ level1: 'value1' })
-    const child2 = child1.child({ level2: 'value2' })
-    expect(child2).toBeDefined()
-    expect(() => child2.info('nested message')).not.toThrow()
-  })
-
-  it('should time async operations', async () => {
-    const logger = createLogger('test')
-    const result = await logger.time('async-op', async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10))
-      return 'result'
-    })
-    expect(result).toBe('result')
-  })
-
-  it('should time sync operations', () => {
-    const logger = createLogger('test')
-    const result = logger.timeSync('sync-op', () => {
-      return 'result'
-    })
-    expect(result).toBe('result')
-  })
-
-  it('should propagate errors from timed async operations', async () => {
-    const logger = createLogger('test')
-    await expect(
-      logger.time('failing-op', async () => {
-        throw new Error('Operation failed')
-      })
-    ).rejects.toThrow('Operation failed')
-  })
-
-  it('should propagate errors from timed sync operations', () => {
-    const logger = createLogger('test')
-    expect(() => {
-      logger.timeSync('failing-op', () => {
-        throw new Error('Operation failed')
-      })
-    }).toThrow('Operation failed')
   })
 
   it('should handle empty context string', () => {
@@ -484,18 +402,6 @@ describe('createLogger', () => {
     expect(() => logger.info('message', metadata)).not.toThrow()
   })
 
-  it('should handle child logger with empty bindings', () => {
-    const logger = createLogger('test')
-    const child = logger.child({})
-    expect(child).toBeDefined()
-    expect(() => child.info('message')).not.toThrow()
-  })
-
-  it('should merge metadata in child logger', () => {
-    const logger = createLogger('test')
-    const child = logger.child({ parentKey: 'parentValue' })
-    expect(() => child.info('message', { childKey: 'childValue' })).not.toThrow()
-  })
 })
 
 describe('getBaseLogger', () => {
