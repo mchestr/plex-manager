@@ -43,7 +43,7 @@ test.describe('Admin invites', () => {
     await expect(row).toContainText('0 of 3');
 
     // Detail page and the pass preview
-    await row.getByRole('link', { name: CODE }).click();
+    await adminPage.getByTestId(`admin-invites-link-${invite.id}`).click();
     await expect(adminPage.getByTestId('admin-invite-header')).toBeVisible();
     const pass = adminPage.getByTestId('admin-invite-preview').getByTestId('invite-pass');
     await expect(pass).toHaveAttribute('data-state', 'valid');

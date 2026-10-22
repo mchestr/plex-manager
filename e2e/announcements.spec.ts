@@ -1,6 +1,17 @@
 import { expect, test } from './fixtures/auth';
-import { waitForAdminContent, waitForToast, WAIT_TIMEOUTS } from './helpers/test-utils';
+import { waitForToast, WAIT_TIMEOUTS } from './helpers/test-utils';
 import { createE2EPrismaClient } from './helpers/prisma';
+
+/** The id of the announcement the admin just created, so its row is found by test id. */
+async function findAnnouncementId(title: string): Promise<string> {
+  const prisma = createE2EPrismaClient();
+  try {
+    const row = await prisma.announcement.findFirstOrThrow({ where: { title }, select: { id: true } });
+    return row.id;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
 
 test.describe('Announcements Admin', () => {
   // Clean up test announcements before each test
@@ -34,9 +45,7 @@ test.describe('Announcements Admin', () => {
 
   test('should access announcements admin page', async ({ adminPage }) => {
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-announcements').first().click();
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Announcements' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('admin-announcements-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
   });
 
   test('creates one with a list, previews the bullets, and shows them on home', async ({ adminPage }) => {
@@ -59,8 +68,8 @@ test.describe('Announcements Admin', () => {
     await waitForToast(adminPage, /created/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
     await expect(adminPage.getByTestId('announcement-dialog')).not.toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
 
-    const row = adminPage.getByTestId('admin-announcements').getByText('E2E Test Announcement');
-    await expect(row).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    const created = await findAnnouncementId('E2E Test Announcement');
+    await expect(adminPage.getByTestId(`admin-announcements-row-${created}`)).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
     await adminPage.goto('/');
     const card = adminPage.getByTestId('announcements-card').filter({ visible: true });
@@ -89,14 +98,14 @@ test.describe('Announcements Admin', () => {
     await adminPage.goto('/admin/announcements');
     const row = adminPage.getByTestId(`admin-announcements-row-${announcementId}`);
     await expect(row).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-    await expect(row.getByText('Active')).toBeVisible();
+    await expect(adminPage.getByTestId(`announcement-status-${announcementId}`)).toHaveText('Active');
 
     const toggle = adminPage.getByTestId(`toggle-announcement-${announcementId}`);
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
     await toggle.click();
     await waitForToast(adminPage, /is hidden/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
-    await expect(row.getByText('Hidden')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    await expect(adminPage.getByTestId(`announcement-status-${announcementId}`)).toHaveText('Hidden', { timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
     await adminPage.getByTestId(`admin-announcements-actions-${announcementId}`).click();
     await adminPage.getByTestId(`admin-announcements-actions-${announcementId}-delete`).click();

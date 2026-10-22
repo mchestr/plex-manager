@@ -65,7 +65,7 @@ test.describe('Settings: a stored key stays with its address', () => {
       (button as HTMLButtonElement).form?.requestSubmit(button as HTMLButtonElement);
     });
 
-    await expect(section.getByText('Enter the API key again to use it with the new address.')).toBeVisible();
+    await expect(section.getByTestId('overseerr-secret-error')).toHaveText('Enter the API key again to use it with the new address.');
     await expect(key).toHaveAttribute('aria-invalid', 'true');
   });
 });

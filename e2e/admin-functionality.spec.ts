@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures/auth';
 import { signInAs } from './fixtures/session';
 import { createE2EPrismaClient } from './helpers/prisma';
-import { verifyPageAccessible, waitForAdminContent, waitForAdminPageReady, WAIT_TIMEOUTS } from './helpers/test-utils';
+import { verifyPageAccessible, waitForAdminPageReady, WAIT_TIMEOUTS } from './helpers/test-utils';
 
 test.describe('Admin Functionality', () => {
   test('should access admin dashboard', async ({ adminPage }) => {
@@ -15,11 +15,9 @@ test.describe('Admin Functionality', () => {
   test('should access admin settings', async ({ adminPage }) => {
     // Use in-app navigation instead of forcing a new navigation
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Settings' },
-      { type: 'text', value: 'Application Settings' },
-      { type: 'text', value: 'LLM Configuration' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('admin-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('settings-system-section')).toBeVisible();
+    await expect(adminPage.getByTestId('settings-ai-section')).toBeVisible();
   });
 
   test('should access admin users list', async ({ adminPage }) => {
@@ -38,50 +36,41 @@ test.describe('Admin Functionality', () => {
 
   test('should access admin cost analysis', async ({ adminPage }) => {
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-cost-analysis').first().click();
-    await waitForAdminContent(adminPage, [
-      { type: 'selector', value: '[data-testid="admin-cost-analysis-header"]' },
-      { type: 'heading', value: 'Cost analysis', level: 1 }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('admin-cost-analysis-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
   });
 
   test('should access admin LLM usage', async ({ adminPage }) => {
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-llm-usage').first().click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
-    // Wait for page content to be visible (not just accessible)
-    await expect(adminPage.locator('main')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    await expect(adminPage.getByTestId('admin-llm-usage-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
   });
 
   test('should access admin playground', async ({ adminPage }) => {
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-playground').first().click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
-    // Wait for page content to be visible (not just accessible)
-    await expect(adminPage.locator('main')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    await expect(adminPage.getByTestId('admin-rewind-playground-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
   });
 
   test('should access admin invites', async ({ adminPage }) => {
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
-    // Wait for page content to be visible (not just accessible)
-    await expect(adminPage.locator('main')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    await expect(adminPage.getByTestId('admin-invites-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
   });
 
   test('should access admin shares', async ({ adminPage }) => {
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-share-analytics').first().click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
-    // Wait for page content to be visible (not just accessible)
-    await expect(adminPage.locator('main')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    await expect(adminPage.getByTestId('admin-shares-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
   });
 
   test('should toggle Jellyfin login visibility in settings', async ({ adminPage }) => {
     // Navigate to settings
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Settings' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('admin-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
     // Look for the Jellyfin login toggle - it should only be visible if Jellyfin is configured
     const jellyfinToggle = adminPage.getByTestId('jellyfin-login-toggle');

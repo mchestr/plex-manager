@@ -110,9 +110,11 @@ test.describe('Admin user detail', () => {
     await adminPage.getByTestId(`admin-user-rewind-actions-${ARCHIVE_YEAR}-version-${USAGE_ID}`).click();
 
     await expect(adminPage).toHaveURL(new RegExp(`/history/${USAGE_ID}$`));
-    const crumbs = adminPage.getByTestId('admin-wrapped-history-heading').getByRole('navigation', { name: 'Breadcrumb' });
-    await expect(crumbs).toContainText('Version of');
-    await crumbs.getByRole('link', { name: `Rewind ${ARCHIVE_YEAR}` }).click();
+    await expect(adminPage.getByTestId('admin-wrapped-history-heading')).toContainText('Version of');
+    // Users, the member, Rewind <year>, then the version itself
+    const rewindCrumb = adminPage.getByTestId('admin-wrapped-history-heading-crumb-2');
+    await expect(rewindCrumb).toHaveText(`Rewind ${ARCHIVE_YEAR}`);
+    await rewindCrumb.click();
 
     await expect(adminPage).toHaveURL(new RegExp(`/admin/users/${MEMBER.id}\\?tab=rewind$`));
     await expect(adminPage.getByTestId('admin-user-rewind')).toBeVisible();

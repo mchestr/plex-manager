@@ -75,7 +75,7 @@ test.describe('Analytics pages', () => {
     await adminPage.goto('/admin/shares');
     const row = adminPage.getByTestId(`admin-shares-row-${SHARE_ID}`);
     await expect(row).toBeVisible();
-    await row.getByRole('link').first().click();
+    await adminPage.getByTestId(`admin-shares-link-${SHARE_ID}`).click();
     await expect(adminPage).toHaveURL(new RegExp(`/admin/users/${rewind.userId}/rewind/${rewind.year}$`));
   });
 
