@@ -437,7 +437,7 @@ npm run db:studio      # Open database GUI
 #### Creating a migration
 - Create it with `npx prisma migrate dev --create-only --name <descriptive_name>` against a database whose name ends in `_test`, review the generated `migration.sql`, then apply it with `npm run db:deploy`. Never hand-type a timestamp or rename a folder, and never edit a merged migration.
 - `node scripts/check-migrations.mjs` (in CI's Schema Drift job) checks every folder not listed in `prisma/migrations/.legacy-names.json`: a 14-digit timestamp later than every earlier folder's and not in the future, at least two lowercase words (`add_member_export`, not `latest` or `fix_changes`), and a `migration.sql`. Never add a folder to that list.
-- `20250101000000_init` is a retroactive baseline: an install made with `db:push` marks every folder applied with `npx prisma migrate resolve --applied <name>` (`docs/operations.md`, "Installed with db push").
+- `20250101000000_init` is a retroactive baseline: an install made with `prisma db push` marks every folder applied with `npx prisma migrate resolve --applied <name>` (`docs/operations.md`, "Installed with db push").
 - `?schema=` in `DATABASE_URL` applies to migrations and to the app's client alike (`lib/db/schema-param.ts`); production refuses to boot on a name that is not a plain identifier.
 
 ### Prisma Patterns
