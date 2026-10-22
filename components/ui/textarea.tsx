@@ -12,6 +12,11 @@ type TextareaProps = ComponentProps<"textarea">
  * wires its description, error and `aria-invalid` the way it does for Input.
  */
 export function Textarea({ className, id, name, value, defaultValue, disabled, ref, ...props }: TextareaProps) {
+  // `overflow-x-hidden`: a textarea wraps, so it never scrolls sideways. With the
+  // default `overflow: auto`, axe measures it by its scrollWidth, which leaves out
+  // the border, so it reads the text as partly outside its own background and
+  // reports color-contrast as incomplete.
+
   return (
     // Field.Control owns the id, name, value and disabled state, so they go to it.
     <FieldPrimitive.Control
@@ -26,7 +31,7 @@ export function Textarea({ className, id, name, value, defaultValue, disabled, r
           data-slot="textarea"
           className={cn(
             fieldSurface,
-            "block min-h-20 resize-y px-3 py-2 focus-visible:border-ring focus-visible:-outline-offset-2 aria-invalid:focus-visible:outline-destructive",
+            "block min-h-20 resize-y overflow-x-hidden px-3 py-2 focus-visible:border-ring focus-visible:-outline-offset-2 aria-invalid:focus-visible:outline-destructive",
             className
           )}
           {...props}

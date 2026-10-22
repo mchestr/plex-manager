@@ -76,7 +76,10 @@ test.describe('Admin user detail', () => {
   test('opens from the users list by keyboard and switches tabs through the URL', async ({ adminPage }) => {
     await adminPage.goto('/admin/users');
     const link = adminPage.getByTestId(`admin-users-name-${MEMBER.id}`);
+    // The list streams in behind loading.tsx; focus() on its still-hidden copy is a no-op
+    await expect(link).toBeVisible();
     await link.focus();
+    await expect(link).toBeFocused();
     await adminPage.keyboard.press('Enter');
 
     await expect(adminPage).toHaveURL(new RegExp(`/admin/users/${MEMBER.id}$`));

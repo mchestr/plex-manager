@@ -23,6 +23,9 @@ test.describe('Rewind story', () => {
       await openStage(page);
       await page.getByTestId('rewind-cut-full').click();
       await expect(currentPage(page)).toHaveAttribute('data-index', '1');
+      // Focus moves to the new page's heading a frame after the turn; until then
+      // it is still on the cut button, and Space on a button is left to that button.
+      await expect.poll(() => currentPage(page).evaluate((el) => el.contains(document.activeElement))).toBe(true);
     });
 
     test('the tap zones and ArrowRight turn pages', async ({ page }) => {
