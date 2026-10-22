@@ -132,9 +132,11 @@ npm run dev      # Development
 npm run start    # Production
 ```
 
-**Distributed locking for horizontal scaling:** the bot uses a **database-backed
-distributed lock** so exactly one instance runs it, even when scaled
-horizontally (Kubernetes, Docker Swarm, etc.).
+**Distributed locking for horizontal scaling:** the bot runs under the
+`discord-bot` **database lease** (`lib/locks/`: `LeaseLock` and `LeasePoller`,
+one `LeaseLock` row per name) so exactly one instance runs it, even when scaled
+horizontally (Kubernetes, Docker Swarm, etc.). The watchlist sync fallback
+without Redis shares the same lock and poller under the name `watchlist-sync`.
 
 - All pods attempt to acquire the lock on startup; only one succeeds.
 - The lease lasts **30 s**. The holder renews it every **10 s** (a third of the
@@ -147,6 +149,9 @@ horizontally (Kubernetes, Docker Swarm, etc.).
   *Token rotation*). The poll never renews the lease, so a longer poll interval
   only slows takeover and settings changes; it cannot take the bot offline.
 - No manual configuration needed.
+- For one release after the move to `LeaseLock`, a new instance also refuses
+  the lease while an old instance still holds the legacy `DiscordBotLock` row,
+  so an old and a new container overlapping in a deploy never both run the bot.
 
 **Gateway compression is optional.** `zlib-sync` is an optional dependency.
 When it builds (it needs `python3`, `make` and `g++` at install time),
@@ -237,12 +242,12 @@ that carries no token usage is logged, not recorded.
 - **Token change not taking effect** → the holding pod bounces within one poll
   interval; check logs for the bounce, and that the lock is held.
 - **Bot keeps going offline or logging in again** → while it runs,
-  `SELECT "instanceId", "lastRenewedAt", "expiresAt" FROM "DiscordBotLock"`
+  `SELECT "instanceId", "lastRenewedAt", "expiresAt" FROM "LeaseLock" WHERE "name" = 'discord-bot'`
   should show `lastRenewedAt` advancing every 10 s for one instance. If it
   stops, check database connectivity: a failed renewal shuts the bot down
   until the next poll takes the lock again.
 - **Bot stays offline for up to 30 s after a restart** → a clean stop
-  (SIGTERM, `docker stop`) destroys the bot and deletes the `DiscordBotLock`
+  (SIGTERM, `docker stop`) destroys the bot and deletes its `LeaseLock`
   row, so the next instance takes over at its first poll. The shutdown
   coordinator needs `NEXT_MANUAL_SIG_HANDLE=true` (the image and
   `npm run start:prod` set it); without it, Next exits at once and the lease

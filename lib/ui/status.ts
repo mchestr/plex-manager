@@ -264,7 +264,7 @@ export function settingsCategory(status: ConnectionStatus) {
   return { category, ...CATEGORIES[category] }
 }
 
-/** A `DiscordBotLock` renewed within this long counts as a live bot (a lease lasts 30 s). */
+/** A `discord-bot` lease (`LeaseLock`) renewed within this long counts as a live bot (a lease lasts 30 s). */
 const DISCORD_HEARTBEAT_MS = 90_000
 
 export interface DiscordState {

@@ -24,7 +24,7 @@ export async function getDiscordOverview(now = new Date()): Promise<DiscordOverv
       where: { id: "discord" },
       select: { isEnabled: true, botEnabled: true, clientId: true, clientSecret: true, botToken: true },
     }),
-    prisma.discordBotLock.findUnique({ where: { id: "discord-bot" }, select: { lastRenewedAt: true } }),
+    prisma.leaseLock.findUnique({ where: { name: "discord-bot" }, select: { lastRenewedAt: true } }),
     prisma.discordCommandLog.count({ where: { createdAt: { gte: new Date(now.getTime() - 60 * 60 * 1000) } } }),
     prisma.discordCommandLog.findFirst({ orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
     prisma.discordConnection.count({ where: { revokedAt: null } }),

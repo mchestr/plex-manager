@@ -1,15 +1,15 @@
 /**
- * Tests for lib/discord/lock/poller.ts - the BotLockPoller class.
+ * Tests for lib/locks/lease-poller.ts - the LeasePoller class.
  *
- * A mock DistributedLock (acquire/renew/release/isHeld/getLeaseDurationMs as
+ * A mock LeaseLock (acquire/renew/release/isHeld/getLeaseDurationMs as
  * jest.fns) is injected so we assert *which* lock op each timer invokes. Fake
  * timers drive both loops deterministically. The lease is 30 s, so renewal runs
  * every 10 s, and the poll runs every 60 s: the old default whose coupling to
  * renewal let the lease lapse (BP-12).
  */
 
-import { BotLockPoller, type BotLockPollerOptions } from "@/lib/discord/lock/poller"
-import type { DistributedLock } from "@/lib/discord/lock/lease"
+import { LeasePoller, type LeasePollerOptions } from "@/lib/locks/lease-poller"
+import type { LeaseLock } from "@/lib/locks/lease-lock"
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({
@@ -26,6 +26,7 @@ const POLL_MS = 60_000
 
 function makeMockLock() {
   return {
+    name: "discord-bot" as const,
     acquire: jest.fn<Promise<boolean>, []>().mockResolvedValue(true),
     renew: jest.fn<Promise<boolean>, []>().mockResolvedValue(true),
     release: jest.fn<Promise<void>, []>().mockResolvedValue(undefined),
@@ -55,9 +56,9 @@ function makeGetConfigVersion(version = 0) {
 function makePoller(
   lock: MockLock,
   callbacks: ReturnType<typeof makeCallbacks>,
-  options: BotLockPollerOptions = {}
+  options: LeasePollerOptions = {}
 ) {
-  return new BotLockPoller(lock as unknown as DistributedLock, callbacks, {
+  return new LeasePoller(lock as unknown as LeaseLock, callbacks, {
     pollIntervalMs: POLL_MS,
     getConfigVersion: makeGetConfigVersion(0),
     ...options,
@@ -90,7 +91,7 @@ afterEach(() => {
   jest.useRealTimers()
 })
 
-describe("BotLockPoller constructor", () => {
+describe("LeasePoller constructor", () => {
   it("throws when the renewal interval is half the lease", () => {
     expect(() => makePoller(makeMockLock(), makeCallbacks(), { renewIntervalMs: 15_000 })).toThrow(
       "renewal interval (15000 ms) must be above 0 and less than half the lease (30000 ms)"
@@ -126,7 +127,7 @@ describe("BotLockPoller constructor", () => {
   })
 })
 
-describe("BotLockPoller.start", () => {
+describe("LeasePoller.start", () => {
   it("acquires immediately and fires onLockAcquired when enabled", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
@@ -189,7 +190,7 @@ describe("BotLockPoller.start", () => {
   })
 })
 
-describe("BotLockPoller config-version read failures", () => {
+describe("LeasePoller config-version read failures", () => {
   it("takes nothing when the read fails on startup, then starts the bot on the next tick", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
@@ -266,7 +267,7 @@ describe("BotLockPoller config-version read failures", () => {
   })
 })
 
-describe("BotLockPoller renewal timer (BP-12)", () => {
+describe("LeasePoller renewal timer (BP-12)", () => {
   it("renews at 10 s, 20 s, 30 s and onwards, independent of the 60 s poll", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
@@ -454,7 +455,7 @@ describe("BotLockPoller renewal timer (BP-12)", () => {
   })
 })
 
-describe("BotLockPoller enabled-flag handling", () => {
+describe("LeasePoller enabled-flag handling", () => {
   it("shuts down the bot and clears the renewal timer when it becomes disabled mid-run", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
@@ -477,7 +478,7 @@ describe("BotLockPoller enabled-flag handling", () => {
   })
 })
 
-describe("BotLockPoller overlapping ticks", () => {
+describe("LeasePoller overlapping ticks", () => {
   it("skips overlapping ticks when a tick's work outlasts the poll interval", async () => {
     const lock = makeMockLock()
     lock.acquire.mockResolvedValueOnce(false) // not running, so ticks try acquire
@@ -502,7 +503,7 @@ describe("BotLockPoller overlapping ticks", () => {
   })
 })
 
-describe("BotLockPoller.stop", () => {
+describe("LeasePoller.stop", () => {
   it("releases and leaves no timers when stopped while the startup acquire is in flight", async () => {
     const lock = makeMockLock()
     const pending = deferred<boolean>()
@@ -637,7 +638,7 @@ describe("BotLockPoller.stop", () => {
   })
 })
 
-describe("BotLockPoller config-change bounce (Step 18)", () => {
+describe("LeasePoller config-change bounce (Step 18)", () => {
   it("bounces (destroy + re-init) when configVersion changes while running", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
@@ -844,6 +845,106 @@ describe("BotLockPoller config-change bounce (Step 18)", () => {
     // A successful bounce does not release or re-acquire the lock - we keep it.
     expect(lock.release).not.toHaveBeenCalled()
     expect(lock.acquire).toHaveBeenCalledTimes(1) // only the startup acquire
+
+    await poller.stop()
+  })
+})
+
+describe("LeasePoller without getConfigVersion", () => {
+  it("acquires, runs and never bounces", async () => {
+    const lock = makeMockLock()
+    const cb = makeCallbacks(true)
+    const poller = new LeasePoller(lock as unknown as LeaseLock, cb, { pollIntervalMs: POLL_MS })
+
+    await poller.start()
+    await advance(POLL_MS * 5)
+
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(1)
+    expect(cb.onLockLost).not.toHaveBeenCalled()
+    expect(lock.renew).toHaveBeenCalled()
+
+    await poller.stop()
+    expect(cb.onLockLost).toHaveBeenCalledTimes(1)
+    expect(lock.release).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("LeasePoller onHeldTick", () => {
+  function makeHeldPoller(enabled = true) {
+    const lock = makeMockLock()
+    const cb = { ...makeCallbacks(enabled), onHeldTick: jest.fn<Promise<void>, []>().mockResolvedValue(undefined) }
+    const poller = new LeasePoller(lock as unknown as LeaseLock, cb, { pollIntervalMs: POLL_MS })
+    return { lock, cb, poller }
+  }
+
+  it("runs on the acquiring poll and on every poll while the lease is held", async () => {
+    const { cb, poller } = makeHeldPoller()
+
+    await poller.start()
+    expect(cb.onHeldTick).toHaveBeenCalledTimes(1)
+    expect(cb.onLockAcquired.mock.invocationCallOrder[0]).toBeLessThan(cb.onHeldTick.mock.invocationCallOrder[0])
+
+    await advance(POLL_MS * 3)
+    expect(cb.onHeldTick).toHaveBeenCalledTimes(4)
+
+    await poller.stop()
+  })
+
+  it("runs on the poll that acquires a lease that was busy at startup", async () => {
+    const { lock, cb, poller } = makeHeldPoller()
+    lock.acquire.mockResolvedValueOnce(false)
+
+    await poller.start()
+    expect(cb.onHeldTick).not.toHaveBeenCalled()
+
+    await advance(POLL_MS)
+    expect(cb.onHeldTick).toHaveBeenCalledTimes(1)
+
+    await poller.stop()
+  })
+
+  it("never runs while disabled, and stops once the work is disabled", async () => {
+    const { cb, poller } = makeHeldPoller(false)
+
+    await poller.start()
+    await advance(POLL_MS * 2)
+    expect(cb.onHeldTick).not.toHaveBeenCalled()
+
+    cb.isEnabled.mockResolvedValue(true)
+    await advance(POLL_MS)
+    expect(cb.onHeldTick).toHaveBeenCalledTimes(1)
+
+    cb.isEnabled.mockResolvedValue(false)
+    await advance(POLL_MS * 2)
+    expect(cb.onHeldTick).toHaveBeenCalledTimes(1)
+
+    await poller.stop()
+  })
+
+  it("stops after a lost renewal until the lease is re-acquired", async () => {
+    const { lock, cb, poller } = makeHeldPoller()
+    lock.acquire.mockResolvedValueOnce(true).mockResolvedValue(false)
+
+    await poller.start()
+    lock.renew.mockResolvedValue(false)
+    await advance(RENEW_MS)
+    expect(cb.onLockLost).toHaveBeenCalledTimes(1)
+
+    await advance(POLL_MS * 3)
+    expect(cb.onHeldTick).toHaveBeenCalledTimes(1)
+
+    await poller.stop()
+  })
+
+  it("keeps polling when onHeldTick throws", async () => {
+    const { cb, poller } = makeHeldPoller()
+    cb.onHeldTick.mockRejectedValue(new Error("boom"))
+
+    await poller.start()
+    await advance(POLL_MS * 2)
+
+    expect(cb.onHeldTick).toHaveBeenCalledTimes(3)
+    expect(cb.onLockLost).not.toHaveBeenCalled()
 
     await poller.stop()
   })

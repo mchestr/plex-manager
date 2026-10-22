@@ -115,11 +115,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** On a dev install without Redis, boot with sync off, then turn it on in settings: the log shows a sync within a minute, and with a 5-minute interval it repeats every 5 minutes. A second container never runs it. With Redis, turning sync on makes the scheduler appear on `/admin/queues` without a restart.
 
 **Done when.**
-- [ ] `lib/locks/` holds the one lease lock and poller, used by the Discord bot and watchlist sync, and `lib/watchlist/lock.ts` is deleted.
-- [ ] Without Redis, sync starts when enabled after boot and repeats on the configured interval.
-- [ ] With Redis, saving the settings creates, updates or removes the scheduler.
-- [ ] The fake-timer tests pass.
+- [x] `lib/locks/` holds the one lease lock and poller, used by the Discord bot and watchlist sync, and `lib/watchlist/lock.ts` is deleted.
+- [x] Without Redis, sync starts when enabled after boot and repeats on the configured interval.
+- [x] With Redis, saving the settings creates, updates or removes the scheduler.
+- [x] The fake-timer tests pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270116000002_p112_lease_lock`. `LeaseName` is the union `"discord-bot" | "watchlist-sync"` in `lib/locks/lease-lock.ts`; P11.14 adds `"retention"` to it and makes `legacyHolder` return false for that name (it has no legacy row). `LeaseStore` is `acquire(claim)`, `renew(claim)`, `release(name, instanceId)` with `claim = { name, instanceId, now, expiresAt }`; `PrismaLeaseStore`'s legacy check (`legacyHolder`) is what P11.3 deletes with the two tables. `onHeldTick` also runs on the poll that acquires (startup included), so a newly enabled sync runs within one poll. The bot liveness readers (`lib/admin/discord.ts`, `lib/settings/connection-health.ts`) read the `discord-bot` `LeaseLock` row. `withTimeout` moved to `lib/utils/with-timeout.ts` (throws `TimeoutError`). `ensureWatchlistSchedule()` returns `{ ok: true, state: "scheduled" | "removed" | "no-redis" }` or `{ ok: false, code: "TIMEOUT" | "FAILED" }`; when it fails, the settings save still saves and answers `UPSTREAM_UNAVAILABLE`. The tests named in the plan as `lease.test.ts`/`lock-integration.test.ts` are `lib/locks/__tests__/lease-lock.test.ts` and `lease-integration.test.ts`; both node tests (`lib/instrumentation/__tests__/node.test.ts`, `__tests__/lib/instrumentation/node.test.ts`) were updated.)
 
 ### Step P11.3: Separate worker process and queue hygiene
 
