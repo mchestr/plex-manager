@@ -202,7 +202,7 @@ describe("what each kind of file gets from eslint.config.mjs", () => {
     ["app/dev/ui/fixture.tsx", { formatting: ["error"], button: [], svg: [] }],
     ["components/rewind/fixture.tsx", { formatting: ["error"], button: [], svg: [] }],
     ["app/api/fixture/route.tsx", { formatting: ["error"], button: [], svg: [] }],
-    ["components/wrapped/fixture.tsx", { formatting: ["warn"], button: ["warn"], svg: [] }],
+    ["components/wrapped/fixture.tsx", { formatting: ["error"], button: ["error"], svg: ["error"] }],
     ["components/setup/setup-wizard/fixture.tsx", { formatting: ["error"], button: ["warn"], svg: ["warn"] }],
     ["lib/fixture.tsx", { formatting: ["warn"], button: [], svg: [] }],
   ])("%s", (file, expected) => {

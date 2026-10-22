@@ -1362,8 +1362,10 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** `git grep -n "components/wrapped" -- app components lib` returns nothing, and the design-debt report shows the deleted files' counts gone.
 
 **Done when.**
-- [ ] `components/wrapped/**`, the classic and cinematic trees, chart.js in Rewind and the temporary cinematic aliases are deleted.
-- [ ] `knip --production` and the design-system check pass with lower totals.
+- [x] `components/wrapped/**`, the classic and cinematic trees, chart.js in Rewind and the temporary cinematic aliases are deleted.
+- [x] `knip --production` and the design-system check pass with lower totals.
+
+(as merged: `design-debt.json` no longer exists after P10.11, so the "lower totals" are the deleted `components/wrapped/` and `components/shared/formatted-text.tsx` allowlist entries and the viewer's ESLint overrides (the react-hooks ignore, the Chart.js exception and the warn-only restricted-syntax blocks). P10.9 had already moved every admin chart to Recharts, so `chart.js` and `react-chartjs-2` left `package.json` too. The deletion also took `components/ui/count-up.tsx`, `lib/wrapped/text-processor.ts`, the v2 `grain` keyframes and the type re-exports only the viewer used. `.claude/skills/motion/SKILL.md` still lists `components/wrapped/**` in `paths:`; changing a vendored skill needs a `/security-review`, so P11.26 drops it with the CLAUDE.md skills table row.)
 
 ### Step P11.30: Eval results page
 

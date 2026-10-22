@@ -55,8 +55,7 @@ components/             # React components
 ├── setup/
 │   └── setup-wizard/  # Setup wizard steps
 ├── shell/             # App and admin shells (from P6.1)
-├── ui/                # Shared UI primitives
-└── wrapped/           # Wrapped display components
+└── ui/                # Shared UI primitives
 
 hooks/                  # Shared client hooks
 lib/                    # Utilities, helpers, business logic

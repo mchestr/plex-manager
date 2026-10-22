@@ -196,7 +196,6 @@ export const rewindCards = [
 const REWIND_ONLY_ALLOWED = ["components/ui/**", "components/rewind/**", "app/dev/**"];
 
 const APP_AND_COMPONENTS = ["app/**/*.{js,jsx,ts,tsx}", "components/**/*.{js,jsx,ts,tsx}"];
-const V2_VIEWER = "components/wrapped/**";
 /** The pre-refresh setup wizard; P10.25 rebuilds it on the primitives. */
 const SETUP_WIZARD = "components/setup/setup-wizard/**";
 /** The `next/og` image routes, which draw with Satori rather than the DOM. */
@@ -209,13 +208,11 @@ const RAW_ELEMENTS_ALLOWED = [...REWIND_ONLY_ALLOWED, "app/api/**", ...OG_ROUTES
 
 /**
  * The blocks `eslint.config.mjs` builds, in order.
- * - The formatting bans are errors in `app/` and `components/`, except the
- *   v2 viewer, which keeps its output until P7.13; elsewhere they warn.
+ * - The formatting bans are errors in `app/` and `components/`; elsewhere
+ *   they warn.
  * - The raw-element bans and the deleted-adapter imports are errors in
- *   `app/` and `components/` outside `RAW_ELEMENTS_ALLOWED` (P10.11). Two
- *   surfaces still warn until their step replaces them: the v2 viewer warns on
- *   raw controls and keeps its inline art until P11.29 deletes it, and the
- *   setup wizard warns until P10.25 rebuilds it.
+ *   `app/` and `components/` outside `RAW_ELEMENTS_ALLOWED` (P10.11). The
+ *   setup wizard still warns until P10.25 rebuilds it.
  * - The `actionsAndApi` bans are errors in `app/api/` and the migrated action
  *   modules, and warn in the rest of `actions/`. An error block replaces the
  *   earlier error blocks for its files, so the `app/api/` one repeats the
@@ -240,14 +237,12 @@ export const restrictedSyntaxBlocks = [
   },
   {
     files: APP_AND_COMPONENTS,
-    ignores: [V2_VIEWER, SETUP_WIZARD, ...RAW_ELEMENTS_ALLOWED],
+    ignores: [SETUP_WIZARD, ...RAW_ELEMENTS_ALLOWED],
     level: "error",
     selectors: [...formatting, ...rewindOnlyProps, ...rawControls, ...inlineSvg, ...deprecatedImports],
   },
   { files: REWIND_ONLY_ALLOWED.map((glob) => glob + "/*.{js,jsx,ts,tsx}"), level: "error", selectors: formatting },
   { files: OG_ROUTES, level: "error", selectors: [...formatting, ...rewindOnlyProps] },
-  { files: ["components/wrapped/**/*.{js,jsx,ts,tsx}"], level: "error", selectors: rewindOnlyProps },
-  { files: ["components/wrapped/**/*.{js,jsx,ts,tsx}"], level: "warn", selectors: [...formatting, ...rawControls] },
   { files: [SETUP_WIZARD + "/*.{js,jsx,ts,tsx}"], level: "error", selectors: [...formatting, ...rewindOnlyProps] },
   {
     files: [SETUP_WIZARD + "/*.{js,jsx,ts,tsx}"],
