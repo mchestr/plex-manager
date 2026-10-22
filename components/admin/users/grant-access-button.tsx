@@ -81,7 +81,6 @@ export function GrantAccessButton({
         message={`Grant complimentary access to ${userName || "this user"}? They will be invited to the Plex server and marked exempt from the subscription requirement.`}
         confirmText="Grant Access"
         cancelText="Cancel"
-        confirmButtonClass="bg-green-600 hover:bg-green-700"
       />
     </>
   )

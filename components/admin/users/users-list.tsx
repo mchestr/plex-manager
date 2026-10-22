@@ -1,6 +1,8 @@
 "use client"
 
 import { useMemo, useState } from "react"
+
+import { Card } from "@/components/ui/card"
 import { AdminUserWithWrappedStats } from "@/types/admin"
 import { UserTableRow } from "./user-table-row"
 import { UsersFilter as UsersFilterComponent, UsersFilter } from "./users-filter"
@@ -74,11 +76,11 @@ export function UsersList({ users, currentYear, stripeDashboardBaseUrl }: UsersL
   return (
     <>
       <UsersFilterComponent onFilterChange={setFilter} defaultFilter={filter} />
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden">
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-900/50 text-xs uppercase text-slate-400 font-medium border-b border-slate-700">
+              <tr className="border-b text-label font-medium text-muted-foreground">
                 <th className="px-2 py-2">User</th>
                 <th className="px-2 py-2">Role</th>
                 <th className="px-2 py-2">Access</th>
@@ -108,7 +110,7 @@ export function UsersList({ users, currentYear, stripeDashboardBaseUrl }: UsersL
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
     </>
   )
 }

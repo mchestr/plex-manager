@@ -121,14 +121,14 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
             <div
               role="menu"
               aria-label={`Actions for ${user.name || 'user'}`}
-              className="fixed w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden"
+              className="fixed w-48 bg-popover text-popover-foreground border border-border rounded-lg shadow-xl z-50 overflow-hidden"
               style={{
                 top: `${menuPosition.top}px`,
                 right: `${menuPosition.right}px`,
               }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* View Wrapped */}
+          {/* View Rewind */}
           {user.wrappedStatus === "completed" && (
             <Link
               href={userRewind(user.id, year)}
@@ -137,7 +137,7 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
               role="menuitem"
             >
               <svg
-                className="w-4 h-4 text-cyan-400"
+                className="w-4 h-4 text-muted-foreground"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -156,7 +156,7 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
                   d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                 />
               </svg>
-              View Wrapped
+              View Rewind
             </Link>
           )}
 

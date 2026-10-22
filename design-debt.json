@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "7141df188f5ec72542d9be0dedfb2916c8e1146b",
-  "generatedAt": "2026-10-21T22:48:30.723Z",
+  "commit": "d49cf41387d4e43cb9327c81b714df0151413bba",
+  "generatedAt": "2026-10-22T14:51:35.643Z",
   "files": {
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "copy": 1
@@ -10,9 +10,6 @@
       "blur": 5,
       "copy": 1,
       "raw-palette": 95
-    },
-    "app/admin/users/page.tsx": {
-      "raw-palette": 2
     },
     "app/invite/[code]/page.tsx": {
       "blur": 3,
@@ -56,48 +53,6 @@
       "blur": 2,
       "infinite-motion": 1,
       "raw-palette": 42
-    },
-    "components/admin/users/cancel-subscription-button.tsx": {
-      "raw-palette": 4
-    },
-    "components/admin/users/change-user-role-button.tsx": {
-      "infinite-motion": 1,
-      "raw-palette": 11
-    },
-    "components/admin/users/grant-access-button.tsx": {
-      "raw-palette": 4
-    },
-    "components/admin/users/regenerate-wrapped-button.tsx": {
-      "infinite-motion": 1,
-      "raw-palette": 9
-    },
-    "components/admin/users/toggle-exempt-button.tsx": {
-      "raw-palette": 4
-    },
-    "components/admin/users/unshare-user-button.tsx": {
-      "infinite-motion": 1,
-      "raw-palette": 13
-    },
-    "components/admin/users/user-actions-menu.tsx": {
-      "copy": 1,
-      "raw-palette": 21
-    },
-    "components/admin/users/user-table-row.tsx": {
-      "raw-palette": 18
-    },
-    "components/admin/users/users-filter.tsx": {
-      "blur": 1,
-      "gradient": 2,
-      "raw-palette": 20
-    },
-    "components/admin/users/users-list.tsx": {
-      "blur": 1,
-      "raw-palette": 7
-    },
-    "components/admin/users/users-stats-summary.tsx": {
-      "blur": 6,
-      "copy": 1,
-      "raw-palette": 24
     },
     "components/auth/jellyfin-sign-in-form.tsx": {
       "raw-palette": 27
@@ -329,12 +284,12 @@
   },
   "totals": {
     "arbitrary-type-z": 24,
-    "blur": 31,
+    "blur": 23,
     "caps-eyebrow": 38,
-    "copy": 7,
-    "gradient": 51,
+    "copy": 5,
+    "gradient": 49,
     "gradient-text": 32,
-    "infinite-motion": 23,
-    "raw-palette": 1031
+    "infinite-motion": 20,
+    "raw-palette": 894
   }
 }

@@ -76,7 +76,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
       <td className="px-2 py-2">
         <div className="flex items-center gap-2 min-w-0">
           {user.image ? (
-            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-slate-700 flex-shrink-0">
+            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-secondary flex-shrink-0">
               <Image
                 src={user.image}
                 alt={user.name || "User"}
@@ -86,7 +86,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
               />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
               <span className="text-muted-foreground text-xs font-medium">
                 {(user.name || user.email || "U")[0].toUpperCase()}
               </span>
@@ -110,25 +110,17 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
       </td>
       <td className="px-2 py-2">
         {user.isAdmin ? (
-          <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-400 text-xs font-medium rounded">
-            Admin
-          </span>
+          <Badge variant="outline">Admin</Badge>
         ) : (
-          <span className="px-1.5 py-0.5 bg-slate-700/50 text-slate-300 text-xs font-medium rounded">
-            User
-          </span>
+          <Badge>User</Badge>
         )}
       </td>
       <td className="px-2 py-2">
         <div className="text-xs">
           {user.hasPlexAccess === true ? (
-            <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 font-medium rounded">
-              Yes
-            </span>
+            <Badge variant="success">Yes</Badge>
           ) : user.hasPlexAccess === false ? (
-            <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 font-medium rounded">
-              No
-            </span>
+            <Badge variant="destructive">No</Badge>
           ) : (
             <span className="text-muted-foreground">—</span>
           )}
@@ -158,7 +150,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
           <div className="text-xs">
             <Link
               href={`/admin/llm-usage?userId=${user.id}`}
-              className="text-green-400 font-medium hover:text-green-300 transition-colors underline"
+              className="font-medium text-foreground tabular-nums underline decoration-border-strong underline-offset-3 transition-colors hover:decoration-foreground"
             >
               {f.money(user.totalLlmUsage.cost)}
             </Link>

@@ -13,6 +13,8 @@ interface ConfirmModalProps {
   cancelText?: string
   /** Only a red class still means anything: it picks the destructive tone. */
   confirmButtonClass?: string
+  /** The confirm button's tone; wins over `confirmButtonClass`. */
+  tone?: "default" | "destructive"
   /** `data-testid` for the dialog element. */
   testId?: string
   /** `data-testid` for the confirm button. */
@@ -34,6 +36,7 @@ export function ConfirmModal({
   confirmText = "Confirm",
   cancelText = "Cancel",
   confirmButtonClass,
+  tone,
   testId,
   confirmTestId,
 }: ConfirmModalProps) {
@@ -47,7 +50,7 @@ export function ConfirmModal({
       description={message}
       confirmLabel={confirmText}
       cancelLabel={cancelText}
-      tone={confirmButtonClass?.includes("red") ? "destructive" : "default"}
+      tone={tone ?? (confirmButtonClass?.includes("red") ? "destructive" : "default")}
       action={async () => {
         await onConfirm()
         return {}
