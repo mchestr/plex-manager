@@ -2,15 +2,70 @@ import { expect, test } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { navigateAndVerify, waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
 
+// A Jellyfin invite reads as unknown while no Jellyfin server is active (P10.26,
+// UI-36), so the pass tests run with one. It is closed to sign-in, so `/` keeps
+// its Plex-only member pass. The admin tests run without it.
+const JELLYFIN_SERVER = {
+  id: 'e2e-invite-jellyfin',
+  name: 'E2E Jellyfin',
+  url: 'http://127.0.0.1:9',
+  apiKey: 'e2e-jellyfin-key',
+  isActive: true,
+  enabledForLogin: false,
+};
+
+async function addJellyfinServer() {
+  const prisma = createE2EPrismaClient();
+  try {
+    await prisma.jellyfinServer.upsert({ where: { id: JELLYFIN_SERVER.id }, create: JELLYFIN_SERVER, update: JELLYFIN_SERVER });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+async function removeJellyfinServer() {
+  const prisma = createE2EPrismaClient();
+  try {
+    await prisma.jellyfinServer.deleteMany({ where: { id: JELLYFIN_SERVER.id } });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 test.describe('Jellyfin Invite Flow', () => {
   test.describe('Public Invite Page', () => {
+    test.beforeAll(addJellyfinServer);
+    test.afterAll(removeJellyfinServer);
+
     test('shows invalid state for unknown Jellyfin invite code', async ({ page }) => {
       const inviteCode = 'JELLY-INVALID-CODE';
       await navigateAndVerify(page, `/invite/${inviteCode}`, {
         waitForSelector: 'h1, h2, [role="heading"]'
       });
 
-      await expect(page.getByTestId('invalid-invite-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      await expect(page.getByTestId('invalid-invite-heading')).toHaveText("We couldn't find that invite", {
+        timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+      });
+    });
+
+    test('a Jellyfin invite reads as unknown while Jellyfin is off', async ({ page }) => {
+      const prisma = createE2EPrismaClient();
+      const inviteCode = `JOFF${Date.now()}`.substring(0, 8).toUpperCase();
+
+      try {
+        await prisma.jellyfinServer.update({ where: { id: JELLYFIN_SERVER.id }, data: { isActive: false } });
+        await prisma.invite.create({ data: { code: inviteCode, serverType: 'JELLYFIN', maxUses: 1, useCount: 0 } });
+
+        await page.goto(`/invite/${inviteCode}`);
+        await expect(page.getByTestId('invalid-invite-heading')).toHaveText("We couldn't find that invite", {
+          timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+        });
+        await expect(page.getByTestId('jellyfin-invite-form')).toHaveCount(0);
+      } finally {
+        await prisma.jellyfinServer.update({ where: { id: JELLYFIN_SERVER.id }, data: { isActive: true } });
+        await prisma.invite.deleteMany({ where: { code: inviteCode } });
+        await prisma.$disconnect();
+      }
     });
 
     test('shows Jellyfin sign-in form for valid Jellyfin invite', async ({ page }) => {
@@ -32,8 +87,11 @@ test.describe('Jellyfin Invite Flow', () => {
         await page.goto(`/invite/${inviteCode}`);
         await waitForLoadingGone(page);
 
-        // Should show the valid invite heading and Jellyfin form
-        await expect(page.getByTestId('valid-invite-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+        // Should show the valid invite heading and Jellyfin form, naming the Jellyfin server
+        await expect(page.getByTestId('valid-invite-heading')).toHaveText(`You're invited to ${JELLYFIN_SERVER.name}`, {
+          timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+        });
+        await expect(page.getByTestId('invite-pass')).toHaveAttribute('data-state', 'valid');
         await expect(page.getByTestId('jellyfin-invite-form')).toBeVisible();
 
         // Verify form fields are present
@@ -272,6 +330,9 @@ test.describe('Jellyfin Invite Flow', () => {
   });
 
   test.describe('Invite Expiration and Usage', () => {
+    test.beforeAll(addJellyfinServer);
+    test.afterAll(removeJellyfinServer);
+
     test('expired Jellyfin invite shows error', async ({ page }) => {
       const prisma = createE2EPrismaClient();
       const inviteCode = `JEXP${Date.now()}`.substring(0, 8).toUpperCase();
@@ -291,9 +352,11 @@ test.describe('Jellyfin Invite Flow', () => {
         await page.goto(`/invite/${inviteCode}`);
         await waitForLoadingGone(page);
 
-        // Should show invalid/expired message
-        await expect(page.getByTestId('invalid-invite-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        await expect(page.getByText(/expired/i)).toBeVisible();
+        // The voided pass with the expired headline
+        await expect(page.getByTestId('invalid-invite-heading')).toHaveText('This invite has expired', {
+          timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+        });
+        await expect(page.getByTestId('invalid-invite-heading')).toHaveAttribute('data-state', 'expired');
 
       } finally {
         await prisma.invite.deleteMany({
@@ -321,9 +384,11 @@ test.describe('Jellyfin Invite Flow', () => {
         await page.goto(`/invite/${inviteCode}`);
         await waitForLoadingGone(page);
 
-        // Should show invalid/used message
-        await expect(page.getByTestId('invalid-invite-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        await expect(page.getByText(/maximum uses/i)).toBeVisible();
+        // The voided pass with the used-up headline
+        await expect(page.getByTestId('invalid-invite-heading')).toHaveText('This invite has been used up', {
+          timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+        });
+        await expect(page.getByTestId('invalid-invite-heading')).toHaveAttribute('data-state', 'used-up');
 
       } finally {
         await prisma.invite.deleteMany({

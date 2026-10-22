@@ -82,7 +82,66 @@ test.describe('Public Flows', () => {
       waitForSelector: 'h1, h2, [role="heading"]'
     });
 
-    await expect(page.getByTestId('invalid-invite-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('invalid-invite-heading')).toHaveText("We couldn't find that invite", {
+      timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+    });
+  });
+
+  // P10.26 (UI-36): the invite page is server-rendered, so its state and unfurl need no JavaScript
+  test.describe('invite pass', () => {
+    const suffix = randomBytes(3).toString('hex').toUpperCase();
+    const codes = { valid: `PASSOK${suffix}`, expired: `PASSEXP${suffix}` };
+
+    test.beforeAll(async () => {
+      const prisma = createE2EPrismaClient();
+      try {
+        await prisma.invite.createMany({
+          data: [
+            { code: codes.valid, maxUses: 5, useCount: 1, expiresAt: new Date('2099-01-01T00:00:00Z'), createdBy: TEST_USERS.ADMIN.id },
+            { code: codes.expired, maxUses: 1, expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000), createdBy: TEST_USERS.ADMIN.id },
+          ],
+        });
+      } finally {
+        await prisma.$disconnect();
+      }
+    });
+
+    test.afterAll(async () => {
+      const prisma = createE2EPrismaClient();
+      try {
+        await prisma.invite.deleteMany({ where: { code: { in: [codes.valid, codes.expired] } } });
+      } finally {
+        await prisma.$disconnect();
+      }
+    });
+
+    test('a valid invite shows the pass with Accept with Plex', async ({ page }) => {
+      await page.goto(`/invite/${codes.valid}`);
+
+      await expect(page.getByTestId('valid-invite-heading')).toContainText("You're invited to", { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      await expect(page.getByTestId('invite-pass')).toHaveAttribute('data-state', 'valid');
+      await expect(page.getByTestId('plex-invite-sign-in')).toBeVisible();
+      await expect(page.getByTestId('invite-pass-uses')).toHaveText('4 of 5');
+    });
+
+    test('an expired invite shows the voided pass', async ({ page }) => {
+      await page.goto(`/invite/${codes.expired}`);
+
+      await expect(page.getByTestId('invalid-invite-heading')).toHaveText('This invite has expired', {
+        timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+      });
+      await expect(page.getByTestId('invite-pass')).toHaveAttribute('data-state', 'expired');
+    });
+
+    test('the invite unfurls without JavaScript', async ({ request }) => {
+      const response = await request.get(`/invite/${codes.valid}`);
+      expect(response.ok()).toBe(true);
+
+      const html = await response.text();
+      expect(html).toMatch(/<meta property="og:title" content="You(?:'|&#x27;|&#39;)re invited to [^"]+"/);
+      expect(html).toContain('name="robots" content="noindex, nofollow"');
+      expect(html).not.toMatch(new RegExp(`<meta[^>]+content="[^"]*${codes.valid}`));
+    });
   });
 
   test('setup page redirects if already set up', async ({ page }) => {

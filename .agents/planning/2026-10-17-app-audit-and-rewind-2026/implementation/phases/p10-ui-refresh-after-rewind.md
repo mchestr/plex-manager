@@ -1255,10 +1255,12 @@ No confetti and no space background.
 **Demo.** Paste an invite link into Discord: it unfurls as "You're invited to Northfield Plex". Open an expired code: a voided pass, the inviter's name and "Ask on Discord". Open a Jellyfin invite with Jellyfin disabled: "We couldn't find that invite".
 
 **Done when.**
-- [ ] The invite page is a Server Component with `generateMetadata` and no client validation.
-- [ ] The server name and marks are correct for Plex and Jellyfin invites.
-- [ ] Expired, used-up and unknown invites each have their own headline.
+- [x] The invite page is a Server Component with `generateMetadata` and no client validation.
+- [x] The server name and marks are correct for Plex and Jellyfin invites.
+- [x] Expired, used-up and unknown invites each have their own headline.
 - [ ] The skeleton, the StatusScreen and the tests pass.
+
+(as merged: `InvitePass` (`components/invite/invite-pass.tsx`, no client directive) takes `InvitePassData` from `types/invite.ts` (`state`, `code`, `serverType`, `serverName`, `monogram`, `inviter`, `libraries`, `usesLeft`, `expiresOn` already formatted) plus `discordInviteCode` and `preview`; P10.1's admin preview passes `preview` for an inert Accept and builds the data like `getInvitePass` does. The voided main part is P10.17's `StatusScreen` (which gained `titleState` for `data-state`), with "Ask on Discord" and "Already a member? Sign in", no "Go to home". The pass pieces (`Pass`, `PassStub`, `Monogram`) moved to `components/auth/pass.tsx` and the member pass uses them. The pass is stacked (stub below) in PublicShell's 560px `wide` column, since PublicShell has no 760px width. Library names come from `lib/invites/library-names.ts` (5-minute `unstable_cache`; a failed listing shows a count, never an id). `validateInvite` stays, tagged `@public`, at the coordinator's request; the `getServerName` action is deleted. `JellyfinSignInForm` shows every failure on the form and lost `onError`; `PlexSignInButton` takes only `inviteCode`. The E2E checks use their own `PASSOK…`/`PASSEXP…` invites, since the chromium project does not seed `VISUALOK`; `jellyfin-invite.spec.ts` adds an active, sign-in-closed Jellyfin row for its pass tests. E2E, axe and visual checks were not run here; the invite baselines change.)
 
 ### Step P10.27: Sign-in, callback and denied screens
 

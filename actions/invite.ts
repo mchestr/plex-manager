@@ -232,6 +232,10 @@ export async function deleteInvite(id: string) {
  * Redemption consumes the invite atomically through validateAndUseInvite()
  * (lib/invites/redemption.ts): the Plex path runs inside the Plex sign-in's
  * authorize (lib/invites/plex-redemption.ts), the Jellyfin path below.
+ *
+ * @public The invite page reads `getInvitePass` (lib/invites/pass.ts) since
+ * P10.26; this action stays for callers outside the page until its removal is
+ * agreed.
  */
 export const validateInvite = publicAction({
   input: inviteCodeSchema,

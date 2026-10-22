@@ -2,7 +2,7 @@
 
 import { z } from "zod"
 
-import { adminAction, publicAction } from "@/lib/actions/define-action"
+import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { serviceErrorMessage, serviceFetch } from "@/lib/connections/http"
 import { prisma } from "@/lib/prisma"
@@ -15,21 +15,6 @@ export interface LibrarySection {
   title: string
   type: string
 }
-
-/**
- * Get the name of the active Plex server. Public: the invite page shows it
- * before the visitor signs in.
- */
-export const getServerName = publicAction({
-  fallbackError: "Failed to load the server name",
-  handler: async () => {
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-      select: { name: true },
-    })
-    return ok(plexServer?.name || "Plex")
-  },
-})
 
 /**
  * Get available library sections from the active Plex server
