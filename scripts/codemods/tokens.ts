@@ -479,7 +479,8 @@ export function transformSource(path: string, source: string): FileResult {
   return { output, reviews, counts }
 }
 
-const cell = (text: string) => text.replace(/\|/g, '\\|')
+// Backslashes first, so an escaped pipe cannot be undone by the text before it
+const cell = (text: string) => text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|')
 
 /**
  * The `codemod-review.md` table.

@@ -249,6 +249,13 @@ describe('skip list and review file', () => {
     expect(review).toContain('| a.tsx | 3 | `bg-cyan-600` | bg-cyan-600: <Button> | cta-fill |')
     expect(formatReview([])).toContain('No review items.')
   })
+
+  it('escapes backslashes before pipes, so a cell cannot end its column early', () => {
+    const review = formatReview([
+      { file: 'a.tsx', line: 1, original: 'content-["a\\|b"]', suggestion: 'x\\', rule: 'r|s' },
+    ])
+    expect(review).toContain('| a.tsx | 1 | `content-["a\\\\\\|b"]` | x\\\\ | r\\|s |')
+  })
 })
 
 describe('CLI', () => {
