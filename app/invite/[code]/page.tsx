@@ -101,7 +101,7 @@ export default function InvitePage() {
               transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             >
               <svg
-                className="w-10 h-10 sm:w-12 sm:h-12 text-red-400 mb-4"
+                className="w-10 h-10 sm:w-12 sm:h-12 text-destructive mb-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -114,7 +114,7 @@ export default function InvitePage() {
                 />
               </svg>
             </motion.div>
-            <h1 data-testid="invalid-invite-heading" className="text-xl sm:text-2xl font-bold text-white mb-2">Invalid Invite</h1>
+            <h1 data-testid="invalid-invite-heading" className="text-xl sm:text-2xl font-bold text-foreground mb-2">Invalid Invite</h1>
             <p data-testid="invalid-invite-message" className="text-slate-300 mb-6 text-sm sm:text-base px-2">{error}</p>
             <Button
               onClick={() => router.push("/")}
@@ -153,12 +153,12 @@ export default function InvitePage() {
             className={`w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br ${iconGradient} rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-lg ${iconShadow}`}
           >
             {isPlex ? (
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-foreground" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M11.643 0L4.68 12l6.963 12h2.714L7.394 12l6.963-12z" />
                 <path d="M12.357 0l6.963 12-6.963 12h2.714L22 12 15.071 0z" />
               </svg>
             ) : (
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-foreground" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 .002C7.524.002 3.256 2.063 1.664 5.227c-.43.856-.665 1.79-.665 2.73v8.085c0 3.983 4.925 7.956 11 7.956s11-3.973 11-7.956V7.957c0-.94-.234-1.874-.665-2.73C20.744 2.063 16.476.002 12 .002zm0 2.002c3.605 0 6.904 1.523 8.336 3.898.333.552.498 1.175.498 1.798v8.342c0 2.794-3.986 5.956-8.834 5.956S3.166 18.836 3.166 16.042V7.7c0-.623.165-1.246.498-1.798C5.096 3.527 8.395 2.004 12 2.004z" />
               </svg>
             )}
@@ -169,7 +169,7 @@ export default function InvitePage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.6 }}
             data-testid="valid-invite-heading"
-            className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent px-2"
+            className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 text-foreground px-2"
           >
             You're Invited!
           </motion.h1>
@@ -180,7 +180,7 @@ export default function InvitePage() {
             className="text-slate-300 mb-6 sm:mb-8 text-sm sm:text-base leading-relaxed px-2"
           >
             You've been invited to join{" "}
-            <span className="font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <span className="font-bold text-foreground">
               {serverName}
             </span>
             .{" "}

@@ -80,7 +80,7 @@ export function JellyfinSignInForm({
           className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center"
         >
           <svg
-            className="w-8 h-8 text-green-400"
+            className="w-8 h-8 text-success"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -93,7 +93,7 @@ export function JellyfinSignInForm({
             />
           </svg>
         </motion.div>
-        <h2 className="text-xl font-bold text-white mb-2" data-testid="jellyfin-success-heading">Account Created!</h2>
+        <h2 className="text-xl font-bold text-foreground mb-2" data-testid="jellyfin-success-heading">Account Created!</h2>
         <p className="text-slate-300 mb-6">
           Your Jellyfin account has been created successfully.
         </p>
@@ -133,7 +133,7 @@ export function JellyfinSignInForm({
           aria-describedby="jellyfin-username-hint"
           data-testid="jellyfin-username-input"
         />
-        <p id="jellyfin-username-hint" className="text-xs text-slate-400 mt-1">
+        <p id="jellyfin-username-hint" className="text-xs text-muted-foreground mt-1">
           3 to 32 letters, numbers, dots, dashes or underscores
         </p>
       </div>
@@ -218,7 +218,7 @@ export function JellyfinSignInForm({
         )}
       </Button>
 
-      <p className="text-xs text-slate-400 text-center mt-4">
+      <p className="text-xs text-muted-foreground text-center mt-4">
         You'll use this username and password to sign in to {serverName}
       </p>
     </form>
