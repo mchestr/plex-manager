@@ -29,6 +29,7 @@ import {
 } from "@/lib/discord/audit"
 import { MarkType, type Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import { auditMemberListed } from "@/lib/security/audit-log"
 import { dayWindow } from "@/lib/utils/day-window"
 import { createLogger } from "@/lib/utils/logger"
 import { serverZone } from "@/lib/utils/server-zone"
@@ -133,8 +134,16 @@ async function markedMedia(
  * @throws the `PM_FORBIDDEN` or `PM_UNAUTHENTICATED` error from {@link assertAdmin}, or a ZodError for a malformed range
  */
 export async function getDiscordDashboardData(raw: DiscordDashboardInput) {
-  await assertAdmin()
+  const session = await assertAdmin()
   const input = discordDashboardInput.parse(raw)
+  // Every member's commands and marks, so the page is audited as a listing (P11.16)
+  await auditMemberListed("discord-activity", session.user.id, {
+    startDate: input.startDate,
+    endDate: input.endDate,
+    markType: input.markType,
+    source: input.source,
+    search: input.search,
+  })
 
   // React 19 serializes Date across the RSC boundary, so rows keep theirs (P10.7)
   const window = dayWindow({ from: input.startDate, to: input.endDate }, await serverZone())

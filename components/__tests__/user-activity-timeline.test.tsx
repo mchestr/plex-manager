@@ -39,6 +39,20 @@ describe('UserActivityTimeline', () => {
     expect(screen.getByTestId('activity-item-m1')).toHaveTextContent('Arrival (2016)')
   })
 
+  it("shows an assistant message as its length, and a command's arguments as they are (GAP-32)", () => {
+    renderTimeline(
+      makeUserActivityTimelineData({
+        items: [
+          makeDiscordCommandActivity({ id: 'chat', commandType: 'CHAT', commandArgs: null, argsLength: 42 }),
+          makeDiscordCommandActivity({ id: 'mark', commandType: 'MEDIA_MARK', commandArgs: 'Arrival', argsLength: null }),
+        ],
+      })
+    )
+
+    expect(screen.getByTestId('activity-item-chat')).toHaveTextContent('Message, 42 characters')
+    expect(screen.getByTestId('activity-item-mark')).toHaveTextContent('Arrival')
+  })
+
   it('shows the empty copy with no activity', () => {
     renderTimeline(makeUserActivityTimelineData({ items: [], total: 0 }))
     expect(screen.getByText('No activity recorded for this member yet.')).toBeInTheDocument()

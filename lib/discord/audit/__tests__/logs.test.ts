@@ -39,6 +39,7 @@ function createMockCommandLog(
     commandType: "CHAT" as DiscordCommandType,
     commandName: "!assistant",
     commandArgs: "help me",
+    argsLength: null,
     channelId: "channel-123",
     channelType: "support-channel",
     guildId: "guild-123",

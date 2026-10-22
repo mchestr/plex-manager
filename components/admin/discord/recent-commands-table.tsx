@@ -10,6 +10,7 @@ import { Time } from "@/components/ui/time"
 import { userDetail } from "@/lib/admin/routes"
 import { useFormat } from "@/lib/format-context"
 import { icons } from "@/lib/ui/icons"
+import { chatMessageLabel } from "@/lib/ui/privacy-copy"
 import type { StatusValue } from "@/lib/ui/status"
 import type { BoundFormat } from "@/lib/utils/format"
 
@@ -19,6 +20,8 @@ export interface RecentCommand {
   discordUserId: string
   userId: string | null
   commandName: string
+  /** CHAT rows: the message length, shown instead of the text the log no longer keeps (GAP-32). */
+  argsLength: number | null
   status: StatusValue<"discordCommand">
   responseTimeMs: number | null
   createdAt: Date
@@ -47,7 +50,15 @@ function columns(f: BoundFormat): ColumnDef<RecentCommand>[] {
     {
       id: "command",
       header: "Command",
-      cell: ({ row }) => <span className="font-mono text-ui">{row.original.commandName}</span>,
+      cell: ({ row }) => {
+        const message = chatMessageLabel(row.original.argsLength)
+        return (
+          <span className="flex flex-col">
+            <span className="font-mono text-ui">{row.original.commandName}</span>
+            {message && <span className="text-caption text-muted-foreground">{message}</span>}
+          </span>
+        )
+      },
       meta: { mobile: "sub" },
     },
     {

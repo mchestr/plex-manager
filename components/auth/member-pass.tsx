@@ -23,6 +23,8 @@ interface MemberPassProps {
   jellyfin: boolean
   /** A same-origin path (`safeCallbackPath`) to land on after signing in. */
   callbackUrl?: string
+  /** `getAssistantDisclosure()`: admins can review assistant conversations, and who processes them (P11.16). */
+  assistantDisclosure: string
 }
 
 /**
@@ -31,7 +33,7 @@ interface MemberPassProps {
  * straight to plex.tv, with no forced wait. Jellyfin is the secondary option,
  * revealed in place. The copy says the Plex token is kept (GAP-34).
  */
-export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }: MemberPassProps) {
+export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl, assistantDisclosure }: MemberPassProps) {
   const headingId = useId()
   return (
     <Pass aria-labelledby={headingId} data-testid="member-pass">
@@ -49,7 +51,8 @@ export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }
           </div>
         )}
         <p className="mt-6 text-caption text-muted-foreground" data-testid="member-pass-privacy">
-          Server admins can see your watch activity and your Rewind. Some Rewind text is written by an AI service.
+          Server admins can see your watch activity and your Rewind. Some Rewind text is written by an AI service.{" "}
+          {assistantDisclosure}
         </p>
       </div>
       <PassStub>
@@ -61,7 +64,7 @@ export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }
   )
 }
 
-function PlexOptions({ serverName, jellyfin, callbackUrl }: Omit<MemberPassProps, "monogram" | "plex">) {
+function PlexOptions({ serverName, jellyfin, callbackUrl }: Omit<MemberPassProps, "monogram" | "plex" | "assistantDisclosure">) {
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [jellyfinOpen, setJellyfinOpen] = useState(false)

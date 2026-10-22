@@ -106,6 +106,7 @@ function toDiscord(log: Prisma.DiscordCommandLogGetPayload<object>): DiscordComm
     commandType: log.commandType,
     commandName: log.commandName,
     commandArgs: log.commandArgs,
+    argsLength: log.argsLength,
     status: log.status,
     responseTimeMs: log.responseTimeMs,
     channelType: log.channelType,

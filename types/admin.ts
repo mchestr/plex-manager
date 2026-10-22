@@ -72,6 +72,8 @@ export type DiscordCommandActivity = {
   commandType: string
   commandName: string
   commandArgs: string | null
+  /** CHAT rows: the length of the member's message, which the log keeps instead of its text (GAP-32). */
+  argsLength: number | null
   status: string
   responseTimeMs: number | null
   channelType: string

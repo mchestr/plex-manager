@@ -7,6 +7,7 @@ import { fail, ok } from "@/lib/actions/result"
 import { getAllPlexServerUsers } from "@/lib/connections/plex"
 import { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("IMPORT_PLEX_USERS")
@@ -28,7 +29,7 @@ function importFailure(error: unknown): string {
  */
 export const importPlexUsers = adminAction({
   fallbackError: "Failed to import users",
-  handler: async () => {
+  handler: async (_input, { userId: adminId }) => {
     const plexServer = await prisma.plexServer.findFirst({ where: { isActive: true } })
     if (!plexServer) {
       return fail("NOT_FOUND", "No active Plex server configured")
@@ -49,6 +50,7 @@ export const importPlexUsers = adminAction({
     let skipped = 0
     let managed = 0
     const errors: string[] = []
+    const createdUserIds: string[] = []
 
     // One query for every user already imported, instead of one per Plex user
     const existing = await prisma.user.findMany({
@@ -64,7 +66,7 @@ export const importPlexUsers = adminAction({
         continue
       }
       try {
-        await prisma.user.create({
+        const created = await prisma.user.create({
           data: {
             plexUserId: plexUser.id,
             name: plexUser.name,
@@ -75,6 +77,7 @@ export const importPlexUsers = adminAction({
             primaryAuthService: "plex",
           },
         })
+        createdUserIds.push(created.id)
         imported++
         if (plexUser.managed) managed++
       } catch (error) {
@@ -83,6 +86,14 @@ export const importPlexUsers = adminAction({
       }
     }
 
+    logAuditEvent(AuditEventType.MEMBERS_IMPORTED, adminId, {
+      imported,
+      skipped,
+      managed,
+      pending,
+      failed: errors.length,
+      createdUserIds,
+    })
     revalidatePath("/admin/users")
     return ok({ imported, skipped, managed, pending, errors })
   },

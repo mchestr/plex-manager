@@ -186,7 +186,18 @@ channel/thread IDs remain configurable (informational only).
 - Conversation history is persisted per Discord DM/channel, so multi-turn context
   is maintained. Session creation and history append are transactional (safe
   under concurrent messages).
-- All LLM usage from Discord flows into the `LLMUsage` table for cost tracking.
+- Every model call from Discord writes one `LLMUsage` row: the member, the
+  model, token counts and cost, and the prompt and response text (the whole
+  conversation so far, tool results included). Admins can read these at
+  `/admin/llm-usage`, where opening a member's record or conversation writes a
+  `MEMBER_CONTENT_VIEWED` audit row (once an hour per admin and member).
+- The command log (`DiscordCommandLog`) keeps only the length of what a member
+  types to the assistant (`argsLength`), never the text; `/admin/discord`
+  shows "Message, N characters".
+- Members are told: the first reply of each chat session, `/help`, the
+  `/assistant ask` description, the sign-in screen, `/help#privacy` and the
+  account page say that server admins can review assistant conversations and
+  name the provider that processes them.
 - **Data-leak prevention (defense in depth):**
   1. **Single tool registry** — each chatbot tool declares `discordSafe`,
      `userScoped`, and an output-field allowlist (`discordFields`).

@@ -127,6 +127,7 @@ describe("rate-limit", () => {
         "rw:view": { points: 120, duration: 900 },
         "rw:hide": { points: 20, duration: 86400 },
         "rw:llm": { points: 30, duration: 60 },
+        "audit:read": { points: 1, duration: 3600 },
       })
     })
   })

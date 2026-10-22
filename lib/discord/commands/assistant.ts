@@ -180,7 +180,7 @@ export const assistantCommand: SlashCommand = {
     .addSubcommand((sub) =>
       sub
         .setName("ask")
-        .setDescription("Ask the assistant a question (answer is only visible to you)")
+        .setDescription("Ask a question. Only you see the answer; server admins can review assistant chats")
         .addStringOption((option) =>
           option
             .setName("prompt")

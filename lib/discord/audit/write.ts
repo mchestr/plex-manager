@@ -21,7 +21,10 @@ export interface CreateCommandLogParams {
   userId?: string
   commandType: DiscordCommandType
   commandName: string
+  /** Never what a member typed to the assistant: CHAT rows record {@link argsLength} instead (GAP-32). */
   commandArgs?: string
+  /** CHAT rows: the length of the member's message. */
+  argsLength?: number
   channelId: string
   channelType: string
   guildId?: string
@@ -31,6 +34,11 @@ export interface UpdateCommandLogParams {
   status: DiscordCommandStatus
   error?: string
   responseTimeMs?: number
+}
+
+/** A CHAT row never stores what the member typed, whatever the caller passed (GAP-32). */
+function argsFor(params: CreateCommandLogParams): string | null {
+  return params.commandType === "CHAT" ? null : (params.commandArgs ?? null)
 }
 
 /**
@@ -47,7 +55,8 @@ export async function createCommandLog(
         userId: params.userId,
         commandType: params.commandType,
         commandName: params.commandName,
-        commandArgs: params.commandArgs,
+        commandArgs: argsFor(params),
+        argsLength: params.argsLength,
         channelId: params.channelId,
         channelType: params.channelType,
         guildId: params.guildId,
@@ -107,7 +116,8 @@ export async function logCommandExecution(
         userId: params.userId,
         commandType: params.commandType,
         commandName: params.commandName,
-        commandArgs: params.commandArgs,
+        commandArgs: argsFor(params),
+        argsLength: params.argsLength,
         channelId: params.channelId,
         channelType: params.channelType,
         guildId: params.guildId,

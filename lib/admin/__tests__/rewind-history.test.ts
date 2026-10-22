@@ -13,12 +13,14 @@ import { pickCurrentUsageId } from "@/lib/wrapped/data/history"
 import { buildStatistics, buildValidOutput } from "@/lib/wrapped/__tests__/fixtures"
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { auditMemberRead } from "@/lib/security/audit-log"
 
 jest.mock("@/lib/admin", () => ({
   assertAdmin: jest.fn().mockResolvedValue({ user: { id: "admin-1", isAdmin: true } }),
 }))
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+jest.mock("@/lib/security/audit-log", () => ({ auditMemberRead: jest.fn() }))
 
 beforeEach(() => mockReset(prismaMock))
 
@@ -88,6 +90,15 @@ describe("pickCurrentUsageId", () => {
 describe("getHistoricalWrappedVersions", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+  })
+
+  it("audits the read of the Rewind's member (P11.16)", async () => {
+    mockWrappedFindUnique.mockResolvedValue({ generatedAt: null, userId: "user-1" })
+    mockUsageFindMany.mockResolvedValue([])
+
+    await getHistoricalWrappedVersions("wrapped-1")
+
+    expect(auditMemberRead).toHaveBeenCalledWith("rewind-history", "user-1", "admin-1")
   })
 
   it("lists versions with removed text and leaves out empty responses", async () => {

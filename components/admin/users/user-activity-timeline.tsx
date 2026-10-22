@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/ui/status-badge"
 import { Time } from "@/components/ui/time"
 import { queryKeys } from "@/hooks/query-keys"
 import { useFormat } from "@/lib/format-context"
+import { chatMessageLabel } from "@/lib/ui/privacy-copy"
 import type { Tone } from "@/lib/ui/status"
 import type { UserActivityItem, UserActivityTimelineData } from "@/types/admin"
 
@@ -46,6 +47,8 @@ function formatMediaTitle(item: UserActivityItem & { type: "media_mark" }) {
 
 function ActivityItem({ item }: { item: UserActivityItem }) {
   const status = item.type === "discord_command" ? (COMMAND_STATUS[item.status] ?? { tone: "neutral" as const, label: item.status }) : null
+  // An assistant message shows its length, never its text (GAP-32)
+  const detail = item.type === "discord_command" ? (chatMessageLabel(item.argsLength) ?? item.commandArgs) : null
 
   return (
     <li className="flex flex-col gap-1.5 rounded-lg border bg-card p-4" data-testid={`activity-item-${item.id}`}>
@@ -64,9 +67,9 @@ function ActivityItem({ item }: { item: UserActivityItem }) {
             {status && <StatusBadge tone={status.tone} label={status.label} />}
             {item.responseTimeMs != null && <span className="text-caption text-muted-foreground">{item.responseTimeMs} ms</span>}
           </div>
-          {item.commandArgs && (
-            <p className="truncate text-caption text-muted-foreground" title={item.commandArgs}>
-              {item.commandArgs}
+          {detail && (
+            <p className="truncate text-caption text-muted-foreground" title={detail} data-testid="activity-command-detail">
+              {detail}
             </p>
           )}
           <p className="text-caption text-muted-foreground">Sent in {item.channelType.replace(/-/g, " ")}</p>

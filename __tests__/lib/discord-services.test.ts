@@ -47,6 +47,53 @@ const mockGetOrCreateSession = getOrCreateSession as jest.MockedFunction<typeof 
 const mockAppendTurn = appendTurn as jest.MockedFunction<typeof appendTurn>
 const mockPrisma = prismaMock
 
+describe("handleDiscordChat: the assistant disclosure (P11.16)", () => {
+  const connection = {
+    id: "connection-1",
+    discordUserId: "discord-123",
+    userId: "user-1",
+    linkedAt: new Date(),
+    revokedAt: null,
+    user: { id: "user-1", isAdmin: false, isExempt: false, disabledAt: null, subscription: null },
+  }
+  const DISCLOSURE = "Server admins can review assistant conversations, and messages are processed by Anthropic."
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockPrisma.discordConnection.findUnique.mockResolvedValue(connection as any)
+    mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: false } as any)
+    mockPrisma.lLMProvider.findFirst.mockResolvedValue({ provider: "anthropic" } as any)
+    mockAppendTurn.mockResolvedValue(undefined)
+    mockRunChatbotForUser.mockResolvedValue({
+      success: true,
+      message: { role: "assistant", content: "Plex is up.", timestamp: Date.now() },
+      conversationId: "conversation-1",
+    })
+  })
+
+  const ask = () => handleDiscordChat({ discordUserId: "discord-123", channelId: "channel-123", message: "Is Plex up?" })
+
+  it("leads the first reply of a new session with the disclosure, and keeps it out of the history", async () => {
+    mockGetOrCreateSession.mockResolvedValue({ id: "session-1", chatConversationId: "conversation-1", history: [], created: true })
+
+    const result = await ask()
+
+    expect(result.message?.content).toBe(`_${DISCLOSURE}_\n\nPlex is up.`)
+    expect(mockAppendTurn).toHaveBeenCalledWith(
+      expect.objectContaining({ assistantMessage: expect.objectContaining({ content: "Plex is up." }) })
+    )
+  })
+
+  it("leaves the second reply of the session alone", async () => {
+    mockGetOrCreateSession.mockResolvedValue({ id: "session-1", chatConversationId: "conversation-1", history: [], created: false })
+
+    const result = await ask()
+
+    expect(result.message?.content).toBe("Plex is up.")
+    expect(mockPrisma.lLMProvider.findFirst).not.toHaveBeenCalled()
+  })
+})
+
 describe("handleDiscordChat", () => {
   const mockConnection = {
     id: "connection-1",
@@ -67,6 +114,7 @@ describe("handleDiscordChat", () => {
     id: "session-1",
     chatConversationId: "conversation-1",
     history: [],
+    created: false,
   }
 
   beforeEach(() => {
@@ -120,6 +168,7 @@ describe("handleDiscordChat", () => {
         id: "session-1",
         chatConversationId: "new-conversation-1",
         history: [],
+        created: true,
       })
 
       mockRunChatbotForUser.mockResolvedValue({

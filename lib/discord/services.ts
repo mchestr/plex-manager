@@ -3,6 +3,7 @@ import { isAccessAllowed } from "@/lib/access"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { appendTurn, getOrCreateSession } from "@/lib/discord/chat-session"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
+import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import { prisma } from "@/lib/prisma"
 import { consume } from "@/lib/security/rate-limit"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
@@ -254,10 +255,16 @@ export async function handleDiscordChat({
     conversationId,
   })
 
+  // The first reply of each session leads with the disclosure (P11.16, GAP-32);
+  // the stored history keeps the answer alone, so the model never sees it.
+  const reply = session.created
+    ? { ...safeMessage, content: `_${await getAssistantDisclosure()}_\n\n${safeMessage.content}` }
+    : safeMessage
+
   return {
     success: true,
     linked: true,
-    message: safeMessage,
+    message: reply,
     conversationId,
   }
 }
