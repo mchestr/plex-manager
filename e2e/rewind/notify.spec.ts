@@ -1,5 +1,6 @@
 import { expect, test } from '../fixtures/session';
 import { createE2EPrismaClient } from '../helpers/prisma';
+import { clearRateLimits } from '../helpers/rate-limits';
 import { clearRewindSeed, REWIND_MEMBERS, REWIND_YEAR, seedRewind, seedRewindIssue } from '../helpers/seed-rewind';
 
 /**
@@ -89,6 +90,8 @@ test.describe('Rewind ready notifications', () => {
         data: { generatedAt: new Date(Date.now() - 60 * 60 * 1000) },
       });
     });
+    // Earlier specs read as this member too; start rw:view fresh so the view is written.
+    if (process.env.REDIS_URL) await clearRateLimits(process.env.REDIS_URL, ['rw:view']);
     await signIn(member.id);
 
     await page.goto('/account');
