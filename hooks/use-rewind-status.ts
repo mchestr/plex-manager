@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { getRewindStatus } from "@/actions/rewind-generation"
+import { queryKeys } from "@/hooks/query-keys"
 import { isActiveRewindState, type RewindStatus } from "@/lib/rewind/rewind-status"
 
 const FIRST_POLL_MS = 3_000
@@ -37,7 +38,7 @@ export function useRewindStatus(year: number | null, options: { userId?: string 
   const pollBase = useRef<number | null>(null)
 
   const query = useQuery({
-    queryKey: ["rewind-status", year, userId ?? null],
+    queryKey: queryKeys.rewindStatus(year, userId ?? null),
     queryFn: async (): Promise<RewindStatus> => {
       const result = await getRewindStatus({ year: year as number, ...(userId && { userId }) })
       if (!result.success) throw new Error(result.error)

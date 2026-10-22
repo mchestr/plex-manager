@@ -6,13 +6,11 @@ import { useEffect, useRef } from "react"
 
 import { getRewindSeasonStatus } from "@/actions/admin/rewind-season"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
+import { queryKeys } from "@/hooks/query-keys"
 import { useFormat } from "@/lib/format-context"
 import type { SeasonCounts } from "@/lib/wrapped/admin/season"
 
 const POLL_MS = 5_000
-
-/** The query key the season console's actions invalidate to start polling. */
-export const seasonStatusKey = (year: number) => ["rewind-season-status", year] as const
 
 const isRunning = (counts: SeasonCounts) => counts.generating + counts.stuck > 0
 
@@ -34,7 +32,7 @@ export function SeasonProgress({ year, initial, budget }: SeasonProgressProps) {
   const f = useFormat()
   const router = useRouter()
   const { data } = useQuery({
-    queryKey: seasonStatusKey(year),
+    queryKey: queryKeys.rewindSeasonStatus(year),
     queryFn: async () => {
       const result = await getRewindSeasonStatus({ year })
       if (!result.success) throw new Error(result.error)

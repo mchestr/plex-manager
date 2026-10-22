@@ -20,7 +20,7 @@ import { getActiveAnnouncements, type AnnouncementData } from "@/actions/announc
 import { getPrometheusStatus, type StatusData } from "@/actions/prometheus-status"
 import { getWatchlistSyncSettings } from "@/actions/watchlist"
 import type { QuickLinksProps } from "@/components/dashboard/quick-links"
-import type { WatchlistSyncSettings } from "@/components/watchlist/sync-settings-card"
+import type { WatchlistSyncSettings } from "@/hooks/use-watchlist-sync"
 import { serverName as getServerName } from "@/lib/brand"
 import { getHelpData } from "@/lib/member/help"
 import { prisma } from "@/lib/prisma"

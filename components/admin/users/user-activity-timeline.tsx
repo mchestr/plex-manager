@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Time } from "@/components/ui/time"
+import { queryKeys } from "@/hooks/query-keys"
 import { useFormat } from "@/lib/format-context"
 import type { Tone } from "@/lib/ui/status"
 import type { UserActivityItem, UserActivityTimelineData } from "@/types/admin"
@@ -90,7 +91,7 @@ function ActivityItem({ item }: { item: UserActivityItem }) {
 export function UserActivityTimeline({ userId, initialData }: UserActivityTimelineProps) {
   const f = useFormat()
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = useInfiniteQuery({
-    queryKey: ["user-activity-timeline", userId],
+    queryKey: queryKeys.userActivityTimeline(userId),
     queryFn: async ({ pageParam }) => {
       const result = await getUserActivityTimeline(userId, { cursor: pageParam, pageSize: PAGE_SIZE })
       if (!result.success) throw new Error(result.error)

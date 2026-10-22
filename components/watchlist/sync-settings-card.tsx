@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 
-import { getWatchlistSyncSettings, triggerWatchlistSync, updateWatchlistSyncSettings } from "@/actions/watchlist"
+import { triggerWatchlistSync, updateWatchlistSyncSettings } from "@/actions/watchlist"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,12 +11,10 @@ import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { Time } from "@/components/ui/time"
 import { useToast } from "@/components/ui/toast"
+import { useWatchlistSync, type WatchlistSyncSettings } from "@/hooks/use-watchlist-sync"
 import { icons } from "@/lib/ui/icons"
 import { WATCHLIST_SKIP_COPY } from "@/lib/watchlist/skip"
 import type { AuthService } from "@/types/onboarding"
-
-type SettingsResult = Awaited<ReturnType<typeof getWatchlistSyncSettings>>
-export type WatchlistSyncSettings = Extract<SettingsResult, { success: true }>["data"]
 
 type BadgeVariant = "success" | "warning" | "destructive" | "info" | "neutral"
 
@@ -56,14 +54,9 @@ export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCar
   const { showSuccess, showError, showInfo } = useToast()
   const [isPending, startTransition] = useTransition()
   const [isSyncing, setIsSyncing] = useState(false)
-  const [settings, setSettings] = useState(initialSettings)
+  const { settings, refresh: reload } = useWatchlistSync(initialSettings)
 
   if (!settings || !canShowWatchlistSync(settings, service)) return null
-
-  const reload = async () => {
-    const result = await getWatchlistSyncSettings()
-    if (result.success) setSettings(result.data)
-  }
 
   const handleToggle = (next: boolean) => {
     startTransition(async () => {
