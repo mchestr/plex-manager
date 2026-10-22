@@ -59,8 +59,16 @@ export function ArticleDocument({ title, masthead, sections, actions, notice }: 
             data-testid="rewind-article-section"
             className="flex flex-col gap-4 border-b border-current/40 pb-10"
           >
-            <h2 id={`${section.id}-heading`} className="font-display text-xl font-bold">
-              {section.folio !== null && <span className="tabular-nums">{String(section.folio).padStart(2, "0")} </span>}
+            <h2
+              id={`${section.id}-heading`}
+              className="font-display text-xl font-bold"
+              data-testid={section.type ? `rewind-article-heading-${section.type}` : undefined}
+            >
+              {section.folio !== null && (
+                <span className="tabular-nums" data-testid="rewind-article-folio">
+                  {String(section.folio).padStart(2, "0")}{" "}
+                </span>
+              )}
               {section.name}
             </h2>
             {section.blocks.map((block, i) => (
