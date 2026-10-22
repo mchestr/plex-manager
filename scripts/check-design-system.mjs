@@ -7,6 +7,7 @@
  *   npm run design:report    totals per rule and the top 20 files (default)
  *   npm run design:check     fails on a rise or a new file with a non-zero count
  *   npm run design:update    lowers the baseline; refuses to raise a count
+ *     -- --add-rule <id>      also records the counts of a rule new to the baseline
  *   npm run design:baseline  rewrites the baseline from the current tree
  *
  * `--check` and `--update` carry counts across renames found by
@@ -21,7 +22,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { RULES, compare, countFile, nonZero, sortKeys, totals, update } from './design-system/rules.mjs'
+import { RULES, addRules, compare, countFile, nonZero, sortKeys, totals, update } from './design-system/rules.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const BASELINE = join(ROOT, 'design-debt.json')
@@ -112,6 +113,12 @@ const args = process.argv.slice(2)
 const baseIndex = args.indexOf('--base')
 const base = baseIndex >= 0 ? args[baseIndex + 1] : 'origin/main'
 const mode = ['--check', '--update', '--baseline'].find((flag) => args.includes(flag)) ?? '--report'
+const newRules = args.flatMap((arg, i) => (arg === '--add-rule' ? [args[i + 1]] : []))
+const unknownRule = newRules.find((id) => !RULES.some((rule) => rule.id === id))
+if (unknownRule !== undefined) {
+  console.error(`design-system: --add-rule needs a rule id from rules.mjs, got ${unknownRule}.`)
+  process.exit(1)
+}
 const current = scan()
 
 if (mode === '--report') report(current)
@@ -132,7 +139,13 @@ else {
         : 'design-system: no design debt added.'
     )
   } else {
-    const { ok, result, files } = update(baseline, current, renames(base))
+    const outcome =
+      newRules.length > 0 ? addRules(baseline, current, newRules, renames(base)) : update(baseline, current, renames(base))
+    if (outcome.known) {
+      console.error(`design-system: --add-rule is for new rules; the baseline already counts ${outcome.known.join(', ')}.`)
+      process.exit(1)
+    }
+    const { ok, result, files } = outcome
     if (!ok) {
       console.error('design-system: refusing to raise the baseline:')
       printFailures(result)

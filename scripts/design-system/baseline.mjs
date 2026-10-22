@@ -71,6 +71,29 @@ export function update(baseline, current, renames = []) {
   return { ok: true, result, files: nonZero(current) }
 }
 
+/**
+ * `design:update --add-rule <id>`: records the current counts of rules the
+ * baseline has never seen, so a new rule can join the ratchet while every
+ * other rule still only falls. Seeds `baseline` with those counts (under the
+ * path a renamed file came from) and then runs `update`. Refuses (`ok: false`,
+ * `known` lists them) a rule the baseline already counts.
+ */
+export function addRules(baseline, current, rules, renames = []) {
+  const counted = totals(baseline)
+  const known = rules.filter((rule) => rule in counted)
+  if (known.length > 0) return { ok: false, known }
+  const renamedFrom = new Map(renames.map(([from, to]) => [to, from]))
+  const seeded = Object.fromEntries(Object.entries(baseline).map(([file, counts]) => [file, { ...counts }]))
+  for (const [file, counts] of Object.entries(current)) {
+    for (const rule of rules) {
+      if (!counts[rule]) continue
+      const from = !(file in seeded) && seeded[renamedFrom.get(file)] ? renamedFrom.get(file) : file
+      seeded[from] = { ...seeded[from], [rule]: counts[rule] }
+    }
+  }
+  return update(seeded, current, renames)
+}
+
 /** The non-zero entries of `current`, sorted: a fresh baseline. */
 export function nonZero(current) {
   return sortKeys(
