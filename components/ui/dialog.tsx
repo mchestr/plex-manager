@@ -113,7 +113,7 @@ export function PanelCloseButton() {
   return (
     <DialogPrimitive.Close
       data-slot="dialog-close"
-      render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-3 text-muted-foreground" />}
+      render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-3 text-muted-foreground" data-testid="dialog-close" />}
     >
       <X aria-hidden="true" />
       <span className="sr-only">Close</span>

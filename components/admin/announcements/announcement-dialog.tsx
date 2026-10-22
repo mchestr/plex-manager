@@ -129,7 +129,7 @@ function AnnouncementForm({ announcement, zone, onSaved }: AnnouncementFormProps
         <Switch checked={isActive} onCheckedChange={setIsActive} data-testid="announcement-active-checkbox" />
       </Field>
       <DialogFooter>
-        <DialogClose render={<Button type="button" variant="ghost" disabled={pending} />}>Cancel</DialogClose>
+        <DialogClose render={<Button data-testid="announcement-cancel-button" type="button" variant="ghost" disabled={pending} />}>Cancel</DialogClose>
         <SubmitButton loadingLabel={announcement ? "Saving" : "Creating"} data-testid="announcement-submit-button">
           {announcement ? "Save announcement" : "Create announcement"}
         </SubmitButton>

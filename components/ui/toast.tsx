@@ -129,7 +129,7 @@ function ToastItem({ toast }: { toast: ToastPrimitive.Root.ToastObject<ToastData
           <ToastPrimitive.Title render={<p />} className="font-semibold" />
           <ToastPrimitive.Description render={<p />} className="text-muted-foreground" />
         </div>
-        <ToastPrimitive.Action render={<Button variant="ghost" size="sm" className="-my-1.5" />} />
+        <ToastPrimitive.Action render={<Button variant="ghost" size="sm" className="-my-1.5" data-testid="toast-action" />} />
         <ToastPrimitive.Close
           aria-label="Dismiss notification"
           // Base UI hides Close on stacked toasts it collapses; these never collapse.

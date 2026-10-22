@@ -34,7 +34,7 @@ export function PromptDetailActions({ prompt, current, seasonNote }: PromptDetai
         Delete
       </Button>
       {prompt.status !== "v2" && (
-        <Button variant="secondary" nativeButton={false} render={<Link href={playgroundWithStyleGuide(prompt.id)} />}>
+        <Button data-testid="admin-prompt-playground" variant="secondary" nativeButton={false} render={<Link href={playgroundWithStyleGuide(prompt.id)} />}>
           Try in playground
         </Button>
       )}

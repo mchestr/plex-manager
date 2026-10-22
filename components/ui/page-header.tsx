@@ -44,7 +44,11 @@ export function PageHeader({ title, description, breadcrumbs, actions, meta, cla
                 )}
                 <li>
                   {crumb.href ? (
-                    <Link href={crumb.href} className="rounded-sm hover:text-foreground">
+                    <Link
+                      href={crumb.href}
+                      className="rounded-sm hover:text-foreground"
+                      data-testid={`${props["data-testid"] ?? "page-header"}-crumb-${index}`}
+                    >
                       {crumb.label}
                     </Link>
                   ) : (

@@ -127,6 +127,7 @@ export function SecretInput({
                 aria-pressed={visible}
                 onClick={() => setShown((now) => !now)}
                 disabled={props.disabled}
+                data-testid={testId && `${testId}-reveal`}
               >
                 {visible ? "Hide" : "Show"}
               </Button>

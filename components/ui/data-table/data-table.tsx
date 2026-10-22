@@ -119,6 +119,7 @@ export function DataTable<T>({
         key={header.id}
         scope="col"
         aria-sort={sortable ? direction : undefined}
+        data-testid={`${testId}-column-${header.column.id}`}
         className={cn(
           "h-10 px-4 text-left text-label font-medium whitespace-nowrap text-muted-foreground",
           columnDef.meta?.align === "end" && ALIGN_END,
@@ -198,7 +199,7 @@ export function DataTable<T>({
                       )}
                     >
                       {index === 0 && href ? (
-                        <Link href={href} className="rounded-sm font-medium text-foreground hover:underline">
+                        <Link data-testid={`${testId}-link-${row.id}`} href={href} className="rounded-sm font-medium text-foreground hover:underline">
                           {content}
                         </Link>
                       ) : (

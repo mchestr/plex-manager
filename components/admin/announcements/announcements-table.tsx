@@ -49,7 +49,7 @@ function columns(f: BoundFormat, onEdit: (row: AdminAnnouncementRow) => void): C
       header: "Status",
       cell: ({ row }) => (
         <span className="flex flex-wrap gap-1.5">
-          <StatusBadge domain="announcement" value={row.original.status} />
+          <StatusBadge domain="announcement" value={row.original.status} data-testid={`announcement-status-${row.original.id}`} />
           {row.original.priority > 0 && <Badge variant="info">Priority {row.original.priority}</Badge>}
         </span>
       ),

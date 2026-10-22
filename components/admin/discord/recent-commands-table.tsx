@@ -28,7 +28,7 @@ export interface RecentCommand {
 export function DiscordMember({ name, userId }: { name: string; userId: string | null }) {
   if (!userId) return <span className="text-foreground">{name}</span>
   return (
-    <Link href={userDetail(userId)} className="rounded-sm font-medium text-foreground underline-offset-4 hover:underline">
+    <Link data-testid={`admin-discord-member-${userId}`} href={userDetail(userId)} className="rounded-sm font-medium text-foreground underline-offset-4 hover:underline">
       {name}
     </Link>
   )

@@ -66,6 +66,7 @@ function StepLabel({ step, onSelect, className }: { step: StepperStep; onSelect?
         type="button"
         onClick={() => onSelect(step.id)}
         className={cn("rounded-sm text-left hover:text-foreground hover:underline", className)}
+        data-testid={`stepper-step-${step.id}`}
       >
         {content}
       </button>

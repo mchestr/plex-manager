@@ -26,7 +26,7 @@ export function InviteUsageTable({ usages }: { usages: InviteUsageRow[] }) {
       id: "member",
       header: "Member",
       cell: ({ row }) => (
-        <Link href={userDetail(row.original.user.id)} className="rounded-sm font-medium text-foreground hover:underline">
+        <Link data-testid={`admin-invite-usage-member-${row.original.user.id}`} href={userDetail(row.original.user.id)} className="rounded-sm font-medium text-foreground hover:underline">
           {row.original.user.name || row.original.user.email || "Unknown member"}
         </Link>
       ),

@@ -106,7 +106,7 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
         const usage = row.original.totalLlmUsage
         if (!usage) return <span className="text-muted-foreground">–</span>
         return (
-          <Link href={llmUsage({ userId: row.original.id })} className="rounded-sm text-foreground hover:underline">
+          <Link data-testid={`admin-users-cost-${row.original.id}`} href={llmUsage({ userId: row.original.id })} className="rounded-sm text-foreground hover:underline">
             {f.money(usage.cost, "table")}
           </Link>
         )
@@ -134,7 +134,7 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
         title="No members match these filters"
         description="Clear the filters to see everyone."
         primaryAction={
-          <Button variant="secondary" onClick={clearFilters}>
+          <Button data-testid="admin-users-clear-filters" variant="secondary" onClick={clearFilters}>
             Clear filters
           </Button>
         }

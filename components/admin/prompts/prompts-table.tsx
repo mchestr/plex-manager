@@ -93,7 +93,7 @@ export function PromptsTable({ rows, seasonNote }: PromptsTableProps) {
             title="No style guides yet"
             description="A style guide sets the voice of every member's Rewind."
             primaryAction={
-              <Button nativeButton={false} render={<Link href={newStyleGuide()} />}>
+              <Button data-testid="admin-prompts-new-style-guide" nativeButton={false} render={<Link href={newStyleGuide()} />}>
                 New style guide
               </Button>
             }

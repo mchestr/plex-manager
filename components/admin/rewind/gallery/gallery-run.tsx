@@ -126,6 +126,7 @@ export function GalleryRun({ runKey, input }: GalleryRunProps) {
         data-testid="rewind-gallery-failed"
         action={
           <Button
+            data-testid="rewind-gallery-retry"
             variant="outline"
             size="sm"
             onClick={() => {

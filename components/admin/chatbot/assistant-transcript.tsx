@@ -109,7 +109,7 @@ export function AssistantTranscript({ messages, isLoading, onSend }: AssistantTr
           disabled={isLoading}
           data-testid="admin-chat-input"
         />
-        <Button type="submit" size="icon" aria-label="Send" disabled={!input.trim() || isLoading}>
+        <Button data-testid="admin-chat-send" type="submit" size="icon" aria-label="Send" disabled={!input.trim() || isLoading}>
           <Icon icon={icons.send} />
         </Button>
       </form>

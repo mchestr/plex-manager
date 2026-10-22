@@ -160,7 +160,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           </div>
           <p className="text-label text-muted-foreground" data-testid="rewind-settings-zone">
             Dates are in {zone}. A season that crosses the new year belongs to the year it opens in.{" "}
-            <Link href="#server-time-zone" className="text-foreground underline underline-offset-3">
+            <Link data-testid="rewind-settings-time-zone-link" href="#server-time-zone" className="text-foreground underline underline-offset-3">
               Change the server time zone
             </Link>
           </p>

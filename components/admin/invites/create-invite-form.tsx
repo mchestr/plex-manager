@@ -153,7 +153,7 @@ export function CreateInviteForm({ plexLibraries, jellyfinLibraries, onCreated }
         </Field>
       )}
       <DialogFooter>
-        <DialogClose render={<Button type="button" variant="ghost" disabled={pending} />}>Cancel</DialogClose>
+        <DialogClose render={<Button data-testid="create-invite-cancel" type="button" variant="ghost" disabled={pending} />}>Cancel</DialogClose>
         <Button type="submit" loading={pending} loadingLabel="Creating" data-testid="create-invite-submit">
           Create invite
         </Button>

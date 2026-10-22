@@ -139,7 +139,7 @@ export function ExpandablePrompt({ content, title, characterCount, characterCoun
       <CardHeader>
         <CardTitle as="h2">{title}</CardTitle>
         <CardAction>
-          <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)} aria-expanded={isExpanded}>
+          <Button data-testid="expandable-prompt-toggle" variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)} aria-expanded={isExpanded}>
             {isExpanded ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden />}
             <span>{isExpanded ? "Collapse" : "Expand"}</span>
           </Button>

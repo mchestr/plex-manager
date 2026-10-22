@@ -125,7 +125,7 @@ export function InvitesTable({ rows, total, all, page, pageSize, sort, createAct
         title="No invites match these filters"
         description="Clear the filters to see every invite."
         primaryAction={
-          <Button variant="secondary" onClick={() => replace({ q: null, status: null, server: null, page: null })}>
+          <Button data-testid="admin-invites-clear-filters" variant="secondary" onClick={() => replace({ q: null, status: null, server: null, page: null })}>
             Clear filters
           </Button>
         }

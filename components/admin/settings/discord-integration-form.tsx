@@ -143,10 +143,11 @@ export function DiscordIntegrationFields({ integration, state }: DiscordIntegrat
         />
       </FormField>
       <FormField name="discord-guild-id" label="Guild ID" optional error={errors.guildId}>
-        <Input value={values.guildId} onValueChange={(guildId) => set({ guildId })} placeholder="Discord server (guild) ID" disabled={disabled} />
+        <Input data-testid="settings-discord-guild-id" value={values.guildId} onValueChange={(guildId) => set({ guildId })} placeholder="Discord server (guild) ID" disabled={disabled} />
       </FormField>
       <FormField name="discord-invite" label="Server invite" optional description="Paste the code or the whole discord.gg link." error={errors.serverInviteCode}>
         <Input
+          data-testid="settings-discord-invite"
           value={values.serverInviteCode}
           onValueChange={(value) => set({ serverInviteCode: parseDiscordInviteCode(value) })}
           leading={<span className="font-mono text-label">discord.gg/</span>}
@@ -155,13 +156,13 @@ export function DiscordIntegrationFields({ integration, state }: DiscordIntegrat
         />
       </FormField>
       <FormField name="discord-platform-name" label="Platform name" description="Shown on members' Discord profiles." error={errors.platformName}>
-        <Input value={values.platformName} onValueChange={(platformName) => set({ platformName })} disabled={disabled} />
+        <Input data-testid="settings-discord-platform-name" value={values.platformName} onValueChange={(platformName) => set({ platformName })} disabled={disabled} />
       </FormField>
       <FormField name="discord-support-channel" label="Support channel ID" optional description="The channel the bot watches for support." error={errors.supportChannelId}>
-        <Input value={values.supportChannelId} onValueChange={(supportChannelId) => set({ supportChannelId })} disabled={disabled} />
+        <Input data-testid="settings-discord-support-channel" value={values.supportChannelId} onValueChange={(supportChannelId) => set({ supportChannelId })} disabled={disabled} />
       </FormField>
       <FormField name="discord-support-threads" label="Support thread IDs" optional description="Separate them with commas." error={errors.supportThreadIds}>
-        <Input value={values.supportThreadIds} onValueChange={(supportThreadIds) => set({ supportThreadIds })} placeholder="123, 456" disabled={disabled} />
+        <Input data-testid="settings-discord-support-threads" value={values.supportThreadIds} onValueChange={(supportThreadIds) => set({ supportThreadIds })} placeholder="123, 456" disabled={disabled} />
       </FormField>
       <FormField
         name="discord-instructions"
@@ -172,6 +173,7 @@ export function DiscordIntegrationFields({ integration, state }: DiscordIntegrat
         className="md:col-span-2"
       >
         <Textarea
+          data-testid="settings-discord-instructions"
           value={values.instructions}
           onChange={(event) => set({ instructions: event.target.value })}
           placeholder="Join our Discord server and mention your username in #support for faster help."

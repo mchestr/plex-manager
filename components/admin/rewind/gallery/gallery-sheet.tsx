@@ -40,6 +40,7 @@ export function GallerySheet({ previewId, fixture, pages, cards, view }: Gallery
             <li key={page.folio} className="flex flex-col gap-1.5" data-testid="rewind-gallery-page" data-page={page.type} data-folio={page.folio}>
               <div className={cn("overflow-hidden rounded-md border border-border bg-muted", FRAME[view].box)}>
                 <iframe
+                  data-testid={`rewind-gallery-frame-${page.type}`}
                   src={pageFrameUrl(previewId, page.type)}
                   title={`${frameName(page.folio, page.type)}: ${page.name}`}
                   width={size.width}
@@ -64,6 +65,7 @@ export function GallerySheet({ previewId, fixture, pages, cards, view }: Gallery
             <li key={card} className="flex flex-col gap-1.5" data-testid="rewind-gallery-card" data-page={card}>
               {/* eslint-disable-next-line @next/next/no-img-element -- the card route returns a finished PNG; next/image would re-encode it */}
               <img
+                data-testid={`rewind-gallery-card-image-${card}`}
                 src={previewCardUrl(previewId, card)}
                 alt={`The ${card} card`}
                 width={180}

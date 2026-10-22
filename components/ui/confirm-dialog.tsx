@@ -125,6 +125,7 @@ export function ConfirmDialog({
               value={typed}
               onChange={(event) => setTyped(event.target.value)}
               disabled={isPending}
+              data-testid={testId && `${testId}-confirm-text`}
               autoComplete="off"
               spellCheck={false}
               className="h-10 rounded-md border border-input bg-background px-3 text-base text-foreground md:h-9 md:text-ui"
