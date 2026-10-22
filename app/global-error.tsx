@@ -89,6 +89,8 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           <h1 style={styles.title}>Something went wrong on our side</h1>
           <p style={styles.text}>Please try again. If it keeps happening, let the server admin know.</p>
           <div style={styles.actions}>
+            {/* The root layout failed, so the app's CSS and primitives may not have loaded: inline styles only. */}
+            {/* eslint-disable-next-line no-restricted-syntax */}
             <button type="button" onClick={reset} style={styles.primary} data-testid="error-retry">
               Try again
             </button>

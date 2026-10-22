@@ -5,6 +5,7 @@ import { Pencil, Trash2 } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/ui/data-table/data-table"
 import { EmptyState } from "@/components/ui/empty-state"
 import { MarkdownBody } from "@/components/ui/markdown-body"
@@ -22,14 +23,14 @@ function columns(f: BoundFormat, onEdit: (row: AdminAnnouncementRow) => void): C
       id: "title",
       header: "Title",
       cell: ({ row }) => (
-        <button
-          type="button"
+        <Button
+          variant="link"
           onClick={() => onEdit(row.original)}
-          className="rounded-sm text-left font-medium text-foreground underline-offset-4 hover:underline"
+          className="h-auto whitespace-normal px-0 text-left"
           data-testid={`edit-announcement-${row.original.id}`}
         >
           {row.original.title}
-        </button>
+        </Button>
       ),
       meta: { mobile: "title" },
     },
