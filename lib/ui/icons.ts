@@ -15,6 +15,7 @@ import {
   Calendar,
   ChartLine,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleCheck,
@@ -129,4 +130,7 @@ export const icons = {
   // Wizards
   back: ChevronLeft,
   chevronRight: ChevronRight,
+  // Disclosure and paging (the icon codemod's chevrons, P10.15)
+  chevronDown: ChevronDown,
+  chevronLeft: ChevronLeft,
 } as const satisfies Record<string, LucideIcon>

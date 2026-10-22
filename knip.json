@@ -8,6 +8,7 @@
     "scripts/codemods/*.mjs!",
     "scripts/codemods/tokens.ts!",
     "scripts/codemods/spinners.ts!",
+    "scripts/codemods/icons.ts!",
     "scripts/design-system/rewind-motion.mjs!",
     "lib/wrapped/facts/*.ts!",
     "lib/wrapped/archetypes/*.ts!",

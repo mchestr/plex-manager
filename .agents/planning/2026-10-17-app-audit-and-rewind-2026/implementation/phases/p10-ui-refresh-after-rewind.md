@@ -679,10 +679,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Run both scripts as dry runs: they print their counts. Show `npm run design:report` with `inline-spinner` at zero outside the skipped v2 code, and the check, chevron, close and warning paths gone. Then show the users page row actions, now with lucide icons and the same test ids.
 
 **Done when.**
-- [ ] `inline-spinner` and `inline-svg` are in the ratchet, with counts that have fallen.
-- [ ] No inline spinner remains outside the skipped v2 code; each became `Spinner` or `Button loading`.
-- [ ] The repeated check, chevron, close and warning SVGs render through lucide.
-- [ ] Both codemods have tests and are idempotent.
+- [x] `inline-spinner` and `inline-svg` are in the ratchet, with counts that have fallen.
+- [x] No inline spinner remains outside the skipped v2 code; each became `Spinner` or `Button loading`.
+- [x] The repeated check, chevron, close and warning SVGs render through lucide.
+- [x] Both codemods have tests and are idempotent.
+
+(as merged: earlier P10 steps had already removed most inline SVGs, so the starting counts were inline-spinner 1 and inline-svg 4, not 32 to 34. The codemods use the TypeScript compiler API like `tokens.ts` (ts-morph is not installed) and share `scripts/codemods/svg.ts`; they run as `npm run codemod:spinners` and `npm run codemod:icons`, write `<Icon icon={icons.<concept>} size={N} />` through `lib/ui/icons.ts` (new concepts `chevronDown` and `chevronLeft`), and also match the 20px solid check and warning paths. `inline-svg` allows `components/rewind/`, `app/(app)/rewind/`, `lib/rewind/`, `components/ui/chart*` and any `chart(s)/` folder; `motion.svg` never counts. Left for P10.25: the rocket SVG in `components/setup/setup-wizard/final-success-animation.tsx`, the one remaining inline SVG (ESLint raw-svg warnings 4 before, 1 after).)
 
 ### Step P10.16: Admin command menu
 
