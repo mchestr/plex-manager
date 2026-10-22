@@ -1,9 +1,12 @@
 import { getHistoricalWrappedData } from "@/actions/admin"
 import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
 import { HistoricalWrappedSelectorHeader } from "@/components/admin/wrapped/historical-wrapped-selector-header"
-import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
+import { ArchiveArticle } from "@/components/rewind/article/archive-article"
+import { RewindScope } from "@/components/rewind/stage/rewind-scope"
 import { requireAdmin } from "@/lib/admin"
-import { getFormat } from "@/lib/settings/app-settings"
+import { serverName } from "@/lib/brand"
+import { rewindFontVariables } from "@/lib/rewind/fonts"
+import { getAppSettings, getFormat } from "@/lib/settings/app-settings"
 import Link from "next/link"
 
 // Force dynamic rendering to prevent caching
@@ -17,7 +20,12 @@ export default async function HistoricalWrappedPage({
   await requireAdmin()
   const { wrappedId, llmUsageId } = await params
 
-  const [historicalData, f] = await Promise.all([getHistoricalWrappedData(llmUsageId, wrappedId), getFormat()])
+  const [historicalData, f, settings, brand] = await Promise.all([
+    getHistoricalWrappedData(llmUsageId, wrappedId),
+    getFormat(),
+    getAppSettings(),
+    serverName(),
+  ])
 
   if (!historicalData) {
     return (
@@ -62,7 +70,7 @@ export default async function HistoricalWrappedPage({
             <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-8 text-center">
               <h2 className="text-2xl font-bold text-white mb-2">Historical Version Not Found</h2>
               <p className="text-slate-400 mb-6">
-                The requested historical wrapped version could not be found or parsed.
+                The requested historical Rewind version could not be found or parsed.
               </p>
               <Link
                 href="/admin/users"
@@ -106,7 +114,7 @@ export default async function HistoricalWrappedPage({
               </Link>
               <div className="flex-1 min-w-0">
                 <h1 data-testid="admin-wrapped-history-heading" className="text-xl font-bold text-white truncate">
-                  {userName}&apos;s {year} Wrapped
+                  {userName}&apos;s Rewind {year}
                 </h1>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Historical Version • {f.dateTime(llmUsage.createdAt, { zoneLabel: true })} • {llmUsage.provider}/{llmUsage.model || "unknown"}
@@ -124,7 +132,9 @@ export default async function HistoricalWrappedPage({
           {historicalData.removed ? (
             <LlmTextRemovedNotice title="Historical version" />
           ) : (
-            <WrappedViewerWrapper wrappedData={historicalData.wrappedData} year={year} />
+            <RewindScope fontClassName={rewindFontVariables}>
+              <ArchiveArticle legacy={historicalData.wrappedData} year={year} brand={brand} locale={settings.locale} />
+            </RewindScope>
           )}
         </div>
       </div>

@@ -111,8 +111,6 @@ function parsePostgresUrl(url: string | undefined): ParsedDatabaseUrl {
  * assertTestDatabaseUrl('postgresql://postgres:pw@localhost:5432/plex_wrapped')
  * // => throws: ... database "plex_wrapped" ... postgresql://postgres:***@localhost:5432/plex_wrapped
  * ```
- *
- * @internal
  */
 export function assertTestDatabaseUrl(url: string | undefined): string {
   const target = parsePostgresUrl(url)

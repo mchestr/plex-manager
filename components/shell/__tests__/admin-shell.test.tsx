@@ -72,7 +72,7 @@ describe('AdminShell', () => {
     expect(within(sidebar).getByTestId('admin-nav-queues')).toHaveTextContent('2 failed')
     const tabs = within(screen.getByTestId('admin-tab-bar')).getAllByRole('listitem')
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Invites', 'Users', 'Rewind', 'Settings', 'More, jobs have failed'])
-    expect(screen.getByTestId('admin-tab-rewind')).toHaveAttribute('href', '/admin/prompts')
+    expect(screen.getByTestId('admin-tab-rewind')).toHaveAttribute('href', '/admin/rewind')
   })
 
   it('opens the grouped More sheet, and Escape returns focus to More', async () => {
@@ -88,7 +88,9 @@ describe('AdminShell', () => {
       expect(within(sheet).getByRole('region', { name: group })).toBeInTheDocument()
     }
     expect(within(within(sheet).getByRole('region', { name: 'Rewind' })).getAllByRole('link').map((a) => a.textContent)).toEqual([
+      'Season',
       'Playground',
+      'Gallery',
       'Prompts',
       'Share analytics',
     ])
@@ -151,12 +153,22 @@ describe('AdminShell', () => {
   })
 
   it('steps aside on an immersive route, assistant included', () => {
-    mockPathname.mockReturnValue('/admin/users/u1/wrapped')
+    mockPathname.mockReturnValue('/admin/wrapped/w1/history/l1')
     renderShell()
 
     expect(screen.queryByTestId('admin-sidebar')).not.toBeInTheDocument()
     expect(screen.queryByTestId('admin-tab-bar')).not.toBeInTheDocument()
     expect(screen.queryByTestId('admin-chat-toggle')).not.toBeInTheDocument()
     expect(screen.getByRole('main')).toHaveTextContent('Page')
+  })
+
+  it('keeps the nav on the admin Rewind preview and hides only the assistant (P7.9)', () => {
+    mockPathname.mockReturnValue('/admin/users/u1/rewind/2026')
+    renderShell()
+
+    expect(screen.getByTestId('admin-sidebar')).toBeInTheDocument()
+    expect(screen.getByTestId('admin-tab-bar')).toBeInTheDocument()
+    expect(screen.queryByTestId('admin-chat-toggle')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('admin-chat-toggle-mobile')).not.toBeInTheDocument()
   })
 })

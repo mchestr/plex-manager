@@ -57,6 +57,12 @@ export const LIMITS = {
   "rw:card:share": { points: 30, duration: MINUTE },
   "rw:gen:burst": { points: 1, duration: 10 * MINUTE },
   "rw:gen:daily": { points: 3, duration: DAY },
+  // View tracking per member (P7.14): one call per page reached in a session, plus shares
+  "rw:view": { points: 120, duration: 15 * MINUTE },
+  // Hide and unhide a title per member (P7.7)
+  "rw:hide": { points: 20, duration: DAY },
+  // Admin dry runs of the Rewind pipeline per admin (P7.10)
+  "rw:dryrun": { points: 10, duration: 10 * MINUTE },
   // Rewind copy calls per LLM provider (design 9.4); the pipeline waits for a point
   "rw:llm": { points: 30, duration: MINUTE },
 } as const satisfies Record<string, LimitConfig>

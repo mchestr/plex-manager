@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 
 import { PortalContainerProvider } from "@/components/ui/portal-container"
 import type { CopyAuthor } from "@/lib/rewind/copy-disclosure"
-import { registry, type IssuePageType, type PageTable } from "@/lib/rewind/registry"
+import { registry, type IssuePageType, type PageTable, type RewindPageType } from "@/lib/rewind/registry"
 
 import { StoryStage, type StoryStagePage } from "../story-stage"
 
@@ -17,7 +17,7 @@ export const TABLE: PageTable = {
 }
 
 /** Pages with a real `h2`, a control on Top shows, and a table on every chart page. */
-export function stagePages(types: IssuePageType[]): StoryStagePage[] {
+export function stagePages(types: RewindPageType[]): StoryStagePage[] {
   return types.map((type) => ({
     type,
     content: (

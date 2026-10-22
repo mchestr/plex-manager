@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`13 Setup summarises the page deterministically 1`] = `
+[
+  "91% of your plays were direct play, with no transcoding. 89% were watched at home. Most of your viewing was on Apple TV, in Plex for Apple TV.",
+  "100% of your plays were direct play, with no transcoding. 100% were watched at home. Most of your viewing was on Apple TV, in Plex for Apple TV.",
+  "100% of your plays were direct play, with no transcoding. 100% were watched at home. Most of your viewing was on Apple TV, in Plex for Apple TV.",
+]
+`;

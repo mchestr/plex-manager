@@ -153,19 +153,27 @@ function centrefoldArticle(data: CentrefoldData, facts: RewindFactsV3, ctx: Arti
   if (has(facts, "archetype.runnerUp")) blocks.push({ kind: "definitionList", entries: [{ term: "Close second", detail: plain(shown(facts, "archetype.runnerUp")) }] })
   if (data.shortlist.length > 0) {
     blocks.push(
-      {
-        kind: "definitionList",
-        label: `Why ${name}?`,
-        entries: whyReasons(data.shortlist).map((candidate, i) => ({
-          term: `${candidate.name}, ${STANDING[i].toLowerCase()}`,
-          detail: copyText(candidate.reasons.join(" "), facts),
-        })),
-      },
+      ...whyBlock(data, facts),
       paragraph(ctx.copy?.archetype.dedication ?? template("archetype.dedication"), facts),
       { kind: "note", text: plain(aboutTheWords({ copySource: ctx.copySource, model: ctx.model })) }
     )
   }
   return [...blocks, ...tableBlock(centrefoldPage.table?.(data, facts, ctx))]
+}
+
+/** "Why this?": each shortlisted archetype with its reasons, the chosen one first. */
+function whyBlock(data: CentrefoldData, facts: RewindFactsV3): ArticleBlock[] {
+  if (data.shortlist.length === 0) return []
+  return [
+    {
+      kind: "definitionList",
+      label: `Why ${shown(facts, "archetype.name")}?`,
+      entries: whyReasons(data.shortlist).map((candidate, i) => ({
+        term: `${candidate.name}, ${STANDING[i].toLowerCase()}`,
+        detail: copyText(candidate.reasons.join(" "), facts),
+      })),
+    },
+  ]
 }
 
 export const centrefoldPage: PageDefinition<CentrefoldData> = {
@@ -181,6 +189,11 @@ export const centrefoldPage: PageDefinition<CentrefoldData> = {
   },
   table: (data, facts, settings) => (data.hours.some((n) => n > 0) ? hoursTable(data.hours, facts, settings) : null),
   article: centrefoldArticle,
+  // The shortlist with its reasons, then the 24 hours.
+  notes: (data, facts, ctx) => {
+    const blocks = [...whyBlock(data, facts), ...tableBlock(centrefoldPage.table?.(data, facts, ctx))]
+    return blocks.length > 0 ? blocks : figure(centrefoldPage.srSummary(data, facts))
+  },
   share: {
     facts: [
       "archetype.name", "archetype.rarityShare", "archetype.rarityCount", "archetype.scoredMembers",

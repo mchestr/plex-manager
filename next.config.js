@@ -35,7 +35,7 @@ module.exports = (phase) => ({
   // Stops `next dev` from writing AGENTS.md into the repo; CLAUDE.md already
   // holds the agent guidance.
   agentRules: false,
-  serverExternalPackages: ['discord.js', '@discordjs/ws', 'zlib-sync', 'bufferutil', 'utf-8-validate'],
+  serverExternalPackages: ['discord.js', '@discordjs/ws', 'zlib-sync', 'bufferutil', 'utf-8-validate', 'subset-font'],
   // The optimizer would fetch and decode any URL an anonymous caller passes to
   // /_next/image. With it off, Next answers that route with a 404.
   images: {
@@ -48,9 +48,14 @@ module.exports = (phase) => ({
     '/apple-icon': ['./lib/og/fonts/*'],
     '/opengraph-image': ['./lib/og/fonts/*'],
     '/twitter-image': ['./lib/og/fonts/*'],
-    // The Rewind card fonts are read from disk (lib/rewind/cards/fonts.ts)
-    '/api/rewind/card/[rewindId]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
-    '/api/rewind/card/s/[assetKey]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
+    // The Rewind card fonts are read from disk (lib/rewind/cards/fonts.ts), and so
+    // are the safe-mode Noto faces and harfbuzz's subsetter (lib/rewind/cards/noto.ts)
+    '/api/rewind/card/[rewindId]/[page]': ['./lib/rewind/cards/fonts/*.ttf', './lib/rewind/cards/fonts/noto/*.ttf', './node_modules/harfbuzzjs/dist/harfbuzz-subset.wasm'],
+    '/api/rewind/card/s/[assetKey]/[page]': ['./lib/rewind/cards/fonts/*.ttf', './lib/rewind/cards/fonts/noto/*.ttf', './node_modules/harfbuzzjs/dist/harfbuzz-subset.wasm'],
+    '/api/rewind/card/preview/[previewId]/[page]': ['./lib/rewind/cards/fonts/*.ttf', './lib/rewind/cards/fonts/noto/*.ttf', './node_modules/harfbuzzjs/dist/harfbuzz-subset.wasm'],
+    // Dry runs read the golden fixtures from disk (lib/rewind/dry-run/fixtures.ts): the admin pages that start them,
+    // and, for the gallery's replay (lib/llm/replay.ts), the selected model and its recordings
+    '/admin/**': ['./evals/rewind/fixtures/*.json', './evals/rewind/selected.json', './evals/rewind/recordings/**/*.json'],
   },
   // Rewind moved from /wrapped (P5.1). Browsers cache a 308, so every target
   // must keep working; the share rule comes first, or the catch-all would send
@@ -98,6 +103,16 @@ module.exports = (phase) => ({
             key: 'Content-Security-Policy',
             value: contentSecurityPolicy(phase)
           }
+        ],
+      },
+      // The public share page (P7.5, UI-39): kept out of search results, and
+      // its token never leaves in a Referer. After the catch-all, so its
+      // Referrer-Policy wins.
+      {
+        source: '/rewind/s/:path*',
+        headers: [
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
         ],
       },
     ]

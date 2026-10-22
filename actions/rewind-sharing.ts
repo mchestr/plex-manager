@@ -280,7 +280,10 @@ export const rotateRewindShare = memberAction({
       throw error
     }
     logAuditEvent(AuditEventType.REWIND_SHARE_ROTATED, userId, { shareId: created.id, rotatedFromId: share.id, year: share.wrapped.year, pages: share.pages })
-    revalidateShares()
+    // No revalidation: it would re-render the calling page, and the owner
+    // banner rotates from the old address, which is now a 404, so the new
+    // address it shows once would be lost. Both callers keep the new link in
+    // their own state, and every page that shows a link renders per request.
     return ok({ shareId: created.id, url: `${base}${token}`, expiresAt: created.expiresAt?.toISOString() ?? null })
   },
 })

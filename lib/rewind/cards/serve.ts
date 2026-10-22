@@ -22,6 +22,7 @@ import type { ShareContext, ShareOptions, SharePageType } from "@/lib/wrapped/da
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 
 import { cardCacheKey, readCachedCard, writeCachedCard } from "./cache"
+import { eligibleCards } from "./eligible"
 import { hasCard } from "./index"
 import { renderCardPng } from "./render"
 
@@ -69,10 +70,16 @@ export interface ServeCardRequest {
   cacheControl: string
 }
 
-/** The card input of an authorised request, or null when the page is not published or has no card. */
+/**
+ * The card input of an authorised request, or null when the page is not
+ * published, has no card, or its card is not eligible under the options (a
+ * fully hidden list, the calendar without Daily detail). Every published page
+ * has an OG card.
+ */
 export function projectCard({ rewind, options, ctx, page, size }: Omit<ServeCardRequest, "limit" | "cacheControl">): CardInput | null {
-  if (!hasCard(page)) return null
+  if (size !== "og" && !hasCard(page)) return null
   const shared = toShareSafe(rewind, options, ctx)
+  if (size !== "og" && !eligibleCards(shared, options).includes(page)) return null
   return cardInput(shared, page, size, { factsHash: rewind.factsHash, options, ctx })
 }
 

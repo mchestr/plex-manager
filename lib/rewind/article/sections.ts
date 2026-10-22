@@ -5,7 +5,7 @@
  * @module lib/rewind/article/sections
  */
 
-import { registry, type IssuePageType, type RegistryEntry } from "@/lib/rewind/registry"
+import { registry, type RewindPageType, type RegistryEntry } from "@/lib/rewind/registry"
 import type { SelectedPage } from "@/lib/rewind/select-pages"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
@@ -17,7 +17,7 @@ export interface ArticleSection {
   folio: number | null
   name: string
   /** The page it prints; the centrefold starts a new sheet in print. */
-  type: IssuePageType | null
+  type: RewindPageType | null
   blocks: ArticleBlock[]
 }
 

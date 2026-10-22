@@ -16,7 +16,7 @@ import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import { BookendsDataSchema, type BookendsData } from "./bookends.schema"
 import { pageDeck } from "./deck"
 import { has, isFinalCut, issueYear, num, shown } from "./facts"
-import { ratingKeyOf } from "./title-key.schema"
+import { ratingKeyOf } from "./title-key"
 
 const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"]
 

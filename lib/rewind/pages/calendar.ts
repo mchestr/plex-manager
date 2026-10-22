@@ -8,7 +8,7 @@
  * @module lib/rewind/pages/calendar
  */
 
-import { figure, heading, paragraph, tableBlock } from "@/lib/rewind/article/blocks"
+import { figure, heading, paragraph, plain, tableBlock } from "@/lib/rewind/article/blocks"
 import { formatDayMonth, formatRewindDuration } from "@/lib/rewind/format"
 import type { PageDefinition, PageTable } from "@/lib/rewind/registry"
 import { headline } from "@/lib/wrapped/copy/templates"
@@ -96,5 +96,10 @@ export const calendarPage: PageDefinition<CalendarData> = {
     ...figure(calendarPage.srSummary(data, facts)),
     ...monthTables(data, facts, ctx).flatMap(tableBlock),
   ],
+  // Minutes per day, one table per month (P8.3 adds the roving-focus grid).
+  notes: (data, facts, ctx) => {
+    const tables = monthTables(data, facts, ctx)
+    return tables.length > 0 ? [{ kind: "heading", text: plain("Every day you pressed play") }, ...tables.flatMap(tableBlock)] : figure(calendarPage.srSummary(data, facts))
+  },
   share: { facts: ["days.active", "window.elapsedDays", "streak.longest.days", "days.biggest.date", "days.biggest.minutes"] },
 }

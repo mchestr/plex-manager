@@ -37,6 +37,7 @@ export type TautulliCommand =
   | "get_library_names"
   | "get_metadata"
   | "get_server_info"
+  | "get_tautulli_info"
   | "get_user_watch_time_stats"
   | "get_users"
 
@@ -153,6 +154,20 @@ export async function getTautulliHomeStat(
   statsType: "plays" | "duration" = "plays"
 ): Promise<ConnectionResult<unknown>> {
   return rawCommand(config, "get_home_stats", { stat_id: statId, stats_count: count, stats_type: statsType })
+}
+
+const tautulliInfoSchema = z.object({ tautulli_version: z.string() }).loose()
+
+/**
+ * Tautulli's own version (`get_tautulli_info`), such as `"2.17.0"`, without
+ * the leading `v`. The season preflight warns below 2.17 (P7.8).
+ */
+export async function getTautulliInfo(
+  config: TautulliEndpoint,
+  opts: { signal?: AbortSignal } = {}
+): Promise<TautulliResult<{ version: string }>> {
+  const result = await tautulliCommand(config, "get_tautulli_info", {}, tautulliInfoSchema, { attempts: 1, timeoutMs: 5000, ...opts })
+  return result.ok ? { ok: true, data: { version: result.data.tautulli_version.replace(/^v/i, "") } } : result
 }
 
 export async function getTautulliUserWatchTimeStats(

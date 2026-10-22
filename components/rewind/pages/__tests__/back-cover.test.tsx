@@ -107,7 +107,7 @@ describe("18 Back cover", () => {
 
   it("reads the privacy line from the member's share choices and link", () => {
     const setup: ShareSetup = {
-      rewindId: "wrapped-1", year: 2026, cards: ["cover"], allowArt: true, publicLinks: true, canShare: true,
+      rewindId: "wrapped-1", year: 2026, cards: ["cover"], artCards: [], allowArt: true, publicLinks: true, canShare: true,
       choices: { signed: true, includeArt: true, dailyDetail: false, cardFacts: [] },
       link: { shareId: "share-1", pages: ["cover"], expiresAt: null },
       seasonCloses: "31 January 2027",

@@ -80,4 +80,21 @@ describe('checkEligibility', () => {
     })
     await expect(checkEligibility(input({ config: { stripeEnabled: true } }), deps())).resolves.toEqual({ ok: true })
   })
+
+  it('generates a member under payload audience all while rewindAudience is admins, and skips them under config (P7.8)', async () => {
+    const admins = { config: { rewindAudience: 'admins' } }
+    await expect(checkEligibility({ ...input(admins), audience: 'all' }, deps())).resolves.toEqual({ ok: true })
+    await expect(checkEligibility({ ...input(admins), audience: 'config' }, deps())).resolves.toEqual({
+      ok: false,
+      reason: 'NOT_IN_AUDIENCE',
+    })
+    await expect(checkEligibility(input(admins), deps())).resolves.toEqual({ ok: false, reason: 'NOT_IN_AUDIENCE' })
+  })
+
+  it('still skips REWIND_DISABLED under payload audience all', async () => {
+    await expect(checkEligibility({ ...input({ config: { rewindEnabled: false } }), audience: 'all' }, deps())).resolves.toEqual({
+      ok: false,
+      reason: 'REWIND_DISABLED',
+    })
+  })
 })

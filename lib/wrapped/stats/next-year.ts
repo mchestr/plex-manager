@@ -19,12 +19,17 @@
  * configured, a title whose rating is excluded or unknown is never picked
  * (FR-44). Without Taste, or without the library, there are no picks.
  *
- * `returning` (Sonarr) stays null until P7.2.
+ * ## Returning
+ *
+ * The member's top five listed series matched by their cached `tvdb://`
+ * guid to Sonarr's season premieres (`sources/sonarr-calendar.ts`), soonest
+ * first, at most three. Null without Sonarr, or when its calendar failed.
  *
  * @module lib/wrapped/stats/next-year
  */
 
 import type { LibraryItem } from "@/lib/wrapped/sources/plex-library"
+import type { SeasonPremiere } from "@/lib/wrapped/sources/sonarr-calendar"
 import type { PlayEvent } from "@/lib/wrapped/sources/watch-history-source"
 import { dayKey } from "@/lib/wrapped/time/zone"
 
@@ -38,6 +43,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const RECENT_DAYS = 120
 const LEFT_DAYS = 30
 const LIMIT = 3
+const TOP_SERIES = 5
 
 export type LibraryTitle = Pick<
   LibraryItem,
@@ -50,13 +56,15 @@ export interface NextYearInput {
   /** The server's films and series, or null when the library pass is missing. */
   library: readonly LibraryTitle[] | null
   excludedContentRatings: readonly string[]
+  /** Sonarr's season premieres, or null without Sonarr. */
+  premieres?: readonly SeasonPremiere[] | null
 }
 
 export interface NextYearStats {
   eligible: boolean
   leftForLater: Array<{ key: TitleKey; title: string; season: number; episode: number; lastWatched: string }>
   picks: Array<{ ratingKey: string; kind: "film" | "series"; title: string; year: number | null; genre: string; person: string | null }>
-  returning: null
+  returning: Array<{ key: TitleKey; title: string; season: number; date: string; tmdbId: number | null }> | null
 }
 
 function leftForLater(events: readonly PlayEvent[], ctx: StatsContext, lookup: MetadataLookup): NextYearStats["leftForLater"] {
@@ -76,6 +84,20 @@ function leftForLater(events: readonly PlayEvent[], ctx: StatsContext, lookup: M
     if (season === 0 || season > finalSeason || (season === finalSeason && episode >= counts[String(finalSeason)])) return []
     return [{ key: series.key, title: series.title, season, episode, lastWatched: dayKey(last, ctx.zone) }]
   })
+}
+
+function returning(events: readonly PlayEvent[], ctx: StatsContext, lookup: MetadataLookup, premieres: readonly SeasonPremiere[]): NonNullable<NextYearStats["returning"]> {
+  const byTvdb = new Map(premieres.map((p) => [`tvdb://${p.tvdbId}`, p]))
+  const episodes = videoEvents(events).filter((e) => e.mediaType === "episode" && isListed(e, ctx))
+  return rankTitles(episodes, ctx, "series")
+    .slice(0, TOP_SERIES)
+    .flatMap((series) => {
+      const guids = episodes.filter((e) => `series:${e.grandparentRatingKey}` === series.key).flatMap((e) => lookup(e)?.guids ?? [])
+      const premiere = guids.map((guid) => byTvdb.get(guid)).find(Boolean)
+      return premiere ? [{ key: series.key, title: series.title, season: premiere.season, date: premiere.airDate, tmdbId: premiere.tmdbId }] : []
+    })
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .slice(0, LIMIT)
 }
 
 const byText = (a: LibraryTitle, b: LibraryTitle) =>
@@ -125,5 +147,6 @@ export function computeNextYear(
 ): NextYearStats {
   const left = leftForLater(events, ctx, lookup).slice(0, LIMIT)
   const picked = picks(events, ctx, input)
-  return { eligible: left.length > 0 || picked.length > 0, leftForLater: left, picks: picked, returning: null }
+  const back = input.premieres ? returning(events, ctx, lookup, input.premieres) : null
+  return { eligible: left.length > 0 || picked.length > 0 || (back?.length ?? 0) > 0, leftForLater: left, picks: picked, returning: back }
 }

@@ -161,7 +161,7 @@ describe('requestRewindGeneration', () => {
     expect(await requestRewindGeneration({ year: 2026 })).toEqual({
       success: false,
       code: 'CONFLICT',
-      error: 'Wrapped generation is currently disabled',
+      error: 'Rewind generation is currently off',
     })
     expect(writes()).toBe(0)
 

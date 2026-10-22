@@ -308,3 +308,56 @@ export async function checkGuildMembership(
     return false
   }
 }
+
+/** A Discord REST call that failed; `code` is Discord's JSON error code when it sent one. */
+export class DiscordApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: number | null
+  ) {
+    super(`Discord API error ${status}${code === null ? "" : ` (code ${code})`}`)
+    this.name = "DiscordApiError"
+  }
+}
+
+/** Discord's error code for a user who does not accept DMs from the bot. */
+export const DISCORD_DMS_CLOSED = 50007
+
+async function discordApiError(response: Response): Promise<DiscordApiError> {
+  const body: unknown = await response.json().catch(() => null)
+  const code = body && typeof body === "object" && "code" in body && typeof body.code === "number" ? body.code : null
+  return new DiscordApiError(response.status, code)
+}
+
+/**
+ * Sends a direct message from the bot over the REST API (P7.14): opens the
+ * DM channel with `POST /users/@me/channels`, then posts to it. It needs no
+ * gateway connection, so any worker can send it, not only the process that
+ * holds the bot's lease. Throws a {@link DiscordApiError} when Discord
+ * refuses either call (code {@link DISCORD_DMS_CLOSED} when the member's DMs
+ * are closed), and an `Error` when no bot token is configured.
+ */
+export async function sendDiscordDirectMessage(discordUserId: string, content: string, signal: AbortSignal): Promise<void> {
+  // Loaded on use, so `scripts/register-discord-metadata.ts` can import this module without a database
+  const { getDiscordBotToken } = await import("@/lib/discord/config")
+  const botToken = await getDiscordBotToken()
+  if (!botToken) throw new Error("No Discord bot token is configured")
+  const headers = { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" }
+
+  const opened = await fetch(`${DISCORD_API_BASE}/users/@me/channels`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ recipient_id: discordUserId }),
+    signal,
+  })
+  if (!opened.ok) throw await discordApiError(opened)
+  const channel = (await opened.json()) as { id: string }
+
+  const sent = await fetch(`${DISCORD_API_BASE}/channels/${channel.id}/messages`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ content, allowed_mentions: { parse: [] } }),
+    signal,
+  })
+  if (!sent.ok) throw await discordApiError(sent)
+}

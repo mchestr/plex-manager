@@ -1678,6 +1678,342 @@
           510,
           220,
           295
+        ],
+        "lastYearDaily": [
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          300,
+          150,
+          150,
+          158
         ]
       }
     },
@@ -1783,6 +2119,164 @@
               0
             ]
           }
+        ],
+        "more": [
+          {
+            "key": "series:4033",
+            "title": "The Office",
+            "minutes": 1500,
+            "episodes": 15
+          },
+          {
+            "key": "series:4032",
+            "title": "Ted Lasso",
+            "minutes": 1500,
+            "episodes": 15
+          },
+          {
+            "key": "series:4031",
+            "title": "Fleabag",
+            "minutes": 1500,
+            "episodes": 15
+          },
+          {
+            "key": "series:4030",
+            "title": "The Crown",
+            "minutes": 1500,
+            "episodes": 15
+          },
+          {
+            "key": "series:4029",
+            "title": "Stranger Things",
+            "minutes": 1500,
+            "episodes": 15
+          },
+          {
+            "key": "series:4028",
+            "title": "The Last of Us",
+            "minutes": 1500,
+            "episodes": 15
+          },
+          {
+            "key": "series:4027",
+            "title": "Succession",
+            "minutes": 1500,
+            "episodes": 15
+          },
+          {
+            "key": "series:4035",
+            "title": "Seinfeld",
+            "minutes": 1450,
+            "episodes": 15
+          },
+          {
+            "key": "series:4034",
+            "title": "Parks and Recreation",
+            "minutes": 1450,
+            "episodes": 15
+          },
+          {
+            "key": "series:4026",
+            "title": "House of the Dragon",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4025",
+            "title": "Mad Men",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4024",
+            "title": "The Wire",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4023",
+            "title": "Better Call Saul",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4022",
+            "title": "The Great British Bake Off",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4021",
+            "title": "Andor",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4020",
+            "title": "The Bear",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4019",
+            "title": "Bron/Broen",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4018",
+            "title": "Dix pour cent",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4017",
+            "title": "Shōgun",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4016",
+            "title": "Avatar: The Last Airbender",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4015",
+            "title": "Star Trek: Strange New Worlds",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4014",
+            "title": "It's Always Sunny in Philadelphia",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4013",
+            "title": "Crazy Ex-Girlfriend",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4012",
+            "title": "Unbreakable Kimmy Schmidt",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4011",
+            "title": "Marvel's Agents of S.H.I.E.L.D.",
+            "minutes": 1440,
+            "episodes": 16
+          },
+          {
+            "key": "series:4010",
+            "title": "Only Murders in the Building",
+            "minutes": 1440,
+            "episodes": 16
+          }
         ]
       }
     },
@@ -1806,6 +2300,73 @@
             "key": "film:5080"
           }
         ]
+      }
+    },
+    {
+      "type": "taste",
+      "data": {
+        "genres": [
+          {
+            "minutes": 10757
+          },
+          {
+            "minutes": 10052
+          },
+          {
+            "minutes": 9935
+          },
+          {
+            "minutes": 9820
+          },
+          {
+            "minutes": 9682
+          }
+        ],
+        "decades": [
+          {
+            "decade": 2020,
+            "titles": 26
+          },
+          {
+            "decade": 2010,
+            "titles": 35
+          },
+          {
+            "decade": 2000,
+            "titles": 31
+          },
+          {
+            "decade": 1990,
+            "titles": 16
+          },
+          {
+            "decade": 1980,
+            "titles": 12
+          },
+          {
+            "decade": 1970,
+            "titles": 8
+          },
+          {
+            "decade": 1960,
+            "titles": 5
+          },
+          {
+            "decade": 1950,
+            "titles": 7
+          },
+          {
+            "decade": 1940,
+            "titles": 3
+          }
+        ]
+      }
+    },
+    {
+      "type": "people",
+      "data": {
+        "actors": 5,
+        "directors": 3
       }
     },
     {
@@ -3302,6 +3863,199 @@
       }
     },
     {
+      "type": "race",
+      "data": {
+        "series": [
+          {
+            "key": "series:4001",
+            "title": "The Lord of the Rings: The Rings of Power"
+          },
+          {
+            "key": "series:4002",
+            "title": "Severance"
+          },
+          {
+            "key": "series:4003",
+            "title": "The Sopranos"
+          },
+          {
+            "key": "series:4004",
+            "title": "Breaking Bad"
+          },
+          {
+            "key": "series:4005",
+            "title": "Game of Thrones"
+          }
+        ],
+        "frames": [
+          {
+            "month": 1,
+            "minutes": [
+              0,
+              330,
+              275,
+              250,
+              232
+            ],
+            "leader": 1
+          },
+          {
+            "month": 2,
+            "minutes": [
+              0,
+              660,
+              550,
+              500,
+              464
+            ],
+            "leader": 1
+          },
+          {
+            "month": 3,
+            "minutes": [
+              0,
+              990,
+              825,
+              750,
+              696
+            ],
+            "leader": 1
+          },
+          {
+            "month": 4,
+            "minutes": [
+              0,
+              1320,
+              1100,
+              1000,
+              928
+            ],
+            "leader": 1
+          },
+          {
+            "month": 5,
+            "minutes": [
+              0,
+              1650,
+              1375,
+              1250,
+              1160
+            ],
+            "leader": 1
+          },
+          {
+            "month": 6,
+            "minutes": [
+              0,
+              1980,
+              1650,
+              1500,
+              1392
+            ],
+            "leader": 1
+          },
+          {
+            "month": 7,
+            "minutes": [
+              0,
+              2310,
+              1925,
+              1750,
+              1624
+            ],
+            "leader": 1
+          },
+          {
+            "month": 8,
+            "minutes": [
+              0,
+              2640,
+              2200,
+              2000,
+              1856
+            ],
+            "leader": 1
+          },
+          {
+            "month": 9,
+            "minutes": [
+              1120,
+              2970,
+              2475,
+              2250,
+              2088
+            ],
+            "leader": 1
+          },
+          {
+            "month": 10,
+            "minutes": [
+              2240,
+              3300,
+              2750,
+              2500,
+              2320
+            ],
+            "leader": 1
+          },
+          {
+            "month": 11,
+            "minutes": [
+              3350,
+              3300,
+              2970,
+              2500,
+              2320
+            ],
+            "leader": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "records",
+      "data": {
+        "cells": [
+          "binge",
+          "day",
+          "week",
+          "completion"
+        ],
+        "stamp": null,
+        "pausedMinutes": null,
+        "bingeKey": "series:4001",
+        "pausedKey": null
+      }
+    },
+    {
+      "type": "setup",
+      "data": {
+        "meters": [
+          "setup.directPlayShare",
+          "setup.homeShare"
+        ]
+      }
+    },
+    {
+      "type": "requests",
+      "data": {
+        "lines": [
+          "requests.approved",
+          "requests.available",
+          "requests.watched",
+          "requests.pending",
+          "requests.declined"
+        ]
+      }
+    },
+    {
+      "type": "standing",
+      "data": {
+        "rank": 1,
+        "community": []
+      }
+    },
+    {
       "type": "centrefold",
       "data": {
         "shortlist": [
@@ -3362,6 +4116,21 @@
           },
           "share": "hours.afterDarkShare"
         }
+      }
+    },
+    {
+      "type": "next-year",
+      "data": {
+        "leftForLater": [],
+        "returning": [],
+        "picks": [
+          {
+            "ratingKey": "5114",
+            "kind": "film",
+            "year": 2023,
+            "because": "people.actor[1].name"
+          }
+        ]
       }
     },
     {
@@ -3745,14 +4514,14 @@
       "bookends": "Here since {{fact:member.since}}, and this is how the year opened and closed.",
       "topShows": "The series you kept returning to, in order.",
       "topFilms": "The longest was {{fact:films.longest.title}}, at {{fact:films.longest.minutes}}.",
-      "taste": null,
-      "people": null,
+      "taste": "After {{fact:taste.genre[1].name}} came {{fact:taste.genre[2].name}} and {{fact:taste.genre[3].name}}.",
+      "people": "Behind the camera, {{fact:people.director[1].name}} came up first.",
       "clock": "Your latest start was {{fact:hours.latestStart.time}} on a {{fact:hours.latestStart.weekday}}.",
       "calendar": "Your biggest day was {{fact:days.biggest.date}}, at {{fact:days.biggest.minutes}}.",
-      "records": null,
-      "requests": null,
-      "standing": null,
-      "nextYear": null
+      "records": "You finished {{fact:records.completionShare}} of what you started.",
+      "requests": "{{fact:requests.available}} of them have arrived on the server.",
+      "standing": "Where you stand, with nobody named.",
+      "nextYear": "A pick for the new year: {{fact:next.picks[1].title}}."
     },
     "archetype": {
       "id": "midnight-marathoner",
@@ -3771,8 +4540,14 @@
       "deck.bookends": "fd194e98efa59c19136e07f7df6d4fb626f0cc24d54b7b26ea0942580c2eec07",
       "deck.topShows": "9e85f8a1ea4ab9e850477fd1df54000af2167afa5fcca31ceb886dafb9dca79b",
       "deck.topFilms": "955adc4c6916e4f20d335028212cc1633fea5c52415ac6a25eb06b46ad4dbea3",
+      "deck.taste": "e48af6ab3517f9a267b5f5909d2e048e52b5f9f51b057e88f39c636a8987bcc2",
+      "deck.people": "ccadd9474d547c76957b2ff32647868a70e8cc5f397cab4f00db56108231e00e",
       "deck.clock": "7e2cf557e4fd3084f4f19f4d770a2c5ccb0b03ceb32516d847233e5f3ab4ff7f",
       "deck.calendar": "91ae0d9fe232ce5b52c732219db1007124c4500eb5f09f680854cd14899747b8",
+      "deck.records": "9c6c6f023d710139d954d7410bc5d4a6051163e94a6ceb7b7a56a543cf142ef6",
+      "deck.requests": "bad653121839928d5e771da38fe05778bc47d40d438f86f442aafb5d3cf648ce",
+      "deck.standing": "5b8bb6df6b94baba0c1e3854080993bfd17ed02d55e94d2530cf167a56e0b0e9",
+      "deck.nextYear": "45bb9c49e205dd2bb9698bd3c623390b122e43f46956d9bb33eece1010c3dfe0",
       "archetype.tagline": "bbe47e8e679a44cc390d72bbbd5a84af3b0125ce8c1f8b381ebaa0fab4ef3295",
       "archetype.dedication": "36e809250218668021554139c15e07a989efedcd6c344bcfb85e055ba2c38ff0",
       "archetype.posterLineId": "6ad5d4456c4261f374b8c0c96ae25105b7bd7f34f315c00d688c904eaa3af5f2",

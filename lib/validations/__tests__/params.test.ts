@@ -1,14 +1,12 @@
 import { randomBytes } from "crypto"
 
-import { generateShareToken } from "@/lib/utils"
-
 import { ratingKeySchema, recordIdSchema, shareTokenSchema, yearParamSchema } from "../params"
 
 describe("params", () => {
   describe("shareTokenSchema", () => {
-    it("accepts every token generateShareToken makes", () => {
+    it("accepts every 32-byte base64url token", () => {
       for (let i = 0; i < 50; i++) {
-        expect(shareTokenSchema.safeParse(generateShareToken()).success).toBe(true)
+        expect(shareTokenSchema.safeParse(randomBytes(32).toString("base64url")).success).toBe(true)
       }
     })
 

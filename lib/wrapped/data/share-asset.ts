@@ -19,28 +19,34 @@ import { assetKeySchema, ShareOptions } from "@/lib/wrapped/data/share-safe-sche
 
 export interface LiveShare {
   shareId: string
+  assetKey: string
+  expiresAt: Date | null
+  wrappedId: string
   rewind: RewindDataV3
   options: ShareOptions
   owner: { userId: string; year: number }
 }
 
-/** The live share behind `assetKey`, or null for a malformed, unknown, revoked or expired key. */
-export async function findLiveShare(assetKey: string, now: Date = new Date()): Promise<LiveShare | null> {
-  if (!assetKeySchema.safeParse(assetKey).success) return null
-  const share = await prisma.rewindShare.findUnique({
-    where: { assetKey },
-    select: {
-      id: true,
-      pages: true,
-      signed: true,
-      includeArt: true,
-      dailyDetail: true,
-      cardFacts: true,
-      expiresAt: true,
-      revokedAt: true,
-      wrapped: { select: { id: true, userId: true, year: true, status: true, data: true } },
-    },
-  })
+const liveShareSelect = {
+  id: true,
+  assetKey: true,
+  pages: true,
+  signed: true,
+  includeArt: true,
+  dailyDetail: true,
+  cardFacts: true,
+  expiresAt: true,
+  revokedAt: true,
+  wrapped: { select: { id: true, userId: true, year: true, status: true, data: true } },
+} as const
+
+/**
+ * The live share found by `where`: neither revoked nor expired, on a completed
+ * v3 Rewind with options that still parse. A rotated link's old row is
+ * revoked, so it is never live.
+ */
+async function findLive(where: { assetKey: string } | { tokenHash: string }, now: Date): Promise<LiveShare | null> {
+  const share = await prisma.rewindShare.findUnique({ where, select: liveShareSelect })
   if (!share || share.revokedAt || (share.expiresAt && share.expiresAt <= now)) return null
   if (readWrappedStatus(share.wrapped.status, share.wrapped.id) !== "completed") return null
   const stored = parseStoredRewind(share.wrapped.data)
@@ -52,7 +58,26 @@ export async function findLiveShare(assetKey: string, now: Date = new Date()): P
     cardFacts: share.cardFacts,
   })
   if (stored.version !== 3 || !options.success) return null
-  return { shareId: share.id, rewind: stored.data, options: options.data, owner: { userId: share.wrapped.userId, year: share.wrapped.year } }
+  return {
+    shareId: share.id,
+    assetKey: share.assetKey,
+    expiresAt: share.expiresAt,
+    wrappedId: share.wrapped.id,
+    rewind: stored.data,
+    options: options.data,
+    owner: { userId: share.wrapped.userId, year: share.wrapped.year },
+  }
+}
+
+/** The live share behind `assetKey`, or null for a malformed, unknown, revoked or expired key. */
+export async function findLiveShare(assetKey: string, now: Date = new Date()): Promise<LiveShare | null> {
+  if (!assetKeySchema.safeParse(assetKey).success) return null
+  return findLive({ assetKey }, now)
+}
+
+/** The live share whose token hashes to `tokenHash` (P7.5's share page), or null. */
+export function findLiveShareByTokenHash(tokenHash: string, now: Date = new Date()): Promise<LiveShare | null> {
+  return findLive({ tokenHash }, now)
 }
 
 /**

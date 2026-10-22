@@ -9,7 +9,7 @@
 import { isValidElement, type ReactElement, type ReactNode } from "react"
 
 import { CARD_PAGES, renderCard } from "@/lib/rewind/cards"
-import { fixtureRewind, shareContext, shareOptions } from "@/lib/wrapped/data/__tests__/share-fixture"
+import { editionRewind, fixtureRewind, shareContext, shareOptions } from "@/lib/wrapped/data/__tests__/share-fixture"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 import { cardInput, toShareSafe, type CardSize } from "@/lib/wrapped/data/share-safe"
 import type { ShareOptions } from "@/lib/wrapped/data/share-safe-schema"
@@ -42,14 +42,25 @@ function text(node: HostNode | string): string {
 }
 
 let heavy: RewindDataV3
+let median: RewindDataV3
+let pocket: RewindDataV3
+let postcard: RewindDataV3
 
 beforeAll(async () => {
   heavy = await fixtureRewind("heavy")
+  median = await fixtureRewind("median")
+  pocket = await editionRewind("pocket")
+  postcard = await editionRewind("postcard")
 })
+
+/** The heavy issue, or one that printed a page heavy did not: Guess, the Short list, the postcard. */
+const issueWith = (page: string) =>
+  page === "short-list" ? pocket : page === "postcard" ? postcard : heavy.pages.some((p) => p.type === page) ? heavy : median
 
 function tree(page: (typeof CARD_PAGES)[number], size: CardSize, overrides: Partial<ShareOptions> = {}, ctx = shareContext()) {
   const options = shareOptions({ pages: [page], ...overrides })
-  const input = cardInput(toShareSafe(heavy, options, ctx), page, size, { factsHash: heavy.factsHash, options, ctx })
+  const rewind = issueWith(page)
+  const input = cardInput(toShareSafe(rewind, options, ctx), page, size, { factsHash: rewind.factsHash, options, ctx })
   if (!input) throw new Error(`${page} is not published`)
   return expand(renderCard(input))[0]
 }
@@ -71,7 +82,7 @@ describe.each(CASES)("%s card (%s, %j)", (page, size, overrides) => {
   })
 
   it("names the member only when signed", () => {
-    const first = heavy.facts["member.firstName"]!.display
+    const first = issueWith(page).facts["member.firstName"]!.display
     expect(text(tree(page, size, { ...overrides, signed: false }))).not.toContain(first)
   })
 })

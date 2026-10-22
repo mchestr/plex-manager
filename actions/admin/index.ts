@@ -9,7 +9,6 @@
 export {
   setLLMDisabled,
   getWrappedSettings,
-  updateWrappedSettings,
   updateLlmCaps,
   updateServerTimeZone,
 } from "./admin-config"

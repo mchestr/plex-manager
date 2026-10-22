@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "ea274ee4a67ffb04aef7ec99494b9c4659a7980b",
-  "generatedAt": "2026-10-20T23:59:18.150Z",
+  "commit": "7a8190d03b750168caa18e8ebf31b52ca3b3d8bd",
+  "generatedAt": "2026-10-21T07:21:08.843Z",
   "files": {
     "app/(app)/page.tsx": {
       "gradient": 2,
@@ -71,7 +71,7 @@
     },
     "app/admin/settings/page.tsx": {
       "blur": 5,
-      "copy": 2,
+      "copy": 1,
       "raw-palette": 95
     },
     "app/admin/shares/page.tsx": {
@@ -85,18 +85,11 @@
       "copy": 4,
       "raw-palette": 117
     },
-    "app/admin/users/[userId]/wrapped/page.tsx": {
-      "blur": 5,
-      "copy": 3,
-      "gradient": 3,
-      "raw-palette": 43
-    },
     "app/admin/users/page.tsx": {
       "raw-palette": 2
     },
     "app/admin/wrapped/[wrappedId]/history/[llmUsageId]/page.tsx": {
       "blur": 3,
-      "copy": 1,
       "gradient": 2,
       "raw-palette": 24
     },
@@ -140,13 +133,6 @@
     },
     "app/onboarding/loading.tsx": {
       "raw-palette": 1
-    },
-    "app/rewind/s/[token]/not-found.tsx": {
-      "gradient": 1,
-      "raw-palette": 8
-    },
-    "app/rewind/s/[token]/page.tsx": {
-      "raw-palette": 2
     },
     "app/setup/error.tsx": {
       "raw-palette": 1
@@ -317,10 +303,6 @@
       "infinite-motion": 1,
       "raw-palette": 42
     },
-    "components/admin/settings/wrapped-settings-form.tsx": {
-      "copy": 2,
-      "raw-palette": 15
-    },
     "components/admin/shared/unauthenticated-error.tsx": {
       "infinite-motion": 1,
       "raw-palette": 2
@@ -424,12 +406,6 @@
       "gradient": 1,
       "gradient-text": 2,
       "raw-palette": 3
-    },
-    "components/generator/wrapped-generating-animation.tsx": {
-      "copy": 2,
-      "gradient": 4,
-      "infinite-motion": 5,
-      "raw-palette": 20
     },
     "components/onboarding/onboarding-steps/discord-support-step.tsx": {
       "caps-eyebrow": 1,
@@ -684,17 +660,6 @@
       "gradient-text": 2,
       "raw-palette": 10
     },
-    "components/wrapped/wrapped-share-button.tsx": {
-      "gradient": 1,
-      "raw-palette": 9
-    },
-    "components/wrapped/wrapped-share-summary.tsx": {
-      "blur": 7,
-      "copy": 2,
-      "gradient": 2,
-      "gradient-text": 2,
-      "raw-palette": 43
-    },
     "components/wrapped/wrapped-transition.tsx": {
       "copy": 1,
       "gradient": 8,
@@ -711,20 +676,17 @@
     },
     "components/wrapped/wrapped-viewer.tsx": {
       "raw-palette": 11
-    },
-    "components/wrapped/wrapped-year-links.tsx": {
-      "raw-palette": 9
     }
   },
   "totals": {
     "arbitrary-color": 17,
     "arbitrary-type-z": 31,
-    "blur": 133,
+    "blur": 121,
     "caps-eyebrow": 84,
-    "copy": 28,
-    "gradient": 104,
-    "gradient-text": 52,
-    "infinite-motion": 47,
-    "raw-palette": 2975
+    "copy": 17,
+    "gradient": 93,
+    "gradient-text": 50,
+    "infinite-motion": 42,
+    "raw-palette": 2826
   }
 }

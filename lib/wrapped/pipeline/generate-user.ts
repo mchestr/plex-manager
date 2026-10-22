@@ -9,7 +9,9 @@
  *   ─► RewindDataV3 ─► persist (one transaction) │ dry run (validate only)
  * ```
  *
- * A failed eligibility check returns `skipped` with its typed reason. An
+ * A failed eligibility check returns `skipped` with its typed reason; a late
+ * joiner (`JOINED_LATE`) is skipped once the lifetime plays are read, before
+ * any copy step, so no model is called. An
  * upstream failure throws `RewindGenerationError` (`UPSTREAM_ERROR` is
  * retryable); a model failure never fails the run, it only turns slots into
  * templates. A dry run writes no `PlexWrapped` or `RewindGeneration` row, and
@@ -23,6 +25,8 @@ import "server-only"
 import { findTautulliUser } from "@/lib/connections/tautulli"
 import { getAccessLevel } from "@/lib/access"
 import { generateStructured } from "@/lib/llm/generate-structured"
+import type { EffortLevel } from "@/lib/llm/models"
+import { effectiveRewindLlmMode } from "@/lib/wrapped/config"
 import { redisLimiter } from "@/lib/queue/redis-semaphore"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import type { RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
@@ -40,7 +44,8 @@ import { dayKey } from "@/lib/wrapped/time/zone"
 import { buildIssue, disagreesWithAggregate, withArchetype, type IssueInput } from "./build-issue"
 import type { GenerateFn } from "./copy-llm"
 import { runCopyStep, type CopyTrail } from "./copy-step"
-import { checkEligibility, type SkipReason } from "./eligibility"
+import { checkEligibility, checkJoinedLate, type GenerationAudience, type SkipReason } from "./eligibility"
+import { firstPlayAt } from "./late-joiner"
 import { loadRewindContext, type RewindContext } from "./load-context"
 import { persistRewind, validateRewind } from "./persist"
 import { readMemberInputs, type MemberInputs } from "./read-inputs"
@@ -61,8 +66,12 @@ export interface GenerateUserOptions {
   /** A model on the Rewind provider for this run only (dry runs and the bake-off). */
   model?: string
   promptVersion?: string
+  /** The copy call's reasoning effort for this run only (dry runs). */
+  effort?: EffortLevel
   /** Replaces the stored style guide for this run (the playground). */
   styleGuide?: string | null
+  /** The fan-out's audience (P7.8); `config` when absent. */
+  audience?: GenerationAudience
   /** Reads the member's inputs instead of Tautulli and the batch cache (fixtures). */
   source?: (ctx: RewindContext) => Promise<MemberInputs>
 }
@@ -83,7 +92,7 @@ export type GenerateUserResult =
 /** What the pipeline reads and calls, injectable for tests and the eval harness. */
 export interface PipelineDeps {
   loadContext: typeof loadRewindContext
-  checkEligibility: (ctx: RewindContext) => ReturnType<typeof checkEligibility>
+  checkEligibility: (ctx: RewindContext, audience: GenerationAudience) => ReturnType<typeof checkEligibility>
   /** The model call; `generateStructured` on the stored provider row by default. */
   generate?: GenerateFn
   /** The `rw:llm` limit; the Redis limiter by default. */
@@ -92,9 +101,9 @@ export interface PipelineDeps {
 
 const defaultDeps: PipelineDeps = {
   loadContext: loadRewindContext,
-  checkEligibility: (ctx) =>
+  checkEligibility: (ctx, audience) =>
     checkEligibility(
-      { kind: ctx.kind, member: ctx.member, config: ctx.config, tautulli: ctx.tautulli },
+      { kind: ctx.kind, member: ctx.member, config: ctx.config, tautulli: ctx.tautulli, audience },
       { checkInfra: checkRewindInfra, findTautulliUser, accessLevel: getAccessLevel }
     ),
 }
@@ -103,10 +112,12 @@ const defaultDeps: PipelineDeps = {
 export async function generateUserRewind(options: GenerateUserOptions, deps: PipelineDeps = defaultDeps): Promise<GenerateUserResult> {
   const { userId, year, signal } = options
   const ctx = await deps.loadContext({ userId, year, kind: options.kind, through: options.through })
-  const eligibility = await deps.checkEligibility(ctx)
+  const eligibility = await deps.checkEligibility(ctx, options.audience ?? "config")
   if (!eligibility.ok) return { status: "skipped", reason: eligibility.reason }
 
   const inputs = await (options.source ?? ((c) => readMemberInputs(c, { signal, limiter: redisLimiter })))(ctx)
+  const joined = checkJoinedLate({ since: firstPlayAt(inputs.sources.lifetime), createdAt: ctx.member.createdAt ?? null }, year, ctx.zone.zone)
+  if (!joined.ok) return { status: "skipped", reason: joined.reason }
   const statsCtx = { zone: ctx.zone.zone, window: ctx.window, finalCut: ctx.finalCut, hiddenKeys: ctx.hiddenKeys }
   const issueInput: IssueInput = {
     userId,
@@ -139,7 +150,7 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
     previous: ctx.previous,
     llm: {
       disabled: ctx.config.llmDisabled,
-      mode: ctx.config.llmMode,
+      mode: effectiveRewindLlmMode({ llmDisabled: ctx.config.llmDisabled, rewindLlmMode: ctx.config.llmMode }),
       provider: ctx.llmProvider,
       budgetReached: ctx.spentUsd >= ctx.config.budgetUsd,
       override: options.model,
@@ -148,6 +159,7 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
       generate: deps.generate ?? generateStructured,
       consume: deps.consume ?? ((provider) => consume("rw:llm", provider)),
       signal,
+      effort: options.effort,
       styleGuide: options.styleGuide === undefined ? ctx.styleGuide : options.styleGuide,
       attribution: {
         userId,

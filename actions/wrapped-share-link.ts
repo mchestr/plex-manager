@@ -7,14 +7,8 @@ import { memberAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
-import { getBaseUrl } from "@/lib/env"
-import { generateShareToken } from "@/lib/utils"
-import { createLogger } from "@/lib/utils/logger"
-import { readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { forgetShareToken } from "@/lib/wrapped/poster-keys"
 import { yearSchema } from "@/lib/validations/shared-schemas"
-
-const logger = createLogger("WRAPPED_SHARE_LINK")
 
 const shareLinkInputSchema = z.object({ year: yearSchema }, { error: "Invalid year" })
 
@@ -24,92 +18,19 @@ function revalidateSharePaths() {
 }
 
 /**
- * Turns on the public share link for the signed-in member's own completed
- * Rewind and returns its URL.
+ * Turns off the public v2 share link for the signed-in member's own Rewind.
+ * The old URL returns 404 at once, its posters stop being served by this
+ * process, and caches may keep its card and posters for at most 5 minutes.
+ * No code mints a v2 token any more (P7.13 deleted `enableWrappedShareLink`;
+ * v3 links are `RewindShare` rows), so a stopped link never comes back.
  *
- * This is the only code path that mints a `PlexWrapped.shareToken` (SEC-16;
- * `__tests__/config/share-token-writers.test.ts` enforces it). Generation and
- * the admin playground never create one, so a link exists only after the
- * member asks for it.
- *
- * ## Idempotence
- *
- * An existing token is returned unchanged. A new one is written with a
- * conditional update (`shareToken: null` in the filter), so two concurrent
- * calls cannot replace each other's token: the one that loses reads back the
- * winner's.
- *
- * Every call spends a point of the `rw:share-actions` limit (ten an hour per
- * member, keyed `rw:share-actions:<userId>`). Only this action is charged:
- * stopping a link is never refused (see {@link disableWrappedShareLink}).
- *
- * @param input - `{ year }` of the member's Rewind.
- * @returns `data: { shareToken, url }`, or a failure.
- */
-export const enableWrappedShareLink = memberAction({
-  input: shareLinkInputSchema,
-  rateLimit: { name: "rw:share-actions" },
-  fallbackError: "Failed to create share link",
-  handler: async ({ year }, { userId }) => {
-    // getBaseUrl() throws when no app URL is configured. Resolving it before
-    // the write means that failure cannot leave a live link the member was
-    // told was not created.
-    const baseUrl = getBaseUrl()
-
-    const wrapped = await prisma.plexWrapped.findUnique({
-      where: { userId_year: { userId, year } },
-      select: { id: true, status: true, shareToken: true },
-    })
-    if (!wrapped || readWrappedStatus(wrapped.status, wrapped.id) !== "completed") {
-      return fail("CONFLICT", "Your Rewind for this year is not ready to share")
-    }
-
-    let shareToken = wrapped.shareToken
-    if (!shareToken) {
-      const minted = generateShareToken()
-      const { count } = await prisma.plexWrapped.updateMany({
-        where: { id: wrapped.id, shareToken: null },
-        data: { shareToken: minted },
-      })
-      if (count === 1) {
-        shareToken = minted
-        logAuditEvent(AuditEventType.SHARE_LINK_CREATED, userId, {
-          wrappedId: wrapped.id,
-          year,
-        })
-      } else {
-        const current = await prisma.plexWrapped.findUnique({
-          where: { id: wrapped.id },
-          select: { shareToken: true },
-        })
-        shareToken = current?.shareToken ?? null
-      }
-    }
-
-    if (!shareToken) {
-      logger.error("Share link vanished after it was minted", undefined, { userId, year })
-      return fail("INTERNAL", "Failed to create share link")
-    }
-
-    revalidateSharePaths()
-    return ok({ shareToken, url: `${baseUrl}/rewind/s/${shareToken}` })
-  },
-})
-
-/**
- * Turns off the public share link for the signed-in member's own Rewind. The
- * old URL returns 404 at once, its posters stop being served by this process,
- * and caches may keep its card and posters for at most 5 minutes. A later
- * {@link enableWrappedShareLink} mints a new token rather than reviving it.
- *
- * Unlike enabling, this works whatever the row's status, so a member can
+ * It works whatever the row's status, so a member can
  * withdraw a link while an admin regenerates their Rewind or after a failed
  * regeneration. Owners of v2 links minted before sharing became opt-in use it
  * too (design 6.2).
  *
- * It is not rate-limited. It only ever clears the caller's own token, and each
- * token it clears took a counted enable or predates opt-in, so refusing it
- * would only keep a public link alive.
+ * It is not rate-limited. It only ever clears the caller's own token, so
+ * refusing it would only keep a public link alive.
  *
  * @param input - `{ year }` of the member's Rewind.
  * @returns success (also when no link was on), or a failure.

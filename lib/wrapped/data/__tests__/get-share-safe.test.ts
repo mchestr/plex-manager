@@ -4,18 +4,28 @@
 
 /**
  * getShareSafeRewind reads a shared Rewind straight from the database and
- * returns only the share-safe projection, keeping the row id on the server
- * (P0.11: RWP-09, SEC-26, BP-23).
+ * returns only the share-safe projection, keeping the ids on the server
+ * (P0.11: RWP-09, SEC-26, BP-23). P7.5: v3 links by `sha256(token)`, refused
+ * when revoked, rotated or expired and while public links are off; surviving
+ * v2 tokens until the 2026 season closes.
  */
 
-import { prisma } from "@/lib/prisma"
+import { createHash } from "node:crypto"
+
+import { mockReset } from "jest-mock-extended"
+
+import { buildConfig, buildPlexWrapped, buildRewindShare } from "@/__tests__/helpers/factories"
+import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import type { RewindShare } from "@/lib/generated/prisma/client"
 import { getShareSafeRewind } from "@/lib/wrapped/data/get-share-safe"
-import { mockReset } from 'jest-mock-extended'
-import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 
-jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+import { fixtureRewind } from "./share-fixture"
 
-beforeEach(() => mockReset(prismaMock))
+jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
+jest.mock("@/lib/settings/app-settings", () => ({
+  getAppSettings: jest.fn().mockResolvedValue({ serverName: "Chester Family Plex", timeZone: "UTC", locale: "en-US" }),
+}))
 
 /**
  * A request-scoped memo standing in for React's server `cache()`, which the
@@ -36,22 +46,26 @@ jest.mock("react", () => {
   }
 })
 
-const mockFindUnique = prisma.plexWrapped.findUnique as jest.Mock
+const sha256 = (value: string) => createHash("sha256").update(value).digest("hex")
 
 /** Each test uses its own tokens, because the memo above lives for the file. */
 function token(seed: string): string {
   return seed.padEnd(43, "x")
 }
 
-function storedRow(overrides: Record<string, unknown> = {}) {
+let heavy: RewindDataV3
+
+beforeAll(async () => {
+  heavy = await fixtureRewind("heavy")
+})
+
+function v2Row(overrides: Record<string, unknown> = {}) {
   return {
-    id: "wrapped-1",
-    year: 2026,
-    status: "completed",
+    ...buildPlexWrapped({ id: "wrapped-2", userId: "user-2", year: 2025 }),
     summary: "A big year.",
     archetype: "The Midnight Marathoner",
     data: JSON.stringify({
-      userId: "user-1",
+      userId: "user-2",
       userName: "owner@example.com",
       statistics: {
         totalWatchTime: { total: 6000 },
@@ -60,7 +74,6 @@ function storedRow(overrides: Record<string, unknown> = {}) {
         episodesWatched: 40,
         topMovies: [{ title: "Dune: Part Three", watchTime: 165, playCount: 1, ratingKey: "101" }],
         topShows: [],
-        watchTimeByMonth: [{ month: 3, watchTime: 600 }],
         leaderboards: { watchTime: { leaderboard: [{ username: "jsnow", totalWatchTime: 9000 }] } },
       },
     }),
@@ -69,11 +82,28 @@ function storedRow(overrides: Record<string, unknown> = {}) {
   }
 }
 
-describe("getShareSafeRewind", () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
+/** The share `findUnique` by token hash returns, with its Rewind. */
+function v3Share(overrides: Partial<RewindShare> = {}, wrapped: Record<string, unknown> = {}) {
+  return {
+    ...buildRewindShare({ id: "share-1", assetKey: "Abcdefghijklmnopqrstuv", pages: ["top-shows"], ...overrides }),
+    wrapped: { ...buildPlexWrapped({ id: "wrapped-1", userId: "user-1", data: JSON.stringify(heavy), dataVersion: 3 }), ...wrapped },
+  }
+}
 
+beforeEach(() => {
+  mockReset(prismaMock)
+  prismaMock.config.findUnique.mockResolvedValue(buildConfig())
+  prismaMock.rewindShare.findUnique.mockResolvedValue(null)
+  prismaMock.plexWrapped.findUnique.mockResolvedValue(null)
+  prismaMock.rewindPrefs.findUnique.mockResolvedValue(null)
+  prismaMock.rewindExclusion.findMany.mockResolvedValue([])
+})
+
+afterEach(() => {
+  jest.useRealTimers()
+})
+
+describe("getShareSafeRewind", () => {
   it.each([
     ["too short", "abc"],
     ["one character too long", "a".repeat(44)],
@@ -82,67 +112,95 @@ describe("getShareSafeRewind", () => {
     ["empty", ""],
   ])("returns null for a malformed token (%s) without a database call", async (_label, malformed) => {
     await expect(getShareSafeRewind(malformed)).resolves.toBeNull()
-    expect(mockFindUnique).not.toHaveBeenCalled()
+    expect(prismaMock.config.findUnique).not.toHaveBeenCalled()
+    expect(prismaMock.rewindShare.findUnique).not.toHaveBeenCalled()
   })
 
-  it.each([
-    ["an unknown token", "unknown", null],
-    ["a revoked token, whose row no longer holds it", "revoked", null],
-    ["a generating row", "generating", storedRow({ status: "generating" })],
-    ["a failed row", "failed", storedRow({ status: "failed" })],
-  ])("returns null for %s", async (_label, seed, row) => {
-    mockFindUnique.mockResolvedValue(row)
+  describe("a v3 link", () => {
+    it("is found by the SHA-256 of its token and projected, keeping the ids beside the projection", async () => {
+      const valid = token("v3-valid")
+      prismaMock.rewindShare.findUnique.mockResolvedValue(v3Share())
 
-    await expect(getShareSafeRewind(token(seed))).resolves.toBeNull()
-    expect(mockFindUnique).toHaveBeenCalledTimes(1)
+      const found = await getShareSafeRewind(valid)
+
+      expect(prismaMock.rewindShare.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { tokenHash: sha256(valid) } }))
+      expect(found).toMatchObject({ kind: "v3", shareId: "share-1", wrappedId: "wrapped-1", ownerUserId: "user-1", assetKey: "Abcdefghijklmnopqrstuv", year: 2026 })
+      if (found?.kind !== "v3") throw new Error("expected a v3 share")
+      expect(found.share.pages.map((page) => page.type)).toEqual(["top-shows"])
+      expect(JSON.stringify(found.share)).not.toMatch(/user-1|wrapped-1|share-1|Abcdefghij/)
+      expect(prismaMock.plexWrapped.findUnique).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ["revoked", { revokedAt: new Date("2026-12-02T00:00:00Z") }, {}],
+      ["rotated (its old row is revoked)", { revokedAt: new Date(), rotatedFromId: null }, {}],
+      ["expired", { expiresAt: new Date(Date.now() - 1000) }, {}],
+      ["on an unfinished Rewind", {}, { status: "generating" }],
+    ])("is null when %s", async (label, share, wrapped) => {
+      prismaMock.rewindShare.findUnique.mockResolvedValue(v3Share(share, wrapped))
+      await expect(getShareSafeRewind(token(`v3-${label.slice(0, 8)}`))).resolves.toBeNull()
+    })
+
+    it("is null while public links are off, without looking the token up", async () => {
+      prismaMock.config.findUnique.mockResolvedValue(buildConfig({ rewindPublicLinks: false }))
+      prismaMock.rewindShare.findUnique.mockResolvedValue(v3Share())
+
+      await expect(getShareSafeRewind(token("v3-off"))).resolves.toBeNull()
+      expect(prismaMock.rewindShare.findUnique).not.toHaveBeenCalled()
+    })
   })
 
-  it("returns the projection and the row id for a valid token", async () => {
-    mockFindUnique.mockResolvedValue(storedRow())
-    const valid = token("valid_-09AZ")
+  describe("a surviving v2 token", () => {
+    it("opens its completed row through the v2 projection before the season closes", async () => {
+      jest.useFakeTimers({ now: new Date("2027-01-31T12:00:00Z"), doNotFake: ["nextTick", "setImmediate", "queueMicrotask"] })
+      prismaMock.plexWrapped.findUnique.mockResolvedValue(v2Row())
 
-    const found = await getShareSafeRewind(valid)
+      const found = await getShareSafeRewind(token("v2-open"))
 
-    expect(found).toEqual({
-      wrappedId: "wrapped-1",
-      share: {
-        year: 2026,
-        ownerName: "Mike",
-        summary: "A big year.",
-        archetypeName: "The Midnight Marathoner",
-        totals: { minutes: 6000, movies: 12, shows: 4, episodes: 40 },
-        months: [{ month: 3, minutes: 600 }],
-        topMovies: [{ title: "Dune: Part Three", minutes: 165, plays: 1, ratingKey: "101" }],
-        topShows: [],
-      },
+      expect(found).toMatchObject({ kind: "v2", wrappedId: "wrapped-2", ownerUserId: "user-2", year: 2025 })
+      expect(found?.share).toMatchObject({ ownerName: "Mike", totals: { minutes: 6000, movies: 12, shows: 4, episodes: 40 } })
+      expect(JSON.stringify(found?.share)).not.toMatch(/jsnow|leaderboard|user-2|owner@example\.com|wrapped-2/)
     })
-    expect(JSON.stringify(found?.share)).not.toMatch(/jsnow|leaderboard|user-1|owner@example\.com|wrapped-1/)
-    expect(mockFindUnique).toHaveBeenCalledWith({
-      where: { shareToken: valid },
-      select: {
-        id: true,
-        year: true,
-        status: true,
-        summary: true,
-        archetype: true,
-        data: true,
-        user: { select: { name: true } },
-      },
+
+    it("is null after the season closes", async () => {
+      jest.useFakeTimers({ now: new Date("2027-02-01T00:00:01Z"), doNotFake: ["nextTick", "setImmediate", "queueMicrotask"] })
+      prismaMock.plexWrapped.findUnique.mockResolvedValue(v2Row())
+
+      await expect(getShareSafeRewind(token("v2-closed"))).resolves.toBeNull()
     })
+
+    it.each(["generating", "failed"])("is null for a %s row", async (status) => {
+      prismaMock.plexWrapped.findUnique.mockResolvedValue(v2Row({ status }))
+      await expect(getShareSafeRewind(token(`v2-${status}`))).resolves.toBeNull()
+    })
+
+    it("is null while public links are off", async () => {
+      prismaMock.config.findUnique.mockResolvedValue(buildConfig({ rewindPublicLinks: false }))
+      prismaMock.plexWrapped.findUnique.mockResolvedValue(v2Row())
+
+      await expect(getShareSafeRewind(token("v2-off"))).resolves.toBeNull()
+      expect(prismaMock.plexWrapped.findUnique).not.toHaveBeenCalled()
+    })
+  })
+
+  it("returns null for an unknown token", async () => {
+    await expect(getShareSafeRewind(token("unknown"))).resolves.toBeNull()
+    expect(prismaMock.rewindShare.findUnique).toHaveBeenCalledTimes(1)
+    expect(prismaMock.plexWrapped.findUnique).toHaveBeenCalledTimes(1)
   })
 
   it("is wrapped in cache(), so the metadata and the page share one lookup", async () => {
-    mockFindUnique.mockResolvedValue(storedRow())
+    prismaMock.rewindShare.findUnique.mockResolvedValue(v3Share())
     const shared = token("cached")
 
     const [metadataLookup, pageLookup] = [await getShareSafeRewind(shared), await getShareSafeRewind(shared)]
 
     expect(pageLookup).toBe(metadataLookup)
-    expect(mockFindUnique).toHaveBeenCalledTimes(1)
+    expect(prismaMock.rewindShare.findUnique).toHaveBeenCalledTimes(1)
   })
 
   it("lets a database error through instead of reporting the share as missing", async () => {
-    mockFindUnique.mockRejectedValue(new Error("connection refused"))
+    prismaMock.rewindShare.findUnique.mockRejectedValue(new Error("connection refused"))
 
     await expect(getShareSafeRewind(token("db-down"))).rejects.toThrow("connection refused")
   })

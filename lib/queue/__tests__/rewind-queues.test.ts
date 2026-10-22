@@ -32,6 +32,8 @@ jest.mock("@/lib/queue/jobs", () => ({ getJobProcessor: jest.fn(), getRegistered
 jest.mock("@/lib/instrumentation/shutdown", () => ({ onShutdown: jest.fn() }))
 jest.mock("@/lib/queue/jobs/rewind", () => ({ processRewindGenerateUser: jest.fn(async () => "generated") }))
 jest.mock("@/lib/queue/jobs/rewind-stale-sweep", () => ({ processRewindStaleSweep: jest.fn(async () => "swept") }))
+jest.mock("@/lib/rewind/season-runs", () => ({ scheduleSeasonOpenRun: jest.fn(async () => null) }))
+jest.mock("@/lib/queue/jobs/rewind-season", () => ({ REWIND_SEASON_PROCESSORS: {} }))
 const mockUpsertJobScheduler = jest.fn(async () => ({}))
 jest.mock("@/lib/queue/rewind-producers", () => ({
   getRewindQueue: jest.fn(() => ({ upsertJobScheduler: mockUpsertJobScheduler })),

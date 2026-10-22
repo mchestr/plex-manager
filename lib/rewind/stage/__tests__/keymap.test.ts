@@ -61,4 +61,13 @@ describe("keyToCommand", () => {
     expect(keyToCommand({ key: "ArrowLeft", target: stage(), altKey: true }, { shortcuts: true })).toBeNull()
     expect(keyToCommand({ key: "k", target: stage(), metaKey: true }, { shortcuts: true })).toBeNull()
   })
+
+  it("leaves the scroll keys to the desktop rail and Notes, but not the letters or Esc", () => {
+    const notes = element('<aside data-rw-scroll><p id="n" tabindex="-1">Notes</p></aside>', "#n")
+    for (const key of ["ArrowRight", "ArrowLeft", "ArrowDown", "PageDown", "Home", "End", " "]) {
+      expect(keyToCommand({ key, target: notes }, { shortcuts: true })).toBeNull()
+    }
+    expect(keyToCommand({ key: "t", target: notes }, { shortcuts: true })).toBe("table")
+    expect(keyToCommand({ key: "Escape", target: notes }, { shortcuts: true })).toBe("escape")
+  })
 })

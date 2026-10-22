@@ -1278,7 +1278,22 @@
     },
     {
       "type": "short-list",
-      "data": null
+      "data": {
+        "rows": [
+          {
+            "key": "film:1101",
+            "rank": 1
+          },
+          {
+            "key": "series:1201",
+            "rank": 1
+          },
+          {
+            "key": "series:1202",
+            "rank": 2
+          }
+        ]
+      }
     },
     {
       "type": "calendar",

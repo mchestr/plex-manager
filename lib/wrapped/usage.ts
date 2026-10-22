@@ -1,8 +1,20 @@
 /**
- * Helper functions for querying LLM usage and cost analysis
+ * LLM usage and cost statistics for the cost pages, from aggregate queries
+ * (BP-28): one `groupBy` by provider, model and member, and a date series that
+ * reads only `createdAt`, `cost` and `totalTokens`. No query selects a
+ * prompt or response.
+ *
+ * @module lib/wrapped/usage
  */
 
+import type { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+
+interface Totals {
+  requests: number
+  tokens: number
+  cost: number
+}
 
 export interface LLMUsageStats {
   totalRequests: number
@@ -10,162 +22,61 @@ export interface LLMUsageStats {
   totalCost: number
   averageCostPerRequest: number
   averageTokensPerRequest: number
-  byProvider: Array<{
-    provider: string
-    requests: number
-    tokens: number
-    cost: number
-  }>
-  byModel: Array<{
-    model: string
-    requests: number
-    tokens: number
-    cost: number
-  }>
-  byUser: Array<{
-    userId: string
-    userName: string | null
-    requests: number
-    tokens: number
-    cost: number
-  }>
-  byDate: Array<{
-    date: string
-    requests: number
-    tokens: number
-    cost: number
-  }>
+  byProvider: Array<{ provider: string } & Totals>
+  byModel: Array<{ model: string } & Totals>
+  byUser: Array<{ userId: string; userName: string | null } & Totals>
+  byDate: Array<{ date: string } & Totals>
 }
 
-/**
- * Get LLM usage statistics for cost analysis
- */
-export async function getLLMUsageStats(
-  startDate?: Date,
-  endDate?: Date,
-  userId?: string
-): Promise<LLMUsageStats> {
-  const where: any = {}
+function add(map: Map<string, Totals>, key: string, part: Totals) {
+  const existing = map.get(key) ?? { requests: 0, tokens: 0, cost: 0 }
+  existing.requests += part.requests
+  existing.tokens += part.tokens
+  existing.cost += part.cost
+  map.set(key, existing)
+}
 
-  if (startDate || endDate) {
-    where.createdAt = {}
-    if (startDate) where.createdAt.gte = startDate
-    if (endDate) where.createdAt.lt = endDate
+const byCost = (a: Totals, b: Totals) => b.cost - a.cost
+
+/** Usage statistics for the cost analysis and LLM usage pages. */
+export async function getLLMUsageStats(startDate?: Date, endDate?: Date, userId?: string): Promise<LLMUsageStats> {
+  const where: Prisma.LLMUsageWhereInput = {}
+  if (startDate || endDate) where.createdAt = { ...(startDate && { gte: startDate }), ...(endDate && { lt: endDate }) }
+  if (userId) where.userId = userId
+
+  const [groups, dated] = await Promise.all([
+    prisma.lLMUsage.groupBy({
+      by: ["provider", "model", "userId"],
+      where,
+      _sum: { totalTokens: true, cost: true },
+      _count: { _all: true },
+    }),
+    prisma.lLMUsage.findMany({ where, select: { createdAt: true, cost: true, totalTokens: true } }),
+  ])
+
+  const providers = new Map<string, Totals>()
+  const models = new Map<string, Totals>()
+  const users = new Map<string, Totals>()
+  for (const group of groups) {
+    const part = { requests: group._count._all, tokens: group._sum.totalTokens ?? 0, cost: group._sum.cost ?? 0 }
+    add(providers, group.provider, part)
+    add(models, group.model || "unknown", part)
+    add(users, group.userId, part)
   }
 
-  if (userId) {
-    where.userId = userId
+  const dates = new Map<string, Totals>()
+  for (const row of dated) {
+    add(dates, row.createdAt.toISOString().slice(0, 10), { requests: 1, tokens: row.totalTokens, cost: row.cost })
   }
 
-  const usageRecords = await prisma.lLMUsage.findMany({
-    where,
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  })
+  const names = users.size
+    ? await prisma.user.findMany({ where: { id: { in: [...users.keys()] } }, select: { id: true, name: true, email: true } })
+    : []
+  const nameOf = new Map(names.map((user) => [user.id, user.name || user.email]))
 
-  const totalRequests = usageRecords.length
-  const totalTokens = usageRecords.reduce((sum, record) => sum + record.totalTokens, 0)
-  const totalCost = usageRecords.reduce((sum, record) => sum + record.cost, 0)
-
-  // Group by provider
-  const byProviderMap = new Map<string, { requests: number; tokens: number; cost: number }>()
-  for (const record of usageRecords) {
-    const existing = byProviderMap.get(record.provider) || {
-      requests: 0,
-      tokens: 0,
-      cost: 0,
-    }
-    existing.requests += 1
-    existing.tokens += record.totalTokens
-    existing.cost += record.cost
-    byProviderMap.set(record.provider, existing)
-  }
-
-  const byProvider = Array.from(byProviderMap.entries())
-    .map(([provider, stats]) => ({
-      provider,
-      ...stats,
-    }))
-    .sort((a, b) => b.cost - a.cost)
-
-  // Group by model
-  const byModelMap = new Map<string, { requests: number; tokens: number; cost: number }>()
-  for (const record of usageRecords) {
-    const model = record.model || "unknown"
-    const existing = byModelMap.get(model) || {
-      requests: 0,
-      tokens: 0,
-      cost: 0,
-    }
-    existing.requests += 1
-    existing.tokens += record.totalTokens
-    existing.cost += record.cost
-    byModelMap.set(model, existing)
-  }
-
-  const byModel = Array.from(byModelMap.entries())
-    .map(([model, stats]) => ({
-      model,
-      ...stats,
-    }))
-    .sort((a, b) => b.cost - a.cost)
-
-  // Group by user
-  const byUserMap = new Map<
-    string,
-    { userName: string | null; requests: number; tokens: number; cost: number }
-  >()
-  for (const record of usageRecords) {
-    const existing = byUserMap.get(record.userId) || {
-      userName: record.user.name || record.user.email,
-      requests: 0,
-      tokens: 0,
-      cost: 0,
-    }
-    existing.requests += 1
-    existing.tokens += record.totalTokens
-    existing.cost += record.cost
-    byUserMap.set(record.userId, existing)
-  }
-
-  const byUser = Array.from(byUserMap.entries())
-    .map(([userId, stats]) => ({
-      userId,
-      ...stats,
-    }))
-    .sort((a, b) => b.cost - a.cost)
-
-  // Group by date
-  const byDateMap = new Map<string, { requests: number; tokens: number; cost: number }>()
-  for (const record of usageRecords) {
-    const date = record.createdAt.toISOString().split("T")[0] // YYYY-MM-DD
-    const existing = byDateMap.get(date) || {
-      requests: 0,
-      tokens: 0,
-      cost: 0,
-    }
-    existing.requests += 1
-    existing.tokens += record.totalTokens
-    existing.cost += record.cost
-    byDateMap.set(date, existing)
-  }
-
-  const byDate = Array.from(byDateMap.entries())
-    .map(([date, stats]) => ({
-      date,
-      ...stats,
-    }))
-    .sort((a, b) => b.date.localeCompare(a.date))
+  const totalRequests = groups.reduce((sum, group) => sum + group._count._all, 0)
+  const totalTokens = groups.reduce((sum, group) => sum + (group._sum.totalTokens ?? 0), 0)
+  const totalCost = groups.reduce((sum, group) => sum + (group._sum.cost ?? 0), 0)
 
   return {
     totalRequests,
@@ -173,9 +84,11 @@ export async function getLLMUsageStats(
     totalCost,
     averageCostPerRequest: totalRequests > 0 ? totalCost / totalRequests : 0,
     averageTokensPerRequest: totalRequests > 0 ? totalTokens / totalRequests : 0,
-    byProvider,
-    byModel,
-    byUser,
-    byDate,
+    byProvider: [...providers].map(([provider, totals]) => ({ provider, ...totals })).sort(byCost),
+    byModel: [...models].map(([model, totals]) => ({ model, ...totals })).sort(byCost),
+    byUser: [...users]
+      .map(([id, totals]) => ({ userId: id, userName: nameOf.get(id) ?? null, ...totals }))
+      .sort(byCost),
+    byDate: [...dates].map(([date, totals]) => ({ date, ...totals })).sort((a, b) => b.date.localeCompare(a.date)),
   }
 }

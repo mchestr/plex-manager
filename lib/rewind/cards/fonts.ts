@@ -27,7 +27,7 @@ import path from "node:path"
 
 import type { ImageResponse } from "next/og"
 
-type CardFont = NonNullable<NonNullable<ConstructorParameters<typeof ImageResponse>[1]>["fonts"]>[number]
+export type CardFont = NonNullable<NonNullable<ConstructorParameters<typeof ImageResponse>[1]>["fonts"]>[number]
 
 const FONT_DIR = path.join("lib", "rewind", "cards", "fonts")
 

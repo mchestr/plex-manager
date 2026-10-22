@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-import { chooseCut, currentPage, currentPageInfo, disableAutoplay, openStage, pageCount, turnForward } from '../helpers/rewind-stage';
+import { chooseCut, currentPage, currentPageInfo, disableAutoplay, goToPage, openStage, pageCount, turnForward } from '../helpers/rewind-stage';
 import { clearRewindSeed, REWIND_MEMBERS, seedRewind, type RewindFixtureId } from '../helpers/seed-rewind';
 import { settle } from '../helpers/deterministic';
 import { expect, settlePage, skipUnlessProductionBuild, test } from './visual-test';
@@ -8,8 +8,8 @@ import { expect, settlePage, skipUnlessProductionBuild, test } from './visual-te
 /**
  * Rewind story screenshots (P5.4): every page of the heavy, median and light
  * issues, taken of `rewind-stage`, in the `rewind-visual-*` projects. Phone
- * projects loop over the five supported phone sizes; desktop projects use
- * their own 1440x900 (P7.4 adds 1366x768).
+ * projects loop over the five supported phone sizes; desktop projects take
+ * the spread at 1440x900 and 1366x768 (P7.4), where nothing scrolls sideways.
  *
  * The final-state shots run under reduced motion with the fake clock paused
  * (`visual-test.ts`). One more pass per fixture, at the project's first size,
@@ -34,6 +34,12 @@ const PHONE_VIEWPORTS = [
 
 /** Viewports where story mode scales under 0.8 (`lib/rewind/stage/fit-stage.ts`). */
 const BELOW_FLOOR = new Set(['360x640', '375x548']);
+
+/** The desktop spread's sizes (P7.4): the artboard at 1.1 and at about 0.9. */
+const DESKTOP_VIEWPORTS = [
+  { width: 1440, height: 900 },
+  { width: 1366, height: 768 },
+];
 
 const MIN_TEXT_PX = 12;
 const MIN_TARGET_PX = 44;
@@ -95,6 +101,8 @@ async function shootEveryPage(page: Page, prefix: string, check: boolean): Promi
     const { index, type } = await currentPageInfo(page);
     expect(index).toBe(i);
     if (check) expect.soft(await smallThings(page), `${prefix} page ${i + 1} (${type})`).toEqual({ text: [], targets: [] });
+    // RWV-04: nothing on the page or the spread scrolls sideways.
+    expect.soft(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${prefix} page ${i + 1} scrolls sideways`).toBe(true);
     await expect(page.getByTestId('rewind-stage')).toHaveScreenshot(`${prefix}-${String(i + 1).padStart(2, '0')}-${type}.png`);
   }
 }
@@ -118,7 +126,7 @@ test.describe('Rewind story', () => {
       test('every page at every size', async ({ page }, testInfo) => {
         test.setTimeout(240_000);
         const phone = testInfo.project.use.isMobile === true;
-        const viewports = phone ? PHONE_VIEWPORTS : [testInfo.project.use.viewport!];
+        const viewports = phone ? PHONE_VIEWPORTS : DESKTOP_VIEWPORTS;
         for (const viewport of viewports) {
           const size = `${viewport.width}x${viewport.height}`;
           await page.setViewportSize(viewport);
@@ -134,6 +142,28 @@ test.describe('Rewind story', () => {
           await shootEveryPage(page, `${fixture}-${size}`, phone && !belowFloor);
         }
       });
+
+      if (fixture === 'heavy') {
+        // P7.1: the race mid-run. Its frames are `element.animate()` runs that start after the 420 ms turn;
+        // pausing them 2.6 s in shows the frame a member sees then, and every other animation is finished.
+        test('the race at 2.6 s', async ({ page }, testInfo) => {
+          const viewport = testInfo.project.use.isMobile ? PHONE_VIEWPORTS[0] : testInfo.project.use.viewport!;
+          await page.setViewportSize(viewport);
+          await page.emulateMedia({ reducedMotion: 'no-preference' });
+          await openStage(page, { settle: settlePage });
+          await goToPage(page, 'race');
+          await page.evaluate((at) => {
+            for (const animation of document.getAnimations()) {
+              const target = animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
+              if (target?.closest('[data-testid="rewind-race-animator"]')) {
+                animation.pause();
+                animation.currentTime = at;
+              } else animation.finish();
+            }
+          }, 420 + 2600);
+          await expect(page.getByTestId('rewind-stage')).toHaveScreenshot('heavy-race-2600ms.png');
+        });
+      }
 
       test('every page in motion', async ({ page }, testInfo) => {
         test.setTimeout(120_000);

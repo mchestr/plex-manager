@@ -2,16 +2,18 @@ import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 
+import { notifyWhenRewindReady } from "@/actions/rewind-notify"
+import { ArchiveActions, ArchiveArticle } from "@/components/rewind/article/archive-article"
 import { RewindIssue } from "@/components/rewind/rewind-issue"
 import { RewindStatusPanel } from "@/components/rewind/rewind-status-panel"
-import { WrappedSharedYearsNotice } from "@/components/wrapped/wrapped-shared-years-notice"
-import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
-import { WrappedYearLinks } from "@/components/wrapped/wrapped-year-links"
+import { RewindSharedYearsNotice } from "@/components/rewind/shared-years-notice"
 import { authOptions } from "@/lib/auth"
-import { rewindName } from "@/lib/brand"
+import { rewindName, serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
+import { previewOwnerId, readPreview } from "@/lib/rewind/dry-run/store"
 import { safeReturnPath } from "@/lib/rewind/return-to"
 import { loadRewindYearView } from "@/lib/rewind/year-view"
+import { getAppSettings } from "@/lib/settings/app-settings"
 import { yearParamSchema } from "@/lib/validations/params"
 import { listCompletedRewindYears } from "@/lib/wrapped/season"
 
@@ -43,13 +45,34 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
   }
   const year = parsedYear.data
   const userId = session.user.id
-  const { from, sheet } = await searchParams
+  const { from, sheet, preview, page, still } = await searchParams
   const returnTo = safeReturnPath(typeof from === "string" ? from : null)
+
+  // An admin's dry run (P7.10); members get the 404 the route gives any unknown page.
+  // The gallery's `page` and `still` (P7.11) work only here.
+  if (preview !== undefined) {
+    if (!session.user.isAdmin) notFound()
+    const found = await readPreview(preview, year)
+    if (!found) {
+      return <RewindStatusPanel kind="not-found" code="REWIND_NOT_FOUND" year={year} returnTo={returnTo} audience="admin" />
+    }
+    return (
+      <RewindIssue
+        rewindId={found.id}
+        data={found.run.data}
+        userId={previewOwnerId(found.run.subject)}
+        returnTo={returnTo}
+        preview
+        initialPage={typeof page === "string" ? page : undefined}
+        still={still === "1"}
+      />
+    )
+  }
 
   const [view, sharedRows, completedYears] = await Promise.all([
     loadRewindYearView({ userId, isAdmin: session.user.isAdmin }, year),
-    // Every year of the member's own with a live public link, so links on
-    // years the viewer does not show can still be stopped (SEC-16).
+    // Every year of the member's own with a live v2 public link, so they can
+    // still be stopped: archive articles have no share controls (SEC-16).
     prisma.plexWrapped.findMany({
       where: { userId, shareToken: { not: null } },
       select: { year: true },
@@ -58,9 +81,7 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
     listCompletedRewindYears(userId),
   ])
 
-  // The legacy viewer has its own controls for the year it shows.
-  const otherSharedYears = sharedRows.map((row) => row.year).filter((shared) => !(view.kind === "legacy" && shared === year))
-  const sharedNotice = <WrappedSharedYearsNotice years={otherSharedYears} />
+  const sharedNotice = <RewindSharedYearsNotice years={sharedRows.map((row) => row.year)} />
 
   if (view.kind === "issue") {
     return (
@@ -72,18 +93,17 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
   }
 
   if (view.kind === "legacy") {
-    // v1 and v2 keep the app's font and colours until P7.13's archive article
+    // A stored v1 or v2 year is an archive article: no story, cards or sharing (P7.13)
+    const [brand, settings] = await Promise.all([serverName(), getAppSettings()])
     return (
-      <div className="font-sans">
-        {sharedNotice}
-        <WrappedYearLinks years={completedYears} currentYear={year} />
-        <WrappedViewerWrapper
-          wrappedData={view.data}
-          year={year}
-          shareToken={view.shareToken ?? undefined}
-          canManageShare
-        />
-      </div>
+      <ArchiveArticle
+        legacy={view.data}
+        year={year}
+        brand={brand}
+        locale={settings.locale}
+        notice={sharedNotice}
+        actions={<ArchiveActions year={year} years={completedYears} returnTo={returnTo} />}
+      />
     )
   }
 
@@ -95,6 +115,7 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
       returnTo={returnTo}
       audience={session.user.isAdmin ? "admin" : "member"}
       completedYears={completedYears}
+      onNotify={notifyWhenRewindReady}
     >
       {sharedNotice}
     </RewindStatusPanel>

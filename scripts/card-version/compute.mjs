@@ -12,7 +12,8 @@
  *   agree, and none at all is an error: a Next upgrade must not silently
  *   produce a version without Satori's.
  * - `fonts` is the first 12 hex digits of a SHA-1 over every card font file
- *   (name, a NUL, then the bytes), in file-name order.
+ *   (name, a NUL, then the bytes), in file-name order, then the safe-mode
+ *   Noto faces in `fonts/noto/` (P7.6) the same way.
  */
 
 import { createHash } from 'node:crypto'
@@ -53,8 +54,10 @@ export function satoriVersion(root) {
 
 function fontsHash(root) {
   const dir = join(root, ...FONT_DIR)
+  const ttfs = (sub) => readdirSync(join(dir, sub)).filter((f) => f.endsWith('.ttf')).sort().map((f) => (sub ? `${sub}/${f}` : f))
   const hash = createHash('sha1')
-  for (const file of readdirSync(dir).filter((f) => f.endsWith('.ttf')).sort()) {
+  // The Archivo and Newsreader instances, then the safe-mode Noto faces (P7.6) under their folder name.
+  for (const file of [...ttfs(''), ...ttfs('noto')]) {
     hash.update(file).update('\0').update(readFileSync(join(dir, file)))
   }
   return hash.digest('hex').slice(0, 12)

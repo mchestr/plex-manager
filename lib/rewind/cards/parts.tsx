@@ -8,14 +8,14 @@
 
 import type { ReactElement } from "react"
 
+import { CARD_SLACK } from "@/lib/rewind/typeset/fit-lines"
 import { hourRing } from "@/lib/rewind/viz/hour-ring"
 import { binsPath } from "@/lib/rewind/viz/soundtrack"
-import { titleFreeHeadline } from "@/lib/wrapped/copy/templates"
 import type { CardInput } from "@/lib/wrapped/data/share-safe"
 import type { CardFactId } from "@/lib/wrapped/data/share-safe-schema"
 
 import type { CardInk } from "./frame"
-import { fitNameplate, Graphic, Line, Nameplate, Picture, Text } from "./type"
+import { fitCard, fitNameplate, Graphic, Line, lineFamily, Nameplate, Picture, Text } from "./type"
 
 export const LABEL = { wdth: 100, weight: 600 } as const
 
@@ -26,12 +26,51 @@ export interface CardAssets {
 
 export const NO_ASSETS: CardAssets = { art: [] }
 
-/** The page's card headline as a nameplate; a line the card fonts cannot set prints the title-free line. */
+/** The page's card headline as a nameplate; a line the card fonts cannot set prints in Noto (safe mode). */
 export function CardHeadline({ input, measure, sizeMax, maxLines }: { input: CardInput; measure: number; sizeMax: number; maxLines: number }): ReactElement {
-  const fitted = fitNameplate(input.page.headline, measure, sizeMax, maxLines)
-  const fit = fitted.safeMode ? fitNameplate(titleFreeHeadline(input.page.type), measure, sizeMax, maxLines) : fitted
-  return <Nameplate fit={fit} />
+  return <Nameplate fit={fitNameplate(input.page.headline, measure, sizeMax, maxLines)} />
 }
+
+/** A title (or a name) in Archivo 700 at W87.5, in up to `maxLines` fitted lines, or in Noto in safe mode. */
+export function CardTitle({ text, measure, sizeMin, sizeMax, maxLines = 2 }: { text: string; measure: number; sizeMin: number; sizeMax: number; maxLines?: number }): ReactElement {
+  const fit = fitCard(text, { role: "sentence", weight: 700, widths: [87.5], measure: measure / (1 + CARD_SLACK), maxLines, sizeMin, sizeMax })
+  return (
+    <div style={{ display: "flex", flexDirection: "column", width: measure }}>
+      {fit.lines.map((line, i) => (
+        <div key={`${i}:${line.text}`} style={{ display: "flex", fontFamily: lineFamily(fit, line, 700), fontSize: fit.size, whiteSpace: "nowrap", lineHeight: `${Math.round(fit.size * (fit.safeMode ? 1.2 : 1.05))}px` }}>
+          {line.text}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** A bar `width` x `height` hatched with 45-degree lines in `ink`, as an SVG with no text. */
+function hatchSvg(width: number, height: number, ink: string): string {
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
+    `<defs><pattern id="h" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="12" fill="${ink}"/></pattern></defs>` +
+    `<rect x="1.5" y="1.5" width="${Math.max(0, width - 3)}" height="${Math.max(0, height - 3)}" fill="url(#h)" stroke="${ink}" stroke-width="3"/></svg>`
+  )
+}
+
+/** A horizontal bar: solid in the ink, or hatched. */
+export function Bar({ width, height, ink, solid }: { width: number; height: number; ink: string; solid: boolean }): ReactElement {
+  return solid ? <div style={{ display: "flex", width, height, backgroundColor: ink }} /> : <Graphic svg={hatchSvg(width, height, ink)} width={width} height={height} />
+}
+
+/** A stat: a fitted numeral over its label. */
+export function Stat({ value, label, width, size = 96 }: { value: string; label: string; width: number; size?: number }): ReactElement {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", width }}>
+      <Line text={value} face={{ wdth: 75, weight: 900, size, measure: width }} style={{ lineHeight: `${size}px` }} />
+      <Text text={label} family="textItalic" size={36} width={width} style={{ marginTop: 8 }} />
+    </div>
+  )
+}
+
+/** The count a display prints: "1,240" is 1240, "Top 3%" is 3. */
+export const countOf = (display: string | undefined) => Number((display ?? "").replace(/[^\d.]/g, "")) || 0
 
 function soundtrackSvg(bins: number[], daily: boolean, width: number, height: number, ink: string): string {
   const scaled = daily ? bins.map(Math.sqrt) : bins

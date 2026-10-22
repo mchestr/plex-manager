@@ -293,9 +293,9 @@ spec folder that the `chromium` project ignores:
 | Project | Specs | CI job |
 | --- | --- | --- |
 | `rewind-e2e-chromium`, `rewind-e2e-webkit` | `e2e/rewind/*.spec.ts`: the story flows (tap zones, keys, Pause, Settings, Table, a hidden tab), the quiz and its match cut, the centrefold, sharing | E2E Tests (required) |
-| `rewind-a11y-chromium`, `rewind-a11y-webkit`, `rewind-a11y-firefox` | `e2e/a11y/rewind*.a11y.spec.ts`: axe at WCAG 2.2 AA on every page and sheet, zero violations; firefox runs only the `@article` tests | E2E Tests (required) |
+| `rewind-a11y-chromium`, `rewind-a11y-webkit`, `rewind-a11y-firefox` | `e2e/a11y/rewind*.a11y.spec.ts`: axe at WCAG 2.2 AA on every page of three issues at 390x844 and the small sizes, and on every sheet, zero violations; forced colours on every page (chromium); firefox runs only the `@article` tests | E2E Tests (required) |
 | `rewind-visual-phone-*`, `rewind-visual-desktop-*` (chromium and webkit) | `e2e/visual/rewind*.spec.ts`: every page of three issues at the five phone sizes (390x844, 412x760, 390x664, 360x640, 375x548) or 1440x900, plus the 12 px text and 44 px target checks | Rewind Visual Diffs (advisory) |
-| `rewind-perf` (chromium, it needs CDP) | `e2e/perf/*.perf.spec.ts`: no long task over 50 ms and at most 3 stage commits per page in 30 s of autoplay at 4x CPU throttling; the scripts only `/rewind/<year>` loads gzip to 110 KB or less | Rewind Performance (advisory: long tasks vary with a shared runner's CPU) |
+| `rewind-perf` (chromium, it needs CDP) | `e2e/perf/*.perf.spec.ts`: no long task over 50 ms and at most 3 stage commits per page in 30 s of autoplay at 4x CPU throttling, on a normal and a low-end device (2 cores, 1 GB); for three issues, the scripts only `/rewind/<year>` loads gzip to 110 KB or less and each page chunk to 12 KB | Rewind Performance (required, P7.15): the budget spec. Rewind Long Tasks (advisory until heavy stays under 50 ms on shared runners): the long-task spec |
 
 - **Seed.** `e2e/helpers/seed-rewind.ts` gives four members (heavy, median,
   light, extreme) a stored v3 Rewind from `e2e/fixtures/rewind/<id>.v3.json`,
@@ -312,6 +312,9 @@ spec folder that the `chromium` project ignores:
 - **Placeholders.** Flows that later steps own stay `test.fixme`, named with
   the step: hiding a title (P7.7), Redis down (FR-50) and a lapsed member
   (FR-51).
+- **Screen readers.** `e2e/manual/rewind-screen-reader.md` holds the
+  VoiceOver and TalkBack scripts and their results table, the manual release
+  gate before the soft launch (P7.15, P7.16).
 
 ## Writing New Tests
 

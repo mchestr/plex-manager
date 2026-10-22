@@ -9,7 +9,8 @@
  * Plex library per member. Every upstream call goes through the Redis
  * semaphore. A failed history read is a retryable `UPSTREAM_ERROR`; a missing
  * optional source (lifetime, requests, library, aggregate) only makes its
- * pages ineligible (NFR-3).
+ * pages ineligible (NFR-3), and so does a failed Sonarr calendar for Next
+ * year's returning part.
  *
  * @module lib/wrapped/pipeline/read-inputs
  */
@@ -21,6 +22,7 @@ import { getBatchLibrary, getMemberEvents, getMemberLifetimeEvents } from "@/lib
 import { getMetadata } from "@/lib/wrapped/metadata-cache"
 import { fetchMemberRequests, findOverseerrUser } from "@/lib/wrapped/sources/overseerr-requests"
 import type { RequestEvent } from "@/lib/wrapped/sources/request-event"
+import { fetchSeasonPremieres, returningRange } from "@/lib/wrapped/sources/sonarr-calendar"
 import { createTautulliHistorySource } from "@/lib/wrapped/sources/tautulli-history"
 import type { PlayEvent, SourceContext } from "@/lib/wrapped/sources/watch-history-source"
 import type { MemberSources } from "@/lib/wrapped/stats/compute"
@@ -62,10 +64,11 @@ export async function readMemberInputs(ctx: RewindContext, sourceCtx: SourceCont
   if (!lifetime.ok) logger.warn("Lifetime history failed; member-since and last year are left out", { code: lifetime.code })
   const lifetimeEvents = lifetime.ok ? lifetime.data : null
 
-  const [metadata, requests, library] = await Promise.all([
+  const [metadata, requests, library, premieres] = await Promise.all([
     getMetadata([...events.data, ...(lifetimeEvents ?? [])]),
     requestsOf(ctx, sourceCtx),
     getBatchLibrary(batch),
+    ctx.sonarr ? fetchSeasonPremieres(ctx.sonarr, returningRange(new Date(), ctx.year)) : null,
   ])
   return {
     events: events.data,
@@ -76,6 +79,7 @@ export async function readMemberInputs(ctx: RewindContext, sourceCtx: SourceCont
       aggregate: ctx.aggregate ? { userId: ctx.userId, aggregate: ctx.aggregate } : null,
       library,
       excludedContentRatings: ctx.config.excludedContentRatings,
+      premieres,
     },
   }
 }

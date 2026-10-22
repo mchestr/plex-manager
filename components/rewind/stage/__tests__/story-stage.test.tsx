@@ -1,10 +1,11 @@
-import { act, fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useReducedMotion } from "motion/react"
 import { Profiler } from "react"
 
 import { expectNoDarkInsideLight } from "@/lib/design/testing"
-import type { IssuePageType } from "@/lib/rewind/registry"
+import { CoverCuts } from "@/components/rewind/pages/cover-cuts"
+import type { IssuePageType, RewindPageType } from "@/lib/rewind/registry"
 
 import { StoryStage } from "../story-stage"
 
@@ -79,13 +80,14 @@ describe("StoryStage", () => {
       const onCommit = jest.fn()
       renderStage(onCommit)
       await user.keyboard("{ArrowRight}")
+      // The turn, then the new neighbour's reveal in idle time (P7.15).
       await act(async () => {
-        await jest.advanceTimersByTimeAsync(100)
+        await jest.advanceTimersByTimeAsync(500)
       })
       onCommit.mockClear()
 
       await act(async () => {
-        await jest.advanceTimersByTimeAsync(7000)
+        await jest.advanceTimersByTimeAsync(6600)
       })
       expect(onCommit).not.toHaveBeenCalled()
       expect(current()).toHaveAttribute("data-index", "1")
@@ -190,7 +192,9 @@ describe("StoryStage", () => {
     expect(screen.getByTestId("rewind-stage")).toHaveAttribute("data-mode", "ended")
     expect(screen.queryByTestId("rewind-pause")).not.toBeInTheDocument()
     const all = screen.getAllByTestId("rewind-page", { hidden: true } as never)
-    expect(all.map((p) => p.hidden)).toEqual([true, true, true, true, false, false])
+    // The jump shows the back cover at once; its new neighbour is revealed after the turn, in idle time (P7.15).
+    expect(all.map((p) => p.hidden)).toEqual([true, true, true, true, true, false])
+    await waitFor(() => expect(all.map((p) => p.hidden)).toEqual([true, true, true, true, false, false]))
     expect(all[4]).toHaveAttribute("inert")
     expectNoDarkInsideLight(container)
   })
@@ -213,5 +217,61 @@ describe("StoryStage", () => {
     } finally {
       jest.useRealTimers()
     }
+  })
+})
+
+describe("StoryStage cuts (P7.3)", () => {
+  const FULL: IssuePageType[] = ["cover", "number", "bookends", "guess", "top-shows", "top-films", "clock", "calendar", "centrefold", "back-cover"]
+  const POCKET: RewindPageType[] = ["cover", "number", "short-list", "calendar", "centrefold", "back-cover"]
+  const withCuts = (types: RewindPageType[]) =>
+    stagePages(types).map((page) =>
+      page.type === "cover"
+        ? { ...page, content: <CoverCuts full={{ label: "Read the full issue", meta: "" }} pocket={{ label: "Pocket edition", meta: "" }} /> }
+        : page
+    )
+
+  function renderCuts() {
+    return render(
+      <div data-theme="rewind">
+        <StoryStage pages={withCuts(FULL)} pocket={withCuts(POCKET)} year={2026} archetype="midnight-marathoner" closeHref="/home" copy={LLM_COPY} />
+      </div>
+    )
+  }
+
+  beforeEach(() => window.sessionStorage.clear())
+
+  it("swaps to the pocket cut and renumbers the folio, keeping the choice for a reload", async () => {
+    const user = userEvent.setup()
+    const { unmount } = renderCuts()
+    await user.click(screen.getByTestId("rewind-cut-pocket"))
+    expect(screen.getByTestId("rewind-folio")).toHaveTextContent("02/06The number")
+    await user.keyboard("{ArrowRight}")
+    expect(screen.getByTestId("rewind-folio")).toHaveTextContent("03/06Short list")
+    expect(window.sessionStorage.getItem("rewind:cut:2026")).toBe("pocket")
+
+    unmount()
+    renderCuts()
+    expect(screen.getByTestId("rewind-folio")).toHaveTextContent("01/06Cover")
+    await user.keyboard("{ArrowRight}")
+    expect(screen.getByTestId("rewind-folio")).toHaveTextContent("02/06The number")
+  })
+
+  it("plays the full issue from its button", async () => {
+    const user = userEvent.setup()
+    renderCuts()
+    await user.click(screen.getByTestId("rewind-cut-full"))
+    expect(screen.getByTestId("rewind-folio")).toHaveTextContent("02/10The number")
+    expect(window.sessionStorage.getItem("rewind:cut:2026")).toBe("full")
+  })
+
+  it("opens a one-page postcard in the ended state", () => {
+    render(
+      <div data-theme="rewind">
+        <StoryStage pages={stagePages(["postcard"])} year={2026} archetype={null} closeHref="/home" copy={LLM_COPY} />
+      </div>
+    )
+    expect(screen.getByTestId("rewind-stage")).toHaveAttribute("data-mode", "ended")
+    expect(screen.queryByTestId("rewind-pause")).not.toBeInTheDocument()
+    expect(screen.getByTestId("rewind-folio")).toHaveTextContent("01/01Postcard")
   })
 })

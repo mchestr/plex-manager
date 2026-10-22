@@ -9,7 +9,8 @@
  * preference is on. Nothing fires from a text field or from inside a sheet,
  * modified keys are left to the browser, Space on a button or link is left to
  * that control, and inside `[data-rw-interactive]` (quiz, scrubber) only Esc
- * is taken.
+ * is taken. Inside `[data-rw-scroll]` (the desktop spread's rail and Notes,
+ * P7.4) the arrows, Page keys, Home, End and Space are left to scroll it.
  *
  * @module lib/rewind/stage/keymap
  */
@@ -38,6 +39,9 @@ const ALWAYS: Record<string, StageCommand> = {
 
 const LETTERS: Record<string, StageCommand> = { k: "toggle-play", s: "share", t: "table", ",": "settings" }
 
+/** Keys a scrolling column keeps for itself. */
+const SCROLL_KEYS = new Set(["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "PageDown", "PageUp", "Home", "End", " "])
+
 const TEXT_FIELD = 'input, textarea, select, [contenteditable=""], [contenteditable="true"]'
 const CONTROL = 'button, a[href], [role="button"], [role="switch"], [role="checkbox"], [role="radio"], [role="link"]'
 
@@ -52,6 +56,7 @@ export function keyToCommand(event: KeyInput, { shortcuts }: { shortcuts: boolea
   const command = ALWAYS[event.key] ?? (shortcuts ? LETTERS[event.key.toLowerCase()] : undefined) ?? null
   if (command === null || command === "escape") return command
   if (closest(event.target, "[data-rw-interactive]")) return null
+  if (SCROLL_KEYS.has(event.key) && closest(event.target, "[data-rw-scroll]")) return null
   if ((event.key === " " || event.key === "Enter") && closest(event.target, CONTROL)) return null
   return command
 }

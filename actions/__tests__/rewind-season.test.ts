@@ -3,116 +3,136 @@
  */
 
 /**
- * Tests for prepareRewindSeasonData (P2.6): admin only, Zod-validated,
- * audit-logged, FR-50 when Redis is missing, and single-flight per batch.
+ * The season console's actions (P7.8): admin only, FR-50 without Redis, the
+ * buttons' runs carry the configured audience, every started run is audited
+ * with its estimate, and the final cut is refused before 1 January.
  */
 
 import { getServerSession } from 'next-auth'
 
-import { getRewindSeasonDataPreparedAt, prepareRewindSeasonData } from '@/actions/admin/rewind-season'
-import { prisma } from '@/lib/prisma'
-import { enqueueServerAggregate } from '@/lib/queue/rewind-batch-queue'
+import {
+  generateAllRewinds,
+  getRewindSeasonStatus,
+  prepareRewindSeason,
+  retryFailedRewinds,
+  runRewindFinalCut,
+} from '@/actions/admin/rewind-season'
 import { checkRewindInfra } from '@/lib/queue/rewind-infra'
+import { enqueueGenerateAll, enqueueSeasonPrepare, seasonZones } from '@/lib/rewind/season-runs'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
+import { getSeasonCounts } from '@/lib/wrapped/admin/season'
+import { loadSeasonEstimate } from '@/lib/wrapped/admin/season-estimate'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
-jest.mock('@/lib/prisma', () => ({ prisma: { rewindServerAggregate: { findFirst: jest.fn() } } }))
-jest.mock('@/lib/queue/rewind-batch-queue', () => ({ enqueueServerAggregate: jest.fn() }))
+jest.mock('@/lib/prisma', () => ({ prisma: {} }))
 jest.mock('@/lib/queue/rewind-infra', () => ({ checkRewindInfra: jest.fn() }))
+jest.mock('@/lib/rewind/season-runs', () => ({
+  ...jest.requireActual('@/lib/rewind/season-runs'),
+  enqueueSeasonPrepare: jest.fn(),
+  enqueueGenerateAll: jest.fn(),
+  seasonThrough: jest.fn(async () => '2026-11-30'),
+  seasonZones: jest.fn(async () => ['America/Chicago', 'America/Los_Angeles']),
+}))
+jest.mock('@/lib/wrapped/admin/season', () => ({ getSeasonCounts: jest.fn() }))
+jest.mock('@/lib/wrapped/admin/season-estimate', () => ({ loadSeasonEstimate: jest.fn() }))
 jest.mock('@/lib/security/audit-log', () => ({
   ...jest.requireActual('@/lib/security/audit-log'),
   logAuditEvent: jest.fn(),
 }))
-jest.mock('@/lib/utils/server-zone', () => ({ serverZone: jest.fn(async () => 'America/Chicago') }))
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }))
 
-const admin = { user: { id: 'admin-1', isAdmin: true } }
+const ESTIMATE = { members: 12, llmMembers: 10, perMemberUsd: 0.01, costUsd: 0.1, pastCap: 0 }
 
 beforeEach(() => {
   jest.clearAllMocks()
   jest.useFakeTimers({ now: new Date('2026-11-20T12:00:00Z'), doNotFake: ['nextTick', 'setImmediate'] })
-  jest.mocked(getServerSession).mockResolvedValue(admin)
+  jest.mocked(getServerSession).mockResolvedValue({ user: { id: 'admin-1', isAdmin: true } })
   jest.mocked(checkRewindInfra).mockResolvedValue({ ok: true })
-  jest.mocked(enqueueServerAggregate).mockResolvedValue({ jobId: 'job-1', alreadyQueued: false })
+  jest.mocked(loadSeasonEstimate).mockResolvedValue(ESTIMATE)
+  jest.mocked(enqueueSeasonPrepare).mockResolvedValue({ jobId: 'prep-1', alreadyQueued: false })
+  jest.mocked(enqueueGenerateAll).mockResolvedValue({ jobId: 'all-1', alreadyQueued: false })
 })
 
 afterEach(() => jest.useRealTimers())
 
-describe('prepareRewindSeasonData', () => {
-  it('queues the season batch and writes an audit entry', async () => {
-    const result = await prepareRewindSeasonData({ year: 2026 })
+describe('bulk actions', () => {
+  it('refuses non-admins before doing anything', async () => {
+    jest.mocked(getServerSession).mockResolvedValue({ user: { id: 'member-1', isAdmin: false } })
 
-    expect(result).toEqual({ success: true, alreadyQueued: false, through: '2026-11-30' })
-    expect(enqueueServerAggregate).toHaveBeenCalledWith({ year: 2026, through: '2026-11-30' })
-    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.REWIND_SEASON_DATA_PREPARED, 'admin-1', {
+    for (const action of [prepareRewindSeason, generateAllRewinds, retryFailedRewinds, runRewindFinalCut, getRewindSeasonStatus]) {
+      expect(await action({ year: 2026 })).toMatchObject({ success: false, code: 'FORBIDDEN' })
+    }
+    expect(enqueueSeasonPrepare).not.toHaveBeenCalled()
+    expect(enqueueGenerateAll).not.toHaveBeenCalled()
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
+  it('Prepare season queues the configured audience and audits it with the estimate', async () => {
+    expect(await prepareRewindSeason({ year: 2026 })).toEqual({ success: true, data: { jobId: 'prep-1', alreadyQueued: false } })
+    expect(enqueueSeasonPrepare).toHaveBeenCalledWith({ year: 2026, through: '2026-11-30', audience: 'config', triggeredBy: 'admin' })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.REWIND_SEASON_PREPARED, 'admin-1', expect.objectContaining({
       year: 2026,
-      through: '2026-11-30',
-      jobId: 'job-1',
-      alreadyQueued: false,
-    })
+      audience: 'config',
+      members: 12,
+      estimatedCostUsd: 0.1,
+    }))
   })
 
-  it('prepares the full year once it has ended in the server zone', async () => {
-    jest.setSystemTime(new Date('2027-01-01T06:30:00Z')) // 00:30 on 1 January in Chicago
+  it('Generate all and Retry failed fan out with the configured audience, each audited', async () => {
+    await generateAllRewinds({ year: 2026 })
+    expect(enqueueGenerateAll).toHaveBeenLastCalledWith({ year: 2026, through: '2026-11-30', audience: 'config', scope: 'all' })
+    expect(logAuditEvent).toHaveBeenLastCalledWith(AuditEventType.REWIND_GENERATE_ALL_STARTED, 'admin-1', expect.objectContaining({ jobId: 'all-1' }))
 
-    await prepareRewindSeasonData({ year: 2026 })
-
-    expect(enqueueServerAggregate).toHaveBeenCalledWith({ year: 2026, through: '2026-12-31' })
-  })
-
-  it('reports a run already in progress', async () => {
-    jest.mocked(enqueueServerAggregate).mockResolvedValue({ jobId: 'job-1', alreadyQueued: true })
-
-    expect(await prepareRewindSeasonData({ year: 2026 })).toEqual({ success: true, alreadyQueued: true, through: '2026-11-30' })
+    await retryFailedRewinds({ year: 2026 })
+    expect(enqueueGenerateAll).toHaveBeenLastCalledWith(expect.objectContaining({ scope: 'failed', audience: 'config' }))
+    expect(loadSeasonEstimate).toHaveBeenLastCalledWith(2026, '2026-11-30', 'failed')
+    expect(logAuditEvent).toHaveBeenLastCalledWith(AuditEventType.REWIND_RETRY_FAILED, 'admin-1', expect.objectContaining({ year: 2026 }))
   })
 
   it('returns the FR-50 message and queues nothing without Redis', async () => {
     jest.mocked(checkRewindInfra).mockResolvedValue({ ok: false, code: 'REDIS_NOT_CONFIGURED' })
 
-    expect(await prepareRewindSeasonData({ year: 2026 })).toEqual({ success: false, error: 'Rewind needs Redis (REDIS_URL)' })
-    expect(enqueueServerAggregate).not.toHaveBeenCalled()
+    expect(await generateAllRewinds({ year: 2026 })).toMatchObject({ success: false, error: 'Rewind needs Redis (REDIS_URL)' })
+    expect(enqueueGenerateAll).not.toHaveBeenCalled()
+    expect(logAuditEvent).not.toHaveBeenCalled()
   })
 
   it('rejects an invalid year', async () => {
-    expect(await prepareRewindSeasonData({ year: 26.5 })).toEqual({ success: false, error: 'Invalid year' })
-    expect(enqueueServerAggregate).not.toHaveBeenCalled()
+    expect(await prepareRewindSeason({ year: 26.5 })).toMatchObject({ success: false, code: 'VALIDATION' })
   })
 
-  it('refuses a non-admin before doing anything', async () => {
-    jest.mocked(getServerSession).mockResolvedValue({ user: { id: 'member-1', isAdmin: false } })
+  it('maps a failed enqueue to a safe error, without an audit entry', async () => {
+    jest.mocked(enqueueSeasonPrepare).mockRejectedValue(new Error('Connection is closed.'))
 
-    await expect(prepareRewindSeasonData({ year: 2026 })).rejects.toThrow('UNAUTHORIZED')
-    expect(checkRewindInfra).not.toHaveBeenCalled()
-    expect(enqueueServerAggregate).not.toHaveBeenCalled()
-  })
-
-  it('returns an error when the enqueue fails', async () => {
-    jest.mocked(enqueueServerAggregate).mockRejectedValue(new Error('Connection is closed.'))
-
-    expect(await prepareRewindSeasonData({ year: 2026 })).toEqual({
-      success: false,
-      error: 'Rewind is temporarily unavailable. Try again in a few minutes.',
-    })
+    expect(await prepareRewindSeason({ year: 2026 })).toMatchObject({ success: false, code: 'INTERNAL', error: 'Could not start Prepare season' })
     expect(logAuditEvent).not.toHaveBeenCalled()
   })
 })
 
-describe('getRewindSeasonDataPreparedAt', () => {
-  it('returns the newest computedAt for the year', async () => {
-    jest.mocked(prisma.rewindServerAggregate.findFirst).mockResolvedValue({ computedAt: new Date('2026-11-02T20:05:00Z') } as never)
+describe('runRewindFinalCut', () => {
+  it('is refused before 1 January has begun in the westernmost zone', async () => {
+    jest.setSystemTime(new Date('2027-01-01T07:30:00Z')) // 01:30 in Chicago, 23:30 on 31 December in Los Angeles
 
-    expect(await getRewindSeasonDataPreparedAt(2026)).toBe('2026-11-02T20:05:00.000Z')
-    expect(prisma.rewindServerAggregate.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { year: 2026 }, orderBy: { computedAt: 'desc' } })
-    )
+    expect(await runRewindFinalCut({ year: 2026 })).toMatchObject({ success: false, code: 'CONFLICT', error: 'Available from 1 January' })
+    expect(seasonZones).toHaveBeenCalled()
+    expect(logAuditEvent).not.toHaveBeenCalled()
   })
 
-  it('returns null before the first run', async () => {
-    jest.mocked(prisma.rewindServerAggregate.findFirst).mockResolvedValue(null)
+  it('stays refused after the date until P8.5 registers the job', async () => {
+    jest.setSystemTime(new Date('2027-01-01T09:00:00Z'))
 
-    expect(await getRewindSeasonDataPreparedAt(2026)).toBeNull()
+    expect(await runRewindFinalCut({ year: 2026 })).toMatchObject({ success: false, code: 'CONFLICT', error: 'The final cut arrives in a later release' })
+  })
+})
+
+describe('getRewindSeasonStatus', () => {
+  it('returns the counts only', async () => {
+    const counts = { ready: 3, generating: 1, failed: 0, stuck: 0, notStarted: 2, byEdition: { full: 3 }, byCopySource: { llm: 3 } }
+    jest.mocked(getSeasonCounts).mockResolvedValue(counts)
+
+    expect(await getRewindSeasonStatus({ year: 2026 })).toEqual({ success: true, data: counts })
   })
 })

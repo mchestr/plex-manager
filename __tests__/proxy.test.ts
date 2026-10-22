@@ -3,14 +3,10 @@
  */
 
 /**
- * `/rewind/<year>` with a year the route rejects (P0.14), and
- * `/rewind/s/<token>` with a token that shares nothing (P0.11), get a
- * real 404 status. The routes render their own not-found pages, but
- * `app/loading.tsx` streams every page, so by then the status has already
- * gone out as 200.
- *
- * The proxy also spends the share-page visitor's `rw:share-page` point before
- * its lookup, and marks a visitor over the limit busy for the page.
+ * `/rewind/<year>` with a year the route rejects (P0.14) gets a real 404
+ * status. The route renders its own not-found page, but `app/loading.tsx`
+ * streams every page, so by then the status has already gone out as 200.
+ * The share page's statuses are in `__tests__/proxy-share.test.ts` (P7.5).
  *
  * P4.5: it sends a lapsed member to /subscribe from every `(app)` page but the
  * read-only Rewind pages, on every request (client-side navigations
@@ -112,98 +108,6 @@ describe('proxy /rewind/<year> status', () => {
       expect(mockConsume).not.toHaveBeenCalled()
     }
   )
-})
-
-describe('proxy /rewind/s/<token> status (P0.11)', () => {
-  it.each([
-    '/rewind/s/bad-token',
-    '/rewind/s/some-token',
-    `/rewind/s/${'a'.repeat(42)}`,
-    `/rewind/s/${'a'.repeat(44)}`,
-    `/rewind/s/${'a'.repeat(42)}=`,
-    `/rewind/s/${'a'.repeat(40)}%2F`,
-    // Not valid percent-encoding, so it is no token at all.
-    `/rewind/s/${'a'.repeat(40)}%E0%A4%A`,
-  ])('answers the malformed share path %s with a 404 and no database call', async (path) => {
-    expectNotFoundRewrite(await proxy(request(path)), path)
-    expect(mockFindUnique).not.toHaveBeenCalled()
-    expect(mockConsume).not.toHaveBeenCalled()
-  })
-
-  it('passes a token that shares a completed Rewind through, after reading only its status', async () => {
-    expectPassedThrough(await proxy(request(`/rewind/s/${TOKEN}`)))
-
-    expect(mockFindUnique).toHaveBeenCalledTimes(1)
-    expect(mockFindUnique).toHaveBeenCalledWith({ where: { shareToken: TOKEN }, select: { status: true } })
-  })
-
-  it('decodes the segment as the page does, so an encoded valid token passes through', async () => {
-    // %4B is "K", the token's first character.
-    const encoded = `%4B${TOKEN.slice(1)}`
-
-    expectPassedThrough(await proxy(request(`/rewind/s/${encoded}`)))
-    expect(mockFindUnique).toHaveBeenCalledWith({ where: { shareToken: TOKEN }, select: { status: true } })
-  })
-
-  it('answers an unknown or revoked token with a 404 and the same page', async () => {
-    const path = '/rewind/s/vZ2bLJpJkqoegfJ4-9rodbBNhGs3XZ-sdNzNXJC96wI'
-
-    expectNotFoundRewrite(await proxy(request(path)), path)
-    expect(mockFindUnique).toHaveBeenCalledTimes(1)
-  })
-
-  it.each(['generating', 'failed'])('answers a token whose Rewind is %s with a 404', async (status) => {
-    mockFindUnique.mockResolvedValue({ status })
-    const path = `/rewind/s/${TOKEN}`
-
-    expectNotFoundRewrite(await proxy(request(path)), path)
-  })
-
-  it("spends the visitor's rw:share-page point, keyed by the trusted proxy's entry, before the lookup", async () => {
-    const response = await proxy(
-      request(`/rewind/s/${TOKEN}`, { 'x-forwarded-for': '10.0.0.1, 203.0.113.7' })
-    )
-
-    expectPassedThrough(response)
-    expect(mockConsume).toHaveBeenCalledWith('rw:share-page', '203.0.113.7')
-    expect(mockConsume.mock.invocationCallOrder[0]).toBeLessThan(mockFindUnique.mock.invocationCallOrder[0])
-    expect(forwardedHeader(response, 'x-rewind-share-busy')).toBeNull()
-  })
-
-  it('marks a visitor over the limit busy for the page, without a lookup', async () => {
-    mockConsume.mockResolvedValue({ ok: false, retryAfterSec: 30 })
-
-    const response = await proxy(request('/rewind/s/vZ2bLJpJkqoegfJ4-9rodbBNhGs3XZ-sdNzNXJC96wI'))
-
-    expectPassedThrough(response)
-    expect(forwardedHeader(response, 'x-rewind-share-busy')).toBe('1')
-    expect(mockFindUnique).not.toHaveBeenCalled()
-  })
-
-  it('drops a busy header the client sent', async () => {
-    const response = await proxy(request(`/rewind/s/${TOKEN}`, { 'x-rewind-share-busy': '1' }))
-
-    expectPassedThrough(response)
-    expect(response.headers.get('x-middleware-override-headers')).not.toContain('x-rewind-share-busy')
-    expect(forwardedHeader(response, 'x-rewind-share-busy')).toBeNull()
-  })
-
-  it('looks the token up when the limiter fails', async () => {
-    const error = new Error('limiter down')
-    mockConsume.mockRejectedValue(error)
-
-    expectPassedThrough(await proxy(request(`/rewind/s/${TOKEN}`)))
-    expect(mockFindUnique).toHaveBeenCalledTimes(1)
-    expect(mockLogError).toHaveBeenCalledWith('Share page rate limit failed', error)
-  })
-
-  it('lets the request through when the lookup fails, so the page reports the error', async () => {
-    const error = new Error('Database unavailable')
-    mockFindUnique.mockRejectedValue(error)
-
-    expectPassedThrough(await proxy(request(`/rewind/s/${TOKEN}`)))
-    expect(mockLogError).toHaveBeenCalledWith('Share token lookup failed', error)
-  })
 })
 
 describe('proxy request log (P4.16)', () => {

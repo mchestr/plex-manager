@@ -42,7 +42,6 @@
     "heading-order|moderate": 1
   },
   "admin /admin/settings": {},
-  "admin /admin/settings [Wrapped settings editing]": {},
   "admin /admin/shares": {
     "role-img-alt|serious": 1
   },
@@ -55,10 +54,7 @@
     "heading-order|moderate": 1
   },
   "admin /admin/users/regular-user-id": {},
-  "admin /admin/users/regular-user-id/wrapped": {
-    "color-contrast|incomplete": 11,
-    "link-name|serious": 1
-  },
+  "admin /admin/users/regular-user-id/rewind/2026": {},
   "admin /admin/wrapped/visual-rewind/history/visual-llm-usage-1": {
     "link-name|serious": 1
   },
@@ -71,12 +67,8 @@
   "member /onboarding": {
     "color-contrast|incomplete": 16
   },
-  "member /rewind": {
-    "color-contrast|incomplete": 8
-  },
-  "member /rewind/2026": {
-    "color-contrast|incomplete": 8
-  },
+  "member /rewind": {},
+  "member /rewind/2026": {},
   "member /subscribe": {},
   "member /subscribe/success": {},
   "public /": {
@@ -89,9 +81,7 @@
   "public /invite/VISUALOK": {
     "color-contrast|incomplete": 3
   },
-  "public /rewind/s/a11y-share-token000000000000000000000000000": {
-    "color-contrast|incomplete": 18
-  },
+  "public /rewind/s/a11y-share-token000000000000000000000000000": {},
   "public /setup [step 1]": {
     "color-contrast|incomplete": 40,
     "color-contrast|serious": 1
