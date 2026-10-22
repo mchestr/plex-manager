@@ -425,10 +425,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Open cost analysis, Tab into the daily chart and step through the days with the arrow keys while a screen reader reads the summary. Switch the theme class in devtools and watch the series recolour with no reload. `npm ls chart.js` finds nothing.
 
 **Done when.**
-- [ ] Every chart is a ChartCard on shadcn Chart and Recharts 3, with `accessibilityLayer`, CSS-variable colours and a generated summary.
+- [x] Every chart is a ChartCard on shadcn Chart and Recharts 3, with `accessibilityLayer`, CSS-variable colours and a generated summary.
 - [ ] chart.js and react-chartjs-2 are uninstalled, and lint blocks their return.
 - [ ] The admin chart budget is recorded and enforced, and the Rewind budget still passes.
 - [ ] Jest, E2E, axe and the reviewed visual baselines pass.
+
+(as merged: `recharts` 3.10.1 and `react-is` 19.3.0 are pinned exactly (react-is 19.3.1 was under two weeks old), with an `overrides` pin of `immer` 11.1.21 because the range resolved to a release from that day; the lockfile was written with `--package-lock-only`. `components/ui/chart.tsx` is the base-nova registry file with local changes: `cn` from `@/lib/utils`, colours set as `--color-<key>` on the container's style (no generated `<style>` block), popover tokens and a `valueFormatter` (default `f.number`) on the tooltip, a tooltip `data-testid`, and only the parts ChartCard uses. Series keys inside the body are `s1`..`s5`. ChartCard's `mode` prop is gone (colours follow the theme class); the spec API is unchanged. The generated summary is `<testId>-summary` (sr-only, the chart's `aria-describedby`), the tooltip `<testId>-tooltip`, and the chart is `role="application"` (Recharts' accessibility layer), no longer `img`. `lib/charts/theme.ts` is the slot map (`seriesColours`, `CHART_COLOURS`, `OTHER_SERIES_ID`); `chartTheme`, `rewindChartTheme` and `registerCharts` are gone (the Rewind scope already remaps `--chart-*`), so `lib/design/color.ts` is test-only and has a knip entry. chart.js and react-chartjs-2 stay installed for `components/wrapped/wrapped-charts.tsx`, the dead v2 viewer P11.29 deletes; lint bans both everywhere else (and recharts outside `components/ui/chart*`), and P11.29 uninstalls them. The perf spec's 200 KB budget is provisional until a production run measures it (set it to the measure plus 10%). `/dev/ui` shows each kind in the dark theme only; the light pass waits for P10.10's light region. E2E and perf specs were written, not run.)
 
 ### Step P10.10: Light theme behind its flag
 

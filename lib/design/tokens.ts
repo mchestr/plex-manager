@@ -1,7 +1,7 @@
 /**
  * The TypeScript mirror of the colour tokens in `app/globals.css`
  * (ui-design-system 4.3), for the places that cannot read CSS variables,
- * `oklch()` or `color-mix()`: Satori share and OG cards, Chart.js, and Rewind.
+ * `oklch()` or `color-mix()`: Satori share and OG cards, and Rewind.
  *
  * ## Overview
  *
@@ -259,10 +259,15 @@ export const rewindInks = {
   },
 } as const satisfies Record<InkName, RewindInk>
 
-/** What an app token reads inside the scope: a colour of the page's ink, paper (popups), transparent, or a fixed value. */
+/** What an app token reads inside the scope: a colour of the page's ink, paper (popups), transparent, or a fixed value. @internal */
 export type RemapValue = "field" | "ink" | "spot" | "paper" | "on-paper" | "transparent" | TokenValue
 
-/** The scope's semantic remap (ui-design-system 4.4). `sidebar-*` never renders inside Rewind. */
+/**
+ * The scope's semantic remap (ui-design-system 4.4). `sidebar-*` never renders inside Rewind.
+ * The token sync test checks it against `globals.css`.
+ *
+ * @internal
+ */
 export const rewindRemap = {
   background: "field", foreground: "ink",
   card: "field", "card-foreground": "ink",

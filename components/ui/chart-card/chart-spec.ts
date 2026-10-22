@@ -2,8 +2,8 @@
  * The declarative chart spec ChartCard draws (ui-design-system 3.5, UI-24).
  *
  * Pages build a `ChartSpec` from their data and never pass library options,
- * so the body that draws it (Chart.js now, Recharts in P10.9) can change
- * without touching a page. Pure and serialisable: a Server Component builds
+ * so the body that draws it (Recharts since P10.9) can change without
+ * touching a page. Pure and serialisable: a Server Component builds
  * the spec and hands it to the client card.
  *
  * - `bar`: one or more series over the x values, side by side.
@@ -17,6 +17,7 @@
  * @module components/ui/chart-card/chart-spec
  */
 
+import { OTHER_SERIES_ID } from "@/lib/charts/theme"
 import type { BoundFormat } from "@/lib/utils/format"
 
 type ChartKind = "bar" | "line" | "stacked-bar" | "ranked-bar"
@@ -51,7 +52,7 @@ export function foldSeries(series: readonly ChartSeries[]): ChartSeries[] {
   const kept = series.slice(0, MAX_SERIES - 1)
   const rest = series.slice(MAX_SERIES - 1)
   const values = rest[0].values.map((_, index) => rest.reduce((sum, item) => sum + (item.values[index] ?? 0), 0))
-  return [...kept, { id: "other", label: "Other", values }]
+  return [...kept, { id: OTHER_SERIES_ID, label: "Other", values }]
 }
 
 /** Each x value's label: day keys through `formatDayKey`, never `new Date(key)`. */

@@ -82,7 +82,9 @@
     "react": "19.3.1",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "19.3.1",
+    "react-is": "19.3.0",
     "react-markdown": "^10.1.0",
+    "recharts": "3.10.1",
     "server-only": "0.0.1",
     "sharp": "0.35.5",
     "stripe": "^23.0.0",
@@ -125,5 +127,8 @@
   },
   "optionalDependencies": {
     "zlib-sync": "^0.1.10"
+  },
+  "overrides": {
+    "immer": "11.1.21"
   }
 }
