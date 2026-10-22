@@ -455,6 +455,11 @@ jobs:
           fi
           exit "$status"
 
+      # Descriptive names and rising timestamps for every folder newer than
+      # prisma/migrations/.legacy-names.json (P11.6).
+      - name: Check migration names
+        run: node scripts/check-migrations.mjs
+
   # The Playwright projects against `next build` plus `next start`, in the
   # image the visual baselines are taken in, on a throwaway Postgres and Redis.
   # "E2E Tests" (required) runs every functional spec, Rewind's story flows
