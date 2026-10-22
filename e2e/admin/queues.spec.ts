@@ -5,7 +5,7 @@ import { expect, test } from '../fixtures/auth';
 /**
  * The job queues page (P10.3): pause through the confirm and read "Queue
  * paused", then resume; retry a seeded failed job from its row menu; and no
- * sideways scroll at 390px.
+ * sideways scroll at 390px, before hydration as well as after it.
  *
  * The failed job is an unknown job type, which the in-process worker fails
  * on its one attempt. Without a worker it never fails, and that test skips.
@@ -68,5 +68,29 @@ test.describe('Job queues', () => {
     await expect(adminPage.getByTestId('queue-status')).toBeVisible();
     const width = await adminPage.evaluate(() => document.documentElement.scrollWidth);
     expect(width).toBe(390);
+  });
+
+  // Before hydration a phone gets the desktop table (the media query's server
+  // snapshot). Blocking the app's script chunks holds the page there: Next's
+  // inline scripts still reveal the streamed HTML, but React never hydrates.
+  test('fits a phone before hydration, with a job in the table', async ({ adminPage, browser }) => {
+    const queue = new Queue(QUEUE_NAME, { connection: { url: process.env.REDIS_URL ?? 'redis://localhost:6379' } });
+    const job = await queue.add(SEEDED_TYPE, {}, { jobId: `e2e-delayed-${Date.now()}`, delay: 60 * 60 * 1000 });
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      storageState: await adminPage.context().storageState(),
+    });
+    try {
+      const page = await context.newPage();
+      await page.route('**/_next/static/chunks/**/*.js', (route) => route.abort());
+      await page.goto(new URL('/admin/queues?status=delayed', test.info().project.use.baseURL).toString());
+      await expect(page.getByTestId(`queue-jobs-row-${job.id}`)).toBeVisible();
+      const width = await page.evaluate(() => document.documentElement.scrollWidth);
+      expect(width).toBe(390);
+    } finally {
+      await context.close();
+      await job.remove();
+      await queue.close();
+    }
   });
 });

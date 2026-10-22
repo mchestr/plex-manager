@@ -228,7 +228,10 @@ export function DataTable<T>({
   return (
     <div data-slot="data-table" className="flex flex-col gap-3" data-testid={testId}>
       {toolbar}
-      <div className="overflow-hidden rounded-lg border bg-card">{body}</div>
+      {/* Before hydration a phone gets the table (the media query's server snapshot is
+          desktop); it scrolls inside its card instead of widening the page. `relative`
+          keeps the sr-only header labels, which are absolutely placed, inside the scroll. */}
+      <div className="relative overflow-x-auto rounded-lg border bg-card">{body}</div>
       {!loading && data.length > 0 && (
         <TablePagination
           page={pagination.page}
