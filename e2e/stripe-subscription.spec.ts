@@ -268,7 +268,8 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       await expect(page.getByTestId('subscription-plan')).toHaveText('Membership');
       await expect(page.getByTestId('subscription-status-badge')).toContainText('Active');
       await expect(page.getByTestId('subscription-period')).toContainText(/^Renews /);
-      await expect(page.getByTestId('manage-subscription-button')).toHaveText('Manage billing');
+      // The Button keeps its hidden loading label in the DOM (aria-hidden) to hold its width.
+      await expect(page.getByTestId('manage-subscription-button')).toHaveAccessibleName('Manage billing');
       await expect(page.getByTestId('subscription-status-view')).not.toContainText('price_');
 
       await page.goto('/');
