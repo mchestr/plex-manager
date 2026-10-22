@@ -9,7 +9,9 @@
  * preference is on. Nothing fires from a text field or from inside a sheet,
  * modified keys are left to the browser, Space on a button or link is left to
  * that control, and inside `[data-rw-interactive]` (quiz, scrubber) only Esc
- * is taken. Inside a composite widget (a slider, a grid, a radio group or a
+ * is taken, while its page is current: after a turn, focus stays on the left
+ * page's control until it moves to the new page's heading a frame later, and a
+ * key pressed in that gap belongs to the story ({@link isLiveIsland}). Inside a composite widget (a slider, a grid, a radio group or a
  * tab list; {@link isCompositeWidgetTarget}) the arrows, Home, End and the Page
  * keys belong to the widget and Esc still closes. Inside `[data-rw-scroll]` (the desktop spread's rail and Notes,
  * P7.4) the arrows, Page keys, Home, End and Space are left to scroll it.
@@ -52,6 +54,9 @@ const WIDGET_KEYS = new Set(["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", 
 
 const COMPOSITE_WIDGET = '[role="slider"], [role="grid"], [role="radiogroup"], [role="tablist"]'
 
+/** A story page (`StagePage`); the current one carries `data-current`. */
+const PAGE = '[aria-roledescription="page"]'
+
 function closest(target: EventTarget | null, selector: string): boolean {
   return typeof Element !== "undefined" && target instanceof Element && target.closest(selector) !== null
 }
@@ -65,13 +70,26 @@ export function isCompositeWidgetTarget(target: EventTarget | null): boolean {
   return closest(target, COMPOSITE_WIDGET)
 }
 
+/**
+ * Whether `target` sits in a `[data-rw-interactive]` island on the current page
+ * (or outside any page). An island on a page a turn has just left, such as
+ * the cover's cut buttons, no longer holds the keys.
+ *
+ * @internal `keyToCommand` uses it; the tests check it directly.
+ */
+export function isLiveIsland(target: EventTarget | null): boolean {
+  if (typeof Element === "undefined" || !(target instanceof Element)) return false
+  const page = target.closest("[data-rw-interactive]")?.closest(PAGE)
+  return page !== undefined && (page === null || page.hasAttribute("data-current"))
+}
+
 export function keyToCommand(event: KeyInput, { shortcuts }: { shortcuts: boolean }): StageCommand | null {
   if (event.altKey || event.ctrlKey || event.metaKey) return null
   if (closest(event.target, TEXT_FIELD) || closest(event.target, '[role="dialog"], [role="alertdialog"]')) return null
 
   const command = ALWAYS[event.key] ?? (shortcuts ? LETTERS[event.key.toLowerCase()] : undefined) ?? null
   if (command === null || command === "escape") return command
-  if (closest(event.target, "[data-rw-interactive]")) return null
+  if (isLiveIsland(event.target)) return null
   if (WIDGET_KEYS.has(event.key) && isCompositeWidgetTarget(event.target)) return null
   if (SCROLL_KEYS.has(event.key) && closest(event.target, "[data-rw-scroll]")) return null
   if ((event.key === " " || event.key === "Enter") && closest(event.target, CONTROL)) return null

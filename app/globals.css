@@ -20,6 +20,9 @@
   }
 }
 
+/* A short window (a 720px laptop): the admin sidebar tightens so its whole nav stays within the viewport */
+@custom-variant short (@media (max-height: 50rem));
+
 /* ---------- 1. Light values (shadcn convention; ships behind a flag, ui-design-system 3.3) ---------- */
 :root {
   color-scheme: light;
