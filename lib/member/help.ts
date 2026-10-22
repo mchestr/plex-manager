@@ -2,7 +2,7 @@ import "server-only"
 
 import type { SupportDiscord } from "@/components/guides/support-guide"
 import { serverName as getServerName } from "@/lib/brand"
-import { primaryService } from "@/lib/member/service"
+import { primaryService } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import { safeHref } from "@/lib/ui/markdown"
 import type { AuthService } from "@/types/onboarding"

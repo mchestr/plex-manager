@@ -1,4 +1,4 @@
-import { memberServices, primaryService, type MemberIdentity } from '@/lib/member/service'
+import { memberServices, primaryService, type MemberIdentity } from '@/lib/members/service'
 import type { AuthService } from '@/types/onboarding'
 
 const PLEX: MemberIdentity = { plexUserId: 'plex-1', jellyfinUserId: null }

@@ -63,17 +63,23 @@ describe('setJellyfinAccountDisabled', () => {
   it('keeps every policy field, EnabledFolders included, and changes only IsDisabled', async () => {
     jellyfin()
 
-    await expect(setJellyfinAccountDisabled(CONFIG, 'jf-1', true)).resolves.toEqual({ success: true })
+    await expect(setJellyfinAccountDisabled(CONFIG, 'jf-1', true)).resolves.toEqual({ success: true, status: 'changed' })
 
     expect(policyWrites()).toEqual([{ url: 'http://jellyfin.local:8096/Users/jf-1/Policy', body: { ...POLICY, IsDisabled: true } }])
   })
 
-  it('fails without writing when the account is gone or has no policy', async () => {
+  it('writes nothing when the account is gone, has no policy or is an administrator', async () => {
     jellyfin({ status: 404 })
-    await expect(setJellyfinAccountDisabled(CONFIG, 'jf-1', true)).resolves.toMatchObject({ success: false })
+    await expect(setJellyfinAccountDisabled(CONFIG, 'jf-1', true)).resolves.toEqual({ success: true, status: 'not_found' })
+
+    jellyfin({ policy: { ...POLICY, IsAdministrator: true } })
+    await expect(setJellyfinAccountDisabled(CONFIG, 'jf-1', true)).resolves.toEqual({ success: false, code: 'JELLYFIN_ADMIN' })
+
+    jellyfin({ policy: { ...POLICY, IsDisabled: true } })
+    await expect(setJellyfinAccountDisabled(CONFIG, 'jf-1', true)).resolves.toEqual({ success: true, status: 'unchanged' })
 
     jest.mocked(fetchWithTimeout).mockResolvedValue(new Response(JSON.stringify({ Id: 'jf-1' }), { status: 200 }))
-    await expect(setJellyfinAccountDisabled(CONFIG, 'jf-1', true)).resolves.toMatchObject({ success: false })
+    await expect(setJellyfinAccountDisabled(CONFIG, 'jf-1', true)).resolves.toEqual({ success: false, code: 'JELLYFIN_UNAVAILABLE' })
 
     expect(policyWrites()).toEqual([])
   })

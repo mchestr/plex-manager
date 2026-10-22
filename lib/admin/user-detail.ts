@@ -13,7 +13,7 @@ import type { UserActionTarget } from "@/lib/admin/user-actions"
 import { getJellyfinUserById } from "@/lib/connections/jellyfin-users"
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
-import { memberServices, primaryService } from "@/lib/member/service"
+import { memberServices, primaryService } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import type { AuthService } from "@/types/onboarding"
 

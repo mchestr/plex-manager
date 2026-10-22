@@ -2,6 +2,7 @@
 
 import { adminAction } from "@/lib/actions/define-action"
 import { ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
+import { isPlexServerOwner } from "@/lib/members/owner"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { enqueueRoleSync } from "@/lib/discord/role-sync"
@@ -11,18 +12,6 @@ import { z } from "zod"
 
 /** Why an admin action on a user was refused. */
 type UserActionRefusal = "SELF" | "OWNER" | "LAST_ADMIN" | "NOT_FOUND"
-
-/** Whether `plexUserId` owns the active Plex server, whom every login promotes. */
-async function isPlexServerOwner(plexUserId: string | null): Promise<boolean> {
-  if (!plexUserId) {
-    return false
-  }
-  const plexServer = await prisma.plexServer.findFirst({
-    where: { isActive: true },
-    select: { adminPlexUserId: true },
-  })
-  return plexServer?.adminPlexUserId === plexUserId
-}
 
 async function revalidateUserPages(userId: string) {
   const { revalidatePath } = await import("next/cache")

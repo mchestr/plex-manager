@@ -59,6 +59,7 @@ import { withMachineIdentifier } from "@/lib/connections/plex-machine-id"
 import { checkUserServerAccess } from "@/lib/connections/plex-user-access"
 import { enqueueRoleSync } from "@/lib/discord/role-sync"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { stopSyncAndClearPlexToken } from "@/lib/members/offboard"
 import { endUserSessions, SYSTEM_ACTOR } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -678,8 +679,9 @@ export function evaluateRevokeGuard(target: RevokeGuardTarget): string | null {
  *    `UnrecoverableError` (a rejected owner token is not retried) and
  *    `PLEX_UNAVAILABLE` throws to retry; a user with no `plexUserId` is
  *    already effectively unshared (idempotent).
- * 4. On `removed` or `already_removed`, record the removal on the subscription
- *    (`plexInviteStatus = "revoked"`), then end the user's sessions
+ * 4. On `removed` or `already_removed`, stop the member's watchlist sync and
+ *    clear their stored Plex token (GAP-31, idempotent), record the removal on
+ *    the subscription (`plexInviteStatus = "revoked"`), then end the user's sessions
  *    ({@link endUserSessions}). A rerun that finds the share gone and the
  *    removal already recorded succeeds without ending them again.
  *
@@ -767,6 +769,8 @@ export async function processPlexAccessRevoke(
     // Plex is unavailable: throw so BullMQ retries the revoke.
     throw new Error(unshareResult.code)
   }
+
+  await stopSyncAndClearPlexToken(userId)
 
   // An already removed share whose removal is already recorded is a rerun:
   // succeed without ending the sessions a second time.

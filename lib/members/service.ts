@@ -15,7 +15,7 @@
  * | both            | plex or null | plex           |
  * | neither         | any          | plex           |
  *
- * @module lib/member/service
+ * @module lib/members/service
  */
 
 import type { AuthService } from "@/types/onboarding"

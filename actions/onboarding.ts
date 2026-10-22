@@ -2,7 +2,7 @@
 
 import { memberAction } from "@/lib/actions/define-action"
 import { ok } from "@/lib/actions/result"
-import { primaryService } from "@/lib/member/service"
+import { primaryService } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import type { AuthService } from "@/types/onboarding"

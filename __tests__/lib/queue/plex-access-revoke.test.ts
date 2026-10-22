@@ -32,6 +32,7 @@ import { JOB_TYPES } from '@/lib/queue/types'
 import { mockReset } from 'jest-mock-extended'
 import type Stripe from 'stripe'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { stopSyncAndClearPlexToken } from '@/lib/members/offboard'
 import { buildConfig } from '@/__tests__/helpers/factories'
 import {
   createFakeStripe,
@@ -53,6 +54,8 @@ jest.mock('@/lib/connections/plex-invitations', () => ({
   acceptPlexInvite: jest.fn(),
   unshareUserFromPlexServer: jest.fn(),
 }))
+
+jest.mock('@/lib/members/offboard', () => ({ stopSyncAndClearPlexToken: jest.fn() }))
 
 jest.mock('@/lib/stripe/client', () => ({
   getStripe: jest.fn(),
@@ -279,6 +282,8 @@ describe('processPlexAccessRevoke', () => {
     expect(prismaMock.user.updateMany.mock.invocationCallOrder[0]).toBeGreaterThan(
       prismaMock.subscription.updateMany.mock.invocationCallOrder[0]
     )
+    // GAP-31: the watchlist sync stops and the stored Plex token goes
+    expect(stopSyncAndClearPlexToken).toHaveBeenCalledWith('user-1')
     expect(result).toEqual({ userId: 'user-1', revoked: true })
   })
 
@@ -399,6 +404,8 @@ describe('processPlexAccessRevoke', () => {
     await expect(processPlexAccessRevoke(makeRevokeJob('user-1'))).resolves.toEqual({ userId: 'user-1', revoked: true })
     await expect(processPlexAccessRevoke(makeRevokeJob('user-1'))).resolves.toEqual({ userId: 'user-1', revoked: false })
 
+    // The clean-up is idempotent, so the rerun repeats it
+    expect(stopSyncAndClearPlexToken).toHaveBeenCalledTimes(2)
     expect(prismaMock.user.updateMany).toHaveBeenCalledTimes(1)
     expect(prismaMock.user.updateMany).toHaveBeenCalledWith({
       where: { id: 'user-1' },

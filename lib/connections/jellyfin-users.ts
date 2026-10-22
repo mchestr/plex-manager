@@ -272,18 +272,32 @@ export async function getJellyfinUserById(
 /** The user's stored policy: every field is kept, so only its shape is checked. */
 const userPolicySchema = z.object({ Policy: z.record(z.string(), z.unknown()) })
 
+/** The outcome of {@link setJellyfinAccountDisabled}. */
+export type JellyfinDisableResult =
+  | { success: true; status: "changed" | "unchanged" | "not_found" }
+  | { success: false; code: "JELLYFIN_ADMIN" | "JELLYFIN_UNAVAILABLE" }
+
 /**
- * Turns a Jellyfin account off or on (P11.10). Jellyfin replaces the whole
- * policy on a write, so this reads the user, keeps every field of their
+ * Turns a Jellyfin account off or on (P11.10, P11.13). Jellyfin replaces the
+ * whole policy on a write, so this reads the user, keeps every field of their
  * current `Policy` (libraries, `IsAdministrator`, downloads) and changes only
  * `IsDisabled`. {@link setJellyfinUserPolicy} cannot do this: it resets the
  * libraries and `IsAdministrator`.
+ *
+ * A Jellyfin administrator is never disabled (`JELLYFIN_ADMIN`). An account
+ * Jellyfin no longer has is `not_found`, which member removal counts as done;
+ * a user without a policy is unknown, so nothing changes
+ * (`JELLYFIN_UNAVAILABLE`).
+ *
+ * @param config - The active Jellyfin server.
+ * @param jellyfinUserId - The member's Jellyfin user id.
+ * @param disabled - True turns the account off.
  */
 export async function setJellyfinAccountDisabled(
   config: JellyfinConfig,
   jellyfinUserId: string,
   disabled: boolean
-): Promise<{ success: true } | { success: false; error: string }> {
+): Promise<JellyfinDisableResult> {
   try {
     const userUrl = `${config.url}/Users/${encodeURIComponent(jellyfinUserId)}`
     const current = await fetchWithTimeout(userUrl, {
@@ -291,33 +305,40 @@ export async function setJellyfinAccountDisabled(
       headers: getJellyfinHeaders(config.apiKey),
       timeoutMs: 5000,
     })
+    if (current.status === 404) return { success: true, status: "not_found" }
     if (!current.ok) {
       logger.warn("jellyfin.access.read_failed", { userId: jellyfinUserId, status: current.status })
-      return { success: false, error: current.status === 404 ? "The Jellyfin account no longer exists" : "Could not read the Jellyfin account" }
+      return { success: false, code: "JELLYFIN_UNAVAILABLE" }
     }
 
     const parsed = userPolicySchema.safeParse(await current.json().catch(() => null))
     if (!parsed.success) {
       logger.warn("jellyfin.access.invalid_policy", { userId: jellyfinUserId })
-      return { success: false, error: "Jellyfin returned an account without a policy" }
+      return { success: false, code: "JELLYFIN_UNAVAILABLE" }
     }
+    const policy = parsed.data.Policy
+    if (disabled && policy.IsAdministrator === true) return { success: false, code: "JELLYFIN_ADMIN" }
+    if (policy.IsDisabled === disabled) return { success: true, status: "unchanged" }
 
     const response = await fetchWithTimeout(`${userUrl}/Policy`, {
       method: "POST",
       headers: getJellyfinHeaders(config.apiKey),
-      body: JSON.stringify({ ...parsed.data.Policy, IsDisabled: disabled }),
+      body: JSON.stringify({ ...policy, IsDisabled: disabled }),
       timeoutMs: 10000,
     })
     if (!response.ok) {
       logger.warn("jellyfin.access.write_failed", { userId: jellyfinUserId, status: response.status })
-      return { success: false, error: "Jellyfin refused the change" }
+      return { success: false, code: "JELLYFIN_UNAVAILABLE" }
     }
 
     logger.info("jellyfin.access.changed", { userId: jellyfinUserId, disabled })
-    return { success: true }
+    return { success: true, status: "changed" }
   } catch (error) {
-    logger.error("Error changing Jellyfin account access", error, { userId: jellyfinUserId })
-    return { success: false, error: "Could not reach the Jellyfin server" }
+    logger.warn("jellyfin.access.error", {
+      userId: jellyfinUserId,
+      error: error instanceof Error ? error.name : "unknown",
+    })
+    return { success: false, code: "JELLYFIN_UNAVAILABLE" }
   }
 }
 

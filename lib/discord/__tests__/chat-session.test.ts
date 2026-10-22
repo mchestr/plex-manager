@@ -35,6 +35,8 @@ interface SessionRow {
 }
 
 let sessions: SessionRow[]
+/** Conversation owners; a conversation not listed belongs to user-1. */
+let owners: Map<string, string>
 let conversationCounter: number
 let sessionCounter: number
 
@@ -60,12 +62,15 @@ const store = {
     create: (args: { data: { userId: string } }) => {
       createSpy(args)
       conversationCounter += 1
+      owners.set(`conversation-${conversationCounter}`, args.data.userId)
       return Promise.resolve({ id: `conversation-${conversationCounter}`, userId: args.data.userId })
     },
   },
   discordChatSession: {
-    findUnique: (args: { where: Parameters<typeof findSession>[0] }) =>
-      Promise.resolve(findSession(args.where) ?? null),
+    findUnique: (args: { where: Parameters<typeof findSession>[0] }) => {
+      const row = findSession(args.where)
+      return Promise.resolve(row ? { ...row, chatConversation: { userId: owners.get(row.chatConversationId) ?? "user-1" } } : null)
+    },
     upsert: (args: {
       where: Parameters<typeof findSession>[0]
       update: Partial<SessionRow>
@@ -108,6 +113,7 @@ const mockPrisma = prisma as unknown as { $transaction: jest.Mock }
 
 beforeEach(() => {
   sessions = []
+  owners = new Map()
   conversationCounter = 0
   sessionCounter = 0
   createSpy.mockClear()
@@ -184,6 +190,25 @@ describe("getOrCreateSession", () => {
 
     expect(createSpy).toHaveBeenCalledTimes(1)
     expect(result.chatConversationId).toBe("conversation-1")
+  })
+
+  it("starts fresh when the Discord account is now linked to another app user (GAP-31)", async () => {
+    sessions.push({
+      id: "session-previous-owner",
+      discordUserId: "discord-1",
+      discordChannelId: "channel-1",
+      chatConversationId: "conversation-previous",
+      messages: [{ role: "user", content: "someone else's turn", timestamp: 1 }],
+      isActive: true,
+      lastMessageAt: new Date(),
+    })
+    owners.set("conversation-previous", "user-previous")
+
+    const result = await getOrCreateSession(params)
+
+    expect(createSpy).toHaveBeenCalledWith({ data: { userId: "user-1" } })
+    expect(result.chatConversationId).toBe("conversation-1")
+    expect(result.history).toEqual([])
   })
 
   it("does NOT create duplicate conversations under concurrency", async () => {

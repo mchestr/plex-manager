@@ -21,7 +21,7 @@ const logger = createLogger("SESSION_REVOCATION")
  * Why a user's sessions were ended. P4.11 adds its own reason; P4.18's role
  * syncs reuse these (`RoleSyncReason` in `lib/queue/types.ts`).
  */
-export type SessionRevocationReason = "unshared" | "demoted" | "disabled" | "subscription_revoked"
+export type SessionRevocationReason = "unshared" | "demoted" | "disabled" | "subscription_revoked" | "removed"
 
 /** The audit actor for revocations that no admin triggered, such as a Stripe job. */
 export const SYSTEM_ACTOR = "system"

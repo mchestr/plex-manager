@@ -33,6 +33,9 @@ export enum AuditEventType {
   // carry the target user id and their Jellyfin user id.
   JELLYFIN_ACCESS_DISABLED = "JELLYFIN_ACCESS_DISABLED",
   JELLYFIN_ACCESS_ENABLED = "JELLYFIN_ACCESS_ENABLED",
+  // An admin removed a member and their data (P11.13). Details carry the row
+  // counts, the external outcomes and the Stripe customer id, never a name or email.
+  MEMBER_ERASED = "MEMBER_ERASED",
   // Invite processing events
   INVITE_CONSUMED = "INVITE_CONSUMED",
   INVITE_PLEX_FAILURE = "INVITE_PLEX_FAILURE",

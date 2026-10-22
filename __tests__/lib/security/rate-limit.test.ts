@@ -99,6 +99,7 @@ describe("rate-limit", () => {
         'admin:test': { points: 30, duration: 600 },
         'admin:queue': { points: 30, duration: 60 },
         'admin:invites': { points: 30, duration: 600 },
+        'admin:remove-member': { points: 10, duration: 3600 },
         checkout: { points: 10, duration: 60 },
         portal: { points: 10, duration: 60 },
         "discord-link": { points: 5, duration: 300 },
