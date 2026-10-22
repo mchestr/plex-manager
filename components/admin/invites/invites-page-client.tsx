@@ -228,7 +228,7 @@ export function InvitesPageClient() {
   function getExpirationLabel(date: Date | null) {
     if (!date) return "Never"
     const now = new Date()
-    if (date < now) return <span className="text-red-400">Expired</span>
+    if (date < now) return <span className="text-destructive">Expired</span>
     return f.date(date)
   }
 
@@ -236,8 +236,8 @@ export function InvitesPageClient() {
     <div>
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Invites</h1>
-          <p className="text-slate-400">Manage invites to your media servers</p>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Invites</h1>
+          <p className="text-muted-foreground">Manage invites to your media servers</p>
         </div>
         <button
           onClick={openCreateModal}
@@ -263,8 +263,8 @@ export function InvitesPageClient() {
           <svg className="w-12 h-12 text-muted-foreground mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
           </svg>
-          <h3 className="text-lg font-medium text-white mb-2">No invites yet</h3>
-          <p className="text-slate-400">Generate an invite code to get started.</p>
+          <h3 className="text-lg font-medium text-foreground mb-2">No invites yet</h3>
+          <p className="text-muted-foreground">Generate an invite code to get started.</p>
         </div>
       ) : (
         <div className="bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden">
@@ -280,9 +280,9 @@ export function InvitesPageClient() {
                   <th className="px-3 sm:px-6 py-3 sm:py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700">
+              <tbody className="divide-y divide-border">
                 {invites.map((invite) => (
-                  <tr key={invite.id} className="hover:bg-slate-800/50 transition-colors">
+                  <tr key={invite.id} className="hover:bg-accent transition-colors">
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <Link
                         href={inviteRoute(invite.id)}
@@ -310,7 +310,7 @@ export function InvitesPageClient() {
                             style={{ width: `${Math.min(100, (invite.useCount / invite.maxUses) * 100)}%` }}
                           ></div>
                         </div>
-                        <span className="text-xs sm:text-sm text-slate-400 whitespace-nowrap">
+                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                           {invite.useCount} / {invite.maxUses}
                         </span>
                       </div>
@@ -319,11 +319,11 @@ export function InvitesPageClient() {
                         {getExpirationLabel(invite.expiresAt ? new Date(invite.expiresAt) : null)}
                       </div>
                     </td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-slate-400 hidden sm:table-cell">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-muted-foreground hidden sm:table-cell">
                       {getExpirationLabel(invite.expiresAt ? new Date(invite.expiresAt) : null)}
                     </td>
                     <td
-                      className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-slate-400 hidden md:table-cell"
+                      className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-muted-foreground hidden md:table-cell"
                       data-testid="invite-created-timestamp"
                     >
                       {f.date(invite.createdAt)}
@@ -332,7 +332,7 @@ export function InvitesPageClient() {
                       <div className="flex items-center gap-2 sm:gap-3">
                         <button
                           onClick={() => copyInviteLink(invite.code)}
-                          className="text-slate-400 hover:text-white transition-colors"
+                          className="text-muted-foreground hover:text-foreground transition-colors"
                           aria-label={`Copy invite link for ${invite.code}`}
                         >
                           <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -342,7 +342,7 @@ export function InvitesPageClient() {
                         <button
                           onClick={() => handleDeleteClick(invite.id)}
                           data-testid={`admin-invites-delete-${invite.id}`}
-                          className="text-slate-400 hover:text-red-400 transition-colors"
+                          className="text-muted-foreground hover:text-destructive transition-colors"
                           aria-label={`Delete invite ${invite.code}`}
                         >
                           <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -369,14 +369,14 @@ export function InvitesPageClient() {
           describedBy="create-invite-description"
           testId="admin-invites-create-dialog"
         >
-            <div className="p-6 border-b border-slate-700 flex justify-between items-center">
+            <div className="p-6 border-b border-border flex justify-between items-center">
               <div>
-                <h2 id="create-invite-title" className="text-xl font-bold text-white">Create Invite</h2>
-                <p id="create-invite-description" className="text-sm text-slate-400 mt-1">Generate a new invite link to share with others</p>
+                <h2 id="create-invite-title" className="text-xl font-bold text-foreground">Create Invite</h2>
+                <p id="create-invite-description" className="text-sm text-muted-foreground mt-1">Generate a new invite link to share with others</p>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Close modal"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -388,7 +388,7 @@ export function InvitesPageClient() {
               {/* Server Type Selection - only show if Jellyfin is available */}
               {jellyfinAvailable && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Server Type
                   </label>
                   <div className="flex gap-3">
@@ -428,8 +428,8 @@ export function InvitesPageClient() {
               )}
 
               <div>
-                <label htmlFor="invite-code" className="block text-sm font-medium text-slate-400 mb-1">
-                  Custom Code <span className="text-slate-400">(Optional)</span>
+                <label htmlFor="invite-code" className="block text-sm font-medium text-muted-foreground mb-1">
+                  Custom Code <span className="text-muted-foreground">(Optional)</span>
                 </label>
                 <input
                   id="invite-code"
@@ -439,13 +439,13 @@ export function InvitesPageClient() {
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono"
                   placeholder="Leave blank to auto-generate"
                 />
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Auto-generated codes use unambiguous characters (no 0, O, I, 1).
                 </p>
               </div>
 
               <div>
-                <label htmlFor="max-uses" className="block text-sm font-medium text-slate-400 mb-1">
+                <label htmlFor="max-uses" className="block text-sm font-medium text-muted-foreground mb-1">
                   Max Uses
                 </label>
                 <input
@@ -459,7 +459,7 @@ export function InvitesPageClient() {
               </div>
 
               <div>
-                <label htmlFor="expiration" className="block text-sm font-medium text-slate-400 mb-1">
+                <label htmlFor="expiration" className="block text-sm font-medium text-muted-foreground mb-1">
                   Expiration
                 </label>
                 <select
@@ -477,17 +477,17 @@ export function InvitesPageClient() {
               </div>
 
               {/* Library Selection */}
-              <div className="border-t border-slate-700 pt-4">
+              <div className="border-t border-border pt-4">
                 <button
                   type="button"
                   onClick={() => setExpandedLibraries(!expandedLibraries)}
                   className="flex items-center justify-between w-full text-left"
                 >
-                  <label className="block text-sm font-medium text-slate-400">
+                  <label className="block text-sm font-medium text-muted-foreground">
                     Library Access
                   </label>
                   <svg
-                    className={`w-5 h-5 text-slate-400 transition-transform ${expandedLibraries ? "rotate-180" : ""}`}
+                    className={`w-5 h-5 text-muted-foreground transition-transform ${expandedLibraries ? "rotate-180" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -497,14 +497,14 @@ export function InvitesPageClient() {
                 </button>
                 {expandedLibraries && (
                   <div className="mt-3 space-y-2">
-                    <p className="text-xs text-slate-400 mb-2">
+                    <p className="text-xs text-muted-foreground mb-2">
                       {formData.serverType === "PLEX"
                         ? "Select specific libraries to share (leave empty to share all libraries)"
                         : "Select specific libraries to grant access (leave empty for all libraries)"
                       }
                     </p>
                     {loadingLibraries ? (
-                      <p className="text-sm text-slate-400">Loading libraries...</p>
+                      <p className="text-sm text-muted-foreground">Loading libraries...</p>
                     ) : formData.serverType === "PLEX" ? (
                       // Plex libraries
                       <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -532,7 +532,7 @@ export function InvitesPageClient() {
                                 className="rounded border-slate-600 text-cyan-600 focus:ring-cyan-500"
                               />
                               <span className="text-sm text-slate-300">
-                                {lib.title} <span className="text-slate-400">({lib.type})</span>
+                                {lib.title} <span className="text-muted-foreground">({lib.type})</span>
                               </span>
                             </label>
                           ))
@@ -565,7 +565,7 @@ export function InvitesPageClient() {
                                 className="rounded border-slate-600 text-purple-600 focus:ring-purple-500"
                               />
                               <span className="text-sm text-slate-300">
-                                {lib.name} <span className="text-slate-400">({lib.type})</span>
+                                {lib.name} <span className="text-muted-foreground">({lib.type})</span>
                               </span>
                             </label>
                           ))
@@ -577,7 +577,7 @@ export function InvitesPageClient() {
               </div>
 
               {/* Allow Downloads */}
-              <div className="border-t border-slate-700 pt-4">
+              <div className="border-t border-border pt-4">
                 <label htmlFor="allow-downloads" className="flex items-center space-x-2 cursor-pointer">
                   <input
                     id="allow-downloads"
@@ -590,11 +590,11 @@ export function InvitesPageClient() {
                         : "text-cyan-600 focus:ring-cyan-500"
                     }`}
                   />
-                  <span className="text-sm font-medium text-slate-400">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Allow Downloads
                   </span>
                 </label>
-                <p className="text-xs text-slate-400 mt-1 ml-6">
+                <p className="text-xs text-muted-foreground mt-1 ml-6">
                   Allow this account to download content from your server
                 </p>
               </div>

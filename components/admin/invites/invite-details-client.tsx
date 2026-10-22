@@ -60,7 +60,7 @@ export function InviteDetailsClient({ id }: { id: string }) {
   function getExpirationLabel(date: Date | null) {
     if (!date) return "Never"
     const now = new Date()
-    if (date < now) return <span className="text-red-400">Expired</span>
+    if (date < now) return <span className="text-destructive">Expired</span>
     return f.date(date)
   }
 
@@ -82,7 +82,7 @@ export function InviteDetailsClient({ id }: { id: string }) {
       <div className="flex items-center gap-4 mb-8">
         <Link
           href="/admin/invites"
-          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
           aria-label="Back to invites"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -90,8 +90,8 @@ export function InviteDetailsClient({ id }: { id: string }) {
           </svg>
         </Link>
         <div>
-          <h1 data-testid="admin-invite-details-heading" className="text-2xl font-bold text-white">Invite Details</h1>
-          <p className="text-slate-400">View usage history and configuration</p>
+          <h1 data-testid="admin-invite-details-heading" className="text-2xl font-bold text-foreground">Invite Details</h1>
+          <p className="text-muted-foreground">View usage history and configuration</p>
         </div>
         <div className="ml-auto">
           <button
@@ -112,7 +112,7 @@ export function InviteDetailsClient({ id }: { id: string }) {
           <div className="flex justify-between items-start mb-6">
             <div>
               <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-1">Invite Code</h3>
-              <div className="text-4xl font-mono font-bold text-white tracking-wider">{invite.code}</div>
+              <div className="text-4xl font-mono font-bold text-foreground tracking-wider">{invite.code}</div>
             </div>
             <button
               onClick={() => {
@@ -130,24 +130,24 @@ export function InviteDetailsClient({ id }: { id: string }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-900/50 rounded-lg p-4">
-              <div className="text-sm text-slate-400 mb-1">Created</div>
-              <div className="text-white font-medium">{f.date(invite.createdAt)}</div>
+              <div className="text-sm text-muted-foreground mb-1">Created</div>
+              <div className="text-foreground font-medium">{f.date(invite.createdAt)}</div>
             </div>
             <div className="bg-slate-900/50 rounded-lg p-4">
-              <div className="text-sm text-slate-400 mb-1">Expires</div>
-              <div className="text-white font-medium">{getExpirationLabel(invite.expiresAt ? new Date(invite.expiresAt) : null)}</div>
+              <div className="text-sm text-muted-foreground mb-1">Expires</div>
+              <div className="text-foreground font-medium">{getExpirationLabel(invite.expiresAt ? new Date(invite.expiresAt) : null)}</div>
             </div>
           </div>
 
           {/* Access Settings */}
-          <div className="mt-6 pt-6 border-t border-slate-700">
+          <div className="mt-6 pt-6 border-t border-border">
             <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-4">Access Settings</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-slate-900/50 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm text-slate-400 mb-1">Library Access</div>
-                    <div className="text-white font-medium">
+                    <div className="text-sm text-muted-foreground mb-1">Library Access</div>
+                    <div className="text-foreground font-medium">
                       {invite.librarySectionIds
                         ? `${JSON.parse(invite.librarySectionIds).length} ${JSON.parse(invite.librarySectionIds).length === 1 ? 'library' : 'libraries'}`
                         : 'All libraries'}
@@ -161,8 +161,8 @@ export function InviteDetailsClient({ id }: { id: string }) {
               <div className="bg-slate-900/50 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm text-slate-400 mb-1">Downloads</div>
-                    <div className="text-white font-medium">
+                    <div className="text-sm text-muted-foreground mb-1">Downloads</div>
+                    <div className="text-foreground font-medium">
                       {invite.allowDownloads ? 'Allowed' : 'Not allowed'}
                     </div>
                   </div>
@@ -208,8 +208,8 @@ export function InviteDetailsClient({ id }: { id: string }) {
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center flex-col">
-              <span className="text-3xl font-bold text-white">{invite.useCount}</span>
-              <span className="text-sm text-slate-400">of {invite.maxUses}</span>
+              <span className="text-3xl font-bold text-foreground">{invite.useCount}</span>
+              <span className="text-sm text-muted-foreground">of {invite.maxUses}</span>
             </div>
           </div>
           <div className="text-center">
@@ -227,12 +227,12 @@ export function InviteDetailsClient({ id }: { id: string }) {
       </div>
 
       <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-700">
-          <h3 className="text-lg font-medium text-white">Usage History</h3>
+        <div className="px-6 py-4 border-b border-border">
+          <h3 className="text-lg font-medium text-foreground">Usage History</h3>
         </div>
 
         {invite.usages.length === 0 ? (
-          <div className="p-8 text-center text-slate-400">
+          <div className="p-8 text-center text-muted-foreground">
             No one has used this invite yet.
           </div>
         ) : (
@@ -244,9 +244,9 @@ export function InviteDetailsClient({ id }: { id: string }) {
                 <th className="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Date Used</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700">
+            <tbody className="divide-y divide-border">
               {invite.usages.map((usage) => (
-                <tr key={usage.id} className="hover:bg-slate-800/50 transition-colors">
+                <tr key={usage.id} className="hover:bg-accent transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       {usage.user.image ? (
@@ -256,15 +256,15 @@ export function InviteDetailsClient({ id }: { id: string }) {
                           {(usage.user.name || "?").charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <Link href={userDetail(usage.user.id)} className="font-medium text-white hover:underline">
+                      <Link href={userDetail(usage.user.id)} className="font-medium text-foreground hover:underline">
                         {usage.user.name || usage.user.email || "Unknown"}
                       </Link>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-slate-400">
+                  <td className="px-6 py-4 text-muted-foreground">
                     {usage.user.email}
                   </td>
-                  <td className="px-6 py-4 text-slate-400">
+                  <td className="px-6 py-4 text-muted-foreground">
                     {f.dateTime(usage.usedAt)}
                   </td>
                 </tr>
