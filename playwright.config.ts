@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
-import { lightThemeStorageState } from './e2e/helpers/light-theme';
 import { assertTestDatabaseUrl } from './lib/security/test-mode';
 
 // The specs delete users, Rewinds and service configs. Refuse anything but a
@@ -28,7 +27,26 @@ const VISUAL_SETUP_SPEC = /visual\/setup\.visual\.spec\.ts$/;
  * the Visual Baselines workflow's `light` suite takes their baselines.
  */
 const LIGHT_ROUTES_SPEC = /visual\/light-routes\.visual\.spec\.ts$/;
-const lightTheme = { storageState: lightThemeStorageState(baseURL) };
+// The light projects start with the `pm-theme=light` cookie that
+// `lib/design/theme.ts` reads. Kept here, not in e2e/, because `next build`
+// type-checks this file and the image's build context leaves e2e/ out.
+const lightTheme = {
+  storageState: {
+    cookies: [
+      {
+        name: 'pm-theme',
+        value: 'light',
+        domain: new URL(baseURL).hostname,
+        path: '/',
+        expires: -1,
+        httpOnly: true,
+        secure: false,
+        sameSite: 'Lax' as const,
+      },
+    ],
+    origins: [],
+  },
+};
 const visualDesktop = {
   ...devices['Desktop Chrome'],
   viewport: { width: 1440, height: 900 },
