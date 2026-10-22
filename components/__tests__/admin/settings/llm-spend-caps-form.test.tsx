@@ -6,16 +6,12 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { listLLMModels, updateLlmCaps } from "@/actions/admin"
+import { listLLMModels } from "@/actions/admin/admin-llm-providers"
+import { updateLlmCaps } from "@/actions/admin/admin-config"
 import { AiSection } from "@/components/admin/settings/sections/ai-section"
 
-jest.mock("@/actions/admin", () => ({
-  listLLMModels: jest.fn(),
-  setLLMDisabled: jest.fn(),
-  updateLlmCaps: jest.fn(),
-  updateChatLLMProvider: jest.fn(),
-  updateWrappedLLMProvider: jest.fn(),
-}))
+jest.mock("@/actions/admin/admin-llm-providers", () => ({ listLLMModels: jest.fn(), updateChatLLMProvider: jest.fn(), updateWrappedLLMProvider: jest.fn() }))
+jest.mock("@/actions/admin/admin-config", () => ({ setLLMDisabled: jest.fn(), updateLlmCaps: jest.fn() }))
 
 const mockRefresh = jest.fn()
 jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mockRefresh }) }))
@@ -42,7 +38,7 @@ function renderSection() {
 
 beforeEach(() => {
   jest.clearAllMocks()
-  jest.mocked(listLLMModels).mockResolvedValue({ success: true, models: [], configuredProvider: null, configuredModel: null })
+  jest.mocked(listLLMModels).mockResolvedValue({ success: true, data: { models: [], configuredProvider: null, configuredModel: null } })
 })
 
 describe("Spend caps in the AI section", () => {

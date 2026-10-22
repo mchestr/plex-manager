@@ -1,5 +1,5 @@
 /**
- * Stable digests for the auth errors `requireAdmin()` throws, and the one
+ * Stable digests for the auth errors `assertAdmin()` throws, and the one
  * check the error boundaries use to recognise them.
  *
  * A production build replaces a Server Component error's name and message

@@ -10,7 +10,9 @@ import path from 'path'
 import { render, screen, within } from '@testing-library/react'
 
 import RootError from '@/app/error'
-import { UnauthenticatedError, UnauthorizedAdminError } from '@/lib/admin'
+import { getServerSession } from 'next-auth'
+
+import { assertAdmin } from '@/lib/admin'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
@@ -66,13 +68,17 @@ describe('app/error.tsx', () => {
     expect(container).not.toHaveTextContent('db:5432')
   })
 
-  it('reads the forbidden digest requireAdmin() throws', () => {
-    render(<RootError error={new UnauthorizedAdminError()} reset={jest.fn()} />)
+  it('reads the forbidden digest assertAdmin() throws', async () => {
+    jest.mocked(getServerSession).mockResolvedValue({ user: { id: 'member-1', isAdmin: false }, expires: '' })
+    const error = await assertAdmin().catch((thrown: Error) => thrown)
+    render(<RootError error={error as Error} reset={jest.fn()} />)
     expect(screen.getByTestId('unauthorized-error-page')).toBeInTheDocument()
   })
 
-  it('reads the unauthenticated digest requireAdmin() throws', () => {
-    render(<RootError error={new UnauthenticatedError()} reset={jest.fn()} />)
+  it('reads the unauthenticated digest assertAdmin() throws', async () => {
+    jest.mocked(getServerSession).mockResolvedValue(null)
+    const error = await assertAdmin().catch((thrown: Error) => thrown)
+    render(<RootError error={error as Error} reset={jest.fn()} />)
     expect(screen.getByTestId('unauthenticated-error-page')).toBeInTheDocument()
   })
 })

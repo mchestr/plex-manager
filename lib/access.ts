@@ -17,12 +17,14 @@
  * - The user has a subscription in an **active-enough** state (`ACTIVE` or
  *   `PAST_DUE`). `PAST_DUE` keeps access during Stripe's dunning/retry window.
  *
- * This module is a plain (non-`"use server"`) module with no next-auth / Next.js
- * imports, so it is safe to use from the always-on Discord bot process as well as
- * from server actions. {@link getAccessLevel} adds the read-only `lapsed` level
+ * This module is server-only, not a `"use server"` file (P11.5), and has no
+ * next-auth or Next.js imports, so it is safe to use from the always-on Discord
+ * bot process as well as from server actions. {@link getAccessLevel} adds the read-only `lapsed` level
  * for members whose access ended (FR-51); the web request path reads it once per
  * request through `lib/actions/entitlement.ts`.
  */
+
+import "server-only"
 
 import { prisma } from "@/lib/prisma"
 import type { Prisma, SubscriptionStatus } from "@/lib/generated/prisma/client"

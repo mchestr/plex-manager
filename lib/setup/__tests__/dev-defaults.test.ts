@@ -7,7 +7,7 @@ jest.mock("server-only", () => ({}))
 // getDevDefaults checks Setup.isComplete; the factory reads the shared mock lazily
 // so it survives jest.resetModules().
 const mockGetSetupStatus = jest.fn()
-jest.mock('@/actions/setup', () => ({
+jest.mock('@/lib/setup/status', () => ({
   getSetupStatus: () => mockGetSetupStatus(),
 }))
 

@@ -22,7 +22,7 @@ beforeEach(() => jest.clearAllMocks())
 
 describe('billing dialogs with a trigger (the Billing tab)', () => {
   it('confirms removing an exemption as destructive and closes on success', async () => {
-    jest.mocked(adminToggleExempt).mockResolvedValue({ success: true })
+    jest.mocked(adminToggleExempt).mockResolvedValue({ success: true, data: null })
     const user = userEvent.setup()
     render(<ToggleExemptDialog user={target(true)} trigger={<Button data-testid="toggle-exempt-button">Remove exemption</Button>} />)
 
@@ -30,13 +30,13 @@ describe('billing dialogs with a trigger (the Billing tab)', () => {
     expect(await screen.findByTestId('admin-user-exempt-dialog')).toHaveTextContent("Remove Morgan Lee's exemption?")
     await user.click(screen.getByTestId('admin-user-exempt-confirm'))
 
-    expect(adminToggleExempt).toHaveBeenCalledWith('u1')
+    expect(adminToggleExempt).toHaveBeenCalledWith({ userId: 'u1' })
     expect(mockShowSuccess).toHaveBeenCalledWith('Exemption removed')
     await waitFor(() => expect(screen.queryByTestId('admin-user-exempt-dialog')).not.toBeInTheDocument())
   })
 
   it("keeps the subscription action's error inside the dialog", async () => {
-    jest.mocked(adminCancelSubscription).mockResolvedValue({ error: 'Stripe is not configured' })
+    jest.mocked(adminCancelSubscription).mockResolvedValue({ success: false, code: 'UPSTREAM_UNAVAILABLE', error: 'Stripe is not configured' })
     const user = userEvent.setup()
     render(<CancelSubscriptionDialog user={target(false)} trigger={<Button data-testid="cancel-subscription-button">Cancel subscription</Button>} />)
 

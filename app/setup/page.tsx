@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { getSetupStatus } from "@/actions/setup"
+import { getSetupStatus } from "@/lib/setup/status"
 import { SetupWizard } from "@/components/setup/setup-wizard/setup-wizard"
 import { getDevDefaults } from "@/lib/setup/dev-defaults"
 

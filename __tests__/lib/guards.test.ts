@@ -20,7 +20,7 @@ jest.mock('next/navigation', () => ({ redirect: jest.fn() }))
 // The guards module also pulls in these actions; stub them so importing
 // `@/lib/guards` does not drag in their real dependencies.
 jest.mock('@/actions/onboarding', () => ({ getOnboardingStatus: jest.fn() }))
-jest.mock('@/actions/setup', () => ({ getSetupStatus: jest.fn() }))
+jest.mock('@/lib/setup/status', () => ({ getSetupStatus: jest.fn() }))
 
 const mockGetServerSession = jest.mocked(getServerSession)
 const mockLevel = jest.mocked(requestAccessLevel)

@@ -1,4 +1,4 @@
-import { getLLMUsageById } from "@/actions/admin"
+import { getLLMUsageById } from "@/lib/data/llm-usage"
 import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
 import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
 import Link from "next/link"

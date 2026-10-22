@@ -1,12 +1,6 @@
 import { notFound } from "next/navigation"
 import type { ReactNode } from "react"
 
-import {
-  getDiscordActivityLogs,
-  getDiscordDashboardData,
-  getDiscordDetailedStats,
-  getDiscordMarkedMedia,
-} from "@/actions/discord-activity"
 import { ActiveMembersTable, CommandTypesTable } from "@/components/admin/discord/discord-breakdown-tables"
 import { DiscordMarkedMedia } from "@/components/admin/discord/discord-marked-media"
 import { DiscordStatGrid } from "@/components/admin/discord/discord-stat-grid"
@@ -33,11 +27,11 @@ import { LiveRefreshProvider, LiveRefreshStatus } from "@/components/ui/live-sta
 import { PageHeader } from "@/components/ui/page-header"
 import { getAdminGate } from "@/lib/admin"
 import { getDiscordOverview } from "@/lib/admin/discord"
+import { getDiscordDashboardData } from "@/lib/data/discord-activity"
 import { getFormat } from "@/lib/settings/app-settings"
 import { parseDateRange, presetRange } from "@/lib/ui/date-range"
 import { icons } from "@/lib/ui/icons"
 import { discordStatus } from "@/lib/ui/status"
-import { dayWindow } from "@/lib/utils/day-window"
 import { serverZone } from "@/lib/utils/server-zone"
 import { dayKey } from "@/lib/utils/zoned-time"
 
@@ -81,26 +75,20 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
   const marksSearch = single(params.marksSearch) ?? ""
   const marksOffset = Math.max(0, parseInt(single(params.marksOffset) ?? "0", 10) || 0)
 
-  const [overview, dashboardResult, logsResult, detailedResult, markedMediaResult] = await Promise.all([
+  const [overview, dashboard] = await Promise.all([
     getDiscordOverview(new Date(renderedAt)),
-    getDiscordDashboardData(period),
-    getDiscordActivityLogs({ limit: 20 }),
-    getDiscordDetailedStats(period),
-    getDiscordMarkedMedia({
+    getDiscordDashboardData({
       ...period,
-      markType: markType as never,
+      markType,
       source,
       search: marksSearch,
-      limit: MARKED_MEDIA_PAGE_SIZE,
-      offset: marksOffset,
+      marksLimit: MARKED_MEDIA_PAGE_SIZE,
+      marksOffset,
     }),
   ])
 
-  const dashboard = dashboardResult.success ? dashboardResult.data : null
-  const detailed = detailedResult.success ? detailedResult.data : null
-  const markedMedia = markedMediaResult.success ? markedMediaResult : null
-  const summary = dashboard?.summary ?? null
-  const recent: RecentCommand[] = (logsResult.success ? logsResult.logs : []).map((log) => ({
+  const { detailed, markedMedia, summary } = dashboard
+  const recent: RecentCommand[] = dashboard.recent.logs.map((log) => ({
     id: log.id,
     discordUsername: log.discordUsername,
     discordUserId: log.discordUserId,
@@ -111,14 +99,14 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
     createdAt: log.createdAt,
   }))
   const quiet = summary !== null && summary.totalCommands === 0
-  const keys = dayWindow(range, zone).keys
+  const keys = dashboard.window.keys
   const periodText = `${f.dayKey(range.from)} to ${f.dayKey(range.to)}`
-  const help = detailed?.helpStats ?? null
-  const linking = detailed?.linkingMetrics ?? null
-  const context = detailed?.contextMetrics ?? null
-  const selection = detailed?.selectionStats ?? null
-  const marking = detailed?.mediaMarkingBreakdown ?? null
-  const errors = detailed?.errorAnalysis ?? null
+  const help = detailed.helpStats ?? null
+  const linking = detailed.linkingMetrics ?? null
+  const context = detailed.contextMetrics ?? null
+  const selection = detailed.selectionStats ?? null
+  const marking = detailed.mediaMarkingBreakdown ?? null
+  const errors = detailed.errorAnalysis ?? null
   const markTotal = (marking?.byCommand ?? []).reduce((sum, row) => sum + row.count, 0)
 
   return (
@@ -160,20 +148,20 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
                 title="Commands per day"
                 description="Successful and failed"
                 summary={`Successful and failed commands per day, ${periodText}`}
-                spec={dailyCommandsSpec(keys, dashboard?.dailyActivity ?? [])}
+                spec={dailyCommandsSpec(keys, dashboard.dailyActivity ?? [])}
                 data-testid="discord-daily-chart"
               />
               <ChartCard
                 title="Command usage"
                 summary={`Commands run most often, ${periodText}`}
-                spec={commandUsageSpec(dashboard?.commandStats ?? [])}
+                spec={commandUsageSpec(dashboard.commandStats ?? [])}
                 data-testid="discord-command-chart"
               />
               <Panel title="Commands by type">
                 <CommandTypesTable rows={summary?.commandsByType ?? []} total={summary?.totalCommands ?? 0} />
               </Panel>
               <Panel title="Most active members">
-                <ActiveMembersTable rows={dashboard?.activeUsers ?? []} />
+                <ActiveMembersTable rows={dashboard.activeUsers ?? []} />
               </Panel>
               <ChartCard
                 title="Help usage"
@@ -309,7 +297,7 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
           <h2 id="discord-recent-heading" className="text-h3">
             Recent commands
           </h2>
-          <RecentCommandsTable rows={recent} total={logsResult.success ? logsResult.total : 0} />
+          <RecentCommandsTable rows={recent} total={dashboard.recent.total} />
         </section>
       </div>
     </LiveRefreshProvider>

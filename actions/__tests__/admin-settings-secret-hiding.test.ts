@@ -8,7 +8,7 @@
  * place (P10.20).
  */
 
-import { getAdminSettings } from '@/actions/admin/admin-settings'
+import { getAdminSettings } from '@/lib/data/admin-settings'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 

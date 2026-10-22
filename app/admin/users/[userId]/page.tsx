@@ -7,7 +7,7 @@ import { OverviewTab } from "@/components/admin/users/detail/overview-tab"
 import { RewindTab } from "@/components/admin/users/detail/rewind-tab"
 import { UsageTab } from "@/components/admin/users/detail/usage-tab"
 import { UserDetailHeader } from "@/components/admin/users/detail/user-detail-header"
-import { requireAdmin } from "@/lib/admin"
+import { assertAdmin } from "@/lib/admin"
 import { USER_DETAIL_TABS, type UserDetailTab } from "@/lib/admin/routes"
 import { billingVisible, getUserDetailHeader } from "@/lib/admin/user-detail"
 import { regenerateEstimateCopy } from "@/lib/admin/user-detail-tabs"
@@ -28,7 +28,7 @@ interface UserDetailPageProps {
 
 /** A member as an entity page (P10.6): the header, then one server-rendered tab. */
 export default async function UserDetailPage({ params, searchParams }: UserDetailPageProps) {
-  await requireAdmin()
+  await assertAdmin()
   const [{ userId }, query, seasonYear, f, stripeDashboardBaseUrl] = await Promise.all([
     params,
     searchParams,

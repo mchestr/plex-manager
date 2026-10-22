@@ -6,7 +6,7 @@
 import { mockReset } from "jest-mock-extended"
 import { getServerSession } from "next-auth"
 
-import { updateLlmCaps } from "@/actions/admin"
+import { updateLlmCaps } from "@/actions/admin/admin-config"
 import type { Config } from "@/lib/generated/prisma/client"
 import { buildConfig } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"

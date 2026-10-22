@@ -11,7 +11,7 @@
 import { mockReset } from 'jest-mock-extended'
 import { getServerSession } from 'next-auth'
 
-import { getWrappedSettings } from '@/actions/admin'
+import { getWrappedSettings } from '@/lib/wrapped/generation-settings'
 import { adminRegenerateRewind, getRewindStatus, requestRewindGeneration } from '@/actions/rewind-generation'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { hasEntitlement } from '@/lib/actions/entitlement'
@@ -24,7 +24,7 @@ import { checkRewindEligibility } from '@/lib/wrapped/eligibility'
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
-jest.mock('@/actions/admin', () => ({ getWrappedSettings: jest.fn() }))
+jest.mock('@/lib/wrapped/generation-settings', () => ({ getWrappedSettings: jest.fn() }))
 jest.mock('@/lib/actions/entitlement', () => ({
   ...jest.requireActual('@/lib/actions/entitlement'),
   hasEntitlement: jest.fn(),

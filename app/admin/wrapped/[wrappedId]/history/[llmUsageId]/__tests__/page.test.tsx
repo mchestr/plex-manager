@@ -12,7 +12,7 @@ import { buildStoredV2Json } from '@/lib/wrapped/__tests__/fixtures'
 import { parseStoredRewind } from '@/lib/wrapped/data/parse-stored'
 
 jest.mock('@/lib/admin', () => ({
-  requireAdmin: jest.fn(),
+  assertAdmin: jest.fn(),
 }))
 
 jest.mock('@/lib/admin/rewind-history', () => ({

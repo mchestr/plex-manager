@@ -55,28 +55,6 @@ export const actionsAndApi = [
 ];
 
 /**
- * The Server Action modules on `lib/actions/define-action.ts` (P4.3), where
- * the `actionsAndApi` bans are errors. P11.5 moves the admin modules and then
- * makes the bans errors in all of `actions/`.
- */
-export const migratedActionFiles = [
-  "actions/admin/admin-config.ts",
-  "actions/admin/admin-llm-providers.ts",
-  "actions/admin/watchlist.ts",
-  "actions/announcements.ts",
-  "actions/chatbot/index.ts",
-  "actions/invite.ts",
-  "actions/onboarding.ts",
-  "actions/prometheus-status.ts",
-  "actions/prompts.ts",
-  "actions/rewind-generation.ts",
-  "actions/server-info.ts",
-  "actions/subscription.ts",
-  "actions/watchlist.ts",
-  "actions/wrapped-share-link.ts",
-];
-
-/**
  * Raw form controls outside `components/ui` (P3.4, ui-design-system 9.6):
  * errors since P10.11 moved every call site onto the primitives.
  */
@@ -216,11 +194,10 @@ const RAW_ELEMENTS_ALLOWED = [...REWIND_ONLY_ALLOWED, "app/api/**", ...OG_ROUTES
  *   surfaces still warn until their step replaces them: the v2 viewer warns on
  *   raw controls and keeps its inline art until P11.29 deletes it, and the
  *   setup wizard warns until P10.25 rebuilds it.
- * - The `actionsAndApi` bans are errors in `app/api/` and the migrated action
- *   modules, and warn in the rest of `actions/`. An error block replaces the
- *   earlier error blocks for its files, so the `app/api/` one repeats the
- *   formatting bans; the migrated modules leave the warn blocks, so their
- *   formatting bans are errors only.
+ * - The `actionsAndApi` bans are errors in `app/api/` and all of `actions/`
+ *   since P11.5 moved the last modules onto the action helper. An error block
+ *   replaces the earlier error blocks for its files, so it repeats the
+ *   formatting bans, which are errors there too.
  * - The Rewind-only Button entries (P3.7) are errors everywhere but
  *   `REWIND_ONLY_ALLOWED`, so every error block outside it carries them.
  * - The Satori bans (`rewindCards`, P5.10) are errors in `lib/rewind/cards/`.
@@ -228,7 +205,7 @@ const RAW_ELEMENTS_ALLOWED = [...REWIND_ONLY_ALLOWED, "app/api/**", ...OG_ROUTES
 export const restrictedSyntaxBlocks = [
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
-    ignores: ["app/**", "components/**", ...migratedActionFiles],
+    ignores: ["app/**", "components/**", "actions/**"],
     level: "warn",
     selectors: formatting,
   },
@@ -255,13 +232,7 @@ export const restrictedSyntaxBlocks = [
     selectors: [...rawControls, ...inlineSvg, ...deprecatedImports],
   },
   {
-    files: ["actions/**/*.ts"],
-    ignores: migratedActionFiles,
-    level: "warn",
-    selectors: [...formatting, ...actionsAndApi],
-  },
-  {
-    files: ["app/api/**/*.{ts,tsx}", ...migratedActionFiles],
+    files: ["app/api/**/*.{ts,tsx}", "actions/**/*.ts"],
     level: "error",
     selectors: [...formatting, ...actionsAndApi, ...rewindOnlyProps],
   },

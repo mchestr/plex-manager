@@ -34,6 +34,10 @@ export const LIMITS = {
   "admin:search": { points: 120, duration: MINUTE },
   // Test connection with typed values in settings and setup (P10.20), per admin
   "admin:test": { points: 30, duration: 10 * MINUTE },
+  // Queue actions (retry, remove, pause, resume, sync) per admin (P11.5)
+  "admin:queue": { points: 30, duration: MINUTE },
+  // Invite create and delete per admin (P11.5)
+  "admin:invites": { points: 30, duration: 10 * MINUTE },
   checkout: { points: 10, duration: MINUTE },
   portal: { points: 10, duration: MINUTE },
   "discord-link": { points: 5, duration: 5 * MINUTE },
