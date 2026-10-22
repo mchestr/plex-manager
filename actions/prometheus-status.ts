@@ -65,7 +65,9 @@ async function fetchPrometheusStatusInternal(): Promise<StatusData> {
     // Query Prometheus
     const result = await queryPrometheusRange(config, startTime, endTime, "1h")
 
-    if (!result.success || !result.data) {
+    if (!result.success) {
+      // errorType and code only: the URL and the query stay out of the logs
+      logger.warn("prometheus.query_failed", { code: result.code, errorType: result.errorType, retryable: result.retryable })
       return {
         isConfigured: true,
         serviceName: prometheus.name,
