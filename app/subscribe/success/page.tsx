@@ -76,7 +76,7 @@ export default async function SubscribeSuccessPage() {
           </Alert>
         ) : (
           <p
-            className="max-w-md text-slate-400"
+            className="max-w-md text-muted-foreground"
             data-testid="subscribe-success-provisioning"
           >
             Your subscription is being set up. We&apos;re preparing your access to

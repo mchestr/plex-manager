@@ -53,7 +53,7 @@ export default async function SubscribePage() {
       <div className="flex flex-col items-center gap-6 text-center">
         <div className="max-w-md">
           <h1 className="text-2xl font-semibold">Subscription required</h1>
-          <p className="mt-2 text-slate-400">
+          <p className="mt-2 text-muted-foreground">
             A subscription is required to access the media server.
           </p>
         </div>
@@ -62,7 +62,7 @@ export default async function SubscribePage() {
           <PlanList plans={plans} />
         ) : (
           <div
-            className="max-w-md text-slate-400"
+            className="max-w-md text-muted-foreground"
             data-testid={hasAccess ? "subscribe-has-access" : "subscribe-unavailable"}
           >
             <p>
