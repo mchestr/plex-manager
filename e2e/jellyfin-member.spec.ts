@@ -8,7 +8,10 @@ import { WAIT_TIMEOUTS } from './helpers/test-utils';
  * Jellyfin members end to end (P11.10), against the mock Jellyfin server that
  * global setup starts (`e2e/mocks/jellyfin-server.ts`). This file points an
  * active, sign-in-enabled JellyfinServer row at the mock and removes it
- * afterwards, so every other spec keeps its Plex-only sign-in.
+ * afterwards, so every other spec keeps its Plex-only sign-in. It also
+ * re-seeds the Jellyfin members global setup creates, because the shared
+ * visual seed (`seedVisualFixtures`) deletes every other user when an earlier
+ * spec runs it.
  */
 
 const SERVER_ID = 'e2e-jellyfin-member-mock';
@@ -28,6 +31,9 @@ test.describe('Jellyfin members', () => {
       // One active Jellyfin row, so every read lands on the mock
       await prisma.jellyfinServer.updateMany({ where: { id: { not: SERVER_ID } }, data: { isActive: false } });
       await prisma.jellyfinServer.upsert({ where: { id: SERVER_ID }, create: { id: SERVER_ID, ...row }, update: row });
+      for (const member of JELLYFIN_MEMBERS) {
+        await prisma.user.upsert({ where: { id: member.id }, create: member, update: member });
+      }
     } finally {
       await prisma.$disconnect();
     }
