@@ -1,7 +1,6 @@
 "use client"
 
 import { Download } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 
 import { importPlexUsers } from "@/actions/import-plex-users"
@@ -13,7 +12,6 @@ import { useToast } from "@/components/ui/toast"
 export function ImportPlexUsersButton() {
   const [isPending, startTransition] = useTransition()
   const toast = useToast()
-  const router = useRouter()
 
   const handleImport = () => {
     startTransition(async () => {
@@ -30,7 +28,6 @@ export function ImportPlexUsersButton() {
 
         toast.showSuccess(parts.join(", "), 5000)
         importResult.errors.forEach((error) => toast.showError(error, 6000))
-        router.refresh()
       } else {
         toast.showError(importResult.errors[0] ?? "Failed to import Plex users")
       }

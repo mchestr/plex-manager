@@ -67,7 +67,8 @@ describe("Spend caps in the AI section", () => {
       llmDailyCapServerUsd: 20,
     })
     expect(mockShowSuccess).toHaveBeenCalled()
-    expect(mockRefresh).toHaveBeenCalled()
+    // The action revalidates /admin/settings, so no client refresh follows (P10.7)
+    expect(mockRefresh).not.toHaveBeenCalled()
   })
 
   it("marks an empty or negative cap on its field and does not save it", async () => {

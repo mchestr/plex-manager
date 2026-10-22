@@ -1,7 +1,8 @@
 /**
  * The Discord link checklist (P6.11, ui-design-system 6.6): three items, one
  * primary action for the next missing item, the privacy line, and Unlink and
- * Resync refreshing the route instead of asking for a reload.
+ * Resync revalidating the route through their actions instead of asking for a
+ * reload.
  */
 
 import { render, screen, waitFor, within } from '@testing-library/react'
@@ -123,26 +124,27 @@ describe('DiscordLinkChecklist', () => {
     expect(screen.getByTestId('discord-link-join-server')).toHaveAttribute('href', 'https://discord.gg/abc')
   })
 
-  it('unlinks and refreshes the route', async () => {
+  it('unlinks, and the action refreshes the route', async () => {
     const user = userEvent.setup()
     jest.mocked(disconnectDiscordAccount).mockResolvedValue({ success: true, data: null })
     renderChecklist({ connection: linked, isOnServer: true })
 
     await user.click(screen.getByTestId('discord-link-disconnect'))
 
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalledTimes(1))
-    expect(mockShowSuccess).toHaveBeenCalledWith('Discord unlinked')
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith('Discord unlinked'))
+    // The action revalidates /discord/link, so no client refresh follows (P10.7)
+    expect(mockRefresh).not.toHaveBeenCalled()
   })
 
-  it('resyncs and refreshes the route', async () => {
+  it('resyncs, and the action refreshes the route', async () => {
     const user = userEvent.setup()
     jest.mocked(resyncDiscordRole).mockResolvedValue({ success: true, data: null })
     renderChecklist({ connection: linked, isOnServer: true })
 
     await user.click(screen.getByTestId('discord-link-resync'))
 
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalledTimes(1))
-    expect(mockShowSuccess).toHaveBeenCalledWith('Member role synced')
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith('Member role synced'))
+    expect(mockRefresh).not.toHaveBeenCalled()
   })
 
   it('shows the error and does not refresh when resync fails', async () => {

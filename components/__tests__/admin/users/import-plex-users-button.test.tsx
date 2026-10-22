@@ -85,11 +85,9 @@ describe('ImportPlexUsersButton', () => {
 
     await user.click(button)
 
-    await waitFor(() => {
-      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 5 users', 5000)
-      // The new members show without a reload
-      expect(mockRefresh).toHaveBeenCalled()
-    })
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith('Imported 5 users', 5000))
+    // The action revalidates /admin/users, so the new members show with no client refresh (P10.7)
+    expect(mockRefresh).not.toHaveBeenCalled()
   })
 
   it('should show success message with singular "user" when importing 1 user', async () => {

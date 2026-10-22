@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
 import { setAppearance } from "@/actions/appearance"
@@ -25,7 +24,6 @@ function useThemeChoice() {
   const { theme } = useAppearance()
   const [choice, setChoice] = useState<Theme>(theme)
   const [isPending, startTransition] = useTransition()
-  const router = useRouter()
   const { showError } = useToast()
 
   const choose = (value: unknown) => {
@@ -40,7 +38,6 @@ function useThemeChoice() {
         showError(result.error)
         return
       }
-      router.refresh()
     })
   }
 

@@ -1,7 +1,7 @@
 /**
  * The Appearance picker (P10.10): hidden while the light-theme flag is off,
  * a named radio group on /account and `menuitemradio`s in the account menu,
- * driven by the keyboard, saving through setAppearance then refreshing.
+ * driven by the keyboard, saving through setAppearance, which revalidates the layout.
  */
 
 import { render, screen, waitFor, within } from '@testing-library/react'
@@ -57,7 +57,7 @@ describe('AppearancePicker', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 
-  it('moves to Light with the arrow keys, saves it and refreshes', async () => {
+  it('moves to Light with the arrow keys and saves it', async () => {
     const user = userEvent.setup()
     renderWith(ON, <AppearancePicker />)
 
@@ -67,7 +67,8 @@ describe('AppearancePicker', () => {
 
     await waitFor(() => expect(setAppearance).toHaveBeenCalledWith('light'))
     expect(screen.getByRole('radio', { name: 'Light' })).toBeChecked()
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalled())
+    // The action revalidates the root layout, so no client refresh follows (P10.7)
+    expect(mockRefresh).not.toHaveBeenCalled()
   })
 
   it('reverts and shows the error when the save is refused', async () => {

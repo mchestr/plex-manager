@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { type ReactNode, useState, useTransition } from "react"
 
 import { updateRewindSettings } from "@/actions/admin/rewind-settings"
@@ -71,7 +70,6 @@ function withStored(options: { value: string; label: string }[], stored: readonl
  * Save stays disabled until something changed; Discard restores the stored values.
  */
 export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, spent, libraries, ratings, status, health, footerMeta, children }: RewindSettingsSectionProps) {
-  const router = useRouter()
   const { showError, showSuccess } = useToast()
   const [isPending, startTransition] = useTransition()
   const [draft, setDraft] = useState(() => toDraft(saved))
@@ -96,7 +94,6 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
       const result = await updateRewindSettings({ ...draft, rewindLlmBudgetUsd: budget.data })
       if (result.success) {
         showSuccess("Rewind settings saved")
-        router.refresh()
       } else {
         showError(result.error)
       }

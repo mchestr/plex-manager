@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 
 import { disconnectDiscordAccount, resyncDiscordRole } from "@/actions/discord"
@@ -101,7 +100,6 @@ function JoinButton({ inviteCode, serverName, primary }: { inviteCode: string; s
  */
 export function DiscordLinkChecklist(props: DiscordLinkChecklistProps) {
   const { connection, isEnabled, isOnServer, connectUrl, serverName, serverInviteCode, instructions } = props
-  const router = useRouter()
   const toast = useToast()
   const [isPending, startTransition] = useTransition()
 
@@ -113,7 +111,6 @@ export function DiscordLinkChecklist(props: DiscordLinkChecklistProps) {
         return
       }
       toast.showSuccess(success)
-      router.refresh()
     })
   }
 

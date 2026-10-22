@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { updateDiscordIntegrationSettings } from "@/actions/discord"
@@ -61,7 +60,6 @@ type DiscordErrors = Partial<Record<keyof DiscordValues, string>>
 
 /** The Discord form, always open (UI-31): values, dirty state, Discard and Save, and field errors. */
 export function useDiscordForm(integration: StoredDiscordIntegration | null) {
-  const router = useRouter()
   const toast = useToast()
   const [errors, setErrors] = useState<DiscordErrors>({})
   const settings = useSettingsForm(initialValues(integration), async (values) => {
@@ -80,7 +78,6 @@ export function useDiscordForm(integration: StoredDiscordIntegration | null) {
     }
     setErrors({})
     toast.showSuccess("Discord settings saved")
-    router.refresh()
     return { ...values, clientSecret: "", botToken: "" }
   })
 

@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useMemo, useState, useSyncExternalStore } from "react"
 
 import { updateServerTimeZone } from "@/actions/admin"
@@ -36,7 +35,6 @@ function zoneGroups() {
  * hydration, so the server and the first client render agree.
  */
 export function useTimeZoneForm({ configured, effective }: ServerTimeZone) {
-  const router = useRouter()
   const toast = useToast()
   const [error, setError] = useState<string>()
   const detected = useSyncExternalStore(noSubscription, browserZone, () => null)
@@ -49,7 +47,6 @@ export function useTimeZoneForm({ configured, effective }: ServerTimeZone) {
     }
     setError(undefined)
     toast.showSuccess(`Server time zone set to ${result.data.timezone}`)
-    router.refresh()
   })
   return { ...settings, error, shown: settings.values.zone || detected || effective, configured, effective }
 }

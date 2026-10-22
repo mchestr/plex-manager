@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { updateLlmCaps } from "@/actions/admin"
@@ -37,7 +36,6 @@ function isInvalid(value: string) {
  * admin assistant and the Discord assistant, not Rewind.
  */
 export function useSpendCapsForm(caps: SpendCaps) {
-  const router = useRouter()
   const toast = useToast()
   const [errors, setErrors] = useState<Partial<Record<CapKey, string>>>({})
   const initial: CapValues = { perUserUsd: String(caps.perUserUsd), adminUsd: String(caps.adminUsd), serverUsd: String(caps.serverUsd) }
@@ -63,7 +61,6 @@ export function useSpendCapsForm(caps: SpendCaps) {
     }
     setErrors({})
     toast.showSuccess("Assistant spend caps saved")
-    router.refresh()
   })
 
   return { values: settings.values, set: settings.set, errors, form: settings.form }

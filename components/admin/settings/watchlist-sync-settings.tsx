@@ -1,9 +1,8 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { Suspense, use, useState } from "react"
 
-import { getWatchlistSyncStats, updateGlobalWatchlistSyncSettings } from "@/actions/admin/watchlist"
+import { updateGlobalWatchlistSyncSettings } from "@/actions/admin/watchlist"
 import { Badge } from "@/components/ui/badge"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
@@ -12,6 +11,7 @@ import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
+import type { WatchlistSyncStats as SyncStats } from "@/lib/admin/watchlist-stats"
 
 /** The badge tone for each sync history status; anything else is neutral. */
 const SYNC_STATUS_VARIANT: Record<string, "success" | "info" | "warning" | "destructive"> = {
@@ -26,8 +26,6 @@ export interface WatchlistGlobalSettings {
   intervalMinutes: number
 }
 
-type SyncStats = Extract<Awaited<ReturnType<typeof getWatchlistSyncStats>>, { success: true }>["data"]
-
 const INTERVAL_ERROR = "Enter a whole number of minutes from 15 to 1440"
 
 function intervalError(value: string): string | undefined {
@@ -37,7 +35,6 @@ function intervalError(value: string): string | undefined {
 
 /** The global switch and interval as one always-open form (UI-31), saved by the section footer. */
 export function useWatchlistForm(saved: WatchlistGlobalSettings) {
-  const router = useRouter()
   const toast = useToast()
   const [error, setError] = useState<string>()
   const settings = useSettingsForm({ enabled: saved.enabled, interval: String(saved.intervalMinutes) }, async (values) => {
@@ -57,27 +54,15 @@ export function useWatchlistForm(saved: WatchlistGlobalSettings) {
       return
     }
     setError(undefined)
+    // The action revalidates the page, so the section's status follows the switch
     toast.showSuccess("Watchlist sync saved")
-    // The section's status follows the switch
-    router.refresh()
   })
   return { ...settings, error }
 }
 
-/** Members, items and recent requests; loaded after the page so it never holds the settings up. */
-function WatchlistSyncStats() {
-  const [stats, setStats] = useState<SyncStats | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    getWatchlistSyncStats().then((result) => {
-      if (!cancelled && result.success) setStats(result.data)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
+/** Members, items and recent requests; the page streams them in, so they never hold the settings up. */
+function WatchlistSyncStats({ stats: pending }: { stats: Promise<SyncStats | null> }) {
+  const stats = use(pending)
   if (!stats) return null
   return (
     <div className="flex flex-col gap-4 border-t pt-6" data-testid="watchlist-sync-stats">
@@ -103,7 +88,7 @@ function WatchlistSyncStats() {
 }
 
 /** The Watchlist sync controls: the global switch, the interval while it is on, and the statistics. */
-export function WatchlistSyncFields({ state }: { state: ReturnType<typeof useWatchlistForm> }) {
+export function WatchlistSyncFields({ state, stats }: { state: ReturnType<typeof useWatchlistForm>; stats: Promise<SyncStats | null> }) {
   const { values, set, form, error } = state
   return (
     <div className="flex flex-col gap-6" data-testid="watchlist-sync-settings">
@@ -137,7 +122,11 @@ export function WatchlistSyncFields({ state }: { state: ReturnType<typeof useWat
           />
         </FormField>
       )}
-      {values.enabled && <WatchlistSyncStats />}
+      {values.enabled && (
+        <Suspense fallback={null}>
+          <WatchlistSyncStats stats={stats} />
+        </Suspense>
+      )}
     </div>
   )
 }

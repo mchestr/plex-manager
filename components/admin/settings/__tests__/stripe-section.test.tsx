@@ -1,21 +1,17 @@
 /**
  * Stripe billing (P10.20): the Subscriptions switch waits for its
  * prerequisites, one Alert names them, the keys are SecretInputs in the
- * saved state, and fields show errors only after a save attempt.
+ * saved state, and fields show errors only after a save attempt. The Plex
+ * libraries arrive as the page's promise (P10.7), never from a mount effect.
  */
 
-import { render, screen, waitFor } from "@testing-library/react"
+import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { setStripeEnabled, updateStripeSettings, type StripeConfigStatus } from "@/actions/admin/admin-config"
-import { getAvailableLibraries } from "@/actions/server-info"
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 
 jest.mock("@/actions/admin/admin-config", () => ({ updateStripeSettings: jest.fn(), setStripeEnabled: jest.fn() }))
-jest.mock("@/actions/server-info", () => ({ getAvailableLibraries: jest.fn() }))
-
-const mockRefresh = jest.fn()
-jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mockRefresh }) }))
 
 const mockShowSuccess = jest.fn()
 const mockShowError = jest.fn()
@@ -39,18 +35,21 @@ const READY: StripeConfigStatus = {
 }
 const HEALTH = { status: "disabled" as const, code: null, checkedAt: null }
 
-function renderSection(config: StripeConfigStatus = EMPTY) {
-  return render(<StripeSection config={config} health={HEALTH} />)
+const LIBRARIES = Promise.resolve({ ok: true as const, libraries: [{ id: "1", name: "Movies", type: "movie" }] })
+
+async function renderSection(config: StripeConfigStatus = EMPTY) {
+  await act(async () => {
+    render(<StripeSection config={config} libraries={LIBRARIES} health={HEALTH} />)
+  })
 }
 
 beforeEach(() => {
   jest.clearAllMocks()
-  jest.mocked(getAvailableLibraries).mockResolvedValue({ success: true, data: [{ id: 1, title: "Movies", type: "movie" }] })
 })
 
 describe("StripeSection", () => {
   it("keeps the switch off and names every missing prerequisite in one Alert", async () => {
-    renderSection()
+    await renderSection()
 
     expect(screen.getByTestId("stripe-enabled-toggle")).toBeDisabled()
     expect(screen.getByTestId("stripe-enable-requirements")).toHaveTextContent(
@@ -59,8 +58,8 @@ describe("StripeSection", () => {
     expect(await screen.findByTestId("stripe-library-checkbox-1")).toBeInTheDocument()
   })
 
-  it("shows no field errors before a save attempt", () => {
-    renderSection()
+  it("shows no field errors before a save attempt", async () => {
+    await renderSection()
 
     for (const id of ["stripe-secret-key-input", "stripe-webhook-secret-input", "stripe-price-ids-input"]) {
       expect(screen.getByTestId(id)).not.toHaveAttribute("aria-invalid", "true")
@@ -71,7 +70,7 @@ describe("StripeSection", () => {
   it("shows the saved keys as masked placeholders, and the switch is live once all are saved", async () => {
     const user = userEvent.setup()
     jest.mocked(setStripeEnabled).mockResolvedValue({ success: true, data: null })
-    renderSection(READY)
+    await renderSection(READY)
 
     expect(screen.getByTestId("stripe-secret-key-input")).toHaveAttribute("placeholder", "••••••••••••3kQ2")
     expect(screen.getByTestId("stripe-secret-key-input")).toHaveValue("")
@@ -79,7 +78,7 @@ describe("StripeSection", () => {
 
     await user.click(screen.getByTestId("stripe-enabled-toggle"))
     expect(setStripeEnabled).toHaveBeenCalledWith(true)
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalled())
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith("Subscriptions turned on"))
   })
 
   it("saves through the footer, omitting blank keys, and puts a refused field's error on it", async () => {
@@ -90,7 +89,7 @@ describe("StripeSection", () => {
       error: "Too small",
       fieldErrors: { secretKey: ["Too small"] },
     })
-    renderSection(READY)
+    await renderSection(READY)
 
     await user.type(screen.getByTestId("stripe-price-ids-input"), "\nprice_456")
     await user.click(await screen.findByTestId("stripe-library-checkbox-1"))
