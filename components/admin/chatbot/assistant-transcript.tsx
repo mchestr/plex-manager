@@ -64,6 +64,7 @@ export function AssistantTranscript({ messages, isLoading, onSend }: AssistantTr
   const inputId = useId()
   const endRef = useRef<HTMLDivElement>(null)
 
+  // A real effect: the streamed transcript keeps its newest line in view
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" })
   }, [messages])

@@ -33,6 +33,7 @@ export function PlexCallbackPageClient() {
   const [code, setCode] = useState<ShownPlexSignInCode | null>(null)
   const startedRef = useRef(false)
 
+  // A real effect: the Plex PIN poll finishes sign-in once, after plex.tv sends the member back
   useEffect(() => {
     if (startedRef.current) return
     startedRef.current = true

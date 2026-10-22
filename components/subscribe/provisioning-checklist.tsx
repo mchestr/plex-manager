@@ -55,6 +55,7 @@ export function ProvisioningChecklist({ initial }: { initial: SubscriptionProvis
   const f = useFormat()
   const [timedOut, setTimedOut] = useState(false)
 
+  // A real effect: the poll gives up after POLL_LIMIT_MS
   useEffect(() => {
     const timer = setTimeout(() => setTimedOut(true), POLL_LIMIT_MS)
     return () => clearTimeout(timer)

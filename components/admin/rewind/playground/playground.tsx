@@ -66,6 +66,7 @@ export function Playground({ initialForm, options, children }: PlaygroundProps) 
     refetchInterval: (query) => (query.state.data?.success && query.state.data.data.status === "pending" ? POLL_MS : false),
   })
 
+  // A real effect: a finished poll moves the run on and opens its preview
   useEffect(() => {
     const result = poll.data
     if (!runningId || !result) return

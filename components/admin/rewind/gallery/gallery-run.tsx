@@ -109,6 +109,7 @@ export function GalleryRun({ runKey, input }: GalleryRunProps) {
     [pathname, router, searchParams]
   )
 
+  // A real effect: the fixture run starts when its preview is shown and stops when it leaves
   useEffect(() => {
     let stop = false
     void runToEnd(runKey, input, true, () => stop).then(finish)

@@ -44,6 +44,7 @@ export function SeasonProgress({ year, initial, budget }: SeasonProgressProps) {
   })
 
   const seen = useRef(fingerprint(initial))
+  // A real effect: a poll that changed the counts refreshes the server-rendered member table
   useEffect(() => {
     const next = fingerprint(data)
     if (next === seen.current) return

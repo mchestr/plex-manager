@@ -11,6 +11,7 @@ import { useEffect, useState } from "react"
 export function useCardFile(url: string | null, name: string): File | null {
   const [file, setFile] = useState<{ url: string; file: File } | null>(null)
 
+  // A real effect: Web Share needs the card as a File before the tap, not after it
   useEffect(() => {
     if (!url) return
     const controller = new AbortController()
