@@ -6,6 +6,7 @@ import { fail, ok } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
+import { CONNECTION_HEALTH_TAG } from "@/lib/settings/connection-status"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { parseStripeLibrarySectionIds, parseStripePriceIds } from "@/lib/stripe/config"
 import { clearOfferedPricesCache } from "@/lib/stripe/prices"
@@ -159,6 +160,8 @@ export const setLLMDisabled = adminAction({
     })
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("llm", before, { llmDisabled: disabled }))
+    // The cached AI check reads the flag too (P10.19)
+    updateTag(CONNECTION_HEALTH_TAG)
     return ok(null)
   },
 })

@@ -1,8 +1,10 @@
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useEffect, useState } from "react"
 
 import { listLLMModels, updateChatLLMProvider, updateWrappedLLMProvider } from "@/actions/admin"
+import type { TestResult } from "@/components/ui/settings-section"
 import { useToast } from "@/components/ui/toast"
+import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 import { listKnownModels, lookupModel, type EffortLevel, type LLMProviderId } from "@/lib/llm/models"
 import { isLLMProviderId } from "@/lib/llm/provider-presets"
 
@@ -59,20 +61,55 @@ function optionalNumber(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
+function listRequest(purpose: "chat" | "wrapped", state: LLMFormState) {
+  return {
+    purpose,
+    provider: state.provider,
+    apiKey: state.apiKey.trim() || undefined,
+    baseUrl: state.provider === "openai-compatible" ? state.baseUrl : undefined,
+  }
+}
+
 /**
- * State and actions of the LLM provider form: the fields, which settings the
- * chosen model takes, whether the stored key can be reused, the provider's
- * model list, Test and Save.
+ * State and actions of one purpose's LLM provider form, always open (UI-31):
+ * the fields and their dirty state, which settings the chosen model takes,
+ * whether the stored key can be reused, the provider's model list, Test and
+ * Save. The AI settings section holds one per purpose.
  */
 export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "chat" | "wrapped") {
-  const [isEditing, setIsEditing] = useState(false)
-  const [isSaving, startSaving] = useTransition()
-  const [isTesting, startTesting] = useTransition()
   const router = useRouter()
   const toast = useToast()
-  const [form, setForm] = useState<LLMFormState>(() => initialState(stored))
   const [liveModels, setLiveModels] = useState<string[] | null>(null)
-  const [test, setTest] = useState<{ ok: boolean; message: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  const settings = useSettingsForm(initialState(stored), async (form) => {
+    if (!form.model.trim()) {
+      toast.showError("Model is required")
+      return
+    }
+    const info = lookupModel(form.provider, form.model)
+    const levels = info?.capabilities.effortLevels ?? null
+    const action = purpose === "chat" ? updateChatLLMProvider : updateWrappedLLMProvider
+    const result = await action({
+      provider: form.provider,
+      // A blank key keeps the stored one when the action allows it
+      apiKey: form.apiKey.trim() || undefined,
+      baseUrl: form.provider === "openai-compatible" ? form.baseUrl : undefined,
+      model: form.model.trim(),
+      customModel: form.custom,
+      effort: levels && form.effort ? (form.effort as EffortLevel) : undefined,
+      temperature: info?.capabilities.samplingParams ? optionalNumber(form.temperature) : undefined,
+      maxTokens: optionalNumber(form.maxTokens),
+    })
+    if (!result.success) {
+      toast.showError(result.error || `Failed to update the ${purpose} LLM provider`)
+      return
+    }
+    toast.showSuccess(`${purpose === "chat" ? "Admin assistant" : "Rewind"} model saved`)
+    router.refresh()
+    return { ...form, apiKey: "" }
+  })
+  const form = settings.values
 
   const info = form.model ? lookupModel(form.provider, form.model) : null
   const effortLevels = info?.capabilities.effortLevels ?? null
@@ -83,48 +120,25 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
     stored?.provider === form.provider &&
     (form.provider !== "openai-compatible" || originOf(form.baseUrl) === originOf(stored?.baseUrl ?? ""))
 
-  const update = (patch: Partial<LLMFormState>) => {
-    setForm((prev) => ({ ...prev, ...patch }))
-    setTest(null)
-  }
-
-  const loadModels = (state: LLMFormState, announce: boolean) => {
-    startTesting(async () => {
-      const result = await listLLMModels({
-        purpose,
-        provider: state.provider,
-        apiKey: state.apiKey.trim() || undefined,
-        baseUrl: state.provider === "openai-compatible" ? state.baseUrl : undefined,
-      })
-      if (!result.success) {
-        setLiveModels(null)
-        if (announce) setTest({ ok: false, message: result.error })
-        return
-      }
-      setLiveModels(result.models)
-      if (!announce) return
-      const listed = !state.model || state.custom || result.models.includes(state.model)
-      setTest(
-        listed
-          ? { ok: true, message: `Connected: ${result.models.length} models available` }
-          : { ok: false, message: `Connected, but the provider does not list ${state.model}` }
-      )
+  const storedProvider = stored?.provider ?? null
+  const storedBaseUrl = stored?.baseUrl ?? null
+  // The stored provider's model list, when the section mounts
+  useEffect(() => {
+    if (!storedProvider || !isLLMProviderId(storedProvider)) return
+    let cancelled = false
+    const request = { purpose, provider: storedProvider, apiKey: undefined, baseUrl: storedProvider === "openai-compatible" ? (storedBaseUrl ?? "") : undefined }
+    listLLMModels(request).then((result) => {
+      if (!cancelled) setLiveModels(result.success ? result.models : null)
     })
-  }
-
-  const startEditing = () => {
-    const state = initialState(stored)
-    setForm(state)
-    setTest(null)
-    setLiveModels(null)
-    setIsEditing(true)
-    if (stored) loadModels(state, false)
-  }
+    return () => {
+      cancelled = true
+    }
+  }, [purpose, storedProvider, storedBaseUrl])
 
   const changeProvider = (value: string) => {
     if (!isLLMProviderId(value)) return
     setLiveModels(null)
-    update({
+    settings.set({
       provider: value,
       model: "",
       custom: false,
@@ -136,55 +150,39 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
 
   const changeBaseUrl = (baseUrl: string) => {
     setLiveModels(null)
-    update({ baseUrl })
+    settings.set({ baseUrl })
   }
 
-  const save = () => {
-    if (!form.model.trim()) {
-      toast.showError("Model is required")
-      return
+  /** Loads the provider's model list with the typed values, and says whether the model is in it. */
+  const testConnection = async (): Promise<TestResult> => {
+    setIsLoading(true)
+    try {
+      const result = await listLLMModels(listRequest(purpose, form))
+      setLiveModels(result.success ? result.models : null)
+      if (!result.success) return { ok: false, message: result.error }
+      const listed = !form.model || form.custom || result.models.includes(form.model)
+      return listed
+        ? { ok: true, message: `Connected: ${result.models.length} models available` }
+        : { ok: false, message: `Connected, but the provider does not list ${form.model}` }
+    } finally {
+      setIsLoading(false)
     }
-    startSaving(async () => {
-      const action = purpose === "chat" ? updateChatLLMProvider : updateWrappedLLMProvider
-      const result = await action({
-        provider: form.provider,
-        // A blank key keeps the stored one when the action allows it
-        apiKey: form.apiKey.trim() || undefined,
-        baseUrl: form.provider === "openai-compatible" ? form.baseUrl : undefined,
-        model: form.model.trim(),
-        customModel: form.custom,
-        effort: effortLevels && form.effort ? (form.effort as EffortLevel) : undefined,
-        temperature: takesTemperature ? optionalNumber(form.temperature) : undefined,
-        maxTokens: optionalNumber(form.maxTokens),
-      })
-      if (result.success) {
-        setIsEditing(false)
-        toast.showSuccess(`${purpose === "chat" ? "Chat" : "Rewind"} LLM provider updated`)
-        router.refresh()
-      } else {
-        toast.showError(result.error || `Failed to update the ${purpose} LLM provider`)
-      }
-    })
   }
 
   return {
     form,
-    update,
+    update: settings.set,
+    settingsForm: settings.form,
     liveModels,
-    test,
-    isEditing,
-    isSaving,
-    busy: isSaving || isTesting,
-    isTesting,
+    busy: settings.form.isPending || isLoading,
     effortLevels,
     takesTemperature,
     keyReusable,
     keyOptional: form.provider === "openai-compatible" || keyReusable,
-    startEditing,
-    cancel: () => setIsEditing(false),
     changeProvider,
     changeBaseUrl,
-    testConnection: () => loadModels(form, true),
-    save,
+    testConnection,
   }
 }
+
+export type LLMProviderFormState = ReturnType<typeof useLLMProviderForm>

@@ -884,10 +884,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Open Settings: the nav shows glyphs and a legend, Tautulli reads "Connected, checked 2 minutes ago", and Turn AI features off turns its glyph to Needs attention with "Template copy". On a phone, Jump to reaches Stripe.
 
 **Done when.**
-- [ ] One page with the grouped glyph nav, the legend and the mobile Jump to Select.
-- [ ] Every section is a `SettingsSection` with a status and a "Checked" time.
-- [ ] No form has an Edit toggle, and the local badge helpers are deleted.
+- [x] One page with the grouped glyph nav, the legend and the mobile Jump to Select.
+- [x] Every section is a `SettingsSection` with a status and a "Checked" time.
+- [x] No form has an Edit toggle, and the local badge helpers are deleted.
 - [ ] Health checks are cached and never expose error text, and the baselines are reviewed.
+
+(as merged: health extends P10.8's `lib/settings/connection-health.ts` rather than a second module. `getConnectionHealth()` (cached, tag `connection-health`, now with Prometheus, a 5 s cut-off and a `code` per entry) stays the Overview's reader; the new `getSettingsHealth()` adds the feature sections read live on each call (AI's `llmDisabled`, Discord, Stripe via `getStripeConfig()`, Watchlist sync, Rewind), so P7.8's preflight should call `getSettingsHealth()`. The tag constant, `HealthCode`, copy and `worstStatus` live in client-safe `lib/settings/connection-status.ts`; `setLLMDisabled` updates the tag. `recheckConnections()` is in `actions/admin/connection-health.ts`, and each section's Test connection re-runs the saved checks through it (`hooks/admin/use-recheck-connection.ts`) until P10.20's `testServiceConnection` tests typed values. Slots for P10.20: `SettingsSection` takes `form: { isDirty, isPending, onDiscard, onSave, blockedReason }` (from `useSettingsForm`, `hooks/admin/use-settings-form.ts`) and `footerMeta`; `form` is optional, so Stripe and Watchlist sync (and the spend caps and time zone forms) still save themselves until P10.20; `SettingsFormFooter` is exported for the Other integrations Sheet. `ServerFormFields` and `useServerForm` (`hooks/admin/use-server-form.ts`) carry the fields, secret still a password Input. Discord keeps one section badge (worst of its features) until P10.20's two rows. System information has no status. The Rewind section moved onto `SettingsSection`, so its test ids are now `settings-rewind-save`, `-discard`, `-unsaved` and `-section`. `<Time nowLabel>` reads "just now". User detail tabs moved onto `components/ui/tabs.tsx`. Baselines at 1440 and 390 are the owner's Visual Baselines workflow.)
 
 ### Step P10.20: Settings sections with SecretInput and audited saves
 

@@ -43,10 +43,10 @@ async function setFlags(data: Partial<Flags>): Promise<void> {
  * once the saved settings come back.
  */
 async function saveSettings(page: Page): Promise<void> {
-  await expect(page.getByTestId('rewind-settings-unsaved')).toBeVisible();
-  await page.getByTestId('rewind-settings-save').click();
-  await expect(page.getByTestId('rewind-settings-unsaved')).toHaveCount(0);
-  await expect(page.getByTestId('rewind-settings-save')).toBeDisabled();
+  await expect(page.getByTestId('settings-rewind-unsaved')).toBeVisible();
+  await page.getByTestId('settings-rewind-save').click();
+  await expect(page.getByTestId('settings-rewind-unsaved')).toHaveCount(0);
+  await expect(page.getByTestId('settings-rewind-save')).toBeDisabled();
 }
 
 test.describe('Rewind settings section', () => {
@@ -81,10 +81,10 @@ test.describe('Rewind settings section', () => {
     await signIn(TEST_USERS.ADMIN.id);
     await page.goto('/admin/settings#rewind');
 
-    const section = page.getByTestId('rewind-settings-section');
+    const section = page.getByTestId('settings-rewind-section');
     await expect(section).toBeVisible();
     await expect(section.getByTestId('rewind-settings-status')).toBeVisible();
-    await expect(page.getByTestId('rewind-settings-save')).toBeDisabled();
+    await expect(page.getByTestId('settings-rewind-save')).toBeDisabled();
   });
 
   test('"Admins only" hides the home RewindCard from a member and keeps it for an admin', async ({ page, signIn }) => {

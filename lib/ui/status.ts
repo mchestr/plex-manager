@@ -167,6 +167,9 @@ export const STATUS = {
 export type StatusDomain = keyof typeof STATUS
 export type StatusValue<D extends StatusDomain> = keyof (typeof STATUS)[D] & string
 
+/** A settings section's live health (5.6 "Connection"). */
+export type ConnectionStatus = StatusValue<"connection">
+
 /** The values a sub-line or label can be filled with. */
 export interface StatusFill {
   /** The state's date: `{date}`, `{day}`, and `{ago}` with `now`. */
@@ -249,14 +252,14 @@ const CATEGORY_OF = {
   untested: "off",
   disabled: "off",
   notConfigured: "off",
-} as const satisfies Record<StatusValue<"connection">, SettingsCategory>
+} as const satisfies Record<ConnectionStatus, SettingsCategory>
 
 /**
  * The settings nav glyph for a connection state (5.6): a shape per category,
  * so the four differ without colour. `neutral` renders in `muted-foreground`.
  * A dirty section keeps its category and adds the unsaved-changes pip.
  */
-export function settingsCategory(status: StatusValue<"connection">) {
+export function settingsCategory(status: ConnectionStatus) {
   const category = CATEGORY_OF[status]
   return { category, ...CATEGORIES[category] }
 }

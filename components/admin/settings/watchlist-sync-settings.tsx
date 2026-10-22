@@ -8,12 +8,12 @@ import {
 import { Alert } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/toast"
+import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 /** The badge tone for each sync history status; anything else is neutral. */
@@ -43,8 +43,13 @@ interface SyncStats {
   }>
 }
 
+/**
+ * The Watchlist sync controls, inside the settings section of that name:
+ * the global switch and the interval save on their own.
+ */
 export function WatchlistSyncSettings() {
   const toast = useToast()
+  const router = useRouter()
   const [settings, setSettings] = useState<GlobalSettings | null>(null)
   const [stats, setStats] = useState<SyncStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -89,6 +94,8 @@ export function WatchlistSyncSettings() {
             ? "Watchlist sync disabled"
             : "Watchlist sync enabled"
         )
+        // The section's status follows the switch
+        router.refresh()
       } else {
         toast.showError(result.error || "Failed to update settings")
       }
@@ -129,13 +136,10 @@ export function WatchlistSyncSettings() {
 
   if (isLoading) {
     return (
-      <Card data-testid="watchlist-sync-settings-loading">
-        <CardContent className="py-6">
-          <Skeleton className="h-5 w-1/3 mb-4" />
-          <Skeleton className="h-4 w-2/3 mb-6" />
-          <Skeleton className="h-10 w-24" />
-        </CardContent>
-      </Card>
+      <div data-testid="watchlist-sync-settings-loading">
+        <Skeleton className="h-4 w-2/3 mb-6" />
+        <Skeleton className="h-10 w-24" />
+      </div>
     )
   }
 
@@ -144,17 +148,7 @@ export function WatchlistSyncSettings() {
   }
 
   return (
-    <Card data-testid="watchlist-sync-settings">
-      <CardHeader className="border-b pb-4">
-        <CardTitle as="h2">Watchlist Sync</CardTitle>
-        <CardDescription>
-          Automatically sync users&apos; Plex watchlists to Overseerr requests.
-          Users must enable sync individually in their settings.
-        </CardDescription>
-      </CardHeader>
-
-      {/* Enable/Disable Toggle */}
-      <CardContent className="space-y-6 py-5">
+    <div className="space-y-6" data-testid="watchlist-sync-settings">
         <div className="flex items-center gap-4">
           <Switch
             checked={settings.watchlistSyncEnabled}
@@ -243,7 +237,6 @@ export function WatchlistSyncSettings() {
             Watchlist sync is disabled. Users will not be able to enable sync in their settings.
           </Alert>
         )}
-      </CardContent>
-    </Card>
+    </div>
   )
 }

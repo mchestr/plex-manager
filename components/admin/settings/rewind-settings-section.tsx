@@ -2,16 +2,16 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { type ReactNode, useState, useTransition } from "react"
 
 import { updateRewindSettings } from "@/actions/admin/rewind-settings"
 import { CheckboxList, MonthDayField, SelectField, SwitchField } from "@/components/admin/settings/rewind-settings/fields"
 import { RewindSettingsStatusLine, type RewindSettingsStatus } from "@/components/admin/settings/rewind-settings/status-line"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
+import { SettingsSection } from "@/components/ui/settings-section"
 import { useToast } from "@/components/ui/toast"
+import type { SectionHealth } from "@/lib/settings/connection-status"
 import { enableEntry, isFeatureEntry, REWIND_FEATURES } from "@/lib/rewind/features"
 import { REWIND_CUT_PAGES, REWIND_DISABLED_PAGE_ENTRIES, rewindBudgetSchema, type RewindSettings } from "@/lib/validations/rewind-settings"
 
@@ -31,6 +31,10 @@ interface RewindSettingsSectionProps {
   /** The distinct content ratings in the metadata cache. */
   ratings: string[]
   status: RewindSettingsStatus
+  /** The section's health: Redis, then Tautulli (`getSettingsHealth()`). */
+  health: SectionHealth
+  /** The season console note, under the fields. */
+  children?: ReactNode
 }
 
 type Draft = Omit<RewindSettings, "rewindLlmBudgetUsd"> & { rewindLlmBudgetUsd: string }
@@ -64,7 +68,7 @@ function withStored(options: { value: string; label: string }[], stored: readonl
  * every admin-facing Rewind flag, saved together with `updateRewindSettings`.
  * Save stays disabled until something changed; Discard restores the stored values.
  */
-export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, spent, libraries, ratings, status }: RewindSettingsSectionProps) {
+export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, spent, libraries, ratings, status, health, children }: RewindSettingsSectionProps) {
   const router = useRouter()
   const { showError, showSuccess } = useToast()
   const [isPending, startTransition] = useTransition()
@@ -109,14 +113,22 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
   )
 
   return (
-    <Card id="rewind" data-testid="rewind-settings-section">
-      <CardHeader>
-        <CardTitle as="h2">Rewind</CardTitle>
-        <CardDescription>Who sees Rewind, when the season runs, and what each issue may include.</CardDescription>
-        <RewindSettingsStatusLine status={status} />
-      </CardHeader>
-
-      <CardContent className="flex flex-col gap-8">
+    <SettingsSection
+      id="rewind"
+      title="Rewind"
+      description="Who sees Rewind, when the season runs, and what each issue may include."
+      status={health.status}
+      checkedAt={health.checkedAt}
+      form={{
+        isDirty: dirty,
+        isPending,
+        onDiscard: () => setDraft(toDraft(saved)),
+        onSave: save,
+        blockedReason: budgetError || datesError ? "Fix the marked fields to save." : undefined,
+      }}
+    >
+      <RewindSettingsStatusLine status={status} />
+      <div className="flex flex-col gap-8">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <SwitchField
             name="enabled"
@@ -271,26 +283,8 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           selected={draft.rewindNotifyChannels}
           onChange={(channels) => set("rewindNotifyChannels")(channels as Draft["rewindNotifyChannels"])}
         />
-      </CardContent>
-
-      <CardFooter className="justify-end">
-        {dirty && (
-          <span className="mr-auto text-label text-muted-foreground" data-testid="rewind-settings-unsaved">
-            Unsaved changes
-          </span>
-        )}
-        <Button variant="secondary" onClick={() => setDraft(toDraft(saved))} disabled={!dirty || isPending} data-testid="rewind-settings-discard">
-          Discard
-        </Button>
-        <Button
-          onClick={save}
-          disabled={!dirty || isPending || Boolean(budgetError) || Boolean(datesError)}
-          loading={isPending}
-          data-testid="rewind-settings-save"
-        >
-          Save
-        </Button>
-      </CardFooter>
-    </Card>
+      </div>
+      {children}
+    </SettingsSection>
   )
 }
