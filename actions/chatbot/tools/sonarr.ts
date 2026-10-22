@@ -1,5 +1,17 @@
 import { type RegisteredTool } from "./types"
 
+/** The optional series filter of the list tools; the executor filters records to it. */
+const SERIES_FILTER_PROPERTIES = {
+  seriesId: {
+    type: "integer",
+    description: "Only this series (preferred - use sonarrId from search_sonarr_series results)",
+  },
+  seriesName: {
+    type: "string",
+    description: "Only the library series whose title contains this name",
+  },
+}
+
 export const SONARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
@@ -56,9 +68,8 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     // Paged history: keep event/title/quality/date leaf fields. Exclude
     // downloadId, download client, indexer, and file paths (infra/tracker detail).
     discordFields: [
+      "showing",
       "totalRecords",
-      "page",
-      "pageSize",
       "records",
       "eventType",
       "sourceTitle",
@@ -73,13 +84,13 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     function: {
       name: "get_sonarr_history",
       description:
-        "Get recent history from Sonarr to check for download issues or successes. Can filter by series name, series ID, or episode ID. IMPORTANT: Use seriesId or episodeId from search_sonarr_series or get_sonarr_episodes results for accurate filtering.",
+        "Get recent download history from Sonarr, newest first, with each record's series and episode titles, to check for download issues or successes. Without a filter it is the whole server's history. With a series (seriesId or seriesName) Sonarr returns only that series' history; with an episodeId, only that episode's. The reply's 'showing' line says how many records were returned out of the total. IMPORTANT: Use seriesId or episodeId from search_sonarr_series or get_sonarr_episodes results for accurate filtering.",
       parameters: {
         type: "object",
         properties: {
           pageSize: {
             type: "integer",
-            description: "Number of history items to retrieve (default 20)",
+            description: "Number of history items to retrieve (default 20, at most 150)",
           },
           seriesName: {
             type: "string",
@@ -106,9 +117,8 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     // Paged queue: keep title/status/progress/size + quality. Exclude
     // downloadId, download client, indexer, and output/file paths.
     discordFields: [
+      "showing",
       "totalRecords",
-      "page",
-      "pageSize",
       "records",
       "title",
       "status",
@@ -125,8 +135,9 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     ],
     function: {
       name: "get_sonarr_queue",
-      description: "Get the current download queue from Sonarr showing TV series being downloaded",
-      parameters: { type: "object", properties: {} },
+      description:
+        "Get the current download queue from Sonarr, with each item's series and episode titles (up to 50 items). Give a series (seriesId or seriesName) to see only that series' items: the latest 150 queue items are read and filtered to it. The reply's 'showing' line says how many items were returned out of the total.",
+      parameters: { type: "object", properties: SERIES_FILTER_PROPERTIES },
     },
   },
   {
@@ -203,10 +214,12 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     type: "function",
     function: {
       name: "get_sonarr_calendar",
-      description: "Get upcoming episodes from Sonarr calendar (airing soon)",
+      description:
+        "Get upcoming episodes from the Sonarr calendar (airing soon), each with its series title. Give a series (seriesId or seriesName) to see only that series' episodes in the date range. The reply's 'showing' line says how many episodes were returned.",
       parameters: {
         type: "object",
         properties: {
+          ...SERIES_FILTER_PROPERTIES,
           startDate: {
             type: "string",
             description: "Start date in ISO format (optional, defaults to today)",
@@ -223,13 +236,15 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     type: "function",
     function: {
       name: "get_sonarr_wanted_missing",
-      description: "Get missing episodes that Sonarr wants to download",
+      description:
+        "Get missing episodes that Sonarr wants to download, latest air date first, each with its series title. Give a series (seriesId or seriesName) to see only that series' missing episodes: the latest 150 missing episodes are read and filtered to it. The reply's 'showing' line says how many episodes were returned out of the total.",
       parameters: {
         type: "object",
         properties: {
+          ...SERIES_FILTER_PROPERTIES,
           pageSize: {
             type: "integer",
-            description: "Number of missing episodes to retrieve (default 20)",
+            description: "Number of missing episodes to retrieve without a series filter (default 20, at most 150)",
           },
         },
       },

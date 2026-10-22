@@ -50,7 +50,7 @@ export type ServiceErrorCode =
   | "UPSTREAM_ERROR"
 
 /** An HTTP failure's body and status text, kept only when the caller sets `readErrorBody`. */
-export interface ServiceErrorDetail {
+interface ServiceErrorDetail {
   /** The parsed JSON body, or `undefined` when it was not JSON. Untrusted: parse it with Zod. */
   body: unknown
   statusText: string

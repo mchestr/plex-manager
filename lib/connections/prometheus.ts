@@ -19,7 +19,7 @@ const ERROR_MAX = 300
  * fixed message. A 503 (a query timeout or abort) is `PROMETHEUS_TIMEOUT`
  * and `retryable`.
  */
-export interface PrometheusFailure {
+interface PrometheusFailure {
   success: false
   code: "PROMETHEUS_ERROR" | "PROMETHEUS_TIMEOUT"
   error: string

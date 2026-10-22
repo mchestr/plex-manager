@@ -1,6 +1,20 @@
+import { z } from "zod"
+
 import { type RadarrParsed } from "@/lib/validations/radarr";
-import { arrGet, testArrConnection } from "@/lib/connections/arr-client";
+import { arrGet, arrGetList, arrGetPaged, arrQuery, invalidArrParams, testArrConnection, type ArrPage } from "@/lib/connections/arr-client";
 import { type ConnectionResult } from "@/types/connection";
+
+/*
+ * Query parameters per endpoint, as Radarr's v3 controllers bind them
+ * (GAP-07). Strict, so a parameter an endpoint ignores is a type error.
+ * `page` and `pageSize` are added by `arrGetPaged`. The calendar and
+ * wanted/missing return movies themselves, so they take no `includeMovie`.
+ */
+const historyParams = z.strictObject({ includeMovie: z.literal(true) })
+const movieHistoryParams = z.strictObject({ movieId: z.number().int(), includeMovie: z.literal(true) })
+const queueParams = z.strictObject({ includeMovie: z.literal(true) })
+const calendarParams = z.strictObject({ start: z.string().optional(), end: z.string().optional() })
+const missingParams = z.strictObject({ sortKey: z.literal("physicalRelease") })
 
 export async function testRadarrConnection(config: RadarrParsed): Promise<{ success: boolean; error?: string }> {
   return testArrConnection("Radarr", config)
@@ -10,8 +24,9 @@ export async function getRadarrSystemStatus(config: RadarrParsed): Promise<Conne
   return arrGet("Radarr", config, "/api/v3/system/status")
 }
 
-export async function getRadarrQueue(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  return arrGet("Radarr", config, "/api/v3/queue")
+/** The download queue with each item's movie, up to `limit` (default 50) items. */
+export async function getRadarrQueue(config: RadarrParsed, limit = 50): Promise<ConnectionResult<ArrPage>> {
+  return arrGetPaged("Radarr", config, "/api/v3/queue", arrQuery(queueParams, { includeMovie: true }), limit)
 }
 
 export async function getRadarrHealth(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
@@ -26,20 +41,20 @@ export async function searchRadarrMovies(config: RadarrParsed, term: string): Pr
   return arrGet("Radarr", config, `/api/v3/movie/lookup?term=${encodeURIComponent(term)}`)
 }
 
+/**
+ * Download history, newest first, with each record's movie. A movie reads
+ * `/api/v3/history/movie`, because `/api/v3/history` ignores `movieId`;
+ * otherwise the server-wide history. At most `pageSize` records.
+ */
 export async function getRadarrHistory(
   config: RadarrParsed,
-  pageSize = 20,
-  movieId?: number
-): Promise<ConnectionResult<unknown>> {
-  const params = new URLSearchParams({
-    pageSize: pageSize.toString(),
-    sortKey: "date",
-    sortDir: "desc",
-  })
+  { pageSize, movieId }: { pageSize: number; movieId?: number }
+): Promise<ConnectionResult<ArrPage>> {
   if (movieId !== undefined) {
-    params.append("movieId", movieId.toString())
+    const query = arrQuery(movieHistoryParams, { movieId, includeMovie: true })
+    return arrGetList("Radarr", config, "/api/v3/history/movie", query, pageSize)
   }
-  return arrGet("Radarr", config, `/api/v3/history?${params.toString()}`)
+  return arrGetPaged("Radarr", config, "/api/v3/history", arrQuery(historyParams, { includeMovie: true }), pageSize)
 }
 
 export async function getRadarrMovies(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
@@ -50,17 +65,16 @@ export async function getRadarrMovieById(config: RadarrParsed, movieId: number):
   return arrGet("Radarr", config, `/api/v3/movie/${movieId}`)
 }
 
+/** Movies releasing from `startDate` to `endDate`. */
 export async function getRadarrCalendar(config: RadarrParsed, startDate?: string, endDate?: string): Promise<ConnectionResult<unknown>> {
-  let path = "/api/v3/calendar"
-  const params = new URLSearchParams()
-  if (startDate) params.append("start", startDate)
-  if (endDate) params.append("end", endDate)
-  if (params.toString()) path += `?${params.toString()}`
-  return arrGet("Radarr", config, path)
+  const query = arrQuery(calendarParams, { start: startDate, end: endDate })
+  if (query === null) return invalidArrParams("Radarr")
+  return arrGet("Radarr", config, query ? `/api/v3/calendar?${query}` : "/api/v3/calendar")
 }
 
-export async function getRadarrWantedMissing(config: RadarrParsed, pageSize = 20): Promise<ConnectionResult<unknown>> {
-  return arrGet("Radarr", config, `/api/v3/wanted/missing?pageSize=${pageSize}&sortKey=physicalRelease&sortDir=desc`)
+/** Missing movies, latest release first, up to `limit`. */
+export async function getRadarrWantedMissing(config: RadarrParsed, limit = 20): Promise<ConnectionResult<ArrPage>> {
+  return arrGetPaged("Radarr", config, "/api/v3/wanted/missing", arrQuery(missingParams, { sortKey: "physicalRelease" }), limit)
 }
 
 export async function getRadarrRootFolders(config: RadarrParsed): Promise<ConnectionResult<unknown>> {

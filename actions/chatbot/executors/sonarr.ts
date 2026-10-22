@@ -1,5 +1,28 @@
 import { getSonarrCalendar, getSonarrDiskSpace, getSonarrEpisodeById, getSonarrEpisodes, getSonarrHealth, getSonarrHistory, getSonarrQualityProfiles, getSonarrQueue, getSonarrRootFolders, getSonarrSeries, getSonarrSeriesById, getSonarrSystemStatus, getSonarrWantedMissing, searchSonarrSeries } from "@/lib/connections/sonarr"
+import { ARR_MAX_RECORDS } from "@/lib/connections/arr-client"
 import { prisma } from "@/lib/prisma"
+import { type SonarrParsed } from "@/lib/validations/sonarr"
+
+import { arrListOutput, arrPageOutput, idForTitle, type ArrFilter } from "./arr-output"
+
+/**
+ * The series a tool asks about: `seriesId`, or the library series whose title
+ * matches `seriesName`. Neither given is every series; a name with no match
+ * is an `error` to return as the tool output.
+ */
+async function resolveSeries(config: SonarrParsed, args: Record<string, unknown>): Promise<{ seriesId?: number } | { error: string }> {
+  if (typeof args.seriesId === "number") return { seriesId: args.seriesId }
+  if (typeof args.seriesName !== "string") return {}
+  const library = await getSonarrSeries(config)
+  if (!library.success) return { error: JSON.stringify({ error: library.error }) }
+  const seriesId = idForTitle(library.data, args.seriesName)
+  if (seriesId === undefined) return { error: JSON.stringify({ error: `Series "${args.seriesName}" not found in Sonarr library` }) }
+  return { seriesId }
+}
+
+function seriesFilter(seriesId: number | undefined): ArrFilter | undefined {
+  return seriesId === undefined ? undefined : { key: "seriesId", id: seriesId }
+}
 
 export async function executeSonarrTool(
   toolName: string,
@@ -21,13 +44,13 @@ export async function executeSonarrTool(
     case "get_sonarr_status": {
       const [statusResult, queueResult, healthResult, diskResult] = await Promise.all([
         getSonarrSystemStatus(config),
-        getSonarrQueue(config),
+        getSonarrQueue(config, 1),
         getSonarrHealth(config),
         getSonarrDiskSpace(config),
       ])
       return JSON.stringify({
         status: statusResult.success ? statusResult.data : { error: statusResult.error },
-        queue: queueResult.success ? queueResult.data : { error: queueResult.error },
+        queue: queueResult.success ? { totalRecords: queueResult.data.totalRecords } : { error: queueResult.error },
         health: healthResult.success ? healthResult.data : { error: healthResult.error },
         disk: diskResult.success ? diskResult.data : { error: diskResult.error },
       })
@@ -65,49 +88,18 @@ export async function executeSonarrTool(
     }
     case "get_sonarr_history": {
       const pageSize = typeof args.pageSize === "number" ? args.pageSize : 20
-      let seriesId: number | undefined = typeof args.seriesId === "number" ? args.seriesId : undefined
-      let episodeId: number | undefined = typeof args.episodeId === "number" ? args.episodeId : undefined
-
-      // If seriesName is provided, search for the series first
-      if (typeof args.seriesName === "string" && !seriesId) {
-        const seriesName = args.seriesName
-        const allSeriesResult = await getSonarrSeries(config)
-        if (!allSeriesResult.success) {
-          return JSON.stringify({ error: allSeriesResult.error })
-        }
-        const allSeries = allSeriesResult.data
-        const matchingSeries = Array.isArray(allSeries)
-          ? allSeries.find(
-              (s: { title?: string; titleSlug?: string }) =>
-                s.title?.toLowerCase().includes(seriesName.toLowerCase()) ||
-                s.titleSlug?.toLowerCase().includes(seriesName.toLowerCase())
-            )
-          : null
-
-        if (!matchingSeries) {
-          return JSON.stringify({
-            error: `Series "${seriesName}" not found in Sonarr library`,
-          })
-        }
-
-        seriesId = matchingSeries.id
-      }
-
-      // If episodeId is provided but we need to find seriesId, get episode details
-      // Note: Sonarr history API can filter by episodeId directly, but if user wants series history
-      // we need seriesId. For now, if episodeId is provided, we'll use it directly.
-      const historyResult = await getSonarrHistory(config, pageSize, seriesId, episodeId)
-      if (!historyResult.success) {
-        return JSON.stringify({ error: historyResult.error })
-      }
-      return JSON.stringify(historyResult.data)
+      const episodeId = typeof args.episodeId === "number" ? args.episodeId : undefined
+      const series = await resolveSeries(config, args)
+      if ("error" in series) return series.error
+      // A series reads /history/series and an episode /history?episodeId=, so Sonarr filters
+      return arrPageOutput(await getSonarrHistory(config, { pageSize, seriesId: series.seriesId, episodeId }))
     }
     case "get_sonarr_queue": {
-      const queueResult = await getSonarrQueue(config)
-      if (!queueResult.success) {
-        return JSON.stringify({ error: queueResult.error })
-      }
-      return JSON.stringify(queueResult.data)
+      // The queue cannot filter by series on every Sonarr version: read up to the cap and filter here
+      const series = await resolveSeries(config, args)
+      if ("error" in series) return series.error
+      const limit = series.seriesId === undefined ? 50 : ARR_MAX_RECORDS
+      return arrPageOutput(await getSonarrQueue(config, limit), seriesFilter(series.seriesId))
     }
     case "get_sonarr_series": {
       const seriesResult = await getSonarrSeries(config)
@@ -129,19 +121,17 @@ export async function executeSonarrTool(
     case "get_sonarr_calendar": {
       const startDate = typeof args.startDate === "string" ? args.startDate : undefined
       const endDate = typeof args.endDate === "string" ? args.endDate : undefined
-      const calendarResult = await getSonarrCalendar(config, startDate, endDate)
-      if (!calendarResult.success) {
-        return JSON.stringify({ error: calendarResult.error })
-      }
-      return JSON.stringify(calendarResult.data)
+      const series = await resolveSeries(config, args)
+      if ("error" in series) return series.error
+      return arrListOutput(await getSonarrCalendar(config, startDate, endDate), seriesFilter(series.seriesId))
     }
     case "get_sonarr_wanted_missing": {
       const pageSize = typeof args.pageSize === "number" ? args.pageSize : 20
-      const missingResult = await getSonarrWantedMissing(config, pageSize)
-      if (!missingResult.success) {
-        return JSON.stringify({ error: missingResult.error })
-      }
-      return JSON.stringify(missingResult.data)
+      // wanted/missing cannot filter by series: read up to the cap and filter here
+      const series = await resolveSeries(config, args)
+      if ("error" in series) return series.error
+      const limit = series.seriesId === undefined ? pageSize : ARR_MAX_RECORDS
+      return arrPageOutput(await getSonarrWantedMissing(config, limit), seriesFilter(series.seriesId))
     }
     case "get_sonarr_root_folders": {
       const foldersResult = await getSonarrRootFolders(config)

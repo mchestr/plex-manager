@@ -95,6 +95,7 @@ describe("an injected Overseerr display name", () => {
     expect(value).not.toMatch(/@example\.com|victim@|plexUsername/)
     expect(JSON.parse(value)).toEqual({
       untrusted_data: {
+        total: 2,
         users: [
           { id: 7, displayName: PAYLOAD.slice(0, 64), requestCount: 3, permissions: 32 },
           { id: 8, displayName: "Sam", requestCount: 0, permissions: 2 },

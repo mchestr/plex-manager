@@ -1,5 +1,17 @@
 import { type RegisteredTool } from "./types"
 
+/** The optional movie filter of the list tools; the executor filters records to it. */
+const MOVIE_FILTER_PROPERTIES = {
+  movieId: {
+    type: "integer",
+    description: "Only this movie (preferred - use radarrId from search_radarr_movies results)",
+  },
+  movieName: {
+    type: "string",
+    description: "Only the library movie whose title contains this name",
+  },
+}
+
 export const RADARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
@@ -54,9 +66,8 @@ export const RADARR_TOOLS: RegisteredTool[] = [
     // Paged history: keep event/title/quality/date leaf fields. Exclude
     // downloadId, download client, indexer, and file paths.
     discordFields: [
+      "showing",
       "totalRecords",
-      "page",
-      "pageSize",
       "records",
       "eventType",
       "sourceTitle",
@@ -69,13 +80,13 @@ export const RADARR_TOOLS: RegisteredTool[] = [
     function: {
       name: "get_radarr_history",
       description:
-        "Get recent history from Radarr to check for download issues or successes. Can filter by movie name or movie ID. IMPORTANT: Use movieId from search_radarr_movies results (radarrId field) for accurate filtering.",
+        "Get recent download history from Radarr, newest first, with each record's movie title, to check for download issues or successes. Without a filter it is the whole server's history. With a movie (movieId or movieName) Radarr returns only that movie's history. The reply's 'showing' line says how many records were returned out of the total. IMPORTANT: Use movieId from search_radarr_movies results (radarrId field) for accurate filtering.",
       parameters: {
         type: "object",
         properties: {
           pageSize: {
             type: "integer",
-            description: "Number of history items to retrieve (default 20)",
+            description: "Number of history items to retrieve (default 20, at most 150)",
           },
           movieName: {
             type: "string",
@@ -98,9 +109,8 @@ export const RADARR_TOOLS: RegisteredTool[] = [
     // Paged queue: keep title/status/progress/size + quality. Exclude
     // downloadId, download client, indexer, and output/file paths.
     discordFields: [
+      "showing",
       "totalRecords",
-      "page",
-      "pageSize",
       "records",
       "title",
       "status",
@@ -115,8 +125,9 @@ export const RADARR_TOOLS: RegisteredTool[] = [
     ],
     function: {
       name: "get_radarr_queue",
-      description: "Get the current download queue from Radarr showing movies being downloaded",
-      parameters: { type: "object", properties: {} },
+      description:
+        "Get the current download queue from Radarr, with each item's movie title (up to 50 items). Give a movie (movieId or movieName) to see only that movie's items: the latest 150 queue items are read and filtered to it. The reply's 'showing' line says how many items were returned out of the total.",
+      parameters: { type: "object", properties: MOVIE_FILTER_PROPERTIES },
     },
   },
   {
@@ -149,10 +160,12 @@ export const RADARR_TOOLS: RegisteredTool[] = [
     type: "function",
     function: {
       name: "get_radarr_calendar",
-      description: "Get upcoming movies from Radarr calendar (releasing soon)",
+      description:
+        "Get upcoming movies from the Radarr calendar (releasing soon). Give a movie (movieId or movieName) to see only that movie in the date range. The reply's 'showing' line says how many movies were returned.",
       parameters: {
         type: "object",
         properties: {
+          ...MOVIE_FILTER_PROPERTIES,
           startDate: {
             type: "string",
             description: "Start date in ISO format (optional, defaults to today)",
@@ -169,13 +182,15 @@ export const RADARR_TOOLS: RegisteredTool[] = [
     type: "function",
     function: {
       name: "get_radarr_wanted_missing",
-      description: "Get missing movies that Radarr wants to download",
+      description:
+        "Get missing movies that Radarr wants to download, latest release first. Give a movie (movieId or movieName) to check only that movie: the latest 150 missing movies are read and filtered to it. The reply's 'showing' line says how many movies were returned out of the total.",
       parameters: {
         type: "object",
         properties: {
+          ...MOVIE_FILTER_PROPERTIES,
           pageSize: {
             type: "integer",
-            description: "Number of missing movies to retrieve (default 20)",
+            description: "Number of missing movies to retrieve without a movie filter (default 20, at most 150)",
           },
         },
       },
