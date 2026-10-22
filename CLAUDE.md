@@ -60,7 +60,7 @@ components/             # React components
 hooks/                  # Shared client hooks
 lib/                    # Utilities, helpers, business logic
 ├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
-├── charts/            # Chart.js theme from the token mirror (chartTheme, registerCharts)
+├── charts/            # Chart slot map (var(--chart-n)) and generated text summaries for ChartCard
 ├── connections/       # External API clients (Plex, Tautulli, Overseerr, etc.)
 ├── design/            # Token mirror of app/globals.css and colour contrast helpers
 ├── discord/           # Discord bot, commands and linking

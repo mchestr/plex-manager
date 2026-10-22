@@ -19,6 +19,15 @@ const jsxA11yWarnings = Object.fromEntries(
   }),
 );
 
+const chartImportBans = [
+  { name: "recharts", message: "Draw charts with ChartCard (components/ui/chart-card.tsx) and a ChartSpec." },
+  { name: "chart.js", message: "Chart.js is retired (P10.9); use ChartCard." },
+  { name: "react-chartjs-2", message: "Chart.js is retired (P10.9); use ChartCard." },
+];
+const chartPatternBans = [
+  { group: ["recharts/*", "chart.js/*"], message: "Draw charts with ChartCard (components/ui/chart-card.tsx)." },
+];
+
 export default defineConfig([
   globalIgnores([
     "**/node_modules/**",
@@ -84,6 +93,22 @@ export default defineConfig([
     plugins: { "restricted-syntax": restrictedSyntaxPlugin },
     rules: { [restrictedSyntaxRule(level)]: [level, ...selectors] },
   })),
+  {
+    // Charts are ChartCard specs on shadcn Chart (P10.9): Recharts stays in
+    // components/ui/chart*, and Chart.js does not come back.
+    files: ["**/*.{js,jsx,mjs,ts,tsx}"],
+    ignores: ["components/ui/chart.tsx", "components/ui/chart-card/**", "components/wrapped/wrapped-charts.tsx"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: chartImportBans, patterns: chartPatternBans }],
+    },
+  },
+  {
+    // The v2 viewer's charts keep Chart.js until P11.29 deletes components/wrapped.
+    files: ["components/wrapped/wrapped-charts.tsx"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: chartImportBans.filter(({ name }) => name === "recharts") }],
+    },
+  },
   {
     // The centralized logger conditionally requires Winston/Chalk at runtime
     // (Node-only), which legitimately needs CommonJS require(). Scope the

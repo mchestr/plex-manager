@@ -79,6 +79,7 @@ describe("/dev/ui", () => {
       "filter-bar",
       "date-range-filter",
       "empty-state",
+      "chart-card",
       "rewind-card",
       "status-screen",
     ]) {

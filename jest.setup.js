@@ -34,6 +34,14 @@ if (typeof window !== 'undefined') {
       disconnect() {}
     }
   }
+  // jsdom lays nothing out, so Recharts' ResponsiveContainer (ChartCard's
+  // body, P10.9) would measure 0 x 0 and draw nothing. Give only that
+  // container a fixed size; every other element keeps jsdom's empty rect.
+  const getBoundingClientRect = HTMLElement.prototype.getBoundingClientRect
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    if (!this.classList.contains('recharts-responsive-container')) return getBoundingClientRect.call(this)
+    return { x: 0, y: 0, top: 0, left: 0, right: 640, bottom: 256, width: 640, height: 256, toJSON() {} }
+  }
   if (!Element.prototype.getAnimations) Element.prototype.getAnimations = () => []
   if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {}
   if (!Element.prototype.hasPointerCapture) Element.prototype.hasPointerCapture = () => false
