@@ -34,8 +34,12 @@ const outsideSvgArt = (path) => outsideRewind(path) && !SVG_ART.some((re) => re.
 
 /** A `'use client'` directive as the module's first statement. */
 const CLIENT_DIRECTIVE = /^(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*['"]use client['"]/
-/** What makes a module need the client: hooks, handlers, browser globals or motion. */
-const CLIENT_NEEDS = /\buse[A-Z]\w*|\bon[A-Z]\w*=|\b(?:window|document)\.|\bmotion\b/
+/**
+ * What makes a module need the client: hooks, handlers, browser globals,
+ * motion, or an element `render` prop (a Base UI trigger merges its children
+ * into that element, which a Server Component parent drops).
+ */
+const CLIENT_NEEDS = /\buse[A-Z]\w*|\bon[A-Z]\w*=|\b(?:window|document)\.|\bmotion\b|\brender=\{</
 
 /**
  * A `'use client'` marker on a module with none of {@link CLIENT_NEEDS}: a

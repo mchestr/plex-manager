@@ -77,6 +77,7 @@ describe("rules", () => {
       ["a browser global", "window.scrollTo(0, 0)"],
       ["document", "document.title = 'x'"],
       ["motion", '<motion.div animate={{ opacity: 1 }} />'],
+      ["an element render prop", '<DialogTrigger render={<Button />}>Open</DialogTrigger>'],
     ])("does not count a module that uses %s", (_case, body) => {
       expect(count(marked(body))["client-marker"]).toBeUndefined()
     })

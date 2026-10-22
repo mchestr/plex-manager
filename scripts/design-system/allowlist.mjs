@@ -39,11 +39,6 @@ export const ALLOWLIST = [
     rules: ['client-marker'],
     reason: 'Passes column cell renderers (functions) to DataTable, which the heuristic cannot see.',
   },
-  {
-    path: 'components/admin/settings/sections/other-integrations-section.tsx',
-    rules: ['client-marker'],
-    reason: 'Reads SERVER_LABELS from the client hook module hooks/admin/use-server-form.',
-  },
 ]
 
 /**
