@@ -1,19 +1,35 @@
 import { z } from "zod"
 
-import { testServiceConnection } from "@/lib/connections/connection-test"
-import { serviceErrorMessage, serviceFetch, type ServiceResult } from "@/lib/connections/http"
+import { isConnectionTestBypassed, testServiceConnection } from "@/lib/connections/connection-test"
+import { serviceErrorMessage, serviceFetch, type ServiceFailure, type ServiceResult } from "@/lib/connections/http"
 import {
+  prometheusErrorBodySchema,
   prometheusRangeDataSchema,
   prometheusResponseSchema,
   type PrometheusParsed,
   type PrometheusRangeData,
 } from "@/lib/validations/prometheus"
-import { type ConnectionResult } from "@/types/connection"
+
+/** The longest Prometheus error message passed on. */
+const ERROR_MAX = 300
 
 /**
- * GET a Prometheus API path; a `status` other than `"success"` is
- * `UPSTREAM_ERROR`.
+ * A failed Prometheus call. `error` is Prometheus's own `errorType: error`
+ * when it sent one (cut to 300 characters), else the HTTP status text or a
+ * fixed message. A 503 (a query timeout or abort) is `PROMETHEUS_TIMEOUT`
+ * and `retryable`.
  */
+interface PrometheusFailure {
+  success: false
+  code: "PROMETHEUS_ERROR" | "PROMETHEUS_TIMEOUT"
+  error: string
+  errorType?: string
+  retryable: boolean
+}
+
+export type PrometheusResult<T> = { success: true; data: T } | PrometheusFailure
+
+/** GET a Prometheus API path, keeping a non-2xx body for {@link prometheusFailure}. */
 async function prometheusGet<T>(
   config: PrometheusParsed,
   path: string,
@@ -25,10 +41,22 @@ async function prometheusGet<T>(
     url: `${config.url}${path}`,
     schema: prometheusResponseSchema(data),
     timeoutMs,
+    readErrorBody: true,
   })
-  if (!result.ok) return result
-  if (result.data.status !== "success") return { ok: false, code: "UPSTREAM_ERROR" }
-  return { ok: true, data: result.data.data }
+  return result.ok ? { ok: true, data: result.data.data } : result
+}
+
+/** A failure as {@link PrometheusFailure}, from Prometheus's documented error body when there is one. */
+function prometheusFailure(failure: ServiceFailure): PrometheusFailure {
+  const timedOut = failure.code === "HTTP" && failure.status === 503
+  const base = { success: false, code: timedOut ? "PROMETHEUS_TIMEOUT" : "PROMETHEUS_ERROR", retryable: timedOut } as const
+  const body = prometheusErrorBodySchema.safeParse(failure.detail?.body)
+  if (body.success) {
+    const { errorType, error } = body.data
+    return { ...base, errorType, error: `${errorType}: ${error}`.slice(0, ERROR_MAX) }
+  }
+  if (failure.detail?.statusText) return { ...base, error: failure.detail.statusText }
+  return { ...base, error: serviceErrorMessage("Prometheus", failure) }
 }
 
 /**
@@ -42,18 +70,17 @@ export async function testPrometheusConnection(
 }
 
 /**
- * Validate that a PromQL query is valid by executing it. Prometheus answers
- * an invalid query with HTTP 400.
+ * Validate a PromQL query by running it. An invalid query fails with
+ * Prometheus's own message, e.g. "bad_data: parse error at char 5: ...".
  */
 export async function validatePrometheusQuery(
-  config: PrometheusParsed
-): Promise<{ success: boolean; error?: string }> {
+  config: PrometheusParsed,
+  { timeoutMs }: { timeoutMs?: number } = {}
+): Promise<PrometheusResult<null>> {
+  if (isConnectionTestBypassed()) return { success: true, data: null }
   const params = new URLSearchParams({ query: config.query })
-  const result = await testServiceConnection("Prometheus", () =>
-    prometheusGet(config, `/api/v1/query?${params.toString()}`, z.unknown())
-  )
-  if (result.success) return result
-  return { success: false, error: `Invalid PromQL query: ${result.error}` }
+  const result = await prometheusGet(config, `/api/v1/query?${params.toString()}`, z.unknown(), timeoutMs)
+  return result.ok ? { success: true, data: null } : prometheusFailure(result)
 }
 
 /**
@@ -70,7 +97,7 @@ export async function queryPrometheusRange(
   startTime: number,
   endTime: number,
   step: string = "1h"
-): Promise<ConnectionResult<PrometheusRangeData>> {
+): Promise<PrometheusResult<PrometheusRangeData>> {
   const params = new URLSearchParams({
     query: config.query,
     start: startTime.toString(),
@@ -79,7 +106,7 @@ export async function queryPrometheusRange(
   })
   // 30 second budget for range queries
   const result = await prometheusGet(config, `/api/v1/query_range?${params.toString()}`, prometheusRangeDataSchema, 30_000)
-  if (!result.ok) return { success: false, error: serviceErrorMessage("Prometheus", result) }
-  if (!result.data) return { success: false, error: "No data returned from Prometheus" }
+  if (!result.ok) return prometheusFailure(result)
+  if (!result.data) return { success: false, code: "PROMETHEUS_ERROR", error: "No data returned from Prometheus", retryable: false }
   return { success: true, data: result.data }
 }

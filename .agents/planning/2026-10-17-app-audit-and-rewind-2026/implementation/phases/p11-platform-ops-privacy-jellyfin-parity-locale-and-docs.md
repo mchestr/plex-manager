@@ -449,10 +449,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Ask the admin assistant "why didn't Severance download?": it answers from Severance's own history, with titles. Ask for every Overseerr user: it reports the true total. Save `rate(` as a PromQL query: settings show "bad_data: ..." instead of "Bad Request".
 
 **Done when.**
-- [ ] History calls use the per-series and per-movie routes, and list calls include series and movie data and page with a cap.
-- [ ] Endpoints that cannot filter are filtered in code, and Overseerr users are paged.
-- [ ] Prometheus errors show `errorType: error`, and 503 is treated as retryable.
-- [ ] The fixture tests pass.
+- [x] History calls use the per-series and per-movie routes, and list calls include series and movie data and page with a cap.
+- [x] Endpoints that cannot filter are filtered in code, and Overseerr users are paged.
+- [x] Prometheus errors show `errorType: error`, and 503 is treated as retryable.
+- [x] The fixture tests pass.
+
+(as merged: built at the current paths, `actions/chatbot/{tools,executors}/` (P11.5's move to `lib/chatbot/` was in flight), with tests in `actions/chatbot/executors/__tests__/` and `__tests__/actions/prometheus-status.test.ts`. The history, queue and wanted calls return `ArrPage` (`{ records, totalRecords }`) from `arrGetPaged`/`arrGetList` in `lib/connections/arr-client.ts`, with params typed by `arrQuery(strictSchema, params)`; executors format them through `actions/chatbot/executors/arr-output.ts` (`showing` line). An episode's history uses `/history?episodeId=` even when a series is also given. The calendar takes no `pageSize` (neither API binds it), and Radarr's calendar and wanted/missing return movies, so they take no `includeMovie` and are filtered by the movie's `id`; `getSonarrCalendar` always sends `includeSeries` (its options argument is gone). `serviceFetch` gained `readErrorBody` (failure `detail: { body, statusText }`); Prometheus calls return `PrometheusResult` (`code`, `errorType`, `retryable`), `validatePrometheusQuery` returns Prometheus's message without the old "Invalid PromQL query:" prefix and takes `{ timeoutMs }`, and settings' Test runs the query after the connection check and puts a rejection on the `query` field.)
 
 ### Step P11.10: Jellyfin member parity: service, admin visibility and tests
 

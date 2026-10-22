@@ -8,8 +8,9 @@ import { toToolOutput } from "./tool-output"
 /** The longest display name the model sees; members choose it, so it is untrusted text (SEC-42). */
 const DISPLAY_NAME_MAX = 64
 
-// `GET /user`: { pageInfo, results: [{ id, displayName, email, requestCount, permissions, ... }] }
+// `GET /user`: { pageInfo: { results: <total>, ... }, results: [{ id, displayName, email, requestCount, permissions, ... }] }
 const usersSchema = z.object({
+  pageInfo: z.looseObject({ results: z.number() }).optional(),
   results: z.array(
     z.looseObject({
       id: z.number(),
@@ -20,12 +21,20 @@ const usersSchema = z.object({
   ),
 })
 
-/** Overseerr users projected to the fields an answer needs: no email, a bounded display name. */
+/**
+ * Overseerr users projected to the fields an answer needs: no email, a
+ * bounded display name. The first page holds 100; `total` is every user, and
+ * `more` says how many are not listed.
+ */
 function projectUsers(result: ConnectionResult<unknown>): string {
   if (!result.success) return toToolOutput(result)
   const users = usersSchema.safeParse(result.data)
   if (!users.success) return JSON.stringify({ error: "Unexpected response from Overseerr" })
+  const listed = users.data.results.length
+  const total = Math.max(users.data.pageInfo?.results ?? listed, listed)
   return JSON.stringify({
+    total,
+    ...(total > listed ? { more: `and ${total - listed} more` } : {}),
     users: users.data.results.map((user) => ({
       id: user.id,
       displayName: (user.displayName ?? "").slice(0, DISPLAY_NAME_MAX),

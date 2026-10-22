@@ -49,7 +49,19 @@ export type ServiceErrorCode =
   | "INVALID_RESPONSE"
   | "UPSTREAM_ERROR"
 
-export type ServiceFailure<C extends string = ServiceErrorCode> = { ok: false; code: C; status?: number }
+/** An HTTP failure's body and status text, kept only when the caller sets `readErrorBody`. */
+interface ServiceErrorDetail {
+  /** The parsed JSON body, or `undefined` when it was not JSON. Untrusted: parse it with Zod. */
+  body: unknown
+  statusText: string
+}
+
+export type ServiceFailure<C extends string = ServiceErrorCode> = {
+  ok: false
+  code: C
+  status?: number
+  detail?: ServiceErrorDetail
+}
 export type ServiceResult<T, C extends string = ServiceErrorCode> = { ok: true; data: T } | ServiceFailure<C>
 
 export interface ServiceFetchOptions<T> {
@@ -65,6 +77,11 @@ export interface ServiceFetchOptions<T> {
   /** Budget for the whole call, redirects and body included (default 10 s). */
   timeoutMs?: number
   signal?: AbortSignal
+  /**
+   * Read a non-2xx body as JSON into the failure's `detail` (Prometheus
+   * documents its errors there). Off by default: the body is cancelled.
+   */
+  readErrorBody?: boolean
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000
@@ -160,6 +177,10 @@ export async function serviceFetch<T>(options: ServiceFetchOptions<T>): Promise<
   try {
     const response = await fetchWithSafeRedirects(url, { method, headers: { ...accept, ...headers }, body, signal })
     if (!response.ok) {
+      if (options.readErrorBody) {
+        const errorBody: unknown = await response.json().catch(() => undefined)
+        return { ...fail(service, url, "HTTP", response.status), detail: { body: errorBody, statusText: response.statusText } }
+      }
       await response.body?.cancel().catch(() => undefined)
       return fail(service, url, "HTTP", response.status)
     }

@@ -42,6 +42,13 @@ function overseerrFetch<T>(
   })
 }
 
+const USER_PAGE_SIZE = 100
+
+/** Page `page` (from 0) of `/user`; Overseerr reads `take` and `skip`, and defaults `take` to 10. */
+function userPagePath(page: number): string {
+  return `/user?take=${USER_PAGE_SIZE}&skip=${page * USER_PAGE_SIZE}`
+}
+
 /** The raw JSON of a GET, for the chatbot tools. */
 async function overseerrGet(config: OverseerrEndpoint, path: string): Promise<ConnectionResult<unknown>> {
   return toConnectionResult("Overseerr", await overseerrFetch(config, path, z.unknown()))
@@ -91,8 +98,12 @@ export async function getOverseerrMediaDetails(
   return overseerrGet(config, `/${mediaType}/${mediaId}`)
 }
 
+/**
+ * The first page of users, 100 of them, as raw JSON; `pageInfo.results` is
+ * the total. A bare `/user` returns only 10 (GAP-07).
+ */
 export async function getOverseerrUsers(config: OverseerrEndpoint): Promise<ConnectionResult<unknown>> {
-  return overseerrGet(config, "/user")
+  return overseerrGet(config, userPagePath(0))
 }
 
 export async function getAllOverseerrRequests(
@@ -103,7 +114,6 @@ export async function getAllOverseerrRequests(
   return overseerrGet(config, `/request?take=${limit}&sort=${encodeURIComponent(sortBy)}`)
 }
 
-const USER_PAGE_SIZE = 100
 const MAX_USER_PAGES = 50
 const USER_INDEX_TTL_MS = 10 * 60 * 1000
 
@@ -135,8 +145,7 @@ export async function buildOverseerrUserIndex(
 
   const index = new Map<number, number>()
   for (let page = 0; page < MAX_USER_PAGES; page++) {
-    const path = `/user?take=${USER_PAGE_SIZE}&skip=${page * USER_PAGE_SIZE}`
-    const result = await overseerrFetch(config, path, userPageSchema, { signal })
+    const result = await overseerrFetch(config, userPagePath(page), userPageSchema, { signal })
     if (!result.ok) return result
     for (const user of result.data.results) {
       if (user.plexId != null) index.set(user.plexId, user.id)

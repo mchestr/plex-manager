@@ -56,7 +56,7 @@ describe("chatbot reads", () => {
       "http://overseerr.local:5055/api/v1/discover/movies?page=2&sortBy=popularity.desc%26take%3D999",
       "http://overseerr.local:5055/api/v1/discover/tv?page=1&sortBy=popularity.desc",
       "http://overseerr.local:5055/api/v1/movie/603",
-      "http://overseerr.local:5055/api/v1/user",
+      "http://overseerr.local:5055/api/v1/user?take=100&skip=0",
       "http://overseerr.local:5055/api/v1/request?take=10&sort=added",
     ])
     for (const [, init] of mockFetch.mock.calls) {

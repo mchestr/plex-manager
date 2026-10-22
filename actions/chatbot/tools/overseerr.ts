@@ -86,7 +86,8 @@ export const OVERSEERR_TOOLS: RegisteredTool[] = [
     type: "function",
     function: {
       name: "get_overseerr_users",
-      description: "Get all users configured in Overseerr",
+      description:
+        "Get the users configured in Overseerr: the total count, and the first 100 users with their request counts ('more' says how many are not listed)",
       parameters: { type: "object", properties: {} },
     },
   },

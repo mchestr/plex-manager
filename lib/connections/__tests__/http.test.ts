@@ -183,6 +183,17 @@ describe("serviceFetch", () => {
     })
   })
 
+  it("keeps a non-2xx body and status text only when asked", async () => {
+    const result = await serviceFetch({ service: "Test", url: `${main.origin}/status?code=400`, schema: z.unknown(), readErrorBody: true })
+
+    expect(result).toEqual({
+      ok: false,
+      code: "HTTP",
+      status: 400,
+      detail: { body: { error: "upstream says apikey=SECRET-KEY" }, statusText: "Bad Request" },
+    })
+  })
+
   it("never puts the key from the URL, the upstream body or an error message in results, messages or logs", async () => {
     const logs = [
       jest.spyOn(console, "warn").mockImplementation(() => undefined),
