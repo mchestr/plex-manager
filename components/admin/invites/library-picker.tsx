@@ -25,7 +25,7 @@ export function LibraryPicker({ listing, value, onChange, serverLabel, error }: 
   const all = value === "all"
   const chosen = all ? [] : value
   const toggle = (id: string, checked: boolean) =>
-    onChange(checked ? [...chosen, id] : chosen.filter((item) => item !== id))
+    onChange(checked ? (chosen.includes(id) ? chosen : [...chosen, id]) : chosen.filter((item) => item !== id))
 
   return (
     <fieldset className="flex flex-col gap-3" data-testid="invite-library-picker">
