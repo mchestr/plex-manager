@@ -19,6 +19,7 @@ on:
           - all
           - app
           - rewind
+          - light
 
 permissions:
   contents: write
@@ -124,9 +125,12 @@ jobs:
         run: |
           app="--project=visual-desktop --project=visual-mobile --project=visual-setup-desktop --project=visual-setup-mobile"
           rewind="--project=rewind-visual-phone-chromium --project=rewind-visual-phone-webkit --project=rewind-visual-desktop-chromium --project=rewind-visual-desktop-webkit"
+          # The light theme (P10.10); its Rewind project compares with the dark Rewind baselines instead.
+          light="--project=visual-light-desktop --project=visual-light-mobile"
           case "$SUITE" in
             app) projects="$app" ;;
             rewind) projects="$rewind" ;;
+            light) projects="$light" ;;
             *) projects="$app $rewind" ;;
           esac
           # shellcheck disable=SC2086 # one word per --project flag
