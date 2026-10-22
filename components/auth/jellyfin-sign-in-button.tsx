@@ -1,173 +1,110 @@
 "use client"
 
+import { signIn } from "next-auth/react"
+import { useActionState } from "react"
+
 import { Alert } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { StyledInput } from "@/components/ui/styled-input"
+import { SubmitButton } from "@/components/ui/submit-button"
 import { isRateLimitedSignInError, RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
-import { signIn } from "next-auth/react"
-import { FormEvent, useState } from "react"
 
 const logger = createLogger("JELLYFIN_SIGN_IN")
 
 export interface JellyfinSignInButtonProps {
-  /**
-   * Server name to display in messages
-   */
+  /** Server name to display in messages */
   serverName?: string
-  /**
-   * Custom submit button text
-   * @default "Sign in with Jellyfin"
-   */
-  buttonText?: string
-  /**
-   * Custom loading text
-   * @default "Signing in..."
-   */
-  loadingText?: string
   /**
    * Whether to show the privacy disclaimer
    * @default true
    */
   showDisclaimer?: boolean
-  /**
-   * A same-origin path to land on afterwards; `/` reads it once onboarding is checked
-   */
+  /** A same-origin path to land on afterwards; `/` reads it once onboarding is checked */
   callbackUrl?: string
-  /**
-   * Callback fired when sign-in is initiated
-   */
-  onSignInStart?: () => void
-  /**
-   * Callback fired when an error occurs
-   */
-  onError?: (error: string) => void
-  /**
-   * Callback fired when sign-in succeeds
-   */
-  onSuccess?: () => void
 }
 
-export function JellyfinSignInButton({
-  serverName,
-  buttonText = "Sign in with Jellyfin",
-  loadingText = "Signing in...",
-  showDisclaimer = true,
-  callbackUrl,
-  onSignInStart,
-  onError,
-  onSuccess,
-}: JellyfinSignInButtonProps) {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+interface SignInState {
+  error: string | null
+  /** The username as typed, re-seeded after an error; the password never is. */
+  username: string
+}
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
+const IDLE: SignInState = { error: null, username: "" }
 
-    if (!username || !password) {
-      const errorMsg = "Username and password are required"
-      setError(errorMsg)
-      onError?.(errorMsg)
-      return
+/** Signs in through NextAuth's Jellyfin provider; every failure is fixed copy (UI-19). */
+async function signInWithJellyfin(form: FormData, callbackUrl: string | undefined): Promise<SignInState> {
+  const username = String(form.get("username") ?? "")
+  const password = String(form.get("password") ?? "")
+  if (!username || !password) return { error: "Username and password are required", username }
+
+  try {
+    const result = await signIn("jellyfin", { username, password, redirect: false })
+    if (result?.ok && !result.error) {
+      // Home checks onboarding first, then follows the callback path
+      window.location.href = callbackUrl ? `/?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/"
+      return { error: null, username }
     }
-
-    setIsLoading(true)
-    setError(null)
-    onSignInStart?.()
-
-    try {
-      const result = await signIn("jellyfin", {
-        username,
-        password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        const errorMsg = isRateLimitedSignInError(result.error)
-          ? RATE_LIMITED_MESSAGE
-          : "Invalid username or password. Please try again."
-
-        setError(errorMsg)
-        onError?.(errorMsg)
-        setIsLoading(false)
-      } else if (result?.ok) {
-        onSuccess?.()
-        // Home checks onboarding first, then follows the callback path
-        window.location.href = callbackUrl ? `/?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/"
-      } else {
-        const errorMsg = "An unexpected error occurred. Please try again."
-        setError(errorMsg)
-        onError?.(errorMsg)
-        setIsLoading(false)
-      }
-    } catch (err) {
-      logger.error('Sign-in error', err)
-      // Fixed copy only: an exception's text never reaches the screen (UI-19)
-      const errorMsg = "We couldn't sign you in. Please check your connection and try again."
-
-      setError(errorMsg)
-      onError?.(errorMsg)
-      setIsLoading(false)
+    if (result?.error) {
+      return { error: isRateLimitedSignInError(result.error) ? RATE_LIMITED_MESSAGE : "Invalid username or password. Please try again.", username }
     }
+    return { error: "An unexpected error occurred. Please try again.", username }
+  } catch (err) {
+    logger.error("Sign-in error", err)
+    return { error: "We couldn't sign you in. Please check your connection and try again.", username }
   }
+}
+
+/**
+ * The Jellyfin sign-in form on the member pass: a `<form action>` with
+ * `useActionState` (P10.7). The username is kept after a failed attempt.
+ */
+export function JellyfinSignInButton({ serverName, showDisclaimer = true, callbackUrl }: JellyfinSignInButtonProps) {
+  const [state, formAction] = useActionState((_previous: SignInState, form: FormData) => signInWithJellyfin(form, callbackUrl), IDLE)
 
   return (
     <div className="w-full max-w-md mx-auto space-y-6" data-testid="jellyfin-sign-in-form">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form action={formAction} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="jellyfin-username">
-            Username
-          </Label>
-          <StyledInput
+          <Label htmlFor="jellyfin-username">Username</Label>
+          <Input
             id="jellyfin-username"
             name="username"
             type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            defaultValue={state.username}
             placeholder="Enter your Jellyfin username"
-            disabled={isLoading}
             required
             autoComplete="username"
+            aria-invalid={state.error ? true : undefined}
+            aria-describedby={state.error ? "jellyfin-sign-in-error" : undefined}
             data-testid="jellyfin-username"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="jellyfin-password">
-            Password
-          </Label>
-          <StyledInput
+          <Label htmlFor="jellyfin-password">Password</Label>
+          <Input
             id="jellyfin-password"
             name="password"
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
-            disabled={isLoading}
             required
             autoComplete="current-password"
+            aria-invalid={state.error ? true : undefined}
+            aria-describedby={state.error ? "jellyfin-sign-in-error" : undefined}
             data-testid="jellyfin-password"
           />
         </div>
 
-        {error && (
-          <Alert tone="destructive" data-testid="jellyfin-error">
-            {error}
+        {state.error && (
+          <Alert id="jellyfin-sign-in-error" tone="destructive" data-testid="jellyfin-error">
+            {state.error}
           </Alert>
         )}
 
-        <Button
-          type="submit"
-          className="w-full"
-          loading={isLoading}
-          loadingLabel={loadingText}
-          data-testid="jellyfin-submit"
-        >
-          {buttonText}
-        </Button>
+        <SubmitButton className="w-full" loadingLabel="Signing in" data-testid="jellyfin-submit">
+          Sign in with Jellyfin
+        </SubmitButton>
       </form>
 
       {showDisclaimer && (

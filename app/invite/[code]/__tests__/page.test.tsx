@@ -16,7 +16,7 @@ import type { InvitePassData, InviteState } from "@/types/invite"
 jest.mock("@/lib/invites/pass", () => ({ getInvitePass: jest.fn() }))
 jest.mock("@/components/status/not-found-screen", () => ({ notFoundInviteCode: jest.fn() }))
 jest.mock("@/lib/plex-auth", () => ({ startPlexSignIn: jest.fn() }))
-jest.mock("@/actions/invite", () => ({ processJellyfinInvite: jest.fn() }))
+jest.mock("@/actions/invite", () => ({ redeemJellyfinInviteForm: jest.fn() }))
 
 const PAGE_DIR = path.join(process.cwd(), "app/invite/[code]")
 

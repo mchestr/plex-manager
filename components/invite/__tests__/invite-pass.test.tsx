@@ -15,7 +15,7 @@ expect.extend(toHaveNoViolations)
 
 jest.mock("@/lib/plex-auth", () => ({ startPlexSignIn: jest.fn() }))
 jest.mock("@/lib/utils/navigation", () => ({ redirectTo: jest.fn() }))
-jest.mock("@/actions/invite", () => ({ processJellyfinInvite: jest.fn() }))
+jest.mock("@/actions/invite", () => ({ redeemJellyfinInviteForm: jest.fn() }))
 
 const VALID: InvitePassProps = {
   state: "valid",

@@ -8,6 +8,8 @@ import { getServerSession } from 'next-auth'
 import { z } from 'zod'
 
 import { memberAction } from '@/lib/actions/define-action'
+import { formAction } from '@/lib/actions/form-action'
+import { idleFormState } from '@/lib/actions/form-state'
 import { ok, toActionError } from '@/lib/actions/result'
 import { parseRouteParams } from '@/lib/actions/route'
 import { ratingKeySchema } from '@/lib/validations/params'
@@ -41,6 +43,26 @@ describe('JSDoc Documentation Examples', () => {
       code: 'INTERNAL',
       error: 'Failed to save',
     })
+  })
+
+  it('formAction: a form action on top of an object action', async () => {
+    const renameThing = jest.fn(async ({ name }: { name: string }) => ok({ name }))
+    const renameThingForm = formAction(renameThing, {
+      schema: z.object({ name: z.string() }),
+      toInput: ({ name }) => ({ name }),
+      keep: ['name'],
+    })
+    const form = new FormData()
+    form.set('name', 'Den')
+
+    await expect(renameThingForm(idleFormState(), form)).resolves.toEqual({
+      status: 'success',
+      data: { name: 'Den' },
+      error: null,
+      fieldErrors: {},
+      values: { name: 'Den' },
+    })
+    expect(renameThing).toHaveBeenCalledWith({ name: 'Den' })
   })
 
   it('parseRouteParams returns the parsed params', () => {

@@ -1,38 +1,52 @@
-import { render, screen } from '@testing-library/react'
+/**
+ * The invite pass's Jellyfin account form (P10.7): a `<form action>` on
+ * `redeemJellyfinInviteForm` with `useActionState`. It shows the pending
+ * state, marks invalid fields, keeps the username after an error and shows
+ * every failure on the form. The checks themselves are the action's
+ * (`actions/__tests__/invite.test.ts`).
+ */
+
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { processJellyfinInvite } from '@/actions/invite'
+import { redeemJellyfinInviteForm } from '@/actions/invite'
 import { JellyfinSignInForm } from '@/components/auth/jellyfin-sign-in-form'
+import type { FormState } from '@/lib/actions/form-state'
 
 jest.mock('@/actions/invite', () => ({
-  processJellyfinInvite: jest.fn(),
+  redeemJellyfinInviteForm: jest.fn(),
 }))
 
-const mockProcessJellyfinInvite = processJellyfinInvite as jest.MockedFunction<typeof processJellyfinInvite>
+const mockRedeem = jest.mocked(redeemJellyfinInviteForm)
+
+type State = FormState<{ jellyfinUserId: string; username: string; serverUrl: string | null }>
+
+const USERNAME_RULE = 'Username must be 3 to 32 characters: letters, numbers, dots, dashes or underscores'
+
+function errorState(error: string, fieldErrors: State['fieldErrors'], username: string): State {
+  return { status: 'error', data: null, error, fieldErrors, values: { username } }
+}
+
+function successState(serverUrl: string | null): State {
+  return { status: 'success', data: { jellyfinUserId: 'jf-1', username: 'jane.doe', serverUrl }, error: null, fieldErrors: {}, values: { username: 'jane.doe' } }
+}
 
 async function submit(username: string, password = 'password123', confirmPassword = password) {
   const user = userEvent.setup()
-  if (username) {
-    await user.type(screen.getByTestId('jellyfin-username-input'), username)
-  }
-  if (password) {
-    await user.type(screen.getByTestId('jellyfin-password-input'), password)
-  }
-  if (confirmPassword) {
-    await user.type(screen.getByTestId('jellyfin-confirm-password-input'), confirmPassword)
-  }
+  await user.type(screen.getByTestId('jellyfin-username-input'), username)
+  await user.type(screen.getByTestId('jellyfin-password-input'), password)
+  await user.type(screen.getByTestId('jellyfin-confirm-password-input'), confirmPassword)
   await user.click(screen.getByTestId('jellyfin-submit-button'))
+  return user
 }
 
 function renderForm() {
   render(<JellyfinSignInForm inviteCode="JELLY123" serverName="Home" />)
 }
 
-describe('JellyfinSignInForm validation', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
+beforeEach(() => jest.clearAllMocks())
 
+describe('JellyfinSignInForm', () => {
   it('describes the allowed usernames under the username field', () => {
     renderForm()
 
@@ -41,68 +55,66 @@ describe('JellyfinSignInForm validation', () => {
     )
   })
 
-  it.each([
-    ['an email-shaped username', 'owner@example.com'],
-    ['a username with a space', 'John Smith'],
-    ['a two-character username', 'ab'],
-  ])('shows %s inline without calling the action', async (_label, username) => {
+  it('submits every field, the invite code included, as form data', async () => {
+    mockRedeem.mockResolvedValue(successState(null))
     renderForm()
 
-    await submit(username)
+    await submit('jane.doe', 'password123', 'password456')
 
-    expect(await screen.findByTestId('jellyfin-form-error')).toHaveTextContent(
-      'Username must be 3 to 32 characters: letters, numbers, dots, dashes or underscores'
-    )
+    await waitFor(() => expect(mockRedeem).toHaveBeenCalledTimes(1))
+    const form = mockRedeem.mock.calls[0][1]
+    expect(Object.fromEntries(form.entries())).toEqual({
+      code: 'JELLY123',
+      username: 'jane.doe',
+      password: 'password123',
+      confirmPassword: 'password456',
+    })
+  })
+
+  it('shows the pending state while the action runs', async () => {
+    let resolve: (state: State) => void = () => undefined
+    mockRedeem.mockReturnValue(new Promise<State>((r) => (resolve = r)))
+    renderForm()
+
+    await submit('jane.doe')
+
+    await waitFor(() => expect(screen.getByTestId('jellyfin-submit-button')).toHaveAttribute('aria-busy', 'true'))
+    expect(screen.getByTestId('jellyfin-submit-button')).toHaveTextContent('Creating account')
+    resolve(successState(null))
+    expect(await screen.findByTestId('jellyfin-success-heading')).toBeInTheDocument()
+  })
+
+  it('marks the refused field, says why, and keeps the username', async () => {
+    mockRedeem.mockResolvedValue(errorState(USERNAME_RULE, { username: [USERNAME_RULE] }, 'owner@example.com'))
+    renderForm()
+
+    await submit('owner@example.com')
+
+    expect(await screen.findByTestId('jellyfin-form-error')).toHaveTextContent(USERNAME_RULE)
     expect(screen.getByRole('alert')).toBe(screen.getByTestId('jellyfin-form-error'))
-    expect(mockProcessJellyfinInvite).not.toHaveBeenCalled()
-    expect(screen.getByTestId('jellyfin-username-input')).toHaveValue(username)
+    const username = screen.getByTestId('jellyfin-username-input')
+    expect(username).toHaveAttribute('aria-invalid', 'true')
+    expect(username).toHaveAccessibleDescription(expect.stringContaining(USERNAME_RULE))
+    expect(username).toHaveValue('owner@example.com')
+    expect(screen.getByTestId('jellyfin-password-input')).not.toHaveAttribute('aria-invalid')
   })
 
-  it('shows a short password inline', async () => {
-    renderForm()
-
-    await submit('jane.doe', 'short')
-
-    expect(await screen.findByTestId('jellyfin-form-error')).toHaveTextContent(
-      'Password must be at least 8 characters'
-    )
-    expect(mockProcessJellyfinInvite).not.toHaveBeenCalled()
-  })
-
-  it('shows mismatched passwords inline', async () => {
+  it('marks the confirmation when the passwords differ', async () => {
+    mockRedeem.mockResolvedValue(errorState('Passwords do not match', { confirmPassword: ['Passwords do not match'] }, 'jane.doe'))
     renderForm()
 
     await submit('jane.doe', 'password123', 'password456')
 
     expect(await screen.findByTestId('jellyfin-form-error')).toHaveTextContent('Passwords do not match')
-    expect(mockProcessJellyfinInvite).not.toHaveBeenCalled()
-  })
-
-  it('submits the trimmed username once the input is valid, clearing the earlier error', async () => {
-    mockProcessJellyfinInvite.mockResolvedValue({ success: true, data: { serverUrl: null } } as never)
-    renderForm()
-    const user = userEvent.setup()
-
-    await submit('a@b.com')
-    expect(await screen.findByTestId('jellyfin-form-error')).toBeInTheDocument()
-
-    await user.clear(screen.getByTestId('jellyfin-username-input'))
-    await user.type(screen.getByTestId('jellyfin-username-input'), ' jane.doe-2 ')
-    await user.click(screen.getByTestId('jellyfin-submit-button'))
-
-    expect(await screen.findByTestId('jellyfin-success-heading')).toBeInTheDocument()
-    expect(mockProcessJellyfinInvite).toHaveBeenCalledWith({
-      code: 'JELLY123',
-      credentials: { username: 'jane.doe-2', password: 'password123' },
-    })
-    expect(screen.queryByTestId('jellyfin-form-error')).not.toBeInTheDocument()
+    expect(screen.getByTestId('jellyfin-confirm-password-input')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByTestId('jellyfin-username-input')).toHaveValue('jane.doe')
   })
 
   it.each([
     ['https://jellyfin.example.com', 'https://jellyfin.example.com/'],
     ['javascript:alert(1)', null],
   ])('links the admin-set server URL %j only when it is http or https (SEC-57)', async (serverUrl, expected) => {
-    mockProcessJellyfinInvite.mockResolvedValue({ success: true, data: { serverUrl } } as never)
+    mockRedeem.mockResolvedValue(successState(serverUrl))
     renderForm()
 
     await submit('jane.doe')
@@ -117,7 +129,7 @@ describe('JellyfinSignInForm validation', () => {
   })
 
   it('shows a server rejection on the form, which stays usable', async () => {
-    mockProcessJellyfinInvite.mockResolvedValue({ success: false, code: 'INVITE_INVALID', error: 'Invite has expired' } as never)
+    mockRedeem.mockResolvedValue(errorState('Invite has expired', {}, 'jane.doe'))
     renderForm()
 
     await submit('jane.doe')
@@ -126,14 +138,15 @@ describe('JellyfinSignInForm validation', () => {
     expect(screen.getByTestId('jellyfin-submit-button')).not.toBeDisabled()
   })
 
-  it('shows fixed copy when the action throws, never its text', async () => {
-    mockProcessJellyfinInvite.mockRejectedValue(new Error('connect ECONNREFUSED 10.0.0.9:8096'))
+  it('shows fixed copy when the request fails, never its text', async () => {
+    mockRedeem.mockRejectedValue(new Error('connect ECONNREFUSED 10.0.0.9:8096'))
     renderForm()
 
     await submit('jane.doe')
 
     expect(await screen.findByTestId('jellyfin-form-error')).toHaveTextContent('Your account could not be created. Please try again.')
     expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument()
+    expect(screen.getByTestId('jellyfin-username-input')).toHaveValue('jane.doe')
   })
 
   it('names the server the account is created on', () => {
