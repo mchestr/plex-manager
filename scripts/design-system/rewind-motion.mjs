@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Rewind's motion rule (NFR-6, Rewind design 5.6; plan step P5.2). The
- * design-debt ratchet skips Rewind for `infinite-motion`, so this check holds
+ * design-system check skips Rewind for `infinite-motion`, so this check holds
  * `components/rewind/**`, `lib/rewind/**` and the Rewind block of
  * `app/globals.css` to the stricter rule, and fails on any violation:
  *

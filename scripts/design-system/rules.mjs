@@ -1,6 +1,6 @@
 /**
- * The design-debt rules of ui-design-system 9.6 and the per-file counter
- * behind `scripts/check-design-system.mjs` (plan step P1.8).
+ * The design-system rules of ui-design-system 9.6 and the per-file counter
+ * behind `scripts/check-design-system.mjs` (plan steps P1.8 and P10.11).
  *
  * Each rule is `{ id, description, pattern | count, scope?, allow?, ast? }`:
  * - `pattern` is a global regex counted over the raw source, unless `ast`
@@ -17,7 +17,8 @@
  */
 
 import { jsxTexts, styleLiterals } from './ast.mjs'
-import { sortKeys } from './baseline.mjs'
+
+const sortKeys = (object) => Object.fromEntries(Object.entries(object).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
 
 const PALETTE =
   'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose'
@@ -135,4 +136,11 @@ export function countFile(path, source) {
   return sortKeys(counts)
 }
 
-export { addRules, compare, update, nonZero, sortKeys, totals } from './baseline.mjs'
+/** Per-rule totals across files, keys sorted. */
+export function totals(files) {
+  const sums = {}
+  for (const counts of Object.values(files)) {
+    for (const [rule, n] of Object.entries(counts)) sums[rule] = (sums[rule] ?? 0) + n
+  }
+  return sortKeys(sums)
+}

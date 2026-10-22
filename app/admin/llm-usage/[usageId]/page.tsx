@@ -165,7 +165,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
               <div className="space-y-4">
                 {record.wrapped && (
                   <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground mb-1">Wrapped</div>
+                    <div className="text-sm text-muted-foreground mb-1">Rewind</div>
                     <div>
                       <span className="text-sm text-muted-foreground">Year: </span>
                       <span className="text-sm font-medium text-foreground">{record.wrapped.year}</span>

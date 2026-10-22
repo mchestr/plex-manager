@@ -1,31 +1,28 @@
 #!/usr/bin/env node
 /**
- * Design-system guardrail (ui-design-system 9.6, plan step P1.8). Counts the
- * banned patterns in `scripts/design-system/rules.mjs` per file under `app/`
- * and `components/`, and compares them with `design-debt.json`.
+ * Design-system guardrail (ui-design-system 9.6, plan steps P1.8 and P10.11).
+ * Counts the banned patterns in `scripts/design-system/rules.mjs` per file
+ * under `app/` and `components/`.
  *
  *   npm run design:report    totals per rule and the top 20 files (default)
- *   npm run design:check     fails on a rise or a new file with a non-zero count
- *   npm run design:update    lowers the baseline; refuses to raise a count
- *     -- --add-rule <id>      also records the counts of a rule new to the baseline
- *   npm run design:baseline  rewrites the baseline from the current tree
+ *   npm run design:check     `--strict`: fails on any count outside the
+ *                            documented allowlist (`design-system/allowlist.mjs`),
+ *                            and on an allowlist entry that no longer covers one
  *
- * `--check` and `--update` carry counts across renames found by
- * `git diff --find-renames --name-status <base>...HEAD` (`--base`, default
- * `origin/main`). `design:baseline` is for the owner after a merge that renames
- * or moves files on `main` itself, where no diff against `origin/main` shows
- * the rename; review the diff of `design-debt.json` before committing it.
+ * P10.11 replaced the per-file ratchet (`design-debt.json`) with the strict
+ * check: a count that can't reach zero gets an allowlist entry with its
+ * reason, reviewed in the PR.
  */
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { RULES, addRules, compare, countFile, nonZero, sortKeys, totals, update } from './design-system/rules.mjs'
+import { staleEntries, strictFailures } from './design-system/allowlist.mjs'
+import { RULES, countFile, totals } from './design-system/rules.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const BASELINE = join(ROOT, 'design-debt.json')
 const EXTENSIONS = /\.(?:ts|tsx|css)$/
 const EXCLUDED = [/^components\/ui\//, /(?:^|\/)__tests__\//, /\.test\.tsx?$/]
 
@@ -46,37 +43,7 @@ function scan() {
   return Object.fromEntries(scannedFiles().map((file) => [file, countFile(file, read(file))]))
 }
 
-function renames(base) {
-  try {
-    return git(['diff', '--find-renames', '--name-status', `${base}...HEAD`])
-      .split('\n')
-      .filter((line) => line.startsWith('R'))
-      .map((line) => line.split('\t').slice(1, 3))
-  } catch {
-    console.warn(`design-system: cannot diff against ${base}; renames are not carried over.`)
-    return []
-  }
-}
-
-function readBaseline() {
-  if (!existsSync(BASELINE)) {
-    console.error('design-system: design-debt.json is missing; run `npm run design:baseline`.')
-    process.exit(1)
-  }
-  return JSON.parse(readFileSync(BASELINE, 'utf8')).files
-}
-
-function writeBaseline(files) {
-  const json = {
-    schema: 1,
-    commit: git(['rev-parse', 'HEAD']).trim(),
-    generatedAt: new Date().toISOString(),
-    files,
-    totals: totals(files),
-  }
-  writeFileSync(BASELINE, `${JSON.stringify(json, null, 2)}\n`)
-  console.log(`design-system: wrote design-debt.json (${Object.keys(files).length} files).`)
-}
+const nonZero = (current) => Object.fromEntries(Object.entries(current).filter(([, counts]) => Object.keys(counts).length > 0))
 
 function report(current) {
   const files = nonZero(current)
@@ -99,58 +66,27 @@ function report(current) {
   for (const [file, counts] of top) console.log(`  ${String(sum(counts)).padStart(4)}  ${file}`)
 }
 
-function printFailures(result) {
-  for (const { file, from, rule, was, now } of result.rises) {
-    console.error(`  ${file}${from ? ` (renamed from ${from})` : ''}: ${rule} rose from ${was} to ${now}`)
+function strict(current) {
+  const failures = strictFailures(current)
+  const stale = staleEntries(current)
+  if (failures.length === 0 && stale.length === 0) {
+    console.log('design-system: no banned patterns outside the allowlist.')
+    return 0
   }
-  for (const { file, counts } of result.added) {
-    const list = Object.entries(counts).map(([rule, n]) => `${rule} ${n}`).join(', ')
-    console.error(`  ${file}: new file must count zero (${list})`)
+  if (failures.length > 0) {
+    console.error('design-system: banned patterns outside the allowlist (ui-design-system 9.6):')
+    for (const { file, rule, count } of failures) console.error(`  ${file}: ${rule} ${count}`)
+    console.error('Fix them, or add an entry with its reason to scripts/design-system/allowlist.mjs.')
   }
+  if (stale.length > 0) {
+    console.error('design-system: allowlist entries that cover nothing now; delete them:')
+    for (const entry of stale) console.error(`  ${entry.path}${entry.rules ? ` (${entry.rules.join(', ')})` : ''}`)
+  }
+  return 1
 }
 
 const args = process.argv.slice(2)
-const baseIndex = args.indexOf('--base')
-const base = baseIndex >= 0 ? args[baseIndex + 1] : 'origin/main'
-const mode = ['--check', '--update', '--baseline'].find((flag) => args.includes(flag)) ?? '--report'
-const newRules = args.flatMap((arg, i) => (arg === '--add-rule' ? [args[i + 1]] : []))
-const unknownRule = newRules.find((id) => !RULES.some((rule) => rule.id === id))
-if (unknownRule !== undefined) {
-  console.error(`design-system: --add-rule needs a rule id from rules.mjs, got ${unknownRule}.`)
-  process.exit(1)
-}
 const current = scan()
+if (args.includes('--strict')) process.exit(strict(current))
+report(current)
 
-if (mode === '--report') report(current)
-else if (mode === '--baseline') writeBaseline(nonZero(current))
-else {
-  const baseline = readBaseline()
-  if (mode === '--check') {
-    const result = compare(baseline, current, renames(base))
-    if (!result.ok) {
-      console.error('design-system: design debt rose (ui-design-system 9.6):')
-      printFailures(result)
-      process.exit(1)
-    }
-    const stale = result.drops.length > 0 || result.deleted.length > 0
-    console.log(
-      stale
-        ? `design-system: counts fell in ${new Set(result.drops.map((d) => d.file)).size} file(s) and ${result.deleted.length} file(s) are gone; run \`npm run design:update\` and commit design-debt.json.`
-        : 'design-system: no design debt added.'
-    )
-  } else {
-    const outcome =
-      newRules.length > 0 ? addRules(baseline, current, newRules, renames(base)) : update(baseline, current, renames(base))
-    if (outcome.known) {
-      console.error(`design-system: --add-rule is for new rules; the baseline already counts ${outcome.known.join(', ')}.`)
-      process.exit(1)
-    }
-    const { ok, result, files } = outcome
-    if (!ok) {
-      console.error('design-system: refusing to raise the baseline:')
-      printFailures(result)
-      process.exit(1)
-    }
-    writeBaseline(sortKeys(files))
-  }
-}

@@ -115,9 +115,8 @@ jobs:
       - name: Run knip
         run: npm run knip
 
-  # Design-debt ratchet (ui-design-system 9.6): fails when a count in
-  # design-debt.json rises or a new file has a non-zero count. The full history
-  # gives origin/main, which the script diffs against to carry renames over.
+  # Design-system check (ui-design-system 9.6, P10.11): fails on any banned
+  # pattern outside the documented allowlist (scripts/design-system/allowlist.mjs).
   design-system:
     name: Design System
     runs-on: ubuntu-latest
@@ -126,16 +125,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
 
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Check design debt
-        run: node scripts/check-design-system.mjs --check
+      - name: Check the design system
+        run: npm run design:check
 
-      # NFR-6 for Rewind, which the ratchet's infinite-motion rule skips (P5.2).
+      # NFR-6 for Rewind, which the check's infinite-motion rule skips (P5.2).
       - name: Check Rewind motion
         run: npm run design:rewind-motion
 
