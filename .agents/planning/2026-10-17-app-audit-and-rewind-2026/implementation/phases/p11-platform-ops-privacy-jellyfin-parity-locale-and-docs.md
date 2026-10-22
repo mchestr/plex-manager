@@ -270,12 +270,14 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 
 **Demo.** From a member session in devtools, replaying a former read action's id returns "Server action not found". A non-admin calling `triggerWatchlistSyncJob` gets `FORBIDDEN`. `/admin/discord` makes one session read, and the server log shows a single lookup.
 
+(as merged: most admin modules were already on `adminAction` from P4.3 to P10; this step moved the rest (`queue.ts` with a new `admin:queue` limit, `subscriptions.ts`, `admin-users.ts`, `listLLMModels`, `importPlexUsers`, `unshareUserLibrary`, `getUserActivityTimeline`) and rebuilt `actions/setup.ts` on `publicAction` with an actor check (anyone during the first run, admins after). `requireAdmin`, `UnauthenticatedError` and `UnauthorizedAdminError` are deleted; `assertAdmin()` and a `cache()`d session read live in `lib/admin.ts`, which is server-only. Loaders: `lib/data/discord-activity.ts` (one `getDiscordDashboardData` with every figure, the recent commands and marked media; it replaces all of `actions/discord-activity.ts`), `admin-users.ts` (`getAllUsersWithWrapped`), `llm-usage.ts` (`getLLMUsageRecords({ page, pageSize, userId, conversationId })`, `getLLMUsageById`), `admin-settings.ts` (`getAdminSettings`, `getConfig`, `getStripeConfig`; `StripeConfigStatus` is in `types/admin.ts`) and `rewind-season.ts` (`getRewindSeasonDataPreparedAt`). Share analytics already lived in server-only `lib/admin/analytics/shares.ts` (P10.2), so there is no `lib/data/share-analytics.ts`; `getUserDetails` was gone (P10.6), and `getUserActivityTimeline` stays an `adminAction` because the timeline pages through it from the client. Public reads left `'use server'` too: `getWrappedSettings` is `lib/wrapped/generation-settings.ts`, `getSetupStatus` is `lib/setup/status.ts`. `lib/guards.ts` and `lib/jellyfin-auth.ts` were already server-only; `lib/access.ts` now is; `lib/plex-auth.ts` stays `'use server'` because its three exports are real `publicAction`s the sign-in page calls (they pass the brand test). The chatbot internals moved with a pure `git mv` commit, then a path and `server-only` commit. The brand is `Symbol.for("__pmAction")` (`brandAction`, `isBrandedAction` in `lib/actions/define-action.ts`); the brand test covers every `'use server'` module under `actions/` and `lib/`. `scripts/codemods/barrel-imports.ts` uses the TypeScript compiler API (ts-morph is not installed), and also splits `jest.mock` factories. The `actionsAndApi` lint ban is an error in all of `actions/` and `app/api/` (`migratedActionFiles` is gone). DUP-11: `createServiceSchema` and `ServiceInput`/`ServiceParsed` in `shared-schemas.ts`; the `*ServerListSchema`s were already gone and setup already used `apiKeySchema`; `ConnectionResult` stays as the `lib/connections` client shape and `ArrConfig` in `arr-client.ts` was left to P11.9, which owns that file. Callers keep reading each action's own `error` copy, which is fixed text; `errorCopy` is not wired in. Invites (PR #384 review): `createInvite` and `deleteInvite` are audited as `INVITE_CREATED`/`INVITE_DELETED` (never the code) and spend `admin:invites`. E2E specs were not run.)
+
 **Done when.**
-- [ ] No `requireAdmin()` call remains, and every admin action validates with Zod and returns `ActionResult`.
-- [ ] Read helpers live in `lib/data/*` with `server-only` and check admin access themselves.
-- [ ] The guards and the chatbot internals are server-only modules, not `'use server'` files.
-- [ ] `actions/admin/index.ts` and `actions/users.ts` are deleted, and the brand test passes.
-- [ ] The per-service schemas share one factory, and the duplicate types and schemas listed under DUP-11 are gone.
+- [x] No `requireAdmin()` call remains, and every admin action validates with Zod and returns `ActionResult`.
+- [x] Read helpers live in `lib/data/*` with `server-only` and check admin access themselves.
+- [x] The guards and the chatbot internals are server-only modules, not `'use server'` files.
+- [x] `actions/admin/index.ts` and `actions/users.ts` are deleted, and the brand test passes.
+- [x] The per-service schemas share one factory, and the duplicate types and schemas listed under DUP-11 are gone.
 
 ### Step P11.6: Migration naming and the ?schema= parameter
 
@@ -405,11 +407,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Block plex.tv in DNS and sign in as a member: "Plex is temporarily unavailable", and the member's Discord role is unchanged. Restart the PMS during a sign-in: it succeeds. The owner streams something and runs `/watching`: their stream is listed. Import users on a server where a friend shares only their own server: that friend is not imported.
 
 **Done when.**
-- [ ] Access checks return granted, denied or unknown, and an unknown result never denies a sign-in as a verdict or removes a role.
-- [ ] Server users come from this server's shares, managed users are kept, and pending shares are labelled and refused.
-- [ ] The owner's sessions match, and PMS reads use container paging and the PUT scrobble.
-- [ ] The recorded-response contract tests pass.
+- [x] Access checks return granted, denied or unknown, and an unknown result never denies a sign-in as a verdict or removes a role.
+- [x] Server users come from this server's shares, managed users are kept, and pending shares are labelled and refused.
+- [x] The owner's sessions match, and PMS reads use container paging and the PUT scrobble.
+- [x] The recorded-response contract tests pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270115000000_p118_plex_server_machine_identifier`. `checkUserServerAccess(config, plexUserId)` takes an optional `machineIdentifier` and returns `{ status: "granted" | "denied" } | { status: "unknown", reason: "plex_unavailable" | "rate_limited" | "server_unreachable" | "server_token_invalid", retryAfterSec? }`; a 401 on the owner token is `unknown` (`server_token_invalid`), not a denial. `withMachineIdentifier(row)` (`lib/connections/plex-machine-id.ts`) fills the column lazily; setup and settings store it on save; `getActivePlexServerConfig()` carries it. `lib/connections/plex-tv-users.ts` exports `fetchPlexTvUsers`, `parsePlexTvUsers` and `activeShareFor` (an accepted share of a machine). A managed user is `home && restricted` with no email, and `getAllPlexServerUsers` keeps one without a share. `importPlexUsers` leaves pending invites out and returns `managed` and `pending` counts. `computeRoleMetadata` returns `metadata: null` on unknown and `syncDiscordRoleConnection` then pushes and stores nothing. `validatePlexToken` returns `"valid" | "invalid" | "unreachable"`. `matchesSessionUser` and `containerPage`/`PLEX_PAGE_SIZE` live in `plex-sessions.ts`. The callback shows `plex_unavailable` on the shared StatusScreen with test id `plex-callback-error-plex_unavailable`, not `auth-plex-unavailable`. The fixtures were written from the documented response shapes, not recorded from a live server; the import test extends `__tests__/actions/import-plex-users.test.ts`.)
 
 ### Step P11.9: Chatbot tool and Prometheus client fixes
 
@@ -449,10 +453,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Ask the admin assistant "why didn't Severance download?": it answers from Severance's own history, with titles. Ask for every Overseerr user: it reports the true total. Save `rate(` as a PromQL query: settings show "bad_data: ..." instead of "Bad Request".
 
 **Done when.**
-- [ ] History calls use the per-series and per-movie routes, and list calls include series and movie data and page with a cap.
-- [ ] Endpoints that cannot filter are filtered in code, and Overseerr users are paged.
-- [ ] Prometheus errors show `errorType: error`, and 503 is treated as retryable.
-- [ ] The fixture tests pass.
+- [x] History calls use the per-series and per-movie routes, and list calls include series and movie data and page with a cap.
+- [x] Endpoints that cannot filter are filtered in code, and Overseerr users are paged.
+- [x] Prometheus errors show `errorType: error`, and 503 is treated as retryable.
+- [x] The fixture tests pass.
+
+(as merged: built at the current paths, `actions/chatbot/{tools,executors}/` (P11.5's move to `lib/chatbot/` was in flight), with tests in `actions/chatbot/executors/__tests__/` and `__tests__/actions/prometheus-status.test.ts`. The history, queue and wanted calls return `ArrPage` (`{ records, totalRecords }`) from `arrGetPaged`/`arrGetList` in `lib/connections/arr-client.ts`, with params typed by `arrQuery(strictSchema, params)`; executors format them through `actions/chatbot/executors/arr-output.ts` (`showing` line). An episode's history uses `/history?episodeId=` even when a series is also given. The calendar takes no `pageSize` (neither API binds it), and Radarr's calendar and wanted/missing return movies, so they take no `includeMovie` and are filtered by the movie's `id`; `getSonarrCalendar` always sends `includeSeries` (its options argument is gone). `serviceFetch` gained `readErrorBody` (failure `detail: { body, statusText }`); Prometheus calls return `PrometheusResult` (`code`, `errorType`, `retryable`), `validatePrometheusQuery` returns Prometheus's message without the old "Invalid PromQL query:" prefix and takes `{ timeoutMs }`, and settings' Test runs the query after the connection check and puts a rejection on the `query` field.)
 
 ### Step P11.10: Jellyfin member parity: service, admin visibility and tests
 
@@ -1331,11 +1337,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 - A show that Overseerr has not seen is requested with all seasons.
 
 **Done when.**
-- [ ] The whole watchlist is paged, and TMDB and TVDB IDs come from per-item metadata, cached per item.
-- [ ] TV requests send seasons, and 202, 403, 409 and 4K status are handled correctly.
-- [ ] The card reports requested, available, already requested, skipped and refused items.
-- [ ] The recorded-response contract tests pass.
+- [x] The whole watchlist is paged, and TMDB and TVDB IDs come from per-item metadata, cached per item.
+- [x] TV requests send seasons, and 202, 403, 409 and 4K status are handled correctly.
+- [x] The card reports requested, available, already requested, skipped and refused items.
+- [x] The recorded-response contract tests pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270115000000_p1128_watchlist_sync_status`. The item loop lives in `lib/watchlist/sync-run.ts` (`processWatchlistItems`), the count copy and test ids in `lib/watchlist/summary.ts`. `serviceFetch` gained `onResponse` (status and headers, used for the ETag and 201 against 202) and `readErrorMessage` (a 4xx JSON `message`, cut to 200 characters, on `ServiceFailure.message`). The 50 cap counts `created` requests; the rest are `itemsDeferred`. The ETag is stored only after a run with no failures and nothing deferred, so a 304 never hides a retry; a 304 run only touches `lastSyncAt`. A 403 message goes into `lastSyncError` without failing the run. The card counts come from a `groupBy` of the member's history rows (`getWatchlistSyncSettings().counts`). The fixtures follow the shape the reference clients read but were not recorded from a live account: the owner re-records them from a test account. P11.2 wraps `syncUserWatchlist` in the shared lock unchanged.)
 
 ### Step P11.29: Remove the v2 viewer
 
@@ -1362,8 +1370,10 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** `git grep -n "components/wrapped" -- app components lib` returns nothing, and the design-debt report shows the deleted files' counts gone.
 
 **Done when.**
-- [ ] `components/wrapped/**`, the classic and cinematic trees, chart.js in Rewind and the temporary cinematic aliases are deleted.
-- [ ] `knip --production` and the design-system check pass with lower totals.
+- [x] `components/wrapped/**`, the classic and cinematic trees, chart.js in Rewind and the temporary cinematic aliases are deleted.
+- [x] `knip --production` and the design-system check pass with lower totals.
+
+(as merged: `design-debt.json` no longer exists after P10.11, so the "lower totals" are the deleted `components/wrapped/` and `components/shared/formatted-text.tsx` allowlist entries and the viewer's ESLint overrides (the react-hooks ignore, the Chart.js exception and the warn-only restricted-syntax blocks). P10.9 had already moved every admin chart to Recharts, so `chart.js` and `react-chartjs-2` left `package.json` too. The deletion also took `components/ui/count-up.tsx`, `lib/wrapped/text-processor.ts`, the v2 `grain` keyframes and the type re-exports only the viewer used. `.claude/skills/motion/SKILL.md` still lists `components/wrapped/**` in `paths:`; changing a vendored skill needs a `/security-review`, so P11.26 drops it with the CLAUDE.md skills table row.)
 
 ### Step P11.30: Eval results page
 
@@ -1386,7 +1396,7 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** `/admin/rewind/evals` lists the 2026 bake-off candidates with their grounding rates and cost, with the selected model badged.
 
 **Done when.**
-- [ ] `/admin/rewind/evals` lists `RewindEvalRun` rows and the committed results, and Evals appears in the admin nav.
+- [x] `/admin/rewind/evals` lists `RewindEvalRun` rows and the committed results, and Evals appears in the admin nav.
 
 ### Step P11.31: One active row per service: audit, then a reviewed apply
 

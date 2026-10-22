@@ -9,6 +9,7 @@ import { fail, ok } from "@/lib/actions/result"
 import { invite as inviteRoute } from "@/lib/admin/routes"
 import { ServerType } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { EXPIRES_IN_OPTIONS, type ExpiresIn } from "@/lib/validations/invite"
 
 const INVITE_CODE_LENGTH = 8
@@ -57,13 +58,17 @@ function libraryIds(ids: readonly (string | number)[] | undefined): string | nul
   return ids && ids.length > 0 ? JSON.stringify(ids) : null
 }
 
+/** Each admin may create or delete 30 invites in ten minutes. */
+const INVITES_LIMIT = { name: "admin:invites" } as const
+
 /**
  * Create an invite (P10.1, BP-30). The server type defaults to Plex; a Plex
  * invite keeps only Plex library ids and Allow downloads, a Jellyfin invite
- * only Jellyfin library ids.
+ * only Jellyfin library ids. Audited and rate-limited (P11.5).
  */
 export const createInvite = adminAction({
   input: createInviteSchema,
+  rateLimit: INVITES_LIMIT,
   fallbackError: "Could not create the invite",
   handler: async (options, { userId }) => {
     const code = options.code || generateInviteCode()
@@ -73,13 +78,16 @@ export const createInvite = adminAction({
     }
 
     const jellyfin = options.serverType === "JELLYFIN"
+    const serverType = jellyfin ? ServerType.JELLYFIN : ServerType.PLEX
+    const maxUses = options.maxUses ?? 1
+    const expiresAt = expiresAtFor(options.expiresIn)
     const invite = await prisma.invite.create({
       data: {
         code,
-        serverType: jellyfin ? ServerType.JELLYFIN : ServerType.PLEX,
+        serverType,
         createdBy: userId,
-        maxUses: options.maxUses ?? 1,
-        expiresAt: expiresAtFor(options.expiresIn),
+        maxUses,
+        expiresAt,
         librarySectionIds: jellyfin ? null : libraryIds(options.librarySectionIds),
         allowDownloads: jellyfin ? false : (options.allowDownloads ?? false),
         jellyfinLibraryIds: jellyfin ? libraryIds(options.jellyfinLibraryIds) : null,
@@ -87,18 +95,31 @@ export const createInvite = adminAction({
       select: { id: true, code: true },
     })
 
+    logAuditEvent(AuditEventType.INVITE_CREATED, userId, {
+      inviteId: invite.id,
+      serverType,
+      maxUses,
+      expiresAt: expiresAt?.toISOString() ?? null,
+      customCode: Boolean(options.code),
+    })
     revalidatePath("/admin/invites")
     revalidatePath(inviteRoute(invite.id))
     return ok(invite)
   },
 })
 
-/** Delete an invite; its usage rows go with it. */
+/** Delete an invite; its usage rows go with it. Audited and rate-limited (P11.5). */
 export const deleteInvite = adminAction({
   input: z.object({ id: z.string().min(1).max(64) }),
+  rateLimit: INVITES_LIMIT,
   fallbackError: "Could not delete the invite",
-  handler: async ({ id }) => {
-    await prisma.invite.delete({ where: { id }, select: { id: true } })
+  handler: async ({ id }, { userId }) => {
+    const deleted = await prisma.invite.delete({ where: { id }, select: { id: true, serverType: true, useCount: true } })
+    logAuditEvent(AuditEventType.INVITE_DELETED, userId, {
+      inviteId: id,
+      serverType: deleted.serverType,
+      useCount: deleted.useCount,
+    })
     revalidatePath("/admin/invites")
     revalidatePath(inviteRoute(id))
     return ok(null)

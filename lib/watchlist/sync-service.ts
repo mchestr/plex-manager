@@ -19,19 +19,58 @@
  * A skip writes `lastSyncStatus: "skipped"` with the fixed copy from
  * `./skip.ts` and returns `{ success: true, skipped }`, so the job is not retried.
  *
+ * ## A run (GAP-02)
+ *
+ * The whole watchlist is read with the stored ETag; a 304 ends the run after
+ * one request. The items go through `processWatchlistItems` (`./sync-run.ts`).
+ * The run is `success` only when nothing failed; `partial` when some items
+ * failed or every processed item had no TMDB match (with that reason); and
+ * `failed` when every processed item failed. The new ETag is stored only
+ * after a run that left nothing behind (no failures, nothing deferred by the
+ * request cap), so a 304 never hides an item that still needs a retry.
+ *
  * @module lib/watchlist/sync-service
  */
 
 import { entitledUserWhere, getAccessLevel } from "@/lib/access"
-import { buildOverseerrUserIndex, findOverseerrUserId, submitOverseerrRequest } from "@/lib/connections/overseerr"
-import { MediaType, WatchlistSyncStatus } from "@/lib/generated/prisma/client"
+import { buildOverseerrUserIndex, findOverseerrUserId } from "@/lib/connections/overseerr"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { SyncResult } from "@/lib/validations/watchlist"
 import { getPlexWatchlist, validatePlexToken } from "./plex-watchlist"
 import { WATCHLIST_SKIP_COPY, type WatchlistSkipCode } from "./skip"
+import { processWatchlistItems } from "./sync-run"
 
 const logger = createLogger("WATCHLIST_SYNC")
+
+interface SyncResult {
+  success: boolean
+  /** The watchlist answered 304: nothing changed since the last complete run. */
+  notModified: boolean
+  itemsSynced: number
+  itemsRequested: number
+  itemsAvailable: number
+  itemsAlreadyRequested: number
+  /** No TMDB match. */
+  itemsSkipped: number
+  itemsNotPermitted: number
+  itemsFailed: number
+  /** Left for the next run by the request cap. */
+  itemsDeferred: number
+  errors?: string[]
+}
+
+const EMPTY_RESULT: SyncResult = {
+  success: true,
+  notModified: false,
+  itemsSynced: 0,
+  itemsRequested: 0,
+  itemsAvailable: 0,
+  itemsAlreadyRequested: 0,
+  itemsSkipped: 0,
+  itemsNotPermitted: 0,
+  itemsFailed: 0,
+  itemsDeferred: 0,
+}
 
 export interface SyncUserWatchlistResult {
   success: boolean
@@ -118,8 +157,17 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
     if (overseerrUserId === null) return await skip(userId, "OVERSEERR_USER_NOT_FOUND")
 
     // Validate token is still valid
-    const tokenValid = await validatePlexToken(user.plexAuthToken)
-    if (!tokenValid) {
+    const tokenStatus = await validatePlexToken(user.plexAuthToken)
+    if (tokenStatus === "unreachable") {
+      // Not a verdict on the token: the next run tries again (GAP-05)
+      logger.warn("Plex was unreachable while checking the token", { userId })
+      await updateSyncSettings(userId, {
+        lastSyncStatus: "failed",
+        lastSyncError: "Plex was unreachable. The next sync will try again.",
+      })
+      return { success: false, error: "Plex was unreachable" }
+    }
+    if (tokenStatus === "invalid") {
       logger.warn("Plex token is invalid or expired", { userId })
       await updateSyncSettings(userId, {
         lastSyncStatus: "failed",
@@ -128,158 +176,69 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
       return { success: false, error: "Plex token is invalid or expired" }
     }
 
-    // Fetch watchlist from Plex
-    const watchlistResult = await getPlexWatchlist(user.plexAuthToken)
-    if (!watchlistResult.success || !watchlistResult.data) {
-      const error = watchlistResult.error || "Failed to fetch watchlist"
-      logger.error("Failed to fetch Plex watchlist", undefined, { userId, error })
-      await updateSyncSettings(userId, {
-        lastSyncStatus: "failed",
-        lastSyncError: error,
-      })
-      return { success: false, error }
-    }
-
-    const watchlistItems = watchlistResult.data
-    logger.info("Fetched Plex watchlist", { userId, itemCount: watchlistItems.length })
-
-    // Get existing sync history for comparison
-    const existingHistory = await prisma.watchlistSyncHistory.findMany({
+    // Read the whole watchlist; an unchanged one is a single 304
+    const settingsRow = await prisma.watchlistSyncSettings.findUnique({
       where: { userId },
-      select: { plexRatingKey: true, status: true },
+      select: { watchlistEtag: true },
     })
-    const existingKeys = new Map(existingHistory.map((h) => [h.plexRatingKey, h.status]))
+    const watchlist = await getPlexWatchlist(user.plexAuthToken, { etag: settingsRow?.watchlistEtag })
+    if (!watchlist.success) {
+      logger.error("Failed to fetch Plex watchlist", undefined, { userId, error: watchlist.error })
+      await updateSyncSettings(userId, { lastSyncStatus: "failed", lastSyncError: watchlist.error })
+      return { success: false, error: watchlist.error }
+    }
+    if (watchlist.notModified) {
+      logger.info("Watchlist unchanged since the last sync", { userId })
+      await prisma.watchlistSyncSettings.updateMany({ where: { userId }, data: { lastSyncAt: new Date() } })
+      return { success: true, data: { ...EMPTY_RESULT, notModified: true } }
+    }
+    logger.info("Fetched Plex watchlist", { userId, itemCount: watchlist.data.length })
 
-    // Process each watchlist item
-    let itemsSynced = 0
-    let itemsRequested = 0
-    let itemsSkipped = 0
-    let itemsFailed = 0
-    const errors: string[] = []
+    const { counts, errors } = await processWatchlistItems({
+      userId,
+      userToken: user.plexAuthToken,
+      items: watchlist.data,
+      overseerr: overseerrConfig,
+      overseerrUserId,
+    })
 
-    for (const item of watchlistItems) {
-      try {
-        // Skip if already processed and in a terminal state
-        const existingStatus = existingKeys.get(item.ratingKey)
-        if (
-          existingStatus &&
-          (existingStatus === WatchlistSyncStatus.REQUESTED ||
-            existingStatus === WatchlistSyncStatus.ALREADY_AVAILABLE ||
-            existingStatus === WatchlistSyncStatus.ALREADY_REQUESTED)
-        ) {
-          itemsSkipped++
-          continue
-        }
-
-        // Need TMDB ID to request in Overseerr
-        if (!item.tmdbId) {
-          logger.debug("Skipping item without TMDB ID", {
-            title: item.title,
-            ratingKey: item.ratingKey,
-          })
-          itemsSkipped++
-          continue
-        }
-
-        // Submit request to Overseerr
-        const mediaType = item.type === "movie" ? "movie" : "tv"
-        const requestResult = await submitOverseerrRequest(
-          overseerrConfig,
-          { mediaType, mediaId: item.tmdbId },
-          { overseerrUserId }
-        )
-
-        // Map Prisma MediaType
-        const prismaMediaType = item.type === "movie" ? MediaType.MOVIE : MediaType.TV_SERIES
-
-        // Determine status based on result
-        let syncStatus: WatchlistSyncStatus
-        let requestedAt: Date | null = null
-
-        if (requestResult.status === "created") {
-          syncStatus = WatchlistSyncStatus.REQUESTED
-          requestedAt = new Date()
-          itemsRequested++
-        } else if (requestResult.status === "already_available") {
-          syncStatus = WatchlistSyncStatus.ALREADY_AVAILABLE
-        } else if (requestResult.status === "already_requested") {
-          syncStatus = WatchlistSyncStatus.ALREADY_REQUESTED
-        } else {
-          syncStatus = WatchlistSyncStatus.FAILED
-          itemsFailed++
-          if (requestResult.error) {
-            errors.push(`${item.title}: ${requestResult.error}`)
-          }
-        }
-
-        // Upsert sync history record
-        await prisma.watchlistSyncHistory.upsert({
-          where: {
-            userId_plexRatingKey: {
-              userId,
-              plexRatingKey: item.ratingKey,
-            },
-          },
-          create: {
-            userId,
-            plexRatingKey: item.ratingKey,
-            guid: item.guid,
-            mediaType: prismaMediaType,
-            title: item.title,
-            year: item.year,
-            tmdbId: item.tmdbId,
-            tvdbId: item.tvdbId,
-            imdbId: item.imdbId,
-            status: syncStatus,
-            requestedAt,
-            overseerrRequestId: requestResult.requestId,
-          },
-          update: {
-            status: syncStatus,
-            requestedAt: requestedAt || undefined,
-            overseerrRequestId: requestResult.requestId || undefined,
-          },
-        })
-
-        itemsSynced++
-      } catch (error) {
-        logger.error("Error processing watchlist item", error, {
-          title: item.title,
-          userId,
-        })
-        itemsFailed++
-        errors.push(`${item.title}: Processing error`)
-      }
+    // A run that leaves work behind keeps no ETag, so the next run reads the list again
+    const complete = watchlist.complete && counts.failed === 0 && counts.deferred === 0
+    const handled = counts.requested + counts.available + counts.alreadyRequested + counts.skipped + counts.notPermitted
+    let lastSyncStatus = "success"
+    let lastSyncError: string | null = errors.length > 0 ? errors.slice(0, 3).join("; ") : null
+    if (counts.failed > 0) {
+      lastSyncStatus = handled > 0 ? "partial" : "failed"
+    } else if (handled > 0 && counts.skipped === handled) {
+      lastSyncStatus = "partial"
+      lastSyncError = `Nothing could be requested: ${counts.skipped} new ${counts.skipped === 1 ? "item has" : "items have"} no TMDB match.`
     }
 
-    // Update sync settings with results
-    const syncStatus = itemsFailed > 0 ? (itemsSynced > 0 ? "partial" : "failed") : "success"
     await updateSyncSettings(userId, {
       lastSyncAt: new Date(),
-      lastSyncStatus: syncStatus,
-      lastSyncError: errors.length > 0 ? errors.slice(0, 3).join("; ") : null,
-      itemsSynced,
-      itemsRequested,
+      lastSyncStatus,
+      lastSyncError,
+      itemsSynced: counts.synced,
+      itemsRequested: counts.requested,
+      itemsSkipped: counts.skipped,
+      watchlistEtag: complete ? watchlist.etag : null,
     })
 
-    const duration = Date.now() - startTime
-    logger.info("Watchlist sync completed", {
-      userId,
-      itemsSynced,
-      itemsRequested,
-      itemsSkipped,
-      itemsFailed,
-      durationMs: duration,
-    })
+    logger.info("Watchlist sync completed", { userId, ...counts, durationMs: Date.now() - startTime })
 
     return {
       success: true,
       data: {
         success: true,
-        itemsSynced,
-        itemsRequested,
-        itemsSkipped,
-        itemsFailed,
+        notModified: false,
+        itemsSynced: counts.synced,
+        itemsRequested: counts.requested,
+        itemsAvailable: counts.available,
+        itemsAlreadyRequested: counts.alreadyRequested,
+        itemsSkipped: counts.skipped,
+        itemsNotPermitted: counts.notPermitted,
+        itemsFailed: counts.failed,
+        itemsDeferred: counts.deferred,
         errors: errors.length > 0 ? errors : undefined,
       },
     }
@@ -306,6 +265,8 @@ async function updateSyncSettings(
     lastSyncError?: string | null
     itemsSynced?: number
     itemsRequested?: number
+    itemsSkipped?: number
+    watchlistEtag?: string | null
   }
 ): Promise<void> {
   const incrementSynced = data.itemsSynced ?? 0

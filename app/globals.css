@@ -20,6 +20,9 @@
   }
 }
 
+/* A short window (a 720px laptop): the admin sidebar tightens so its whole nav stays within the viewport */
+@custom-variant short (@media (max-height: 50rem));
+
 /* ---------- 1. Light values (shadcn convention; ships behind a flag, ui-design-system 3.3) ---------- */
 :root {
   color-scheme: light;
@@ -408,16 +411,6 @@
   --text-caption: 0.75rem;  --text-caption--line-height: 1rem;   --text-caption--font-weight: 500;
 }
 
-/* temporary cinematic aliases: delete in P11.29 */
-@theme inline {
-  --color-stage: var(--background);
-  --color-stage-panel: var(--card);
-  --color-gold: var(--primary);
-  --color-gold-bright: var(--primary-hover);
-  --color-ivory: var(--foreground);
-  --color-taupe: var(--muted-foreground);
-}
-
 /* Motion: theme-independent and always emitted as variables, so the Rewind scope can read them */
 @theme static {
   --ease-out-quiet: cubic-bezier(0.2, 0, 0, 1);
@@ -427,19 +420,12 @@
   @keyframes skeleton { 50% { opacity: 0.6; } }
 }
 
-/* The one-shot fade-in, and the v2 film grain until P11.29 deletes the v2 viewer */
+/* The one-shot fade-in */
 @theme {
   --animate-fade-in: fade-in 0.6s ease-out;
-  --animate-grain: grain 0.9s steps(4) infinite;
   @keyframes fade-in {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes grain {
-    0%, 100% { transform: translate(0, 0); }
-    25% { transform: translate(-2%, 1%); }
-    50% { transform: translate(1%, -2%); }
-    75% { transform: translate(-1%, 2%); }
   }
 }
 

@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 
-import { getSetupStatus } from "@/actions/setup"
+import { getSetupStatus } from "@/lib/setup/status"
 import { DeniedSignOut } from "@/app/auth/denied/denied-sign-out"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"

@@ -2,9 +2,10 @@
  * Tests for the Sonarr/Radarr helpers on serviceFetch (P2.3).
  */
 
-import { arrGet, testArrConnection } from "@/lib/connections/arr-client"
-import { getRadarrHistory } from "@/lib/connections/radarr"
-import { getSonarrQueue, testSonarrConnection } from "@/lib/connections/sonarr"
+import { z } from "zod"
+
+import { arrGet, arrQuery, testArrConnection } from "@/lib/connections/arr-client"
+import { getSonarrHealth, testSonarrConnection } from "@/lib/connections/sonarr"
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
@@ -26,12 +27,12 @@ describe("arrGet", () => {
   it("sends the key as a header and returns the JSON", async () => {
     mockFetch.mockResolvedValue(respond(200, [{ id: 1 }]))
 
-    expect(await getSonarrQueue({ ...config, name: "Sonarr", publicUrl: undefined })).toEqual({
+    expect(await getSonarrHealth({ ...config, name: "Sonarr", publicUrl: undefined })).toEqual({
       success: true,
       data: [{ id: 1 }],
     })
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://sonarr.local:8989/api/v3/queue",
+      "http://sonarr.local:8989/api/v3/health",
       expect.objectContaining({ headers: expect.objectContaining({ "X-Api-Key": "arr-key" }) })
     )
   })
@@ -41,15 +42,18 @@ describe("arrGet", () => {
 
     expect(await arrGet("Radarr", config, "/api/v3/movie")).toEqual({ success: false, error: "Radarr returned HTTP 503" })
   })
+})
 
-  it("builds the Radarr history query", async () => {
-    mockFetch.mockResolvedValue(respond(200, { records: [] }))
+describe("arrQuery", () => {
+  const schema = z.strictObject({ includeSeries: z.literal(true), episodeId: z.number().int().optional() })
 
-    await getRadarrHistory({ ...config, name: "Radarr", publicUrl: undefined }, 5, 9)
+  it("builds the query from the values the schema accepts, skipping undefined", () => {
+    expect(arrQuery(schema, { includeSeries: true, episodeId: undefined })).toBe("includeSeries=true")
+    expect(arrQuery(schema, { includeSeries: true, episodeId: 7 })).toBe("includeSeries=true&episodeId=7")
+  })
 
-    expect(String(mockFetch.mock.calls[0][0])).toBe(
-      "http://sonarr.local:8989/api/v3/history?pageSize=5&sortKey=date&sortDir=desc&movieId=9"
-    )
+  it("is null for values the schema refuses", () => {
+    expect(arrQuery(schema, { includeSeries: true, episodeId: 1.5 })).toBeNull()
   })
 })
 

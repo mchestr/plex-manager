@@ -2,9 +2,9 @@
 
 import type { ReactElement } from "react"
 
-import { setUserDisabled, updateUserAdminStatus } from "@/actions/admin"
+import { setUserDisabled, updateUserAdminStatus } from "@/actions/admin/admin-users"
 import { adminRegenerateRewind } from "@/actions/rewind-generation"
-import { unshareUserLibrary } from "@/actions/users"
+import { unshareUserLibrary } from "@/actions/user-queries"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useActionDialog } from "@/hooks/use-action-dialog"
 import type { UserActionTarget } from "@/lib/admin/user-actions"
@@ -49,7 +49,7 @@ export function RegenerateDialog({ user, year, estimateCopy, ...dialog }: UserDi
   )
 }
 
-const setAdmin = (userId: string, isAdmin: boolean) => updateUserAdminStatus(userId, isAdmin)
+const setAdmin = (userId: string, isAdmin: boolean) => updateUserAdminStatus({ userId, isAdmin })
 
 /** Makes the member an admin, or takes the role away. */
 export function ChangeRoleDialog({ user, ...dialog }: UserDialogProps) {
@@ -111,7 +111,7 @@ export function RemoveAccessDialog({ user, ...dialog }: UserDialogProps) {
       pendingLabel="Removing"
       tone="destructive"
       typeToConfirm={user.name}
-      action={() => run(user.id)}
+      action={() => run({ userId: user.id })}
       data-testid="admin-user-remove-access-dialog"
       confirmTestId="admin-user-remove-access-confirm"
     />

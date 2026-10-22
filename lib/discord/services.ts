@@ -1,4 +1,4 @@
-import { type ChatMessage } from "@/actions/chatbot/types"
+import { type ChatMessage } from "@/lib/chatbot/types"
 import { isAccessAllowed } from "@/lib/access"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { appendTurn, getOrCreateSession } from "@/lib/discord/chat-session"

@@ -28,33 +28,42 @@ describe("waitForInvitedAccess", () => {
 
   it("waits 3 s before the first check and stops at the first grant", async () => {
     mockCheck
-      .mockResolvedValueOnce({ success: true, hasAccess: false })
-      .mockResolvedValueOnce({ success: true, hasAccess: true })
+      .mockResolvedValueOnce({ status: "denied" as const })
+      .mockResolvedValueOnce({ status: "granted" as const })
 
     const promise = waitForInvitedAccess(SERVER, "plex-member")
     await jest.advanceTimersByTimeAsync(2999)
     expect(mockCheck).not.toHaveBeenCalled()
     await jest.runAllTimersAsync()
 
-    await expect(promise).resolves.toEqual({ success: true, hasAccess: true })
+    await expect(promise).resolves.toEqual({ status: "granted" })
     expect(mockCheck).toHaveBeenCalledTimes(2)
     expect(mockCheck).toHaveBeenCalledWith(SERVER, "plex-member")
   })
 
   it("gives up after the first check and five retries", async () => {
-    mockCheck.mockResolvedValue({ success: true, hasAccess: false })
+    mockCheck.mockResolvedValue({ status: "denied" as const })
 
-    await expect(run()).resolves.toEqual({ success: true, hasAccess: false })
+    await expect(run()).resolves.toEqual({ status: "denied" })
     expect(mockCheck).toHaveBeenCalledTimes(6)
+  })
+
+  it("retries an unknown check and returns the grant that follows", async () => {
+    mockCheck
+      .mockResolvedValueOnce({ status: "unknown", reason: "rate_limited", retryAfterSec: 5 })
+      .mockResolvedValueOnce({ status: "granted" })
+
+    await expect(run()).resolves.toEqual({ status: "granted" })
+    expect(mockCheck).toHaveBeenCalledTimes(2)
   })
 
   it("never waits past three minutes", async () => {
     mockCheck.mockImplementation(async () => {
       await new Promise((resolve) => setTimeout(resolve, 60_000))
-      return { success: true, hasAccess: false }
+      return { status: "denied" as const }
     })
 
-    await expect(run()).resolves.toEqual({ success: false, hasAccess: false, error: "Access check timed out" })
+    await expect(run()).resolves.toEqual({ status: "unknown", reason: "plex_unavailable" })
     expect(mockCheck.mock.calls.length).toBeLessThan(6)
   })
 })

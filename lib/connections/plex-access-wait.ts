@@ -3,6 +3,7 @@
  * seconds to propagate a new share, so the check waits 3 s and then retries up
  * to five times with doubling delays (2, 4, 8, 16 and 32 s), never past three
  * minutes in total. The schedule is fixed here on the server (SEC-19).
+ * An `unknown` check is retried like a denial.
  *
  * @module lib/connections/plex-access-wait
  */
@@ -29,7 +30,7 @@ function wait(ms: number): Promise<void> {
 /**
  * Checks a freshly invited member's access with the schedule above. Returns
  * the first check that grants access, or the last one. Running out of time is
- * a failed check (`success: false`), never a clean "no access".
+ * `unknown`, never a clean "no access".
  */
 export async function waitForInvitedAccess(serverConfig: ServerConfig, plexUserId: string): Promise<AccessCheck> {
   const started = Date.now()
@@ -37,11 +38,11 @@ export async function waitForInvitedAccess(serverConfig: ServerConfig, plexUserI
 
   let check = await checkUserServerAccess(serverConfig, plexUserId)
   let delay = FIRST_RETRY_DELAY_MS
-  for (let retry = 1; retry <= MAX_RETRIES && !check.hasAccess; retry++) {
+  for (let retry = 1; retry <= MAX_RETRIES && check.status !== "granted"; retry++) {
     const remaining = MAX_WAIT_MS - (Date.now() - started)
     if (remaining <= 0) {
       logger.warn("Invited member's access check timed out", { retry })
-      return { success: false, hasAccess: false, error: "Access check timed out" }
+      return { status: "unknown", reason: "plex_unavailable" }
     }
     await wait(Math.min(delay, remaining))
     check = await checkUserServerAccess(serverConfig, plexUserId)
@@ -49,7 +50,7 @@ export async function waitForInvitedAccess(serverConfig: ServerConfig, plexUserI
   }
 
   logger.info("Invited member's access check finished", {
-    hasAccess: check.hasAccess,
+    status: check.status,
     durationMs: Date.now() - started,
   })
   return check

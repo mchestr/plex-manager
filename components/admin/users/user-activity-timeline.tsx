@@ -93,7 +93,7 @@ export function UserActivityTimeline({ userId, initialData }: UserActivityTimeli
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = useInfiniteQuery({
     queryKey: queryKeys.userActivityTimeline(userId),
     queryFn: async ({ pageParam }) => {
-      const result = await getUserActivityTimeline(userId, { cursor: pageParam, pageSize: PAGE_SIZE })
+      const result = await getUserActivityTimeline({ userId, cursor: pageParam, pageSize: PAGE_SIZE })
       if (!result.success) throw new Error(result.error)
       return result.data
     },

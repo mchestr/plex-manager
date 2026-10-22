@@ -1,4 +1,4 @@
-import { getAllUsersWithWrapped } from "@/actions/users"
+import { getAllUsersWithWrapped } from "@/lib/data/admin-users"
 import { ImportPlexUsersButton } from "@/components/admin/users/import-plex-users-button"
 import { PlexDownAlert } from "@/components/admin/users/plex-down-alert"
 import { UsersStatGrid } from "@/components/admin/users/users-stat-grid"

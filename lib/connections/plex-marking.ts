@@ -12,6 +12,9 @@ import { logger } from "./plex-core"
  * Mark a Plex item as watched in the member's own history, through the
  * scrobble endpoint. `access` carries the member's server token from
  * `resolveMemberServerToken`, never the owner's (SEC-48).
+ *
+ * Sends `PUT /:/scrobble`, as the PMS API documents, and retries once with
+ * GET when an older PMS answers 405 (GAP-10).
  */
 export async function markPlexItemWatched(
   access: MemberServerAccess,
@@ -21,13 +24,21 @@ export async function markPlexItemWatched(
   logger.debug("Marking Plex item as watched", { ratingKey })
 
   const params = new URLSearchParams({ identifier: "com.plexapp.plugins.library", key: ratingKey })
-  const result = await serviceFetch({
-    service: "Plex",
-    url: `${access.url}/:/scrobble?${params.toString()}`,
-    headers: { "X-Plex-Token": access.token },
-    responseType: "text",
-    schema: z.string(),
-  })
+  const scrobble = (method: "PUT" | "GET") =>
+    serviceFetch({
+      service: "Plex",
+      url: `${access.url}/:/scrobble?${params.toString()}`,
+      method,
+      headers: { "X-Plex-Token": access.token },
+      responseType: "text",
+      schema: z.string(),
+    })
+
+  let result = await scrobble("PUT")
+  if (!result.ok && result.code === "HTTP" && result.status === 405) {
+    logger.debug("PMS refused PUT /:/scrobble; retrying with GET", { ratingKey })
+    result = await scrobble("GET")
+  }
 
   const duration = Date.now() - startTime
   if (!result.ok) {

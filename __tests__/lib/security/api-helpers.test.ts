@@ -5,10 +5,7 @@
 
 import { NextRequest } from "next/server"
 import { getServerSession } from "next-auth"
-import {
-  requireAdminAPI,
-  validateYear,
-} from "@/lib/security/api-helpers"
+import { requireAdminAPI } from "@/lib/security/api-helpers"
 import { ErrorCode } from "@/lib/security/error-handler"
 
 // Mock Next.js server
@@ -119,52 +116,4 @@ describe("API Security Helpers", () => {
     })
   })
 
-  describe("validateYear", () => {
-    const currentYear = new Date().getFullYear()
-
-    it("should return current year when no parameter provided", () => {
-      expect(validateYear(null)).toBe(currentYear)
-    })
-
-    it("should return parsed year for valid year string", () => {
-      expect(validateYear("2023")).toBe(2023)
-      expect(validateYear("2024")).toBe(2024)
-      expect(validateYear("2020")).toBe(2020)
-    })
-
-    it("should return current year for invalid year string", () => {
-      expect(validateYear("invalid")).toBe(currentYear)
-      expect(validateYear("abc")).toBe(currentYear)
-      expect(validateYear("")).toBe(currentYear)
-    })
-
-    it("should return current year for year below 2000", () => {
-      expect(validateYear("1999")).toBe(currentYear)
-      expect(validateYear("1900")).toBe(currentYear)
-      expect(validateYear("0")).toBe(currentYear)
-    })
-
-    it("should return current year for year above 2100", () => {
-      expect(validateYear("2101")).toBe(currentYear)
-      expect(validateYear("3000")).toBe(currentYear)
-      expect(validateYear("9999")).toBe(currentYear)
-    })
-
-    it("should accept boundary years", () => {
-      expect(validateYear("2000")).toBe(2000)
-      expect(validateYear("2100")).toBe(2100)
-    })
-
-    it("should handle year with leading zeros", () => {
-      expect(validateYear("0002023")).toBe(2023)
-    })
-
-    it("should handle negative numbers", () => {
-      expect(validateYear("-2023")).toBe(currentYear)
-    })
-
-    it("should handle floating point numbers", () => {
-      expect(validateYear("2023.5")).toBe(2023)
-    })
-  })
 })

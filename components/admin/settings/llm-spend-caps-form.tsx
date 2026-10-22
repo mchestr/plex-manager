@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import { updateLlmCaps } from "@/actions/admin"
+import { updateLlmCaps } from "@/actions/admin/admin-config"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/toast"

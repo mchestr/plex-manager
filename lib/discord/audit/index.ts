@@ -14,10 +14,7 @@ export {
   type CreateCommandLogParams,
 } from "./write"
 
-export {
-  getCommandLogs,
-  type GetCommandLogsParams,
-} from "./logs"
+export { getCommandLogs } from "./logs"
 
 export {
   getDailyActivity,

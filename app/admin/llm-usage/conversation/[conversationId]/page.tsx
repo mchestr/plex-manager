@@ -1,6 +1,6 @@
 import { MessagesSquare } from "lucide-react"
 
-import { getLLMUsageRecords } from "@/actions/admin"
+import { getLLMUsageRecords } from "@/lib/data/llm-usage"
 import { ConversationTranscript } from "@/components/admin/llm-usage/conversation-transcript"
 import { ConversationUsageRow } from "@/components/admin/llm-usage/conversation-usage-row"
 import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
@@ -37,7 +37,7 @@ const HEADINGS = ["#", "Time", "Model", "Tokens", "Cost"]
 /** One chat conversation's LLM calls (P10.6): breadcrumbs, server-formatted zoned times and the transcript. */
 export default async function LLMConversationPage({ params }: { params: Promise<{ conversationId: string }> }) {
   const { conversationId } = await params
-  const [{ records }, f] = await Promise.all([getLLMUsageRecords(1, 100, undefined, conversationId), getFormat()])
+  const [{ records }, f] = await Promise.all([getLLMUsageRecords({ pageSize: 100, conversationId }), getFormat()])
 
   if (!records.length) {
     return (

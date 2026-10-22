@@ -13,14 +13,6 @@
 /** @internal Exported for the reason check in its test. */
 export const ALLOWLIST = [
   {
-    path: 'components/wrapped/',
-    reason: 'The v2 Wrapped viewer, kept for v2 share links until P11.29 deletes it.',
-  },
-  {
-    path: 'components/shared/formatted-text.tsx',
-    reason: 'Only the v2 viewer renders it; P11.29 deletes it with the viewer.',
-  },
-  {
     path: 'components/setup/setup-wizard/',
     reason: 'The pre-refresh setup wizard; P10.25 rebuilds it on the primitives and tokens.',
   },
@@ -63,7 +55,7 @@ export function isAllowed(file, rule, allowlist = ALLOWLIST) {
  *
  * @example
  * ```js
- * strictFailures({ 'components/admin/a.tsx': { 'raw-palette': 2 }, 'components/wrapped/b.tsx': { blur: 1 } })
+ * strictFailures({ 'components/admin/a.tsx': { 'raw-palette': 2 }, 'components/setup/setup-wizard/b.tsx': { blur: 1 } })
  * // [{ file: 'components/admin/a.tsx', rule: 'raw-palette', count: 2 }]
  * ```
  */

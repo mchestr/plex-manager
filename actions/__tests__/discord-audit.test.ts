@@ -28,10 +28,6 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 
 beforeEach(() => mockReset(prismaMock))
 
-jest.mock("@/lib/admin", () => ({
-  requireAdmin: jest.fn(),
-}))
-
 jest.mock("next-auth", () => ({
   getServerSession: jest.fn(),
 }))
@@ -55,7 +51,6 @@ jest.mock("@/lib/utils/logger", () => ({
 }))
 
 import { updateDiscordIntegrationSettings, disconnectDiscordAccount } from "@/actions/discord"
-import { requireAdmin } from "@/lib/admin"
 import { getServerSession } from "next-auth"
 import { clearDiscordRoleForUser as mockedClearRole } from "@/lib/discord/integration"
 import { mockReset } from 'jest-mock-extended'
@@ -63,11 +58,9 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 const mockLogAuditEvent = logAuditEvent as jest.MockedFunction<typeof logAuditEvent>
 const mockPrisma = prismaMock
-const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
 
 beforeEach(() => {
   jest.clearAllMocks()
-  mockRequireAdmin.mockResolvedValue({ user: { id: "admin-1", isAdmin: true } } as never)
   jest.mocked(getServerSession).mockResolvedValue({ user: { id: "admin-1", isAdmin: true }, expires: "2099-01-01T00:00:00.000Z" })
   mockPrisma.discordIntegration.upsert.mockResolvedValue({} as never)
 })

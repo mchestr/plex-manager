@@ -6,7 +6,7 @@ import { ArchiveArticle } from "@/components/rewind/article/archive-article"
 import { RewindScope } from "@/components/rewind/stage/rewind-scope"
 import { EmptyState } from "@/components/ui/empty-state"
 import { PageHeader } from "@/components/ui/page-header"
-import { requireAdmin } from "@/lib/admin"
+import { assertAdmin } from "@/lib/admin"
 import { getHistoricalWrappedData, getHistoricalWrappedVersions } from "@/lib/admin/rewind-history"
 import { userDetail } from "@/lib/admin/routes"
 import { serverName } from "@/lib/brand"
@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic"
 
 /** One stored generation of a legacy Rewind (P7.13's renderer), inside the admin shell (P10.6, UI-21). */
 export default async function HistoricalWrappedPage({ params }: { params: Promise<{ wrappedId: string; llmUsageId: string }> }) {
-  await requireAdmin()
+  await assertAdmin()
   const { wrappedId, llmUsageId } = await params
 
   const [historicalData, versions, f, settings, brand] = await Promise.all([

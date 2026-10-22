@@ -44,6 +44,7 @@ const plexConfig: PlexServerConfig = {
   token: "owner-token",
   publicUrl: undefined,
   adminPlexUserId: null,
+  machineIdentifier: null,
 }
 
 function makeItem(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {

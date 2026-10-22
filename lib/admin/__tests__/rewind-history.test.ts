@@ -15,7 +15,7 @@ import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock("@/lib/admin", () => ({
-  requireAdmin: jest.fn().mockResolvedValue({ user: { id: "admin-1", isAdmin: true } }),
+  assertAdmin: jest.fn().mockResolvedValue({ user: { id: "admin-1", isAdmin: true } }),
 }))
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)

@@ -7,9 +7,7 @@ import { z } from "zod"
 
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
-import { requireAdmin } from "@/lib/admin"
 import { userRewind } from "@/lib/admin/routes"
-import { prisma } from "@/lib/prisma"
 import { getRedisConnection } from "@/lib/queue/connection"
 import { acquireGenerationLock } from "@/lib/queue/redis-lock"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
@@ -142,19 +140,6 @@ export const getRewindSeasonStatus = adminAction({
   fallbackError: "Could not load the season's progress",
   handler: async ({ year }) => ok<SeasonCounts>(await getSeasonCounts(year)),
 })
-
-/** When the newest aggregate for `year` was computed, as an ISO string, or null (admin only). */
-export async function getRewindSeasonDataPreparedAt(year: number): Promise<string | null> {
-  await requireAdmin()
-  const parsed = yearInput.safeParse({ year })
-  if (!parsed.success) return null
-  const latest = await prisma.rewindServerAggregate.findFirst({
-    where: { year: parsed.data.year },
-    orderBy: { computedAt: "desc" },
-    select: { computedAt: true },
-  })
-  return latest?.computedAt.toISOString() ?? null
-}
 
 const memberYearInput = z.object({ userId: userIdSchema, year: yearSchema })
 

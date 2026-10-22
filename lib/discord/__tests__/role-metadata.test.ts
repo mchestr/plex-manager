@@ -59,6 +59,7 @@ const PLEX_SERVER = {
   token: "plex-token",
   publicUrl: undefined,
   adminPlexUserId: "admin-1",
+  machineIdentifier: "this-server-machine-id",
 }
 
 const TAUTULLI_SERVER = {
@@ -94,16 +95,17 @@ beforeEach(() => {
 describe("computeRoleMetadata - is_subscribed", () => {
   it("reports is_subscribed=true when the user has Plex access", async () => {
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
-    mockCheckAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckAccess.mockResolvedValue({ status: "granted" })
 
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
-    expect(metadata[IS_SUBSCRIBED_KEY]).toBe(true)
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(true)
     expect(mockCheckAccess).toHaveBeenCalledWith(
       {
         url: PLEX_SERVER.url,
         token: PLEX_SERVER.token,
         adminPlexUserId: PLEX_SERVER.adminPlexUserId,
+        machineIdentifier: PLEX_SERVER.machineIdentifier,
       },
       USER.plexUserId
     )
@@ -112,56 +114,61 @@ describe("computeRoleMetadata - is_subscribed", () => {
   it("with Stripe on, a canceled member is not subscribed even with Plex access", async () => {
     givenMember(true, { status: "CANCELED" })
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
-    mockCheckAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckAccess.mockResolvedValue({ status: "granted" })
 
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
-    expect(metadata[IS_SUBSCRIBED_KEY]).toBe(false)
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(false)
     expect(mockCheckAccess).not.toHaveBeenCalled()
   })
 
   it("with Stripe on, an active subscriber with Plex access is subscribed", async () => {
     givenMember(true, { status: "ACTIVE" })
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
-    mockCheckAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckAccess.mockResolvedValue({ status: "granted" })
 
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
-    expect(metadata[IS_SUBSCRIBED_KEY]).toBe(true)
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(true)
   })
 
   it("a disabled member is not subscribed, with Stripe off too", async () => {
     givenMember(false, { disabled: true })
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
-    mockCheckAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckAccess.mockResolvedValue({ status: "granted" })
 
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
-    expect(metadata[IS_SUBSCRIBED_KEY]).toBe(false)
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(false)
   })
 
   it("reports is_subscribed=false when the user lacks Plex access", async () => {
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
-    mockCheckAccess.mockResolvedValue({ success: true, hasAccess: false })
+    mockCheckAccess.mockResolvedValue({ status: "denied" })
 
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
-    expect(metadata[IS_SUBSCRIBED_KEY]).toBe(false)
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(false)
   })
 
-  it("treats an unsuccessful access check as not subscribed", async () => {
+  it.each([
+    ["a 503", { status: "unknown", reason: "plex_unavailable" }],
+    ["a 429", { status: "unknown", reason: "rate_limited", retryAfterSec: 30 }],
+    ["an unreachable PMS", { status: "unknown", reason: "server_unreachable" }],
+  ] as const)("pushes no update when access is unknown after %s, keeping the stored hours", async (_label, result) => {
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
-    mockCheckAccess.mockResolvedValue({ success: false, hasAccess: false, error: "boom" })
+    mockCheckAccess.mockResolvedValue(result)
 
-    const { metadata } = await computeRoleMetadata(USER, REFRESH)
+    const outcome = await computeRoleMetadata({ ...USER, lastWatchedHours: 12 }, REFRESH)
 
-    expect(metadata[IS_SUBSCRIBED_KEY]).toBe(false)
+    expect(outcome).toEqual({ metadata: null, watchedHours: 12 })
+    expect(mockFetchStats).not.toHaveBeenCalled()
   })
 
   it("treats a missing active Plex server as not subscribed", async () => {
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
-    expect(metadata[IS_SUBSCRIBED_KEY]).toBe(false)
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(false)
     expect(mockCheckAccess).not.toHaveBeenCalled()
   })
 
@@ -170,17 +177,17 @@ describe("computeRoleMetadata - is_subscribed", () => {
 
     const { metadata } = await computeRoleMetadata({ ...USER, plexUserId: null }, REFRESH)
 
-    expect(metadata[IS_SUBSCRIBED_KEY]).toBe(false)
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(false)
     expect(mockCheckAccess).not.toHaveBeenCalled()
   })
 
-  it("treats a thrown Plex access error as not subscribed (degradation)", async () => {
+  it("treats a thrown Plex access error as unknown: no update", async () => {
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
     mockCheckAccess.mockRejectedValue(new Error("network down"))
 
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
-    expect(metadata[IS_SUBSCRIBED_KEY]).toBe(false)
+    expect(metadata).toBeNull()
   })
 })
 
@@ -188,7 +195,7 @@ describe("computeRoleMetadata - watched_hours", () => {
   beforeEach(() => {
     // Isolate watched_hours tests from Plex access.
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
-    mockCheckAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckAccess.mockResolvedValue({ status: "granted" })
   })
 
   it("derives integer hours from Tautulli totalWatchTime (minutes, floored)", async () => {
@@ -200,7 +207,7 @@ describe("computeRoleMetadata - watched_hours", () => {
 
     const { metadata, watchedHours } = await computeRoleMetadata(USER, REFRESH)
 
-    expect(metadata[WATCHED_HOURS_KEY]).toBe(3)
+    expect(metadata?.[WATCHED_HOURS_KEY]).toBe(3)
     expect(watchedHours).toBe(3)
     expect(mockFetchStats).toHaveBeenCalledWith(
       { url: TAUTULLI_SERVER.url, apiKey: TAUTULLI_SERVER.apiKey },
@@ -236,14 +243,14 @@ describe("computeRoleMetadata - watched_hours", () => {
   it("an event-driven sync with no stored hours omits watched_hours", async () => {
     const { metadata, watchedHours } = await computeRoleMetadata(USER, { refreshHours: false })
 
-    expect(WATCHED_HOURS_KEY in metadata).toBe(false)
+    expect(WATCHED_HOURS_KEY in (metadata ?? {})).toBe(false)
     expect(watchedHours).toBeNull()
   })
 
   it("omits watched_hours when Tautulli is not configured", async () => {
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
-    expect(WATCHED_HOURS_KEY in metadata).toBe(false)
+    expect(WATCHED_HOURS_KEY in (metadata ?? {})).toBe(false)
     expect(mockFetchStats).not.toHaveBeenCalled()
   })
 
@@ -252,7 +259,7 @@ describe("computeRoleMetadata - watched_hours", () => {
 
     const { metadata } = await computeRoleMetadata({ ...USER, plexUserId: null }, REFRESH)
 
-    expect(WATCHED_HOURS_KEY in metadata).toBe(false)
+    expect(WATCHED_HOURS_KEY in (metadata ?? {})).toBe(false)
     expect(mockFetchStats).not.toHaveBeenCalled()
   })
 
@@ -262,7 +269,7 @@ describe("computeRoleMetadata - watched_hours", () => {
 
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
-    expect(WATCHED_HOURS_KEY in metadata).toBe(false)
+    expect(WATCHED_HOURS_KEY in (metadata ?? {})).toBe(false)
   })
 
   it("keeps the stored hours when a refresh fails", async () => {
@@ -271,7 +278,7 @@ describe("computeRoleMetadata - watched_hours", () => {
 
     const { metadata, watchedHours } = await computeRoleMetadata({ ...USER, lastWatchedHours: 7 }, REFRESH)
 
-    expect(metadata[WATCHED_HOURS_KEY]).toBe(7)
+    expect(metadata?.[WATCHED_HOURS_KEY]).toBe(7)
     expect(watchedHours).toBe(7)
   })
 
@@ -281,16 +288,16 @@ describe("computeRoleMetadata - watched_hours", () => {
 
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
-    expect(WATCHED_HOURS_KEY in metadata).toBe(false)
+    expect(WATCHED_HOURS_KEY in (metadata ?? {})).toBe(false)
     // Plex-derived field is unaffected by the Tautulli failure.
-    expect(metadata[IS_SUBSCRIBED_KEY]).toBe(true)
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(true)
   })
 })
 
 describe("computeRoleMetadata - combined", () => {
   it("returns both fields when both sources succeed", async () => {
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
-    mockCheckAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckAccess.mockResolvedValue({ status: "granted" })
     prismaMock.tautulli.findFirst.mockResolvedValue(TAUTULLI_SERVER as never)
     mockFetchStats.mockResolvedValue({
       success: true,
@@ -307,7 +314,7 @@ describe("computeRoleMetadata - combined", () => {
 
   it("matches the documented JSDoc example", async () => {
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
-    mockCheckAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckAccess.mockResolvedValue({ status: "granted" })
 
     const { metadata } = await computeRoleMetadata(
       { id: "user-1", plexUserId: "123", lastWatchedHours: 42 },

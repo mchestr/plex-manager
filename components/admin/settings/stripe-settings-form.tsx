@@ -2,7 +2,8 @@
 
 import { Suspense, use, useState, useTransition } from "react"
 
-import { setStripeEnabled, updateStripeSettings, type StripeConfigStatus } from "@/actions/admin/admin-config"
+import { setStripeEnabled, updateStripeSettings } from "@/actions/admin/admin-config"
+import type { StripeConfigStatus } from "@/types/admin"
 import { Alert } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { FormField } from "@/components/ui/form-field"

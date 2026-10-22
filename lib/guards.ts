@@ -1,7 +1,7 @@
 import "server-only"
 
 import { getOnboardingStatus } from "@/actions/onboarding"
-import { getSetupStatus } from "@/actions/setup"
+import { getSetupStatus } from "@/lib/setup/status"
 import { needsSubscribeRedirect } from "@/lib/access-paths"
 import { requestAccessLevel } from "@/lib/actions/entitlement"
 import { authOptions } from "@/lib/auth"

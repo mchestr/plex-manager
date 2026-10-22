@@ -38,7 +38,7 @@ import "server-only"
 
 import { unstable_cache } from "next/cache"
 
-import { getStripeConfig } from "@/actions/admin/admin-config"
+import { getStripeConfig } from "@/lib/data/admin-settings"
 import { testJellyfinConnection } from "@/lib/connections/jellyfin-connection"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { testPlexConnection } from "@/lib/connections/plex-connection"

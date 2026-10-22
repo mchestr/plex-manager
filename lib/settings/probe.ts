@@ -14,7 +14,7 @@ import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("CONNECTION_HEALTH")
 
-/** A tester that has not answered by now counts as `unreachable` with `TIMEOUT` (P2.3's budget). @internal */
+/** A tester that has not answered by now counts as `unreachable` with `TIMEOUT` (P2.3's budget). */
 export const PROBE_TIMEOUT_MS = 5000
 
 export type Tester = () => Promise<{ success: boolean; error?: string }>

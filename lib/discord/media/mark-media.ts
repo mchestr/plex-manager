@@ -8,7 +8,7 @@
  *
  * - the `!`-prefixed command flow (`lib/discord/commands/media-marking.ts`, and
  *   the Step 12 slash + component flow), and
- * - the admin chatbot executor (`actions/chatbot/executors/media-marking.ts`).
+ * - the admin chatbot executor (`lib/chatbot/executors/media-marking.ts`).
  *
  * Before this module both call sites duplicated ~50 lines of identical
  * media-type resolution, Radarr/Sonarr id matching, `userMediaMark.upsert`, and

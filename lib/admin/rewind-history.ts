@@ -10,7 +10,7 @@
 
 import "server-only"
 
-import { requireAdmin } from "@/lib/admin"
+import { assertAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
@@ -28,7 +28,7 @@ const logger = createLogger("ADMIN")
  * `PlexWrapped.generatedAt` ({@link pickCurrentUsageId}).
  */
 export async function getHistoricalWrappedVersions(wrappedId: string) {
-  await requireAdmin()
+  await assertAdmin()
 
   const wrapped = await prisma.plexWrapped.findUnique({
     where: { id: wrappedId },
@@ -111,7 +111,7 @@ function rebuildVersion(
  * null when the record does not exist or its response cannot be rebuilt.
  */
 export async function getHistoricalWrappedData(llmUsageId: string, _wrappedId: string) {
-  await requireAdmin()
+  await assertAdmin()
 
   const llmUsage = await prisma.lLMUsage.findUnique({
     where: { id: llmUsageId },

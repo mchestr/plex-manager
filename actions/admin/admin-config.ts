@@ -1,152 +1,18 @@
 "use server"
 
-import { Prisma } from "@/lib/generated/prisma/client"
-import type { SavedSecret } from "@/lib/security/saved-secret"
-import { describeSecret } from "@/lib/security/secret-reuse"
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
-import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
 import { CONNECTION_HEALTH_TAG } from "@/lib/settings/connection-status"
 import { isRedisConfigured } from "@/lib/queue/connection"
-import { parseStripeLibrarySectionIds, parseStripePriceIds } from "@/lib/stripe/config"
+import { parseStripePriceIds } from "@/lib/stripe/config"
 import { clearOfferedPricesCache } from "@/lib/stripe/prices"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
-import { createLogger } from "@/lib/utils/logger"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
-import { REWIND_SETTINGS_SELECT } from "@/lib/wrapped/config"
-import { DEFAULT_SEASON, getSeasonState, seasonStateAt } from "@/lib/wrapped/season"
 import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
-
-const logger = createLogger("ADMIN")
-
-/**
- * The Rewind generation settings (public, no auth required).
- *
- * - `featureEnabled`: the admin's on/off switch (`Config.wrappedEnabled`).
- * - `seasonOpen`: the season window is open now, in the server zone.
- * - `wrappedEnabled`: both, so members may generate now. Admins regenerate
- *   whenever the feature is on, inside the window or not.
- * - `wrappedYear`: the season year (`lib/wrapped/season.ts`).
- */
-export async function getWrappedSettings() {
-  try {
-    const [config, season] = await Promise.all([
-      prisma.config.findUnique({ where: { id: "config" }, select: { wrappedEnabled: true } }),
-      getSeasonState(),
-    ])
-    const featureEnabled = config?.wrappedEnabled ?? true
-    return {
-      featureEnabled,
-      seasonOpen: season.isOpen,
-      wrappedEnabled: featureEnabled && season.isOpen,
-      wrappedYear: season.seasonYear,
-    }
-  } catch (error) {
-    logger.error("Error getting wrapped settings", error)
-    // Fail as the default configuration would: the default window, in UTC
-    const season = seasonStateAt(new Date(), DEFAULT_SEASON.opens, DEFAULT_SEASON.closes, "UTC")
-    return {
-      featureEnabled: true,
-      seasonOpen: season.isOpen,
-      wrappedEnabled: season.isOpen,
-      wrappedYear: season.seasonYear,
-    }
-  }
-}
-
-/**
- * Non-secret Config columns. Explicitly excludes `stripeSecretKey` and
- * `stripeWebhookSecret`: the Prisma extension decrypts those on read, so
- * selecting them would return plaintext secrets to callers (some of which pass
- * the result to client components). Secrets are read only via narrowly-scoped
- * selects within this module.
- */
-const NON_SECRET_CONFIG_SELECT = {
-  id: true,
-  llmDisabled: true,
-  wrappedEnabled: true,
-  ...REWIND_SETTINGS_SELECT,
-  timezone: true,
-  watchlistSyncEnabled: true,
-  watchlistSyncIntervalMinutes: true,
-  stripeEnabled: true,
-  stripePriceIds: true,
-  llmDailyCapPerUserUsd: true,
-  llmDailyCapAdminUsd: true,
-  llmDailyCapServerUsd: true,
-  lightThemeEnabled: true,
-  updatedAt: true,
-  updatedBy: true,
-} as const
-
-/**
- * Get the current application configuration (admin only).
- *
- * Never returns the Stripe secret key or webhook secret (see
- * {@link NON_SECRET_CONFIG_SELECT}).
- */
-export async function getConfig() {
-  await requireAdmin()
-
-  try {
-    const config = await prisma.config.findUnique({
-      where: { id: "config" },
-      select: NON_SECRET_CONFIG_SELECT,
-    })
-
-    // If config doesn't exist, create it with defaults
-    if (!config) {
-      return await prisma.config.create({
-        data: {
-          id: "config",
-          llmDisabled: false,
-          wrappedEnabled: true,
-        },
-        select: NON_SECRET_CONFIG_SELECT,
-      })
-    }
-
-    return config
-  } catch (error) {
-    logger.error("Error getting config", error)
-    // Return default config if there's an error
-    return {
-      id: "config",
-      llmDisabled: false,
-      wrappedEnabled: true,
-      rewindEnabled: false,
-      rewindAudience: "admins",
-      rewindSeasonOpens: DEFAULT_SEASON.opens,
-      rewindSeasonCloses: DEFAULT_SEASON.closes,
-      rewindLlmMode: "standard",
-      rewindLlmBudgetUsd: new Prisma.Decimal(10),
-      rewindPublicLinks: true,
-      rewindPublicCounts: false,
-      rewindShowServerNameOnCards: true,
-      rewindAllowArtOnCards: true,
-      rewindExcludedSectionIds: null,
-      rewindExcludedContentRatings: null,
-      rewindIncludeManagedUsers: false,
-      rewindDisabledPages: null,
-      rewindNotifyChannels: ["discord", "banner"],
-      timezone: null,
-      watchlistSyncEnabled: false,
-      watchlistSyncIntervalMinutes: 60,
-      stripeEnabled: false,
-      stripePriceIds: null,
-      llmDailyCapPerUserUsd: 0.5,
-      llmDailyCapAdminUsd: 5,
-      llmDailyCapServerUsd: 5,
-      lightThemeEnabled: false,
-      updatedAt: new Date(),
-      updatedBy: null,
-    }
-  }
-}
 
 /**
  * Update LLM disabled setting (admin only)
@@ -242,22 +108,6 @@ export const updateServerTimeZone = adminAction({
   },
 })
 
-/**
- * Non-secret view of the Stripe configuration used to determine whether the
- * feature can be enabled. Never contains raw secret values.
- */
-export interface StripeConfigStatus {
-  enabled: boolean
-  hasSecretKey: boolean
-  hasWebhookSecret: boolean
-  /** The stored keys' last four for `SecretInput` (P10.20); both go only to Stripe, so no origin. */
-  saved: { secretKey: SavedSecret | null; webhookSecret: SavedSecret | null }
-  /** Whether `REDIS_URL` is set, so the queue that processes webhooks can run. */
-  hasJobQueue: boolean
-  priceIds: string[]
-  librarySectionIds: number[]
-}
-
 /** The missing-config entry for the job queue; the settings form shows the same words. */
 const STRIPE_QUEUE_REQUIREMENT = "job queue (REDIS_URL)"
 
@@ -286,59 +136,6 @@ const updateStripeSettingsSchema = z.object({
   priceIds: z.array(z.string().trim().min(1)),
   librarySectionIds: z.array(z.number().int().nonnegative()),
 })
-
-/**
- * Get the non-secret Stripe configuration status for the UI (admin only).
- *
- * Returns only booleans and the list of configured price ids — never the raw
- * secret key or webhook secret — so client components cannot receive secrets.
- */
-export async function getStripeConfig(): Promise<StripeConfigStatus> {
-  await requireAdmin()
-
-  try {
-    const config = await prisma.config.findUnique({
-      where: { id: "config" },
-      select: {
-        stripeEnabled: true,
-        stripeSecretKey: true,
-        stripeWebhookSecret: true,
-        stripePriceIds: true,
-        stripeLibrarySectionIds: true,
-      },
-    })
-
-    if (!config) {
-      return emptyStripeConfigStatus()
-    }
-
-    return {
-      enabled: config.stripeEnabled,
-      hasSecretKey: Boolean(config.stripeSecretKey),
-      hasWebhookSecret: Boolean(config.stripeWebhookSecret),
-      saved: { secretKey: describeSecret(config.stripeSecretKey), webhookSecret: describeSecret(config.stripeWebhookSecret) },
-      hasJobQueue: isRedisConfigured(),
-      priceIds: parseStripePriceIds(config.stripePriceIds),
-      librarySectionIds: parseStripeLibrarySectionIds(config.stripeLibrarySectionIds),
-    }
-  } catch (error) {
-    logger.error("Error getting Stripe config", error)
-    return emptyStripeConfigStatus()
-  }
-}
-
-/** @internal */
-function emptyStripeConfigStatus(): StripeConfigStatus {
-  return {
-    enabled: false,
-    hasSecretKey: false,
-    hasWebhookSecret: false,
-    saved: { secretKey: null, webhookSecret: null },
-    hasJobQueue: isRedisConfigured(),
-    priceIds: [],
-    librarySectionIds: [],
-  }
-}
 
 /**
  * Save Stripe credentials and price ids (admin only).
