@@ -42,7 +42,7 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT FROM information_schema.columns
-    WHERE table_schema = 'public'
+    WHERE table_schema = current_schema()
     AND table_name = 'PlexServer'
     AND column_name = 'hostname'
   ) THEN
@@ -74,7 +74,7 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT FROM information_schema.columns
-    WHERE table_schema = 'public'
+    WHERE table_schema = current_schema()
     AND table_name = 'Tautulli'
     AND column_name = 'hostname'
   ) THEN
@@ -102,7 +102,7 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT FROM information_schema.columns
-    WHERE table_schema = 'public'
+    WHERE table_schema = current_schema()
     AND table_name = 'Overseerr'
     AND column_name = 'hostname'
   ) THEN
