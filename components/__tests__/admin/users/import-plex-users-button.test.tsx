@@ -85,7 +85,7 @@ describe('ImportPlexUsersButton', () => {
 
     await user.click(button)
 
-    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith('Imported 5 users', 5000))
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith('Imported 5 users'))
     // The action revalidates /admin/users, so the new members show with no client refresh (P10.7)
     expect(mockRefresh).not.toHaveBeenCalled()
   })
@@ -105,7 +105,7 @@ describe('ImportPlexUsersButton', () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 1 user', 5000)
+      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 1 user')
     })
   })
 
@@ -125,9 +125,7 @@ describe('ImportPlexUsersButton', () => {
 
     await waitFor(() => {
       expect(mockShowSuccess).toHaveBeenCalledWith(
-        'Imported 3 users, 2 skipped (already exist)',
-        5000
-      )
+        'Imported 3 users, 2 skipped (already exist)')
     })
   })
 
@@ -146,7 +144,7 @@ describe('ImportPlexUsersButton', () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 3 users, 2 errors', 5000)
+      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 3 users, 2 errors')
     })
   })
 
@@ -166,9 +164,9 @@ describe('ImportPlexUsersButton', () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 1 user, 2 errors', 5000)
-      expect(mockShowError).toHaveBeenCalledWith('User 1: Failed to create', 6000)
-      expect(mockShowError).toHaveBeenCalledWith('User 2: Invalid data', 6000)
+      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 1 user, 2 errors')
+      expect(mockShowError).toHaveBeenCalledWith('User 1: Failed to create')
+      expect(mockShowError).toHaveBeenCalledWith('User 2: Invalid data')
     })
   })
 
@@ -225,7 +223,7 @@ describe('ImportPlexUsersButton', () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 2 users, 1 error', 5000)
+      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 2 users, 1 error')
     })
   })
 
@@ -245,9 +243,7 @@ describe('ImportPlexUsersButton', () => {
 
     await waitFor(() => {
       expect(mockShowSuccess).toHaveBeenCalledWith(
-        'Imported 5 users, 3 skipped (already exist), 2 errors',
-        5000
-      )
+        'Imported 5 users, 3 skipped (already exist), 2 errors')
     })
   })
 
