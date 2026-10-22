@@ -20,7 +20,7 @@ function keyedProvider<P extends "openai" | "anthropic" | "google">(provider: P)
 
 /**
  * A provider row as an admin saves it. The base URL is admin-only (SEC-44):
- * only `requireAdmin` actions parse this schema; setup uses
+ * only admin actions parse this schema; setup uses
  * {@link setupLLMProviderSchema}.
  */
 export const llmProviderSchema = z.discriminatedUnion("provider", [

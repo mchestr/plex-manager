@@ -45,25 +45,3 @@ export async function requireAdminAPI(
     }
   }
 }
-
-/**
- * Validate year parameter from URL
- *
- * @internal
- */
-export function validateYear(yearParam: string | null): number {
-  const currentYear = new Date().getFullYear()
-
-  if (!yearParam) {
-    return currentYear
-  }
-
-  const parsed = parseInt(yearParam, 10)
-
-  // Validate year is reasonable (2000-2100)
-  if (isNaN(parsed) || parsed < 2000 || parsed > 2100) {
-    return currentYear
-  }
-
-  return parsed
-}
