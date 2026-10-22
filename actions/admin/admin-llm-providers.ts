@@ -123,13 +123,23 @@ function auditedFields(row: Pick<LLMProvider, "provider" | "model" | "baseUrl" |
 }
 
 /**
+ * The stored base URL as a save sees it: normalised, and only for an
+ * OpenAI-compatible row, so an older row's trailing slash or a hosted row's
+ * leftover URL never reads as a change.
+ */
+function storedBaseUrl(stored: LLMProvider): string | null {
+  if (stored.provider !== "openai-compatible" || !stored.baseUrl) return null
+  return normalizeBaseUrl(stored.baseUrl) ?? stored.baseUrl
+}
+
+/**
  * The refusal of a Rewind model change while the season is open, or null.
  * A first provider, a key rotation and setting changes pass.
  */
 async function frozenModelRefusal(stored: LLMProvider | null, next: { provider: string; model: string; baseUrl: string | null }): Promise<string | null> {
   if (!stored) return null
   const changed =
-    stored.provider !== next.provider || normalizeModelId(stored.model) !== normalizeModelId(next.model) || (stored.baseUrl ?? null) !== next.baseUrl
+    stored.provider !== next.provider || normalizeModelId(stored.model) !== normalizeModelId(next.model) || storedBaseUrl(stored) !== next.baseUrl
   if (!changed) return null
   const season = await getSeasonState()
   if (!season.isOpen) return null

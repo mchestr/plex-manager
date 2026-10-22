@@ -79,6 +79,35 @@ describe('the Rewind model freeze', () => {
     expect(prismaMock.lLMProvider.create).toHaveBeenCalledWith({ data: expect.objectContaining({ apiKey: 'rotated', model: 'claude-sonnet-5-5' }) })
   })
 
+  it('allows a key rotation when the stored base URL predates normalisation', async () => {
+    at('2026-12-05T12:00:00Z')
+    prismaMock.lLMProvider.findFirst.mockResolvedValue(
+      row({ provider: 'openai-compatible', model: 'local-model', baseUrl: 'https://llm.example.com/v1/' })
+    )
+    const result = await updateWrappedLLMProvider({
+      provider: 'openai-compatible', apiKey: 'rotated', model: 'local-model', baseUrl: 'https://llm.example.com/v1',
+    })
+    expect(result).toEqual({ success: true, data: null })
+  })
+
+  it('allows a key rotation on a hosted provider whose row kept an old base URL', async () => {
+    at('2026-12-05T12:00:00Z')
+    prismaMock.lLMProvider.findFirst.mockResolvedValue(row({ baseUrl: 'https://old.example.com/v1' }))
+    const result = await updateWrappedLLMProvider({ provider: 'anthropic', apiKey: 'rotated', model: 'claude-sonnet-5-5' })
+    expect(result).toEqual({ success: true, data: null })
+  })
+
+  it('still refuses a new base URL in the season', async () => {
+    at('2026-12-05T12:00:00Z')
+    prismaMock.lLMProvider.findFirst.mockResolvedValue(
+      row({ provider: 'openai-compatible', model: 'local-model', baseUrl: 'https://llm.example.com/v1' })
+    )
+    const result = await updateWrappedLLMProvider({
+      provider: 'openai-compatible', apiKey: 'k', model: 'local-model', baseUrl: 'https://other.example.com/v1',
+    })
+    expect(result).toEqual({ success: false, code: 'CONFLICT', error: FROZEN })
+  })
+
   it('never blocks the assistant', async () => {
     at('2026-12-05T12:00:00Z')
     prismaMock.lLMProvider.findFirst.mockResolvedValue(row({ purpose: 'chat', provider: 'openai', model: 'gpt-6-sol' }))
