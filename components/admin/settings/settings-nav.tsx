@@ -1,0 +1,149 @@
+"use client"
+
+import { Icon } from "@/components/ui/icon"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { settingsCategory, type ConnectionStatus, type Tone } from "@/lib/ui/status"
+import { cn } from "@/lib/utils"
+
+export interface SettingsNavItem {
+  id: string
+  label: string
+  group: "Media" | "Features" | "More"
+  /** Left out for a section with nothing to check (System information). */
+  status?: ConnectionStatus
+}
+
+const TONE_TEXT: Partial<Record<Tone, string>> = {
+  success: "text-success",
+  warning: "text-warning",
+  destructive: "text-destructive",
+}
+
+const GROUPS = ["Media", "Features", "More"] as const
+
+/** The 12px category glyph (5.6): a shape per category, with its name for screen readers. */
+function StatusGlyph({ status, decorative = false }: { status: ConnectionStatus; decorative?: boolean }) {
+  const category = settingsCategory(status)
+  return (
+    <Icon
+      icon={category.icon}
+      size={12}
+      label={decorative ? undefined : category.label}
+      className={TONE_TEXT[category.tone] ?? "text-muted-foreground"}
+      data-category={category.category}
+    />
+  )
+}
+
+function DirtyPip({ decorative = false }: { decorative?: boolean }) {
+  return (
+    <span
+      {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": "Unsaved changes" })}
+      className="size-2 shrink-0 rounded-full bg-primary-indicator"
+    />
+  )
+}
+
+const LEGEND: { status: ConnectionStatus; label: string }[] = [
+  { status: "ok", label: "Working" },
+  { status: "incomplete", label: "Needs attention" },
+  { status: "unreachable", label: "Not working" },
+  { status: "notConfigured", label: "Off, not set up or not checked" },
+]
+
+/** Scrolls to a section's anchor and moves the hash there. */
+function jumpTo(id: string) {
+  const target = document.getElementById(id)
+  if (!target) return
+  const smooth = !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  target.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" })
+  window.history.replaceState(null, "", `#${id}`)
+}
+
+interface SettingsNavProps {
+  items: SettingsNavItem[]
+  /** The section in view, from the layout's IntersectionObserver. */
+  active: string | null
+  dirty: ReadonlySet<string>
+}
+
+/**
+ * The settings section nav (ui-design-system 6.4): grouped links, each with
+ * its tone glyph and the unsaved-changes pip, and the legend under them.
+ */
+export function SettingsNav({ items, active, dirty }: SettingsNavProps) {
+  return (
+    <nav aria-label="Settings sections" className="flex flex-col gap-4" data-testid="settings-nav">
+      {GROUPS.map((group) => (
+        <div key={group} className="flex flex-col gap-0.5">
+          <p className="px-2 pb-1 text-caption font-medium text-muted-foreground">{group}</p>
+          {items
+            .filter((item) => item.group === group)
+            .map((item) => (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                aria-current={active === item.id ? "true" : undefined}
+                onClick={(event) => {
+                  event.preventDefault()
+                  jumpTo(item.id)
+                }}
+                className={cn(
+                  "flex h-8 items-center gap-2 rounded-md px-2 text-ui text-muted-foreground hover:bg-accent hover:text-foreground",
+                  "aria-[current=true]:bg-accent aria-[current=true]:text-foreground"
+                )}
+                data-testid={`settings-nav-${item.id}`}
+              >
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                {dirty.has(item.id) && <DirtyPip />}
+                {item.status && <StatusGlyph status={item.status} />}
+              </a>
+            ))}
+        </div>
+      ))}
+      <ul aria-hidden="true" className="flex flex-col gap-1.5 border-t pt-4 text-caption text-muted-foreground" data-testid="settings-nav-legend">
+        {LEGEND.map((entry) => (
+          <li key={entry.label} className="flex items-center gap-2">
+            <StatusGlyph status={entry.status} decorative />
+            {entry.label}
+          </li>
+        ))}
+        <li className="flex items-center gap-2">
+          <span className="flex w-3 justify-center">
+            <DirtyPip decorative />
+          </span>
+          Unsaved changes
+        </li>
+      </ul>
+    </nav>
+  )
+}
+
+/** Below `md`: the nav as a "Jump to" Select that scrolls to the anchor. */
+export function SettingsJumpTo({ items, active }: Pick<SettingsNavProps, "items" | "active">) {
+  const selectItems = items.map((item) => ({ value: item.id, label: item.label }))
+  return (
+    <Select items={selectItems} value={active ?? items[0]?.id ?? null} onValueChange={(id) => typeof id === "string" && jumpTo(id)}>
+      <SelectTrigger aria-label="Jump to section" data-testid="settings-jump-to">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="text-muted-foreground">Jump to</span>
+          <SelectValue />
+        </span>
+      </SelectTrigger>
+      <SelectContent>
+        {GROUPS.map((group) => (
+          <SelectGroup key={group}>
+            <SelectLabel>{group}</SelectLabel>
+            {items
+              .filter((item) => item.group === group)
+              .map((item) => (
+                <SelectItem key={item.id} value={item.id} label={item.label} data-testid={`settings-jump-to-option-${item.id}`}>
+                  {item.label}
+                </SelectItem>
+              ))}
+          </SelectGroup>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}

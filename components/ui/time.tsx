@@ -34,6 +34,8 @@ interface TimeProps {
   /** An ISO timestamp, or a Date from a Server Component prop. */
   value: string | Date
   className?: string
+  /** Read instead of the relative time within a minute of now, such as "just now". */
+  nowLabel?: string
   'data-testid'?: string
 }
 
@@ -42,7 +44,7 @@ interface TimeProps {
  * time in the app zone; after mount it reads as relative time ("5 minutes
  * ago"), refreshed each minute, with the viewer-local date in `title`.
  */
-export function Time({ value, className, 'data-testid': testId }: TimeProps) {
+export function Time({ value, className, nowLabel, 'data-testid': testId }: TimeProps) {
   const format = useFormat()
   const current = useSyncExternalStore(subscribe, getNow, getServerNow)
   const date = typeof value === 'string' ? new Date(value) : value
@@ -54,7 +56,11 @@ export function Time({ value, className, 'data-testid': testId }: TimeProps) {
       data-testid={testId}
       title={current === null ? undefined : localDateTime(date, format.settings.locale)}
     >
-      {current === null ? format.dateTime(date) : format.relative(date, current)}
+      {current === null
+        ? format.dateTime(date)
+        : nowLabel && Math.abs(current - date.getTime()) < 60_000
+          ? nowLabel
+          : format.relative(date, current)}
     </time>
   )
 }

@@ -30,6 +30,7 @@ jest.mock('@/lib/security/audit-log', () => ({
 jest.mock('next/cache', () => ({
   ...jest.requireActual('next/cache'),
   revalidatePath: jest.fn(),
+  updateTag: jest.fn(),
 }))
 
 // Mock dependencies

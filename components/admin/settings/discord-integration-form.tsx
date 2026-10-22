@@ -1,37 +1,30 @@
 "use client"
 
 import { updateDiscordIntegrationSettings } from "@/actions/discord"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { StyledCheckbox } from "@/components/ui/styled-checkbox"
 import { StyledInput } from "@/components/ui/styled-input"
 import { StyledTextarea } from "@/components/ui/styled-textarea"
 import { useToast } from "@/components/ui/toast"
+import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
 
-interface DiscordIntegrationFormProps {
-  /**
-   * The Discord integration config, with the client secret stripped.
-   * `hasClientSecret` indicates a secret is stored (never the value itself) so
-   * the form can offer "leave blank to keep current value" without exposing it.
-   */
-  integration: {
-    isEnabled: boolean
-    botEnabled?: boolean | null
-    clientId?: string | null
-    hasClientSecret?: boolean
-    hasBotToken?: boolean
-    supportChannelId?: string | null
-    supportThreadIds?: unknown
-    guildId?: string | null
-    serverInviteCode?: string | null
-    platformName?: string | null
-    instructions?: string | null
-    updatedAt?: Date
-  } | null
-  linkedCount: number
-  portalUrl: string
+/**
+ * The Discord integration config, with the client secret and bot token
+ * stripped. `hasClientSecret` and `hasBotToken` say a secret is stored (never
+ * the value itself), so a blank field keeps it.
+ */
+export interface StoredDiscordIntegration {
+  isEnabled: boolean
+  botEnabled?: boolean | null
+  clientId?: string | null
+  hasClientSecret?: boolean
+  hasBotToken?: boolean
+  supportChannelId?: string | null
+  supportThreadIds?: unknown
+  guildId?: string | null
+  serverInviteCode?: string | null
+  platformName?: string | null
+  instructions?: string | null
 }
 
 /**
@@ -56,118 +49,66 @@ function parseDiscordInviteCode(input: string): string {
   return trimmed
 }
 
-export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: DiscordIntegrationFormProps) {
-  const router = useRouter()
-  const toast = useToast()
-  const [isEditing, setIsEditing] = useState(false)
-  const [isPending, startTransition] = useTransition()
-
-  // Whether a client secret / bot token is already stored (leave-blank-to-keep).
-  const hasStoredClientSecret = Boolean(integration?.hasClientSecret)
-  const hasStoredBotToken = Boolean(integration?.hasBotToken)
-
-  // Normalize the stored (non-secret) support thread IDs into a comma-separated
-  // string for the text input.
-  const initialSupportThreadIds = Array.isArray(integration?.supportThreadIds)
-    ? (integration.supportThreadIds as unknown[])
-        .filter((id): id is string => typeof id === "string")
-        .join(", ")
+function initialValues(integration: StoredDiscordIntegration | null) {
+  // Normalize the stored (non-secret) support thread IDs into a comma-separated string
+  const supportThreadIds = Array.isArray(integration?.supportThreadIds)
+    ? (integration.supportThreadIds as unknown[]).filter((id): id is string => typeof id === "string").join(", ")
     : ""
-
-  // Secrets (client secret + bot token) are never sent to the client. Empty
-  // means "keep existing".
-  const initialState = {
+  // Secrets (client secret + bot token) are never sent to the client. Empty means "keep existing".
+  return {
     isEnabled: integration?.isEnabled ?? false,
     botEnabled: integration?.botEnabled ?? false,
     clientId: integration?.clientId ?? "",
     clientSecret: "",
     botToken: "",
     supportChannelId: integration?.supportChannelId ?? "",
-    supportThreadIds: initialSupportThreadIds,
+    supportThreadIds,
     guildId: integration?.guildId ?? "",
     serverInviteCode: integration?.serverInviteCode ?? "",
     platformName: integration?.platformName ?? "Plex Wrapped",
     instructions: integration?.instructions ?? "",
   }
+}
 
-  const [formData, setFormData] = useState(initialState)
-
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault()
-
-    startTransition(async () => {
-      const result = await updateDiscordIntegrationSettings({
-        ...formData,
-        // Blank secrets are omitted so the action keeps the stored values.
-        clientSecret: formData.clientSecret.trim() || undefined,
-        botToken: formData.botToken.trim() || undefined,
-      })
-
-      if (result.success) {
-        setIsEditing(false)
-        toast.showSuccess("Discord settings updated successfully")
-        router.refresh()
-      } else {
-        toast.showError(result.error || "Failed to update Discord settings")
-      }
+/** The Discord form, always open (UI-31): values, dirty state, Discard and Save. */
+export function useDiscordForm(integration: StoredDiscordIntegration | null) {
+  const router = useRouter()
+  const toast = useToast()
+  return useSettingsForm(initialValues(integration), async (values) => {
+    const result = await updateDiscordIntegrationSettings({
+      ...values,
+      // Blank secrets are omitted so the action keeps the stored values.
+      clientSecret: values.clientSecret.trim() || undefined,
+      botToken: values.botToken.trim() || undefined,
     })
-  }
+    if (!result.success) {
+      toast.showError(result.error || "Failed to update Discord settings")
+      return
+    }
+    toast.showSuccess("Discord settings saved")
+    router.refresh()
+    return { ...values, clientSecret: "", botToken: "" }
+  })
+}
 
-  if (!isEditing) {
-    return (
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 space-y-4">
-          {integration ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">Linked Accounts</div>
-                <div className="text-sm text-foreground">{linkedCount}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">Bot Status</div>
-                <div className="text-sm text-foreground">
-                  {integration.botEnabled ? (
-                    <Badge variant="success">Enabled</Badge>
-                  ) : (
-                    <Badge>Disabled</Badge>
-                  )}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">Portal URL</div>
-                <div className="text-xs text-foreground font-mono truncate" title={portalUrl}>
-                  {portalUrl}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground">No Discord integration configured</div>
-          )}
-          {integration?.instructions && (
-            <div>
-              <div className="text-xs font-medium text-muted-foreground mb-1">Instructions</div>
-              <p className="text-sm text-foreground whitespace-pre-line border border-border rounded-lg p-3 bg-muted">
-                {integration.instructions}
-              </p>
-            </div>
-          )}
-        </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => {
-            setIsEditing(true)
-          }}
-          className="ml-4 whitespace-nowrap"
-        >
-          Edit
-        </Button>
-      </div>
-    )
-  }
+type DiscordForm = ReturnType<typeof useDiscordForm>
+
+interface DiscordIntegrationFieldsProps {
+  integration: StoredDiscordIntegration | null
+  values: DiscordForm["values"]
+  set: DiscordForm["set"]
+  isPending: boolean
+}
+
+/** The Discord fields: the two feature toggles, credentials and support settings. */
+export function DiscordIntegrationFields({ integration, values: formData, set, isPending }: DiscordIntegrationFieldsProps) {
+  // Whether a client secret / bot token is already stored (leave-blank-to-keep).
+  const hasStoredClientSecret = Boolean(integration?.hasClientSecret)
+  const hasStoredBotToken = Boolean(integration?.hasBotToken)
+  const setFormData = (next: typeof formData) => set(next)
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-4">
       <div className="space-y-4 p-4 border border-border rounded-lg">
         <StyledCheckbox
           id="discord-enabled"
@@ -314,23 +255,6 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
           className="w-full min-h-[120px]"
         />
       </div>
-
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Saving..." : "Save"}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => {
-            setIsEditing(false)
-            setFormData(initialState)
-          }}
-          disabled={isPending}
-        >
-          Cancel
-        </Button>
-      </div>
-    </form>
+    </div>
   )
 }

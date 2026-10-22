@@ -45,6 +45,7 @@ function renderSection(props: Partial<Parameters<typeof RewindSettingsSection>[0
       libraries={[{ id: '1', name: 'Films' }, { id: '2', name: 'Shows' }]}
       ratings={['PG', 'R']}
       status={{ redis: null, tautulli: 'connected' }}
+      health={{ status: 'ok', code: null, checkedAt: null }}
       {...props}
     />
   )
@@ -60,7 +61,7 @@ describe('RewindSettingsSection', () => {
     const user = userEvent.setup()
     renderSection()
 
-    const save = screen.getByTestId('rewind-settings-save')
+    const save = screen.getByTestId('settings-rewind-save')
     expect(save).toBeDisabled()
 
     await user.click(screen.getByRole('switch', { name: 'Rewind' }))
@@ -82,9 +83,9 @@ describe('RewindSettingsSection', () => {
     await user.click(publicLinks)
     expect(publicLinks).toHaveAttribute('aria-checked', 'false')
 
-    await user.click(screen.getByTestId('rewind-settings-discard'))
+    await user.click(screen.getByTestId('settings-rewind-discard'))
     expect(publicLinks).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByTestId('rewind-settings-save')).toBeDisabled()
+    expect(screen.getByTestId('settings-rewind-save')).toBeDisabled()
   })
 
   it('disables Discord, with its reason, while the bot is off', () => {
@@ -111,7 +112,7 @@ describe('RewindSettingsSection', () => {
     await user.clear(budget)
     await user.type(budget, '5.555')
     expect(screen.getByText('Use at most 2 decimals')).toBeInTheDocument()
-    expect(screen.getByTestId('rewind-settings-save')).toBeDisabled()
+    expect(screen.getByTestId('settings-rewind-save')).toBeDisabled()
   })
 
   it('lists stored libraries Tautulli no longer offers, and says when it is unavailable', () => {
@@ -144,7 +145,7 @@ describe('RewindSettingsSection', () => {
     await user.click(features.getByRole('checkbox', { name: 'Share: Save all cards' }))
     await user.click(features.getByRole('checkbox', { name: 'Notes for the core pages' }))
     await user.click(screen.getByRole('checkbox', { name: 'Setup' }))
-    await user.click(screen.getByTestId('rewind-settings-save'))
+    await user.click(screen.getByTestId('settings-rewind-save'))
     expect(updateRewindSettings).toHaveBeenCalledWith({ ...saved, rewindDisabledPages: ['people', 'setup', '+share.save-all'] })
   })
 
@@ -159,7 +160,7 @@ describe('RewindSettingsSection', () => {
 
     await user.click(screen.getByRole('checkbox', { name: 'The race: scrubber and Replay' }))
     await user.click(screen.getByRole('checkbox', { name: 'Taste' }))
-    await user.click(screen.getByTestId('rewind-settings-save'))
+    await user.click(screen.getByTestId('settings-rewind-save'))
     expect(updateRewindSettings).toHaveBeenCalledWith({ ...saved, rewindDisabledPages: ['people', 'taste', '+race.scrubber', '+calendar.grid'] })
   })
 

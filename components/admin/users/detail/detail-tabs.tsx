@@ -1,9 +1,9 @@
 "use client"
 
-import { Tabs } from "@base-ui/react/tabs"
 import { useRouter } from "next/navigation"
 import { type ReactNode, useTransition } from "react"
 
+import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs"
 import { userDetail, type UserDetailTab } from "@/lib/admin/routes"
 import { cn } from "@/lib/utils"
 
@@ -31,30 +31,22 @@ export function DetailTabs({ userId, tabs, active, children }: DetailTabsProps) 
   }
 
   return (
-    <Tabs.Root value={active} onValueChange={select} className="flex flex-col gap-6">
-      <Tabs.List activateOnFocus aria-label="Member details" className="flex gap-1 overflow-x-auto border-b" data-testid="admin-user-tabs">
+    <Tabs value={active} onValueChange={select}>
+      <TabsList aria-label="Member details" data-testid="admin-user-tabs">
         {tabs.map((tab) => (
-          <Tabs.Tab
-            key={tab.value}
-            value={tab.value}
-            data-testid={`admin-user-tab-${tab.value}`}
-            className={cn(
-              "-mb-px border-b-2 border-transparent px-3 py-2 text-ui whitespace-nowrap text-muted-foreground outline-none",
-              "hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[active]:border-primary data-[active]:text-foreground"
-            )}
-          >
+          <TabsTab key={tab.value} value={tab.value} data-testid={`admin-user-tab-${tab.value}`}>
             {tab.label}
-          </Tabs.Tab>
+          </TabsTab>
         ))}
-      </Tabs.List>
-      <Tabs.Panel
+      </TabsList>
+      <TabsPanel
         value={active}
         aria-busy={pending || undefined}
-        className={cn("outline-none", pending && "opacity-60")}
+        className={cn(pending && "opacity-60")}
         data-testid={`admin-user-panel-${active}`}
       >
         {children}
-      </Tabs.Panel>
-    </Tabs.Root>
+      </TabsPanel>
+    </Tabs>
   )
 }
