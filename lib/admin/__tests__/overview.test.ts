@@ -39,9 +39,9 @@ beforeEach(() => {
   jest.mocked(getConnectionHealth).mockResolvedValue({
     checkedAt: NOW.toISOString(),
     connections: [
-      { id: "plex", label: "Plex", status: "ok" },
-      { id: "tautulli", label: "Tautulli", status: "unreachable" },
-      { id: "sonarr", label: "Sonarr", status: "notConfigured" },
+      { id: "plex", label: "Plex", status: "ok", code: null },
+      { id: "tautulli", label: "Tautulli", status: "unreachable", code: "UNREACHABLE" },
+      { id: "sonarr", label: "Sonarr", status: "notConfigured", code: null },
     ],
   })
   jest.mocked(checkDependencies).mockResolvedValue({ database: "ok", redis: "ok" })
