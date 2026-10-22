@@ -103,7 +103,8 @@ describe("StripeSection", () => {
       librarySectionIds: [1],
     })
     expect(await screen.findByText("Too small")).toBeInTheDocument()
-    expect(screen.getByTestId("stripe-secret-key-input")).toHaveAttribute("aria-invalid", "true")
+    // Base UI Field can mark the control invalid after the error text renders
+    await waitFor(() => expect(screen.getByTestId("stripe-secret-key-input")).toHaveAttribute("aria-invalid", "true"))
     expect(mockShowError).not.toHaveBeenCalled()
   })
 })
