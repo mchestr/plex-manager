@@ -22,6 +22,7 @@
     "codemod:tokens": "tsx --tsconfig tsconfig.scripts.json scripts/codemods/tokens.ts",
     "codemod:spinners": "tsx --tsconfig tsconfig.scripts.json scripts/codemods/spinners.ts",
     "codemod:icons": "tsx --tsconfig tsconfig.scripts.json scripts/codemods/icons.ts",
+    "codemod:adapters": "tsx --tsconfig tsconfig.scripts.json scripts/codemods/adapters.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

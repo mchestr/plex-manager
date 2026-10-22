@@ -194,6 +194,8 @@ export function runCli(options: {
   root: string
   log: (line: string) => void
   name: string
+  /** What `rewritten` counts in the summary line; SVGs by default. */
+  unit?: string
   reviewFile: string
   transform: (path: string, source: string) => SvgResult
 }): number {
@@ -229,7 +231,7 @@ export function runCli(options: {
     if (write) writeFileSync(absolute, result.output)
   }
   writeFileSync(resolve(root, reviewFile), formatSvgReview(`${options.name} review`, reviews))
-  log(`${write ? 'Rewrote' : 'Would rewrite'} ${rewritten} SVGs in ${changed.length} of ${files.length} files`)
+  log(`${write ? 'Rewrote' : 'Would rewrite'} ${rewritten} ${options.unit ?? 'SVGs'} in ${changed.length} of ${files.length} files`)
   if (write) changed.forEach((path) => log(`  changed ${path}`))
   log(`${reviews.length} review items in ${reviewFile}`)
   return 0
