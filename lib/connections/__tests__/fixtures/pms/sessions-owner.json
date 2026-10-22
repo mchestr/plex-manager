@@ -1,0 +1,41 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "Metadata": [
+      {
+        "addedAt": 1700000000,
+        "duration": 8160000,
+        "key": "/library/metadata/4211",
+        "librarySectionID": "1",
+        "ratingKey": "4211",
+        "sessionKey": "17",
+        "title": "Arrival",
+        "type": "movie",
+        "viewOffset": 1200000,
+        "year": 2016,
+        "Media": [{ "videoResolution": "1080" }],
+        "User": { "id": "1", "thumb": "https://plex.tv/users/0a1b2c/avatar?c=1700000000", "title": "owner" },
+        "Player": { "device": "Apple TV", "platform": "tvOS", "product": "Plex for Apple TV", "state": "playing" },
+        "Session": { "id": "a1b2c3d4", "bandwidth": 12000, "location": "lan" }
+      },
+      {
+        "addedAt": 1700000100,
+        "duration": 2700000,
+        "grandparentTitle": "Severance",
+        "index": 3,
+        "key": "/library/metadata/5310",
+        "librarySectionID": "2",
+        "parentIndex": 1,
+        "ratingKey": "5310",
+        "sessionKey": "18",
+        "title": "In Perpetuity",
+        "type": "episode",
+        "viewOffset": 600000,
+        "Media": [{ "videoResolution": "4k" }],
+        "User": { "id": "1001", "thumb": "https://plex.tv/users/a1b2c3/avatar?c=1700000000", "title": "alice" },
+        "Player": { "device": "iPhone", "platform": "iOS", "product": "Plex for iOS", "state": "paused" },
+        "Session": { "id": "e5f6a7b8", "bandwidth": 8000, "location": "wan" }
+      }
+    ]
+  }
+}

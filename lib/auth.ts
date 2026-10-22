@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 
 import { getAccessLevel, type AccessLevel } from "@/lib/access"
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
+import { withMachineIdentifier } from "@/lib/connections/plex-machine-id"
 import { waitForInvitedAccess } from "@/lib/connections/plex-access-wait"
 import { readPin } from "@/lib/connections/plex-pin"
 import { getEnv, usesSecureCookies } from "@/lib/env"
@@ -118,7 +119,7 @@ async function readPlexSignIn(
 }
 
 /** Errors the Plex `authorize` passes on to the callback page, which maps them to its codes. */
-const PLEX_SIGN_IN_ERRORS = new Set(["access_denied", "NO_SERVER_CONFIGURED"])
+const PLEX_SIGN_IN_ERRORS = new Set(["access_denied", "plex_unavailable", "NO_SERVER_CONFIGURED"])
 
 export const authOptions: NextAuthOptions = {
   // NOTE: PrismaAdapter is not compatible with CredentialsProvider
@@ -154,14 +155,15 @@ export const authOptions: NextAuthOptions = {
           const plexUser = userInfoResult.data
 
           // Get the configured Plex server
-          const plexServer = await prisma.plexServer.findFirst({
+          const activeServer = await prisma.plexServer.findFirst({
             where: { isActive: true },
           })
 
-          if (!plexServer) {
+          if (!activeServer) {
             logger.error("No active Plex server configured")
             throw new Error("NO_SERVER_CONFIGURED")
           }
+          const plexServer = await withMachineIdentifier(activeServer)
 
           // Check if user has access to the configured Plex server
           // Use the server's admin token to check if the user exists in the server's user list
@@ -171,26 +173,26 @@ export const authOptions: NextAuthOptions = {
             url: plexServer.url,
             token: plexServer.token,
             adminPlexUserId: plexServer.adminPlexUserId,
+            machineIdentifier: plexServer.machineIdentifier,
           }
           const accessCheck = inviteCode
             ? await waitForInvitedAccess(serverConfig, plexUser.id)
             : await checkUserServerAccess(serverConfig, plexUser.id)
 
-          if (!accessCheck.success) {
-            // A failed access check (Plex/API error) is always fatal, regardless
-            // of the Stripe flag — we must not silently admit a user when we could
-            // not actually determine their access.
-            logger.warn("Plex user access check failed", {
+          if (accessCheck.status === "unknown") {
+            // Plex could not answer (GAP-05). Admission still fails closed,
+            // whatever the Stripe flag, but the member is told Plex is
+            // temporarily unavailable rather than that they have no access.
+            logger.warn("Plex user access unknown", {
               plexUserId: plexUser.id,
-              username: plexUser.username,
-              // Email is automatically sanitized by logger in production
               serverUrl: plexServer.url,
-              reason: accessCheck.error || "Access check failed",
+              reason: accessCheck.reason,
+              retryAfterSec: accessCheck.retryAfterSec,
             })
-            throw new Error("access_denied")
+            throw new Error("plex_unavailable")
           }
 
-          if (!accessCheck.hasAccess) {
+          if (accessCheck.status === "denied") {
             // Clean "no access" result. Only relax the deny when the Stripe
             // subscription flow is enabled — then the user is allowed to create a
             // session and is gated to /subscribe by the (app) layout guard.
@@ -206,7 +208,6 @@ export const authOptions: NextAuthOptions = {
                 username: plexUser.username,
                 // Email is automatically sanitized by logger in production
                 serverUrl: plexServer.url,
-                reason: accessCheck.error || "No access to server",
               })
               throw new Error("access_denied")
             }

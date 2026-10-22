@@ -240,6 +240,7 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
       {
         url: plexServer.url,
         token: plexServer.token,
+        machineIdentifier: plexServer.machineIdentifier,
       },
       plexUser.email,
       inviteSettings

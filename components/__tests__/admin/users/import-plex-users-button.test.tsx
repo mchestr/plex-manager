@@ -62,6 +62,8 @@ describe('ImportPlexUsersButton', () => {
       success: true,
       imported: 0,
       skipped: 0,
+      managed: 0,
+      pending: 0,
       errors: [],
     })
 
@@ -77,6 +79,8 @@ describe('ImportPlexUsersButton', () => {
       success: true,
       imported: 5,
       skipped: 0,
+      managed: 0,
+      pending: 0,
       errors: [],
     })
 
@@ -90,12 +94,33 @@ describe('ImportPlexUsersButton', () => {
     expect(mockRefresh).not.toHaveBeenCalled()
   })
 
+  it('reports managed users and pending invites left out', async () => {
+    const user = userEvent.setup()
+    jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
+      success: true,
+      imported: 3,
+      skipped: 0,
+      managed: 1,
+      pending: 2,
+      errors: [],
+    })
+
+    render(<ImportPlexUsersButton />)
+    await user.click(screen.getByText('Import from Plex'))
+
+    await waitFor(() =>
+      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 3 users, 1 managed, 2 pending invites left out')
+    )
+  })
+
   it('should show success message with singular "user" when importing 1 user', async () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: true,
       imported: 1,
       skipped: 0,
+      managed: 0,
+      pending: 0,
       errors: [],
     })
 
@@ -115,6 +140,8 @@ describe('ImportPlexUsersButton', () => {
       success: true,
       imported: 3,
       skipped: 2,
+      managed: 0,
+      pending: 0,
       errors: [],
     })
 
@@ -135,6 +162,8 @@ describe('ImportPlexUsersButton', () => {
       success: true,
       imported: 3,
       skipped: 0,
+      managed: 0,
+      pending: 0,
       errors: ['Error 1', 'Error 2'],
     })
 
@@ -155,6 +184,8 @@ describe('ImportPlexUsersButton', () => {
       success: true,
       imported: 1,
       skipped: 0,
+      managed: 0,
+      pending: 0,
       errors,
     })
 
@@ -176,6 +207,8 @@ describe('ImportPlexUsersButton', () => {
       success: false,
       imported: 0,
       skipped: 0,
+      managed: 0,
+      pending: 0,
       errors: ['No active Plex server configured'],
     })
 
@@ -195,6 +228,8 @@ describe('ImportPlexUsersButton', () => {
       success: false,
       imported: 0,
       skipped: 0,
+      managed: 0,
+      pending: 0,
       errors: [],
     })
 
@@ -214,6 +249,8 @@ describe('ImportPlexUsersButton', () => {
       success: true,
       imported: 2,
       skipped: 0,
+      managed: 0,
+      pending: 0,
       errors: ['Single error'],
     })
 
@@ -233,6 +270,8 @@ describe('ImportPlexUsersButton', () => {
       success: true,
       imported: 5,
       skipped: 3,
+      managed: 0,
+      pending: 0,
       errors: ['Error 1', 'Error 2'],
     })
 
@@ -253,6 +292,8 @@ describe('ImportPlexUsersButton', () => {
       success: true,
       imported: 1,
       skipped: 0,
+      managed: 0,
+      pending: 0,
       errors: [],
     })
 
@@ -277,6 +318,8 @@ describe('ImportPlexUsersButton', () => {
       success: false,
       imported: 0,
       skipped: 0,
+      managed: 0,
+      pending: 0,
       errors: ['Failed'],
     })
 

@@ -405,11 +405,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Block plex.tv in DNS and sign in as a member: "Plex is temporarily unavailable", and the member's Discord role is unchanged. Restart the PMS during a sign-in: it succeeds. The owner streams something and runs `/watching`: their stream is listed. Import users on a server where a friend shares only their own server: that friend is not imported.
 
 **Done when.**
-- [ ] Access checks return granted, denied or unknown, and an unknown result never denies a sign-in as a verdict or removes a role.
-- [ ] Server users come from this server's shares, managed users are kept, and pending shares are labelled and refused.
-- [ ] The owner's sessions match, and PMS reads use container paging and the PUT scrobble.
-- [ ] The recorded-response contract tests pass.
+- [x] Access checks return granted, denied or unknown, and an unknown result never denies a sign-in as a verdict or removes a role.
+- [x] Server users come from this server's shares, managed users are kept, and pending shares are labelled and refused.
+- [x] The owner's sessions match, and PMS reads use container paging and the PUT scrobble.
+- [x] The recorded-response contract tests pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270115000000_p118_plex_server_machine_identifier`. `checkUserServerAccess(config, plexUserId)` takes an optional `machineIdentifier` and returns `{ status: "granted" | "denied" } | { status: "unknown", reason: "plex_unavailable" | "rate_limited" | "server_unreachable" | "server_token_invalid", retryAfterSec? }`; a 401 on the owner token is `unknown` (`server_token_invalid`), not a denial. `withMachineIdentifier(row)` (`lib/connections/plex-machine-id.ts`) fills the column lazily; setup and settings store it on save; `getActivePlexServerConfig()` carries it. `lib/connections/plex-tv-users.ts` exports `fetchPlexTvUsers`, `parsePlexTvUsers` and `activeShareFor` (an accepted share of a machine). A managed user is `home && restricted` with no email, and `getAllPlexServerUsers` keeps one without a share. `importPlexUsers` leaves pending invites out and returns `managed` and `pending` counts. `computeRoleMetadata` returns `metadata: null` on unknown and `syncDiscordRoleConnection` then pushes and stores nothing. `validatePlexToken` returns `"valid" | "invalid" | "unreachable"`. `matchesSessionUser` and `containerPage`/`PLEX_PAGE_SIZE` live in `plex-sessions.ts`. The callback shows `plex_unavailable` on the shared StatusScreen with test id `plex-callback-error-plex_unavailable`, not `auth-plex-unavailable`. The fixtures were written from the documented response shapes, not recorded from a live server; the import test extends `__tests__/actions/import-plex-users.test.ts`.)
 
 ### Step P11.9: Chatbot tool and Prometheus client fixes
 

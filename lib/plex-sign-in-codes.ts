@@ -4,8 +4,11 @@
  * messages, and next-auth's `signIn()` hands them back to the page, so no
  * server text ever reaches the screen.
  *
- * - `access_denied` sends the member to `/auth/denied`. A failed access check
- *   is always this code, whatever the Stripe flag.
+ * - `access_denied` sends the member to `/auth/denied`: plex.tv answered and
+ *   the account has no share of this server (with the Stripe flag off).
+ * - `plex_unavailable` is an access check Plex could not answer (a 429, a 5xx,
+ *   a timeout). Sign-in still fails, but it is never shown as a verdict
+ *   (GAP-05).
  * - The rest are shown on the callback page's StatusScreen with the copy
  *   below; every one but `invite_invalid` offers Try again.
  *
@@ -20,6 +23,7 @@ import { isRateLimitedSignInError, RATE_LIMITED_MESSAGE } from "@/lib/security/r
 export type PlexSignInCode =
   | "plex_pin_expired"
   | "access_denied"
+  | "plex_unavailable"
   | "invite_invalid"
   | "rate_limited"
   | "sign_in_failed"
@@ -36,6 +40,10 @@ export const PLEX_SIGN_IN_COPY: Record<ShownPlexSignInCode, { title: string; mes
     title: "This invite can't be used",
     message: "This invite can't be used. It may have expired, been used up, or be for another server.",
   },
+  plex_unavailable: {
+    title: "Plex is temporarily unavailable",
+    message: "Plex is temporarily unavailable. Try again in a minute.",
+  },
   rate_limited: { title: "Too many attempts", message: RATE_LIMITED_MESSAGE },
   sign_in_failed: {
     title: "Sign-in didn't finish",
@@ -43,7 +51,7 @@ export const PLEX_SIGN_IN_COPY: Record<ShownPlexSignInCode, { title: string; mes
   },
 }
 
-const AUTHORIZE_CODES = new Set<string>(["plex_pin_expired", "access_denied", "invite_invalid"])
+const AUTHORIZE_CODES = new Set<string>(["plex_pin_expired", "access_denied", "plex_unavailable", "invite_invalid"])
 
 /** The code for the `error` that next-auth's `signIn("plex")` returned. */
 export function plexSignInCodeFor(error: string | null | undefined): PlexSignInCode {

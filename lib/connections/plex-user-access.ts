@@ -1,137 +1,89 @@
 /**
- * Plex user access checking functions
+ * Whether a Plex account may use this server, as a tri-state (GAP-05).
  *
- * Functions for checking if users have access to Plex servers
+ * - `granted`: the owner, or a user with an accepted share of this server's
+ *   machine identifier.
+ * - `denied`: plex.tv answered and the user has no accepted share. A pending
+ *   invite is denied until it is accepted.
+ * - `unknown`: plex.tv or the PMS could not answer (429 with its
+ *   `Retry-After`, 5xx, timeout, network or parse error, or the owner token
+ *   refused). Following Plex's auth guide this is an error state, never a
+ *   verdict: callers fail closed where they must, but never show it as
+ *   "no access" and never remove a role on it.
+ *
+ * The machine identifier comes from `PlexServer.machineIdentifier` when the
+ * caller passes it, so a PMS restart does not block a decision plex.tv makes.
+ *
+ * @module lib/connections/plex-user-access
  */
 
-import {
-  logger,
-  sanitizeUrlForLogging,
-  type PlexUser,
-} from "./plex-core"
-import { getPlexServerIdentity } from "./plex-connection"
-import { getPlexUsers } from "./plex-user-info"
+import { resolveMachineIdentifier } from "./plex-connection"
+import { logger, sanitizeUrlForLogging } from "./plex-core"
+import { activeShareFor, fetchPlexTvUsers } from "./plex-tv-users"
 
-/**
- * Checks if a user has access to a server based on their servers list
- */
-function checkUserHasAccess(
-  users: ReadonlyMap<string, PlexUser>,
-  userId: string,
-  machineIdentifier: string,
-  adminUserId?: string | null
-): boolean {
-  // Check if user is admin
-  if (adminUserId && userId === adminUserId) {
-    return true
-  }
+type PlexAccessUnknownReason = "plex_unavailable" | "rate_limited" | "server_unreachable" | "server_token_invalid"
 
-  // Check if user exists in the map
-  const user = users.get(userId)
-  if (!user) {
-    return false
-  }
+export type PlexAccessResult =
+  | { status: "granted" }
+  | { status: "denied" }
+  | { status: "unknown"; reason: PlexAccessUnknownReason; retryAfterSec?: number }
 
-  // Check if user has access to the server by machine identifier
-  const hasAccess = user.servers.some((server) => server.machineIdentifier === machineIdentifier)
-
-  if (!hasAccess) {
-    logger.debug("User found but doesn't have access to server", {
-      userId,
-      username: user.username,
-      machineIdentifier,
-    })
-  }
-
-  return hasAccess
+export interface PlexAccessServerConfig {
+  url: string
+  token: string
+  adminPlexUserId?: string | null
+  /** The stored `PlexServer.machineIdentifier`; without it the PMS `/identity` is asked. */
+  machineIdentifier?: string | null
 }
 
 /**
- * Checks if a user has access to a configured Plex server
- * Uses the Plex.tv API to get users and check if the user has access to the server
+ * Checks whether `plexUserId` may use the configured Plex server. Never
+ * throws; see the module docs for the three results.
  */
 export async function checkUserServerAccess(
-  serverConfig: { url: string; token: string; adminPlexUserId?: string | null },
+  serverConfig: PlexAccessServerConfig,
   plexUserId: string
-): Promise<{ success: boolean; hasAccess: boolean; error?: string }> {
-  const checkStartTime = Date.now()
-  logger.debug("Checking user server access", { plexUserId, url: sanitizeUrlForLogging(serverConfig.url) })
+): Promise<PlexAccessResult> {
+  const startedAt = Date.now()
+  const userId = String(plexUserId).trim()
 
-  try {
-    // Normalize IDs for comparison (convert to string and trim)
-    const normalizedPlexUserId = String(plexUserId).trim()
-    logger.debug("Normalized Plex user ID", { normalizedPlexUserId })
-
-    // Check if user is admin (optimization: skip API calls)
-    if (serverConfig.adminPlexUserId && normalizedPlexUserId === String(serverConfig.adminPlexUserId).trim()) {
-      logger.info("User is admin, granting access", { plexUserId: normalizedPlexUserId })
-      return { success: true, hasAccess: true }
-    }
-
-    // Get the server's machine identifier
-    logger.debug("Fetching server machine identifier")
-    const identityResult = await getPlexServerIdentity({
-      url: serverConfig.url,
-      token: serverConfig.token,
-    })
-
-    if (!identityResult.success || !identityResult.machineIdentifier) {
-      const duration = Date.now() - checkStartTime
-      logger.warn("Failed to get server machine identifier", { error: identityResult.error, duration })
-      return {
-        success: false,
-        hasAccess: false,
-        error: identityResult.error ?? "Failed to get server machine identifier",
-      }
-    }
-
-    const machineIdentifier = identityResult.machineIdentifier
-    logger.debug("Got machine identifier", { machineIdentifier })
-
-    // Get all users from Plex.tv API
-    logger.debug("Fetching all users from Plex.tv API")
-    const usersFetchStart = Date.now()
-    const usersResult = await getPlexUsers(serverConfig.token)
-    const usersFetchDuration = Date.now() - usersFetchStart
-    logger.debug("Fetched users", { duration: usersFetchDuration, success: usersResult.success, count: usersResult.data?.length })
-
-    if (!usersResult.success) {
-      const duration = Date.now() - checkStartTime
-      logger.warn("Failed to fetch users", { error: usersResult.error, duration })
-      return { success: false, hasAccess: false, error: usersResult.error ?? "Failed to fetch users" }
-    }
-
-    if (!usersResult.data) {
-      const duration = Date.now() - checkStartTime
-      logger.warn("No user data returned", { duration })
-      return { success: false, hasAccess: false, error: "No user data returned" }
-    }
-
-    logger.debug("Found users", { count: usersResult.data.length })
-
-    // Create a map of users by ID for efficient lookup
-    const userMap = new Map<string, PlexUser>()
-    for (const user of usersResult.data) {
-      userMap.set(user.id, user)
-    }
-
-    // Check if user has access
-    const hasAccess = checkUserHasAccess(userMap, normalizedPlexUserId, machineIdentifier, serverConfig.adminPlexUserId)
-
-    const duration = Date.now() - checkStartTime
-    if (hasAccess) {
-      logger.info("User has access", { duration })
-      return { success: true, hasAccess: true }
-    }
-
-    logger.info("User does not have access", { duration })
-    return { success: true, hasAccess: false, error: "User does not have access to this server" }
-  } catch (error) {
-    const duration = Date.now() - checkStartTime
-    logger.error("Error checking server access", error, { duration })
-    if (error instanceof Error) {
-      return { success: false, hasAccess: false, error: `Error checking server access: ${error.message}` }
-    }
-    return { success: false, hasAccess: false, error: "Failed to check server access" }
+  if (serverConfig.adminPlexUserId && userId === String(serverConfig.adminPlexUserId).trim()) {
+    logger.info("User is the server owner, granting access", { plexUserId: userId })
+    return { status: "granted" }
   }
+
+  const identity = await resolveMachineIdentifier(serverConfig)
+  if (!identity.success || !identity.machineIdentifier) {
+    logger.warn("Plex access unknown: no machine identifier", {
+      url: sanitizeUrlForLogging(serverConfig.url),
+      error: identity.error,
+      duration: Date.now() - startedAt,
+    })
+    return { status: "unknown", reason: "server_unreachable" }
+  }
+
+  const users = await fetchPlexTvUsers(serverConfig.token)
+  if (!users.ok) {
+    const duration = Date.now() - startedAt
+    if (users.kind === "invalid_token") {
+      logger.error("Plex access unknown: plex.tv refused the server owner's token", undefined, { duration })
+      return { status: "unknown", reason: "server_token_invalid" }
+    }
+    logger.warn("Plex access unknown: plex.tv unavailable", { reason: users.reason, status: users.status, duration })
+    if (users.reason === "rate_limited") {
+      return users.retryAfterSec === undefined
+        ? { status: "unknown", reason: "rate_limited" }
+        : { status: "unknown", reason: "rate_limited", retryAfterSec: users.retryAfterSec }
+    }
+    return { status: "unknown", reason: "plex_unavailable" }
+  }
+
+  const user = users.users.find((candidate) => candidate.id === userId)
+  const granted = Boolean(user && activeShareFor(user, identity.machineIdentifier))
+  logger.info(granted ? "User has access" : "User does not have access", {
+    plexUserId: userId,
+    pendingInvite: Boolean(user?.servers.some((share) => share.machineIdentifier === identity.machineIdentifier && share.pending)),
+    duration: Date.now() - startedAt,
+  })
+  return granted ? { status: "granted" } : { status: "denied" }
 }

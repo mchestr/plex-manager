@@ -7,6 +7,7 @@
 
 import { plexProduct } from "@/lib/brand"
 import { getClientIdentifier } from "@/lib/connections/plex-core"
+import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
 import { createLogger } from "@/lib/utils/logger"
 import { WatchlistItem } from "@/lib/validations/watchlist"
 
@@ -148,21 +149,28 @@ export async function getPlexWatchlist(userToken: string): Promise<GetWatchlistR
   }
 }
 
+export type PlexTokenStatus = "valid" | "invalid" | "unreachable"
+
 /**
- * Validate a user's Plex token is still valid
+ * Whether a member's Plex token still works. Only a 401 means the token is
+ * invalid (Plex's auth guide); any other status, a timeout or a network
+ * error is `unreachable`, which is retried on the next run (GAP-05).
+ *
  * @param userToken User's Plex auth token
  */
-export async function validatePlexToken(userToken: string): Promise<boolean> {
+export async function validatePlexToken(userToken: string): Promise<PlexTokenStatus> {
   try {
-    const url = "https://plex.tv/api/v2/user"
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout("https://plex.tv/api/v2/user", {
       method: "GET",
       headers: getPlexHeaders(userToken),
     })
-
-    return response.ok
+    await response.body?.cancel().catch(() => undefined)
+    if (response.ok) return "valid"
+    if (response.status === 401) return "invalid"
+    logger.warn("plex.tv could not validate the token", { status: response.status })
+    return "unreachable"
   } catch (error) {
-    logger.debug("Error validating Plex token", { error })
-    return false
+    logger.warn("plex.tv was unreachable while validating the token", { timeout: isTimeoutError(error) })
+    return "unreachable"
   }
 }

@@ -6,15 +6,36 @@ import { type PlexServerParsed } from "@/lib/validations/plex"
 import { z } from "zod"
 
 import { serviceErrorMessage, serviceFetch } from "@/lib/connections/http"
+import { containerPage, PLEX_PAGE_SIZE } from "@/lib/connections/plex-sessions"
 import { logger, type PlexMediaItem } from "./plex-core"
 
+const optionalNumber = z.coerce.number().optional().catch(undefined)
+const optionalText = z.string().optional().catch(undefined)
+
+/** The fields this module reads from one search result; Plex sends many more. */
+const searchItemSchema = z.looseObject({
+  ratingKey: z.union([z.string(), z.number()]).transform(String).catch(""),
+  title: z.string().catch(""),
+  type: z.string().catch(""),
+  year: optionalNumber,
+  parentTitle: optionalText,
+  grandparentTitle: optionalText,
+  index: optionalNumber,
+  parentIndex: optionalNumber,
+  thumb: optionalText,
+  viewCount: optionalNumber,
+  lastViewedAt: optionalNumber,
+})
+
 const searchResponseSchema = z.looseObject({
-  MediaContainer: z.looseObject({ Metadata: z.unknown().optional() }).optional(),
+  MediaContainer: z
+    .looseObject({ Metadata: z.union([z.array(searchItemSchema), searchItemSchema]).optional() })
+    .optional(),
 })
 
 /**
- * Search for media items in Plex by title
- * Uses the search endpoint to find media items
+ * Search for media items in Plex by title, the first page of 50 results
+ * (`X-Plex-Container-Start`/`Size`), each validated with Zod (GAP-10).
  */
 export async function searchPlexMedia(
   config: PlexServerParsed,
@@ -40,7 +61,7 @@ export async function searchPlexMedia(
     const result = await serviceFetch({
       service: "Plex",
       url: `${config.url}/search?${params.toString()}`,
-      headers: { "X-Plex-Token": config.token },
+      headers: { "X-Plex-Token": config.token, ...containerPage(PLEX_PAGE_SIZE) },
       schema: searchResponseSchema,
     })
 
@@ -65,10 +86,10 @@ export async function searchPlexMedia(
       ? mediaContainer.Metadata
       : [mediaContainer.Metadata]
 
-    const mediaItems: PlexMediaItem[] = metadataArray.map((item: any) => ({
-      ratingKey: item.ratingKey?.toString() || '',
-      title: item.title || '',
-      type: item.type || '',
+    const mediaItems: PlexMediaItem[] = metadataArray.filter((item) => item.ratingKey).map((item) => ({
+      ratingKey: item.ratingKey,
+      title: item.title,
+      type: item.type,
       year: item.year,
       parentTitle: item.parentTitle,
       grandparentTitle: item.grandparentTitle,

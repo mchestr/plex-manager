@@ -1,0 +1,14 @@
+{
+  "429": {
+    "status": 429,
+    "contentType": "application/json",
+    "headers": { "Retry-After": "30" },
+    "body": "{\"errors\":[{\"code\":1029,\"message\":\"Too many requests, slow down owner@example.com\",\"status\":429}]}"
+  },
+  "503": {
+    "status": 503,
+    "contentType": "text/html",
+    "headers": {},
+    "body": "<html><head><title>503 Service Temporarily Unavailable</title></head><body><center><h1>503 Service Temporarily Unavailable</h1></center></body></html>"
+  }
+}

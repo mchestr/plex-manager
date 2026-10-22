@@ -96,13 +96,15 @@ export async function savePlexServer(data: WithOptionalSecret<PlexServerInput, "
     }
 
     // Fetch the admin's Plex user ID from the token
-    const { getPlexUserInfo } = await import("@/lib/connections/plex")
+    const { getPlexServerIdentity, getPlexUserInfo } = await import("@/lib/connections/plex")
     const userInfoResult = await getPlexUserInfo(validated.token)
     if (!userInfoResult.success || !userInfoResult.data) {
       return { success: false, error: "Failed to fetch user info from Plex token" }
     }
 
     const adminPlexUserId = userInfoResult.data.id
+    // Stored so sign-in and invites need no /identity call; filled later if the PMS does not say now
+    const identity = await getPlexServerIdentity(validated)
 
     await prisma.$transaction(async (tx) => {
       // Create or update setup record
@@ -133,6 +135,7 @@ export async function savePlexServer(data: WithOptionalSecret<PlexServerInput, "
           token: validated.token,
           publicUrl: validated.publicUrl,
           adminPlexUserId,
+          machineIdentifier: identity.machineIdentifier ?? null,
           isActive: true,
         },
       })
