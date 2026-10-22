@@ -6,6 +6,7 @@ import { adminAction, memberAction } from "@/lib/actions/define-action"
 import { type ActionErrorCode, type ActionResult, fail, ok } from "@/lib/actions/result"
 import { unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { type PlexUnshareErrorCode } from "@/lib/connections/plex-invitations"
+import { stopSyncAndClearPlexToken } from "@/lib/members/offboard"
 import { prisma } from "@/lib/prisma"
 import { endUserSessions } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
@@ -87,7 +88,8 @@ const UNSHARE_ERROR_COPY: Record<PlexUnshareErrorCode, string> = {
 /**
  * Removes a user's share of the configured Plex server (admin only), leaving
  * their plex.tv friendship and the owner's other servers alone. A share that
- * is already gone succeeds as `already_removed`. Either success also ends the
+ * is already gone succeeds as `already_removed`. Either success also stops
+ * their watchlist sync, clears their stored Plex token (GAP-31) and ends the
  * user's sessions (SEC-10).
  *
  * @param input - `{ userId }`
@@ -131,6 +133,7 @@ export const unshareUserLibrary = adminAction({
       return { success: false, code: result.code, error: UNSHARE_ERROR_COPY[result.code] }
     }
 
+    await stopSyncAndClearPlexToken(user.id)
     await endUserSessions(user.id, "unshared", actorId)
 
     logger.info("Unshared user library", { userId: user.id, status: result.status })

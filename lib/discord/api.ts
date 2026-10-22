@@ -121,6 +121,39 @@ export async function refreshDiscordToken({
   return (await response.json()) as DiscordTokenResponse
 }
 
+interface RevokeParams {
+  clientId: string
+  clientSecret: string
+  /** The refresh token when there is one: revoking it ends the whole grant. */
+  token: string
+  tokenTypeHint: "access_token" | "refresh_token"
+}
+
+/**
+ * Revokes a member's OAuth grant at Discord (`POST /oauth2/token/revoke`), so
+ * the app's link stops working there too (GAP-31). Discord answers 200 for a
+ * token it no longer knows, so a rerun succeeds.
+ *
+ * @throws When Discord refuses the request; the body is logged, never returned.
+ */
+export async function revokeDiscordToken({ clientId, clientSecret, token, tokenTypeHint }: RevokeParams): Promise<void> {
+  const response = await fetch(`${DISCORD_API_BASE}/oauth2/token/revoke`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      token,
+      token_type_hint: tokenTypeHint,
+    }),
+  })
+
+  if (!response.ok) {
+    logger.error("Discord token revoke failed", undefined, { status: response.status })
+    throw new Error("Unable to revoke the Discord grant")
+  }
+}
+
 export async function fetchDiscordUserProfile(accessToken: string): Promise<DiscordUserProfile> {
   const response = await fetch(`${DISCORD_API_BASE}/users/@me`, {
     headers: {

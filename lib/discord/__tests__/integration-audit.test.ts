@@ -2,7 +2,8 @@
  * Step 19 / Part A — audit events emitted from lib/discord/integration.ts.
  *
  * - completeDiscordLink → DISCORD_ACCOUNT_LINKED (actor userId + discordUserId).
- * - clearDiscordRoleForUser → DISCORD_ACCOUNT_UNLINKED.
+ * - clearDiscordRoleForUser → DISCORD_ACCOUNT_UNLINKED, after revoking the
+ *   grant at Discord and deleting the chat sessions of that Discord id (GAP-31).
  */
 
 import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
@@ -28,7 +29,9 @@ jest.mock("@/lib/prisma", () => ({
       updateMany: jest.fn(),
       findUniqueOrThrow: jest.fn(),
     },
+    discordChatSession: { deleteMany: jest.fn() },
     user: { findUnique: jest.fn() },
+    $transaction: jest.fn((operations: Promise<unknown>[]) => Promise.all(operations)),
   },
 }))
 
@@ -36,6 +39,7 @@ jest.mock("@/lib/discord/api", () => ({
   exchangeDiscordCode: jest.fn(),
   fetchDiscordUserProfile: jest.fn(),
   refreshDiscordToken: jest.fn(),
+  revokeDiscordToken: jest.fn(),
   updateDiscordRoleConnection: jest.fn(),
 }))
 
@@ -51,6 +55,7 @@ import { prisma } from "@/lib/prisma"
 import {
   exchangeDiscordCode,
   fetchDiscordUserProfile,
+  revokeDiscordToken,
   updateDiscordRoleConnection,
 } from "@/lib/discord/api"
 
@@ -59,6 +64,7 @@ const p = prisma as unknown as {
   discordIntegration: { findUnique: jest.Mock }
   discordConnection: { upsert: jest.Mock; update: jest.Mock; deleteMany: jest.Mock; findUnique: jest.Mock }
   discordOAuthState: { updateMany: jest.Mock; findUniqueOrThrow: jest.Mock }
+  discordChatSession: { deleteMany: jest.Mock }
   user: { findUnique: jest.Mock }
 }
 
@@ -119,6 +125,7 @@ describe("clearDiscordRoleForUser audit", () => {
     })
     p.discordConnection.findUnique.mockResolvedValue({
       userId: "user-7",
+      discordUserId: "discord-7",
       accessToken: "at",
       revokedAt: null,
       expiresAt: new Date(Date.now() + 600_000),
@@ -127,13 +134,40 @@ describe("clearDiscordRoleForUser audit", () => {
     ;(updateDiscordRoleConnection as jest.Mock).mockResolvedValue({})
     p.discordConnection.deleteMany.mockResolvedValue({ count: 1 })
 
-    await clearDiscordRoleForUser("user-7")
+    await expect(clearDiscordRoleForUser("user-7")).resolves.toEqual({ linked: true, roleCleared: true, grantRevoked: true })
 
+    expect(revokeDiscordToken).toHaveBeenCalledWith({
+      clientId: "client-1",
+      clientSecret: "secret",
+      token: "rt",
+      tokenTypeHint: "refresh_token",
+    })
+    expect(p.discordConnection.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-7" } })
+    expect(p.discordChatSession.deleteMany).toHaveBeenCalledWith({ where: { discordUserId: "discord-7" } })
     expect(mockLogAuditEvent).toHaveBeenCalledWith(
       AuditEventType.DISCORD_ACCOUNT_UNLINKED,
       "user-7",
       expect.any(Object)
     )
+  })
+
+  it("still unlinks when Discord refuses the revoke", async () => {
+    p.discordIntegration.findUnique.mockResolvedValue({ id: "discord", isEnabled: true, clientId: "client-1", clientSecret: "secret" })
+    p.discordConnection.findUnique.mockResolvedValue({
+      userId: "user-7",
+      discordUserId: "discord-7",
+      accessToken: "at",
+      refreshToken: null,
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 600_000),
+    })
+    ;(updateDiscordRoleConnection as jest.Mock).mockResolvedValue({})
+    ;(revokeDiscordToken as jest.Mock).mockRejectedValue(new Error("400"))
+
+    await expect(clearDiscordRoleForUser("user-7")).resolves.toEqual({ linked: true, roleCleared: true, grantRevoked: false })
+
+    expect(revokeDiscordToken).toHaveBeenCalledWith(expect.objectContaining({ token: "at", tokenTypeHint: "access_token" }))
+    expect(p.discordConnection.deleteMany).toHaveBeenCalled()
   })
 
   it("still emits DISCORD_ACCOUNT_UNLINKED even if the role clear fails", async () => {

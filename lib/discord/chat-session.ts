@@ -130,9 +130,11 @@ export async function getOrCreateSession({
         const now = Date.now()
         const existing = await tx.discordChatSession.findUnique({
           where: { discordUserId_discordChannelId: sessionKey },
+          include: { chatConversation: { select: { userId: true } } },
         })
 
-        if (!isExpired(existing, now) && existing) {
+        // A Discord account relinked to another app user never inherits the old turns (GAP-31)
+        if (!isExpired(existing, now) && existing && existing.chatConversation.userId === userId) {
           return {
             id: existing.id,
             chatConversationId: existing.chatConversationId,

@@ -42,6 +42,7 @@ model User {
   rewindGenerations     RewindGeneration[]
   rewindPrefs           RewindPrefs[]
   rewindExclusions      RewindExclusion[]
+  discordCommandLogs    DiscordCommandLog[]
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
 
@@ -710,8 +711,9 @@ model DiscordCommandLog {
   discordUserId   String
   discordUsername String?
 
-  // Linked Plex user (if available)
+  // Linked app user (if available); removing the member deletes their rows first, and SetNull covers the rest
   userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   // Command details
   commandType DiscordCommandType

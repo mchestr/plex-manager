@@ -12,9 +12,11 @@
  *
  * 1. `WATCHLIST_DISABLED`: `Config.watchlistSyncEnabled` is off.
  * 2. `NOT_OPTED_IN`: the member's `syncEnabled` is false (GAP-39).
- * 3. `NOT_ENTITLED`: `getAccessLevel` is below `full` (P4.5; a disabled member is `none`).
- * 4. `NO_PLEX_IDENTITY`: the member has no `plexUserId`.
- * 5. `OVERSEERR_USER_NOT_FOUND`: no Overseerr user has the member's `plexId`.
+ * 3. `NO_ACCESS`: the member is gone, disabled, or `getAccessLevel` is `none`
+ *    (P11.13). Unshare, the Stripe revoke and removal also turn `syncEnabled` off.
+ * 4. `NOT_ENTITLED`: `getAccessLevel` is `lapsed` (P4.5).
+ * 5. `NO_PLEX_IDENTITY`: the member has no `plexUserId`.
+ * 6. `OVERSEERR_USER_NOT_FOUND`: no Overseerr user has the member's `plexId`.
  *
  * A skip writes `lastSyncStatus: "skipped"` with the fixed copy from
  * `./skip.ts` and returns `{ success: true, skipped }`, so the job is not retried.
@@ -111,12 +113,14 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
       }),
     ])
 
-    // A deleted member has no access (`getAccessLevel` is `none`): skip, no retry
-    if (!user) return await skip(userId, "NOT_ENTITLED")
+    // A removed member has no access: skip, no retry
+    if (!user) return await skip(userId, "NO_ACCESS")
 
     if (!config?.watchlistSyncEnabled) return await skip(userId, "WATCHLIST_DISABLED")
     if (!user.watchlistSyncSettings?.syncEnabled) return await skip(userId, "NOT_OPTED_IN")
-    if ((await getAccessLevel(userId)) !== "full") return await skip(userId, "NOT_ENTITLED")
+    const access = await getAccessLevel(userId)
+    if (access === "none") return await skip(userId, "NO_ACCESS")
+    if (access !== "full") return await skip(userId, "NOT_ENTITLED")
     if (!user.plexUserId) return await skip(userId, "NO_PLEX_IDENTITY")
 
     if (!user.plexAuthToken) {

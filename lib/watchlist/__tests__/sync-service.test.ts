@@ -80,7 +80,7 @@ describe('syncUserWatchlist skips', () => {
     ['NOT_OPTED_IN', { member: { watchlistSyncSettings: { syncEnabled: false } } }],
     ['NOT_OPTED_IN', { member: { watchlistSyncSettings: null as never } }],
     ['NOT_ENTITLED', { level: 'lapsed' }],
-    ['NOT_ENTITLED', { level: 'none' }],
+    ['NO_ACCESS', { level: 'none' }],
     ['NO_PLEX_IDENTITY', { member: { plexUserId: null as never } }],
     ['OVERSEERR_USER_NOT_FOUND', { index: new Map([[1001, 1]]) }],
   ])('%s, without reading Plex or filing a request', async (code, setup) => {
@@ -97,11 +97,11 @@ describe('syncUserWatchlist skips', () => {
     })
   })
 
-  it('skips a deleted member as NOT_ENTITLED, so the job is not retried', async () => {
+  it('skips a removed member as NO_ACCESS, so the job is not retried', async () => {
     given()
     prismaMock.user.findUnique.mockResolvedValue(null)
 
-    await expect(syncUserWatchlist('member-1')).resolves.toEqual({ success: true, skipped: 'NOT_ENTITLED' })
+    await expect(syncUserWatchlist('member-1')).resolves.toEqual({ success: true, skipped: 'NO_ACCESS' })
     expect(buildOverseerrUserIndex).not.toHaveBeenCalled()
   })
 
