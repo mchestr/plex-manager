@@ -74,6 +74,12 @@ describe('transformAdapters: automatic mappings', () => {
     )
   })
 
+  it('puts an added attribute on its own line when the attributes are one per line', () => {
+    const imports = 'import { StyledInput } from "@/components/ui/styled-input"'
+    const result = run(imports, '<StyledInput\n    name="url"\n    size="md"\n  />')
+    expect(result.output).toBe(file('import { Input } from "@/components/ui/input"', '<Input\n    data-testid="setup-input-url"\n    name="url"\n  />'))
+  })
+
   it('moves StyledCheckbox onChange to onCheckedChange', () => {
     const imports = 'import { StyledCheckbox } from "@/components/ui/styled-checkbox"'
     const result = run(imports, '<StyledCheckbox checked={on} onChange={(e) => setOn(e.target.checked)} />')

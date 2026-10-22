@@ -122,6 +122,15 @@ export function transformAdapters(path: string, source: string): SvgResult {
     reviews.push({ file: path, line: lineOf(file, node), original, suggestion, rule })
   const replace = (node: ts.Node, text: string) => edits.push({ start: node.getStart(file), end: node.end, text })
   const remove = (attr: ts.JsxAttribute) => edits.push({ start: attr.getFullStart(), end: attr.end, text: '' })
+  /** Adds an attribute after the tag name, on its own line when the attributes are one per line. */
+  const insert = (node: Jsx, text: string) => {
+    const at = opening(node).tagName.end
+    const first = attributesOf(node).properties[0]
+    const firstStart = first ? first.getStart(file) : at
+    const multiline = first !== undefined && source.slice(at, firstStart).includes('\n')
+    const indent = multiline ? source.slice(source.lastIndexOf('\n', firstStart) + 1, firstStart) : ''
+    edits.push({ start: at, end: at, text: multiline ? `\n${indent}${text}` : ` ${text}` })
+  }
   /** Renames the opening and closing tag. */
   const rename = (node: Jsx, to: string) => {
     replace(opening(node).tagName, to)
@@ -188,7 +197,7 @@ export function transformAdapters(path: string, source: string): SvgResult {
         continue
       }
       if (size) replace(size, `size={${SPINNER_SIZES[value]}}`)
-      else edits.push({ start: opening(node).tagName.end, end: opening(node).tagName.end, text: ` size={${SPINNER_SIZES[value]}}` })
+      else insert(node, `size={${SPINNER_SIZES[value]}}`)
       rename(node, 'Spinner')
       added.push(['Spinner', `${UI}spinner`])
       rewritten++
@@ -212,12 +221,12 @@ export function transformAdapters(path: string, source: string): SvgResult {
       if (resize) remove(resize)
       const merged = classes(extra, classValue ?? undefined)
       if (className) replace(className, merged ? `className="${merged}"` : '')
-      else if (merged) edits.push({ start: opening(node).tagName.end, end: opening(node).tagName.end, text: ` className="${merged}"` })
+      else if (merged) insert(node, `className="${merged}"`)
       const error = attribute(node, 'error')
       if (error) replace(error, error.initializer ? `aria-invalid={${expressionText(error, file)} || undefined}` : 'aria-invalid')
       const name = literal(attribute(node, 'name'))
       if (!attribute(node, 'data-testid') && name) {
-        edits.push({ start: opening(node).tagName.end, end: opening(node).tagName.end, text: ` data-testid="setup-input-${name}"` })
+        insert(node, `data-testid="setup-input-${name}"`)
       }
       const to = textarea ? 'Textarea' : 'Input'
       rename(node, to)
