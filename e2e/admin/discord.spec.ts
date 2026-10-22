@@ -21,8 +21,12 @@ test.describe('Discord bot page', () => {
     await adminPage.goto('/admin/discord?from=2026-10-01&to=2026-10-17');
     await expect(adminPage.getByTestId('discord-period')).toHaveText('Period: Oct 1, 2026 – Oct 17, 2026');
 
-    await adminPage.getByTestId('discord-date-range-from').fill('2026-10-10');
-    await expect(adminPage).toHaveURL(/from=2026-10-10/);
+    // The streamed filter shows before it hydrates, and a fill before then changes
+    // nothing, so fill again until the address follows
+    await expect(async () => {
+      await adminPage.getByTestId('discord-date-range-from').fill('2026-10-10');
+      await expect(adminPage).toHaveURL(/from=2026-10-10/, { timeout: 1000 });
+    }).toPass();
     await expect(adminPage.getByTestId('discord-period')).toHaveText('Period: Oct 10, 2026 – Oct 17, 2026');
   });
 
