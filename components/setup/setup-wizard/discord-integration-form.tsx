@@ -1,16 +1,18 @@
 "use client"
 
-import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveDiscordIntegration } from "@/actions/setup"
 import { StyledInput } from "@/components/ui/styled-input"
 import { StyledTextarea } from "@/components/ui/styled-textarea"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type DiscordIntegrationInput } from "@/lib/validations/discord"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
+import type { DevDefaults } from "@/types/setup"
 
 interface DiscordIntegrationFormProps {
   onComplete: () => void
   onBack?: () => void
+  /** The DEV_* pre-fill, read once by the setup page. */
+  devDefaults: DevDefaults
 }
 
 // The setup wizard only collects the basic OAuth fields; the bot token and
@@ -34,47 +36,27 @@ function isFormComplete(data: DiscordFormState): boolean {
   return !!(data.clientId?.trim() && data.clientSecret?.trim())
 }
 
-export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegrationFormProps) {
+export function DiscordIntegrationForm({ onComplete, onBack, devDefaults }: DiscordIntegrationFormProps) {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<DiscordFormState>({
-    isEnabled: false,
-    botEnabled: false,
-    clientId: "",
-    clientSecret: "",
-    guildId: "",
-    serverInviteCode: "",
-    platformName: "Plex Wrapped",
-    instructions: "",
+    isEnabled: devDefaults.discord?.isEnabled ?? false,
+    botEnabled: devDefaults.discord?.botEnabled ?? false,
+    clientId: devDefaults.discord?.clientId ?? "",
+    clientSecret: devDefaults.discord?.clientSecret ?? "",
+    guildId: devDefaults.discord?.guildId ?? "",
+    serverInviteCode: devDefaults.discord?.serverInviteCode ?? "",
+    platformName: devDefaults.discord?.platformName ?? "Plex Wrapped",
+    instructions: devDefaults.discord?.instructions ?? "",
   })
-  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
   const autoSubmitTriggered = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    // Load dev defaults on mount
-    getDevDefaults().then((defaults) => {
-      setDevDefaults(defaults)
-      if (defaults.discord) {
-        setFormData((prev) => ({
-          isEnabled: defaults.discord?.isEnabled ?? prev.isEnabled,
-          botEnabled: defaults.discord?.botEnabled ?? prev.botEnabled,
-          clientId: defaults.discord?.clientId ?? prev.clientId,
-          clientSecret: defaults.discord?.clientSecret ?? prev.clientSecret,
-          guildId: defaults.discord?.guildId ?? prev.guildId,
-          serverInviteCode: defaults.discord?.serverInviteCode ?? prev.serverInviteCode,
-          platformName: defaults.discord?.platformName ?? prev.platformName,
-          instructions: defaults.discord?.instructions ?? prev.instructions,
-        }))
-      }
-    })
-  }, [])
 
   // Auto-submit when form is complete and auto-submit is enabled
   useEffect(() => {
     if (
-      devDefaults?.autoSubmit &&
+      devDefaults.autoSubmit &&
       isFormComplete(formData) &&
       !autoSubmitTriggered.current &&
       !isPending &&

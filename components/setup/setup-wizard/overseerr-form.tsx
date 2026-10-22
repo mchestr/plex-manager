@@ -1,15 +1,17 @@
 "use client"
 
-import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveOverseerr } from "@/actions/setup"
 import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type OverseerrInput } from "@/lib/validations/overseerr"
 import { useEffect, useRef, useState, useTransition } from "react"
+import type { DevDefaults } from "@/types/setup"
 
 interface OverseerrFormProps {
   onComplete: () => void
   onBack?: () => void
+  /** The DEV_* pre-fill, read once by the setup page. */
+  devDefaults: DevDefaults
 }
 
 /** Check if all required fields are populated for Overseerr form */
@@ -17,39 +19,23 @@ function isFormComplete(data: OverseerrInput): boolean {
   return !!(data.name?.trim() && data.url?.trim() && data.apiKey?.trim())
 }
 
-export function OverseerrForm({ onComplete, onBack }: OverseerrFormProps) {
+export function OverseerrForm({ onComplete, onBack, devDefaults }: OverseerrFormProps) {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<OverseerrInput>({
-    name: "",
-    url: "",
-    apiKey: "",
-    publicUrl: "",
+    name: devDefaults.overseerr?.name ?? "",
+    url: devDefaults.overseerr?.url ?? "",
+    apiKey: devDefaults.overseerr?.apiKey ?? "",
+    publicUrl: devDefaults.overseerr?.publicUrl ?? "",
   })
-  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
   const autoSubmitTriggered = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    // Load dev defaults on mount
-    getDevDefaults().then((defaults) => {
-      setDevDefaults(defaults)
-      if (defaults.overseerr) {
-        setFormData((prev) => ({
-          name: defaults.overseerr?.name ?? prev.name,
-          url: defaults.overseerr?.url ?? prev.url,
-          apiKey: defaults.overseerr?.apiKey ?? prev.apiKey,
-          publicUrl: defaults.overseerr?.publicUrl ?? prev.publicUrl,
-        }))
-      }
-    })
-  }, [])
 
   // Auto-submit when form is fully populated and auto-submit is enabled
   useEffect(() => {
     if (
-      devDefaults?.autoSubmit &&
+      devDefaults.autoSubmit &&
       isFormComplete(formData) &&
       !autoSubmitTriggered.current &&
       !isPending &&

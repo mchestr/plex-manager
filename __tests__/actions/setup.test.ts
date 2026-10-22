@@ -4,7 +4,6 @@
 
 import {
     completeSetup,
-    fetchLLMModels,
     getSetupStatus,
     saveLLMProvider,
     saveOverseerr,
@@ -12,7 +11,7 @@ import {
     savePrometheus,
     saveTautulli,
 } from '@/actions/setup'
-import { loadProviderModels, testLLMProviderConnection } from '@/lib/connections/llm-provider'
+import { testLLMProviderConnection } from '@/lib/connections/llm-provider'
 import { testOverseerrConnection } from '@/lib/connections/overseerr'
 import { getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
 import { testPrometheusConnection } from '@/lib/connections/prometheus'
@@ -49,7 +48,6 @@ jest.mock('@/lib/connections/prometheus', () => ({
 }))
 
 jest.mock('@/lib/connections/llm-provider', () => ({
-  loadProviderModels: jest.fn(),
   testLLMProviderConnection: jest.fn(),
 }))
 
@@ -72,7 +70,6 @@ const mockTestTautulliConnection = testTautulliConnection as jest.MockedFunction
 const mockTestOverseerrConnection = testOverseerrConnection as jest.MockedFunction<typeof testOverseerrConnection>
 const mockTestPrometheusConnection = testPrometheusConnection as jest.MockedFunction<typeof testPrometheusConnection>
 const mockTestLLMProviderConnection = testLLMProviderConnection as jest.MockedFunction<typeof testLLMProviderConnection>
-const mockLoadProviderModels = loadProviderModels as jest.MockedFunction<typeof loadProviderModels>
 const mockRevalidatePath = revalidatePath as jest.MockedFunction<typeof revalidatePath>
 
 describe('Setup Actions', () => {
@@ -478,58 +475,6 @@ describe('Setup Actions', () => {
 
       expect(result.success).toBe(true)
       expect(mockPrisma.setup.update).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('fetchLLMModels', () => {
-    it('should fetch OpenAI models successfully', async () => {
-      const mockModels = ['gpt-4', 'gpt-3.5-turbo', 'gpt-4-turbo']
-      mockLoadProviderModels.mockResolvedValue({
-        success: true,
-        models: mockModels,
-      })
-
-      // API key must be at least 10 characters for validation
-      const validApiKey = 'test-api-key-12345'
-      const result = await fetchLLMModels('openai', validApiKey)
-
-      expect(result.success).toBe(true)
-      expect(result.models).toEqual(mockModels)
-      expect(mockLoadProviderModels).toHaveBeenCalledWith({ provider: 'openai', apiKey: validApiKey })
-    })
-
-    it('should return error when API key is missing', async () => {
-      const result = await fetchLLMModels('openai', '')
-
-      expect(result.success).toBe(false)
-      // With validation, empty string fails the min length check
-      expect(result.error).toBeDefined()
-      expect(mockLoadProviderModels).not.toHaveBeenCalled()
-    })
-
-    it('should return error when API key is too short', async () => {
-      const result = await fetchLLMModels('openai', 'short')
-
-      expect(result.success).toBe(false)
-      // With validation, short API key fails the min length check
-      expect(result.error).toBeDefined()
-      expect(mockLoadProviderModels).not.toHaveBeenCalled()
-    })
-
-    it('should return error for invalid provider', async () => {
-      const result = await fetchLLMModels('invalid' as any, 'valid-api-key-123')
-
-      expect(result.success).toBe(false)
-      // With validation, invalid provider fails the enum check
-      expect(result.error).toBeDefined()
-    })
-
-    it('passes on a fixed listing error', async () => {
-      mockLoadProviderModels.mockResolvedValue({ success: false, error: 'Invalid API key' })
-
-      const result = await fetchLLMModels('openai', 'test-api-key-12345')
-
-      expect(result).toEqual({ success: false, error: 'Invalid API key' })
     })
   })
 })

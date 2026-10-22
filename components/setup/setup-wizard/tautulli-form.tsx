@@ -1,15 +1,17 @@
 "use client"
 
-import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveTautulli } from "@/actions/setup"
 import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type TautulliInput } from "@/lib/validations/tautulli"
 import { useEffect, useRef, useState, useTransition } from "react"
+import type { DevDefaults } from "@/types/setup"
 
 interface TautulliFormProps {
   onComplete: () => void
   onBack?: () => void
+  /** The DEV_* pre-fill, read once by the setup page. */
+  devDefaults: DevDefaults
 }
 
 /** Check if all required fields are populated for Tautulli form */
@@ -17,39 +19,23 @@ function isFormComplete(data: TautulliInput): boolean {
   return !!(data.name?.trim() && data.url?.trim() && data.apiKey?.trim())
 }
 
-export function TautulliForm({ onComplete, onBack }: TautulliFormProps) {
+export function TautulliForm({ onComplete, onBack, devDefaults }: TautulliFormProps) {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<TautulliInput>({
-    name: "",
-    url: "",
-    apiKey: "",
-    publicUrl: "",
+    name: devDefaults.tautulli?.name ?? "",
+    url: devDefaults.tautulli?.url ?? "",
+    apiKey: devDefaults.tautulli?.apiKey ?? "",
+    publicUrl: devDefaults.tautulli?.publicUrl ?? "",
   })
-  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
   const autoSubmitTriggered = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    // Load dev defaults on mount
-    getDevDefaults().then((defaults) => {
-      setDevDefaults(defaults)
-      if (defaults.tautulli) {
-        setFormData((prev) => ({
-          name: defaults.tautulli?.name ?? prev.name,
-          url: defaults.tautulli?.url ?? prev.url,
-          apiKey: defaults.tautulli?.apiKey ?? prev.apiKey,
-          publicUrl: defaults.tautulli?.publicUrl ?? prev.publicUrl,
-        }))
-      }
-    })
-  }, [])
 
   // Auto-submit when form is fully populated and auto-submit is enabled
   useEffect(() => {
     if (
-      devDefaults?.autoSubmit &&
+      devDefaults.autoSubmit &&
       isFormComplete(formData) &&
       !autoSubmitTriggered.current &&
       !isPending &&

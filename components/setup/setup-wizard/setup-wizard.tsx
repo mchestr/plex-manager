@@ -1,6 +1,5 @@
 "use client"
 
-import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { completeSetup } from "@/actions/setup"
 import { DevModeBanner } from "@/components/setup/setup-wizard/dev-mode-banner"
 import { DiscordIntegrationForm } from "@/components/setup/setup-wizard/discord-integration-form"
@@ -15,27 +14,24 @@ import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animat
 import { TautulliForm } from "@/components/setup/setup-wizard/tautulli-form"
 import { Icon } from "@/components/ui/icon"
 import { icons } from "@/lib/ui/icons"
-import { SETUP_STEPS } from "@/types/setup"
+import { SETUP_STEPS, type DevDefaults } from "@/types/setup"
 import { AnimatePresence, motion } from "motion/react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 interface SetupWizardProps {
   currentStep: number
+  /** The DEV_* pre-fill, read once by the setup page (P10.7). */
+  devDefaults: DevDefaults
 }
 
-export function SetupWizard({ currentStep: initialStep }: SetupWizardProps) {
+export function SetupWizard({ currentStep: initialStep, devDefaults }: SetupWizardProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(initialStep)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showFinalSuccess, setShowFinalSuccess] = useState(false)
-  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
   const totalSteps = SETUP_STEPS.length
 
-  // Load dev defaults once on mount
-  useEffect(() => {
-    getDevDefaults().then(setDevDefaults)
-  }, [])
   const visibleStep = Math.min(currentStep, totalSteps)
   const progressPercent =
     totalSteps > 1
@@ -93,23 +89,23 @@ export function SetupWizard({ currentStep: initialStep }: SetupWizardProps) {
 
     switch (currentStep) {
       case 1:
-        return <PlexServerForm onComplete={handleStepComplete} onBack={undefined} />
+        return <PlexServerForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={undefined} />
       case 2:
-        return <TautulliForm onComplete={handleStepComplete} onBack={handleBack} />
+        return <TautulliForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
       case 3:
-        return <OverseerrForm onComplete={handleStepComplete} onBack={handleBack} />
+        return <OverseerrForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
       case 4:
-        return <SonarrForm onComplete={handleStepComplete} onBack={handleBack} />
+        return <SonarrForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
       case 5:
-        return <RadarrForm onComplete={handleStepComplete} onBack={handleBack} />
+        return <RadarrForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
       case 6:
-        return <DiscordIntegrationForm onComplete={handleStepComplete} onBack={handleBack} />
+        return <DiscordIntegrationForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
       case 7:
-        return <LLMProviderForm purpose="chat" onComplete={handleStepComplete} onBack={handleBack} />
+        return <LLMProviderForm devDefaults={devDefaults} purpose="chat" onComplete={handleStepComplete} onBack={handleBack} />
       case 8:
-        return <LLMProviderForm purpose="wrapped" onComplete={handleStepComplete} onBack={handleBack} />
+        return <LLMProviderForm devDefaults={devDefaults} purpose="wrapped" onComplete={handleStepComplete} onBack={handleBack} />
       case 9:
-        return <PrometheusForm onComplete={handleStepComplete} onBack={handleBack} />
+        return <PrometheusForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
       default:
         return <div className="text-white">Step {currentStep} - Coming soon</div>
     }

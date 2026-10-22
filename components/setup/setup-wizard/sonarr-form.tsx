@@ -1,15 +1,17 @@
 "use client"
 
-import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveSonarr } from "@/actions/setup"
 import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type SonarrInput } from "@/lib/validations/sonarr"
 import { useEffect, useRef, useState, useTransition } from "react"
+import type { DevDefaults } from "@/types/setup"
 
 interface SonarrFormProps {
   onComplete: () => void
   onBack?: () => void
+  /** The DEV_* pre-fill, read once by the setup page. */
+  devDefaults: DevDefaults
 }
 
 /** Check if all required fields are populated for Sonarr form */
@@ -17,39 +19,23 @@ function isFormComplete(data: SonarrInput): boolean {
   return !!(data.name?.trim() && data.url?.trim() && data.apiKey?.trim())
 }
 
-export function SonarrForm({ onComplete, onBack }: SonarrFormProps) {
+export function SonarrForm({ onComplete, onBack, devDefaults }: SonarrFormProps) {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<SonarrInput>({
-    name: "",
-    url: "",
-    apiKey: "",
-    publicUrl: "",
+    name: devDefaults.sonarr?.name ?? "",
+    url: devDefaults.sonarr?.url ?? "",
+    apiKey: devDefaults.sonarr?.apiKey ?? "",
+    publicUrl: devDefaults.sonarr?.publicUrl ?? "",
   })
-  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
   const autoSubmitTriggered = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    // Load dev defaults on mount
-    getDevDefaults().then((defaults) => {
-      setDevDefaults(defaults)
-      if (defaults.sonarr) {
-        setFormData((prev) => ({
-          name: defaults.sonarr?.name ?? prev.name,
-          url: defaults.sonarr?.url ?? prev.url,
-          apiKey: defaults.sonarr?.apiKey ?? prev.apiKey,
-          publicUrl: defaults.sonarr?.publicUrl ?? prev.publicUrl,
-        }))
-      }
-    })
-  }, [])
 
   // Auto-submit when form is fully populated and auto-submit is enabled
   useEffect(() => {
     if (
-      devDefaults?.autoSubmit &&
+      devDefaults.autoSubmit &&
       isFormComplete(formData) &&
       !autoSubmitTriggered.current &&
       !isPending &&

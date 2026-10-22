@@ -7,12 +7,6 @@ import { render, screen } from '@testing-library/react'
 
 describe('DevModeBanner', () => {
   describe('Rendering', () => {
-    it('should not render when devDefaults is null', () => {
-      const { container } = render(<DevModeBanner devDefaults={null} />)
-
-      expect(container.firstChild).toBeNull()
-    })
-
     it('should not render when isDevMode is false', () => {
       const devDefaults = {
         plex: null,

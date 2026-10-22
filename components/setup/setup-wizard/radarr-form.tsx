@@ -1,15 +1,17 @@
 "use client"
 
-import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveRadarr } from "@/actions/setup"
 import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type RadarrInput } from "@/lib/validations/radarr"
 import { useEffect, useRef, useState, useTransition } from "react"
+import type { DevDefaults } from "@/types/setup"
 
 interface RadarrFormProps {
   onComplete: () => void
   onBack?: () => void
+  /** The DEV_* pre-fill, read once by the setup page. */
+  devDefaults: DevDefaults
 }
 
 /** Check if all required fields are populated for Radarr form */
@@ -17,39 +19,23 @@ function isFormComplete(data: RadarrInput): boolean {
   return !!(data.name?.trim() && data.url?.trim() && data.apiKey?.trim())
 }
 
-export function RadarrForm({ onComplete, onBack }: RadarrFormProps) {
+export function RadarrForm({ onComplete, onBack, devDefaults }: RadarrFormProps) {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<RadarrInput>({
-    name: "",
-    url: "",
-    apiKey: "",
-    publicUrl: "",
+    name: devDefaults.radarr?.name ?? "",
+    url: devDefaults.radarr?.url ?? "",
+    apiKey: devDefaults.radarr?.apiKey ?? "",
+    publicUrl: devDefaults.radarr?.publicUrl ?? "",
   })
-  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
   const autoSubmitTriggered = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    // Load dev defaults on mount
-    getDevDefaults().then((defaults) => {
-      setDevDefaults(defaults)
-      if (defaults.radarr) {
-        setFormData((prev) => ({
-          name: defaults.radarr?.name ?? prev.name,
-          url: defaults.radarr?.url ?? prev.url,
-          apiKey: defaults.radarr?.apiKey ?? prev.apiKey,
-          publicUrl: defaults.radarr?.publicUrl ?? prev.publicUrl,
-        }))
-      }
-    })
-  }, [])
 
   // Auto-submit when form is fully populated and auto-submit is enabled
   useEffect(() => {
     if (
-      devDefaults?.autoSubmit &&
+      devDefaults.autoSubmit &&
       isFormComplete(formData) &&
       !autoSubmitTriggered.current &&
       !isPending &&

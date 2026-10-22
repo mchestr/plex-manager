@@ -1,15 +1,17 @@
 "use client"
 
-import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { savePlexServer } from "@/actions/setup"
 import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type PlexServerInput } from "@/lib/validations/plex"
 import { memo, useCallback, useEffect, useRef, useState, useTransition } from "react"
+import type { DevDefaults } from "@/types/setup"
 
 interface PlexServerFormProps {
   onComplete: () => void
   onBack?: () => void
+  /** The DEV_* pre-fill, read once by the setup page. */
+  devDefaults: DevDefaults
 }
 
 /** Check if all required fields are populated for Plex form */
@@ -17,39 +19,23 @@ function isFormComplete(data: PlexServerInput): boolean {
   return !!(data.name?.trim() && data.url?.trim() && data.token?.trim())
 }
 
-export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack }: PlexServerFormProps) {
+export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack, devDefaults }: PlexServerFormProps) {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<PlexServerInput>({
-    name: "",
-    url: "",
-    token: "",
-    publicUrl: "",
+    name: devDefaults.plex?.name ?? "",
+    url: devDefaults.plex?.url ?? "",
+    token: devDefaults.plex?.token ?? "",
+    publicUrl: devDefaults.plex?.publicUrl ?? "",
   })
-  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
   const autoSubmitTriggered = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    // Load dev defaults on mount
-    getDevDefaults().then((defaults) => {
-      setDevDefaults(defaults)
-      if (defaults.plex) {
-        setFormData((prev) => ({
-          name: defaults.plex?.name ?? prev.name,
-          url: defaults.plex?.url ?? prev.url,
-          token: defaults.plex?.token ?? prev.token,
-          publicUrl: defaults.plex?.publicUrl ?? prev.publicUrl,
-        }))
-      }
-    })
-  }, [])
 
   // Auto-submit when form is fully populated and auto-submit is enabled
   useEffect(() => {
     if (
-      devDefaults?.autoSubmit &&
+      devDefaults.autoSubmit &&
       isFormComplete(formData) &&
       !autoSubmitTriggered.current &&
       !isPending &&
