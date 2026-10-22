@@ -29,7 +29,7 @@ interface MarkedMediaItem {
   parentTitle: string | null
   note: string | null
   markedVia: string
-  markedAt: string
+  markedAt: Date
   radarrTitleSlug: string | null
   sonarrTitleSlug: string | null
   user: MarkedMediaUser

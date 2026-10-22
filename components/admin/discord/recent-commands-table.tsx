@@ -21,7 +21,7 @@ export interface RecentCommand {
   commandName: string
   status: StatusValue<"discordCommand">
   responseTimeMs: number | null
-  createdAt: string
+  createdAt: Date
 }
 
 /** The member's Discord name, linked to their admin page when the account is linked (UI-06). */

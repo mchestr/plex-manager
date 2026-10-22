@@ -22,7 +22,7 @@ interface ActiveMember {
   discordUsername: string | null
   userId: string | null
   commandCount: number
-  lastActiveAt: string
+  lastActiveAt: Date
 }
 
 /** The period's most active members, linked to their admin pages. */
