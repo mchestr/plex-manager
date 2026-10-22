@@ -266,7 +266,7 @@ npm run db:studio     # Open database GUI
 
 **Creating a migration (contributors).** After changing `prisma/schema.prisma`, run `npx prisma migrate dev --create-only --name <descriptive_name>` against a throwaway database whose name ends in `_test`, read the generated `migration.sql`, then apply it with `npm run db:deploy`. Never hand-type a migration timestamp. CI's Schema Drift job runs `node scripts/check-migrations.mjs`, which wants a timestamp later than every earlier folder's, at least two lowercase words in the name (`add_member_export`, not `latest`), and a `migration.sql`; the folders listed in `prisma/migrations/.legacy-names.json` predate the rule.
 
-`20250101000000_init` is a retroactive baseline for installs that predate migrations: a database created with `db:push` marks each folder applied with `npx prisma migrate resolve --applied <name>` instead of running it (see [Installed with `db push`?](#installed-with-db-push) and [docs/operations.md](docs/operations.md#installed-with-db-push)).
+`20250101000000_init` is a retroactive baseline for installs that predate migrations: a database created with `prisma db push` marks each folder applied with `npx prisma migrate resolve --applied <name>` instead of running it (see [Installed with `db push`?](#installed-with-db-push) and [docs/operations.md](docs/operations.md#installed-with-db-push)).
 
 **Database schema.** `DATABASE_URL` may end in `?schema=<name>` to keep the app's tables in a schema other than `public`. Migrations and the running app both use it. The name must be a letter or `_` followed by letters, digits or `_` (at most 63 characters), or a production server refuses to start.
 

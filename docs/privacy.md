@@ -69,7 +69,7 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `DiscordChatSession` | the last assistant turns of a Discord chat, Discord id, channel id | none (LLM context only) | Deleted by Discord id, and through `ChatConversation` (also on unlink) | No |
 | `DiscordOAuthState` | a pending link attempt and its redirect | none | Cascade | No |
 | `DiscordPendingSelection` | a parked `/mark` search for a Discord id | none | Deleted by Discord id | No |
-| `DiscordCommandLog` | Discord id and username, linked user id, command name and arguments, channel and guild | A Discord activity, user timeline | Deleted by user id and by Discord id. If a `User` row is deleted any other way, the foreign key sets `userId` to null | No |
+| `DiscordCommandLog` | Discord id and username, linked user id, command name and arguments (assistant messages as a length only, `argsLength`), channel and guild | A Discord activity, user timeline | Deleted by user id and by Discord id. If a `User` row is deleted any other way, the foreign key sets `userId` to null | No |
 | `UserMediaMark` | titles the member marked and how | M `/mymarks`; A marked media, timeline | Cascade | No |
 | `WatchlistSyncSettings` | sync choice, last result and counters | M card; A counts | Cascade. Unshare and the Stripe revoke turn sync off | No |
 | `WatchlistSyncHistory` | titles from the member's private Plex watchlist and their request status | M recent items; A recent items | Cascade | No |
@@ -96,6 +96,7 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `DiscordIntegration` | Discord app credentials and bot settings; `updatedBy` admin id | `clientSecret`, `botToken` |
 | `DiscordBotLock` | which instance runs the bot | No |
 | `WatchlistSyncLock` | which instance runs the sync | No |
+| `LeaseLock` | which instance holds each lease (Discord bot, watchlist sync) and until when | No |
 | `RewindServerAggregate` | server-wide yearly totals, no per-member rows | No |
 | `MediaMetadataCache` | Plex metadata per title | No |
 | `RewindEvalRun` | Rewind copy eval results on fixture data; `createdBy` admin id | No |

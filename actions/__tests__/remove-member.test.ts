@@ -22,7 +22,7 @@ import { consume } from '@/lib/security/rate-limit'
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
-jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
+jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), unstable_cache: (fn: () => unknown) => fn }))
 jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn(), actionClientIp: jest.fn() }))
 jest.mock('@/lib/members/owner', () => ({ isPlexServerOwner: jest.fn() }))
 jest.mock('@/lib/discord/integration', () => ({ clearDiscordRoleForUser: jest.fn() }))
