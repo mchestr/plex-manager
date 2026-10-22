@@ -34,7 +34,7 @@ const mockSave = updateWrappedLLMProvider as jest.Mock
 const STORED = {
   provider: 'openai',
   model: 'gpt-4o',
-  hasApiKey: true,
+  secret: { last4: '', origin: 'https://api.openai.com' },
   baseUrl: null,
   effort: null,
   temperature: 0.8,
@@ -172,7 +172,9 @@ describe('LLMProviderForm', () => {
     const user = await openForm(STORED)
 
     expect(mockList).toHaveBeenCalledWith({ purpose: 'wrapped', provider: 'openai', apiKey: undefined, baseUrl: undefined })
-    expect(screen.getByTestId('llm-api-key-input')).toHaveAttribute('placeholder', 'Leave blank to keep the current key')
+    // P10.20: the saved key is a masked placeholder, never a value
+    expect(screen.getByTestId('llm-api-key-input')).toHaveAttribute('placeholder', '••••••••••••')
+    expect(screen.getByTestId('llm-api-key-input')).toHaveValue('')
     expect(screen.getByTestId('llm-temperature-input')).toHaveValue(0.8)
 
     await user.click(screen.getByTestId('llm-model-select'))
@@ -198,7 +200,10 @@ describe('LLMProviderForm', () => {
 
     await choose(user, 'llm-provider-select', 'google')
 
-    expect(screen.getByTestId('llm-api-key-input')).toHaveAttribute('placeholder', 'Enter the API key')
+    // The saved key only goes to the old provider (SEC-31): re-enter, and Save waits for it
+    expect(screen.getByTestId('llm-api-key-input')).toHaveAttribute('data-state', 'reenter-required')
     expect(screen.getByTestId('llm-api-key-input')).toBeRequired()
+    expect(screen.getByTestId('settings-ai-save')).toBeDisabled()
+    expect(screen.getByTestId('settings-ai-unsaved')).toHaveTextContent('Enter the API key to test or save')
   })
 })

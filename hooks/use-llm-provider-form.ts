@@ -6,14 +6,15 @@ import type { TestResult } from "@/components/ui/settings-section"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 import { listKnownModels, lookupModel, type EffortLevel, type LLMProviderId } from "@/lib/llm/models"
-import { isLLMProviderId } from "@/lib/llm/provider-presets"
+import { isLLMProviderId, llmKeyDestination } from "@/lib/llm/provider-presets"
+import { needsSecretReentry, safeOrigin, type SavedSecret } from "@/lib/security/saved-secret"
 
 /** The active provider row as the settings page sends it, without the key. */
 export interface StoredLLMProvider {
   provider: string
   model: string | null
-  /** A key is stored (never the value itself). */
-  hasApiKey: boolean
+  /** The stored key's last four and the origin it is sent to (never the key itself). */
+  secret: SavedSecret | null
   baseUrl: string | null
   effort: string | null
   temperature: number | null
@@ -47,14 +48,6 @@ function initialState(stored: StoredLLMProvider | null): LLMFormState {
   }
 }
 
-function originOf(url: string): string | null {
-  try {
-    return new URL(url).origin
-  } catch {
-    return null
-  }
-}
-
 function optionalNumber(value: string): number | undefined {
   if (!value.trim()) return undefined
   const parsed = Number(value)
@@ -81,10 +74,11 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
   const toast = useToast()
   const [liveModels, setLiveModels] = useState<string[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [errors, setErrors] = useState<Partial<Record<"apiKey" | "baseUrl" | "model", string>>>({})
 
   const settings = useSettingsForm(initialState(stored), async (form) => {
     if (!form.model.trim()) {
-      toast.showError("Model is required")
+      setErrors({ model: "Choose a model" })
       return
     }
     const info = lookupModel(form.provider, form.model)
@@ -102,9 +96,13 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
       maxTokens: optionalNumber(form.maxTokens),
     })
     if (!result.success) {
-      toast.showError(result.error || `Failed to update the ${purpose} LLM provider`)
+      const field = (["apiKey", "baseUrl", "model"] as const).find((key) => result.fieldErrors?.[key]?.[0])
+      // A field error shows on its field; anything else is a toast
+      if (field) setErrors({ [field]: result.fieldErrors?.[field]?.[0] })
+      else toast.showError(result.error)
       return
     }
+    setErrors({})
     toast.showSuccess(`${purpose === "chat" ? "Admin assistant" : "Rewind"} model saved`)
     router.refresh()
     return { ...form, apiKey: "" }
@@ -114,11 +112,16 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
   const info = form.model ? lookupModel(form.provider, form.model) : null
   const effortLevels = info?.capabilities.effortLevels ?? null
   const takesTemperature = info?.capabilities.samplingParams ?? false
-  // The stored key is reused only for the same provider and base-URL origin (the action's rule)
-  const keyReusable =
-    Boolean(stored?.hasApiKey) &&
-    stored?.provider === form.provider &&
-    (form.provider !== "openai-compatible" || originOf(form.baseUrl) === originOf(stored?.baseUrl ?? ""))
+  // The stored key is reused only for the same provider and the same origin of
+  // the address it is sent to (the action's rule, SEC-31)
+  const currentOrigin = safeOrigin(llmKeyDestination(form.provider, form.baseUrl))
+  const sameProvider = stored?.provider === form.provider
+  const keyReusable = sameProvider && Boolean(stored?.secret) && !needsSecretReentry(stored?.secret, currentOrigin, "")
+  const keyOptional = form.provider === "openai-compatible" || keyReusable
+  // The saved key as SecretInput shows it: "Saved", or "re-enter" for a new
+  // address. A local server needs no key, so there it simply reads as unset.
+  const savedKey = !keyReusable && form.provider === "openai-compatible" ? null : (stored?.secret ?? null)
+  const blocked = !keyOptional && Boolean(savedKey) && !form.apiKey.trim()
 
   const storedProvider = stored?.provider ?? null
   const storedBaseUrl = stored?.baseUrl ?? null
@@ -135,10 +138,16 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
     }
   }, [purpose, storedProvider, storedBaseUrl])
 
+  /** Changes fields and clears their errors. */
+  const update = (patch: Partial<LLMFormState>) => {
+    settings.set(patch)
+    setErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([field]) => !(field in patch))))
+  }
+
   const changeProvider = (value: string) => {
     if (!isLLMProviderId(value)) return
     setLiveModels(null)
-    settings.set({
+    update({
       provider: value,
       model: "",
       custom: false,
@@ -150,7 +159,7 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
 
   const changeBaseUrl = (baseUrl: string) => {
     setLiveModels(null)
-    settings.set({ baseUrl })
+    update({ baseUrl })
   }
 
   /** Loads the provider's model list with the typed values, and says whether the model is in it. */
@@ -171,14 +180,16 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
 
   return {
     form,
-    update: settings.set,
-    settingsForm: settings.form,
+    update,
+    errors,
+    settingsForm: { ...settings.form, blockedReason: blocked ? "Enter the API key to test or save" : undefined },
     liveModels,
     busy: settings.form.isPending || isLoading,
     effortLevels,
     takesTemperature,
-    keyReusable,
-    keyOptional: form.provider === "openai-compatible" || keyReusable,
+    savedKey,
+    currentOrigin,
+    keyOptional,
     changeProvider,
     changeBaseUrl,
     testConnection,

@@ -33,6 +33,8 @@ interface RewindSettingsSectionProps {
   status: RewindSettingsStatus
   /** The section's health: Redis, then Tautulli (`getSettingsHealth()`). */
   health: SectionHealth
+  /** "Last saved ... by ..." from the audit log (P10.20). */
+  footerMeta?: ReactNode
   /** The season console note, under the fields. */
   children?: ReactNode
 }
@@ -68,7 +70,7 @@ function withStored(options: { value: string; label: string }[], stored: readonl
  * every admin-facing Rewind flag, saved together with `updateRewindSettings`.
  * Save stays disabled until something changed; Discard restores the stored values.
  */
-export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, spent, libraries, ratings, status, health, children }: RewindSettingsSectionProps) {
+export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, spent, libraries, ratings, status, health, footerMeta, children }: RewindSettingsSectionProps) {
   const router = useRouter()
   const { showError, showSuccess } = useToast()
   const [isPending, startTransition] = useTransition()
@@ -119,6 +121,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
       description="Who sees Rewind, when the season runs, and what each issue may include."
       status={health.status}
       checkedAt={health.checkedAt}
+      footerMeta={footerMeta}
       form={{
         isDirty: dirty,
         isPending,

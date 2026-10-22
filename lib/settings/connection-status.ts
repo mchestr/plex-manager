@@ -1,6 +1,6 @@
 /**
  * The client-safe half of the settings connection health (P10.19): the
- * section keys, the result shape, the failure codes with their copy, and the
+ * section keys, the result shape, the failure codes, and the
  * "worst status wins" rule. `getSettingsHealth()` in
  * `lib/settings/connection-health.ts` (server-only) fills it.
  *
@@ -28,7 +28,7 @@ const HEALTH_KEYS = [
   "prometheus",
 ] as const
 
-export type HealthKey = (typeof HEALTH_KEYS)[number]
+type HealthKey = (typeof HEALTH_KEYS)[number]
 
 /** Why a check is not `ok`. A tester's own message never leaves the server. */
 export type HealthCode =
@@ -42,6 +42,9 @@ export type HealthCode =
   | "REDIS_UNAVAILABLE"
   | "DEPENDENCY"
 
+/** Why a connection check against a service failed. */
+export type ProbeFailureCode = Extract<HealthCode, "TIMEOUT" | "UNAUTHORIZED" | "NOT_FOUND" | "UNREACHABLE">
+
 export interface SectionHealth {
   status: ConnectionStatus
   code: HealthCode | null
@@ -50,31 +53,6 @@ export interface SectionHealth {
 }
 
 export type SettingsHealth = Record<HealthKey, SectionHealth>
-
-const COPY: Record<HealthCode, string> = {
-  TIMEOUT: "Nothing answered within 5 seconds.",
-  UNAUTHORIZED: "The server refused the saved key.",
-  NOT_FOUND: "Nothing answered at this address.",
-  UNREACHABLE: "Can't connect with the saved settings.",
-  LLM_DISABLED: "AI features are off, so Rewind uses template copy.",
-  MISSING_SETUP: "Some required settings are missing.",
-  BOT_OFFLINE: "The support bot has not renewed its lease in the last 90 seconds.",
-  REDIS_UNAVAILABLE: "Redis is not answering.",
-  DEPENDENCY: "A service this depends on is not working.",
-}
-
-const OK_COPY: Partial<Record<ConnectionStatus, string>> = {
-  ok: "Connected with the saved settings.",
-  disabled: "Off.",
-  notConfigured: "Not set up yet.",
-  untested: "Not checked yet.",
-}
-
-/** The sentence a section shows for its last check. */
-export function healthMessage(health: SectionHealth): string {
-  if (health.code) return COPY[health.code]
-  return OK_COPY[health.status] ?? "Checked."
-}
 
 const RANK: Record<ConnectionStatus, number> = {
   notConfigured: 0,

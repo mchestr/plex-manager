@@ -147,7 +147,7 @@ describe('updateServerTimeZone', () => {
 
     await expect(updateServerTimeZone('US/Pacific')).resolves.toEqual({
       success: true,
-      timezone: 'America/Los_Angeles',
+      data: { timezone: 'America/Los_Angeles' },
     })
     expect(mockUpsert).toHaveBeenCalledWith({
       where: { id: 'config' },
@@ -156,6 +156,7 @@ describe('updateServerTimeZone', () => {
       select: { id: true },
     })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.SERVER_TIMEZONE_CHANGED, 'admin-user-id', {
+      section: 'timezone',
       from: 'UTC',
       to: 'America/Los_Angeles',
     })
@@ -168,23 +169,24 @@ describe('updateServerTimeZone', () => {
     mockFindUnique.mockResolvedValue(null)
     mockUpsert.mockResolvedValue({ id: 'config' })
 
-    await expect(updateServerTimeZone('Etc/UTC')).resolves.toEqual({ success: true, timezone: 'UTC' })
+    await expect(updateServerTimeZone('Etc/UTC')).resolves.toEqual({ success: true, data: { timezone: 'UTC' } })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.SERVER_TIMEZONE_CHANGED, 'admin-user-id', {
+      section: 'timezone',
       from: null,
       to: 'UTC',
     })
   })
 
   it.each(['Mars/Base', '', '+05:00', 'x'.repeat(65)])('rejects %p', async (zone) => {
-    await expect(updateServerTimeZone(zone)).resolves.toMatchObject({ success: false })
+    await expect(updateServerTimeZone(zone)).resolves.toMatchObject({ success: false, code: 'VALIDATION' })
     expect(mockUpsert).not.toHaveBeenCalled()
     expect(logAuditEvent).not.toHaveBeenCalled()
   })
 
   it('requires an admin', async () => {
-    mockRequireAdmin.mockRejectedValue(new Error('Not admin'))
+    ;(getServerSession as jest.Mock).mockResolvedValue({ ...mockAdminSession, user: { ...mockAdminSession.user, isAdmin: false } })
 
-    await expect(updateServerTimeZone('Europe/Berlin')).rejects.toThrow('Not admin')
+    await expect(updateServerTimeZone('Europe/Berlin')).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
     expect(mockUpsert).not.toHaveBeenCalled()
   })
 })

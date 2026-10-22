@@ -4,7 +4,7 @@ import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
-import { StyledInput } from "@/components/ui/styled-input"
+import { Input } from "@/components/ui/input"
 import { listKnownModels, lookupModel, priceAt, type LLMProviderId, type ModelInfo } from "@/lib/llm/models"
 import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/provider-presets"
 import { useFormat } from "@/lib/format-context"
@@ -47,7 +47,6 @@ function orderModels(provider: LLMProviderId, live: string[] | null): string[] {
 }
 
 interface LLMModelPickerProps {
-  id: string
   provider: LLMProviderId
   model: string
   custom: boolean
@@ -59,9 +58,9 @@ interface LLMModelPickerProps {
 
 /**
  * Model select with known models first, a custom id, and each model's price
- * and retirement. The form renders its label (`id` is the select's).
+ * and retirement. It sits in a `FormField`, which labels the select.
  */
-export function LLMModelPicker({ id, provider, model, custom, liveModels, onChange, disabled }: LLMModelPickerProps) {
+export function LLMModelPicker({ provider, model, custom, liveModels, onChange, disabled }: LLMModelPickerProps) {
   const f = useFormat()
   const [now] = useState(() => new Date())
   const listed = orderModels(provider, liveModels)
@@ -73,7 +72,6 @@ export function LLMModelPicker({ id, provider, model, custom, liveModels, onChan
   return (
     <div>
       <StyledDropdown
-        id={id}
         value={custom ? CUSTOM : model}
         onChange={(value) => (value === CUSTOM ? onChange("", true) : onChange(value, false))}
         options={[
@@ -89,12 +87,12 @@ export function LLMModelPicker({ id, provider, model, custom, liveModels, onChan
         data-testid="llm-model-select"
       />
       {custom && (
-        <StyledInput
+        <Input
           className="mt-2"
           type="text"
           aria-label="Custom model id"
           value={model}
-          onChange={(e) => onChange(e.target.value, true)}
+          onValueChange={(value) => onChange(value, true)}
           placeholder={provider === "openai" ? `e.g. ${DEFAULT_OPENAI_MODEL}` : "Model id"}
           required
           disabled={disabled}
@@ -104,7 +102,7 @@ export function LLMModelPicker({ id, provider, model, custom, liveModels, onChan
       )}
       {info && (
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <p className="text-xs opacity-70" data-testid="llm-model-price">
+          <p className="text-label text-muted-foreground" data-testid="llm-model-price">
             {priceLabel(info, now, f)}
           </p>
           {retirement && (

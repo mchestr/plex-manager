@@ -4,7 +4,8 @@
  * getAdminSettings feeds the admin settings client forms via the RSC payload.
  * The Prisma extension decrypts secret columns on read, so this action must
  * strip every raw secret (server tokens/API keys, LLM API keys, the Discord
- * client secret) and expose only `has*` booleans in their place.
+ * client secret and bot token) and expose only `{ last4, origin }` in their
+ * place (P10.20).
  */
 
 import { getAdminSettings } from '@/actions/admin/admin-settings'
@@ -88,7 +89,7 @@ describe('getAdminSettings secret hiding', () => {
     mockPrisma.discordConnection.count.mockResolvedValue(0)
   })
 
-  it('strips the LLM API key and exposes hasApiKey (chat + wrapped)', async () => {
+  it('strips the LLM API key and exposes its last4 and destination origin (chat + wrapped)', async () => {
     mockPrisma.lLMProvider.findFirst
       .mockResolvedValueOnce({ id: 'chat', provider: 'openai', purpose: 'chat', apiKey: 'sk-chat-secret', model: 'gpt-4', temperature: 0.7, maxTokens: 1000, isActive: true })
       .mockResolvedValueOnce({ id: 'wrapped', provider: 'openai', purpose: 'wrapped', apiKey: 'sk-wrapped-secret', model: 'gpt-4', temperature: 0.8, maxTokens: 6000, isActive: true })
@@ -96,37 +97,39 @@ describe('getAdminSettings secret hiding', () => {
     const settings = await getAdminSettings()
 
     expect(settings.chatLLMProvider).not.toHaveProperty('apiKey')
-    expect(settings.chatLLMProvider).toMatchObject({ hasApiKey: true, model: 'gpt-4' })
+    expect(settings.chatLLMProvider).toMatchObject({ secret: { last4: 'cret', origin: 'https://api.openai.com' }, model: 'gpt-4' })
     expect(settings.wrappedLLMProvider).not.toHaveProperty('apiKey')
-    expect(settings.wrappedLLMProvider).toMatchObject({ hasApiKey: true })
+    expect(settings.wrappedLLMProvider?.secret).toEqual({ last4: 'cret', origin: 'https://api.openai.com' })
     // Backward-compat alias mirrors the wrapped provider (still sanitized).
     expect(settings.llmProvider).not.toHaveProperty('apiKey')
-    expect(settings.llmProvider).toMatchObject({ hasApiKey: true })
+    expect(settings.llmProvider?.secret).not.toBeNull()
 
     expect(JSON.stringify(settings)).not.toContain('sk-chat-secret')
     expect(JSON.stringify(settings)).not.toContain('sk-wrapped-secret')
   })
 
-  it('strips the Plex token and server API keys, exposing has* booleans', async () => {
-    mockPrisma.plexServer.findFirst.mockResolvedValue({ id: 'p', name: 'Plex', url: 'http://plex', token: 'plex-token-secret', publicUrl: null, isActive: true })
-    mockPrisma.tautulli.findFirst.mockResolvedValue({ id: 't', name: 'Tautulli', url: 'http://taut', apiKey: 'taut-secret', publicUrl: null, isActive: true })
-    mockPrisma.sonarr.findFirst.mockResolvedValue({ id: 's', name: 'Sonarr', url: 'http://son', apiKey: 'sonarr-secret', publicUrl: null, isActive: true })
+  it('strips the Plex token and server API keys, exposing last4 and the URL origin', async () => {
+    mockPrisma.plexServer.findFirst.mockResolvedValue({ id: 'p', name: 'Plex', url: 'http://plex:32400', token: 'plex-token-secret', publicUrl: null, isActive: true })
+    mockPrisma.tautulli.findFirst.mockResolvedValue({ id: 't', name: 'Tautulli', url: 'http://taut:8181', apiKey: 'taut-secret-0a91c', publicUrl: null, isActive: true })
+    mockPrisma.sonarr.findFirst.mockResolvedValue({ id: 's', name: 'Sonarr', url: 'http://son', apiKey: 'sonarr-k1', publicUrl: null, isActive: true })
 
     const settings = await getAdminSettings()
 
     expect(settings.plexServer).not.toHaveProperty('token')
-    expect(settings.plexServer).toMatchObject({ hasToken: true, name: 'Plex' })
+    expect(settings.plexServer).toMatchObject({ secret: { last4: 'cret', origin: 'http://plex:32400' }, name: 'Plex' })
     expect(settings.tautulli).not.toHaveProperty('apiKey')
-    expect(settings.tautulli).toMatchObject({ hasApiKey: true })
-    expect(settings.sonarr).toMatchObject({ hasApiKey: true })
+    expect(settings.tautulli?.secret).toEqual({ last4: 'a91c', origin: 'http://taut:8181' })
+    // Too short to show any of it
+    expect(settings.sonarr?.secret).toEqual({ last4: '', origin: 'http://son' })
 
     const serialized = JSON.stringify(settings)
     expect(serialized).not.toContain('plex-token-secret')
     expect(serialized).not.toContain('taut-secret')
-    expect(serialized).not.toContain('sonarr-secret')
+    expect(serialized).not.toContain('sonarr-k1')
+    expect(serialized).not.toContain('sonarr-k1')
   })
 
-  it('strips the Discord client secret and bot token, exposing has* booleans', async () => {
+  it('strips the Discord client secret and bot token, with no origin (a fixed destination)', async () => {
     mockPrisma.discordIntegration.findUnique.mockResolvedValue({
       id: 'discord',
       isEnabled: true,
@@ -147,8 +150,7 @@ describe('getAdminSettings secret hiding', () => {
     expect(settings.discordIntegration).not.toHaveProperty('clientSecret')
     expect(settings.discordIntegration).not.toHaveProperty('botToken')
     expect(settings.discordIntegration).toMatchObject({
-      hasClientSecret: true,
-      hasBotToken: true,
+      secrets: { clientSecret: { last4: 'alue', origin: null }, botToken: { last4: 'alue', origin: null } },
       clientId: 'client-id-public',
       // Non-secret fields pass through.
       supportChannelId: 'channel-123',
@@ -159,15 +161,15 @@ describe('getAdminSettings secret hiding', () => {
     expect(serialized).not.toContain('discord-bot-token-value')
   })
 
-  it('reports has* as false when a secret column is empty', async () => {
+  it('reports a null secret when the column is empty', async () => {
     mockPrisma.plexServer.findFirst.mockResolvedValue({ id: 'p', name: 'Plex', url: 'http://plex', token: '', publicUrl: null, isActive: true })
 
     const settings = await getAdminSettings()
 
-    expect(settings.plexServer).toMatchObject({ hasToken: false })
+    expect(settings.plexServer).toMatchObject({ secret: null })
   })
 
-  it('keeps null rows null (no has* object fabricated)', async () => {
+  it('keeps null rows null (no secret object fabricated)', async () => {
     const settings = await getAdminSettings()
 
     expect(settings.plexServer).toBeNull()

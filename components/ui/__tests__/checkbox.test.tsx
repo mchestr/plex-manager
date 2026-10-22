@@ -4,7 +4,6 @@ import { axe, toHaveNoViolations } from "jest-axe"
 import { useState } from "react"
 
 import { Checkbox } from "@/components/ui/checkbox"
-import { StyledCheckbox } from "@/components/ui/styled-checkbox"
 
 expect.extend(toHaveNoViolations)
 
@@ -71,62 +70,5 @@ describe("Checkbox", () => {
   it("has no axe violations", async () => {
     const { container } = render(<Labelled />)
     expect(await axe(container)).toHaveNoViolations()
-  })
-})
-
-describe("StyledCheckbox (deprecated adapter)", () => {
-  it("calls onChange with an event-shaped target.checked", async () => {
-    const user = userEvent.setup()
-    const onChange = jest.fn()
-    render(<StyledCheckbox label="Active" checked={false} onChange={onChange} />)
-
-    await user.click(screen.getByRole("checkbox", { name: "Active" }))
-    expect(onChange).toHaveBeenCalledWith({ target: { checked: true } })
-  })
-
-  it("keeps a generated id stable across rerenders and links the label to it", () => {
-    const { rerender } = render(<StyledCheckbox label="Notify me" checked={false} onChange={() => {}} />)
-    const label = screen.getByText("Notify me")
-    const firstFor = label.getAttribute("for")
-    expect(firstFor).toBeTruthy()
-
-    rerender(<StyledCheckbox label="Notify me" checked onChange={() => {}} />)
-    expect(screen.getByText("Notify me")).toHaveAttribute("for", firstFor)
-    expect(screen.getByRole("checkbox", { name: "Notify me" })).toHaveAttribute("aria-checked", "true")
-  })
-
-  it("uses the id prop when given", () => {
-    render(<StyledCheckbox id="custom-id" label="Opt in" />)
-    expect(screen.getByText("Opt in")).toHaveAttribute("for", "custom-id")
-    expect(screen.getByRole("checkbox", { name: "Opt in" })).toBeInTheDocument()
-  })
-
-  it("toggles when its label is clicked, and puts data-testid on the checkbox", async () => {
-    const user = userEvent.setup()
-    const onChange = jest.fn()
-    render(<StyledCheckbox label="Opt in" data-testid="cb" onChange={onChange} />)
-
-    await user.click(screen.getByText("Opt in"))
-    expect(onChange).toHaveBeenCalledTimes(1)
-    expect(screen.getByTestId("cb")).toHaveAttribute("role", "checkbox")
-  })
-
-  it("describes the checkbox with its description", async () => {
-    const { container } = render(
-      <StyledCheckbox label="Enable Discord Bot" description="Monitors the support channels." checked onChange={() => {}} />
-    )
-    expect(screen.getByRole("checkbox", { name: "Enable Discord Bot" })).toHaveAccessibleDescription(
-      "Monitors the support channels."
-    )
-    expect(await axe(container)).toHaveNoViolations()
-  })
-
-  it("blocks changes while disabled", async () => {
-    const user = userEvent.setup()
-    const onChange = jest.fn()
-    render(<StyledCheckbox label="Active" disabled onChange={onChange} />)
-
-    await user.click(screen.getByText("Active"))
-    expect(onChange).not.toHaveBeenCalled()
   })
 })

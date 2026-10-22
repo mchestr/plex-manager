@@ -124,6 +124,7 @@ describe('updateLLMProviderForPurpose key rule', () => {
       success: false,
       code: 'SECRET_REQUIRED',
       error: 'Enter the API key again: the provider or its address changed.',
+      fieldErrors: { apiKey: ['Enter the API key again: the provider or its address changed.'] },
     })
     expect(mockTest).not.toHaveBeenCalled()
     expect(prismaMock.lLMProvider.create).not.toHaveBeenCalled()

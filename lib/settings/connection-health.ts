@@ -6,7 +6,7 @@
  *
  * `getConnectionHealth()` runs the existing testers in `lib/connections/*`
  * in parallel for every active service row, each cut off at 5 s
- * ({@link PROBE_TIMEOUT_MS}), and caches the result for 5 minutes under the
+ * (`probeConnection`, `lib/settings/probe.ts`), and caches the result for 5 minutes under the
  * tag `connection-health`, so a page that polls never runs a live upstream
  * test more than once per window. `recheckConnections()`
  * (`actions/admin/connection-health.ts`) updates the tag to re-check.
@@ -48,14 +48,9 @@ import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
+import { probeConnection, type Tester } from "@/lib/settings/probe"
 import { CONNECTION_HEALTH_TAG, worstStatus, type HealthCode, type SectionHealth, type SettingsHealth } from "@/lib/settings/connection-status"
 import { discordStatus, type ConnectionStatus } from "@/lib/ui/status"
-import { createLogger } from "@/lib/utils/logger"
-
-const logger = createLogger("CONNECTION_HEALTH")
-
-/** A tester that has not answered by now counts as `unreachable` with `TIMEOUT` (P2.3's budget). @internal */
-export const PROBE_TIMEOUT_MS = 5000
 
 type ConnectionId = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus" | "ai"
 
@@ -71,39 +66,6 @@ export interface ConnectionHealth {
   /** When the testers ran, as an ISO string (the cache serialises it). */
   checkedAt: string
   connections: ConnectionHealthEntry[]
-}
-
-type Tester = () => Promise<{ success: boolean; error?: string }>
-type Probe = Pick<ConnectionHealthEntry, "status" | "code">
-
-/** Classifies a tester's fixed message into a code; the message itself stops here. */
-function failureCode(error: string | undefined): HealthCode {
-  if (!error) return "UNREACHABLE"
-  if (/timeout/i.test(error)) return "TIMEOUT"
-  if (/invalid|privilege|unauthori/i.test(error)) return "UNAUTHORIZED"
-  if (/not found/i.test(error)) return "NOT_FOUND"
-  return "UNREACHABLE"
-}
-
-/** `ok`, or `unreachable` with a code; a thrown tester is logged without reaching the result. */
-async function probe(id: ConnectionId, test: Tester): Promise<Probe> {
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const timeout = new Promise<Probe>((resolve) => {
-    timer = setTimeout(() => resolve({ status: "unreachable", code: "TIMEOUT" }), PROBE_TIMEOUT_MS)
-  })
-  const run = test().then(
-    (result): Probe =>
-      result.success ? { status: "ok", code: null } : { status: "unreachable", code: failureCode(result.error) },
-    (error: unknown): Probe => {
-      logger.warn("Connection test threw", { id, error })
-      return { status: "unreachable", code: "UNREACHABLE" }
-    }
-  )
-  try {
-    return await Promise.race([run, timeout])
-  } finally {
-    clearTimeout(timer)
-  }
 }
 
 const SERVICE = { where: { isActive: true }, select: { name: true, url: true, publicUrl: true } } as const
@@ -137,11 +99,11 @@ export async function checkConnections(now: Date = new Date()): Promise<Connecti
       async ([id, label, test]): Promise<ConnectionHealthEntry> => ({
         id,
         label,
-        ...(test ? await probe(id, test) : { status: "notConfigured", code: null }),
+        ...(test ? await probeConnection(id, test) : { status: "notConfigured", code: null }),
       })
     )
   )
-  const ai: Probe = config?.llmDisabled
+  const ai: Pick<ConnectionHealthEntry, "status" | "code"> = config?.llmDisabled
     ? { status: "degraded", code: "LLM_DISABLED" }
     : { status: llmProviders > 0 ? "ok" : "notConfigured", code: null }
 

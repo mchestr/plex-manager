@@ -32,6 +32,8 @@ export const LIMITS = {
   admin: { points: 50, duration: 15 * MINUTE },
   // The command menu's search-as-you-type (P10.16); `admin` would throttle typing
   "admin:search": { points: 120, duration: MINUTE },
+  // Test connection with typed values in settings and setup (P10.20), per admin
+  "admin:test": { points: 30, duration: 10 * MINUTE },
   checkout: { points: 10, duration: MINUTE },
   portal: { points: 10, duration: MINUTE },
   "discord-link": { points: 5, duration: 5 * MINUTE },

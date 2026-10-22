@@ -7,11 +7,13 @@
  * Secrets are never sent to the client, so a blank token or API key means
  * "keep the stored one", but only for the address it was saved with
  * (`resolveSecretForOrigin`, SEC-31). The connection test runs after that rule,
- * so a stored secret never reaches a new address. Every save is audited as
- * `CONFIG_CHANGED` with a redacted diff (SEC-55).
+ * so a stored secret never reaches a new address. A refusal carries
+ * `fieldErrors` on the secret or URL field, with code copy rather than the
+ * tester's message (P10.20). Every save is audited as `CONFIG_CHANGED` with a
+ * redacted diff (SEC-55) and expires the cached connection health.
  */
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 
 import { adminAction } from "@/lib/actions/define-action"
@@ -37,6 +39,9 @@ import { plexServerSchema } from "@/lib/validations/plex"
 import { prometheusSchema } from "@/lib/validations/prometheus"
 import { radarrSchema } from "@/lib/validations/radarr"
 import { sonarrSchema } from "@/lib/validations/sonarr"
+import { CONNECTION_HEALTH_TAG } from "@/lib/settings/connection-status"
+import { probeConnection } from "@/lib/settings/probe"
+import { connectionTestCopy } from "@/lib/ui/error-copy"
 import { tautulliSchema } from "@/lib/validations/tautulli"
 
 type ServerActionCode = ActionErrorCode | SecretRequiredCode
@@ -44,17 +49,39 @@ type ServerResult = ActionResult<null, ServerActionCode>
 
 const SECRET_INPUT = z.string().max(500).optional()
 
+type SecretField = "token" | "apiKey"
+
 /**
- * A blank secret that cannot be reused. With nothing stored this is a plain
- * required field (`missing`); otherwise the address changed.
+ * A blank secret that cannot be reused, as an error on the secret field. With
+ * nothing stored this is a plain required field (`missing`); otherwise the
+ * address changed.
  */
-function secretRequired(missing: string | null): ActionFailure<ServerActionCode> {
-  if (missing) return { success: false, code: "VALIDATION", error: missing }
-  return { success: false, code: "SECRET_REQUIRED", error: SECRET_REQUIRED_MESSAGE }
+function secretRequired(missing: string | null, field: SecretField): ActionFailure<ServerActionCode> {
+  if (missing) return { success: false, code: "VALIDATION", error: missing, fieldErrors: { [field]: [missing] } }
+  return { success: false, code: "SECRET_REQUIRED", error: SECRET_REQUIRED_MESSAGE, fieldErrors: { [field]: [SECRET_REQUIRED_MESSAGE] } }
 }
 
-function unreachable(error: string): ActionFailure<ServerActionCode> {
-  return { success: false, code: "UPSTREAM_UNAVAILABLE", error }
+/**
+ * Runs the connection test with the 5 s cut-off. A failure is
+ * `UPSTREAM_UNAVAILABLE` with the code's copy on the URL or secret field,
+ * never the tester's message.
+ */
+async function checkConnection(
+  service: string,
+  test: () => Promise<{ success: boolean; error?: string }>,
+  secretField: SecretField | null
+): Promise<ActionFailure<ServerActionCode> | null> {
+  const probe = await probeConnection(service, test)
+  if (probe.status === "ok") return null
+  const copy = connectionTestCopy(probe.code, secretField === "token" ? "Plex token" : "API key")
+  const field = copy.field === "secret" && secretField ? secretField : "url"
+  return { success: false, code: "UPSTREAM_UNAVAILABLE", error: `${copy.title}. ${copy.fix}`, fieldErrors: { [field]: [copy.fieldError] } }
+}
+
+/** After a save: the settings page re-renders and the cached health checks run again. */
+function savedSettings() {
+  updateTag(CONNECTION_HEALTH_TAG)
+  revalidatePath("/admin/settings")
 }
 
 /** The fields every saved service row holds besides its secret. */
@@ -121,16 +148,17 @@ export const updatePlexServer = adminAction({
       stored: stored && { secret: stored.token, url: stored.url },
       submittedUrl: input.url,
     })
-    if (!secret.ok) return secretRequired(stored ? null : "Plex token is required")
+    if (!secret.ok) return secretRequired(stored ? null : "Plex token is required", "token")
     const validated = { ...input, token: secret.secret }
 
-    const connectionTest = await testPlexConnection(validated)
-    if (!connectionTest.success) return unreachable(connectionTest.error || "Failed to connect to Plex server")
+    const refused = await checkConnection("plex", () => testPlexConnection(validated), "token")
+    if (refused) return refused
 
     // The admin's Plex user ID comes from the token
     const userInfoResult = await getPlexUserInfo(validated.token)
     if (!userInfoResult.success || !userInfoResult.data) {
-      return unreachable("Failed to fetch user info from Plex token")
+      const copy = connectionTestCopy("UNAUTHORIZED", "Plex token")
+      return { success: false, code: "UPSTREAM_UNAVAILABLE", error: `${copy.title}. ${copy.fix}`, fieldErrors: { token: [copy.fieldError] } }
     }
     const adminPlexUserId = userInfoResult.data.id
 
@@ -152,7 +180,7 @@ export const updatePlexServer = adminAction({
       auditedFields(validated, validated.token),
       "secret"
     )
-    revalidatePath("/admin/settings")
+    savedSettings()
     return ok(null)
   },
 })
@@ -161,7 +189,6 @@ export const updatePlexServer = adminAction({
 type ApiKeyService = "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr"
 
 interface ApiKeyServiceDefinition {
-  label: string
   findActive: () => Promise<{ name: string; url: string; publicUrl: string | null; apiKey: string } | null>
   test: (config: ServiceValues & { apiKey: string }) => Promise<{ success: boolean; error?: string }>
   delegate: (tx: PrismaTransactionClient) => ActiveRowDelegate<ServiceValues & { apiKey: string; isActive: true }>
@@ -169,31 +196,26 @@ interface ApiKeyServiceDefinition {
 
 const API_KEY_SERVICES: Record<ApiKeyService, ApiKeyServiceDefinition> = {
   jellyfin: {
-    label: "Jellyfin server",
     findActive: () => prisma.jellyfinServer.findFirst({ where: { isActive: true } }),
     test: testJellyfinConnection,
     delegate: (tx) => tx.jellyfinServer,
   },
   tautulli: {
-    label: "Tautulli",
     findActive: () => prisma.tautulli.findFirst({ where: { isActive: true } }),
     test: testTautulliConnection,
     delegate: (tx) => tx.tautulli,
   },
   overseerr: {
-    label: "Overseerr",
     findActive: () => prisma.overseerr.findFirst({ where: { isActive: true } }),
     test: testOverseerrConnection,
     delegate: (tx) => tx.overseerr,
   },
   sonarr: {
-    label: "Sonarr",
     findActive: () => prisma.sonarr.findFirst({ where: { isActive: true } }),
     test: testSonarrConnection,
     delegate: (tx) => tx.sonarr,
   },
   radarr: {
-    label: "Radarr",
     findActive: () => prisma.radarr.findFirst({ where: { isActive: true } }),
     test: testRadarrConnection,
     delegate: (tx) => tx.radarr,
@@ -216,13 +238,11 @@ async function saveApiKeyService(service: ApiKeyService, input: ApiKeyInput, act
     stored: stored && { secret: stored.apiKey, url: stored.url },
     submittedUrl: input.url,
   })
-  if (!secret.ok) return secretRequired(stored ? null : "API key is required")
+  if (!secret.ok) return secretRequired(stored ? null : "API key is required", "apiKey")
   const validated = { ...input, apiKey: secret.secret }
 
-  const connectionTest = await definition.test(validated)
-  if (!connectionTest.success) {
-    return unreachable(connectionTest.error || `Failed to connect to ${definition.label}`)
-  }
+  const refused = await checkConnection(service, () => definition.test(validated), "apiKey")
+  if (refused) return refused
 
   await prisma.$transaction((tx) =>
     replaceActiveRow(definition.delegate(tx), {
@@ -241,7 +261,7 @@ async function saveApiKeyService(service: ApiKeyService, input: ApiKeyInput, act
     auditedFields(validated, validated.apiKey),
     "secret"
   )
-  revalidatePath("/admin/settings")
+  savedSettings()
   return ok(null)
 }
 
@@ -287,10 +307,8 @@ export const updatePrometheus = adminAction({
   input: prometheusSchema,
   fallbackError: "Failed to update Prometheus configuration",
   handler: async (validated, { userId }): Promise<ServerResult> => {
-    const connectionTest = await testPrometheusConnection(validated)
-    if (!connectionTest.success) {
-      return unreachable(connectionTest.error || "Failed to connect to Prometheus server")
-    }
+    const refused = await checkConnection("prometheus", () => testPrometheusConnection(validated), null)
+    if (refused) return refused
 
     const queryTest = await validatePrometheusQuery(validated)
     if (!queryTest.success) {
@@ -317,7 +335,7 @@ export const updatePrometheus = adminAction({
         { urlFields: ["url"] }
       )
     )
-    revalidatePath("/admin/settings")
+    savedSettings()
     revalidatePath("/") // The home page shows the status
     return ok(null)
   },

@@ -13,7 +13,8 @@ import { testTautulliConnection } from "@/lib/connections/tautulli"
 import { getStripeConfig } from "@/actions/admin/admin-config"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
-import { checkConnections, getSettingsHealth, PROBE_TIMEOUT_MS } from "@/lib/settings/connection-health"
+import { checkConnections, getSettingsHealth } from "@/lib/settings/connection-health"
+import { PROBE_TIMEOUT_MS } from "@/lib/settings/probe"
 import { CONNECTION_HEALTH_TAG } from "@/lib/settings/connection-status"
 
 jest.mock("next/cache", () => ({ unstable_cache: jest.fn((fn: () => unknown) => fn) }))
@@ -28,7 +29,15 @@ jest.mock("@/lib/connections/prometheus", () => ({ testPrometheusConnection: jes
 jest.mock("@/lib/queue/rewind-infra", () => ({ checkRewindInfra: jest.fn() }))
 jest.mock("@/actions/admin/admin-config", () => ({ getStripeConfig: jest.fn() }))
 
-const STRIPE_OFF = { enabled: false, hasSecretKey: false, hasWebhookSecret: false, hasJobQueue: true, priceIds: [], librarySectionIds: [] }
+const STRIPE_OFF = {
+  enabled: false,
+  hasSecretKey: false,
+  hasWebhookSecret: false,
+  saved: { secretKey: null, webhookSecret: null },
+  hasJobQueue: true,
+  priceIds: [],
+  librarySectionIds: [],
+}
 
 const SECRET = "connect ECONNREFUSED tautulli.internal:8181 apikey=hunter2"
 const NOW = new Date("2026-12-10T18:00:00Z")

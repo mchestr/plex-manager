@@ -1,5 +1,5 @@
 /**
- * Checks the @example blocks in lib/security/secret-reuse.ts,
+ * Checks the @example blocks in lib/security/secret-reuse.ts, lib/security/saved-secret.ts,
  * lib/security/config-diff.ts, lib/security/rate-limit-messages.ts,
  * lib/security/safe-redirect.ts and lib/security/signed-cookie.ts.
  */
@@ -7,7 +7,8 @@
 import { configDiff } from "@/lib/security/config-diff"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
 import { safeRedirectPath } from "@/lib/security/safe-redirect"
-import { resolveSecretForOrigin } from "@/lib/security/secret-reuse"
+import { safeOrigin } from "@/lib/security/saved-secret"
+import { describeSecret, resolveSecretForOrigin } from "@/lib/security/secret-reuse"
 import { readCookie, signValue, verifyValue } from "@/lib/security/signed-cookie"
 
 jest.mock("@/lib/env", () => ({
@@ -16,6 +17,17 @@ jest.mock("@/lib/env", () => ({
 }))
 
 describe("JSDoc Documentation Examples", () => {
+  it("describeSecret", () => {
+    expect(describeSecret("abcdefgh12345678", "http://tautulli.lan:8181/x")).toEqual({ last4: "5678", origin: "http://tautulli.lan:8181" })
+    expect(describeSecret("", "http://tautulli.lan:8181")).toBeNull()
+  })
+
+  it("safeOrigin", () => {
+    expect(safeOrigin("http://Tautulli.lan:8181/api")).toBe("http://tautulli.lan:8181")
+    expect(safeOrigin("https://plex.example.com:443")).toBe("https://plex.example.com")
+    expect(safeOrigin("not a url")).toBeNull()
+  })
+
   it("resolveSecretForOrigin refuses a stored key for a new host", () => {
     expect(
       resolveSecretForOrigin({

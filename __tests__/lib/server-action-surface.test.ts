@@ -46,8 +46,8 @@ const PARSE_METHODS = new Set(['parse', 'safeParse', 'parseAsync', 'safeParseAsy
  * entry goes when its input changes and gets checked again.
  */
 const REVIEWED_CREDENTIAL_INPUTS: Record<string, string> = {
-  'actions/discord.ts updateDiscordIntegrationSettings(parse(...) -> botToken)':
-    'requireAdmin(); stores the Discord bot token, which the bot sends only to Discord',
+  'actions/discord.ts updateDiscordIntegrationSettings(input: { clientId?: string | undefined; clientSecret?: string | undefined; botToken?: string | undefined; supportChannelId?: string | undefined; supportThreadIds?: string | string[] | undefined; ... 5 more ...; botEnabled?: boolean | undefined; })':
+    'adminAction (P10.20); stores the Discord bot token, which the bot sends only to Discord',
 }
 
 const FIXTURE = path.join(__dirname, 'fixtures/server-action-surface/target-inputs.ts')

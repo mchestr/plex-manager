@@ -32,3 +32,19 @@ export const OPENAI_COMPATIBLE_PRESETS = {
 export function isLLMProviderId(value: string): value is LLMProviderId {
   return (LLM_PROVIDER_IDS as readonly string[]).includes(value)
 }
+
+/** Where each hosted provider's key is sent. */
+const HOSTED_API_ORIGINS: Record<string, string> = {
+  openai: "https://api.openai.com",
+  anthropic: "https://api.anthropic.com",
+  google: "https://generativelanguage.googleapis.com",
+}
+
+/**
+ * The address a provider's API key is sent to: the hosted API, or the base
+ * URL of an OpenAI-compatible server. The stored key is reused only for the
+ * same provider and the same origin of this address (SEC-31).
+ */
+export function llmKeyDestination(provider: string, baseUrl: string | null | undefined): string {
+  return (provider === "openai-compatible" ? baseUrl : HOSTED_API_ORIGINS[provider]) ?? ""
+}

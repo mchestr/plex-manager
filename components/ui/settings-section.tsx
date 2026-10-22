@@ -2,6 +2,7 @@
 
 import { createContext, type FormEvent, type ReactNode, useContext, useEffect, useState } from "react"
 
+import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Icon } from "@/components/ui/icon"
@@ -16,6 +17,8 @@ import { cn } from "@/lib/utils"
 export interface TestResult {
   ok: boolean
   message: string
+  /** The fix for a failure, shown in the inline Alert under `message`. */
+  detail?: string
 }
 
 /** Collects each section's dirty flag for the section nav's "Unsaved changes" pip. */
@@ -83,14 +86,20 @@ export function SettingsFormFooter({ id, form, onTest, footerMeta, className }: 
   return (
     <CardFooter className={cn("flex-col items-stretch gap-3 pt-4 sm:flex-row sm:items-center", className)}>
       <div className="flex min-w-0 flex-1 flex-col gap-1 text-label text-muted-foreground">
-        <p role="status" className="flex items-start gap-2 empty:hidden" data-testid={`settings-${id}-test-result`}>
-          {result && (
-            <>
-              <Icon icon={result.ok ? icons.success : icons.warning} className={cn("mt-0.5", result.ok ? "text-success" : "text-warning")} />
+        <div role="status" className="empty:hidden" data-testid={`settings-${id}-test-result`}>
+          {result?.ok && (
+            <p className="flex items-start gap-2">
+              <Icon icon={icons.success} className="mt-0.5 text-success" />
               <span className="text-foreground">{result.message}</span>
-            </>
+            </p>
           )}
-        </p>
+          {result && !result.ok && (
+            // Inside the status region, so it is announced once, politely
+            <Alert tone="warning" role="presentation" title={result.message}>
+              {result.detail}
+            </Alert>
+          )}
+        </div>
         {dirty ? (
           <p className="flex flex-wrap items-center gap-x-2" data-testid={`settings-${id}-unsaved`}>
             <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-primary-indicator" />
@@ -147,8 +156,9 @@ interface SettingsSectionProps extends Omit<SettingsFormFooterProps, "className"
  * the connection badge and "Checked ..." in the header, the fields, and the
  * {@link SettingsFormFooter}. Save is disabled until the form is dirty; a
  * dirty form shows the "Unsaved changes" pip and Discard, and reports itself
- * to the section nav. `form.blockedReason` disables Test and Save and says why.
- * Leave `form` out for controls that save themselves.
+ * to the section nav. `form.blockedReason` disables Test and Save and says why;
+ * a submit that gets past it still reaches the server, which refuses on the
+ * same rule (SEC-31). Leave `form` out for controls that save themselves.
  */
 export function SettingsSection({ id, title, description, status, checkedAt, children, footerMeta, onTest, form, className }: SettingsSectionProps) {
   const reportDirty = useContext(DirtyContext)
@@ -161,7 +171,7 @@ export function SettingsSection({ id, title, description, status, checkedAt, chi
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (form?.isDirty && !form.blockedReason) form.onSave()
+    if (form?.isDirty) form.onSave()
   }
 
   const body = (
@@ -185,7 +195,14 @@ export function SettingsSection({ id, title, description, status, checkedAt, chi
             </CardAction>
           )}
         </CardHeader>
-        {form ? <form onSubmit={submit}>{body}</form> : body}
+        {/* noValidate: errors show on their fields, and a blocked submit still reaches the server */}
+        {form ? (
+          <form onSubmit={submit} noValidate>
+            {body}
+          </form>
+        ) : (
+          body
+        )}
       </Card>
     </section>
   )

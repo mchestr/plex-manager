@@ -1,26 +1,26 @@
 "use client"
 
-import { StripeSettingsForm } from "@/components/admin/settings/stripe-settings-form"
+import type { ReactNode } from "react"
+
+import type { StripeConfigStatus } from "@/actions/admin/admin-config"
+import { StripeSettingsFields, useStripeForm } from "@/components/admin/settings/stripe-settings-form"
 import { SettingsSection } from "@/components/ui/settings-section"
 import type { SectionHealth } from "@/lib/settings/connection-status"
 
 interface StripeSectionProps {
-  config: {
-    enabled: boolean
-    hasSecretKey: boolean
-    hasWebhookSecret: boolean
-    hasJobQueue: boolean
-    priceIds: string[]
-    librarySectionIds: number[]
-  }
+  config: StripeConfigStatus
   health: SectionHealth
+  /** "Last saved ... by ..." from the audit log. */
+  footerMeta?: ReactNode
 }
 
 /**
- * Stripe billing. Its switch and form save on their own until P10.20 moves
- * the keys onto SecretInput and the section footer.
+ * Stripe billing (P10.20): the Subscriptions switch saves on its own; the
+ * keys, prices and libraries save through the section footer. The switch's
+ * prerequisites show as one Alert, and fields turn red only after a save.
  */
-export function StripeSection({ config, health }: StripeSectionProps) {
+export function StripeSection({ config, health, footerMeta }: StripeSectionProps) {
+  const stripe = useStripeForm(config)
   return (
     <SettingsSection
       id="stripe"
@@ -28,8 +28,10 @@ export function StripeSection({ config, health }: StripeSectionProps) {
       description="Gate server access behind a Stripe subscription for non-members."
       status={health.status}
       checkedAt={health.checkedAt}
+      form={stripe.form}
+      footerMeta={footerMeta}
     >
-      <StripeSettingsForm {...config} />
+      <StripeSettingsFields config={config} state={stripe} />
     </SettingsSection>
   )
 }

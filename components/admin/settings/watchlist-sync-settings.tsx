@@ -1,20 +1,17 @@
 "use client"
 
-import {
-  getGlobalWatchlistSyncSettings,
-  getWatchlistSyncStats,
-  updateGlobalWatchlistSyncSettings,
-} from "@/actions/admin/watchlist"
-import { Alert } from "@/components/ui/alert"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+
+import { getWatchlistSyncStats, updateGlobalWatchlistSyncSettings } from "@/actions/admin/watchlist"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Label } from "@/components/ui/label"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/toast"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 
 /** The badge tone for each sync history status; anything else is neutral. */
 const SYNC_STATUS_VARIANT: Record<string, "success" | "info" | "warning" | "destructive"> = {
@@ -24,219 +21,123 @@ const SYNC_STATUS_VARIANT: Record<string, "success" | "info" | "warning" | "dest
   FAILED: "destructive",
 }
 
-interface GlobalSettings {
-  watchlistSyncEnabled: boolean
-  watchlistSyncIntervalMinutes: number
+export interface WatchlistGlobalSettings {
+  enabled: boolean
+  intervalMinutes: number
 }
 
-interface SyncStats {
-  usersWithSyncEnabled: number
-  totalItemsSynced: number
-  totalItemsRequested: number
-  recentHistory: Array<{
-    id: string
-    title: string
-    mediaType: string
-    status: string
-    syncedAt: Date
-    user: { name: string | null; email: string | null }
-  }>
+type SyncStats = Extract<Awaited<ReturnType<typeof getWatchlistSyncStats>>, { success: true }>["data"]
+
+const INTERVAL_ERROR = "Enter a whole number of minutes from 15 to 1440"
+
+function intervalError(value: string): string | undefined {
+  const minutes = Number(value)
+  return Number.isInteger(minutes) && minutes >= 15 && minutes <= 1440 ? undefined : INTERVAL_ERROR
 }
 
-/**
- * The Watchlist sync controls, inside the settings section of that name:
- * the global switch and the interval save on their own.
- */
-export function WatchlistSyncSettings() {
-  const toast = useToast()
+/** The global switch and interval as one always-open form (UI-31), saved by the section footer. */
+export function useWatchlistForm(saved: WatchlistGlobalSettings) {
   const router = useRouter()
-  const [settings, setSettings] = useState<GlobalSettings | null>(null)
-  const [stats, setStats] = useState<SyncStats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [intervalInput, setIntervalInput] = useState("")
-
-  useEffect(() => {
-    Promise.all([
-      getGlobalWatchlistSyncSettings(),
-      getWatchlistSyncStats(),
-    ]).then(([settingsResult, statsResult]) => {
-      if (settingsResult.success && settingsResult.data) {
-        setSettings(settingsResult.data)
-        setIntervalInput(settingsResult.data.watchlistSyncIntervalMinutes.toString())
-      }
-
-      if (statsResult.success && statsResult.data) {
-        setStats(statsResult.data)
-      }
-
-      setIsLoading(false)
-    })
-  }, [])
-
-  const handleToggleEnabled = async () => {
-    if (!settings) return
-
-    setIsSaving(true)
-    try {
-      const result = await updateGlobalWatchlistSyncSettings({
-        watchlistSyncEnabled: !settings.watchlistSyncEnabled,
-        watchlistSyncIntervalMinutes: settings.watchlistSyncIntervalMinutes,
-      })
-
-      if (result.success) {
-        setSettings({
-          ...settings,
-          watchlistSyncEnabled: !settings.watchlistSyncEnabled,
-        })
-        toast.showSuccess(
-          settings.watchlistSyncEnabled
-            ? "Watchlist sync disabled"
-            : "Watchlist sync enabled"
-        )
-        // The section's status follows the switch
-        router.refresh()
-      } else {
-        toast.showError(result.error || "Failed to update settings")
-      }
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleIntervalChange = async () => {
-    if (!settings) return
-
-    const interval = parseInt(intervalInput, 10)
-    if (isNaN(interval) || interval < 15 || interval > 1440) {
-      toast.showError("Interval must be between 15 and 1440 minutes")
+  const toast = useToast()
+  const [error, setError] = useState<string>()
+  const settings = useSettingsForm({ enabled: saved.enabled, interval: String(saved.intervalMinutes) }, async (values) => {
+    const invalid = intervalError(values.interval)
+    if (invalid) {
+      setError(invalid)
       return
     }
-
-    setIsSaving(true)
-    try {
-      const result = await updateGlobalWatchlistSyncSettings({
-        watchlistSyncEnabled: settings.watchlistSyncEnabled,
-        watchlistSyncIntervalMinutes: interval,
-      })
-
-      if (result.success) {
-        setSettings({
-          ...settings,
-          watchlistSyncIntervalMinutes: interval,
-        })
-        toast.showSuccess("Sync interval updated")
-      } else {
-        toast.showError(result.error || "Failed to update settings")
-      }
-    } finally {
-      setIsSaving(false)
+    const result = await updateGlobalWatchlistSyncSettings({
+      watchlistSyncEnabled: values.enabled,
+      watchlistSyncIntervalMinutes: Number(values.interval),
+    })
+    if (!result.success) {
+      const field = result.fieldErrors?.watchlistSyncIntervalMinutes?.[0]
+      if (field) setError(field)
+      else toast.showError(result.error)
+      return
     }
-  }
+    setError(undefined)
+    toast.showSuccess("Watchlist sync saved")
+    // The section's status follows the switch
+    router.refresh()
+  })
+  return { ...settings, error }
+}
 
-  if (isLoading) {
-    return (
-      <div data-testid="watchlist-sync-settings-loading">
-        <Skeleton className="h-4 w-2/3 mb-6" />
-        <Skeleton className="h-10 w-24" />
-      </div>
-    )
-  }
+/** Members, items and recent requests; loaded after the page so it never holds the settings up. */
+function WatchlistSyncStats() {
+  const [stats, setStats] = useState<SyncStats | null>(null)
 
-  if (!settings) {
-    return null
-  }
+  useEffect(() => {
+    let cancelled = false
+    getWatchlistSyncStats().then((result) => {
+      if (!cancelled && result.success) setStats(result.data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
+  if (!stats) return null
   return (
-    <div className="space-y-6" data-testid="watchlist-sync-settings">
-        <div className="flex items-center gap-4">
-          <Switch
-            checked={settings.watchlistSyncEnabled}
-            onCheckedChange={() => void handleToggleEnabled()}
-            loading={isSaving}
-            label="Watchlist sync"
-            data-testid="watchlist-sync-global-toggle"
-          />
-          <span className="text-sm font-medium text-foreground">
-            {settings.watchlistSyncEnabled ? "Enabled" : "Disabled"}
+    <div className="flex flex-col gap-4 border-t pt-6" data-testid="watchlist-sync-stats">
+      <StatGrid className="grid-cols-3 lg:grid-cols-3">
+        <StatTile label="Members with sync on" value={stats.usersWithSyncEnabled} />
+        <StatTile label="Items synced" value={stats.totalItemsSynced} />
+        <StatTile label="Requests created" value={stats.totalItemsRequested} />
+      </StatGrid>
+      {stats.recentHistory.length > 0 && (
+        <ul className="flex flex-col gap-2" aria-label="Recent activity">
+          {stats.recentHistory.slice(0, 5).map((item) => (
+            <li key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-secondary px-3 py-2 text-ui">
+              <span className="min-w-0 truncate text-foreground">
+                {item.title} <span className="text-label text-muted-foreground">by {item.user.name || item.user.email || "Unknown"}</span>
+              </span>
+              <Badge variant={SYNC_STATUS_VARIANT[item.status] ?? "neutral"}>{item.status.replace(/_/g, " ").toLowerCase()}</Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/** The Watchlist sync controls: the global switch, the interval while it is on, and the statistics. */
+export function WatchlistSyncFields({ state }: { state: ReturnType<typeof useWatchlistForm> }) {
+  const { values, set, form, error } = state
+  return (
+    <div className="flex flex-col gap-6" data-testid="watchlist-sync-settings">
+      <div className="flex items-start gap-3">
+        <Switch
+          id="watchlist-sync-enabled"
+          checked={values.enabled}
+          onCheckedChange={(enabled) => set({ enabled })}
+          disabled={form.isPending}
+          aria-describedby="watchlist-sync-enabled-hint"
+          data-testid="watchlist-sync-global-toggle"
+        />
+        <div className="flex flex-col">
+          <Label htmlFor="watchlist-sync-enabled">Watchlist sync</Label>
+          <span id="watchlist-sync-enabled-hint" className="text-label text-muted-foreground">
+            While it is off, members can't turn sync on for themselves. It needs Overseerr.
           </span>
         </div>
-
-        {/* Interval Setting */}
-        {settings.watchlistSyncEnabled && (
-          <div className="space-y-2">
-            <label htmlFor="watchlist-sync-interval" className="block text-sm font-medium text-foreground">
-              Sync Interval (minutes)
-            </label>
-            <div className="flex items-center gap-3">
-              <Input
-                id="watchlist-sync-interval"
-                type="number"
-                min="15"
-                max="1440"
-                value={intervalInput}
-                onChange={(e) => setIntervalInput(e.target.value)}
-                className="w-24"
-                data-testid="watchlist-sync-interval-input"
-              />
-              <Button
-                variant="primary"
-                onClick={handleIntervalChange}
-                disabled={isSaving || intervalInput === settings.watchlistSyncIntervalMinutes.toString()}
-                data-testid="watchlist-sync-interval-save"
-              >
-                Save
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              How often to check for new items in users&apos; watchlists (15-1440 minutes)
-            </p>
-          </div>
-        )}
-
-        {/* Statistics */}
-        {stats && settings.watchlistSyncEnabled && (
-          <div className="border-t border-border pt-6 mt-6">
-            <h3 className="text-sm font-medium text-foreground mb-4">Statistics</h3>
-            <StatGrid className="grid-cols-3 lg:grid-cols-3">
-              <StatTile label="Users with sync enabled" value={stats.usersWithSyncEnabled} />
-              <StatTile label="Total items synced" value={stats.totalItemsSynced} />
-              <StatTile label="Requests created" value={stats.totalItemsRequested} />
-            </StatGrid>
-
-            {/* Recent Activity */}
-            {stats.recentHistory.length > 0 && (
-              <div className="mt-6">
-                <h4 className="text-sm font-medium text-foreground mb-3">Recent Activity</h4>
-                <div className="space-y-2">
-                  {stats.recentHistory.slice(0, 5).map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between rounded-lg bg-secondary px-3 py-2 text-sm"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-foreground">{item.title}</span>
-                        <span className="text-xs text-muted-foreground">
-                          by {item.user.name || item.user.email || "Unknown"}
-                        </span>
-                      </div>
-                      <Badge variant={SYNC_STATUS_VARIANT[item.status] ?? "neutral"}>
-                        {item.status.replace(/_/g, " ").toLowerCase()}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Warning when disabled */}
-        {!settings.watchlistSyncEnabled && (
-          <Alert tone="warning">
-            Watchlist sync is disabled. Users will not be able to enable sync in their settings.
-          </Alert>
-        )}
+      </div>
+      {values.enabled && (
+        <FormField name="watchlist-sync-interval" label="Sync interval" description="Minutes between checks, from 15 to 1440." error={error ?? intervalError(values.interval)}>
+          <Input
+            type="number"
+            min="15"
+            max="1440"
+            value={values.interval}
+            onValueChange={(interval) => set({ interval })}
+            disabled={form.isPending}
+            className="w-32"
+            data-testid="watchlist-sync-interval-input"
+          />
+        </FormField>
+      )}
+      {values.enabled && <WatchlistSyncStats />}
     </div>
   )
 }

@@ -38,7 +38,7 @@ jest.mock("next-auth", () => ({
 
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 
-jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
+jest.mock("next/cache", () => ({ revalidatePath: jest.fn(), updateTag: jest.fn() }))
 
 jest.mock("@/lib/discord/integration", () => ({
   clearDiscordRoleForUser: jest.fn(),
@@ -56,6 +56,7 @@ jest.mock("@/lib/utils/logger", () => ({
 
 import { updateDiscordIntegrationSettings, disconnectDiscordAccount } from "@/actions/discord"
 import { requireAdmin } from "@/lib/admin"
+import { getServerSession } from "next-auth"
 import { clearDiscordRoleForUser as mockedClearRole } from "@/lib/discord/integration"
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -67,6 +68,7 @@ const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin
 beforeEach(() => {
   jest.clearAllMocks()
   mockRequireAdmin.mockResolvedValue({ user: { id: "admin-1", isAdmin: true } } as never)
+  jest.mocked(getServerSession).mockResolvedValue({ user: { id: "admin-1", isAdmin: true }, expires: "2099-01-01T00:00:00.000Z" })
   mockPrisma.discordIntegration.upsert.mockResolvedValue({} as never)
 })
 
@@ -123,6 +125,8 @@ describe("updateDiscordIntegrationSettings audit", () => {
     expect(details.secretsChanged).toEqual(
       expect.objectContaining({ clientSecret: true, botToken: true })
     )
+    // The settings footer finds the save by its section (P10.20)
+    expect(details.section).toBe("discord")
 
     // The secret VALUES must never appear anywhere in the audit payload.
     assertNoSecretLeak(["SUPER_SECRET_CLIENT", "SUPER_SECRET_BOT_TOKEN", "OLD_SECRET_VALUE", "OLD_BOT_TOKEN"])

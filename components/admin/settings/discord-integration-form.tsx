@@ -1,24 +1,27 @@
 "use client"
 
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+
 import { updateDiscordIntegrationSettings } from "@/actions/discord"
-import { StyledCheckbox } from "@/components/ui/styled-checkbox"
-import { StyledInput } from "@/components/ui/styled-input"
-import { StyledTextarea } from "@/components/ui/styled-textarea"
+import { FormField } from "@/components/ui/form-field"
+import { Input } from "@/components/ui/input"
+import { SecretInput } from "@/components/ui/secret-input"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
-import { useRouter } from "next/navigation"
+import type { SavedSecret } from "@/lib/security/saved-secret"
 
 /**
  * The Discord integration config, with the client secret and bot token
- * stripped. `hasClientSecret` and `hasBotToken` say a secret is stored (never
- * the value itself), so a blank field keeps it.
+ * replaced by `{ last4 }`: both go only to Discord, a fixed destination, so
+ * a blank field keeps them (P4.6's exception to SEC-31).
  */
 export interface StoredDiscordIntegration {
   isEnabled: boolean
   botEnabled?: boolean | null
   clientId?: string | null
-  hasClientSecret?: boolean
-  hasBotToken?: boolean
+  secrets: { clientSecret: SavedSecret | null; botToken: SavedSecret | null }
   supportChannelId?: string | null
   supportThreadIds?: unknown
   guildId?: string | null
@@ -27,38 +30,21 @@ export interface StoredDiscordIntegration {
   instructions?: string | null
 }
 
-/**
- * Parses a Discord invite code from either a full URL or just the code
- * Examples:
- * - https://discord.gg/axzpDYH6jz -> axzpDYH6jz
- * - discord.gg/axzpDYH6jz -> axzpDYH6jz
- * - axzpDYH6jz -> axzpDYH6jz
- */
+/** "abc123" from "https://discord.gg/abc123", "discord.gg/abc123" or "abc123". */
 function parseDiscordInviteCode(input: string): string {
-  if (!input) return ""
-
   const trimmed = input.trim()
-
-  // Match Discord invite URLs (https://discord.gg/CODE or discord.gg/CODE)
-  const urlMatch = trimmed.match(/discord\.gg\/([a-zA-Z0-9]+)/i)
-  if (urlMatch) {
-    return urlMatch[1]
-  }
-
-  // If it's already just a code, return as-is
-  return trimmed
+  return trimmed.match(/discord\.gg\/([a-zA-Z0-9]+)/i)?.[1] ?? trimmed
 }
 
 function initialValues(integration: StoredDiscordIntegration | null) {
-  // Normalize the stored (non-secret) support thread IDs into a comma-separated string
   const supportThreadIds = Array.isArray(integration?.supportThreadIds)
     ? (integration.supportThreadIds as unknown[]).filter((id): id is string => typeof id === "string").join(", ")
     : ""
-  // Secrets (client secret + bot token) are never sent to the client. Empty means "keep existing".
   return {
     isEnabled: integration?.isEnabled ?? false,
     botEnabled: integration?.botEnabled ?? false,
     clientId: integration?.clientId ?? "",
+    // Blank keeps the stored secret
     clientSecret: "",
     botToken: "",
     supportChannelId: integration?.supportChannelId ?? "",
@@ -70,191 +56,132 @@ function initialValues(integration: StoredDiscordIntegration | null) {
   }
 }
 
-/** The Discord form, always open (UI-31): values, dirty state, Discard and Save. */
+type DiscordValues = ReturnType<typeof initialValues>
+type DiscordErrors = Partial<Record<keyof DiscordValues, string>>
+
+/** The Discord form, always open (UI-31): values, dirty state, Discard and Save, and field errors. */
 export function useDiscordForm(integration: StoredDiscordIntegration | null) {
   const router = useRouter()
   const toast = useToast()
-  return useSettingsForm(initialValues(integration), async (values) => {
+  const [errors, setErrors] = useState<DiscordErrors>({})
+  const settings = useSettingsForm(initialValues(integration), async (values) => {
     const result = await updateDiscordIntegrationSettings({
       ...values,
-      // Blank secrets are omitted so the action keeps the stored values.
       clientSecret: values.clientSecret.trim() || undefined,
       botToken: values.botToken.trim() || undefined,
     })
     if (!result.success) {
-      toast.showError(result.error || "Failed to update Discord settings")
+      const fieldErrors = Object.fromEntries(
+        Object.entries(result.fieldErrors ?? {}).flatMap(([field, messages]) => (field in values && messages[0] ? [[field, messages[0]]] : []))
+      )
+      setErrors(fieldErrors)
+      if (Object.keys(fieldErrors).length === 0) toast.showError(result.error)
       return
     }
+    setErrors({})
     toast.showSuccess("Discord settings saved")
     router.refresh()
     return { ...values, clientSecret: "", botToken: "" }
   })
+
+  /** Changes fields and clears their errors. */
+  const set = (patch: Partial<DiscordValues>) => {
+    settings.set(patch)
+    setErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([field]) => !(field in patch))))
+  }
+
+  return { values: settings.values, set, errors, form: settings.form }
 }
 
 type DiscordForm = ReturnType<typeof useDiscordForm>
 
 interface DiscordIntegrationFieldsProps {
   integration: StoredDiscordIntegration | null
-  values: DiscordForm["values"]
-  set: DiscordForm["set"]
-  isPending: boolean
+  state: DiscordForm
 }
 
-/** The Discord fields: the two feature toggles, credentials and support settings. */
-export function DiscordIntegrationFields({ integration, values: formData, set, isPending }: DiscordIntegrationFieldsProps) {
-  // Whether a client secret / bot token is already stored (leave-blank-to-keep).
-  const hasStoredClientSecret = Boolean(integration?.hasClientSecret)
-  const hasStoredBotToken = Boolean(integration?.hasBotToken)
-  const setFormData = (next: typeof formData) => set(next)
+/**
+ * The Discord credentials and support settings as FormFields (UI-13). The
+ * two feature switches sit in the section's status rows. The client secret
+ * and bot token are SecretInputs in the saved state only: their destination
+ * is fixed, so no address change asks for them again.
+ */
+export function DiscordIntegrationFields({ integration, state }: DiscordIntegrationFieldsProps) {
+  const { values, set, errors, form } = state
+  const disabled = form.isPending
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-4 p-4 border border-border rounded-lg">
-        <StyledCheckbox
-          id="discord-enabled"
-          checked={formData.isEnabled}
-          onChange={(e) => setFormData({ ...formData, isEnabled: e.target.checked })}
-          disabled={isPending}
-          label="Enable Discord Linked Roles"
-          description="Allow users to link their Discord account and verify Plex access through Discord Linked Roles"
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <FormField name="discord-client-id" label="Client ID" error={errors.clientId}>
+        <Input
+          value={values.clientId}
+          onValueChange={(clientId) => set({ clientId })}
+          placeholder="Discord application client ID"
+          required={values.isEnabled}
+          disabled={disabled}
+          data-testid="settings-discord-client-id"
         />
-        <StyledCheckbox
-          id="discord-bot-enabled"
-          checked={formData.botEnabled}
-          onChange={(e) => setFormData({ ...formData, botEnabled: e.target.checked })}
-          disabled={isPending}
-          label="Enable Discord Bot"
-          description="Automatically monitor support channels and verify user roles (runs automatically when enabled)"
+      </FormField>
+      <FormField name="discord-client-secret" label="Client secret" error={errors.clientSecret}>
+        <SecretInput
+          value={values.clientSecret}
+          onValueChange={(clientSecret) => set({ clientSecret })}
+          saved={integration?.secrets.clientSecret}
+          noun="secret"
+          placeholder="Discord application client secret"
+          required={values.isEnabled}
+          disabled={disabled}
+          data-testid="settings-discord-client-secret"
         />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Client ID {formData.isEnabled && <span className="text-destructive">*</span>}
-          </label>
-          <StyledInput
-            type="text"
-            value={formData.clientId}
-            onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
-            placeholder="Discord application client ID"
-            required={formData.isEnabled}
-            disabled={isPending}
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Client Secret {formData.isEnabled && !hasStoredClientSecret && <span className="text-destructive">*</span>}
-          </label>
-          <StyledInput
-            type="password"
-            value={formData.clientSecret}
-            onChange={(e) => setFormData({ ...formData, clientSecret: e.target.value })}
-            placeholder={hasStoredClientSecret ? "Leave blank to keep current secret" : "Discord application client secret"}
-            required={formData.isEnabled && !hasStoredClientSecret}
-            disabled={isPending}
-            autoComplete="off"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Guild ID <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <StyledInput
-            type="text"
-            value={formData.guildId}
-            onChange={(e) => setFormData({ ...formData, guildId: e.target.value })}
-            placeholder="Discord server (guild) ID"
-            disabled={isPending}
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Server Invite Code <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <StyledInput
-            type="text"
-            value={formData.serverInviteCode}
-            onChange={(e) => {
-              const value = e.target.value
-              // Parse Discord invite link if full URL is pasted
-              const parsedCode = parseDiscordInviteCode(value)
-              setFormData({ ...formData, serverInviteCode: parsedCode })
-            }}
-            placeholder="Discord invite code or full link (e.g., abc123 or https://discord.gg/abc123)"
-            disabled={isPending}
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Paste the invite code or full Discord invite link (e.g., https://discord.gg/axzpDYH6jz)
-          </p>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">Platform Name</label>
-          <StyledInput
-            type="text"
-            value={formData.platformName}
-            onChange={(e) => setFormData({ ...formData, platformName: e.target.value })}
-            placeholder="Displayed in Discord profile"
-            disabled={isPending}
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Bot Token <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <StyledInput
-            type="password"
-            value={formData.botToken}
-            onChange={(e) => setFormData({ ...formData, botToken: e.target.value })}
-            placeholder={hasStoredBotToken ? "Leave blank to keep current token" : "Discord bot token"}
-            disabled={isPending}
-            autoComplete="off"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Used by the Discord bot. Falls back to the DISCORD_BOT_TOKEN environment variable when blank.
-          </p>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Support Channel ID <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <StyledInput
-            type="text"
-            value={formData.supportChannelId}
-            onChange={(e) => setFormData({ ...formData, supportChannelId: e.target.value })}
-            placeholder="Channel the bot monitors for support"
-            disabled={isPending}
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Support Thread IDs <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <StyledInput
-            type="text"
-            value={formData.supportThreadIds}
-            onChange={(e) => setFormData({ ...formData, supportThreadIds: e.target.value })}
-            placeholder="Comma-separated thread IDs (e.g. 123, 456)"
-            disabled={isPending}
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium text-muted-foreground mb-1">
-          Server Notes for Onboarding <span className="text-muted-foreground font-normal">(optional)</span>
-        </label>
-        <p className="text-xs text-muted-foreground mb-2">
-          Custom notes displayed to users during the onboarding guide's Discord support step. Use this to provide server-specific instructions or important information.
-        </p>
-        <StyledTextarea
-          value={formData.instructions}
-          onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-          placeholder="e.g., Join our Discord server and mention your username in #support for faster help..."
-          disabled={isPending}
-          className="w-full min-h-[120px]"
+      </FormField>
+      <FormField name="discord-bot-token" label="Bot token" optional description="Falls back to DISCORD_BOT_TOKEN when blank." error={errors.botToken}>
+        <SecretInput
+          value={values.botToken}
+          onValueChange={(botToken) => set({ botToken })}
+          saved={integration?.secrets.botToken}
+          noun="token"
+          placeholder="Discord bot token"
+          disabled={disabled}
+          data-testid="settings-discord-bot-token"
         />
-      </div>
+      </FormField>
+      <FormField name="discord-guild-id" label="Guild ID" optional error={errors.guildId}>
+        <Input value={values.guildId} onValueChange={(guildId) => set({ guildId })} placeholder="Discord server (guild) ID" disabled={disabled} />
+      </FormField>
+      <FormField name="discord-invite" label="Server invite" optional description="Paste the code or the whole discord.gg link." error={errors.serverInviteCode}>
+        <Input
+          value={values.serverInviteCode}
+          onValueChange={(value) => set({ serverInviteCode: parseDiscordInviteCode(value) })}
+          leading={<span className="font-mono text-label">discord.gg/</span>}
+          placeholder="abc123"
+          disabled={disabled}
+        />
+      </FormField>
+      <FormField name="discord-platform-name" label="Platform name" description="Shown on members' Discord profiles." error={errors.platformName}>
+        <Input value={values.platformName} onValueChange={(platformName) => set({ platformName })} disabled={disabled} />
+      </FormField>
+      <FormField name="discord-support-channel" label="Support channel ID" optional description="The channel the bot watches for support." error={errors.supportChannelId}>
+        <Input value={values.supportChannelId} onValueChange={(supportChannelId) => set({ supportChannelId })} disabled={disabled} />
+      </FormField>
+      <FormField name="discord-support-threads" label="Support thread IDs" optional description="Separate them with commas." error={errors.supportThreadIds}>
+        <Input value={values.supportThreadIds} onValueChange={(supportThreadIds) => set({ supportThreadIds })} placeholder="123, 456" disabled={disabled} />
+      </FormField>
+      <FormField
+        name="discord-instructions"
+        label="Server notes for onboarding"
+        optional
+        description="Shown to members in the onboarding guide's Discord step."
+        error={errors.instructions}
+        className="md:col-span-2"
+      >
+        <Textarea
+          value={values.instructions}
+          onChange={(event) => set({ instructions: event.target.value })}
+          placeholder="Join our Discord server and mention your username in #support for faster help."
+          disabled={disabled}
+          className="min-h-[120px]"
+        />
+      </FormField>
     </div>
   )
 }

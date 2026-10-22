@@ -1,5 +1,7 @@
 "use client"
 
+import type { ReactNode } from "react"
+
 import { JellyfinLoginToggle } from "@/components/admin/settings/jellyfin-login-toggle"
 import { ServerForm } from "@/components/admin/settings/server-form"
 import { Button } from "@/components/ui/button"
@@ -25,6 +27,8 @@ interface OtherIntegrationsSectionProps {
   /** Jellyfin's "sign in with Jellyfin" flag, when Jellyfin is set up. */
   jellyfinLogin: boolean | null
   health: Record<OtherService, SectionHealth>
+  /** "Last saved ... by ..." from the audit log, shown in each Sheet's footer. */
+  footerMeta?: ReactNode
 }
 
 /** The host and port of a saved URL, or the service's description. */
@@ -42,7 +46,7 @@ function rowDescription(type: OtherService, server: StoredServer | null) {
  * list card. Each row shows its badge, and Edit or Set up opens its form in a
  * Sheet. The section takes the worst status among the services set up.
  */
-export function OtherIntegrationsSection({ servers, jellyfinLogin, health }: OtherIntegrationsSectionProps) {
+export function OtherIntegrationsSection({ servers, jellyfinLogin, health, footerMeta }: OtherIntegrationsSectionProps) {
   const configured = ORDER.filter((type) => servers[type])
   const checkedAt = configured.map((type) => health[type].checkedAt).find(Boolean) ?? null
 
@@ -77,7 +81,7 @@ export function OtherIntegrationsSection({ servers, jellyfinLogin, health }: Oth
                     <SheetTitle>{label}</SheetTitle>
                     <SheetDescription>{DESCRIPTIONS[type]}</SheetDescription>
                   </SheetHeader>
-                  <ServerForm type={type} server={server} />
+                  <ServerForm type={type} server={server} footerMeta={footerMeta} />
                   {type === "jellyfin" && jellyfinLogin !== null && <JellyfinLoginToggle enabledForLogin={jellyfinLogin} />}
                 </SheetContent>
               </Sheet>

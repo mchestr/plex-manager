@@ -3,6 +3,7 @@ import Link from "next/link"
 import { getAdminSettings } from "@/actions/admin"
 import { getStripeConfig } from "@/actions/admin/admin-config"
 import { getRewindSeasonDataPreparedAt } from "@/actions/admin/rewind-season"
+import { LastSaved } from "@/components/admin/settings/last-saved"
 import { LightThemeSwitch } from "@/components/admin/settings/light-theme-switch"
 import { RewindSettingsSection } from "@/components/admin/settings/rewind-settings-section"
 import { AiSection } from "@/components/admin/settings/sections/ai-section"
@@ -12,16 +13,17 @@ import { ServiceSection } from "@/components/admin/settings/sections/service-sec
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 import { SystemSection } from "@/components/admin/settings/sections/system-section"
 import { WatchlistSection } from "@/components/admin/settings/sections/watchlist-section"
-import { ServerTimeZoneForm } from "@/components/admin/settings/server-time-zone-form"
 import { SettingsLayout } from "@/components/admin/settings/settings-layout"
 import type { SettingsNavItem } from "@/components/admin/settings/settings-nav"
 import { SettingsPageActions } from "@/components/admin/settings/settings-page-actions"
 import { PageHeader } from "@/components/ui/page-header"
+import { getDiscordOverview } from "@/lib/admin/discord"
 import { getBaseUrl } from "@/lib/env"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
 import { getRewindSeasonSpend } from "@/lib/llm/usage-totals"
 import { getFormat } from "@/lib/settings/app-settings"
+import { getSettingsAuditMeta } from "@/lib/settings/audit-meta"
 import { getSettingsHealth } from "@/lib/settings/connection-health"
 import { worstStatus } from "@/lib/settings/connection-status"
 import { serverZone } from "@/lib/utils/server-zone"
@@ -52,13 +54,16 @@ export default async function SettingsPage() {
     serverZone(),
     getFormat(),
   ])
-  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd] = await Promise.all([
+  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord] = await Promise.all([
     getRewindSeasonDataPreparedAt(season.seasonYear),
     checkRewindInfra(),
     getRewindLibraries(),
     getRewindContentRatings(),
     getRewindSeasonSpend(season.seasonYear),
+    getSettingsAuditMeta(),
+    getDiscordOverview(),
   ])
+  const saved = (id: keyof typeof audit) => <LastSaved id={id} meta={audit[id]} />
   const baseUrl = getBaseUrl()
   const other = {
     sonarr: settings.sonarr,
@@ -92,9 +97,9 @@ export default async function SettingsPage() {
         data-testid="admin-settings-header"
       />
       <SettingsLayout items={nav}>
-        <ServiceSection type="plex" server={settings.plexServer} health={health.plex} />
-        <ServiceSection type="tautulli" server={settings.tautulli} health={health.tautulli} />
-        <ServiceSection type="overseerr" server={settings.overseerr} health={health.overseerr} />
+        <ServiceSection type="plex" server={settings.plexServer} health={health.plex} footerMeta={saved("plex")} />
+        <ServiceSection type="tautulli" server={settings.tautulli} health={health.tautulli} footerMeta={saved("tautulli")} />
+        <ServiceSection type="overseerr" server={settings.overseerr} health={health.overseerr} footerMeta={saved("overseerr")} />
         <AiSection
           chat={settings.chatLLMProvider}
           wrapped={settings.wrappedLLMProvider}
@@ -105,15 +110,22 @@ export default async function SettingsPage() {
             serverUsd: settings.config.llmDailyCapServerUsd,
           }}
           health={health.ai}
+          footerMeta={saved("ai")}
         />
         <DiscordSection
           integration={settings.discordIntegration}
           linkedCount={settings.discordLinkedCount}
           portalUrl={`${baseUrl}/discord/link`}
-          health={health.discord}
+          state={discord.state}
+          now={new Date().toISOString()}
+          footerMeta={saved("discord")}
         />
-        <StripeSection config={stripeConfig} health={health.stripe} />
-        <WatchlistSection health={health.watchlist} />
+        <StripeSection config={stripeConfig} health={health.stripe} footerMeta={saved("stripe")} />
+        <WatchlistSection
+          saved={{ enabled: settings.config.watchlistSyncEnabled, intervalMinutes: settings.config.watchlistSyncIntervalMinutes }}
+          health={health.watchlist}
+          footerMeta={saved("watchlist")}
+        />
         <RewindSettingsSection
           saved={rewindSettingsFromConfig(settings.config)}
           zone={zone}
@@ -124,6 +136,7 @@ export default async function SettingsPage() {
           ratings={ratings}
           status={{ redis: rewindInfra.ok ? null : rewindInfraMessage(rewindInfra.code, "admin"), tautulli: libraries.status }}
           health={health.rewind}
+          footerMeta={saved("rewind")}
         >
           {/* P7.8: Prepare season moved to the season console. */}
           <p className="text-ui text-muted-foreground" data-testid="rewind-season-data-prepared-at">
@@ -137,6 +150,7 @@ export default async function SettingsPage() {
           servers={other}
           jellyfinLogin={settings.jellyfinServer?.enabledForLogin ?? null}
           health={{ sonarr: health.sonarr, radarr: health.radarr, jellyfin: health.jellyfin, prometheus: health.prometheus }}
+          footerMeta={saved("other")}
         />
         <SystemSection
           appearance={<LightThemeSwitch enabled={settings.config.lightThemeEnabled} />}
@@ -147,7 +161,8 @@ export default async function SettingsPage() {
           databaseUrl={process.env.DATABASE_URL?.replace(/\/\/.*@/, "//***@") || "Not configured"}
           platform={PLATFORMS[process.platform] ?? process.platform}
           configUpdated={settings.config.updatedAt ? f.dateTime(settings.config.updatedAt, { zoneLabel: true }) : "Never"}
-          timeZone={<ServerTimeZoneForm configured={settings.config.timezone} effective={zone} />}
+          timeZone={{ configured: settings.config.timezone, effective: zone }}
+          footerMeta={saved("system")}
         />
       </SettingsLayout>
     </div>

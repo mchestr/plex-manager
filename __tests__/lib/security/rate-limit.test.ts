@@ -96,6 +96,7 @@ describe("rate-limit", () => {
         'poster:access': { points: 2000, duration: 900 },
         admin: { points: 50, duration: 900 },
         'admin:search': { points: 120, duration: 60 },
+        'admin:test': { points: 30, duration: 600 },
         checkout: { points: 10, duration: 60 },
         portal: { points: 10, duration: 60 },
         "discord-link": { points: 5, duration: 300 },

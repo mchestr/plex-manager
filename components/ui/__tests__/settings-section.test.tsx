@@ -55,6 +55,28 @@ describe('SettingsSection', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Nothing answered at this address.')
   })
 
+  it('renders a failure with its fix as an inline Alert, inside the status region', async () => {
+    const user = userEvent.setup()
+    const onTest = jest.fn().mockResolvedValue({ ok: false, message: 'Nothing answered at this address', detail: 'Check the host and port.' })
+    renderSection(formState(), onTest)
+
+    await user.click(screen.getByTestId('settings-tautulli-test'))
+
+    const status = await screen.findByRole('status')
+    expect(status).toHaveTextContent('Nothing answered at this address')
+    expect(status).toHaveTextContent('Check the host and port.')
+    expect(status.querySelector('[data-slot="alert"]')).toHaveAttribute('data-tone', 'warning')
+  })
+
+  it('still submits a blocked form, so the server can refuse it too', () => {
+    const form = formState({ isDirty: true, blockedReason: 'Enter the API key to test or save' })
+    const { container } = renderSection(form)
+
+    container.querySelector('form')?.requestSubmit()
+
+    expect(form.onSave).toHaveBeenCalledTimes(1)
+  })
+
   it('disables Test and Save with blockedReason, and says why', () => {
     renderSection(formState({ isDirty: true, blockedReason: 'Enter the API key to test or save' }), jest.fn())
 

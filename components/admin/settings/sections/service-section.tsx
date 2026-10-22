@@ -1,8 +1,9 @@
 "use client"
 
+import type { ReactNode } from "react"
+
 import { ServerFormFields } from "@/components/admin/settings/server-form"
 import { SettingsSection } from "@/components/ui/settings-section"
-import { useRecheckConnection } from "@/hooks/admin/use-recheck-connection"
 import { useServerForm, type StoredServer } from "@/hooks/admin/use-server-form"
 import type { SectionHealth } from "@/lib/settings/connection-status"
 
@@ -16,12 +17,16 @@ interface ServiceSectionProps {
   type: keyof typeof COPY
   server: StoredServer | null
   health: SectionHealth
+  /** "Last saved ... by ..." from the audit log. */
+  footerMeta?: ReactNode
 }
 
-/** A Media group section: Plex server, Tautulli or Overseerr, with its live health. */
-export function ServiceSection({ type, server, health }: ServiceSectionProps) {
-  const { values, set, form, hasStoredSecret } = useServerForm(type, server)
-  const test = useRecheckConnection(type)
+/**
+ * A Media group section: Plex server, Tautulli or Overseerr, with its live
+ * health. Test connection tries the values in the form.
+ */
+export function ServiceSection({ type, server, health, footerMeta }: ServiceSectionProps) {
+  const { values, set, errors, currentOrigin, test, form } = useServerForm(type, server)
 
   return (
     <SettingsSection
@@ -30,10 +35,19 @@ export function ServiceSection({ type, server, health }: ServiceSectionProps) {
       description={COPY[type].description}
       status={health.status}
       checkedAt={health.checkedAt}
-      onTest={server ? test : undefined}
+      onTest={test}
       form={form}
+      footerMeta={footerMeta}
     >
-      <ServerFormFields type={type} values={values} set={set} hasStoredSecret={hasStoredSecret} disabled={form.isPending} />
+      <ServerFormFields
+        type={type}
+        values={values}
+        set={set}
+        errors={errors}
+        saved={server?.secret}
+        currentOrigin={currentOrigin}
+        disabled={form.isPending}
+      />
     </SettingsSection>
   )
 }

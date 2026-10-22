@@ -1,94 +1,102 @@
 "use client"
 
-import { updateLlmCaps } from "@/actions/admin"
-import { Button } from "@/components/ui/button"
-import { StyledInput } from "@/components/ui/styled-input"
-import { useToast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useState } from "react"
 
-interface LlmSpendCapsFormProps {
+import { updateLlmCaps } from "@/actions/admin"
+import { FormField } from "@/components/ui/form-field"
+import { Input } from "@/components/ui/input"
+import { useToast } from "@/components/ui/toast"
+import { useSettingsForm } from "@/hooks/admin/use-settings-form"
+
+export interface SpendCaps {
   perUserUsd: number
   adminUsd: number
   serverUsd: number
 }
 
 const FIELDS = [
-  { key: "perUserUsd", id: "llm-cap-user", label: "Per member" },
-  { key: "adminUsd", id: "llm-cap-admin", label: "Per admin" },
-  { key: "serverUsd", id: "llm-cap-server", label: "Whole server" },
+  { key: "perUserUsd", id: "llm-cap-user", label: "Per member", action: "llmDailyCapPerUserUsd" },
+  { key: "adminUsd", id: "llm-cap-admin", label: "Per admin", action: "llmDailyCapAdminUsd" },
+  { key: "serverUsd", id: "llm-cap-server", label: "Whole server", action: "llmDailyCapServerUsd" },
 ] as const
 
 type CapKey = (typeof FIELDS)[number]["key"]
+type CapValues = Record<CapKey, string>
+
+const INVALID = "Enter 0 or more"
+
+function isInvalid(value: string) {
+  const parsed = Number(value)
+  return value.trim() === "" || !Number.isFinite(parsed) || parsed < 0
+}
 
 /**
- * The assistant's daily spend caps, in US dollars per server-zone day. They
- * cover the admin assistant and the Discord assistant, not Rewind.
+ * The assistant's daily spend caps as part of the AI section's form (UI-31):
+ * values, dirty state and Save through the section footer. They cover the
+ * admin assistant and the Discord assistant, not Rewind.
  */
-export function LlmSpendCapsForm(caps: LlmSpendCapsFormProps) {
+export function useSpendCapsForm(caps: SpendCaps) {
   const router = useRouter()
   const toast = useToast()
-  const [isPending, startTransition] = useTransition()
-  const [values, setValues] = useState<Record<CapKey, string>>({
-    perUserUsd: String(caps.perUserUsd),
-    adminUsd: String(caps.adminUsd),
-    serverUsd: String(caps.serverUsd),
+  const [errors, setErrors] = useState<Partial<Record<CapKey, string>>>({})
+  const initial: CapValues = { perUserUsd: String(caps.perUserUsd), adminUsd: String(caps.adminUsd), serverUsd: String(caps.serverUsd) }
+
+  const settings = useSettingsForm(initial, async (values) => {
+    const invalid = FIELDS.filter(({ key }) => isInvalid(values[key]))
+    if (invalid.length) {
+      setErrors(Object.fromEntries(invalid.map(({ key }) => [key, INVALID])))
+      return
+    }
+    const result = await updateLlmCaps({
+      llmDailyCapPerUserUsd: Number(values.perUserUsd),
+      llmDailyCapAdminUsd: Number(values.adminUsd),
+      llmDailyCapServerUsd: Number(values.serverUsd),
+    })
+    if (!result.success) {
+      const fieldErrors = Object.fromEntries(
+        FIELDS.flatMap(({ key, action }) => (result.fieldErrors?.[action]?.[0] ? [[key, result.fieldErrors[action][0]]] : []))
+      )
+      setErrors(fieldErrors)
+      if (Object.keys(fieldErrors).length === 0) toast.showError(result.error)
+      return
+    }
+    setErrors({})
+    toast.showSuccess("Assistant spend caps saved")
+    router.refresh()
   })
 
-  const parsed = Object.fromEntries(FIELDS.map(({ key }) => [key, Number(values[key])])) as Record<CapKey, number>
-  const isInvalid = (key: CapKey) => values[key].trim() === "" || !Number.isFinite(parsed[key]) || parsed[key] < 0
-  const invalid = FIELDS.some(({ key }) => isInvalid(key))
+  return { values: settings.values, set: settings.set, errors, form: settings.form }
+}
 
-  const save = () => {
-    startTransition(async () => {
-      const result = await updateLlmCaps({
-        llmDailyCapPerUserUsd: parsed.perUserUsd,
-        llmDailyCapAdminUsd: parsed.adminUsd,
-        llmDailyCapServerUsd: parsed.serverUsd,
-      })
-      if (result.success) {
-        toast.showSuccess("Assistant spend caps saved")
-        router.refresh()
-      } else {
-        toast.showError(result.error || "Failed to update the assistant spend caps")
-      }
-    })
-  }
+type SpendCapsForm = ReturnType<typeof useSpendCapsForm>
 
+/** The three caps, in US dollars per server-zone day; an empty or negative one shows its error at once. */
+export function LlmSpendCapsFields({ state, disabled }: { state: SpendCapsForm; disabled?: boolean }) {
   return (
-    <div className="flex flex-col gap-2 rounded-lg bg-card p-3" data-testid="llm-spend-caps-form">
-      <h4 className="text-xs font-medium">Daily spend caps (USD)</h4>
-      <p className="text-xs text-muted-foreground">
-        The assistant stops answering once a cap is reached, and starts again at midnight server time. A cap of 0 turns the
-        assistant off for that group.
+    <fieldset className="flex flex-col gap-3" data-testid="llm-spend-caps-form">
+      <legend className="text-ui font-medium text-foreground">Daily spend caps (USD)</legend>
+      <p className="text-label text-muted-foreground">
+        The assistant stops answering once a cap is reached, and starts again at midnight server time. A cap of 0 turns the assistant off
+        for that group.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {FIELDS.map(({ key, id, label }) => (
-          <div key={key} className="flex flex-col gap-1">
-            <label htmlFor={id} className="text-xs">
-              {label}
-            </label>
-            <StyledInput
-              id={id}
+          <FormField key={key} name={id} label={label} error={isInvalid(state.values[key]) ? INVALID : state.errors[key]}>
+            <Input
               type="number"
               inputMode="decimal"
               min={0}
               max={1000}
               step={0.01}
-              value={values[key]}
-              onChange={(event) => setValues((prev) => ({ ...prev, [key]: event.target.value }))}
-              disabled={isPending}
-              error={isInvalid(key)}
+              value={state.values[key]}
+              onValueChange={(value) => state.set({ [key]: value })}
+              disabled={disabled}
               data-testid={id}
             />
-          </div>
+          </FormField>
         ))}
       </div>
-      <div>
-        <Button type="button" variant="secondary" onClick={save} disabled={isPending || invalid} data-testid="llm-caps-save">
-          {isPending ? "Saving..." : "Save caps"}
-        </Button>
-      </div>
-    </div>
+    </fieldset>
   )
 }

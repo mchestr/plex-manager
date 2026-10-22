@@ -1,10 +1,13 @@
+"use client"
+
 import type { ReactNode } from "react"
 
+import { ServerTimeZoneField, useTimeZoneForm, type ServerTimeZone } from "@/components/admin/settings/server-time-zone-form"
 import { Badge } from "@/components/ui/badge"
 import { SettingsSection } from "@/components/ui/settings-section"
 
 interface SystemSectionProps {
-  /** The light theme switch (P10.10). */
+  /** The light theme switch (P10.10); it saves on its own. */
   appearance: ReactNode
   baseUrl: string
   nodeEnv: string
@@ -15,8 +18,9 @@ interface SystemSectionProps {
   platform: string
   /** "Never", or the last config change, formatted. */
   configUpdated: string
-  /** The server time zone form. */
-  timeZone: ReactNode
+  timeZone: ServerTimeZone
+  /** "Last saved ... by ..." from the audit log. */
+  footerMeta?: ReactNode
 }
 
 function Row({ label, children, testId }: { label: string; children: ReactNode; testId?: string }) {
@@ -30,10 +34,15 @@ function Row({ label, children, testId }: { label: string; children: ReactNode; 
   )
 }
 
-/** System information (6.4): the light theme switch, base URL, environment, runtime and database, and the server time zone. */
-export function SystemSection({ appearance, baseUrl, nodeEnv, nodeVersion, databaseProvider, databaseUrl, platform, configUpdated, timeZone }: SystemSectionProps) {
+/**
+ * System information (6.4): the light theme switch, base URL, environment,
+ * runtime and database, and the server time zone, which saves through the
+ * section footer (P10.20).
+ */
+export function SystemSection({ appearance, baseUrl, nodeEnv, nodeVersion, databaseProvider, databaseUrl, platform, configUpdated, timeZone, footerMeta }: SystemSectionProps) {
+  const zone = useTimeZoneForm(timeZone)
   return (
-    <SettingsSection id="system" title="System information" description="Runtime, database and the server time zone.">
+    <SettingsSection id="system" title="System information" description="Runtime, database and the server time zone." form={zone.form} footerMeta={footerMeta}>
       {appearance}
       <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Row label="Base URL">
@@ -57,7 +66,7 @@ export function SystemSection({ appearance, baseUrl, nodeEnv, nodeVersion, datab
         </Row>
       </dl>
       <div id="server-time-zone" className="scroll-mt-24 border-t pt-6">
-        {timeZone}
+        <ServerTimeZoneField state={zone} />
       </div>
     </SettingsSection>
   )

@@ -1,0 +1,109 @@
+/**
+ * Stripe billing (P10.20): the Subscriptions switch waits for its
+ * prerequisites, one Alert names them, the keys are SecretInputs in the
+ * saved state, and fields show errors only after a save attempt.
+ */
+
+import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+
+import { setStripeEnabled, updateStripeSettings, type StripeConfigStatus } from "@/actions/admin/admin-config"
+import { getAvailableLibraries } from "@/actions/server-info"
+import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
+
+jest.mock("@/actions/admin/admin-config", () => ({ updateStripeSettings: jest.fn(), setStripeEnabled: jest.fn() }))
+jest.mock("@/actions/server-info", () => ({ getAvailableLibraries: jest.fn() }))
+
+const mockRefresh = jest.fn()
+jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mockRefresh }) }))
+
+const mockShowSuccess = jest.fn()
+const mockShowError = jest.fn()
+jest.mock("@/components/ui/toast", () => ({ useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }) }))
+
+const EMPTY: StripeConfigStatus = {
+  enabled: false,
+  hasSecretKey: false,
+  hasWebhookSecret: false,
+  saved: { secretKey: null, webhookSecret: null },
+  hasJobQueue: true,
+  priceIds: [],
+  librarySectionIds: [],
+}
+const READY: StripeConfigStatus = {
+  ...EMPTY,
+  hasSecretKey: true,
+  hasWebhookSecret: true,
+  saved: { secretKey: { last4: "3kQ2", origin: null }, webhookSecret: { last4: "x9Zp", origin: null } },
+  priceIds: ["price_123"],
+}
+const HEALTH = { status: "disabled" as const, code: null, checkedAt: null }
+
+function renderSection(config: StripeConfigStatus = EMPTY) {
+  return render(<StripeSection config={config} health={HEALTH} />)
+}
+
+beforeEach(() => {
+  jest.clearAllMocks()
+  jest.mocked(getAvailableLibraries).mockResolvedValue({ success: true, data: [{ id: 1, title: "Movies", type: "movie" }] })
+})
+
+describe("StripeSection", () => {
+  it("keeps the switch off and names every missing prerequisite in one Alert", async () => {
+    renderSection()
+
+    expect(screen.getByTestId("stripe-enabled-toggle")).toBeDisabled()
+    expect(screen.getByTestId("stripe-enable-requirements")).toHaveTextContent(
+      "Save a secret key, a webhook signing secret, at least one price ID first."
+    )
+    expect(await screen.findByTestId("stripe-library-checkbox-1")).toBeInTheDocument()
+  })
+
+  it("shows no field errors before a save attempt", () => {
+    renderSection()
+
+    for (const id of ["stripe-secret-key-input", "stripe-webhook-secret-input", "stripe-price-ids-input"]) {
+      expect(screen.getByTestId(id)).not.toHaveAttribute("aria-invalid", "true")
+    }
+    expect(screen.getByTestId("stripe-webhook-secret-input")).toHaveAccessibleDescription(/Required before subscriptions can be turned on/)
+  })
+
+  it("shows the saved keys as masked placeholders, and the switch is live once all are saved", async () => {
+    const user = userEvent.setup()
+    jest.mocked(setStripeEnabled).mockResolvedValue({ success: true, data: null })
+    renderSection(READY)
+
+    expect(screen.getByTestId("stripe-secret-key-input")).toHaveAttribute("placeholder", "••••••••••••3kQ2")
+    expect(screen.getByTestId("stripe-secret-key-input")).toHaveValue("")
+    expect(screen.queryByTestId("stripe-enable-requirements")).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId("stripe-enabled-toggle"))
+    expect(setStripeEnabled).toHaveBeenCalledWith(true)
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled())
+  })
+
+  it("saves through the footer, omitting blank keys, and puts a refused field's error on it", async () => {
+    const user = userEvent.setup()
+    jest.mocked(updateStripeSettings).mockResolvedValue({
+      success: false,
+      code: "VALIDATION",
+      error: "Too small",
+      fieldErrors: { secretKey: ["Too small"] },
+    })
+    renderSection(READY)
+
+    await user.type(screen.getByTestId("stripe-price-ids-input"), "\nprice_456")
+    await user.click(await screen.findByTestId("stripe-library-checkbox-1"))
+    await user.click(screen.getByTestId("settings-stripe-save"))
+
+    expect(updateStripeSettings).toHaveBeenCalledWith({
+      secretKey: undefined,
+      webhookSecret: undefined,
+      priceIds: ["price_123", "price_456"],
+      librarySectionIds: [1],
+    })
+    expect(await screen.findByText("Too small")).toBeInTheDocument()
+    expect(screen.getByTestId("stripe-secret-key-input")).toHaveAttribute("aria-invalid", "true")
+    expect(mockShowError).not.toHaveBeenCalled()
+  })
+})

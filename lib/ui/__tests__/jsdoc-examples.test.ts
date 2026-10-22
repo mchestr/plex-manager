@@ -3,7 +3,7 @@
  * lib/ui/status.ts, lib/ui/poster-palette.ts and lib/ui/flash-codes.ts.
  */
 
-import { boundaryCopy, errorCopy } from '../error-copy'
+import { boundaryCopy, connectionTestCopy, errorCopy } from '../error-copy'
 import { nextAuthError, readFlash } from '../flash-codes'
 import { safeHref, safeLink } from '../markdown'
 import { posterPalette } from '../poster-palette'
@@ -19,6 +19,11 @@ afterEach(() => {
 })
 
 describe('JSDoc Documentation Examples', () => {
+  it('connectionTestCopy', () => {
+    expect(connectionTestCopy('NOT_FOUND').fieldError).toBe('Nothing answered at this address')
+    expect(connectionTestCopy('UNAUTHORIZED', 'Plex token').field).toBe('secret')
+  })
+
   it('safeLink', () => {
     expect(safeLink('/help')).toEqual({ href: '/help', external: false })
     expect(safeLink('https://example.com/')).toEqual({ href: 'https://example.com/', external: true })
