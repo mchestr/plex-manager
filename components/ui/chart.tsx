@@ -62,11 +62,16 @@ function ChartContainer({
 
   return (
     <ChartContext.Provider value={{ config }}>
+      {/* Recharts 3 classes the tick text `recharts-cartesian-axis-tick-value`
+          (the registry's `-tick text` no longer matches, leaving Recharts' #666).
+          axe cannot see a background through an <svg>, so each tick tspan names
+          the card it sits on (bg-card does not paint in SVG) and its contrast is
+          measured instead of left undecided. */}
       <div
         data-slot="chart"
         data-chart={chartId}
         className={cn(
-          "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
+          "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick-value]:fill-muted-foreground [&_.recharts-cartesian-axis-tick-value_tspan]:bg-card [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
           className,
         )}
         style={{ ...colours, ...style }}
@@ -214,7 +219,8 @@ function ChartLegendContent({
   }
 
   return (
-    <div className={cn("flex items-center justify-center gap-4", verticalAlign === "top" ? "pb-3" : "pt-3", className)}>
+    // bg-card is the card's own colour, painted so axe stops here rather than at the <svg> beneath
+    <div className={cn("flex items-center justify-center gap-4 bg-card", verticalAlign === "top" ? "pb-3" : "pt-3", className)}>
       {payload
         .filter((item) => item.type !== "none")
         .map((item, index) => {
