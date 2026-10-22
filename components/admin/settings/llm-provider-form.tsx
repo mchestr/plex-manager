@@ -5,9 +5,38 @@ import { LLMModelPicker } from "@/components/admin/settings/llm-model-picker"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { SecretInput } from "@/components/ui/secret-input"
-import { StyledDropdown } from "@/components/ui/styled-dropdown"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { LLMProviderFormState } from "@/hooks/use-llm-provider-form"
 import { LLM_PROVIDER_IDS, LLM_PROVIDER_LABELS } from "@/lib/llm/provider-presets"
+
+const PROVIDER_ITEMS = LLM_PROVIDER_IDS.map((id) => ({ value: id, label: LLM_PROVIDER_LABELS[id] }))
+
+interface OptionSelectProps<T extends string> {
+  items: { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
+  disabled: boolean
+  /** The trigger's test id; each option takes `<testId>-option-<value>`. */
+  testId: string
+}
+
+/** A Select over plain options; the FormField around it labels the trigger. */
+function OptionSelect<T extends string>({ items, value, onChange, disabled, testId }: OptionSelectProps<T>) {
+  return (
+    <Select items={items} value={value} onValueChange={(next) => next !== null && onChange(next)} disabled={disabled}>
+      <SelectTrigger data-testid={testId}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {items.map((item) => (
+          <SelectItem key={item.value} value={item.value} label={item.label} data-testid={`${testId}-option-${item.value}`}>
+            {item.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
 
 interface LLMProviderFieldsProps {
   purpose: "chat" | "wrapped"
@@ -29,13 +58,12 @@ export function LLMProviderFields({ purpose, state }: LLMProviderFieldsProps) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2" data-testid={`llm-provider-form-${purpose}`}>
       <FormField name={`${idPrefix}-provider`} label="Provider">
-        <StyledDropdown
+        <OptionSelect
+          items={PROVIDER_ITEMS}
           value={form.provider}
           onChange={state.changeProvider}
-          options={LLM_PROVIDER_IDS.map((id) => ({ value: id, label: LLM_PROVIDER_LABELS[id] }))}
-          size="md"
           disabled={busy}
-          data-testid="llm-provider-select"
+          testId="llm-provider-select"
         />
       </FormField>
       <FormField name={`${idPrefix}-model`} label="Model" error={errors.model}>
@@ -80,13 +108,12 @@ export function LLMProviderFields({ purpose, state }: LLMProviderFieldsProps) {
       </FormField>
       {effortLevels && (
         <FormField name={`${idPrefix}-effort`} label="Effort">
-          <StyledDropdown
+          <OptionSelect
+            items={[{ value: "", label: "Model default" }, ...effortLevels.map((level) => ({ value: level, label: level }))]}
             value={form.effort}
             onChange={(effort) => update({ effort })}
-            options={[{ value: "", label: "Model default" }, ...effortLevels.map((level) => ({ value: level, label: level }))]}
-            size="md"
             disabled={busy}
-            data-testid="llm-effort-select"
+            testId="llm-effort-select"
           />
         </FormField>
       )}

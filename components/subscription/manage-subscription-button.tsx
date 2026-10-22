@@ -6,14 +6,13 @@ import { openBillingPortal } from "@/actions/subscription"
 import { redirectTo } from "@/lib/utils/navigation"
 import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useToast } from "@/components/ui/toast"
 
 interface ManageSubscriptionButtonProps {
-  /** Visual variant of the button. Defaults to the primary gradient. */
+  /** Visual variant of the button. Defaults to `primary`. */
   variant?: "primary" | "secondary" | "ghost"
-  /** Button size. Defaults to `md`. */
-  size?: "sm" | "md" | "lg"
+  /** Button size. Defaults to `default`. */
+  size?: "sm" | "default" | "lg"
   /** Label shown when idle. Defaults to "Manage subscription". */
   label?: string
   className?: string
@@ -34,7 +33,7 @@ interface ManageSubscriptionButtonProps {
  */
 export function ManageSubscriptionButton({
   variant = "primary",
-  size = "md",
+  size = "default",
   label = "Manage subscription",
   className,
   description,
@@ -79,20 +78,14 @@ export function ManageSubscriptionButton({
       type="button"
       variant={variant}
       size={size}
-      disabled={isPending}
+      loading={isPending}
+      loadingLabel="Opening..."
       onClick={handleClick}
       className={className}
       aria-describedby={description ? descriptionId : undefined}
       data-testid={testId}
     >
-      {isPending ? (
-        <>
-          <LoadingSpinner size="sm" />
-          Opening...
-        </>
-      ) : (
-        label
-      )}
+      {label}
     </Button>
   )
 

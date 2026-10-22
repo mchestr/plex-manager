@@ -1,6 +1,8 @@
 /**
- * Tests for actions/dev-defaults.ts - development defaults for setup wizard
+ * Tests for lib/setup/dev-defaults.ts - development defaults for setup wizard
  */
+
+jest.mock("server-only", () => ({}))
 
 // getDevDefaults checks Setup.isComplete; the factory reads the shared mock lazily
 // so it survives jest.resetModules().
@@ -49,7 +51,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_PLEX_NAME = 'My Plex'
       process.env.DEV_PLEX_URL = 'http://localhost:32400'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.isDevMode).toBe(false)
@@ -70,7 +72,7 @@ describe('getDevDefaults', () => {
       jest.replaceProperty(process.env, 'NODE_ENV', 'test')
       process.env.DEV_PLEX_NAME = 'My Plex'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       // test is not development, so should return empty
@@ -89,7 +91,7 @@ describe('getDevDefaults', () => {
     it('should return empty defaults in development without DEV_SETUP_PREFILL', async () => {
       delete process.env.DEV_SETUP_PREFILL
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.isDevMode).toBe(false)
@@ -101,7 +103,7 @@ describe('getDevDefaults', () => {
     it('should return empty defaults when DEV_SETUP_PREFILL has a value other than true', async () => {
       process.env.DEV_SETUP_PREFILL = '1'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.isDevMode).toBe(false)
@@ -111,7 +113,7 @@ describe('getDevDefaults', () => {
     it('should return empty defaults once setup is complete', async () => {
       mockGetSetupStatus.mockResolvedValue({ isComplete: true, currentStep: 5 })
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(mockGetSetupStatus).toHaveBeenCalledTimes(1)
@@ -127,7 +129,7 @@ describe('getDevDefaults', () => {
       delete process.env.DEV_SETUP_PREFILL
       process.env.E2E_TEST_MODE = 'true'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.isDevMode).toBe(false)
@@ -136,7 +138,7 @@ describe('getDevDefaults', () => {
     })
 
     it('should return defaults with the flag set before setup is complete', async () => {
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.isDevMode).toBe(true)
@@ -156,7 +158,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_PLEX_TOKEN = 'test-token-123'
       process.env.DEV_PLEX_PUBLIC_URL = 'https://plex.example.com'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.plex).toEqual({
@@ -174,7 +176,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_TAUTULLI_API_KEY = 'tautulli-api-key'
       process.env.DEV_TAUTULLI_PUBLIC_URL = 'https://tautulli.example.com'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.tautulli).toEqual({
@@ -191,7 +193,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_OVERSEERR_API_KEY = 'overseerr-api-key'
       process.env.DEV_OVERSEERR_PUBLIC_URL = 'https://overseerr.example.com'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.overseerr).toEqual({
@@ -208,7 +210,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_SONARR_API_KEY = 'sonarr-api-key'
       process.env.DEV_SONARR_PUBLIC_URL = 'https://sonarr.example.com'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.sonarr).toEqual({
@@ -225,7 +227,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_RADARR_API_KEY = 'radarr-api-key'
       process.env.DEV_RADARR_PUBLIC_URL = 'https://radarr.example.com'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.radarr).toEqual({
@@ -239,7 +241,7 @@ describe('getDevDefaults', () => {
     it('should return null for services when no DEV_* variables are set', async () => {
       // No DEV_* variables set
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.plex).toBeNull()
@@ -255,7 +257,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_PLEX_NAME = 'Partial Plex'
       // DEV_PLEX_URL and DEV_PLEX_TOKEN not set
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.plex).toEqual({
@@ -280,7 +282,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_DISCORD_PLATFORM_NAME = 'My Platform'
       process.env.DEV_DISCORD_INSTRUCTIONS = 'Custom instructions'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.discord).toEqual({
@@ -299,7 +301,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_DISCORD_ENABLED = 'false'
       process.env.DEV_DISCORD_BOT_ENABLED = 'false'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.discord?.isEnabled).toBe(false)
@@ -310,7 +312,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_DISCORD_ENABLED = 'yes'  // Not 'true'
       process.env.DEV_DISCORD_BOT_ENABLED = '1'  // Not 'true'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.discord?.isEnabled).toBe(false)
@@ -330,7 +332,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_CHAT_LLM_TEMPERATURE = '0.7'
       process.env.DEV_CHAT_LLM_MAX_TOKENS = '4096'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider).toEqual({
@@ -349,7 +351,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_WRAPPED_LLM_TEMPERATURE = '1.0'
       process.env.DEV_WRAPPED_LLM_MAX_TOKENS = '2048'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.wrappedLlmProvider).toEqual({
@@ -366,7 +368,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_LLM_API_KEY = 'generic-api-key'
       process.env.DEV_LLM_MODEL = 'gpt-4-turbo'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider).toEqual({
@@ -381,7 +383,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_LLM_API_KEY = 'generic-api-key'
       process.env.DEV_LLM_MODEL = 'gpt-4-turbo'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.wrappedLlmProvider).toEqual({
@@ -398,7 +400,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_CHAT_LLM_API_KEY = 'specific-chat-key'
       process.env.DEV_WRAPPED_LLM_MODEL = 'specific-wrapped-model'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider?.apiKey).toBe('specific-chat-key')
@@ -412,7 +414,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_LLM_API_KEY = 'legacy-key'
       process.env.DEV_LLM_MODEL = 'legacy-model'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.llmProvider).toEqual({
@@ -431,7 +433,7 @@ describe('getDevDefaults', () => {
     it('should parse valid temperature values', async () => {
       process.env.DEV_CHAT_LLM_TEMPERATURE = '0.5'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider?.temperature).toBe(0.5)
@@ -440,7 +442,7 @@ describe('getDevDefaults', () => {
     it('should clamp temperature below 0 to 0', async () => {
       process.env.DEV_CHAT_LLM_TEMPERATURE = '-0.5'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider?.temperature).toBe(0)
@@ -449,7 +451,7 @@ describe('getDevDefaults', () => {
     it('should clamp temperature above 2 to 2', async () => {
       process.env.DEV_CHAT_LLM_TEMPERATURE = '3.0'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider?.temperature).toBe(2)
@@ -458,7 +460,7 @@ describe('getDevDefaults', () => {
     it('should return undefined for invalid temperature (NaN)', async () => {
       process.env.DEV_CHAT_LLM_TEMPERATURE = 'invalid'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider?.temperature).toBeUndefined()
@@ -468,7 +470,7 @@ describe('getDevDefaults', () => {
       // Edge case: 0 is valid
       process.env.DEV_CHAT_LLM_TEMPERATURE = '0'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider?.temperature).toBe(0)
@@ -483,7 +485,7 @@ describe('getDevDefaults', () => {
     it('should parse valid max tokens values', async () => {
       process.env.DEV_CHAT_LLM_MAX_TOKENS = '4096'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider?.maxTokens).toBe(4096)
@@ -492,7 +494,7 @@ describe('getDevDefaults', () => {
     it('should return undefined for zero max tokens', async () => {
       process.env.DEV_CHAT_LLM_MAX_TOKENS = '0'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider?.maxTokens).toBeUndefined()
@@ -501,7 +503,7 @@ describe('getDevDefaults', () => {
     it('should return undefined for negative max tokens', async () => {
       process.env.DEV_CHAT_LLM_MAX_TOKENS = '-100'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider?.maxTokens).toBeUndefined()
@@ -510,7 +512,7 @@ describe('getDevDefaults', () => {
     it('should return undefined for invalid max tokens (NaN)', async () => {
       process.env.DEV_CHAT_LLM_MAX_TOKENS = 'invalid'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider?.maxTokens).toBeUndefined()
@@ -519,7 +521,7 @@ describe('getDevDefaults', () => {
     it('should handle float max tokens by truncating to integer', async () => {
       process.env.DEV_CHAT_LLM_MAX_TOKENS = '4096.7'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.chatLlmProvider?.maxTokens).toBe(4096)
@@ -534,7 +536,7 @@ describe('getDevDefaults', () => {
     it('should accept valid provider value "openai"', async () => {
       process.env.DEV_LLM_PROVIDER = 'openai'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.llmProvider?.provider).toBe('openai')
@@ -543,7 +545,7 @@ describe('getDevDefaults', () => {
     it('should return undefined for invalid provider value', async () => {
       process.env.DEV_LLM_PROVIDER = 'invalid-provider'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.llmProvider?.provider).toBeUndefined()
@@ -552,7 +554,7 @@ describe('getDevDefaults', () => {
     it('should return undefined for empty provider value', async () => {
       process.env.DEV_LLM_PROVIDER = ''
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.llmProvider).toBeNull()
@@ -561,7 +563,7 @@ describe('getDevDefaults', () => {
     it('should handle case-sensitive provider validation', async () => {
       process.env.DEV_LLM_PROVIDER = 'OpenAI'  // Wrong case
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.llmProvider?.provider).toBeUndefined()
@@ -577,7 +579,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_SETUP_AUTO_SUBMIT = 'true'
       process.env.DEV_PLEX_NAME = 'Plex'  // Need some defaults to enable dev mode
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.autoSubmit).toBe(true)
@@ -587,7 +589,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_SETUP_AUTO_SUBMIT = 'false'
       process.env.DEV_PLEX_NAME = 'Plex'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.autoSubmit).toBe(false)
@@ -596,7 +598,7 @@ describe('getDevDefaults', () => {
     it('should disable auto-submit when DEV_SETUP_AUTO_SUBMIT is not set', async () => {
       process.env.DEV_PLEX_NAME = 'Plex'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.autoSubmit).toBe(false)
@@ -606,7 +608,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_SETUP_AUTO_SUBMIT = 'yes'  // Not exactly 'true'
       process.env.DEV_PLEX_NAME = 'Plex'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.autoSubmit).toBe(false)
@@ -621,7 +623,7 @@ describe('getDevDefaults', () => {
     it('should be true when any service defaults are set', async () => {
       process.env.DEV_PLEX_NAME = 'Plex'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.isDevMode).toBe(true)
@@ -630,7 +632,7 @@ describe('getDevDefaults', () => {
     it('should be true when only Discord defaults are set', async () => {
       process.env.DEV_DISCORD_ENABLED = 'true'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.isDevMode).toBe(true)
@@ -640,7 +642,7 @@ describe('getDevDefaults', () => {
       process.env.DEV_LLM_PROVIDER = 'openai'
       process.env.DEV_LLM_API_KEY = 'key'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.isDevMode).toBe(true)
@@ -649,7 +651,7 @@ describe('getDevDefaults', () => {
     it('should be false when only auto-submit is set without other defaults', async () => {
       process.env.DEV_SETUP_AUTO_SUBMIT = 'true'
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       expect(result.isDevMode).toBe(false)
@@ -659,7 +661,7 @@ describe('getDevDefaults', () => {
     it('should be false when only legacy llmProvider is set without valid provider', async () => {
       process.env.DEV_LLM_API_KEY = 'key'  // No provider set
 
-      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()
 
       // llmProvider will have apiKey but no provider, so it's still valid

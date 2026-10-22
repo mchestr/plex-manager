@@ -1,11 +1,10 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useMemo, useState, useSyncExternalStore } from "react"
 
 import { updateServerTimeZone } from "@/actions/admin"
 import { FormField } from "@/components/ui/form-field"
-import { StyledDropdown } from "@/components/ui/styled-dropdown"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 import { normalizeTimeZone, timeZoneOptions } from "@/lib/utils/zoned-time"
@@ -36,7 +35,6 @@ function zoneGroups() {
  * hydration, so the server and the first client render agree.
  */
 export function useTimeZoneForm({ configured, effective }: ServerTimeZone) {
-  const router = useRouter()
   const toast = useToast()
   const [error, setError] = useState<string>()
   const detected = useSyncExternalStore(noSubscription, browserZone, () => null)
@@ -49,14 +47,14 @@ export function useTimeZoneForm({ configured, effective }: ServerTimeZone) {
     }
     setError(undefined)
     toast.showSuccess(`Server time zone set to ${result.data.timezone}`)
-    router.refresh()
   })
   return { ...settings, error, shown: settings.values.zone || detected || effective, configured, effective }
 }
 
 /** The zone picker, with what is in effect now and where it comes from. */
 export function ServerTimeZoneField({ state }: { state: ReturnType<typeof useTimeZoneForm> }) {
-  const optgroups = useMemo(() => zoneGroups(), [])
+  const groups = useMemo(() => zoneGroups(), [])
+  const items = useMemo(() => groups.flatMap((group) => group.options), [groups])
   const description = state.configured
     ? `In effect: ${state.effective}. Season dates, announcement expiry and Rewind times use it.`
     : `In effect: ${state.effective}, from the TZ environment variable or UTC. Saving a zone here overrides it. Season dates, announcement expiry and Rewind times use it.`
@@ -64,13 +62,33 @@ export function ServerTimeZoneField({ state }: { state: ReturnType<typeof useTim
   return (
     <div data-testid="server-time-zone-form">
       <FormField name="server-time-zone" label="Server time zone" description={<span data-testid="server-time-zone-effective">{description}</span>} error={state.error}>
-        <StyledDropdown
+        <Select
+          items={items}
           value={state.shown}
-          onChange={(zone) => state.set({ zone })}
-          optgroups={optgroups}
+          onValueChange={(zone) => zone !== null && state.set({ zone })}
           disabled={state.form.isPending}
-          data-testid="server-time-zone-select"
-        />
+        >
+          <SelectTrigger aria-label="Server time zone" data-testid="server-time-zone-select">
+            <SelectValue placeholder="Select a time zone" />
+          </SelectTrigger>
+          <SelectContent>
+            {groups.map((group) => (
+              <SelectGroup key={group.label}>
+                <SelectLabel>{group.label}</SelectLabel>
+                {group.options.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    label={option.label}
+                    data-testid={`server-time-zone-select-option-${option.value}`}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))}
+          </SelectContent>
+        </Select>
       </FormField>
     </div>
   )

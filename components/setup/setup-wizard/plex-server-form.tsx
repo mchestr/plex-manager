@@ -1,15 +1,17 @@
 "use client"
 
-import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { savePlexServer } from "@/actions/setup"
-import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type PlexServerInput } from "@/lib/validations/plex"
 import { memo, useCallback, useEffect, useRef, useState, useTransition } from "react"
+import type { DevDefaults } from "@/types/setup"
+import { Input } from "@/components/ui/input"
 
 interface PlexServerFormProps {
   onComplete: () => void
   onBack?: () => void
+  /** The DEV_* pre-fill, read once by the setup page. */
+  devDefaults: DevDefaults
 }
 
 /** Check if all required fields are populated for Plex form */
@@ -17,39 +19,23 @@ function isFormComplete(data: PlexServerInput): boolean {
   return !!(data.name?.trim() && data.url?.trim() && data.token?.trim())
 }
 
-export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack }: PlexServerFormProps) {
+export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack, devDefaults }: PlexServerFormProps) {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<PlexServerInput>({
-    name: "",
-    url: "",
-    token: "",
-    publicUrl: "",
+    name: devDefaults.plex?.name ?? "",
+    url: devDefaults.plex?.url ?? "",
+    token: devDefaults.plex?.token ?? "",
+    publicUrl: devDefaults.plex?.publicUrl ?? "",
   })
-  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
   const autoSubmitTriggered = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    // Load dev defaults on mount
-    getDevDefaults().then((defaults) => {
-      setDevDefaults(defaults)
-      if (defaults.plex) {
-        setFormData((prev) => ({
-          name: defaults.plex?.name ?? prev.name,
-          url: defaults.plex?.url ?? prev.url,
-          token: defaults.plex?.token ?? prev.token,
-          publicUrl: defaults.plex?.publicUrl ?? prev.publicUrl,
-        }))
-      }
-    })
-  }, [])
 
   // Auto-submit when form is fully populated and auto-submit is enabled
   useEffect(() => {
     if (
-      devDefaults?.autoSubmit &&
+      devDefaults.autoSubmit &&
       isFormComplete(formData) &&
       !autoSubmitTriggered.current &&
       !isPending &&
@@ -109,7 +95,8 @@ export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack 
         >
           Server Name
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-name"
           type="text"
           id="name"
           name="name"
@@ -117,9 +104,8 @@ export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack 
           value={formData.name}
           onChange={handleChange}
           placeholder="My Plex Server"
-          size="md"
           className="mt-1"
-          error={!!errors.name}
+          aria-invalid={!!errors.name || undefined}
         />
         {errors.name && (
           <p className="mt-1 text-sm text-red-400">{errors.name}</p>
@@ -133,7 +119,8 @@ export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack 
         >
           Server URL
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-url"
           type="text"
           id="url"
           name="url"
@@ -141,9 +128,8 @@ export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack 
           value={formData.url}
           onChange={handleChange}
           placeholder="https://plex.example.com:32400 or http://192.168.1.100:32400"
-          size="md"
           className="mt-1"
-          error={!!errors.url}
+          aria-invalid={!!errors.url || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Include protocol (http:// or https://) and port number
@@ -160,16 +146,16 @@ export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack 
         >
           Public Server URL <span className="text-slate-500 font-normal">(optional)</span>
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-publicUrl"
           type="text"
           id="publicUrl"
           name="publicUrl"
           value={formData.publicUrl || ""}
           onChange={handleChange}
           placeholder="https://plex.example.com"
-          size="md"
           className="mt-1"
-          error={!!errors.publicUrl}
+          aria-invalid={!!errors.publicUrl || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           The public URL your users use to access Plex (for links/redirects)
@@ -186,7 +172,8 @@ export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack 
         >
           Plex Token
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-token"
           type="password"
           id="token"
           name="token"
@@ -194,9 +181,8 @@ export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack 
           value={formData.token}
           onChange={handleChange}
           placeholder="Your Plex authentication token"
-          size="md"
           className="mt-1"
-          error={!!errors.token}
+          aria-invalid={!!errors.token || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Find your token at{" "}

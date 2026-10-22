@@ -253,34 +253,3 @@ export async function elementExists(page: Page, selector: string): Promise<boole
     return false;
   }
 }
-
-/**
- * Wait for admin page content to be fully loaded and visible
- * This waits for the page structure, loading states, and specific content
- */
-export async function waitForAdminContent(
-  page: Page,
-  contentSelectors: Array<{ type: 'heading' | 'text' | 'selector'; value: string | RegExp; level?: number }>,
-  options?: { timeout?: number }
-): Promise<void> {
-  const timeout = options?.timeout || WAIT_TIMEOUTS.ADMIN_CONTENT;
-  await waitForAdminPageReady(page, timeout);
-
-  // Wait for specific content to appear
-  for (const selector of contentSelectors) {
-    if (selector.type === 'heading') {
-      const headingOptions: { name: string | RegExp; level?: number; exact?: boolean } = {
-        name: selector.value,
-        exact: typeof selector.value === 'string',
-      };
-      if (selector.level !== undefined) {
-        headingOptions.level = selector.level;
-      }
-      await expect(page.getByRole('heading', headingOptions)).toBeVisible({ timeout });
-    } else if (selector.type === 'text') {
-      await expect(page.getByText(selector.value)).toBeVisible({ timeout });
-    } else if (selector.type === 'selector') {
-      await page.waitForSelector(selector.value as string, { state: 'visible', timeout });
-    }
-  }
-}

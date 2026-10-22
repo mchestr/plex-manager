@@ -7,10 +7,9 @@ import { generateAllRewinds, prepareRewindSeason, retryFailedRewinds, runRewindF
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useToast } from "@/components/ui/toast"
+import { queryKeys } from "@/hooks/query-keys"
 import { useFormat } from "@/lib/format-context"
 import type { SeasonCostEstimate } from "@/lib/wrapped/admin/estimate"
-
-import { seasonStatusKey } from "./season-progress"
 
 interface SeasonActionsProps {
   year: number
@@ -49,7 +48,7 @@ export function SeasonActions({ year, estimates, finalCutOpen }: SeasonActionsPr
     const result = await action({ year })
     if (!result.success) return { error: result.error }
     toast.showSuccess(result.data.alreadyQueued ? "That run is already going" : done)
-    await queryClient.invalidateQueries({ queryKey: seasonStatusKey(year) })
+    await queryClient.invalidateQueries({ queryKey: queryKeys.rewindSeasonStatus(year) })
     router.refresh()
     return {}
   }

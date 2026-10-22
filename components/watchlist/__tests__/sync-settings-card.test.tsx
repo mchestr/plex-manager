@@ -1,9 +1,13 @@
-import { render, screen } from '@testing-library/react'
+import { render as rtlRender, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { getWatchlistSyncSettings, triggerWatchlistSync, updateWatchlistSyncSettings } from '@/actions/watchlist'
-import { WatchlistSyncCard, type WatchlistSyncSettings } from '@/components/watchlist/sync-settings-card'
+import { WatchlistSyncCard } from '@/components/watchlist/sync-settings-card'
+import type { WatchlistSyncSettings } from '@/hooks/use-watchlist-sync'
 import { WATCHLIST_SKIP_COPY } from '@/lib/watchlist/skip'
+import { createQueryWrapper } from '@/__tests__/helpers/query-client'
+
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: createQueryWrapper() })
 
 const mockShowInfo = jest.fn()
 
@@ -72,7 +76,7 @@ describe('WatchlistSyncCard', () => {
     await user.click(screen.getByTestId('watchlist-sync-toggle'))
 
     expect(updateWatchlistSyncSettings).toHaveBeenCalledWith({ syncEnabled: false })
-    expect(getWatchlistSyncSettings).toHaveBeenCalled()
+    await waitFor(() => expect(getWatchlistSyncSettings).toHaveBeenCalled())
   })
 
   it('shows why the last sync was skipped', () => {

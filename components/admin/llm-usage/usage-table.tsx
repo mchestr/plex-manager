@@ -28,7 +28,7 @@ function columns(f: BoundFormat): ColumnDef<LlmUsageGroupRow>[] {
       id: "member",
       header: "Member",
       cell: ({ row }) => (
-        <Link href={userDetail(row.original.userId)} className="rounded-sm underline-offset-4 hover:underline">
+        <Link data-testid={`admin-llm-usage-member-${row.original.key}`} href={userDetail(row.original.userId)} className="rounded-sm underline-offset-4 hover:underline">
           {row.original.memberName}
         </Link>
       ),

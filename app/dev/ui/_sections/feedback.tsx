@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button"
 import { Alert } from "@/components/ui/alert"
 import { HomeSkeleton } from "@/components/dashboard/home-skeleton"
 import { ErrorState } from "@/components/ui/error-state"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { PageHeaderSkeleton, Skeleton, StatGridSkeleton, TableSkeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { StatusScreen } from "@/components/ui/status-screen"
@@ -46,12 +45,6 @@ export function SpinnerSpecimen() {
         <Spinner />
         <Spinner size={20} />
         <Spinner size={24} label="Loading" />
-      </Row>
-      <Row label="LoadingSpinner">
-        <LoadingSpinner size="sm" />
-        <LoadingSpinner size="md" />
-        <LoadingSpinner size="lg" />
-        <LoadingSpinner size="xl" label="Loading users" />
       </Row>
     </Specimen>
   )

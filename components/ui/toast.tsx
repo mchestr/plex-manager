@@ -19,10 +19,10 @@ interface ToastOptions {
 }
 
 interface ToastApi {
-  showToast: (message: string, type?: ToastType, duration?: number) => void
-  showSuccess: (message: string, duration?: number) => void
-  showError: (message: string, duration?: number) => void
-  showInfo: (message: string, duration?: number) => void
+  showToast: (message: string, type?: ToastType) => void
+  showSuccess: (message: string) => void
+  showError: (message: string) => void
+  showInfo: (message: string) => void
   /** Shows a toast and returns its id. */
   toast: (options: ToastOptions) => string
 }
@@ -34,7 +34,7 @@ let lastId = 0
 
 /**
  * The toast facade (ui-design-system 5.4), on Base UI Toast. Success and info
- * toasts last 5s (a legacy `duration` overrides that); errors and toasts with
+ * toasts last 5s; errors and toasts with
  * an action stay until dismissed, and errors are announced assertively.
  */
 export function useToast(): ToastApi {
@@ -44,7 +44,7 @@ export function useToast(): ToastApi {
   const { popupProps } = usePortalContainer()
 
   return useMemo(() => {
-    const show = ({ title, description, tone = "info", action }: ToastOptions, duration?: number) => {
+    const show = ({ title, description, tone = "info", action }: ToastOptions) => {
       const id = `toast-${++lastId}`
       const persistent = tone === "error" || action !== undefined
       return add({
@@ -53,7 +53,7 @@ export function useToast(): ToastApi {
         description,
         type: tone,
         data: { popupProps },
-        timeout: persistent ? 0 : (duration ?? TIMEOUT_MS),
+        timeout: persistent ? 0 : TIMEOUT_MS,
         actionProps: action && {
           children: action.label,
           onClick: () => {
@@ -63,14 +63,14 @@ export function useToast(): ToastApi {
         },
       })
     }
-    const showToast = (message: string, type: ToastType = "info", duration?: number) => {
-      show({ title: message, tone: type }, duration)
+    const showToast = (message: string, type: ToastType = "info") => {
+      show({ title: message, tone: type })
     }
     return {
       showToast,
-      showSuccess: (message, duration) => showToast(message, "success", duration),
+      showSuccess: (message) => showToast(message, "success"),
       showError: (message) => showToast(message, "error"),
-      showInfo: (message, duration) => showToast(message, "info", duration),
+      showInfo: (message) => showToast(message, "info"),
       toast: (options) => show(options),
     }
   }, [add, close, popupProps])
@@ -129,7 +129,7 @@ function ToastItem({ toast }: { toast: ToastPrimitive.Root.ToastObject<ToastData
           <ToastPrimitive.Title render={<p />} className="font-semibold" />
           <ToastPrimitive.Description render={<p />} className="text-muted-foreground" />
         </div>
-        <ToastPrimitive.Action render={<Button variant="ghost" size="sm" className="-my-1.5" />} />
+        <ToastPrimitive.Action render={<Button variant="ghost" size="sm" className="-my-1.5" data-testid="toast-action" />} />
         <ToastPrimitive.Close
           aria-label="Dismiss notification"
           // Base UI hides Close on stacked toasts it collapses; these never collapse.

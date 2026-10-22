@@ -15,11 +15,12 @@ test('a new style guide is previewed, activated and listed as in use', async ({ 
 
   await adminPage.getByTestId('admin-prompt-editor-name').fill(name);
   await adminPage.getByTestId('admin-prompt-editor-style-guide').fill(text);
-  await expect(adminPage.getByTestId('admin-prompt-editor-preview').locator('mark')).toContainText(text);
+  await expect(adminPage.getByTestId('admin-prompt-editor-preview-block')).toContainText(text);
   await expect(adminPage.getByTestId('admin-prompt-editor-counter')).toContainText(`${text.length} of 1,200 characters`);
 
   await adminPage.getByTestId('admin-prompt-editor-save').click();
   await expect(adminPage.getByTestId('admin-prompt-detail-heading')).toContainText(name);
+  const promptId = decodeURIComponent(new URL(adminPage.url()).pathname.split('/').pop()!);
 
   await adminPage.getByTestId('admin-prompt-activate').click();
   await expect(adminPage.getByTestId('admin-prompt-activate-dialog')).toContainText(`Use ${name} for Rewind?`);
@@ -27,7 +28,7 @@ test('a new style guide is previewed, activated and listed as in use', async ({ 
   await expect(adminPage.getByTestId('admin-prompt-activate-dialog')).toBeHidden();
 
   await adminPage.goto('/admin/prompts');
-  const row = adminPage.getByTestId('admin-prompts').locator('[data-testid^="admin-prompts-row-"]', { hasText: name });
+  const row = adminPage.getByTestId(`admin-prompts-row-${promptId}`);
   await expect(row).toContainText('In use');
 });
 

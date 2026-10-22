@@ -13,7 +13,7 @@ export {
   updateServerTimeZone,
 } from "./admin-config"
 
-// LLM usage, providers and historical wrapped versions
+// LLM usage and providers
 export {
   getLLMUsageRecords,
   getLLMUsageById,
@@ -24,11 +24,6 @@ export {
   updateChatLLMProvider,
   updateWrappedLLMProvider,
 } from "./admin-llm-providers"
-
-export {
-  getHistoricalWrappedVersions,
-  getHistoricalWrappedData,
-} from "./admin-llm-history"
 
 // Server configurations
 export {

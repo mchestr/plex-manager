@@ -142,14 +142,14 @@ describe("Satori bans in the share cards (P5.10)", () => {
   })
 })
 
-describe("deprecated adapter imports (P3.5, P3.6)", () => {
+describe("deleted adapter imports (P3.5, P3.6, P10.11)", () => {
   it.each([
     'import { StyledInput } from "@/components/ui/styled-input"',
     'import { StyledDropdown, DropdownOption } from "@/components/ui/styled-dropdown"',
     'import { StyledCheckbox } from "@/components/ui/styled-checkbox"',
     'import { ModalShell } from "@/components/ui/modal-shell"',
     'import { ConfirmModal } from "@/components/admin/shared/confirm-modal"',
-  ])("warns on %s", (code) => {
+  ])("bans %s", (code) => {
     expect(hits(code, deprecatedImports)).toBe(1)
   })
 
@@ -194,24 +194,27 @@ describe("what each kind of file gets from eslint.config.mjs", () => {
   }
 
   it.each([
-    ["components/admin/users/fixture.tsx", { formatting: ["error"], button: ["warn"], svg: ["warn"] }],
-    ["app/admin/fixture/page.tsx", { formatting: ["error"], button: ["warn"], svg: ["warn"] }],
+    ["components/admin/users/fixture.tsx", { formatting: ["error"], button: ["error"], svg: ["error"] }],
+    ["app/admin/fixture/page.tsx", { formatting: ["error"], button: ["error"], svg: ["error"] }],
+    ["components/dashboard/fixture.tsx", { formatting: ["error"], button: ["error"], svg: ["error"] }],
     ["components/ui/fixture.tsx", { formatting: ["error"], button: [], svg: [] }],
+    ["app/icon.tsx", { formatting: ["error"], button: [], svg: [] }],
     ["app/dev/ui/fixture.tsx", { formatting: ["error"], button: [], svg: [] }],
     ["components/rewind/fixture.tsx", { formatting: ["error"], button: [], svg: [] }],
     ["app/api/fixture/route.tsx", { formatting: ["error"], button: [], svg: [] }],
     ["components/wrapped/fixture.tsx", { formatting: ["warn"], button: ["warn"], svg: [] }],
+    ["components/setup/setup-wizard/fixture.tsx", { formatting: ["error"], button: ["warn"], svg: ["warn"] }],
     ["lib/fixture.tsx", { formatting: ["warn"], button: [], svg: [] }],
   ])("%s", (file, expected) => {
     expect(lint(file)).toEqual(expected)
   })
 
   it.each([
-    ["components/admin/users/fixture.tsx", ["warn"]],
-    ["app/admin/fixture/page.tsx", ["warn"]],
+    ["components/admin/users/fixture.tsx", ["error"]],
+    ["app/admin/fixture/page.tsx", ["error"]],
     ["components/ui/fixture.tsx", []],
     ["app/dev/ui/fixture.tsx", []],
-  ])("%s (deprecated adapter import)", (file, expected) => {
+  ])("%s (deleted adapter import)", (file, expected) => {
     const messages = realLinter
       .verify('import { StyledInput } from "@/components/ui/styled-input"\nexport { StyledInput }\n', config, path.join(root, file))
       .filter((m) => m.ruleId === "restricted-syntax/warn" || m.ruleId === "no-restricted-syntax")

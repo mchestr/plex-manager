@@ -40,6 +40,7 @@ export function useRecordView(tracking: ViewTracking | null, index: number): (ki
     [rewindId, record]
   )
 
+  // A real effect: each page the member reaches is recorded once, after it shows
   useEffect(() => {
     const page = index + 1
     if (!rewindId || reached.current.has(page)) return

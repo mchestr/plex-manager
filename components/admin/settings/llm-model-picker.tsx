@@ -3,7 +3,7 @@
 import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
-import { StyledDropdown } from "@/components/ui/styled-dropdown"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { listKnownModels, lookupModel, priceAt, type LLMProviderId, type ModelInfo } from "@/lib/llm/models"
 import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/provider-presets"
@@ -66,26 +66,36 @@ export function LLMModelPicker({ provider, model, custom, liveModels, onChange, 
   const listed = orderModels(provider, liveModels)
   // A saved model the provider no longer lists stays selectable
   const ids = !custom && model && !listed.includes(model) ? [model, ...listed] : listed
+  const items = [
+    ...ids.map((modelId) => ({ value: modelId, label: lookupModel(provider, modelId).displayName })),
+    { value: CUSTOM, label: "Enter a custom model id…" },
+  ]
   const info = model ? lookupModel(provider, model) : null
   const retirement = info ? retirementLabel(info, now, f) : null
 
   return (
     <div>
-      <StyledDropdown
-        value={custom ? CUSTOM : model}
-        onChange={(value) => (value === CUSTOM ? onChange("", true) : onChange(value, false))}
-        options={[
-          ...ids.map((modelId) => ({
-            value: modelId,
-            label: lookupModel(provider, modelId).displayName,
-          })),
-          { value: CUSTOM, label: "Enter a custom model id…" },
-        ]}
-        placeholder="Select a model"
-        size="md"
+      <Select
+        items={items}
+        value={custom ? CUSTOM : items.some((item) => item.value === model) ? model : null}
+        onValueChange={(value) => {
+          if (value === null) return
+          if (value === CUSTOM) onChange("", true)
+          else onChange(value, false)
+        }}
         disabled={disabled}
-        data-testid="llm-model-select"
-      />
+      >
+        <SelectTrigger data-testid="llm-model-select">
+          <SelectValue placeholder="Select a model" />
+        </SelectTrigger>
+        <SelectContent>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value} label={item.label} data-testid={`llm-model-select-option-${item.value}`}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {custom && (
         <Input
           className="mt-2"
@@ -106,7 +116,7 @@ export function LLMModelPicker({ provider, model, custom, liveModels, onChange, 
             {priceLabel(info, now, f)}
           </p>
           {retirement && (
-            <Badge tone="warning" data-testid="llm-model-retires">
+            <Badge variant="warning" data-testid="llm-model-retires">
               {retirement}
             </Badge>
           )}

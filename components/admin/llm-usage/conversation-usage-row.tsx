@@ -41,7 +41,7 @@ export function ConversationUsageRow({ record, index }: ConversationUsageRowProp
   return (
     <tr data-testid={`conversation-usage-row-${record.id}`} className="hover:bg-accent/40">
       <td className="px-4 py-3 whitespace-nowrap">
-        <Link href={llmUsageDetail(record.id)} className="rounded-sm font-medium text-foreground hover:underline" aria-label={`Call ${index + 1}, ${record.time}`}>
+        <Link data-testid={`admin-llm-conversation-call-${record.id}`} href={llmUsageDetail(record.id)} className="rounded-sm font-medium text-foreground hover:underline" aria-label={`Call ${index + 1}, ${record.time}`}>
           #{index + 1}
         </Link>
       </td>

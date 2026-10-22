@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { signIn } from 'next-auth/react'
 
@@ -18,7 +18,7 @@ async function submit(username = 'alice', password = 'wrong-password') {
   await user.click(screen.getByTestId('jellyfin-submit'))
 }
 
-describe('JellyfinSignInButton errors', () => {
+describe('JellyfinSignInButton', () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -27,14 +27,12 @@ describe('JellyfinSignInButton errors', () => {
     ['RATE_LIMITED', 'the per-username limit'],
     ['RateLimited', 'the per-IP limit'],
   ])('shows the rate-limit message for %s (%s)', async (code) => {
-    const onError = jest.fn()
     mockSignIn.mockResolvedValue({ ok: false, status: 401, error: code, url: null })
 
-    render(<JellyfinSignInButton onError={onError} />)
+    render(<JellyfinSignInButton />)
     await submit()
 
     expect(await screen.findByTestId('jellyfin-error')).toHaveTextContent(RATE_LIMITED_MESSAGE)
-    expect(onError).toHaveBeenCalledWith(RATE_LIMITED_MESSAGE)
     expect(screen.getByTestId('jellyfin-submit')).not.toBeDisabled()
   })
 
@@ -47,5 +45,23 @@ describe('JellyfinSignInButton errors', () => {
     expect(await screen.findByTestId('jellyfin-error')).toHaveTextContent(
       'Invalid username or password. Please try again.'
     )
+    // P10.7: a <form action> resets its fields; the username is re-seeded, the password is not
+    expect(screen.getByTestId('jellyfin-username')).toHaveValue('alice')
+    expect(screen.getByTestId('jellyfin-username')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByTestId('jellyfin-password')).toHaveValue('')
+    expect(mockSignIn).toHaveBeenCalledWith('jellyfin', { username: 'alice', password: 'wrong-password', redirect: false })
+  })
+
+  it('shows its pending state while NextAuth answers', async () => {
+    let answer: (value: Awaited<ReturnType<typeof signIn>>) => void = () => undefined
+    mockSignIn.mockReturnValue(new Promise((resolve) => (answer = resolve)))
+
+    render(<JellyfinSignInButton />)
+    await submit()
+
+    await waitFor(() => expect(screen.getByTestId('jellyfin-submit')).toHaveAttribute('aria-busy', 'true'))
+    answer({ ok: false, status: 401, error: 'CredentialsSignin', url: null })
+    expect(await screen.findByTestId('jellyfin-error')).toBeInTheDocument()
+    expect(screen.getByTestId('jellyfin-submit')).not.toHaveAttribute('aria-busy')
   })
 })

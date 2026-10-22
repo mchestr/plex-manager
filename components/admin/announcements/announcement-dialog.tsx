@@ -10,6 +10,7 @@ import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogT
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
+import { SubmitButton } from "@/components/ui/submit-button"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/toast"
@@ -19,9 +20,11 @@ import { instantToWallTime } from "@/lib/utils/zoned-time"
 interface FormState {
   error: string | null
   fieldErrors: Record<string, string[] | undefined>
+  /** The uncontrolled fields as submitted, re-seeded after an error (React resets the form). */
+  values: { priority: string; expiresAt: string } | null
 }
 
-const NO_ERRORS: FormState = { error: null, fieldErrors: {} }
+const NO_ERRORS: FormState = { error: null, fieldErrors: {}, values: null }
 
 interface AnnouncementFormProps {
   /** The row being edited, or null for a new announcement. */
@@ -39,15 +42,16 @@ function AnnouncementForm({ announcement, zone, onSaved }: AnnouncementFormProps
   const [createdAt] = useState(() => announcement?.createdAt ?? new Date().toISOString())
 
   const [state, formAction, pending] = useActionState(async (_previous: FormState, form: FormData): Promise<FormState> => {
+    const values = { priority: String(form.get("priority") ?? ""), expiresAt: String(form.get("expiresAt") ?? "") }
     const input = {
       title: String(form.get("title") ?? ""),
       content: String(form.get("content") ?? ""),
-      priority: Number(form.get("priority") || 0),
+      priority: Number(values.priority || 0),
       isActive,
-      expiresAt: String(form.get("expiresAt") ?? ""),
+      expiresAt: values.expiresAt,
     }
     const result = announcement ? await updateAnnouncement({ id: announcement.id, ...input }) : await createAnnouncement(input)
-    if (!result.success) return { error: result.error, fieldErrors: result.fieldErrors ?? {} }
+    if (!result.success) return { error: result.error, fieldErrors: result.fieldErrors ?? {}, values }
     showSuccess(announcement ? "Announcement saved" : "Announcement created")
     onSaved()
     return NO_ERRORS
@@ -99,7 +103,7 @@ function AnnouncementForm({ announcement, zone, onSaved }: AnnouncementFormProps
             min={0}
             max={100}
             step={1}
-            defaultValue={announcement?.priority ?? 0}
+            defaultValue={state.values?.priority ?? announcement?.priority ?? 0}
             data-testid="announcement-priority-input"
           />
         </FormField>
@@ -112,7 +116,7 @@ function AnnouncementForm({ announcement, zone, onSaved }: AnnouncementFormProps
         >
           <Input
             type="datetime-local"
-            defaultValue={announcement?.expiresAt ? instantToWallTime(new Date(announcement.expiresAt), zone) : ""}
+            defaultValue={state.values?.expiresAt ?? (announcement?.expiresAt ? instantToWallTime(new Date(announcement.expiresAt), zone) : "")}
             data-testid="announcement-expires-input"
           />
         </FormField>
@@ -125,15 +129,10 @@ function AnnouncementForm({ announcement, zone, onSaved }: AnnouncementFormProps
         <Switch checked={isActive} onCheckedChange={setIsActive} data-testid="announcement-active-checkbox" />
       </Field>
       <DialogFooter>
-        <DialogClose render={<Button type="button" variant="ghost" disabled={pending} />}>Cancel</DialogClose>
-        <Button
-          type="submit"
-          loading={pending}
-          loadingLabel={announcement ? "Saving" : "Creating"}
-          data-testid="announcement-submit-button"
-        >
+        <DialogClose render={<Button data-testid="announcement-cancel-button" type="button" variant="ghost" disabled={pending} />}>Cancel</DialogClose>
+        <SubmitButton loadingLabel={announcement ? "Saving" : "Creating"} data-testid="announcement-submit-button">
           {announcement ? "Save announcement" : "Create announcement"}
-        </Button>
+        </SubmitButton>
       </DialogFooter>
     </form>
   )

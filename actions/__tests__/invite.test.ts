@@ -11,7 +11,8 @@
  * - Zod validation of Jellyfin invite credentials
  */
 
-import { processJellyfinInvite } from '@/actions/invite'
+import { processJellyfinInvite, redeemJellyfinInviteForm } from '@/actions/invite'
+import { idleFormState } from '@/lib/actions/form-state'
 import { redeemPlexInvite } from '@/lib/invites/plex-redemption'
 import {
   getPlexUserInfo,
@@ -747,6 +748,57 @@ describe('invite actions', () => {
       expect(tx.user.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ name: 'jane.doe-2', jellyfinUserId: 'jf-user-1' }),
       })
+    })
+
+    // P10.7: the invite page's <form action>
+    function formData(fields: Record<string, string>) {
+      const form = new FormData()
+      for (const [name, value] of Object.entries(fields)) form.set(name, value)
+      return form
+    }
+
+    it('refuses mismatched passwords on the form, keeping the username and no password', async () => {
+      const state = await redeemJellyfinInviteForm(
+        idleFormState(),
+        formData({ code: 'TESTCODE', username: 'jane.doe-2', password: 'password123', confirmPassword: 'password456' })
+      )
+
+      expect(state).toEqual({
+        status: 'error',
+        data: null,
+        error: 'Passwords do not match',
+        fieldErrors: { confirmPassword: ['Passwords do not match'] },
+        values: { username: 'jane.doe-2' },
+      })
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled()
+    })
+
+    it('puts a bad username on its field', async () => {
+      const state = await redeemJellyfinInviteForm(
+        idleFormState(),
+        formData({ code: 'TESTCODE', username: 'a@b.com', password: 'password123', confirmPassword: 'password123' })
+      )
+
+      expect(state.status).toBe('error')
+      expect(state.fieldErrors.username).toEqual([
+        'Username must be 3 to 32 characters: letters, numbers, dots, dashes or underscores',
+      ])
+      expect(state.values).toEqual({ username: 'a@b.com' })
+      expect(mockCreateJellyfinUser).not.toHaveBeenCalled()
+    })
+
+    it('redeems through processJellyfinInvite and returns its data', async () => {
+      const state = await redeemJellyfinInviteForm(
+        idleFormState(),
+        formData({ code: 'TESTCODE', username: ' jane.doe-2 ', password: 'password123', confirmPassword: 'password123' })
+      )
+
+      expect(state).toMatchObject({
+        status: 'success',
+        error: null,
+        data: { jellyfinUserId: 'jf-user-1', username: 'jane.doe-2', serverUrl: null },
+      })
+      expect(mockCreateJellyfinUser).toHaveBeenCalledWith(expect.anything(), 'jane.doe-2', 'password123')
     })
   })
 

@@ -103,6 +103,7 @@ export function PromptScrollspy({ messages, containerId }: PromptScrollspyProps)
 
           return (
             <Button
+              data-testid={`prompt-scrollspy-${message.id}`}
               key={message.id}
               variant={isActive ? "secondary" : "ghost"}
               size="sm"

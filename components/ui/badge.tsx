@@ -23,12 +23,9 @@ const badgeVariants = cva(
 )
 
 type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>
-type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger"
 
 interface BadgeProps extends ComponentProps<"span"> {
   variant?: BadgeVariant
-  /** @deprecated Use `variant`; `danger` is `destructive`. Removed in P10.11. */
-  tone?: BadgeTone
   /** A 6px dot in the badge's colour before the word. */
   dot?: boolean
   /** A 12px icon before the word, in place of the dot. */
@@ -39,10 +36,9 @@ interface BadgeProps extends ComponentProps<"span"> {
  * A small label for a state (ui-design-system 5.4). Badges are for states;
  * categories are plain text. The colour always comes with a word.
  */
-export function Badge({ variant, tone, dot, icon, className, children, ...props }: BadgeProps) {
-  const resolved = variant ?? (tone === "danger" ? "destructive" : tone)
+export function Badge({ variant, dot, icon, className, children, ...props }: BadgeProps) {
   return (
-    <span data-slot="badge" className={cn(badgeVariants({ variant: resolved }), className)} {...props}>
+    <span data-slot="badge" className={cn(badgeVariants({ variant }), className)} {...props}>
       {icon ? (
         <Icon icon={icon} size={12} />
       ) : (

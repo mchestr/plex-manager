@@ -78,7 +78,7 @@ export const migratedActionFiles = [
 
 /**
  * Raw form controls outside `components/ui` (P3.4, ui-design-system 9.6):
- * warnings to burn down as P10 moves call sites onto the primitives.
+ * errors since P10.11 moved every call site onto the primitives.
  */
 export const rawControls = [
   {
@@ -108,25 +108,25 @@ export const inlineSvg = [
 ];
 
 /**
- * The deprecated adapters (ui-design-system 9.4): new code imports the
- * primitive. A `no-restricted-syntax` selector rather than
- * `no-restricted-imports`, so it shares the raw-element block. P3.5 adds the
- * `styled-*` form adapters; P3.6 adds `modal-shell` and `confirm-modal`.
+ * The deleted adapters (ui-design-system 9.4; P10.11 removed them): an import
+ * of one is an error, so a copy cannot come back under its old name. A
+ * `no-restricted-syntax` selector rather than `no-restricted-imports`, so it
+ * shares the raw-element block.
  */
 export const deprecatedImports = [
   {
     // esquery regexes cannot hold a slash, so `.` stands in for each one.
     selector: "ImportDeclaration[source.value=/^@.components.ui.styled-/]",
     message:
-      "StyledInput, StyledTextarea, StyledCheckbox and StyledDropdown are deprecated: use Input, Textarea, Checkbox or Select from components/ui, with Field or FormField.",
+      "StyledInput, StyledTextarea, StyledCheckbox and StyledDropdown are gone: use Input, Textarea, Checkbox or Select from components/ui, with Field or FormField.",
   },
   {
     selector: "ImportDeclaration[source.value=/^@.components.ui.modal-shell$/]",
-    message: "ModalShell is deprecated: use Dialog from components/ui/dialog.",
+    message: "ModalShell is gone: use Dialog from components/ui/dialog.",
   },
   {
     selector: "ImportDeclaration[source.value=/^@.components.admin.shared.confirm-modal$/]",
-    message: "ConfirmModal is deprecated: use ConfirmDialog from components/ui/confirm-dialog with useActionDialog.",
+    message: "ConfirmModal is gone: use ConfirmDialog from components/ui/confirm-dialog with useActionDialog.",
   },
 ];
 
@@ -197,16 +197,25 @@ const REWIND_ONLY_ALLOWED = ["components/ui/**", "components/rewind/**", "app/de
 
 const APP_AND_COMPONENTS = ["app/**/*.{js,jsx,ts,tsx}", "components/**/*.{js,jsx,ts,tsx}"];
 const V2_VIEWER = "components/wrapped/**";
+/** The pre-refresh setup wizard; P10.25 rebuilds it on the primitives. */
+const SETUP_WIZARD = "components/setup/setup-wizard/**";
+/** The `next/og` image routes, which draw with Satori rather than the DOM. */
+const OG_ROUTES = ["app/icon.tsx", "app/apple-icon.tsx", "app/opengraph-image.tsx", "app/twitter-image.tsx"];
+/**
+ * Where raw elements and inline SVG are allowed: the primitives, Rewind art,
+ * the dev sheet and the image routes (P10.11, ui-design-system 9.6).
+ */
+const RAW_ELEMENTS_ALLOWED = [...REWIND_ONLY_ALLOWED, "app/api/**", ...OG_ROUTES];
 
 /**
  * The blocks `eslint.config.mjs` builds, in order.
  * - The formatting bans are errors in `app/` and `components/`, except the
  *   v2 viewer, which keeps its output until P7.13; elsewhere they warn.
- * - The raw-element warnings cover `app/` and `components/` outside the
- *   primitives (`components/ui/**`), the dev sheet (`app/dev/**`), Rewind art
- *   (`components/rewind/**`) and the Satori image routes (`app/api/**`). The
- *   v2 viewer warns on raw controls but keeps its inline art until P11.29.
- *   The same block warns on imports of the deprecated adapters.
+ * - The raw-element bans and the deleted-adapter imports are errors in
+ *   `app/` and `components/` outside `RAW_ELEMENTS_ALLOWED` (P10.11). Two
+ *   surfaces still warn until their step replaces them: the v2 viewer warns on
+ *   raw controls and keeps its inline art until P11.29 deletes it, and the
+ *   setup wizard warns until P10.25 rebuilds it.
  * - The `actionsAndApi` bans are errors in `app/api/` and the migrated action
  *   modules, and warn in the rest of `actions/`. An error block replaces the
  *   earlier error blocks for its files, so the `app/api/` one repeats the
@@ -231,16 +240,17 @@ export const restrictedSyntaxBlocks = [
   },
   {
     files: APP_AND_COMPONENTS,
-    ignores: [V2_VIEWER, ...REWIND_ONLY_ALLOWED],
+    ignores: [V2_VIEWER, SETUP_WIZARD, ...RAW_ELEMENTS_ALLOWED],
     level: "error",
-    selectors: [...formatting, ...rewindOnlyProps],
+    selectors: [...formatting, ...rewindOnlyProps, ...rawControls, ...inlineSvg, ...deprecatedImports],
   },
   { files: REWIND_ONLY_ALLOWED.map((glob) => glob + "/*.{js,jsx,ts,tsx}"), level: "error", selectors: formatting },
+  { files: OG_ROUTES, level: "error", selectors: [...formatting, ...rewindOnlyProps] },
   { files: ["components/wrapped/**/*.{js,jsx,ts,tsx}"], level: "error", selectors: rewindOnlyProps },
   { files: ["components/wrapped/**/*.{js,jsx,ts,tsx}"], level: "warn", selectors: [...formatting, ...rawControls] },
+  { files: [SETUP_WIZARD + "/*.{js,jsx,ts,tsx}"], level: "error", selectors: [...formatting, ...rewindOnlyProps] },
   {
-    files: APP_AND_COMPONENTS,
-    ignores: ["components/ui/**", "components/rewind/**", "app/dev/**", "app/api/**", V2_VIEWER],
+    files: [SETUP_WIZARD + "/*.{js,jsx,ts,tsx}"],
     level: "warn",
     selectors: [...rawControls, ...inlineSvg, ...deprecatedImports],
   },

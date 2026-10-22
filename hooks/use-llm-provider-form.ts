@@ -1,5 +1,4 @@
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { listLLMModels, updateChatLLMProvider, updateWrappedLLMProvider } from "@/actions/admin"
 import type { TestResult } from "@/components/ui/settings-section"
@@ -68,9 +67,12 @@ function listRequest(purpose: "chat" | "wrapped", state: LLMFormState) {
  * the fields and their dirty state, which settings the chosen model takes,
  * whether the stored key can be reused, the provider's model list, Test and
  * Save. The AI settings section holds one per purpose.
+ *
+ * The picker starts from the static catalogue in `lib/llm/models.ts`, so
+ * opening the page asks the provider for nothing (P10.7); Test connection
+ * loads the provider's own list and adds the models the catalogue lacks.
  */
 export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "chat" | "wrapped") {
-  const router = useRouter()
   const toast = useToast()
   const [liveModels, setLiveModels] = useState<string[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -102,9 +104,9 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
       else toast.showError(result.error)
       return
     }
+    // The action revalidates the page, so the stored provider follows
     setErrors({})
     toast.showSuccess(`${purpose === "chat" ? "Admin assistant" : "Rewind"} model saved`)
-    router.refresh()
     return { ...form, apiKey: "" }
   })
   const form = settings.values
@@ -122,21 +124,6 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
   // address. A local server needs no key, so there it simply reads as unset.
   const savedKey = !keyReusable && form.provider === "openai-compatible" ? null : (stored?.secret ?? null)
   const blocked = !keyOptional && Boolean(savedKey) && !form.apiKey.trim()
-
-  const storedProvider = stored?.provider ?? null
-  const storedBaseUrl = stored?.baseUrl ?? null
-  // The stored provider's model list, when the section mounts
-  useEffect(() => {
-    if (!storedProvider || !isLLMProviderId(storedProvider)) return
-    let cancelled = false
-    const request = { purpose, provider: storedProvider, apiKey: undefined, baseUrl: storedProvider === "openai-compatible" ? (storedBaseUrl ?? "") : undefined }
-    listLLMModels(request).then((result) => {
-      if (!cancelled) setLiveModels(result.success ? result.models : null)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [purpose, storedProvider, storedBaseUrl])
 
   /** Changes fields and clears their errors. */
   const update = (patch: Partial<LLMFormState>) => {

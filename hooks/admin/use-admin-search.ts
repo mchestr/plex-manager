@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 
+import { queryKeys } from "@/hooks/query-keys"
 import { useDebouncedValue } from "@/hooks/use-debounced-value"
 import {
   ADMIN_SEARCH_MAX,
@@ -30,7 +31,7 @@ async function fetchAdminSearch(kind: AdminSearchKind, q: string, signal: AbortS
 export function useAdminSearch(kind: AdminSearchKind, query: string) {
   const q = useDebouncedValue(query.trim().slice(0, ADMIN_SEARCH_MAX), DEBOUNCE_MS)
   const { data, isFetching, isError } = useQuery({
-    queryKey: ["admin-search", kind, q],
+    queryKey: queryKeys.adminSearch(kind, q),
     queryFn: ({ signal }) => fetchAdminSearch(kind, q, signal),
     enabled: q.length > 0,
     placeholderData: keepPreviousData,

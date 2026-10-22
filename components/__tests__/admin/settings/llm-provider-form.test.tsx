@@ -164,18 +164,24 @@ describe('LLMProviderForm', () => {
       temperature: undefined,
       maxTokens: undefined,
     })
-    expect(mockRefresh).toHaveBeenCalled()
+    // The action revalidates /admin/settings, so no client refresh follows (P10.7)
+    expect(mockRefresh).not.toHaveBeenCalled()
   })
 
-  it('loads the stored provider models on edit and Test reports the list', async () => {
+  it('asks the provider for nothing on open, and Test loads its list into the picker', async () => {
     mockList.mockResolvedValue({ success: true, models: ['gpt-4o', 'gpt-6-sol', 'ft:gpt-4o:me'], configuredProvider: 'openai', configuredModel: 'gpt-4o' })
     const user = await openForm(STORED)
 
-    expect(mockList).toHaveBeenCalledWith({ purpose: 'wrapped', provider: 'openai', apiKey: undefined, baseUrl: undefined })
+    // P10.7: the picker starts from the static catalogue
+    expect(mockList).not.toHaveBeenCalled()
     // P10.20: the saved key is a masked placeholder, never a value
     expect(screen.getByTestId('llm-api-key-input')).toHaveAttribute('placeholder', '••••••••••••')
     expect(screen.getByTestId('llm-api-key-input')).toHaveValue('')
     expect(screen.getByTestId('llm-temperature-input')).toHaveValue(0.8)
+
+    await user.click(screen.getByTestId('settings-ai-test'))
+    await waitFor(() => expect(screen.getByTestId('settings-ai-test-result')).toHaveTextContent('Connected: 3 models available'))
+    expect(mockList).toHaveBeenCalledWith({ purpose: 'wrapped', provider: 'openai', apiKey: undefined, baseUrl: undefined })
 
     await user.click(screen.getByTestId('llm-model-select'))
     const options = within(await screen.findByRole('listbox'))
@@ -188,11 +194,6 @@ describe('LLMProviderForm', () => {
       'llm-model-select-option-ft:gpt-4o:me',
       'llm-model-select-option-__custom__',
     ])
-    await user.click(screen.getByTestId('llm-model-select-option-gpt-4o'))
-    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
-
-    await user.click(screen.getByTestId('settings-ai-test'))
-    await waitFor(() => expect(screen.getByTestId('settings-ai-test-result')).toHaveTextContent('Connected: 3 models available'))
   })
 
   it('asks for the key again after the provider changes', async () => {

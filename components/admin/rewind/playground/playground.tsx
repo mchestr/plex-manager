@@ -9,6 +9,7 @@ import { estimateRewindDryRun, getRewindDryRun, startRewindDryRun } from "@/acti
 import { Alert } from "@/components/ui/alert"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Spinner } from "@/components/ui/spinner"
+import { queryKeys } from "@/hooks/query-keys"
 import { useFormat } from "@/lib/format-context"
 
 import { PlaygroundForm, type PlaygroundOptions } from "./playground-form"
@@ -59,12 +60,13 @@ export function Playground({ initialForm, options, children }: PlaygroundProps) 
   }
 
   const poll = useQuery({
-    queryKey: ["rewind-dry-run", runningId],
+    queryKey: queryKeys.rewindDryRun(runningId),
     queryFn: () => getRewindDryRun({ id: runningId ?? "" }),
     enabled: runningId !== null,
     refetchInterval: (query) => (query.state.data?.success && query.state.data.data.status === "pending" ? POLL_MS : false),
   })
 
+  // A real effect: a finished poll moves the run on and opens its preview
   useEffect(() => {
     const result = poll.data
     if (!runningId || !result) return

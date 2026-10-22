@@ -81,6 +81,18 @@ export default defineConfig([
     },
   },
   {
+    // P10.7: the client data-loading sweep left no hits in app, components and
+    // hooks, so the burn-down rules are errors there. The v2 viewer keeps its
+    // ref reads until P11.29 deletes it.
+    files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "hooks/**/*.{ts,tsx}"],
+    ignores: ["components/wrapped/wrapped-viewer.tsx"],
+    rules: {
+      "react-hooks/exhaustive-deps": "error",
+      "react-hooks/refs": "error",
+      "react-hooks/preserve-manual-memoization": "error",
+    },
+  },
+  {
     files: ["lib/**", "actions/**", "app/api/**"],
     ignores: ["lib/utils/logger.ts"],
     rules: {

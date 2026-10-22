@@ -55,19 +55,10 @@ export const buttonVariants = cva(
 type Variant = NonNullable<VariantProps<typeof buttonVariants>["variant"]>
 type Size = NonNullable<VariantProps<typeof buttonVariants>["size"]>
 
-/** Names kept for today's call sites; P10.13 moves them and P10.11 drops them. */
-type DeprecatedVariant = "danger" | "success"
-type DeprecatedSize = "md"
-
-const variantAliases: Record<DeprecatedVariant, Variant> = { danger: "destructive", success: "secondary" }
-
 interface BaseButtonProps extends Omit<ButtonPrimitive.Props, "className"> {
   className?: string
-  /**
-   * `danger` (now `destructive`) and `success` (now `secondary`) are
-   * deprecated. `ink` and `ink-outline` are for the Rewind scope only.
-   */
-  variant?: Variant | DeprecatedVariant
+  /** `ink` and `ink-outline` are for the Rewind scope only. */
+  variant?: Variant
   /** The leading icon, 16px. A Spinner takes its place while `loading`. */
   icon?: ReactNode
   /**
@@ -81,11 +72,11 @@ interface BaseButtonProps extends Omit<ButtonPrimitive.Props, "className"> {
 }
 
 /**
- * `md` (now `default`) is deprecated; `pill` and `icon-pill` are for the
- * Rewind scope only. An `icon-pill` holds only an icon, so it must be named.
+ * `pill` and `icon-pill` are for the Rewind scope only. An `icon-pill` holds
+ * only an icon, so it must be named.
  */
 type ButtonProps = BaseButtonProps &
-  ({ size: "icon-pill"; "aria-label": string } | { size?: Exclude<Size, "icon-pill"> | DeprecatedSize })
+  ({ size: "icon-pill"; "aria-label": string } | { size?: Exclude<Size, "icon-pill"> })
 
 /**
  * The app's button, on Base UI Button.
@@ -107,8 +98,6 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const resolvedVariant = variant === "danger" || variant === "success" ? variantAliases[variant] : variant
-  const resolvedSize = size === "md" ? "default" : size
   const busy = loading === true
 
   return (
@@ -121,7 +110,7 @@ export function Button({
       disabled={disabled || busy}
       focusableWhenDisabled={busy}
       aria-busy={busy || undefined}
-      className={cn(buttonVariants({ variant: resolvedVariant, size: resolvedSize }), className)}
+      className={cn(buttonVariants({ variant, size }), className)}
       {...props}
     >
       {loading === undefined ? (

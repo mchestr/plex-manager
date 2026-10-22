@@ -1,15 +1,17 @@
 "use client"
 
-import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { savePrometheus } from "@/actions/setup"
-import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type PrometheusInput } from "@/lib/validations/prometheus"
 import { useEffect, useRef, useState, useTransition } from "react"
+import type { DevDefaults } from "@/types/setup"
+import { Input } from "@/components/ui/input"
 
 interface PrometheusFormProps {
   onComplete: () => void
   onBack?: () => void
+  /** The DEV_* pre-fill, read once by the setup page. */
+  devDefaults: DevDefaults
 }
 
 /** Check if all required fields are populated for Prometheus form */
@@ -17,37 +19,22 @@ function isFormComplete(data: PrometheusInput): boolean {
   return !!(data.name?.trim() && data.url?.trim() && data.query?.trim())
 }
 
-export function PrometheusForm({ onComplete, onBack }: PrometheusFormProps) {
+export function PrometheusForm({ onComplete, onBack, devDefaults }: PrometheusFormProps) {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<PrometheusInput>({
-    name: "",
-    url: "",
-    query: "",
+    name: devDefaults.prometheus?.name ?? "",
+    url: devDefaults.prometheus?.url ?? "",
+    query: devDefaults.prometheus?.query ?? "",
   })
-  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
   const autoSubmitTriggered = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    // Load dev defaults on mount
-    getDevDefaults().then((defaults) => {
-      setDevDefaults(defaults)
-      if (defaults.prometheus) {
-        setFormData((prev) => ({
-          name: defaults.prometheus?.name ?? prev.name,
-          url: defaults.prometheus?.url ?? prev.url,
-          query: defaults.prometheus?.query ?? prev.query,
-        }))
-      }
-    })
-  }, [])
 
   // Auto-submit when form is fully populated and auto-submit is enabled
   useEffect(() => {
     if (
-      devDefaults?.autoSubmit &&
+      devDefaults.autoSubmit &&
       isFormComplete(formData) &&
       !autoSubmitTriggered.current &&
       !isPending &&
@@ -106,7 +93,8 @@ export function PrometheusForm({ onComplete, onBack }: PrometheusFormProps) {
         >
           Service Name
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-name"
           type="text"
           id="name"
           name="name"
@@ -114,9 +102,8 @@ export function PrometheusForm({ onComplete, onBack }: PrometheusFormProps) {
           value={formData.name}
           onChange={handleChange}
           placeholder="Plex Server"
-          size="md"
           className="mt-1"
-          error={!!errors.name}
+          aria-invalid={!!errors.name || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Display name for the service being monitored
@@ -133,7 +120,8 @@ export function PrometheusForm({ onComplete, onBack }: PrometheusFormProps) {
         >
           Prometheus URL
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-url"
           type="text"
           id="url"
           name="url"
@@ -141,9 +129,8 @@ export function PrometheusForm({ onComplete, onBack }: PrometheusFormProps) {
           value={formData.url}
           onChange={handleChange}
           placeholder="http://prometheus.example.com:9090 or http://192.168.1.100:9090"
-          size="md"
           className="mt-1"
-          error={!!errors.url}
+          aria-invalid={!!errors.url || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Include protocol (http:// or https://) and port number
@@ -160,7 +147,8 @@ export function PrometheusForm({ onComplete, onBack }: PrometheusFormProps) {
         >
           PromQL Query
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-query"
           type="text"
           id="query"
           name="query"
@@ -168,9 +156,8 @@ export function PrometheusForm({ onComplete, onBack }: PrometheusFormProps) {
           value={formData.query}
           onChange={handleChange}
           placeholder='up{job="plex"}'
-          size="md"
           className="mt-1"
-          error={!!errors.query}
+          aria-invalid={!!errors.query || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Query that returns data when the service is up (e.g., up&#123;job=&quot;plex&quot;&#125;)

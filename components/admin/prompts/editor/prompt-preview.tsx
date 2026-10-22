@@ -30,7 +30,7 @@ export function PromptPreview({ styleGuide }: { styleGuide: string }) {
         data-testid="admin-prompt-editor-preview"
       >
         {base}
-        {block && <mark className="rounded-sm bg-primary/15 text-foreground">{block}</mark>}
+        {block && <mark className="rounded-sm bg-primary/15 text-foreground" data-testid="admin-prompt-editor-preview-block">{block}</mark>}
       </pre>
     </section>
   )

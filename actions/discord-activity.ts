@@ -58,17 +58,10 @@ export async function getDiscordActivityLogs(params: GetActivityLogsParams = {})
       endDate: toEndOfDayExclusive(params.endDate),
     }
 
+    // React 19 serializes Date across the RSC boundary, so rows keep theirs (P10.7)
     const result = await getCommandLogs(queryParams)
 
-    // Serialize dates for client
-    const logs = result.logs.map((log) => ({
-      ...log,
-      startedAt: log.startedAt.toISOString(),
-      completedAt: log.completedAt?.toISOString() ?? null,
-      createdAt: log.createdAt.toISOString(),
-    }))
-
-    return { success: true, logs, total: result.total }
+    return { success: true, logs: result.logs, total: result.total }
   } catch (error) {
     logger.error("Failed to get Discord activity logs", error instanceof Error ? error : undefined)
     return {
@@ -142,13 +135,7 @@ async function getDiscordActiveUsers(params: GetStatsParams & { limit?: number }
       params.limit ?? 20
     )
 
-    // Serialize dates for client
-    const serializedUsers = users.map((user) => ({
-      ...user,
-      lastActiveAt: user.lastActiveAt.toISOString(),
-    }))
-
-    return { success: true, users: serializedUsers }
+    return { success: true, users }
   } catch (error) {
     logger.error("Failed to get Discord active users", error instanceof Error ? error : undefined)
     return {
@@ -446,7 +433,7 @@ export async function getDiscordMarkedMedia(params: GetMarkedMediaParams = {}) {
       parentTitle: row.parentTitle,
       note: row.note,
       markedVia: row.markedVia,
-      markedAt: row.markedAt.toISOString(),
+      markedAt: row.markedAt,
       radarrTitleSlug: row.radarrTitleSlug,
       sonarrTitleSlug: row.sonarrTitleSlug,
       user: {

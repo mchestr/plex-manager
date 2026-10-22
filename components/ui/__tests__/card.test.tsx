@@ -42,26 +42,6 @@ describe("Card", () => {
     expect(screen.getByText("Child").parentElement).toBe(card)
   })
 
-  it.each([
-    ["none", "p-0"],
-    ["sm", "p-4"],
-    ["md", "p-6"],
-    ["lg", "p-8"],
-  ] as const)("the deprecated padding %s wraps the children in CardContent with %s", (padding, paddingClass) => {
-    render(
-      <Card padding={padding} className="flex flex-col gap-4" data-testid="card">
-        <span>Child</span>
-      </Card>
-    )
-
-    const card = screen.getByTestId("card")
-    const content = screen.getByText("Child").parentElement
-    expect(content).toHaveAttribute("data-slot", "card-content")
-    expect(content?.parentElement).toBe(card)
-    expect(content).toHaveClass(paddingClass, "flex", "flex-col", "gap-4")
-    expect(card).not.toHaveClass("gap-4")
-  })
-
   it("has no axe violations", async () => {
     const { container } = render(
       <Card>

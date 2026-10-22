@@ -8,8 +8,6 @@ import {
   setLLMDisabled,
   getLLMUsageRecords,
   getLLMUsageById,
-  getHistoricalWrappedVersions,
-  getHistoricalWrappedData,
   setUserDisabled,
   updateUserAdminStatus,
 } from '@/actions/admin'
@@ -248,97 +246,6 @@ describe('Admin Actions Security', () => {
       })
 
       await expect(getLLMUsageById('usage-1')).rejects.toThrow()
-      expect(prisma.lLMUsage.findUnique).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('getHistoricalWrappedVersions', () => {
-    it('should allow admin to get historical wrapped versions', async () => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
-      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
-        data: JSON.stringify({ sections: [], summary: 'Test summary' }),
-        generatedAt: new Date(),
-      })
-      ;(prisma.lLMUsage.findMany as jest.Mock).mockResolvedValue([
-        {
-          id: 'llm-usage-1',
-          wrappedId: 'wrapped-1',
-          userId: 'user-1',
-          response: JSON.stringify({ sections: [], summary: 'Test summary' }),
-          createdAt: new Date(),
-          provider: 'openai',
-          model: 'gpt-4',
-          cost: 0.01,
-          totalTokens: 1000,
-          user: {
-            id: 'user-1',
-            name: 'Test User',
-            email: 'user@example.com',
-          },
-        },
-      ])
-
-      const result = await getHistoricalWrappedVersions('wrapped-1')
-
-      expect(requireAdmin).toHaveBeenCalled()
-      expect(result).toHaveLength(1)
-      expect(result[0].id).toBe('llm-usage-1')
-    })
-
-    it('should reject non-admin user', async () => {
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        redirect('/')
-        throw new Error('Not admin')
-      })
-
-      await expect(getHistoricalWrappedVersions('wrapped-1')).rejects.toThrow()
-      expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('getHistoricalWrappedData', () => {
-    it('should allow admin to get historical wrapped data', async () => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
-      ;(prisma.lLMUsage.findUnique as jest.Mock).mockResolvedValue({
-        id: 'llm-usage-1',
-        wrappedId: 'wrapped-1',
-        userId: 'user-1',
-        response: JSON.stringify({
-          sections: [],
-          summary: 'Test summary',
-        }),
-        createdAt: new Date(),
-        provider: 'openai',
-        model: 'gpt-4',
-        cost: 0.01,
-        totalTokens: 1000,
-        user: {
-          id: 'user-1',
-          name: 'Test User',
-          email: 'user@example.com',
-        },
-        wrapped: {
-          id: 'wrapped-1',
-          year: 2024,
-          data: JSON.stringify({
-            statistics: { totalWatchTime: { total: 1000 } },
-          }),
-        },
-      })
-
-      const result = await getHistoricalWrappedData('llm-usage-1', 'wrapped-1')
-
-      expect(requireAdmin).toHaveBeenCalled()
-      expect(result).toMatchObject({ removed: false, wrappedData: expect.any(Object) })
-    })
-
-    it('should reject non-admin user', async () => {
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        redirect('/')
-        throw new Error('Not admin')
-      })
-
-      await expect(getHistoricalWrappedData('llm-usage-1', 'wrapped-1')).rejects.toThrow()
       expect(prisma.lLMUsage.findUnique).not.toHaveBeenCalled()
     })
   })

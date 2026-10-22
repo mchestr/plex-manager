@@ -123,6 +123,23 @@ describe('AnnouncementDialog', () => {
     expect(await screen.findByTestId('announcement-form-error')).toHaveTextContent("Couldn't create the announcement")
   })
 
+  it('keeps the typed priority and expiry after a failed save (P10.7)', async () => {
+    const user = userEvent.setup()
+    mockCreate.mockResolvedValue({ success: false, code: 'INTERNAL', error: "Couldn't create the announcement" })
+    renderDialog()
+
+    await user.type(screen.getByTestId('announcement-title-input'), 'T')
+    await user.type(screen.getByTestId('announcement-content-input'), 'C')
+    await user.clear(screen.getByTestId('announcement-priority-input'))
+    await user.type(screen.getByTestId('announcement-priority-input'), '7')
+    await user.type(screen.getByTestId('announcement-expires-input'), '2027-02-01T09:30')
+    await user.click(screen.getByTestId('announcement-submit-button'))
+
+    expect(await screen.findByTestId('announcement-form-error')).toBeInTheDocument()
+    expect(screen.getByTestId('announcement-priority-input')).toHaveValue(7)
+    expect(screen.getByTestId('announcement-expires-input')).toHaveValue('2027-02-01T09:30')
+  })
+
   it('sends the form and closes with a toast on success', async () => {
     const user = userEvent.setup()
     mockCreate.mockResolvedValue({ success: true, data: { id: 'new' } })

@@ -64,6 +64,7 @@ export function AssistantTranscript({ messages, isLoading, onSend }: AssistantTr
   const inputId = useId()
   const endRef = useRef<HTMLDivElement>(null)
 
+  // A real effect: the streamed transcript keeps its newest line in view
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" })
   }, [messages])
@@ -108,7 +109,7 @@ export function AssistantTranscript({ messages, isLoading, onSend }: AssistantTr
           disabled={isLoading}
           data-testid="admin-chat-input"
         />
-        <Button type="submit" size="icon" aria-label="Send" disabled={!input.trim() || isLoading}>
+        <Button data-testid="admin-chat-send" type="submit" size="icon" aria-label="Send" disabled={!input.trim() || isLoading}>
           <Icon icon={icons.send} />
         </Button>
       </form>

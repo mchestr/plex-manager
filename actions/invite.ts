@@ -2,6 +2,7 @@
 
 import { z } from "zod"
 import { publicAction } from "@/lib/actions/define-action"
+import { formAction } from "@/lib/actions/form-action"
 import { fail, ok, type ActionResult } from "@/lib/actions/result"
 import {
   createJellyfinUser,
@@ -20,7 +21,7 @@ import { createLogger } from "@/lib/utils/logger"
 import { ServerType } from "@/lib/generated/prisma/client"
 import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
 import { inviteCodeSchema } from "@/lib/validations/invite"
-import { jellyfinInviteCredentialsSchema } from "@/lib/validations/jellyfin"
+import { jellyfinInviteCredentialsSchema, jellyfinInviteFormSchema } from "@/lib/validations/jellyfin"
 
 const logger = createLogger("INVITE")
 
@@ -203,6 +204,10 @@ async function compensateJellyfinInvite(
  * - Retry logic with exponential backoff for transaction conflicts (P2034)
  * - Compensating transaction (rollback) if Jellyfin operations fail after invite is consumed
  * - Audit logging for security-sensitive events
+ *
+ * The invite form posts {@link redeemJellyfinInviteForm}, which calls this.
+ *
+ * @internal
  */
 export const processJellyfinInvite = publicAction({
   // The credentials are validated before the invite is consumed, so a rejected name costs no use
@@ -210,6 +215,17 @@ export const processJellyfinInvite = publicAction({
   rateLimit: { name: "invite:redeem" },
   fallbackError: JELLYFIN_REDEEM_FAILED,
   handler: ({ code, credentials }) => redeemJellyfinInvite(code, credentials),
+})
+
+/**
+ * {@link processJellyfinInvite} as the invite form's `<form action>` (P10.7):
+ * the fields are checked, the passwords matched, and only the username comes
+ * back for the form to keep after an error.
+ */
+export const redeemJellyfinInviteForm = formAction(processJellyfinInvite, {
+  schema: jellyfinInviteFormSchema,
+  toInput: ({ code, username, password }) => ({ code, credentials: { username, password } }),
+  keep: ["username"],
 })
 
 async function redeemJellyfinInvite(

@@ -218,6 +218,7 @@ export function FilterBar({ search, filters, sort, resultCount, className, ...pr
                 size="icon-sm"
                 className="size-6"
                 aria-label={`Remove the ${filter.label} filter`}
+                data-testid={`${testId}-chip-${filter.param}-remove`}
                 onClick={() => replace({ [filter.param]: null, page: null })}
               >
                 <Icon icon={X} size={14} />

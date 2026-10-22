@@ -110,6 +110,7 @@ describe("DiscordSection", () => {
     await user.click(screen.getByTestId("settings-discord-save"))
 
     expect(updateDiscordIntegrationSettings).toHaveBeenCalledWith(expect.objectContaining({ botEnabled: false, clientSecret: undefined, botToken: undefined }))
-    expect(mockRefresh).toHaveBeenCalled()
+    // The action revalidates /admin/settings, so no client refresh follows (P10.7)
+    expect(mockRefresh).not.toHaveBeenCalled()
   })
 })

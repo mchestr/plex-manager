@@ -67,17 +67,9 @@ describe("toast", () => {
     expect(screen.getByText("Settings saved")).toBeInTheDocument()
   })
 
-  it("the legacy duration applies to success and info", async () => {
-    const fire = renderToasts()
-    await fire((t) => t.showInfo("Copied", 1000))
-    await act(async () => jest.advanceTimersByTime(1000))
-    await act(async () => jest.advanceTimersByTime(500))
-    expect(screen.queryByText("Copied")).not.toBeInTheDocument()
-  })
-
   it("showError is an alert that is still present at 60s, with a circle-x icon", async () => {
     const fire = renderToasts()
-    await fire((t) => t.showError("Plex didn't answer.", 1000))
+    await fire((t) => t.showError("Plex didn't answer."))
 
     // One alert: the toast itself, never hidden from assistive technology.
     expect(screen.getByRole("alert")).toBe(screen.getByTestId("toast"))

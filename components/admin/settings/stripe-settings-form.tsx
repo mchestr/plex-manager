@@ -1,10 +1,8 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { useEffect, useState, useTransition } from "react"
+import { Suspense, use, useState, useTransition } from "react"
 
 import { setStripeEnabled, updateStripeSettings, type StripeConfigStatus } from "@/actions/admin/admin-config"
-import { getAvailableLibraries } from "@/actions/server-info"
 import { Alert } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { FormField } from "@/components/ui/form-field"
@@ -14,6 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
+import type { LibraryListing } from "@/types/invite"
 
 /** The comma or newline separated price ids as a clean list. */
 function parsePriceIds(input: string): string[] {
@@ -45,7 +44,6 @@ type StripeField = "secretKey" | "webhookSecret" | "priceIds" | "librarySectionI
  * after a save attempt.
  */
 export function useStripeForm(config: StripeConfigStatus) {
-  const router = useRouter()
   const toast = useToast()
   const [errors, setErrors] = useState<Partial<Record<StripeField, string>>>({})
   const initial = {
@@ -72,9 +70,9 @@ export function useStripeForm(config: StripeConfigStatus) {
       if (Object.keys(fieldErrors).length === 0) toast.showError(result.error)
       return
     }
+    // The action revalidates the page, so the saved state follows
     setErrors({})
     toast.showSuccess("Stripe settings saved")
-    router.refresh()
     return { ...values, secretKey: "", webhookSecret: "" }
   })
 
@@ -88,7 +86,6 @@ export function useStripeForm(config: StripeConfigStatus) {
 
 /** The master switch: it saves on its own, and stays off until every prerequisite is saved. */
 function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; missing: string[] }) {
-  const router = useRouter()
   const toast = useToast()
   const [isToggling, startToggling] = useTransition()
 
@@ -99,8 +96,8 @@ function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; 
         toast.showError(result.error)
         return
       }
+      // The action revalidates the page, so the switch follows the stored value
       toast.showSuccess(next ? "Subscriptions turned on" : "Subscriptions turned off")
-      router.refresh()
     })
 
   return (
@@ -127,27 +124,53 @@ function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; 
 interface StripeSettingsFieldsProps {
   config: StripeConfigStatus
   state: ReturnType<typeof useStripeForm>
+  /** The Plex libraries, started by the page and read inside Suspense. */
+  libraries: Promise<LibraryListing>
+}
+
+interface LibraryChecklistProps {
+  libraries: Promise<LibraryListing>
+  selected: number[]
+  onToggle: (id: number, checked: boolean) => void
+  disabled: boolean
+}
+
+/** The subscriber library checkboxes, once the page's Plex listing arrives. */
+function LibraryChecklist({ libraries, selected, onToggle, disabled }: LibraryChecklistProps) {
+  const listing = use(libraries)
+  if (!listing.ok || listing.libraries.length === 0) {
+    return <p className="text-label text-muted-foreground">No Plex libraries available</p>
+  }
+  return (
+    <div className="flex max-h-48 flex-col gap-2 overflow-y-auto">
+      {listing.libraries.map((library) => {
+        const id = Number(library.id)
+        return (
+          <label key={library.id} className="flex cursor-pointer items-center gap-2 text-ui text-foreground">
+            <Checkbox
+              checked={selected.includes(id)}
+              onCheckedChange={(checked) => onToggle(id, checked)}
+              disabled={disabled}
+              data-testid={`stripe-library-checkbox-${library.id}`}
+            />
+            <span>
+              {library.name} <span className="text-muted-foreground">({library.type})</span>
+            </span>
+          </label>
+        )
+      })}
+    </div>
+  )
 }
 
 /**
  * Stripe's switch, its one prerequisite Alert (`stripe-enable-requirements`)
  * and the fields. The keys are SecretInputs in the saved state.
  */
-export function StripeSettingsFields({ config, state }: StripeSettingsFieldsProps) {
+export function StripeSettingsFields({ config, state, libraries }: StripeSettingsFieldsProps) {
   const { values, set, errors, form } = state
   const missing = missingStripeSetup(config)
-  const [libraries, setLibraries] = useState<Array<{ id: number; title: string; type: string }> | null>(null)
   const disabled = form.isPending
-
-  useEffect(() => {
-    let cancelled = false
-    getAvailableLibraries().then((result) => {
-      if (!cancelled) setLibraries(result.success && result.data ? result.data : [])
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const toggleLibrary = (id: number, checked: boolean) =>
     set({ librarySectionIds: checked ? [...values.librarySectionIds, id] : values.librarySectionIds.filter((existing) => existing !== id) })
@@ -208,27 +231,9 @@ export function StripeSettingsFields({ config, state }: StripeSettingsFieldsProp
       <fieldset className="flex flex-col gap-2" data-testid="stripe-library-access">
         <legend className="text-ui font-medium text-foreground">Subscriber library access</legend>
         <p className="text-label text-muted-foreground">Libraries shared with subscribers. Leave all unchecked to share every library.</p>
-        {libraries === null ? (
-          <p className="text-label text-muted-foreground">Loading libraries</p>
-        ) : libraries.length === 0 ? (
-          <p className="text-label text-muted-foreground">No Plex libraries available</p>
-        ) : (
-          <div className="flex max-h-48 flex-col gap-2 overflow-y-auto">
-            {libraries.map((library) => (
-              <label key={library.id} className="flex cursor-pointer items-center gap-2 text-ui text-foreground">
-                <Checkbox
-                  checked={values.librarySectionIds.includes(library.id)}
-                  onCheckedChange={(checked) => toggleLibrary(library.id, checked)}
-                  disabled={disabled}
-                  data-testid={`stripe-library-checkbox-${library.id}`}
-                />
-                <span>
-                  {library.title} <span className="text-muted-foreground">({library.type})</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        )}
+        <Suspense fallback={<p className="text-label text-muted-foreground">Loading libraries</p>}>
+          <LibraryChecklist libraries={libraries} selected={values.librarySectionIds} onToggle={toggleLibrary} disabled={disabled} />
+        </Suspense>
       </fieldset>
     </div>
   )

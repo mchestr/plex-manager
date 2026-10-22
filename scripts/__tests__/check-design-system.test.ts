@@ -3,12 +3,16 @@
  */
 
 /**
- * The design-system guardrail (P1.8): every ui-design-system 9.6 rule counts
- * what it bans and nothing else, and the baseline comparison only lets counts
- * fall, carrying them across renames.
+ * The design-system guardrail (P1.8, P10.11): every ui-design-system 9.6 rule
+ * counts what it bans and nothing else, and `--strict` fails on any count
+ * outside the documented allowlist.
  */
 
-import { addRules, compare, countFile, RULES, totals, update } from "../design-system/rules.mjs"
+import { spawnSync } from "node:child_process"
+import path from "node:path"
+
+import { ALLOWLIST, isAllowed, staleEntries, strictFailures } from "../design-system/allowlist.mjs"
+import { countFile, RULES, totals } from "../design-system/rules.mjs"
 
 const FILE = "components/admin/example.tsx"
 
@@ -24,6 +28,7 @@ describe("rules", () => {
         "arbitrary-type-z",
         "blur",
         "caps-eyebrow",
+        "client-marker",
         "copy",
         "gradient",
         "gradient-text",
@@ -56,6 +61,44 @@ describe("rules", () => {
   it.each(cases)("%s counts the matching fixture only", (rule, matching, nonMatching) => {
     expect(count(matching)[rule]).toBeGreaterThan(0)
     expect(count(nonMatching)[rule]).toBeUndefined()
+  })
+
+  describe("client-marker", () => {
+    const marked = (body: string) => `"use client"\n\n${body}`
+
+    it("counts a client marker on a render-only module", () => {
+      expect(count(marked('export function Banner() {\n  return <p className="text-ui">Hi</p>\n}\n'))).toEqual({ "client-marker": 1 })
+      expect(count(marked("export const Leaf = () => <span />\n"), "components/ui/leaf.tsx")).toEqual({ "client-marker": 1 })
+    })
+
+    it.each([
+      ["a hook", "const [open, setOpen] = useState(false)"],
+      ["a handler prop", "<button onClick={() => go()} />"],
+      ["a browser global", "window.scrollTo(0, 0)"],
+      ["document", "document.title = 'x'"],
+      ["motion", '<motion.div animate={{ opacity: 1 }} />'],
+      ["an element render prop", '<DialogTrigger render={<Button />}>Open</DialogTrigger>'],
+    ])("does not count a module that uses %s", (_case, body) => {
+      expect(count(marked(body))["client-marker"]).toBeUndefined()
+    })
+
+    it("counts nothing without the directive, or after a leading comment only when the directive is first", () => {
+      expect(count('export function Banner() {\n  return <p>Hi</p>\n}\n')).toEqual({})
+      expect(count('// Banner\n"use client"\nexport const A = () => <p />\n')).toEqual({ "client-marker": 1 })
+      expect(count('const note = "use client"\nexport const A = () => <p />\n')).toEqual({})
+    })
+
+    it("skips leading block comments, and an unclosed comment run returns quickly", () => {
+      expect(count('/* a */ /** b */\n"use client"\nexport const A = () => <p />\n')).toEqual({ "client-marker": 1 })
+      const started = Date.now()
+      expect(count(`/*${"*//*".repeat(50_000)}`)).toEqual({})
+      expect(Date.now() - started).toBeLessThan(1000)
+    })
+
+    it("skips Next error boundaries, which must be client components", () => {
+      expect(count(marked("export default function Error() {\n  return <p />\n}\n"), "app/admin/error.tsx")).toEqual({})
+      expect(count(marked("export default function GlobalError() {\n  return <p />\n}\n"), "app/global-error.tsx")).toEqual({})
+    })
   })
 
   it("counts each raw-palette utility", () => {
@@ -116,100 +159,56 @@ describe("rules", () => {
   })
 })
 
-describe("compare", () => {
-  const baseline = { "a.tsx": { gradient: 2, "raw-palette": 5 }, "gone.tsx": { blur: 1 } }
-
-  it("fails on a rise and names the file and rule", () => {
-    const result = compare(baseline, { "a.tsx": { gradient: 3, "raw-palette": 5 } })
-    expect(result.ok).toBe(false)
-    expect(result.rises).toEqual([{ file: "a.tsx", rule: "gradient", was: 2, now: 3 }])
+describe("totals", () => {
+  it("sums each rule across files", () => {
+    expect(totals({ "a.tsx": { gradient: 2, blur: 1 }, "b.tsx": { gradient: 1 } })).toEqual({ blur: 1, gradient: 3 })
   })
+})
 
-  it("fails on a new file with a non-zero count, not on one at zero", () => {
-    const current = { "a.tsx": baseline["a.tsx"], "new.tsx": { blur: 1 }, "clean.tsx": {} }
-    const result = compare(baseline, current)
-    expect(result.ok).toBe(false)
-    expect(result.added).toEqual([{ file: "new.tsx", counts: { blur: 1 } }])
-  })
+describe("--strict", () => {
+  const allowlist = [
+    { path: "components/wrapped/", reason: "v2 viewer" },
+    { path: "components/admin/pane.tsx", rules: ["client-marker"], reason: "passes renderers" },
+  ]
 
-  it("passes on a drop and reports it", () => {
-    const result = compare(baseline, { "a.tsx": { gradient: 1 } })
-    expect(result.ok).toBe(true)
-    expect(result.drops).toEqual([
-      { file: "a.tsx", rule: "gradient", was: 2, now: 1 },
-      { file: "a.tsx", rule: "raw-palette", was: 5, now: 0 },
+  it("fails on one match outside the allowlist", () => {
+    expect(strictFailures({ "components/admin/users/row.tsx": { "raw-palette": 1 }, "components/admin/ok.tsx": {} }, allowlist)).toEqual([
+      { file: "components/admin/users/row.tsx", rule: "raw-palette", count: 1 },
     ])
   })
 
-  it("ignores deleted files", () => {
-    const result = compare(baseline, { "a.tsx": baseline["a.tsx"] })
-    expect(result.ok).toBe(true)
-    expect(result.deleted).toEqual(["gone.tsx"])
+  it("passes on an allowlisted folder, and on an allowlisted file for its rules only", () => {
+    expect(strictFailures({ "components/wrapped/hero.tsx": { gradient: 4, copy: 1 } }, allowlist)).toEqual([])
+    expect(strictFailures({ "components/admin/pane.tsx": { "client-marker": 1 } }, allowlist)).toEqual([])
+    expect(strictFailures({ "components/admin/pane.tsx": { "client-marker": 1, blur: 1 } }, allowlist)).toEqual([
+      { file: "components/admin/pane.tsx", rule: "blur", count: 1 },
+    ])
   })
 
-  it("carries counts across a rename", () => {
-    const current = { "b.tsx": { gradient: 2, "raw-palette": 5 }, "gone.tsx": { blur: 1 } }
-    expect(compare(baseline, current).ok).toBe(false)
-    const result = compare(baseline, current, [["a.tsx", "b.tsx"]])
-    expect(result).toMatchObject({ ok: true, rises: [], added: [], deleted: [] })
-    const risen = compare(baseline, { ...current, "b.tsx": { gradient: 3, "raw-palette": 5 } }, [["a.tsx", "b.tsx"]])
-    expect(risen.rises).toEqual([{ file: "b.tsx", from: "a.tsx", rule: "gradient", was: 2, now: 3 }])
+  it("matches a folder entry by prefix and a file entry exactly", () => {
+    expect(isAllowed("components/wrapped/a/b.tsx", "gradient", allowlist)).toBe(true)
+    expect(isAllowed("components/wrapped-legacy.tsx", "gradient", allowlist)).toBe(false)
+    expect(isAllowed("components/admin/pane.tsx.bak", "client-marker", allowlist)).toBe(false)
+  })
+
+  it("reports entries that cover nothing any more", () => {
+    expect(staleEntries({ "components/wrapped/hero.tsx": { gradient: 1 } }, allowlist)).toEqual([allowlist[1]])
+  })
+
+  it("gives every real entry a reason", () => {
+    for (const entry of ALLOWLIST) expect(entry.reason.length).toBeGreaterThan(10)
   })
 
   it("matches the documented example", () => {
-    expect(compare({ "a.tsx": { gradient: 2 } }, { "b.tsx": { gradient: 1 } }, [["a.tsx", "b.tsx"]])).toEqual({
-      ok: true,
-      rises: [],
-      added: [],
-      deleted: [],
-      drops: [{ file: "b.tsx", from: "a.tsx", rule: "gradient", was: 2, now: 1 }],
-    })
-  })
-})
-
-describe("update", () => {
-  const baseline = { "a.tsx": { gradient: 2 }, "gone.tsx": { blur: 1 } }
-
-  it("refuses to raise a count", () => {
-    const result = update(baseline, { "a.tsx": { gradient: 3 } })
-    expect(result.ok).toBe(false)
-    expect(result.files).toBeUndefined()
+    expect(
+      strictFailures({ "components/admin/a.tsx": { "raw-palette": 2 }, "components/wrapped/b.tsx": { blur: 1 } })
+    ).toEqual([{ file: "components/admin/a.tsx", rule: "raw-palette", count: 2 }])
   })
 
-  it("refuses to add a file with a non-zero count", () => {
-    expect(update(baseline, { "a.tsx": { gradient: 2 }, "new.tsx": { blur: 1 } }).ok).toBe(false)
-  })
-
-  it("lowers counts, drops deleted and zero files, and moves renames", () => {
-    const result = update(baseline, { "b.tsx": { gradient: 1 }, "clean.tsx": {} }, [["a.tsx", "b.tsx"]])
-    expect(result).toMatchObject({ ok: true, files: { "b.tsx": { gradient: 1 } } })
-    expect(totals(result.files)).toEqual({ gradient: 1 })
-  })
-})
-
-describe("addRules", () => {
-  const baseline = { "a.tsx": { gradient: 2 } }
-
-  it("records a rule new to the baseline", () => {
-    const result = addRules(baseline, { "a.tsx": { gradient: 2, "inline-svg": 3 }, "b.tsx": { "inline-svg": 1 } }, ["inline-svg"])
-    expect(result).toMatchObject({
-      ok: true,
-      files: { "a.tsx": { gradient: 2, "inline-svg": 3 }, "b.tsx": { "inline-svg": 1 } },
-    })
-  })
-
-  it("still refuses any other rise", () => {
-    const result = addRules(baseline, { "a.tsx": { gradient: 3, "inline-svg": 1 } }, ["inline-svg"])
-    expect(result).toMatchObject({ ok: false, result: { rises: [{ file: "a.tsx", rule: "gradient", was: 2, now: 3 }] } })
-    expect(addRules(baseline, { "a.tsx": { gradient: 2 }, "b.tsx": { blur: 1 } }, ["inline-svg"]).ok).toBe(false)
-  })
-
-  it("refuses a rule the baseline already counts", () => {
-    expect(addRules(baseline, { "a.tsx": { gradient: 2 } }, ["gradient"])).toEqual({ ok: false, known: ["gradient"] })
-  })
-
-  it("seeds a renamed file under the path it came from", () => {
-    const result = addRules(baseline, { "b.tsx": { gradient: 1, "inline-svg": 2 } }, ["inline-svg"], [["a.tsx", "b.tsx"]])
-    expect(result).toMatchObject({ ok: true, files: { "b.tsx": { gradient: 1, "inline-svg": 2 } } })
+  it("passes on the repository as it stands", () => {
+    const script = path.resolve(__dirname, "../check-design-system.mjs")
+    const result = spawnSync(process.execPath, [script, "--strict"], { encoding: "utf8" })
+    expect(result.stderr).toBe("")
+    expect(result.status).toBe(0)
   })
 })

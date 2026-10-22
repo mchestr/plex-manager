@@ -29,7 +29,7 @@ export function FormField({ name, label, optional, description, error, changedFr
       {children}
       {description && <FieldDescription>{description}</FieldDescription>}
       {changedFrom !== undefined && <FieldDescription>Changed from {changedFrom}</FieldDescription>}
-      {error && <FieldError>{error}</FieldError>}
+      {error && <FieldError data-testid={`${name}-error`}>{error}</FieldError>}
     </Field>
   )
 }

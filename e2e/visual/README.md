@@ -52,8 +52,9 @@ it off again), and each light project holds the `pm-theme=light` cookie
   axe baseline.
 
 They are not in CI's project lists. Take their baselines with the workflow's
-`light` suite; a file with a design-debt count shows up as a light-mode bug, so
-burn its counts to zero before its baseline.
+`light` suite; a file on the design-system allowlist
+(`scripts/design-system/allowlist.mjs`) shows up as a light-mode bug, so take
+it off the list before its baseline.
 
 ## How the screens are kept stable
 

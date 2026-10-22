@@ -4,8 +4,8 @@ import { createE2EPrismaClient } from '../helpers/prisma';
 /**
  * The users list (P10.18), the reference admin list page: with Plex at a
  * dead address every member is still listed as Unknown under the Plex-down
- * Alert, a filter change lands in the URL with a chip, and Disable runs from
- * a row's action menu through its confirm.
+ * Alert, a filter change lands in the URL with a chip, and Make admin and
+ * Disable run from a row's action menu through their confirms (UI-46).
  */
 
 const MEMBER = { id: 'users-list-e2e-id', plexUserId: 'users-list-e2e-plex', name: 'Aaa Users Member', email: 'users-list@example.com' };
@@ -59,6 +59,28 @@ test.describe('Admin users list', () => {
     await expect(adminPage).toHaveURL(/plexAccess=unknown/);
     await expect(adminPage.getByTestId('admin-users-filters-chip-plexAccess')).toContainText('Plex access: Unknown');
     await expect(adminPage.getByTestId(`admin-users-row-${MEMBER.id}`)).toBeVisible();
+  });
+
+  test('makes a member an admin through the row menu and its confirm', async ({ adminPage }) => {
+    await adminPage.goto('/admin/users');
+    await adminPage.getByTestId(`admin-users-actions-${MEMBER.id}`).click();
+    await adminPage.getByTestId(`admin-users-actions-${MEMBER.id}-role`).click();
+
+    const dialog = adminPage.getByTestId('admin-user-role-dialog');
+    await expect(dialog).toContainText(`Make ${MEMBER.name} an admin?`);
+    await adminPage.getByTestId('admin-user-role-confirm').click();
+    await expect(dialog).toBeHidden();
+
+    const prisma = createE2EPrismaClient();
+    try {
+      await expect.poll(async () => (await prisma.user.findUniqueOrThrow({ where: { id: MEMBER.id } })).isAdmin).toBe(true);
+    } finally {
+      await prisma.$disconnect();
+    }
+    // The refreshed row now offers to take the role away
+    await adminPage.getByTestId(`admin-users-actions-${MEMBER.id}`).click();
+    await expect(adminPage.getByTestId(`admin-users-actions-${MEMBER.id}-role`)).toContainText('Remove admin role');
+    await adminPage.keyboard.press('Escape');
   });
 
   test('disables a member through the row menu and its confirm', async ({ adminPage }) => {

@@ -113,12 +113,9 @@ test.describe('Rewind settings section', () => {
     await signIn(REWIND_MEMBERS.heavy.id);
     await page.goto(`/rewind/${REWIND_YEAR}/read`);
     await expect(page.getByTestId('rewind-article-mode')).toBeVisible();
-    await expect(page.locator('[data-article-page="people"]')).toHaveCount(0);
+    await expect(page.getByTestId('rewind-article-heading-people')).toHaveCount(0);
 
-    const folios = await page
-      .getByTestId('rewind-article-section')
-      .locator('h2 > span')
-      .allTextContents();
+    const folios = await page.getByTestId('rewind-article-folio').allTextContents();
     const numbers = folios.map((folio) => Number(folio.trim()));
     expect(numbers).toEqual(numbers.map((_, i) => numbers[0] + i));
   });

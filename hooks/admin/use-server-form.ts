@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import {
@@ -102,7 +101,6 @@ function formErrors(fieldErrors: Record<string, string[]> | undefined): ServerFo
  * server refuses the same case with `SECRET_REQUIRED` on the secret field.
  */
 export function useServerForm(type: ServerType, server: StoredServer | null) {
-  const router = useRouter()
   const toast = useToast()
   const [errors, setErrors] = useState<ServerFormErrors>({})
   const noun = secretNoun(type)
@@ -125,7 +123,6 @@ export function useServerForm(type: ServerType, server: StoredServer | null) {
     }
     setErrors({})
     toast.showSuccess(`${SERVER_LABELS[type]} settings saved`)
-    router.refresh()
     return { ...values, secret: "" }
   })
 

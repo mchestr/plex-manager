@@ -1,15 +1,13 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
+
 import { prisma } from "@/lib/prisma"
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
-import { requireAdmin } from "@/lib/admin"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
-import { createLogger } from "@/lib/utils/logger"
 import { globalWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
-
-const logger = createLogger("ADMIN_WATCHLIST_ACTIONS")
 
 /**
  * Update global watchlist sync settings (admin only)
@@ -38,53 +36,7 @@ export const updateGlobalWatchlistSyncSettings = adminAction({
     })
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("watchlist", before, values))
+    revalidatePath("/admin/settings")
     return ok(null)
   },
 })
-
-/**
- * Get watchlist sync statistics (admin only)
- */
-export async function getWatchlistSyncStats() {
-  await requireAdmin()
-
-  try {
-    const [usersWithSyncEnabled, totalItemsSynced, totalItemsRequested, recentHistory] =
-      await Promise.all([
-        prisma.watchlistSyncSettings.count({
-          where: { syncEnabled: true },
-        }),
-        prisma.watchlistSyncHistory.count(),
-        prisma.watchlistSyncHistory.count({
-          where: { status: "REQUESTED" },
-        }),
-        prisma.watchlistSyncHistory.findMany({
-          orderBy: { syncedAt: "desc" },
-          take: 10,
-          select: {
-            id: true,
-            title: true,
-            mediaType: true,
-            status: true,
-            syncedAt: true,
-            user: {
-              select: { name: true, email: true },
-            },
-          },
-        }),
-      ])
-
-    return {
-      success: true as const,
-      data: {
-        usersWithSyncEnabled,
-        totalItemsSynced,
-        totalItemsRequested,
-        recentHistory,
-      },
-    }
-  } catch (error) {
-    logger.error("Error fetching watchlist sync stats", error)
-    return { success: false as const, error: "Failed to fetch stats" }
-  }
-}

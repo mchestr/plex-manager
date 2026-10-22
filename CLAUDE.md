@@ -26,6 +26,7 @@ A Next.js-based Plex management platform that combines server management tools, 
 ### Data Fetching
 - **Server Components**: Fetch directly in components (async/await)
 - **Client Components**: Use TanStack Query with proper error/loading states
+- **Query keys**: Every TanStack Query key comes from `hooks/query-keys.ts`; first data arrives as Server Component props (seed a query with `initialData`), and a mutation invalidates the key its reader uses
 - **Server Actions**: For mutations, form submissions, user-triggered operations
 - **Validation**: All inputs validated with Zod before processing
 
@@ -155,7 +156,7 @@ export const renameThing = memberAction({
 - **Dark theme first** - Primary design uses dark slate backgrounds
 - **Responsive** - Mobile-first approach, test all breakpoints
 - **Component variants** - Use `clsx`/`tailwind-merge` for conditional classes
-- **Design-debt ratchet** - `npm run design:report` counts the patterns the design system bans (raw palette colours, gradients, blur, caps eyebrows, infinite motion, arrows and "Wrapped" in copy, and more; rules in `scripts/design-system/rules.mjs`). CI's `design:check` fails when a file's count in `design-debt.json` rises or a new file counts above zero; run `npm run design:update` when counts fall. After a merge that renames or moves files on `main`, regenerate the baseline with `npm run design:baseline` and review its diff
+- **Design-system check** - `npm run design:report` counts the patterns the design system bans (raw palette colours, gradients, blur, caps eyebrows, infinite motion, arrows and "Wrapped" in copy, and more; rules in `scripts/design-system/rules.mjs`). CI's `design:check` (`--strict`) fails on any count outside `scripts/design-system/allowlist.mjs`, where each exception names its reason and the step that removes it, and on an entry that no longer covers anything
 
 ```typescript
 import { clsx } from 'clsx'
@@ -245,13 +246,13 @@ if (!result.success) {
 ### Common UI Components Available
 
 Located in `components/ui/`:
-- Form inputs and controls
-- Buttons and interactive elements
-- Layout components
-- Data display components
-- Feedback components (toasts, alerts)
+- **Actions**: `Button` (variants `primary`, `secondary`, `outline`, `ghost`, `destructive`, `destructive-solid`, `link`; `loading` and `loadingLabel`), `SubmitButton`, `Toggle`, `SegmentedControl`
+- **Forms**: `Input`, `Textarea`, `SecretInput`, `Select` and its parts, `Checkbox`, `Switch`, `Slider`, `Field`, `FormField`, `Label`, `DateRangeFilter`, `FilterBar`
+- **Overlays**: `Dialog`, `AlertDialog`, `ConfirmDialog` (with `useActionDialog`), `Sheet`, `Popover`, `DropdownMenu`, `Tooltip`, `Command`
+- **Display**: `Card` (compose `CardHeader`, `CardContent`, `CardFooter`), `Badge`, `StatusBadge`, `StatTile`, `DataTable`, `ChartCard`, `Tabs`, `Stepper`, `Poster`, `Time`, `MarkdownBody`, `Icon`, `PageHeader`, `SettingsSection`
+- **Feedback**: `Alert`, `useToast`, `Spinner`, `Skeleton`, `EmptyState`, `ErrorState`, `StatusScreen`, `LiveStatus`
 
-Check the directory for the complete list before implementing custom UI elements.
+ESLint enforces this: a raw `<button>`, `<input>`, `<select>`, `<textarea>` or inline `<svg>` outside `components/ui/**` is an error (`no-restricted-syntax`, selectors in `eslint/restricted-syntax.mjs`). The allowlist is Rewind art (`components/rewind/**`), the dev sheet (`app/dev/**`), the `next/og` image routes and `app/api/**`; the v2 viewer and the setup wizard only warn until P11.29 and P10.25 replace them. The old adapters (`StyledInput`, `StyledDropdown`, `ModalShell`, `ConfirmModal`, `LoadingSpinner` and the rest) are deleted, and importing one is an error.
 
 ## Testing Strategy
 

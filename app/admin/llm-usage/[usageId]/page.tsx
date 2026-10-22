@@ -82,6 +82,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
             <Link
+              data-testid="admin-llm-usage-back"
               href="/admin/llm-usage"
               className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline mb-4 inline-block"
             >
@@ -139,6 +140,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                   <div className="text-sm text-muted-foreground">{record.user.email}</div>
                 )}
                 <Link
+                  data-testid="admin-llm-usage-member"
                   href={userDetail(record.user.id)}
                   className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground mt-1 inline-block"
                 >
@@ -165,7 +167,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
               <div className="space-y-4">
                 {record.wrapped && (
                   <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground mb-1">Wrapped</div>
+                    <div className="text-sm text-muted-foreground mb-1">Rewind</div>
                     <div>
                       <span className="text-sm text-muted-foreground">Year: </span>
                       <span className="text-sm font-medium text-foreground">{record.wrapped.year}</span>
@@ -183,6 +185,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                       </div>
                     )}
                     <Link
+                      data-testid="admin-llm-usage-rewind"
                       href={userRewind(record.userId, record.wrapped.year)}
                       className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground inline-block mt-2"
                     >
@@ -197,6 +200,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                       Started {f.dateTime(record.chatConversation.createdAt, { zoneLabel: true })}
                     </div>
                     <Link
+                      data-testid="admin-llm-usage-conversation"
                       href={llmConversation(record.chatConversation.id)}
                       className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground inline-block mt-2"
                     >

@@ -5,7 +5,7 @@ import { expect, test, TEST_USERS } from './fixtures/auth';
 import { signInAs } from './fixtures/session';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { REWIND_STATISTICS } from './helpers/seed-fixtures';
-import { WAIT_TIMEOUTS, waitForAdminContent } from './helpers/test-utils';
+import { WAIT_TIMEOUTS } from './helpers/test-utils';
 import {
   makeUserGatedNonMember,
   resetStripeState,
@@ -268,7 +268,8 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       await expect(page.getByTestId('subscription-plan')).toHaveText('Membership');
       await expect(page.getByTestId('subscription-status-badge')).toContainText('Active');
       await expect(page.getByTestId('subscription-period')).toContainText(/^Renews /);
-      await expect(page.getByTestId('manage-subscription-button')).toHaveText('Manage billing');
+      // The Button keeps its hidden loading label in the DOM (aria-hidden) to hold its width.
+      await expect(page.getByTestId('manage-subscription-button')).toHaveAccessibleName('Manage billing');
       await expect(page.getByTestId('subscription-status-view')).not.toContainText('price_');
 
       await page.goto('/');
@@ -289,11 +290,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
 
     test('admin can enable Stripe from settings once configured', async ({ adminPage }) => {
       await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
-      await waitForAdminContent(
-        adminPage,
-        [{ type: 'heading', value: 'Settings' }],
-        { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION }
-      );
+      await expect(adminPage.getByTestId('admin-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
       // The Stripe settings card and its form are present.
       const form = adminPage.getByTestId('stripe-settings-form');
@@ -331,9 +328,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       ).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
       // The Subscription column header is present.
-      await expect(
-        adminPage.getByRole('columnheader', { name: 'Subscription' })
-      ).toBeVisible();
+      await expect(adminPage.getByTestId('admin-users-column-subscription')).toBeVisible();
     });
   });
 

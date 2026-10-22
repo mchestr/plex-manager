@@ -72,7 +72,8 @@ describe('RewindSettingsSection', () => {
     await user.click(save)
     expect(updateRewindSettings).toHaveBeenCalledWith({ ...saved, rewindEnabled: true, rewindDisabledPages: ['people'] })
     expect(mockShowSuccess).toHaveBeenCalledWith('Rewind settings saved')
-    expect(mockRefresh).toHaveBeenCalled()
+    // The action revalidates /admin/settings, so no client refresh follows (P10.7)
+    expect(mockRefresh).not.toHaveBeenCalled()
   })
 
   it('Discard restores the stored values', async () => {

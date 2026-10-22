@@ -6,9 +6,12 @@ import type { StripeConfigStatus } from "@/actions/admin/admin-config"
 import { StripeSettingsFields, useStripeForm } from "@/components/admin/settings/stripe-settings-form"
 import { SettingsSection } from "@/components/ui/settings-section"
 import type { SectionHealth } from "@/lib/settings/connection-status"
+import type { LibraryListing } from "@/types/invite"
 
 interface StripeSectionProps {
   config: StripeConfigStatus
+  /** The Plex libraries for the subscriber picker, started by the page. */
+  libraries: Promise<LibraryListing>
   health: SectionHealth
   /** "Last saved ... by ..." from the audit log. */
   footerMeta?: ReactNode
@@ -19,7 +22,7 @@ interface StripeSectionProps {
  * keys, prices and libraries save through the section footer. The switch's
  * prerequisites show as one Alert, and fields turn red only after a save.
  */
-export function StripeSection({ config, health, footerMeta }: StripeSectionProps) {
+export function StripeSection({ config, libraries, health, footerMeta }: StripeSectionProps) {
   const stripe = useStripeForm(config)
   return (
     <SettingsSection
@@ -31,7 +34,7 @@ export function StripeSection({ config, health, footerMeta }: StripeSectionProps
       form={stripe.form}
       footerMeta={footerMeta}
     >
-      <StripeSettingsFields config={config} state={stripe} />
+      <StripeSettingsFields config={config} state={stripe} libraries={libraries} />
     </SettingsSection>
   )
 }

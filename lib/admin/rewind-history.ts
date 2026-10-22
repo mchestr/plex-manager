@@ -1,13 +1,14 @@
-"use server"
-
 /**
- * LLM historical wrapped version management
+ * Reads for the admin history page: a legacy Rewind's stored versions.
  *
- * Functions for viewing historical wrapped versions. Each version is an
+ * Server-only reads, not actions (P10.7, BP-06): the history page calls them
+ * on the server and passes the versions to its picker as props. Each version is an
  * `LLMUsage` row whose response is rebuilt into a Rewind on the statistics
  * stored with the current one (statistics do not change between
  * regenerations).
  */
+
+import "server-only"
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"

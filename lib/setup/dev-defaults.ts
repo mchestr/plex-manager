@@ -1,6 +1,7 @@
-"use server"
+import "server-only"
 
 import { getSetupStatus } from "@/actions/setup"
+import type { DevDefaults, DiscordDefaults, LLMDefaults, PrometheusDefaults, ServiceDefaults } from "@/types/setup"
 
 // Valid LLM provider values
 const VALID_LLM_PROVIDERS = ["openai"] as const
@@ -40,60 +41,9 @@ function safeParseProvider(value: string | undefined): ValidLLMProvider | undefi
   return undefined
 }
 
-// Type definitions for dev defaults
-interface ServiceDefaults {
-  name?: string
-  url?: string
-  token?: string
-  apiKey?: string
-  publicUrl?: string
-}
-
-interface LLMDefaults {
-  provider?: "openai"
-  apiKey?: string
-  model?: string
-  temperature?: number
-  maxTokens?: number
-}
-
-interface DiscordDefaults {
-  isEnabled?: boolean
-  botEnabled?: boolean
-  clientId?: string
-  clientSecret?: string
-  guildId?: string
-  serverInviteCode?: string
-  platformName?: string
-  instructions?: string
-}
-
-interface PrometheusDefaults {
-  name?: string
-  url?: string
-  query?: string
-}
-
-export interface DevDefaults {
-  plex: ServiceDefaults | null
-  tautulli: ServiceDefaults | null
-  overseerr: ServiceDefaults | null
-  sonarr: ServiceDefaults | null
-  radarr: ServiceDefaults | null
-  discord: DiscordDefaults | null
-  prometheus: PrometheusDefaults | null
-  chatLlmProvider: LLMDefaults | null
-  wrappedLlmProvider: LLMDefaults | null
-  /** @deprecated Use chatLlmProvider or wrappedLlmProvider instead */
-  llmProvider: LLMDefaults | null
-  /** Whether any DEV_* variables are actively providing defaults */
-  isDevMode: boolean
-  /** Whether auto-submit is enabled for fully populated forms */
-  autoSubmit: boolean
-}
-
 /**
- * Returns development defaults for the setup wizard.
+ * Returns development defaults for the setup wizard. The setup page reads them
+ * once on the server and passes them down (P10.7); no form asks on mount.
  *
  * SECURITY NOTE: These values are ONLY returned when NODE_ENV=development, the explicit
  * DEV_SETUP_PREFILL=true flag is set, and setup is not yet complete. Otherwise every value

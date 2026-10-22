@@ -52,3 +52,54 @@ export const SETUP_STEPS: SetupStep[] = [
   },
 ]
 
+// The setup wizard's DEV_* pre-fill, read by lib/setup/dev-defaults.ts
+export interface ServiceDefaults {
+  name?: string
+  url?: string
+  token?: string
+  apiKey?: string
+  publicUrl?: string
+}
+
+export interface LLMDefaults {
+  provider?: "openai"
+  apiKey?: string
+  model?: string
+  temperature?: number
+  maxTokens?: number
+}
+
+export interface DiscordDefaults {
+  isEnabled?: boolean
+  botEnabled?: boolean
+  clientId?: string
+  clientSecret?: string
+  guildId?: string
+  serverInviteCode?: string
+  platformName?: string
+  instructions?: string
+}
+
+export interface PrometheusDefaults {
+  name?: string
+  url?: string
+  query?: string
+}
+
+export interface DevDefaults {
+  plex: ServiceDefaults | null
+  tautulli: ServiceDefaults | null
+  overseerr: ServiceDefaults | null
+  sonarr: ServiceDefaults | null
+  radarr: ServiceDefaults | null
+  discord: DiscordDefaults | null
+  prometheus: PrometheusDefaults | null
+  chatLlmProvider: LLMDefaults | null
+  wrappedLlmProvider: LLMDefaults | null
+  /** @deprecated Use chatLlmProvider or wrappedLlmProvider instead */
+  llmProvider: LLMDefaults | null
+  /** Whether any DEV_* variables are actively providing defaults */
+  isDevMode: boolean
+  /** Whether auto-submit is enabled for fully populated forms */
+  autoSubmit: boolean
+}

@@ -1,11 +1,9 @@
-"use client"
-
-import { type DevDefaults } from "@/actions/dev-defaults"
 import { Icon } from "@/components/ui/icon"
 import { icons } from "@/lib/ui/icons"
+import type { DevDefaults } from "@/types/setup"
 
 interface DevModeBannerProps {
-  devDefaults: DevDefaults | null
+  devDefaults: DevDefaults
 }
 
 /**
@@ -14,7 +12,7 @@ interface DevModeBannerProps {
  * and reminds them about security implications.
  */
 export function DevModeBanner({ devDefaults }: DevModeBannerProps) {
-  if (!devDefaults?.isDevMode) {
+  if (!devDefaults.isDevMode) {
     return null
   }
 

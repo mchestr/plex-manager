@@ -89,7 +89,7 @@ describe('ManageSubscriptionButton', () => {
     await user.click(screen.getByTestId('manage-subscription-button'))
 
     await waitFor(() => {
-      expect(screen.getByTestId('manage-subscription-button')).toBeDisabled()
+      expect(screen.getByTestId('manage-subscription-button')).toHaveAttribute('aria-busy', 'true')
     })
     expect(screen.getByText('Opening...')).toBeInTheDocument()
 

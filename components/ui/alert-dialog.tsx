@@ -30,7 +30,7 @@ export function AlertDialogCancel({
   ...props
 }: Omit<AlertDialogPrimitive.Close.Props, "render" | "className"> & { className?: string }) {
   return (
-    <AlertDialogPrimitive.Close data-slot="alert-dialog-cancel" render={<Button variant="ghost" />} {...props}>
+    <AlertDialogPrimitive.Close data-slot="alert-dialog-cancel" render={<Button variant="ghost" data-testid="alert-dialog-cancel" />} {...props}>
       {children}
     </AlertDialogPrimitive.Close>
   )

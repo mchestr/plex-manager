@@ -53,7 +53,7 @@ export function StackedList<T>({
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="truncate text-ui font-medium text-foreground">
                 {href ? (
-                  <Link href={href} className="rounded-sm hover:underline">
+                  <Link data-testid={`${testId}-link-${row.id}`} href={href} className="rounded-sm hover:underline">
                     {title}
                   </Link>
                 ) : (

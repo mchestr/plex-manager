@@ -52,7 +52,7 @@ test.describe('Admin Overview', () => {
   test('the mobile tab bar starts with Overview', async ({ adminPage }) => {
     await adminPage.setViewportSize({ width: 390, height: 844 });
     await adminPage.goto('/admin');
-    const tabs = adminPage.getByTestId('admin-tab-bar').getByRole('link');
+    const tabs = adminPage.getByTestId('admin-tab-bar').getByTestId(/^admin-tab-(?!bar$)/);
     await expect(tabs.first()).toHaveAttribute('data-testid', 'admin-tab-overview');
     await expect(adminPage.getByTestId('admin-tab-overview')).toHaveAttribute('aria-current', 'page');
     expect(await adminPage.evaluate(() => document.documentElement.scrollWidth)).toBe(390);

@@ -109,6 +109,7 @@ export function GalleryRun({ runKey, input }: GalleryRunProps) {
     [pathname, router, searchParams]
   )
 
+  // A real effect: the fixture run starts when its preview is shown and stops when it leaves
   useEffect(() => {
     let stop = false
     void runToEnd(runKey, input, true, () => stop).then(finish)
@@ -125,6 +126,7 @@ export function GalleryRun({ runKey, input }: GalleryRunProps) {
         data-testid="rewind-gallery-failed"
         action={
           <Button
+            data-testid="rewind-gallery-retry"
             variant="outline"
             size="sm"
             onClick={() => {

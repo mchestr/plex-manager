@@ -32,6 +32,18 @@ export const jellyfinInviteCredentialsSchema = z.object({
 })
 
 /**
+ * The invite page's account form (P10.7): the credentials with the password
+ * typed twice, and the invite code from a hidden field. The action checks the
+ * code itself.
+ */
+export const jellyfinInviteFormSchema = jellyfinInviteCredentialsSchema
+  .extend({ code: z.string(), confirmPassword: z.string() })
+  .refine((form) => form.password === form.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  })
+
+/**
  * Jellyfin API response types
  * Based on Jellyfin API documentation
  */

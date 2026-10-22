@@ -21,14 +21,14 @@ export interface RecentCommand {
   commandName: string
   status: StatusValue<"discordCommand">
   responseTimeMs: number | null
-  createdAt: string
+  createdAt: Date
 }
 
 /** The member's Discord name, linked to their admin page when the account is linked (UI-06). */
 export function DiscordMember({ name, userId }: { name: string; userId: string | null }) {
   if (!userId) return <span className="text-foreground">{name}</span>
   return (
-    <Link href={userDetail(userId)} className="rounded-sm font-medium text-foreground underline-offset-4 hover:underline">
+    <Link data-testid={`admin-discord-member-${userId}`} href={userDetail(userId)} className="rounded-sm font-medium text-foreground underline-offset-4 hover:underline">
       {name}
     </Link>
   )

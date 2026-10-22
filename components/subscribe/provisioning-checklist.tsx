@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 
 import { getSubscriptionProvisioning, type SubscriptionProvisioning } from "@/actions/subscription"
 import { Icon } from "@/components/ui/icon"
+import { queryKeys } from "@/hooks/query-keys"
 import { useFormat } from "@/lib/format-context"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
@@ -54,13 +55,14 @@ export function ProvisioningChecklist({ initial }: { initial: SubscriptionProvis
   const f = useFormat()
   const [timedOut, setTimedOut] = useState(false)
 
+  // A real effect: the poll gives up after POLL_LIMIT_MS
   useEffect(() => {
     const timer = setTimeout(() => setTimedOut(true), POLL_LIMIT_MS)
     return () => clearTimeout(timer)
   }, [])
 
   const { data } = useQuery({
-    queryKey: ["subscription-provisioning"],
+    queryKey: queryKeys.subscriptionProvisioning(),
     queryFn: async () => {
       const result = await getSubscriptionProvisioning()
       if (!result.success) throw new Error(result.error)

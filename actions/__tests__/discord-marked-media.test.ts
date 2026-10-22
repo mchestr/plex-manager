@@ -91,7 +91,7 @@ describe("getDiscordMarkedMedia", () => {
       title: "The Office",
       markType: "KEEP_FOREVER",
       markedVia: "discord",
-      markedAt: "2026-07-01T12:00:00.000Z",
+      markedAt: new Date("2026-07-01T12:00:00Z"),
       user: { name: "Alice", email: "a@x.com" },
     })
     expect(result.total).toBe(1)

@@ -3,7 +3,6 @@
 import { toggleJellyfinLogin } from "@/actions/admin/admin-servers"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
-import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 
 interface JellyfinLoginToggleProps {
@@ -12,7 +11,6 @@ interface JellyfinLoginToggleProps {
 
 export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProps) {
   const [isPending, startTransition] = useTransition()
-  const router = useRouter()
   const toast = useToast()
 
   const handleToggle = () => {
@@ -20,7 +18,6 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
       const result = await toggleJellyfinLogin(!enabledForLogin)
       if (result.success) {
         toast.showSuccess(`Jellyfin sign-in turned ${!enabledForLogin ? "on" : "off"}`)
-        router.refresh()
       } else {
         toast.showError(result.error || "Failed to update the Jellyfin sign-in setting")
       }

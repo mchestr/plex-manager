@@ -109,7 +109,7 @@ export function PromptEditor({ prompt, initial, cancelHref }: PromptEditorProps)
           tone="info"
           title="Read-only"
           action={
-            <Button variant="secondary" size="sm" nativeButton={false} render={<Link href={newStyleGuide(prompt.id)} />}>
+            <Button data-testid="admin-prompt-editor-new-style-guide" variant="secondary" size="sm" nativeButton={false} render={<Link href={newStyleGuide(prompt.id)} />}>
               Copy into a new style guide
             </Button>
           }
@@ -140,7 +140,7 @@ export function PromptEditor({ prompt, initial, cancelHref }: PromptEditorProps)
         <span aria-live="polite" className="mr-auto text-label text-muted-foreground" data-testid="admin-prompt-editor-status">
           {STATUS_TEXT[editor.status]}
         </span>
-        <Button variant="secondary" nativeButton={false} render={<Link href={cancelHref} />}>
+        <Button data-testid="admin-prompt-editor-cancel" variant="secondary" nativeButton={false} render={<Link href={cancelHref} />}>
           {readOnly ? "Back" : "Cancel"}
         </Button>
         {!readOnly && (

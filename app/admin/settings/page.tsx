@@ -18,6 +18,8 @@ import type { SettingsNavItem } from "@/components/admin/settings/settings-nav"
 import { SettingsPageActions } from "@/components/admin/settings/settings-page-actions"
 import { PageHeader } from "@/components/ui/page-header"
 import { getDiscordOverview } from "@/lib/admin/discord"
+import { plexLibraryListing } from "@/lib/admin/invites/libraries"
+import { getWatchlistSyncStats } from "@/lib/admin/watchlist-stats"
 import { getBaseUrl } from "@/lib/env"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
@@ -46,6 +48,9 @@ function databaseProvider(url: string | undefined) {
  * glyphs beside one column of `SettingsSection`s, each with its live health.
  */
 export default async function SettingsPage() {
+  // Started, not awaited: the sections stream these in (P10.7)
+  const plexLibraries = plexLibraryListing()
+  const watchlistStats = getWatchlistSyncStats()
   const [settings, stripeConfig, health, season, zone, f] = await Promise.all([
     getAdminSettings(),
     getStripeConfig(),
@@ -120,9 +125,10 @@ export default async function SettingsPage() {
           now={new Date().toISOString()}
           footerMeta={saved("discord")}
         />
-        <StripeSection config={stripeConfig} health={health.stripe} footerMeta={saved("stripe")} />
+        <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />
         <WatchlistSection
           saved={{ enabled: settings.config.watchlistSyncEnabled, intervalMinutes: settings.config.watchlistSyncIntervalMinutes }}
+          stats={watchlistStats}
           health={health.watchlist}
           footerMeta={saved("watchlist")}
         />

@@ -38,7 +38,7 @@ function ErrorCell({ error }: { error: string | null }) {
   return (
     <Tooltip>
       <TooltipTrigger
-        render={<span tabIndex={0} className="block max-w-64 truncate rounded-sm text-muted-foreground" />}
+        render={<span data-testid="admin-queues-job-error" tabIndex={0} className="block max-w-64 truncate rounded-sm text-muted-foreground" />}
       >
         {error}
       </TooltipTrigger>

@@ -102,26 +102,6 @@ describe("Button", () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
-  it("maps the deprecated danger, success and md names", () => {
-    render(
-      <>
-        <Button variant="danger">Delete</Button>
-        <Button variant="destructive">Remove</Button>
-        <Button variant="success">Keep</Button>
-        <Button variant="secondary">Other</Button>
-        <Button size="md">Medium</Button>
-        <Button>Default</Button>
-      </>
-    )
-
-    const name = (label: string) => screen.getByRole("button", { name: label })
-    expect(classesOf(name("Delete"))).toEqual(classesOf(name("Remove")))
-    expect(name("Delete")).toHaveClass("bg-destructive-subtle", "text-destructive")
-    expect(classesOf(name("Keep"))).toEqual(classesOf(name("Other")))
-    expect(classesOf(name("Medium"))).toEqual(classesOf(name("Default")))
-    expect(name("Default")).toHaveClass("h-9")
-  })
-
   it("forwards data-testid and ref to the button", () => {
     const ref = createRef<HTMLButtonElement>()
     render(

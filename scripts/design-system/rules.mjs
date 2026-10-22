@@ -1,11 +1,12 @@
 /**
- * The design-debt rules of ui-design-system 9.6 and the per-file counter
- * behind `scripts/check-design-system.mjs` (plan step P1.8).
+ * The design-system rules of ui-design-system 9.6 and the per-file counter
+ * behind `scripts/check-design-system.mjs` (plan steps P1.8 and P10.11).
  *
- * Each rule is `{ id, description, pattern, scope?, allow?, ast? }`:
+ * Each rule is `{ id, description, pattern | count, scope?, allow?, ast? }`:
  * - `pattern` is a global regex counted over the raw source, unless `ast`
  *   says which AST text it runs over instead (`'jsx-text'`), or adds a second
  *   AST pass (`{ target: 'style', pattern }`) on top of the raw count;
+ * - `count(source)` replaces `pattern` for a rule about the whole file;
  * - `scope(path)` returns false for paths the rule skips;
  * - `allow` lists exact paths where the rule is not counted.
  *
@@ -16,7 +17,8 @@
  */
 
 import { jsxTexts, styleLiterals } from './ast.mjs'
-import { sortKeys } from './baseline.mjs'
+
+const sortKeys = (object) => Object.fromEntries(Object.entries(object).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
 
 const PALETTE =
   'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose'
@@ -29,6 +31,50 @@ const outsideRewind = (path) => !REWIND_PATHS.some((prefix) => path.startsWith(p
 /** Inline SVG is allowed for drawn charts and Rewind art; icons come from lucide (P10.15). */
 const SVG_ART = [/^components\/ui\/chart/, /(?:^|\/)charts?\//]
 const outsideSvgArt = (path) => outsideRewind(path) && !SVG_ART.some((re) => re.test(path))
+
+const DIRECTIVE = /^['"]use client['"]/
+
+/**
+ * The source after a leading `'use client'` directive, or null when the module
+ * has none. Leading whitespace and comments are skipped by hand: a regex with
+ * a repeated comment alternative backtracks exponentially on `/*` runs.
+ */
+function afterClientDirective(source) {
+  let at = 0
+  for (;;) {
+    while (at < source.length && /\s/.test(source[at])) at++
+    if (source.startsWith('//', at)) {
+      const end = source.indexOf('\n', at)
+      if (end === -1) return null
+      at = end + 1
+    } else if (source.startsWith('/*', at)) {
+      const end = source.indexOf('*/', at + 2)
+      if (end === -1) return null
+      at = end + 2
+    } else break
+  }
+  const rest = source.slice(at)
+  const match = DIRECTIVE.exec(rest)
+  return match ? rest.slice(match[0].length) : null
+}
+
+/**
+ * What makes a module need the client: hooks, handlers, browser globals,
+ * motion, or an element `render` prop (a Base UI trigger merges its children
+ * into that element, which a Server Component parent drops).
+ */
+const CLIENT_NEEDS = /\buse[A-Z]\w*|\bon[A-Z]\w*=|\b(?:window|document)\.|\bmotion\b|\brender=\{</
+
+/**
+ * A `'use client'` marker on a module with none of {@link CLIENT_NEEDS}: a
+ * render-only leaf that can be a Server Component (P10.7, BP-32). A function
+ * prop passed down (a render prop, a className callback) also needs the
+ * client, which the heuristic cannot see; such files keep a count.
+ */
+function unneededClientMarker(source) {
+  const rest = afterClientDirective(source)
+  return rest !== null && !CLIENT_NEEDS.test(rest) ? 1 : 0
+}
 
 /** The Rewind block of `app/globals.css` (P3.1 adds the markers). */
 const REWIND_BLOCK = /\/\* rewind-scope:start \*\/[\s\S]*?\/\* rewind-scope:end \*\//g
@@ -86,6 +132,13 @@ export const RULES = [
     pattern: /<svg\b/g,
     scope: outsideSvgArt,
   },
+  {
+    id: 'client-marker',
+    description: "'use client' on a module with no hooks, handlers, browser APIs or motion",
+    count: unneededClientMarker,
+    // Next requires error boundaries to be client components
+    scope: (path) => /\.tsx?$/.test(path) && !/(?:^|\/)(?:global-)?error\.tsx$/.test(path),
+  },
 ]
 
 function countIn(pattern, texts) {
@@ -101,7 +154,8 @@ export function countFile(path, source) {
     if (rule.allow?.includes(path)) continue
     const raw = rule.scope ? source.replace(REWIND_BLOCK, '') : source
     let n
-    if (rule.ast === 'jsx-text') n = jsx ? countIn(rule.pattern, jsxTexts(path, source)) : 0
+    if (rule.count) n = rule.count(source)
+    else if (rule.ast === 'jsx-text') n = jsx ? countIn(rule.pattern, jsxTexts(path, source)) : 0
     else {
       n = countIn(rule.pattern, [raw])
       if (rule.ast && jsx) n += countIn(rule.ast.pattern, styleLiterals(path, source))
@@ -111,4 +165,11 @@ export function countFile(path, source) {
   return sortKeys(counts)
 }
 
-export { addRules, compare, update, nonZero, sortKeys, totals } from './baseline.mjs'
+/** Per-rule totals across files, keys sorted. */
+export function totals(files) {
+  const sums = {}
+  for (const counts of Object.values(files)) {
+    for (const [rule, n] of Object.entries(counts)) sums[rule] = (sums[rule] ?? 0) + n
+  }
+  return sortKeys(sums)
+}

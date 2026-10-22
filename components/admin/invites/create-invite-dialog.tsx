@@ -76,8 +76,8 @@ function CreatedInviteView({ invite }: { invite: CreatedInvite }) {
         </p>
       </div>
       <DialogFooter>
-        <DialogClose render={<Button type="button" variant="ghost" />}>Done</DialogClose>
-        <Button variant="secondary" render={<Link href={inviteRoute(invite.id)} />} nativeButton={false}>
+        <DialogClose render={<Button data-testid="create-invite-done" type="button" variant="ghost" />}>Done</DialogClose>
+        <Button data-testid="create-invite-view" variant="secondary" render={<Link href={inviteRoute(invite.id)} />} nativeButton={false}>
           View invite
         </Button>
         <Button icon={<Icon icon={Copy} />} onClick={() => copy(invite.code)} data-testid="create-invite-copy-link">

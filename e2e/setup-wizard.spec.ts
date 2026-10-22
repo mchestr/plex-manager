@@ -122,6 +122,11 @@ test.describe('Setup Wizard', () => {
         const tagName = await input.evaluate((el) => el.tagName);
         if (tagName === 'SELECT') {
           await input.selectOption(value);
+        } else if ((await input.getAttribute('role')) === 'combobox') {
+          // A Select primitive: open it and pick the option by its test id
+          await input.click();
+          await page.getByTestId(`setup-input-${name}-option-${value}`).click();
+          await expect(input).toHaveText(value);
         } else {
           await input.fill(value);
         }
@@ -228,7 +233,7 @@ test.describe('Setup Wizard', () => {
     await fillAndSubmitStep('Chat Assistant AI Configuration', {
       provider: 'openai',
       apiKey: 'sk-chat-openai-api-key',
-      model: 'gpt-4o-mini',
+      model: 'gpt-6-luna',
       temperature: '0.6',
       maxTokens: '1200',
     });
@@ -237,7 +242,7 @@ test.describe('Setup Wizard', () => {
     await fillAndSubmitStep('Wrapped Generation AI Configuration', {
       provider: 'openai',
       apiKey: 'sk-wrapped-openai-api-key',
-      model: 'gpt-4o-mini',
+      model: 'gpt-6-luna',
       temperature: '0.8',
       maxTokens: '6000',
     });
@@ -294,6 +299,7 @@ test.describe('Setup Wizard', () => {
     expect(chatLLMProvider).toBeTruthy();
     expect(chatLLMProvider?.provider).toBe('openai');
     expect(chatLLMProvider?.purpose).toBe('chat');
+    expect(chatLLMProvider?.model).toBe('gpt-6-luna');
 
     const wrappedLLMProvider = await prisma.lLMProvider.findFirst({
       where: { purpose: 'wrapped' },
@@ -301,6 +307,7 @@ test.describe('Setup Wizard', () => {
     expect(wrappedLLMProvider).toBeTruthy();
     expect(wrappedLLMProvider?.provider).toBe('openai');
     expect(wrappedLLMProvider?.purpose).toBe('wrapped');
+    expect(wrappedLLMProvider?.model).toBe('gpt-6-luna');
 
     const prometheus = await prisma.prometheus.findFirst();
     expect(prometheus).toBeTruthy();

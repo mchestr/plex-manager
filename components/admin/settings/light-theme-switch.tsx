@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
 import { setLightThemeEnabled } from "@/actions/admin/light-theme"
@@ -10,12 +9,12 @@ import { useToast } from "@/components/ui/toast"
 
 /**
  * "Light theme for members" (P10.10): `Config.lightThemeEnabled`. Saves on
- * toggle, reverts if the save fails, and refreshes so the menus pick it up.
+ * toggle and reverts if the save fails; the action revalidates the layout, so
+ * the menus pick it up.
  */
 export function LightThemeSwitch({ enabled }: { enabled: boolean }) {
   const [checked, setChecked] = useState(enabled)
   const [isPending, startTransition] = useTransition()
-  const router = useRouter()
   const { showError } = useToast()
 
   const onCheckedChange = (next: boolean) => {
@@ -27,7 +26,6 @@ export function LightThemeSwitch({ enabled }: { enabled: boolean }) {
         showError(result.error)
         return
       }
-      router.refresh()
     })
   }
 

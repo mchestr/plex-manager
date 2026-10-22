@@ -45,7 +45,7 @@ export async function UsageTab({ userId, f }: { userId: string; f: BoundFormat }
                 {usage.latest.map((row) => (
                   <tr key={row.id} data-testid={`admin-user-usage-row-${row.id}`}>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Link href={llmUsageDetail(row.id)} className="rounded-sm font-medium text-foreground hover:underline">
+                      <Link data-testid={`admin-user-usage-${row.id}`} href={llmUsageDetail(row.id)} className="rounded-sm font-medium text-foreground hover:underline">
                         {f.dateTime(row.createdAt, { zoneLabel: true })}
                       </Link>
                     </td>

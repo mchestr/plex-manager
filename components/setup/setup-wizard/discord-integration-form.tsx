@@ -1,16 +1,18 @@
 "use client"
 
-import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveDiscordIntegration } from "@/actions/setup"
-import { StyledInput } from "@/components/ui/styled-input"
-import { StyledTextarea } from "@/components/ui/styled-textarea"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type DiscordIntegrationInput } from "@/lib/validations/discord"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
+import type { DevDefaults } from "@/types/setup"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 interface DiscordIntegrationFormProps {
   onComplete: () => void
   onBack?: () => void
+  /** The DEV_* pre-fill, read once by the setup page. */
+  devDefaults: DevDefaults
 }
 
 // The setup wizard only collects the basic OAuth fields; the bot token and
@@ -34,47 +36,27 @@ function isFormComplete(data: DiscordFormState): boolean {
   return !!(data.clientId?.trim() && data.clientSecret?.trim())
 }
 
-export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegrationFormProps) {
+export function DiscordIntegrationForm({ onComplete, onBack, devDefaults }: DiscordIntegrationFormProps) {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<DiscordFormState>({
-    isEnabled: false,
-    botEnabled: false,
-    clientId: "",
-    clientSecret: "",
-    guildId: "",
-    serverInviteCode: "",
-    platformName: "Plex Wrapped",
-    instructions: "",
+    isEnabled: devDefaults.discord?.isEnabled ?? false,
+    botEnabled: devDefaults.discord?.botEnabled ?? false,
+    clientId: devDefaults.discord?.clientId ?? "",
+    clientSecret: devDefaults.discord?.clientSecret ?? "",
+    guildId: devDefaults.discord?.guildId ?? "",
+    serverInviteCode: devDefaults.discord?.serverInviteCode ?? "",
+    platformName: devDefaults.discord?.platformName ?? "Plex Wrapped",
+    instructions: devDefaults.discord?.instructions ?? "",
   })
-  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
   const autoSubmitTriggered = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    // Load dev defaults on mount
-    getDevDefaults().then((defaults) => {
-      setDevDefaults(defaults)
-      if (defaults.discord) {
-        setFormData((prev) => ({
-          isEnabled: defaults.discord?.isEnabled ?? prev.isEnabled,
-          botEnabled: defaults.discord?.botEnabled ?? prev.botEnabled,
-          clientId: defaults.discord?.clientId ?? prev.clientId,
-          clientSecret: defaults.discord?.clientSecret ?? prev.clientSecret,
-          guildId: defaults.discord?.guildId ?? prev.guildId,
-          serverInviteCode: defaults.discord?.serverInviteCode ?? prev.serverInviteCode,
-          platformName: defaults.discord?.platformName ?? prev.platformName,
-          instructions: defaults.discord?.instructions ?? prev.instructions,
-        }))
-      }
-    })
-  }, [])
 
   // Auto-submit when form is complete and auto-submit is enabled
   useEffect(() => {
     if (
-      devDefaults?.autoSubmit &&
+      devDefaults.autoSubmit &&
       isFormComplete(formData) &&
       !autoSubmitTriggered.current &&
       !isPending &&
@@ -177,7 +159,7 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
           <label className="block text-sm font-medium text-cyan-400 mb-2">
             Client ID {formData.isEnabled && <span className="text-red-400">*</span>}
           </label>
-          <StyledInput
+          <Input
             type="text"
             name="clientId"
             data-testid="setup-input-clientId"
@@ -186,14 +168,13 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
             placeholder="Discord application client ID"
             required={formData.isEnabled}
             disabled={isPending}
-            size="md"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-cyan-400 mb-2">
             Client Secret {formData.isEnabled && <span className="text-red-400">*</span>}
           </label>
-          <StyledInput
+          <Input
             type="password"
             name="clientSecret"
             data-testid="setup-input-clientSecret"
@@ -202,14 +183,13 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
             placeholder="Discord application client secret"
             required={formData.isEnabled}
             disabled={isPending}
-            size="md"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-cyan-400 mb-2">
             Guild ID <span className="text-slate-500 font-normal">(optional)</span>
           </label>
-          <StyledInput
+          <Input
             type="text"
             name="guildId"
             data-testid="setup-input-guildId"
@@ -217,7 +197,6 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
             onChange={handleChange}
             placeholder="Discord server/guild ID"
             disabled={isPending}
-            size="md"
           />
           <p className="mt-1 text-xs text-slate-400">
             Provide this to limit linking to a single Discord server.
@@ -227,7 +206,7 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
           <label className="block text-sm font-medium text-cyan-400 mb-2">
             Platform Name <span className="text-slate-500 font-normal">(optional)</span>
           </label>
-          <StyledInput
+          <Input
             type="text"
             name="platformName"
             data-testid="setup-input-platformName"
@@ -235,7 +214,6 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
             onChange={handleChange}
             placeholder="Shown in Discord profile (e.g. Plex Wrapped)"
             disabled={isPending}
-            size="md"
           />
         </div>
       </div>
@@ -244,16 +222,14 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
         <label className="block text-sm font-medium text-cyan-400 mb-2">
           Internal Instructions <span className="text-slate-500 font-normal">(optional)</span>
         </label>
-        <StyledTextarea
+        <Textarea
           name="instructions"
           data-testid="setup-input-instructions"
           value={formData.instructions}
           onChange={handleChange}
           placeholder="Share notes for other admins on how to deploy and test the Discord bot."
           disabled={isPending}
-          resize="none"
-          className="min-h-[120px]"
-          size="md"
+          className="resize-none min-h-[120px]"
         />
       </div>
 

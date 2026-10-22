@@ -1,15 +1,17 @@
 "use client"
 
-import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveSonarr } from "@/actions/setup"
-import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type SonarrInput } from "@/lib/validations/sonarr"
 import { useEffect, useRef, useState, useTransition } from "react"
+import type { DevDefaults } from "@/types/setup"
+import { Input } from "@/components/ui/input"
 
 interface SonarrFormProps {
   onComplete: () => void
   onBack?: () => void
+  /** The DEV_* pre-fill, read once by the setup page. */
+  devDefaults: DevDefaults
 }
 
 /** Check if all required fields are populated for Sonarr form */
@@ -17,39 +19,23 @@ function isFormComplete(data: SonarrInput): boolean {
   return !!(data.name?.trim() && data.url?.trim() && data.apiKey?.trim())
 }
 
-export function SonarrForm({ onComplete, onBack }: SonarrFormProps) {
+export function SonarrForm({ onComplete, onBack, devDefaults }: SonarrFormProps) {
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<SonarrInput>({
-    name: "",
-    url: "",
-    apiKey: "",
-    publicUrl: "",
+    name: devDefaults.sonarr?.name ?? "",
+    url: devDefaults.sonarr?.url ?? "",
+    apiKey: devDefaults.sonarr?.apiKey ?? "",
+    publicUrl: devDefaults.sonarr?.publicUrl ?? "",
   })
-  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
   const autoSubmitTriggered = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    // Load dev defaults on mount
-    getDevDefaults().then((defaults) => {
-      setDevDefaults(defaults)
-      if (defaults.sonarr) {
-        setFormData((prev) => ({
-          name: defaults.sonarr?.name ?? prev.name,
-          url: defaults.sonarr?.url ?? prev.url,
-          apiKey: defaults.sonarr?.apiKey ?? prev.apiKey,
-          publicUrl: defaults.sonarr?.publicUrl ?? prev.publicUrl,
-        }))
-      }
-    })
-  }, [])
 
   // Auto-submit when form is fully populated and auto-submit is enabled
   useEffect(() => {
     if (
-      devDefaults?.autoSubmit &&
+      devDefaults.autoSubmit &&
       isFormComplete(formData) &&
       !autoSubmitTriggered.current &&
       !isPending &&
@@ -108,7 +94,8 @@ export function SonarrForm({ onComplete, onBack }: SonarrFormProps) {
         >
           Server Name
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-name"
           type="text"
           id="name"
           name="name"
@@ -116,9 +103,8 @@ export function SonarrForm({ onComplete, onBack }: SonarrFormProps) {
           value={formData.name}
           onChange={handleChange}
           placeholder="My Sonarr Server"
-          size="md"
           className="mt-1"
-          error={!!errors.name}
+          aria-invalid={!!errors.name || undefined}
         />
         {errors.name && (
           <p className="mt-1 text-sm text-red-400">{errors.name}</p>
@@ -132,7 +118,8 @@ export function SonarrForm({ onComplete, onBack }: SonarrFormProps) {
         >
           Server URL
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-url"
           type="text"
           id="url"
           name="url"
@@ -140,9 +127,8 @@ export function SonarrForm({ onComplete, onBack }: SonarrFormProps) {
           value={formData.url}
           onChange={handleChange}
           placeholder="http://sonarr.example.com:8989 or http://192.168.1.100:8989"
-          size="md"
           className="mt-1"
-          error={!!errors.url}
+          aria-invalid={!!errors.url || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Include protocol (http:// or https://) and port number
@@ -159,16 +145,16 @@ export function SonarrForm({ onComplete, onBack }: SonarrFormProps) {
         >
           Public Server URL <span className="text-slate-500 font-normal">(optional)</span>
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-publicUrl"
           type="text"
           id="publicUrl"
           name="publicUrl"
           value={formData.publicUrl || ""}
           onChange={handleChange}
           placeholder="https://sonarr.example.com"
-          size="md"
           className="mt-1"
-          error={!!errors.publicUrl}
+          aria-invalid={!!errors.publicUrl || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           The public URL for Sonarr (for links/redirects)
@@ -185,7 +171,8 @@ export function SonarrForm({ onComplete, onBack }: SonarrFormProps) {
         >
           API Key
         </label>
-        <StyledInput
+        <Input
+          data-testid="setup-input-apiKey"
           type="password"
           id="apiKey"
           name="apiKey"
@@ -193,9 +180,8 @@ export function SonarrForm({ onComplete, onBack }: SonarrFormProps) {
           value={formData.apiKey}
           onChange={handleChange}
           placeholder="Your Sonarr API key"
-          size="md"
           className="mt-1"
-          error={!!errors.apiKey}
+          aria-invalid={!!errors.apiKey || undefined}
         />
         <p className="mt-1 text-xs text-slate-400">
           Find your API key in Sonarr Settings → General → Security → API Key
