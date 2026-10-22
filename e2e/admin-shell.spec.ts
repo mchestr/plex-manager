@@ -55,7 +55,7 @@ test.describe('Admin shell', () => {
     await expect(page.getByTestId('admin-chat-sheet')).toBeHidden();
     await expect(page.getByTestId('admin-chat-toggle-mobile')).toBeFocused();
 
-    for (const id of ['invites', 'users', 'rewind', 'settings', 'more']) {
+    for (const id of ['overview', 'users', 'rewind', 'settings', 'more']) {
       const tab = page.getByTestId(`admin-tab-${id}`);
       const box = await tab.boundingBox();
       expect(box, `admin-tab-${id} has a box`).not.toBeNull();

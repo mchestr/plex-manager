@@ -46,7 +46,7 @@ export function AdminMobileBar({ serverName, navCounts, assistant }: AdminMobile
           <AdminNavList counts={navCounts} onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
-      <Link href="/admin/users" className="flex min-w-0 items-center rounded-sm">
+      <Link href="/admin" className="flex min-w-0 items-center rounded-sm">
         <Wordmark serverName={serverName} size="sm" />
       </Link>
       <Badge variant="outline">Admin</Badge>
