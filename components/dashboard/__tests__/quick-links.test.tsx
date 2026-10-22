@@ -12,7 +12,7 @@ const PLEX_WEB = 'https://app.plex.tv/desktop/#!/media/abc123/com.plexapp.plugin
 
 function props(overrides: Partial<QuickLinksProps> = {}): QuickLinksProps {
   return {
-    media: { service: 'plex', serverName: 'Northfield Plex', url: PLEX_WEB },
+    media: [{ service: 'plex', serverName: 'Northfield Plex', url: PLEX_WEB }],
     requestsUrl: 'https://requests.example.com',
     discord: { linkEnabled: true, handle: null, inviteUrl: null, supportChannelUrl: null },
     ...overrides,
@@ -23,7 +23,7 @@ describe('QuickLinks', () => {
   it("opens the server's own Plex Web app in a new tab", () => {
     render(<QuickLinks {...props()} />)
 
-    const tile = screen.getByTestId('home-quick-link-media')
+    const tile = screen.getByTestId('home-quick-link-plex')
     expect(tile).toHaveAttribute('href', PLEX_WEB)
     expect(tile).toHaveAttribute('target', '_blank')
     expect(tile).toHaveAttribute('rel', 'noopener noreferrer')
@@ -33,16 +33,32 @@ describe('QuickLinks', () => {
 
   it('names the Jellyfin server and never falls back to jellyfin.org', () => {
     const { container, rerender } = render(
-      <QuickLinks {...props({ media: { service: 'jellyfin', serverName: 'Basement Jelly', url: 'https://jf.example.com' } })} />
+      <QuickLinks {...props({ media: [{ service: 'jellyfin', serverName: 'Basement Jelly', url: 'https://jf.example.com' }] })} />
     )
 
-    expect(screen.getByTestId('home-quick-link-media')).toHaveAttribute('href', 'https://jf.example.com')
-    expect(screen.getByTestId('home-quick-link-media')).toHaveTextContent('Open Basement Jelly')
+    expect(screen.getByTestId('home-quick-link-jellyfin')).toHaveAttribute('href', 'https://jf.example.com')
+    expect(screen.getByTestId('home-quick-link-jellyfin')).toHaveTextContent('Open Basement Jelly')
 
-    rerender(<QuickLinks {...props({ media: { service: 'jellyfin', serverName: 'Basement Jelly', url: null } })} />)
+    rerender(<QuickLinks {...props({ media: [{ service: 'jellyfin', serverName: 'Basement Jelly', url: null }] })} />)
 
-    expect(screen.queryByTestId('home-quick-link-media')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('home-quick-link-jellyfin')).not.toBeInTheDocument()
     expect(container.innerHTML).not.toMatch(/jellyfin\.org/)
+  })
+
+  it('shows one media tile per linked service, in the order given', () => {
+    render(
+      <QuickLinks
+        {...props({
+          media: [
+            { service: 'jellyfin', serverName: 'Basement Jelly', url: 'https://jf.example.com' },
+            { service: 'plex', serverName: 'Northfield Plex', url: PLEX_WEB },
+          ],
+        })}
+      />
+    )
+
+    const tiles = screen.getAllByTestId(/^home-quick-link-(plex|jellyfin)$/)
+    expect(tiles.map((tile) => tile.dataset.testid)).toEqual(['home-quick-link-jellyfin', 'home-quick-link-plex'])
   })
 
   it('never names Overseerr on the requests tile', () => {
@@ -93,7 +109,7 @@ describe('QuickLinks', () => {
   it('renders nothing when no tile can work', () => {
     const { container } = render(
       <QuickLinks
-        {...props({ media: { service: 'plex', serverName: 'Northfield Plex', url: null }, requestsUrl: null, discord: null })}
+        {...props({ media: [{ service: 'plex', serverName: 'Northfield Plex', url: null }], requestsUrl: null, discord: null })}
       />
     )
 

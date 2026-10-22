@@ -13,6 +13,7 @@
 
 import { installShutdownHandlers, onShutdown, shutdownSignal } from "@/lib/instrumentation/shutdown"
 import { createLogger } from "@/lib/utils/logger"
+import { withTimeout } from "@/lib/utils/with-timeout"
 
 const logger = createLogger("INSTRUMENTATION")
 
@@ -31,19 +32,10 @@ export async function startNodeInstrumentation() {
   ])
 }
 
-/** Rejects when `promise` has not settled within `ms`. */
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  let timer: NodeJS.Timeout | undefined
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms} ms`)), ms)
-  })
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
-}
-
 /**
- * Starts the BullMQ worker once Redis answers. Without `REDIS_URL` the legacy
- * polling watchlist sync runs instead; with it, never, so two sync paths never
- * run at once.
+ * Starts the BullMQ worker once Redis answers. Without `REDIS_URL` the
+ * database-lease watchlist fallback runs instead; with it, never, so two sync
+ * paths never run at once.
  */
 async function startQueueWorker() {
   if (process.env.ENABLE_QUEUE_WORKER === "false") {
@@ -54,15 +46,15 @@ async function startQueueWorker() {
   const redisUrl = process.env.REDIS_URL
   if (!redisUrl) {
     logger.debug("Queue worker disabled: REDIS_URL not configured")
-    await startWatchlistSyncPolling()
+    const { startWatchlistFallback } = await import("@/lib/watchlist/fallback")
+    await startWatchlistFallback({ signal: shutdownSignal })
     return
   }
 
   const { startWorker, stopWorker } = await import("@/lib/queue/worker")
-  const { scheduleRepeatingJob, removeScheduledJob, closeQueue } = await import("@/lib/queue/client")
+  const { closeQueue } = await import("@/lib/queue/client")
   const { closeRedisConnection, createFailFastRedis, waitForRedis } = await import("@/lib/queue/connection")
-  const { JOB_TYPES } = await import("@/lib/queue/types")
-  const { isWatchlistSyncEnabled, getWatchlistSyncInterval } = await import("@/lib/watchlist/lock")
+  const { ensureWatchlistSchedule } = await import("@/lib/watchlist/schedule")
 
   // Each is a no-op when nothing was started.
   onShutdown("queue-worker", "drain", stopWorker)
@@ -87,36 +79,16 @@ async function startQueueWorker() {
   await startWorker()
   await scheduleRoleReconcile().catch((error) => logger.error("Could not schedule the Discord role reconcile", error))
 
-  if (await isWatchlistSyncEnabled()) {
-    const intervalMinutes = await getWatchlistSyncInterval()
-    await withTimeout(
-      scheduleRepeatingJob(
-        "watchlist-sync-scheduled",
-        JOB_TYPES.WATCHLIST_SYNC_ALL,
-        { triggeredBy: "scheduled" },
-        intervalMinutes * 60 * 1000
-      ),
-      SCHEDULER_TIMEOUT_MS,
-      "Scheduling the watchlist sync"
-    )
-    logger.info(`Watchlist sync scheduled every ${intervalMinutes} minutes`)
-  } else {
-    await withTimeout(
-      removeScheduledJob("watchlist-sync-scheduled"),
-      SCHEDULER_TIMEOUT_MS,
-      "Removing the watchlist sync schedule"
-    )
-    logger.info("Watchlist sync disabled - scheduler removed")
-  }
+  // The settings save calls this too, so a change applies without a restart.
+  await ensureWatchlistSchedule()
 }
 
 /**
  * Schedules the daily Discord role reconcile (P4.18) at 04:00 in the server
  * zone while the Discord integration is on, and removes the schedule (with
- * its pending run) while it is off, as the watchlist sync does: both read
- * their settings at boot. It runs on the queue worker, whose drain the
- * shutdown coordinator already owns, and stops its pacing at
- * `shutdownSignal`. Upserting the same scheduler id keeps one schedule
+ * its pending run) while it is off. It reads the setting at boot. It runs on
+ * the queue worker, whose drain the shutdown coordinator already owns, and
+ * stops its pacing at `shutdownSignal`. Upserting the same scheduler id keeps one schedule
  * however many processes start.
  */
 async function scheduleRoleReconcile() {
@@ -151,60 +123,6 @@ async function scheduleRoleReconcile() {
   logger.info("Discord role reconcile scheduled daily at 04:00", { tz })
 }
 
-/**
- * Legacy: Polling-based watchlist sync
- * Only used when Redis is not configured
- */
-async function startWatchlistSyncPolling() {
-  // Check if watchlist sync should attempt to start
-  const envSyncEnabled = process.env.ENABLE_WATCHLIST_SYNC !== "false"
-
-  if (!envSyncEnabled) {
-    logger.debug("Watchlist sync disabled via ENABLE_WATCHLIST_SYNC=false")
-    return
-  }
-
-  try {
-    const { isWatchlistSyncEnabled, startWatchlistSyncPolling: startPolling, stopWatchlistSyncPolling } = await import("@/lib/watchlist/lock")
-    const { syncAllEnabledUsers } = await import("@/lib/watchlist/sync-service")
-
-    // Check database setting
-    const syncEnabled = await isWatchlistSyncEnabled()
-    if (!syncEnabled) {
-      logger.debug("Watchlist sync disabled in database settings")
-      return
-    }
-
-    // Poll interval in milliseconds (default: 60 seconds)
-    const pollIntervalMs = parseInt(process.env.WATCHLIST_SYNC_POLL_INTERVAL_MS || "60000", 10)
-
-    onShutdown("watchlist-sync-polling", "drain", stopWatchlistSyncPolling)
-
-    // Start background polling
-    startPolling(
-      // onLockAcquired - called when we successfully acquire the lock
-      async () => {
-        try {
-          logger.info("Watchlist sync lock acquired - running sync")
-          const result = await syncAllEnabledUsers()
-          logger.info(`Watchlist sync completed: ${result.usersProcessed} users processed, ${result.usersSucceeded} succeeded, ${result.usersFailed} failed`)
-        } catch (error) {
-          logger.error("Failed to run watchlist sync", error)
-        }
-      },
-      // onLockLost - called if we lose the lock
-      async () => {
-        logger.info("Watchlist sync lock lost")
-      },
-      pollIntervalMs
-    )
-
-    logger.info(`Watchlist sync polling started (checking every ${pollIntervalMs / 1000} seconds)`)
-  } catch (error) {
-    logger.warn("Watchlist sync module could not be loaded", { error })
-  }
-}
-
 async function startDiscordBotPolling() {
   // Check if bot should attempt to start (can be disabled via env var for manual control)
   const envBotEnabled = process.env.ENABLE_DISCORD_BOT !== "false"
@@ -216,7 +134,7 @@ async function startDiscordBotPolling() {
 
   // Check database setting - if bot is disabled there, don't start polling
   try {
-    const { isDiscordBotEnabled } = await import("@/lib/discord/lock")
+    const { isDiscordBotEnabled } = await import("@/lib/discord/config")
     const botEnabled = await isDiscordBotEnabled()
     if (!botEnabled) {
       logger.debug("Discord bot disabled in database settings")
@@ -231,20 +149,19 @@ async function startDiscordBotPolling() {
   // Use dynamic import with a string to prevent Next.js from analyzing the dependency tree
   // This ensures Discord.js and its native dependencies aren't bundled.
   //
-  // This is the ONE legitimate place that owns the DiscordBot and BotLockPoller
-  // instances for the process lifecycle. The bot and lock singletons were removed
-  // in favor of constructing (and wiring) them here.
+  // This is the ONE legitimate place that owns the DiscordBot and its
+  // LeasePoller for the process lifecycle.
   try {
-    const { DistributedLock } = await import("@/lib/discord/lock/lease")
-    const { BotLockPoller, DEFAULT_POLL_INTERVAL_MS } = await import("@/lib/discord/lock/poller")
-    const { isDiscordBotEnabled } = await import("@/lib/discord/lock")
+    const { LeaseLock } = await import("@/lib/locks/lease-lock")
+    const { LeasePoller, DEFAULT_POLL_INTERVAL_MS } = await import("@/lib/locks/lease-poller")
+    const { isDiscordBotEnabled } = await import("@/lib/discord/config")
     const { DiscordBot } = await import("@/lib/discord/bot")
     const { prisma } = await import("@/lib/prisma")
 
     // Construct the process-lifecycle instances here (injecting a real Client via
     // the bot's default factory).
     const bot = new DiscordBot()
-    const lock = new DistributedLock()
+    const lock = new LeaseLock({ name: "discord-bot" })
 
     // Poll interval in milliseconds (default: 10 seconds). It only paces
     // acquisition, the enabled check and the config bounce: the poller renews
@@ -263,7 +180,7 @@ async function startDiscordBotPolling() {
     // the poller runs onLockLost (destroy) then onLockAcquired (re-initialize),
     // so bot.initialize() re-reads the fresh token via lib/discord/config.ts —
     // no redeploy required.
-    const poller = new BotLockPoller(
+    const poller = new LeasePoller(
       lock,
       {
         onLockAcquired: async () => {
@@ -299,7 +216,7 @@ async function startDiscordBotPolling() {
     )
 
     // stop() fires onLockLost (which destroys the bot) and releases the
-    // DiscordBotLock row, so another instance can take over at once.
+    // discord-bot lease, so another instance can take over at once.
     onShutdown("discord-bot", "drain", () => poller.stop())
 
     // Runs the first acquisition attempt, then polls in the background. The

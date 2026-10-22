@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { addJob, findJob } from "@/lib/queue/client"
 import { JOB_TYPES } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
+import { withRequestContext } from "@/lib/actions/route"
 
 /**
  * Stripe delivers webhooks as POST requests that must be verified against the
@@ -65,7 +66,7 @@ async function readCappedBody(request: Request): Promise<string | null> {
  * front of it would let anyone who spoofs Stripe's addresses get genuine
  * deliveries rejected with 429.
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+async function handlePost(request: NextRequest): Promise<NextResponse> {
   const stripe = await getStripe()
   if (!stripe) {
     logger.warn("Received Stripe webhook but Stripe is not configured")
@@ -145,3 +146,5 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   return NextResponse.json({ received: true })
 }
+
+export const POST = withRequestContext(handlePost)

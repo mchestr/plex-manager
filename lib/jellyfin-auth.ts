@@ -19,8 +19,6 @@ const logger = createLogger("JELLYFIN_AUTH")
 
 /**
  * What a sign-in learned about the user's Jellyfin administrator flag.
- *
- * @internal
  */
 export type JellyfinAdminStatus = "admin" | "not-admin" | "unknown"
 
@@ -164,13 +162,13 @@ export async function authenticateJellyfin(
  * just checked against, from their Jellyfin policy's IsAdministrator.
  *
  * `'unknown'` when the lookup fails (a timeout, a 5xx) or the policy carries
- * no flag: the sign-in then keeps the role it already stores (GAP-26).
+ * no flag: the sign-in then keeps the role it already stores (GAP-26), and
+ * `setMemberJellyfinAccess` refuses as for an administrator (P11.10).
  *
- * @internal
- * @param server - The sign-in server from `getJellyfinLoginServer`
+ * @param server - The sign-in server from `getJellyfinLoginServer`, or the active row
  * @param jellyfinUserId - Jellyfin user ID
  */
-async function isJellyfinAdmin(
+export async function isJellyfinAdmin(
   server: Pick<JellyfinServer, "url" | "apiKey">,
   jellyfinUserId: string
 ): Promise<JellyfinAdminStatus> {

@@ -231,6 +231,7 @@ jobs:
             echo "NEXTAUTH_URL=http://localhost:3000"
             echo "NEXT_PUBLIC_APP_URL=http://localhost:3000"
             echo "PLEX_CLIENT_IDENTIFIER=$(openssl rand -hex 16)"
+            echo "METRICS_TOKEN=smoke-metrics-token-0123456789"
           } > "$RUNNER_TEMP/app.env"
 
       # The image's own HEALTHCHECK (liveness probe, 30 s interval) decides.
@@ -252,6 +253,14 @@ jobs:
 
           # The readiness body checks both dependencies
           curl -fsS http://127.0.0.1:3000/api/health | tee /dev/stderr | grep -F '"checks":{"database":"ok","redis":"ok"}'
+
+          # Metrics: 401 without the token; with it, queue gauges and no failed source
+          [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/metrics)" = 401 ]
+          curl -fsS -H "Authorization: Bearer smoke-metrics-token-0123456789" http://127.0.0.1:3000/api/metrics > "$RUNNER_TEMP/metrics.txt"
+          grep -F 'plex_manager_queue_jobs{queue="plex-wrapped",state="waiting"}' "$RUNNER_TEMP/metrics.txt"
+          if grep -E '^plex_manager_scrape_error\{.*\} 1$' "$RUNNER_TEMP/metrics.txt"; then
+            echo "::error::A metrics source failed"; exit 1
+          fi
 
           # Restarted with SKIP_MIGRATIONS=true: logs the skip, still healthy
           docker rm -f app
@@ -454,6 +463,11 @@ jobs:
             echo "::error::prisma/schema.prisma differs from the migrations. Create a migration with npm run db:migrate."
           fi
           exit "$status"
+
+      # Descriptive names and rising timestamps for every folder newer than
+      # prisma/migrations/.legacy-names.json (P11.6).
+      - name: Check migration names
+        run: node scripts/check-migrations.mjs
 
   # The Playwright projects against `next build` plus `next start`, in the
   # image the visual baselines are taken in, on a throwaway Postgres and Redis.

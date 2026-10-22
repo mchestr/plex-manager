@@ -1,6 +1,7 @@
 /**
  * The LLM usage pages' reads (P11.5, BP-06): server-only, each admin-checked
- * next to its data.
+ * next to its data. Reading one member's prompts (a record, a conversation)
+ * is audited through `auditMemberRead` (P11.16).
  *
  * @module lib/data/llm-usage
  */
@@ -11,6 +12,7 @@ import { z } from "zod"
 
 import { assertAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { auditMemberRead } from "@/lib/security/audit-log"
 import { llmUsageIdSchema, userIdSchema } from "@/lib/validations/shared-schemas"
 
 const recordsInput = z.object({
@@ -27,7 +29,7 @@ const recordsInput = z.object({
  * @throws a ZodError for a malformed page or id
  */
 export async function getLLMUsageRecords(raw: z.input<typeof recordsInput> = {}) {
-  await assertAdmin()
+  const session = await assertAdmin()
   const { page, pageSize, userId, conversationId } = recordsInput.parse(raw)
 
   const where = {
@@ -50,6 +52,9 @@ export async function getLLMUsageRecords(raw: z.input<typeof recordsInput> = {})
     prisma.lLMUsage.count({ where }),
   ])
 
+  // A conversation is one member's transcript
+  if (conversationId && records[0]) await auditMemberRead("llm-conversation", records[0].userId, session.user.id)
+
   return {
     records,
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
@@ -58,11 +63,11 @@ export async function getLLMUsageRecords(raw: z.input<typeof recordsInput> = {})
 
 /** One LLM usage record (admin only), or null when the id is malformed or unknown. */
 export async function getLLMUsageById(id: string) {
-  await assertAdmin()
+  const session = await assertAdmin()
   const parsed = llmUsageIdSchema.safeParse(id)
   if (!parsed.success) return null
 
-  return prisma.lLMUsage.findUnique({
+  const record = await prisma.lLMUsage.findUnique({
     where: { id: parsed.data },
     include: {
       user: { select: { id: true, name: true, email: true, image: true } },
@@ -70,4 +75,6 @@ export async function getLLMUsageById(id: string) {
       chatConversation: { select: { id: true, createdAt: true } },
     },
   })
+  if (record) await auditMemberRead("llm-usage-detail", record.userId, session.user.id)
+  return record
 }

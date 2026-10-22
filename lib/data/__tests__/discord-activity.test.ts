@@ -11,10 +11,12 @@ import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { getDiscordDashboardData } from "@/lib/data/discord-activity"
 import { getSummaryStats } from "@/lib/discord/audit"
 import { prisma } from "@/lib/prisma"
+import { auditMemberListed } from "@/lib/security/audit-log"
 
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
+jest.mock("@/lib/security/audit-log", () => ({ auditMemberListed: jest.fn() }))
 jest.mock("@/lib/utils/server-zone", () => ({ serverZone: jest.fn().mockResolvedValue("UTC") }))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
@@ -73,6 +75,18 @@ describe("getDiscordDashboardData", () => {
     await getDiscordDashboardData(PERIOD)
 
     expect(session).toHaveBeenCalledTimes(1)
+  })
+
+  it("audits the page as a listing of members' content, with its filters (P11.16)", async () => {
+    await getDiscordDashboardData({ ...PERIOD, search: "office" })
+
+    expect(auditMemberListed).toHaveBeenCalledWith("discord-activity", "admin-1", {
+      startDate: "2026-07-01",
+      endDate: "2026-07-31",
+      markType: undefined,
+      source: undefined,
+      search: "office",
+    })
   })
 
   it("refuses a member with the forbidden digest before reading anything", async () => {

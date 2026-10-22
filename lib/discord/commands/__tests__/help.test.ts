@@ -70,6 +70,11 @@ jest.mock("@/lib/discord/config", () => ({
   getDiscordPortalUrl: () => "https://example.com/discord/link",
 }))
 
+const DISCLOSURE = "Server admins can review assistant conversations, and messages are processed by OpenAI."
+jest.mock("@/lib/llm/assistant-disclosure", () => ({
+  getAssistantDisclosure: jest.fn(async () => DISCLOSURE),
+}))
+
 import { type AutocompleteInteraction } from "discord.js"
 import {
   COMMAND_REGISTRY,
@@ -442,6 +447,15 @@ describe("helpCommand (slash)", () => {
       expect(allValues).toContain("/help [command]")
       expect(allValues).toContain("Show available commands and how to use them")
       expect(allValues).toContain("/mark finished title:<name>")
+    })
+
+    it("carries the assistant disclosure (P11.16)", async () => {
+      const { ctx, reply } = createMockChatInteraction(null)
+
+      await helpCommand.handle(ctx)
+
+      const privacy = getEmbedData(reply).fields.find((f) => f.name === "Privacy")
+      expect(privacy?.value).toBe(DISCLOSURE)
     })
 
     it("respects Discord embed structural limits", async () => {

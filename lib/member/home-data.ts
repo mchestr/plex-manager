@@ -9,6 +9,8 @@
  * - Jellyfin members get the active Jellyfin row's own name and
  *   `publicUrl ?? url`, whether or not it signs members in; without a URL
  *   the tile hides (GAP-29).
+ * - One media tile per linked service (P11.10), the member's own first, so a
+ *   member with both accounts sees both.
  * - Requests use Overseerr's public URL only (SEC-57), through `getHelpData`.
  *
  * @module lib/member/home-data
@@ -23,6 +25,7 @@ import type { QuickLinksProps } from "@/components/dashboard/quick-links"
 import type { WatchlistSyncSettings } from "@/hooks/use-watchlist-sync"
 import { serverName as getServerName } from "@/lib/brand"
 import { getHelpData } from "@/lib/member/help"
+import { memberServices } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import { plexServerId } from "@/lib/rewind/item-links"
 import { getFormatSettings } from "@/lib/settings/app-settings"
@@ -91,7 +94,9 @@ export async function jellyfinLink(): Promise<{ name: string; url: string | null
   return { name: row.name, url: safeHref(row.publicUrl ?? row.url) }
 }
 
-async function mediaLink(service: AuthService, serverName: string): Promise<QuickLinksProps["media"]> {
+type MediaLink = QuickLinksProps["media"][number]
+
+async function mediaLink(service: AuthService, serverName: string): Promise<MediaLink> {
   if (service === "jellyfin") {
     const jellyfin = await jellyfinLink()
     return { service, serverName: jellyfin?.name ?? serverName, url: jellyfin?.url ?? null }
@@ -105,7 +110,7 @@ export async function getHomeData(userId: string, now: Date = new Date()): Promi
     await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { name: true, timezone: true, createdAt: true, announcementsSeenAt: true },
+        select: { name: true, timezone: true, createdAt: true, announcementsSeenAt: true, plexUserId: true, jellyfinUserId: true },
       }),
       getHelpData(userId),
       getServerName(),
@@ -117,7 +122,11 @@ export async function getHomeData(userId: string, now: Date = new Date()): Promi
     ])
 
   const zone = normalizeTimeZone(user?.timezone) ?? format.timeZone
-  const media = await mediaLink(help.service, serverName)
+  const others = (user ? memberServices(user) : []).filter((service) => service !== help.service)
+  const [media, otherMedia] = await Promise.all([
+    mediaLink(help.service, serverName),
+    Promise.all(others.map((service) => mediaLink(service, serverName))),
+  ])
 
   return {
     serverName,
@@ -126,7 +135,7 @@ export async function getHomeData(userId: string, now: Date = new Date()): Promi
     service: help.service,
     announcements: announcementsResult.success ? announcementsResult.data.slice(0, HOME_ANNOUNCEMENTS) : [],
     announcementsSeenAt: user?.announcementsSeenAt ?? null,
-    quickLinks: { media, requestsUrl: help.requestsUrl, discord: help.discord },
+    quickLinks: { media: [media, ...otherMedia], requestsUrl: help.requestsUrl, discord: help.discord },
     watchlist: watchlistResult.success ? watchlistResult.data : null,
     hasSubscription: Boolean(subscription),
     supportChannelUrl: help.discord?.supportChannelUrl ?? null,

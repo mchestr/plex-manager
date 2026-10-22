@@ -141,6 +141,7 @@ function createMockLog(): DiscordCommandLog {
     commandType: "HELP" as DiscordCommandType,
     commandName: "ping",
     commandArgs: null,
+    argsLength: null,
     channelId: "channel-123",
     channelType: "guild",
     guildId: "guild-123",
@@ -313,6 +314,21 @@ describe("routeInteraction", () => {
       "log-123",
       expect.objectContaining({ status: "SUCCESS" })
     )
+  })
+
+  it("logs an /assistant question's length, never its text (GAP-32)", async () => {
+    const chat: SlashCommand = { ...createStubCommand(), commandType: "CHAT" as DiscordCommandType }
+    const deps = makeDeps({ getCommand: jest.fn().mockReturnValue(chat) })
+    const { interaction } = createMockChatInputInteraction({ commandName: "assistant" })
+    const getString = jest.fn().mockReturnValue(" is plex down? ")
+    Object.assign(interaction, { options: { getString } })
+
+    await routeInteraction(interaction, deps)
+
+    expect(getString).toHaveBeenCalledWith("prompt")
+    const params = mockCreate.mock.calls[0][0]
+    expect(params).toMatchObject({ commandType: "CHAT", commandName: "assistant", argsLength: "is plex down?".length })
+    expect(params.commandArgs).toBeUndefined()
   })
 
   it("records a FAILED audit log and replies with a generic error when the handler throws", async () => {

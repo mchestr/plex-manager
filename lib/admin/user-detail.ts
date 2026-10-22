@@ -10,11 +10,20 @@ import "server-only"
 
 import { activeRunStarts } from "@/lib/admin/active-runs"
 import type { UserActionTarget } from "@/lib/admin/user-actions"
+import { getJellyfinUserById } from "@/lib/connections/jellyfin-users"
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
+import { memberServices, primaryService } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
+import type { AuthService } from "@/types/onboarding"
 
 type PlexAccess = "shared" | "notShared" | "unknown"
+
+/**
+ * The member's Jellyfin account, read live (P11.10): `missing` when Jellyfin
+ * has no such user, `unknown` when no server is active or it didn't answer.
+ */
+export type JellyfinStatus = "enabled" | "disabled" | "missing" | "unknown"
 
 export interface UserDetailHeaderData {
   id: string
@@ -22,7 +31,12 @@ export interface UserDetailHeaderData {
   name: string
   email: string | null
   plexUserId: string | null
-  primaryAuthService: string | null
+  jellyfinUserId: string | null
+  /** Every linked media server, Plex first. */
+  services: AuthService[]
+  primaryService: AuthService
+  /** Null when the member has no Jellyfin account. */
+  jellyfinStatus: JellyfinStatus | null
   isAdmin: boolean
   /** The Plex account that set the server up. */
   isOwner: boolean
@@ -65,6 +79,19 @@ async function plexAccessOf(plexUserId: string | null, server: ActivePlexServer)
   return result.status === "granted" ? "shared" : "notShared"
 }
 
+type ActiveJellyfinServer = { url: string; apiKey: string } | null
+
+async function jellyfinStatusOf(jellyfinUserId: string | null, server: ActiveJellyfinServer): Promise<JellyfinStatus | null> {
+  if (!jellyfinUserId) return null
+  if (!server) return "unknown"
+  // getJellyfinUserById gives up after 5 s, so a slow Jellyfin never holds the page long
+  const result = await getJellyfinUserById(server, jellyfinUserId)
+  if (result.notFound) return "missing"
+  const disabled = result.data?.Policy?.IsDisabled
+  if (!result.success || typeof disabled !== "boolean") return "unknown"
+  return disabled ? "disabled" : "enabled"
+}
+
 /** The header, or null when there is no such user. */
 export async function getUserDetailHeader(userId: string, seasonYear: number): Promise<UserDetailHeaderData | null> {
   const user = await prisma.user.findUnique({
@@ -74,6 +101,7 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
       name: true,
       email: true,
       plexUserId: true,
+      jellyfinUserId: true,
       primaryAuthService: true,
       isAdmin: true,
       disabledAt: true,
@@ -87,12 +115,16 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
   })
   if (!user) return null
 
-  const [server, config, runs] = await Promise.all([
+  const [server, jellyfinServer, config, runs] = await Promise.all([
     prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true, token: true, adminPlexUserId: true, machineIdentifier: true } }),
+    user.jellyfinUserId ? prisma.jellyfinServer.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }) : null,
     prisma.config.findUnique({ where: { id: "config" }, select: { stripeEnabled: true } }),
     activeRunStarts([user.id], seasonYear),
   ])
-  const plexAccess = await plexAccessOf(user.plexUserId, server)
+  const [plexAccess, jellyfinStatus] = await Promise.all([
+    plexAccessOf(user.plexUserId, server),
+    jellyfinStatusOf(user.jellyfinUserId, jellyfinServer),
+  ])
   const discord = user.discordConnection
 
   return {
@@ -100,7 +132,10 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
     name: user.name ?? user.email ?? "Unknown member",
     email: user.email,
     plexUserId: user.plexUserId,
-    primaryAuthService: user.primaryAuthService,
+    jellyfinUserId: user.jellyfinUserId,
+    services: memberServices(user),
+    primaryService: primaryService(user),
+    jellyfinStatus,
     isAdmin: user.isAdmin,
     isOwner: Boolean(user.plexUserId && server?.adminPlexUserId === user.plexUserId),
     disabledAt: user.disabledAt,

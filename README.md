@@ -264,6 +264,12 @@ npm run db:migrate    # Contributor-only: create a migration after changing pris
 npm run db:studio     # Open database GUI
 ```
 
+**Creating a migration (contributors).** After changing `prisma/schema.prisma`, run `npx prisma migrate dev --create-only --name <descriptive_name>` against a throwaway database whose name ends in `_test`, read the generated `migration.sql`, then apply it with `npm run db:deploy`. Never hand-type a migration timestamp. CI's Schema Drift job runs `node scripts/check-migrations.mjs`, which wants a timestamp later than every earlier folder's, at least two lowercase words in the name (`add_member_export`, not `latest`), and a `migration.sql`; the folders listed in `prisma/migrations/.legacy-names.json` predate the rule.
+
+`20250101000000_init` is a retroactive baseline for installs that predate migrations: a database created with `prisma db push` marks each folder applied with `npx prisma migrate resolve --applied <name>` instead of running it (see [Installed with `db push`?](#installed-with-db-push) and [docs/operations.md](docs/operations.md#installed-with-db-push)).
+
+**Database schema.** `DATABASE_URL` may end in `?schema=<name>` to keep the app's tables in a schema other than `public`. Migrations and the running app both use it. The name must be a letter or `_` followed by letters, digits or `_` (at most 63 characters), or a production server refuses to start.
+
 ### Environment Variables
 
 See `example.env` for all available configuration options. Key variables:
@@ -273,7 +279,7 @@ See `example.env` for all available configuration options. Key variables:
 - **Authentication**: `NEXTAUTH_SECRET`, `PLEX_CLIENT_IDENTIFIER`
 - **Jellyfin**: `JELLYFIN_DEVICE_ID` (optional) — the DeviceId reported to Jellyfin at sign-in. By default it is derived from `PLEX_CLIENT_IDENTIFIER`, so leave it unset unless you want your own value. If neither is set, Jellyfin sign-in uses the fixed `plex-manager-server` and logs `jellyfin.auth.device_id_fallback` at warn.
 - **Encryption**: `ENCRYPTION_KEY` (optional but strongly recommended in production) — encrypts external-service secrets/tokens at rest. Use a dedicated value (do **not** reuse `NEXTAUTH_SECRET`); generate with `openssl rand -hex 32`. Rollout is non-destructive; rotating it makes previously-encrypted secrets undecryptable until re-saved.
-- **Job Queue**: `REDIS_URL` — enables the Redis-backed BullMQ worker. Rewind and Stripe subscriptions require it; without it, only the watchlist sync keeps running, through PostgreSQL polling.
+- **Job Queue**: `REDIS_URL` — enables the Redis-backed BullMQ worker. Without Redis, watchlist sync runs under a database lease in one process. Stripe and Rewind need Redis.
 - **Docker Compose (development)**: `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required; `docker compose up` refuses to start without them. `docker-compose.yml` publishes Postgres (5432, 5433) and Redis (6379) on `127.0.0.1` only and builds the app container's `DATABASE_URL` and `REDIS_URL` from the two passwords; use them in your own `.env` URLs as well. A database volume created before this change keeps its old password (`postgres`), so set `POSTGRES_PASSWORD` to that or change it with `ALTER USER`. The compose databases run `postgres:16-alpine` (they were 15): Postgres 16 cannot open a 15 data directory, so dump an existing `db` volume while it still runs 15 (see [docs/operations.md](docs/operations.md#backup)), remove the volume (`docker compose down -v` removes every volume), then start the new one and restore the dump. The app container starts only once `db` and `redis` pass their health checks.
 - **Development**: `DEV_*` variables for setup wizard defaults (read only with `NODE_ENV=development` and `DEV_SETUP_PREFILL=true`, until setup is complete)
   - Use URL format: `DEV_PLEX_URL="https://localhost:32400"` (includes protocol and port)
@@ -453,6 +459,7 @@ All integrations are configured through the setup wizard or admin panel, with va
 - **Audit logging** - Tracking of admin actions and security events
 - **Encryption at rest** - External-service API keys/tokens are AES-256-GCM encrypted when `ENCRYPTION_KEY` is set
 - **Signed webhooks** - Stripe webhooks are verified against the raw request body (no admin auth needed)
+- **Member removal** - Admins can remove a member: their access, sessions, Stripe subscription, Discord grant and stored data go. [docs/privacy.md](docs/privacy.md) lists every table of personal data and what removal does to it
 
 See [CLAUDE.md](CLAUDE.md) for detailed security best practices.
 

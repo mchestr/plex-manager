@@ -133,10 +133,10 @@ describe("getSettingsHealth", () => {
       clientSecret: "s",
       botToken: "t",
     } as never)
-    prismaMock.discordBotLock.findUnique.mockResolvedValue({ lastRenewedAt: new Date(NOW.getTime() - 5 * 60_000) } as never)
+    prismaMock.leaseLock.findUnique.mockResolvedValue({ lastRenewedAt: new Date(NOW.getTime() - 5 * 60_000) } as never)
     expect((await getSettingsHealth(NOW)).discord).toMatchObject({ status: "unreachable", code: "BOT_OFFLINE" })
 
-    prismaMock.discordBotLock.findUnique.mockResolvedValue({ lastRenewedAt: new Date(NOW.getTime() - 10_000) } as never)
+    prismaMock.leaseLock.findUnique.mockResolvedValue({ lastRenewedAt: new Date(NOW.getTime() - 10_000) } as never)
     expect((await getSettingsHealth(NOW)).discord.status).toBe("ok")
 
     prismaMock.discordIntegration.findUnique.mockResolvedValue(null)

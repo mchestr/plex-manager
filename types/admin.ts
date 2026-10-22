@@ -1,5 +1,6 @@
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import type { SavedSecret } from "@/lib/security/saved-secret"
+import type { AuthService } from "@/types/onboarding"
 
 /** LLM usage summed over some calls; `aggregateLlmUsage` builds one from rows. */
 export interface LlmUsageStats {
@@ -18,6 +19,11 @@ export interface AdminUserWithWrappedStats {
   email: string | null
   image: string | null
   plexUserId: string | null
+  jellyfinUserId: string | null
+  /** Every linked media server, Plex first (`memberServices`, P11.10). */
+  services: AuthService[]
+  /** The member's own service (`primaryService`). */
+  primaryService: AuthService
   isAdmin: boolean
   /** The Plex account that owns the configured server (`PlexServer.adminPlexUserId`). */
   isOwner: boolean
@@ -66,6 +72,8 @@ export type DiscordCommandActivity = {
   commandType: string
   commandName: string
   commandArgs: string | null
+  /** CHAT rows: the length of the member's message, which the log keeps instead of its text (GAP-32). */
+  argsLength: number | null
   status: string
   responseTimeMs: number | null
   channelType: string

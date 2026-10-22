@@ -114,6 +114,14 @@ async function routeAutocomplete(
 }
 
 /**
+ * The length of an assistant question (`/assistant ask prompt:`), which the
+ * command log keeps instead of its text (GAP-32). Undefined without a prompt.
+ */
+function promptLength(interaction: import("discord.js").ChatInputCommandInteraction): number | undefined {
+  return interaction.options.getString("prompt")?.trim().length
+}
+
+/**
  * @internal Dispatch a slash command through the audit wrapper.
  */
 async function routeChatInputCommand(
@@ -141,6 +149,7 @@ async function routeChatInputCommand(
     channelId: interaction.channelId,
     channelType: interaction.guildId ? "guild" : "dm",
     guildId: interaction.guildId ?? undefined,
+    argsLength: command.commandType === "CHAT" ? promptLength(interaction) : undefined,
   }
 
   try {

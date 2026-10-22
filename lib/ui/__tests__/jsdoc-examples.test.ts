@@ -1,12 +1,14 @@
 /**
  * The @example blocks in lib/ui/markdown.ts, lib/ui/error-copy.ts,
- * lib/ui/status.ts, lib/ui/poster-palette.ts and lib/ui/flash-codes.ts.
+ * lib/ui/status.ts, lib/ui/poster-palette.ts, lib/ui/flash-codes.ts and
+ * lib/ui/privacy-copy.ts.
  */
 
 import { boundaryCopy, connectionTestCopy, errorCopy } from '../error-copy'
 import { nextAuthError, readFlash } from '../flash-codes'
 import { safeHref, safeLink } from '../markdown'
 import { posterPalette } from '../poster-palette'
+import { assistantDisclosure, chatMessageLabel } from '../privacy-copy'
 import { resolveStatus, settingsCategory } from '../status'
 
 const original = process.env.NEXT_PUBLIC_APP_URL
@@ -82,5 +84,26 @@ describe('JSDoc Documentation Examples', () => {
 describe('safeHref', () => {
   it.each([[null], [undefined], [''], ['ftp://example.com'], ['http://[bad']])('refuses %p', (href) => {
     expect(safeHref(href)).toBeNull()
+  })
+})
+
+describe('assistantDisclosure', () => {
+  it('names the provider', () => {
+    expect(assistantDisclosure('anthropic')).toBe(
+      'Server admins can review assistant conversations, and messages are processed by Anthropic.'
+    )
+  })
+
+  it('falls back without a known provider', () => {
+    expect(assistantDisclosure(null)).toContain("processed by the server's AI provider.")
+    expect(assistantDisclosure('mystery')).toContain("processed by the server's AI provider.")
+  })
+})
+
+describe('chatMessageLabel', () => {
+  it('counts characters, never the text', () => {
+    expect(chatMessageLabel(42)).toBe('Message, 42 characters')
+    expect(chatMessageLabel(1)).toBe('Message, 1 character')
+    expect(chatMessageLabel(null)).toBeNull()
   })
 })

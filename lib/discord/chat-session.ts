@@ -50,6 +50,8 @@ export interface ResolvedSession {
   chatConversationId: string
   /** Coerced, trimmed history for the (possibly freshly reset) session. */
   history: ChatMessage[]
+  /** True when this call started the session (new, or reset after idling), so its first reply carries the disclosure. */
+  created: boolean
 }
 
 /** True for a Prisma serialization-conflict error (transaction should retry). */
@@ -130,13 +132,16 @@ export async function getOrCreateSession({
         const now = Date.now()
         const existing = await tx.discordChatSession.findUnique({
           where: { discordUserId_discordChannelId: sessionKey },
+          include: { chatConversation: { select: { userId: true } } },
         })
 
-        if (!isExpired(existing, now) && existing) {
+        // A Discord account relinked to another app user never inherits the old turns (GAP-31)
+        if (!isExpired(existing, now) && existing && existing.chatConversation.userId === userId) {
           return {
             id: existing.id,
             chatConversationId: existing.chatConversationId,
             history: trimHistory(coerceHistory(existing.messages)),
+            created: false,
           }
         }
 
@@ -165,6 +170,7 @@ export async function getOrCreateSession({
           id: session.id,
           chatConversationId: session.chatConversationId,
           history: [],
+          created: true,
         }
       },
       {

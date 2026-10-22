@@ -26,7 +26,7 @@ jest.mock("@/lib/queue/client", () => ({
   removeScheduledJob: jest.fn(),
   closeQueue: jest.fn(),
 }))
-jest.mock("@/lib/watchlist/lock", () => ({
+jest.mock("@/lib/watchlist/config", () => ({
   isWatchlistSyncEnabled: jest.fn().mockResolvedValue(true),
   getWatchlistSyncInterval: jest.fn().mockResolvedValue(60),
 }))

@@ -17,7 +17,7 @@ import type { TableSort } from "@/lib/ui/table-params"
 import type { AdminUserWithWrappedStats } from "@/types/admin"
 
 import { useUserActions } from "./actions/use-user-actions"
-import { MemberCell, PlexAccessCell, RewindCell, RoleCell, SubscriptionCell } from "./user-cells"
+import { MemberCell, PlexAccessCell, RewindCell, RoleCell, ServiceCell, SubscriptionCell } from "./user-cells"
 import { ImportPlexUsersButton } from "./import-plex-users-button"
 
 type User = AdminUserWithWrappedStats
@@ -30,6 +30,15 @@ const FILTERS = [
       { value: "all", label: "All" },
       { value: "admin", label: "Admin" },
       { value: "member", label: "Member" },
+    ],
+  },
+  {
+    param: "service",
+    label: "Service",
+    options: [
+      { value: "all", label: "All" },
+      { value: "plex", label: "Plex" },
+      { value: "jellyfin", label: "Jellyfin" },
     ],
   },
   {
@@ -95,6 +104,7 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
   const columns: ColumnDef<User>[] = [
     { id: "name", header: "Member", enableSorting: true, cell: ({ row }) => <MemberCell user={row.original} />, meta: { mobile: "title" } },
     { id: "role", header: "Role", cell: ({ row }) => <RoleCell user={row.original} />, meta: { mobile: "hidden" } },
+    { id: "service", header: "Service", cell: ({ row }) => <ServiceCell user={row.original} />, meta: { mobile: "badges" } },
     { id: "plexAccess", header: "Plex access", cell: ({ row }) => <PlexAccessCell user={row.original} unknownSub={unknownSub} />, meta: { mobile: "badges" } },
     { id: "subscription", header: "Subscription", cell: ({ row }) => <SubscriptionCell user={row.original} />, meta: { mobile: "badges" } },
     { id: "rewind", header: `Rewind ${year}`, cell: ({ row }) => <RewindCell user={row.original} now={now} />, meta: { mobile: "hidden", priority: 3 } },
@@ -116,7 +126,7 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
     { id: "joined", header: "Joined", enableSorting: true, cell: ({ row }) => f.date(row.original.createdAt, "short"), meta: { mobile: "meta" } },
   ]
 
-  const clearFilters = () => replace({ q: null, role: null, plexAccess: null, subscription: null, page: null })
+  const clearFilters = () => replace({ q: null, role: null, service: null, plexAccess: null, subscription: null, page: null })
   const empty =
     memberCount === 0 ? (
       <EmptyState

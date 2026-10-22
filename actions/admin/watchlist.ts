@@ -8,6 +8,7 @@ import { fail, ok } from "@/lib/actions/result"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
 import { globalWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
+import { ensureWatchlistSchedule } from "@/lib/watchlist/schedule"
 
 /**
  * Update global watchlist sync settings (admin only)
@@ -37,6 +38,16 @@ export const updateGlobalWatchlistSyncSettings = adminAction({
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("watchlist", before, values))
     revalidatePath("/admin/settings")
+
+    // With Redis the BullMQ scheduler follows the save at once; without it the
+    // fallback poller reads the new settings on its next poll.
+    const schedule = await ensureWatchlistSchedule()
+    if (!schedule.ok) {
+      return fail(
+        "UPSTREAM_UNAVAILABLE",
+        "Settings saved, but the job queue did not answer, so the sync schedule was not updated. Save again once the queue is back."
+      )
+    }
     return ok(null)
   },
 })

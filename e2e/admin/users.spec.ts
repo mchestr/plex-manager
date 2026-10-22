@@ -19,7 +19,7 @@ test.describe('Admin users list', () => {
   test.beforeAll(async () => {
     const prisma = createE2EPrismaClient();
     try {
-      const row = { ...MEMBER, isAdmin: false, disabledAt: null, primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } };
+      const row = { ...MEMBER, isAdmin: false, disabledAt: null, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true, jellyfin: false } };
       await prisma.user.upsert({ where: { id: MEMBER.id }, create: row, update: row });
       const server = await prisma.plexServer.findFirst({ where: { isActive: true }, select: { id: true, url: true } });
       if (server) {

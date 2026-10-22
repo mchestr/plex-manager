@@ -8,8 +8,11 @@ import { icons } from "@/lib/ui/icons"
 import type { AuthService } from "@/types/onboarding"
 
 export interface QuickLinksProps {
-  /** The member's own media server: its name and where its web app opens, or null to hide the tile. */
-  media: { service: AuthService; serverName: string; url: string | null }
+  /**
+   * One entry per linked media server, the member's own first (P11.10): its
+   * name and where its web app opens, or a null URL to hide that tile.
+   */
+  media: { service: AuthService; serverName: string; url: string | null }[]
   /** The request site's public URL, or null. */
   requestsUrl: string | null
   discord: SupportDiscord | null
@@ -27,14 +30,15 @@ interface QuickLink {
 /** The tiles that can work right now; a missing URL drops its tile, never leaves a gap (UI-38). */
 function quickLinksFor({ media, requestsUrl, discord }: QuickLinksProps): QuickLink[] {
   const links: QuickLink[] = []
-  if (media.url) {
-    const plex = media.service === "plex"
+  for (const server of media) {
+    if (!server.url) continue
+    const plex = server.service === "plex"
     links.push({
-      id: "media",
+      id: server.service,
       icon: plex ? icons.plex : icons.jellyfin,
       title: plex ? "Watch on Plex" : "Watch on Jellyfin",
-      description: plex ? `Open ${media.serverName} in Plex Web` : `Open ${media.serverName}`,
-      href: media.url,
+      description: plex ? `Open ${server.serverName} in Plex Web` : `Open ${server.serverName}`,
+      href: server.url,
       external: true,
     })
   }

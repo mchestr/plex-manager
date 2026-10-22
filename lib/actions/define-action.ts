@@ -14,6 +14,10 @@
  *   -> catch        toActionError(error, fallbackError)   (INTERNAL, never error.message)
  * ```
  *
+ * All of it runs in a request context (`lib/utils/log-context.ts`) with the
+ * proxy's `x-request-id`, and the handler's with the caller's user id too, so
+ * every log line and enqueued job carries them (P11.4).
+ *
  * Nothing on this path throws, except Next's own control-flow errors
  * (`redirect()`, `notFound()`), which are rethrown so they keep working.
  *
@@ -43,8 +47,10 @@ import { z } from "zod"
 import { hasEntitlement, NOT_ENTITLED_MESSAGE, type Entitlement } from "@/lib/actions/entitlement"
 import { fail, toActionError, type ActionErrorCode, type ActionResult } from "@/lib/actions/result"
 import { authOptions } from "@/lib/auth"
+import { getRequestId } from "@/lib/observability/request-context"
 import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
+import { generateRequestId, runWithRequestContext } from "@/lib/utils/log-context"
 
 type AuthLevel = "public" | "member" | "admin"
 
@@ -141,9 +147,15 @@ export function defineAction<
   C extends string = ActionErrorCode,
 >(def: Definition<A, S, T, C>): Action<S, T, C> {
   const action = async (raw?: unknown): Promise<ActionResult<T, C | ActionErrorCode>> => {
+    const requestId = (await getRequestId()) ?? generateRequestId()
+    return runWithRequestContext(requestId, undefined, () => run(requestId, raw))
+  }
+
+  const run = async (requestId: string, raw: unknown): Promise<ActionResult<T, C | ActionErrorCode>> => {
     try {
       const guarded = await guard(def.auth, def.entitlement)
       if (!guarded.ok) return guarded.result
+      const userId = (guarded.ctx as { session: Session | null }).session?.user?.id
 
       let input: unknown = undefined
       if (def.input) {
@@ -167,7 +179,10 @@ export function defineAction<
         }
       }
 
-      return await def.handler(input as Parameters<typeof def.handler>[0], guarded.ctx)
+      // The handler's log lines, and the jobs it enqueues, carry the id and the user
+      return await runWithRequestContext(requestId, userId, () =>
+        def.handler(input as Parameters<typeof def.handler>[0], guarded.ctx)
+      )
     } catch (error) {
       unstable_rethrow(error)
       return toActionError(error, def.fallbackError ?? DEFAULT_FALLBACK)

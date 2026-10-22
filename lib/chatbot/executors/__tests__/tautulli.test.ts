@@ -30,6 +30,7 @@ import {
   getTautulliUsers,
 } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
+import { auditMemberRead } from "@/lib/security/audit-log"
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
@@ -46,6 +47,8 @@ jest.mock("@/lib/connections/tautulli", () => ({
   getTautulliLibraryStats: jest.fn(),
   getTautulliUsers: jest.fn(),
 }))
+
+jest.mock("@/lib/security/audit-log", () => ({ auditMemberRead: jest.fn() }))
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({
@@ -338,6 +341,33 @@ describe("Discord tool gating - get_tautulli_users", () => {
     const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS)
 
     expect(prompt).not.toContain("get_tautulli_users")
+  })
+})
+
+describe("per-member reads are audited (P11.16, GAP-33)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockTautulliFindFirst.mockResolvedValue({ id: "tautulli-1", name: "Tautulli", url: "http://t", apiKey: "k", publicUrl: null } as never)
+    jest.mocked(getTautulliHistory).mockResolvedValue({ success: true, data: { data: [] } })
+  })
+
+  it("writes one read for the member whose Plex id the tool was given", async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ id: "member-7" } as never)
+
+    await executeTautulliTool("get_tautulli_watch_history", { userId: 7 }, "admin-1")
+
+    expect(prismaMock.user.findFirst).toHaveBeenCalledWith({ where: { plexUserId: "7" }, select: { id: true } })
+    expect(auditMemberRead).toHaveBeenCalledWith("chatbot-tautulli", "member-7", "admin-1")
+  })
+
+  it("writes nothing for the server-wide history, an unknown Plex user or the admin's own", async () => {
+    await executeTautulliTool("get_tautulli_watch_history", {}, "admin-1")
+    prismaMock.user.findFirst.mockResolvedValueOnce(null)
+    await executeTautulliTool("get_tautulli_watch_history", { userId: 8 }, "admin-1")
+    prismaMock.user.findFirst.mockResolvedValueOnce({ id: "admin-1" } as never)
+    await executeTautulliTool("get_tautulli_watch_history", { userId: 9 }, "admin-1")
+
+    expect(auditMemberRead).not.toHaveBeenCalled()
   })
 })
 

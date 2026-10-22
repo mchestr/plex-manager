@@ -2,13 +2,15 @@
  * @jest-environment node
  */
 
-import { BotLockPoller } from "@/lib/discord/lock/poller"
 import { startNodeInstrumentation } from "@/lib/instrumentation/node"
+import { shutdownSignal } from "@/lib/instrumentation/shutdown"
+import { LeasePoller } from "@/lib/locks/lease-poller"
 import { getDiscordIntegration } from "@/lib/discord/integration"
 import { removeScheduledJob, scheduleCronJob } from "@/lib/queue/client"
 import { waitForRedis } from "@/lib/queue/connection"
 import { startWorker } from "@/lib/queue/worker"
-import { startWatchlistSyncPolling } from "@/lib/watchlist/lock"
+import { startWatchlistFallback } from "@/lib/watchlist/fallback"
+import { ensureWatchlistSchedule } from "@/lib/watchlist/schedule"
 
 // The queue worker and the bot poller start side by side, so a Redis that is
 // down at boot never stops the Discord bot (BP-13).
@@ -35,22 +37,17 @@ jest.mock("@/lib/queue/jobs/discord-role", () => ({
   ROLE_RECONCILE_SCHEDULER_ID: "discord-role-reconcile",
   reconcileTimeZone: jest.fn().mockResolvedValue("UTC"),
 }))
-jest.mock("@/lib/watchlist/lock", () => ({
-  isWatchlistSyncEnabled: jest.fn().mockResolvedValue(true),
-  getWatchlistSyncInterval: jest.fn().mockResolvedValue(60),
-  startWatchlistSyncPolling: jest.fn(),
-  stopWatchlistSyncPolling: jest.fn(),
-}))
-jest.mock("@/lib/discord/lock/poller", () => ({
+jest.mock("@/lib/watchlist/fallback", () => ({ startWatchlistFallback: jest.fn() }))
+jest.mock("@/lib/watchlist/schedule", () => ({ ensureWatchlistSchedule: jest.fn() }))
+jest.mock("@/lib/locks/lease-poller", () => ({
   DEFAULT_POLL_INTERVAL_MS: 10_000,
-  BotLockPoller: jest.fn().mockImplementation(() => ({
+  LeasePoller: jest.fn().mockImplementation(() => ({
     start: jest.fn().mockResolvedValue(undefined),
     stop: jest.fn().mockResolvedValue(undefined),
   })),
 }))
-jest.mock("@/lib/watchlist/sync-service", () => ({ syncAllEnabledUsers: jest.fn() }))
-jest.mock("@/lib/discord/lock/lease", () => ({ DistributedLock: jest.fn() }))
-jest.mock("@/lib/discord/lock", () => ({ isDiscordBotEnabled: jest.fn().mockResolvedValue(true) }))
+jest.mock("@/lib/locks/lease-lock", () => ({ LeaseLock: jest.fn() }))
+jest.mock("@/lib/discord/config", () => ({ isDiscordBotEnabled: jest.fn().mockResolvedValue(true) }))
 jest.mock("@/lib/discord/bot", () => ({ DiscordBot: jest.fn() }))
 jest.mock("@/lib/prisma", () => ({ prisma: {} }))
 
@@ -68,7 +65,7 @@ afterAll(() => {
 })
 
 function botPollerStarted(): boolean {
-  const poller = jest.mocked(BotLockPoller).mock.results[0]?.value as { start: jest.Mock } | undefined
+  const poller = jest.mocked(LeasePoller).mock.results[0]?.value as { start: jest.Mock } | undefined
   return poller?.start.mock.calls.length === 1
 }
 
@@ -90,7 +87,7 @@ describe("startNodeInstrumentation() with Redis unreachable", () => {
 
     expect(botPollerStarted()).toBe(true)
     expect(startWorker).not.toHaveBeenCalled()
-    expect(startWatchlistSyncPolling).not.toHaveBeenCalled()
+    expect(startWatchlistFallback).not.toHaveBeenCalled()
     expect(mockError).toHaveBeenCalledWith(expect.stringMatching(/^queue\.redis_unreachable/))
   })
 
@@ -104,14 +101,26 @@ describe("startNodeInstrumentation() with Redis unreachable", () => {
     expect(mockError).toHaveBeenCalledWith("Queue worker start failed", expect.any(Error))
   })
 
-  it("runs the legacy polling sync only without REDIS_URL", async () => {
+  it("starts the watchlist fallback without REDIS_URL", async () => {
     delete process.env.REDIS_URL
 
     await startNodeInstrumentation()
 
     expect(waitForRedis).not.toHaveBeenCalled()
-    expect(startWatchlistSyncPolling).toHaveBeenCalledTimes(1)
+    expect(startWatchlistFallback).toHaveBeenCalledTimes(1)
+    expect(startWatchlistFallback).toHaveBeenCalledWith({ signal: shutdownSignal })
+    expect(ensureWatchlistSchedule).not.toHaveBeenCalled()
     expect(botPollerStarted()).toBe(true)
+  })
+
+  it("does not start the fallback with REDIS_URL, and ensures the schedule instead", async () => {
+    jest.mocked(waitForRedis).mockResolvedValue(true)
+    jest.mocked(startWorker).mockResolvedValue(undefined)
+
+    await startNodeInstrumentation()
+
+    expect(startWatchlistFallback).not.toHaveBeenCalled()
+    expect(ensureWatchlistSchedule).toHaveBeenCalledTimes(1)
   })
 })
 

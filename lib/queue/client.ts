@@ -8,6 +8,7 @@
 import { Queue, QueueEvents, JobsOptions, type Job } from "bullmq"
 import { getRedisConnection } from "./connection"
 import { sanitizeJobId } from "./job-id"
+import { traceQueue } from "./job-meta"
 import { JOB_TYPES, JobType, JobPayloadMap, JobMetadata, QueueStats, JobStatus } from "./types"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -42,10 +43,13 @@ let queueEvents: QueueEvents | null = null
  */
 function getQueue(): Queue {
   if (!queue) {
-    queue = new Queue(QUEUE_NAME, {
-      connection: getRedisConnection(),
-      defaultJobOptions: DEFAULT_JOB_OPTIONS,
-    })
+    // Jobs added in a request carry its id (lib/queue/job-meta.ts)
+    queue = traceQueue(
+      new Queue(QUEUE_NAME, {
+        connection: getRedisConnection(),
+        defaultJobOptions: DEFAULT_JOB_OPTIONS,
+      })
+    )
   }
   return queue
 }
@@ -292,6 +296,20 @@ export async function removeJob(jobId: string): Promise<void> {
 
   await job.remove()
   logger.info("Job removed", { jobId })
+}
+
+/**
+ * Removes the job a deduplication id points at, when it is still waiting or
+ * delayed, and frees the id. A running job cannot be removed and is left to
+ * finish. Returns whether a job was removed.
+ */
+export async function removeDeduplicatedJob(deduplicationId: string): Promise<boolean> {
+  const q = getQueue()
+  const jobId = await q.getDeduplicationJobId(deduplicationId)
+  if (!jobId) return false
+  const removed = await q.remove(jobId)
+  if (removed > 0) await q.removeDeduplicationKey(deduplicationId)
+  return removed > 0
 }
 
 /**

@@ -1,5 +1,11 @@
 import { serverName } from "@/lib/brand"
-import { exchangeDiscordCode, fetchDiscordUserProfile, refreshDiscordToken, updateDiscordRoleConnection } from "@/lib/discord/api"
+import {
+  exchangeDiscordCode,
+  fetchDiscordUserProfile,
+  refreshDiscordToken,
+  revokeDiscordToken,
+  updateDiscordRoleConnection,
+} from "@/lib/discord/api"
 import { getDiscordBotToken } from "@/lib/discord/config"
 import { computeRoleMetadata, type RoleMetadataOptions } from "@/lib/discord/role-metadata"
 import { prisma } from "@/lib/prisma"
@@ -351,7 +357,47 @@ export async function syncDiscordRoleConnection(
   })
 }
 
-export async function clearDiscordRoleForUser(userId: string) {
+/** What {@link clearDiscordRoleForUser} managed at Discord; the local unlink always happens. */
+export interface DiscordUnlinkResult {
+  /** A connection row existed. */
+  linked: boolean
+  roleCleared: boolean
+  /** The OAuth grant was revoked at Discord (GAP-31). */
+  grantRevoked: boolean
+}
+
+/** Revokes the stored grant at Discord; false when it could not be. */
+async function revokeGrant(userId: string): Promise<boolean> {
+  const [integration, connection] = await Promise.all([
+    getDiscordIntegration(true),
+    prisma.discordConnection.findUnique({ where: { userId }, select: { accessToken: true, refreshToken: true } }),
+  ])
+  if (!connection || !integration?.clientId || !integration.clientSecret) return false
+  try {
+    await revokeDiscordToken({
+      clientId: integration.clientId,
+      clientSecret: integration.clientSecret,
+      ...(connection.refreshToken
+        ? { token: connection.refreshToken, tokenTypeHint: "refresh_token" as const }
+        : { token: connection.accessToken, tokenTypeHint: "access_token" as const }),
+    })
+    return true
+  } catch (error) {
+    logger.warn("Failed to revoke the Discord grant", { userId, error: error instanceof Error ? error.message : "unknown" })
+    return false
+  }
+}
+
+/**
+ * Unlinks a member's Discord account: clears their linked role, revokes the
+ * OAuth grant at Discord, then deletes the connection and the assistant chat
+ * sessions of that Discord id, so a relinked account starts fresh (GAP-31).
+ * The Discord calls are best effort; the local unlink always happens and is
+ * audited as `DISCORD_ACCOUNT_UNLINKED`.
+ */
+export async function clearDiscordRoleForUser(userId: string): Promise<DiscordUnlinkResult> {
+  const existing = await prisma.discordConnection.findUnique({ where: { userId }, select: { discordUserId: true } })
+  let roleCleared = false
   try {
     const { connection, integration } = await ensureValidAccessToken(userId)
 
@@ -366,19 +412,24 @@ export async function clearDiscordRoleForUser(userId: string) {
       platform_username: "Unlinked",
       metadata: {},
     })
+    roleCleared = true
   } catch (error) {
     logger.warn("Failed to clear Discord role connection", {
       userId,
       error: error instanceof Error ? error.message : "unknown",
     })
-  } finally {
-    await prisma.discordConnection.deleteMany({
-      where: { userId },
-    })
-    logAuditEvent(AuditEventType.DISCORD_ACCOUNT_UNLINKED, userId, {
-      source: "clear_role",
-    })
   }
+
+  const grantRevoked = await revokeGrant(userId)
+
+  await prisma.$transaction([
+    prisma.discordConnection.deleteMany({ where: { userId } }),
+    ...(existing ? [prisma.discordChatSession.deleteMany({ where: { discordUserId: existing.discordUserId } })] : []),
+  ])
+  logAuditEvent(AuditEventType.DISCORD_ACCOUNT_UNLINKED, userId, {
+    source: "clear_role",
+  })
+  return { linked: existing !== null, roleCleared, grantRevoked }
 }
 
 export async function getDiscordLinkStatus(userId: string) {

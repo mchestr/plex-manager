@@ -49,13 +49,39 @@ async function walkOnboarding(page: Page, service: Service) {
   await page.getByTestId('onboarding-final-complete').click();
 }
 
+const JELLYFIN_SERVER_ID = 'e2e-onboarding-jellyfin';
+
+/**
+ * The member's service follows their linked accounts (`lib/members/service.ts`),
+ * so the Jellyfin case links a Jellyfin account, records Jellyfin as the one
+ * they joined with and adds an active Jellyfin server, whose name onboarding
+ * shows (P11.10: each spec that needs Jellyfin adds its own row). The Plex
+ * case undoes all three.
+ */
 async function setOnboarding(service: Service, done: boolean) {
   const prisma = createE2EPrismaClient();
   try {
+    if (service === 'jellyfin') {
+      const row = {
+        name: 'E2E Jellyfin',
+        url: process.env.E2E_JELLYFIN_URL ?? 'http://127.0.0.1:8096',
+        apiKey: 'e2e-jellyfin-key',
+        isActive: true,
+        enabledForLogin: false,
+      };
+      await prisma.jellyfinServer.upsert({
+        where: { id: JELLYFIN_SERVER_ID },
+        create: { id: JELLYFIN_SERVER_ID, ...row },
+        update: row,
+      });
+    } else {
+      await prisma.jellyfinServer.deleteMany({ where: { id: JELLYFIN_SERVER_ID } });
+    }
     await prisma.user.update({
       where: { id: TEST_USERS.REGULAR.id },
       data: {
         primaryAuthService: service,
+        jellyfinUserId: service === 'jellyfin' ? 'e2e-regular-jellyfin-id' : null,
         onboardingStatus: done ? TEST_USERS.REGULAR.onboardingStatus : { plex: false, jellyfin: false },
       },
     });

@@ -14,6 +14,7 @@ the bundled `docker-compose.yml` (database `plex_wrapped`, user `postgres`, the
 - [Migration calendar for the 2026 season](#migration-calendar-for-the-2026-season)
 - [Code freeze gate](#code-freeze-gate)
 - [Installed with db push](#installed-with-db-push)
+- [Request IDs and metrics](#request-ids-and-metrics)
 
 ## What holds state
 
@@ -193,3 +194,63 @@ once, on the old release before upgrading, after a dump:
 The README's [Installed with `db push`?](../README.md#installed-with-db-push)
 section has the exact commands. The new release's migrations then apply
 normally.
+
+## Request IDs and metrics
+
+**Request IDs.** Every request gets an id: the `X-Request-ID` your reverse
+proxy sends, when it is 8 to 64 letters, digits, `.`, `_` or `-`, otherwise a
+new UUID. The response carries it back as `X-Request-ID`, and every log line
+of the request carries it as `requestId`: the proxy, Server Actions, route
+handlers and the jobs they queue (a job's lines carry the id of the request
+that queued it; a scheduled job runs as `job:<id>`). An error page's digest
+matches the `request.unhandled_error` line, which also carries the id:
+
+```bash
+docker compose logs app | grep '"requestId":"<id from X-Request-ID>"'
+docker compose logs app | grep '"digest":"<digest from the error page>"'
+```
+
+**Metrics.** Set `METRICS_TOKEN` (`openssl rand -hex 32`) to turn on
+`/api/metrics`, which serves the Prometheus text format to a scraper that
+sends `Authorization: Bearer <token>`. Without the variable the route answers
+404. It reports:
+
+| Metric | Labels | What |
+|---|---|---|
+| `plex_manager_queue_jobs` | `queue`, `state` | Jobs in `plex-wrapped`, `rewind-batch`, `rewind-gen` and `rewind-aux` by state (the counts the admin queues page shows) |
+| `plex_manager_job_failures_total` | `queue`, `job` | Failed job attempts, retries included, counted in Redis (`pm:metrics:job_failures`) |
+| `plex_manager_llm_spend_usd` | `purpose` (`wrapped`, `chat`), `period` (`day`, `month`) | LLM spend since midnight, and since the 1st, in the server time zone (cached 60 s) |
+| `plex_manager_scrape_error` | `source` | 1 when a source failed or took over 2 s this scrape |
+| `plex_manager_build_info` | `version`, `commit` | The running build (`BUILD_COMMIT`) |
+| `process_resident_memory_bytes` | | Resident memory |
+| `plex_manager_event_loop_delay_p99_seconds` | | p99 event-loop delay since the previous scrape |
+
+A Prometheus scrape job:
+
+```yaml
+scrape_configs:
+  - job_name: plex-manager
+    scrape_interval: 30s
+    metrics_path: /api/metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/plex-manager-token
+    static_configs:
+      - targets: ["plex-manager.example.com:443"]
+    scheme: https
+```
+
+Three alerts worth having (set the spend threshold to a thirtieth of your
+monthly LLM budget, here USD 30 a month):
+
+```yaml
+groups:
+  - name: plex-manager
+    rules:
+      - alert: JobFailuresRising
+        expr: sum by (queue, job) (increase(plex_manager_job_failures_total[30m])) > 5
+      - alert: QueueBacklog
+        expr: sum by (queue) (plex_manager_queue_jobs{state="waiting"}) > 100
+        for: 15m
+      - alert: LlmSpendHigh
+        expr: sum(plex_manager_llm_spend_usd{period="day"}) > 1

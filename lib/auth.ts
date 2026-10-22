@@ -246,6 +246,7 @@ export const authOptions: NextAuthOptions = {
                   ...email,
                   image: plexUser.thumb,
                   isAdmin,
+                  primaryAuthService: "plex",
                 },
               })
             )

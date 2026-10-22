@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-import { parseSearchParams } from "@/lib/actions/route"
+import { parseSearchParams, withRequestContext } from "@/lib/actions/route"
 import { invite as inviteRoute, userDetail } from "@/lib/admin/routes"
 import { adminSearchQuerySchema, type AdminSearchKind, type AdminSearchResponse, type AdminSearchResult } from "@/lib/admin/search"
 import { prisma } from "@/lib/prisma"
@@ -54,7 +54,7 @@ const SEARCHES: Record<AdminSearchKind, (q: string) => Promise<AdminSearchResult
  * run one at a time per client and search-as-you-type would queue. Each kind
  * selects only public fields, so no token or secret can reach the response.
  */
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   try {
     const limited = await limitRequest("admin:search", request)
     if (limited) return limited
@@ -74,3 +74,5 @@ export async function GET(request: NextRequest) {
     })
   }
 }
+
+export const GET = withRequestContext(handleGet)

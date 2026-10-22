@@ -42,7 +42,7 @@ const mockConsume = consume as jest.MockedFunction<typeof consume>
 process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000"
 
 function makeRequest(url = "http://localhost:3000/discord/connect") {
-  return { url, nextUrl: new URL(url) } as never
+  return { url, nextUrl: new URL(url), headers: new Headers() } as never
 }
 
 describe("discord connect route rate limiting", () => {

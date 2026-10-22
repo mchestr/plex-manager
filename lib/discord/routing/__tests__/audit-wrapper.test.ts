@@ -30,6 +30,7 @@ function createMockLog(overrides: Partial<DiscordCommandLog> = {}): DiscordComma
     commandType: "HELP" as DiscordCommandType,
     commandName: "ping",
     commandArgs: null,
+    argsLength: null,
     channelId: "channel-123",
     channelType: "guild",
     guildId: "guild-123",

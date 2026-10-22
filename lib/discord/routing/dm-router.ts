@@ -23,7 +23,8 @@
  *   ├─ content is empty ───────► reply asking for a message
  *   └─ otherwise ──────────────► handleDiscordChat (context "discord") → reply,
  *                                 split into 2,000-character messages
- *                                 (wrapped in withAuditLog, commandType CHAT)
+ *                                 (wrapped in withAuditLog, commandType CHAT;
+ *                                 the log keeps the message length, not its text)
  * ```
  *
  * ## Dependency injection
@@ -174,7 +175,8 @@ export async function routeDirectMessage(
       ...auditBase,
       commandType: "CHAT" as DiscordCommandType,
       commandName: "dm",
-      commandArgs: trimmed.substring(0, 500),
+      // The log keeps the length, never the text (GAP-32)
+      argsLength: trimmed.length,
     },
     async () => {
       if (message.channel.isSendable()) {

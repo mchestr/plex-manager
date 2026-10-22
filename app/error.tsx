@@ -10,6 +10,9 @@ import { StatusScreen } from "@/components/ui/status-screen"
 import { useServerName } from "@/lib/brand-context"
 import { boundaryCopy } from "@/lib/ui/error-copy"
 import { icons } from "@/lib/ui/icons"
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("error-boundary")
 
 /**
  * The root boundary (ui-design-system 6.7). It replaces every segment layout,
@@ -28,7 +31,7 @@ export default function Error({
   const copy = boundaryCopy(error)
 
   useEffect(() => {
-    if (!copy.auth) console.error("Route error:", error)
+    if (!copy.auth) logger.error("Route error", error, { digest: error.digest })
   }, [copy.auth, error])
 
   return (

@@ -5,7 +5,8 @@
 import { z } from 'zod'
 
 import { hasEntitlement } from '@/lib/actions/entitlement'
-import { parseRouteParams, parseSearchParams, requireEntitlement } from '@/lib/actions/route'
+import { parseRouteParams, parseSearchParams, requireEntitlement, withRequestContext } from '@/lib/actions/route'
+import { getLogContext } from '@/lib/utils/log-context'
 import { ratingKeySchema, shareTokenSchema, yearParamSchema } from '@/lib/validations/params'
 
 jest.mock('@/lib/actions/entitlement', () => ({
@@ -89,5 +90,23 @@ describe('requireEntitlement', () => {
     if (checked.ok) return
     expect(checked.response.status).toBe(307)
     expect(checked.response.headers.get('location')).toBe('https://plex.example.com/subscribe')
+  })
+})
+
+describe('withRequestContext (P11.4)', () => {
+  const handler = withRequestContext(async (_request: Request, label: string) => ({ label, ctx: getLogContext() }))
+
+  it("runs the handler with the request's x-request-id and passes its arguments through", async () => {
+    const request = new Request('http://localhost/api/x', { headers: { 'x-request-id': 'demo-1234abcd' } })
+
+    await expect(handler(request, 'ctx')).resolves.toEqual({ label: 'ctx', ctx: { requestId: 'demo-1234abcd' } })
+  })
+
+  it('generates an id when the header is missing or invalid', async () => {
+    const request = new Request('http://localhost/api/x', { headers: { 'x-request-id': '<script>' } })
+
+    const { ctx } = await handler(request, 'ctx')
+
+    expect(ctx?.requestId).toMatch(/^[0-9a-f-]{32,36}$/)
   })
 })

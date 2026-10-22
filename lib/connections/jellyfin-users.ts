@@ -2,6 +2,8 @@
  * Jellyfin user management functions
  */
 
+import { z } from "zod"
+
 import {
   jellyfinAuthResultSchema,
   type JellyfinUser,
@@ -240,9 +242,9 @@ export async function deleteJellyfinUser(
 export async function getJellyfinUserById(
   config: JellyfinConfig,
   userId: string
-): Promise<{ success: boolean; data?: JellyfinUser; error?: string }> {
+): Promise<{ success: boolean; data?: JellyfinUser; error?: string; notFound?: boolean }> {
   try {
-    const url = `${config.url}/Users/${userId}`
+    const url = `${config.url}/Users/${encodeURIComponent(userId)}`
 
     const response = await fetchWithTimeout(url, {
       method: "GET",
@@ -252,7 +254,7 @@ export async function getJellyfinUserById(
 
     if (!response.ok) {
       if (response.status === 404) {
-        return { success: false, error: "User not found" }
+        return { success: false, error: "User not found", notFound: true }
       }
       return { success: false, error: `Failed to fetch user: ${response.statusText}` }
     }
@@ -264,6 +266,79 @@ export async function getJellyfinUserById(
       return { success: false, error: `Error fetching user: ${error.message}` }
     }
     return { success: false, error: "Failed to fetch Jellyfin user" }
+  }
+}
+
+/** The user's stored policy: every field is kept, so only its shape is checked. */
+const userPolicySchema = z.object({ Policy: z.record(z.string(), z.unknown()) })
+
+/** The outcome of {@link setJellyfinAccountDisabled}. */
+export type JellyfinDisableResult =
+  | { success: true; status: "changed" | "unchanged" | "not_found" }
+  | { success: false; code: "JELLYFIN_ADMIN" | "JELLYFIN_UNAVAILABLE" }
+
+/**
+ * Turns a Jellyfin account off or on (P11.10, P11.13). Jellyfin replaces the
+ * whole policy on a write, so this reads the user, keeps every field of their
+ * current `Policy` (libraries, `IsAdministrator`, downloads) and changes only
+ * `IsDisabled`. {@link setJellyfinUserPolicy} cannot do this: it resets the
+ * libraries and `IsAdministrator`.
+ *
+ * A Jellyfin administrator is never disabled (`JELLYFIN_ADMIN`). An account
+ * Jellyfin no longer has is `not_found`, which member removal counts as done;
+ * a user without a policy is unknown, so nothing changes
+ * (`JELLYFIN_UNAVAILABLE`).
+ *
+ * @param config - The active Jellyfin server.
+ * @param jellyfinUserId - The member's Jellyfin user id.
+ * @param disabled - True turns the account off.
+ */
+export async function setJellyfinAccountDisabled(
+  config: JellyfinConfig,
+  jellyfinUserId: string,
+  disabled: boolean
+): Promise<JellyfinDisableResult> {
+  try {
+    const userUrl = `${config.url}/Users/${encodeURIComponent(jellyfinUserId)}`
+    const current = await fetchWithTimeout(userUrl, {
+      method: "GET",
+      headers: getJellyfinHeaders(config.apiKey),
+      timeoutMs: 5000,
+    })
+    if (current.status === 404) return { success: true, status: "not_found" }
+    if (!current.ok) {
+      logger.warn("jellyfin.access.read_failed", { userId: jellyfinUserId, status: current.status })
+      return { success: false, code: "JELLYFIN_UNAVAILABLE" }
+    }
+
+    const parsed = userPolicySchema.safeParse(await current.json().catch(() => null))
+    if (!parsed.success) {
+      logger.warn("jellyfin.access.invalid_policy", { userId: jellyfinUserId })
+      return { success: false, code: "JELLYFIN_UNAVAILABLE" }
+    }
+    const policy = parsed.data.Policy
+    if (disabled && policy.IsAdministrator === true) return { success: false, code: "JELLYFIN_ADMIN" }
+    if (policy.IsDisabled === disabled) return { success: true, status: "unchanged" }
+
+    const response = await fetchWithTimeout(`${userUrl}/Policy`, {
+      method: "POST",
+      headers: getJellyfinHeaders(config.apiKey),
+      body: JSON.stringify({ ...policy, IsDisabled: disabled }),
+      timeoutMs: 10000,
+    })
+    if (!response.ok) {
+      logger.warn("jellyfin.access.write_failed", { userId: jellyfinUserId, status: response.status })
+      return { success: false, code: "JELLYFIN_UNAVAILABLE" }
+    }
+
+    logger.info("jellyfin.access.changed", { userId: jellyfinUserId, disabled })
+    return { success: true, status: "changed" }
+  } catch (error) {
+    logger.warn("jellyfin.access.error", {
+      userId: jellyfinUserId,
+      error: error instanceof Error ? error.name : "unknown",
+    })
+    return { success: false, code: "JELLYFIN_UNAVAILABLE" }
   }
 }
 

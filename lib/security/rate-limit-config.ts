@@ -38,6 +38,8 @@ export const LIMITS = {
   "admin:queue": { points: 30, duration: MINUTE },
   // Invite create and delete per admin (P11.5)
   "admin:invites": { points: 30, duration: 10 * MINUTE },
+  // Member removals per admin (P11.13)
+  "admin:remove-member": { points: 10, duration: HOUR },
   checkout: { points: 10, duration: MINUTE },
   portal: { points: 10, duration: MINUTE },
   "discord-link": { points: 5, duration: 5 * MINUTE },
@@ -73,6 +75,8 @@ export const LIMITS = {
   "rw:dryrun": { points: 10, duration: 10 * MINUTE },
   // Rewind copy calls per LLM provider (design 9.4); the pipeline waits for a point
   "rw:llm": { points: 30, duration: MINUTE },
+  // One audit row per admin, member and surface per hour for reads of member content (P11.16)
+  "audit:read": { points: 1, duration: HOUR },
 } as const satisfies Record<string, LimitConfig>
 
 export type LimitName = keyof typeof LIMITS

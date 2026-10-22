@@ -12,6 +12,7 @@ import "server-only"
 
 import { assertAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { auditMemberRead } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import { pickCurrentUsageId } from "@/lib/wrapped/data/history"
@@ -28,12 +29,13 @@ const logger = createLogger("ADMIN")
  * `PlexWrapped.generatedAt` ({@link pickCurrentUsageId}).
  */
 export async function getHistoricalWrappedVersions(wrappedId: string) {
-  await assertAdmin()
+  const session = await assertAdmin()
 
   const wrapped = await prisma.plexWrapped.findUnique({
     where: { id: wrappedId },
-    select: { generatedAt: true },
+    select: { generatedAt: true, userId: true },
   })
+  if (wrapped) await auditMemberRead("rewind-history", wrapped.userId, session.user.id)
 
   const llmUsageRecords = await prisma.lLMUsage.findMany({
     where: {
@@ -111,7 +113,7 @@ function rebuildVersion(
  * null when the record does not exist or its response cannot be rebuilt.
  */
 export async function getHistoricalWrappedData(llmUsageId: string, _wrappedId: string) {
-  await assertAdmin()
+  const session = await assertAdmin()
 
   const llmUsage = await prisma.lLMUsage.findUnique({
     where: { id: llmUsageId },
@@ -136,6 +138,7 @@ export async function getHistoricalWrappedData(llmUsageId: string, _wrappedId: s
   if (!llmUsage || !llmUsage.wrapped) {
     return null
   }
+  await auditMemberRead("rewind-history", llmUsage.userId, session.user.id)
 
   const version = {
     year: llmUsage.wrapped.year,

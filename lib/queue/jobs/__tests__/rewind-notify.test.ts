@@ -13,14 +13,14 @@ import { buildConfig, buildPlexWrapped } from '@/__tests__/helpers/factories'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { getAccessLevel } from '@/lib/access'
 import { DiscordApiError, DISCORD_DMS_CLOSED, sendDiscordDirectMessage } from '@/lib/discord/api'
-import { isDiscordBotEnabled } from '@/lib/discord/lock'
+import { isDiscordBotEnabled } from '@/lib/discord/config'
 import { enqueueSeasonReadyNotifications, processRewindNotify, registerNotifyJobs } from '@/lib/queue/jobs/rewind-notify'
 import type { RewindNotifyPayload } from '@/lib/queue/types'
 import { afterRewindCompleted, type CompletedRewind } from '@/lib/wrapped/pipeline/after-complete'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/access', () => ({ getAccessLevel: jest.fn() }))
-jest.mock('@/lib/discord/lock', () => ({ isDiscordBotEnabled: jest.fn() }))
+jest.mock('@/lib/discord/config', () => ({ ...jest.requireActual('@/lib/discord/config'), isDiscordBotEnabled: jest.fn() }))
 jest.mock('@/lib/discord/api', () => ({
   ...jest.requireActual('@/lib/discord/api'),
   sendDiscordDirectMessage: jest.fn(),

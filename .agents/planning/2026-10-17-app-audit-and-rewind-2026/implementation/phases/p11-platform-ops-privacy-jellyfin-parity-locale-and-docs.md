@@ -115,11 +115,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** On a dev install without Redis, boot with sync off, then turn it on in settings: the log shows a sync within a minute, and with a 5-minute interval it repeats every 5 minutes. A second container never runs it. With Redis, turning sync on makes the scheduler appear on `/admin/queues` without a restart.
 
 **Done when.**
-- [ ] `lib/locks/` holds the one lease lock and poller, used by the Discord bot and watchlist sync, and `lib/watchlist/lock.ts` is deleted.
-- [ ] Without Redis, sync starts when enabled after boot and repeats on the configured interval.
-- [ ] With Redis, saving the settings creates, updates or removes the scheduler.
-- [ ] The fake-timer tests pass.
+- [x] `lib/locks/` holds the one lease lock and poller, used by the Discord bot and watchlist sync, and `lib/watchlist/lock.ts` is deleted.
+- [x] Without Redis, sync starts when enabled after boot and repeats on the configured interval.
+- [x] With Redis, saving the settings creates, updates or removes the scheduler.
+- [x] The fake-timer tests pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270116000002_p112_lease_lock`. `LeaseName` is the union `"discord-bot" | "watchlist-sync"` in `lib/locks/lease-lock.ts`; P11.14 adds `"retention"` to it and makes `legacyHolder` return false for that name (it has no legacy row). `LeaseStore` is `acquire(claim)`, `renew(claim)`, `release(name, instanceId)` with `claim = { name, instanceId, now, expiresAt }`; `PrismaLeaseStore`'s legacy check (`legacyHolder`) is what P11.3 deletes with the two tables. `onHeldTick` also runs on the poll that acquires (startup included), so a newly enabled sync runs within one poll. The bot liveness readers (`lib/admin/discord.ts`, `lib/settings/connection-health.ts`) read the `discord-bot` `LeaseLock` row. `withTimeout` moved to `lib/utils/with-timeout.ts` (throws `TimeoutError`). `ensureWatchlistSchedule()` returns `{ ok: true, state: "scheduled" | "removed" | "no-redis" }` or `{ ok: false, code: "TIMEOUT" | "FAILED" }`; when it fails, the settings save still saves and answers `UPSTREAM_UNAVAILABLE`. The tests named in the plan as `lease.test.ts`/`lock-integration.test.ts` are `lib/locks/__tests__/lease-lock.test.ts` and `lease-integration.test.ts`; both node tests (`lib/instrumentation/__tests__/node.test.ts`, `__tests__/lib/instrumentation/node.test.ts`) were updated.)
 
 ### Step P11.3: Separate worker process and queue hygiene
 
@@ -220,10 +222,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Send an action with `x-request-id: demo-1234abcd` that enqueues a sync and fails: every log line, the job's included, carries `demo-1234abcd`. A server error page's digest matches the `request.unhandled_error` line. `curl -H "Authorization: Bearer $METRICS_TOKEN" .../api/metrics` shows the queue gauges, which a local Prometheus scrapes.
 
 **Done when.**
-- [ ] Request IDs reach every log line in actions, route handlers and jobs, and `onRequestError` logs the digest.
-- [ ] `/api/metrics` reports queue depth, job failures and LLM spend behind a token.
-- [ ] `lib/utils/logger.ts` keeps only used exports and has no chalk path or `@ts-ignore`.
-- [ ] No `console.*` call remains outside scripts, and `no-console` is enforced.
+- [x] Request IDs reach every log line in actions, route handlers and jobs, and `onRequestError` logs the digest.
+- [x] `/api/metrics` reports queue depth, job failures and LLM spend behind a token.
+- [x] `lib/utils/logger.ts` keeps only used exports and has no chalk path or `@ts-ignore`.
+- [x] No `console.*` call remains outside scripts, and `no-console` is enforced.
+
+(as merged: the AsyncLocalStorage store, `runWithRequestContext` and `generateRequestId` live in `lib/utils/log-context.ts`, not the logger, because 144 test files mock `@/lib/utils/logger`; the logger reads it. `getBaseLogger` stays as an `@internal` export for `__tests__/helpers/log-capture.ts`. The id header and its check are `REQUEST_ID_HEADER`/`isValidRequestId` in `lib/request-headers.ts` (the proxy cannot import server-only modules); `getRequestId()` is `lib/observability/request-context.ts`. Route handlers: `withRequestContext(handler)` in `lib/actions/route.ts` wraps every `route.ts` export (`export const GET = withRequestContext(handleGet)`) and carries the request id only, not a user id. There was no `enqueueFromRequest`: `traceQueue()` (`lib/queue/job-meta.ts`) patches `add`/`addBulk` on the three producer queues (`lib/queue/client.ts`, `rewind-producers.ts`, `rewind-batch-queue.ts`), so every enqueue in a request or a job stamps `_meta.requestId`; `runJobInContext` wraps both Workers' processors, and their `completed`/`failed` handlers log `requestId: jobRequestId(job)`. Failures: `recordJobFailure` (`lib/observability/job-failures.ts`) counts every failed attempt, retries included. Metrics: BullMQ 6 has no `paused` job state, so the gauges cover waiting, active, completed, failed, delayed and prioritized; the spend purposes are `chat` (rows with a `chatConversationId`) and `wrapped` (the rest), from `llmSpendSince()` in `lib/llm/usage-totals.ts`; the loop metric is `plex_manager_event_loop_delay_p99_seconds`, reset each scrape. `BUILD_COMMIT` is a new optional variable (Dockerfile `ARG`, `docker-publish.yml` passes `github.sha`). `no-console` is an error everywhere but `scripts/**`, `evals/**`, `prisma/seed.ts` and the logger; the only calls left were the five client error boundaries, now on `createLogger("error-boundary")` with the digest. The redaction masks the share segment of a `routePath` too (`/rewind/s/[masked]`). E2E specs were not run.)
 
 ### Step P11.5: Admin actions on the action helper; server-only boundaries
 
@@ -310,8 +314,10 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Name a migration `latest`: the name check fails inside `schema-drift`. Locally, run the app with `?schema=pm_test` after migrating into it: the home page loads.
 
 **Done when.**
-- [ ] New migration names are checked, and the docs describe the `--create-only` workflow.
-- [ ] A valid `?schema=` reaches the runtime adapter, and an invalid one stops boot.
+- [x] New migration names are checked, and the docs describe the `--create-only` workflow.
+- [x] A valid `?schema=` reaches the runtime adapter, and an invalid one stops boot.
+
+(as merged: the baseline `.legacy-names.json` lists all 51 folders on the start point, including both `20270115000000_*` folders; every later folder must be later than the newest of them and than the folder before it. A timestamp may run up to 180 days ahead of the clock, because plan-calendar timestamps (2027) are ahead of the build date. Names fail only when every word is deny-listed (`latest_changes`), so `fix_invite_expiry` passes. The env issue is `DATABASE_URL` `schema_invalid`, and `createPrismaClient()` (now exported, `@internal`) also throws on an invalid name outside production; `prisma/seed.ts` passes the schema too. `20251122201244_combined_schema_updates` was edited (`table_schema = 'public'` to `current_schema()`): without it no migration into a non-public schema could finish. `migrate deploy`/`status` ignore the new checksum; `migrate dev` on an existing contributor database asks for a reset, or run `UPDATE "_prisma_migrations" SET checksum = 'af13d7e87e9a3687266696b8daa07909e189c98a5fe6b548cf5f098680e8a83a' WHERE migration_name = '20251122201244_combined_schema_updates'`.)
 
 ### Step P11.7: Discord bot lifecycle and command registration
 
@@ -513,11 +519,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Invite a Jellyfin member and sign them in: they see the Jellyfin onboarding and a Jellyfin tile. On `/admin/users` the Service column shows Jellyfin, and the detail page shows "Jellyfin access: enabled". Turn it off: the mock server records `IsDisabled: true`, and the member is signed out.
 
 **Done when.**
-- [ ] `primaryAuthService` is written on every create path, backfilled, and stored as an enum.
-- [ ] Onboarding and the home tiles follow the member's service.
-- [ ] Admins see each member's service and Jellyfin status, and can turn Jellyfin access off and on with an audit entry.
+- [x] `primaryAuthService` is written on every create path, backfilled, and stored as an enum.
+- [x] Onboarding and the home tiles follow the member's service.
+- [x] Admins see each member's service and Jellyfin status, and can turn Jellyfin access off and on with an audit entry.
 - [ ] The seed, the mock Jellyfin server and the sign-in, onboarding and admin tests exist and pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: the rule lives in `lib/members/service.ts` (P11.10 wrote it in `lib/member/`; the P11 integration moved it to the plan's path beside P11.13's `lib/members/` and dropped P11.13's stand-in); `memberServices` and `primaryService` take `{ plexUserId, jellyfinUserId[, primaryAuthService] }`. Migration `20270116000000_p1110_primary_auth_service_enum`; Prisma enum `AuthService`. The readers are `getOnboardingStatus` and `getHelpData` (onboarding, Help and home all read `getHelpData`). `QuickLinksProps.media` is now an array, one tile per linked service, test ids `home-quick-link-plex` / `home-quick-link-jellyfin` (was `home-quick-link-media`). The detail DTO is `lib/admin/user-detail.ts` (`jellyfinUserId`, `services`, `primaryService`, `jellyfinStatus`, null without a Jellyfin account; `primaryAuthService` is gone from it); the list DTO gains `jellyfinUserId`, `services`, `primaryService` and the list a `?service=` filter. `setJellyfinAccountDisabled` is in `lib/connections/jellyfin-users.ts` (after the integration it returns P11.13's `JellyfinDisableResult`: `changed`/`unchanged`/`not_found`, or `JELLYFIN_ADMIN`/`JELLYFIN_UNAVAILABLE`); `isJellyfinAdmin` is now exported from `lib/jellyfin-auth.ts`. `setMemberJellyfinAccess` ends sessions with reason `unshared` and re-syncs the role with `access_granted` on enable. The mock Jellyfin server is started by `e2e/global-setup.ts`, which exports `E2E_JELLYFIN_URL`; global setup seeds only the members (`jf-member`, `both-member`, in `e2e/helpers/jellyfin-members.ts`), and each spec that needs Jellyfin upserts its own active row pointing at the mock (as `e2e/jellyfin-member.spec.ts` does), so other specs keep a Plex-only sign-in. Onboarding's root carries `onboarding-service-<service>`.)
 
 ### Step P11.11: Stripe for Jellyfin-only members
 
@@ -655,11 +663,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Remove a seeded member who has a subscription, a Discord link, marks, a Rewind with a public link and watchlist sync on. The dialog shows the counts. After confirming: Stripe shows the subscription cancelled, the Plex share is gone, the Discord role and grant are revoked, the public link returns 404, and a query over the inventory finds no rows for the member.
 
 **Done when.**
-- [ ] Unshare and revoke stop watchlist sync and clear the stored Plex token.
-- [ ] `eraseMember` runs the external effects, deletes or anonymises every inventory row, and audits the removal with ids only.
-- [ ] The admin action needs the member's name typed, refuses protected members, and shows dry-run counts.
-- [ ] `DiscordCommandLog` has its foreign key, and `docs/privacy.md` holds the inventory checked by a test.
+- [x] Unshare and revoke stop watchlist sync and clear the stored Plex token.
+- [x] `eraseMember` runs the external effects, deletes or anonymises every inventory row, and audits the removal with ids only.
+- [x] The admin action needs the member's name typed, refuses protected members, and shows dry-run counts.
+- [x] `DiscordCommandLog` has its foreign key, and `docs/privacy.md` holds the inventory checked by a test.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270116000003_p1113_discord_command_log_user_fk`. P11.10 and P11.11 had not merged, so this step wrote the smallest versions of their helpers at the plan's paths, for them to replace or extend: `memberServices` in `lib/members/service.ts`, `revokeServiceAccess(user)` in `lib/members/access-actions.ts` (Plex unshare, Jellyfin disable; returns `{ success, plex?, jellyfin? }` or a code: `PLEX_AUTH`, `PLEX_UNAVAILABLE`, `JELLYFIN_ADMIN`, `JELLYFIN_UNAVAILABLE`), and `setJellyfinAccountDisabled(config, id, disabled)` appended to `lib/connections/jellyfin-users.ts` (merges the policy, refuses an administrator, a 404 is `not_found`). `actions/admin/member-access.ts` holds `previewMemberRemoval` (the dry run the dialog loads) and `removeMember`; P11.10's `setMemberJellyfinAccess` joins it. `stopSyncAndClearPlexToken` (`lib/members/offboard.ts`) runs in `unshareUserLibrary` and `processPlexAccessRevoke`; `isPlexServerOwner` moved to `lib/members/owner.ts`. `NO_ACCESS` is a missing member or access level `none`; `lapsed` stays `NOT_ENTITLED`. `clearDiscordRoleForUser` itself revokes the grant (`revokeDiscordToken`, refresh token first) and deletes the Discord id's chat sessions, so a member's own unlink revokes too; it returns `{ linked, roleCleared, grantRevoked }`, and Discord failures never stop a removal. Removal also refuses a queued Rewind generation, not only a running one; it anonymises admin LLM rows found by `wrappedId` as well as `generationId`; sessions end before the queued jobs (`watchlist:user:<id>`, `discord:role:<id>`) are removed, so the role sync that `endUserSessions` queues is dropped too. The danger zone is at the foot of the Overview tab; its dialog is `RemoveMemberDialog` with test ids `admin-remove-member-open`, `-confirm-input`, `-button`, `-preview` and `-count-<table>`. Rate limit `admin:remove-member` (10 an hour); audit type `MEMBER_ERASED`; session reason `removed`; flash `member_removed`. The E2E spec was written but not run.)
 
 ### Step P11.14: Retention jobs for content tables
 
@@ -810,10 +820,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Send the bot a DM: the reply carries the disclosure once, and `/admin/discord` shows "Message, 42 characters" instead of the text. Open a member's conversation page as an admin: `SELECT type, details FROM "AuditLog" ORDER BY "createdAt" DESC LIMIT 1` shows `MEMBER_CONTENT_VIEWED` with the surface.
 
 **Done when.**
-- [ ] No DM or assistant question text is stored in `DiscordCommandLog`, including existing rows.
-- [ ] The disclosure appears in the first reply of each session, in `/help`, at sign-in and on the help and account pages.
-- [ ] The remaining member-data writes and the admin reads of member content emit audit events, with reads deduplicated per hour.
+- [x] No DM or assistant question text is stored in `DiscordCommandLog`, including existing rows.
+- [x] The disclosure appears in the first reply of each session, in `/help`, at sign-in and on the help and account pages.
+- [x] The remaining member-data writes and the admin reads of member content emit audit events, with reads deduplicated per hour.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270116000006_p1116_discord_command_log_args_length` adds `argsLength` and moves each existing CHAT row's `char_length(commandArgs)` into it before nulling the text; `createCommandLog` also forces `commandArgs` to null for any CHAT row. There is no `lib/discord/copy.ts`: the pure string is `assistantDisclosure(provider)` in `lib/ui/privacy-copy.ts` (with `chatMessageLabel(n)`, "Message, N characters"), and the server read of the active chat provider is `getAssistantDisclosure()` in `lib/llm/assistant-disclosure.ts`, used by the bot, `/help`, the sign-in pass (`MemberPass` prop `assistantDisclosure`), `/help#privacy` and a minimal "Your data" card on `/account` (`account-your-data`) that P11.15 extends. `getOrCreateSession` returns `created`; the disclosure leads the first reply and is never stored in the history. The `/assistant ask` description changed, so the owner re-runs `npm run register-discord-commands`. No `REWIND_REGENERATED_BY_ADMIN`: `adminRegenerateRewind` (the only admin regenerate path; P7.9's rollback writes `REWIND_ROLLED_BACK`) already writes `REWIND_REGENERATE_REQUESTED` with `targetUserId`. New types `MEMBER_UNSHARED`, `MEMBERS_IMPORTED` (counts and `createdUserIds`, no single target), `MEMBER_CONTENT_VIEWED`, `MEMBER_CONTENT_LISTED`. The helpers are `auditMemberRead(surface, targetUserId, actorUserId)` and `auditMemberListed(surface, actorUserId, filters)` in `lib/security/audit-log.ts`, deduplicated through the `audit:read` limit (1 point an hour); surfaces: `activity-timeline` (in the `getUserActivityTimeline` action), `llm-usage-detail`, `llm-conversation`, `rewind-history`, `chatbot-tautulli` (the Tautulli user id is the Plex id, mapped to the app user; a Plex user without an account here is not audited), and listings `discord-activity` and `watchlist-panel` (`getWatchlistSyncStats` now calls `assertAdmin()`). The services test is `__tests__/lib/discord-services.test.ts`, which already existed. `docs/privacy.md` did not exist on this branch (P11.13 creates it in parallel), so its "Admin access" section is for the merge: "Admins can see each member's watch activity and Rewind (and its past versions), the assistant conversations stored in `LLMUsage` (prompts, responses and tool results), Discord command history (assistant messages as a length only), media marks and watchlist sync history. Opening one member's content writes `MEMBER_CONTENT_VIEWED` (once an hour per admin, member and page); pages that list every member's content write `MEMBER_CONTENT_LISTED`; unsharing, importing members and regenerating a Rewind are audited too. `AuditLog` rows are kept for 400 days (P11.14).")
 
 ### Step P11.17: Locale follow-ups
 

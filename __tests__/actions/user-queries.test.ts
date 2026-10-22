@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { makePrismaUser, makePrismaWrapped, makePrismaLlmUsage } from '../utils/test-builders'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { stopSyncAndClearPlexToken } from '@/lib/members/offboard'
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -25,6 +26,8 @@ jest.mock('@/lib/llm/usage-totals', () => ({
 }))
 
 beforeEach(() => mockReset(prismaMock))
+
+jest.mock('@/lib/members/offboard', () => ({ stopSyncAndClearPlexToken: jest.fn() }))
 
 jest.mock('@/lib/connections/plex', () => ({
   checkUserServerAccess: jest.fn(),
@@ -618,6 +621,8 @@ describe('unshareUserLibrary', () => {
       where: { id: 'member-1' },
       data: { sessionVersion: { increment: 1 } },
     })
+    // GAP-31: the watchlist sync stops and the stored Plex token goes
+    expect(stopSyncAndClearPlexToken).toHaveBeenCalledWith('member-1')
   })
 
   it('reports a share that is already gone as success, and still ends the sessions', async () => {
@@ -628,6 +633,7 @@ describe('unshareUserLibrary', () => {
       data: { status: 'already_removed' },
     })
     expect(mockPrisma.user.updateMany).toHaveBeenCalledTimes(1)
+    expect(stopSyncAndClearPlexToken).toHaveBeenCalledWith('member-1')
   })
 
   it.each([

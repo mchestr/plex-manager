@@ -6,7 +6,9 @@ import { adminAction, memberAction } from "@/lib/actions/define-action"
 import { type ActionErrorCode, type ActionResult, fail, ok } from "@/lib/actions/result"
 import { unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { type PlexUnshareErrorCode } from "@/lib/connections/plex-invitations"
+import { stopSyncAndClearPlexToken } from "@/lib/members/offboard"
 import { prisma } from "@/lib/prisma"
+import { AuditEventType, auditMemberRead, logAuditEvent } from "@/lib/security/audit-log"
 import { endUserSessions } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
 import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
@@ -87,7 +89,8 @@ const UNSHARE_ERROR_COPY: Record<PlexUnshareErrorCode, string> = {
 /**
  * Removes a user's share of the configured Plex server (admin only), leaving
  * their plex.tv friendship and the owner's other servers alone. A share that
- * is already gone succeeds as `already_removed`. Either success also ends the
+ * is already gone succeeds as `already_removed`. Either success also stops
+ * their watchlist sync, clears their stored Plex token (GAP-31) and ends the
  * user's sessions (SEC-10).
  *
  * @param input - `{ userId }`
@@ -131,7 +134,9 @@ export const unshareUserLibrary = adminAction({
       return { success: false, code: result.code, error: UNSHARE_ERROR_COPY[result.code] }
     }
 
+    await stopSyncAndClearPlexToken(user.id)
     await endUserSessions(user.id, "unshared", actorId)
+    logAuditEvent(AuditEventType.MEMBER_UNSHARED, actorId, { targetUserId: user.id, status: result.status })
 
     logger.info("Unshared user library", { userId: user.id, status: result.status })
 
@@ -166,9 +171,14 @@ export const getUserActivityTimeline = adminAction({
     pageSize: z.number().int().min(1).max(50).default(10),
   }),
   fallbackError: "Could not load the activity",
-  handler: async ({ userId, cursor: rawCursor, pageSize }): Promise<ActionResult<UserActivityTimelineData>> => {
+  handler: async (
+    { userId, cursor: rawCursor, pageSize },
+    { userId: adminId }
+  ): Promise<ActionResult<UserActivityTimelineData>> => {
     const cursor = rawCursor === undefined ? null : decodeActivityCursor(rawCursor)
     if (rawCursor !== undefined && !cursor) return fail("VALIDATION", BAD_PAGE)
-    return ok(await loadActivityTimeline(userId, { cursor, pageSize }))
+    const timeline = await loadActivityTimeline(userId, { cursor, pageSize })
+    await auditMemberRead("activity-timeline", userId, adminId)
+    return ok(timeline)
   },
 })

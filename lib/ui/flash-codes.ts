@@ -36,7 +36,10 @@ export type DiscordCallbackFlash = (typeof DISCORD_CALLBACK_CODES)[number]
 /** The connect route's refusals. */
 type DiscordConnectFlash = "discord_rate_limited" | "discord_unavailable"
 
-type FlashCode = DiscordCallbackFlash | DiscordConnectFlash
+/** An admin removed a member (P11.13); the users list shows it. */
+type AdminFlash = "member_removed"
+
+type FlashCode = DiscordCallbackFlash | DiscordConnectFlash | AdminFlash
 
 /**
  * NextAuth's error codes: sign-in errors reach the sign-in page as `?error=`,
@@ -52,7 +55,7 @@ type NextAuthErrorCode =
   | "Default"
 
 /** The codes whose toast is an error, with copy in `error-copy.ts`. */
-export type FlashErrorCode = Exclude<FlashCode, "discord_linked"> | NextAuthErrorCode
+export type FlashErrorCode = Exclude<FlashCode, "discord_linked" | AdminFlash> | NextAuthErrorCode
 
 type FlashTone = "success" | "error"
 
@@ -68,6 +71,12 @@ const DISCORD_LINKED: FlashToast = {
   tone: "success",
 }
 
+const MEMBER_REMOVED: FlashToast = {
+  title: "Member removed",
+  description: "Their access, sessions and stored data are gone.",
+  tone: "success",
+}
+
 const errorToast = (code: FlashErrorCode): FlashToast => ({ ...errorCopy(code, { audience: "member" }), tone: "error" })
 
 const FLASH: Record<FlashCode, FlashToast> = {
@@ -77,6 +86,7 @@ const FLASH: Record<FlashCode, FlashToast> = {
   discord_session_mismatch: errorToast("discord_session_mismatch"),
   discord_rate_limited: errorToast("discord_rate_limited"),
   discord_unavailable: errorToast("discord_unavailable"),
+  member_removed: MEMBER_REMOVED,
 }
 
 const NEXT_AUTH: Record<NextAuthErrorCode, FlashToast> = {

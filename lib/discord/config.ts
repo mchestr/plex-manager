@@ -107,3 +107,21 @@ export function getDiscordPortalUrl(): string {
     "http://localhost:3000"
   return process.env.DISCORD_PORTAL_URL || `${base}/discord/link`
 }
+
+/**
+ * Whether the Discord bot is switched on (`DiscordIntegration.botEnabled`).
+ * The bot runs under the `discord-bot` lease (`lib/locks/`). A failed read
+ * counts as off.
+ */
+export async function isDiscordBotEnabled(): Promise<boolean> {
+  try {
+    const integration = await prisma.discordIntegration.findUnique({
+      where: { id: "discord" },
+      select: { botEnabled: true },
+    })
+    return integration?.botEnabled ?? false
+  } catch (error) {
+    logger.debug("Error checking if the Discord bot is enabled", { error })
+    return false
+  }
+}

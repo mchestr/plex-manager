@@ -107,6 +107,18 @@ describe('UsersTable', () => {
     expect(screen.getByTestId('admin-users-pagination-info')).toHaveTextContent('Showing all 2 members')
   })
 
+  it("shows each member's services as badges (P11.10)", () => {
+    renderTable({
+      rows: [
+        member('u-jf', 'Jo Fin', { plexUserId: null, jellyfinUserId: 'jf-1', services: ['jellyfin'], primaryService: 'jellyfin' }),
+        member('u-both', 'Bo Th', { jellyfinUserId: 'jf-2', services: ['plex', 'jellyfin'] }),
+      ],
+    })
+
+    expect(within(screen.getByTestId('admin-users-row-u-jf')).getByTestId('admin-user-service-badge')).toHaveTextContent('Jellyfin')
+    expect(within(screen.getByTestId('admin-users-row-u-both')).getByTestId('admin-user-service-badge')).toHaveTextContent('PlexJellyfin')
+  })
+
   it('heads the menu with the member and puts Remove Plex access last', async () => {
     renderTable()
 

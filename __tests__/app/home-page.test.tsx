@@ -48,7 +48,7 @@ jest.mock('@/lib/member/home-data', () => ({
     service: 'plex',
     announcements: [],
     announcementsSeenAt: null,
-    quickLinks: { media: { service: 'plex', serverName: 'Test Plex', url: null }, requestsUrl: null, discord: null },
+    quickLinks: { media: [{ service: 'plex', serverName: 'Test Plex', url: null }], requestsUrl: null, discord: null },
     watchlist: null,
     hasSubscription: false,
     supportChannelUrl: null,

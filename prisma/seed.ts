@@ -1,5 +1,6 @@
 import { PrismaClient } from '../lib/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { pgAdapterOptionsFor } from '../lib/db/schema-param'
 import { resolveSeedTarget } from '../lib/security/test-mode'
 
 /**
@@ -11,7 +12,7 @@ import { resolveSeedTarget } from '../lib/security/test-mode'
 async function main() {
   const target = resolveSeedTarget(process.env)
   console.log(`Seeding database "${target.database}" on host "${target.host}"`)
-  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: target.url }) })
+  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: target.url }, pgAdapterOptionsFor(target.url)) })
   try {
     await seed(prisma)
   } finally {
@@ -71,6 +72,31 @@ async function seed(prisma: PrismaClient) {
       plexUserId: 'regular-plex-id',
       name: 'Regular User',
       email: 'regular@example.com',
+      isAdmin: false,
+      primaryAuthService: 'plex',
+      onboardingStatus: { plex: true, jellyfin: false },
+    },
+  })
+
+  // A Jellyfin-only member and one with both identities (P11.10), matching
+  // e2e/helpers/jellyfin-members.ts
+  await prisma.user.create({
+    data: {
+      id: 'jf-member',
+      jellyfinUserId: 'jf-member-jellyfin-id',
+      name: 'jf-member',
+      isAdmin: false,
+      primaryAuthService: 'jellyfin',
+      onboardingStatus: { plex: false, jellyfin: true },
+    },
+  })
+  await prisma.user.create({
+    data: {
+      id: 'both-member',
+      plexUserId: 'both-member-plex-id',
+      jellyfinUserId: 'both-member-jellyfin-id',
+      name: 'both-member',
+      email: 'both-member@example.com',
       isAdmin: false,
       primaryAuthService: 'plex',
       onboardingStatus: { plex: true, jellyfin: false },

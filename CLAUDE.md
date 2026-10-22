@@ -67,6 +67,7 @@ lib/                    # Utilities, helpers, business logic
 ├── design/            # Token mirror of app/globals.css and colour contrast helpers
 ├── discord/           # Discord bot, commands and linking
 ├── llm/               # LLM chat client and pricing
+├── observability/     # Request id reader, /api/metrics sources and the Prometheus text writer
 ├── og/                # App icons and the default OG card (next/og)
 │   └── fonts/         # Committed IBM Plex subsets for next/og (scripts/build-og-fonts.py)
 ├── rewind/            # Rewind 2026: typesetter, format rules, page registry, card fonts
@@ -416,6 +417,11 @@ logger.warn('Deprecation warning', { feature })
 
 See the JSDoc in `lib/utils/logger.ts` for log levels, metadata, and best practices.
 
+- **No `console.*`**: ESLint's `no-console` is an error outside `scripts/`, `evals/`, `prisma/seed.ts` and the logger; client code logs through `createLogger` too.
+- **Request IDs**: `proxy.ts` forwards an `x-request-id` (a valid incoming one, else a new UUID) and returns it as `X-Request-ID`. Actions built with the action helpers, and route handlers exported through `withRequestContext` (`@/lib/actions/route`), run in a context (`lib/utils/log-context.ts`) that puts `requestId` and `userId` on every log line. Jobs added in a request carry `_meta.requestId` (`traceQueue` in `lib/queue/job-meta.ts`) and the Workers run them in that context. A Server Component that logs passes `{ requestId: await getRequestId() }` (`lib/observability/request-context.ts`).
+- **Unhandled errors**: `instrumentation.ts` exports `onRequestError`, which logs `request.unhandled_error` with the digest the error page shows.
+- **Metrics**: `/api/metrics` (Prometheus text, behind `METRICS_TOKEN`; 404 without it) reports queue depth, job failures, LLM spend and the process; see `docs/operations.md`.
+
 ## Database
 
 ### Prisma Workflow
@@ -427,6 +433,12 @@ npm run db:push        # Contributor-only: prototype on a throwaway database
 npm run db:migrate     # Contributor-only: create a migration
 npm run db:studio      # Open database GUI
 ```
+
+#### Creating a migration
+- Create it with `npx prisma migrate dev --create-only --name <descriptive_name>` against a database whose name ends in `_test`, review the generated `migration.sql`, then apply it with `npm run db:deploy`. Never hand-type a timestamp or rename a folder, and never edit a merged migration.
+- `node scripts/check-migrations.mjs` (in CI's Schema Drift job) checks every folder not listed in `prisma/migrations/.legacy-names.json`: a 14-digit timestamp later than every earlier folder's and not in the future, at least two lowercase words (`add_member_export`, not `latest` or `fix_changes`), and a `migration.sql`. Never add a folder to that list.
+- `20250101000000_init` is a retroactive baseline: an install made with `prisma db push` marks every folder applied with `npx prisma migrate resolve --applied <name>` (`docs/operations.md`, "Installed with db push").
+- `?schema=` in `DATABASE_URL` applies to migrations and to the app's client alike (`lib/db/schema-param.ts`); production refuses to boot on a name that is not a plain identifier.
 
 ### Prisma Patterns
 - **Always use Prisma Client** - Never write raw SQL

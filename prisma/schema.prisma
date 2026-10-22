@@ -20,7 +20,7 @@ model User {
   plexUserId            String?                @unique
   plexAuthToken         String? // Plex auth token (stored during login for watchlist API access)
   jellyfinUserId        String?                @unique // Jellyfin user ID (if user was created via Jellyfin invite)
-  primaryAuthService    String? // Track which service user authenticated with first: "plex" or "jellyfin"
+  primaryAuthService    AuthService? // The service the member joined with; written at invite, sign-in and import (P11.10)
   isAdmin               Boolean                @default(false)
   onboardingStatus      Json?                  @default("{\"plex\": false, \"jellyfin\": false}") // Track onboarding completion per service
   plexWrapped           PlexWrapped[]
@@ -42,12 +42,19 @@ model User {
   rewindGenerations     RewindGeneration[]
   rewindPrefs           RewindPrefs[]
   rewindExclusions      RewindExclusion[]
+  discordCommandLogs    DiscordCommandLog[]
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
 
   @@index([isAdmin])
   @@index([primaryAuthService])
   @@index([isExempt])
+}
+
+/// A member's media server (P11.10). `lib/member/service.ts` reads it with the linked identifiers.
+enum AuthService {
+  plex
+  jellyfin
 }
 
 // Setup and Configuration models
@@ -500,7 +507,20 @@ model DiscordIntegration {
   updatedBy        String?
 }
 
-// Distributed lock for Discord bot (ensures only one pod runs the bot)
+// One lease per background role ("discord-bot", "watchlist-sync"): only one
+// process holds a name at a time (lib/locks/lease-lock.ts).
+model LeaseLock {
+  name          String   @id
+  instanceId    String // Unique identifier for the holding process
+  acquiredAt    DateTime
+  expiresAt     DateTime // The lease lapses if not renewed (handles crashed pods)
+  lastRenewedAt DateTime
+
+  @@index([expiresAt])
+}
+
+// Legacy Discord bot lock: read only by LeaseLock's one-release overlap check.
+// P11.3 drops it.
 model DiscordBotLock {
   id            String   @id @default("discord-bot")
   instanceId    String // Unique identifier for this pod/instance
@@ -710,13 +730,15 @@ model DiscordCommandLog {
   discordUserId   String
   discordUsername String?
 
-  // Linked Plex user (if available)
+  // Linked app user (if available); removing the member deletes their rows first, and SetNull covers the rest
   userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   // Command details
   commandType DiscordCommandType
   commandName String // e.g., "!finished", "!assistant", "!clear"
-  commandArgs String? // Arguments passed to the command
+  commandArgs String? // Arguments passed to the command; always null for CHAT rows (GAP-32)
+  argsLength  Int? // Characters a member typed to the assistant (CHAT rows), never the text
 
   // Context
   channelId   String
@@ -820,7 +842,8 @@ model WatchlistSyncHistory {
   @@index([status])
 }
 
-// Watchlist Sync - Distributed lock (mirrors DiscordBotLock)
+// Legacy watchlist sync lock: read only by LeaseLock's one-release overlap
+// check. P11.3 drops it.
 model WatchlistSyncLock {
   id            String   @id @default("watchlist-sync")
   instanceId    String // Unique identifier for this pod/instance

@@ -8,6 +8,9 @@ import { Icon } from "@/components/ui/icon"
 import { errorCopy } from "@/lib/ui/error-copy"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("error-boundary")
 
 interface ErrorStateProps {
   error?: Error & { digest?: string }
@@ -28,7 +31,7 @@ interface ErrorStateProps {
 export function ErrorState({ error, reset, title, message, secondaryAction, className }: ErrorStateProps) {
   useEffect(() => {
     if (error) {
-      console.error("Route Error:", error)
+      logger.error("Route Error", error, { digest: error.digest })
     }
   }, [error])
 

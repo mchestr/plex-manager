@@ -5,6 +5,7 @@
  * Add new job types here as the system grows.
  */
 
+import type { JobMeta } from "@/lib/queue/job-meta"
 import type { DryRunInput } from "@/lib/rewind/dry-run/input"
 import type { SessionRevocationReason } from "@/lib/session-revocation"
 import type { GenerationAudience } from "@/lib/wrapped/pipeline/eligibility"
@@ -366,9 +367,12 @@ export interface RewindSeasonOpenPayload {
 // =============================================================================
 
 /**
- * Maps job types to their payload types
+ * Maps job types to their payload types, each with the optional `_meta` a
+ * job added in a request carries (`lib/queue/job-meta.ts`, P11.4)
  */
-export interface JobPayloadMap {
+export type JobPayloadMap = { [K in keyof JobPayloads]: JobPayloads[K] & { _meta?: JobMeta } }
+
+interface JobPayloads {
   [JOB_TYPES.WATCHLIST_SYNC_USER]: WatchlistSyncUserPayload
   [JOB_TYPES.WATCHLIST_SYNC_ALL]: WatchlistSyncAllPayload
   [JOB_TYPES.STRIPE_WEBHOOK]: StripeWebhookPayload

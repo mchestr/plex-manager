@@ -80,7 +80,7 @@ export async function seedRewind(): Promise<void> {
     savedFlags ??= { rewindEnabled: config.rewindEnabled, rewindAudience: config.rewindAudience };
     await prisma.config.update({ where: { id: 'config' }, data: { rewindEnabled: true, rewindAudience: 'all' } });
     for (const member of Object.values(REWIND_MEMBERS)) {
-      const row = { ...member, isAdmin: false, primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } };
+      const row = { ...member, isAdmin: false, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true, jellyfin: false } };
       await prisma.user.upsert({ where: { id: member.id }, create: row, update: row });
     }
   } finally {

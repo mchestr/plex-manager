@@ -1,79 +1,69 @@
 import { createLogger } from "@/lib/utils/logger"
-import type { DistributedLock } from "./lease"
+import type { LeaseLock } from "./lease-lock"
 
-const logger = createLogger("DISCORD_BOT_LOCK")
+const logger = createLogger("LEASE_POLLER")
 
 /**
- * How often the poll loop ticks (acquire, re-check enabled, config bounce).
- * Renewal runs on its own timer, so this only bounds how quickly a free lock is
- * picked up and a settings change is applied.
+ * How often the poll loop ticks (acquire, re-check enabled, config bounce,
+ * held tick). Renewal runs on its own timer, so this only bounds how quickly a
+ * free lease is picked up and a settings change is applied.
  */
 export const DEFAULT_POLL_INTERVAL_MS = 10 * 1000
 
-export interface BotLockPollerCallbacks {
-  /** Fired once when the lock is acquired and the bot should start. */
+export interface LeasePollerCallbacks {
+  /** Fired once when the lease is acquired and the work should start. */
   onLockAcquired: () => Promise<void>
-  /** Fired once when the lock is lost or the bot is disabled and should stop. */
+  /** Fired once when the lease is lost or the work is disabled and should stop. */
   onLockLost: () => Promise<void>
-  /** Whether the bot is enabled (DB flag). Checked every tick. */
+  /** Whether the work is enabled. Checked every tick. */
   isEnabled: () => Promise<boolean>
+  /**
+   * Runs on every poll while the lease is held, the acquiring poll included,
+   * after any config bounce. Keep it short: a long run belongs in a promise it
+   * starts and does not await, or it holds up the next tick.
+   */
+  onHeldTick?: () => Promise<void>
 }
 
-export interface BotLockPollerOptions {
+export interface LeasePollerOptions {
   /** How often to run the poll loop. Defaults to {@link DEFAULT_POLL_INTERVAL_MS}. */
   pollIntervalMs?: number
   /**
-   * How often to renew the lease while the bot runs. Defaults to a third of the
-   * lock's lease (10 s for the default 30 s lease). It must be a finite number
-   * above 0 and below half the lease, so one late or skipped renewal still
-   * leaves time for the next before the lease lapses; the constructor throws
-   * otherwise (BP-12). A renewal that fails is not retried: it ends the run.
+   * How often to renew the lease while the work runs. Defaults to a third of
+   * the lock's lease (10 s for the default 30 s lease). It must be a finite
+   * number above 0 and below half the lease, so one late or skipped renewal
+   * still leaves time for the next before the lease lapses; the constructor
+   * throws otherwise (BP-12). A renewal that fails is not retried: it ends the run.
    */
   renewIntervalMs?: number
   /**
-   * Reads the current bot config version (bumped whenever the token / support
-   * config changes). Injectable for tests. Defaults to a resolver that reads
-   * `DiscordIntegration.configVersion` (0 when no row exists). See {@link tick}
-   * for how a version change triggers a re-init bounce (Step 18 / FR-13).
+   * Reads the current config version (the Discord bot bumps it whenever the
+   * token or support config changes). When given, a change while the lease is
+   * held bounces the work: onLockLost, then onLockAcquired (Step 18 / FR-13).
+   * Without it there is no bounce.
    */
   getConfigVersion?: () => Promise<number>
 }
 
 /**
- * Default {@link BotLockPollerOptions.getConfigVersion} resolver: reads
- * `DiscordIntegration.configVersion` from the DB, defaulting to 0 when the row
- * is absent. Imported lazily inside the closure so the poller module stays free
- * of a hard prisma dependency for tests that inject their own resolver.
+ * # LeasePoller
  *
- * @internal
- */
-async function defaultGetConfigVersion(): Promise<number> {
-  const { prisma } = await import("@/lib/prisma")
-  const row = await prisma.discordIntegration.findUnique({
-    where: { id: "discord" },
-    select: { configVersion: true },
-  })
-  return row?.configVersion ?? 0
-}
-
-/**
- * # BotLockPoller
- *
- * Owns the background loops that manage the Discord-bot distributed lock
- * lifecycle, all driven off one shared {@link DistributedLock} instance.
+ * Owns the background loops that run one piece of work under one
+ * {@link LeaseLock}: the Discord bot, or the watchlist sync without Redis.
  *
  * ## Two timers, one lock
  *
- * - The **poll** timer (`pollIntervalMs`) acquires the lock while the bot is not
- *   running, re-checks the enabled flag, and bounces the bot on a config change.
+ * - The **poll** timer (`pollIntervalMs`) acquires the lease while the work is
+ *   not running, re-checks the enabled flag, bounces the work on a config
+ *   change, and runs `onHeldTick` while the lease is held.
  * - The **renewal** timer (`renewIntervalMs`, a third of the lease by default)
- *   runs only while the bot runs, and only renews the lease.
+ *   runs only while the work runs, and only renews the lease.
  *
  * Renewal used to ride on the poll tick, so a poll interval longer than the
  * lease (the old 60 s default against the 30 s lease) let the lease lapse
  * between ticks and the bot dropped offline every minute (BP-12). Renewal now
- * starts the moment the lock is acquired, before the bot logs in (which takes
- * seconds), and keeps running through a config bounce.
+ * starts the moment the lease is acquired, before the work starts (a bot login
+ * takes seconds), and keeps running through a config bounce.
  *
  * Both timers share one `running` flag and one lock object, and
  * `this.lock.isHeld()` stays the only authority on ownership. The lifecycle
@@ -90,27 +80,28 @@ async function defaultGetConfigVersion(): Promise<number> {
  *       return
  *
  *   if running:
- *       # --- Step 18: config-change / token-rotation bounce (FR-13) ---
- *       # Only the holder reaches here, so only the holder bounces.
- *       current = await getConfigVersion()
- *       if running and current != lastConfigVersion:
- *           queue: onLockLost(); onLockAcquired()   # in-place re-init, each only while running
- *           lastConfigVersion = current              # only if the re-init ran
- *           on failure -> stop renewal; release()    # next tick re-acquires
+ *       if getConfigVersion given:                  # Step 18 (FR-13)
+ *           current = await getConfigVersion()
+ *           if running and current != lastConfigVersion:
+ *               queue: onLockLost(); onLockAcquired()   # each only while running
+ *               lastConfigVersion = current              # only if the re-init ran
+ *               on failure -> stop renewal; release()    # next tick re-acquires
  *   else:
- *       version = await getConfigVersion()           # before acquire: a failed read takes nothing
+ *       version = await getConfigVersion?()         # before acquire: a failed read takes nothing
  *       if await lock.acquire():
  *           if stopped meanwhile -> release(); return
  *           lastConfigVersion = version; start renewal; queue: onLockAcquired() while running
+ *
+ *   if running: await onHeldTick?()
  * ```
  *
  * ## Ending a run
  *
  * Four paths end a run: disable, a failed bounce, a lost renewal and `stop()`.
- * Whichever sets `running` to false first tears the bot down. A lifecycle
+ * Whichever sets `running` to false first tears the work down. A lifecycle
  * callback queued before that (a bounce, or a login waiting behind a slow
- * teardown) re-checks `running` and skips its re-init, so the bot never comes
- * back up without the lease.
+ * teardown) re-checks `running` and skips its re-init, so the work never comes
+ * back up without the lease, and `onHeldTick` stops at once.
  *
  * ## Renewal tick
  *
@@ -119,12 +110,12 @@ async function defaultGetConfigVersion(): Promise<number> {
  *   if !(await lock.renew()) and still running -> stop renewal; onLockLost()
  * ```
  */
-export class BotLockPoller {
-  private readonly lock: DistributedLock
-  private readonly callbacks: BotLockPollerCallbacks
+export class LeasePoller {
+  private readonly lock: LeaseLock
+  private readonly callbacks: LeasePollerCallbacks
   private readonly pollIntervalMs: number
   private readonly renewIntervalMs: number
-  private readonly getConfigVersion: () => Promise<number>
+  private readonly getConfigVersion?: () => Promise<number>
 
   private timer?: ReturnType<typeof setInterval>
   private renewTimer?: ReturnType<typeof setInterval>
@@ -132,7 +123,7 @@ export class BotLockPoller {
   /**
    * Guards against overlapping ticks: if a tick's async work (acquire / bounce)
    * outlasts the poll interval, the next interval fire is skipped rather than
-   * running concurrently against the same lock/bot state.
+   * running concurrently against the same lock and work state.
    */
   private ticking = false
   /** Skips a renewal fire while the previous renewal is still in flight. */
@@ -140,25 +131,20 @@ export class BotLockPoller {
   /** True once onLockAcquired has fired and not yet been undone by onLockLost. */
   private running = false
   /**
-   * The `configVersion` the currently-initialized bot was started with. Captured
-   * whenever the bot is (re-)initialized while running; a later tick observing a
-   * different version bounces the bot to pick up fresh config.
+   * The config version the running work was started with. A later tick seeing
+   * a different version bounces the work to pick up fresh config.
    */
   private lastConfigVersion = 0
   /** Tail of the lifecycle-callback queue (see {@link runLifecycle}). */
   private lifecycle: Promise<void> = Promise.resolve()
 
-  constructor(
-    lock: DistributedLock,
-    callbacks: BotLockPollerCallbacks,
-    options: BotLockPollerOptions = {}
-  ) {
+  constructor(lock: LeaseLock, callbacks: LeasePollerCallbacks, options: LeasePollerOptions = {}) {
     const leaseDurationMs = lock.getLeaseDurationMs()
     const renewIntervalMs = options.renewIntervalMs ?? Math.floor(leaseDurationMs / 3)
     // NaN, 0 or a negative interval would make setInterval fire every ~1 ms.
     if (!Number.isFinite(renewIntervalMs) || renewIntervalMs <= 0 || renewIntervalMs >= leaseDurationMs / 2) {
       throw new Error(
-        `Discord bot lock renewal interval (${renewIntervalMs} ms) must be above 0 and less than half the lease (${leaseDurationMs} ms)`
+        `Lease renewal interval (${renewIntervalMs} ms) must be above 0 and less than half the lease (${leaseDurationMs} ms)`
       )
     }
 
@@ -166,7 +152,7 @@ export class BotLockPoller {
     this.callbacks = callbacks
     this.pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS
     this.renewIntervalMs = renewIntervalMs
-    this.getConfigVersion = options.getConfigVersion ?? defaultGetConfigVersion
+    this.getConfigVersion = options.getConfigVersion
   }
 
   /**
@@ -176,25 +162,25 @@ export class BotLockPoller {
    */
   async start(): Promise<void> {
     if (this.polling) {
-      logger.debug("Lock polling already started")
+      logger.debug("Lease polling already started", { name: this.lock.name })
       return
     }
 
     this.polling = true
     logger.debug(
-      `Starting Discord bot lock polling (every ${this.pollIntervalMs / 1000} seconds, renewing every ${this.renewIntervalMs / 1000} seconds)`
+      `Starting lease polling for ${this.lock.name} (every ${this.pollIntervalMs / 1000} seconds, renewing every ${this.renewIntervalMs / 1000} seconds)`
     )
 
-    // Try immediately on startup so a free lock is grabbed without waiting a tick.
+    // Try immediately on startup so a free lease is taken without waiting a tick.
     try {
-      const enabled = await this.callbacks.isEnabled()
-      if (enabled) {
+      if (await this.callbacks.isEnabled()) {
         await this.acquireAndStart("on startup")
+        await this.heldTick()
       } else {
-        logger.debug("Bot disabled in database - not acquiring lock on startup")
+        logger.debug("Disabled - not acquiring the lease on startup", { name: this.lock.name })
       }
     } catch (error) {
-      logger.debug("Error during initial lock acquisition", { error })
+      logger.debug("Error during initial lease acquisition", { name: this.lock.name, error })
     }
 
     // stop() may have run during the startup attempt, and a start() after that
@@ -209,8 +195,7 @@ export class BotLockPoller {
   }
 
   /**
-   * One iteration of the poll loop. Extracted so tests can advance fake timers
-   * and assert behavior deterministically.
+   * One iteration of the poll loop.
    *
    * @internal
    */
@@ -220,20 +205,17 @@ export class BotLockPoller {
     }
 
     // Skip if a previous tick is still in flight (its awaits outlasted the poll
-    // interval); overlapping ticks would race on the shared lock/bot state.
+    // interval); overlapping ticks would race on the shared lock and work state.
     if (this.ticking) {
-      logger.debug("Previous lock tick still in progress - skipping this tick")
+      logger.debug("Previous lease tick still in progress - skipping this tick", { name: this.lock.name })
       return
     }
     this.ticking = true
 
     try {
-      const enabled = await this.callbacks.isEnabled()
-
-      if (!enabled) {
-        // Bot disabled - shut down if running.
+      if (!(await this.callbacks.isEnabled())) {
         if (this.running) {
-          logger.debug("Bot disabled in database - shutting down bot")
+          logger.debug("Disabled - stopping the work and releasing the lease", { name: this.lock.name })
           this.markStopped()
           await this.runLifecycle(() => this.callbacks.onLockLost())
           await this.lock.release()
@@ -243,20 +225,26 @@ export class BotLockPoller {
 
       if (this.running) {
         await this.bounceIfConfigChanged()
-        return
+      } else {
+        await this.acquireAndStart("during polling")
       }
-
-      // Not running but enabled - try to acquire.
-      await this.acquireAndStart("during polling")
+      await this.heldTick()
     } catch (error) {
-      logger.debug("Error during lock polling", { error })
+      logger.debug("Error during lease polling", { name: this.lock.name, error })
     } finally {
       this.ticking = false
     }
   }
 
+  /** Runs `onHeldTick` while the work runs under the lease. @internal */
+  private async heldTick(): Promise<void> {
+    if (this.running && this.callbacks.onHeldTick) {
+      await this.callbacks.onHeldTick()
+    }
+  }
+
   /**
-   * Takes the lock and starts the bot, if the lock is free.
+   * Takes the lease and starts the work, if the lease is free.
    *
    * The config version is read before the acquire. Read after it, a failed read
    * left the lease held and renewed with no bot logged in, so no pod could run
@@ -266,22 +254,20 @@ export class BotLockPoller {
    * @internal
    */
   private async acquireAndStart(when: "on startup" | "during polling"): Promise<void> {
-    // Snapshot the version the bot initializes against, so a later tick can
-    // detect a rotation and bounce (Step 18).
-    const configVersion = await this.getConfigVersion()
+    const configVersion = this.getConfigVersion ? await this.getConfigVersion() : 0
     if (!(await this.lock.acquire())) {
       return
     }
 
     if (!this.polling) {
-      logger.debug("Lock polling stopped while acquiring - releasing lock")
+      logger.debug("Lease polling stopped while acquiring - releasing the lease", { name: this.lock.name })
       await this.lock.release()
       return
     }
 
-    logger.debug(`Lock acquired ${when} - initializing bot`)
+    logger.debug(`Lease acquired ${when} - starting`, { name: this.lock.name })
     this.lastConfigVersion = configVersion
-    // Renew from now on: the login below can take seconds.
+    // Renew from now on: a login can take seconds.
     this.markRunning()
     await this.runLifecycle(async () => {
       // A lost renewal or stop() may end the run while an earlier callback
@@ -293,33 +279,36 @@ export class BotLockPoller {
   }
 
   /**
-   * Step 18 (FR-13): config-change / token-rotation bounce.
+   * Step 18 (FR-13): config-change / token-rotation bounce, only when
+   * `getConfigVersion` was given.
    *
-   * Only the lock HOLDER calls this, so only the holder bounces (the guarantee
-   * the design relies on). If the tracked config version changed since the bot
-   * initialized, it re-initializes in place so the client logs in with the fresh
-   * token. The lock is kept across the bounce, and the renewal timer keeps the
-   * lease alive while the bot logs in again.
+   * Only the lease HOLDER calls this, so only the holder bounces. If the config
+   * version changed since the work started, it re-initializes in place (the
+   * bot logs in with the fresh token). The lease is kept across the bounce, and
+   * the renewal timer keeps it alive meanwhile.
    *
    * A renewal can be lost, or stop() can run, during the version read or while
    * the bounce waits in the lifecycle queue. Their teardown is then queued or
-   * done, so the bounce skips the re-init: otherwise the bot would come back up
-   * with no lease, and nothing would tear it down.
+   * done, so the bounce skips the re-init: otherwise the work would come back
+   * up with no lease, and nothing would tear it down.
    *
    * @internal
    */
   private async bounceIfConfigChanged(): Promise<void> {
+    if (!this.getConfigVersion) {
+      return
+    }
     const currentConfigVersion = await this.getConfigVersion()
     if (!this.running || currentConfigVersion === this.lastConfigVersion) {
       return
     }
 
-    logger.info("Discord config changed - bouncing bot to apply new config", {
+    logger.info("Config changed - bouncing to apply it", {
+      name: this.lock.name,
       from: this.lastConfigVersion,
       to: currentConfigVersion,
     })
     try {
-      // Lost-then-re-acquired path: tear down, then re-init with fresh config.
       const reinitialized = await this.runLifecycle(async () => {
         if (!this.running) {
           return false
@@ -339,7 +328,10 @@ export class BotLockPoller {
     } catch (error) {
       // Never leave a half-initialized client: release the lease so another pod
       // can take over, and let the next tick re-acquire.
-      logger.error("Failed to re-initialize Discord bot after config change - releasing lock", { error })
+      logger.error("Failed to re-initialize after a config change - releasing the lease", {
+        name: this.lock.name,
+        error,
+      })
       this.markStopped()
       await this.lock.release()
     }
@@ -347,13 +339,13 @@ export class BotLockPoller {
 
   /**
    * One renewal: extends the lease off the same lock object. A failed renewal
-   * means the lease is gone, so the bot stops and the poll loop re-acquires.
+   * means the lease is gone, so the work stops and the poll loop re-acquires.
    *
    * @internal
    */
   private async renewLease(): Promise<void> {
     if (this.renewing) {
-      logger.debug("Previous lock renewal still in progress - skipping this renewal")
+      logger.debug("Previous lease renewal still in progress - skipping this renewal", { name: this.lock.name })
       return
     }
     this.renewing = true
@@ -365,11 +357,11 @@ export class BotLockPoller {
       if (renewed || !this.running) {
         return
       }
-      logger.debug("Lock renewal failed - shutting down bot")
+      logger.debug("Lease renewal failed - stopping the work", { name: this.lock.name })
       this.markStopped()
       await this.runLifecycle(() => this.callbacks.onLockLost())
     } catch (error) {
-      logger.debug("Error shutting down bot after a failed lock renewal", { error })
+      logger.debug("Error stopping the work after a failed lease renewal", { name: this.lock.name, error })
     } finally {
       this.renewing = false
     }
@@ -391,7 +383,7 @@ export class BotLockPoller {
     return run
   }
 
-  /** Marks the bot running and starts renewing the lease. @internal */
+  /** Marks the work running and starts renewing the lease. @internal */
   private markRunning(): void {
     this.running = true
     // Never stack a second renewal timer on one already running.
@@ -403,7 +395,7 @@ export class BotLockPoller {
     }, this.renewIntervalMs)
   }
 
-  /** Marks the bot stopped and stops renewing the lease. @internal */
+  /** Marks the work stopped and stops renewing the lease. @internal */
   private markStopped(): void {
     this.running = false
     if (this.renewTimer) {
@@ -413,15 +405,15 @@ export class BotLockPoller {
   }
 
   /**
-   * Stops polling, clears both timers, and — if the bot was running — fires
-   * onLockLost and releases the lock. Idempotent.
+   * Stops polling, clears both timers, and — if the work was running — fires
+   * onLockLost and releases the lease. Idempotent.
    */
   async stop(): Promise<void> {
     if (!this.polling) {
       return
     }
 
-    logger.debug("Stopping Discord bot lock polling")
+    logger.debug("Stopping lease polling", { name: this.lock.name })
     this.polling = false
 
     if (this.timer) {
@@ -440,7 +432,7 @@ export class BotLockPoller {
     try {
       await this.callbacks.onLockLost()
     } catch (error) {
-      logger.debug("Error during lock lost callback on stop", { error })
+      logger.debug("Error during the lock-lost callback on stop", { name: this.lock.name, error })
     }
     await this.lock.release()
   }
