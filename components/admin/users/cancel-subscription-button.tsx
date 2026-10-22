@@ -54,7 +54,7 @@ export function CancelSubscriptionButton({
         onClick={() => setShowConfirmModal(true)}
         disabled={isCanceling}
         data-testid="cancel-subscription-button"
-        className="w-full flex items-center gap-2 text-sm text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full flex items-center gap-2 text-sm text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         title="Cancel subscription at period end"
       >
         <svg

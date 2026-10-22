@@ -70,7 +70,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
     <tr
       key={user.id}
       data-testid={`user-row-${user.id}`}
-      className="hover:bg-slate-700/20 transition-colors cursor-pointer"
+      className="hover:bg-accent transition-colors cursor-pointer"
       onClick={handleRowClick}
     >
       <td className="px-2 py-2">
@@ -87,7 +87,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
             </div>
           ) : (
             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <span className="text-slate-400 text-xs font-medium">
+              <span className="text-muted-foreground text-xs font-medium">
                 {(user.name || user.email || "U")[0].toUpperCase()}
               </span>
             </div>
@@ -103,7 +103,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
               {user.name || "Unknown"}
             </Link>
             {user.email && (
-              <div className="text-xs text-slate-400 truncate">{user.email}</div>
+              <div className="text-xs text-muted-foreground truncate">{user.email}</div>
             )}
           </div>
         </div>
@@ -140,7 +140,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
             <>
               <Badge tone={badge.tone}>{badge.label}</Badge>
               {badge.tone !== "danger" && user.currentPeriodEnd && (
-                <div className="text-xs text-slate-400 mt-0.5">
+                <div className="text-xs text-muted-foreground mt-0.5">
                   {user.cancelAtPeriodEnd ? "Ends" : "Renews"}{" "}
                   {f.date(user.currentPeriodEnd)}
                 </div>
@@ -162,7 +162,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
             >
               {f.money(user.totalLlmUsage.cost)}
             </Link>
-            <div className="text-xs text-slate-400 truncate">
+            <div className="text-xs text-muted-foreground truncate">
               {user.totalLlmUsage.provider}
             </div>
           </div>
@@ -171,7 +171,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
         )}
       </td>
       <td className="px-2 py-2" data-testid="user-joined-timestamp">
-        <div className="text-xs text-slate-400">
+        <div className="text-xs text-muted-foreground">
           {f.date(user.createdAt)}
         </div>
         <div className="text-xs text-muted-foreground">

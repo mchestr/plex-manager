@@ -88,10 +88,10 @@ export function UsersList({ users, currentYear, stripeDashboardBaseUrl }: UsersL
                 <th className="px-2 py-2">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/50">
+            <tbody className="divide-y divide-border/50">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">
                     No users found
                   </td>
                 </tr>

@@ -63,12 +63,12 @@ export function UnshareUserButton({
         <button
           onClick={() => setShowConfirmModal(true)}
           disabled={isUnsharing}
-          className="w-full flex items-center gap-2 text-sm text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full flex items-center gap-2 text-sm text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           title="Unshare library access"
         >
           {isUnsharing ? (
             <svg
-              className="animate-spin h-4 w-4 text-red-400"
+              className="animate-spin h-4 w-4 text-destructive"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -89,7 +89,7 @@ export function UnshareUserButton({
             </svg>
           ) : showSuccess ? (
             <svg
-              className="w-4 h-4 text-green-400"
+              className="w-4 h-4 text-success"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -103,7 +103,7 @@ export function UnshareUserButton({
             </svg>
           ) : (
             <svg
-              className="w-4 h-4 text-red-400"
+              className="w-4 h-4 text-destructive"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

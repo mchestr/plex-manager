@@ -87,13 +87,13 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
           e.stopPropagation()
           setIsOpen(!isOpen)
         }}
-        className="p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors group"
+        className="p-1.5 rounded-lg hover:bg-accent transition-colors group"
         aria-label={`Actions for ${user.name || 'user'}`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         <svg
-          className="w-5 h-5 text-slate-400 group-hover:text-slate-200 transition-colors"
+          className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -132,7 +132,7 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
           {user.wrappedStatus === "completed" && (
             <Link
               href={userRewind(user.id, year)}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700/50 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
               onClick={() => setIsOpen(false)}
               role="menuitem"
             >
@@ -162,7 +162,7 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
 
           {/* Regenerate Wrapped */}
           {regenerable && (
-            <div className="px-3 py-2 hover:bg-slate-700/50 transition-colors">
+            <div className="px-3 py-2 hover:bg-accent transition-colors">
               <RegenerateWrappedButton
                 userId={user.id}
                 plexUserId={user.plexUserId}
@@ -175,7 +175,7 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
 
           {/* Unshare Library */}
           {!user.isAdmin && user.hasPlexAccess === true && (
-            <div className="px-3 py-2 hover:bg-slate-700/50 transition-colors border-t border-slate-700">
+            <div className="px-3 py-2 hover:bg-accent transition-colors border-t border-border">
               <UnshareUserButton
                 userId={user.id}
                 userName={user.name}
@@ -187,7 +187,7 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
 
           {/* Cancel Subscription */}
           {canCancelSubscription && (
-            <div className="px-3 py-2 hover:bg-slate-700/50 transition-colors border-t border-slate-700">
+            <div className="px-3 py-2 hover:bg-accent transition-colors border-t border-border">
               <CancelSubscriptionButton
                 userId={user.id}
                 userName={user.name}
@@ -198,7 +198,7 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
 
           {/* Grant Access (Comp) */}
           {canGrantAccess && (
-            <div className="px-3 py-2 hover:bg-slate-700/50 transition-colors border-t border-slate-700">
+            <div className="px-3 py-2 hover:bg-accent transition-colors border-t border-border">
               <GrantAccessButton
                 userId={user.id}
                 userName={user.name}
@@ -209,7 +209,7 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
 
           {/* Toggle Exempt */}
           {!user.isAdmin && (
-            <div className="px-3 py-2 hover:bg-slate-700/50 transition-colors border-t border-slate-700">
+            <div className="px-3 py-2 hover:bg-accent transition-colors border-t border-border">
               <ToggleExemptButton
                 userId={user.id}
                 userName={user.name}
@@ -225,13 +225,13 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
               href={`${stripeDashboardBaseUrl}/customers/${user.stripeCustomerId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700/50 transition-colors border-t border-slate-700"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors border-t border-border"
               onClick={() => setIsOpen(false)}
               role="menuitem"
               data-testid="view-in-stripe-link"
             >
               <svg
-                className="w-4 h-4 text-indigo-400"
+                className="w-4 h-4 text-foreground"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
