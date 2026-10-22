@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { act, render, screen } from "@testing-library/react"
 import { useReducedMotion } from "motion/react"
 
 import { RacePage } from "@/components/rewind/pages/race"
@@ -35,10 +35,11 @@ beforeEach(() => {
 const ink = pageInk(registry.race, null)
 
 /** The race as page 1 of a two-page stage, with page `current` showing. */
-function Stage({ issue, data, current }: { issue: FixtureIssue; data: RaceData; current: number }) {
+function Stage({ issue, data, current, scrubber = false }: { issue: FixtureIssue; data: RaceData; current: number; scrubber?: boolean }) {
+  const context = issueContext(issue)
   return (
     <StagePage index={1} current={current} previous={null} ink={ink} label="Page 2 of 2: The race">
-      <RacePage data={data} issue={issueContext(issue)} />
+      <RacePage data={data} issue={scrubber ? { ...context, features: { ...context.features, "race.scrubber": true } } : context} />
     </StagePage>
   )
 }
@@ -80,6 +81,27 @@ describe("11 The race", () => {
     rerender(<Stage issue={issue} data={data} current={0} />)
     rerender(<Stage issue={issue} data={data} current={1} />)
     expect(animate).toHaveBeenCalledTimes(data.series.length * 2 + 1)
+  })
+
+  it("shows the scrubber on a revisit after the member left mid-run (P8.3)", async () => {
+    // Each animation settles only when it is cancelled, as a run cut short does
+    animate.mockImplementation(() => {
+      let cancel = () => {}
+      const finished = new Promise((_resolve, reject) => {
+        cancel = () => reject(new DOMException("cancelled", "AbortError"))
+      })
+      return { cancel, finished } as never
+    })
+    const issue = issues.get("heavy")!
+    const data = pageData<RaceData>(issue, "race")!
+    const { rerender } = render(<Stage issue={issue} data={data} current={1} scrubber />)
+    expect(animate).toHaveBeenCalled()
+    expect(screen.queryByTestId("rewind-race-controls")).not.toBeInTheDocument()
+
+    await act(async () => rerender(<Stage issue={issue} data={data} current={0} scrubber />))
+    rerender(<Stage issue={issue} data={data} current={1} scrubber />)
+    expect(await screen.findByTestId("rewind-race-controls")).toBeInTheDocument()
+    animate.mockImplementation(() => ({ cancel: jest.fn() }))
   })
 
   it("shows the final frame at once under reduced motion", () => {
