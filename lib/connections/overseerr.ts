@@ -2,10 +2,12 @@ import { z } from "zod";
 
 import { testServiceConnection } from "@/lib/connections/connection-test";
 import {
+  invalidResponse,
   serviceErrorMessage,
   serviceFetch,
   toConnectionResult,
   type ServiceErrorCode,
+  type ServiceFetchOptions,
   type ServiceResult,
 } from "@/lib/connections/http";
 import { type OverseerrParsed } from "@/lib/validations/overseerr";
@@ -25,7 +27,10 @@ function overseerrFetch<T>(
   config: OverseerrEndpoint,
   path: string,
   schema: z.ZodType<T>,
-  init: { method?: "GET" | "POST"; body?: string; asUser?: number; signal?: AbortSignal } = {}
+  init: Pick<ServiceFetchOptions<T>, "body" | "signal" | "onResponse" | "readErrorMessage"> & {
+    method?: "GET" | "POST"
+    asUser?: number
+  } = {}
 ): Promise<ServiceResult<T>> {
   return serviceFetch({
     service: "Overseerr",
@@ -39,6 +44,8 @@ function overseerrFetch<T>(
     },
     schema,
     signal: init.signal,
+    onResponse: init.onResponse,
+    readErrorMessage: init.readErrorMessage,
   })
 }
 
@@ -174,27 +181,31 @@ const mediaDetailsSchema = z.looseObject({
   mediaInfo: z
     .looseObject({
       status: z.number().optional(),
+      status4k: z.number().optional(),
       requests: z.array(z.looseObject({ id: z.number() })).optional(),
     })
     .nullish(),
 })
 
 /**
- * Media status from Overseerr by TMDB ID. `data` is undefined when Overseerr
- * does not know the title (HTTP 404), which is normal for new titles.
+ * Media status from Overseerr by TMDB ID, the 4K status when `is4k` is set.
+ * `data` is undefined when Overseerr does not know the title (HTTP 404),
+ * which is normal for new titles.
  */
 async function getOverseerrMediaByTmdbId(
   config: OverseerrEndpoint,
   tmdbId: number,
-  mediaType: "movie" | "tv"
+  mediaType: "movie" | "tv",
+  is4k: boolean
 ): Promise<{ success: boolean; data?: { status: number; requestId?: number } }> {
   const result = await overseerrFetch(config, `/${mediaType}/${tmdbId}`, mediaDetailsSchema)
   if (!result.ok) return { success: result.code === "HTTP" && result.status === 404 }
+  const mediaInfo = result.data.mediaInfo
   return {
     success: true,
     data: {
-      status: result.data.mediaInfo?.status ?? OverseerrMediaStatus.UNKNOWN,
-      requestId: result.data.mediaInfo?.requests?.[0]?.id,
+      status: (is4k ? mediaInfo?.status4k : mediaInfo?.status) ?? OverseerrMediaStatus.UNKNOWN,
+      requestId: mediaInfo?.requests?.[0]?.id,
     },
   }
 }
@@ -202,7 +213,8 @@ async function getOverseerrMediaByTmdbId(
 export interface SubmitOverseerrRequestPayload {
   mediaType: "movie" | "tv"
   mediaId: number // TMDB ID
-  seasons?: number[] // For TV shows, which seasons to request
+  /** TV only: the seasons to request; every season when left out. */
+  seasons?: number[]
   is4k?: boolean
 }
 
@@ -210,8 +222,13 @@ export interface SubmitOverseerrRequestResult {
   success: boolean
   requestId?: number
   error?: string
-  status: "created" | "already_requested" | "already_available" | "failed"
+  status: "created" | "already_requested" | "already_available" | "not_permitted" | "failed"
 }
+
+/** The 201 body: a `MediaRequest`. */
+const mediaRequestSchema = z.looseObject({ id: z.number().int().positive(), status: z.number().int().optional() })
+
+const NOT_PERMITTED_FALLBACK = "Overseerr did not allow this request"
 
 /**
  * Submit a media request to Overseerr as the member's own Overseerr user.
@@ -220,6 +237,23 @@ export interface SubmitOverseerrRequestResult {
  * Overseerr applies that user's permissions, auto-approve rules and quotas and
  * lists them as the requester. The user id is required: there is no fallback
  * to the API key's admin (SEC-27).
+ *
+ * ## Body
+ *
+ * A TV request always carries `seasons`, `"all"` unless a list is given:
+ * without it Overseerr throws a TypeError and answers 500 (GAP-03).
+ *
+ * ## Replies (`server/routes/request.ts`)
+ *
+ * | Reply | Result |
+ * |---|---|
+ * | 201 with a `MediaRequest` | `created`, with its id |
+ * | 202 (no seasons left to request) | `already_requested`, no id |
+ * | 409 (duplicate) | `already_requested` |
+ * | 403 (quota or permission) | `not_permitted`, Overseerr's message cut to 200 characters |
+ * | 5xx, anything else | `failed` |
+ *
+ * The status pre-check reads `mediaInfo.status4k` when `is4k` is set.
  *
  * @param config Overseerr configuration
  * @param payload Request details (mediaType, mediaId, optional seasons)
@@ -230,63 +264,63 @@ export async function submitOverseerrRequest(
   payload: SubmitOverseerrRequestPayload,
   requester: { overseerrUserId: number }
 ): Promise<SubmitOverseerrRequestResult> {
-  // First check if media already exists/is requested
-  const existingStatus = await getOverseerrMediaByTmdbId(config, payload.mediaId, payload.mediaType)
+  const is4k = payload.is4k ?? false
+  const meta = { tmdbId: payload.mediaId, mediaType: payload.mediaType, is4k }
+  const existingStatus = await getOverseerrMediaByTmdbId(config, payload.mediaId, payload.mediaType, is4k)
 
   if (existingStatus.success && existingStatus.data) {
     const status = existingStatus.data.status
 
     if (status === OverseerrMediaStatus.AVAILABLE || status === OverseerrMediaStatus.PARTIALLY_AVAILABLE) {
-      logger.debug("Media already available in Overseerr", {
-        tmdbId: payload.mediaId,
-        mediaType: payload.mediaType,
-        status,
-      })
+      logger.debug("Media already available in Overseerr", { ...meta, status })
       return { success: true, status: "already_available" }
     }
 
     if (status === OverseerrMediaStatus.PENDING || status === OverseerrMediaStatus.PROCESSING) {
-      logger.debug("Media already requested in Overseerr", {
-        tmdbId: payload.mediaId,
-        mediaType: payload.mediaType,
-        status,
-      })
+      logger.debug("Media already requested in Overseerr", { ...meta, status })
       return { success: true, requestId: existingStatus.data.requestId, status: "already_requested" }
     }
   }
 
-  const body: Record<string, unknown> = {
-    mediaType: payload.mediaType,
-    mediaId: payload.mediaId,
+  const body: Record<string, unknown> = { mediaType: payload.mediaType, mediaId: payload.mediaId }
+  if (payload.mediaType === "tv") {
+    body.seasons = payload.seasons && payload.seasons.length > 0 ? payload.seasons : "all"
   }
-  if (payload.seasons && payload.seasons.length > 0) body.seasons = payload.seasons
   if (payload.is4k !== undefined) body.is4k = payload.is4k
 
-  const result = await overseerrFetch(config, "/request", z.looseObject({ id: z.number() }), {
+  let replyStatus = 0
+  const result = await overseerrFetch(config, "/request", z.unknown(), {
     method: "POST",
     body: JSON.stringify(body),
     asUser: requester.overseerrUserId,
+    readErrorMessage: true,
+    onResponse: ({ status }) => {
+      replyStatus = status
+    },
   })
 
   if (!result.ok) {
-    // Overseerr answers 409 when the title already has a request
-    if (result.code === "HTTP" && result.status === 409) {
-      return { success: true, status: "already_requested" }
+    if (result.code === "HTTP" && result.status === 409) return { success: true, status: "already_requested" }
+    if (result.code === "HTTP" && result.status === 403) {
+      logger.info("Overseerr refused the request", meta)
+      return { success: false, status: "not_permitted", error: result.message ?? NOT_PERMITTED_FALLBACK }
     }
-    logger.error("Overseerr request submission failed", undefined, {
-      code: result.code,
-      status: result.status,
-      tmdbId: payload.mediaId,
-      mediaType: payload.mediaType,
-    })
+    logger.error("Overseerr request submission failed", undefined, { ...meta, code: result.code, status: result.status })
     return { success: false, error: serviceErrorMessage("Overseerr", result), status: "failed" }
   }
 
-  logger.info("Overseerr request submitted successfully", {
-    requestId: String(result.data.id),
-    tmdbId: payload.mediaId,
-    mediaType: payload.mediaType,
-  })
+  // Overseerr's NoSeasonsAvailableError: every season is already requested
+  if (replyStatus === 202) {
+    logger.debug("Overseerr had no seasons left to request", meta)
+    return { success: true, status: "already_requested" }
+  }
 
-  return { success: true, requestId: result.data.id, status: "created" }
+  const created = mediaRequestSchema.safeParse(result.data)
+  if (!created.success) {
+    invalidResponse("Overseerr", created.error, { where: "/api/v1/request" })
+    return { success: false, error: "Overseerr sent an unexpected response", status: "failed" }
+  }
+
+  logger.info("Overseerr request submitted successfully", { ...meta, requestId: String(created.data.id) })
+  return { success: true, requestId: created.data.id, status: "created" }
 }

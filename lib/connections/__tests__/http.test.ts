@@ -80,6 +80,8 @@ beforeAll(async () => {
         return
       case "/status":
         return json(res, Number(url.searchParams.get("code")), { error: "upstream says apikey=SECRET-KEY" })
+      case "/message":
+        return json(res, Number(url.searchParams.get("code")), { message: url.searchParams.get("text") })
       case "/not-json":
         res.writeHead(200, { "Content-Type": "application/json" })
         return res.end("<html>SECRET-KEY</html>")
@@ -181,6 +183,31 @@ describe("serviceFetch", () => {
       ok: false,
       code: "INVALID_RESPONSE",
     })
+  })
+
+  it("shows onResponse the status and headers, and reads a 4xx message only when asked (P11.28)", async () => {
+    const seen: number[] = []
+    const onResponse = ({ status, headers }: { status: number; headers: Headers }) => {
+      seen.push(status)
+      expect(headers.get("content-type")).toBe("application/json")
+    }
+    const message = await serviceFetch({
+      service: "Test",
+      url: `${main.origin}/message?code=403&text=${"q".repeat(250)}`,
+      schema: z.unknown(),
+      readErrorMessage: true,
+      onResponse,
+    })
+    expect(message).toEqual({ ok: false, code: "HTTP", status: 403, message: "q".repeat(200) })
+    expect(await serviceFetch({ service: "Test", url: `${main.origin}/message?code=403&text=no`, schema: z.unknown() })).toEqual({
+      ok: false,
+      code: "HTTP",
+      status: 403,
+    })
+    expect(
+      await serviceFetch({ service: "Test", url: `${main.origin}/message?code=500&text=boom`, schema: z.unknown(), readErrorMessage: true })
+    ).toEqual({ ok: false, code: "HTTP", status: 500 })
+    expect(seen).toEqual([403])
   })
 
   it("never puts the key from the URL, the upstream body or an error message in results, messages or logs", async () => {

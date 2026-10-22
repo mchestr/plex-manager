@@ -1,0 +1,24 @@
+{
+ "MediaContainer": {
+  "offset": 0,
+  "totalSize": 1,
+  "identifier": "tv.plex.provider.metadata",
+  "size": 1,
+  "Metadata": [
+   {
+    "art": "https://image.tmdb.org/t/p/original/art3.jpg",
+    "guid": "plex://movie/65910a0fd76f69a08e6faa14",
+    "key": "/library/metadata/65910a0fd76f69a08e6faa14",
+    "ratingKey": "65910a0fd76f69a08e6faa14",
+    "slug": "title-3",
+    "type": "movie",
+    "title": "Film 003",
+    "thumb": "https://image.tmdb.org/t/p/original/thumb3.jpg",
+    "addedAt": 1759989200,
+    "publicPagesURL": "https://watch.plex.tv/movie/title-3",
+    "year": 1993,
+    "Guid": []
+   }
+  ]
+ }
+}

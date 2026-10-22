@@ -1,0 +1,38 @@
+{
+ "id": 412,
+ "status": 1,
+ "createdAt": "2027-01-04T10:00:00.000Z",
+ "updatedAt": "2027-01-04T10:00:00.000Z",
+ "type": "tv",
+ "is4k": false,
+ "serverId": null,
+ "profileId": null,
+ "rootFolder": null,
+ "isAutoRequest": false,
+ "media": {
+  "id": 88,
+  "mediaType": "tv",
+  "tmdbId": 1396,
+  "tvdbId": 81189,
+  "status": 2,
+  "status4k": 1
+ },
+ "seasons": [
+  {
+   "id": 1,
+   "seasonNumber": 1,
+   "status": 1
+  },
+  {
+   "id": 2,
+   "seasonNumber": 2,
+   "status": 1
+  }
+ ],
+ "modifiedBy": null,
+ "requestedBy": {
+  "id": 7,
+  "displayName": "member"
+ },
+ "seasonCount": 2
+}
