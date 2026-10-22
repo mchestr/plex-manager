@@ -1386,7 +1386,7 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** `/admin/rewind/evals` lists the 2026 bake-off candidates with their grounding rates and cost, with the selected model badged.
 
 **Done when.**
-- [ ] `/admin/rewind/evals` lists `RewindEvalRun` rows and the committed results, and Evals appears in the admin nav.
+- [x] `/admin/rewind/evals` lists `RewindEvalRun` rows and the committed results, and Evals appears in the admin nav.
 
 ### Step P11.31: One active row per service: audit, then a reviewed apply
 
