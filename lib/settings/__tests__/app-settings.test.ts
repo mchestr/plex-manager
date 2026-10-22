@@ -55,16 +55,20 @@ describe("getAppSettings", () => {
     })
   })
 
-  it("returns the server zone, the stored locale and the stored server name", async () => {
+  it("returns the server zone, the stored locale, server name and light-theme flag", async () => {
     zone.mockResolvedValue("Europe/Berlin")
-    findUnique.mockResolvedValue({ locale: "de-DE", serverName: "Northfield Plex" })
+    findUnique.mockResolvedValue({ locale: "de-DE", serverName: "Northfield Plex", lightThemeEnabled: true })
 
     await expect(getAppSettings()).resolves.toEqual({
       timeZone: "Europe/Berlin",
       locale: "de-DE",
       serverName: "Northfield Plex",
+      lightThemeEnabled: true,
     })
-    expect(findUnique).toHaveBeenCalledWith({ where: { id: "config" }, select: { locale: true, serverName: true } })
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: "config" },
+      select: { locale: true, serverName: true, lightThemeEnabled: true },
+    })
   })
 
   it.each([
@@ -74,7 +78,7 @@ describe("getAppSettings", () => {
     zone.mockResolvedValue("UTC")
     findUnique.mockResolvedValue(row)
 
-    await expect(getAppSettings()).resolves.toEqual({ timeZone: "UTC", locale: "en-US", serverName: null })
+    await expect(getAppSettings()).resolves.toEqual({ timeZone: "UTC", locale: "en-US", serverName: null, lightThemeEnabled: false })
   })
 
   it("takes the zone from serverZone(), so it follows Config.timezone, then TZ, then UTC", async () => {
@@ -109,12 +113,17 @@ describe("getAppSettings", () => {
     })
   })
 
-  it("falls back to TZ, en-US and no name when the database is unreachable", async () => {
+  it("falls back to TZ, en-US, no name and dark when the database is unreachable", async () => {
     process.env.TZ = "US/Pacific"
     zone.mockRejectedValue(new Error("connection refused"))
     findUnique.mockRejectedValue(new Error("connection refused"))
 
-    await expect(getAppSettings()).resolves.toEqual({ timeZone: "America/Los_Angeles", locale: "en-US", serverName: null })
+    await expect(getAppSettings()).resolves.toEqual({
+      timeZone: "America/Los_Angeles",
+      locale: "en-US",
+      serverName: null,
+      lightThemeEnabled: false,
+    })
   })
 
   it("binds the formatters to the zone and locale alone", async () => {

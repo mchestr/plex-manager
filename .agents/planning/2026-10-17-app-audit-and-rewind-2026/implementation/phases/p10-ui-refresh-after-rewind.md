@@ -467,10 +467,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 
 **Done when.**
 - [ ] Every page has light baselines at both sizes, and the Rewind pages match their dark baselines.
-- [ ] `resolveTheme()` decides on the server from the flag and the cookie, with no flash and no extra database read.
-- [ ] The Appearance picker appears only behind the flag, in the menus and on `/account`.
+- [x] `resolveTheme()` decides on the server from the flag and the cookie, with no flash and no extra database read.
+- [x] The Appearance picker appears only behind the flag, in the menus and on `/account`.
 - [ ] axe passes in light, and the flag ships off.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270114000000_p1010_light_theme_flag`. `lib/design/theme.ts` exports `resolveTheme()`, `resolveAppearance()` (`{ enabled, theme }`), `THEME_COOKIE` and `THEME_COLOR` (from the token mirror); the root layout passes `appearance` to `Providers`, and client code reads it with `useAppearance()` from `lib/appearance-context.tsx`. The picker is `components/account/appearance-picker.tsx` (`variant="inline"`, a SegmentedControl radiogroup, or `"menu"`, the new `DropdownMenuRadioGroup`/`DropdownMenuRadioItem`). The admin shell had no user menu, so an Appearance icon button beside Sign out in the sidebar footer opens one; the mobile admin bar has none (`/account` covers it). The settings Switch sits in the System Information card (`actions/admin/light-theme.ts`, audited as section `appearance`); P10.19/P10.20 move it with that card. The cookie is `Secure` where the session cookie is (`usesSecureCookies()`, an https `NEXTAUTH_URL`), not on `NODE_ENV`, so a LAN install on http keeps working. The light `--chart-*` values already existed in `:root`; `lib/design/__tests__/chart-surfaces.test.ts` adds 3:1 for every slot and the "Other" fold on background, card and popover in both themes. Playwright: `light-theme-setup` (flips the flag through the Switch, teardown flips it back), `visual-light-desktop`/`-mobile` (the visual specs plus `light-routes.visual.spec.ts`, every route in `e2e/a11y/routes.ts`), `visual-light-rewind` (chromium phone, the dark Rewind baselines) and `a11y-light`; none is in CI's lists, and the Visual Baselines workflow has a `light` suite. Specs were written, not run. Owner: take the light baselines, run `a11y-light`, burn design debt on pages that look wrong in light, and keep the flag off until then (decision UI Q2).)
 
 ### Step P10.11: Remove adapters and enforce the guardrails
 

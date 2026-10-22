@@ -1,6 +1,7 @@
 'use client'
 
 import { ToastProvider } from '@/components/ui/toast'
+import { AppearanceProvider, type Appearance } from '@/lib/appearance-context'
 import { ServerNameProvider } from '@/lib/brand-context'
 import { FormatProvider } from '@/lib/format-context'
 import type { FormatSettings } from '@/lib/utils/format'
@@ -12,10 +13,12 @@ export function Providers({
   children,
   format,
   serverName,
+  appearance,
 }: {
   children: React.ReactNode
   format: FormatSettings
   serverName: string
+  appearance: Appearance
 }) {
   const [queryClient] = useState(
     () =>
@@ -39,9 +42,11 @@ export function Providers({
       <MotionConfig reducedMotion="user">
         <FormatProvider value={format}>
           <ServerNameProvider value={serverName}>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
+            <AppearanceProvider value={appearance}>
+              <ToastProvider>
+                {children}
+              </ToastProvider>
+            </AppearanceProvider>
           </ServerNameProvider>
         </FormatProvider>
       </MotionConfig>

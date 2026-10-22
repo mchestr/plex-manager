@@ -123,6 +123,7 @@ export function buildConfig(overrides: Partial<Config> = {}): Config {
   return {
     id: 'config',
     llmDisabled: false,
+    lightThemeEnabled: false,
     wrappedEnabled: true,
     wrappedGenerationStartDate: null,
     wrappedGenerationEndDate: null,

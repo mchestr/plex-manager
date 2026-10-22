@@ -5,6 +5,7 @@ import { getStripeConfig } from "@/actions/admin/admin-config"
 import { getRewindSeasonDataPreparedAt } from "@/actions/admin/rewind-season"
 import { DiscordIntegrationForm } from "@/components/admin/settings/discord-integration-form"
 import { JellyfinLoginToggle } from "@/components/admin/settings/jellyfin-login-toggle"
+import { LightThemeSwitch } from "@/components/admin/settings/light-theme-switch"
 import { LLMProviderForm } from "@/components/admin/settings/llm-provider-form"
 import { LlmSpendCapsForm } from "@/components/admin/settings/llm-spend-caps-form"
 import { LLMToggle } from "@/components/admin/settings/llm-toggle"
@@ -421,7 +422,8 @@ export default async function SettingsPage() {
                 </CardTitle>
                 <CardDescription>Runtime and database information</CardDescription>
               </CardHeader>
-              <CardContent className="py-5">
+              <CardContent className="py-5 space-y-6">
+                <LightThemeSwitch enabled={settings.config.lightThemeEnabled} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <div className="text-xs font-medium text-muted-foreground mb-1">Database Provider</div>

@@ -3,7 +3,9 @@
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import type { ReactNode } from "react"
 
+import { Icon } from "@/components/ui/icon"
 import { usePopupLayer, usePortalContainer } from "@/components/ui/portal-container"
+import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 
 /**
@@ -118,6 +120,35 @@ export function DropdownMenuLinkItem({ className, icon, children, ...props }: Li
       {icon}
       {children}
     </MenuPrimitive.LinkItem>
+  )
+}
+
+/** A set of `DropdownMenuRadioItem`s, one of them checked (`menuitemradio`). */
+export function DropdownMenuRadioGroup(props: MenuPrimitive.RadioGroup.Props) {
+  return <MenuPrimitive.RadioGroup data-slot="dropdown-menu-radio-group" {...props} />
+}
+
+interface RadioItemProps extends Omit<MenuPrimitive.RadioItem.Props, "className"> {
+  className?: string
+}
+
+/** One choice in a DropdownMenuRadioGroup, with a check after the label when it is the current one. */
+export function DropdownMenuRadioItem({ className, children, ...props }: RadioItemProps) {
+  return (
+    <MenuPrimitive.RadioItem
+      data-slot="dropdown-menu-radio-item"
+      className={cn(
+        "flex h-8 cursor-default items-center gap-2 rounded-sm px-2 text-ui outline-none select-none",
+        "data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:pointer-events-none data-disabled:text-muted-foreground",
+        className
+      )}
+      {...props}
+    >
+      <span className="flex-1">{children}</span>
+      <MenuPrimitive.RadioItemIndicator className="flex size-4 items-center justify-center">
+        <Icon icon={icons.done} />
+      </MenuPrimitive.RadioItemIndicator>
+    </MenuPrimitive.RadioItem>
   )
 }
 
