@@ -1,6 +1,9 @@
+import { Suspense } from "react"
+
 import { AnnouncementsCard } from "@/components/dashboard/announcements-card"
 import { HelpCard } from "@/components/dashboard/help-card"
 import { MembershipLinkCard } from "@/components/dashboard/membership-link-card"
+import { NewOnRow, NewOnRowSkeleton } from "@/components/dashboard/new-on-row"
 import { QuickLinks } from "@/components/dashboard/quick-links"
 import { RewindCard } from "@/components/dashboard/rewind-card"
 import { UptimeStrip } from "@/components/ui/uptime-strip"
@@ -15,8 +18,8 @@ interface HomePageProps {
 
 /**
  * The signed-in home (P10.21), in the order of `home.html`: the greeting, the
- * RewindCard, announcements, quick links, watchlist sync, membership and
- * help, then the uptime strip. Two columns from `lg`; below it one column in
+ * RewindCard, announcements, the "New on" poster row (Plex members, P10.12),
+ * quick links, watchlist sync, membership and help, then the uptime strip. Two columns from `lg`; below it one column in
  * reading order. Nothing on it animates forever (UI-15).
  */
 export async function HomePage({ userId, isAdmin }: HomePageProps) {
@@ -40,10 +43,24 @@ export async function HomePage({ userId, isAdmin }: HomePageProps) {
                 <RewindCard {...rewindCard} />
               </div>
             )}
-            <div className="order-3 empty:hidden lg:order-none">
+            {data.service === "plex" && (
+              <div className="order-3 min-w-0 empty:hidden lg:order-none">
+                {/* Its own boundary: a slow or unreachable Plex never holds up home */}
+                <Suspense fallback={<NewOnRowSkeleton />}>
+                  <NewOnRow
+                    userId={userId}
+                    isAdmin={isAdmin}
+                    serverName={data.serverName}
+                    browseUrl={data.quickLinks.media.url}
+                    format={data.format}
+                  />
+                </Suspense>
+              </div>
+            )}
+            <div className="order-4 empty:hidden lg:order-none">
               <QuickLinks {...data.quickLinks} />
             </div>
-            <div className="order-4 empty:hidden lg:order-none">
+            <div className="order-5 empty:hidden lg:order-none">
               <WatchlistSyncCard initialSettings={data.watchlist} service={data.service} />
             </div>
           </div>
@@ -54,11 +71,11 @@ export async function HomePage({ userId, isAdmin }: HomePageProps) {
               </div>
             )}
             {data.hasSubscription && (
-              <div className="order-5 lg:order-none">
+              <div className="order-6 lg:order-none">
                 <MembershipLinkCard />
               </div>
             )}
-            <div className="order-6 lg:order-none">
+            <div className="order-7 lg:order-none">
               <HelpCard service={data.service} supportChannelUrl={data.supportChannelUrl} />
             </div>
           </div>

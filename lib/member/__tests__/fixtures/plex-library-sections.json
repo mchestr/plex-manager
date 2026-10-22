@@ -1,0 +1,13 @@
+{
+  "MediaContainer": {
+    "size": 4,
+    "allowSync": false,
+    "title1": "Plex Library",
+    "Directory": [
+      { "allowSync": true, "art": "/:/resources/movie-fanart.jpg", "composite": "/library/sections/1/composite/1767225600", "filters": true, "refreshing": false, "thumb": "/:/resources/movie.png", "key": "1", "type": "movie", "title": "Movies", "agent": "tv.plex.agents.movie", "scanner": "Plex Movie", "language": "en-US", "uuid": "0a3b6c1e-1111-4c7e-9a1b-2f5c3d4e5f60", "updatedAt": 1767225600, "createdAt": 1600000000, "scannedAt": 1767225600, "content": true, "directory": true, "contentChangedAt": 51234, "hidden": 0 },
+      { "allowSync": true, "art": "/:/resources/show-fanart.jpg", "composite": "/library/sections/2/composite/1767225600", "filters": true, "refreshing": false, "thumb": "/:/resources/show.png", "key": "2", "type": "show", "title": "TV Shows", "agent": "tv.plex.agents.series", "scanner": "Plex TV Series", "language": "en-US", "uuid": "0a3b6c1e-2222-4c7e-9a1b-2f5c3d4e5f60", "updatedAt": 1767225600, "createdAt": 1600000000, "scannedAt": 1767225600, "content": true, "directory": true, "contentChangedAt": 51240, "hidden": 0 },
+      { "allowSync": true, "art": "/:/resources/artist-fanart.jpg", "filters": true, "refreshing": false, "thumb": "/:/resources/artist.png", "key": "3", "type": "artist", "title": "Music", "agent": "tv.plex.agents.music", "scanner": "Plex Music", "language": "en-US", "uuid": "0a3b6c1e-3333-4c7e-9a1b-2f5c3d4e5f60", "updatedAt": 1767225600, "createdAt": 1600000000, "scannedAt": 1767225600, "content": true, "directory": true, "contentChangedAt": 300, "hidden": 0 },
+      { "allowSync": true, "art": "/:/resources/movie-fanart.jpg", "filters": true, "refreshing": false, "thumb": "/:/resources/movie.png", "key": "4", "type": "movie", "title": "Kids Movies", "agent": "tv.plex.agents.movie", "scanner": "Plex Movie", "language": "en-US", "uuid": "0a3b6c1e-4444-4c7e-9a1b-2f5c3d4e5f60", "updatedAt": 1767225600, "createdAt": 1600000000, "scannedAt": 1767225600, "content": true, "directory": true, "contentChangedAt": 900, "hidden": 0 }
+    ]
+  }
+}

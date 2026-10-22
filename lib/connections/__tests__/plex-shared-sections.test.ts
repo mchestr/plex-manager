@@ -10,6 +10,7 @@ import {
   clearPlexSharedSectionCaches,
   getItemSectionKey,
   getSharedSectionKeys,
+  rememberItemSectionKey,
 } from '@/lib/connections/plex-shared-sections'
 
 const SHARED_SERVERS_XML = readFileSync(
@@ -246,6 +247,13 @@ describe('plex-shared-sections', () => {
       expect(url).not.toContain('owner-token')
       expect(init.headers.Accept).toBe('application/json')
       expect(init.headers['X-Plex-Token']).toBe('owner-token')
+    })
+
+    it('answers a section remembered from a listing without a request (P10.12)', async () => {
+      rememberItemSectionKey(SERVER, '555', '2')
+
+      expect(await getItemSectionKey(SERVER, '555')).toEqual({ status: 'found', sectionKey: '2' })
+      expect(global.fetch).not.toHaveBeenCalled()
     })
 
     it("falls back to the first item's librarySectionID", async () => {

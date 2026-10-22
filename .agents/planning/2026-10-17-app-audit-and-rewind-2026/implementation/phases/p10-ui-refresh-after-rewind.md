@@ -539,10 +539,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** As a member restricted to two libraries, open home: the row shows only titles from those libraries. Click one and land on its Plex web page. Stop Plex and reload: home renders at once without the row.
 
 **Done when.**
-- [ ] Home shows up to 12 recently added titles from the member's own sections, linking to Plex web.
-- [ ] The row never delays home and hides when it can't work.
-- [ ] Posters come through the proxy's library-access check, with tests on both sides.
+- [x] Home shows up to 12 recently added titles from the member's own sections, linking to Plex web.
+- [x] The row never delays home and hides when it can't work.
+- [x] Posters come through the proxy's library-access check, with tests on both sides.
 - [ ] The home baselines and E2E are updated.
+
+(as merged: the row sits in home's left column under the RewindCard (mobile order after announcements), rendered only for Plex-primary members, in its own `<Suspense>` with `NewOnRowSkeleton`. Links use `plexItemHref` (`lib/ui/plex-links.ts`) with P10.21's cached `plexServerId`; no separate `plexItemUrl`. Admins and the owner read every movie and show section. `getNewOn` never throws: any Plex, plex.tv or database failure gives an empty row, and failures are not cached. Listed items prime the poster route's item-section cache through `rememberItemSectionKey`, so row posters need no metadata lookup while the route still checks access per request; the `poster` limit (500/15 min, disk-cache misses only) covers a 12-poster row. There is no Plex test-mode fixture, so `e2e/home-new-on.spec.ts` starts its own stub Plex server and points the active server at it. The JSON fixtures are hand-built in Plex's real shape, not captured. E2E and visual baselines were not run.)
 ### Step P10.13: Token codemod: the tool and the member slices
 
 - **Track:** ui. **Lane:** member. **Effort:** L, 2 PRs. **Window:** 2027-01-04 to 2027-01-07. **Depends on:** P3.1, P3.4.

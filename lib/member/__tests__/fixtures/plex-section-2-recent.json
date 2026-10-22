@@ -1,0 +1,23 @@
+{
+  "MediaContainer": {
+    "size": 7,
+    "totalSize": 96,
+    "offset": 0,
+    "allowSync": true,
+    "identifier": "com.plexapp.plugins.library",
+    "librarySectionID": 2,
+    "librarySectionTitle": "TV Shows",
+    "title1": "TV Shows",
+    "title2": "All Shows",
+    "viewGroup": "show",
+    "Metadata": [
+      { "ratingKey": "70210", "key": "/library/metadata/70210/children", "guid": "plex://show/5d9c08", "type": "show", "title": "Northbound", "year": 2026, "thumb": "/library/metadata/70210/thumb/1767500000", "leafCount": 8, "viewedLeafCount": 0, "childCount": 1, "addedAt": 1767500000, "updatedAt": 1767500100 },
+      { "ratingKey": "70188", "key": "/library/metadata/70188/children", "guid": "plex://show/5d9c09", "type": "show", "title": "Quiet Machines", "year": 2024, "leafCount": 18, "childCount": 2, "addedAt": 1767200000 },
+      { "ratingKey": "70150", "key": "/library/metadata/70150/children", "guid": "plex://show/5d9c10", "type": "show", "title": "Harbor Lights", "year": 2021, "leafCount": 30, "childCount": 3, "addedAt": 1767000000 },
+      { "ratingKey": "70140", "key": "/library/metadata/70140/children", "type": "show", "title": "Field Notes", "leafCount": 6, "childCount": 1, "addedAt": 1766500000 },
+      { "ratingKey": "70131", "key": "/library/metadata/70131/children", "type": "show", "title": "Night Shift", "year": 2019, "childCount": 4, "addedAt": 1766400000 },
+      { "ratingKey": "70120", "key": "/library/metadata/70120/children", "type": "show", "title": "The Long Table", "year": 2020, "childCount": 2, "addedAt": 1766300000 },
+      { "ratingKey": "70111", "key": "/library/metadata/70111/children", "type": "show", "title": "Overland", "year": 2018, "childCount": 5, "addedAt": 1766200000 }
+    ]
+  }
+}
