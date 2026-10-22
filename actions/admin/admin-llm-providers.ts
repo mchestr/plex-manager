@@ -9,6 +9,13 @@
  * unchanged (`resolveSecretForOrigin`, P4.6); otherwise the key must be entered
  * again, so a stored key is never sent to a new address. Saves are audited as
  * `CONFIG_CHANGED` with a redacted diff.
+ *
+ * Rewind's model is frozen while the season is open (P8.1): from
+ * `rewindSeasonOpens` to the end of `rewindSeasonCloses`, a `wrapped` save
+ * that changes the provider, the model or an OpenAI-compatible base URL is
+ * refused, because member and hide regenerations still run after the final
+ * cut. Rotating the key stays open, and so does the assistant's provider;
+ * `rewindLlmMode` remains the emergency switch.
  */
 
 import { revalidatePath } from "next/cache"
@@ -19,7 +26,7 @@ import { ok, type ActionErrorCode, type ActionResult } from "@/lib/actions/resul
 import { loadProviderModels, testLLMProviderConnection } from "@/lib/connections/llm-provider"
 import type { LLMProvider } from "@/lib/generated/prisma/client"
 import { requireAdmin } from "@/lib/admin"
-import { lookupModel } from "@/lib/llm/models"
+import { lookupModel, normalizeModelId } from "@/lib/llm/models"
 import { LLM_PROVIDER_IDS } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
@@ -27,8 +34,10 @@ import { configDiff } from "@/lib/security/config-diff"
 import { consume } from "@/lib/security/rate-limit"
 import { resolveSecretForOrigin, type SecretRequiredCode } from "@/lib/security/secret-reuse"
 import { createLogger } from "@/lib/utils/logger"
+import { serverZone } from "@/lib/utils/server-zone"
 import { EFFORT_LEVELS, llmProviderSchema } from "@/lib/validations/llm-provider"
 import { normalizeBaseUrl } from "@/lib/validations/shared-schemas"
+import { getSeasonState } from "@/lib/wrapped/season"
 
 const logger = createLogger("ADMIN_LLM_PROVIDERS")
 
@@ -113,6 +122,31 @@ function auditedFields(row: Pick<LLMProvider, "provider" | "model" | "baseUrl" |
   return { provider, model, baseUrl, effort, temperature, maxTokens, apiKey }
 }
 
+/**
+ * The stored base URL as a save sees it: normalised, and only for an
+ * OpenAI-compatible row, so an older row's trailing slash or a hosted row's
+ * leftover URL never reads as a change.
+ */
+function storedBaseUrl(stored: LLMProvider): string | null {
+  if (stored.provider !== "openai-compatible" || !stored.baseUrl) return null
+  return normalizeBaseUrl(stored.baseUrl) ?? stored.baseUrl
+}
+
+/**
+ * The refusal of a Rewind model change while the season is open, or null.
+ * A first provider, a key rotation and setting changes pass.
+ */
+async function frozenModelRefusal(stored: LLMProvider | null, next: { provider: string; model: string; baseUrl: string | null }): Promise<string | null> {
+  if (!stored) return null
+  const changed =
+    stored.provider !== next.provider || normalizeModelId(stored.model) !== normalizeModelId(next.model) || storedBaseUrl(stored) !== next.baseUrl
+  if (!changed) return null
+  const season = await getSeasonState()
+  if (!season.isOpen) return null
+  const closes = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: await serverZone() }).format(season.closesAt.getTime() - 1)
+  return `Rewind's model is frozen until the season closes on ${closes}`
+}
+
 async function updateLLMProviderForPurpose(
   purpose: LLMProviderPurpose,
   input: z.output<typeof saveInputSchema>,
@@ -136,6 +170,11 @@ async function updateLLMProviderForPurpose(
   }
   const validated = parsed.data
   const validatedBaseUrl = validated.provider === "openai-compatible" ? validated.baseUrl : null
+
+  if (purpose === "wrapped") {
+    const refusal = await frozenModelRefusal(stored, { provider: validated.provider, model: validated.model, baseUrl: validatedBaseUrl ?? null })
+    if (refusal) return { success: false, code: "CONFLICT", error: refusal }
+  }
 
   const connection = await testLLMProviderConnection(
     { provider: validated.provider, apiKey: validated.apiKey, baseUrl: validatedBaseUrl ?? undefined, model: validated.model },

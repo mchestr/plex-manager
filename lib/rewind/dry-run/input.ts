@@ -14,7 +14,7 @@ import { recordIdSchema } from "@/lib/validations/params"
 import { yearSchema } from "@/lib/validations/shared-schemas"
 import { PROMPT_VERSION, styleGuideSchema } from "@/lib/wrapped/prompt/rewind-2026"
 
-const EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const satisfies readonly EffortLevel[]
+export const DRY_RUN_EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const satisfies readonly EffortLevel[]
 
 /**
  * The model id that replays the selected model's recorded answers for a
@@ -38,7 +38,7 @@ export const DryRunInput = z.strictObject({
   /** A model on the Rewind provider for this run only; the provider's own model when absent. */
   model: z.string().trim().min(1).max(120).optional(),
   promptVersion: z.literal(PROMPT_VERSION).default(PROMPT_VERSION),
-  effort: z.enum(EFFORTS).default("low"),
+  effort: z.enum(DRY_RUN_EFFORTS).default("low"),
   /** Replaces the stored style guide for this run; null runs with none, absent keeps the stored one. */
   styleGuide: styleGuideSchema.nullable().optional(),
   /** `no-llm` is "Templates only". */

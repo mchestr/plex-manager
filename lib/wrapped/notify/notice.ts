@@ -14,6 +14,8 @@
  * member may view it (`rewindEnabled`, and the audience is everyone or they
  * are an admin), their `RewindPrefs.notify` is on (a missing row reads as
  * on, the column default), and `banner` is one of `rewindNotifyChannels`.
+ * After the final cut, a member who read the season issue gets the final
+ * cut's copy ("now includes December", P8.5).
  *
  * @module lib/wrapped/notify/notice
  */
@@ -59,7 +61,7 @@ export async function getRewindNotice(userId: string, now: Date = new Date()): P
 
   const year = seasonStateAt(now, config.rewindSeasonOpens ?? DEFAULT_SEASON.opens, config.rewindSeasonCloses ?? DEFAULT_SEASON.closes, zone).seasonYear
   const [rewind, prefs] = await Promise.all([
-    prisma.plexWrapped.findUnique({ where: { userId_year: { userId, year } }, select: { id: true, status: true, generatedAt: true } }),
+    prisma.plexWrapped.findUnique({ where: { userId_year: { userId, year } }, select: { id: true, status: true, generatedAt: true, finalCutAt: true } }),
     prisma.rewindPrefs.findUnique({ where: { userId_year: { userId, year } }, select: { notify: true } }),
   ])
   if (rewind?.status !== "completed" || prefs?.notify === false) return null
@@ -69,5 +71,8 @@ export async function getRewindNotice(userId: string, now: Date = new Date()): P
     select: { createdAt: true },
     take: 1,
   })
-  return isRewindUnread(rewind.generatedAt, views.map((view) => view.createdAt)) ? { kind: "rewind-ready", year } : null
+  if (!isRewindUnread(rewind.generatedAt, views.map((view) => view.createdAt))) return null
+  // December's readers get the final cut's copy, the same as its DM (P8.5).
+  const readSeason = rewind.finalCutAt && (await prisma.rewindView.count({ where: { wrappedId: rewind.id, createdAt: { lt: rewind.finalCutAt } } })) > 0
+  return readSeason ? { kind: "rewind-ready", year, finalCut: true } : { kind: "rewind-ready", year }
 }

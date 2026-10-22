@@ -4,6 +4,10 @@
  * aggregate, the zone and window, the serial, the previous copy, the LLM
  * provider and the season's Rewind spend.
  *
+ * The LLM provider is `getFrozenRewindModel()` (P8.1): the freeze lock's
+ * model on the active row's key. A row on another provider than the lock
+ * sets `llmProviderMismatch`, and the copy step writes templates.
+ *
  * @module lib/wrapped/pipeline/load-context
  */
 
@@ -11,21 +15,21 @@ import "server-only"
 
 import { createHmac, randomBytes } from "node:crypto"
 
-import { type LLMProviderId } from "@/lib/llm/models"
+import { getFrozenRewindModel } from "@/lib/llm/registry"
 import { getRewindSeasonSpend } from "@/lib/llm/usage-totals"
-import { isLLMProviderId } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
 import type { RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
 import { serverZone } from "@/lib/utils/server-zone"
 import { serverAggregateSchema, type ServerAggregate } from "@/lib/wrapped/aggregate/schema"
-import { batchWindowAt, dataThroughDate, isFinalCut, throughFor } from "@/lib/wrapped/aggregate/window"
+import { dataThroughDate, isFinalCut, throughFor } from "@/lib/wrapped/aggregate/window"
 import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
 import { findRewindStyleGuide } from "@/lib/wrapped/prompt/store"
 import { excludedContentRatingsSchema, excludedSectionIdsSchema } from "@/lib/wrapped/sources/schemas"
 import type { SonarrEndpoint } from "@/lib/wrapped/sources/sonarr-calendar"
-import { dataWindow, resolveZone, type RewindZone, type TimeWindow } from "@/lib/wrapped/time/zone"
+import { dataWindow, resolveDataWindow, resolveZone, seasonWindowAt, type RewindZone, type TimeWindow } from "@/lib/wrapped/time/zone"
 
-import type { PreviousCopy } from "./copy-step"
+import type { CopyProvider, PreviousCopy } from "./copy-step"
+import { storedIssueOf } from "./final-cut"
 import { RewindGenerationError } from "./generation-error"
 
 export interface RewindContext {
@@ -61,7 +65,9 @@ export interface RewindContext {
   nthRewind: number
   wrappedId: string | null
   previous: PreviousCopy | null
-  llmProvider: { provider: LLMProviderId; model: string } | null
+  llmProvider: CopyProvider | null
+  /** The active row names another provider than the freeze lock (P8.1). */
+  llmProviderMismatch?: boolean
   spentUsd: number
   styleGuide: string | null
 }
@@ -111,7 +117,24 @@ async function previousCopy(userId: string, year: number, data: string | null): 
     copy,
     copySource,
     slotHashes: copyMeta.slotHashes,
+    issue: storedIssueOf(stored.data),
   }
+}
+
+/**
+ * The batch's last data day, whether it is the final cut, and the member's
+ * window. A run with a `through` (the fan-outs) reads that batch; the rest
+ * (member requests, admin runs, hide runs, the stale sweep's re-runs) follow
+ * `resolveDataWindow` in the member's zone, so after 1 January they keep the
+ * full year. The season window never runs past the end of yesterday.
+ */
+function windowFor(year: number, zone: string, options: { through?: string; finalCut?: boolean }, now: number) {
+  if (options.through) {
+    const finalCut = options.finalCut ?? isFinalCut(year, options.through)
+    return { through: options.through, finalCut, window: finalCut ? dataWindow(year, zone, { finalCut }) : seasonWindowAt(year, zone, now) }
+  }
+  const resolved = resolveDataWindow({ year, zone, now })
+  return { through: throughFor(year, resolved), ...resolved }
 }
 
 /** Loads the context; throws `NOT_CONFIGURED` for a member who no longer exists. */
@@ -120,6 +143,8 @@ export async function loadRewindContext(options: {
   year: number
   kind: RewindGenerationKind
   through?: string
+  /** The final cut's full-year window with an earlier `through` (a staging rehearsal). */
+  finalCut?: boolean
 }): Promise<RewindContext> {
   const { userId, year } = options
   const [user, config, tautulli, overseerr, sonarr, zone, exclusions, wrapped, provider, styleGuide] = await Promise.all([
@@ -131,14 +156,13 @@ export async function loadRewindContext(options: {
     serverZone(),
     prisma.rewindExclusion.findMany({ where: { userId }, select: { ratingKey: true } }),
     prisma.plexWrapped.findUnique({ where: { userId_year: { userId, year } }, select: { id: true, data: true, status: true } }),
-    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" }, select: { provider: true, model: true } }),
+    getFrozenRewindModel(),
     findRewindStyleGuide(),
   ])
   if (!user) throw new RewindGenerationError("NOT_CONFIGURED", { retryable: false })
 
-  const through = options.through ?? throughFor(year, batchWindowAt(year, zone, Date.now()))
-  const finalCut = isFinalCut(year, through)
   const memberZone = resolveZone(user, zone)
+  const { through, finalCut, window } = windowFor(year, memberZone.zone, options, Date.now())
   const [aggregateRow, nth, spent, key] = await Promise.all([
     prisma.rewindServerAggregate.findUnique({ where: { year_dataThrough: { year, dataThrough: dataThroughDate(through) } }, select: { data: true } }),
     prisma.plexWrapped.count({ where: { userId, status: "completed", year: { lt: year } } }),
@@ -155,7 +179,7 @@ export async function loadRewindContext(options: {
     finalCut,
     member: { userId, name: user.name, plexUserId: user.plexUserId, isAdmin: user.isAdmin, createdAt: user.createdAt },
     zone: memberZone,
-    window: dataWindow(year, memberZone.zone, { finalCut }),
+    window,
     config: {
       rewindEnabled: config?.rewindEnabled ?? false,
       rewindAudience: config?.rewindAudience ?? "admins",
@@ -178,7 +202,8 @@ export async function loadRewindContext(options: {
     nthRewind: nth + 1,
     wrappedId: wrapped?.id ?? null,
     previous: wrapped?.status === "completed" ? await previousCopy(userId, year, wrapped.data) : null,
-    llmProvider: provider && isLLMProviderId(provider.provider) && provider.model ? { provider: provider.provider, model: provider.model } : null,
+    llmProvider: provider && provider.status !== "mismatch" ? { provider: provider.provider, model: provider.model, budgetModel: provider.budgetModel, rowModel: provider.rowModel } : null,
+    llmProviderMismatch: provider?.status === "mismatch",
     spentUsd: spent,
     styleGuide,
   }

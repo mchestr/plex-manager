@@ -31,6 +31,8 @@ export const JOB_TYPES = {
   // Season console (P7.8), on `rewind-batch`
   REWIND_SEASON_PREPARE: "rewind:season:prepare",
   REWIND_GENERATE_ALL: "rewind:generate:all",
+  // The final cut (P8.5), on `rewind-batch`
+  REWIND_FINAL_CUT: "rewind:final-cut",
   // Share cards (P5.10), on `rewind-aux`
   REWIND_CARD_PREWARM: "rewind:card:prewarm",
   REWIND_CARD_SWEEP: "rewind:card:sweep",
@@ -38,6 +40,8 @@ export const JOB_TYPES = {
   REWIND_DRY_RUN: "rewind:dry-run",
   // Ready notifications (P7.14), on `rewind-aux`
   REWIND_NOTIFY: "rewind:notify",
+  // The season open's audience switch (P8.2), on `rewind-aux`
+  REWIND_SEASON_OPEN: "rewind:season:open",
 } as const
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
@@ -209,6 +213,8 @@ export interface RewindServerAggregatePayload {
    * enqueuing them, so `REWIND_SEASON_PREPARE` adds them as its children.
    */
   warm?: "enqueue" | "return"
+  /** The full-year window with an earlier `through`: a staging rehearsal of the final cut (P8.5). */
+  finalCut?: true
 }
 
 /**
@@ -241,6 +247,8 @@ export interface RewindGenerateUserPayload {
   /** Set by the season fan-out (P7.8): whose Rewinds it generates, and the batch's last data day. */
   audience?: GenerationAudience
   through?: string
+  /** The final cut's full-year window, set by its fan-out (P8.5); with an early `through` only on staging. */
+  finalCut?: true
 }
 
 /**
@@ -262,7 +270,22 @@ export interface RewindGenerateAllPayload {
   through: string
   audience: GenerationAudience
   scope: "all" | "failed"
+  /** `final-cut` children keep unchanged slots (`copyPolicy: 'changed-slots'`, P8.5); `season` when absent. */
+  kind?: "season" | "final-cut"
+  finalCut?: true
   step?: "fan-out" | "done"
+}
+
+/**
+ * The final cut (P8.5): the full-year aggregate, the warm batches, then a
+ * `final-cut` fan-out. `through` is `YYYY-12-31`, or an earlier day on a
+ * staging rehearsal (`REWIND_STAGING=1`), which still reads the full-year window.
+ */
+export interface RewindFinalCutPayload {
+  year: number
+  through: string
+  triggeredBy: "scheduled" | "admin" | "script"
+  step?: "aggregate" | "warm" | "generate" | "done"
 }
 
 /** Renders the cover, centrefold and back cover of one completed Rewind with the member's saved options. */
@@ -279,13 +302,24 @@ export interface RewindDryRunPayload {
 
 /**
  * One "your Rewind is ready" message (P7.14), deduplicated on
- * `rewind:notify:{year}:{userId}:{kind}`. P8.5 adds the `final-cut` kind.
+ * `rewind:notify:{year}:{userId}:{kind}`. `final-cut` tells December's
+ * readers that their issue now includes December (P8.5).
  */
 export interface RewindNotifyPayload {
   wrappedId: string
   userId: string
   year: number
-  kind: "season" | "member"
+  kind: "season" | "member" | "final-cut"
+}
+
+/**
+ * The season open's audience switch (P8.2): at 08:00 on the opening day in
+ * the server zone, Rewind opens to everyone once the season-open generation
+ * is clean.
+ */
+export interface RewindSeasonOpenPayload {
+  year: number
+  triggeredBy: "scheduled"
 }
 
 // =============================================================================
@@ -309,10 +343,12 @@ export interface JobPayloadMap {
   [JOB_TYPES.REWIND_STALE_SWEEP]: Record<string, never>
   [JOB_TYPES.REWIND_SEASON_PREPARE]: RewindSeasonPreparePayload
   [JOB_TYPES.REWIND_GENERATE_ALL]: RewindGenerateAllPayload
+  [JOB_TYPES.REWIND_FINAL_CUT]: RewindFinalCutPayload
   [JOB_TYPES.REWIND_CARD_PREWARM]: RewindCardPrewarmPayload
   [JOB_TYPES.REWIND_CARD_SWEEP]: Record<string, never>
   [JOB_TYPES.REWIND_DRY_RUN]: RewindDryRunPayload
   [JOB_TYPES.REWIND_NOTIFY]: RewindNotifyPayload
+  [JOB_TYPES.REWIND_SEASON_OPEN]: RewindSeasonOpenPayload
 }
 
 // =============================================================================

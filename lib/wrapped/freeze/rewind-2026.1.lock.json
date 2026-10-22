@@ -1,0 +1,22 @@
+{
+  "version": "rewind-2026.1",
+  "frozenAt": "2026-12-01",
+  "model": null,
+  "hashes": {
+    "promptVersion": "fce634116ff7f5ae70294e0f3651547080f3eacec22b418768182a23767e775e",
+    "systemPrompt": "ba73512fcfc3f9a0565fdac8f0958cf54aa1feb4d700a1a827e034e6dddd573f",
+    "wireSchema": "a324cbd0b4ce0a37ac5b7849d1c2cad259a1085bef6b26ba510c386418e20985",
+    "copySlots": "aa222f77e096af80477d303ae3e7b504d9aae9aae2468a72376ed2456ee5384b",
+    "grounding": "3f68de6b63346e58bd88e0dc17015e8253766cae475bde9f7cbdc1da7c391f1f",
+    "posterLines": "3134f1bbb2b41f33c416672a22fd664fa3e07f42ac30ebe0d12b1e5873feb513",
+    "slotTemplates": "b749883d26032a318e0b81a6ef56de28782ff5c314abb28a7686f148f06d41f8",
+    "catalogue": "f703241b748eeff8cedf4512d3a4f2ce97469fefb680143e86774d75de59a210",
+    "model": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+  },
+  "changes": [
+    {
+      "on": "2026-10-21",
+      "reason": "Lock rewind-2026.1: the prompt, the catalogue and the copy slots, with window.finalCut out of every identity list (P8.5). No model yet: the bake-off sets it in evals/rewind/selected.json."
+    }
+  ]
+}

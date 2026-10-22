@@ -19,6 +19,11 @@ export function userRewind(id: string, year: number): Route {
   return `/admin/users/${seg(id)}/rewind/${year}` as Route
 }
 
+/** The playground with a member as the dry run's subject (P8.8). */
+export function playgroundFor(userId: string): Route {
+  return `/admin/rewind/playground?subject=${seg(userId)}` as Route
+}
+
 /** LLM usage, filtered to a member and a year when given. */
 export function llmUsage({ userId, year }: { userId?: string; year?: number } = {}): Route {
   const params = new URLSearchParams()

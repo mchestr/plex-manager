@@ -60,7 +60,8 @@ const isFinal = (facts: RewindFactsV3) => facts["window.finalCut"]?.value === 1
 const resolve = (v: Variant, facts: RewindFactsV3) => (typeof v === "string" ? v : isFinal(facts) ? v.final : v.open)
 const t = (id: string) => `{{fact:${id}}}`
 
-const SLOT_TEMPLATES: Readonly<Record<Exclude<SlotId, "archetype.posterLineId" | "archetype.tagline">, readonly Variant[]>> = {
+/** Every slot's fallback variants; P8.1's freeze lock hashes them. */
+export const SLOT_TEMPLATES: Readonly<Record<Exclude<SlotId, "archetype.posterLineId" | "archetype.tagline">, readonly Variant[]>> = {
   "deck.number": [
     { open: `That's ${t("time.daysHours")} of screen time, about ${t("time.perDay")} for every day of the year so far.`, final: `That's ${t("time.daysHours")} of screen time, about ${t("time.perDay")} for every day of the year.` },
     { open: `Put end to end, that's ${t("time.daysHours")}, or about ${t("time.perDay")} a day so far.`, final: `Put end to end, that's ${t("time.daysHours")}, or about ${t("time.perDay")} a day.` },

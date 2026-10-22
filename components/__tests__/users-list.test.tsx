@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { UsersList } from '../admin/users/users-list'
 import {
@@ -14,6 +14,17 @@ jest.mock('../admin/users/user-table-row', () => ({
     </tr>
   ),
 }))
+
+/** Base UI holds the opening popup at `pointer-events: none` for a moment; waits until the option takes a click. */
+async function clickable(testId: string) {
+  const option = await screen.findByTestId(testId)
+  await waitFor(() => {
+    for (let node: HTMLElement | null = option; node; node = node.parentElement) {
+      expect(getComputedStyle(node).pointerEvents).not.toBe('none')
+    }
+  })
+  return option
+}
 
 describe('UsersList', () => {
   it('should render a list of users', () => {
@@ -67,7 +78,7 @@ describe('UsersList', () => {
       // Open the Select, then choose the option from its portalled list.
       const user = userEvent.setup()
       await user.click(screen.getByTestId('users-filter-subscription'))
-      await user.click(await screen.findByTestId(`users-filter-subscription-option-${value}`))
+      await user.click(await clickable(`users-filter-subscription-option-${value}`))
     }
 
     it('shows all users when the subscription filter is "all"', () => {

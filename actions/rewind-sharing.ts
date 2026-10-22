@@ -45,12 +45,15 @@ import { wallTimeToInstant } from "@/lib/utils/zoned-time"
 import { yearSchema } from "@/lib/validations/shared-schemas"
 import { parseStoredRewind, readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
+import { choosable } from "@/lib/wrapped/data/share-safe"
+import { loadShareContext } from "@/lib/wrapped/data/share-context"
 import { CardFactIdSchema, ShareOptions } from "@/lib/wrapped/data/share-safe-schema"
 import { getSeasonState } from "@/lib/wrapped/season"
 
 /** What a lapsed member reads when sharing needs a membership; the sheet links it to `/subscribe`. */
 const NEEDS_MEMBERSHIP = "Sharing needs an active membership"
 const NOT_READY = "Your Rewind for this year is not ready to share"
+const NOT_YOUR_STATS = "Choose the poster's stats from your own"
 const NO_LINK = "That link was not found"
 const LIVE_LINK = "You already have a public link. Rotate it for a new address."
 
@@ -164,6 +167,7 @@ export const enableRewindShare = memberAction({
     const rewind = row && completedV3(row)
     if (!row || !rewind) return fail("CONFLICT", NOT_READY)
     if (!printsAll(rewind, options.pages)) return fail("VALIDATION", "Those pages are not in your Rewind")
+    if (options.cardFacts.length > 0 && !choosable(options.cardFacts, rewind, await loadShareContext({ userId, year }))) return fail("VALIDATION", NOT_YOUR_STATS)
 
     const expiresAt = await resolveExpiry(expiry)
     if (isPast(expiresAt)) return fail("VALIDATION", PAST_EXPIRY)
@@ -210,6 +214,7 @@ export const updateRewindShare = memberAction({
     const rewind = completedV3(share.wrapped)
     if (!rewind) return fail("CONFLICT", NOT_READY)
     if (changes.pages && !printsAll(rewind, changes.pages)) return fail("VALIDATION", "Those pages are not in your Rewind")
+    if (changes.cardFacts?.length && !choosable(changes.cardFacts, rewind, await loadShareContext(share.wrapped))) return fail("VALIDATION", NOT_YOUR_STATS)
 
     const expiresAt = expiry ? await resolveExpiry(expiry) : undefined
     if (expiresAt !== undefined && isPast(expiresAt)) return fail("VALIDATION", PAST_EXPIRY)

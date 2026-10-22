@@ -37,6 +37,7 @@
 import { formatCount } from "@/lib/rewind/format"
 import { has, num, shown } from "@/lib/rewind/pages/facts"
 import { measurer, type FontMetrics } from "@/lib/rewind/typeset/measure"
+import type { CardFactId } from "@/lib/wrapped/data/share-safe-schema"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 export interface BillingEntry {
@@ -63,6 +64,8 @@ export interface BillingOptions {
   /** The clock page is in the issue, so its hour may headline the showtime. */
   showtime: boolean
   locale: string
+  /** The stats the member chose for the poster (Edit card, P8.4): they become the tail line. */
+  tail?: readonly CardFactId[]
   measure: number
   metrics: FontMetrics
 }
@@ -80,7 +83,26 @@ type Credit = { connector: string | null; entry: BillingEntry } | { connector: s
 
 const titles = (facts: RewindFactsV3, ids: FactId[]) => ids.filter((id) => has(facts, id)).map((id) => shown(facts, id))
 
-function credits(facts: RewindFactsV3, opts: BillingOptions): Credit[][] {
+type CreditOptions = Pick<BillingOptions, "serverName" | "named" | "showtime" | "locale" | "tail">
+
+/** Each poster stat as a tail credit: its connector and term. */
+const TAIL_CREDITS: Record<CardFactId, [connector: string, term: string]> = {
+  "time.totalHours": ["watched", "Watch time"],
+  "time.seriesHours": ["series", "Series hours"],
+  "counts.films": ["films", "Films"],
+  "counts.episodes": ["episodes", "Episodes"],
+  "standing.percentile": ["standing", "Standing"],
+  "hours.peak": ["showtime", "Showtime"],
+  "streak.longest.days": ["longest run", "Longest run"],
+  "archetype.rarityShare": ["rarity", "Rarity"],
+  "taste.genre[1].name": ["genre", "Top genre"],
+  "records.completionShare": ["finished", "Finished"],
+}
+
+/** "1,307 hours" for the hour facts, else the display. */
+const tailDetail = (facts: RewindFactsV3, id: CardFactId) => (id === "time.totalHours" || id === "time.seriesHours" ? `${shown(facts, id)}\u00A0hours` : shown(facts, id))
+
+function credits(facts: RewindFactsV3, opts: CreditOptions): Credit[][] {
   const { locale } = opts
   const credit = (connector: string | null, term: string, detail: string | null | false): Credit[] =>
     detail ? [{ connector, entry: { term, detail } }] : []
@@ -101,11 +123,13 @@ function credits(facts: RewindFactsV3, opts: BillingOptions): Credit[][] {
     filmsLine.length > 0 && lead ? [...filmsLine, { connector: "featuring", entry: null }] : filmsLine,
     credit(filmsLine.length > 0 ? null : "featuring", series.length > 0 ? "Top series" : "Top film", lead),
     [...credit("with", "Also featuring", others.length > 0 && others.join(", ")), ...credit(others.length > 0 ? "and" : "with", "Top film", film)],
-    [
-      ...credit("showtime", "Showtime", opts.showtime && shown(facts, "hours.peak")),
-      ...credit("longest run", "Longest run", num(facts, "streak.longest.days") >= 2 && shown(facts, "streak.longest.days")),
-      ...credit("standing", "Standing", shown(facts, "standing.percentile")),
-    ],
+    opts.tail && opts.tail.length > 0
+      ? opts.tail.flatMap((id) => credit(TAIL_CREDITS[id][0], TAIL_CREDITS[id][1], has(facts, id) && tailDetail(facts, id)))
+      : [
+          ...credit("showtime", "Showtime", opts.showtime && shown(facts, "hours.peak")),
+          ...credit("longest run", "Longest run", num(facts, "streak.longest.days") >= 2 && shown(facts, "streak.longest.days")),
+          ...credit("standing", "Standing", shown(facts, "standing.percentile")),
+        ],
     credit("and introducing", "And introducing", shown(facts, "archetype.name")),
   ]
 }
@@ -126,6 +150,11 @@ function setLine(credits: Credit[], opts: BillingOptions): BillingLine {
     SPACE_EM * (parts.length - 1)
   )
   return { parts, size: Math.floor(Math.min(SIZE_MAX, opts.measure / em) * 10) / 10, safe: false }
+}
+
+/** The block's credits as a definition list alone, without setting its lines (the Notes, P8.4). */
+export function billingEntries(facts: RewindFactsV3, opts: CreditOptions): BillingEntry[] {
+  return credits(facts, opts).flatMap((line) => line.flatMap((c) => (c.entry ? [c.entry] : [])))
 }
 
 /**

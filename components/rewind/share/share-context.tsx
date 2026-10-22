@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react"
 
-import type { disableRewindShare, enableRewindShare, rotateRewindShare, saveRewindSharePrefs } from "@/actions/rewind-sharing"
+import type { disableRewindShare, enableRewindShare, rotateRewindShare, saveRewindSharePrefs, updateRewindShare } from "@/actions/rewind-sharing"
 import type { CardChoices, ShareSetup } from "@/lib/rewind/share-sheet"
 
 /**
@@ -15,6 +15,8 @@ export interface ShareActions {
   rotate: typeof rotateRewindShare
   disable: typeof disableRewindShare
   savePrefs: typeof saveRewindSharePrefs
+  /** Changes what the live link publishes (Edit card, P8.4). */
+  update?: typeof updateRewindShare
 }
 
 interface ShareState {

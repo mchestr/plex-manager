@@ -259,7 +259,6 @@ export const storedWrappedDataSchema = z.object({
 export type WrappedData = z.infer<typeof wrappedDataSchema>
 export type StoredWrappedData = z.infer<typeof storedWrappedDataSchema>
 export type WrappedStatistics = z.infer<typeof wrappedStatisticsSchema>
-export type TopContentLeaderboards = z.infer<typeof topContentLeaderboardsSchema>
 export type DerivedStatistics = z.infer<typeof derivedStatisticsSchema>
 export type PercentileResult = z.infer<typeof percentileResultSchema>
 export type MovieData = z.infer<typeof movieSchema>

@@ -1,7 +1,7 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { Eye, RefreshCw, SearchX, Undo2, Users } from "lucide-react"
+import { Eye, FlaskConical, RefreshCw, SearchX, Undo2, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { FilterBar } from "@/components/ui/filter-bar"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { useToast } from "@/components/ui/toast"
-import { userRewind } from "@/lib/admin/routes"
+import { playgroundFor, userRewind } from "@/lib/admin/routes"
 import { useFormat } from "@/lib/format-context"
 import type { BoundFormat } from "@/lib/utils/format"
 import type { SeasonMemberState } from "@/lib/wrapped/admin/season"
@@ -132,6 +132,7 @@ export function SeasonMemberTable({ year, rows, total, members, page, pageSize, 
       getRowName={(row) => row.name}
       rowActions={(row) => [
         { id: "preview", label: "Preview", icon: Eye, href: userRewind(row.id, year) },
+        { id: "playground", label: "Open in playground", icon: FlaskConical, href: playgroundFor(row.id) },
         {
           id: "regenerate",
           label: row.state === "stuck" ? "Regenerate (stuck)" : "Regenerate",

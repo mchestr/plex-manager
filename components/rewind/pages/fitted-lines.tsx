@@ -36,7 +36,7 @@ export function FittedLines({ fit, weight, tnum = false, lineHeight = 0.86, clas
   const lines = fit.lines.map((line, i) => (
     <Fragment key={i}>
       {i > 0 && " "}
-      <span className="block whitespace-nowrap" style={{ fontVariationSettings: axes(line.wdth, weight) }}>
+      <span className="rw-line block whitespace-nowrap" style={{ fontVariationSettings: axes(line.wdth, weight) }}>
         {line.text}
       </span>
     </Fragment>

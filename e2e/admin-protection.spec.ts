@@ -8,7 +8,7 @@ const adminPages = [
   '/admin/cost-analysis',
   '/admin/invites',
   '/admin/llm-usage',
-  '/admin/playground',
+  '/admin/rewind/playground',
   '/admin/settings',
   '/admin/shares',
   '/admin/users',

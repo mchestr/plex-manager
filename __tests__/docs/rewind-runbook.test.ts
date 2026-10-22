@@ -49,8 +49,8 @@ describe('docs/rewind.md', () => {
   it('names every P1 feature flag once lib/rewind/features.ts exists', async () => {
     const features = path.join(ROOT, 'lib/rewind/features.ts')
     if (!fs.existsSync(features)) return
-    const mod: { REWIND_FEATURES?: Record<string, unknown> } = await import(features)
-    const keys = Object.keys(mod.REWIND_FEATURES ?? {})
+    const mod: { REWIND_FEATURES?: ReadonlyArray<{ key: string }> } = await import(features)
+    const keys = (mod.REWIND_FEATURES ?? []).map((feature) => feature.key)
     expect(keys.length).toBeGreaterThan(0)
     for (const key of keys) expect(runbook).toContain(`\`${key}\``)
   })

@@ -1,7 +1,6 @@
 import type { TautulliHistoryItem } from "@/lib/validations/tautulli"
 import {
   computeDerivedStatistics,
-  computePercentile,
   formatHourLabel,
 } from "@/lib/wrapped/derived-statistics"
 
@@ -134,28 +133,6 @@ describe("computeDerivedStatistics", () => {
     const result = computeDerivedStatistics(history, YEAR)
 
     expect(result.peakHour?.hour).toBe(22)
-  })
-})
-
-describe("computePercentile", () => {
-  it("computes standard percentiles", () => {
-    expect(computePercentile(1, 50)).toEqual({
-      percentile: 2,
-      topPercentLabel: "Top 2%",
-    })
-    expect(computePercentile(25, 50)).toEqual({
-      percentile: 50,
-      topPercentLabel: "Top 50%",
-    })
-  })
-
-  it("clamps to Top 1% at minimum", () => {
-    expect(computePercentile(1, 500).topPercentLabel).toBe("Top 1%")
-  })
-
-  it("handles last place and single-user servers", () => {
-    expect(computePercentile(50, 50).percentile).toBe(100)
-    expect(computePercentile(1, 1).percentile).toBe(100)
   })
 })
 

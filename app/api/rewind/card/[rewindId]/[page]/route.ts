@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma"
 import { cardBadRequest, cardError, cardNotFound, completedV3, serveCard } from "@/lib/rewind/cards/serve"
 import { createLogger } from "@/lib/utils/logger"
 import { recordIdSchema } from "@/lib/validations/params"
+import { choosable } from "@/lib/wrapped/data/share-safe"
 import { loadShareContext } from "@/lib/wrapped/data/share-context"
 import { CardFactIdSchema, SharePageTypeSchema } from "@/lib/wrapped/data/share-safe-schema"
 
@@ -43,7 +44,8 @@ function query(url: URL) {
  *
  * The owner's card (design 6.4): the session's own completed v3 Rewind, with
  * an active membership when Stripe is on. The options are clamped by the
- * admin flags inside the projection; `square` is refused until FR-27. Anything
+ * admin flags inside the projection, and `facts` must be stats the member
+ * may choose (`cardFactOptions`, P8.4); `square` is refused until FR-27. Anything
  * unauthorised, unknown or unpublished is a 404.
  */
 export async function GET(request: NextRequest, context: { params: Promise<{ rewindId: string; page: string }> }) {
@@ -66,10 +68,13 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rew
     if (!(await hasEntitlement(userId, "full"))) return cardNotFound()
 
     const { size, signed, art, daily, facts } = parsed.data
+    const ctx = await loadShareContext(row)
+    // Edit card (P8.4): only the stats this member may print.
+    if (!choosable(facts, rewind, ctx)) return cardBadRequest("Choose stats from your own")
     return await serveCard({
       rewind,
       options: { pages: [params.data.page], signed, includeArt: art, dailyDetail: daily, cardFacts: facts },
-      ctx: await loadShareContext(row),
+      ctx,
       page: params.data.page,
       size,
       limit: { name: "rw:card:session", subject: userId },

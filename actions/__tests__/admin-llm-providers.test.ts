@@ -27,6 +27,8 @@ jest.mock('@/lib/security/audit-log', () => ({
   logAuditEvent: jest.fn(),
 }))
 jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn() }))
+// The Rewind model freeze (P8.1) has its own file; here the season is closed.
+jest.mock('@/lib/wrapped/season', () => ({ getSeasonState: jest.fn(async () => ({ isOpen: false })) }))
 
 const mockSession = getServerSession as jest.Mock
 const mockTest = testLLMProviderConnection as jest.Mock

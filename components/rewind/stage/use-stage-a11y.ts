@@ -1,6 +1,6 @@
 "use client"
 
-import { useLayoutEffect, useRef, type FocusEvent, type RefObject } from "react"
+import { useEffect, useLayoutEffect, useRef, type FocusEvent, type RefObject } from "react"
 
 import type { PlayerEvent, PlayerState } from "@/lib/rewind/stage/player-reducer"
 
@@ -9,6 +9,18 @@ const PAGE = '[data-testid="rewind-page"]'
 /** A focusable control inside a page: not the page itself and not its `h2` focus target. */
 function isPageControl(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && target.closest(PAGE) !== null && !target.matches(`h2, ${PAGE}`)
+}
+
+/** Runs `run` in a task of its own once the next frame has rendered; returns its cancel. */
+function afterNextFrame(run: () => void): () => void {
+  let timer: number | null = null
+  const frame = requestAnimationFrame(() => {
+    timer = window.setTimeout(run, 0)
+  })
+  return () => {
+    cancelAnimationFrame(frame)
+    if (timer !== null) window.clearTimeout(timer)
+  }
 }
 
 /**
@@ -34,15 +46,25 @@ export function useStageA11y({
   pageLabel: (index: number) => string
 }) {
   const shown = useRef(state.index)
+  const pendingFocus = useRef<(() => void) | null>(null)
 
   useLayoutEffect(() => {
     if (shown.current === state.index) return
     shown.current = state.index
     if (state.lastTurn !== "user") return
-    const page = pagesRef.current?.querySelector<HTMLElement>(`${PAGE}[data-current]`)
-    const target = page?.querySelector<HTMLElement>("h2") ?? page
-    target?.focus({ preventScroll: true })
+    // After the turn's frame, in a task of its own: focus forces the incoming
+    // page's style and layout, which in the commit (P7.15) or in the frame's
+    // animation callbacks made the turn one long task.
+    pendingFocus.current?.()
+    pendingFocus.current = afterNextFrame(() => {
+      pendingFocus.current = null
+      const page = pagesRef.current?.querySelector<HTMLElement>(`${PAGE}[data-current]`)
+      const target = page?.querySelector<HTMLElement>("h2") ?? page
+      target?.focus({ preventScroll: true })
+    })
   }, [pagesRef, state.index, state.lastTurn])
+
+  useEffect(() => () => pendingFocus.current?.(), [])
 
   return {
     announcement: state.lastTurn === "auto" ? pageLabel(state.index) : "",

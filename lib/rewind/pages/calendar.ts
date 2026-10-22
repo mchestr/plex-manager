@@ -8,10 +8,12 @@
  * @module lib/rewind/pages/calendar
  */
 
-import { figure, heading, paragraph, plain, tableBlock } from "@/lib/rewind/article/blocks"
+import { figure, heading, paragraph, plain, tableBlock, type ArticleBlock } from "@/lib/rewind/article/blocks"
+import type { RewindFeatureFlags } from "@/lib/rewind/features"
 import { formatDayMonth, formatRewindDuration } from "@/lib/rewind/format"
 import type { PageDefinition, PageTable } from "@/lib/rewind/registry"
 import { headline } from "@/lib/wrapped/copy/templates"
+import { formatDayKey } from "@/lib/utils/format"
 import { display } from "@/lib/wrapped/facts/display"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
@@ -29,6 +31,37 @@ export function calendarDays(data: CalendarData, facts: RewindFactsV3) {
   const from = facts["window.from"]?.value
   const start = Date.parse(`${typeof from === "string" ? from : "1970-01-01"}T00:00:00Z`)
   return data.days.map((day, i) => ({ ...day, date: new Date(start + i * DAY_MS).toISOString().slice(0, 10) }))
+}
+
+/** One day as "Pick a day" (P8.3) and the calendar grid read it. */
+export interface CalendarDayRow {
+  date: string
+  /** 1 to 12. */
+  month: number
+  /** "Jul 4" in en-US, "4 Jul" in en-GB. */
+  day: string
+  minutes: number
+  /** "12 h 24 m", or null on a day without plays. */
+  watched: string | null
+  /** The day's most watched title, or null. */
+  title: string | null
+  /** The whole row as one line: "4 Jul, 12 h 24 m, mostly The Bear" or "4 Jul, no plays". */
+  label: string
+}
+
+/**
+ * Every day of the window as a row (P8.3), from the stored page data only.
+ * A title the member hid (`hiddenKeys`, P7.7) is left out before the
+ * regeneration that drops it from the data lands.
+ */
+export function calendarDayRows(data: CalendarData, facts: RewindFactsV3, settings: { locale: string }, hiddenKeys?: ReadonlySet<string>): CalendarDayRow[] {
+  return calendarDays(data, facts).map(({ date, minutes, key }) => {
+    const day = formatDayKey(date, "day-month-short", settings).replace(/[ \u202F]/g, "\u00A0")
+    const watched = minutes > 0 ? formatRewindDuration(minutes, settings) : null
+    const title = watched && key && !hiddenKeys?.has(key) ? (data.titles[key] ?? null) : null
+    const label = !watched ? `${day}, no plays` : title ? `${day}, ${watched}, mostly ${title}` : `${day}, ${watched}`
+    return { date, month: Number(date.slice(5, 7)), day, minutes, watched, title, label }
+  })
 }
 
 const COLUMNS = ["Day", "Watched", "Most watched"]
@@ -57,6 +90,27 @@ export function monthTables(data: CalendarData, facts: RewindFactsV3, settings: 
     columns: COLUMNS,
     rows,
   }))
+}
+
+/**
+ * The day blocks of the Notes and article mode: the month tables, or with
+ * `calendar.grid` on (P8.3) one `calendar` block that holds them for the
+ * server render and the grid's month rows for the hydrated island.
+ */
+function dayBlocks(
+  data: CalendarData,
+  facts: RewindFactsV3,
+  ctx: { locale: string; hiddenKeys?: ReadonlySet<string>; features?: Partial<RewindFeatureFlags> }
+): ArticleBlock[] {
+  const tables = monthTables(data, facts, ctx)
+  if (tables.length === 0 || !ctx.features?.["calendar.grid"]) return tables.flatMap(tableBlock)
+  const rows = calendarDayRows(data, facts, ctx, ctx.hiddenKeys)
+  const months = [...new Set(rows.map((row) => row.month))].map((month) => ({
+    label: display("month", month, ctx),
+    days: rows.filter((row) => row.month === month),
+  }))
+  const caption = `Every day from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}, a row per month, by day in ${shown(facts, "tz.label")}. Use the arrow keys to move, and Enter to read a day.`
+  return [{ kind: "calendar", caption, tables, months }]
 }
 
 export const calendarPage: PageDefinition<CalendarData> = {
@@ -94,12 +148,12 @@ export const calendarPage: PageDefinition<CalendarData> = {
     heading(headline("calendar", facts), facts),
     paragraph(pageDeck(ctx, facts, "calendar"), facts),
     ...figure(calendarPage.srSummary(data, facts)),
-    ...monthTables(data, facts, ctx).flatMap(tableBlock),
+    ...dayBlocks(data, facts, ctx),
   ],
-  // Minutes per day, one table per month (P8.3 adds the roving-focus grid).
+  // Minutes per day, one table per month, or the roving-focus grid under `calendar.grid` (P8.3).
   notes: (data, facts, ctx) => {
-    const tables = monthTables(data, facts, ctx)
-    return tables.length > 0 ? [{ kind: "heading", text: plain("Every day you pressed play") }, ...tables.flatMap(tableBlock)] : figure(calendarPage.srSummary(data, facts))
+    const blocks = dayBlocks(data, facts, ctx)
+    return blocks.length > 0 ? [{ kind: "heading", text: plain("Every day you pressed play") }, ...blocks] : figure(calendarPage.srSummary(data, facts))
   },
   share: { facts: ["days.active", "window.elapsedDays", "streak.longest.days", "days.biggest.date", "days.biggest.minutes"] },
 }

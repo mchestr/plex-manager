@@ -23,13 +23,25 @@ async function loadRedirects(): Promise<Redirect[]> {
 
 describe("next.config.js redirects", () => {
   it("moves share links first, then every other /wrapped path", async () => {
-    expect(await loadRedirects()).toEqual([
+    expect((await loadRedirects()).slice(0, 2)).toEqual([
       { source: "/wrapped/share/:token", destination: "/rewind/s/:token", permanent: true },
       { source: "/wrapped/:path*", destination: "/rewind/:path*", permanent: true },
     ])
   })
 
-  it("makes both permanent (308)", async () => {
-    for (const rule of await loadRedirects()) expect(rule.permanent).toBe(true)
+  it("makes both /wrapped moves permanent (308)", async () => {
+    for (const rule of (await loadRedirects()).slice(0, 2)) expect(rule.permanent).toBe(true)
+  })
+
+  it("sends the old playground to the Rewind playground, keeping a template as its style guide, for now (307)", async () => {
+    expect((await loadRedirects()).slice(2)).toEqual([
+      {
+        source: "/admin/playground",
+        has: [{ type: "query", key: "templateId", value: "(?<templateId>[A-Za-z0-9_-]+)" }],
+        destination: "/admin/rewind/playground?styleGuideId=:templateId",
+        permanent: false,
+      },
+      { source: "/admin/playground", destination: "/admin/rewind/playground", permanent: false },
+    ])
   })
 })

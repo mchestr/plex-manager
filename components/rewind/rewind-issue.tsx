@@ -4,7 +4,7 @@ import type { Route } from "next"
 import { z } from "zod"
 
 import { hideRewindTitle, unhideRewindTitle } from "@/actions/rewind-exclusions"
-import { disableRewindShare, enableRewindShare, rotateRewindShare, saveRewindSharePrefs } from "@/actions/rewind-sharing"
+import { disableRewindShare, enableRewindShare, rotateRewindShare, saveRewindSharePrefs, updateRewindShare } from "@/actions/rewind-sharing"
 import { recordRewindView } from "@/actions/rewind-views"
 import { RegenerationWatch } from "@/components/rewind/hide/regeneration-watch"
 import { PageBody } from "@/components/rewind/pages/page-body"
@@ -13,8 +13,9 @@ import { StoryStage } from "@/components/rewind/stage/story-stage"
 import { serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
 import { pagesForCut } from "@/lib/rewind/editions"
+import { rewindFeatureFlags } from "@/lib/rewind/features"
 import { loadItemLinks } from "@/lib/rewind/item-links"
-import { pageNotes } from "@/lib/rewind/notes"
+import { answeredNotes, pageNotes, type CoreNotesContext } from "@/lib/rewind/notes"
 import { registry, type RegistryEntry } from "@/lib/rewind/registry"
 import { validatePagesOnRead, type SelectedPage } from "@/lib/rewind/select-pages"
 import { loadShareSetup } from "@/lib/rewind/share-setup"
@@ -49,12 +50,19 @@ async function libraryHref(): Promise<string | undefined> {
   return server?.publicUrl ? `${server.publicUrl.replace(/\/+$/, "")}/web/index.html` : undefined
 }
 
+/** The member's completed Rewinds before `year`, newest first, for the bookends' Notes (P8.4). */
+async function earlierYears(userId: string, year: number): Promise<number[]> {
+  const rows = await prisma.plexWrapped.findMany({ where: { userId, year: { lt: year }, status: "completed" }, select: { year: true }, orderBy: { year: "desc" } })
+  return rows.map((row) => row.year)
+}
+
 /**
  * A stored v3 issue as the story (P5.5): its pages parsed with their
  * registry schemas, minus `Config.rewindDisabledPages`, numbered, typeset on
  * the server and handed to P5.2's `StoryStage` as slots, with the share
  * sheet's setup (P5.11). A full issue also typesets its pocket cut
  * (`pagesForCut`, P7.3), numbered 1 to 6, which the cover can swap to.
+ * The December feature flags (P8.3) are read here and passed down as booleans.
  */
 export async function RewindIssue({
   rewindId,
@@ -75,16 +83,18 @@ export async function RewindIssue({
     prisma.config.findUnique({ where: { id: "config" }, select: { rewindDisabledPages: true } }),
   ])
   const archetype = data.archetype?.id ?? null
+  const features = rewindFeatureFlags(config)
   const numbering = { archetype, disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []) }
   const pages = validatePagesOnRead(pagesForCut(data, "full"), numbering)
   const pocket = data.edition === "full" ? validatePagesOnRead(pagesForCut(data, "pocket"), numbering) : null
-  const [share, hidden, links, library] = await Promise.all([
-    mode !== "member" ? null : loadShareSetup({ userId, rewindId, rewind: data, pages }),
+  const [share, hidden, links, library, earlier] = await Promise.all([
+    mode !== "member" ? null : loadShareSetup({ userId, rewindId, rewind: data, pages, features }),
     mode !== "member"
       ? null
       : prisma.rewindExclusion.findMany({ where: { userId }, select: { ratingKey: true, kind: true, title: true }, orderBy: { createdAt: "asc" } }),
     pages.some((page) => page.type === "next-year") ? loadItemLinks() : undefined,
     data.edition === "postcard" ? libraryHref() : undefined,
+    features["notes.core"] && pages.some((page) => page.type === "bookends") ? earlierYears(userId, data.year) : [],
   ])
   const types = (list: readonly SelectedPage[]) => list.map((page) => page.type)
   const hiddenKeys = new Set((hidden ?? []).map((row) => row.ratingKey))
@@ -104,17 +114,32 @@ export async function RewindIssue({
     cuts: { full: data.edition === "full" ? types(pages) : null, pocket: types(pocket ?? pages) },
     libraryHref: library,
     links,
+    features,
   }
-  const slots = (list: readonly SelectedPage[], context: IssueContext) =>
-    list.map((page) => {
+  const slots = (list: readonly SelectedPage[], context: IssueContext) => {
+    const notesCtx: CoreNotesContext = {
+      locale: settings.locale,
+      zone: context.zone,
+      hiddenKeys,
+      features,
+      coreNotes: features["notes.core"],
+      pages: list.map((page) => ({ folio: page.folio, name: registry[page.type].name, type: page.type })),
+      earlierYears: earlier,
+      serverName: brand,
+      copySource: data.copySource,
+      cards: share?.cards.map((card) => registry[card].name),
+    }
+    return list.map((page) => {
       const entry: RegistryEntry = registry[page.type]
       return {
         type: page.type,
         content: <PageBody page={page} issue={context} />,
         table: entry.table?.(page.data, data.facts, { locale: settings.locale }) ?? null,
-        notes: pageNotes(page, data.facts, { locale: settings.locale, zone: context.zone, hiddenKeys }),
+        notes: pageNotes(page, data.facts, notesCtx),
+        notesAnswered: answeredNotes(page, data.facts, notesCtx),
       }
     })
+  }
 
   return (
     <StoryStage
@@ -125,7 +150,7 @@ export async function RewindIssue({
       archetype={archetype}
       closeHref={returnTo}
       copy={{ copySource: data.copySource, model: data.copyMeta.model }}
-      share={share ? { setup: share, actions: { enable: enableRewindShare, rotate: rotateRewindShare, disable: disableRewindShare, savePrefs: saveRewindSharePrefs } } : undefined}
+      share={share ? { setup: share, actions: { enable: enableRewindShare, rotate: rotateRewindShare, disable: disableRewindShare, savePrefs: saveRewindSharePrefs, update: updateRewindShare } } : undefined}
       hide={
         hidden
           ? {
@@ -141,6 +166,7 @@ export async function RewindIssue({
       views={mode === "member" ? { rewindId, record: recordRewindView } : undefined}
       initialIndex={mode === "preview" ? Math.max(0, pages.findIndex((page) => page.type === initialPage)) : undefined}
       still={mode === "preview" && still}
+      tapCompletes={features["stage.tap-completes"]}
     />
   )
 }

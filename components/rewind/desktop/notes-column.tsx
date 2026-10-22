@@ -3,6 +3,7 @@
 import { Table } from "lucide-react"
 
 import { ArticleBlockView } from "@/components/rewind/article/article-block"
+import { useQuiz } from "@/components/rewind/stage/quiz-context"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import type { ArticleBlock } from "@/lib/rewind/article/blocks"
@@ -17,6 +18,8 @@ interface NotesColumnProps {
   pageName: string
   /** The page's Notes blocks (`pageNotes`), built on the server. */
   notes: readonly ArticleBlock[]
+  /** The Notes once the quiz is answered or skipped (P8.4), so the Guess Notes never spoil it. */
+  answeredNotes?: readonly ArticleBlock[] | null
   /** The page's own `table()`, which "Show as table" swaps in; null hides the toggle. */
   table: PageTable | null
   showTable: boolean
@@ -30,14 +33,17 @@ interface NotesColumnProps {
  * than repeat it, "Show as table" (`rewind-notes-table-toggle`, also T on
  * desktop) for the page's own chart, and the share formats at the foot. It
  * is the only part of the spread that scrolls, vertically, and it keeps the
- * arrow keys for that (`data-rw-scroll`).
+ * arrow keys for that (`data-rw-scroll`). It takes focus, so a keyboard can
+ * scroll a page whose Notes have no control of their own.
  */
-export function NotesColumn({ folio, pageName, notes, table, showTable, onToggleTable, formats }: NotesColumnProps) {
+export function NotesColumn({ folio, pageName, notes: before, answeredNotes, table, showTable, onToggleTable, formats }: NotesColumnProps) {
+  const { answer } = useQuiz()
+  const notes = answer && answeredNotes ? answeredNotes : before
   const label = `Notes on page ${folio}, ${pageName}`
   const asTable = showTable && table !== null
 
   return (
-    <aside aria-label={label} data-rw-scroll className={cn(SPREAD_SIDE, "pointer-events-auto right-6 w-(--rw-notes-w) pl-2 font-text")} data-testid="rewind-notes">
+    <aside aria-label={label} data-rw-scroll tabIndex={0} className={cn(SPREAD_SIDE, "pointer-events-auto right-6 w-(--rw-notes-w) pl-2 font-text")} data-testid="rewind-notes">
       <div className="flex items-center justify-between gap-3">
         <p className="font-display text-ui font-semibold">{label}</p>
         {table && (

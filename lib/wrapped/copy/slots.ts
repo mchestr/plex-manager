@@ -9,8 +9,11 @@
  * - `allowedFacts`: the only facts its tokens may name. A deck leaves out its
  *   page's hero fact ({@link HERO_FACTS}), so it adds context instead of
  *   repeating the number (RWV-10).
- * - `identity`: the facts its claim depends on, such as the No. 1 title. A
- *   slot that may refer to the open data window lists `window.finalCut`.
+ * - `identity`: the facts its claim depends on, such as the No. 1 title. No
+ *   slot lists `window.finalCut`: model copy may not use window words
+ *   (grounding rule 6), so window wording lives in the templates (design
+ *   8.3), and listing it would re-call the model for every full issue at the
+ *   final cut (P8.5).
  * - `bands`: thresholds a quantifier depends on ("most" needs a share of 0.5).
  *
  * ## Dependency hash
@@ -85,7 +88,7 @@ export const COPY_SLOTS: Readonly<Record<SlotId, CopySlot>> = {
       "time.daysHours", "time.perDay", "time.seriesHours", "time.seriesShare", "time.filmsHours", "time.filmsShare",
       "time.vsLastYear", "counts.episodes", "counts.series", "counts.films", "window.elapsedDays",
     ],
-    identity: ["window.finalCut"],
+    identity: [],
     bands: [{ fact: "time.seriesShare", at: [0.5] }],
   }),
   "deck.bookends": slot("deck.bookends", "bookends", DECK, {
@@ -144,7 +147,7 @@ export const COPY_SLOTS: Readonly<Record<SlotId, CopySlot>> = {
       "streak.longest.from", "streak.longest.to", "days.active", "window.elapsedDays", "days.biggest.date",
       "days.biggest.minutes", "days.longestGap.days", "days.longestGap.month", "days.biggestWeek", "days.biggestWeek.from",
     ],
-    identity: ["window.finalCut", "days.biggest.date", "days.longestGap.month", "streak.longest.from"],
+    identity: ["days.biggest.date", "days.longestGap.month", "streak.longest.from"],
     bands: [],
   }),
   "deck.records": slot("deck.records", "records", DECK, {
@@ -169,7 +172,7 @@ export const COPY_SLOTS: Readonly<Record<SlotId, CopySlot>> = {
       "standing.members", "community.hours", "community.topSeries", "community.busiestNight",
       "community.peakConcurrent", "community.requestsFulfilled", "community.titlesAdded",
     ],
-    identity: ["window.finalCut", "community.topSeries"],
+    identity: ["community.topSeries"],
     bands: [],
   }),
   "deck.nextYear": slot("deck.nextYear", "next-year", DECK, {
@@ -199,7 +202,7 @@ export const COPY_SLOTS: Readonly<Record<SlotId, CopySlot>> = {
   }),
   signOff: slot("signOff", "back-cover", 120, {
     allowedFacts: ["member.firstName", "time.totalHours", "series[1].title", "films[1].title", "archetype.name"],
-    identity: ["window.finalCut", "member.firstName", "series[1].title", "archetype.id"],
+    identity: ["member.firstName", "series[1].title", "archetype.id"],
     bands: [],
   }),
 }
@@ -225,7 +228,7 @@ export function factPages(id: FactId): IssuePageType[] {
 /**
  * A hash of what the slot's claim depends on: the identity facts' values and
  * which side of each band the member is on. A number that merely grows keeps
- * it; a new No. 1, the final cut or a crossed band changes it.
+ * it; a new No. 1 or a crossed band changes it.
  *
  * @example
  * ```ts

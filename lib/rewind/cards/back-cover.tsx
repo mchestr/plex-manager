@@ -61,6 +61,8 @@ export function BackCoverCard(input: CardInput, assets: CardAssets = NO_ASSETS):
     named: input.signed,
     showtime: Boolean(input.page.facts["hours.peak"]),
     locale: "en-US",
+    // Edit card (P8.4): the member's chosen stats become the tail line.
+    tail: input.cardFacts.length > 0 ? input.page.stats : undefined,
     measure: PAGE_MEASURE,
     metrics: pageMetrics,
   })

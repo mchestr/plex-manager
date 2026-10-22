@@ -89,11 +89,19 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 
 **Done when.**
 - [ ] The last prompt edits reach 98% or more first-pass grounding on all 20 fixtures, and their recordings are committed.
-- [ ] `PROMPT_VERSION` is `rewind-2026.1`, and the lock covers the model, the prompt and the catalogue, with a CI check that fails on any change.
-- [ ] The Rewind model cannot be changed in settings until the season closes, and a provider mismatch falls back to templates.
+- [x] `PROMPT_VERSION` is `rewind-2026.1`, and the lock covers the model, the prompt and the catalogue, with a CI check that fails on any change. (The lock's `model` is null until the bake-off fills `selected.json`; see the note.)
+- [x] The Rewind model cannot be changed in settings until the season closes, and a provider mismatch falls back to templates.
 - [ ] The page data that P8.3 and P8.4 need is verified in the stored soft-launch issues, with no change to the data contract on the day.
 - [ ] The tag, the dump and the deploy happened before 18:00 on 30 November, and the staging rehearsal's timings are in `ship-check.md`.
 - [ ] Prices were re-checked on 2026-12-01 and recorded in `model-selection.md`.
+
+(as merged, code only:
+- The lock is `lib/wrapped/freeze/rewind-2026.1.lock.json` with nine sections (`lib/wrapped/freeze/sections.ts`: `promptVersion`, `systemPrompt`, `wireSchema`, `copySlots`, `grounding`, `posterLines`, `slotTemplates`, `catalogue`, `model`), a `frozenAt` of 2026-12-01 and dated reason lines; `npm run rewind:freeze -- --check` runs in CI's Unit Tests job, and `--write --reason=...` refuses a changed lock under the same version from `frozenAt`. `copySlots` hashes the lists with `window.finalCut` already removed by P8.5. `SLOT_TEMPLATES` in `lib/wrapped/copy/templates.ts` is now exported for the hash.
+- `evals/rewind/selected.json` still names no model, so the committed lock has `model: null`. While it does, `getFrozenRewindModel()` (`lib/llm/registry.ts`, pure rule `frozenModelFor` in `lib/wrapped/freeze/lock.ts`) returns the active row's own model ("unfrozen"); once the lock names one it returns the lock's model and budget model on the row's key, and "mismatch" for a row on another provider. `loadRewindContext` uses it, so the default and P8.5's `changed-slots` policies both write with the frozen model; a mismatch makes every slot a template (`PROVIDER_MISMATCH`, one warning per process) and turns the preflight's AI copy row red (`unreachable`). Dry runs on fixtures keep the active row, so the playground can still try other models.
+- The settings refusal covers a provider, model or OpenAI-compatible base-URL change for `wrapped` while `getSeasonState().isOpen`, returned as `CONFLICT` before the connection test; key rotation and the assistant pass.
+- `/admin/rewind` shows "Model freeze" ("Frozen 1 December 2026", or "Not frozen: no model selected yet") and the frozen model.
+- `models.test.ts`'s `asOf` check is skipped until the lock names a model, and from 2026-12-02 it fails until the frozen pair carries a 2026-12-01 price check.
+- Owner-only, not done (dated checklist in `docs/rewind.md`, "Owner checklist, 30 November to 2 December"): by 29 Nov record the bake-off in `selected.json` with its recordings, reach 98% first-pass grounding, and merge `npm run rewind:freeze -- --write --reason=...`; 30 Nov after 12:00 run the validator's page-schema pass on an admin's soft-launch issue, tag `rewind-2026.1`, dump, deploy before 18:00, check `/admin/rewind`, rehearse on staging in the evening and record the timings in `ship-check.md`; 1 Dec re-check the prices and append them to `model-selection.md`.)
 
 ### Step P8.2: Season open
 
@@ -134,6 +142,8 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 - [ ] 100% of eligible members have a completed Rewind, and every skip carries an eligibility reason.
 - [ ] `rewindAudience` became `all` at 08:00, and each member received one ready notification inside their window.
 - [ ] `RewindView` rows are recording, and spend is within the cap and under $0.03 per member.
+
+(as merged, code only: unlike "This step merges no code", the season open is now scheduled code. The Prepare through 30 November at 00:15 in the westernmost zone was already P7.8's `ensureSeasonPrepareScheduled`; P8.2 adds the 08:00 audience switch. `REWIND_SEASON_OPEN` on `rewind-aux` (`lib/queue/jobs/rewind-season-open.ts`, rules in `lib/rewind/season-open.ts`) is kept as one delayed job (dedup `rewind:open:{year}`) for 08:00 on the opening day in the server zone, at worker start and by the stale sweep, through the shared `keepDelayedRun` now in `lib/rewind/season-runs.ts` (the Prepare and the final cut use it too). It switches only with the owner's opt-in, the new `+season.auto-open` entry in `REWIND_FEATURES` (no migration; listed under "Features added in December"), with Rewind on, the audience still `admins`, the season-open Prepare finished and no member generating or failed; while a run is going it re-checks every 10 minutes until 12:00, and with failures it leaves the switch to the owner. The switch (`openRewindToEveryone`) is a compare-and-set to `all`, a `CONFIG_CHANGED` entry by `system` and `enqueueSeasonReadyNotifications`, the same effects as P7.12's save. `scripts/rewind-season-open.ts` (`npm run rewind:season-open`) prints the schedule read-only, and `--rehearse` (only with `REWIND_STAGING=1`) enqueues the Prepare at once with audience `all`, waits, switches and prints the timings; `--switch-only` switches after Retry failed. `/admin/rewind` shows "Opens to everyone". `e2e/rewind/season-open.spec.ts` is written, not run. Owner-only, not done (dated in `docs/rewind.md`'s checklist): on 30 Nov turn on `+season.auto-open` if wanted and run the staging rehearsal; 1 Dec 00:15 to 08:00 verify the dashboard, Retry failed, and at 08:00 confirm the audience is Everyone or switch by hand; watch DMs, `RewindView` rows and spend; 2 Dec run `npm run rewind:validate -- --year=2026` against production and record zero failures in `ship-check.md`.)
 
 ### Step P8.3: P1 story features
 
@@ -177,11 +187,13 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 **Demo.** On the heavy member's race, the bars run once; scrubbing to August announces the standings, and Replay runs them again. On the calendar, "Pick a day" opens July at "4 Jul, 12 h 24 m, mostly The Bear". On desktop, the arrow keys walk the Notes grid without turning the page. On page 02, the first tap lands the odometer and the second turns the page.
 
 **Done when.**
-- [ ] The race scrubber (Slider with month `aria-valuetext`) and Replay work by touch, mouse and keyboard, and pause autoplay while in use.
-- [ ] "Pick a day" opens a bottom sheet with a month selector and 44 px day rows.
-- [ ] The desktop Notes and article calendars are a grid with roving focus, and remain a table without JavaScript.
-- [ ] The first tap completes a running count-up or stretch, and the second advances.
-- [ ] Each feature has its own flag, off on a fresh `Config` until its `+key` is set, and the unit, E2E, visual, axe and perf checks pass.
+- [x] The race scrubber (Slider with month `aria-valuetext`) and Replay work by touch, mouse and keyboard, and pause autoplay while in use.
+- [x] "Pick a day" opens a bottom sheet with a month selector and 44 px day rows.
+- [x] The desktop Notes and article calendars are a grid with roving focus, and remain a table without JavaScript.
+- [x] The first tap completes a running count-up or stretch, and the second advances.
+- [ ] Each feature has its own flag, off on a fresh `Config` until its `+key` is set, and the unit, E2E, visual, axe and perf checks pass. (Flags and unit tests done; `e2e/rewind/p1-story.spec.ts` is written but not run, and no visual baselines were added: the coordinator runs E2E, axe and perf.)
+
+(as merged: `lib/rewind/features.ts` exports `REWIND_FEATURES` (key and label), `rewindFeatureFlags(config)` and `rewindFeatureOn`; P8.4 appends its entries to `REWIND_FEATURES`, and `lib/validations/rewind-settings.ts` accepts each feature's `+key` and plain key through `REWIND_DISABLED_PAGE_ENTRIES`, with no further edit there. Server code passes the flags down as `IssueContext.features`, `NotesContext.features`, `ArticleContext.features` and `StoryStage`'s `tapCompletes`. The Notes and article calendar is a new `ArticleBlock` kind, `calendar`, holding the month tables (the server render) and the grid's month rows. The count-ups on page 02 are CSS animations, not Motion controls, so `running-animations.ts` finishes `article.getAnimations({ subtree: true })` only and keeps no handle registry. The Settings section lists the switches under "Features added in December". Owner: enable each `+key` in production after checking it on the heavy member, and record it in `ship-check.md`.)
 
 ### Step P8.4: P1 comparison, Edit card, Save all and remaining Notes
 
@@ -230,11 +242,13 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 **Demo.** On page 02, "Compare with 2025" mirrors last year under this one. On the back cover, "Save all 15 cards" downloads a ZIP that opens to 15 posters. At 1440x900 every core page has real Notes, and Guess shows its answer only after the quiz.
 
 **Done when.**
-- [ ] "Compare with 2025" is a Toggle with `aria-pressed`, draws mirrored 7-day averages on one scale, and is hidden without 2025 data.
-- [ ] Edit card offers the three-stat allow-list on the centrefold and back cover, saved in the prefs and on links.
-- [ ] "Save all {n} cards" builds the ZIP in the browser with fflate, and its count comes from `eligibleCards()`.
-- [ ] The seven remaining core pages have Notes, and the Guess Notes never spoil the quiz.
-- [ ] Each feature has its own default-off flag, and the unit, E2E, visual and budget checks pass.
+- [x] "Compare with 2025" is a Toggle with `aria-pressed`, draws mirrored 7-day averages on one scale, and is hidden without 2025 data.
+- [x] Edit card offers the three-stat allow-list on the centrefold and back cover, saved in the prefs and on links.
+- [x] "Save all {n} cards" builds the ZIP in the browser with fflate, and its count comes from `eligibleCards()`.
+- [x] The seven remaining core pages have Notes, and the Guess Notes never spoil the quiz.
+- [ ] Each feature has its own default-off flag, and the unit, E2E, visual and budget checks pass. (Flags and unit tests done; `e2e/rewind/p1-share.spec.ts` is written but not run, and no visual baselines were added: the coordinator's E2E pass.)
+
+(as merged: `lib/rewind/features.ts` was written in parallel with P8.3 and already lists P8.3's four keys, with `rewindFeatureOn`, `rewindFeatureFlags` and `withEnabledFeatures`; `rewindSettingsSchema` accepts `+key` and the plain key of each feature in `rewindDisabledPages` (`DISABLED_LIST_ENTRIES`), and the settings section's "Features added in December" list writes the `+` entries. Merge with P8.3 by keeping one copy. The compare variant lives in `lib/rewind/viz/soundtrack-compare.ts` (`soundtrackCompare`), not inside `soundtrack.ts`, for the module size limit. `lib/rewind/notes.ts` became `lib/rewind/notes/index.ts`; the core builders are gated by `CoreNotesContext.coreNotes`, and `answeredNotes()` gives the stage a second list (`StoryStagePage.notesAnswered`) that `NotesColumn` swaps in once the quiz is answered or skipped. A `definitionList` entry may carry an `href` (the bookends' earlier years). Top films' Notes list the stored top five with plays and minutes plus the year's `films.finishedShare`: the stored page has no per-film finish, and adding one needs a regeneration. The heavy golden fixture has no Guess page, so it has 14 cards with Daily detail off and 15 with it on (the design's mock member has 15 and 16, as P7.6 noted). `ShareSetup` gained `dailyCards`, `folios`, `cardFactOptions`, `cardFactDefaults` and `features`. Edit card updates a live link only when three or none are chosen, to spare the 10-an-hour share limit; `enableRewindShare`, `updateRewindShare` and the owner card route refuse stats outside `cardFactOptions`. The islands load through `next/dynamic`, so with the flags off nothing new reaches the first page. Owner: turn each flag on in production after checking it on the heavy test member, and record it in `ship-check.md`.)
 
 ### Step P8.5: Validator and final-cut job
 
@@ -277,13 +291,24 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 
 **Demo.** On the December fixtures, the script prints "18 of 20 keep all copy, 2 re-call (series[1].title changed; afterDark band crossed)", and the heavy cover reads "Final cut" with December drawn in. A hide dated 3 January keeps "Final cut".
 
+(As merged:
+- `window.finalCut` is no longer an identity fact of any slot (`deck.number`, `deck.calendar`, `deck.standing`, `signOff` listed it): model copy may not use window words, so it only forced a re-call for every full issue. This is P8.1's "that list should be empty" check, done here; P8.1's lock hashes the emptied lists.
+- `getFrozenRewindModel()` is P8.1's and was not on the branch, so `changed-slots` writes with the active `wrapped` provider row, like the default policy; P8.1 swaps it in.
+- `copyMeta.slotHashes` now describe the stored facts: when the model picks another archetype from the shortlist, the hashes are retaken after the rebuild, and `no-llm` and `changed-slots` plan against the facts of that stored pick (`CopyInput.factsFor`). A kept text with window words (only a template can have them) is templated again. Rows written before this report `SLOT_HASH_STALE` in the validator when the model picked the archetype; the season-open generation rewrites them.
+- The window rule also clamps the season window to the end of yesterday, so a run before 30 November reads "Data through <yesterday>".
+- `REWIND_FINAL_CUT` lives in `lib/queue/jobs/rewind-final-cut.ts` (it reuses `rewind-season.ts`'s step helpers), not `jobs/rewind.ts`. Its fan-out uses audience `all` and leaves out members whose Rewind already holds that final cut, which makes a re-run a no-op. `latestLocalInstant(day, time, zones)` takes a `YYYY-MM-DD` day.
+- "December's readers" are members with a `RewindView` from before `finalCutAt`, for the DM and the banner ("Your Rewind 2026 now includes December").
+- The December fixtures repeat 3 to 30 November four weeks later for members active in November's last week; `heavy` (new No. 1) and `night-owl` (afternoons cross the after-dark band) are written to move, and `zero-films` re-calls on a near tie: 3 of 20 (15%).
+- Scripts: `npm run rewind:validate`, `npm run rewind:final-cut` (`--apply` needs `--with-llm`) and `npm run rewind:rollback-final-cut` (`--apply` needs `--admin=<id>` for the audit rows).
+- Owner: run `npm run rewind:validate -- --year=2026` against production on 2026-12-02 and record the zero-failure result in `ship-check.md`.)
+
 **Done when.**
-- [ ] `REWIND_FINAL_CUT` recomputes the full-year aggregate and fans out `final-cut` jobs, scheduled for 1 January 00:30 in the westernmost zone.
-- [ ] Only slots with a changed identity fact, a crossed band or a newly selected page call the LLM, and fewer than 30% of the fixtures re-call.
-- [ ] Every later 2026 regeneration keeps the full-year window, and the template wording reads "Final cut".
-- [ ] The final-cut notification reaches December's readers once, from 2 January.
-- [ ] `scripts/rewind-validate.ts` and `lib/wrapped/maintenance/validate-year.ts` are merged with their tests, and the validator reported zero failures against production on 2026-12-02.
-- [ ] The fixture dry-run tests pass, and the dry-run and bulk roll-back scripts exist.
+- [x] `REWIND_FINAL_CUT` recomputes the full-year aggregate and fans out `final-cut` jobs, scheduled for 1 January 00:30 in the westernmost zone.
+- [x] Only slots with a changed identity fact, a crossed band or a newly selected page call the LLM, and fewer than 30% of the fixtures re-call.
+- [x] Every later 2026 regeneration keeps the full-year window, and the template wording reads "Final cut".
+- [x] The final-cut notification reaches December's readers once, from 2 January.
+- [ ] `scripts/rewind-validate.ts` and `lib/wrapped/maintenance/validate-year.ts` are merged with their tests, and the validator reported zero failures against production on 2026-12-02. (Code and tests done; the production run is the owner's.)
+- [x] The fixture dry-run tests pass, and the dry-run and bulk roll-back scripts exist.
 
 ### Step P8.8: Playground on the production pipeline (P1)
 
@@ -321,11 +346,13 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 
 **Demo.** Pick the `hostile-titles` fixture and the default model. The estimate appears first, then the fact sheet, the selection, the grounding trail with the injection title held inside a token, and the cost. Open the preview, step to Top shows and close it. `/admin/playground` lands here.
 
+(as merged: the page polls the run, then puts its id in the address as `?preview=` and renders the panes on the server from `lib/rewind/playground/view.ts`; the pane tests read a committed `hostile-titles` view that `lib/rewind/playground/__tests__/view.test.ts` keeps current (`UPDATE_PLAYGROUND_VIEW=1`). The prompt-version list holds only `rewind-2026.1`, the one version `DryRunInput` accepts; there is no `-rc`. Both `/admin/playground` redirects are temporary (307). `generate-v2.ts` and `app/api/admin/models` were already gone; knip then also removed `prompt-template.ts` (no longer used by the prompts editor), `archetype-scoring.ts`, `server-statistics.ts`, `overseerr-statistics.ts`, `collect-v2-statistics.ts`, the Tautulli leaderboard and library fetchers and `hooks/use-playground-state.ts`. `components/wrapped/**` lost its last caller with `preview-modal.tsx`; it stays for P11.29 through a temporary knip entry on `wrapped-viewer-wrapper.tsx`, which P11.29 deletes. CLAUDE.md's JSDoc reference module is now `lib/wrapped/archetypes/scorers.ts`. `e2e/admin/rewind-playground.spec.ts` was written but not run here; the axe route moved to `/admin/rewind/playground` with no baseline entry.)
+
 **Done when.**
-- [ ] `/admin/rewind/playground` runs `generateUserRewind` in dry-run mode on a member or a fixture, with model, prompt-version and style-guide inputs.
-- [ ] It shows the facts, the page selection, the raw output, the grounding trail and the cost, and previews through `?preview=`.
-- [ ] A paid run shows its estimate first, and P7.10's limit of 10 dry runs per 10 minutes applies.
-- [ ] The copied statistics route, the v2 playground client and their API routes are deleted, and `/admin/playground` redirects.
+- [x] `/admin/rewind/playground` runs `generateUserRewind` in dry-run mode on a member or a fixture, with model, prompt-version and style-guide inputs.
+- [x] It shows the facts, the page selection, the raw output, the grounding trail and the cost, and previews through `?preview=`.
+- [x] A paid run shows its estimate first, and P7.10's limit of 10 dry runs per 10 minutes applies.
+- [x] The copied statistics route, the v2 playground client and their API routes are deleted, and `/admin/playground` redirects.
 
 ### Step P8.9: CI freeze gate, off until the code freeze
 
@@ -343,6 +370,8 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 - **Flip it on schedule.** The owner sets `CODE_FREEZE` to `on` at 00:00 server time on 2026-12-14 (an owner calendar item), and P9.3 sets it back to `off` after the final cut.
 
 **Tests.** `actionlint` passes on the workflow, and the three throwaway PRs above are the behavioural test.
+
+(as merged: the workflow reads labels and changed files from the API at run time, so a re-run after `CODE_FREEZE` flips judges the PR as it is now; it also runs on `labeled`/`unlabeled`. Flipping the variable does not re-run open PRs, so the owner re-runs them with the loop in `docs/operations.md` "Code freeze gate", which holds the whole owner procedure. Owner-only, not done: create the variable and the two labels, make "Freeze gate" a required check after it passes on main, run the three throwaway PRs and record their run ids in `ship-check.md`, flip `CODE_FREEZE` on 2026-12-14.)
 
 **Integration.** P9.1's freeze rules rely on the gate; P9.3 lifts it.
 
@@ -367,6 +396,8 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 - A failure is fixed in an ordinary PR before 2026-12-14 and the dry run repeated on 2026-12-11. Tear staging down the same day.
 
 **Tests.** No new test files; the gate is the validator's zero-failure run and the recorded re-call rate.
+
+(as merged: the procedure is `docs/rewind.md`, "Staging rehearsal", and the report is `implementation/final-cut-dry-run.md`. `scripts/rewind-staging-neutralise.sql` holds the saved statements (it refuses any database but `plex_manager_staging` and needs `-v budget=<USD>`). New read-only `npm run rewind:final-cut-report -- --year=2026 --since=<start> --log=<worker log> --warn=20` measures the run from the `final-cut` generations: the re-call rate overall and for full editions, the reasons (`planFinalCut()` of `previousData` against the result), cost per member, timings, and Tautulli 429s from a `LOG_LEVEL=debug` log, since `serviceFetch` logs 4xx at debug; it has a unit test. Fix found on the way: the staging worker schedules the 1 January run under `rewind:final:2026`, so `--apply` would have joined that delayed job and waited until New Year; `enqueueFinalCut` now gives a `through` before 31 December its own id, `rewind:final:{year}:{through}`. Owner, not done: build staging, run the final cut with `--through=2026-12-10`, the report and the validator, fill in `final-cut-dry-run.md`, and tear staging down, all on 2026-12-11.)
 
 **Integration.** P9.2 reruns the same procedure on 2026-12-28 with `--through=2026-12-27`, and P9.3 relies on both.
 

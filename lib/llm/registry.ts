@@ -10,6 +10,7 @@ import type { LLMProvider } from "@/lib/generated/prisma/client"
 import { lookupModel, type ModelInfo } from "@/lib/llm/models"
 import { isLLMProviderId } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
+import { frozenModelFor, REWIND_LOCK, type FrozenRewindModel } from "@/lib/wrapped/freeze/lock"
 
 export type LLMPurpose = "wrapped" | "chat"
 
@@ -99,4 +100,16 @@ export async function getLanguageModel(
   const row = await prisma.lLMProvider.findFirst({ where: { isActive: true, purpose } })
   if (!row) return null
   return resolveModel(row, override?.model ?? row.model)
+}
+
+/**
+ * The model Rewind's copy step writes with (P8.1): the freeze lock's model on
+ * the key of the active `wrapped` row, the row's own model while the lock has
+ * none, a `mismatch` when the row names another provider than the lock (the
+ * copy step then writes templates), or null with no active row. See
+ * `lib/wrapped/freeze/lock.ts`.
+ */
+export async function getFrozenRewindModel(): Promise<FrozenRewindModel | null> {
+  const row = await prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" }, select: { provider: true, model: true } })
+  return frozenModelFor(row, REWIND_LOCK.model)
 }

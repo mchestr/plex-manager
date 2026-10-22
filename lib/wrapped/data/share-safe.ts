@@ -192,6 +192,24 @@ export function defaultCardFacts(page: RewindPageType, allowed: (id: CardFactId)
   return [...new Set(order)].filter(ok).slice(0, 3)
 }
 
+/**
+ * The stats a member may choose for the poster (Edit card, design 6.3,
+ * P8.4): the `CARD_FACT_IDS` they have that a poster may print under the
+ * admin flags, so the percentile is offered only at top 25% or better and a
+ * server count only with public counts. The owner card route and the link
+ * actions refuse any other choice.
+ */
+export function cardFactOptions(rewind: RewindDataV3, ctx: ShareContext): CardFactId[] {
+  return CARD_FACT_IDS.filter((id) => Boolean(rewind.facts[id]) && mayPrint(id, "centrefold", rewind.facts, ctx))
+}
+
+/** Every one of `cardFacts` is among the member's `cardFactOptions`. */
+export function choosable(cardFacts: readonly CardFactId[], rewind: RewindDataV3, ctx: ShareContext): boolean {
+  if (cardFacts.length === 0) return true
+  const options = cardFactOptions(rewind, ctx)
+  return cardFacts.every((id) => options.includes(id))
+}
+
 function archetypeOf(rewind: RewindDataV3, ctx: ShareContext): ShareSafePage["archetype"] {
   if (!rewind.archetype) return null
   const id = rewind.archetype.id

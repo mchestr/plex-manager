@@ -62,6 +62,7 @@ export const envSchema = z.object({
   PLEX_WRAPPED_BASE_URL: text("First choice for the Discord portal base URL, before NEXT_PUBLIC_APP_URL."),
   JELLYFIN_DEVICE_ID: text("DeviceId reported to Jellyfin (default derived from PLEX_CLIENT_IDENTIFIER)."),
   LLM_REQUEST_TIMEOUT_MS: text("LLM request timeout in milliseconds (default 300000)."),
+  REWIND_STAGING: text('Staging only: "1" lets a final-cut rehearsal run with an early --through (P8.5). Never set in production.'),
   // Test only, never in production
   E2E_TEST_MODE: text('Test only: "true" arms the seed outside production.'),
   E2E_DATABASE_URL: text("Test only: the Playwright database; its name must end in _test."),

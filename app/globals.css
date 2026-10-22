@@ -239,12 +239,13 @@
 /* the page turn: the next field rolls in from the side it comes from; the old page's content shifts away and fades */
 @keyframes rw-ink-roll-forward { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }
 @keyframes rw-ink-roll-back { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
-@keyframes rw-page-leave { to { transform: translateX(var(--rw-leave-x)); opacity: 0; } }
+/* literal offsets, not a custom property on the page: a variable set on the leaving page would restyle its whole subtree on the turn (P7.15) */
+@keyframes rw-page-leave-forward { to { transform: translateX(-24px); opacity: 0; } }
+@keyframes rw-page-leave-back { to { transform: translateX(24px); opacity: 0; } }
 .rw-page[data-turn="forward"] { animation: rw-ink-roll-forward var(--rw-dur-m) var(--rw-ease-ink) both; }
 .rw-page[data-turn="back"] { animation: rw-ink-roll-back var(--rw-dur-m) var(--rw-ease-ink) both; }
-.rw-page[data-leaving="forward"] { --rw-leave-x: -24px; }
-.rw-page[data-leaving="back"] { --rw-leave-x: 24px; }
-.rw-page[data-leaving] .rw-artboard { animation: rw-page-leave 200ms var(--rw-ease-ink) forwards; }
+.rw-page[data-leaving="forward"] .rw-artboard { animation: rw-page-leave-forward 200ms var(--rw-ease-ink) forwards; }
+.rw-page[data-leaving="back"] .rw-artboard { animation: rw-page-leave-back 200ms var(--rw-ease-ink) forwards; }
 /* print textures (Rewind 5.2, 5.7): hatching means "the others", the halftone is the hero numeral's misregistration */
 .rw-hatch { background: repeating-linear-gradient(-45deg, var(--ink) 0 1.5px, transparent 1.5px 6px); }
 .rw-halftone { mask-image: radial-gradient(circle, black 42%, transparent 48%); mask-size: calc(var(--u) * 4px) calc(var(--u) * 4px); }
@@ -264,7 +265,8 @@
 @keyframes rw-slide-down { from { transform: translateY(-24px); opacity: 0; } }
 @keyframes rw-slide-up { from { transform: translateY(24px); opacity: 0; } }
 .rw-page[data-current] .rw-print { animation: rw-print 1200ms linear 420ms both; }
-.rw-page[data-current] .rw-stretch span span { animation: rw-stretch var(--rw-dur-l) var(--rw-ease-stretch) 420ms both; }
+/* the lines carry a class: a turn toggles data-current, and a rule ending in a bare `span` would restyle every span on both pages (P7.15) */
+.rw-page[data-current] .rw-stretch .rw-line { animation: rw-stretch var(--rw-dur-l) var(--rw-ease-stretch) 420ms both; }
 .rw-page[data-current] .rw-cover-line { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) both; }
 .rw-page[data-current] .rw-cover-line:nth-child(1) { animation-delay: 600ms; }
 .rw-page[data-current] .rw-cover-line:nth-child(2) { animation-delay: 660ms; }
@@ -283,12 +285,12 @@
 .rw-page[data-current] .rw-ring-bar { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) both; }
 .rw-page[data-current] .rw-ring-arc { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) 1140ms both; }
 .rw-page[data-current] .rw-cal-row { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) both; }
-.rw-page[data-current] .rw-stretch span span:nth-child(2) { animation-delay: 490ms; }
-.rw-page[data-current] .rw-stretch span span:nth-child(3) { animation-delay: 560ms; }
+.rw-page[data-current] .rw-stretch .rw-line:nth-child(2) { animation-delay: 490ms; }
+.rw-page[data-current] .rw-stretch .rw-line:nth-child(3) { animation-delay: 560ms; }
 /* low-end mode (P7.15, Rewind 5.6, 11.2), data-low-end on the scope root: the nameplate stretches from the left edge
    with scaleX over 420 ms instead of the width axis (the line delays stay), and the cover's soundtrack does not print in */
 @keyframes rw-stretch-low { from { transform: scaleX(0.82); opacity: 0; } }
-[data-low-end] .rw-page[data-current] .rw-stretch span span { transform-origin: left; animation-name: rw-stretch-low; animation-duration: var(--rw-dur-m); }
+[data-low-end] .rw-page[data-current] .rw-stretch .rw-line { transform-origin: left; animation-name: rw-stretch-low; animation-duration: var(--rw-dur-m); }
 [data-low-end] .rw-page[data-current] .rw-print { animation: none; }
 @keyframes rw-gate-left { from { transform: none; opacity: 1; } 90% { opacity: 1; } to { transform: translateX(-101%); opacity: 0; } }
 @keyframes rw-gate-right { from { transform: none; opacity: 1; } 90% { opacity: 1; } to { transform: translateX(101%); opacity: 0; } }

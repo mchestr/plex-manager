@@ -1,9 +1,7 @@
 import { z } from "zod"
 
-import {
-  ARCHETYPES,
-  wrappedLLMOutputSchema,
-} from "@/lib/wrapped/llm-output-schema"
+import { ARCHETYPES } from "@/lib/wrapped/archetypes/catalogue"
+import { wrappedLLMOutputSchema } from "@/lib/wrapped/llm-output-schema"
 import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
 
 import { buildValidOutput } from "./fixtures"

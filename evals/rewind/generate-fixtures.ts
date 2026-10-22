@@ -5,6 +5,7 @@
  * Usage:
  *   npx tsx evals/rewind/generate-fixtures.ts           # write evals/rewind/fixtures/*.json
  *   npx tsx evals/rewind/generate-fixtures.ts --check   # fail on any drift, write nothing
+ *   npx tsx evals/rewind/generate-fixtures.ts --december [--check]  # the same for fixtures/december/*.json (P8.5)
  *
  * Each profile's rows come from a mulberry32 seeded with its id, so a run is
  * deterministic. Every fixture is validated with `fixtureSchema` before it is
@@ -12,15 +13,16 @@
  * generator never computes one.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { parseArgs } from "node:util"
 
+import { decemberExtension, type DecemberExtension } from "./december"
 import { fixtureSchema, type Fixture } from "./fixture-schema"
 import { PROFILES } from "./profiles"
 import { mulberry32 } from "./rows"
 
-const DIR = path.resolve("evals/rewind/fixtures")
+const FIXTURES_DIR = path.resolve("evals/rewind/fixtures")
 const MAX_BYTES = 2 * 1024 * 1024
 
 /** FNV-1a: a stable seed from a profile id. */
@@ -48,20 +50,28 @@ function serialise(fixture: Fixture): string {
   )
 }
 
-function build(): Map<string, string> {
+/** A December extension: its fixture id, then one history row per line. */
+function serialiseDecember(december: DecemberExtension): string {
+  const rows = december.history.map((row) => `    ${JSON.stringify(row)}`).join(",\n")
+  return `{\n  "fixture": ${JSON.stringify(december.fixture)},\n  "history": [\n${rows}\n  ]\n}\n`
+}
+
+function build(december: boolean): Map<string, string> {
   const files = new Map<string, string>()
   for (const { build: rows, ...profile } of PROFILES) {
     const built = rows(mulberry32(seedOf(profile.id)))
     const fixture = fixtureSchema.parse({ ...profile, ...built, library: built.library ?? null })
     if (files.has(`${fixture.id}.json`)) throw new Error(`Duplicate fixture id ${fixture.id}`)
-    files.set(`${fixture.id}.json`, serialise(fixture))
+    files.set(`${fixture.id}.json`, december ? serialiseDecember(decemberExtension(fixture)) : serialise(fixture))
   }
   return files
 }
 
 function main() {
-  const { values } = parseArgs({ options: { check: { type: "boolean", default: false } } })
-  const files = build()
+  const { values } = parseArgs({ options: { check: { type: "boolean", default: false }, december: { type: "boolean", default: false } } })
+  const DIR = values.december ? path.join(FIXTURES_DIR, "december") : FIXTURES_DIR
+  if (!values.check && !existsSync(DIR)) mkdirSync(DIR)
+  const files = build(values.december)
   const existing = existsSync(DIR) ? readdirSync(DIR).filter((name) => name.endsWith(".json")) : []
   const drift: string[] = []
 

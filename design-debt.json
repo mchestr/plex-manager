@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "7a8190d03b750168caa18e8ebf31b52ca3b3d8bd",
-  "generatedAt": "2026-10-21T07:21:08.843Z",
+  "commit": "842934d7bddd6a2817d5874fc699028a0eed29d3",
+  "generatedAt": "2026-10-21T20:11:15.929Z",
   "files": {
     "app/(app)/page.tsx": {
       "gradient": 2,
@@ -39,10 +39,6 @@
     "app/admin/loading.tsx": {
       "gradient": 1,
       "raw-palette": 3
-    },
-    "app/admin/playground/page.tsx": {
-      "copy": 1,
-      "raw-palette": 2
     },
     "app/admin/prompts/[promptId]/edit/page.tsx": {
       "gradient": 1,
@@ -212,33 +208,6 @@
     "components/admin/llm-usage/llm-text-removed-notice.tsx": {
       "blur": 1,
       "raw-palette": 4
-    },
-    "components/admin/playground/llm-response.tsx": {
-      "blur": 1,
-      "copy": 1,
-      "raw-palette": 9
-    },
-    "components/admin/playground/preview-modal.tsx": {
-      "arbitrary-type-z": 2,
-      "blur": 3,
-      "copy": 2,
-      "gradient": 1,
-      "raw-palette": 17
-    },
-    "components/admin/playground/rendered-prompt.tsx": {
-      "blur": 1,
-      "raw-palette": 10
-    },
-    "components/admin/playground/statistics-viewer.tsx": {
-      "raw-palette": 65
-    },
-    "components/admin/playground/template-selector.tsx": {
-      "blur": 1,
-      "raw-palette": 8
-    },
-    "components/admin/playground/test-configuration.tsx": {
-      "blur": 1,
-      "raw-palette": 52
     },
     "components/admin/prompts/expandable-prompt.tsx": {
       "blur": 1,
@@ -680,13 +649,13 @@
   },
   "totals": {
     "arbitrary-color": 17,
-    "arbitrary-type-z": 31,
-    "blur": 121,
+    "arbitrary-type-z": 29,
+    "blur": 114,
     "caps-eyebrow": 84,
-    "copy": 17,
-    "gradient": 93,
+    "copy": 13,
+    "gradient": 92,
     "gradient-text": 50,
     "infinite-motion": 42,
-    "raw-palette": 2826
+    "raw-palette": 2663
   }
 }

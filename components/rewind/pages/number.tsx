@@ -1,3 +1,5 @@
+import dynamic from "next/dynamic"
+
 import { RewindFigure } from "@/components/rewind/a11y/figure"
 import { pluralWord } from "@/lib/rewind/format"
 import { has, num, shown } from "@/lib/rewind/pages/facts"
@@ -7,18 +9,34 @@ import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { milestoneMarks } from "@/lib/rewind/viz/milestones"
 import { yearDays } from "@/lib/rewind/viz/soundtrack"
+import { compareSummary, monthsAhead, soundtrackCompare } from "@/lib/rewind/viz/soundtrack-compare"
 import { headline } from "@/lib/wrapped/copy/templates"
 
 import { CopyText } from "./copy-text"
 import { FittedLines } from "./fitted-lines"
-import { deckText, type PageProps } from "./issue-context"
+import { deckText, type IssueContext, type PageProps } from "./issue-context"
 import { NumberSplit } from "./number-split"
 import { SoundtrackStrip } from "./soundtrack-strip"
 import { axes, MEASURE, u, ut } from "./units"
 
+// Behind its default-off flag (P8.4): the island's chunk loads only when the toggle shows.
+const NumberCompare = dynamic(() => import("./number-compare").then((m) => m.NumberCompare))
+
 const ROAD_HEIGHT = 64
 /** "hours" under the numeral: 56 px at a line height of 1. */
 const HOURS_H = 56
+
+/**
+ * Compare with last year's strips (P8.4), or null: the flag is off, or there
+ * is no last-year series or it sums to zero (the stamp's rule).
+ */
+function comparison(data: NumberData, issue: IssueContext) {
+  const lastYear = data.lastYearDaily
+  if (!issue.features?.["number.compare-2025"] || !lastYear || lastYear.reduce((sum, m) => sum + m, 0) === 0) return null
+  const from = String(issue.facts["window.from"]?.value)
+  const strip = soundtrackCompare(data.minutes, lastYear, { variant: "compare", window: { from, days: yearDays(from) }, width: MEASURE, height: ROAD_HEIGHT })
+  return { lastYear, strip: { above: strip.above, below: strip.below, centre: strip.centre } }
+}
 
 /**
  * 02 The number (design 4.3, `slide-02-number.png`): the lead, the hero
@@ -38,6 +56,23 @@ export function NumberPage({ data, issue }: PageProps<NumberData>) {
   const marks = milestoneFacts(facts)
   const xs = milestoneMarks(marks.map((m) => m.key), { from, days: yearDays(from), width: MEASURE })
   const finalCut = facts["window.finalCut"]?.value === 1
+  const summary = numberPage.srSummary(data, facts)
+  const compare = comparison(data, issue)
+  const roadHead = (
+    <>
+      <p className="font-display" style={{ fontSize: ut(13), fontVariationSettings: axes(100, 650) }}>
+        The road to {hero}
+      </p>
+      <div aria-hidden className="relative font-display tabular-nums" style={{ height: u(20), fontSize: ut(13), fontVariationSettings: axes(87.5, 760) }}>
+        {xs.map(({ x }, i) => (
+          <span key={marks[i].key} className="rw-pop absolute bottom-0 -translate-x-1/2" style={{ left: `${(x / MEASURE) * 100}%`, animationDelay: `${1000 + i * 80}ms` }}>
+            {marks[i].hours}
+          </span>
+        ))}
+      </div>
+    </>
+  )
+  const road = <SoundtrackStrip minutes={data.minutes} from={from} locale={locale} width={MEASURE} height={ROAD_HEIGHT} />
 
   return (
     <div className="flex h-full flex-col font-text" style={{ padding: `${u(4)} ${u(16)} 0` }} data-testid="rewind-page-number">
@@ -93,19 +128,25 @@ export function NumberPage({ data, issue }: PageProps<NumberData>) {
           ))}
         </dl>
       )}
-      <RewindFigure summary={numberPage.srSummary(data, facts)} className="mt-auto pb-[calc(var(--u)*12px)]">
-        <p className="font-display" style={{ fontSize: ut(13), fontVariationSettings: axes(100, 650) }}>
-          The road to {hero}
-        </p>
-        <div aria-hidden className="relative font-display tabular-nums" style={{ height: u(20), fontSize: ut(13), fontVariationSettings: axes(87.5, 760) }}>
-          {xs.map(({ x }, i) => (
-            <span key={marks[i].key} className="rw-pop absolute bottom-0 -translate-x-1/2" style={{ left: `${(x / MEASURE) * 100}%`, animationDelay: `${1000 + i * 80}ms` }}>
-              {marks[i].hours}
-            </span>
-          ))}
-        </div>
-        <SoundtrackStrip minutes={data.minutes} from={from} locale={locale} width={MEASURE} height={ROAD_HEIGHT} />
-      </RewindFigure>
+      {compare ? (
+        <NumberCompare
+          summary={summary}
+          compareSummary={compareSummary({ year: issue.year, ...monthsAhead(data.minutes, compare.lastYear, from) })}
+          lastYear={issue.year - 1}
+          compare={compare.strip}
+          width={MEASURE}
+          height={ROAD_HEIGHT}
+          strip={road}
+          className="mt-auto pb-[calc(var(--u)*12px)]"
+        >
+          {roadHead}
+        </NumberCompare>
+      ) : (
+        <RewindFigure summary={summary} className="mt-auto pb-[calc(var(--u)*12px)]">
+          {roadHead}
+          {road}
+        </RewindFigure>
+      )}
     </div>
   )
 }

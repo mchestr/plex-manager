@@ -24,6 +24,11 @@ const SETUP: ShareSetup = {
   choices: { signed: false, includeArt: false, dailyDetail: false, cardFacts: [] },
   link: null,
   seasonCloses: "31 January 2027",
+  dailyCards: ["cover", "number", "top-shows", "clock", "back-cover"],
+  folios: {},
+  cardFactOptions: [],
+  cardFactDefaults: {},
+  features: { editCard: false, saveAll: false },
 }
 
 const fetchMock = jest.fn()

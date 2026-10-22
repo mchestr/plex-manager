@@ -1,9 +1,10 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react"
 
 import { inkProps } from "@/lib/design/tokens"
 import type { PageInk } from "@/lib/rewind/stage/page-ink"
+import { warmVisibleStyle } from "@/lib/rewind/stage/warm-style"
 import { cn } from "@/lib/utils"
 
 interface StagePageInfo {
@@ -28,6 +29,19 @@ export function NearPage({ children }: { children: ReactNode }) {
   return Math.abs(useStagePage().distance) <= 1 ? children : null
 }
 
+/** How long the leaving page shows under the incoming one: the ink roll's `--rw-dur-m`. */
+const LEAVE_MS = 420
+
+/** Runs `run` in idle time (within a second), or after 200 ms where idle callbacks are missing; returns the cancel. */
+function whenIdle(run: () => void): () => void {
+  if (typeof window.requestIdleCallback === "function") {
+    const id = window.requestIdleCallback(run, { timeout: 1000 })
+    return () => window.cancelIdleCallback(id)
+  }
+  const id = window.setTimeout(run, 200)
+  return () => window.clearTimeout(id)
+}
+
 interface StagePageProps {
   index: number
   current: number
@@ -42,10 +56,14 @@ interface StagePageProps {
 /**
  * One full-bleed page: its field fills the stage, and its content sits on the
  * scaled artboard between the chrome rows. Only the current page and its
- * neighbours are rendered visible; the rest are `hidden`. Pages other than
- * the current one are `inert`. A turn sets `data-turn` on the incoming page
- * (the ink roll) and `data-leaving` on the outgoing one. Each page is an
- * `<article aria-roledescription="page">` labelled with its position (design
+ * neighbours are rendered; the rest are `hidden` and `inert`. A neighbour is
+ * `invisible` (`visibility: hidden`), which keeps it out of the focus order,
+ * the accessibility tree and hit testing as `inert` does (P7.15). The
+ * leaving page stays visible under the incoming page's ink roll for
+ * `LEAVE_MS`, then hides; a timer, not a CSS transition, so the
+ * turn's frame dispatches no transition event. A turn sets `data-turn` on the
+ * incoming page (the ink roll) and `data-leaving` on the outgoing one. Each
+ * page is an `<article aria-roledescription="page">` labelled with its position (design
  * 11.1); its body brings the `h2` that a member's turn focuses, and the page
  * itself takes focus when the body has none. P5.6 adds the match-cut layer.
  *
@@ -53,6 +71,16 @@ interface StagePageProps {
  * the turn, not in the turn's own frame: styling a whole page costs a long
  * task on a low-end phone (P7.15, design 11.2). A turn onto a page that is
  * not revealed yet shows it at once.
+ *
+ * Unveiling a page restyles its whole subtree, and Chrome styles a subtree's
+ * first visible state at more than twice the cost of a later one. A
+ * neighbour revealed straight into `visibility: hidden` therefore left that
+ * first visible styling to the turn onto it, the long task on the turn onto
+ * a big page (the light issue's centrefold, the heavy issue's Top films). So
+ * once a revealed neighbour is veiled, a second idle callback styles it
+ * visible and veils it again within one task (`warmVisibleStyle`), and the
+ * turn reuses that style. A page that has shown since it was last hidden
+ * needs no warming.
  */
 export function StagePage({ index, current, previous, ink, label, children }: StagePageProps) {
   const distance = index - current
@@ -64,21 +92,40 @@ export function StagePage({ index, current, previous, ink, label, children }: St
   // The current page this slot was last revealed for; the first render reveals every neighbour.
   const [revealedAt, setRevealedAt] = useState<number | null>(near ? current : null)
   const waiting = near && !onTurn && revealedAt !== current
+  // The current page this slot last finished leaving for.
+  const leaving = index === previous && !isCurrent
+  const [leftAt, setLeftAt] = useState<number | null>(null)
+  const veiled = !isCurrent && !(leaving && leftAt !== current)
 
   useEffect(() => {
-    if (!waiting) return
-    const reveal = () => setRevealedAt(current)
-    if (typeof window.requestIdleCallback === "function") {
-      const id = window.requestIdleCallback(reveal, { timeout: 1000 })
-      return () => window.cancelIdleCallback(id)
-    }
-    const id = window.setTimeout(reveal, 200)
+    if (!leaving || leftAt === current) return
+    const id = window.setTimeout(() => setLeftAt(current), LEAVE_MS)
     return () => window.clearTimeout(id)
-  }, [waiting, current])
+  }, [leaving, leftAt, current])
+
+  const article = useRef<HTMLElement>(null)
+  // Whether this slot has had its visible style computed since it was last hidden.
+  const warm = useRef(false)
+  const shown = near && !waiting && !veiled
+
+  useEffect(() => {
+    if (!near || waiting) warm.current = false
+    else if (shown) warm.current = true
+  })
+
+  useEffect(() => {
+    if (waiting) return whenIdle(() => setRevealedAt(current))
+    if (!near || !veiled || warm.current) return undefined
+    return whenIdle(() => {
+      warm.current = true
+      if (article.current) warmVisibleStyle(article.current)
+    })
+  }, [near, waiting, veiled, current])
 
   return (
     <StagePageContext.Provider value={{ index, distance }}>
       <article
+        ref={article}
         {...fieldProps}
         aria-roledescription="page"
         aria-label={label}
@@ -89,13 +136,14 @@ export function StagePage({ index, current, previous, ink, label, children }: St
         data-turn={isCurrent && direction ? direction : undefined}
         data-leaving={index === previous && direction ? direction : undefined}
         hidden={!near || waiting}
-        inert={!isCurrent}
+        inert={!near || waiting}
         className={cn(
           scheme,
           "rw-page absolute inset-0 flex outline-none items-center justify-center overflow-hidden bg-background pt-(--rw-chrome-top) pb-(--rw-chrome-bottom) text-foreground",
           // The desktop spread (P7.4): the field fills only the framed artboard; the spread around it is paper
           "rw-spread:bg-transparent rw-spread:p-0",
-          isCurrent ? "z-2" : index === previous ? "z-1" : "z-0"
+          isCurrent ? "z-2" : index === previous ? "z-1" : "z-0",
+          veiled && "invisible"
         )}
       >
         {/* The body's 24 px line box scales with the page too, so text that sets no line height never outgrows the artboard */}

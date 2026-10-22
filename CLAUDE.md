@@ -377,10 +377,10 @@ Use detailed JSDoc documentation for **complex modules** with:
 
 ### Example: Archetype Scoring Module
 
-See `lib/wrapped/archetype-scoring.ts` for a reference implementation:
-- Module-level JSDoc with an Overview section explaining why the module exists
-- A Scoring section that lists each scorer and the signal it measures
-- Documented special cases (archetypes with no measurable signal score 0)
+See `lib/wrapped/archetypes/scorers.ts` for a reference implementation:
+- Module-level JSDoc explaining what the module does and why
+- A Scorers section that tables each scorer, its score and its evidence
+- Documented special cases (fallbacks and the one after-dark window)
 
 ### Testing JSDoc Examples
 
@@ -658,6 +658,9 @@ if (!result.ok) return { error: result.error.message } // TRUNCATED, REFUSAL, SC
   (`lookupModel`, `costUsd`); never match model names by prefix.
 - Every billed attempt, failed ones included, writes one `LLMUsage` row through
   `recordUsage` (`lib/llm/usage.ts`).
+- The admin playground (`/admin/rewind/playground`) runs `generateUserRewind`
+  in dry-run mode through `startRewindDryRun` (`actions/admin/rewind-playground.ts`);
+  try prompts and models there, never in a copy of the pipeline.
 - The chat assistant still uses `callChatLLM` (`lib/llm/chat.ts`, OpenAI only)
   until it moves onto the registry.
 

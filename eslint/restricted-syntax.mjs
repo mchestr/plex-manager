@@ -68,7 +68,6 @@ export const migratedActionFiles = [
   "actions/invite.ts",
   "actions/onboarding.ts",
   "actions/prometheus-status.ts",
-  "actions/prompt-test.ts",
   "actions/prompts.ts",
   "actions/rewind-generation.ts",
   "actions/server-info.ts",

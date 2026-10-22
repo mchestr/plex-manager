@@ -10,7 +10,7 @@ export type MemberNotice =
   | { kind: "past-due" }
   | { kind: "pending-invite" }
   | { kind: "outage"; serviceName: string }
-  | { kind: "rewind-ready"; year: number }
+  | { kind: "rewind-ready"; year: number; finalCut?: true }
 
 /** Highest first. P7.14 produces `rewind-ready`. */
 const PRIORITY: ReadonlyArray<MemberNotice["kind"]> = ["past-due", "pending-invite", "outage", "rewind-ready"]
