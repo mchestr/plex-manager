@@ -8,6 +8,7 @@
 import { Queue, QueueEvents, JobsOptions, type Job } from "bullmq"
 import { getRedisConnection } from "./connection"
 import { sanitizeJobId } from "./job-id"
+import { traceQueue } from "./job-meta"
 import { JOB_TYPES, JobType, JobPayloadMap, JobMetadata, QueueStats, JobStatus } from "./types"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -42,10 +43,13 @@ let queueEvents: QueueEvents | null = null
  */
 function getQueue(): Queue {
   if (!queue) {
-    queue = new Queue(QUEUE_NAME, {
-      connection: getRedisConnection(),
-      defaultJobOptions: DEFAULT_JOB_OPTIONS,
-    })
+    // Jobs added in a request carry its id (lib/queue/job-meta.ts)
+    queue = traceQueue(
+      new Queue(QUEUE_NAME, {
+        connection: getRedisConnection(),
+        defaultJobOptions: DEFAULT_JOB_OPTIONS,
+      })
+    )
   }
   return queue
 }

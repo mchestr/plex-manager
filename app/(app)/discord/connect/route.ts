@@ -1,4 +1,4 @@
-import { parseSearchParams, requireEntitlement } from "@/lib/actions/route"
+import { parseSearchParams, requireEntitlement, withRequestContext } from "@/lib/actions/route"
 import { authOptions } from "@/lib/auth"
 import { createDiscordAuthorizationUrl } from "@/lib/discord/integration"
 import { discordOAuthCookie } from "@/lib/discord/oauth-cookie"
@@ -21,7 +21,7 @@ const logger = createLogger("DISCORD_CONNECT")
  */
 const querySchema = z.object({ redirect: z.string().max(512).optional() })
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.redirect(new URL("/", request.url))
@@ -56,4 +56,4 @@ export async function GET(request: NextRequest) {
   }
 }
 
-
+export const GET = withRequestContext(handleGet)

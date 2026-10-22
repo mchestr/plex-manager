@@ -9,6 +9,7 @@ import { previewOwnerId, readDryRun } from "@/lib/rewind/dry-run/store"
 import { createLogger } from "@/lib/utils/logger"
 import { loadShareContext } from "@/lib/wrapped/data/share-context"
 import { SharePageTypeSchema } from "@/lib/wrapped/data/share-safe-schema"
+import { withRequestContext } from "@/lib/actions/route"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -30,7 +31,7 @@ const dailySchema = z.enum(["0", "1"]).default("0")
  * gallery (P7.11) passes `daily=1`, so the calendar card exists. Every
  * response is noindex; anything unauthorised, unknown or expired is a 404.
  */
-export async function GET(request: NextRequest, context: { params: Promise<{ previewId: string; page: string }> }) {
+async function handleGet(request: NextRequest, context: { params: Promise<{ previewId: string; page: string }> }) {
   try {
     const params = paramsSchema.safeParse(await context.params)
     if (!params.success) return cardNotFound()
@@ -61,3 +62,5 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pre
     return cardError()
   }
 }
+
+export const GET = withRequestContext(handleGet)

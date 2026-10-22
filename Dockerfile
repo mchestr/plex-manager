@@ -47,6 +47,10 @@ RUN npx prisma generate && npm run build
 FROM base AS runner
 WORKDIR /app
 
+# The commit /api/metrics reports in build_info (docker-publish passes it)
+ARG BUILD_COMMIT=unknown
+ENV BUILD_COMMIT=$BUILD_COMMIT
+
 # NEXT_MANUAL_SIG_HANDLE: the app's shutdown coordinator handles SIGTERM and
 # drains jobs and the Discord bot; Next's own handler would exit at once.
 # REWIND_CACHE_DIR is the only path the app may write (posters, cards, fonts).

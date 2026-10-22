@@ -3,6 +3,9 @@
 import { useEffect, type CSSProperties } from "react"
 
 import { themes } from "@/lib/design/tokens"
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("error-boundary")
 
 const dark = themes.dark
 
@@ -71,7 +74,7 @@ const styles = {
  */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error("Global error:", error)
+    logger.error("Global error", error, { digest: error.digest })
   }, [error])
 
   return (

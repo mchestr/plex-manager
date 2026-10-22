@@ -1,6 +1,7 @@
 /**
- * Zod checks for route handlers' dynamic segments and query strings, and the
- * entitlement check for signed-in requests.
+ * Zod checks for route handlers' dynamic segments and query strings, the
+ * entitlement check for signed-in requests, and the request-id wrapper
+ * {@link withRequestContext}.
  *
  * Each parser returns the parsed value, or a 400 JSON response with
  * `{ error, code: "VALIDATION_ERROR" }` (the code every route already uses)
@@ -24,9 +25,26 @@ import { NextResponse } from "next/server"
 import type { z } from "zod"
 
 import { hasEntitlement, NOT_ENTITLED_MESSAGE, type Entitlement } from "@/lib/actions/entitlement"
+import { isValidRequestId, REQUEST_ID_HEADER } from "@/lib/request-headers"
 import { createSafeError, ErrorCode, getStatusCode } from "@/lib/security/error-handler"
+import { generateRequestId, runWithRequestContext } from "@/lib/utils/log-context"
 
 export type Parsed<T> = { ok: true; data: T } | { ok: false; response: NextResponse }
+
+/**
+ * Wraps a route handler so its log lines, and the jobs it enqueues, carry the
+ * request id `proxy.ts` forwarded (or a new one when the proxy did not run).
+ * Every `route.ts` export goes through it (P11.4).
+ */
+export function withRequestContext<A extends [Request, ...unknown[]], R>(
+  handler: (...args: A) => Promise<R>
+): (...args: A) => Promise<R> {
+  return (...args) => {
+    const incoming = args[0].headers.get(REQUEST_ID_HEADER)
+    const requestId = isValidRequestId(incoming) ? incoming : generateRequestId()
+    return runWithRequestContext(requestId, undefined, () => handler(...args))
+  }
+}
 
 function badRequest(error: z.ZodError, headers?: HeadersInit): NextResponse {
   const message = error.issues[0]?.message ?? "Invalid request"

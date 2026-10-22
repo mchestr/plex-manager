@@ -46,6 +46,8 @@ export const envSchema = z.object({
   ENABLE_WATCHLIST_SYNC: text('"false" turns the polling watchlist sync off when Redis is not set (default on).'),
   WATCHLIST_SYNC_POLL_INTERVAL_MS: text("How often the polling watchlist sync checks its lock (default 60000)."),
   LOG_LEVEL: text("error, warn, info, verbose, debug or silly (default info in production)."),
+  METRICS_TOKEN: text("Bearer token for /api/metrics; without it the route answers 404: openssl rand -hex 32."),
+  BUILD_COMMIT: text("Git commit /api/metrics reports in build_info (the image sets it at build time)."),
   SKIP_MIGRATIONS: text('Docker image only: "true" starts without applying migrations.'),
   PROCESS_ROLE: text("web, worker or all (default all): picks the database pool defaults."),
   DB_POOL_MAX: text("Database pool size (default 10 web, 5 worker, 12 all)."),

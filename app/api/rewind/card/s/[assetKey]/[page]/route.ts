@@ -5,6 +5,7 @@ import { createLogger } from "@/lib/utils/logger"
 import { findLiveShare } from "@/lib/wrapped/data/share-asset"
 import { loadShareContext } from "@/lib/wrapped/data/share-context"
 import { assetKeySchema, SharePageTypeSchema } from "@/lib/wrapped/data/share-safe-schema"
+import { withRequestContext } from "@/lib/actions/route"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -27,7 +28,7 @@ const sizeSchema = z.enum(["story", "og"]).default("story")
  * key read is `size` (`story` or `og`, the 1200 x 630 card of design 6.7).
  * Anything else is a 404, whatever is on disk.
  */
-export async function GET(request: Request, context: { params: Promise<{ assetKey: string; page: string }> }) {
+async function handleGet(request: Request, context: { params: Promise<{ assetKey: string; page: string }> }) {
   try {
     const params = paramsSchema.safeParse(await context.params)
     if (!params.success) return cardNotFound()
@@ -52,3 +53,5 @@ export async function GET(request: Request, context: { params: Promise<{ assetKe
     return cardError()
   }
 }
+
+export const GET = withRequestContext(handleGet)

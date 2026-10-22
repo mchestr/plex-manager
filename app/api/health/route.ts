@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { checkDependencies } from "@/lib/health/checks"
+import { withRequestContext } from "@/lib/actions/route"
 
 /**
  * Health check for the image's HEALTHCHECK and for monitoring (BP-16, BP-17).
@@ -20,7 +21,7 @@ export const runtime = "nodejs"
 
 const NO_STORE = { "Cache-Control": "no-store" }
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   if (request.nextUrl.searchParams.get("probe") === "live") {
     return NextResponse.json({ status: "ok" }, { headers: NO_STORE })
   }
@@ -33,3 +34,5 @@ export async function GET(request: NextRequest) {
     { status: healthy ? 200 : 503, headers: NO_STORE }
   )
 }
+
+export const GET = withRequestContext(handleGet)

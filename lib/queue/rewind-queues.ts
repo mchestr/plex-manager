@@ -21,6 +21,8 @@
 import { Worker, type Job } from "bullmq"
 
 import { onShutdown } from "@/lib/instrumentation/shutdown"
+import { recordJobFailure } from "@/lib/observability/job-failures"
+import { jobRequestId, runJobInContext } from "@/lib/queue/job-meta"
 import { closeWorker, getRedisConnection } from "@/lib/queue/connection"
 import type { JobProcessor } from "@/lib/queue/jobs"
 import { REWIND_BATCH_PROCESSORS } from "@/lib/queue/jobs/rewind-batch"
@@ -72,11 +74,13 @@ function createRewindWorker(name: RewindQueueName): Worker {
   const processors = PROCESSORS[name]
   const worker = new Worker(
     name,
-    async (job: Job, token?: string) => {
-      const processor = processors[job.name]
-      if (!processor) throw new Error(`Unknown job type on ${name}: ${job.name}`)
-      return processor(job, token)
-    },
+    // Each job's log lines carry the id of the request or job that queued it
+    (job: Job, token?: string) =>
+      runJobInContext(job, async () => {
+        const processor = processors[job.name]
+        if (!processor) throw new Error(`Unknown job type on ${name}: ${job.name}`)
+        return processor(job, token)
+      }),
     {
       connection: getRedisConnection(),
       concurrency: REWIND_QUEUES[name].concurrency,
@@ -87,7 +91,13 @@ function createRewindWorker(name: RewindQueueName): Worker {
     }
   )
   worker.on("failed", (job, error) => {
-    logger.error("Rewind job failed", error, { queue: name, jobId: job?.id, jobType: job?.name })
+    recordJobFailure(getRedisConnection(), name, job?.name)
+    logger.error("Rewind job failed", error, {
+      queue: name,
+      jobId: job?.id,
+      jobType: job?.name,
+      requestId: job ? jobRequestId(job) : undefined,
+    })
   })
   worker.on("stalled", (jobId) => logger.warn("Rewind job stalled", { queue: name, jobId }))
   worker.on("error", (error) => logger.error("Rewind worker error", error, { queue: name }))

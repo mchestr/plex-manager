@@ -9,7 +9,9 @@ import { Worker, Job } from "bullmq"
 import { closeWorker, getRedisConnection } from "./connection"
 import { getJobProcessor, getRegisteredJobTypes } from "./jobs"
 import { QUEUE_NAME } from "./client"
+import { jobRequestId, runJobInContext } from "./job-meta"
 import { startRewindWorkers, stopRewindWorkers } from "./rewind-queues"
+import { recordJobFailure } from "@/lib/observability/job-failures"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("QUEUE_WORKER")
@@ -51,49 +53,8 @@ export async function startWorker(): Promise<void> {
 
   worker = new Worker(
     QUEUE_NAME,
-    async (job: Job) => {
-      const startTime = Date.now()
-      const processor = getJobProcessor(job.name)
-
-      if (!processor) {
-        logger.error("No processor found for job type", undefined, {
-          jobType: job.name,
-          jobId: job.id,
-        })
-        throw new Error(`Unknown job type: ${job.name}`)
-      }
-
-      logger.debug("Processing job", {
-        jobId: job.id,
-        jobType: job.name,
-        attempt: job.attemptsMade + 1,
-      })
-
-      try {
-        const result = await processor(job)
-        const duration = Date.now() - startTime
-
-        logger.debug("Job processed successfully", {
-          jobId: job.id,
-          jobType: job.name,
-          durationMs: duration,
-        })
-
-        return result
-      } catch (error) {
-        const duration = Date.now() - startTime
-
-        logger.error("Job processing failed", error, {
-          jobId: job.id,
-          jobType: job.name,
-          attempt: job.attemptsMade + 1,
-          maxAttempts: job.opts.attempts,
-          durationMs: duration,
-        })
-
-        throw error
-      }
-    },
+    // Each job's log lines carry the id of the request that queued it
+    (job: Job) => runJobInContext(job, () => processJob(job)),
     {
       connection: getRedisConnection(),
       concurrency,
@@ -104,20 +65,23 @@ export async function startWorker(): Promise<void> {
     }
   )
 
-  // Event handlers for monitoring
+  // Event handlers for monitoring; they run outside the job's context, so they name its request id
   worker.on("completed", (job, result) => {
     logger.info("Job completed", {
       jobId: job.id,
       jobType: job.name,
+      requestId: jobRequestId(job),
       result: summarizeResult(result),
     })
   })
 
   worker.on("failed", (job, error) => {
+    recordJobFailure(getRedisConnection(), QUEUE_NAME, job?.name)
     const willRetry = job && job.attemptsMade < (job.opts.attempts ?? 3)
     logger.error("Job failed", error, {
       jobId: job?.id,
       jobType: job?.name,
+      requestId: job ? jobRequestId(job) : undefined,
       attempts: job?.attemptsMade,
       maxAttempts: job?.opts.attempts,
       willRetry,
@@ -142,6 +106,45 @@ export async function startWorker(): Promise<void> {
   startRewindWorkers()
 
   logger.info("Queue worker started", { concurrency })
+}
+
+/** Runs one `plex-wrapped` job through its registered processor. */
+async function processJob(job: Job): Promise<unknown> {
+  const startTime = Date.now()
+  const processor = getJobProcessor(job.name)
+
+  if (!processor) {
+    logger.error("No processor found for job type", undefined, {
+      jobType: job.name,
+      jobId: job.id,
+    })
+    throw new Error(`Unknown job type: ${job.name}`)
+  }
+
+  logger.debug("Processing job", {
+    jobId: job.id,
+    jobType: job.name,
+    attempt: job.attemptsMade + 1,
+  })
+
+  try {
+    const result = await processor(job)
+    logger.debug("Job processed successfully", {
+      jobId: job.id,
+      jobType: job.name,
+      durationMs: Date.now() - startTime,
+    })
+    return result
+  } catch (error) {
+    logger.error("Job processing failed", error, {
+      jobId: job.id,
+      jobType: job.name,
+      attempt: job.attemptsMade + 1,
+      maxAttempts: job.opts.attempts,
+      durationMs: Date.now() - startTime,
+    })
+    throw error
+  }
 }
 
 /**
