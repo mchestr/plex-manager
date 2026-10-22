@@ -1,11 +1,22 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { UsersFilter } from '@/components/admin/users/users-filter'
+
+/** Base UI holds the opening popup at `pointer-events: none` for a moment; waits until the option takes a click. */
+async function clickable(testId: string) {
+  const option = await screen.findByTestId(testId)
+  await waitFor(() => {
+    for (let node: HTMLElement | null = option; node; node = node.parentElement) {
+      expect(getComputedStyle(node).pointerEvents).not.toBe('none')
+    }
+  })
+  return option
+}
 
 async function choose(testId: string, value: string) {
   const user = userEvent.setup()
   await user.click(screen.getByTestId(testId))
-  await user.click(await screen.findByTestId(`${testId}-option-${value}`))
+  await user.click(await clickable(`${testId}-option-${value}`))
   return user
 }
 

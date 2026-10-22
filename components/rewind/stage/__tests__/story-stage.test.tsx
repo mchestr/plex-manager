@@ -171,6 +171,26 @@ describe("StoryStage", () => {
     }
   })
 
+  it("warms a veiled neighbour's visible style in idle time and keeps it veiled", () => {
+    jest.useFakeTimers()
+    const read = jest.spyOn(window, "getComputedStyle")
+    try {
+      renderStage()
+      const [cover, neighbour] = screen.getAllByTestId("rewind-page", { hidden: true } as never)
+      expect(read).not.toHaveBeenCalledWith(neighbour)
+      // jsdom has no requestIdleCallback, so the idle work falls back to a 200 ms timer.
+      act(() => {
+        jest.advanceTimersByTime(200)
+      })
+      expect(read).toHaveBeenCalledWith(neighbour)
+      expect(read).not.toHaveBeenCalledWith(cover)
+      expect(neighbour).toHaveClass("invisible")
+    } finally {
+      read.mockRestore()
+      jest.useRealTimers()
+    }
+  })
+
   it("ignores taps inside an interactive island", () => {
     render(
       <div data-theme="rewind">
