@@ -1,16 +1,10 @@
 {
   "schema": 1,
-  "commit": "6b5ca96f621b65d7f40656a18dbef7f6883c5b3c",
-  "generatedAt": "2026-10-22T15:10:43.904Z",
+  "commit": "e30fd63620742346675c7a3671014afc975c5641",
+  "generatedAt": "2026-10-22T15:17:05.602Z",
   "files": {
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "copy": 1
-    },
-    "app/invite/[code]/page.tsx": {
-      "blur": 3,
-      "gradient": 3,
-      "gradient-text": 4,
-      "raw-palette": 26
     },
     "components/admin/invites/invite-details-client.tsx": {
       "caps-eyebrow": 6,
@@ -19,13 +13,6 @@
     "components/admin/invites/invites-page-client.tsx": {
       "caps-eyebrow": 6,
       "raw-palette": 108
-    },
-    "components/auth/jellyfin-sign-in-form.tsx": {
-      "raw-palette": 27
-    },
-    "components/auth/plex-sign-in-button.tsx": {
-      "gradient": 1,
-      "raw-palette": 6
     },
     "components/setup/setup-wizard/dev-mode-banner.tsx": {
       "raw-palette": 8
@@ -250,12 +237,12 @@
   },
   "totals": {
     "arbitrary-type-z": 24,
-    "blur": 16,
+    "blur": 13,
     "caps-eyebrow": 38,
     "copy": 4,
-    "gradient": 49,
-    "gradient-text": 32,
+    "gradient": 45,
+    "gradient-text": 28,
     "infinite-motion": 19,
-    "raw-palette": 670
+    "raw-palette": 611
   }
 }

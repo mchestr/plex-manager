@@ -3,6 +3,7 @@
 import { useId, useState } from "react"
 
 import { JellyfinSignInButton } from "@/components/auth/jellyfin-sign-in-button"
+import { Monogram, Pass, PassStub } from "@/components/auth/pass"
 import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
@@ -33,11 +34,7 @@ interface MemberPassProps {
 export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }: MemberPassProps) {
   const headingId = useId()
   return (
-    <section
-      aria-labelledby={headingId}
-      className="w-full overflow-hidden rounded-xl border bg-card text-card-foreground"
-      data-testid="member-pass"
-    >
+    <Pass aria-labelledby={headingId} data-testid="member-pass">
       <div className="flex flex-col p-6 sm:p-7">
         <Monogram letter={monogram} />
         <h1 id={headingId} className="mt-5 text-display text-foreground">
@@ -55,24 +52,12 @@ export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }
           Server admins can see your watch activity and your Rewind. Some Rewind text is written by an AI service.
         </p>
       </div>
-      <div className="flex flex-col gap-1 border-t border-dashed border-border-strong bg-muted px-6 py-5 sm:px-7">
+      <PassStub>
         <p className="text-label text-muted-foreground">Member pass</p>
         <p className="text-ui font-medium text-foreground">Good for every account on the share</p>
         <p className="text-caption text-muted-foreground">Not a member yet? Ask the server owner for an invite link.</p>
-      </div>
-    </section>
-  )
-}
-
-function Monogram({ letter }: { letter: string | null }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="relative flex size-12 items-center justify-center rounded-[10px] border border-border-strong bg-secondary text-h2 text-foreground"
-    >
-      {letter}
-      <span className="absolute top-1.5 right-1.5 size-2 rounded-[2px] bg-primary" />
-    </span>
+      </PassStub>
+    </Pass>
   )
 }
 

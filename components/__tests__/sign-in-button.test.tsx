@@ -17,15 +17,15 @@ jest.mock('@/lib/utils/navigation', () => ({ redirectTo: jest.fn() }))
 
 const mockRedirectTo = jest.mocked(redirectTo)
 
-describe('PlexSignInButton', () => {
+describe('PlexSignInButton (the invite pass accept)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockStart.mockResolvedValue({ success: true, data: { authUrl: AUTH_URL } })
   })
 
-  it('should render sign in button', () => {
-    render(<PlexSignInButton />)
-    expect(screen.getByText('Sign in with Plex')).toBeInTheDocument()
+  it('reads Accept with Plex', () => {
+    render(<PlexSignInButton inviteCode="FRIENDS1" />)
+    expect(screen.getByRole('button', { name: 'Accept with Plex' })).toBeInTheDocument()
   })
 
   it('starts the sign-in on the server and goes to plex.tv at once (UI-35)', async () => {
@@ -49,21 +49,20 @@ describe('PlexSignInButton', () => {
     })
   })
 
-  it('should display the generic message when the action throws', async () => {
+  it('shows fixed copy when the action throws', async () => {
     const user = userEvent.setup()
-    mockStart.mockRejectedValue('String error')
+    mockStart.mockRejectedValue(new Error('ECONNREFUSED 10.0.0.5:443'))
 
-    render(<PlexSignInButton />)
+    render(<PlexSignInButton inviteCode="FRIENDS1" />)
     const button = screen.getByTestId('sign-in-with-plex')
     await user.click(button)
 
-    await waitFor(() => {
-      expect(screen.getByText('Failed to start authentication')).toBeInTheDocument()
-    })
+    expect(await screen.findByTestId('plex-invite-error')).toHaveTextContent("We couldn't reach Plex. Please try again in a moment.")
+    expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument()
     expect(button).not.toBeDisabled()
   })
 
-  it('should disable button while loading', async () => {
+  it('is busy while starting', async () => {
     const user = userEvent.setup()
     let resolveStart: (value: Awaited<ReturnType<typeof startPlexSignIn>>) => void = () => undefined
     mockStart.mockReturnValue(
@@ -72,12 +71,12 @@ describe('PlexSignInButton', () => {
       })
     )
 
-    render(<PlexSignInButton />)
+    render(<PlexSignInButton inviteCode="FRIENDS1" />)
     const button = screen.getByTestId('sign-in-with-plex')
     await user.click(button)
 
     await waitFor(() => {
-      expect(button).toBeDisabled()
+      expect(button).toHaveAttribute('aria-busy', 'true')
     })
 
     resolveStart({ success: true, data: { authUrl: AUTH_URL } })
@@ -88,17 +87,13 @@ describe('PlexSignInButton', () => {
     [{ success: false as const, code: 'UPSTREAM_UNAVAILABLE' as const, error: "We couldn't reach Plex." }],
   ])('shows the refusal and does not go to Plex: %p', async (refusal) => {
     const user = userEvent.setup()
-    const onError = jest.fn()
     mockStart.mockResolvedValue(refusal)
 
-    render(<PlexSignInButton onError={onError} />)
+    render(<PlexSignInButton inviteCode="FRIENDS1" />)
     const button = screen.getByTestId('sign-in-with-plex')
     await user.click(button)
 
-    await waitFor(() => {
-      expect(screen.getByText(refusal.error)).toBeInTheDocument()
-    })
-    expect(onError).toHaveBeenCalledWith(refusal.error)
+    expect(await screen.findByTestId('plex-invite-error')).toHaveTextContent(refusal.error)
     expect(mockRedirectTo).not.toHaveBeenCalled()
     expect(button).not.toBeDisabled()
   })
