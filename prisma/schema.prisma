@@ -20,7 +20,7 @@ model User {
   plexUserId            String?                @unique
   plexAuthToken         String? // Plex auth token (stored during login for watchlist API access)
   jellyfinUserId        String?                @unique // Jellyfin user ID (if user was created via Jellyfin invite)
-  primaryAuthService    String? // Track which service user authenticated with first: "plex" or "jellyfin"
+  primaryAuthService    AuthService? // The service the member joined with; written at invite, sign-in and import (P11.10)
   isAdmin               Boolean                @default(false)
   onboardingStatus      Json?                  @default("{\"plex\": false, \"jellyfin\": false}") // Track onboarding completion per service
   plexWrapped           PlexWrapped[]
@@ -48,6 +48,12 @@ model User {
   @@index([isAdmin])
   @@index([primaryAuthService])
   @@index([isExempt])
+}
+
+/// A member's media server (P11.10). `lib/member/service.ts` reads it with the linked identifiers.
+enum AuthService {
+  plex
+  jellyfin
 }
 
 // Setup and Configuration models

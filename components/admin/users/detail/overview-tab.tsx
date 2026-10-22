@@ -6,7 +6,9 @@ import { ErrorState } from "@/components/ui/error-state"
 import type { UserDetailHeaderData } from "@/lib/admin/user-detail"
 import type { BoundFormat } from "@/lib/utils/format"
 
-const SERVICE_LABEL: Record<string, string> = { plex: "Plex", jellyfin: "Jellyfin" }
+import { JellyfinAccess } from "./jellyfin-access"
+
+const SERVICE_LABEL = { plex: "Plex", jellyfin: "Jellyfin" } as const
 
 function Item({ label, children, testId }: { label: string; children: ReactNode; testId?: string }) {
   return (
@@ -19,7 +21,7 @@ function Item({ label, children, testId }: { label: string; children: ReactNode;
   )
 }
 
-/** The member's account facts and their activity timeline (P10.6). */
+/** The member's account facts, their Jellyfin access (P11.10) and their activity timeline (P10.6). */
 export async function OverviewTab({ header, f }: { header: UserDetailHeaderData; f: BoundFormat }) {
   const timeline = await getUserActivityTimeline({ userId: header.id, pageSize: 10 })
   const { discord } = header
@@ -28,7 +30,16 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
     <div className="flex flex-col gap-6">
       <dl className="grid grid-cols-1 gap-4 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="admin-user-overview">
         <Item label="Email">{header.email ?? "Not set"}</Item>
-        <Item label="Service">{header.primaryAuthService ? (SERVICE_LABEL[header.primaryAuthService] ?? header.primaryAuthService) : "Not recorded"}</Item>
+        <Item label="Service" testId="admin-user-service">
+          {SERVICE_LABEL[header.primaryService]}
+          {header.services
+            .filter((service) => service !== header.primaryService)
+            .map((service) => (
+              <span key={service} className="block text-caption text-muted-foreground">
+                Also on {SERVICE_LABEL[service]}
+              </span>
+            ))}
+        </Item>
         <Item label="Joined" testId="admin-user-created-timestamp">
           {f.dateTime(header.createdAt, { zoneLabel: true })}
         </Item>
@@ -44,6 +55,16 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
             "Not linked"
           )}
         </Item>
+        {header.jellyfinUserId && (
+          <>
+            <Item label="Jellyfin ID" testId="admin-user-jellyfin-id">
+              <span className="font-mono text-label break-all">{header.jellyfinUserId}</span>
+            </Item>
+            <Item label="Jellyfin access">
+              <JellyfinAccess userId={header.id} name={header.name} status={header.jellyfinStatus ?? "unknown"} />
+            </Item>
+          </>
+        )}
       </dl>
 
       <section aria-labelledby="admin-user-activity-heading" className="flex flex-col gap-3">

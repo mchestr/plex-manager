@@ -29,6 +29,10 @@ export enum AuditEventType {
   // An admin disabled or re-enabled a user's account (User.disabledAt).
   USER_DISABLED = "USER_DISABLED",
   USER_ENABLED = "USER_ENABLED",
+  // An admin turned a member's Jellyfin account off or on (P11.10). Details
+  // carry the target user id and their Jellyfin user id.
+  JELLYFIN_ACCESS_DISABLED = "JELLYFIN_ACCESS_DISABLED",
+  JELLYFIN_ACCESS_ENABLED = "JELLYFIN_ACCESS_ENABLED",
   // Invite processing events
   INVITE_CONSUMED = "INVITE_CONSUMED",
   INVITE_PLEX_FAILURE = "INVITE_PLEX_FAILURE",

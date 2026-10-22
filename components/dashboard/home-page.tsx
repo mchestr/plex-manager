@@ -51,7 +51,7 @@ export async function HomePage({ userId, isAdmin }: HomePageProps) {
                     userId={userId}
                     isAdmin={isAdmin}
                     serverName={data.serverName}
-                    browseUrl={data.quickLinks.media.url}
+                    browseUrl={data.quickLinks.media.find((server) => server.service === "plex")?.url ?? null}
                     format={data.format}
                   />
                 </Suspense>

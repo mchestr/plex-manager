@@ -1,5 +1,7 @@
 import { createE2EPrismaClient } from './helpers/prisma';
 import { clearRateLimits, redisAnswers } from './helpers/rate-limits';
+import { JELLYFIN_MEMBERS } from './helpers/jellyfin-members';
+import { startMockJellyfin } from './mocks/jellyfin-server';
 
 /**
  * Global setup for Playwright tests
@@ -90,6 +92,13 @@ async function globalSetup() {
       console.log('[E2E Setup] Created regular user');
     }
 
+    // A Jellyfin-only member and one with both identities (P11.10). Their
+    // Jellyfin accounts live on the mock server started below.
+    for (const member of JELLYFIN_MEMBERS) {
+      await prisma.user.upsert({ where: { id: member.id }, create: member, update: member });
+    }
+    console.log('[E2E Setup] Seeded the Jellyfin members');
+
     console.log('[E2E Setup] Database setup complete');
     console.log('[E2E Setup] Verifying test users...');
 
@@ -120,6 +129,15 @@ async function globalSetup() {
     await prisma.$disconnect();
     console.log('[E2E Setup] Database connection closed');
   }
+
+  // The app calls Jellyfin from the server, so specs point a JellyfinServer
+  // row at this mock; workers inherit the URL through the environment.
+  const jellyfin = await startMockJellyfin();
+  process.env.E2E_JELLYFIN_URL = jellyfin.url;
+  console.log(`[E2E Setup] Mock Jellyfin listening at ${jellyfin.url}`);
+  return async () => {
+    await new Promise<void>((resolve) => jellyfin.server.close(() => resolve()));
+  };
 }
 
 export default globalSetup;

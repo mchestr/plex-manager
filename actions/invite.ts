@@ -79,6 +79,7 @@ async function findOrCreateJellyfinUser(
     data: {
       name: username,
       jellyfinUserId,
+      primaryAuthService: "jellyfin",
       ...INVITE_EXEMPTION,
     },
   })

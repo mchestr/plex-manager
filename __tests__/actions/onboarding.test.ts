@@ -3,6 +3,7 @@ import { completeOnboarding, getOnboardingStatus } from '@/actions/onboarding'
 import { getServerSession } from 'next-auth'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { buildUser } from '@/__tests__/helpers/factories'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
@@ -41,6 +42,16 @@ describe('Onboarding Actions', () => {
       const result = await getOnboardingStatus()
 
       expect(result).toMatchObject({ success: true, data: { isComplete: false, service: 'plex' } })
+    })
+
+    it("checks a Jellyfin member's Jellyfin onboarding, even with a stale stored service (P11.10)", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(
+        buildUser({ plexUserId: null, jellyfinUserId: 'jf-1', primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } })
+      )
+
+      const result = await getOnboardingStatus()
+
+      expect(result).toMatchObject({ success: true, data: { isComplete: false, service: 'jellyfin' } })
     })
 
     it('refuses an unauthenticated caller with a code', async () => {

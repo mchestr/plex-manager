@@ -98,10 +98,10 @@ describe("importPlexUsers", () => {
     await importPlexUsers()
 
     expect(prismaMock.user.create).toHaveBeenNthCalledWith(1, {
-      data: { plexUserId: "plex-0", name: "Member 0", email: "member0@example.com", image: null, isAdmin: true },
+      data: { plexUserId: "plex-0", name: "Member 0", email: "member0@example.com", image: null, isAdmin: true, primaryAuthService: "plex" },
     })
     expect(prismaMock.user.create).toHaveBeenNthCalledWith(2, {
-      data: { plexUserId: "plex-1", name: "Member 1", email: "member1@example.com", image: null, isAdmin: false },
+      data: { plexUserId: "plex-1", name: "Member 1", email: "member1@example.com", image: null, isAdmin: false, primaryAuthService: "plex" },
     })
   })
 

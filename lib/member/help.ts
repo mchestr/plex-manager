@@ -2,6 +2,7 @@ import "server-only"
 
 import type { SupportDiscord } from "@/components/guides/support-guide"
 import { serverName as getServerName } from "@/lib/brand"
+import { primaryService } from "@/lib/member/service"
 import { prisma } from "@/lib/prisma"
 import { safeHref } from "@/lib/ui/markdown"
 import type { AuthService } from "@/types/onboarding"
@@ -24,7 +25,10 @@ export interface HelpData {
  */
 export async function getHelpData(userId: string): Promise<HelpData> {
   const [user, overseerr, integration, connection] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { primaryAuthService: true } }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { primaryAuthService: true, plexUserId: true, jellyfinUserId: true },
+    }),
     prisma.overseerr.findFirst({ where: { isActive: true }, select: { publicUrl: true } }),
     prisma.discordIntegration.findUnique({
       where: { id: "discord" },
@@ -41,7 +45,7 @@ export async function getHelpData(userId: string): Promise<HelpData> {
     prisma.discordConnection.findUnique({ where: { userId }, select: { username: true } }),
   ])
 
-  const service: AuthService = user?.primaryAuthService === "jellyfin" ? "jellyfin" : "plex"
+  const service: AuthService = user ? primaryService(user) : "plex"
   const serverName =
     service === "jellyfin"
       ? ((await prisma.jellyfinServer.findFirst({ where: { isActive: true }, select: { name: true } }))?.name ??
