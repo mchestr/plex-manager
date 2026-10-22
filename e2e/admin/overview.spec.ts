@@ -38,11 +38,13 @@ test.describe('Admin Overview', () => {
     const rewind = adminPage.getByTestId('admin-overview-rewind');
     await expect(rewind).toBeVisible();
 
-    // Tab until the Rewind tile has focus, then follow it with Enter
+    // Tab until the Rewind tile has focus, then follow it with Enter. The skip
+    // link, header and nav come first (over 20 stops), so retry with no backoff:
+    // toPass's default intervals grow to a second and run out before the tile.
     await expect(async () => {
       await adminPage.keyboard.press('Tab');
       await expect(rewind).toBeFocused({ timeout: 200 });
-    }).toPass({ timeout: 15_000 });
+    }).toPass({ intervals: [0], timeout: 15_000 });
     await adminPage.keyboard.press('Enter');
     await expect(adminPage).toHaveURL(/\/admin\/rewind$/);
   });
