@@ -13,6 +13,7 @@ import { getPlexServerIdentity, getPlexUsers } from "@/lib/connections/plex"
 import { activeShareFor, type PlexTvUser } from "@/lib/connections/plex-tv-users"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { usageTotalsByUser, usageTotalsForWrapped } from "@/lib/llm/usage-totals"
+import { memberServices, primaryService } from "@/lib/member/service"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import type { AdminUsersList, AdminUserWithWrappedStats, PlexAccessCheck } from "@/types/admin"
@@ -58,6 +59,9 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUsersLi
       email: user.email,
       image: user.image,
       plexUserId: user.plexUserId,
+      jellyfinUserId: user.jellyfinUserId,
+      services: memberServices(user),
+      primaryService: primaryService(user),
       isAdmin: user.isAdmin,
       isOwner: Boolean(ownerPlexId && user.plexUserId && String(user.plexUserId).trim() === ownerPlexId),
       disabledAt: user.disabledAt,

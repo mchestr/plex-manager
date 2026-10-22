@@ -18,7 +18,7 @@ const MEMBER = { id: 'rewind-preview-user-id', plexUserId: 'rewind-preview-plex-
 async function seedMember(): Promise<void> {
   const prisma = createE2EPrismaClient();
   try {
-    const row = { ...MEMBER, isAdmin: false, primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } };
+    const row = { ...MEMBER, isAdmin: false, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true, jellyfin: false } };
     await prisma.user.upsert({ where: { id: MEMBER.id }, create: row, update: row });
     await prisma.plexWrapped.deleteMany({ where: { userId: MEMBER.id } });
     const wrapped = await prisma.plexWrapped.create({

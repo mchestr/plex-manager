@@ -4,14 +4,16 @@
  *
  * ## Filters
  *
- * `?q=` searches name and email, ignoring case. `?role=`, `?plexAccess=` and
- * `?subscription=` each default to `all` (UI-05), so a fresh page lists
- * everyone, even when Plex is down and every access is `unknown`. Anything
+ * `?q=` searches name and email, ignoring case. `?role=`, `?service=`,
+ * `?plexAccess=` and `?subscription=` each default to `all` (UI-05), so a
+ * fresh page lists everyone, even when Plex is down and every access is
+ * `unknown`. Anything
  * unrecognised in the URL falls back to `all`.
  *
  * | Param          | Values                                           |
  * |----------------|--------------------------------------------------|
  * | `role`         | `all`, `admin` (owner included), `member`        |
+ * | `service`      | `all`, `plex`, `jellyfin` (a linked account)     |
  * | `plexAccess`   | `all`, `shared`, `notShared`, `unknown`          |
  * | `subscription` | `all`, `active`, `pastDue`, `canceled`, `none`   |
  *
@@ -37,12 +39,14 @@ export const USERS_SORTS = ["name", "joined", "cost"] as const
 export const USERS_DEFAULT_SORT: TableSort = { id: "joined", desc: true }
 
 const ROLES = ["all", "admin", "member"] as const
+const SERVICES = ["all", "plex", "jellyfin"] as const
 const PLEX_ACCESS = ["all", "shared", "notShared", "unknown"] as const
 const SUBSCRIPTIONS = ["all", "active", "pastDue", "canceled", "none"] as const
 
 const usersFilterSchema = z.object({
   q: z.string().trim().max(100).catch(""),
   role: z.enum(ROLES).catch("all"),
+  service: z.enum(SERVICES).catch("all"),
   plexAccess: z.enum(PLEX_ACCESS).catch("all"),
   subscription: z.enum(SUBSCRIPTIONS).catch("all"),
 })
@@ -60,6 +64,7 @@ export function parseUsersFilter(params: Params): UsersFilter {
   return usersFilterSchema.parse({
     q: first("q") ?? "",
     role: first("role"),
+    service: first("service"),
     plexAccess: first("plexAccess"),
     subscription: first("subscription"),
   })
@@ -91,6 +96,7 @@ export function filterUsers<T extends AdminUserWithWrappedStats>(users: T[], fil
   return users.filter((user) => {
     if (q && !`${user.name ?? ""} ${user.email ?? ""}`.toLowerCase().includes(q)) return false
     if (filter.role !== "all" && (user.isAdmin ? "admin" : "member") !== filter.role) return false
+    if (filter.service !== "all" && !user.services.includes(filter.service)) return false
     if (filter.plexAccess !== "all" && plexAccessOf(user) !== filter.plexAccess) return false
     if (filter.subscription !== "all" && subscriptionOf(user) !== filter.subscription) return false
     return true

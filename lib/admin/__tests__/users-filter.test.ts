@@ -30,13 +30,14 @@ const ids = (users: AdminUserWithWrappedStats[]) => users.map((u) => u.id)
 
 describe('parseUsersFilter', () => {
   it('defaults every filter to all and the search to empty', () => {
-    expect(parseUsersFilter({})).toEqual({ q: '', role: 'all', plexAccess: 'all', subscription: 'all' })
+    expect(parseUsersFilter({})).toEqual({ q: '', role: 'all', service: 'all', plexAccess: 'all', subscription: 'all' })
   })
 
   it('reads known values and falls back to all on anything else', () => {
-    expect(parseUsersFilter({ q: '  mor ', role: 'admin', plexAccess: ['unknown', 'shared'], subscription: 'gold' })).toEqual({
+    expect(parseUsersFilter({ q: '  mor ', role: 'admin', service: 'emby', plexAccess: ['unknown', 'shared'], subscription: 'gold' })).toEqual({
       q: 'mor',
       role: 'admin',
+      service: 'all',
       plexAccess: 'unknown',
       subscription: 'all',
     })
@@ -52,6 +53,17 @@ describe('filterUsers', () => {
   it('filters by role, the owner counting as an admin', () => {
     expect(ids(filterUsers(MEMBERS, parseUsersFilter({ role: 'admin' })))).toEqual(['Dana Whitfield'])
     expect(filterUsers(MEMBERS, parseUsersFilter({ role: 'member' }))).toHaveLength(6)
+  })
+
+  it('filters by service, a member with both accounts matching either', () => {
+    const members = [
+      user('Plex only'),
+      user('Jellyfin only', { plexUserId: null, jellyfinUserId: 'jf-1', services: ['jellyfin'], primaryService: 'jellyfin' }),
+      user('Both', { jellyfinUserId: 'jf-2', services: ['plex', 'jellyfin'] }),
+    ]
+    expect(ids(filterUsers(members, parseUsersFilter({ service: 'jellyfin' })))).toEqual(['Jellyfin only', 'Both'])
+    expect(ids(filterUsers(members, parseUsersFilter({ service: 'plex' })))).toEqual(['Plex only', 'Both'])
+    expect(filterUsers(members, parseUsersFilter({}))).toHaveLength(3)
   })
 
   it.each([

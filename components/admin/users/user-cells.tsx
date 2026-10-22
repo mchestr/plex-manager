@@ -48,6 +48,20 @@ export function RoleCell({ user }: { user: User }) {
   return <StatusBadge domain="role" value={user.isOwner ? "owner" : user.isAdmin ? "admin" : "user"} />
 }
 
+const SERVICE_LABEL = { plex: "Plex", jellyfin: "Jellyfin" } as const
+
+/** One neutral badge per linked media server (P11.10), or "None" for a row with neither. */
+export function ServiceCell({ user }: { user: User }) {
+  if (user.services.length === 0) return <span className="text-muted-foreground">None</span>
+  return (
+    <span className="inline-flex flex-wrap gap-1" data-testid="admin-user-service-badge" data-services={user.services.join(" ")}>
+      {user.services.map((service) => (
+        <StatusBadge key={service} tone="neutral" label={SERVICE_LABEL[service]} />
+      ))}
+    </span>
+  )
+}
+
 /** A dot and a word; Unknown carries why: no Plex account, or when Plex was last asked. */
 export function PlexAccessCell({ user, unknownSub }: { user: User; unknownSub?: string }) {
   if (user.isOwner) return <span className="text-muted-foreground">Owns the server</span>

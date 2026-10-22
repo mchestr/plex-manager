@@ -74,6 +74,7 @@ async function findOrCreateUser(
       plexUserId: plexUser.id,
       image: plexUser.thumb,
       emailVerified: email === null ? null : new Date(),
+      primaryAuthService: "plex",
       ...INVITE_EXEMPTION,
     },
   })

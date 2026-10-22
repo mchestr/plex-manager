@@ -163,7 +163,7 @@ export async function seedVisualFixtures(): Promise<void> {
         name: VISUAL_ONBOARDING_USER.name,
         email: VISUAL_ONBOARDING_USER.email,
         isAdmin: false,
-        primaryAuthService: 'plex',
+        primaryAuthService: 'plex' as const,
         onboardingStatus: { plex: false, jellyfin: false },
         createdAt: daysAgo(shown, 3),
       };

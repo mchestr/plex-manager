@@ -147,16 +147,29 @@ describe('getHomeData', () => {
   })
 
   it("names a Jellyfin member's tile after the Jellyfin server", async () => {
-    prismaMock.user.findUnique.mockResolvedValue(buildUser())
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ plexUserId: null, jellyfinUserId: 'jf-1', primaryAuthService: 'jellyfin' }))
     jest.mocked(getHelpData).mockResolvedValue({ ...HELP, service: 'jellyfin' })
     prismaMock.jellyfinServer.findFirst.mockResolvedValue(buildJellyfinServer({ name: 'Basement Jelly', url: 'http://jellyfin:8096', publicUrl: 'https://jf.example.com' }))
 
     const data = await getHomeData('user-1', now)
 
-    expect(data.quickLinks.media).toEqual({
-      service: 'jellyfin',
-      serverName: 'Basement Jelly',
-      url: 'https://jf.example.com/',
-    })
+    expect(data.quickLinks.media).toEqual([
+      { service: 'jellyfin', serverName: 'Basement Jelly', url: 'https://jf.example.com/' },
+    ])
+  })
+
+  it('gives a member with both accounts both tiles, their own service first', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ plexUserId: 'plex-1', jellyfinUserId: 'jf-1', primaryAuthService: 'jellyfin' }))
+    jest.mocked(getHelpData).mockResolvedValue({ ...HELP, service: 'jellyfin' })
+    prismaMock.jellyfinServer.findFirst.mockResolvedValue(buildJellyfinServer({ name: 'Basement Jelly', url: 'http://jellyfin:8096', publicUrl: 'https://jf.example.com' }))
+    prismaMock.plexServer.findFirst.mockResolvedValue(buildPlexServer({ publicUrl: 'https://plex.example.com' }))
+    jest.mocked(getPlexServerIdentity).mockResolvedValue({ success: false, error: 'down' })
+
+    const data = await getHomeData('user-1', now)
+
+    expect(data.quickLinks.media.map((server) => [server.service, server.url])).toEqual([
+      ['jellyfin', 'https://jf.example.com/'],
+      ['plex', 'https://plex.example.com/web'],
+    ])
   })
 })

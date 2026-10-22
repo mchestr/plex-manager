@@ -11,7 +11,7 @@ interface TestUser {
   name: string;
   plexUserId: string;
   isAdmin: boolean;
-  primaryAuthService: string;
+  primaryAuthService: 'plex' | 'jellyfin';
   onboardingStatus: { plex: boolean; jellyfin: boolean };
 }
 

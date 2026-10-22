@@ -513,11 +513,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Invite a Jellyfin member and sign them in: they see the Jellyfin onboarding and a Jellyfin tile. On `/admin/users` the Service column shows Jellyfin, and the detail page shows "Jellyfin access: enabled". Turn it off: the mock server records `IsDisabled: true`, and the member is signed out.
 
 **Done when.**
-- [ ] `primaryAuthService` is written on every create path, backfilled, and stored as an enum.
-- [ ] Onboarding and the home tiles follow the member's service.
-- [ ] Admins see each member's service and Jellyfin status, and can turn Jellyfin access off and on with an audit entry.
+- [x] `primaryAuthService` is written on every create path, backfilled, and stored as an enum.
+- [x] Onboarding and the home tiles follow the member's service.
+- [x] Admins see each member's service and Jellyfin status, and can turn Jellyfin access off and on with an audit entry.
 - [ ] The seed, the mock Jellyfin server and the sign-in, onboarding and admin tests exist and pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: the rule lives in `lib/member/service.ts` (the existing `lib/member/` folder, not `lib/members/`); `memberServices` and `primaryService` take `{ plexUserId, jellyfinUserId[, primaryAuthService] }`. Migration `20270116000000_p1110_primary_auth_service_enum`; Prisma enum `AuthService`. The readers are `getOnboardingStatus` and `getHelpData` (onboarding, Help and home all read `getHelpData`). `QuickLinksProps.media` is now an array, one tile per linked service, test ids `home-quick-link-plex` / `home-quick-link-jellyfin` (was `home-quick-link-media`). The detail DTO is `lib/admin/user-detail.ts` (`jellyfinUserId`, `services`, `primaryService`, `jellyfinStatus`, null without a Jellyfin account; `primaryAuthService` is gone from it); the list DTO gains `jellyfinUserId`, `services`, `primaryService` and the list a `?service=` filter. `setJellyfinAccountDisabled` is in `lib/connections/jellyfin-users.ts`; `isJellyfinAdmin` is now exported from `lib/jellyfin-auth.ts`. `setMemberJellyfinAccess` ends sessions with reason `unshared` and re-syncs the role with `access_granted` on enable. The mock Jellyfin server is started by `e2e/global-setup.ts`, which exports `E2E_JELLYFIN_URL`; global setup seeds only the members (`jf-member`, `both-member`, in `e2e/helpers/jellyfin-members.ts`), and each spec that needs Jellyfin upserts its own active row pointing at the mock (as `e2e/jellyfin-member.spec.ts` does), so other specs keep a Plex-only sign-in. Onboarding's root carries `onboarding-service-<service>`.)
 
 ### Step P11.11: Stripe for Jellyfin-only members
 

@@ -22,7 +22,7 @@ test.describe('Rewind archive articles', () => {
     memberId = `rewind-archive-${test.info().project.name}`;
     const prisma = createE2EPrismaClient();
     try {
-      const row = { id: memberId, name: 'Archive member', email: `${memberId}@example.com`, plexUserId: `${memberId}-plex`, isAdmin: false, primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } };
+      const row = { id: memberId, name: 'Archive member', email: `${memberId}@example.com`, plexUserId: `${memberId}-plex`, isAdmin: false, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true, jellyfin: false } };
       await prisma.user.upsert({ where: { id: memberId }, create: row, update: row });
     } finally {
       await prisma.$disconnect();

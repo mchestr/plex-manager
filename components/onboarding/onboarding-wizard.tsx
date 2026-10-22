@@ -71,7 +71,7 @@ export function OnboardingWizard({ data, initialStepId = "welcome" }: Onboarding
   }))
 
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="flex w-full flex-col gap-4" data-testid={`onboarding-service-${data.service}`}>
       <div className="flex flex-col gap-1">
         <p className="text-h3 text-foreground" data-testid="onboarding-wizard-heading">
           Get set up

@@ -72,6 +72,7 @@ export const importPlexUsers = adminAction({
             email: plexUser.managed ? null : plexUser.email || null,
             image: plexUser.thumb || null,
             isAdmin: plexServer.adminPlexUserId === plexUser.id,
+            primaryAuthService: "plex",
           },
         })
         imported++

@@ -450,7 +450,7 @@ describe('invite actions', () => {
       tx.inviteUsage.create.mockResolvedValue({})
     })
 
-    it('marks a newly created user exempt', async () => {
+    it('marks a newly created user exempt, as a Plex member (P11.10)', async () => {
       tx.user.findUnique.mockResolvedValue(null)
       tx.user.create.mockResolvedValue({ id: 'user-1' })
 
@@ -460,6 +460,7 @@ describe('invite actions', () => {
       expect(tx.user.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           plexUserId: mockPlexUser.id,
+          primaryAuthService: 'plex',
           isExempt: true,
           exemptReason: 'invite',
         }),
@@ -500,7 +501,7 @@ describe('invite actions', () => {
       expect(updateData).not.toHaveProperty('exemptReason')
     })
 
-    it('marks a newly created Jellyfin user exempt', async () => {
+    it('marks a newly created Jellyfin user exempt, as a Jellyfin member (P11.10)', async () => {
       const jellyfinInvite = { ...mockInvite, serverType: 'JELLYFIN' }
       tx.invite.findUnique.mockResolvedValue(jellyfinInvite)
       tx.invite.update.mockResolvedValue({ ...jellyfinInvite, useCount: 1 })
@@ -526,6 +527,7 @@ describe('invite actions', () => {
       expect(tx.user.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           jellyfinUserId: 'jf-user-1',
+          primaryAuthService: 'jellyfin',
           isExempt: true,
           exemptReason: 'invite',
         }),

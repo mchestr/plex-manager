@@ -56,7 +56,7 @@ test.describe('Home page', () => {
     await page.goto('/');
     await expect(page.getByTestId('home-page')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
-    const media = page.getByTestId('home-quick-link-media');
+    const media = page.getByTestId('home-quick-link-plex');
     if (await media.count()) {
       await expect(media).toHaveAttribute(
         'href',

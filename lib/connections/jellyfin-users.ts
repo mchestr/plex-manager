@@ -2,6 +2,8 @@
  * Jellyfin user management functions
  */
 
+import { z } from "zod"
+
 import {
   jellyfinAuthResultSchema,
   type JellyfinUser,
@@ -240,9 +242,9 @@ export async function deleteJellyfinUser(
 export async function getJellyfinUserById(
   config: JellyfinConfig,
   userId: string
-): Promise<{ success: boolean; data?: JellyfinUser; error?: string }> {
+): Promise<{ success: boolean; data?: JellyfinUser; error?: string; notFound?: boolean }> {
   try {
-    const url = `${config.url}/Users/${userId}`
+    const url = `${config.url}/Users/${encodeURIComponent(userId)}`
 
     const response = await fetchWithTimeout(url, {
       method: "GET",
@@ -252,7 +254,7 @@ export async function getJellyfinUserById(
 
     if (!response.ok) {
       if (response.status === 404) {
-        return { success: false, error: "User not found" }
+        return { success: false, error: "User not found", notFound: true }
       }
       return { success: false, error: `Failed to fetch user: ${response.statusText}` }
     }
@@ -264,6 +266,58 @@ export async function getJellyfinUserById(
       return { success: false, error: `Error fetching user: ${error.message}` }
     }
     return { success: false, error: "Failed to fetch Jellyfin user" }
+  }
+}
+
+/** The user's stored policy: every field is kept, so only its shape is checked. */
+const userPolicySchema = z.object({ Policy: z.record(z.string(), z.unknown()) })
+
+/**
+ * Turns a Jellyfin account off or on (P11.10). Jellyfin replaces the whole
+ * policy on a write, so this reads the user, keeps every field of their
+ * current `Policy` (libraries, `IsAdministrator`, downloads) and changes only
+ * `IsDisabled`. {@link setJellyfinUserPolicy} cannot do this: it resets the
+ * libraries and `IsAdministrator`.
+ */
+export async function setJellyfinAccountDisabled(
+  config: JellyfinConfig,
+  jellyfinUserId: string,
+  disabled: boolean
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const userUrl = `${config.url}/Users/${encodeURIComponent(jellyfinUserId)}`
+    const current = await fetchWithTimeout(userUrl, {
+      method: "GET",
+      headers: getJellyfinHeaders(config.apiKey),
+      timeoutMs: 5000,
+    })
+    if (!current.ok) {
+      logger.warn("jellyfin.access.read_failed", { userId: jellyfinUserId, status: current.status })
+      return { success: false, error: current.status === 404 ? "The Jellyfin account no longer exists" : "Could not read the Jellyfin account" }
+    }
+
+    const parsed = userPolicySchema.safeParse(await current.json().catch(() => null))
+    if (!parsed.success) {
+      logger.warn("jellyfin.access.invalid_policy", { userId: jellyfinUserId })
+      return { success: false, error: "Jellyfin returned an account without a policy" }
+    }
+
+    const response = await fetchWithTimeout(`${userUrl}/Policy`, {
+      method: "POST",
+      headers: getJellyfinHeaders(config.apiKey),
+      body: JSON.stringify({ ...parsed.data.Policy, IsDisabled: disabled }),
+      timeoutMs: 10000,
+    })
+    if (!response.ok) {
+      logger.warn("jellyfin.access.write_failed", { userId: jellyfinUserId, status: response.status })
+      return { success: false, error: "Jellyfin refused the change" }
+    }
+
+    logger.info("jellyfin.access.changed", { userId: jellyfinUserId, disabled })
+    return { success: true }
+  } catch (error) {
+    logger.error("Error changing Jellyfin account access", error, { userId: jellyfinUserId })
+    return { success: false, error: "Could not reach the Jellyfin server" }
   }
 }
 

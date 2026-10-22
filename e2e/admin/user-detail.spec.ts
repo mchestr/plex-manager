@@ -22,7 +22,7 @@ const ARCHIVE_YEAR = REWIND_YEAR - 1;
 async function seedMember(): Promise<void> {
   const prisma = createE2EPrismaClient();
   try {
-    const row = { ...MEMBER, isAdmin: false, primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } };
+    const row = { ...MEMBER, isAdmin: false, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true, jellyfin: false } };
     await prisma.user.upsert({ where: { id: MEMBER.id }, create: row, update: row });
     await prisma.tautulli.upsert({ where: { id: TAUTULLI.id }, create: TAUTULLI, update: TAUTULLI });
     // Deleting the Rewind rows only unlinks their usage, so each test's seed clears it first

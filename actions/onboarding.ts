@@ -2,6 +2,7 @@
 
 import { memberAction } from "@/lib/actions/define-action"
 import { ok } from "@/lib/actions/result"
+import { primaryService } from "@/lib/member/service"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import type { AuthService } from "@/types/onboarding"
@@ -34,7 +35,7 @@ interface OnboardingStatusRecord {
  * Whether the signed-in user has completed onboarding for a service.
  *
  * @param input - `{ service }`, the auth service ("plex" or "jellyfin"); when
- *   omitted, the user's primaryAuthService
+ *   omitted, the member's own service (`primaryService`)
  */
 export const getOnboardingStatus = memberAction({
   input: z.object({ service: AuthServiceSchema.optional() }).optional(),
@@ -45,6 +46,8 @@ export const getOnboardingStatus = memberAction({
       select: {
         onboardingStatus: true,
         primaryAuthService: true,
+        plexUserId: true,
+        jellyfinUserId: true,
       },
     })
 
@@ -53,8 +56,8 @@ export const getOnboardingStatus = memberAction({
       ? validation.data
       : { plex: false, jellyfin: false }
 
-    // If no service specified, use primary auth service
-    const targetService: AuthService = input?.service || (user?.primaryAuthService as AuthService) || "plex"
+    // If no service specified, use the member's own service
+    const targetService: AuthService = input?.service ?? (user ? primaryService(user) : "plex")
 
     return ok({
       isComplete: status[targetService] || false,
