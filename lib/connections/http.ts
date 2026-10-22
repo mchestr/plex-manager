@@ -61,6 +61,8 @@ export type ServiceFailure<C extends string = ServiceErrorCode> = {
   code: C
   status?: number
   detail?: ServiceErrorDetail
+  /** The service's own `message` for a 4xx when `readErrorMessage` asked for it, at most 200 characters. */
+  message?: string
 }
 export type ServiceResult<T, C extends string = ServiceErrorCode> = { ok: true; data: T } | ServiceFailure<C>
 
@@ -82,9 +84,14 @@ export interface ServiceFetchOptions<T> {
    * documents its errors there). Off by default: the body is cancelled.
    */
   readErrorBody?: boolean
+  /** Sees the final response's status and headers (an ETag, 201 against 202) before the body is read. */
+  onResponse?: (response: { status: number; headers: Headers }) => void
+  /** Read a 4xx body's JSON `message` into the failure: copy the service wrote for people. */
+  readErrorMessage?: boolean
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000
+const MAX_ERROR_MESSAGE_LENGTH = 200
 const MAX_REDIRECTS = 3
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 const AUTH_HEADERS = new Set(["x-api-key", "x-goog-api-key", "x-plex-token", "x-emby-token", "authorization"])
@@ -157,6 +164,19 @@ function fail(service: string, url: string, code: ServiceErrorCode, status?: num
   return status === undefined ? { ok: false, code } : { ok: false, code, status }
 }
 
+/** The JSON body's `message`, cut to 200 characters, or undefined. Never throws. */
+async function readErrorMessage(response: Response): Promise<string | undefined> {
+  try {
+    const body: unknown = await response.json()
+    if (typeof body !== "object" || body === null || !("message" in body)) return undefined
+    const { message } = body
+    if (typeof message !== "string" || !message.trim()) return undefined
+    return message.trim().slice(0, MAX_ERROR_MESSAGE_LENGTH)
+  } catch {
+    return undefined
+  }
+}
+
 /** Log a schema mismatch by issue path only and return `INVALID_RESPONSE`. */
 export function invalidResponse(service: string, error: z.ZodError, context: Record<string, unknown> = {}): ServiceFailure {
   logger.warn(`${service} response did not match the expected shape`, {
@@ -176,13 +196,19 @@ export async function serviceFetch<T>(options: ServiceFetchOptions<T>): Promise<
 
   try {
     const response = await fetchWithSafeRedirects(url, { method, headers: { ...accept, ...headers }, body, signal })
+    options.onResponse?.({ status: response.status, headers: response.headers })
     if (!response.ok) {
       if (options.readErrorBody) {
         const errorBody: unknown = await response.json().catch(() => undefined)
         return { ...fail(service, url, "HTTP", response.status), detail: { body: errorBody, statusText: response.statusText } }
       }
-      await response.body?.cancel().catch(() => undefined)
-      return fail(service, url, "HTTP", response.status)
+      const message =
+        options.readErrorMessage && response.status >= 400 && response.status < 500
+          ? await readErrorMessage(response)
+          : undefined
+      if (message === undefined) await response.body?.cancel().catch(() => undefined)
+      const failure = fail(service, url, "HTTP", response.status)
+      return message === undefined ? failure : { ...failure, message }
     }
 
     let raw: unknown

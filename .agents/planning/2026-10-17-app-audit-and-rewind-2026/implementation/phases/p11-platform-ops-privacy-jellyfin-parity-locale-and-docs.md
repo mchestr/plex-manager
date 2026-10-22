@@ -1333,11 +1333,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 - A show that Overseerr has not seen is requested with all seasons.
 
 **Done when.**
-- [ ] The whole watchlist is paged, and TMDB and TVDB IDs come from per-item metadata, cached per item.
-- [ ] TV requests send seasons, and 202, 403, 409 and 4K status are handled correctly.
-- [ ] The card reports requested, available, already requested, skipped and refused items.
-- [ ] The recorded-response contract tests pass.
+- [x] The whole watchlist is paged, and TMDB and TVDB IDs come from per-item metadata, cached per item.
+- [x] TV requests send seasons, and 202, 403, 409 and 4K status are handled correctly.
+- [x] The card reports requested, available, already requested, skipped and refused items.
+- [x] The recorded-response contract tests pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270115000000_p1128_watchlist_sync_status`. The item loop lives in `lib/watchlist/sync-run.ts` (`processWatchlistItems`), the count copy and test ids in `lib/watchlist/summary.ts`. `serviceFetch` gained `onResponse` (status and headers, used for the ETag and 201 against 202) and `readErrorMessage` (a 4xx JSON `message`, cut to 200 characters, on `ServiceFailure.message`). The 50 cap counts `created` requests; the rest are `itemsDeferred`. The ETag is stored only after a run with no failures and nothing deferred, so a 304 never hides a retry; a 304 run only touches `lastSyncAt`. A 403 message goes into `lastSyncError` without failing the run. The card counts come from a `groupBy` of the member's history rows (`getWatchlistSyncSettings().counts`). The fixtures follow the shape the reference clients read but were not recorded from a live account: the owner re-records them from a test account. P11.2 wraps `syncUserWatchlist` in the shared lock unchanged.)
 
 ### Step P11.29: Remove the v2 viewer
 

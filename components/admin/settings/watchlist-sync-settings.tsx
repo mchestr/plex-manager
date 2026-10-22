@@ -19,6 +19,7 @@ const SYNC_STATUS_VARIANT: Record<string, "success" | "info" | "warning" | "dest
   ALREADY_AVAILABLE: "info",
   ALREADY_REQUESTED: "warning",
   FAILED: "destructive",
+  NOT_PERMITTED: "warning",
 }
 
 export interface WatchlistGlobalSettings {
@@ -66,10 +67,12 @@ function WatchlistSyncStats({ stats: pending }: { stats: Promise<SyncStats | nul
   if (!stats) return null
   return (
     <div className="flex flex-col gap-4 border-t pt-6" data-testid="watchlist-sync-stats">
-      <StatGrid className="grid-cols-3 lg:grid-cols-3">
+      <StatGrid className="grid-cols-2 lg:grid-cols-5">
         <StatTile label="Members with sync on" value={stats.usersWithSyncEnabled} />
         <StatTile label="Items synced" value={stats.totalItemsSynced} />
         <StatTile label="Requests created" value={stats.totalItemsRequested} />
+        <StatTile label="No TMDB match" value={stats.totalItemsSkipped} />
+        <StatTile label="Not allowed" value={stats.totalItemsNotPermitted} />
       </StatGrid>
       {stats.recentHistory.length > 0 && (
         <ul className="flex flex-col gap-2" aria-label="Recent activity">

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { updateWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
 import type { WatchlistSkipCode } from "@/lib/watchlist/skip"
+import type { WatchlistCounts } from "@/lib/watchlist/summary"
 import { syncUserWatchlist } from "@/lib/watchlist/sync-service"
 import { memberAction } from "@/lib/actions/define-action"
 import { hasEntitlement, NOT_ENTITLED_MESSAGE } from "@/lib/actions/entitlement"
@@ -50,20 +51,34 @@ export const getWatchlistSyncSettings = memberAction({
       syncedAt: Date
     }> = []
 
+    let counts: WatchlistCounts | null = null
+
     if (user?.watchlistSyncSettings?.syncEnabled) {
-      recentHistory = await prisma.watchlistSyncHistory.findMany({
-        where: { userId },
-        orderBy: { syncedAt: "desc" },
-        take: 5,
-        select: {
-          id: true,
-          title: true,
-          year: true,
-          mediaType: true,
-          status: true,
-          syncedAt: true,
-        },
-      })
+      const [rows, byStatus] = await Promise.all([
+        prisma.watchlistSyncHistory.findMany({
+          where: { userId },
+          orderBy: { syncedAt: "desc" },
+          take: 5,
+          select: {
+            id: true,
+            title: true,
+            year: true,
+            mediaType: true,
+            status: true,
+            syncedAt: true,
+          },
+        }),
+        prisma.watchlistSyncHistory.groupBy({ by: ["status"], where: { userId }, _count: { _all: true } }),
+      ])
+      recentHistory = rows
+      const count = (status: string) => byStatus.find((row) => row.status === status)?._count._all ?? 0
+      counts = {
+        requested: count("REQUESTED"),
+        available: count("ALREADY_AVAILABLE"),
+        alreadyRequested: count("ALREADY_REQUESTED"),
+        skipped: count("SKIPPED_NO_EXTERNAL_ID"),
+        notPermitted: count("NOT_PERMITTED"),
+      }
     }
 
     return ok({
@@ -83,6 +98,7 @@ export const getWatchlistSyncSettings = memberAction({
             }
           : null,
         recentHistory,
+        counts,
     })
   },
 })
@@ -149,9 +165,9 @@ export type TriggerWatchlistSyncData =
   | {
       queued: false
       skipped?: WatchlistSkipCode
-      itemsSynced?: number
-      itemsRequested?: number
-      itemsSkipped?: number
+      /** The watchlist has not changed since the last complete sync. */
+      notModified?: boolean
+      counts?: WatchlistCounts
       itemsFailed?: number
     }
 
@@ -205,13 +221,19 @@ export const triggerWatchlistSync = memberAction({
       return fail("UPSTREAM_UNAVAILABLE", "Sync failed. Please try again later.")
     }
 
+    const data = result.data
     return ok({
       queued: false,
       skipped: result.skipped,
-      itemsSynced: result.data?.itemsSynced,
-      itemsRequested: result.data?.itemsRequested,
-      itemsSkipped: result.data?.itemsSkipped,
-      itemsFailed: result.data?.itemsFailed,
+      notModified: data?.notModified,
+      counts: data && {
+        requested: data.itemsRequested,
+        available: data.itemsAvailable,
+        alreadyRequested: data.itemsAlreadyRequested,
+        skipped: data.itemsSkipped,
+        notPermitted: data.itemsNotPermitted,
+      },
+      itemsFailed: data?.itemsFailed,
     })
   },
 })

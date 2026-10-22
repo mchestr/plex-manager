@@ -18,13 +18,17 @@ import { getAccessLevel } from '@/lib/access'
 import { buildOverseerrUserIndex, submitOverseerrRequest } from '@/lib/connections/overseerr'
 import { getWatchlistProcessor } from '@/lib/queue/jobs/watchlist-sync'
 import { JOB_TYPES } from '@/lib/queue/types'
-import { getPlexWatchlist, validatePlexToken } from '@/lib/watchlist/plex-watchlist'
+import { getPlexWatchlist, resolveExternalIds, validatePlexToken } from '@/lib/watchlist/plex-watchlist'
 import { WATCHLIST_SKIP_COPY, type WatchlistSkipCode } from '@/lib/watchlist/skip'
 import { syncAllEnabledUsers, syncUserWatchlist } from '@/lib/watchlist/sync-service'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/access', () => ({ ...jest.requireActual('@/lib/access'), getAccessLevel: jest.fn() }))
-jest.mock('@/lib/watchlist/plex-watchlist', () => ({ getPlexWatchlist: jest.fn(), validatePlexToken: jest.fn() }))
+jest.mock('@/lib/watchlist/plex-watchlist', () => ({
+  getPlexWatchlist: jest.fn(),
+  resolveExternalIds: jest.fn(),
+  validatePlexToken: jest.fn(),
+}))
 jest.mock('@/lib/connections/overseerr', () => ({
   ...jest.requireActual('@/lib/connections/overseerr'),
   buildOverseerrUserIndex: jest.fn(),
@@ -56,8 +60,12 @@ function given(overrides: {
   jest.mocked(validatePlexToken).mockResolvedValue(true)
   jest.mocked(getPlexWatchlist).mockResolvedValue({
     success: true,
-    data: [{ ratingKey: 'rk-1', guid: 'plex://movie/1', type: 'movie', title: 'The Matrix', year: 1999, tmdbId: 603 }],
+    notModified: false,
+    data: [{ ratingKey: 'rk-1', guid: 'plex://movie/1', type: 'movie', title: 'The Matrix', year: 1999 }],
+    etag: null,
+    complete: true,
   })
+  jest.mocked(resolveExternalIds).mockResolvedValue({ ok: true, ids: { tmdbId: 603 } })
   jest.mocked(submitOverseerrRequest).mockResolvedValue({ success: true, requestId: 412, status: 'created' })
 }
 
@@ -134,7 +142,11 @@ describe('syncUserWatchlist for a matched member', () => {
 
     await syncUserWatchlist('member-1')
 
-    expect(prismaMock.watchlistSyncSettings.findUnique).not.toHaveBeenCalled()
+    // Only the ETag is read: the totals are never read and written back
+    expect(prismaMock.watchlistSyncSettings.findUnique).toHaveBeenCalledWith({
+      where: { userId: 'member-1' },
+      select: { watchlistEtag: true },
+    })
     expect(prismaMock.watchlistSyncSettings.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: expect.objectContaining({

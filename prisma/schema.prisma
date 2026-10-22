@@ -788,6 +788,8 @@ model WatchlistSyncSettings {
   itemsRequested      Int       @default(0) // Items requested in last sync
   totalItemsSynced    Int       @default(0) // Cumulative total items synced
   totalItemsRequested Int       @default(0) // Cumulative total requests created
+  itemsSkipped        Int       @default(0) // Items with no TMDB match in last sync
+  watchlistEtag       String? // ETag of the last complete watchlist read; a 304 skips the run
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -835,8 +837,10 @@ enum WatchlistSyncStatus {
   REQUESTED // Submitted to Overseerr
   ALREADY_AVAILABLE // Already in library
   ALREADY_REQUESTED // Already has pending request
-  FAILED // Request submission failed
+  FAILED // Request submission failed; retried on the next sync
   REMOVED_FROM_WATCHLIST // Removed from Plex watchlist
+  SKIPPED_NO_EXTERNAL_ID // Plex metadata has no TMDB id, so nothing can be requested
+  NOT_PERMITTED // Overseerr refused the request (403: quota or permission); terminal
 }
 
 // Stripe Subscriptions - one-to-one with User
