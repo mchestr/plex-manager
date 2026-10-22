@@ -483,14 +483,18 @@ describe('getAllUsersWithWrapped', () => {
       ])
     })
 
+    const PLEX_TV_USER = { title: '', home: false, restricted: false }
+    const share = (machineIdentifier: string, pending = false) => ({ machineIdentifier, owned: false, pending })
+
     it('reads each share from Plex when it answers', async () => {
       mockPrisma.plexServer.findFirst.mockResolvedValue(SERVER)
       jest.mocked(getPlexServerIdentity).mockResolvedValue({ success: true, machineIdentifier: 'machine-1' })
       jest.mocked(getPlexUsers).mockResolvedValue({
         success: true,
         data: [
-          { id: 'plex-shared', username: 'shared', servers: [{ machineIdentifier: 'machine-1' }] },
-          { id: 'plex-gone', username: 'gone', servers: [{ machineIdentifier: 'other' }] },
+          { ...PLEX_TV_USER, id: 'plex-shared', username: 'shared', servers: [share('machine-1')] },
+          // A pending invite to this server is no access yet (GAP-06)
+          { ...PLEX_TV_USER, id: 'plex-gone', username: 'gone', servers: [share('other'), share('machine-1', true)] },
         ],
       })
 
@@ -600,6 +604,7 @@ describe('unshareUserLibrary', () => {
       publicUrl: null,
       token: 'server-token',
       adminPlexUserId: 'plex-owner',
+      machineIdentifier: null,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),

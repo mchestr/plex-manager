@@ -84,6 +84,7 @@ const PLEX_SERVER = {
   url: 'https://plex.example.com:32400',
   token: 'server-token',
   adminPlexUserId: 'plex-owner',
+  machineIdentifier: 'this-server-machine-id',
   isActive: true,
 }
 
@@ -124,7 +125,7 @@ describe('Plex sign-in when another row holds the Plex email (SEC-08)', () => {
     delete env.E2E_TEST_MODE
     mockPlexServerFindFirst.mockResolvedValue(PLEX_SERVER)
     mockGetPlexUserInfo.mockResolvedValue({ success: true, data: VICTIM })
-    mockCheckUserServerAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckUserServerAccess.mockResolvedValue({ status: 'granted' })
   })
 
   it('creates the row without an email and returns a session when the create conflicts', async () => {

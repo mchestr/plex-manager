@@ -9,13 +9,19 @@ import { revalidatePath } from "next/cache"
 const logger = createLogger("IMPORT_PLEX_USERS")
 
 /**
- * Import users from Plex server into the database
- * Creates User records for Plex users that don't already exist
+ * Import this server's Plex members into the database (GAP-06): users with an
+ * accepted share of this server and the owner's managed users (created
+ * without an email). A pending invite is reported, not imported, and friends
+ * who share only another server are never seen.
  */
 export async function importPlexUsers(): Promise<{
   success: boolean
   imported: number
   skipped: number
+  /** Managed users among the imported ones. */
+  managed: number
+  /** Pending invites, left out until they are accepted. */
+  pending: number
   errors: string[]
 }> {
   try {
@@ -31,6 +37,8 @@ export async function importPlexUsers(): Promise<{
         success: false,
         imported: 0,
         skipped: 0,
+        managed: 0,
+        pending: 0,
         errors: ["No active Plex server configured"],
       }
     }
@@ -39,6 +47,7 @@ export async function importPlexUsers(): Promise<{
     const usersResult = await getAllPlexServerUsers({
       url: plexServer.url,
       token: plexServer.token,
+      machineIdentifier: plexServer.machineIdentifier,
     })
 
     if (!usersResult.success || !usersResult.data) {
@@ -46,13 +55,17 @@ export async function importPlexUsers(): Promise<{
         success: false,
         imported: 0,
         skipped: 0,
+        managed: 0,
+        pending: 0,
         errors: [usersResult.error || "Failed to fetch Plex users"],
       }
     }
 
-    const plexUsers = usersResult.data
+    const plexUsers = usersResult.data.filter((plexUser) => !plexUser.pending)
+    const pending = usersResult.data.length - plexUsers.length
     let imported = 0
     let skipped = 0
+    let managed = 0
     const errors: string[] = []
 
     // One query for every user already imported, instead of one per Plex user
@@ -78,13 +91,15 @@ export async function importPlexUsers(): Promise<{
           data: {
             plexUserId: plexUser.id,
             name: plexUser.name,
-            email: plexUser.email || null,
+            // A managed user has no plex.tv account, so no email
+            email: plexUser.managed ? null : plexUser.email || null,
             image: plexUser.thumb || null,
             isAdmin,
           },
         })
 
         imported++
+        if (plexUser.managed) managed++
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error"
         errors.push(`${plexUser.name} (${plexUser.id}): ${errorMessage}`)
@@ -98,6 +113,8 @@ export async function importPlexUsers(): Promise<{
       success: true,
       imported,
       skipped,
+      managed,
+      pending,
       errors,
     }
   } catch (error) {
@@ -106,6 +123,8 @@ export async function importPlexUsers(): Promise<{
       success: false,
       imported: 0,
       skipped: 0,
+      managed: 0,
+      pending: 0,
       errors: [error instanceof Error ? error.message : "Failed to import users"],
     }
   }

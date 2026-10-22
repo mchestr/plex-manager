@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { useToast } from "@/components/ui/toast"
 
-/** The users page's primary action: adds every Plex friend who has no account yet. */
+/** The users page's primary action: adds every member of this Plex server who has no account yet. */
 export function ImportPlexUsersButton() {
   const [isPending, startTransition] = useTransition()
   const toast = useToast()
@@ -19,8 +19,14 @@ export function ImportPlexUsersButton() {
 
       if (importResult.success) {
         const parts = [`Imported ${importResult.imported} user${importResult.imported !== 1 ? "s" : ""}`]
+        if (importResult.managed > 0) {
+          parts.push(`${importResult.managed} managed`)
+        }
         if (importResult.skipped > 0) {
           parts.push(`${importResult.skipped} skipped (already exist)`)
+        }
+        if (importResult.pending > 0) {
+          parts.push(`${importResult.pending} pending invite${importResult.pending !== 1 ? "s" : ""} left out`)
         }
         if (importResult.errors.length > 0) {
           parts.push(`${importResult.errors.length} error${importResult.errors.length !== 1 ? "s" : ""}`)

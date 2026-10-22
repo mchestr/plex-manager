@@ -6,6 +6,7 @@ import { memberAction } from "@/lib/actions/define-action"
 import { type ActionErrorCode, type ActionResult, fail, ok, toActionError } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
 import { getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
+import { activeShareFor, type PlexTvUser as PlexUser } from "@/lib/connections/plex-tv-users"
 import { type PlexUnshareErrorCode } from "@/lib/connections/plex-invitations"
 import { prisma } from "@/lib/prisma"
 import { endUserSessions } from "@/lib/session-revocation"
@@ -206,6 +207,7 @@ export async function unshareUserLibrary(
       {
         url: plexServer.url,
         token: plexServer.token,
+        machineIdentifier: plexServer.machineIdentifier,
       },
       user.plexUserId
     )
@@ -300,18 +302,17 @@ async function buildPlexAccessMap(users: { id: string; plexUserId: string | null
   }
 
   try {
-    // Get the server's machine identifier once
-    const identityResult = await getPlexServerIdentity({
-      url: plexServer.url,
-      token: plexServer.token,
-    })
+    // The server's machine identifier: stored, or asked of the PMS once
+    const identityResult = plexServer.machineIdentifier
+      ? { success: true, machineIdentifier: plexServer.machineIdentifier }
+      : await getPlexServerIdentity({ url: plexServer.url, token: plexServer.token })
     if (!identityResult.success || !identityResult.machineIdentifier) return unknown()
 
     // Fetch all users from Plex.tv API once
     const usersResult = await getPlexUsers(plexServer.token)
     if (!usersResult.success || !usersResult.data) return unknown()
 
-    const plexUserMap = new Map<string, { servers: Array<{ machineIdentifier: string }> }>()
+    const plexUserMap = new Map<string, PlexUser>()
     for (const plexUser of usersResult.data) {
       plexUserMap.set(plexUser.id, plexUser)
     }
@@ -324,7 +325,8 @@ async function buildPlexAccessMap(users: { id: string; plexUserId: string | null
         accessMap.set(user.id, true)
       } else {
         const plexUser = plexUserMap.get(String(user.plexUserId).trim())
-        accessMap.set(user.id, Boolean(plexUser?.servers.some((server) => server.machineIdentifier === machineIdentifier)))
+        // A pending invite is no access yet (GAP-06)
+        accessMap.set(user.id, Boolean(plexUser && activeShareFor(plexUser, machineIdentifier)))
       }
     }
     return { map: accessMap, status: "ok", adminPlexUserId }

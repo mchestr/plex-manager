@@ -51,6 +51,7 @@ beforeEach(() => {
 jest.mock('@/lib/connections/plex', () => ({
   testPlexConnection: jest.fn(),
   getPlexUserInfo: jest.fn(),
+  getPlexServerIdentity: jest.fn().mockResolvedValue({ success: true, machineIdentifier: 'machine-1' }),
 }))
 
 jest.mock('@/lib/connections/tautulli', () => ({

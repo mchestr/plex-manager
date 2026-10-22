@@ -157,8 +157,17 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
     if (overseerrUserId === null) return await skip(userId, "OVERSEERR_USER_NOT_FOUND")
 
     // Validate token is still valid
-    const tokenValid = await validatePlexToken(user.plexAuthToken)
-    if (!tokenValid) {
+    const tokenStatus = await validatePlexToken(user.plexAuthToken)
+    if (tokenStatus === "unreachable") {
+      // Not a verdict on the token: the next run tries again (GAP-05)
+      logger.warn("Plex was unreachable while checking the token", { userId })
+      await updateSyncSettings(userId, {
+        lastSyncStatus: "failed",
+        lastSyncError: "Plex was unreachable. The next sync will try again.",
+      })
+      return { success: false, error: "Plex was unreachable" }
+    }
+    if (tokenStatus === "invalid") {
       logger.warn("Plex token is invalid or expired", { userId })
       await updateSyncSettings(userId, {
         lastSyncStatus: "failed",

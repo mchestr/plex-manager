@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<MediaContainer friendlyName="myPlex" identifier="com.plexapp.plugins.myplex" machineIdentifier="0f1e2d3c4b5a69788796a5b4c3d2e1f0a1b2c3d4" totalSize="3" size="3">
+<MediaContainer friendlyName="myPlex" identifier="com.plexapp.plugins.myplex" machineIdentifier="0f1e2d3c4b5a69788796a5b4c3d2e1f0a1b2c3d4" totalSize="4" size="4">
   <User id="1001" title="alice" username="alice" email="alice@example.com" recommendationsPlaylistId="" thumb="https://plex.tv/users/a1b2c3/avatar?c=1700000000" protected="0" home="0" allowTuners="0" allowSync="0" allowCameraUpload="0" allowChannels="0" allowSubtitleAdmin="0" filterAll="" filterMovies="" filterMusic="" filterPhotos="" filterTelevision="" restricted="0">
     <Server id="48211" serverId="7001" machineIdentifier="this-server-machine-id" name="Home" lastSeenAt="1760000000" numLibraries="3" allLibraries="0" owned="1" pending="0"/>
     <Server id="48299" serverId="7002" machineIdentifier="other-server-machine-id" name="Cabin" lastSeenAt="1760000000" numLibraries="2" allLibraries="1" owned="1" pending="0"/>
@@ -7,5 +7,8 @@
   <User id="1002" title="Kids" username="" email="" recommendationsPlaylistId="" thumb="https://plex.tv/users/d4e5f6/avatar?c=1700000000" protected="1" home="1" allowTuners="0" allowSync="0" allowCameraUpload="0" allowChannels="0" allowSubtitleAdmin="0" filterAll="" filterMovies="contentRating=G" filterMusic="" filterPhotos="" filterTelevision="" restricted="1"/>
   <User id="1003" title="bob" username="bob" email="bob@example.com" recommendationsPlaylistId="" thumb="https://plex.tv/users/g7h8i9/avatar?c=1700000000" protected="0" home="0" allowTuners="0" allowSync="0" allowCameraUpload="0" allowChannels="0" allowSubtitleAdmin="0" filterAll="" filterMovies="" filterMusic="" filterPhotos="" filterTelevision="" restricted="0">
     <Server id="48302" serverId="7002" machineIdentifier="other-server-machine-id" name="Cabin" lastSeenAt="1760000000" numLibraries="2" allLibraries="1" owned="1" pending="0"/>
+  </User>
+  <User id="1004" title="carol" username="carol" email="carol@example.com" recommendationsPlaylistId="" thumb="https://plex.tv/users/j1k2l3/avatar?c=1700000000" protected="0" home="0" allowTuners="0" allowSync="0" allowCameraUpload="0" allowChannels="0" allowSubtitleAdmin="0" filterAll="" filterMovies="" filterMusic="" filterPhotos="" filterTelevision="" restricted="0">
+    <Server id="48407" serverId="7001" machineIdentifier="this-server-machine-id" name="Home" lastSeenAt="1760000000" numLibraries="3" allLibraries="0" owned="1" pending="1"/>
   </User>
 </MediaContainer>

@@ -14,28 +14,20 @@ export interface PlexUserInfo {
   thumb?: string
 }
 
+/** A user with an accepted or pending share of this server, or one of the owner's managed users. */
 export interface PlexServerUser {
   id: string
   name: string
   email?: string
   thumb?: string
   restricted: boolean
-  serverAdmin: boolean
+  /** A Plex Home managed user: no plex.tv account and no email. */
+  managed: boolean
+  /** Invited but not accepted yet: no access until they accept. */
+  pending: boolean
 }
 
-export interface PlexUserServer {
-  machineIdentifier: string
-  /** The `<Server id>` of this share: the id plex.tv's `shared_servers` route deletes. */
-  shareId?: string
-}
-
-export interface PlexUser {
-  id: string
-  username: string
-  email?: string
-  thumb?: string
-  servers: PlexUserServer[]
-}
+export type { PlexTvUser as PlexUser } from "./plex-tv-users"
 
 export interface PlexMediaItem {
   ratingKey: string
@@ -54,45 +46,6 @@ export interface PlexMediaItem {
 export interface InviteSettings {
   librarySectionIds?: number[] // If undefined/null, all libraries are shared
   allowDownloads?: boolean // Default: false
-}
-
-// XML parsing types
-export interface ParsedXmlUser {
-  "@_id": string
-  "@_username"?: string
-  "@_name"?: string
-  "@_email"?: string
-  "@_thumb"?: string
-  Server?: ParsedXmlServer | ParsedXmlServer[]
-}
-
-export interface ParsedXmlServer {
-  "@_id"?: string
-  "@_machineIdentifier": string
-}
-
-export interface ParsedXmlUsersResponse {
-  MediaContainer?: {
-    User?: ParsedXmlUser | ParsedXmlUser[]
-  }
-}
-
-export interface ParsedXmlServerUser {
-  "@_id": string
-  "@_title"?: string
-  "@_name"?: string
-  "@_username"?: string
-  "@_email"?: string
-  "@_thumb"?: string
-  "@_restricted"?: string
-  "@_serverAdmin"?: string
-}
-
-export interface ParsedXmlServerUsersResponse {
-  MediaContainer?: {
-    User?: ParsedXmlServerUser | ParsedXmlServerUser[]
-    Account?: ParsedXmlServerUser | ParsedXmlServerUser[]
-  }
 }
 
 /**

@@ -72,6 +72,7 @@ const PLEX_SERVER = {
   url: 'https://plex.example.com:32400',
   token: 'server-token',
   adminPlexUserId: 'plex-owner',
+  machineIdentifier: 'this-server-machine-id',
 }
 
 /** A paying member with an ACTIVE subscription, overridable per test. */
@@ -124,7 +125,7 @@ describe('processPlexAccessGrant', () => {
 
     // No configured subscriber libraries → all libraries are shared.
     expect(inviteUserToPlexServer).toHaveBeenCalledWith(
-      { url: PLEX_SERVER.url, token: PLEX_SERVER.token },
+      { url: PLEX_SERVER.url, token: PLEX_SERVER.token, machineIdentifier: 'this-server-machine-id' },
       'user@example.com',
       undefined
     )
@@ -156,7 +157,7 @@ describe('processPlexAccessGrant', () => {
     await processPlexAccessGrant(makeJob('user-1'))
 
     expect(inviteUserToPlexServer).toHaveBeenCalledWith(
-      { url: PLEX_SERVER.url, token: PLEX_SERVER.token },
+      { url: PLEX_SERVER.url, token: PLEX_SERVER.token, machineIdentifier: 'this-server-machine-id' },
       'user@example.com',
       { librarySectionIds: [1, 2] }
     )
@@ -182,7 +183,7 @@ describe('processPlexAccessGrant', () => {
     await processPlexAccessGrant(makeJob('user-1'))
 
     expect(inviteUserToPlexServer).toHaveBeenCalledWith(
-      { url: PLEX_SERVER.url, token: PLEX_SERVER.token },
+      { url: PLEX_SERVER.url, token: PLEX_SERVER.token, machineIdentifier: 'this-server-machine-id' },
       'user@example.com',
       undefined
     )
@@ -361,12 +362,17 @@ describe('processPlexAccessGrant', () => {
 
     it('records existing access as accepted and sends no invite', async () => {
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ plexUserId: 'plex-7' }))
-      ;(checkUserServerAccess as jest.Mock).mockResolvedValue({ success: true, hasAccess: true })
+      ;(checkUserServerAccess as jest.Mock).mockResolvedValue({ status: 'granted' })
 
       const result = await processPlexAccessGrant(makeJob('user-1'))
 
       expect(checkUserServerAccess).toHaveBeenCalledWith(
-        { url: PLEX_SERVER.url, token: PLEX_SERVER.token, adminPlexUserId: 'plex-owner' },
+        {
+          url: PLEX_SERVER.url,
+          token: PLEX_SERVER.token,
+          adminPlexUserId: 'plex-owner',
+          machineIdentifier: 'this-server-machine-id',
+        },
         'plex-7'
       )
       expect(inviteUserToPlexServer).not.toHaveBeenCalled()
@@ -377,9 +383,9 @@ describe('processPlexAccessGrant', () => {
       expect(result).toEqual({ userId: 'user-1', granted: true })
     })
 
-    it('invites when the access check fails', async () => {
+    it('invites when the access check is unknown', async () => {
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ plexUserId: 'plex-7' }))
-      ;(checkUserServerAccess as jest.Mock).mockResolvedValue({ success: false, hasAccess: false })
+      ;(checkUserServerAccess as jest.Mock).mockResolvedValue({ status: 'unknown', reason: 'plex_unavailable' })
       ;(inviteUserToPlexServer as jest.Mock).mockResolvedValue({ success: true, inviteID: 5 })
       ;(acceptPlexInvite as jest.Mock).mockResolvedValue({ success: true })
 

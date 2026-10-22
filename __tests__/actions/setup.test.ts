@@ -33,6 +33,7 @@ beforeEach(() => {
 jest.mock('@/lib/connections/plex', () => ({
   testPlexConnection: jest.fn(),
   getPlexUserInfo: jest.fn(),
+  getPlexServerIdentity: jest.fn().mockResolvedValue({ success: true, machineIdentifier: 'machine-abc' }),
 }))
 
 jest.mock('@/lib/connections/tautulli', () => ({
@@ -150,6 +151,8 @@ describe('Setup Actions', () => {
           token: plexInput.token,
           publicUrl: plexInput.publicUrl,
           adminPlexUserId: 'plex-user-123',
+          // Stored on save, so sign-in needs no /identity call (P11.8)
+          machineIdentifier: 'machine-abc',
           isActive: true,
         }),
       })
@@ -530,6 +533,7 @@ describe('setup saves keep a stored secret only for its own address (P4.6)', () 
       publicUrl: null,
       token: 'stored-plex-token',
       adminPlexUserId: null,
+      machineIdentifier: null,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),

@@ -57,7 +57,7 @@ function given(overrides: {
   prismaMock.watchlistSyncHistory.findMany.mockResolvedValue([])
   jest.mocked(getAccessLevel).mockResolvedValue(overrides.level ?? 'full')
   jest.mocked(buildOverseerrUserIndex).mockResolvedValue({ ok: true, data: overrides.index ?? new Map([[4815162, 7]]) })
-  jest.mocked(validatePlexToken).mockResolvedValue(true)
+  jest.mocked(validatePlexToken).mockResolvedValue('valid')
   jest.mocked(getPlexWatchlist).mockResolvedValue({
     success: true,
     notModified: false,
@@ -119,6 +119,17 @@ describe('syncUserWatchlist skips', () => {
 
     await expect(syncUserWatchlist('member-1')).resolves.toMatchObject({ success: false })
     expect(submitOverseerrRequest).not.toHaveBeenCalled()
+  })
+
+  it('records "Plex was unreachable", never "token expired", when plex.tv cannot answer (GAP-05)', async () => {
+    given()
+    jest.mocked(validatePlexToken).mockResolvedValue('unreachable')
+
+    await expect(syncUserWatchlist('member-1')).resolves.toEqual({ success: false, error: 'Plex was unreachable' })
+    const stored = JSON.stringify(prismaMock.watchlistSyncSettings.upsert.mock.calls)
+    expect(stored).toContain('Plex was unreachable')
+    expect(stored).not.toContain('expired')
+    expect(getPlexWatchlist).not.toHaveBeenCalled()
   })
 })
 

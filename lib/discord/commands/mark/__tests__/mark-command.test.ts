@@ -147,6 +147,7 @@ const plexConfig: PlexServerConfig = {
   url: "http://plex.local:32400",
   token: "tok",
   adminPlexUserId: null,
+  machineIdentifier: null,
 }
 
 const linkedUser: VerifyDiscordUserResult = {

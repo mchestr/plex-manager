@@ -25,7 +25,7 @@ jest.mock("@/lib/utils/logger", () => ({
 }))
 
 const RESOURCES = jest.requireActual<unknown[]>("@/lib/discord/media/__tests__/fixtures/plex-tv-resources.json")
-const SERVER = { name: "Home", url: "http://plex.local:32400", token: "owner-token", adminPlexUserId: "1" }
+const SERVER = { name: "Home", url: "http://plex.local:32400", token: "owner-token", adminPlexUserId: "1" , machineIdentifier: null}
 
 const calls: { url: string; token: string | undefined }[] = []
 

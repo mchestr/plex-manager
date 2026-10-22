@@ -1,5 +1,6 @@
 import { getPlexLibrarySections, getPlexOnDeck, getPlexRecentlyAdded, getPlexServerIdentity, getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
+import { matchesSessionUser, type PlexSessionUserRef } from "@/lib/connections/plex-sessions"
 import { prisma } from "@/lib/prisma"
 import { sanitizePlexSessionsPayload } from "./plex-sanitizer"
 
@@ -32,15 +33,12 @@ export async function executePlexTool(
         })
 
         if (user?.plexUserId && sessionsData?.MediaContainer?.Metadata) {
-          // Filter sessions to only include those belonging to the user
-          const userSessions = Array.isArray(sessionsData.MediaContainer.Metadata)
-            ? sessionsData.MediaContainer.Metadata.filter(
-                (session: any) => session.User?.id === user.plexUserId || session.user_id === user.plexUserId
-              )
-            : sessionsData.MediaContainer.Metadata.User?.id === user.plexUserId ||
-              sessionsData.MediaContainer.Metadata.user_id === user.plexUserId
-              ? [sessionsData.MediaContainer.Metadata]
-              : []
+          // Only the user's own sessions; the owner's are PMS user 1 (GAP-08)
+          const member = { plexUserId: user.plexUserId, isOwner: user.plexUserId === config.adminPlexUserId }
+          const metadata: PlexSessionUserRef[] = Array.isArray(sessionsData.MediaContainer.Metadata)
+            ? sessionsData.MediaContainer.Metadata
+            : [sessionsData.MediaContainer.Metadata]
+          const userSessions = metadata.filter((session) => matchesSessionUser(session, member))
 
           sessionsData = {
             ...sessionsData,
