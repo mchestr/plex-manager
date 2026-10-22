@@ -204,6 +204,10 @@ async function compensateJellyfinInvite(
  * - Retry logic with exponential backoff for transaction conflicts (P2034)
  * - Compensating transaction (rollback) if Jellyfin operations fail after invite is consumed
  * - Audit logging for security-sensitive events
+ *
+ * The invite form posts {@link redeemJellyfinInviteForm}, which calls this.
+ *
+ * @internal
  */
 export const processJellyfinInvite = publicAction({
   // The credentials are validated before the invite is consumed, so a rejected name costs no use
