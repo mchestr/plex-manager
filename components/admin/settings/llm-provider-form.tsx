@@ -16,9 +16,9 @@ interface LLMProviderFormProps {
 
 function FieldLabel({ htmlFor, required, children }: { htmlFor: string; required?: boolean; children: React.ReactNode }) {
   return (
-    <label htmlFor={htmlFor} className="block text-xs font-medium text-slate-400 mb-1">
+    <label htmlFor={htmlFor} className="block text-xs font-medium text-muted-foreground mb-1">
       {children}
-      {required && <span className="text-red-400"> *</span>}
+      {required && <span className="text-destructive"> *</span>}
     </label>
   )
 }
@@ -26,8 +26,8 @@ function FieldLabel({ htmlFor, required, children }: { htmlFor: string; required
 function ReadOnlyField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-xs font-medium text-slate-400 mb-1">{label}</div>
-      <div className="text-sm text-white">{children}</div>
+      <div className="text-xs font-medium text-muted-foreground mb-1">{label}</div>
+      <div className="text-sm text-foreground">{children}</div>
     </div>
   )
 }
@@ -73,7 +73,7 @@ export function LLMProviderForm({ provider: stored, purpose }: LLMProviderFormPr
           {stored ? (
             <ProviderSummary stored={stored} />
           ) : (
-            <div className="text-sm text-slate-400">No LLM provider configured</div>
+            <div className="text-sm text-muted-foreground">No LLM provider configured</div>
           )}
         </div>
         <Button

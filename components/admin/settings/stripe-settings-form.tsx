@@ -142,7 +142,7 @@ export function StripeSettingsForm({
           label={enabled ? "Disable Stripe subscriptions" : "Enable Stripe subscriptions"}
           data-testid="stripe-enabled-toggle"
         />
-        <span className="text-sm font-medium text-white">
+        <span className="text-sm font-medium text-foreground">
           {enabled ? "Enabled" : "Disabled"}
         </span>
       </div>
@@ -162,7 +162,7 @@ export function StripeSettingsForm({
       <form onSubmit={handleSave} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
               Secret Key
             </label>
             <StyledInput
@@ -176,7 +176,7 @@ export function StripeSettingsForm({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
               Webhook Signing Secret
             </label>
             <StyledInput
@@ -192,7 +192,7 @@ export function StripeSettingsForm({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Price IDs <span className="text-muted-foreground font-normal">(one per line or comma separated)</span>
           </label>
           <StyledInput
@@ -209,14 +209,14 @@ export function StripeSettingsForm({
         </div>
 
         <div data-testid="stripe-library-access">
-          <label className="block text-xs font-medium text-slate-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Subscriber Library Access
           </label>
           <p className="text-xs text-muted-foreground mb-2">
             Libraries shared with subscribers when access is granted. Leave all unchecked to share every library.
           </p>
           {loadingLibraries ? (
-            <p className="text-sm text-slate-400">Loading libraries...</p>
+            <p className="text-sm text-muted-foreground">Loading libraries...</p>
           ) : libraries.length === 0 ? (
             <p className="text-sm text-muted-foreground">No Plex libraries available</p>
           ) : (
@@ -232,7 +232,7 @@ export function StripeSettingsForm({
                     data-testid={`stripe-library-checkbox-${lib.id}`}
                   />
                   <span className="text-sm text-slate-300">
-                    {lib.title} <span className="text-slate-400">({lib.type})</span>
+                    {lib.title} <span className="text-muted-foreground">({lib.type})</span>
                   </span>
                 </label>
               ))}
