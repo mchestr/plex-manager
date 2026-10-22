@@ -80,7 +80,7 @@ test.describe('Jellyfin members', () => {
 
       const tile = page.getByTestId('home-quick-link-jellyfin');
       await expect(tile).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-      await expect(tile).toHaveAttribute('href', new RegExp(`^${mockUrl().replace(/[.:/]/g, '\\$&')}`));
+      await expect(tile).toHaveAttribute('href', new RegExp(`^${mockUrl().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
       await expect(page.getByTestId('home-quick-link-plex')).toHaveCount(0);
 
       const row = await prisma.user.findFirst({ where: { name: username }, select: { primaryAuthService: true } });
