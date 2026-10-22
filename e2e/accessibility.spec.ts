@@ -86,6 +86,8 @@ test.describe('Accessibility', () => {
 
     test('the delete-invite confirmation is a labelled, described modal', async ({ page }) => {
       await page.getByTestId(`admin-invites-actions-${VISUAL_INVITE_IDS.valid}`).click();
+      // A Base UI popup mounts on an animation frame, and the clock is paused.
+      await page.clock.runFor(100);
       await page.getByTestId(`admin-invites-actions-${VISUAL_INVITE_IDS.valid}-delete`).click();
       const dialog = page.getByTestId('admin-invites-delete-dialog');
       await expect(dialog).toBeVisible();
@@ -110,6 +112,8 @@ test.describe('Accessibility', () => {
       await expectPageBehindHidden(page);
       await expect(dialog).toHaveAccessibleName('Create invite');
       await page.keyboard.press('Escape');
+      // The paused clock holds Base UI's exit transition until it runs.
+      await settlePage(page);
       await expect(dialog).toBeHidden();
     });
   });

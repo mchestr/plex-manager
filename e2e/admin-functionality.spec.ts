@@ -15,11 +15,11 @@ test.describe('Admin Functionality', () => {
   test('should access admin settings', async ({ adminPage }) => {
     // Use in-app navigation instead of forcing a new navigation
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Settings' },
-      { type: 'text', value: 'Application Settings' },
-      { type: 'text', value: 'LLM Configuration' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    // The P10.19 layout: a section nav and one section per area
+    await expect(adminPage).toHaveURL(/\/admin\/settings$/, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('admin-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('settings-nav')).toBeVisible();
+    await expect(adminPage.getByTestId('settings-ai-section')).toBeVisible();
   });
 
   test('should access admin users list', async ({ adminPage }) => {

@@ -1,4 +1,5 @@
 import { expect, test } from '../fixtures/auth';
+import { createE2EPrismaClient } from '../helpers/prisma';
 
 /**
  * P10.19: the settings layout. The section nav reaches every section, Test
@@ -31,13 +32,40 @@ test.describe('Settings layout', () => {
     await expect(page.getByTestId('settings-nav-legend')).toContainText('Unsaved changes');
   });
 
-  test('Test all connections turns the badges to "Checked just now"', async ({ adminPage: page }) => {
-    await page.goto('/admin/settings');
+  test.describe('with a Tautulli server', () => {
+    /**
+     * The global and visual seeds have no Tautulli, and a section that is not
+     * set up has no "Checked" line. Nothing listens here, so the check fails
+     * fast and the badge reads "Can't connect, Checked just now".
+     */
+    const TAUTULLI = { id: 'settings-layout-e2e-tautulli', name: 'E2E Tautulli', url: 'http://127.0.0.1:9', apiKey: 'e2e-key', isActive: true };
 
-    await page.getByTestId('settings-test-all').click();
+    test.beforeAll(async () => {
+      const prisma = createE2EPrismaClient();
+      try {
+        await prisma.tautulli.upsert({ where: { id: TAUTULLI.id }, create: TAUTULLI, update: TAUTULLI });
+      } finally {
+        await prisma.$disconnect();
+      }
+    });
 
-    await expect(page.getByTestId('settings-plex-status')).toContainText('Checked just now');
-    await expect(page.getByTestId('settings-tautulli-status')).toContainText('Checked just now');
+    test.afterAll(async () => {
+      const prisma = createE2EPrismaClient();
+      try {
+        await prisma.tautulli.deleteMany({ where: { id: TAUTULLI.id } });
+      } finally {
+        await prisma.$disconnect();
+      }
+    });
+
+    test('Test all connections turns the badges to "Checked just now"', async ({ adminPage: page }) => {
+      await page.goto('/admin/settings');
+
+      await page.getByTestId('settings-test-all').click();
+
+      await expect(page.getByTestId('settings-plex-status')).toContainText('Checked just now');
+      await expect(page.getByTestId('settings-tautulli-status')).toContainText('Checked just now');
+    });
   });
 
   test('a dirty section shows its pip in the nav', async ({ adminPage: page }) => {
