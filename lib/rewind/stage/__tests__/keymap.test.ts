@@ -1,4 +1,4 @@
-import { isCompositeWidgetTarget, keyToCommand } from "../keymap"
+import { isCompositeWidgetTarget, isLiveIsland, keyToCommand } from "../keymap"
 
 function element(html: string, selector: string): Element {
   document.body.innerHTML = html
@@ -55,6 +55,23 @@ describe("keyToCommand", () => {
     const radio = element('<div data-rw-interactive><div role="radio" id="r"></div></div>', "#r")
     expect(keyToCommand({ key: "ArrowRight", target: radio }, { shortcuts: true })).toBeNull()
     expect(keyToCommand({ key: "Escape", target: radio }, { shortcuts: true })).toBe("escape")
+  })
+
+  it("gives the keys back to the story from an island on a page a turn has left", () => {
+    // The cover's cut button keeps focus for a frame after the turn it started
+    const left = element(
+      '<article aria-roledescription="page"><div data-rw-interactive><button id="b">Pocket</button></div></article>',
+      "#b"
+    )
+    expect(isLiveIsland(left)).toBe(false)
+    expect(keyToCommand({ key: "ArrowLeft", target: left }, { shortcuts: true })).toBe("prev")
+
+    const current = element(
+      '<article aria-roledescription="page" data-current><div data-rw-interactive><button id="b">Pocket</button></div></article>',
+      "#b"
+    )
+    expect(isLiveIsland(current)).toBe(true)
+    expect(keyToCommand({ key: "ArrowLeft", target: current }, { shortcuts: true })).toBeNull()
   })
 
   it("leaves modified keys to the browser", () => {
