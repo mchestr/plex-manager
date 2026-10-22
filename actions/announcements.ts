@@ -1,14 +1,14 @@
 "use server"
 
-import { memberAction } from "@/lib/actions/define-action"
+import { adminAction, memberAction } from "@/lib/actions/define-action"
 import { ok } from "@/lib/actions/result"
-import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 import { serverZone } from "@/lib/utils/server-zone"
-import { isWallTime, wallTimeToInstant } from "@/lib/utils/zoned-time"
-import { getServerSession } from "next-auth"
+import { recordIdSchema } from "@/lib/validations/params"
+import { announcementSchema } from "@/lib/validations/announcement"
+import { wallTimeToInstant } from "@/lib/utils/zoned-time"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
@@ -70,254 +70,92 @@ export const getActiveAnnouncements = memberAction({
   },
 })
 
-/**
- * Get all announcements for admin view (including inactive)
- */
-export async function getAllAnnouncements(): Promise<AnnouncementData[]> {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.isAdmin) {
-      logger.warn("Unauthorized attempt to fetch all announcements")
-      return []
-    }
-
-    const announcements = await prisma.announcement.findMany({
-      orderBy: [
-        { priority: "desc" },
-        { createdAt: "desc" },
-      ],
-      select: {
-        id: true,
-        title: true,
-        content: true,
-        priority: true,
-        isActive: true,
-        createdAt: true,
-        expiresAt: true,
-      },
-    })
-
-    return announcements.map((a) => ({
-      id: a.id,
-      title: a.title,
-      content: a.content,
-      priority: a.priority,
-      isActive: a.isActive,
-      createdAt: a.createdAt.toISOString(),
-      expiresAt: a.expiresAt?.toISOString() ?? null,
-    }))
-  } catch (error) {
-    logger.error("Error fetching all announcements", error)
-    return []
-  }
+/** Home, the member list and the admin table all show announcements. */
+function revalidateAnnouncements() {
+  revalidatePath("/")
+  revalidatePath("/announcements")
+  revalidatePath("/admin/announcements")
 }
 
-/**
- * Expiry is a `datetime-local` value (`YYYY-MM-DDTHH:mm`), read as wall time
- * in the server zone, so it means what the admin typed.
- */
-const expiresAtSchema = z
-  .string()
-  .refine(isWallTime, { message: "Invalid date format" })
-  .nullable()
-  .optional()
-
-async function toExpiry(value: string | null | undefined): Promise<Date | null> {
+/** Expiry is wall time in the server zone (`YYYY-MM-DDTHH:mm`), so it means what the admin typed. */
+async function toExpiry(value: string | null): Promise<Date | null> {
   return value ? wallTimeToInstant(value, await serverZone()) : null
 }
 
-const createAnnouncementSchema = z.object({
-  title: z.string().min(1, "Title is required").max(200, "Title too long"),
-  content: z.string().min(1, "Content is required").max(5000, "Content too long"),
-  priority: z.number().int().min(0).max(100).default(0),
-  isActive: z.boolean().default(true),
-  expiresAt: expiresAtSchema,
-})
-
-export type CreateAnnouncementInput = z.infer<typeof createAnnouncementSchema>
-
-/**
- * Create a new announcement (admin only)
- */
-export async function createAnnouncement(input: CreateAnnouncementInput): Promise<{ success: boolean; error?: string; data?: AnnouncementData }> {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.isAdmin) {
-      return { success: false, error: "Unauthorized" }
-    }
-
-    const validated = createAnnouncementSchema.safeParse(input)
-    if (!validated.success) {
-      return { success: false, error: validated.error.issues[0].message }
-    }
-
-    const { title, content, priority, isActive, expiresAt } = validated.data
-
+/** Create an announcement (admin only). Reads live in `lib/admin/announcements.ts`. */
+export const createAnnouncement = adminAction({
+  input: announcementSchema,
+  fallbackError: "Couldn't create the announcement",
+  handler: async ({ title, content, priority, isActive, expiresAt }, { userId }) => {
     const announcement = await prisma.announcement.create({
-      data: {
-        title,
-        content,
-        priority,
-        isActive,
-        expiresAt: await toExpiry(expiresAt),
-        createdBy: session.user.id,
-      },
+      data: { title, content, priority, isActive, expiresAt: await toExpiry(expiresAt), createdBy: userId },
+      select: { id: true },
     })
 
-    logger.info("Announcement created", { id: announcement.id, title, createdBy: session.user.id })
-    logAuditEvent(AuditEventType.ANNOUNCEMENT_CREATED, session.user.id, {
+    logger.info("Announcement created", { id: announcement.id, title, createdBy: userId })
+    logAuditEvent(AuditEventType.ANNOUNCEMENT_CREATED, userId, {
       announcementId: announcement.id,
       title,
       priority,
       isActive,
-      expiresAt: expiresAt ?? null,
+      expiresAt,
     })
-    revalidatePath("/")
-    revalidatePath("/admin/announcements")
-
-    return {
-      success: true,
-      data: {
-        id: announcement.id,
-        title: announcement.title,
-        content: announcement.content,
-        priority: announcement.priority,
-        isActive: announcement.isActive,
-        createdAt: announcement.createdAt.toISOString(),
-        expiresAt: announcement.expiresAt?.toISOString() ?? null,
-      },
-    }
-  } catch (error) {
-    logger.error("Error creating announcement", error)
-    return { success: false, error: "Failed to create announcement" }
-  }
-}
-
-const updateAnnouncementSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1, "Title is required").max(200, "Title too long"),
-  content: z.string().min(1, "Content is required").max(5000, "Content too long"),
-  priority: z.number().int().min(0).max(100),
-  isActive: z.boolean(),
-  expiresAt: expiresAtSchema,
+    revalidateAnnouncements()
+    return ok({ id: announcement.id })
+  },
 })
 
-export type UpdateAnnouncementInput = z.infer<typeof updateAnnouncementSchema>
-
-/**
- * Update an existing announcement (admin only)
- */
-export async function updateAnnouncement(input: UpdateAnnouncementInput): Promise<{ success: boolean; error?: string }> {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.isAdmin) {
-      return { success: false, error: "Unauthorized" }
-    }
-
-    const validated = updateAnnouncementSchema.safeParse(input)
-    if (!validated.success) {
-      return { success: false, error: validated.error.issues[0].message }
-    }
-
-    const { id, title, content, priority, isActive, expiresAt } = validated.data
-
+/** Update an announcement (admin only); a missing row is `NOT_FOUND`. */
+export const updateAnnouncement = adminAction({
+  input: announcementSchema.extend({ id: recordIdSchema }),
+  fallbackError: "Couldn't save the announcement",
+  handler: async ({ id, title, content, priority, isActive, expiresAt }, { userId }) => {
     await prisma.announcement.update({
       where: { id },
-      data: {
-        title,
-        content,
-        priority,
-        isActive,
-        expiresAt: await toExpiry(expiresAt),
-      },
+      data: { title, content, priority, isActive, expiresAt: await toExpiry(expiresAt) },
     })
 
-    logger.info("Announcement updated", { id, updatedBy: session.user.id })
-    logAuditEvent(AuditEventType.ANNOUNCEMENT_UPDATED, session.user.id, {
+    logger.info("Announcement updated", { id, updatedBy: userId })
+    logAuditEvent(AuditEventType.ANNOUNCEMENT_UPDATED, userId, {
       announcementId: id,
       title,
       content,
       priority,
       isActive,
-      expiresAt: expiresAt ?? null,
+      expiresAt,
     })
-    revalidatePath("/")
-    revalidatePath("/admin/announcements")
+    revalidateAnnouncements()
+    return ok({ id })
+  },
+})
 
-    return { success: true }
-  } catch (error) {
-    // Handle Prisma not found error
-    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
-      return { success: false, error: "Announcement not found" }
-    }
-    logger.error("Error updating announcement", error)
-    return { success: false, error: "Failed to update announcement" }
-  }
-}
+/** Delete an announcement (admin only). */
+export const deleteAnnouncement = adminAction({
+  input: z.object({ id: recordIdSchema }),
+  fallbackError: "Couldn't delete the announcement",
+  handler: async ({ id }, { userId }) => {
+    await prisma.announcement.delete({ where: { id } })
+
+    logger.info("Announcement deleted", { id, deletedBy: userId })
+    logAuditEvent(AuditEventType.ANNOUNCEMENT_DELETED, userId, { announcementId: id })
+    revalidateAnnouncements()
+    return ok(null)
+  },
+})
 
 /**
- * Delete an announcement (admin only)
+ * Show or hide an announcement on home (admin only). Takes the wanted state,
+ * not a toggle, so two quick clicks never race a read-modify-write.
  */
-export async function deleteAnnouncement(id: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.isAdmin) {
-      return { success: false, error: "Unauthorized" }
-    }
+export const setAnnouncementActive = adminAction({
+  input: z.object({ id: recordIdSchema, isActive: z.boolean() }),
+  fallbackError: "Couldn't change whether it shows",
+  handler: async ({ id, isActive }, { userId }) => {
+    await prisma.announcement.update({ where: { id }, data: { isActive } })
 
-    await prisma.announcement.delete({
-      where: { id },
-    })
-
-    logger.info("Announcement deleted", { id, deletedBy: session.user.id })
-    logAuditEvent(AuditEventType.ANNOUNCEMENT_DELETED, session.user.id, {
-      announcementId: id,
-    })
-    revalidatePath("/")
-    revalidatePath("/admin/announcements")
-
-    return { success: true }
-  } catch (error) {
-    // Handle Prisma not found error
-    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
-      return { success: false, error: "Announcement not found" }
-    }
-    logger.error("Error deleting announcement", error)
-    return { success: false, error: "Failed to delete announcement" }
-  }
-}
-
-/**
- * Set announcement active status (admin only)
- * Uses explicit isActive parameter to avoid race conditions with read-modify-write pattern
- */
-export async function setAnnouncementActive(id: string, isActive: boolean): Promise<{ success: boolean; error?: string }> {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.isAdmin) {
-      return { success: false, error: "Unauthorized" }
-    }
-
-    await prisma.announcement.update({
-      where: { id },
-      data: { isActive },
-    })
-
-    logger.info("Announcement status updated", { id, isActive, updatedBy: session.user.id })
-    logAuditEvent(AuditEventType.ANNOUNCEMENT_STATUS_CHANGED, session.user.id, {
-      announcementId: id,
-      isActive,
-    })
-    revalidatePath("/")
-    revalidatePath("/admin/announcements")
-
-    return { success: true }
-  } catch (error) {
-    // Handle Prisma not found error
-    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
-      return { success: false, error: "Announcement not found" }
-    }
-    logger.error("Error updating announcement status", error)
-    return { success: false, error: "Failed to update announcement status" }
-  }
-}
+    logger.info("Announcement status updated", { id, isActive, updatedBy: userId })
+    logAuditEvent(AuditEventType.ANNOUNCEMENT_STATUS_CHANGED, userId, { announcementId: id, isActive })
+    revalidateAnnouncements()
+    return ok(null)
+  },
+})

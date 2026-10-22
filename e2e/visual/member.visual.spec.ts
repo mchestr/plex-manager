@@ -1,11 +1,12 @@
 import { TEST_USERS } from '../fixtures/auth';
+import { createE2EPrismaClient } from '../helpers/prisma';
 import { resetStripeState, setStripeEnabled } from '../helpers/stripe';
 import { clearVisualFixtures, seedVisualFixtures, VISUAL_INVITES, VISUAL_ONBOARDING_USER } from '../helpers/seed-fixtures';
 import { settle } from '../helpers/deterministic';
 import { capture, expectScreen, skipUnlessProductionBuild, test } from './visual-test';
 
 /**
- * Member and public screens (P1.6): 9 screens per viewport project.
+ * Member and public screens (P1.6, P10.22): 12 screens per viewport project.
  */
 
 skipUnlessProductionBuild();
@@ -65,6 +66,34 @@ test.describe('Member and public screens', () => {
   test('account', async ({ page, signIn }) => {
     await signIn(TEST_USERS.REGULAR.id);
     await capture(page, '/account', 'account');
+  });
+
+  test('help', async ({ page, signIn }) => {
+    await signIn(TEST_USERS.REGULAR.id);
+    await capture(page, '/help', 'help');
+  });
+
+  test('announcements', async ({ page, signIn }) => {
+    await signIn(TEST_USERS.REGULAR.id);
+    await capture(page, '/announcements', 'announcements');
+  });
+
+  test.describe('membership', () => {
+    test.afterAll(async () => {
+      await resetStripeState([TEST_USERS.REGULAR.id]);
+    });
+
+    test('membership, comp', async ({ page, signIn }) => {
+      await setStripeEnabled(true, { configure: true });
+      const prisma = createE2EPrismaClient();
+      try {
+        await prisma.user.update({ where: { id: TEST_USERS.REGULAR.id }, data: { isExempt: true, exemptReason: 'comp' } });
+      } finally {
+        await prisma.$disconnect();
+      }
+      await signIn(TEST_USERS.REGULAR.id);
+      await capture(page, '/membership', 'membership');
+    });
   });
 
   test('access denied', async ({ page }) => {

@@ -48,7 +48,8 @@ test.describe('Admin Functionality', () => {
   test('should access admin cost analysis', async ({ adminPage }) => {
     await adminPage.locator('aside').getByTestId('admin-nav-cost-analysis').first().click();
     await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Cost Analysis' }
+      { type: 'selector', value: '[data-testid="admin-cost-analysis-header"]' },
+      { type: 'heading', value: 'Cost analysis', level: 1 }
     ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
   });
 

@@ -22,6 +22,8 @@ export interface AdminUserWithWrappedStats {
   updatedAt: Date
   wrappedStatus: string | null
   wrappedGeneratedAt: Date | null
+  /** When the year's queued or running generation started, or null when none is active (`canRegenerate`). */
+  wrappedRunStartedAt: Date | null
   totalWrappedCount: number
   totalShares: number
   totalVisits: number
@@ -34,47 +36,6 @@ export interface AdminUserWithWrappedStats {
   isExempt: boolean
   exemptReason: string | null
   stripeCustomerId: string | null
-}
-
-export interface WrappedSummary {
-  id: string
-  year: number
-  status: string
-  generatedAt: Date | null
-  createdAt: Date
-  shareToken: string | null
-  shareVisits: number
-}
-
-interface DiscordConnectionDetails {
-  discordUserId: string
-  username: string
-  discriminator: string | null
-  globalName: string | null
-  avatar: string | null
-  metadataSyncedAt: Date | null
-  linkedAt: Date
-  revokedAt: Date | null
-  lastError: string | null
-}
-
-export interface UserDetails {
-  id: string
-  name: string | null
-  email: string | null
-  image: string | null
-  plexUserId: string | null
-  isAdmin: boolean
-  /** When an admin disabled the account; null while it is enabled. */
-  disabledAt: Date | null
-  createdAt: Date
-  updatedAt: Date
-  hasPlexAccess: boolean | null
-  wrapped: WrappedSummary[]
-  totalShares: number
-  totalVisits: number
-  llmUsage: LlmUsageStats | null
-  discordConnection: DiscordConnectionDetails | null
 }
 
 // Activity Timeline Types
@@ -106,10 +67,9 @@ export type MediaMarkActivity = {
 
 export type UserActivityItem = DiscordCommandActivity | MediaMarkActivity
 
+/** One keyset page of the timeline (P10.6): `nextCursor` is null on the last page. */
 export interface UserActivityTimelineData {
   items: UserActivityItem[]
   total: number
-  page: number
-  pageSize: number
-  totalPages: number
+  nextCursor: string | null
 }

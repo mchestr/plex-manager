@@ -1,10 +1,11 @@
 /**
- * The `(app)` layout's entitlement guard (P4.5): level-aware, with the path
+ * The `(app)` layout's onboarding guard, and its entitlement guard (P4.5): level-aware, with the path
  * from the `x-pm-pathname` header proxy.ts sets. The level table itself is in
  * __tests__/lib/access.test.ts.
  */
 
-import { ensureSubscriptionOrAccess } from '@/lib/guards'
+import { getOnboardingStatus } from '@/actions/onboarding'
+import { ensureOnboardingComplete, ensureSubscriptionOrAccess } from '@/lib/guards'
 import { requestAccessLevel } from '@/lib/actions/entitlement'
 import { getServerSession } from 'next-auth'
 import { headers } from 'next/headers'
@@ -88,5 +89,33 @@ describe('ensureSubscriptionOrAccess', () => {
     await ensureSubscriptionOrAccess()
 
     expect(mockRedirect).toHaveBeenCalledWith('/subscribe')
+  })
+})
+
+describe('ensureOnboardingComplete', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('sends a member who has not finished onboarding to /onboarding', async () => {
+    jest.mocked(getOnboardingStatus).mockResolvedValue({ success: true, data: { isComplete: false } } as never)
+
+    await ensureOnboardingComplete()
+
+    expect(mockRedirect).toHaveBeenCalledWith('/onboarding')
+  })
+
+  it('lets a member who has finished through', async () => {
+    jest.mocked(getOnboardingStatus).mockResolvedValue({ success: true, data: { isComplete: true } } as never)
+
+    await ensureOnboardingComplete()
+
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  it('fails open when the status read fails', async () => {
+    jest.mocked(getOnboardingStatus).mockResolvedValue({ success: false, code: 'INTERNAL', error: 'x' } as never)
+
+    await ensureOnboardingComplete()
+
+    expect(mockRedirect).not.toHaveBeenCalled()
   })
 })

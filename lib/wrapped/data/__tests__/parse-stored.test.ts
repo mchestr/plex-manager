@@ -3,7 +3,7 @@
  * typed result and none throws.
  */
 
-import { legacyWrappedData, parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
+import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
 import { buildLeaderboards } from "@/lib/wrapped/__tests__/fixtures"
 
 import storedV1 from "./fixtures/stored-v1.json"
@@ -113,15 +113,3 @@ describe("parseStoredRewind", () => {
   })
 })
 
-describe("legacyWrappedData", () => {
-  it("returns the legacy data for v1 and v2 rows", () => {
-    expect(legacyWrappedData({ id: "w1", data: JSON.stringify(storedV2) })).toEqual(storedV2)
-    expect(legacyWrappedData({ id: "w1", data: JSON.stringify(storedV1) })?.year).toBe(2024)
-  })
-
-  it("returns null for a v3 row and for a row that does not parse", () => {
-    expect(legacyWrappedData({ id: "w1", data: JSON.stringify(minimalV3()) })).toBeNull()
-    expect(legacyWrappedData({ id: "w1", data: "not json" })).toBeNull()
-    expect(legacyWrappedData({ id: "w1", data: null })).toBeNull()
-  })
-})

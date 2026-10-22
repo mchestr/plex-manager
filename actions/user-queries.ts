@@ -5,7 +5,7 @@ import { z } from "zod"
 import { memberAction } from "@/lib/actions/define-action"
 import { type ActionErrorCode, type ActionResult, fail, ok, toActionError } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
-import { checkUserServerAccess, getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
+import { getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { type PlexUnshareErrorCode } from "@/lib/connections/plex-invitations"
 import { prisma } from "@/lib/prisma"
 import { endUserSessions } from "@/lib/session-revocation"
@@ -15,14 +15,11 @@ import { createLogger } from "@/lib/utils/logger"
 import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
 import { readStoredError, toStoredError } from "@/lib/wrapped/generation-errors"
 import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
+import { decodeActivityCursor, loadActivityTimeline } from "@/lib/admin/activity-timeline"
+import { activeRunStarts } from "@/lib/admin/active-runs"
 import {
   AdminUserWithWrappedStats,
-  DiscordCommandActivity,
-  MediaMarkActivity,
-  UserActivityItem,
   UserActivityTimelineData,
-  UserDetails,
-  WrappedSummary
 } from "@/types/admin"
 
 const logger = createLogger("USER_QUERIES")
@@ -91,117 +88,6 @@ export const getUserPlexWrapped = memberAction({
 })
 
 /**
- * Get detailed user information including all wrapped, shares, visits, and LLM usage
- */
-export async function getUserDetails(userId: string): Promise<UserDetails | null> {
-  // Admin-only: returns another user's full PII. Placed before the try so the
-  // thrown auth error propagates to the error boundary instead of being
-  // swallowed into a null return by the catch below.
-  await requireAdmin()
-
-  try {
-    // Get active Plex server for access checking
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        plexWrapped: {
-          orderBy: { year: "desc" },
-          // Never `data`: the summary needs the status columns only (BP-28).
-          select: {
-            id: true,
-            year: true,
-            status: true,
-            generatedAt: true,
-            createdAt: true,
-            shareToken: true,
-            _count: { select: { shareVisits: true } },
-          },
-        },
-        discordConnection: true,
-      },
-    })
-
-    if (!user) {
-      return null
-    }
-
-    // Check Plex access
-    let hasPlexAccess: boolean | null = null
-    if (user.plexUserId && plexServer) {
-      const accessResult = await checkUserServerAccess(
-        {
-          url: plexServer.url,
-          token: plexServer.token,
-          adminPlexUserId: plexServer.adminPlexUserId,
-        },
-        user.plexUserId
-      )
-      hasPlexAccess = accessResult.success ? accessResult.hasAccess : null
-    }
-
-    // Calculate share and visit stats
-    let totalShares = 0
-    let totalVisits = 0
-    const wrapped: WrappedSummary[] = user.plexWrapped.map((w) => {
-      if (w.shareToken) {
-        totalShares += 1
-      }
-      totalVisits += w._count.shareVisits
-      return {
-        id: w.id,
-        year: w.year,
-        status: w.status,
-        generatedAt: w.generatedAt,
-        createdAt: w.createdAt,
-        shareToken: w.shareToken,
-        shareVisits: w._count.shareVisits,
-      }
-    })
-
-    const llmUsage = (await usageTotalsByUser([user.id])).get(user.id) ?? null
-
-    const discordConnection = user.discordConnection
-      ? {
-          discordUserId: user.discordConnection.discordUserId,
-          username: user.discordConnection.username,
-          discriminator: user.discordConnection.discriminator,
-          globalName: user.discordConnection.globalName,
-          avatar: user.discordConnection.avatar,
-          metadataSyncedAt: user.discordConnection.metadataSyncedAt,
-          linkedAt: user.discordConnection.linkedAt,
-          revokedAt: user.discordConnection.revokedAt,
-          lastError: user.discordConnection.lastError,
-        }
-      : null
-
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      image: user.image,
-      plexUserId: user.plexUserId,
-      isAdmin: user.isAdmin,
-      disabledAt: user.disabledAt,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      hasPlexAccess,
-      wrapped,
-      totalShares,
-      totalVisits,
-      llmUsage,
-      discordConnection,
-    }
-  } catch (error) {
-    logger.error("Error getting user details", error)
-    return null
-  }
-}
-
-/**
  * Get all users with their wrapped status for `year` (the caller passes the
  * season year; there is no calendar default).
  */
@@ -223,10 +109,11 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUserWit
     // 4. Batch-load subscriptions and LLM usage totals (aggregate queries; no N+1)
     const userIds = users.map((u) => u.id)
     const wrappedIds = users.flatMap((u) => u.plexWrapped.map((w) => w.id))
-    const [subscriptionMap, totalUsageMap, yearUsageMap] = await Promise.all([
+    const [subscriptionMap, totalUsageMap, yearUsageMap, runStarts] = await Promise.all([
       fetchSubscriptionMap(userIds),
       usageTotalsByUser(userIds),
       usageTotalsForWrapped(wrappedIds),
+      activeRunStarts(userIds, year),
     ])
 
     // 5. Map users to DTO
@@ -251,6 +138,7 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUserWit
         updatedAt: user.updatedAt,
         wrappedStatus: wrapped?.status || null,
         wrappedGeneratedAt: wrapped?.generatedAt || null,
+        wrappedRunStartedAt: runStarts.get(user.id) ?? null,
         totalWrappedCount: user._count.plexWrapped,
         totalShares: shareStatsForUser.totalShares,
         totalVisits: shareStatsForUser.totalVisits,
@@ -546,82 +434,36 @@ async function fetchSubscriptionMap(userIds: string[]): Promise<Map<string, {
   return subscriptionMap
 }
 
+
+const timelineInput = z.object({
+  userId: userIdSchema,
+  cursor: z.string().max(512).optional(),
+  pageSize: z.number().int().min(1).max(50).default(10),
+})
+
+const BAD_PAGE = "That timeline page is not valid"
+
 /**
- * Get user activity timeline (Discord commands + media marks)
+ * One keyset page of a member's activity timeline (admin only; GAP-38): see
+ * `lib/admin/activity-timeline.ts` for the order and the cursor. A cursor
+ * this module did not write is refused with `VALIDATION`.
  */
 export async function getUserActivityTimeline(
   userId: string,
-  options: { page?: number; pageSize?: number } = {}
-): Promise<UserActivityTimelineData | null> {
+  options: { cursor?: string; pageSize?: number } = {}
+): Promise<ActionResult<UserActivityTimelineData>> {
   await requireAdmin()
 
-  const { page = 1, pageSize = 10 } = options
+  const input = timelineInput.safeParse({ userId, ...options })
+  if (!input.success) return fail("VALIDATION", BAD_PAGE)
+  const { cursor: rawCursor, pageSize } = input.data
+  const cursor = rawCursor === undefined ? null : decodeActivityCursor(rawCursor)
+  if (rawCursor !== undefined && !cursor) return fail("VALIDATION", BAD_PAGE)
 
   try {
-    // Fetch both data sources and counts in parallel
-    const [discordLogs, mediaMarks, discordCount, mediaMarkCount] = await Promise.all([
-      prisma.discordCommandLog.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-        take: pageSize * 2, // Fetch extra to merge properly
-      }),
-      prisma.userMediaMark.findMany({
-        where: { userId },
-        orderBy: { markedAt: "desc" },
-        take: pageSize * 2,
-      }),
-      prisma.discordCommandLog.count({ where: { userId } }),
-      prisma.userMediaMark.count({ where: { userId } }),
-    ])
-
-    // Transform Discord logs to activity items
-    const discordActivities: DiscordCommandActivity[] = discordLogs.map((log) => ({
-      type: "discord_command" as const,
-      id: log.id,
-      timestamp: log.createdAt,
-      commandType: log.commandType,
-      commandName: log.commandName,
-      commandArgs: log.commandArgs,
-      status: log.status,
-      responseTimeMs: log.responseTimeMs,
-      channelType: log.channelType,
-    }))
-
-    // Transform media marks to activity items
-    const mediaMarkActivities: MediaMarkActivity[] = mediaMarks.map((mark) => ({
-      type: "media_mark" as const,
-      id: mark.id,
-      timestamp: mark.markedAt,
-      markType: mark.markType,
-      mediaType: mark.mediaType,
-      title: mark.title,
-      year: mark.year,
-      seasonNumber: mark.seasonNumber,
-      episodeNumber: mark.episodeNumber,
-      parentTitle: mark.parentTitle,
-      markedVia: mark.markedVia,
-    }))
-
-    // Merge and sort by timestamp (most recent first)
-    const allActivities: UserActivityItem[] = [...discordActivities, ...mediaMarkActivities].sort(
-      (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
-    )
-
-    // Apply pagination
-    const total = discordCount + mediaMarkCount
-    const totalPages = Math.ceil(total / pageSize)
-    const offset = (page - 1) * pageSize
-    const paginatedItems = allActivities.slice(offset, offset + pageSize)
-
-    return {
-      items: paginatedItems,
-      total,
-      page,
-      pageSize,
-      totalPages,
-    }
+    return ok(await loadActivityTimeline(input.data.userId, { cursor, pageSize }))
   } catch (error) {
     logger.error("Error fetching user activity timeline", error, { userId })
-    return null
+    return fail("INTERNAL", "Could not load the activity")
   }
 }

@@ -6,6 +6,8 @@
 import {
   clearOfferedPricesCache,
   getOfferedPrices,
+  getPlanName,
+  getPlanPrice,
 } from '@/lib/stripe/prices'
 import { prisma } from '@/lib/prisma'
 import { getStripe } from '@/lib/stripe/client'
@@ -191,5 +193,59 @@ describe('getOfferedPrices', () => {
       interval: null,
       productName: 'prod_expanded_string',
     })
+  })
+})
+
+describe('getPlanName', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    clearOfferedPricesCache()
+  })
+
+  it('names an offered price by its product', async () => {
+    mockFindUnique.mockResolvedValue({ stripeEnabled: true, stripePriceIds: ['price_month'] })
+    const stripe = makeStripeMock()
+    stripe.prices.retrieve.mockResolvedValue(
+      makeStripePrice({ id: 'price_month', product: { name: 'Supporter plan', deleted: false } })
+    )
+    mockGetStripe.mockResolvedValue(stripe)
+
+    await expect(getPlanName('price_month')).resolves.toBe('Supporter plan')
+  })
+
+  it('retrieves a price that is no longer offered, and caches it', async () => {
+    mockFindUnique.mockResolvedValue({ stripeEnabled: true, stripePriceIds: [] })
+    const stripe = makeStripeMock()
+    stripe.prices.retrieve.mockResolvedValue(
+      makeStripePrice({ id: 'price_old', product: { name: 'Founding plan', deleted: false } })
+    )
+    mockGetStripe.mockResolvedValue(stripe)
+
+    await expect(getPlanName('price_old')).resolves.toBe('Founding plan')
+    await expect(getPlanPrice('price_old')).resolves.toMatchObject({ amount: 500, interval: 'month' })
+    expect(stripe.prices.retrieve).toHaveBeenCalledTimes(1)
+    expect(stripe.prices.retrieve).toHaveBeenCalledWith('price_old', { expand: ['product'] })
+  })
+
+  it('falls back to "Membership", never the price id', async () => {
+    mockFindUnique.mockResolvedValue({ stripeEnabled: true, stripePriceIds: [] })
+    const stripe = makeStripeMock()
+    stripe.prices.retrieve.mockRejectedValue(new Error('No such price'))
+    mockGetStripe.mockResolvedValue(stripe)
+
+    await expect(getPlanName('price_gone')).resolves.toBe('Membership')
+    await expect(getPlanName(null)).resolves.toBe('Membership')
+
+    mockGetStripe.mockResolvedValue(null)
+    await expect(getPlanName('price_gone')).resolves.toBe('Membership')
+  })
+
+  it('does not use an unexpanded product id as the name', async () => {
+    mockFindUnique.mockResolvedValue({ stripeEnabled: true, stripePriceIds: [] })
+    const stripe = makeStripeMock()
+    stripe.prices.retrieve.mockResolvedValue(makeStripePrice({ id: 'price_x', product: 'prod_123' }))
+    mockGetStripe.mockResolvedValue(stripe)
+
+    await expect(getPlanName('price_x')).resolves.toBe('Membership')
   })
 })

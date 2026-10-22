@@ -54,6 +54,7 @@ describe("/dev/ui", () => {
       "alert-dialog",
       "confirm-dialog",
       "dropdown-menu",
+      "command",
       "popover",
       "tooltip",
       "toast",
@@ -61,6 +62,7 @@ describe("/dev/ui", () => {
       "toggle",
       "slider",
       "segmented-control",
+      "live-status",
       "ink",
       "ink-paper",
       "ink-marigold",
@@ -78,11 +80,12 @@ describe("/dev/ui", () => {
       "date-range-filter",
       "empty-state",
       "rewind-card",
+      "status-screen",
     ]) {
       expect(screen.getByTestId(`dev-ui-${primitive}`)).toBeInTheDocument()
     }
     expect(await axe(container)).toHaveNoViolations()
-  })
+  }, 60_000) // axe over the whole sheet takes several seconds
 
   it("draws the composites from 7 members and 120 plays", () => {
     process.env.ENABLE_DEV_UI = "1"

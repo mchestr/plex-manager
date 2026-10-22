@@ -24,7 +24,15 @@ interface StackedListProps<T> extends RowLinks<T> {
  * (title, sub line, badges, meta line) with the row's actions button beside
  * it, and no sideways scroll.
  */
-export function StackedList<T>({ rows, label, getRowHref, rowActions, getRowName, testId }: StackedListProps<T>) {
+export function StackedList<T>({
+  rows,
+  label,
+  getRowHref,
+  rowActions,
+  getRowName,
+  onRowActionsOpenChange,
+  testId,
+}: StackedListProps<T>) {
   return (
     <ul aria-label={label} data-slot="stacked-list" className="divide-y" data-testid={`${testId}-list`}>
       {rows.map((row) => {
@@ -59,7 +67,12 @@ export function StackedList<T>({ rows, label, getRowHref, rowActions, getRowName
               )}
             </div>
             {actions.length > 0 && getRowName && (
-              <RowActions name={getRowName(row.original)} actions={actions} data-testid={`${testId}-actions-${row.id}`} />
+              <RowActions
+                name={getRowName(row.original)}
+                actions={actions}
+                onOpenChange={onRowActionsOpenChange}
+                data-testid={`${testId}-actions-${row.id}`}
+              />
             )}
           </li>
         )

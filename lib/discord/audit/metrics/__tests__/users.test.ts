@@ -174,7 +174,7 @@ describe("getAccountLinkingMetrics", () => {
       { createdAt: new Date("2024-01-02T12:00:00Z") },
     ])
 
-    const result = await getAccountLinkingMetrics(startDate, endDate)
+    const result = await getAccountLinkingMetrics(startDate, endDate, "UTC")
 
     expect(mockCount).toHaveBeenCalledWith({
       where: {

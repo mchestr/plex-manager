@@ -1,223 +1,64 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { Check, ChevronDown, History } from "lucide-react"
+import Link from "next/link"
 
-import { useFormat } from "@/lib/format-context"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuLinkItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Icon } from "@/components/ui/icon"
 import { rewindHistory, userRewind } from "@/lib/admin/routes"
 
-interface HistoricalVersion {
+interface HistoricalVersionOption {
   id: string
-  createdAt: Date | string
-  provider: string
-  model: string | null
-  cost: number
-  totalTokens: number
-  isCurrent?: boolean
+  /** "Oct 12, 2026, 2:26 PM CDT", formatted on the server. */
+  label: string
+  /** "openai/gpt-5 · $0.02" */
+  detail: string
+  isCurrent: boolean
 }
 
 interface HistoricalWrappedSelectorHeaderProps {
   wrappedId: string
   userId: string
-  /** The Rewind's year: "current" opens that year, not the season year. */
+  /** The Rewind's year: "Current" opens that year, not the season year. */
   year: number
+  /** The version this page shows. */
+  selectedId: string
+  versions: HistoricalVersionOption[]
 }
 
-/** The version a path shows, or null when the path names none. */
-function versionFromPathname(pathname: string | null, userId: string): string | null {
-  const historyMatch = pathname?.match(/\/admin\/wrapped\/[^/]+\/history\/([^/]+)/)
-  if (historyMatch) return historyMatch[1]
-  if (pathname?.includes(`/admin/users/${userId}/rewind/`)) return "current"
-  return null
-}
-
-export function HistoricalWrappedSelectorHeader({
-  wrappedId,
-  userId,
-  year,
-}: HistoricalWrappedSelectorHeaderProps) {
-  const router = useRouter()
-  const f = useFormat()
-  const pathname = usePathname()
-  const [versions, setVersions] = useState<HistoricalVersion[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedVersion, setSelectedVersion] = useState<string>(
-    () => versionFromPathname(pathname, userId) ?? "current"
-  )
-  const [isExpanded, setIsExpanded] = useState(false)
-
-  // Detect current version from pathname, during render when it changes
-  const [prevLocation, setPrevLocation] = useState({ pathname, userId })
-  if (prevLocation.pathname !== pathname || prevLocation.userId !== userId) {
-    setPrevLocation({ pathname, userId })
-    const version = versionFromPathname(pathname, userId)
-    if (version) {
-      setSelectedVersion(version)
-    }
-  }
-
-  useEffect(() => {
-    async function loadVersions() {
-      try {
-        const response = await fetch(`/api/admin/wrapped/${wrappedId}/versions`)
-        if (response.ok) {
-          const data = await response.json()
-          setVersions(data.versions || [])
-        }
-      } catch (error) {
-        console.error("Failed to load historical versions:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (wrappedId) {
-      loadVersions()
-    }
-  }, [wrappedId])
-
-  const handleVersionChange = async (versionId: string) => {
-    try {
-      if (versionId === "current") {
-        setSelectedVersion("current")
-        await router.push(userRewind(userId, year))
-      } else {
-        const version = versions.find(v => v.id === versionId)
-        if (version?.isCurrent) {
-          setSelectedVersion("current")
-          await router.push(userRewind(userId, year))
-        } else {
-          setSelectedVersion(versionId)
-          await router.push(rewindHistory(wrappedId, versionId))
-        }
-      }
-      setIsExpanded(false)
-    } catch (error) {
-      console.error("Failed to navigate to version:", error)
-      const historyMatch = pathname?.match(/\/admin\/wrapped\/[^/]+\/history\/([^/]+)/)
-      if (historyMatch) {
-        setSelectedVersion(historyMatch[1])
-      } else {
-        setSelectedVersion("current")
-      }
-    }
-  }
-
-  const currentVersion = versions.find(v => v.isCurrent)
-  const selectedVersionData = selectedVersion === "current"
-    ? currentVersion
-    : versions.find(v => v.id === selectedVersion)
-
-  // Don't show if no versions or still loading
-  if (loading || versions.length === 0) {
-    return null
-  }
+/** The history page's version picker (P10.6): the versions come in as props. */
+export function HistoricalWrappedSelectorHeader({ wrappedId, userId, year, selectedId, versions }: HistoricalWrappedSelectorHeaderProps) {
+  if (versions.length === 0) return null
+  const selected = versions.find((version) => version.id === selectedId)
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 px-3 py-1.5 text-xs bg-slate-800/50 hover:bg-slate-800 border border-slate-600 hover:border-cyan-500/50 rounded-md transition-colors text-slate-300 hover:text-white"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <span className="font-medium">
-          {selectedVersion === "current" ? "Current" : f.dateTime(selectedVersionData?.createdAt || new Date())}
-        </span>
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button variant="outline" data-testid="admin-wrapped-version-picker" />}>
+        <Icon icon={History} />
+        {selected?.label ?? "Versions"}
         <span className="text-muted-foreground">({versions.length})</span>
-        <svg
-          className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </button>
-
-      {isExpanded && (
-        <>
-          {/* Backdrop to close dropdown */}
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsExpanded(false)}
-          />
-          {/* Dropdown menu */}
-          <div className="absolute top-full right-0 mt-2 z-50 bg-slate-800 border border-slate-700 rounded-lg shadow-xl min-w-[280px] max-h-[400px] overflow-y-auto">
-            <div className="p-2 space-y-1">
-              {versions.map((version) => {
-                const isSelected = selectedVersion === version.id ||
-                  (selectedVersion === "current" && version.isCurrent)
-
-                return (
-                  <button
-                    key={version.id}
-                    onClick={() => handleVersionChange(version.isCurrent ? "current" : version.id)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-xs transition-colors ${
-                      isSelected
-                        ? "bg-cyan-500/20 border border-cyan-500/50 text-cyan-300"
-                        : "hover:bg-slate-700/50 text-slate-300 hover:text-white"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium truncate">
-                            {f.dateTime(version.createdAt)}
-                          </span>
-                          {version.isCurrent && (
-                            <span className="flex-shrink-0 text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded border border-green-500/30">
-                              Current
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-slate-400 truncate">
-                          {version.provider}/{version.model || "unknown"}
-                        </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
-                          {f.money(version.cost)} • {f.tokens(version.totalTokens)}
-                        </div>
-                      </div>
-                      {isSelected && (
-                        <svg
-                          className="w-4 h-4 text-cyan-400 flex-shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+        <Icon icon={ChevronDown} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-h-96 min-w-72 overflow-y-auto">
+        {versions.map((version) => (
+          <DropdownMenuLinkItem
+            key={version.id}
+            render={<Link href={version.isCurrent ? userRewind(userId, year) : rewindHistory(wrappedId, version.id)} />}
+            icon={version.id === selectedId ? <Icon icon={Check} /> : <span className="size-4" aria-hidden="true" />}
+            className="h-auto py-1.5"
+            data-testid={`admin-wrapped-version-${version.id}`}
+          >
+            <span className="flex flex-col">
+              <span>
+                {version.label}
+                {version.isCurrent && " (current)"}
+              </span>
+              <span className="text-caption text-muted-foreground">{version.detail}</span>
+            </span>
+          </DropdownMenuLinkItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
-

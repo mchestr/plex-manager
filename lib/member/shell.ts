@@ -1,6 +1,7 @@
 import "server-only"
 
 import { serverName } from "@/lib/brand"
+import { hasMembershipPage } from "@/lib/member/membership-page"
 import { memberNav, type MemberNavItem } from "@/lib/member/nav"
 import { prisma } from "@/lib/prisma"
 import { requestRewindCardModel } from "@/lib/rewind/home-card"
@@ -14,6 +15,8 @@ export interface ShellUser {
   isAdmin: boolean
   /** The linked Discord handle, `null` when unlinked, and absent when Discord is off. */
   discordHandle?: string | null
+  /** Whether `/membership` exists for them, for the account menu. */
+  membership: boolean
 }
 
 export interface AppShellData {
@@ -56,11 +59,12 @@ export async function discordHandleFor(userId: string): Promise<string | null | 
 
 /** Everything `AppShell` needs for the signed-in member, read once per layout render. */
 export async function getAppShellData(session: { id: string; isAdmin: boolean }): Promise<AppShellData> {
-  const [name, user, rewindYear, discordHandle] = await Promise.all([
+  const [name, user, rewindYear, discordHandle, membership] = await Promise.all([
     serverName(),
     prisma.user.findUnique({ where: { id: session.id }, select: { name: true, email: true } }),
     rewindYearFor(session.id, session.isAdmin),
     discordHandleFor(session.id),
+    hasMembershipPage(session.id),
   ])
   const displayName = user?.name?.trim() || user?.email || "Member"
 
@@ -71,8 +75,9 @@ export async function getAppShellData(session: { id: string; isAdmin: boolean })
       email: user?.email ?? null,
       initials: initialsFor(displayName),
       isAdmin: session.isAdmin,
+      membership,
       ...(discordHandle === undefined ? {} : { discordHandle }),
     },
-    nav: memberNav({ rewindYear }),
+    nav: memberNav({ rewindYear, membership }),
   }
 }

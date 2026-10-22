@@ -42,25 +42,6 @@ async function revalidateUserPages(userId: string) {
 }
 
 /**
- * Get user by ID (admin only)
- */
-export async function getUserById(userId: string) {
-  await requireAdmin()
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      image: true,
-    },
-  })
-
-  return user
-}
-
-/**
  * Update user admin status (admin only).
  *
  * Refuses to demote the caller (`SELF`), the Plex server owner, whom the next

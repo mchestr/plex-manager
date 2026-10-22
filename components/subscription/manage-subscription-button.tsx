@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 
 import { openBillingPortal } from "@/actions/subscription"
 import { redirectTo } from "@/lib/utils/navigation"
+import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useToast } from "@/components/ui/toast"
@@ -16,6 +17,10 @@ interface ManageSubscriptionButtonProps {
   /** Label shown when idle. Defaults to "Manage subscription". */
   label?: string
   className?: string
+  /** A caption beside the button that describes where it goes, such as "Opens Stripe". */
+  description?: string
+  /** Also show a failure in an inline Alert under the button, not only in the toast (UI-10). */
+  inlineError?: boolean
   "data-testid"?: string
 }
 
@@ -32,10 +37,20 @@ export function ManageSubscriptionButton({
   size = "md",
   label = "Manage subscription",
   className,
+  description,
+  inlineError = false,
   "data-testid": testId = "manage-subscription-button",
 }: ManageSubscriptionButtonProps) {
   const toast = useToast()
+  const descriptionId = useId()
   const [isPending, setIsPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const showError = (message: string) => {
+    toast.showError(message)
+    setError(message)
+    setIsPending(false)
+  }
 
   const handleClick = async () => {
     if (isPending) {
@@ -43,11 +58,11 @@ export function ManageSubscriptionButton({
     }
 
     setIsPending(true)
+    setError(null)
     try {
       const result = await openBillingPortal()
       if (!result.success) {
-        toast.showError(result.error)
-        setIsPending(false)
+        showError(result.error)
         return
       }
 
@@ -55,12 +70,11 @@ export function ManageSubscriptionButton({
       // navigation to Stripe happens.
       redirectTo(result.data.url)
     } catch {
-      toast.showError("Could not open the billing portal. Please try again.")
-      setIsPending(false)
+      showError("Could not open the billing portal. Please try again.")
     }
   }
 
-  return (
+  const button = (
     <Button
       type="button"
       variant={variant}
@@ -68,16 +82,37 @@ export function ManageSubscriptionButton({
       disabled={isPending}
       onClick={handleClick}
       className={className}
+      aria-describedby={description ? descriptionId : undefined}
       data-testid={testId}
     >
       {isPending ? (
         <>
-          <LoadingSpinner size="sm" className="text-white" />
+          <LoadingSpinner size="sm" />
           Opening...
         </>
       ) : (
         label
       )}
     </Button>
+  )
+
+  if (!description && !inlineError) return button
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        {button}
+        {description && (
+          <span id={descriptionId} className="text-caption text-muted-foreground">
+            {description}
+          </span>
+        )}
+      </div>
+      {inlineError && error && (
+        <Alert tone="destructive" data-testid={`${testId}-error`}>
+          {error}
+        </Alert>
+      )}
+    </div>
   )
 }

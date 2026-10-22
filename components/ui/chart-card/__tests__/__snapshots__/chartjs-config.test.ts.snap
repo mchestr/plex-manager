@@ -1,0 +1,303 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`chartjsConfig commands stacked: takes every colour from chartTheme 1`] = `
+{
+  "animation": false,
+  "indexAxis": "x",
+  "maintainAspectRatio": false,
+  "plugins": {
+    "legend": {
+      "display": true,
+      "labels": {
+        "boxWidth": 12,
+        "color": "#adb1b7",
+      },
+    },
+    "tooltip": {
+      "backgroundColor": "#27292c",
+      "bodyColor": "#f2f3f5",
+      "borderColor": "#505356",
+      "borderWidth": 1,
+      "callbacks": {
+        "label": [Function],
+      },
+      "titleColor": "#f2f3f5",
+    },
+  },
+  "responsive": true,
+  "scales": {
+    "x": {
+      "border": {
+        "display": false,
+      },
+      "grid": {
+        "display": false,
+      },
+      "stacked": true,
+      "ticks": {
+        "autoSkip": true,
+        "color": "#adb1b7",
+        "maxRotation": 0,
+        "maxTicksLimit": 8,
+      },
+    },
+    "y": {
+      "beginAtZero": true,
+      "border": {
+        "display": false,
+      },
+      "grid": {
+        "color": "#383b3e",
+      },
+      "stacked": true,
+      "ticks": {
+        "callback": [Function],
+        "color": "#adb1b7",
+        "maxTicksLimit": 6,
+        "precision": 0,
+      },
+    },
+  },
+}
+`;
+
+exports[`chartjsConfig cost by model: takes every colour from chartTheme 1`] = `
+{
+  "animation": false,
+  "indexAxis": "y",
+  "maintainAspectRatio": false,
+  "plugins": {
+    "legend": {
+      "display": false,
+      "labels": {
+        "boxWidth": 12,
+        "color": "#adb1b7",
+      },
+    },
+    "tooltip": {
+      "backgroundColor": "#27292c",
+      "bodyColor": "#f2f3f5",
+      "borderColor": "#505356",
+      "borderWidth": 1,
+      "callbacks": {
+        "label": [Function],
+      },
+      "titleColor": "#f2f3f5",
+    },
+  },
+  "responsive": true,
+  "scales": {
+    "x": {
+      "beginAtZero": true,
+      "border": {
+        "display": false,
+      },
+      "grid": {
+        "color": "#383b3e",
+      },
+      "stacked": false,
+      "ticks": {
+        "callback": [Function],
+        "color": "#adb1b7",
+        "maxTicksLimit": 6,
+      },
+    },
+    "y": {
+      "border": {
+        "display": false,
+      },
+      "grid": {
+        "display": false,
+      },
+      "stacked": false,
+      "ticks": {
+        "autoSkip": true,
+        "color": "#adb1b7",
+        "maxRotation": 0,
+        "maxTicksLimit": undefined,
+      },
+    },
+  },
+}
+`;
+
+exports[`chartjsConfig daily cost: takes every colour from chartTheme 1`] = `
+{
+  "animation": false,
+  "indexAxis": "x",
+  "maintainAspectRatio": false,
+  "plugins": {
+    "legend": {
+      "display": false,
+      "labels": {
+        "boxWidth": 12,
+        "color": "#adb1b7",
+      },
+    },
+    "tooltip": {
+      "backgroundColor": "#27292c",
+      "bodyColor": "#f2f3f5",
+      "borderColor": "#505356",
+      "borderWidth": 1,
+      "callbacks": {
+        "label": [Function],
+      },
+      "titleColor": "#f2f3f5",
+    },
+  },
+  "responsive": true,
+  "scales": {
+    "x": {
+      "border": {
+        "display": false,
+      },
+      "grid": {
+        "display": false,
+      },
+      "stacked": false,
+      "ticks": {
+        "autoSkip": true,
+        "color": "#adb1b7",
+        "maxRotation": 0,
+        "maxTicksLimit": 8,
+      },
+    },
+    "y": {
+      "beginAtZero": true,
+      "border": {
+        "display": false,
+      },
+      "grid": {
+        "color": "#383b3e",
+      },
+      "stacked": false,
+      "ticks": {
+        "callback": [Function],
+        "color": "#adb1b7",
+        "maxTicksLimit": 6,
+      },
+    },
+  },
+}
+`;
+
+exports[`chartjsConfig links and visits: takes every colour from chartTheme 1`] = `
+{
+  "animation": false,
+  "indexAxis": "x",
+  "maintainAspectRatio": false,
+  "plugins": {
+    "legend": {
+      "display": true,
+      "labels": {
+        "boxWidth": 12,
+        "color": "#adb1b7",
+      },
+    },
+    "tooltip": {
+      "backgroundColor": "#27292c",
+      "bodyColor": "#f2f3f5",
+      "borderColor": "#505356",
+      "borderWidth": 1,
+      "callbacks": {
+        "label": [Function],
+      },
+      "titleColor": "#f2f3f5",
+    },
+  },
+  "responsive": true,
+  "scales": {
+    "x": {
+      "border": {
+        "display": false,
+      },
+      "grid": {
+        "display": false,
+      },
+      "stacked": false,
+      "ticks": {
+        "autoSkip": true,
+        "color": "#adb1b7",
+        "maxRotation": 0,
+        "maxTicksLimit": 8,
+      },
+    },
+    "y": {
+      "beginAtZero": true,
+      "border": {
+        "display": false,
+      },
+      "grid": {
+        "color": "#383b3e",
+      },
+      "stacked": false,
+      "ticks": {
+        "callback": [Function],
+        "color": "#adb1b7",
+        "maxTicksLimit": 6,
+        "precision": 0,
+      },
+    },
+  },
+}
+`;
+
+exports[`chartjsConfig trend line: takes every colour from chartTheme 1`] = `
+{
+  "animation": false,
+  "indexAxis": "x",
+  "maintainAspectRatio": false,
+  "plugins": {
+    "legend": {
+      "display": false,
+      "labels": {
+        "boxWidth": 12,
+        "color": "#adb1b7",
+      },
+    },
+    "tooltip": {
+      "backgroundColor": "#27292c",
+      "bodyColor": "#f2f3f5",
+      "borderColor": "#505356",
+      "borderWidth": 1,
+      "callbacks": {
+        "label": [Function],
+      },
+      "titleColor": "#f2f3f5",
+    },
+  },
+  "responsive": true,
+  "scales": {
+    "x": {
+      "border": {
+        "display": false,
+      },
+      "grid": {
+        "display": false,
+      },
+      "stacked": false,
+      "ticks": {
+        "autoSkip": true,
+        "color": "#adb1b7",
+        "maxRotation": 0,
+        "maxTicksLimit": 8,
+      },
+    },
+    "y": {
+      "beginAtZero": true,
+      "border": {
+        "display": false,
+      },
+      "grid": {
+        "color": "#383b3e",
+      },
+      "stacked": false,
+      "ticks": {
+        "callback": [Function],
+        "color": "#adb1b7",
+        "maxTicksLimit": 6,
+      },
+    },
+  },
+}
+`;

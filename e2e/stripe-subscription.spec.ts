@@ -203,6 +203,50 @@ test.describe('Stripe subscription gate & admin visibility', () => {
     });
   });
 
+  // P10.22 (UI-37): the plan, its renewal and Manage billing live on /membership.
+  test.describe('Membership page (Stripe enabled, active subscriber)', () => {
+    test.beforeEach(async () => {
+      await setStripeEnabled(true, { configure: true });
+      const prisma = createE2EPrismaClient();
+      try {
+        // No price id, so the page names the plan without asking Stripe
+        await prisma.subscription.upsert({
+          where: { userId: TEST_USERS.REGULAR.id },
+          update: { status: 'ACTIVE', priceId: null, currentPeriodEnd: new Date(Date.now() + 20 * 86_400_000) },
+          create: {
+            userId: TEST_USERS.REGULAR.id,
+            status: 'ACTIVE',
+            stripeCustomerId: `cus_p1022_${Date.now()}`,
+            currentPeriodEnd: new Date(Date.now() + 20 * 86_400_000),
+          },
+        });
+      } finally {
+        await prisma.$disconnect();
+      }
+    });
+
+    test.afterEach(async () => {
+      await resetStripeState([TEST_USERS.REGULAR.id]);
+    });
+
+    test('shows the plan, Active, the renewal line and Manage billing, with nav entries', async ({
+      regularUserPage: page,
+    }) => {
+      await page.goto('/membership');
+      await expect(page.getByTestId('subscription-status-view')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      await expect(page.getByTestId('member-nav-membership')).toHaveAttribute('aria-current', 'page');
+      await expect(page.getByTestId('subscription-plan')).toHaveText('Membership');
+      await expect(page.getByTestId('subscription-status-badge')).toContainText('Active');
+      await expect(page.getByTestId('subscription-period')).toContainText(/^Renews /);
+      await expect(page.getByTestId('manage-subscription-button')).toHaveText('Manage billing');
+      await expect(page.getByTestId('subscription-status-view')).not.toContainText('price_');
+
+      await page.goto('/');
+      await expect(page.getByTestId('home-membership-link')).toHaveAttribute('href', '/membership');
+      await expect(page.getByTestId('manage-subscription-button')).toHaveCount(0);
+    });
+  });
+
   test.describe('Admin enable + subscription column', () => {
     test.beforeEach(async () => {
       // Fully configured but disabled: the pre-condition for "enable unlocks".

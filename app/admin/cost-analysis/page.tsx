@@ -1,260 +1,91 @@
-import { getLLMUsageStats } from "@/actions/admin"
-import { CostDateFilter } from "@/components/admin/cost-analysis/cost-date-filter"
-import { CostModelChart } from "@/components/admin/cost-analysis/cost-model-chart"
-import { CostProviderChart } from "@/components/admin/cost-analysis/cost-provider-chart"
-import { CostTrendChart } from "@/components/admin/cost-analysis/cost-trend-chart"
-import { CostUserChart } from "@/components/admin/cost-analysis/cost-user-chart"
+import { ChartCard } from "@/components/ui/chart-card"
+import { rankedSpec } from "@/components/ui/chart-card/chart-spec"
+import { DateRangeFilter } from "@/components/ui/date-range-filter"
+import { PageHeader } from "@/components/ui/page-header"
+import { StatGrid, StatTile } from "@/components/ui/stat-tile"
+import { getCostAnalysis } from "@/lib/admin/analytics/cost"
 import { getFormat } from "@/lib/settings/app-settings"
-import { toEndOfDayExclusive } from "@/lib/utils/format"
-import { Suspense } from "react"
+import { parseDateRange } from "@/lib/ui/date-range"
+import { formatPeriod } from "@/lib/utils/day-window"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
-interface CostAnalysisPageProps {
-  searchParams: Promise<{ startDate?: string; endDate?: string }>
-}
+type Params = Record<string, string | string[] | undefined>
 
-export default async function CostAnalysisPage({ searchParams }: CostAnalysisPageProps) {
+export default async function CostAnalysisPage({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams
-  const startDate = params.startDate ? new Date(params.startDate) : undefined
-  const endDate = toEndOfDayExclusive(params.endDate)
-
-  // Get stats for the selected period
-  const [stats, f] = await Promise.all([getLLMUsageStats(startDate, endDate), getFormat()])
-
-  // Calculate projections
-  const projectionDays = 30
-  let projectedCost30Days = 0
-  let projectedCost12Months = 0
-
-  if (stats.byDate.length > 0) {
-    // Calculate average daily cost from recent data
-    const recentDays = Math.min(30, stats.byDate.length)
-    const recentCosts = stats.byDate.slice(0, recentDays).reduce((sum, day) => sum + day.cost, 0)
-    const avgDailyCost = recentCosts / recentDays
-
-    projectedCost30Days = avgDailyCost * projectionDays
-    projectedCost12Months = avgDailyCost * 365
-  }
-
-  // Calculate cost per 1M tokens (consistent with pricing definition)
-  const costPer1MTokens = stats.totalTokens > 0 ? (stats.totalCost / stats.totalTokens) * 1000000 : 0
-
-  // Calculate most expensive day
-  const mostExpensiveDay = stats.byDate.length > 0
-    ? stats.byDate.reduce((max, day) => day.cost > max.cost ? day : max, stats.byDate[0])
-    : null
-
-  // Format date range display
-  const formatDateRange = () => {
-    if (!startDate && !endDate) {
-      return "All Time"
-    }
-    const start = params.startDate ? f.dayKey(params.startDate) : "Beginning"
-    const end = params.endDate ? f.dayKey(params.endDate) : "Now"
-    return `${start} - ${end}`
-  }
+  // `startDate` and `endDate` were the old filter's params; bookmarks keep working.
+  const range = parseDateRange(params) ?? parseDateRange(params, { from: "startDate", to: "endDate" })
+  const f = await getFormat()
+  const zone = f.settings.timeZone
+  const cost = await getCostAnalysis(range, zone)
+  const period = formatPeriod(cost.window, f.settings)
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-6">
-            <h1 data-testid="admin-cost-analysis-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">Cost Analysis</h1>
-            <p className="text-sm text-slate-400">
-              Comprehensive cost breakdowns and projections for LLM usage
-            </p>
-            <div className="mt-2 text-xs text-muted-foreground">
-              Period: {formatDateRange()}
-            </div>
-          </div>
-
-          {/* Date Filter */}
-          <Suspense fallback={<div className="mb-6 h-20 bg-slate-800/50 rounded-lg animate-pulse" />}>
-            <CostDateFilter />
-          </Suspense>
-
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-              <div className="text-sm text-slate-400 mb-1">Total Cost</div>
-              <div className="text-3xl font-bold text-green-400">{f.money(stats.totalCost)}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {f.money(stats.averageCostPerRequest, "prose")} avg per request
-              </div>
-            </div>
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-              <div className="text-sm text-slate-400 mb-1">Total Tokens</div>
-              <div className="text-3xl font-bold text-cyan-400">{f.number(stats.totalTokens)}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {f.money(costPer1MTokens)} per 1M tokens
-              </div>
-            </div>
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-              <div className="text-sm text-slate-400 mb-1">30-Day Projection</div>
-              <div className="text-3xl font-bold text-purple-400">{f.money(projectedCost30Days)}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                Based on recent trends
-              </div>
-            </div>
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-              <div className="text-sm text-slate-400 mb-1">12-Month Projection</div>
-              <div className="text-3xl font-bold text-yellow-400">{f.money(projectedCost12Months)}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                Annual estimate
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-              <div className="text-sm text-slate-400 mb-1">Total Requests</div>
-              <div className="text-2xl font-bold text-white">{f.number(stats.totalRequests)}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {f.number(stats.averageTokensPerRequest)} avg tokens/request
-              </div>
-            </div>
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-              <div className="text-sm text-slate-400 mb-1">Unique Providers</div>
-              <div className="text-2xl font-bold text-white">{stats.byProvider.length}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {stats.byProvider.map(p => p.provider).join(", ")}
-              </div>
-            </div>
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-              <div className="text-sm text-slate-400 mb-1">Most Expensive Day</div>
-              <div className="text-2xl font-bold text-white">
-                {mostExpensiveDay ? f.money(mostExpensiveDay.cost) : "N/A"}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {mostExpensiveDay
-                  ? f.dayKey(mostExpensiveDay.date, "day-month-short")
-                  : "No data"}
-              </div>
-            </div>
-          </div>
-
-          {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Cost Trend Over Time */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Cost Trend Over Time</h2>
-              <div className="h-64">
-                <CostTrendChart data={stats.byDate} />
-              </div>
-            </div>
-
-            {/* Cost by Provider */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Cost by Provider</h2>
-              <div className="h-64">
-                <CostProviderChart data={stats.byProvider} />
-              </div>
-            </div>
-          </div>
-
-          {/* Model and User Breakdowns */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Cost by Model */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Cost by Model</h2>
-              <div className="h-80">
-                <CostModelChart data={stats.byModel} />
-              </div>
-            </div>
-
-            {/* Cost by User */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Cost by User</h2>
-              <div className="h-80">
-                <CostUserChart data={stats.byUser} />
-              </div>
-            </div>
-          </div>
-
-          {/* Detailed Breakdown Tables */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Provider Breakdown Table */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden">
-              <div className="p-4 border-b border-slate-700">
-                <h2 className="text-lg font-semibold text-white">Provider Breakdown</h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-700/30 border-b border-slate-700">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Provider</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Cost</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Requests</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Tokens</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700">
-                    {stats.byProvider.map((provider) => (
-                      <tr key={provider.provider} className="hover:bg-slate-700/20">
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-1 bg-slate-700/50 text-slate-300 text-xs font-medium rounded">
-                            {provider.provider}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-medium text-green-400">
-                          {f.money(provider.cost)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-300">
-                          {f.number(provider.requests)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-300">
-                          {f.number(provider.tokens)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Top Models Table */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden">
-              <div className="p-4 border-b border-slate-700">
-                <h2 className="text-lg font-semibold text-white">Top Models</h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-700/30 border-b border-slate-700">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Model</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Cost</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Requests</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Avg Cost</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700">
-                    {stats.byModel.slice(0, 10).map((model) => (
-                      <tr key={model.model} className="hover:bg-slate-700/20">
-                        <td className="px-4 py-3">
-                          <div className="text-sm text-slate-300 font-mono truncate max-w-[200px]">
-                            {model.model}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-medium text-green-400">
-                          {f.money(model.cost)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-300">
-                          {f.number(model.requests)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-400">
-                          {f.money(model.cost / model.requests)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-cost-analysis-page">
+      <PageHeader
+        title="Cost analysis"
+        description="What LLM calls cost, by day, model, member and provider."
+        meta={<span data-testid="admin-cost-analysis-period">Period: {period}</span>}
+        data-testid="admin-cost-analysis-header"
+      />
+      <DateRangeFilter zone={zone} data-testid="cost-dates" />
+      <StatGrid data-testid="cost-stats">
+        <StatTile label="Total cost" value={f.money(cost.totals.cost)} data-testid="cost-total" />
+        <StatTile label="Requests" value={f.number(cost.totals.requests)} data-testid="cost-requests" />
+        <StatTile label="Cost per 1M tokens" value={f.money(cost.costPerMillionTokens)} data-testid="cost-per-million" />
+        <StatTile
+          label="Projected 30 days"
+          value={f.money(cost.projected30Days)}
+          meta="At this period's daily average"
+          data-testid="cost-projection"
+        />
+      </StatGrid>
+      <ChartCard
+        title="Daily cost"
+        description={period}
+        summary={`LLM cost per day, ${period}`}
+        spec={{
+          kind: "bar",
+          x: { type: "day", keys: cost.window.keys },
+          series: [{ id: "cost", label: "Cost", values: cost.daily.map((day) => day.cost) }],
+          format: "money",
+        }}
+        empty={{ title: "No LLM calls in this period", description: "Pick a longer range to see spending." }}
+        data-testid="cost-daily-chart"
+      />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ChartCard
+          title="Cost by model"
+          summary={`LLM cost by model, ${period}`}
+          spec={rankedSpec(
+            cost.byModel.map((row) => ({ label: row.model, value: row.cost })),
+            { series: "Cost", format: "money" },
+          )}
+          heightClassName="h-80"
+          data-testid="cost-model-chart"
+        />
+        <ChartCard
+          title="Cost by member"
+          summary={`LLM cost by member, ${period}`}
+          spec={rankedSpec(
+            cost.byUser.map((row) => ({ label: row.name, value: row.cost })),
+            { series: "Cost", format: "money" },
+          )}
+          heightClassName="h-80"
+          data-testid="cost-user-chart"
+        />
       </div>
+      <ChartCard
+        title="Cost by provider"
+        summary={`LLM cost by provider, ${period}`}
+        spec={rankedSpec(
+          cost.byProvider.map((row) => ({ label: row.provider, value: row.cost })),
+          { series: "Cost", format: "money" },
+        )}
+        heightClassName="h-40"
+        data-testid="cost-provider-chart"
+      />
     </div>
   )
 }
-

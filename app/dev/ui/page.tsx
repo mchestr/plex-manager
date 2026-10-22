@@ -5,16 +5,23 @@ import { Suspense } from "react"
 import { getEnv } from "@/lib/env"
 
 import { ButtonSpecimen } from "./_sections/buttons"
+import { CommandSpecimen } from "./_sections/command"
 import { DataTableSpecimen } from "./_sections/composite-tables"
 import { EmptyStateSpecimen, PageHeaderSpecimen, StatTileSpecimen } from "./_sections/composites"
 import { AlertDialogSpecimen, ConfirmDialogSpecimen, DialogSpecimen } from "./_sections/dialogs"
 import { BadgeSpecimen, CardSpecimen, IconSpecimen, StatusSpecimen } from "./_sections/display"
-import { AlertSpecimen, SkeletonSpecimen, SpinnerSpecimen } from "./_sections/feedback"
+import { AlertSpecimen, SkeletonSpecimen, SpinnerSpecimen, StatusSpecimens } from "./_sections/feedback"
 import { CheckboxSpecimen, FieldSpecimen, InputSpecimen, SelectSpecimen, SwitchSpecimen } from "./_sections/forms"
 import { InkSpecimen } from "./_sections/ink"
 import { DropdownMenuSpecimen, PopoverSpecimen, ToastSpecimen, TooltipSpecimen } from "./_sections/popups"
 import { RewindCardSpecimen } from "./_sections/rewind-card"
-import { SegmentedControlSpecimen, SheetSpecimen, SliderSpecimen, ToggleSpecimen } from "./_sections/rewind-ready"
+import {
+  LiveStatusSpecimen,
+  SegmentedControlSpecimen,
+  SheetSpecimen,
+  SliderSpecimen,
+  ToggleSpecimen,
+} from "./_sections/rewind-ready"
 import { IconMapSpecimen, PosterPaletteSpecimen, StatusVocabularySpecimen } from "./_sections/vocabulary"
 
 export const metadata: Metadata = {
@@ -48,6 +55,7 @@ export default function DevUiPage() {
       <AlertSpecimen />
       <SpinnerSpecimen />
       <SkeletonSpecimen />
+      <StatusSpecimens />
       <IconSpecimen />
       <InputSpecimen />
       <FieldSpecimen />
@@ -58,6 +66,7 @@ export default function DevUiPage() {
       <AlertDialogSpecimen />
       <ConfirmDialogSpecimen />
       <DropdownMenuSpecimen />
+      <CommandSpecimen />
       <PopoverSpecimen />
       <TooltipSpecimen />
       <ToastSpecimen />
@@ -65,6 +74,7 @@ export default function DevUiPage() {
       <ToggleSpecimen />
       <SliderSpecimen />
       <SegmentedControlSpecimen />
+      <LiveStatusSpecimen />
       <InkSpecimen />
       <StatusVocabularySpecimen />
       <IconMapSpecimen />

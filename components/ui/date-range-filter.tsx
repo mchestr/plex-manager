@@ -19,6 +19,8 @@ interface DateRangeFilterProps {
   zone: string
   /** Adds "This season" when given. */
   season?: DayRange
+  /** The range the page shows without `?from=` and `?to=`; replaces "Any time". */
+  defaultRange?: DayRange
   className?: string
   "data-testid"?: string
 }
@@ -32,10 +34,10 @@ const sameRange = (a: DayRange | null, b: DayRange | null) => a?.from === b?.fro
  * `dateRangeToInstants(range, serverZone())`. An end before the start is
  * refused with an error and leaves the URL alone.
  */
-export function DateRangeFilter({ zone, season, className, ...props }: DateRangeFilterProps) {
+export function DateRangeFilter({ zone, season, defaultRange, className, ...props }: DateRangeFilterProps) {
   const testId = props["data-testid"] ?? "date-range"
   const { searchParams, replace } = useReplaceParams()
-  const range = parseDateRange(searchParams)
+  const range = parseDateRange(searchParams) ?? defaultRange ?? null
   // Today in the server zone, fixed for the life of the filter.
   const [today] = useState(() => dayKey(Date.now(), zone))
 
@@ -57,7 +59,7 @@ export function DateRangeFilter({ zone, season, className, ...props }: DateRange
       (season && sameRange(range, season) ? "season" : "custom"))
 
   const items: Array<{ value: Choice; label: string }> = [
-    { value: "all", label: "Any time" },
+    ...(defaultRange ? [] : [{ value: "all" as const, label: "Any time" }]),
     ...presets.map((preset) => ({ value: preset, label: PRESET_LABELS[preset] })),
     ...(season ? [{ value: "season" as const, label: "This season" }] : []),
     ...(choice === "custom" ? [{ value: "custom" as const, label: "Custom" }] : []),

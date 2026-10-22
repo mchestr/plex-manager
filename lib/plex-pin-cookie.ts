@@ -4,7 +4,8 @@
  * - `pm-plex-client` holds the browser's own Plex client identifier, a random
  *   UUID signed for one year. plex.tv lists one Plex Manager device per browser.
  * - `pm-plex-pin` holds the PIN being authorised, with its code, that client
- *   identifier and an optional invite code, signed for 15 minutes. It is the
+ *   identifier, an optional invite code and an optional same-origin path to
+ *   land on afterwards, signed for 15 minutes. It is the
  *   only place the PIN id lives: the forward URL carries none.
  *
  * Both are httpOnly and SameSite=Lax, so plex.tv's top-level redirect back to
@@ -19,6 +20,7 @@ import { z } from "zod"
 
 import { usesSecureCookies } from "@/lib/env"
 import { signValue, verifyValue } from "@/lib/security/signed-cookie"
+import { callbackPathSchema } from "@/lib/validations/callback-path"
 import { inviteCodeSchema } from "@/lib/validations/invite"
 
 export const PLEX_PIN_COOKIE = "pm-plex-pin"
@@ -34,6 +36,7 @@ const pinCookieSchema = z.object({
   code: z.string().min(1).max(64),
   clientId: z.uuid(),
   inviteCode: inviteCodeSchema.optional(),
+  callbackPath: callbackPathSchema.optional(),
 })
 
 export type PlexPinCookie = z.infer<typeof pinCookieSchema>

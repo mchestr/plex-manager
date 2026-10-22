@@ -59,6 +59,7 @@ export function getRegisteredJobTypes(): JobType[] {
 
 /**
  * Check if a job type is registered
+ * @internal
  */
 export function isRegisteredJobType(jobType: string): jobType is JobType {
   return Object.values(JOB_TYPES).includes(jobType as JobType)

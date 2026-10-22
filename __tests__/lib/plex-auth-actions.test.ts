@@ -113,6 +113,21 @@ describe("startPlexSignIn", () => {
     expect(result.data.authUrl).toContain("Plex%20Manager")
   })
 
+  it("keeps a same-origin callback path in the cookie, never in the plex.tv URL", async () => {
+    const result = await startPlexSignIn({ callbackPath: "/admin" })
+
+    expect(readPinCookie(setCookie("pm-plex-pin")?.value)?.callbackPath).toBe("/admin")
+    expect(result.success && result.data.authUrl).not.toContain("admin")
+  })
+
+  it.each(["https://evil.example/admin", "//evil.example", "/\\evil.example", "/a/..//evil.example"])(
+    "drops the off-site callback path %s and still signs in",
+    async (callbackPath) => {
+      await expect(startPlexSignIn({ callbackPath })).resolves.toMatchObject({ success: true })
+      expect(readPinCookie(setCookie("pm-plex-pin")?.value)).not.toHaveProperty("callbackPath")
+    }
+  )
+
   it("keeps a base URL's path in the forward URL", async () => {
     process.env.NEXT_PUBLIC_APP_URL = "https://plex.example.com/manager/"
 
@@ -265,6 +280,24 @@ describe("finishPlexSignIn", () => {
   it("deletes the PIN cookie and sends a member home", async () => {
     await expect(finishPlexSignIn()).resolves.toEqual({ success: true, data: { next: "/" } })
     expect(mockBrowser.jar.has("pm-plex-pin")).toBe(false)
+  })
+
+  it("sends a member to the cookie's callback path", async () => {
+    mockBrowser.jar.set(
+      "pm-plex-pin",
+      pinCookie({ pinId: 5, code: "abcd", clientId: "6f1c2a7e-3b4d-4c5e-8f90-1a2b3c4d5e6f", callbackPath: "/admin" }).value
+    )
+
+    await expect(finishPlexSignIn()).resolves.toEqual({ success: true, data: { next: "/admin" } })
+  })
+
+  it("ignores a callback path in a cookie the app did not sign", async () => {
+    const [body] = (mockBrowser.jar.get("pm-plex-pin") ?? "").split(".")
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as Record<string, unknown>
+    const forged = Buffer.from(JSON.stringify({ ...payload, callbackPath: "//evil.example" })).toString("base64url")
+    mockBrowser.jar.set("pm-plex-pin", forged + ".bad")
+
+    await expect(finishPlexSignIn()).resolves.toEqual({ success: true, data: { next: "/" } })
   })
 
   it("sends a member who has not finished onboarding to /onboarding", async () => {

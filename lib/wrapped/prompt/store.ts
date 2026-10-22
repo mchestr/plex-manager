@@ -18,10 +18,6 @@ import "server-only"
 
 import { prisma } from "@/lib/prisma"
 
-export const PROMPT_TEMPLATE_KINDS = ["v2-full", "rewind-style-guide"] as const
-
-export type PromptTemplateKind = (typeof PROMPT_TEMPLATE_KINDS)[number]
-
 /** The active Rewind style guide's text, or null when there is none. */
 export async function findRewindStyleGuide(): Promise<string | null> {
   const row = await prisma.promptTemplate.findFirst({

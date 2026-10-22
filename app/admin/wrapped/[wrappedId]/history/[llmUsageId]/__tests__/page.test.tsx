@@ -17,6 +17,7 @@ jest.mock('@/lib/admin', () => ({
 
 jest.mock('@/actions/admin', () => ({
   getHistoricalWrappedData: jest.fn(),
+  getHistoricalWrappedVersions: jest.fn().mockResolvedValue([]),
 }))
 
 jest.mock('@/components/admin/wrapped/historical-wrapped-selector-header', () => ({
@@ -27,7 +28,7 @@ jest.mock('@/lib/rewind/fonts', () => ({ rewindFontVariables: 'rw-fonts' }))
 jest.mock('@/lib/brand', () => ({ serverName: async () => 'Chester Family Plex' }))
 jest.mock('@/lib/settings/app-settings', () => ({
   getAppSettings: async () => ({ locale: 'en-US', timeZone: 'UTC', serverName: 'Chester Family Plex' }),
-  getFormat: async () => ({ dateTime: (date: Date) => date.toISOString() }),
+  getFormat: async () => (await import('@/lib/utils/format')).bindFormat({ timeZone: 'America/Chicago', locale: 'en-US' }),
 }))
 
 const mockGetHistoricalWrappedData = getHistoricalWrappedData as jest.Mock
@@ -69,6 +70,18 @@ describe('Admin historical Rewind version page', () => {
     expect(screen.queryByTestId('rewind-article-mode')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: "Mike's Rewind 2025" })).toBeInTheDocument()
     expect(screen.getByTestId('selector-header')).toHaveTextContent('user-1')
+  })
+
+  it('carries breadcrumbs back to the member and their Rewind tab, with the zoned version time (UI-21)', async () => {
+    mockGetHistoricalWrappedData.mockResolvedValue({ ...version, removed: true })
+
+    await renderPage()
+
+    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    expect(crumbs).toHaveTextContent('Users/Mike/Rewind 2025/Version of Nov 30, 2025, 6:00 PM CST')
+    expect(screen.getByRole('link', { name: 'Mike' })).toHaveAttribute('href', '/admin/users/user-1')
+    expect(screen.getByRole('link', { name: 'Rewind 2025' })).toHaveAttribute('href', '/admin/users/user-1?tab=rewind')
+    expect(screen.queryAllByRole('main')).toHaveLength(0)
   })
 
   it('shows the archive article, in the Rewind scope, for a version that has text', async () => {

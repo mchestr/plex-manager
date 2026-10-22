@@ -78,10 +78,10 @@ export const A11Y_ROUTES: A11yRoute[] = [
   // No PIN in the URL: the callback's error state.
   { path: '/auth/callback/plex', as: 'public', ready: 'plex-callback-error-heading' },
   { path: `/rewind/s/${A11Y_SHARE_TOKEN}`, as: 'public', ready: 'rewind-share-v2' },
-  { path: '/a11y-missing-page', as: 'public', ready: 'not-found-heading' },
+  { path: '/a11y-missing-page', as: 'public', ready: 'status-screen' },
 
   // Member
-  { path: '/', as: 'member', ready: 'plex-link-card' },
+  { path: '/', as: 'member', ready: 'home-greeting' },
   { path: '/rewind', as: 'member', ready: 'rewind-article-mode' },
   { path: `/rewind/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'rewind-article-mode' },
   { path: '/onboarding', as: 'member', userId: VISUAL_ONBOARDING_USER.id, ready: 'onboarding-welcome-heading' },
@@ -100,7 +100,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
     setup: (page) => openWith(page, 'users-filter-role', 'users-filter-role-option-admin'),
   },
   // Its Visits and Rewind table count the share visit the public share route records.
-  { path: `/admin/users/${regularId}`, as: 'admin', ready: 'admin-user-season-wrapped-view', reset: clearA11yShareVisits },
+  { path: `/admin/users/${regularId}`, as: 'admin', ready: 'admin-user-header', reset: clearA11yShareVisits },
   { path: `/admin/users/${regularId}/rewind/2026`, as: 'admin', ready: 'admin-rewind-preview-header' },
   { path: '/admin/invites', as: 'admin', ready: 'generate-invite-button' },
   {
@@ -118,15 +118,15 @@ export const A11Y_ROUTES: A11yRoute[] = [
     setup: (page) => openWith(page, `admin-invites-delete-${VISUAL_INVITE_IDS.valid}`, 'admin-invites-delete-dialog'),
   },
   { path: `/admin/invites/${VISUAL_INVITE_IDS.valid}`, as: 'admin', ready: 'admin-invite-details-heading' },
-  { path: '/admin/announcements', as: 'admin', ready: 'announcements-list' },
-  { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-heading' },
-  { path: '/admin/discord', as: 'admin', ready: 'discord-bot-status' },
+  { path: '/admin/announcements', as: 'admin', ready: 'admin-announcements-header' },
+  { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-header' },
+  { path: '/admin/discord', as: 'admin', ready: 'discord-status' },
   { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },
   { path: '/admin/queues', as: 'admin', ready: 'queue-status' },
   { path: '/admin/settings', as: 'admin', ready: 'stripe-settings-card' },
   // The public share route records a visit; a worker restart's re-seed drops it.
-  { path: '/admin/shares', as: 'admin', ready: 'admin-shares-heading', reset: clearA11yShareVisits },
-  { path: '/admin/llm-usage', as: 'admin', ready: 'admin-llm-usage-heading' },
+  { path: '/admin/shares', as: 'admin', ready: 'admin-shares-header', reset: clearA11yShareVisits },
+  { path: '/admin/llm-usage', as: 'admin', ready: 'admin-llm-usage-header' },
   { path: '/admin/llm-usage/visual-llm-usage-1', as: 'admin', ready: 'admin-llm-usage-detail-heading' },
   {
     path: `/admin/llm-usage/conversation/${A11Y_CONVERSATION_ID}`,

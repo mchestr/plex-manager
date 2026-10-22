@@ -4,8 +4,10 @@ import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { getFormat } from "@/lib/settings/app-settings"
-import { userDetail, userRewind } from "@/lib/admin/routes"
+import { llmConversation, llmUsage, userDetail, userRewind } from "@/lib/admin/routes"
 
 export const dynamic = 'force-dynamic'
 
@@ -15,18 +17,6 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
 
   if (!record) {
     notFound()
-  }
-
-  const getProviderBadge = (provider: string) => {
-    const colors = {
-      openai: "bg-green-500/20 text-green-400",
-      mock: "bg-slate-500/20 text-slate-400",
-    }
-    return (
-      <span className={`px-3 py-1.5 ${colors[provider as keyof typeof colors] || "bg-slate-700/50 text-slate-300"} text-sm font-medium rounded`}>
-        {provider}
-      </span>
-    )
   }
 
   // Try to parse response as JSON for better display. Prompt and response are
@@ -93,53 +83,40 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
         <div className="mb-6">
             <Link
               href="/admin/llm-usage"
-              className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 inline-block"
+              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline mb-4 inline-block"
             >
-              ← Back to LLM Requests
+              Back to LLM usage
             </Link>
-            <h1 data-testid="admin-llm-usage-detail-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">LLM Request Details</h1>
-            <p className="text-sm text-slate-400">
+            <h1 data-testid="admin-llm-usage-detail-heading" className="text-2xl sm:text-3xl font-bold text-foreground mb-2">LLM Request Details</h1>
+            <p className="text-sm text-muted-foreground">
               Investigate LLM request details, token usage, and response data
             </p>
           </div>
 
-        {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">Provider</div>
-            <div className="mt-2">{getProviderBadge(record.provider)}</div>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">Model</div>
-            <div className="text-lg font-bold text-white font-mono">
-              {record.model || <span className="text-muted-foreground">Not specified</span>}
-            </div>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">Total Tokens</div>
-            <div className="text-2xl font-bold text-cyan-400">{f.number(record.totalTokens)}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {f.number(record.promptTokens)} prompt + {f.number(record.completionTokens)} completion
-            </div>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">Total Cost</div>
-            <div className="text-2xl font-bold text-green-400">{f.money(record.cost)}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {record.totalTokens > 0
-                ? `${f.money((record.cost / record.totalTokens) * 1000000)} per 1M tokens`
-                : "N/A"}
-            </div>
-          </div>
-        </div>
+        <StatGrid className="mb-6">
+          <StatTile label="Provider" value={record.provider} />
+          <StatTile label="Model" value={record.model || "Not specified"} />
+          <StatTile
+            label="Total tokens"
+            value={f.number(record.totalTokens)}
+            meta={`${f.number(record.promptTokens)} prompt + ${f.number(record.completionTokens)} completion`}
+          />
+          <StatTile
+            label="Total cost"
+            value={f.money(record.cost)}
+            meta={record.totalTokens > 0 ? `${f.money((record.cost / record.totalTokens) * 1000000)} per 1M tokens` : undefined}
+          />
+        </StatGrid>
 
-        {/* User & Context Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">User Information</h2>
-            <div className="flex items-center gap-4 mb-4">
+          <Card>
+            <CardHeader>
+              <CardTitle as="h2">User Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+            <div className="flex items-center gap-4">
               {record.user.image ? (
-                <div className="relative w-16 h-16 rounded-full overflow-hidden bg-slate-700">
+                <div className="relative w-16 h-16 rounded-full overflow-hidden bg-secondary">
                   <Image
                     src={record.user.image}
                     alt={record.user.name || "User"}
@@ -150,67 +127,78 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                   />
                 </div>
               ) : (
-                <div className="w-16 h-16 rounded-full bg-slate-700 flex items-center justify-center">
-                  <span className="text-slate-400 text-xl font-medium">
+                <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
+                  <span className="text-muted-foreground text-xl font-medium">
                     {(record.user.name || record.user.email || "U")[0].toUpperCase()}
                   </span>
                 </div>
               )}
               <div>
-                <div className="text-lg font-medium text-white">{record.user.name || "Unknown"}</div>
+                <div className="text-lg font-medium text-foreground">{record.user.name || "Unknown"}</div>
                 {record.user.email && (
-                  <div className="text-sm text-slate-400">{record.user.email}</div>
+                  <div className="text-sm text-muted-foreground">{record.user.email}</div>
                 )}
                 <Link
                   href={userDetail(record.user.id)}
-                  className="text-sm text-cyan-400 hover:text-cyan-300 underline mt-1 inline-block"
+                  className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground mt-1 inline-block"
                 >
                   View user
                 </Link>
+                <Link
+                  href={llmUsage({ userId: record.userId, year: record.wrapped?.year })}
+                  className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground mt-1 ml-4 inline-block"
+                  data-testid="llm-usage-detail-view-all"
+                >
+                  View all
+                </Link>
               </div>
             </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Usage Context</h2>
+          <Card>
+            <CardHeader>
+              <CardTitle as="h2">Usage Context</CardTitle>
+            </CardHeader>
+            <CardContent>
             {record.wrapped || record.chatConversation ? (
               <div className="space-y-4">
                 {record.wrapped && (
                   <div className="space-y-2">
-                    <div className="text-sm text-slate-400 mb-1">Wrapped</div>
+                    <div className="text-sm text-muted-foreground mb-1">Wrapped</div>
                     <div>
-                      <span className="text-sm text-slate-400">Year: </span>
-                      <span className="text-sm font-medium text-white">{record.wrapped.year}</span>
+                      <span className="text-sm text-muted-foreground">Year: </span>
+                      <span className="text-sm font-medium text-foreground">{record.wrapped.year}</span>
                     </div>
                     <div>
-                      <span className="text-sm text-slate-400">Status: </span>
-                      <span className="text-sm font-medium text-white">{record.wrapped.status}</span>
+                      <span className="text-sm text-muted-foreground">Status: </span>
+                      <span className="text-sm font-medium text-foreground">{record.wrapped.status}</span>
                     </div>
                     {record.wrapped.generatedAt && (
                       <div>
-                        <span className="text-sm text-slate-400">Generated: </span>
-                        <span className="text-sm text-white">
+                        <span className="text-sm text-muted-foreground">Generated: </span>
+                        <span className="text-sm text-foreground">
                           {f.dateTime(record.wrapped.generatedAt, { zoneLabel: true })}
                         </span>
                       </div>
                     )}
                     <Link
                       href={userRewind(record.userId, record.wrapped.year)}
-                      className="text-sm text-cyan-400 hover:text-cyan-300 underline inline-block mt-2"
+                      className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground inline-block mt-2"
                     >
-                      View Wrapped
+                      View Rewind
                     </Link>
                   </div>
                 )}
                 {record.chatConversation && (
                   <div className="space-y-2">
-                    <div className="text-sm text-slate-400 mb-1">Chat Conversation</div>
-                    <div className="text-sm text-white">
+                    <div className="text-sm text-muted-foreground mb-1">Chat Conversation</div>
+                    <div className="text-sm text-foreground">
                       Started {f.dateTime(record.chatConversation.createdAt, { zoneLabel: true })}
                     </div>
                     <Link
-                      href={`/admin/llm-usage/conversation/${record.chatConversation.id}`}
-                      className="text-sm text-cyan-400 hover:text-cyan-300 underline inline-block mt-2"
+                      href={llmConversation(record.chatConversation.id)}
+                      className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground inline-block mt-2"
                     >
                       View Conversation Calls
                     </Link>
@@ -218,40 +206,23 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                 )}
               </div>
             ) : (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 Not associated with a wrapped or chat conversation.
               </p>
             )}
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Request Details */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Request Details</h2>
-          <div className="space-y-4">
-            <div>
-              <div className="text-sm text-slate-400 mb-2">Created At</div>
-              <div className="text-sm text-white">{f.dateTime(record.createdAt, { zoneLabel: true })}</div>
-            </div>
-            <div>
-              <div className="text-sm text-slate-400 mb-2">Token Breakdown</div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-slate-900/50 rounded p-3">
-                  <div className="text-xs text-slate-400 mb-1">Prompt Tokens</div>
-                  <div className="text-lg font-bold text-blue-400">{f.number(record.promptTokens)}</div>
-                </div>
-                <div className="bg-slate-900/50 rounded p-3">
-                  <div className="text-xs text-slate-400 mb-1">Completion Tokens</div>
-                  <div className="text-lg font-bold text-purple-400">{f.number(record.completionTokens)}</div>
-                </div>
-                <div className="bg-slate-900/50 rounded p-3">
-                  <div className="text-xs text-slate-400 mb-1">Total Tokens</div>
-                  <div className="text-lg font-bold text-cyan-400">{f.number(record.totalTokens)}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle as="h2">Request Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-muted-foreground mb-2">Created At</div>
+            <div className="text-sm text-foreground">{f.dateTime(record.createdAt, { zoneLabel: true })}</div>
+          </CardContent>
+        </Card>
 
         {/* Prompt */}
         {record.prompt === null ? (

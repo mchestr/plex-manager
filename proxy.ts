@@ -17,6 +17,7 @@
 import { getAccessLevel } from "@/lib/access"
 import { isMemberAppPath, needsSubscribeRedirect } from "@/lib/access-paths"
 import { getEnv, usesSecureCookies } from "@/lib/env"
+import { hasMembershipPage } from "@/lib/member/membership-page"
 import { PATHNAME_HEADER } from "@/lib/request-headers"
 import { sanitizeText } from "@/lib/utils/log-redaction"
 import { createLogger, generateRequestId, runWithRequestContext } from "@/lib/utils/logger"
@@ -58,6 +59,30 @@ function isInvalidRewindYearPath(pathname: string): boolean {
   return segment !== undefined && !yearParamSchema.safeParse(segment).success
 }
 
+/** The session token of a page load, or null without one. */
+async function pageToken(request: NextRequest) {
+  return getToken({ req: request, secret: getEnv().NEXTAUTH_SECRET, secureCookie: usesSecureCookies() })
+}
+
+/**
+ * Whether the path is `/membership` for a signed-in member who has no such
+ * page: Stripe is off and they have no subscription row (P10.22). The page
+ * renders its not-found itself, but streamed behind `app/loading.tsx`, so this
+ * gives it the 404 status, as for a Rewind year. A failed check decides nothing.
+ */
+async function isMissingMembershipPage(request: NextRequest): Promise<boolean> {
+  if (request.nextUrl.pathname !== "/membership" || (request.method !== "GET" && request.method !== "HEAD")) {
+    return false
+  }
+  try {
+    const userId = (await pageToken(request))?.sub
+    return userId ? !(await hasMembershipPage(userId)) : false
+  } catch (error) {
+    logger.error("Membership page check failed", error)
+    return false
+  }
+}
+
 /**
  * Whether a signed-in member must be sent to `/subscribe` from this path: a
  * `lapsed` member may open only the read-only Rewind pages, and a `none`
@@ -77,11 +102,7 @@ async function needsMemberRedirect(request: NextRequest): Promise<boolean> {
     return false
   }
   try {
-    const token = await getToken({
-      req: request,
-      secret: getEnv().NEXTAUTH_SECRET,
-      secureCookie: usesSecureCookies(),
-    })
+    const token = await pageToken(request)
     const claimed = token?.accessLevel
     if (!token?.sub || !claimed || !needsSubscribeRedirect(pathname, claimed)) {
       return false
@@ -158,9 +179,10 @@ export async function proxy(request: NextRequest) {
     }
 
     // Create response: the same page, with a 404 status for an invalid Rewind
-    // year or a share token that shares nothing
+    // year, a share token that shares nothing or a membership page the member lacks
     const init = { request: { headers: pageRequestHeaders(request.headers, pathname) } }
-    const notFound = isInvalidRewindYearPath(pathname) || share === "missing"
+    const notFound =
+      isInvalidRewindYearPath(pathname) || share === "missing" || (await isMissingMembershipPage(request))
     const response = notFound
       ? NextResponse.rewrite(request.nextUrl, { ...init, status: 404 })
       : NextResponse.next(init)

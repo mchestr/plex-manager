@@ -1,350 +1,73 @@
-import { getLLMUsageRecords, getLLMUsageStats, getUserById } from "@/actions/admin"
-import { aggregateLlmUsage } from "@/lib/utils"
+import { z } from "zod"
+
+import { UsageTable } from "@/components/admin/llm-usage/usage-table"
+import { PageHeader } from "@/components/ui/page-header"
+import { StatGrid, StatTile } from "@/components/ui/stat-tile"
+import { getUsageFilterOptions, listUsageGroups, LLM_PURPOSES } from "@/lib/admin/analytics/llm-usage"
 import { getFormat } from "@/lib/settings/app-settings"
-import Image from "next/image"
-import Link from "next/link"
-import { llmUsageDetail, userDetail } from "@/lib/admin/routes"
+import { parseDateRange } from "@/lib/ui/date-range"
+import { parseTableParams } from "@/lib/ui/table-params"
+import { formatPeriod } from "@/lib/utils/day-window"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
-export default async function LLMUsagePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string; userId?: string; conversationId?: string }>
-}) {
+type Params = Record<string, string | string[] | undefined>
+
+const filterSchema = z.object({
+  userId: z.string().min(1).max(100).optional().catch(undefined),
+  purpose: z.enum(LLM_PURPOSES).optional().catch(undefined),
+  model: z.string().min(1).max(200).optional().catch(undefined),
+  year: z.coerce.number().int().min(2000).max(2100).optional().catch(undefined),
+})
+
+export default async function LLMUsagePage({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams
-  const page = parseInt(params.page || "1", 10)
-  const userId = params.userId
-  const conversationId = params.conversationId
+  const single = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
+  const table = parseTableParams(params, { sortable: [], defaultSort: { id: "started", desc: true } })
+  const filters = filterSchema.parse({
+    userId: single(params.userId),
+    purpose: single(params.purpose),
+    model: single(params.model),
+    year: single(params.year),
+  })
+  const range = parseDateRange(params)
+  const filtered = Boolean(filters.userId || filters.purpose || filters.model || filters.year || range)
 
-  const { records, pagination } = await getLLMUsageRecords(page, 50, userId, conversationId)
-  const stats = await getLLMUsageStats(undefined, undefined, userId)
-  const filteredUser = userId ? await getUserById(userId) : null
   const f = await getFormat()
+  const zone = f.settings.timeZone
+  const [usage, options] = await Promise.all([
+    listUsageGroups({ ...filters, range }, zone, { page: table.page, pageSize: table.pageSize }),
+    getUsageFilterOptions(),
+  ])
 
-  const conversationGroups = (() => {
-    const groups = new Map<
-      string,
-      {
-        records: typeof records
-      }
-    >()
-
-    for (const record of records) {
-      const key = record.chatConversationId ?? `single:${record.id}`
-      const existing = groups.get(key) || { records: [] as typeof records }
-      existing.records.push(record)
-      groups.set(key, existing)
-    }
-
-    return Array.from(groups.entries()).map(([key, group]) => {
-      const usageSummary = aggregateLlmUsage(
-        group.records.map((r) => ({
-          totalTokens: r.totalTokens,
-          promptTokens: r.promptTokens,
-          completionTokens: r.completionTokens,
-          cost: r.cost,
-          provider: r.provider,
-          model: r.model,
-        }))
-      )
-
-      const first = group.records.reduce(
-        (earliest, r) => (r.createdAt < earliest.createdAt ? r : earliest),
-        group.records[0]
-      )
-
-      const sampleUsageId = first.id
-      const isChat = !!first.chatConversationId
-      const hasWrapped = !!first.wrapped
-
-      let contextLabel = "Standalone"
-      if (isChat) {
-        const calls = group.records.length
-        contextLabel = `Chat conversation (${calls} call${calls === 1 ? "" : "s"})`
-      } else if (hasWrapped && first.wrapped) {
-        contextLabel = `Wrapped ${first.wrapped.year} (${first.wrapped.status})`
-      }
-
-      return {
-        id: key,
-        user: first.user,
-        createdAt: first.createdAt,
-        totalTokens: usageSummary?.totalTokens ?? 0,
-        promptTokens: usageSummary?.promptTokens ?? 0,
-        completionTokens: usageSummary?.completionTokens ?? 0,
-        cost: usageSummary?.cost ?? 0,
-        provider: usageSummary?.provider ?? null,
-        model: usageSummary?.model ?? null,
-        isChat,
-        conversationId: first.chatConversationId as string | undefined,
-        contextLabel,
-        sampleUsageId,
-        hasWrapped,
-      }
-    })
-  })()
+  const scope = [
+    range ? formatPeriod(range, f.settings) : "Any time",
+    filters.year !== undefined ? `Rewind ${filters.year}` : null,
+  ].filter(Boolean)
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
-          <div className="mb-6">
-            <h1 data-testid="admin-llm-usage-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">LLM Requests</h1>
-            <p className="text-sm text-slate-400">
-              {filteredUser
-                ? `Filtered by: ${filteredUser.name || filteredUser.email || "Unknown User"}`
-                : "Investigate LLM requests, responses, and token usage"}
-            </p>
-            {filteredUser && (
-              <Link
-                href="/admin/llm-usage"
-                className="text-xs text-cyan-400 hover:text-cyan-300 underline mt-1 inline-block"
-              >
-                Clear filter
-              </Link>
-            )}
-          </div>
-
-        {/* Filter Banner */}
-        {filteredUser && (
-          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4 mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-3 sm:gap-4">
-                {filteredUser.image ? (
-                  <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-slate-700 flex-shrink-0">
-                    <Image
-                      src={filteredUser.image}
-                      alt={filteredUser.name || "User"}
-                      width={48}
-                      height={48}
-                      className="w-full h-full object-cover"
-                      unoptimized
-                    />
-                  </div>
-                ) : (
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
-                    <span className="text-slate-400 text-base sm:text-lg font-medium">
-                      {(filteredUser.name || filteredUser.email || "U")[0].toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <div className="text-xs sm:text-sm text-slate-400">Viewing requests for</div>
-                  <div className="text-base sm:text-lg font-semibold text-white truncate">
-                    {filteredUser.name || filteredUser.email || "Unknown User"}
-                  </div>
-                </div>
-              </div>
-              <Link
-                href="/admin/llm-usage"
-                className="px-3 sm:px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs sm:text-sm font-medium rounded transition-colors self-start sm:self-auto"
-              >
-                Clear Filter
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* Stats Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">
-              {filteredUser ? "User Requests" : "Total Requests"}
-            </div>
-            <div className="text-2xl font-bold text-white">{f.number(stats.totalRequests)}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {f.number(stats.averageTokensPerRequest)} avg tokens
-            </div>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">
-              {filteredUser ? "User Tokens" : "Total Tokens"}
-            </div>
-            <div className="text-2xl font-bold text-cyan-400">{f.number(stats.totalTokens)}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {stats.byProvider.length} provider{stats.byProvider.length !== 1 ? "s" : ""}
-            </div>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">
-              {filteredUser ? "User Cost" : "Total Cost"}
-            </div>
-            <div className="text-2xl font-bold text-green-400">{f.money(stats.totalCost)}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {f.money(stats.averageCostPerRequest, "prose")} avg per request
-            </div>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">Unique Models</div>
-            <div className="text-2xl font-bold text-purple-400">{stats.byModel.length}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {filteredUser
-                ? "This user only"
-                : `${stats.byUser.length} user${stats.byUser.length !== 1 ? "s" : ""}`}
-            </div>
-          </div>
-        </div>
-
-        {/* Usage Records Table (grouped by conversation / standalone) */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-                <thead className="bg-slate-700/30 border-b border-slate-700">
-                  <tr>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                      Started
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider hidden md:table-cell">
-                      User
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider hidden lg:table-cell">
-                      Model
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                      Tokens
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                      Cost
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                      Context
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700">
-                  {conversationGroups.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
-                      No LLM usage found.
-                      </td>
-                    </tr>
-                  ) : (
-                    conversationGroups
-                      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-                      .map((group) => (
-                        <tr key={group.id} className="hover:bg-slate-700/20 transition-colors">
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                            <div className="text-xs sm:text-sm text-slate-300" data-testid="llm-usage-started-timestamp">
-                              <div className="md:hidden">
-                                {f.date(group.createdAt, "day-month-short")}
-                              </div>
-                              <div className="hidden md:block">
-                                {f.dateTime(group.createdAt, { zoneLabel: true })}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden md:table-cell">
-                            <div className="flex items-center gap-2">
-                              {group.user.image ? (
-                                <div className="relative w-8 h-8 rounded-full overflow-hidden bg-slate-700">
-                                  <Image
-                                    src={group.user.image}
-                                    alt={group.user.name || "User"}
-                                    width={32}
-                                    height={32}
-                                    className="w-full h-full object-cover"
-                                    unoptimized
-                                  />
-                                </div>
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
-                                  <span className="text-slate-400 text-xs font-medium">
-                                    {(group.user.name || group.user.email || "U")[0].toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
-                              <div>
-                                <Link
-                                  href={userDetail(group.user.id)}
-                                  className="text-sm font-medium text-white hover:underline"
-                                >
-                                  {group.user.name || "Unknown"}
-                                </Link>
-                                {group.user.email && (
-                                  <div className="text-xs text-slate-400">{group.user.email}</div>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
-                            <div className="text-sm text-slate-300 font-mono truncate max-w-[140px]">
-                              {group.model || <span className="text-muted-foreground">—</span>}
-                            </div>
-                          </td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm">
-                              <div className="text-white font-medium">
-                                {f.number(group.totalTokens)}
-                              </div>
-                              <div className="text-xs text-slate-400 hidden sm:block">
-                                {f.number(group.promptTokens)} +{" "}
-                                {f.number(group.completionTokens)}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-green-400 font-medium">
-                              {f.money(group.cost)}
-                            </div>
-                          </td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                            <span className="text-xs font-medium text-slate-300">
-                            {group.contextLabel}
-                            </span>
-                          </td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                          <Link
-                            href={
-                              group.isChat && group.conversationId
-                                ? `/admin/llm-usage/conversation/${group.conversationId}`
-                                : llmUsageDetail(group.sampleUsageId)
-                            }
-                            className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-medium rounded transition-colors inline-block"
-                          >
-                            {group.isChat ? "View Calls" : "View Details"}
-                          </Link>
-                          </td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="px-4 sm:px-6 py-4 border-t border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="text-xs sm:text-sm text-slate-400">
-                Showing {(pagination.page - 1) * pagination.pageSize + 1} to{" "}
-                {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{" "}
-                {pagination.total} results
-              </div>
-              <div className="flex gap-2">
-                {pagination.page > 1 && (
-                  <Link
-                    href={`/admin/llm-usage?page=${pagination.page - 1}${userId ? `&userId=${userId}` : ""}`}
-                    className="px-3 sm:px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs sm:text-sm font-medium rounded transition-colors"
-                  >
-                    Previous
-                  </Link>
-                )}
-                {pagination.page < pagination.totalPages && (
-                  <Link
-                    href={`/admin/llm-usage?page=${pagination.page + 1}${userId ? `&userId=${userId}` : ""}`}
-                    className="px-3 sm:px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs sm:text-sm font-medium rounded transition-colors"
-                  >
-                    Next
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-llm-usage-page">
+      <PageHeader
+        title="LLM usage"
+        description="Every billed LLM call, by conversation or on its own."
+        meta={<span data-testid="admin-llm-usage-scope">{scope.join(" · ")}</span>}
+        data-testid="admin-llm-usage-header"
+      />
+      <StatGrid data-testid="llm-usage-stats">
+        <StatTile label="Calls" value={f.number(usage.totals.calls)} />
+        <StatTile label="Rows" value={f.number(usage.total)} unit="conversations and calls" />
+        <StatTile label="Tokens" value={f.number(usage.totals.tokens)} />
+        <StatTile label="Cost" value={f.money(usage.totals.cost)} />
+      </StatGrid>
+      <UsageTable
+        rows={usage.rows}
+        total={usage.total}
+        page={table.page}
+        pageSize={table.pageSize}
+        filtered={filtered}
+        options={options}
+        zone={zone}
+      />
     </div>
   )
 }
-

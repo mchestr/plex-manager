@@ -6,7 +6,7 @@ import { Providers } from "@/lib/providers"
 describe("Providers", () => {
   it("applies the OS reduced-motion setting app-wide", () => {
     render(
-      <Providers format={{ timeZone: "UTC", locale: "en-US" }}>
+      <Providers format={{ timeZone: "UTC", locale: "en-US" }} serverName="Northfield Plex">
         <p>app</p>
       </Providers>
     )

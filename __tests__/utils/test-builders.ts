@@ -15,7 +15,6 @@ import {
   LlmUsageStats,
   MediaMarkActivity,
   UserActivityTimelineData,
-  WrappedSummary,
 } from '@/types/admin'
 
 // ============================================================================
@@ -41,24 +40,6 @@ export const makeLlmUsageStats = (
 })
 
 /**
- * Creates a mock wrapped summary object
- * @param overrides - Partial properties to override defaults
- * @returns WrappedSummary object with sensible defaults
- */
-export const makeWrappedSummary = (
-  overrides: Partial<WrappedSummary> = {}
-): WrappedSummary => ({
-  id: 'wrapped-1',
-  year: 2024,
-  status: 'completed',
-  generatedAt: new Date('2024-01-01T00:00:00Z'),
-  createdAt: new Date('2024-01-01T00:00:00Z'),
-  shareToken: null,
-  shareVisits: 0,
-  ...overrides,
-})
-
-/**
  * Creates a mock admin user with wrapped statistics
  * @param overrides - Partial properties to override defaults
  * @returns AdminUserWithWrappedStats object with sensible defaults
@@ -76,6 +57,7 @@ export const makeAdminUserWithStats = (
   updatedAt: new Date('2024-01-01T00:00:00Z'),
   wrappedStatus: 'completed',
   wrappedGeneratedAt: new Date('2024-01-01T00:00:00Z'),
+  wrappedRunStartedAt: null,
   totalWrappedCount: 1,
   totalShares: 0,
   totalVisits: 0,
@@ -528,9 +510,7 @@ export const makeUserActivityTimelineData = (
     makeMediaMarkActivity(),
   ],
   total: 2,
-  page: 1,
-  pageSize: 10,
-  totalPages: 1,
+  nextCursor: null,
   ...overrides,
 })
 

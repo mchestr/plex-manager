@@ -26,6 +26,7 @@ import { consume } from '@/lib/security/rate-limit'
 import { config as proxyConfig, proxy } from '@/proxy'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { buildConfig } from '@/__tests__/helpers/factories'
 
 const mockLogError = jest.fn()
 const mockLogDebug = jest.fn()
@@ -262,6 +263,50 @@ describe('proxy lapsed-member redirect (P4.5, FR-51)', () => {
 
     expectPassedThrough(await proxy(request('/')))
     expect(mockLogError).toHaveBeenCalledWith('Access level check failed', error)
+  })
+})
+
+describe('proxy /membership status (P10.22)', () => {
+  type Subscription = Awaited<ReturnType<typeof prismaMock.subscription.findUnique>>
+
+  beforeEach(() => {
+    mockGetToken.mockResolvedValue({ sub: 'member-1', isAdmin: false, accessLevel: 'full' })
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: false }))
+    prismaMock.subscription.findUnique.mockResolvedValue(null)
+  })
+
+  it('answers a member with Stripe off and no subscription with a 404 and the same page', async () => {
+    expectNotFoundRewrite(await proxy(request('/membership')), '/membership')
+    expect(prismaMock.subscription.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: 'member-1' } }))
+  })
+
+  it('passes it through with Stripe on', async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: true }))
+
+    expectPassedThrough(await proxy(request('/membership')))
+  })
+
+  it('passes it through for a member with a subscription row', async () => {
+    prismaMock.subscription.findUnique.mockResolvedValue({ id: 'sub-1' } as Subscription)
+
+    expectPassedThrough(await proxy(request('/membership')))
+  })
+
+  it('leaves a signed-out request and a failed check to the page', async () => {
+    mockGetToken.mockResolvedValue(null)
+    expectPassedThrough(await proxy(request('/membership')))
+    expect(prismaMock.config.findUnique).not.toHaveBeenCalled()
+
+    mockGetToken.mockResolvedValue({ sub: 'member-1', isAdmin: false, accessLevel: 'full' })
+    const error = new Error('Database unavailable')
+    prismaMock.config.findUnique.mockRejectedValue(error)
+    expectPassedThrough(await proxy(request('/membership')))
+    expect(mockLogError).toHaveBeenCalledWith('Membership page check failed', error)
+  })
+
+  it('never checks another path', async () => {
+    expectPassedThrough(await proxy(request('/help')))
+    expect(prismaMock.config.findUnique).not.toHaveBeenCalled()
   })
 })
 

@@ -10,8 +10,13 @@ import type { Route } from "next"
 
 const seg = encodeURIComponent
 
-export function userDetail(id: string): Route {
-  return `/admin/users/${seg(id)}` as Route
+/** The user detail page's tabs (P10.6); `overview` is the default and leaves the URL bare. */
+export const USER_DETAIL_TABS = ["overview", "rewind", "usage", "billing"] as const
+export type UserDetailTab = (typeof USER_DETAIL_TABS)[number]
+
+export function userDetail(id: string, { tab }: { tab?: UserDetailTab } = {}): Route {
+  const base = `/admin/users/${seg(id)}`
+  return (tab && tab !== "overview" ? `${base}?tab=${tab}` : base) as Route
 }
 
 /** One member's Rewind for `year`, in the admin preview (P7.9). */
@@ -24,17 +29,27 @@ export function playgroundFor(userId: string): Route {
   return `/admin/rewind/playground?subject=${seg(userId)}` as Route
 }
 
-/** LLM usage, filtered to a member and a year when given. */
-export function llmUsage({ userId, year }: { userId?: string; year?: number } = {}): Route {
+/**
+ * LLM usage, filtered to a member, a Rewind year and an inclusive day range
+ * (`YYYY-MM-DD` in the server zone) when given.
+ */
+export function llmUsage({ userId, year, from, to }: { userId?: string; year?: number; from?: string; to?: string } = {}): Route {
   const params = new URLSearchParams()
   if (userId) params.set("userId", userId)
   if (year !== undefined) params.set("year", String(year))
+  if (from) params.set("from", from)
+  if (to) params.set("to", to)
   const query = params.toString()
   return (query ? `/admin/llm-usage?${query}` : "/admin/llm-usage") as Route
 }
 
 export function llmUsageDetail(id: string): Route {
   return `/admin/llm-usage/${seg(id)}` as Route
+}
+
+/** One assistant conversation's calls. */
+export function llmConversation(id: string): Route {
+  return `/admin/llm-usage/conversation/${seg(id)}` as Route
 }
 
 export function invite(id: string): Route {
@@ -44,4 +59,22 @@ export function invite(id: string): Route {
 /** One stored generation of a Rewind, from its LLM usage row. */
 export function rewindHistory(wrappedId: string, usageId: string): Route {
   return `/admin/wrapped/${seg(wrappedId)}/history/${seg(usageId)}` as Route
+}
+
+export function promptDetail(id: string): Route {
+  return `/admin/prompts/${seg(id)}` as Route
+}
+
+export function promptEdit(id: string): Route {
+  return `/admin/prompts/${seg(id)}/edit` as Route
+}
+
+/** A new style guide, prefilled from a v2 template's text when `fromId` is given. */
+export function newStyleGuide(fromId?: string): Route {
+  return (fromId ? `/admin/prompts/new?from=${seg(fromId)}` : "/admin/prompts/new") as Route
+}
+
+/** The playground with a style guide selected for the dry run. */
+export function playgroundWithStyleGuide(id: string): Route {
+  return `/admin/rewind/playground?styleGuideId=${seg(id)}` as Route
 }

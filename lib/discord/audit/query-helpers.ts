@@ -5,10 +5,11 @@
  * - {@link dateRangeWhere} builds the `createdAt` clause used by every reader.
  * - {@link countByStatus} folds a single `groupBy(["status"])` result into a
  *   `{ success, failed, timeout, ... }` shape, replacing paired `count()` calls.
- * - {@link toDateKey} buckets a timestamp into a `YYYY-MM-DD` day key.
+ * - {@link toDateKey} buckets a timestamp into its `YYYY-MM-DD` day in the server zone.
  */
 
 import type { DiscordCommandStatus } from "@/lib/generated/prisma/client"
+import { dayKey } from "@/lib/utils/zoned-time"
 
 /**
  * Build a Prisma `where` clause constraining `createdAt` to `[start, end)`.
@@ -29,10 +30,11 @@ export function dateRangeWhere(
 }
 
 /**
- * Bucket a timestamp into its `YYYY-MM-DD` (UTC) day key.
+ * Bucket a timestamp into its `YYYY-MM-DD` day in `zone` (the server zone),
+ * so the Discord charts label a day the way every other admin chart does.
  */
-export function toDateKey(date: Date): string {
-  return date.toISOString().split("T")[0]
+export function toDateKey(date: Date, zone: string): string {
+  return dayKey(date.getTime(), zone)
 }
 
 /**

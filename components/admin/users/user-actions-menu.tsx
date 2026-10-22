@@ -9,6 +9,7 @@ import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
+import { canRegenerate } from "@/lib/admin/can-regenerate"
 import { userRewind } from "@/lib/admin/routes"
 
 interface UserActionsMenuProps {
@@ -19,6 +20,7 @@ interface UserActionsMenuProps {
     isAdmin: boolean
     hasPlexAccess: boolean | null
     wrappedStatus: string | null
+    wrappedRunStartedAt: Date | string | null
     subscriptionStatus: SubscriptionStatus | null
     isExempt: boolean
     stripeCustomerId: string | null
@@ -31,6 +33,8 @@ interface UserActionsMenuProps {
 
 export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
+  // Read once per mount, so the render stays pure.
+  const [now] = useState(() => Date.now())
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
   const buttonRef = useRef<HTMLButtonElement>(null)
 
@@ -42,9 +46,13 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
   // Only link to Stripe when we have both a customer and a (mode-aware) base URL.
   const hasStripeLink = Boolean(user.stripeCustomerId && stripeDashboardBaseUrl)
 
-  const hasActions = user.wrappedStatus === "completed" ||
-                     user.wrappedStatus === "failed" ||
-                     !user.wrappedStatus ||
+  // A stuck run (over 15 minutes) can be retried from the list (UI-29).
+  const regenerable = canRegenerate(
+    { status: user.wrappedRunStartedAt ? "generating" : user.wrappedStatus, runStartedAt: user.wrappedRunStartedAt },
+    now
+  )
+
+  const hasActions = regenerable ||
                      (!user.isAdmin && user.hasPlexAccess === true) ||
                      canCancelSubscription ||
                      canGrantAccess ||
@@ -153,9 +161,7 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
           )}
 
           {/* Regenerate Wrapped */}
-          {(user.wrappedStatus === "completed" ||
-            user.wrappedStatus === "failed" ||
-            !user.wrappedStatus) && (
+          {regenerable && (
             <div className="px-3 py-2 hover:bg-slate-700/50 transition-colors">
               <RegenerateWrappedButton
                 userId={user.id}

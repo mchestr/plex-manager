@@ -1,10 +1,6 @@
 {
-  "admin /admin/announcements": {
-    "heading-order|moderate": 1
-  },
-  "admin /admin/cost-analysis": {
-    "role-img-alt|serious": 4
-  },
+  "admin /admin/announcements": {},
+  "admin /admin/cost-analysis": {},
   "admin /admin/discord": {},
   "admin /admin/invites": {},
   "admin /admin/invites [confirm dialog open]": {},
@@ -13,35 +9,21 @@
     "color-contrast|incomplete": 2,
     "heading-order|moderate": 1
   },
-  "admin /admin/llm-usage": {
-    "color-contrast|incomplete": 4
-  },
-  "admin /admin/llm-usage/conversation/a11y-conversation": {
-    "color-contrast|incomplete": 1
-  },
-  "admin /admin/llm-usage/visual-llm-usage-1": {
-    "color-contrast|incomplete": 1
-  },
-  "admin /admin/prompts": {
-    "color-contrast|incomplete": 1
-  },
+  "admin /admin/llm-usage": {},
+  "admin /admin/llm-usage/conversation/a11y-conversation": {},
+  "admin /admin/llm-usage/visual-llm-usage-1": {},
+  "admin /admin/prompts": {},
   "admin /admin/prompts/new": {
-    "color-contrast|incomplete": 3
+    "color-contrast|incomplete": 2
   },
-  "admin /admin/prompts/visual-prompt-active": {
+  "admin /admin/prompts/visual-prompt-active": {},
+  "admin /admin/prompts/visual-prompt-active/edit": {
     "color-contrast|incomplete": 1
   },
-  "admin /admin/prompts/visual-prompt-active/edit": {
-    "color-contrast|incomplete": 3
-  },
-  "admin /admin/queues": {
-    "color-contrast|serious": 1,
-    "heading-order|moderate": 1
-  },
+  "admin /admin/queues": {},
+  "admin /admin/rewind/playground": {},
   "admin /admin/settings": {},
-  "admin /admin/shares": {
-    "role-img-alt|serious": 1
-  },
+  "admin /admin/shares": {},
   "admin /admin/users": {
     "color-contrast|incomplete": 2,
     "heading-order|moderate": 1
@@ -52,25 +34,16 @@
   },
   "admin /admin/users/regular-user-id": {},
   "admin /admin/users/regular-user-id/rewind/2026": {},
-  "admin /admin/wrapped/visual-rewind/history/visual-llm-usage-1": {
-    "link-name|serious": 1
-  },
-  "member /": {
-    "color-contrast|incomplete": 10,
-    "heading-order|moderate": 1
-  },
+  "admin /admin/wrapped/visual-rewind/history/visual-llm-usage-1": {},
+  "member /": {},
   "member /account": {},
   "member /discord/link": {},
-  "member /onboarding": {
-    "color-contrast|incomplete": 16
-  },
+  "member /onboarding": {},
   "member /rewind": {},
   "member /rewind/2026": {},
   "member /subscribe": {},
   "member /subscribe/success": {},
-  "public /": {
-    "color-contrast|incomplete": 2
-  },
+  "public /": {},
   "public /a11y-missing-page": {},
   "public /auth/callback/plex": {},
   "public /auth/denied": {},

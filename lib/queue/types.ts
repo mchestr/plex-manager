@@ -46,6 +46,45 @@ export const JOB_TYPES = {
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
 
+/** What the admin queues page calls each job type (P10.3). */
+export const JOB_TYPE_LABELS: Record<JobType, string> = {
+  [JOB_TYPES.WATCHLIST_SYNC_USER]: "Watchlist sync, one member",
+  [JOB_TYPES.WATCHLIST_SYNC_ALL]: "Watchlist sync, everyone",
+  [JOB_TYPES.STRIPE_WEBHOOK]: "Stripe event",
+  [JOB_TYPES.PLEX_ACCESS_GRANT]: "Plex access grant",
+  [JOB_TYPES.PLEX_ACCESS_REVOKE]: "Plex access removal",
+  [JOB_TYPES.DISCORD_ROLE_SYNC]: "Discord role sync",
+  [JOB_TYPES.DISCORD_ROLE_RECONCILE]: "Discord role check",
+  [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
+  [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
+  [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
+  [JOB_TYPES.REWIND_STALE_SWEEP]: "Rewind stale sweep",
+  [JOB_TYPES.REWIND_SEASON_PREPARE]: "Rewind season prepare",
+  [JOB_TYPES.REWIND_GENERATE_ALL]: "Rewind generate all",
+  [JOB_TYPES.REWIND_FINAL_CUT]: "Rewind final cut",
+  [JOB_TYPES.REWIND_CARD_PREWARM]: "Rewind card prewarm",
+  [JOB_TYPES.REWIND_CARD_SWEEP]: "Rewind card sweep",
+  [JOB_TYPES.REWIND_DRY_RUN]: "Rewind dry run",
+  [JOB_TYPES.REWIND_NOTIFY]: "Rewind ready notice",
+  [JOB_TYPES.REWIND_SEASON_OPEN]: "Rewind season open",
+}
+
+/** The job types that run on the main `plex-wrapped` queue, in the order the filter lists them. */
+export const MAIN_QUEUE_JOB_TYPES = [
+  JOB_TYPES.WATCHLIST_SYNC_USER,
+  JOB_TYPES.WATCHLIST_SYNC_ALL,
+  JOB_TYPES.STRIPE_WEBHOOK,
+  JOB_TYPES.PLEX_ACCESS_GRANT,
+  JOB_TYPES.PLEX_ACCESS_REVOKE,
+  JOB_TYPES.DISCORD_ROLE_SYNC,
+  JOB_TYPES.DISCORD_ROLE_RECONCILE,
+] as const satisfies readonly JobType[]
+
+/** A job's label, or its raw name for a type this build does not know. */
+export function jobTypeLabel(name: string): string {
+  return (JOB_TYPE_LABELS as Record<string, string | undefined>)[name] ?? name
+}
+
 /**
  * Job trigger source - who/what initiated the job
  */

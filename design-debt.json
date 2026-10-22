@@ -1,118 +1,18 @@
 {
   "schema": 1,
-  "commit": "842934d7bddd6a2817d5874fc699028a0eed29d3",
-  "generatedAt": "2026-10-21T20:11:15.929Z",
+  "commit": "7141df188f5ec72542d9be0dedfb2916c8e1146b",
+  "generatedAt": "2026-10-21T22:48:30.723Z",
   "files": {
-    "app/(app)/page.tsx": {
-      "gradient": 2,
-      "gradient-text": 4,
-      "raw-palette": 7
-    },
-    "app/admin/cost-analysis/page.tsx": {
-      "blur": 13,
-      "infinite-motion": 1,
-      "raw-palette": 76
-    },
-    "app/admin/discord/page.tsx": {
-      "blur": 16,
-      "infinite-motion": 2,
-      "raw-palette": 73
-    },
-    "app/admin/error.tsx": {
-      "infinite-motion": 1,
-      "raw-palette": 2
-    },
     "app/admin/llm-usage/[usageId]/page.tsx": {
-      "blur": 7,
-      "copy": 2,
-      "raw-palette": 67
-    },
-    "app/admin/llm-usage/conversation/[conversationId]/page.tsx": {
-      "caps-eyebrow": 6,
-      "raw-palette": 36
-    },
-    "app/admin/llm-usage/page.tsx": {
-      "blur": 5,
-      "caps-eyebrow": 7,
-      "raw-palette": 66
-    },
-    "app/admin/loading.tsx": {
-      "gradient": 1,
-      "raw-palette": 3
-    },
-    "app/admin/prompts/[promptId]/edit/page.tsx": {
-      "gradient": 1,
-      "gradient-text": 2,
-      "raw-palette": 6
-    },
-    "app/admin/prompts/[promptId]/page.tsx": {
-      "blur": 4,
-      "raw-palette": 23
-    },
-    "app/admin/prompts/new/page.tsx": {
-      "gradient": 1,
-      "gradient-text": 2,
-      "raw-palette": 6
-    },
-    "app/admin/prompts/page.tsx": {
-      "blur": 1,
-      "caps-eyebrow": 6,
-      "gradient": 2,
-      "raw-palette": 37
-    },
-    "app/admin/queues/page.tsx": {
-      "blur": 1,
-      "infinite-motion": 1,
-      "raw-palette": 13
+      "copy": 1
     },
     "app/admin/settings/page.tsx": {
       "blur": 5,
       "copy": 1,
       "raw-palette": 95
     },
-    "app/admin/shares/page.tsx": {
-      "blur": 6,
-      "caps-eyebrow": 6,
-      "raw-palette": 50
-    },
-    "app/admin/users/[userId]/page.tsx": {
-      "blur": 10,
-      "caps-eyebrow": 6,
-      "copy": 4,
-      "raw-palette": 117
-    },
     "app/admin/users/page.tsx": {
       "raw-palette": 2
-    },
-    "app/admin/wrapped/[wrappedId]/history/[llmUsageId]/page.tsx": {
-      "blur": 3,
-      "gradient": 2,
-      "raw-palette": 24
-    },
-    "app/auth/callback/plex/callback-client.tsx": {
-      "blur": 2,
-      "raw-palette": 9
-    },
-    "app/auth/callback/plex/error.tsx": {
-      "raw-palette": 1
-    },
-    "app/auth/callback/plex/loading.tsx": {
-      "raw-palette": 1
-    },
-    "app/auth/denied/denied-client.tsx": {
-      "blur": 1,
-      "infinite-motion": 4,
-      "raw-palette": 12
-    },
-    "app/error.tsx": {
-      "gradient": 1,
-      "raw-palette": 3
-    },
-    "app/invite/[code]/error.tsx": {
-      "raw-palette": 1
-    },
-    "app/invite/[code]/loading.tsx": {
-      "raw-palette": 1
     },
     "app/invite/[code]/page.tsx": {
       "blur": 3,
@@ -120,76 +20,11 @@
       "gradient-text": 4,
       "raw-palette": 26
     },
-    "app/loading.tsx": {
-      "gradient": 1,
-      "raw-palette": 3
-    },
-    "app/onboarding/error.tsx": {
-      "raw-palette": 1
-    },
-    "app/onboarding/loading.tsx": {
-      "raw-palette": 1
-    },
-    "app/setup/error.tsx": {
-      "raw-palette": 1
-    },
-    "app/setup/loading.tsx": {
-      "raw-palette": 1
-    },
     "app/subscribe/page.tsx": {
       "raw-palette": 4
     },
     "app/subscribe/success/page.tsx": {
       "raw-palette": 3
-    },
-    "components/admin/announcements/announcement-form-modal.tsx": {
-      "raw-palette": 11
-    },
-    "components/admin/announcements/announcement-list-item.tsx": {
-      "raw-palette": 21
-    },
-    "components/admin/announcements/announcements-page-client.tsx": {
-      "raw-palette": 9
-    },
-    "components/admin/cost-analysis/cost-date-filter.tsx": {
-      "blur": 1,
-      "raw-palette": 6
-    },
-    "components/admin/discord/discord-active-users.tsx": {
-      "raw-palette": 13
-    },
-    "components/admin/discord/discord-activity-table.tsx": {
-      "raw-palette": 40
-    },
-    "components/admin/discord/discord-bot-status.tsx": {
-      "blur": 2,
-      "infinite-motion": 2,
-      "raw-palette": 15
-    },
-    "components/admin/discord/discord-context-metrics.tsx": {
-      "raw-palette": 7
-    },
-    "components/admin/discord/discord-date-filter.tsx": {
-      "blur": 1,
-      "raw-palette": 3
-    },
-    "components/admin/discord/discord-error-analysis.tsx": {
-      "raw-palette": 13
-    },
-    "components/admin/discord/discord-help-stats.tsx": {
-      "raw-palette": 9
-    },
-    "components/admin/discord/discord-linking-metrics.tsx": {
-      "raw-palette": 10
-    },
-    "components/admin/discord/discord-marked-media.tsx": {
-      "raw-palette": 42
-    },
-    "components/admin/discord/discord-media-marking-breakdown.tsx": {
-      "raw-palette": 11
-    },
-    "components/admin/discord/discord-selection-stats.tsx": {
-      "raw-palette": 10
     },
     "components/admin/invites/invite-details-client.tsx": {
       "caps-eyebrow": 6,
@@ -198,56 +33,6 @@
     "components/admin/invites/invites-page-client.tsx": {
       "caps-eyebrow": 6,
       "raw-palette": 108
-    },
-    "components/admin/llm-usage/conversation-usage-row.tsx": {
-      "arbitrary-type-z": 1,
-      "caps-eyebrow": 1,
-      "copy": 1,
-      "raw-palette": 10
-    },
-    "components/admin/llm-usage/llm-text-removed-notice.tsx": {
-      "blur": 1,
-      "raw-palette": 4
-    },
-    "components/admin/prompts/expandable-prompt.tsx": {
-      "blur": 1,
-      "caps-eyebrow": 2,
-      "raw-palette": 28
-    },
-    "components/admin/prompts/prompt-scrollspy.tsx": {
-      "raw-palette": 15
-    },
-    "components/admin/prompts/prompt-template-actions.tsx": {
-      "raw-palette": 11
-    },
-    "components/admin/prompts/prompt-template-editor.tsx": {
-      "blur": 3,
-      "gradient": 1,
-      "raw-palette": 139
-    },
-    "components/admin/queues/job-table.tsx": {
-      "caps-eyebrow": 7,
-      "raw-palette": 49
-    },
-    "components/admin/queues/queue-controls.tsx": {
-      "blur": 1,
-      "raw-palette": 9
-    },
-    "components/admin/queues/queue-filters.tsx": {
-      "raw-palette": 2
-    },
-    "components/admin/queues/queue-stats.tsx": {
-      "blur": 1,
-      "raw-palette": 8
-    },
-    "components/admin/queues/queue-status.tsx": {
-      "blur": 1,
-      "infinite-motion": 1,
-      "raw-palette": 20
-    },
-    "components/admin/queues/scheduler-info.tsx": {
-      "blur": 1,
-      "raw-palette": 8
     },
     "components/admin/settings/discord-integration-form.tsx": {
       "raw-palette": 30
@@ -271,15 +56,6 @@
       "blur": 2,
       "infinite-motion": 1,
       "raw-palette": 42
-    },
-    "components/admin/shared/unauthenticated-error.tsx": {
-      "infinite-motion": 1,
-      "raw-palette": 2
-    },
-    "components/admin/shared/unauthorized-error.tsx": {
-      "gradient": 2,
-      "infinite-motion": 1,
-      "raw-palette": 14
     },
     "components/admin/users/cancel-subscription-button.tsx": {
       "raw-palette": 4
@@ -306,14 +82,8 @@
       "copy": 1,
       "raw-palette": 21
     },
-    "components/admin/users/user-activity-timeline.tsx": {
-      "raw-palette": 37
-    },
-    "components/admin/users/user-status-badge.tsx": {
-      "raw-palette": 12
-    },
     "components/admin/users/user-table-row.tsx": {
-      "raw-palette": 19
+      "raw-palette": 18
     },
     "components/admin/users/users-filter.tsx": {
       "blur": 1,
@@ -329,85 +99,12 @@
       "copy": 1,
       "raw-palette": 24
     },
-    "components/admin/wrapped/historical-wrapped-selector-header.tsx": {
-      "arbitrary-type-z": 3,
-      "raw-palette": 20
-    },
-    "components/auth/jellyfin-sign-in-button.tsx": {
-      "raw-palette": 6
-    },
     "components/auth/jellyfin-sign-in-form.tsx": {
       "raw-palette": 27
     },
     "components/auth/plex-sign-in-button.tsx": {
       "gradient": 1,
-      "raw-palette": 19
-    },
-    "components/auth/service-sign-in-toggle.tsx": {
-      "gradient": 6,
-      "raw-palette": 42
-    },
-    "components/dashboard/announcements-card.tsx": {
-      "arbitrary-type-z": 1,
-      "caps-eyebrow": 1,
-      "gradient": 4,
-      "infinite-motion": 3,
-      "raw-palette": 29
-    },
-    "components/dashboard/discord-card.tsx": {
-      "arbitrary-color": 17,
-      "gradient": 2,
-      "raw-palette": 10
-    },
-    "components/dashboard/media-server-link-card.tsx": {
-      "raw-palette": 4
-    },
-    "components/dashboard/requests-card.tsx": {
-      "gradient": 2,
-      "raw-palette": 15
-    },
-    "components/dashboard/status-background.tsx": {
-      "blur": 1,
-      "raw-palette": 24
-    },
-    "components/dashboard/user-dashboard.tsx": {
-      "caps-eyebrow": 3,
-      "gradient": 1,
-      "gradient-text": 2,
-      "raw-palette": 3
-    },
-    "components/onboarding/onboarding-steps/discord-support-step.tsx": {
-      "caps-eyebrow": 1,
-      "raw-palette": 43
-    },
-    "components/onboarding/onboarding-steps/final-step.tsx": {
-      "gradient": 2,
-      "gradient-text": 2,
-      "raw-palette": 17
-    },
-    "components/onboarding/onboarding-steps/jellyfin-configuration-step.tsx": {
-      "raw-palette": 19
-    },
-    "components/onboarding/onboarding-steps/jellyfin-welcome-step.tsx": {
-      "gradient": 2,
-      "gradient-text": 2,
-      "raw-palette": 24
-    },
-    "components/onboarding/onboarding-steps/media-request-step.tsx": {
-      "raw-palette": 21
-    },
-    "components/onboarding/onboarding-steps/plex-configuration-step.tsx": {
-      "raw-palette": 15
-    },
-    "components/onboarding/onboarding-steps/welcome-step.tsx": {
-      "gradient": 2,
-      "gradient-text": 2,
-      "raw-palette": 24
-    },
-    "components/onboarding/onboarding-wizard.tsx": {
-      "gradient": 3,
-      "gradient-text": 2,
-      "raw-palette": 21
+      "raw-palette": 6
     },
     "components/setup/setup-wizard/dev-mode-banner.tsx": {
       "raw-palette": 8
@@ -470,23 +167,6 @@
       "gradient-text": 2,
       "infinite-motion": 1,
       "raw-palette": 3
-    },
-    "components/shared/rex-dinosaur.tsx": {
-      "infinite-motion": 1
-    },
-    "components/subscribe/plan-list.tsx": {
-      "raw-palette": 4
-    },
-    "components/subscription/manage-subscription-button.tsx": {
-      "raw-palette": 1
-    },
-    "components/subscription/subscription-status-view.tsx": {
-      "raw-palette": 3
-    },
-    "components/watchlist/sync-settings-card.tsx": {
-      "gradient": 3,
-      "infinite-motion": 1,
-      "raw-palette": 44
     },
     "components/wrapped/cinematic/gold-count-up.tsx": {
       "gradient": 1,
@@ -648,14 +328,13 @@
     }
   },
   "totals": {
-    "arbitrary-color": 17,
-    "arbitrary-type-z": 29,
-    "blur": 114,
-    "caps-eyebrow": 84,
-    "copy": 13,
-    "gradient": 92,
-    "gradient-text": 50,
-    "infinite-motion": 42,
-    "raw-palette": 2663
+    "arbitrary-type-z": 24,
+    "blur": 31,
+    "caps-eyebrow": 38,
+    "copy": 7,
+    "gradient": 51,
+    "gradient-text": 32,
+    "infinite-motion": 23,
+    "raw-palette": 1031
   }
 }

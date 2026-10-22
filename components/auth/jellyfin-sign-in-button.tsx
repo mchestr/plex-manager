@@ -1,6 +1,8 @@
 "use client"
 
+import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import { StyledInput } from "@/components/ui/styled-input"
 import { isRateLimitedSignInError, RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
@@ -30,6 +32,10 @@ export interface JellyfinSignInButtonProps {
    */
   showDisclaimer?: boolean
   /**
+   * A same-origin path to land on afterwards; `/` reads it once onboarding is checked
+   */
+  callbackUrl?: string
+  /**
    * Callback fired when sign-in is initiated
    */
   onSignInStart?: () => void
@@ -48,6 +54,7 @@ export function JellyfinSignInButton({
   buttonText = "Sign in with Jellyfin",
   loadingText = "Signing in...",
   showDisclaimer = true,
+  callbackUrl,
   onSignInStart,
   onError,
   onSuccess,
@@ -88,8 +95,8 @@ export function JellyfinSignInButton({
         setIsLoading(false)
       } else if (result?.ok) {
         onSuccess?.()
-        // Redirect to home page to check onboarding status
-        window.location.href = "/"
+        // Home checks onboarding first, then follows the callback path
+        window.location.href = callbackUrl ? `/?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/"
       } else {
         const errorMsg = "An unexpected error occurred. Please try again."
         setError(errorMsg)
@@ -98,18 +105,8 @@ export function JellyfinSignInButton({
       }
     } catch (err) {
       logger.error('Sign-in error', err)
-      let errorMsg = "Failed to sign in. Please try again."
-
-      // Provide more specific error messages based on error type
-      if (err instanceof Error) {
-        if (err.message.includes('fetch')) {
-          errorMsg = "Unable to reach the server. Please check your connection."
-        } else if (err.message.includes('credentials') || err.message.includes('unauthorized')) {
-          errorMsg = "Invalid username or password."
-        } else if (err.message) {
-          errorMsg = `Failed to sign in: ${err.message}`
-        }
-      }
+      // Fixed copy only: an exception's text never reaches the screen (UI-19)
+      const errorMsg = "We couldn't sign you in. Please check your connection and try again."
 
       setError(errorMsg)
       onError?.(errorMsg)
@@ -121,9 +118,9 @@ export function JellyfinSignInButton({
     <div className="w-full max-w-md mx-auto space-y-6" data-testid="jellyfin-sign-in-form">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <label htmlFor="jellyfin-username" className="block text-sm font-medium text-cyan-400">
+          <Label htmlFor="jellyfin-username">
             Username
-          </label>
+          </Label>
           <StyledInput
             id="jellyfin-username"
             name="username"
@@ -139,9 +136,9 @@ export function JellyfinSignInButton({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="jellyfin-password" className="block text-sm font-medium text-cyan-400">
+          <Label htmlFor="jellyfin-password">
             Password
-          </label>
+          </Label>
           <StyledInput
             id="jellyfin-password"
             name="password"
@@ -157,13 +154,9 @@ export function JellyfinSignInButton({
         </div>
 
         {error && (
-          <div
-            className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-3 rounded-lg text-sm"
-            role="alert"
-            data-testid="jellyfin-error"
-          >
+          <Alert tone="destructive" data-testid="jellyfin-error">
             {error}
-          </div>
+          </Alert>
         )}
 
         <Button
@@ -203,7 +196,7 @@ export function JellyfinSignInButton({
       </form>
 
       {showDisclaimer && (
-        <p className="text-xs text-slate-400 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           By signing in, you agree to allow this application to access your {serverName || "Jellyfin"} account information.
         </p>
       )}

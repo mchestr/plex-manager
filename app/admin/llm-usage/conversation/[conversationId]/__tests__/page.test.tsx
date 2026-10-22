@@ -1,26 +1,20 @@
 /**
- * The prompt column is nullable since the October 2026 privacy clean-up
- * (P0.20). It strips only non-chat rows, but the conversation page and its
- * rows must still handle a null prompt.
+ * The conversation page (P10.6): breadcrumbs, every time formatted on the
+ * server in `Config.timezone` with its zone (GAP-43), the transcript through
+ * MarkdownBody, and the clean-up notice for a removed prompt (P0.20).
  */
 
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 
 import LLMConversationPage from '@/app/admin/llm-usage/conversation/[conversationId]/page'
 import { getLLMUsageRecords } from '@/actions/admin'
 
-jest.mock('@/actions/admin', () => ({
-  getLLMUsageRecords: jest.fn(),
+jest.mock('@/actions/admin', () => ({ getLLMUsageRecords: jest.fn() }))
+jest.mock('@/lib/settings/app-settings', () => ({
+  getFormat: async () => (await import('@/lib/utils/format')).bindFormat({ timeZone: 'America/Chicago', locale: 'en-US' }),
 }))
-
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
-}))
-
 jest.mock('@/components/admin/prompts/expandable-prompt', () => ({
-  ExpandablePrompt: ({ title, content }: { title: string; content: string }) => (
-    <section data-testid={`expandable-${title}`}>{content}</section>
-  ),
+  ExpandablePrompt: ({ title, content }: { title: string; content: string }) => <section data-testid={`expandable-${title}`}>{content}</section>,
 }))
 
 const mockGetLLMUsageRecords = getLLMUsageRecords as jest.Mock
@@ -40,7 +34,7 @@ function call(id: string, createdAt: string, prompt: string | null) {
     response: prompt === null ? null : 'Hello!',
     user: { id: 'user-1', name: 'Mike', email: 'mike@example.com', image: null },
     wrapped: null,
-    chatConversation: { id: 'chat-1', createdAt: new Date('2025-12-01T10:00:00Z') },
+    chatConversation: { id: 'chat-1', createdAt: new Date('2026-10-12T19:00:00Z') },
   }
 }
 
@@ -50,34 +44,58 @@ async function renderPage() {
 }
 
 describe('Admin conversation LLM usage page', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
+  beforeEach(() => jest.clearAllMocks())
 
-  it('shows the clean-up notice when the latest prompt was removed, and rows without a snippet', async () => {
-    mockGetLLMUsageRecords.mockResolvedValue({
-      records: [call('call-2', '2025-12-01T10:02:00Z', null), call('call-1', '2025-12-01T10:01:00Z', null)],
-    })
-
+  it('has breadcrumbs back to LLM usage and the member', async () => {
+    mockGetLLMUsageRecords.mockResolvedValue({ records: [call('call-1', '2026-10-12T19:26:00Z', null)] })
     await renderPage()
 
-    expect(screen.getByTestId('llm-text-removed-notice')).toHaveTextContent('Latest Conversation Prompt')
-    expect(screen.getByTestId('llm-text-removed-notice')).toHaveTextContent(
-      'Text removed in the October 2026 privacy clean-up'
-    )
-    expect(screen.queryByTestId('expandable-Latest Conversation Prompt')).not.toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'View Request →' })).toHaveLength(2)
+    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    expect(crumbs).toHaveTextContent('LLM usage/Mike/Conversation')
+    expect(within(crumbs).getByRole('link', { name: 'Mike' })).toHaveAttribute('href', '/admin/llm-usage?userId=user-1')
+  })
+
+  it('formats the summary and every row in the server zone with its name', async () => {
+    mockGetLLMUsageRecords.mockResolvedValue({
+      records: [call('call-oct', '2026-10-12T19:26:00Z', null), call('call-jan', '2027-01-12T20:26:00Z', null)],
+    })
+    await renderPage()
+
+    expect(screen.getByTestId('admin-llm-conversation-range')).toHaveTextContent('Oct 12, 2026, 2:26 PM CDT to Jan 12, 2027, 2:26 PM CST')
+    expect(screen.getByTestId('conversation-usage-time-call-oct')).toHaveTextContent('Oct 12, 2026, 2:26 PM CDT')
+    expect(screen.getByTestId('conversation-usage-time-call-jan')).toHaveTextContent('Jan 12, 2027, 2:26 PM CST')
+  })
+
+  it('shows the clean-up notice when the latest prompt was removed, and links each call', async () => {
+    mockGetLLMUsageRecords.mockResolvedValue({
+      records: [call('call-2', '2026-10-12T19:28:00Z', null), call('call-1', '2026-10-12T19:26:00Z', null)],
+    })
+    await renderPage()
+
+    expect(screen.getByTestId('llm-text-removed-notice')).toHaveTextContent('Text removed in the October 2026 privacy clean-up')
+    expect(screen.getByRole('link', { name: /^Call 1,/ })).toHaveAttribute('href', '/admin/llm-usage/call-2')
     expect(screen.queryByText('User:')).not.toBeInTheDocument()
   })
 
-  it('shows the latest prompt and each call\'s last user message when they have text', async () => {
-    const prompt = JSON.stringify([{ role: 'user', content: 'What should I watch?' }])
-    mockGetLLMUsageRecords.mockResolvedValue({ records: [call('call-1', '2025-12-01T10:01:00Z', prompt)] })
-
+  it('renders the latest prompt as a Markdown transcript, with tool JSON as code', async () => {
+    const prompt = JSON.stringify([
+      { role: 'user', content: 'What should I **watch**?' },
+      { role: 'tool', name: 'search', content: '{"results":[1]}' },
+    ])
+    mockGetLLMUsageRecords.mockResolvedValue({ records: [call('call-1', '2026-10-12T19:26:00Z', prompt)] })
     await renderPage()
 
-    expect(screen.getByTestId('expandable-Latest Conversation Prompt')).toHaveTextContent('[USER]')
-    expect(screen.getByText('What should I watch?')).toBeInTheDocument()
-    expect(screen.queryByTestId('llm-text-removed-notice')).not.toBeInTheDocument()
+    const transcript = screen.getByTestId('conversation-transcript')
+    expect(within(transcript).getByText('watch').tagName).toBe('STRONG')
+    expect(transcript).toHaveTextContent('Tool (search)')
+    expect(within(transcript).getByText(/"results"/).tagName).toBe('PRE')
+    expect(screen.getByText('What should I **watch**?')).toBeInTheDocument()
+  })
+
+  it('falls back to the raw prompt when it is not chat messages', async () => {
+    mockGetLLMUsageRecords.mockResolvedValue({ records: [call('call-1', '2026-10-12T19:26:00Z', 'plain text prompt')] })
+    await renderPage()
+
+    expect(screen.getByTestId('expandable-Latest Conversation Prompt')).toHaveTextContent('plain text prompt')
   })
 })

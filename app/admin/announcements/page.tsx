@@ -1,17 +1,22 @@
-import { getAllAnnouncements } from "@/actions/announcements"
-import { AnnouncementsPageClient } from "@/components/admin/announcements/announcements-page-client"
+import { notFound } from "next/navigation"
+
+import { AnnouncementsManager } from "@/components/admin/announcements/announcements-manager"
+import { getAdminGate } from "@/lib/admin"
+import { listAnnouncements } from "@/lib/admin/announcements"
 import { serverZone } from "@/lib/utils/server-zone"
 
 export const dynamic = "force-dynamic"
 
+/** `/admin/announcements` (P10.5): every announcement, read on the server. */
 export default async function AnnouncementsPage() {
-  const [announcements, zone] = await Promise.all([getAllAnnouncements(), serverZone()])
+  const gate = await getAdminGate()
+  if (!gate.ok) notFound()
+
+  const [rows, zone] = await Promise.all([listAnnouncements(), serverZone()])
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="max-w-5xl mx-auto">
-        <AnnouncementsPageClient initialAnnouncements={announcements} zone={zone} />
-      </div>
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 sm:p-6" data-testid="admin-announcements-page">
+      <AnnouncementsManager rows={rows} zone={zone} />
     </div>
   )
 }

@@ -45,8 +45,6 @@ jest.mock("@/components/admin/rewind/admin-rewind-article", () => ({ AdminRewind
 jest.mock("@/components/rewind/article/archive-article", () => ({ ArchiveArticle: () => <div data-testid="legacy" /> }))
 jest.mock("@/lib/brand", () => ({ serverName: jest.fn().mockResolvedValue("Test Server") }))
 jest.mock("@/lib/settings/app-settings", () => ({ getAppSettings: jest.fn().mockResolvedValue({ locale: "en-US" }) }))
-jest.mock("@/components/admin/shared/unauthorized-error", () => ({ UnauthorizedError: () => <p data-testid="unauthorized-error-page" /> }))
-jest.mock("@/components/admin/shared/unauthenticated-error", () => ({ UnauthenticatedError: () => <p data-testid="unauthenticated" /> }))
 // The real stage, on the stage fixture's pages, in the mode the issue passes it.
 jest.mock("@/components/rewind/rewind-issue", () => ({
   RewindIssue: ({ adminPreview }: { adminPreview?: boolean }) => (

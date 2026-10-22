@@ -1,27 +1,28 @@
-import { getHistoricalWrappedData } from "@/actions/admin"
+import { SearchX } from "lucide-react"
+
+import { getHistoricalWrappedData, getHistoricalWrappedVersions } from "@/actions/admin"
 import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
 import { HistoricalWrappedSelectorHeader } from "@/components/admin/wrapped/historical-wrapped-selector-header"
 import { ArchiveArticle } from "@/components/rewind/article/archive-article"
 import { RewindScope } from "@/components/rewind/stage/rewind-scope"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageHeader } from "@/components/ui/page-header"
 import { requireAdmin } from "@/lib/admin"
+import { userDetail } from "@/lib/admin/routes"
 import { serverName } from "@/lib/brand"
 import { rewindFontVariables } from "@/lib/rewind/fonts"
 import { getAppSettings, getFormat } from "@/lib/settings/app-settings"
-import Link from "next/link"
 
-// Force dynamic rendering to prevent caching
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
-export default async function HistoricalWrappedPage({
-  params,
-}: {
-  params: Promise<{ wrappedId: string; llmUsageId: string }>
-}) {
+/** One stored generation of a legacy Rewind (P7.13's renderer), inside the admin shell (P10.6, UI-21). */
+export default async function HistoricalWrappedPage({ params }: { params: Promise<{ wrappedId: string; llmUsageId: string }> }) {
   await requireAdmin()
   const { wrappedId, llmUsageId } = await params
 
-  const [historicalData, f, settings, brand] = await Promise.all([
+  const [historicalData, versions, f, settings, brand] = await Promise.all([
     getHistoricalWrappedData(llmUsageId, wrappedId),
+    getHistoricalWrappedVersions(wrappedId),
     getFormat(),
     getAppSettings(),
     serverName(),
@@ -29,116 +30,56 @@ export default async function HistoricalWrappedPage({
 
   if (!historicalData) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-        <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700">
-          <div className="max-w-7xl mx-auto px-6 py-4">
-            <div className="flex justify-between items-center gap-4">
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                <Link
-                  href="/admin/users"
-                  className="text-slate-400 hover:text-white transition-colors flex-shrink-0"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                </Link>
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-xl font-bold text-white truncate">
-                    Historical Version Not Found
-                  </h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Viewing as admin
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="pt-20 p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-8 text-center">
-              <h2 className="text-2xl font-bold text-white mb-2">Historical Version Not Found</h2>
-              <p className="text-slate-400 mb-6">
-                The requested historical Rewind version could not be found or parsed.
-              </p>
-              <Link
-                href="/admin/users"
-                className="inline-block px-6 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-white rounded-md text-sm font-medium transition-colors"
-              >
-                Back to Users
-              </Link>
-            </div>
-          </div>
-        </div>
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 sm:p-6">
+        <PageHeader breadcrumbs={[{ label: "Users", href: "/admin/users" }, { label: "Version not found" }]} title="Version not found" />
+        <EmptyState
+          kind="unavailable"
+          icon={SearchX}
+          title="This version can't be shown"
+          description="The stored version could not be found or read."
+          data-testid="admin-wrapped-history-missing"
+        />
       </div>
     )
   }
 
   const { llmUsage, userId, userName, year } = historicalData
+  const version = `Version of ${f.dateTime(llmUsage.createdAt, { zoneLabel: true })}`
 
   return (
-    <div className="min-h-screen">
-      <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center gap-4">
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-              <Link
-                href="/admin/users"
-                className="text-slate-400 hover:text-white transition-colors flex-shrink-0"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </Link>
-              <div className="flex-1 min-w-0">
-                <h1 data-testid="admin-wrapped-history-heading" className="text-xl font-bold text-white truncate">
-                  {userName}&apos;s Rewind {year}
-                </h1>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Historical Version • {f.dateTime(llmUsage.createdAt, { zoneLabel: true })} • {llmUsage.provider}/{llmUsage.model || "unknown"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <HistoricalWrappedSelectorHeader wrappedId={wrappedId} userId={userId} year={year} />
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="pt-20">
-        <div className="max-w-7xl mx-auto px-6 pb-8">
-          {historicalData.removed ? (
-            <LlmTextRemovedNotice title="Historical version" />
-          ) : (
-            <RewindScope fontClassName={rewindFontVariables}>
-              <ArchiveArticle legacy={historicalData.wrappedData} year={year} brand={brand} locale={settings.locale} />
-            </RewindScope>
-          )}
-        </div>
-      </div>
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 sm:p-6">
+      <PageHeader
+        breadcrumbs={[
+          { label: "Users", href: "/admin/users" },
+          { label: userName, href: userDetail(userId) },
+          { label: `Rewind ${year}`, href: userDetail(userId, { tab: "rewind" }) },
+          { label: version },
+        ]}
+        title={`${userName}'s Rewind ${year}`}
+        description={`${version}, from ${llmUsage.provider}/${llmUsage.model || "unknown"}`}
+        actions={
+          <HistoricalWrappedSelectorHeader
+            wrappedId={wrappedId}
+            userId={userId}
+            year={year}
+            selectedId={llmUsage.id}
+            versions={versions.map((v) => ({
+              id: v.id,
+              label: f.dateTime(v.createdAt, { zoneLabel: true }),
+              detail: `${v.provider}/${v.model || "unknown"} · ${f.money(v.cost)}`,
+              isCurrent: v.isCurrent,
+            }))}
+          />
+        }
+        data-testid="admin-wrapped-history-heading"
+      />
+      {historicalData.removed ? (
+        <LlmTextRemovedNotice title="Historical version" />
+      ) : (
+        <RewindScope fontClassName={rewindFontVariables}>
+          <ArchiveArticle legacy={historicalData.wrappedData} year={year} brand={brand} locale={settings.locale} />
+        </RewindScope>
+      )}
     </div>
   )
 }
-

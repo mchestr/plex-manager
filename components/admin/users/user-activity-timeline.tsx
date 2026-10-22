@@ -1,253 +1,135 @@
 "use client"
 
-import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useInfiniteQuery } from "@tanstack/react-query"
+
 import { getUserActivityTimeline } from "@/actions/user-queries"
-import { Pagination } from "@/components/ui/pagination"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { Time } from "@/components/ui/time"
+import { useFormat } from "@/lib/format-context"
+import type { Tone } from "@/lib/ui/status"
 import type { UserActivityItem, UserActivityTimelineData } from "@/types/admin"
 
 interface UserActivityTimelineProps {
   userId: string
+  /** The first page, rendered on the server. */
   initialData: UserActivityTimelineData
 }
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "SUCCESS":
-      return (
-        <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs font-medium rounded">
-          Success
-        </span>
-      )
-    case "FAILED":
-      return (
-        <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-xs font-medium rounded">
-          Failed
-        </span>
-      )
-    case "PENDING":
-      return (
-        <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-medium rounded">
-          Pending
-        </span>
-      )
-    case "TIMEOUT":
-      return (
-        <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 text-xs font-medium rounded">
-          Timeout
-        </span>
-      )
-    default:
-      return (
-        <span className="px-1.5 py-0.5 bg-slate-500/20 text-slate-400 text-xs font-medium rounded">
-          {status}
-        </span>
-      )
-  }
+const PAGE_SIZE = 10
+
+const COMMAND_STATUS: Record<string, { tone: Tone; label: string }> = {
+  SUCCESS: { tone: "success", label: "Success" },
+  FAILED: { tone: "destructive", label: "Failed" },
+  PENDING: { tone: "neutral", label: "Pending" },
+  TIMEOUT: { tone: "warning", label: "Timed out" },
 }
 
-function getMarkTypeBadge(markType: string) {
-  switch (markType) {
-    case "FINISHED_WATCHING":
-      return (
-        <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-medium rounded">
-          Finished
-        </span>
-      )
-    case "NOT_INTERESTED":
-      return (
-        <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-xs font-medium rounded">
-          Not Interested
-        </span>
-      )
-    case "KEEP_FOREVER":
-      return (
-        <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs font-medium rounded">
-          Keep Forever
-        </span>
-      )
-    case "REWATCH_CANDIDATE":
-      return (
-        <span className="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs font-medium rounded">
-          Rewatch
-        </span>
-      )
-    case "POOR_QUALITY":
-      return (
-        <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 text-xs font-medium rounded">
-          Poor Quality
-        </span>
-      )
-    case "WRONG_VERSION":
-      return (
-        <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-xs font-medium rounded">
-          Wrong Version
-        </span>
-      )
-    default:
-      return (
-        <span className="px-1.5 py-0.5 bg-slate-500/20 text-slate-400 text-xs font-medium rounded">
-          {markType.replace(/_/g, " ")}
-        </span>
-      )
-  }
+const MARK_LABEL: Record<string, string> = {
+  FINISHED_WATCHING: "Finished",
+  NOT_INTERESTED: "Not interested",
+  KEEP_FOREVER: "Keep forever",
+  REWATCH_CANDIDATE: "Rewatch",
+  POOR_QUALITY: "Poor quality",
+  WRONG_VERSION: "Wrong version",
 }
 
 function formatMediaTitle(item: UserActivityItem & { type: "media_mark" }) {
   if (item.mediaType === "EPISODE" && item.parentTitle) {
-    const episodeInfo =
-      item.seasonNumber != null && item.episodeNumber != null
-        ? ` S${item.seasonNumber}E${item.episodeNumber}`
-        : ""
-    return `${item.parentTitle}${episodeInfo}: ${item.title}`
+    const episode = item.seasonNumber != null && item.episodeNumber != null ? ` S${item.seasonNumber}E${item.episodeNumber}` : ""
+    return `${item.parentTitle}${episode}: ${item.title}`
   }
   return item.year ? `${item.title} (${item.year})` : item.title
 }
 
 function ActivityItem({ item }: { item: UserActivityItem }) {
-  const isDiscord = item.type === "discord_command"
+  const status = item.type === "discord_command" ? (COMMAND_STATUS[item.status] ?? { tone: "neutral" as const, label: item.status }) : null
 
   return (
-    <div
-      className="relative pl-8 pb-6 last:pb-0"
-      data-testid={`activity-item-${item.id}`}
-    >
-      {/* Timeline line */}
-      <div className="absolute left-[11px] top-3 bottom-0 w-px bg-slate-700 last:hidden" />
-
-      {/* Timeline dot */}
-      <div
-        className={`absolute left-0 top-1.5 w-6 h-6 rounded-full flex items-center justify-center ${
-          isDiscord ? "bg-indigo-500/20" : "bg-purple-500/20"
-        }`}
-      >
-        <div
-          className={`w-2.5 h-2.5 rounded-full ${
-            isDiscord ? "bg-indigo-400" : "bg-purple-400"
-          }`}
-        />
+    <li className="flex flex-col gap-1.5 rounded-lg border bg-card p-4" data-testid={`activity-item-${item.id}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline" data-testid="activity-type-badge">
+          {item.type === "discord_command" ? "Discord" : "Media mark"}
+        </Badge>
+        <span className="text-caption text-muted-foreground">
+          <Time value={item.timestamp} />
+        </span>
       </div>
-
-      {/* Content */}
-      <div className="bg-slate-800/30 rounded-lg p-4">
-        <div className="flex flex-wrap items-center gap-2 mb-2">
-          {/* Type badge */}
-          {isDiscord ? (
-            <span
-              className="px-2 py-1 bg-indigo-500/20 text-indigo-400 text-xs font-medium rounded"
-              data-testid="activity-type-badge"
-            >
-              Discord
-            </span>
-          ) : (
-            <span
-              className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs font-medium rounded"
-              data-testid="activity-type-badge"
-            >
-              Media Mark
-            </span>
+      {item.type === "discord_command" ? (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-ui text-foreground">{item.commandName}</span>
+            {status && <StatusBadge tone={status.tone} label={status.label} />}
+            {item.responseTimeMs != null && <span className="text-caption text-muted-foreground">{item.responseTimeMs} ms</span>}
+          </div>
+          {item.commandArgs && (
+            <p className="truncate text-caption text-muted-foreground" title={item.commandArgs}>
+              {item.commandArgs}
+            </p>
           )}
-
-          {/* Timestamp */}
-          <span className="text-xs text-muted-foreground">
-            <Time value={item.timestamp} />
-          </span>
-        </div>
-
-        {/* Type-specific content */}
-        {item.type === "discord_command" ? (
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="text-sm text-slate-300 font-mono">
-                {item.commandName}
-              </span>
-              {getStatusBadge(item.status)}
-              {item.responseTimeMs != null && (
-                <span className="text-xs text-muted-foreground">
-                  {item.responseTimeMs}ms
-                </span>
-              )}
-            </div>
-            {item.commandArgs && (
-              <p
-                className="text-xs text-muted-foreground truncate"
-                title={item.commandArgs}
-              >
-                {item.commandArgs}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1 capitalize">
-              via {item.channelType.replace(/-/g, " ")}
-            </p>
+          <p className="text-caption text-muted-foreground">Sent in {item.channelType.replace(/-/g, " ")}</p>
+        </>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="neutral">{MARK_LABEL[item.markType] ?? item.markType.replace(/_/g, " ").toLowerCase()}</Badge>
+            <span className="text-ui text-foreground">{formatMediaTitle(item)}</span>
           </div>
-        ) : (
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              {getMarkTypeBadge(item.markType)}
-            </div>
-            <p className="text-sm text-slate-300">{formatMediaTitle(item)}</p>
-            <p className="text-xs text-muted-foreground mt-1 capitalize">
-              via {item.markedVia}
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
+          <p className="text-caption text-muted-foreground">Marked through {item.markedVia}</p>
+        </>
+      )}
+    </li>
   )
 }
 
-export function UserActivityTimeline({
-  userId,
-  initialData,
-}: UserActivityTimelineProps) {
-  const [page, setPage] = useState(1)
-  const pageSize = 10
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["user-activity-timeline", userId, page, pageSize],
-    queryFn: () => getUserActivityTimeline(userId, { page, pageSize }),
-    initialData: page === 1 ? initialData : undefined,
-    staleTime: 30000,
+/**
+ * A member's activity, newest first (GAP-38): keyset pages through
+ * `useInfiniteQuery`, with "Show older activity" and a "Showing 30 of 47" line.
+ */
+export function UserActivityTimeline({ userId, initialData }: UserActivityTimelineProps) {
+  const f = useFormat()
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = useInfiniteQuery({
+    queryKey: ["user-activity-timeline", userId],
+    queryFn: async ({ pageParam }) => {
+      const result = await getUserActivityTimeline(userId, { cursor: pageParam, pageSize: PAGE_SIZE })
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    initialData: { pages: [initialData], pageParams: [undefined] },
+    staleTime: 30_000,
   })
 
-  if (isLoading && !data) {
-    return (
-      <div className="p-8 text-center text-muted-foreground">
-        Loading activity...
-      </div>
-    )
-  }
+  const items = data.pages.flatMap((page) => page.items)
+  const total = data.pages[0]?.total ?? 0
 
-  if (!data || data.items.length === 0) {
-    return (
-      <div className="p-8 text-center text-muted-foreground">
-        No activity recorded for this user yet
-      </div>
-    )
+  if (items.length === 0) {
+    return <p className="rounded-lg border bg-card p-6 text-center text-ui text-muted-foreground">No activity recorded for this member yet.</p>
   }
 
   return (
-    <div data-testid="user-activity-timeline">
-      <div className="p-4">
-        {data.items.map((item) => (
-          <ActivityItem key={item.id} item={item} />
+    <div className="flex flex-col gap-3" data-testid="user-activity-timeline">
+      <ol className="flex flex-col gap-2">
+        {items.map((item) => (
+          <ActivityItem key={`${item.type}-${item.id}`} item={item} />
         ))}
+      </ol>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-label text-muted-foreground" aria-live="polite" data-testid="activity-count">
+          Showing {f.number(items.length)} of {f.number(total)}
+        </p>
+        {hasNextPage && (
+          <Button variant="outline" size="sm" onClick={() => void fetchNextPage()} disabled={isFetchingNextPage} data-testid="activity-show-older">
+            {isFetchingNextPage ? "Loading older activity" : "Show older activity"}
+          </Button>
+        )}
       </div>
-
-      {data.totalPages > 1 && (
-        <div className="border-t border-slate-700 px-4">
-          <Pagination
-            page={data.page}
-            pageSize={data.pageSize}
-            totalCount={data.total}
-            totalPages={data.totalPages}
-            hasNextPage={data.page < data.totalPages}
-            hasPreviousPage={data.page > 1}
-            onPageChange={setPage}
-            data-testid="activity-pagination"
-          />
-        </div>
+      {isFetchNextPageError && (
+        <p role="alert" className="text-label text-destructive">
+          Couldn&apos;t load older activity. Try again.
+        </p>
       )}
     </div>
   )

@@ -1,10 +1,6 @@
-import { LoadingScreen } from "@/components/ui/loading-screen"
+import { FinishingSignIn } from "@/components/auth/finishing-sign-in"
 
+/** The one spinner screen the app keeps (ui-design-system 6.7). */
 export default function Loading() {
-  return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <LoadingScreen message="Completing sign in..." />
-    </div>
-  )
+  return <FinishingSignIn data-testid="plex-callback-loading" />
 }
-

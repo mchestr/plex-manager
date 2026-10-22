@@ -21,8 +21,6 @@
  * @module lib/wrapped/prompt/rewind-2026
  */
 
-import { z } from "zod"
-
 import { ARCHETYPES, posterLineIds, type ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 import { POSTER_LINES } from "@/lib/wrapped/copy/poster-lines"
 import { BANNED_PHRASES, WINDOW_PHRASES } from "@/lib/wrapped/copy/grounding-words"
@@ -30,18 +28,6 @@ import { COPY_SLOTS, type SlotId } from "@/lib/wrapped/copy/slots"
 import type { FactSheet } from "@/lib/wrapped/facts/fact-sheet"
 
 export const PROMPT_VERSION = "rewind-2026.1"
-
-/** The admin's style guide is at most this long (design 8.3). */
-const STYLE_GUIDE_MAX_CHARS = 1200
-
-/**
- * A style guide is short plain text: the prompt is frozen, and placeholders
- * would let it carry member data.
- */
-export const styleGuideSchema = z
-  .string()
-  .max(STYLE_GUIDE_MAX_CHARS, `A style guide is at most ${STYLE_GUIDE_MAX_CHARS} characters`)
-  .refine((text) => !/\{\{|\}\}/.test(text), "A style guide cannot use placeholders")
 
 /** What each slot is for: context beside the page's big number, never the number again. */
 const FIELD_GUIDE: Readonly<Record<Exclude<SlotId, "archetype.posterLineId">, string>> = {

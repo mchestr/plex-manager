@@ -29,6 +29,7 @@ export async function seedA11yFixtures(): Promise<void> {
           id: A11Y_CHAT_USAGE_ID,
           userId: TEST_USERS.ADMIN.id,
           chatConversationId: A11Y_CONVERSATION_ID,
+          groupKey: A11Y_CONVERSATION_ID,
           provider: 'openai',
           model: 'gpt-5-mini',
           promptTokens: 320,

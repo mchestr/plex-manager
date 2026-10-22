@@ -7,7 +7,7 @@ import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 import { PlexCallbackPageClient } from '@/app/auth/callback/plex/callback-client'
-import { finishPlexSignIn, pollPlexSignIn } from '@/lib/plex-auth'
+import { finishPlexSignIn, pollPlexSignIn, startPlexSignIn } from '@/lib/plex-auth'
 import { PLEX_SIGN_IN_COPY, type ShownPlexSignInCode } from '@/lib/plex-sign-in-codes'
 import { RATE_LIMITED_MESSAGE } from '@/lib/security/rate-limit-messages'
 import { redirectTo } from '@/lib/utils/navigation'
@@ -15,6 +15,7 @@ import { redirectTo } from '@/lib/utils/navigation'
 jest.mock('@/lib/plex-auth', () => ({
   pollPlexSignIn: jest.fn(),
   finishPlexSignIn: jest.fn(),
+  startPlexSignIn: jest.fn(),
 }))
 // jsdom locks window.location, so the full-page redirect goes through this seam
 jest.mock('@/lib/utils/navigation', () => ({ redirectTo: jest.fn() }))
@@ -23,6 +24,7 @@ jest.mock('next/navigation', () => ({ useRouter: jest.fn() }))
 
 const mockPoll = jest.mocked(pollPlexSignIn)
 const mockFinish = jest.mocked(finishPlexSignIn)
+const mockStart = jest.mocked(startPlexSignIn)
 const mockSignIn = jest.mocked(signIn)
 const mockRedirectTo = jest.mocked(redirectTo)
 const mockPush = jest.fn()
@@ -41,6 +43,7 @@ beforeEach(() => {
   mockUseRouter.mockReturnValue({ push: mockPush })
   mockSignIn.mockResolvedValue({ ok: true, error: null, status: 200, url: null })
   mockFinish.mockResolvedValue({ success: true, data: { next: '/' } })
+  mockStart.mockResolvedValue({ success: true, data: { authUrl: 'https://app.plex.tv/auth#?code=NEW' } })
 })
 
 afterEach(() => {
@@ -153,13 +156,61 @@ describe('PlexCallbackPageClient', () => {
     expect(screen.getByText(RATE_LIMITED_MESSAGE)).toBeInTheDocument()
   })
 
-  it('offers a way back home', async () => {
+  it('shows the waiting state as the one "Finishing sign-in" spinner', () => {
+    mockPoll.mockReturnValue(new Promise(() => undefined))
+
+    render(<PlexCallbackPageClient />)
+
+    const waiting = screen.getByTestId('plex-callback-waiting')
+    expect(waiting).toHaveAttribute('role', 'status')
+    expect(waiting).toHaveTextContent('Finishing sign-in')
+  })
+
+  it('shows each failure as a StatusScreen with its code', async () => {
+    pollReturns('expired')
+
+    render(<PlexCallbackPageClient />)
+
+    expect(await screen.findByTestId('status-screen')).toBeInTheDocument()
+    expect(screen.getByTestId('status-screen-code')).toHaveTextContent('plex_pin_expired')
+  })
+
+  it('restarts the sign-in from Try again and goes straight to plex.tv', async () => {
     const user = userEvent.setup()
     pollReturns('expired')
 
     render(<PlexCallbackPageClient />)
-    await user.click(await screen.findByRole('button', { name: 'Try Again' }))
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
 
-    expect(mockPush).toHaveBeenCalledWith('/')
+    expect(mockStart).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(mockRedirectTo).toHaveBeenCalledWith('https://app.plex.tv/auth#?code=NEW'))
+  })
+
+  it('shows the rate-limit copy when the restart is refused', async () => {
+    const user = userEvent.setup()
+    pollReturns('expired')
+    mockStart.mockResolvedValue({ success: false, code: 'RATE_LIMITED', error: RATE_LIMITED_MESSAGE })
+
+    render(<PlexCallbackPageClient />)
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByTestId('plex-callback-error-rate_limited')).toBeInTheDocument()
+    expect(mockRedirectTo).not.toHaveBeenCalled()
+  })
+
+  it('offers only Go to home for a refused invite', async () => {
+    pollReturns('ready')
+    mockSignIn.mockResolvedValue({ ok: false, error: 'invite_invalid', status: 401, url: null })
+
+    render(<PlexCallbackPageClient />)
+
+    expect(await screen.findByRole('link', { name: 'Go to home' })).toHaveAttribute('href', '/')
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+  })
+
+  it('never renders a developer string', () => {
+    const source = fs.readFileSync(CLIENT_FILE, 'utf8')
+
+    expect(source).not.toMatch(/No PIN ID|error\.message/)
   })
 })

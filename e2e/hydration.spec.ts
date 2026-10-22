@@ -70,6 +70,7 @@ test.describe('Hydration across zones and locales', () => {
             id,
             userId: TEST_USERS.ADMIN.id,
             chatConversationId: CONVERSATION_ID,
+            groupKey: CONVERSATION_ID,
             provider: 'openai',
             model: 'gpt-5-mini',
             prompt: JSON.stringify([{ role: 'user', content: 'How many films this year?' }]),
@@ -96,7 +97,7 @@ test.describe('Hydration across zones and locales', () => {
   test('announcements', async ({ page }) => {
     const errors = collectHydrationErrors(page);
     await page.goto('/admin/announcements');
-    await expect(page.getByTestId(`announcement-${ANNOUNCEMENT_ID}`)).toBeVisible();
+    await expect(page.getByTestId(`admin-announcements-row-${ANNOUNCEMENT_ID}`)).toBeVisible();
     await page.waitForLoadState('networkidle');
     expect(errors).toEqual([]);
   });

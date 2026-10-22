@@ -122,12 +122,21 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** With `Config.timezone` set to `America/Los_Angeles`, open cost analysis after 17:00 Pacific: today's bar carries today's label, the period header matches the picker, and the projection hint states its method. On a quiet day the shares chart still shows today at zero. A row opens that member's year.
 
 **Done when.**
-- [ ] All three pages bucket and label days in `Config.timezone`, include today and show an inclusive period.
-- [ ] Projections divide by calendar days, and every amount goes through `formatMoney`.
-- [ ] ChartCard is the only chart wrapper on these pages, and one Chart.js registration serves them.
-- [ ] LLM usage groups before paginating, keeps every param and links members; share rows keep the year.
+- [x] All three pages bucket and label days in `Config.timezone`, include today and show an inclusive period.
+- [x] Projections divide by calendar days, and every amount goes through `formatMoney`.
+- [x] ChartCard is the only chart wrapper on these pages, and one Chart.js registration serves them.
+- [x] LLM usage groups before paginating, keeps every param and links members; share rows keep the year.
 - [ ] axe passes and the visual baselines are updated.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+**(as merged: P10.2)**
+- `lib/utils/day-window.ts`: `dayWindow(range, zone)` and `defaultWindow(days, zone, now?)` return `{ from, to, zone, gte, lt, keys }`. It also has `windowSince(first, zone)` (for "Any time": from the first row through today), `sumByDay(rows, zone, at, value?)`, `zeroFill(keys, map, empty)` (gives `{ date, ...T }[]`) and `formatPeriod(range, settings)` ("Oct 1 – Oct 17, 2026"). It builds on `lib/ui/date-range.ts`.
+- ChartCard: `components/ui/chart-card.tsx` (client) takes `{ title, description?, summary, spec, mode?, empty?, heightClassName? }`. The spec types and `rankedSpec(rows, { series, format, limit })` live in `components/ui/chart-card/chart-spec.ts`; server pages import them from there, never from the client file. The Chart.js body is `chart-card/chartjs-body.tsx` (`next/dynamic`, `ssr: false`), with its options built in `chartjs-config.ts`, which a snapshot test covers. P10.9 replaces those two files.
+- The Discord readers take a window: `getDailyActivity(window)` and `getErrorAnalysis(window)` zero-fill; `toDateKey(date, zone)` and `getAccountLinkingMetrics(start, end, zone)` take the zone. `actions/discord-activity.ts` builds the window from `startDate`/`endDate` in `serverZone()`.
+- `LLMUsage.groupKey` is `@default(uuid())`: the migration backfills `chatConversationId ?? id`, and `recordUsage` writes the conversation id. A seed that creates assistant rows sets `groupKey` itself.
+- Share visit days now count on the server zone's day (`recordShareVisit`), so the shares chart buckets visits on the days it labels. Older rows keep their UTC day.
+- New `share` status domain (Active, Expired, Stopped) and `llmConversation(id)` in `lib/admin/routes.ts`. `actions/share-analytics.ts`, `lib/wrapped/usage.ts`, `getLLMUsageStats`, `getUserById` and the old chart and filter components are gone.
+- Left for the coordinator and owner: visual and axe baselines, E2E runs, and a dump before the migration deploys.
 
 ### Step P10.3: Queues page with live status
 
@@ -163,10 +172,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Run the web process without workers: within 10 s the row reads "Worker stopped", with no reload. Trigger a watchlist sync from another tab and watch the job appear. Pause and resume through the confirm, and open the page at 390px.
 
 **Done when.**
-- [ ] Worker, Redis and queue state are words with dots, and the worker state is read from Redis.
-- [ ] The page refreshes every 10 s while visible, shows "Updated Ns ago" and can be paused.
-- [ ] Pause and Resume are labelled Buttons with a confirm, and no `window.location.reload()` remains.
-- [ ] Jobs are in a DataTable with Retry, a page total and FilterBar, and the page meets 9.5 at 390px.
+- [x] Worker, Redis and queue state are words with dots, and the worker state is read from Redis.
+- [x] The page refreshes every 10 s while visible, shows "Updated Ns ago" and can be paused.
+- [x] Pause and Resume are labelled Buttons with a confirm, and no `window.location.reload()` remains.
+- [x] Jobs are in a DataTable with Retry, a page total and FilterBar, and the page meets 9.5 at 390px.
+
+(as merged: the reads moved out of `actions/admin/queue.ts` into `lib/admin/queues.ts` (`server-only`: `getQueueDashboard`, `listQueueJobs`), so the worker-state test is `lib/admin/__tests__/queues.test.ts`; the actions file keeps only the mutations, each revalidating `/admin/queues`. Shared API for P10.5 and P10.8: `useLiveRefresh({ intervalMs, paused })` in `hooks/use-live-refresh.ts`; `components/ui/live-status.tsx` exports `LiveStatus` (presentational), `LiveRefreshProvider` (`renderedAt`, `intervalMs`), `LiveRefreshStatus` and `useHoldLiveRefresh(open)`, which dialogs and menus call to hold the refresh. `RowActions` and `DataTable` gained `onOpenChange` / `onRowActionsOpenChange` for that. `formatDuration` takes `smallestUnit: "second"`. `lib/ui/status.ts` gained the `redis` and `queue` domains (`queue.unknown` when Redis does not answer). `lib/queue/client.ts`'s `getJobs` became `getJobPage` (page plus total) and `getWorkerCount`; `isWorkerRunning` and `isRedisHealthy` are gone. The token codemod was not run (P10.13 owns it); the files were written on tokens. Visual and axe baselines for `/admin/queues` are left to the owner's workflow; `e2e/admin/queues.spec.ts` was written but not run.)
 
 ### Step P10.4: Prompts pages and the split editor
 
@@ -207,10 +218,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Open a v2 template and see the read-only notice. Copy it into a style guide, edit it with Undo and Redo, and watch the preview. Activate it, then run a playground dry run and find the same block in the prompt.
 
 **Done when.**
-- [ ] The list is a DataTable with the `prompt` status badges, an EmptyState and test ids.
-- [ ] The editor is a 960px page with breadcrumbs; its files are each under 200 lines, and its state lives in two tested hooks.
-- [ ] The preview is built by the pipeline's own `systemPrompt()`, and the 1,200-character rule is shared with the actions and the playground.
-- [ ] No client copy of placeholder replacement remains.
+- [x] The list is a DataTable with the `prompt` status badges, an EmptyState and test ids.
+- [x] The editor is a 960px page with breadcrumbs; its files are each under 200 lines, and its state lives in two tested hooks.
+- [x] The preview is built by the pipeline's own `systemPrompt()`, and the 1,200-character rule is shared with the actions and the playground.
+- [x] No client copy of placeholder replacement remains.
+
+(as merged: P8.8 had already deleted `lib/wrapped/prompt-template.ts`, so there was no `replacePlaceholders` to move; the editor's last v2 leftover, `lib/wrapped/prompt-text.ts` (the placeholder catalogue), and the now-unused `legacyWrappedData` were deleted. `styleGuideSchema` and `STYLE_GUIDE_MAX_CHARS` moved from `rewind-2026.ts` to `lib/validations/prompt.ts`, beside `styleGuideFormSchema`; the dry-run input imports them from there. `rewind-2026.ts` needed no split: it imports nothing server-only. Reads moved out of `actions/prompts.ts` into `server-only` `lib/admin/prompts/queries.ts` (`getPromptTemplates`/`getPromptTemplate` are gone). Create and update take style guides only; editing or activating a v2 row is refused (`CONFLICT`), and a v2 row may be deleted even when its legacy `isActive` is set. "Copy into a new style guide" is `/admin/prompts/new?from=<id>`, which prefills the first 1,200 characters with a note; the admin removes its placeholders before saving. `RowAction` gained `disabled`. The token codemod was not run (Phase 10 rules); `expandable-prompt.tsx` and `prompt-scrollspy.tsx` are untouched.)
 
 ### Step P10.5: Announcements and Discord admin pages
 
@@ -248,10 +261,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Write an announcement with a bulleted list and a link, and watch the preview render them as home will. Save it, open home in another tab, then hide it with the Switch. On the Discord page, stop the bot: within 30 s "Support bot" reads offline while "Linked roles" stays on.
 
 **Done when.**
-- [ ] Announcements render through `MarkdownBody` in the table, the preview and home, and "New" follows read state everywhere.
-- [ ] The announcement form is a Dialog with a live preview and inline errors.
-- [ ] The Discord page has two status rows, a DateRangeFilter, a StatGrid and ChartCards, all refreshed while visible.
+- [x] Announcements render through `MarkdownBody` in the table, the preview and home, and "New" follows read state everywhere.
+- [x] The announcement form is a Dialog with a live preview and inline errors.
+- [x] The Discord page has two status rows, a DateRangeFilter, a StatGrid and ChartCards, all refreshed while visible.
 - [ ] No Discord or announcement component hand-builds a panel, a badge, an empty state or a chart, and the baselines are updated.
+
+(as merged: P10.2's ChartCard and `day-window.ts` were not on the start point, so the Discord charts (`discord-trend-chart`, `discord-command-chart` and the help, linking, marking, context, selection and error components) stay on their Chart.js bodies inside Cards; the coordinator moves them onto ChartCard specs (and writes `components/admin/discord/__tests__/specs.test.ts`) after P10.2 merges. Status rows, DateRangeFilter, StatGrid, the recent-commands, commands-by-type and active-members DataTables and the 30 s `LiveRefreshProvider` are in. The period is `presetRange("30d", today)` from `lib/ui/date-range.ts`, and `actions/discord-activity.ts` bounds every stat with `dateRangeToInstants` in the server zone; old `startDate`/`endDate` URLs are read. `DateRangeFilter` gained `defaultRange` (replaces "Any time"). New `server-only` reads: `lib/admin/announcements.ts` (`listAnnouncements`) and `lib/admin/discord.ts` (`getDiscordOverview`); `getAllAnnouncements` and the bot-status read in `getDiscordDashboardData` are gone. Announcement mutations are `adminAction`s on `lib/validations/announcement.ts` and revalidate `/`, `/announcements` and `/admin/announcements`. `lib/ui/status.ts` gained the `announcement`, `linkedRoles`, `supportBot` and `discordCommand` domains, a `{time}` placeholder and `discordStatus()` (P10.20's mapping was not there to move). The member item is `components/announcements/announcement-item.tsx`, shared by `/announcements` and the admin preview; the home card only lost its permanent "NEW" badge, and its per-item pip is P10.21's. Delete is the row-menu item `admin-announcements-actions-<id>-delete`, not `delete-announcement-<id>`. The token codemod was not run; E2E specs were written but not run; visual and axe baselines are the owner's. Coordinator follow-up: the charts are ChartCards built by `components/admin/discord/specs.ts` (tested in `__tests__/specs.test.ts`); the eight Chart.js components are deleted, and the repeat requesters, frequent clearers and failing commands are `DiscordTopList` cards.)
 
 ### Step P10.6: User detail, Rewind history and conversation pages
 
@@ -293,11 +308,13 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** From the users list, use only the keyboard to open Morgan Lee. The Rewind tab shows 2026 "Generating" for 20 minutes, with Regenerate; run it. Open a history page and read the breadcrumb. On the conversation page, the summary and every row show the same zone name ("CDT" for October turns, "CST" for January ones).
 
 **Done when.**
-- [ ] User detail has the name as h1, status badges and four URL-driven tabs, and no file is over 200 lines.
-- [ ] Stuck rows can be regenerated from the detail page and from the users list through `canRegenerate`.
-- [ ] The timeline is keyset-paged, and the Postgres test for pages 3 and 5 passes.
-- [ ] The history and conversation pages have breadcrumbs, and every server-rendered time carries its zone.
-- [ ] Dump taken before deploy; `prisma migrate status` clean.
+- [x] User detail has the name as h1, status badges and four URL-driven tabs, and no file is over 200 lines.
+- [x] Stuck rows can be regenerated from the detail page and from the users list through `canRegenerate`.
+- [x] The timeline is keyset-paged, and the Postgres test for pages 3 and 5 passes.
+- [x] The history and conversation pages have breadcrumbs, and every server-rendered time carries its zone.
+- [ ] Dump taken before deploy; `prisma migrate status` clean. (Owner.)
+
+(as merged: `canRegenerate({ status, runStartedAt }, now)` in `lib/admin/can-regenerate.ts` is pure; callers pass `status: "generating"` whenever a queued or running `RewindGeneration` exists, and `runStartedAt` from `lib/admin/active-runs.ts` (`startedAt ?? createdAt`). `AdminUserWithWrappedStats.wrappedRunStartedAt` carries it to the users list menu. P10.18 was not on the start point, so the header reuses the old `UserActionsMenu` plus the Disable and Change role buttons, and the users list name became a `userDetail` link; P10.18 replaces both. The tabs use `@base-ui/react/tabs` directly in `components/admin/users/detail/detail-tabs.tsx` (P10.19 owns `components/ui/tabs.tsx`). `getUserActivityTimeline(userId, { cursor, pageSize })` returns `ActionResult<{ items, total, nextCursor }>`; the core is `lib/admin/activity-timeline.ts`, and its test is `actions/__tests__/user-activity-timeline.pg.test.ts`. Migration `20270113000001_p106_activity_timeline_indexes`. Last sign-in is not stored anywhere, so the Overview lists email, service, joined and Discord only. The history page reads its versions on the server; `/api/admin/wrapped/[wrappedId]/versions` now has no caller, for P10.7 to delete. `getUserDetails`, `user-status-badge.tsx` and the unused `components/ui/pagination.tsx` are gone.)
 
 ### Step P10.7: Client data-loading and boundary sweep
 
@@ -573,9 +590,11 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Run `--slice components/dashboard` as a dry run: it prints the auto and review counts. Then open the slice PR, showing its screenshot diff and the `design-debt.json` totals before and after.
 
 **Done when.**
-- [ ] The tool implements every 9.3 pair, with tests, and is idempotent.
+- [x] The tool implements every 9.3 pair, with tests, and is idempotent.
 - [ ] The two slice PRs are merged, each with a reviewed screenshot diff and resolved review items, and the tool is ready for P10.14 and the page rebuilds.
-- [ ] `design-debt.json` counts are lower for every file in those slices.
+- [x] `design-debt.json` counts are lower for every file in those slices.
+
+(as merged: run the tool over any folders, files or globs with `npm run codemod:tokens -- --slice <folder|file|glob> [...more]` for a dry run (counts per rule; it writes only the git-ignored `codemod-review.md`), then add `--write` to rewrite; `--review-file <path>` moves the review list. Rerunning is a no-op, so it is safe over folders already done. Built on the `typescript` compiler API the design check already uses (`scripts/design-system/ast.mjs`) instead of a new `ts-morph` dependency, so P10.11's `adapters.ts` builds on the same API. Beyond 9.3: neutral rows also take `gray-` and `zinc-`; `text-cyan-400` is always review (link, label and stat value can't be told apart); any palette class with no pair goes to review (`raw-palette`), which holds its whole unit under the context rule; the context unit is the whole className or class-function call, not one string; and `text-white` goes to review (`on-fill`) inside a `<Button>`, under a `style` background or within three elements of a coloured fill. The skip list already holds P10.14's admin entries. Class strings returned from plain helper functions are not class contexts and stay hand work. Both slices are tokenised with every review item resolved by hand, and every file in them leaves `design-debt.json`; screenshot diffs and axe baselines are left to the owner's Visual Baselines workflow.)
 
 ### Step P10.14: Token codemod: admin users and settings slices
 
@@ -693,10 +712,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Press Cmd K on any admin page, type part of a member's name and press Enter: the detail page opens. Type an invite code and open it. The network panel shows debounced GETs, and the list never flashes empty.
 
 **Done when.**
-- [ ] The dialog opens from the keyboard and both triggers, and it covers destinations, users, invites and quick actions.
-- [ ] The search route is admin-only, Zod-validated and rate-limited, and returns only public fields.
-- [ ] The hook debounces, keeps previous results and validates responses.
-- [ ] Keyboard tests and the E2E spec pass.
+- [x] The dialog opens from the keyboard and both triggers, and it covers destinations, users, invites and quick actions.
+- [x] The search route is admin-only, Zod-validated and rate-limited, and returns only public fields.
+- [x] The hook debounces, keeps previous results and validates responses.
+- [ ] Keyboard tests and the E2E spec pass. (Jest keyboard tests pass; the E2E spec is written and collects, not yet run.)
+
+(as merged: cmdk 1.1.1 is pinned exactly. cmdk has no per-group `shouldFilter`, so the root sets `shouldFilter={false}` and the menu filters destinations and quick actions itself (label or group substring). The query and response schemas live client-safe in `lib/admin/search.ts` (`adminSearchQuerySchema`, `adminSearchResponseSchema`, `adminSearchUrl`); result `href`s must start with `/admin/`. The menu is `CommandMenuProvider` (mounted once in `AdminShell`, owns the Ctrl or Cmd K listener and the Dialog), `CommandMenuTrigger` (sidebar `admin-command-trigger`, mobile bar `admin-command-trigger-mobile`) and `CommandMenuKeyHint`; items are `admin-command-{page,user,invite,action}-<id>` and the input `admin-command-input`. New shared hooks: `hooks/use-debounced-value.ts` and `hooks/use-open-from-param.ts` (reads `?create=1` / `?new=1`, then drops the param). "Generate all Rewinds" opens the Season page, where its confirm stays; it does not auto-open the confirm. `icons.search` was added. The `/dev/ui` Command specimen shows the content open inline, not the live dialog.)
 
 ### Step P10.17: Status screens, 404, global error and route skeletons
 
@@ -741,10 +762,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Open `/does-not-exist`: a branded 404 with Go to home. Throw from the dev route in a production build: the screen shows a digest, and `docker logs` shows the full error. Click between admin pages on a throttled connection: header and table skeletons appear inside the shell.
 
 **Done when.**
-- [ ] StatusScreen and ErrorState exist with tests, and no boundary renders `error.message`.
-- [ ] `app/not-found.tsx` and `app/global-error.tsx` exist, and the admin denial screens are StatusScreens.
-- [ ] Every `loading.tsx` in scope is a shaped skeleton, and the brand-text loaders are gone.
+- [x] StatusScreen and ErrorState exist with tests, and no boundary renders `error.message`.
+- [x] `app/not-found.tsx` and `app/global-error.tsx` exist, and the admin denial screens are StatusScreens.
+- [x] Every `loading.tsx` in scope is a shaped skeleton, and the brand-text loaders are gone.
 - [ ] The production-mode E2E spec and the baselines pass.
+
+(as merged: the denials are `components/shell/admin-denial.tsx` (`AdminDenial`, codes 401 and 403, ids `unauthenticated-error-page` and `unauthorized-error-page`, buttons `admin-denial-sign-in` and `go-home-button`); copy comes from `authCopy` and `boundaryCopy` in `lib/ui/error-copy.ts`. Client boundaries get the server name from `useServerName()` (`lib/brand-context.tsx`, which the root layout fills through `Providers`). `app/(app)/loading.tsx` was NOT added: a loader at the `(app)` level becomes the prefetched fallback for `/rewind/<year>` and replaces the story loader's `rewind-field` layer that the morph needs. The home skeleton is `components/dashboard/home-skeleton.tsx`, drawn on `/dev/ui` for the "home loading" frame; P10.21 wires it once the home page has its own segment. The callback loader is "Finishing sign-in" with a Spinner inside the auth PublicShell; P10.27 finishes it. `LoadingScreen`, both P6.1 denial files and `RexDinosaur` are deleted. `global-error.tsx` keeps a raw `<button>` (no Tailwind, no providers): P10.11 must allow it when the raw-element ban becomes an error. The admin sign-in link is `/?callbackUrl=/admin`, which nothing reads yet; P10.27's sign-in should honour it. E2E, visual and axe baselines were not run here.)
 
 ### Step P10.18: Admin users page as the reference list page
 
@@ -966,11 +989,13 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Sign in as a Jellyfin member: the tile names the Jellyfin server and opens its public URL. As a Plex member, Watch on Plex opens the server in Plex Web. Post an announcement: its pip shows once, and is gone after a reload. With reduced motion off, nothing on the page keeps moving.
 
 **Done when.**
-- [ ] Home follows `home.html` (minus "New on") as a Server Component page with no client fetch waterfall.
-- [ ] The quick links go to the server's own Plex Web, the public Requests URL, `/discord/link`, and Jellyfin with the right name.
-- [ ] Announcements render through MarkdownBody with seen-based pips, and the UptimeStrip hides without Prometheus.
+- [x] Home follows `home.html` (minus "New on") as a Server Component page with no client fetch waterfall.
+- [x] The quick links go to the server's own Plex Web, the public Requests URL, `/discord/link`, and Jellyfin with the right name.
+- [x] Announcements render through MarkdownBody with seen-based pips, and the UptimeStrip hides without Prometheus.
 - [ ] No infinite animation remains, and the E2E, visual and axe checks pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: no new migration; it reuses P10.22's `announcementsSeenAt`, `markAnnouncementsSeen`, `MarkAnnouncementsSeen` and `NewPip`. The home skeleton is the signed-in page's own `<Suspense>` fallback in `app/(app)/page.tsx`, not a `loading.tsx`: an `(app)/loading.tsx` would replace the Rewind story's `rewind-field` fallback, and a route-level loader would also flash member cards on the signed-out `/`. The page no longer repeats the layout's onboarding redirect. The cached machine id is `plexServerId` exported from `lib/rewind/item-links.ts` (one `plex-identity` cache for Rewind and home); P10.12's `plexItemUrl` can use `plexItemHref` in `lib/ui/plex-links.ts`. Fold and copy logic for the strip is in `lib/ui/uptime.ts` (one down hour of a pair reads as degraded, two as down). Discord shows a separate "Join the Discord" tile when an invite code exists. The membership card stays P10.22's `MembershipLinkCard` (plan and billing live on `/membership`). The help card links `/help#playback` and the Discord support channel, else `/help#support`. `formatDate` gains a `month-year` style. The RewindCard's generating badge still spins (P6.9, kept as is), so `e2e/home.spec.ts`'s no-infinite-animation check assumes a non-generating card. E2E, visual and axe were not run.)
 
 ### Step P10.22: Announcements, help and membership pages
 
@@ -1013,10 +1038,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Follow "View all" from home: every announcement renders with real bullets, and the pips clear on the next visit. Open Help as a Jellyfin member: Jellyfin settings only. With Stripe on, Membership shows "Supporter plan, Active, Renews November 6, 2026" and opens Stripe.
 
 **Done when.**
-- [ ] `/announcements`, `/help` and `/membership` exist with metadata, nav entries and tests.
-- [ ] The guides are shared components with service-aware copy and no admin hints.
-- [ ] `/membership` never shows a raw price id, and the subscription section is gone from home.
+- [x] `/announcements`, `/help` and `/membership` exist with metadata, nav entries and tests.
+- [x] The guides are shared components with service-aware copy and no admin hints.
+- [x] `/membership` never shows a raw price id, and the subscription section is gone from home.
 - [ ] E2E, visual and axe checks pass.
+
+(as merged: P10.21 was not on the start point, so this step ships the pieces it shares: migration `20270112000000_p1022_user_announcements_seen` (`User.announcementsSeenAt`), `markAnnouncementsSeen` in `actions/announcements-seen.ts` (moves forward only, never past now), `components/announcements/mark-announcements-seen.tsx`, `components/announcements/new-pip.tsx` and `lib/member/announcements.ts`; P10.21 reuses them instead of adding its own. Guides render no heading (`PlaybackGuide({ service, serverName })`, `RequestsGuide({ requestsUrl })`, `SupportGuide({ discord, linkHref?, instructions? })`, with `linkHref` for onboarding's `/discord/connect?redirect=/onboarding`); `getHelpData(userId)` in `lib/member/help.ts` loads their props. `memberNav({ rewindYear, membership })` orders Home, Rewind, Membership, Help (6.1); `hasMembershipPage` in `lib/member/membership.ts` feeds the nav, the account menu (`ShellUser.membership`) and the page's `notFound()`. `getPlanName` sits beside `getPlanPrice` in `lib/stripe/prices.ts`; their tests are in `__tests__/lib/stripe/prices.test.ts`. Pre-P10.21 home keeps its layout: the announcements card gains "View all" and `MembershipLinkCard` replaces the subscription view; P10.21's help card links `/help#playback` and `#support`. The three visual captures are added to `e2e/visual/member.visual.spec.ts` for the owner's baseline workflow.)
 
 ### Step P10.23: Onboarding refresh
 
@@ -1061,10 +1088,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Complete onboarding on a phone in under 20 seconds: no overlays, a sticky Continue, and VoiceOver announcing each step's heading. A Jellyfin member sees Jellyfin instructions, and Link Discord returns to the Support step with "Discord linked".
 
 **Done when.**
-- [ ] The Stepper exists in both orientations with tests.
-- [ ] Onboarding has no space background, no interstitials and no infinite animation, and focus lands on each h1.
-- [ ] The copy is service-aware, has no admin hints and promises only configured features.
+- [x] The Stepper exists in both orientations with tests.
+- [x] Onboarding has no space background, no interstitials and no infinite animation, and focus lands on each h1.
+- [x] The copy is service-aware, has no admin hints and promises only configured features.
 - [ ] Discord goes through `/discord/connect?redirect=/onboarding`, and the E2E and visual checks pass.
+
+(as merged: `Stepper({ steps, orientation, label?, meta?, showCurrentLabel?, onSelect? })` in `components/ui/stepper.tsx`; steps are `{ id, label, state, optional?, group? }` with `state` `done | current | upcoming | skipped`. Horizontal hides the labels visually above five steps; `showCurrentLabel` gives "Step 3 of 9, Overseerr" for setup below `lg`; `onSelect` makes done and skipped steps buttons (setup's Back). The page reads `getOnboardingData(userId)` (`lib/member/onboarding.ts`: P10.22's `getHelpData` plus `Config.rewindEnabled`) instead of `getOnboardingInfo()`, which is deleted. Step ids are `welcome | playback | requests | support | final` (`types/onboarding.ts`), so the test ids are `onboarding-<id>-heading` and `-continue`. The Discord flow returns with a `discord_*` flash, which reopens the Support step. `SupportGuide`'s `linkHref` is now a plain `<a>` string, because the connect route is a route handler. Illustrations live in `components/guides/playback-illustration.tsx` and `requests-illustration.tsx`, so Help can reuse them. `space-background`, `success-animation` and `final-success-animation` stay until P10.25, since setup still imports them. The E2E spec is written but has not been run, and the step 2 baseline belongs to the owner.)
 
 ### Step P10.24: Setup wizard model: string step ids and Skip
 
@@ -1276,10 +1305,12 @@ No confetti and no space background.
 **Demo.** Open `/` signed out: one click on Continue with Plex reaches plex.tv immediately. Paste a stale callback URL: "Sign-in didn't finish" with Try again. Sign in as a non-member: "You're not a member of Northfield Plex yet", with Sign out.
 
 **Done when.**
-- [ ] Sign-in is one click with no forced wait, and Jellyfin is the secondary option.
-- [ ] The copy says the token is stored and reused, and the short privacy notice is present.
-- [ ] "Finishing sign-in" is the only full-screen spinner, and the failure, denied and NextAuth error screens are StatusScreens.
+- [x] Sign-in is one click with no forced wait, and Jellyfin is the secondary option.
+- [x] The copy says the token is stored and reused, and the short privacy notice is present.
+- [x] "Finishing sign-in" is the only full-screen spinner, and the failure, denied and NextAuth error screens are StatusScreens.
 - [ ] The E2E, axe and visual checks pass.
+
+(as merged: `/?callbackUrl=` is honoured. `safeCallbackPath` (`lib/validations/callback-path.ts`) keeps only a same-origin relative path. The member pass passes it to `startPlexSignIn({ callbackPath })`, which keeps it in the signed PIN cookie (an off-site value is dropped), and `finishPlexSignIn` returns it as `next` after the access and onboarding checks. Jellyfin goes back to `/?callbackUrl=`, and the signed-in `/` redirects there once onboarding is done. The action input is named `callbackPath` because the SEC-35 surface test flags inputs ending in `url`. The Jellyfin option reveals `JellyfinSignInButton`, the sign-in form; `JellyfinSignInForm` is the invite account form. `PlexSignInButton` is now invite-only, with no warning and no disclaimer, for P10.26. `StatusScreen` gained `titleTestId` (`plex-callback-error-heading`, `access-denied-heading`, `auth-error-heading`). `/auth/error` reads `nextAuthError()` from `flash-codes.ts`, which gained `RateLimited`, and `FlashFromQuery` skips that page. E2E, axe and visual checks were not run here.)
 
 ### Step P10.28: Subscribe pages
 

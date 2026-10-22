@@ -4,6 +4,7 @@ import { createInvite, deleteInvite, getInvites } from "@/actions/invite"
 import { getAvailableLibraries } from "@/actions/server-info"
 import { getJellyfinLibraries } from "@/actions/admin/admin-servers"
 import { useToast } from "@/components/ui/toast"
+import { useOpenFromParam } from "@/hooks/use-open-from-param"
 import { ModalShell } from "@/components/ui/modal-shell"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import type { InviteWithUsages } from "@/lib/dto/user"
@@ -118,6 +119,9 @@ export function InvitesPageClient() {
     setShowCreateModal(true)
     loadLibraries(formData.serverType)
   }
+
+  // The command menu's Create invite quick action (P10.16)
+  useOpenFromParam("create", openCreateModal)
 
   function selectServerType(serverType: ServerType) {
     setFormData(

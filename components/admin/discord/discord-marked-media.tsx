@@ -1,11 +1,13 @@
 "use client"
 
-import { useCallback } from "react"
+import { type ComponentProps, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { StyledInput } from "@/components/ui/styled-input"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Time } from "@/components/ui/time"
+import { Toggle } from "@/components/ui/toggle"
 import { useFormat } from "@/lib/format-context"
 import type { MarkType, MediaType } from "@/lib/generated/prisma"
 
@@ -50,38 +52,16 @@ interface DiscordMarkedMediaProps {
   limit: number
 }
 
-/** Human label + accent color for each MarkType. */
-const MARK_TYPE_META: Record<MarkType, { label: string; color: string; chip: string }> = {
-  FINISHED_WATCHING: {
-    label: "Finished",
-    color: "text-emerald-400",
-    chip: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  },
-  KEEP_FOREVER: {
-    label: "Keep Forever",
-    color: "text-purple-400",
-    chip: "bg-purple-500/15 text-purple-300 border-purple-500/30",
-  },
-  NOT_INTERESTED: {
-    label: "Not Interested",
-    color: "text-slate-400",
-    chip: "bg-slate-500/15 text-slate-300 border-slate-500/30",
-  },
-  REWATCH_CANDIDATE: {
-    label: "Rewatch",
-    color: "text-cyan-400",
-    chip: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
-  },
-  POOR_QUALITY: {
-    label: "Poor Quality",
-    color: "text-amber-400",
-    chip: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-  },
-  WRONG_VERSION: {
-    label: "Wrong Version",
-    color: "text-rose-400",
-    chip: "bg-rose-500/15 text-rose-300 border-rose-500/30",
-  },
+type BadgeVariant = NonNullable<ComponentProps<typeof Badge>["variant"]>
+
+/** Human label and Badge variant for each MarkType. */
+const MARK_TYPE_META: Record<MarkType, { label: string; variant: BadgeVariant }> = {
+  FINISHED_WATCHING: { label: "Finished", variant: "success" },
+  KEEP_FOREVER: { label: "Keep Forever", variant: "info" },
+  NOT_INTERESTED: { label: "Not Interested", variant: "neutral" },
+  REWATCH_CANDIDATE: { label: "Rewatch", variant: "info" },
+  POOR_QUALITY: { label: "Poor Quality", variant: "warning" },
+  WRONG_VERSION: { label: "Wrong Version", variant: "destructive" },
 }
 
 const MARK_TYPE_OPTIONS = [
@@ -165,18 +145,16 @@ export function DiscordMarkedMedia({
           const meta = MARK_TYPE_META[s.markType]
           const active = filters.markType === s.markType
           return (
-            <button
+            <Toggle
               key={s.markType}
-              type="button"
-              onClick={() => setFilter("markType", active ? "all" : s.markType)}
+              size="sm"
+              pressed={active}
+              onPressedChange={() => setFilter("markType", active ? "all" : s.markType)}
               data-testid={`mark-summary-${s.markType}`}
-              className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${meta.chip} ${
-                active ? "ring-2 ring-offset-1 ring-offset-slate-900 ring-current" : "hover:brightness-125"
-              }`}
             >
               {meta.label}
-              <span className="ml-2 font-bold">{f.number(s.count)}</span>
-            </button>
+              <span className="font-semibold tabular-nums">{f.number(s.count)}</span>
+            </Toggle>
           )
         })}
       </div>
@@ -223,39 +201,39 @@ export function DiscordMarkedMedia({
           No marked media matches these filters.
         </div>
       ) : (
-        <div className="overflow-x-auto border border-slate-700 rounded-lg">
+        <div className="overflow-x-auto border border-border rounded-lg">
           <table className="w-full">
-            <thead className="bg-slate-700/30 border-b border-slate-700">
+            <thead className="bg-secondary border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                <th className="px-4 py-3 text-left text-label font-medium text-muted-foreground">
                   Media
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                <th className="px-4 py-3 text-left text-label font-medium text-muted-foreground">
                   Mark
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                <th className="px-4 py-3 text-left text-label font-medium text-muted-foreground">
                   Marked By
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                <th className="px-4 py-3 text-left text-label font-medium text-muted-foreground">
                   Source
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">
+                <th className="px-4 py-3 text-right text-label font-medium text-muted-foreground">
                   When
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700">
+            <tbody className="divide-y divide-border">
               {marks.map((mark) => {
                 const meta = MARK_TYPE_META[mark.markType]
                 return (
                   <tr
                     key={mark.id}
-                    className="hover:bg-slate-700/20"
+                    className="hover:bg-accent"
                     data-testid={`marked-media-row-${mark.id}`}
                   >
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
-                        <span className="text-sm text-slate-200 font-medium">
+                        <span className="text-sm text-foreground font-medium">
                           {formatMediaLabel(mark)}
                         </span>
                         <span className="text-xs text-muted-foreground">
@@ -265,29 +243,19 @@ export function DiscordMarkedMedia({
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`px-2 py-1 rounded border text-xs font-medium ${meta.chip}`}
-                      >
-                        {meta.label}
-                      </span>
+                      <Badge variant={meta.variant}>{meta.label}</Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-slate-300">
+                      <span className="text-sm text-foreground">
                         {mark.user.name ?? mark.user.email ?? "Unknown user"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`px-2 py-0.5 rounded text-xs font-medium ${
-                          mark.markedVia === "discord"
-                            ? "bg-indigo-500/15 text-indigo-300"
-                            : "bg-slate-600/40 text-slate-300"
-                        }`}
-                      >
+                      <Badge variant={mark.markedVia === "discord" ? "info" : "neutral"}>
                         {mark.markedVia === "discord" ? "Discord" : mark.markedVia}
-                      </span>
+                      </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right text-sm text-slate-400">
+                    <td className="px-4 py-3 text-right text-sm text-muted-foreground">
                       <Time value={mark.markedAt} />
                     </td>
                   </tr>
@@ -301,7 +269,7 @@ export function DiscordMarkedMedia({
       {/* Pagination */}
       {total > 0 && (
         <div className="flex items-center justify-between mt-4">
-          <span className="text-sm text-slate-400" data-testid="marks-range">
+          <span className="text-sm text-muted-foreground" data-testid="marks-range">
             Showing {start}–{end} of {f.number(total)}
           </span>
           <div className="flex gap-2">

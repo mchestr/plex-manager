@@ -93,9 +93,15 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <div className="text-xs font-medium text-white truncate">
+            {/* A real link, so the member opens by keyboard (UI-23, P10.6) */}
+            <Link
+              href={userDetail(user.id)}
+              onClick={(e) => e.stopPropagation()}
+              className="block truncate rounded-sm text-xs font-medium text-foreground hover:underline"
+              data-testid={`user-name-link-${user.id}`}
+            >
               {user.name || "Unknown"}
-            </div>
+            </Link>
             {user.email && (
               <div className="text-xs text-slate-400 truncate">{user.email}</div>
             )}

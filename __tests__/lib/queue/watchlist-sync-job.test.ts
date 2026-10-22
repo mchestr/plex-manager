@@ -56,11 +56,9 @@ jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/queue/connection', () => ({
   isRedisConfigured: () => true,
-  isRedisHealthy: jest.fn(),
   getRedisConnection: jest.fn(),
 }))
-jest.mock('@/lib/queue/jobs', () => ({ isRegisteredJobType: () => true }))
-jest.mock('@/lib/queue/worker', () => ({ isWorkerRunning: () => true }))
+jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
 jest.mock('@/lib/security/audit-log', () => ({
   ...jest.requireActual('@/lib/security/audit-log'),
   logAuditEvent: jest.fn(),

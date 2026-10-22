@@ -1,5 +1,5 @@
 
-import { completeOnboarding, getOnboardingInfo, getOnboardingStatus } from '@/actions/onboarding'
+import { completeOnboarding, getOnboardingStatus } from '@/actions/onboarding'
 import { getServerSession } from 'next-auth'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -28,42 +28,6 @@ describe('Onboarding Actions', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } } as any)
-  })
-
-  describe('getOnboardingInfo', () => {
-    it('should return publicUrl when available', async () => {
-      mockPrisma.overseerr.findFirst.mockResolvedValue({
-        publicUrl: 'https://requests.example.com',
-        url: 'http://internal:5055',
-      } as any)
-      mockPrisma.discordIntegration.findUnique.mockResolvedValue(null)
-
-      const result = await getOnboardingInfo()
-
-      expect(result).toMatchObject({ success: true, data: { overseerrUrl: 'https://requests.example.com' } })
-    })
-
-    it('never returns the internal URL when publicUrl is missing', async () => {
-      mockPrisma.overseerr.findFirst.mockResolvedValue({
-        publicUrl: null,
-        url: 'http://localhost:5055',
-      } as any)
-      mockPrisma.discordIntegration.findUnique.mockResolvedValue(null)
-
-      const result = await getOnboardingInfo()
-
-      expect(result).toMatchObject({ success: true, data: { overseerrUrl: null } })
-      expect(JSON.stringify(result)).not.toContain('localhost')
-    })
-
-    it('should return null when no overseerr configured', async () => {
-      mockPrisma.overseerr.findFirst.mockResolvedValue(null)
-      mockPrisma.discordIntegration.findUnique.mockResolvedValue(null)
-
-      const result = await getOnboardingInfo()
-
-      expect(result).toMatchObject({ success: true, data: { overseerrUrl: null } })
-    })
   })
 
   describe('getOnboardingStatus', () => {

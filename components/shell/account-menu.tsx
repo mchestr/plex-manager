@@ -32,8 +32,8 @@ function Avatar({ initials }: { initials: string }) {
 
 /**
  * The account menu (ui-design-system 6.1): the name and email, the Discord
- * link state (UI-01), Account settings, Admin for admins, and Sign out.
- * P10.22 adds Membership.
+ * link state (UI-01), Membership when it exists, Account settings, Admin for
+ * admins, and Sign out.
  */
 export function AccountMenu({ user }: { user: ShellUser }) {
   const signOut = useSignOut()
@@ -70,6 +70,15 @@ export function AccountMenu({ user }: { user: ShellUser }) {
           </>
         )}
         <DropdownMenuSeparator />
+        {user.membership && (
+          <DropdownMenuLinkItem
+            render={<Link href="/membership" />}
+            icon={<Icon icon={icons.membership} />}
+            data-testid="account-menu-membership"
+          >
+            Membership
+          </DropdownMenuLinkItem>
+        )}
         <DropdownMenuLinkItem
           render={<Link href="/account" />}
           icon={<Icon icon={icons.settings} />}
