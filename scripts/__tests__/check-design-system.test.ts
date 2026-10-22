@@ -88,6 +88,13 @@ describe("rules", () => {
       expect(count('const note = "use client"\nexport const A = () => <p />\n')).toEqual({})
     })
 
+    it("skips leading block comments, and an unclosed comment run returns quickly", () => {
+      expect(count('/* a */ /** b */\n"use client"\nexport const A = () => <p />\n')).toEqual({ "client-marker": 1 })
+      const started = Date.now()
+      expect(count(`/*${"*//*".repeat(50_000)}`)).toEqual({})
+      expect(Date.now() - started).toBeLessThan(1000)
+    })
+
     it("skips Next error boundaries, which must be client components", () => {
       expect(count(marked("export default function Error() {\n  return <p />\n}\n"), "app/admin/error.tsx")).toEqual({})
       expect(count(marked("export default function GlobalError() {\n  return <p />\n}\n"), "app/global-error.tsx")).toEqual({})
