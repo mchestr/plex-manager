@@ -60,3 +60,16 @@ export async function getPlexServerIdentity(
     return { success: false, error: "Plex sent an unexpected response" }
   }
 }
+
+/**
+ * The server's machine identifier: the stored `PlexServer.machineIdentifier`
+ * when the caller has it, so a PMS restart does not block a decision plex.tv
+ * makes; otherwise the server's `/identity`.
+ */
+export async function resolveMachineIdentifier(
+  serverConfig: { url: string; token: string; machineIdentifier?: string | null },
+  options: { timeoutMs?: number } = {}
+): Promise<{ success: boolean; machineIdentifier?: string; error?: string }> {
+  if (serverConfig.machineIdentifier) return { success: true, machineIdentifier: serverConfig.machineIdentifier }
+  return getPlexServerIdentity(serverConfig, options)
+}

@@ -1,0 +1,34 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "allowSync": false,
+    "identifier": "com.plexapp.plugins.library",
+    "mediaTagPrefix": "/system/bundle/media/flags/",
+    "mediaTagVersion": 1700000000,
+    "mixedParents": true,
+    "Metadata": [
+      {
+        "addedAt": 1760000200,
+        "key": "/library/metadata/6120",
+        "librarySectionID": 1,
+        "librarySectionTitle": "Movies",
+        "ratingKey": "6120",
+        "title": "Dune: Part Two",
+        "type": "movie",
+        "year": 2024
+      },
+      {
+        "addedAt": 1760000100,
+        "grandparentTitle": "Shogun",
+        "index": 4,
+        "key": "/library/metadata/6118",
+        "librarySectionID": 2,
+        "librarySectionTitle": "TV Shows",
+        "parentIndex": 1,
+        "ratingKey": "6118",
+        "title": "The Eightfold Fence",
+        "type": "episode"
+      }
+    ]
+  }
+}

@@ -7,16 +7,11 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { listLLMModels, updateWrappedLLMProvider } from '@/actions/admin'
+import { listLLMModels, updateWrappedLLMProvider } from '@/actions/admin/admin-llm-providers'
 import { AiSection } from '@/components/admin/settings/sections/ai-section'
 
-jest.mock('@/actions/admin', () => ({
-  listLLMModels: jest.fn(),
-  setLLMDisabled: jest.fn(),
-  updateLlmCaps: jest.fn(),
-  updateChatLLMProvider: jest.fn(),
-  updateWrappedLLMProvider: jest.fn(),
-}))
+jest.mock('@/actions/admin/admin-llm-providers', () => ({ listLLMModels: jest.fn(), updateChatLLMProvider: jest.fn(), updateWrappedLLMProvider: jest.fn() }))
+jest.mock('@/actions/admin/admin-config', () => ({ setLLMDisabled: jest.fn(), updateLlmCaps: jest.fn() }))
 
 const mockRefresh = jest.fn()
 jest.mock('next/navigation', () => ({
@@ -44,7 +39,7 @@ const STORED = {
 beforeEach(() => {
   jest.clearAllMocks()
   jest.useFakeTimers({ now: new Date('2026-10-17T12:00:00Z'), advanceTimers: true })
-  mockList.mockResolvedValue({ success: true, models: [], configuredProvider: null, configuredModel: null })
+  mockList.mockResolvedValue({ success: true, data: { models: [], configuredProvider: null, configuredModel: null } })
 })
 
 afterEach(() => jest.useRealTimers())
@@ -169,7 +164,7 @@ describe('LLMProviderForm', () => {
   })
 
   it('asks the provider for nothing on open, and Test loads its list into the picker', async () => {
-    mockList.mockResolvedValue({ success: true, models: ['gpt-4o', 'gpt-6-sol', 'ft:gpt-4o:me'], configuredProvider: 'openai', configuredModel: 'gpt-4o' })
+    mockList.mockResolvedValue({ success: true, data: { models: ['gpt-4o', 'gpt-6-sol', 'ft:gpt-4o:me'], configuredProvider: 'openai', configuredModel: 'gpt-4o' } })
     const user = await openForm(STORED)
 
     // P10.7: the picker starts from the static catalogue

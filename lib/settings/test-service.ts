@@ -14,6 +14,9 @@
  * 2. Validate the values with the service's own schema (`VALIDATION`).
  * 3. Run the service's tester through `probeConnection`, cut off at 5 s, and
  *    return `{ status, code }`. The tester's message never leaves the server.
+ * 4. Prometheus only: once it answers, run the query. A query Prometheus
+ *    rejects is a `VALIDATION` error on `query` with Prometheus's own
+ *    `errorType: error` (GAP-09), so the form shows the parse error inline.
  *
  * @module lib/settings/test-service
  */
@@ -25,13 +28,13 @@ import type { z } from "zod"
 import { testJellyfinConnection } from "@/lib/connections/jellyfin-connection"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { testPlexConnection } from "@/lib/connections/plex-connection"
-import { testPrometheusConnection } from "@/lib/connections/prometheus"
+import { testPrometheusConnection, validatePrometheusQuery } from "@/lib/connections/prometheus"
 import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { resolveSecretForOrigin } from "@/lib/security/secret-reuse"
-import { probeConnection, type Probe } from "@/lib/settings/probe"
+import { PROBE_TIMEOUT_MS, probeConnection, type Probe } from "@/lib/settings/probe"
 import { jellyfinServerSchema } from "@/lib/validations/jellyfin"
 import { overseerrSchema } from "@/lib/validations/overseerr"
 import { plexServerSchema } from "@/lib/validations/plex"
@@ -138,5 +141,12 @@ export async function testService(input: ServiceTestInput, stored?: StoredSecret
 
   const tester = testerFor(input.service, input.url, secret, input.query ?? "")
   if (typeof tester !== "function") return tester
-  return { ok: true, probe: await probeConnection(input.service, tester) }
+  const probe = await probeConnection(input.service, tester)
+  if (input.service === "prometheus" && probe.status === "ok") {
+    // Parsed again for the normalised URL; the tester above already passed this parse
+    const config = prometheusSchema.parse({ name: TEST_NAME, url: input.url, query: input.query ?? "" })
+    const query = await validatePrometheusQuery(config, { timeoutMs: PROBE_TIMEOUT_MS })
+    if (!query.success) return { ok: false, code: "VALIDATION", field: "query", message: query.error }
+  }
+  return { ok: true, probe }
 }

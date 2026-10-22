@@ -309,7 +309,7 @@ describe("usage rows store only each call's new content (SEC-45)", () => {
   it("over a three-call turn, the stored prompts add up to less than 1.5 times the context", async () => {
     prismaMock.sonarr.findFirst.mockResolvedValue(sonarrRow)
     const { getSonarrHistory } = jest.requireMock<typeof import("@/lib/connections/sonarr")>("@/lib/connections/sonarr")
-    jest.mocked(getSonarrHistory).mockResolvedValue({ success: true, data: { records: ["r".repeat(2000)] } })
+    jest.mocked(getSonarrHistory).mockResolvedValue({ success: true, data: { records: ["r".repeat(2000)], totalRecords: 1 } })
     mockChatWithTools
       .mockResolvedValueOnce(turn({ toolCalls: [toolCall("call-1", "get_sonarr_history")] }))
       .mockResolvedValueOnce(turn({ toolCalls: [toolCall("call-2", "get_sonarr_history")] }))

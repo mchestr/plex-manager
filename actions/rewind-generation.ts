@@ -8,7 +8,7 @@
 
 import { z } from "zod"
 
-import { getWrappedSettings } from "@/actions/admin"
+import { getWrappedSettings } from "@/lib/wrapped/generation-settings"
 import { adminAction, memberAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"

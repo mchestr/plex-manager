@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useSyncExternalStore } from "react"
 
-import { updateServerTimeZone } from "@/actions/admin"
+import { updateServerTimeZone } from "@/actions/admin/admin-config"
 import { FormField } from "@/components/ui/form-field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/toast"

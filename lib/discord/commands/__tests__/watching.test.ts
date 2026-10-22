@@ -68,6 +68,9 @@ jest.mock("@/lib/discord/config", () => ({
   getDiscordPortalUrl: () => "https://example.com/discord/link",
 }))
 
+import { readFileSync } from "fs"
+import path from "path"
+
 import { watchingCommand } from "../watching"
 import { getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
@@ -98,6 +101,7 @@ const activeConfig = {
   url: "https://plex.local:32400",
   token: "tok",
   adminPlexUserId: null,
+  machineIdentifier: null,
 }
 
 /** A session belonging to the caller (an episode, transcoding). */
@@ -246,6 +250,34 @@ describe("watchingCommand.handle", () => {
     expect(value).toContain("50%")
     // Transcode / quality signal.
     expect(value.toLowerCase()).toMatch(/transcod/)
+  })
+
+  it("lists the server owner's own stream, which the PMS reports as user 1 (GAP-08)", async () => {
+    const recorded = JSON.parse(
+      readFileSync(path.join(__dirname, "../../../connections/__tests__/fixtures/pms/sessions-owner.json"), "utf8")
+    )
+    mockGetSessions.mockResolvedValue({ success: true, data: recorded })
+    mockGetConfig.mockResolvedValue({ ...activeConfig, adminPlexUserId: PLEX_USER_ID })
+    const { ctx, editReply } = createMockContext()
+
+    await watchingCommand.handle(ctx)
+
+    const embed = editReply.mock.calls[0][0].embeds[0] as { data: { fields: { name: string }[] } }
+    expect(embed.data.fields).toHaveLength(1)
+    expect(JSON.stringify(embed.data)).toContain("Arrival")
+    expect(JSON.stringify(embed.data)).not.toContain("Severance")
+  })
+
+  it("never matches user 1 for a member who is not the owner", async () => {
+    mockGetSessions.mockResolvedValue({
+      success: true,
+      data: { MediaContainer: { size: 1, Metadata: [{ ...otherUserSession, User: { id: "1", title: "owner" } }] } },
+    })
+    const { ctx, editReply } = createMockContext()
+
+    await watchingCommand.handle(ctx)
+
+    expect(editReply.mock.calls[0][0].content).toMatch(/not watching anything/i)
   })
 
   it("shows a friendly empty state when the caller is watching nothing", async () => {

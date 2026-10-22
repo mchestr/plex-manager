@@ -62,27 +62,10 @@ describe("app/globals.css", () => {
     }
   })
 
-  it("keeps the one-shot fade-in and the v2 grain", () => {
+  it("keeps the one-shot fade-in and drops the v2 grain", () => {
     expect(CSS).toMatch(/@keyframes\s+fade-in\b/)
-    expect(CSS).toMatch(/@keyframes\s+grain\b/)
-  })
-
-  it("replaces the cinematic colours with aliases marked for P11.29", () => {
-    expect(CSS).not.toMatch(/#(?:0a0908|16120e|d4af37|f5d67b|ece5d8|9a9082)\b/i)
-    const marker = RAW.indexOf("/* temporary cinematic aliases: delete in P11.29 */")
-    expect(marker).toBeGreaterThan(-1)
-    const block = CSS.slice(marker, CSS.indexOf("}", marker))
-    expect(block).toMatch(/^\s*@theme inline\s*\{/)
-    for (const [alias, token] of [
-      ["stage", "background"],
-      ["stage-panel", "card"],
-      ["gold", "primary"],
-      ["gold-bright", "primary-hover"],
-      ["ivory", "foreground"],
-      ["taupe", "muted-foreground"],
-    ]) {
-      expect(block).toContain(`--color-${alias}: var(--${token});`)
-    }
+    expect(CSS).not.toMatch(/@keyframes\s+grain\b/)
+    expect(CSS).not.toMatch(/--animate-grain\b/)
   })
 
   it("uses the bounded dark variant", () => {

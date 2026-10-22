@@ -12,7 +12,7 @@ import {
   SESSION_IDLE_TIMEOUT_MS,
 } from "@/lib/discord/chat-session"
 import { prisma } from "@/lib/prisma"
-import { type ChatMessage } from "@/actions/chatbot/types"
+import { type ChatMessage } from "@/lib/chatbot/types"
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({

@@ -78,6 +78,7 @@ const PLEX_SERVER = {
   publicUrl: null,
   token: 'server-token',
   adminPlexUserId: 'plex-owner',
+  machineIdentifier: 'this-server-machine-id',
   isActive: true,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -104,7 +105,7 @@ describe('Plex sign-in keeps roles set in the UI', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     prismaMock.plexServer.findFirst.mockResolvedValue(PLEX_SERVER)
-    mockCheckUserServerAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckUserServerAccess.mockResolvedValue({ status: 'granted' })
   })
 
   it('keeps a member promoted in the UI an admin', async () => {

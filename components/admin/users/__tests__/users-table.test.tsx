@@ -3,22 +3,22 @@ import userEvent from '@testing-library/user-event'
 
 import { makeAdminUserWithStats, makeLlmUsageStats } from '@/__tests__/utils/test-builders'
 import { currentHref, resetUrl } from '@/__tests__/helpers/url-router'
-import { setUserDisabled, updateUserAdminStatus } from '@/actions/admin'
+import { setUserDisabled, updateUserAdminStatus } from '@/actions/admin/admin-users'
 import { adminGrantAccess, adminToggleExempt } from '@/actions/admin/subscriptions'
 import { adminRegenerateRewind } from '@/actions/rewind-generation'
-import { unshareUserLibrary } from '@/actions/users'
+import { unshareUserLibrary } from '@/actions/user-queries'
 import { UsersTable } from '@/components/admin/users/users-table'
 import type { AdminUserWithWrappedStats } from '@/types/admin'
 
 jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').navigationModule)
-jest.mock('@/actions/admin', () => ({ setUserDisabled: jest.fn(), updateUserAdminStatus: jest.fn() }))
+jest.mock('@/actions/admin/admin-users', () => ({ setUserDisabled: jest.fn(), updateUserAdminStatus: jest.fn() }))
 jest.mock('@/actions/admin/subscriptions', () => ({
   adminGrantAccess: jest.fn(),
   adminToggleExempt: jest.fn(),
   adminCancelSubscription: jest.fn(),
 }))
 jest.mock('@/actions/rewind-generation', () => ({ adminRegenerateRewind: jest.fn() }))
-jest.mock('@/actions/users', () => ({ unshareUserLibrary: jest.fn() }))
+jest.mock('@/actions/user-queries', () => ({ unshareUserLibrary: jest.fn() }))
 jest.mock('@/actions/import-plex-users', () => ({ importPlexUsers: jest.fn() }))
 const mockShowSuccess = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: mockShowSuccess, showError: jest.fn() }) }))
@@ -139,7 +139,7 @@ describe('UsersTable', () => {
     expect(confirm).toBeEnabled()
     await user.click(confirm)
     expect(confirm).toHaveTextContent('Removing')
-    expect(unshareUserLibrary).toHaveBeenCalledWith('u-sam')
+    expect(unshareUserLibrary).toHaveBeenCalledWith({ userId: 'u-sam' })
 
     settle({ success: false, code: 'PLEX_UNAVAILABLE', error: "Plex didn't respond. Try again in a few minutes." })
     expect(await within(dialog).findByRole('alert')).toHaveTextContent("Plex didn't respond.")
@@ -161,14 +161,14 @@ describe('UsersTable', () => {
   })
 
   it('changes the role and disables the account through their confirms, closing on success', async () => {
-    jest.mocked(updateUserAdminStatus).mockResolvedValue({ success: true })
+    jest.mocked(updateUserAdminStatus).mockResolvedValue({ success: true, data: null })
     jest.mocked(setUserDisabled).mockResolvedValue({ success: true, data: null })
     renderTable()
 
     let user = await openAction('Sam Rivera', 'Make admin...')
     expect(await screen.findByTestId('admin-user-role-dialog')).toHaveTextContent('Make Sam Rivera an admin?')
     await user.click(screen.getByTestId('admin-user-role-confirm'))
-    expect(updateUserAdminStatus).toHaveBeenCalledWith('u-sam', true)
+    expect(updateUserAdminStatus).toHaveBeenCalledWith({ userId: 'u-sam', isAdmin: true })
     expect(mockShowSuccess).toHaveBeenCalledWith('Admin role granted')
     await waitFor(() => expect(screen.queryByTestId('admin-user-role-dialog')).not.toBeInTheDocument())
 
@@ -179,8 +179,8 @@ describe('UsersTable', () => {
   })
 
   it('offers the billing actions only with Stripe on', async () => {
-    jest.mocked(adminGrantAccess).mockResolvedValue({ error: 'Plex refused the invite' })
-    jest.mocked(adminToggleExempt).mockResolvedValue({ success: true })
+    jest.mocked(adminGrantAccess).mockResolvedValue({ success: false, code: 'UPSTREAM_UNAVAILABLE', error: 'Plex refused the invite' })
+    jest.mocked(adminToggleExempt).mockResolvedValue({ success: true, data: null })
     renderTable({ stripeEnabled: true })
 
     const user = await openAction('Sam Rivera', 'Grant comp access...')

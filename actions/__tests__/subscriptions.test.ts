@@ -94,9 +94,9 @@ describe('adminCancelSubscription', () => {
     const stripe = makeStripeMock()
     mockGetStripe.mockResolvedValue(stripe)
 
-    const result = await adminCancelSubscription('user-9')
+    const result = await adminCancelSubscription({ userId: 'user-9' })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(stripe.subscriptions.update).toHaveBeenCalledWith('sub_1', {
       cancel_at_period_end: true,
     })
@@ -108,9 +108,9 @@ describe('adminCancelSubscription', () => {
     mockGetServerSession.mockResolvedValue(adminSession)
     mockSubscriptionFindUnique.mockResolvedValue(null)
 
-    const result = await adminCancelSubscription('user-9')
+    const result = await adminCancelSubscription({ userId: 'user-9' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
     expect(mockGetStripe).not.toHaveBeenCalled()
   })
 
@@ -119,9 +119,9 @@ describe('adminCancelSubscription', () => {
     mockSubscriptionFindUnique.mockResolvedValue({ stripeSubscriptionId: 'sub_1' })
     mockGetStripe.mockResolvedValue(null)
 
-    const result = await adminCancelSubscription('user-9')
+    const result = await adminCancelSubscription({ userId: 'user-9' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
   })
 
   it('returns an error (does not throw) when Stripe update fails', async () => {
@@ -131,15 +131,24 @@ describe('adminCancelSubscription', () => {
     stripe.subscriptions.update.mockRejectedValue(new Error('Stripe down'))
     mockGetStripe.mockResolvedValue(stripe)
 
-    const result = await adminCancelSubscription('user-9')
+    const result = await adminCancelSubscription({ userId: 'user-9' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
+  })
+
+  it('refuses a signed-out caller and an empty user id without a throw', async () => {
+    mockGetServerSession.mockResolvedValue(null)
+    await expect(adminCancelSubscription({ userId: 'user-9' })).resolves.toMatchObject({ code: 'UNAUTHENTICATED' })
+
+    mockGetServerSession.mockResolvedValue(adminSession)
+    await expect(adminCancelSubscription({ userId: '' })).resolves.toMatchObject({ code: 'VALIDATION' })
+    expect(mockGetStripe).not.toHaveBeenCalled()
   })
 
   it('rejects a non-admin caller before touching Stripe', async () => {
     mockGetServerSession.mockResolvedValue(nonAdminSession)
 
-    await expect(adminCancelSubscription('user-9')).rejects.toThrow()
+    await expect(adminCancelSubscription({ userId: 'user-9' })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
     expect(mockSubscriptionFindUnique).not.toHaveBeenCalled()
     expect(mockGetStripe).not.toHaveBeenCalled()
   })
@@ -159,9 +168,9 @@ describe('adminGrantAccess', () => {
     delete process.env.REDIS_URL
     mockGetServerSession.mockResolvedValue(adminSession)
 
-    const result = await adminGrantAccess('user-9')
+    const result = await adminGrantAccess({ userId: 'user-9' })
 
-    expect(result).toEqual({ error: expect.stringContaining('REDIS_URL') })
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('REDIS_URL') })
     expect(mockUserUpdate).not.toHaveBeenCalled()
     expect(mockAddJob).not.toHaveBeenCalled()
   })
@@ -172,9 +181,9 @@ describe('adminGrantAccess', () => {
     mockUserUpdate.mockResolvedValue({ id: 'user-9' })
     mockAddJob.mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:6379'))
 
-    const result = await adminGrantAccess('user-9')
+    const result = await adminGrantAccess({ userId: 'user-9' })
 
-    expect(result).toEqual({ error: expect.not.stringContaining('ECONNREFUSED') })
+    expect(result).toMatchObject({ success: false, error: expect.not.stringContaining('ECONNREFUSED') })
     expect(mockUserUpdate).toHaveBeenLastCalledWith({
       where: { id: 'user-9' },
       data: { isExempt: false, exemptReason: null },
@@ -187,9 +196,9 @@ describe('adminGrantAccess', () => {
     mockUserUpdate.mockResolvedValue({ id: 'user-9' })
     mockAddJob.mockResolvedValue('plex:access:grant:user-9')
 
-    const result = await adminGrantAccess('user-9')
+    const result = await adminGrantAccess({ userId: 'user-9' })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(mockUserUpdate).toHaveBeenCalledWith({
       where: { id: 'user-9' },
       data: { isExempt: true, exemptReason: 'comp' },
@@ -207,9 +216,9 @@ describe('adminGrantAccess', () => {
     mockGetServerSession.mockResolvedValue(adminSession)
     mockUserFindUnique.mockResolvedValue(null)
 
-    const result = await adminGrantAccess('missing')
+    const result = await adminGrantAccess({ userId: 'missing' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
     expect(mockUserUpdate).not.toHaveBeenCalled()
     expect(mockAddJob).not.toHaveBeenCalled()
   })
@@ -217,7 +226,7 @@ describe('adminGrantAccess', () => {
   it('rejects a non-admin caller before any side effect', async () => {
     mockGetServerSession.mockResolvedValue(nonAdminSession)
 
-    await expect(adminGrantAccess('user-9')).rejects.toThrow()
+    await expect(adminGrantAccess({ userId: 'user-9' })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
     expect(mockUserFindUnique).not.toHaveBeenCalled()
     expect(mockAddJob).not.toHaveBeenCalled()
   })
@@ -226,9 +235,9 @@ describe('adminGrantAccess', () => {
     mockGetServerSession.mockResolvedValue(adminSession)
     mockUserFindUnique.mockResolvedValue({ id: 'user-9', isAdmin: true })
 
-    const result = await adminGrantAccess('user-9')
+    const result = await adminGrantAccess({ userId: 'user-9' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
     expect(mockUserUpdate).not.toHaveBeenCalled()
     expect(mockAddJob).not.toHaveBeenCalled()
   })
@@ -244,9 +253,9 @@ describe('adminToggleExempt', () => {
     mockUserFindUnique.mockResolvedValue({ isExempt: false })
     mockUserUpdate.mockResolvedValue({ id: 'user-9' })
 
-    const result = await adminToggleExempt('user-9')
+    const result = await adminToggleExempt({ userId: 'user-9' })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(mockUserUpdate).toHaveBeenCalledWith({
       where: { id: 'user-9' },
       data: { isExempt: true, exemptReason: 'comp' },
@@ -258,7 +267,7 @@ describe('adminToggleExempt', () => {
     mockUserFindUnique.mockResolvedValue({ isExempt: false })
     mockUserUpdate.mockResolvedValue({ id: 'user-9' })
 
-    await adminToggleExempt('user-9', 'grandfathered')
+    await adminToggleExempt({ userId: 'user-9', reason: 'grandfathered' })
 
     expect(mockUserUpdate).toHaveBeenCalledWith({
       where: { id: 'user-9' },
@@ -271,9 +280,9 @@ describe('adminToggleExempt', () => {
     mockUserFindUnique.mockResolvedValue({ isExempt: true })
     mockUserUpdate.mockResolvedValue({ id: 'user-9' })
 
-    const result = await adminToggleExempt('user-9')
+    const result = await adminToggleExempt({ userId: 'user-9' })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(mockUserUpdate).toHaveBeenCalledWith({
       where: { id: 'user-9' },
       data: { isExempt: false, exemptReason: null },
@@ -284,16 +293,16 @@ describe('adminToggleExempt', () => {
     mockGetServerSession.mockResolvedValue(adminSession)
     mockUserFindUnique.mockResolvedValue(null)
 
-    const result = await adminToggleExempt('missing')
+    const result = await adminToggleExempt({ userId: 'missing' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
     expect(mockUserUpdate).not.toHaveBeenCalled()
   })
 
   it('rejects a non-admin caller before any side effect', async () => {
     mockGetServerSession.mockResolvedValue(nonAdminSession)
 
-    await expect(adminToggleExempt('user-9')).rejects.toThrow()
+    await expect(adminToggleExempt({ userId: 'user-9' })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
     expect(mockUserFindUnique).not.toHaveBeenCalled()
     expect(mockUserUpdate).not.toHaveBeenCalled()
   })
@@ -302,9 +311,9 @@ describe('adminToggleExempt', () => {
     mockGetServerSession.mockResolvedValue(adminSession)
     mockUserFindUnique.mockResolvedValue({ isExempt: false, isAdmin: true })
 
-    const result = await adminToggleExempt('user-9')
+    const result = await adminToggleExempt({ userId: 'user-9' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
     expect(mockUserUpdate).not.toHaveBeenCalled()
   })
 })

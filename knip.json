@@ -10,6 +10,7 @@
     "scripts/codemods/spinners.ts!",
     "scripts/codemods/icons.ts!",
     "scripts/codemods/adapters.ts!",
+    "scripts/codemods/barrel-imports.ts!",
     "scripts/design-system/rewind-motion.mjs!",
     "lib/wrapped/facts/*.ts!",
     "lib/wrapped/archetypes/*.ts!",
@@ -30,9 +31,7 @@
     // the share visit counter (P5.11); P7.5's share page is its first caller
     "lib/wrapped/share/visit-counter.ts!",
     // colour maths for the token and contrast tests; its last app caller, the Chart.js theme, went in P10.9
-    "lib/design/color.ts!",
-    // the v2 viewer lost its last caller with the v2 playground (P8.8); P11.29 deletes it
-    "components/wrapped/wrapped-viewer-wrapper.tsx!"
+    "lib/design/color.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",

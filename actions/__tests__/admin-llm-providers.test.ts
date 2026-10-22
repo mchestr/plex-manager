@@ -187,9 +187,9 @@ describe('admin only, audited, rate-limited', () => {
       success: false,
       code: 'FORBIDDEN',
     })
-    expect(await listLLMModels({ purpose: 'chat', provider: 'openai', apiKey: 'k' })).toEqual({
+    expect(await listLLMModels({ purpose: 'chat', provider: 'openai', apiKey: 'k' })).toMatchObject({
       success: false,
-      error: 'Admin access required',
+      code: 'FORBIDDEN',
     })
     expect(prismaMock.lLMProvider.findFirst).not.toHaveBeenCalled()
     expect(mockLoad).not.toHaveBeenCalled()
@@ -216,7 +216,7 @@ describe('admin only, audited, rate-limited', () => {
 
     const result = await listLLMModels({ purpose: 'chat', provider: 'openai', apiKey: 'k' })
 
-    expect(result.success).toBe(false)
+    expect(result).toMatchObject({ success: false, code: 'RATE_LIMITED' })
     expect(mockLoad).not.toHaveBeenCalled()
   })
 })
@@ -230,9 +230,7 @@ describe('listLLMModels', () => {
 
     expect(result).toEqual({
       success: true,
-      models: ['claude-sonnet-5-5'],
-      configuredProvider: 'anthropic',
-      configuredModel: 'claude-sonnet-5-5',
+      data: { models: ['claude-sonnet-5-5'], configuredProvider: 'anthropic', configuredModel: 'claude-sonnet-5-5' },
     })
     expect(mockLoad).toHaveBeenCalledWith({ provider: 'anthropic', apiKey: 'stored-key', baseUrl: undefined })
   })
@@ -251,11 +249,13 @@ describe('listLLMModels', () => {
 
     expect(await listLLMModels({ purpose: 'chat', provider: 'google' })).toEqual({
       success: false,
+      code: 'VALIDATION',
       error: 'Enter the API key first',
     })
   })
 
   it('validates its input', async () => {
-    expect(await listLLMModels({ purpose: 'other' as 'chat' })).toEqual({ success: false, error: 'Invalid request' })
+    const send = listLLMModels as (input: unknown) => ReturnType<typeof listLLMModels>
+    expect(await send({ purpose: 'other' })).toMatchObject({ success: false, code: 'VALIDATION' })
   })
 })

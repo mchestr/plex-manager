@@ -6,10 +6,10 @@
  * Shows the requesting user their OWN current Plex streams as an ephemeral
  * embed. Sessions are scoped to the caller's `plexUserId` the same way the
  * chatbot's `get_plex_sessions` executor scopes them in Discord context
- * (`actions/chatbot/executors/plex.ts`): the raw `MediaContainer.Metadata` list
+ * (`lib/chatbot/executors/plex.ts`): the raw `MediaContainer.Metadata` list
  * is filtered to entries whose `User.id` (or `user_id`) equals the caller's Plex
- * user id. Because the result is self-scoped, no other viewer's activity is ever
- * rendered.
+ * user id, or `1` for the server owner (`matchesSessionUser`). Because the
+ * result is self-scoped, no other viewer's activity is ever rendered.
  *
  * ## Flow
  *
@@ -33,6 +33,7 @@ import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
+import { matchesSessionUser } from "@/lib/connections/plex-sessions"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { formatResolution } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
@@ -92,13 +93,12 @@ function toArray<T>(value: T | T[] | undefined | null): T[] {
 
 /**
  * Filter the session list to only the caller's own streams, mirroring the
- * `get_plex_sessions` executor's Discord scoping.
+ * `get_plex_sessions` executor's Discord scoping. The owner's own streams are
+ * PMS user 1 (GAP-08).
  * @internal
  */
-function scopeToUser(sessions: PlexSession[], plexUserId: string): PlexSession[] {
-  return sessions.filter(
-    (session) => session.User?.id === plexUserId || session.user_id === plexUserId
-  )
+function scopeToUser(sessions: PlexSession[], member: { plexUserId: string; isOwner: boolean }): PlexSession[] {
+  return sessions.filter((session) => matchesSessionUser(session, member))
 }
 
 /**
@@ -254,7 +254,7 @@ async function handleWatching(ctx: InteractionContext): Promise<void> {
   }
 
   const allSessions = toArray<PlexSession>(result.data?.MediaContainer?.Metadata)
-  const mySessions = scopeToUser(allSessions, plexUserId)
+  const mySessions = scopeToUser(allSessions, { plexUserId, isOwner: plexUserId === config.adminPlexUserId })
 
   if (mySessions.length === 0) {
     await interaction.editReply({ content: EMPTY_STATE })

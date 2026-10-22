@@ -184,8 +184,7 @@ plex-wrapped/
 │   ├── generator/          # Wrapped generation UI
 │   ├── onboarding/         # Onboarding components
 │   ├── setup-wizard/       # Setup wizard steps
-│   ├── ui/                 # Shared UI primitives
-│   └── wrapped/            # Wrapped display components
+│   └── ui/                 # Shared UI primitives
 ├── lib/                    # Utilities, helpers, business logic
 │   ├── connections/        # External API clients (Plex, Tautulli, Overseerr, etc.)
 │   ├── security/           # Security utilities (rate limiting, CSRF, audit logging)

@@ -75,6 +75,7 @@ const PLEX_SERVER = {
   id: 'ps_1',
   url: 'https://plex.example.com:32400',
   token: 'server-token',
+  machineIdentifier: 'this-server-machine-id',
 }
 
 /** Build a minimal fixture Job for the revoke processor. */
@@ -260,7 +261,7 @@ describe('processPlexAccessRevoke', () => {
     const result = await processPlexAccessRevoke(makeRevokeJob('user-1'))
 
     expect(unshareUserFromPlexServer).toHaveBeenCalledWith(
-      { url: PLEX_SERVER.url, token: PLEX_SERVER.token },
+      { url: PLEX_SERVER.url, token: PLEX_SERVER.token, machineIdentifier: 'this-server-machine-id' },
       'plex-99'
     )
     expect(prisma.subscription.updateMany).toHaveBeenCalledWith({

@@ -130,3 +130,26 @@ export function createPublicUrlSchema(exampleDomain?: string) {
       { message: `Invalid URL format. Expected format: https://${domainExample}` }
     )
 }
+
+/**
+ * The row an API-key service saves (Tautulli, Overseerr, Sonarr and Radarr;
+ * DUP-11): a name, the server URL, the key and an optional public URL. The
+ * port and domain only shape the error copy.
+ *
+ * @example
+ * ```ts
+ * const sonarr = createServiceSchema({ defaultPort: "8989", publicExample: "sonarr.example.com" })
+ * sonarr.parse({ name: "Sonarr", url: "http://sonarr.lan:8989/", apiKey: "k" }).url // "http://sonarr.lan:8989"
+ * ```
+ */
+export function createServiceSchema({ defaultPort, publicExample }: { defaultPort: string; publicExample: string }) {
+  return z.object({
+    name: z.string().min(1, "Server name is required"),
+    url: createServerUrlSchema(defaultPort),
+    apiKey: z.string().min(1, "API key is required"),
+    publicUrl: createPublicUrlSchema(publicExample),
+  })
+}
+
+export type ServiceInput = z.input<ReturnType<typeof createServiceSchema>>
+export type ServiceParsed = z.output<ReturnType<typeof createServiceSchema>>

@@ -24,7 +24,7 @@ import {
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { testJellyfinConnection } from '@/lib/connections/jellyfin'
 import { testOverseerrConnection } from '@/lib/connections/overseerr'
-import { getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
+import { getPlexServerIdentity, getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
 import { testPrometheusConnection, validatePrometheusQuery } from '@/lib/connections/prometheus'
 import { testRadarrConnection } from '@/lib/connections/radarr'
 import { testSonarrConnection } from '@/lib/connections/sonarr'
@@ -48,7 +48,11 @@ function sendsSecret(secretField: 'apiKey' | 'token') {
   }
 }
 
-jest.mock('@/lib/connections/plex', () => ({ testPlexConnection: jest.fn(), getPlexUserInfo: jest.fn() }))
+jest.mock('@/lib/connections/plex', () => ({
+  testPlexConnection: jest.fn(),
+  getPlexUserInfo: jest.fn(),
+  getPlexServerIdentity: jest.fn(),
+}))
 jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn() }))
 jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn() }))
 jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
@@ -153,6 +157,7 @@ beforeEach(() => {
   prismaMock.$transaction.mockImplementation((async (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock)) as never)
   for (const service of SERVICES) service.test.mockImplementation(sendsSecret(service.secretField))
   ;(getPlexUserInfo as jest.Mock).mockResolvedValue({ success: true, data: { id: 'plex-admin' } })
+  ;(getPlexServerIdentity as jest.Mock).mockResolvedValue({ success: false, error: 'Plex did not respond in time' })
 })
 
 describe.each(SERVICES)('$name: a stored secret never goes to a new address', (service) => {

@@ -1,11 +1,13 @@
-import { runConversationLoop } from "@/actions/chatbot/conversation"
+import "server-only"
+
+import { runConversationLoop } from "@/lib/chatbot/conversation"
 import {
   ALL_TOOLS,
   DISCORD_SAFE_TOOLS,
   generateDiscordSystemPrompt,
   generateSystemPrompt,
-} from "@/actions/chatbot/tools"
-import { type ChatMessage, type ChatResponse } from "@/actions/chatbot/types"
+} from "@/lib/chatbot/tools"
+import { type ChatMessage, type ChatResponse } from "@/lib/chatbot/types"
 import { type ChatTool } from "@/lib/llm/chat"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
@@ -39,7 +41,7 @@ function getToolsForContext(context: ChatbotContext | undefined): ChatTool[] {
 
 /**
  * Rules for tool output, which reaches the model wrapped as `untrusted_data`
- * (`actions/chatbot/conversation.ts`). Members control some of that text, such
+ * (`lib/chatbot/conversation.ts`). Members control some of that text, such
  * as Overseerr display names, so it is data and never instructions (SEC-42).
  */
 const UNTRUSTED_DATA_RULES = `=== TOOL DATA SAFETY ===

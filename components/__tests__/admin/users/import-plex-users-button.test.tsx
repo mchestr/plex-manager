@@ -60,9 +60,7 @@ describe('ImportPlexUsersButton', () => {
     // Resolve the promise
     resolveImport!({
       success: true,
-      imported: 0,
-      skipped: 0,
-      errors: [],
+      data: { imported: 0, skipped: 0, managed: 0, pending: 0, errors: [] },
     })
 
     // Wait for the button to be re-enabled
@@ -75,9 +73,7 @@ describe('ImportPlexUsersButton', () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: true,
-      imported: 5,
-      skipped: 0,
-      errors: [],
+      data: { imported: 5, skipped: 0, managed: 0, pending: 0, errors: [] },
     })
 
     render(<ImportPlexUsersButton />)
@@ -90,13 +86,26 @@ describe('ImportPlexUsersButton', () => {
     expect(mockRefresh).not.toHaveBeenCalled()
   })
 
+  it('reports managed users and pending invites left out', async () => {
+    const user = userEvent.setup()
+    jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
+      success: true,
+      data: { imported: 3, skipped: 0, managed: 1, pending: 2, errors: [] },
+    })
+
+    render(<ImportPlexUsersButton />)
+    await user.click(screen.getByText('Import from Plex'))
+
+    await waitFor(() =>
+      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 3 users, 1 managed, 2 pending invites left out')
+    )
+  })
+
   it('should show success message with singular "user" when importing 1 user', async () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: true,
-      imported: 1,
-      skipped: 0,
-      errors: [],
+      data: { imported: 1, skipped: 0, managed: 0, pending: 0, errors: [] },
     })
 
     render(<ImportPlexUsersButton />)
@@ -113,9 +122,7 @@ describe('ImportPlexUsersButton', () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: true,
-      imported: 3,
-      skipped: 2,
-      errors: [],
+      data: { imported: 3, skipped: 2, managed: 0, pending: 0, errors: [] },
     })
 
     render(<ImportPlexUsersButton />)
@@ -133,9 +140,7 @@ describe('ImportPlexUsersButton', () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: true,
-      imported: 3,
-      skipped: 0,
-      errors: ['Error 1', 'Error 2'],
+      data: { imported: 3, skipped: 0, managed: 0, pending: 0, errors: ['Error 1', 'Error 2'] },
     })
 
     render(<ImportPlexUsersButton />)
@@ -153,9 +158,7 @@ describe('ImportPlexUsersButton', () => {
     const errors = ['User 1: Failed to create', 'User 2: Invalid data']
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: true,
-      imported: 1,
-      skipped: 0,
-      errors,
+      data: { imported: 1, skipped: 0, managed: 0, pending: 0, errors },
     })
 
     render(<ImportPlexUsersButton />)
@@ -174,9 +177,8 @@ describe('ImportPlexUsersButton', () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: false,
-      imported: 0,
-      skipped: 0,
-      errors: ['No active Plex server configured'],
+      code: 'NOT_FOUND',
+      error: 'No active Plex server configured',
     })
 
     render(<ImportPlexUsersButton />)
@@ -189,13 +191,12 @@ describe('ImportPlexUsersButton', () => {
     })
   })
 
-  it('should show generic error message when import fails without specific error', async () => {
+  it('should show the action\'s error copy', async () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: false,
-      imported: 0,
-      skipped: 0,
-      errors: [],
+      code: 'NOT_FOUND',
+      error: 'Failed to import Plex users',
     })
 
     render(<ImportPlexUsersButton />)
@@ -212,9 +213,7 @@ describe('ImportPlexUsersButton', () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: true,
-      imported: 2,
-      skipped: 0,
-      errors: ['Single error'],
+      data: { imported: 2, skipped: 0, managed: 0, pending: 0, errors: ['Single error'] },
     })
 
     render(<ImportPlexUsersButton />)
@@ -231,9 +230,7 @@ describe('ImportPlexUsersButton', () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: true,
-      imported: 5,
-      skipped: 3,
-      errors: ['Error 1', 'Error 2'],
+      data: { imported: 5, skipped: 3, managed: 0, pending: 0, errors: ['Error 1', 'Error 2'] },
     })
 
     render(<ImportPlexUsersButton />)
@@ -251,9 +248,7 @@ describe('ImportPlexUsersButton', () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: true,
-      imported: 1,
-      skipped: 0,
-      errors: [],
+      data: { imported: 1, skipped: 0, managed: 0, pending: 0, errors: [] },
     })
 
     render(<ImportPlexUsersButton />)
@@ -275,9 +270,8 @@ describe('ImportPlexUsersButton', () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: false,
-      imported: 0,
-      skipped: 0,
-      errors: ['Failed'],
+      code: 'NOT_FOUND',
+      error: 'Failed',
     })
 
     render(<ImportPlexUsersButton />)

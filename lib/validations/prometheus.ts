@@ -16,13 +16,20 @@ export type PrometheusParsed = z.output<typeof prometheusSchema>
  * Based on Prometheus HTTP API: https://prometheus.io/docs/prometheus/latest/querying/api/
  */
 
-/** The `{ status, data }` wrapper every Prometheus API response uses. */
+/** The `{ status, data }` wrapper of a 2xx Prometheus API response; its status is always "success". */
 export function prometheusResponseSchema<T extends z.ZodType>(data: T) {
   return z.looseObject({
-    status: z.string(),
+    status: z.literal("success"),
     data: data.optional(),
   })
 }
+
+/** The body of a 4xx/5xx answer: 400 bad parameters, 422 an expression that cannot run, 503 a timeout or abort. */
+export const prometheusErrorBodySchema = z.looseObject({
+  status: z.literal("error"),
+  errorType: z.string(),
+  error: z.string(),
+})
 
 /** `query_range` data: one series per metric, as `[timestamp, value]` pairs. */
 export const prometheusRangeDataSchema = z.looseObject({

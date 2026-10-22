@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { extendTailwindMerge } from "tailwind-merge"
+import type { LlmUsageStats } from "@/types/admin"
 
 /**
  * tailwind-merge that knows the design system's own scales (ui-design-system
@@ -94,15 +95,7 @@ export function aggregateLlmUsage(usageRecords: {
   cost: number;
   provider: string | null;
   model: string | null;
-}[]): {
-  totalTokens: number;
-  promptTokens: number;
-  completionTokens: number;
-  cost: number;
-  provider: string | null;
-  model: string | null;
-  count: number;
-} | null {
+}[]): LlmUsageStats | null {
   if (usageRecords.length === 0) {
     return null
   }

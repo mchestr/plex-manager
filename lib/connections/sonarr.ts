@@ -1,6 +1,20 @@
+import { z } from "zod"
+
 import { type SonarrParsed } from "@/lib/validations/sonarr";
-import { arrGet, testArrConnection } from "@/lib/connections/arr-client";
+import { arrGet, arrGetList, arrGetPaged, arrQuery, invalidArrParams, testArrConnection, type ArrPage } from "@/lib/connections/arr-client";
 import { type ConnectionResult } from "@/types/connection";
+
+/*
+ * Query parameters per endpoint, as Sonarr's v3 controllers bind them
+ * (GAP-07). Strict, so a parameter an endpoint ignores is a type error.
+ * `page` and `pageSize` are added by `arrGetPaged`.
+ */
+const withSeriesAndEpisode = { includeSeries: z.literal(true), includeEpisode: z.literal(true) }
+const historyParams = z.strictObject({ ...withSeriesAndEpisode, episodeId: z.number().int().optional() })
+const seriesHistoryParams = z.strictObject({ ...withSeriesAndEpisode, seriesId: z.number().int() })
+const queueParams = z.strictObject(withSeriesAndEpisode)
+const calendarParams = z.strictObject({ start: z.string().optional(), end: z.string().optional(), includeSeries: z.literal(true) })
+const missingParams = z.strictObject({ includeSeries: z.literal(true), sortKey: z.literal("airDateUtc") })
 
 export async function testSonarrConnection(config: SonarrParsed): Promise<{ success: boolean; error?: string }> {
   return testArrConnection("Sonarr", config)
@@ -10,8 +24,10 @@ export async function getSonarrSystemStatus(config: SonarrParsed): Promise<Conne
   return arrGet("Sonarr", config, "/api/v3/system/status")
 }
 
-export async function getSonarrQueue(config: SonarrParsed): Promise<ConnectionResult<unknown>> {
-  return arrGet("Sonarr", config, "/api/v3/queue")
+/** The download queue with each item's series and episode, up to `limit` (default 50) items. */
+export async function getSonarrQueue(config: SonarrParsed, limit = 50): Promise<ConnectionResult<ArrPage>> {
+  const query = arrQuery(queueParams, { includeSeries: true, includeEpisode: true })
+  return arrGetPaged("Sonarr", config, "/api/v3/queue", query, limit)
 }
 
 export async function getSonarrHealth(config: SonarrParsed): Promise<ConnectionResult<unknown>> {
@@ -26,24 +42,22 @@ export async function searchSonarrSeries(config: SonarrParsed, term: string): Pr
   return arrGet("Sonarr", config, `/api/v3/series/lookup?term=${encodeURIComponent(term)}`)
 }
 
+/**
+ * Download history, newest first, with series and episode. An episode reads
+ * `/api/v3/history?episodeId=`; a series reads `/api/v3/history/series`,
+ * because `/api/v3/history` ignores `seriesId`; otherwise the server-wide
+ * history. At most `pageSize` records.
+ */
 export async function getSonarrHistory(
   config: SonarrParsed,
-  pageSize = 20,
-  seriesId?: number,
-  episodeId?: number
-): Promise<ConnectionResult<unknown>> {
-  const params = new URLSearchParams({
-    pageSize: pageSize.toString(),
-    sortKey: "date",
-    sortDir: "desc",
-  })
-  if (seriesId !== undefined) {
-    params.append("seriesId", seriesId.toString())
+  { pageSize, seriesId, episodeId }: { pageSize: number; seriesId?: number; episodeId?: number }
+): Promise<ConnectionResult<ArrPage>> {
+  if (seriesId !== undefined && episodeId === undefined) {
+    const query = arrQuery(seriesHistoryParams, { seriesId, includeSeries: true, includeEpisode: true })
+    return arrGetList("Sonarr", config, "/api/v3/history/series", query, pageSize)
   }
-  if (episodeId !== undefined) {
-    params.append("episodeId", episodeId.toString())
-  }
-  return arrGet("Sonarr", config, `/api/v3/history?${params.toString()}`)
+  const query = arrQuery(historyParams, { episodeId, includeSeries: true, includeEpisode: true })
+  return arrGetPaged("Sonarr", config, "/api/v3/history", query, pageSize)
 }
 
 export async function getSonarrSeries(config: SonarrParsed): Promise<ConnectionResult<unknown>> {
@@ -54,24 +68,17 @@ export async function getSonarrSeriesById(config: SonarrParsed, seriesId: number
   return arrGet("Sonarr", config, `/api/v3/series/${seriesId}`)
 }
 
-/** `includeSeries` adds each episode's series (its title, `tvdbId` and `tmdbId`). */
-export async function getSonarrCalendar(
-  config: SonarrParsed,
-  startDate?: string,
-  endDate?: string,
-  options: { includeSeries?: boolean } = {}
-): Promise<ConnectionResult<unknown>> {
-  let path = "/api/v3/calendar"
-  const params = new URLSearchParams()
-  if (startDate) params.append("start", startDate)
-  if (endDate) params.append("end", endDate)
-  if (options.includeSeries) params.append("includeSeries", "true")
-  if (params.toString()) path += `?${params.toString()}`
-  return arrGet("Sonarr", config, path)
+/** Episodes airing from `startDate` to `endDate`, each with its series (title, `tvdbId`, `tmdbId`). */
+export async function getSonarrCalendar(config: SonarrParsed, startDate?: string, endDate?: string): Promise<ConnectionResult<unknown>> {
+  const query = arrQuery(calendarParams, { start: startDate, end: endDate, includeSeries: true })
+  if (query === null) return invalidArrParams("Sonarr")
+  return arrGet("Sonarr", config, `/api/v3/calendar?${query}`)
 }
 
-export async function getSonarrWantedMissing(config: SonarrParsed, pageSize = 20): Promise<ConnectionResult<unknown>> {
-  return arrGet("Sonarr", config, `/api/v3/wanted/missing?pageSize=${pageSize}&sortKey=airDateUtc&sortDir=desc`)
+/** Missing episodes with their series, latest air date first, up to `limit`. */
+export async function getSonarrWantedMissing(config: SonarrParsed, limit = 20): Promise<ConnectionResult<ArrPage>> {
+  const query = arrQuery(missingParams, { includeSeries: true, sortKey: "airDateUtc" })
+  return arrGetPaged("Sonarr", config, "/api/v3/wanted/missing", query, limit)
 }
 
 export async function getSonarrRootFolders(config: SonarrParsed): Promise<ConnectionResult<unknown>> {

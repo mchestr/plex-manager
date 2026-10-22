@@ -1,0 +1,25 @@
+[
+  {
+    "id": 9031,
+    "episodeId": 4410,
+    "seriesId": 12,
+    "sourceTitle": "Severance.S02E10.1080p.WEB.H264",
+    "quality": { "quality": { "id": 3, "name": "WEBDL-1080p" } },
+    "date": "2027-01-12T21:04:11Z",
+    "eventType": "downloadFailed",
+    "data": { "message": "Import failed, path does not exist or is not accessible by Sonarr" },
+    "series": { "id": 12, "title": "Severance", "titleSlug": "severance", "tvdbId": 371980 },
+    "episode": { "id": 4410, "seriesId": 12, "seasonNumber": 2, "episodeNumber": 10, "title": "Cold Harbor" }
+  },
+  {
+    "id": 9029,
+    "episodeId": 4410,
+    "seriesId": 12,
+    "sourceTitle": "Severance.S02E10.1080p.WEB.H264",
+    "quality": { "quality": { "id": 3, "name": "WEBDL-1080p" } },
+    "date": "2027-01-12T18:55:30Z",
+    "eventType": "grabbed",
+    "series": { "id": 12, "title": "Severance", "titleSlug": "severance", "tvdbId": 371980 },
+    "episode": { "id": 4410, "seriesId": 12, "seasonNumber": 2, "episodeNumber": 10, "title": "Cold Harbor" }
+  }
+]

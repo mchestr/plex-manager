@@ -10,7 +10,7 @@
  * them trivially unit-testable and safe to call inside a transaction.
  */
 
-import { type ChatMessage } from "@/actions/chatbot/types"
+import { type ChatMessage } from "@/lib/chatbot/types"
 import { Prisma } from "@/lib/generated/prisma/client"
 
 /**

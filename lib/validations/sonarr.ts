@@ -1,13 +1,6 @@
-import { z } from "zod"
+import { createServiceSchema, type ServiceInput, type ServiceParsed } from "./shared-schemas"
 
-import { createPublicUrlSchema, createServerUrlSchema } from "./shared-schemas"
+export const sonarrSchema = createServiceSchema({ defaultPort: "8989", publicExample: "sonarr.example.com" })
 
-export const sonarrSchema = z.object({
-  name: z.string().min(1, "Server name is required"),
-  url: createServerUrlSchema("8989"),
-  apiKey: z.string().min(1, "API key is required"),
-  publicUrl: createPublicUrlSchema("sonarr.example.com"),
-})
-
-export type SonarrInput = z.input<typeof sonarrSchema>
-export type SonarrParsed = z.output<typeof sonarrSchema>
+export type SonarrInput = ServiceInput
+export type SonarrParsed = ServiceParsed

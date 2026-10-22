@@ -22,28 +22,21 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 import { adminAction } from "@/lib/actions/define-action"
-import { ok, type ActionErrorCode, type ActionResult } from "@/lib/actions/result"
+import { fail, ok, type ActionErrorCode, type ActionResult } from "@/lib/actions/result"
 import { loadProviderModels, testLLMProviderConnection } from "@/lib/connections/llm-provider"
 import type { LLMProvider } from "@/lib/generated/prisma/client"
-import { requireAdmin } from "@/lib/admin"
 import { lookupModel, normalizeModelId } from "@/lib/llm/models"
 import { LLM_PROVIDER_IDS, llmKeyDestination } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
-import { consume } from "@/lib/security/rate-limit"
 import { resolveSecretForOrigin, type SecretRequiredCode } from "@/lib/security/secret-reuse"
-import { createLogger } from "@/lib/utils/logger"
 import { serverZone } from "@/lib/utils/server-zone"
 import { EFFORT_LEVELS, llmProviderSchema } from "@/lib/validations/llm-provider"
 import { normalizeBaseUrl } from "@/lib/validations/shared-schemas"
 import { getSeasonState } from "@/lib/wrapped/season"
 
-const logger = createLogger("ADMIN_LLM_PROVIDERS")
-
 type LLMProviderPurpose = "chat" | "wrapped"
-
-const RATE_LIMITED = "Too many model requests. Wait a few minutes and try again."
 
 const saveInputSchema = z.object({
   provider: z.enum(LLM_PROVIDER_IDS, { message: "Please select a provider" }),
@@ -65,9 +58,11 @@ const listInputSchema = z.object({
   baseUrl: z.string().max(2048).optional(),
 })
 
-type ListResult =
-  | { success: true; models: string[]; configuredProvider: string | null; configuredModel: string | null }
-  | { success: false; error: string }
+interface ModelList {
+  models: string[]
+  configuredProvider: string | null
+  configuredModel: string | null
+}
 
 type SaveResult = ActionResult<null, ActionErrorCode | SecretRequiredCode>
 
@@ -91,14 +86,6 @@ function reusableKey(stored: LLMProvider | null, provider: string, baseUrl: stri
 function baseUrlFor(provider: string, baseUrl: string | undefined): string | undefined {
   if (provider !== "openai-compatible" || !baseUrl?.trim()) return undefined
   return normalizeBaseUrl(baseUrl) ?? baseUrl
-}
-
-async function adminUserId(): Promise<string | null> {
-  try {
-    return (await requireAdmin()).user.id
-  } catch {
-    return null
-  }
 }
 
 function activeProvider(purpose: LLMProviderPurpose) {
@@ -247,35 +234,27 @@ export const updateWrappedLLMProvider = adminAction({
  * it lists the purpose's active provider, for the prompt playground. A blank
  * key falls back to the stored one under the same rule as saving.
  */
-export async function listLLMModels(data: z.input<typeof listInputSchema>): Promise<ListResult> {
-  const userId = await adminUserId()
-  if (!userId) return { success: false, error: "Admin access required" }
-
-  const input = listInputSchema.safeParse(data)
-  if (!input.success) return { success: false, error: "Invalid request" }
-
-  if (!(await consume("llm:models", userId)).ok) return { success: false, error: RATE_LIMITED }
-
-  try {
-    const stored = await activeProvider(input.data.purpose)
+export const listLLMModels = adminAction({
+  input: listInputSchema,
+  rateLimit: { name: "llm:models" },
+  fallbackError: "Failed to load models",
+  handler: async (input): Promise<ActionResult<ModelList>> => {
+    const stored = await activeProvider(input.purpose)
     const configured = { configuredProvider: stored?.provider ?? null, configuredModel: stored?.model || null }
-    const provider = input.data.provider ?? stored?.provider
-    if (!provider) return { success: true, models: [], ...configured }
+    const provider = input.provider ?? stored?.provider
+    if (!provider) return ok({ models: [], ...configured })
 
-    const requested = input.data.provider ? input.data.baseUrl : (stored?.baseUrl ?? undefined)
+    const requested = input.provider ? input.baseUrl : (stored?.baseUrl ?? undefined)
     const baseUrl = baseUrlFor(provider, requested)
     if (provider === "openai-compatible") {
-      if (!baseUrl || normalizeBaseUrl(baseUrl) === null) return { success: false, error: "Enter a valid base URL first" }
+      if (!baseUrl || normalizeBaseUrl(baseUrl) === null) return fail("VALIDATION", "Enter a valid base URL first")
     }
-    const apiKey = input.data.apiKey?.trim() || reusableKey(stored, provider, baseUrl)
-    if (!apiKey && provider !== "openai-compatible") return { success: false, error: "Enter the API key first" }
+    const apiKey = input.apiKey?.trim() || reusableKey(stored, provider, baseUrl)
+    if (!apiKey && provider !== "openai-compatible") return fail("VALIDATION", "Enter the API key first")
 
     const parsedProvider = z.enum(LLM_PROVIDER_IDS).parse(provider)
     const loaded = await loadProviderModels({ provider: parsedProvider, apiKey, baseUrl })
-    if (!loaded.success) return loaded
-    return { success: true, models: loaded.models, ...configured }
-  } catch (error) {
-    logger.error("Failed to list LLM models", error, { purpose: input.data.purpose })
-    return { success: false, error: "Failed to load models" }
-  }
-}
+    if (!loaded.success) return fail("UPSTREAM_UNAVAILABLE", loaded.error)
+    return ok({ models: loaded.models, ...configured })
+  },
+})

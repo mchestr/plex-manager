@@ -1,4 +1,4 @@
-import { sanitizePlexSessionsPayload } from "@/actions/chatbot/executors/plex-sanitizer"
+import { sanitizePlexSessionsPayload } from "@/lib/chatbot/executors/plex-sanitizer"
 
 describe("sanitizePlexSessionsPayload", () => {
   it("removes personal identifiers and keeps useful playback details", () => {

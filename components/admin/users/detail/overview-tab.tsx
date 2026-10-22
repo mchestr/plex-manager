@@ -21,7 +21,7 @@ function Item({ label, children, testId }: { label: string; children: ReactNode;
 
 /** The member's account facts and their activity timeline (P10.6). */
 export async function OverviewTab({ header, f }: { header: UserDetailHeaderData; f: BoundFormat }) {
-  const timeline = await getUserActivityTimeline(header.id, { pageSize: 10 })
+  const timeline = await getUserActivityTimeline({ userId: header.id, pageSize: 10 })
   const { discord } = header
 
   return (

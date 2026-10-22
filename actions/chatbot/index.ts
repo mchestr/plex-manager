@@ -8,7 +8,7 @@ import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { prisma } from "@/lib/prisma"
 import { recordIdSchema } from "@/lib/validations/params"
 
-import { type ChatMessage } from "./types"
+import { type ChatMessage } from "@/lib/chatbot/types"
 
 /** Bounds on the history a client sends (SEC-42): only its own user and assistant turns. */
 const MAX_MESSAGES = 40

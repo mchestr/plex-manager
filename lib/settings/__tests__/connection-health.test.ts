@@ -10,7 +10,7 @@ import { buildConfig } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { testPlexConnection } from "@/lib/connections/plex-connection"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
-import { getStripeConfig } from "@/actions/admin/admin-config"
+import { getStripeConfig } from "@/lib/data/admin-settings"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { checkConnections, getSettingsHealth } from "@/lib/settings/connection-health"
@@ -27,7 +27,7 @@ jest.mock("@/lib/connections/sonarr", () => ({ testSonarrConnection: jest.fn() }
 jest.mock("@/lib/connections/radarr", () => ({ testRadarrConnection: jest.fn() }))
 jest.mock("@/lib/connections/prometheus", () => ({ testPrometheusConnection: jest.fn() }))
 jest.mock("@/lib/queue/rewind-infra", () => ({ checkRewindInfra: jest.fn() }))
-jest.mock("@/actions/admin/admin-config", () => ({ getStripeConfig: jest.fn() }))
+jest.mock("@/lib/data/admin-settings", () => ({ getStripeConfig: jest.fn() }))
 
 const STRIPE_OFF = {
   enabled: false,

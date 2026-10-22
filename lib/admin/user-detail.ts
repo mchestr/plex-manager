@@ -53,16 +53,16 @@ export interface UserDetailHeaderData {
   } | null
 }
 
-type ActivePlexServer = { url: string; token: string; adminPlexUserId: string | null } | null
+type ActivePlexServer = { url: string; token: string; adminPlexUserId: string | null; machineIdentifier: string | null } | null
 
 async function plexAccessOf(plexUserId: string | null, server: ActivePlexServer): Promise<PlexAccess> {
   if (!plexUserId || !server) return "unknown"
   const result = await checkUserServerAccess(
-    { url: server.url, token: server.token, adminPlexUserId: server.adminPlexUserId },
+    { url: server.url, token: server.token, adminPlexUserId: server.adminPlexUserId, machineIdentifier: server.machineIdentifier },
     plexUserId
   )
-  if (!result.success) return "unknown"
-  return result.hasAccess ? "shared" : "notShared"
+  if (result.status === "unknown") return "unknown"
+  return result.status === "granted" ? "shared" : "notShared"
 }
 
 /** The header, or null when there is no such user. */
@@ -88,7 +88,7 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
   if (!user) return null
 
   const [server, config, runs] = await Promise.all([
-    prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true, token: true, adminPlexUserId: true } }),
+    prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true, token: true, adminPlexUserId: true, machineIdentifier: true } }),
     prisma.config.findUnique({ where: { id: "config" }, select: { stripeEnabled: true } }),
     activeRunStarts([user.id], seasonYear),
   ])

@@ -120,6 +120,19 @@ describe('PlexCallbackPageClient', () => {
     expect(mockFinish).not.toHaveBeenCalled()
   })
 
+  it('shows "Plex is temporarily unavailable" for plex_unavailable, never the denied page', async () => {
+    pollReturns('ready')
+    mockSignIn.mockResolvedValue({ ok: false, error: 'plex_unavailable', status: 401, url: null })
+
+    render(<PlexCallbackPageClient />)
+
+    expect(await screen.findByTestId('plex-callback-error-plex_unavailable')).toBeInTheDocument()
+    expect(screen.getByTestId('plex-callback-error-heading')).toHaveTextContent('Plex is temporarily unavailable')
+    expect(screen.getByText('Plex is temporarily unavailable. Try again in a minute.')).toBeInTheDocument()
+    expect(screen.getByTestId('plex-callback-retry')).toBeInTheDocument()
+    expect(mockPush).not.toHaveBeenCalledWith('/auth/denied')
+  })
+
   it.each<[string, string, ShownPlexSignInCode]>([
     ['the PIN cookie is missing or expired', 'plex_pin_expired', 'plex_pin_expired'],
     ['the invite is refused', 'invite_invalid', 'invite_invalid'],

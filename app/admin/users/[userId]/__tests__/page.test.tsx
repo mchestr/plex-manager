@@ -11,7 +11,7 @@ import { getUserDetailHeader, type UserDetailHeaderData } from '@/lib/admin/user
 
 jest.mock('server-only', () => ({}))
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))
-jest.mock('@/lib/admin', () => ({ requireAdmin: jest.fn() }))
+jest.mock('@/lib/admin', () => ({ assertAdmin: jest.fn() }))
 jest.mock('@/lib/wrapped/season', () => ({ getSeasonYear: async () => 2026 }))
 jest.mock('@/lib/stripe/client', () => ({ getStripeDashboardBaseUrl: async () => null }))
 jest.mock('@/lib/settings/app-settings', () => ({

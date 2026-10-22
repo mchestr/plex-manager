@@ -29,10 +29,11 @@ jest.mock('next/cache', () => ({
   unstable_cache: jest.fn((fn) => fn),
 }))
 
+const mockWarn = jest.fn()
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: jest.fn(() => ({
     info: jest.fn(),
-    warn: jest.fn(),
+    warn: (...args: unknown[]) => mockWarn(...args),
     error: jest.fn(),
     debug: jest.fn(),
   })),
@@ -99,7 +100,10 @@ describe('Prometheus Status Actions', () => {
       mockPrisma.prometheus.findFirst.mockResolvedValue(mockPrometheus)
       mockQueryPrometheusRange.mockResolvedValue({
         success: false,
-        error: 'Connection timeout',
+        code: 'PROMETHEUS_ERROR',
+        errorType: 'bad_data',
+        error: 'bad_data: parse error at char 5',
+        retryable: false,
       })
 
       const result = await status()
@@ -110,6 +114,14 @@ describe('Prometheus Status Actions', () => {
       // Should have 169 segments (7 days * 24 hours + 1)
       expect(result.segments.length).toBeGreaterThan(0)
       expect(result.segments.every(s => s.status === 'unknown')).toBe(true)
+      // Logged once, with the errorType and without the URL
+      expect(mockWarn).toHaveBeenCalledTimes(1)
+      expect(mockWarn).toHaveBeenCalledWith('prometheus.query_failed', {
+        code: 'PROMETHEUS_ERROR',
+        errorType: 'bad_data',
+        retryable: false,
+      })
+      expect(JSON.stringify(mockWarn.mock.calls)).not.toContain('prometheus:9090')
     })
 
     it('should calculate operational status when uptime is >= 95%', async () => {

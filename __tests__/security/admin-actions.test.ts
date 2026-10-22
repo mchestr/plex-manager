@@ -1,20 +1,15 @@
 /**
- * Security tests for admin server actions
- * Tests that admin-only actions properly enforce authorization
+ * Security tests for admin server actions and loaders (P11.5): actions refuse
+ * signed-out and non-admin callers with `UNAUTHENTICATED` and `FORBIDDEN`
+ * without a throw; loaders throw the digests the error boundaries read.
  */
 
-import { requireAdmin } from '@/lib/admin'
-import {
-  setLLMDisabled,
-  getLLMUsageRecords,
-  getLLMUsageById,
-  setUserDisabled,
-  updateUserAdminStatus,
-} from '@/actions/admin'
-import { getConfig } from '@/actions/admin/admin-config'
+import { setLLMDisabled } from '@/actions/admin/admin-config'
+import { getLLMUsageRecords, getLLMUsageById } from '@/lib/data/llm-usage'
+import { setUserDisabled, updateUserAdminStatus } from '@/actions/admin/admin-users'
+import { getConfig } from '@/lib/data/admin-settings'
 import { prisma } from '@/lib/prisma'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
-import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -29,12 +24,6 @@ jest.mock('next/cache', () => ({
   ...jest.requireActual('next/cache'),
   revalidatePath: jest.fn(),
   updateTag: jest.fn(),
-}))
-
-// Mock dependencies
-jest.mock('@/lib/admin', () => ({
-  requireAdmin: jest.fn(),
-  getAdminStatus: jest.fn(),
 }))
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
@@ -52,6 +41,11 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 
+const asAdmin = () => (getServerSession as jest.Mock).mockResolvedValue(mockAdminSession)
+const asMember = () =>
+  (getServerSession as jest.Mock).mockResolvedValue({ ...mockAdminSession, user: { ...mockAdminSession.user, isAdmin: false } })
+const signedOut = () => (getServerSession as jest.Mock).mockResolvedValue(null)
+
 const mockAdminSession = {
   user: {
     id: 'admin-user-id',
@@ -68,7 +62,7 @@ describe('Admin Actions Security', () => {
 
   describe('getConfig', () => {
     it('should require admin to get config', async () => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
+      asAdmin()
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
         id: 'config',
         llmDisabled: false,
@@ -78,13 +72,13 @@ describe('Admin Actions Security', () => {
 
       const result = await getConfig()
 
-      expect(requireAdmin).toHaveBeenCalled()
+      expect(getServerSession).toHaveBeenCalled()
       expect(result).toBeTruthy()
       expect(result.id).toBe('config')
     })
 
     it('should create config with defaults if not exists (admin only)', async () => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
+      asAdmin()
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)
       ;(prisma.config.create as jest.Mock).mockResolvedValue({
         id: 'config',
@@ -95,7 +89,7 @@ describe('Admin Actions Security', () => {
 
       const result = await getConfig()
 
-      expect(requireAdmin).toHaveBeenCalled()
+      expect(getServerSession).toHaveBeenCalled()
       // getConfig selects only non-secret columns so decrypted Stripe secrets
       // are never returned to callers.
       expect(prisma.config.create).toHaveBeenCalledWith({
@@ -113,23 +107,17 @@ describe('Admin Actions Security', () => {
     })
 
     it('should reject non-admin user', async () => {
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        redirect('/')
-        throw new Error('Not admin')
-      })
+      asMember()
 
-      await expect(getConfig()).rejects.toThrow()
+      await expect(getConfig()).rejects.toMatchObject({ digest: 'PM_FORBIDDEN' })
       expect(prisma.config.findUnique).not.toHaveBeenCalled()
       expect(prisma.config.create).not.toHaveBeenCalled()
     })
 
     it('should reject unauthenticated user', async () => {
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        redirect('/')
-        throw new Error('Unauthenticated')
-      })
+      signedOut()
 
-      await expect(getConfig()).rejects.toThrow()
+      await expect(getConfig()).rejects.toMatchObject({ digest: 'PM_UNAUTHENTICATED' })
       expect(prisma.config.findUnique).not.toHaveBeenCalled()
       expect(prisma.config.create).not.toHaveBeenCalled()
     })
@@ -175,7 +163,7 @@ describe('Admin Actions Security', () => {
 
   describe('getLLMUsageRecords', () => {
     it('should allow admin to get LLM usage records', async () => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
+      asAdmin()
       ;(prisma.lLMUsage.findMany as jest.Mock).mockResolvedValue([
         {
           id: 'usage-1',
@@ -188,29 +176,26 @@ describe('Admin Actions Security', () => {
       ])
       ;(prisma.lLMUsage.count as jest.Mock).mockResolvedValue(1)
 
-      const result = await getLLMUsageRecords(1, 50)
+      const result = await getLLMUsageRecords({ page: 1, pageSize: 50 })
 
-      expect(requireAdmin).toHaveBeenCalled()
+      expect(getServerSession).toHaveBeenCalled()
       expect(result.records).toHaveLength(1)
       expect(result.pagination.total).toBe(1)
     })
 
     it('should reject non-admin user', async () => {
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        redirect('/')
-        throw new Error('Not admin')
-      })
+      asMember()
 
-      await expect(getLLMUsageRecords(1, 50)).rejects.toThrow()
+      await expect(getLLMUsageRecords({ page: 1, pageSize: 50 })).rejects.toMatchObject({ digest: 'PM_FORBIDDEN' })
       expect(prisma.lLMUsage.findMany).not.toHaveBeenCalled()
     })
 
     it('should filter by userId when provided', async () => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
+      asAdmin()
       ;(prisma.lLMUsage.findMany as jest.Mock).mockResolvedValue([])
       ;(prisma.lLMUsage.count as jest.Mock).mockResolvedValue(0)
 
-      await getLLMUsageRecords(1, 50, 'user-1')
+      await getLLMUsageRecords({ page: 1, pageSize: 50, userId: 'user-1' })
 
       expect(prisma.lLMUsage.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -222,7 +207,7 @@ describe('Admin Actions Security', () => {
 
   describe('getLLMUsageById', () => {
     it('should allow admin to get LLM usage by ID', async () => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
+      asAdmin()
       ;(prisma.lLMUsage.findUnique as jest.Mock).mockResolvedValue({
         id: 'usage-1',
         userId: 'user-1',
@@ -234,18 +219,15 @@ describe('Admin Actions Security', () => {
 
       const result = await getLLMUsageById('usage-1')
 
-      expect(requireAdmin).toHaveBeenCalled()
+      expect(getServerSession).toHaveBeenCalled()
       expect(result).toBeTruthy()
       expect(result?.id).toBe('usage-1')
     })
 
     it('should reject non-admin user', async () => {
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        redirect('/')
-        throw new Error('Not admin')
-      })
+      asMember()
 
-      await expect(getLLMUsageById('usage-1')).rejects.toThrow()
+      await expect(getLLMUsageById('usage-1')).rejects.toMatchObject({ digest: 'PM_FORBIDDEN' })
       expect(prisma.lLMUsage.findUnique).not.toHaveBeenCalled()
     })
   })
@@ -256,7 +238,7 @@ describe('Admin Actions Security', () => {
     const bump = { where: { id: 'member-1' }, data: { sessionVersion: { increment: 1 } } }
 
     beforeEach(() => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
+      asAdmin()
       prismaMock.plexServer.findFirst.mockResolvedValue({ adminPlexUserId: 'plex-owner' } as never)
       prismaMock.user.count.mockResolvedValue(2)
       prismaMock.user.updateMany.mockResolvedValue({ count: 1 })
@@ -265,7 +247,7 @@ describe('Admin Actions Security', () => {
     it('refuses to demote the Plex server owner', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: true, plexUserId: 'plex-owner' }))
 
-      const result = await updateUserAdminStatus('member-1', false)
+      const result = await updateUserAdminStatus({ userId: 'member-1', isAdmin: false })
 
       expect(result).toMatchObject({ success: false, code: 'OWNER' })
       expect(prismaMock.user.update).not.toHaveBeenCalled()
@@ -275,14 +257,34 @@ describe('Admin Actions Security', () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: true, plexUserId: 'plex-other' }))
       prismaMock.user.count.mockResolvedValue(1)
 
-      const result = await updateUserAdminStatus('member-1', false)
+      const result = await updateUserAdminStatus({ userId: 'member-1', isAdmin: false })
 
       expect(result).toMatchObject({ success: false, code: 'LAST_ADMIN' })
       expect(prismaMock.user.update).not.toHaveBeenCalled()
     })
 
+    it('refuses a signed-out caller and a member without a throw', async () => {
+      signedOut()
+      await expect(updateUserAdminStatus({ userId: 'member-1', isAdmin: true })).resolves.toMatchObject({
+        success: false,
+        code: 'UNAUTHENTICATED',
+      })
+
+      asMember()
+      await expect(updateUserAdminStatus({ userId: 'member-1', isAdmin: true })).resolves.toMatchObject({
+        success: false,
+        code: 'FORBIDDEN',
+      })
+      expect(prismaMock.user.update).not.toHaveBeenCalled()
+    })
+
+    it('refuses invalid input with VALIDATION', async () => {
+      const send = updateUserAdminStatus as (input: unknown) => ReturnType<typeof updateUserAdminStatus>
+      await expect(send({ userId: 'member-1', isAdmin: 'yes' })).resolves.toMatchObject({ success: false, code: 'VALIDATION' })
+    })
+
     it('refuses to demote the caller', async () => {
-      const result = await updateUserAdminStatus(mockAdminSession.user.id, false)
+      const result = await updateUserAdminStatus({ userId: mockAdminSession.user.id, isAdmin: false })
 
       expect(result).toMatchObject({ success: false, code: 'SELF' })
     })
@@ -290,9 +292,9 @@ describe('Admin Actions Security', () => {
     it('demotes another admin and ends their sessions', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: true, plexUserId: 'plex-other' }))
 
-      const result = await updateUserAdminStatus('member-1', false)
+      const result = await updateUserAdminStatus({ userId: 'member-1', isAdmin: false })
 
-      expect(result).toEqual({ success: true })
+      expect(result).toEqual({ success: true, data: null })
       expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'member-1' }, data: { isAdmin: false } })
       expect(prismaMock.user.updateMany).toHaveBeenCalledWith(bump)
       expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.SESSIONS_REVOKED, 'admin-user-id', {
@@ -304,7 +306,7 @@ describe('Admin Actions Security', () => {
     it('promotes without ending sessions', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: false }))
 
-      await expect(updateUserAdminStatus('member-1', true)).resolves.toEqual({ success: true })
+      await expect(updateUserAdminStatus({ userId: 'member-1', isAdmin: true })).resolves.toEqual({ success: true, data: null })
 
       expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
     })

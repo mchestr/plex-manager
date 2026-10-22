@@ -12,13 +12,14 @@ import { resetUrl } from '@/__tests__/helpers/url-router'
 import { buildConfig } from '@/__tests__/helpers/factories'
 import { makeAdminUserWithStats } from '@/__tests__/utils/test-builders'
 import UsersPage from '@/app/admin/users/page'
-import { getAllUsersWithWrapped } from '@/actions/users'
+import { getAllUsersWithWrapped } from '@/lib/data/admin-users'
 import type { AdminUserWithWrappedStats, PlexAccessCheck } from '@/types/admin'
 
 jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').navigationModule)
 jest.mock('server-only', () => ({}))
-jest.mock('@/actions/users', () => ({ getAllUsersWithWrapped: jest.fn(), unshareUserLibrary: jest.fn() }))
-jest.mock('@/actions/admin', () => ({ setUserDisabled: jest.fn(), updateUserAdminStatus: jest.fn() }))
+jest.mock('@/lib/data/admin-users', () => ({ getAllUsersWithWrapped: jest.fn() }))
+jest.mock('@/actions/user-queries', () => ({ unshareUserLibrary: jest.fn() }))
+jest.mock('@/actions/admin/admin-users', () => ({ setUserDisabled: jest.fn(), updateUserAdminStatus: jest.fn() }))
 jest.mock('@/actions/admin/subscriptions', () => ({ adminGrantAccess: jest.fn(), adminToggleExempt: jest.fn(), adminCancelSubscription: jest.fn() }))
 jest.mock('@/actions/rewind-generation', () => ({ adminRegenerateRewind: jest.fn() }))
 jest.mock('@/actions/import-plex-users', () => ({ importPlexUsers: jest.fn() }))

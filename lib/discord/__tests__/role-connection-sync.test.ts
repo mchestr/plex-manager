@@ -95,6 +95,16 @@ describe("syncDiscordRoleConnection", () => {
     })
   })
 
+  it("pushes nothing and stores nothing when Plex access is unknown, so the role is kept", async () => {
+    given({ name: "Sam", email: null })
+    mockCompute.mockResolvedValue({ metadata: null, watchedHours: 12 })
+
+    await syncDiscordRoleConnection("user-1", { refreshHours: false })
+
+    expect(mockPush).not.toHaveBeenCalled()
+    expect(prismaMock.discordConnection.update).not.toHaveBeenCalled()
+  })
+
   it("refreshes the hours by default (a fresh link or a manual resync)", async () => {
     given({ name: "Sam", email: null })
 

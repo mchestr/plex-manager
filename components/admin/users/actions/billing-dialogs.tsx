@@ -6,16 +6,9 @@ import { useActionDialog } from "@/hooks/use-action-dialog"
 
 import type { UserDialogProps } from "./access-dialogs"
 
-type SubscriptionResult = { success: true } | { error: string }
-
-/** The subscription actions' `{ error }` as the `{ success, error }` `useActionDialog` reads. */
-function settled(result: SubscriptionResult) {
-  return "success" in result ? { success: true } : { success: false, error: result.error }
-}
-
-const grant = (userId: string) => adminGrantAccess(userId).then(settled)
-const toggleExempt = (userId: string) => adminToggleExempt(userId).then(settled)
-const cancel = (userId: string) => adminCancelSubscription(userId).then(settled)
+const grant = (userId: string) => adminGrantAccess({ userId })
+const toggleExempt = (userId: string) => adminToggleExempt({ userId })
+const cancel = (userId: string) => adminCancelSubscription({ userId })
 
 /** Comp access: invites the member to the Plex server and marks them exempt. */
 export function GrantAccessDialog({ user, ...dialog }: UserDialogProps) {

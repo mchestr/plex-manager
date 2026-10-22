@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react"
 
 import { chatWithAdminBot } from "@/actions/chatbot"
-import { type ChatMessage } from "@/actions/chatbot/types"
+import type { ChatMessage } from "@/lib/chatbot/types"
 
 /** The newest turns that fit the action's bounds: 40 messages and 60,000 characters (SEC-42). */
 function boundedHistory(messages: ChatMessage[]) {

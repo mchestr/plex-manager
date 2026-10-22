@@ -122,6 +122,7 @@ describe('invite actions', () => {
     publicUrl: null,
     token: 'test-token',
     adminPlexUserId: null,
+    machineIdentifier: null,
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),

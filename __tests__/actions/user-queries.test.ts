@@ -1,5 +1,5 @@
-import { getUserPlexWrapped, getAllUsersWithWrapped, unshareUserLibrary } from '@/actions/user-queries'
-import { requireAdmin } from '@/lib/admin'
+import { getUserPlexWrapped, unshareUserLibrary } from '@/actions/user-queries'
+import { getAllUsersWithWrapped } from '@/lib/data/admin-users'
 import { getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from '@/lib/connections/plex'
 import { buildPlexServer, buildUser } from '@/__tests__/helpers/factories'
 import { aggregateLlmUsage } from '@/lib/utils'
@@ -15,10 +15,6 @@ jest.mock('next-auth', () => ({
 
 jest.mock('@/lib/auth', () => ({
   authOptions: {},
-}))
-
-jest.mock('@/lib/admin', () => ({
-  requireAdmin: jest.fn(),
 }))
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
@@ -220,6 +216,7 @@ describe('getAllUsersWithWrapped', () => {
     jest.useFakeTimers()
     jest.setSystemTime(new Date('2024-06-01T12:00:00Z'))
     jest.clearAllMocks()
+    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'admin-1', isAdmin: true } })
     // No subscriptions by default; fetchSubscriptionMap returns an empty map so
     // the existing (non-subscription) assertions are unaffected.
     mockPrisma.subscription.findMany.mockResolvedValue([])
@@ -483,14 +480,18 @@ describe('getAllUsersWithWrapped', () => {
       ])
     })
 
+    const PLEX_TV_USER = { title: '', home: false, restricted: false }
+    const share = (machineIdentifier: string, pending = false) => ({ machineIdentifier, owned: false, pending })
+
     it('reads each share from Plex when it answers', async () => {
       mockPrisma.plexServer.findFirst.mockResolvedValue(SERVER)
       jest.mocked(getPlexServerIdentity).mockResolvedValue({ success: true, machineIdentifier: 'machine-1' })
       jest.mocked(getPlexUsers).mockResolvedValue({
         success: true,
         data: [
-          { id: 'plex-shared', username: 'shared', servers: [{ machineIdentifier: 'machine-1' }] },
-          { id: 'plex-gone', username: 'gone', servers: [{ machineIdentifier: 'other' }] },
+          { ...PLEX_TV_USER, id: 'plex-shared', username: 'shared', servers: [share('machine-1')] },
+          // A pending invite to this server is no access yet (GAP-06)
+          { ...PLEX_TV_USER, id: 'plex-gone', username: 'gone', servers: [share('other'), share('machine-1', true)] },
         ],
       })
 
@@ -591,7 +592,7 @@ describe('aggregateLlmUsage', () => {
 describe('unshareUserLibrary', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(requireAdmin as jest.Mock).mockResolvedValue({ user: { id: 'admin-1', isAdmin: true } })
+    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'admin-1', isAdmin: true } })
     mockPrisma.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', plexUserId: 'plex-member' }))
     mockPrisma.plexServer.findFirst.mockResolvedValue({
       id: 'ps-1',
@@ -600,6 +601,7 @@ describe('unshareUserLibrary', () => {
       publicUrl: null,
       token: 'server-token',
       adminPlexUserId: 'plex-owner',
+      machineIdentifier: null,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -610,7 +612,7 @@ describe('unshareUserLibrary', () => {
   it("ends the member's sessions after a successful unshare (SEC-10)", async () => {
     ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'removed' })
 
-    await expect(unshareUserLibrary('member-1')).resolves.toEqual({ success: true, data: { status: 'removed' } })
+    await expect(unshareUserLibrary({ userId: 'member-1' })).resolves.toEqual({ success: true, data: { status: 'removed' } })
 
     expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
       where: { id: 'member-1' },
@@ -621,7 +623,7 @@ describe('unshareUserLibrary', () => {
   it('reports a share that is already gone as success, and still ends the sessions', async () => {
     ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'already_removed' })
 
-    await expect(unshareUserLibrary('member-1')).resolves.toEqual({
+    await expect(unshareUserLibrary({ userId: 'member-1' })).resolves.toEqual({
       success: true,
       data: { status: 'already_removed' },
     })
@@ -634,7 +636,7 @@ describe('unshareUserLibrary', () => {
   ])('returns %s with admin copy and keeps the sessions', async (code, error) => {
     ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: false, code })
 
-    await expect(unshareUserLibrary('member-1')).resolves.toEqual({ success: false, code, error })
+    await expect(unshareUserLibrary({ userId: 'member-1' })).resolves.toEqual({ success: false, code, error })
 
     expect(mockPrisma.user.updateMany).not.toHaveBeenCalled()
   })
@@ -642,15 +644,28 @@ describe('unshareUserLibrary', () => {
   it('never returns the text of a thrown error', async () => {
     ;(unshareUserFromPlexServer as jest.Mock).mockRejectedValue(new Error('plex.tv said: invalid token abc123'))
 
-    const result = await unshareUserLibrary('member-1')
+    const result = await unshareUserLibrary({ userId: 'member-1' })
 
     expect(result).toEqual({ success: false, code: 'INTERNAL', error: 'Failed to unshare user library' })
+  })
+
+  it('refuses a signed-out caller and a member without a throw', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValueOnce(null)
+    await expect(unshareUserLibrary({ userId: 'member-1' })).resolves.toMatchObject({ code: 'UNAUTHENTICATED' })
+
+    ;(getServerSession as jest.Mock).mockResolvedValueOnce({ user: { id: 'member-2', isAdmin: false } })
+    await expect(unshareUserLibrary({ userId: 'member-1' })).resolves.toMatchObject({ code: 'FORBIDDEN' })
+    expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
+  })
+
+  it('refuses invalid input with VALIDATION', async () => {
+    await expect(unshareUserLibrary({ userId: '' })).resolves.toMatchObject({ success: false, code: 'VALIDATION' })
   })
 
   it('refuses an admin with a code', async () => {
     mockPrisma.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', plexUserId: 'plex-member', isAdmin: true }))
 
-    await expect(unshareUserLibrary('member-1')).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+    await expect(unshareUserLibrary({ userId: 'member-1' })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
     expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
   })
 })

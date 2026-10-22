@@ -46,6 +46,7 @@ function given(stripeEnabled: boolean, member: Member) {
   prismaMock.overseerr.findFirst.mockResolvedValue({ id: 'o1' } as never)
   prismaMock.watchlistSyncSettings.findUnique.mockResolvedValue({ syncEnabled: true } as never)
   prismaMock.watchlistSyncHistory.findMany.mockResolvedValue([])
+  ;(prismaMock.watchlistSyncHistory.groupBy as jest.Mock).mockResolvedValue([])
 }
 
 const NOT_ENTITLED = { success: false, code: 'NOT_ENTITLED', error: 'This needs an active membership.' }

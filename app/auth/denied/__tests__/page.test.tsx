@@ -11,12 +11,12 @@ import { render, screen } from "@testing-library/react"
 import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { getSetupStatus } from "@/actions/setup"
+import { getSetupStatus } from "@/lib/setup/status"
 import DeniedAccessPage from "@/app/auth/denied/page"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/brand", () => ({ serverName: jest.fn().mockResolvedValue("Northfield Plex") }))
-jest.mock("@/actions/setup", () => ({ getSetupStatus: jest.fn() }))
+jest.mock("@/lib/setup/status", () => ({ getSetupStatus: jest.fn() }))
 jest.mock("next-auth/react", () => ({ signOut: jest.fn() }))
 jest.mock("next/navigation", () => ({
   redirect: jest.fn((url: string) => {

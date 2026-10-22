@@ -24,9 +24,8 @@ jest.mock('@/lib/prisma', () => ({
     return mockDb
   },
 }))
-jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
+jest.mock('next-auth', () => ({ getServerSession: jest.fn().mockResolvedValue({ user: { id: 'admin', isAdmin: true } }) }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
-jest.mock('@/lib/admin', () => ({ requireAdmin: jest.fn().mockResolvedValue({ user: { id: 'admin', isAdmin: true } }) }))
 
 const USER = `p106-${randomUUID()}`
 const BASE = Date.parse('2026-10-12T19:26:00Z')
@@ -60,7 +59,7 @@ function referenceOrder(rows: Seeded[]): string[] {
 }
 
 async function page(cursor?: string) {
-  const result = await getUserActivityTimeline(USER, { cursor, pageSize: 10 })
+  const result = await getUserActivityTimeline({ userId: USER, cursor, pageSize: 10 })
   if (!result.success) throw new Error(result.error)
   return result.data
 }
@@ -112,10 +111,10 @@ describePg('activity timeline keyset paging', (databaseUrl) => {
   })
 
   it('refuses a malformed cursor', async () => {
-    const bad = await getUserActivityTimeline(USER, { cursor: 'not-a-cursor', pageSize: 10 })
+    const bad = await getUserActivityTimeline({ userId: USER, cursor: 'not-a-cursor', pageSize: 10 })
     expect(bad).toMatchObject({ success: false, code: 'VALIDATION' })
 
     const forged = Buffer.from(JSON.stringify({ ts: 'yesterday', source: 'media_mark', id: 'x' })).toString('base64url')
-    expect(await getUserActivityTimeline(USER, { cursor: forged })).toMatchObject({ success: false, code: 'VALIDATION' })
+    expect(await getUserActivityTimeline({ userId: USER, cursor: forged })).toMatchObject({ success: false, code: 'VALIDATION' })
   })
 })
