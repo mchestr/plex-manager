@@ -29,9 +29,11 @@ async function setSeason(data: Partial<SeasonConfig>): Promise<void> {
 async function recordViewTransitions(page: import('@playwright/test').Page): Promise<void> {
   await page.addInitScript(() => {
     const names: string[] = [];
-    (window as unknown as { __vtNames: string[] }).__vtNames = names;
+    // A browser without the API (this WebKit build) navigates with no transition: `null`.
+    const supported = 'startViewTransition' in Document.prototype;
+    (window as unknown as { __vtNames: string[] | null }).__vtNames = supported ? names : null;
+    if (!supported) return;
     const start = Document.prototype.startViewTransition;
-    if (!start) return;
     Document.prototype.startViewTransition = function (this: Document, ...args: Parameters<typeof start>) {
       for (const el of document.querySelectorAll('*')) {
         const name = getComputedStyle(el).viewTransitionName;
@@ -80,8 +82,9 @@ test.describe('Home RewindCard', () => {
     await card.getByTestId('rewind-card-open').click();
     await expect(page).toHaveURL(new RegExp(`/rewind/${REWIND_YEAR}\\?from=/$`));
     await expect(page.getByTestId('rewind-page-cover')).toBeVisible();
-    const names = await page.evaluate(() => (window as unknown as { __vtNames: string[] }).__vtNames);
-    expect(names).toContain('rewind-field');
+    const names = await page.evaluate(() => (window as unknown as { __vtNames: string[] | null }).__vtNames);
+    // Where the browser has view transitions, the strip morphs into the cover's field
+    if (names !== null) expect(names).toContain('rewind-field');
   });
 
   test('before the season, with the flags off, the card says when Rewind arrives on paper', async ({ page }) => {

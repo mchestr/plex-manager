@@ -10,7 +10,7 @@
 import { mockReset } from 'jest-mock-extended'
 import { getServerSession } from 'next-auth'
 
-import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { buildPlexWrapped } from '@/__tests__/helpers/factories'
 import { recordRewindView } from '@/actions/rewind-views'
 import { hasEntitlement } from '@/lib/actions/entitlement'
@@ -51,25 +51,20 @@ beforeEach(() => {
     views.push({ ...row })
     return { count: 1 }
   }) as never)
-  prismaMock.rewindView.updateMany.mockImplementation((async (args: { where: { wrappedId: string; sessionKey: string; furthestPage: { lt: number } }; data: { furthestPage: number } }) => {
+  type UpdateWhere = { wrappedId: string; sessionKey: string; furthestPage?: { lt: number }; shareActions?: { equals: Record<string, number> } }
+  type UpdateData = { furthestPage?: number; shareActions?: Record<string, number> }
+  prismaMock.rewindView.updateMany.mockImplementation((async (args: { where: UpdateWhere; data: UpdateData }) => {
     const row = find(args.where.wrappedId, args.where.sessionKey)
-    if (!row || row.furthestPage >= args.where.furthestPage.lt) return { count: 0 }
-    row.furthestPage = args.data.furthestPage
+    if (!row) return { count: 0 }
+    if (args.where.furthestPage && row.furthestPage >= args.where.furthestPage.lt) return { count: 0 }
+    if (args.where.shareActions && JSON.stringify(row.shareActions) !== JSON.stringify(args.where.shareActions.equals)) return { count: 0 }
+    Object.assign(row, args.data)
     return { count: 1 }
   }) as never)
-
-  const byKey = (where: { wrappedId_sessionKey: { wrappedId: string; sessionKey: string } }) => find(where.wrappedId_sessionKey.wrappedId, where.wrappedId_sessionKey.sessionKey)
-  const tx = asTransactionClient({
-    rewindView: {
-      findUniqueOrThrow: async ({ where }: { where: { wrappedId_sessionKey: { wrappedId: string; sessionKey: string } } }) => byKey(where),
-      update: async ({ where, data }: { where: { wrappedId_sessionKey: { wrappedId: string; sessionKey: string } }; data: { shareActions: Record<string, number> } }) => {
-        const row = byKey(where)!
-        row.shareActions = data.shareActions
-        return row
-      },
-    },
-  })
-  prismaMock.$transaction.mockImplementation((async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx)) as never)
+  prismaMock.rewindView.findUnique.mockImplementation((async ({ where }: { where: { wrappedId_sessionKey: { wrappedId: string; sessionKey: string } } }) => {
+    const row = find(where.wrappedId_sessionKey.wrappedId, where.wrappedId_sessionKey.sessionKey)
+    return row ? { shareActions: { ...row.shareActions } } : null
+  }) as never)
 })
 
 describe('recordRewindView', () => {
@@ -109,6 +104,19 @@ describe('recordRewindView', () => {
 
     expect(views[0].shareActions).toEqual({ image: 2, link: 1 })
     expect(views[0].furthestPage).toBe(3)
+  })
+
+  it('retries the count when another share action wrote between the read and the write', async () => {
+    await recordRewindView({ wrappedId: 'wrapped-1', sessionKey: SESSION, page: 2 })
+    // A concurrent call lands its increment after this one reads the counts
+    prismaMock.rewindView.findUnique.mockImplementationOnce((async () => {
+      const snapshot = { ...views[0].shareActions }
+      views[0].shareActions = { ...views[0].shareActions, link: 1 }
+      return { shareActions: snapshot }
+    }) as never)
+    await recordRewindView({ wrappedId: 'wrapped-1', sessionKey: SESSION, page: 2, shareAction: 'image' })
+
+    expect(views[0].shareActions).toEqual({ link: 1, image: 1 })
   })
 
   it('counts a share action on the first call of an open', async () => {

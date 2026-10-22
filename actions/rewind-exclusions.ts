@@ -72,12 +72,14 @@ async function gate(userId: string) {
  * A hide applies to the member in every year (`RewindExclusion` is keyed by
  * user and title), so every year's card cache key moves. A year without a
  * prefs row reads version 0 and would keep its cached cards, so each year
- * the member has a Rewind for gets a row first, then every row is bumped.
+ * the member has a Rewind for (and only those) gets a row first, then every row is bumped.
  */
-async function bumpVersion(tx: PrismaTransactionClient, userId: string, year: number) {
+async function bumpVersion(tx: PrismaTransactionClient, userId: string) {
   const rewinds = await tx.plexWrapped.findMany({ where: { userId }, select: { year: true } })
-  const years = [...new Set([year, ...rewinds.map((row) => row.year)])]
-  await tx.rewindPrefs.createMany({ data: years.map((y) => ({ userId, year: y, exclusionsVersion: 0 })), skipDuplicates: true })
+  const years = [...new Set(rewinds.map((row) => row.year))]
+  if (years.length > 0) {
+    await tx.rewindPrefs.createMany({ data: years.map((y) => ({ userId, year: y, exclusionsVersion: 0 })), skipDuplicates: true })
+  }
   await tx.rewindPrefs.updateMany({ where: { userId }, data: { exclusionsVersion: { increment: 1 } } })
 }
 
@@ -113,7 +115,7 @@ export const hideRewindTitle = memberAction({
         create: { userId, ratingKey, kind, title: title.slice(0, MAX_TITLE) },
         update: {},
       })
-      await bumpVersion(tx, userId, year)
+      await bumpVersion(tx, userId)
     })
     const regenerating = await regenerate(userId, year)
     logAuditEvent(AuditEventType.REWIND_TITLE_HIDDEN, userId, { year, ratingKey, kind })
@@ -125,8 +127,8 @@ export const hideRewindTitle = memberAction({
 export const unhideRewindTitle = memberAction({
   input,
   fallbackError: "Could not bring that title back",
-  handler: async ({ year, ratingKey, kind }, { userId }): Promise<ExclusionResult> => {
-    const exclusion = await prisma.rewindExclusion.findUnique({ where: { userId_ratingKey: { userId, ratingKey } }, select: { id: true } })
+  handler: async ({ year, ratingKey }, { userId }): Promise<ExclusionResult> => {
+    const exclusion = await prisma.rewindExclusion.findUnique({ where: { userId_ratingKey: { userId, ratingKey } }, select: { id: true, kind: true } })
     if (!exclusion) return fail("NOT_FOUND", "That title is not hidden")
 
     const blocked = await gate(userId)
@@ -134,10 +136,10 @@ export const unhideRewindTitle = memberAction({
 
     await prisma.$transaction(async (tx) => {
       await tx.rewindExclusion.deleteMany({ where: { userId, ratingKey } })
-      await bumpVersion(tx, userId, year)
+      await bumpVersion(tx, userId)
     })
     const regenerating = (await completedRewind(userId, year)) !== null && (await regenerate(userId, year))
-    logAuditEvent(AuditEventType.REWIND_TITLE_UNHIDDEN, userId, { year, ratingKey, kind })
+    logAuditEvent(AuditEventType.REWIND_TITLE_UNHIDDEN, userId, { year, ratingKey, kind: exclusion.kind })
     return ok({ regenerating })
   },
 })

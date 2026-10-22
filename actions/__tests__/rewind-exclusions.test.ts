@@ -152,7 +152,7 @@ describe("hideRewindTitle", () => {
 
 describe("unhideRewindTitle", () => {
   it("deletes the member's own row, bumps the version and regenerates", async () => {
-    prismaMock.rewindExclusion.findUnique.mockResolvedValue({ id: "ex-1" } as never)
+    prismaMock.rewindExclusion.findUnique.mockResolvedValue({ id: "ex-1", kind: "series" } as never)
 
     expect(await unhideRewindTitle({ year: YEAR, ratingKey: no1.ratingKey, kind: "series" })).toEqual({ success: true, data: { regenerating: true } })
 
@@ -161,6 +161,8 @@ describe("unhideRewindTitle", () => {
     )
     expect(prismaMock.rewindExclusion.deleteMany).toHaveBeenCalledWith({ where: { userId: memberId, ratingKey: no1.ratingKey } })
     expect(prismaMock.rewindPrefs.updateMany).toHaveBeenCalledTimes(1)
+    // No year holds a Rewind in this mock, so no prefs row is created for the year passed
+    expect(prismaMock.rewindPrefs.createMany).not.toHaveBeenCalled()
     expect(enqueueRewindGeneration).toHaveBeenCalledWith({ userId: memberId, year: YEAR, kind: "member", exclusion: {} })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.REWIND_TITLE_UNHIDDEN, memberId, { year: YEAR, ratingKey: no1.ratingKey, kind: "series" })
   })
