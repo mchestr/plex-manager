@@ -1,96 +1,57 @@
-import Link from "next/link"
+import type { Metadata } from "next"
 import { getServerSession } from "next-auth"
+import Link from "next/link"
+import { redirect } from "next/navigation"
 
+import { getSubscriptionProvisioning, type SubscriptionProvisioning } from "@/actions/subscription"
 import { PublicShell } from "@/components/shell/public-shell"
-import { Alert } from "@/components/ui/alert"
+import { ProvisioningChecklist } from "@/components/subscribe/provisioning-checklist"
+import { Button } from "@/components/ui/button"
 import { authOptions } from "@/lib/auth"
 import { serverName } from "@/lib/brand"
-import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
 
-/**
- * Reads the current user's Plex invite status so the success page can reflect
- * where provisioning is at. Returns `null` when there is no signed-in user or no
- * subscription row yet (the webhook may not have upserted it).
- */
-async function getInviteStatus(userId: string | undefined): Promise<string | null> {
-  if (!userId) {
-    return null
-  }
+export const metadata: Metadata = { title: "You're in" }
 
-  const subscription = await prisma.subscription.findUnique({
-    where: { userId },
-    select: { plexInviteStatus: true },
-  })
-
-  return subscription?.plexInviteStatus ?? null
+const NOTHING_YET: SubscriptionProvisioning = {
+  status: null,
+  plexInviteStatus: null,
+  libraryCount: null,
+  memberSince: null,
+  currentPeriodEnd: null,
 }
 
 /**
- * Post-checkout return page.
- *
- * Stripe redirects here after a completed Checkout (`success_url`). Provisioning
- * (the Plex invite/accept) happens asynchronously via the webhook + BullMQ job,
- * so this reflects the current invite status:
- *
- * - `accepted` → access is ready.
- * - `pending` → the auto-accept didn't complete; the user must accept the invite
- *   from their email (FR-13).
- * - otherwise (`sent`/absent) → provisioning is still in progress; friendly
- *   "setting up" copy.
+ * You're in (UI-40): where Stripe Checkout returns (`success_url`). The Plex
+ * grant runs later, in the webhook's job, so the page shows a live checklist
+ * (Payment confirmed, then the share or "Check your email to accept the
+ * invite") seeded from the server and polled on the client. Anonymous
+ * visitors go to sign-in.
  */
 export default async function SubscribeSuccessPage() {
   const session = await getServerSession(authOptions)
   const user = session?.user
-  const [inviteStatus, name] = await Promise.all([getInviteStatus(user?.id), serverName()])
+  if (!user?.id) redirect("/")
+
+  const [provisioning, name] = await Promise.all([getSubscriptionProvisioning(), serverName()])
 
   return (
     <PublicShell
       serverName={name}
       width="wide"
-      account={user?.id ? { name: user.name || user.email || "Member" } : undefined}
+      account={{ name: user.name || user.email || "Member" }}
       data-testid="subscribe-success-page"
     >
-      <div className="flex flex-col items-center gap-6 text-center">
-        <div className="max-w-md">
-          <h1 className="text-2xl font-semibold">Thanks for subscribing!</h1>
+      <div className="flex w-full max-w-[440px] flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-h1 text-foreground">You&apos;re in</h1>
+          <p className="text-body text-muted-foreground">Thanks for joining {name}.</p>
         </div>
-
-        {inviteStatus === "accepted" ? (
-          <Alert
-            tone="success"
-            className="max-w-md text-left"
-            data-testid="subscribe-success-accepted"
-          >
-            Your access is ready. Head into the app to start streaming.
-          </Alert>
-        ) : inviteStatus === "pending" ? (
-          <Alert
-            tone="info"
-            className="max-w-md text-left"
-            data-testid="subscribe-success-pending"
-          >
-            We&apos;ve sent a Plex invite to your email. Accept it to finish setting
-            up your access to the media server.
-          </Alert>
-        ) : (
-          <p
-            className="max-w-md text-slate-400"
-            data-testid="subscribe-success-provisioning"
-          >
-            Your subscription is being set up. We&apos;re preparing your access to
-            the media server — this only takes a moment.
-          </p>
-        )}
-
-        <Link
-          href="/"
-          className="text-cyan-400 hover:text-cyan-300"
-          data-testid="subscribe-success-home-link"
-        >
-          Continue to the app
-        </Link>
+        <ProvisioningChecklist initial={provisioning.success ? provisioning.data : NOTHING_YET} />
+        <Button nativeButton={false} render={<Link href="/" />} className="self-start" data-testid="subscribe-success-home-link">
+          Go to home
+        </Button>
       </div>
     </PublicShell>
   )

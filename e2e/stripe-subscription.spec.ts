@@ -87,6 +87,36 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       await expect(regularUserPage.getByTestId('app-top-bar')).toHaveCount(0);
     });
 
+    // P10.28 (UI-37): one primary plan, and never a raw price id on screen.
+    test('a gated member sees one primary plan button and no price ids', async ({ regularUserPage }) => {
+      await setStripeEnabled(true, { configure: true });
+      await makeUserGatedNonMember(TEST_USERS.REGULAR.id);
+
+      await regularUserPage.goto('/subscribe');
+      const page = regularUserPage.getByTestId('subscribe-page');
+      await expect(page).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+      // The stubbed keys reach no Stripe, so the plans may be unavailable.
+      const planList = regularUserPage.getByTestId('subscribe-plan-list');
+      if (await planList.isVisible().catch(() => false)) {
+        const primaries = planList.getByTestId(/^subscribe-button-/).and(regularUserPage.locator('[data-variant="primary"]'));
+        await expect(primaries).toHaveCount(1);
+      } else {
+        await expect(regularUserPage.getByTestId('subscribe-unavailable')).toBeVisible();
+      }
+      await expect(page).not.toContainText('price_');
+    });
+
+    test('an admin visiting /subscribe is told they already have access', async ({ adminPage }) => {
+      await setStripeEnabled(true, { configure: true });
+
+      await adminPage.goto('/subscribe');
+      await expect(adminPage.getByTestId('subscribe-already-entitled')).toBeVisible({
+        timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+      });
+      await expect(adminPage.getByTestId('subscribe-plan-list')).toHaveCount(0);
+    });
+
     test('admin is never gated even when Stripe is enabled', async ({ adminPage }) => {
       await setStripeEnabled(true, { configure: true });
 

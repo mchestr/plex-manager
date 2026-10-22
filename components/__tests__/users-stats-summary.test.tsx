@@ -92,8 +92,7 @@ describe('UsersStatsSummary', () => {
     render(<UsersStatsSummary users={users} />)
 
     expect(screen.getByText('Total Tokens')).toBeInTheDocument()
-    const tokenValue = screen.getByText('Total Tokens').parentElement?.querySelector('.text-2xl')
-    expect(tokenValue).toHaveTextContent('0')
+    expect(screen.getByTestId('users-stat-total-tokens')).toHaveTextContent('Total Tokens0')
     expect(screen.getByText('Total Cost')).toBeInTheDocument()
     expect(screen.getByText('$0.00')).toBeInTheDocument()
   })

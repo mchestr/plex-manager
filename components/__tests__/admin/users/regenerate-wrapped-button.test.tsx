@@ -1,7 +1,7 @@
 import * as rewindActions from '@/actions/rewind-generation'
 import { RegenerateWrappedButton } from '@/components/admin/users/regenerate-wrapped-button'
 import { ToastProvider } from '@/components/ui/toast'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useRouter } from 'next/navigation'
 import React from 'react'
@@ -125,8 +125,8 @@ describe('RegenerateWrappedButton', () => {
       await waitFor(() => {
         expect(button).toBeDisabled()
         // Check for loading spinner
-        const svg = button.querySelector('svg.animate-spin')
-        expect(svg).toBeInTheDocument()
+        const spinner = button.querySelector('[data-slot="spinner"]')
+        expect(spinner).toBeInTheDocument()
       })
 
       resolveGenerate!({ success: true, data: { alreadyQueued: false } })
@@ -147,11 +147,9 @@ describe('RegenerateWrappedButton', () => {
       await user.click(confirmButton)
 
       await waitFor(() => {
-        // In non-inline mode, success shows green button with checkmark icon
+        // In non-inline mode, success shows the checkmark icon
         const successButton = screen.getByRole('button', { name: /Regeneration started/i })
-        expect(successButton).toHaveClass('bg-green-600')
-        const checkmark = successButton.querySelector('svg')
-        expect(checkmark).toBeInTheDocument()
+        expect(within(successButton).getByTestId('regenerate-icon-done')).toBeInTheDocument()
       })
     })
 
@@ -170,9 +168,9 @@ describe('RegenerateWrappedButton', () => {
       await user.click(confirmButton)
 
       await waitFor(() => {
-        // In non-inline mode, success shows green button with checkmark icon
+        // In non-inline mode, success shows the checkmark icon
         const successButton = screen.getByRole('button', { name: /Regeneration started/i })
-        expect(successButton).toHaveClass('bg-green-600')
+        expect(within(successButton).getByTestId('regenerate-icon-done')).toBeInTheDocument()
       })
 
       act(() => {
@@ -180,10 +178,10 @@ describe('RegenerateWrappedButton', () => {
       })
 
       await waitFor(() => {
-        // After 3 seconds, button should return to purple (non-success state)
+        // After 3 seconds, the button returns to its idle icon
         const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
-        expect(button).toHaveClass('bg-purple-600')
-        expect(button).not.toHaveClass('bg-green-600')
+        expect(within(button).getByTestId('regenerate-icon-idle')).toBeInTheDocument()
+        expect(within(button).queryByTestId('regenerate-icon-done')).not.toBeInTheDocument()
       })
     })
 
@@ -478,11 +476,10 @@ describe('RegenerateWrappedButton', () => {
         data: { alreadyQueued: false },
       })
 
-      const { container } = renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
 
       // Initial state - refresh icon
-      let svg = container.querySelector('svg.text-purple-400')
-      expect(svg).toBeInTheDocument()
+      expect(screen.getByTestId('regenerate-icon-idle')).toBeInTheDocument()
 
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
       await user.click(button)
@@ -491,8 +488,7 @@ describe('RegenerateWrappedButton', () => {
 
       // Success state - checkmark icon
       await waitFor(() => {
-        svg = container.querySelector('svg.text-green-400')
-        expect(svg).toBeInTheDocument()
+        expect(screen.getByTestId('regenerate-icon-done')).toBeInTheDocument()
       })
     })
   })

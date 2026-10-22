@@ -20,8 +20,8 @@ export default async function UsersPage() {
         <div className="mb-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative">
             <div>
-              <h1 data-testid="admin-users-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">Users</h1>
-              <p className="text-sm text-slate-400">
+              <h1 data-testid="admin-users-heading" className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Users</h1>
+              <p className="text-sm text-muted-foreground">
                 {allUsers.length} user{allUsers.length !== 1 ? "s" : ""} in database
               </p>
             </div>

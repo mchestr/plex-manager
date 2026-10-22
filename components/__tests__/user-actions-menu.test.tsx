@@ -64,7 +64,7 @@ describe('UserActionsMenu', () => {
 
     openMenu()
 
-    expect(screen.getByText('View Wrapped')).toBeInTheDocument()
+    expect(screen.getByText('View Rewind')).toBeInTheDocument()
     expect(screen.getByText(/Regenerate Wrapped/)).toBeInTheDocument()
   })
 
@@ -75,7 +75,7 @@ describe('UserActionsMenu', () => {
 
     openMenu()
 
-    expect(screen.getByRole('menuitem', { name: /View Wrapped/ })).toHaveAttribute(
+    expect(screen.getByRole('menuitem', { name: /View Rewind/ })).toHaveAttribute(
       'href',
       '/admin/users/user-9/rewind/2026'
     )
@@ -183,12 +183,12 @@ describe('UserActionsMenu', () => {
     render(<UserActionsMenu user={user} year={2026} />)
 
     openMenu()
-    expect(screen.getByText('View Wrapped')).toBeInTheDocument()
+    expect(screen.getByText('View Rewind')).toBeInTheDocument()
 
     const backdrop = document.querySelector('.fixed.inset-0')
     expect(backdrop).toBeInTheDocument()
     fireEvent.click(backdrop!)
-    expect(screen.queryByText('View Wrapped')).not.toBeInTheDocument()
+    expect(screen.queryByText('View Rewind')).not.toBeInTheDocument()
   })
 
   it('should fall back to a wrapped-only menu when using the base stats builder', () => {
@@ -197,7 +197,7 @@ describe('UserActionsMenu', () => {
     const user = makeAdminUserWithStats({ wrappedStatus: 'completed', isAdmin: true, hasPlexAccess: true }) as any
     render(<UserActionsMenu user={user} year={2026} />)
     openMenu()
-    expect(screen.getByText('View Wrapped')).toBeInTheDocument()
+    expect(screen.getByText('View Rewind')).toBeInTheDocument()
     expect(screen.queryByText('Cancel Subscription')).not.toBeInTheDocument()
     expect(screen.queryByTestId('view-in-stripe-link')).not.toBeInTheDocument()
   })

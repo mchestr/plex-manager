@@ -19,6 +19,10 @@ export interface OfferedPrice {
   /** Billing interval, e.g. "month" | "year"; `null` for one-off prices. */
   interval: string | null
   productName: string
+  /** Up to {@link MAX_FEATURES} benefit lines from the product's `marketing_features`. */
+  features: string[]
+  /** The price's `metadata.recommended` is `"true"`: the plan `/subscribe` makes primary. */
+  recommended: boolean
 }
 
 interface PriceCache {
@@ -68,6 +72,35 @@ function resolveProductName(product: Stripe.Price["product"]): string {
   return ""
 }
 
+/** How many benefit lines a plan card shows. */
+const MAX_FEATURES = 3
+
+/**
+ * The product's `marketing_features` names, capped at {@link MAX_FEATURES}.
+ *
+ * @internal
+ */
+function resolveFeatures(product: Stripe.Price["product"]): string[] {
+  if (typeof product === "string" || !product || product.deleted) return []
+  return (product.marketing_features ?? [])
+    .map((feature) => feature.name?.trim() ?? "")
+    .filter((name) => name.length > 0)
+    .slice(0, MAX_FEATURES)
+}
+
+/** A retrieved price, with its product expanded, as display details. */
+function toOfferedPrice(price: Stripe.Price): OfferedPrice {
+  return {
+    priceId: price.id,
+    amount: price.unit_amount ?? null,
+    currency: price.currency,
+    interval: price.recurring?.interval ?? null,
+    productName: resolveProductName(price.product),
+    features: resolveFeatures(price.product),
+    recommended: price.metadata?.recommended === "true",
+  }
+}
+
 /**
  * Resolves the admin-configured price IDs into display-ready price details.
  *
@@ -82,7 +115,9 @@ function resolveProductName(product: Stripe.Price["product"]): string {
  *
  * - For each configured price ID, calls
  *   `stripe.prices.retrieve(id, { expand: ['product'] })` and returns
- *   `{ priceId, amount, currency, interval, productName }`.
+ *   `{ priceId, amount, currency, interval, productName, features, recommended }`:
+ *   `features` are the product's `marketing_features` (at most three) and
+ *   `recommended` is the price's `metadata.recommended === "true"`.
  * - A price ID that fails to resolve (deleted/invalid) is skipped and logged —
  *   one bad ID never crashes the page or discards the valid prices.
  * - Returns an empty array when Stripe is disabled (`Config.stripeEnabled` is
@@ -97,7 +132,8 @@ function resolveProductName(product: Stripe.Price["product"]): string {
  * ```ts
  * const prices = await getOfferedPrices()
  * // [{ priceId: "price_123", amount: 500, currency: "usd",
- * //    interval: "month", productName: "Plex Access" }]
+ * //    interval: "month", productName: "Plex Access",
+ * //    features: ["Every library"], recommended: false }]
  * ```
  */
 export async function getOfferedPrices(): Promise<OfferedPrice[]> {
@@ -122,13 +158,7 @@ export async function getOfferedPrices(): Promise<OfferedPrice[]> {
         expand: ["product"],
       })
 
-      resolved.push({
-        priceId: price.id,
-        amount: price.unit_amount ?? null,
-        currency: price.currency,
-        interval: price.recurring?.interval ?? null,
-        productName: resolveProductName(price.product),
-      })
+      resolved.push(toOfferedPrice(price))
     } catch (error) {
       logger.warn("Skipping unresolvable Stripe price", { priceId, error })
     }
@@ -162,13 +192,7 @@ export async function getPlanPrice(priceId: string | null): Promise<OfferedPrice
   if (!stripe) return null
   try {
     const price = await stripe.prices.retrieve(priceId, { expand: ["product"] })
-    const resolved: OfferedPrice = {
-      priceId: price.id,
-      amount: price.unit_amount ?? null,
-      currency: price.currency,
-      interval: price.recurring?.interval ?? null,
-      productName: resolveProductName(price.product),
-    }
+    const resolved = toOfferedPrice(price)
     planCache.set(priceId, { expiresAt: Date.now() + PLAN_CACHE_TTL_MS, price: resolved })
     return resolved
   } catch (error) {

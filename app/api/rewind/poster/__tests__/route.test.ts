@@ -567,6 +567,32 @@ describe('GET /api/rewind/poster/[ratingKey]', () => {
     })
   })
 
+  describe("home's New on row (P10.12)", () => {
+    beforeEach(() => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      mockMember()
+      ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(new Set(['1', '2']))
+      ;(getItemSectionKey as jest.Mock).mockImplementation(async (_server: unknown, key: string) =>
+        found(key === '50101' ? '1' : '9')
+      )
+      mockUpstreamImage()
+    })
+
+    it('serves a row poster from a shared section with private caching', async () => {
+      const response = await callRoute(`${posterUrl('50101')}?w=160&tone=none`, '50101')
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('Cache-Control')).toBe(SESSION_CACHE)
+    })
+
+    it('answers 404 for a key from a section the member is not shared, whatever the row offered', async () => {
+      const response = await callRoute(`${posterUrl('80001')}?w=160&tone=none`, '80001')
+
+      expect(response.status).toBe(404)
+      expect(fetchWithTimeout).not.toHaveBeenCalled()
+    })
+  })
+
   describe('one 3 s deadline per request', () => {
     let now: number
     let clock: jest.SpyInstance<number, []>

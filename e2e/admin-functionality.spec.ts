@@ -5,10 +5,11 @@ import { verifyPageAccessible, waitForAdminContent, waitForAdminPageReady, WAIT_
 
 test.describe('Admin Functionality', () => {
   test('should access admin dashboard', async ({ adminPage }) => {
-    // After authentication, adminPage starts on /admin/users (dashboard)
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: /Users/i }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    // After authentication, adminPage is on /admin, the Overview (P10.8)
+    await expect(adminPage).toHaveURL(/\/admin$/);
+    await expect(adminPage.getByTestId('admin-overview-header')).toContainText('Overview', {
+      timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION,
+    });
   });
 
   test('should access admin settings', async ({ adminPage }) => {
@@ -22,7 +23,8 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin users list', async ({ adminPage }) => {
-    // Already on /admin/users; verify heading first
+    // /admin is the Overview (P10.8), so open Users from the nav
+    await adminPage.locator('aside').getByTestId('admin-nav-users').first().click();
     await waitForAdminContent(adminPage, [
       { type: 'heading', value: 'Users' }
     ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });

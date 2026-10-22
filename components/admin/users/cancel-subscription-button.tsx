@@ -54,11 +54,11 @@ export function CancelSubscriptionButton({
         onClick={() => setShowConfirmModal(true)}
         disabled={isCanceling}
         data-testid="cancel-subscription-button"
-        className="w-full flex items-center gap-2 text-sm text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full flex items-center gap-2 text-sm text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         title="Cancel subscription at period end"
       >
         <svg
-          className="w-4 h-4 text-amber-400"
+          className="w-4 h-4 text-warning"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -81,7 +81,6 @@ export function CancelSubscriptionButton({
         message={`Schedule cancellation for ${userName || "this user"}? Their subscription will not renew, but they keep access until the end of the current paid period. Plex access is removed automatically at that time.`}
         confirmText="Confirm Cancellation"
         cancelText="Keep Subscription"
-        confirmButtonClass="bg-amber-600 hover:bg-amber-700"
       />
     </>
   )

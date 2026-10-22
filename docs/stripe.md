@@ -147,7 +147,14 @@ of the following are present:
 Once all four are in place, flip the toggle on. From that point:
 
 - Plex non-members can create a session and are gated to `/subscribe`.
-- The `/subscribe` page lists your configured prices (fetched live from Stripe).
+- The `/subscribe` page lists your configured prices (fetched live from Stripe)
+  as plan cards: the product's name, the price, and up to three benefit lines
+  from the product's **Marketing features** (Products → your product → Marketing
+  feature list). One plan gets the primary button: the price whose metadata has
+  `recommended` = `true`, else the first configured price.
+- After Checkout, `/subscribe/success` ("You're in") polls a live checklist
+  every 3 seconds for up to 2 minutes: Payment confirmed, then the Plex share or
+  "Check your email to accept the invite".
 - Successful subscriptions provision Plex access automatically.
 
 ## Grandfathering Existing Members
@@ -192,7 +199,8 @@ subscription's `metadata.appUserId` equals the session's `client_reference_id`
 whose price is one of the configured price IDs.
 
 A member whose subscription is `ACTIVE` or `PAST_DUE` cannot start a second
-checkout (`ALREADY_SUBSCRIBED`), and `/subscribe` shows them no plans. A
+checkout (`ALREADY_SUBSCRIBED`), and `/subscribe` shows them no plans but
+"You already have access", with Manage billing (to `/membership`). A
 returning member checks out as their existing Stripe customer.
 
 Status mapping (`lib/stripe/events.ts` → `mapStripeStatus`): Stripe
@@ -341,7 +349,7 @@ re-verified against the **installed** `stripe` SDK:
 - **Toggle won't enable / greyed out.** Stripe isn't fully configured. The card
   shows exactly what's missing (secret key, webhook secret, a price ID, or the
   job queue).
-- **`/subscribe` shows "not available right now".** No prices resolved:
+- **`/subscribe` shows "Subscriptions aren't open right now".** No prices resolved:
   Stripe is disabled/unconfigured, no price IDs are set, or every configured
   price ID is invalid/deleted in Stripe. Invalid IDs are skipped and logged; they
   never crash the page.

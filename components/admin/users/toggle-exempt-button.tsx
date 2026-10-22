@@ -68,11 +68,11 @@ export function ToggleExemptButton({
         onClick={handleClick}
         disabled={isToggling}
         data-testid="toggle-exempt-button"
-        className="w-full flex items-center gap-2 text-sm text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full flex items-center gap-2 text-sm text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         title={isExempt ? "Remove subscription exemption" : "Mark user exempt from subscription"}
       >
         <svg
-          className="w-4 h-4 text-cyan-400"
+          className="w-4 h-4 text-muted-foreground"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -97,7 +97,7 @@ export function ToggleExemptButton({
         message={`Remove the subscription exemption for ${userName || "this user"}? Without an active subscription, they will lose access to the app until they subscribe.`}
         confirmText="Remove Exemption"
         cancelText="Keep Exempt"
-        confirmButtonClass="bg-red-600 hover:bg-red-700"
+        tone="destructive"
       />
     </>
   )

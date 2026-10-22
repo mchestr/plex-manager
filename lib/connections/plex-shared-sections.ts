@@ -208,6 +208,15 @@ export async function getItemSectionKey(
 }
 
 /**
+ * Records an item's section from a section listing the server itself sent
+ * (home's "New on" row, P10.12), so the poster route's access check for that
+ * item needs no metadata request.
+ */
+export function rememberItemSectionKey(server: { url: string }, ratingKey: string, sectionKey: string): void {
+  itemSectionCache.set(`${server.url}|${ratingKey}`, sectionKey)
+}
+
+/**
  * Drops both caches. For tests.
  *
  * @internal

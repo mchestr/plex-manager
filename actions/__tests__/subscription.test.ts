@@ -14,7 +14,7 @@
  */
 
 import { createCheckoutSession } from '@/lib/stripe/checkout'
-import { openBillingPortal, startCheckout } from '@/actions/subscription'
+import { getSubscriptionProvisioning, openBillingPortal, startCheckout } from '@/actions/subscription'
 import { prisma } from '@/lib/prisma'
 import { getStripe } from '@/lib/stripe/client'
 import { getOfferedPrices } from '@/lib/stripe/prices'
@@ -379,5 +379,58 @@ describe('openBillingPortal', () => {
     const result = await openBillingPortal()
 
     expect(result).toMatchObject({ success: false, error: expect.any(String) })
+  })
+})
+
+// P10.28 (UI-40): the success page's live checklist
+describe('getSubscriptionProvisioning', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('needs a session and reads nothing without one', async () => {
+    mockGetServerSession.mockResolvedValue(null)
+
+    const result = await getSubscriptionProvisioning()
+
+    expect(result).toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
+    expect(mockSubscriptionFindUnique).not.toHaveBeenCalled()
+  })
+
+  it("reads only the caller's row, and status fields only", async () => {
+    mockGetServerSession.mockResolvedValue(userSession)
+    const createdAt = new Date('2027-01-26T18:00:00Z')
+    const currentPeriodEnd = new Date('2027-02-26T18:00:00Z')
+    mockSubscriptionFindUnique.mockResolvedValue({
+      status: 'ACTIVE',
+      plexInviteStatus: 'accepted',
+      createdAt,
+      currentPeriodEnd,
+    })
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ stripeLibrarySectionIds: [1, 2, 3] })
+
+    const result = await getSubscriptionProvisioning()
+
+    expect(mockSubscriptionFindUnique).toHaveBeenCalledWith({
+      where: { userId: 'user-123' },
+      select: { status: true, plexInviteStatus: true, createdAt: true, currentPeriodEnd: true },
+    })
+    expect(result).toEqual({
+      success: true,
+      data: { status: 'ACTIVE', plexInviteStatus: 'accepted', libraryCount: 3, memberSince: createdAt, currentPeriodEnd },
+    })
+  })
+
+  it('reports nothing yet before the webhook writes the row, and every library when none are chosen', async () => {
+    mockGetServerSession.mockResolvedValue(userSession)
+    mockSubscriptionFindUnique.mockResolvedValue(null)
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ stripeLibrarySectionIds: null })
+
+    const result = await getSubscriptionProvisioning()
+
+    expect(result).toEqual({
+      success: true,
+      data: { status: null, plexInviteStatus: null, libraryCount: null, memberSince: null, currentPeriodEnd: null },
+    })
   })
 })

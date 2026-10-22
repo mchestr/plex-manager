@@ -96,7 +96,7 @@ export function AdminSidebar({ serverName, user, navCounts, assistant }: AdminSi
       data-testid="admin-sidebar"
     >
       <div className="flex h-14 items-center justify-center gap-2 px-2 lg:justify-start lg:px-4">
-        <Link href="/admin/users" className="flex min-w-0 items-center rounded-sm" data-testid="admin-wordmark">
+        <Link href="/admin" className="flex min-w-0 items-center rounded-sm" data-testid="admin-wordmark">
           <Wordmark serverName={serverName} className="hidden lg:flex" />
           <span aria-hidden="true" className="size-2 rounded-[2px] bg-primary lg:hidden" />
           <span className="sr-only lg:hidden">{serverName}</span>
@@ -134,6 +134,11 @@ export function AdminSidebar({ serverName, user, navCounts, assistant }: AdminSi
         </AdminChrome>
       )}
       <nav aria-label="Admin" className="flex-1 overflow-y-auto px-2 py-2">
+        <ul className="mb-4 flex flex-col gap-0.5">
+          {itemsIn(null, ADMIN_NAV).map((item) => (
+            <NavLink key={item.id} item={item} counts={navCounts} pathname={pathname} />
+          ))}
+        </ul>
         {ADMIN_NAV_GROUPS.map((group) => (
           <div key={group} className="mb-4 border-t border-sidebar-border pt-3 first:border-t-0 first:pt-0 lg:border-t-0 lg:pt-0">
             <h2 className="hidden px-2 pb-1 text-caption font-medium text-muted-foreground lg:block">{group}</h2>

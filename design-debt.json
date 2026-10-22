@@ -1,30 +1,10 @@
 {
   "schema": 1,
-  "commit": "7141df188f5ec72542d9be0dedfb2916c8e1146b",
-  "generatedAt": "2026-10-21T22:48:30.723Z",
+  "commit": "e30fd63620742346675c7a3671014afc975c5641",
+  "generatedAt": "2026-10-22T15:17:05.602Z",
   "files": {
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "copy": 1
-    },
-    "app/admin/settings/page.tsx": {
-      "blur": 5,
-      "copy": 1,
-      "raw-palette": 95
-    },
-    "app/admin/users/page.tsx": {
-      "raw-palette": 2
-    },
-    "app/invite/[code]/page.tsx": {
-      "blur": 3,
-      "gradient": 3,
-      "gradient-text": 4,
-      "raw-palette": 26
-    },
-    "app/subscribe/page.tsx": {
-      "raw-palette": 4
-    },
-    "app/subscribe/success/page.tsx": {
-      "raw-palette": 3
     },
     "components/admin/invites/invite-details-client.tsx": {
       "caps-eyebrow": 6,
@@ -33,78 +13,6 @@
     "components/admin/invites/invites-page-client.tsx": {
       "caps-eyebrow": 6,
       "raw-palette": 108
-    },
-    "components/admin/settings/discord-integration-form.tsx": {
-      "raw-palette": 30
-    },
-    "components/admin/settings/jellyfin-login-toggle.tsx": {
-      "raw-palette": 4
-    },
-    "components/admin/settings/llm-provider-form.tsx": {
-      "raw-palette": 9
-    },
-    "components/admin/settings/llm-toggle.tsx": {
-      "raw-palette": 2
-    },
-    "components/admin/settings/server-form.tsx": {
-      "raw-palette": 21
-    },
-    "components/admin/settings/stripe-settings-form.tsx": {
-      "raw-palette": 14
-    },
-    "components/admin/settings/watchlist-sync-settings.tsx": {
-      "blur": 2,
-      "infinite-motion": 1,
-      "raw-palette": 42
-    },
-    "components/admin/users/cancel-subscription-button.tsx": {
-      "raw-palette": 4
-    },
-    "components/admin/users/change-user-role-button.tsx": {
-      "infinite-motion": 1,
-      "raw-palette": 11
-    },
-    "components/admin/users/grant-access-button.tsx": {
-      "raw-palette": 4
-    },
-    "components/admin/users/regenerate-wrapped-button.tsx": {
-      "infinite-motion": 1,
-      "raw-palette": 9
-    },
-    "components/admin/users/toggle-exempt-button.tsx": {
-      "raw-palette": 4
-    },
-    "components/admin/users/unshare-user-button.tsx": {
-      "infinite-motion": 1,
-      "raw-palette": 13
-    },
-    "components/admin/users/user-actions-menu.tsx": {
-      "copy": 1,
-      "raw-palette": 21
-    },
-    "components/admin/users/user-table-row.tsx": {
-      "raw-palette": 18
-    },
-    "components/admin/users/users-filter.tsx": {
-      "blur": 1,
-      "gradient": 2,
-      "raw-palette": 20
-    },
-    "components/admin/users/users-list.tsx": {
-      "blur": 1,
-      "raw-palette": 7
-    },
-    "components/admin/users/users-stats-summary.tsx": {
-      "blur": 6,
-      "copy": 1,
-      "raw-palette": 24
-    },
-    "components/auth/jellyfin-sign-in-form.tsx": {
-      "raw-palette": 27
-    },
-    "components/auth/plex-sign-in-button.tsx": {
-      "gradient": 1,
-      "raw-palette": 6
     },
     "components/setup/setup-wizard/dev-mode-banner.tsx": {
       "raw-palette": 8
@@ -329,12 +237,12 @@
   },
   "totals": {
     "arbitrary-type-z": 24,
-    "blur": 31,
+    "blur": 13,
     "caps-eyebrow": 38,
-    "copy": 7,
-    "gradient": 51,
-    "gradient-text": 32,
-    "infinite-motion": 23,
-    "raw-palette": 1031
+    "copy": 4,
+    "gradient": 45,
+    "gradient-text": 28,
+    "infinite-motion": 19,
+    "raw-palette": 611
   }
 }

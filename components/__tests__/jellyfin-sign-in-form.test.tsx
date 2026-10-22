@@ -25,9 +25,7 @@ async function submit(username: string, password = 'password123', confirmPasswor
 }
 
 function renderForm() {
-  const onError = jest.fn()
-  render(<JellyfinSignInForm inviteCode="JELLY123" serverName="Home" onError={onError} />)
-  return { onError }
+  render(<JellyfinSignInForm inviteCode="JELLY123" serverName="Home" />)
 }
 
 describe('JellyfinSignInForm validation', () => {
@@ -47,8 +45,8 @@ describe('JellyfinSignInForm validation', () => {
     ['an email-shaped username', 'owner@example.com'],
     ['a username with a space', 'John Smith'],
     ['a two-character username', 'ab'],
-  ])('shows %s inline without calling the action or the page error', async (_label, username) => {
-    const { onError } = renderForm()
+  ])('shows %s inline without calling the action', async (_label, username) => {
+    renderForm()
 
     await submit(username)
 
@@ -57,12 +55,11 @@ describe('JellyfinSignInForm validation', () => {
     )
     expect(screen.getByRole('alert')).toBe(screen.getByTestId('jellyfin-form-error'))
     expect(mockProcessJellyfinInvite).not.toHaveBeenCalled()
-    expect(onError).not.toHaveBeenCalled()
     expect(screen.getByTestId('jellyfin-username-input')).toHaveValue(username)
   })
 
   it('shows a short password inline', async () => {
-    const { onError } = renderForm()
+    renderForm()
 
     await submit('jane.doe', 'short')
 
@@ -70,22 +67,20 @@ describe('JellyfinSignInForm validation', () => {
       'Password must be at least 8 characters'
     )
     expect(mockProcessJellyfinInvite).not.toHaveBeenCalled()
-    expect(onError).not.toHaveBeenCalled()
   })
 
   it('shows mismatched passwords inline', async () => {
-    const { onError } = renderForm()
+    renderForm()
 
     await submit('jane.doe', 'password123', 'password456')
 
     expect(await screen.findByTestId('jellyfin-form-error')).toHaveTextContent('Passwords do not match')
     expect(mockProcessJellyfinInvite).not.toHaveBeenCalled()
-    expect(onError).not.toHaveBeenCalled()
   })
 
   it('submits the trimmed username once the input is valid, clearing the earlier error', async () => {
     mockProcessJellyfinInvite.mockResolvedValue({ success: true, data: { serverUrl: null } } as never)
-    const { onError } = renderForm()
+    renderForm()
     const user = userEvent.setup()
 
     await submit('a@b.com')
@@ -101,7 +96,6 @@ describe('JellyfinSignInForm validation', () => {
       credentials: { username: 'jane.doe-2', password: 'password123' },
     })
     expect(screen.queryByTestId('jellyfin-form-error')).not.toBeInTheDocument()
-    expect(onError).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -122,13 +116,28 @@ describe('JellyfinSignInForm validation', () => {
     }
   })
 
-  it('still hands a server rejection to the page', async () => {
+  it('shows a server rejection on the form, which stays usable', async () => {
     mockProcessJellyfinInvite.mockResolvedValue({ success: false, code: 'INVITE_INVALID', error: 'Invite has expired' } as never)
-    const { onError } = renderForm()
+    renderForm()
 
     await submit('jane.doe')
 
-    expect(onError).toHaveBeenCalledWith('Invite has expired')
-    expect(screen.queryByTestId('jellyfin-form-error')).not.toBeInTheDocument()
+    expect(await screen.findByTestId('jellyfin-form-error')).toHaveTextContent('Invite has expired')
+    expect(screen.getByTestId('jellyfin-submit-button')).not.toBeDisabled()
+  })
+
+  it('shows fixed copy when the action throws, never its text', async () => {
+    mockProcessJellyfinInvite.mockRejectedValue(new Error('connect ECONNREFUSED 10.0.0.9:8096'))
+    renderForm()
+
+    await submit('jane.doe')
+
+    expect(await screen.findByTestId('jellyfin-form-error')).toHaveTextContent('Your account could not be created. Please try again.')
+    expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument()
+  })
+
+  it('names the server the account is created on', () => {
+    renderForm()
+    expect(screen.getByText('Creates an account on Home')).toBeInTheDocument()
   })
 })

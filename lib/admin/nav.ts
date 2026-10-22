@@ -6,7 +6,7 @@
  * ## Groups
  *
  * ```
- * Overview            hidden until P10.8 ships the page
+ * Overview            ungrouped, at the top (P10.8)
  * Community           Users, Invites, Announcements, Discord bot
  * Rewind              Season, Playground, Gallery, Prompts, Share analytics
  * Usage and cost      LLM usage, Cost analysis
@@ -15,8 +15,8 @@
  *
  * `typedRoutes` rejects links to routes that do not exist yet, so the step
  * that ships a route adds its item: Season (P7.8, shipped), Gallery (P7.11,
- * shipped), Playground (P8.8, `/admin/rewind/playground`), Evals (P11.30)
- * and Overview (P10.8).
+ * shipped), Playground (P8.8, `/admin/rewind/playground`), Overview (P10.8,
+ * shipped) and Evals (P11.30).
  *
  * Labels are sentence case, equal the page titles (UI-21) and say Rewind,
  * never Wrapped (UI-32). Each item's test id is `admin-nav-<id>`.
@@ -60,6 +60,16 @@ export interface AdminNavItem {
 export const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = ["Community", "Rewind", "Usage and cost", "System"]
 
 export const ADMIN_NAV: readonly AdminNavItem[] = [
+  {
+    id: "overview",
+    label: "Overview",
+    href: "/admin",
+    icon: icons.overview,
+    group: null,
+    // Exact: every admin page sits under /admin and lights its own item.
+    match: "exact",
+    mobile: "tab",
+  },
   {
     id: "users",
     label: "Users",
@@ -226,15 +236,14 @@ function linkTab(item: AdminNavItem): MobileLinkTab {
 }
 
 /**
- * The mobile tab bar: Overview, Users, Rewind, Settings and More. Invites
- * stands in for Overview until P10.8 ships it. The Rewind tab opens Season,
- * or Prompts until Season ships, and lights on every Rewind page.
+ * The mobile tab bar: Overview, Users, Rewind, Settings and More. The Rewind
+ * tab opens Season and lights on every Rewind page; Invites opens from More.
  */
 export function mobileTabs(items: readonly AdminNavItem[] = ADMIN_NAV): MobileTab[] {
   const byId = (id: string) => items.find((item) => item.id === id)
-  const first = byId("overview") ?? byId("invites")
+  const first = byId("overview")
   const rewindItems = itemsIn("Rewind", items)
-  const rewindTarget = byId("season") ?? byId("prompts")
+  const rewindTarget = byId("season")
   const tabs: MobileTab[] = []
 
   if (first) tabs.push(linkTab(first))

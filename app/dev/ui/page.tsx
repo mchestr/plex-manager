@@ -5,6 +5,7 @@ import { Suspense } from "react"
 import { getEnv } from "@/lib/env"
 
 import { ButtonSpecimen } from "./_sections/buttons"
+import { ChartSpecimen } from "./_sections/charts"
 import { CommandSpecimen } from "./_sections/command"
 import { DataTableSpecimen } from "./_sections/composite-tables"
 import { EmptyStateSpecimen, PageHeaderSpecimen, StatTileSpecimen } from "./_sections/composites"
@@ -85,6 +86,7 @@ export default function DevUiPage() {
         <DataTableSpecimen />
       </Suspense>
       <EmptyStateSpecimen />
+      <ChartSpecimen />
       <RewindCardSpecimen />
     </main>
   )

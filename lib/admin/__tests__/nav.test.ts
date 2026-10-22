@@ -19,7 +19,6 @@ import {
   type AdminNavItem,
   type MobileLinkTab,
 } from "@/lib/admin/nav"
-import { icons } from "@/lib/ui/icons"
 
 const byId = (id: string) => ADMIN_NAV.find((item) => item.id === id) as AdminNavItem
 
@@ -32,7 +31,7 @@ describe("ADMIN_NAV", () => {
   })
 
   it("keeps the test ids the E2E specs use", () => {
-    for (const id of ["users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "queues", "season", "prompts", "playground", "gallery", "settings"]) {
+    for (const id of ["overview", "users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "queues", "season", "prompts", "playground", "gallery", "settings"]) {
       expect(ADMIN_NAV.map(navTestId)).toContain(`admin-nav-${id}`)
     }
   })
@@ -95,19 +94,9 @@ describe("titleFor", () => {
 })
 
 describe("mobileTabs", () => {
-  const extra = (id: string, href: string, group: AdminNavItem["group"]): AdminNavItem => ({
-    id,
-    label: id === "overview" ? "Overview" : "Season",
-    href: href as Route,
-    icon: icons.overview,
-    group,
-    match: id === "overview" ? "exact" : "prefix",
-    mobile: id === "overview" ? "tab" : "more",
-  })
-
-  it("shows Invites, Users, Rewind, Settings and More until Overview ships, with the Rewind tab on Season (P7.8)", () => {
+  it("shows Overview, Users, Rewind, Settings and More, with the Rewind tab on Season (P10.8)", () => {
     const tabs = mobileTabs()
-    expect(tabs.map((tab) => tab.label)).toEqual(["Invites", "Users", "Rewind", "Settings", "More"])
+    expect(tabs.map((tab) => tab.label)).toEqual(["Overview", "Users", "Rewind", "Settings", "More"])
     const rewind = tabs.find((tab) => tab.id === "rewind") as MobileLinkTab
     expect(rewind.href).toBe("/admin/rewind")
     expect(isTabActive(rewind, "/admin/rewind")).toBe(true)
@@ -116,11 +105,24 @@ describe("mobileTabs", () => {
     expect(isTabActive(rewind, "/admin/users")).toBe(false)
   })
 
-  it("puts Overview first and opens Season from the Rewind tab once they exist", () => {
-    const items = [extra("overview", "/admin", null), ...ADMIN_NAV]
-    const tabs = mobileTabs(items)
-    expect(tabs.map((tab) => tab.label)).toEqual(["Overview", "Users", "Rewind", "Settings", "More"])
-    expect((tabs.find((tab) => tab.id === "rewind") as MobileLinkTab).href).toBe("/admin/rewind")
+  it("lights the Overview tab only on /admin", () => {
+    const overview = mobileTabs()[0] as MobileLinkTab
+    expect(overview.href).toBe("/admin")
+    expect(isTabActive(overview, "/admin")).toBe(true)
+    expect(isTabActive(overview, "/admin/users")).toBe(false)
+  })
+})
+
+describe("Overview (P10.8)", () => {
+  it("is the first item, ungrouped, exact and a mobile tab", () => {
+    expect(ADMIN_NAV[0]).toMatchObject({ id: "overview", label: "Overview", href: "/admin", group: null, match: "exact", mobile: "tab" })
+    expect(titleFor("/admin")).toBe("Overview")
+  })
+
+  it("leaves Users unlit on /admin", () => {
+    expect(isActive(byId("users"), "/admin")).toBe(false)
+    expect(activeItem("/admin")?.id).toBe("overview")
+    expect(activeItem("/admin/users")?.id).toBe("users")
   })
 })
 

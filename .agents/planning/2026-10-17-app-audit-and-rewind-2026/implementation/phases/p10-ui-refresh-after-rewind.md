@@ -390,10 +390,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Stop the workers: within 10 s the queues tile reads "Worker stopped". The spend tile matches cost analysis for this month, and the Rewind tile matches the season dashboard. On a phone the tab bar starts with Overview.
 
 **Done when.**
-- [ ] `/admin` renders the four-tile Overview, and each tile links to its page.
-- [ ] Every source fails on its own with a dash, and no poll runs a live upstream test.
-- [ ] The Overview refreshes while visible, and the nav and mobile tab bar include it.
+- [x] `/admin` renders the four-tile Overview, and each tile links to its page.
+- [x] Every source fails on its own with a dash, and no poll runs a live upstream test.
+- [x] The Overview refreshes while visible, and the nav and mobile tab bar include it.
 - [ ] It meets the 9.5 definition of done, with E2E, axe and a visual baseline.
+
+(as merged: P10.19 was not on the start point, so `lib/settings/connection-health.ts` is its smallest version: `getConnectionHealth()` (`unstable_cache`, 5 minutes, tag `connection-health`) tests Plex, Jellyfin, Tautulli, Overseerr, Sonarr and Radarr and maps AI from `llmDisabled` and the provider rows, with statuses only; `checkConnections()` is the uncached core. P10.19 extends it (Discord, Stripe, Prometheus, `recheckConnections()`). The `/api/health` checks moved into `lib/health/checks.ts` (`checkDependencies()`), which the route and the Overview share. The page is `app/admin/(overview)/page.tsx` with its own `loading.tsx` (PageHeader and four tile skeletons), so `app/admin/loading.tsx` stays the table loader for the other admin pages. A failed source's tile is a dash with a "Couldn't load" meta line rather than a full ErrorState card. A Services tile whose worst service is Redis links to `/admin/queues`; the others link to `settingsSection(id)` (`/admin/settings#<id>`), anchors P10.19's sections provide. `lib/admin/routes.ts` gained `costAnalysis({ from, to })` and `settingsSection(id)`. The mobile tabs dropped the Invites and Prompts stand-ins. E2E `e2e/admin/overview.spec.ts` was written but not run; axe and visual baselines are the owner's.)
 
 ### Step P10.9: Charts on shadcn Chart; chart.js removed
 
@@ -423,10 +425,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Open cost analysis, Tab into the daily chart and step through the days with the arrow keys while a screen reader reads the summary. Switch the theme class in devtools and watch the series recolour with no reload. `npm ls chart.js` finds nothing.
 
 **Done when.**
-- [ ] Every chart is a ChartCard on shadcn Chart and Recharts 3, with `accessibilityLayer`, CSS-variable colours and a generated summary.
+- [x] Every chart is a ChartCard on shadcn Chart and Recharts 3, with `accessibilityLayer`, CSS-variable colours and a generated summary.
 - [ ] chart.js and react-chartjs-2 are uninstalled, and lint blocks their return.
 - [ ] The admin chart budget is recorded and enforced, and the Rewind budget still passes.
 - [ ] Jest, E2E, axe and the reviewed visual baselines pass.
+
+(as merged: `recharts` 3.10.1 and `react-is` 19.3.0 are pinned exactly (react-is 19.3.1 was under two weeks old), with an `overrides` pin of `immer` 11.1.21 because the range resolved to a release from that day; the lockfile was written with `--package-lock-only`. `components/ui/chart.tsx` is the base-nova registry file with local changes: `cn` from `@/lib/utils`, colours set as `--color-<key>` on the container's style (no generated `<style>` block), popover tokens and a `valueFormatter` (default `f.number`) on the tooltip, a tooltip `data-testid`, and only the parts ChartCard uses. Series keys inside the body are `s1`..`s5`. ChartCard's `mode` prop is gone (colours follow the theme class); the spec API is unchanged. The generated summary is `<testId>-summary` (sr-only, the chart's `aria-describedby`), the tooltip `<testId>-tooltip`, and the chart is `role="application"` (Recharts' accessibility layer), no longer `img`. `lib/charts/theme.ts` is the slot map (`seriesColours`, `CHART_COLOURS`, `OTHER_SERIES_ID`); `chartTheme`, `rewindChartTheme` and `registerCharts` are gone (the Rewind scope already remaps `--chart-*`), so `lib/design/color.ts` is test-only and has a knip entry. chart.js and react-chartjs-2 stay installed for `components/wrapped/wrapped-charts.tsx`, the dead v2 viewer P11.29 deletes; lint bans both everywhere else (and recharts outside `components/ui/chart*`), and P11.29 uninstalls them. The perf spec's 200 KB budget is provisional until a production run measures it (set it to the measure plus 10%). `/dev/ui` shows each kind in the dark theme only; the light pass waits for P10.10's light region. E2E and perf specs were written, not run.)
 
 ### Step P10.10: Light theme behind its flag
 
@@ -539,10 +543,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** As a member restricted to two libraries, open home: the row shows only titles from those libraries. Click one and land on its Plex web page. Stop Plex and reload: home renders at once without the row.
 
 **Done when.**
-- [ ] Home shows up to 12 recently added titles from the member's own sections, linking to Plex web.
-- [ ] The row never delays home and hides when it can't work.
-- [ ] Posters come through the proxy's library-access check, with tests on both sides.
+- [x] Home shows up to 12 recently added titles from the member's own sections, linking to Plex web.
+- [x] The row never delays home and hides when it can't work.
+- [x] Posters come through the proxy's library-access check, with tests on both sides.
 - [ ] The home baselines and E2E are updated.
+
+(as merged: the row sits in home's left column under the RewindCard (mobile order after announcements), rendered only for Plex-primary members, in its own `<Suspense>` with `NewOnRowSkeleton`. Links use `plexItemHref` (`lib/ui/plex-links.ts`) with P10.21's cached `plexServerId`; no separate `plexItemUrl`. Admins and the owner read every movie and show section. `getNewOn` never throws: any Plex, plex.tv or database failure gives an empty row, and failures are not cached. Listed items prime the poster route's item-section cache through `rememberItemSectionKey`, so row posters need no metadata lookup while the route still checks access per request; the `poster` limit (500/15 min, disk-cache misses only) covers a 12-poster row. There is no Plex test-mode fixture, so `e2e/home-new-on.spec.ts` starts its own stub Plex server and points the active server at it. The JSON fixtures are hand-built in Plex's real shape, not captured. E2E and visual baselines were not run.)
 ### Step P10.13: Token codemod: the tool and the member slices
 
 - **Track:** ui. **Lane:** member. **Effort:** L, 2 PRs. **Window:** 2027-01-04 to 2027-01-07. **Depends on:** P3.1, P3.4.
@@ -628,9 +634,11 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Show `/admin/users` and `/admin/settings` before and after: one primary action per view and graphite cards without blur, with the axe baseline diff.
 
 **Done when.**
-- [ ] The users and settings areas are tokenised in their own PRs, with reviewed diffs.
-- [ ] The users and settings panels render through `Card`.
+- [x] The users and settings areas are tokenised in their own PRs, with reviewed diffs.
+- [x] The users and settings panels render through `Card`.
 - [ ] Those areas' `design-debt.json` counts and contrast violations are lower.
+
+(as merged: one commit for each codemod run and one for its hand fixes, per area; a rerun over `app/admin/users`, `components/admin/users`, `app/admin/settings` and `components/admin/settings` rewrites nothing and lists no review items, and every file in them has left `design-debt.json`. The skip-list entries were already in place from P10.13. Beyond the guidance: the users stat summary and the watchlist sync stats render through `StatGrid`/`StatTile`; the settings page's local `StatusBadge` became the shared `Badge`; the watchlist toggle, interval and Stripe library picks moved onto `Switch`, `Input` and `Checkbox`; amber notices became `Alert tone="warning"`; the role, access and sync-status cells became `Badge`s; "View Wrapped" in the users menu reads "View Rewind". `ConfirmModal` gained a `tone` prop so callers stop passing palette classes through `confirmButtonClass` (the invites pages still do; P10.1). Screenshot diffs and the axe baseline are the owner's Visual Baselines workflow, so the contrast half of the last item is unmeasured.)
 
 ### Step P10.15: Spinner and icon sweeps
 
@@ -1255,10 +1263,12 @@ No confetti and no space background.
 **Demo.** Paste an invite link into Discord: it unfurls as "You're invited to Northfield Plex". Open an expired code: a voided pass, the inviter's name and "Ask on Discord". Open a Jellyfin invite with Jellyfin disabled: "We couldn't find that invite".
 
 **Done when.**
-- [ ] The invite page is a Server Component with `generateMetadata` and no client validation.
-- [ ] The server name and marks are correct for Plex and Jellyfin invites.
-- [ ] Expired, used-up and unknown invites each have their own headline.
+- [x] The invite page is a Server Component with `generateMetadata` and no client validation.
+- [x] The server name and marks are correct for Plex and Jellyfin invites.
+- [x] Expired, used-up and unknown invites each have their own headline.
 - [ ] The skeleton, the StatusScreen and the tests pass.
+
+(as merged: `InvitePass` (`components/invite/invite-pass.tsx`, no client directive) takes `InvitePassData` from `types/invite.ts` (`state`, `code`, `serverType`, `serverName`, `monogram`, `inviter`, `libraries`, `usesLeft`, `expiresOn` already formatted) plus `discordInviteCode` and `preview`; P10.1's admin preview passes `preview` for an inert Accept and builds the data like `getInvitePass` does. The voided main part is P10.17's `StatusScreen` (which gained `titleState` for `data-state`), with "Ask on Discord" and "Already a member? Sign in", no "Go to home". The pass pieces (`Pass`, `PassStub`, `Monogram`) moved to `components/auth/pass.tsx` and the member pass uses them. The pass is stacked (stub below) in PublicShell's 560px `wide` column, since PublicShell has no 760px width. Library names come from `lib/invites/library-names.ts` (5-minute `unstable_cache`; a failed listing shows a count, never an id). `validateInvite` stays, tagged `@public`, at the coordinator's request; the `getServerName` action is deleted. `JellyfinSignInForm` shows every failure on the form and lost `onError`; `PlexSignInButton` takes only `inviteCode`. The E2E checks use their own `PASSOK…`/`PASSEXP…` invites, since the chromium project does not seed `VISUALOK`; `jellyfin-invite.spec.ts` adds an active, sign-in-closed Jellyfin row for its pass tests. E2E, axe and visual checks were not run here; the invite baselines change.)
 
 ### Step P10.27: Sign-in, callback and denied screens
 
@@ -1356,7 +1366,9 @@ No confetti and no space background.
 **Demo.** As an entitled member, open `/subscribe`: "You already have access" with Manage billing. As a gated member: "Join Northfield Plex" with the Supporter plan at $5.00 per month and one primary button. After a test checkout, the success checklist ticks Payment confirmed, then Sharing.
 
 **Done when.**
-- [ ] Entitled members get the "You already have access" screen.
-- [ ] The plan cards show names, prices and benefits, never raw ids, with one primary action.
-- [ ] Sign out is always present, and checkout errors render inline.
-- [ ] The success page polls a live checklist, and the tests pass.
+- [x] Entitled members get the "You already have access" screen.
+- [x] The plan cards show names, prices and benefits, never raw ids, with one primary action.
+- [x] Sign out is always present, and checkout errors render inline.
+- [x] The success page polls a live checklist, and the tests pass.
+
+(as merged: the entitled screen's Manage billing links to P10.22's `/membership` rather than opening the portal itself; the unavailable state is a StatusScreen (`subscribe-unavailable`, "Ask on Discord" or Sign out), not an EmptyState. `OfferedPrice` gained `features` and `recommended`; `lib/stripe/price-format.ts` (`formatPlanAmount`) now formats prices for both the plan cards and `/membership`. `getSubscriptionProvisioning` returns `{ status, plexInviteStatus, libraryCount (null = every library), memberSince, currentPeriodEnd }`. The prices tests stayed in `__tests__/lib/stripe/prices.test.ts`; the old `components/__tests__/subscribe-*.test.tsx` moved next to the pages and components. Checkout's `cancel_url` is unchanged, so a canceled checkout lands back on the plans.)

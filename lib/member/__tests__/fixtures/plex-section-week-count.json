@@ -1,0 +1,12 @@
+{
+  "MediaContainer": {
+    "size": 0,
+    "totalSize": 19,
+    "offset": 0,
+    "allowSync": true,
+    "identifier": "com.plexapp.plugins.library",
+    "librarySectionID": 1,
+    "title1": "Movies",
+    "viewGroup": "movie"
+  }
+}

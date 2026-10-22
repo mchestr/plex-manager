@@ -1,11 +1,16 @@
 "use client"
 
-import { adminRegenerateRewind } from "@/actions/rewind-generation"
-import { useToast } from "@/components/ui/toast"
-import { adminErrorHint } from "@/lib/wrapped/generation-errors"
+import { Check, RefreshCw } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+
+import { adminRegenerateRewind } from "@/actions/rewind-generation"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import { Button } from "@/components/ui/button"
+import { Icon } from "@/components/ui/icon"
+import { Spinner } from "@/components/ui/spinner"
+import { useToast } from "@/components/ui/toast"
+import { adminErrorHint } from "@/lib/wrapped/generation-errors"
 
 /** Shown when a run for this member and year is already in progress. */
 const ALREADY_GENERATING_COPY = "This member's Rewind is already being made. Try again when it finishes."
@@ -66,6 +71,27 @@ export function RegenerateWrappedButton({
     }
   }
 
+  const label = isRegenerating ? "Regenerating wrapped" : showSuccess ? "Regeneration started" : "Regenerate wrapped"
+  const stateIcon = isRegenerating ? (
+    <Spinner />
+  ) : showSuccess ? (
+    <Icon icon={Check} className="text-success" data-testid="regenerate-icon-done" />
+  ) : (
+    <Icon icon={RefreshCw} data-testid="regenerate-icon-idle" />
+  )
+
+  const confirmModal = (
+    <ConfirmModal
+      isOpen={showConfirmModal}
+      onClose={() => setShowConfirmModal(false)}
+      onConfirm={handleRegenerate}
+      title="Regenerate Wrapped"
+      message={`Are you sure you want to regenerate the ${year} wrapped for this user? The current one stays live until the new one is ready.`}
+      confirmText="Regenerate"
+      cancelText="Cancel"
+    />
+  )
+
   if (inline) {
     return (
       <>
@@ -73,168 +99,32 @@ export function RegenerateWrappedButton({
           onClick={() => setShowConfirmModal(true)}
           disabled={isRegenerating}
           aria-busy={isRegenerating}
-          className="w-full flex items-center gap-2 text-sm text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          aria-label={isRegenerating ? "Regenerating wrapped" : showSuccess ? "Regeneration started" : "Regenerate wrapped"}
+          className="w-full flex items-center gap-2 text-sm text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          aria-label={label}
         >
-          {isRegenerating ? (
-            <svg
-              className="animate-spin h-4 w-4 text-purple-400"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-          ) : showSuccess ? (
-            <svg
-              className="w-4 h-4 text-green-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="w-4 h-4 text-purple-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-          )}
+          {stateIcon}
           <span>
             {isRegenerating ? "Regenerating..." : showSuccess ? "Started!" : "Regenerate Wrapped"}
           </span>
         </button>
-        <ConfirmModal
-          isOpen={showConfirmModal}
-          onClose={() => setShowConfirmModal(false)}
-          onConfirm={handleRegenerate}
-          title="Regenerate Wrapped"
-          message={`Are you sure you want to regenerate the ${year} wrapped for this user? The current one stays live until the new one is ready.`}
-          confirmText="Regenerate"
-          cancelText="Cancel"
-        />
+        {confirmModal}
       </>
     )
   }
 
   return (
     <>
-      <div className="flex flex-col gap-0.5">
-        <button
-          onClick={() => setShowConfirmModal(true)}
-          disabled={isRegenerating}
-          aria-busy={isRegenerating}
-          className={`px-2 py-1 text-white text-xs font-medium rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 justify-center ${
-            showSuccess
-              ? "bg-green-600 hover:bg-green-700 animate-pulse"
-              : "bg-purple-600 hover:bg-purple-700"
-          }`}
-          aria-label={isRegenerating ? "Regenerating wrapped" : showSuccess ? "Regeneration started" : "Regenerate wrapped"}
-        >
-          {isRegenerating ? (
-            <>
-              <svg
-                className="animate-spin h-3 w-3"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <span>...</span>
-            </>
-          ) : showSuccess ? (
-            <>
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </>
-          ) : (
-            <>
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-            </>
-          )}
-        </button>
-      </div>
-
-      <ConfirmModal
-        isOpen={showConfirmModal}
-        onClose={() => setShowConfirmModal(false)}
-        onConfirm={handleRegenerate}
-        title="Regenerate Wrapped"
-        message={`Are you sure you want to regenerate the ${year} wrapped for this user? The current one stays live until the new one is ready.`}
-        confirmText="Regenerate"
-        cancelText="Cancel"
-      />
+      <Button
+        variant="secondary"
+        size="icon-sm"
+        onClick={() => setShowConfirmModal(true)}
+        disabled={isRegenerating}
+        aria-busy={isRegenerating || undefined}
+        aria-label={label}
+      >
+        {stateIcon}
+      </Button>
+      {confirmModal}
     </>
   )
 }
-

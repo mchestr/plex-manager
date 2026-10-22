@@ -1,6 +1,7 @@
 "use client"
 
 import { updateDiscordIntegrationSettings } from "@/actions/discord"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { StyledCheckbox } from "@/components/ui/styled-checkbox"
 import { StyledInput } from "@/components/ui/styled-input"
@@ -119,37 +120,33 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
           {integration ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <div className="text-xs font-medium text-slate-400 mb-1">Linked Accounts</div>
-                <div className="text-sm text-white">{linkedCount}</div>
+                <div className="text-xs font-medium text-muted-foreground mb-1">Linked Accounts</div>
+                <div className="text-sm text-foreground">{linkedCount}</div>
               </div>
               <div>
-                <div className="text-xs font-medium text-slate-400 mb-1">Bot Status</div>
-                <div className="text-sm text-white">
+                <div className="text-xs font-medium text-muted-foreground mb-1">Bot Status</div>
+                <div className="text-sm text-foreground">
                   {integration.botEnabled ? (
-                    <span className="px-2 py-1 bg-green-500/15 text-green-300 border border-green-500/30 rounded text-xs font-medium">
-                      Enabled
-                    </span>
+                    <Badge variant="success">Enabled</Badge>
                   ) : (
-                    <span className="px-2 py-1 bg-slate-800/60 text-slate-300 border border-slate-600/70 rounded text-xs font-medium">
-                      Disabled
-                    </span>
+                    <Badge>Disabled</Badge>
                   )}
                 </div>
               </div>
               <div>
-                <div className="text-xs font-medium text-slate-400 mb-1">Portal URL</div>
-                <div className="text-xs text-white font-mono truncate" title={portalUrl}>
+                <div className="text-xs font-medium text-muted-foreground mb-1">Portal URL</div>
+                <div className="text-xs text-foreground font-mono truncate" title={portalUrl}>
                   {portalUrl}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="text-sm text-slate-400">No Discord integration configured</div>
+            <div className="text-sm text-muted-foreground">No Discord integration configured</div>
           )}
           {integration?.instructions && (
             <div>
-              <div className="text-xs font-medium text-slate-400 mb-1">Instructions</div>
-              <p className="text-sm text-slate-300 whitespace-pre-line border border-slate-700 rounded-lg p-3 bg-slate-900/40">
+              <div className="text-xs font-medium text-muted-foreground mb-1">Instructions</div>
+              <p className="text-sm text-foreground whitespace-pre-line border border-border rounded-lg p-3 bg-muted">
                 {integration.instructions}
               </p>
             </div>
@@ -171,7 +168,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-4 p-4 bg-slate-900/30 border border-slate-700 rounded-lg">
+      <div className="space-y-4 p-4 border border-border rounded-lg">
         <StyledCheckbox
           id="discord-enabled"
           checked={formData.isEnabled}
@@ -192,8 +189,8 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Client ID {formData.isEnabled && <span className="text-red-400">*</span>}
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
+            Client ID {formData.isEnabled && <span className="text-destructive">*</span>}
           </label>
           <StyledInput
             type="text"
@@ -205,8 +202,8 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Client Secret {formData.isEnabled && !hasStoredClientSecret && <span className="text-red-400">*</span>}
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
+            Client Secret {formData.isEnabled && !hasStoredClientSecret && <span className="text-destructive">*</span>}
           </label>
           <StyledInput
             type="password"
@@ -219,7 +216,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Guild ID <span className="text-muted-foreground font-normal">(optional)</span>
           </label>
           <StyledInput
@@ -231,7 +228,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Server Invite Code <span className="text-muted-foreground font-normal">(optional)</span>
           </label>
           <StyledInput
@@ -251,7 +248,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
           </p>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">Platform Name</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Platform Name</label>
           <StyledInput
             type="text"
             value={formData.platformName}
@@ -261,7 +258,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Bot Token <span className="text-muted-foreground font-normal">(optional)</span>
           </label>
           <StyledInput
@@ -277,7 +274,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
           </p>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Support Channel ID <span className="text-muted-foreground font-normal">(optional)</span>
           </label>
           <StyledInput
@@ -289,7 +286,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Support Thread IDs <span className="text-muted-foreground font-normal">(optional)</span>
           </label>
           <StyledInput
@@ -303,7 +300,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-400 mb-1">
+        <label className="block text-xs font-medium text-muted-foreground mb-1">
           Server Notes for Onboarding <span className="text-muted-foreground font-normal">(optional)</span>
         </label>
         <p className="text-xs text-muted-foreground mb-2">

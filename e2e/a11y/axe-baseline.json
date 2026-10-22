@@ -24,14 +24,8 @@
   "admin /admin/rewind/playground": {},
   "admin /admin/settings": {},
   "admin /admin/shares": {},
-  "admin /admin/users": {
-    "color-contrast|incomplete": 2,
-    "heading-order|moderate": 1
-  },
-  "admin /admin/users [role filter open]": {
-    "color-contrast|incomplete": 2,
-    "heading-order|moderate": 1
-  },
+  "admin /admin/users": {},
+  "admin /admin/users [role filter open]": {},
   "admin /admin/users/regular-user-id": {},
   "admin /admin/users/regular-user-id/rewind/2026": {},
   "admin /admin/wrapped/visual-rewind/history/visual-llm-usage-1": {},
@@ -48,9 +42,7 @@
   "public /auth/callback/plex": {},
   "public /auth/denied": {},
   "public /invite/VISUALEXP": {},
-  "public /invite/VISUALOK": {
-    "color-contrast|incomplete": 3
-  },
+  "public /invite/VISUALOK": {},
   "public /rewind/s/a11y-share-token000000000000000000000000000": {},
   "public /setup [step 1]": {
     "color-contrast|incomplete": 40,

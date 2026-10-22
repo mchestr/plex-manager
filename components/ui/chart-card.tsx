@@ -2,21 +2,21 @@
 
 import { BarChart3 } from "lucide-react"
 import dynamic from "next/dynamic"
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useId, useState } from "react"
 
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Skeleton } from "@/components/ui/skeleton"
 import { StatTile } from "@/components/ui/stat-tile"
 import { Toggle } from "@/components/ui/toggle"
-import type { ThemeName } from "@/lib/design/tokens"
+import { summarize } from "@/lib/charts/summary"
 import { useFormat } from "@/lib/format-context"
 import { cn } from "@/lib/utils"
 
 import { axisLabels, foldSeries, formatValue, orderedSpec, pointCount, type ChartSpec } from "./chart-card/chart-spec"
 
-// The one Chart.js island; P10.9 swaps this import for the Recharts body.
-const ChartBody = dynamic(() => import("./chart-card/chartjs-body"), {
+// The one Recharts island (P10.9): recharts stays out of every first load.
+const ChartBody = dynamic(() => import("./chart-card/recharts-body"), {
   ssr: false,
   loading: () => <Skeleton className="size-full" />,
 })
@@ -27,8 +27,6 @@ interface ChartCardProps {
   /** One sentence naming what the chart shows; the chart's accessible name. */
   summary: string
   spec: ChartSpec
-  /** The resolved theme class; dark until the light theme ships (P10.10). */
-  mode?: ThemeName
   /** Shown in place of the chart when every value is 0. */
   empty?: { title: string; description: string }
   /** The chart area's height class. */
@@ -78,9 +76,11 @@ function ChartTable({ spec, caption }: { spec: ChartSpec; caption: string }) {
 
 /**
  * The admin chart wrapper (ui-design-system 3.5, UI-24): a Card with a title,
- * a description, the chart named by `summary`, and "View as table", a real
- * `<table>` of the same values. It takes a declarative `ChartSpec`, so pages
- * never pass library options and P10.9 swaps only the body.
+ * a description, the chart named by `summary` and described by a generated
+ * text summary (`lib/charts/summary.ts`, also an sr-only caption), and "View
+ * as table", a real `<table>` of the same values. It takes a declarative
+ * `ChartSpec`, so pages never pass library options; the body is shadcn Chart
+ * on Recharts 3 (P10.9), and its colours follow the theme class.
  *
  * A category chart with fewer than two categories is a StatTile, not a chart.
  */
@@ -89,7 +89,6 @@ export function ChartCard({
   description,
   summary,
   spec: input,
-  mode = "dark",
   empty,
   heightClassName = "h-64",
   className,
@@ -98,6 +97,7 @@ export function ChartCard({
   const testId = props["data-testid"] ?? "chart-card"
   const f = useFormat()
   const [asTable, setAsTable] = useState(false)
+  const summaryId = useId()
   const spec = orderedSpec(input)
   const points = pointCount(spec.x)
   const allZero = spec.series.every((item) => item.values.every((value) => value === 0))
@@ -128,7 +128,7 @@ export function ChartCard({
   } else {
     body = (
       <div className={cn("relative w-full", heightClassName)} data-testid={`${testId}-chart`}>
-        <ChartBody spec={spec} label={summary} mode={mode} />
+        <ChartBody spec={spec} label={summary} describedBy={summaryId} tooltipTestId={`${testId}-tooltip`} />
       </div>
     )
   }
@@ -148,7 +148,14 @@ export function ChartCard({
           </CardAction>
         )}
       </CardHeader>
-      <CardContent>{body}</CardContent>
+      <CardContent>
+        {canTable && (
+          <p id={summaryId} className="sr-only" data-testid={`${testId}-summary`}>
+            {summarize(spec, f)}
+          </p>
+        )}
+        {body}
+      </CardContent>
     </Card>
   )
 }
