@@ -628,9 +628,11 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Show `/admin/users` and `/admin/settings` before and after: one primary action per view and graphite cards without blur, with the axe baseline diff.
 
 **Done when.**
-- [ ] The users and settings areas are tokenised in their own PRs, with reviewed diffs.
-- [ ] The users and settings panels render through `Card`.
+- [x] The users and settings areas are tokenised in their own PRs, with reviewed diffs.
+- [x] The users and settings panels render through `Card`.
 - [ ] Those areas' `design-debt.json` counts and contrast violations are lower.
+
+(as merged: one commit for each codemod run and one for its hand fixes, per area; a rerun over `app/admin/users`, `components/admin/users`, `app/admin/settings` and `components/admin/settings` rewrites nothing and lists no review items, and every file in them has left `design-debt.json`. The skip-list entries were already in place from P10.13. Beyond the guidance: the users stat summary and the watchlist sync stats render through `StatGrid`/`StatTile`; the settings page's local `StatusBadge` became the shared `Badge`; the watchlist toggle, interval and Stripe library picks moved onto `Switch`, `Input` and `Checkbox`; amber notices became `Alert tone="warning"`; the role, access and sync-status cells became `Badge`s; "View Wrapped" in the users menu reads "View Rewind". `ConfirmModal` gained a `tone` prop so callers stop passing palette classes through `confirmButtonClass` (the invites pages still do; P10.1). Screenshot diffs and the axe baseline are the owner's Visual Baselines workflow, so the contrast half of the last item is unmeasured.)
 
 ### Step P10.15: Spinner and icon sweeps
 
