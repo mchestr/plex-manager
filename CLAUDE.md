@@ -26,6 +26,7 @@ A Next.js-based Plex management platform that combines server management tools, 
 ### Data Fetching
 - **Server Components**: Fetch directly in components (async/await)
 - **Client Components**: Use TanStack Query with proper error/loading states
+- **Query keys**: Every TanStack Query key comes from `hooks/query-keys.ts`; first data arrives as Server Component props (seed a query with `initialData`), and a mutation invalidates the key its reader uses
 - **Server Actions**: For mutations, form submissions, user-triggered operations
 - **Validation**: All inputs validated with Zod before processing
 
