@@ -28,6 +28,8 @@ export interface RowAction {
   variant?: "default" | "destructive"
   /** Shown but not selectable, such as Delete on the row in use. */
   disabled?: boolean
+  /** Replaces the item's `${menu}-${id}` test id, to keep an id an E2E suite already uses. */
+  testId?: string
 }
 
 interface RowActionsProps {
@@ -53,7 +55,7 @@ export function RowActions({ name, actions, onOpenChange, ...props }: RowActions
       onClick={action.onSelect}
       disabled={action.disabled}
       render={action.href ? <Link href={action.href} /> : undefined}
-      data-testid={testId && `${testId}-${action.id}`}
+      data-testid={action.testId ?? (testId && `${testId}-${action.id}`)}
     >
       {action.label}
     </DropdownMenuItem>

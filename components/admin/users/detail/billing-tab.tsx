@@ -1,8 +1,7 @@
-import { CancelSubscriptionButton } from "@/components/admin/users/cancel-subscription-button"
-import { GrantAccessButton } from "@/components/admin/users/grant-access-button"
-import { ToggleExemptButton } from "@/components/admin/users/toggle-exempt-button"
+import { CancelSubscriptionDialog, GrantAccessDialog, ToggleExemptDialog } from "@/components/admin/users/actions/billing-dialogs"
+import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/ui/status-badge"
-import type { UserDetailHeaderData } from "@/lib/admin/user-detail"
+import { detailUserTarget, type UserDetailHeaderData } from "@/lib/admin/user-detail"
 import { resolveStatus } from "@/lib/ui/status"
 import type { BoundFormat } from "@/lib/utils/format"
 
@@ -25,6 +24,7 @@ export function BillingTab({ header, f }: { header: UserDetailHeaderData; f: Bou
       ? `Ends ${f.date(periodEnd)}`
       : resolveStatus("subscription", subscription.status, { date: periodEnd ?? undefined, settings: f.settings }).sub
   const exemption = exemptionOf(header)
+  const user = detailUserTarget(header)
 
   return (
     <div className="flex flex-col gap-6">
@@ -51,15 +51,36 @@ export function BillingTab({ header, f }: { header: UserDetailHeaderData; f: Bou
         <ul className="flex flex-col divide-y rounded-lg border bg-card" aria-label="Billing actions">
           {!header.isExempt && (
             <li className="px-4 py-3">
-              <GrantAccessButton userId={header.id} userName={header.name} />
+              <GrantAccessDialog
+                user={user}
+                trigger={
+                  <Button variant="outline" size="sm" data-testid="grant-access-button">
+                    Grant comp access
+                  </Button>
+                }
+              />
             </li>
           )}
           <li className="px-4 py-3">
-            <ToggleExemptButton userId={header.id} userName={header.name} isExempt={header.isExempt} />
+            <ToggleExemptDialog
+              user={user}
+              trigger={
+                <Button variant="outline" size="sm" data-testid="toggle-exempt-button">
+                  {header.isExempt ? "Remove exemption" : "Mark exempt"}
+                </Button>
+              }
+            />
           </li>
           {canCancel && (
             <li className="px-4 py-3">
-              <CancelSubscriptionButton userId={header.id} userName={header.name} />
+              <CancelSubscriptionDialog
+                user={user}
+                trigger={
+                  <Button variant="destructive" size="sm" data-testid="cancel-subscription-button">
+                    Cancel subscription
+                  </Button>
+                }
+              />
             </li>
           )}
         </ul>

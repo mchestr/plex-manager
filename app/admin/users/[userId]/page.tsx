@@ -10,6 +10,7 @@ import { UserDetailHeader } from "@/components/admin/users/detail/user-detail-he
 import { requireAdmin } from "@/lib/admin"
 import { USER_DETAIL_TABS, type UserDetailTab } from "@/lib/admin/routes"
 import { billingVisible, getUserDetailHeader } from "@/lib/admin/user-detail"
+import { regenerateEstimateCopy } from "@/lib/admin/user-detail-tabs"
 import { getFormat } from "@/lib/settings/app-settings"
 import { getStripeDashboardBaseUrl } from "@/lib/stripe/client"
 import { getSeasonYear } from "@/lib/wrapped/season"
@@ -39,6 +40,7 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
   if (!header) notFound()
 
   const now = new Date().getTime()
+  const estimateCopy = await regenerateEstimateCopy(seasonYear, f)
   const tabs = USER_DETAIL_TABS.filter((tab) => tab !== "billing" || billingVisible(header)).map((value) => ({ value, label: LABELS[value] }))
   const asked = searchSchema.parse({ tab: query.tab }).tab
   const active = tabs.some((tab) => tab.value === asked) ? asked : "overview"
@@ -46,7 +48,7 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
   return (
     <div className="p-4 sm:p-6">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <UserDetailHeader header={header} stripeDashboardBaseUrl={stripeDashboardBaseUrl} now={now} />
+        <UserDetailHeader header={header} stripeDashboardBaseUrl={stripeDashboardBaseUrl} estimateCopy={estimateCopy} now={now} />
         <DetailTabs userId={header.id} tabs={tabs} active={active}>
           {active === "overview" && <OverviewTab header={header} f={f} />}
           {active === "rewind" && <RewindTab userId={header.id} name={header.name} seasonYear={seasonYear} f={f} now={now} />}

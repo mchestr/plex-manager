@@ -28,7 +28,7 @@ test.describe('Production build', () => {
     await signIn(TEST_USERS.ADMIN.id);
     await page.goto('/admin/users');
 
-    await expect(page.getByTestId('admin-users-heading')).toBeVisible();
+    await expect(page.getByTestId('admin-users-header')).toBeVisible();
     await expect(page.getByTestId('admin-nav-users')).toBeVisible();
   });
 
@@ -41,6 +41,6 @@ test.describe('Production build', () => {
 
     await expect(page).toHaveURL(/\/admin$/);
     await expect(page.getByTestId('admin-nav-users')).toHaveCount(0);
-    await expect(page.getByTestId('admin-users-heading')).toHaveCount(0);
+    await expect(page.getByTestId('admin-users-header')).toHaveCount(0);
   });
 });

@@ -1,4 +1,4 @@
-import { canRegenerate } from '@/lib/admin/can-regenerate'
+import { canRegenerate, rewindRowState } from '@/lib/admin/can-regenerate'
 
 const NOW = Date.parse('2026-12-03T12:00:00Z')
 const minutesAgo = (minutes: number) => new Date(NOW - minutes * 60_000)
@@ -23,5 +23,21 @@ describe('canRegenerate', () => {
 
   it('allows a missing row', () => {
     expect(canRegenerate({ status: null, runStartedAt: null }, NOW)).toBe(true)
+  })
+})
+
+describe('rewindRowState', () => {
+  it('reads an active run as generating, then stuck past 15 minutes', () => {
+    expect(rewindRowState('completed', minutesAgo(14), NOW)).toBe('generating')
+    expect(rewindRowState('completed', minutesAgo(16).toISOString(), NOW)).toBe('stuck')
+  })
+
+  it.each([
+    ['completed', 'ready'],
+    ['failed', 'failed'],
+    ['generating', 'generating'],
+    [null, 'notStarted'],
+  ] as const)('reads %s with no active run as %s', (status, state) => {
+    expect(rewindRowState(status, null, NOW)).toBe(state)
   })
 })

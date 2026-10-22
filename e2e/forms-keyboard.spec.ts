@@ -6,29 +6,31 @@ import { expect, test, TEST_USERS } from './fixtures/auth';
  * below `md` so iOS does not zoom on focus.
  */
 test.describe('Form primitives', () => {
-  test('the Plex access filter works from the keyboard and returns focus', async ({ adminPage }) => {
+  test('the Role filter works from the keyboard and returns focus', async ({ adminPage }) => {
     await adminPage.goto('/admin/users');
-    const trigger = adminPage.getByTestId('users-filter-plex-access');
+    const trigger = adminPage.getByTestId('admin-users-filters-filter-role');
     // The streamed page waits in a hidden segment until React reveals it, and
     // moving it into place drops focus given to it there.
     await expect(trigger).toBeVisible();
-    await expect(trigger).toHaveText('Yes');
+    await expect(trigger).toHaveText('All');
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
     await trigger.focus();
     await adminPage.keyboard.press('ArrowDown');
     await expect(trigger).toHaveAttribute('aria-expanded', 'true');
     await expect(adminPage.getByRole('listbox')).toBeVisible();
-    // The list opens on the selected option, Yes; All is the one above it.
-    await expect(adminPage.getByTestId('users-filter-plex-access-option-yes')).toHaveAttribute('data-highlighted', '');
-    await adminPage.keyboard.press('ArrowUp');
-    await expect(adminPage.getByTestId('users-filter-plex-access-option-all')).toHaveAttribute('data-highlighted', '');
+    // The list opens on the selected option, All; Admin is the one below it.
+    await expect(adminPage.getByTestId('admin-users-filters-filter-role-option-all')).toHaveAttribute('data-highlighted', '');
+    await adminPage.keyboard.press('ArrowDown');
+    await expect(adminPage.getByTestId('admin-users-filters-filter-role-option-admin')).toHaveAttribute('data-highlighted', '');
     await adminPage.keyboard.press('Enter');
 
     await expect(adminPage.getByRole('listbox')).toBeHidden();
     await expect(trigger).toBeFocused();
-    await expect(trigger).toHaveText('All');
-    await expect(adminPage.getByTestId(`user-row-${TEST_USERS.ADMIN.id}`)).toBeVisible();
+    await expect(trigger).toHaveText('Admin');
+    await expect(adminPage).toHaveURL(/role=admin/);
+    await expect(adminPage.getByTestId(`admin-users-row-${TEST_USERS.ADMIN.id}`)).toBeVisible();
+    await expect(adminPage.getByTestId(`admin-users-row-${TEST_USERS.REGULAR.id}`)).toHaveCount(0);
   });
 
   test('inputs use 16px text at 390x844', async ({ adminPage }) => {

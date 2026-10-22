@@ -7,11 +7,12 @@
  * only once its run has been going for more than 15 minutes, P2.5's stale rule
  * (the same window as `STUCK_AFTER_MS` in `lib/wrapped/admin/season.ts`), so a
  * stuck run can be retried without starting a second live one.
+ * `rewindRowState` names the same states for a badge ("Stuck" past the rule).
  *
  * @module lib/admin/can-regenerate
  */
 
-export const REGENERATE_STALE_AFTER_MS = 15 * 60 * 1000
+const REGENERATE_STALE_AFTER_MS = 15 * 60 * 1000
 
 export interface RegenerateRow {
   /** `PlexWrapped.status` for the year, or null when there is no row. */
@@ -24,4 +25,14 @@ export function canRegenerate(row: RegenerateRow, now: number): boolean {
   if (row.status !== "generating") return true
   if (row.runStartedAt === null) return false
   return now - new Date(row.runStartedAt).getTime() > REGENERATE_STALE_AFTER_MS
+}
+
+export type RewindRowState = "ready" | "generating" | "stuck" | "failed" | "notStarted"
+
+/** A year's state from its `PlexWrapped.status` and any active run's start. */
+export function rewindRowState(status: string | null, runStartedAt: Date | string | null | undefined, now: number): RewindRowState {
+  if (runStartedAt) return now - new Date(runStartedAt).getTime() > REGENERATE_STALE_AFTER_MS ? "stuck" : "generating"
+  if (status === "completed") return "ready"
+  if (status === "failed") return "failed"
+  return status === "generating" ? "generating" : "notStarted"
 }

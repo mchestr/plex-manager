@@ -33,7 +33,7 @@ test.describe('Announcements Admin', () => {
   });
 
   test('should access announcements admin page', async ({ adminPage }) => {
-    await adminPage.locator('aside').getByTestId('admin-nav-announcements').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-announcements').first().click();
     await waitForAdminContent(adminPage, [
       { type: 'heading', value: 'Announcements' }
     ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });

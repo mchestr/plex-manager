@@ -91,13 +91,13 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/subscribe/success', as: 'member', stripe: true, ready: 'subscribe-success-page' },
 
   // Admin (`/admin` itself redirects to `/admin/users`)
-  { path: '/admin/users', as: 'admin', ready: 'admin-users-heading' },
+  { path: '/admin/users', as: 'admin', ready: 'admin-users-header' },
   {
     path: '/admin/users',
     as: 'admin',
     state: 'role filter open',
-    ready: 'users-filter-role',
-    setup: (page) => openWith(page, 'users-filter-role', 'users-filter-role-option-admin'),
+    ready: 'admin-users-filters-filter-role',
+    setup: (page) => openWith(page, 'admin-users-filters-filter-role', 'admin-users-filters-filter-role-option-admin'),
   },
   // Its Visits and Rewind table count the share visit the public share route records.
   { path: `/admin/users/${regularId}`, as: 'admin', ready: 'admin-user-header', reset: clearA11yShareVisits },
