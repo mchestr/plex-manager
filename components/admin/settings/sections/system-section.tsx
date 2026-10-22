@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge"
 import { SettingsSection } from "@/components/ui/settings-section"
 
 interface SystemSectionProps {
+  /** The light theme switch (P10.10). */
+  appearance: ReactNode
   baseUrl: string
   nodeEnv: string
   nodeVersion: string
@@ -28,10 +30,11 @@ function Row({ label, children, testId }: { label: string; children: ReactNode; 
   )
 }
 
-/** System information (6.4): base URL, environment, runtime and database, and the server time zone. */
-export function SystemSection({ baseUrl, nodeEnv, nodeVersion, databaseProvider, databaseUrl, platform, configUpdated, timeZone }: SystemSectionProps) {
+/** System information (6.4): the light theme switch, base URL, environment, runtime and database, and the server time zone. */
+export function SystemSection({ appearance, baseUrl, nodeEnv, nodeVersion, databaseProvider, databaseUrl, platform, configUpdated, timeZone }: SystemSectionProps) {
   return (
     <SettingsSection id="system" title="System information" description="Runtime, database and the server time zone.">
+      {appearance}
       <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Row label="Base URL">
           <span className="font-mono break-all">{baseUrl}</span>

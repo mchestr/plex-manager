@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 
+import { AppearancePicker } from "@/components/account/appearance-picker"
 import { useSignOut } from "@/components/shell/use-sign-out"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Icon } from "@/components/ui/icon"
+import { useAppearance } from "@/lib/appearance-context"
 import type { ShellUser } from "@/lib/member/shell"
 import { icons } from "@/lib/ui/icons"
 
@@ -32,11 +34,13 @@ function Avatar({ initials }: { initials: string }) {
 
 /**
  * The account menu (ui-design-system 6.1): the name and email, the Discord
- * link state (UI-01), Membership when it exists, Account settings, Admin for
- * admins, and Sign out.
+ * link state (UI-01), Membership when it exists, Account settings,
+ * Appearance while the light theme's flag is on (P10.10), Admin for admins,
+ * and Sign out.
  */
 export function AccountMenu({ user }: { user: ShellUser }) {
   const signOut = useSignOut()
+  const appearance = useAppearance()
   const firstName = user.name.split(/\s+/)[0]
 
   return (
@@ -86,6 +90,13 @@ export function AccountMenu({ user }: { user: ShellUser }) {
         >
           Account settings
         </DropdownMenuLinkItem>
+        {appearance.enabled && (
+          <>
+            <DropdownMenuSeparator />
+            <AppearancePicker variant="menu" testId="account-menu-appearance" />
+            <DropdownMenuSeparator />
+          </>
+        )}
         {user.isAdmin && (
           <DropdownMenuLinkItem
             render={<Link href="/admin" />}

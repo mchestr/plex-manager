@@ -3,6 +3,7 @@ import Link from "next/link"
 import { getAdminSettings } from "@/actions/admin"
 import { getStripeConfig } from "@/actions/admin/admin-config"
 import { getRewindSeasonDataPreparedAt } from "@/actions/admin/rewind-season"
+import { LightThemeSwitch } from "@/components/admin/settings/light-theme-switch"
 import { RewindSettingsSection } from "@/components/admin/settings/rewind-settings-section"
 import { AiSection } from "@/components/admin/settings/sections/ai-section"
 import { DiscordSection } from "@/components/admin/settings/sections/discord-section"
@@ -138,6 +139,7 @@ export default async function SettingsPage() {
           health={{ sonarr: health.sonarr, radarr: health.radarr, jellyfin: health.jellyfin, prometheus: health.prometheus }}
         />
         <SystemSection
+          appearance={<LightThemeSwitch enabled={settings.config.lightThemeEnabled} />}
           baseUrl={baseUrl}
           nodeEnv={process.env.NODE_ENV || "development"}
           nodeVersion={process.version}

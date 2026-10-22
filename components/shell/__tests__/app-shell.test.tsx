@@ -19,6 +19,7 @@ import type { ShellUser } from '@/lib/member/shell'
 expect.extend(toHaveNoViolations)
 
 jest.mock('next-auth/react', () => ({ signOut: jest.fn().mockResolvedValue(undefined) }))
+jest.mock('@/actions/appearance', () => ({ setAppearance: jest.fn() }))
 
 const push = jest.fn()
 const refresh = jest.fn()
