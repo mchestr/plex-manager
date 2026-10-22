@@ -114,10 +114,13 @@ export const A11Y_ROUTES: A11yRoute[] = [
     path: '/admin/invites',
     as: 'admin',
     state: 'confirm dialog open',
-    ready: `admin-invites-delete-${VISUAL_INVITE_IDS.valid}`,
-    setup: (page) => openWith(page, `admin-invites-delete-${VISUAL_INVITE_IDS.valid}`, 'admin-invites-delete-dialog'),
+    ready: `admin-invites-actions-${VISUAL_INVITE_IDS.valid}`,
+    setup: async (page) => {
+      await openWith(page, `admin-invites-actions-${VISUAL_INVITE_IDS.valid}`, `admin-invites-actions-${VISUAL_INVITE_IDS.valid}-delete`);
+      await openWith(page, `admin-invites-actions-${VISUAL_INVITE_IDS.valid}-delete`, 'admin-invites-delete-dialog');
+    },
   },
-  { path: `/admin/invites/${VISUAL_INVITE_IDS.valid}`, as: 'admin', ready: 'admin-invite-details-heading' },
+  { path: `/admin/invites/${VISUAL_INVITE_IDS.valid}`, as: 'admin', ready: 'admin-invite-header' },
   { path: '/admin/announcements', as: 'admin', ready: 'admin-announcements-header' },
   { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-header' },
   { path: '/admin/discord', as: 'admin', ready: 'discord-status' },

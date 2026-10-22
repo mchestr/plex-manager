@@ -49,7 +49,7 @@ function sendsSecret(secretField: 'apiKey' | 'token') {
 }
 
 jest.mock('@/lib/connections/plex', () => ({ testPlexConnection: jest.fn(), getPlexUserInfo: jest.fn() }))
-jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn(), getJellyfinLibraries: jest.fn() }))
+jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn() }))
 jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn() }))
 jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
 jest.mock('@/lib/connections/sonarr', () => ({ testSonarrConnection: jest.fn() }))

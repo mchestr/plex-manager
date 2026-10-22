@@ -26,3 +26,13 @@ export interface InvitePassData {
   /** The expiry, already formatted in the app zone (`formatDate`, long). */
   expiresOn: string | null
 }
+
+/** One library the create-invite picker offers; Plex section keys are strings here. */
+interface LibraryOption {
+  id: string
+  name: string
+  type: string
+}
+
+/** A server's libraries for the picker, or why they could not be listed. */
+export type LibraryListing = { ok: true; libraries: LibraryOption[] } | { ok: false; reason: string }

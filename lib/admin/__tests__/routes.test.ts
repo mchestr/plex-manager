@@ -1,6 +1,16 @@
 /** The admin route builders (P6.1, UI-06): each carries the year it is given and encodes ids. */
 
-import { invite, llmConversation, llmUsage, llmUsageDetail, playgroundFor, rewindHistory, userDetail, userRewind } from "@/lib/admin/routes"
+import {
+  invite,
+  llmConversation,
+  llmUsage,
+  llmUsageDetail,
+  playgroundFor,
+  publicInviteUrl,
+  rewindHistory,
+  userDetail,
+  userRewind,
+} from "@/lib/admin/routes"
 
 describe("admin routes", () => {
   it("builds the user pages, with the year on the Rewind link", () => {
@@ -33,5 +43,11 @@ describe("admin routes", () => {
     expect(rewindHistory("w/1", "l#1")).toBe("/admin/wrapped/w%2F1/history/l%231")
     expect(invite("x/y")).toBe("/admin/invites/x%2Fy")
     expect(llmUsageDetail("x y")).toBe("/admin/llm-usage/x%20y")
+  })
+
+  it("builds the public invite link on an origin", () => {
+    expect(publicInviteUrl("AUDIT2026", "https://plex.example.com")).toBe("https://plex.example.com/invite/AUDIT2026")
+    expect(publicInviteUrl("AUDIT2026", "https://plex.example.com/")).toBe("https://plex.example.com/invite/AUDIT2026")
+    expect(publicInviteUrl("A B", "http://localhost:3000")).toBe("http://localhost:3000/invite/A%20B")
   })
 })

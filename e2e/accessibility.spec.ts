@@ -5,7 +5,7 @@ import { ALL_ROUTE_NAMES, A11Y_ROUTES, routeName, routeUserId } from './a11y/rou
 import { readBaseline, staleRoutes, UPDATE_COMMAND, writeBaseline } from './a11y/baseline';
 import { analyzeAtRest, scanAgainstBaseline } from './a11y/scan';
 import { clearA11yFixtures, seedA11yFixtures } from './a11y/seed';
-import { VISUAL_INVITE_IDS } from './helpers/seed-fixtures';
+import { VISUAL_INVITE_IDS, VISUAL_INVITES } from './helpers/seed-fixtures';
 import { resetStripeState, setStripeEnabled } from './helpers/stripe';
 import { expect, settlePage, test } from './visual/visual-test';
 
@@ -85,7 +85,8 @@ test.describe('Accessibility', () => {
     });
 
     test('the delete-invite confirmation is a labelled, described modal', async ({ page }) => {
-      await page.getByTestId(`admin-invites-delete-${VISUAL_INVITE_IDS.valid}`).click();
+      await page.getByTestId(`admin-invites-actions-${VISUAL_INVITE_IDS.valid}`).click();
+      await page.getByTestId(`admin-invites-actions-${VISUAL_INVITE_IDS.valid}-delete`).click();
       const dialog = page.getByTestId('admin-invites-delete-dialog');
       await expect(dialog).toBeVisible();
       // A confirmation asks for a decision, so it is an alertdialog (P3.6).
@@ -93,8 +94,8 @@ test.describe('Accessibility', () => {
       await expectPageBehindHidden(page);
       await expect(dialog).toHaveAttribute('aria-labelledby');
       await expect(dialog).toHaveAttribute('aria-describedby');
-      await expect(dialog).toHaveAccessibleName('Delete Invite');
-      await expect(dialog).toHaveAccessibleDescription(/cannot be undone/);
+      await expect(dialog).toHaveAccessibleName(`Delete invite ${VISUAL_INVITES.valid}?`);
+      await expect(dialog).toHaveAccessibleDescription(/can't be undone/);
       await page.keyboard.press('Escape');
       // The paused clock holds Base UI's exit transition until it runs.
       await settlePage(page);
@@ -107,7 +108,7 @@ test.describe('Accessibility', () => {
       await expect(dialog).toBeVisible();
       await expect(dialog).toHaveAttribute('role', 'dialog');
       await expectPageBehindHidden(page);
-      await expect(dialog).toHaveAttribute('aria-labelledby', 'create-invite-title');
+      await expect(dialog).toHaveAccessibleName('Create invite');
       await page.keyboard.press('Escape');
       await expect(dialog).toBeHidden();
     });

@@ -2,24 +2,16 @@
  * Tests for actions/invite.ts and lib/invites/ - invite validation and processing
  *
  * These tests cover:
- * - Basic invite CRUD operations
+ * - Jellyfin redemption through processJellyfinInvite
  * - Race condition prevention with atomic transactions
  * - Transaction conflict retry logic (P2034)
  * - Compensating transactions (rollback) on Plex failures
  * - Audit logging for security-sensitive events
  * - Matching Plex redemptions by plexUserId only, never by email (SEC-08)
  * - Zod validation of Jellyfin invite credentials
- * - Invite listings carry only public user fields, never plexAuthToken (SEC-18)
  */
 
-import {
-  processJellyfinInvite,
-  createInvite,
-  getInvites,
-  getInviteDetails,
-  deleteInvite,
-} from '@/actions/invite'
-import { requireAdmin } from '@/lib/admin'
+import { processJellyfinInvite } from '@/actions/invite'
 import { redeemPlexInvite } from '@/lib/invites/plex-redemption'
 import {
   getPlexUserInfo,
@@ -33,18 +25,9 @@ import { RATE_LIMITED_MESSAGE } from '@/lib/security/rate-limit-messages'
 import { Prisma } from '@/lib/generated/prisma/client'
 import type { Invite, JellyfinServer, PlexServer } from '@/lib/generated/prisma/client'
 import { getServerSession, type Session } from 'next-auth'
-import { publicUserSelect } from '@/lib/dto/user'
-import { assertNoSecretKeys } from '@/__tests__/utils/assert-no-secret-keys'
-import { applyPrismaShape } from '@/__tests__/utils/prisma-shape'
-import { makePrismaInviteWithUsages, INVITEE_PLEX_AUTH_TOKEN } from '@/__tests__/utils/test-builders'
 import { mockReset } from 'jest-mock-extended'
 import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { buildInvite } from '@/__tests__/helpers/factories'
-
-// Mock dependencies
-jest.mock('@/lib/admin', () => ({
-  requireAdmin: jest.fn(),
-}))
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
@@ -92,7 +75,6 @@ jest.mock('@/lib/utils/logger', () => ({
   }),
 }))
 
-const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
 const mockConsume = consume as jest.MockedFunction<typeof consume>
 const mockActionClientIp = actionClientIp as jest.MockedFunction<typeof actionClientIp>
 const mockPrisma = prismaMock
@@ -168,7 +150,6 @@ describe('invite actions', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    mockRequireAdmin.mockResolvedValue(mockSession)
     mockGetServerSession.mockResolvedValue(mockSession)
     mockActionClientIp.mockResolvedValue(CLIENT_IP)
     mockConsume.mockResolvedValue({ ok: true })
@@ -1071,209 +1052,6 @@ describe('invite actions', () => {
       expect(result.success).toBe(false)
       // The error bubbles up through the catch block
       expect(!result.success && result.error).toBeDefined()
-    })
-  })
-
-  describe('createInvite', () => {
-    it('should create invite with generated code', async () => {
-      mockPrisma.invite.findUnique.mockResolvedValue(null)
-      mockPrisma.invite.create.mockResolvedValue(mockInvite)
-
-      const result = await createInvite({ maxUses: 5 })
-
-      expect(result.success).toBe(true)
-      expect(mockPrisma.invite.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          maxUses: 5,
-          createdBy: mockSession.user.id,
-        }),
-      })
-    })
-
-    it('should create invite with custom code', async () => {
-      mockPrisma.invite.findUnique.mockResolvedValue(null)
-      mockPrisma.invite.create.mockResolvedValue({ ...mockInvite, code: 'CUSTOMCODE' })
-
-      const result = await createInvite({ code: 'customcode' })
-
-      expect(result.success).toBe(true)
-      expect(mockPrisma.invite.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          code: 'CUSTOMCODE', // Should be uppercased
-        }),
-      })
-    })
-
-    it('should reject duplicate code', async () => {
-      mockPrisma.invite.findUnique.mockResolvedValue(mockInvite)
-
-      const result = await createInvite({ code: 'TESTCODE' })
-
-      expect(result.success).toBe(false)
-      expect(!result.success && result.error).toBe('Invite code already exists')
-    })
-
-    it('should require admin access', async () => {
-      mockGetServerSession.mockResolvedValue({ ...mockSession, user: { ...mockSession.user, isAdmin: false } })
-
-      await expect(createInvite({})).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
-      expect(mockPrisma.invite.create).not.toHaveBeenCalled()
-    })
-
-    it.each([
-      ['a custom code with symbols', { code: 'AB&CD=1' }],
-      ['a custom code that is too short', { code: 'ABC' }],
-      ['an ambiguous character', { code: 'ABCDE0' }],
-      ['zero uses', { maxUses: 0 }],
-      ['too many uses', { maxUses: 1001 }],
-      ['fractional uses', { maxUses: 1.5 }],
-      ['an unknown expiry', { expiresIn: '999y' }],
-      ['an unknown server type', { serverType: 'EMBY' }],
-      ['more than 100 libraries', { librarySectionIds: Array.from({ length: 101 }, (_, i) => i) }],
-      ['a library id that is not an integer', { librarySectionIds: [1.5] }],
-    ])('refuses %s (SEC-56)', async (_label, input) => {
-      const result = await createInvite(input as Parameters<typeof createInvite>[0])
-
-      expect(result).toMatchObject({ success: false, code: 'VALIDATION' })
-      expect(mockPrisma.invite.create).not.toHaveBeenCalled()
-    })
-
-    it.each([
-      ['a generated code', {}],
-      ['an upper-cased custom code', { code: ' friends2 ' }],
-      ['every expiry option', { expiresIn: 'never', maxUses: 1000 }],
-    ])('accepts %s', async (_label, input) => {
-      mockPrisma.invite.findUnique.mockResolvedValue(null)
-      mockPrisma.invite.create.mockResolvedValue(mockInvite)
-
-      const result = await createInvite(input as Parameters<typeof createInvite>[0])
-
-      expect(result.success).toBe(true)
-    })
-  })
-
-  describe('getInvites', () => {
-    it('should return all invites for admin', async () => {
-      const invites = [mockInvite, { ...mockInvite, id: 'invite-456', code: 'OTHER' }]
-      mockPrisma.invite.findMany.mockResolvedValue(invites)
-
-      const result = await getInvites()
-
-      expect(result.success).toBe(true)
-      if (!result.success) throw new Error(result.error)
-      expect(result.data).toEqual(invites)
-    })
-
-    it('should require admin access', async () => {
-      mockRequireAdmin.mockRejectedValue(new Error('Unauthorized'))
-
-      await expect(getInvites()).rejects.toThrow('Unauthorized')
-    })
-  })
-
-  describe('invite queries send only public user fields (SEC-18)', () => {
-    const publicUsagesInclude = { usages: { include: { user: { select: publicUserSelect } } } }
-
-    /** Answer each query by applying its own select/include to rows holding plexAuthToken. */
-    function serveInviteRowsWithSecrets() {
-      const rows = [makePrismaInviteWithUsages(), makePrismaInviteWithUsages({ id: 'invite-2', code: 'OTHER' })]
-      mockPrisma.invite.findMany.mockImplementation(((args: Parameters<typeof applyPrismaShape>[1]) =>
-        Promise.resolve(rows.map((row) => applyPrismaShape(row, args)))) as never)
-      mockPrisma.invite.findUnique.mockImplementation(((args: Parameters<typeof applyPrismaShape>[1]) =>
-        Promise.resolve(applyPrismaShape(rows[0], args))) as never)
-    }
-
-    function expectNoSecrets(result: unknown) {
-      const serialised = JSON.stringify(result)
-      expect(serialised).not.toContain('plexAuthToken')
-      expect(serialised).not.toContain(INVITEE_PLEX_AUTH_TOKEN)
-      assertNoSecretKeys(JSON.parse(serialised))
-    }
-
-    it('getInvites selects publicUserSelect for usages.user', async () => {
-      serveInviteRowsWithSecrets()
-
-      await getInvites()
-
-      expect(mockPrisma.invite.findMany).toHaveBeenCalledWith({
-        orderBy: { createdAt: 'desc' },
-        include: publicUsagesInclude,
-      })
-    })
-
-    it('getInviteDetails selects publicUserSelect for usages.user and keeps the usage order', async () => {
-      serveInviteRowsWithSecrets()
-
-      await getInviteDetails('invite-1')
-
-      expect(mockPrisma.invite.findUnique).toHaveBeenCalledWith({
-        where: { id: 'invite-1' },
-        include: {
-          usages: { include: { user: { select: publicUserSelect } }, orderBy: { usedAt: 'desc' } },
-        },
-      })
-    })
-
-    it('getInvites returns no token field and only id, name, email and image per user', async () => {
-      serveInviteRowsWithSecrets()
-
-      const result = await getInvites()
-
-      expect(result.success).toBe(true)
-      expectNoSecrets(result)
-      if (!result.success) throw new Error(result.error)
-      expect(result.data).toHaveLength(2)
-      expect(result.data[0].usages[0].user).toEqual({
-        id: 'user-1',
-        name: 'Invited Member',
-        email: 'member@example.com',
-        image: 'https://plex.tv/users/member/avatar',
-      })
-    })
-
-    it('getInviteDetails returns no token field and only id, name, email and image per user', async () => {
-      serveInviteRowsWithSecrets()
-
-      const result = await getInviteDetails('invite-1')
-
-      expect(result.success).toBe(true)
-      expectNoSecrets(result)
-      if (!result.success) throw new Error(result.error)
-      expect(Object.keys(result.data.usages[0].user).sort()).toEqual(['email', 'id', 'image', 'name'])
-    })
-
-    it('getInviteDetails reports a missing invite', async () => {
-      mockPrisma.invite.findUnique.mockResolvedValue(null)
-
-      await expect(getInviteDetails('missing')).resolves.toEqual({ success: false, error: 'Invite not found' })
-    })
-  })
-
-  describe('deleteInvite', () => {
-    it('should delete invite', async () => {
-      mockPrisma.invite.delete.mockResolvedValue(mockInvite)
-
-      const result = await deleteInvite('invite-123')
-
-      expect(result.success).toBe(true)
-      expect(mockPrisma.invite.delete).toHaveBeenCalledWith({
-        where: { id: 'invite-123' },
-      })
-    })
-
-    it('should require admin access', async () => {
-      mockRequireAdmin.mockRejectedValue(new Error('Unauthorized'))
-
-      await expect(deleteInvite('invite-123')).rejects.toThrow('Unauthorized')
-    })
-
-    it('should handle non-existent invite', async () => {
-      mockPrisma.invite.delete.mockRejectedValue(new Error('Record not found'))
-
-      const result = await deleteInvite('nonexistent')
-
-      expect(result.success).toBe(false)
-      expect(!result.success && result.error).toBe('Failed to delete invite')
     })
   })
 })

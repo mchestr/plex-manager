@@ -56,6 +56,11 @@ export function invite(id: string): Route {
   return `/admin/invites/${seg(id)}` as Route
 }
 
+/** The link an invitee follows: the public invite page on `origin` ("https://plex.example.com"). */
+export function publicInviteUrl(code: string, origin: string): string {
+  return `${origin.replace(/\/+$/, "")}/invite/${seg(code)}`
+}
+
 /** One stored generation of a Rewind, from its LLM usage row. */
 export function rewindHistory(wrappedId: string, usageId: string): Route {
   return `/admin/wrapped/${seg(wrappedId)}/history/${seg(usageId)}` as Route

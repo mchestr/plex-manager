@@ -3,6 +3,7 @@ import {
   clearVisualFixtures,
   seedVisualFixtures,
   setVisualPlexServerUrl,
+  VISUAL_INVITE_IDS,
   VISUAL_PLEX_SERVER,
 } from '../helpers/seed-fixtures';
 import { capture, expect, settlePage, skipUnlessProductionBuild, test } from './visual-test';
@@ -73,6 +74,15 @@ test.describe('Admin screens', () => {
 
   test('invites', async ({ page }) => {
     await capture(page, '/admin/invites', 'admin-invites');
+  });
+
+  // P10.1: the filtered empty state and the detail page with its pass preview.
+  test('invites, no match', async ({ page }) => {
+    await capture(page, '/admin/invites?q=NOMATCH', 'admin-invites-empty-filtered');
+  });
+
+  test('invite detail', async ({ page }) => {
+    await capture(page, `/admin/invites/${VISUAL_INVITE_IDS.valid}`, 'admin-invite-detail');
   });
 
   // P10.3: the live page, with its "Updated Ns ago" line and the run-dependent jobs masked.

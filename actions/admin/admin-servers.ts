@@ -16,8 +16,7 @@ import { z } from "zod"
 
 import { adminAction } from "@/lib/actions/define-action"
 import { ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
-import { requireAdmin } from "@/lib/admin"
-import { getJellyfinLibraries as fetchLibraries, testJellyfinConnection } from "@/lib/connections/jellyfin"
+import { testJellyfinConnection } from "@/lib/connections/jellyfin"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { getPlexUserInfo, testPlexConnection } from "@/lib/connections/plex"
 import { testPrometheusConnection, validatePrometheusQuery } from "@/lib/connections/prometheus"
@@ -107,47 +106,6 @@ function auditServerChange(
 /** A row's audited fields, so the stored and saved states compare like with like. */
 function auditedFields(row: { name: string; url: string; publicUrl?: string | null }, secret: string) {
   return { name: row.name, url: row.url, publicUrl: row.publicUrl ?? null, secret }
-}
-
-/**
- * Get Jellyfin libraries for invite creation
- */
-export async function getJellyfinLibraries() {
-  await requireAdmin()
-
-  try {
-    const jellyfinServer = await prisma.jellyfinServer.findFirst({
-      where: { isActive: true },
-    })
-
-    if (!jellyfinServer) {
-      return { success: false, error: "No active Jellyfin server configured" }
-    }
-
-
-    const result = await fetchLibraries({
-      url: jellyfinServer.url,
-      apiKey: jellyfinServer.apiKey,
-    })
-
-    if (!result.success) {
-      return { success: false, error: result.error }
-    }
-
-    // Transform to simpler format for UI
-    const libraries = (result.data || []).map((lib) => ({
-      id: lib.ItemId,
-      name: lib.Name,
-      type: lib.CollectionType || "unknown",
-    }))
-
-    return { success: true, data: libraries }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to fetch Jellyfin libraries" }
-  }
 }
 
 /**

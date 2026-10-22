@@ -1,10 +1,8 @@
 "use server"
 
-import { randomInt } from "crypto"
 import { z } from "zod"
-import { adminAction, publicAction } from "@/lib/actions/define-action"
+import { publicAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionResult } from "@/lib/actions/result"
-import { requireAdmin } from "@/lib/admin"
 import {
   createJellyfinUser,
   setJellyfinUserPolicy,
@@ -23,72 +21,8 @@ import { ServerType } from "@/lib/generated/prisma/client"
 import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
 import { inviteCodeSchema } from "@/lib/validations/invite"
 import { jellyfinInviteCredentialsSchema } from "@/lib/validations/jellyfin"
-import { publicUserSelect, type InviteWithUsages } from "@/lib/dto/user"
 
 const logger = createLogger("INVITE")
-
-// Constants
-const INVITE_CODE_LENGTH = 8
-const INVITE_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // Removed: 0, O, I, l, 1
-const DEFAULT_INVITE_EXPIRATION_HOURS = 48
-
-/** The "Expires" options of the create-invite form. */
-const EXPIRES_IN_OPTIONS = ["1d", "48h", "7d", "30d", "never"] as const
-
-/** What an admin may set on a new invite (SEC-56). */
-const createInviteSchema = z.object({
-  code: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .regex(/^[A-Z2-9]{6,32}$/, "Custom codes are 6 to 32 letters and digits 2-9")
-    .optional(),
-  serverType: z.enum(["PLEX", "JELLYFIN"]).optional(),
-  maxUses: z.number().int().min(1).max(1000).optional(),
-  expiresIn: z.enum(EXPIRES_IN_OPTIONS).optional(),
-  // Plex-specific: undefined shares every library
-  librarySectionIds: z.array(z.number().int().nonnegative()).max(100).optional(),
-  allowDownloads: z.boolean().optional(),
-  // Jellyfin-specific: undefined grants every library
-  jellyfinLibraryIds: z.array(z.string().min(1).max(64)).max(100).optional(),
-})
-
-/**
- * Generate a random invite code with unambiguous characters.
- * Uses crypto.randomInt — invite codes grant server access, so they must not
- * be predictable from previously observed codes.
- */
-function generateInviteCode(length = INVITE_CODE_LENGTH): string {
-  let result = ""
-  for (let i = 0; i < length; i++) {
-    result += INVITE_CODE_CHARS.charAt(randomInt(INVITE_CODE_CHARS.length))
-  }
-  return result
-}
-
-/**
- * Calculate expiration date from duration string
- */
-function calculateExpirationDate(expiresIn?: string): Date | null {
-  if (!expiresIn || expiresIn === "never") {
-    return null
-  }
-
-  const now = new Date()
-  const hoursInDay = 24 * 60 * 60 * 1000
-
-  switch (expiresIn) {
-    case "1d":
-      return new Date(now.getTime() + hoursInDay)
-    case "7d":
-      return new Date(now.getTime() + 7 * hoursInDay)
-    case "30d":
-      return new Date(now.getTime() + 30 * hoursInDay)
-    default:
-      return new Date(now.getTime() + DEFAULT_INVITE_EXPIRATION_HOURS * 60 * 60 * 1000)
-  }
-}
-
 
 // Jellyfin user data for invite processing
 interface JellyfinAuthData {
@@ -101,129 +35,6 @@ const JELLYFIN_ENABLE_FAILED = "Your account was created. Ask the server owner t
 
 // Jellyfin virtual-folder ids are 32-hex GUIDs (`ItemId` from /Library/VirtualFolders)
 const jellyfinLibraryIdsSchema = z.array(z.string().regex(/^[0-9a-f]{32}$/i))
-
-/**
- * Create a new invite code (admin only). Input is checked by
- * `createInviteSchema`; the server type defaults to Plex.
- */
-export const createInvite = adminAction({
-  input: createInviteSchema,
-  fallbackError: "Failed to create invite",
-  handler: async (options, { userId }) => {
-    // Use provided code or generate one
-    const code = options.code || generateInviteCode()
-
-    // Check if code already exists
-    const existing = await prisma.invite.findUnique({
-      where: { code },
-    })
-
-    if (existing) {
-      return fail("CONFLICT", "Invite code already exists")
-    }
-
-    const expiresAt = calculateExpirationDate(options.expiresIn)
-    const serverType = options.serverType === "JELLYFIN" ? ServerType.JELLYFIN : ServerType.PLEX
-
-    const invite = await prisma.invite.create({
-      data: {
-        code,
-        serverType,
-        createdBy: userId,
-        maxUses: options.maxUses || 1,
-        expiresAt,
-        // Plex-specific fields
-        librarySectionIds: options.librarySectionIds && options.librarySectionIds.length > 0
-          ? JSON.stringify(options.librarySectionIds)
-          : null,
-        allowDownloads: options.allowDownloads ?? false,
-        // Jellyfin-specific fields
-        jellyfinLibraryIds: options.jellyfinLibraryIds && options.jellyfinLibraryIds.length > 0
-          ? JSON.stringify(options.jellyfinLibraryIds)
-          : null,
-      },
-    })
-
-    return ok(invite)
-  },
-})
-
-/**
- * Get all invites (admin only)
- */
-export async function getInvites(): Promise<
-  { success: true; data: InviteWithUsages[] } | { success: false; error: string }
-> {
-  await requireAdmin()
-
-  try {
-    const invites = await prisma.invite.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        usages: {
-          include: {
-            user: { select: publicUserSelect },
-          },
-        },
-      },
-    })
-
-    return { success: true, data: invites }
-  } catch (error) {
-    logger.error("Error fetching invites", error)
-    return { success: false, error: "Failed to fetch invites" }
-  }
-}
-
-/**
- * Get a single invite by ID with details (admin only)
- */
-export async function getInviteDetails(id: string): Promise<
-  { success: true; data: InviteWithUsages } | { success: false; error: string }
-> {
-  await requireAdmin()
-
-  try {
-    const invite = await prisma.invite.findUnique({
-      where: { id },
-      include: {
-        usages: {
-          include: {
-            user: { select: publicUserSelect },
-          },
-          orderBy: { usedAt: "desc" },
-        },
-      },
-    })
-
-    if (!invite) {
-      return { success: false, error: "Invite not found" }
-    }
-
-    return { success: true, data: invite }
-  } catch (error) {
-    logger.error("Error fetching invite details", error)
-    return { success: false, error: "Failed to fetch invite details" }
-  }
-}
-
-/**
- * Delete an invite (admin only)
- */
-export async function deleteInvite(id: string) {
-  await requireAdmin()
-
-  try {
-    await prisma.invite.delete({
-      where: { id },
-    })
-
-    return { success: true }
-  } catch (error) {
-    logger.error("Error deleting invite", error)
-    return { success: false, error: "Failed to delete invite" }
-  }
-}
 
 /**
  * Get active Jellyfin server configuration

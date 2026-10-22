@@ -228,7 +228,7 @@ test.describe('Jellyfin Invite Flow', () => {
       await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
       await waitForLoadingGone(adminPage);
 
-      await expect(adminPage.getByRole('heading', { name: 'Invites', exact: true })).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+      await expect(adminPage.getByTestId('admin-invites-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
       await expect(adminPage.getByTestId('generate-invite-button')).toBeVisible();
     });
 
@@ -238,92 +238,56 @@ test.describe('Jellyfin Invite Flow', () => {
 
       await adminPage.getByTestId('generate-invite-button').click();
 
-      // Modal should appear
-      await expect(adminPage.getByRole('dialog')).toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-      await expect(adminPage.getByRole('heading', { name: 'Create Invite' })).toBeVisible();
+      const dialog = adminPage.getByTestId('admin-invites-create-dialog');
+      await expect(dialog).toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
+      await expect(dialog.getByTestId('invite-server-type-plex')).toBeVisible();
+      await expect(dialog.getByTestId('create-invite-submit')).toBeVisible();
     });
 
-    test('admin can create a Jellyfin invite via database', async ({ adminPage }) => {
+    test('a Jellyfin invite shows in the list with its server', async ({ adminPage }) => {
       const prisma = createE2EPrismaClient();
       const inviteCode = `JADM${Date.now()}`.substring(0, 8).toUpperCase();
 
       try {
-        // Create a Jellyfin invite directly (simulating what the admin action does)
         const invite = await prisma.invite.create({
-          data: {
-            code: inviteCode,
-            serverType: 'JELLYFIN',
-            maxUses: 5,
-            useCount: 0,
-            allowDownloads: true,
-          }
+          data: { code: inviteCode, serverType: 'JELLYFIN', maxUses: 5, useCount: 0 },
         });
 
-        expect(invite.serverType).toBe('JELLYFIN');
-        expect(invite.allowDownloads).toBe(true);
-        expect(invite.maxUses).toBe(5);
-
-        // Navigate to invites page and verify
-        await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
+        await adminPage.goto(`/admin/invites?q=${inviteCode}`);
         await waitForLoadingGone(adminPage);
 
-        // The invite should appear in the list
-        await expect(adminPage.getByText(inviteCode)).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-
-        // Check for Jellyfin badge
-        await expect(adminPage.getByText('Jellyfin')).toBeVisible();
-
+        const row = adminPage.getByTestId(`admin-invites-row-${invite.id}`);
+        await expect(row).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+        await expect(row).toContainText(inviteCode);
+        await expect(row).toContainText('Jellyfin');
+        await expect(row).toContainText('0 of 5');
       } finally {
-        await prisma.invite.deleteMany({
-          where: { code: inviteCode }
-        });
+        await prisma.invite.deleteMany({ where: { code: inviteCode } });
         await prisma.$disconnect();
       }
     });
 
-    test('invite list shows server type badges correctly', async ({ adminPage }) => {
+    test('the Server filter keeps Plex and Jellyfin invites apart', async ({ adminPage }) => {
       const prisma = createE2EPrismaClient();
-      const plexCode = `PLX${Date.now()}`.substring(0, 8).toUpperCase();
-      const jellyfinCode = `JFN${Date.now()}`.substring(0, 8).toUpperCase();
+      const stamp = `${Date.now()}`;
+      const plexCode = `PLX${stamp}`.substring(0, 8).toUpperCase();
+      const jellyfinCode = `JFN${stamp}`.substring(0, 8).toUpperCase();
 
       try {
-        // Create both Plex and Jellyfin invites
-        await prisma.invite.createMany({
-          data: [
-            {
-              code: plexCode,
-              serverType: 'PLEX',
-              maxUses: 1,
-              useCount: 0,
-            },
-            {
-              code: jellyfinCode,
-              serverType: 'JELLYFIN',
-              maxUses: 1,
-              useCount: 0,
-            }
-          ]
-        });
+        const plex = await prisma.invite.create({ data: { code: plexCode, serverType: 'PLEX', maxUses: 1 } });
+        const jellyfin = await prisma.invite.create({ data: { code: jellyfinCode, serverType: 'JELLYFIN', maxUses: 1 } });
 
-        // Navigate to invites page
-        await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
+        await adminPage.goto('/admin/invites?server=jellyfin');
         await waitForLoadingGone(adminPage);
+        await expect(adminPage.getByTestId(`admin-invites-row-${jellyfin.id}`)).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+        await expect(adminPage.getByTestId(`admin-invites-row-${plex.id}`)).toHaveCount(0);
 
-        // Both invites should appear with correct badges
-        await expect(adminPage.getByText(plexCode)).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-        await expect(adminPage.getByText(jellyfinCode)).toBeVisible();
-
-        // Should show both Plex and Jellyfin badges (at least one each)
-        const plexBadges = adminPage.locator('span:has-text("Plex")');
-        const jellyfinBadges = adminPage.locator('span:has-text("Jellyfin")');
-
-        expect(await plexBadges.count()).toBeGreaterThanOrEqual(1);
-        expect(await jellyfinBadges.count()).toBeGreaterThanOrEqual(1);
-
+        await adminPage.goto('/admin/invites?server=plex');
+        await waitForLoadingGone(adminPage);
+        await expect(adminPage.getByTestId(`admin-invites-row-${plex.id}`)).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+        await expect(adminPage.getByTestId(`admin-invites-row-${jellyfin.id}`)).toHaveCount(0);
       } finally {
-        await prisma.invite.deleteMany({
-          where: { code: { in: [plexCode, jellyfinCode] } }
-        });
+        await prisma.invite.deleteMany({ where: { code: { in: [plexCode, jellyfinCode] } } });
         await prisma.$disconnect();
       }
     });

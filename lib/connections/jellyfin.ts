@@ -14,10 +14,7 @@ export {
 } from "./jellyfin-core"
 
 // Connection and server info
-export {
-  testJellyfinConnection,
-  getJellyfinLibraries,
-} from "./jellyfin-connection"
+export { testJellyfinConnection } from "./jellyfin-connection"
 
 // User management
 export {

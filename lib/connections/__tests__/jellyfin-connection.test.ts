@@ -3,10 +3,8 @@
  * Tests: testJellyfinConnection, getJellyfinLibraries
  */
 
-import {
-  testJellyfinConnection,
-  getJellyfinLibraries,
-} from '@/lib/connections/jellyfin'
+import { getJellyfinLibraries } from '@/lib/connections/jellyfin-connection'
+import { testJellyfinConnection } from '@/lib/connections/jellyfin'
 import { makeJellyfinServerConfig } from '../../../__tests__/utils/test-builders'
 
 // Store original env
