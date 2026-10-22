@@ -7,7 +7,7 @@
 import { render, screen } from '@testing-library/react'
 
 import HistoricalWrappedPage from '@/app/admin/wrapped/[wrappedId]/history/[llmUsageId]/page'
-import { getHistoricalWrappedData } from '@/actions/admin'
+import { getHistoricalWrappedData } from '@/lib/admin/rewind-history'
 import { buildStoredV2Json } from '@/lib/wrapped/__tests__/fixtures'
 import { parseStoredRewind } from '@/lib/wrapped/data/parse-stored'
 
@@ -15,7 +15,7 @@ jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock('@/actions/admin', () => ({
+jest.mock('@/lib/admin/rewind-history', () => ({
   getHistoricalWrappedData: jest.fn(),
   getHistoricalWrappedVersions: jest.fn().mockResolvedValue([]),
 }))

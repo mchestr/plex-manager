@@ -4,7 +4,9 @@
  * removed (P0.20), which stay listed and open as `removed`.
  */
 
-import { getHistoricalWrappedData, getHistoricalWrappedVersions } from "@/actions/admin/admin-llm-history"
+jest.mock("server-only", () => ({}))
+
+import { getHistoricalWrappedData, getHistoricalWrappedVersions } from "@/lib/admin/rewind-history"
 import { prisma } from "@/lib/prisma"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import { pickCurrentUsageId } from "@/lib/wrapped/data/history"
