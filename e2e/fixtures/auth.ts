@@ -100,10 +100,9 @@ async function verifyAuthentication(page: Page, isAdmin: boolean): Promise<void>
   // If admin, we can verify access to admin pages
   if (isAdmin) {
     await page.goto('/admin');
-    // /admin redirects to /admin/users. The admin layout streams, so the
-    // redirect runs in the browser after `load`; a test's next goto would
-    // otherwise race it and fail with net::ERR_ABORTED.
-    await page.waitForURL('**/admin/users');
+    // /admin is the Overview (P10.8). The admin layout streams, so wait for
+    // its header before the test's next goto.
+    await page.getByTestId('admin-overview-header').waitFor();
     await page.waitForLoadState('networkidle');
     // Should not see 401 error
     const unauthorizedError = page.getByText('401', { exact: true });

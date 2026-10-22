@@ -71,7 +71,7 @@ describe('AdminShell', () => {
     expect(within(sidebar).getByTestId('admin-nav-invites')).toHaveTextContent('3 active')
     expect(within(sidebar).getByTestId('admin-nav-queues')).toHaveTextContent('2 failed')
     const tabs = within(screen.getByTestId('admin-tab-bar')).getAllByRole('listitem')
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Invites', 'Users', 'Rewind', 'Settings', 'More, jobs have failed'])
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Users', 'Rewind', 'Settings', 'More, jobs have failed'])
     expect(screen.getByTestId('admin-tab-rewind')).toHaveAttribute('href', '/admin/rewind')
   })
 

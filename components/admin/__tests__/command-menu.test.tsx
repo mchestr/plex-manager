@@ -88,8 +88,19 @@ describe('CommandMenu', () => {
 
     await user.keyboard('{ArrowDown}{Enter}')
 
-    expect(mockPush).toHaveBeenCalledWith('/admin/invites')
+    expect(mockPush).toHaveBeenCalledWith('/admin/users')
     await waitFor(() => expect(dialog).not.toBeInTheDocument())
+  })
+
+  it('lists Overview first (P10.8)', async () => {
+    const user = userEvent.setup()
+    renderMenu()
+    await user.keyboard('{Control>}k{/Control}')
+    const dialog = await screen.findByRole('dialog')
+
+    await user.keyboard('over')
+
+    expect(within(dialog).getByTestId('admin-command-page-overview')).toBeInTheDocument()
   })
 
   it('shows members and invites from the search route and opens one', async () => {

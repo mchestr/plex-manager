@@ -78,3 +78,13 @@ export function newStyleGuide(fromId?: string): Route {
 export function playgroundWithStyleGuide(id: string): Route {
   return `/admin/rewind/playground?styleGuideId=${seg(id)}` as Route
 }
+
+/** Cost analysis for an inclusive day range (`YYYY-MM-DD` in the server zone). */
+export function costAnalysis({ from, to }: { from: string; to: string }): Route {
+  return `/admin/cost-analysis?${new URLSearchParams({ from, to })}` as Route
+}
+
+/** One section of the settings page, by its anchor id. */
+export function settingsSection(id: string): Route {
+  return `/admin/settings#${seg(id)}` as Route
+}

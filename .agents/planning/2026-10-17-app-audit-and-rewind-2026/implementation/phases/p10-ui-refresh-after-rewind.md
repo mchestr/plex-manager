@@ -390,10 +390,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Stop the workers: within 10 s the queues tile reads "Worker stopped". The spend tile matches cost analysis for this month, and the Rewind tile matches the season dashboard. On a phone the tab bar starts with Overview.
 
 **Done when.**
-- [ ] `/admin` renders the four-tile Overview, and each tile links to its page.
-- [ ] Every source fails on its own with a dash, and no poll runs a live upstream test.
-- [ ] The Overview refreshes while visible, and the nav and mobile tab bar include it.
+- [x] `/admin` renders the four-tile Overview, and each tile links to its page.
+- [x] Every source fails on its own with a dash, and no poll runs a live upstream test.
+- [x] The Overview refreshes while visible, and the nav and mobile tab bar include it.
 - [ ] It meets the 9.5 definition of done, with E2E, axe and a visual baseline.
+
+(as merged: P10.19 was not on the start point, so `lib/settings/connection-health.ts` is its smallest version: `getConnectionHealth()` (`unstable_cache`, 5 minutes, tag `connection-health`) tests Plex, Jellyfin, Tautulli, Overseerr, Sonarr and Radarr and maps AI from `llmDisabled` and the provider rows, with statuses only; `checkConnections()` is the uncached core. P10.19 extends it (Discord, Stripe, Prometheus, `recheckConnections()`). The `/api/health` checks moved into `lib/health/checks.ts` (`checkDependencies()`), which the route and the Overview share. The page is `app/admin/(overview)/page.tsx` with its own `loading.tsx` (PageHeader and four tile skeletons), so `app/admin/loading.tsx` stays the table loader for the other admin pages. A failed source's tile is a dash with a "Couldn't load" meta line rather than a full ErrorState card. A Services tile whose worst service is Redis links to `/admin/queues`; the others link to `settingsSection(id)` (`/admin/settings#<id>`), anchors P10.19's sections provide. `lib/admin/routes.ts` gained `costAnalysis({ from, to })` and `settingsSection(id)`. The mobile tabs dropped the Invites and Prompts stand-ins. E2E `e2e/admin/overview.spec.ts` was written but not run; axe and visual baselines are the owner's.)
 
 ### Step P10.9: Charts on shadcn Chart; chart.js removed
 
