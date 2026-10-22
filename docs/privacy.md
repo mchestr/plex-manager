@@ -42,6 +42,10 @@ If Stripe, Plex or Jellyfin fails, removal stops before the transaction with a c
 
 Unsharing a member (`unshareUserLibrary`) and the Stripe revoke job (`PLEX_ACCESS_REVOKE`) also turn the member's watchlist sync off and clear their stored plex.tv token, then end their sessions. The watchlist sync refuses a member without access with the skip code `NO_ACCESS`. Unlinking Discord revokes the grant at Discord and deletes the member's assistant chat sessions for that Discord account.
 
+## Admin access
+
+Admins can see each member's watch activity and Rewind (and its past versions), the assistant conversations stored in `LLMUsage` (prompts, responses and tool results), Discord command history (assistant messages as a length only), media marks and watchlist sync history. Opening one member's content writes `MEMBER_CONTENT_VIEWED` (once an hour per admin, member and page); pages that list every member's content write `MEMBER_CONTENT_LISTED`; unsharing, importing members and regenerating a Rewind are audited too. `AuditLog` rows are kept for 400 days (P11.14).
+
 ## Inventory
 
 Readers: M is the member, A is admins, P is the public. "Cascade" means the row is deleted with the `User` row.
