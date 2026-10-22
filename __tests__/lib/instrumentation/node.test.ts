@@ -2,7 +2,8 @@
  * @jest-environment node
  */
 
-import { BotLockPoller } from "@/lib/discord/lock/poller"
+import { LeaseLock } from "@/lib/locks/lease-lock"
+import { LeasePoller } from "@/lib/locks/lease-poller"
 import { startNodeInstrumentation } from "@/lib/instrumentation/node"
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -17,15 +18,15 @@ jest.mock("@/lib/utils/logger", () => ({
 }))
 
 // The Discord bot wiring, stubbed so the tests can read the poller's options.
-jest.mock("@/lib/discord/lock/poller", () => ({
-  DEFAULT_POLL_INTERVAL_MS: jest.requireActual("@/lib/discord/lock/poller").DEFAULT_POLL_INTERVAL_MS,
-  BotLockPoller: jest.fn().mockImplementation(() => ({
+jest.mock("@/lib/locks/lease-poller", () => ({
+  DEFAULT_POLL_INTERVAL_MS: jest.requireActual("@/lib/locks/lease-poller").DEFAULT_POLL_INTERVAL_MS,
+  LeasePoller: jest.fn().mockImplementation(() => ({
     start: jest.fn().mockResolvedValue(undefined),
     stop: jest.fn().mockResolvedValue(undefined),
   })),
 }))
-jest.mock("@/lib/discord/lock/lease", () => ({ DistributedLock: jest.fn() }))
-jest.mock("@/lib/discord/lock", () => ({ isDiscordBotEnabled: jest.fn().mockResolvedValue(true) }))
+jest.mock("@/lib/locks/lease-lock", () => ({ LeaseLock: jest.fn() }))
+jest.mock("@/lib/discord/config", () => ({ isDiscordBotEnabled: jest.fn().mockResolvedValue(true) }))
 jest.mock("@/lib/discord/bot", () => ({ DiscordBot: jest.fn() }))
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
@@ -35,7 +36,7 @@ const originalEnv = { ...process.env }
 
 describe("startNodeInstrumentation: Discord bot lock poller (BP-12)", () => {
   beforeEach(() => {
-    jest.mocked(BotLockPoller).mockClear()
+    jest.mocked(LeasePoller).mockClear()
     // The bot is on; the queue worker stays off, and "test" skips the
     // SIGINT/SIGTERM handlers.
     process.env = { ...originalEnv, ENABLE_QUEUE_WORKER: "false", NODE_ENV: "test" }
@@ -51,8 +52,9 @@ describe("startNodeInstrumentation: Discord bot lock poller (BP-12)", () => {
   it("polls every 10 s by default and leaves renewal at the poller's default", async () => {
     await startNodeInstrumentation()
 
-    expect(BotLockPoller).toHaveBeenCalledTimes(1)
-    const options = jest.mocked(BotLockPoller).mock.calls[0][2]
+    expect(LeasePoller).toHaveBeenCalledTimes(1)
+    expect(LeaseLock).toHaveBeenCalledWith({ name: "discord-bot" })
+    const options = jest.mocked(LeasePoller).mock.calls[0][2]
     expect(options?.pollIntervalMs).toBe(10_000)
     expect(options?.renewIntervalMs).toBeUndefined()
   })
@@ -62,6 +64,6 @@ describe("startNodeInstrumentation: Discord bot lock poller (BP-12)", () => {
 
     await startNodeInstrumentation()
 
-    expect(jest.mocked(BotLockPoller).mock.calls[0][2]?.pollIntervalMs).toBe(60_000)
+    expect(jest.mocked(LeasePoller).mock.calls[0][2]?.pollIntervalMs).toBe(60_000)
   })
 })

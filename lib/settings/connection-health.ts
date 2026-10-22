@@ -128,7 +128,7 @@ async function discordHealth(now: Date): Promise<SectionHealth> {
       where: { id: "discord" },
       select: { isEnabled: true, botEnabled: true, clientId: true, clientSecret: true, botToken: true },
     }),
-    prisma.discordBotLock.findUnique({ where: { id: "discord-bot" }, select: { lastRenewedAt: true } }),
+    prisma.leaseLock.findUnique({ where: { name: "discord-bot" }, select: { lastRenewedAt: true } }),
   ])
   const rows = discordStatus(
     {

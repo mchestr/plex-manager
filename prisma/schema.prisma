@@ -500,7 +500,20 @@ model DiscordIntegration {
   updatedBy        String?
 }
 
-// Distributed lock for Discord bot (ensures only one pod runs the bot)
+// One lease per background role ("discord-bot", "watchlist-sync"): only one
+// process holds a name at a time (lib/locks/lease-lock.ts).
+model LeaseLock {
+  name          String   @id
+  instanceId    String // Unique identifier for the holding process
+  acquiredAt    DateTime
+  expiresAt     DateTime // The lease lapses if not renewed (handles crashed pods)
+  lastRenewedAt DateTime
+
+  @@index([expiresAt])
+}
+
+// Legacy Discord bot lock: read only by LeaseLock's one-release overlap check.
+// P11.3 drops it.
 model DiscordBotLock {
   id            String   @id @default("discord-bot")
   instanceId    String // Unique identifier for this pod/instance
@@ -820,7 +833,8 @@ model WatchlistSyncHistory {
   @@index([status])
 }
 
-// Watchlist Sync - Distributed lock (mirrors DiscordBotLock)
+// Legacy watchlist sync lock: read only by LeaseLock's one-release overlap
+// check. P11.3 drops it.
 model WatchlistSyncLock {
   id            String   @id @default("watchlist-sync")
   instanceId    String // Unique identifier for this pod/instance
