@@ -17,24 +17,6 @@ describe("Alert", () => {
     expect(screen.getByText("Something happened.")).toBeInTheDocument()
   })
 
-  it("treats the deprecated danger tone as destructive", () => {
-    const { rerender } = render(
-      <Alert tone="danger" data-testid="alert">
-        Danger
-      </Alert>
-    )
-    const danger = screen.getByTestId("alert")
-    expect(danger).toHaveAttribute("data-tone", "destructive")
-    const dangerClasses = danger.className
-
-    rerender(
-      <Alert tone="destructive" data-testid="alert">
-        Danger
-      </Alert>
-    )
-    expect(screen.getByTestId("alert").className).toBe(dangerClasses)
-  })
-
   it.each([
     ["info", "lucide-info"],
     ["success", "lucide-circle-check"],
@@ -49,7 +31,7 @@ describe("Alert", () => {
     const { rerender } = render(<Alert tone="warning">Warning</Alert>)
     expect(screen.getByRole("alert")).toBeInTheDocument()
 
-    rerender(<Alert tone="danger">Danger</Alert>)
+    rerender(<Alert tone="destructive">Danger</Alert>)
     expect(screen.getByRole("alert")).toBeInTheDocument()
   })
 
@@ -72,7 +54,7 @@ describe("Alert", () => {
 
   it("renders the action slot", () => {
     render(
-      <Alert tone="danger" action={<button type="button">Fix it</button>}>
+      <Alert tone="destructive" action={<button type="button">Fix it</button>}>
         Payment failed
       </Alert>
     )

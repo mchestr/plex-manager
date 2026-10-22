@@ -26,8 +26,8 @@ export function ImportPlexUsersButton() {
           parts.push(`${importResult.errors.length} error${importResult.errors.length !== 1 ? "s" : ""}`)
         }
 
-        toast.showSuccess(parts.join(", "), 5000)
-        importResult.errors.forEach((error) => toast.showError(error, 6000))
+        toast.showSuccess(parts.join(", "))
+        importResult.errors.forEach((error) => toast.showError(error))
       } else {
         toast.showError(importResult.errors[0] ?? "Failed to import Plex users")
       }

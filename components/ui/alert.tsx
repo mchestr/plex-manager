@@ -7,11 +7,8 @@ import { cn } from "@/lib/utils"
 type AlertTone = "info" | "success" | "warning" | "destructive"
 
 interface AlertProps extends Omit<ComponentProps<"div">, "title"> {
-  /**
-   * Tone of the alert; also picks the default icon and the role. `danger` is
-   * the deprecated name of `destructive`, kept until P10.11.
-   */
-  tone?: AlertTone | "danger"
+  /** Tone of the alert; also picks the default icon and the role. */
+  tone?: AlertTone
   /** A short heading in semibold above the message. */
   title?: ReactNode
   /** Replaces the tone's icon; `null` renders none. */
@@ -41,16 +38,15 @@ const toneIcons: Record<AlertTone, { icon: LucideIcon; className: string }> = {
  * `success` are polite (`role="status"`). Pass `role` to override.
  */
 export function Alert({ tone = "info", title, icon, action, className, children, role, ...props }: AlertProps) {
-  const resolved: AlertTone = tone === "danger" ? "destructive" : tone
-  const toneIcon = toneIcons[resolved]
+  const toneIcon = toneIcons[tone]
   return (
     <div
-      role={role ?? (resolved === "warning" || resolved === "destructive" ? "alert" : "status")}
+      role={role ?? (tone === "warning" || tone === "destructive" ? "alert" : "status")}
       data-slot="alert"
-      data-tone={resolved}
+      data-tone={tone}
       className={cn(
         "flex flex-wrap items-start gap-x-3 gap-y-2 rounded-lg border p-3 text-ui text-foreground",
-        toneClasses[resolved],
+        toneClasses[tone],
         className
       )}
       {...props}

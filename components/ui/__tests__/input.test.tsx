@@ -5,7 +5,6 @@ import { Search } from "lucide-react"
 import { createRef } from "react"
 
 import { Input } from "@/components/ui/input"
-import { StyledInput } from "@/components/ui/styled-input"
 
 expect.extend(toHaveNoViolations)
 
@@ -68,68 +67,6 @@ describe("Input", () => {
         <Input id="url" placeholder="https://plex.example.com" />
       </>
     )
-    expect(await axe(container)).toHaveNoViolations()
-  })
-})
-
-describe("StyledInput (deprecated adapter)", () => {
-  it.each([
-    ["sm", ["h-8", "md:h-8"]],
-    ["md", ["h-10", "md:h-9"]],
-    ["lg", ["h-11", "md:h-11"]],
-  ] as const)("maps size %s to %p", (size, classes) => {
-    render(<StyledInput size={size} data-testid="input" />)
-    expect(screen.getByTestId("input")).toHaveClass(...classes)
-  })
-
-  it("maps error to aria-invalid", () => {
-    const { rerender } = render(<StyledInput error data-testid="input" />)
-    expect(screen.getByTestId("input")).toHaveAttribute("aria-invalid", "true")
-
-    rerender(<StyledInput error={false} data-testid="input" />)
-    expect(screen.getByTestId("input")).not.toHaveAttribute("aria-invalid")
-  })
-
-  it("defaults the test id to setup-input-<name>, which the setup-wizard spec reads", () => {
-    const { rerender } = render(<StyledInput name="url" />)
-    expect(screen.getByTestId("setup-input-url")).toHaveAttribute("name", "url")
-
-    rerender(<StyledInput name="url" data-testid="explicit" />)
-    expect(screen.getByTestId("explicit")).toBeInTheDocument()
-    expect(screen.queryByTestId("setup-input-url")).not.toBeInTheDocument()
-
-    rerender(<StyledInput />)
-    expect(screen.getByRole("textbox")).not.toHaveAttribute("data-testid")
-  })
-
-  it("passes value, type, placeholder, className and ref through", async () => {
-    const user = userEvent.setup()
-    const onChange = jest.fn()
-    const ref = createRef<HTMLInputElement>()
-    render(
-      <StyledInput
-        ref={ref}
-        type="url"
-        placeholder="https://"
-        defaultValue="http://"
-        className="max-w-sm"
-        onChange={onChange}
-        data-testid="input"
-      />
-    )
-
-    const input = screen.getByTestId("input")
-    expect(ref.current).toBe(input)
-    expect(input).toHaveAttribute("type", "url")
-    expect(input).toHaveAttribute("placeholder", "https://")
-    expect(input).toHaveClass("max-w-sm", "bg-background")
-    await user.type(input, "x")
-    expect(input).toHaveValue("http://x")
-    expect(onChange).toHaveBeenCalled()
-  })
-
-  it("has no axe violations", async () => {
-    const { container } = render(<StyledInput aria-label="API key" name="apiKey" error />)
     expect(await axe(container)).toHaveNoViolations()
   })
 })

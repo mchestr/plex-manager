@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 
 interface ManageSubscriptionButtonProps {
-  /** Visual variant of the button. Defaults to the primary gradient. */
+  /** Visual variant of the button. Defaults to `primary`. */
   variant?: "primary" | "secondary" | "ghost"
-  /** Button size. Defaults to `md`. */
-  size?: "sm" | "md" | "lg"
+  /** Button size. Defaults to `default`. */
+  size?: "sm" | "default" | "lg"
   /** Label shown when idle. Defaults to "Manage subscription". */
   label?: string
   className?: string
@@ -33,7 +33,7 @@ interface ManageSubscriptionButtonProps {
  */
 export function ManageSubscriptionButton({
   variant = "primary",
-  size = "md",
+  size = "default",
   label = "Manage subscription",
   className,
   description,

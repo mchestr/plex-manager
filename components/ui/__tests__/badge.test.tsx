@@ -14,34 +14,6 @@ describe("Badge", () => {
     expect(badge).toHaveAttribute("data-slot", "badge")
   })
 
-  it.each([
-    ["neutral", "neutral"],
-    ["info", "info"],
-    ["success", "success"],
-    ["warning", "warning"],
-    ["danger", "destructive"],
-  ] as const)("maps the deprecated tone %s to the %s variant", (tone, variant) => {
-    render(
-      <>
-        <Badge tone={tone}>Old</Badge>
-        <Badge variant={variant}>New</Badge>
-      </>
-    )
-    expect(screen.getByText("Old").className).toBe(screen.getByText("New").className)
-  })
-
-  it("prefers variant over tone", () => {
-    render(
-      <>
-        <Badge variant="outline" tone="danger">
-          Both
-        </Badge>
-        <Badge variant="outline">Outline</Badge>
-      </>
-    )
-    expect(screen.getByText("Both").className).toBe(screen.getByText("Outline").className)
-  })
-
   it("renders a hidden dot", () => {
     const { container } = render(<Badge dot>Live</Badge>)
     expect(container.querySelector('[data-slot="badge-dot"]')).toHaveAttribute("aria-hidden", "true")
