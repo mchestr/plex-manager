@@ -226,45 +226,6 @@ export async function deleteInvite(id: string) {
 }
 
 /**
- * Validate an invite code (public)
- *
- * NOTE: This performs non-atomic validation for UI/display purposes only.
- * Redemption consumes the invite atomically through validateAndUseInvite()
- * (lib/invites/redemption.ts): the Plex path runs inside the Plex sign-in's
- * authorize (lib/invites/plex-redemption.ts), the Jellyfin path below.
- *
- * @public The invite page reads `getInvitePass` (lib/invites/pass.ts) since
- * P10.26; this action stays for callers outside the page until its removal is
- * agreed.
- */
-export const validateInvite = publicAction({
-  input: inviteCodeSchema,
-  rateLimit: { name: "invite:validate" },
-  fallbackError: "Failed to validate invite",
-  handler: async (code) => {
-    const invite = await prisma.invite.findUnique({
-      where: { code },
-      select: { serverType: true, expiresAt: true, useCount: true, maxUses: true },
-    })
-
-    if (!invite) {
-      return fail("INVITE_INVALID", "Invalid invite code")
-    }
-
-    if (invite.expiresAt && invite.expiresAt < new Date()) {
-      return fail("INVITE_INVALID", "Invite has expired")
-    }
-
-    if (invite.useCount >= invite.maxUses) {
-      return fail("INVITE_INVALID", "Invite has reached maximum uses")
-    }
-
-    // The invite page needs only these; the code's settings stay on the server
-    return ok({ serverType: invite.serverType, expiresAt: invite.expiresAt })
-  },
-})
-
-/**
  * Get active Jellyfin server configuration
  */
 async function getActiveJellyfinServer() {

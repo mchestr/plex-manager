@@ -13,7 +13,6 @@
  */
 
 import {
-  validateInvite,
   processJellyfinInvite,
   createInvite,
   getInvites,
@@ -190,29 +189,12 @@ describe('invite actions', () => {
     }
   }
 
-  describe('rate limits (invite:validate, invite:redeem)', () => {
+  describe('rate limits (invite:redeem)', () => {
     function limitTo(limited: string) {
       mockConsume.mockImplementation(async (name) =>
         name === limited ? { ok: false, retryAfterSec: 600 } : { ok: true }
       )
     }
-
-    it('spends invite:validate for the client IP on each lookup', async () => {
-      mockPrisma.invite.findUnique.mockResolvedValue(mockInvite)
-
-      await validateInvite('TESTCODE')
-
-      expect(mockConsume).toHaveBeenCalledWith('invite:validate', CLIENT_IP)
-    })
-
-    it('refuses a rate-limited lookup before reading the invite', async () => {
-      limitTo('invite:validate')
-
-      const result = await validateInvite('FRIENDS')
-
-      expect(result).toEqual(RATE_LIMITED_RESULT)
-      expect(mockPrisma.invite.findUnique).not.toHaveBeenCalled()
-    })
 
     it('refuses a rate-limited Jellyfin redemption before contacting Jellyfin or consuming the invite', async () => {
       limitTo('invite:redeem')
@@ -227,70 +209,12 @@ describe('invite actions', () => {
     })
 
     it.each(['A B', '../x', 'X'.repeat(65), ''])('refuses the code %p on every invite action before any lookup', async (code) => {
-      await expect(validateInvite(code)).resolves.toMatchObject({ success: false, code: 'VALIDATION' })
       await expect(redeemJellyfin(code, { username: 'newuser', password: 'password123' })).resolves.toMatchObject({
         success: false,
         code: 'VALIDATION',
       })
       expect(mockPrisma.invite.findUnique).not.toHaveBeenCalled()
       expect(mockPrisma.$transaction).not.toHaveBeenCalled()
-    })
-
-    it('does not spend the redemption limit on a lookup', async () => {
-      limitTo('invite:redeem')
-      mockPrisma.invite.findUnique.mockResolvedValue(mockInvite)
-
-      const result = await validateInvite('TESTCODE')
-
-      expect(result.success).toBe(true)
-    })
-  })
-
-  describe('validateInvite', () => {
-    it('should return success for valid invite', async () => {
-      mockPrisma.invite.findUnique.mockResolvedValue(mockInvite)
-
-      const result = await validateInvite('TESTCODE')
-
-      // Only what the invite page reads (SEC-56)
-      expect(result).toEqual({ success: true, data: { serverType: mockInvite.serverType, expiresAt: mockInvite.expiresAt } })
-      expect(result.success && Object.keys(result.data)).toEqual(['serverType', 'expiresAt'])
-    })
-
-    it('should return error for non-existent invite', async () => {
-      mockPrisma.invite.findUnique.mockResolvedValue(null)
-
-      const result = await validateInvite('INVALID')
-
-      expect(result.success).toBe(false)
-      expect(!result.success && result.error).toBe('Invalid invite code')
-    })
-
-    it('should return error for expired invite', async () => {
-      const expiredInvite = {
-        ...mockInvite,
-        expiresAt: new Date(Date.now() - 86400000), // 1 day ago
-      }
-      mockPrisma.invite.findUnique.mockResolvedValue(expiredInvite)
-
-      const result = await validateInvite('TESTCODE')
-
-      expect(result.success).toBe(false)
-      expect(!result.success && result.error).toBe('Invite has expired')
-    })
-
-    it('should return error for fully used invite', async () => {
-      const usedInvite = {
-        ...mockInvite,
-        useCount: 1,
-        maxUses: 1,
-      }
-      mockPrisma.invite.findUnique.mockResolvedValue(usedInvite)
-
-      const result = await validateInvite('TESTCODE')
-
-      expect(result.success).toBe(false)
-      expect(!result.success && result.error).toBe('Invite has reached maximum uses')
     })
   })
 
