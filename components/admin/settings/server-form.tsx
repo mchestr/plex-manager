@@ -145,12 +145,9 @@ export function ServerForm({ type, server }: ServerFormProps) {
             <div className="text-sm text-muted-foreground">No {type} server configured</div>
           )}
         </div>
-        <button
-          onClick={() => setIsEditing(true)}
-          className="ml-4 px-3 py-1 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-cyan-500/50 text-slate-300 hover:text-white text-xs font-medium rounded transition-all whitespace-nowrap flex items-center"
-        >
+        <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)} className="ml-4 whitespace-nowrap">
           Edit
-        </button>
+        </Button>
       </div>
     )
   }

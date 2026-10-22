@@ -1,15 +1,10 @@
 {
   "schema": 1,
-  "commit": "d49cf41387d4e43cb9327c81b714df0151413bba",
-  "generatedAt": "2026-10-22T14:51:35.643Z",
+  "commit": "267b700157d7908156d8a47589312656f363e466",
+  "generatedAt": "2026-10-22T14:54:02.227Z",
   "files": {
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "copy": 1
-    },
-    "app/admin/settings/page.tsx": {
-      "blur": 5,
-      "copy": 1,
-      "raw-palette": 95
     },
     "app/invite/[code]/page.tsx": {
       "blur": 3,
@@ -30,29 +25,6 @@
     "components/admin/invites/invites-page-client.tsx": {
       "caps-eyebrow": 6,
       "raw-palette": 108
-    },
-    "components/admin/settings/discord-integration-form.tsx": {
-      "raw-palette": 30
-    },
-    "components/admin/settings/jellyfin-login-toggle.tsx": {
-      "raw-palette": 4
-    },
-    "components/admin/settings/llm-provider-form.tsx": {
-      "raw-palette": 9
-    },
-    "components/admin/settings/llm-toggle.tsx": {
-      "raw-palette": 2
-    },
-    "components/admin/settings/server-form.tsx": {
-      "raw-palette": 21
-    },
-    "components/admin/settings/stripe-settings-form.tsx": {
-      "raw-palette": 14
-    },
-    "components/admin/settings/watchlist-sync-settings.tsx": {
-      "blur": 2,
-      "infinite-motion": 1,
-      "raw-palette": 42
     },
     "components/auth/jellyfin-sign-in-form.tsx": {
       "raw-palette": 27
@@ -284,12 +256,12 @@
   },
   "totals": {
     "arbitrary-type-z": 24,
-    "blur": 23,
+    "blur": 16,
     "caps-eyebrow": 38,
-    "copy": 5,
+    "copy": 4,
     "gradient": 49,
     "gradient-text": 32,
-    "infinite-motion": 20,
-    "raw-palette": 894
+    "infinite-motion": 19,
+    "raw-palette": 677
   }
 }

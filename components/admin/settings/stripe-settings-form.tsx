@@ -2,7 +2,9 @@
 
 import { setStripeEnabled, updateStripeSettings } from "@/actions/admin/admin-config"
 import { getAvailableLibraries } from "@/actions/server-info"
+import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { StyledInput } from "@/components/ui/styled-input"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/toast"
@@ -148,14 +150,9 @@ export function StripeSettingsForm({
       </div>
 
       {!enabled && !canEnable && (
-        <div
-          className="p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg"
-          data-testid="stripe-enable-requirements"
-        >
-          <p className="text-sm text-amber-300">
-            Stripe cannot be enabled until it is fully configured. Missing: {missing.join(", ")}.
-          </p>
-        </div>
+        <Alert tone="warning" data-testid="stripe-enable-requirements">
+          Stripe cannot be enabled until it is fully configured. Missing: {missing.join(", ")}.
+        </Alert>
       )}
 
       {/* Credentials + price ids */}
@@ -223,15 +220,13 @@ export function StripeSettingsForm({
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {libraries.map((lib) => (
                 <label key={lib.id} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedLibraryIds.includes(lib.id)}
-                    onChange={(e) => toggleLibrary(lib.id, e.target.checked)}
+                    onCheckedChange={(checked) => toggleLibrary(lib.id, checked)}
                     disabled={isSaving}
-                    className="rounded border-slate-600 text-cyan-600 focus:ring-cyan-500"
                     data-testid={`stripe-library-checkbox-${lib.id}`}
                   />
-                  <span className="text-sm text-slate-300">
+                  <span className="text-sm text-foreground">
                     {lib.title} <span className="text-muted-foreground">({lib.type})</span>
                   </span>
                 </label>

@@ -31,7 +31,7 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
     <div className="mt-4 pt-4 border-t border-border">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-xs font-medium text-slate-300">Allow Jellyfin sign-in</h4>
+          <h4 className="text-xs font-medium text-foreground">Allow Jellyfin sign-in</h4>
           <p className="text-xs text-muted-foreground mt-0.5">
             {enabledForLogin
               ? "Members can sign in with their Jellyfin account"
@@ -51,7 +51,7 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
                 : "Turn on Jellyfin sign-in"
           }
           data-testid="jellyfin-login-toggle"
-          className="hover:border-cyan-500/50 hover:text-white whitespace-nowrap"
+          className="whitespace-nowrap"
         >
           {isPending
             ? "Updating..."

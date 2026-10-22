@@ -36,7 +36,7 @@ function ProviderSummary({ stored }: { stored: StoredLLMProvider }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <ReadOnlyField label="Provider">
-        <span className="px-2 py-1 bg-slate-700/50 text-slate-300 rounded text-xs font-medium">
+        <span>
           {isLLMProviderId(stored.provider) ? LLM_PROVIDER_LABELS[stored.provider] : stored.provider}
         </span>
       </ReadOnlyField>
@@ -207,7 +207,7 @@ export function LLMProviderForm({ provider: stored, purpose }: LLMProviderFormPr
       {state.test && (
         <p
           role="status"
-          className={state.test.ok ? "text-xs text-green-400" : "text-xs text-amber-400"}
+          className={state.test.ok ? "text-xs text-success" : "text-xs text-warning"}
           data-testid="llm-test-result"
         >
           {state.test.message}

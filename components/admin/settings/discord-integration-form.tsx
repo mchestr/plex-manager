@@ -1,6 +1,7 @@
 "use client"
 
 import { updateDiscordIntegrationSettings } from "@/actions/discord"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { StyledCheckbox } from "@/components/ui/styled-checkbox"
 import { StyledInput } from "@/components/ui/styled-input"
@@ -126,13 +127,9 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
                 <div className="text-xs font-medium text-muted-foreground mb-1">Bot Status</div>
                 <div className="text-sm text-foreground">
                   {integration.botEnabled ? (
-                    <span className="px-2 py-1 bg-green-500/15 text-green-300 border border-green-500/30 rounded text-xs font-medium">
-                      Enabled
-                    </span>
+                    <Badge variant="success">Enabled</Badge>
                   ) : (
-                    <span className="px-2 py-1 bg-slate-800/60 text-slate-300 border border-slate-600/70 rounded text-xs font-medium">
-                      Disabled
-                    </span>
+                    <Badge>Disabled</Badge>
                   )}
                 </div>
               </div>
@@ -149,7 +146,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
           {integration?.instructions && (
             <div>
               <div className="text-xs font-medium text-muted-foreground mb-1">Instructions</div>
-              <p className="text-sm text-slate-300 whitespace-pre-line border border-slate-700 rounded-lg p-3 bg-slate-900/40">
+              <p className="text-sm text-foreground whitespace-pre-line border border-border rounded-lg p-3 bg-muted">
                 {integration.instructions}
               </p>
             </div>
@@ -171,7 +168,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-4 p-4 bg-slate-900/30 border border-slate-700 rounded-lg">
+      <div className="space-y-4 p-4 border border-border rounded-lg">
         <StyledCheckbox
           id="discord-enabled"
           checked={formData.isEnabled}
