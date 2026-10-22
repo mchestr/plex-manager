@@ -1,10 +1,22 @@
 {
   "schema": 1,
-  "commit": "f741a92794593f090016cfd765386ba152bacb80",
-  "generatedAt": "2026-10-22T17:10:37.289Z",
+  "commit": "77e9b9863d7310f752f37f8009eae3442f6e5249",
+  "generatedAt": "2026-10-22T17:33:02.312Z",
   "files": {
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "copy": 1
+    },
+    "app/dev/rewind-stage/guess-island.tsx": {
+      "client-marker": 1
+    },
+    "app/dev/ui/_sections/command.tsx": {
+      "client-marker": 1
+    },
+    "components/admin/rewind/playground/facts-pane.tsx": {
+      "client-marker": 1
+    },
+    "components/admin/settings/sections/other-integrations-section.tsx": {
+      "client-marker": 1
     },
     "components/setup/setup-wizard/dev-mode-banner.tsx": {
       "raw-palette": 8
@@ -21,7 +33,7 @@
       "raw-palette": 8
     },
     "components/setup/setup-wizard/llm-provider-form.tsx": {
-      "raw-palette": 24
+      "raw-palette": 20
     },
     "components/setup/setup-wizard/overseerr-form.tsx": {
       "raw-palette": 17
@@ -69,7 +81,11 @@
       "infinite-motion": 1,
       "raw-palette": 3
     },
+    "components/wrapped/cinematic/cinematic-background.tsx": {
+      "client-marker": 1
+    },
     "components/wrapped/cinematic/gold-count-up.tsx": {
+      "client-marker": 1,
       "gradient": 1,
       "gradient-text": 2
     },
@@ -106,7 +122,8 @@
     },
     "components/wrapped/wrapped-sections/cinematic/index.tsx": {
       "arbitrary-type-z": 1,
-      "caps-eyebrow": 1
+      "caps-eyebrow": 1,
+      "client-marker": 1
     },
     "components/wrapped/wrapped-sections/cinematic/monthly-journey-section.tsx": {
       "arbitrary-type-z": 1,
@@ -115,7 +132,8 @@
     },
     "components/wrapped/wrapped-sections/cinematic/movies-breakdown-section.tsx": {
       "arbitrary-type-z": 1,
-      "caps-eyebrow": 1
+      "caps-eyebrow": 1,
+      "client-marker": 1
     },
     "components/wrapped/wrapped-sections/cinematic/overseerr-stats-section.tsx": {
       "arbitrary-type-z": 3,
@@ -130,11 +148,13 @@
     },
     "components/wrapped/wrapped-sections/cinematic/server-stats-section.tsx": {
       "arbitrary-type-z": 1,
-      "caps-eyebrow": 2
+      "caps-eyebrow": 2,
+      "client-marker": 1
     },
     "components/wrapped/wrapped-sections/cinematic/shows-breakdown-section.tsx": {
       "arbitrary-type-z": 1,
-      "caps-eyebrow": 1
+      "caps-eyebrow": 1,
+      "client-marker": 1
     },
     "components/wrapped/wrapped-sections/cinematic/streaks-patterns-section.tsx": {
       "arbitrary-type-z": 5,
@@ -146,6 +166,12 @@
       "arbitrary-type-z": 3,
       "caps-eyebrow": 3
     },
+    "components/wrapped/wrapped-sections/cinematic/top-movies-section.tsx": {
+      "client-marker": 1
+    },
+    "components/wrapped/wrapped-sections/cinematic/top-shows-section.tsx": {
+      "client-marker": 1
+    },
     "components/wrapped/wrapped-sections/cinematic/total-watch-time-section.tsx": {
       "arbitrary-type-z": 1,
       "caps-eyebrow": 1,
@@ -154,6 +180,7 @@
     },
     "components/wrapped/wrapped-sections/fun-facts-section.tsx": {
       "blur": 2,
+      "client-marker": 1,
       "gradient": 2,
       "raw-palette": 15
     },
@@ -163,6 +190,7 @@
       "raw-palette": 10
     },
     "components/wrapped/wrapped-sections/index.tsx": {
+      "client-marker": 1,
       "raw-palette": 3
     },
     "components/wrapped/wrapped-sections/insights-section.tsx": {
@@ -186,6 +214,7 @@
     },
     "components/wrapped/wrapped-sections/server-stats-section.tsx": {
       "blur": 1,
+      "client-marker": 1,
       "gradient": 1,
       "raw-palette": 9
     },
@@ -197,11 +226,13 @@
     },
     "components/wrapped/wrapped-sections/top-movies-section.tsx": {
       "blur": 1,
+      "client-marker": 1,
       "gradient": 1,
       "raw-palette": 12
     },
     "components/wrapped/wrapped-sections/top-shows-section.tsx": {
       "blur": 1,
+      "client-marker": 1,
       "gradient": 1,
       "raw-palette": 13
     },
@@ -232,11 +263,12 @@
     "arbitrary-type-z": 24,
     "blur": 13,
     "caps-eyebrow": 26,
+    "client-marker": 17,
     "copy": 4,
     "gradient": 45,
     "gradient-text": 28,
     "infinite-motion": 19,
     "inline-svg": 1,
-    "raw-palette": 438
+    "raw-palette": 434
   }
 }

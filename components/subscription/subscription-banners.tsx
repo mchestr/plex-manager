@@ -1,5 +1,3 @@
-"use client"
-
 import { ManageSubscriptionButton } from "@/components/subscription/manage-subscription-button"
 import { Alert } from "@/components/ui/alert"
 

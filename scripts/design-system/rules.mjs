@@ -2,10 +2,11 @@
  * The design-debt rules of ui-design-system 9.6 and the per-file counter
  * behind `scripts/check-design-system.mjs` (plan step P1.8).
  *
- * Each rule is `{ id, description, pattern, scope?, allow?, ast? }`:
+ * Each rule is `{ id, description, pattern | count, scope?, allow?, ast? }`:
  * - `pattern` is a global regex counted over the raw source, unless `ast`
  *   says which AST text it runs over instead (`'jsx-text'`), or adds a second
  *   AST pass (`{ target: 'style', pattern }`) on top of the raw count;
+ * - `count(source)` replaces `pattern` for a rule about the whole file;
  * - `scope(path)` returns false for paths the rule skips;
  * - `allow` lists exact paths where the rule is not counted.
  *
@@ -29,6 +30,21 @@ const outsideRewind = (path) => !REWIND_PATHS.some((prefix) => path.startsWith(p
 /** Inline SVG is allowed for drawn charts and Rewind art; icons come from lucide (P10.15). */
 const SVG_ART = [/^components\/ui\/chart/, /(?:^|\/)charts?\//]
 const outsideSvgArt = (path) => outsideRewind(path) && !SVG_ART.some((re) => re.test(path))
+
+/** A `'use client'` directive as the module's first statement. */
+const CLIENT_DIRECTIVE = /^(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*['"]use client['"]/
+/** What makes a module need the client: hooks, handlers, browser globals or motion. */
+const CLIENT_NEEDS = /\buse[A-Z]\w*|\bon[A-Z]\w*=|\b(?:window|document)\.|\bmotion\b/
+
+/**
+ * A `'use client'` marker on a module with none of {@link CLIENT_NEEDS}: a
+ * render-only leaf that can be a Server Component (P10.7, BP-32). A function
+ * prop passed down (a render prop, a className callback) also needs the
+ * client, which the heuristic cannot see; such files keep a count.
+ */
+function unneededClientMarker(source) {
+  return CLIENT_DIRECTIVE.test(source) && !CLIENT_NEEDS.test(source.replace(CLIENT_DIRECTIVE, '')) ? 1 : 0
+}
 
 /** The Rewind block of `app/globals.css` (P3.1 adds the markers). */
 const REWIND_BLOCK = /\/\* rewind-scope:start \*\/[\s\S]*?\/\* rewind-scope:end \*\//g
@@ -86,6 +102,13 @@ export const RULES = [
     pattern: /<svg\b/g,
     scope: outsideSvgArt,
   },
+  {
+    id: 'client-marker',
+    description: "'use client' on a module with no hooks, handlers, browser APIs or motion",
+    count: unneededClientMarker,
+    // Next requires error boundaries to be client components
+    scope: (path) => /\.tsx?$/.test(path) && !/(?:^|\/)(?:global-)?error\.tsx$/.test(path),
+  },
 ]
 
 function countIn(pattern, texts) {
@@ -101,7 +124,8 @@ export function countFile(path, source) {
     if (rule.allow?.includes(path)) continue
     const raw = rule.scope ? source.replace(REWIND_BLOCK, '') : source
     let n
-    if (rule.ast === 'jsx-text') n = jsx ? countIn(rule.pattern, jsxTexts(path, source)) : 0
+    if (rule.count) n = rule.count(source)
+    else if (rule.ast === 'jsx-text') n = jsx ? countIn(rule.pattern, jsxTexts(path, source)) : 0
     else {
       n = countIn(rule.pattern, [raw])
       if (rule.ast && jsx) n += countIn(rule.ast.pattern, styleLiterals(path, source))

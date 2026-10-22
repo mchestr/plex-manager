@@ -24,6 +24,7 @@ describe("rules", () => {
         "arbitrary-type-z",
         "blur",
         "caps-eyebrow",
+        "client-marker",
         "copy",
         "gradient",
         "gradient-text",
@@ -56,6 +57,36 @@ describe("rules", () => {
   it.each(cases)("%s counts the matching fixture only", (rule, matching, nonMatching) => {
     expect(count(matching)[rule]).toBeGreaterThan(0)
     expect(count(nonMatching)[rule]).toBeUndefined()
+  })
+
+  describe("client-marker", () => {
+    const marked = (body: string) => `"use client"\n\n${body}`
+
+    it("counts a client marker on a render-only module", () => {
+      expect(count(marked('export function Banner() {\n  return <p className="text-ui">Hi</p>\n}\n'))).toEqual({ "client-marker": 1 })
+      expect(count(marked("export const Leaf = () => <span />\n"), "components/ui/leaf.tsx")).toEqual({ "client-marker": 1 })
+    })
+
+    it.each([
+      ["a hook", "const [open, setOpen] = useState(false)"],
+      ["a handler prop", "<button onClick={() => go()} />"],
+      ["a browser global", "window.scrollTo(0, 0)"],
+      ["document", "document.title = 'x'"],
+      ["motion", '<motion.div animate={{ opacity: 1 }} />'],
+    ])("does not count a module that uses %s", (_case, body) => {
+      expect(count(marked(body))["client-marker"]).toBeUndefined()
+    })
+
+    it("counts nothing without the directive, or after a leading comment only when the directive is first", () => {
+      expect(count('export function Banner() {\n  return <p>Hi</p>\n}\n')).toEqual({})
+      expect(count('// Banner\n"use client"\nexport const A = () => <p />\n')).toEqual({ "client-marker": 1 })
+      expect(count('const note = "use client"\nexport const A = () => <p />\n')).toEqual({})
+    })
+
+    it("skips Next error boundaries, which must be client components", () => {
+      expect(count(marked("export default function Error() {\n  return <p />\n}\n"), "app/admin/error.tsx")).toEqual({})
+      expect(count(marked("export default function GlobalError() {\n  return <p />\n}\n"), "app/global-error.tsx")).toEqual({})
+    })
   })
 
   it("counts each raw-palette utility", () => {

@@ -1,5 +1,3 @@
-"use client"
-
 import { Icon } from "@/components/ui/icon"
 import { icons } from "@/lib/ui/icons"
 import type { DevDefaults } from "@/types/setup"

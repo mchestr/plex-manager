@@ -1,5 +1,3 @@
-"use client"
-
 import { Check, ChevronDown, History } from "lucide-react"
 import Link from "next/link"
 
