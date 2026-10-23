@@ -1310,9 +1310,11 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** In a fresh session, open `lib/rewind/cards/centrefold.tsx`: `share-card` and `rewind-design-system` load. On a scratch branch, ask the agent to add a trial page with `rewind-page`: it produces the registry entry, the component test and the baseline entries, and the branch is then discarded.
 
 **Done when.**
-- [ ] The four skills exist with scoped frontmatter and point at the real files and design sections.
-- [ ] The project-skills test passes, and `THIRD_PARTY.md` and the settings list them.
-- [ ] The fresh-session check loads the right skills for a card file.
+- [x] The four skills exist with scoped frontmatter and point at the real files and design sections.
+- [ ] The project-skills test passes, and `THIRD_PARTY.md` and the settings list them. (The test and `THIRD_PARTY.md` are done; the four `Skill(...)` allow rules in `.claude/settings.json` are the owner's.)
+- [ ] The fresh-session check loads the right skills for a card file. (The test checks the `paths:` globs; the session check is the owner's.)
+
+(as merged: the skills describe the code, not the older plan text: the card routes are `route.ts`, the fonts load from `lib/rewind/fonts.ts`, cards come in `story` and `og` sizes, and there is no single `visual` project, so `visual-qa` names the real `visual-*`, `rewind-visual-*`, `rewind-a11y-*`, `rewind-e2e-*` and `rewind-perf` projects. `rewind-page` also scopes `lib/rewind/pages/**` and `lib/rewind/page-meta.ts`, and its component tests run on the four `PAGE_FIXTURES`. THIRD_PARTY.md lists the skills in a "Project-authored skills" table with the pin cell `project-authored`; `vendored-skills.test.ts` accepts those rows without a licence file and forbids URLs and WebFetch in them. The identifier check also reads exports from `eslint/` and `scripts/` for the guardrails. CLAUDE.md's Agent Skills table and the PR template list the skills. Owner items: add `Skill(rewind-design-system)`, `Skill(rewind-page)`, `Skill(share-card)` and `Skill(visual-qa)` to `.claude/settings.json` (the settings case of `vendored-skills.test.ts` fails until then), run `/security-review` on the PR, and do the fresh-session check. The vendored `motion` skill's `paths:` and its CLAUDE.md row still name the deleted `components/wrapped/**`; that is left for a skill-update PR.)
 ### Step P11.28: Watchlist sync resolves IDs and files valid TV requests
 
 - **Track:** platform. **Lane:** platform. **Effort:** M. **Window:** 2027-01-04 to 2027-01-06. **Depends on:** P4.13.
