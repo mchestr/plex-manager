@@ -93,8 +93,6 @@ function maskOneIp(ip: string): string {
  * An IP address as its network: the /24 for IPv4 and the /48 for IPv6. A
  * comma-separated `x-forwarded-for` list masks each entry; anything that is
  * not an IP becomes `[masked]`.
- *
- * @internal
  */
 export function maskIp(value: string): string {
   return value.split(",").map((part) => maskOneIp(part.trim())).join(", ")

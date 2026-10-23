@@ -85,3 +85,29 @@ describe("mark_media_finished", () => {
     expect(text).not.toMatch(/updated Plex watch status|Your Plex watch status is updated/)
   })
 })
+
+describe("get_my_marks (P11.17)", () => {
+  it("dates a mark in the member's zone, with its offset, after the DST change", async () => {
+    // 19:30 on 1 November in Los Angeles, already 2 November in UTC
+    prismaMock.userMediaMark.findMany.mockResolvedValue([
+      {
+        title: "Arrival",
+        parentTitle: null,
+        year: 2016,
+        seasonNumber: null,
+        episodeNumber: null,
+        markType: "FINISHED_WATCHING",
+        markedAt: new Date("2026-11-02T03:30:00Z"),
+      },
+    ] as never)
+
+    const text = await executeMediaMarkingTool("get_my_marks", {}, "user-1", "discord", {
+      timeZone: "America/Los_Angeles",
+      locale: "en-US",
+    })
+
+    expect(text).toContain("markedAt: 2026-11-01T19:30:00-08:00")
+    expect(text).toContain("markedAtDisplay: Nov 1, 2026")
+    expect(text).not.toContain("Nov 2")
+  })
+})

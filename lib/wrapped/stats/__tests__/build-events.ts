@@ -68,7 +68,6 @@ export function play(input: PlayInput): PlayEvent {
     platform: null,
     product: null,
     guid: null,
-    librarySectionId: "1",
     contentRating: null,
     live: input.live ?? false,
   }

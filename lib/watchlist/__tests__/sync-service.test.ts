@@ -55,6 +55,7 @@ function given(overrides: {
   prismaMock.user.findUnique.mockResolvedValue({ ...MEMBER, ...overrides.member } as never)
   prismaMock.overseerr.findFirst.mockResolvedValue({ url: 'http://overseerr.local', apiKey: 'key' } as never)
   prismaMock.watchlistSyncHistory.findMany.mockResolvedValue([])
+  prismaMock.watchlistSyncHistory.updateMany.mockResolvedValue({ count: 0 })
   jest.mocked(getAccessLevel).mockResolvedValue(overrides.level ?? 'full')
   jest.mocked(buildOverseerrUserIndex).mockResolvedValue({ ok: true, data: overrides.index ?? new Map([[4815162, 7]]) })
   jest.mocked(validatePlexToken).mockResolvedValue('valid')
@@ -146,6 +147,26 @@ describe('syncUserWatchlist for a matched member', () => {
       { mediaType: 'movie', mediaId: 603 },
       { overseerrUserId: 7 }
     )
+  })
+
+  it('marks titles gone from a complete watchlist as REMOVED_FROM_WATCHLIST (P11.14)', async () => {
+    given()
+
+    await syncUserWatchlist('member-1')
+
+    expect(prismaMock.watchlistSyncHistory.updateMany).toHaveBeenCalledWith({
+      where: { userId: 'member-1', plexRatingKey: { notIn: ['rk-1'] }, status: { not: 'REMOVED_FROM_WATCHLIST' } },
+      data: { status: 'REMOVED_FROM_WATCHLIST', syncedAt: expect.any(Date) },
+    })
+  })
+
+  it('marks nothing removed after a partial read', async () => {
+    given()
+    jest.mocked(getPlexWatchlist).mockResolvedValue({ success: true, notModified: false, data: [], etag: null, complete: false })
+
+    await syncUserWatchlist('member-1')
+
+    expect(prismaMock.watchlistSyncHistory.updateMany).not.toHaveBeenCalled()
   })
 
   it('adds the counts to the totals with atomic increments', async () => {

@@ -87,6 +87,8 @@ export function historyRow(input: PlayInput): HistoryRow {
   const paused = input.pausedSeconds ?? 0
   const percent = input.percent ?? 100
   const common = {
+    // The group's key; real Tautulli numbers its history rows, the start time stands in.
+    reference_id: started,
     // The member's plex.tv account ID; the server-wide pass (P2.6) buckets on it.
     user_id: 1,
     started,
@@ -115,7 +117,6 @@ export function historyRow(input: PlayInput): HistoryRow {
       year: film.year,
       originally_available_at: input.released ?? film.released ?? `${film.year}-01-01`,
       guid: `plex://movie/${film.key}`,
-      section_id: "1",
     }
   }
   const { series, season, episode } = input
@@ -132,7 +133,6 @@ export function historyRow(input: PlayInput): HistoryRow {
     year: series.year,
     originally_available_at: input.released ?? series.released ?? `${series.year}-01-01`,
     guid: `plex://episode/${key}`,
-    section_id: "2",
   }
 }
 

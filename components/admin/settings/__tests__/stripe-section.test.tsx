@@ -70,7 +70,7 @@ describe("StripeSection", () => {
 
   it("shows the saved keys as masked placeholders, and the switch is live once all are saved", async () => {
     const user = userEvent.setup()
-    jest.mocked(setStripeEnabled).mockResolvedValue({ success: true, data: null })
+    jest.mocked(setStripeEnabled).mockResolvedValue({ success: true, data: { status: "saved" } })
     await renderSection(READY)
 
     expect(screen.getByTestId("stripe-secret-key-input")).toHaveAttribute("placeholder", "••••••••••••3kQ2")
@@ -79,6 +79,25 @@ describe("StripeSection", () => {
 
     await user.click(screen.getByTestId("stripe-enabled-toggle"))
     expect(setStripeEnabled).toHaveBeenCalledWith(true)
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith("Subscriptions turned on"))
+  })
+
+  it("lists the Jellyfin-only members first, and turns subscriptions on once confirmed (P11.11)", async () => {
+    const user = userEvent.setup()
+    jest
+      .mocked(setStripeEnabled)
+      .mockResolvedValueOnce({ success: true, data: { status: "confirm", jellyfinMembers: { count: 3, names: ["Ana", "Ben"] } } })
+      .mockResolvedValueOnce({ success: true, data: { status: "saved" } })
+    await renderSection(READY)
+
+    await user.click(screen.getByTestId("stripe-enabled-toggle"))
+    const dialog = await screen.findByTestId("stripe-enable-jellyfin-confirm")
+    expect(dialog).toHaveTextContent("3 Jellyfin members will be asked to subscribe")
+    expect(dialog).toHaveTextContent("Ana, Ben and 1 more sign in with Jellyfin only")
+    expect(mockShowSuccess).not.toHaveBeenCalled()
+
+    await user.click(screen.getByTestId("stripe-enable-jellyfin-confirm-button"))
+    expect(setStripeEnabled).toHaveBeenLastCalledWith({ enabled: true, confirmJellyfinMembers: true })
     await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith("Subscriptions turned on"))
   })
 

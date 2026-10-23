@@ -161,6 +161,22 @@ beforeEach(() => {
     history.set(create.plexRatingKey, row)
     return row
   }) as never)
+  // markRemovedItems (P11.14): rows whose key is missing from a complete read
+  prismaMock.watchlistSyncHistory.updateMany.mockImplementation((async ({
+    where,
+    data,
+  }: {
+    where: { plexRatingKey: { notIn: string[] } }
+    data: { status: HistoryRow["status"] }
+  }) => {
+    let count = 0
+    for (const row of history.values()) {
+      if (where.plexRatingKey.notIn.includes(row.plexRatingKey) || row.status === data.status) continue
+      row.status = data.status
+      count += 1
+    }
+    return { count }
+  }) as never)
 })
 
 /** Mark every item but `keys` as handled by an earlier run. */
@@ -297,6 +313,16 @@ describe("watchlist sync against recorded responses", () => {
     await syncUserWatchlist("member-1")
 
     expect(posts()).toHaveLength(0)
+    expect(history.get(FILM_603)).toMatchObject({ status: "ALREADY_AVAILABLE" })
+  })
+
+  it("records a title gone from the watchlist as REMOVED_FROM_WATCHLIST (P11.14)", async () => {
+    onlyNew([])
+    history.set("gone-1", { plexRatingKey: "gone-1", status: "REQUESTED" })
+
+    await syncUserWatchlist("member-1")
+
+    expect(history.get("gone-1")).toMatchObject({ status: "REMOVED_FROM_WATCHLIST" })
     expect(history.get(FILM_603)).toMatchObject({ status: "ALREADY_AVAILABLE" })
   })
 

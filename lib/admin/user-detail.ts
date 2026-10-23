@@ -50,6 +50,9 @@ export interface UserDetailHeaderData {
     currentPeriodEnd: Date | null
     cancelAtPeriodEnd: boolean
     stripeCustomerId: string | null
+    /** What the last grant or revoke did on Plex (`accepted`, `pending`, `revoked`) and Jellyfin (`enabled`, `disabled`, `skipped`). */
+    plexInviteStatus: string | null
+    jellyfinAccessStatus: string | null
   } | null
   stripeEnabled: boolean
   season: {
@@ -108,7 +111,16 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
       createdAt: true,
       isExempt: true,
       exemptReason: true,
-      subscription: { select: { status: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, stripeCustomerId: true } },
+      subscription: {
+        select: {
+          status: true,
+          currentPeriodEnd: true,
+          cancelAtPeriodEnd: true,
+          stripeCustomerId: true,
+          plexInviteStatus: true,
+          jellyfinAccessStatus: true,
+        },
+      },
       plexWrapped: { where: { year: seasonYear }, select: { status: true } },
       discordConnection: { select: { username: true, globalName: true, discordUserId: true, linkedAt: true, revokedAt: true } },
     },
@@ -163,6 +175,7 @@ export function detailUserTarget(header: UserDetailHeaderData): UserActionTarget
     id: header.id,
     name: header.name,
     plexUserId: header.plexUserId,
+    services: header.services,
     isAdmin: header.isAdmin,
     isOwner: header.isOwner,
     disabled: header.disabledAt !== null,

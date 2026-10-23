@@ -3,10 +3,12 @@ import "server-only"
 import { searchPlexMedia } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { prisma } from "@/lib/prisma"
+import { formatDate, formatIsoWithOffset, type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import { MarkType } from "@/lib/generated/prisma/client"
 import { applyMark } from "@/lib/discord/media/mark-media"
 import { getMarkTypeLabel, watchStatusNote } from "@/lib/discord/media/mark-labels"
+import { UTC_FORMAT } from "./timestamps"
 
 const logger = createLogger("CHATBOT_MEDIA_MARKING")
 
@@ -14,7 +16,8 @@ export async function executeMediaMarkingTool(
   toolName: string,
   args: Record<string, unknown>,
   userId?: string,
-  context?: string
+  context?: string,
+  format: FormatSettings = UTC_FORMAT
 ): Promise<string> {
   if (!userId) {
     return "Error: User authentication required for media marking operations"
@@ -167,9 +170,11 @@ export async function executeMediaMarkingTool(
               ? ` S${mark.seasonNumber}E${mark.episodeNumber}`
               : ""
           const markTypeLabel = getMarkTypeLabel(mark.markType)
-          const markedDate = new Date(mark.markedAt).toLocaleDateString()
+          // The member's own day, so "today" and "yesterday" mean theirs (P11.17)
+          const markedAt = formatIsoWithOffset(mark.markedAt, format.timeZone)
+          const markedAtDisplay = formatDate(mark.markedAt, "short", format)
 
-          return `- ${titleDisplay}${yearDisplay}${seasonEp} - ${markTypeLabel} (${markedDate})`
+          return `- ${titleDisplay}${yearDisplay}${seasonEp} - ${markTypeLabel} (markedAt: ${markedAt}, markedAtDisplay: ${markedAtDisplay})`
         })
 
         const header = markType

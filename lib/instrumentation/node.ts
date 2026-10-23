@@ -3,9 +3,9 @@
  *
  * `instrumentation.ts` calls {@link startNodeInstrumentation} without awaiting
  * it, because Next awaits `register()` before serving the first request. It
- * installs the shutdown coordinator first, then starts the queue worker and the
- * Discord bot poller side by side, so neither a down Redis nor a slow Discord
- * login holds up the other or the site (BP-13).
+ * installs the shutdown coordinator first, then starts the queue worker, the
+ * Discord bot poller and the setup code (P11.32) side by side, so neither a
+ * down Redis nor a slow Discord login holds up the others or the site (BP-13).
  *
  * Imported dynamically from instrumentation.ts so the Edge runtime never
  * analyses its Node-only dependencies.
@@ -29,13 +29,20 @@ export async function startNodeInstrumentation() {
   await Promise.all([
     startQueueWorker().catch((error) => logger.error("Queue worker start failed", error)),
     startDiscordBotPolling().catch((error) => logger.error("Discord bot start failed", error)),
+    issueSetupCode().catch((error) => logger.error("Could not issue the setup code", error)),
   ])
+}
+
+/** Prints this boot's setup code while first-run setup is incomplete (P11.32). */
+async function issueSetupCode() {
+  const { issueSetupCode: issue } = await import("@/lib/setup/claim")
+  await issue()
 }
 
 /**
  * Starts the BullMQ worker once Redis answers. Without `REDIS_URL` the
- * database-lease watchlist fallback runs instead; with it, never, so two sync
- * paths never run at once.
+ * database-lease watchlist and retention fallbacks run instead; with it,
+ * never, so two sync or sweep paths never run at once.
  */
 async function startQueueWorker() {
   if (process.env.ENABLE_QUEUE_WORKER === "false") {
@@ -47,7 +54,13 @@ async function startQueueWorker() {
   if (!redisUrl) {
     logger.debug("Queue worker disabled: REDIS_URL not configured")
     const { startWatchlistFallback } = await import("@/lib/watchlist/fallback")
-    await startWatchlistFallback({ signal: shutdownSignal })
+    const { startRetentionFallback } = await import("@/lib/retention/fallback")
+    await Promise.all([
+      startWatchlistFallback({ signal: shutdownSignal }),
+      startRetentionFallback({ signal: shutdownSignal }).catch((error) =>
+        logger.error("Retention fallback start failed", error)
+      ),
+    ])
     return
   }
 
@@ -78,6 +91,9 @@ async function startQueueWorker() {
 
   await startWorker()
   await scheduleRoleReconcile().catch((error) => logger.error("Could not schedule the Discord role reconcile", error))
+
+  const { ensureRetentionSchedule } = await import("@/lib/retention/schedule")
+  await ensureRetentionSchedule().catch((error) => logger.error("Could not schedule the retention sweep", error))
 
   // The settings save calls this too, so a change applies without a restart.
   await ensureWatchlistSchedule()

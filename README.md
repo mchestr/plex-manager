@@ -155,12 +155,18 @@ npm run dev
 6. **Open your browser**
 Navigate to [http://localhost:3000](http://localhost:3000)
 
-7. **Complete the setup wizard**
-On first launch, you'll be guided through configuring:
-- Plex server connection (URL format: `https://example.com:32400`)
-- Tautulli integration (URL format: `http://example.com:8181`)
-- Overseerr integration (optional, URL format: `http://example.com:5055`)
-- LLM provider (optional)
+7. **Claim the server**
+Until setup completes, `/setup` asks for a setup code, so nobody else who reaches a fresh install can take it over. Each start prints a new one-time code to the server log; the newest one is valid:
+```bash
+docker logs <container> | grep 'Setup code'   # or read the `npm run dev` output
+```
+To choose the code yourself, set `SETUP_TOKEN` (at least 16 characters, e.g. `openssl rand -hex 16`) before starting; it replaces the printed code while it is set. The claim lasts 12 hours in that browser and ends when setup completes.
+
+8. **Connect Plex**
+Choose **Connect with Plex** and approve Plex Manager on plex.tv with the account that owns your server. Back in the wizard, pick your server and the address Plex Manager should use (a local one is fastest). Servers shared with that account can't be chosen; only their owner can set them up. If your server doesn't show up, or this browser can't reach plex.tv, open **Enter a token instead** and type the server URL (for example `https://example.com:32400`) and an X-Plex-Token.
+
+9. **Complete the setup wizard**
+Plex and Tautulli (URL format: `http://example.com:8181`) are required. Overseerr, Sonarr, Radarr, the two AI providers, Discord and Prometheus are optional: **Skip for now** moves on, and you can set them up later in Admin, Settings. The summary lists what is connected and what was skipped; **Open admin** finishes setup and signs you in with the Plex account from step 1.
 
 ---
 
@@ -460,6 +466,7 @@ All integrations are configured through the setup wizard or admin panel, with va
 - **Encryption at rest** - External-service API keys/tokens are AES-256-GCM encrypted when `ENCRYPTION_KEY` is set
 - **Signed webhooks** - Stripe webhooks are verified against the raw request body (no admin auth needed)
 - **Member removal** - Admins can remove a member: their access, sessions, Stripe subscription, Discord grant and stored data go. [docs/privacy.md](docs/privacy.md) lists every table of personal data and what removal does to it
+- **Member export** - Members download their data as JSON from Account, Your data (`/account/export`, three a day) and delete single marks, watchlist items and assistant conversations there
 
 See [CLAUDE.md](CLAUDE.md) for detailed security best practices.
 

@@ -16,7 +16,7 @@ import type { Job } from 'bullmq'
 
 import {
   processStripeWebhook,
-  processPlexAccessGrant,
+  processAccessGrant,
   getStripeProcessor,
 } from '@/lib/queue/jobs/stripe'
 import { getStripe } from '@/lib/stripe/client'
@@ -397,7 +397,7 @@ describe('getStripeProcessor', () => {
 
   it('returns the processor for PLEX_ACCESS_GRANT', () => {
     expect(getStripeProcessor(JOB_TYPES.PLEX_ACCESS_GRANT)).toBe(
-      processPlexAccessGrant
+      processAccessGrant
     )
   })
 

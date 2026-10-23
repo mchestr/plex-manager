@@ -38,7 +38,6 @@ export interface PlayEvent {
   platform: string | null
   product: string | null
   guid: string | null
-  librarySectionId: string
   /** History rows carry none; P2.6's `getMemberEvents()` fills it from the library pass. */
   contentRating: string | null
   live: boolean

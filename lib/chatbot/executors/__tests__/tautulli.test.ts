@@ -180,7 +180,7 @@ describe("executeTautulliTool - Discord activity scoping", () => {
 
     expect(mockUserFindUnique).toHaveBeenCalledWith({
       where: { id: "user-1" },
-      select: { plexUserId: true },
+      select: { plexUserId: true, jellyfinUserId: true },
     })
     expect(mockFindTautulliUser).toHaveBeenCalledWith(
       expect.objectContaining({ url: "http://localhost:8181", apiKey: "test-key" }),
@@ -225,6 +225,15 @@ describe("executeTautulliTool - Discord activity scoping", () => {
 
     expect(mockFindTautulliUser).not.toHaveBeenCalled()
     expect(result).toEqual(UNMAPPED)
+  })
+
+  it("tells a Jellyfin-only caller why there are no sessions (P11.12)", async () => {
+    mockUserFindUnique.mockResolvedValue({ plexUserId: null, jellyfinUserId: "jf-1" })
+
+    const result = JSON.parse(await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord"))
+
+    expect(mockFindTautulliUser).not.toHaveBeenCalled()
+    expect(result).toEqual({ unavailable: "jellyfin-member" })
   })
 
   it("returns no sessions when there is no caller at all", async () => {
@@ -329,6 +338,8 @@ describe("executeTautulliTool - tools built on real Tautulli commands", () => {
   })
 })
 
+const UTC_PROMPT_FORMAT = { timeZone: "UTC", locale: "en-US" }
+
 describe("Discord tool gating - get_tautulli_users", () => {
   it("excludes get_tautulli_users from the Discord safe-tool set", () => {
     expect(DISCORD_SAFE_TOOL_NAMES.has("get_tautulli_users")).toBe(false)
@@ -338,9 +349,17 @@ describe("Discord tool gating - get_tautulli_users", () => {
   })
 
   it("does not advertise get_tautulli_users in the generated Discord system prompt", () => {
-    const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS)
+    const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { format: UTC_PROMPT_FORMAT, now: new Date() })
 
     expect(prompt).not.toContain("get_tautulli_users")
+  })
+
+  it("names Jellyfin in the Discord system prompt only when a Jellyfin server is active (P11.12)", () => {
+    expect(generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { format: UTC_PROMPT_FORMAT, now: new Date() })).not.toContain("Jellyfin")
+
+    const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { format: UTC_PROMPT_FORMAT, now: new Date(), jellyfin: true })
+    expect(prompt).toContain("Plex, Jellyfin, Tautulli")
+    expect(prompt).toContain('"unavailable":"jellyfin-member"')
   })
 })
 
@@ -426,5 +445,43 @@ describe("admin context drops emails, addresses and tokens (P4.15, SEC-42)", () 
       expect(result).not.toMatch(PERSONAL)
       expect(JSON.parse(result)).toEqual({ data: [{ title: "Heat", user: "Sam" }] })
     }
+  })
+})
+
+describe("epochs reach the model as ISO strings with an offset (P11.17)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockTautulliFindFirst.mockResolvedValue({ id: "tautulli-1", name: "Tautulli", url: "http://t", apiKey: "k", publicUrl: null } as never)
+  })
+
+  it("converts history epochs into the server zone", async () => {
+    // 1793590200 is 2026-11-02T03:30:00Z: 19:30 on 1 November in Los Angeles
+    jest.mocked(getTautulliHistory).mockResolvedValue({
+      success: true,
+      data: { data: [{ title: "Heat", date: 1793590200, started: "1793590200", stopped: 1793597400, duration: 7200 }] },
+    })
+
+    const result = JSON.parse(
+      await executeTautulliTool("get_tautulli_watch_history", {}, "admin-1", "default", {
+        timeZone: "America/Los_Angeles",
+        locale: "en-US",
+      })
+    )
+
+    expect(result.data[0]).toEqual({
+      title: "Heat",
+      date: "2026-11-01T19:30:00-08:00",
+      started: "2026-11-01T19:30:00-08:00",
+      stopped: "2026-11-01T21:30:00-08:00",
+      duration: 7200,
+    })
+  })
+
+  it("writes UTC with an explicit offset when no zone is given", async () => {
+    jest.mocked(getTautulliHomeStat).mockResolvedValue({ success: true, data: [{ user: "Sam", last_play: 1793590200 }] })
+
+    const result = JSON.parse(await executeTautulliTool("get_tautulli_top_users", {}))
+
+    expect(result).toEqual([{ user: "Sam", last_play: "2026-11-02T03:30:00+00:00" }])
   })
 })

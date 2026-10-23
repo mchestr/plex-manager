@@ -61,8 +61,16 @@ enum AuthService {
 model Setup {
   id          String    @id @default(cuid())
   isComplete  Boolean   @default(false)
-  currentStep Int       @default(1)
+  // The wizard's position: a SetupStepId (types/setup.ts) or "summary" (P10.24)
+  currentStepId String  @default("plex")
   completedAt DateTime?
+  // The first-run claim (P11.32, lib/setup/claim.ts): the SHA-256 of the newest
+  // setup code (cleared once used), and the claim the `pm-setup` cookie names.
+  // Both are cleared when setup completes.
+  claimCodeHash     String?
+  claimCodeIssuedAt DateTime?
+  claimId           String?
+  claimedAt         DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -484,6 +492,8 @@ model Config {
   llmDailyCapAdminUsd          Float     @default(5) // Daily assistant spend per admin
   llmDailyCapServerUsd         Float     @default(5) // Daily assistant spend for the whole server
   lightThemeEnabled            Boolean   @default(false) // Members may pick the light theme (P10.10, ui-design-system 3.3)
+  lastRetentionRunAt           DateTime? // When the retention sweep last finished (P11.14)
+  lastRetentionSummary         Json? // That run's per-rule counts (P11.14)
   updatedAt                    DateTime  @updatedAt
   updatedBy                    String? // User ID who last updated this config
 }
@@ -880,6 +890,8 @@ model Subscription {
   cancelAtPeriodEnd    Boolean            @default(false)
   canceledAt           DateTime? // When the subscription was canceled
   plexInviteStatus     String? // Tracks Plex invite lifecycle (e.g. "invited", "accepted")
+  jellyfinAccessStatus String? // The Jellyfin account the grant or revoke left: "enabled", "disabled" or "skipped" (P11.11)
+  accessSkipCode       String? // Why the last grant or revoke changed nothing, e.g. "NO_MEMBER_SERVICE"; null after one that acted
   stripeEventAt        DateTime? // `created` of the newest Stripe event applied; older events are skipped (SEC-37)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt

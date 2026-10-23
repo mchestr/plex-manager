@@ -1,5 +1,6 @@
 import { expect, test, TEST_USERS } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
+import { clearRateLimits } from '../helpers/rate-limits';
 import { REWIND_YEAR, seedRewindIssue } from '../helpers/seed-rewind';
 import { WAIT_TIMEOUTS } from '../helpers/test-utils';
 
@@ -54,6 +55,12 @@ test.describe('Rewind share sheet', () => {
   });
 
   test.afterAll(cleanUp);
+
+  // Every browser project signs in as the same admin, and `rw:share-actions`
+  // allows 10 an hour: start each test with the budget full.
+  test.beforeEach(async () => {
+    if (process.env.REDIS_URL) await clearRateLimits(process.env.REDIS_URL, ['rw:share-actions']);
+  });
 
   test('creates, rotates and stops a public link', async ({ adminPage }) => {
     await adminPage.goto(`/rewind/${YEAR}?sheet=share`);

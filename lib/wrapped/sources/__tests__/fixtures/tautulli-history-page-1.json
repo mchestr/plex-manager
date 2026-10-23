@@ -53,8 +53,7 @@
           "group_count": 1,
           "group_ids": "1001",
           "state": null,
-          "session_key": null,
-          "section_id": 2
+          "session_key": null
         },
         {
           "reference_id": 2001,
@@ -100,8 +99,7 @@
           "group_count": 2,
           "group_ids": "2001,2101",
           "state": null,
-          "session_key": null,
-          "section_id": 1
+          "session_key": null
         }
       ]
     }

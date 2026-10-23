@@ -247,6 +247,8 @@ export const authOptions: NextAuthOptions = {
                   image: plexUser.thumb,
                   isAdmin,
                   primaryAuthService: "plex",
+                  // The owner set the server up, so member onboarding is done: "Open admin" lands on /admin (UI-03)
+                  ...(isOwner && { onboardingStatus: { plex: true, jellyfin: false } }),
                 },
               })
             )

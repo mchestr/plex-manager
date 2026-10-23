@@ -23,8 +23,6 @@ interface MemberPassProps {
   jellyfin: boolean
   /** A same-origin path (`safeCallbackPath`) to land on after signing in. */
   callbackUrl?: string
-  /** `getAssistantDisclosure()`: admins can review assistant conversations, and who processes them (P11.16). */
-  assistantDisclosure: string
 }
 
 /**
@@ -33,7 +31,7 @@ interface MemberPassProps {
  * straight to plex.tv, with no forced wait. Jellyfin is the secondary option,
  * revealed in place. The copy says the Plex token is kept (GAP-34).
  */
-export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl, assistantDisclosure }: MemberPassProps) {
+export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }: MemberPassProps) {
   const headingId = useId()
   return (
     <Pass aria-labelledby={headingId} data-testid="member-pass">
@@ -42,7 +40,7 @@ export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl, 
         <h1 id={headingId} className="mt-5 text-display text-foreground">
           Sign in to {serverName}
         </h1>
-        <p className="mt-2 text-lead text-muted-foreground">Members watch, request titles and open their Rewind here.</p>
+        <p className="mt-2 text-lead text-muted-foreground">Members manage their account and find links to everything on the server here.</p>
         {plex ? (
           <PlexOptions serverName={serverName} jellyfin={jellyfin} callbackUrl={callbackUrl} />
         ) : (
@@ -50,10 +48,6 @@ export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl, 
             <JellyfinSignInButton serverName={serverName} showDisclaimer={false} callbackUrl={callbackUrl} />
           </div>
         )}
-        <p className="mt-6 text-caption text-muted-foreground" data-testid="member-pass-privacy">
-          Server admins can see your watch activity and your Rewind. Some Rewind text is written by an AI service.{" "}
-          {assistantDisclosure}
-        </p>
       </div>
       <PassStub>
         <p className="text-label text-muted-foreground">Member pass</p>
@@ -64,7 +58,7 @@ export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl, 
   )
 }
 
-function PlexOptions({ serverName, jellyfin, callbackUrl }: Omit<MemberPassProps, "monogram" | "plex" | "assistantDisclosure">) {
+function PlexOptions({ serverName, jellyfin, callbackUrl }: Omit<MemberPassProps, "monogram" | "plex">) {
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [jellyfinOpen, setJellyfinOpen] = useState(false)

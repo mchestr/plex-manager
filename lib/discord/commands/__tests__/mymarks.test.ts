@@ -102,6 +102,10 @@ const linkedUser: VerifyDiscordUserResult = {
     name: "Test User",
     email: "t@example.com",
     plexUserId: "plex-1",
+    jellyfinUserId: null,
+    primaryAuthService: "plex",
+    services: ["plex"],
+    timezone: null,
     isAdmin: false,
   },
 }
@@ -288,6 +292,16 @@ describe("myMarksCommand.handle — rendering", () => {
     expect(allValues).toContain("The Office (2005)")
     expect(allValues).toContain("Seinfeld (1989)")
     expect(allValues).toContain("Friends (1994)")
+  })
+
+  it("points to the account page for deleting a mark (P11.15)", async () => {
+    findMany.mockResolvedValue([makeMark({ title: "The Office", year: 2005 })])
+    count.mockResolvedValue(1)
+    const { ctx, editReply } = createMockContext()
+
+    await myMarksCommand.handle(ctx)
+
+    expect(firstEmbedData(editReply).description).toMatch(/Delete a mark on your account page: https?:\/\/\S+\/account$/)
   })
 
   it("shows an empty-state message when the user has no marks", async () => {

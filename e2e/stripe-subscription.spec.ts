@@ -1,8 +1,10 @@
 import type { Browser, BrowserContext } from '@playwright/test';
+import { Queue } from 'bullmq';
 
 import { generateMockWrappedData } from '../lib/wrapped/mock-data';
 import { expect, test, TEST_USERS } from './fixtures/auth';
 import { signInAs } from './fixtures/session';
+import { JELLYFIN_MEMBERS } from './helpers/jellyfin-members';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { REWIND_STATISTICS } from './helpers/seed-fixtures';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
@@ -307,6 +309,14 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       await expect(toggle).toHaveAttribute('aria-checked', 'false');
       await toggle.click();
 
+      // The seeded Jellyfin-only member is not exempt, so turning Stripe on
+      // asks first, naming them (P11.11).
+      const confirm = adminPage.getByTestId('stripe-enable-jellyfin-confirm');
+      if (await confirm.waitFor({ timeout: 5_000 }).then(() => true, () => false)) {
+        await expect(confirm).toContainText('will be asked to subscribe');
+        await adminPage.getByTestId('stripe-enable-jellyfin-confirm-button').click();
+      }
+
       // Enabling succeeds: the switch reflects the on state after the action +
       // refresh complete.
       await expect(toggle).toHaveAttribute('aria-checked', 'true', {
@@ -367,6 +377,111 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       await expect(
         regularUserPage.getByTestId('subscribe-plan-list')
       ).not.toBeVisible();
+    });
+  });
+
+  // P11.11: grant and revoke act on the Jellyfin account, against the mock
+  // Jellyfin server global setup starts. Stripe is stubbed as above: no secret
+  // key, so the jobs skip the live Stripe check, and the spec enqueues the
+  // grant and revoke jobs the webhook would enqueue on checkout and on
+  // cancellation at period end. The in-process worker runs them.
+  test.describe('Jellyfin-only member (P11.11)', () => {
+    const SERVER_ID = 'e2e-stripe-jellyfin-mock';
+    const [JF_MEMBER] = JELLYFIN_MEMBERS;
+    const JELLYFIN_ID = JF_MEMBER.jellyfinUserId;
+    let queue: Queue;
+
+    function mockUrl(): string {
+      const url = process.env.E2E_JELLYFIN_URL;
+      if (!url) throw new Error('E2E_JELLYFIN_URL is unset: e2e/global-setup.ts starts the mock Jellyfin server');
+      return url;
+    }
+
+    /** The account's `IsDisabled` as the mock stores it. */
+    async function isDisabledOnMock(): Promise<unknown> {
+      const response = await fetch(`${mockUrl()}/__mock/users/${JELLYFIN_ID}`);
+      const user = (await response.json()) as { Policy: { IsDisabled?: unknown } };
+      return user.Policy.IsDisabled;
+    }
+
+    async function setDisabledOnMock(disabled: boolean): Promise<void> {
+      const response = await fetch(`${mockUrl()}/__mock/users/${JELLYFIN_ID}`);
+      const user = (await response.json()) as { Policy: Record<string, unknown> };
+      await fetch(`${mockUrl()}/Users/${JELLYFIN_ID}/Policy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...user.Policy, IsDisabled: disabled }),
+      });
+    }
+
+    test.beforeAll(async () => {
+      queue = new Queue('plex-wrapped', { connection: { url: process.env.REDIS_URL ?? 'redis://localhost:6379' } });
+      const prisma = createE2EPrismaClient();
+      try {
+        const row = { name: 'E2E Jellyfin', url: mockUrl(), apiKey: 'e2e-jellyfin-key', isActive: true, enabledForLogin: true };
+        await prisma.jellyfinServer.updateMany({ where: { id: { not: SERVER_ID } }, data: { isActive: false } });
+        await prisma.jellyfinServer.upsert({ where: { id: SERVER_ID }, create: { id: SERVER_ID, ...row }, update: row });
+        await prisma.user.upsert({ where: { id: JF_MEMBER.id }, create: JF_MEMBER, update: { ...JF_MEMBER, isExempt: false } });
+        // Stripe on with no secret key: no live Stripe call from the jobs
+        await prisma.config.upsert({
+          where: { id: 'config' },
+          update: { stripeEnabled: true, stripeSecretKey: null },
+          create: { id: 'config', stripeEnabled: true },
+        });
+      } finally {
+        await prisma.$disconnect();
+      }
+    });
+
+    test.afterAll(async () => {
+      await setDisabledOnMock(false);
+      await queue.close();
+      const prisma = createE2EPrismaClient();
+      try {
+        await prisma.jellyfinServer.deleteMany({ where: { id: SERVER_ID } });
+      } finally {
+        await prisma.$disconnect();
+      }
+      await resetStripeState([JF_MEMBER.id]);
+    });
+
+    test('subscribing turns the account on, and cancelling turns it off', async ({ browser, baseURL }) => {
+      test.skip(!baseURL, 'needs the app URL');
+      const prisma = createE2EPrismaClient();
+      let context: BrowserContext | undefined;
+      try {
+        await setDisabledOnMock(true);
+
+        // checkout.session.completed: an ACTIVE row and the grant job
+        await prisma.subscription.upsert({
+          where: { userId: JF_MEMBER.id },
+          create: { userId: JF_MEMBER.id, status: 'ACTIVE' },
+          update: { status: 'ACTIVE', stripeSubscriptionId: null, jellyfinAccessStatus: null },
+        });
+        await queue.add('plex:access:grant', { userId: JF_MEMBER.id }, { jobId: `plex-access-grant-${JF_MEMBER.id}-e2e-${Date.now()}` });
+        await expect.poll(isDisabledOnMock, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION }).toBe(false);
+
+        context = await browser.newContext();
+        await signInAs(context, baseURL!, JF_MEMBER.id);
+        const page = await context.newPage();
+        await page.goto('/subscribe/success');
+        await expect(page.getByTestId('subscribe-success-jellyfin-enabled')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+        await expect(page.getByTestId('subscribe-success-provisioning')).toHaveCount(0);
+
+        // customer.subscription.deleted at period end: CANCELED and the revoke job
+        await prisma.subscription.update({
+          where: { userId: JF_MEMBER.id },
+          data: { status: 'CANCELED', stripeSubscriptionId: `sub_e2e_jf_${Date.now()}` },
+        });
+        await queue.add('plex:access:revoke', { userId: JF_MEMBER.id }, { jobId: `plex-access-revoke-${JF_MEMBER.id}-e2e-${Date.now()}` });
+        await expect.poll(isDisabledOnMock, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION }).toBe(true);
+        await expect
+          .poll(async () => (await prisma.subscription.findUnique({ where: { userId: JF_MEMBER.id } }))?.jellyfinAccessStatus)
+          .toBe('disabled');
+      } finally {
+        await context?.close();
+        await prisma.$disconnect();
+      }
     });
   });
 });

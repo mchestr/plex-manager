@@ -40,7 +40,7 @@ import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { getPlexWatchlist, validatePlexToken } from "./plex-watchlist"
 import { WATCHLIST_SKIP_COPY, type WatchlistSkipCode } from "./skip"
-import { processWatchlistItems } from "./sync-run"
+import { markRemovedItems, processWatchlistItems } from "./sync-run"
 
 const logger = createLogger("WATCHLIST_SYNC")
 
@@ -206,6 +206,11 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
       overseerrUserId,
     })
 
+    // Titles missing from a complete read were removed from the watchlist (P11.14)
+    const removed = watchlist.complete
+      ? await markRemovedItems(userId, watchlist.data.map((item) => item.ratingKey))
+      : 0
+
     // A run that leaves work behind keeps no ETag, so the next run reads the list again
     const complete = watchlist.complete && counts.failed === 0 && counts.deferred === 0
     const handled = counts.requested + counts.available + counts.alreadyRequested + counts.skipped + counts.notPermitted
@@ -228,7 +233,7 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
       watchlistEtag: complete ? watchlist.etag : null,
     })
 
-    logger.info("Watchlist sync completed", { userId, ...counts, durationMs: Date.now() - startTime })
+    logger.info("Watchlist sync completed", { userId, ...counts, removed, durationMs: Date.now() - startTime })
 
     return {
       success: true,

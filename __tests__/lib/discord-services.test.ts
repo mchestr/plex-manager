@@ -2,7 +2,7 @@
  * Tests for lib/discord/services.ts - Discord chat functionality
  */
 
-import { handleDiscordChat } from "@/lib/discord/services"
+import { clearDiscordChat, handleDiscordChat, verifyDiscordUser } from "@/lib/discord/services"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { getOrCreateSession, appendTurn } from "@/lib/discord/chat-session"
 import { mockReset } from 'jest-mock-extended'
@@ -158,6 +158,7 @@ describe("handleDiscordChat", () => {
         conversationId: "conversation-1",
         context: "discord",
         isAdmin: false,
+        format: expect.objectContaining({ locale: "en-US" }),
       })
     })
 
@@ -197,6 +198,47 @@ describe("handleDiscordChat", () => {
         channelId: "channel-123",
         userId: "user-1",
       })
+    })
+  })
+
+  describe("the member's zone and the app locale (P11.17)", () => {
+    beforeEach(() => {
+      mockRunChatbotForUser.mockResolvedValue({
+        success: true,
+        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+      })
+    })
+
+    it("uses the member's own zone and Config.locale", async () => {
+      mockPrisma.discordConnection.findUnique.mockResolvedValue({
+        ...mockConnection,
+        user: { ...mockConnection.user, timezone: "America/Los_Angeles" },
+      } as never)
+      mockPrisma.config.findUnique.mockResolvedValue(
+        buildConfig({ stripeEnabled: false, locale: "en-gb", timezone: "Europe/Berlin" })
+      )
+
+      await handleDiscordChat({ discordUserId: "discord-123", channelId: "channel-123", message: "what did I mark today?" })
+
+      expect(mockRunChatbotForUser).toHaveBeenCalledWith(
+        expect.objectContaining({ format: { timeZone: "America/Los_Angeles", locale: "en-GB" } })
+      )
+    })
+
+    it("falls back to the server zone when the member set none", async () => {
+      mockPrisma.discordConnection.findUnique.mockResolvedValue({
+        ...mockConnection,
+        user: { ...mockConnection.user, timezone: null },
+      } as never)
+      mockPrisma.config.findUnique.mockResolvedValue(
+        buildConfig({ stripeEnabled: false, locale: "en-US", timezone: "Europe/Berlin" })
+      )
+
+      await handleDiscordChat({ discordUserId: "discord-123", channelId: "channel-123", message: "what did I mark today?" })
+
+      expect(mockRunChatbotForUser).toHaveBeenCalledWith(
+        expect.objectContaining({ format: { timeZone: "Europe/Berlin", locale: "en-US" } })
+      )
     })
   })
 
@@ -455,5 +497,104 @@ describe("handleDiscordChat", () => {
       })
       expect(mockAppendTurn).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe("verifyDiscordUser: the member's services (P11.12)", () => {
+  function linkedTo(identity: { plexUserId: string | null; jellyfinUserId: string | null; primaryAuthService: "plex" | "jellyfin" | null }) {
+    mockPrisma.discordConnection.findUnique.mockResolvedValue({
+      userId: "user-1",
+      revokedAt: null,
+      linkedAt: new Date("2026-01-01T00:00:00Z"),
+      metadataSyncedAt: null,
+      user: {
+        id: "user-1",
+        name: "Member",
+        email: null,
+        timezone: "Europe/Berlin",
+        isAdmin: false,
+        isExempt: false,
+        disabledAt: null,
+        subscription: null,
+        ...identity,
+      },
+    } as never)
+    mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: false } as never)
+  }
+
+  it("resolves a Jellyfin-only member with their service", async () => {
+    linkedTo({ plexUserId: null, jellyfinUserId: "jf-1", primaryAuthService: "jellyfin" })
+
+    const result = await verifyDiscordUser("discord-1")
+
+    expect(result.user).toEqual(
+      expect.objectContaining({ plexUserId: null, jellyfinUserId: "jf-1", primaryAuthService: "jellyfin", services: ["jellyfin"], timezone: "Europe/Berlin" })
+    )
+  })
+
+  it("resolves a member with both identities with both services, Plex first", async () => {
+    linkedTo({ plexUserId: "plex-1", jellyfinUserId: "jf-1", primaryAuthService: "jellyfin" })
+
+    const result = await verifyDiscordUser("discord-1")
+
+    expect(result.user?.services).toEqual(["plex", "jellyfin"])
+  })
+})
+
+describe("handleDiscordChat: the fallback reply names Jellyfin when it is configured (P11.12)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockPrisma.discordConnection.findUnique.mockResolvedValue({
+      userId: "user-1",
+      revokedAt: null,
+      user: { id: "user-1", isAdmin: false, isExempt: false, disabledAt: null, subscription: null },
+    } as never)
+    mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: false } as never)
+    mockGetOrCreateSession.mockResolvedValue({ id: "session-1", chatConversationId: "conversation-1", history: [], created: false })
+    mockAppendTurn.mockResolvedValue(undefined)
+    mockRunChatbotForUser.mockResolvedValue({ success: true, message: { role: "assistant", content: "  ", timestamp: 1 } })
+  })
+
+  it.each([
+    [1, "Plex, Jellyfin, Tautulli"],
+    [0, "Plex, Tautulli"],
+  ])("with %i active Jellyfin servers it lists %s", async (count, services) => {
+    mockPrisma.jellyfinServer.count.mockResolvedValue(count)
+
+    const result = await handleDiscordChat({ discordUserId: "discord-1", channelId: "channel-1", message: "hi" })
+
+    expect(result.message?.content).toContain(services)
+  })
+})
+
+describe("clearDiscordChat: a manual reset ends the conversation (P11.14)", () => {
+  const now = new Date()
+
+  it("writes endedAt on the old conversation before starting a new one", async () => {
+    mockPrisma.discordConnection.findUnique.mockResolvedValue({
+      id: "connection-1", userId: "user-1", discordUserId: "discord-123", username: "member", discriminator: null,
+      globalName: null, avatar: null, accessToken: "token", refreshToken: null, scope: null, expiresAt: null,
+      metadataSyncedAt: null, lastWatchedHours: null, linkedAt: now, revokedAt: null, lastError: null,
+      createdAt: now, updatedAt: now,
+    })
+    const session = {
+      id: "session-1", discordUserId: "discord-123", discordChannelId: "channel-123", chatConversationId: "conversation-old",
+      messages: [], lastMessageAt: now, isActive: true, createdAt: now, updatedAt: now,
+    }
+    mockPrisma.discordChatSession.findUnique.mockResolvedValue(session)
+    mockPrisma.chatConversation.updateMany.mockResolvedValue({ count: 1 })
+    mockPrisma.chatConversation.create.mockResolvedValue({ id: "conversation-new", userId: "user-1", createdAt: now, endedAt: null })
+    mockPrisma.discordChatSession.update.mockResolvedValue({ ...session, chatConversationId: "conversation-new" })
+
+    const result = await clearDiscordChat({ discordUserId: "discord-123", channelId: "channel-123" })
+
+    expect(result.success).toBe(true)
+    expect(mockPrisma.chatConversation.updateMany).toHaveBeenCalledWith({
+      where: { id: "conversation-old", endedAt: null },
+      data: { endedAt: expect.any(Date) },
+    })
+    expect(mockPrisma.discordChatSession.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ chatConversationId: "conversation-new" }) })
+    )
   })
 })

@@ -29,6 +29,16 @@ describe("tautulliHistoryRowSchema", () => {
     expect(row).not.toHaveProperty("viewed_duration")
   })
 
+  it("reads a row without section_id, which get_history never sends, and keeps its reference_id", () => {
+    expect(episodeRow).not.toHaveProperty("section_id")
+
+    const row = tautulliHistoryRowSchema.parse(episodeRow)
+
+    expect(row.reference_id).toBe("1001")
+    expect(row).not.toHaveProperty("section_id")
+    expect(tautulliHistoryRowSchema.parse({ ...episodeRow, reference_id: null }).reference_id).toBeNull()
+  })
+
   it("reads Tautulli's empty strings on a film as null", () => {
     expect(tautulliHistoryRowSchema.parse(movieRow)).toMatchObject({
       grandparent_rating_key: null,
@@ -36,12 +46,6 @@ describe("tautulliHistoryRowSchema", () => {
       parent_media_index: null,
       grandparent_title: null,
     })
-  })
-
-  it("reads a row without section_id, as Tautulli's get_history sends it, as null", () => {
-    const { section_id: _sectionId, ...withoutSection } = episodeRow
-
-    expect(tautulliHistoryRowSchema.parse(withoutSection).section_id).toBeNull()
   })
 
   it("rejects a watched_status outside 0 to 1", () => {

@@ -17,9 +17,18 @@ const POLL_LIMIT_MS = 120_000
 
 const isPaid = (data: SubscriptionProvisioning) => data.status === "ACTIVE" || data.status === "PAST_DUE"
 
-/** Payment confirmed and the Plex invite settled, accepted or waiting on the member's email. */
+/** The Plex step shows for a Plex member, and for a row that names no service yet. */
+const showsPlex = (data: SubscriptionProvisioning) => data.services.length === 0 || data.services.includes("plex")
+const showsJellyfin = (data: SubscriptionProvisioning) => data.services.includes("jellyfin")
+
+/**
+ * Payment confirmed, the Plex invite settled (accepted or waiting on the
+ * member's email) and the Jellyfin account turned on, for each service shown.
+ */
 const isSettled = (data: SubscriptionProvisioning) =>
-  isPaid(data) && (data.plexInviteStatus === "accepted" || data.plexInviteStatus === "pending")
+  isPaid(data) &&
+  (!showsPlex(data) || data.plexInviteStatus === "accepted" || data.plexInviteStatus === "pending") &&
+  (!showsJellyfin(data) || data.jellyfinAccessStatus === "enabled" || data.jellyfinAccessStatus === "skipped")
 
 function sharingLabel(libraryCount: number | null): string {
   if (libraryCount === null) return "Sharing every library with your Plex account"
@@ -45,11 +54,59 @@ function Step({ icon, tone, children, ...props }: StepProps) {
   )
 }
 
+/** The Plex line: the share, or the invite waiting in the member's email. */
+function PlexStep({ data, paid }: { data: SubscriptionProvisioning; paid: boolean }) {
+  if (paid && data.plexInviteStatus === "accepted") {
+    return (
+      <Step icon={icons.success} tone="done" data-testid="subscribe-success-accepted">
+        {sharingLabel(data.libraryCount)}
+      </Step>
+    )
+  }
+  if (paid && data.plexInviteStatus === "pending") {
+    return (
+      <Step icon={icons.info} tone="action" data-testid="subscribe-success-pending">
+        We&apos;ve sent a Plex invite to your email. Accept it to finish.
+      </Step>
+    )
+  }
+  return (
+    <Step icon={icons.pending} tone="waiting" data-testid="subscribe-success-provisioning">
+      {sharingLabel(data.libraryCount)}
+    </Step>
+  )
+}
+
+/** The Jellyfin line: the account turned on, or not found on the server. */
+function JellyfinStep({ data, paid }: { data: SubscriptionProvisioning; paid: boolean }) {
+  if (paid && data.jellyfinAccessStatus === "enabled") {
+    return (
+      <Step icon={icons.success} tone="done" data-testid="subscribe-success-jellyfin-enabled">
+        Your Jellyfin account is enabled
+      </Step>
+    )
+  }
+  if (paid && data.jellyfinAccessStatus === "skipped") {
+    return (
+      <Step icon={icons.info} tone="action" data-testid="subscribe-success-jellyfin-skipped">
+        We couldn&apos;t find your Jellyfin account. Ask the server admin to check it.
+      </Step>
+    )
+  }
+  return (
+    <Step icon={icons.pending} tone="waiting" data-testid="subscribe-success-jellyfin-provisioning">
+      Turning on your Jellyfin account
+    </Step>
+  )
+}
+
 /**
- * The success page's live checklist (UI-40): Payment confirmed, then the Plex
- * share or "Check your email to accept the invite", polled through
- * `getSubscriptionProvisioning` until both settle or 2 minutes pass. Below it,
- * the member-since and renewal dates once the subscription row has them.
+ * The success page's live checklist (UI-40): Payment confirmed, then one line
+ * per service the member uses (P11.11): the Plex share or "We've sent a Plex
+ * invite to your email", and "Your Jellyfin account is enabled". Polled
+ * through `getSubscriptionProvisioning` until all settle or 2 minutes pass.
+ * Below it, the member-since and renewal dates once the subscription row has
+ * them.
  */
 export function ProvisioningChecklist({ initial }: { initial: SubscriptionProvisioning }) {
   const f = useFormat()
@@ -83,19 +140,8 @@ export function ProvisioningChecklist({ initial }: { initial: SubscriptionProvis
         <Step icon={paid ? icons.success : icons.pending} tone={paid ? "done" : "waiting"} data-testid="subscribe-success-payment">
           {paid ? "Payment confirmed" : "Confirming your payment"}
         </Step>
-        {paid && data.plexInviteStatus === "accepted" ? (
-          <Step icon={icons.success} tone="done" data-testid="subscribe-success-accepted">
-            {sharingLabel(data.libraryCount)}
-          </Step>
-        ) : paid && data.plexInviteStatus === "pending" ? (
-          <Step icon={icons.info} tone="action" data-testid="subscribe-success-pending">
-            Check your email to accept the invite
-          </Step>
-        ) : (
-          <Step icon={icons.pending} tone="waiting" data-testid="subscribe-success-provisioning">
-            {sharingLabel(data.libraryCount)}
-          </Step>
-        )}
+        {showsPlex(data) && <PlexStep data={data} paid={paid} />}
+        {showsJellyfin(data) && <JellyfinStep data={data} paid={paid} />}
       </ul>
 
       {timedOut && !isSettled(data) && (

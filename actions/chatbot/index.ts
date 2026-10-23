@@ -6,6 +6,7 @@ import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionResult } from "@/lib/actions/result"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { prisma } from "@/lib/prisma"
+import { getFormatSettings } from "@/lib/settings/app-settings"
 import { recordIdSchema } from "@/lib/validations/params"
 
 import { type ChatMessage } from "@/lib/chatbot/types"
@@ -63,6 +64,8 @@ export const chatWithAdminBot = adminAction({
       messages: messages.map((m) => ({ ...m, timestamp: Date.now() })),
       conversationId,
       isAdmin: true,
+      // The admin assistant works in the server zone (P11.17)
+      format: await getFormatSettings(),
     })
     if (result.refusal === "BUDGET_EXCEEDED") return fail("RATE_LIMITED", result.error ?? "Daily budget reached")
     if (!result.success || !result.message) {

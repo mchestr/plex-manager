@@ -33,6 +33,13 @@ export function memberServices(user: MemberIdentity): AuthService[] {
   return services
 }
 
+const SERVICE_NAMES: Record<AuthService, string> = { plex: "Plex", jellyfin: "Jellyfin" }
+
+/** The services as copy names them: "Plex", "Jellyfin" or "Plex and Jellyfin". */
+export function serviceNames(services: readonly AuthService[]): string {
+  return services.map((service) => SERVICE_NAMES[service]).join(" and ")
+}
+
 /**
  * The member's own service: the stored one when it is linked, else the only
  * linked one, else Plex.

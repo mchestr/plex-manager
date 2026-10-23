@@ -37,6 +37,29 @@ export interface FormatSettings {
 
 export type DateInput = Date | string | number
 
+/** The locale when `Config.locale` is unset or invalid. */
+export const DEFAULT_LOCALE = "en-US"
+
+/**
+ * `Config.locale` in canonical form when `Intl` accepts it, else en-US. It
+ * sets `<html lang>` and every formatter's locale; it never changes the
+ * language of the copy (P11.17).
+ *
+ * @example
+ * ```ts
+ * canonicalLocale("en-gb")  // "en-GB"
+ * canonicalLocale("not a locale") // "en-US"
+ * ```
+ */
+export function canonicalLocale(locale: string | null | undefined): string {
+  if (!locale) return DEFAULT_LOCALE
+  try {
+    return Intl.getCanonicalLocales(locale)[0] ?? DEFAULT_LOCALE
+  } catch {
+    return DEFAULT_LOCALE
+  }
+}
+
 const intlCache = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat>()
 
 function cached<T extends Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat>(
@@ -149,6 +172,38 @@ export function formatDateTime(
   const options: Intl.DateTimeFormatOptions = { ...DATE_STYLES.short, ...TIME, timeZone }
   if (zoneLabel) options.timeZoneName = "short"
   return dateFormat(locale, options).format(toDate(value))
+}
+
+const ISO_PARTS: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+  timeZoneName: "longOffset",
+}
+
+/**
+ * An ISO 8601 timestamp in `timeZone`, with its offset, to the second: the
+ * form the assistant's tool results carry, so the model reads local wall time
+ * and never has to convert from UTC. UTC itself is `+00:00`.
+ *
+ * @example
+ * ```ts
+ * formatIsoWithOffset("2026-11-02T03:30:00Z", "America/Los_Angeles") // "2026-11-01T19:30:00-08:00"
+ * formatIsoWithOffset("2026-07-01T12:00:00Z", "Europe/Berlin")       // "2026-07-01T14:00:00+02:00"
+ * ```
+ */
+export function formatIsoWithOffset(value: DateInput, timeZone: string): string {
+  const parts: Record<string, string> = {}
+  for (const { type, value: part } of dateFormat("en-US", { ...ISO_PARTS, timeZone }).formatToParts(toDate(value))) {
+    parts[type] = part
+  }
+  // "GMT-08:00", "GMT+05:30", or plain "GMT" at zero
+  const offset = parts.timeZoneName === "GMT" ? "+00:00" : parts.timeZoneName.slice(3)
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}${offset}`
 }
 
 /**

@@ -29,7 +29,7 @@ const PAGE_DIR = path.join(process.cwd(), "app/auth/denied")
 
 beforeEach(() => {
   mockReset(prismaMock)
-  jest.mocked(getSetupStatus).mockResolvedValue({ isComplete: true, currentStep: 10 })
+  jest.mocked(getSetupStatus).mockResolvedValue({ isComplete: true, currentStepId: 'summary' })
 })
 
 describe("/auth/denied", () => {
@@ -53,7 +53,7 @@ describe("/auth/denied", () => {
   })
 
   it("sends an unfinished install to setup", async () => {
-    jest.mocked(getSetupStatus).mockResolvedValue({ isComplete: false, currentStep: 1 })
+    jest.mocked(getSetupStatus).mockResolvedValue({ isComplete: false, currentStepId: 'plex' })
 
     await expect(DeniedAccessPage()).rejects.toThrow("NEXT_REDIRECT /setup")
   })

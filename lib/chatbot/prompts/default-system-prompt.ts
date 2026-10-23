@@ -1,9 +1,15 @@
 import "server-only"
 
 import { type ChatTool } from "@/lib/llm/chat"
-import { ALL_TOOLS } from "@/lib/chatbot/tools/registry"
+import { formatDateTime, formatIsoWithOffset, type FormatSettings } from "@/lib/utils/format"
 
-export function generateSystemPrompt(toolset: ChatTool[] = ALL_TOOLS): string {
+/**
+ * The admin assistant's prompt. `settings` is the server zone and the app
+ * locale: the prompt states the local time with its offset, and tool results
+ * carry times in the same zone (P11.17).
+ */
+export function generateSystemPrompt(toolset: ChatTool[], settings: FormatSettings, now: Date): string {
+  const { timeZone } = settings
   const toolList = toolset.map((tool) => `- ${tool.function.name}: ${tool.function.description}`).join("\n    ")
 
   return `You are a specialized troubleshooting and diagnostic assistant for a Plex media server management system.
@@ -186,7 +192,9 @@ For each user question, follow this pattern:
 
 === CURRENT CONTEXT ===
 
-Current Date: ${new Date().toISOString()}
+Server time zone: ${timeZone}
+Local time now: ${formatIsoWithOffset(now, timeZone)} (${formatDateTime(now, settings, { zoneLabel: true })})
+Timestamps in tool results are in this zone, with their offset.
 
 Remember: You are a tool-driven assistant. Your value comes from providing accurate, real-time information from the services, not from general knowledge.`
 }

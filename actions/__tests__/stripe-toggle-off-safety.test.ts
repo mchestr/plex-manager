@@ -18,6 +18,7 @@ import {
   inviteUserToPlexServer,
   unshareUserFromPlexServer,
 } from '@/lib/connections/plex-invitations'
+import { setJellyfinAccountDisabled } from '@/lib/connections/jellyfin-users'
 import { getServerSession } from 'next-auth'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -51,6 +52,11 @@ jest.mock('@/lib/connections/plex-invitations', () => ({
   inviteUserToPlexServer: jest.fn(),
   unshareUserFromPlexServer: jest.fn(),
   acceptPlexInvite: jest.fn(),
+}))
+
+jest.mock('@/lib/connections/jellyfin-users', () => ({
+  ...jest.requireActual('@/lib/connections/jellyfin-users'),
+  setJellyfinAccountDisabled: jest.fn(),
 }))
 
 const mockPrisma = prismaMock
@@ -95,6 +101,15 @@ describe('setStripeEnabled(false) — safe & reversible toggle-off (FR-4)', () =
 
     // Existing subscriptions are left untouched (not queried for cancellation).
     expect(mockPrisma.subscription.findMany).not.toHaveBeenCalled()
+  })
+
+  it('leaves Jellyfin members alone: no account change and no member listing (P11.11)', async () => {
+    await setStripeEnabled(false)
+
+    expect(setJellyfinAccountDisabled).not.toHaveBeenCalled()
+    expect(mockPrisma.user.count).not.toHaveBeenCalled()
+    expect(mockPrisma.user.findMany).not.toHaveBeenCalled()
+    expect(mockPrisma.user.update).not.toHaveBeenCalled()
   })
 
   it('is idempotent: disabling again still performs no destructive work', async () => {
