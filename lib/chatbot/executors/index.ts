@@ -2,6 +2,7 @@ import "server-only"
 
 import { type ChatToolCall } from "@/lib/llm/chat"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES } from "../tools/registry"
 import { executeOverseerrTool } from "./overseerr"
@@ -48,7 +49,15 @@ function isToolError(output: string): boolean {
 }
 
 // Map tool names to their service executors
-const TOOL_SERVICE_MAP: Record<string, (toolName: string, args: Record<string, unknown>, userId?: string, context?: string) => Promise<string>> = {
+type ToolExecutor = (
+  toolName: string,
+  args: Record<string, unknown>,
+  userId?: string,
+  context?: string,
+  format?: FormatSettings
+) => Promise<string>
+
+const TOOL_SERVICE_MAP: Record<string, ToolExecutor> = {
   // Plex tools
   get_plex_status: executePlexTool,
   get_plex_sessions: executePlexTool,
@@ -108,7 +117,9 @@ export async function executeToolCall(
   toolCall: ChatToolCall,
   userId?: string,
   context?: string,
-  isAdmin?: boolean
+  isAdmin?: boolean,
+  /** The turn's zone and locale: tool results carry times in it (P11.17). */
+  format?: FormatSettings
 ): Promise<string> {
   const toolName = toolCall.function.name
   const rawArgs = toolCall.function.arguments || "{}"
@@ -184,7 +195,7 @@ export async function executeToolCall(
   })
 
   try {
-    const result = await executor(toolName, args, userId, context)
+    const result = await executor(toolName, args, userId, context, format)
 
     logger.debug("Chatbot tool execution completed", {
       toolName,

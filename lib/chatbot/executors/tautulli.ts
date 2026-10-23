@@ -3,8 +3,10 @@ import "server-only"
 import { findTautulliUser, getTautulliActivity, getTautulliHistory, getTautulliHomeStat, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliServerInfo, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { auditMemberRead } from "@/lib/security/audit-log"
+import { type FormatSettings } from "@/lib/utils/format"
 import { z } from "zod"
 import { withoutPersonalFields } from "./personal-fields"
+import { TAUTULLI_EPOCH_KEYS, UTC_FORMAT, withLocalTimestamps } from "./timestamps"
 import { toToolOutput } from "./tool-output"
 
 type TautulliConfig = Parameters<typeof findTautulliUser>[0]
@@ -53,8 +55,11 @@ export async function executeTautulliTool(
   toolName: string,
   args: Record<string, unknown>,
   userId?: string,
-  context?: string
+  context?: string,
+  format: FormatSettings = UTC_FORMAT
 ): Promise<string> {
+  // Epoch seconds reach the model as ISO strings with the turn zone's offset (P11.17)
+  const local = (data: unknown) => withLocalTimestamps(data, TAUTULLI_EPOCH_KEYS, format.timeZone)
   const server = await prisma.tautulli.findFirst({ where: { isActive: true } })
   if (!server) return "Error: No active Tautulli server configured."
 
@@ -79,10 +84,10 @@ export async function executeTautulliTool(
         return JSON.stringify({ error: activityResult.error })
       }
       if (context === "discord") {
-        return JSON.stringify(await scopeActivityToCaller(config, activityResult.data, userId))
+        return JSON.stringify(local(await scopeActivityToCaller(config, activityResult.data, userId)))
       }
 
-      return JSON.stringify(withoutPersonalFields(activityResult.data))
+      return JSON.stringify(local(withoutPersonalFields(activityResult.data)))
     }
     case "get_tautulli_library_stats": {
       const statsResult = await getTautulliLibraryStats(config)
@@ -103,7 +108,7 @@ export async function executeTautulliTool(
       if (!usersResult.success) {
         return JSON.stringify({ error: usersResult.error })
       }
-      return JSON.stringify(withoutPersonalFields(usersResult.data))
+      return JSON.stringify(local(withoutPersonalFields(usersResult.data)))
     }
     case "get_tautulli_watch_history": {
       const tautulliUserId = typeof args.userId === "number" ? args.userId : undefined
@@ -113,13 +118,13 @@ export async function executeTautulliTool(
         return JSON.stringify({ error: historyResult.error })
       }
       await auditTautulliMemberRead(tautulliUserId, userId)
-      return JSON.stringify(withoutPersonalFields(historyResult.data))
+      return JSON.stringify(local(withoutPersonalFields(historyResult.data)))
     }
     case "get_tautulli_recently_watched": {
       // get_history is newest first by default
       const limit = typeof args.limit === "number" ? args.limit : 20
       const recent = await getTautulliHistory(config, undefined, limit)
-      return toToolOutput(recent.success ? { ...recent, data: withoutPersonalFields(recent.data) } : recent)
+      return toToolOutput(recent.success ? { ...recent, data: local(withoutPersonalFields(recent.data)) } : recent)
     }
     case "get_tautulli_most_watched": {
       const limit = typeof args.limit === "number" ? args.limit : 20
@@ -129,11 +134,12 @@ export async function executeTautulliTool(
       ])
       if (!movies.success) return toToolOutput(movies)
       if (!tv.success) return toToolOutput(tv)
-      return JSON.stringify({ top_movies: movies.data, top_tv: tv.data })
+      return JSON.stringify(local({ top_movies: movies.data, top_tv: tv.data }))
     }
     case "get_tautulli_top_users": {
       const limit = typeof args.limit === "number" ? args.limit : 10
-      return toToolOutput(await getTautulliHomeStat(config, "top_users", limit, "duration"))
+      const topUsers = await getTautulliHomeStat(config, "top_users", limit, "duration")
+      return toToolOutput(topUsers.success ? { ...topUsers, data: local(topUsers.data) } : topUsers)
     }
     case "get_tautulli_user_watch_stats": {
       const tautulliUserId = typeof args.userId === "number" ? args.userId : undefined

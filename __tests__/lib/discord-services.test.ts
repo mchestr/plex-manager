@@ -158,6 +158,7 @@ describe("handleDiscordChat", () => {
         conversationId: "conversation-1",
         context: "discord",
         isAdmin: false,
+        format: expect.objectContaining({ locale: "en-US" }),
       })
     })
 
@@ -197,6 +198,47 @@ describe("handleDiscordChat", () => {
         channelId: "channel-123",
         userId: "user-1",
       })
+    })
+  })
+
+  describe("the member's zone and the app locale (P11.17)", () => {
+    beforeEach(() => {
+      mockRunChatbotForUser.mockResolvedValue({
+        success: true,
+        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+      })
+    })
+
+    it("uses the member's own zone and Config.locale", async () => {
+      mockPrisma.discordConnection.findUnique.mockResolvedValue({
+        ...mockConnection,
+        user: { ...mockConnection.user, timezone: "America/Los_Angeles" },
+      } as never)
+      mockPrisma.config.findUnique.mockResolvedValue(
+        buildConfig({ stripeEnabled: false, locale: "en-gb", timezone: "Europe/Berlin" })
+      )
+
+      await handleDiscordChat({ discordUserId: "discord-123", channelId: "channel-123", message: "what did I mark today?" })
+
+      expect(mockRunChatbotForUser).toHaveBeenCalledWith(
+        expect.objectContaining({ format: { timeZone: "America/Los_Angeles", locale: "en-GB" } })
+      )
+    })
+
+    it("falls back to the server zone when the member set none", async () => {
+      mockPrisma.discordConnection.findUnique.mockResolvedValue({
+        ...mockConnection,
+        user: { ...mockConnection.user, timezone: null },
+      } as never)
+      mockPrisma.config.findUnique.mockResolvedValue(
+        buildConfig({ stripeEnabled: false, locale: "en-US", timezone: "Europe/Berlin" })
+      )
+
+      await handleDiscordChat({ discordUserId: "discord-123", channelId: "channel-123", message: "what did I mark today?" })
+
+      expect(mockRunChatbotForUser).toHaveBeenCalledWith(
+        expect.objectContaining({ format: { timeZone: "Europe/Berlin", locale: "en-US" } })
+      )
     })
   })
 

@@ -7,6 +7,7 @@
 import {
   bindFormat,
   calendarMonthsBetween,
+  canonicalLocale,
   formatApproxDuration,
   formatBytes,
   formatCompact,
@@ -14,6 +15,7 @@ import {
   formatDateTime,
   formatDayKey,
   formatDuration,
+  formatIsoWithOffset,
   formatMoney,
   formatNumber,
   formatPercent,
@@ -103,6 +105,38 @@ describe("dates and times", () => {
     ["2026-10-25T01:30:00Z", "25. Okt. 2026, 02:30 MEZ"],
   ])("follows the Berlin DST change at %s", (instant, expected) => {
     expect(formatDateTime(instant, { timeZone: "Europe/Berlin", locale: "de-DE" }, { zoneLabel: true })).toBe(expected)
+  })
+})
+
+describe("canonicalLocale", () => {
+  it("canonicalises a valid locale and falls back to en-US", () => {
+    expect(canonicalLocale("en-gb")).toBe("en-GB")
+    expect(canonicalLocale("not a locale")).toBe("en-US")
+    expect(canonicalLocale(null)).toBe("en-US")
+  })
+})
+
+describe("formatIsoWithOffset", () => {
+  it.each([
+    // US spring change on 8 March 2026 and autumn change on 1 November 2026 (01:30 happens twice).
+    ["2026-03-08T09:30:00Z", "America/Los_Angeles", "2026-03-08T01:30:00-08:00"],
+    ["2026-03-08T10:30:00Z", "America/Los_Angeles", "2026-03-08T03:30:00-07:00"],
+    ["2026-11-01T08:30:00Z", "America/Los_Angeles", "2026-11-01T01:30:00-07:00"],
+    ["2026-11-01T09:30:00Z", "America/Los_Angeles", "2026-11-01T01:30:00-08:00"],
+    // EU spring change on 29 March 2026 and autumn change on 25 October 2026.
+    ["2026-03-29T00:30:00Z", "Europe/Berlin", "2026-03-29T01:30:00+01:00"],
+    ["2026-03-29T01:30:00Z", "Europe/Berlin", "2026-03-29T03:30:00+02:00"],
+    ["2026-10-25T00:30:00Z", "Europe/Berlin", "2026-10-25T02:30:00+02:00"],
+    ["2026-10-25T01:30:00Z", "Europe/Berlin", "2026-10-25T02:30:00+01:00"],
+  ])("writes %s in %s as %s", (instant, timeZone, expected) => {
+    expect(formatIsoWithOffset(instant, timeZone)).toBe(expected)
+    expect(Date.parse(expected)).toBe(Date.parse(instant))
+  })
+
+  it("writes UTC as +00:00, midnight as 00 and a half-hour offset in full", () => {
+    expect(formatIsoWithOffset(NEW_YEARS_EVE, "UTC")).toBe("2026-12-31T23:30:00+00:00")
+    expect(formatIsoWithOffset("2027-01-01T18:30:00Z", "Asia/Kolkata")).toBe("2027-01-02T00:00:00+05:30")
+    expect(formatIsoWithOffset("2026-07-01T12:00:00Z", "Europe/Berlin")).toBe("2026-07-01T14:00:00+02:00")
   })
 })
 
