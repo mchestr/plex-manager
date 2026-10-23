@@ -73,6 +73,38 @@ On the same page a member can delete, one at a time and only their own (`actions
 
 Share links and hidden titles keep their own controls on the Rewind.
 
+## Retention
+
+A daily sweep (`lib/queue/jobs/retention.ts`) removes personal data once it is older than its window. It runs at 03:30 in the server zone on the job queue; without Redis, one app process runs it under the `retention` database lease when the last run is more than 24 hours old. Each window can be changed with its `RETENTION_<NAME>_DAYS` variable (`lib/retention/policy.ts`, at least 1 day). **Admin → Settings → Privacy** lists the windows and the last run with its counts per rule, and **Run now** runs the sweep at once (audited as `RETENTION_RUN`). The sweep never touches a row before its window ends, and running it twice removes nothing more.
+
+| Data | Kept for | Then | Variable |
+|---|---|---|---|
+| Rewind AI text (`LLMUsage` rows with no conversation, or tied to a Rewind) | 120 days | `prompt` and `response` set to null; tokens, cost and model kept (design 7.10) | `RETENTION_REWIND_LLM_TEXT_DAYS` |
+| Assistant AI text (`LLMUsage` rows in a conversation) | 90 days | `prompt` and `response` set to null; tokens, cost and model kept | `RETENTION_ASSISTANT_LLM_TEXT_DAYS` |
+| Assistant conversations (`ChatConversation`) | 180 days after it ends | Deleted; its `LLMUsage` rows keep their cost without the link, and its Discord sessions go with it. A conversation ends on an idle or manual reset, or when its Discord session is deleted | `RETENTION_CHAT_CONVERSATION_DAYS` |
+| Discord chat turns (`DiscordChatSession.messages`) | 1 idle day | `messages` emptied | `RETENTION_DISCORD_CHAT_MESSAGES_DAYS` |
+| Discord chat sessions (`DiscordChatSession`) | 30 idle days | Deleted, and its conversation ended | `RETENTION_DISCORD_CHAT_SESSION_DAYS` |
+| Discord command arguments (`DiscordCommandLog.commandArgs`) | 7 days | `commandArgs` set to null | `RETENTION_DISCORD_COMMAND_ARGS_DAYS` |
+| Discord command log (`DiscordCommandLog`) | 90 days | Deleted | `RETENTION_DISCORD_COMMAND_LOG_DAYS` |
+| Share-link visit counts (`RewindShareVisitDay`) | 90 days | Deleted (design 6.2) | `RETENTION_SHARE_VISITS_DAYS` |
+| Rewind reading records (`RewindView`) | 120 days | Deleted (design 7.10) | `RETENTION_REWIND_VIEW_DAYS` |
+| Titles removed from a watchlist (`WatchlistSyncHistory`) | 30 days after the sync saw them gone | Deleted. A complete watchlist read marks missing titles `REMOVED_FROM_WATCHLIST`; other rows stay while the member has sync | `RETENTION_WATCHLIST_REMOVED_DAYS` |
+| Discord link attempts (`DiscordOAuthState`) | 1 day after it expires | Deleted | `RETENTION_DISCORD_OAUTH_STATE_DAYS` |
+| Parked Discord searches (`DiscordPendingSelection`) | until it expires | Deleted | none |
+| Replaced Rewinds (`RewindGeneration.previousData`) | until 30 June after its season (2026's until 2027-06-30) | Set to null; the one rollback is then gone (design 7.9) | none |
+| Audit log (`AuditLog`) | 400 days | Deleted; this is the only way audit rows are removed | `RETENTION_AUDIT_LOG_DAYS` |
+
+Every other row in the member tables below is kept while the member is, and goes when they are removed. `WrappedShareVisit` (v2 share visits) is deleted with its Rewind. Server logs are kept for as long as the operator's log rotation keeps them.
+
+### Stored tokens
+
+- **`User.plexAuthToken`** (the member's plex.tv token): kept while the member has access, and cleared on unshare, the Stripe revoke and removal.
+- **`DiscordConnection` access and refresh tokens**: kept until the member unlinks, and revoked at Discord on unlink and on removal.
+- **Invite codes** (`Invite.code`): kept until the invite is deleted. Admins see them to share them, so they are not hashed.
+- **Rewind share tokens**: stored only as SHA-256 hashes (`RewindShare.tokenHash`); the token itself is never stored.
+- **Service keys** (Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr, LLM providers, Stripe, Discord app): kept until an admin replaces them.
+- Every secret column is encrypted at rest when `ENCRYPTION_KEY` is set (the last column of the tables below).
+
 ## Inventory
 
 Readers: M is the member, A is admins, P is the public. "Cascade" means the row is deleted with the `User` row.
@@ -123,7 +155,7 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `DiscordIntegration` | Discord app credentials and bot settings; `updatedBy` admin id | `clientSecret`, `botToken` |
 | `DiscordBotLock` | which instance runs the bot | No |
 | `WatchlistSyncLock` | which instance runs the sync | No |
-| `LeaseLock` | which instance holds each lease (Discord bot, watchlist sync) and until when | No |
+| `LeaseLock` | which instance holds each lease (Discord bot, watchlist sync, retention) and until when | No |
 | `RewindServerAggregate` | server-wide yearly totals, no per-member rows | No |
 | `MediaMetadataCache` | Plex metadata per title | No |
 | `RewindEvalRun` | Rewind copy eval results on fixture data; `createdBy` admin id | No |

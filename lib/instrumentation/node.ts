@@ -41,8 +41,8 @@ async function issueSetupCode() {
 
 /**
  * Starts the BullMQ worker once Redis answers. Without `REDIS_URL` the
- * database-lease watchlist fallback runs instead; with it, never, so two sync
- * paths never run at once.
+ * database-lease watchlist and retention fallbacks run instead; with it,
+ * never, so two sync or sweep paths never run at once.
  */
 async function startQueueWorker() {
   if (process.env.ENABLE_QUEUE_WORKER === "false") {
@@ -54,7 +54,13 @@ async function startQueueWorker() {
   if (!redisUrl) {
     logger.debug("Queue worker disabled: REDIS_URL not configured")
     const { startWatchlistFallback } = await import("@/lib/watchlist/fallback")
-    await startWatchlistFallback({ signal: shutdownSignal })
+    const { startRetentionFallback } = await import("@/lib/retention/fallback")
+    await Promise.all([
+      startWatchlistFallback({ signal: shutdownSignal }),
+      startRetentionFallback({ signal: shutdownSignal }).catch((error) =>
+        logger.error("Retention fallback start failed", error)
+      ),
+    ])
     return
   }
 
@@ -85,6 +91,9 @@ async function startQueueWorker() {
 
   await startWorker()
   await scheduleRoleReconcile().catch((error) => logger.error("Could not schedule the Discord role reconcile", error))
+
+  const { ensureRetentionSchedule } = await import("@/lib/retention/schedule")
+  await ensureRetentionSchedule().catch((error) => logger.error("Could not schedule the retention sweep", error))
 
   // The settings save calls this too, so a change applies without a restart.
   await ensureWatchlistSchedule()

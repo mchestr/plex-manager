@@ -12,6 +12,8 @@ import { startWorker } from "@/lib/queue/worker"
 import { startWatchlistFallback } from "@/lib/watchlist/fallback"
 import { ensureWatchlistSchedule } from "@/lib/watchlist/schedule"
 import { issueSetupCode } from "@/lib/setup/claim"
+import { startRetentionFallback } from "@/lib/retention/fallback"
+import { ensureRetentionSchedule } from "@/lib/retention/schedule"
 
 // The queue worker and the bot poller start side by side, so a Redis that is
 // down at boot never stops the Discord bot (BP-13).
@@ -40,6 +42,8 @@ jest.mock("@/lib/queue/jobs/discord-role", () => ({
 }))
 jest.mock("@/lib/watchlist/fallback", () => ({ startWatchlistFallback: jest.fn() }))
 jest.mock("@/lib/watchlist/schedule", () => ({ ensureWatchlistSchedule: jest.fn() }))
+jest.mock("@/lib/retention/fallback", () => ({ startRetentionFallback: jest.fn().mockResolvedValue(null) }))
+jest.mock("@/lib/retention/schedule", () => ({ ensureRetentionSchedule: jest.fn().mockResolvedValue(undefined) }))
 jest.mock("@/lib/locks/lease-poller", () => ({
   DEFAULT_POLL_INTERVAL_MS: 10_000,
   LeasePoller: jest.fn().mockImplementation(() => ({
@@ -111,7 +115,9 @@ describe("startNodeInstrumentation() with Redis unreachable", () => {
     expect(waitForRedis).not.toHaveBeenCalled()
     expect(startWatchlistFallback).toHaveBeenCalledTimes(1)
     expect(startWatchlistFallback).toHaveBeenCalledWith({ signal: shutdownSignal })
+    expect(startRetentionFallback).toHaveBeenCalledWith({ signal: shutdownSignal })
     expect(ensureWatchlistSchedule).not.toHaveBeenCalled()
+    expect(ensureRetentionSchedule).not.toHaveBeenCalled()
     expect(botPollerStarted()).toBe(true)
   })
 
@@ -122,7 +128,9 @@ describe("startNodeInstrumentation() with Redis unreachable", () => {
     await startNodeInstrumentation()
 
     expect(startWatchlistFallback).not.toHaveBeenCalled()
+    expect(startRetentionFallback).not.toHaveBeenCalled()
     expect(ensureWatchlistSchedule).toHaveBeenCalledTimes(1)
+    expect(ensureRetentionSchedule).toHaveBeenCalledTimes(1)
   })
 })
 

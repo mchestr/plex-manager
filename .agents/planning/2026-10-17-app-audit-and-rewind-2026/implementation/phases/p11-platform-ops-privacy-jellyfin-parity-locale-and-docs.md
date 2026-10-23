@@ -721,11 +721,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** On a staging copy, the Privacy section shows the windows. "Run now" reports counts per rule. A second run reports zeros, and `LLMUsage` rows older than 120 days keep their cost but have no text.
 
 **Done when.**
-- [ ] A daily sweep applies every documented window, with and without Redis.
-- [ ] `ChatConversation.endedAt` is written, and watchlist removals are recorded.
-- [ ] The Privacy settings section shows the windows and the last run, with an audited "Run now".
-- [ ] `docs/privacy.md` states the retention of every content table and stored token.
+- [x] A daily sweep applies every documented window, with and without Redis.
+- [x] `ChatConversation.endedAt` is written, and watchlist removals are recorded.
+- [x] The Privacy settings section shows the windows and the last run, with an audited "Run now".
+- [x] `docs/privacy.md` states the retention of every content table and stored token.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270117000004_p1114_retention_run` adds `Config.lastRetentionRunAt` and `lastRetentionSummary` (per-rule counts). Rule ids, windows and the twelve `RETENTION_*_DAYS` variables are in `lib/retention/policy.ts` (`retentionDays()`, `retentionPolicy()`, `RETENTION_RULES`); an unreadable value keeps the default and a value below 1 becomes 1. `runRetentionSweep({ now, signal, batchSize })` in `lib/queue/jobs/retention.ts` is the one sweep (job, fallback and "Run now"); it records the run only when it was not aborted. Rewind text is an `LLMUsage` row with no conversation or with a `generationId`/`wrappedId`; assistant text is the rest. Deleting a 30-day-idle `DiscordChatSession` also ends its conversation, so its 180-day window starts. `previousData` is nulled for seasons whose 30 June of the next year has passed (UTC), not only for 2027-06-30. The scheduler (`retention-sweep`, `30 3 * * *`, `Config.timezone`) is upserted at boot on the main `plex-wrapped` queue (P11.3 moves it to the worker role) and has no `retention:<date>` deduplication id: a scheduler fires once a day and the sweep is idempotent; a time zone change applies at the next restart. Without Redis, `startRetentionFallback` (`lib/retention/fallback.ts`) polls the `retention` lease every 5 minutes and runs when `lastRetentionRunAt` is over 24 hours old, retrying a failure after an hour. "Run now" is `runRetentionNow` (`actions/admin/retention.ts`, `admin` rate limit, audit `RETENTION_RUN` with counts) and runs in the request. The Privacy section is `components/admin/settings/sections/privacy-section.tsx` (anchor `privacy`, test ids `settings-retention-run`, `-last-run`, `-windows`, `-<rule>`, `-count-<rule>`), its test `components/admin/settings/__tests__/privacy-section.test.tsx`, its read `getRetentionStatus()` in `lib/data/retention.ts`. Watchlist removals: `markRemovedItems` (`lib/watchlist/sync-run.ts`) runs after every complete read and stamps `syncedAt` with the removal time. `docs/privacy.md` has a Retention section with its own table and a Stored tokens section rather than a new column in the inventory tables, to stay clear of P11.15's edits; its first cells are not bare model names, because the inventory test counts those. Web assistant conversations are never ended, so they are not deleted; only their text expires.)
 
 ### Step P11.15: Member export and item-level deletion
 
