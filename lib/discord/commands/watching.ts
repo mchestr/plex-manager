@@ -17,6 +17,7 @@
  * /watching
  *   │
  *   ├─ not linked ─────────────► ephemeral "link your account" nudge
+ *   ├─ Jellyfin only ──────────► ephemeral explicit reason (P11.12)
  *   ├─ defer (ephemeral) ──────► server calls are slow
  *   ├─ no active Plex server ──► ephemeral error
  *   ├─ fetch failure ──────────► ephemeral error
@@ -35,6 +36,7 @@ import { getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { matchesSessionUser } from "@/lib/connections/plex-sessions"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
+import { isJellyfinOnly, JELLYFIN_COPY } from "@/lib/discord/copy"
 import { formatResolution } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import type { InteractionContext, SlashCommand } from "./registry"
@@ -224,6 +226,11 @@ async function handleWatching(ctx: InteractionContext): Promise<void> {
     action: "I can show what you're watching",
   })
   if (!user) return
+
+  if (isJellyfinOnly(user.services)) {
+    await interaction.reply({ content: JELLYFIN_COPY.watching, flags: MessageFlags.Ephemeral })
+    return
+  }
 
   // Plex calls are slow; ack now (ephemerally) to stay under Discord's 3s window.
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })

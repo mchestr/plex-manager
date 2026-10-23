@@ -38,8 +38,9 @@ async function revalidateUsers(userId: string): Promise<void> {
  * Setting `cancel_at_period_end: true` (rather than deleting immediately) keeps
  * the single source of truth in the webhook: Stripe fires
  * `customer.subscription.deleted` at the end of the paid period, and the normal
- * webhook path is what removes Plex access. This action therefore performs **no**
- * immediate Plex removal — it only tells Stripe to stop renewing.
+ * webhook path is what removes access (the Plex share, the Jellyfin account, or
+ * both). This action therefore performs **no** immediate removal — it only
+ * tells Stripe to stop renewing.
  *
  * @param input - `{ userId }`: the app user whose subscription should be canceled.
  * @returns `ok(null)` once Stripe is updated, or a coded failure.
@@ -85,17 +86,18 @@ export const adminCancelSubscription = adminAction({
 })
 
 /**
- * Grants a user comp (complimentary) access to the Plex server.
+ * Grants a user comp (complimentary) access on the services they use.
  *
  * ## Behavior (FR-24 / R10)
  *
  * 1. Refuses without the job queue (`REDIS_URL`), which runs the grant.
  * 2. Marks the user `isExempt = true` with `exemptReason = "comp"` so the
  *    subscription gate treats them as covered independent of Stripe.
- * 3. Enqueues the shared {@link JOB_TYPES.PLEX_ACCESS_GRANT} job so the user is
- *    invited to (and auto-accepted onto) the active Plex server — reusing the
- *    exact same grant path as a paid checkout. If the enqueue fails, the
- *    exemption is put back as it was.
+ * 3. Enqueues the shared {@link JOB_TYPES.PLEX_ACCESS_GRANT} job, which invites
+ *    a Plex member to (and auto-accepts them onto) the active Plex server and
+ *    turns a Jellyfin member's account on (P11.11) — the exact same grant
+ *    path as a paid checkout. If the enqueue fails, the exemption is put back
+ *    as it was.
  *
  * The grant job id is keyed by the user (matching the checkout path) so a repeat
  * grant collapses onto a single job rather than creating duplicate invites.

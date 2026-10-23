@@ -42,6 +42,7 @@ let sessionCounter: number
 
 const createSpy = jest.fn()
 const upsertSpy = jest.fn()
+const endSpy = jest.fn()
 
 function findSession(where: {
   id?: string
@@ -64,6 +65,10 @@ const store = {
       conversationCounter += 1
       owners.set(`conversation-${conversationCounter}`, args.data.userId)
       return Promise.resolve({ id: `conversation-${conversationCounter}`, userId: args.data.userId })
+    },
+    updateMany: (args: { where: { id: string; endedAt: null }; data: { endedAt: Date } }) => {
+      endSpy(args)
+      return Promise.resolve({ count: 1 })
     },
   },
   discordChatSession: {
@@ -118,6 +123,7 @@ beforeEach(() => {
   sessionCounter = 0
   createSpy.mockClear()
   upsertSpy.mockClear()
+  endSpy.mockClear()
   mockPrisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(store))
 })
 
@@ -173,6 +179,11 @@ describe("getOrCreateSession", () => {
     // The unique tuple means the row was reset in place, not duplicated.
     expect(sessions).toHaveLength(1)
     expect(sessions[0].chatConversationId).toBe("conversation-1")
+    // The idle conversation ends, which starts its retention window (P11.14)
+    expect(endSpy).toHaveBeenCalledWith({
+      where: { id: "conversation-old", endedAt: null },
+      data: { endedAt: expect.any(Date) },
+    })
   })
 
   it("resets a session that is inactive even if recently used", async () => {

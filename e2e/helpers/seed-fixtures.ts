@@ -24,7 +24,10 @@ export const VISUAL_ONBOARDING_USER = {
   email: 'visual-onboarding@example.com',
 } as const;
 
-export const VISUAL_INVITES = { valid: 'VISUALOK', expired: 'VISUALEXP' } as const;
+/** `Config.locale` in the shared seed; the screenshots' dates and numbers are in it. */
+export const SEEDED_LOCALE = 'en-US';
+
+export const VISUAL_INVITES ={ valid: 'VISUALOK', expired: 'VISUALEXP' } as const;
 
 /** Fixed row ids, for the detail routes the axe spec visits. */
 export const VISUAL_INVITE_IDS = { valid: 'visual-invite-ok', expired: 'visual-invite-expired' } as const;
@@ -90,7 +93,7 @@ export async function seedVisualFixtures(): Promise<void> {
   try {
     await prisma.$transaction(async (tx) => {
       await tx.setup.deleteMany();
-      await tx.setup.create({ data: { isComplete: true, currentStep: 5, completedAt: daysAgo(shown, 30) } });
+      await tx.setup.create({ data: { isComplete: true, currentStepId: 'summary', completedAt: daysAgo(shown, 30) } });
 
       // Service configs: only the Plex server and the Discord integration.
       await tx.tautulli.deleteMany();
@@ -132,6 +135,8 @@ export async function seedVisualFixtures(): Promise<void> {
         rewindSeasonOpens: '01-01',
         rewindSeasonCloses: '12-31',
         timezone: null,
+        // `<html lang>` follows it (P11.17, e2e/accessibility.spec.ts)
+        locale: SEEDED_LOCALE,
         watchlistSyncEnabled: false,
         watchlistSyncIntervalMinutes: 60,
         stripeEnabled: false,

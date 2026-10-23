@@ -14,8 +14,8 @@ import {
 } from '@/lib/queue/jobs'
 import {
   processStripeWebhook,
-  processPlexAccessGrant,
-  processPlexAccessRevoke,
+  processAccessGrant,
+  processAccessRevoke,
 } from '@/lib/queue/jobs/stripe'
 import { JOB_TYPES } from '@/lib/queue/types'
 
@@ -67,7 +67,7 @@ describe('getJobProcessor dispatch', () => {
 
   it('resolves the grant processor for PLEX_ACCESS_GRANT', () => {
     expect(getJobProcessor(JOB_TYPES.PLEX_ACCESS_GRANT)).toBe(
-      processPlexAccessGrant
+      processAccessGrant
     )
   })
 
@@ -77,7 +77,7 @@ describe('getJobProcessor dispatch', () => {
 
   it('resolves the revoke processor for PLEX_ACCESS_REVOKE', () => {
     expect(getJobProcessor(JOB_TYPES.PLEX_ACCESS_REVOKE)).toBe(
-      processPlexAccessRevoke
+      processAccessRevoke
     )
   })
 })

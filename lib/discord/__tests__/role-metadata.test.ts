@@ -2,13 +2,13 @@
  * Tests for lib/discord/role-metadata.ts.
  *
  * `computeRoleMetadata` reports exactly two Discord Linked-Roles fields:
- *   - is_subscribed: an entitled member (getAccessLevel "full") with live Plex
- *     server access (always present; false when indeterminate).
- *   - watched_hours: Tautulli-derived integer hours, recomputed only with
- *     `refreshHours`, otherwise the stored `lastWatchedHours`.
+ *   - is_subscribed: an entitled member (getAccessLevel "full") with live
+ *     access on a service: a Plex share, or an enabled Jellyfin account.
+ *   - watched_hours: the member's year stats in whole hours, recomputed only
+ *     with `refreshHours`, otherwise the stored `lastWatchedHours`.
  *
- * The external service calls (Plex access check, Tautulli stats) and the
- * active-server / Tautulli lookups are mocked; the access level runs for real
+ * The external service calls (Plex access check, Jellyfin user, year stats)
+ * and the active-server lookups are mocked; the access level runs for real
  * against the typed Prisma mock.
  */
 
@@ -17,10 +17,12 @@ import {
   IS_SUBSCRIBED_KEY,
   WATCHED_HOURS_KEY,
 } from "@/lib/discord/role-metadata"
+import { getJellyfinUserById } from "@/lib/connections/jellyfin-users"
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
+import { getMemberYearStats, memberStatsYear } from "@/lib/discord/stats/member-stats"
+import { statsFromFacts, type MemberYearStats } from "@/lib/discord/stats/year-stats"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
-import { fetchTautulliStatistics } from "@/lib/wrapped/tautulli-statistics"
 import type { UpstreamLimiter } from "@/lib/wrapped/sources/watch-history-source"
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -43,15 +45,22 @@ jest.mock("@/lib/connections/plex-config", () => ({
   getActivePlexServerConfig: jest.fn(),
 }))
 
-jest.mock("@/lib/wrapped/tautulli-statistics", () => ({
-  fetchTautulliStatistics: jest.fn(),
+jest.mock("@/lib/connections/jellyfin-users", () => ({
+  getJellyfinUserById: jest.fn(),
+}))
+
+jest.mock("@/lib/discord/stats/member-stats", () => ({
+  getMemberYearStats: jest.fn(),
+  memberStatsYear: jest.fn(),
 }))
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
 const mockCheckAccess = checkUserServerAccess as jest.Mock
 const mockGetPlexConfig = getActivePlexServerConfig as jest.Mock
-const mockFetchStats = fetchTautulliStatistics as jest.Mock
+const mockGetJellyfinUser = getJellyfinUserById as jest.Mock
+const mockFetchStats = getMemberYearStats as jest.Mock
+const mockStatsYear = memberStatsYear as jest.Mock
 
 const PLEX_SERVER = {
   name: "Home",
@@ -62,13 +71,27 @@ const PLEX_SERVER = {
   machineIdentifier: "this-server-machine-id",
 }
 
-const TAUTULLI_SERVER = {
-  url: "https://tautulli.example.com",
-  apiKey: "tautulli-key",
-  isActive: true,
-}
+const JELLYFIN_SERVER = { url: "https://jellyfin.example.com", apiKey: "jf-key" }
 
-const USER = { id: "user-1", plexUserId: "user-42", lastWatchedHours: null }
+const USER = { id: "user-1", plexUserId: "user-42", jellyfinUserId: null, timezone: null, lastWatchedHours: null }
+const JELLYFIN_MEMBER = { ...USER, plexUserId: null, jellyfinUserId: "jf-1" }
+
+/** Year stats with `totalMinutes` watched. */
+function statsOf(totalMinutes: number): { ok: true; stats: MemberYearStats } {
+  return {
+    ok: true,
+    stats: {
+      year: 2026,
+      source: "history",
+      totalMinutes,
+      counts: { episodes: 0, series: 0, films: 0 },
+      topShow: null,
+      topFilm: null,
+      peakHour: null,
+      longestStreakDays: null,
+    },
+  }
+}
 const REFRESH = { refreshHours: true }
 
 /** The access level's inputs: Stripe gating and the member's row. */
@@ -89,7 +112,9 @@ beforeEach(() => {
   // Sensible defaults: Stripe off, an enabled member, no Plex server, no Tautulli.
   givenMember(false)
   mockGetPlexConfig.mockResolvedValue(null)
-  prismaMock.tautulli.findFirst.mockResolvedValue(null)
+  prismaMock.jellyfinServer.findFirst.mockResolvedValue(null)
+  mockStatsYear.mockResolvedValue({ year: 2026, zone: "America/Chicago" })
+  mockFetchStats.mockResolvedValue({ ok: false, code: "NO_TAUTULLI" })
 })
 
 describe("computeRoleMetadata - is_subscribed", () => {
@@ -191,6 +216,67 @@ describe("computeRoleMetadata - is_subscribed", () => {
   })
 })
 
+describe("computeRoleMetadata - Jellyfin access", () => {
+  beforeEach(() => {
+    prismaMock.jellyfinServer.findFirst.mockResolvedValue(JELLYFIN_SERVER as never)
+  })
+
+  it("counts an enabled Jellyfin account as subscribed", async () => {
+    mockGetJellyfinUser.mockResolvedValue({ success: true, data: { Id: "jf-1", Policy: { IsDisabled: false } } })
+
+    const { metadata } = await computeRoleMetadata(JELLYFIN_MEMBER, REFRESH)
+
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(true)
+    expect(mockGetJellyfinUser).toHaveBeenCalledWith(JELLYFIN_SERVER, "jf-1")
+    expect(mockCheckAccess).not.toHaveBeenCalled()
+  })
+
+  it("does not count a disabled Jellyfin account", async () => {
+    mockGetJellyfinUser.mockResolvedValue({ success: true, data: { Id: "jf-1", Policy: { IsDisabled: true } } })
+
+    const { metadata } = await computeRoleMetadata(JELLYFIN_MEMBER, REFRESH)
+
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(false)
+  })
+
+  it("does not count an account Jellyfin no longer has", async () => {
+    mockGetJellyfinUser.mockResolvedValue({ success: false, notFound: true, error: "User not found" })
+
+    const { metadata } = await computeRoleMetadata(JELLYFIN_MEMBER, REFRESH)
+
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(false)
+  })
+
+  it("pushes no update when Jellyfin cannot answer", async () => {
+    mockGetJellyfinUser.mockResolvedValue({ success: false, error: "Failed to fetch user" })
+
+    expect(await computeRoleMetadata({ ...JELLYFIN_MEMBER, lastWatchedHours: 5 }, REFRESH)).toEqual({
+      metadata: null,
+      watchedHours: 5,
+    })
+  })
+
+  it("a member with both services is subscribed when Plex is unknown but Jellyfin is enabled", async () => {
+    mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
+    mockCheckAccess.mockResolvedValue({ status: "unknown", reason: "plex_unavailable" })
+    mockGetJellyfinUser.mockResolvedValue({ success: true, data: { Id: "jf-1", Policy: { IsDisabled: false } } })
+
+    const { metadata } = await computeRoleMetadata({ ...USER, jellyfinUserId: "jf-1" }, REFRESH)
+
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(true)
+  })
+
+  it("a member with both services is not subscribed when Plex denies and Jellyfin is disabled", async () => {
+    mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
+    mockCheckAccess.mockResolvedValue({ status: "denied" })
+    mockGetJellyfinUser.mockResolvedValue({ success: true, data: { Id: "jf-1", Policy: { IsDisabled: true } } })
+
+    const { metadata } = await computeRoleMetadata({ ...USER, jellyfinUserId: "jf-1" }, REFRESH)
+
+    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(false)
+  })
+})
+
 describe("computeRoleMetadata - watched_hours", () => {
   beforeEach(() => {
     // Isolate watched_hours tests from Plex access.
@@ -198,37 +284,49 @@ describe("computeRoleMetadata - watched_hours", () => {
     mockCheckAccess.mockResolvedValue({ status: "granted" })
   })
 
-  it("derives integer hours from Tautulli totalWatchTime (minutes, floored)", async () => {
-    prismaMock.tautulli.findFirst.mockResolvedValue(TAUTULLI_SERVER as never)
-    mockFetchStats.mockResolvedValue({
-      success: true,
-      data: { totalWatchTime: 185 }, // 185 minutes -> 3 hours
-    })
+  it("derives integer hours from the member's year stats (minutes, floored)", async () => {
+    mockFetchStats.mockResolvedValue(statsOf(185)) // 185 minutes -> 3 hours
 
     const { metadata, watchedHours } = await computeRoleMetadata(USER, REFRESH)
 
     expect(metadata?.[WATCHED_HOURS_KEY]).toBe(3)
     expect(watchedHours).toBe(3)
-    expect(mockFetchStats).toHaveBeenCalledWith(
-      { url: TAUTULLI_SERVER.url, apiKey: TAUTULLI_SERVER.apiKey },
-      { plexUserId: USER.plexUserId },
-      new Date().getFullYear()
-    )
+    expect(mockStatsYear).toHaveBeenCalledWith(null)
+    expect(mockFetchStats).toHaveBeenCalledWith(USER.id, {
+      year: 2026,
+      zone: "America/Chicago",
+      limiter: expect.anything(),
+      signal: undefined,
+    })
   })
 
-  it("runs the Tautulli scan through the given limiter", async () => {
-    prismaMock.tautulli.findFirst.mockResolvedValue(TAUTULLI_SERVER as never)
-    mockFetchStats.mockResolvedValue({ success: true, data: { totalWatchTime: 120 } })
+  it("takes the year in the member's own zone", async () => {
+    mockFetchStats.mockResolvedValue(statsOf(60))
+
+    await computeRoleMetadata({ ...USER, timezone: "America/Los_Angeles" }, REFRESH)
+
+    expect(mockStatsYear).toHaveBeenCalledWith("America/Los_Angeles")
+  })
+
+  it("reads hours from the stored Rewind's facts", async () => {
+    const facts = { "time.totalMinutes": { value: 78420, display: "78,420 minutes", unit: "duration" as const } }
+    mockFetchStats.mockResolvedValue({ ok: true, stats: statsFromFacts(2026, facts) })
+
+    const { metadata } = await computeRoleMetadata(USER, REFRESH)
+
+    expect(metadata?.[WATCHED_HOURS_KEY]).toBe(1307)
+  })
+
+  it("passes the given limiter to the stats read", async () => {
+    mockFetchStats.mockResolvedValue(statsOf(120))
     const limiter: UpstreamLimiter = { run: jest.fn((_service, fn) => fn()) }
 
     await computeRoleMetadata(USER, { refreshHours: true, limiter })
 
-    expect(limiter.run).toHaveBeenCalledWith("tautulli", expect.any(Function), { signal: undefined })
+    expect(mockFetchStats).toHaveBeenCalledWith(USER.id, expect.objectContaining({ limiter }))
   })
 
-  it("an event-driven sync reuses lastWatchedHours without calling Tautulli", async () => {
-    prismaMock.tautulli.findFirst.mockResolvedValue(TAUTULLI_SERVER as never)
-
+  it("an event-driven sync reuses lastWatchedHours without reading stats", async () => {
     const { metadata, watchedHours } = await computeRoleMetadata(
       { ...USER, lastWatchedHours: 42 },
       { refreshHours: false }
@@ -237,7 +335,6 @@ describe("computeRoleMetadata - watched_hours", () => {
     expect(metadata).toEqual({ [IS_SUBSCRIBED_KEY]: true, [WATCHED_HOURS_KEY]: 42 })
     expect(watchedHours).toBe(42)
     expect(mockFetchStats).not.toHaveBeenCalled()
-    expect(prismaMock.tautulli.findFirst).not.toHaveBeenCalled()
   })
 
   it("an event-driven sync with no stored hours omits watched_hours", async () => {
@@ -247,34 +344,14 @@ describe("computeRoleMetadata - watched_hours", () => {
     expect(watchedHours).toBeNull()
   })
 
-  it("omits watched_hours when Tautulli is not configured", async () => {
-    const { metadata } = await computeRoleMetadata(USER, REFRESH)
-
-    expect(WATCHED_HOURS_KEY in (metadata ?? {})).toBe(false)
-    expect(mockFetchStats).not.toHaveBeenCalled()
-  })
-
-  it("omits watched_hours when the user has no plexUserId", async () => {
-    prismaMock.tautulli.findFirst.mockResolvedValue(TAUTULLI_SERVER as never)
-
-    const { metadata } = await computeRoleMetadata({ ...USER, plexUserId: null }, REFRESH)
-
-    expect(WATCHED_HOURS_KEY in (metadata ?? {})).toBe(false)
-    expect(mockFetchStats).not.toHaveBeenCalled()
-  })
-
-  it("omits watched_hours when the stats lookup is unsuccessful", async () => {
-    prismaMock.tautulli.findFirst.mockResolvedValue(TAUTULLI_SERVER as never)
-    mockFetchStats.mockResolvedValue({ success: false, error: "no user" })
-
+  it("omits watched_hours when no stats can be read", async () => {
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
     expect(WATCHED_HOURS_KEY in (metadata ?? {})).toBe(false)
   })
 
   it("keeps the stored hours when a refresh fails", async () => {
-    prismaMock.tautulli.findFirst.mockResolvedValue(TAUTULLI_SERVER as never)
-    mockFetchStats.mockRejectedValue(new Error("tautulli down"))
+    mockFetchStats.mockResolvedValue({ ok: false, code: "UNAVAILABLE" })
 
     const { metadata, watchedHours } = await computeRoleMetadata({ ...USER, lastWatchedHours: 7 }, REFRESH)
 
@@ -282,14 +359,13 @@ describe("computeRoleMetadata - watched_hours", () => {
     expect(watchedHours).toBe(7)
   })
 
-  it("omits watched_hours when the stats lookup throws (degradation)", async () => {
-    prismaMock.tautulli.findFirst.mockResolvedValue(TAUTULLI_SERVER as never)
+  it("omits watched_hours when the stats read throws (degradation)", async () => {
     mockFetchStats.mockRejectedValue(new Error("tautulli down"))
 
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
     expect(WATCHED_HOURS_KEY in (metadata ?? {})).toBe(false)
-    // Plex-derived field is unaffected by the Tautulli failure.
+    // The access field is unaffected by the stats failure.
     expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(true)
   })
 })
@@ -298,11 +374,7 @@ describe("computeRoleMetadata - combined", () => {
   it("returns both fields when both sources succeed", async () => {
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
     mockCheckAccess.mockResolvedValue({ status: "granted" })
-    prismaMock.tautulli.findFirst.mockResolvedValue(TAUTULLI_SERVER as never)
-    mockFetchStats.mockResolvedValue({
-      success: true,
-      data: { totalWatchTime: 3600 }, // 60 hours
-    })
+    mockFetchStats.mockResolvedValue(statsOf(3600)) // 60 hours
 
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
@@ -317,7 +389,7 @@ describe("computeRoleMetadata - combined", () => {
     mockCheckAccess.mockResolvedValue({ status: "granted" })
 
     const { metadata } = await computeRoleMetadata(
-      { id: "user-1", plexUserId: "123", lastWatchedHours: 42 },
+      { id: "user-1", plexUserId: "123", jellyfinUserId: null, timezone: null, lastWatchedHours: 42 },
       { refreshHours: false }
     )
 

@@ -95,17 +95,27 @@ export async function getSupportThreadIds(): Promise<string[]> {
   return parseThreadIdCsv(process.env.DISCORD_SUPPORT_THREAD_IDS)
 }
 
+/** The app's base URL for links in bot replies, without a trailing slash. Env-only. */
+function appBaseUrl(): string {
+  return (
+    process.env.PLEX_WRAPPED_BASE_URL?.replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    "http://localhost:3000"
+  )
+}
+
 /**
  * The account-linking portal URL shown in "link your account" nudges. Mirrors the
  * resolution `bot.ts` uses at startup: `DISCORD_PORTAL_URL` if set, else
  * `<base>/discord/link`. Synchronous (env-only) so nudges can build it cheaply.
  */
 export function getDiscordPortalUrl(): string {
-  const base =
-    process.env.PLEX_WRAPPED_BASE_URL?.replace(/\/$/, "") ||
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-    "http://localhost:3000"
-  return process.env.DISCORD_PORTAL_URL || `${base}/discord/link`
+  return process.env.DISCORD_PORTAL_URL || `${appBaseUrl()}/discord/link`
+}
+
+/** The member's account page, where they delete marks and download their data (P11.15). */
+export function getAccountUrl(): string {
+  return `${appBaseUrl()}/account`
 }
 
 /**

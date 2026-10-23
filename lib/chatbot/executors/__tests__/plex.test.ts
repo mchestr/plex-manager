@@ -48,7 +48,7 @@ beforeEach(() => {
 })
 
 async function sessionTitlesFor(plexUserId: string): Promise<string[]> {
-  prismaMock.user.findUnique.mockResolvedValue({ plexUserId } as never)
+  prismaMock.user.findUnique.mockResolvedValue({ plexUserId, jellyfinUserId: null } as never)
   const result = JSON.parse(await executePlexTool("get_plex_sessions", {}, "user-1", "discord")) as {
     data: { sessions: { mediaTitle?: string }[] }
   }
@@ -65,6 +65,26 @@ describe("executePlexTool get_plex_sessions in Discord", () => {
 
     expect(titles).toHaveLength(1)
     expect(titles[0]).toContain("Severance")
+  })
+})
+
+describe("executePlexTool get_plex_sessions for a Jellyfin-only member (P11.12)", () => {
+  it("says the member is on Jellyfin instead of reporting no sessions", async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: null, jellyfinUserId: "jf-1" } as never)
+
+    const result = JSON.parse(await executePlexTool("get_plex_sessions", {}, "user-1", "discord"))
+
+    expect(result).toEqual({ unavailable: "jellyfin-member" })
+  })
+
+  it("still scopes a member with both services to their Plex streams", async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: "1001", jellyfinUserId: "jf-1" } as never)
+
+    const result = JSON.parse(await executePlexTool("get_plex_sessions", {}, "user-1", "discord")) as {
+      data: { sessions: unknown[] }
+    }
+
+    expect(result.data.sessions).toHaveLength(1)
   })
 })
 

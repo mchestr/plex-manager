@@ -570,11 +570,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** In Stripe test mode, a Jellyfin-only member subscribes: the success page says "Your Jellyfin account is enabled", and the account works. Cancel at period end and run the revoke: the account is disabled, while a Jellyfin administrator in the same state is left alone, with a logged reason.
 
 **Done when.**
-- [ ] Grant and revoke act on Plex, Jellyfin or both, following the member's linked services.
-- [ ] No path invites a username-derived email; members without a usable identity are skipped with a code.
-- [ ] A Jellyfin administrator is never disabled, and the existing guards still hold.
-- [ ] Copy, admin dialogs and `docs/stripe.md` describe the per-service behaviour, and the tests pass.
+- [x] Grant and revoke act on Plex, Jellyfin or both, following the member's linked services.
+- [x] No path invites a username-derived email; members without a usable identity are skipped with a code.
+- [x] A Jellyfin administrator is never disabled, and the existing guards still hold.
+- [x] Copy, admin dialogs and `docs/stripe.md` describe the per-service behaviour, and the tests pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270117000001_p1111_subscription_jellyfin_access` adds `Subscription.jellyfinAccessStatus` and also `Subscription.accessSkipCode`, where `NO_MEMBER_SERVICE` is recorded (null after a grant or revoke that acted). `grantServiceAccess(user)` sits beside P11.13's `revokeServiceAccess` in `lib/members/access-actions.ts`; it turns Jellyfin on first and invites Plex last, so a retry never invites twice, and returns failure codes (`NO_PLEX_SERVER`, `NO_JELLYFIN_SERVER`, `PLEX_INVITE_FAILED`, `JELLYFIN_UNAVAILABLE`) that the job throws to retry. A Plex invite needs a `plexUserId` and its email; otherwise the Plex part is skipped. The revoke guard asks `isJellyfinAdmin` between the stored-state and live Stripe checks and skips the whole revoke (Plex too) for `'admin'` or `'unknown'`. `startCheckout` now lets a Jellyfin-only member with no email check out. `setStripeEnabled` takes `boolean | { enabled: true, confirmJellyfinMembers: true }` and returns `{ status: "saved" }` or `{ status: "confirm", jellyfinMembers: { count, names } }` (non-admin, non-exempt, enabled Jellyfin-only members); the switch shows `stripe-enable-jellyfin-confirm`. `UserActionTarget` gains `services`; `serviceNames()` in `lib/members/service.ts`. Billing tab rows `admin-user-plex-invite-status` / `admin-user-jellyfin-access-status`; success checklist `subscribe-success-jellyfin-enabled` / `-provisioning` / `-skipped`; the pending-invite notice carries `jellyfinEnabled`. Job labels read "Member access grant/removal". The E2E case enqueues the grant and revoke jobs itself with Stripe on and no secret key (no Stripe stub exists); written, not run.)
 
 ### Step P11.12: Discord for Jellyfin members; stats from stored facts
 
@@ -613,10 +615,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Link Discord as the seeded Jellyfin member: `/mystats` and `/watching` give the explicit replies, and the linked role shows "subscribed". For a Plex member with a completed 2026 Rewind, `/mystats` answers from stored facts, and the Tautulli access log shows no request.
 
 **Done when.**
-- [ ] Discord identity carries Jellyfin, and every command or tool gives Jellyfin-only members a real answer or an explicit reason.
-- [ ] `is_subscribed` follows access on each service.
-- [ ] `/mystats` and the role hours read stored v3 facts or at most 20 pages of history for the member's year.
-- [ ] `fetchTautulliStatistics` and the Discord-only v2 modules are deleted.
+- [x] Discord identity carries Jellyfin, and every command or tool gives Jellyfin-only members a real answer or an explicit reason.
+- [x] `is_subscribed` follows access on each service.
+- [x] `/mystats` and the role hours read stored v3 facts or at most 20 pages of history for the member's year.
+- [x] `fetchTautulliStatistics` and the Discord-only v2 modules are deleted.
+
+(as merged: `verifyDiscordUser`'s user gains `jellyfinUserId`, `primaryAuthService`, `services` and `timezone` (the member's `User.timezone`, for P11.17). `lib/discord/copy.ts` holds `JELLYFIN_COPY` (mystats, watching, mark), `isJellyfinOnly(services)` and `assistantFallbackReply(jellyfinConfigured)`; the commands reply before deferring. The executors return `JELLYFIN_MEMBER` (`{ unavailable: "jellyfin-member" }`, `lib/chatbot/executors/tool-output.ts`) from `get_plex_sessions` and the Discord `get_tautulli_activity`; `generateDiscordSystemPrompt(toolset, { jellyfin })` takes an options object that P11.17 can extend with the zone, and `runChatbotForUser` sets it from an active `JellyfinServer`. `computeRoleMetadata`'s user is `{ id, plexUserId, jellyfinUserId, timezone, lastWatchedHours }`; access is true when either service grants it, null (push nothing) when none grants and one is unknown. Stats live in `lib/discord/stats/`: `getMemberYearStats(userId, { year, zone, limiter?, signal? })` returns `{ ok, stats }` or `NO_PLEX_ACCOUNT` / `NO_TAUTULLI` / `UNAVAILABLE`; `memberStatsYear(timezone, now?)` gives the year and zone; the pure `statsFromFacts` / `statsFromEvents` are in `year-stats.ts`. The history read is P2.4's source with a new `maxPages` option (20) over `yearWindow` (whole calendar year, `finalCut: true` context), honouring `RewindExclusion` for the top titles but not P2.6's content-rating exclusions; the default limiter is `redisLimiter` when Redis is configured; Redis key `discord:stats:<userId>:<year>:<zone>`, 15 minutes. A v1/v2 completed row falls through to the history read. `/mystats` formats the peak hour in en-US (P11.17 owns locale; after the P11 integration it formats it in `Config.locale`, and the prompt is `generateDiscordSystemPrompt(toolset, { format, now, jellyfin })`). Deleted: `lib/wrapped/{tautulli-statistics,tautulli-user-statistics,derived-statistics,statistics-types}.ts`, their tests, the v2 history schemas in `lib/validations/tautulli.ts` and the `DerivedStatistics` type export. The member-stats tests are in `lib/discord/stats/__tests__/member-stats.test.ts` (goldens included); the services cases are in `__tests__/lib/discord-services.test.ts`.)
 
 ### Step P11.13: Member offboarding and deletion
 
@@ -719,11 +723,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** On a staging copy, the Privacy section shows the windows. "Run now" reports counts per rule. A second run reports zeros, and `LLMUsage` rows older than 120 days keep their cost but have no text.
 
 **Done when.**
-- [ ] A daily sweep applies every documented window, with and without Redis.
-- [ ] `ChatConversation.endedAt` is written, and watchlist removals are recorded.
-- [ ] The Privacy settings section shows the windows and the last run, with an audited "Run now".
-- [ ] `docs/privacy.md` states the retention of every content table and stored token.
+- [x] A daily sweep applies every documented window, with and without Redis.
+- [x] `ChatConversation.endedAt` is written, and watchlist removals are recorded.
+- [x] The Privacy settings section shows the windows and the last run, with an audited "Run now".
+- [x] `docs/privacy.md` states the retention of every content table and stored token.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270117000004_p1114_retention_run` adds `Config.lastRetentionRunAt` and `lastRetentionSummary` (per-rule counts). Rule ids, windows and the twelve `RETENTION_*_DAYS` variables are in `lib/retention/policy.ts` (`retentionDays()`, `retentionPolicy()`, `RETENTION_RULES`); an unreadable value keeps the default and a value below 1 becomes 1. `runRetentionSweep({ now, signal, batchSize })` in `lib/queue/jobs/retention.ts` is the one sweep (job, fallback and "Run now"); it records the run only when it was not aborted. Rewind text is an `LLMUsage` row with no conversation or with a `generationId`/`wrappedId`; assistant text is the rest. Deleting a 30-day-idle `DiscordChatSession` also ends its conversation, so its 180-day window starts. `previousData` is nulled for seasons whose 30 June of the next year has passed (UTC), not only for 2027-06-30. The scheduler (`retention-sweep`, `30 3 * * *`, `Config.timezone`) is upserted at boot on the main `plex-wrapped` queue (P11.3 moves it to the worker role) and has no `retention:<date>` deduplication id: a scheduler fires once a day and the sweep is idempotent; a time zone change applies at the next restart. Without Redis, `startRetentionFallback` (`lib/retention/fallback.ts`) polls the `retention` lease every 5 minutes and runs when `lastRetentionRunAt` is over 24 hours old, retrying a failure after an hour. "Run now" is `runRetentionNow` (`actions/admin/retention.ts`, `admin` rate limit, audit `RETENTION_RUN` with counts) and runs in the request. The Privacy section is `components/admin/settings/sections/privacy-section.tsx` (anchor `privacy`, test ids `settings-retention-run`, `-last-run`, `-windows`, `-<rule>`, `-count-<rule>`), its test `components/admin/settings/__tests__/privacy-section.test.tsx`, its read `getRetentionStatus()` in `lib/data/retention.ts`. Watchlist removals: `markRemovedItems` (`lib/watchlist/sync-run.ts`) runs after every complete read and stamps `syncedAt` with the removal time. `docs/privacy.md` has a Retention section with its own table and a Stored tokens section rather than a new column in the inventory tables, to stay clear of P11.15's edits; its first cells are not bare model names, because the inventory test counts those. Web assistant conversations are never ended, so they are not deleted; only their text expires.)
 
 ### Step P11.15: Member export and item-level deletion
 
@@ -772,9 +778,11 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** As a seeded member, download the export: a JSON file with the profile, the 2026 Rewind, marks and watchlist history, and no token. Delete a mark and forget a watchlist item: both are gone after a reload, and `/mymarks` in Discord no longer lists the mark.
 
 **Done when.**
-- [ ] `/account/export` returns a versioned, strictly validated JSON export with no secrets, rate-limited.
-- [ ] Members can delete marks, watchlist history items and assistant conversations they own, and nothing else.
+- [x] `/account/export` returns a versioned, strictly validated JSON export with no secrets, rate-limited.
+- [x] Members can delete marks, watchlist history items and assistant conversations they own, and nothing else.
 - [ ] The export covers every inventory model or records why not, and the E2E passes.
+
+(as merged: the schema and the coverage map are `MemberExportV1` and `EXPORT_COVERAGE` in `lib/members/export-schema.ts`; `buildMemberExport(userId, now?)` is in `lib/members/export.ts`. The coverage test reads the "Member data" table of `docs/privacy.md` and its new section "Your data: export and single deletes" (bullets, not a column, so P11.14's Retention column merges cleanly); left out with reasons: RewindGeneration, RewindShareVisitDay, RewindView, WrappedShareVisit, DiscordChatSession, DiscordOAuthState, DiscordPendingSelection, InviteUsage, AuditLog. `subscription.plan` is the plan name from `getPlanName`, never the price id; `discordCommands` carry no `commandArgs`. Rate limits `account:export` (3 a day) and `account:data` (60 an hour, shared by the three actions). `lib/access-paths.ts` lets a lapsed member reach `/account/export` (the `/account` page itself still redirects them). The actions take `recordIdSchema` ids rather than a strict cuid, so seeded readable ids work. The section is `YourDataSection` (`components/account/`), with the marks DataTable paged by `?page=` (25 a page) and the newest 50 watchlist items and conversations; row menu id `account-marks-actions-<id>`, confirm ids `account-mark-delete-confirm`, `account-watchlist-forget-confirm`, `account-conversation-delete-confirm`. `/mymarks` ends with a link to `/account` (`getAccountUrl()` in `lib/discord/config.ts`), and `/help#privacy` links `/account#your-data`. The E2E spec and the `/account` visual baselines were not run or regenerated here.)
 
 ### Step P11.16: Disclosures and the admin audit trail
 
@@ -861,10 +869,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** As a Los Angeles member, mark a film at 19:30 local time, then ask the bot "what did I mark today?": it answers with today's date, not tomorrow's. Set `Config.locale` to en-GB: the page source shows `<html lang="en-GB">`, and dates read "1 December".
 
 **Done when.**
-- [ ] The Discord assistant's prompt and tool results carry the member's zone, formatted through `lib/utils/format.ts`.
-- [ ] Admin chatbot timestamps carry the server zone's offset.
-- [ ] `<html lang>` follows `Config.locale`, and axe passes.
-- [ ] The i18n non-goal is recorded.
+- [x] The Discord assistant's prompt and tool results carry the member's zone, formatted through `lib/utils/format.ts`.
+- [x] Admin chatbot timestamps carry the server zone's offset.
+- [x] `<html lang>` follows `Config.locale`, and axe passes.
+- [x] The i18n non-goal is recorded.
+
+(as merged: the turn's `{ timeZone, locale }` is a required `format` on `runChatbotForUser` and runs through `runConversationLoop` and `executeToolCall` to each executor's fifth argument, defaulting to UTC (`lib/chatbot/executors/timestamps.ts`, which also holds `withLocalTimestamps` and the Tautulli and Plex epoch keys). `handleDiscordChat` reads `Config.locale` and `serverZone()` directly, not `getAppSettings()`, because the bot runs outside a request, where `unstable_cache` has no incremental cache. The locale canonicaliser is `canonicalLocale` in `lib/utils/format.ts`. Plex sessions reach the model sanitised, with no timestamps; the Plex conversion covers recently added and On Deck. `/mystats`' year is left to P11.12, which is merging in parallel.)
 
 ### Step P11.18: Season success review and season close cleanup
 
@@ -1492,8 +1502,10 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 
 **Demo.** On a fresh database, `docker compose up` prints "Setup code: ...", and a second browser that calls `savePlexServer` gets `SETUP_UNCLAIMED`. Entering the code opens the wizard, and after setup completes the same cookie opens nothing.
 
+(as merged: migration `20270117000009_p1132_setup_claim`. `defineAction` gained `auth: "setup"` with a `setupAction` alias in `lib/actions/define-action.ts`; its handler context is `{ session, actor }` (`actor` is `"setup"` during the first run, the admin's id after), and a missing claim is the new `ActionErrorCode` `SETUP_UNCLAIMED` (copy in `lib/ui/error-copy.ts`). `claimServer` is a `publicAction` in `actions/setup-claim.ts` (a `'use server'` module, so the form can call it; inside the `actions/setup*.ts` allow-list), not in `lib/setup/claim.ts`, which holds `issueSetupCode`, `redeemSetupCode`, `setupClaimCookie`, `requireSetupClaim` and `clearSetupClaimCookie`. A wrong code answers `VALIDATION` with a `code` field error; a successful claim refunds its `setup:claim` point, so only wrong codes count toward the 5 a minute. `SETUP_TOKEN` is compared exactly (trimmed, case-sensitive); the generated code is normalised. A token shorter than 16 characters is ignored with a warning, and production boot refuses it (`checkProductionEnv`). A claim replaces `claimId`, so a newer claim ends an older browser's. `fetchLLMModels` no longer exists (P10.7 deleted it), and `getDevDefaults` is a server-only loader since P11.5, not an action: it returns empty defaults without the claim, and `/setup` renders `SetupClaimForm` (on `Input`/`FormField`/`Button`/`Alert`; `StyledInput` is gone) before it reads them. Playwright sets `SETUP_TOKEN` (default `e2e-setup-token-0123456789`) for the server and workers; `e2e/helpers/setup-claim.ts`'s `claimSetup(page)` is used by the setup, setup-axe and setup-visual specs. E2E specs were not run.)
+
 **Done when.**
-- [ ] Every setup action, `fetchLLMModels` and `getDevDefaults` require a claim before completion and an admin after it.
-- [ ] The setup code is printed once per boot, stored only as a hash, compared in constant time, rate-limited and single-use, and `SETUP_TOKEN` overrides it.
-- [ ] Today's wizard shows the claim screen, and the E2E spec claims before it continues.
+- [x] Every setup action, `fetchLLMModels` and `getDevDefaults` require a claim before completion and an admin after it.
+- [x] The setup code is printed once per boot, stored only as a hash, compared in constant time, rate-limited and single-use, and `SETUP_TOKEN` overrides it.
+- [x] Today's wizard shows the claim screen, and the E2E spec claims before it continues.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.

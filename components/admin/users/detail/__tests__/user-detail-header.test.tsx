@@ -60,7 +60,7 @@ describe('UserDetailHeader', () => {
 
     rerender(
       <UserDetailHeader
-        header={header({ isAdmin: true, isOwner: true, plexAccess: 'unknown', stripeEnabled: true, subscription: { status: 'PAST_DUE', currentPeriodEnd: null, cancelAtPeriodEnd: false, stripeCustomerId: null } })}
+        header={header({ isAdmin: true, isOwner: true, plexAccess: 'unknown', stripeEnabled: true, subscription: { status: 'PAST_DUE', currentPeriodEnd: null, cancelAtPeriodEnd: false, stripeCustomerId: null, plexInviteStatus: null, jellyfinAccessStatus: null } })}
         stripeDashboardBaseUrl={null}
         estimateCopy=""
         now={NOW}

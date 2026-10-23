@@ -144,10 +144,18 @@ export enum AuditEventType {
   // An admin opened a page listing many members' content (P11.16): one row per
   // admin and surface per hour. Details carry the surface and the filters.
   MEMBER_CONTENT_LISTED = "MEMBER_CONTENT_LISTED",
+  // An admin ran the retention sweep from settings (P11.14). Details carry the
+  // per-rule counts.
+  RETENTION_RUN = "RETENTION_RUN",
   // A credential, settings, setup or prompt-template change. Details carry the
   // redacted diff from lib/security/config-diff.ts: changed field names, whether
   // a secret changed, and URL origins only.
   CONFIG_CHANGED = "CONFIG_CHANGED",
+  // A browser claimed the server before first-run setup (P11.32, SEC-30).
+  // Details carry the method (code or token) and the masked IP, never the code.
+  SETUP_CLAIMED = "SETUP_CLAIMED",
+  // An optional setup step was skipped (P10.24). Details carry the step id.
+  SETUP_STEP_SKIPPED = "SETUP_STEP_SKIPPED",
 }
 
 type AuditDetails = {

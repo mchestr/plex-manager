@@ -29,6 +29,7 @@ export const envSchema = z.object({
   NEXTAUTH_SECRET: text("Signs session cookies. At least 32 random characters: openssl rand -base64 32."),
   PLEX_CLIENT_IDENTIFIER: text("Unique id this install reports to Plex: openssl rand -hex 16."),
   ENCRYPTION_KEY: text("Encrypts stored service secrets: openssl rand -hex 32. Never reuse NEXTAUTH_SECRET."),
+  SETUP_TOKEN: text("Claims first-run setup instead of the code printed in the log. At least 16 characters: openssl rand -hex 16."),
   ALLOW_INSECURE_HTTP: text('"true" lets production run on plain http (LAN only). Cookies are then not Secure.'),
   // Infrastructure
   REDIS_URL: text("Redis for the job queue and rate limits. Rewind and Stripe need it."),
@@ -54,6 +55,19 @@ export const envSchema = z.object({
   DB_CONNECTION_TIMEOUT_MS: text("How long a query waits for a free database connection (default 10000)."),
   DB_STATEMENT_TIMEOUT_MS: text("Statement timeout in milliseconds (default 15000 web, 120000 worker, 60000 all)."),
   SHUTDOWN_GRACE_MS: text("How long SIGTERM waits for jobs, the bot and connections before exiting (default 8000)."),
+  // Retention windows in days (P11.14, docs/privacy.md); each at least 1
+  RETENTION_REWIND_LLM_TEXT_DAYS: text("Days Rewind AI prompts and replies keep their text (default 120)."),
+  RETENTION_ASSISTANT_LLM_TEXT_DAYS: text("Days assistant prompts and replies keep their text (default 90)."),
+  RETENTION_CHAT_CONVERSATION_DAYS: text("Days an ended assistant conversation is kept (default 180)."),
+  RETENTION_DISCORD_CHAT_MESSAGES_DAYS: text("Idle days before a Discord chat's stored turns are emptied (default 1)."),
+  RETENTION_DISCORD_CHAT_SESSION_DAYS: text("Idle days before a Discord chat session is deleted (default 30)."),
+  RETENTION_DISCORD_COMMAND_ARGS_DAYS: text("Days Discord command arguments are kept (default 7)."),
+  RETENTION_DISCORD_COMMAND_LOG_DAYS: text("Days Discord command log rows are kept (default 90)."),
+  RETENTION_SHARE_VISITS_DAYS: text("Days Rewind share-link daily visit counts are kept (default 90)."),
+  RETENTION_REWIND_VIEW_DAYS: text("Days Rewind reading records are kept (default 120)."),
+  RETENTION_WATCHLIST_REMOVED_DAYS: text("Days a title removed from a watchlist stays in sync history (default 30)."),
+  RETENTION_DISCORD_OAUTH_STATE_DAYS: text("Days an expired Discord link attempt is kept (default 1)."),
+  RETENTION_AUDIT_LOG_DAYS: text("Days audit log rows are kept (default 400)."),
   // Integrations
   DISCORD_BOT_TOKEN: text("Discord bot token, used when none is stored in Admin settings."),
   DISCORD_CLIENT_ID: text("Discord application id for the slash-command and metadata scripts."),
@@ -139,6 +153,9 @@ export const KNOWN_PLACEHOLDER_SECRETS: ReadonlySet<string> = new Set([
   "secret",
 ])
 
+/** The shortest `SETUP_TOKEN` that replaces the generated setup code (P11.32). */
+export const SETUP_TOKEN_MIN_LENGTH = 16
+
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
 
 /** @internal */
@@ -203,6 +220,9 @@ export function checkProductionEnv(env: Env): EnvIssue[] {
     checkHttps("NEXTAUTH_URL", env.NEXTAUTH_URL, allowInsecure),
     checkHttps("NEXT_PUBLIC_APP_URL", env.NEXT_PUBLIC_APP_URL, allowInsecure),
   ]
+  if (env.SETUP_TOKEN !== undefined && env.SETUP_TOKEN.length < SETUP_TOKEN_MIN_LENGTH) {
+    issues.push({ variable: "SETUP_TOKEN", code: "too_short", severity: "error", hint: "shorter than 16 characters; generate one with openssl rand -hex 16" })
+  }
   if (!env.PLEX_CLIENT_IDENTIFIER?.trim()) {
     issues.push({ variable: "PLEX_CLIENT_IDENTIFIER", code: "missing", severity: "error", hint: "not set; generate one with openssl rand -hex 16" })
   }

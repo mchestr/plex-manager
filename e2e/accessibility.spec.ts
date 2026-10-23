@@ -5,7 +5,7 @@ import { ALL_ROUTE_NAMES, A11Y_ROUTES, routeName, routeUserId } from './a11y/rou
 import { readBaseline, staleRoutes, UPDATE_COMMAND, writeBaseline } from './a11y/baseline';
 import { analyzeAtRest, scanAgainstBaseline } from './a11y/scan';
 import { clearA11yFixtures, seedA11yFixtures } from './a11y/seed';
-import { VISUAL_INVITE_IDS, VISUAL_INVITES } from './helpers/seed-fixtures';
+import { SEEDED_LOCALE, VISUAL_INVITE_IDS, VISUAL_INVITES } from './helpers/seed-fixtures';
 import { resetStripeState, setStripeEnabled } from './helpers/stripe';
 import { expect, settlePage, test } from './visual/visual-test';
 
@@ -116,6 +116,17 @@ test.describe('Accessibility', () => {
       await settlePage(page);
       await expect(dialog).toBeHidden();
     });
+  });
+
+  test('<html lang> is the seeded Config.locale, and axe accepts it (P11.17)', async ({ page }) => {
+    await page.goto('/');
+    await settlePage(page);
+    await expect(page.getByTestId('sign-in-button')).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', SEEDED_LOCALE);
+
+    const builder = new AxeBuilder({ page }).withRules(['html-has-lang', 'valid-lang']).exclude('nextjs-portal');
+    const results = await analyzeAtRest(page, builder);
+    expect(results.violations).toEqual([]);
   });
 
   test('every button on the users page has an accessible name', async ({ page, signIn }) => {

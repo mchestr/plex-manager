@@ -12,12 +12,13 @@ lists the known hotspots and says where performance checks will come from.
 Each Rewind generation downloads far more than it needs, and most of these calls
 have no effective timeout:
 
-- **Tautulli:** `lib/wrapped/tautulli-user-statistics.ts` pages through the
-  user's lifetime `get_history` 1,000 rows at a time, then filters by year in
-  memory.
+- **Tautulli:** the v2 statistics fetcher paged through the user's lifetime
+  `get_history` 1,000 rows at a time, then filtered by year in memory.
 
 P2.4 (Rewind sources) and P2.6 (one server-wide history pass with a metadata
-cache) replace this path.
+cache) replaced this path for Rewind. P11.12 deleted the fetcher: Discord's
+`/mystats` and linked-role hours read the stored Rewind's facts, or at most 20
+pages of the member's year (`lib/discord/stats/member-stats.ts`).
 
 ### LLM usage totals (BP-28)
 

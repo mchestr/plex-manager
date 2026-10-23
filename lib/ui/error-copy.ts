@@ -139,6 +139,12 @@ const COPY = {
       description: "Sign in with the service the invite names, Plex or Jellyfin, to use it.",
     },
   },
+  SETUP_UNCLAIMED: {
+    member: {
+      title: "Claim this server first",
+      description: "Enter the setup code from the server log, or the value of SETUP_TOKEN, to continue setup.",
+    },
+  },
   INTERNAL,
 
   // lib/security/secret-reuse.ts: a blank secret refused for a new address (SEC-31)

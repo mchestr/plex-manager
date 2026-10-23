@@ -7,6 +7,7 @@
  * ```
  * call(input)
  *   -> guard        public | member | admin   (UNAUTHENTICATED, FORBIDDEN)
+ *                   setup: a claim before setup completes, then admin   (SETUP_UNCLAIMED)
  *   -> entitlement  member: full | read       (NOT_ENTITLED)
  *   -> safeParse    the input schema          (VALIDATION + fieldErrors)
  *   -> consume()    the optional named limit  (RATE_LIMITED + retryAfterSec)
@@ -52,12 +53,17 @@ import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-lim
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { generateRequestId, runWithRequestContext } from "@/lib/utils/log-context"
 
-type AuthLevel = "public" | "member" | "admin"
+type AuthLevel = "public" | "member" | "admin" | "setup"
 
-/** What a handler receives besides its input. */
+/**
+ * What a handler receives besides its input. A setup action's `actor` is
+ * `setup` during the first run and the admin's id after it.
+ */
 type ActionContext<A extends AuthLevel> = A extends "public"
   ? { session: Session | null }
-  : { session: Session; userId: string }
+  : A extends "setup"
+    ? { session: Session | null; actor: string }
+    : { session: Session; userId: string }
 
 interface RateLimitOption {
   name: LimitName
@@ -90,6 +96,7 @@ type Action<S extends z.ZodType | undefined, T, C extends string> = S extends z.
   : () => Promise<ActionResult<T, C | ActionErrorCode>>
 
 const DEFAULT_FALLBACK = "Something went wrong. Please try again."
+const SETUP_UNCLAIMED_MESSAGE = "Enter the setup code from the server log to continue setup."
 
 /**
  * Marks a function this module built (P11.5). Every export of a `'use server'`
@@ -121,16 +128,30 @@ async function guard<A extends AuthLevel>(
   if (auth === "public") {
     return { ok: true, ctx: { session } as ActionContext<A> }
   }
+  if (auth === "setup") {
+    // Loaded here, so the many actions that never reach this path never load the setup modules
+    const [{ getSetupStatus }, { requireSetupClaim }] = await Promise.all([
+      import("@/lib/setup/status"),
+      import("@/lib/setup/claim"),
+    ])
+    if (!(await getSetupStatus()).isComplete) {
+      if (!(await requireSetupClaim()).ok) {
+        return { ok: false, result: fail("SETUP_UNCLAIMED", SETUP_UNCLAIMED_MESSAGE) }
+      }
+      return { ok: true, ctx: { session, actor: "setup" } as ActionContext<A> }
+    }
+  }
   if (!session?.user?.id) {
     return { ok: false, result: fail("UNAUTHENTICATED", "Please sign in to continue.") }
   }
-  if (auth === "admin" && !session.user.isAdmin) {
+  if ((auth === "admin" || auth === "setup") && !session.user.isAdmin) {
     return { ok: false, result: fail("FORBIDDEN", "Admins only.") }
   }
   if (entitlement && !(await hasEntitlement(session.user.id, entitlement))) {
     return { ok: false, result: fail("NOT_ENTITLED", NOT_ENTITLED_MESSAGE) }
   }
-  return { ok: true, ctx: { session, userId: session.user.id } as ActionContext<A> }
+  const ctx = auth === "setup" ? { session, actor: session.user.id } : { session, userId: session.user.id }
+  return { ok: true, ctx: ctx as ActionContext<A> }
 }
 
 /**
@@ -218,4 +239,15 @@ export function adminAction<T, S extends z.ZodType | undefined = undefined, C ex
   def: AliasDefinition<"admin", S, T, C>
 ): Action<S, T, C> {
   return defineAction({ ...def, auth: "admin" })
+}
+
+/**
+ * A first-run setup action (SEC-30): before setup completes, only a browser
+ * holding the current claim (`lib/setup/claim.ts`) may call it
+ * (`SETUP_UNCLAIMED` otherwise); after it, only an admin.
+ */
+export function setupAction<T, S extends z.ZodType | undefined = undefined, C extends string = ActionErrorCode>(
+  def: AliasDefinition<"setup", S, T, C>
+): Action<S, T, C> {
+  return defineAction({ ...def, auth: "setup" })
 }

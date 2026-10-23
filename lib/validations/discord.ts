@@ -82,4 +82,3 @@ export const discordIntegrationSchema = z.object({
 })
 
 /** Parsed (output) shape — transforms applied, defaults resolved. */
-export type DiscordIntegrationInput = z.infer<typeof discordIntegrationSchema>

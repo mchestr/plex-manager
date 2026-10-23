@@ -315,6 +315,8 @@ export async function syncDiscordRoleConnection(
       id: true,
       name: true,
       plexUserId: true,
+      jellyfinUserId: true,
+      timezone: true,
     },
   })
 
@@ -330,12 +332,18 @@ export async function syncDiscordRoleConnection(
   const platformUsername = user.name || "Plex member"
 
   const { metadata, watchedHours } = await computeRoleMetadata(
-    { id: user.id, plexUserId: user.plexUserId, lastWatchedHours: connection.lastWatchedHours },
+    {
+      id: user.id,
+      plexUserId: user.plexUserId,
+      jellyfinUserId: user.jellyfinUserId,
+      timezone: user.timezone,
+      lastWatchedHours: connection.lastWatchedHours,
+    },
     options
   )
   if (!metadata) {
-    // Plex could not answer: push nothing, so Discord keeps the stored role (GAP-05)
-    logger.warn("Discord role sync skipped: Plex access unknown", { userId })
+    // A service could not answer: push nothing, so Discord keeps the stored role (GAP-05)
+    logger.warn("Discord role sync skipped: access unknown", { userId })
     return
   }
 

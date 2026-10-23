@@ -1,5 +1,6 @@
 import "server-only"
 
+import { requireSetupClaim } from "@/lib/setup/claim"
 import { getSetupStatus } from "@/lib/setup/status"
 import type { DevDefaults, DiscordDefaults, LLMDefaults, PrometheusDefaults, ServiceDefaults } from "@/types/setup"
 
@@ -46,7 +47,8 @@ function safeParseProvider(value: string | undefined): ValidLLMProvider | undefi
  * once on the server and passes them down (P10.7); no form asks on mount.
  *
  * SECURITY NOTE: These values are ONLY returned when NODE_ENV=development, the explicit
- * DEV_SETUP_PREFILL=true flag is set, and setup is not yet complete. Otherwise every value
+ * DEV_SETUP_PREFILL=true flag is set, setup is not yet complete and this browser holds the
+ * setup claim (P11.32). Otherwise every value
  * is null regardless of the DEV_* environment variables. The flag is separate from
  * E2E_TEST_MODE so that turning on the prefill never enables the seed.
  *
@@ -77,7 +79,7 @@ export async function getDevDefaults(): Promise<DevDefaults> {
     return emptyDefaults
   }
   const { isComplete } = await getSetupStatus()
-  if (isComplete) {
+  if (isComplete || !(await requireSetupClaim()).ok) {
     return emptyDefaults
   }
 

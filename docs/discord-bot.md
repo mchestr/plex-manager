@@ -22,12 +22,37 @@ the invoking user sees them) and are hard-scoped to that user.
 | `/mark finished\|keep\|notinterested\|rewatch\|badquality title:<name>` | Mark media; disambiguates multiple matches with a select menu. `finished` also marks it watched on your own Plex account (see *Marking as the member*). |
 | `/assistant ask prompt:<text>` | Ask the AI assistant (answers ephemerally; DM the bot to continue a multi-turn conversation). |
 | `/assistant reset` | Clear your assistant conversation context (a `reset`/`clear` DM also works). |
-| `/mystats` | Your personal watch statistics. |
+| `/mystats` | Your watch statistics for this year, in your own time zone. |
 | `/mymarks [type]` | The media you've marked, optionally filtered by type. |
 | `/watching` | What you're currently watching. |
 
 The **AI assistant** is DM-based: DM the bot for a full multi-turn conversation.
 DM content is delivered **without** the Message Content privileged intent.
+
+`/mystats` reads the member's completed Rewind for the year when there is one,
+so it makes no Tautulli call. Otherwise it reads at most 20 pages (20,000 rows)
+of the member's Tautulli history for their year, through the shared Tautulli
+limit, and keeps the result for 15 minutes (with Redis). The year is the
+member's current year in their own time zone, else the server's.
+
+### Jellyfin members
+
+A member whose account is on Jellyfin can link Discord and use `/help`,
+`/mymarks` and the assistant, and their linked role follows their Jellyfin
+account. The commands that read Plex answer with the reason instead of an
+empty result:
+
+| Command | Reply for a Jellyfin-only member |
+|---|---|
+| `/mystats` | "Stats use Plex watch history, and your account is on Jellyfin, so they aren't available yet." |
+| `/watching` | "I can only see Plex streams for now." |
+| `/mark` | "Marking works with the Plex library only." |
+
+The assistant's Plex and Tautulli session tools return
+`{"unavailable":"jellyfin-member"}` for them, and the Discord system prompt
+names Jellyfin when a Jellyfin server is active, so the assistant explains
+this rather than reporting that nothing is playing. A member with both a Plex
+and a Jellyfin account uses every command with their Plex account.
 
 ## Prerequisites
 
@@ -42,7 +67,8 @@ DM content is delivered **without** the Message Content privileged intent.
      and `Send Messages` permission.
 2. **Linked Roles** — configure Discord Linked Roles in the admin UI. The bot
    exposes two role-connection metadata fields, `is_subscribed` (an entitled
-   member with Plex access) and `watched_hours` (from Tautulli). Register them
+   member with access on Plex or Jellyfin) and `watched_hours` (this year's
+   hours, as `/mystats` reads them). Register them
    with `npm run register-discord-metadata`. See *Linked-role refresh* for
    when they are pushed.
 3. **Configuration** — the bot token and support channel/thread IDs are now
@@ -73,8 +99,11 @@ DM content is delivered **without** the Message Content privileged intent.
 A member's linked role follows their access:
 
 - `is_subscribed` is true only when the member is entitled (not disabled and,
-  with Stripe on, paying, exempt or an admin) **and** Plex reports access to
-  the server. `platform_username` is the member's display name, never their
+  with Stripe on, paying, exempt or an admin) **and** has access on one of
+  their services: Plex reports a share of the server, or their Jellyfin
+  account on the active server exists and is not disabled. When no service
+  grants access and one cannot answer, nothing is pushed and Discord keeps the
+  stored role. `platform_username` is the member's display name, never their
   email.
 - **Within minutes of an access change** — an unshare, demotion, disable or
   re-enable, a Stripe revoke, a Plex grant, any Stripe subscription status
@@ -82,11 +111,12 @@ A member's linked role follows their access:
   `discord:role:sync` job re-pushes the metadata. Jobs are deduplicated per
   member (`discord:role:<userId>`) and retried 3 times. These syncs reuse the
   stored `watched_hours` (`DiscordConnection.lastWatchedHours`) instead of
-  scanning Tautulli.
+  reading the hours again.
 - **Daily at 04:00** in the server time zone (`Config.timezone`, else `TZ`,
   else UTC, read at boot), `discord:role:reconcile` re-syncs every link whose
   last sync is more than 20 hours old, at most 25 a minute, and recomputes
-  `watched_hours` through the shared Tautulli limit. Linking an account and
+  `watched_hours` the way `/mystats` reads them (the stored Rewind, else at
+  most 20 pages of the member's year) through the shared Tautulli limit. Linking an account and
   the member's own "Resync" also recompute the hours. Like the watchlist
   sync, the schedule follows the settings at boot: it is created when the
   server starts with the integration on and removed when it starts with it

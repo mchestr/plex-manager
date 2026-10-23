@@ -40,9 +40,15 @@ export const LIMITS = {
   "admin:invites": { points: 30, duration: 10 * MINUTE },
   // Member removals per admin (P11.13)
   "admin:remove-member": { points: 10, duration: HOUR },
+  // The member's data export, per member (P11.15)
+  "account:export": { points: 3, duration: DAY },
+  // Deleting a mark, a watchlist item or a conversation from /account, per member (P11.15)
+  "account:data": { points: 60, duration: HOUR },
   checkout: { points: 10, duration: MINUTE },
   portal: { points: 10, duration: MINUTE },
   "discord-link": { points: 5, duration: 5 * MINUTE },
+  // Setup-code guesses per address before first-run setup completes (P11.32)
+  "setup:claim": { points: 5, duration: MINUTE },
   "auth:plex": { points: 20, duration: 15 * MINUTE },
   "auth:jellyfin:ip": { points: 10, duration: 15 * MINUTE },
   "auth:jellyfin:user": { points: 5, duration: 15 * MINUTE },
@@ -50,6 +56,8 @@ export const LIMITS = {
   "invite:redeem": { points: 10, duration: 15 * MINUTE },
   "plex:pin:create": { points: 30, duration: 10 * MINUTE },
   "plex:pin:poll": { points: 300, duration: 10 * MINUTE },
+  // Setup's server choice per address (P10.25): each one calls plex.tv and probes the server
+  "setup:plex:choose": { points: 10, duration: 10 * MINUTE },
   "llm:models": { points: 30, duration: 15 * MINUTE },
   // Assistant messages per user (P4.20). The Discord pair is shared by DMs and `/assistant ask`.
   "llm:assistant:admin": { points: 60, duration: HOUR },

@@ -15,7 +15,7 @@ import { unstable_cache } from "next/cache"
 import { cache } from "react"
 
 import { prisma } from "@/lib/prisma"
-import { bindFormat, type FormatSettings } from "@/lib/utils/format"
+import { bindFormat, canonicalLocale, DEFAULT_LOCALE, type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import { serverZone } from "@/lib/utils/server-zone"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
@@ -23,8 +23,6 @@ import { normalizeTimeZone } from "@/lib/utils/zoned-time"
 const logger = createLogger("app-settings")
 
 export const APP_SETTINGS_TAG = "app-settings"
-
-const DEFAULT_LOCALE = "en-US"
 
 export interface AppSettings extends FormatSettings {
   /**
@@ -35,16 +33,6 @@ export interface AppSettings extends FormatSettings {
   serverName: string | null
   /** `Config.lightThemeEnabled`: members may pick the light theme (P10.10). */
   lightThemeEnabled: boolean
-}
-
-/** The stored locale when `Intl` accepts it, else en-US. */
-function normalizeLocale(locale: string | null | undefined): string {
-  if (!locale) return DEFAULT_LOCALE
-  try {
-    return Intl.getCanonicalLocales(locale)[0] ?? DEFAULT_LOCALE
-  } catch {
-    return DEFAULT_LOCALE
-  }
 }
 
 /** The most recently updated active row's name, never its token. */
@@ -61,7 +49,7 @@ const loadAppSettings = unstable_cache(
     const serverName = [config?.serverName, plex?.name, jellyfin?.name].map((name) => name?.trim()).find(Boolean)
     return {
       timeZone,
-      locale: normalizeLocale(config?.locale),
+      locale: canonicalLocale(config?.locale),
       serverName: serverName ?? null,
       lightThemeEnabled: config?.lightThemeEnabled ?? false,
     }

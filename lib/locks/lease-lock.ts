@@ -1,7 +1,7 @@
 /**
  * One named lease, held by at most one process at a time.
  *
- * The Discord bot and the watchlist sync fallback each run in one process only:
+ * The Discord bot, the watchlist sync fallback and the retention fallback each run in one process only:
  * whichever process holds the lease for their name. A {@link LeaseLock} keeps
  * the "am I the holder?" flag; a {@link LeaseStore} keeps the lease itself.
  * {@link PrismaLeaseStore} keeps one `LeaseLock` row per name.
@@ -25,7 +25,7 @@ import { createLogger } from "@/lib/utils/logger"
 const logger = createLogger("LEASE_LOCK")
 
 /** The background roles that run under a lease. */
-export type LeaseName = "discord-bot" | "watchlist-sync"
+export type LeaseName = "discord-bot" | "watchlist-sync" | "retention"
 
 /** How long an acquired or renewed lease stays valid (30 seconds). @internal */
 export const DEFAULT_LEASE_DURATION_MS = 30 * 1000
@@ -56,6 +56,8 @@ type LeaseTx = Pick<PrismaClient, "leaseLock" | "discordBotLock" | "watchlistSyn
  * the legacy tables in P11.3.
  */
 async function legacyHolder(tx: LeaseTx, name: LeaseName, instanceId: string, now: Date): Promise<boolean> {
+  // The retention sweep (P11.14) never had a legacy row
+  if (name === "retention") return false
   const where = { id: name }
   const row =
     name === "discord-bot"

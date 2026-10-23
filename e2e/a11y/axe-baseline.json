@@ -39,12 +39,6 @@
   "public /invite/VISUALEXP": {},
   "public /invite/VISUALOK": {},
   "public /rewind/s/a11y-share-token000000000000000000000000000": {},
-  "public /setup [step 1]": {
-    "color-contrast|incomplete": 40,
-    "color-contrast|serious": 1
-  },
-  "public /setup [step 3]": {
-    "color-contrast|incomplete": 38,
-    "color-contrast|serious": 1
-  }
+  "public /setup [step 1]": {},
+  "public /setup [step 3]": {}
 }

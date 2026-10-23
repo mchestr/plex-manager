@@ -92,6 +92,10 @@ const linkedUser: VerifyDiscordUserResult = {
     name: "Test User",
     email: "t@example.com",
     plexUserId: PLEX_USER_ID,
+    jellyfinUserId: null,
+    primaryAuthService: "plex",
+    services: ["plex"],
+    timezone: null,
     isAdmin: false,
   },
 }
@@ -201,6 +205,20 @@ describe("watchingCommand.handle", () => {
         flags: 64,
       })
     )
+    expect(mockGetSessions).not.toHaveBeenCalled()
+  })
+
+  it("tells a Jellyfin-only member it can only see Plex streams", async () => {
+    const { ctx, reply, deferReply } = createMockContext()
+    ctx.verifiedUser = {
+      ...linkedUser,
+      user: { ...linkedUser.user!, plexUserId: null, jellyfinUserId: "jf-1", primaryAuthService: "jellyfin", services: ["jellyfin"] },
+    }
+
+    await watchingCommand.handle(ctx)
+
+    expect(reply).toHaveBeenCalledWith({ content: "I can only see Plex streams for now.", flags: 64 })
+    expect(deferReply).not.toHaveBeenCalled()
     expect(mockGetSessions).not.toHaveBeenCalled()
   })
 

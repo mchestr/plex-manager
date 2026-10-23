@@ -39,6 +39,13 @@ describe("signValue and verifyValue", () => {
     expect(verifyValue(body, "plex-pin")).toBeNull()
   })
 
+  it("refuses a setup claim cookie presented as a PIN cookie", () => {
+    const raw = signValue({ claimId: "claim-1" }, "setup-claim", 43200)
+
+    expect(verifyValue(raw, "plex-pin")).toBeNull()
+    expect(verifyValue(raw, "setup-claim")).toEqual({ claimId: "claim-1" })
+  })
+
   it("refuses an expired value", () => {
     jest.useFakeTimers({ now: new Date("2026-11-11T12:00:00Z") })
     const raw = signValue({ pinId: 42 }, "plex-pin", 900)

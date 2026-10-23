@@ -36,13 +36,16 @@ export const llmProviderSchema = z.discriminatedUnion("provider", [
   }),
 ])
 
-/** The setup wizard stays OpenAI-only, with no base URL, until P11.32 and P10.25. */
+/**
+ * The setup wizard stays OpenAI-only, with no base URL (an OpenAI-compatible
+ * address is an admin-only SSRF surface, SEC-44). A blank key keeps the
+ * stored OpenAI key (P10.25).
+ */
 export const setupLLMProviderSchema = z.object({
   provider: z.literal("openai", { message: "Please select a provider" }),
-  apiKey: apiKeySchema.min(1, "API key is required"),
+  apiKey: apiKeySchema.optional(),
   model: z.string().trim().max(200).optional(),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().int().min(1).max(100000).optional(),
 })
 
-export type SetupLLMProviderInput = z.infer<typeof setupLLMProviderSchema>

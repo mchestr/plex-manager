@@ -10,12 +10,11 @@
  * Pure data and functions with no `import.meta`, so Jest can load it.
  */
 
-/** @internal Exported for the reason check in its test. */
+/**
+ * @internal Exported for the reason check in its test.
+ * @type {Array<{ path: string, rules?: string[], reason: string }>}
+ */
 export const ALLOWLIST = [
-  {
-    path: 'components/setup/setup-wizard/',
-    reason: 'The pre-refresh setup wizard; P10.25 rebuilds it on the primitives and tokens.',
-  },
   {
     path: 'app/dev/rewind-stage/guess-island.tsx',
     rules: ['client-marker'],
@@ -55,7 +54,7 @@ export function isAllowed(file, rule, allowlist = ALLOWLIST) {
  *
  * @example
  * ```js
- * strictFailures({ 'components/admin/a.tsx': { 'raw-palette': 2 }, 'components/setup/setup-wizard/b.tsx': { blur: 1 } })
+ * strictFailures({ 'components/admin/a.tsx': { 'raw-palette': 2 }, 'app/dev/rewind-stage/guess-island.tsx': { 'client-marker': 1 } })
  * // [{ file: 'components/admin/a.tsx', rule: 'raw-palette', count: 2 }]
  * ```
  */

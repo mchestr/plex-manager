@@ -6,13 +6,16 @@ import { redirect } from "next/navigation"
 import { AppearancePicker } from "@/components/account/appearance-picker"
 import { NotifySwitch } from "@/components/account/notify-switch"
 import { TimezoneField } from "@/components/account/timezone-field"
+import { YourDataSection } from "@/components/account/your-data-section"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authOptions } from "@/lib/auth"
 import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import { getAppSettings } from "@/lib/settings/app-settings"
 import { discordHandleFor } from "@/lib/member/shell"
+import { getYourData } from "@/lib/member/your-data"
 import { prisma } from "@/lib/prisma"
+import { parseTableParams } from "@/lib/ui/table-params"
 import { serverZone } from "@/lib/utils/server-zone"
 import { timeZoneOptions } from "@/lib/utils/zoned-time"
 import { getSeasonState } from "@/lib/wrapped/season"
@@ -34,20 +37,24 @@ async function rewindNotify(userId: string): Promise<boolean> {
 /**
  * The member's account settings (ui-design-system 6.1, UI-30): Discord,
  * the Rewind ready notification, the time zone, Appearance while the
- * light theme's flag is on (P10.10), and what admins can see (P11.16).
+ * light theme's flag is on (P10.10), and Your data: what admins can see
+ * (P11.16), the export and single-item deletes (P11.15). `?page=` pages the
+ * marks table.
  */
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect("/")
   const userId = session.user.id
+  const { page } = parseTableParams(await searchParams, { sortable: [], defaultSort: { id: "markedAt", desc: true } })
 
-  const [user, discordHandle, notify, zone, { lightThemeEnabled }, assistantDisclosure] = await Promise.all([
+  const [user, discordHandle, notify, zone, { lightThemeEnabled }, assistantDisclosure, yourData] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
     discordHandleFor(userId),
     rewindNotify(userId),
     serverZone(),
     getAppSettings(),
     getAssistantDisclosure(),
+    getYourData(userId, page),
   ])
 
   return (
@@ -106,14 +113,10 @@ export default async function AccountPage() {
           </Card>
         )}
 
-        <Card data-testid="account-your-data">
-          <CardHeader>
-            <CardTitle as="h2">Your data</CardTitle>
-            <CardDescription>
-              Server admins can see your watch activity and your Rewind. {assistantDisclosure}
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <YourDataSection
+          data={yourData}
+          disclosure={`Server admins can see your watch activity and your Rewind. ${assistantDisclosure}`}
+        />
       </div>
     </div>
   )

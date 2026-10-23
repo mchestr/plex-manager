@@ -67,7 +67,7 @@ describe("syncDiscordRoleConnection", () => {
     expect(pushed.platform_username).toBe("Plex member")
     expect(JSON.stringify(pushed)).not.toContain("@example.com")
     expect(prismaMock.user.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ select: { id: true, name: true, plexUserId: true } })
+      expect.objectContaining({ select: { id: true, name: true, plexUserId: true, jellyfinUserId: true, timezone: true } })
     )
   })
 

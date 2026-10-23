@@ -25,7 +25,7 @@ function prometheus(overallStatus: 'operational' | 'issues' | 'down' | 'unknown'
   })
 }
 
-function stripe(enabled: boolean, subscription: { status: string; plexInviteStatus: string | null } | null) {
+function stripe(enabled: boolean, subscription: { status: string; plexInviteStatus: string | null; jellyfinAccessStatus?: string } | null) {
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: enabled }))
   prismaMock.subscription.findUnique.mockResolvedValue(subscription as Subscription)
 }
@@ -75,6 +75,13 @@ describe('getMemberNotice', () => {
     prometheus('down')
 
     await expect(getMemberNotice('u1')).resolves.toEqual({ kind: 'pending-invite' })
+  })
+
+  it('notes an enabled Jellyfin account on the pending invite of a member with both (P11.11)', async () => {
+    stripe(true, { status: 'ACTIVE', plexInviteStatus: 'pending', jellyfinAccessStatus: 'enabled' })
+    prometheus('operational')
+
+    await expect(getMemberNotice('u1')).resolves.toEqual({ kind: 'pending-invite', jellyfinEnabled: true })
   })
 
   it('shows nothing from the subscription while Stripe is off', async () => {

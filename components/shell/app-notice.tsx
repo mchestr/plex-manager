@@ -12,8 +12,9 @@ import { noticeShownOn, type MemberNotice } from "@/lib/member/notice-rules"
 function NoticeBody({ notice }: { notice: MemberNotice }) {
   switch (notice.kind) {
     case "past-due":
+      return <SubscriptionBanners notice="past-due" />
     case "pending-invite":
-      return <SubscriptionBanners notice={notice.kind} />
+      return <SubscriptionBanners notice="pending-invite" jellyfinEnabled={notice.jellyfinEnabled} />
     case "outage":
       return (
         <Alert tone="warning" title={`${notice.serviceName || "The server"} is down`} data-testid="outage-banner">

@@ -19,11 +19,14 @@ export const JOB_TYPES = {
   WATCHLIST_SYNC_USER: "watchlist:sync:user",
   WATCHLIST_SYNC_ALL: "watchlist:sync:all",
   STRIPE_WEBHOOK: "stripe:webhook",
+  // Plex or Jellyfin access (P11.11); the names stay so jobs already queued still run
   PLEX_ACCESS_GRANT: "plex:access:grant",
   PLEX_ACCESS_REVOKE: "plex:access:revoke",
   // Discord linked-role metadata (P4.18)
   DISCORD_ROLE_SYNC: "discord:role:sync",
   DISCORD_ROLE_RECONCILE: "discord:role:reconcile",
+  // The daily retention sweep (P11.14)
+  RETENTION_SWEEP: "retention:sweep",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -52,10 +55,11 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.WATCHLIST_SYNC_USER]: "Watchlist sync, one member",
   [JOB_TYPES.WATCHLIST_SYNC_ALL]: "Watchlist sync, everyone",
   [JOB_TYPES.STRIPE_WEBHOOK]: "Stripe event",
-  [JOB_TYPES.PLEX_ACCESS_GRANT]: "Plex access grant",
-  [JOB_TYPES.PLEX_ACCESS_REVOKE]: "Plex access removal",
+  [JOB_TYPES.PLEX_ACCESS_GRANT]: "Member access grant",
+  [JOB_TYPES.PLEX_ACCESS_REVOKE]: "Member access removal",
   [JOB_TYPES.DISCORD_ROLE_SYNC]: "Discord role sync",
   [JOB_TYPES.DISCORD_ROLE_RECONCILE]: "Discord role check",
+  [JOB_TYPES.RETENTION_SWEEP]: "Retention sweep",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
   [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
@@ -79,6 +83,7 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.PLEX_ACCESS_REVOKE,
   JOB_TYPES.DISCORD_ROLE_SYNC,
   JOB_TYPES.DISCORD_ROLE_RECONCILE,
+  JOB_TYPES.RETENTION_SWEEP,
 ] as const satisfies readonly JobType[]
 
 /** A job's label, or its raw name for a type this build does not know. */
@@ -151,19 +156,18 @@ export interface StripeWebhookPayload {
 }
 
 /**
- * Payload for granting a user Plex server access after a successful checkout.
- *
- * Keyed by the app user id; the processor loads the active Plex server and the
- * user's email at run time. (Plex effects are implemented in a later step.)
+ * Payload for granting a member access after a successful checkout or a comp
+ * grant: a Plex share, a Jellyfin account turned on, or both (P11.11; the
+ * Plex name is legacy). Keyed by the app user id; the processor reads the
+ * member's linked services at run time.
  */
 export interface PlexAccessGrantPayload {
   userId: string
 }
 
 /**
- * Payload for revoking a user's Plex server access after cancellation.
- *
- * (Plex effects are implemented in a later step.)
+ * Payload for removing a member's access after cancellation: the Plex share,
+ * the Jellyfin account, or both (P11.11; the Plex name is legacy).
  */
 export interface PlexAccessRevokePayload {
   userId: string
@@ -380,6 +384,7 @@ interface JobPayloads {
   [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokePayload
   [JOB_TYPES.DISCORD_ROLE_SYNC]: DiscordRoleSyncPayload
   [JOB_TYPES.DISCORD_ROLE_RECONCILE]: Record<string, never>
+  [JOB_TYPES.RETENTION_SWEEP]: { triggeredBy: "scheduled" | "admin" }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
