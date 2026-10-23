@@ -157,6 +157,8 @@ export function buildConfig(overrides: Partial<Config> = {}): Config {
     llmDailyCapPerUserUsd: 0.5,
     llmDailyCapAdminUsd: 5,
     llmDailyCapServerUsd: 5,
+    lastRetentionRunAt: null,
+    lastRetentionSummary: null,
     updatedAt: fixedDate(),
     updatedBy: null,
     ...overrides,

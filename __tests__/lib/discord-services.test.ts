@@ -2,7 +2,7 @@
  * Tests for lib/discord/services.ts - Discord chat functionality
  */
 
-import { handleDiscordChat } from "@/lib/discord/services"
+import { clearDiscordChat, handleDiscordChat } from "@/lib/discord/services"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { getOrCreateSession, appendTurn } from "@/lib/discord/chat-session"
 import { mockReset } from 'jest-mock-extended'
@@ -455,5 +455,37 @@ describe("handleDiscordChat", () => {
       })
       expect(mockAppendTurn).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe("clearDiscordChat: a manual reset ends the conversation (P11.14)", () => {
+  const now = new Date()
+
+  it("writes endedAt on the old conversation before starting a new one", async () => {
+    mockPrisma.discordConnection.findUnique.mockResolvedValue({
+      id: "connection-1", userId: "user-1", discordUserId: "discord-123", username: "member", discriminator: null,
+      globalName: null, avatar: null, accessToken: "token", refreshToken: null, scope: null, expiresAt: null,
+      metadataSyncedAt: null, lastWatchedHours: null, linkedAt: now, revokedAt: null, lastError: null,
+      createdAt: now, updatedAt: now,
+    })
+    const session = {
+      id: "session-1", discordUserId: "discord-123", discordChannelId: "channel-123", chatConversationId: "conversation-old",
+      messages: [], lastMessageAt: now, isActive: true, createdAt: now, updatedAt: now,
+    }
+    mockPrisma.discordChatSession.findUnique.mockResolvedValue(session)
+    mockPrisma.chatConversation.updateMany.mockResolvedValue({ count: 1 })
+    mockPrisma.chatConversation.create.mockResolvedValue({ id: "conversation-new", userId: "user-1", createdAt: now, endedAt: null })
+    mockPrisma.discordChatSession.update.mockResolvedValue({ ...session, chatConversationId: "conversation-new" })
+
+    const result = await clearDiscordChat({ discordUserId: "discord-123", channelId: "channel-123" })
+
+    expect(result.success).toBe(true)
+    expect(mockPrisma.chatConversation.updateMany).toHaveBeenCalledWith({
+      where: { id: "conversation-old", endedAt: null },
+      data: { endedAt: expect.any(Date) },
+    })
+    expect(mockPrisma.discordChatSession.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ chatConversationId: "conversation-new" }) })
+    )
   })
 })

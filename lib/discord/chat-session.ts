@@ -145,6 +145,14 @@ export async function getOrCreateSession({
           }
         }
 
+        // Expired or relinked: the old conversation ends, which starts its retention window (P11.14)
+        if (existing) {
+          await tx.chatConversation.updateMany({
+            where: { id: existing.chatConversationId, endedAt: null },
+            data: { endedAt: new Date(now) },
+          })
+        }
+
         // Expired or missing: start a brand-new conversation and (re)set the row.
         const conversation = await tx.chatConversation.create({
           data: { userId },

@@ -24,6 +24,8 @@ export const JOB_TYPES = {
   // Discord linked-role metadata (P4.18)
   DISCORD_ROLE_SYNC: "discord:role:sync",
   DISCORD_ROLE_RECONCILE: "discord:role:reconcile",
+  // The daily retention sweep (P11.14)
+  RETENTION_SWEEP: "retention:sweep",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -56,6 +58,7 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.PLEX_ACCESS_REVOKE]: "Plex access removal",
   [JOB_TYPES.DISCORD_ROLE_SYNC]: "Discord role sync",
   [JOB_TYPES.DISCORD_ROLE_RECONCILE]: "Discord role check",
+  [JOB_TYPES.RETENTION_SWEEP]: "Retention sweep",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
   [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
@@ -79,6 +82,7 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.PLEX_ACCESS_REVOKE,
   JOB_TYPES.DISCORD_ROLE_SYNC,
   JOB_TYPES.DISCORD_ROLE_RECONCILE,
+  JOB_TYPES.RETENTION_SWEEP,
 ] as const satisfies readonly JobType[]
 
 /** A job's label, or its raw name for a type this build does not know. */
@@ -380,6 +384,7 @@ interface JobPayloads {
   [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokePayload
   [JOB_TYPES.DISCORD_ROLE_SYNC]: DiscordRoleSyncPayload
   [JOB_TYPES.DISCORD_ROLE_RECONCILE]: Record<string, never>
+  [JOB_TYPES.RETENTION_SWEEP]: { triggeredBy: "scheduled" }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload

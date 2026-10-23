@@ -180,3 +180,23 @@ async function processItem(
   })
   return { status, message }
 }
+
+/**
+ * Marks the member's history rows whose title is no longer on their watchlist
+ * as `REMOVED_FROM_WATCHLIST`, stamping `syncedAt` with the time, so the
+ * retention sweep deletes them 30 days later (P11.14). Call it only after a
+ * complete read; a title added back is processed again on the next run.
+ *
+ * @returns how many rows were marked
+ */
+export async function markRemovedItems(userId: string, ratingKeys: string[]): Promise<number> {
+  const { count } = await prisma.watchlistSyncHistory.updateMany({
+    where: {
+      userId,
+      plexRatingKey: { notIn: ratingKeys },
+      status: { not: WatchlistSyncStatus.REMOVED_FROM_WATCHLIST },
+    },
+    data: { status: WatchlistSyncStatus.REMOVED_FROM_WATCHLIST, syncedAt: new Date() },
+  })
+  return count
+}

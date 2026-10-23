@@ -317,7 +317,11 @@ export async function clearDiscordChat({
     }
   }
 
-  // Create a new conversation and clear the messages
+  // End the old conversation (its retention window starts, P11.14), then start a new one
+  await prisma.chatConversation.updateMany({
+    where: { id: session.chatConversationId, endedAt: null },
+    data: { endedAt: new Date() },
+  })
   const conversation = await prisma.chatConversation.create({
     data: { userId: connection.userId },
   })
