@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 /**
  * The setup claim (P11.32). playwright.config.ts sets `SETUP_TOKEN` for the
@@ -11,11 +11,26 @@ export function setupToken(): string {
   return token;
 }
 
-/** Opens /setup and claims the server in this page's browser context. */
+/**
+ * Claims the server and gives `page`'s browser context the claim cookie.
+ *
+ * The claim runs in a fresh context of its own: the visual and axe specs pause
+ * the page's clock (`makeDeterministic`), and with it paused React never
+ * reveals the streamed /setup content, so the form would stay hidden.
+ */
 export async function claimSetup(page: Page): Promise<void> {
-  await page.goto('/setup');
-  await expect(page.getByTestId('setup-claim-form')).toBeVisible();
-  await page.getByTestId('setup-claim-code-input').fill(setupToken());
-  await page.getByTestId('setup-claim-submit').click();
-  await expect(page.getByTestId('setup-claim-form')).toBeHidden();
+  const browser = page.context().browser();
+  if (!browser) throw new Error('claimSetup needs a page from a launched browser');
+  const claimContext = await browser.newContext({ baseURL: test.info().project.use.baseURL });
+  try {
+    const claimPage = await claimContext.newPage();
+    await claimPage.goto('/setup');
+    await expect(claimPage.getByTestId('setup-claim-form')).toBeVisible();
+    await claimPage.getByTestId('setup-claim-code-input').fill(setupToken());
+    await claimPage.getByTestId('setup-claim-submit').click();
+    await expect(claimPage.getByTestId('setup-claim-form')).toBeHidden();
+    await page.context().addCookies(await claimContext.cookies());
+  } finally {
+    await claimContext.close();
+  }
 }

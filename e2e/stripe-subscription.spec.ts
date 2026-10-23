@@ -458,7 +458,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
           create: { userId: JF_MEMBER.id, status: 'ACTIVE' },
           update: { status: 'ACTIVE', stripeSubscriptionId: null, jellyfinAccessStatus: null },
         });
-        await queue.add('plex:access:grant', { userId: JF_MEMBER.id }, { jobId: `plex:access:grant:${JF_MEMBER.id}:e2e-${Date.now()}` });
+        await queue.add('plex:access:grant', { userId: JF_MEMBER.id }, { jobId: `plex-access-grant-${JF_MEMBER.id}-e2e-${Date.now()}` });
         await expect.poll(isDisabledOnMock, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION }).toBe(false);
 
         context = await browser.newContext();
@@ -473,7 +473,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
           where: { userId: JF_MEMBER.id },
           data: { status: 'CANCELED', stripeSubscriptionId: `sub_e2e_jf_${Date.now()}` },
         });
-        await queue.add('plex:access:revoke', { userId: JF_MEMBER.id }, { jobId: `plex:access:revoke:${JF_MEMBER.id}:e2e-${Date.now()}` });
+        await queue.add('plex:access:revoke', { userId: JF_MEMBER.id }, { jobId: `plex-access-revoke-${JF_MEMBER.id}-e2e-${Date.now()}` });
         await expect.poll(isDisabledOnMock, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION }).toBe(true);
         await expect
           .poll(async () => (await prisma.subscription.findUnique({ where: { userId: JF_MEMBER.id } }))?.jellyfinAccessStatus)
