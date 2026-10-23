@@ -9,8 +9,6 @@ import { listPromptTemplates, seasonVoiceNote } from "@/lib/admin/prompts/querie
 import { newStyleGuide } from "@/lib/admin/routes"
 import { getFormat } from "@/lib/settings/app-settings"
 
-export const dynamic = "force-dynamic"
-
 /** `/admin/prompts` (P10.4): the Rewind style guides and the old v2 templates. */
 export default async function PromptsPage() {
   const gate = await getAdminGate()

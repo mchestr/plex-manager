@@ -11,8 +11,6 @@ import {
 import { getMemberNotice } from "@/lib/member/notice"
 import { getAppShellData } from "@/lib/member/shell"
 
-export const dynamic = 'force-dynamic'
-
 /**
  * The member layout: the setup, onboarding and access guards (a gated member
  * goes to `/subscribe`), then the AppShell with its one notice. Signed out it

@@ -18,8 +18,6 @@ import { assetKeySchema } from "@/lib/wrapped/data/share-safe-schema"
 import { isKnownPosterMiss, rememberPosterMiss, remainingMs, resolveSessionPosterAccess } from "@/lib/wrapped/poster-access"
 import { shareTokenAllowsRatingKey } from "@/lib/wrapped/poster-keys"
 
-export const dynamic = "force-dynamic"
-
 const INKS = Object.keys(rewindInks) as [InkName, ...InkName[]]
 const InkSchema = z.enum(INKS)
 /** `<spot>.<field>`: two Rewind inks. */

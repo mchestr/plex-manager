@@ -13,9 +13,6 @@ import { loadShareContext } from "@/lib/wrapped/data/share-context"
 import { CardFactIdSchema, SharePageTypeSchema } from "@/lib/wrapped/data/share-safe-schema"
 import { withRequestContext } from "@/lib/actions/route"
 
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-
 const logger = createLogger("REWIND_CARD_OWNER")
 
 const OWNER_CACHE_CONTROL = "private, max-age=86400"

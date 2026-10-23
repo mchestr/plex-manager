@@ -18,8 +18,6 @@ import { prisma } from "@/lib/prisma";
 import { icons } from "@/lib/ui/icons";
 import { safeCallbackPath } from "@/lib/validations/callback-path";
 
-export const dynamic = 'force-dynamic'
-
 interface HomeProps {
   /** `callbackUrl`: where sign-in lands afterwards, such as the admin denial's `/admin` (same-origin paths only). */
   searchParams: Promise<Record<string, string | string[] | undefined>>

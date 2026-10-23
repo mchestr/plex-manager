@@ -20,8 +20,6 @@ import { serverZone } from "@/lib/utils/server-zone"
 import { timeZoneOptions } from "@/lib/utils/zoned-time"
 import { getSeasonState } from "@/lib/wrapped/season"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = { title: "Account" }
 
 async function rewindNotify(userId: string): Promise<boolean> {

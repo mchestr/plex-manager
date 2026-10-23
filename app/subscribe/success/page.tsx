@@ -10,8 +10,6 @@ import { Button } from "@/components/ui/button"
 import { authOptions } from "@/lib/auth"
 import { serverName } from "@/lib/brand"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = { title: "You're in" }
 
 const NOTHING_YET: SubscriptionProvisioning = {

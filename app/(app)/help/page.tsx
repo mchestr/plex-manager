@@ -12,8 +12,6 @@ import { authOptions } from "@/lib/auth"
 import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import { getHelpData } from "@/lib/member/help"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = { title: "Help" }
 
 function HelpSection({ id, title, children }: { id: string; title: string; children: ReactNode }) {

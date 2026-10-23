@@ -26,8 +26,6 @@ import { createLogger } from "@/lib/utils/logger"
 import { getShareSafeRewind, type ShareSafeLookup } from "@/lib/wrapped/data/get-share-safe"
 import { recordShareVisit } from "@/lib/wrapped/share/visit-counter"
 
-export const dynamic = "force-dynamic"
-
 const logger = createLogger("REWIND_SHARE_PAGE")
 
 /** Share links are public but not meant for search results (also sent as `X-Robots-Tag` by next.config.js). */

@@ -32,8 +32,6 @@ import { memberName } from "@/lib/wrapped/member-name"
 import { PROMPT_VERSION } from "@/lib/wrapped/prompt/rewind-2026"
 import { getSeasonYear } from "@/lib/wrapped/season"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = { title: "Playground", robots: { index: false } }
 
 const querySchema = z.object({

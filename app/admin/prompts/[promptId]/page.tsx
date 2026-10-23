@@ -10,8 +10,6 @@ import { currentStyleGuideName, getPromptTemplateDetail, seasonVoiceNote } from 
 import { getFormat } from "@/lib/settings/app-settings"
 import { STYLE_GUIDE_MAX_CHARS } from "@/lib/validations/prompt"
 
-export const dynamic = "force-dynamic"
-
 /** `/admin/prompts/[promptId]` (P10.4): one template, its state and its text. */
 export default async function PromptTemplatePage({ params }: { params: Promise<{ promptId: string }> }) {
   const gate = await getAdminGate()

@@ -29,6 +29,12 @@ function contentSecurityPolicy(phase) {
  */
 module.exports = (phase) => ({
   reactStrictMode: true,
+  // Partial prerendering, 'use cache' and cacheTag (P11.19). Uncached data
+  // renders per request, so no segment exports `dynamic` or `revalidate`.
+  cacheComponents: true,
+  // Links keep the full prefetch Cache Components shipped with; Partial
+  // Prefetching is its own adoption (the Next docs' "Adopting Partial Prefetching").
+  partialPrefetching: false,
   typedRoutes: true,
   output: 'standalone',
   poweredByHeader: false,

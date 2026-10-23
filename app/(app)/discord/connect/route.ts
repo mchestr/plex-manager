@@ -10,8 +10,6 @@ import { getServerSession } from "next-auth"
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-export const dynamic = "force-dynamic"
-
 const logger = createLogger("DISCORD_CONNECT")
 
 /**

@@ -6,8 +6,6 @@ import { jellyfinLibraryListing, plexLibraryListing } from "@/lib/admin/invites/
 import { listInvites } from "@/lib/admin/invites/queries"
 import { parseTableParams } from "@/lib/ui/table-params"
 
-export const dynamic = "force-dynamic"
-
 type Params = Record<string, string | string[] | undefined>
 
 /**

@@ -26,8 +26,6 @@ import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { recordIdSchema } from "@/lib/validations/params"
 import { adminErrorHint } from "@/lib/wrapped/generation-errors"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = { robots: { index: false } }
 
 const ParamsSchema = z.object({

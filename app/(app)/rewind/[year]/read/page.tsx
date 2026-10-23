@@ -21,8 +21,6 @@ import { yearParamSchema } from "@/lib/validations/params"
 import { windowLine } from "@/lib/wrapped/copy/templates"
 import { listCompletedRewindYears } from "@/lib/wrapped/season"
 
-export const dynamic = "force-dynamic"
-
 type ReadPageProps = {
   params: Promise<{ year: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>

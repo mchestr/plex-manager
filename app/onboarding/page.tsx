@@ -6,8 +6,6 @@ import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard"
 import { authOptions } from "@/lib/auth"
 import { getOnboardingData } from "@/lib/member/onboarding"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = { title: "Get set up" }
 
 /**

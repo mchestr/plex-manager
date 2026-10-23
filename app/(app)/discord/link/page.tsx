@@ -8,8 +8,6 @@ import { serverName } from "@/lib/brand"
 import { getDiscordIntegration, getDiscordLinkStatus } from "@/lib/discord/integration"
 import { prisma } from "@/lib/prisma"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = {
   title: "Link Discord",
 }

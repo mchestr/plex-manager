@@ -17,8 +17,6 @@ import { getAppSettings } from "@/lib/settings/app-settings"
 import { yearParamSchema } from "@/lib/validations/params"
 import { listCompletedRewindYears } from "@/lib/wrapped/season"
 
-export const dynamic = "force-dynamic"
-
 type YearPageProps = {
   params: Promise<{ year: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>

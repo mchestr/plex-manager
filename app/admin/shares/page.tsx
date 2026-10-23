@@ -9,8 +9,6 @@ import { parseDateRange } from "@/lib/ui/date-range"
 import { parseTableParams } from "@/lib/ui/table-params"
 import { formatPeriod } from "@/lib/utils/day-window"
 
-export const dynamic = "force-dynamic"
-
 type Params = Record<string, string | string[] | undefined>
 
 export default async function SharesDashboardPage({ searchParams }: { searchParams: Promise<Params> }) {

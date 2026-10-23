@@ -13,8 +13,6 @@ import { serverName } from "@/lib/brand"
 import { rewindFontVariables } from "@/lib/rewind/fonts"
 import { getAppSettings, getFormat } from "@/lib/settings/app-settings"
 
-export const dynamic = "force-dynamic"
-
 /** One stored generation of a legacy Rewind (P7.13's renderer), inside the admin shell (P10.6, UI-21). */
 export default async function HistoricalWrappedPage({ params }: { params: Promise<{ wrappedId: string; llmUsageId: string }> }) {
   await assertAdmin()

@@ -8,8 +8,6 @@ import { getMembership } from "@/lib/member/membership"
 import { hasMembershipPage } from "@/lib/member/membership-page"
 import { getFormatSettings } from "@/lib/settings/app-settings"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = { title: "Membership" }
 
 /**

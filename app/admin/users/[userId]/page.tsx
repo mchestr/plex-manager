@@ -15,8 +15,6 @@ import { getFormat } from "@/lib/settings/app-settings"
 import { getStripeDashboardBaseUrl } from "@/lib/stripe/client"
 import { getSeasonYear } from "@/lib/wrapped/season"
 
-export const dynamic = "force-dynamic"
-
 const searchSchema = z.object({ tab: z.enum(USER_DETAIL_TABS).catch("overview") })
 
 const LABELS: Record<UserDetailTab, string> = { overview: "Overview", rewind: "Rewind", usage: "Usage", billing: "Billing" }

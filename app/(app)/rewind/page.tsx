@@ -4,8 +4,6 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { resolveRewindYear } from "@/lib/wrapped/season"
 
-export const dynamic = "force-dynamic"
-
 /** The query keys `/rewind` hands on to the year it opens. */
 const KEPT_PARAMS = ["from", "sheet"] as const
 

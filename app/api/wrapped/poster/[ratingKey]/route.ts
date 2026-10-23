@@ -5,4 +5,3 @@
  */
 export { GET } from "@/app/api/rewind/poster/[ratingKey]/route"
 
-export const dynamic = "force-dynamic"

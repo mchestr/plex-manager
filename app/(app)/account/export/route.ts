@@ -8,9 +8,6 @@ import { createSafeError, ErrorCode, getStatusCode } from "@/lib/security/error-
 import { consume } from "@/lib/security/rate-limit"
 import { createLogger } from "@/lib/utils/logger"
 
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-
 const logger = createLogger("MEMBER_EXPORT")
 
 const NO_STORE = { "Cache-Control": "no-store" }

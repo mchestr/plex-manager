@@ -17,8 +17,6 @@ import { prisma } from "@/lib/prisma"
 import { getOfferedPrices } from "@/lib/stripe/prices"
 import { icons } from "@/lib/ui/icons"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = { title: "Join" }
 
 /** An entitled member's way to billing: `/membership` holds Manage billing (P10.22). */

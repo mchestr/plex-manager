@@ -12,8 +12,6 @@ import { isNewAnnouncement, newestCreatedAt } from "@/lib/member/announcements"
 import { prisma } from "@/lib/prisma"
 import { icons } from "@/lib/ui/icons"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = { title: "Announcements" }
 
 /**
