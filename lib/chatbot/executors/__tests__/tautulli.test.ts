@@ -180,7 +180,7 @@ describe("executeTautulliTool - Discord activity scoping", () => {
 
     expect(mockUserFindUnique).toHaveBeenCalledWith({
       where: { id: "user-1" },
-      select: { plexUserId: true },
+      select: { plexUserId: true, jellyfinUserId: true },
     })
     expect(mockFindTautulliUser).toHaveBeenCalledWith(
       expect.objectContaining({ url: "http://localhost:8181", apiKey: "test-key" }),
@@ -225,6 +225,15 @@ describe("executeTautulliTool - Discord activity scoping", () => {
 
     expect(mockFindTautulliUser).not.toHaveBeenCalled()
     expect(result).toEqual(UNMAPPED)
+  })
+
+  it("tells a Jellyfin-only caller why there are no sessions (P11.12)", async () => {
+    mockUserFindUnique.mockResolvedValue({ plexUserId: null, jellyfinUserId: "jf-1" })
+
+    const result = JSON.parse(await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord"))
+
+    expect(mockFindTautulliUser).not.toHaveBeenCalled()
+    expect(result).toEqual({ unavailable: "jellyfin-member" })
   })
 
   it("returns no sessions when there is no caller at all", async () => {
@@ -329,6 +338,8 @@ describe("executeTautulliTool - tools built on real Tautulli commands", () => {
   })
 })
 
+const UTC_PROMPT_FORMAT = { timeZone: "UTC", locale: "en-US" }
+
 describe("Discord tool gating - get_tautulli_users", () => {
   it("excludes get_tautulli_users from the Discord safe-tool set", () => {
     expect(DISCORD_SAFE_TOOL_NAMES.has("get_tautulli_users")).toBe(false)
@@ -338,9 +349,17 @@ describe("Discord tool gating - get_tautulli_users", () => {
   })
 
   it("does not advertise get_tautulli_users in the generated Discord system prompt", () => {
-    const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { timeZone: "UTC", locale: "en-US" }, new Date())
+    const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { format: UTC_PROMPT_FORMAT, now: new Date() })
 
     expect(prompt).not.toContain("get_tautulli_users")
+  })
+
+  it("names Jellyfin in the Discord system prompt only when a Jellyfin server is active (P11.12)", () => {
+    expect(generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { format: UTC_PROMPT_FORMAT, now: new Date() })).not.toContain("Jellyfin")
+
+    const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { format: UTC_PROMPT_FORMAT, now: new Date(), jellyfin: true })
+    expect(prompt).toContain("Plex, Jellyfin, Tautulli")
+    expect(prompt).toContain('"unavailable":"jellyfin-member"')
   })
 })
 

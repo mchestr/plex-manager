@@ -12,7 +12,7 @@ const NOW = new Date("2026-12-01T16:05:00Z")
 
 describe("generateDiscordSystemPrompt", () => {
   it("holds the member's zone and local time for Europe/Berlin in en-GB", () => {
-    const prompt = generateDiscordSystemPrompt([], { timeZone: "Europe/Berlin", locale: "en-GB" }, NOW)
+    const prompt = generateDiscordSystemPrompt([], { format: { timeZone: "Europe/Berlin", locale: "en-GB" }, now: NOW })
 
     expect(prompt).toContain("Member time zone: Europe/Berlin. Local time now: 1 Dec 2026, 17:05.")
   })

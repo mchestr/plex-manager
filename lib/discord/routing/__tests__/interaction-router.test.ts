@@ -162,6 +162,10 @@ const linkedUser: VerifyDiscordUserResult = {
     name: "Test User",
     email: "test@example.com",
     plexUserId: "plex-1",
+    jellyfinUserId: null,
+    primaryAuthService: "plex",
+    services: ["plex"],
+    timezone: null,
     isAdmin: false,
   },
 }

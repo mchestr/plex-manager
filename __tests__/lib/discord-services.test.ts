@@ -2,7 +2,7 @@
  * Tests for lib/discord/services.ts - Discord chat functionality
  */
 
-import { handleDiscordChat } from "@/lib/discord/services"
+import { handleDiscordChat, verifyDiscordUser } from "@/lib/discord/services"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { getOrCreateSession, appendTurn } from "@/lib/discord/chat-session"
 import { mockReset } from 'jest-mock-extended'
@@ -497,5 +497,72 @@ describe("handleDiscordChat", () => {
       })
       expect(mockAppendTurn).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe("verifyDiscordUser: the member's services (P11.12)", () => {
+  function linkedTo(identity: { plexUserId: string | null; jellyfinUserId: string | null; primaryAuthService: "plex" | "jellyfin" | null }) {
+    mockPrisma.discordConnection.findUnique.mockResolvedValue({
+      userId: "user-1",
+      revokedAt: null,
+      linkedAt: new Date("2026-01-01T00:00:00Z"),
+      metadataSyncedAt: null,
+      user: {
+        id: "user-1",
+        name: "Member",
+        email: null,
+        timezone: "Europe/Berlin",
+        isAdmin: false,
+        isExempt: false,
+        disabledAt: null,
+        subscription: null,
+        ...identity,
+      },
+    } as never)
+    mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: false } as never)
+  }
+
+  it("resolves a Jellyfin-only member with their service", async () => {
+    linkedTo({ plexUserId: null, jellyfinUserId: "jf-1", primaryAuthService: "jellyfin" })
+
+    const result = await verifyDiscordUser("discord-1")
+
+    expect(result.user).toEqual(
+      expect.objectContaining({ plexUserId: null, jellyfinUserId: "jf-1", primaryAuthService: "jellyfin", services: ["jellyfin"], timezone: "Europe/Berlin" })
+    )
+  })
+
+  it("resolves a member with both identities with both services, Plex first", async () => {
+    linkedTo({ plexUserId: "plex-1", jellyfinUserId: "jf-1", primaryAuthService: "jellyfin" })
+
+    const result = await verifyDiscordUser("discord-1")
+
+    expect(result.user?.services).toEqual(["plex", "jellyfin"])
+  })
+})
+
+describe("handleDiscordChat: the fallback reply names Jellyfin when it is configured (P11.12)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockPrisma.discordConnection.findUnique.mockResolvedValue({
+      userId: "user-1",
+      revokedAt: null,
+      user: { id: "user-1", isAdmin: false, isExempt: false, disabledAt: null, subscription: null },
+    } as never)
+    mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: false } as never)
+    mockGetOrCreateSession.mockResolvedValue({ id: "session-1", chatConversationId: "conversation-1", history: [], created: false })
+    mockAppendTurn.mockResolvedValue(undefined)
+    mockRunChatbotForUser.mockResolvedValue({ success: true, message: { role: "assistant", content: "  ", timestamp: 1 } })
+  })
+
+  it.each([
+    [1, "Plex, Jellyfin, Tautulli"],
+    [0, "Plex, Tautulli"],
+  ])("with %i active Jellyfin servers it lists %s", async (count, services) => {
+    mockPrisma.jellyfinServer.count.mockResolvedValue(count)
+
+    const result = await handleDiscordChat({ discordUserId: "discord-1", channelId: "channel-1", message: "hi" })
+
+    expect(result.message?.content).toContain(services)
   })
 })

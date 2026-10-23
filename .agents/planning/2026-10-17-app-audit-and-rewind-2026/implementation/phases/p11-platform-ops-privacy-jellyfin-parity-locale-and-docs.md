@@ -613,10 +613,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Link Discord as the seeded Jellyfin member: `/mystats` and `/watching` give the explicit replies, and the linked role shows "subscribed". For a Plex member with a completed 2026 Rewind, `/mystats` answers from stored facts, and the Tautulli access log shows no request.
 
 **Done when.**
-- [ ] Discord identity carries Jellyfin, and every command or tool gives Jellyfin-only members a real answer or an explicit reason.
-- [ ] `is_subscribed` follows access on each service.
-- [ ] `/mystats` and the role hours read stored v3 facts or at most 20 pages of history for the member's year.
-- [ ] `fetchTautulliStatistics` and the Discord-only v2 modules are deleted.
+- [x] Discord identity carries Jellyfin, and every command or tool gives Jellyfin-only members a real answer or an explicit reason.
+- [x] `is_subscribed` follows access on each service.
+- [x] `/mystats` and the role hours read stored v3 facts or at most 20 pages of history for the member's year.
+- [x] `fetchTautulliStatistics` and the Discord-only v2 modules are deleted.
+
+(as merged: `verifyDiscordUser`'s user gains `jellyfinUserId`, `primaryAuthService`, `services` and `timezone` (the member's `User.timezone`, for P11.17). `lib/discord/copy.ts` holds `JELLYFIN_COPY` (mystats, watching, mark), `isJellyfinOnly(services)` and `assistantFallbackReply(jellyfinConfigured)`; the commands reply before deferring. The executors return `JELLYFIN_MEMBER` (`{ unavailable: "jellyfin-member" }`, `lib/chatbot/executors/tool-output.ts`) from `get_plex_sessions` and the Discord `get_tautulli_activity`; `generateDiscordSystemPrompt(toolset, { jellyfin })` takes an options object that P11.17 can extend with the zone, and `runChatbotForUser` sets it from an active `JellyfinServer`. `computeRoleMetadata`'s user is `{ id, plexUserId, jellyfinUserId, timezone, lastWatchedHours }`; access is true when either service grants it, null (push nothing) when none grants and one is unknown. Stats live in `lib/discord/stats/`: `getMemberYearStats(userId, { year, zone, limiter?, signal? })` returns `{ ok, stats }` or `NO_PLEX_ACCOUNT` / `NO_TAUTULLI` / `UNAVAILABLE`; `memberStatsYear(timezone, now?)` gives the year and zone; the pure `statsFromFacts` / `statsFromEvents` are in `year-stats.ts`. The history read is P2.4's source with a new `maxPages` option (20) over `yearWindow` (whole calendar year, `finalCut: true` context), honouring `RewindExclusion` for the top titles but not P2.6's content-rating exclusions; the default limiter is `redisLimiter` when Redis is configured; Redis key `discord:stats:<userId>:<year>:<zone>`, 15 minutes. A v1/v2 completed row falls through to the history read. `/mystats` formats the peak hour in en-US (P11.17 owns locale). Deleted: `lib/wrapped/{tautulli-statistics,tautulli-user-statistics,derived-statistics,statistics-types}.ts`, their tests, the v2 history schemas in `lib/validations/tautulli.ts` and the `DerivedStatistics` type export. The member-stats tests are in `lib/discord/stats/__tests__/member-stats.test.ts` (goldens included); the services cases are in `__tests__/lib/discord-services.test.ts`.)
 
 ### Step P11.13: Member offboarding and deletion
 

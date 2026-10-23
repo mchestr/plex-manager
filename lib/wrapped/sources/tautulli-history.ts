@@ -8,7 +8,8 @@
  *    oldest first and `length=1000`; per member with `user_id`, or server-wide
  *    without it.
  * 2. Page with `start` until `recordsFiltered` rows are read, at most 200
- *    pages. A flat-array response is one complete page. Each page goes through
+ *    pages (`maxPages`; Discord's stats read at most 20). A flat-array
+ *    response is one complete page. Each page goes through
  *    `ctx.limiter` with a 20 s budget.
  * 3. Validate each row, map it to a {@link PlayEvent}, drop the admin's
  *    excluded library sections, and trim to the window by instant.
@@ -45,6 +46,8 @@ export interface TautulliHistoryOptions {
   config: { url: string; apiKey: string }
   /** `Config.rewindExcludedSectionIds`, parsed with `excludedSectionIdsSchema`. */
   excludedSectionIds: readonly string[]
+  /** The most pages one read may take before it fails with `PAGE_LIMIT` (default 200). */
+  maxPages?: number
 }
 
 /** Plays by Tautulli `user_id` (the plex.tv account ID). */
@@ -122,7 +125,7 @@ async function readEvents(
   const tally: RowTally = { read: 0, dropped: 0 }
   let start = 0
 
-  for (let page = 0; page < MAX_PAGES; page++) {
+  for (let page = 0; page < (options.maxPages ?? MAX_PAGES); page++) {
     if (ctx.signal?.aborted) return { ok: false, code: "ABORTED" }
     const params = { ...filter, grouping: 1, order_column: "started", order_dir: "asc", start, length: PAGE_LENGTH }
     const result = await runLimited(ctx, "tautulli", () =>
