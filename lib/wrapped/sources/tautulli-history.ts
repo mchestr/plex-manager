@@ -13,6 +13,16 @@
  * 3. Validate each row, map it to a {@link PlayEvent}, drop the admin's
  *    excluded library sections, and trim to the window by instant.
  *
+ * ## Excluded sections
+ *
+ * History rows carry no `section_id`, but `get_history` filters on one (a
+ * comma-separated list). When the admin has excluded sections, the read first
+ * pages the same filter with `section_id` set to them and keeps each row's
+ * `reference_id`; the main pass then drops the rows with those ids. A play in
+ * an excluded section is left out of the Rewind entirely, totals included,
+ * as the library pass leaves out the section's titles (`readLibrary`).
+ * Without exclusions there is no extra pass.
+ *
  * Hidden titles and content ratings are not applied here: hidden titles still
  * count toward totals, and history rows carry no content rating (P2.6 applies
  * the rating exclusions once the library pass has stored each title's).
@@ -69,14 +79,13 @@ function oneOf<T extends string>(allowed: ReadonlySet<string>, value: string | n
 }
 
 /**
- * Map a validated row to a {@link PlayEvent}, or `null` when its library
- * section is excluded. Seconds become epoch ms; minutes come from
- * `play_duration`, never `viewed_duration` (which does not exist).
+ * Map a validated row to a {@link PlayEvent}. Seconds become epoch ms;
+ * minutes come from `play_duration`, never `viewed_duration` (which does not
+ * exist).
  *
  * Exported for P2.10's fixture source and the tests.
  */
-export function toPlayEvent(row: TautulliHistoryRow, excludedSectionIds: ReadonlySet<string>): PlayEvent | null {
-  if (row.section_id !== null && excludedSectionIds.has(row.section_id)) return null
+export function toPlayEvent(row: TautulliHistoryRow): PlayEvent {
   return {
     ratingKey: row.rating_key,
     grandparentRatingKey: row.grandparent_rating_key,
@@ -98,27 +107,23 @@ export function toPlayEvent(row: TautulliHistoryRow, excludedSectionIds: Readonl
     platform: row.platform,
     product: row.product,
     guid: row.guid,
-    librarySectionId: row.section_id ?? "",
     contentRating: null,
     live: row.live === 1,
   }
 }
 
-type HistoryFilter = { user_id?: string; after?: string; before?: string }
+type HistoryFilter = { user_id?: string; after?: string; before?: string; section_id?: string }
 
 /**
- * Every `get_history` row matching `filter`, validated, mapped to events and
- * trimmed to `window` when given. Each page's events go to `add` as the page
- * arrives, so no caller has to hold the raw rows. @internal
+ * Every `get_history` row matching `filter`, validated. Each page's rows go
+ * to `add` as the page arrives, so no caller has to hold the raw rows.
  */
-async function readEvents(
+async function readRows(
   options: TautulliHistoryOptions,
   filter: HistoryFilter,
   ctx: SourceContext,
-  window: TimeWindow | undefined,
-  add: (event: PlayEvent, row: TautulliHistoryRow) => void
+  add: (row: TautulliHistoryRow) => void
 ): Promise<SourceResult<null>> {
-  const excluded = new Set(options.excludedSectionIds)
   const tally: RowTally = { read: 0, dropped: 0 }
   let start = 0
 
@@ -135,10 +140,7 @@ async function readEvents(
 
     const data = result.data
     const raw = Array.isArray(data) ? data : data.data
-    for (const row of parseRows("tautulli get_history", tautulliHistoryRowSchema, raw, tally)) {
-      const event = toPlayEvent(row, excluded)
-      if (event && (!window || inWindow(event.startedAt, window))) add(event, row)
-    }
+    for (const row of parseRows("tautulli get_history", tautulliHistoryRowSchema, raw, tally)) add(row)
     start += raw.length
 
     if (Array.isArray(data) || raw.length === 0 || start >= data.recordsFiltered) {
@@ -146,6 +148,40 @@ async function readEvents(
     }
   }
   return { ok: false, code: "PAGE_LIMIT" }
+}
+
+/** The `reference_id`s of the rows in the excluded sections; empty without exclusions. */
+async function excludedReferences(
+  options: TautulliHistoryOptions,
+  filter: HistoryFilter,
+  ctx: SourceContext
+): Promise<SourceResult<Set<string>>> {
+  const ids = new Set<string>()
+  if (options.excludedSectionIds.length === 0) return { ok: true, data: ids }
+  const result = await readRows(options, { ...filter, section_id: options.excludedSectionIds.join(",") }, ctx, (row) => {
+    if (row.reference_id !== null) ids.add(row.reference_id)
+  })
+  return result.ok ? { ok: true, data: ids } : result
+}
+
+/**
+ * Every play matching `filter` outside the excluded sections, trimmed to
+ * `window` when given, each passed to `add` with its row. @internal
+ */
+async function readEvents(
+  options: TautulliHistoryOptions,
+  filter: HistoryFilter,
+  ctx: SourceContext,
+  window: TimeWindow | undefined,
+  add: (event: PlayEvent, row: TautulliHistoryRow) => void
+): Promise<SourceResult<null>> {
+  const excluded = await excludedReferences(options, filter, ctx)
+  if (!excluded.ok) return excluded
+  return readRows(options, filter, ctx, (row) => {
+    if (row.reference_id !== null && excluded.data.has(row.reference_id)) return
+    const event = toPlayEvent(row)
+    if (!window || inWindow(event.startedAt, window)) add(event, row)
+  })
 }
 
 async function readEventList(

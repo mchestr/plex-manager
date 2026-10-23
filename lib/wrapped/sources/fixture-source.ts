@@ -32,8 +32,7 @@ function readRows(rows: readonly unknown[]): SourceResult<PlayEvent[]> {
   const tally: RowTally = { read: 0, dropped: 0 }
   const parsed = parseRows("fixture get_history", tautulliHistoryRowSchema, rows, tally)
   if (tooManyInvalid(tally)) return { ok: false, code: "ROWS_INVALID" }
-  const none = new Set<string>()
-  return { ok: true, data: parsed.flatMap((row) => toPlayEvent(row, none) ?? []) }
+  return { ok: true, data: parsed.map(toPlayEvent) }
 }
 
 /**

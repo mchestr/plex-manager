@@ -40,10 +40,13 @@ export const tautulliHistoryDataSchema = z.union([
 
 /**
  * One `get_history` row (Tautulli 2.17, `grouping=1`). Times are Unix seconds.
- * `user_id` (the plex.tv account ID) buckets the server-wide pass by member;
- * it never reaches a `PlayEvent`.
+ * `user_id` (the plex.tv account ID) buckets the server-wide pass by member,
+ * and `reference_id` (the group's key, null on a live-activity row) matches a
+ * row to the excluded-section pass; neither reaches a `PlayEvent`. Rows carry
+ * no `section_id`: Tautulli takes it as a filter but never returns it.
  */
 export const tautulliHistoryRowSchema = z.object({
+  reference_id: nullableKey,
   user_id: num,
   started: num,
   stopped: num,
@@ -65,7 +68,6 @@ export const tautulliHistoryRowSchema = z.object({
   location: nullableText,
   platform: nullableText,
   product: nullableText,
-  section_id: nullableKey,
   live: z.preprocess(numeric, z.union([z.literal(0), z.literal(1)])),
 })
 export type TautulliHistoryRow = z.infer<typeof tautulliHistoryRowSchema>

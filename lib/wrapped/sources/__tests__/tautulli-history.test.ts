@@ -134,7 +134,6 @@ describe("createTautulliHistorySource().fetchYear", () => {
       platform: "Roku",
       product: "Plex for Roku",
       guid: "plex://episode/000000000000000000000001",
-      librarySectionId: "2",
       contentRating: null,
       live: false,
     })
@@ -147,12 +146,63 @@ describe("createTautulliHistorySource().fetchYear", () => {
     }
   })
 
-  it("drops plays from excluded library sections", async () => {
-    mockFetch.mockResolvedValueOnce(json(page1)).mockResolvedValueOnce(json(page2))
+  it("drops plays from excluded library sections, matched by a section-filtered pass", async () => {
+    const excludedRow = page2.response.data.data[1]
+    mockFetch
+      .mockResolvedValueOnce(json(page([excludedRow], 1)))
+      .mockResolvedValueOnce(json(page1))
+      .mockResolvedValueOnce(json(page2))
+
+    const result = await createTautulliHistorySource({ config, excludedSectionIds: ["7", "9"] }).fetchYear(member, window2026, ctx)
+
+    expect(result.ok && result.data.map((e) => e.ratingKey)).toEqual(["50011", "60001", "50012"])
+    const [exclusion, ...main] = requestedUrls()
+    expect(Object.fromEntries(exclusion.searchParams)).toMatchObject({
+      user_id: "100001",
+      after: "2025-12-31",
+      before: "2027-01-01",
+      section_id: "7,9",
+      grouping: "1",
+    })
+    for (const url of main) expect(url.searchParams.has("section_id")).toBe(false)
+  })
+
+  it("keeps every play when the excluded sections hold none", async () => {
+    mockFetch
+      .mockResolvedValueOnce(json(page([], 0)))
+      .mockResolvedValueOnce(json(page1))
+      .mockResolvedValueOnce(json(page2))
 
     const result = await createTautulliHistorySource({ config, excludedSectionIds: ["7"] }).fetchYear(member, window2026, ctx)
 
-    expect(result.ok && result.data.map((e) => e.librarySectionId)).toEqual(["2", "1", "2"])
+    expect(result.ok && result.data).toHaveLength(4)
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+  })
+
+  it("fails the read when the excluded-section pass fails", async () => {
+    mockFetch.mockImplementation(async () => json(errorEnvelope))
+
+    const result = await createTautulliHistorySource({ config, excludedSectionIds: ["7"] }).fetchYear(member, window2026, ctx)
+
+    expect(result).toEqual({ ok: false, code: "TAUTULLI_ERROR" })
+    expect(requestedUrls().every((url) => url.searchParams.get("section_id") === "7")).toBe(true)
+  })
+
+  it("applies the exclusions to the server-wide year and the lifetime", async () => {
+    const rows = page1.response.data.data
+    mockFetch.mockImplementation(async (url: string) =>
+      json(new URL(url).searchParams.has("section_id") ? page([rows[1]], 1) : page(rows, 2))
+    )
+    const source = createTautulliHistorySource({ config, excludedSectionIds: ["7"] })
+
+    const byUser = await source.fetchServerYear(window2026, ctx)
+    const lifetime = await source.fetchLifetime(member, ctx)
+
+    expect(byUser.ok && byUser.data.get("100001")?.map((e) => e.ratingKey)).toEqual(["50011"])
+    expect(lifetime.ok && lifetime.data.map((e) => e.ratingKey)).toEqual(["50011"])
+    const exclusions = requestedUrls().filter((url) => url.searchParams.has("section_id"))
+    expect(exclusions.map((url) => url.searchParams.has("user_id"))).toEqual([false, true])
+    expect(exclusions[1].searchParams.has("after")).toBe(false)
   })
 
   it("returns TAUTULLI_ERROR after Tautulli's retries", async () => {
@@ -226,9 +276,7 @@ describe("createTautulliHistorySource().fetchServerYear", () => {
 describe("the watched rules", () => {
   const event = (playSeconds: number, percentComplete: number, watchedStatus = 0) => {
     const row = tautulliHistoryRowSchema.parse({ ...episodeRow, play_duration: playSeconds, percent_complete: percentComplete, watched_status: watchedStatus })
-    const mapped = toPlayEvent(row, new Set())
-    if (!mapped) throw new Error("excluded")
-    return mapped
+    return toPlayEvent(row)
   }
 
   it("counts 70 s at 95% and 120 s, not 100 s at 40%", () => {
