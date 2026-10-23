@@ -294,6 +294,16 @@ describe("myMarksCommand.handle — rendering", () => {
     expect(allValues).toContain("Friends (1994)")
   })
 
+  it("points to the account page for deleting a mark (P11.15)", async () => {
+    findMany.mockResolvedValue([makeMark({ title: "The Office", year: 2005 })])
+    count.mockResolvedValue(1)
+    const { ctx, editReply } = createMockContext()
+
+    await myMarksCommand.handle(ctx)
+
+    expect(firstEmbedData(editReply).description).toMatch(/Delete a mark on your account page: https?:\/\/\S+\/account$/)
+  })
+
   it("shows an empty-state message when the user has no marks", async () => {
     findMany.mockResolvedValue([])
     const { ctx, editReply } = createMockContext()

@@ -12,6 +12,7 @@ import { buildUser } from '@/__tests__/helpers/factories'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import AccountPage from '@/app/(app)/account/page'
 import { discordHandleFor } from '@/lib/member/shell'
+import { getYourData } from '@/lib/member/your-data'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
@@ -22,6 +23,10 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 jest.mock('@/lib/member/shell', () => ({ discordHandleFor: jest.fn() }))
+jest.mock('@/lib/member/your-data', () => ({ getYourData: jest.fn() }))
+jest.mock('@/components/account/your-data-section', () => ({
+  YourDataSection: ({ disclosure }: { disclosure: string }) => <div data-testid="account-your-data">{disclosure}</div>,
+}))
 jest.mock('@/lib/utils/server-zone', () => ({ serverZone: jest.fn().mockResolvedValue('America/Chicago') }))
 jest.mock('@/lib/wrapped/season', () => ({
   getSeasonState: jest.fn().mockResolvedValue({ seasonYear: 2026 }),
@@ -46,18 +51,25 @@ beforeEach(() => {
   jest.mocked(discordHandleFor).mockResolvedValue(null)
   prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', timezone: 'Europe/London' }))
   prismaMock.rewindPrefs.findUnique.mockResolvedValue(null)
+  jest.mocked(getYourData).mockResolvedValue({
+    marks: { rows: [], page: 1, total: 0 },
+    watchlist: { rows: [], total: 0 },
+    conversations: { rows: [], total: 0 },
+  })
 })
+
+const props = (query: Record<string, string> = {}) => ({ searchParams: Promise.resolve(query) })
 
 describe('AccountPage', () => {
   it('redirects without a session', async () => {
     jest.mocked(getServerSession).mockResolvedValue(null)
 
-    await expect(AccountPage()).rejects.toThrow('NEXT_REDIRECT')
+    await expect(AccountPage(props())).rejects.toThrow('NEXT_REDIRECT')
     expect(redirect).toHaveBeenCalledWith('/')
   })
 
   it('renders the sections, with Appearance absent', async () => {
-    render(await AccountPage())
+    render(await AccountPage(props()))
 
     expect(screen.getByRole('heading', { level: 1, name: 'Account' })).toBeInTheDocument()
     expect(screen.queryByRole('main')).not.toBeInTheDocument()
@@ -70,7 +82,7 @@ describe('AccountPage', () => {
   })
 
   it('reads the season year prefs, defaulting the switch on', async () => {
-    render(await AccountPage())
+    render(await AccountPage(props()))
     expect(prismaMock.rewindPrefs.findUnique).toHaveBeenCalledWith({
       where: { userId_year: { userId: 'member-1', year: 2026 } },
       select: { notify: true },
@@ -81,13 +93,13 @@ describe('AccountPage', () => {
   it('shows a stored notify off', async () => {
     prismaMock.rewindPrefs.findUnique.mockResolvedValue({ notify: false } as never)
 
-    render(await AccountPage())
+    render(await AccountPage(props()))
 
     expect(screen.getByTestId('account-notify-switch')).toHaveAttribute('data-on', 'false')
   })
 
   it('offers Link Discord when unlinked', async () => {
-    render(await AccountPage())
+    render(await AccountPage(props()))
 
     const section = screen.getByTestId('account-discord')
     expect(within(section).getByTestId('account-discord-link')).toHaveTextContent('Link Discord')
@@ -97,7 +109,7 @@ describe('AccountPage', () => {
   it('shows the linked handle with Manage when linked', async () => {
     jest.mocked(discordHandleFor).mockResolvedValue('morgan.lee')
 
-    render(await AccountPage())
+    render(await AccountPage(props()))
 
     const section = screen.getByTestId('account-discord')
     expect(within(section).getByText('Linked as morgan.lee')).toBeInTheDocument()
@@ -108,8 +120,23 @@ describe('AccountPage', () => {
   it('leaves Discord out while linking is off', async () => {
     jest.mocked(discordHandleFor).mockResolvedValue(undefined)
 
-    render(await AccountPage())
+    render(await AccountPage(props()))
 
     expect(screen.queryByTestId('account-discord')).not.toBeInTheDocument()
+  })
+})
+
+describe('AccountPage, Your data (P11.15)', () => {
+  it('loads the page of marks the query names, and shows the section', async () => {
+    render(await AccountPage(props({ page: '2' })))
+
+    expect(getYourData).toHaveBeenCalledWith('member-1', 2)
+    expect(screen.getByTestId('account-your-data')).toHaveTextContent('Server admins can see your watch activity and your Rewind.')
+  })
+
+  it('falls back to the first page on a bad query', async () => {
+    render(await AccountPage(props({ page: 'abc' })))
+
+    expect(getYourData).toHaveBeenCalledWith('member-1', 1)
   })
 })
