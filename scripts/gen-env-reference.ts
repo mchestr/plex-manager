@@ -52,7 +52,7 @@ function requirement(entry: EnvEntry): string {
   return entry.required ? "yes" : ""
 }
 
-const cell = (value: string) => value.replace(/\|/g, "\\|")
+const cell = (value: string) => value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|")
 
 /** `docs/environment.md`. */
 export function renderMarkdown(entries: readonly EnvEntry[]): string {
