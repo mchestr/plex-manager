@@ -750,9 +750,9 @@ export async function processAccessRevoke(
 }
 
 /** Runs an access job under the member's `access:<userId>` lock, so a grant and a revoke never overlap (P11.3). */
-function underAccessLock<P extends { userId: string }, R>(process: (job: Job<P, R>) => Promise<R>) {
+function underAccessLock<P extends { userId: string }, R>(run: (job: Job<P, R>) => Promise<R>) {
   return (job: Job<P, R>): Promise<R> =>
-    withAccessLock(job.data.userId, job.id ?? job.data.userId, () => process(job), { redis: getRedisConnection() })
+    withAccessLock(job.data.userId, job.id ?? job.data.userId, () => run(job), { redis: getRedisConnection() })
 }
 
 /**
