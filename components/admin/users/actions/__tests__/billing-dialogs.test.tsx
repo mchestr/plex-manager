@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 
 import { makeAdminUserWithStats } from '@/__tests__/utils/test-builders'
 import { adminCancelSubscription, adminToggleExempt } from '@/actions/admin/subscriptions'
-import { CancelSubscriptionDialog, ToggleExemptDialog } from '@/components/admin/users/actions/billing-dialogs'
+import { CancelSubscriptionDialog, GrantAccessDialog, ToggleExemptDialog } from '@/components/admin/users/actions/billing-dialogs'
 import { Button } from '@/components/ui/button'
 import { listUserTarget } from '@/lib/admin/user-actions'
 
@@ -45,5 +45,30 @@ describe('billing dialogs with a trigger (the Billing tab)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Stripe is not configured')
     expect(screen.getByTestId('admin-user-cancel-dialog')).toBeInTheDocument()
+  })
+})
+
+describe('billing dialogs name the member\'s services (P11.11)', () => {
+  const withServices = (services: Array<'plex' | 'jellyfin'>) =>
+    listUserTarget(makeAdminUserWithStats({ id: 'u1', name: 'Morgan Lee', services }))
+
+  it.each([
+    [['jellyfin'], 'They will get access to Jellyfin and no longer need a subscription.'],
+    [['plex', 'jellyfin'], 'They will get access to Plex and Jellyfin and no longer need a subscription.'],
+    [[], 'They have no Plex or Jellyfin account linked'],
+  ] as const)('the comp grant for %j', async (services, copy) => {
+    const user = userEvent.setup()
+    render(<GrantAccessDialog user={withServices([...services])} trigger={<Button data-testid="grant-access-button">Grant</Button>} />)
+
+    await user.click(screen.getByTestId('grant-access-button'))
+    expect(await screen.findByTestId('admin-user-grant-dialog')).toHaveTextContent(copy)
+  })
+
+  it('the cancel dialog says which access is removed at period end', async () => {
+    const user = userEvent.setup()
+    render(<CancelSubscriptionDialog user={withServices(['jellyfin'])} trigger={<Button data-testid="cancel-subscription-button">Cancel</Button>} />)
+
+    await user.click(screen.getByTestId('cancel-subscription-button'))
+    expect(await screen.findByTestId('admin-user-cancel-dialog')).toHaveTextContent('when their Jellyfin access is removed')
   })
 })

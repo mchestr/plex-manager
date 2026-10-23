@@ -13,7 +13,26 @@ function exemptionOf(header: UserDetailHeaderData) {
   return resolveStatus("exemption", "exempt")
 }
 
-/** The subscription, the exemption and the Grant, Toggle exempt and Cancel confirms (P10.6). */
+/** What the last grant or revoke left on each service (P11.11). */
+const PLEX_INVITE_LABELS: Record<string, string> = { accepted: "Shared", pending: "Invite pending", revoked: "Removed" }
+const JELLYFIN_ACCESS_LABELS: Record<string, string> = { enabled: "Enabled", disabled: "Disabled", skipped: "Account not found" }
+
+function AccessRow({ label, value, labels, testId }: { label: string; value: string | null; labels: Record<string, string>; testId: string }) {
+  return (
+    <div className="flex flex-col gap-1" data-testid={testId}>
+      <dt className="text-label text-muted-foreground">{label}</dt>
+      <dd>
+        <StatusBadge tone="plain" label={value ? (labels[value] ?? value) : "Not provisioned"} />
+      </dd>
+    </div>
+  )
+}
+
+/**
+ * The subscription, the exemption, what the grant left on each linked service
+ * (the Plex invite and the Jellyfin account), and the Grant, Toggle exempt and
+ * Cancel confirms (P10.6).
+ */
 export function BillingTab({ header, f }: { header: UserDetailHeaderData; f: BoundFormat }) {
   const { subscription } = header
   const canCancel = subscription?.status === "ACTIVE" || subscription?.status === "PAST_DUE"
@@ -45,6 +64,17 @@ export function BillingTab({ header, f }: { header: UserDetailHeaderData; f: Bou
             <StatusBadge tone={exemption.tone} label={exemption.label} />
           </dd>
         </div>
+        {subscription && header.services.includes("plex") && (
+          <AccessRow label="Plex invite" value={subscription.plexInviteStatus} labels={PLEX_INVITE_LABELS} testId="admin-user-plex-invite-status" />
+        )}
+        {subscription && header.services.includes("jellyfin") && (
+          <AccessRow
+            label="Jellyfin access"
+            value={subscription.jellyfinAccessStatus}
+            labels={JELLYFIN_ACCESS_LABELS}
+            testId="admin-user-jellyfin-access-status"
+          />
+        )}
       </dl>
 
       {!header.isAdmin && (

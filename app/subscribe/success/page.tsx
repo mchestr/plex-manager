@@ -17,16 +17,18 @@ export const metadata: Metadata = { title: "You're in" }
 const NOTHING_YET: SubscriptionProvisioning = {
   status: null,
   plexInviteStatus: null,
+  jellyfinAccessStatus: null,
+  services: [],
   libraryCount: null,
   memberSince: null,
   currentPeriodEnd: null,
 }
 
 /**
- * You're in (UI-40): where Stripe Checkout returns (`success_url`). The Plex
+ * You're in (UI-40): where Stripe Checkout returns (`success_url`). The access
  * grant runs later, in the webhook's job, so the page shows a live checklist
- * (Payment confirmed, then the share or "Check your email to accept the
- * invite") seeded from the server and polled on the client. Anonymous
+ * (Payment confirmed, then the Plex share or invite and the Jellyfin account,
+ * per service) seeded from the server and polled on the client. Anonymous
  * visitors go to sign-in.
  */
 export default async function SubscribeSuccessPage() {

@@ -726,7 +726,9 @@ if (!stripe) return { error: 'Stripe is not configured' }
   signature, dedupes on a processed `StripeEvent(event.id)`, enqueues a BullMQ
   job (or retries its failed one), returns 200 (400 on bad signature, never 5xx).
 - `lib/queue/jobs/stripe.ts` — BullMQ processors (`STRIPE_WEBHOOK`,
-  `PLEX_ACCESS_GRANT`, `PLEX_ACCESS_REVOKE`).
+  `PLEX_ACCESS_GRANT`, `PLEX_ACCESS_REVOKE`; the access jobs keep their legacy
+  names and act on Plex, Jellyfin or both through `grantServiceAccess` /
+  `revokeServiceAccess` in `lib/members/access-actions.ts`).
 
 **Handled webhook events**: `checkout.session.completed`,
 `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
@@ -738,11 +740,12 @@ if (!stripe) return { error: 'Stripe is not configured' }
 recovers a failed event.
 
 **⚠️ CRITICAL — disabled-state safety**: the webhook still verifies signatures and
-records subscription **status** while disabled, but performs **no** Plex
-grant/revoke side effects (FR-29). Disabling the toggle never cancels Stripe
-subscriptions or removes Plex access (FR-4). Automatic Plex removal never
-unshares an admin, an exempt user, a non-Stripe-managed user, or a `PAST_DUE`
-subscriber (FR-19, `evaluateRevokeGuard`).
+records subscription **status** while disabled, but performs **no** Plex or
+Jellyfin grant/revoke side effects (FR-29). Disabling the toggle never cancels
+Stripe subscriptions or removes Plex or Jellyfin access (FR-4). Automatic
+removal never unshares an admin, an exempt user, a non-Stripe-managed user, or
+a `PAST_DUE` subscriber, and never disables a Jellyfin administrator (FR-19,
+`evaluateRevokeGuard`). No path invites a username-derived email to Plex.
 
 ## Avoid Over-Engineering
 

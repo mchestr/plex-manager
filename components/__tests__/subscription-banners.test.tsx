@@ -40,5 +40,13 @@ describe('SubscriptionBanners', () => {
     expect(screen.getByTestId('pending-invite-banner')).toBeInTheDocument()
     expect(screen.getByText(/accept it to finish setting up/i)).toBeInTheDocument()
     expect(screen.queryByTestId('past-due-banner')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Jellyfin/)).not.toBeInTheDocument()
+  })
+
+  it('says the Jellyfin account is enabled beside the pending Plex invite (P11.11)', () => {
+    render(<SubscriptionBanners notice="pending-invite" jellyfinEnabled />)
+
+    expect(screen.getByTestId('pending-invite-banner')).toHaveTextContent("We've sent a Plex invite to your email")
+    expect(screen.getByTestId('pending-invite-banner')).toHaveTextContent('Your Jellyfin account is enabled.')
   })
 })

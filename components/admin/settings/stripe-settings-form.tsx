@@ -6,6 +6,7 @@ import { setStripeEnabled, updateStripeSettings } from "@/actions/admin/admin-co
 import type { StripeConfigStatus } from "@/types/admin"
 import { Alert } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { FormField } from "@/components/ui/form-field"
 import { Label } from "@/components/ui/label"
 import { SecretInput } from "@/components/ui/secret-input"
@@ -85,10 +86,51 @@ export function useStripeForm(config: StripeConfigStatus) {
   return { values: settings.values, set, errors, form: settings.form }
 }
 
+interface JellyfinMembers {
+  count: number
+  names: string[]
+}
+
+/** "Ana, Ben and 2 more sign in with Jellyfin only ..." */
+function jellyfinConfirmCopy({ count, names }: JellyfinMembers): string {
+  const more = count - names.length
+  const who = more > 0 ? `${names.join(", ")} and ${more} more` : names.join(", ")
+  return `${who} sign in with Jellyfin only and aren't exempt. Their accounts were made in Jellyfin, not through an invite, so mark anyone who should keep free access exempt first.`
+}
+
+/**
+ * Turning subscriptions on with Jellyfin-only members who are not exempt
+ * (P11.11): the action lists them first, and this confirms.
+ */
+function JellyfinMembersConfirm({ members, onClose }: { members: JellyfinMembers | null; onClose: () => void }) {
+  const toast = useToast()
+  const count = members?.count ?? 0
+  const enable = async () => {
+    const result = await setStripeEnabled({ enabled: true, confirmJellyfinMembers: true })
+    if (!result.success) return { error: result.error }
+    toast.showSuccess("Subscriptions turned on")
+    return {}
+  }
+  return (
+    <ConfirmDialog
+      open={members !== null}
+      onOpenChange={(open) => !open && onClose()}
+      title={`${count} Jellyfin ${count === 1 ? "member" : "members"} will be asked to subscribe`}
+      description={members ? jellyfinConfirmCopy(members) : ""}
+      confirmLabel="Turn on subscriptions"
+      pendingLabel="Turning on"
+      action={enable}
+      data-testid="stripe-enable-jellyfin-confirm"
+      confirmTestId="stripe-enable-jellyfin-confirm-button"
+    />
+  )
+}
+
 /** The master switch: it saves on its own, and stays off until every prerequisite is saved. */
 function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; missing: string[] }) {
   const toast = useToast()
   const [isToggling, startToggling] = useTransition()
+  const [jellyfinMembers, setJellyfinMembers] = useState<JellyfinMembers | null>(null)
 
   const toggle = (next: boolean) =>
     startToggling(async () => {
@@ -97,12 +139,17 @@ function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; 
         toast.showError(result.error)
         return
       }
+      if (result.data.status === "confirm") {
+        setJellyfinMembers(result.data.jellyfinMembers)
+        return
+      }
       // The action revalidates the page, so the switch follows the stored value
       toast.showSuccess(next ? "Subscriptions turned on" : "Subscriptions turned off")
     })
 
   return (
     <div className="flex items-start gap-3">
+      <JellyfinMembersConfirm members={jellyfinMembers} onClose={() => setJellyfinMembers(null)} />
       <Switch
         id="stripe-enabled"
         checked={config.enabled}

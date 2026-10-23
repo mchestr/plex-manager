@@ -1,7 +1,7 @@
 "use server"
 
 import { adminAction } from "@/lib/actions/define-action"
-import { fail, ok } from "@/lib/actions/result"
+import { fail, ok, type ActionResult } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
 import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
 import { CONNECTION_HEALTH_TAG } from "@/lib/settings/connection-status"
@@ -193,6 +193,36 @@ export const updateStripeSettings = adminAction({
   },
 })
 
+/** How many names the turn-on confirmation lists; the count covers the rest. */
+const JELLYFIN_CONFIRM_NAMES = 10
+
+/**
+ * Members who sign in with Jellyfin only and are neither admins, exempt nor
+ * disabled: turning Stripe on asks them to subscribe. Their accounts were
+ * usually made in Jellyfin itself, not through an app invite, so the owner
+ * sees them first and can mark them exempt (P11.11).
+ *
+ * @internal
+ */
+async function jellyfinMembersToGate(): Promise<{ count: number; names: string[] }> {
+  const where = { jellyfinUserId: { not: null }, plexUserId: null, isAdmin: false, isExempt: false, disabledAt: null }
+  const [count, members] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({ where, select: { name: true, email: true }, orderBy: { name: "asc" }, take: JELLYFIN_CONFIRM_NAMES }),
+  ])
+  return { count, names: members.map((member) => member.name ?? member.email ?? "Unnamed member") }
+}
+
+/** `saved`, or the confirmation step turning Stripe on waits for. */
+export type StripeToggleResult =
+  | { status: "saved" }
+  | { status: "confirm"; jellyfinMembers: { count: number; names: string[] } }
+
+const stripeToggleInput = z.union([
+  z.boolean({ message: "Invalid input: enabled must be a boolean" }),
+  z.object({ enabled: z.literal(true), confirmJellyfinMembers: z.literal(true) }),
+])
+
 /**
  * Flip the master Stripe toggle (admin only).
  *
@@ -201,11 +231,18 @@ export const updateStripeSettings = adminAction({
  * which no webhook is ever processed) must all be present. When any are
  * missing, returns `{error}` naming what is missing and does NOT set
  * `stripeEnabled = true`. Disabling is always allowed.
+ *
+ * Turning Stripe on while it is off, with Jellyfin-only members who are not
+ * exempt, saves nothing and returns `{ status: "confirm" }` listing them
+ * ("3 Jellyfin members will be asked to subscribe"); the form confirms with
+ * `{ enabled: true, confirmJellyfinMembers: true }` (P11.11).
  */
 export const setStripeEnabled = adminAction({
-  input: z.boolean({ message: "Invalid input: enabled must be a boolean" }),
+  input: stripeToggleInput,
   fallbackError: "Failed to update Stripe configuration",
-  handler: async (enabled, { userId }) => {
+  handler: async (input, { userId }): Promise<ActionResult<StripeToggleResult>> => {
+    const enabled = typeof input === "boolean" ? input : input.enabled
+    const confirmed = typeof input !== "boolean"
     // Disabling reads only the flag (for the audit diff), never the secrets
     const config = await prisma.config.findUnique({
       where: { id: "config" },
@@ -226,6 +263,11 @@ export const setStripeEnabled = adminAction({
           "VALIDATION",
           `Stripe cannot be enabled until it is fully configured. Missing: ${missing.join(", ")}.`
         )
+      }
+
+      if (!config?.stripeEnabled && !confirmed) {
+        const jellyfinMembers = await jellyfinMembersToGate()
+        if (jellyfinMembers.count > 0) return ok({ status: "confirm", jellyfinMembers })
       }
     }
 
@@ -251,6 +293,6 @@ export const setStripeEnabled = adminAction({
     clearOfferedPricesCache()
     revalidatePath("/admin/settings")
     revalidatePath("/")
-    return ok(null)
+    return ok({ status: "saved" })
   },
 })

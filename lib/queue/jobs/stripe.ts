@@ -19,11 +19,14 @@
  *
  * ## Scope
  *
- * This module records subscription **status** and performs Plex **provisioning**
- * via the `PLEX_ACCESS_GRANT` job, enqueued when a subscription moves into
- * ACTIVE, and Plex **removal** via the `PLEX_ACCESS_REVOKE` job, enqueued when
- * it becomes CANCELED or UNPAID. Both jobs re-check live state before acting
- * (SEC-38). While `Config.stripeEnabled` is off neither is enqueued (FR-29).
+ * This module records subscription **status** and performs access
+ * **provisioning** via the `PLEX_ACCESS_GRANT` job, enqueued when a
+ * subscription moves into ACTIVE, and access **removal** via the
+ * `PLEX_ACCESS_REVOKE` job, enqueued when it becomes CANCELED or UNPAID. The
+ * job names are legacy: both act on every service the member uses, sharing
+ * Plex or turning the Jellyfin account on or off (`lib/members/access-actions.ts`,
+ * P11.11). Both jobs re-check live state before acting (SEC-38). While
+ * `Config.stripeEnabled` is off neither is enqueued (FR-29).
  */
 
 import type Stripe from "stripe"
@@ -41,7 +44,7 @@ import {
 import { addJob } from "../client"
 import { getAccessLevel } from "@/lib/access"
 import { getStripe } from "@/lib/stripe/client"
-import { parseStripeLibrarySectionIds, parseStripePriceIds } from "@/lib/stripe/config"
+import { parseStripePriceIds } from "@/lib/stripe/config"
 import { mapStripeStatus } from "@/lib/stripe/events"
 import {
   applySubscriptionState,
@@ -50,14 +53,10 @@ import {
 } from "@/lib/stripe/subscription-sync"
 import { prisma } from "@/lib/prisma"
 import { Prisma, SubscriptionStatus } from "@/lib/generated/prisma/client"
-import {
-  inviteUserToPlexServer,
-  acceptPlexInvite,
-  unshareUserFromPlexServer,
-} from "@/lib/connections/plex-invitations"
-import { withMachineIdentifier } from "@/lib/connections/plex-machine-id"
-import { checkUserServerAccess } from "@/lib/connections/plex-user-access"
 import { enqueueRoleSync } from "@/lib/discord/role-sync"
+import { isJellyfinAdmin } from "@/lib/jellyfin-auth"
+import { grantServiceAccess, NO_MEMBER_SERVICE, revokeServiceAccess } from "@/lib/members/access-actions"
+import { memberServices } from "@/lib/members/service"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { stopSyncAndClearPlexToken } from "@/lib/members/offboard"
 import { endUserSessions, SYSTEM_ACTOR } from "@/lib/session-revocation"
@@ -94,7 +93,7 @@ function expandableId(value: string | { id: string } | null | undefined): string
   return typeof value === "string" ? value : value.id
 }
 
-/** Whether `config.stripeEnabled` is on, which gates every Plex side effect (FR-29). @internal */
+/** Whether `config.stripeEnabled` is on, which gates every Plex and Jellyfin side effect (FR-29). @internal */
 async function isStripeEnabled(): Promise<boolean> {
   const config = await prisma.config.findUnique({
     where: { id: "config" },
@@ -110,9 +109,9 @@ async function isStripeEnabled(): Promise<boolean> {
  *
  * @internal
  */
-async function enqueuePlexAccessGrant(userId: string, eventId: string): Promise<void> {
+async function enqueueAccessGrant(userId: string, eventId: string): Promise<void> {
   if (!(await isStripeEnabled())) {
-    logger.info("Stripe disabled; skipping Plex access grant enqueue", { userId })
+    logger.info("Stripe disabled; skipping access grant enqueue", { userId })
     return
   }
   await addJob(
@@ -129,9 +128,9 @@ async function enqueuePlexAccessGrant(userId: string, eventId: string): Promise<
  *
  * @internal
  */
-async function enqueuePlexAccessRevoke(userId: string, eventId: string): Promise<void> {
+async function enqueueAccessRevoke(userId: string, eventId: string): Promise<void> {
   if (!(await isStripeEnabled())) {
-    logger.info("Stripe disabled; skipping Plex access revoke enqueue", { userId })
+    logger.info("Stripe disabled; skipping access revoke enqueue", { userId })
     return
   }
   await addJob(
@@ -139,11 +138,11 @@ async function enqueuePlexAccessRevoke(userId: string, eventId: string): Promise
     { userId },
     { jobId: `${JOB_TYPES.PLEX_ACCESS_REVOKE}:${userId}:${eventId}` }
   )
-  logger.info("Enqueued Plex access revoke", { userId, eventId })
+  logger.info("Enqueued access revoke", { userId, eventId })
 }
 
 /**
- * Runs the Plex side effects of a subscription write:
+ * Runs the access side effects of a subscription write:
  * - a stale event (a newer one already applied) does nothing;
  * - a move into ACTIVE from UNPAID, CANCELED or INCOMPLETE enqueues a grant;
  * - a CANCELED or UNPAID row enqueues a revoke. Whichever event applies the
@@ -183,9 +182,9 @@ async function applySideEffects(
   })
 
   if (outcome.becameActive) {
-    await enqueuePlexAccessGrant(outcome.userId, event.id)
+    await enqueueAccessGrant(outcome.userId, event.id)
   } else if (REVOKABLE_STATUSES.includes(outcome.status)) {
-    await enqueuePlexAccessRevoke(outcome.userId, event.id)
+    await enqueueAccessRevoke(outcome.userId, event.id)
   }
   await enqueueRoleSync(outcome.userId, "subscription_changed")
 }
@@ -441,37 +440,34 @@ async function grantSkipReason(user: {
 }
 
 /**
- * Process a `PLEX_ACCESS_GRANT` job.
+ * Process an access grant job. The job keeps its legacy name,
+ * `PLEX_ACCESS_GRANT`, so grants queued before P11.11 still run; it now acts
+ * on every service the member uses ({@link grantServiceAccess}), not only Plex.
  *
  * ## Behavior
  *
  * 1. Re-check the user live ({@link grantSkipReason}); a user who should not
  *    get access ends the job as skipped, without a retry.
- * 2. Load the active {@link PlexServer} and the user's email. A missing server
- *    or email is a configuration/data error → throw so BullMQ retries and the
- *    failure is observable.
- * 3. If the user already has access to the server, record `accepted` and stop.
- * 4. Invite the user. An invite failure throws (retry).
- * 5. If a valid `plexAuthToken` and invite id are present, auto-accept. On accept
- *    failure the invite is left `pending` (do NOT throw — the user can still
- *    accept via the emailed invite, FR-13).
- * 6. Record the resulting `plexInviteStatus` (`accepted` | `pending`).
- * 7. Once the member has access (`accepted`), re-sync their Discord linked
- *    role (P4.18). A pending invite gives no access yet; the daily reconcile
- *    picks it up after the member accepts.
+ * 2. Grant each linked service: turn the Jellyfin account on, then share the
+ *    Plex server (an existing share is `accepted`; otherwise invite the
+ *    member's Plex email and auto-accept with their stored token, else leave
+ *    it `pending` for them to accept by email, FR-13).
+ * 3. A member with no usable identity is skipped with `NO_MEMBER_SERVICE`,
+ *    recorded on the subscription, and the job succeeds (GAP-23). A missing
+ *    server or a failed call throws the failure code so BullMQ retries.
+ * 4. Record `plexInviteStatus` and `jellyfinAccessStatus`, and, once the
+ *    member has access on some service, re-sync their Discord linked role
+ *    (P4.18). A pending Plex invite alone gives no access yet; the daily
+ *    reconcile picks it up after the member accepts.
  *
  * @internal
  */
-export async function processPlexAccessGrant(
+export async function processAccessGrant(
   job: Job<PlexAccessGrantPayload, PlexAccessGrantResult>
 ): Promise<PlexAccessGrantResult> {
   const { userId } = job.data
 
-  logger.info("Processing Plex access grant job", {
-    jobId: job.id,
-    userId,
-    attempt: job.attemptsMade + 1,
-  })
+  logger.info("Processing access grant job", { jobId: job.id, userId, attempt: job.attemptsMade + 1 })
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -480,6 +476,7 @@ export async function processPlexAccessGrant(
       email: true,
       plexAuthToken: true,
       plexUserId: true,
+      jellyfinUserId: true,
       isExempt: true,
       subscription: { select: { status: true, stripeSubscriptionId: true } },
     },
@@ -491,101 +488,28 @@ export async function processPlexAccessGrant(
     return { userId, granted: false, skipped: skipReason ?? undefined }
   }
 
-  const activeServer = await prisma.plexServer.findFirst({
-    where: { isActive: true },
-  })
-
-  if (!activeServer) {
-    // Configuration error: surfaced via a thrown error so it is retried/visible.
-    throw new Error("No active Plex server configured")
-  }
-  const plexServer = await withMachineIdentifier(activeServer)
-
-  if (!user.email) {
-    throw new Error(`User ${userId} has no email; cannot grant Plex access`)
-  }
-
-  if (user.plexUserId) {
-    const access = await checkUserServerAccess(
-      {
-        url: plexServer.url,
-        token: plexServer.token,
-        adminPlexUserId: plexServer.adminPlexUserId,
-        machineIdentifier: plexServer.machineIdentifier,
-      },
-      user.plexUserId
-    )
-    if (access.status === "granted") {
-      await prisma.subscription.updateMany({
-        where: { userId },
-        data: { plexInviteStatus: "accepted" },
-      })
-      logger.info("User already has Plex access; recorded as accepted", { userId })
-      await enqueueRoleSync(userId, "access_granted")
-      return { userId, granted: true }
-    }
-  }
-
-  // Restrict the share to the admin-configured subscriber libraries. A missing
-  // or empty selection falls back to sharing all libraries.
-  const config = await prisma.config.findUnique({
-    where: { id: "config" },
-    select: { stripeLibrarySectionIds: true },
-  })
-  const librarySectionIds = parseStripeLibrarySectionIds(
-    config?.stripeLibrarySectionIds
-  )
-
-  const inviteResult = await inviteUserToPlexServer(
-    { url: plexServer.url, token: plexServer.token, machineIdentifier: plexServer.machineIdentifier },
-    user.email,
-    librarySectionIds.length > 0 ? { librarySectionIds } : undefined
-  )
-
-  if (!inviteResult.success) {
-    // Invite failed: throw so BullMQ retries the grant.
-    throw new Error(inviteResult.error || "Failed to invite user to Plex server")
-  }
-
-  // Attempt to auto-accept on the user's behalf when we have their token and an
-  // invite id. If either is missing, or the accept fails, leave the invite
-  // pending so the user can accept via the emailed invite.
-  let plexInviteStatus: "accepted" | "pending" = "pending"
-
-  if (user.plexAuthToken && inviteResult.inviteID !== undefined) {
-    const acceptResult = await acceptPlexInvite(
-      user.plexAuthToken,
-      inviteResult.inviteID
-    )
-
-    if (acceptResult.success) {
-      plexInviteStatus = "accepted"
-    } else {
-      logger.warn("Plex auto-accept failed; leaving invite pending", {
-        userId,
-        error: acceptResult.error,
-      })
-    }
-  } else {
-    // No stored token (or no invite id returned): the user must accept via email.
-    logger.info("No Plex token/invite id for auto-accept; invite left pending", {
-      userId,
-      hasToken: Boolean(user.plexAuthToken),
-      hasInviteId: inviteResult.inviteID !== undefined,
-    })
+  const grant = await grantServiceAccess(user)
+  if (!grant.success) {
+    // A missing server or an unreachable service: throw so BullMQ retries.
+    throw new Error(grant.code)
   }
 
   await prisma.subscription.updateMany({
     where: { userId },
-    data: { plexInviteStatus },
+    data: {
+      accessSkipCode: grant.skipCode ?? null,
+      ...(grant.plex && grant.plex !== "skipped" && { plexInviteStatus: grant.plex }),
+      ...(grant.jellyfin && { jellyfinAccessStatus: grant.jellyfin }),
+    },
   })
 
-  logger.info("Plex access grant complete", { userId, plexInviteStatus })
-  if (plexInviteStatus === "accepted") {
+  const granted = grant.plex === "accepted" || grant.jellyfin === "enabled"
+  logger.info("Access grant complete", { userId, plex: grant.plex, jellyfin: grant.jellyfin, skipCode: grant.skipCode })
+  if (granted) {
     await enqueueRoleSync(userId, "access_granted")
   }
 
-  return { userId, granted: plexInviteStatus === "accepted" }
+  return { userId, granted, ...(grant.skipCode && { skipped: grant.skipCode }) }
 }
 
 /**
@@ -595,6 +519,8 @@ export async function processPlexAccessGrant(
  */
 interface RevokeGuardTarget {
   isAdmin: boolean
+  /** The member administers Jellyfin, or the check could not say (`'unknown'`). */
+  jellyfinAdmin: boolean
   isExempt: boolean
   stripeSubscriptionId: string | null
   status: SubscriptionStatus
@@ -607,15 +533,17 @@ interface RevokeGuardTarget {
  *
  * ## Safety invariant (FR-19)
  *
- * Automatic removal must NEVER unshare a user who is any of the following, in
- * priority order:
+ * Automatic removal must NEVER unshare or disable a user who is any of the
+ * following, in priority order:
  *
  * 1. an **admin** (`isAdmin`) — server operators keep access;
- * 2. an **exempt** user (`isExempt`) — grandfathered / comped members;
- * 3. **not Stripe-managed** — no `stripeSubscriptionId`, so their access was not
+ * 2. a **Jellyfin administrator** (`jellyfinAdmin`) — never disabled, and an
+ *    admin check that could not answer counts as one;
+ * 3. an **exempt** user (`isExempt`) — grandfathered / comped members;
+ * 4. **not Stripe-managed** — no `stripeSubscriptionId`, so their access was not
  *    provisioned by this integration;
- * 4. **past due** (`PAST_DUE`) — dunning grace period retains access (Q10a);
- * 5. **active again** (SEC-38) — the stored status is not CANCELED or UNPAID,
+ * 5. **past due** (`PAST_DUE`) — dunning grace period retains access (Q10a);
+ * 6. **active again** (SEC-38) — the stored status is not CANCELED or UNPAID,
  *    or Stripe's live status is not `canceled`, `unpaid` or
  *    `incomplete_expired`. A revoke queued (or retried by hand) before the
  *    member resubscribed or paid therefore does nothing.
@@ -628,17 +556,23 @@ interface RevokeGuardTarget {
  *
  * @example
  * ```ts
- * evaluateRevokeGuard({ isAdmin: true, isExempt: false, stripeSubscriptionId: "sub_1", status: SubscriptionStatus.CANCELED, liveStatus: null })
+ * const canceled = { isAdmin: false, jellyfinAdmin: false, isExempt: false, stripeSubscriptionId: "sub_1", status: SubscriptionStatus.CANCELED, liveStatus: null }
+ * evaluateRevokeGuard({ ...canceled, isAdmin: true })
  * // => "user is an admin"
- * evaluateRevokeGuard({ isAdmin: false, isExempt: false, stripeSubscriptionId: "sub_1", status: SubscriptionStatus.CANCELED, liveStatus: "active" })
+ * evaluateRevokeGuard({ ...canceled, jellyfinAdmin: true })
+ * // => "user is a Jellyfin administrator"
+ * evaluateRevokeGuard({ ...canceled, liveStatus: "active" })
  * // => "subscription is active again"
- * evaluateRevokeGuard({ isAdmin: false, isExempt: false, stripeSubscriptionId: "sub_1", status: SubscriptionStatus.CANCELED, liveStatus: "canceled" })
+ * evaluateRevokeGuard({ ...canceled, liveStatus: "canceled" })
  * // => null (eligible for removal)
  * ```
  */
 export function evaluateRevokeGuard(target: RevokeGuardTarget): string | null {
   if (target.isAdmin) {
     return "user is an admin"
+  }
+  if (target.jellyfinAdmin) {
+    return "user is a Jellyfin administrator"
   }
   if (target.isExempt) {
     return "user is exempt"
@@ -659,44 +593,57 @@ export function evaluateRevokeGuard(target: RevokeGuardTarget): string | null {
 }
 
 /**
- * Process a `PLEX_ACCESS_REVOKE` job.
+ * Whether the member's Jellyfin account must be left alone: they administer
+ * the active server, or the check could not say. With no active server the
+ * revoke itself stops on the missing server, so this answers false.
  *
- * Removes a user's Plex server access on final cancellation/unpaid. This is the
- * highest-risk operation, so it evaluates hard safety guards FIRST via
+ * @internal
+ */
+async function isProtectedJellyfinAdmin(jellyfinUserId: string): Promise<boolean> {
+  const server = await prisma.jellyfinServer.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } })
+  if (!server) return false
+  return (await isJellyfinAdmin(server, jellyfinUserId)) !== "not-admin"
+}
+
+/** The revoke outcomes that mean an earlier run already removed the access. @internal */
+const ALREADY_REVOKED: readonly string[] = ["already_removed", "already_disabled", "not_found"]
+
+/**
+ * Process an access revoke job (`PLEX_ACCESS_REVOKE`, the legacy name kept so
+ * revokes queued before P11.11 still run).
+ *
+ * Removes a member's access on final cancellation/unpaid: the Plex share and
+ * the Jellyfin account, per linked service ({@link revokeServiceAccess}). This
+ * is the highest-risk operation, so it evaluates hard safety guards FIRST via
  * {@link evaluateRevokeGuard} and skips (logs a reason, succeeds) whenever the
  * target must be protected.
  *
  * ## Behavior
  *
  * 1. Re-read the user + subscription state (do not trust the queued payload).
- * 2. Evaluate the guards on the stored state, then, when a Stripe client is
- *    configured, again with Stripe's live status. If any trips, skip with a
- *    logged reason and succeed (`revoked: false`) — this does not call Plex.
- * 3. Otherwise load the active {@link PlexServer} (a missing server is a
- *    configuration error → throw so BullMQ retries) and, when a `plexUserId` is
- *    known, remove the user's share of that server only
- *    ({@link unshareUserFromPlexServer}). `PLEX_AUTH` throws
- *    `UnrecoverableError` (a rejected owner token is not retried) and
- *    `PLEX_UNAVAILABLE` throws to retry; a user with no `plexUserId` is
- *    already effectively unshared (idempotent).
- * 4. On `removed` or `already_removed`, stop the member's watchlist sync and
- *    clear their stored Plex token (GAP-31, idempotent), record the removal on
- *    the subscription (`plexInviteStatus = "revoked"`), then end the user's sessions
- *    ({@link endUserSessions}). A rerun that finds the share gone and the
+ * 2. Evaluate the guards on the stored state, then with the member's Jellyfin
+ *    administrator status, then, when a Stripe client is configured, with
+ *    Stripe's live status. If any trips, skip with a logged reason and
+ *    succeed (`revoked: false`): neither Plex nor Jellyfin is changed.
+ * 3. A member with no linked service records `NO_MEMBER_SERVICE` and succeeds.
+ * 4. Otherwise unshare the active Plex server and disable the Jellyfin
+ *    account. `PLEX_AUTH` throws `UnrecoverableError` (a rejected owner token
+ *    is not retried); `JELLYFIN_ADMIN` (promoted since the guard ran) skips;
+ *    an unavailable service or a missing server throws to retry.
+ * 5. Stop the member's watchlist sync and clear their stored Plex token
+ *    (GAP-31, idempotent), record `plexInviteStatus = "revoked"` and
+ *    `jellyfinAccessStatus = "disabled"`, then end the user's sessions
+ *    ({@link endUserSessions}). A rerun that finds every access gone and the
  *    removal already recorded succeeds without ending them again.
  *
  * @internal
  */
-export async function processPlexAccessRevoke(
+export async function processAccessRevoke(
   job: Job<PlexAccessRevokePayload, PlexAccessRevokeResult>
 ): Promise<PlexAccessRevokeResult> {
   const { userId } = job.data
 
-  logger.info("Processing Plex access revoke job", {
-    jobId: job.id,
-    userId,
-    attempt: job.attemptsMade + 1,
-  })
+  logger.info("Processing access revoke job", { jobId: job.id, userId, attempt: job.attemptsMade + 1 })
 
   // Re-read live state; never trust the queued payload for a destructive op.
   const user = await prisma.user.findUnique({
@@ -706,6 +653,7 @@ export async function processPlexAccessRevoke(
       isAdmin: true,
       isExempt: true,
       plexUserId: true,
+      jellyfinUserId: true,
       subscription: {
         select: { stripeSubscriptionId: true, status: true },
       },
@@ -721,12 +669,17 @@ export async function processPlexAccessRevoke(
   // Guards FIRST. This is the safety invariant (FR-19).
   const target: RevokeGuardTarget = {
     isAdmin: user.isAdmin,
+    jellyfinAdmin: false,
     isExempt: user.isExempt,
     stripeSubscriptionId: user.subscription?.stripeSubscriptionId ?? null,
     status: user.subscription?.status ?? SubscriptionStatus.INCOMPLETE,
     liveStatus: null,
   }
   let skipReason = evaluateRevokeGuard(target)
+  if (!skipReason && user.jellyfinUserId) {
+    target.jellyfinAdmin = await isProtectedJellyfinAdmin(user.jellyfinUserId)
+    skipReason = evaluateRevokeGuard(target)
+  }
   if (!skipReason && target.stripeSubscriptionId) {
     const stripe = await getStripe()
     if (stripe) {
@@ -740,55 +693,56 @@ export async function processPlexAccessRevoke(
     return { userId, revoked: false }
   }
 
-  // Idempotent: a user with no linked Plex account has no sharing to remove.
-  if (!user.plexUserId) {
-    logger.info("Revoke skipped: user has no linked Plex account", { userId })
+  if (memberServices(user).length === 0) {
+    logger.warn("Revoke skipped: no linked service", { userId, code: NO_MEMBER_SERVICE })
+    await prisma.subscription.updateMany({ where: { userId }, data: { accessSkipCode: NO_MEMBER_SERVICE } })
     return { userId, revoked: false }
   }
 
-  const activeServer = await prisma.plexServer.findFirst({
-    where: { isActive: true },
-  })
-
-  if (!activeServer) {
-    // Configuration error: surfaced via a thrown error so it is retried/visible.
-    throw new Error("No active Plex server configured")
-  }
-  const plexServer = await withMachineIdentifier(activeServer)
-
-  const unshareResult = await unshareUserFromPlexServer(
-    { url: plexServer.url, token: plexServer.token, machineIdentifier: plexServer.machineIdentifier },
-    user.plexUserId
-  )
-
-  if (!unshareResult.success) {
+  const revoke = await revokeServiceAccess(user)
+  if (!revoke.success) {
     // A rejected owner token will not fix itself: stop instead of retrying.
-    if (unshareResult.code === "PLEX_AUTH") {
+    if (revoke.code === "PLEX_AUTH") {
       throw new UnrecoverableError("PLEX_AUTH")
     }
-    // Plex is unavailable: throw so BullMQ retries the revoke.
-    throw new Error(unshareResult.code)
+    if (revoke.code === "JELLYFIN_ADMIN") {
+      logger.info("Revoke skipped by safety guard", { userId, reason: "user is a Jellyfin administrator" })
+      return { userId, revoked: false }
+    }
+    // Plex or Jellyfin is unavailable: throw so BullMQ retries the revoke.
+    throw new Error(revoke.code)
   }
+  // Configuration errors: surfaced via a thrown error so they are retried/visible.
+  if (revoke.plex === "no_server") throw new Error("NO_PLEX_SERVER")
+  if (revoke.jellyfin === "no_server") throw new Error("NO_JELLYFIN_SERVER")
 
   await stopSyncAndClearPlexToken(userId)
 
-  // An already removed share whose removal is already recorded is a rerun:
+  // An access already gone whose removal is already recorded is a rerun:
   // succeed without ending the sessions a second time.
   const { count } = await prisma.subscription.updateMany({
     where: {
       userId,
-      OR: [{ plexInviteStatus: null }, { plexInviteStatus: { not: "revoked" } }],
+      OR: [
+        ...(revoke.plex ? [{ plexInviteStatus: null }, { plexInviteStatus: { not: "revoked" } }] : []),
+        ...(revoke.jellyfin ? [{ jellyfinAccessStatus: null }, { jellyfinAccessStatus: { not: "disabled" } }] : []),
+      ],
     },
-    data: { plexInviteStatus: "revoked" },
+    data: {
+      accessSkipCode: null,
+      ...(revoke.plex && { plexInviteStatus: "revoked" }),
+      ...(revoke.jellyfin && { jellyfinAccessStatus: "disabled" }),
+    },
   })
-  if (count === 0 && unshareResult.status === "already_removed") {
+  const outcomes = [revoke.plex, revoke.jellyfin].filter((status) => status !== undefined)
+  if (count === 0 && outcomes.every((status) => ALREADY_REVOKED.includes(status))) {
     logger.info("Revoke already applied", { userId })
     return { userId, revoked: false }
   }
 
   await endUserSessions(userId, "subscription_revoked", SYSTEM_ACTOR)
 
-  logger.info("Plex access revoke complete", { userId, status: unshareResult.status })
+  logger.info("Access revoke complete", { userId, plex: revoke.plex, jellyfin: revoke.jellyfin })
 
   return { userId, revoked: true }
 }
@@ -805,9 +759,9 @@ export function getStripeProcessor(
     case JOB_TYPES.STRIPE_WEBHOOK:
       return processStripeWebhook as (job: Job) => Promise<unknown>
     case JOB_TYPES.PLEX_ACCESS_GRANT:
-      return processPlexAccessGrant as (job: Job) => Promise<unknown>
+      return processAccessGrant as (job: Job) => Promise<unknown>
     case JOB_TYPES.PLEX_ACCESS_REVOKE:
-      return processPlexAccessRevoke as (job: Job) => Promise<unknown>
+      return processAccessRevoke as (job: Job) => Promise<unknown>
     default:
       return null
   }
