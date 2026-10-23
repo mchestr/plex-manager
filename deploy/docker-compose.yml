@@ -7,6 +7,10 @@
 # The app reads every setting from .env, including DATABASE_URL and REDIS_URL,
 # which name the db and redis services below as their hosts. Nothing here
 # overrides .env, so NEXT_PUBLIC_APP_URL and NEXTAUTH_URL are always yours.
+# .env must also set ENCRYPTION_KEYS (production refuses to start without a
+# key; docs/operations.md#encryption-keys). This one app container runs with
+# PROCESS_ROLE=all, the default; docs/examples/docker-compose.workers.yml splits
+# it into web containers and a worker.
 services:
   app:
     image: ghcr.io/mchestr/plex-manager:${PLEX_MANAGER_VERSION:-latest}

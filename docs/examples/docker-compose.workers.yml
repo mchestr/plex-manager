@@ -10,8 +10,9 @@
 #   starts after the worker reports healthy, so the migrations have run, and
 #   may be scaled. Put your reverse proxy in front of it; with more than one
 #   replica, publish no host port and let the proxy reach `web` on this network.
-# - Both read one .env (NEXTAUTH_SECRET, PLEX_CLIENT_IDENTIFIER, the URLs and
-#   the passwords below; see example.env) and share the database and Redis.
+# - Both read one .env (NEXTAUTH_SECRET, PLEX_CLIENT_IDENTIFIER,
+#   ENCRYPTION_KEYS, the URLs and the passwords below; see example.env) and
+#   share the database and Redis. Every role checks the encryption key at boot.
 #   The leases make a second worker safe, but one is enough.
 #
 # Take a dump before starting a release that carries a migration

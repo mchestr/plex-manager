@@ -12,6 +12,7 @@ in [the environment reference](environment.md). Backups and upgrades are in
 - [Install with Docker Compose](#install-with-docker-compose)
 - [Reverse proxy](#reverse-proxy)
 - [Claim the server](#claim-the-server)
+- [Web and worker containers](#web-and-worker-containers)
 - [Bare metal](#bare-metal)
 - [After the install](#after-the-install)
 
@@ -52,7 +53,7 @@ overrides it.
    NEXT_PUBLIC_APP_URL="https://plex.example.com"
    NEXTAUTH_SECRET="<openssl rand -base64 32>"
    PLEX_CLIENT_IDENTIFIER="<openssl rand -hex 16>"
-   ENCRYPTION_KEY="<openssl rand -hex 32>"
+   ENCRYPTION_KEYS="k1:<openssl rand -base64 32>"
 
    # db and redis are the compose service names
    DATABASE_URL="postgresql://postgres:<POSTGRES_PASSWORD>@db:5432/plex_wrapped?schema=public"
@@ -60,6 +61,10 @@ overrides it.
    ```
    Delete or comment out the development lines you do not need: the `DEV_*`
    block and `E2E_DATABASE_URL` are for development and tests only.
+   `ENCRYPTION_KEYS` encrypts the secrets the app stores, and a production
+   server refuses to start without it. Keep it in your password manager, never
+   beside a database dump; generating, rotating and losing a key are in
+   [operations](operations.md#encryption-keys).
 3. Start it:
    ```bash
    docker compose pull
@@ -73,7 +78,8 @@ overrides it.
 **Versions.** Pushing a `v*` tag publishes the image as `X.Y.Z` and `X.Y`;
 `latest` and `main` track the `main` branch. Pin a release with
 `PLEX_MANAGER_VERSION` in production, and read the release notes before you
-change it. Prisma has no down migrations, so rolling back means restoring the
+change it ([releasing](releasing.md) explains the tags and the changelog's
+upgrade notes). Prisma has no down migrations, so rolling back means restoring the
 dump taken before the upgrade and running the previous tag.
 
 **Data.** The `db-data` volume is the only state to back up
@@ -169,6 +175,17 @@ fixed value instead of the printed code, set `SETUP_TOKEN` (at least 16
 characters, `openssl rand -hex 16`) in `.env` and restart; it stays valid while
 it is set, so remove it once setup is done.
 
+## Web and worker containers
+
+The compose file above runs one container with `PROCESS_ROLE=all` (the
+default): it serves the site and runs the job queue, the schedulers and the
+Discord bot. To scale the site, run `web` containers and one `worker` from the
+same image, as in
+[`examples/docker-compose.workers.yml`](examples/docker-compose.workers.yml).
+A worker serves only `/api/health` and `/api/metrics`, and without a `worker`
+or `all` container no jobs run. The roles and their trade-offs are in
+[operations](operations.md#web-and-worker-containers).
+
 ## Bare metal
 
 Without Docker, run the app with Node.js 22.9 or later against your own
@@ -215,6 +232,7 @@ npm run start:prod
   `npm run register-discord-metadata`; see [the Discord bot guide](discord-bot.md).
 - **Stripe.** Register the webhook at `https://plex.example.com/api/stripe/webhook`;
   see [Stripe](stripe.md).
-- **Backups.** Schedule `pg_dump` ([operations](operations.md#backup)) and keep
-  `.env` with it: `ENCRYPTION_KEY` and `NEXTAUTH_SECRET` cannot be recovered
-  from the dump.
+- **Backups.** Schedule `pg_dump` ([operations](operations.md#backup)) and back up
+  `.env` separately, never beside the dump: `ENCRYPTION_KEYS` (or `ENCRYPTION_KEY`) and
+  `NEXTAUTH_SECRET` cannot be recovered from the dump, and a restore under a
+  different key stops the app at boot ([encryption keys](operations.md#encryption-keys)).
