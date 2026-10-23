@@ -23,10 +23,15 @@ import { testPrometheusConnection } from '@/lib/connections/prometheus'
 import { testRadarrConnection } from '@/lib/connections/radarr'
 import { testSonarrConnection } from '@/lib/connections/sonarr'
 import { testTautulliConnection } from '@/lib/connections/tautulli'
+import * as rateLimit from '@/lib/security/rate-limit'
 import { setupClaimCookie } from '@/lib/setup/claim'
 import { getDevDefaults } from '@/lib/setup/dev-defaults'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
+jest.mock('@/lib/security/rate-limit', () => {
+  const actual = jest.requireActual('@/lib/security/rate-limit')
+  return { ...actual, reward: jest.fn(actual.reward) }
+})
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/connections/plex', () => ({
@@ -184,6 +189,15 @@ describe('claimServer', () => {
     wizard({ claimId: prismaMock.setup.update.mock.calls[0][0].data.claimId as string })
 
     await expect(setupActions.saveTautulli(SAMPLES.saveTautulli as never)).resolves.toEqual({ success: true, data: null })
+  })
+
+  it('keeps a good claim when giving back the limiter attempt fails', async () => {
+    process.env.SETUP_TOKEN = TOKEN
+    wizard()
+    jest.mocked(rateLimit.reward).mockRejectedValueOnce(new Error('redis down'))
+
+    await expect(claimServer({ code: TOKEN })).resolves.toEqual({ success: true, data: null })
+    expect(jar.has(SETUP_CLAIM_COOKIE)).toBe(true)
   })
 
   it('refuses a wrong code as VALIDATION without setting a cookie', async () => {

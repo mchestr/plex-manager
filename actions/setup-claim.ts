@@ -16,6 +16,9 @@ import { actionClientIp, reward } from "@/lib/security/rate-limit"
 import { redeemSetupCode, setupClaimCookie } from "@/lib/setup/claim"
 import { getSetupStatus } from "@/lib/setup/status"
 import { maskIp } from "@/lib/utils/log-redaction"
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("SETUP_CLAIM")
 
 const WRONG_CODE = "That code doesn't match. Use the newest setup code in the server log, or SETUP_TOKEN."
 
@@ -40,7 +43,8 @@ export const claimServer = publicAction({
 
     ;(await cookies()).set(setupClaimCookie(claim.claimId))
     const ip = await actionClientIp()
-    await reward("setup:claim", ip)
+    // The claim and its cookie already exist: a limiter error must not turn them into a failure
+    await reward("setup:claim", ip).catch((error: unknown) => logger.warn("Could not give back the claim attempt", { error }))
     logAuditEvent(AuditEventType.SETUP_CLAIMED, "setup", { method: claim.method, ip: maskIp(ip) })
     return ok(null)
   },
