@@ -103,7 +103,7 @@ Every other row in the member tables below is kept while the member is, and goes
 - **Invite codes** (`Invite.code`): kept until the invite is deleted. Admins see them to share them, so they are not hashed.
 - **Rewind share tokens**: stored only as SHA-256 hashes (`RewindShare.tokenHash`); the token itself is never stored.
 - **Service keys** (Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr, LLM providers, Stripe, Discord app): kept until an admin replaces them.
-- Every secret column is encrypted at rest when `ENCRYPTION_KEY` is set (the last column of the tables below).
+- Every secret column, and the AI prompt and reply text, is encrypted at rest under the keyring in `ENCRYPTION_KEYS` (the last column of the tables below); production refuses to start without a key ([operations](operations.md#encryption-keys)).
 
 ## Inventory
 
@@ -113,7 +113,7 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 
 | Model | Personal data | Readers | Removal does | Encrypted at rest |
 |---|---|---|---|---|
-| `User` | name, email, image, `plexUserId`, `jellyfinUserId`, `primaryAuthService`, `timezone`, exemption note, role, `disabledAt`; `plexAuthToken` (credential) | M own; A users list and detail; P name and image on a signed share | Deleted. Unshare and the Stripe revoke clear `plexAuthToken` | `plexAuthToken` when `ENCRYPTION_KEY` is set |
+| `User` | name, email, image, `plexUserId`, `jellyfinUserId`, `primaryAuthService`, `timezone`, exemption note, role, `disabledAt`; `plexAuthToken` (credential) | M own; A users list and detail; P name and image on a signed share | Deleted. Unshare and the Stripe revoke clear `plexAuthToken` | `plexAuthToken` |
 | `PlexWrapped` | the member's Rewind: viewing history facts, LLM copy, summary, archetype, legacy share token | M viewer; A Rewind pages; P published pages of a share | Cascade | No |
 | `RewindGeneration` | run status, error code, `previousData` (the replaced Rewind) | A Rewind history | Cascade | No |
 | `RewindShare` | published page list, card facts, token hash and asset key | M sharing panel; P the public link | Cascade (through `PlexWrapped`); the link returns 404 | Token stored as a SHA-256 hash only |
@@ -122,9 +122,9 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `RewindPrefs` | sharing and notification choices per year | M | Cascade | No |
 | `RewindExclusion` | titles the member hid from their Rewind | M | Cascade | No |
 | `WrappedShareVisit` | v2 share visits: hashed IP, user agent, referer of visitors | none | Cascade (through `PlexWrapped`) | IP is a salted hash |
-| `LLMUsage` | prompt and response text (viewing stats, assistant turns, tool output), tokens, cost, model | A LLM usage pages, conversation page, Rewind history | Cascade for the member's rows; admins' rows about the member keep cost but lose their text | No |
+| `LLMUsage` | prompt and response text (viewing stats, assistant turns, tool output), tokens, cost, model | A LLM usage pages, conversation page, Rewind history | Cascade for the member's rows; admins' rows about the member keep cost but lose their text | Prompt and response text |
 | `ChatConversation` | which member a conversation belongs to, start and end | A via LLM usage | Cascade | No |
-| `DiscordConnection` | Discord id, username, global name, avatar; access and refresh tokens | M link panel; A user detail | Grant revoked at Discord, then deleted (also on unlink) | Tokens when `ENCRYPTION_KEY` is set |
+| `DiscordConnection` | Discord id, username, global name, avatar; access and refresh tokens | M link panel; A user detail | Grant revoked at Discord, then deleted (also on unlink) | Tokens |
 | `DiscordChatSession` | the last assistant turns of a Discord chat, Discord id, channel id | none (LLM context only) | Deleted by Discord id, and through `ChatConversation` (also on unlink) | No |
 | `DiscordOAuthState` | a pending link attempt and its redirect | none | Cascade | No |
 | `DiscordPendingSelection` | a parked `/mark` search for a Discord id | none | Deleted by Discord id | No |

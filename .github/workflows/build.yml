@@ -228,6 +228,7 @@ jobs:
             echo "DATABASE_URL=postgresql://postgres:${PG_PASSWORD}@db:5432/plex_manager_smoke?schema=public"
             echo "REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379"
             echo "NEXTAUTH_SECRET=${secret}"
+            echo "ENCRYPTION_KEYS=smoke:$(openssl rand -base64 32)"
             echo "NEXTAUTH_URL=http://localhost:3000"
             echo "NEXT_PUBLIC_APP_URL=http://localhost:3000"
             echo "PLEX_CLIENT_IDENTIFIER=$(openssl rand -hex 16)"

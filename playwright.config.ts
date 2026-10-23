@@ -13,6 +13,10 @@ process.env.DATABASE_URL = databaseUrl;
 // that reopen setup (e2e/helpers/setup-claim.ts) share this token.
 process.env.SETUP_TOKEN ||= 'e2e-setup-token-0123456789';
 
+// A production server refuses to start without an encryption key (P11.1). This
+// one is public and only ever encrypts the test database's secrets.
+process.env.ENCRYPTION_KEYS ||= 'e2e:ZTJlLWVuY3J5cHRpb24ta2V5LTAxMjM0NTY3ODlhYmM=';
+
 const port = process.env.E2E_PORT || '3100';
 const baseURL = `http://localhost:${port}`;
 // E2E_SERVER=prod builds the app and serves it with `next start`; the default

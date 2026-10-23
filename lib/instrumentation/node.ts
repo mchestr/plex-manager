@@ -3,7 +3,8 @@
  *
  * `instrumentation.ts` calls {@link startNodeInstrumentation} without awaiting
  * it, because Next awaits `register()` before serving the first request. It
- * installs the shutdown coordinator first, then starts the queue worker, the
+ * installs the shutdown coordinator first and checks the encryption key
+ * (P11.1, at most 5 s), then starts the queue worker, the
  * Discord bot poller and the setup code (P11.32) side by side, so neither a
  * down Redis nor a slow Discord login holds up the others or the site (BP-13).
  *
@@ -25,6 +26,10 @@ export async function startNodeInstrumentation() {
     const { prisma } = await import("@/lib/prisma")
     await prisma.$disconnect()
   })
+
+  // Exits on a mismatched key; a slow database is retried in the background
+  const { assertEncryptionKey } = await import("@/lib/instrumentation/encryption-canary")
+  await assertEncryptionKey({ signal: shutdownSignal })
 
   await Promise.all([
     startQueueWorker().catch((error) => logger.error("Queue worker start failed", error)),
@@ -90,6 +95,8 @@ async function startQueueWorker() {
   }
 
   await startWorker()
+  const { enqueueSecretsReencrypt } = await import("@/lib/queue/jobs/secrets")
+  await enqueueSecretsReencrypt().catch((error) => logger.error("Could not queue the secret re-encryption", error))
   await scheduleRoleReconcile().catch((error) => logger.error("Could not schedule the Discord role reconcile", error))
 
   const { ensureRetentionSchedule } = await import("@/lib/retention/schedule")

@@ -470,13 +470,12 @@ PLEX_CLIENT_IDENTIFIER=                        # Any unique string
 
 # Database (PostgreSQL required for Prisma v7)
 DATABASE_URL=postgresql://user:password@localhost:5432/plex_manager
-```
 
-### Recommended Production Variables
-```env
-# Encrypts stored service secrets at rest (ENCRYPTED_FIELDS in lib/prisma.ts).
-# Generate with: openssl rand -hex 32. Use a dedicated value and keep it stable.
-ENCRYPTION_KEY=
+# Encrypts stored secrets at rest (ENCRYPTED_FIELDS, lib/db/encrypted-fields.ts).
+# kid:base64 entries of 32 bytes (openssl rand -base64 32); the first is primary.
+# Production refuses to boot without a key unless ALLOW_PLAINTEXT_SECRETS=true.
+# The legacy single ENCRYPTION_KEY still works. See docs/operations.md, "Encryption keys".
+ENCRYPTION_KEYS=k1:
 ```
 
 ### Development Shortcuts

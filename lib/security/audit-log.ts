@@ -147,6 +147,9 @@ export enum AuditEventType {
   // An admin ran the retention sweep from settings (P11.14). Details carry the
   // per-rule counts.
   RETENTION_RUN = "RETENTION_RUN",
+  // An admin re-encrypted the stored secrets from settings (P11.1). Details
+  // carry the primary kid and counts, never a value.
+  SECRETS_REENCRYPTED = "SECRETS_REENCRYPTED",
   // A credential, settings, setup or prompt-template change. Details carry the
   // redacted diff from lib/security/config-diff.ts: changed field names, whether
   // a secret changed, and URL origins only.

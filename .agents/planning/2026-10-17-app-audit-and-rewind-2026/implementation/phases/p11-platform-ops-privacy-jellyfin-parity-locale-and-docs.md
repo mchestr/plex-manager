@@ -69,13 +69,15 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Start the production image without a key: it exits with `env.invalid ENCRYPTION_KEY_MISSING` and the generation hint. With k1 set, the canary is written. Restart with a wrong key: `crypto.key_mismatch`, exit 1. Add k2 as primary and run "Encrypt stored secrets": every value reads `enc:v2:k2:`. Remove k1 and the app still works. Corrupt the stored Tautulli key: settings asks for it again, and sign-in still works.
 
 **Done when.**
-- [ ] Decryption never throws in the extension; an unreadable field is null and shown as "enter it again" in settings.
-- [ ] `ENCRYPTION_KEYS` with kids, `enc:v2:` writes, tag-length checks and an idempotent re-encryption job and action exist.
-- [ ] Production refuses to boot without a strong key unless `ALLOW_PLAINTEXT_SECRETS` is set, and the canary catches a mismatched key.
-- [ ] Nested includes and nested writes are decrypted and encrypted, and `LLMUsage` text is encrypted.
-- [ ] The lost-key and rotation runbook is in `docs/operations.md`.
+- [x] Decryption never throws in the extension; an unreadable field is null and shown as "enter it again" in settings.
+- [x] `ENCRYPTION_KEYS` with kids, `enc:v2:` writes, tag-length checks and an idempotent re-encryption job and action exist.
+- [x] Production refuses to boot without a strong key unless `ALLOW_PLAINTEXT_SECRETS` is set, and the canary catches a mismatched key.
+- [x] Nested includes and nested writes are decrypted and encrypted, and `LLMUsage` text is encrypted.
+- [x] The lost-key and rotation runbook is in `docs/operations.md`.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
-- [ ] An install with only `ENCRYPTION_KEY` set writes `enc:v2:legacy:` values in production, and the upgrade note explains the move to `ENCRYPTION_KEYS`.
+- [x] An install with only `ENCRYPTION_KEY` set writes `enc:v2:legacy:` values in production, and the upgrade note explains the move to `ENCRYPTION_KEYS`.
+
+(as merged: migration `20270118000002_p111_encryption_canary`. Built early; its deploy still waits until the season closes on 2027-01-31. `ENCRYPTED_FIELDS` moved to `lib/db/encrypted-fields.ts` (re-exported from `lib/prisma.ts`) and the extension to `lib/db/encryption-extension.ts` (`encryptionQuery`, `decryptDeep`, `withStoredSecrets`, an AsyncLocalStorage switch the re-encryption uses to read and write stored values; the relation map is built lazily from `Prisma.dmmf`). Keyring rules: kids `[A-Za-z0-9_-]{1,32}`, `legacy` reserved; an invalid entry is ignored with a warning and, if `ENCRYPTION_KEYS` has no valid entry, `encryptSecret` throws rather than write plaintext. `tryDecryptSecret` answers `KEY_MISSING` only when no key at all is configured. The env issues follow P4.1's shape: `ENCRYPTION_KEY` `missing` and `ENCRYPTION_KEY`/`ENCRYPTION_KEYS` `weak` (so the log reads `env.invalid ENCRYPTION_KEY: ...`). Unreadable fields are recorded per process in `lib/security/unreadable-secrets.ts` by model, field and row id; `SavedSecret` gained `unreadable`, which `secretInputState` and `needsSecretReentry` turn into the re-enter state (hint test id `<id>-unreadable`). `Config.encryptionFieldsHash` stores `<kid>:<fields hash>`; boot (with Redis, after the worker starts) queues `SECRETS_REENCRYPT` only when it differs. The canary exits on `KEY_MISSING`, `KEY_UNKNOWN` and `CORRUPT` alike, and a finished re-encryption rewrites it under the new primary kid. Settings > Security (`settings-security-status`, `settings-reencrypt-button`, confirm `settings-reencrypt-confirm`, `settings-security-unreadable`) uses `reencryptStoredSecrets({ dryRun })` in `actions/admin/encryption.ts`. `checkUserServerAccess` answers `unknown`/`server_token_invalid` for a null server token (the owner still signs in). Playwright gives its server the public key `e2e:...` and CI's image smoke test a generated one; the E2E spec was written, not run.)
 
 ### Step P11.2: Watchlist lock and fallback polling
 

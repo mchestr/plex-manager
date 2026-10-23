@@ -96,15 +96,16 @@ describe("gen-env-reference", () => {
       NEXT_PUBLIC_APP_URL: "https://plex.example.com",
       NEXTAUTH_SECRET: "Zq8vK2mR7xLp4Wn9Tb6Yc3Hd1Fg5Js0A",
       PLEX_CLIENT_IDENTIFIER: "0123456789abcdef0123456789abcdef",
+      ENCRYPTION_KEYS: `k1:${Buffer.alloc(32, 7).toString("base64")}`,
     }
     expect(checkProductionEnv(envSchema.parse(valid))).toEqual([])
 
     const missing = Object.keys(valid).filter((name) => {
       const env = { ...valid }
       delete env[name]
-      return checkProductionEnv(envSchema.parse(env)).some(
-        (issue) => issue.variable === name && issue.code === "missing"
-      )
+      // Without ENCRYPTION_KEYS the boot check names its legacy alternative,
+      // ENCRYPTION_KEY, as the missing variable, so any `missing` counts.
+      return checkProductionEnv(envSchema.parse(env)).some((issue) => issue.code === "missing")
     })
     expect(entries.filter((entry) => entry.requiredInProduction).map((entry) => entry.name).sort()).toEqual(missing.sort())
   })

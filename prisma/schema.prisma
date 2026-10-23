@@ -494,6 +494,8 @@ model Config {
   lightThemeEnabled            Boolean   @default(false) // Members may pick the light theme (P10.10, ui-design-system 3.3)
   lastRetentionRunAt           DateTime? // When the retention sweep last finished (P11.14)
   lastRetentionSummary         Json? // That run's per-rule counts (P11.14)
+  encryptionCanary             String? // A known value under the primary key; boot checks it decrypts (P11.1)
+  encryptionFieldsHash         String? // "<kid>:<ENCRYPTED_FIELDS hash>" the last full re-encryption finished under (P11.1)
   updatedAt                    DateTime  @updatedAt
   updatedBy                    String? // User ID who last updated this config
 }

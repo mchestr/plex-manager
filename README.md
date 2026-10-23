@@ -280,6 +280,7 @@ npm run db:studio     # Open database GUI
 
 Every variable, with whether production requires it and its default, is in the [environment reference](docs/environment.md), generated from `lib/env.ts` by `npm run env:docs`. Copy `example.env` (generated from the same source) to `.env` to start. Beyond those:
 
+- **Encryption**: production needs `ENCRYPTION_KEYS` (or the older `ENCRYPTION_KEY`) for the secrets stored at rest, unless `ALLOW_PLAINTEXT_SECRETS=true`; a boot check stops the server when the key does not match the database. Rotation and lost-key recovery: [docs/operations.md](docs/operations.md#encryption-keys).
 - **Docker Compose (development)**: `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required; `docker compose up` refuses to start without them. `docker-compose.yml` publishes Postgres (5432, 5433) and Redis (6379) on `127.0.0.1` only and builds the app container's `DATABASE_URL` and `REDIS_URL` from the two passwords; use them in your own `.env` URLs as well. A database volume created before this change keeps its old password (`postgres`), so set `POSTGRES_PASSWORD` to that or change it with `ALTER USER`. The compose databases run `postgres:16-alpine` (they were 15): Postgres 16 cannot open a 15 data directory, so dump an existing `db` volume while it still runs 15 (see [docs/operations.md](docs/operations.md#backup)), remove the volume (`docker compose down -v` removes every volume), then start the new one and restore the dump. The app container starts only once `db` and `redis` pass their health checks.
 - **Development**: `DEV_*` variables for setup wizard defaults (read only with `NODE_ENV=development` and `DEV_SETUP_PREFILL=true`, until setup is complete)
   - Use URL format: `DEV_PLEX_URL="https://localhost:32400"` (includes protocol and port)
@@ -444,7 +445,7 @@ All integrations are configured through the setup wizard or admin panel, with va
 - **CSRF protection** - Built into Next.js Server Actions
 - **Rate limiting** - Redis-backed limits on sign-in, invite, PIN, share and admin endpoints, keyed by the client IP behind `TRUSTED_PROXY_HOPS` proxies
 - **Audit logging** - Tracking of admin actions and security events
-- **Encryption at rest** - External-service API keys/tokens are AES-256-GCM encrypted when `ENCRYPTION_KEY` is set
+- **Encryption at rest** - Service keys and tokens, member Plex tokens, Discord and Stripe secrets and AI prompt text are AES-256-GCM encrypted under a rotatable keyring (`ENCRYPTION_KEYS`); a secret the key cannot read is asked for again instead of breaking the app
 - **Signed webhooks** - Stripe webhooks are verified against the raw request body (no admin auth needed)
 - **Member removal** - Admins can remove a member: their access, sessions, Stripe subscription, Discord grant and stored data go. [docs/privacy.md](docs/privacy.md) lists every table of personal data and what removal does to it
 - **Member export** - Members download their data as JSON from Account, Your data (`/account/export`, three a day) and delete single marks, watchlist items and assistant conversations there

@@ -30,8 +30,10 @@ beforeEach(() => {
     NEXTAUTH_URL: "https://plex.example.com",
     NEXT_PUBLIC_APP_URL: "https://plex.example.com",
     PLEX_CLIENT_IDENTIFIER: "0123456789abcdef",
+    ENCRYPTION_KEYS: `k1:${Buffer.alloc(32, 7).toString("base64")}`,
   }
   delete process.env.NEXT_PHASE
+  delete process.env.ENCRYPTION_KEY
   exit = jest.spyOn(process, "exit").mockImplementation(() => undefined as never)
   mockError.mockClear()
   mockWarn.mockClear()
@@ -49,6 +51,28 @@ afterAll(() => {
 })
 
 describe("register()", () => {
+  it("exits with 1 without an encryption key, and only warns with ALLOW_PLAINTEXT_SECRETS (P11.1)", async () => {
+    process.env.NEXTAUTH_SECRET = "q3V0Zm1sY2hQa2F6dGN2b0x1N2Q4c2Y5ZzBoMWkyajM="
+    delete process.env.ENCRYPTION_KEYS
+
+    await register()
+
+    expect(exit).toHaveBeenCalledWith(1)
+    expect(mockError).toHaveBeenCalledWith(expect.stringMatching(/^env\.invalid ENCRYPTION_KEY: neither/), undefined, {
+      variable: "ENCRYPTION_KEY",
+      code: "missing",
+    })
+
+    exit.mockClear()
+    mockError.mockClear()
+    process.env.ALLOW_PLAINTEXT_SECRETS = "true"
+    jest.resetModules()
+    await require("@/instrumentation").register()
+
+    expect(exit).not.toHaveBeenCalled()
+    expect(mockWarn).toHaveBeenCalledWith(expect.stringMatching(/^env\.warning ENCRYPTION_KEY/), { variable: "ENCRYPTION_KEY", code: "missing" })
+  })
+
   it("exits with 1 on a placeholder secret in production, logging the name only", async () => {
     startNodeInstrumentation.mockImplementation(async () => {
       expect(exit).toHaveBeenCalledWith(1)

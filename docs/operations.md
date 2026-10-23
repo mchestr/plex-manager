@@ -20,13 +20,14 @@ Installing is in [deployment](deployment.md), every variable is in the
 - [Installed with db push](#installed-with-db-push)
 - [Request IDs and metrics](#request-ids-and-metrics)
 - [Locale](#locale)
+- [Encryption keys](#encryption-keys)
 
 ## What holds state
 
 | State | Needed for a restore | Why |
 | --- | --- | --- |
 | PostgreSQL | **Mandatory** | Every user, Rewind, invite, subscription and setting, and every stored service secret: the `ENCRYPTED_FIELDS` in `lib/prisma.ts` (Plex, Tautulli, Overseerr, Sonarr and Radarr keys, LLM keys, Stripe and Discord secrets). |
-| `ENCRYPTION_KEY` | **Mandatory when set** | The encrypted fields in a dump cannot be decrypted without it. Keep it in your password manager, never next to the dump. A restore with a different key leaves every service secret unreadable until it is re-entered. |
+| `ENCRYPTION_KEYS` (or `ENCRYPTION_KEY`) | **Mandatory** | The encrypted fields in a dump cannot be decrypted without the keys they were written with. Keep them in your password manager, never next to the dump. A restore with a different key stops the app at boot (`crypto.key_mismatch`); see [Encryption keys](#encryption-keys). |
 | `NEXTAUTH_SECRET` | Recommended | Signs sessions. A new value signs everyone out. |
 | `PLEX_CLIENT_IDENTIFIER` | Recommended | Identifies this install to Plex. A new value makes every member sign in to Plex again. |
 | Redis (AOF) | Optional | Holds the job queue and rate-limit counters. Rewind jobs are idempotent and rescheduled when the worker starts. Stripe resends an event whose webhook did not answer 200, but a Stripe job that was queued and then lost with Redis is not redelivered (the webhook already recorded the event id), so after losing Redis compare subscriptions in Admin with the Stripe dashboard. |
@@ -278,3 +279,81 @@ The locale does not translate the copy: every string stays in English.
 Translation is out of scope for now, so there is no i18n library, no string
 extraction and no `Accept-Language` negotiation; every visitor gets the one
 configured locale.
+
+## Encryption keys
+
+Service keys and tokens, member Plex tokens, the Discord and Stripe secrets,
+the Rewind serial key and AI prompt and reply text (`ENCRYPTED_FIELDS` in
+`lib/db/encrypted-fields.ts`) are encrypted with AES-256-GCM before they reach
+the database. A production server refuses to start without a key
+(`env.invalid ENCRYPTION_KEY`) unless `ALLOW_PLAINTEXT_SECRETS=true`, which
+stores secrets as plain text and logs a warning at every boot.
+
+### Generate a key
+
+```bash
+echo "ENCRYPTION_KEYS=k1:$(openssl rand -base64 32)"
+```
+
+`ENCRYPTION_KEYS` is a comma-separated keyring of `kid:base64` entries, each 32
+bytes. The first entry encrypts every new write (`enc:v2:<kid>:…`); the others
+only read. A kid is 1 to 32 letters, digits, `_` or `-`, and `legacy` is
+reserved. An entry that is not 32 bytes stops a production boot
+(`ENCRYPTION_KEYS weak`).
+
+The older single `ENCRYPTION_KEY` (any string of at least 32 characters, never
+`NEXTAUTH_SECRET`) keeps working: it reads the `enc:v1:` values it wrote, and
+while `ENCRYPTION_KEYS` is unset it encrypts new writes as `enc:v2:legacy:`.
+
+At boot the app checks a known value (`Config.encryptionCanary`) against the
+key. When it does not decrypt, the log shows `crypto.key_mismatch` with its kid
+and code (never a value) and the process exits with 1, so a wrong key never
+starts serving. A database that does not answer within 5 seconds is retried in
+the background instead.
+
+### Encrypt what is stored
+
+Values written before a key was set, and values under an older kid, are
+rewritten under the primary key by the re-encryption job:
+
+- with Redis, boot queues `SECRETS_REENCRYPT` once per primary kid and field
+  list (`Config.encryptionFieldsHash` records the last finished run);
+- with or without Redis, Settings > Security > **Encrypt stored secrets**
+  counts first (a dry run), then rewrites after you confirm. The run is
+  audited as `SECRETS_REENCRYPTED`.
+
+Both are idempotent: a second run changes nothing.
+
+### Move from ENCRYPTION_KEY to a keyring
+
+1. Take a dump.
+2. Add `ENCRYPTION_KEYS=k1:<new key>` and keep `ENCRYPTION_KEY` set. Restart.
+3. Run **Encrypt stored secrets** (or let the boot job finish) until Security
+   shows every value under `k1`.
+4. Remove `ENCRYPTION_KEY` and restart.
+
+### Rotate
+
+1. Take a dump.
+2. Put the new kid first and keep the old one: `ENCRYPTION_KEYS=k2:<new>,k1:<old>`. Restart.
+3. Run **Encrypt stored secrets**. It also moves the boot canary to `k2`.
+4. Remove `k1:<old>` and restart. Removing it before step 3 finishes stops the
+   next boot with `crypto.key_mismatch` (the canary is still under `k1`).
+
+### Lost key
+
+A value no configured key can read is never fatal at run time: it reads as
+empty, `crypto.decrypt_failed` is logged once per field and kid, the settings
+page asks for that secret again ("The stored key can't be read with the
+current encryption key. Enter it again."), and Security lists every unreadable
+field. To recover:
+
+- **Set the right key**, if you still have it anywhere (an older `.env`, the
+  password manager). Nothing else is needed.
+- **Or enter the secrets again.** Clear `Config.encryptionCanary`
+  (`UPDATE "Config" SET "encryptionCanary" = NULL;`) so the next boot writes a
+  new one under the current key, then re-enter each service key in Settings.
+  Member Plex tokens refresh at each member's next sign-in; Discord links must
+  be linked again; the Stripe keys and the Discord client secret and bot token
+  are entered again in their sections. AI prompt text that cannot be read stays
+  unreadable until retention clears it.
