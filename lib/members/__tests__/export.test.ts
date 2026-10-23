@@ -45,7 +45,7 @@ beforeEach(async () => {
   prismaMock.watchlistSyncHistory.findMany.mockResolvedValue([])
   prismaMock.subscription.findUnique.mockResolvedValue({
     id: 's-1', userId: MEMBER, stripeCustomerId: 'cus_123', stripeSubscriptionId: 'sub_123', status: 'ACTIVE', priceId: 'price_1',
-    currentPeriodEnd: AT, cancelAtPeriodEnd: false, canceledAt: null, plexInviteStatus: null, stripeEventAt: null, createdAt: AT, updatedAt: AT,
+    currentPeriodEnd: AT, cancelAtPeriodEnd: false, canceledAt: null, plexInviteStatus: null, jellyfinAccessStatus: null, accessSkipCode: null, stripeEventAt: null, createdAt: AT, updatedAt: AT,
   })
   prismaMock.discordConnection.findUnique.mockResolvedValue({ username: 'ann', globalName: 'Ann', linkedAt: AT } as never)
   prismaMock.lLMUsage.findMany.mockResolvedValue([
