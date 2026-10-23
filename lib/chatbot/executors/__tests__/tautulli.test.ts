@@ -338,7 +338,7 @@ describe("Discord tool gating - get_tautulli_users", () => {
   })
 
   it("does not advertise get_tautulli_users in the generated Discord system prompt", () => {
-    const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS)
+    const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { timeZone: "UTC", locale: "en-US" }, new Date())
 
     expect(prompt).not.toContain("get_tautulli_users")
   })
@@ -426,5 +426,43 @@ describe("admin context drops emails, addresses and tokens (P4.15, SEC-42)", () 
       expect(result).not.toMatch(PERSONAL)
       expect(JSON.parse(result)).toEqual({ data: [{ title: "Heat", user: "Sam" }] })
     }
+  })
+})
+
+describe("epochs reach the model as ISO strings with an offset (P11.17)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockTautulliFindFirst.mockResolvedValue({ id: "tautulli-1", name: "Tautulli", url: "http://t", apiKey: "k", publicUrl: null } as never)
+  })
+
+  it("converts history epochs into the server zone", async () => {
+    // 1793590200 is 2026-11-02T03:30:00Z: 19:30 on 1 November in Los Angeles
+    jest.mocked(getTautulliHistory).mockResolvedValue({
+      success: true,
+      data: { data: [{ title: "Heat", date: 1793590200, started: "1793590200", stopped: 1793597400, duration: 7200 }] },
+    })
+
+    const result = JSON.parse(
+      await executeTautulliTool("get_tautulli_watch_history", {}, "admin-1", "default", {
+        timeZone: "America/Los_Angeles",
+        locale: "en-US",
+      })
+    )
+
+    expect(result.data[0]).toEqual({
+      title: "Heat",
+      date: "2026-11-01T19:30:00-08:00",
+      started: "2026-11-01T19:30:00-08:00",
+      stopped: "2026-11-01T21:30:00-08:00",
+      duration: 7200,
+    })
+  })
+
+  it("writes UTC with an explicit offset when no zone is given", async () => {
+    jest.mocked(getTautulliHomeStat).mockResolvedValue({ success: true, data: [{ user: "Sam", last_play: 1793590200 }] })
+
+    const result = JSON.parse(await executeTautulliTool("get_tautulli_top_users", {}))
+
+    expect(result).toEqual([{ user: "Sam", last_play: "2026-11-02T03:30:00+00:00" }])
   })
 })

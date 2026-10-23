@@ -7,7 +7,10 @@ import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import { prisma } from "@/lib/prisma"
 import { consume } from "@/lib/security/rate-limit"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
+import { canonicalLocale } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
+import { serverZone } from "@/lib/utils/server-zone"
+import { resolveZone } from "@/lib/wrapped/time/zone"
 
 const logger = createLogger("DISCORD_SERVICES")
 
@@ -145,6 +148,7 @@ export async function handleDiscordChat({
             isAdmin: true,
             isExempt: true,
             disabledAt: true,
+            timezone: true,
             subscription: { select: { status: true } },
           },
         },
@@ -152,7 +156,7 @@ export async function handleDiscordChat({
     }),
     prisma.config.findUnique({
       where: { id: "config" },
-      select: { stripeEnabled: true },
+      select: { stripeEnabled: true, locale: true },
     }),
   ])
 
@@ -206,6 +210,13 @@ export async function handleDiscordChat({
     // Thread the linked user's admin status so the executor's Discord admin-tier
     // guard can gate server-wide tools (Step 19, FR-14).
     isAdmin: connection.user.isAdmin,
+    // The member's zone (`User.timezone`, else the server zone) and the app
+    // locale, so "yesterday" is the member's (P11.17). Read here, not through
+    // `getAppSettings()`: the bot runs outside a request, where its data cache is unavailable.
+    format: {
+      timeZone: resolveZone(connection.user, await serverZone()).zone,
+      locale: canonicalLocale(config?.locale),
+    },
   })
 
   if (chatbotResponse.refusal) {

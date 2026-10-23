@@ -1,8 +1,14 @@
 import "server-only"
 
 import { type ChatTool } from "@/lib/llm/chat"
+import { formatDateTime, type FormatSettings } from "@/lib/utils/format"
 
-export function generateDiscordSystemPrompt(toolset: ChatTool[]): string {
+/**
+ * The Discord assistant's prompt. `settings` is the member's zone
+ * (`User.timezone`, else the server zone) and the app locale, so "today" and
+ * "yesterday" mean the member's (P11.17).
+ */
+export function generateDiscordSystemPrompt(toolset: ChatTool[], settings: FormatSettings, now: Date): string {
   const toolList = toolset.map((tool) => `- ${tool.function.name}: ${tool.function.description}`).join("\n    ")
 
   return `You are the Plex Wrapped Discord support co-pilot. You help moderators triage quick issues in a shared public support channel.
@@ -32,5 +38,9 @@ export function generateDiscordSystemPrompt(toolset: ChatTool[]): string {
 2. **Impact or next steps** (short guidance, e.g., "Try pausing and resuming playback" or "An admin may need to restart Sonarr").
 3. **Privacy reminder** if the user shared sensitive info.
 
-If multiple tools are relevant, synthesize them in a single cohesive response. Always stay calm, neutral, and professional.`
+If multiple tools are relevant, synthesize them in a single cohesive response. Always stay calm, neutral, and professional.
+
+=== CURRENT CONTEXT ===
+Member time zone: ${settings.timeZone}. Local time now: ${formatDateTime(now, settings)}.
+Timestamps in tool results are in this zone, with their offset; "today" and "yesterday" mean the member's.`
 }

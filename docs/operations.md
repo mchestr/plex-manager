@@ -15,6 +15,7 @@ the bundled `docker-compose.yml` (database `plex_wrapped`, user `postgres`, the
 - [Code freeze gate](#code-freeze-gate)
 - [Installed with db push](#installed-with-db-push)
 - [Request IDs and metrics](#request-ids-and-metrics)
+- [Locale](#locale)
 
 ## What holds state
 
@@ -254,3 +255,21 @@ groups:
         for: 15m
       - alert: LlmSpendHigh
         expr: sum(plex_manager_llm_spend_usd{period="day"}) > 1
+
+## Locale
+
+Admin settings hold two values that shape how the app writes dates and numbers:
+
+- **Time zone** (`Config.timezone`, else the `TZ` variable, else UTC): the
+  server zone. Day boundaries, admin timestamps and the admin assistant use it.
+  A member who sets their own zone gets it for Rewind and the Discord
+  assistant, which states the local time and gives every date in that zone, so
+  "yesterday" means the member's yesterday.
+- **Locale** (`Config.locale`, a BCP 47 tag such as `en-GB`; default `en-US`):
+  number and date formats ("1 December" against "December 1") and the page's
+  `<html lang>`. A value `Intl` rejects falls back to `en-US`.
+
+The locale does not translate the copy: every string stays in English.
+Translation is out of scope for now, so there is no i18n library, no string
+extraction and no `Accept-Language` negotiation; every visitor gets the one
+configured locale.

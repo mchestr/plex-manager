@@ -861,10 +861,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** As a Los Angeles member, mark a film at 19:30 local time, then ask the bot "what did I mark today?": it answers with today's date, not tomorrow's. Set `Config.locale` to en-GB: the page source shows `<html lang="en-GB">`, and dates read "1 December".
 
 **Done when.**
-- [ ] The Discord assistant's prompt and tool results carry the member's zone, formatted through `lib/utils/format.ts`.
-- [ ] Admin chatbot timestamps carry the server zone's offset.
-- [ ] `<html lang>` follows `Config.locale`, and axe passes.
-- [ ] The i18n non-goal is recorded.
+- [x] The Discord assistant's prompt and tool results carry the member's zone, formatted through `lib/utils/format.ts`.
+- [x] Admin chatbot timestamps carry the server zone's offset.
+- [x] `<html lang>` follows `Config.locale`, and axe passes.
+- [x] The i18n non-goal is recorded.
+
+(as merged: the turn's `{ timeZone, locale }` is a required `format` on `runChatbotForUser` and runs through `runConversationLoop` and `executeToolCall` to each executor's fifth argument, defaulting to UTC (`lib/chatbot/executors/timestamps.ts`, which also holds `withLocalTimestamps` and the Tautulli and Plex epoch keys). `handleDiscordChat` reads `Config.locale` and `serverZone()` directly, not `getAppSettings()`, because the bot runs outside a request, where `unstable_cache` has no incremental cache. The locale canonicaliser is `canonicalLocale` in `lib/utils/format.ts`. Plex sessions reach the model sanitised, with no timestamps; the Plex conversion covers recently added and On Deck. `/mystats`' year is left to P11.12, which is merging in parallel.)
 
 ### Step P11.18: Season success review and season close cleanup
 

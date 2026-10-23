@@ -4,13 +4,16 @@ import { getPlexLibrarySections, getPlexOnDeck, getPlexRecentlyAdded, getPlexSer
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { matchesSessionUser, type PlexSessionUserRef } from "@/lib/connections/plex-sessions"
 import { prisma } from "@/lib/prisma"
+import { type FormatSettings } from "@/lib/utils/format"
 import { sanitizePlexSessionsPayload } from "./plex-sanitizer"
+import { PLEX_EPOCH_KEYS, UTC_FORMAT, withLocalTimestamps } from "./timestamps"
 
 export async function executePlexTool(
   toolName: string,
   args: Record<string, unknown>,
   userId?: string,
-  context?: string
+  context?: string,
+  format: FormatSettings = UTC_FORMAT
 ): Promise<string> {
   const config = await getActivePlexServerConfig()
   if (!config) return "Error: No active Plex server configured."
@@ -77,12 +80,12 @@ export async function executePlexTool(
       const limit = typeof args.limit === "number" ? args.limit : 20
       const result = await getPlexRecentlyAdded(config, limit)
       if (!result.success) return result.error || "Error fetching recently added"
-      return JSON.stringify(result.data)
+      return JSON.stringify(withLocalTimestamps(result.data, PLEX_EPOCH_KEYS, format.timeZone))
     }
     case "get_plex_on_deck": {
       const result = await getPlexOnDeck(config)
       if (!result.success) return result.error || "Error fetching on deck"
-      return JSON.stringify(result.data)
+      return JSON.stringify(withLocalTimestamps(result.data, PLEX_EPOCH_KEYS, format.timeZone))
     }
     default:
       return "Error: Unknown Plex tool"

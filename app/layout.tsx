@@ -48,7 +48,7 @@ export default async function RootLayout({
 
   // Light is the :root block, with no class; dark adds `.dark` (ui-design-system 4.1).
   return (
-    <html lang="en" className={cn(appearance.theme === "dark" && "dark", plexFontClassNames)} suppressHydrationWarning>
+    <html lang={format.locale} className={cn(appearance.theme === "dark" && "dark", plexFontClassNames)} suppressHydrationWarning>
       <body className="min-h-dvh bg-background text-foreground">
         {/* Each segment layout renders the one <main id="main" tabIndex={-1}> this skips to. */}
         <a

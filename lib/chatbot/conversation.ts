@@ -4,6 +4,7 @@ import type { ModelMessage } from "ai"
 
 import { ASSISTANT_BUDGET_MESSAGE, ASSISTANT_BUDGET_UNAVAILABLE_MESSAGE, checkSpend } from "@/lib/llm/budget"
 import { chatWithTools, type ChatTool, type UsagePromptMessage } from "@/lib/llm/chat"
+import { type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import { executeToolCall } from "./executors"
 import { ALL_TOOLS } from "./tools"
@@ -29,6 +30,8 @@ interface ConversationConfig {
   tools?: ChatTool[]
   /** Output-token cap for each LLM call (the Discord context's 600, SEC-51). */
   maxOutputTokens?: number
+  /** The turn's zone and locale, which tool results format their times in (P11.17). */
+  format: FormatSettings
 }
 
 /**
@@ -137,7 +140,7 @@ export async function runConversationLoop(
         toolName: toolCall.function.name,
         output: {
           type: "text" as const,
-          value: asUntrustedData(await executeToolCall(toolCall, config.userId, config.context, config.isAdmin)),
+          value: asUntrustedData(await executeToolCall(toolCall, config.userId, config.context, config.isAdmin, config.format)),
         },
       }))
     )
