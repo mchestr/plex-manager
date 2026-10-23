@@ -20,14 +20,21 @@ check); the `no-changelog` label skips it.
 
 ### Upgrade notes
 
-- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds four migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim` and `20270117000010_p1024_setup_step_ids`.
+- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds six migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables`.
 - **Setup claim:** an install whose first-run setup is still unfinished must enter the one-time setup code to continue. Find it with `docker logs <container> | grep 'Setup code'`, or set `SETUP_TOKEN` to at least 16 characters; production refuses to start with a shorter one. Finished installs are unaffected.
 - **Retention:** the first daily retention sweep deletes data past its window, including audit rows older than 400 days and Discord command logs older than 90 days. To keep more, set the `RETENTION_*_DAYS` variables (`docs/privacy.md`) before you deploy.
 - **Stripe:** turning Stripe on now asks for confirmation when there are Jellyfin-only members who are not exempt.
 - **Setup steps:** an unfinished setup resumes on the matching step.
+- **Do not deploy before 2027-01-31.** The encryption keyring and the worker role change how stored secrets are read and where the Rewind queues run; the 2026 Rewind season stays live until it closes on 2027-01-31.
+- **Encryption keys (breaking):** a production server now refuses to start without a key for the secrets it stores. Before you pull this release, set `ENCRYPTION_KEYS="k1:$(openssl rand -base64 32)"` (a comma-separated `kid:base64` keyring; the first entry encrypts new writes). An install that already sets only `ENCRYPTION_KEY` keeps working and writes `enc:v2:legacy:` values; to move to a keyring, add `ENCRYPTION_KEYS` beside it, run Admin > Settings > Security > "Encrypt stored secrets", then remove `ENCRYPTION_KEY`. `ALLOW_PLAINTEXT_SECRETS=true` is the unsafe escape hatch: it starts without a key, stores secrets as plain text and warns at every boot. A boot check stops the server with `crypto.key_mismatch` when the key does not match the database, so a restore under the wrong key never serves. Keep every key in your password manager, never beside a dump; rotation and lost-key recovery are in `docs/operations.md` ("Encryption keys"). After the first boot with Redis the app re-encrypts stored plaintext in the background.
+- **Worker role:** every running container must be on a 0.3.0 (P11.2 lease lock) or later release before you deploy this one, because its migration drops the `DiscordBotLock` and `WatchlistSyncLock` tables that older releases still use. `PROCESS_ROLE` (`web`, `worker` or `all`, default `all`) now picks what a container runs: one `all` container behaves as before; `web` serves requests only; `worker` runs the queues, schedulers and Discord bot and answers 404 for everything but `/api/health` and `/api/metrics`. Any other value stops a production boot. `docs/examples/docker-compose.workers.yml` runs web containers and one worker. While Redis is down, request-path enqueues fail fast with "the queue is unavailable" and the Stripe webhook answers `503`, so Stripe retries.
+- **Bare metal:** `npm run start:prod` now runs the standalone server (`node --env-file-if-exists=.env .next/standalone/server.js`, Node.js 22.9 or later); `npm run build` copies `.next/static` and `public` beside it. `example.env` is regenerated from `lib/env.ts`, so compare your `.env` with it, and every variable is listed in `docs/environment.md`. Discord account-linking links no longer fall back to `localhost` outside development: set `NEXTAUTH_URL` (or `DISCORD_PORTAL_URL`).
 
 ### Added
 
+- Production deployment: `deploy/docker-compose.yml` for the published image, `docs/deployment.md` (compose, Caddy and nginx, the setup claim, bare metal, web and worker containers), `docs/domain-move.md`, and `docs/environment.md`, generated with `example.env` from `lib/env.ts` by `npm run env:docs` and checked in CI.
+- At-rest encryption keyring: `ENCRYPTION_KEYS` with key ids and rotation, a boot check against the database, a background and on-demand re-encryption (Admin > Settings > Security), and settings that ask you to re-enter a secret the current keys cannot read instead of failing.
+- `PROCESS_ROLE=web|worker|all` to run the job queue, schedulers and Discord bot in a separate worker container.
 - Releases: this changelog, a release workflow that publishes the GitHub Release from a version's section when its `v*` tag is pushed, `scripts/release/prepare.mjs` to cut a release, and the Changelog check on pull requests.
 - Member data export at `/account/export` (at most 3 a day; no tokens, hashes or Stripe ids), and item-level deletes of marks, watchlist history and assistant conversations from the new "Your data" section on `/account`.
 - A daily retention sweep, with per-table `RETENTION_*_DAYS` overrides and an audited "Run now" in the new Privacy section of admin settings.
@@ -39,9 +46,11 @@ check); the `no-changelog` label skips it.
 - The setup wizard is rebuilt: string step ids, "Skip for now" on optional steps, "Connect with Plex" instead of pasting a token, one service form, and a summary step that signs the owner in. Setup and admin settings save through the same flow.
 - The assistants use the member's or the server's time zone and the app locale, and `<html lang>` follows the configured locale.
 - The package is named `plex-manager`, to match the repository and the image.
+- One lease lock (database or Redis) runs the Discord bot, watchlist sync, Rewind generation and member access changes; every job type has a deduplication or deterministic id, and a job that exhausts its retries logs `queue.job_exhausted`.
 
 ### Security
 
+- Stored secrets, member Plex tokens and AI prompt and reply text are encrypted by default; production refuses to start without a key unless `ALLOW_PLAINTEXT_SECRETS=true`.
 - First-run setup needs a claim: the one-time setup code from the container log, or `SETUP_TOKEN`. A wrong code is limited to 5 a minute, and after setup every setup action is admin-only.
 - The automatic Stripe revoke never removes a member whose Jellyfin admin status is "admin" or "unknown".
 
