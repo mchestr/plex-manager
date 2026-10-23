@@ -88,7 +88,8 @@ describe("issueSetupCode", () => {
     prismaMock.setup.findFirst.mockResolvedValue(buildSetup())
     await issueSetupCode()
 
-    expect(write).not.toHaveBeenCalled()
+    // The logger may also write to stdout; what must never appear is a code
+    expect(write).not.toHaveBeenCalledWith(expect.stringContaining("Setup code:"))
     expect(prismaMock.setup.update).not.toHaveBeenCalled()
   })
 
