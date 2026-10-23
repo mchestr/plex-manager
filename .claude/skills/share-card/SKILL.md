@@ -57,10 +57,11 @@ type follow `rewind-design-system`.
   reads the TTFs in `lib/rewind/cards/fonts/` once per process
   (`archivoFamily`, `NEWSREADER`); non-Latin text falls back to the Noto
   subsets in `lib/rewind/cards/noto.ts`.
-- Every fitted line is chosen before render with `fitCard`,
-  `fitNameplate` and `safeFit` (`lib/rewind/cards/type.tsx`), which call
-  `fitLines` with `cardMetrics` on the `CARD_MEASURE` measure minus
-  `CARD_SLACK`, and is set `nowrap`, so Satori never re-wraps it. Card roles
+- Every fitted line is chosen before render with `fitCard` and
+  `fitNameplate` (`lib/rewind/cards/type.tsx`), which call `fitLines` with
+  `cardMetrics` on a measure divided by `1 + CARD_SLACK` (Satori's unkerned
+  word spacing), and is set `nowrap`, so Satori never re-wraps it. Text the
+  card fonts cannot set falls back to `safeFit`, one Noto line. Card roles
   are design 6.4's list, not the page's.
 - Rebuilding the fonts or metrics is `scripts/build-rewind-fonts.py`.
 
