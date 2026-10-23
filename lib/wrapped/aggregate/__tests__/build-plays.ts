@@ -45,7 +45,6 @@ export function play({ at, zone, seconds, film, series, percentComplete = 100, t
     platform: "Roku",
     product: "Plex for Roku",
     guid: null,
-    librarySectionId: "1",
     contentRating: null,
     live: false,
   }

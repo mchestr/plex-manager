@@ -89,7 +89,7 @@ is generated again.
 | Public counts | `rewindPublicCounts` | off | Counts instead of percentages on public cards. |
 | Server name on cards | `rewindShowServerNameOnCards` | on | The server name (`Config.serverName`, edited with the Plex server) on cards and the share page. |
 | Artwork on cards | `rewindAllowArtOnCards` | on | Lets members put posters on their cards. |
-| Excluded libraries | `rewindExcludedSectionIds` | none | Plex libraries left out of every Rewind, from Tautulli's library list. Next generation. |
+| Excluded libraries | `rewindExcludedSectionIds` | none | Plex libraries left out of every Rewind, from Tautulli's library list: their plays count toward nothing, totals included. Next generation. |
 | Excluded content ratings | `rewindExcludedContentRatings` | none | Ratings left out, from the metadata cache. Next generation. |
 | Include managed accounts | `rewindIncludeManagedUsers` | off | Plex Home managed accounts get a Rewind; otherwise they are skipped with `MANAGED_ACCOUNT`. Next generation. |
 | Disabled pages | `rewindDisabledPages` | none | Turns non-core pages off without a deploy; see [Cut list](#cut-list). A page key takes effect on the next view; the Next year part keys at the next generation. |

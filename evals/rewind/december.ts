@@ -39,9 +39,9 @@ const startedOf = (row: Row) => Number(row.started)
 const zoneOf = (fixture: Fixture) => resolveZone({ timezone: fixture.member.timezone }, fixture.server.zone).zone
 const pad = (n: number) => String(n).padStart(2, "0")
 
-/** The row moved to start at `started` (seconds), keeping its length. */
+/** The row moved to start at `started` (seconds), keeping its length; its `reference_id` follows, as in `historyRow`. */
 const startingAt = (row: Row, started: number): HistoryRow =>
-  ({ ...row, started, stopped: started + Number(row.stopped) - startedOf(row) }) as HistoryRow
+  ({ ...row, reference_id: started, started, stopped: started + Number(row.stopped) - startedOf(row) }) as HistoryRow
 
 /** The instant, in seconds, of `HH:00` on `day` of December in `zone`. */
 const decemberAt = (year: number, day: number, hour: number, zone: string) =>
