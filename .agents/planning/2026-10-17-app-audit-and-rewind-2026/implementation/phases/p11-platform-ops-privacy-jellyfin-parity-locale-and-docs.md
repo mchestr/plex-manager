@@ -1223,9 +1223,11 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Cut `v0.2.0`: the release PR merges, the tag is pushed, `ghcr.io/mchestr/plex-manager:0.2.0` exists, and the GitHub Release shows the 0.2.0 section with its upgrade notes. A PR that adds a migration without a changelog line fails the check.
 
 **Done when.**
-- [ ] `CHANGELOG.md` exists with an "Upgrade notes" block per release, and `v0.2.0` is published.
-- [ ] Tags publish semver images, and the release workflow creates the GitHub Release from the changelog.
-- [ ] The changelog check runs on pull requests, and the README explains pinning and rolling back.
+- [x] `CHANGELOG.md` exists with an "Upgrade notes" block per release, and `v0.2.0` is published.
+- [x] Tags publish semver images, and the release workflow creates the GitHub Release from the changelog.
+- [x] The changelog check runs on pull requests, and the README explains pinning and rolling back.
+
+(as merged: the owner had already pushed `v0.1.0` (Phase 0, #321), `v0.2.0` (#386) and `v0.3.0` (#387) by hand, with GitHub Releases for the last two, so `CHANGELOG.md` records those three retroactively (0.1.0 also carries the 2026-07 Discord notes), `package.json` is renamed `plex-manager` and set to `0.3.0` to match the newest tag, and the first release cut through `scripts/release/prepare.mjs` is `v0.4.0`. Unreleased holds #396's upgrade notes; P11.1, P11.3 and P11.18 add theirs under Unreleased when they merge (the Changelog check requires it, since each touches migrations, `lib/env.ts` or the image). The release workflow waits up to 90 minutes for "Checks" on the tagged commit as a push to `main` and requires Schema Drift and Build to have passed; it needs `actions: read` besides `contents: write`. The check is `.github/workflows/changelog.yml` (job "Changelog"), separate from build.yml so label changes re-run it. The procedure is in `docs/releasing.md`; P11.24's deployment guide should link it and pin `:0.4.0` once that is published. Owner: create the `breaking` and `no-changelog` labels, optionally make "Changelog" a required check, run the fork dry run, and cut `v0.4.0`; optionally replace the v0.2.0/v0.3.0 release bodies with their changelog sections via `gh release edit --notes-file`.)
 
 ### Step P11.26: README and CLAUDE.md accuracy pass
 

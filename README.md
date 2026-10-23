@@ -352,6 +352,13 @@ A production server checks these at start and exits with code 1, logging `env.in
   ```
   If the count is not 0, those links stop working after the upgrade. Clear their tokens (`UPDATE "PlexWrapped" SET "shareToken" = NULL WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';`) and tell the owners to turn sharing on again for a new link, or keep the release back until those links can lapse.
 
+### Versions and upgrades
+
+- `ghcr.io/mchestr/plex-manager:latest` tracks `main` and changes with every merge. In production, pin a release, for example `:0.3.0`, and move to the next one on purpose.
+- [CHANGELOG.md](CHANGELOG.md) lists every release, and each has an **Upgrade notes** block: read the notes of every version between yours and the new one before you pull.
+- Rolling back means restoring the dump taken before the upgrade and running the previous tag, because Prisma has no down migrations. A newer image would apply its migrations again at start.
+- [docs/releasing.md](docs/releasing.md) describes how releases are cut and what each tag publishes.
+
 ### Upgrading
 
 Prisma has no down migrations, so a dump is the only way back from a migration. For every upgrade:
@@ -360,8 +367,8 @@ Prisma has no down migrations, so a dump is the only way back from a migration. 
    ```bash
    docker compose exec -T db pg_dump -U postgres -Fc plex_wrapped > plex-manager-$(date +%F-%H%M).dump
    ```
-2. **Read the release notes** for every version you are moving past, including the "Upgrading to the release…" notes above.
-3. **Pull or rebuild**: pull the new release and run `npm ci && npm run build`, or pull or rebuild the Docker image.
+2. **Read the upgrade notes** in [CHANGELOG.md](CHANGELOG.md) for every version you are moving past, and the "Upgrading to the release…" notes above.
+3. **Pull or rebuild**: check out the new release's tag and run `npm ci && npm run build`, or pull the new version's image tag (`:0.3.0`, not `:latest`).
 4. **Apply migrations**: run `npm run db:deploy`, or let the container do it at start. The container logs `prisma migrate status` first; start it with `SKIP_MIGRATIONS=true` to apply migrations by hand instead.
 5. **Check the app**: sign in, and check that `/api/health` answers 200 with `"database":"ok"` and `"redis":"ok"`; `docker ps` shows the container `(healthy)`.
 

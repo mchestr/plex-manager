@@ -78,8 +78,9 @@ worker or replica).
 Outside compose, with the app stopped, connect to any other database on the
 server: `pg_restore -d postgresql://user:password@host:5432/postgres --clean --if-exists --create --no-owner plex-manager-….dump`.
 
-If you are rolling back an upgrade, start the **previous** release: the new one
-would apply its migrations again at start. To start any release without
+If you are rolling back an upgrade, start the **previous** release's image tag
+(`CHANGELOG.md` lists them; see `docs/releasing.md`): the new one would apply
+its migrations again at start. To start any release without
 applying migrations, set `SKIP_MIGRATIONS=true`.
 
 ## Dump before every migration

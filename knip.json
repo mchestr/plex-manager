@@ -6,6 +6,7 @@
     "scripts/*.{ts,tsx}!",
     "scripts/*.mjs!",
     "scripts/codemods/*.mjs!",
+    "scripts/release/*.mjs!",
     "scripts/codemods/tokens.ts!",
     "scripts/codemods/spinners.ts!",
     "scripts/codemods/icons.ts!",
