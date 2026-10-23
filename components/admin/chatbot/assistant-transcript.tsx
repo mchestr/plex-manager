@@ -106,7 +106,6 @@ export function AssistantTranscript({ messages, isLoading, onSend }: AssistantTr
           onChange={(event) => setInput(event.target.value)}
           placeholder="Ask about server status..."
           maxLength={8000}
-          disabled={isLoading}
           data-testid="admin-chat-input"
         />
         <Button data-testid="admin-chat-send" type="submit" size="icon" aria-label="Send" disabled={!input.trim() || isLoading}>

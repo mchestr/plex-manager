@@ -95,6 +95,35 @@ describe("AssistantSheet", () => {
     expect(await screen.findByText("All good")).toBeInTheDocument()
   })
 
+  it("keeps focus in the input during and after a reply, and sends nothing on Enter mid-reply", async () => {
+    let resolveReply: (value: Awaited<ReturnType<typeof chatWithAdminBot>>) => void = () => {}
+    jest.mocked(chatWithAdminBot).mockReturnValue(
+      new Promise((resolve) => {
+        resolveReply = resolve
+      })
+    )
+    const { user } = await open()
+    const input = screen.getByTestId("admin-chat-input")
+
+    await user.click(input)
+    await user.keyboard("status?{Enter}")
+    expect(screen.getByRole("log")).toHaveAttribute("aria-busy", "true")
+    expect(input).toBeEnabled()
+    expect(input).toHaveFocus()
+
+    await user.keyboard("again{Enter}")
+    expect(chatWithAdminBot).toHaveBeenCalledTimes(1)
+    expect(input).toHaveValue("again")
+
+    resolveReply({
+      success: true,
+      data: { message: { role: "assistant", content: "All good", timestamp: Date.now() }, conversationId: "conv-1" },
+    })
+    await screen.findByText("All good")
+    expect(screen.getByRole("log")).toHaveAttribute("aria-busy", "false")
+    expect(input).toHaveFocus()
+  })
+
   it("sends only roles and content, and the conversation id once it has one", async () => {
     replyWith("ok")
     const { user } = await open()
