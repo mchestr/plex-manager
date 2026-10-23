@@ -4,6 +4,7 @@ import { createServiceSchema, type ServiceInput, type ServiceParsed } from "./sh
 
 export const tautulliSchema = createServiceSchema({ defaultPort: "8181", publicExample: "tautulli.example.com" })
 
+/** @internal The form shape; the validation tests type their fixtures with it. */
 export type TautulliInput = ServiceInput
 export type TautulliParsed = ServiceParsed
 

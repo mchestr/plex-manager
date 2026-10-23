@@ -35,7 +35,8 @@ function parseDiscordInviteCode(input: string): string {
   return trimmed.match(/discord\.gg\/([a-zA-Z0-9]+)/i)?.[1] ?? trimmed
 }
 
-function initialValues(integration: StoredDiscordIntegration | null) {
+/** The form's starting values; blank secrets keep the stored ones. Setup starts from these too. */
+export function initialDiscordValues(integration: StoredDiscordIntegration | null) {
   const supportThreadIds = Array.isArray(integration?.supportThreadIds)
     ? (integration.supportThreadIds as unknown[]).filter((id): id is string => typeof id === "string").join(", ")
     : ""
@@ -55,14 +56,14 @@ function initialValues(integration: StoredDiscordIntegration | null) {
   }
 }
 
-type DiscordValues = ReturnType<typeof initialValues>
+export type DiscordValues = ReturnType<typeof initialDiscordValues>
 type DiscordErrors = Partial<Record<keyof DiscordValues, string>>
 
 /** The Discord form, always open (UI-31): values, dirty state, Discard and Save, and field errors. */
 export function useDiscordForm(integration: StoredDiscordIntegration | null) {
   const toast = useToast()
   const [errors, setErrors] = useState<DiscordErrors>({})
-  const settings = useSettingsForm(initialValues(integration), async (values) => {
+  const settings = useSettingsForm(initialDiscordValues(integration), async (values) => {
     const result = await updateDiscordIntegrationSettings({
       ...values,
       clientSecret: values.clientSecret.trim() || undefined,
@@ -94,7 +95,8 @@ type DiscordForm = ReturnType<typeof useDiscordForm>
 
 interface DiscordIntegrationFieldsProps {
   integration: StoredDiscordIntegration | null
-  state: DiscordForm
+  /** `useDiscordForm`, or setup's own state with the same fields (P10.25). */
+  state: Pick<DiscordForm, "values" | "set" | "errors"> & { form: Pick<DiscordForm["form"], "isPending"> }
 }
 
 /**

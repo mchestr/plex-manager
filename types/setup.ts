@@ -84,6 +84,39 @@ export function parseSetupPosition(value: unknown): SetupPosition | null {
   return SETUP_STEP_IDS.find((id) => id === value) ?? null
 }
 
+/** One of a Plex server's addresses on plex.tv. */
+export interface PlexServerConnection {
+  uri: string
+  local: boolean
+  relay: boolean
+}
+
+/** A server on the owner's plex.tv account, as the setup picker shows it: never a token (P10.25). */
+export interface PickerServer {
+  machineIdentifier: string
+  name: string
+  owned: boolean
+  online: boolean
+  lastSeenAt: string | null
+  version: string | null
+  platform: string | null
+  /** Local first, then remote, relays last. */
+  connections: PlexServerConnection[]
+}
+
+/** What `pollSetupPlexConnect` reports: `idle` when no Connect with Plex is under way in this browser. */
+export type SetupPlexPoll =
+  | { status: "idle" | "waiting" | "expired" }
+  | { status: "ready"; account: { username: string }; servers: PickerServer[] }
+
+/** The Rewind writer's or the assistant's stored OpenAI provider, without its key. */
+export interface SetupStoredLLM {
+  model: string | null
+  temperature: number | null
+  maxTokens: number | null
+  secret: { last4: string; origin: string | null } | null
+}
+
 // The setup wizard's DEV_* pre-fill, read by lib/setup/dev-defaults.ts
 export interface ServiceDefaults {
   name?: string

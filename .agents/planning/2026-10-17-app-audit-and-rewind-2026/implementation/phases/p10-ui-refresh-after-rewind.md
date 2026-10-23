@@ -1228,10 +1228,12 @@ No confetti and no space background.
 
 **Demo.** On a fresh install, paste the setup code from `docker logs`. Connect with Plex, pick the owned server, skip every optional step, and press Open admin: the owner lands on `/admin` with no member onboarding.
 
+(as merged: the claim step is `components/setup/setup-claim-step.tsx` (`setup-claim-form.tsx` deleted, P11.32's test ids kept). Connect with Plex is a same-tab redirect to plex.tv that forwards back to `/setup?step=plex` (no popup); the PIN lives in `pm-setup-plex-pin` (`setupPinCookie` in `lib/plex-pin-cookie.ts`), and `plexAuthUrl`/`browserClientId` moved from `lib/plex-auth.ts` to `lib/plex-pin-flow.ts`. `lib/setup/plex-resources.ts` reads plex.tv resources; `PickerServer`/`SetupPlexPoll` are in `types/setup.ts`. `chooseSetupPlexServer` writes through `saveActiveService` directly (not `saveServiceConnection`, whose Plex `toRow` reads the owner from the token) with the PIN account as `adminPlexUserId`. `advanceSetup`/`wizardRow` moved to `lib/setup/progress.ts`. Setup's Test connection is `testSetupConnection` (a `setupAction` in `actions/setup.ts`, `admin:test` limit); both it and `testServiceConnection` call `runConnectionTest` in `lib/settings/test-connection.ts`. The page reads `getSetupWizardData(position)` (`lib/setup/wizard-data.ts`: configured steps, the shown step's saved values with `{ last4, origin }`, a pending Plex PIN) and streams `PlexConnectedCard` (`lib/setup/plex-summary.ts`) into the rail. `ServerFormFields` gained `testIdPrefix` (setup ids are `setup-<step>-<field>`; Discord keeps `settings-discord-*`, since its fields are the settings component). The LLM steps stay OpenAI-only (SEC-44) on `SecretInput` and `LLMModelPicker`; a blank key keeps the stored OpenAI key, and setup's Discord save keeps stored secrets when blank. New `components/ui/radio-group.tsx` (`RadioGroup`, `RadioCard`, Base UI). Deleted `lib/utils/motion-loop.ts` (its only user was the space background). The adapters P10.11 deleted no longer exist, so there were no default `setup-input-*` ids to remove; the codemod's historical rewrite rule is left as is. The setup-wizard ESLint overrides and allowlist entry are gone. E2E and visual specs written, not run; baselines `setup-claim` and `setup-step-1` are new.)
+
 **Done when.**
-- [ ] The claim, Plex connect, service, Skip and summary steps match `setup.html` on the shared primitives.
-- [ ] No plex.tv token reaches the browser, and the token fallback still works.
-- [ ] The confetti, the space background and the five copied forms are deleted.
+- [x] The claim, Plex connect, service, Skip and summary steps match `setup.html` on the shared primitives.
+- [x] No plex.tv token reaches the browser, and the token fallback still works.
+- [x] The confetti, the space background and the five copied forms are deleted.
 - [ ] The E2E spec passes on the test database, and the baselines are reviewed.
 
 ### Step P10.26: Invite page as a server-rendered pass

@@ -37,6 +37,8 @@ interface ServerFormFieldsProps {
   /** The live origin of the URL field (`safeOrigin`). */
   currentOrigin: string | null
   disabled?: boolean
+  /** Test ids are `<prefix>-<type>-<field>`; setup passes `setup`. Default `settings`. */
+  testIdPrefix?: string
 }
 
 /**
@@ -45,7 +47,7 @@ interface ServerFormFieldsProps {
  * a `SecretInput`, or Prometheus's query. Errors from Test and Save show on
  * their field. Setup (P10.25) reuses these fields.
  */
-export function ServerFormFields({ type, values, set, errors, saved, currentOrigin, disabled }: ServerFormFieldsProps) {
+export function ServerFormFields({ type, values, set, errors, saved, currentOrigin, disabled, testIdPrefix = "settings" }: ServerFormFieldsProps) {
   const label = SERVER_LABELS[type]
   const id = (field: string) => `${type}-${field}`
   const noun = secretNoun(type)
@@ -53,19 +55,19 @@ export function ServerFormFields({ type, values, set, errors, saved, currentOrig
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <FormField name={id("name")} label="Name" error={errors.name}>
-        <Input value={values.name} onValueChange={(name) => set({ name })} placeholder={`My ${label} server`} required disabled={disabled} data-testid={`settings-${type}-name`} />
+        <Input value={values.name} onValueChange={(name) => set({ name })} placeholder={`My ${label} server`} required disabled={disabled} data-testid={`${testIdPrefix}-${type}-name`} />
       </FormField>
       <FormField name={id("url")} label="Local URL" error={errors.url}>
-        <Input value={values.url} onValueChange={(url) => set({ url })} placeholder={PLACEHOLDERS[type]} required disabled={disabled} data-testid={`settings-${type}-url`} />
+        <Input value={values.url} onValueChange={(url) => set({ url })} placeholder={PLACEHOLDERS[type]} required disabled={disabled} data-testid={`${testIdPrefix}-${type}-url`} />
       </FormField>
       {type === "prometheus" ? (
         <FormField name={id("query")} label="PromQL query" description={'For example up{job="plex"}'} error={errors.query} className="md:col-span-2">
-          <Input value={values.query} onValueChange={(query) => set({ query })} placeholder='up{job="plex"}' required disabled={disabled} data-testid="settings-prometheus-query" />
+          <Input value={values.query} onValueChange={(query) => set({ query })} placeholder='up{job="plex"}' required disabled={disabled} data-testid={`${testIdPrefix}-prometheus-query`} />
         </FormField>
       ) : (
         <>
           <FormField name={id("public-url")} label="Public URL" optional description="Shown to members" error={errors.publicUrl}>
-            <Input value={values.publicUrl} onValueChange={(publicUrl) => set({ publicUrl })} placeholder={`https://${type}.example.com`} disabled={disabled} data-testid={`settings-${type}-public-url`} />
+            <Input value={values.publicUrl} onValueChange={(publicUrl) => set({ publicUrl })} placeholder={`https://${type}.example.com`} disabled={disabled} data-testid={`${testIdPrefix}-${type}-public-url`} />
           </FormField>
           <FormField name={id("secret")} label={noun} error={errors.secret}>
             <SecretInput
@@ -77,7 +79,7 @@ export function ServerFormFields({ type, values, set, errors, saved, currentOrig
               placeholder={`${label} ${noun}`}
               required
               disabled={disabled}
-              data-testid={`settings-${type}-secret`}
+              data-testid={`${testIdPrefix}-${type}-secret`}
             />
           </FormField>
         </>

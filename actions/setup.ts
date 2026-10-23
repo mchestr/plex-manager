@@ -20,48 +20,23 @@ import { setupAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionErrorCode, type ActionResult } from "@/lib/actions/result"
 import { testLLMProviderConnection } from "@/lib/connections/llm-provider"
 import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/provider-presets"
-import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
 import type { SecretRequiredCode } from "@/lib/security/secret-reuse"
 import { SERVICE_DESCRIPTORS, type ServiceKind } from "@/lib/services/descriptors"
 import { saveServiceConnection } from "@/lib/services/service-save"
+import { runConnectionTest, testConnectionInput, type TestConnectionResult } from "@/lib/settings/test-connection"
 import { clearSetupClaimCookie } from "@/lib/setup/claim"
+import { advanceSetup, wizardRow } from "@/lib/setup/progress"
 import { discordIntegrationSchema } from "@/lib/validations/discord"
 import { setupLLMProviderSchema } from "@/lib/validations/llm-provider"
-import {
-  nextStepId,
-  OPTIONAL_SETUP_STEP_IDS,
-  parseSetupPosition,
-  stepIndex,
-  type SetupPosition,
-  type SetupStepId,
-} from "@/types/setup"
+import { OPTIONAL_SETUP_STEP_IDS, stepIndex, type SetupStepId } from "@/types/setup"
 
 type SetupCode = ActionErrorCode | SecretRequiredCode
 
 function auditSetupSave(actor: string, section: string, after: Record<string, unknown>, secretFields: string[] = []) {
   logAuditEvent(AuditEventType.CONFIG_CHANGED, actor, configDiff(`setup.${section}`, null, after, { secretFields }))
-}
-
-/** The wizard's row and position, or null before its first save. */
-async function wizardRow(tx: PrismaTransactionClient): Promise<{ id: string; position: SetupPosition } | null> {
-  const setup = await tx.setup.findFirst({ orderBy: { createdAt: "desc" } })
-  return setup && { id: setup.id, position: parseSetupPosition(setup.currentStepId) ?? "plex" }
-}
-
-/**
- * Moves the wizard past `from`: to `nextStepId(from)`, unless it is already
- * further on (a save after Back). Creates the row on the first save.
- */
-async function advanceSetup(tx: PrismaTransactionClient, from: SetupStepId) {
-  const next = nextStepId(from)
-  const setup = await wizardRow(tx)
-  if (!setup) {
-    await tx.setup.create({ data: { currentStepId: next } })
-  } else if (stepIndex(next) > stepIndex(setup.position)) {
-    await tx.setup.update({ where: { id: setup.id }, data: { currentStepId: next } })
-  }
 }
 
 /** A service step's save: the shared flow, plus the wizard's step in its transaction. */
@@ -95,23 +70,35 @@ export const saveRadarr = serviceSave("radarr", "radarr")
 
 export const savePrometheus = serviceSave("prometheus", "prometheus")
 
-/** Saves the Discord integration. The client secret goes only to Discord, so it keeps "blank means keep". */
+/**
+ * Saves the Discord integration. Its secrets go only to Discord, a fixed
+ * destination, so a blank field keeps the stored one (as in settings).
+ */
 export const saveDiscordIntegration = setupAction({
   input: discordIntegrationSchema,
   fallbackError: "Failed to save Discord integration",
   handler: async (validated, { actor }) => {
     const isEnabled = validated.isEnabled ?? false
     const botEnabled = validated.botEnabled ?? false
+    const existing = await prisma.discordIntegration.findUnique({ where: { id: "discord" } })
+    const clientSecret = validated.clientSecret ?? existing?.clientSecret ?? undefined
+    const botToken = validated.botToken ?? existing?.botToken ?? undefined
 
-    if (isEnabled && (!validated.clientId || !validated.clientSecret)) {
-      return fail("VALIDATION", "Client ID and Client Secret are required when enabling Discord integration")
+    if (isEnabled && (!validated.clientId || !clientSecret)) {
+      const message = "Client ID and client secret are required to turn on linked roles"
+      return fail("VALIDATION", message, {
+        fieldErrors: { ...(!validated.clientId && { clientId: [message] }), ...(!clientSecret && { clientSecret: [message] }) },
+      })
     }
 
     const row = {
       isEnabled,
       botEnabled,
       clientId: validated.clientId,
-      clientSecret: validated.clientSecret,
+      clientSecret,
+      botToken,
+      supportChannelId: validated.supportChannelId,
+      supportThreadIds: validated.supportThreadIds ?? [],
       guildId: validated.guildId,
       serverInviteCode: validated.serverInviteCode,
       platformName: validated.platformName,
@@ -127,7 +114,7 @@ export const saveDiscordIntegration = setupAction({
       })
     })
 
-    auditSetupSave(actor, "discord", row, ["clientSecret"])
+    auditSetupSave(actor, "discord", row, ["clientSecret", "botToken"])
     revalidatePath("/setup")
     revalidatePath("/discord/link")
     revalidatePath("/admin/settings")
@@ -135,14 +122,22 @@ export const saveDiscordIntegration = setupAction({
   },
 })
 
-/** Saves an OpenAI provider for `purpose`, replacing that purpose's active one. Setup checks the key only. */
+/**
+ * Saves an OpenAI provider for `purpose`, replacing that purpose's active one.
+ * Setup checks the key only. A blank key keeps the purpose's stored OpenAI
+ * key: it only ever goes to api.openai.com, so no address can change.
+ */
 function llmProviderSave(purpose: "chat" | "wrapped", step: SetupStepId) {
   return setupAction({
     input: setupLLMProviderSchema,
     fallbackError: "Failed to save LLM provider configuration",
     handler: async (validated, { actor }) => {
+      const stored = await prisma.lLMProvider.findFirst({ where: { isActive: true, purpose, provider: "openai", baseUrl: null } })
+      const apiKey = validated.apiKey?.trim() || stored?.apiKey
+      if (!apiKey) return fail("VALIDATION", "API key is required", { fieldErrors: { apiKey: ["API key is required"] } })
+
       // The model field is free text, as before P2.12
-      const connectionTest = await testLLMProviderConnection(validated, { customModel: true })
+      const connectionTest = await testLLMProviderConnection({ ...validated, apiKey }, { customModel: true })
       if (!connectionTest.success) {
         return fail("UPSTREAM_UNAVAILABLE", connectionTest.error || "Failed to connect to LLM provider")
       }
@@ -155,7 +150,7 @@ function llmProviderSave(purpose: "chat" | "wrapped", step: SetupStepId) {
           data: {
             provider: validated.provider,
             purpose,
-            apiKey: validated.apiKey,
+            apiKey,
             model,
             temperature: validated.temperature ?? null,
             maxTokens: validated.maxTokens ?? null,
@@ -165,7 +160,7 @@ function llmProviderSave(purpose: "chat" | "wrapped", step: SetupStepId) {
       })
 
       // Setup is OpenAI only, so the key always goes to api.openai.com
-      auditSetupSave(actor, `llm.${purpose}`, { provider: validated.provider, model, apiKey: validated.apiKey }, ["apiKey"])
+      auditSetupSave(actor, `llm.${purpose}`, { provider: validated.provider, model, apiKey }, ["apiKey"])
       revalidatePath("/setup")
       return ok(null)
     },
@@ -177,6 +172,18 @@ export const saveChatLLMProvider = llmProviderSave("chat", "llm-chat")
 
 /** Saves the Rewind writer's provider. */
 export const saveLLMProvider = llmProviderSave("wrapped", "llm-rewind")
+
+/**
+ * Test connection in a setup step, with the typed values (P10.20's test,
+ * behind the claim). A blank secret reuses the stored one only for the
+ * origin it was saved with.
+ */
+export const testSetupConnection = setupAction({
+  input: testConnectionInput,
+  rateLimit: { name: "admin:test" },
+  fallbackError: "Could not test the connection",
+  handler: (input): Promise<TestConnectionResult> => runConnectionTest(input),
+})
 
 /**
  * Skip for now on an optional step: moves the wizard on without writing a

@@ -53,7 +53,7 @@ jest.mock('@/lib/connections/prometheus', () => ({
 }))
 jest.mock('@/lib/connections/llm-provider', () => ({ testLLMProviderConnection: jest.fn() }))
 jest.mock('@/lib/security/audit-log', () => ({ ...jest.requireActual('@/lib/security/audit-log'), logAuditEvent: jest.fn() }))
-jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
+jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), unstable_cache: (load: unknown) => load }))
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 
@@ -287,6 +287,46 @@ describe('LLM saves', () => {
     jest.mocked(testLLMProviderConnection).mockResolvedValue({ success: false, error: 'Invalid API key' })
 
     await expect(saveLLMProvider({ provider: 'openai', apiKey: 'openai-key' })).resolves.toMatchObject({ success: false })
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+  })
+
+  it('keep the stored OpenAI key when the field is blank (a step revisited with Back)', async () => {
+    prismaMock.lLMProvider.findFirst.mockResolvedValue({ apiKey: 'stored-key' } as never)
+
+    await expect(saveChatLLMProvider({ provider: 'openai', model: 'gpt-4' })).resolves.toEqual({ success: true, data: null })
+
+    expect(prismaMock.lLMProvider.findFirst).toHaveBeenCalledWith({ where: { isActive: true, purpose: 'chat', provider: 'openai', baseUrl: null } })
+    expect(testLLMProviderConnection).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'stored-key' }), { customModel: true })
+    expect(tx.lLMProvider.create).toHaveBeenCalledWith({ data: expect.objectContaining({ apiKey: 'stored-key' }) })
+  })
+
+  it('refuse a blank key with none stored, on the field', async () => {
+    await expect(saveLLMProvider({ provider: 'openai', apiKey: ' ' })).resolves.toMatchObject({
+      success: false,
+      code: 'VALIDATION',
+      fieldErrors: { apiKey: ['API key is required'] },
+    })
+    expect(testLLMProviderConnection).not.toHaveBeenCalled()
+  })
+})
+
+describe('saveDiscordIntegration', () => {
+  it('keeps the stored client secret when the field is blank', async () => {
+    prismaMock.discordIntegration.findUnique.mockResolvedValue({ clientSecret: 'stored-secret', botToken: null } as never)
+
+    await expect(saveDiscordIntegration({ isEnabled: true, clientId: 'client-1' })).resolves.toEqual({ success: true, data: null })
+
+    expect(tx.discordIntegration.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: expect.objectContaining({ isEnabled: true, clientId: 'client-1', clientSecret: 'stored-secret' }) })
+    )
+  })
+
+  it('refuses linked roles without a client secret, on the field', async () => {
+    await expect(saveDiscordIntegration({ isEnabled: true, clientId: 'client-1' })).resolves.toMatchObject({
+      success: false,
+      code: 'VALIDATION',
+      fieldErrors: { clientSecret: [expect.any(String)] },
+    })
     expect(prismaMock.$transaction).not.toHaveBeenCalled()
   })
 })

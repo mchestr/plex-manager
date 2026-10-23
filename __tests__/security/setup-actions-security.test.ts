@@ -45,7 +45,7 @@ jest.mock('@/lib/connections/prometheus', () => ({
 jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn() }))
 jest.mock('@/lib/connections/llm-provider', () => ({ testLLMProviderConnection: jest.fn() }))
 jest.mock('@/lib/security/audit-log', () => ({ ...jest.requireActual('@/lib/security/audit-log'), logAuditEvent: jest.fn() }))
-jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
+jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), unstable_cache: (load: unknown) => load }))
 
 // One browser: its cookie jar and its address
 const jar = new Map<string, string>()
@@ -77,6 +77,7 @@ const SAMPLES: Record<string, unknown> = {
   saveLLMProvider: { provider: 'openai', apiKey: 'sk-test', model: 'gpt-4o' },
   savePrometheus: { name: 'Prometheus', url: 'http://prometheus.example.com:9090', query: 'up' },
   skipSetupStep: { stepId: 'overseerr' },
+  testSetupConnection: { service: 'tautulli', url: 'http://tautulli.example.com:8181', secret: 'tautulli-key' },
   completeSetup: undefined,
 }
 
@@ -134,7 +135,7 @@ describe.each(EXPORTS)('%s', (name, action) => {
     wizard({ claimId: 'claim-1' })
     jar.set(SETUP_CLAIM_COOKIE, setupClaimCookie('claim-1').value)
 
-    await expect(action(SAMPLES[name])).resolves.toEqual({ success: true, data: null })
+    await expect(action(SAMPLES[name])).resolves.toMatchObject({ success: true })
   })
 
   it('refuses a member, and a signed-out caller, once setup is complete', async () => {
@@ -152,7 +153,7 @@ describe.each(EXPORTS)('%s', (name, action) => {
     wizard({ isComplete: true })
     session.mockResolvedValue(ADMIN)
 
-    await expect(action(SAMPLES[name])).resolves.toEqual({ success: true, data: null })
+    await expect(action(SAMPLES[name])).resolves.toMatchObject({ success: true })
   })
 })
 

@@ -201,7 +201,7 @@ describe("--strict", () => {
 
   it("matches the documented example", () => {
     expect(
-      strictFailures({ "components/admin/a.tsx": { "raw-palette": 2 }, "components/setup/setup-wizard/b.tsx": { blur: 1 } })
+      strictFailures({ "components/admin/a.tsx": { "raw-palette": 2 }, "app/dev/rewind-stage/guess-island.tsx": { "client-marker": 1 } })
     ).toEqual([{ file: "components/admin/a.tsx", rule: "raw-palette", count: 2 }])
   })
 

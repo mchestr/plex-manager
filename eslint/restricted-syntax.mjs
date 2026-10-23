@@ -174,8 +174,6 @@ export const rewindCards = [
 const REWIND_ONLY_ALLOWED = ["components/ui/**", "components/rewind/**", "app/dev/**"];
 
 const APP_AND_COMPONENTS = ["app/**/*.{js,jsx,ts,tsx}", "components/**/*.{js,jsx,ts,tsx}"];
-/** The pre-refresh setup wizard; P10.25 rebuilds it on the primitives. */
-const SETUP_WIZARD = "components/setup/setup-wizard/**";
 /** The `next/og` image routes, which draw with Satori rather than the DOM. */
 const OG_ROUTES = ["app/icon.tsx", "app/apple-icon.tsx", "app/opengraph-image.tsx", "app/twitter-image.tsx"];
 /**
@@ -189,8 +187,7 @@ const RAW_ELEMENTS_ALLOWED = [...REWIND_ONLY_ALLOWED, "app/api/**", ...OG_ROUTES
  * - The formatting bans are errors in `app/` and `components/`; elsewhere
  *   they warn.
  * - The raw-element bans and the deleted-adapter imports are errors in
- *   `app/` and `components/` outside `RAW_ELEMENTS_ALLOWED` (P10.11). The
- *   setup wizard still warns until P10.25 rebuilds it.
+ *   `app/` and `components/` outside `RAW_ELEMENTS_ALLOWED` (P10.11).
  * - The `actionsAndApi` bans are errors in `app/api/` and all of `actions/`
  *   since P11.5 moved the last modules onto the action helper. An error block
  *   replaces the earlier error blocks for its files, so it repeats the
@@ -214,18 +211,12 @@ export const restrictedSyntaxBlocks = [
   },
   {
     files: APP_AND_COMPONENTS,
-    ignores: [SETUP_WIZARD, ...RAW_ELEMENTS_ALLOWED],
+    ignores: RAW_ELEMENTS_ALLOWED,
     level: "error",
     selectors: [...formatting, ...rewindOnlyProps, ...rawControls, ...inlineSvg, ...deprecatedImports],
   },
   { files: REWIND_ONLY_ALLOWED.map((glob) => glob + "/*.{js,jsx,ts,tsx}"), level: "error", selectors: formatting },
   { files: OG_ROUTES, level: "error", selectors: [...formatting, ...rewindOnlyProps] },
-  { files: [SETUP_WIZARD + "/*.{js,jsx,ts,tsx}"], level: "error", selectors: [...formatting, ...rewindOnlyProps] },
-  {
-    files: [SETUP_WIZARD + "/*.{js,jsx,ts,tsx}"],
-    level: "warn",
-    selectors: [...rawControls, ...inlineSvg, ...deprecatedImports],
-  },
   {
     files: ["app/api/**/*.{ts,tsx}", "actions/**/*.ts"],
     level: "error",

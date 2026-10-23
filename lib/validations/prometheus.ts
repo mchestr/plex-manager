@@ -8,7 +8,6 @@ export const prometheusSchema = z.object({
   query: z.string().min(1, "PromQL query is required"),
 })
 
-export type PrometheusInput = z.input<typeof prometheusSchema>
 export type PrometheusParsed = z.output<typeof prometheusSchema>
 
 /**
