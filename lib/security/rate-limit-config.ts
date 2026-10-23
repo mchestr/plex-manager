@@ -56,6 +56,8 @@ export const LIMITS = {
   "invite:redeem": { points: 10, duration: 15 * MINUTE },
   "plex:pin:create": { points: 30, duration: 10 * MINUTE },
   "plex:pin:poll": { points: 300, duration: 10 * MINUTE },
+  // Setup's server choice per address (P10.25): each one calls plex.tv and probes the server
+  "setup:plex:choose": { points: 10, duration: 10 * MINUTE },
   "llm:models": { points: 30, duration: 15 * MINUTE },
   // Assistant messages per user (P4.20). The Discord pair is shared by DMs and `/assistant ask`.
   "llm:assistant:admin": { points: 60, duration: HOUR },

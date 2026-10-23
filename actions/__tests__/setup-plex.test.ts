@@ -34,13 +34,14 @@ jest.mock('@/lib/security/audit-log', () => ({ ...jest.requireActual('@/lib/secu
 jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), unstable_cache: (load: unknown) => load }))
 
 const jar = new Map<string, string>()
+let mockForwardedFor = '203.0.113.9'
 jest.mock('next/headers', () => ({
   cookies: async () => ({
     get: (name: string) => (jar.has(name) ? { name, value: jar.get(name) } : undefined),
     set: (cookie: { name: string; value: string }) => jar.set(cookie.name, cookie.value),
     delete: (name: string) => jar.delete(name),
   }),
-  headers: async () => new Headers({ 'x-forwarded-for': '203.0.113.9' }),
+  headers: async () => new Headers({ 'x-forwarded-for': mockForwardedFor }),
 }))
 
 const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL
@@ -188,6 +189,24 @@ describe('chooseSetupPlexServer', () => {
     await expect(chooseSetupPlexServer({ machineIdentifier: 'owned-1', uri: 'http://evil.example.com:32400' })).resolves.toMatchObject({ code: 'VALIDATION' })
     expect(testPlexConnection).not.toHaveBeenCalled()
     expect(prismaMock.$transaction).not.toHaveBeenCalled()
+  })
+
+  it('is limited per address (setup:plex:choose), before plex.tv is asked', async () => {
+    mockForwardedFor = '198.51.100.77'
+    try {
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        await expect(chooseSetupPlexServer({ machineIdentifier: 'nope', uri: 'http://192.168.1.20:32400' })).resolves.toMatchObject({ code: 'CONFLICT' })
+      }
+      jest.mocked(readPin).mockClear()
+
+      await expect(chooseSetupPlexServer({ machineIdentifier: 'nope', uri: 'http://192.168.1.20:32400' })).resolves.toMatchObject({
+        success: false,
+        code: 'RATE_LIMITED',
+      })
+      expect(readPin).not.toHaveBeenCalled()
+    } finally {
+      mockForwardedFor = '203.0.113.9'
+    }
   })
 
   it('asks to connect again once the PIN has gone', async () => {

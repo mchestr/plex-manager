@@ -133,6 +133,22 @@ describe("redeemSetupCode", () => {
     await expect(redeemSetupCode(code)).resolves.toEqual({ ok: false })
   })
 
+  it("gives two concurrent uses of one code exactly one winner", async () => {
+    const { code, hash } = await issue()
+    prismaMock.setup.findFirst.mockResolvedValue(buildSetup({ id: "setup-1", claimCodeHash: hash }))
+    // Both pass the hash check; only the first guarded write still finds the hash
+    prismaMock.setup.updateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 })
+
+    const results = await Promise.all([redeemSetupCode(code), redeemSetupCode(code)])
+
+    expect(results.filter((result) => result.ok)).toHaveLength(1)
+    expect(results.filter((result) => !result.ok)).toEqual([{ ok: false }])
+    expect(prismaMock.setup.updateMany).toHaveBeenCalledTimes(2)
+    for (const [args] of prismaMock.setup.updateMany.mock.calls) {
+      expect(args.where).toEqual({ id: "setup-1", claimCodeHash: hash })
+    }
+  })
+
   it("accepts SETUP_TOKEN instead of a code, and compares with timingSafeEqual", async () => {
     process.env.SETUP_TOKEN = "a-long-enough-setup-token"
     prismaMock.setup.findFirst.mockResolvedValue(null)
@@ -174,6 +190,14 @@ describe("requireSetupClaim", () => {
 
     jar.set(SETUP_CLAIM_COOKIE, setupClaimCookie("claim-1").value)
     prismaMock.setup.findFirst.mockResolvedValue(buildSetup({ claimId: "claim-1", isComplete: true }))
+    await expect(requireSetupClaim()).resolves.toEqual({ ok: false, code: "SETUP_UNCLAIMED" })
+  })
+
+  it("treats the current claim's cookie as unclaimed once setup is complete", async () => {
+    // completeSetup clears claimId; a row that kept it still never lets the cookie through
+    jar.set(SETUP_CLAIM_COOKIE, setupClaimCookie("claim-1").value)
+    prismaMock.setup.findFirst.mockResolvedValue(buildSetup({ claimId: "claim-1", isComplete: true }))
+
     await expect(requireSetupClaim()).resolves.toEqual({ ok: false, code: "SETUP_UNCLAIMED" })
   })
 

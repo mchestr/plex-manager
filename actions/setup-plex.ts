@@ -103,6 +103,7 @@ export const pollSetupPlexConnect = setupAction({
  */
 export const chooseSetupPlexServer = setupAction({
   input: z.strictObject({ machineIdentifier: z.string().min(1).max(200), uri: z.string().min(1).max(2048) }),
+  rateLimit: { name: "setup:plex:choose" },
   fallbackError: "Couldn't save this Plex server",
   handler: async ({ machineIdentifier, uri }, { actor }) => {
     const pin = await setupPin()

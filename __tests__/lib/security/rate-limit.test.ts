@@ -113,6 +113,7 @@ describe("rate-limit", () => {
         "invite:redeem": { points: 10, duration: 900 },
         "plex:pin:create": { points: 30, duration: 600 },
         "plex:pin:poll": { points: 300, duration: 600 },
+        "setup:plex:choose": { points: 10, duration: 600 },
         "llm:models": { points: 30, duration: 900 },
         "llm:assistant:admin": { points: 60, duration: 3600 },
         "llm:discord:dm": { points: 20, duration: 3600 },
