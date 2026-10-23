@@ -3,9 +3,9 @@
  *
  * `instrumentation.ts` calls {@link startNodeInstrumentation} without awaiting
  * it, because Next awaits `register()` before serving the first request. It
- * installs the shutdown coordinator first, then starts the queue worker and the
- * Discord bot poller side by side, so neither a down Redis nor a slow Discord
- * login holds up the other or the site (BP-13).
+ * installs the shutdown coordinator first, then starts the queue worker, the
+ * Discord bot poller and the setup code (P11.32) side by side, so neither a
+ * down Redis nor a slow Discord login holds up the others or the site (BP-13).
  *
  * Imported dynamically from instrumentation.ts so the Edge runtime never
  * analyses its Node-only dependencies.
@@ -29,7 +29,14 @@ export async function startNodeInstrumentation() {
   await Promise.all([
     startQueueWorker().catch((error) => logger.error("Queue worker start failed", error)),
     startDiscordBotPolling().catch((error) => logger.error("Discord bot start failed", error)),
+    issueSetupCode().catch((error) => logger.error("Could not issue the setup code", error)),
   ])
+}
+
+/** Prints this boot's setup code while first-run setup is incomplete (P11.32). */
+async function issueSetupCode() {
+  const { issueSetupCode: issue } = await import("@/lib/setup/claim")
+  await issue()
 }
 
 /**

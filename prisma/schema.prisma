@@ -63,6 +63,13 @@ model Setup {
   isComplete  Boolean   @default(false)
   currentStep Int       @default(1)
   completedAt DateTime?
+  // The first-run claim (P11.32, lib/setup/claim.ts): the SHA-256 of the newest
+  // setup code (cleared once used), and the claim the `pm-setup` cookie names.
+  // Both are cleared when setup completes.
+  claimCodeHash     String?
+  claimCodeIssuedAt DateTime?
+  claimId           String?
+  claimedAt         DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }

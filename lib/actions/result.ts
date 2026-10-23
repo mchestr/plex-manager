@@ -21,6 +21,8 @@ const logger = createLogger("ACTION")
  * Why an action refused or failed. P3.8's `errorCopy` maps every code, and
  * P4.5 starts returning `NOT_ENTITLED`. `INVITE_INVALID` and
  * `INVITE_WRONG_SERVICE` are the invite codes P4.12 introduced.
+ * `SETUP_UNCLAIMED` refuses a setup action before this browser claimed the
+ * server with the setup code (P11.32).
  */
 export type ActionErrorCode =
   | "UNAUTHENTICATED"
@@ -33,6 +35,7 @@ export type ActionErrorCode =
   | "UPSTREAM_UNAVAILABLE"
   | "INVITE_INVALID"
   | "INVITE_WRONG_SERVICE"
+  | "SETUP_UNCLAIMED"
   | "INTERNAL"
 
 /**

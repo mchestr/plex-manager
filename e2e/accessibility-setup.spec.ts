@@ -3,6 +3,7 @@ import { A11Y_SETUP_ROUTES, setupRouteName } from './a11y/routes';
 import { scanAgainstBaseline } from './a11y/scan';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { clearVisualFixtures, seedVisualFixtures } from './helpers/seed-fixtures';
+import { claimSetup } from './helpers/setup-claim';
 import { expect, settlePage, test } from './visual/visual-test';
 
 /**
@@ -32,6 +33,7 @@ test.describe('Accessibility: setup wizard', () => {
         await prisma.$disconnect();
       }
 
+      await claimSetup(page);
       await page.goto('/setup');
       await settlePage(page);
       await expect(page.getByTestId(route.ready)).toBeVisible();

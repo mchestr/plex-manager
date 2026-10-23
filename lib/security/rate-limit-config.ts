@@ -43,6 +43,8 @@ export const LIMITS = {
   checkout: { points: 10, duration: MINUTE },
   portal: { points: 10, duration: MINUTE },
   "discord-link": { points: 5, duration: 5 * MINUTE },
+  // Setup-code guesses per address before first-run setup completes (P11.32)
+  "setup:claim": { points: 5, duration: MINUTE },
   "auth:plex": { points: 20, duration: 15 * MINUTE },
   "auth:jellyfin:ip": { points: 10, duration: 15 * MINUTE },
   "auth:jellyfin:user": { points: 5, duration: 15 * MINUTE },

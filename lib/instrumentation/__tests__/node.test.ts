@@ -11,6 +11,7 @@ import { waitForRedis } from "@/lib/queue/connection"
 import { startWorker } from "@/lib/queue/worker"
 import { startWatchlistFallback } from "@/lib/watchlist/fallback"
 import { ensureWatchlistSchedule } from "@/lib/watchlist/schedule"
+import { issueSetupCode } from "@/lib/setup/claim"
 
 // The queue worker and the bot poller start side by side, so a Redis that is
 // down at boot never stops the Discord bot (BP-13).
@@ -50,6 +51,7 @@ jest.mock("@/lib/locks/lease-lock", () => ({ LeaseLock: jest.fn() }))
 jest.mock("@/lib/discord/config", () => ({ isDiscordBotEnabled: jest.fn().mockResolvedValue(true) }))
 jest.mock("@/lib/discord/bot", () => ({ DiscordBot: jest.fn() }))
 jest.mock("@/lib/prisma", () => ({ prisma: {} }))
+jest.mock("@/lib/setup/claim", () => ({ issueSetupCode: jest.fn() }))
 
 const originalEnv = process.env
 
@@ -154,5 +156,26 @@ describe("startNodeInstrumentation() and the Discord role reconcile", () => {
 
     expect(scheduleCronJob).not.toHaveBeenCalled()
     expect(removeScheduledJob).toHaveBeenCalledWith("discord-role-reconcile")
+  })
+})
+
+describe("startNodeInstrumentation() and the setup code (P11.32)", () => {
+  it("issues the setup code while Redis is still unanswered", async () => {
+    jest.mocked(waitForRedis).mockReturnValue(new Promise(() => {}))
+
+    void startNodeInstrumentation()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(issueSetupCode).toHaveBeenCalledTimes(1)
+  })
+
+  it("logs a failure to issue it without stopping the rest", async () => {
+    jest.mocked(waitForRedis).mockResolvedValue(true)
+    jest.mocked(issueSetupCode).mockRejectedValueOnce(new Error("database down"))
+
+    await startNodeInstrumentation()
+
+    expect(mockError).toHaveBeenCalledWith("Could not issue the setup code", expect.any(Error))
+    expect(startWorker).toHaveBeenCalled()
   })
 })

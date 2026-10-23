@@ -62,6 +62,12 @@ jest.mock('next-auth', () => ({
 
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 
+// This browser holds the setup claim; __tests__/security/setup-actions-security.test.ts covers the claim
+jest.mock('@/lib/setup/claim', () => ({
+  requireSetupClaim: async () => ({ ok: true }),
+  clearSetupClaimCookie: async () => undefined,
+}))
+
 const mockPrisma = prismaMock
 const mockTestPlexConnection = testPlexConnection as jest.MockedFunction<typeof testPlexConnection>
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
@@ -464,6 +470,8 @@ describe('Setup Actions', () => {
         data: {
           isComplete: true,
           completedAt: expect.any(Date),
+          claimId: null,
+          claimCodeHash: null,
         },
       })
       expect(mockRevalidatePath).toHaveBeenCalledWith('/')

@@ -29,6 +29,7 @@ export const envSchema = z.object({
   NEXTAUTH_SECRET: text("Signs session cookies. At least 32 random characters: openssl rand -base64 32."),
   PLEX_CLIENT_IDENTIFIER: text("Unique id this install reports to Plex: openssl rand -hex 16."),
   ENCRYPTION_KEY: text("Encrypts stored service secrets: openssl rand -hex 32. Never reuse NEXTAUTH_SECRET."),
+  SETUP_TOKEN: text("Claims first-run setup instead of the code printed in the log. At least 16 characters: openssl rand -hex 16."),
   ALLOW_INSECURE_HTTP: text('"true" lets production run on plain http (LAN only). Cookies are then not Secure.'),
   // Infrastructure
   REDIS_URL: text("Redis for the job queue and rate limits. Rewind and Stripe need it."),
@@ -139,6 +140,9 @@ export const KNOWN_PLACEHOLDER_SECRETS: ReadonlySet<string> = new Set([
   "secret",
 ])
 
+/** The shortest `SETUP_TOKEN` that replaces the generated setup code (P11.32). */
+export const SETUP_TOKEN_MIN_LENGTH = 16
+
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
 
 /** @internal */
@@ -203,6 +207,9 @@ export function checkProductionEnv(env: Env): EnvIssue[] {
     checkHttps("NEXTAUTH_URL", env.NEXTAUTH_URL, allowInsecure),
     checkHttps("NEXT_PUBLIC_APP_URL", env.NEXT_PUBLIC_APP_URL, allowInsecure),
   ]
+  if (env.SETUP_TOKEN !== undefined && env.SETUP_TOKEN.length < SETUP_TOKEN_MIN_LENGTH) {
+    issues.push({ variable: "SETUP_TOKEN", code: "too_short", severity: "error", hint: "shorter than 16 characters; generate one with openssl rand -hex 16" })
+  }
   if (!env.PLEX_CLIENT_IDENTIFIER?.trim()) {
     issues.push({ variable: "PLEX_CLIENT_IDENTIFIER", code: "missing", severity: "error", hint: "not set; generate one with openssl rand -hex 16" })
   }

@@ -10,6 +10,7 @@ import { expect, test } from '@playwright/test';
 import { assertTestDatabaseUrl } from '../lib/security/test-mode';
 import globalSetup from './global-setup';
 import { createE2EPrismaClient } from './helpers/prisma';
+import { claimSetup, setupToken } from './helpers/setup-claim';
 import { navigateAndVerify, waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
 
 import type { PrismaClient } from '../lib/generated/prisma/client';
@@ -30,6 +31,36 @@ test.describe('Setup Wizard', () => {
     // so that other specs can rely on consistent fixtures after this destructive test.
     await globalSetup();
     await prisma.$disconnect();
+  });
+
+  test('claims the server before the wizard opens (P11.32)', async ({ page, browser }) => {
+    // A fresh install: no wizard row, so no claim
+    await prisma.setup.deleteMany();
+
+    await navigateAndVerify(page, '/setup');
+    await expect(page.getByTestId('setup-claim-form')).toBeVisible();
+    await expect(page.getByTestId('setup-wizard-intro-text')).toHaveCount(0);
+
+    // A wrong code is refused
+    await page.getByTestId('setup-claim-code-input').fill('K7QM-4WZD-P2HX');
+    await page.getByTestId('setup-claim-submit').click();
+    await expect(page.getByTestId('setup-claim-error')).toBeVisible();
+
+    // SETUP_TOKEN claims it, and the wizard renders
+    await page.getByTestId('setup-claim-code-input').fill(setupToken());
+    await page.getByTestId('setup-claim-submit').click();
+    await expect(page.getByTestId('setup-wizard-intro-text')).toBeVisible();
+
+    // Another browser, without the cookie, still sees the claim form
+    const other = await browser.newContext();
+    try {
+      const otherPage = await other.newPage();
+      await otherPage.goto('/setup');
+      await expect(otherPage.getByTestId('setup-claim-form')).toBeVisible();
+      await expect(otherPage.getByTestId('setup-wizard-intro-text')).toHaveCount(0);
+    } finally {
+      await other.close();
+    }
   });
 
   test('should complete setup wizard from empty database', async ({ page }) => {
@@ -61,7 +92,8 @@ test.describe('Setup Wizard', () => {
     // The connection test functions check for NODE_ENV=test or SKIP_CONNECTION_TESTS=true
     // and return success immediately without making actual API calls
 
-    // Navigate to setup page
+    // Claim the server (the wipe above ended any earlier claim), then open the wizard
+    await claimSetup(page);
     await navigateAndVerify(page, '/setup');
     await waitForLoadingGone(page);
 

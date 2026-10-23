@@ -9,6 +9,10 @@ import { assertTestDatabaseUrl } from './lib/security/test-mode';
 const databaseUrl = assertTestDatabaseUrl(process.env.E2E_DATABASE_URL);
 process.env.DATABASE_URL = databaseUrl;
 
+// Setup actions need the setup claim (P11.32); the web server and the specs
+// that reopen setup (e2e/helpers/setup-claim.ts) share this token.
+process.env.SETUP_TOKEN ||= 'e2e-setup-token-0123456789';
+
 const port = process.env.E2E_PORT || '3100';
 const baseURL = `http://localhost:${port}`;
 // E2E_SERVER=prod builds the app and serves it with `next start`; the default

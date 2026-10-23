@@ -10,6 +10,11 @@ const mockGetSetupStatus = jest.fn()
 jest.mock('@/lib/setup/status', () => ({
   getSetupStatus: () => mockGetSetupStatus(),
 }))
+// ...and that this browser holds the setup claim (P11.32)
+const mockRequireSetupClaim = jest.fn()
+jest.mock('@/lib/setup/claim', () => ({
+  requireSetupClaim: () => mockRequireSetupClaim(),
+}))
 
 // Store original environment to restore after tests
 const originalEnv = process.env
@@ -38,6 +43,8 @@ describe('getDevDefaults', () => {
     process.env.DEV_SETUP_PREFILL = 'true'
     mockGetSetupStatus.mockReset()
     mockGetSetupStatus.mockResolvedValue({ isComplete: false, currentStep: 1 })
+    mockRequireSetupClaim.mockReset()
+    mockRequireSetupClaim.mockResolvedValue({ ok: true })
   })
 
   afterAll(() => {
@@ -121,6 +128,18 @@ describe('getDevDefaults', () => {
       expect(result.autoSubmit).toBe(false)
       expect(result.plex).toBeNull()
       expect(result.tautulli).toBeNull()
+    })
+
+    it('should return empty defaults to a browser without the setup claim', async () => {
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
+      process.env.DEV_PLEX_URL = 'https://plex.example.com:32400'
+      mockRequireSetupClaim.mockResolvedValue({ ok: false, code: 'SETUP_UNCLAIMED' })
+
+      const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
+      const result = await getDevDefaults()
+
+      expect(result.isDevMode).toBe(false)
+      expect(result.plex).toBeNull()
     })
 
     it('should not treat E2E_TEST_MODE as the prefill flag', async () => {

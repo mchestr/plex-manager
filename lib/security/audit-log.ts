@@ -148,6 +148,9 @@ export enum AuditEventType {
   // redacted diff from lib/security/config-diff.ts: changed field names, whether
   // a secret changed, and URL origins only.
   CONFIG_CHANGED = "CONFIG_CHANGED",
+  // A browser claimed the server before first-run setup (P11.32, SEC-30).
+  // Details carry the method (code or token) and the masked IP, never the code.
+  SETUP_CLAIMED = "SETUP_CLAIMED",
 }
 
 type AuditDetails = {

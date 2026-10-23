@@ -1,6 +1,7 @@
 import globalSetup from '../global-setup';
 import { createE2EPrismaClient } from '../helpers/prisma';
 import { clearVisualFixtures, seedVisualFixtures } from '../helpers/seed-fixtures';
+import { claimSetup } from '../helpers/setup-claim';
 import { capture, skipUnlessProductionBuild, test } from './visual-test';
 
 /**
@@ -29,6 +30,7 @@ test.describe('Setup wizard', () => {
   });
 
   test('step 3', async ({ page }) => {
+    await claimSetup(page);
     await capture(page, '/setup', 'setup-step-3');
   });
 });

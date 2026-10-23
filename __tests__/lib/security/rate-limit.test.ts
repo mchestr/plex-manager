@@ -103,6 +103,7 @@ describe("rate-limit", () => {
         checkout: { points: 10, duration: 60 },
         portal: { points: 10, duration: 60 },
         "discord-link": { points: 5, duration: 300 },
+        'setup:claim': { points: 5, duration: 60 },
         "auth:plex": { points: 20, duration: 900 },
         "auth:jellyfin:ip": { points: 10, duration: 900 },
         "auth:jellyfin:user": { points: 5, duration: 900 },

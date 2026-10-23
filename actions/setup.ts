@@ -1,18 +1,18 @@
 "use server"
 
 /**
- * The first-run setup wizard's saves. Anyone may call them until setup
- * completes (P11.32 adds a claim); after that only an admin may. Each save
+ * The first-run setup wizard's saves. Until setup completes only the browser
+ * that claimed the server with the setup code may call them (P11.32,
+ * `lib/setup/claim.ts`); after that only an admin may. Each save
  * tests the connection first, writes the row and the wizard's step in one
  * transaction, and is audited as `CONFIG_CHANGED` with the actor `setup`
  * during the first run.
  */
 
 import { revalidatePath } from "next/cache"
-import type { Session } from "next-auth"
 import { z } from "zod"
 
-import { publicAction } from "@/lib/actions/define-action"
+import { setupAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
 import { testLLMProviderConnection } from "@/lib/connections/llm-provider"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
@@ -26,7 +26,7 @@ import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
 import { resolveSecretForOrigin, SECRET_REQUIRED_MESSAGE, type SecretRequiredCode } from "@/lib/security/secret-reuse"
-import { getSetupStatus } from "@/lib/setup/status"
+import { clearSetupClaimCookie } from "@/lib/setup/claim"
 import { discordIntegrationSchema } from "@/lib/validations/discord"
 import { setupLLMProviderSchema } from "@/lib/validations/llm-provider"
 import { overseerrSchema } from "@/lib/validations/overseerr"
@@ -43,30 +43,19 @@ type SetupCode = ActionErrorCode | SecretRequiredCode
 type Tx = Parameters<Extract<Parameters<typeof prisma.$transaction>[0], (...args: never[]) => unknown>>[0]
 
 /**
- * The actor for the audit trail: `setup` before setup completes, then the
- * admin's id. A non-admin after completion is refused.
+ * A setup save: a claim before setup completes, an admin after it
+ * (`setupAction`), then `handler` with the audit actor. Errors map to
+ * `fallbackError`, never their text.
  */
-async function setupActor(session: Session | null): Promise<{ ok: true; actor: string } | { ok: false; result: ActionFailure }> {
-  if (!(await getSetupStatus()).isComplete) return { ok: true, actor: "setup" }
-  if (!session?.user?.id) return { ok: false, result: fail("UNAUTHENTICATED", "Please sign in to continue.") }
-  if (!session.user.isAdmin) return { ok: false, result: fail("FORBIDDEN", "Admins only.") }
-  return { ok: true, actor: session.user.id }
-}
-
-/** A setup save: the actor check, then `handler`. Errors map to `fallbackError`, never their text. */
-function setupAction<S extends z.ZodType, T>(
+function setupSave<S extends z.ZodType, T>(
   input: S,
   fallbackError: string,
   handler: (data: z.output<S>, actor: string) => Promise<ActionResult<T, SetupCode>>
 ) {
-  return publicAction({
+  return setupAction({
     input,
     fallbackError,
-    handler: async (data, { session }): Promise<ActionResult<T, SetupCode>> => {
-      const actor = await setupActor(session)
-      if (!actor.ok) return actor.result
-      return handler(data as z.output<S>, actor.actor)
-    },
+    handler: (data, { actor }): Promise<ActionResult<T, SetupCode>> => handler(data as z.output<S>, actor),
   })
 }
 
@@ -138,7 +127,7 @@ interface ServiceSave {
 
 /** A save for an API-key service (Tautulli, Overseerr, Sonarr, Radarr; DUP-11). */
 function serviceSave(service: ServiceSave) {
-  return setupAction(withOptionalSecret("apiKey"), `Failed to save ${service.label} configuration`, async (data, actor) => {
+  return setupSave(withOptionalSecret("apiKey"), `Failed to save ${service.label} configuration`, async (data, actor) => {
     const stored = await service.stored()
     const secret = setupSecret(data.apiKey, data.url, stored && { secret: stored.apiKey, url: stored.url })
     if (!secret.ok) return secret.result
@@ -177,7 +166,7 @@ function serviceSave(service: ServiceSave) {
 const activeOnly = { where: { isActive: true } } as const
 
 /** Saves the Plex server and records its owner as the admin (step 2). */
-export const savePlexServer = setupAction(
+export const savePlexServer = setupSave(
   withOptionalSecret("token"),
   "Failed to save Plex server configuration",
   async (data, actor) => {
@@ -274,7 +263,7 @@ export const saveRadarr = serviceSave({
 })
 
 /** Saves the Discord integration (step 7). The client secret goes only to Discord, so it keeps "blank means keep". */
-export const saveDiscordIntegration = setupAction(
+export const saveDiscordIntegration = setupSave(
   discordIntegrationSchema,
   "Failed to save Discord integration",
   async (validated, actor) => {
@@ -315,7 +304,7 @@ export const saveDiscordIntegration = setupAction(
 
 /** Saves an OpenAI provider for `purpose` and moves the wizard to `nextStep`. Setup checks the key only. */
 function llmProviderSave(purpose: "chat" | "wrapped", nextStep: number) {
-  return setupAction(setupLLMProviderSchema, "Failed to save LLM provider configuration", async (validated, actor) => {
+  return setupSave(setupLLMProviderSchema, "Failed to save LLM provider configuration", async (validated, actor) => {
     // The model field is free text, as before P2.12
     const connectionTest = await testLLMProviderConnection(validated, { customModel: true })
     if (!connectionTest.success) {
@@ -353,7 +342,7 @@ export const saveChatLLMProvider = llmProviderSave("chat", 8)
 export const saveLLMProvider = llmProviderSave("wrapped", 10)
 
 /** Saves Prometheus (step 10). */
-export const savePrometheus = setupAction(prometheusSchema, "Failed to save Prometheus configuration", async (validated, actor) => {
+export const savePrometheus = setupSave(prometheusSchema, "Failed to save Prometheus configuration", async (validated, actor) => {
   const connectionTest = await testPrometheusConnection(validated)
   if (!connectionTest.success) {
     return fail("UPSTREAM_UNAVAILABLE", connectionTest.error || "Failed to connect to Prometheus server")
@@ -371,15 +360,16 @@ export const savePrometheus = setupAction(prometheusSchema, "Failed to save Prom
   return ok(null)
 })
 
-/** Marks setup complete; from then on these saves are admin only. */
-export const completeSetup = setupAction(z.undefined(), "Failed to finish setup", async (_input, actor) => {
+/** Marks setup complete and ends the claim; from then on these saves are admin only. */
+export const completeSetup = setupSave(z.undefined(), "Failed to finish setup", async (_input, actor) => {
   const setup = await prisma.setup.findFirst({ orderBy: { createdAt: "desc" } })
   if (setup) {
     await prisma.setup.update({
       where: { id: setup.id },
-      data: { isComplete: true, completedAt: new Date() },
+      data: { isComplete: true, completedAt: new Date(), claimId: null, claimCodeHash: null },
     })
   }
+  await clearSetupClaimCookie()
 
   auditSetupSave(actor, "complete", null, { isComplete: true })
   revalidatePath("/")
