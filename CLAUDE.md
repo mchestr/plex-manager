@@ -836,7 +836,7 @@ The project includes custom slash commands in `.claude/commands/`:
 
 ### Agent Skills
 
-`.claude/skills/` holds third-party skills vendored at pinned commits, so every session, including cloud sessions, gets the same reviewed copies. Each loads on its own when you work on files matching its `paths:`, or by name:
+`.claude/skills/` holds third-party skills vendored at pinned commits, so every session, including cloud sessions, gets the same reviewed copies, plus four project-authored skills that describe this codebase's Rewind and visual QA conventions. Each loads on its own when you work on files matching its `paths:`, or by name:
 
 | Skill | Loads for | Use it for |
 |---|---|---|
@@ -847,10 +847,15 @@ The project includes custom slash commands in `.claude/commands/`:
 | `vercel-composition-patterns` | `app/**`, `components/**`, `hooks/**` | Component API design |
 | `vercel-react-view-transitions` | `app/**` | React `<ViewTransition>` work |
 | `motion` | `components/wrapped/**`, `components/rewind/**`, `lib/rewind/**` | Animation (its `motion/react` imports apply after P2.15) |
+| `rewind-design-system` (project) | `components/rewind/**`, `lib/rewind/**`, `app/(app)/rewind/**`, `app/rewind/**` | The Rewind scope, inks, type, motion and poster rules |
+| `rewind-page` (project) | `components/rewind/pages/**`, `lib/rewind/pages/**`, `lib/rewind/registry.ts`, `lib/rewind/page-meta.ts` | Checklist for adding or changing a Rewind page |
+| `share-card` (project) | `lib/rewind/cards/**`, `app/api/rewind/card/**` | Satori-safe share cards drawn from the share-safe projection |
+| `visual-qa` (project) | `e2e/**` | Running, reading and updating the visual, axe and performance projects |
 
 - Where a skill's advice conflicts with this file (for example SWR instead of TanStack Query, or throwing from Server Actions), this file wins.
 - Shell execution from skills is off (`disableSkillShellExecution` in `.claude/settings.json`).
 - `.claude/skills/THIRD_PARTY.md` records each skill's source, SHA or npm version, licence, review and local changes, and the update procedure: review the upstream diff at a new SHA, copy, record. Never run `npx skills add` or `npx skills update` here.
+- The project-authored skills point at source files and design sections instead of copying values; `scripts/__tests__/project-skills.test.ts` fails when a path, export, npm script or Playwright project they name disappears, so update the skill in the same PR as the code it describes.
 - Any change to `.claude/skills/**` or `.mcp.json` needs a `/security-review` before merge.
 
 ## Additional Resources
