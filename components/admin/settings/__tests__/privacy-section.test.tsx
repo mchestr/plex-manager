@@ -3,7 +3,7 @@
  * counts, and the audited "Run now".
  */
 
-import { render, screen, within } from "@testing-library/react"
+import { act, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { runRetentionNow } from "@/actions/admin/retention"
@@ -12,6 +12,9 @@ import { RETENTION_RULES, retentionDays, retentionPolicy, type RetentionRule } f
 
 jest.mock("@/actions/admin/retention", () => ({ runRetentionNow: jest.fn() }))
 
+const mockRefresh = jest.fn()
+jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mockRefresh }) }))
+
 const mockShowSuccess = jest.fn()
 const mockShowError = jest.fn()
 jest.mock("@/components/ui/toast", () => ({ useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }) }))
@@ -19,6 +22,7 @@ jest.mock("@/components/ui/toast", () => ({ useToast: () => ({ showSuccess: mock
 const POLICY = retentionPolicy(retentionDays({}))
 
 beforeEach(() => jest.clearAllMocks())
+afterEach(() => jest.useRealTimers())
 
 describe("PrivacySection", () => {
   it("lists every window", () => {
@@ -50,6 +54,8 @@ describe("PrivacySection", () => {
       success: true,
       data: {
         counts: { ...(Object.fromEntries(RETENTION_RULES.map((rule) => [rule, 0])) as Record<RetentionRule, number>), rewindLlmText: 7 },
+        queued: false,
+        partial: false,
         finishedAt: "2027-02-02T10:00:00.000Z",
       },
     })
@@ -70,6 +76,52 @@ describe("PrivacySection", () => {
     await user.click(screen.getByTestId("settings-retention-run"))
 
     expect(mockShowError).toHaveBeenCalledWith("Could not run the retention sweep")
+    expect(screen.getByTestId("settings-retention-last-run")).toHaveTextContent("Not run yet.")
+  })
+
+  it("shows a queued sweep and refreshes until the recorded run changes", async () => {
+    jest.useFakeTimers()
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    jest.mocked(runRetentionNow).mockResolvedValue({ success: true, data: { queued: true } })
+    const before = { at: "2027-02-01T03:30:00.000Z", counts: { auditLog: 1 } }
+    const { rerender } = render(<PrivacySection status={{ policy: POLICY, lastRun: before }} />)
+
+    await user.click(screen.getByTestId("settings-retention-run"))
+
+    expect(mockShowSuccess).toHaveBeenCalledWith("Retention sweep queued. The counts update here when it finishes.")
+    expect(await screen.findByText("Sweep queued. The counts update here when it finishes.")).toHaveAttribute(
+      "data-testid",
+      "settings-retention-last-run"
+    )
+    act(() => jest.advanceTimersByTime(5000))
+    expect(mockRefresh).toHaveBeenCalledTimes(1)
+
+    rerender(<PrivacySection status={{ policy: POLICY, lastRun: { at: "2027-02-02T10:00:00.000Z", counts: { auditLog: 9 } } }} />)
+
+    expect(screen.getByTestId("settings-retention-last-run")).toHaveTextContent("Last run")
+    expect(screen.getByTestId("settings-retention-count-auditLog")).toHaveTextContent("9")
+    act(() => jest.advanceTimersByTime(10_000))
+    expect(mockRefresh).toHaveBeenCalledTimes(1)
+  })
+
+  it("reports a partial inline sweep without recording it as the last run", async () => {
+    const user = userEvent.setup()
+    jest.mocked(runRetentionNow).mockResolvedValue({
+      success: true,
+      data: {
+        counts: { ...(Object.fromEntries(RETENTION_RULES.map((rule) => [rule, 0])) as Record<RetentionRule, number>), auditLog: 1000 },
+        queued: false,
+        partial: true,
+        finishedAt: "2027-02-02T10:00:20.000Z",
+      },
+    })
+    render(<PrivacySection status={{ policy: POLICY, lastRun: null }} />)
+
+    await user.click(screen.getByTestId("settings-retention-run"))
+
+    expect(mockShowSuccess).toHaveBeenCalledWith(
+      "Retention sweep stopped after 20 seconds with 1000 rows removed or cleared. The next run finishes it."
+    )
     expect(screen.getByTestId("settings-retention-last-run")).toHaveTextContent("Not run yet.")
   })
 })

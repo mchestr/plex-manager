@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import { useEffect, useState, useTransition } from "react"
 
 import { runRetentionNow } from "@/actions/admin/retention"
 import { Button } from "@/components/ui/button"
@@ -10,16 +11,41 @@ import { useToast } from "@/components/ui/toast"
 import type { RetentionStatus } from "@/lib/data/retention"
 
 const HEADINGS = ["Data", "Kept for", "Then", "Last run"]
+/** While a queued sweep runs, the page refreshes this often, for at most {@link POLL_FOR_MS}. */
+const POLL_EVERY_MS = 5000
+const POLL_FOR_MS = 5 * 60 * 1000
+
+type LastRun = RetentionStatus["lastRun"]
+
+const newest = (a: LastRun, b: LastRun): LastRun => (!a ? b : !b ? a : a.at >= b.at ? a : b)
+const total = (counts: Record<string, number>) => Object.values(counts).reduce((sum, count) => sum + count, 0)
 
 /**
  * Privacy (P11.14): the retention windows the daily sweep applies, the last
  * run with its count per rule, and an audited "Run now". The windows come
  * from `RETENTION_<NAME>_DAYS`, so they change only with the environment.
+ * A queued run (with Redis) refreshes the page until the recorded run changes.
  */
 export function PrivacySection({ status }: { status: RetentionStatus }) {
-  const [lastRun, setLastRun] = useState(status.lastRun)
+  const router = useRouter()
+  const [ranNow, setRanNow] = useState<LastRun>(null)
+  // The recorded run's time when a sweep was queued; undefined when none is
+  const [queuedFrom, setQueuedFrom] = useState<string | null | undefined>(undefined)
   const [isPending, startTransition] = useTransition()
   const { showError, showSuccess } = useToast()
+
+  const lastRun = newest(status.lastRun, ranNow)
+  const waiting = queuedFrom !== undefined && (status.lastRun?.at ?? null) === queuedFrom
+
+  useEffect(() => {
+    if (!waiting) return
+    const poll = setInterval(() => router.refresh(), POLL_EVERY_MS)
+    const stop = setTimeout(() => setQueuedFrom(undefined), POLL_FOR_MS)
+    return () => {
+      clearInterval(poll)
+      clearTimeout(stop)
+    }
+  }, [waiting, router])
 
   const runNow = () => {
     startTransition(async () => {
@@ -28,9 +54,19 @@ export function PrivacySection({ status }: { status: RetentionStatus }) {
         showError(result.error)
         return
       }
-      setLastRun({ at: result.data.finishedAt, counts: result.data.counts })
-      const total = Object.values(result.data.counts).reduce((sum, count) => sum + count, 0)
-      showSuccess(total === 0 ? "Retention sweep finished. Nothing was due." : `Retention sweep finished. ${total} rows removed or cleared.`)
+      const run = result.data
+      if (run.queued) {
+        setQueuedFrom(status.lastRun?.at ?? null)
+        showSuccess("Retention sweep queued. The counts update here when it finishes.")
+        return
+      }
+      if (run.partial) {
+        showSuccess(`Retention sweep stopped after 20 seconds with ${total(run.counts)} rows removed or cleared. The next run finishes it.`)
+        return
+      }
+      setRanNow({ at: run.finishedAt, counts: run.counts })
+      const rows = total(run.counts)
+      showSuccess(rows === 0 ? "Retention sweep finished. Nothing was due." : `Retention sweep finished. ${rows} rows removed or cleared.`)
     })
   }
 
@@ -42,7 +78,9 @@ export function PrivacySection({ status }: { status: RetentionStatus }) {
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-ui text-muted-foreground" data-testid="settings-retention-last-run">
-          {lastRun ? (
+          {waiting ? (
+            "Sweep queued. The counts update here when it finishes."
+          ) : lastRun ? (
             <>
               Last run <Time value={lastRun.at} nowLabel="just now" />
             </>
