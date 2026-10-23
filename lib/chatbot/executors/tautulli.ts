@@ -1,11 +1,13 @@
 import "server-only"
 
 import { findTautulliUser, getTautulliActivity, getTautulliHistory, getTautulliHomeStat, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliServerInfo, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
+import { isJellyfinOnly } from "@/lib/discord/copy"
+import { memberServices } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import { auditMemberRead } from "@/lib/security/audit-log"
 import { z } from "zod"
 import { withoutPersonalFields } from "./personal-fields"
-import { toToolOutput } from "./tool-output"
+import { JELLYFIN_MEMBER, toToolOutput } from "./tool-output"
 
 type TautulliConfig = Parameters<typeof findTautulliUser>[0]
 
@@ -21,13 +23,15 @@ const UNMAPPED_ACTIVITY = { session_count: 0, sessions: [], scope: "unmapped" } 
  * Activity scoped to the Discord caller. Fails closed (SEC-50): only a caller
  * positively mapped to a Tautulli user sees sessions, and only their own. No
  * caller, no Plex user ID, a failed or empty lookup, or an activity payload of
- * an unexpected shape all return no sessions.
+ * an unexpected shape all return no sessions; a Jellyfin-only member is told
+ * why (P11.12).
  */
 async function scopeActivityToCaller(config: TautulliConfig, data: unknown, userId: string | undefined) {
   const activity = activitySchema.safeParse(data)
   if (!activity.success || !userId) return UNMAPPED_ACTIVITY
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } })
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true, jellyfinUserId: true } })
+  if (user && isJellyfinOnly(memberServices(user))) return JELLYFIN_MEMBER
   if (!user?.plexUserId) return UNMAPPED_ACTIVITY
 
   const lookup = await findTautulliUser(config, { plexUserId: user.plexUserId })

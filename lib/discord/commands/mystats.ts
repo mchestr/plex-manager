@@ -1,13 +1,14 @@
 /**
- * The `/mystats` slash command (Step 21).
+ * The `/mystats` slash command (Step 21, P11.12).
  *
  * ## Overview
  *
- * Shows the *requesting* user their own watch statistics for the current year as
- * an ephemeral embed. Unlike the LLM chat surface, the numbers here are the
- * caller's own data pulled straight from Tautulli — but the free-text fields
- * (media titles) are still routed through {@link sanitizeDiscordResponse} as a
- * defence-in-depth backstop, mirroring the rest of the Discord surface (design
+ * Shows the *requesting* member their own numbers for their current year (in
+ * `User.timezone`, else the server zone) as an ephemeral embed. The numbers
+ * come from {@link getMemberYearStats}: the stored v3 Rewind's facts when the
+ * year's Rewind is complete, else at most 20 pages of the member's history for
+ * the year, never an all-time scan (RWP-17). Media titles still go through
+ * {@link sanitizeDiscordResponse} as a defence-in-depth backstop (design
  * §4.4, FR-8).
  *
  * ## Flow
@@ -16,12 +17,13 @@
  * /mystats
  *   │
  *   ├─ not linked ─────────────► ephemeral "link your account" nudge
+ *   ├─ Jellyfin only ──────────► ephemeral explicit reason (GAP-25)
  *   ├─ over 5 an hour ─────────► ephemeral "try again in …" (no Tautulli call)
- *   └─ linked ─────────────────► deferReply (ephemeral; Tautulli fetch is slow,
+ *   └─ linked ─────────────────► deferReply (ephemeral; a history read is slow,
  *                                 must ack < 3s)
  *                                    │
  *                                    ├─ no active Tautulli server ─► ephemeral error
- *                                    ├─ fetch fails / throws ──────► ephemeral error
+ *                                    ├─ read fails ────────────────► ephemeral error
  *                                    │                                (no internals leaked)
  *                                    ├─ no watch data ─────────────► friendly "no stats yet"
  *                                    └─ success ───────────────────► editReply with the embed
@@ -35,17 +37,15 @@
 import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
-import { prisma } from "@/lib/prisma"
+import { isJellyfinOnly, JELLYFIN_COPY } from "@/lib/discord/copy"
+import { getMemberYearStats, memberStatsYear } from "@/lib/discord/stats/member-stats"
+import { hoursOf, type MemberYearStats } from "@/lib/discord/stats/year-stats"
+import { formatHour } from "@/lib/rewind/format"
 import { consume } from "@/lib/security/rate-limit"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
-import { createLogger } from "@/lib/utils/logger"
 import { formatDuration } from "@/lib/utils/format"
-import { fetchTautulliStatistics } from "@/lib/wrapped/tautulli-statistics"
-import type { TautulliStatisticsData } from "@/lib/wrapped/statistics-types"
 import type { InteractionContext, SlashCommand } from "./registry"
 import { requireLinkedUser } from "./require-linked-user"
-
-const logger = createLogger("DISCORD_MYSTATS_COMMAND")
 
 const NO_TAUTULLI =
   "Watch statistics are unavailable right now — no Tautulli server is configured. Please contact an admin."
@@ -55,6 +55,9 @@ const GENERIC_ERROR =
 
 const NO_DATA =
   "You don't have any watch stats yet for this year. Watch something and check back later!"
+
+/** A history read gives up after this long; a deferred reply may be edited for 15 minutes. */
+const READ_LIMIT_MS = 90_000
 
 /**
  * Pass a free-text value through the Discord scrubber backstop, returning the
@@ -67,56 +70,46 @@ function scrub(value: string): string {
 }
 
 /**
- * Build the ephemeral stats embed from a user's Tautulli statistics.
+ * Build the ephemeral stats embed from a member's year stats.
  * @internal
  */
-function buildStatsEmbed(stats: TautulliStatisticsData): EmbedBuilder {
+function buildStatsEmbed(stats: MemberYearStats): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle("📊 Your Watch Stats")
     .setDescription(
-      `You've watched **${scrub(formatDuration(stats.totalWatchTime, "long", { largestUnit: "day" }))}** this year.`
+      `You've watched **${formatDuration(stats.totalMinutes, "long", { largestUnit: "day" })}** in ${stats.year} (${hoursOf(stats)} hours).`
     )
     .addFields(
-      { name: "🎬 Movies", value: `${stats.moviesWatched}`, inline: true },
-      { name: "📺 Shows", value: `${stats.showsWatched}`, inline: true },
-      { name: "🎞️ Episodes", value: `${stats.episodesWatched}`, inline: true }
+      { name: "🎬 Movies", value: `${stats.counts.films}`, inline: true },
+      { name: "📺 Shows", value: `${stats.counts.series}`, inline: true },
+      { name: "🎞️ Episodes", value: `${stats.counts.episodes}`, inline: true }
     )
 
-  const topShow = stats.topShows[0]
-  if (topShow) {
-    embed.addFields({
-      name: "🏆 Top Show",
-      value: scrub(topShow.title),
-      inline: true,
-    })
+  if (stats.topShow) {
+    embed.addFields({ name: "🏆 Top Show", value: scrub(stats.topShow), inline: true })
   }
-
-  const topMovie = stats.topMovies[0]
-  if (topMovie) {
-    embed.addFields({
-      name: "🥇 Top Movie",
-      value: scrub(topMovie.title),
-      inline: true,
-    })
+  if (stats.topFilm) {
+    embed.addFields({ name: "🥇 Top Movie", value: scrub(stats.topFilm), inline: true })
   }
-
-  const { longestStreak, peakHour } = stats.derived
-  if (longestStreak) {
-    embed.addFields({
-      name: "🔥 Longest Streak",
-      value: `${longestStreak.days} ${longestStreak.days === 1 ? "day" : "days"}`,
-      inline: true,
-    })
+  if (stats.longestStreakDays) {
+    const days = stats.longestStreakDays
+    embed.addFields({ name: "🔥 Longest Streak", value: `${days} ${days === 1 ? "day" : "days"}`, inline: true })
   }
-  if (peakHour) {
+  if (stats.peakHour !== null) {
     embed.addFields({
       name: "⏰ Peak Viewing Hour",
-      value: scrub(peakHour.label),
+      value: formatHour(stats.peakHour, { locale: "en-US" }).replace(/\u00A0/g, " "),
       inline: true,
     })
   }
 
   return embed
+}
+
+/** The reply for a read that gave no stats. @internal */
+function failureCopy(code: "NO_PLEX_ACCOUNT" | "NO_TAUTULLI" | "UNAVAILABLE"): string {
+  if (code === "NO_TAUTULLI") return NO_TAUTULLI
+  return code === "NO_PLEX_ACCOUNT" ? NO_DATA : GENERIC_ERROR
 }
 
 /**
@@ -129,7 +122,12 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
   const user = await requireLinkedUser(ctx, { action: "viewing your stats" })
   if (!user) return
 
-  // Each call fetches a year of Tautulli history, so it is limited per member (SEC-23)
+  if (isJellyfinOnly(user.services)) {
+    await interaction.reply({ content: JELLYFIN_COPY.mystats, flags: MessageFlags.Ephemeral })
+    return
+  }
+
+  // A history read takes up to 20 pages, so it is limited per member (SEC-23)
   const limit = await consume("discord:mystats", user.id)
   if (!limit.ok) {
     await interaction.reply({
@@ -139,55 +137,23 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
     return
   }
 
-  const { plexUserId } = user
-
-  // Tautulli fetch is slow; ack now (ephemerally) so we stay under Discord's 3s
+  // The read is slow; ack now (ephemerally) so we stay under Discord's 3s
   // window, then edit the reply with the result.
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
-  const tautulli = await prisma.tautulli.findFirst({ where: { isActive: true } })
-  if (!tautulli) {
-    await interaction.editReply({ content: NO_TAUTULLI })
+  const { year, zone } = await memberStatsYear(user.timezone)
+  const result = await getMemberYearStats(user.id, { year, zone, signal: AbortSignal.timeout(READ_LIMIT_MS) })
+
+  if (!result.ok) {
+    await interaction.editReply({ content: failureCopy(result.code) })
     return
   }
-
-  if (!plexUserId) {
+  if (result.stats.totalMinutes <= 0) {
     await interaction.editReply({ content: NO_DATA })
     return
   }
 
-  let stats: TautulliStatisticsData
-  try {
-    const result = await fetchTautulliStatistics(
-      { url: tautulli.url, apiKey: tautulli.apiKey },
-      { plexUserId },
-      new Date().getFullYear()
-    )
-
-    if (!result.success || !result.data) {
-      // Log the raw internal error, but never surface it to the user.
-      logger.error("Failed to fetch Tautulli stats for /mystats", undefined, {
-        userId: user.id,
-        error: result.error,
-      })
-      await interaction.editReply({ content: GENERIC_ERROR })
-      return
-    }
-    stats = result.data
-  } catch (error) {
-    logger.error("Error fetching Tautulli stats for /mystats", error, {
-      userId: user.id,
-    })
-    await interaction.editReply({ content: GENERIC_ERROR })
-    return
-  }
-
-  if (stats.totalWatchTime <= 0) {
-    await interaction.editReply({ content: NO_DATA })
-    return
-  }
-
-  await interaction.editReply({ embeds: [buildStatsEmbed(stats)] })
+  await interaction.editReply({ embeds: [buildStatsEmbed(result.stats)] })
 }
 
 /**

@@ -180,7 +180,7 @@ describe("executeTautulliTool - Discord activity scoping", () => {
 
     expect(mockUserFindUnique).toHaveBeenCalledWith({
       where: { id: "user-1" },
-      select: { plexUserId: true },
+      select: { plexUserId: true, jellyfinUserId: true },
     })
     expect(mockFindTautulliUser).toHaveBeenCalledWith(
       expect.objectContaining({ url: "http://localhost:8181", apiKey: "test-key" }),
@@ -225,6 +225,15 @@ describe("executeTautulliTool - Discord activity scoping", () => {
 
     expect(mockFindTautulliUser).not.toHaveBeenCalled()
     expect(result).toEqual(UNMAPPED)
+  })
+
+  it("tells a Jellyfin-only caller why there are no sessions (P11.12)", async () => {
+    mockUserFindUnique.mockResolvedValue({ plexUserId: null, jellyfinUserId: "jf-1" })
+
+    const result = JSON.parse(await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord"))
+
+    expect(mockFindTautulliUser).not.toHaveBeenCalled()
+    expect(result).toEqual({ unavailable: "jellyfin-member" })
   })
 
   it("returns no sessions when there is no caller at all", async () => {
@@ -341,6 +350,14 @@ describe("Discord tool gating - get_tautulli_users", () => {
     const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS)
 
     expect(prompt).not.toContain("get_tautulli_users")
+  })
+
+  it("names Jellyfin in the Discord system prompt only when a Jellyfin server is active (P11.12)", () => {
+    expect(generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS)).not.toContain("Jellyfin")
+
+    const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { jellyfin: true })
+    expect(prompt).toContain("Plex, Jellyfin, Tautulli")
+    expect(prompt).toContain('"unavailable":"jellyfin-member"')
   })
 })
 

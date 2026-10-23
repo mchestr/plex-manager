@@ -3,7 +3,10 @@ import "server-only"
 import { getPlexLibrarySections, getPlexOnDeck, getPlexRecentlyAdded, getPlexServerIdentity, getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { matchesSessionUser, type PlexSessionUserRef } from "@/lib/connections/plex-sessions"
+import { isJellyfinOnly } from "@/lib/discord/copy"
+import { memberServices } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
+import { JELLYFIN_MEMBER } from "./tool-output"
 import { sanitizePlexSessionsPayload } from "./plex-sanitizer"
 
 export async function executePlexTool(
@@ -31,8 +34,10 @@ export async function executePlexTool(
       if (context === "discord" && userId) {
         const user = await prisma.user.findUnique({
           where: { id: userId },
-          select: { plexUserId: true },
+          select: { plexUserId: true, jellyfinUserId: true },
         })
+        // A Jellyfin-only member has no Plex streams to show; say why rather than "none" (P11.12)
+        if (user && isJellyfinOnly(memberServices(user))) return JSON.stringify(JELLYFIN_MEMBER)
 
         if (user?.plexUserId && sessionsData?.MediaContainer?.Metadata) {
           // Only the user's own sessions; the owner's are PMS user 1 (GAP-08)

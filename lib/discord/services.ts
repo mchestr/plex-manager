@@ -2,12 +2,15 @@ import { type ChatMessage } from "@/lib/chatbot/types"
 import { isAccessAllowed } from "@/lib/access"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { appendTurn, getOrCreateSession } from "@/lib/discord/chat-session"
+import { assistantFallbackReply } from "@/lib/discord/copy"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import { prisma } from "@/lib/prisma"
 import { consume } from "@/lib/security/rate-limit"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
+import { memberServices } from "@/lib/members/service"
+import type { AuthService } from "@/types/onboarding"
 
 const logger = createLogger("DISCORD_SERVICES")
 
@@ -26,6 +29,12 @@ export interface VerifyDiscordUserResult {
     name: string | null
     email: string | null
     plexUserId: string | null
+    jellyfinUserId: string | null
+    primaryAuthService: AuthService | null
+    /** Every linked media server, Plex first (P11.10); a Jellyfin-only member gets explicit replies (P11.12). */
+    services: AuthService[]
+    /** `User.timezone`: the member's own zone, null for the server zone. */
+    timezone: string | null
     isAdmin: boolean
   }
   metadataSyncedAt?: Date | null
@@ -76,6 +85,9 @@ export async function verifyDiscordUser(discordUserId: string): Promise<VerifyDi
             name: true,
             email: true,
             plexUserId: true,
+            jellyfinUserId: true,
+            primaryAuthService: true,
+            timezone: true,
             isAdmin: true,
             isExempt: true,
             disabledAt: true,
@@ -110,6 +122,10 @@ export async function verifyDiscordUser(discordUserId: string): Promise<VerifyDi
       name: connection.user.name,
       email: connection.user.email,
       plexUserId: connection.user.plexUserId,
+      jellyfinUserId: connection.user.jellyfinUserId,
+      primaryAuthService: connection.user.primaryAuthService,
+      services: memberServices(connection.user),
+      timezone: connection.user.timezone,
       isAdmin: connection.user.isAdmin,
     },
     metadataSyncedAt: connection.metadataSyncedAt,
@@ -229,7 +245,7 @@ export async function handleDiscordChat({
   const baseContent =
     sanitized.content.trim().length > 0
       ? sanitized.content
-      : "Here's what I can help with: system status, queue issues, and download problems for Plex, Tautulli, Overseerr, Sonarr, or Radarr."
+      : assistantFallbackReply((await prisma.jellyfinServer.count({ where: { isActive: true } })) > 0)
 
   const safeContent = sanitized.redacted
     ? `${baseContent}\n\n_(Personal details were removed for privacy.)_`

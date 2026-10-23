@@ -259,6 +259,5 @@ export const storedWrappedDataSchema = z.object({
 export type WrappedData = z.infer<typeof wrappedDataSchema>
 export type StoredWrappedData = z.infer<typeof storedWrappedDataSchema>
 export type WrappedStatistics = z.infer<typeof wrappedStatisticsSchema>
-export type DerivedStatistics = z.infer<typeof derivedStatisticsSchema>
 export type WrappedSection = z.infer<typeof sectionSchema>
 export type WrappedSectionType = WrappedSection["type"]
