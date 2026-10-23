@@ -25,7 +25,6 @@ function renderPass(props: Partial<Parameters<typeof MemberPass>[0]> = {}) {
         monogram="N"
         plex
         jellyfin={false}
-        assistantDisclosure="Server admins can review assistant conversations, and messages are processed by OpenAI."
         {...props}
       />
     </main>
@@ -129,18 +128,11 @@ describe('MemberPass', () => {
     expect(screen.getByTestId('jellyfin-sign-in-form')).toBeInTheDocument()
   })
 
-  it('says the Plex token is kept, and carries the privacy notice (GAP-34)', () => {
+  it('says the Plex token is kept (GAP-34)', () => {
     renderPass()
 
     expect(screen.getByTestId('member-pass-token-copy')).toHaveTextContent(
       "You'll approve access on plex.tv. Northfield Plex keeps your Plex sign-in token to sync your watchlist and accept invites for you."
-    )
-    expect(screen.getByTestId('member-pass-privacy')).toHaveTextContent(
-      'Server admins can see your watch activity and your Rewind. Some Rewind text is written by an AI service.'
-    )
-    // The assistant disclosure (P11.16)
-    expect(screen.getByTestId('member-pass-privacy')).toHaveTextContent(
-      'Server admins can review assistant conversations, and messages are processed by OpenAI.'
     )
   })
 

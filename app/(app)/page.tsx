@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { StatusScreen } from "@/components/ui/status-screen";
 import { authOptions } from "@/lib/auth";
-import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure";
 import { monogramFor, serverName as getServerName } from "@/lib/brand";
 import { prisma } from "@/lib/prisma";
 import { icons } from "@/lib/ui/icons";
@@ -53,12 +52,11 @@ export default async function Home({ searchParams }: HomeProps) {
     );
   }
 
-  const [plexServer, jellyfinServer, discordIntegration, serverName, assistantDisclosure] = await Promise.all([
+  const [plexServer, jellyfinServer, discordIntegration, serverName] = await Promise.all([
     prisma.plexServer.findFirst({ where: { isActive: true } }),
     prisma.jellyfinServer.findFirst({ where: { isActive: true, enabledForLogin: true } }),
     prisma.discordIntegration.findUnique({ where: { id: "discord" }, select: { serverInviteCode: true } }),
     getServerName(),
-    getAssistantDisclosure(),
   ]);
 
   const hasPlex = !!plexServer;
@@ -102,7 +100,6 @@ export default async function Home({ searchParams }: HomeProps) {
         plex={hasPlex}
         jellyfin={hasJellyfin}
         callbackUrl={callbackPath ?? undefined}
-        assistantDisclosure={assistantDisclosure}
       />
     </PublicShell>
   );
