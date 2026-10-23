@@ -5,6 +5,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, test, TEST_USERS } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
+import { clearRateLimits } from '../helpers/rate-limits';
 import { REWIND_YEAR, seedRewindIssue } from '../helpers/seed-rewind';
 import { waitForLoadingGone, WAIT_TIMEOUTS } from '../helpers/test-utils';
 
@@ -115,6 +116,12 @@ test.describe('Rewind share page', () => {
   });
 
   test.afterAll(cleanUp);
+
+  // Every browser project signs in as the same admin, and `rw:share-actions`
+  // allows 10 an hour: start each test with the budget full.
+  test.beforeEach(async () => {
+    if (process.env.REDIS_URL) await clearRateLimits(process.env.REDIS_URL, ['rw:share-actions']);
+  });
 
   test('a logged-out visitor sees only the published cards, and the response says noindex', async ({ page }) => {
     const token = await createLink(['top-shows']);
