@@ -155,7 +155,14 @@ npm run dev
 6. **Open your browser**
 Navigate to [http://localhost:3000](http://localhost:3000)
 
-7. **Complete the setup wizard**
+7. **Claim the server**
+Until setup completes, `/setup` asks for a setup code, so nobody else who reaches a fresh install can take it over. Each start prints a new one-time code to the server log; the newest one is valid:
+```bash
+docker logs <container> | grep 'Setup code'   # or read the `npm run dev` output
+```
+To choose the code yourself, set `SETUP_TOKEN` (at least 16 characters, e.g. `openssl rand -hex 16`) before starting; it replaces the printed code while it is set. The claim lasts 12 hours in that browser and ends when setup completes.
+
+8. **Complete the setup wizard**
 On first launch, you'll be guided through configuring:
 - Plex server connection (URL format: `https://example.com:32400`)
 - Tautulli integration (URL format: `http://example.com:8181`)
