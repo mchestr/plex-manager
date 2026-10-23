@@ -92,7 +92,7 @@ describe('createCheckoutSession', () => {
       url: 'https://checkout.stripe.com/c/pay/cs_test_1',
     })
     mockGetStripe.mockResolvedValue(stripe)
-    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com' })
+    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', plexUserId: 'plex-1' })
 
     const session = await createCheckoutSession('user-123', 'price_month')
 
@@ -133,7 +133,7 @@ describe('createCheckoutSession', () => {
     const stripe = makeStripeMock()
     stripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_test_4', url: 'u' })
     mockGetStripe.mockResolvedValue(stripe)
-    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', subscription: { stripeCustomerId: 'cus_existing' } })
+    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', plexUserId: 'plex-1', subscription: { stripeCustomerId: 'cus_existing' } })
 
     await createCheckoutSession('user-123', 'price_month')
 
@@ -177,7 +177,7 @@ describe('startCheckout', () => {
       url: 'https://checkout.stripe.com/c/pay/cs_test_3',
     })
     mockGetStripe.mockResolvedValue(stripe)
-    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com' })
+    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', plexUserId: 'plex-1' })
 
     const result = await startCheckout({ priceId: 'price_month' })
 
@@ -191,7 +191,7 @@ describe('startCheckout', () => {
     ])
     const stripe = makeStripeMock()
     mockGetStripe.mockResolvedValue(stripe)
-    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', subscription: { status } })
+    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', plexUserId: 'plex-1', subscription: { status } })
 
     const result = await startCheckout({ priceId: 'price_month' })
 
@@ -209,6 +209,7 @@ describe('startCheckout', () => {
     mockGetStripe.mockResolvedValue(stripe)
     mockUserFindUnique.mockResolvedValue({
       email: 'user@test.com',
+      plexUserId: 'plex-1',
       subscription: { status: 'CANCELED', stripeCustomerId: 'cus_existing' },
     })
 
@@ -259,6 +260,37 @@ describe('startCheckout', () => {
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled()
   })
 
+  it('lets a Jellyfin-only member with no email check out, since the grant turns their account on (P11.11)', async () => {
+    mockGetServerSession.mockResolvedValue(userSession)
+    mockGetOfferedPrices.mockResolvedValue([
+      { priceId: 'price_month', amount: 500, currency: 'usd', interval: 'month', productName: 'Plex' },
+    ])
+    const stripe = makeStripeMock()
+    stripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_jf', url: 'https://checkout.stripe.com/jf' })
+    mockGetStripe.mockResolvedValue(stripe)
+    mockUserFindUnique.mockResolvedValue({ email: null, plexUserId: null, jellyfinUserId: 'jf-1' })
+
+    const result = await startCheckout({ priceId: 'price_month' })
+
+    expect(result).toEqual({ success: true, data: { url: 'https://checkout.stripe.com/jf' } })
+    expect(stripe.checkout.sessions.create.mock.calls[0][0]).not.toHaveProperty('customer_email')
+  })
+
+  it('refuses a member with an email but no linked Plex or Jellyfin account', async () => {
+    mockGetServerSession.mockResolvedValue(userSession)
+    mockGetOfferedPrices.mockResolvedValue([
+      { priceId: 'price_month', amount: 500, currency: 'usd', interval: 'month', productName: 'Plex' },
+    ])
+    const stripe = makeStripeMock()
+    mockGetStripe.mockResolvedValue(stripe)
+    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', plexUserId: null, jellyfinUserId: null })
+
+    const result = await startCheckout({ priceId: 'price_month' })
+
+    expect(result).toMatchObject({ success: false, code: 'CONFLICT' })
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled()
+  })
+
   it('returns an error when the created session has no URL', async () => {
     mockGetServerSession.mockResolvedValue(userSession)
     mockGetOfferedPrices.mockResolvedValue([
@@ -267,7 +299,7 @@ describe('startCheckout', () => {
     const stripe = makeStripeMock()
     stripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_no_url', url: null })
     mockGetStripe.mockResolvedValue(stripe)
-    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com' })
+    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', plexUserId: 'plex-1' })
 
     const result = await startCheckout({ priceId: 'price_month' })
 
@@ -282,7 +314,7 @@ describe('startCheckout', () => {
     const stripe = makeStripeMock()
     stripe.checkout.sessions.create.mockRejectedValue(new Error('Stripe down'))
     mockGetStripe.mockResolvedValue(stripe)
-    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com' })
+    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', plexUserId: 'plex-1' })
 
     const result = await startCheckout({ priceId: 'price_month' })
 
@@ -404,33 +436,53 @@ describe('getSubscriptionProvisioning', () => {
     mockSubscriptionFindUnique.mockResolvedValue({
       status: 'ACTIVE',
       plexInviteStatus: 'accepted',
+      jellyfinAccessStatus: 'enabled',
       createdAt,
       currentPeriodEnd,
     })
+    mockUserFindUnique.mockResolvedValue({ plexUserId: 'plex-1', jellyfinUserId: 'jf-1' })
     ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ stripeLibrarySectionIds: [1, 2, 3] })
 
     const result = await getSubscriptionProvisioning()
 
     expect(mockSubscriptionFindUnique).toHaveBeenCalledWith({
       where: { userId: 'user-123' },
-      select: { status: true, plexInviteStatus: true, createdAt: true, currentPeriodEnd: true },
+      select: { status: true, plexInviteStatus: true, jellyfinAccessStatus: true, createdAt: true, currentPeriodEnd: true },
     })
+    expect(mockUserFindUnique).toHaveBeenCalledWith({ where: { id: 'user-123' }, select: { plexUserId: true, jellyfinUserId: true } })
     expect(result).toEqual({
       success: true,
-      data: { status: 'ACTIVE', plexInviteStatus: 'accepted', libraryCount: 3, memberSince: createdAt, currentPeriodEnd },
+      data: {
+        status: 'ACTIVE',
+        plexInviteStatus: 'accepted',
+        jellyfinAccessStatus: 'enabled',
+        services: ['plex', 'jellyfin'],
+        libraryCount: 3,
+        memberSince: createdAt,
+        currentPeriodEnd,
+      },
     })
   })
 
   it('reports nothing yet before the webhook writes the row, and every library when none are chosen', async () => {
     mockGetServerSession.mockResolvedValue(userSession)
     mockSubscriptionFindUnique.mockResolvedValue(null)
+    mockUserFindUnique.mockResolvedValue({ plexUserId: null, jellyfinUserId: 'jf-1' })
     ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ stripeLibrarySectionIds: null })
 
     const result = await getSubscriptionProvisioning()
 
     expect(result).toEqual({
       success: true,
-      data: { status: null, plexInviteStatus: null, libraryCount: null, memberSince: null, currentPeriodEnd: null },
+      data: {
+        status: null,
+        plexInviteStatus: null,
+        jellyfinAccessStatus: null,
+        services: ['jellyfin'],
+        libraryCount: null,
+        memberSince: null,
+        currentPeriodEnd: null,
+      },
     })
   })
 })

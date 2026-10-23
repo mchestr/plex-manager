@@ -74,7 +74,7 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `WatchlistSyncSettings` | sync choice, last result and counters | M card; A counts | Cascade. Unshare and the Stripe revoke turn sync off | No |
 | `WatchlistSyncHistory` | titles from the member's private Plex watchlist and their request status | M recent items; A recent items | Cascade | No |
 | `InviteUsage` | which invite the member redeemed, and when | A invite detail | Cascade | No |
-| `Subscription` | Stripe customer and subscription ids, status, plan, period end, cancel date, Plex invite status | M status; A users list, billing tab | Stripe subscription cancelled at once, then cascade; the customer id goes to the audit row | No |
+| `Subscription` | Stripe customer and subscription ids, status, plan, period end, cancel date, Plex invite status, Jellyfin access status, access skip code | M status; A users list, billing tab | Stripe subscription cancelled at once, then cascade; the customer id goes to the audit row | No |
 | `AuditLog` | actor and target user ids, event details (ids and counts, never secrets) | none in the app; the operator | Kept (ids only) | No |
 
 ### Server data with no member's personal data

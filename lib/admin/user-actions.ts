@@ -29,6 +29,7 @@ import { canRegenerate } from "@/lib/admin/can-regenerate"
 import { type PlexAccess, plexAccessOf } from "@/lib/admin/users-filter"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import type { AdminUserWithWrappedStats } from "@/types/admin"
+import type { AuthService } from "@/types/onboarding"
 
 /** What the actions and their dialogs need to know about a member. */
 export interface UserActionTarget {
@@ -36,6 +37,8 @@ export interface UserActionTarget {
   /** The display name the dialogs name: "Remove Plex access for Morgan Lee?" */
   name: string
   plexUserId: string | null
+  /** Every linked media server, which the comp grant and cancel dialogs name (P11.11). */
+  services: AuthService[]
   isAdmin: boolean
   isOwner: boolean
   disabled: boolean
@@ -98,6 +101,7 @@ export function listUserTarget(user: AdminUserWithWrappedStats): UserActionTarge
     id: user.id,
     name: user.name || user.email || "Unknown member",
     plexUserId: user.plexUserId,
+    services: user.services,
     isAdmin: user.isAdmin,
     isOwner: user.isOwner,
     disabled: user.disabledAt !== null,

@@ -217,9 +217,12 @@ describe('admin Stripe config actions', () => {
         stripeEnabled: true,
       })
 
+      mockPrisma.user.count.mockResolvedValue(0)
+      mockPrisma.user.findMany.mockResolvedValue([])
+
       const result = await setStripeEnabled(true)
 
-      expect(result.success).toBe(true)
+      expect(result).toEqual({ success: true, data: { status: 'saved' } })
       expect(mockPrisma.config.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({ stripeEnabled: true, updatedBy: 'admin-123' }),
@@ -228,6 +231,56 @@ describe('admin Stripe config actions', () => {
       expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/settings')
       // Enabling must invalidate the cache so /subscribe reflects it immediately.
       expect(clearOfferedPricesCache).toHaveBeenCalled()
+    })
+
+    describe('Jellyfin-only members (P11.11)', () => {
+      const READY = { stripeEnabled: false, stripeSecretKey: 'sk_test_123', stripeWebhookSecret: 'whsec_123', stripePriceIds: ['price_1'] }
+
+      it('lists the non-exempt Jellyfin-only members and saves nothing until confirmed', async () => {
+        mockGetServerSession.mockResolvedValue(mockAdminSession)
+        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue(READY)
+        mockPrisma.user.count.mockResolvedValue(3)
+        ;(mockPrisma.user.findMany as jest.Mock).mockResolvedValue([
+          { name: 'Ana', email: null },
+          { name: null, email: 'ben@example.com' },
+          { name: null, email: null },
+        ])
+
+        const result = await setStripeEnabled(true)
+
+        expect(result).toEqual({
+          success: true,
+          data: { status: 'confirm', jellyfinMembers: { count: 3, names: ['Ana', 'ben@example.com', 'Unnamed member'] } },
+        })
+        const where = { jellyfinUserId: { not: null }, plexUserId: null, isAdmin: false, isExempt: false, disabledAt: null }
+        expect(mockPrisma.user.count).toHaveBeenCalledWith({ where })
+        expect(mockPrisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where }))
+        expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
+        expect(logAuditEvent).not.toHaveBeenCalled()
+      })
+
+      it('turns Stripe on once the owner confirms', async () => {
+        mockGetServerSession.mockResolvedValue(mockAdminSession)
+        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue(READY)
+
+        const result = await setStripeEnabled({ enabled: true, confirmJellyfinMembers: true })
+
+        expect(result).toEqual({ success: true, data: { status: 'saved' } })
+        expect(mockPrisma.user.count).not.toHaveBeenCalled()
+        expect(mockPrisma.config.upsert).toHaveBeenCalledWith(
+          expect.objectContaining({ update: expect.objectContaining({ stripeEnabled: true }) })
+        )
+      })
+
+      it('asks nothing when Stripe is already on, or on turning it off', async () => {
+        mockGetServerSession.mockResolvedValue(mockAdminSession)
+        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({ ...READY, stripeEnabled: true })
+        mockPrisma.user.count.mockResolvedValue(3)
+
+        await expect(setStripeEnabled(true)).resolves.toEqual({ success: true, data: { status: 'saved' } })
+        await expect(setStripeEnabled(false)).resolves.toEqual({ success: true, data: { status: 'saved' } })
+        expect(mockPrisma.user.count).not.toHaveBeenCalled()
+      })
     })
 
     it('refuses enabling without REDIS_URL, which the webhook jobs need (GAP-15)', async () => {

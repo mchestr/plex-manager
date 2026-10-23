@@ -570,11 +570,13 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** In Stripe test mode, a Jellyfin-only member subscribes: the success page says "Your Jellyfin account is enabled", and the account works. Cancel at period end and run the revoke: the account is disabled, while a Jellyfin administrator in the same state is left alone, with a logged reason.
 
 **Done when.**
-- [ ] Grant and revoke act on Plex, Jellyfin or both, following the member's linked services.
-- [ ] No path invites a username-derived email; members without a usable identity are skipped with a code.
-- [ ] A Jellyfin administrator is never disabled, and the existing guards still hold.
-- [ ] Copy, admin dialogs and `docs/stripe.md` describe the per-service behaviour, and the tests pass.
+- [x] Grant and revoke act on Plex, Jellyfin or both, following the member's linked services.
+- [x] No path invites a username-derived email; members without a usable identity are skipped with a code.
+- [x] A Jellyfin administrator is never disabled, and the existing guards still hold.
+- [x] Copy, admin dialogs and `docs/stripe.md` describe the per-service behaviour, and the tests pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270117000001_p1111_subscription_jellyfin_access` adds `Subscription.jellyfinAccessStatus` and also `Subscription.accessSkipCode`, where `NO_MEMBER_SERVICE` is recorded (null after a grant or revoke that acted). `grantServiceAccess(user)` sits beside P11.13's `revokeServiceAccess` in `lib/members/access-actions.ts`; it turns Jellyfin on first and invites Plex last, so a retry never invites twice, and returns failure codes (`NO_PLEX_SERVER`, `NO_JELLYFIN_SERVER`, `PLEX_INVITE_FAILED`, `JELLYFIN_UNAVAILABLE`) that the job throws to retry. A Plex invite needs a `plexUserId` and its email; otherwise the Plex part is skipped. The revoke guard asks `isJellyfinAdmin` between the stored-state and live Stripe checks and skips the whole revoke (Plex too) for `'admin'` or `'unknown'`. `startCheckout` now lets a Jellyfin-only member with no email check out. `setStripeEnabled` takes `boolean | { enabled: true, confirmJellyfinMembers: true }` and returns `{ status: "saved" }` or `{ status: "confirm", jellyfinMembers: { count, names } }` (non-admin, non-exempt, enabled Jellyfin-only members); the switch shows `stripe-enable-jellyfin-confirm`. `UserActionTarget` gains `services`; `serviceNames()` in `lib/members/service.ts`. Billing tab rows `admin-user-plex-invite-status` / `admin-user-jellyfin-access-status`; success checklist `subscribe-success-jellyfin-enabled` / `-provisioning` / `-skipped`; the pending-invite notice carries `jellyfinEnabled`. Job labels read "Member access grant/removal". The E2E case enqueues the grant and revoke jobs itself with Stripe on and no secret key (no Stripe stub exists); written, not run.)
 
 ### Step P11.12: Discord for Jellyfin members; stats from stored facts
 

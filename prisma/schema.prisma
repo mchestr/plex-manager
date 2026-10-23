@@ -880,6 +880,8 @@ model Subscription {
   cancelAtPeriodEnd    Boolean            @default(false)
   canceledAt           DateTime? // When the subscription was canceled
   plexInviteStatus     String? // Tracks Plex invite lifecycle (e.g. "invited", "accepted")
+  jellyfinAccessStatus String? // The Jellyfin account the grant or revoke left: "enabled", "disabled" or "skipped" (P11.11)
+  accessSkipCode       String? // Why the last grant or revoke changed nothing, e.g. "NO_MEMBER_SERVICE"; null after one that acted
   stripeEventAt        DateTime? // `created` of the newest Stripe event applied; older events are skipped (SEC-37)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt

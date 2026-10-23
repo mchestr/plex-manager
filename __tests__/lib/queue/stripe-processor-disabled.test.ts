@@ -19,6 +19,7 @@ import type { Job } from 'bullmq'
 import { processStripeWebhook } from '@/lib/queue/jobs/stripe'
 import { getStripe } from '@/lib/stripe/client'
 import { addJob } from '@/lib/queue/client'
+import { setJellyfinAccountDisabled } from '@/lib/connections/jellyfin-users'
 import { SubscriptionStatus } from '@/lib/generated/prisma/client'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -43,6 +44,11 @@ jest.mock('@/lib/queue/client', () => ({
 }))
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+jest.mock('@/lib/connections/jellyfin-users', () => ({
+  ...jest.requireActual('@/lib/connections/jellyfin-users'),
+  setJellyfinAccountDisabled: jest.fn(),
+}))
 
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({
@@ -103,6 +109,19 @@ describe('Stripe webhook processor — disabled-state (FR-29) revoke safety', ()
 
     expect(store.subscriptions[0].status).toBe(SubscriptionStatus.UNPAID)
     expect(addJob).not.toHaveBeenCalled()
+  })
+
+  it('neither disables nor enables a Jellyfin member while disabled (P11.11)', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', plexUserId: null, jellyfinUserId: 'jf-1' } as never)
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'canceled' }))
+    await deliver(stripeEvent('evt_jf_deleted', 'customer.subscription.deleted', { id: 'sub_1' }, 1_760_000_000))
+
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'active' }))
+    await deliver(stripeEvent('evt_jf_active', 'customer.subscription.updated', { id: 'sub_1' }, 1_760_000_100))
+
+    expect(store.subscriptions[0].status).toBe(SubscriptionStatus.ACTIVE)
+    expect(addJob).not.toHaveBeenCalled()
+    expect(setJellyfinAccountDisabled).not.toHaveBeenCalled()
   })
 
   it('still records the event as processed while disabled', async () => {
