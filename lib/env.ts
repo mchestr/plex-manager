@@ -4,6 +4,7 @@ import path from "node:path"
 import { z } from "zod"
 
 import { isValidSchemaName, schemaParamOf } from "@/lib/db/schema-param"
+import { parseKeyringEntries } from "@/lib/security/crypto"
 import { createLogger } from "@/lib/utils/logger"
 
 /**
@@ -28,7 +29,9 @@ export const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: text("Public URL for share links and OG images. Falls back to NEXTAUTH_URL."),
   NEXTAUTH_SECRET: text("Signs session cookies. At least 32 random characters: openssl rand -base64 32."),
   PLEX_CLIENT_IDENTIFIER: text("Unique id this install reports to Plex: openssl rand -hex 16."),
-  ENCRYPTION_KEY: text("Encrypts stored service secrets: openssl rand -hex 32. Never reuse NEXTAUTH_SECRET."),
+  ENCRYPTION_KEY: text("Legacy single key for stored secrets, at least 32 characters: openssl rand -hex 32. Never reuse NEXTAUTH_SECRET."),
+  ENCRYPTION_KEYS: text("Keyring for stored secrets: comma-separated kid:base64 entries of 32 bytes (openssl rand -base64 32); the first is primary."),
+  ALLOW_PLAINTEXT_SECRETS: text('"true" lets production start without a strong encryption key (warned at every boot).'),
   SETUP_TOKEN: text("Claims first-run setup instead of the code printed in the log. At least 16 characters: openssl rand -hex 16."),
   ALLOW_INSECURE_HTTP: text('"true" lets production run on plain http (LAN only). Cookies are then not Secure.'),
   // Infrastructure
@@ -161,7 +164,7 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
 /** @internal */
 export interface EnvIssue {
   variable: string
-  code: "missing" | "too_short" | "low_entropy" | "known_placeholder" | "not_https" | "origin_mismatch" | "schema_invalid"
+  code: "missing" | "too_short" | "low_entropy" | "known_placeholder" | "not_https" | "origin_mismatch" | "schema_invalid" | "weak"
   severity: "error" | "warning"
   hint: string
 }
@@ -188,6 +191,34 @@ function checkSecret(secret: string | undefined): EnvIssue | null {
   return null
 }
 
+const KEY_HINT = "generate one with openssl rand -base64 32 for ENCRYPTION_KEYS (kid:base64), or set ALLOW_PLAINTEXT_SECRETS=true"
+
+/**
+ * At-rest encryption on by default (P11.1, SEC-33): no key at all is
+ * `missing`, and a keyring entry that is not 32 bytes or a legacy key shorter
+ * than 32 characters or equal to `NEXTAUTH_SECRET` is `weak`. Both are errors
+ * unless `ALLOW_PLAINTEXT_SECRETS=true`, which makes them warnings.
+ */
+function checkEncryptionKeys(env: Env): EnvIssue[] {
+  const severity = env.ALLOW_PLAINTEXT_SECRETS === "true" ? "warning" : "error"
+  const ring = env.ENCRYPTION_KEYS?.trim() ? env.ENCRYPTION_KEYS : undefined
+  const legacy = env.ENCRYPTION_KEY || undefined
+  if (!ring && !legacy) {
+    return [{ variable: "ENCRYPTION_KEY", code: "missing", severity, hint: `neither ENCRYPTION_KEYS nor ENCRYPTION_KEY is set; ${KEY_HINT}` }]
+  }
+  const issues: EnvIssue[] = []
+  const bad = parseKeyringEntries(ring).filter((entry) => entry.problem !== null)
+  if (bad.length > 0) {
+    const named = bad.map((entry) => `${entry.kid || "?"} (${entry.problem})`).join(", ")
+    issues.push({ variable: "ENCRYPTION_KEYS", code: "weak", severity, hint: `unusable entries: ${named}; ${KEY_HINT}` })
+  }
+  if (legacy && (legacy.length < 32 || legacy === env.NEXTAUTH_SECRET)) {
+    const why = legacy === env.NEXTAUTH_SECRET ? "equals NEXTAUTH_SECRET" : "shorter than 32 characters"
+    issues.push({ variable: "ENCRYPTION_KEY", code: "weak", severity, hint: `${why}; ${KEY_HINT}` })
+  }
+  return issues
+}
+
 function checkHttps(variable: string, url: string | undefined, allowInsecure: boolean): EnvIssue | null {
   if (!url) return null
   let parsed: URL
@@ -208,7 +239,10 @@ function checkHttps(variable: string, url: string | undefined, allowInsecure: bo
  * @example
  * ```ts
  * checkProductionEnv(envSchema.parse({ NEXTAUTH_SECRET: 'changeme', PLEX_CLIENT_IDENTIFIER: 'x' }))
- * // => [{ variable: 'NEXTAUTH_SECRET', code: 'known_placeholder', severity: 'error', hint: '...' }]
+ * // => [
+ * //   { variable: 'NEXTAUTH_SECRET', code: 'known_placeholder', severity: 'error', hint: '...' },
+ * //   { variable: 'ENCRYPTION_KEY', code: 'missing', severity: 'error', hint: '...' },
+ * // ]
  * ```
  *
  * @internal
@@ -220,6 +254,7 @@ export function checkProductionEnv(env: Env): EnvIssue[] {
     checkHttps("NEXTAUTH_URL", env.NEXTAUTH_URL, allowInsecure),
     checkHttps("NEXT_PUBLIC_APP_URL", env.NEXT_PUBLIC_APP_URL, allowInsecure),
   ]
+  issues.push(...checkEncryptionKeys(env))
   if (env.SETUP_TOKEN !== undefined && env.SETUP_TOKEN.length < SETUP_TOKEN_MIN_LENGTH) {
     issues.push({ variable: "SETUP_TOKEN", code: "too_short", severity: "error", hint: "shorter than 16 characters; generate one with openssl rand -hex 16" })
   }

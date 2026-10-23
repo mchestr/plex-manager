@@ -71,6 +71,7 @@ describe("checkProductionEnv and ?schema=", () => {
         DATABASE_URL: databaseUrl,
         NEXTAUTH_SECRET: randomBytes(32).toString("base64"),
         PLEX_CLIENT_IDENTIFIER: "0123456789abcdef0123456789abcdef",
+        ENCRYPTION_KEYS: `k1:${randomBytes(32).toString("base64")}`,
       })
     )
 

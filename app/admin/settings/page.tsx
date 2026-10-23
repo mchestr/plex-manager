@@ -7,6 +7,7 @@ import { AiSection } from "@/components/admin/settings/sections/ai-section"
 import { DiscordSection } from "@/components/admin/settings/sections/discord-section"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
 import { PrivacySection } from "@/components/admin/settings/sections/privacy-section"
+import { SecuritySection } from "@/components/admin/settings/sections/security-section"
 import { ServiceSection } from "@/components/admin/settings/sections/service-section"
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 import { SystemSection } from "@/components/admin/settings/sections/system-section"
@@ -17,6 +18,7 @@ import { SettingsPageActions } from "@/components/admin/settings/settings-page-a
 import { PageHeader } from "@/components/ui/page-header"
 import { getDiscordOverview } from "@/lib/admin/discord"
 import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
+import { getEncryptionStatus } from "@/lib/data/encryption"
 import { getRetentionStatus } from "@/lib/data/retention"
 import { getRewindSeasonDataPreparedAt } from "@/lib/data/rewind-season"
 import { plexLibraryListing } from "@/lib/admin/invites/libraries"
@@ -70,6 +72,8 @@ export default async function SettingsPage() {
     getDiscordOverview(),
     getRetentionStatus(),
   ])
+  // After the reads above, so it lists every secret they could not decrypt
+  const encryption = await getEncryptionStatus()
   const saved = (id: keyof typeof audit) => <LastSaved id={id} meta={audit[id]} />
   const baseUrl = getBaseUrl()
   const other = {
@@ -93,6 +97,7 @@ export default async function SettingsPage() {
     { id: "rewind", label: "Rewind", group: "Features", status: health.rewind.status },
     { id: "other", label: "Other integrations", group: "More", status: otherStatus },
     { id: "privacy", label: "Privacy", group: "More" },
+    { id: "security", label: "Security", group: "More" },
     { id: "system", label: "System information", group: "More" },
   ]
 
@@ -162,6 +167,7 @@ export default async function SettingsPage() {
           footerMeta={saved("other")}
         />
         <PrivacySection status={retention} />
+        <SecuritySection status={encryption} />
         <SystemSection
           appearance={<LightThemeSwitch enabled={settings.config.lightThemeEnabled} />}
           baseUrl={baseUrl}

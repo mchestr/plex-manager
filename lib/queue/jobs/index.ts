@@ -11,6 +11,7 @@ import { getWatchlistProcessor } from "./watchlist-sync"
 import { getStripeProcessor } from "./stripe"
 import { getDiscordRoleProcessor } from "./discord-role"
 import { getRetentionProcessor } from "./retention"
+import { getSecretsProcessor } from "./secrets"
 
 /**
  * Job processor function type
@@ -45,6 +46,11 @@ export function getJobProcessor(jobType: string): JobProcessor | null {
   const retentionProcessor = getRetentionProcessor(jobType)
   if (retentionProcessor) {
     return retentionProcessor
+  }
+
+  const secretsProcessor = getSecretsProcessor(jobType)
+  if (secretsProcessor) {
+    return secretsProcessor
   }
 
   // Add more processor lookups here as new job types are added

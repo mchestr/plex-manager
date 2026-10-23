@@ -8,6 +8,7 @@ import path from "node:path"
 import { checkProductionEnv, envSchema, KNOWN_PLACEHOLDER_SECRETS, sessionCookieName, usesSecureCookies } from "@/lib/env"
 
 const SECRET = randomBytes(32).toString("base64")
+const KEYRING = `k1:${randomBytes(32).toString("base64")}`
 
 function issues(overrides: Record<string, string>) {
   return checkProductionEnv(
@@ -16,6 +17,7 @@ function issues(overrides: Record<string, string>) {
       NEXTAUTH_URL: "https://plex.example.com",
       NEXT_PUBLIC_APP_URL: "https://plex.example.com",
       PLEX_CLIENT_IDENTIFIER: "0123456789abcdef0123456789abcdef",
+      ENCRYPTION_KEYS: KEYRING,
       ...overrides,
     })
   )
@@ -89,7 +91,43 @@ describe("checkProductionEnv", () => {
   it("matches its JSDoc example", () => {
     expect(checkProductionEnv(envSchema.parse({ NEXTAUTH_SECRET: "changeme", PLEX_CLIENT_IDENTIFIER: "x" }))).toEqual([
       expect.objectContaining({ variable: "NEXTAUTH_SECRET", code: "known_placeholder", severity: "error" }),
+      expect.objectContaining({ variable: "ENCRYPTION_KEY", code: "missing", severity: "error" }),
     ])
+  })
+
+  describe("encryption keys (P11.1)", () => {
+    const legacyKey = randomBytes(24).toString("hex")
+
+    it("refuses production without any key", () => {
+      expect(codes({ ENCRYPTION_KEYS: "" })).toEqual(["error ENCRYPTION_KEY missing"])
+    })
+
+    it("accepts a keyring, or a legacy key of 32 characters or more on its own", () => {
+      expect(codes({})).toEqual([])
+      expect(codes({ ENCRYPTION_KEYS: "", ENCRYPTION_KEY: legacyKey })).toEqual([])
+    })
+
+    it("flags a keyring entry that is not 32 bytes, without printing it", () => {
+      const short = randomBytes(31).toString("base64")
+      const found = issues({ ENCRYPTION_KEYS: `${KEYRING},k2:${short}` })
+      expect(found.map(({ variable, code, severity }) => `${severity} ${variable} ${code}`)).toEqual(["error ENCRYPTION_KEYS weak"])
+      expect(found[0].hint).toContain("k2 (not_32_bytes)")
+      expect(JSON.stringify(found)).not.toContain(short)
+      expect(JSON.stringify(found)).not.toContain(KEYRING.slice(3))
+    })
+
+    it("flags a short legacy key and one equal to NEXTAUTH_SECRET", () => {
+      expect(codes({ ENCRYPTION_KEYS: "", ENCRYPTION_KEY: "too-short" })).toEqual(["error ENCRYPTION_KEY weak"])
+      expect(codes({ ENCRYPTION_KEYS: "", ENCRYPTION_KEY: SECRET })).toEqual(["error ENCRYPTION_KEY weak"])
+      expect(JSON.stringify(issues({ ENCRYPTION_KEYS: "", ENCRYPTION_KEY: "too-short" }))).not.toContain("too-short")
+    })
+
+    it("turns both into warnings with ALLOW_PLAINTEXT_SECRETS=true", () => {
+      expect(codes({ ENCRYPTION_KEYS: "", ALLOW_PLAINTEXT_SECRETS: "true" })).toEqual(["warning ENCRYPTION_KEY missing"])
+      expect(codes({ ENCRYPTION_KEYS: "", ENCRYPTION_KEY: "too-short", ALLOW_PLAINTEXT_SECRETS: "true" })).toEqual([
+        "warning ENCRYPTION_KEY weak",
+      ])
+    })
   })
 
   it("never puts a secret value in its output", () => {

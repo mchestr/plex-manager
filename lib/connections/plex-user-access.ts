@@ -30,7 +30,8 @@ export type PlexAccessResult =
 
 export interface PlexAccessServerConfig {
   url: string
-  token: string
+  /** Null when the stored token cannot be decrypted with the current key (P11.1). */
+  token: string | null
   adminPlexUserId?: string | null
   /** The stored `PlexServer.machineIdentifier`; without it the PMS `/identity` is asked. */
   machineIdentifier?: string | null
@@ -52,7 +53,13 @@ export async function checkUserServerAccess(
     return { status: "granted" }
   }
 
-  const identity = await resolveMachineIdentifier(serverConfig)
+  // An unreadable stored token (P11.1): the owner still signs in above to enter it again
+  if (!serverConfig.token) {
+    logger.error("Plex access unknown: the server token is missing or unreadable")
+    return { status: "unknown", reason: "server_token_invalid" }
+  }
+
+  const identity = await resolveMachineIdentifier({ ...serverConfig, token: serverConfig.token })
   if (!identity.success || !identity.machineIdentifier) {
     logger.warn("Plex access unknown: no machine identifier", {
       url: sanitizeUrlForLogging(serverConfig.url),

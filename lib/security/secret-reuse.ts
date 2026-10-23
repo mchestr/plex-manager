@@ -46,6 +46,8 @@ const MIN_LENGTH_FOR_LAST4 = 12
  * What a settings form may know about a stored secret: its last four (only
  * for a secret of 12 characters or more) and the origin it may be sent to,
  * or null when none is stored. `url` is left out for a fixed destination.
+ * `unreadable` marks a stored value the current encryption key cannot read
+ * (`isUnreadable`), which the form asks for again.
  *
  * @example
  * ```ts
@@ -54,11 +56,13 @@ const MIN_LENGTH_FOR_LAST4 = 12
  * describeSecret("", "http://tautulli.lan:8181") // null
  * ```
  */
-export function describeSecret(secret: string | null | undefined, url?: string | null): SavedSecret | null {
-  if (!secret) return null
+export function describeSecret(secret: string | null | undefined, url?: string | null, unreadable = false): SavedSecret | null {
+  const origin = url === undefined ? null : safeOrigin(url)
+  // The extension read it as null because no key decrypts it (P11.1)
+  if (!secret) return unreadable ? { last4: "", origin, unreadable: true } : null
   return {
     last4: secret.length >= MIN_LENGTH_FOR_LAST4 ? secret.slice(-4) : "",
-    origin: url === undefined ? null : safeOrigin(url),
+    origin,
   }
 }
 

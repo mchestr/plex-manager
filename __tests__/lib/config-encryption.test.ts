@@ -2,14 +2,14 @@
  * Verifies that the secret Config fields (the Stripe secrets and the Rewind
  * serial key) are encrypted at rest.
  *
- * The Prisma query extension in `lib/prisma.ts` encrypts/decrypts the fields
- * listed in its `ENCRYPTED_FIELDS` map via `lib/security/crypto.ts`. These tests
+ * The Prisma query extension (`lib/db/encryption-extension.ts`) encrypts/decrypts the fields
+ * listed in `ENCRYPTED_FIELDS` via `lib/security/crypto.ts`. These tests
  * exercise that same encrypt-on-write / decrypt-on-read pipeline for the two new
  * `Config` secret fields (`stripeSecretKey`, `stripeWebhookSecret`), and confirm
  * the non-secret fields (`stripePriceIds`, `stripeEnabled`) are never encrypted.
  */
 
-import { ENCRYPTION_PREFIX } from '@/lib/security/crypto'
+const ENCRYPTION_PREFIX = 'enc:v2:legacy:'
 
 // The crypto module caches the derived key at module load, so each scenario
 // resets modules and re-imports with the desired ENCRYPTION_KEY state.
