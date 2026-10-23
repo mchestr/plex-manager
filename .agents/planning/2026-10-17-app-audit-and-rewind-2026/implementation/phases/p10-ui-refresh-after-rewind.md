@@ -1167,11 +1167,13 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 
 **Demo.** On a test database, save Tautulli with a wrong URL, go Back, fix it and save again: `SELECT count(*) FROM "Tautulli" WHERE "isActive"` returns 1. Skip Sonarr: the wizard moves to Radarr, and no Sonarr row exists.
 
+(as merged: migration `20270117000010_p1024_setup_step_ids` (9 and anything above it map to `prometheus`, anything unknown to `plex`). `types/setup.ts` exports `SETUP_STEPS`, `SetupStepId`, `SetupPosition`, `OPTIONAL_SETUP_STEP_IDS`, `OptionalSetupStepId`, `isOptionalStep`, `stepIndex`, `nextStepId`, `previousStepId` and `parseSetupPosition`; `getSetupStatus()` returns `{ isComplete, currentStepId }`. The shared flow is `saveServiceConnection(kind, input, { actor, section, within })` in a third file, `lib/services/service-save.ts` (secret rule, then the tester through `probeConnection`, then `toRow`, then `saveActiveService` and `within` in one transaction, then the `CONFIG_CHANGED` diff); `lib/services/descriptors.ts` (`SERVICE_DESCRIPTORS`, server-only because it holds the testers and delegates) gives each kind its `input` (secret optional), `schema`, `secretField`, `test`, `toRow` and `delegate`. So setup saves now answer like settings: code copy with `fieldErrors`, never the tester's text, and setup's Prometheus save also runs the query check. The active-row read in that flow is ordered by `updatedAt desc`; the other ~28 reads are still P11.31's (not on this branch). `skipSetupStep({ stepId })` returns `ok(null)` and also refuses a step the wizard has not reached (`CONFLICT`). The Rewind writer now leads to `llm-chat` (the grouped order), so the test checks that and "never `summary`", not `prometheus`. Back and the move after a save are `router.push('/setup?step=')`; `app/setup/page.tsx` clamps `?step=` to at or before `currentStepId` and keys the wizard on it. Until P10.25, a minimal `SkipStepButton` (`setup-skip-step`) under the step card calls `skipSetupStep`; P10.25 moves Skip into the footer. The action tests stayed at `__tests__/actions/setup.test.ts`; `e2e/a11y/routes.ts` keeps the numeric baseline keys and adds `stepId`, and `e2e/setup-wizard.spec.ts` walks the new order. E2E specs were not run.)
+
 **Done when.**
-- [ ] Steps have string ids with `group` and `optional`, and the migration maps every stored number.
-- [ ] The step-10 write is gone, and optional steps can be skipped through a claim-gated action.
-- [ ] Setup and admin saves share `saveActiveService`, and Back and re-save leaves one active row.
-- [ ] Action, migration and helper tests pass, and the migration touches no service row.
+- [x] Steps have string ids with `group` and `optional`, and the migration maps every stored number.
+- [x] The step-10 write is gone, and optional steps can be skipped through a claim-gated action.
+- [x] Setup and admin saves share `saveActiveService`, and Back and re-save leaves one active row.
+- [x] Action, migration and helper tests pass, and the migration touches no service row.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
 
 ### Step P10.25: Setup wizard UI

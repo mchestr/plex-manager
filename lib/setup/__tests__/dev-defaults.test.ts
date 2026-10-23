@@ -42,7 +42,7 @@ describe('getDevDefaults', () => {
     // below that check the gate override these.
     process.env.DEV_SETUP_PREFILL = 'true'
     mockGetSetupStatus.mockReset()
-    mockGetSetupStatus.mockResolvedValue({ isComplete: false, currentStep: 1 })
+    mockGetSetupStatus.mockResolvedValue({ isComplete: false, currentStepId: 'plex' })
     mockRequireSetupClaim.mockReset()
     mockRequireSetupClaim.mockResolvedValue({ ok: true })
   })
@@ -118,7 +118,7 @@ describe('getDevDefaults', () => {
     })
 
     it('should return empty defaults once setup is complete', async () => {
-      mockGetSetupStatus.mockResolvedValue({ isComplete: true, currentStep: 5 })
+      mockGetSetupStatus.mockResolvedValue({ isComplete: true, currentStepId: 'radarr' })
 
       const { getDevDefaults } = await import('@/lib/setup/dev-defaults')
       const result = await getDevDefaults()

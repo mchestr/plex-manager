@@ -14,20 +14,31 @@ import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animat
 import { TautulliForm } from "@/components/setup/setup-wizard/tautulli-form"
 import { Icon } from "@/components/ui/icon"
 import { icons } from "@/lib/ui/icons"
-import { SETUP_STEPS, type DevDefaults } from "@/types/setup"
+import { SkipStepButton } from "@/components/setup/setup-wizard/skip-step-button"
+import {
+  isOptionalStep,
+  nextStepId,
+  previousStepId,
+  SETUP_STEPS,
+  stepIndex,
+  type DevDefaults,
+  type SetupPosition,
+} from "@/types/setup"
 import { AnimatePresence, motion } from "motion/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 interface SetupWizardProps {
-  currentStep: number
+  /** The step to show: the wizard's position, or an earlier step reached with Back (`?step=`). */
+  position: SetupPosition
   /** The DEV_* pre-fill, read once by the setup page (P10.7). */
   devDefaults: DevDefaults
 }
 
-export function SetupWizard({ currentStep: initialStep, devDefaults }: SetupWizardProps) {
+export function SetupWizard({ position, devDefaults }: SetupWizardProps) {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(initialStep)
+  // 1-based, as the step cards number them; the summary is one past the last step
+  const currentStep = stepIndex(position) + 1
   const [showSuccess, setShowSuccess] = useState(false)
   const [showFinalSuccess, setShowFinalSuccess] = useState(false)
   const totalSteps = SETUP_STEPS.length
@@ -49,9 +60,10 @@ export function SetupWizard({ currentStep: initialStep, devDefaults }: SetupWiza
     }
   }
 
+  // Every move is a navigation to `?step=`, which the page keeps at or before the saved position
   const handleSuccessComplete = () => {
     setShowSuccess(false)
-    setCurrentStep(currentStep + 1)
+    if (position !== "summary") router.push(`/setup?step=${nextStepId(position)}`)
   }
 
   const handleFinalSuccessComplete = async () => {
@@ -62,13 +74,12 @@ export function SetupWizard({ currentStep: initialStep, devDefaults }: SetupWiza
   }
 
   const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
+    const previous = previousStepId(position)
+    if (previous) router.push(`/setup?step=${previous}`)
   }
 
   const renderStep = () => {
-    if (currentStep > totalSteps) {
+    if (position === "summary") {
       return (
         <div className="space-y-4 text-white">
           <p className="text-lg font-semibold">You're ready to finish setup</p>
@@ -87,27 +98,25 @@ export function SetupWizard({ currentStep: initialStep, devDefaults }: SetupWiza
       )
     }
 
-    switch (currentStep) {
-      case 1:
+    switch (position) {
+      case "plex":
         return <PlexServerForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={undefined} />
-      case 2:
+      case "tautulli":
         return <TautulliForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
-      case 3:
+      case "overseerr":
         return <OverseerrForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
-      case 4:
+      case "sonarr":
         return <SonarrForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
-      case 5:
+      case "radarr":
         return <RadarrForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
-      case 6:
-        return <DiscordIntegrationForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
-      case 7:
-        return <LLMProviderForm devDefaults={devDefaults} purpose="chat" onComplete={handleStepComplete} onBack={handleBack} />
-      case 8:
+      case "llm-rewind":
         return <LLMProviderForm devDefaults={devDefaults} purpose="wrapped" onComplete={handleStepComplete} onBack={handleBack} />
-      case 9:
+      case "llm-chat":
+        return <LLMProviderForm devDefaults={devDefaults} purpose="chat" onComplete={handleStepComplete} onBack={handleBack} />
+      case "discord":
+        return <DiscordIntegrationForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
+      case "prometheus":
         return <PrometheusForm devDefaults={devDefaults} onComplete={handleStepComplete} onBack={handleBack} />
-      default:
-        return <div className="text-white">Step {currentStep} - Coming soon</div>
     }
   }
 
@@ -160,8 +169,8 @@ export function SetupWizard({ currentStep: initialStep, devDefaults }: SetupWiza
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {SETUP_STEPS.map((step, index) => {
-              const isComplete = step.id < currentStep
-              const isActive = step.id === currentStep
+              const isComplete = index + 1 < currentStep
+              const isActive = index + 1 === currentStep
               const stateClasses = isComplete
                 ? "border-cyan-500/40 bg-gradient-to-br from-cyan-500/20 to-purple-500/10 shadow-[0_10px_40px_rgba(34,211,238,0.15)]"
                 : isActive
@@ -190,7 +199,7 @@ export function SetupWizard({ currentStep: initialStep, devDefaults }: SetupWiza
                       {isComplete ? (
                         <Icon icon={icons.done} size={16} />
                       ) : (
-                        step.id
+                        index + 1
                       )}
                     </div>
                     <span className="text-[10px] uppercase tracking-wide text-slate-500">
@@ -224,6 +233,7 @@ export function SetupWizard({ currentStep: initialStep, devDefaults }: SetupWiza
             {renderStep()}
           </motion.div>
         </AnimatePresence>
+        {isOptionalStep(position) && <SkipStepButton stepId={position} />}
       </div>
     </>
   )

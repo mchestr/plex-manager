@@ -90,7 +90,7 @@ export async function seedVisualFixtures(): Promise<void> {
   try {
     await prisma.$transaction(async (tx) => {
       await tx.setup.deleteMany();
-      await tx.setup.create({ data: { isComplete: true, currentStep: 5, completedAt: daysAgo(shown, 30) } });
+      await tx.setup.create({ data: { isComplete: true, currentStepId: 'summary', completedAt: daysAgo(shown, 30) } });
 
       // Service configs: only the Plex server and the Discord integration.
       await tx.tautulli.deleteMany();

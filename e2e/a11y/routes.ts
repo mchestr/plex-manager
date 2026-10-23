@@ -38,8 +38,10 @@ export interface A11yRoute {
 }
 
 export interface A11ySetupRoute {
-  /** The `Setup.currentStep` the wizard is reopened at. */
+  /** The step's number in the baseline key, kept from before P10.24's step ids. */
   step: number;
+  /** The `Setup.currentStepId` the wizard is reopened at. */
+  stepId: 'plex' | 'overseerr';
   ready: string;
 }
 
@@ -149,8 +151,8 @@ export const A11Y_ROUTES: A11yRoute[] = [
 
 /** `/setup` needs an incomplete setup, so these run in the `setup-wizard` project. */
 export const A11Y_SETUP_ROUTES: A11ySetupRoute[] = [
-  { step: 1, ready: 'setup-form-submit' },
-  { step: 3, ready: 'setup-form-submit' },
+  { step: 1, stepId: 'plex', ready: 'setup-form-submit' },
+  { step: 3, stepId: 'overseerr', ready: 'setup-form-submit' },
 ];
 
 export const ALL_ROUTE_NAMES: string[] = [

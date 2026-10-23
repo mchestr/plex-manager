@@ -4,11 +4,12 @@ import { SetupClaimForm } from "@/components/setup/setup-claim-form"
 import { SetupWizard } from "@/components/setup/setup-wizard/setup-wizard"
 import { requireSetupClaim } from "@/lib/setup/claim"
 import { getDevDefaults } from "@/lib/setup/dev-defaults"
+import { parseSetupPosition, stepIndex } from "@/types/setup"
 
 export const dynamic = 'force-dynamic'
 
-export default async function SetupPage() {
-  const { isComplete, currentStep } = await getSetupStatus()
+export default async function SetupPage({ searchParams }: { searchParams: Promise<{ step?: string | string[] }> }) {
+  const { isComplete, currentStepId } = await getSetupStatus()
 
   if (isComplete) {
     redirect("/")
@@ -22,5 +23,9 @@ export default async function SetupPage() {
   // Read once here, so no step asks for them on mount (P10.7)
   const devDefaults = await getDevDefaults()
 
-  return <SetupWizard currentStep={currentStep} devDefaults={devDefaults} />
+  // Back is `?step=`, to any step at or before the wizard's position (P10.24)
+  const requested = parseSetupPosition((await searchParams).step)
+  const position = requested && stepIndex(requested) <= stepIndex(currentStepId) ? requested : currentStepId
+
+  return <SetupWizard key={position} position={position} devDefaults={devDefaults} />
 }

@@ -245,7 +245,25 @@ test.describe('Setup Wizard', () => {
       publicUrl: 'http://localhost:7878',
     });
 
-    // Step 6: Discord Linked Roles
+    // Step 6: the Rewind writer (P10.24's grouped order puts the AI steps before Discord)
+    await fillAndSubmitStep('Wrapped Generation AI Configuration', {
+      provider: 'openai',
+      apiKey: 'sk-wrapped-openai-api-key',
+      model: 'gpt-6-luna',
+      temperature: '0.8',
+      maxTokens: '6000',
+    });
+
+    // Step 7: Chat Assistant AI Configuration (the admin assistant)
+    await fillAndSubmitStep('Chat Assistant AI Configuration', {
+      provider: 'openai',
+      apiKey: 'sk-chat-openai-api-key',
+      model: 'gpt-6-luna',
+      temperature: '0.6',
+      maxTokens: '1200',
+    });
+
+    // Step 8: Discord Linked Roles
     await expect(page.getByRole('heading', { name: /Discord Linked Roles/i })).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     const discordToggle = page.getByTestId('setup-discord-toggle');
     if ((await discordToggle.getAttribute('aria-pressed')) === 'false') {
@@ -259,24 +277,6 @@ test.describe('Setup Wizard', () => {
       guildId: '1234567890',
       platformName: 'Plex Wrapped Test',
       instructions: 'Use this Discord app for linked roles.',
-    });
-
-    // Step 7: Chat Assistant AI Configuration
-    await fillAndSubmitStep('Chat Assistant AI Configuration', {
-      provider: 'openai',
-      apiKey: 'sk-chat-openai-api-key',
-      model: 'gpt-6-luna',
-      temperature: '0.6',
-      maxTokens: '1200',
-    });
-
-    // Step 8: Wrapped Generation AI Configuration
-    await fillAndSubmitStep('Wrapped Generation AI Configuration', {
-      provider: 'openai',
-      apiKey: 'sk-wrapped-openai-api-key',
-      model: 'gpt-6-luna',
-      temperature: '0.8',
-      maxTokens: '6000',
     });
 
     // Step 9: Prometheus Status Configuration

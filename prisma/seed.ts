@@ -36,7 +36,7 @@ async function seed(prisma: PrismaClient) {
   await prisma.setup.create({
     data: {
       isComplete: true,
-      currentStep: 5,
+      currentStepId: 'summary',
       completedAt: new Date(),
     },
   })

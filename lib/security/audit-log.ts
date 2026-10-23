@@ -151,6 +151,8 @@ export enum AuditEventType {
   // A browser claimed the server before first-run setup (P11.32, SEC-30).
   // Details carry the method (code or token) and the masked IP, never the code.
   SETUP_CLAIMED = "SETUP_CLAIMED",
+  // An optional setup step was skipped (P10.24). Details carry the step id.
+  SETUP_STEP_SKIPPED = "SETUP_STEP_SKIPPED",
 }
 
 type AuditDetails = {

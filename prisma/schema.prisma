@@ -61,7 +61,8 @@ enum AuthService {
 model Setup {
   id          String    @id @default(cuid())
   isComplete  Boolean   @default(false)
-  currentStep Int       @default(1)
+  // The wizard's position: a SetupStepId (types/setup.ts) or "summary" (P10.24)
+  currentStepId String  @default("plex")
   completedAt DateTime?
   // The first-run claim (P11.32, lib/setup/claim.ts): the SHA-256 of the newest
   // setup code (cleared once used), and the claim the `pm-setup` cookie names.

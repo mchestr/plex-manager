@@ -9,11 +9,11 @@
  * or written. An export added later without the guard fails here.
  */
 
-import { mockDeep, mockReset } from 'jest-mock-extended'
+import { mockReset } from 'jest-mock-extended'
 import { getServerSession } from 'next-auth'
 
 import { buildSetup } from '@/__tests__/helpers/factories'
-import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
 import * as setupActions from '@/actions/setup'
 import { claimServer } from '@/actions/setup-claim'
 import { testLLMProviderConnection } from '@/lib/connections/llm-provider'
@@ -23,7 +23,6 @@ import { testPrometheusConnection } from '@/lib/connections/prometheus'
 import { testRadarrConnection } from '@/lib/connections/radarr'
 import { testSonarrConnection } from '@/lib/connections/sonarr'
 import { testTautulliConnection } from '@/lib/connections/tautulli'
-import type { Prisma } from '@/lib/generated/prisma/client'
 import { setupClaimCookie } from '@/lib/setup/claim'
 import { getDevDefaults } from '@/lib/setup/dev-defaults'
 
@@ -39,7 +38,11 @@ jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn
 jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
 jest.mock('@/lib/connections/sonarr', () => ({ testSonarrConnection: jest.fn() }))
 jest.mock('@/lib/connections/radarr', () => ({ testRadarrConnection: jest.fn() }))
-jest.mock('@/lib/connections/prometheus', () => ({ testPrometheusConnection: jest.fn() }))
+jest.mock('@/lib/connections/prometheus', () => ({
+  testPrometheusConnection: jest.fn(),
+  validatePrometheusQuery: jest.fn().mockResolvedValue({ success: true, data: null }),
+}))
+jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn() }))
 jest.mock('@/lib/connections/llm-provider', () => ({ testLLMProviderConnection: jest.fn() }))
 jest.mock('@/lib/security/audit-log', () => ({ ...jest.requireActual('@/lib/security/audit-log'), logAuditEvent: jest.fn() }))
 jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
@@ -73,6 +76,7 @@ const SAMPLES: Record<string, unknown> = {
   saveChatLLMProvider: { provider: 'openai', apiKey: 'sk-test', model: 'gpt-4o' },
   saveLLMProvider: { provider: 'openai', apiKey: 'sk-test', model: 'gpt-4o' },
   savePrometheus: { name: 'Prometheus', url: 'http://prometheus.example.com:9090', query: 'up' },
+  skipSetupStep: { stepId: 'overseerr' },
   completeSetup: undefined,
 }
 
@@ -88,7 +92,7 @@ const TESTERS = [
 ]
 
 function wizard(row: Partial<Parameters<typeof buildSetup>[0]> = {}) {
-  prismaMock.setup.findFirst.mockResolvedValue(buildSetup({ currentStep: 5, ...row }))
+  prismaMock.setup.findFirst.mockResolvedValue(buildSetup({ currentStepId: 'radarr', ...row }))
 }
 
 beforeEach(() => {
@@ -97,7 +101,8 @@ beforeEach(() => {
   jar.clear()
   address = '203.0.113.7'
   delete process.env.SETUP_TOKEN
-  prismaMock.$transaction.mockImplementation((callback) => callback(mockDeep<Prisma.TransactionClient>()))
+  // The transaction sees the same rows, the wizard's included
+  prismaMock.$transaction.mockImplementation((callback) => callback(asTransactionClient(prismaMock)))
   session.mockResolvedValue(null)
   for (const tester of TESTERS) jest.mocked(tester).mockResolvedValue({ success: true })
   jest.mocked(getPlexUserInfo).mockResolvedValue({ success: true, data: { id: 'plex-user-123' } } as never)

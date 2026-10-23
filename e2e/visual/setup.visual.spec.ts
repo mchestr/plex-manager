@@ -18,7 +18,7 @@ test.describe('Setup wizard', () => {
     const prisma = createE2EPrismaClient();
     try {
       await prisma.setup.deleteMany();
-      await prisma.setup.create({ data: { isComplete: false, currentStep: 3 } });
+      await prisma.setup.create({ data: { isComplete: false, currentStepId: 'overseerr' } });
     } finally {
       await prisma.$disconnect();
     }
