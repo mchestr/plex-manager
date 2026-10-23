@@ -9,6 +9,7 @@ export const plexServerSchema = z.object({
   publicUrl: createPublicUrlSchema("plex.example.com"),
 })
 
+/** @internal The form shape; the validation tests type their fixtures with it. */
 export type PlexServerInput = z.input<typeof plexServerSchema>
 export type PlexServerParsed = z.output<typeof plexServerSchema>
 

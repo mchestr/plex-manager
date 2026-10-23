@@ -28,7 +28,7 @@ test.describe('Accessibility: setup wizard', () => {
       const prisma = createE2EPrismaClient();
       try {
         await prisma.setup.deleteMany();
-        await prisma.setup.create({ data: { isComplete: false, currentStep: route.step } });
+        await prisma.setup.create({ data: { isComplete: false, currentStepId: route.stepId } });
       } finally {
         await prisma.$disconnect();
       }

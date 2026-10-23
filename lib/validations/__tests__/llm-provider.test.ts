@@ -79,10 +79,12 @@ describe('setupLLMProviderSchema', () => {
     )
   })
 
-  it('names the missing provider and key', () => {
+  it('names the missing provider', () => {
     expect(setupLLMProviderSchema.safeParse({ apiKey: 'k' }).error?.issues[0]?.message).toBe('Please select a provider')
-    expect(setupLLMProviderSchema.safeParse({ provider: 'openai', apiKey: '' }).error?.issues[0]?.message).toBe(
-      'API key is required'
-    )
+  })
+
+  it('takes a blank key, which the save resolves to the stored one (P10.25)', () => {
+    expect(setupLLMProviderSchema.safeParse({ provider: 'openai' }).success).toBe(true)
+    expect(setupLLMProviderSchema.safeParse({ provider: 'openai', apiKey: '' }).success).toBe(true)
   })
 })

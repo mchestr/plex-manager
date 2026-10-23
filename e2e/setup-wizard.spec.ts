@@ -1,12 +1,12 @@
 /**
- * Setup Wizard E2E Test
+ * Setup wizard E2E (P11.32, P10.25), on the guarded test database.
  *
- * This test verifies the complete setup wizard flow from an empty database.
- * Connection tests are bypassed via SKIP_CONNECTION_TESTS=true environment variable,
- * which causes all connection test functions to return success immediately.
+ * CI cannot reach plex.tv, so the Plex step uses the token fallback, and
+ * SKIP_CONNECTION_TESTS (set by playwright.config.ts) makes every connection
+ * test pass without a request. The claim uses SETUP_TOKEN.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { assertTestDatabaseUrl } from '../lib/security/test-mode';
 import globalSetup from './global-setup';
 import { createE2EPrismaClient } from './helpers/prisma';
@@ -14,6 +14,13 @@ import { claimSetup, setupToken } from './helpers/setup-claim';
 import { navigateAndVerify, waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
 
 import type { PrismaClient } from '../lib/generated/prisma/client';
+
+const OPTIONAL_STEPS = ['overseerr', 'sonarr', 'radarr', 'llm-rewind', 'llm-chat', 'discord', 'prometheus'] as const;
+
+/** Waits for a step's card, by its step id. */
+async function atStep(page: Page, stepId: string) {
+  await expect(page.getByTestId(`setup-step-${stepId}`)).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+}
 
 test.describe('Setup Wizard', () => {
   test.describe.configure({ mode: 'serial' });
@@ -39,7 +46,7 @@ test.describe('Setup Wizard', () => {
 
     await navigateAndVerify(page, '/setup');
     await expect(page.getByTestId('setup-claim-form')).toBeVisible();
-    await expect(page.getByTestId('setup-wizard-intro-text')).toHaveCount(0);
+    await expect(page.getByTestId('setup-wizard')).toHaveCount(0);
 
     // A wrong code is refused
     await page.getByTestId('setup-claim-code-input').fill('K7QM-4WZD-P2HX');
@@ -49,7 +56,7 @@ test.describe('Setup Wizard', () => {
     // SETUP_TOKEN claims it, and the wizard renders
     await page.getByTestId('setup-claim-code-input').fill(setupToken());
     await page.getByTestId('setup-claim-submit').click();
-    await expect(page.getByTestId('setup-wizard-intro-text')).toBeVisible();
+    await expect(page.getByTestId('setup-wizard')).toBeVisible();
 
     // Another browser, without the cookie, still sees the claim form
     const other = await browser.newContext();
@@ -57,19 +64,14 @@ test.describe('Setup Wizard', () => {
       const otherPage = await other.newPage();
       await otherPage.goto('/setup');
       await expect(otherPage.getByTestId('setup-claim-form')).toBeVisible();
-      await expect(otherPage.getByTestId('setup-wizard-intro-text')).toHaveCount(0);
+      await expect(otherPage.getByTestId('setup-wizard')).toHaveCount(0);
     } finally {
       await other.close();
     }
   });
 
-  test('should complete setup wizard from empty database', async ({ page }) => {
-    // Set a longer timeout for this test since it goes through the entire wizard
-    test.setTimeout(120000); // 2 minutes
-
-    // Connection tests are bypassed via SKIP_CONNECTION_TESTS=true in Playwright config
-    // The connection test functions check for NODE_ENV=test or SKIP_CONNECTION_TESTS=true
-    // and return success immediately without making actual API calls
+  test('token fallback, Tautulli, skips to the summary, Back and save again, then Open admin', async ({ page }) => {
+    test.setTimeout(120000);
 
     // Clear all setup-related data to start fresh
     await prisma.lLMUsage.deleteMany();
@@ -88,301 +90,73 @@ test.describe('Setup Wizard', () => {
     await prisma.plexServer.deleteMany();
     await prisma.setup.deleteMany();
 
-    // No route interception needed - connection tests are bypassed via SKIP_CONNECTION_TESTS=true
-    // The connection test functions check for NODE_ENV=test or SKIP_CONNECTION_TESTS=true
-    // and return success immediately without making actual API calls
-
-    // Claim the server (the wipe above ended any earlier claim), then open the wizard
     await claimSetup(page);
     await navigateAndVerify(page, '/setup');
     await waitForLoadingGone(page);
 
-    // Verify we're on the setup wizard
-    await expect(page.getByRole('heading', { name: /Welcome to Plex Manager/i })).toBeVisible();
-    await expect(page.getByTestId('setup-wizard-intro-text')).toBeVisible();
+    // Step 1: Plex, through "Enter a token instead"
+    await atStep(page, 'plex');
+    await page.getByTestId('setup-plex-token-disclosure').locator('summary').click();
+    await page.getByTestId('setup-plex-name').fill('Test Plex Server');
+    await page.getByTestId('setup-plex-url').fill('http://localhost:32400');
+    await page.getByTestId('setup-plex-secret').fill('test-plex-token-12345');
+    await page.getByTestId('setup-form-submit').click();
 
-    // Known hidden fields that are auto-populated by form logic
-    // These fields have hidden inputs for form submission but are managed by custom UI components
-    const HIDDEN_FIELDS = ['provider']; // Dropdown with hidden input for form submission
+    // Step 2: Tautulli
+    await atStep(page, 'tautulli');
+    await page.getByTestId('setup-tautulli-name').fill('Test Tautulli');
+    await page.getByTestId('setup-tautulli-url').fill('http://localhost:8181');
+    await page.getByTestId('setup-tautulli-secret').fill('test-tautulli-api-key');
+    await page.getByTestId('setup-form-submit').click();
 
-    // Helper function to fill and submit a form step
-    const fillAndSubmitStep = async (stepName: string, fields: Record<string, string>) => {
-      console.log(`[TEST] Starting step: ${stepName}`);
-
-      // Wait for the step heading to be visible
-      await expect(page.getByRole('heading', { name: new RegExp(stepName, 'i') })).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-
-      // Fill all fields
-      for (const [name, value] of Object.entries(fields)) {
-        // Use data-testid selector pattern for better test stability
-        const input = page.getByTestId(`setup-input-${name}`);
-
-        // Check if this is a known hidden field (dropdown with hidden input)
-        if (HIDDEN_FIELDS.includes(name)) {
-          console.log(`[TEST] Skipping known hidden field: ${name} (uses custom UI component)`);
-          continue;
-        }
-
-        // Wait for element to be attached to DOM first
-        await input.waitFor({ state: 'attached', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-
-        // Enhanced hidden input detection - handles both hidden inputs and CSS-based hiding
-        const isHidden = await input.evaluate((el) => {
-          // Check if it's a hidden input element
-          if (el instanceof HTMLInputElement && el.type === 'hidden') {
-            return true;
-          }
-          // Check CSS-based hiding (display: none, visibility: hidden)
-          const style = window.getComputedStyle(el);
-          return style.display === 'none' || style.visibility === 'hidden';
-        }).catch((error) => {
-          console.log(`[TEST] Warning: Could not check if input "${name}" is hidden:`, error.message);
-          // Only ignore "unable to adopt element" errors (element detached from DOM)
-          // Re-throw other errors for visibility
-          if (!error.message.includes('unable to adopt element')) {
-            throw error;
-          }
-          return false;
-        });
-
-        if (isHidden) {
-          console.log(`[TEST] Skipping hidden input: ${name}`);
-          continue;
-        }
-
-        await input.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-        const tagName = await input.evaluate((el) => el.tagName);
-        if (tagName === 'SELECT') {
-          await input.selectOption(value);
-        } else if ((await input.getAttribute('role')) === 'combobox') {
-          // A Select primitive: open it and pick the option by its test id
-          await input.click();
-          await page.getByTestId(`setup-input-${name}-option-${value}`).click();
-          await expect(input).toHaveText(value);
-        } else {
-          await input.fill(value);
-        }
-      }
-
-      // Submit form
-      const submitButton = page.getByTestId('setup-form-submit');
-
-      console.log(`[TEST] Clicking submit button for ${stepName}`);
-
-      // Wait for any pending requests to complete before submitting
-      await page.waitForLoadState('networkidle');
-
-      await submitButton.click();
-
-      // Wait for the server action to complete
-      // Listen for the response
-      const responsePromise = page.waitForResponse(
-        (response) => {
-          const url = response.url();
-          const method = response.request().method();
-          return method === 'POST' && (url.includes('/setup') || url.includes('/_next/'));
-        },
-        { timeout: WAIT_TIMEOUTS.ADMIN_CONTENT }
-      ).catch(() => null);
-
-      // Wait for the response to complete (don't use fixed timeout, wait for actual response)
-      await responsePromise;
-
-      // Wait for loading to complete after form submission
-      await waitForLoadingGone(page);
-
-      // Wait for DOM to be fully loaded and stable after form submission
-      await page.waitForLoadState('domcontentloaded');
-
-      // Check for error messages on the page
-      const errorElement = page.locator('text=/error|Error|failed|Failed/i').first();
-      const hasError = await errorElement.isVisible({ timeout: WAIT_TIMEOUTS.SHORT_CHECK }).catch(() => false);
-      if (hasError) {
-        const errorText = await errorElement.textContent();
-        console.log(`[TEST] Error visible on page for ${stepName}:`, errorText);
-        // Take a screenshot for debugging
-        await page.screenshot({ path: `test-results/error-${stepName}-${Date.now()}.png` });
-      }
-    };
-
-    // Step 1: Plex Server Configuration
-    await fillAndSubmitStep('Plex Server', {
-      name: 'Test Plex Server',
-      url: 'http://localhost:32400',
-      token: 'test-plex-token-12345',
-      publicUrl: 'http://localhost:32400',
-    });
-
-    // Step 2: Tautulli Configuration
-    await fillAndSubmitStep('Tautulli', {
-      name: 'Test Tautulli',
-      url: 'http://localhost:8181',
-      apiKey: 'test-tautulli-api-key',
-      publicUrl: 'http://localhost:8181',
-    });
-
-    // Step 3: Overseerr Configuration
-    await fillAndSubmitStep('Overseerr', {
-      name: 'Test Overseerr',
-      url: 'http://localhost:5055',
-      apiKey: 'test-overseerr-api-key',
-      publicUrl: 'http://localhost:5055',
-    });
-
-    // Step 4: Sonarr Configuration
-    await fillAndSubmitStep('Sonarr', {
-      name: 'Test Sonarr',
-      url: 'http://localhost:8989',
-      apiKey: 'test-sonarr-api-key',
-      publicUrl: 'http://localhost:8989',
-    });
-
-    // Step 5: Radarr Configuration
-    await fillAndSubmitStep('Radarr', {
-      name: 'Test Radarr',
-      url: 'http://localhost:7878',
-      apiKey: 'test-radarr-api-key',
-      publicUrl: 'http://localhost:7878',
-    });
-
-    // Step 6: Discord Linked Roles
-    await expect(page.getByRole('heading', { name: /Discord Linked Roles/i })).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    const discordToggle = page.getByTestId('setup-discord-toggle');
-    if ((await discordToggle.getAttribute('aria-pressed')) === 'false') {
-      await discordToggle.click();
-      // Wait for conditional fields to appear after toggle
-      await page.locator('input[name="clientId"]').waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
+    // Skip for now on every optional step, Overseerr to Prometheus
+    for (const stepId of OPTIONAL_STEPS) {
+      await atStep(page, stepId);
+      await page.getByTestId('setup-skip-step').click();
     }
-    await fillAndSubmitStep('Discord Linked Roles', {
-      clientId: 'discord-client-id',
-      clientSecret: 'discord-client-secret',
-      guildId: '1234567890',
-      platformName: 'Plex Wrapped Test',
-      instructions: 'Use this Discord app for linked roles.',
-    });
 
-    // Step 7: Chat Assistant AI Configuration
-    await fillAndSubmitStep('Chat Assistant AI Configuration', {
-      provider: 'openai',
-      apiKey: 'sk-chat-openai-api-key',
-      model: 'gpt-6-luna',
-      temperature: '0.6',
-      maxTokens: '1200',
-    });
+    // The summary lists what is connected and what was skipped
+    await atStep(page, 'summary');
+    await expect(page.getByTestId('setup-summary-connected')).toContainText('Plex server');
+    await expect(page.getByTestId('setup-summary-connected')).toContainText('Tautulli');
+    for (const title of ['Overseerr', 'Sonarr', 'Radarr', 'Rewind writer', 'Admin assistant', 'Discord', 'Prometheus']) {
+      await expect(page.getByTestId('setup-summary-skipped')).toContainText(title);
+    }
+    expect(await prisma.overseerr.count()).toBe(0);
 
-    // Step 8: Wrapped Generation AI Configuration
-    await fillAndSubmitStep('Wrapped Generation AI Configuration', {
-      provider: 'openai',
-      apiKey: 'sk-wrapped-openai-api-key',
-      model: 'gpt-6-luna',
-      temperature: '0.8',
-      maxTokens: '6000',
-    });
+    // Back to Tautulli: the key shows as saved, and saving again keeps one active row
+    await page.getByTestId('stepper-step-tautulli').first().click();
+    await atStep(page, 'tautulli');
+    await expect(page.getByTestId('setup-tautulli-secret-saved')).toBeVisible();
+    await page.getByTestId('setup-form-submit').click();
+    await atStep(page, 'overseerr');
+    expect(await prisma.tautulli.count({ where: { isActive: true } })).toBe(1);
 
-    // Step 9: Prometheus Status Configuration
-    await fillAndSubmitStep('Prometheus', {
-      name: 'Plex Server Status',
-      url: 'http://localhost:9090',
-      query: 'up{job="plex"}',
-    });
+    // Open admin finishes setup, then signs in with Plex (plex.tv is stubbed: CI cannot reach it)
+    await page.route('https://app.plex.tv/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<p>plex.tv</p>' }));
+    await page.goto('/setup?step=summary');
+    await atStep(page, 'summary');
+    await page.getByTestId('setup-open-admin').click();
+    await page.waitForURL(/app\.plex\.tv/, { timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
-    // Wait for final success animation and redirect to home
-    await page.waitForURL('**/', { timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-    await waitForLoadingGone(page);
-
-    // Verify setup is complete in database
-    const setup = await prisma.setup.findFirst({
-      orderBy: { createdAt: 'desc' },
-    });
-
-    expect(setup).toBeTruthy();
+    const setup = await prisma.setup.findFirst({ orderBy: { createdAt: 'desc' } });
     expect(setup?.isComplete).toBe(true);
-    expect(setup?.completedAt).toBeTruthy();
-
-    // Verify all configurations were saved
-    const plexServer = await prisma.plexServer.findFirst();
-    expect(plexServer).toBeTruthy();
-    expect(plexServer?.name).toBe('Test Plex Server');
-
-    const tautulli = await prisma.tautulli.findFirst();
-    expect(tautulli).toBeTruthy();
-    expect(tautulli?.name).toBe('Test Tautulli');
-
-    const overseerr = await prisma.overseerr.findFirst();
-    expect(overseerr).toBeTruthy();
-    expect(overseerr?.name).toBe('Test Overseerr');
-
-    const sonarr = await prisma.sonarr.findFirst();
-    expect(sonarr).toBeTruthy();
-    expect(sonarr?.name).toBe('Test Sonarr');
-
-    const radarr = await prisma.radarr.findFirst();
-    expect(radarr).toBeTruthy();
-    expect(radarr?.name).toBe('Test Radarr');
-
-    const discordIntegration = await prisma.discordIntegration.findFirst();
-    expect(discordIntegration).toBeTruthy();
-    expect(discordIntegration?.isEnabled).toBe(true);
-    expect(discordIntegration?.clientId).toBe('discord-client-id');
-
-    const chatLLMProvider = await prisma.lLMProvider.findFirst({
-      where: { purpose: 'chat' },
-    });
-    expect(chatLLMProvider).toBeTruthy();
-    expect(chatLLMProvider?.provider).toBe('openai');
-    expect(chatLLMProvider?.purpose).toBe('chat');
-    expect(chatLLMProvider?.model).toBe('gpt-6-luna');
-
-    const wrappedLLMProvider = await prisma.lLMProvider.findFirst({
-      where: { purpose: 'wrapped' },
-    });
-    expect(wrappedLLMProvider).toBeTruthy();
-    expect(wrappedLLMProvider?.provider).toBe('openai');
-    expect(wrappedLLMProvider?.purpose).toBe('wrapped');
-    expect(wrappedLLMProvider?.model).toBe('gpt-6-luna');
-
-    const prometheus = await prisma.prometheus.findFirst();
-    expect(prometheus).toBeTruthy();
-    expect(prometheus?.name).toBe('Plex Server Status');
-    expect(prometheus?.query).toBe('up{job="plex"}');
+    expect(setup?.claimId).toBeNull();
+    expect((await prisma.plexServer.findFirst({ where: { isActive: true } }))?.name).toBe('Test Plex Server');
   });
 
-  test('should handle hidden form inputs gracefully', async ({ page }) => {
-    // This test verifies that the form input helper correctly identifies and skips hidden inputs
-    // without causing test timeouts or failures.
+  test('at 390px the first input sits inside the first viewport', async ({ page }) => {
+    await prisma.setup.deleteMany();
+    await prisma.setup.create({ data: { isComplete: false, currentStepId: 'tautulli' } });
+    await page.setViewportSize({ width: 390, height: 844 });
 
-    // Navigate to setup page
-    await navigateAndVerify(page, '/setup');
-    await waitForLoadingGone(page);
+    await claimSetup(page);
+    await page.goto('/setup?step=tautulli');
+    await atStep(page, 'tautulli');
+    await expect(page.getByTestId('setup-stepper-compact')).toContainText('Step 2 of 9, Tautulli');
 
-    // Navigate through to LLM provider step where the 'provider' field exists
-    // The 'provider' field is a dropdown with a hidden input for form submission
-    // We want to verify it doesn't cause issues with the test helper
-
-    // Quick navigation to step 7 (Chat Assistant AI)
-    // In a real scenario this would be populated, but for this test we just need to reach the step
-    await page.goto('/setup');
-    await waitForLoadingGone(page);
-
-    // Verify the hidden input exists and has correct data-testid
-    const providerHiddenInput = page.getByTestId('setup-input-provider-hidden');
-
-    // The hidden input should exist but not be visible
-    const exists = await providerHiddenInput.count();
-
-    if (exists > 0) {
-      // Hidden input should have display: none or visibility: hidden
-      const isVisuallyHidden = await providerHiddenInput.evaluate((el) => {
-        const style = window.getComputedStyle(el);
-        return (
-          (el instanceof HTMLInputElement && el.type === 'hidden') ||
-          style.display === 'none' ||
-          style.visibility === 'hidden'
-        );
-      }).catch(() => true); // If evaluation fails, assume it's hidden
-
-      expect(isVisuallyHidden).toBe(true);
-      console.log('[TEST] Verified provider hidden input is correctly hidden');
-    }
+    const box = await page.getByTestId('setup-tautulli-name').boundingBox();
+    expect(box).not.toBeNull();
+    expect((box?.y ?? Infinity) + (box?.height ?? 0)).toBeLessThanOrEqual(844);
   });
 });

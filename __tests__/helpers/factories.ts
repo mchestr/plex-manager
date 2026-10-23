@@ -220,7 +220,7 @@ export function buildSetup(overrides: Partial<Setup> = {}): Setup {
   return {
     id: 'setup-1',
     isComplete: false,
-    currentStep: 1,
+    currentStepId: 'plex',
     completedAt: null,
     claimCodeHash: null,
     claimCodeIssuedAt: null,
