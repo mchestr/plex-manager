@@ -15,7 +15,7 @@
 import { POST } from '@/app/api/stripe/webhook/route'
 import { getStripe } from '@/lib/stripe/client'
 import { prisma } from '@/lib/prisma'
-import { addJob, findJob } from '@/lib/queue/client'
+import { enqueueFromRequest } from '@/lib/queue/request-path'
 import { processStripeWebhook } from '@/lib/queue/jobs/stripe'
 import { JOB_TYPES } from '@/lib/queue/types'
 import { NextRequest } from 'next/server'
@@ -41,9 +41,16 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 
 beforeEach(() => mockReset(prismaMock))
 
-jest.mock('@/lib/queue/client', () => ({
-  addJob: jest.fn(),
-  findJob: jest.fn(),
+jest.mock('@/lib/queue/client', () => ({ addJob: jest.fn() }))
+
+// The route reaches the queue only through the request-path producer (P11.3)
+const mockGetJob = jest.fn()
+const mockQueueUp = { current: true }
+jest.mock('@/lib/queue/request-path', () => ({
+  enqueueFromRequest: jest.fn(),
+  withRequestPathQueue: jest.fn(async (_label: string, fn: (queue: unknown) => Promise<unknown>) =>
+    mockQueueUp.current ? { ok: true, value: await fn({ getJob: mockGetJob }) } : { ok: false, code: 'QUEUE_UNAVAILABLE' }
+  ),
 }))
 
 jest.mock('@/lib/security/audit-log', () => ({
@@ -100,8 +107,9 @@ describe('POST /api/stripe/webhook', () => {
       stripeWebhookSecret: 'whsec_test',
     })
     ;(prisma.stripeEvent.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(addJob as jest.Mock).mockResolvedValue('evt_1')
-    ;(findJob as jest.Mock).mockResolvedValue(undefined)
+    mockQueueUp.current = true
+    ;(enqueueFromRequest as jest.Mock).mockResolvedValue({ ok: true, jobId: 'evt_1' })
+    mockGetJob.mockResolvedValue(undefined)
   })
 
   it('enqueues a STRIPE_WEBHOOK job and returns 200 for a valid, unseen event', async () => {
@@ -112,11 +120,33 @@ describe('POST /api/stripe/webhook', () => {
 
     expect(response.status).toBe(200)
     expect(data.received).toBe(true)
-    expect(addJob).toHaveBeenCalledWith(
+    expect(enqueueFromRequest).toHaveBeenCalledWith(
       JOB_TYPES.STRIPE_WEBHOOK,
       { eventId: 'evt_1' },
       { jobId: 'evt_1' }
     )
+  })
+
+  it('answers 503 so Stripe retries while the queue is unavailable (P11.3)', async () => {
+    mockConstructEvent.mockReturnValue({ id: 'evt_1', type: 'checkout.session.completed' })
+    ;(enqueueFromRequest as jest.Mock).mockResolvedValue({ ok: false, code: 'QUEUE_UNAVAILABLE' })
+
+    expect((await POST(makeRequest('{"raw":true}'))).status).toBe(503)
+
+    mockQueueUp.current = false
+    ;(enqueueFromRequest as jest.Mock).mockClear()
+    expect((await POST(makeRequest('{"raw":true}'))).status).toBe(503)
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
+  })
+
+  it('still answers 400 for a bad signature while the queue is unavailable', async () => {
+    mockQueueUp.current = false
+    mockConstructEvent.mockImplementation(() => {
+      throw new Error('No signatures found matching the expected signature')
+    })
+
+    expect((await POST(makeRequest('{"raw":true}'))).status).toBe(400)
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
   })
 
   it('reads the raw text body (not parsed JSON) before verifying', async () => {
@@ -159,7 +189,7 @@ describe('POST /api/stripe/webhook', () => {
     expect(request.bodyUsed).toBe(false)
     await expect(response.json()).resolves.toEqual({ error: 'Payload too large' })
     expect(mockConstructEvent).not.toHaveBeenCalled()
-    expect(addJob).not.toHaveBeenCalled()
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
   })
 
   it('returns 413 when a body without Content-Length grows past 1 MiB', async () => {
@@ -167,7 +197,7 @@ describe('POST /api/stripe/webhook', () => {
 
     expect(response.status).toBe(413)
     expect(mockConstructEvent).not.toHaveBeenCalled()
-    expect(addJob).not.toHaveBeenCalled()
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
   })
 
   it('returns 400 and enqueues nothing when the signature fails verification', async () => {
@@ -180,7 +210,7 @@ describe('POST /api/stripe/webhook', () => {
 
     expect(response.status).toBe(400)
     expect(data.error).toBe('Invalid signature')
-    expect(addJob).not.toHaveBeenCalled()
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
     expect(prisma.stripeEvent.findUnique).not.toHaveBeenCalled()
   })
 
@@ -194,7 +224,7 @@ describe('POST /api/stripe/webhook', () => {
       )
       expect(response.status).toBe(200)
     }
-    expect(addJob).toHaveBeenCalledTimes(150)
+    expect(enqueueFromRequest).toHaveBeenCalledTimes(150)
   })
 
   it('returns 200 without re-enqueuing when the event was already processed', async () => {
@@ -206,7 +236,7 @@ describe('POST /api/stripe/webhook', () => {
 
     expect(response.status).toBe(200)
     expect(data.duplicate).toBe(true)
-    expect(addJob).not.toHaveBeenCalled()
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
   })
 
   it('returns 503 when Stripe is not configured', async () => {
@@ -215,7 +245,7 @@ describe('POST /api/stripe/webhook', () => {
     const response = await POST(makeRequest('{"raw":true}'))
 
     expect(response.status).toBe(503)
-    expect(addJob).not.toHaveBeenCalled()
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
   })
 
   it('returns 503 when no webhook secret is configured', async () => {
@@ -227,7 +257,7 @@ describe('POST /api/stripe/webhook', () => {
 
     expect(response.status).toBe(503)
     expect(mockConstructEvent).not.toHaveBeenCalled()
-    expect(addJob).not.toHaveBeenCalled()
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
   })
 })
 
@@ -259,7 +289,9 @@ describe('POST /api/stripe/webhook: resends of unprocessed events (SEC-40)', () 
     mockReset(prismaMock)
     ;(getStripe as jest.Mock).mockResolvedValue(createFakeStripe().client)
     prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeWebhookSecret: TEST_WEBHOOK_SECRET }))
-    ;(addJob as jest.Mock).mockResolvedValue('evt_resend')
+    mockQueueUp.current = true
+    mockGetJob.mockResolvedValue(undefined)
+    ;(enqueueFromRequest as jest.Mock).mockResolvedValue({ ok: true, jobId: 'evt_resend' })
   })
 
   it('rejects a fixture signed with another secret', async () => {
@@ -273,40 +305,40 @@ describe('POST /api/stripe/webhook: resends of unprocessed events (SEC-40)', () 
     const response = await POST(signedRequest(fixture))
 
     expect(response.status).toBe(200)
-    expect(addJob).toHaveBeenCalledWith(JOB_TYPES.STRIPE_WEBHOOK, { eventId: 'evt_resend' }, { jobId: 'evt_resend' })
+    expect(enqueueFromRequest).toHaveBeenCalledWith(JOB_TYPES.STRIPE_WEBHOOK, { eventId: 'evt_resend' }, { jobId: 'evt_resend' })
   })
 
   it('retries the failed job of an unprocessed event', async () => {
     prismaMock.stripeEvent.findUnique.mockResolvedValue(unprocessedRow)
     const job = fakeJob('failed')
-    ;(findJob as jest.Mock).mockResolvedValue(job)
+    ;mockGetJob.mockResolvedValue(job)
 
     const response = await POST(signedRequest(fixture))
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ received: true, retried: true })
     expect(job.retry).toHaveBeenCalledTimes(1)
-    expect(addJob).not.toHaveBeenCalled()
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
   })
 
   it.each(['waiting', 'active', 'delayed'])('leaves a %s job alone', async (state) => {
     const job = fakeJob(state)
-    ;(findJob as jest.Mock).mockResolvedValue(job)
+    ;mockGetJob.mockResolvedValue(job)
 
     const response = await POST(signedRequest(fixture))
 
     expect(response.status).toBe(200)
     expect(job.retry).not.toHaveBeenCalled()
-    expect(addJob).not.toHaveBeenCalled()
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
   })
 
   it('enqueues again under the same id when the job record has expired', async () => {
     prismaMock.stripeEvent.findUnique.mockResolvedValue(unprocessedRow)
-    ;(findJob as jest.Mock).mockResolvedValue(undefined)
+    ;mockGetJob.mockResolvedValue(undefined)
 
     await POST(signedRequest(fixture))
 
-    expect(addJob).toHaveBeenCalledWith(JOB_TYPES.STRIPE_WEBHOOK, { eventId: 'evt_resend' }, { jobId: 'evt_resend' })
+    expect(enqueueFromRequest).toHaveBeenCalledWith(JOB_TYPES.STRIPE_WEBHOOK, { eventId: 'evt_resend' }, { jobId: 'evt_resend' })
   })
 
   it('a failed handler leaves the event unprocessed, and the resend retries its job', async () => {
@@ -323,7 +355,7 @@ describe('POST /api/stripe/webhook: resends of unprocessed events (SEC-40)', () 
     expect(store.events.get('evt_resend')).toMatchObject({ processedAt: null, lastError: 'HANDLER_FAILED' })
 
     const failedJob = fakeJob('failed')
-    ;(findJob as jest.Mock).mockResolvedValue(failedJob)
+    ;mockGetJob.mockResolvedValue(failedJob)
     const response = await POST(signedRequest(fixture))
 
     expect(response.status).toBe(200)

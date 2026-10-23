@@ -80,9 +80,7 @@ function createLockStore() {
     },
   }
 
-  // No legacy rows: the overlap check always passes here.
-  const noLegacyRow = { findUnique: async () => null }
-  const tx = { leaseLock, discordBotLock: noLegacyRow, watchlistSyncLock: noLegacyRow }
+  const tx = { leaseLock }
   return {
     ...tx,
     // One transaction at a time, as Serializable isolation gives two real pods.

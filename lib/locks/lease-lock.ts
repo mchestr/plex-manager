@@ -4,14 +4,9 @@
  * The Discord bot, the watchlist sync fallback and the retention fallback each run in one process only:
  * whichever process holds the lease for their name. A {@link LeaseLock} keeps
  * the "am I the holder?" flag; a {@link LeaseStore} keeps the lease itself.
- * {@link PrismaLeaseStore} keeps one `LeaseLock` row per name.
- *
- * ## Special cases
- *
- * For one release, {@link PrismaLeaseStore} also refuses a name while the
- * legacy `DiscordBotLock` or `WatchlistSyncLock` row for it is live and owned
- * by another instance, so an old and a new container overlapping in a deploy
- * never both run the bot. P11.3 removes that check and drops both tables.
+ * {@link PrismaLeaseStore} keeps one `LeaseLock` row per name, and
+ * `RedisLeaseStore` (`lib/locks/redis-lease-store.ts`) one Redis key per name,
+ * for the short per-member locks: a Rewind generation and an access change.
  *
  * @module
  */
@@ -19,13 +14,20 @@
 import { randomBytes } from "crypto"
 
 import type { PrismaClient } from "@/lib/generated/prisma/client"
-import { prisma as defaultPrisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("LEASE_LOCK")
 
-/** The background roles that run under a lease. */
-export type LeaseName = "discord-bot" | "watchlist-sync" | "retention"
+/**
+ * The leases: the background roles on the database store, and the per-member
+ * locks on the Redis store (a Rewind generation; a grant or revoke of access).
+ */
+export type LeaseName =
+  | "discord-bot"
+  | "watchlist-sync"
+  | "retention"
+  | `rw:lock:gen:${number}:${string}`
+  | `access:${string}`
 
 /** How long an acquired or renewed lease stays valid (30 seconds). @internal */
 export const DEFAULT_LEASE_DURATION_MS = 30 * 1000
@@ -44,36 +46,25 @@ export interface LeaseStore {
   acquire(claim: LeaseClaim): Promise<boolean>
   /** Extends the lease only while it is ours and live. */
   renew(claim: LeaseClaim): Promise<boolean>
-  /** Gives the lease up if it is ours. */
-  release(name: LeaseName, instanceId: string): Promise<void>
+  /** Gives the lease up if it is ours; true when it was. */
+  release(name: LeaseName, instanceId: string): Promise<boolean>
 }
 
-type LeasePrisma = Pick<PrismaClient, "$transaction" | "leaseLock" | "discordBotLock" | "watchlistSyncLock">
-type LeaseTx = Pick<PrismaClient, "leaseLock" | "discordBotLock" | "watchlistSyncLock">
-
-/**
- * The live legacy row for `name` owned by someone else, if any. Removed with
- * the legacy tables in P11.3.
- */
-async function legacyHolder(tx: LeaseTx, name: LeaseName, instanceId: string, now: Date): Promise<boolean> {
-  // The retention sweep (P11.14) never had a legacy row
-  if (name === "retention") return false
-  const where = { id: name }
-  const row =
-    name === "discord-bot"
-      ? await tx.discordBotLock.findUnique({ where })
-      : await tx.watchlistSyncLock.findUnique({ where })
-  return row !== null && row.expiresAt > now && row.instanceId !== instanceId
-}
+type LeasePrisma = Pick<PrismaClient, "$transaction" | "leaseLock">
 
 /** {@link LeaseStore} on the `LeaseLock` table, one row per name. @internal */
 export class PrismaLeaseStore implements LeaseStore {
-  constructor(private readonly prisma: LeasePrisma = defaultPrisma as unknown as LeasePrisma) {}
+  constructor(private readonly injected?: LeasePrisma) {}
+
+  /** The injected client, else the app's, loaded on first use so the Redis-only locks never load Prisma. */
+  private async db(): Promise<LeasePrisma> {
+    if (this.injected) return this.injected
+    const { prisma } = await import("@/lib/prisma")
+    return prisma as unknown as LeasePrisma
+  }
 
   async acquire({ name, instanceId, now, expiresAt }: LeaseClaim): Promise<boolean> {
-    const row = await this.prisma.$transaction(async (tx) => {
-      if (await legacyHolder(tx, name, instanceId, now)) return null
-
+    const row = await (await this.db()).$transaction(async (tx) => {
       await tx.leaseLock.deleteMany({ where: { name, expiresAt: { lt: now } } })
       const existing = await tx.leaseLock.findUnique({ where: { name } })
       if (!existing) {
@@ -92,15 +83,16 @@ export class PrismaLeaseStore implements LeaseStore {
   }
 
   async renew({ name, instanceId, now, expiresAt }: LeaseClaim): Promise<boolean> {
-    const result = await this.prisma.leaseLock.updateMany({
+    const result = await (await this.db()).leaseLock.updateMany({
       where: { name, instanceId, expiresAt: { gt: now } },
       data: { expiresAt, lastRenewedAt: now },
     })
     return result.count > 0
   }
 
-  async release(name: LeaseName, instanceId: string): Promise<void> {
-    await this.prisma.leaseLock.deleteMany({ where: { name, instanceId } })
+  async release(name: LeaseName, instanceId: string): Promise<boolean> {
+    const result = await (await this.db()).leaseLock.deleteMany({ where: { name, instanceId } })
+    return result.count > 0
   }
 }
 
@@ -161,16 +153,25 @@ export class LeaseLock {
     }
   }
 
-  /** Takes the lease. A held lease returns true without a store call. */
+  /** Takes the lease. A held lease returns true without a store call; a store error counts as not taken. */
   async acquire(): Promise<boolean> {
-    if (this.held) return true
     try {
-      this.held = await this.store.acquire(this.claim())
-      logger.debug(this.held ? "Lease acquired" : "Lease not available", { name: this.name })
+      return await this.acquireOrThrow()
     } catch (error) {
       logger.debug("Error acquiring lease", { name: this.name, error })
       this.held = false
+      return false
     }
+  }
+
+  /**
+   * {@link acquire}, but a store error propagates, for a caller that must
+   * tell "held elsewhere" from "the store is down".
+   */
+  async acquireOrThrow(): Promise<boolean> {
+    if (this.held) return true
+    this.held = await this.store.acquire(this.claim())
+    logger.debug(this.held ? "Lease acquired" : "Lease not available", { name: this.name })
     return this.held
   }
 
@@ -187,14 +188,19 @@ export class LeaseLock {
     return this.held
   }
 
-  /** Gives the lease up. Held state clears even when the store call fails. */
-  async release(): Promise<void> {
-    if (!this.held) return
+  /**
+   * Gives the lease up; true when the store still had it as ours. Held state
+   * clears even when the store call fails.
+   */
+  async release(): Promise<boolean> {
+    if (!this.held) return false
     try {
-      await this.store.release(this.name, this.instanceId)
-      logger.debug("Lease released", { name: this.name })
+      const released = await this.store.release(this.name, this.instanceId)
+      logger.debug("Lease released", { name: this.name, released })
+      return released
     } catch (error) {
       logger.debug("Error releasing lease", { name: this.name, error })
+      return false
     } finally {
       this.held = false
     }

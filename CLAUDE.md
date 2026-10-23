@@ -729,7 +729,8 @@ if (!stripe) return { error: 'Stripe is not configured' }
 - `actions/admin/subscriptions.ts` — admin cancel/grant/toggle-exempt.
 - `app/api/stripe/webhook/route.ts` — **the only** Stripe API route: verifies the
   signature, dedupes on a processed `StripeEvent(event.id)`, enqueues a BullMQ
-  job (or retries its failed one), returns 200 (400 on bad signature, never 5xx).
+  job (or retries its failed one), returns 200 (400 on bad signature, never 5xx
+  for a bad signature; 503 while the queue is unavailable, so Stripe retries).
 - `lib/queue/jobs/stripe.ts` — BullMQ processors (`STRIPE_WEBHOOK`,
   `PLEX_ACCESS_GRANT`, `PLEX_ACCESS_REVOKE`; the access jobs keep their legacy
   names and act on Plex, Jellyfin or both through `grantServiceAccess` /

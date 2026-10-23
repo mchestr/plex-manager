@@ -5,8 +5,9 @@ import { z } from "zod"
 
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
-import { addJob, addWatchlistSyncUserJob, pauseQueue, removeJob, resumeQueue, retryJob } from "@/lib/queue/client"
+import { pauseQueue, removeJob, resumeQueue, retryJob } from "@/lib/queue/client"
 import { isRedisConfigured } from "@/lib/queue/connection"
+import { enqueueFromRequest } from "@/lib/queue/request-path"
 import { JOB_TYPES } from "@/lib/queue/types"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
@@ -25,6 +26,7 @@ const QUEUES_PATH = "/admin/queues"
 const QUEUE_LIMIT = { name: "admin:queue" } as const
 
 const NO_REDIS = fail("UPSTREAM_UNAVAILABLE", "Redis is not configured")
+const QUEUE_UNAVAILABLE = fail("UPSTREAM_UNAVAILABLE", "The job queue is unavailable. Try again in a few minutes.")
 
 const jobIdInput = z.object({ jobId: z.string().min(1, "Invalid job ID").max(200, "Invalid job ID") })
 
@@ -109,17 +111,18 @@ export const triggerWatchlistSyncJob = adminAction({
   handler: async ({ userId }, { userId: adminId }) => {
     if (!isRedisConfigured()) return NO_REDIS
 
-    let jobId: string
-    if (userId) {
-      // The job skips a member who has not opted in (NOT_OPTED_IN), and joins
-      // one already waiting or running for them.
-      jobId = await addWatchlistSyncUserJob({ userId, triggeredBy: "admin", triggeredByUserId: adminId })
+    // The job skips a member who has not opted in (NOT_OPTED_IN). Either job
+    // joins one already waiting or running (watchlist:user:<id>, watchlist:all).
+    const queued = userId
+      ? await enqueueFromRequest(JOB_TYPES.WATCHLIST_SYNC_USER, { userId, triggeredBy: "admin", triggeredByUserId: adminId })
+      : await enqueueFromRequest(JOB_TYPES.WATCHLIST_SYNC_ALL, { triggeredBy: "admin" })
+    if (!queued.ok) return QUEUE_UNAVAILABLE
+    const { jobId } = queued
 
+    if (userId) {
       logAuditEvent(AuditEventType.QUEUE_SYNC_TRIGGERED, adminId, { targetUserId: userId, syncType: "user", jobId })
       logger.info("User watchlist sync job triggered by admin", { userId, jobId, adminId })
     } else {
-      jobId = await addJob(JOB_TYPES.WATCHLIST_SYNC_ALL, { triggeredBy: "admin" })
-
       logAuditEvent(AuditEventType.QUEUE_SYNC_TRIGGERED, adminId, { syncType: "all", jobId })
       logger.info("Batch watchlist sync job triggered by admin", { jobId, adminId })
     }

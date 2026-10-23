@@ -21,7 +21,7 @@
 import { Worker, type Job } from "bullmq"
 
 import { onShutdown } from "@/lib/instrumentation/shutdown"
-import { recordJobFailure } from "@/lib/observability/job-failures"
+import { onJobFailed } from "@/lib/observability/job-failures"
 import { jobRequestId, runJobInContext } from "@/lib/queue/job-meta"
 import { closeWorker, getRedisConnection } from "@/lib/queue/connection"
 import type { JobProcessor } from "@/lib/queue/jobs"
@@ -91,7 +91,7 @@ function createRewindWorker(name: RewindQueueName): Worker {
     }
   )
   worker.on("failed", (job, error) => {
-    recordJobFailure(getRedisConnection(), name, job?.name)
+    onJobFailed(getRedisConnection(), name, job, error)
     logger.error("Rewind job failed", error, {
       queue: name,
       jobId: job?.id,

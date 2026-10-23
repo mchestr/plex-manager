@@ -16,11 +16,11 @@ import type { Job } from 'bullmq'
 
 import {
   processStripeWebhook,
-  processAccessGrant,
   getStripeProcessor,
 } from '@/lib/queue/jobs/stripe'
 import { getStripe } from '@/lib/stripe/client'
 import { addJob } from '@/lib/queue/client'
+import { withAccessLock } from '@/lib/locks/access-lock'
 import { logAuditEvent } from '@/lib/security/audit-log'
 import { SubscriptionStatus } from '@/lib/generated/prisma/client'
 import { JOB_TYPES } from '@/lib/queue/types'
@@ -45,6 +45,25 @@ jest.mock('@/lib/stripe/client', () => ({
 
 jest.mock('@/lib/queue/client', () => ({
   addJob: jest.fn(),
+}))
+
+// Request paths enqueue through the fail-fast producer (P11.3); it answers
+// QUEUE_UNAVAILABLE where addJob would throw, and records through the addJob mock.
+jest.mock('@/lib/queue/request-path', () => ({
+  enqueueFromRequest: jest.fn(async (...args: unknown[]) => {
+    const { addJob } = jest.requireMock('@/lib/queue/client') as { addJob: (...a: unknown[]) => Promise<string> }
+    try {
+      return { ok: true, jobId: await addJob(...args) }
+    } catch {
+      return { ok: false, code: 'QUEUE_UNAVAILABLE' }
+    }
+  }),
+}))
+
+jest.mock('@/lib/locks/access-lock', () => ({ withAccessLock: jest.fn() }))
+jest.mock('@/lib/queue/connection', () => ({
+  getRedisConnection: () => 'redis',
+  isRedisConfigured: () => Boolean(process.env.REDIS_URL),
 }))
 
 jest.mock('@/lib/security/audit-log', () => ({
@@ -395,10 +414,13 @@ describe('getStripeProcessor', () => {
     expect(getStripeProcessor(JOB_TYPES.STRIPE_WEBHOOK)).toBe(processStripeWebhook)
   })
 
-  it('returns the processor for PLEX_ACCESS_GRANT', () => {
-    expect(getStripeProcessor(JOB_TYPES.PLEX_ACCESS_GRANT)).toBe(
-      processAccessGrant
-    )
+  it('runs PLEX_ACCESS_GRANT under the member\'s access lock (P11.3)', async () => {
+    const processor = getStripeProcessor(JOB_TYPES.PLEX_ACCESS_GRANT)
+    jest.mocked(withAccessLock).mockResolvedValueOnce({ userId: 'user-1', granted: true })
+
+    await expect(processor?.({ id: 'job-1', data: { userId: 'user-1' } } as Job)).resolves.toEqual({ userId: 'user-1', granted: true })
+
+    expect(withAccessLock).toHaveBeenCalledWith('user-1', 'job-1', expect.any(Function), { redis: 'redis' })
   })
 
   it('returns null for non-Stripe job types', () => {

@@ -15,7 +15,7 @@ import { getServerSession } from "next-auth"
 import { asTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { getRewindRollbackTarget, rollbackRewind } from "@/actions/admin/rewind-season"
 import type { RewindGeneration } from "@/lib/generated/prisma/client"
-import { acquireGenerationLock } from "@/lib/queue/redis-lock"
+import { acquireGenerationLock } from "@/lib/locks/generation-lock"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { hasActiveGeneration } from "@/lib/rewind/generation-guards"
 import { AuditEventType } from "@/lib/security/audit-log"
@@ -27,7 +27,7 @@ jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prism
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/queue/rewind-infra", () => ({ checkRewindInfra: jest.fn() }))
 jest.mock("@/lib/queue/connection", () => ({ getRedisConnection: jest.fn(() => ({})) }))
-jest.mock("@/lib/queue/redis-lock", () => ({ acquireGenerationLock: jest.fn() }))
+jest.mock("@/lib/locks/generation-lock", () => ({ acquireGenerationLock: jest.fn() }))
 jest.mock("@/lib/rewind/generation-guards", () => ({ hasActiveGeneration: jest.fn() }))
 // The season-run producers reach BullMQ, which this suite never needs.
 jest.mock("@/lib/rewind/season-runs", () => ({}))

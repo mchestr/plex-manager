@@ -531,20 +531,6 @@ model LeaseLock {
   @@index([expiresAt])
 }
 
-// Legacy Discord bot lock: read only by LeaseLock's one-release overlap check.
-// P11.3 drops it.
-model DiscordBotLock {
-  id            String   @id @default("discord-bot")
-  instanceId    String // Unique identifier for this pod/instance
-  acquiredAt    DateTime @default(now())
-  expiresAt     DateTime // Lock expires if not renewed (handles crashed pods)
-  lastRenewedAt DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([expiresAt])
-}
-
 model DiscordConnection {
   id               String    @id @default(cuid())
   userId           String    @unique
@@ -852,20 +838,6 @@ model WatchlistSyncHistory {
   @@unique([userId, plexRatingKey])
   @@index([userId, syncedAt])
   @@index([status])
-}
-
-// Legacy watchlist sync lock: read only by LeaseLock's one-release overlap
-// check. P11.3 drops it.
-model WatchlistSyncLock {
-  id            String   @id @default("watchlist-sync")
-  instanceId    String // Unique identifier for this pod/instance
-  acquiredAt    DateTime @default(now())
-  expiresAt     DateTime // Lock expires if not renewed (handles crashed pods)
-  lastRenewedAt DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([expiresAt])
 }
 
 enum WatchlistSyncStatus {

@@ -51,7 +51,7 @@ describe('GET /api/health', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
-    expect(await response.json()).toEqual({ status: 'ok', checks: { database: 'ok', redis: 'ok' } })
+    expect(await response.json()).toEqual({ status: 'ok', role: 'all', checks: { database: 'ok', redis: 'ok' } })
     expect(prismaMock.config.findUnique).toHaveBeenCalledWith({ where: { id: 'config' }, select: { id: true } })
     expect(mockPing).toHaveBeenCalledTimes(1)
   })
@@ -70,7 +70,7 @@ describe('GET /api/health', () => {
 
     expect(response.status).toBe(503)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
-    expect(JSON.parse(text)).toEqual({ status: 'fail', checks: { database: 'fail', redis: 'ok' } })
+    expect(JSON.parse(text)).toEqual({ status: 'fail', role: 'all', checks: { database: 'fail', redis: 'ok' } })
     expect(text).not.toMatch(/ECONNREFUSED|example|hunter2/)
   })
 
@@ -81,7 +81,7 @@ describe('GET /api/health', () => {
     const text = await body(response)
 
     expect(response.status).toBe(503)
-    expect(JSON.parse(text)).toEqual({ status: 'fail', checks: { database: 'ok', redis: 'fail' } })
+    expect(JSON.parse(text)).toEqual({ status: 'fail', role: 'all', checks: { database: 'ok', redis: 'fail' } })
     expect(text).not.toMatch(/ECONNREFUSED|example|hunter2/)
   })
 
@@ -91,7 +91,7 @@ describe('GET /api/health', () => {
     const response = await GET(healthRequest())
 
     expect(response.status).toBe(503)
-    expect(await response.json()).toEqual({ status: 'fail', checks: { database: 'ok', redis: 'fail' } })
+    expect(await response.json()).toEqual({ status: 'fail', role: 'all', checks: { database: 'ok', redis: 'fail' } })
     expect(mockPing).not.toHaveBeenCalled()
   })
 
@@ -101,8 +101,19 @@ describe('GET /api/health', () => {
     const response = await GET(healthRequest())
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ status: 'ok', checks: { database: 'ok', redis: 'not_configured' } })
+    expect(await response.json()).toEqual({ status: 'ok', role: 'all', checks: { database: 'ok', redis: 'not_configured' } })
     expect(getRequestPathRedis).not.toHaveBeenCalled()
+  })
+
+  it('names the container role (P11.3)', async () => {
+    process.env.PROCESS_ROLE = 'worker'
+    try {
+      const response = await GET(healthRequest('?probe=live'))
+
+      expect(await response.json()).toEqual({ status: 'ok', role: 'worker' })
+    } finally {
+      delete process.env.PROCESS_ROLE
+    }
   })
 
   it('answers the liveness probe with 200 while the database and Redis are both down', async () => {
@@ -113,7 +124,7 @@ describe('GET /api/health', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
-    expect(await response.json()).toEqual({ status: 'ok' })
+    expect(await response.json()).toEqual({ status: 'ok', role: 'all' })
     expect(prismaMock.config.findUnique).not.toHaveBeenCalled()
     expect(getRequestPathRedis).not.toHaveBeenCalled()
   })
@@ -139,7 +150,7 @@ describe('GET /api/health', () => {
       const response = await pending
 
       expect(response.status).toBe(503)
-      expect(await response.json()).toEqual({ status: 'fail', checks: { database: 'fail', redis: 'fail' } })
+      expect(await response.json()).toEqual({ status: 'fail', role: 'all', checks: { database: 'fail', redis: 'fail' } })
     })
   })
 })

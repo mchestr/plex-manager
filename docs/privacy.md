@@ -153,8 +153,6 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `LLMProvider` | provider, model and API key | `apiKey` |
 | `Config` | app settings, Stripe keys, Rewind settings | `stripeSecretKey`, `stripeWebhookSecret`, `rewindSerialKey` |
 | `DiscordIntegration` | Discord app credentials and bot settings; `updatedBy` admin id | `clientSecret`, `botToken` |
-| `DiscordBotLock` | which instance runs the bot | No |
-| `WatchlistSyncLock` | which instance runs the sync | No |
 | `LeaseLock` | which instance holds each lease (Discord bot, watchlist sync, retention) and until when | No |
 | `RewindServerAggregate` | server-wide yearly totals, no per-member rows | No |
 | `MediaMetadataCache` | Plex metadata per title | No |

@@ -36,6 +36,19 @@ jest.mock('@/lib/queue/client', () => ({
   addJob: jest.fn(),
 }))
 
+// Request paths enqueue through the fail-fast producer (P11.3); it answers
+// QUEUE_UNAVAILABLE where addJob would throw, and records through the addJob mock.
+jest.mock('@/lib/queue/request-path', () => ({
+  enqueueFromRequest: jest.fn(async (...args: unknown[]) => {
+    const { addJob } = jest.requireMock('@/lib/queue/client') as { addJob: (...a: unknown[]) => Promise<string> }
+    try {
+      return { ok: true, jobId: await addJob(...args) }
+    } catch {
+      return { ok: false, code: 'QUEUE_UNAVAILABLE' }
+    }
+  }),
+}))
+
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }))

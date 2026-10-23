@@ -150,7 +150,10 @@ export const envSchema = z.object({
     group: "Database",
     default: "false",
   }),
-  PROCESS_ROLE: text("web, worker or all: picks the database pool defaults below.", { group: "Database", default: "all" }),
+  PROCESS_ROLE: text("web, worker or all: what this container runs, and the database pool defaults below. web serves pages only; worker runs the queues, schedulers and Discord bot and serves only /api/health and /api/metrics; all does both in one container (docs/examples/docker-compose.workers.yml). The boot check refuses any other value.", {
+    group: "Database",
+    default: "all",
+  }),
   DB_POOL_MAX: text("Database pool size. The Prisma 7 pg adapter ignores ?connection_limit= in DATABASE_URL.", {
     group: "Database",
     default: "10 web, 5 worker, 12 all",
@@ -279,7 +282,7 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
 /** @internal */
 export interface EnvIssue {
   variable: string
-  code: "missing" | "too_short" | "low_entropy" | "known_placeholder" | "not_https" | "origin_mismatch" | "schema_invalid" | "weak"
+  code: "missing" | "too_short" | "low_entropy" | "known_placeholder" | "not_https" | "origin_mismatch" | "schema_invalid" | "weak" | "invalid"
   severity: "error" | "warning"
   hint: string
 }
@@ -372,6 +375,10 @@ export function checkProductionEnv(env: Env): EnvIssue[] {
   issues.push(...checkEncryptionKeys(env))
   if (env.SETUP_TOKEN !== undefined && env.SETUP_TOKEN.length < SETUP_TOKEN_MIN_LENGTH) {
     issues.push({ variable: "SETUP_TOKEN", code: "too_short", severity: "error", hint: "shorter than 16 characters; generate one with openssl rand -hex 16" })
+  }
+  // An unknown role would fall back to `all` and run the queues where only pages were meant (P11.3)
+  if (env.PROCESS_ROLE !== undefined && !["web", "worker", "all"].includes(env.PROCESS_ROLE)) {
+    issues.push({ variable: "PROCESS_ROLE", code: "invalid", severity: "error", hint: "must be web, worker or all" })
   }
   if (!env.PLEX_CLIENT_IDENTIFIER?.trim()) {
     issues.push({ variable: "PLEX_CLIENT_IDENTIFIER", code: "missing", severity: "error", hint: "not set; generate one with openssl rand -hex 16" })

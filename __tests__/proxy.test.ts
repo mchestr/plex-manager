@@ -145,6 +145,34 @@ describe('proxy request log (P4.16)', () => {
   })
 })
 
+describe('proxy in the worker role (P11.3)', () => {
+  afterEach(() => {
+    delete process.env.PROCESS_ROLE
+  })
+
+  it.each(['/', '/admin', '/rewind/2026', '/api/stripe/webhook'])('answers 404 for %s', async (path) => {
+    process.env.PROCESS_ROLE = 'worker'
+
+    const response = await proxy(request(path))
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get('x-middleware-next')).toBeNull()
+    expect(response.headers.get('X-Request-ID')).toBeTruthy()
+  })
+
+  it.each(['/api/health', '/api/metrics'])('passes %s through', async (path) => {
+    process.env.PROCESS_ROLE = 'worker'
+
+    expectPassedThrough(await proxy(request(path)))
+  })
+
+  it.each(['web', 'all'])('serves pages in the %s role', async (role) => {
+    process.env.PROCESS_ROLE = role
+
+    expectPassedThrough(await proxy(request('/admin')))
+  })
+})
+
 describe('proxy x-pm-pathname header (P4.5)', () => {
   it.each(['/', '/rewind/2026', `/rewind/s/${TOKEN}`, '/admin/users'])(
     'forwards the pathname of %s to the page',

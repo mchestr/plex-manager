@@ -174,12 +174,14 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Start the workers example with two web replicas. Only the worker logs the queue and the bot starting, and `curl http://worker:3000/` returns 404. A manual sync clicked twice yields one job. Stop Redis and click it again: the toast says the queue is unavailable within two seconds.
 
 **Done when.**
-- [ ] `PROCESS_ROLE=web|worker|all` controls what each container starts, and a worker serves only health and metrics.
-- [ ] One `LeaseLock` with Prisma and Redis stores remains, and the legacy lock tables are dropped.
-- [ ] Every job type has a deduplication or deterministic id.
-- [ ] Request-path enqueues fail fast with `QUEUE_UNAVAILABLE`, and the webhook answers 503 so Stripe retries.
-- [ ] The compose example is committed and tested.
+- [x] `PROCESS_ROLE=web|worker|all` controls what each container starts, and a worker serves only health and metrics.
+- [x] One `LeaseLock` with Prisma and Redis stores remains, and the legacy lock tables are dropped.
+- [x] Every job type has a deduplication or deterministic id.
+- [x] Request-path enqueues fail fast with `QUEUE_UNAVAILABLE`, and the webhook answers 503 so Stripe retries.
+- [x] The compose example is committed and tested.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270118000003_p113_drop_legacy_lock_tables`. Roles: `startNodeInstrumentation()` reads `processRole()` (`lib/db/pool-config.ts`); `web` starts only `issueSetupCode()`; `worker` and `all` also start `startQueueWorker()` (the Workers, the watchlist, role-reconcile and retention schedulers, the Rewind schedulers inside `startRewindWorkers()`, and without Redis the two lease fallbacks) and the Discord poller, so P11.14's retention scheduler moved to the worker by role gating, not by moving code. `proxy.ts` answers a bare 404 in the worker role except `/api/health` and `/api/metrics`; both `/api/health` bodies carry `role`; `checkProductionEnv` refuses an unknown `PROCESS_ROLE` (code `invalid`). Locks: `LeaseName` adds `` `rw:lock:gen:${number}:${string}` `` and `` `access:${string}` ``; `LeaseStore.release` and `LeaseLock.release` return whether the lease was still ours; `LeaseLock.acquireOrThrow()` lets a store error propagate; `PrismaLeaseStore` loads Prisma lazily. `RedisLeaseStore` is `lib/locks/redis-lease-store.ts` (key = lease name, P2.5's scripts and re-entrancy); `acquireGenerationLock` moved with the same API to `lib/locks/generation-lock.ts`; `withAccessLock(userId, owner, fn, { redis })` in `lib/locks/access-lock.ts` waits up to 30 s, then throws so BullMQ retries, and `getStripeProcessor` wraps grant and revoke in it. Job ids: `JOB_ID_POLICY` (`lib/queue/types.ts`) gives each type `deduplication`, `jobId` or `fromCaller`, applied by `jobIdOptions()` (`lib/queue/job-id.ts`) in `addJob` and `enqueueFromRequest`; a `fromCaller` type without an id throws. `addWatchlistSyncUserJob` and `findJob` are deleted. BullMQ 6 job schedulers cannot carry a deduplication id, so scheduled `WATCHLIST_SYNC_ALL` ticks keep their `repeat:` ids and only the admin Sync all dedupes on `watchlist:all`; the console's Generate all keeps BullMQ's own id by P7.8's design. P11.4's counter already counted every attempt; `onJobFailed()` (`lib/observability/job-failures.ts`) adds `queue.job_exhausted` on the last attempt (or an `UnrecoverableError`) for every Worker. Request path: `lib/queue/request-path.ts` exports `enqueueFromRequest()` and `withRequestPathQueue()` on the fail-fast client; the callers are the member and admin syncs, the comp grant, `enqueueRoleSync` and the Stripe webhook (its job lookup too). The Rewind producers were already on that client. The image smoke job starts a `web` and a `worker` container. E2E specs were not run.)
 
 ### Step P11.4: Observability
 

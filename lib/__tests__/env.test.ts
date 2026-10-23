@@ -77,6 +77,11 @@ describe("checkProductionEnv", () => {
     ).toEqual(["warning NEXTAUTH_URL not_https", "warning NEXT_PUBLIC_APP_URL not_https"])
   })
 
+  it("accepts the three process roles and rejects any other (P11.3)", () => {
+    for (const role of ["web", "worker", "all"]) expect(codes({ PROCESS_ROLE: role })).toEqual([])
+    expect(codes({ PROCESS_ROLE: "scheduler" })).toEqual(["error PROCESS_ROLE invalid"])
+  })
+
   it("reports a missing PLEX_CLIENT_IDENTIFIER", () => {
     expect(codes({ PLEX_CLIENT_IDENTIFIER: "" })).toEqual(["error PLEX_CLIENT_IDENTIFIER missing"])
     expect(codes({ PLEX_CLIENT_IDENTIFIER: "  " })).toEqual(["error PLEX_CLIENT_IDENTIFIER missing"])

@@ -12,11 +12,7 @@ import {
   getRegisteredJobTypes,
   isRegisteredJobType,
 } from '@/lib/queue/jobs'
-import {
-  processStripeWebhook,
-  processAccessGrant,
-  processAccessRevoke,
-} from '@/lib/queue/jobs/stripe'
+import { processStripeWebhook } from '@/lib/queue/jobs/stripe'
 import { JOB_TYPES } from '@/lib/queue/types'
 
 // The Stripe processor module imports the queue client (for enqueuing grants);
@@ -65,19 +61,16 @@ describe('getJobProcessor dispatch', () => {
     expect(getJobProcessor(JOB_TYPES.STRIPE_WEBHOOK)).toBe(processStripeWebhook)
   })
 
-  it('resolves the grant processor for PLEX_ACCESS_GRANT', () => {
-    expect(getJobProcessor(JOB_TYPES.PLEX_ACCESS_GRANT)).toBe(
-      processAccessGrant
-    )
+  // The access jobs run wrapped in the member's access lock (P11.3)
+  it('resolves a processor for PLEX_ACCESS_GRANT', () => {
+    expect(getJobProcessor(JOB_TYPES.PLEX_ACCESS_GRANT)).toEqual(expect.any(Function))
   })
 
   it('returns null for unknown job types', () => {
     expect(getJobProcessor('unknown:type')).toBeNull()
   })
 
-  it('resolves the revoke processor for PLEX_ACCESS_REVOKE', () => {
-    expect(getJobProcessor(JOB_TYPES.PLEX_ACCESS_REVOKE)).toBe(
-      processAccessRevoke
-    )
+  it('resolves a processor for PLEX_ACCESS_REVOKE', () => {
+    expect(getJobProcessor(JOB_TYPES.PLEX_ACCESS_REVOKE)).toEqual(expect.any(Function))
   })
 })
