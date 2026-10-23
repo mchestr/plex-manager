@@ -2,7 +2,8 @@
  * The daily retention sweep (P11.14, GAP-35): `RETENTION_SWEEP`, on the main
  * queue at 03:30 in the server zone, or under the `retention` lease without
  * Redis (`lib/retention/fallback.ts`). The admin Privacy section's "Run now"
- * calls {@link runRetentionSweep} directly.
+ * queues the same job, or without Redis calls {@link runRetentionSweep} under
+ * a time budget (`actions/admin/retention.ts`).
  *
  * | Rule | Rows | Outcome |
  * |---|---|---|
@@ -10,7 +11,7 @@
  * | `assistantLlmText` | `LLMUsage` in a conversation | text nulled |
  * | `chatConversations` | `ChatConversation` by `endedAt` | deleted (usage keeps cost, sessions cascade) |
  * | `discordChatMessages` | `DiscordChatSession` by `lastMessageAt` | `messages` emptied |
- * | `discordChatSessions` | `DiscordChatSession` by `lastMessageAt` | conversation ended, row deleted |
+ * | `discordChatSessions` | `DiscordChatSession` by `lastMessageAt` | row deleted, then its conversation ended once no session is left |
  * | `discordCommandArgs` / `discordCommandLog` | `DiscordCommandLog` by `createdAt` | args nulled / deleted |
  * | `shareVisitDays` | `RewindShareVisitDay` by `day` | deleted |
  * | `rewindViews` | `RewindView` by `createdAt` | deleted |
@@ -123,23 +124,31 @@ function deleteWhere(ctx: Ctx, model: Deletable, where: object) {
   )
 }
 
+/**
+ * Deletes idle sessions, then ends the batch's conversations left with no
+ * session, in one transaction. A session that took a message since the select
+ * is not deleted, so its conversation stays open.
+ */
 async function endIdleChatSessions(ctx: Ctx, days: number): Promise<number> {
   const where = { lastMessageAt: { lt: ctx.before(days) } }
-  let lastBatch: { id: string; chatConversationId: string }[] = []
+  let conversationIds: string[] = []
   return inBatches(
     ctx,
     async (take) => {
-      lastBatch = await prisma.discordChatSession.findMany({ where, select: { id: true, chatConversationId: true }, take })
-      return ids(lastBatch)
+      const rows = await prisma.discordChatSession.findMany({ where, select: { id: true, chatConversationId: true }, take })
+      conversationIds = [...new Set(rows.map((row) => row.chatConversationId))]
+      return ids(rows)
     },
-    async (batch) => {
-      // The conversation's own window starts when its last session goes
-      await prisma.chatConversation.updateMany({
-        where: { id: { in: lastBatch.map((row) => row.chatConversationId) }, endedAt: null },
-        data: { endedAt: ctx.now },
+    (batch) =>
+      prisma.$transaction(async (tx) => {
+        const deleted = await tx.discordChatSession.deleteMany({ where: { ...where, id: { in: batch } } })
+        // The conversation's own window starts when its last session goes
+        await tx.chatConversation.updateMany({
+          where: { id: { in: conversationIds }, endedAt: null, discordSessions: { none: {} } },
+          data: { endedAt: ctx.now },
+        })
+        return deleted
       })
-      return prisma.discordChatSession.deleteMany({ where: { ...where, id: { in: batch } } })
-    }
   )
 }
 

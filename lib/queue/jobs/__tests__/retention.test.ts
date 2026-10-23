@@ -40,6 +40,7 @@ beforeEach(() => {
   ]) {
     model.findMany.mockResolvedValue([])
   }
+  prismaMock.$transaction.mockImplementation(((fn: (tx: unknown) => Promise<unknown>) => fn(prismaMock)) as never)
 })
 
 describe("the windows and their boundaries", () => {
@@ -104,13 +105,31 @@ describe("the windows and their boundaries", () => {
     })
     expect(prismaMock.discordChatSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { messages: [] } }))
     expect(prismaMock.chatConversation.updateMany).toHaveBeenCalledWith({
-      where: { id: { in: ["conversation-2"] }, endedAt: null },
+      where: { id: { in: ["conversation-2"] }, endedAt: null, discordSessions: { none: {} } },
       data: { endedAt: NOW },
     })
     expect(prismaMock.discordChatSession.deleteMany).toHaveBeenCalledWith({
       where: { lastMessageAt: { lt: daysAgo(30) }, id: { in: ["session-2"] } },
     })
     expect(result.counts).toMatchObject({ discordChatMessages: 1, discordChatSessions: 1 })
+  })
+
+  it("deletes before ending, in one transaction, and only ends conversations left with no session", async () => {
+    prismaMock.discordChatSession.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: "session-3", chatConversationId: "conversation-3" }] as never)
+    // A message arrived after the select: the guarded delete keeps the session
+    prismaMock.discordChatSession.deleteMany.mockResolvedValue({ count: 0 })
+    prismaMock.chatConversation.updateMany.mockResolvedValue({ count: 0 })
+
+    const result = await runRetentionSweep({ now: NOW })
+
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
+    const deletedAt = prismaMock.discordChatSession.deleteMany.mock.invocationCallOrder[0]
+    const endedAt = prismaMock.chatConversation.updateMany.mock.invocationCallOrder[0]
+    expect(deletedAt).toBeLessThan(endedAt)
+    expect(prismaMock.chatConversation.updateMany.mock.calls[0][0]?.where).toMatchObject({ discordSessions: { none: {} } })
+    expect(result.counts.discordChatSessions).toBe(0)
   })
 
   it("nulls command arguments after 7 days", async () => {
