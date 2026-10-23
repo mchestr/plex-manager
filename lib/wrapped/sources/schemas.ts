@@ -65,8 +65,9 @@ export const tautulliHistoryRowSchema = z.object({
   location: nullableText,
   platform: nullableText,
   product: nullableText,
-  section_id: nullableKey,
-  live: z.preprocess(numeric, z.union([z.literal(0), z.literal(1)])),
+  // Tautulli's get_history rows carry no section_id, so a missing one reads as null.
+  section_id: z.preprocess((v) => v ?? null, nullableKey),
+  live:z.preprocess(numeric, z.union([z.literal(0), z.literal(1)])),
 })
 export type TautulliHistoryRow = z.infer<typeof tautulliHistoryRowSchema>
 

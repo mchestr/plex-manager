@@ -38,6 +38,12 @@ describe("tautulliHistoryRowSchema", () => {
     })
   })
 
+  it("reads a row without section_id, as Tautulli's get_history sends it, as null", () => {
+    const { section_id: _sectionId, ...withoutSection } = episodeRow
+
+    expect(tautulliHistoryRowSchema.parse(withoutSection).section_id).toBeNull()
+  })
+
   it("rejects a watched_status outside 0 to 1", () => {
     expect(tautulliHistoryRowSchema.safeParse({ ...episodeRow, watched_status: 2 }).success).toBe(false)
   })
