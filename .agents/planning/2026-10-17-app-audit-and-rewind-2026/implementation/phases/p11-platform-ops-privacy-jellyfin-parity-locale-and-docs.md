@@ -1186,10 +1186,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** On a clean VM, follow `docs/deployment.md` with `deploy/docker-compose.yml`: the app starts healthy behind Caddy, and the claim code is in the logs. Follow `docs/domain-move.md` to a second hostname: Plex sign-in, Discord linking and a Stripe test webhook work on the new host.
 
 **Done when.**
-- [ ] A production compose file uses the published image, and `docs/deployment.md` covers compose, reverse proxy, claim and bare metal.
-- [ ] `start:prod` works outside the image or is removed, and CLAUDE.md matches.
-- [ ] `docs/domain-move.md` lists the URL variables, the four external registrations and what members notice, and the Discord portal fallback is fixed.
-- [ ] `docs/environment.md` and `example.env` are generated from `envSchema`, and CI checks them.
+- [x] A production compose file uses the published image, and `docs/deployment.md` covers compose, reverse proxy, claim and bare metal.
+- [x] `start:prod` works outside the image or is removed, and CLAUDE.md matches.
+- [x] `docs/domain-move.md` lists the URL variables, the four external registrations and what members notice, and the Discord portal fallback is fixed.
+- [x] `docs/environment.md` and `example.env` are generated from `envSchema`, and CI checks them.
+
+(as merged: every `envSchema` field carries `.meta({ description, group, default?, example?, requiredInProduction?, required? })`; groups are `ENV_GROUPS` in `lib/env.ts`. `requiredInProduction` is exactly what `checkProductionEnv` reports as missing (`NEXTAUTH_SECRET`, `PLEX_CLIENT_IDENTIFIER`, test-checked); `required` marks `DATABASE_URL` and `NEXTAUTH_URL`, which the boot check does not test. A new variable needs its meta and `npm run env:docs`, or the Unit Tests job's `env:docs -- --check` step fails. `start:prod` is `node --env-file-if-exists=.env .next/standalone/server.js` (Node 22.9+), with a `postbuild` (`scripts/copy-standalone-assets.mjs`). The prod compose's database is `plex_wrapped`, like the dev file, so `docs/operations.md` commands work on both. Discord links no longer fall back to localhost outside development; `assistant.ts` builds its link nudge per call. P11.3's worker example and P11.1's `ENCRYPTION_KEYS` are not in the docs yet: each adds its own meta, reruns `env:docs`, and links from `docs/deployment.md`.)
 
 ### Step P11.25: Versioned releases and a changelog
 

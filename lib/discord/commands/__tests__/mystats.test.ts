@@ -194,6 +194,9 @@ function embedText(embed: EmbedShape): string {
   return [embed.data.title ?? "", embed.data.description ?? "", ...embed.data.fields.map((f) => `${f.name} ${f.value}`)].join(" ")
 }
 
+// Link nudges need a base URL: there is no localhost fallback outside development.
+process.env.NEXT_PUBLIC_APP_URL = "https://plex.example.com"
+
 beforeEach(() => {
   mockReset(prismaMock)
   jest.clearAllMocks()

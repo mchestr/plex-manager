@@ -29,6 +29,9 @@ const SERVER = { name: "Home", url: "http://plex.local:32400", token: "owner-tok
 
 const calls: { url: string; token: string | undefined }[] = []
 
+// The reply links to the account page: there is no localhost fallback outside development.
+process.env.NEXT_PUBLIC_APP_URL = "https://plex.example.com"
+
 function reply(status: number, body: string) {
   return { ok: status < 300, status, headers: new Map(), body: null, text: async () => body, json: async () => JSON.parse(body) }
 }
