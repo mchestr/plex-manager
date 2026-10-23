@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
 import { previewMemberRemoval, removeMember } from "@/actions/admin/member-access"
+import { queryKeys } from "@/hooks/query-keys"
 import { Alert } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -45,7 +46,7 @@ export function RemoveMemberDialog({ userId, name }: RemoveMemberDialogProps) {
   const [isPending, startTransition] = useTransition()
 
   const preview = useQuery({
-    queryKey: ["admin", "remove-member-preview", userId],
+    queryKey: queryKeys.removeMemberPreview(userId),
     queryFn: async () => {
       const result = await previewMemberRemoval({ userId })
       if (!result.success) throw new Error(result.error)
