@@ -1048,9 +1048,11 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** `npx eslint components actions` reports no `max-lines` error. The admin settings, invites and setup E2E specs pass unchanged.
 
 **Done when.**
-- [ ] No component or action file exceeds 300 lines without a documented exception.
-- [ ] Each split is a move-only PR with green tests.
-- [ ] The `max-lines` rule is enforced for components and actions, and warns for `lib` and `hooks`.
+- [x] No component or action file exceeds 300 lines without a documented exception.
+- [x] Each split is a move-only PR with green tests.
+- [x] The `max-lines` rule is enforced for components and actions, and warns for `lib` and `hooks`.
+
+(as merged: the inventory at the step's start found one file over 300 counted lines, `components/rewind/stage/story-stage.tsx` (370); P10.x, P11.5 and P11.32 had already brought every file the Guidance lists under the limit (`actions/invite.ts` 406 raw lines, under 300 counted; `admin-servers.ts`, `queue.ts`, `setup.ts`, `admin-config.ts`, `user-queries.ts`, `sync-settings-card.tsx` and `discord-marked-media.tsx` all under), so `actions/invites/`, `actions/admin/servers/` and `actions/setup/` were not created and CLAUDE.md's tree is unchanged. The stage's chrome moved to `stage-chrome.tsx` (`StageChrome`) and its keymap dispatch to `stage-keys.ts` (`stageKeyDown`). No file needed a documented exception. `lib/` and `hooks/` start with 67 `max-lines` warnings, left for later burn-down; `lib/queue/jobs/stripe.ts` and `lib/utils/logger.ts` got no exception comment, since a warning needs none.)
 
 ### Step P11.22: Test coverage backfill
 
