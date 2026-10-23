@@ -14,7 +14,9 @@ import fs from 'fs'
 import path from 'path'
 
 const ROOT = path.resolve(__dirname, '../..')
-const ROOTS = ['app', 'actions', 'components', 'lib', 'types', 'prisma', 'docs', 'e2e', 'scripts', 'hooks']
+const ROOTS = ['app', 'actions', 'components', 'lib', 'types', 'prisma', 'docs', 'e2e', 'scripts', 'hooks', 'deploy']
+// The deployment docs (P11.24) are held to the same rule.
+const DEPLOYMENT_DOCS = ['docs/deployment.md', 'docs/domain-move.md', 'docs/environment.md']
 // `.js` covers `@/lib/generated/prisma/client`, which `prisma generate` writes.
 const IMPORT_EXTENSIONS = ['', '.ts', '.tsx', '.js', '/index.ts', '/index.tsx']
 
@@ -48,6 +50,18 @@ describe('CLAUDE.md paths', () => {
 
   it.each(paths)('%s exists', (repoPath) => {
     expect(exists(repoPath)).toBe(true)
+  })
+})
+
+describe('deployment docs paths', () => {
+  it.each(DEPLOYMENT_DOCS)('every repository path %s names exists', (doc) => {
+    const paths = repositoryPaths(fs.readFileSync(path.join(ROOT, doc), 'utf8'))
+    expect(paths.filter((repoPath) => !exists(repoPath))).toEqual([])
+  })
+
+  it('checks the paths the deployment guide names', () => {
+    const paths = repositoryPaths(fs.readFileSync(path.join(ROOT, 'docs/deployment.md'), 'utf8'))
+    expect(paths).toContain('deploy/docker-compose.yml')
   })
 })
 

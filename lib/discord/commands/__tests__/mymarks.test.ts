@@ -77,6 +77,9 @@ jest.mock("discord.js", () => {
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
 beforeEach(() => mockReset(prismaMock))
+
+// Link nudges need a base URL: there is no localhost fallback outside development.
+process.env.NEXT_PUBLIC_APP_URL = "https://plex.example.com"
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
 }))

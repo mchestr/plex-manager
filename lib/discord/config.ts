@@ -15,6 +15,7 @@
  * test. Step 18's rotation-bounce reads `configVersion` from the same row.
  */
 
+import { getBaseUrl } from "@/lib/env"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -95,13 +96,13 @@ export async function getSupportThreadIds(): Promise<string[]> {
   return parseThreadIdCsv(process.env.DISCORD_SUPPORT_THREAD_IDS)
 }
 
-/** The app's base URL for links in bot replies, without a trailing slash. Env-only. */
+/**
+ * The app's base URL for links in bot replies, without a trailing slash:
+ * `PLEX_WRAPPED_BASE_URL`, else {@link getBaseUrl} (`NEXT_PUBLIC_APP_URL`, then
+ * `NEXTAUTH_URL`), so a domain move needs no Discord-only variable. Env-only.
+ */
 function appBaseUrl(): string {
-  return (
-    process.env.PLEX_WRAPPED_BASE_URL?.replace(/\/$/, "") ||
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-    "http://localhost:3000"
-  )
+  return (process.env.PLEX_WRAPPED_BASE_URL || getBaseUrl()).replace(/\/$/, "")
 }
 
 /**

@@ -3,6 +3,10 @@
 How to back up, restore and upgrade a Plex Manager install. The commands assume
 the bundled `docker-compose.yml` (database `plex_wrapped`, user `postgres`, the
 `db` and `app` services); outside compose, use the `DATABASE_URL` variants.
+The production compose file `deploy/docker-compose.yml` uses the same names.
+Installing is in [deployment](deployment.md), every variable is in the
+[environment reference](environment.md), and moving to a new host name is in
+[domain move](domain-move.md).
 
 ## Contents
 

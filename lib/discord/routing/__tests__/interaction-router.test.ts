@@ -129,6 +129,9 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 
 beforeEach(() => mockReset(prismaMock))
 
+// Link nudges need a base URL: there is no localhost fallback outside development.
+process.env.NEXT_PUBLIC_APP_URL = "https://plex.example.com"
+
 const mockCreate = createCommandLog as jest.MockedFunction<typeof createCommandLog>
 const mockUpdate = updateCommandLog as jest.MockedFunction<typeof updateCommandLog>
 
