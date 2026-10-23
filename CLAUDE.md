@@ -211,6 +211,8 @@ if (!result.success) {
 - **React components**: Max ~200-300 lines (if larger, split into smaller components)
 - **Utility modules**: Max ~150 lines per file
 - If a file exceeds these limits, it's a signal to refactor
+- ESLint's `max-lines` (blank lines and comments skipped, tests excluded) fails a file in `components/` or `actions/` above 300 lines and warns for `lib/` and `hooks/` above 150. Split along responsibilities; a `'use server'` file can export only async functions, so shared helpers move to `lib/`
+- Deliberate exceptions carry a file-level `/* eslint max-lines: ["error", N] -- cohesive: <reason> */` and a line here. None today
 
 ### Testability First
 - Components should be independently testable
