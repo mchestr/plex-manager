@@ -71,12 +71,11 @@ RUN apk add --no-cache tini && \
     addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Public assets and the Next.js standalone output, owned by root so the app
-# cannot rewrite its own code
+# The Next.js standalone output, owned by root so the app cannot rewrite its
+# own code. `npm run build`'s postbuild (scripts/copy-standalone-assets.mjs)
+# has already copied .next/static and public into it.
 # https://nextjs.org/docs/app/api-reference/config/next-config-js/output
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
 
 # Prisma schema, migrations, config and generated client, and the pinned CLI
 COPY --from=builder /app/prisma/schema.prisma ./prisma/schema.prisma
