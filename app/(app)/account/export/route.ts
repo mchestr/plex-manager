@@ -22,9 +22,16 @@ function failure(code: ErrorCode, message: string, headers: HeadersInit = NO_STO
 /**
  * GET /account/export: the signed-in member's data as a JSON download
  * (P11.15, GAP-36). A route handler because it returns a file. Three a day
- * per member; lapsed members may export too (`lib/access-paths.ts`).
+ * per member; lapsed members may export too (`lib/access-paths.ts`). A
+ * cross-site request (`Sec-Fetch-Site: cross-site`, such as a link on another
+ * site) gets 403 before it can spend the limit; a browser without the header
+ * is let through.
  */
-async function handleGet(_request: Request) {
+async function handleGet(request: Request) {
+  if (request.headers.get("sec-fetch-site") === "cross-site") {
+    return failure(ErrorCode.FORBIDDEN, "Download your data from your account page")
+  }
+
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return failure(ErrorCode.UNAUTHORIZED, "Sign in to download your data")
   const userId = session.user.id

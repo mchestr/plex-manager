@@ -34,7 +34,7 @@ function signIn(): string {
   return id
 }
 
-const download = () => GET(new NextRequest('http://localhost/account/export'))
+const download = (headers?: HeadersInit) => GET(new NextRequest('http://localhost/account/export', { headers }))
 
 beforeEach(() => {
   jest.clearAllMocks()
@@ -42,6 +42,22 @@ beforeEach(() => {
 })
 
 describe('GET /account/export', () => {
+  it('refuses a cross-site request with 403 before it spends the limit', async () => {
+    signIn()
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const response = await download({ 'Sec-Fetch-Site': 'cross-site' })
+      expect(response.status).toBe(403)
+      expect(response.headers.get('Cache-Control')).toBe('no-store')
+    }
+    expect(buildMemberExport).not.toHaveBeenCalled()
+
+    // The member's three downloads are all still there
+    for (const site of ['same-origin', 'same-site', 'none']) {
+      expect((await download({ 'Sec-Fetch-Site': site })).status).toBe(200)
+    }
+  })
+
   it('refuses a signed-out caller with 401 and builds nothing', async () => {
     mockSession.mockResolvedValue(null)
 
