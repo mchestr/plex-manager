@@ -10,12 +10,13 @@ export function Card({ className, ...props }: ComponentProps<"div">) {
   return <div data-slot="card" className={cn("flex flex-col rounded-lg border bg-card text-card-foreground", className)} {...props} />
 }
 
+/** Bottom padding comes from the content or footer below it; a header that ends the card adds its own (`last:pb-5`). */
 export function CardHeader({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       data-slot="card-header"
       className={cn(
-        "grid auto-rows-min items-start gap-1 px-5 pt-5 has-data-[slot=card-action]:grid-cols-[1fr_auto]",
+        "grid auto-rows-min items-start gap-1 px-5 pt-5 last:pb-5 has-data-[slot=card-action]:grid-cols-[1fr_auto]",
         className
       )}
       {...props}

@@ -42,6 +42,18 @@ describe("Card", () => {
     expect(screen.getByText("Child").parentElement).toBe(card)
   })
 
+  it("pads the bottom of a header only when it ends the card", () => {
+    render(
+      <Card>
+        <CardHeader data-testid="header">
+          <CardTitle>Plex</CardTitle>
+        </CardHeader>
+      </Card>
+    )
+    expect(screen.getByTestId("header")).toHaveClass("pt-5", "last:pb-5")
+    expect(screen.getByTestId("header")).not.toHaveClass("pb-5")
+  })
+
   it("has no axe violations", async () => {
     const { container } = render(
       <Card>
