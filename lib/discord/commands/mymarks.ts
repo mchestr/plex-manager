@@ -32,6 +32,7 @@ import {
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { MarkType } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import { getAccountUrl } from "@/lib/discord/config"
 import { getMarkTypeLabel } from "@/lib/discord/media/mark-labels"
 import { createLogger } from "@/lib/utils/logger"
 import type { InteractionContext, SlashCommand } from "./registry"
@@ -156,9 +157,9 @@ function buildMarksEmbed(
   if (renderedCount < total) {
     descriptionParts.push(`Showing ${renderedCount} of ${total} marks.`)
   }
-  if (descriptionParts.length > 0) {
-    embed.setDescription(descriptionParts.join(" "))
-  }
+  // There is no /unmark: a mark is deleted on the account page (P11.15)
+  descriptionParts.push(`Delete a mark on your account page: ${getAccountUrl()}`)
+  embed.setDescription(descriptionParts.join(" "))
 
   return embed
 }

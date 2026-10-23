@@ -772,9 +772,11 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** As a seeded member, download the export: a JSON file with the profile, the 2026 Rewind, marks and watchlist history, and no token. Delete a mark and forget a watchlist item: both are gone after a reload, and `/mymarks` in Discord no longer lists the mark.
 
 **Done when.**
-- [ ] `/account/export` returns a versioned, strictly validated JSON export with no secrets, rate-limited.
-- [ ] Members can delete marks, watchlist history items and assistant conversations they own, and nothing else.
+- [x] `/account/export` returns a versioned, strictly validated JSON export with no secrets, rate-limited.
+- [x] Members can delete marks, watchlist history items and assistant conversations they own, and nothing else.
 - [ ] The export covers every inventory model or records why not, and the E2E passes.
+
+(as merged: the schema and the coverage map are `MemberExportV1` and `EXPORT_COVERAGE` in `lib/members/export-schema.ts`; `buildMemberExport(userId, now?)` is in `lib/members/export.ts`. The coverage test reads the "Member data" table of `docs/privacy.md` and its new section "Your data: export and single deletes" (bullets, not a column, so P11.14's Retention column merges cleanly); left out with reasons: RewindGeneration, RewindShareVisitDay, RewindView, WrappedShareVisit, DiscordChatSession, DiscordOAuthState, DiscordPendingSelection, InviteUsage, AuditLog. `subscription.plan` is the plan name from `getPlanName`, never the price id; `discordCommands` carry no `commandArgs`. Rate limits `account:export` (3 a day) and `account:data` (60 an hour, shared by the three actions). `lib/access-paths.ts` lets a lapsed member reach `/account/export` (the `/account` page itself still redirects them). The actions take `recordIdSchema` ids rather than a strict cuid, so seeded readable ids work. The section is `YourDataSection` (`components/account/`), with the marks DataTable paged by `?page=` (25 a page) and the newest 50 watchlist items and conversations; row menu id `account-marks-actions-<id>`, confirm ids `account-mark-delete-confirm`, `account-watchlist-forget-confirm`, `account-conversation-delete-confirm`. `/mymarks` ends with a link to `/account` (`getAccountUrl()` in `lib/discord/config.ts`), and `/help#privacy` links `/account#your-data`. The E2E spec and the `/account` visual baselines were not run or regenerated here.)
 
 ### Step P11.16: Disclosures and the admin audit trail
 

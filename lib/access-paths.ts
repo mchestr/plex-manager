@@ -7,11 +7,14 @@
  * listed; `__tests__/proxy.test.ts` checks every route folder against this.
  *
  * ```
- * level    (app) path         /rewind, /rewind/*   other paths
- * full     open               open                 open
- * lapsed   -> /subscribe      open                 open
- * none     -> /subscribe      -> /subscribe        open
+ * level    (app) path         /rewind, /rewind/*,   other paths
+ *                             /account/export
+ * full     open               open                  open
+ * lapsed   -> /subscribe      open                  open
+ * none     -> /subscribe      -> /subscribe         open
  * ```
+ *
+ * A lapsed member keeps the data export (P11.15): it is their data.
  *
  * A plain module (no `server-only`), so `proxy.ts` and the `(app)` layout share it.
  *
@@ -26,8 +29,11 @@ const NON_APP_SEGMENTS = new Set(["admin", "api", "auth", "dev", "invite", "onbo
 /** `app/rewind/s/`, outside `(app)`: anyone may open a share link. */
 const PUBLIC_PATH = /^\/rewind\/s(\/|$)/
 
-/** The read-only Rewind pages a lapsed member keeps (FR-51). `/wrapped*` redirects here before the proxy runs. */
-const READ_ONLY_REWIND_PATH = /^\/rewind(\/|$)/
+/**
+ * The read-only Rewind pages a lapsed member keeps (FR-51), and the data
+ * export (P11.15). `/wrapped*` redirects here before the proxy runs.
+ */
+const LAPSED_OPEN_PATH = /^\/rewind(\/|$)|^\/account\/export$/
 
 /** A file such as `/robots.txt`: never a page. */
 const FILE_PATH = /\/[^/]*\.[A-Za-z0-9]+$/
@@ -46,5 +52,5 @@ export function needsSubscribeRedirect(pathname: string, level: AccessLevel): bo
   if (level === "full" || !isMemberAppPath(pathname)) {
     return false
   }
-  return level === "none" || !READ_ONLY_REWIND_PATH.test(pathname)
+  return level === "none" || !LAPSED_OPEN_PATH.test(pathname)
 }
