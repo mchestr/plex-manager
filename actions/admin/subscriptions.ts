@@ -8,7 +8,7 @@ import { enqueueRoleSync } from "@/lib/discord/role-sync"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { getStripe } from "@/lib/stripe/client"
-import { addJob } from "@/lib/queue/client"
+import { enqueueFromRequest } from "@/lib/queue/request-path"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { JOB_TYPES } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
@@ -136,21 +136,20 @@ export const adminGrantAccess = adminAction({
       data: { isExempt: true, exemptReason: "comp" },
     })
 
-    try {
-      // Unique jobId suffix so a repeat comp-grant isn't collapsed onto a stale
-      // completed job still retained in Redis (BullMQ dedupes by jobId).
-      await addJob(
-        JOB_TYPES.PLEX_ACCESS_GRANT,
-        { userId },
-        { jobId: `${JOB_TYPES.PLEX_ACCESS_GRANT}:${userId}:admin-${Date.now()}` }
-      )
-    } catch (error) {
+    // The grant's event is this comp grant, so a repeat is not collapsed onto a
+    // stale completed job still retained in Redis (BullMQ dedupes by jobId).
+    const queued = await enqueueFromRequest(
+      JOB_TYPES.PLEX_ACCESS_GRANT,
+      { userId },
+      { jobId: `${JOB_TYPES.PLEX_ACCESS_GRANT}:${userId}:admin-${Date.now()}` }
+    )
+    if (!queued.ok) {
       // No grant is coming, so the exemption must not stay either.
       await prisma.user.update({
         where: { id: userId },
         data: { isExempt: user.isExempt, exemptReason: user.exemptReason },
       })
-      logger.error("Failed to queue the comp grant; exemption reverted", error, { userId })
+      logger.error("Failed to queue the comp grant; exemption reverted", undefined, { userId })
       return fail("UPSTREAM_UNAVAILABLE", "The job queue is unavailable, so access was not granted. Try again later.")
     }
 

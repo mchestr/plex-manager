@@ -11,6 +11,10 @@
  * `(app)` layout alone cannot do (P4.5, FR-51), and forwards the pathname to
  * the pages as the `x-pm-pathname` request header.
  *
+ * A `PROCESS_ROLE=worker` container (P11.3) answers 404 for everything but the
+ * health check and the metrics, so it never serves pages even when its port
+ * is exposed.
+ *
  * The proxy is bundled apart from the app, so in production it holds its own
  * PrismaClient and pg pool (lib/prisma.ts reuses a client through globalThis
  * only outside production) and, with REDIS_URL, its own rate-limiter Redis
@@ -19,6 +23,7 @@
  */
 
 import { getAccessLevel } from "@/lib/access"
+import { processRole } from "@/lib/db/pool-config"
 import { isMemberAppPath, needsSubscribeRedirect } from "@/lib/access-paths"
 import { getEnv, usesSecureCookies } from "@/lib/env"
 import { hasMembershipPage } from "@/lib/member/membership-page"
@@ -36,6 +41,9 @@ import { NextResponse } from "next/server"
 const logger = createLogger("HTTP")
 
 const HEALTH_PATH = "/api/health"
+
+/** The only paths a worker container serves (P11.3). */
+const WORKER_PATHS: ReadonlySet<string> = new Set([HEALTH_PATH, "/api/metrics"])
 
 /** The only query keys the request log carries; every other key may hold a credential (SEC-54). */
 const LOGGED_QUERY_KEYS = ["year", "page", "tab"] as const
@@ -162,6 +170,10 @@ export async function proxy(request: NextRequest) {
 
   return runWithRequestContext(requestId, undefined, async () => {
     const { pathname } = request.nextUrl
+
+    if (processRole() === "worker" && !WORKER_PATHS.has(pathname)) {
+      return new NextResponse(null, { status: 404, headers: { "X-Request-ID": requestId, "Cache-Control": "no-store" } })
+    }
 
     // No URL, client IP or query beyond the allow-list: the bearer segment of
     // share and invite paths is masked (SEC-54). The health check, which the

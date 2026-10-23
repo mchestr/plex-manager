@@ -19,6 +19,7 @@ import {
   ROLE_STALE_AFTER_MS,
 } from "@/lib/queue/jobs/discord-role"
 import { redisLimiter } from "@/lib/queue/redis-semaphore"
+import { enqueueFromRequest } from "@/lib/queue/request-path"
 import { JOB_TYPES } from "@/lib/queue/types"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -27,6 +28,8 @@ jest.mock("@/lib/discord/integration", () => ({
   syncDiscordRoleConnection: jest.fn(),
 }))
 jest.mock("@/lib/queue/client", () => ({ addJob: jest.fn() }))
+// Requests call enqueueRoleSync, so it enqueues on the fail-fast producer (P11.3)
+jest.mock("@/lib/queue/request-path", () => ({ enqueueFromRequest: jest.fn() }))
 jest.mock("@/lib/queue/redis-semaphore", () => ({ redisLimiter: { run: jest.fn() } }))
 jest.mock("@/lib/queue/jobs/watchlist-sync", () => ({ getWatchlistProcessor: jest.fn(() => null) }))
 jest.mock("@/lib/queue/jobs/stripe", () => ({ getStripeProcessor: jest.fn(() => null) }))
@@ -37,6 +40,7 @@ jest.mock("@/lib/utils/logger", () => ({
 const mockIntegration = jest.mocked(getDiscordIntegration)
 const mockSync = jest.mocked(syncDiscordRoleConnection)
 const mockAddJob = jest.mocked(addJob)
+const mockEnqueue = jest.mocked(enqueueFromRequest)
 
 const INTEGRATION = { id: "discord", isEnabled: true, clientId: "client", clientSecret: "secret" }
 const job = (data: unknown) => ({ id: "job-1", data, attemptsMade: 0 }) as Job
@@ -51,6 +55,7 @@ beforeEach(() => {
   mockIntegration.mockResolvedValue(INTEGRATION as Awaited<ReturnType<typeof getDiscordIntegration>>)
   prismaMock.discordConnection.findUnique.mockResolvedValue({ revokedAt: null } as never)
   mockAddJob.mockResolvedValue("job-id")
+  mockEnqueue.mockResolvedValue({ ok: true, jobId: "job-id" })
   mockSync.mockResolvedValue(undefined)
 })
 
@@ -65,12 +70,12 @@ describe("enqueueRoleSync", () => {
     await enqueueRoleSync("user-1", "unshared")
     await enqueueRoleSync("user-1", "subscription_changed")
 
-    expect(mockAddJob).toHaveBeenCalledTimes(2)
-    for (const [type, , options] of mockAddJob.mock.calls) {
+    expect(mockEnqueue).toHaveBeenCalledTimes(2)
+    for (const [type, , options] of mockEnqueue.mock.calls) {
       expect(type).toBe(JOB_TYPES.DISCORD_ROLE_SYNC)
       expect(options).toEqual({ attempts: 3, deduplication: { id: "discord:role:user-1" } })
     }
-    expect(mockAddJob.mock.calls[0][1]).toEqual({ userId: "user-1", reason: "unshared", refreshHours: false })
+    expect(mockEnqueue.mock.calls[0][1]).toEqual({ userId: "user-1", reason: "unshared", refreshHours: false })
     expect(mockSync).not.toHaveBeenCalled()
   })
 
@@ -79,7 +84,7 @@ describe("enqueueRoleSync", () => {
 
     await enqueueRoleSync("user-1", "unshared")
 
-    expect(mockAddJob).not.toHaveBeenCalled()
+    expect(mockEnqueue).not.toHaveBeenCalled()
     expect(mockSync).not.toHaveBeenCalled()
     expect(prismaMock.discordConnection.findUnique).not.toHaveBeenCalled()
   })
@@ -90,7 +95,7 @@ describe("enqueueRoleSync", () => {
     prismaMock.discordConnection.findUnique.mockResolvedValueOnce({ revokedAt: new Date() } as never)
     await enqueueRoleSync("user-1", "unshared")
 
-    expect(mockAddJob).not.toHaveBeenCalled()
+    expect(mockEnqueue).not.toHaveBeenCalled()
   })
 
   it("runs the sync inline without Redis", async () => {
@@ -98,12 +103,14 @@ describe("enqueueRoleSync", () => {
 
     await enqueueRoleSync("user-1", "disabled")
 
-    expect(mockAddJob).not.toHaveBeenCalled()
+    expect(mockEnqueue).not.toHaveBeenCalled()
     expect(mockSync).toHaveBeenCalledWith("user-1", { refreshHours: false })
   })
 
   it("never throws, even when the queue or the inline sync fails", async () => {
-    mockAddJob.mockRejectedValueOnce(new Error("redis down"))
+    mockEnqueue.mockRejectedValueOnce(new Error("redis down"))
+    await expect(enqueueRoleSync("user-1", "unshared")).resolves.toBeUndefined()
+    mockEnqueue.mockResolvedValueOnce({ ok: false, code: "QUEUE_UNAVAILABLE" })
     await expect(enqueueRoleSync("user-1", "unshared")).resolves.toBeUndefined()
 
     delete process.env.REDIS_URL

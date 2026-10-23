@@ -2,7 +2,7 @@
  * Tests for lib/locks/lease-lock.ts: LeaseLock over PrismaLeaseStore.
  *
  * An in-memory `prisma`-shaped store models the `LeaseLock` rows (one per
- * name) and the two legacy lock rows, with a `$transaction(fn)` that runs the
+ * name), with a `$transaction(fn)` that runs the
  * callback against the same store, so acquire()'s cleanup, read and write run
  * for real. The instance id and the clock are injected.
  */
@@ -22,14 +22,7 @@ interface LeaseRow {
   lastRenewedAt: Date
 }
 
-interface LegacyRow {
-  id: string
-  instanceId: string
-  expiresAt: Date
-}
-
 const rows = new Map<string, LeaseRow>()
-const legacy = { discordBotLock: new Map<string, LegacyRow>(), watchlistSyncLock: new Map<string, LegacyRow>() }
 
 type Where = { name?: string; instanceId?: string; expiresAt?: { lt?: Date; gt?: Date } }
 
@@ -79,15 +72,7 @@ const leaseLock = {
   }),
 }
 
-const legacyModel = (table: Map<string, LegacyRow>) => ({
-  findUnique: async ({ where }: { where: { id: string } }) => table.get(where.id) ?? null,
-})
-
-const tx = {
-  leaseLock,
-  discordBotLock: legacyModel(legacy.discordBotLock),
-  watchlistSyncLock: legacyModel(legacy.watchlistSyncLock),
-}
+const tx = { leaseLock }
 
 const store = {
   ...tx,
@@ -123,8 +108,6 @@ function liveRow(name: string, instanceId: string): LeaseRow {
 
 beforeEach(() => {
   rows.clear()
-  legacy.discordBotLock.clear()
-  legacy.watchlistSyncLock.clear()
   clock = new Date("2027-01-01T00:00:00Z")
   jest.clearAllMocks()
 })
@@ -208,36 +191,6 @@ describe("LeaseLock names", () => {
   })
 })
 
-describe("LeaseLock legacy overlap check (one release)", () => {
-  it.each([
-    ["discord-bot", legacy.discordBotLock],
-    ["watchlist-sync", legacy.watchlistSyncLock],
-  ] as const)("refuses %s while its live legacy row belongs to another instance", async (name, table) => {
-    table.set(name, { id: name, instanceId: OTHER, expiresAt: new Date(clock.getTime() + LEASE_MS) })
-    const lock = makeLock(name)
-
-    await expect(lock.acquire()).resolves.toBe(false)
-
-    expect(rows.has(name)).toBe(false)
-  })
-
-  it("acquires once the legacy row has expired", async () => {
-    legacy.discordBotLock.set("discord-bot", { id: "discord-bot", instanceId: OTHER, expiresAt: new Date(clock.getTime() - 1) })
-
-    await expect(makeLock().acquire()).resolves.toBe(true)
-  })
-
-  it("ignores the other role's legacy row", async () => {
-    legacy.watchlistSyncLock.set("watchlist-sync", {
-      id: "watchlist-sync",
-      instanceId: OTHER,
-      expiresAt: new Date(clock.getTime() + LEASE_MS),
-    })
-
-    await expect(makeLock("discord-bot").acquire()).resolves.toBe(true)
-  })
-})
-
 describe("LeaseLock.renew", () => {
   it("extends the lease when still owned", async () => {
     const lock = makeLock()
@@ -290,15 +243,24 @@ describe("LeaseLock.release", () => {
     const lock = makeLock()
     await lock.acquire()
 
-    await lock.release()
+    await expect(lock.release()).resolves.toBe(true)
 
     expect(lock.isHeld()).toBe(false)
     expect(rows.has("discord-bot")).toBe(false)
   })
 
   it("is a no-op when not held", async () => {
-    await makeLock().release()
+    await expect(makeLock().release()).resolves.toBe(false)
     expect(leaseLock.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it("answers false when another instance took the row in between", async () => {
+    const lock = makeLock()
+    await lock.acquire()
+    rows.set("discord-bot", liveRow("discord-bot", OTHER))
+
+    await expect(lock.release()).resolves.toBe(false)
+    expect(rows.get("discord-bot")?.instanceId).toBe(OTHER)
   })
 
   it("clears held state even if the delete throws", async () => {
@@ -306,9 +268,22 @@ describe("LeaseLock.release", () => {
     await lock.acquire()
     leaseLock.deleteMany.mockRejectedValueOnce(new Error("db down"))
 
-    await lock.release()
+    await expect(lock.release()).resolves.toBe(false)
 
     expect(lock.isHeld()).toBe(false)
+  })
+})
+
+describe("LeaseLock.acquireOrThrow", () => {
+  it("propagates a store error, where acquire answers false", async () => {
+    const failing: LeaseStore = {
+      acquire: jest.fn().mockRejectedValue(new Error("store down")),
+      renew: jest.fn(),
+      release: jest.fn(),
+    }
+
+    await expect(makeLock("discord-bot", INSTANCE, failing).acquire()).resolves.toBe(false)
+    await expect(makeLock("discord-bot", INSTANCE, failing).acquireOrThrow()).rejects.toThrow("store down")
   })
 })
 
@@ -317,7 +292,7 @@ describe("LeaseLock with another store", () => {
     const custom: LeaseStore = {
       acquire: jest.fn().mockResolvedValue(true),
       renew: jest.fn().mockResolvedValue(true),
-      release: jest.fn().mockResolvedValue(undefined),
+      release: jest.fn().mockResolvedValue(true),
     }
     const lock = makeLock("watchlist-sync", INSTANCE, custom)
 

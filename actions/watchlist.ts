@@ -12,6 +12,8 @@ import { fail, ok, type ActionResult } from "@/lib/actions/result"
 
 const logger = createLogger("WATCHLIST_ACTIONS")
 
+const QUEUE_UNAVAILABLE_COPY = "The sync queue is unavailable. Try again in a few minutes."
+
 /**
  * Get current user's watchlist sync settings, status and recent history.
  * A lapsed member may still read them (`read`).
@@ -195,14 +197,17 @@ export const triggerWatchlistSync = memberAction({
     const { isRedisConfigured } = await import("@/lib/queue/connection")
 
     if (isRedisConfigured()) {
-      // Use job queue
-      const { addWatchlistSyncUserJob } = await import("@/lib/queue/client")
+      // Use job queue; a trigger while the member's job waits or runs joins it
+      const { enqueueFromRequest } = await import("@/lib/queue/request-path")
+      const { JOB_TYPES } = await import("@/lib/queue/types")
 
-      const jobId = await addWatchlistSyncUserJob({
+      const queued = await enqueueFromRequest(JOB_TYPES.WATCHLIST_SYNC_USER, {
         userId,
         triggeredBy: "manual",
         triggeredByUserId: userId,
       })
+      if (!queued.ok) return fail("UPSTREAM_UNAVAILABLE", QUEUE_UNAVAILABLE_COPY)
+      const { jobId } = queued
 
       logger.info("Watchlist sync job queued", { userId, jobId })
 

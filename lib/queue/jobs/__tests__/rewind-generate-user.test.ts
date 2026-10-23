@@ -14,14 +14,14 @@ import { mockReset } from 'jest-mock-extended'
 
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { processRewindGenerateUser } from '@/lib/queue/jobs/rewind'
-import { acquireGenerationLock } from '@/lib/queue/redis-lock'
+import { acquireGenerationLock } from '@/lib/locks/generation-lock'
 import type { RewindGenerateUserPayload } from '@/lib/queue/types'
 import { generateUserRewind } from '@/lib/wrapped/pipeline/generate-user'
 import { RewindGenerationError } from '@/lib/wrapped/pipeline/generation-error'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/queue/connection', () => ({ getRedisConnection: jest.fn(() => ({ fake: 'redis' })) }))
-jest.mock('@/lib/queue/redis-lock', () => ({ acquireGenerationLock: jest.fn() }))
+jest.mock('@/lib/locks/generation-lock', () => ({ acquireGenerationLock: jest.fn() }))
 jest.mock('@/lib/wrapped/pipeline/generate-user', () => ({ generateUserRewind: jest.fn() }))
 
 let mockShutdown = new AbortController()

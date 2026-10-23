@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { getStripe } from "@/lib/stripe/client"
 import { prisma } from "@/lib/prisma"
-import { addJob, findJob } from "@/lib/queue/client"
+import { sanitizeJobId } from "@/lib/queue/job-id"
+import { enqueueFromRequest, withRequestPathQueue } from "@/lib/queue/request-path"
 import { JOB_TYPES } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 import { withRequestContext } from "@/lib/actions/route"
@@ -47,6 +48,12 @@ async function readCappedBody(request: Request): Promise<string | null> {
   return new TextDecoder().decode(Buffer.concat(chunks))
 }
 
+/** 503 while the queue is down: Stripe retries the delivery, and nothing was recorded. */
+function queueUnavailable(eventId: string): NextResponse {
+  logger.warn("Stripe webhook not enqueued: the job queue is unavailable", { eventId })
+  return NextResponse.json({ error: "Queue unavailable" }, { status: 503 })
+}
+
 /**
  * POST /api/stripe/webhook
  *
@@ -54,7 +61,10 @@ async function readCappedBody(request: Request): Promise<string | null> {
  * `StripeEvent(event.id)`, enqueues a `STRIPE_WEBHOOK` job for asynchronous
  * processing, and returns 200 quickly. All side effects happen in the job.
  *
- * - 400 on signature verification failure (never 5xx — Stripe would retry).
+ * - 400 on signature verification failure (never 5xx for a bad signature —
+ *   Stripe would retry).
+ * - 503 while the job queue is unavailable (Redis down), within about two
+ *   seconds, so Stripe retries the delivery later (P11.3).
  * - 413 when the body is over 1 MiB, before the signature is checked.
  * - 200 without re-enqueue when the event was already processed (idempotency).
  * - 200 + `job.retry()` when an unprocessed event's job failed (SEC-40), so the
@@ -122,22 +132,30 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 
   // An unprocessed resend recovers its job: a failed job runs again, a queued
   // or running one is left alone.
-  const job = await findJob(event.id)
-  if (job) {
+  const recovered = await withRequestPathQueue("stripe-webhook", async (queue) => {
+    const job = await queue.getJob(sanitizeJobId(event.id))
+    if (!job) return "absent" as const
     const state = await job.getState()
     if (state === "failed") {
       await job.retry()
-      logger.info("Stripe event resent; retrying its failed job", { eventId: event.id, eventType: event.type })
-      return NextResponse.json({ received: true, retried: true })
+      return "retried" as const
     }
-    if (state !== "completed" && state !== "unknown") {
-      return NextResponse.json({ received: true, queued: true })
-    }
+    if (state !== "completed" && state !== "unknown") return "queued" as const
     // A completed job whose event is unprocessed cannot be re-added under its id until it is gone.
     await job.remove()
+    return "absent" as const
+  })
+  if (!recovered.ok) return queueUnavailable(event.id)
+  if (recovered.value === "retried") {
+    logger.info("Stripe event resent; retrying its failed job", { eventId: event.id, eventType: event.type })
+    return NextResponse.json({ received: true, retried: true })
+  }
+  if (recovered.value === "queued") {
+    return NextResponse.json({ received: true, queued: true })
   }
 
-  await addJob(JOB_TYPES.STRIPE_WEBHOOK, { eventId: event.id }, { jobId: event.id })
+  const queued = await enqueueFromRequest(JOB_TYPES.STRIPE_WEBHOOK, { eventId: event.id }, { jobId: event.id })
+  if (!queued.ok) return queueUnavailable(event.id)
 
   logger.info("Stripe webhook enqueued", {
     eventId: event.id,

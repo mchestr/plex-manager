@@ -50,7 +50,7 @@ export const envSchema = z.object({
   METRICS_TOKEN: text("Bearer token for /api/metrics; without it the route answers 404: openssl rand -hex 32."),
   BUILD_COMMIT: text("Git commit /api/metrics reports in build_info (the image sets it at build time)."),
   SKIP_MIGRATIONS: text('Docker image only: "true" starts without applying migrations.'),
-  PROCESS_ROLE: text("web, worker or all (default all): picks the database pool defaults."),
+  PROCESS_ROLE: text("web, worker or all (default all): web serves pages only; worker runs the queues, schedulers and bot and serves only /api/health and /api/metrics."),
   DB_POOL_MAX: text("Database pool size (default 10 web, 5 worker, 12 all)."),
   DB_CONNECTION_TIMEOUT_MS: text("How long a query waits for a free database connection (default 10000)."),
   DB_STATEMENT_TIMEOUT_MS: text("Statement timeout in milliseconds (default 15000 web, 120000 worker, 60000 all)."),
@@ -161,7 +161,7 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
 /** @internal */
 export interface EnvIssue {
   variable: string
-  code: "missing" | "too_short" | "low_entropy" | "known_placeholder" | "not_https" | "origin_mismatch" | "schema_invalid"
+  code: "missing" | "too_short" | "low_entropy" | "known_placeholder" | "not_https" | "origin_mismatch" | "schema_invalid" | "invalid"
   severity: "error" | "warning"
   hint: string
 }
@@ -222,6 +222,10 @@ export function checkProductionEnv(env: Env): EnvIssue[] {
   ]
   if (env.SETUP_TOKEN !== undefined && env.SETUP_TOKEN.length < SETUP_TOKEN_MIN_LENGTH) {
     issues.push({ variable: "SETUP_TOKEN", code: "too_short", severity: "error", hint: "shorter than 16 characters; generate one with openssl rand -hex 16" })
+  }
+  // An unknown role would fall back to `all` and run the queues where only pages were meant (P11.3)
+  if (env.PROCESS_ROLE !== undefined && !["web", "worker", "all"].includes(env.PROCESS_ROLE)) {
+    issues.push({ variable: "PROCESS_ROLE", code: "invalid", severity: "error", hint: "must be web, worker or all" })
   }
   if (!env.PLEX_CLIENT_IDENTIFIER?.trim()) {
     issues.push({ variable: "PLEX_CLIENT_IDENTIFIER", code: "missing", severity: "error", hint: "not set; generate one with openssl rand -hex 16" })

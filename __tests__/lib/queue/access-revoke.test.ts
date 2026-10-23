@@ -29,6 +29,7 @@ import { prisma } from '@/lib/prisma'
 import { unshareUserFromPlexServer } from '@/lib/connections/plex-invitations'
 import { getStripe } from '@/lib/stripe/client'
 import { addJob } from '@/lib/queue/client'
+import { withAccessLock } from '@/lib/locks/access-lock'
 import { SubscriptionStatus } from '@/lib/generated/prisma/client'
 import { JOB_TYPES } from '@/lib/queue/types'
 import { mockReset } from 'jest-mock-extended'
@@ -67,12 +68,31 @@ jest.mock('@/lib/connections/jellyfin-users', () => ({
 }))
 jest.mock('@/lib/jellyfin-auth', () => ({ isJellyfinAdmin: jest.fn() }))
 
+jest.mock('@/lib/locks/access-lock', () => ({ withAccessLock: jest.fn() }))
+jest.mock('@/lib/queue/connection', () => ({
+  getRedisConnection: () => 'redis',
+  isRedisConfigured: () => Boolean(process.env.REDIS_URL),
+}))
+
 jest.mock('@/lib/stripe/client', () => ({
   getStripe: jest.fn(),
 }))
 
 jest.mock('@/lib/queue/client', () => ({
   addJob: jest.fn(),
+}))
+
+// Request paths enqueue through the fail-fast producer (P11.3); it answers
+// QUEUE_UNAVAILABLE where addJob would throw, and records through the addJob mock.
+jest.mock('@/lib/queue/request-path', () => ({
+  enqueueFromRequest: jest.fn(async (...args: unknown[]) => {
+    const { addJob } = jest.requireMock('@/lib/queue/client') as { addJob: (...a: unknown[]) => Promise<string> }
+    try {
+      return { ok: true, jobId: await addJob(...args) }
+    } catch {
+      return { ok: false, code: 'QUEUE_UNAVAILABLE' }
+    }
+  }),
 }))
 
 jest.mock('@/lib/utils/logger', () => ({
@@ -570,10 +590,15 @@ describe('processAccessRevoke for Jellyfin members', () => {
 })
 
 describe('getStripeProcessor (revoke)', () => {
-  it('returns the processor for PLEX_ACCESS_REVOKE', () => {
-    expect(getStripeProcessor(JOB_TYPES.PLEX_ACCESS_REVOKE)).toBe(
-      processAccessRevoke
-    )
+  it('runs PLEX_ACCESS_REVOKE under the member\'s access lock (P11.3)', async () => {
+    jest.mocked(withAccessLock).mockImplementationOnce(async (_userId, _owner, fn) => fn())
+    const revoke = getStripeProcessor(JOB_TYPES.PLEX_ACCESS_REVOKE)
+    prismaMock.user.findUnique.mockResolvedValue(null)
+
+    await revoke?.({ id: 'job-9', data: { userId: 'user-9' }, attemptsMade: 0 } as never)
+
+    expect(withAccessLock).toHaveBeenCalledWith('user-9', 'job-9', expect.any(Function), { redis: 'redis' })
+    expect(prismaMock.user.findUnique).toHaveBeenCalled()
   })
 })
 

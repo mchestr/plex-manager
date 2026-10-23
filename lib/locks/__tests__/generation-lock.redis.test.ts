@@ -3,7 +3,7 @@
  */
 
 /**
- * Redis-backed tests for lib/queue/redis-lock.ts, run against the server in
+ * Redis-backed tests for lib/locks/generation-lock.ts, run against the server in
  * TEST_REDIS_URL. Gated by `describeRedis` and run only by
  * `npm run test:integration`. Two clients stand in for two app processes.
  */
@@ -11,7 +11,7 @@
 import { randomUUID } from "node:crypto"
 import Redis from "ioredis"
 
-import { acquireGenerationLock } from "@/lib/queue/redis-lock"
+import { acquireGenerationLock } from "@/lib/locks/generation-lock"
 import { describeRedis } from "@/test/helpers/integration"
 
 describeRedis("redis generation lock", (redisUrl) => {

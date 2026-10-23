@@ -11,6 +11,7 @@ the bundled `docker-compose.yml` (database `plex_wrapped`, user `postgres`, the
 - [Restore](#restore)
 - [Dump before every migration](#dump-before-every-migration)
 - [Applying migrations](#applying-migrations)
+- [Web and worker containers](#web-and-worker-containers)
 - [Migration calendar for the 2026 season](#migration-calendar-for-the-2026-season)
 - [Code freeze gate](#code-freeze-gate)
 - [Installed with db push](#installed-with-db-push)
@@ -117,10 +118,35 @@ Use `SKIP_MIGRATIONS=true`:
   `docker compose run --rm -e SKIP_MIGRATIONS=true app npx prisma migrate deploy`
   (the entrypoint skips its own deploy and runs the command you give it), or
   `npm run db:deploy` outside Docker; then start the app;
-- on every replica but one, so only one process applies migrations.
+- on every replica but one, so only one process applies migrations. The
+  [web and worker example](examples/docker-compose.workers.yml) does this: its
+  one `worker` container applies them and the `web` containers skip them.
 
 Afterwards, `npx prisma migrate status` must report "Database schema is up to
 date!".
+
+## Web and worker containers
+
+`PROCESS_ROLE` picks what a container runs. Every role runs the same image
+and `server.js`.
+
+| Role | Serves | Runs |
+|---|---|---|
+| `all` (default) | every page and route | the queue Workers, the schedulers, the Discord bot and, without Redis, the database-lease watchlist and retention polling |
+| `web` | every page and route | nothing in the background but the first-run setup code |
+| `worker` | only `/api/health` and `/api/metrics` (everything else is 404) | what `all` runs |
+
+One `all` container is the simple install. To scale the site, run web
+containers and one worker, as in
+[`examples/docker-compose.workers.yml`](examples/docker-compose.workers.yml):
+the worker applies the migrations and the web containers start with
+`SKIP_MIGRATIONS=true`. `/api/health` names each container's role. Without a
+worker or `all` container nothing processes jobs: Stripe events, watchlist
+syncs and Rewind generations wait in Redis.
+
+Requests never wait on Redis for more than about two seconds: while it is
+down, enqueues answer "the queue is unavailable" and the Stripe webhook
+answers `503`, so Stripe retries the delivery.
 
 ## Migration calendar for the 2026 season
 

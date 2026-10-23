@@ -132,8 +132,10 @@ Stripe signature is the authentication. It has no IP rate limit, because anyone
 who spoofs Stripe's addresses could otherwise get genuine deliveries rejected.
 Bodies over 1 MiB are refused with `413` before the signature check, so an
 unsigned request cannot make the app buffer an unbounded body. Bad signatures return
-`400` (never `5xx`, so Stripe does not retry a forged request); an event that was
-already processed returns `200` with no re-enqueue. A resend of an event that
+`400` (never `5xx` for a bad signature, so Stripe does not retry a forged
+request). While the job queue is unavailable (Redis down) the route answers
+`503` within about two seconds, so Stripe retries the delivery later. An event
+that was already processed returns `200` with no re-enqueue. A resend of an event that
 was never processed recovers it (see
 [Event Ordering and Recovery](#event-ordering-and-recovery)).
 

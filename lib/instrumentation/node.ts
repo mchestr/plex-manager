@@ -7,10 +7,17 @@
  * Discord bot poller and the setup code (P11.32) side by side, so neither a
  * down Redis nor a slow Discord login holds up the others or the site (BP-13).
  *
+ * `PROCESS_ROLE` (P11.3) picks what starts: a `web` container issues only the
+ * setup code, because web containers serve the wizard; `worker` and `all`
+ * (the default) also start the queue Workers, their schedulers (watchlist,
+ * role reconcile, retention and the Rewind runs), the Discord bot poller and,
+ * without Redis, the database-lease fallbacks.
+ *
  * Imported dynamically from instrumentation.ts so the Edge runtime never
  * analyses its Node-only dependencies.
  */
 
+import { processRole } from "@/lib/db/pool-config"
 import { installShutdownHandlers, onShutdown, shutdownSignal } from "@/lib/instrumentation/shutdown"
 import { createLogger } from "@/lib/utils/logger"
 import { withTimeout } from "@/lib/utils/with-timeout"
@@ -26,9 +33,18 @@ export async function startNodeInstrumentation() {
     await prisma.$disconnect()
   })
 
+  const role = processRole()
+  logger.info("Process role", { role })
+  const background =
+    role === "web"
+      ? []
+      : [
+          startQueueWorker().catch((error) => logger.error("Queue worker start failed", error)),
+          startDiscordBotPolling().catch((error) => logger.error("Discord bot start failed", error)),
+        ]
+
   await Promise.all([
-    startQueueWorker().catch((error) => logger.error("Queue worker start failed", error)),
-    startDiscordBotPolling().catch((error) => logger.error("Discord bot start failed", error)),
+    ...background,
     issueSetupCode().catch((error) => logger.error("Could not issue the setup code", error)),
   ])
 }

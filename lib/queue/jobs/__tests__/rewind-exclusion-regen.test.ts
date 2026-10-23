@@ -20,7 +20,7 @@ import { fixtureMember } from '@/evals/rewind/__tests__/member-stats'
 import { FIXTURE_USER_ID } from '@/evals/rewind/__tests__/stats-inputs'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { processRewindGenerateUser } from '@/lib/queue/jobs/rewind'
-import { acquireGenerationLock } from '@/lib/queue/redis-lock'
+import { acquireGenerationLock } from '@/lib/locks/generation-lock'
 import type { RewindGenerateUserPayload } from '@/lib/queue/types'
 import { enqueueRewindGeneration } from '@/lib/rewind/enqueue-generation'
 import { COPY_SLOTS, slotDependencyHash } from '@/lib/wrapped/copy/slots'
@@ -32,7 +32,7 @@ import { generateUserRewind } from '@/lib/wrapped/pipeline/generate-user'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/queue/connection', () => ({ getRedisConnection: jest.fn(() => ({ fake: 'redis' })) }))
-jest.mock('@/lib/queue/redis-lock', () => ({ acquireGenerationLock: jest.fn() }))
+jest.mock('@/lib/locks/generation-lock', () => ({ acquireGenerationLock: jest.fn() }))
 jest.mock('@/lib/rewind/enqueue-generation', () => ({ enqueueRewindGeneration: jest.fn() }))
 jest.mock('@/lib/wrapped/pipeline/generate-user', () => ({ generateUserRewind: jest.fn() }))
 jest.mock('@/lib/llm/registry', () => ({ getLanguageModel: jest.fn(), LLMConfigError: class extends Error {} }))
