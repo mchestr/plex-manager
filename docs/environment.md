@@ -24,7 +24,9 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `NEXT_PUBLIC_APP_URL` |  | `NEXTAUTH_URL` | Public URL for share links and OG images; same origin as NEXTAUTH_URL. A bare-metal install rebuilds after changing it, because Next inlines it at build time. |
 | `NEXTAUTH_SECRET` | yes (boot check) |  | Signs session cookies. At least 32 random characters: openssl rand -base64 32. |
 | `PLEX_CLIENT_IDENTIFIER` | yes (boot check) |  | Unique id this install reports to Plex: openssl rand -hex 16. Keep it stable; Jellyfin's default device id is derived from it. |
-| `ENCRYPTION_KEY` |  |  | Encrypts stored service secrets: openssl rand -hex 32. Never reuse NEXTAUTH_SECRET, and keep it stable: rotating it makes encrypted secrets unreadable until they are saved again. |
+| `ENCRYPTION_KEYS` | yes (boot check) |  | Keyring for secrets stored at rest: comma-separated kid:base64 entries of 32 bytes each (openssl rand -base64 32). The first encrypts new writes; the others only read. Production also starts with ENCRYPTION_KEY alone, or with ALLOW_PLAINTEXT_SECRETS=true. Keep every key in a password manager, never beside a database dump; rotation and lost-key recovery are in docs/operations.md. |
+| `ENCRYPTION_KEY` |  |  | Older single key for stored secrets, at least 32 characters: openssl rand -hex 32. Never reuse NEXTAUTH_SECRET. It still reads what it wrote and, without ENCRYPTION_KEYS, encrypts new writes as kid legacy; move to ENCRYPTION_KEYS with Settings > Security. |
+| `ALLOW_PLAINTEXT_SECRETS` |  | `false` | UNSAFE. "true" lets production start without a strong encryption key; every boot warns and secrets are stored as plain text. |
 | `SETUP_TOKEN` |  |  | Claims first-run setup instead of the code printed in the log. At least 16 characters: openssl rand -hex 16. |
 | `ALLOW_INSECURE_HTTP` |  | `false` | "true" lets production run on plain http (LAN only). Cookies are then not Secure; never set it on an install reachable from the internet. |
 | `TRUSTED_PROXY_HOPS` |  | `1` | Reverse proxies that append to X-Forwarded-For: 1 for one proxy, 2 for a CDN in front of it, 0 for none. A wrong value lets clients pick their rate-limit address. |
@@ -36,7 +38,7 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 |---|---|---|---|
 | `DATABASE_URL` | yes |  | PostgreSQL connection string. ?schema= picks the Postgres schema for migrations and the app alike; change it only before the first migration. |
 | `SKIP_MIGRATIONS` |  | `false` | Docker image only: "true" starts without applying migrations; the entrypoint still logs prisma migrate status. |
-| `PROCESS_ROLE` |  | `all` | web, worker or all: picks the database pool defaults below. |
+| `PROCESS_ROLE` |  | `all` | web, worker or all: what this container runs, and the database pool defaults below. web serves pages only; worker runs the queues, schedulers and Discord bot and serves only /api/health and /api/metrics; all does both in one container (docs/examples/docker-compose.workers.yml). The boot check refuses any other value. |
 | `DB_POOL_MAX` |  | `10 web, 5 worker, 12 all` | Database pool size. The Prisma 7 pg adapter ignores ?connection_limit= in DATABASE_URL. |
 | `DB_CONNECTION_TIMEOUT_MS` |  | `10000` | How long a query waits for a free database connection. |
 | `DB_STATEMENT_TIMEOUT_MS` |  | `15000 web, 120000 worker, 60000 all` | Statement timeout in milliseconds. |
