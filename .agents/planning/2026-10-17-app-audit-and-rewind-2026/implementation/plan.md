@@ -140,7 +140,7 @@ The soft launch (P7.16) depends only on P7.11's gallery, P7.12, P7.15 and P4.16.
 - **Sign-in path.** No change to sign-in, callback, invite, onboarding or subscribe merges between 2026-11-25 and 2026-12-10, except a security fix.
 - **Feature freeze.** No new feature code lands after 2026-12-10. Every P1 feature ships with its flag off, and the owner enables it in production.
 - **Code freeze.** From 2026-12-14 only data or security fixes merge, until the final cut has finished. P8.9's CI freeze gate, merged and tested by 2026-12-09 with `CODE_FREEZE` off, enforces it once the owner flips the variable at 00:00 on 2026-12-14.
-- **January.** Rewind stays live until the season closes on 2027-01-31, so the steps that change runtime pieces Rewind depends on (P11.1, P11.3) wait until after it.
+- **January.** Rewind stays live until the season closes on 2027-01-31. The steps that change runtime pieces Rewind depends on (P11.1, P11.3) were planned for after it; the owner deployed them on 2026-10-24 instead, before the season opens, so the soft launch and the season run on them. No other change to them lands while the season is live, except a security fix.
 - **Cuts.** The fixed Rewind dates do not move. If Rewind work slips, the plan-level cuts and then the design's cut list apply in order (Appendix B and the P7 header), and `rewindDisabledPages` turns pages off without a deploy. The ten core pages, sharing, privacy and accessibility are never cut.
 
 **Turn steps into issues with `/create-issues`.** The tracking document for the command is [`issues-backlog.md`](issues-backlog.md), next to this plan.
