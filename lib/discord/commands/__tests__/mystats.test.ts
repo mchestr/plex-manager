@@ -127,7 +127,7 @@ function row(overrides: Record<string, unknown> = {}) {
     year: 2010,
     originally_available_at: "2010-07-16",
     guid: "plex://movie/5001",
-    section_id: "1",
+    reference_id: 1001,
     ...overrides,
   }
 }
@@ -147,7 +147,7 @@ const SAMPLE_ROWS = [
     grandparent_title: "The Office",
     year: 2005,
     guid: "plex://episode/9001",
-    section_id: "2",
+    reference_id: 1002,
   }),
 ]
 

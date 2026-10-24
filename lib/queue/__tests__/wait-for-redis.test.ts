@@ -130,5 +130,6 @@ describe("startNodeInstrumentation() with Redis starting late", () => {
     expect(startWorker).toHaveBeenCalledTimes(1)
     expect(scheduleRepeatingJob).toHaveBeenCalledTimes(1)
     expect(mockProbe.disconnect).toHaveBeenCalled()
-  })
+    // Real module loading (Prisma among it) can outlast the default 5 s on a loaded runner with coverage
+  }, 20_000)
 })
