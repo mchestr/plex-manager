@@ -44,6 +44,9 @@ const customJestConfig = {
     '!**/*.d.ts',
     '!**/node_modules/**',
     '!lib/generated/**',
+    // Integration suites are left out of the unit run, which would count them as untested code
+    '!**/*.pg.test.ts',
+    '!**/*.redis.test.ts',
   ],
   // json-summary feeds scripts/coverage-ratchet.mjs.
   coverageReporters: ['json-summary', 'lcov', 'text-summary'],

@@ -20,6 +20,9 @@ import {
   tryDecryptSecret,
 } from "@/lib/security/crypto"
 
+const warn = jest.fn()
+jest.mock("@/lib/utils/logger", () => ({ createLogger: () => ({ warn, info: jest.fn(), error: jest.fn(), debug: jest.fn() }) }))
+
 const LEGACY = "legacy-key-0123456789abcdef0123456789"
 const K1 = crypto.randomBytes(32).toString("base64")
 const K2 = crypto.randomBytes(32).toString("base64")
@@ -154,5 +157,35 @@ describe("crypto keyring", () => {
     setKeys({ keys: `k1:${K1}` })
     expect(tryDecryptSecret("plain")).toEqual({ ok: true, value: "plain" })
     expect(tryDecryptSecret("enc:v2:gone:AAAA")).toEqual({ ok: false, code: "KEY_UNKNOWN", kid: "gone" })
+  })
+
+  it("ignores an entry that is not base64, and warns once per bad entry", () => {
+    expect(parseKeyringEntries("k1:not*base64")).toEqual([{ kid: "k1", problem: "not_32_bytes" }])
+
+    warn.mockClear()
+    setKeys({ keys: `nokid,k1:${K1}` })
+    expect(primaryKid()).toBe("k1")
+    setKeys({ keys: `nokid,k2:${K2}` })
+    expect(primaryKid()).toBe("k2")
+    const ignored = warn.mock.calls.filter(([event]) => event === "crypto.keyring_entry_ignored")
+    expect(ignored).toEqual([["crypto.keyring_entry_ignored", { kid: undefined, problem: "malformed" }]])
+  })
+
+  it("reads the kid of each stored format", () => {
+    expect(kidOf("enc:v1:AAAA")).toBe("legacy")
+    expect(kidOf("plain")).toBeNull()
+    expect(kidOf("enc:v2:nokid")).toBeNull()
+  })
+
+  it("answers CORRUPT with no kid for a v2 value without one", () => {
+    setKeys({ keys: `k1:${K1}` })
+    expect(tryDecryptSecret("enc:v2:nokid")).toEqual({ ok: false, code: "CORRUPT", kid: null })
+    expect(() => decryptSecret("enc:v2:nokid")).toThrow(/^Cannot decrypt a stored secret: CORRUPT$/)
+  })
+
+  it("leaves a value as it is for the primary when there is no key or nothing to seal", () => {
+    expect(encryptForPrimary("plain")).toBe("plain")
+    setKeys({ keys: `k1:${K1}` })
+    expect(encryptForPrimary("")).toBe("")
   })
 })
