@@ -19,6 +19,8 @@ import { useEffect, useRef, useState } from "react"
 /** plex.tv is asked every 3 s, for up to 5 minutes. */
 const POLL_INTERVAL_MS = 3000
 const MAX_POLLS = 100
+/** signIn runs at most twice when the first one set no session. */
+const MAX_SIGN_IN_ATTEMPTS = 2
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -38,7 +40,10 @@ export function PlexCallbackPageClient() {
     if (startedRef.current) return
     startedRef.current = true
 
-    const complete = async () => {
+    // next-auth's signIn reports ok without a session when its CSRF check
+    // fails, so the session is confirmed by finishPlexSignIn, and a missing one
+    // gets one more signIn with a fresh CSRF token (#393).
+    const complete = async (attempt = 1): Promise<void> => {
       const result = await signIn("plex", { redirect: false })
       if (!result?.ok) {
         const failure = plexSignInCodeFor(result?.error)
@@ -51,8 +56,14 @@ export function PlexCallbackPageClient() {
       }
 
       const finished = await finishPlexSignIn()
-      // Full page load, so the new session cookie is used everywhere
-      redirectTo(finished.success ? finished.data.next : "/")
+      if (finished.success) {
+        // Full page load, so the new session cookie is used everywhere
+        redirectTo(finished.data.next)
+      } else if (finished.code === "UNAUTHENTICATED" && attempt < MAX_SIGN_IN_ATTEMPTS) {
+        await complete(attempt + 1)
+      } else {
+        setCode(finished.code === "RATE_LIMITED" ? "rate_limited" : "sign_in_failed")
+      }
     }
 
     const run = async () => {
@@ -107,7 +118,8 @@ function CallbackFailure({
   const tryAgain = async () => {
     setRestarting(true)
     try {
-      const started = await startPlexSignIn({})
+      // retry carries the unfinished sign-in's invite code and callback path over
+      const started = await startPlexSignIn({ retry: true })
       if (started.success) {
         redirectTo(started.data.authUrl)
         return

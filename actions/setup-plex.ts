@@ -29,7 +29,7 @@ import { fail, ok } from "@/lib/actions/result"
 import { getPlexUserInfo, testPlexConnection } from "@/lib/connections/plex"
 import { createPin, readPin } from "@/lib/connections/plex-pin"
 import { readSetupPinCookie, SETUP_PLEX_PIN_COOKIE, setupPinCookie, type SetupPlexPinCookie } from "@/lib/plex-pin-cookie"
-import { browserClientId, plexAuthUrl } from "@/lib/plex-pin-flow"
+import { browserClientId, forwardBaseUrl, plexAuthUrl } from "@/lib/plex-pin-flow"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
@@ -66,7 +66,8 @@ export const startSetupPlexConnect = setupAction({
     if (!pin.ok) return fail("UPSTREAM_UNAVAILABLE", START_FAILED)
 
     ;(await cookies()).set(setupPinCookie({ pinId: pin.data.id, code: pin.data.code, clientId }))
-    return ok({ authUrl: plexAuthUrl(clientId, pin.data.code, "/setup?step=plex") })
+    const { baseUrl } = await forwardBaseUrl()
+    return ok({ authUrl: plexAuthUrl(clientId, pin.data.code, baseUrl, "/setup?step=plex") })
   },
 })
 
