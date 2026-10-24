@@ -6,7 +6,7 @@
  * the botToken/support-channel migration (NFR-5). Prisma is mocked.
  */
 
-import { getDiscordBotToken, getSupportChannelId, getSupportThreadIds } from "@/lib/discord/config"
+import { getDiscordBotToken, getDiscordPortalUrl, getSupportChannelId, getSupportThreadIds } from "@/lib/discord/config"
 import { prisma } from "@/lib/prisma"
 
 jest.mock("@/lib/prisma", () => ({
@@ -23,6 +23,10 @@ const ENV_KEYS = [
   "DISCORD_BOT_TOKEN",
   "DISCORD_SUPPORT_CHANNEL_ID",
   "DISCORD_SUPPORT_THREAD_IDS",
+  "DISCORD_PORTAL_URL",
+  "PLEX_WRAPPED_BASE_URL",
+  "NEXT_PUBLIC_APP_URL",
+  "NEXTAUTH_URL",
 ] as const
 
 const originalEnv: Record<string, string | undefined> = {}
@@ -122,5 +126,25 @@ describe("getSupportThreadIds", () => {
     mockPrisma.discordIntegration.findUnique.mockResolvedValue(null)
 
     await expect(getSupportThreadIds()).resolves.toEqual([])
+  })
+})
+
+describe("getDiscordPortalUrl", () => {
+  it("prefers DISCORD_PORTAL_URL, then PLEX_WRAPPED_BASE_URL", () => {
+    process.env.PLEX_WRAPPED_BASE_URL = "https://bot.example.com/"
+    expect(getDiscordPortalUrl()).toBe("https://bot.example.com/discord/link")
+    process.env.DISCORD_PORTAL_URL = "https://portal.example.com/link"
+    expect(getDiscordPortalUrl()).toBe("https://portal.example.com/link")
+  })
+
+  it("falls back to getBaseUrl(): NEXT_PUBLIC_APP_URL, then NEXTAUTH_URL", () => {
+    process.env.NEXTAUTH_URL = "https://auth.example.com"
+    expect(getDiscordPortalUrl()).toBe("https://auth.example.com/discord/link")
+    process.env.NEXT_PUBLIC_APP_URL = "https://plex.example.com/"
+    expect(getDiscordPortalUrl()).toBe("https://plex.example.com/discord/link")
+  })
+
+  it("never falls back to localhost outside development", () => {
+    expect(() => getDiscordPortalUrl()).toThrow(/Base URL is not configured/)
   })
 })

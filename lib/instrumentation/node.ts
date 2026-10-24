@@ -3,14 +3,22 @@
  *
  * `instrumentation.ts` calls {@link startNodeInstrumentation} without awaiting
  * it, because Next awaits `register()` before serving the first request. It
- * installs the shutdown coordinator first, then starts the queue worker, the
+ * installs the shutdown coordinator first and checks the encryption key
+ * (P11.1, at most 5 s), then starts the queue worker, the
  * Discord bot poller and the setup code (P11.32) side by side, so neither a
  * down Redis nor a slow Discord login holds up the others or the site (BP-13).
+ *
+ * `PROCESS_ROLE` (P11.3) picks what starts: a `web` container issues only the
+ * setup code, because web containers serve the wizard; `worker` and `all`
+ * (the default) also start the queue Workers, their schedulers (watchlist,
+ * role reconcile, retention and the Rewind runs), the Discord bot poller and,
+ * without Redis, the database-lease fallbacks.
  *
  * Imported dynamically from instrumentation.ts so the Edge runtime never
  * analyses its Node-only dependencies.
  */
 
+import { processRole } from "@/lib/db/pool-config"
 import { installShutdownHandlers, onShutdown, shutdownSignal } from "@/lib/instrumentation/shutdown"
 import { createLogger } from "@/lib/utils/logger"
 import { withTimeout } from "@/lib/utils/with-timeout"
@@ -26,9 +34,25 @@ export async function startNodeInstrumentation() {
     await prisma.$disconnect()
   })
 
+  // Every role checks the key first, before anything below can read a stored
+  // secret: a worker decrypts service keys and tokens in its jobs and the bot,
+  // and a web container serves settings, sign-in and the setup wizard. It exits
+  // on a mismatched key; a slow database is retried in the background (P11.1).
+  const { assertEncryptionKey } = await import("@/lib/instrumentation/encryption-canary")
+  await assertEncryptionKey({ signal: shutdownSignal })
+
+  const role = processRole()
+  logger.info("Process role", { role })
+  const background =
+    role === "web"
+      ? []
+      : [
+          startQueueWorker().catch((error) => logger.error("Queue worker start failed", error)),
+          startDiscordBotPolling().catch((error) => logger.error("Discord bot start failed", error)),
+        ]
+
   await Promise.all([
-    startQueueWorker().catch((error) => logger.error("Queue worker start failed", error)),
-    startDiscordBotPolling().catch((error) => logger.error("Discord bot start failed", error)),
+    ...background,
     issueSetupCode().catch((error) => logger.error("Could not issue the setup code", error)),
   ])
 }
@@ -90,6 +114,8 @@ async function startQueueWorker() {
   }
 
   await startWorker()
+  const { enqueueSecretsReencrypt } = await import("@/lib/queue/jobs/secrets")
+  await enqueueSecretsReencrypt().catch((error) => logger.error("Could not queue the secret re-encryption", error))
   await scheduleRoleReconcile().catch((error) => logger.error("Could not schedule the Discord role reconcile", error))
 
   const { ensureRetentionSchedule } = await import("@/lib/retention/schedule")

@@ -2,82 +2,23 @@ import { PrismaClient } from '@/lib/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { poolConfigFor, processRole } from '@/lib/db/pool-config'
 import { pgAdapterOptionsFor } from '@/lib/db/schema-param'
-import { decryptSecret, encryptSecret } from '@/lib/security/crypto'
+import { ENCRYPTED_FIELDS } from '@/lib/db/encrypted-fields'
+import { encryptionQuery } from '@/lib/db/encryption-extension'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: ReturnType<typeof createPrismaClient> | undefined
 }
 
 /**
- * Secret-bearing columns to encrypt at rest, keyed by Prisma model name.
- *
- * A single Prisma query extension (below) transparently encrypts these on write
- * and decrypts them on read, so no call site needs to know about encryption.
- * Encryption is a no-op unless ENCRYPTION_KEY is set, and reads of legacy
- * plaintext pass through unchanged — see lib/security/crypto.ts.
- *
- * IMPORTANT: the extension transforms write `data`/`create`/`update` payloads and
- * decrypts read results, but NOT `where` clauses. Encryption uses a random IV per
- * write (GCM), so ciphertext is non-deterministic — a plaintext equality filter on
- * an encrypted column can never match. Never filter these fields in a `where`;
- * match on non-secret columns and compare the decrypted value in application code.
- *
- * Nested relation reads and writes bypass the extension, which only sees the
- * top-level model. Nested rows (`include`/`select` of a related model) are
- * neither decrypted nor stripped of secret columns, so `include: { user: true }`
- * returns `plexAuthToken` exactly as stored. Nested `create`/`update` payloads
- * (e.g. `user: { create: { plexAuthToken } }` under another model) are not
- * encrypted. Select explicit fields for nested reads (e.g. `publicUserSelect`
- * in lib/dto/user.ts), and write secret columns only through a top-level query
- * on their own model.
+ * Secret-bearing columns encrypted at rest (`lib/db/encrypted-fields.ts`).
+ * The query extension (`lib/db/encryption-extension.ts`) encrypts them on
+ * every write and decrypts them on every read, nested relations included, and
+ * turns a value it cannot decrypt into null (P11.1). `where` clauses are never
+ * transformed, so never filter on these columns.
  *
  * @internal
  */
-export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
-  User: ['plexAuthToken'],
-  PlexServer: ['token'],
-  JellyfinServer: ['apiKey'],
-  Tautulli: ['apiKey'],
-  Overseerr: ['apiKey'],
-  Sonarr: ['apiKey'],
-  Radarr: ['apiKey'],
-  LLMProvider: ['apiKey'],
-  DiscordIntegration: ['clientSecret', 'botToken'],
-  DiscordConnection: ['accessToken', 'refreshToken'],
-  Config: ['stripeSecretKey', 'stripeWebhookSecret', 'rewindSerialKey'],
-}
-
-/** Encrypt any configured secret fields present on a write-args `data` object. */
-function encryptData(fields: readonly string[], data: unknown): void {
-  if (!data || typeof data !== 'object') return
-  const record = data as Record<string, unknown>
-  for (const field of fields) {
-    const value = record[field]
-    if (typeof value === 'string') {
-      record[field] = encryptSecret(value)
-    } else if (
-      // Prisma update operator form, e.g. { set: "..." }.
-      value &&
-      typeof value === 'object' &&
-      typeof (value as Record<string, unknown>).set === 'string'
-    ) {
-      const op = value as Record<string, unknown>
-      op.set = encryptSecret(op.set as string)
-    }
-  }
-}
-
-/** Decrypt any configured secret fields present on a read result row. */
-function decryptRow(fields: readonly string[], row: unknown): void {
-  if (!row || typeof row !== 'object') return
-  const record = row as Record<string, unknown>
-  for (const field of fields) {
-    const value = record[field]
-    if (typeof value === 'string') {
-      record[field] = decryptSecret(value)
-    }
-  }
-}
+export { ENCRYPTED_FIELDS }
 
 /**
  * The app's Prisma client: the pg adapter with the role's pool limits and the
@@ -98,41 +39,7 @@ export function createPrismaClient() {
   return new PrismaClient({ adapter }).$extends({
     query: {
       $allModels: {
-        async $allOperations({ model, args, query }) {
-          const fields = model ? ENCRYPTED_FIELDS[model] : undefined
-          if (!fields) {
-            return query(args)
-          }
-
-          // Encrypt secrets in write payloads before they reach the DB.
-          const writeArgs = args as {
-            data?: unknown
-            create?: unknown
-            update?: unknown
-          }
-          if (writeArgs.data !== undefined) {
-            if (Array.isArray(writeArgs.data)) {
-              // createMany
-              for (const entry of writeArgs.data) encryptData(fields, entry)
-            } else {
-              encryptData(fields, writeArgs.data)
-            }
-          }
-          // upsert carries separate create/update payloads.
-          if (writeArgs.create !== undefined) encryptData(fields, writeArgs.create)
-          if (writeArgs.update !== undefined) encryptData(fields, writeArgs.update)
-
-          const result = await query(args)
-
-          // Decrypt secrets in read/returned rows.
-          if (Array.isArray(result)) {
-            for (const row of result) decryptRow(fields, row)
-          } else {
-            decryptRow(fields, result)
-          }
-
-          return result
-        },
+        $allOperations: encryptionQuery,
       },
     },
   })

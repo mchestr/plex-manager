@@ -14,6 +14,8 @@ import { ensureWatchlistSchedule } from "@/lib/watchlist/schedule"
 import { issueSetupCode } from "@/lib/setup/claim"
 import { startRetentionFallback } from "@/lib/retention/fallback"
 import { ensureRetentionSchedule } from "@/lib/retention/schedule"
+import { assertEncryptionKey } from "@/lib/instrumentation/encryption-canary"
+import { enqueueSecretsReencrypt } from "@/lib/queue/jobs/secrets"
 
 // The queue worker and the bot poller start side by side, so a Redis that is
 // down at boot never stops the Discord bot (BP-13).
@@ -56,6 +58,8 @@ jest.mock("@/lib/discord/config", () => ({ isDiscordBotEnabled: jest.fn().mockRe
 jest.mock("@/lib/discord/bot", () => ({ DiscordBot: jest.fn() }))
 jest.mock("@/lib/prisma", () => ({ prisma: {} }))
 jest.mock("@/lib/setup/claim", () => ({ issueSetupCode: jest.fn() }))
+jest.mock("@/lib/instrumentation/encryption-canary", () => ({ assertEncryptionKey: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("@/lib/queue/jobs/secrets", () => ({ enqueueSecretsReencrypt: jest.fn().mockResolvedValue("current") }))
 
 const originalEnv = process.env
 
@@ -185,5 +189,43 @@ describe("startNodeInstrumentation() and the setup code (P11.32)", () => {
 
     expect(mockError).toHaveBeenCalledWith("Could not issue the setup code", expect.any(Error))
     expect(startWorker).toHaveBeenCalled()
+  })
+})
+
+describe("startNodeInstrumentation() and the encryption key (P11.1)", () => {
+  it("checks the key before anything else starts", async () => {
+    jest.mocked(waitForRedis).mockResolvedValue(true)
+    let startedBeforeCheck = false
+    jest.mocked(assertEncryptionKey).mockImplementationOnce(async () => {
+      startedBeforeCheck = jest.mocked(issueSetupCode).mock.calls.length > 0 || botPollerStarted()
+    })
+
+    await startNodeInstrumentation()
+
+    expect(assertEncryptionKey).toHaveBeenCalledWith({ signal: shutdownSignal })
+    expect(startedBeforeCheck).toBe(false)
+    expect(issueSetupCode).toHaveBeenCalled()
+  })
+
+  it("queues the re-encryption once the worker runs, and only with Redis", async () => {
+    jest.mocked(waitForRedis).mockResolvedValue(true)
+    jest.mocked(startWorker).mockResolvedValue(undefined)
+    await startNodeInstrumentation()
+    expect(enqueueSecretsReencrypt).toHaveBeenCalledTimes(1)
+
+    jest.clearAllMocks()
+    delete process.env.REDIS_URL
+    await startNodeInstrumentation()
+    expect(enqueueSecretsReencrypt).not.toHaveBeenCalled()
+  })
+
+  it("logs a failure to queue it without stopping the rest", async () => {
+    jest.mocked(waitForRedis).mockResolvedValue(true)
+    jest.mocked(enqueueSecretsReencrypt).mockRejectedValueOnce(new Error("redis down"))
+
+    await startNodeInstrumentation()
+
+    expect(mockError).toHaveBeenCalledWith("Could not queue the secret re-encryption", expect.any(Error))
+    expect(ensureWatchlistSchedule).toHaveBeenCalled()
   })
 })

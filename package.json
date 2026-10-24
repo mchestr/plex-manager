@@ -1,6 +1,6 @@
 {
-  "name": "plex-wrapped",
-  "version": "0.1.0",
+  "name": "plex-manager",
+  "version": "0.3.0",
   "private": true,
   "engines": {
     "node": ">=22"
@@ -8,9 +8,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "postbuild": "node scripts/copy-standalone-assets.mjs",
     "build:e2e": "npm run build",
     "start": "next start",
-    "start:prod": "NEXT_MANUAL_SIG_HANDLE=true node server.js",
+    "start:prod": "NEXT_MANUAL_SIG_HANDLE=true node --env-file-if-exists=.env .next/standalone/server.js",
+    "env:docs": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/gen-env-reference.ts",
     "lint": "eslint .",
     "typecheck": "prisma generate && next typegen && tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
     "knip": "knip --production",

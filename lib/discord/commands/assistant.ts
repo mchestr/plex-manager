@@ -54,7 +54,7 @@ import {
 
 const logger = createLogger("DISCORD_ASSISTANT_COMMAND")
 
-const LINK_NUDGE = buildNotLinkedMessage("using the assistant")
+const LINK_NUDGE_ACTION = "using the assistant"
 
 /** Appended to `/assistant ask` answers so users know where to continue. */
 const CONTINUE_IN_DM_NOTE =
@@ -87,7 +87,7 @@ async function handleAsk(ctx: InteractionContext): Promise<void> {
   // Guard the (rare) case where entitlement lapsed between the gate above and the
   // chat call — handleDiscordChat re-checks and refuses non-linked/unentitled.
   if (response.linked === false) {
-    await interaction.editReply({ content: LINK_NUDGE })
+    await interaction.editReply({ content: buildNotLinkedMessage(LINK_NUDGE_ACTION) })
     return
   }
   if (response.entitled === false) {

@@ -22,7 +22,7 @@ import { parseArgs } from "node:util"
 
 import { prisma } from "@/lib/prisma"
 import { getRedisConnection } from "@/lib/queue/connection"
-import { acquireGenerationLock } from "@/lib/queue/redis-lock"
+import { acquireGenerationLock } from "@/lib/locks/generation-lock"
 import { hasActiveGeneration } from "@/lib/rewind/generation-guards"
 import { rollbackStoredRewind } from "@/lib/rewind/rollback"
 import { yearSchema } from "@/lib/validations/shared-schemas"

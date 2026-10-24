@@ -33,6 +33,12 @@ describe("secretInputState", () => {
     expect(secretInputState("", { last4: "3kQ2", origin: null }, "http://anything")).toBe("saved")
     expect(secretInputState("", SAVED)).toBe("saved")
   })
+
+  it("asks again for a stored value the current key cannot read (P11.1), even with a fixed destination", () => {
+    expect(secretInputState("", { ...SAVED, unreadable: true }, "http://localhost:5055")).toBe("reenter-required")
+    expect(secretInputState("", { last4: "", origin: null, unreadable: true })).toBe("reenter-required")
+    expect(secretInputState("typed", { ...SAVED, unreadable: true }, "http://localhost:5055")).toBe("entered")
+  })
 })
 
 describe("SecretInput", () => {
@@ -101,6 +107,19 @@ describe("SecretInput", () => {
 
     const hint = screen.getByTestId("key-reenter")
     expect(hint).toHaveTextContent("Re-enter to use with the new address. The saved key only goes to localhost:5055.")
+    expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(hint.id)
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("unreadable: asks for the key again with the encryption copy", async () => {
+    const { container } = render(<Harness saved={{ last4: "", origin: "http://localhost:5055", unreadable: true }} currentOrigin="http://localhost:5055" />)
+    const input = screen.getByLabelText("API key")
+
+    expect(input).toBeRequired()
+    expect(input).toHaveAttribute("data-state", "reenter-required")
+    const hint = screen.getByTestId("key-unreadable")
+    expect(hint).toHaveTextContent("The stored key can't be read with the current encryption key. Enter it again.")
+    expect(screen.queryByTestId("key-reenter")).not.toBeInTheDocument()
     expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(hint.id)
     expect(await axe(container)).toHaveNoViolations()
   })

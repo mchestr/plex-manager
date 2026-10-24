@@ -127,7 +127,7 @@ function row(overrides: Record<string, unknown> = {}) {
     year: 2010,
     originally_available_at: "2010-07-16",
     guid: "plex://movie/5001",
-    section_id: "1",
+    reference_id: 1001,
     ...overrides,
   }
 }
@@ -147,7 +147,7 @@ const SAMPLE_ROWS = [
     grandparent_title: "The Office",
     year: 2005,
     guid: "plex://episode/9001",
-    section_id: "2",
+    reference_id: 1002,
   }),
 ]
 
@@ -193,6 +193,9 @@ function createMockContext(options: { linked?: boolean; userId?: string; user?: 
 function embedText(embed: EmbedShape): string {
   return [embed.data.title ?? "", embed.data.description ?? "", ...embed.data.fields.map((f) => `${f.name} ${f.value}`)].join(" ")
 }
+
+// Link nudges need a base URL: there is no localhost fallback outside development.
+process.env.NEXT_PUBLIC_APP_URL = "https://plex.example.com"
 
 beforeEach(() => {
   mockReset(prismaMock)

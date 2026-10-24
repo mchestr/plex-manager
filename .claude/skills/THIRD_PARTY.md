@@ -1,8 +1,9 @@
 # Vendored agent skills
 
-Every folder in `.claude/skills/` is a third-party skill copied in at a pinned
-commit (or an exact npm version) after a line-by-line review. Nothing here is
-fetched or updated at run time. `scripts/__tests__/vendored-skills.test.ts`
+Every folder in `.claude/skills/` is either a third-party skill copied in at a
+pinned commit (or an exact npm version) after a line-by-line review, or a
+project-authored skill (listed below). Nothing here is fetched or updated at
+run time. `scripts/__tests__/vendored-skills.test.ts`
 checks this table against the folders.
 
 ## Skills
@@ -17,6 +18,22 @@ checks this table against the folders.
 | `vercel-composition-patterns` | `vercel-labs/agent-skills`, `skills/composition-patterns` | `063bee94c3f4df8453406c830b0a7df0f2860278` | MIT (`LICENSE`, see its note) | 2026-10-19 | Claude Code agent, P1.9 | Added `paths:`. Left out the contributor `README.md` and `metadata.json`. |
 | `vercel-react-view-transitions` | `vercel-labs/agent-skills`, `skills/react-view-transitions` | `063bee94c3f4df8453406c830b0a7df0f2860278` | MIT (`LICENSE`, see its note) | 2026-10-19 | Claude Code agent, P1.9 | Added `paths:`. Left out the `README.md` (an `npx skills add` install line) and `metadata.json`. |
 | `motion` | npm `motion-ai`, `content/skills/motion/` | `motion-ai@14.2.0` | MIT (`LICENSE`, see its note) | 2026-10-19 | Claude Code agent, P1.9 | Added `paths:`; replaced the "Runtime audits" section of `performance-audit/index.md`, which ran `npx motionscore`. |
+
+## Project-authored skills
+
+These four are written in this repository (P11.27), not vendored, so they have
+no upstream pin and fall under the repository's own `LICENSE`. They point at
+the code and design sections they describe instead of copying values, and
+`scripts/__tests__/project-skills.test.ts` fails when a path, export, npm
+script or Playwright project they name stops existing. Update the skill in the
+same pull request as the code it describes.
+
+| Skill | Source | Pinned at | Licence | Reviewed | Reviewer | Local changes |
+|---|---|---|---|---|---|---|
+| `rewind-design-system` | This repository, `.claude/skills/rewind-design-system` | project-authored | The repository's `LICENSE` | 2026-10-23 | Claude Code agent, P11.27 | Not applicable. |
+| `rewind-page` | This repository, `.claude/skills/rewind-page` | project-authored | The repository's `LICENSE` | 2026-10-23 | Claude Code agent, P11.27 | Not applicable. |
+| `share-card` | This repository, `.claude/skills/share-card` | project-authored | The repository's `LICENSE` | 2026-10-23 | Claude Code agent, P11.27 | Not applicable. |
+| `visual-qa` | This repository, `.claude/skills/visual-qa` | project-authored | The repository's `LICENSE` | 2026-10-23 | Claude Code agent, P11.27 | Not applicable. |
 
 The Vercel folders are renamed to their skill names (`react-best-practices`
 becomes `vercel-react-best-practices`, and so on). None of the upstream `*.zip`

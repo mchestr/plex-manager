@@ -278,14 +278,9 @@ npm run db:studio     # Open database GUI
 
 ### Environment Variables
 
-See `example.env` for all available configuration options. Key variables:
+Every variable, with whether production requires it and its default, is in the [environment reference](docs/environment.md), generated from `lib/env.ts` by `npm run env:docs`. Copy `example.env` (generated from the same source) to `.env` to start. Beyond those:
 
-- **Database**: `DATABASE_URL`
-- **Application URLs**: `NEXT_PUBLIC_APP_URL` (preferred, used for public URLs), `NEXTAUTH_URL` (required by NextAuth, should match `NEXT_PUBLIC_APP_URL` in production)
-- **Authentication**: `NEXTAUTH_SECRET`, `PLEX_CLIENT_IDENTIFIER`
-- **Jellyfin**: `JELLYFIN_DEVICE_ID` (optional) — the DeviceId reported to Jellyfin at sign-in. By default it is derived from `PLEX_CLIENT_IDENTIFIER`, so leave it unset unless you want your own value. If neither is set, Jellyfin sign-in uses the fixed `plex-manager-server` and logs `jellyfin.auth.device_id_fallback` at warn.
-- **Encryption**: `ENCRYPTION_KEY` (optional but strongly recommended in production) — encrypts external-service secrets/tokens at rest. Use a dedicated value (do **not** reuse `NEXTAUTH_SECRET`); generate with `openssl rand -hex 32`. Rollout is non-destructive; rotating it makes previously-encrypted secrets undecryptable until re-saved.
-- **Job Queue**: `REDIS_URL` — enables the Redis-backed BullMQ worker. Without Redis, watchlist sync runs under a database lease in one process. Stripe and Rewind need Redis.
+- **Encryption**: production needs `ENCRYPTION_KEYS` (or the older `ENCRYPTION_KEY`) for the secrets stored at rest, unless `ALLOW_PLAINTEXT_SECRETS=true`; a boot check stops the server when the key does not match the database. Rotation and lost-key recovery: [docs/operations.md](docs/operations.md#encryption-keys).
 - **Docker Compose (development)**: `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required; `docker compose up` refuses to start without them. `docker-compose.yml` publishes Postgres (5432, 5433) and Redis (6379) on `127.0.0.1` only and builds the app container's `DATABASE_URL` and `REDIS_URL` from the two passwords; use them in your own `.env` URLs as well. A database volume created before this change keeps its old password (`postgres`), so set `POSTGRES_PASSWORD` to that or change it with `ALTER USER`. The compose databases run `postgres:16-alpine` (they were 15): Postgres 16 cannot open a 15 data directory, so dump an existing `db` volume while it still runs 15 (see [docs/operations.md](docs/operations.md#backup)), remove the volume (`docker compose down -v` removes every volume), then start the new one and restore the dump. The app container starts only once `db` and `redis` pass their health checks.
 - **Development**: `DEV_*` variables for setup wizard defaults (read only with `NODE_ENV=development` and `DEV_SETUP_PREFILL=true`, until setup is complete)
   - Use URL format: `DEV_PLEX_URL="https://localhost:32400"` (includes protocol and port)
@@ -298,29 +293,9 @@ See `example.env` for all available configuration options. Key variables:
 
 ### Production Deployment Requirements
 
-When deploying to production, ensure the following environment variables are set:
+Install with the production compose file `deploy/docker-compose.yml` and the [deployment guide](docs/deployment.md), which covers the reverse proxy, the first-run setup claim and bare metal. The variables a production install sets are marked "Required in production" in the [environment reference](docs/environment.md). To move an install to a new host name, follow the [domain move checklist](docs/domain-move.md).
 
-1. **`NEXT_PUBLIC_APP_URL`** - Your public-facing domain (e.g., `https://yourdomain.com`)
-   - Used for sharing links, OG images, and public URLs
-   - Must be accessible from the internet
-
-2. **`NEXTAUTH_URL`** - Your application URL (should match `NEXT_PUBLIC_APP_URL`)
-   - Used by NextAuth for OAuth callbacks and session management
-   - Must match the domain where your app is accessible
-
-3. **`NEXTAUTH_SECRET`** - A secure random string
-   - Generate with: `openssl rand -base64 32`
-   - Keep this secret and never commit it to version control
-
-4. **`PLEX_CLIENT_IDENTIFIER`** - A unique, stable identifier for this install
-   - Generate with: `openssl rand -hex 16`
-   - Keep it unchanged across upgrades: Plex and Jellyfin see it as this app's device id
-
-5. **`DATABASE_URL`** - Your production PostgreSQL database connection string
-   - Example: `postgresql://user:password@host:port/database`
-   - SQLite is no longer supported (Prisma v7 requirement)
-
-A production server checks these at start and exits with code 1, logging `env.invalid` and the variable's name (never its value), when `NEXTAUTH_SECRET` is missing, shorter than 32 characters, has fewer than 10 distinct characters or is a published placeholder (such as `example.env`'s old value), when `NEXTAUTH_URL` or `NEXT_PUBLIC_APP_URL` is not `https:` (loopback hosts excepted), or when `PLEX_CLIENT_IDENTIFIER` is empty. Two URLs with different origins only log a warning. `ALLOW_INSECURE_HTTP=true` lets a LAN-only install run on plain http; it logs a warning at every start, and session cookies are then not Secure, so never set it on an install reachable from the internet.
+A production server checks the required variables at start and exits with code 1, logging `env.invalid` and the variable's name (never its value), when `NEXTAUTH_SECRET` is missing, shorter than 32 characters, has fewer than 10 distinct characters or is a published placeholder (such as `example.env`'s old value), when `NEXTAUTH_URL` or `NEXT_PUBLIC_APP_URL` is not `https:` (loopback hosts excepted), or when `PLEX_CLIENT_IDENTIFIER` is empty. Two URLs with different origins only log a warning. `ALLOW_INSECURE_HTTP=true` lets a LAN-only install run on plain http; it logs a warning at every start, and session cookies are then not Secure, so never set it on an install reachable from the internet.
 
 ### Important Notes
 
@@ -352,6 +327,13 @@ A production server checks these at start and exits with code 1, logging `env.in
   ```
   If the count is not 0, those links stop working after the upgrade. Clear their tokens (`UPDATE "PlexWrapped" SET "shareToken" = NULL WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';`) and tell the owners to turn sharing on again for a new link, or keep the release back until those links can lapse.
 
+### Versions and upgrades
+
+- `ghcr.io/mchestr/plex-manager:latest` tracks `main` and changes with every merge. In production, pin a release, for example `:0.3.0`, and move to the next one on purpose.
+- [CHANGELOG.md](CHANGELOG.md) lists every release, and each has an **Upgrade notes** block: read the notes of every version between yours and the new one before you pull.
+- Rolling back means restoring the dump taken before the upgrade and running the previous tag, because Prisma has no down migrations. A newer image would apply its migrations again at start.
+- [docs/releasing.md](docs/releasing.md) describes how releases are cut and what each tag publishes.
+
 ### Upgrading
 
 Prisma has no down migrations, so a dump is the only way back from a migration. For every upgrade:
@@ -360,8 +342,8 @@ Prisma has no down migrations, so a dump is the only way back from a migration. 
    ```bash
    docker compose exec -T db pg_dump -U postgres -Fc plex_wrapped > plex-manager-$(date +%F-%H%M).dump
    ```
-2. **Read the release notes** for every version you are moving past, including the "Upgrading to the release…" notes above.
-3. **Pull or rebuild**: pull the new release and run `npm ci && npm run build`, or pull or rebuild the Docker image.
+2. **Read the upgrade notes** in [CHANGELOG.md](CHANGELOG.md) for every version you are moving past, and the "Upgrading to the release…" notes above.
+3. **Pull or rebuild**: check out the new release's tag and run `npm ci && npm run build`, or pull the new version's image tag (`:0.3.0`, not `:latest`).
 4. **Apply migrations**: run `npm run db:deploy`, or let the container do it at start. The container logs `prisma migrate status` first; start it with `SKIP_MIGRATIONS=true` to apply migrations by hand instead.
 5. **Check the app**: sign in, and check that `/api/health` answers 200 with `"database":"ok"` and `"redis":"ok"`; `docker ps` shows the container `(healthy)`.
 
@@ -387,7 +369,7 @@ Then upgrade as above. The new release's migrations, including their data steps,
 
 ### Docker Deployment
 
-The project includes a `Dockerfile` for containerized deployments. When deploying with Docker:
+The project includes a `Dockerfile` for containerized deployments, published as `ghcr.io/mchestr/plex-manager`; `deploy/docker-compose.yml` runs it ([docs/deployment.md](docs/deployment.md)). When deploying with Docker:
 
 1. Set environment variables in your deployment platform or `.env` file
 2. Ensure `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` are set to your production domain
@@ -463,7 +445,7 @@ All integrations are configured through the setup wizard or admin panel, with va
 - **CSRF protection** - Built into Next.js Server Actions
 - **Rate limiting** - Redis-backed limits on sign-in, invite, PIN, share and admin endpoints, keyed by the client IP behind `TRUSTED_PROXY_HOPS` proxies
 - **Audit logging** - Tracking of admin actions and security events
-- **Encryption at rest** - External-service API keys/tokens are AES-256-GCM encrypted when `ENCRYPTION_KEY` is set
+- **Encryption at rest** - Service keys and tokens, member Plex tokens, Discord and Stripe secrets and AI prompt text are AES-256-GCM encrypted under a rotatable keyring (`ENCRYPTION_KEYS`); a secret the key cannot read is asked for again instead of breaking the app
 - **Signed webhooks** - Stripe webhooks are verified against the raw request body (no admin auth needed)
 - **Member removal** - Admins can remove a member: their access, sessions, Stripe subscription, Discord grant and stored data go. [docs/privacy.md](docs/privacy.md) lists every table of personal data and what removal does to it
 - **Member export** - Members download their data as JSON from Account, Your data (`/account/export`, three a day) and delete single marks, watchlist items and assistant conversations there

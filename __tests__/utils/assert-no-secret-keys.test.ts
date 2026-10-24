@@ -36,7 +36,9 @@ describe('assertNoSecretKeys', () => {
 
   it('flags every column registered in ENCRYPTED_FIELDS', () => {
     // A new encrypted column whose name the pattern misses would let a leak pass silently.
-    const columns = [...new Set(Object.values(ENCRYPTED_FIELDS).flat())]
+    // LLMUsage text is personal data that admins read, not a credential (P11.1)
+    const credentials = Object.entries(ENCRYPTED_FIELDS).filter(([model]) => model !== 'LLMUsage')
+    const columns = [...new Set(credentials.flatMap(([, fields]) => fields))]
 
     expect(columns.length).toBeGreaterThan(0)
     expect(columns.filter((column) => findSecretKeys({ [column]: 'x' }).length === 0)).toEqual([])

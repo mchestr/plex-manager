@@ -11,7 +11,7 @@ import { getJobProcessor, getRegisteredJobTypes } from "./jobs"
 import { QUEUE_NAME } from "./client"
 import { jobRequestId, runJobInContext } from "./job-meta"
 import { startRewindWorkers, stopRewindWorkers } from "./rewind-queues"
-import { recordJobFailure } from "@/lib/observability/job-failures"
+import { onJobFailed } from "@/lib/observability/job-failures"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("QUEUE_WORKER")
@@ -76,7 +76,7 @@ export async function startWorker(): Promise<void> {
   })
 
   worker.on("failed", (job, error) => {
-    recordJobFailure(getRedisConnection(), QUEUE_NAME, job?.name)
+    onJobFailed(getRedisConnection(), QUEUE_NAME, job, error)
     const willRetry = job && job.attemptsMade < (job.opts.attempts ?? 3)
     logger.error("Job failed", error, {
       jobId: job?.id,

@@ -69,13 +69,15 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Start the production image without a key: it exits with `env.invalid ENCRYPTION_KEY_MISSING` and the generation hint. With k1 set, the canary is written. Restart with a wrong key: `crypto.key_mismatch`, exit 1. Add k2 as primary and run "Encrypt stored secrets": every value reads `enc:v2:k2:`. Remove k1 and the app still works. Corrupt the stored Tautulli key: settings asks for it again, and sign-in still works.
 
 **Done when.**
-- [ ] Decryption never throws in the extension; an unreadable field is null and shown as "enter it again" in settings.
-- [ ] `ENCRYPTION_KEYS` with kids, `enc:v2:` writes, tag-length checks and an idempotent re-encryption job and action exist.
-- [ ] Production refuses to boot without a strong key unless `ALLOW_PLAINTEXT_SECRETS` is set, and the canary catches a mismatched key.
-- [ ] Nested includes and nested writes are decrypted and encrypted, and `LLMUsage` text is encrypted.
-- [ ] The lost-key and rotation runbook is in `docs/operations.md`.
+- [x] Decryption never throws in the extension; an unreadable field is null and shown as "enter it again" in settings.
+- [x] `ENCRYPTION_KEYS` with kids, `enc:v2:` writes, tag-length checks and an idempotent re-encryption job and action exist.
+- [x] Production refuses to boot without a strong key unless `ALLOW_PLAINTEXT_SECRETS` is set, and the canary catches a mismatched key.
+- [x] Nested includes and nested writes are decrypted and encrypted, and `LLMUsage` text is encrypted.
+- [x] The lost-key and rotation runbook is in `docs/operations.md`.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
-- [ ] An install with only `ENCRYPTION_KEY` set writes `enc:v2:legacy:` values in production, and the upgrade note explains the move to `ENCRYPTION_KEYS`.
+- [x] An install with only `ENCRYPTION_KEY` set writes `enc:v2:legacy:` values in production, and the upgrade note explains the move to `ENCRYPTION_KEYS`.
+
+(as merged: migration `20270118000002_p111_encryption_canary`. Built early; its deploy still waits until the season closes on 2027-01-31. `ENCRYPTED_FIELDS` moved to `lib/db/encrypted-fields.ts` (re-exported from `lib/prisma.ts`) and the extension to `lib/db/encryption-extension.ts` (`encryptionQuery`, `decryptDeep`, `withStoredSecrets`, an AsyncLocalStorage switch the re-encryption uses to read and write stored values; the relation map is built lazily from `Prisma.dmmf`). Keyring rules: kids `[A-Za-z0-9_-]{1,32}`, `legacy` reserved; an invalid entry is ignored with a warning and, if `ENCRYPTION_KEYS` has no valid entry, `encryptSecret` throws rather than write plaintext. `tryDecryptSecret` answers `KEY_MISSING` only when no key at all is configured. The env issues follow P4.1's shape: `ENCRYPTION_KEY` `missing` and `ENCRYPTION_KEY`/`ENCRYPTION_KEYS` `weak` (so the log reads `env.invalid ENCRYPTION_KEY: ...`). Unreadable fields are recorded per process in `lib/security/unreadable-secrets.ts` by model, field and row id; `SavedSecret` gained `unreadable`, which `secretInputState` and `needsSecretReentry` turn into the re-enter state (hint test id `<id>-unreadable`). `Config.encryptionFieldsHash` stores `<kid>:<fields hash>`; boot (with Redis, after the worker starts) queues `SECRETS_REENCRYPT` only when it differs. The canary exits on `KEY_MISSING`, `KEY_UNKNOWN` and `CORRUPT` alike, and a finished re-encryption rewrites it under the new primary kid. Settings > Security (`settings-security-status`, `settings-reencrypt-button`, confirm `settings-reencrypt-confirm`, `settings-security-unreadable`) uses `reencryptStoredSecrets({ dryRun })` in `actions/admin/encryption.ts`. `checkUserServerAccess` answers `unknown`/`server_token_invalid` for a null server token (the owner still signs in). Playwright gives its server the public key `e2e:...` and CI's image smoke test a generated one; the E2E spec was written, not run.)
 
 ### Step P11.2: Watchlist lock and fallback polling
 
@@ -172,12 +174,14 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Start the workers example with two web replicas. Only the worker logs the queue and the bot starting, and `curl http://worker:3000/` returns 404. A manual sync clicked twice yields one job. Stop Redis and click it again: the toast says the queue is unavailable within two seconds.
 
 **Done when.**
-- [ ] `PROCESS_ROLE=web|worker|all` controls what each container starts, and a worker serves only health and metrics.
-- [ ] One `LeaseLock` with Prisma and Redis stores remains, and the legacy lock tables are dropped.
-- [ ] Every job type has a deduplication or deterministic id.
-- [ ] Request-path enqueues fail fast with `QUEUE_UNAVAILABLE`, and the webhook answers 503 so Stripe retries.
-- [ ] The compose example is committed and tested.
+- [x] `PROCESS_ROLE=web|worker|all` controls what each container starts, and a worker serves only health and metrics.
+- [x] One `LeaseLock` with Prisma and Redis stores remains, and the legacy lock tables are dropped.
+- [x] Every job type has a deduplication or deterministic id.
+- [x] Request-path enqueues fail fast with `QUEUE_UNAVAILABLE`, and the webhook answers 503 so Stripe retries.
+- [x] The compose example is committed and tested.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: migration `20270118000003_p113_drop_legacy_lock_tables`. Roles: `startNodeInstrumentation()` reads `processRole()` (`lib/db/pool-config.ts`); `web` starts only `issueSetupCode()`; `worker` and `all` also start `startQueueWorker()` (the Workers, the watchlist, role-reconcile and retention schedulers, the Rewind schedulers inside `startRewindWorkers()`, and without Redis the two lease fallbacks) and the Discord poller, so P11.14's retention scheduler moved to the worker by role gating, not by moving code. `proxy.ts` answers a bare 404 in the worker role except `/api/health` and `/api/metrics`; both `/api/health` bodies carry `role`; `checkProductionEnv` refuses an unknown `PROCESS_ROLE` (code `invalid`). Locks: `LeaseName` adds `` `rw:lock:gen:${number}:${string}` `` and `` `access:${string}` ``; `LeaseStore.release` and `LeaseLock.release` return whether the lease was still ours; `LeaseLock.acquireOrThrow()` lets a store error propagate; `PrismaLeaseStore` loads Prisma lazily. `RedisLeaseStore` is `lib/locks/redis-lease-store.ts` (key = lease name, P2.5's scripts and re-entrancy); `acquireGenerationLock` moved with the same API to `lib/locks/generation-lock.ts`; `withAccessLock(userId, owner, fn, { redis })` in `lib/locks/access-lock.ts` waits up to 30 s, then throws so BullMQ retries, and `getStripeProcessor` wraps grant and revoke in it. Job ids: `JOB_ID_POLICY` (`lib/queue/types.ts`) gives each type `deduplication`, `jobId` or `fromCaller`, applied by `jobIdOptions()` (`lib/queue/job-id.ts`) in `addJob` and `enqueueFromRequest`; a `fromCaller` type without an id throws. `addWatchlistSyncUserJob` and `findJob` are deleted. BullMQ 6 job schedulers cannot carry a deduplication id, so scheduled `WATCHLIST_SYNC_ALL` ticks keep their `repeat:` ids and only the admin Sync all dedupes on `watchlist:all`; the console's Generate all keeps BullMQ's own id by P7.8's design. P11.4's counter already counted every attempt; `onJobFailed()` (`lib/observability/job-failures.ts`) adds `queue.job_exhausted` on the last attempt (or an `UnrecoverableError`) for every Worker. Request path: `lib/queue/request-path.ts` exports `enqueueFromRequest()` and `withRequestPathQueue()` on the fail-fast client; the callers are the member and admin syncs, the comp grant, `enqueueRoleSync` and the Stripe webhook (its job lookup too). The Rewind producers were already on that client. The image smoke job starts a `web` and a `worker` container. E2E specs were not run.)
 
 ### Step P11.4: Observability
 
@@ -1048,9 +1052,11 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** `npx eslint components actions` reports no `max-lines` error. The admin settings, invites and setup E2E specs pass unchanged.
 
 **Done when.**
-- [ ] No component or action file exceeds 300 lines without a documented exception.
-- [ ] Each split is a move-only PR with green tests.
-- [ ] The `max-lines` rule is enforced for components and actions, and warns for `lib` and `hooks`.
+- [x] No component or action file exceeds 300 lines without a documented exception.
+- [x] Each split is a move-only PR with green tests.
+- [x] The `max-lines` rule is enforced for components and actions, and warns for `lib` and `hooks`.
+
+(as merged: the inventory at the step's start found one file over 300 counted lines, `components/rewind/stage/story-stage.tsx` (370); P10.x, P11.5 and P11.32 had already brought every file the Guidance lists under the limit (`actions/invite.ts` 406 raw lines, under 300 counted; `admin-servers.ts`, `queue.ts`, `setup.ts`, `admin-config.ts`, `user-queries.ts`, `sync-settings-card.tsx` and `discord-marked-media.tsx` all under), so `actions/invites/`, `actions/admin/servers/` and `actions/setup/` were not created and CLAUDE.md's tree is unchanged. The stage's chrome moved to `stage-chrome.tsx` (`StageChrome`) and its keymap dispatch to `stage-keys.ts` (`stageKeyDown`). No file needed a documented exception. `lib/` and `hooks/` start with 67 `max-lines` warnings, left for later burn-down; `lib/queue/jobs/stripe.ts` and `lib/utils/logger.ts` got no exception comment, since a warning needs none.)
 
 ### Step P11.22: Test coverage backfill
 
@@ -1184,10 +1190,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** On a clean VM, follow `docs/deployment.md` with `deploy/docker-compose.yml`: the app starts healthy behind Caddy, and the claim code is in the logs. Follow `docs/domain-move.md` to a second hostname: Plex sign-in, Discord linking and a Stripe test webhook work on the new host.
 
 **Done when.**
-- [ ] A production compose file uses the published image, and `docs/deployment.md` covers compose, reverse proxy, claim and bare metal.
-- [ ] `start:prod` works outside the image or is removed, and CLAUDE.md matches.
-- [ ] `docs/domain-move.md` lists the URL variables, the four external registrations and what members notice, and the Discord portal fallback is fixed.
-- [ ] `docs/environment.md` and `example.env` are generated from `envSchema`, and CI checks them.
+- [x] A production compose file uses the published image, and `docs/deployment.md` covers compose, reverse proxy, claim and bare metal.
+- [x] `start:prod` works outside the image or is removed, and CLAUDE.md matches.
+- [x] `docs/domain-move.md` lists the URL variables, the four external registrations and what members notice, and the Discord portal fallback is fixed.
+- [x] `docs/environment.md` and `example.env` are generated from `envSchema`, and CI checks them.
+
+(as merged: every `envSchema` field carries `.meta({ description, group, default?, example?, requiredInProduction?, required? })`; groups are `ENV_GROUPS` in `lib/env.ts`. `requiredInProduction` is exactly what `checkProductionEnv` reports as missing (`NEXTAUTH_SECRET`, `PLEX_CLIENT_IDENTIFIER`, test-checked); `required` marks `DATABASE_URL` and `NEXTAUTH_URL`, which the boot check does not test. A new variable needs its meta and `npm run env:docs`, or the Unit Tests job's `env:docs -- --check` step fails. `start:prod` is `node --env-file-if-exists=.env .next/standalone/server.js` (Node 22.9+), with a `postbuild` (`scripts/copy-standalone-assets.mjs`). The prod compose's database is `plex_wrapped`, like the dev file, so `docs/operations.md` commands work on both. Discord links no longer fall back to localhost outside development; `assistant.ts` builds its link nudge per call. P11.3's worker example and P11.1's `ENCRYPTION_KEYS` are not in the docs yet: each adds its own meta, reruns `env:docs`, and links from `docs/deployment.md`.)
 
 ### Step P11.25: Versioned releases and a changelog
 
@@ -1221,9 +1229,11 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** Cut `v0.2.0`: the release PR merges, the tag is pushed, `ghcr.io/mchestr/plex-manager:0.2.0` exists, and the GitHub Release shows the 0.2.0 section with its upgrade notes. A PR that adds a migration without a changelog line fails the check.
 
 **Done when.**
-- [ ] `CHANGELOG.md` exists with an "Upgrade notes" block per release, and `v0.2.0` is published.
-- [ ] Tags publish semver images, and the release workflow creates the GitHub Release from the changelog.
-- [ ] The changelog check runs on pull requests, and the README explains pinning and rolling back.
+- [x] `CHANGELOG.md` exists with an "Upgrade notes" block per release, and `v0.2.0` is published.
+- [x] Tags publish semver images, and the release workflow creates the GitHub Release from the changelog.
+- [x] The changelog check runs on pull requests, and the README explains pinning and rolling back.
+
+(as merged: the owner had already pushed `v0.1.0` (Phase 0, #321), `v0.2.0` (#386) and `v0.3.0` (#387) by hand, with GitHub Releases for the last two, so `CHANGELOG.md` records those three retroactively (0.1.0 also carries the 2026-07 Discord notes), `package.json` is renamed `plex-manager` and set to `0.3.0` to match the newest tag, and the first release cut through `scripts/release/prepare.mjs` is `v0.4.0`. Unreleased holds #396's upgrade notes; P11.1, P11.3 and P11.18 add theirs under Unreleased when they merge (the Changelog check requires it, since each touches migrations, `lib/env.ts` or the image). The release workflow waits up to 90 minutes for "Checks" on the tagged commit as a push to `main` and requires Schema Drift and Build to have passed; it needs `actions: read` besides `contents: write`. The check is `.github/workflows/changelog.yml` (job "Changelog"), separate from build.yml so label changes re-run it. The procedure is in `docs/releasing.md`; P11.24's deployment guide should link it and pin `:0.4.0` once that is published. Owner: create the `breaking` and `no-changelog` labels, optionally make "Changelog" a required check, run the fork dry run, and cut `v0.4.0`; optionally replace the v0.2.0/v0.3.0 release bodies with their changelog sections via `gh release edit --notes-file`.)
 
 ### Step P11.26: README and CLAUDE.md accuracy pass
 
@@ -1306,9 +1316,11 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** In a fresh session, open `lib/rewind/cards/centrefold.tsx`: `share-card` and `rewind-design-system` load. On a scratch branch, ask the agent to add a trial page with `rewind-page`: it produces the registry entry, the component test and the baseline entries, and the branch is then discarded.
 
 **Done when.**
-- [ ] The four skills exist with scoped frontmatter and point at the real files and design sections.
-- [ ] The project-skills test passes, and `THIRD_PARTY.md` and the settings list them.
-- [ ] The fresh-session check loads the right skills for a card file.
+- [x] The four skills exist with scoped frontmatter and point at the real files and design sections.
+- [ ] The project-skills test passes, and `THIRD_PARTY.md` and the settings list them. (The test and `THIRD_PARTY.md` are done; the four `Skill(...)` allow rules in `.claude/settings.json` are the owner's.)
+- [ ] The fresh-session check loads the right skills for a card file. (The test checks the `paths:` globs; the session check is the owner's.)
+
+(as merged: the skills describe the code, not the older plan text: the card routes are `route.ts`, the fonts load from `lib/rewind/fonts.ts`, cards come in `story` and `og` sizes, and there is no single `visual` project, so `visual-qa` names the real `visual-*`, `rewind-visual-*`, `rewind-a11y-*`, `rewind-e2e-*` and `rewind-perf` projects. `rewind-page` also scopes `lib/rewind/pages/**` and `lib/rewind/page-meta.ts`, and its component tests run on the four `PAGE_FIXTURES`. THIRD_PARTY.md lists the skills in a "Project-authored skills" table with the pin cell `project-authored`; `vendored-skills.test.ts` accepts those rows without a licence file and forbids URLs and WebFetch in them. The identifier check also reads exports from `eslint/` and `scripts/` for the guardrails. CLAUDE.md's Agent Skills table and the PR template list the skills. Owner items: add `Skill(rewind-design-system)`, `Skill(rewind-page)`, `Skill(share-card)` and `Skill(visual-qa)` to `.claude/settings.json` (the settings case of `vendored-skills.test.ts` fails until then), run `/security-review` on the PR, and do the fresh-session check. The vendored `motion` skill's `paths:` and its CLAUDE.md row still name the deleted `components/wrapped/**`; that is left for a skill-update PR.)
 ### Step P11.28: Watchlist sync resolves IDs and files valid TV requests
 
 - **Track:** platform. **Lane:** platform. **Effort:** M. **Window:** 2027-01-04 to 2027-01-06. **Depends on:** P4.13.

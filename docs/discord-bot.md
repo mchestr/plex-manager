@@ -179,9 +179,9 @@ without Redis shares the same lock and poller under the name `watchlist-sync`.
   *Token rotation*). The poll never renews the lease, so a longer poll interval
   only slows takeover and settings changes; it cannot take the bot offline.
 - No manual configuration needed.
-- For one release after the move to `LeaseLock`, a new instance also refuses
-  the lease while an old instance still holds the legacy `DiscordBotLock` row,
-  so an old and a new container overlapping in a deploy never both run the bot.
+- Only `worker` and `all` containers (`PROCESS_ROLE`) poll for the lock; a
+  `web` container never runs the bot. See
+  [the workers example](examples/docker-compose.workers.yml).
 
 **Gateway compression is optional.** `zlib-sync` is an optional dependency.
 When it builds (it needs `python3`, `make` and `g++` at install time),

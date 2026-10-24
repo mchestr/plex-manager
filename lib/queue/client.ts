@@ -7,9 +7,9 @@
 
 import { Queue, QueueEvents, JobsOptions, type Job } from "bullmq"
 import { getRedisConnection } from "./connection"
-import { sanitizeJobId } from "./job-id"
+import { jobIdOptions } from "./job-id"
 import { traceQueue } from "./job-meta"
-import { JOB_TYPES, JobType, JobPayloadMap, JobMetadata, QueueStats, JobStatus } from "./types"
+import { JobType, JobPayloadMap, JobMetadata, QueueStats, JobStatus } from "./types"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("QUEUE_CLIENT")
@@ -17,9 +17,10 @@ const logger = createLogger("QUEUE_CLIENT")
 export const QUEUE_NAME = "plex-wrapped"
 
 /**
- * Default job options applied to all jobs
+ * Default job options applied to all jobs, by this queue and by the
+ * request-path producer (`lib/queue/request-path.ts`)
  */
-const DEFAULT_JOB_OPTIONS: JobsOptions = {
+export const DEFAULT_JOB_OPTIONS: JobsOptions = {
   attempts: 3,
   backoff: {
     type: "exponential",
@@ -55,7 +56,10 @@ function getQueue(): Queue {
 }
 
 /**
- * Add a job to the queue with type safety
+ * Add a job to the queue with type safety. Its id comes from the caller or
+ * from `JOB_ID_POLICY` (`jobIdOptions`), never from the clock. Request paths
+ * use `enqueueFromRequest` (`lib/queue/request-path.ts`), which fails fast
+ * while Redis is down; this waits on the BullMQ connection.
  *
  * @param jobType - The type of job to add
  * @param data - Job payload (type-checked based on jobType)
@@ -69,11 +73,7 @@ export async function addJob<T extends JobType>(
 ): Promise<string> {
   const q = getQueue()
 
-  const jobId = sanitizeJobId(options?.jobId ?? `${jobType}:${Date.now()}`)
-  const job = await q.add(jobType, data, {
-    ...options,
-    jobId,
-  })
+  const job = await q.add(jobType, data, { ...options, ...jobIdOptions(jobType, data, options) })
 
   // Log only safe fields to avoid exposing sensitive data
   const dataRecord = data as unknown as Record<string, unknown>
@@ -85,20 +85,6 @@ export async function addJob<T extends JobType>(
   })
 
   return job.id!
-}
-
-/**
- * Queue one member's watchlist sync. BullMQ deduplicates on
- * `watchlist:user:<userId>` while a job for the member is waiting or running,
- * so repeated triggers (the member's, an admin's) collapse into that job and
- * get its id back (P4.13).
- */
-export function addWatchlistSyncUserJob(
-  data: JobPayloadMap[typeof JOB_TYPES.WATCHLIST_SYNC_USER]
-): Promise<string> {
-  return addJob(JOB_TYPES.WATCHLIST_SYNC_USER, data, {
-    deduplication: { id: `watchlist:user:${data.userId}` },
-  })
 }
 
 /**
@@ -258,14 +244,6 @@ export async function getJobPage(options: {
  */
 export async function getWorkerCount(): Promise<number> {
   return (await getQueue().getWorkers()).length
-}
-
-/**
- * Look up a job by the id it was added with, or `undefined` once BullMQ has
- * dropped it (completed jobs after a day, failed ones after seven).
- */
-export async function findJob(jobId: string): Promise<Job | undefined> {
-  return getQueue().getJob(sanitizeJobId(jobId))
 }
 
 /**

@@ -19,7 +19,7 @@ export type SecretInputState = "saved" | "empty" | "entered" | "reenter-required
  * |---|---|
  * | `entered` | a value is typed |
  * | `empty` | nothing typed and nothing saved |
- * | `reenter-required` | nothing typed, and the section's address no longer matches `saved.origin` (SEC-31) |
+ * | `reenter-required` | nothing typed, and the section's address no longer matches `saved.origin` (SEC-31), or the stored value is unreadable with the current encryption key (P11.1) |
  * | `saved` | nothing typed, a secret is saved and may be reused |
  *
  * `currentOrigin` left out means the field has no address to follow, so a
@@ -30,6 +30,7 @@ export type SecretInputState = "saved" | "empty" | "entered" | "reenter-required
 export function secretInputState(value: string, saved: SavedSecret | null | undefined, currentOrigin?: string | null): SecretInputState {
   if (value) return "entered"
   if (!saved) return "empty"
+  if (saved.unreadable) return "reenter-required"
   if (saved.origin && currentOrigin !== undefined && currentOrigin !== saved.origin) return "reenter-required"
   return "saved"
 }
@@ -140,7 +141,13 @@ export function SecretInput({
           {saved.last4 ? `A ${noun} ending in ${saved.last4} is saved.` : `A ${noun} is saved.`} Leave this blank to keep it.
         </FieldDescription>
       )}
-      {state === "reenter-required" && saved?.origin && (
+      {state === "reenter-required" && saved?.unreadable && (
+        <FieldDescription className="flex items-start gap-1.5" data-testid={testId && `${testId}-unreadable`}>
+          <Icon icon={icons.reenterSecret} size={12} className="mt-1" />
+          <span>The stored {noun} can&apos;t be read with the current encryption key. Enter it again.</span>
+        </FieldDescription>
+      )}
+      {state === "reenter-required" && !saved?.unreadable && saved?.origin && (
         <FieldDescription className="flex items-start gap-1.5" data-testid={testId && `${testId}-reenter`}>
           <Icon icon={icons.reenterSecret} size={12} className="mt-1" />
           <span>

@@ -35,3 +35,12 @@ export const prismaModule = { prisma: prismaMock }
 export function asTransactionClient(partial: object): Prisma.TransactionClient {
   return partial as unknown as Prisma.TransactionClient
 }
+
+/**
+ * One delegate of {@link prismaMock} by its client name (`"lLMUsage"`), with
+ * its methods as plain `jest.Mock`s, for tests that back every model the
+ * same way.
+ */
+export function delegateMock(name: string): Record<string, jest.Mock> {
+  return (prismaMock as unknown as Record<string, Record<string, jest.Mock>>)[name]
+}

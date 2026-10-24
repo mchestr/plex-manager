@@ -21,6 +21,11 @@ export interface SavedSecret {
    * its destination is fixed (the Stripe keys, the Discord client secret).
    */
   origin: string | null
+  /**
+   * True when the stored value cannot be decrypted with the current
+   * encryption key (P11.1): the field must be entered again.
+   */
+  unreadable?: boolean
 }
 
 /**
@@ -49,9 +54,12 @@ export function safeOrigin(url: string | null | undefined): string | null {
 /**
  * True when a saved secret cannot be reused for the address in the form and
  * nothing has been typed: the field must be filled before Test or Save.
- * A fixed-destination secret (`origin: null`) never needs re-entry.
+ * A fixed-destination secret (`origin: null`) never needs re-entry, unless
+ * the stored value is unreadable (P11.1).
  */
 export function needsSecretReentry(saved: SavedSecret | null | undefined, currentOrigin: string | null, typed: string): boolean {
-  if (typed.trim() || !saved?.origin) return false
+  if (typed.trim()) return false
+  if (saved?.unreadable) return true
+  if (!saved?.origin) return false
   return saved.origin !== currentOrigin
 }

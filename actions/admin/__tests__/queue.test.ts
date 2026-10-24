@@ -19,7 +19,9 @@ import {
   retryQueueJob,
   triggerWatchlistSyncJob,
 } from "@/actions/admin/queue"
-import { addJob, addWatchlistSyncUserJob, pauseQueue, removeJob, resumeQueue, retryJob } from "@/lib/queue/client"
+import { pauseQueue, removeJob, resumeQueue, retryJob } from "@/lib/queue/client"
+import { enqueueFromRequest } from "@/lib/queue/request-path"
+import { JOB_TYPES } from "@/lib/queue/types"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { consume } from "@/lib/security/rate-limit"
@@ -30,14 +32,13 @@ jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prism
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/security/rate-limit", () => ({ consume: jest.fn(), actionClientIp: jest.fn() }))
 jest.mock("@/lib/queue/client", () => ({
-  addJob: jest.fn(),
-  addWatchlistSyncUserJob: jest.fn(),
   pauseQueue: jest.fn(),
   resumeQueue: jest.fn(),
   retryJob: jest.fn(),
   removeJob: jest.fn(),
 }))
 jest.mock("@/lib/queue/connection", () => ({ isRedisConfigured: jest.fn() }))
+jest.mock("@/lib/queue/request-path", () => ({ enqueueFromRequest: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({
   ...jest.requireActual("@/lib/security/audit-log"),
   logAuditEvent: jest.fn(),
@@ -76,7 +77,7 @@ describe("auth and the rate limit", () => {
   it.each([
     ["pauseJobQueue", () => pauseJobQueue(), pauseQueue],
     ["retryQueueJob", () => retryQueueJob({ jobId: "job-1" }), retryJob],
-    ["triggerWatchlistSyncJob", () => triggerWatchlistSyncJob({}), addJob],
+    ["triggerWatchlistSyncJob", () => triggerWatchlistSyncJob({}), enqueueFromRequest],
   ])("%s spends the admin:queue limit and stops when it runs out", async (_name, call, work) => {
     await call()
     expect(consume).toHaveBeenCalledWith("admin:queue", "admin-1")
@@ -142,10 +143,10 @@ describe("job actions", () => {
 
 describe("triggerWatchlistSyncJob", () => {
   it("syncs one member", async () => {
-    jest.mocked(addWatchlistSyncUserJob).mockResolvedValue("job-u")
+    jest.mocked(enqueueFromRequest).mockResolvedValue({ ok: true, jobId: "job-u" })
 
     await expect(triggerWatchlistSyncJob({ userId: "member-1" })).resolves.toEqual({ success: true, data: { jobId: "job-u" } })
-    expect(addWatchlistSyncUserJob).toHaveBeenCalledWith({
+    expect(enqueueFromRequest).toHaveBeenCalledWith(JOB_TYPES.WATCHLIST_SYNC_USER, {
       userId: "member-1",
       triggeredBy: "admin",
       triggeredByUserId: "admin-1",
@@ -153,12 +154,22 @@ describe("triggerWatchlistSyncJob", () => {
   })
 
   it("syncs everyone without a user id", async () => {
-    jest.mocked(addJob).mockResolvedValue("job-all")
+    jest.mocked(enqueueFromRequest).mockResolvedValue({ ok: true, jobId: "job-all" })
 
     await expect(triggerWatchlistSyncJob({})).resolves.toEqual({ success: true, data: { jobId: "job-all" } })
+    expect(enqueueFromRequest).toHaveBeenCalledWith(JOB_TYPES.WATCHLIST_SYNC_ALL, { triggeredBy: "admin" })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.QUEUE_SYNC_TRIGGERED, "admin-1", {
       syncType: "all",
       jobId: "job-all",
     })
+  })
+
+  it("answers within the request with fixed copy while the queue is unavailable, and audits nothing", async () => {
+    jest.mocked(enqueueFromRequest).mockResolvedValue({ ok: false, code: "QUEUE_UNAVAILABLE" })
+
+    const result = await triggerWatchlistSyncJob({})
+
+    expect(result).toEqual({ success: false, code: "UPSTREAM_UNAVAILABLE", error: expect.stringMatching(/queue is unavailable/) })
+    expect(logAuditEvent).not.toHaveBeenCalled()
   })
 })

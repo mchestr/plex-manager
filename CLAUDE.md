@@ -211,6 +211,8 @@ if (!result.success) {
 - **React components**: Max ~200-300 lines (if larger, split into smaller components)
 - **Utility modules**: Max ~150 lines per file
 - If a file exceeds these limits, it's a signal to refactor
+- ESLint's `max-lines` (blank lines and comments skipped, tests excluded) fails a file in `components/` or `actions/` above 300 lines and warns for `lib/` and `hooks/` above 150. Split along responsibilities; a `'use server'` file can export only async functions, so shared helpers move to `lib/`
+- Deliberate exceptions carry a file-level `/* eslint max-lines: ["error", N] -- cohesive: <reason> */` and a line here. None today
 
 ### Testability First
 - Components should be independently testable
@@ -328,6 +330,8 @@ describe('Component', () => {
 ### CI Checks
 
 `.github/workflows/build.yml` ("Checks") runs the checks that `main` requires: Lint (ESLint and actionlint), Typecheck, Audit (`scripts/audit-gate.mjs`; exceptions in `.github/audit-exceptions.json`, at most 14 days each), Knip, Design System, Unit Tests (with coverage floors), Integration, Schema Drift (a schema change without its migration fails), Build and E2E Tests (production build, Postgres and Redis; every Playwright project but the visual ones). Visual Diffs runs the screenshot projects and is advisory, not required: a diff leaves a warning and the `visual-diffs` artifact but does not fail the workflow, and the Visual Baselines workflow (`.github/workflows/visual-baselines.yml`, see `e2e/visual/README.md`) refreshes the baselines. Image Smoke Test runs on pull requests but is not required: it builds the image, starts it on a fresh Postgres and Redis until its `HEALTHCHECK` reports healthy (migrations, `SKIP_MIGRATIONS`, read-only files, tini, `docker stop`) and scans it with Trivy. Shared setup lives in `.github/actions/setup/action.yml`, and every action is pinned by SHA
+
+The Changelog check (`.github/workflows/changelog.yml`) fails a pull request that touches `prisma/migrations/**`, `lib/env.ts`, `docker-entrypoint.sh`, `Dockerfile` or `deploy/**`, or carries the `breaking` label, without a line under Unreleased in `CHANGELOG.md` (put operator steps under "Upgrade notes"); the `no-changelog` label skips it. A `v*` tag publishes the versioned image and, through `.github/workflows/release.yml`, the GitHub Release; see `docs/releasing.md`.
 
 ## JSDoc Documentation Strategy
 
@@ -452,6 +456,8 @@ npm run db:studio      # Open database GUI
 
 ## Environment Variables
 
+Every variable is in `envSchema` (`lib/env.ts`), each with `.meta({ description, group, default?, requiredInProduction? })`. `npm run env:docs` writes `docs/environment.md` and the generated block of `example.env` from it; CI runs it with `--check`.
+
 ### Required Production Variables
 ```env
 # Application URLs
@@ -464,13 +470,12 @@ PLEX_CLIENT_IDENTIFIER=                        # Any unique string
 
 # Database (PostgreSQL required for Prisma v7)
 DATABASE_URL=postgresql://user:password@localhost:5432/plex_manager
-```
 
-### Recommended Production Variables
-```env
-# Encrypts stored service secrets at rest (ENCRYPTED_FIELDS in lib/prisma.ts).
-# Generate with: openssl rand -hex 32. Use a dedicated value and keep it stable.
-ENCRYPTION_KEY=
+# Encrypts stored secrets at rest (ENCRYPTED_FIELDS, lib/db/encrypted-fields.ts).
+# kid:base64 entries of 32 bytes (openssl rand -base64 32); the first is primary.
+# Production refuses to boot without a key unless ALLOW_PLAINTEXT_SECRETS=true.
+# The legacy single ENCRYPTION_KEY still works. See docs/operations.md, "Encryption keys".
+ENCRYPTION_KEYS=k1:
 ```
 
 ### Development Shortcuts
@@ -724,7 +729,8 @@ if (!stripe) return { error: 'Stripe is not configured' }
 - `actions/admin/subscriptions.ts` — admin cancel/grant/toggle-exempt.
 - `app/api/stripe/webhook/route.ts` — **the only** Stripe API route: verifies the
   signature, dedupes on a processed `StripeEvent(event.id)`, enqueues a BullMQ
-  job (or retries its failed one), returns 200 (400 on bad signature, never 5xx).
+  job (or retries its failed one), returns 200 (400 on bad signature, never 5xx
+  for a bad signature; 503 while the queue is unavailable, so Stripe retries).
 - `lib/queue/jobs/stripe.ts` — BullMQ processors (`STRIPE_WEBHOOK`,
   `PLEX_ACCESS_GRANT`, `PLEX_ACCESS_REVOKE`; the access jobs keep their legacy
   names and act on Plex, Jellyfin or both through `grantServiceAccess` /
@@ -783,9 +789,10 @@ If Discord features are enabled:
 2. Generate secure `NEXTAUTH_SECRET`
 3. Configure production `DATABASE_URL`
 4. Take a backup (`pg_dump -Fc`), then run `npm run db:deploy`; the Docker image runs it at start unless `SKIP_MIGRATIONS=true`. See `docs/operations.md`.
-5. Build: `npm run build`
-6. Start: `npm run start:prod` (runs the standalone `server.js` that `next build` writes; the Docker image ships it)
-7. Verify environment variables are set (app will fail on startup if missing)
+5. Build: `npm run build` (its `postbuild` copies `.next/static` and `public` into `.next/standalone`)
+6. Start: `npm run start:prod` (runs `.next/standalone/server.js` with `.env`; the Docker image runs the same server as `node server.js`)
+7. Verify environment variables are set (app will fail on startup if missing); `docs/environment.md` lists them, generated by `npm run env:docs`
+8. Compose installs use `deploy/docker-compose.yml`; see `docs/deployment.md`, and `docs/domain-move.md` for a new host
 
 ## Claude Code Workflow Patterns
 
@@ -836,7 +843,7 @@ The project includes custom slash commands in `.claude/commands/`:
 
 ### Agent Skills
 
-`.claude/skills/` holds third-party skills vendored at pinned commits, so every session, including cloud sessions, gets the same reviewed copies. Each loads on its own when you work on files matching its `paths:`, or by name:
+`.claude/skills/` holds third-party skills vendored at pinned commits, so every session, including cloud sessions, gets the same reviewed copies, plus four project-authored skills that describe this codebase's Rewind and visual QA conventions. Each loads on its own when you work on files matching its `paths:`, or by name:
 
 | Skill | Loads for | Use it for |
 |---|---|---|
@@ -847,10 +854,15 @@ The project includes custom slash commands in `.claude/commands/`:
 | `vercel-composition-patterns` | `app/**`, `components/**`, `hooks/**` | Component API design |
 | `vercel-react-view-transitions` | `app/**` | React `<ViewTransition>` work |
 | `motion` | `components/wrapped/**`, `components/rewind/**`, `lib/rewind/**` | Animation (its `motion/react` imports apply after P2.15) |
+| `rewind-design-system` (project) | `components/rewind/**`, `lib/rewind/**`, `app/(app)/rewind/**`, `app/rewind/**` | The Rewind scope, inks, type, motion and poster rules |
+| `rewind-page` (project) | `components/rewind/pages/**`, `lib/rewind/pages/**`, `lib/rewind/registry.ts`, `lib/rewind/page-meta.ts` | Checklist for adding or changing a Rewind page |
+| `share-card` (project) | `lib/rewind/cards/**`, `app/api/rewind/card/**` | Satori-safe share cards drawn from the share-safe projection |
+| `visual-qa` (project) | `e2e/**` | Running, reading and updating the visual, axe and performance projects |
 
 - Where a skill's advice conflicts with this file (for example SWR instead of TanStack Query, or throwing from Server Actions), this file wins.
 - Shell execution from skills is off (`disableSkillShellExecution` in `.claude/settings.json`).
 - `.claude/skills/THIRD_PARTY.md` records each skill's source, SHA or npm version, licence, review and local changes, and the update procedure: review the upstream diff at a new SHA, copy, record. Never run `npx skills add` or `npx skills update` here.
+- The project-authored skills point at source files and design sections instead of copying values; `scripts/__tests__/project-skills.test.ts` fails when a path, export, npm script or Playwright project they name disappears, so update the skill in the same PR as the code it describes.
 - Any change to `.claude/skills/**` or `.mcp.json` needs a `/security-review` before merge.
 
 ## Additional Resources
@@ -860,6 +872,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - Discord Bot: See `docs/discord-bot.md`
 - Stripe Subscriptions: See `docs/stripe.md`
 - Operations (backup, restore, upgrades): See `docs/operations.md`
+- Releases and the changelog: See `docs/releasing.md` and `CHANGELOG.md`
 - Rewind season runbook (flags, season open, roll back, final cut): See `docs/rewind.md`
 - Performance Testing: See `docs/performance-testing.md`
 - Project README: See `README.md`

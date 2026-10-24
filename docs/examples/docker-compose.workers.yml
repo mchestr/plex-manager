@@ -1,0 +1,84 @@
+# Web containers and one worker from the same image (P11.3).
+#
+#   docker compose -f docker-compose.workers.yml up -d --scale web=2
+#
+# - `worker` (PROCESS_ROLE=worker) runs the queue Workers, the schedulers
+#   (watchlist, Discord role check, retention, the Rewind runs) and the Discord
+#   bot. It applies the migrations at start, publishes no port, and answers 404
+#   for everything but /api/health and /api/metrics.
+# - `web` (PROCESS_ROLE=web, SKIP_MIGRATIONS=true) only serves requests. It
+#   starts after the worker reports healthy, so the migrations have run, and
+#   may be scaled. Put your reverse proxy in front of it; with more than one
+#   replica, publish no host port and let the proxy reach `web` on this network.
+# - Both read one .env (NEXTAUTH_SECRET, PLEX_CLIENT_IDENTIFIER,
+#   ENCRYPTION_KEYS, the URLs and the passwords below; see example.env) and
+#   share the database and Redis. Every role checks the encryption key at boot.
+#   The leases make a second worker safe, but one is enough.
+#
+# Take a dump before starting a release that carries a migration
+# (docs/operations.md).
+
+x-app: &app
+  image: ghcr.io/mchestr/plex-manager:latest
+  env_file:
+    - .env
+  restart: unless-stopped
+
+services:
+  worker:
+    <<: *app
+    environment:
+      - PROCESS_ROLE=worker
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/plex_manager?schema=public
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}@redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    <<: *app
+    environment:
+      - PROCESS_ROLE=web
+      - SKIP_MIGRATIONS=true
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/plex_manager?schema=public
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}@redis:6379
+    expose:
+      - "3000"
+    depends_on:
+      worker:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      - POSTGRES_DB=plex_manager
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "plex_manager"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    environment:
+      - REDISCLI_AUTH=${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  redis-data:

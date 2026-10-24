@@ -36,7 +36,7 @@ fallback they name applies.
 | Need | Required | Notes |
 | --- | --- | --- |
 | Redis (`REDIS_URL`) | **Yes** | Rewind has no fallback without it (FR-50). The queue, the per-member lock, the rate limits and dry-run previews live there. Without `REDIS_URL` admins see "Rewind needs Redis (REDIS_URL)"; while it is down everyone sees "Rewind is temporarily unavailable. Try again in a few minutes." |
-| A queue worker | **Yes** | The app process runs it by default (`ENABLE_QUEUE_WORKER`, `PROCESS_ROLE`; see `example.env`). It must be running at 00:15 on the opening day for the season-open run. At start it retries Redis for about two minutes, then stays off until the next restart. |
+| A queue worker | **Yes** | An `all` or `worker` container runs it, never a `web` one (`ENABLE_QUEUE_WORKER`, `PROCESS_ROLE`; see `example.env` and `docs/operations.md`). It must be running at 00:15 on the opening day for the season-open run. At start it retries Redis for about two minutes, then stays off until the next restart. |
 | Node 22 or later | **Yes** | `engines.node` in `package.json`; the Docker image ships it. |
 | PostgreSQL | **Yes** | Migrated with `npm run db:deploy` (the image does it at start). |
 | Plex and Tautulli | **Yes** | Rewind reads every play from Tautulli. Use **Tautulli 2.17 or later**: the season console warns below it ("Update Tautulli: versions before 2.17 are affected by CVE-2026-31799"). A member Tautulli does not list is skipped with `TAUTULLI_USER_NOT_FOUND`. |

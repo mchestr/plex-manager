@@ -42,6 +42,8 @@ import {
   PlexAccessRevokeResult,
 } from "../types"
 import { addJob } from "../client"
+import { getRedisConnection } from "../connection"
+import { withAccessLock } from "@/lib/locks/access-lock"
 import { getAccessLevel } from "@/lib/access"
 import { getStripe } from "@/lib/stripe/client"
 import { parseStripePriceIds } from "@/lib/stripe/config"
@@ -747,10 +749,17 @@ export async function processAccessRevoke(
   return { userId, revoked: true }
 }
 
+/** Runs an access job under the member's `access:<userId>` lock, so a grant and a revoke never overlap (P11.3). */
+function underAccessLock<P extends { userId: string }, R>(run: (job: Job<P, R>) => Promise<R>) {
+  return (job: Job<P, R>): Promise<R> =>
+    withAccessLock(job.data.userId, job.id ?? job.data.userId, () => run(job), { redis: getRedisConnection() })
+}
+
 /**
  * Get processor function for Stripe job types.
  *
- * Handles `STRIPE_WEBHOOK`, `PLEX_ACCESS_GRANT`, and `PLEX_ACCESS_REVOKE`.
+ * Handles `STRIPE_WEBHOOK`, `PLEX_ACCESS_GRANT`, and `PLEX_ACCESS_REVOKE`;
+ * the access jobs run under the member's access lock.
  */
 export function getStripeProcessor(
   jobType: string
@@ -759,9 +768,9 @@ export function getStripeProcessor(
     case JOB_TYPES.STRIPE_WEBHOOK:
       return processStripeWebhook as (job: Job) => Promise<unknown>
     case JOB_TYPES.PLEX_ACCESS_GRANT:
-      return processAccessGrant as (job: Job) => Promise<unknown>
+      return underAccessLock(processAccessGrant) as (job: Job) => Promise<unknown>
     case JOB_TYPES.PLEX_ACCESS_REVOKE:
-      return processAccessRevoke as (job: Job) => Promise<unknown>
+      return underAccessLock(processAccessRevoke) as (job: Job) => Promise<unknown>
     default:
       return null
   }

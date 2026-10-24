@@ -28,6 +28,7 @@ jest.mock("@/lib/locks/lease-poller", () => ({
 jest.mock("@/lib/locks/lease-lock", () => ({ LeaseLock: jest.fn() }))
 jest.mock("@/lib/discord/config", () => ({ isDiscordBotEnabled: jest.fn().mockResolvedValue(true) }))
 jest.mock("@/lib/discord/bot", () => ({ DiscordBot: jest.fn() }))
+jest.mock("@/lib/instrumentation/encryption-canary", () => ({ assertEncryptionKey: jest.fn().mockResolvedValue(undefined) }))
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
 beforeEach(() => mockReset(prismaMock))

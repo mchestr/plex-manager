@@ -27,6 +27,8 @@ export const JOB_TYPES = {
   DISCORD_ROLE_RECONCILE: "discord:role:reconcile",
   // The daily retention sweep (P11.14)
   RETENTION_SWEEP: "retention:sweep",
+  // Stored secrets under the primary key (P11.1)
+  SECRETS_REENCRYPT: "secrets:reencrypt",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -60,6 +62,7 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.DISCORD_ROLE_SYNC]: "Discord role sync",
   [JOB_TYPES.DISCORD_ROLE_RECONCILE]: "Discord role check",
   [JOB_TYPES.RETENTION_SWEEP]: "Retention sweep",
+  [JOB_TYPES.SECRETS_REENCRYPT]: "Secret re-encryption",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
   [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
@@ -84,6 +87,7 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.DISCORD_ROLE_SYNC,
   JOB_TYPES.DISCORD_ROLE_RECONCILE,
   JOB_TYPES.RETENTION_SWEEP,
+  JOB_TYPES.SECRETS_REENCRYPT,
 ] as const satisfies readonly JobType[]
 
 /** A job's label, or its raw name for a type this build does not know. */
@@ -385,6 +389,7 @@ interface JobPayloads {
   [JOB_TYPES.DISCORD_ROLE_SYNC]: DiscordRoleSyncPayload
   [JOB_TYPES.DISCORD_ROLE_RECONCILE]: Record<string, never>
   [JOB_TYPES.RETENTION_SWEEP]: { triggeredBy: "scheduled" | "admin" }
+  [JOB_TYPES.SECRETS_REENCRYPT]: { triggeredBy: "scheduled" }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
@@ -397,6 +402,55 @@ interface JobPayloads {
   [JOB_TYPES.REWIND_DRY_RUN]: RewindDryRunPayload
   [JOB_TYPES.REWIND_NOTIFY]: RewindNotifyPayload
   [JOB_TYPES.REWIND_SEASON_OPEN]: RewindSeasonOpenPayload
+}
+
+// =============================================================================
+// Job ids (BP-20, P11.3)
+// =============================================================================
+
+/**
+ * How a job type gets its id, so a repeated trigger never adds a second job:
+ *
+ * - `deduplication`: BullMQ's deduplication id, which holds while a job with
+ *   it is waiting or running, so a trigger then joins that job;
+ * - `jobId`: a deterministic job id, kept while BullMQ keeps the job;
+ * - `fromCaller`: the caller names the id, because what makes it unique (a
+ *   Stripe event, an admin's grant, a Rewind generation row) is not in the
+ *   payload. The value says what the id carries; `addJob` refuses such a job
+ *   without one.
+ *
+ * Scheduled jobs get BullMQ's scheduler ids (`repeat:<scheduler>:<time>`),
+ * one per tick. The Rewind queues are filled by their own producers
+ * (`lib/rewind/*`, `lib/queue/jobs/rewind-*.ts`), which set the ids named here.
+ */
+export type JobIdPolicy<T> =
+  | { deduplication: (data: T) => string }
+  | { jobId: (data: T) => string }
+  | { fromCaller: string }
+
+/** Every job type's id rule; `lib/queue/__tests__/job-id-policy.test.ts` checks each type has one. */
+export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = {
+  [JOB_TYPES.WATCHLIST_SYNC_USER]: { deduplication: (data) => `watchlist:user:${data.userId}` },
+  [JOB_TYPES.WATCHLIST_SYNC_ALL]: { deduplication: () => "watchlist:all" },
+  [JOB_TYPES.STRIPE_WEBHOOK]: { fromCaller: "the Stripe event id" },
+  [JOB_TYPES.PLEX_ACCESS_GRANT]: { fromCaller: "the member and the event that granted access" },
+  [JOB_TYPES.PLEX_ACCESS_REVOKE]: { fromCaller: "the member and the event that removed access" },
+  [JOB_TYPES.DISCORD_ROLE_SYNC]: { deduplication: (data) => `discord:role:${data.userId}` },
+  [JOB_TYPES.DISCORD_ROLE_RECONCILE]: { deduplication: () => "discord:role:reconcile" },
+  [JOB_TYPES.RETENTION_SWEEP]: { deduplication: () => "retention:sweep" },
+  [JOB_TYPES.SECRETS_REENCRYPT]: { fromCaller: "secrets:reencrypt:<kid>:<fields hash>, from enqueueSecretsReencrypt" },
+  [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
+  [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },
+  [JOB_TYPES.REWIND_GENERATE_USER]: { fromCaller: "the RewindGeneration id" },
+  [JOB_TYPES.REWIND_STALE_SWEEP]: { fromCaller: "the rewind-stale-sweep scheduler" },
+  [JOB_TYPES.REWIND_SEASON_PREPARE]: { fromCaller: "rewind:prepare-now:<year>:<through>, or the season-open run" },
+  [JOB_TYPES.REWIND_GENERATE_ALL]: { fromCaller: "the parent run's step id; BullMQ's own id for the console button, which never joins a run" },
+  [JOB_TYPES.REWIND_FINAL_CUT]: { fromCaller: "the final-cut run" },
+  [JOB_TYPES.REWIND_CARD_PREWARM]: { fromCaller: "rewind:cards:<wrappedId>:<facts hash>" },
+  [JOB_TYPES.REWIND_CARD_SWEEP]: { fromCaller: "the rewind-card-sweep scheduler" },
+  [JOB_TYPES.REWIND_DRY_RUN]: { jobId: (data) => data.previewId },
+  [JOB_TYPES.REWIND_NOTIFY]: { deduplication: (data) => `rewind:notify:${data.year}:${data.userId}:${data.kind}` },
+  [JOB_TYPES.REWIND_SEASON_OPEN]: { deduplication: (data) => `rewind:open:${data.year}` },
 }
 
 // =============================================================================

@@ -11,6 +11,7 @@
 import { getAdminSettings } from '@/lib/data/admin-settings'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
+import { markUnreadable, resetUnreadable } from '@/lib/security/unreadable-secrets'
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
@@ -175,5 +176,18 @@ describe('getAdminSettings secret hiding', () => {
     expect(settings.plexServer).toBeNull()
     expect(settings.chatLLMProvider).toBeNull()
     expect(settings.discordIntegration).toBeNull()
+  })
+
+  it('marks a secret the current encryption key cannot read, so the form asks for it again (P11.1)', async () => {
+    resetUnreadable()
+    markUnreadable('Tautulli', 'apiKey', 't', 'k1', 'KEY_UNKNOWN')
+    mockPrisma.tautulli.findFirst.mockResolvedValue({ id: 't', name: 'Tautulli', url: 'http://taut:8181', apiKey: null, publicUrl: null, isActive: true })
+    mockPrisma.overseerr.findFirst.mockResolvedValue({ id: 'o', name: 'Overseerr', url: 'http://req:5055', apiKey: null, publicUrl: null, isActive: true })
+
+    const settings = await getAdminSettings()
+
+    expect(settings.tautulli?.secret).toEqual({ last4: '', origin: 'http://taut:8181', unreadable: true })
+    expect(settings.overseerr?.secret).toBeNull()
+    resetUnreadable()
   })
 })

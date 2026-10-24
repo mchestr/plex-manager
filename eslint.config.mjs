@@ -29,6 +29,8 @@ const barrelImportBans = [
   { name: "@/actions/admin", message: "The admin barrel is gone (P11.5): import from the module that defines the action." },
   { name: "@/actions/users", message: "The users barrel is gone (P11.5): import from actions/user-queries or lib/data/admin-users." },
 ];
+/** Tests and their fixtures are outside the file size limits (P11.21). */
+const maxLinesTestIgnores = ["**/*.test.{ts,tsx}", "**/__fixtures__/**", "**/__mocks__/**"];
 const chartPatternBans = [
   { group: ["recharts/*", "chart.js/*"], message: "Draw charts with ChartCard (components/ui/chart-card.tsx)." },
 ];
@@ -119,6 +121,20 @@ export default defineConfig([
     rules: {
       "no-restricted-imports": ["error", { paths: [...chartImportBans, ...barrelImportBans], patterns: chartPatternBans }],
     },
+  },
+  {
+    // CLAUDE.md's file size limits (BP-30, P11.21): components and actions
+    // fail above 300 lines, lib and hooks warn above 150. A cohesive file
+    // that must stay whole carries a file-level `/* eslint max-lines: ... */`
+    // with its reason, listed in CLAUDE.md.
+    files: ["components/**/*.{ts,tsx}", "actions/**/*.ts"],
+    ignores: maxLinesTestIgnores,
+    rules: { "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }] },
+  },
+  {
+    files: ["lib/**/*.{ts,tsx}", "hooks/**/*.{ts,tsx}"],
+    ignores: maxLinesTestIgnores,
+    rules: { "max-lines": ["warn", { max: 150, skipBlankLines: true, skipComments: true }] },
   },
   {
     // The centralized logger conditionally requires winston and async_hooks at runtime

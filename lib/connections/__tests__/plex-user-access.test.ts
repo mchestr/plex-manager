@@ -142,4 +142,12 @@ describe("checkUserServerAccess", () => {
       reason: "server_token_invalid",
     })
   })
+
+  it("is unknown when the stored token cannot be decrypted, and the owner still signs in (P11.1)", async () => {
+    const unreadable = { ...SERVER, token: null }
+
+    await expect(checkUserServerAccess(unreadable, "1001")).resolves.toEqual({ status: "unknown", reason: "server_token_invalid" })
+    await expect(checkUserServerAccess(unreadable, "1000")).resolves.toEqual({ status: "granted" })
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
 })

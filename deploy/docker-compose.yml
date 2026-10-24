@@ -1,0 +1,72 @@
+# Production compose for the published image. docs/deployment.md walks through
+# it. Put this file and your .env in one folder (the .env supplies both the
+# compose passwords and every app variable), then:
+#   docker compose pull && docker compose up -d
+#
+# Pin a release with PLEX_MANAGER_VERSION in .env; latest tracks main.
+# The app reads every setting from .env, including DATABASE_URL and REDIS_URL,
+# which name the db and redis services below as their hosts. Nothing here
+# overrides .env, so NEXT_PUBLIC_APP_URL and NEXTAUTH_URL are always yours.
+# .env must also set ENCRYPTION_KEYS (production refuses to start without a
+# key; docs/operations.md#encryption-keys). This one app container runs with
+# PROCESS_ROLE=all, the default; docs/examples/docker-compose.workers.yml splits
+# it into web containers and a worker.
+services:
+  app:
+    image: ghcr.io/mchestr/plex-manager:${PLEX_MANAGER_VERSION:-latest}
+    restart: unless-stopped
+    env_file:
+      - .env
+    # Loopback only: rate limits trust X-Forwarded-For, so a client that
+    # reaches the app port directly could choose its own address. The reverse
+    # proxy on this host forwards to 127.0.0.1:3000.
+    ports:
+      - "127.0.0.1:3000:3000"
+    # The image's HEALTHCHECK probes /api/health?probe=live. This volume keeps
+    # Next's and Rewind's caches across container replacements; it can always
+    # be rebuilt, so it needs no backup.
+    volumes:
+      - app-cache:/app/.next/cache
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Postgres and Redis publish no ports: only the app, on the compose network,
+  # reaches them. Both refuse to start without a password.
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      - POSTGRES_DB=plex_wrapped
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "plex_wrapped"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    # redis-cli reads the password from REDISCLI_AUTH, so the health check
+    # authenticates without putting it on the command line.
+    environment:
+      - REDISCLI_AUTH=${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  app-cache:
+  db-data:
+  redis-data:

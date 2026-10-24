@@ -15,6 +15,7 @@ import { prisma } from "@/lib/prisma"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import type { SavedSecret } from "@/lib/security/saved-secret"
 import { describeSecret } from "@/lib/security/secret-reuse"
+import { isUnreadable } from "@/lib/security/unreadable-secrets"
 import { parseStripeLibrarySectionIds, parseStripePriceIds } from "@/lib/stripe/config"
 import { createLogger } from "@/lib/utils/logger"
 import { REWIND_SETTINGS_SELECT } from "@/lib/wrapped/config"
@@ -144,7 +145,10 @@ export async function getStripeConfig(): Promise<StripeConfigStatus> {
       enabled: config.stripeEnabled,
       hasSecretKey: Boolean(config.stripeSecretKey),
       hasWebhookSecret: Boolean(config.stripeWebhookSecret),
-      saved: { secretKey: describeSecret(config.stripeSecretKey), webhookSecret: describeSecret(config.stripeWebhookSecret) },
+      saved: {
+        secretKey: describeSecret(config.stripeSecretKey, undefined, isUnreadable("Config", "stripeSecretKey", "config")),
+        webhookSecret: describeSecret(config.stripeWebhookSecret, undefined, isUnreadable("Config", "stripeWebhookSecret", "config")),
+      },
       hasJobQueue: isRedisConfigured(),
       priceIds: parseStripePriceIds(config.stripePriceIds),
       librarySectionIds: parseStripeLibrarySectionIds(config.stripeLibrarySectionIds),
@@ -176,18 +180,21 @@ function emptyStripeConfigStatus(): StripeConfigStatus {
  * returning a row verbatim from this loader would leak the plaintext
  * into the RSC payload sent to the settings forms. `destination` gives the
  * address the secret may be sent to, whose origin `SecretInput` compares with
- * the URL being typed.
+ * the URL being typed. A secret the current encryption key cannot read comes
+ * back as `{ unreadable: true }`, so the form asks for it again (P11.1).
  *
  * @internal
  */
-function omitSecret<T extends Record<string, unknown>, K extends keyof T>(
+function omitSecret<T extends Record<string, unknown> & { id: string }, K extends keyof T & string>(
+  model: string,
   row: T | null,
   secretField: K,
   destination: (row: T) => string | null
 ): (Omit<T, K> & { secret: SavedSecret | null }) | null {
   if (!row) return null
   const { [secretField]: secret, ...rest } = row
-  return { ...rest, secret: describeSecret(typeof secret === "string" ? secret : null, destination(row)) }
+  const unreadable = isUnreadable(model, secretField, row.id)
+  return { ...rest, secret: describeSecret(typeof secret === "string" ? secret : null, destination(row), unreadable) }
 }
 
 const serverUrl = (row: { url: string }) => row.url
@@ -232,15 +239,22 @@ export async function getAdminSettings() {
     prisma.discordConnection.count({ where: { revokedAt: null } }),
   ])
 
-  const sanitizedChatLLMProvider = omitSecret(chatLLMProvider, "apiKey", llmDestination)
-  const sanitizedWrappedLLMProvider = omitSecret(wrappedLLMProvider, "apiKey", llmDestination)
+  const sanitizedChatLLMProvider = omitSecret("LLMProvider", chatLLMProvider, "apiKey", llmDestination)
+  const sanitizedWrappedLLMProvider = omitSecret("LLMProvider", wrappedLLMProvider, "apiKey", llmDestination)
 
   // Both Discord secrets go only to Discord (a fixed destination), so neither
   // carries an origin. The support channel and threads are not secret.
   const sanitizedDiscordIntegration = discordIntegration
     ? (() => {
         const { clientSecret, botToken, ...rest } = discordIntegration
-        return { ...rest, secrets: { clientSecret: describeSecret(clientSecret), botToken: describeSecret(botToken) } }
+        const unreadable = (field: string) => isUnreadable("DiscordIntegration", field, discordIntegration.id)
+        return {
+          ...rest,
+          secrets: {
+            clientSecret: describeSecret(clientSecret, undefined, unreadable("clientSecret")),
+            botToken: describeSecret(botToken, undefined, unreadable("botToken")),
+          },
+        }
       })()
     : null
 
@@ -250,12 +264,12 @@ export async function getAdminSettings() {
     wrappedLLMProvider: sanitizedWrappedLLMProvider,
     // Keep llmProvider for backward compatibility (returns wrapped provider)
     llmProvider: sanitizedWrappedLLMProvider,
-    plexServer: omitSecret(plexServer, "token", serverUrl),
-    jellyfinServer: omitSecret(jellyfinServer, "apiKey", serverUrl),
-    tautulli: omitSecret(tautulli, "apiKey", serverUrl),
-    overseerr: omitSecret(overseerr, "apiKey", serverUrl),
-    sonarr: omitSecret(sonarr, "apiKey", serverUrl),
-    radarr: omitSecret(radarr, "apiKey", serverUrl),
+    plexServer: omitSecret("PlexServer", plexServer, "token", serverUrl),
+    jellyfinServer: omitSecret("JellyfinServer", jellyfinServer, "apiKey", serverUrl),
+    tautulli: omitSecret("Tautulli", tautulli, "apiKey", serverUrl),
+    overseerr: omitSecret("Overseerr", overseerr, "apiKey", serverUrl),
+    sonarr: omitSecret("Sonarr", sonarr, "apiKey", serverUrl),
+    radarr: omitSecret("Radarr", radarr, "apiKey", serverUrl),
     prometheus,
     discordIntegration: sanitizedDiscordIntegration,
     discordLinkedCount,

@@ -107,9 +107,11 @@ export async function enqueueRoleSync(userId: string, reason: RoleSyncReason): P
       await runRoleSync(payload)
       return
     }
-    // Loaded on use, so the actions and auth paths that import this module never load BullMQ.
-    const { addJob } = await import("@/lib/queue/client")
-    await addJob(JOB_TYPES.DISCORD_ROLE_SYNC, payload, roleSyncJobOptions(userId))
+    // Loaded on use, so the actions and auth paths that import this module never
+    // load BullMQ; fails fast while Redis is down, since requests call this (P11.3)
+    const { enqueueFromRequest } = await import("@/lib/queue/request-path")
+    const queued = await enqueueFromRequest(JOB_TYPES.DISCORD_ROLE_SYNC, payload, roleSyncJobOptions(userId))
+    if (!queued.ok) logger.warn("discord.role_sync_enqueue_failed", { userId, reason, code: queued.code })
   } catch (error) {
     logger.warn("discord.role_sync_enqueue_failed", { userId, reason, error })
   }

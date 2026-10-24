@@ -228,6 +228,7 @@ jobs:
             echo "DATABASE_URL=postgresql://postgres:${PG_PASSWORD}@db:5432/plex_manager_smoke?schema=public"
             echo "REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379"
             echo "NEXTAUTH_SECRET=${secret}"
+            echo "ENCRYPTION_KEYS=smoke:$(openssl rand -base64 32)"
             echo "NEXTAUTH_URL=http://localhost:3000"
             echo "NEXT_PUBLIC_APP_URL=http://localhost:3000"
             echo "PLEX_CLIENT_IDENTIFIER=$(openssl rand -hex 16)"
@@ -283,6 +284,31 @@ jobs:
             if docker exec app test -e "$dir"; then fail "$dir is in the image"; fi
           done
           if docker exec app sh -c 'command -v npm'; then fail "npm is in the runner"; fi
+
+      # P11.3: one image, two roles; only the worker starts the queue Workers,
+      # and it serves nothing but the health check and the metrics.
+      - name: Check the web and worker roles
+        run: |
+          for role in web worker; do
+            docker run -d --name "app-$role" --network "$NET" \
+              --env-file "$RUNNER_TEMP/app.env" -e PROCESS_ROLE="$role" -e SKIP_MIGRATIONS=true "$IMAGE"
+          done
+          for role in web worker; do
+            if ! timeout 90 sh -c "until [ \"\$(docker inspect -f '{{.State.Health.Status}}' app-$role)\" = healthy ]; do sleep 2; done"; then
+              docker logs "app-$role"
+              echo "::error::app-$role did not report healthy within 90 s"
+              exit 1
+            fi
+          done
+          docker logs app-worker 2>&1 | grep -F "Queue worker started"
+          if docker logs app-web 2>&1 | grep -F "Queue worker started"; then
+            echo "::error::The web role started the queue worker"; exit 1
+          fi
+          docker exec app-worker node -e "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status===404?0:1),()=>process.exit(1))" ||
+            { echo "::error::The worker served a page"; exit 1; }
+          docker exec app-worker node -e "fetch('http://127.0.0.1:3000/api/health?probe=live').then(r=>r.json()).then(b=>process.exit(b.role==='worker'?0:1),()=>process.exit(1))" ||
+            { echo "::error::/api/health did not report the worker role"; exit 1; }
+          docker rm -f app-web app-worker
 
       - name: Check a Redis outage leaves the site live
         run: |
@@ -357,6 +383,10 @@ jobs:
       # season (P8.1, docs/rewind.md "The freeze lock").
       - name: Check the Rewind freeze lock
         run: npm run rewind:freeze -- --check
+
+      # docs/environment.md and example.env are generated from lib/env.ts (P11.24).
+      - name: Check the environment reference
+        run: npm run env:docs -- --check
 
       - name: Upload coverage report
         if: ${{ !cancelled() }}

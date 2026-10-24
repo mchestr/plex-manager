@@ -38,12 +38,14 @@ interface QueuedJob {
 const mockQueued = new Map<string, QueuedJob>()
 const mockDeduplication = new Map<string, string>()
 const mockAdd = jest.fn(
-  async (name: string, data: unknown, opts: { jobId: string; deduplication?: { id: string } }) => {
+  async (name: string, data: unknown, opts: { jobId?: string; deduplication?: { id: string } }) => {
     const live = opts.deduplication && mockDeduplication.get(opts.deduplication.id)
     if (live) return { id: live }
-    mockQueued.set(opts.jobId, { id: opts.jobId, name, data })
-    if (opts.deduplication) mockDeduplication.set(opts.deduplication.id, opts.jobId)
-    return { id: opts.jobId }
+    // Without a jobId, BullMQ numbers the job itself
+    const id = opts.jobId ?? String(mockQueued.size + 1)
+    mockQueued.set(id, { id, name, data })
+    if (opts.deduplication) mockDeduplication.set(opts.deduplication.id, id)
+    return { id }
   }
 )
 
@@ -57,6 +59,8 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 jest.mock('@/lib/queue/connection', () => ({
   isRedisConfigured: () => true,
   getRedisConnection: jest.fn(),
+  getRequestPathRedis: jest.fn(),
+  readyWithin: jest.fn().mockResolvedValue(true),
 }))
 jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
 jest.mock('@/lib/security/audit-log', () => ({

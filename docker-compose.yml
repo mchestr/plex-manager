@@ -1,5 +1,6 @@
-# Development only. The production recipe is P11.24's; the image itself is the
-# Dockerfile's hardened runner, which reports its health (/api/health).
+# Development only. It builds from source and pins localhost URLs below; for a
+# production install use deploy/docker-compose.yml (docs/deployment.md), which
+# runs the published image with every setting from .env.
 services:
   app:
     build:
