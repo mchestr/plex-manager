@@ -27,7 +27,12 @@ interface SetCookie {
 }
 
 /** One browser's cookies, and every cookie the actions set. */
-const mockBrowser = { jar: new Map<string, string>(), sets: [] as SetCookie[], ip: "203.0.113.7" }
+const mockBrowser = {
+  jar: new Map<string, string>(),
+  sets: [] as SetCookie[],
+  ip: "203.0.113.7",
+  origin: null as string | null,
+}
 
 jest.mock("next/headers", () => ({
   cookies: async () => ({
@@ -38,7 +43,8 @@ jest.mock("next/headers", () => ({
     },
     delete: (name: string) => mockBrowser.jar.delete(name),
   }),
-  headers: async () => new Headers({ "x-forwarded-for": mockBrowser.ip }),
+  headers: async () =>
+    new Headers({ "x-forwarded-for": mockBrowser.ip, ...(mockBrowser.origin ? { origin: mockBrowser.origin } : {}) }),
 }))
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
@@ -67,6 +73,7 @@ function newBrowser(ip = `198.51.100.${(nextPinId % 250) + 1}`) {
   mockBrowser.jar = new Map()
   mockBrowser.sets = []
   mockBrowser.ip = ip
+  mockBrowser.origin = null
 }
 
 function setCookie(name: string) {
@@ -138,6 +145,48 @@ describe("startPlexSignIn", () => {
     )
   })
 
+  it("sends the browser back to the host it started on, where its PIN cookie lives", async () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://plex.example.com/manager"
+    mockBrowser.origin = "https://www.plex.example.com"
+
+    const result = await startPlexSignIn({})
+
+    expect(result.success && new URLSearchParams(result.data.authUrl.slice(AUTH_PREFIX.length)).get("forwardUrl")).toBe(
+      "https://www.plex.example.com/manager/auth/callback/plex"
+    )
+  })
+
+  it.each(["null", "not a url", "javascript:alert(1)"])("falls back to the base URL for the origin %p", async (origin) => {
+    mockBrowser.origin = origin
+
+    const result = await startPlexSignIn({})
+
+    expect(result.success && new URLSearchParams(result.data.authUrl.slice(AUTH_PREFIX.length)).get("forwardUrl")).toBe(
+      "https://plex.example.com/auth/callback/plex"
+    )
+  })
+
+  it("carries the unfinished sign-in's invite code and callback path over on a retry", async () => {
+    await startPlexSignIn({ inviteCode: "FRIENDS1", callbackPath: "/admin" })
+    const first = readPinCookie(setCookie("pm-plex-pin")?.value)
+
+    await startPlexSignIn({ retry: true })
+
+    const second = readPinCookie(setCookie("pm-plex-pin")?.value)
+    expect(second).toMatchObject({ inviteCode: "FRIENDS1", callbackPath: "/admin" })
+    expect(second?.pinId).not.toBe(first?.pinId)
+  })
+
+  it("starts a plain sign-in without a retry, or on a retry without a valid cookie", async () => {
+    await startPlexSignIn({ inviteCode: "FRIENDS1" })
+    await startPlexSignIn({})
+    expect(readPinCookie(setCookie("pm-plex-pin")?.value)).not.toHaveProperty("inviteCode")
+
+    mockBrowser.jar.set("pm-plex-pin", "forged.value")
+    await startPlexSignIn({ retry: true })
+    expect(readPinCookie(setCookie("pm-plex-pin")?.value)).not.toHaveProperty("inviteCode")
+  })
+
   it("gives each browser its own client identifier and keeps it for a year", async () => {
     await startPlexSignIn({})
     const first = setCookie("pm-plex-client")
@@ -167,7 +216,7 @@ describe("startPlexSignIn", () => {
     expect(mockCreatePin).toHaveBeenCalledWith(expect.stringMatching(UUID))
   })
 
-  it.each([{ inviteCode: "A B" }, { inviteCode: "../x" }, { pinId: 1 }])("refuses the input %p", async (input) => {
+  it.each([{ inviteCode: "A B" }, { inviteCode: "../x" }, { pinId: 1 }, { retry: false }])("refuses the input %p", async (input) => {
     await expect(startPlexSignIn(input as Parameters<typeof startPlexSignIn>[0])).resolves.toMatchObject({
       success: false,
       code: "VALIDATION",
@@ -316,10 +365,10 @@ describe("finishPlexSignIn", () => {
     expect(mockGetOnboardingStatus).not.toHaveBeenCalled()
   })
 
-  it("refuses without a session, and still deletes the cookie", async () => {
+  it("refuses without a session and keeps the cookie, so the sign-in can run again", async () => {
     mockGetServerSession.mockResolvedValue(null)
 
     await expect(finishPlexSignIn()).resolves.toMatchObject({ success: false, code: "UNAUTHENTICATED" })
-    expect(mockBrowser.jar.has("pm-plex-pin")).toBe(false)
+    expect(mockBrowser.jar.has("pm-plex-pin")).toBe(true)
   })
 })

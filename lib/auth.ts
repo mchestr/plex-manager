@@ -110,13 +110,24 @@ async function readPlexSignIn(
     throw new Error("plex_pin_expired")
   }
 
-  const status = await readPin(pin.pinId, pin.code, pin.clientId)
+  // The callback page only signs in after a poll read the PIN as ready, so a
+  // `waiting` or `unavailable` read here is plex.tv lagging or hiccuping:
+  // read again for about 2 s before failing the sign-in (#393).
+  let status = await readPin(pin.pinId, pin.code, pin.clientId)
+  for (const delay of PIN_REREAD_DELAYS_MS) {
+    if (status.status !== "waiting" && status.status !== "unavailable") break
+    await new Promise((resolve) => setTimeout(resolve, delay))
+    status = await readPin(pin.pinId, pin.code, pin.clientId)
+  }
   if (status.status !== "ready") {
     logger.warn("auth.plex_pin_not_ready", { status: status.status })
     throw new Error(status.status === "unavailable" ? "sign_in_failed" : "plex_pin_expired")
   }
   return { authToken: status.authToken, inviteCode: pin.inviteCode }
 }
+
+/** Waits between `readPlexSignIn`'s re-reads of a PIN that is not ready yet. */
+const PIN_REREAD_DELAYS_MS = [500, 1500]
 
 /** Errors the Plex `authorize` passes on to the callback page, which maps them to its codes. */
 const PLEX_SIGN_IN_ERRORS = new Set(["access_denied", "plex_unavailable", "NO_SERVER_CONFIGURED"])

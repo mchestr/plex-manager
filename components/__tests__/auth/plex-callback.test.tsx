@@ -101,6 +101,30 @@ describe('PlexCallbackPageClient', () => {
     expect(mockFinish).toHaveBeenCalledTimes(1)
   })
 
+  it('signs in once more when next-auth reported ok without a session (failed CSRF check)', async () => {
+    pollReturns('ready')
+    mockFinish
+      .mockResolvedValueOnce({ success: false, code: 'UNAUTHENTICATED', error: 'Please sign in to continue.' })
+      .mockResolvedValueOnce({ success: true, data: { next: '/' } })
+
+    render(<PlexCallbackPageClient />)
+
+    await waitFor(() => expect(mockRedirectTo).toHaveBeenCalledWith('/'))
+    expect(mockSignIn).toHaveBeenCalledTimes(2)
+    expect(mockFinish).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows "Sign-in didn\'t finish" when the second sign-in sets no session either, never a silent redirect', async () => {
+    pollReturns('ready')
+    mockFinish.mockResolvedValue({ success: false, code: 'UNAUTHENTICATED', error: 'Please sign in to continue.' })
+
+    render(<PlexCallbackPageClient />)
+
+    expect(await screen.findByTestId('plex-callback-error-sign_in_failed')).toBeInTheDocument()
+    expect(mockSignIn).toHaveBeenCalledTimes(2)
+    expect(mockRedirectTo).not.toHaveBeenCalled()
+  })
+
   it('sends a gated non-member to /subscribe', async () => {
     pollReturns('ready')
     mockFinish.mockResolvedValue({ success: true, data: { next: '/subscribe' } })
@@ -196,6 +220,8 @@ describe('PlexCallbackPageClient', () => {
     await user.click(await screen.findByRole('button', { name: 'Try again' }))
 
     expect(mockStart).toHaveBeenCalledTimes(1)
+    // retry keeps the unfinished sign-in's invite code and callback path
+    expect(mockStart).toHaveBeenCalledWith({ retry: true })
     await waitFor(() => expect(mockRedirectTo).toHaveBeenCalledWith('https://app.plex.tv/auth#?code=NEW'))
   })
 

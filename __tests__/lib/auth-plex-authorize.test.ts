@@ -88,6 +88,10 @@ beforeEach(() => {
   prismaMock.user.update.mockResolvedValue(MEMBER_ROW)
 })
 
+afterEach(() => {
+  jest.useRealTimers()
+})
+
 describe('Plex authorize reads the PIN cookie', () => {
   it('refuses a request without the cookie', async () => {
     await expect(authorize(undefined, { headers: {} })).rejects.toThrow('plex_pin_expired')
@@ -108,12 +112,29 @@ describe('Plex authorize reads the PIN cookie', () => {
     [{ status: 'waiting' } as const, 'plex_pin_expired'],
     [{ status: 'expired' } as const, 'plex_pin_expired'],
     [{ status: 'unavailable' } as const, 'sign_in_failed'],
-  ])('refuses a PIN that is %p', async (status, code) => {
+  ])('refuses a PIN that is still %p after about 2 s of re-reads', async (status, code) => {
+    jest.useFakeTimers()
     mockReadPin.mockResolvedValue(status)
 
-    await expect(authorize(undefined, plexPinRequest())).rejects.toThrow(code)
+    const result = expect(authorize(undefined, plexPinRequest())).rejects.toThrow(code)
+    await jest.advanceTimersByTimeAsync(2000)
+    await result
+    expect(mockReadPin).toHaveBeenCalledTimes(status.status === 'expired' ? 1 : 3)
     expect(mockGetPlexUserInfo).not.toHaveBeenCalled()
   })
+
+  it.each([{ status: 'waiting' } as const, { status: 'unavailable' } as const])(
+    'reads the PIN again when plex.tv lags behind the poll (%p)',
+    async (status) => {
+      jest.useFakeTimers()
+      mockReadPin.mockResolvedValueOnce(status).mockResolvedValueOnce(readyPin(PLEX_TOKEN))
+
+      const result = authorize(undefined, plexPinRequest())
+      await jest.advanceTimersByTimeAsync(500)
+      await expect(result).resolves.toMatchObject({ id: 'member-row' })
+      expect(mockReadPin).toHaveBeenCalledTimes(2)
+    }
+  )
 
   it('signs in with a ready PIN, using the token plex.tv issued for it', async () => {
     const result = await authorize(undefined, plexPinRequest({ pinId: 77, code: 'zzzz9999' }))
