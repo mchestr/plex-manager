@@ -154,6 +154,7 @@ async function acceptInviteWithPropagationDelay(
 async function getActivePlexServer() {
   const plexServer = await prisma.plexServer.findFirst({
     where: { isActive: true },
+  orderBy: { updatedAt: "desc" },
   })
 
   if (!plexServer) {

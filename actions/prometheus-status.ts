@@ -38,6 +38,7 @@ async function fetchPrometheusStatusInternal(): Promise<StatusData> {
     // Get active Prometheus configuration
     const prometheus = await prisma.prometheus.findFirst({
       where: { isActive: true },
+    orderBy: { updatedAt: "desc" },
     })
 
     if (!prometheus) {
@@ -148,6 +149,7 @@ async function fetchPrometheusStatusInternal(): Promise<StatusData> {
     try {
       const prometheus = await prisma.prometheus.findFirst({
         where: { isActive: true },
+        orderBy: { updatedAt: "desc" },
         select: { name: true },
       })
       serviceName = prometheus?.name ?? ""

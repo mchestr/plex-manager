@@ -60,6 +60,7 @@ const JellyfinCredentialsSchema = z.object({
 export async function getJellyfinLoginServer() {
   const server = await prisma.jellyfinServer.findFirst({
     where: { isActive: true },
+  orderBy: { updatedAt: "desc" },
   })
 
   if (!server) {

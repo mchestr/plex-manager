@@ -73,9 +73,9 @@ async function main() {
   const member = { plexUserId: user.plexUserId }
   const [config, tautulli, overseerr, plex] = await Promise.all([
     prisma.config.findUnique({ where: { id: "config" }, select: { rewindExcludedSectionIds: true } }),
-    prisma.tautulli.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
-    prisma.overseerr.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
-    prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true, token: true } }),
+    prisma.tautulli.findFirst({ where: { isActive: true }, orderBy: { updatedAt: "desc" }, select: { url: true, apiKey: true } }),
+    prisma.overseerr.findFirst({ where: { isActive: true }, orderBy: { updatedAt: "desc" }, select: { url: true, apiKey: true } }),
+    prisma.plexServer.findFirst({ where: { isActive: true }, orderBy: { updatedAt: "desc" }, select: { url: true, token: true } }),
   ])
 
   const { zone, source } = resolveZone(user, await serverZone())

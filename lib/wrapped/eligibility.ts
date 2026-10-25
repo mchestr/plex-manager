@@ -119,6 +119,7 @@ export async function checkRewindEligibility(user: {
 
   const tautulli = await prisma.tautulli.findFirst({
     where: { isActive: true },
+    orderBy: { updatedAt: "desc" },
     select: { url: true, apiKey: true },
   })
   if (!tautulli) {

@@ -23,7 +23,7 @@ describe("getActivePlexServerConfig", () => {
 
     await getActivePlexServerConfig()
 
-    expect(findFirstMock).toHaveBeenCalledWith({ where: { isActive: true } })
+    expect(findFirstMock).toHaveBeenCalledWith({ where: { isActive: true }, orderBy: { updatedAt: "desc" } })
   })
 
   it("returns the mapped config when an active server exists", async () => {

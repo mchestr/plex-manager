@@ -89,6 +89,7 @@ export async function plexWebUrl(publicUrl: string | null): Promise<string | nul
 export async function jellyfinLink(): Promise<{ name: string; url: string | null } | null> {
   const row = await prisma.jellyfinServer.findFirst({
     where: { isActive: true },
+    orderBy: { updatedAt: "desc" },
     select: { name: true, url: true, publicUrl: true },
   })
   if (!row) return null

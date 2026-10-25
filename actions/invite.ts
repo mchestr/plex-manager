@@ -43,6 +43,7 @@ const jellyfinLibraryIdsSchema = z.array(z.string().regex(/^[0-9a-f]{32}$/i))
 async function getActiveJellyfinServer() {
   const jellyfinServer = await prisma.jellyfinServer.findFirst({
     where: { isActive: true },
+  orderBy: { updatedAt: "desc" },
   })
 
   if (!jellyfinServer) {

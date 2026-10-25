@@ -32,7 +32,7 @@ export interface SetupWizardData {
   plexPending: boolean
 }
 
-const active = { where: { isActive: true } } as const
+const active = { where: { isActive: true }, orderBy: { updatedAt: "desc" } } as const
 
 function storedServer(row: { name: string; url: string; publicUrl?: string | null } | null, secret: string | null | undefined): StoredServer | null {
   return row && { name: row.name, url: row.url, publicUrl: row.publicUrl ?? null, secret: describeSecret(secret, row.url) }

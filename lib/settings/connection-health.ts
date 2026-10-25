@@ -70,7 +70,7 @@ export interface ConnectionHealth {
   connections: ConnectionHealthEntry[]
 }
 
-const SERVICE = { where: { isActive: true }, select: { name: true, url: true, publicUrl: true } } as const
+const SERVICE = { where: { isActive: true }, orderBy: { updatedAt: "desc" }, select: { name: true, url: true, publicUrl: true } } as const
 
 /** Runs every tester now, without the cache. @internal */
 export async function checkConnections(now: Date = new Date()): Promise<ConnectionHealth> {
