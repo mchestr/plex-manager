@@ -55,7 +55,7 @@ interface AppearancePickerProps {
  * The Appearance choice, Dark or Light (P10.10, ui-design-system 4.1): one
  * component for `/account`, the account menu and the admin menu. It renders
  * nothing while `Config.lightThemeEnabled` is off. There is no "System"
- * choice until the nonce CSP can run a pre-paint script.
+ * choice yet: it needs a pre-paint script carrying the CSP nonce (P11.20).
  */
 export function AppearancePicker({ variant = "inline", testId = "appearance" }: AppearancePickerProps) {
   const { enabled } = useAppearance()

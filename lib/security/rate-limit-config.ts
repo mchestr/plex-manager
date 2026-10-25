@@ -83,6 +83,8 @@ export const LIMITS = {
   "rw:dryrun": { points: 10, duration: 10 * MINUTE },
   // Rewind copy calls per LLM provider (design 9.4); the pipeline waits for a point
   "rw:llm": { points: 30, duration: MINUTE },
+  // CSP violation reports per address (P11.20); one page can send several
+  "csp-report": { points: 60, duration: MINUTE },
   // One audit row per admin, member and surface per hour for reads of member content (P11.16)
   "audit:read": { points: 1, duration: HOUR },
 } as const satisfies Record<string, LimitConfig>

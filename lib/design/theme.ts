@@ -12,7 +12,8 @@
  * | on | `light` | light |
  * | on | `dark`, missing or garbage | dark |
  *
- * There is no "System" choice until the nonce CSP can run a pre-paint script.
+ * There is no "System" choice yet: it needs a pre-paint script, which can now
+ * carry the CSP nonce from the `x-nonce` request header (P11.20).
  * Reading `cookies()` makes the caller dynamic; the root layout already is.
  *
  * @module lib/design/theme

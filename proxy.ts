@@ -11,6 +11,11 @@
  * `(app)` layout alone cannot do (P4.5, FR-51), and forwards the pathname to
  * the pages as the `x-pm-pathname` request header.
  *
+ * Every response carries the strict Content Security Policy with a fresh nonce
+ * (P11.20, `lib/security/csp.ts`), also forwarded on the request so Next adds
+ * the nonce to its scripts, and, on https, `Strict-Transport-Security`
+ * (`lib/security/hsts.ts`). `CSP_REPORT_ONLY=true` sends the policy report-only.
+ *
  * A `PROCESS_ROLE=worker` container (P11.3) answers 404 for everything but the
  * health check and the metrics, so it never serves pages even when its port
  * is exposed.
@@ -28,6 +33,8 @@ import { isMemberAppPath, needsSubscribeRedirect } from "@/lib/access-paths"
 import { getEnv, usesSecureCookies } from "@/lib/env"
 import { hasMembershipPage } from "@/lib/member/membership-page"
 import { isValidRequestId, PATHNAME_HEADER, REQUEST_ID_HEADER } from "@/lib/request-headers"
+import { contentSecurityPolicy, createNonce, cspHeaderName, NONCE_HEADER, REPORTING_ENDPOINTS } from "@/lib/security/csp"
+import { hstsHeader } from "@/lib/security/hsts"
 import { sanitizeText } from "@/lib/utils/log-redaction"
 import { generateRequestId, runWithRequestContext } from "@/lib/utils/log-context"
 import { createLogger } from "@/lib/utils/logger"
@@ -127,15 +134,52 @@ async function needsMemberRedirect(request: NextRequest): Promise<boolean> {
   }
 }
 
+/** The headers every response of one request carries: its id, its policy and HSTS. */
+interface ResponseHeaders {
+  requestId: string
+  nonce: string
+  cspName: ReturnType<typeof cspHeaderName>
+  csp: string
+  hsts: string | null
+}
+
+function responseHeadersFor(requestId: string): ResponseHeaders {
+  const env = getEnv()
+  const https = usesSecureCookies(env.NEXTAUTH_URL)
+  const nonce = createNonce()
+  return {
+    requestId,
+    nonce,
+    cspName: cspHeaderName(env.CSP_REPORT_ONLY === "true"),
+    // NODE_ENV is inlined at build time, so a production build never allows eval
+    csp: contentSecurityPolicy(nonce, { development: process.env.NODE_ENV === "development", https }),
+    hsts: hstsHeader(env, https),
+  }
+}
+
+/** Sets the request id, the policy, its reporting endpoint and HSTS on `response`. */
+function withResponseHeaders<R extends Response>(response: R, headers: ResponseHeaders): R {
+  response.headers.set("X-Request-ID", headers.requestId)
+  response.headers.set(headers.cspName, headers.csp)
+  response.headers.set("Reporting-Endpoints", REPORTING_ENDPOINTS)
+  if (headers.hsts) response.headers.set("Strict-Transport-Security", headers.hsts)
+  return response
+}
+
 /**
  * The request headers a page receives: the client's, with the proxy's
- * {@link PATHNAME_HEADER} and {@link REQUEST_ID_HEADER} in place of any value
- * the client sent.
+ * {@link PATHNAME_HEADER}, {@link REQUEST_ID_HEADER}, {@link NONCE_HEADER} and
+ * policy in place of any value the client sent. Next reads the nonce from the
+ * policy on the request.
  */
-function pageRequestHeaders(headers: Headers, pathname: string, requestId: string): Headers {
-  const next = new Headers(headers)
+function pageRequestHeaders(request: Headers, pathname: string, headers: ResponseHeaders): Headers {
+  const next = new Headers(request)
   next.set(PATHNAME_HEADER, pathname)
-  next.set(REQUEST_ID_HEADER, requestId)
+  next.set(REQUEST_ID_HEADER, headers.requestId)
+  next.set(NONCE_HEADER, headers.nonce)
+  next.delete("content-security-policy")
+  next.delete("content-security-policy-report-only")
+  next.set(headers.cspName, headers.csp)
   return next
 }
 
@@ -170,9 +214,10 @@ export async function proxy(request: NextRequest) {
 
   return runWithRequestContext(requestId, undefined, async () => {
     const { pathname } = request.nextUrl
+    const headers = responseHeadersFor(requestId)
 
     if (processRole() === "worker" && !WORKER_PATHS.has(pathname)) {
-      return new NextResponse(null, { status: 404, headers: { "X-Request-ID": requestId, "Cache-Control": "no-store" } })
+      return withResponseHeaders(new NextResponse(null, { status: 404, headers: { "Cache-Control": "no-store" } }), headers)
     }
 
     // No URL, client IP or query beyond the allow-list: the bearer segment of
@@ -188,33 +233,26 @@ export async function proxy(request: NextRequest) {
     }
     if (await needsMemberRedirect(request)) {
       // RSC navigations and prefetches get the same redirect; the router follows it
-      const redirect = NextResponse.redirect(new URL("/subscribe", request.url))
-      redirect.headers.set("X-Request-ID", requestId)
-      return redirect
+      return withResponseHeaders(NextResponse.redirect(new URL("/subscribe", request.url)), headers)
     }
 
     // A share path is gated first (lib/rewind/share/share-gate.ts): 429 when
     // over the limit, 503 when the database is down
     const share = await gateSharePath(pathname, request.headers)
     if (share === "busy" || share === "down") {
-      const status = shareStatusResponse(pathname, share === "busy" ? 429 : 503)
-      status.headers.set("X-Request-ID", requestId)
-      return status
+      return withResponseHeaders(shareStatusResponse(pathname, share === "busy" ? 429 : 503), headers)
     }
 
     // Create response: the same page, with a 404 status for an invalid Rewind
     // year, a share token that shares nothing or a membership page the member lacks
-    const init = { request: { headers: pageRequestHeaders(request.headers, pathname, requestId) } }
+    const init = { request: { headers: pageRequestHeaders(request.headers, pathname, headers) } }
     const notFound =
       isInvalidRewindYearPath(pathname) || share === "missing" || (await isMissingMembershipPage(request))
     const response = notFound
       ? NextResponse.rewrite(request.nextUrl, { ...init, status: 404 })
       : NextResponse.next(init)
 
-    // Add request ID to response headers for tracing
-    response.headers.set("X-Request-ID", requestId)
-
-    return response
+    return withResponseHeaders(response, headers)
   })
 }
 
