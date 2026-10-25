@@ -18,12 +18,22 @@ test.describe('Production build', () => {
     expect(response.status()).not.toBe(200);
   });
 
-  test("the CSP has no 'unsafe-eval'", async ({ request }) => {
+  // P11.20: the nonce policy, with 'strict-dynamic' and no 'unsafe-inline' scripts
+  test("the CSP is strict and has no 'unsafe-eval'", async ({ request }) => {
     const response = await request.get('/');
     const csp = response.headers()['content-security-policy'];
+    const scriptSrc = csp.split(';').map((directive) => directive.trim()).find((directive) => directive.startsWith('script-src '));
 
     expect(csp).toBeTruthy();
     expect(csp).not.toContain("'unsafe-eval'");
+    expect(csp).toContain("object-src 'none'");
+    expect(scriptSrc).toMatch(/^script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'$/);
+  });
+
+  test('two loads get two nonces', async ({ request }) => {
+    const nonce = async () => /'nonce-([^']+)'/.exec((await request.get('/')).headers()['content-security-policy'])?.[1];
+
+    expect(await nonce()).not.toBe(await nonce());
   });
 
   test('an admin can open /admin/users', async ({ page, signIn }) => {
