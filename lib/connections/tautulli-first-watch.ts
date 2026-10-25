@@ -28,6 +28,7 @@ export async function getFirstWatchDate(
   try {
     const tautulli = await prisma.tautulli.findFirst({
       where: { isActive: true },
+    orderBy: { updatedAt: "desc" },
     })
 
     if (!tautulli) {

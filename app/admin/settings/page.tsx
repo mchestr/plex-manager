@@ -12,6 +12,7 @@ import { ServiceSection } from "@/components/admin/settings/sections/service-sec
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 import { SystemSection } from "@/components/admin/settings/sections/system-section"
 import { WatchlistSection } from "@/components/admin/settings/sections/watchlist-section"
+import { ServiceRowsCheck } from "@/components/admin/settings/service-rows-check"
 import { SettingsLayout } from "@/components/admin/settings/settings-layout"
 import type { SettingsNavItem } from "@/components/admin/settings/settings-nav"
 import { SettingsPageActions } from "@/components/admin/settings/settings-page-actions"
@@ -168,7 +169,7 @@ export default async function SettingsPage() {
           footerMeta={saved("other")}
         />
         <PrivacySection status={retention} />
-        <SecuritySection status={encryption} />
+        <SecuritySection status={encryption} serviceRows={<ServiceRowsCheck />} />
         <SystemSection
           appearance={<LightThemeSwitch enabled={settings.config.lightThemeEnabled} />}
           baseUrl={baseUrl}

@@ -34,6 +34,7 @@ export const getWatchlistSyncSettings = memberAction({
     // Check if Overseerr is configured
     const overseerr = await prisma.overseerr.findFirst({
       where: { isActive: true },
+      orderBy: { updatedAt: "desc" },
       select: { id: true },
     })
 
@@ -129,6 +130,7 @@ export const updateWatchlistSyncSettings = memberAction({
 
       const overseerr = await prisma.overseerr.findFirst({
         where: { isActive: true },
+      orderBy: { updatedAt: "desc" },
       })
 
       if (!overseerr) {

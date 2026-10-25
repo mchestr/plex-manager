@@ -17,6 +17,7 @@ export async function isPlexServerOwner(plexUserId: string | null): Promise<bool
   }
   const plexServer = await prisma.plexServer.findFirst({
     where: { isActive: true },
+    orderBy: { updatedAt: "desc" },
     select: { adminPlexUserId: true },
   })
   return plexServer?.adminPlexUserId === plexUserId

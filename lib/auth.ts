@@ -157,6 +157,7 @@ export const authOptions: NextAuthOptions = {
           // Get the configured Plex server
           const activeServer = await prisma.plexServer.findFirst({
             where: { isActive: true },
+          orderBy: { updatedAt: "desc" },
           })
 
           if (!activeServer) {

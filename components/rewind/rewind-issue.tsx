@@ -46,7 +46,7 @@ interface RewindIssueProps {
 
 /** "Browse the library" on the postcard: the server's own Plex web app when it has a public URL. */
 async function libraryHref(): Promise<string | undefined> {
-  const server = await prisma.plexServer.findFirst({ where: { isActive: true }, select: { publicUrl: true } })
+  const server = await prisma.plexServer.findFirst({ where: { isActive: true }, orderBy: { updatedAt: "desc" }, select: { publicUrl: true } })
   return server?.publicUrl ? `${server.publicUrl.replace(/\/+$/, "")}/web/index.html` : undefined
 }
 

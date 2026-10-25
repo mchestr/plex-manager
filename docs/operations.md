@@ -20,6 +20,7 @@ Installing is in [deployment](deployment.md), every variable is in the
 - [Code freeze gate](#code-freeze-gate)
 - [Installed with db push](#installed-with-db-push)
 - [Request IDs and metrics](#request-ids-and-metrics)
+- [Security headers and CSP](#security-headers-and-csp)
 - [Locale](#locale)
 - [Encryption keys](#encryption-keys)
 - [Members, roles and Jellyfin](#members-roles-and-jellyfin)
@@ -288,6 +289,46 @@ groups:
         for: 15m
       - alert: LlmSpendHigh
         expr: sum(plex_manager_llm_spend_usd{period="day"}) > 1
+
+## Security headers and CSP
+
+Every page and route response carries a strict Content Security Policy with a
+fresh nonce per request (`lib/security/csp.ts`): scripts run only when they
+carry the nonce or were loaded by one that does (`'strict-dynamic'`), and there
+is no `'unsafe-inline'` or `'unsafe-eval'` for scripts. Images may come from
+the app, Plex (`plex.tv`) and Discord avatars; forms may post to the app and
+redirect to Stripe Checkout and the billing portal. Over https the policy also
+upgrades insecure requests.
+
+**Violation reports.** Browsers report blocked content to `/api/csp-report`
+(`report-uri`, and `report-to` through `Reporting-Endpoints`). The route
+stores nothing: each violation is one `csp.violation` warning with the
+directive, the blocked origin and the document path, with share and invite
+tokens masked. It reads at most 8 KB and takes 60 reports a minute per
+address.
+
+```bash
+docker compose logs app | grep csp.violation
+```
+
+A violation from normal browsing is a bug in the app or the policy. While you
+investigate one, `CSP_REPORT_ONLY=true` sends the policy as
+`Content-Security-Policy-Report-Only`: violations are still reported, but
+nothing is blocked. Unset it again once it is fixed.
+
+**HSTS.** `Strict-Transport-Security` goes out only when `NEXTAUTH_URL` is
+https, with `max-age` from `HSTS_MAX_AGE` (default 31536000, one year).
+`HSTS_INCLUDE_SUBDOMAINS=true` adds `includeSubDomains`, and
+`HSTS_PRELOAD=true` adds `preload`; set them only when every subdomain serves
+https, because browsers keep both for the whole `max-age`. These are read at
+start, so a restart applies a change. If your reverse proxy already sends
+HSTS, keep one of the two.
+
+The other headers are fixed in `next.config.js`: `X-Frame-Options: SAMEORIGIN`,
+`X-Content-Type-Options: nosniff`, `Referrer-Policy:
+strict-origin-when-cross-origin` (`no-referrer` on share pages) and a
+`Permissions-Policy` that turns off the camera, microphone and location. There
+is no `X-Powered-By`.
 
 ## Locale
 

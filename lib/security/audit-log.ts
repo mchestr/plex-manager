@@ -150,6 +150,12 @@ export enum AuditEventType {
   // An admin re-encrypted the stored secrets from settings (P11.1). Details
   // carry the primary kid and counts, never a value.
   SECRETS_REENCRYPTED = "SECRETS_REENCRYPTED",
+  // An admin listed the services with more than one active row (P11.31).
+  // Details carry each listed table and its row ids, never a URL or key.
+  SERVICE_ROWS_AUDITED = "SERVICE_ROWS_AUDITED",
+  // The duplicate active service rows were deactivated (P11.31). Details carry
+  // the kept and deactivated ids per table and where the dump taken first lives.
+  SERVICE_ROWS_DEDUPED = "SERVICE_ROWS_DEDUPED",
   // A credential, settings, setup or prompt-template change. Details carry the
   // redacted diff from lib/security/config-diff.ts: changed field names, whether
   // a secret changed, and URL origins only.

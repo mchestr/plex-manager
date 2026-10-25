@@ -21,6 +21,7 @@ the projects live in `playwright.config.ts`.
 | `visual-desktop`, `visual-mobile`, `visual-setup-desktop`, `visual-setup-mobile` | the app screens in `e2e/visual/*.visual.spec.ts`, 1440x900 and 390x844 | Visual Diffs (advisory) |
 | `rewind-visual-phone-chromium`, `rewind-visual-phone-webkit`, `rewind-visual-desktop-chromium`, `rewind-visual-desktop-webkit` | `e2e/visual/rewind.spec.ts` (every page of three issues at the five phone sizes or 1440x900, plus the 12 px text and 44 px target checks) and `e2e/visual/rewind-cards.spec.ts` (the cards, phone chromium only) | Rewind Visual Diffs (advisory) |
 | `rewind-a11y-chromium`, `rewind-a11y-webkit`, `rewind-a11y-firefox` | `e2e/a11y/rewind.a11y.spec.ts` and the other Rewind axe specs: zero violations at WCAG 2.2 AA | E2E Tests (required) |
+| `csp-chromium`, `csp-webkit`, `csp-firefox` | `e2e/csp.spec.ts`: no CSP violation and a nonce on every server-rendered script, on every axe route and the Rewind story | E2E Tests (required) |
 | `rewind-e2e-chromium`, `rewind-e2e-webkit`, `rewind-e2e-firefox` | the Rewind flows in `e2e/rewind/` | E2E Tests (required) |
 | `rewind-perf` | `e2e/perf/rewind.perf.spec.ts` and `e2e/perf/rewind-budget.perf.spec.ts` | Rewind Performance (required) |
 | `visual-light-desktop`, `visual-light-mobile`, `visual-light-rewind`, `a11y-light` | the light theme, after `light-theme-setup` | not in CI |
