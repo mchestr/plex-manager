@@ -6,12 +6,10 @@ import { prisma } from "@/lib/prisma"
 import { queryPrometheusRange } from "@/lib/connections/prometheus"
 import type { PrometheusParsed } from "@/lib/validations/prometheus"
 import { createLogger } from "@/lib/utils/logger"
-import { unstable_cache } from "next/cache"
+import { PROMETHEUS_STATUS_TAG } from "@/lib/settings/connection-status"
+import { cacheLife, cacheTag } from "next/cache"
 
 const logger = createLogger("prometheus-status")
-
-// Cache revalidation time in seconds (5 minutes)
-const CACHE_REVALIDATE_SECONDS = 5 * 60
 
 /**
  * Status for a single hour segment
@@ -170,21 +168,20 @@ async function fetchPrometheusStatusInternal(): Promise<StatusData> {
 }
 
 /**
- * Cached version of fetchPrometheusStatusInternal
- * Caches results for 5 minutes to reduce Prometheus API load
+ * The status, shared by every member for minutes (P11.19) to spare the
+ * Prometheus API. It holds no secret: the Prometheus row has none. A
+ * Prometheus save updates the tag.
  */
-const getCachedPrometheusStatus = unstable_cache(
-  fetchPrometheusStatusInternal,
-  ["prometheus-status"],
-  {
-    revalidate: CACHE_REVALIDATE_SECONDS,
-    tags: ["prometheus-status"],
-  }
-)
+async function getCachedPrometheusStatus(): Promise<StatusData> {
+  "use cache"
+  cacheTag(PROMETHEUS_STATUS_TAG)
+  cacheLife("minutes")
+  return fetchPrometheusStatusInternal()
+}
 
 /**
  * Fetch Prometheus status data for the dashboard background
- * Results are cached for 5 minutes to reduce load on Prometheus
+ * Results are cached for minutes to reduce load on Prometheus
  * Queries the last 7 days with 1-hour resolution (168 data points)
  *
  * Members only: Server Actions are publicly invokable endpoints, so service
