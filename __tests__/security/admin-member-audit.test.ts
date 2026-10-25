@@ -29,7 +29,7 @@ import { getWrappedSettings } from "@/lib/wrapped/generation-settings"
 
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
-jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
+jest.mock("next/cache", () => ({ revalidatePath: jest.fn(), refresh: jest.fn() }))
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/connections/plex", () => ({
   getAllPlexServerUsers: jest.fn(),

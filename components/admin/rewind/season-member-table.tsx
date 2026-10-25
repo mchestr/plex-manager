@@ -2,7 +2,6 @@
 
 import type { ColumnDef } from "@tanstack/react-table"
 import { Eye, FlaskConical, RefreshCw, SearchX, Undo2, Users } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { getRewindRollbackTarget } from "@/actions/admin/rewind-season"
@@ -97,7 +96,6 @@ interface SeasonMemberTableProps {
 export function SeasonMemberTable({ year, rows, total, members, page, pageSize, filtered, now }: SeasonMemberTableProps) {
   const f = useFormat()
   const toast = useToast()
-  const router = useRouter()
 
   const [rollback, setRollback] = useState<{ row: SeasonMemberRow; from: string | null } | null>(null)
 
@@ -118,7 +116,6 @@ export function SeasonMemberTable({ year, rows, total, members, page, pageSize, 
       return
     }
     toast.showSuccess(result.data.alreadyQueued ? `${row.name}'s Rewind is already generating` : `Regenerating ${row.name}'s Rewind`)
-    router.refresh()
   }
 
   return (

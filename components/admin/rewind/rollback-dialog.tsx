@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import type { ReactElement } from "react"
 
 import { rollbackRewind } from "@/actions/admin/rewind-season"
@@ -24,7 +23,6 @@ interface RollbackDialogProps {
 export function RollbackDialog({ userId, year, name, from, trigger, open, onOpenChange }: RollbackDialogProps) {
   const f = useFormat()
   const toast = useToast()
-  const router = useRouter()
   const version = from ? `the version from ${f.date(from, "long")}` : "its previous version"
 
   return (
@@ -41,7 +39,6 @@ export function RollbackDialog({ userId, year, name, from, trigger, open, onOpen
         const result = await rollbackRewind({ userId, year })
         if (!result.success) return { error: result.error }
         toast.showSuccess(`Rolled back ${name}'s Rewind ${year}`)
-        router.refresh()
         return {}
       }}
       data-testid="admin-rewind-rollback-dialog"

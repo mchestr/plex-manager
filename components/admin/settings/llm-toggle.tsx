@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 
 import { setLLMDisabled } from "@/actions/admin/admin-config"
@@ -18,15 +17,14 @@ interface LLMToggleProps {
  */
 export function LLMToggle({ disabled }: LLMToggleProps) {
   const [isPending, startTransition] = useTransition()
-  const router = useRouter()
   const toast = useToast()
 
   const toggle = (on: boolean) => {
     startTransition(async () => {
       const result = await setLLMDisabled(!on)
       if (result.success) {
+        // The action updates a tag, so the page re-renders with its result
         toast.showSuccess(on ? "AI features turned on" : "AI features turned off")
-        router.refresh()
       } else {
         toast.showError(result.error || "Could not change AI features")
       }
