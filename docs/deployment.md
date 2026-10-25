@@ -14,6 +14,7 @@ in [the environment reference](environment.md). Backups and upgrades are in
 - [Claim the server](#claim-the-server)
 - [Web and worker containers](#web-and-worker-containers)
 - [Bare metal](#bare-metal)
+- [The image](#the-image)
 - [After the install](#after-the-install)
 
 ## What you need
@@ -219,6 +220,41 @@ npm run start:prod
   SIGTERM to stop it.
 - After every upgrade: dump, `git checkout` the new tag, `npm ci`,
   `npm run build`, `npm run db:deploy`, restart.
+
+## The image
+
+- It runs Node.js 24 LTS under `tini` as the unprivileged `nextjs` user. The
+  app files are owned by root and cannot be rewritten at run time; the one
+  writable path is `/app/.next/cache`, where Next's own cache and Rewind's
+  (`REWIND_CACHE_DIR=/app/.next/cache/rewind`: posters, cards, fonts) live.
+  The compose file mounts the `app-cache` volume there; it can always be
+  rebuilt.
+- Migrations run through a Prisma CLI pinned with its own lockfile in
+  `docker/prisma-cli/` (a test keeps its versions equal to the root lockfile).
+  With `SKIP_MIGRATIONS=true` the container logs
+  `SKIP_MIGRATIONS=true: not applying migrations` and starts without applying
+  them.
+- The site starts serving without waiting for Redis or Discord. The queue
+  worker retries Redis with backoff for about two minutes and then stays off
+  (logging `queue.redis_unreachable`) until the next restart.
+- On `docker stop` (SIGTERM) the app drains running jobs, stops the Discord bot
+  and releases its lock, closes its connections, and exits with 0, or with 1
+  if that takes longer than `SHUTDOWN_GRACE_MS` (default 8000 ms, below
+  Docker's 10 s stop timeout). The image and `npm run start:prod` set
+  `NEXT_MANUAL_SIG_HANDLE=true` so the app handles the signal instead of Next;
+  in-flight requests finish inside the same grace window because the process
+  exits last.
+- The image installs no native toolchain. `zlib-sync`, which compresses the
+  Discord gateway, is an optional dependency that is skipped without one, so
+  the Discord bot connects uncompressed ([Discord bot](discord-bot.md)).
+- `GET /api/health` checks the database and, when `REDIS_URL` is set, Redis,
+  each within 2 seconds. It answers `200` with
+  `{"status":"ok","checks":{"database":"ok","redis":"ok"}}`, or `503` with
+  `"status":"fail"` and the failed check (`redis` is `not_configured` without
+  `REDIS_URL`, which does not fail it). It needs no sign-in and carries no
+  hostnames or error text. `GET /api/health?probe=live` answers `200` without
+  touching either; the image's `HEALTHCHECK` uses it, so a Redis outage, which
+  the site survives, never gets the container restarted.
 
 ## After the install
 
