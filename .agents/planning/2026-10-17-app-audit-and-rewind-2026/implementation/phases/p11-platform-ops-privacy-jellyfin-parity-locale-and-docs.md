@@ -1096,9 +1096,11 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** `npm run test:coverage` prints the per-path table at or above the targets. `DATABASE_URL= npx jest lib/discord` runs without the import-time error.
 
 **Done when.**
-- [ ] The agreed targets are recorded and met for auth, encryption, the queue core and the setup wizard.
-- [ ] The Prisma client is lazy, and the test job runs without a dummy `DATABASE_URL`.
-- [ ] The ratchet holds the new floors.
+- [x] The agreed targets are recorded and met for auth, encryption, the queue core and the setup wizard.
+- [x] The Prisma client is lazy, and the test job runs without a dummy `DATABASE_URL`.
+- [x] The ratchet holds the new floors.
+
+(as merged: the proposed floors were used as the targets, since every path already met or passed them, and the ratchet set each floor to the measured value: per-file keys for `lib/security/crypto.ts`, `lib/db/encryption-extension.ts` (where P11.1's encryption extension lives), the five queue-core files, `lib/locks/`, `components/setup/` and `actions/setup.ts`, `setup-plex.ts` and `setup-claim.ts` (the setup actions are flat files, not `actions/setup/**`). `lib/prisma.ts` exports `prisma` as a Proxy that builds the client on first property access, so tests that check the adapter arguments touch `prisma.user` to build it. The Unit Tests job sets `DATABASE_URL: ""`. Not covered: `components/setup/plex-connected-card.tsx`, an async Server Component left alone while P11.19 changes rendering.)
 
 ### Step P11.23: Dependency majors and the auth spike
 
