@@ -6,6 +6,7 @@ import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES, getRegisteredTool } from "../tools/registry"
+import { executeAppDataTool } from "./app-data"
 import { executeOverseerrTool } from "./overseerr"
 import { executePlexTool } from "./plex"
 import { executeRadarrTool } from "./radarr"
@@ -113,6 +114,10 @@ const TOOL_SERVICE_MAP: Record<string, ToolExecutor> = {
   mark_media_finished: executeMediaMarkingTool,
   mark_media_keep: executeMediaMarkingTool,
   get_my_marks: executeMediaMarkingTool,
+  // App data tools (admin only; not Discord-safe)
+  get_app_invites: executeAppDataTool,
+  get_app_member: executeAppDataTool,
+  get_app_failed_jobs: executeAppDataTool,
 }
 
 export async function executeToolCall(

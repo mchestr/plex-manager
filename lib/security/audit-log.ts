@@ -136,6 +136,9 @@ export enum AuditEventType {
   // An admin opened a member's stored Rewind (P7.9, GAP-33). Details carry the
   // target user, the year and the wrapped id.
   REWIND_ADMIN_VIEWED = "REWIND_ADMIN_VIEWED",
+  // The admin assistant read app data for an admin through a tool. Details carry
+  // the tool name and the conversation, never the arguments' values or the result.
+  ASSISTANT_DATA_READ = "ASSISTANT_DATA_READ",
   // An admin restored a member's previous Rewind (P7.9). Details carry the
   // target user, the year, the source generation and the new one.
   REWIND_ROLLED_BACK = "REWIND_ROLLED_BACK",

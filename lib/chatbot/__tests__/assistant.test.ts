@@ -12,6 +12,7 @@ import { runChatbotForUser } from "../assistant"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/llm/chat", () => ({ chatWithTools: jest.fn() }))
+jest.mock("@/lib/data/assistant-data", () => ({}))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({ debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() })),
 }))
