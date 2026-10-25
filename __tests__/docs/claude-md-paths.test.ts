@@ -2,7 +2,9 @@
  * @jest-environment node
  *
  * Every repository path CLAUDE.md names in inline code must exist, because
- * every agent session reads that file (GAP-22, P1.2).
+ * every agent session reads that file (GAP-22, P1.2). README.md and every
+ * `docs/*.md` are held to the same rule, and every `npm run` script either
+ * file names must exist in package.json (P11.26).
  *
  * Checked: inline-code spans outside fenced blocks that start with one of the
  * source roots below, or with the `@/` alias (resolved like an import). Not
@@ -15,8 +17,14 @@ import path from 'path'
 
 const ROOT = path.resolve(__dirname, '../..')
 const ROOTS = ['app', 'actions', 'components', 'lib', 'types', 'prisma', 'docs', 'e2e', 'scripts', 'hooks', 'deploy']
-// The deployment docs (P11.24) are held to the same rule.
-const DEPLOYMENT_DOCS = ['docs/deployment.md', 'docs/domain-move.md', 'docs/environment.md']
+// README and every operator doc (P11.24, P11.26) are held to the same rule.
+const DOCS = [
+  'README.md',
+  ...fs
+    .readdirSync(path.join(ROOT, 'docs'))
+    .filter((name) => name.endsWith('.md'))
+    .map((name) => `docs/${name}`),
+]
 // `.js` covers `@/lib/generated/prisma/client`, which `prisma generate` writes.
 const IMPORT_EXTENSIONS = ['', '.ts', '.tsx', '.js', '/index.ts', '/index.tsx']
 
@@ -53,8 +61,8 @@ describe('CLAUDE.md paths', () => {
   })
 })
 
-describe('deployment docs paths', () => {
-  it.each(DEPLOYMENT_DOCS)('every repository path %s names exists', (doc) => {
+describe('README and docs paths', () => {
+  it.each(DOCS)('every repository path %s names exists', (doc) => {
     const paths = repositoryPaths(fs.readFileSync(path.join(ROOT, doc), 'utf8'))
     expect(paths.filter((repoPath) => !exists(repoPath))).toEqual([])
   })
@@ -62,6 +70,19 @@ describe('deployment docs paths', () => {
   it('checks the paths the deployment guide names', () => {
     const paths = repositoryPaths(fs.readFileSync(path.join(ROOT, 'docs/deployment.md'), 'utf8'))
     expect(paths).toContain('deploy/docker-compose.yml')
+  })
+})
+
+describe('npm scripts named in README.md and CLAUDE.md', () => {
+  const scripts = Object.keys(
+    (JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts,
+  )
+
+  it.each(['README.md', 'CLAUDE.md'])('every `npm run` script in %s exists', (file) => {
+    const markdown = fs.readFileSync(path.join(ROOT, file), 'utf8')
+    const named = Array.from(new Set(Array.from(markdown.matchAll(/npm run ([a-z0-9:-]+)/g), (match) => match[1])))
+    expect(named.length).toBeGreaterThan(0)
+    expect(named.filter((script) => !scripts.includes(script))).toEqual([])
   })
 })
 
