@@ -7,7 +7,8 @@ A Next.js-based Plex management platform that combines server management tools, 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router) + React 19
-- **Language**: TypeScript (strict mode with exhaustive checks)
+- **Language**: TypeScript 7 (strict mode with exhaustive checks). `tsc` is TypeScript 7 (`@typescript/native`); the `typescript` package is the TypeScript 6 API that typescript-eslint, `next build` and the codemods load
+- **Lint**: ESLint 10 (flat config, `eslint.config.mjs`)
 - **Database**: Prisma v7 + PostgreSQL (SQLite no longer supported)
 - **Auth**: NextAuth.js 4 (Plex PIN sign-in, plus Jellyfin username and password when enabled)
 - **State**: TanStack Query (React Query) for client-side data fetching

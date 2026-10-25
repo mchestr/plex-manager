@@ -291,7 +291,7 @@ async function ensureValidAccessToken(userId: string) {
     logger.error("Failed to refresh Discord token", error instanceof Error ? error : undefined, {
       userId,
     })
-    throw new Error("Failed to refresh Discord access token")
+    throw new Error("Failed to refresh Discord access token", { cause: error })
   }
 }
 

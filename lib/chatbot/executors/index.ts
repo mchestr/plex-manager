@@ -124,7 +124,7 @@ export async function executeToolCall(
   const toolName = toolCall.function.name
   const rawArgs = toolCall.function.arguments || "{}"
 
-  let args: Record<string, unknown> = {}
+  let args: Record<string, unknown>
 
   try {
     args = JSON.parse(rawArgs)

@@ -1148,9 +1148,15 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** CI is green on TypeScript 7 and ESLint 10, or the blockers file shows the failing tool and its issue link. The spike write-up answers each question with a link to the branch.
 
 **Done when.**
-- [ ] TypeScript 7 and ESLint 10 are merged, or each blocker is recorded with its upstream issue.
-- [ ] Lint findings are unchanged across the ESLint upgrade.
-- [ ] `auth-spike-2027-02.md` exists with evidence for each question and a go or no-go.
+- [x] TypeScript 7 and ESLint 10 are merged, or each blocker is recorded with its upstream issue.
+- [x] Lint findings are unchanged across the ESLint upgrade.
+- [x] `auth-spike-2027-02.md` exists with evidence for each question and a go or no-go.
+
+(as merged, 2026-10-25:
+- **TypeScript 7.** TypeScript 7.0.2 has no JavaScript compiler API: its main export is only the version. typescript-eslint throws "does not support TS 7.0" (typescript-eslint/typescript-eslint#10940; #12518 closed as not planned). The design-system AST check, the codemods (they use `typescript` directly; there is no ts-morph), two Jest tests and `next build`'s API checker all need that API as well. So the repository uses Microsoft's side-by-side layout. `@typescript/native` is `npm:typescript@7.0.2`, and its `tsc` runs `npm run typecheck`. `typescript` is `npm:@typescript/typescript6@6.0.2`, the TS 6 API package (bin `tsc6`), for every tool that loads the API; `next build` checks with it. Both configs passed on TS 7 with no code changes. Full, non-incremental typecheck: the app config went from 23.4 s to 6.6 s and the tests config from 33.3 s to 9.0 s (5.9.3 to 7.0.2). Drop the TS 6 package once typescript-eslint supports the TS 7.1 API.
+- **ESLint 10.** ESLint is 10.13.0, @eslint/js 10.0.1 and typescript-eslint 8.72.0, all exact. eslint-config-next 16.4.3 still pulls in eslint-plugin-react 7.37.5, eslint-plugin-import 2.32.0 and eslint-plugin-jsx-a11y 6.10.2. Their peer ranges stop at ESLint 9 and no newer release exists (jsx-eslint/eslint-plugin-react#3977; import-js/eslint-plugin-import#3227, fixed but unreleased; jsx-eslint/eslint-plugin-jsx-a11y#1075). `package.json` `overrides` therefore let those three accept the root eslint, and they run through eslint-config-next's `fixupPluginRules` shim (vercel/next.js#89764). Drop the overrides when those releases land. FlatCompat was already gone. @eslint/js 10 adds no-unassigned-vars, no-useless-assignment and preserve-caught-error; six hits were fixed first. The resolved rule set lost no rule and lowered none. `npm run lint -- --format json` gives the same 101 findings (0 errors) on ESLint 9 and 10; the only difference is one max-lines count in lib/setup/dev-defaults.ts, which went from 164 to 163 lines because of a fix.
+- **Dependency updates.** Dependabot is gone (the owner moved to Renovate on 2026-10-20), so the groups and holds are now in `renovate.json`: next-react, typescript, eslint and playwright groups. ioredis majors and Node image majors stay held; the TypeScript and ESLint major holds are lifted.
+- **Better Auth spike.** The verdict is no-go, revisit on 2027-08-02; details are in `auth-spike-2027-02.md`, branch `spike/better-auth`.)
 
 ### Step P11.24: Deployment, environment and domain-move docs
 

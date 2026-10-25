@@ -36,7 +36,7 @@ const listeners = new Set<() => void>()
 
 function read(year: number): QuizAnswer | null {
   if (!answers.has(year)) {
-    let stored: QuizAnswer | null = null
+    let stored: QuizAnswer | null
     try {
       const raw = window.sessionStorage.getItem(storageKey(year))
       stored = raw ? parseAnswer(JSON.parse(raw)) : null
