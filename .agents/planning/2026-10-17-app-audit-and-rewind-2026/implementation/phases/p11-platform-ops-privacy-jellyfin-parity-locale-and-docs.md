@@ -1270,9 +1270,11 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** A new agent session follows CLAUDE.md to add a Tautulli-backed admin tile and uses only APIs that exist. A reader of the README learns what Rewind, Stripe and Jellyfin do and finds every operator doc from one section.
 
 **Done when.**
-- [ ] README claims match the code, and Rewind, Stripe, Jellyfin, invites, watchlist sync and the assistants are described.
-- [ ] CLAUDE.md's integration snippets, file tree, testing and workflow facts match the final code.
-- [ ] The path, symbol and claims tests pass.
+- [x] README claims match the code, and Rewind, Stripe, Jellyfin, invites, watchlist sync and the assistants are described.
+- [x] CLAUDE.md's integration snippets, file tree, testing and workflow facts match the final code.
+- [x] The path, symbol and claims tests pass.
+
+(as merged: written against the wave 5 start point. No `'use cache'` (P11.19) and no strict CSP (P11.20) exist yet, so CLAUDE.md documents `getServerSession(authOptions)` and README says "Content Security Policy" without "strict"; those steps update both. `actions/invites`, `actions/admin/servers`, `actions/setup` and `lib/wrapped/archetype-scoring.ts` do not exist, so the tree lists `actions/admin/` and the JSDoc reference keeps `lib/wrapped/archetypes/scorers.ts` plus `lib/locks/lease-poller.ts`. README's Deployment section is a table of links; its operational notes moved to `docs/deployment.md` "The image" and `docs/operations.md` "Members, roles and Jellyfin", and the 0.1.0 upgrade notes stay under README "Upgrading" because CHANGELOG 0.1.0 points there. Screenshots were not refreshed: the committed visual baselines predate Phase 10, so `docs/images/wrapped-viewer.png` was removed and the rest wait for a Visual Baselines run (owner). The motion skill's `paths:` dropped `components/wrapped/**`, recorded in THIRD_PARTY.md; it needs a `/security-review`.)
 
 ### Step P11.27: Project-authored agent skills
 

@@ -17,7 +17,7 @@ checks this table against the folders.
 | `vercel-react-best-practices` | `vercel-labs/agent-skills`, `skills/react-best-practices` | `063bee94c3f4df8453406c830b0a7df0f2860278` | MIT (`LICENSE`, see its note) | 2026-10-19 | Claude Code agent, P1.9 | Added `paths:`. Left out the contributor `README.md` and `metadata.json`. |
 | `vercel-composition-patterns` | `vercel-labs/agent-skills`, `skills/composition-patterns` | `063bee94c3f4df8453406c830b0a7df0f2860278` | MIT (`LICENSE`, see its note) | 2026-10-19 | Claude Code agent, P1.9 | Added `paths:`. Left out the contributor `README.md` and `metadata.json`. |
 | `vercel-react-view-transitions` | `vercel-labs/agent-skills`, `skills/react-view-transitions` | `063bee94c3f4df8453406c830b0a7df0f2860278` | MIT (`LICENSE`, see its note) | 2026-10-19 | Claude Code agent, P1.9 | Added `paths:`. Left out the `README.md` (an `npx skills add` install line) and `metadata.json`. |
-| `motion` | npm `motion-ai`, `content/skills/motion/` | `motion-ai@14.2.0` | MIT (`LICENSE`, see its note) | 2026-10-19 | Claude Code agent, P1.9 | Added `paths:`; replaced the "Runtime audits" section of `performance-audit/index.md`, which ran `npx motionscore`. |
+| `motion` | npm `motion-ai`, `content/skills/motion/` | `motion-ai@14.2.0` | MIT (`LICENSE`, see its note) | 2026-10-19 | Claude Code agent, P1.9 | Added `paths:` (`components/rewind/**`, `lib/rewind/**`; `components/wrapped/**` removed by P11.26 after P11.29 deleted that folder); replaced the "Runtime audits" section of `performance-audit/index.md`, which ran `npx motionscore`. |
 
 ## Project-authored skills
 
@@ -48,8 +48,8 @@ archives is vendored.
   2.5.8 Target Size (Minimum), 3.2.6 Consistent Help, 3.3.7 Redundant Entry and
   3.3.8 Accessible Authentication. The skill is not patched for this.
 - **`motion` is written for the `motion` package.** Its rule "never import from
-  `framer-motion`" matches this codebase only after P2.15 moves it from
-  `framer-motion` to `motion`. Until then, follow the existing imports. The
+  `framer-motion`" matches this codebase, which imports `motion/react` since
+  P2.15. The
   skill's search, easing, transition-editor and MotionScore features need the
   hosted Motion MCP servers, which this project does not add; its
   `best-practices/` folder works without them.
