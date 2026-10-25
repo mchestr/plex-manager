@@ -195,7 +195,7 @@ describe('UsersTable', () => {
     jest.mocked(adminToggleExempt).mockResolvedValue({ success: true, data: null })
     renderTable({ stripeEnabled: true })
 
-    const user = await openAction('Sam Rivera', 'Grant comp access...')
+    const user = await openAction('Sam Rivera', 'Grant access and exempt...')
     const dialog = await screen.findByTestId('admin-user-grant-dialog')
     await user.click(screen.getByTestId('admin-user-grant-confirm'))
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Plex refused the invite')

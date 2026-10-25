@@ -222,9 +222,9 @@ once, on the old release before upgrading, after a dump:
    must exit 0 (no difference). If it does not, stop: the database has drifted.
 2. `npx prisma migrate resolve --applied <name>` for each folder in
    `prisma/migrations`.
-3. Only if Stripe was never enabled, run the grandfather `UPDATE` from
+3. Only if Stripe was never enabled, run the exempt-all `UPDATE` from
    `20260703000000_add_stripe_subscriptions` through `npx prisma db execute --stdin`
-   (see [stripe.md](stripe.md#grandfathering-existing-members)).
+   (see [stripe.md](stripe.md#exempting-existing-members)).
 
 The README's [Installed with `db push`?](../README.md#installed-with-db-push)
 section has the exact commands. The new release's migrations then apply

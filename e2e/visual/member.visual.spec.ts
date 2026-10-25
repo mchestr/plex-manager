@@ -83,11 +83,11 @@ test.describe('Member and public screens', () => {
       await resetStripeState([TEST_USERS.REGULAR.id]);
     });
 
-    test('membership, comp', async ({ page, signIn }) => {
+    test('membership, exempt', async ({ page, signIn }) => {
       await setStripeEnabled(true, { configure: true });
       const prisma = createE2EPrismaClient();
       try {
-        await prisma.user.update({ where: { id: TEST_USERS.REGULAR.id }, data: { isExempt: true, exemptReason: 'comp' } });
+        await prisma.user.update({ where: { id: TEST_USERS.REGULAR.id }, data: { isExempt: true } });
       } finally {
         await prisma.$disconnect();
       }

@@ -113,7 +113,7 @@ A member's linked role follows their access:
   email.
 - **Within minutes of an access change** — an unshare, demotion, disable or
   re-enable, a Stripe revoke, a Plex grant, any Stripe subscription status
-  change, and the admin's cancel, comp-grant and exemption actions — a
+  change, and the admin's cancel, access-grant and exemption actions — a
   `discord:role:sync` job re-pushes the metadata. Jobs are deduplicated per
   member (`discord:role:<userId>`) and retried 3 times. These syncs reuse the
   stored `watched_hours` (`DiscordConnection.lastWatchedHours`) instead of

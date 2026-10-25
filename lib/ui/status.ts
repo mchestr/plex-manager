@@ -11,7 +11,7 @@
  *   `triangle-alert` (3.1) unless the table names another mark.
  * - `label` and `sub` may hold placeholders, which `resolveStatus` fills:
  *   `{date}` ("Nov 6, 2026"), `{day}` ("Oct 20"), `{ago}` ("2 minutes ago"),
- *   `{time}` ("Oct 20, 2026, 2:14 PM CST"), `{by}`, `{left}` and `{total}`.
+ *   `{time}` ("Oct 20, 2026, 2:14 PM CST"), `{note}`, `{left}` and `{total}`.
  *
  * ## Special cases
  *
@@ -61,9 +61,7 @@ export const STATUS = {
     none: { label: "None", tone: "plain" },
   },
   exemption: {
-    comp: { label: "Comp", tone: "info", sub: "Set by {by}" },
-    exempt: { label: "Exempt", tone: "neutral", sub: "Set by {by}" },
-    grandfathered: { label: "Grandfathered", tone: "plain" },
+    exempt: { label: "Exempt", tone: "neutral", sub: "{note}" },
     notRequired: { label: "Not required", tone: "plain" },
   },
   plexAccess: {
@@ -175,7 +173,7 @@ export interface StatusFill {
   /** The state's date: `{date}`, `{day}`, and `{ago}` with `now`. */
   date?: DateInput
   now?: DateInput
-  by?: string
+  note?: string
   usesLeft?: number
   usesTotal?: number
   /** The app zone and locale; UTC and en-US when left out, as outside `FormatProvider`. */
@@ -199,7 +197,7 @@ function placeholders(fill: StatusFill): Record<string, string | undefined> {
     day: date === undefined ? undefined : formatDate(date, "day-month-short", settings),
     ago: date === undefined || now === undefined ? undefined : formatRelative(date, { ...settings, now }),
     time: date === undefined ? undefined : formatDateTime(date, settings, { zoneLabel: true }),
-    by: fill.by,
+    note: fill.note,
     left: fill.usesLeft?.toString(),
     total: fill.usesTotal?.toString(),
   }

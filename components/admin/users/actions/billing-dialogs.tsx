@@ -11,17 +11,17 @@ const grant = (userId: string) => adminGrantAccess({ userId })
 const toggleExempt = (userId: string) => adminToggleExempt({ userId })
 const cancel = (userId: string) => adminCancelSubscription({ userId })
 
-/** Comp access: shares Plex or turns the Jellyfin account on, per linked service, and marks the member exempt. */
+/** Grants access: shares Plex or turns the Jellyfin account on, per linked service, and marks the member exempt. */
 export function GrantAccessDialog({ user, ...dialog }: UserDialogProps) {
-  const { run } = useActionDialog(grant, { success: `Comp access granted to ${user.name}` })
+  const { run } = useActionDialog(grant, { success: `Access granted to ${user.name}` })
   return (
     <ConfirmDialog
       {...dialog}
-      title={`Grant ${user.name} comp access?`}
+      title={`Grant ${user.name} access?`}
       description={
         user.services.length > 0
-          ? `They will get access to ${serviceNames(user.services)} and no longer need a subscription.`
-          : "They have no Plex or Jellyfin account linked, so there is nothing to share yet. They no longer need a subscription."
+          ? `They will get access to ${serviceNames(user.services)} and be exempt from the subscription.`
+          : "They have no Plex or Jellyfin account linked, so there is nothing to share yet. They are exempt from the subscription."
       }
       confirmLabel="Grant access"
       pendingLabel="Granting"

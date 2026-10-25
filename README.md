@@ -92,7 +92,7 @@ Each member's year on the server, as a story of pages (formerly "Plex Wrapped"):
 - **Announcements** shown in the app, with Markdown
 - **LLM usage and cost** per call and per member, and **share analytics** for Rewind links
 - **Queues**, and a privacy section in settings with the retention sweep. Admin and security events are written to an append-only audit table
-- **Subscription management** - Cancel, comp/grant access, and mark users exempt (when Stripe is enabled)
+- **Subscription management** - Cancel, grant access and exempt, and mark users exempt (when Stripe is enabled)
 - **Server status**: an optional uptime strip from Prometheus on the home page
 
 ### Stripe Subscriptions (Optional)
@@ -374,9 +374,9 @@ Earlier instructions installed the schema with `npm run db:push` (now contributo
    ```bash
    for dir in prisma/migrations/*/; do npx prisma migrate resolve --applied "$(basename "$dir")"; done
    ```
-3. Only if Stripe subscriptions were **never** enabled, run the grandfather update from `20260703000000_add_stripe_subscriptions`, which `db push` skipped (see [docs/stripe.md](docs/stripe.md#grandfathering-existing-members)):
+3. Only if Stripe subscriptions were **never** enabled, run the exempt-all update from `20260703000000_add_stripe_subscriptions`, which `db push` skipped (see [docs/stripe.md](docs/stripe.md#exempting-existing-members)):
    ```bash
-   echo "UPDATE \"User\" SET \"isExempt\" = true, \"exemptReason\" = 'grandfathered';" | npx prisma db execute --stdin
+   echo "UPDATE \"User\" SET \"isExempt\" = true;" | npx prisma db execute --stdin
    ```
 
 Then upgrade as above. The new release's migrations, including their data steps, apply normally.

@@ -86,12 +86,12 @@ export const adminCancelSubscription = adminAction({
 })
 
 /**
- * Grants a user comp (complimentary) access on the services they use.
+ * Grants a user access and marks them exempt on the services they use.
  *
  * ## Behavior (FR-24 / R10)
  *
  * 1. Refuses without the job queue (`REDIS_URL`), which runs the grant.
- * 2. Marks the user `isExempt = true` with `exemptReason = "comp"` so the
+ * 2. Marks the user `isExempt = true` (keeping any note) so the
  *    subscription gate treats them as covered independent of Stripe.
  * 3. Enqueues the shared {@link JOB_TYPES.PLEX_ACCESS_GRANT} job, which invites
  *    a Plex member to (and auto-accepts them onto) the active Plex server and
@@ -102,7 +102,7 @@ export const adminCancelSubscription = adminAction({
  * The grant job id is keyed by the user (matching the checkout path) so a repeat
  * grant collapses onto a single job rather than creating duplicate invites.
  *
- * @param input - `{ userId }`: the app user to grant comp access to.
+ * @param input - `{ userId }`: the app user to grant access to.
  * @returns `ok(null)` once queued and marked, or a coded failure.
  */
 export const adminGrantAccess = adminAction({
@@ -117,26 +117,26 @@ export const adminGrantAccess = adminAction({
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, isAdmin: true, isExempt: true, exemptReason: true },
+      select: { id: true, isAdmin: true, isExempt: true },
     })
 
     if (!user) {
       return fail("NOT_FOUND", "User not found.")
     }
 
-    // Defense-in-depth: admins already bypass the gate, so comp-granting one is a
+    // Defense-in-depth: admins already bypass the gate, so exempting one is a
     // no-op that only muddies audit trails. The UI hides this for admin rows, but
     // that's client-side only — reject it server-side too.
     if (user.isAdmin) {
-      return fail("CONFLICT", "Admins already have access; no comp grant needed.")
+      return fail("CONFLICT", "Admins already have access; no grant needed.")
     }
 
     await prisma.user.update({
       where: { id: userId },
-      data: { isExempt: true, exemptReason: "comp" },
+      data: { isExempt: true },
     })
 
-    // The grant's event is this comp grant, so a repeat is not collapsed onto a
+    // The grant's event is this grant, so a repeat is not collapsed onto a
     // stale completed job still retained in Redis (BullMQ dedupes by jobId).
     const queued = await enqueueFromRequest(
       JOB_TYPES.PLEX_ACCESS_GRANT,
@@ -147,20 +147,19 @@ export const adminGrantAccess = adminAction({
       // No grant is coming, so the exemption must not stay either.
       await prisma.user.update({
         where: { id: userId },
-        data: { isExempt: user.isExempt, exemptReason: user.exemptReason },
+        data: { isExempt: user.isExempt },
       })
-      logger.error("Failed to queue the comp grant; exemption reverted", undefined, { userId })
+      logger.error("Failed to queue the grant; exemption reverted", undefined, { userId })
       return fail("UPSTREAM_UNAVAILABLE", "The job queue is unavailable, so access was not granted. Try again later.")
     }
 
-    logger.info("Admin granted comp access", { userId })
+    logger.info("Admin granted access", { userId })
 
     logAuditEvent(AuditEventType.SUBSCRIPTION_ACCESS_GRANTED, actorId, {
       targetUserId: userId,
-      exemptReason: "comp",
     })
 
-    await enqueueRoleSync(userId, "comp_granted")
+    await enqueueRoleSync(userId, "access_granted")
     await revalidateUsers(userId)
 
     return ok(null)
@@ -170,19 +169,19 @@ export const adminGrantAccess = adminAction({
 /**
  * Toggles a user's exemption from the subscription requirement.
  *
- * Flips `isExempt`: when enabling, `exemptReason` is set to `reason` (defaulting
- * to `"comp"`); when disabling, `exemptReason` is cleared to `null`. This does
+ * Flips `isExempt`: when enabling, `exemptNote` is set to `note` (or null);
+ * when disabling, `exemptNote` is cleared to `null`. This does
  * not touch Plex or Stripe — it only changes how the access gate treats the
  * user.
  *
- * @param input - `{ userId, reason? }`: the app user, and the reason to record
- *   when enabling exemption (default `"comp"`).
+ * @param input - `{ userId, note? }`: the app user, and an optional free-text
+ *   note to record when enabling exemption. The note carries no behavior.
  * @returns `ok(null)` once flipped, or a coded failure.
  */
 export const adminToggleExempt = adminAction({
-  input: userInput.extend({ reason: z.string().trim().min(1).max(100).optional() }),
+  input: userInput.extend({ note: z.string().trim().min(1).max(100).optional() }),
   fallbackError: "Failed to update exemption.",
-  handler: async ({ userId, reason }, { userId: actorId }) => {
+  handler: async ({ userId, note }, { userId: actorId }) => {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { isExempt: true, isAdmin: true },
@@ -199,11 +198,11 @@ export const adminToggleExempt = adminAction({
     }
 
     const nextExempt = !user.isExempt
-    const exemptReason = nextExempt ? (reason ?? "comp") : null
+    const exemptNote = nextExempt ? (note ?? null) : null
 
     await prisma.user.update({
       where: { id: userId },
-      data: { isExempt: nextExempt, exemptReason },
+      data: { isExempt: nextExempt, exemptNote },
     })
 
     logger.info("Admin toggled exempt", { userId, isExempt: nextExempt })
@@ -211,7 +210,7 @@ export const adminToggleExempt = adminAction({
     logAuditEvent(AuditEventType.SUBSCRIPTION_EXEMPT_CHANGED, actorId, {
       targetUserId: userId,
       isExempt: nextExempt,
-      exemptReason,
+      exemptNote,
     })
 
     await enqueueRoleSync(userId, "exemption_changed")

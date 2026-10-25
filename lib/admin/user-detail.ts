@@ -44,7 +44,7 @@ export interface UserDetailHeaderData {
   disabledAt: Date | null
   createdAt: Date
   isExempt: boolean
-  exemptReason: string | null
+  exemptNote: string | null
   plexAccess: PlexAccess
   subscription: {
     status: SubscriptionStatus
@@ -111,7 +111,7 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
       disabledAt: true,
       createdAt: true,
       isExempt: true,
-      exemptReason: true,
+      exemptNote: true,
       subscription: {
         select: {
           status: true,
@@ -154,7 +154,7 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
     disabledAt: user.disabledAt,
     createdAt: user.createdAt,
     isExempt: user.isExempt,
-    exemptReason: user.exemptReason,
+    exemptNote: user.exemptNote,
     plexAccess,
     subscription: user.subscription,
     stripeEnabled: Boolean(config?.stripeEnabled),

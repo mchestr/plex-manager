@@ -4,9 +4,9 @@
  * Covers:
  * - adminCancelSubscription: schedules cancel_at_period_end via Stripe, no
  *   immediate Plex removal, no-subscription / unconfigured handling, admin auth.
- * - adminGrantAccess: enqueues PLEX_ACCESS_GRANT and marks user comp-exempt;
+ * - adminGrantAccess: enqueues PLEX_ACCESS_GRANT and marks user exempt;
  *   without Redis, or when the enqueue fails, the user is left as they were.
- * - adminToggleExempt: flips isExempt and sets/clears exemptReason.
+ * - adminToggleExempt: flips isExempt and sets/clears the exemption note.
  * - Auth: non-admin callers are rejected before any side effect.
  *
  * All external effects (Stripe, queue, Prisma, session) are mocked.
@@ -190,7 +190,7 @@ describe('adminGrantAccess', () => {
 
   it('reverts the exemption when the enqueue throws', async () => {
     mockGetServerSession.mockResolvedValue(adminSession)
-    mockUserFindUnique.mockResolvedValue({ id: 'user-9', isAdmin: false, isExempt: false, exemptReason: null })
+    mockUserFindUnique.mockResolvedValue({ id: 'user-9', isAdmin: false, isExempt: false })
     mockUserUpdate.mockResolvedValue({ id: 'user-9' })
     mockAddJob.mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:6379'))
 
@@ -199,11 +199,11 @@ describe('adminGrantAccess', () => {
     expect(result).toMatchObject({ success: false, error: expect.not.stringContaining('ECONNREFUSED') })
     expect(mockUserUpdate).toHaveBeenLastCalledWith({
       where: { id: 'user-9' },
-      data: { isExempt: false, exemptReason: null },
+      data: { isExempt: false },
     })
   })
 
-  it('enqueues the grant job and marks the user comp-exempt', async () => {
+  it('enqueues the grant job and marks the user exempt', async () => {
     mockGetServerSession.mockResolvedValue(adminSession)
     mockUserFindUnique.mockResolvedValue({ id: 'user-9' })
     mockUserUpdate.mockResolvedValue({ id: 'user-9' })
@@ -214,9 +214,9 @@ describe('adminGrantAccess', () => {
     expect(result).toEqual({ success: true, data: null })
     expect(mockUserUpdate).toHaveBeenCalledWith({
       where: { id: 'user-9' },
-      data: { isExempt: true, exemptReason: 'comp' },
+      data: { isExempt: true },
     })
-    // jobId carries a unique admin suffix so repeat comp-grants don't collapse
+    // jobId carries a unique admin suffix so repeat grants don't collapse
     // onto a stale completed job retained in Redis.
     expect(mockAddJob).toHaveBeenCalledWith(
       'plex:access:grant',
@@ -261,7 +261,7 @@ describe('adminToggleExempt', () => {
     jest.clearAllMocks()
   })
 
-  it('enables exemption and records the reason when not currently exempt', async () => {
+  it('enables exemption without a note when not currently exempt', async () => {
     mockGetServerSession.mockResolvedValue(adminSession)
     mockUserFindUnique.mockResolvedValue({ isExempt: false })
     mockUserUpdate.mockResolvedValue({ id: 'user-9' })
@@ -271,24 +271,24 @@ describe('adminToggleExempt', () => {
     expect(result).toEqual({ success: true, data: null })
     expect(mockUserUpdate).toHaveBeenCalledWith({
       where: { id: 'user-9' },
-      data: { isExempt: true, exemptReason: 'comp' },
+      data: { isExempt: true, exemptNote: null },
     })
   })
 
-  it('uses a provided reason when enabling exemption', async () => {
+  it('records a provided note when enabling exemption', async () => {
     mockGetServerSession.mockResolvedValue(adminSession)
     mockUserFindUnique.mockResolvedValue({ isExempt: false })
     mockUserUpdate.mockResolvedValue({ id: 'user-9' })
 
-    await adminToggleExempt({ userId: 'user-9', reason: 'grandfathered' })
+    await adminToggleExempt({ userId: 'user-9', note: 'IT support' })
 
     expect(mockUserUpdate).toHaveBeenCalledWith({
       where: { id: 'user-9' },
-      data: { isExempt: true, exemptReason: 'grandfathered' },
+      data: { isExempt: true, exemptNote: 'IT support' },
     })
   })
 
-  it('clears the reason when disabling exemption', async () => {
+  it('clears the note when disabling exemption', async () => {
     mockGetServerSession.mockResolvedValue(adminSession)
     mockUserFindUnique.mockResolvedValue({ isExempt: true })
     mockUserUpdate.mockResolvedValue({ id: 'user-9' })
@@ -298,7 +298,7 @@ describe('adminToggleExempt', () => {
     expect(result).toEqual({ success: true, data: null })
     expect(mockUserUpdate).toHaveBeenCalledWith({
       where: { id: 'user-9' },
-      data: { isExempt: false, exemptReason: null },
+      data: { isExempt: false, exemptNote: null },
     })
   })
 

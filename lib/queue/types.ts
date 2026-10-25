@@ -217,7 +217,7 @@ export type RoleSyncReason =
   | SessionRevocationReason
   | "enabled"
   | "access_granted"
-  | "comp_granted"
+  | "access_granted"
   | "exemption_changed"
   | "subscription_changed"
   | "subscription_canceled"

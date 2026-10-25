@@ -60,7 +60,7 @@ describe('makeAdminUserWithSubscription', () => {
     expect(user.currentPeriodEnd).toBeInstanceOf(Date)
     expect(user.cancelAtPeriodEnd).toBe(false)
     expect(user.isExempt).toBe(false)
-    expect(user.exemptReason).toBeNull()
+    expect(user.exemptNote).toBeNull()
     expect(user.stripeCustomerId).toBe('cus_test123')
     // Base admin-user stats are still present
     expect(user.id).toBe('user-1')
@@ -70,12 +70,12 @@ describe('makeAdminUserWithSubscription', () => {
     const user = makeAdminUserWithSubscription({
       subscriptionStatus: 'CANCELED',
       isExempt: true,
-      exemptReason: 'grandfathered',
+      exemptNote: 'IT support',
       stripeCustomerId: 'cus_override',
     })
     expect(user.subscriptionStatus).toBe('CANCELED')
     expect(user.isExempt).toBe(true)
-    expect(user.exemptReason).toBe('grandfathered')
+    expect(user.exemptNote).toBe('IT support')
     expect(user.stripeCustomerId).toBe('cus_override')
   })
 })

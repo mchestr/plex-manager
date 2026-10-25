@@ -7,7 +7,7 @@
  * | Plex     | invite the member's Plex email, auto-accept   | unshare the active server  |
  * | Jellyfin | turn the account on (`IsDisabled: false`)     | turn the account off       |
  *
- * The Stripe grant and revoke jobs and comp grants call these; member removal
+ * The Stripe grant and revoke jobs and admin grants call these; member removal
  * (P11.13) calls the revoke before any database change. A Plex invite goes
  * only to the email on a row with a `plexUserId`, which came from plex.tv; a
  * Jellyfin username is never used as an address. A member with no usable

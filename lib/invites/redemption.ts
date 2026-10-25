@@ -22,10 +22,9 @@ const MAX_TRANSACTION_RETRIES = 3
 const INITIAL_RETRY_DELAY_MS = 100
 
 // Redeeming an invite is admin-granted membership, so the user is marked exempt
-// from the Stripe subscription gate — same semantics as the admin "Grant access"
-// comp action. Applied only when the user is not already exempt, so an existing
-// exemptReason (e.g. "grandfathered", "comp") is never overwritten.
-export const INVITE_EXEMPTION = { isExempt: true, exemptReason: "invite" }
+// from the Stripe subscription gate. Applied only when the user is not already
+// exempt, so an existing exemptNote is never overwritten.
+export const INVITE_EXEMPTION = { isExempt: true, exemptNote: "Joined by invite" }
 
 /**
  * Check if an error is a Prisma transaction conflict (P2034)

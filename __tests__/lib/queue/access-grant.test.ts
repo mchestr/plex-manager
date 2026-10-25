@@ -366,7 +366,7 @@ describe('processAccessGrant', () => {
       expect(result).toEqual({ userId: 'gone', granted: false, skipped: 'user not found' })
     })
 
-    it('lets an exempt comp grant proceed without a subscription', async () => {
+    it('lets an exempt member be granted without a subscription', async () => {
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ isExempt: true, subscription: null }))
       ;(inviteUserToPlexServer as jest.Mock).mockResolvedValue({ success: true, inviteID: 5 })
       ;(acceptPlexInvite as jest.Mock).mockResolvedValue({ success: true })

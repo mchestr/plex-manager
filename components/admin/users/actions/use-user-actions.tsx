@@ -58,7 +58,7 @@ export function useUserActions({ year, stripeEnabled, stripeDashboardBaseUrl, es
       role: user.isAdmin
         ? { id: "role", label: "Remove admin role...", icon: ShieldOff, onSelect: open("role") }
         : { id: "role", label: "Make admin...", icon: ShieldPlus, onSelect: open("role") },
-      grant: { id: "grant", label: "Grant comp access...", icon: Gift, onSelect: open("grant") },
+      grant: { id: "grant", label: "Grant access and exempt...", icon: Gift, onSelect: open("grant") },
       exempt: user.isExempt
         ? { id: "exempt", label: "Remove exemption...", icon: CircleSlash, onSelect: open("exempt") }
         : { id: "exempt", label: "Mark exempt...", icon: BadgeCheck, onSelect: open("exempt") },

@@ -92,14 +92,14 @@ describe('MembershipPage', () => {
     expect(screen.getByTestId('subscription-status-badge')).toHaveTextContent('Canceled')
   })
 
-  it('shows Comp for a comped member without a subscription', async () => {
+  it('shows Exempt for an exempt member without a subscription', async () => {
     prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: true }))
     prismaMock.subscription.findUnique.mockResolvedValue(null)
-    prismaMock.user.findUnique.mockResolvedValue(buildUser({ isExempt: true, exemptReason: 'comp' }))
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ isExempt: true, exemptNote: null }))
 
     render(await MembershipPage())
 
-    expect(screen.getByTestId('subscription-status-badge')).toHaveTextContent('Comp')
+    expect(screen.getByTestId('subscription-status-badge')).toHaveTextContent('Exempt')
     expect(screen.queryByTestId('manage-subscription-button')).not.toBeInTheDocument()
   })
 })

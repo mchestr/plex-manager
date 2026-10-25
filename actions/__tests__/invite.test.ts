@@ -462,7 +462,7 @@ describe('invite actions', () => {
           plexUserId: mockPlexUser.id,
           primaryAuthService: 'plex',
           isExempt: true,
-          exemptReason: 'invite',
+          exemptNote: 'Joined by invite',
         }),
       })
     })
@@ -471,7 +471,7 @@ describe('invite actions', () => {
       tx.user.findUnique.mockResolvedValueOnce({
         id: 'user-1',
         isExempt: false,
-        exemptReason: null,
+        exemptNote: null,
       })
       tx.user.update.mockResolvedValue({ id: 'user-1' })
 
@@ -480,16 +480,16 @@ describe('invite actions', () => {
       expect(result).toEqual({ success: true, data: null })
       expect(tx.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ isExempt: true, exemptReason: 'invite' }),
+          data: expect.objectContaining({ isExempt: true, exemptNote: 'Joined by invite' }),
         })
       )
     })
 
-    it('does not overwrite an existing exemption reason', async () => {
+    it('does not overwrite an existing exemption note', async () => {
       tx.user.findUnique.mockResolvedValueOnce({
         id: 'user-1',
         isExempt: true,
-        exemptReason: 'grandfathered',
+        exemptNote: 'IT support',
       })
       tx.user.update.mockResolvedValue({ id: 'user-1' })
 
@@ -498,7 +498,7 @@ describe('invite actions', () => {
       expect(result).toEqual({ success: true, data: null })
       const updateData = tx.user.update.mock.calls[0][0].data
       expect(updateData).not.toHaveProperty('isExempt')
-      expect(updateData).not.toHaveProperty('exemptReason')
+      expect(updateData).not.toHaveProperty('exemptNote')
     })
 
     it('marks a newly created Jellyfin user exempt, as a Jellyfin member (P11.10)', async () => {
@@ -529,7 +529,7 @@ describe('invite actions', () => {
           jellyfinUserId: 'jf-user-1',
           primaryAuthService: 'jellyfin',
           isExempt: true,
-          exemptReason: 'invite',
+          exemptNote: 'Joined by invite',
         }),
       })
     })

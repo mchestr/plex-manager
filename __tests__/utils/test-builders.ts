@@ -73,7 +73,7 @@ export const makeAdminUserWithStats = (
   currentPeriodEnd: null,
   cancelAtPeriodEnd: false,
   isExempt: false,
-  exemptReason: null,
+  exemptNote: null,
   stripeCustomerId: null,
   ...overrides,
 })
@@ -83,7 +83,7 @@ export const makeAdminUserWithStats = (
  *
  * Builds on {@link makeAdminUserWithStats} and layers the subscription-related
  * columns the Stripe feature adds to the admin user list (`subscriptionStatus`,
- * `currentPeriodEnd`, `cancelAtPeriodEnd`, `isExempt`, `exemptReason`,
+ * `currentPeriodEnd`, `cancelAtPeriodEnd`, `isExempt`, `exemptNote`,
  * `stripeCustomerId`). Loosely typed because the admin type does not yet declare
  * these fields; overrides are applied last so callers can set any value.
  *
@@ -96,7 +96,7 @@ export const makeAdminUserWithSubscription = (overrides: any = {}) => ({
   currentPeriodEnd: new Date('2024-02-01T00:00:00Z'),
   cancelAtPeriodEnd: false,
   isExempt: false,
-  exemptReason: null,
+  exemptNote: null,
   stripeCustomerId: 'cus_test123',
   ...overrides,
 })
@@ -206,7 +206,7 @@ export const makePrismaInviteWithUsages = (overrides: Record<string, unknown> = 
         isAdmin: false,
         onboardingStatus: null,
         isExempt: true,
-        exemptReason: 'invite',
+        exemptNote: 'Joined by invite',
         createdAt: new Date('2026-10-02T00:00:00Z'),
         updatedAt: new Date('2026-10-02T00:00:00Z'),
       },

@@ -22,7 +22,7 @@ export function buildUser(overrides: Partial<User> = {}): User {
     isAdmin: false,
     onboardingStatus: { plex: false, jellyfin: false },
     isExempt: false,
-    exemptReason: null,
+    exemptNote: null,
     timezone: null,
     sessionVersion: 0,
     disabledAt: null,
