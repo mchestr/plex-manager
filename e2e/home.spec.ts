@@ -43,15 +43,20 @@ test.describe('Home page', () => {
     await page.goto('/');
     await expect(page.getByTestId('home-page')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     // Not networkidle: with Cache Components, the router holds its /help
-    // prefetch open while the page sits, so the network never goes idle
-    await page.waitForLoadState('load');
-
-    const infinite = await page.evaluate(() =>
-      document
-        .getAnimations()
-        .filter((animation) => animation.effect?.getComputedTiming().iterations === Infinity).length
-    );
-    expect(infinite).toBe(0);
+    // prefetch open while the page sits, so the network never goes idle,
+    // and a streamed skeleton may still pulse at load: it must stop, not run on
+    await expect
+      .poll(
+        () =>
+          page.evaluate(
+            () =>
+              document
+                .getAnimations()
+                .filter((animation) => animation.effect?.getComputedTiming().iterations === Infinity).length
+          ),
+        { timeout: WAIT_TIMEOUTS.PAGE_CONTENT }
+      )
+      .toBe(0);
   });
 
   test('the quick links go to Plex Web, the public request site and /discord/link', async ({ regularUserPage: page }) => {
