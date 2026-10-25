@@ -146,6 +146,28 @@ describe("AssistantSheet", () => {
     expect(await screen.findByText("Get Sonarr Status")).toHaveAttribute("title", "Sonarr health")
   })
 
+  it("keeps focus in the input while the assistant replies, and sends nothing on Enter meanwhile", async () => {
+    let finish: (value: Awaited<ReturnType<typeof chatWithAdminBot>>) => void = () => {}
+    jest.mocked(chatWithAdminBot).mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    const { user } = await open()
+    const input = screen.getByLabelText("Message the assistant")
+
+    await user.type(input, "status?{Enter}")
+    expect(chatWithAdminBot).toHaveBeenCalledTimes(1)
+    expect(input).toHaveFocus()
+    expect(input).toBeEnabled()
+
+    await user.type(input, "again{Enter}")
+    expect(chatWithAdminBot).toHaveBeenCalledTimes(1)
+
+    finish({
+      success: true,
+      data: { message: { role: "assistant", content: "done", timestamp: Date.now() }, conversationId: "conv-1" },
+    })
+    await screen.findByText("done")
+    expect(input).toHaveFocus()
+  })
+
   it("shows the action's error copy on a refusal", async () => {
     jest.mocked(chatWithAdminBot).mockResolvedValue({
       success: false,
