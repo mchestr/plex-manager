@@ -13,6 +13,7 @@ import { z } from "zod"
 import { tautulliCommand } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { tautulliLibrarySchema } from "@/lib/wrapped/sources/schemas"
+import { getActiveService } from "@/lib/data/active-service"
 
 interface RewindLibraryOption {
   id: string
@@ -30,7 +31,7 @@ const librariesSchema = z.union([
 
 /** The Plex sections from Tautulli `get_libraries`, or why there are none. */
 export async function getRewindLibraries(): Promise<RewindLibraries> {
-  const tautulli = await prisma.tautulli.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } })
+  const tautulli = await getActiveService("tautulli")
   if (!tautulli) return { status: "not-configured", libraries: null }
   const result = await tautulliCommand(tautulli, "get_libraries", {}, librariesSchema, { attempts: 1, timeoutMs: 5000 })
   if (!result.ok) return { status: "unreachable", libraries: null }

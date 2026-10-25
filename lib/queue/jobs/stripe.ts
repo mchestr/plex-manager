@@ -63,6 +63,7 @@ import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { stopSyncAndClearPlexToken } from "@/lib/members/offboard"
 import { endUserSessions, SYSTEM_ACTOR } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
+import { getActiveService } from "@/lib/data/active-service"
 
 const logger = createLogger("STRIPE_WEBHOOK_JOB")
 
@@ -602,7 +603,7 @@ export function evaluateRevokeGuard(target: RevokeGuardTarget): string | null {
  * @internal
  */
 async function isProtectedJellyfinAdmin(jellyfinUserId: string): Promise<boolean> {
-  const server = await prisma.jellyfinServer.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } })
+  const server = await getActiveService("jellyfin")
   if (!server) return false
   return (await isJellyfinAdmin(server, jellyfinUserId)) !== "not-admin"
 }

@@ -9,6 +9,7 @@ import { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
+import { getActiveService } from "@/lib/data/active-service"
 
 const logger = createLogger("IMPORT_PLEX_USERS")
 
@@ -30,7 +31,7 @@ function importFailure(error: unknown): string {
 export const importPlexUsers = adminAction({
   fallbackError: "Failed to import users",
   handler: async (_input, { userId: adminId }) => {
-    const plexServer = await prisma.plexServer.findFirst({ where: { isActive: true } })
+    const plexServer = await getActiveService("plex")
     if (!plexServer) {
       return fail("NOT_FOUND", "No active Plex server configured")
     }

@@ -2,12 +2,12 @@
  * Shared loader for the active Plex server configuration.
  *
  * Centralizes the previously duplicated
- * `prisma.plexServer.findFirst({ where: { isActive: true } })` lookup and the
+ * active Plex row lookup (`getActiveService("plex")`, memoised per request) and the
  * subsequent mapping into the config object that the Plex connection helpers
  * (and Discord integration) consume.
  */
 
-import { prisma } from "@/lib/prisma"
+import { getActiveService } from "@/lib/data/active-service"
 
 /**
  * The full active-Plex-server config shared by all callers.
@@ -32,7 +32,7 @@ export interface PlexServerConfig {
  * @returns The mapped config, or `null` when no active Plex server exists.
  */
 export async function getActivePlexServerConfig(): Promise<PlexServerConfig | null> {
-  const server = await prisma.plexServer.findFirst({ where: { isActive: true } })
+  const server = await getActiveService("plex")
   if (!server) {
     return null
   }

@@ -51,6 +51,7 @@ import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { probeConnection, type Tester } from "@/lib/settings/probe"
 import { CONNECTION_HEALTH_TAG, worstStatus, type HealthCode, type SectionHealth, type SettingsHealth } from "@/lib/settings/connection-status"
 import { discordStatus, type ConnectionStatus } from "@/lib/ui/status"
+import { getActiveService } from "@/lib/data/active-service"
 
 type ConnectionId = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus" | "ai"
 
@@ -79,7 +80,7 @@ export async function checkConnections(now: Date = new Date()): Promise<Connecti
     prisma.overseerr.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
     prisma.sonarr.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
     prisma.radarr.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
-    prisma.prometheus.findFirst({ where: { isActive: true }, select: { name: true, url: true, query: true } }),
+    getActiveService("prometheus"),
     prisma.config.findUnique({ where: { id: "config" }, select: { llmDisabled: true } }),
     prisma.lLMProvider.count({ where: { isActive: true } }),
   ])

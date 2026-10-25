@@ -51,9 +51,9 @@ import { checkUserServerAccess } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { getMemberYearStats, memberStatsYear } from "@/lib/discord/stats/member-stats"
 import { hoursOf } from "@/lib/discord/stats/year-stats"
-import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { directLimiter, type UpstreamLimiter } from "@/lib/wrapped/sources/watch-history-source"
+import { getActiveService } from "@/lib/data/active-service"
 
 const logger = createLogger("DISCORD_ROLE_METADATA")
 
@@ -146,7 +146,7 @@ async function resolvePlexAccess(userId: string, plexUserId: string): Promise<bo
  */
 async function resolveJellyfinAccess(userId: string, jellyfinUserId: string): Promise<boolean | null> {
   try {
-    const server = await prisma.jellyfinServer.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } })
+    const server = await getActiveService("jellyfin")
     if (!server) return false
     const result = await getJellyfinUserById(server, jellyfinUserId)
     if (result.notFound) return false

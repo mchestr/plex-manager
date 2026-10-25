@@ -10,6 +10,7 @@ import { z } from "zod"
 import { withoutPersonalFields } from "./personal-fields"
 import { TAUTULLI_EPOCH_KEYS, UTC_FORMAT, withLocalTimestamps } from "./timestamps"
 import { JELLYFIN_MEMBER, toToolOutput } from "./tool-output"
+import { getActiveService } from "@/lib/data/active-service"
 
 type TautulliConfig = Parameters<typeof findTautulliUser>[0]
 
@@ -64,7 +65,7 @@ export async function executeTautulliTool(
 ): Promise<string> {
   // Epoch seconds reach the model as ISO strings with the turn zone's offset (P11.17)
   const local = (data: unknown) => withLocalTimestamps(data, TAUTULLI_EPOCH_KEYS, format.timeZone)
-  const server = await prisma.tautulli.findFirst({ where: { isActive: true } })
+  const server = await getActiveService("tautulli")
   if (!server) return "Error: No active Tautulli server configured."
 
   const config = {

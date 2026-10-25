@@ -12,9 +12,9 @@ import "server-only"
 import { unstable_cache } from "next/cache"
 
 import { getPlexServerIdentity } from "@/lib/connections/plex-connection"
-import { prisma } from "@/lib/prisma"
 import type { ItemLinks } from "@/lib/ui/plex-links"
 import { createLogger } from "@/lib/utils/logger"
+import { getActiveService } from "@/lib/data/active-service"
 
 const logger = createLogger("rewind-links")
 const DAY_S = 24 * 60 * 60
@@ -25,7 +25,7 @@ const DAY_S = 24 * 60 * 60
  */
 export const plexServerId = unstable_cache(
   async (): Promise<string | null> => {
-    const plex = await prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true, token: true } })
+    const plex = await getActiveService("plex")
     if (!plex) return null
     const identity = await getPlexServerIdentity(plex)
     // a thrown failure is not cached, so the next view asks again
@@ -40,7 +40,7 @@ export async function loadItemLinks(): Promise<ItemLinks> {
   try {
     const [serverId, overseerr] = await Promise.all([
       plexServerId().catch(() => null),
-      prisma.overseerr.findFirst({ where: { isActive: true }, select: { publicUrl: true } }),
+      getActiveService("overseerr"),
     ])
     return { plexServerId: serverId, overseerrUrl: overseerr?.publicUrl ?? null }
   } catch (error) {

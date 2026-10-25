@@ -33,6 +33,7 @@ import { safeHref } from "@/lib/ui/markdown"
 import { formatDate, type FormatSettings } from "@/lib/utils/format"
 import { normalizeTimeZone, zonedParts } from "@/lib/utils/zoned-time"
 import type { AuthService } from "@/types/onboarding"
+import { getActiveService } from "@/lib/data/active-service"
 
 /** Home shows the three announcements at the top of the list; `/announcements` has the rest. */
 const HOME_ANNOUNCEMENTS = 3
@@ -101,7 +102,7 @@ async function mediaLink(service: AuthService, serverName: string): Promise<Medi
     const jellyfin = await jellyfinLink()
     return { service, serverName: jellyfin?.name ?? serverName, url: jellyfin?.url ?? null }
   }
-  const plex = await prisma.plexServer.findFirst({ where: { isActive: true }, select: { publicUrl: true } })
+  const plex = await getActiveService("plex")
   return { service, serverName, url: plex ? await plexWebUrl(plex.publicUrl) : null }
 }
 

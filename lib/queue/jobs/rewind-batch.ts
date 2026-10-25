@@ -16,7 +16,6 @@
 import type { Job } from "bullmq"
 
 import { shutdownSignal } from "@/lib/instrumentation/shutdown"
-import { prisma } from "@/lib/prisma"
 import { enqueueMetadataWarm } from "@/lib/queue/rewind-batch-queue"
 import { redisLimiter } from "@/lib/queue/redis-semaphore"
 import { JOB_TYPES, type RewindMetadataWarmPayload, type RewindServerAggregatePayload } from "@/lib/queue/types"
@@ -26,6 +25,7 @@ import { runServerAggregate } from "@/lib/wrapped/aggregate/run-aggregate"
 import { warmTitles } from "@/lib/wrapped/metadata-warm"
 
 import type { JobProcessor } from "./index"
+import { getActiveService } from "@/lib/data/active-service"
 
 const logger = createLogger("REWIND_BATCH_JOBS")
 
@@ -46,7 +46,7 @@ async function processServerAggregate(job: Job<RewindServerAggregatePayload>) {
 }
 
 async function processMetadataWarm(job: Job<RewindMetadataWarmPayload>) {
-  const tautulli = await prisma.tautulli.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } })
+  const tautulli = await getActiveService("tautulli")
   if (!tautulli) return { fetched: 0, failedCalls: 0, skipped: "TAUTULLI_NOT_CONFIGURED" }
   const signal = limitSignal(WARM_LIMIT_MS)
   const result = await warmTitles(job.data, { config: tautulli, signal, limiter: redisLimiter })

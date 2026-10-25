@@ -14,7 +14,6 @@ import "server-only"
 
 import sharp from "sharp"
 
-import { prisma } from "@/lib/prisma"
 import { posterCachePath, readCachedPoster, writeCachedPoster } from "@/lib/rewind/poster/disk-cache"
 import { fetchPlexPoster } from "@/lib/rewind/poster/fetch"
 import { renderPoster } from "@/lib/rewind/poster/image"
@@ -22,6 +21,7 @@ import { createLogger } from "@/lib/utils/logger"
 import type { CardInput } from "@/lib/wrapped/data/share-safe"
 
 import type { CardAssets } from "./parts"
+import { getActiveService } from "@/lib/data/active-service"
 
 const logger = createLogger("REWIND_CARD_ART")
 
@@ -43,7 +43,7 @@ async function posterWebp(server: { url: string; token: string } | null, ratingK
 /** Each published poster as a PNG data URI, or null where it is missing. */
 export async function loadCardArt(art: CardInput["art"]): Promise<CardAssets> {
   if (!art || art.length === 0) return { art: [] }
-  const server = await prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true, token: true } })
+  const server = await getActiveService("plex")
   const images = await Promise.all(
     art.map(async ({ ratingKey }) => {
       try {

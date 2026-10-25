@@ -1,5 +1,4 @@
 import type { Metadata, Route } from "next";
-import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -11,12 +10,13 @@ import { PublicShell } from "@/components/shell/public-shell";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { StatusScreen } from "@/components/ui/status-screen";
-import { authOptions } from "@/lib/auth";
 import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure";
 import { monogramFor, serverName as getServerName } from "@/lib/brand";
 import { prisma } from "@/lib/prisma";
 import { icons } from "@/lib/ui/icons";
 import { safeCallbackPath } from "@/lib/validations/callback-path";
+import { getSession } from "@/lib/data/session";
+import { getActiveService } from "@/lib/data/active-service";
 
 interface HomeProps {
   /** `callbackUrl`: where sign-in lands afterwards, such as the admin denial's `/admin` (same-origin paths only). */
@@ -25,7 +25,7 @@ interface HomeProps {
 
 /** "Home" for members, "Sign in" for the sign-in screen. */
 export async function generateMetadata(): Promise<Metadata> {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   return { title: session?.user?.id ? "Home" : "Sign in" };
 }
 
@@ -35,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
  * streams behind its own skeleton; the signed-out screen never shows it.
  */
 export default async function Home({ searchParams }: HomeProps) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   const callbackPath = safeCallbackPath((await searchParams).callbackUrl);
 
   if (session?.user?.id) {
@@ -52,7 +52,7 @@ export default async function Home({ searchParams }: HomeProps) {
   }
 
   const [plexServer, jellyfinServer, discordIntegration, serverName, assistantDisclosure] = await Promise.all([
-    prisma.plexServer.findFirst({ where: { isActive: true } }),
+    getActiveService("plex"),
     prisma.jellyfinServer.findFirst({ where: { isActive: true, enabledForLogin: true } }),
     prisma.discordIntegration.findUnique({ where: { id: "discord" }, select: { serverInviteCode: true } }),
     getServerName(),
