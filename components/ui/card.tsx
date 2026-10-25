@@ -15,7 +15,7 @@ export function CardHeader({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="card-header"
       className={cn(
-        "grid auto-rows-min items-start gap-1 px-5 pt-5 has-data-[slot=card-action]:grid-cols-[1fr_auto]",
+        "grid auto-rows-min items-start gap-1 px-5 pt-5 last:pb-5 has-data-[slot=card-action]:grid-cols-[1fr_auto]",
         className
       )}
       {...props}

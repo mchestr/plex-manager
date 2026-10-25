@@ -48,7 +48,7 @@ export default async function AnnouncementsPage() {
           <div className="flex flex-col gap-4" data-testid="announcements-list">
             {announcements.map((announcement) => (
               <Card key={announcement.id}>
-                <CardContent className="p-6">
+                <CardContent>
                   <AnnouncementItem announcement={announcement} isNew={isNewAnnouncement(announcement.createdAt, seenAt)} />
                 </CardContent>
               </Card>

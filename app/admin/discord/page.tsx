@@ -49,7 +49,7 @@ function Panel({ title, children, className }: { title: string; children: ReactN
       <CardHeader>
         <CardTitle as="h2">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="p-5">{children}</CardContent>
+      <CardContent>{children}</CardContent>
     </Card>
   )
 }
@@ -279,7 +279,7 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
             <p className="text-ui text-muted-foreground">What members marked in this period, from Discord or the web.</p>
           </div>
           <Card>
-            <CardContent className="p-6">
+            <CardContent>
               <DiscordMarkedMedia
                 marks={markedMedia?.marks ?? []}
                 total={markedMedia?.total ?? 0}
