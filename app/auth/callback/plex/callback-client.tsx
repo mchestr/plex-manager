@@ -39,20 +39,32 @@ export function PlexCallbackPageClient() {
     startedRef.current = true
 
     const complete = async () => {
-      const result = await signIn("plex", { redirect: false })
-      if (!result?.ok) {
-        const failure = plexSignInCodeFor(result?.error)
-        if (failure === "access_denied") {
-          router.push("/auth/denied")
-        } else {
-          setCode(failure)
+      // next-auth answers `ok` without a session when its CSRF check fails, so
+      // a missing session after `ok` gets one more `signIn`.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const result = await signIn("plex", { redirect: false })
+        if (!result?.ok) {
+          const failure = plexSignInCodeFor(result?.error)
+          if (failure === "access_denied") {
+            router.push("/auth/denied")
+          } else {
+            setCode(failure)
+          }
+          return
         }
-        return
-      }
 
-      const finished = await finishPlexSignIn()
-      // Full page load, so the new session cookie is used everywhere
-      redirectTo(finished.success ? finished.data.next : "/")
+        const finished = await finishPlexSignIn()
+        if (finished.success) {
+          // Full page load, so the new session cookie is used everywhere
+          redirectTo(finished.data.next)
+          return
+        }
+        if (finished.code !== "UNAUTHENTICATED") {
+          redirectTo("/")
+          return
+        }
+      }
+      setCode("sign_in_failed")
     }
 
     const run = async () => {
@@ -91,7 +103,8 @@ export function PlexCallbackPageClient() {
 
 /**
  * "Sign-in didn't finish" and its siblings (ui-design-system 6.6): fixed copy
- * by code, never server text. Try again starts a new PIN at once; a refused
+ * by code, never server text. Try again starts a new PIN at once, keeping the
+ * invite code and callback path of the failed one; a refused
  * invite only goes home.
  */
 function CallbackFailure({
@@ -107,7 +120,7 @@ function CallbackFailure({
   const tryAgain = async () => {
     setRestarting(true)
     try {
-      const started = await startPlexSignIn({})
+      const started = await startPlexSignIn({ retry: true })
       if (started.success) {
         redirectTo(started.data.authUrl)
         return

@@ -10,7 +10,7 @@
 import "server-only"
 
 import { randomUUID } from "node:crypto"
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 
 import { plexProduct } from "@/lib/brand"
 import { getBaseUrl } from "@/lib/env"
@@ -52,4 +52,16 @@ export async function browserClientId(): Promise<string> {
   const clientId = randomUUID()
   jar.set(clientCookie(clientId))
   return clientId
+}
+
+/**
+ * Whether this request reached the app on the host of the base URL, for the
+ * sign-in logs. The PIN cookie is host-only and plex.tv forwards to the base
+ * URL, so a sign-in started on another host finds no cookie when it returns.
+ */
+export async function requestHostCheck(): Promise<{ matchesBaseUrl: boolean; requestHost: string | null; baseHost: string }> {
+  const incoming = await headers()
+  const requestHost = incoming.get("x-forwarded-host") ?? incoming.get("host")
+  const baseHost = new URL(getBaseUrl()).host
+  return { matchesBaseUrl: requestHost?.toLowerCase() === baseHost.toLowerCase(), requestHost, baseHost }
 }

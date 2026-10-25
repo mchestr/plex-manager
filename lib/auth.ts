@@ -93,6 +93,20 @@ async function writeWithPlexEmail<T>(
   }
 }
 
+/** The page's poll saw the PIN ready, so a `waiting` or `unavailable` read now is a plex.tv hiccup. */
+const PIN_READ_ATTEMPTS = 4
+const PIN_READ_DELAY_MS = 700
+
+async function readPinWithRetry(pin: { pinId: number; code: string; clientId: string; attemptId?: string }) {
+  let status = await readPin(pin.pinId, pin.code, pin.clientId)
+  for (let attempt = 1; attempt < PIN_READ_ATTEMPTS; attempt++) {
+    if (status.status !== "waiting" && status.status !== "unavailable") break
+    await new Promise((resolve) => setTimeout(resolve, PIN_READ_DELAY_MS))
+    status = await readPin(pin.pinId, pin.code, pin.clientId)
+  }
+  return status
+}
+
 /**
  * The Plex sign-in this browser started: the PIN in its signed `pm-plex-pin`
  * cookie, and the account token plex.tv issued for that PIN (SEC-11). The
@@ -110,9 +124,9 @@ async function readPlexSignIn(
     throw new Error("plex_pin_expired")
   }
 
-  const status = await readPin(pin.pinId, pin.code, pin.clientId)
+  const status = await readPinWithRetry(pin)
   if (status.status !== "ready") {
-    logger.warn("auth.plex_pin_not_ready", { status: status.status })
+    logger.warn("auth.plex_pin_not_ready", { status: status.status, attemptId: pin.attemptId ?? null })
     throw new Error(status.status === "unavailable" ? "sign_in_failed" : "plex_pin_expired")
   }
   return { authToken: status.authToken, inviteCode: pin.inviteCode }

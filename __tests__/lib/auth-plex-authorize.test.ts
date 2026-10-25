@@ -105,14 +105,41 @@ describe('Plex authorize reads the PIN cookie', () => {
   })
 
   it.each([
-    [{ status: 'waiting' } as const, 'plex_pin_expired'],
     [{ status: 'expired' } as const, 'plex_pin_expired'],
-    [{ status: 'unavailable' } as const, 'sign_in_failed'],
   ])('refuses a PIN that is %p', async (status, code) => {
     mockReadPin.mockResolvedValue(status)
 
     await expect(authorize(undefined, plexPinRequest())).rejects.toThrow(code)
+    expect(mockReadPin).toHaveBeenCalledTimes(1)
     expect(mockGetPlexUserInfo).not.toHaveBeenCalled()
+  })
+
+  describe('a PIN plex.tv does not report as ready at once', () => {
+    beforeEach(() => jest.useFakeTimers())
+    afterEach(() => jest.useRealTimers())
+
+    it.each([
+      [{ status: 'waiting' } as const, 'plex_pin_expired'],
+      [{ status: 'unavailable' } as const, 'sign_in_failed'],
+    ])('is read again, and refused when still %p', async (status, code) => {
+      mockReadPin.mockResolvedValue(status)
+
+      const refused = expect(authorize(undefined, plexPinRequest())).rejects.toThrow(code)
+      await jest.runAllTimersAsync()
+      await refused
+      expect(mockReadPin.mock.calls.length).toBeGreaterThan(1)
+      expect(mockGetPlexUserInfo).not.toHaveBeenCalled()
+    })
+
+    it('signs in when a later read is ready', async () => {
+      mockReadPin.mockResolvedValueOnce({ status: 'unavailable' }).mockResolvedValueOnce({ status: 'waiting' })
+
+      const result = authorize(undefined, plexPinRequest())
+      await jest.runAllTimersAsync()
+
+      await expect(result).resolves.toMatchObject({ id: 'member-row' })
+      expect(mockReadPin).toHaveBeenCalledTimes(3)
+    })
   })
 
   it('signs in with a ready PIN, using the token plex.tv issued for it', async () => {

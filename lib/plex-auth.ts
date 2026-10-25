@@ -18,6 +18,7 @@
  * returns it.
  */
 
+import { randomUUID } from "node:crypto"
 import { cookies } from "next/headers"
 import { z } from "zod"
 
@@ -27,7 +28,7 @@ import { publicAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { createPin, readPin } from "@/lib/connections/plex-pin"
 import { PLEX_PIN_COOKIE, pinCookie, readPinCookie } from "@/lib/plex-pin-cookie"
-import { browserClientId, plexAuthUrl } from "@/lib/plex-pin-flow"
+import { browserClientId, plexAuthUrl, requestHostCheck } from "@/lib/plex-pin-flow"
 import { consume } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
@@ -44,23 +45,33 @@ export type PlexSignInStatus = "waiting" | "ready" | "expired"
  * Starts a Plex sign-in: a strong PIN for this browser, kept in the signed
  * `pm-plex-pin` cookie for 15 minutes together with the optional invite code
  * and `callbackPath` (from `/?callbackUrl=`). A `callbackPath` that is not a same-origin path
- * (`safeCallbackPath`) is dropped, never stored. Limited per client IP
- * (`plex:pin:create`).
+ * (`safeCallbackPath`) is dropped, never stored. With `retry`, a new PIN keeps
+ * the invite code and callback path of the cookie it replaces, which the page
+ * cannot read. Logs whether the request host is the base URL's host. Limited
+ * per client IP (`plex:pin:create`).
  */
 export const startPlexSignIn = publicAction({
-  input: z.strictObject({ inviteCode: inviteCodeSchema.optional(), callbackPath: z.string().max(2048).optional() }),
+  input: z.strictObject({
+    inviteCode: inviteCodeSchema.optional(),
+    callbackPath: z.string().max(2048).optional(),
+    retry: z.boolean().optional(),
+  }),
   rateLimit: { name: "plex:pin:create" },
   fallbackError: START_FAILED,
-  handler: async ({ inviteCode, callbackPath: requested }) => {
+  handler: async ({ inviteCode: requestedInvite, callbackPath: requested, retry }) => {
+    const jar = await cookies()
+    const previous = retry ? readPinCookie(jar.get(PLEX_PIN_COOKIE)?.value) : null
+    const inviteCode = requestedInvite ?? previous?.inviteCode
     const clientId = await browserClientId()
     const pin = await createPin(clientId)
     if (!pin.ok) {
       return fail("UPSTREAM_UNAVAILABLE", START_FAILED)
     }
 
-    const jar = await cookies()
-    const callbackPath = safeCallbackPath(requested) ?? undefined
-    jar.set(pinCookie({ pinId: pin.data.id, code: pin.data.code, clientId, inviteCode, callbackPath }))
+    const callbackPath = safeCallbackPath(requested) ?? previous?.callbackPath
+    const attemptId = randomUUID()
+    jar.set(pinCookie({ pinId: pin.data.id, code: pin.data.code, clientId, inviteCode, callbackPath, attemptId }))
+    logger.info("plex.sign_in_started", { attemptId, retry: Boolean(retry), ...(await requestHostCheck()) })
     return ok({ authUrl: plexAuthUrl(clientId, pin.data.code) })
   },
 })
@@ -76,6 +87,7 @@ export const pollPlexSignIn = publicAction({
   handler: async () => {
     const pin = readPinCookie((await cookies()).get(PLEX_PIN_COOKIE)?.value)
     if (!pin) {
+      logger.warn("plex.poll_without_cookie", await requestHostCheck())
       return ok<{ status: PlexSignInStatus }>({ status: "expired" })
     }
 
@@ -92,20 +104,24 @@ export const pollPlexSignIn = publicAction({
 
 /**
  * Ends the PIN binding after `signIn("plex")` succeeded, and returns where the
- * member goes next: `/subscribe` without full access (a non-member with Stripe
+ * member goes next. Without a session it keeps the PIN cookie, so the page can
+ * run `signIn` again (next-auth answers `ok` without a session when its CSRF
+ * check fails). Where it goes: `/subscribe` without full access (a non-member with Stripe
  * on), `/onboarding` until onboarding is done, otherwise the PIN cookie's
  * `callbackPath` or `/`.
  */
 export const finishPlexSignIn = publicAction({
   handler: async (_input, { session }) => {
     const jar = await cookies()
-    const callbackPath = readPinCookie(jar.get(PLEX_PIN_COOKIE)?.value)?.callbackPath
-    jar.delete(PLEX_PIN_COOKIE)
-
+    const pin = readPinCookie(jar.get(PLEX_PIN_COOKIE)?.value)
     const userId = session?.user?.id
+    logger.info("plex.sign_in_finished", { attemptId: pin?.attemptId ?? null, hasSession: Boolean(userId) })
     if (!userId) {
       return fail("UNAUTHENTICATED", "Please sign in to continue.")
     }
+
+    const callbackPath = pin?.callbackPath
+    jar.delete(PLEX_PIN_COOKIE)
     if ((await getAccessLevel(userId)) !== "full") {
       return ok({ next: "/subscribe" })
     }
