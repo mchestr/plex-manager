@@ -4,21 +4,21 @@ import userEvent from '@testing-library/user-event'
 import { SettingsJumpTo, SettingsNav, type SettingsNavItem } from '@/components/admin/settings/settings-nav'
 
 const ITEMS: SettingsNavItem[] = [
-  { id: 'plex', label: 'Plex server', group: 'Media', status: 'ok' },
-  { id: 'tautulli', label: 'Tautulli', group: 'Media', status: 'unreachable' },
-  { id: 'overseerr', label: 'Overseerr', group: 'Media', status: 'untested' },
-  { id: 'ai', label: 'AI provider', group: 'Features', status: 'degraded' },
-  { id: 'discord', label: 'Discord', group: 'Features', status: 'incomplete' },
-  { id: 'stripe', label: 'Stripe billing', group: 'Features', status: 'disabled' },
-  { id: 'other', label: 'Other integrations', group: 'More', status: 'notConfigured' },
-  { id: 'system', label: 'System information', group: 'More' },
+  { id: 'plex', label: 'Plex server', group: 'media', status: 'ok' },
+  { id: 'tautulli', label: 'Tautulli', group: 'media', status: 'unreachable' },
+  { id: 'overseerr', label: 'Overseerr', group: 'media', status: 'untested' },
+  { id: 'ai', label: 'AI provider', group: 'integrations', status: 'degraded' },
+  { id: 'discord', label: 'Discord', group: 'integrations', status: 'incomplete' },
+  { id: 'stripe', label: 'Stripe billing', group: 'integrations', status: 'disabled' },
+  { id: 'other', label: 'Other integrations', group: 'system', status: 'notConfigured' },
+  { id: 'system', label: 'System information', group: 'system' },
 ]
 
 const glyph = (id: string) => within(screen.getByTestId(`settings-nav-${id}`)).queryAllByRole('img')
 
 describe('SettingsNav', () => {
   it('labels each glyph with its 5.6 category, by shape as well as colour', () => {
-    render(<SettingsNav items={ITEMS} active="plex" dirty={new Set()} />)
+    render(<SettingsNav items={ITEMS} active="plex" activeGroup="media" dirty={new Set()} onSelect={jest.fn()} />)
 
     expect(glyph('plex')[0]).toHaveAccessibleName('Working')
     expect(glyph('tautulli')[0]).toHaveAccessibleName('Not working')
@@ -34,14 +34,14 @@ describe('SettingsNav', () => {
   })
 
   it('marks the section in view with aria-current', () => {
-    render(<SettingsNav items={ITEMS} active="tautulli" dirty={new Set()} />)
+    render(<SettingsNav items={ITEMS} active="tautulli" activeGroup="media" dirty={new Set()} onSelect={jest.fn()} />)
 
     expect(screen.getByRole('link', { name: /Tautulli/ })).toHaveAttribute('aria-current', 'true')
     expect(screen.getByRole('link', { name: /Plex server/ })).not.toHaveAttribute('aria-current')
   })
 
   it('adds the Unsaved changes pip before the glyph of a dirty section', () => {
-    render(<SettingsNav items={ITEMS} active="plex" dirty={new Set(['overseerr'])} />)
+    render(<SettingsNav items={ITEMS} active="plex" activeGroup="media" dirty={new Set(['overseerr'])} onSelect={jest.fn()} />)
 
     const images = glyph('overseerr')
     expect(images.map((image) => image.getAttribute('aria-label'))).toEqual(['Unsaved changes', 'Off, not set up or not checked'])
@@ -49,42 +49,38 @@ describe('SettingsNav', () => {
   })
 
   it('shows the legend with the same five entries', () => {
-    render(<SettingsNav items={ITEMS} active="plex" dirty={new Set()} />)
+    render(<SettingsNav items={ITEMS} active="plex" activeGroup="media" dirty={new Set()} onSelect={jest.fn()} />)
 
     expect(screen.getByTestId('settings-nav-legend')).toHaveTextContent(
       'WorkingNeeds attentionNot workingOff, not set up or not checkedUnsaved changes'
     )
   })
 
-  it('scrolls to the anchor when a link is clicked', async () => {
+  it('marks the active group and hands a clicked section to onSelect', async () => {
     const user = userEvent.setup()
-    document.body.insertAdjacentHTML('beforeend', '<section id="stripe"></section>')
-    const target = document.getElementById('stripe')!
-    target.scrollIntoView = jest.fn()
-    render(<SettingsNav items={ITEMS} active="plex" dirty={new Set()} />)
+    const onSelect = jest.fn()
+    render(<SettingsNav items={ITEMS} active="plex" activeGroup="integrations" dirty={new Set()} onSelect={onSelect} />)
+
+    expect(within(screen.getByTestId('settings-nav-group-integrations')).getByText('Integrations')).toHaveAttribute('aria-current', 'true')
+    expect(within(screen.getByTestId('settings-nav-group-media')).getByText('Media servers')).not.toHaveAttribute('aria-current')
 
     await user.click(screen.getByRole('link', { name: /Stripe billing/ }))
 
-    expect(target.scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: 'start' }))
-    expect(window.location.hash).toBe('#stripe')
-    target.remove()
+    expect(onSelect).toHaveBeenCalledWith('stripe')
   })
 })
 
 describe('SettingsJumpTo', () => {
-  it('scrolls to the chosen section', async () => {
+  it('hands the chosen section to onSelect', async () => {
     const user = userEvent.setup()
-    document.body.insertAdjacentHTML('beforeend', '<section id="discord"></section>')
-    const target = document.getElementById('discord')!
-    target.scrollIntoView = jest.fn()
-    render(<SettingsJumpTo items={ITEMS} active="plex" />)
+    const onSelect = jest.fn()
+    render(<SettingsJumpTo items={ITEMS} active="plex" onSelect={onSelect} />)
 
     await user.click(screen.getByRole('combobox', { name: 'Jump to section' }))
     const option = await screen.findByTestId('settings-jump-to-option-discord')
     await waitFor(() => expect(option.closest('[style*="pointer-events: none"]')).toBeNull())
     await user.click(option)
 
-    expect(target.scrollIntoView).toHaveBeenCalled()
-    target.remove()
+    expect(onSelect).toHaveBeenCalledWith('discord')
   })
 })
