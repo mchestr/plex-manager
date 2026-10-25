@@ -1,6 +1,9 @@
+import { createHash } from "crypto"
 import { Client, Events, GatewayIntentBits, Partials } from "discord.js"
 import { createLogger, type Logger } from "@/lib/utils/logger"
 import { getDiscordBotToken, getDiscordPortalUrl, getSupportChannelId } from "./config"
+import { FATAL_CLOSE_CODES, LoginGuard, type BlockedVerdict } from "./login-guard"
+import { LoginLedger, recordGatewayDisconnect, recordGatewayHealth } from "./login-ledger"
 import { routeInteraction } from "./routing/interaction-router"
 import { routeDirectMessage, defaultDmRouteDeps } from "./routing/dm-router"
 
@@ -31,32 +34,59 @@ export const defaultClientFactory: DiscordClientFactory = () =>
     partials: [Partials.Channel],
   })
 
+/** Gateway READY must hold this long before the login backoff resets. */
+const STABLE_READY_MS = 60 * 1000
+
+const HEALTH_MESSAGES = {
+  fatal: "Discord rejected the bot's token or intents. Save a new token in Admin, Settings, Discord.",
+  backoff: "The bot could not log in to Discord and is retrying with a growing delay.",
+  daily_cap: "The bot hit its daily login limit and will not log in again until the count falls.",
+} as const
+
 export class DiscordBot {
   private client: Client | null = null
   private readonly logger: Logger
   private isInitialized = false
+  private tokenId: string | null = null
+  /** Reason and retry time of the last blocked login reported, so a tick that finds the same block stays quiet. */
+  private lastBlocked: string | null = null
+  private stableTimer: ReturnType<typeof setTimeout> | null = null
   private readonly createClient: DiscordClientFactory
+  private readonly guard: LoginGuard
 
   /**
    * @param createClient - Factory that builds the discord.js Client. Defaults to
    *   a real client with the bot's gateway intents; inject a fake in tests.
    * @param logger - Where the bot logs. Defaults to the shared sanitising
    *   logger, so bot metadata is redacted like every other line (BP-37).
+   * @param guard - Decides whether a login may happen now (backoff, fatal
+   *   errors, daily cap). Defaults to one counting logins in the shared ledger.
    */
   constructor(
     createClient: DiscordClientFactory = defaultClientFactory,
-    logger: Logger = createLogger("discord-bot")
+    logger: Logger = createLogger("discord-bot"),
+    guard: LoginGuard = new LoginGuard(new LoginLedger())
   ) {
     this.createClient = createClient
     this.logger = logger
+    this.guard = guard
   }
 
-  async initialize(): Promise<void> {
-    if (this.isInitialized) {
-      this.logger.warn("Discord bot already initialized")
-      return
-    }
+  /** Whether a logged-in client is live. */
+  get isActive(): boolean {
+    return this.isInitialized
+  }
 
+  /**
+   * Logs in, unless the login guard says wait. Never throws for a failed login:
+   * the failure is logged, the failed client destroyed, and the guard decides
+   * when the next attempt may happen (call again; it is cheap while blocked).
+   *
+   * Already logged in with the same token is a no-op, so a config change that
+   * left the token alone keeps the gateway session. A different token destroys
+   * the old client first, so one process never holds two.
+   */
+  async initialize(): Promise<void> {
     // Resolve config, preferring the DB row and falling back to env (see
     // lib/discord/config.ts). Only the bot token is required to start: support
     // is now DM-the-assistant + `/help` (FR-18), so the support channel is no
@@ -69,6 +99,21 @@ export class DiscordBot {
       })
       return
     }
+
+    const tokenId = createHash("sha256").update(BOT_TOKEN).digest("hex").slice(0, 12)
+    if (this.isInitialized && this.tokenId === tokenId) {
+      this.logger.debug("Discord bot already logged in with this token")
+      return
+    }
+    await this.teardown()
+
+    const verdict = await this.guard.check(tokenId)
+    if (!verdict.allowed) {
+      await this.reportBlocked(verdict)
+      return
+    }
+    this.lastBlocked = null
+
     const SUPPORT_CHANNEL_ID = await getSupportChannelId()
     const PORTAL_URL = getDiscordPortalUrl()
 
@@ -77,29 +122,45 @@ export class DiscordBot {
       hasBotToken: !!BOT_TOKEN,
     })
 
-    this.client = this.createClient()
+    const client = this.createClient()
+    this.client = client
+    this.tokenId = tokenId
+    this.setupEventHandlers(PORTAL_URL, tokenId)
 
-    // Set up event handlers (BOT_TOKEN is guaranteed non-null by the check
-    // above).
-    this.setupEventHandlers(PORTAL_URL)
-
-    // Login to Discord
     try {
-      await this.client.login(BOT_TOKEN!)
+      await this.guard.recordAttempt()
+      await client.login(BOT_TOKEN)
       this.isInitialized = true
       this.logger.info("Discord bot initialized successfully")
     } catch (error) {
-      this.logger.error("Failed to login to Discord", error, {
-        hasToken: !!BOT_TOKEN,
-      })
-      throw error
+      this.logger.error("Failed to login to Discord", error, { hasToken: !!BOT_TOKEN })
+      await this.teardown()
+      await this.reportBlocked(this.guard.recordFailure(error, tokenId))
     }
   }
 
-  private setupEventHandlers(PORTAL_URL: string) {
+  private async reportBlocked(verdict: BlockedVerdict): Promise<void> {
+    const blocked = `${verdict.reason}:${verdict.retryAt}`
+    if (blocked === this.lastBlocked) return
+    this.lastBlocked = blocked
+    const retryAt = verdict.retryAt ? new Date(verdict.retryAt).toISOString() : null
+    if (verdict.reason === "backoff") {
+      this.logger.warn("discord.login_backoff", { retryAt })
+    } else {
+      this.logger.error(`discord.login_${verdict.reason}`, undefined, { retryAt })
+    }
+    await recordGatewayHealth(verdict.reason, HEALTH_MESSAGES[verdict.reason])
+  }
+
+  private setupEventHandlers(PORTAL_URL: string, tokenId: string) {
     if (!this.client) return
 
     this.client.once(Events.ClientReady, (readyClient) => {
+      this.stableTimer = setTimeout(() => {
+        this.guard.recordReady()
+        void recordGatewayHealth("ok", null)
+      }, STABLE_READY_MS)
+      this.stableTimer.unref()
       this.logger.info("Bot connected and ready", {
         botTag: readyClient.user.tag,
         botId: readyClient.user.id,
@@ -158,6 +219,13 @@ export class DiscordBot {
         code: event.code,
         reason: event.reason,
       })
+      void recordGatewayDisconnect(event.code)
+      if (FATAL_CLOSE_CODES.has(event.code)) {
+        // Discord will refuse this login again: stop, and wait for a new token.
+        this.guard.recordFatalClose(tokenId)
+        this.logger.error("discord.login_fatal", undefined, { code: event.code })
+        void this.teardown().then(() => recordGatewayHealth("fatal", HEALTH_MESSAGES.fatal))
+      }
     })
 
     this.client.on(Events.ShardReconnecting, (shardId) => {
@@ -173,12 +241,26 @@ export class DiscordBot {
   }
 
   async destroy(): Promise<void> {
-    if (this.client) {
-      this.logger.info("Destroying Discord client")
-      await this.client.destroy()
-      this.client = null
-      this.isInitialized = false
+    if (this.client) this.logger.info("Destroying Discord client")
+    await this.teardown()
+  }
+
+  /** Destroys the client, live or half-started; safe to call with none. */
+  private async teardown(): Promise<void> {
+    if (this.stableTimer) {
+      clearTimeout(this.stableTimer)
+      this.stableTimer = null
+    }
+    const client = this.client
+    this.client = null
+    this.isInitialized = false
+    this.tokenId = null
+    if (!client) return
+    try {
+      await client.destroy()
       this.logger.info("Discord client destroyed")
+    } catch (error) {
+      this.logger.warn("Discord client could not be destroyed cleanly", { error })
     }
   }
 }

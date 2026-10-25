@@ -255,6 +255,7 @@ sends `Authorization: Bearer <token>`. Without the variable the route answers
 | `plex_manager_queue_jobs` | `queue`, `state` | Jobs in `plex-wrapped`, `rewind-batch`, `rewind-gen` and `rewind-aux` by state (the counts the admin queues page shows) |
 | `plex_manager_job_failures_total` | `queue`, `job` | Failed job attempts, retries included, counted in Redis (`pm:metrics:job_failures`) |
 | `plex_manager_llm_spend_usd` | `purpose` (`wrapped`, `chat`), `period` (`day`, `month`) | LLM spend since midnight, and since the 1st, in the server time zone (cached 60 s) |
+| `plex_manager_discord_gateway_logins_total`, `_logins_24h`, `_disconnects_total`, `_last_close_code`, `plex_manager_discord_bot_healthy` | | Discord gateway logins (total and rolling 24 h; Discord resets the token near 1000), disconnects, the latest close code, and 0 while the bot is blocked (see `docs/discord-bot.md`) |
 | `plex_manager_scrape_error` | `source` | 1 when a source failed or took over 2 s this scrape |
 | `plex_manager_build_info` | `version`, `commit` | The running build (`BUILD_COMMIT`) |
 | `process_resident_memory_bytes` | | Resident memory |

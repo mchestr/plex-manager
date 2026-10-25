@@ -10,11 +10,14 @@ const logger = createLogger("LEASE_POLLER")
  */
 export const DEFAULT_POLL_INTERVAL_MS = 10 * 1000
 
+/** Why the work is told to stop. A bounce passes `config_changed` and starts the work again straight after. */
+type LockLossReason = "renewal_failed" | "config_changed" | "disabled" | "stopped"
+
 export interface LeasePollerCallbacks {
   /** Fired once when the lease is acquired and the work should start. */
   onLockAcquired: () => Promise<void>
   /** Fired once when the lease is lost or the work is disabled and should stop. */
-  onLockLost: () => Promise<void>
+  onLockLost: (reason: LockLossReason) => Promise<void>
   /** Whether the work is enabled. Checked every tick. */
   isEnabled: () => Promise<boolean>
   /**
@@ -217,7 +220,7 @@ export class LeasePoller {
         if (this.running) {
           logger.debug("Disabled - stopping the work and releasing the lease", { name: this.lock.name })
           this.markStopped()
-          await this.runLifecycle(() => this.callbacks.onLockLost())
+          await this.runLifecycle(() => this.callbacks.onLockLost("disabled"))
           await this.lock.release()
         }
         return
@@ -313,7 +316,7 @@ export class LeasePoller {
         if (!this.running) {
           return false
         }
-        await this.callbacks.onLockLost()
+        await this.callbacks.onLockLost("config_changed")
         if (!this.running) {
           return false
         }
@@ -359,7 +362,7 @@ export class LeasePoller {
       }
       logger.debug("Lease renewal failed - stopping the work", { name: this.lock.name })
       this.markStopped()
-      await this.runLifecycle(() => this.callbacks.onLockLost())
+      await this.runLifecycle(() => this.callbacks.onLockLost("renewal_failed"))
     } catch (error) {
       logger.debug("Error stopping the work after a failed lease renewal", { name: this.lock.name, error })
     } finally {
@@ -430,7 +433,7 @@ export class LeasePoller {
     // queue: a login that hangs must not hold up process exit.
     this.markStopped()
     try {
-      await this.callbacks.onLockLost()
+      await this.callbacks.onLockLost("stopped")
     } catch (error) {
       logger.debug("Error during the lock-lost callback on stop", { name: this.lock.name, error })
     }

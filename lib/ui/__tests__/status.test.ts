@@ -79,6 +79,9 @@ const TABLE: Row[] = [
   ["supportBot", "offline", "Offline", "destructive", "dot"],
   ["supportBot", "needsSetup", "Waiting for a bot token", "warning", icons.warning],
   ["supportBot", "off", "Turned off", "neutral", "dot"],
+  ["supportBot", "loginRejected", "Login rejected", "destructive", "dot"],
+  ["supportBot", "loginRetrying", "Retrying login", "warning", icons.warning],
+  ["supportBot", "loginCapped", "Login limit reached", "destructive", "dot"],
   ["discordCommand", "SUCCESS", "Succeeded", "success", "dot"],
   ["discordCommand", "FAILED", "Failed", "destructive", undefined],
   ["discordCommand", "PENDING", "Running", "info", "spinner"],
@@ -187,6 +190,10 @@ describe("discordStatus", () => {
     [{ lastRenewedAt: null }, "Offline"],
     [{ lastRenewedAt: new Date(now.getTime() - 90_000) }, "Online"],
     [{ lastRenewedAt: new Date(now.getTime() - 90_001) }, "Offline"],
+    [{ loginBlock: "fatal" as const }, "Login rejected"],
+    [{ loginBlock: "backoff" as const }, "Retrying login"],
+    [{ loginBlock: "daily_cap" as const }, "Login limit reached"],
+    [{ loginBlock: null }, "Online"],
   ])("the support bot with %o reads %s", (patch, label) => {
     expect(rows(patch).supportBot.label).toBe(label)
   })

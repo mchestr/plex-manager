@@ -1,10 +1,11 @@
 import "server-only"
 
+import { readGatewayStats } from "@/lib/discord/login-ledger"
 import { prisma } from "@/lib/prisma"
 import type { DiscordState } from "@/lib/ui/status"
 
 /** The support bot's part of {@link DiscordState}. */
-export type DiscordBotStatus = Pick<DiscordState, "botEnabled" | "hasBotToken" | "lastRenewedAt">
+export type DiscordBotStatus = Pick<DiscordState, "botEnabled" | "hasBotToken" | "lastRenewedAt" | "loginBlock">
 
 /**
  * The support bot's row (P11.7): "Turned off", "Waiting for a bot token" or
@@ -14,14 +15,16 @@ export type DiscordBotStatus = Pick<DiscordState, "botEnabled" | "hasBotToken" |
  * (`isDiscordBotReady`).
  */
 export async function getDiscordBotStatus(): Promise<DiscordBotStatus> {
-  const [integration, lock] = await Promise.all([
+  const [integration, lock, stats] = await Promise.all([
     prisma.discordIntegration.findUnique({ where: { id: "discord" }, select: { botEnabled: true, botToken: true } }),
     prisma.leaseLock.findUnique({ where: { name: "discord-bot" }, select: { lastRenewedAt: true } }),
+    readGatewayStats().catch(() => null),
   ])
   return {
     botEnabled: integration?.botEnabled ?? false,
     hasBotToken: Boolean(integration?.botToken || process.env.DISCORD_BOT_TOKEN),
     lastRenewedAt: lock?.lastRenewedAt ?? null,
+    loginBlock: stats && stats.health !== "ok" ? stats.health : null,
   }
 }
 

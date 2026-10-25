@@ -34,6 +34,7 @@ check); the `no-changelog` label skips it.
 
 ### Added
 
+- Discord bot login safety: backoff between failed logins (30 s up to 30 min), no retries after a rejected token or disallowed intents (Admin, Settings, Discord shows "Login rejected"), a cap of 100 logins per rolling 24 hours, a destroyed client after every failed login, a kept gateway session across one failed lease renewal or a settings save that left the token alone, and `plex_manager_discord_*` metrics. If Discord reset your bot token, paste a new one in Admin, Settings, Discord (`docs/discord-bot.md`).
 - Production deployment: `deploy/docker-compose.yml` for the published image, `docs/deployment.md` (compose, Caddy and nginx, the setup claim, bare metal, web and worker containers), `docs/domain-move.md`, and `docs/environment.md`, generated with `example.env` from `lib/env.ts` by `npm run env:docs` and checked in CI.
 - At-rest encryption keyring: `ENCRYPTION_KEYS` with key ids and rotation, a boot check against the database, a background and on-demand re-encryption (Admin > Settings > Security), and settings that ask you to re-enter a secret the current keys cannot read instead of failing.
 - `PROCESS_ROLE=web|worker|all` to run the job queue, schedulers and Discord bot in a separate worker container.
