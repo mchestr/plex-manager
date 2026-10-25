@@ -42,7 +42,9 @@ test.describe('Home page', () => {
   test('nothing keeps animating after load', async ({ regularUserPage: page }) => {
     await page.goto('/');
     await expect(page.getByTestId('home-page')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    await page.waitForLoadState('networkidle');
+    // Not networkidle: with Cache Components, the router holds its /help
+    // prefetch open while the page sits, so the network never goes idle
+    await page.waitForLoadState('load');
 
     const infinite = await page.evaluate(() =>
       document
@@ -86,9 +88,11 @@ test.describe('Home page', () => {
       await prisma.$disconnect();
     }
 
+    // The visit is the write: wait for markAnnouncementsSeen's action to answer
+    const marked = page.waitForResponse((response) => response.request().method() === 'POST' && !!response.request().headers()['next-action']);
     await page.goto('/');
     await expect(page.getByTestId(`announcement-${id}-new`)).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    await page.waitForLoadState('networkidle');
+    await marked;
 
     await page.reload();
     await expect(page.getByTestId(`announcement-${id}`)).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
