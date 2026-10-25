@@ -9,6 +9,7 @@ import {
   getPlanName,
   getPlanPrice,
 } from '@/lib/stripe/prices'
+import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getStripe } from '@/lib/stripe/client'
 import { mockReset } from 'jest-mock-extended'
@@ -17,6 +18,9 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
 beforeEach(() => mockReset(prismaMock))
+
+// The 'use cache' directive is inert under Jest; the tag and life calls are checked.
+jest.mock('next/cache', () => ({ cacheLife: jest.fn(), cacheTag: jest.fn() }))
 
 jest.mock('@/lib/stripe/client', () => ({
   getStripe: jest.fn(),
@@ -252,7 +256,7 @@ describe('getPlanName', () => {
     await expect(getPlanName('price_month')).resolves.toBe('Supporter plan')
   })
 
-  it('retrieves a price that is no longer offered, and caches it', async () => {
+  it('retrieves a price that is no longer offered, cached under the plan-names tag', async () => {
     mockFindUnique.mockResolvedValue({ stripeEnabled: true, stripePriceIds: [] })
     const stripe = makeStripeMock()
     stripe.prices.retrieve.mockResolvedValue(
@@ -262,7 +266,8 @@ describe('getPlanName', () => {
 
     await expect(getPlanName('price_old')).resolves.toBe('Founding plan')
     await expect(getPlanPrice('price_old')).resolves.toMatchObject({ amount: 500, interval: 'month' })
-    expect(stripe.prices.retrieve).toHaveBeenCalledTimes(1)
+    expect(cacheTag).toHaveBeenCalledWith('plan-names')
+    expect(cacheLife).toHaveBeenCalledWith('hours')
     expect(stripe.prices.retrieve).toHaveBeenCalledWith('price_old', { expand: ['product'] })
   })
 
