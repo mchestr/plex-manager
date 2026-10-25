@@ -40,7 +40,9 @@ export function HelpCard({ service, supportChannelUrl }: HelpCardProps) {
         <CardDescription>Buffering or a soft picture usually means your {app} app is limiting quality.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col pt-2.5 pb-4">
-        <Link href={"/help#playback" as Route} className={rowClass} data-testid="home-help-playback">
+        {/* The nav's /help link prefetches the route; with Cache Components, a
+            second prefetch for /help#… leaves its request open (Next 16.4) */}
+        <Link href={"/help#playback" as Route} prefetch={false} className={rowClass} data-testid="home-help-playback">
           <Row icon={icons.playback} end={icons.internalLink}>
             Revisit the quality guide
           </Row>
@@ -58,7 +60,7 @@ export function HelpCard({ service, supportChannelUrl }: HelpCardProps) {
             </Row>
           </a>
         ) : (
-          <Link href={"/help#support" as Route} className={rowClass} data-testid="home-help-support">
+          <Link href={"/help#support" as Route} prefetch={false} className={rowClass} data-testid="home-help-support">
             <Row icon={icons.info} end={icons.internalLink}>
               Report a problem
             </Row>

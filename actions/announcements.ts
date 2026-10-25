@@ -9,7 +9,7 @@ import { serverZone } from "@/lib/utils/server-zone"
 import { recordIdSchema } from "@/lib/validations/params"
 import { announcementSchema, announcementUpdateSchema } from "@/lib/validations/announcement"
 import { wallTimeToInstant } from "@/lib/utils/zoned-time"
-import { cacheLife, cacheTag, revalidatePath, updateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 const logger = createLogger("ANNOUNCEMENTS")
@@ -24,48 +24,6 @@ export interface AnnouncementData {
   expiresAt: string | null
 }
 
-/** The cache tag of the active announcements; every announcement write updates it (P11.19). */
-const ANNOUNCEMENTS_TAG = "announcements"
-
-/**
- * The active announcements, newest priority first, shared by every member
- * (P11.19): they are the same for everyone and hold no secret. Expiry is
- * applied per request by the caller, so a cached list never shows an expired
- * one.
- */
-async function activeAnnouncements(): Promise<AnnouncementData[]> {
-  "use cache"
-  cacheTag(ANNOUNCEMENTS_TAG)
-  cacheLife("hours")
-
-  const announcements = await prisma.announcement.findMany({
-    where: { isActive: true },
-    orderBy: [
-      { priority: "desc" },
-      { createdAt: "desc" },
-    ],
-    select: {
-      id: true,
-      title: true,
-      content: true,
-      priority: true,
-      isActive: true,
-      createdAt: true,
-      expiresAt: true,
-    },
-  })
-
-  return announcements.map((a): AnnouncementData => ({
-    id: a.id,
-    title: a.title,
-    content: a.content,
-    priority: a.priority,
-    isActive: a.isActive,
-    createdAt: a.createdAt.toISOString(),
-    expiresAt: a.expiresAt?.toISOString() ?? null,
-  }))
-}
-
 /**
  * Get all active, non-expired announcements sorted by priority (descending),
  * for signed-in members.
@@ -73,15 +31,47 @@ async function activeAnnouncements(): Promise<AnnouncementData[]> {
 export const getActiveAnnouncements = memberAction({
   fallbackError: "Failed to load announcements",
   handler: async () => {
-    const now = Date.now()
-    const announcements = await activeAnnouncements()
-    return ok(announcements.filter((a) => a.expiresAt === null || Date.parse(a.expiresAt) > now))
+    const now = new Date()
+
+    const announcements = await prisma.announcement.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: now } },
+        ],
+      },
+      orderBy: [
+        { priority: "desc" },
+        { createdAt: "desc" },
+      ],
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        priority: true,
+        isActive: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+    })
+
+    return ok(
+      announcements.map((a): AnnouncementData => ({
+        id: a.id,
+        title: a.title,
+        content: a.content,
+        priority: a.priority,
+        isActive: a.isActive,
+        createdAt: a.createdAt.toISOString(),
+        expiresAt: a.expiresAt?.toISOString() ?? null,
+      }))
+    )
   },
 })
 
 /** Home, the member list and the admin table all show announcements. */
 function revalidateAnnouncements() {
-  updateTag(ANNOUNCEMENTS_TAG)
   revalidatePath("/")
   revalidatePath("/announcements")
   revalidatePath("/admin/announcements")

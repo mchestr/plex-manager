@@ -17,7 +17,7 @@ import {
   setAnnouncementActive,
 } from '@/actions/announcements'
 import { getServerSession } from 'next-auth'
-import { cacheTag, revalidatePath, updateTag } from 'next/cache'
+import { revalidatePath } from 'next/cache'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { Prisma } from '@/lib/generated/prisma/client'
@@ -31,12 +31,8 @@ jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }))
 
-// The 'use cache' directive is inert under Jest; the tag calls are checked.
 jest.mock('next/cache', () => ({
-  cacheLife: jest.fn(),
-  cacheTag: jest.fn(),
   revalidatePath: jest.fn(),
-  updateTag: jest.fn(),
 }))
 
 jest.mock('@/lib/auth', () => ({
@@ -86,10 +82,7 @@ describe('announcements actions', () => {
 
     beforeEach(() => {
       mockGetServerSession.mockResolvedValue(memberSession)
-      jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2025-06-01T00:00:00Z'))
     })
-
-    afterEach(() => jest.restoreAllMocks())
 
     it('should return active, non-expired announcements', async () => {
       mockPrisma.announcement.findMany.mockResolvedValue([mockAnnouncement])
@@ -101,19 +94,11 @@ describe('announcements actions', () => {
       expect(result[0].title).toBe('Test Announcement')
       expect(mockPrisma.announcement.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { isActive: true },
+          where: expect.objectContaining({
+            isActive: true,
+          }),
         })
       )
-      expect(cacheTag).toHaveBeenCalledWith('announcements')
-    })
-
-    it('drops an expired announcement from the shared cached list', async () => {
-      mockPrisma.announcement.findMany.mockResolvedValue([
-        mockAnnouncement,
-        { ...mockAnnouncement, id: 'ann-old', expiresAt: new Date('2025-01-01') },
-      ])
-
-      await expect(active()).resolves.toEqual([expect.objectContaining({ id: 'ann-123' })])
     })
 
     it('refuses a signed-out caller', async () => {
@@ -140,10 +125,7 @@ describe('announcements actions', () => {
   })
 
   const PATHS = ['/', '/announcements', '/admin/announcements']
-  const expectRevalidated = () => {
-    PATHS.forEach((path) => expect(mockRevalidatePath).toHaveBeenCalledWith(path))
-    expect(updateTag).toHaveBeenCalledWith('announcements')
-  }
+  const expectRevalidated = () => PATHS.forEach((path) => expect(mockRevalidatePath).toHaveBeenCalledWith(path))
   const notFound = () => new Prisma.PrismaClientKnownRequestError('Record not found', { code: 'P2025', clientVersion: '7' })
   const input = { title: 'Storage upgrade', content: '- Disks swap', priority: 10, isActive: true, expiresAt: '' }
 

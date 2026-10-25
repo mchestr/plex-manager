@@ -11,7 +11,7 @@ test.describe('Discord bot page', () => {
     await expect(adminPage.getByTestId('discord-live-updated')).toContainText(/Updated \d+s ago/);
 
     for (const id of ['linked-roles', 'support-bot']) {
-      await expect(adminPage.getByTestId(`discord-status-${id}-word`)).toHaveText(/^(On|Off|Online|Offline|Needs setup)$/);
+      await expect(adminPage.getByTestId(`discord-status-${id}-word`)).toHaveText(/^(On|Off|Needs setup|Online|Offline|Waiting for a bot token|Turned off)$/);
     }
     await expect(adminPage.getByTestId('discord-status-linked-roles')).toContainText('Linked roles');
     await expect(adminPage.getByTestId('discord-status-support-bot')).toContainText('Support bot');

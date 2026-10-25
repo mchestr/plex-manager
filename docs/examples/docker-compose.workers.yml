@@ -14,6 +14,8 @@
 #   ENCRYPTION_KEYS, the URLs and the passwords below; see example.env) and
 #   share the database and Redis. Every role checks the encryption key at boot.
 #   The leases make a second worker safe, but one is enough.
+# - Each web container keeps its own page cache: after a settings save, the
+#   other replicas show the old server name or zone for up to a minute.
 #
 # Take a dump before starting a release that carries a migration
 # (docs/operations.md).
