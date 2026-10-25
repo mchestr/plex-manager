@@ -47,6 +47,8 @@
     "rewind:rollback-final-cut": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-rollback-final-cut.ts",
     "rewind:probe-sources": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-probe-sources.ts",
     "rewind:gallery": "tsx --tsconfig tsconfig.scripts.json scripts/rewind-gallery.ts",
+    "services:rows-audit": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/service-rows-audit.ts",
+    "services:rows-apply": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/service-rows-apply.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
@@ -54,7 +56,8 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "register-discord-metadata": "tsx --tsconfig tsconfig.scripts.json scripts/register-discord-metadata.ts",
-    "register-discord-commands": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/register-discord-commands.ts"
+    "register-discord-commands": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/register-discord-commands.ts",
+    "build:discord-scripts": "esbuild scripts/register-discord-commands.ts scripts/register-discord-metadata.ts --bundle --platform=node --target=node24 --format=cjs --outdir=scripts/dist --out-extension:.js=.cjs --tsconfig=tsconfig.scripts.json --conditions=react-server --external:discord.js --log-level=warning"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.83",
@@ -110,6 +113,7 @@
     "@types/react-dom": "^19.3.0",
     "axe-core": "4.11.0",
     "chalk": "6.0.1",
+    "esbuild": "0.28.2",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.4.2",
     "eslint-plugin-jsx-a11y": "6.10.2",

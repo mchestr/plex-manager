@@ -77,8 +77,8 @@ const TABLE: Row[] = [
   ["linkedRoles", "off", "Off", "neutral", "dot"],
   ["supportBot", "online", "Online", "success", "dot"],
   ["supportBot", "offline", "Offline", "destructive", "dot"],
-  ["supportBot", "needsSetup", "Needs setup", "warning", icons.warning],
-  ["supportBot", "off", "Off", "neutral", "dot"],
+  ["supportBot", "needsSetup", "Waiting for a bot token", "warning", icons.warning],
+  ["supportBot", "off", "Turned off", "neutral", "dot"],
   ["discordCommand", "SUCCESS", "Succeeded", "success", "dot"],
   ["discordCommand", "FAILED", "Failed", "destructive", undefined],
   ["discordCommand", "PENDING", "Running", "info", "spinner"],
@@ -181,9 +181,9 @@ describe("discordStatus", () => {
   })
 
   it.each([
-    [{ botEnabled: false }, "Off"],
-    [{ botEnabled: false, lastRenewedAt: null }, "Off"],
-    [{ hasBotToken: false }, "Needs setup"],
+    [{ botEnabled: false }, "Turned off"],
+    [{ botEnabled: false, lastRenewedAt: null }, "Turned off"],
+    [{ hasBotToken: false }, "Waiting for a bot token"],
     [{ lastRenewedAt: null }, "Offline"],
     [{ lastRenewedAt: new Date(now.getTime() - 90_000) }, "Online"],
     [{ lastRenewedAt: new Date(now.getTime() - 90_001) }, "Offline"],

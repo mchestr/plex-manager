@@ -12,6 +12,7 @@ import { ServiceSection } from "@/components/admin/settings/sections/service-sec
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 import { SystemSection } from "@/components/admin/settings/sections/system-section"
 import { WatchlistSection } from "@/components/admin/settings/sections/watchlist-section"
+import { ServiceRowsCheck } from "@/components/admin/settings/service-rows-check"
 import { SettingsLayout } from "@/components/admin/settings/settings-layout"
 import type { SettingsNavItem } from "@/components/admin/settings/settings-nav"
 import { SettingsPageActions } from "@/components/admin/settings/settings-page-actions"
@@ -35,8 +36,7 @@ import { serverZone } from "@/lib/utils/server-zone"
 import { getRewindContentRatings, getRewindLibraries } from "@/lib/wrapped/admin/settings-options"
 import { rewindSettingsFromConfig } from "@/lib/wrapped/config"
 import { getSeasonState } from "@/lib/wrapped/season"
-
-export const dynamic = "force-dynamic"
+import { connection } from "next/server"
 
 const PLATFORMS: Record<string, string> = { darwin: "macOS", win32: "Windows", linux: "Linux" }
 
@@ -51,6 +51,8 @@ function databaseProvider(url: string | undefined) {
  * glyphs beside one column of `SettingsSection`s, each with its live health.
  */
 export default async function SettingsPage() {
+  // The health checks read the clock: render per request, never at build
+  await connection()
   // Started, not awaited: the sections stream these in (P10.7)
   const plexLibraries = plexLibraryListing()
   const watchlistStats = getWatchlistSyncStats()
@@ -167,7 +169,7 @@ export default async function SettingsPage() {
           footerMeta={saved("other")}
         />
         <PrivacySection status={retention} />
-        <SecuritySection status={encryption} />
+        <SecuritySection status={encryption} serviceRows={<ServiceRowsCheck />} />
         <SystemSection
           appearance={<LightThemeSwitch enabled={settings.config.lightThemeEnabled} />}
           baseUrl={baseUrl}

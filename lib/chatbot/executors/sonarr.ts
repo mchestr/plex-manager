@@ -2,10 +2,10 @@ import "server-only"
 
 import { getSonarrCalendar, getSonarrDiskSpace, getSonarrEpisodeById, getSonarrEpisodes, getSonarrHealth, getSonarrHistory, getSonarrQualityProfiles, getSonarrQueue, getSonarrRootFolders, getSonarrSeries, getSonarrSeriesById, getSonarrSystemStatus, getSonarrWantedMissing, searchSonarrSeries } from "@/lib/connections/sonarr"
 import { ARR_MAX_RECORDS } from "@/lib/connections/arr-client"
-import { prisma } from "@/lib/prisma"
 import { type SonarrParsed } from "@/lib/validations/sonarr"
 
 import { arrListOutput, arrPageOutput, idForTitle, type ArrFilter } from "./arr-output"
+import { getActiveService } from "@/lib/data/active-service"
 
 /**
  * The series a tool asks about: `seriesId`, or the library series whose title
@@ -32,7 +32,7 @@ export async function executeSonarrTool(
   _userId?: string,
   _context?: string
 ): Promise<string> {
-  const server = await prisma.sonarr.findFirst({ where: { isActive: true } })
+  const server = await getActiveService("sonarr")
   if (!server) return "Error: No active Sonarr server configured."
 
   const config = {

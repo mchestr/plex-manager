@@ -22,6 +22,7 @@ import { logAuditEvent } from '@/lib/security/audit-log'
 import { checkRewindEligibility } from '@/lib/wrapped/eligibility'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
+jest.mock('next/cache', () => ({ refresh: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/wrapped/generation-settings', () => ({ getWrappedSettings: jest.fn() }))

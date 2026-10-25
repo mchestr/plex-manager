@@ -77,7 +77,7 @@ describe("DiscordSection", () => {
     renderSection({ hasClientCredentials: false, botEnabled: false })
 
     expect(screen.getByTestId("settings-discord-linked-roles-status")).toHaveTextContent("Needs setup")
-    expect(screen.getByTestId("settings-discord-support-bot-status")).toHaveTextContent("Off")
+    expect(screen.getByTestId("settings-discord-support-bot-status")).toHaveTextContent("Turned off")
   })
 
   it("shows the secrets in the saved state only, never as values", () => {

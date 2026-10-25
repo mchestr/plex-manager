@@ -6,7 +6,7 @@
 
 **The ultimate companion for your Plex Media Server.**
 
-Plex Management System transforms your Plex experience by combining powerful management tools, community features, and personalized insights into a single platform. It helps users configure their clients for optimal playback, manage media requests, report issues, and celebrate their viewing habits with "Plex Wrapped".
+Plex Management System combines server management tools, member onboarding and invites, and a personal year in review into a single platform. It helps members set up their devices for the best playback, request media and find support, and look back on their year with Rewind (formerly "Plex Wrapped"). Admins manage members, invites, services and an optional Stripe subscription from one place, for Plex and, optionally, Jellyfin.
 
 ## Screenshots
 
@@ -23,9 +23,9 @@ Plex Management System transforms your Plex experience by combining powerful man
 </td>
 <td width="50%">
 
-**Wrapped Viewer**
+**Admin Dashboard**
 
-![Wrapped Viewer](docs/images/wrapped-viewer.png)
+![Admin Dashboard](docs/images/admin-dashboard.png)
 
 </td>
 </tr>
@@ -39,10 +39,6 @@ Plex Management System transforms your Plex experience by combining powerful man
 </td>
 <td width="50%">
 
-**Admin Dashboard**
-
-![Admin Dashboard](docs/images/admin-dashboard.png)
-
 </td>
 </tr>
 </table>
@@ -53,49 +49,64 @@ Plex Management System transforms your Plex experience by combining powerful man
 
 ## Features
 
-### 🚀 Onboarding & Configuration
-- **Guided Onboarding** for new users to the server
-- **Client Configuration Guides** to ensure Direct Play and best quality
-- **Issue Reporting** workflow to streamline support requests
-- **Media Request** integration (via Overseerr)
-- **Discord Integration** for community engagement and announcements (optional)
-- **Service Status** monitoring for all connected platforms
+### Members
+- **Sign in with Plex** (PIN sign-in on plex.tv), or with a **Jellyfin** username and password when an admin turns Jellyfin sign-in on
+- **Guided onboarding**: playback settings for each device, how to request titles, and a support link (the Discord server, when configured, and the admin's own instructions)
+- **Home page** with Rewind, quick links to the request site and other services, what is new on the server, and in-app announcements
+- **Media requests** through the Overseerr request site
+- **Account** page: time zone, appearance, Rewind notifications, and **Your data**: download everything stored about you as JSON (`/account/export`) and delete single marks, watchlist items and assistant conversations
 
-### 📌 Watchlist Sync (Optional)
+### Rewind
+Each member's year on the server, as a story of pages (formerly "Plex Wrapped"):
+- **A season**: generation opens on 1 December and closes on 31 January by default (both set in Admin, Settings); the admin prepares and opens it from the season console at `/admin/rewind`
+- **Built from Tautulli history**: totals, top titles, habits, an archetype, and copy written by the configured AI provider, or template copy without one
+- **Article mode**: every Rewind also reads as a plain article at `/rewind/<year>/read`, which needs no JavaScript and is not indexed by search engines; earlier years open as archive articles
+- **Opt-in sharing**: nothing is public until the member makes a link and picks the pages it shows. A link serves a share-safe copy (no other member's name, no server-wide ranking), is signed with the member's name only when they choose, expires at the season close by default, and can be rotated or turned off at any time. Admins can turn public links off for the server
+- **Hide titles**: a member can hide titles from their Rewind
+- See the [Rewind runbook](docs/rewind.md) for the season, its flags and the final cut
+
+### Invites
+- **Plex and Jellyfin invites** with a code, a use limit, an expiry and the libraries to share; redemption shares the Plex libraries or creates the Jellyfin account
+
+### Watchlist Sync (Optional)
 - **Plex watchlist to Overseerr** - Members who turn it on get the titles on their Plex watchlist requested in Overseerr, on the admin's interval or with **Sync Now** (4 an hour)
 - **Filed as the member** - Each request is sent as the member's own Overseerr user (`X-Api-User`), so approval follows their Overseerr permissions: auto-approve rules, quotas and the requester shown in Overseerr are theirs, never the admin's
 - **Needs an Overseerr account imported from Plex** - A member is matched by their Plex account id, so they must have signed in to Overseerr with Plex once (or been imported from Plex by an admin). Members without a match are skipped, and their card says why
 - **Opt-in only** - Nothing syncs for a member who has not turned it on, whoever triggers the sync, nor while the admin has the feature off
+- Without Redis, one process runs the sync on its interval under a database lease, so several containers never sync twice
 
-### 📊 Plex Wrapped & Statistics
-- **Total watch time** breakdown (movies vs. shows)
-- **Top movies and shows** with play counts and ratings
-- **Server-wide leaderboards** to see how you rank
-- **Visualizations** with animated charts and transitions
-- **AI-Powered Insights** for personalized viewing summaries
+### Assistants (Optional)
+- **Admin assistant** in the admin pages, which can read the server's state through Plex, Tautulli, Overseerr, Sonarr and Radarr tools
+- **Discord assistant** (`/assistant` and direct messages to the bot) for linked members
+- Every surface that offers an assistant says that server admins can review assistant conversations and names the AI provider that processes them
+- **Prompt templates** (`/admin/prompts`): the style guides that set the voice of the Rewind copy, tried out in the Rewind playground (`/admin/rewind/playground`) before a season
 
-### 🤝 Share & Discover
-- **One-click sharing** of wrapped stats
-- **Public share links** for easy social media sharing
-- **Analytics tracking** for shared content
-- **Responsive design** that works on any device
+### Discord (Optional)
+- **Linked roles** that follow a member's access and watch hours
+- **Slash commands**: `/help`, `/mark`, `/assistant`, `/mystats`, `/mymarks` and `/watching`
+- See the [Discord bot guide](docs/discord-bot.md)
 
-### 🛠️ Admin Features
-- **User management** dashboard with role-based access control
-- **Service management** - Monitor and configure Plex, Tautulli, Overseerr, Sonarr, Radarr
-- **Announcements system** - Server-wide notifications with markdown support
-- **LLM usage tracking** and cost monitoring
-- **Share analytics** to see what's popular
-- **Audit logging** for security and compliance
-- **Centralized configuration** for all integrations
+### Admin
+- **Users**: roles, access, Plex and Jellyfin details, billing, activity, unsharing, disabling and removing a member (with a dry run)
+- **Settings** for every service, with connection tests, and **connection health** on the overview
+- **Announcements** shown in the app, with Markdown
+- **LLM usage and cost** per call and per member, and **share analytics** for Rewind links
+- **Queues**, and a privacy section in settings with the retention sweep. Admin and security events are written to an append-only audit table
 - **Subscription management** - Cancel, comp/grant access, and mark users exempt (when Stripe is enabled)
+- **Server status**: an optional uptime strip from Prometheus on the home page
 
-### 💳 Subscriptions & Access (Optional)
-- **Stripe-powered access gating** - Non-members can subscribe to auto-provision Plex access
+### Stripe Subscriptions (Optional)
+- **Stripe-powered access gating** - Non-members can subscribe to get Plex access, or have their Jellyfin account turned on
 - **Stripe Checkout & Billing Portal** - No in-app card handling; payment is fully hosted by Stripe
-- **Webhook-driven provisioning** - Automatic Plex invite on subscribe and removal on cancellation
+- **Webhook-driven provisioning** - Automatic Plex invite or Jellyfin account on subscribe, and removal on cancellation
 - **Off by default** - When disabled, the app behaves exactly as if the feature didn't exist
 - See the [Stripe Subscriptions guide](docs/stripe.md) for setup
+
+### Jellyfin
+Jellyfin is supported for sign-in, invites, onboarding, admin, Stripe and Discord. What still needs Plex:
+- **Rewind** reads Plex history from Tautulli, so a member without a Plex account has no Rewind
+- **Watchlist sync** reads the Plex watchlist
+- The setup wizard connects Plex; Jellyfin is added afterwards in Admin, Settings
 
 ---
 
@@ -104,23 +115,24 @@ Plex Management System transforms your Plex experience by combining powerful man
 ### Prerequisites
 
 - **Node.js** 22 or later (the Docker image ships Node.js 24 LTS)
-- **npm** or **yarn**
+- **npm**
 - **PostgreSQL** database (SQLite is no longer supported as of Prisma v7)
 - **Redis**, which Rewind and Stripe subscriptions require (it backs the background job queue)
 - Access to:
-  - A **Plex server** (with admin token)
-  - **Tautulli** instance (for viewing statistics)
-  - **Overseerr** (optional, for request stats)
-  - **Sonarr/Radarr** (optional, for media management features)
-  - **OpenAI** API key (optional, for AI insights)
+  - A **Plex server** you own (setup signs in to plex.tv with the owner's account)
+  - **Tautulli** (required: Rewind and the statistics read its history)
+  - **Overseerr** (optional, for requests and watchlist sync)
+  - **Sonarr/Radarr** (optional, for the assistant and Rewind's returning shows)
+  - **Jellyfin** (optional, for Jellyfin sign-in and invites)
+  - An **AI provider** key (optional): OpenAI, Anthropic, Google or an OpenAI-compatible server, for Rewind copy and the assistants
   - A **Stripe** account (optional, for subscription-based access gating)
 
 ### Installation
 
 1. **Clone the repository**
 ```bash
-git clone <repository-url>
-cd plex-wrapped
+git clone https://github.com/mchestr/plex-manager.git
+cd plex-manager
 ```
 
 2. **Install dependencies**
@@ -135,10 +147,12 @@ cp example.env .env
 
 Edit `.env` and configure:
 - `DATABASE_URL` - PostgreSQL connection string (e.g., `postgresql://user:password@localhost:5432/plex_manager`)
-- `NEXT_PUBLIC_APP_URL` - Your public application URL (e.g., `http://localhost:3000` for dev, `https://yourdomain.com` for production)
-- `NEXTAUTH_URL` - Your application URL for NextAuth callbacks (should match `NEXT_PUBLIC_APP_URL` in production)
+- `NEXTAUTH_URL` - Your application URL (e.g., `http://localhost:3000` for dev, `https://yourdomain.com` for production)
+- `NEXT_PUBLIC_APP_URL` - Optional public URL for share links and images; defaults to `NEXTAUTH_URL` and must have the same origin
 - `NEXTAUTH_SECRET` - Generate with: `openssl rand -base64 32`
-- `PLEX_CLIENT_IDENTIFIER` - Unique identifier for your app instance (any string, doesn't need to be a UUID)
+- `PLEX_CLIENT_IDENTIFIER` - Unique identifier for your app instance (`openssl rand -hex 16`); keep it stable
+- `ENCRYPTION_KEYS` - Encrypts the secrets the app stores: `k1:` followed by `openssl rand -base64 32` (required in production)
+- `REDIS_URL` - Redis for the job queue and rate limits; Rewind and Stripe need it
 
 4. **Initialize the database**
 ```bash
@@ -166,7 +180,7 @@ To choose the code yourself, set `SETUP_TOKEN` (at least 16 characters, e.g. `op
 Choose **Connect with Plex** and approve Plex Manager on plex.tv with the account that owns your server. Back in the wizard, pick your server and the address Plex Manager should use (a local one is fastest). Servers shared with that account can't be chosen; only their owner can set them up. If your server doesn't show up, or this browser can't reach plex.tv, open **Enter a token instead** and type the server URL (for example `https://example.com:32400`) and an X-Plex-Token.
 
 9. **Complete the setup wizard**
-Plex and Tautulli (URL format: `http://example.com:8181`) are required. Overseerr, Sonarr, Radarr, the two AI providers, Discord and Prometheus are optional: **Skip for now** moves on, and you can set them up later in Admin, Settings. The summary lists what is connected and what was skipped; **Open admin** finishes setup and signs you in with the Plex account from step 1.
+Plex and Tautulli (URL format: `http://example.com:8181`) are required. Overseerr, Sonarr, Radarr, the two AI providers, Discord and Prometheus are optional: **Skip for now** moves on, and you can set them up later in Admin, Settings. The summary lists what is connected and what was skipped; **Open admin** finishes setup and signs you in with the Plex account you connected.
 
 ---
 
@@ -175,52 +189,73 @@ Plex and Tautulli (URL format: `http://example.com:8181`) are required. Overseer
 ### Project Structure
 
 ```
-plex-wrapped/
+plex-manager/
 ├── app/                    # Next.js App Router (pages, layouts, routes)
-│   ├── (app)/              # Authenticated app layout group
-│   ├── admin/              # Admin dashboard and management
-│   ├── api/                # API routes (webhooks, external integrations)
-│   ├── auth/               # Authentication pages
-│   ├── onboarding/         # User onboarding flow
-│   ├── setup/              # Initial setup wizard
-│   └── rewind/             # Rewind pages and public share links
-├── actions/                # Server Actions (mutations, data operations)
+│   ├── (app)/              # Signed-in member pages: home, account, help, Rewind
+│   ├── admin/              # Admin pages
+│   ├── api/                # API routes (Stripe webhook, health, metrics, Rewind cards)
+│   ├── auth/               # Sign-in callback and error pages
+│   ├── invite/             # Invite redemption
+│   ├── onboarding/         # Member onboarding
+│   ├── rewind/s/           # Public Rewind share links
+│   ├── setup/              # Setup claim and first-run wizard
+│   └── subscribe/          # Stripe subscription flow
+├── actions/                # Server Actions (mutations)
 ├── components/             # React components
-│   ├── admin/              # Admin-specific components
-│   ├── generator/          # Wrapped generation UI
-│   ├── onboarding/         # Onboarding components
-│   ├── setup-wizard/       # Setup wizard steps
+│   ├── admin/              # Admin components
+│   ├── dashboard/          # Member home page
+│   ├── rewind/             # Rewind story, pages, article mode and sharing
+│   ├── setup/              # Setup claim and wizard steps
+│   ├── shell/              # App, public and admin shells
 │   └── ui/                 # Shared UI primitives
-├── lib/                    # Utilities, helpers, business logic
-│   ├── connections/        # External API clients (Plex, Tautulli, Overseerr, etc.)
-│   ├── security/           # Security utilities (rate limiting, CSRF, audit logging)
-│   ├── validations/        # Zod schemas for all services
-│   ├── wrapped/            # Wrapped generation and statistics
-│   └── utils/              # Shared utilities
-├── types/                  # TypeScript type definitions
+├── lib/                    # Business logic
+│   ├── connections/        # Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr and Prometheus clients
+│   ├── data/               # Server-only admin loaders
+│   ├── members/            # Member access, removal and export
+│   ├── queue/              # BullMQ queues and jobs
+│   ├── rewind/             # Rewind presentation: pages, typesetting, cards
+│   ├── security/           # Rate limiting, encryption, audit logging
+│   ├── stripe/             # Stripe client and subscription sync
+│   ├── validations/        # Zod schemas
+│   └── wrapped/            # Rewind generation pipeline
+├── docs/                   # Operator guides
+├── e2e/                    # Playwright end-to-end tests
+├── evals/                  # Rewind golden fixtures and eval harness
 ├── prisma/                 # Database schema and migrations
-└── e2e/                    # Playwright end-to-end tests
+└── types/                  # TypeScript type definitions
 ```
+
+CLAUDE.md has the full tree.
 
 ### Available Scripts
 
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run start` | Start production server |
+| `npm run build` | Build for production (the standalone server in `.next/standalone`) |
+| `npm run start:prod` | Start the standalone production server with `.env` and graceful shutdown |
+| `npm run start` | Start the production build with `next start` (no graceful shutdown) |
 | `npm run lint` | Run ESLint |
-| `npm test` | Run unit/integration tests |
+| `npm run typecheck` | Type-check the app and the tests |
+| `npm run knip` | Find unused files, exports and dependencies |
+| `npm run design:check` | Check the design-system rules |
+| `npm test` | Run unit tests |
 | `npm run test:watch` | Run tests in watch mode |
-| `npm run test:coverage` | Generate coverage report |
+| `npm run test:coverage` | Run unit tests with coverage and its floors |
+| `npm run test:integration` | Run the Postgres and Redis integration suites (needs `TEST_DATABASE_URL` and `TEST_REDIS_URL`) |
 | `npm run test:e2e` | Run end-to-end tests (Playwright) |
 | `npm run test:e2e:ui` | Run E2E tests in UI mode |
+| `npm run env:docs` | Regenerate `docs/environment.md` and `example.env` from `lib/env.ts` |
 | `npm run db:generate` | Generate Prisma Client |
 | `npm run db:deploy` | Apply pending migrations (install and upgrade) |
 | `npm run db:push` | Contributor-only: push the schema to a throwaway database while prototyping |
 | `npm run db:migrate` | Contributor-only: create a new migration (`prisma migrate dev`) |
 | `npm run db:studio` | Open Prisma Studio (database GUI) |
 | `npm run db:seed` | Deletes all users, Rewinds and service configs, then creates test users. Local or `_test` databases only; needs `E2E_TEST_MODE=true`. Never run it on a host that serves production |
+| `npm run register-discord-commands` | Register the Discord slash commands |
+| `npm run register-discord-metadata` | Register the Discord linked-role metadata |
+
+The `rewind:*` scripts run the season's operator tasks; the [Rewind runbook](docs/rewind.md) says when to use each.
 
 ### Development Guidelines
 
@@ -278,9 +313,8 @@ npm run db:studio     # Open database GUI
 
 ### Environment Variables
 
-Every variable, with whether production requires it and its default, is in the [environment reference](docs/environment.md), generated from `lib/env.ts` by `npm run env:docs`. Copy `example.env` (generated from the same source) to `.env` to start. Beyond those:
+Every variable, with whether production requires it and its default, is in the [environment reference](docs/environment.md), generated from `lib/env.ts` by `npm run env:docs`. Copy `example.env` (generated from the same source) to `.env` to start.
 
-- **Encryption**: production needs `ENCRYPTION_KEYS` (or the older `ENCRYPTION_KEY`) for the secrets stored at rest, unless `ALLOW_PLAINTEXT_SECRETS=true`; a boot check stops the server when the key does not match the database. Rotation and lost-key recovery: [docs/operations.md](docs/operations.md#encryption-keys).
 - **Docker Compose (development)**: `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required; `docker compose up` refuses to start without them. `docker-compose.yml` publishes Postgres (5432, 5433) and Redis (6379) on `127.0.0.1` only and builds the app container's `DATABASE_URL` and `REDIS_URL` from the two passwords; use them in your own `.env` URLs as well. A database volume created before this change keeps its old password (`postgres`), so set `POSTGRES_PASSWORD` to that or change it with `ALTER USER`. The compose databases run `postgres:16-alpine` (they were 15): Postgres 16 cannot open a 15 data directory, so dump an existing `db` volume while it still runs 15 (see [docs/operations.md](docs/operations.md#backup)), remove the volume (`docker compose down -v` removes every volume), then start the new one and restore the dump. The app container starts only once `db` and `redis` pass their health checks.
 - **Development**: `DEV_*` variables for setup wizard defaults (read only with `NODE_ENV=development` and `DEV_SETUP_PREFILL=true`, until setup is complete)
   - Use URL format: `DEV_PLEX_URL="https://localhost:32400"` (includes protocol and port)
@@ -291,41 +325,21 @@ Every variable, with whether production requires it and its default, is in the [
 
 ## Deployment
 
-### Production Deployment Requirements
+Install with the production compose file `deploy/docker-compose.yml` and the guides in `docs/`:
 
-Install with the production compose file `deploy/docker-compose.yml` and the [deployment guide](docs/deployment.md), which covers the reverse proxy, the first-run setup claim and bare metal. The variables a production install sets are marked "Required in production" in the [environment reference](docs/environment.md). To move an install to a new host name, follow the [domain move checklist](docs/domain-move.md).
+| Guide | What it covers |
+|---|---|
+| [Deployment](docs/deployment.md) | Docker Compose with the published image, the reverse proxy and `TRUSTED_PROXY_HOPS`, claiming the server, web and worker containers, bare metal, the image and its health check |
+| [Environment reference](docs/environment.md) | Every variable, whether production requires it, and its default |
+| [Domain move](docs/domain-move.md) | Moving an install to a new host name |
+| [Operations](docs/operations.md) | Backups, restores, migrations, encryption keys, request IDs and metrics, member roles and Jellyfin sign-in |
+| [Rewind runbook](docs/rewind.md) | The season: flags, opening, monitoring, roll back and the final cut |
+| [Privacy](docs/privacy.md) | Every table of personal data, member removal, export and retention |
+| [Stripe](docs/stripe.md) | Subscriptions, the webhook, and Plex and Jellyfin access |
+| [Discord bot](docs/discord-bot.md) | The bot, slash commands and linked roles |
+| [Releasing](docs/releasing.md) and [CHANGELOG.md](CHANGELOG.md) | Versions, tags and every release's upgrade notes |
 
-A production server checks the required variables at start and exits with code 1, logging `env.invalid` and the variable's name (never its value), when `NEXTAUTH_SECRET` is missing, shorter than 32 characters, has fewer than 10 distinct characters or is a published placeholder (such as `example.env`'s old value), when `NEXTAUTH_URL` or `NEXT_PUBLIC_APP_URL` is not `https:` (loopback hosts excepted), or when `PLEX_CLIENT_IDENTIFIER` is empty. Two URLs with different origins only log a warning. `ALLOW_INSECURE_HTTP=true` lets a LAN-only install run on plain http; it logs a warning at every start, and session cookies are then not Secure, so never set it on an install reachable from the internet.
-
-### Important Notes
-
-- **No hardcoded localhost**: The application will throw an error in production if neither `NEXT_PUBLIC_APP_URL` nor `NEXTAUTH_URL` is set
-- **HTTPS required**: In production, both URL variables must be HTTPS, or the server refuses to start (see above). Session cookies are Secure, with the `__Secure-` name, exactly when `NEXTAUTH_URL` is https
-- **Domain consistency**: Both URL variables should point to the same domain to avoid authentication issues
-- **Reverse proxy and rate limits**: Rate limits key on the client IP (IPv6 clients by their /64), read from `X-Forwarded-For`. Run the app behind a reverse proxy that adds the client address to `X-Forwarded-For` (Traefik and Caddy do by default, nginx with `proxy_add_x_forwarded_for`), and set `TRUSTED_PROXY_HOPS` to the number of proxies that append to it: `1` (the default) for one proxy. Keep the app port off the public internet so every request passes through the proxy; a client that reaches the app directly can choose its own address. Set `REDIS_URL` so limits hold across processes and restarts. The server logs a warning once if `TRUSTED_PROXY_HOPS` is invalid or no client address can be found, because such requests share one bucket.
-- **CDN in front of the proxy** (`TRUSTED_PROXY_HOPS=2`): this is only correct when the inner proxy keeps the CDN's `X-Forwarded-For` and appends to it. Traefik and Caddy drop an incoming `X-Forwarded-For` from senders they do not trust, so add the CDN's address ranges to Traefik's `forwardedHeaders.trustedIPs` or Caddy's `trusted_proxies`; otherwise the header has a single entry and every visitor is keyed by a CDN edge address. Let the origin accept traffic only from the CDN (a firewall rule on the CDN's published ranges, or a tunnel), because a request sent straight to the proxy can choose the entry the app reads.
-- **Upgrading to a release with `TRUSTED_PROXY_HOPS`**: earlier releases keyed rate limits on the leftmost `X-Forwarded-For` entry, which the client controls; the app now reads the entry the outermost trusted proxy wrote. Check `TRUSTED_PROXY_HOPS` against your proxy chain when you upgrade (see `example.env`). Behind a CDN and a proxy, leaving it at `1` keys every visitor by the CDN's edge address, so visitors who share an edge share the sign-in, invite, share-page and poster limits and get false "Too many attempts" errors.
-- **Jellyfin sign-in limits**: the app allows 10 Jellyfin sign-in attempts per 15 minutes from one client address and 5 failed attempts per 15 minutes for one username. Jellyfin's own lockout still applies, and the app's limits do not prevent it: by default Jellyfin disables a user after 3 failed sign-ins (5 for administrators), configurable per user as "Failed login tries before user is locked out". Anyone who knows a username can still lock that account through the sign-in page; the app's limits only slow password guessing. An administrator re-enables a locked user in the Jellyfin dashboard.
-- **Jellyfin sign-in on Jellyfin 12**: the app identifies itself in the `Authorization` header, which Jellyfin 12.0 and later require (they ignore the legacy `X-Emby-Authorization` header unless legacy authorization is turned on), and it retries once with the legacy header only if the server answers 400. Each sign-in's Jellyfin session is logged out straight away, because the app keeps only the Jellyfin user ID; a logout that fails or takes longer than 3 seconds is logged as `jellyfin.auth.logout_failed` at warn and leaves that session on the server. Earlier releases left one session per member on the Jellyfin server, listed under the client "Plex Wrapped" and the device ID `plex-wrapped-server` (or your `JELLYFIN_DEVICE_ID`); a Jellyfin administrator can delete them in Dashboard → Devices.
-- **Jellyfin accounts are never linked by email**: a Jellyfin sign-in matches only the Jellyfin user ID, and the Jellyfin username is never stored as an email address, because any Jellyfin user can rename themselves to someone else's address. A new member who signs in with both Plex and Jellyfin gets two separate accounts. A Plex sign-in or Plex invite whose email another account already holds still goes ahead, without storing the email. "Allow Jellyfin sign-in" in Admin → Settings turns the Jellyfin provider off, not just the button on the login page; members already signed in with Jellyfin stay signed in until their session expires (at most 7 days).
-- **Admin roles**: roles set in Admin → Users stick. A sign-in only ever promotes: the Plex server owner is always an admin, and so is a Jellyfin administrator, because Jellyfin has no owner. A sign-in never demotes anyone, so app admins demote members in the UI, and a Jellyfin lookup that fails (a timeout or a server error) keeps the stored role. The Plex server owner and the last admin cannot be demoted.
-- **Unsharing removes one server's share only**: Unshare in Admin → Users, and the Stripe access removal, delete the member's share of the configured Plex server and nothing else. The member stays your plex.tv friend and keeps any other servers you share with them; remove those in Plex itself. A share that is already gone counts as success ("already removed"), so a retry or a second click settles. Managed Plex Home users have no share to remove and report "already removed".
-- **Ending sessions**: unsharing a member, demoting an admin, disabling an account (Admin → Users → a user → Disable account) and the Stripe access removal end that user's sessions within five minutes, when the session next checks the database. A disabled user cannot sign in with Plex or Jellyfin until an admin enables the account again.
-- **Upgrading to the release that stops email linking**: earlier releases linked a Jellyfin sign-in to any account whose email matched the Jellyfin username, so a Jellyfin user could take over an account, the admin's included, by renaming themselves to its email. The upgrade keeps those links, and the sessions they produced, so every server that allowed Jellyfin sign-in should check them:
-  1. Take a database dump before deploying, and store it encrypted. The release runs a migration that clears data and cannot be undone.
-  2. Before deploying, list the accounts that hold both a Plex and a Jellyfin ID, and keep the output. Each row is a link an earlier release made by email: either a Jellyfin sign-in onto a Plex account, which the server logs record as "Linked Jellyfin account to existing user" with the Jellyfin username, or a Plex invite redeemed onto a Jellyfin account, which was not logged.
-     ```sql
-     SELECT id, name, email, "isAdmin", "plexUserId", "jellyfinUserId" FROM "User" WHERE "jellyfinUserId" IS NOT NULL AND "plexUserId" IS NOT NULL;
-     ```
-  3. For each row whose Jellyfin account you do not recognise as that member's own, remove the link and the email it may have written: `UPDATE "User" SET "jellyfinUserId" = NULL, "email" = NULL WHERE id = '...';`. For each other row whose email is not that member's own address (an earlier release wrote the Jellyfin username there at every Jellyfin sign-in), clear the email only: `UPDATE "User" SET "email" = NULL WHERE id = '...';`. The migration leaves these rows alone, so this review is the only step that removes such an email. The member's Plex email comes back on their next Plex sign-in.
-  4. If you removed any link, rotate `NEXTAUTH_SECRET` and restart the app. Everyone has to sign in again, which ends the sessions the Jellyfin user still holds on that account: they last up to 7 days and keep the account's admin rights. Then search the server logs for `ADMIN_PRIVILEGE_GRANTED` and `ADMIN_PRIVILEGE_REVOKED` audit events on those accounts, and review the settings, invites and users changed while the link existed.
-
-  The migration then clears the stored email of every account that has a Jellyfin ID and no Plex ID, because such an email can only have come from a Jellyfin username. Accounts with a Plex ID keep their email unless you cleared it in step 3. An account whose email is cleared finds only the Overseerr requests of an Overseerr user with its Plex ID (none for an account without a Plex ID), cannot start Stripe Checkout, and cannot be invited to Plex by the Stripe grant, until a Plex sign-in stores its Plex email again.
-- **Upgrading to the release where the share page reads the database**: a Rewind share link now opens only when its token is exactly 43 URL-safe characters (`A-Z`, `a-z`, `0-9`, `-` and `_`), the shape the app's link generator makes. A link with any other token answers 404 without a database lookup, and nothing is logged. Before deploying, count the shared Rewinds whose token has another shape:
-  ```sql
-  SELECT count(*) FROM "PlexWrapped" WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';
-  ```
-  If the count is not 0, those links stop working after the upgrade. Clear their tokens (`UPDATE "PlexWrapped" SET "shareToken" = NULL WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';`) and tell the owners to turn sharing on again for a new link, or keep the release back until those links can lapse.
+A production server checks the required variables at start and exits with code 1, logging `env.invalid` and the variable's name (never its value), when `NEXTAUTH_SECRET` is missing, shorter than 32 characters, has fewer than 10 distinct characters or is a published placeholder, when `NEXTAUTH_URL` or `NEXT_PUBLIC_APP_URL` is not `https:` (loopback hosts excepted), when `PLEX_CLIENT_IDENTIFIER` is empty, or when there is no usable encryption key. `ALLOW_INSECURE_HTTP=true` lets a LAN-only install run on plain http; it logs a warning at every start, and session cookies are then not Secure, so never set it on an install reachable from the internet.
 
 ### Versions and upgrades
 
@@ -342,7 +356,7 @@ Prisma has no down migrations, so a dump is the only way back from a migration. 
    ```bash
    docker compose exec -T db pg_dump -U postgres -Fc plex_wrapped > plex-manager-$(date +%F-%H%M).dump
    ```
-2. **Read the upgrade notes** in [CHANGELOG.md](CHANGELOG.md) for every version you are moving past, and the "Upgrading to the release…" notes above.
+2. **Read the upgrade notes** in [CHANGELOG.md](CHANGELOG.md) for every version you are moving past, and the [notes kept from earlier releases](#notes-kept-from-earlier-releases) below.
 3. **Pull or rebuild**: check out the new release's tag and run `npm ci && npm run build`, or pull the new version's image tag (`:0.3.0`, not `:latest`).
 4. **Apply migrations**: run `npm run db:deploy`, or let the container do it at start. The container logs `prisma migrate status` first; start it with `SKIP_MIGRATIONS=true` to apply migrations by hand instead.
 5. **Check the app**: sign in, and check that `/api/health` answers 200 with `"database":"ok"` and `"redis":"ok"`; `docker ps` shows the container `(healthy)`.
@@ -367,20 +381,31 @@ Earlier instructions installed the schema with `npm run db:push` (now contributo
 
 Then upgrade as above. The new release's migrations, including their data steps, apply normally.
 
+#### Notes kept from earlier releases
+
+These came with the 0.1.0 release ([CHANGELOG.md](CHANGELOG.md)); read them when upgrading from a release before it.
+
+- **Upgrading to a release with `TRUSTED_PROXY_HOPS`**: earlier releases keyed rate limits on the leftmost `X-Forwarded-For` entry, which the client controls; the app now reads the entry the outermost trusted proxy wrote. Check `TRUSTED_PROXY_HOPS` against your proxy chain when you upgrade (see `example.env`). Behind a CDN and a proxy, leaving it at `1` keys every visitor by the CDN's edge address, so visitors who share an edge share the sign-in, invite, share-page and poster limits and get false "Too many attempts" errors.
+- **Upgrading to the release that stops email linking**: earlier releases linked a Jellyfin sign-in to any account whose email matched the Jellyfin username, so a Jellyfin user could take over an account, the admin's included, by renaming themselves to its email. The upgrade keeps those links, and the sessions they produced, so every server that allowed Jellyfin sign-in should check them:
+  1. Take a database dump before deploying, and store it encrypted. The release runs a migration that clears data and cannot be undone.
+  2. Before deploying, list the accounts that hold both a Plex and a Jellyfin ID, and keep the output. Each row is a link an earlier release made by email: either a Jellyfin sign-in onto a Plex account, which the server logs record as "Linked Jellyfin account to existing user" with the Jellyfin username, or a Plex invite redeemed onto a Jellyfin account, which was not logged.
+     ```sql
+     SELECT id, name, email, "isAdmin", "plexUserId", "jellyfinUserId" FROM "User" WHERE "jellyfinUserId" IS NOT NULL AND "plexUserId" IS NOT NULL;
+     ```
+  3. For each row whose Jellyfin account you do not recognise as that member's own, remove the link and the email it may have written: `UPDATE "User" SET "jellyfinUserId" = NULL, "email" = NULL WHERE id = '...';`. For each other row whose email is not that member's own address (an earlier release wrote the Jellyfin username there at every Jellyfin sign-in), clear the email only: `UPDATE "User" SET "email" = NULL WHERE id = '...';`. The migration leaves these rows alone, so this review is the only step that removes such an email. The member's Plex email comes back on their next Plex sign-in.
+  4. If you removed any link, rotate `NEXTAUTH_SECRET` and restart the app. Everyone has to sign in again, which ends the sessions the Jellyfin user still holds on that account: they last up to 7 days and keep the account's admin rights. Then search the server logs for `ADMIN_PRIVILEGE_GRANTED` and `ADMIN_PRIVILEGE_REVOKED` audit events on those accounts, and review the settings, invites and users changed while the link existed.
+
+  The migration then clears the stored email of every account that has a Jellyfin ID and no Plex ID, because such an email can only have come from a Jellyfin username. Accounts with a Plex ID keep their email unless you cleared it in step 3. An account whose email is cleared finds only the Overseerr requests of an Overseerr user with its Plex ID (none for an account without a Plex ID), cannot start Stripe Checkout, and cannot be invited to Plex by the Stripe grant, until a Plex sign-in stores its Plex email again.
+- **Upgrading to the release where the share page reads the database**: a Rewind share link now opens only when its token is exactly 43 URL-safe characters (`A-Z`, `a-z`, `0-9`, `-` and `_`), the shape the app's link generator makes. A link with any other token answers 404 without a database lookup, and nothing is logged. Before deploying, count the shared Rewinds whose token has another shape:
+  ```sql
+  SELECT count(*) FROM "PlexWrapped" WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';
+  ```
+  If the count is not 0, those links stop working after the upgrade. Clear their tokens (`UPDATE "PlexWrapped" SET "shareToken" = NULL WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';`) and tell the owners to turn sharing on again for a new link, or keep the release back until those links can lapse.
+
+
 ### Docker Deployment
 
-The project includes a `Dockerfile` for containerized deployments, published as `ghcr.io/mchestr/plex-manager`; `deploy/docker-compose.yml` runs it ([docs/deployment.md](docs/deployment.md)). When deploying with Docker:
-
-1. Set environment variables in your deployment platform or `.env` file
-2. Ensure `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` are set to your production domain
-3. The application will fail to start in production mode if these are not configured
-4. Publish the app port on loopback or an internal network only, with your reverse proxy in front: `127.0.0.1:3000:3000` under compose `ports:`, `-p 127.0.0.1:3000:3000` with `docker run`, or no published port when the proxy shares a Docker network with the app. Rate limits trust `X-Forwarded-For` (see "Reverse proxy and rate limits" above), so a client that reaches the app port directly gets a fresh limit on every request.
-5. The image installs no native toolchain (`python3`, `make`, `g++`). `zlib-sync`, which compresses the Discord gateway, is an optional dependency that is skipped without one, so the Discord bot connects uncompressed. See [docs/discord-bot.md](docs/discord-bot.md).
-6. At every start the container logs `prisma migrate status`, then runs `prisma migrate deploy` (what `npm run db:deploy` runs). With `SKIP_MIGRATIONS=true` it logs `SKIP_MIGRATIONS=true: not applying migrations` and starts without applying them. Take a dump before starting a release that carries a migration; see [docs/operations.md](docs/operations.md).
-7. The site starts serving without waiting for Redis or Discord. The queue worker retries Redis with backoff for about two minutes and then stays off (logging `queue.redis_unreachable`) until the next restart.
-8. On `docker stop` (SIGTERM) the app drains running jobs, stops the Discord bot and releases its lock, closes its connections, and exits with 0, or with 1 if that takes longer than `SHUTDOWN_GRACE_MS` (default 8000 ms, below Docker's 10 s stop timeout). The image and `npm run start:prod` set `NEXT_MANUAL_SIG_HANDLE=true` so the app handles the signal instead of Next; Next then no longer closes the HTTP server itself, and in-flight requests finish inside the same grace window because the process exits last.
-9. The image runs Node.js 24 LTS under `tini` as the unprivileged `nextjs` user. The app files are owned by root and cannot be rewritten at runtime; the one writable path is `/app/.next/cache`, where Next's own cache and Rewind's (`REWIND_CACHE_DIR=/app/.next/cache/rewind`: posters, cards, fonts) live. Mount a volume there to keep the Rewind cache across container replacements; it can always be rebuilt. Migrations run through a Prisma CLI pinned with its own lockfile in `docker/prisma-cli/` (keep its versions equal to the root lockfile; a test checks).
-10. **Health check.** `GET /api/health` checks the database and, when `REDIS_URL` is set, Redis, each within 2 seconds. It answers `200` with `{"status":"ok","checks":{"database":"ok","redis":"ok"}}`, or `503` with `"status":"fail"` and the failed check (`redis` is `not_configured` without `REDIS_URL`, which does not fail it). It needs no sign-in and carries no hostnames or error text; point monitoring at it. `GET /api/health?probe=live` answers `200` without touching either dependency: the image's `HEALTHCHECK` uses it, so a Redis outage, which the site survives, never gets the container restarted.
+The project includes a `Dockerfile` for containerized deployments, published as `ghcr.io/mchestr/plex-manager`; `deploy/docker-compose.yml` runs it. Publish the app port on loopback or an internal network only, with your reverse proxy in front, because rate limits trust `X-Forwarded-For`. The image, its health check (`/api/health`) and its shutdown behaviour are described in [docs/deployment.md](docs/deployment.md#the-image).
 
 ---
 
@@ -388,15 +413,17 @@ The project includes a `Dockerfile` for containerized deployments, published as 
 
 | Category | Technology |
 |----------|-----------|
-| **Framework** | Next.js 14+ (App Router) |
+| **Framework** | Next.js 16 (App Router) and React 19 |
 | **Language** | TypeScript (strict mode) |
 | **Database** | Prisma v7 + PostgreSQL |
-| **Authentication** | NextAuth.js (Plex PIN-based authentication) |
-| **Data Fetching** | TanStack Query (React Query) |
-| **Styling** | Tailwind CSS |
-| **Animations** | Framer Motion |
+| **Authentication** | NextAuth.js (Plex PIN sign-in; Jellyfin username and password) |
+| **Data Fetching** | Server Components, Server Actions and TanStack Query |
+| **Styling** | Tailwind CSS v4 and Base UI primitives |
+| **Animations** | Motion |
+| **Charts** | Recharts |
 | **Validation** | Zod |
-| **Job Queue** | BullMQ + Redis (optional) |
+| **Job Queue** | BullMQ + Redis |
+| **AI** | Vercel AI SDK (OpenAI, Anthropic, Google, OpenAI-compatible) |
 | **Payments** | Stripe (optional) |
 | **Testing** | Jest + Testing Library + Playwright |
 
@@ -404,51 +431,52 @@ The project includes a `Dockerfile` for containerized deployments, published as 
 
 ## How It Works
 
-1. **User Authentication** - Sign in with your Plex account using PIN-based authentication
-2. **Onboarding** - New users are guided through server configuration and features
-3. **Data Collection** - Fetch viewing statistics from Tautulli and Plex
-4. **Dashboard** - View server info, request media, and explore content
-5. **Plex Wrapped** - Generate shareable year-end summaries (optional)
+1. **Setup** - The server owner claims the install with a one-time code, connects Plex with their plex.tv account, then Tautulli and any optional services
+2. **Sign-in** - Members sign in with Plex (or Jellyfin), and only people with access, an invite or, with Stripe on, a subscription get in
+3. **Onboarding** - New members are guided through playback settings, requests and support
+4. **Home** - Members see Rewind, quick links, what is new and announcements
+5. **Rewind** - During the season, each member's year is generated from Tautulli history in the background, and they can read it as a story or an article and share it if they choose
 
 ---
 
 ## Integrations
 
-The platform integrates with multiple services to provide a comprehensive Plex management experience:
-
 ### Core Services
 - **Plex Media Server** - Primary media server integration (required)
-- **Tautulli** - Watch history and statistics tracking (required for Wrapped features)
+- **Tautulli** - Watch history and statistics (required)
 
 ### Optional Services
-- **Overseerr** - Media request management and availability tracking
-- **Sonarr** - TV series management and monitoring
-- **Radarr** - Movie management and monitoring
-- **Discord** - Bot integration for server announcements and community features
-- **OpenAI/LLM Providers** - AI-powered insights for Wrapped summaries
-- **Stripe** - Subscription-based access gating with auto-provisioned Plex access (see [docs/stripe.md](docs/stripe.md))
-- **Redis** - Backing store for the BullMQ background job queue
+- **Jellyfin** - Sign-in, invites and Stripe access for Jellyfin members
+- **Overseerr** - Media requests and watchlist sync
+- **Sonarr** and **Radarr** - Assistant tools; Sonarr also adds returning shows to Rewind
+- **Discord** - Linked roles, slash commands and the assistant
+- **AI providers** - Rewind copy and the assistants
+- **Prometheus** - The server status strip on the home page
+- **Stripe** - Subscription-based access with auto-provisioned Plex or Jellyfin access (see [docs/stripe.md](docs/stripe.md))
+- **Redis** - The BullMQ job queue and shared rate limits; Rewind and Stripe need it
 
-All integrations are configured through the setup wizard or admin panel, with validation and connection testing built-in.
+Plex, Tautulli and the optional services are configured in the setup wizard or in Admin, Settings, with connection tests; Jellyfin and Stripe are set up in Admin, Settings.
 
 ---
 
 ## Security
 
-- **PIN-based authentication** via Plex
-- **Server access verification** - Only users with access to your Plex server can sign in
-- **Secure token generation** for sharing features
-- **Admin-only actions** protected by role checks
-- **Input validation** with Zod schemas on all user inputs and API responses
+- **Sign-in through Plex or Jellyfin** - Only a Plex user with access to your server, the holder of a valid invite, or (with Stripe on) a subscriber can become a member; a Jellyfin user signs in only while an admin allows Jellyfin sign-in. Jellyfin accounts are never linked to others by email
+- **Sessions that end when access ends** - Unsharing, demotion, disabling, removal and a lapsed subscription end that member's sessions within five minutes
+- **Admin checks on every admin action and read** - Admin Server Actions and the server-only admin loaders check the session themselves; a layout is never the only check
+- **Input validation** with Zod schemas on every action input, route parameter and external API response
 - **SQL injection protection** via Prisma parameterized queries
-- **XSS prevention** - React escapes by default, no unsafe HTML rendering
+- **XSS prevention** - React escapes by default; Markdown renders through a sanitising renderer
+- **Strict Content Security Policy** - A per-request nonce with `'strict-dynamic'` and no inline or eval scripts; violations are logged through a rate-limited report endpoint, and HSTS is configurable (`docs/operations.md`, "Security headers and CSP")
 - **CSRF protection** - Built into Next.js Server Actions
-- **Rate limiting** - Redis-backed limits on sign-in, invite, PIN, share and admin endpoints, keyed by the client IP behind `TRUSTED_PROXY_HOPS` proxies
-- **Audit logging** - Tracking of admin actions and security events
-- **Encryption at rest** - Service keys and tokens, member Plex tokens, Discord and Stripe secrets and AI prompt text are AES-256-GCM encrypted under a rotatable keyring (`ENCRYPTION_KEYS`); a secret the key cannot read is asked for again instead of breaking the app
+- **Rate limiting** - Redis-backed limits (with an in-process fallback) on sign-in, invite, PIN, share and admin endpoints, keyed by the client IP behind `TRUSTED_PROXY_HOPS` proxies
+- **Audit logging** - Admin and security events, including admin reads of member content, go to stdout and an append-only `AuditLog` table
+- **Encryption at rest** - Service keys and tokens, member Plex tokens, Discord and Stripe secrets and AI prompt text are AES-256-GCM encrypted under a rotatable keyring (`ENCRYPTION_KEYS`), which production requires; a secret the key cannot read is asked for again instead of breaking the app
 - **Signed webhooks** - Stripe webhooks are verified against the raw request body (no admin auth needed)
+- **Opt-in sharing** - A Rewind is private until its member makes a link; a link serves a share-safe copy and can be revoked at once
 - **Member removal** - Admins can remove a member: their access, sessions, Stripe subscription, Discord grant and stored data go. [docs/privacy.md](docs/privacy.md) lists every table of personal data and what removal does to it
 - **Member export** - Members download their data as JSON from Account, Your data (`/account/export`, three a day) and delete single marks, watchlist items and assistant conversations there
+- **Retention** - A daily sweep deletes content past its window (`docs/privacy.md`, "Retention")
 
 See [CLAUDE.md](CLAUDE.md) for detailed security best practices.
 

@@ -1,8 +1,6 @@
-import { getServerSession } from "next-auth"
 import { NextRequest } from "next/server"
 import { z } from "zod"
 
-import { authOptions } from "@/lib/auth"
 import { cardBadRequest, cardError, cardNotFound, serveCard } from "@/lib/rewind/cards/serve"
 import { previewIdSchema } from "@/lib/rewind/dry-run/input"
 import { previewOwnerId, readDryRun } from "@/lib/rewind/dry-run/store"
@@ -10,9 +8,7 @@ import { createLogger } from "@/lib/utils/logger"
 import { loadShareContext } from "@/lib/wrapped/data/share-context"
 import { SharePageTypeSchema } from "@/lib/wrapped/data/share-safe-schema"
 import { withRequestContext } from "@/lib/actions/route"
-
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
+import { getSession } from "@/lib/data/session"
 
 const logger = createLogger("REWIND_CARD_PREVIEW")
 
@@ -40,7 +36,7 @@ async function handleGet(request: NextRequest, context: { params: Promise<{ prev
     const daily = dailySchema.safeParse(request.nextUrl.searchParams.get("daily") ?? undefined)
     if (!daily.success) return cardBadRequest("Invalid daily")
 
-    const session = await getServerSession(authOptions)
+    const session = await getSession()
     if (!session?.user?.isAdmin) return cardNotFound()
     const stored = await readDryRun(params.data.previewId)
     if (stored?.status !== "completed") return cardNotFound()

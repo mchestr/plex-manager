@@ -2,7 +2,6 @@
 
 import type { Route } from "next"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 
 import { adminRegenerateRewind } from "@/actions/rewind-generation"
 import { Button } from "@/components/ui/button"
@@ -24,7 +23,6 @@ interface RewindPreviewActionsProps {
 /** The preview page's actions (P7.9): Regenerate, Roll back and "Read as an article". */
 export function RewindPreviewActions({ userId, year, name, rollback, toggle }: RewindPreviewActionsProps) {
   const toast = useToast()
-  const router = useRouter()
 
   return (
     <>
@@ -60,7 +58,6 @@ export function RewindPreviewActions({ userId, year, name, rollback, toggle }: R
           const result = await adminRegenerateRewind({ userId, year })
           if (!result.success) return { error: result.error }
           toast.showSuccess(result.data.alreadyQueued ? `${name}'s Rewind is already generating` : `Regenerating ${name}'s Rewind`)
-          router.refresh()
           return {}
         }}
         data-testid="admin-rewind-preview-regenerate-dialog"

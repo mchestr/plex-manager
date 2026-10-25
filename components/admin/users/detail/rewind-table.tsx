@@ -2,7 +2,6 @@
 
 import type { ColumnDef } from "@tanstack/react-table"
 import { Eye, History, RefreshCw, Sparkles, Undo2 } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { getRewindRollbackTarget } from "@/actions/admin/rewind-season"
@@ -57,7 +56,6 @@ interface RewindTableProps {
 /** The Rewind tab's table: Preview, the version history pages, Roll back and Regenerate (P10.6). */
 export function RewindTable({ userId, name, rows, estimateCopy }: RewindTableProps) {
   const toast = useToast()
-  const router = useRouter()
   const [rollback, setRollback] = useState<{ year: number; from: string | null } | null>(null)
   const [regenerate, setRegenerate] = useState<number | null>(null)
 
@@ -116,7 +114,6 @@ export function RewindTable({ userId, name, rows, estimateCopy }: RewindTablePro
             const result = await adminRegenerateRewind({ userId, year: regenerate })
             if (!result.success) return { error: result.error }
             toast.showSuccess(result.data.alreadyQueued ? `${name}'s Rewind is already generating` : `Regenerating ${name}'s Rewind`)
-            router.refresh()
             return {}
           }}
           data-testid="admin-user-regenerate-dialog"

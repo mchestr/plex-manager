@@ -9,8 +9,6 @@ import { getFormat } from "@/lib/settings/app-settings"
 import { recordIdSchema } from "@/lib/validations/params"
 import { STYLE_GUIDE_MAX_CHARS } from "@/lib/validations/prompt"
 
-export const dynamic = "force-dynamic"
-
 /** A v2 template's text as a style guide's start: the first 1,200 characters, and a note when text was cut. */
 async function copiedFrom(fromParam: string | string[] | undefined) {
   const id = recordIdSchema.safeParse(fromParam)

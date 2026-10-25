@@ -9,8 +9,6 @@ import { getAdminGate } from "@/lib/admin"
 import { EVAL_DEFAULT_SORT, EVAL_SORTS, loadEvalRuns, sortEvalRuns } from "@/lib/admin/eval-results"
 import { parseTableParams } from "@/lib/ui/table-params"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = { title: "Evals", robots: { index: false } }
 
 /**

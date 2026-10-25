@@ -24,8 +24,6 @@ import { lockedModelLabel, REWIND_LOCK, type FrozenRewindModel } from "@/lib/wra
 import { PROMPT_VERSION } from "@/lib/wrapped/prompt/rewind-2026"
 import { getSeasonState } from "@/lib/wrapped/season"
 
-export const dynamic = "force-dynamic"
-
 const EDITIONS = ["full", "pocket", "postcard"]
 const COPY_SOURCES = ["llm", "repair", "mixed", "template"]
 

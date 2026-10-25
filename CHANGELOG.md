@@ -25,9 +25,11 @@ check); the `no-changelog` label skips it.
 - **Retention:** the first daily retention sweep deletes data past its window, including audit rows older than 400 days and Discord command logs older than 90 days. To keep more, set the `RETENTION_*_DAYS` variables (`docs/privacy.md`) before you deploy.
 - **Stripe:** turning Stripe on now asks for confirmation when there are Jellyfin-only members who are not exempt.
 - **Setup steps:** an unfinished setup resumes on the matching step.
-- **Do not deploy before 2027-01-31.** The encryption keyring and the worker role change how stored secrets are read and where the Rewind queues run; the 2026 Rewind season stays live until it closes on 2027-01-31.
+- **Duplicate service rows:** reads of a service's active row now take the most recently updated one. Before you deploy, run `npm run services:rows-audit`; where a service lists a "read after this release" row that differs from the "read today" one, run `services:rows-apply` (after a dump) soon after the deploy to keep the row you want.
+- **Deploy outside the Rewind season.** The encryption keyring and the worker role change how stored secrets are read and where the Rewind queues run, so deploy this release before the season opens on 2026-12-01 or after it closes on 2027-01-31, not while it is live.
 - **Encryption keys (breaking):** a production server now refuses to start without a key for the secrets it stores. Before you pull this release, set `ENCRYPTION_KEYS="k1:$(openssl rand -base64 32)"` (a comma-separated `kid:base64` keyring; the first entry encrypts new writes). An install that already sets only `ENCRYPTION_KEY` keeps working and writes `enc:v2:legacy:` values; to move to a keyring, add `ENCRYPTION_KEYS` beside it, run Admin > Settings > Security > "Encrypt stored secrets", then remove `ENCRYPTION_KEY`. `ALLOW_PLAINTEXT_SECRETS=true` is the unsafe escape hatch: it starts without a key, stores secrets as plain text and warns at every boot. A boot check stops the server with `crypto.key_mismatch` when the key does not match the database, so a restore under the wrong key never serves. Keep every key in your password manager, never beside a dump; rotation and lost-key recovery are in `docs/operations.md` ("Encryption keys"). After the first boot with Redis the app re-encrypts stored plaintext in the background.
 - **Worker role:** every running container must be on a 0.3.0 (P11.2 lease lock) or later release before you deploy this one, because its migration drops the `DiscordBotLock` and `WatchlistSyncLock` tables that older releases still use. `PROCESS_ROLE` (`web`, `worker` or `all`, default `all`) now picks what a container runs: one `all` container behaves as before; `web` serves requests only; `worker` runs the queues, schedulers and Discord bot and answers 404 for everything but `/api/health` and `/api/metrics`. Any other value stops a production boot. `docs/examples/docker-compose.workers.yml` runs web containers and one worker. While Redis is down, request-path enqueues fail fast with "the queue is unavailable" and the Stripe webhook answers `503`, so Stripe retries.
+- **HSTS:** releases before this one sent `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` on every response. It is now one year with neither flag by default; browsers that saw the old header keep it until it expires. If your domain is on the preload list or your subdomains rely on it, set `HSTS_INCLUDE_SUBDOMAINS=true` and `HSTS_PRELOAD=true` (and `HSTS_MAX_AGE=63072000`) before you deploy.
 - **Bare metal:** `npm run start:prod` now runs the standalone server (`node --env-file-if-exists=.env .next/standalone/server.js`, Node.js 22.9 or later); `npm run build` copies `.next/static` and `public` beside it. `example.env` is regenerated from `lib/env.ts`, so compare your `.env` with it, and every variable is listed in `docs/environment.md`. Discord account-linking links no longer fall back to `localhost` outside development: set `NEXTAUTH_URL` (or `DISCORD_PORTAL_URL`).
 
 ### Added
@@ -40,6 +42,7 @@ check); the `no-changelog` label skips it.
 - A daily retention sweep, with per-table `RETENTION_*_DAYS` overrides and an audited "Run now" in the new Privacy section of admin settings.
 - Stripe for Jellyfin-only members: checkout without an email, and a subscription turns the member's Jellyfin account on and a cancellation turns it off.
 - Discord replies for Jellyfin-only members. `/mystats` and the linked-role hours are computed from stored data.
+- One active row per service: "Check service rows" (Admin > Settings > Security) and `npm run services:rows-audit` list any service with more than one active row, with each row's host, dates, connection result and the row the app reads today; `npm run services:rows-apply -- --dump <file> --keep <Table>=<id>` (or the same check after you confirm a dump) keeps the chosen row and deactivates the rest, audited. Every read of a service's active row is now ordered by its last update.
 
 ### Changed
 
@@ -47,12 +50,15 @@ check); the `no-changelog` label skips it.
 - The assistants use the member's or the server's time zone and the app locale, and `<html lang>` follows the configured locale.
 - The package is named `plex-manager`, to match the repository and the image.
 - One lease lock (database or Redis) runs the Discord bot, watchlist sync, Rewind generation and member access changes; every job type has a deduplication or deterministic id, and a job that exhausts its retries logs `queue.job_exhausted`.
+- The Discord bot starts within one poll (10 s) of "Bot enabled" being turned on with a token saved, with no restart, and `/admin/discord` says "Turned off", "Waiting for a bot token" or "Online". `ENABLE_DISCORD_BOT=false` still opts a process out. Slash commands register from the image with `docker compose exec app node scripts/dist/register-discord-commands.cjs` (or `register-discord-metadata.cjs`), and the script falls back to the token and client ID saved in admin settings.
 
 ### Security
 
 - Stored secrets, member Plex tokens and AI prompt and reply text are encrypted by default; production refuses to start without a key unless `ALLOW_PLAINTEXT_SECRETS=true`.
 - First-run setup needs a claim: the one-time setup code from the container log, or `SETUP_TOKEN`. A wrong code is limited to 5 a minute, and after setup every setup action is admin-only.
 - The automatic Stripe revoke never removes a member whose Jellyfin admin status is "admin" or "unknown".
+- A strict Content Security Policy: a per-request nonce with `'strict-dynamic'`, no inline or eval scripts, and violations logged through the rate-limited `/api/csp-report`. `CSP_REPORT_ONLY=true` sends it report-only while you investigate a violation.
+- `X-XSS-Protection` and `X-DNS-Prefetch-Control` are gone and `Referrer-Policy` is `strict-origin-when-cross-origin`. HSTS is sent only when `NEXTAUTH_URL` is https, for `HSTS_MAX_AGE` (default one year), with `includeSubDomains` and `preload` only when `HSTS_INCLUDE_SUBDOMAINS` or `HSTS_PRELOAD` is true.
 
 ## [0.3.0] - 2026-10-23
 

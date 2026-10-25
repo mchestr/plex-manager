@@ -132,6 +132,7 @@ async function buildPlexAccessMap(users: { id: string; plexUserId: string | null
 
   const plexServer = await prisma.plexServer.findFirst({
     where: { isActive: true },
+  orderBy: { updatedAt: "desc" },
   })
 
   if (!plexServer) {

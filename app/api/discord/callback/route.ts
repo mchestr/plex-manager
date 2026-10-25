@@ -1,4 +1,3 @@
-import { authOptions } from "@/lib/auth"
 import { completeDiscordLink, discordLinkOrigin, DiscordStateError } from "@/lib/discord/integration"
 import {
   clearedDiscordOAuthCookie,
@@ -8,10 +7,10 @@ import {
 import { getBaseUrl } from "@/lib/env"
 import { type DiscordCallbackFlash, withFlash } from "@/lib/ui/flash-codes"
 import { createLogger } from "@/lib/utils/logger"
-import { getServerSession } from "next-auth"
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 import { withRequestContext } from "@/lib/actions/route"
+import { getSession } from "@/lib/data/session"
 
 const logger = createLogger("DISCORD_CALLBACK")
 
@@ -93,7 +92,7 @@ async function linkFromCallback(request: NextRequest, userId: string | undefined
 }
 
 async function handleGet(request: NextRequest) {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   const userId = session?.user?.id
 
   const outcome = await linkFromCallback(request, userId)

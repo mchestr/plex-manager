@@ -1,12 +1,9 @@
 import type { Metadata } from "next"
-import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard"
-import { authOptions } from "@/lib/auth"
 import { getOnboardingData } from "@/lib/member/onboarding"
-
-export const dynamic = "force-dynamic"
+import { getSession } from "@/lib/data/session"
 
 export const metadata: Metadata = { title: "Get set up" }
 
@@ -21,7 +18,7 @@ export default async function OnboardingPage({
 }: {
   searchParams: Promise<{ flash?: string | string[] }>
 }) {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session?.user?.id) redirect("/")
 
   const [data, query] = await Promise.all([getOnboardingData(session.user.id), searchParams])

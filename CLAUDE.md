@@ -2,17 +2,20 @@
 
 ## Project Overview
 
-A Next.js-based Plex management platform that combines server management tools, user onboarding, and personalized "Wrapped" statistics. Integrates with Plex, Tautulli, Overseerr, and optional Discord/LLM providers.
+A Next.js-based Plex management platform that combines server management tools, member onboarding and invites, and Rewind, each member's personal year in review (formerly "Wrapped"). Integrates with Plex, Tautulli and Overseerr, with optional Jellyfin sign-in, Sonarr/Radarr, Stripe subscriptions, Discord, Prometheus and LLM providers.
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router) + React 19
 - **Language**: TypeScript (strict mode with exhaustive checks)
 - **Database**: Prisma v7 + PostgreSQL (SQLite no longer supported)
-- **Auth**: NextAuth.js (Plex PIN-based authentication)
+- **Auth**: NextAuth.js 4 (Plex PIN sign-in, plus Jellyfin username and password when enabled)
 - **State**: TanStack Query (React Query) for client-side data fetching
-- **Styling**: Tailwind CSS v4 with utility-first approach
-- **Animation**: Framer Motion
+- **Styling**: Tailwind CSS v4 with utility-first approach; primitives in `components/ui/` are built on Base UI (`@base-ui/react`)
+- **Animation**: Motion (`motion/react`)
+- **Charts**: Recharts, through `ChartCard`
+- **Jobs**: BullMQ on Redis (Rewind generation, Stripe access, watchlist sync, retention)
+- **LLM**: Vercel AI SDK (OpenAI, Anthropic, Google and OpenAI-compatible servers)
 - **Validation**: Zod schemas for all inputs/responses
 - **Testing**: Jest + Testing Library + Playwright (E2E)
 
@@ -24,62 +27,83 @@ A Next.js-based Plex management platform that combines server management tools, 
 - **Colocation** - Keep related files close (components with tests, actions with validators)
 
 ### Data Fetching
-- **Server Components**: Fetch directly in components (async/await)
+- **Server Components**: Fetch directly in components (async/await). Read the session with `getServerSession(authOptions)` (`next-auth`, `authOptions` from `@/lib/auth`); admin data comes from the `server-only` loaders in `lib/data/*`, which check `assertAdmin()` themselves
 - **Client Components**: Use TanStack Query with proper error/loading states
 - **Query keys**: Every TanStack Query key comes from `hooks/query-keys.ts`; first data arrives as Server Component props (seed a query with `initialData`), and a mutation invalidates the key its reader uses
 - **Server Actions**: For mutations, form submissions, user-triggered operations
 - **Validation**: All inputs validated with Zod before processing
+- **Cache Components** (`cacheComponents: true`, P11.19): no segment exports `dynamic`, `revalidate`, `fetchCache` or `runtime`; uncached data renders per request
+  - Session: `getSession()` from `@/lib/data/session`, never `getServerSession(authOptions)`; active service rows: `getActiveService(kind)` from `@/lib/data/active-service`. Both are React `cache()`d per request
+  - Shared, non-secret data uses `'use cache'` with `cacheTag` and `cacheLife` (`getAppSettings()` tag `app-settings`, Prometheus status, plan names), and the actions that change it call `updateTag(tag)`. The cache is per process, so with several `web` containers another container serves a cached value until its `cacheLife` revalidates; data that must show at once on every container (announcements) is read per request. Readers the bot or jobs also call go through `cachedOrDirect` (`@/lib/utils/use-cache`), and a database read calls `notDuringBuild()` first, since the Docker build has no database
+  - Never put a row with `ENCRYPTED_FIELDS`, the session or anything viewer-specific inside `'use cache'` (`__tests__/security/use-cache-no-secrets.test.ts`)
+  - An action that revalidates already refreshes the page; where the client needs a refresh, the action calls `refresh()` from `next/cache` instead of `router.refresh()`
 
 ### File Organization
 ```
 app/                     # Next.js App Router (pages, layouts, routes)
 ├── (app)/              # Authenticated member layout group
+│   ├── account/        # Account page and /account/export (the member's data)
+│   ├── announcements/  # In-app announcements
 │   ├── discord/        # Discord account linking
-│   └── rewind/         # Rewind: /rewind, /rewind/[year], the scope layout and its fonts
-├── admin/              # Admin dashboard and management
-├── api/                # API routes (webhooks, external integrations)
-├── auth/               # Authentication pages
-├── invite/             # Invite redemption
-├── onboarding/         # User onboarding flow
+│   ├── help/           # Help and support
+│   ├── membership/     # Stripe membership (when enabled)
+│   └── rewind/         # Rewind: /rewind, /rewind/[year] (story), /rewind/[year]/read (article), the scope layout
+├── admin/              # Admin pages: overview, users, invites, settings, rewind, prompts, queues, LLM usage
+├── api/                # API routes (webhooks, health, metrics, admin search, Rewind cards and posters)
+├── auth/               # Plex sign-in callback, access denied and auth error pages (sign-in itself is on /)
+├── dev/                # Development-only UI sheet
+├── invite/             # Invite redemption (Plex and Jellyfin)
+├── onboarding/         # Member onboarding flow
 ├── rewind/s/           # Public Rewind share links (/wrapped/* redirects to /rewind/*)
-├── setup/              # Initial setup wizard
+├── setup/              # First-run setup claim and wizard
 └── subscribe/          # Stripe subscription flow
 
-actions/                # Server Actions (mutations, data operations)
+actions/                # Server Actions, built with publicAction/memberAction/adminAction
+├── admin/             # Admin actions (users, servers, invites, settings, Rewind season, retention)
+└── chatbot/           # Admin assistant chat action
 components/             # React components
 ├── admin/             # Admin-specific components
 ├── dashboard/         # Member home page cards
-├── generator/         # Wrapped generating animation
+├── guides/            # Help and onboarding guides
 ├── onboarding/        # Onboarding components
-├── rewind/            # Rewind scope, status panels and the story stage
+├── rewind/            # Rewind scope, story stage, pages, article mode, sharing
 ├── setup/
 │   └── setup-wizard/  # Setup wizard steps
-├── shell/             # App and admin shells (from P6.1)
+├── shell/             # App, public and admin shells
 └── ui/                # Shared UI primitives
 
-hooks/                  # Shared client hooks
+hooks/                  # Shared client hooks; query-keys.ts holds every TanStack Query key
 lib/                    # Utilities, helpers, business logic
+├── actions/           # The action helpers (define-action.ts), ActionResult, route handler helpers
 ├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
 ├── charts/            # Chart slot map (var(--chart-n)) and generated text summaries for ChartCard
 ├── chatbot/           # Admin assistant: tools, executors, prompts and the conversation loop (server-only)
-├── connections/       # External API clients (Plex, Tautulli, Overseerr, etc.)
+├── connections/       # External API clients (Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr, Prometheus)
 ├── data/              # Server-only admin loaders, each checking assertAdmin() next to its data
+├── db/                # Encrypted fields and the ?schema= parameter
 ├── design/            # Token mirror of app/globals.css and colour contrast helpers
 ├── discord/           # Discord bot, commands and linking
-├── llm/               # LLM chat client and pricing
+├── invites/           # Invite passes and redemption (Plex and Jellyfin)
+├── llm/               # LLM facade (generateStructured, chatWithTools), provider registry, model table, usage
+├── locks/             # LeaseLock and LeasePoller (database or Redis leases)
+├── members/           # Member service rule, access grant/revoke, offboarding, erase and export
 ├── observability/     # Request id reader, /api/metrics sources and the Prometheus text writer
 ├── og/                # App icons and the default OG card (next/og)
 │   └── fonts/         # Committed IBM Plex subsets for next/og (scripts/build-og-fonts.py)
-├── rewind/            # Rewind 2026: typesetter, format rules, page registry, card fonts
-├── security/          # Security utilities (rate limiting, CSRF, audit logging)
-├── settings/          # getAppSettings(): server zone, locale and server name
+├── queue/             # BullMQ queues, workers and job processors
+├── retention/         # Retention policy and the daily sweep
+├── rewind/            # Rewind 2026: typesetter, format rules, page registry, cards, article mode
+├── security/          # Security utilities (rate limiting, encryption, audit logging)
+├── settings/          # getAppSettings(): server zone, locale and server name; connection health
+├── stripe/            # Stripe client, prices, events and subscription sync
 ├── ui/                # UI helpers: status vocabulary, icon map, poster palette, safe Markdown links, error copy
 ├── validations/       # Zod schemas for all services
-├── wrapped/           # Wrapped generation and statistics
+├── watchlist/         # Plex watchlist to Overseerr sync
+├── wrapped/           # Rewind generation pipeline: sources, stats, facts, archetypes, copy, season
 └── utils/             # Shared utilities
 
 evals/                  # Rewind golden fixtures and eval harness (evals/rewind/README.md)
-types/                  # TypeScript type definitions (admin.ts, discord.ts, wrapped.ts, ...)
+types/                  # TypeScript type definitions (admin.ts, onboarding.ts, setup.ts, wrapped.ts, ...)
 prisma/                # Database schema and migrations
 ```
 
@@ -103,10 +127,13 @@ export default async function Page() {
 
 import { useQuery } from '@tanstack/react-query'
 
-export function ClientComponent() {
+import { queryKeys } from '@/hooks/query-keys'
+
+export function ClientComponent({ initial }: { initial: Data }) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['key'],
-    queryFn: async () => { /* ... */ }
+    queryKey: queryKeys.watchlistSync(),
+    queryFn: async () => { /* ... */ },
+    initialData: initial,
   })
 
   if (isLoading) return <Loading />
@@ -187,7 +214,7 @@ export function cn(...inputs: ClassValue[]) {
 // The action helper returns a coded failure; it never throws
 const result = await renameThing({ name })
 if (!result.success) {
-  showToast({ type: 'error', message: result.error })
+  showError(result.error) // const { showError } = useToast()
 }
 ```
 
@@ -252,12 +279,12 @@ if (!result.success) {
 
 Located in `components/ui/`:
 - **Actions**: `Button` (variants `primary`, `secondary`, `outline`, `ghost`, `destructive`, `destructive-solid`, `link`; `loading` and `loadingLabel`), `SubmitButton`, `Toggle`, `SegmentedControl`
-- **Forms**: `Input`, `Textarea`, `SecretInput`, `Select` and its parts, `Checkbox`, `Switch`, `Slider`, `Field`, `FormField`, `Label`, `DateRangeFilter`, `FilterBar`
+- **Forms**: `Input`, `Textarea`, `SecretInput`, `Select` and its parts, `Checkbox`, `RadioGroup`, `Switch`, `Slider`, `Field`, `FormField`, `Label`, `DateRangeFilter`, `FilterBar`
 - **Overlays**: `Dialog`, `AlertDialog`, `ConfirmDialog` (with `useActionDialog`), `Sheet`, `Popover`, `DropdownMenu`, `Tooltip`, `Command`
-- **Display**: `Card` (compose `CardHeader`, `CardContent`, `CardFooter`), `Badge`, `StatusBadge`, `StatTile`, `DataTable`, `ChartCard`, `Tabs`, `Stepper`, `Poster`, `Time`, `MarkdownBody`, `Icon`, `PageHeader`, `SettingsSection`
+- **Display**: `Card` (compose `CardHeader`, `CardContent`, `CardFooter`), `Badge`, `StatusBadge`, `StatTile`, `DataTable`, `ChartCard`, `Tabs`, `Stepper`, `Poster`, `Time`, `MarkdownBody`, `Icon`, `PageHeader`, `SettingsSection`, `UptimeStrip`, `Wordmark`
 - **Feedback**: `Alert`, `useToast`, `Spinner`, `Skeleton`, `EmptyState`, `ErrorState`, `StatusScreen`, `LiveStatus`
 
-ESLint enforces this: a raw `<button>`, `<input>`, `<select>`, `<textarea>` or inline `<svg>` outside `components/ui/**` is an error (`no-restricted-syntax`, selectors in `eslint/restricted-syntax.mjs`). The allowlist is Rewind art (`components/rewind/**`), the dev sheet (`app/dev/**`), the `next/og` image routes and `app/api/**`; the v2 viewer and the setup wizard only warn until P11.29 and P10.25 replace them. The old adapters (`StyledInput`, `StyledDropdown`, `ModalShell`, `ConfirmModal`, `LoadingSpinner` and the rest) are deleted, and importing one is an error.
+ESLint enforces this: a raw `<button>`, `<input>`, `<select>`, `<textarea>` or inline `<svg>` outside `components/ui/**` is an error (`no-restricted-syntax`, selectors in `eslint/restricted-syntax.mjs`). The allowlist is Rewind art (`components/rewind/**`), the dev sheet (`app/dev/**`), the `next/og` image routes and `app/api/**`. The old adapters (`StyledInput`, `StyledDropdown`, `ModalShell`, `ConfirmModal`, `LoadingSpinner` and the rest) are deleted, and importing one is an error.
 
 ## Testing Strategy
 
@@ -303,9 +330,12 @@ describe('Component', () => {
 - **Env** - Change read-only keys with `jest.replaceProperty(process.env, 'NODE_ENV', 'production')`
 
 ### E2E Tests (Playwright)
-- **Authenticated sessions** - Use setup project for auth state
-- **Critical user flows** - Test onboarding, wrapped generation, admin actions
-- **Chromium only** - `playwright.config.ts` runs the `chromium` and `setup-wizard` projects, plus the `visual-*` screenshot projects (see `e2e/visual/README.md`)
+- **Critical user flows** - Test onboarding, invites, Rewind, admin actions
+- **Projects** (`playwright.config.ts`):
+  - `chromium` (every functional spec) and `setup-wizard` (the wizard and its axe scan, which reopen setup);
+  - `rewind-e2e-chromium`, `rewind-e2e-webkit` and `rewind-e2e-firefox` (`e2e/rewind/*.spec.ts`; Firefox runs the share page and archive specs), and `rewind-a11y-chromium`, `rewind-a11y-webkit` and `rewind-a11y-firefox` (`e2e/a11y/rewind*.a11y.spec.ts`; Firefox only the `@article` tests);
+  - `rewind-perf` (`e2e/perf/*.perf.spec.ts`, chromium: the 4x-throttled long-task gate, the 110 KB first-page budget and the admin chart budget);
+  - screenshots: `visual-desktop`, `visual-mobile`, `visual-setup-desktop`, `visual-setup-mobile`, the `rewind-visual-*` phone and desktop projects (chromium and webkit), and the light-theme projects (`visual-light-*`, `a11y-light`) behind `light-theme-setup`. See `e2e/visual/README.md`
 - **Auth fixtures** - Import `test` and `expect` from `e2e/fixtures/auth.ts` (`adminPage`, `regularUserPage`) or `e2e/fixtures/session.ts` (`signIn`); both mint the NextAuth session cookie, so they work against `next dev` and a production build. There is no test-token login. See `e2e/README.md`
 - **Production mode** - `E2E_SERVER=prod` runs `npm run build:e2e` then `next start`; CI runs every project that way (visual specs and `e2e/production.spec.ts` skip without it). `E2E_PREBUILT=1` skips the build when one already exists
 
@@ -324,12 +354,14 @@ describe('Component', () => {
 - Type-check app and tests: `npm run typecheck` (`tsconfig.json`, which also covers `e2e/`, then `tsconfig.test.json` for the Jest files)
 - Unused code: `npm run knip` (production mode; it is a CI gate)
 - **Integration suites** - A Postgres-backed test is `*.pg.test.ts` and wraps its body in `describePg`; a Redis-backed one is `*.redis.test.ts` with `describeRedis` (both in `test/helpers/integration.ts`). `npm test` leaves them out; `TEST_DATABASE_URL=... TEST_REDIS_URL=redis://localhost:6379/0 npm run test:integration` runs them serially. Locally a missing variable skips them; under `CI` it fails them
-- **Coverage ratchet** - Jest fails below the floors in `jest.coverage-thresholds.json`. After raising coverage, run `npm run test:coverage` then `node scripts/coverage-ratchet.mjs --update`, which only ever raises floors
+- **Coverage ratchet** - Jest fails below the floors in `jest.coverage-thresholds.json`. After raising coverage, run `npm run test:coverage` then `node scripts/coverage-ratchet.mjs --update`, which only ever raises floors. CI's unit run sets `DATABASE_URL=""`: `prisma` from `@/lib/prisma` builds its client on first use, so a test that imports it without the shared mock fails rather than reaching a database
 - **Throwaway Postgres** - For a production-mode E2E run on a fresh database: `docker run --rm -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=plex_manager_e2e_test -p 5433:5432 postgres:16`, then point `E2E_DATABASE_URL` at it and run `prisma migrate deploy`
 
 ### CI Checks
 
-`.github/workflows/build.yml` ("Checks") runs the checks that `main` requires: Lint (ESLint and actionlint), Typecheck, Audit (`scripts/audit-gate.mjs`; exceptions in `.github/audit-exceptions.json`, at most 14 days each), Knip, Design System, Unit Tests (with coverage floors), Integration, Schema Drift (a schema change without its migration fails), Build and E2E Tests (production build, Postgres and Redis; every Playwright project but the visual ones). Visual Diffs runs the screenshot projects and is advisory, not required: a diff leaves a warning and the `visual-diffs` artifact but does not fail the workflow, and the Visual Baselines workflow (`.github/workflows/visual-baselines.yml`, see `e2e/visual/README.md`) refreshes the baselines. Image Smoke Test runs on pull requests but is not required: it builds the image, starts it on a fresh Postgres and Redis until its `HEALTHCHECK` reports healthy (migrations, `SKIP_MIGRATIONS`, read-only files, tini, `docker stop`) and scans it with Trivy. Shared setup lives in `.github/actions/setup/action.yml`, and every action is pinned by SHA
+`.github/workflows/build.yml` ("Checks") runs the checks that `main` requires: Lint (ESLint and actionlint), Typecheck, Audit (`scripts/audit-gate.mjs`; exceptions in `.github/audit-exceptions.json`, at most 14 days each), Knip, Design System (`design:check` and `design:rewind-motion`), Unit Tests (with coverage floors, then `rewind:fixtures --check`, `rewind:freeze --check` and `env:docs --check`), Integration, Schema Drift (a schema change without its migration fails, and `scripts/check-migrations.mjs` checks migration names), Build, E2E Tests (production build, Postgres and Redis: `chromium`, `setup-wizard`, and the Rewind E2E and axe projects on chromium, webkit and firefox) and Rewind Performance (`rewind-perf`, blocking). Visual Diffs and Rewind Visual Diffs run the screenshot projects and are advisory, not required: a diff leaves a warning and the `visual-diffs` or `rewind-visual-diffs` artifact but does not fail the workflow, and the Visual Baselines workflow (`.github/workflows/visual-baselines.yml`, see `e2e/visual/README.md`) refreshes the baselines. The light-theme projects run only locally. Image Smoke Test runs on pull requests but is not required: it builds the image, starts it on a fresh Postgres and Redis until its `HEALTHCHECK` reports healthy (migrations, `SKIP_MIGRATIONS`, read-only files, tini, `docker stop`) and scans it with Trivy. Shared setup lives in `.github/actions/setup/action.yml`, and every action is pinned by SHA
+
+Other workflows: `freeze-gate.yml` fails a pull request while the `CODE_FREEZE` repository variable is `on`, unless it carries `freeze:data` or `freeze:security` (`docs/operations.md`, "Code freeze gate"); `rewind-gallery.yml` builds the Rewind review gallery by hand; `docker-publish.yml` publishes the image from `main` and `v*` tags.
 
 The Changelog check (`.github/workflows/changelog.yml`) fails a pull request that touches `prisma/migrations/**`, `lib/env.ts`, `docker-entrypoint.sh`, `Dockerfile` or `deploy/**`, or carries the `breaking` label, without a line under Unreleased in `CHANGELOG.md` (put operator steps under "Upgrade notes"); the `no-changelog` label skips it. A `v*` tag publishes the versioned image and, through `.github/workflows/release.yml`, the GitHub Release; see `docs/releasing.md`.
 
@@ -390,6 +422,8 @@ See `lib/wrapped/archetypes/scorers.ts` for a reference implementation:
 - A Scorers section that tables each scorer, its score and its evidence
 - Documented special cases (fallbacks and the one after-dark window)
 
+For a lifecycle with two timers and a diagram of each loop, see `lib/locks/lease-poller.ts`.
+
 ### Testing JSDoc Examples
 
 Verify documentation examples in a test next to the module:
@@ -441,6 +475,7 @@ npm run db:studio      # Open database GUI
 #### Creating a migration
 - Create it with `npx prisma migrate dev --create-only --name <descriptive_name>` against a database whose name ends in `_test`, review the generated `migration.sql`, then apply it with `npm run db:deploy`. Never hand-type a timestamp or rename a folder, and never edit a merged migration.
 - `node scripts/check-migrations.mjs` (in CI's Schema Drift job) checks every folder not listed in `prisma/migrations/.legacy-names.json`: a 14-digit timestamp later than every earlier folder's and not in the future, at least two lowercase words (`add_member_export`, not `latest` or `fix_changes`), and a `migration.sql`. Never add a folder to that list.
+- Schema Drift also runs `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code` against a migrated database: a schema change without its migration fails.
 - `20250101000000_init` is a retroactive baseline: an install made with `prisma db push` marks every folder applied with `npx prisma migrate resolve --applied <name>` (`docs/operations.md`, "Installed with db push").
 - `?schema=` in `DATABASE_URL` applies to migrations and to the app's client alike (`lib/db/schema-param.ts`); production refuses to boot on a name that is not a plain identifier.
 
@@ -460,9 +495,9 @@ Every variable is in `envSchema` (`lib/env.ts`), each with `.meta({ description,
 
 ### Required Production Variables
 ```env
-# Application URLs
-NEXT_PUBLIC_APP_URL=https://yourdomain.com    # Public-facing URL
-NEXTAUTH_URL=https://yourdomain.com           # Auth callbacks (should match above)
+# Application URL (https in production)
+NEXTAUTH_URL=https://yourdomain.com           # Auth callbacks and session cookies
+NEXT_PUBLIC_APP_URL=https://yourdomain.com    # Optional: share links and OG images; defaults to NEXTAUTH_URL, same origin
 
 # Security
 NEXTAUTH_SECRET=                               # Generate with: openssl rand -base64 32
@@ -478,8 +513,10 @@ DATABASE_URL=postgresql://user:password@localhost:5432/plex_manager
 ENCRYPTION_KEYS=k1:
 ```
 
+`REDIS_URL` is not required to boot, but Rewind, Stripe and the job queue need it. `PROCESS_ROLE` (`web`, `worker` or `all`, default `all`) picks what a container runs; see `docs/operations.md`, "Web and worker containers".
+
 ### Development Shortcuts
-- Use `DEV_*` variables in `.env` to pre-fill setup wizard
+- Use `DEV_*` variables in `.env` to pre-fill the setup wizard; they are read only with `NODE_ENV=development` and `DEV_SETUP_PREFILL=true`
 - Format: `DEV_PLEX_URL="https://localhost:32400"` (include protocol + port)
 - See `example.env` for all available options
 
@@ -503,35 +540,42 @@ export default function Loading() {
 // App Router - error.tsx
 'use client'
 
+import { Button } from '@/components/ui/button'
+
 export default function Error({ error, reset }: {
-  error: Error
+  error: Error & { digest?: string }
   reset: () => void
 }) {
   return (
     <div>
       <h2>Something went wrong</h2>
-      <button onClick={reset}>Try again</button>
+      <Button onClick={reset}>Try again</Button>
     </div>
   )
 }
 ```
 
+Most routes render `ErrorState` or `StatusScreen` from `components/ui/` instead of hand-written markup.
+
 ### Form Handling
 ```typescript
-// With Server Actions
-<form action={serverAction}>
-  <input name="field" required />
-  <button type="submit">Submit</button>
+// A form: renameThingForm = formAction(renameThing, { schema, toInput }) (@/lib/actions/form-action);
+// idleFormState() comes from @/lib/actions/form-state
+const [state, submit] = useActionState(renameThingForm, idleFormState())
+
+<form action={submit}>
+  <Input name="name" required />
+  <SubmitButton>Save</SubmitButton>
 </form>
 
-// With client-side validation
+// Calling an action from a client component
 const [isPending, startTransition] = useTransition()
 
-const handleSubmit = (formData: FormData) => {
+const handleSubmit = (input: { name: string }) => {
   startTransition(async () => {
-    const result = await serverAction(formData)
-    if (result.error) {
-      showToast({ type: 'error', message: result.error })
+    const result = await renameThing(input)
+    if (!result.success) {
+      showError(result.error) // const { showError } = useToast()
     }
   })
 }
@@ -574,15 +618,25 @@ libraries, users, invitations, search, marking).
 
 ### Tautulli API
 ```typescript
+import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { getTautulliHistory } from '@/lib/connections/tautulli'
+import { tautulliCommand } from '@/lib/connections/tautulli'
 
-const server = await prisma.tautulli.findFirst({ where: { isActive: true } })
-if (!server) return { error: 'No active Tautulli server configured' }
+// apiKey is an encrypted field; the Prisma extension decrypts it on read
+const tautulli = await prisma.tautulli.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } })
+if (!tautulli) return null
 
-const config = { name: server.name, url: server.url, apiKey: server.apiKey }
-const history = await getTautulliHistory(config, tautulliUserId, 50) // (config, userId?, limit = 20)
+const historySchema = z.looseObject({ data: z.array(z.looseObject({ rating_key: z.coerce.number() })) })
+const history = await tautulliCommand(tautulli, 'get_history', { user_id: tautulliUserId, length: 50 }, historySchema)
+if (!history.ok) return null // history.code: 'TAUTULLI_ERROR', 'TIMEOUT', 'HTTP', 'INVALID_RESPONSE', ...
 ```
+
+`tautulliCommand` (`lib/connections/tautulli.ts`) is the one Tautulli client: it
+goes through `serviceFetch` (timeouts, safe redirects), unwraps the `response`
+envelope, parses `data` with your schema and retries transient failures. Only
+the commands in its `TautulliCommand` union can be called; add one there first.
+The older `getTautulli*` helpers return `{ success, data?, error? }` for the
+admin assistant's tools.
 
 **Official Documentation**: [docs.tautulli.com/extending-tautulli/api-reference](https://docs.tautulli.com/extending-tautulli/api-reference)
 
@@ -594,18 +648,30 @@ const history = await getTautulliHistory(config, tautulliUserId, 50) // (config,
 - **Response Format**: JSON by default, optional `out_type` parameter for XML
 - **Response Structure**: `{"response": {"result": "success", "message": null, "data": [...]}}`
 
-**Key Commands**:
-- `get_activity` - Current streaming activity
-- `get_history` - Playback history with filters
-- `get_libraries` - List all libraries
-- `get_users` - List all users
-- `get_metadata` - Detailed media metadata by rating_key
-- `terminate_session` - Stop a streaming session
-- `notify` - Send notifications
+**Commands the app calls** (`TautulliCommand`): `get_activity`, `get_children_metadata`,
+`get_history`, `get_home_stats`, `get_item_user_stats`, `get_libraries`,
+`get_libraries_table`, `get_library_names`, `get_metadata`, `get_server_info`,
+`get_tautulli_info`, `get_user_watch_time_stats`, `get_users`
 
 **Common Parameters**: `user_id`, `rating_key`, `section_id`, `start`, `length`, `order_column`, `order_dir`
 
 ### Overseerr API
+```typescript
+import { buildOverseerrUserIndex, findOverseerrUserId, submitOverseerrRequest } from '@/lib/connections/overseerr'
+
+const index = await buildOverseerrUserIndex(config) // { url, apiKey }; cached 10 minutes per server
+if (!index.ok) return null
+const overseerrUserId = findOverseerrUserId(index.data, user.plexUserId)
+if (overseerrUserId === null) return null // the member never signed in to Overseerr with Plex
+
+const result = await submitOverseerrRequest(config, { mediaType: 'tv', mediaId: tmdbId }, { overseerrUserId })
+// result.status: 'created' | 'already_requested' | 'already_available' | 'not_permitted' | 'failed'
+```
+
+A request is always filed as the member's own Overseerr user (`X-Api-User`
+beside the API key), so their permissions, auto-approve rules and quotas apply;
+there is no fallback to the API key's admin. A TV request always carries
+`seasons` (`"all"` unless a list is given).
 
 **Official Documentation**: [api-docs.overseerr.dev](https://api-docs.overseerr.dev) (Swagger/OpenAPI)
 
@@ -681,8 +747,11 @@ if (!result.ok) return { error: result.error.message } // TRUNCATED, REFUSAL, SC
 - The admin playground (`/admin/rewind/playground`) runs `generateUserRewind`
   in dry-run mode through `startRewindDryRun` (`actions/admin/rewind-playground.ts`);
   try prompts and models there, never in a copy of the pipeline.
-- The chat assistant still uses `callChatLLM` (`lib/llm/chat.ts`, OpenAI only)
-  until it moves onto the registry.
+- The admin assistant (`lib/chatbot/`) and the Discord `/assistant` command run
+  through `chatWithTools` (`lib/llm/chat.ts`) on the `chat` purpose's row of
+  the same registry. Every surface that offers the assistant shows
+  `getAssistantDisclosure()` (`lib/llm/assistant-disclosure.ts`): admins can
+  review conversations, and the named provider processes them.
 
 ### Stripe Subscriptions (Optional)
 
@@ -711,10 +780,13 @@ if (!stripe) return { error: 'Stripe is not configured' }
   **signature** verified against the raw request body (no admin auth).
 - **Config**: `stripeEnabled`, `stripeSecretKey` (ENCRYPTED), `stripeWebhookSecret`
   (ENCRYPTED), and `stripePriceIds` (JSON array) live on `Config`. Secrets are
-  registered in `ENCRYPTED_FIELDS` (`lib/prisma.ts`).
+  registered in `ENCRYPTED_FIELDS` (`lib/db/encrypted-fields.ts`).
 - **Settings form**: the keys are `SecretInput`s in the saved state only
   (`getStripeConfig().saved` carries `{ last4 }`, never a key). Both go only to
   Stripe, so a blank field keeps the stored key and never asks for re-entry.
+- **Jellyfin members**: a Jellyfin-only member checks out without an email;
+  their grant turns the Jellyfin account on and a revoke turns it off (see
+  `docs/stripe.md`, "Plex and Jellyfin Members").
 - **Hosted UI**: no in-app card handling — Checkout (subscribe) and Billing
   Portal (manage/cancel) are Stripe-hosted.
 - **API version**: `apiVersion` is intentionally NOT hard-pinned in
@@ -778,16 +850,19 @@ a `PAST_DUE` subscriber, and never disables a Jellyfin administrator (FR-19,
 
 If Discord features are enabled:
 - Bot client and event wiring in `lib/discord/bot.ts`
-- Slash commands live in `lib/discord/commands/` (`registry.ts` lists them); register them with `npm run register-discord-commands`
+- Slash commands live in `lib/discord/commands/`: `definitions.ts` holds the builders (no Prisma), `registry.ts` pairs each with a lazily loaded handler. Register them with `npm run register-discord-commands` (`-- --dry-run` lists them), or `node scripts/dist/register-discord-commands.cjs` in the image
+- The bot starts once Admin, Discord, "Bot enabled" is on and a token exists (`isDiscordBotReady`), with no restart; `ENABLE_DISCORD_BOT=false` opts a process out
 - Safety checks in `lib/discord/chat-safety.ts`
-- Register linked-role metadata: `npm run register-discord-metadata`
+- Register linked-role metadata: `npm run register-discord-metadata` (`node scripts/dist/register-discord-metadata.cjs` in the image)
 - See `docs/discord-bot.md` for setup
 
 ## Deployment Checklist
 
-1. Set `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` to production domain
-2. Generate secure `NEXTAUTH_SECRET`
-3. Configure production `DATABASE_URL`
+`docs/deployment.md` is the full guide (compose, reverse proxy, setup claim, bare metal, web and worker containers). In short:
+
+1. Set `NEXTAUTH_URL` (and `NEXT_PUBLIC_APP_URL`, same origin) to the production https domain
+2. Generate a secure `NEXTAUTH_SECRET` and `ENCRYPTION_KEYS`, and set `PLEX_CLIENT_IDENTIFIER`
+3. Configure production `DATABASE_URL` and `REDIS_URL`
 4. Take a backup (`pg_dump -Fc`), then run `npm run db:deploy`; the Docker image runs it at start unless `SKIP_MIGRATIONS=true`. See `docs/operations.md`.
 5. Build: `npm run build` (its `postbuild` copies `.next/static` and `public` into `.next/standalone`)
 6. Start: `npm run start:prod` (runs `.next/standalone/server.js` with `.env`; the Docker image runs the same server as `node server.js`)
@@ -806,6 +881,11 @@ The project includes custom slash commands in `.claude/commands/`:
 - `/create-issues` - Convert improvement ideas to GitHub issues
 - `/fix-tests` - Automated unit test fixer agent
 - `/fix-e2e` - Automated Playwright E2E test fixer agent
+- `/fix-pr-status-checks` - Fix a pull request's failing status checks
+- `/implement-issue` - Fetch a GitHub issue and implement it on a new branch
+- `/label-issues` - Apply labels to GitHub issues
+- `/sync-main` - Switch to `main` and pull
+- `/update-pr` - Rebase a pull request on `main` and address its comments
 
 ### Agent Patterns
 
@@ -836,7 +916,7 @@ The project includes custom slash commands in `.claude/commands/`:
 **Playwright** is used for all E2E testing and browser automation:
 - Configured in project (see `npm run test:e2e` scripts)
 - Tests located in `e2e/` directory
-- Runs on Chromium only
+- Chromium for most projects; the Rewind projects also run WebKit and Firefox (see E2E Tests above)
 - Use `/fix-e2e` command for automated test repair
 
 **MCP Servers**: `.mcp.json` commits one server, `chrome-devtools` (pinned `chrome-devtools-mcp@1.11.0`, headless), for quick looks at a running page. It needs a local Chrome and does not start without one. E2E tests still use Playwright directly. Servers that need keys (image generation, Figma, Motion+) stay at user scope and are never committed.
@@ -853,7 +933,7 @@ The project includes custom slash commands in `.claude/commands/`:
 | `vercel-react-best-practices` | `app/**`, `components/**`, `hooks/**` | React and Next.js performance |
 | `vercel-composition-patterns` | `app/**`, `components/**`, `hooks/**` | Component API design |
 | `vercel-react-view-transitions` | `app/**` | React `<ViewTransition>` work |
-| `motion` | `components/wrapped/**`, `components/rewind/**`, `lib/rewind/**` | Animation (its `motion/react` imports apply after P2.15) |
+| `motion` | `components/rewind/**`, `lib/rewind/**` | Animation with `motion/react` |
 | `rewind-design-system` (project) | `components/rewind/**`, `lib/rewind/**`, `app/(app)/rewind/**`, `app/rewind/**` | The Rewind scope, inks, type, motion and poster rules |
 | `rewind-page` (project) | `components/rewind/pages/**`, `lib/rewind/pages/**`, `lib/rewind/registry.ts`, `lib/rewind/page-meta.ts` | Checklist for adding or changing a Rewind page |
 | `share-card` (project) | `lib/rewind/cards/**`, `app/api/rewind/card/**` | Satori-safe share cards drawn from the share-safe projection |
@@ -871,7 +951,9 @@ The project includes custom slash commands in `.claude/commands/`:
 - Logging: See the JSDoc in `lib/utils/logger.ts`
 - Discord Bot: See `docs/discord-bot.md`
 - Stripe Subscriptions: See `docs/stripe.md`
-- Operations (backup, restore, upgrades): See `docs/operations.md`
+- Deployment, environment variables and moving hosts: See `docs/deployment.md`, `docs/environment.md` and `docs/domain-move.md`
+- Operations (backup, restore, upgrades, encryption keys, worker containers, metrics): See `docs/operations.md`
+- Privacy (personal data inventory, member removal, export, retention): See `docs/privacy.md`
 - Releases and the changelog: See `docs/releasing.md` and `CHANGELOG.md`
 - Rewind season runbook (flags, season open, roll back, final cut): See `docs/rewind.md`
 - Performance Testing: See `docs/performance-testing.md`

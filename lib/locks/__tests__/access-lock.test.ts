@@ -101,4 +101,27 @@ describe("withAccessLock", () => {
     expect(work).not.toHaveBeenCalled()
     expect(owners.get("access:u1")).toBe("grant-1")
   })
+
+  it("renews every minute while the work runs, and stops once the lease is lost", async () => {
+    jest.useFakeTimers()
+    try {
+      let finish: () => void = () => {}
+      const run = withAccessLock("u1", "job-1", () => new Promise<void>((resolve) => (finish = resolve)), { redis })
+      await jest.advanceTimersByTimeAsync(0)
+      redisMock.eval.mockClear()
+
+      await jest.advanceTimersByTimeAsync(60_000)
+      expect(redisMock.eval).toHaveBeenCalledTimes(1)
+
+      owners.set("access:u1", "job-2")
+      await jest.advanceTimersByTimeAsync(180_000)
+      expect(redisMock.eval).toHaveBeenCalledTimes(2)
+
+      finish()
+      await run
+      expect(owners.get("access:u1")).toBe("job-2")
+    } finally {
+      jest.useRealTimers()
+    }
+  })
 })

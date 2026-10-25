@@ -12,6 +12,14 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 /**
+ * Every route may block on the request (P11.19). The `<html>` element takes
+ * the theme cookie and the stored locale, so no page has a static shell above
+ * this layout. The strict CSP's per-request nonce (P11.20, proxy.ts) relies on
+ * that: a static shell would carry no nonce.
+ */
+export const instant = false;
+
+/**
  * No zoom locks: pinch-zoom and text resize stay available (WCAG 1.4.4). The
  * browser chrome takes the resolved theme's background (P10.10).
  */

@@ -11,6 +11,7 @@ import "server-only"
 import { prisma } from "@/lib/prisma"
 import { consume, reward, type ConsumeResult } from "@/lib/security/rate-limit"
 import { checkRewindEligibility } from "@/lib/wrapped/eligibility"
+import { getActiveService } from "@/lib/data/active-service"
 
 /**
  * Why a member's Rewind cannot be made, or null when it can. A member without
@@ -24,8 +25,8 @@ export async function generationBlocker(user: {
   if (!user.plexUserId) return "REWIND_NOT_ELIGIBLE"
 
   const [plexServer, tautulli] = await Promise.all([
-    prisma.plexServer.findFirst({ where: { isActive: true }, select: { id: true } }),
-    prisma.tautulli.findFirst({ where: { isActive: true }, select: { id: true } }),
+    getActiveService("plex"),
+    getActiveService("tautulli"),
   ])
   if (!plexServer) return "NO_PLEX_SERVER"
   if (!tautulli) return "NO_TAUTULLI"

@@ -8,8 +8,6 @@ import { getFormat } from "@/lib/settings/app-settings"
 import { parseDateRange } from "@/lib/ui/date-range"
 import { formatPeriod } from "@/lib/utils/day-window"
 
-export const dynamic = "force-dynamic"
-
 type Params = Record<string, string | string[] | undefined>
 
 export default async function CostAnalysisPage({ searchParams }: { searchParams: Promise<Params> }) {

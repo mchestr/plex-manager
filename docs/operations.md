@@ -20,8 +20,10 @@ Installing is in [deployment](deployment.md), every variable is in the
 - [Code freeze gate](#code-freeze-gate)
 - [Installed with db push](#installed-with-db-push)
 - [Request IDs and metrics](#request-ids-and-metrics)
+- [Security headers and CSP](#security-headers-and-csp)
 - [Locale](#locale)
 - [Encryption keys](#encryption-keys)
+- [Members, roles and Jellyfin](#members-roles-and-jellyfin)
 
 ## What holds state
 
@@ -32,7 +34,7 @@ Installing is in [deployment](deployment.md), every variable is in the
 | `NEXTAUTH_SECRET` | Recommended | Signs sessions. A new value signs everyone out. |
 | `PLEX_CLIENT_IDENTIFIER` | Recommended | Identifies this install to Plex. A new value makes every member sign in to Plex again. |
 | Redis (AOF) | Optional | Holds the job queue and rate-limit counters. Rewind jobs are idempotent and rescheduled when the worker starts. Stripe resends an event whose webhook did not answer 200, but a Stripe job that was queued and then lost with Redis is not redelivered (the webhook already recorded the event id), so after losing Redis compare subscriptions in Admin with the Stripe dashboard. |
-| `REWIND_CACHE_DIR` | Not needed | Rebuildable cache, once a release adds it. |
+| `REWIND_CACHE_DIR` | Not needed | Rebuildable cache of Rewind posters, cards and fonts. |
 
 Keep a copy of your `.env` (or your platform's environment settings) with the
 secrets above, stored like the dump.
@@ -288,6 +290,46 @@ groups:
       - alert: LlmSpendHigh
         expr: sum(plex_manager_llm_spend_usd{period="day"}) > 1
 
+## Security headers and CSP
+
+Every page and route response carries a strict Content Security Policy with a
+fresh nonce per request (`lib/security/csp.ts`): scripts run only when they
+carry the nonce or were loaded by one that does (`'strict-dynamic'`), and there
+is no `'unsafe-inline'` or `'unsafe-eval'` for scripts. Images may come from
+the app, Plex (`plex.tv`) and Discord avatars; forms may post to the app and
+redirect to Stripe Checkout and the billing portal. Over https the policy also
+upgrades insecure requests.
+
+**Violation reports.** Browsers report blocked content to `/api/csp-report`
+(`report-uri`, and `report-to` through `Reporting-Endpoints`). The route
+stores nothing: each violation is one `csp.violation` warning with the
+directive, the blocked origin and the document path, with share and invite
+tokens masked. It reads at most 8 KB and takes 60 reports a minute per
+address.
+
+```bash
+docker compose logs app | grep csp.violation
+```
+
+A violation from normal browsing is a bug in the app or the policy. While you
+investigate one, `CSP_REPORT_ONLY=true` sends the policy as
+`Content-Security-Policy-Report-Only`: violations are still reported, but
+nothing is blocked. Unset it again once it is fixed.
+
+**HSTS.** `Strict-Transport-Security` goes out only when `NEXTAUTH_URL` is
+https, with `max-age` from `HSTS_MAX_AGE` (default 31536000, one year).
+`HSTS_INCLUDE_SUBDOMAINS=true` adds `includeSubDomains`, and
+`HSTS_PRELOAD=true` adds `preload`; set them only when every subdomain serves
+https, because browsers keep both for the whole `max-age`. These are read at
+start, so a restart applies a change. If your reverse proxy already sends
+HSTS, keep one of the two.
+
+The other headers are fixed in `next.config.js`: `X-Frame-Options: SAMEORIGIN`,
+`X-Content-Type-Options: nosniff`, `Referrer-Policy:
+strict-origin-when-cross-origin` (`no-referrer` on share pages) and a
+`Permissions-Policy` that turns off the camera, microphone and location. There
+is no `X-Powered-By`.
+
 ## Locale
 
 Admin settings hold two values that shape how the app writes dates and numbers:
@@ -383,3 +425,53 @@ field. To recover:
   be linked again; the Stripe keys and the Discord client secret and bot token
   are entered again in their sections. AI prompt text that cannot be read stays
   unreadable until retention clears it.
+
+## Members, roles and Jellyfin
+
+- **Admin roles**: roles set in Admin → Users stick. A sign-in only ever
+  promotes: the Plex server owner is always an admin, and so is a Jellyfin
+  administrator, because Jellyfin has no owner. A sign-in never demotes anyone,
+  so app admins demote members in the UI, and a Jellyfin lookup that fails (a
+  timeout or a server error) keeps the stored role. The Plex server owner and
+  the last admin cannot be demoted.
+- **Unsharing removes one server's share only**: Unshare in Admin → Users, and
+  the Stripe access removal, delete the member's share of the configured Plex
+  server and nothing else. The member stays your plex.tv friend and keeps any
+  other servers you share with them; remove those in Plex itself. A share that
+  is already gone counts as success ("already removed"), so a retry or a second
+  click settles. Managed Plex Home users have no share to remove and report
+  "already removed".
+- **Ending sessions**: unsharing a member, demoting an admin, disabling an
+  account (Admin → Users → a user → Disable account), removing a member and the
+  Stripe access removal end that user's sessions within five minutes, when the
+  session next checks the database. A disabled user cannot sign in with Plex or
+  Jellyfin until an admin enables the account again. Removing a member is in
+  [privacy](privacy.md#removing-a-member).
+- **Jellyfin accounts are never linked by email**: a Jellyfin sign-in matches
+  only the Jellyfin user ID, and the Jellyfin username is never stored as an
+  email address, because any Jellyfin user can rename themselves to someone
+  else's address. A new member who signs in with both Plex and Jellyfin gets
+  two separate accounts. A Plex sign-in or Plex invite whose email another
+  account already holds still goes ahead, without storing the email. "Allow
+  Jellyfin sign-in" in Admin → Settings turns the Jellyfin provider off, not
+  just the button on the sign-in page; members already signed in with Jellyfin
+  stay signed in until their session expires (at most 7 days).
+- **Jellyfin sign-in limits**: the app allows 10 Jellyfin sign-in attempts per
+  15 minutes from one client address and 5 failed attempts per 15 minutes for
+  one username. Jellyfin's own lockout still applies, and the app's limits do
+  not prevent it: by default Jellyfin disables a user after 3 failed sign-ins
+  (5 for administrators), configurable per user as "Failed login tries before
+  user is locked out". Anyone who knows a username can still lock that account
+  through the sign-in page; the app's limits only slow password guessing. An
+  administrator re-enables a locked user in the Jellyfin dashboard.
+- **Jellyfin 12**: the app identifies itself in the `Authorization` header,
+  which Jellyfin 12.0 and later require (they ignore the legacy
+  `X-Emby-Authorization` header unless legacy authorization is turned on), and
+  it retries once with the legacy header only if the server answers 400. Each
+  sign-in's Jellyfin session is logged out straight away, because the app
+  keeps only the Jellyfin user ID; a logout that fails or takes longer than 3
+  seconds is logged as `jellyfin.auth.logout_failed` at warn and leaves that
+  session on the server. Earlier releases left one session per member on the
+  Jellyfin server, listed under the client "Plex Wrapped" and the device ID
+  `plex-wrapped-server` (or your `JELLYFIN_DEVICE_ID`); a Jellyfin
+  administrator can delete them in Dashboard → Devices.

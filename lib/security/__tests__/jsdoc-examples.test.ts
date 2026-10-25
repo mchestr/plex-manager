@@ -1,10 +1,14 @@
 /**
  * Checks the @example blocks in lib/security/secret-reuse.ts, lib/security/saved-secret.ts,
  * lib/security/config-diff.ts, lib/security/rate-limit-messages.ts,
- * lib/security/safe-redirect.ts and lib/security/signed-cookie.ts.
+ * lib/security/safe-redirect.ts, lib/security/signed-cookie.ts, lib/security/csp.ts,
+ * lib/security/csp-report.ts and lib/security/hsts.ts.
  */
 
 import { configDiff } from "@/lib/security/config-diff"
+import { contentSecurityPolicy } from "@/lib/security/csp"
+import { parseCspReport } from "@/lib/security/csp-report"
+import { hstsHeader } from "@/lib/security/hsts"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
 import { safeRedirectPath } from "@/lib/security/safe-redirect"
 import { safeOrigin } from "@/lib/security/saved-secret"
@@ -70,5 +74,26 @@ describe("JSDoc Documentation Examples", () => {
     expect(verifyValue(raw, "plex-pin")).toEqual({ pinId: 42 })
     expect(verifyValue(raw, "discord-oauth")).toBeNull()
     expect(readCookie("a=1; pm-plex-pin=abc", "pm-plex-pin")).toBe("abc")
+  })
+
+  it("contentSecurityPolicy starts with the nonce script-src", () => {
+    expect(contentSecurityPolicy("abc", { development: false, https: true })).toMatch(
+      /^default-src 'self'; script-src 'self' 'nonce-abc' 'strict-dynamic'; /
+    )
+  })
+
+  it("parseCspReport keeps the blocked origin and the path", () => {
+    const body = JSON.stringify({
+      "csp-report": { "document-uri": "https://app.example/rewind/2026?x=1", "effective-directive": "script-src-elem", "blocked-uri": "https://evil.example/x.js" },
+    })
+    expect(parseCspReport("application/csp-report", body)).toEqual([
+      { directive: "script-src-elem", blocked: "https://evil.example", documentPath: "/rewind/2026", disposition: "enforce" },
+    ])
+  })
+
+  it("hstsHeader", () => {
+    expect(hstsHeader({}, true)).toBe("max-age=31536000")
+    expect(hstsHeader({ HSTS_PRELOAD: "true" }, true)).toBe("max-age=31536000; preload")
+    expect(hstsHeader({}, false)).toBeNull()
   })
 })

@@ -1,9 +1,11 @@
+import { cacheLife, cacheTag } from "next/cache"
 import type Stripe from "stripe"
 
 import { prisma } from "@/lib/prisma"
 import { getStripe } from "@/lib/stripe/client"
 import { parseStripePriceIds } from "@/lib/stripe/config"
 import { createLogger } from "@/lib/utils/logger"
+import { cachedOrDirect } from "@/lib/utils/use-cache"
 
 const logger = createLogger("STRIPE_PRICES")
 
@@ -168,15 +170,32 @@ export async function getOfferedPrices(): Promise<OfferedPrice[]> {
   return resolved
 }
 
-/** How long a member's retrieved plan price is cached, in milliseconds. */
-const PLAN_CACHE_TTL_MS = 60 * 60_000
+/** The cache tag of the retrieved plan prices; Stripe settings saves update it (P11.19). */
+export const PLAN_NAMES_TAG = "plan-names"
 
-const planCache = new Map<string, { expiresAt: number; price: OfferedPrice }>()
+/** A price straight from Stripe, or null when Stripe is unconfigured; throws when it cannot be read. */
+async function retrievePlanPrice(priceId: string): Promise<OfferedPrice | null> {
+  const stripe = await getStripe()
+  if (!stripe) return null
+  return toOfferedPrice(await stripe.prices.retrieve(priceId, { expand: ["product"] }))
+}
+
+/**
+ * The retrieved price, shared for hours (P11.19). Only the display details
+ * are stored, never the Stripe key the call uses; a failed read throws, so it
+ * is not cached.
+ */
+async function cachedPlanPrice(priceId: string): Promise<OfferedPrice | null> {
+  "use cache"
+  cacheTag(PLAN_NAMES_TAG)
+  cacheLife("hours")
+  return retrievePlanPrice(priceId)
+}
 
 /**
  * The display details of the price a member subscribes to: the offered price
  * when it is still on offer, else `stripe.prices.retrieve(priceId, { expand:
- * ['product'] })` cached for an hour (a retired price still names its plan).
+ * ['product'] })` cached for hours (a retired price still names its plan).
  * Null when Stripe is unconfigured or the price cannot be read; never throws.
  */
 export async function getPlanPrice(priceId: string | null): Promise<OfferedPrice | null> {
@@ -185,16 +204,8 @@ export async function getPlanPrice(priceId: string | null): Promise<OfferedPrice
   const offered = (await getOfferedPrices()).find((price) => price.priceId === priceId)
   if (offered) return offered
 
-  const cached = planCache.get(priceId)
-  if (cached && cached.expiresAt > Date.now()) return cached.price
-
-  const stripe = await getStripe()
-  if (!stripe) return null
   try {
-    const price = await stripe.prices.retrieve(priceId, { expand: ["product"] })
-    const resolved = toOfferedPrice(price)
-    planCache.set(priceId, { expiresAt: Date.now() + PLAN_CACHE_TTL_MS, price: resolved })
-    return resolved
+    return await cachedOrDirect(() => cachedPlanPrice(priceId), () => retrievePlanPrice(priceId))
   } catch (error) {
     logger.warn("Could not read a member's Stripe price", { priceId, error })
     return null
@@ -212,10 +223,10 @@ export async function getPlanName(priceId: string | null): Promise<string> {
 }
 
 /**
- * Clears the offered-prices and plan caches. Intended for tests and for use
- * after an admin updates the configured price IDs.
+ * Clears the offered-prices cache. Intended for tests and for use after an
+ * admin updates the configured price IDs; the retrieved plan prices are
+ * expired with `updateTag(PLAN_NAMES_TAG)`.
  */
 export function clearOfferedPricesCache(): void {
   cache = null
-  planCache.clear()
 }

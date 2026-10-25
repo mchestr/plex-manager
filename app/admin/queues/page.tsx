@@ -14,8 +14,6 @@ import { MAIN_QUEUE_JOB_TYPES } from "@/lib/queue/types"
 import { getFormat } from "@/lib/settings/app-settings"
 import { parseTableParams } from "@/lib/ui/table-params"
 
-export const dynamic = "force-dynamic"
-
 /** Refresh cadence of the monitoring pages (ui-design-system 6.3). */
 const LIVE_INTERVAL_MS = 10_000
 

@@ -50,7 +50,7 @@ jest.mock('@/lib/connections/prometheus', () => ({
 jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn() }))
 jest.mock('@/lib/connections/llm-provider', () => ({ testLLMProviderConnection: jest.fn() }))
 jest.mock('@/lib/security/audit-log', () => ({ ...jest.requireActual('@/lib/security/audit-log'), logAuditEvent: jest.fn() }))
-jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), unstable_cache: (load: unknown) => load }))
+jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), updateTag: jest.fn(), unstable_cache: (load: unknown) => load }))
 
 // One browser: its cookie jar and its address
 const jar = new Map<string, string>()

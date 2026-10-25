@@ -34,7 +34,7 @@
  * closest fit; there is no dedicated stats audit type).
  */
 
-import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js"
+import { EmbedBuilder, MessageFlags } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { isJellyfinOnly, JELLYFIN_COPY } from "@/lib/discord/copy"
@@ -45,6 +45,7 @@ import { formatHour } from "@/lib/rewind/format"
 import { consume } from "@/lib/security/rate-limit"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
 import { canonicalLocale, formatDuration } from "@/lib/utils/format"
+import { COMMAND_DEFINITIONS } from "./definitions"
 import type { InteractionContext, SlashCommand } from "./registry"
 import { requireLinkedUser } from "./require-linked-user"
 
@@ -166,11 +167,7 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
  * ephemeral embed.
  */
 export const myStatsCommand: SlashCommand = {
-  data: new SlashCommandBuilder()
-    .setName("mystats")
-    .setDescription(
-      "See your own Plex watch stats for this year (only visible to you)"
-    ) as SlashCommandBuilder,
+  data: COMMAND_DEFINITIONS.mystats,
   commandType: "CHAT" as DiscordCommandType,
   handle: handleMyStats,
 }

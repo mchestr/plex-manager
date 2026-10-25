@@ -1,11 +1,11 @@
 import {
   EmbedBuilder,
   MessageFlags,
-  SlashCommandBuilder,
   type AutocompleteInteraction,
 } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
+import { COMMAND_DEFINITIONS } from "./definitions"
 import type { InteractionContext, SlashCommand } from "./registry"
 import { requireLinkedUser } from "./require-linked-user"
 
@@ -353,15 +353,7 @@ function buildCommandHelpEmbed(command: CommandDefinition): EmbedBuilder {
  * option autocompletes against registered command names.
  */
 export const helpCommand: SlashCommand = {
-  data: new SlashCommandBuilder()
-    .setName("help")
-    .setDescription("Show available commands and how to use them")
-    .addStringOption((option) =>
-      option
-        .setName("command")
-        .setDescription("Get detailed help for a specific command")
-        .setAutocomplete(true)
-    ) as SlashCommandBuilder,
+  data: COMMAND_DEFINITIONS.help,
   commandType: "HELP" as DiscordCommandType,
   async handle(ctx: InteractionContext): Promise<void> {
     // Gate on entitlement like every other command (data-disclosure policy: no

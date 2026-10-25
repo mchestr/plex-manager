@@ -24,6 +24,7 @@ import { runLimited, type SourceContext } from "@/lib/wrapped/sources/watch-hist
 import { resolveZone } from "@/lib/wrapped/time/zone"
 
 import type { AggregateMember } from "./server-year"
+import { getActiveService } from "@/lib/data/active-service"
 
 /** The services, settings and members one batch reads. */
 export interface BatchSetup {
@@ -44,9 +45,9 @@ export async function loadBatchSetup(): Promise<BatchSetup> {
       where: { id: "config" },
       select: { rewindExcludedSectionIds: true, rewindExcludedContentRatings: true },
     }),
-    prisma.tautulli.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
-    prisma.overseerr.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
-    prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true, token: true } }),
+    getActiveService("tautulli"),
+    getActiveService("overseerr"),
+    getActiveService("plex"),
     serverZone(),
     prisma.user.findMany({ where: { plexUserId: { not: null } }, select: { id: true, plexUserId: true, timezone: true } }),
   ])

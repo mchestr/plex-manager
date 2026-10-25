@@ -57,3 +57,6 @@ playwright-report/
 # Spinner and icon codemod review lists (scripts/codemods/{spinners,icons}.ts, P10.15)
 /codemod-spinners-review.md
 /codemod-icons-review.md
+
+# Bundled Discord scripts (npm run build:discord-scripts, P11.7); the image builds its own
+/scripts/dist/

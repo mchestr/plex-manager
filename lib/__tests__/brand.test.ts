@@ -12,7 +12,7 @@ import { buildConfig, buildPlexServer } from "@/__tests__/helpers/factories"
 import { monogramFor, productName, rewindName, serverName } from "@/lib/brand"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
-jest.mock("next/cache", () => ({ unstable_cache: (fn: () => unknown) => fn }))
+jest.mock("next/cache", () => ({ cacheLife: jest.fn(), cacheTag: jest.fn() }))
 jest.mock("react", () => ({ ...jest.requireActual("react"), cache: (fn: unknown) => fn }))
 jest.mock("@/lib/utils/server-zone", () => ({ serverZone: async () => "UTC" }))
 

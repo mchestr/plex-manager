@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession, type Session } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import type { Session } from "next-auth"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
+import { getSession } from "@/lib/data/session"
 
 /**
  * Require admin authentication for API routes
@@ -11,7 +11,7 @@ export async function requireAdminAPI(
   _request: NextRequest
 ): Promise<{ session: Session; response: null } | { session: null; response: NextResponse }> {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getSession()
 
     if (!session) {
       return {

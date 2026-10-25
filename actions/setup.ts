@@ -13,7 +13,7 @@
  * `CONFIG_CHANGED` with the actor `setup` during the first run.
  */
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 
 import { setupAction } from "@/lib/actions/define-action"
@@ -26,6 +26,7 @@ import { configDiff } from "@/lib/security/config-diff"
 import type { SecretRequiredCode } from "@/lib/security/secret-reuse"
 import { SERVICE_DESCRIPTORS, type ServiceKind } from "@/lib/services/descriptors"
 import { saveServiceConnection } from "@/lib/services/service-save"
+import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
 import { runConnectionTest, testConnectionInput, type TestConnectionResult } from "@/lib/settings/test-connection"
 import { clearSetupClaimCookie } from "@/lib/setup/claim"
 import { advanceSetup, wizardRow } from "@/lib/setup/progress"
@@ -51,7 +52,11 @@ function serviceSave<K extends ServiceKind>(kind: K, step: SetupStepId) {
         section: `setup.${kind}`,
         within: (tx) => advanceSetup(tx, step),
       })
-      if (result.success) revalidatePath("/setup")
+      if (result.success) {
+        revalidatePath("/setup")
+        // The server name falls back to the Plex server's (P11.19)
+        if (kind === "plex") updateTag(APP_SETTINGS_TAG)
+      }
       return result
     },
   })

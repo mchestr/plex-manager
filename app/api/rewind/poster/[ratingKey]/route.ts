@@ -1,9 +1,7 @@
-import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
 import { parseRouteParams, parseSearchParams, requireEntitlement, withRequestContext } from "@/lib/actions/route"
-import { authOptions } from "@/lib/auth"
 import { rewindInks, type InkName } from "@/lib/design/tokens"
 import { prisma } from "@/lib/prisma"
 import type { TonePair } from "@/lib/rewind/media/tone"
@@ -17,8 +15,7 @@ import { assetKeyAllowsRatingKey } from "@/lib/wrapped/data/share-asset"
 import { assetKeySchema } from "@/lib/wrapped/data/share-safe-schema"
 import { isKnownPosterMiss, rememberPosterMiss, remainingMs, resolveSessionPosterAccess } from "@/lib/wrapped/poster-access"
 import { shareTokenAllowsRatingKey } from "@/lib/wrapped/poster-keys"
-
-export const dynamic = "force-dynamic"
+import { getSession } from "@/lib/data/session"
 
 const INKS = Object.keys(rewindInks) as [InkName, ...InkName[]]
 const InkSchema = z.enum(INKS)
@@ -114,7 +111,7 @@ async function handleGet(request: NextRequest, context: { params: Promise<{ rati
     const shareToken = query.data.share ?? null
     const assetKey = query.data.s ?? null
 
-    let session = await getServerSession(authOptions)
+    let session = await getSession()
     if (session) {
       // A lapsed member keeps their own Rewind's posters (FR-51); one without
       // even that is answered as signed out, so a covering share link still works.
@@ -152,6 +149,7 @@ async function handleGet(request: NextRequest, context: { params: Promise<{ rati
 
     const plexServer = await prisma.plexServer.findFirst({
       where: { isActive: true },
+      orderBy: { updatedAt: "desc" },
       select: { url: true, token: true, adminPlexUserId: true },
     })
     if (!plexServer) return posterNotFound()

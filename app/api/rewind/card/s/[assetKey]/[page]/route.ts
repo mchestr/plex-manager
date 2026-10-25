@@ -7,9 +7,6 @@ import { loadShareContext } from "@/lib/wrapped/data/share-context"
 import { assetKeySchema, SharePageTypeSchema } from "@/lib/wrapped/data/share-safe-schema"
 import { withRequestContext } from "@/lib/actions/route"
 
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-
 const logger = createLogger("REWIND_CARD_SHARE")
 
 /** Short, so a stopped link stops serving within minutes even through a proxy. */

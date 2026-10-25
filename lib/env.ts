@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import { isValidSchemaName, schemaParamOf } from "@/lib/db/schema-param"
 import { parseKeyringEntries } from "@/lib/security/crypto"
+import { isValidHstsMaxAge } from "@/lib/security/hsts"
 import { createLogger } from "@/lib/utils/logger"
 
 /**
@@ -98,6 +99,22 @@ export const envSchema = z.object({
   REDIS_URL: text("Redis for the job queue and rate limits, redis://:password@host:6379. Rewind and Stripe need it.", {
     group: "Background work",
   }),
+  HSTS_MAX_AGE: text("Strict-Transport-Security max-age in seconds, sent only when NEXTAUTH_URL is https. The boot check refuses anything but a whole number.", {
+    group: "Core",
+    default: "31536000",
+  }),
+  HSTS_INCLUDE_SUBDOMAINS: text('"true" adds includeSubDomains to Strict-Transport-Security. Set it only when every subdomain serves https.', {
+    group: "Core",
+    default: "false",
+  }),
+  HSTS_PRELOAD: text('"true" adds preload to Strict-Transport-Security, for the browsers\' preload list. Hard to undo: read hstspreload.org first.', {
+    group: "Core",
+    default: "false",
+  }),
+  CSP_REPORT_ONLY: text('"true" sends the Content Security Policy as Content-Security-Policy-Report-Only: violations reach /api/csp-report but are not blocked. For a rollout or a suspected policy fault only.', {
+    group: "Core",
+    default: "false",
+  }),
   TRUSTED_PROXY_HOPS: text("Reverse proxies that append to X-Forwarded-For: 1 for one proxy, 2 for a CDN in front of it, 0 for none. A wrong value lets clients pick their rate-limit address.", {
     group: "Core",
     default: "1",
@@ -120,7 +137,7 @@ export const envSchema = z.object({
     default: "true",
   }),
   QUEUE_WORKER_CONCURRENCY: text("Jobs the worker runs at once.", { group: "Background work", default: "5" }),
-  ENABLE_DISCORD_BOT: text('"false" stops this process from running the Discord bot. One process runs it, under a database lock.', {
+  ENABLE_DISCORD_BOT: text('"false" opts this process out of the Discord bot. Otherwise it starts once Admin, Discord, "Bot enabled" is on and a token exists, with no restart. One process runs it, under a database lock.', {
     group: "Background work",
     default: "true",
   }),
@@ -379,6 +396,9 @@ export function checkProductionEnv(env: Env): EnvIssue[] {
   // An unknown role would fall back to `all` and run the queues where only pages were meant (P11.3)
   if (env.PROCESS_ROLE !== undefined && !["web", "worker", "all"].includes(env.PROCESS_ROLE)) {
     issues.push({ variable: "PROCESS_ROLE", code: "invalid", severity: "error", hint: "must be web, worker or all" })
+  }
+  if (!isValidHstsMaxAge(env.HSTS_MAX_AGE)) {
+    issues.push({ variable: "HSTS_MAX_AGE", code: "invalid", severity: "error", hint: "must be a whole number of seconds" })
   }
   if (!env.PLEX_CLIENT_IDENTIFIER?.trim()) {
     issues.push({ variable: "PLEX_CLIENT_IDENTIFIER", code: "missing", severity: "error", hint: "not set; generate one with openssl rand -hex 16" })

@@ -1,8 +1,6 @@
 import type { ReactNode } from "react"
-import { getServerSession } from "next-auth"
 
 import { AppShell } from "@/components/shell/app-shell"
-import { authOptions } from "@/lib/auth"
 import {
   ensureOnboardingComplete,
   ensureSetupComplete,
@@ -10,8 +8,7 @@ import {
 } from "@/lib/guards"
 import { getMemberNotice } from "@/lib/member/notice"
 import { getAppShellData } from "@/lib/member/shell"
-
-export const dynamic = 'force-dynamic'
+import { getSession } from "@/lib/data/session"
 
 /**
  * The member layout: the setup, onboarding and access guards (a gated member
@@ -27,7 +24,7 @@ export default async function AppGuardLayout({
   await ensureOnboardingComplete()
   await ensureSubscriptionOrAccess()
 
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session?.user?.id) {
     return children
   }

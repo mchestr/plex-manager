@@ -5,8 +5,6 @@ import { userRewind } from "@/lib/admin/routes"
 import { recordIdSchema, yearParamSchema } from "@/lib/validations/params"
 import { getSeasonYear, listCompletedRewindYears } from "@/lib/wrapped/season"
 
-export const dynamic = "force-dynamic"
-
 /**
  * The old admin viewer's address (P7.9): redirects to the preview with the
  * year in the path. The year is `?year=`, else the member's latest completed

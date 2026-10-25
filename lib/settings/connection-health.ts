@@ -38,6 +38,7 @@ import "server-only"
 
 import { unstable_cache } from "next/cache"
 
+import { getDiscordBotStatus } from "@/lib/admin/discord"
 import { getStripeConfig } from "@/lib/data/admin-settings"
 import { testJellyfinConnection } from "@/lib/connections/jellyfin-connection"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
@@ -51,6 +52,7 @@ import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { probeConnection, type Tester } from "@/lib/settings/probe"
 import { CONNECTION_HEALTH_TAG, worstStatus, type HealthCode, type SectionHealth, type SettingsHealth } from "@/lib/settings/connection-status"
 import { discordStatus, type ConnectionStatus } from "@/lib/ui/status"
+import { getActiveService } from "@/lib/data/active-service"
 
 type ConnectionId = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus" | "ai"
 
@@ -68,7 +70,7 @@ export interface ConnectionHealth {
   connections: ConnectionHealthEntry[]
 }
 
-const SERVICE = { where: { isActive: true }, select: { name: true, url: true, publicUrl: true } } as const
+const SERVICE = { where: { isActive: true }, orderBy: { updatedAt: "desc" }, select: { name: true, url: true, publicUrl: true } } as const
 
 /** Runs every tester now, without the cache. @internal */
 export async function checkConnections(now: Date = new Date()): Promise<ConnectionHealth> {
@@ -79,7 +81,7 @@ export async function checkConnections(now: Date = new Date()): Promise<Connecti
     prisma.overseerr.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
     prisma.sonarr.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
     prisma.radarr.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
-    prisma.prometheus.findFirst({ where: { isActive: true }, select: { name: true, url: true, query: true } }),
+    getActiveService("prometheus"),
     prisma.config.findUnique({ where: { id: "config" }, select: { llmDisabled: true } }),
     prisma.lLMProvider.count({ where: { isActive: true } }),
   ])
@@ -123,20 +125,18 @@ const live = (status: ConnectionStatus, code: HealthCode | null, now: Date): Sec
 })
 
 async function discordHealth(now: Date): Promise<SectionHealth> {
-  const [integration, lock] = await Promise.all([
+  const [integration, bot] = await Promise.all([
     prisma.discordIntegration.findUnique({
       where: { id: "discord" },
-      select: { isEnabled: true, botEnabled: true, clientId: true, clientSecret: true, botToken: true },
+      select: { isEnabled: true, clientId: true, clientSecret: true },
     }),
-    prisma.leaseLock.findUnique({ where: { name: "discord-bot" }, select: { lastRenewedAt: true } }),
+    getDiscordBotStatus(),
   ])
   const rows = discordStatus(
     {
       isEnabled: integration?.isEnabled ?? false,
       hasClientCredentials: Boolean(integration?.clientId && integration.clientSecret),
-      botEnabled: integration?.botEnabled ?? false,
-      hasBotToken: Boolean(integration?.botToken),
-      lastRenewedAt: lock?.lastRenewedAt ?? null,
+      ...bot,
     },
     now
   )
@@ -144,7 +144,7 @@ async function discordHealth(now: Date): Promise<SectionHealth> {
     !enabled ? "disabled" : tone === "success" ? "ok" : tone === "destructive" ? "unreachable" : "incomplete"
   const status = worstStatus([
     toStatus(integration?.isEnabled, rows.linkedRoles.tone),
-    toStatus(integration?.botEnabled, rows.supportBot.tone),
+    toStatus(bot.botEnabled, rows.supportBot.tone),
   ])
   const code: HealthCode | null = status === "unreachable" ? "BOT_OFFLINE" : status === "incomplete" ? "MISSING_SETUP" : null
   return live(status, code, now)

@@ -284,6 +284,9 @@ jobs:
             if docker exec app test -e "$dir"; then fail "$dir is in the image"; fi
           done
           if docker exec app sh -c 'command -v npm'; then fail "npm is in the runner"; fi
+          # P11.7: the bundled slash-command registration runs from the image
+          docker exec app node scripts/dist/register-discord-commands.cjs --dry-run | grep -F "/assistant" ||
+            fail "register-discord-commands.cjs --dry-run did not list the commands"
 
       # P11.3: one image, two roles; only the worker starts the queue Workers,
       # and it serves nothing but the health check and the metrics.
@@ -350,6 +353,11 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # No database and no URL: lib/prisma.ts builds its client on first use
+    # (P11.22), so modules import without one. The setup action's Prisma
+    # generate step supplies its own.
+    env:
+      DATABASE_URL: ""
 
     steps:
       - name: Checkout code
@@ -358,8 +366,7 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
-      # No database: lib/prisma.ts only needs DATABASE_URL set. The Postgres-
-      # and Redis-backed suites (*.pg.test.ts, *.redis.test.ts) run in the
+      # The Postgres- and Redis-backed suites (*.pg.test.ts, *.redis.test.ts) run in the
       # integration job; see jest.config.js. Jest fails when coverage falls
       # below a floor in jest.coverage-thresholds.json.
       - name: Run unit tests with coverage
@@ -522,6 +529,7 @@ jobs:
               --project=chromium --project=setup-wizard
               --project=rewind-e2e-chromium --project=rewind-e2e-webkit --project=rewind-e2e-firefox
               --project=rewind-a11y-chromium --project=rewind-a11y-webkit --project=rewind-a11y-firefox
+              --project=csp-chromium --project=csp-webkit --project=csp-firefox
             advisory: false
             artifact: playwright-report
             timeout: 60

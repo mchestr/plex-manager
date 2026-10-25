@@ -29,6 +29,10 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `ALLOW_PLAINTEXT_SECRETS` |  | `false` | UNSAFE. "true" lets production start without a strong encryption key; every boot warns and secrets are stored as plain text. |
 | `SETUP_TOKEN` |  |  | Claims first-run setup instead of the code printed in the log. At least 16 characters: openssl rand -hex 16. |
 | `ALLOW_INSECURE_HTTP` |  | `false` | "true" lets production run on plain http (LAN only). Cookies are then not Secure; never set it on an install reachable from the internet. |
+| `HSTS_MAX_AGE` |  | `31536000` | Strict-Transport-Security max-age in seconds, sent only when NEXTAUTH_URL is https. The boot check refuses anything but a whole number. |
+| `HSTS_INCLUDE_SUBDOMAINS` |  | `false` | "true" adds includeSubDomains to Strict-Transport-Security. Set it only when every subdomain serves https. |
+| `HSTS_PRELOAD` |  | `false` | "true" adds preload to Strict-Transport-Security, for the browsers' preload list. Hard to undo: read hstspreload.org first. |
+| `CSP_REPORT_ONLY` |  | `false` | "true" sends the Content Security Policy as Content-Security-Policy-Report-Only: violations reach /api/csp-report but are not blocked. For a rollout or a suspected policy fault only. |
 | `TRUSTED_PROXY_HOPS` |  | `1` | Reverse proxies that append to X-Forwarded-For: 1 for one proxy, 2 for a CDN in front of it, 0 for none. A wrong value lets clients pick their rate-limit address. |
 | `TZ` |  | `UTC` | Server time zone (IANA name) until one is saved in Admin settings, which overrides it. |
 
@@ -50,7 +54,7 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `REDIS_URL` |  |  | Redis for the job queue and rate limits, redis://:password@host:6379. Rewind and Stripe need it. |
 | `ENABLE_QUEUE_WORKER` |  | `true` | "false" turns the BullMQ worker off in this process (on by default when REDIS_URL is set). |
 | `QUEUE_WORKER_CONCURRENCY` |  | `5` | Jobs the worker runs at once. |
-| `ENABLE_DISCORD_BOT` |  | `true` | "false" stops this process from running the Discord bot. One process runs it, under a database lock. |
+| `ENABLE_DISCORD_BOT` |  | `true` | "false" opts this process out of the Discord bot. Otherwise it starts once Admin, Discord, "Bot enabled" is on and a token exists, with no restart. One process runs it, under a database lock. |
 | `DISCORD_BOT_POLL_INTERVAL_MS` |  | `10000` | How often to try for the bot lock and re-check settings. |
 | `ENABLE_WATCHLIST_SYNC` |  | `true` | "false" turns the polling watchlist sync off when Redis is not set. |
 | `WATCHLIST_SYNC_POLL_INTERVAL_MS` |  | `60000` | How often the polling watchlist sync checks its lock. |

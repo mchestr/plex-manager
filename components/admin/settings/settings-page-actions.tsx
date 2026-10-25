@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 
 import { recheckConnections } from "@/actions/admin/connection-health"
@@ -12,7 +11,6 @@ import { icons } from "@/lib/ui/icons"
 
 /** The settings page actions (6.4): "Test all connections" (secondary) and the Assistant. */
 export function SettingsPageActions() {
-  const router = useRouter()
   const toast = useToast()
   const [isPending, startTransition] = useTransition()
 
@@ -26,7 +24,6 @@ export function SettingsPageActions() {
       const broken = Object.values(result.data).filter((health) => health.status === "unreachable").length
       if (broken > 0) toast.showError(broken === 1 ? "1 connection is not working" : `${broken} connections are not working`)
       else toast.showSuccess("Every connection answered")
-      router.refresh()
     })
 
   return (

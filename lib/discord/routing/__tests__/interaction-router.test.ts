@@ -233,8 +233,8 @@ function createStubCommand(handle = jest.fn().mockResolvedValue(undefined)): Sla
 function makeDeps(overrides: Partial<RouteDeps> = {}): RouteDeps {
   return {
     verifyDiscordUser: jest.fn().mockResolvedValue(linkedUser),
-    getCommand: jest.fn().mockReturnValue(createStubCommand()),
-    getComponentHandler: jest.fn().mockReturnValue(undefined),
+    getCommand: jest.fn().mockResolvedValue(createStubCommand()),
+    getComponentHandler: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   }
 }
@@ -283,7 +283,7 @@ describe("routeInteraction", () => {
     const command = createStubCommand(handle)
     const verifyDiscordUser = jest.fn().mockResolvedValue(linkedUser)
     const deps = makeDeps({
-      getCommand: jest.fn().mockReturnValue(command),
+      getCommand: jest.fn().mockResolvedValue(command),
       verifyDiscordUser,
     })
     const { interaction } = createMockChatInputInteraction({ commandName: "ping" })
@@ -325,7 +325,7 @@ describe("routeInteraction", () => {
 
   it("logs an /assistant question's length, never its text (GAP-32)", async () => {
     const chat: SlashCommand = { ...createStubCommand(), commandType: "CHAT" as DiscordCommandType }
-    const deps = makeDeps({ getCommand: jest.fn().mockReturnValue(chat) })
+    const deps = makeDeps({ getCommand: jest.fn().mockResolvedValue(chat) })
     const { interaction } = createMockChatInputInteraction({ commandName: "assistant" })
     const getString = jest.fn().mockReturnValue(" is plex down? ")
     Object.assign(interaction, { options: { getString } })
@@ -340,7 +340,7 @@ describe("routeInteraction", () => {
 
   it("records a FAILED audit log and replies with a generic error when the handler throws", async () => {
     const handle = jest.fn().mockRejectedValue(new Error("kaboom"))
-    const deps = makeDeps({ getCommand: jest.fn().mockReturnValue(createStubCommand(handle)) })
+    const deps = makeDeps({ getCommand: jest.fn().mockResolvedValue(createStubCommand(handle)) })
     const { interaction, reply } = createMockChatInputInteraction()
 
     await routeInteraction(interaction, deps)
@@ -356,7 +356,7 @@ describe("routeInteraction", () => {
 
   it("uses followUp for the error reply when the interaction was already replied", async () => {
     const handle = jest.fn().mockRejectedValue(new Error("kaboom"))
-    const deps = makeDeps({ getCommand: jest.fn().mockReturnValue(createStubCommand(handle)) })
+    const deps = makeDeps({ getCommand: jest.fn().mockResolvedValue(createStubCommand(handle)) })
     const { interaction, reply, followUp } = createMockChatInputInteraction({ replied: true })
 
     await routeInteraction(interaction, deps)
@@ -366,7 +366,7 @@ describe("routeInteraction", () => {
   })
 
   it("replies with an ephemeral error for an unknown command and does not audit", async () => {
-    const deps = makeDeps({ getCommand: jest.fn().mockReturnValue(undefined) })
+    const deps = makeDeps({ getCommand: jest.fn().mockResolvedValue(undefined) })
     const { interaction, reply } = createMockChatInputInteraction({ commandName: "nope" })
 
     await routeInteraction(interaction, deps)
@@ -399,7 +399,7 @@ describe("routeInteraction", () => {
       commandType: "SELECTION" as DiscordCommandType,
       handle,
     }
-    const getComponentHandler = jest.fn().mockReturnValue(handler)
+    const getComponentHandler = jest.fn().mockResolvedValue(handler)
     const deps = makeDeps({ getComponentHandler })
     const { interaction } = createMockComponentInteraction({
       isStringSelectMenu: true,
@@ -420,7 +420,7 @@ describe("routeInteraction", () => {
       commandType: "SELECTION" as DiscordCommandType,
       handle: jest.fn().mockResolvedValue(undefined),
     }
-    const deps = makeDeps({ getComponentHandler: jest.fn().mockReturnValue(handler) })
+    const deps = makeDeps({ getComponentHandler: jest.fn().mockResolvedValue(handler) })
     const { interaction } = createMockComponentInteraction({ isStringSelectMenu: true })
 
     await routeInteraction(interaction, deps)
@@ -439,7 +439,7 @@ describe("routeInteraction", () => {
   })
 
   it("replies with an ephemeral notice for an unknown component and does not audit", async () => {
-    const deps = makeDeps({ getComponentHandler: jest.fn().mockReturnValue(undefined) })
+    const deps = makeDeps({ getComponentHandler: jest.fn().mockResolvedValue(undefined) })
     const { interaction, reply } = createMockComponentInteraction({
       isButton: true,
       isStringSelectMenu: false,
@@ -461,7 +461,7 @@ describe("routeInteraction", () => {
       commandType: "SELECTION" as DiscordCommandType,
       handle: jest.fn().mockRejectedValue(new Error("kaboom")),
     }
-    const deps = makeDeps({ getComponentHandler: jest.fn().mockReturnValue(handler) })
+    const deps = makeDeps({ getComponentHandler: jest.fn().mockResolvedValue(handler) })
     const { interaction, reply } = createMockComponentInteraction({ isStringSelectMenu: true })
 
     await routeInteraction(interaction, deps)
@@ -488,7 +488,7 @@ describe("routeInteraction", () => {
       user: linkedUser.user,
     } satisfies VerifyDiscordUserResult)
     const deps = makeDeps({
-      getComponentHandler: jest.fn().mockReturnValue(handler),
+      getComponentHandler: jest.fn().mockResolvedValue(handler),
       verifyDiscordUser: verifiedUser,
     })
     const { interaction, reply } = createMockComponentInteraction({ isStringSelectMenu: true })
@@ -519,7 +519,7 @@ describe("routeInteraction", () => {
       entitled: false,
     } satisfies VerifyDiscordUserResult)
     const deps = makeDeps({
-      getComponentHandler: jest.fn().mockReturnValue(handler),
+      getComponentHandler: jest.fn().mockResolvedValue(handler),
       verifyDiscordUser: verifiedUser,
     })
     const { interaction, reply } = createMockComponentInteraction({ isStringSelectMenu: true })
@@ -540,7 +540,7 @@ describe("routeInteraction", () => {
   it("routes autocomplete interactions to the matching command's autocomplete handler", async () => {
     const autocomplete = jest.fn().mockResolvedValue(undefined)
     const command: SlashCommand = { ...createStubCommand(), autocomplete }
-    const getCommand = jest.fn().mockReturnValue(command)
+    const getCommand = jest.fn().mockResolvedValue(command)
     const deps = makeDeps({ getCommand })
     const { interaction } = createMockAutocompleteInteraction("help")
 
@@ -555,7 +555,7 @@ describe("routeInteraction", () => {
   })
 
   it("ignores an autocomplete interaction whose command has no autocomplete handler", async () => {
-    const getCommand = jest.fn().mockReturnValue(createStubCommand())
+    const getCommand = jest.fn().mockResolvedValue(createStubCommand())
     const deps = makeDeps({ getCommand })
     const { interaction, respond } = createMockAutocompleteInteraction("ping")
 
@@ -566,7 +566,7 @@ describe("routeInteraction", () => {
   })
 
   it("ignores an autocomplete interaction for an unknown command", async () => {
-    const getCommand = jest.fn().mockReturnValue(undefined)
+    const getCommand = jest.fn().mockResolvedValue(undefined)
     const deps = makeDeps({ getCommand })
     const { interaction, respond } = createMockAutocompleteInteraction("nope")
 

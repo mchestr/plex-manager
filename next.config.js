@@ -1,34 +1,19 @@
-const { PHASE_DEVELOPMENT_SERVER } = require('next/constants')
-
-// React Refresh in `next dev` needs 'unsafe-eval' (E2E also runs on `next dev`
-// until P1.5). Keyed to the Next phase rather than NODE_ENV, so a build or
-// `next start` never ships it whatever NODE_ENV the shell exports.
-function contentSecurityPolicy(phase) {
-  const scriptSrc = [
-    "'self'",
-    "'unsafe-inline'",
-    ...(phase === PHASE_DEVELOPMENT_SERVER ? ["'unsafe-eval'"] : []),
-  ]
-
-  return [
-    "default-src 'self'",
-    `script-src ${scriptSrc.join(' ')}`,
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: https:",
-    "font-src 'self' data:",
-    "connect-src 'self' https:",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "frame-ancestors 'self'",
-  ].join('; ')
-}
-
 /**
- * @param {string} phase
+ * The Content Security Policy and Strict-Transport-Security are not here:
+ * `proxy.ts` sends both per request (P11.20), the policy with a fresh nonce
+ * and HSTS from the runtime environment, which `headers()` (fixed at build
+ * time) cannot read.
+ *
  * @returns {import('next').NextConfig}
  */
-module.exports = (phase) => ({
+module.exports = () => ({
   reactStrictMode: true,
+  // Partial prerendering, 'use cache' and cacheTag (P11.19). Uncached data
+  // renders per request, so no segment exports `dynamic` or `revalidate`.
+  cacheComponents: true,
+  // Links keep the full prefetch Cache Components shipped with; Partial
+  // Prefetching is its own adoption (the Next docs' "Adopting Partial Prefetching").
+  partialPrefetching: false,
   typedRoutes: true,
   output: 'standalone',
   poweredByHeader: false,
@@ -80,38 +65,10 @@ module.exports = (phase) => ({
       {
         source: '/:path*',
         headers: [
-          {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on'
-          },
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload'
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN'
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block'
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin'
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()'
-          },
-          {
-            key: 'Content-Security-Policy',
-            value: contentSecurityPolicy(phase)
-          }
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
         ],
       },
       // The public share page (P7.5, UI-39): kept out of search results, and

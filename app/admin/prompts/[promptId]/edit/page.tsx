@@ -6,8 +6,6 @@ import { getAdminGate } from "@/lib/admin"
 import { getPromptTemplateDetail } from "@/lib/admin/prompts/queries"
 import { promptDetail } from "@/lib/admin/routes"
 
-export const dynamic = "force-dynamic"
-
 /** `/admin/prompts/[promptId]/edit` (P10.4): the style-guide editor; a v2 template opens read-only. */
 export default async function EditPromptTemplatePage({ params }: { params: Promise<{ promptId: string }> }) {
   const gate = await getAdminGate()

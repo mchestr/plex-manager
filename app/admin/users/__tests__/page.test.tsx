@@ -17,6 +17,7 @@ import type { AdminUserWithWrappedStats, PlexAccessCheck } from '@/types/admin'
 
 jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').navigationModule)
 jest.mock('server-only', () => ({}))
+jest.mock('next/server', () => ({ ...jest.requireActual('next/server'), connection: jest.fn().mockResolvedValue(undefined) }))
 jest.mock('@/lib/data/admin-users', () => ({ getAllUsersWithWrapped: jest.fn() }))
 jest.mock('@/actions/user-queries', () => ({ unshareUserLibrary: jest.fn() }))
 jest.mock('@/actions/admin/admin-users', () => ({ setUserDisabled: jest.fn(), updateUserAdminStatus: jest.fn() }))

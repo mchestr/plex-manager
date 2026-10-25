@@ -13,8 +13,6 @@ import { aggregateLlmUsage } from "@/lib/utils"
 import type { BoundFormat } from "@/lib/utils/format"
 import { dayKey } from "@/lib/utils/zoned-time"
 
-export const dynamic = "force-dynamic"
-
 /** "Oct 12, 2026, 2:26 PM CDT to 2:28 PM", or both dates when the range spans days; always in `Config.timezone` (GAP-43). */
 function formatTimeRange(start: Date, end: Date, f: BoundFormat) {
   const { timeZone } = f.settings

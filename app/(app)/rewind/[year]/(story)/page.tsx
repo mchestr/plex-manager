@@ -1,13 +1,11 @@
 import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
-import { getServerSession } from "next-auth"
 
 import { notifyWhenRewindReady } from "@/actions/rewind-notify"
 import { ArchiveActions, ArchiveArticle } from "@/components/rewind/article/archive-article"
 import { RewindIssue } from "@/components/rewind/rewind-issue"
 import { RewindStatusPanel } from "@/components/rewind/rewind-status-panel"
 import { RewindSharedYearsNotice } from "@/components/rewind/shared-years-notice"
-import { authOptions } from "@/lib/auth"
 import { rewindName, serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
 import { previewOwnerId, readPreview } from "@/lib/rewind/dry-run/store"
@@ -16,8 +14,7 @@ import { loadRewindYearView } from "@/lib/rewind/year-view"
 import { getAppSettings } from "@/lib/settings/app-settings"
 import { yearParamSchema } from "@/lib/validations/params"
 import { listCompletedRewindYears } from "@/lib/wrapped/season"
-
-export const dynamic = "force-dynamic"
+import { getSession } from "@/lib/data/session"
 
 type YearPageProps = {
   params: Promise<{ year: string }>
@@ -33,7 +30,7 @@ export async function generateMetadata({ params }: YearPageProps): Promise<Metad
 
 /** The member's own Rewind for the year in the route (FR-1, RWP-04, RWV-02, UI-02). */
 export default async function RewindYearPage({ params, searchParams }: YearPageProps) {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session) {
     redirect("/")
   }

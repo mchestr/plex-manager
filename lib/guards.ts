@@ -4,11 +4,10 @@ import { getOnboardingStatus } from "@/actions/onboarding"
 import { getSetupStatus } from "@/lib/setup/status"
 import { needsSubscribeRedirect } from "@/lib/access-paths"
 import { requestAccessLevel } from "@/lib/actions/entitlement"
-import { authOptions } from "@/lib/auth"
 import { PATHNAME_HEADER } from "@/lib/request-headers"
-import { getServerSession } from "next-auth"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
+import { getSession } from "@/lib/data/session"
 
 /**
  * Redirect guards for the `(app)` layout. A plain server-only module, not a
@@ -45,7 +44,7 @@ export async function ensureOnboardingComplete() {
  * cause a redirect loop.
  */
 export async function ensureSubscriptionOrAccess() {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session?.user?.id) {
     return
   }

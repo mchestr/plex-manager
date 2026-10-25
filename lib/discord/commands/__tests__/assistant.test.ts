@@ -8,60 +8,10 @@
  */
 
 jest.mock("discord.js", () => {
-  class SlashCommandStringOption {
-    name = ""
-    description = ""
-    required = false
-    setName(name: string) {
-      this.name = name
-      return this
-    }
-    setDescription(description: string) {
-      this.description = description
-      return this
-    }
-    setRequired(required: boolean) {
-      this.required = required
-      return this
-    }
-  }
-  class SlashCommandSubcommandBuilder {
-    name = ""
-    description = ""
-    options: SlashCommandStringOption[] = []
-    setName(name: string) {
-      this.name = name
-      return this
-    }
-    setDescription(description: string) {
-      this.description = description
-      return this
-    }
-    addStringOption(fn: (o: SlashCommandStringOption) => SlashCommandStringOption) {
-      this.options.push(fn(new SlashCommandStringOption()))
-      return this
-    }
-  }
-  class SlashCommandBuilder {
-    name = ""
-    description = ""
-    subcommands: SlashCommandSubcommandBuilder[] = []
-    setName(name: string) {
-      this.name = name
-      return this
-    }
-    setDescription(description: string) {
-      this.description = description
-      return this
-    }
-    addSubcommand(fn: (s: SlashCommandSubcommandBuilder) => SlashCommandSubcommandBuilder) {
-      this.subcommands.push(fn(new SlashCommandSubcommandBuilder()))
-      return this
-    }
-  }
   return {
     MessageFlags: { Ephemeral: 64 },
-    SlashCommandBuilder,
+    // Every definition is built on import, so one shared stub covers them all.
+    SlashCommandBuilder: jest.requireActual("./helpers/slash-command-builder-stub").SlashCommandBuilder,
   }
 })
 

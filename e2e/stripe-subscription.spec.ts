@@ -124,7 +124,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
 
       await adminPage.goto('/');
       // Admins bypass the gate (FR-7): they stay in the app, not on /subscribe.
-      await adminPage.waitForLoadState('networkidle');
+      await expect(adminPage.getByTestId('home-page')).toBeVisible();
       expect(adminPage.url()).not.toContain('/subscribe');
     });
   });
@@ -355,7 +355,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       await setStripeEnabled(false);
 
       await regularUserPage.goto('/');
-      await regularUserPage.waitForLoadState('networkidle');
+      await expect(regularUserPage.getByTestId('home-page')).toBeVisible();
 
       // Not redirected to the subscribe surface.
       expect(regularUserPage.url()).not.toContain('/subscribe');
@@ -368,7 +368,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       await setStripeEnabled(false);
 
       await regularUserPage.goto('/');
-      await regularUserPage.waitForLoadState('networkidle');
+      await expect(regularUserPage.getByTestId('home-page')).toBeVisible();
 
       // No subscription banners and no plan list surface.
       await expect(

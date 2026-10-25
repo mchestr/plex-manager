@@ -45,9 +45,32 @@ export function createPrismaClient() {
   })
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient()
+let client: ExtendedPrismaClient | undefined
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+/** Builds the client on first use, reusing the development singleton across reloads. */
+function getClient(): ExtendedPrismaClient {
+  if (!client) {
+    client = globalForPrisma.prisma ?? createPrismaClient()
+    if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = client
+  }
+  return client
+}
+
+/**
+ * The app's client, built on first property access (P11.22), so importing a
+ * module that reaches this one needs no `DATABASE_URL`. Methods are bound to
+ * the real client, so `prisma.$transaction(...)` runs with its own `this`.
+ */
+export const prisma = new Proxy({} as ExtendedPrismaClient, {
+  get(_target, property) {
+    const target = getClient()
+    const value: unknown = Reflect.get(target, property)
+    return typeof value === 'function' ? value.bind(target) : value
+  },
+  has(_target, property) {
+    return Reflect.has(getClient(), property)
+  },
+})
 
 /**
  * The extended Prisma client type (with the encryption query extension applied).

@@ -32,23 +32,12 @@ jest.mock("discord.js", () => {
     }
   }
 
-  class SlashCommandBuilder {
-    name = ""
-    description = ""
-    setName(name: string) {
-      this.name = name
-      return this
-    }
-    setDescription(description: string) {
-      this.description = description
-      return this
-    }
-  }
 
   return {
     MessageFlags: { Ephemeral: 64 },
     EmbedBuilder,
-    SlashCommandBuilder,
+    // Every definition is built on import, so one shared stub covers them all.
+    SlashCommandBuilder: jest.requireActual("./helpers/slash-command-builder-stub").SlashCommandBuilder,
   }
 })
 

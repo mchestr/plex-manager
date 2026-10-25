@@ -157,7 +157,7 @@ The 2026-10-18 schedule review raised 43 issues: 2 blocking, 20 major and 21 min
 - P8.3 and P8.4: every P1 feature is default-off through `+<key>` entries, with a fresh-Config test and each enable recorded in `ship-check.md`.
 - P10.14 keeps the users and settings codemod slices; the other areas fold into P10.1 to P10.6, and the playground and admin Rewind views join the skip list.
 - P10.24 keeps only the column and step-id changes; P11.31 does the audited duplicate-row clean-up after the final cut.
-- P11.1 and P11.3 run after 2027-01-31. P11.1 treats `ENCRYPTION_KEY` as the implicit `legacy` kid, so production installs without `ENCRYPTION_KEYS` keep writing.
+- P11.1 and P11.3 were deployed on 2026-10-24, before the season (owner decision; planned for after 2027-01-31). P11.1 treats `ENCRYPTION_KEY` as the implicit `legacy` kid, so production installs without `ENCRYPTION_KEYS` keep writing.
 - P11.18 adds the 2027-01-15 success review to the season-close clean-up.
 - Stale references removed: `generateAllPlexWrapped` in P0.12 and P2.5, the dead file in P5.1, the duplicate deletion in P2.5.
 - Missing dependencies added: P1.5 on P1.6 and P1.8, P3.2 on P4.1, P6.9 on P5.5. The backlog items carry the same lists.
@@ -429,7 +429,7 @@ Every finding from the audit reports, generated from the plan skeleton. 240 of 2
 - Thanksgiving (2026-11-26) falls inside the gallery review. Mitigation: the gallery is ready on 2026-11-20, the owner reviews on 2026-11-25 and 2026-11-27, the soft launch may slip to 2026-11-29 without moving 2026-12-01, and the 12:00 cutoff on 2026-11-30 still holds.
 - The final cut could fail on production-like data during the code freeze. Mitigation: the validator ships in P8.5 and runs against production after the 2026-12-01 generation; P8.10 rehearses the final cut on staging by 2026-12-11, before the code freeze, so a failure is still ordinary work; P9.2 is the second rehearsal on 2026-12-28; and the untested batch path is dropped.
 - January routing could break again. Mitigation: /rewind resolves the latest completed year, and an E2E test runs with the clock set to 2027-01-02 (P0.14, P5.1).
-- Rewind stays live until 2027-01-31 while P10 and P11 run. Mitigation: P11.1 and P11.3, which change runtime pieces Rewind depends on, run after 2027-01-31; every January migration takes a dump first; and P5.4's Rewind projects stay required checks.
+- Rewind stays live until 2027-01-31 while P10 and P11 run. Mitigation: P11.1 and P11.3, which change runtime pieces Rewind depends on, were deployed on 2026-10-24, five weeks before the season opens, so the soft launch exercises them first; every January migration takes a dump first; and P5.4's Rewind projects stay required checks.
 - The token codemod could produce enough visual churn to hide regressions. Mitigation: it runs in January (P10.13 to P10.15), one slice per PR with reviewed screenshot diffs, and a design-debt ratchet that only goes down.
 - Web Share with files can lose user activation on iOS Safari. Mitigation: the share sheet prefetches the card File when it opens, and an E2E test covers it on webkit.
 

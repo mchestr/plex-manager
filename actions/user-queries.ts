@@ -16,6 +16,7 @@ import { readStoredError, toStoredError } from "@/lib/wrapped/generation-errors"
 import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
 import { decodeActivityCursor, loadActivityTimeline } from "@/lib/admin/activity-timeline"
 import type { UserActivityTimelineData } from "@/types/admin"
+import { getActiveService } from "@/lib/data/active-service"
 
 const logger = createLogger("USER_QUERIES")
 
@@ -119,7 +120,7 @@ export const unshareUserLibrary = adminAction({
       return fail("VALIDATION", "User Plex ID is required to unshare library access")
     }
 
-    const plexServer = await prisma.plexServer.findFirst({ where: { isActive: true } })
+    const plexServer = await getActiveService("plex")
     if (!plexServer) {
       return fail("NOT_FOUND", "No active Plex server configured")
     }

@@ -9,6 +9,7 @@ import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
 import { globalWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
 import { ensureWatchlistSchedule } from "@/lib/watchlist/schedule"
+import { getActiveService } from "@/lib/data/active-service"
 
 /**
  * Update global watchlist sync settings (admin only)
@@ -19,7 +20,7 @@ export const updateGlobalWatchlistSyncSettings = adminAction({
   handler: async ({ watchlistSyncEnabled, watchlistSyncIntervalMinutes }, { userId }) => {
     // Watchlist sync files requests in Overseerr, so it needs an active server
     if (watchlistSyncEnabled) {
-      const overseerr = await prisma.overseerr.findFirst({ where: { isActive: true } })
+      const overseerr = await getActiveService("overseerr")
       if (!overseerr) {
         return fail("VALIDATION", "Cannot enable watchlist sync without an active Overseerr server")
       }

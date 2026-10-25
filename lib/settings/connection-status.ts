@@ -12,6 +12,9 @@ import type { ConnectionStatus } from "@/lib/ui/status"
 /** The cache tag of the service checks; actions that change a section's health update it. */
 export const CONNECTION_HEALTH_TAG = "connection-health"
 
+/** The cache tag of the member status bar's Prometheus uptime; a Prometheus save updates it (P11.19). */
+export const PROMETHEUS_STATUS_TAG = "prometheus-status"
+
 /** The checks `getSettingsHealth()` reports, one per settings section or listed service. */
 const HEALTH_KEYS = [
   "plex",

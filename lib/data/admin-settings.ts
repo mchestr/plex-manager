@@ -21,6 +21,7 @@ import { createLogger } from "@/lib/utils/logger"
 import { REWIND_SETTINGS_SELECT } from "@/lib/wrapped/config"
 import { DEFAULT_SEASON } from "@/lib/wrapped/season"
 import type { StripeConfigStatus } from "@/types/admin"
+import { getActiveService } from "@/lib/data/active-service"
 
 const logger = createLogger("ADMIN_SETTINGS")
 
@@ -228,13 +229,13 @@ export async function getAdminSettings() {
     getConfig(),
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "chat" } }),
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" } }),
-    prisma.plexServer.findFirst({ where: { isActive: true } }),
-    prisma.jellyfinServer.findFirst({ where: { isActive: true } }),
-    prisma.tautulli.findFirst({ where: { isActive: true } }),
-    prisma.overseerr.findFirst({ where: { isActive: true } }),
-    prisma.sonarr.findFirst({ where: { isActive: true } }),
-    prisma.radarr.findFirst({ where: { isActive: true } }),
-    prisma.prometheus.findFirst({ where: { isActive: true } }),
+    getActiveService("plex"),
+    getActiveService("jellyfin"),
+    getActiveService("tautulli"),
+    getActiveService("overseerr"),
+    getActiveService("sonarr"),
+    getActiveService("radarr"),
+    getActiveService("prometheus"),
     prisma.discordIntegration.findUnique({ where: { id: "discord" } }),
     prisma.discordConnection.count({ where: { revokedAt: null } }),
   ])

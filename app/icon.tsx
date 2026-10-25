@@ -2,8 +2,6 @@ import { connection } from "next/server"
 
 import { renderIcon } from "@/lib/og/brand-images"
 
-export const runtime = "nodejs"
-
 const SIZES = [32, 192, 512] as const
 
 /** The favicon and the manifest's two install icons, served at `/icon/<size>`. */

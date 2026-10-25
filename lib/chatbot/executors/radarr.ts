@@ -2,10 +2,10 @@ import "server-only"
 
 import { getRadarrCalendar, getRadarrDiskSpace, getRadarrHealth, getRadarrHistory, getRadarrMovieById, getRadarrMovies, getRadarrQualityProfiles, getRadarrQueue, getRadarrRootFolders, getRadarrSystemStatus, getRadarrWantedMissing, searchRadarrMovies } from "@/lib/connections/radarr"
 import { ARR_MAX_RECORDS } from "@/lib/connections/arr-client"
-import { prisma } from "@/lib/prisma"
 import { type RadarrParsed } from "@/lib/validations/radarr"
 
 import { arrListOutput, arrPageOutput, idForTitle, type ArrFilter } from "./arr-output"
+import { getActiveService } from "@/lib/data/active-service"
 
 /**
  * The movie a tool asks about: `movieId`, or the library movie whose title
@@ -33,7 +33,7 @@ export async function executeRadarrTool(
   _userId?: string,
   _context?: string
 ): Promise<string> {
-  const server = await prisma.radarr.findFirst({ where: { isActive: true } })
+  const server = await getActiveService("radarr")
   if (!server) return "Error: No active Radarr server configured."
 
   const config = {

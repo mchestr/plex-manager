@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation"
-import { getServerSession } from "next-auth"
 
-import { authOptions } from "@/lib/auth"
 import { resolveRewindYear } from "@/lib/wrapped/season"
-
-export const dynamic = "force-dynamic"
+import { getSession } from "@/lib/data/session"
 
 /** The query keys `/rewind` hands on to the year it opens. */
 const KEPT_PARAMS = ["from", "sheet"] as const
@@ -19,7 +16,7 @@ export default async function RewindResolverPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session) {
     redirect("/")
   }

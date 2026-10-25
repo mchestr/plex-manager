@@ -135,6 +135,7 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
     // Get Overseerr configuration
     const overseerr = await prisma.overseerr.findFirst({
       where: { isActive: true },
+    orderBy: { updatedAt: "desc" },
     })
 
     if (!overseerr) {
