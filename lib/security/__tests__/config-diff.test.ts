@@ -47,11 +47,11 @@ describe("configDiff", () => {
   })
 
   it("counts every field of a first save as changed", () => {
-    expect(configDiff("prometheus", null, { name: "P", url: "http://p:9090", query: "up" }, { urlFields: ["url"] })).toEqual({
-      section: "prometheus",
-      changedFields: ["name", "query", "url"],
+    expect(configDiff("sonarr", null, { name: "S", url: "http://s:8989", apiKey: "k" }, { urlFields: ["url"] })).toEqual({
+      section: "sonarr",
+      changedFields: ["apiKey", "name", "url"],
       secretChanged: false,
-      origins: { before: null, after: { url: "http://p:9090" } },
+      origins: { before: null, after: { url: "http://s:8989" } },
     })
   })
 

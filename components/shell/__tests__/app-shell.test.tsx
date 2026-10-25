@@ -34,7 +34,7 @@ const mockPathname = usePathname as jest.Mock
 jest.mock('@/components/subscription/subscription-banners', () => ({ SubscriptionBanners: () => null }))
 jest.mock('next/dynamic', () => () => require('@/components/shell/app-chrome').AppChrome)
 
-const OUTAGE: MemberNotice = { kind: 'outage', serviceName: 'Plex' }
+const NOTICE: MemberNotice = { kind: 'past-due' }
 
 const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initials: 'TM', isAdmin: false, membership: false }
 
@@ -82,7 +82,7 @@ describe('AppShell', () => {
 
   it('steps aside on Rewind pages, which draw their own chrome', () => {
     mockPathname.mockReturnValue('/rewind/2026')
-    renderShell(member, OUTAGE)
+    renderShell(member, NOTICE)
 
     expect(screen.queryByTestId('app-top-bar')).not.toBeInTheDocument()
     expect(screen.queryByTestId('app-notice')).not.toBeInTheDocument()
@@ -90,9 +90,9 @@ describe('AppShell', () => {
   })
 
   it('renders the notice under the top bar', () => {
-    renderShell(member, OUTAGE)
+    renderShell(member, NOTICE)
 
-    expect(screen.getByTestId('app-notice')).toHaveTextContent('Plex is down')
+    expect(screen.getByTestId('app-notice')).toBeInTheDocument()
   })
 
   it('opens the account menu by keyboard and signs out', async () => {

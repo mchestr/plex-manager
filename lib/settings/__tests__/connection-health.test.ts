@@ -25,7 +25,6 @@ jest.mock("@/lib/connections/jellyfin-connection", () => ({ testJellyfinConnecti
 jest.mock("@/lib/connections/overseerr", () => ({ testOverseerrConnection: jest.fn() }))
 jest.mock("@/lib/connections/sonarr", () => ({ testSonarrConnection: jest.fn() }))
 jest.mock("@/lib/connections/radarr", () => ({ testRadarrConnection: jest.fn() }))
-jest.mock("@/lib/connections/prometheus", () => ({ testPrometheusConnection: jest.fn() }))
 jest.mock("@/lib/queue/rewind-infra", () => ({ checkRewindInfra: jest.fn() }))
 jest.mock("@/lib/data/admin-settings", () => ({ getStripeConfig: jest.fn() }))
 

@@ -7,7 +7,7 @@ import { type ConnectionResult } from "@/types/connection"
 
 /**
  * The one outbound HTTP helper for the self-hosted services (Plex, Tautulli,
- * Overseerr, Sonarr, Radarr, Prometheus).
+ * Overseerr, Sonarr, Radarr).
  *
  * ## What every call gets
  *
@@ -80,8 +80,8 @@ export interface ServiceFetchOptions<T> {
   timeoutMs?: number
   signal?: AbortSignal
   /**
-   * Read a non-2xx body as JSON into the failure's `detail` (Prometheus
-   * documents its errors there). Off by default: the body is cancelled.
+   * Read a non-2xx body as JSON into the failure's `detail` (for an upstream
+   * that documents its errors there). Off by default: the body is cancelled.
    */
   readErrorBody?: boolean
   /** Sees the final response's status and headers (an ETag, 201 against 202) before the body is read. */

@@ -150,7 +150,6 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `Overseerr` | URL and API key | `apiKey` |
 | `Sonarr` | URL and API key | `apiKey` |
 | `Radarr` | URL and API key | `apiKey` |
-| `Prometheus` | URL | No |
 | `LLMProvider` | provider, model and API key | `apiKey` |
 | `Config` | app settings, Stripe keys, Rewind settings | `stripeSecretKey`, `stripeWebhookSecret`, `rewindSerialKey` |
 | `DiscordIntegration` | Discord app credentials and bot settings; `updatedBy` admin id | `clientSecret`, `botToken` |

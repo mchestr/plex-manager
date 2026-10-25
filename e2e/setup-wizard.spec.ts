@@ -15,7 +15,7 @@ import { navigateAndVerify, waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/
 
 import type { PrismaClient } from '../lib/generated/prisma/client';
 
-const OPTIONAL_STEPS = ['overseerr', 'sonarr', 'radarr', 'llm-rewind', 'llm-chat', 'discord', 'prometheus'] as const;
+const OPTIONAL_STEPS = ['overseerr', 'sonarr', 'radarr', 'llm-rewind', 'llm-chat', 'discord'] as const;
 
 /** Waits for a step's card, by its step id. */
 async function atStep(page: Page, stepId: string) {
@@ -82,7 +82,6 @@ test.describe('Setup Wizard', () => {
     await prisma.user.deleteMany();
     await prisma.lLMProvider.deleteMany();
     await prisma.discordIntegration.deleteMany();
-    await prisma.prometheus.deleteMany();
     await prisma.radarr.deleteMany();
     await prisma.sonarr.deleteMany();
     await prisma.overseerr.deleteMany();
@@ -109,7 +108,7 @@ test.describe('Setup Wizard', () => {
     await page.getByTestId('setup-tautulli-secret').fill('test-tautulli-api-key');
     await page.getByTestId('setup-form-submit').click();
 
-    // Skip for now on every optional step, Overseerr to Prometheus
+    // Skip for now on every optional step, Overseerr to Discord
     for (const stepId of OPTIONAL_STEPS) {
       await atStep(page, stepId);
       await page.getByTestId('setup-skip-step').click();
@@ -119,7 +118,7 @@ test.describe('Setup Wizard', () => {
     await atStep(page, 'summary');
     await expect(page.getByTestId('setup-summary-connected')).toContainText('Plex server');
     await expect(page.getByTestId('setup-summary-connected')).toContainText('Tautulli');
-    for (const title of ['Overseerr', 'Sonarr', 'Radarr', 'Rewind writer', 'Admin assistant', 'Discord', 'Prometheus']) {
+    for (const title of ['Overseerr', 'Sonarr', 'Radarr', 'Rewind writer', 'Admin assistant', 'Discord']) {
       await expect(page.getByTestId('setup-summary-skipped')).toContainText(title);
     }
     expect(await prisma.overseerr.count()).toBe(0);

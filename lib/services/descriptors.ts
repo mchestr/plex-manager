@@ -15,24 +15,22 @@ import type { ActionFailure } from "@/lib/actions/result"
 import { testJellyfinConnection } from "@/lib/connections/jellyfin"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { getPlexServerIdentity, getPlexUserInfo, testPlexConnection } from "@/lib/connections/plex"
-import { testPrometheusConnection, validatePrometheusQuery } from "@/lib/connections/prometheus"
 import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
-import type { JellyfinServer, PlexServer, Prometheus } from "@/lib/generated/prisma/client"
+import type { JellyfinServer, PlexServer } from "@/lib/generated/prisma/client"
 import type { PrismaTransactionClient } from "@/lib/prisma"
 import { connectionTestCopy } from "@/lib/ui/error-copy"
 import { jellyfinServerSchema } from "@/lib/validations/jellyfin"
 import { overseerrSchema } from "@/lib/validations/overseerr"
 import { plexServerSchema, type PlexServerParsed } from "@/lib/validations/plex"
-import { prometheusSchema, type PrometheusParsed } from "@/lib/validations/prometheus"
 import { radarrSchema } from "@/lib/validations/radarr"
 import type { ServiceParsed } from "@/lib/validations/shared-schemas"
 import { sonarrSchema } from "@/lib/validations/sonarr"
 import { tautulliSchema } from "@/lib/validations/tautulli"
 
-export type ServiceKind = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus"
-type ApiKeyKind = Exclude<ServiceKind, "plex" | "prometheus">
+export type ServiceKind = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr"
+type ApiKeyKind = Exclude<ServiceKind, "plex">
 type ApiKeyRow = Omit<JellyfinServer, "adminUserId" | "enabledForLogin">
 
 /** A form as sent: its secret may be blank, to keep the stored one for the same address. */
@@ -42,7 +40,6 @@ type ApiKeyInput = Omit<ServiceParsed, "apiKey"> & { apiKey?: string }
 
 interface Kinds {
   plex: { input: PlexInput; config: PlexServerParsed; stored: PlexServer; row: PlexServerParsed & Pick<PlexServer, "adminPlexUserId" | "machineIdentifier"> }
-  prometheus: { input: PrometheusParsed; config: PrometheusParsed; stored: Prometheus; row: PrometheusParsed }
 }
 type Kind<K extends ServiceKind> = K extends keyof Kinds ? Kinds[K] : { input: ApiKeyInput; config: ServiceParsed; stored: ApiKeyRow; row: ServiceParsed }
 
@@ -62,8 +59,8 @@ interface ActiveRowDelegate<D, S> {
 
 export interface ServiceDescriptor<K extends ServiceKind> {
   label: string
-  /** The row's secret, or null for Prometheus, which has none. */
-  secretField: "token" | "apiKey" | null
+  /** The row's secret field. */
+  secretField: "token" | "apiKey"
   /** The full form, for client-side checks. */
   schema: z.ZodType<ServiceConfig<K>>
   /** The action input: the form with its secret optional. */
@@ -73,7 +70,7 @@ export interface ServiceDescriptor<K extends ServiceKind> {
   /** The input with its resolved secret. */
   withSecret(input: ServiceInput<K>, secret: string): ServiceConfig<K>
   test(config: ServiceConfig<K>): Promise<{ success: boolean; error?: string }>
-  /** After a passing test: the row to save, or why not (the Plex owner, the Prometheus query). */
+  /** After a passing test: the row to save, or why not (the Plex owner). */
   toRow(config: ServiceConfig<K>): Promise<{ ok: true; row: ServiceRow<K> } | { ok: false; failure: ActionFailure }>
   delegate(db: PrismaTransactionClient): ActiveRowDelegate<ServiceRow<K>, StoredService<K>>
 }
@@ -126,21 +123,4 @@ export const SERVICE_DESCRIPTORS: { [K in ServiceKind]: ServiceDescriptor<K> } =
   overseerr: apiKeyService("Overseerr", overseerrSchema, testOverseerrConnection, (db) => db.overseerr),
   sonarr: apiKeyService("Sonarr", sonarrSchema, testSonarrConnection, (db) => db.sonarr),
   radarr: apiKeyService("Radarr", radarrSchema, testRadarrConnection, (db) => db.radarr),
-  prometheus: {
-    label: "Prometheus",
-    secretField: null,
-    schema: prometheusSchema,
-    input: prometheusSchema,
-    secretOf: () => undefined,
-    withSecret: (input) => input,
-    test: testPrometheusConnection,
-    toRow: async (config) => {
-      const query = await validatePrometheusQuery(config)
-      if (!query.success) {
-        return { ok: false, failure: { success: false, code: "VALIDATION", error: query.error || "Invalid PromQL query" } }
-      }
-      return plainRow(config)
-    },
-    delegate: (db) => db.prometheus,
-  },
 }

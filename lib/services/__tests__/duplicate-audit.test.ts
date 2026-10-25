@@ -18,7 +18,7 @@ import { testService } from '@/lib/settings/test-service'
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/settings/test-service', () => ({ testService: jest.fn() }))
 
-const DELEGATES = ['plexServer', 'jellyfinServer', 'tautulli', 'overseerr', 'sonarr', 'radarr', 'prometheus']
+const DELEGATES = ['plexServer', 'jellyfinServer', 'tautulli', 'overseerr', 'sonarr', 'radarr']
 const KEY_OLD = 'tautulli-key-old-0123456789'
 const KEY_NEW = 'tautulli-key-new-9876543210'
 

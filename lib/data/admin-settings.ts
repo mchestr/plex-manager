@@ -222,7 +222,6 @@ export async function getAdminSettings() {
     overseerr,
     sonarr,
     radarr,
-    prometheus,
     discordIntegration,
     discordLinkedCount,
   ] = await Promise.all([
@@ -235,7 +234,6 @@ export async function getAdminSettings() {
     getActiveService("overseerr"),
     getActiveService("sonarr"),
     getActiveService("radarr"),
-    getActiveService("prometheus"),
     prisma.discordIntegration.findUnique({ where: { id: "discord" } }),
     prisma.discordConnection.count({ where: { revokedAt: null } }),
   ])
@@ -271,7 +269,6 @@ export async function getAdminSettings() {
     overseerr: omitSecret("Overseerr", overseerr, "apiKey", serverUrl),
     sonarr: omitSecret("Sonarr", sonarr, "apiKey", serverUrl),
     radarr: omitSecret("Radarr", radarr, "apiKey", serverUrl),
-    prometheus,
     discordIntegration: sanitizedDiscordIntegration,
     discordLinkedCount,
   }

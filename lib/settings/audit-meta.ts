@@ -14,7 +14,7 @@
  * | Stripe billing | `stripe`, `stripe.enabled` |
  * | Watchlist sync, Rewind | `watchlist`, `rewind` |
  * | Discord channel stats, Request limits | `discord.stats`, `request-tiers` |
- * | Other integrations | `sonarr`, `radarr`, `jellyfin`, `jellyfin.login`, `prometheus` |
+ * | Other integrations | `sonarr`, `radarr`, `jellyfin`, `jellyfin.login` |
  * | System information | `appearance`, `timezone` (`SERVER_TIMEZONE_CHANGED`) |
  *
  * The lookups go out as one batched transaction, then one read of the actors'
@@ -39,7 +39,7 @@ const SECTIONS = {
   channelStats: ["discord.stats"],
   requestTiers: ["request-tiers"],
   rewind: ["rewind"],
-  other: ["sonarr", "radarr", "jellyfin", "jellyfin.login", "prometheus"],
+  other: ["sonarr", "radarr", "jellyfin", "jellyfin.login"],
   system: ["appearance", "timezone"],
 } as const satisfies Record<string, readonly string[]>
 

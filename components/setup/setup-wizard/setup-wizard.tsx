@@ -59,7 +59,6 @@ export function SetupWizard({ position, reached, data, devDefaults, rail }: Setu
       case "overseerr":
       case "sonarr":
       case "radarr":
-      case "prometheus":
         return <ServiceConnectionForm kind={position} stored={stored.server ?? null} devDefaults={devDefaults} />
       case "llm-rewind":
         return <LLMStep purpose="wrapped" stored={stored.llm ?? null} devDefaults={devDefaults} />

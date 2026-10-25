@@ -15,7 +15,7 @@ import "server-only"
 
 import { cache } from "react"
 
-import type { JellyfinServer, Overseerr, PlexServer, Prometheus, Radarr, Sonarr, Tautulli } from "@/lib/generated/prisma/client"
+import type { JellyfinServer, Overseerr, PlexServer, Radarr, Sonarr, Tautulli } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 
 interface ActiveRows {
@@ -25,7 +25,6 @@ interface ActiveRows {
   overseerr: Overseerr
   sonarr: Sonarr
   radarr: Radarr
-  prometheus: Prometheus
 }
 
 export type ActiveServiceKind = keyof ActiveRows
@@ -39,7 +38,6 @@ const loaders: { [K in ActiveServiceKind]: () => Promise<ActiveRows[K] | null> }
   overseerr: cache(() => prisma.overseerr.findFirst(ACTIVE)),
   sonarr: cache(() => prisma.sonarr.findFirst(ACTIVE)),
   radarr: cache(() => prisma.radarr.findFirst(ACTIVE)),
-  prometheus: cache(() => prisma.prometheus.findFirst(ACTIVE)),
 }
 
 /** The kind's active row, or `null` when none is configured. */

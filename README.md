@@ -93,7 +93,6 @@ Each member's year on the server, as a story of pages (formerly "Plex Wrapped"):
 - **LLM usage and cost** per call and per member, and **share analytics** for Rewind links
 - **Queues**, and a privacy section in settings with the retention sweep. Admin and security events are written to an append-only audit table
 - **Subscription management** - Cancel, grant access and exempt, and mark users exempt (when Stripe is enabled)
-- **Server status**: an optional uptime strip from Prometheus on the home page
 
 ### Stripe Subscriptions (Optional)
 - **Stripe-powered access gating** - Non-members can subscribe to get Plex access, or have their Jellyfin account turned on
@@ -180,7 +179,7 @@ To choose the code yourself, set `SETUP_TOKEN` (at least 16 characters, e.g. `op
 Choose **Connect with Plex** and approve Plex Manager on plex.tv with the account that owns your server. Back in the wizard, pick your server and the address Plex Manager should use (a local one is fastest). Servers shared with that account can't be chosen; only their owner can set them up. If your server doesn't show up, or this browser can't reach plex.tv, open **Enter a token instead** and type the server URL (for example `https://example.com:32400`) and an X-Plex-Token.
 
 9. **Complete the setup wizard**
-Plex and Tautulli (URL format: `http://example.com:8181`) are required. Overseerr, Sonarr, Radarr, the two AI providers, Discord and Prometheus are optional: **Skip for now** moves on, and you can set them up later in Admin, Settings. The summary lists what is connected and what was skipped; **Open admin** finishes setup and signs you in with the Plex account you connected.
+Plex and Tautulli (URL format: `http://example.com:8181`) are required. Overseerr, Sonarr, Radarr, the two AI providers and Discord are optional: **Skip for now** moves on, and you can set them up later in Admin, Settings. The summary lists what is connected and what was skipped; **Open admin** finishes setup and signs you in with the Plex account you connected.
 
 ---
 
@@ -209,7 +208,7 @@ plex-manager/
 │   ├── shell/              # App, public and admin shells
 │   └── ui/                 # Shared UI primitives
 ├── lib/                    # Business logic
-│   ├── connections/        # Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr and Prometheus clients
+│   ├── connections/        # Plex, Jellyfin, Tautulli, Overseerr, Sonarr, and Radarr clients
 │   ├── data/               # Server-only admin loaders
 │   ├── members/            # Member access, removal and export
 │   ├── queue/              # BullMQ queues and jobs
@@ -451,7 +450,6 @@ The project includes a `Dockerfile` for containerized deployments, published as 
 - **Sonarr** and **Radarr** - Assistant tools; Sonarr also adds returning shows to Rewind
 - **Discord** - Linked roles, slash commands and the assistant
 - **AI providers** - Rewind copy and the assistants
-- **Prometheus** - The server status strip on the home page
 - **Stripe** - Subscription-based access with auto-provisioned Plex or Jellyfin access (see [docs/stripe.md](docs/stripe.md))
 - **Redis** - The BullMQ job queue and shared rate limits; Rewind and Stripe need it
 
