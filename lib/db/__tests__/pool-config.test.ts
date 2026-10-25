@@ -32,7 +32,7 @@ afterAll(() => {
 
 function adapterConfig(): Record<string, unknown> {
   jest.isolateModules(() => {
-    require("@/lib/prisma")
+    void require("@/lib/prisma").prisma.user
   })
   expect(PrismaPg).toHaveBeenCalledTimes(1)
   return jest.mocked(PrismaPg).mock.calls[0][0] as Record<string, unknown>

@@ -33,7 +33,7 @@ afterAll(() => {
 function adapterArgs(url: string): unknown[] {
   process.env = { ...originalEnv, DATABASE_URL: url }
   jest.isolateModules(() => {
-    require("@/lib/prisma")
+    void require("@/lib/prisma").prisma.user
   })
   expect(PrismaPg).toHaveBeenCalledTimes(1)
   return jest.mocked(PrismaPg).mock.calls[0]
@@ -57,7 +57,7 @@ describe("createPrismaClient() and ?schema=", () => {
     process.env = { ...originalEnv, DATABASE_URL: `${BASE}?schema=bad-name` }
     expect(() =>
       jest.isolateModules(() => {
-        require("@/lib/prisma")
+        void require("@/lib/prisma").prisma.user
       })
     ).toThrow("?schema= must be")
     expect(PrismaPg).not.toHaveBeenCalled()

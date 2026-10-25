@@ -350,6 +350,11 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # No database and no URL: lib/prisma.ts builds its client on first use
+    # (P11.22), so modules import without one. The setup action's Prisma
+    # generate step supplies its own.
+    env:
+      DATABASE_URL: ""
 
     steps:
       - name: Checkout code
@@ -358,8 +363,7 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
-      # No database: lib/prisma.ts only needs DATABASE_URL set. The Postgres-
-      # and Redis-backed suites (*.pg.test.ts, *.redis.test.ts) run in the
+      # The Postgres- and Redis-backed suites (*.pg.test.ts, *.redis.test.ts) run in the
       # integration job; see jest.config.js. Jest fails when coverage falls
       # below a floor in jest.coverage-thresholds.json.
       - name: Run unit tests with coverage
