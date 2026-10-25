@@ -72,7 +72,7 @@ type Tester = () => Promise<{ success: boolean; error?: string }>
 const TEST_NAME = "Connection test"
 
 function storedRow(service: TestableService): Promise<StoredSecret | null> {
-  const where = { where: { isActive: true } } as const
+  const where = { where: { isActive: true }, orderBy: { updatedAt: "desc" } } as const
   switch (service) {
     case "plex":
       return prisma.plexServer.findFirst({ ...where, select: { url: true, token: true } }).then((row) => row && { url: row.url, secret: row.token })

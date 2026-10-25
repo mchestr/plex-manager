@@ -1469,8 +1469,10 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Done when.**
 - [ ] The audit lists every duplicate active row with its connection result and today's choice, and the owner confirmed the keeps.
 - [ ] The apply left one active row per service, recorded the deactivated ids, and is idempotent.
-- [ ] Every active read of the seven models has a deterministic order, enforced by a test.
+- [x] Every active read of the seven models has a deterministic order, enforced by a test.
 - [ ] Dump taken before the apply.
+
+(as merged: code only; the first, second and fourth Done-when items are the owner's, after the final cut (P9.3). The audit is `auditServiceRows()` in `lib/services/duplicate-audit.ts` (connection results from P10.20's `testService`, so codes are `ok`/probe codes/`SECRET_REQUIRED`/`VALIDATION`); each listed table carries `todaysPickId` (the unordered pre-P11.31 read, the default keep), `orderedPickId` (this release's read) and `suggestedKeepId`. The apply is `applyServiceRowKeeps()` in `lib/services/duplicate-apply.ts` (one `$transaction`: re-reads, refuses `KEEP_MISSING`/`KEEP_UNKNOWN`, deactivates, writes `SERVICE_ROWS_DEDUPED`; nothing listed writes nothing). Scripts: `npm run services:rows-audit` and `npm run services:rows-apply -- --dump <file> --keep <Table>=<id> ...` (tables by Prisma model name); the dump-first rule is `--dump` naming a non-empty file modified in the last six hours, since the script does not run `pg_dump` itself (a plain dump would sit unencrypted). The admin action is `auditServiceRows({ confirm?, keeps?, dumpTaken? })` in `actions/admin/service-rows.ts`, behind "Check service rows" in Settings > Security (`settings-service-rows-*` test ids); the app cannot take or verify a dump, so `confirm: true` needs the admin's `dumpTaken: true` and the audit row records it. The order test `__tests__/config/active-row-order.test.ts` scans `findFirst` on the seven models (resolving same-file consts); the audit's deliberate unordered read carries an `active-row-order: unordered` comment. Postgres suite: `lib/services/__tests__/duplicate-apply.pg.test.ts`.)
 
 ### Step P11.32: Claim the server before first-run setup
 

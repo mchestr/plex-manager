@@ -18,6 +18,7 @@ export async function findRadarrIdByTitle(
     // Get active Radarr server
     const radarrServer = await prisma.radarr.findFirst({
       where: { isActive: true },
+    orderBy: { updatedAt: "desc" },
     })
 
     if (!radarrServer) {
@@ -129,6 +130,7 @@ export async function findSonarrIdByTitle(
     // Get active Sonarr server
     const sonarrServer = await prisma.sonarr.findFirst({
       where: { isActive: true },
+    orderBy: { updatedAt: "desc" },
     })
 
     if (!sonarrServer) {

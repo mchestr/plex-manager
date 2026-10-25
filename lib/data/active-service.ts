@@ -30,7 +30,7 @@ interface ActiveRows {
 
 export type ActiveServiceKind = keyof ActiveRows
 
-const ACTIVE = { where: { isActive: true } } as const
+const ACTIVE = { where: { isActive: true }, orderBy: { updatedAt: "desc" } } as const
 
 const loaders: { [K in ActiveServiceKind]: () => Promise<ActiveRows[K] | null> } = {
   plex: cache(() => prisma.plexServer.findFirst(ACTIVE)),

@@ -149,6 +149,7 @@ async function handleGet(request: NextRequest, context: { params: Promise<{ rati
 
     const plexServer = await prisma.plexServer.findFirst({
       where: { isActive: true },
+      orderBy: { updatedAt: "desc" },
       select: { url: true, token: true, adminPlexUserId: true },
     })
     if (!plexServer) return posterNotFound()

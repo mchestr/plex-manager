@@ -67,7 +67,7 @@ describe('lib/jellyfin-auth', () => {
   describe('getJellyfinLoginServer', () => {
     it('returns the active server when sign-in is allowed', async () => {
       await expect(getJellyfinLoginServer()).resolves.toBe(SERVER)
-      expect(mockFindFirst).toHaveBeenCalledWith({ where: { isActive: true } })
+      expect(mockFindFirst).toHaveBeenCalledWith({ where: { isActive: true }, orderBy: { updatedAt: 'desc' } })
     })
 
     it('returns null and logs when "Allow Jellyfin sign-in" is off', async () => {

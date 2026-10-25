@@ -52,7 +52,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
   const [plexServer, jellyfinServer, discordIntegration, serverName] = await Promise.all([
     getActiveService("plex"),
-    prisma.jellyfinServer.findFirst({ where: { isActive: true, enabledForLogin: true } }),
+    prisma.jellyfinServer.findFirst({ where: { isActive: true, enabledForLogin: true }, orderBy: { updatedAt: "desc" } }),
     prisma.discordIntegration.findUnique({ where: { id: "discord" }, select: { serverInviteCode: true } }),
     getServerName(),
   ]);

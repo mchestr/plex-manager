@@ -163,6 +163,7 @@ export async function getNewOn(viewer: { userId: string; isAdmin: boolean }, now
     const [server, user] = await Promise.all([
       prisma.plexServer.findFirst({
         where: { isActive: true },
+        orderBy: { updatedAt: "desc" },
         select: { url: true, token: true, adminPlexUserId: true, publicUrl: true },
       }),
       prisma.user.findUnique({ where: { id: viewer.userId }, select: { plexUserId: true } }),

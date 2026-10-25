@@ -72,6 +72,7 @@ export const toggleJellyfinLogin = adminAction({
   handler: async (enabled, { userId }) => {
     const stored = await prisma.jellyfinServer.findFirst({
       where: { isActive: true },
+      orderBy: { updatedAt: "desc" },
       select: { enabledForLogin: true },
     })
     await prisma.jellyfinServer.updateMany({

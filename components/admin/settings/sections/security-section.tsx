@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, type ReactNode } from "react"
 
 import { reencryptStoredSecrets } from "@/actions/admin/encryption"
 import { Alert } from "@/components/ui/alert"
@@ -43,9 +43,10 @@ interface DryRun {
  * Security (P11.1): whether stored secrets are encrypted and under which key,
  * any field the current key cannot read, and "Encrypt stored secrets", which
  * counts first (a dry run) and then rewrites every plaintext value and every
- * value under an older key with the primary key.
+ * value under an older key with the primary key. `serviceRows` is the
+ * duplicate service row check (P11.31).
  */
-export function SecuritySection({ status }: { status: EncryptionStatus }) {
+export function SecuritySection({ status, serviceRows }: { status: EncryptionStatus; serviceRows?: ReactNode }) {
   const [counts, setCounts] = useState<DryRun | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -127,6 +128,7 @@ export function SecuritySection({ status }: { status: EncryptionStatus }) {
           </ul>
         </Alert>
       )}
+      {serviceRows}
     </SettingsSection>
   )
 }
