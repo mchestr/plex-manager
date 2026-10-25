@@ -18,8 +18,8 @@
     "lines": 95
   },
   "./lib/security/": {
-    "statements": 97,
-    "branches": 96,
+    "statements": 98,
+    "branches": 97,
     "functions": 98,
     "lines": 98
   },
@@ -42,8 +42,8 @@
     "lines": 88
   },
   "./lib/security/crypto.ts": {
-    "statements": 99,
-    "branches": 97,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
     "lines": 100
   },
@@ -97,7 +97,7 @@
   },
   "./actions/setup.ts": {
     "statements": 100,
-    "branches": 86,
+    "branches": 87,
     "functions": 100,
     "lines": 100
   },

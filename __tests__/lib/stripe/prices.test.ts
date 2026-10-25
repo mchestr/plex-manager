@@ -271,6 +271,21 @@ describe('getPlanName', () => {
     expect(stripe.prices.retrieve).toHaveBeenCalledWith('price_old', { expand: ['product'] })
   })
 
+  it('retrieves the price directly outside a Next request (the Discord bot and queue jobs)', async () => {
+    mockFindUnique.mockResolvedValue({ stripeEnabled: true, stripePriceIds: [] })
+    const stripe = makeStripeMock()
+    stripe.prices.retrieve.mockResolvedValue(
+      makeStripePrice({ id: 'price_old', product: { name: 'Founding plan', deleted: false } })
+    )
+    mockGetStripe.mockResolvedValue(stripe)
+    jest.mocked(cacheTag).mockImplementationOnce(() => {
+      throw new Error('"use cache" cannot be used outside of App Router.')
+    })
+
+    await expect(getPlanName('price_old')).resolves.toBe('Founding plan')
+    expect(stripe.prices.retrieve).toHaveBeenCalledWith('price_old', { expand: ['product'] })
+  })
+
   it('falls back to "Membership", never the price id', async () => {
     mockFindUnique.mockResolvedValue({ stripeEnabled: true, stripePriceIds: [] })
     const stripe = makeStripeMock()
