@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 
 import { getActiveAnnouncements } from "@/actions/announcements"
@@ -7,10 +6,10 @@ import { MarkAnnouncementsSeen } from "@/components/announcements/mark-announcem
 import { AnnouncementItem } from "@/components/announcements/announcement-item"
 import { Card, CardContent } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
-import { authOptions } from "@/lib/auth"
 import { isNewAnnouncement, newestCreatedAt } from "@/lib/member/announcements"
 import { prisma } from "@/lib/prisma"
 import { icons } from "@/lib/ui/icons"
+import { getSession } from "@/lib/data/session"
 
 export const metadata: Metadata = { title: "Announcements" }
 
@@ -20,7 +19,7 @@ export const metadata: Metadata = { title: "Announcements" }
  * since the member last looked carry the "New" pip for this view.
  */
 export default async function AnnouncementsPage() {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session?.user?.id) redirect("/")
 
   const [result, user] = await Promise.all([

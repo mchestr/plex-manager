@@ -1,12 +1,11 @@
-import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 
 import { withRequestContext } from "@/lib/actions/route"
-import { authOptions } from "@/lib/auth"
 import { buildMemberExport } from "@/lib/members/export"
 import { createSafeError, ErrorCode, getStatusCode } from "@/lib/security/error-handler"
 import { consume } from "@/lib/security/rate-limit"
 import { createLogger } from "@/lib/utils/logger"
+import { getSession } from "@/lib/data/session"
 
 const logger = createLogger("MEMBER_EXPORT")
 
@@ -29,7 +28,7 @@ async function handleGet(request: Request) {
     return failure(ErrorCode.FORBIDDEN, "Download your data from your account page")
   }
 
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session?.user?.id) return failure(ErrorCode.UNAUTHORIZED, "Sign in to download your data")
   const userId = session.user.id
 

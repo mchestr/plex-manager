@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 
 import { AppearancePicker } from "@/components/account/appearance-picker"
@@ -9,7 +8,6 @@ import { TimezoneField } from "@/components/account/timezone-field"
 import { YourDataSection } from "@/components/account/your-data-section"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { authOptions } from "@/lib/auth"
 import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import { getAppSettings } from "@/lib/settings/app-settings"
 import { discordHandleFor } from "@/lib/member/shell"
@@ -19,6 +17,7 @@ import { parseTableParams } from "@/lib/ui/table-params"
 import { serverZone } from "@/lib/utils/server-zone"
 import { timeZoneOptions } from "@/lib/utils/zoned-time"
 import { getSeasonState } from "@/lib/wrapped/season"
+import { getSession } from "@/lib/data/session"
 
 export const metadata: Metadata = { title: "Account" }
 
@@ -40,7 +39,7 @@ async function rewindNotify(userId: string): Promise<boolean> {
  * marks table.
  */
 export default async function AccountPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session?.user?.id) redirect("/")
   const userId = session.user.id
   const { page } = parseTableParams(await searchParams, { sortable: [], defaultSort: { id: "markedAt", desc: true } })

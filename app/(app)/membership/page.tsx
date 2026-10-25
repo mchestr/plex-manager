@@ -1,12 +1,11 @@
 import type { Metadata } from "next"
-import { getServerSession } from "next-auth"
 import { notFound, redirect } from "next/navigation"
 
 import { MembershipDetails } from "@/components/subscription/membership-details"
-import { authOptions } from "@/lib/auth"
 import { getMembership } from "@/lib/member/membership"
 import { hasMembershipPage } from "@/lib/member/membership-page"
 import { getFormatSettings } from "@/lib/settings/app-settings"
+import { getSession } from "@/lib/data/session"
 
 export const metadata: Metadata = { title: "Membership" }
 
@@ -16,7 +15,7 @@ export const metadata: Metadata = { title: "Membership" }
  * subscription row.
  */
 export default async function MembershipPage() {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session?.user?.id) redirect("/")
   const userId = session.user.id
 

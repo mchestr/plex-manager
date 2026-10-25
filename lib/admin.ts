@@ -1,17 +1,9 @@
 import "server-only"
 
-import { getServerSession, type Session } from "next-auth"
-import { cache } from "react"
+import type { Session } from "next-auth"
 
-import { authOptions } from "@/lib/auth"
 import { AUTH_ERROR_DIGESTS, type AuthErrorKind } from "@/lib/auth-errors"
-
-/**
- * The request's session, read once per server render (DUP-06): the admin
- * layout's gate and every loader on the page share one lookup. Outside a
- * render (an action, a route handler) each call reads it again.
- */
-const requestSession = cache(() => getServerSession(authOptions))
+import { getSession } from "@/lib/data/session"
 
 export type AdminGate =
   | { ok: true; session: Session }
@@ -23,7 +15,8 @@ export type AdminGate =
  * rewrites thrown errors (BP-27).
  */
 export async function getAdminGate(): Promise<AdminGate> {
-  const session = await requestSession()
+  // The memoised read (DUP-06): the layout gate and every loader share one lookup
+  const session = await getSession()
   if (!session?.user?.id) return { ok: false, reason: "unauthenticated" }
   if (!session.user.isAdmin) return { ok: false, reason: "forbidden" }
   return { ok: true, session }
@@ -58,7 +51,7 @@ export async function assertAdmin(): Promise<Session> {
  * @internal
  */
 export async function getAdminStatus(): Promise<boolean | null> {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
 
   if (!session) {
     return null

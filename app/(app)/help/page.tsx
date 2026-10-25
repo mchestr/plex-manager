@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { getServerSession } from "next-auth"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import type { ReactNode } from "react"
@@ -8,9 +7,9 @@ import { PlaybackGuide } from "@/components/guides/playback-guide"
 import { RequestsGuide } from "@/components/guides/requests-guide"
 import { SupportGuide } from "@/components/guides/support-guide"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { authOptions } from "@/lib/auth"
 import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import { getHelpData } from "@/lib/member/help"
+import { getSession } from "@/lib/data/session"
 
 export const metadata: Metadata = { title: "Help" }
 
@@ -37,7 +36,7 @@ function HelpSection({ id, title, children }: { id: string; title: string; child
  * with a public request URL.
  */
 export default async function HelpPage() {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session?.user?.id) redirect("/")
 
   const [help, assistantDisclosure] = await Promise.all([getHelpData(session.user.id), getAssistantDisclosure()])

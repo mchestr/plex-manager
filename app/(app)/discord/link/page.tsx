@@ -1,12 +1,11 @@
 import type { Metadata } from "next"
-import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 
 import { DiscordLinkChecklist } from "@/components/discord/link-checklist"
-import { authOptions } from "@/lib/auth"
 import { serverName } from "@/lib/brand"
 import { getDiscordIntegration, getDiscordLinkStatus } from "@/lib/discord/integration"
 import { prisma } from "@/lib/prisma"
+import { getSession } from "@/lib/data/session"
 
 export const metadata: Metadata = {
   title: "Link Discord",
@@ -15,7 +14,7 @@ export const metadata: Metadata = {
 const CONNECT_URL = "/discord/connect?redirect=%2Fdiscord%2Flink"
 
 export default async function DiscordLinkPage() {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session?.user?.id) {
     redirect("/")
   }

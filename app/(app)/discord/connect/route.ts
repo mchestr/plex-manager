@@ -1,14 +1,13 @@
 import { parseSearchParams, requireEntitlement, withRequestContext } from "@/lib/actions/route"
-import { authOptions } from "@/lib/auth"
 import { createDiscordAuthorizationUrl } from "@/lib/discord/integration"
 import { discordOAuthCookie } from "@/lib/discord/oauth-cookie"
 import { consume } from "@/lib/security/rate-limit"
 import { safeRedirectPath } from "@/lib/security/safe-redirect"
 import { withFlash } from "@/lib/ui/flash-codes"
 import { createLogger } from "@/lib/utils/logger"
-import { getServerSession } from "next-auth"
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
+import { getSession } from "@/lib/data/session"
 
 const logger = createLogger("DISCORD_CONNECT")
 
@@ -20,7 +19,7 @@ const logger = createLogger("DISCORD_CONNECT")
 const querySchema = z.object({ redirect: z.string().max(512).optional() })
 
 async function handleGet(request: NextRequest) {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session?.user?.id) {
     return NextResponse.redirect(new URL("/", request.url))
   }

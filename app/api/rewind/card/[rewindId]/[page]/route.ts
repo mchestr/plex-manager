@@ -1,9 +1,7 @@
-import { getServerSession } from "next-auth"
 import { NextRequest } from "next/server"
 import { z } from "zod"
 
 import { hasEntitlement } from "@/lib/actions/entitlement"
-import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { cardBadRequest, cardError, cardNotFound, completedV3, serveCard } from "@/lib/rewind/cards/serve"
 import { createLogger } from "@/lib/utils/logger"
@@ -12,6 +10,7 @@ import { choosable } from "@/lib/wrapped/data/share-safe"
 import { loadShareContext } from "@/lib/wrapped/data/share-context"
 import { CardFactIdSchema, SharePageTypeSchema } from "@/lib/wrapped/data/share-safe-schema"
 import { withRequestContext } from "@/lib/actions/route"
+import { getSession } from "@/lib/data/session"
 
 const logger = createLogger("REWIND_CARD_OWNER")
 
@@ -54,7 +53,7 @@ async function handleGet(request: NextRequest, context: { params: Promise<{ rewi
     if (!parsed.success) return cardBadRequest(parsed.error.issues[0]?.message ?? "Invalid request")
     if (parsed.data.size === "square") return cardBadRequest("Square cards are not available yet")
 
-    const session = await getServerSession(authOptions)
+    const session = await getSession()
     if (!session) return cardNotFound()
     const userId = session.user.id
     const row = await prisma.plexWrapped.findFirst({
