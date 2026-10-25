@@ -62,9 +62,9 @@ export interface RouteDeps {
   /** Resolve the linked-user status for a Discord user id. */
   verifyDiscordUser: typeof defaultVerifyDiscordUser
   /** Look up a registered slash command by name. */
-  getCommand: (name: string) => SlashCommand | undefined
+  getCommand: (name: string) => Promise<SlashCommand | undefined>
   /** Resolve the component handler owning a `custom_id`. */
-  getComponentHandler: (customId: string) => ComponentHandler | undefined
+  getComponentHandler: (customId: string) => Promise<ComponentHandler | undefined>
 }
 
 const defaultDeps: RouteDeps = {
@@ -108,7 +108,7 @@ async function routeAutocomplete(
   interaction: AutocompleteInteraction,
   deps: RouteDeps
 ): Promise<void> {
-  const command = deps.getCommand(interaction.commandName)
+  const command = await deps.getCommand(interaction.commandName)
   if (!command?.autocomplete) return
   await command.autocomplete(interaction)
 }
@@ -128,7 +128,7 @@ async function routeChatInputCommand(
   interaction: import("discord.js").ChatInputCommandInteraction,
   deps: RouteDeps
 ): Promise<void> {
-  const command = deps.getCommand(interaction.commandName)
+  const command = await deps.getCommand(interaction.commandName)
 
   if (!command) {
     await interaction.reply({
@@ -189,7 +189,7 @@ async function routeComponent(
   interaction: ButtonInteraction | StringSelectMenuInteraction,
   deps: RouteDeps
 ): Promise<void> {
-  const handler = deps.getComponentHandler(interaction.customId)
+  const handler = await deps.getComponentHandler(interaction.customId)
 
   if (!handler) {
     await interaction.reply({

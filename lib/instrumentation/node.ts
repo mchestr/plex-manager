@@ -48,7 +48,7 @@ export async function startNodeInstrumentation() {
       ? []
       : [
           startQueueWorker().catch((error) => logger.error("Queue worker start failed", error)),
-          startDiscordBotPolling().catch((error) => logger.error("Discord bot start failed", error)),
+          startDiscordBot().catch((error) => logger.error("Discord bot start failed", error)),
         ]
 
   await Promise.all([
@@ -165,110 +165,8 @@ async function scheduleRoleReconcile() {
   logger.info("Discord role reconcile scheduled daily at 04:00", { tz })
 }
 
-async function startDiscordBotPolling() {
-  // Check if bot should attempt to start (can be disabled via env var for manual control)
-  const envBotEnabled = process.env.ENABLE_DISCORD_BOT !== "false"
-
-  if (!envBotEnabled) {
-    logger.debug("Discord bot disabled via ENABLE_DISCORD_BOT=false")
-    return
-  }
-
-  // Check database setting - if bot is disabled there, don't start polling
-  try {
-    const { isDiscordBotEnabled } = await import("@/lib/discord/config")
-    const botEnabled = await isDiscordBotEnabled()
-    if (!botEnabled) {
-      logger.debug("Discord bot disabled in database settings")
-      return
-    }
-  } catch (error) {
-    // If we can't check the database, proceed anyway (database might not be ready yet)
-    // The polling loop will check the setting periodically
-    logger.warn("Could not check Discord bot enabled status", { error })
-  }
-
-  // Use dynamic import with a string to prevent Next.js from analyzing the dependency tree
-  // This ensures Discord.js and its native dependencies aren't bundled.
-  //
-  // This is the ONE legitimate place that owns the DiscordBot and its
-  // LeasePoller for the process lifecycle.
-  try {
-    const { LeaseLock } = await import("@/lib/locks/lease-lock")
-    const { LeasePoller, DEFAULT_POLL_INTERVAL_MS } = await import("@/lib/locks/lease-poller")
-    const { isDiscordBotEnabled } = await import("@/lib/discord/config")
-    const { DiscordBot } = await import("@/lib/discord/bot")
-    const { prisma } = await import("@/lib/prisma")
-
-    // Construct the process-lifecycle instances here (injecting a real Client via
-    // the bot's default factory).
-    const bot = new DiscordBot()
-    const lock = new LeaseLock({ name: "discord-bot" })
-
-    // Poll interval in milliseconds (default: 10 seconds). It only paces
-    // acquisition, the enabled check and the config bounce: the poller renews
-    // the 30 s lease on its own timer every 10 s, whatever this is set to.
-    const pollIntervalMs = parseInt(
-      process.env.DISCORD_BOT_POLL_INTERVAL_MS || String(DEFAULT_POLL_INTERVAL_MS),
-      10
-    )
-
-    // The poller drives acquire/renew off a single lock (single source of truth)
-    // and calls these lifecycle hooks. onLockAcquired -> initialize the bot;
-    // onLockLost -> destroy it.
-    //
-    // Step 18 (FR-13): getConfigVersion feeds the poller's config-change bounce.
-    // When DiscordIntegration.configVersion changes while the holder is running,
-    // the poller runs onLockLost (destroy) then onLockAcquired (re-initialize),
-    // so bot.initialize() re-reads the fresh token via lib/discord/config.ts —
-    // no redeploy required.
-    const poller = new LeasePoller(
-      lock,
-      {
-        onLockAcquired: async () => {
-          try {
-            await bot.initialize()
-            logger.info("Discord bot initialized successfully (holding distributed lock)")
-          } catch (error) {
-            logger.error("Failed to initialize Discord bot", error)
-            // Release lock if initialization fails so another instance can take over.
-            await lock.release()
-          }
-        },
-        onLockLost: async () => {
-          try {
-            logger.info("Discord bot lock lost - shutting down bot")
-            await bot.destroy()
-          } catch (error) {
-            logger.error("Error shutting down bot after lock loss", error)
-          }
-        },
-        isEnabled: isDiscordBotEnabled,
-      },
-      {
-        pollIntervalMs,
-        getConfigVersion: async () => {
-          const row = await prisma.discordIntegration.findUnique({
-            where: { id: "discord" },
-            select: { configVersion: true },
-          })
-          return row?.configVersion ?? 0
-        },
-      }
-    )
-
-    // stop() fires onLockLost (which destroys the bot) and releases the
-    // discord-bot lease, so another instance can take over at once.
-    onShutdown("discord-bot", "drain", () => poller.stop())
-
-    // Runs the first acquisition attempt, then polls in the background. The
-    // bot initializes automatically when the lock is acquired.
-    await poller.start()
-
-    logger.info(`Discord bot lock polling started (checking every ${pollIntervalMs / 1000} seconds)`)
-  } catch (error) {
-    // Silently fail if Discord.js can't be loaded (e.g., missing native dependencies)
-    // This allows the app to start even if the bot can't be initialized
-    logger.warn("Discord bot module could not be loaded", { error })
-  }
+/** The Discord bot's lease poller (`lib/instrumentation/discord-start.ts`, P11.7). */
+async function startDiscordBot() {
+  const { startDiscordBotPolling } = await import("@/lib/instrumentation/discord-start")
+  await startDiscordBotPolling()
 }

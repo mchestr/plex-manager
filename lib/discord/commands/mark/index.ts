@@ -44,7 +44,6 @@ import { randomUUID } from "crypto"
 import {
   ActionRowBuilder,
   MessageFlags,
-  SlashCommandBuilder,
   StringSelectMenuBuilder,
   type ChatInputCommandInteraction,
   type MessageComponentInteraction,
@@ -66,6 +65,7 @@ import type {
   InteractionContext,
   SlashCommand,
 } from "../registry"
+import { COMMAND_DEFINITIONS, MARK_SELECT_PREFIX } from "../definitions"
 import { requireLinkedUser } from "../require-linked-user"
 import {
   createPendingSelection,
@@ -74,13 +74,6 @@ import {
 } from "./pending-store"
 
 const logger = createLogger("DISCORD_MARK_COMMAND")
-
-/**
- * `custom_id` prefix for `/mark`'s disambiguation select menu.
- *
- * @internal
- */
-export const MARK_SELECT_PREFIX = "mark:select:"
 
 /** Max results a Plex search can put in a single select menu (Discord cap). */
 const MAX_SELECT_OPTIONS = 25
@@ -373,49 +366,7 @@ const selectComponent: ComponentHandler = {
  * component handler for multi-result disambiguation.
  */
 export const markCommand: SlashCommand = {
-  data: new SlashCommandBuilder()
-    .setName("mark")
-    .setDescription("Mark a movie or show in your Plex library")
-    .addSubcommand((sub) =>
-      sub
-        .setName("finished")
-        .setDescription("Mark as finished watching (marks it watched on your Plex account)")
-        .addStringOption((option) =>
-          option.setName("title").setDescription("Title to search for").setRequired(true)
-        )
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName("keep")
-        .setDescription("Mark as keep forever (protected from auto-deletion)")
-        .addStringOption((option) =>
-          option.setName("title").setDescription("Title to search for").setRequired(true)
-        )
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName("notinterested")
-        .setDescription("Mark as not interested (won't be recommended)")
-        .addStringOption((option) =>
-          option.setName("title").setDescription("Title to search for").setRequired(true)
-        )
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName("rewatch")
-        .setDescription("Mark as a rewatch candidate")
-        .addStringOption((option) =>
-          option.setName("title").setDescription("Title to search for").setRequired(true)
-        )
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName("badquality")
-        .setDescription("Report media as poor quality (may be re-downloaded)")
-        .addStringOption((option) =>
-          option.setName("title").setDescription("Title to search for").setRequired(true)
-        )
-    ) as SlashCommandBuilder,
+  data: COMMAND_DEFINITIONS.mark,
   commandType: "MEDIA_MARK" as DiscordCommandType,
   handle: handleMark,
   components: [selectComponent],

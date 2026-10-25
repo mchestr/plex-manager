@@ -50,7 +50,7 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `REDIS_URL` |  |  | Redis for the job queue and rate limits, redis://:password@host:6379. Rewind and Stripe need it. |
 | `ENABLE_QUEUE_WORKER` |  | `true` | "false" turns the BullMQ worker off in this process (on by default when REDIS_URL is set). |
 | `QUEUE_WORKER_CONCURRENCY` |  | `5` | Jobs the worker runs at once. |
-| `ENABLE_DISCORD_BOT` |  | `true` | "false" stops this process from running the Discord bot. One process runs it, under a database lock. |
+| `ENABLE_DISCORD_BOT` |  | `true` | "false" opts this process out of the Discord bot. Otherwise it starts once Admin, Discord, "Bot enabled" is on and a token exists, with no restart. One process runs it, under a database lock. |
 | `DISCORD_BOT_POLL_INTERVAL_MS` |  | `10000` | How often to try for the bot lock and re-check settings. |
 | `ENABLE_WATCHLIST_SYNC` |  | `true` | "false" turns the polling watchlist sync off when Redis is not set. |
 | `WATCHLIST_SYNC_POLL_INTERVAL_MS` |  | `60000` | How often the polling watchlist sync checks its lock. |

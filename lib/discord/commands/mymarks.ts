@@ -24,17 +24,14 @@
  * embed description carries a `showing N of M` note.
  */
 
-import {
-  EmbedBuilder,
-  MessageFlags,
-  SlashCommandBuilder,
-} from "discord.js"
+import { EmbedBuilder, MessageFlags } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { MarkType } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getAccountUrl } from "@/lib/discord/config"
 import { getMarkTypeLabel } from "@/lib/discord/media/mark-labels"
 import { createLogger } from "@/lib/utils/logger"
+import { COMMAND_DEFINITIONS, MARK_TYPE_CHOICES } from "./definitions"
 import type { InteractionContext, SlashCommand } from "./registry"
 import { requireLinkedUser } from "./require-linked-user"
 
@@ -49,21 +46,8 @@ const MAX_LINES_PER_GROUP = 15
 /** Overall cap on marks rendered across all groups. */
 const MAX_MARKS_RENDERED = 100
 
-/**
- * The `type` option's choices: one per user-facing mark type, mapped to its
- * {@link MarkType} enum value. Mirrors the `/mark` subcommand vocabulary
- * (finished / keep / notinterested / rewatch / badquality).
- */
-const TYPE_CHOICES: { name: string; value: MarkType }[] = [
-  { name: "finished", value: MarkType.FINISHED_WATCHING },
-  { name: "keep", value: MarkType.KEEP_FOREVER },
-  { name: "notinterested", value: MarkType.NOT_INTERESTED },
-  { name: "rewatch", value: MarkType.REWATCH_CANDIDATE },
-  { name: "badquality", value: MarkType.POOR_QUALITY },
-]
-
 /** Ordered mark types for stable group ordering in the embed. */
-const MARK_TYPE_ORDER: MarkType[] = TYPE_CHOICES.map((c) => c.value)
+const MARK_TYPE_ORDER: MarkType[] = MARK_TYPE_CHOICES.map((c) => c.value)
 
 /** A single mark row projected to just the fields we render. */
 type MarkRow = {
@@ -228,16 +212,7 @@ async function handleMyMarks(ctx: InteractionContext): Promise<void> {
  * media marks as an ephemeral, grouped embed.
  */
 export const myMarksCommand: SlashCommand = {
-  data: new SlashCommandBuilder()
-    .setName("mymarks")
-    .setDescription("Show the media you've marked")
-    .addStringOption((option) =>
-      option
-        .setName("type")
-        .setDescription("Only show marks of this type")
-        .setRequired(false)
-        .addChoices(...TYPE_CHOICES)
-    ) as SlashCommandBuilder,
+  data: COMMAND_DEFINITIONS.mymarks,
   commandType: "MEDIA_MARK" as DiscordCommandType,
   handle: handleMyMarks,
 }

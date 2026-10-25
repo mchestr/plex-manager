@@ -1,8 +1,14 @@
 # Discord Bot
 
-This repository ships with a Discord bot that **runs automatically with the
-Next.js process**. It serves users through native **slash commands** and a
-**DM-based AI assistant** — it does **not** monitor or read channel messages.
+This repository ships with a Discord bot that runs inside the app's own
+process: the single container, or the `worker` container when you split roles
+(`PROCESS_ROLE`, see [the workers example](examples/docker-compose.workers.yml)).
+It serves users through native **slash commands** and a **DM-based AI
+assistant**; it does **not** monitor or read channel messages.
+
+**Admin → Settings → Discord → "Bot enabled"** is the main control. Turn it on
+and save a bot token, and the bot comes online within one poll (10 s by
+default), with no restart; turn it off and it goes offline the same way.
 
 > **Migration note:** the bot was migrated from `!`-prefix text commands to
 > native slash commands. As a result it **no longer requires the `Message
@@ -77,9 +83,9 @@ and a Jellyfin account uses every command with their Plex account.
    when the corresponding DB fields are unset, so existing deployments keep
    working:
    ```
-   # Optional: set to "false" to disable bot attempts (default: enabled).
+   # On by default; "false" opts this process out of running the bot.
    # The bot uses a distributed DB lock, so only one pod runs it.
-   ENABLE_DISCORD_BOT="true"
+   # ENABLE_DISCORD_BOT="false"
 
    # Fallbacks only — prefer setting these in Admin → Settings → Discord.
    DISCORD_BOT_TOKEN=...
@@ -87,9 +93,9 @@ and a Jellyfin account uses every command with their Plex account.
    DISCORD_SUPPORT_THREAD_IDS=...   # optional, comma-delimited
    DISCORD_PORTAL_URL=https://yourdomain.com/discord/link  # optional
    ```
-   Only the **bot token** is required for the bot to start. Setting/rotating the
-   token in the admin UI takes effect **without a redeploy** (see *Token
-   rotation* below).
+   The bot starts once "Bot enabled" is on and a token exists, saved in the
+   admin UI or in `DISCORD_BOT_TOKEN`. Turning it on, saving or rotating the
+   token all take effect **without a restart** (see *Token rotation* below).
 
 > **Tip:** Grab IDs by enabling *Developer Mode* in Discord → Advanced →
 > right-click → "Copy ID".
@@ -139,23 +145,39 @@ hit, so a wrong pick now touches only the member's own history.
 
 ## Registering slash commands
 
-Slash commands must be registered with Discord once per deploy (and whenever the
-command set changes):
+Slash commands must be registered with Discord once, and again whenever the
+command set changes (the changelog says when):
 
 ```bash
-# Global registration (eventually consistent across all guilds):
-DISCORD_BOT_TOKEN=... DISCORD_CLIENT_ID=... npm run register-discord-commands
+# From a checkout (reads .env):
+npm run register-discord-commands
 
-# Instant registration to a single guild (recommended for development):
-DISCORD_BOT_TOKEN=... DISCORD_CLIENT_ID=... DISCORD_GUILD_ID=... \
-  npm run register-discord-commands
+# From the image:
+docker compose exec app node scripts/dist/register-discord-commands.cjs
+
+# List the commands without registering anything (no network, no database):
+npm run register-discord-commands -- --dry-run
 ```
 
-The script performs an idempotent bulk overwrite of the application's commands.
+The script reads `DISCORD_BOT_TOKEN` and `DISCORD_CLIENT_ID` (or
+`NEXT_PUBLIC_DISCORD_CLIENT_ID`) from the environment or `.env`. When either is
+missing, it uses the bot token and client ID saved in Admin → Settings →
+Discord, read through `DATABASE_URL`. Without `DISCORD_GUILD_ID` the commands
+are global and can take up to an hour to appear; with it they appear at once in
+that server, which suits development. It performs an idempotent bulk overwrite
+of the application's commands. `register-discord-metadata` runs the same two
+ways (`node scripts/dist/register-discord-metadata.cjs` in the image), from
+the environment only.
 
 ## Running the bot
 
-The bot **only starts** when `ENABLE_DISCORD_BOT="true"`:
+Every process that runs background work (`PROCESS_ROLE` `all` or `worker`)
+polls for the bot unless `ENABLE_DISCORD_BOT="false"`. On each poll it checks
+that "Bot enabled" is on and a token exists, so a bot turned on or given a
+token after boot starts at the next poll. The log says why it is waiting, once
+per change: `discord.waiting_for_enable`, `discord.waiting_for_token`, then
+`discord.ready`. If the database cannot be read, that poll counts as not ready
+(warning at most once a minute) and the next poll tries again.
 
 ```bash
 npm run dev      # Development
@@ -175,7 +197,7 @@ without Redis shares the same lock and poller under the name `watchlist-sync`.
   takes it at its next poll.
 - Every pod also runs a **poll** every `DISCORD_BOT_POLL_INTERVAL_MS`
   (default `10000`, 10 s). The poll tries for the lock when this pod does not
-  hold it, re-checks the "bot enabled" switch, and applies config changes (see
+  hold it, re-checks the "Bot enabled" switch and the token, and applies config changes (see
   *Token rotation*). The poll never renews the lease, so a longer poll interval
   only slows takeover and settings changes; it cannot take the bot offline.
 - No manual configuration needed.
@@ -197,7 +219,8 @@ lock poller watches a `configVersion` counter on the `DiscordIntegration` row
 (bumped on every settings save). When it changes, the holding pod **bounces** the
 bot — `destroy()` then `initialize()` — so it reconnects with the fresh token,
 **without a redeploy**. If the re-initialization fails, the pod releases the lease
-so another pod can take over.
+so another pod can take over. A bot that is not running picks the change up at
+its next poll.
 
 ## Support flow
 
@@ -277,9 +300,12 @@ that carries no token usage is logged, not recorded.
 ## Troubleshooting
 
 - **Slash commands don't appear** → run `npm run register-discord-commands`
-  (use `DISCORD_GUILD_ID` for instant dev registration).
-- **Bot won't start** → ensure a bot token is set (admin UI or `DISCORD_BOT_TOKEN`)
-  and `ENABLE_DISCORD_BOT="true"`.
+  (in the image, `node scripts/dist/register-discord-commands.cjs`; use
+  `DISCORD_GUILD_ID` for instant dev registration).
+- **Bot won't start** → `/admin/discord` says "Turned off" (turn on "Bot
+  enabled") or "Waiting for a bot token" (save one, or set
+  `DISCORD_BOT_TOKEN`). Check that `ENABLE_DISCORD_BOT` is not `"false"` and
+  that a `worker` or `all` container is running.
 - **Token change not taking effect** → the holding pod bounces within one poll
   interval; check logs for the bounce, and that the lock is held.
 - **Bot keeps going offline or logging in again** → while it runs,

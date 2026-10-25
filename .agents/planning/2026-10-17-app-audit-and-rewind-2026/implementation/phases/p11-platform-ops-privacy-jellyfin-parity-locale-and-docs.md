@@ -366,10 +366,12 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
 **Demo.** On a fresh install, turn the bot on in the wizard and paste the token: the bot is online within 10 s, with no restart. Then `docker compose exec app node scripts/dist/register-discord-commands.cjs` registers the commands with the stored token, and they appear in the dev guild.
 
 **Done when.**
-- [ ] The poller always runs unless opted out, and the bot starts once it is enabled and has a token.
-- [ ] The docs and `example.env` match the default and describe the admin switch.
-- [ ] The registration script loads its environment first, falls back to the database token, and runs from the image.
-- [ ] The fake-timer and script tests pass.
+- [x] The poller always runs unless opted out, and the bot starts once it is enabled and has a token.
+- [x] The docs and `example.env` match the default and describe the admin switch.
+- [x] The registration script loads its environment first, falls back to the database token, and runs from the image.
+- [x] The fake-timer and script tests pass.
+
+(as merged: the bot start moved out of `lib/instrumentation/node.ts` into `lib/instrumentation/discord-start.ts` (`startDiscordBotPolling`). `isDiscordBotReady()` is in `lib/discord/config.ts`, beside `getStoredBotCredentials()` for the script; `isDiscordBotEnabled()` stays for `rewind-notify`. `getDiscordBotStatus()` is in `lib/admin/discord.ts` and returns the bot part of `DiscordState`, where an env `DISCORD_BOT_TOKEN` now counts as a token. `/admin/discord` and the settings health both use it, and the `supportBot` labels are now "Turned off" and "Waiting for a bot token". `registry.ts` entries are `{ name, load, componentPrefixes? }`, and `getCommand`/`getComponentHandler` are async. `MARK_SELECT_PREFIX` and `MARK_TYPE_CHOICES` live in `definitions.ts`. The command tests that stub discord.js share `lib/discord/commands/__tests__/helpers/slash-command-builder-stub.ts`. `registerSlashCommands` takes `{ token, clientId, guildId? }` or `{ dryRun: true }`. The scripts already ran on tsx. `npm run build:discord-scripts` (esbuild 0.28.2, an exact devDependency) writes `scripts/dist/*.cjs`, which is gitignored. The bundle includes Prisma and dotenv; only discord.js is external. Registration uses only `DISCORD_GUILD_ID` and ignores the stored guild id. The image build and its smoke step were not run here.)
 
 ### Step P11.8: Plex API contract fixes
 

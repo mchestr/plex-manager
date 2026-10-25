@@ -153,8 +153,8 @@ export const STATUS = {
   supportBot: {
     online: { label: "Online", tone: "success", mark: "dot", sub: "Lease renewed {ago}" },
     offline: { label: "Offline", tone: "destructive", mark: "dot", sub: "Since {time}" },
-    needsSetup: { label: "Needs setup", ...warning, sub: "Add the bot token in settings" },
-    off: { label: "Off", tone: "neutral", mark: "dot" },
+    needsSetup: { label: "Waiting for a bot token", ...warning, sub: "Add the bot token in settings" },
+    off: { label: "Turned off", tone: "neutral", mark: "dot" },
   },
   discordCommand: {
     SUCCESS: { label: "Succeeded", tone: "success", mark: "dot" },

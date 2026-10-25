@@ -778,9 +778,10 @@ a `PAST_DUE` subscriber, and never disables a Jellyfin administrator (FR-19,
 
 If Discord features are enabled:
 - Bot client and event wiring in `lib/discord/bot.ts`
-- Slash commands live in `lib/discord/commands/` (`registry.ts` lists them); register them with `npm run register-discord-commands`
+- Slash commands live in `lib/discord/commands/`: `definitions.ts` holds the builders (no Prisma), `registry.ts` pairs each with a lazily loaded handler. Register them with `npm run register-discord-commands` (`-- --dry-run` lists them), or `node scripts/dist/register-discord-commands.cjs` in the image
+- The bot starts once Admin, Discord, "Bot enabled" is on and a token exists (`isDiscordBotReady`), with no restart; `ENABLE_DISCORD_BOT=false` opts a process out
 - Safety checks in `lib/discord/chat-safety.ts`
-- Register linked-role metadata: `npm run register-discord-metadata`
+- Register linked-role metadata: `npm run register-discord-metadata` (`node scripts/dist/register-discord-metadata.cjs` in the image)
 - See `docs/discord-bot.md` for setup
 
 ## Deployment Checklist

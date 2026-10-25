@@ -37,14 +37,12 @@
  * router / audit wrapper (commandType {@link DiscordCommandType} `CHAT`).
  */
 
-import {
-  MessageFlags,
-  SlashCommandBuilder,
-} from "discord.js"
+import { MessageFlags } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { DISCORD_MESSAGE_LIMIT, fitDiscordContent } from "@/lib/discord/chat-safety"
 import { clearDiscordChat, handleDiscordChat } from "@/lib/discord/services"
 import { createLogger } from "@/lib/utils/logger"
+import { COMMAND_DEFINITIONS } from "./definitions"
 import type { InteractionContext, SlashCommand } from "./registry"
 import {
   buildNotEntitledMessage,
@@ -174,23 +172,7 @@ async function handleAssistant(ctx: InteractionContext): Promise<void> {
  * context) subcommands.
  */
 export const assistantCommand: SlashCommand = {
-  data: new SlashCommandBuilder()
-    .setName("assistant")
-    .setDescription("Ask the AI assistant a question")
-    .addSubcommand((sub) =>
-      sub
-        .setName("ask")
-        .setDescription("Ask a question. Only you see the answer; server admins can review assistant chats")
-        .addStringOption((option) =>
-          option
-            .setName("prompt")
-            .setDescription("What would you like to ask?")
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((sub) =>
-      sub.setName("reset").setDescription("Clear your assistant conversation context")
-    ) as SlashCommandBuilder,
+  data: COMMAND_DEFINITIONS.assistant,
   commandType: "CHAT" as DiscordCommandType,
   handle: handleAssistant,
 }

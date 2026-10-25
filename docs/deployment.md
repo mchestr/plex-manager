@@ -227,9 +227,12 @@ npm run start:prod
   `/api/health?probe=live`, which never touches either.
 - **Metrics.** Set `METRICS_TOKEN` to serve Prometheus metrics at `/api/metrics`
   ([operations](operations.md#request-ids-and-metrics)).
-- **Discord.** Register the slash commands and linked-role metadata from a
-  checkout with `npm run register-discord-commands` and
-  `npm run register-discord-metadata`; see [the Discord bot guide](discord-bot.md).
+- **Discord.** Turn the bot on in Admin → Settings → Discord; it starts within
+  10 s, with no restart. Register the slash commands with
+  `docker compose exec app node scripts/dist/register-discord-commands.cjs`
+  (from a checkout, `npm run register-discord-commands`), and the linked-role
+  metadata with `register-discord-metadata` the same way; see
+  [the Discord bot guide](discord-bot.md#registering-slash-commands).
 - **Stripe.** Register the webhook at `https://plex.example.com/api/stripe/webhook`;
   see [Stripe](stripe.md).
 - **Backups.** Schedule `pg_dump` ([operations](operations.md#backup)) and back up

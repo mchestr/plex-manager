@@ -136,3 +136,53 @@ export async function isDiscordBotEnabled(): Promise<boolean> {
     return false
   }
 }
+
+/** The stored bot token and application id, for `scripts/register-discord-commands.ts`. */
+export async function getStoredBotCredentials(): Promise<{ token?: string; clientId?: string }> {
+  const row = await getRow()
+  return { token: row?.botToken ?? undefined, clientId: row?.clientId ?? undefined }
+}
+
+type BotReadiness = "waiting_for_enable" | "waiting_for_token" | "ready"
+
+const READINESS_WARN_INTERVAL_MS = 60_000
+let lastReadiness: BotReadiness | undefined
+let lastReadinessWarnAt = Number.NEGATIVE_INFINITY
+
+/**
+ * Whether this process should run the bot now (GAP-12): "Bot enabled" is on
+ * and a token exists, stored or in `DISCORD_BOT_TOKEN`. The bot's lease poller
+ * calls it on every tick, so turning the bot on or saving a token takes effect
+ * within one poll, with no restart. Each change of state is logged at info
+ * (`discord.waiting_for_enable`, `discord.waiting_for_token`, `discord.ready`).
+ *
+ * A database error answers false for that tick only, warning at most once a
+ * minute; the next tick reads again.
+ */
+export async function isDiscordBotReady(): Promise<boolean> {
+  let row: { botEnabled: boolean; botToken: string | null } | null
+  try {
+    row = await prisma.discordIntegration.findUnique({
+      where: { id: "discord" },
+      select: { botEnabled: true, botToken: true },
+    })
+  } catch (error) {
+    const now = Date.now()
+    if (now - lastReadinessWarnAt >= READINESS_WARN_INTERVAL_MS) {
+      lastReadinessWarnAt = now
+      logger.warn("discord.readiness_check_failed", { error })
+    }
+    return false
+  }
+
+  const readiness: BotReadiness = !row?.botEnabled
+    ? "waiting_for_enable"
+    : row.botToken || process.env.DISCORD_BOT_TOKEN
+      ? "ready"
+      : "waiting_for_token"
+  if (readiness !== lastReadiness) {
+    lastReadiness = readiness
+    logger.info(`discord.${readiness}`)
+  }
+  return readiness === "ready"
+}

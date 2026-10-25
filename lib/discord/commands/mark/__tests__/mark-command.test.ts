@@ -8,57 +8,6 @@
  */
 
 jest.mock("discord.js", () => {
-  class SlashCommandStringOption {
-    name = ""
-    description = ""
-    required = false
-    setName(name: string) {
-      this.name = name
-      return this
-    }
-    setDescription(description: string) {
-      this.description = description
-      return this
-    }
-    setRequired(required: boolean) {
-      this.required = required
-      return this
-    }
-  }
-  class SlashCommandSubcommandBuilder {
-    name = ""
-    description = ""
-    options: SlashCommandStringOption[] = []
-    setName(name: string) {
-      this.name = name
-      return this
-    }
-    setDescription(description: string) {
-      this.description = description
-      return this
-    }
-    addStringOption(fn: (o: SlashCommandStringOption) => SlashCommandStringOption) {
-      this.options.push(fn(new SlashCommandStringOption()))
-      return this
-    }
-  }
-  class SlashCommandBuilder {
-    name = ""
-    description = ""
-    subcommands: SlashCommandSubcommandBuilder[] = []
-    setName(name: string) {
-      this.name = name
-      return this
-    }
-    setDescription(description: string) {
-      this.description = description
-      return this
-    }
-    addSubcommand(fn: (s: SlashCommandSubcommandBuilder) => SlashCommandSubcommandBuilder) {
-      this.subcommands.push(fn(new SlashCommandSubcommandBuilder()))
-      return this
-    }
-  }
   class StringSelectMenuBuilder {
     data: { customId?: string; placeholder?: string; options: unknown[] } = { options: [] }
     setCustomId(id: string) {
@@ -83,7 +32,8 @@ jest.mock("discord.js", () => {
   }
   return {
     MessageFlags: { Ephemeral: 64 },
-    SlashCommandBuilder,
+    // Every definition is built on import, so one shared stub covers them all.
+    SlashCommandBuilder: jest.requireActual("../../__tests__/helpers/slash-command-builder-stub").SlashCommandBuilder,
     StringSelectMenuBuilder,
     ActionRowBuilder,
   }
@@ -120,7 +70,8 @@ jest.mock("@/lib/discord/config", () => ({
   getDiscordPortalUrl: () => "https://example.com/discord/link",
 }))
 
-import { markCommand, MARK_SUBCOMMANDS, MARK_SELECT_PREFIX } from "../index"
+import { markCommand, MARK_SUBCOMMANDS } from "../index"
+import { MARK_SELECT_PREFIX } from "../../definitions"
 import { searchPlexMedia, type PlexMediaItem } from "@/lib/connections/plex"
 import { getActivePlexServerConfig, type PlexServerConfig } from "@/lib/connections/plex-config"
 import { applyMark } from "@/lib/discord/media/mark-media"

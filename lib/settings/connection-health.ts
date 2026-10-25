@@ -38,6 +38,7 @@ import "server-only"
 
 import { unstable_cache } from "next/cache"
 
+import { getDiscordBotStatus } from "@/lib/admin/discord"
 import { getStripeConfig } from "@/lib/data/admin-settings"
 import { testJellyfinConnection } from "@/lib/connections/jellyfin-connection"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
@@ -123,20 +124,18 @@ const live = (status: ConnectionStatus, code: HealthCode | null, now: Date): Sec
 })
 
 async function discordHealth(now: Date): Promise<SectionHealth> {
-  const [integration, lock] = await Promise.all([
+  const [integration, bot] = await Promise.all([
     prisma.discordIntegration.findUnique({
       where: { id: "discord" },
-      select: { isEnabled: true, botEnabled: true, clientId: true, clientSecret: true, botToken: true },
+      select: { isEnabled: true, clientId: true, clientSecret: true },
     }),
-    prisma.leaseLock.findUnique({ where: { name: "discord-bot" }, select: { lastRenewedAt: true } }),
+    getDiscordBotStatus(),
   ])
   const rows = discordStatus(
     {
       isEnabled: integration?.isEnabled ?? false,
       hasClientCredentials: Boolean(integration?.clientId && integration.clientSecret),
-      botEnabled: integration?.botEnabled ?? false,
-      hasBotToken: Boolean(integration?.botToken),
-      lastRenewedAt: lock?.lastRenewedAt ?? null,
+      ...bot,
     },
     now
   )
@@ -144,7 +143,7 @@ async function discordHealth(now: Date): Promise<SectionHealth> {
     !enabled ? "disabled" : tone === "success" ? "ok" : tone === "destructive" ? "unreachable" : "incomplete"
   const status = worstStatus([
     toStatus(integration?.isEnabled, rows.linkedRoles.tone),
-    toStatus(integration?.botEnabled, rows.supportBot.tone),
+    toStatus(bot.botEnabled, rows.supportBot.tone),
   ])
   const code: HealthCode | null = status === "unreachable" ? "BOT_OFFLINE" : status === "incomplete" ? "MISSING_SETUP" : null
   return live(status, code, now)
