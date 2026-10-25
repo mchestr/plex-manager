@@ -109,6 +109,7 @@
     "@types/node": "^25.0.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@typescript/native": "npm:typescript@7.0.2",
     "axe-core": "4.11.0",
     "chalk": "6.0.1",
     "esbuild": "0.28.2",
@@ -124,7 +125,7 @@
     "prisma": "^7.10.1",
     "tailwindcss": "^4.3.2",
     "tsx": "4.23.15",
-    "typescript": "^5.5.0",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "^8.52.0",
     "yaml": "2.9.1"
   },
