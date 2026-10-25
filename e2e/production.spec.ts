@@ -1,5 +1,7 @@
 import { expect, test } from './fixtures/session';
 import { TEST_USERS } from './fixtures/auth';
+import { setLightThemeFlag } from './helpers/light-theme';
+import { createE2EPrismaClient } from './helpers/prisma';
 
 /**
  * Checks that only mean something against `next build` plus `next start`
@@ -42,5 +44,28 @@ test.describe('Production build', () => {
     await expect(page).toHaveURL(/\/admin$/);
     await expect(page.getByTestId('admin-nav-users')).toHaveCount(0);
     await expect(page.getByTestId('admin-users-header')).toHaveCount(0);
+  });
+
+  // P11.19: the app settings are a 'use cache' entry tagged app-settings. A
+  // settings save updates the tag, so the next request reads the new name
+  // instead of waiting out the cache. The name is written to Config, then the
+  // light-theme Switch (a save that updates the tag) is flipped and restored.
+  test('the next request after a settings save shows a new server name', async ({ page, signIn }) => {
+    const prisma = createE2EPrismaClient();
+    const name = `Cache Check ${Date.now()}`;
+    const before = await prisma.config.findUnique({ where: { id: 'config' }, select: { serverName: true, lightThemeEnabled: true } });
+    try {
+      await signIn(TEST_USERS.ADMIN.id);
+      await page.goto('/');
+      await prisma.config.upsert({ where: { id: 'config' }, update: { serverName: name }, create: { id: 'config', serverName: name } });
+
+      await setLightThemeFlag(page, !(before?.lightThemeEnabled ?? false));
+      await page.goto('/');
+      await expect(page).toHaveTitle(new RegExp(`- ${name}$`));
+    } finally {
+      await prisma.config.updateMany({ where: { id: 'config' }, data: { serverName: before?.serverName ?? null } });
+      await setLightThemeFlag(page, before?.lightThemeEnabled ?? false);
+      await prisma.$disconnect();
+    }
   });
 });

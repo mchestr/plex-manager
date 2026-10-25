@@ -5,8 +5,6 @@ import { getAdminGate } from "@/lib/admin"
 import { listAnnouncements } from "@/lib/admin/announcements"
 import { serverZone } from "@/lib/utils/server-zone"
 
-export const dynamic = "force-dynamic"
-
 /** `/admin/announcements` (P10.5): every announcement, read on the server. */
 export default async function AnnouncementsPage() {
   const gate = await getAdminGate()

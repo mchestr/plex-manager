@@ -26,7 +26,8 @@ jest.mock('@/lib/connections/prometheus', () => ({
 }))
 
 jest.mock('next/cache', () => ({
-  unstable_cache: jest.fn((fn) => fn),
+  cacheLife: jest.fn(),
+  cacheTag: jest.fn(),
 }))
 
 const mockWarn = jest.fn()

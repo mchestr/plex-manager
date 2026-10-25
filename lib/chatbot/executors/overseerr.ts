@@ -1,11 +1,11 @@
 import "server-only"
 
 import { getAllOverseerrRequests, getOverseerrDiscoverMovies, getOverseerrDiscoverTV, getOverseerrMediaDetails, getOverseerrRequests, getOverseerrStatus, getOverseerrUsers } from "@/lib/connections/overseerr"
-import { prisma } from "@/lib/prisma"
 import { type ConnectionResult } from "@/types/connection"
 import { z } from "zod"
 import { withoutPersonalFields } from "./personal-fields"
 import { toToolOutput } from "./tool-output"
+import { getActiveService } from "@/lib/data/active-service"
 
 /** The longest display name the model sees; members choose it, so it is untrusted text (SEC-42). */
 const DISPLAY_NAME_MAX = 64
@@ -57,7 +57,7 @@ export async function executeOverseerrTool(
   _userId?: string,
   _context?: string
 ): Promise<string> {
-  const server = await prisma.overseerr.findFirst({ where: { isActive: true } })
+  const server = await getActiveService("overseerr")
   if (!server) return "Error: No active Overseerr server configured."
 
   const config = {

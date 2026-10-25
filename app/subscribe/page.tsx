@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { getServerSession } from "next-auth"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
@@ -11,13 +10,11 @@ import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { StatusScreen } from "@/components/ui/status-screen"
 import { getAccessLevel } from "@/lib/access"
-import { authOptions } from "@/lib/auth"
 import { serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
 import { getOfferedPrices } from "@/lib/stripe/prices"
 import { icons } from "@/lib/ui/icons"
-
-export const dynamic = "force-dynamic"
+import { getSession } from "@/lib/data/session"
 
 export const metadata: Metadata = { title: "Join" }
 
@@ -120,7 +117,7 @@ function UnavailableScreen({ inviteCode }: { inviteCode: string | null }) {
  *   open right now", with the owner's Discord when an invite code exists.
  */
 export default async function SubscribePage() {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session?.user?.id) {
     // NextAuth's configured sign-in page is "/" (see authOptions.pages.signIn).
     redirect("/")

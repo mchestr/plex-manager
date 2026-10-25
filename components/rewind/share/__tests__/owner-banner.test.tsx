@@ -70,7 +70,7 @@ describe("OwnerBanner", () => {
     expect(screen.queryByTestId("rewind-share-new-url")).not.toBeInTheDocument()
   })
 
-  it("stops a v3 link and refreshes the page", async () => {
+  it("stops a v3 link; the action's revalidation refreshes the page", async () => {
     const user = userEvent.setup()
     jest.mocked(disableRewindShare).mockResolvedValue({ success: true, data: null })
     renderBanner({ kind: "v3", shareId: "share-1", year: 2026, publicUntil: null })
@@ -80,7 +80,7 @@ describe("OwnerBanner", () => {
 
     expect(disableRewindShare).toHaveBeenCalledWith({ shareId: "share-1" })
     expect(await screen.findByText("This page is no longer shared.")).toBeInTheDocument()
-    expect(refresh).toHaveBeenCalled()
+    expect(refresh).not.toHaveBeenCalled()
   })
 
   it("offers a v2 link only Stop sharing, through the v2 action", async () => {

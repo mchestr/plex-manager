@@ -1,11 +1,9 @@
 import type { Metadata, Route } from "next"
 import { notFound, redirect } from "next/navigation"
-import { getServerSession } from "next-auth"
 import { z } from "zod"
 
 import { ArchiveActions, ArchiveArticle } from "@/components/rewind/article/archive-article"
 import { ArticleDocument } from "@/components/rewind/article/article-document"
-import { authOptions } from "@/lib/auth"
 import { rewindName, serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
 import { copyText, plain } from "@/lib/rewind/article/blocks"
@@ -20,8 +18,7 @@ import { getAppSettings } from "@/lib/settings/app-settings"
 import { yearParamSchema } from "@/lib/validations/params"
 import { windowLine } from "@/lib/wrapped/copy/templates"
 import { listCompletedRewindYears } from "@/lib/wrapped/season"
-
-export const dynamic = "force-dynamic"
+import { getSession } from "@/lib/data/session"
 
 type ReadPageProps = {
   params: Promise<{ year: string }>
@@ -58,7 +55,7 @@ export async function generateMetadata({ params }: ReadPageProps): Promise<Metad
  * the story route, which shows its status panel.
  */
 export default async function RewindArticlePage({ params, searchParams }: ReadPageProps) {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (!session) redirect("/")
 
   const parsedYear = yearParamSchema.safeParse((await params).year)

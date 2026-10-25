@@ -35,8 +35,7 @@ import { serverZone } from "@/lib/utils/server-zone"
 import { getRewindContentRatings, getRewindLibraries } from "@/lib/wrapped/admin/settings-options"
 import { rewindSettingsFromConfig } from "@/lib/wrapped/config"
 import { getSeasonState } from "@/lib/wrapped/season"
-
-export const dynamic = "force-dynamic"
+import { connection } from "next/server"
 
 const PLATFORMS: Record<string, string> = { darwin: "macOS", win32: "Windows", linux: "Linux" }
 
@@ -51,6 +50,8 @@ function databaseProvider(url: string | undefined) {
  * glyphs beside one column of `SettingsSection`s, each with its live health.
  */
 export default async function SettingsPage() {
+  // The health checks read the clock: render per request, never at build
+  await connection()
   // Started, not awaited: the sections stream these in (P10.7)
   const plexLibraries = plexLibraryListing()
   const watchlistStats = getWatchlistSyncStats()

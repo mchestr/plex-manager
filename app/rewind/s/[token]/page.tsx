@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { getServerSession } from "next-auth"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 import { after } from "next/server"
@@ -8,7 +7,6 @@ import { OwnerBanner } from "@/components/rewind/share/owner-banner"
 import { SharedRewind, shareMasthead } from "@/components/rewind/share/shared-rewind"
 import { V2ShareArticle } from "@/components/rewind/share/v2-share-article"
 import { RewindScope } from "@/components/rewind/stage/rewind-scope"
-import { authOptions } from "@/lib/auth"
 import { inkProps } from "@/lib/design/tokens"
 import { getBaseUrl } from "@/lib/env"
 import { prisma } from "@/lib/prisma"
@@ -25,8 +23,7 @@ import { cn } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import { getShareSafeRewind, type ShareSafeLookup } from "@/lib/wrapped/data/get-share-safe"
 import { recordShareVisit } from "@/lib/wrapped/share/visit-counter"
-
-export const dynamic = "force-dynamic"
+import { getSession } from "@/lib/data/session"
 
 const logger = createLogger("REWIND_SHARE_PAGE")
 
@@ -101,7 +98,7 @@ export default async function SharedRewindPage({ params }: ShareParams) {
   const found = await getShareSafeRewind(token)
   if (!found) notFound()
 
-  const [session, requestHeaders, settings] = await Promise.all([getServerSession(authOptions), headers(), getAppSettings()])
+  const [session, requestHeaders, settings] = await Promise.all([getSession(), headers(), getAppSettings()])
   recordVisit(found, clientIp(requestHeaders), await getRequestId())
   const viewerId = session?.user?.id ?? null
   const isOwner = viewerId === found.ownerUserId

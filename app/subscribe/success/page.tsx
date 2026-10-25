@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { getServerSession } from "next-auth"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
@@ -7,10 +6,8 @@ import { getSubscriptionProvisioning, type SubscriptionProvisioning } from "@/ac
 import { PublicShell } from "@/components/shell/public-shell"
 import { ProvisioningChecklist } from "@/components/subscribe/provisioning-checklist"
 import { Button } from "@/components/ui/button"
-import { authOptions } from "@/lib/auth"
 import { serverName } from "@/lib/brand"
-
-export const dynamic = "force-dynamic"
+import { getSession } from "@/lib/data/session"
 
 export const metadata: Metadata = { title: "You're in" }
 
@@ -32,7 +29,7 @@ const NOTHING_YET: SubscriptionProvisioning = {
  * visitors go to sign-in.
  */
 export default async function SubscribeSuccessPage() {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   const user = session?.user
   if (!user?.id) redirect("/")
 

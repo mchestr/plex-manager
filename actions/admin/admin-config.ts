@@ -7,7 +7,7 @@ import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
 import { CONNECTION_HEALTH_TAG } from "@/lib/settings/connection-status"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { parseStripePriceIds } from "@/lib/stripe/config"
-import { clearOfferedPricesCache } from "@/lib/stripe/prices"
+import { clearOfferedPricesCache, PLAN_NAMES_TAG } from "@/lib/stripe/prices"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
@@ -188,6 +188,7 @@ export const updateStripeSettings = adminAction({
     // Invalidate the offered-prices cache so a price-id change is reflected on
     // /subscribe immediately rather than after the TTL.
     clearOfferedPricesCache()
+    updateTag(PLAN_NAMES_TAG)
     revalidatePath("/admin/settings")
     return ok(null)
   },
@@ -291,6 +292,7 @@ export const setStripeEnabled = adminAction({
     // /subscribe immediately (a stale cache could otherwise offer prices for up
     // to the TTL after disabling).
     clearOfferedPricesCache()
+    updateTag(PLAN_NAMES_TAG)
     revalidatePath("/admin/settings")
     revalidatePath("/")
     return ok({ status: "saved" })

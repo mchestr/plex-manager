@@ -22,8 +22,6 @@ import { loadShareContext } from "@/lib/wrapped/data/share-context"
 import { toShareSafe } from "@/lib/wrapped/data/share-safe"
 import { SharePageTypeSchema, type SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 
-export const dynamic = "force-dynamic"
-
 export const metadata: Metadata = { title: "Gallery", robots: { index: false } }
 
 const querySchema = z.object({

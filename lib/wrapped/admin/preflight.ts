@@ -24,6 +24,7 @@ import { prisma } from "@/lib/prisma"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
 import type { STATUS } from "@/lib/ui/status"
+import { getActiveService } from "@/lib/data/active-service"
 
 type PreflightStatus = keyof typeof STATUS.connection
 
@@ -59,7 +60,7 @@ async function redisRow(): Promise<PreflightRow> {
 
 async function tautulliRow(): Promise<PreflightRow> {
   const label = "Tautulli"
-  const config = await prisma.tautulli.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } })
+  const config = await getActiveService("tautulli")
   if (!config) return { id: "tautulli", label, status: "notConfigured", detail: "Rewind reads its plays from Tautulli" }
   const info = await getTautulliInfo(config)
   if (!info.ok) return { id: "tautulli", label, status: "unreachable", detail: "Tautulli didn't respond" }

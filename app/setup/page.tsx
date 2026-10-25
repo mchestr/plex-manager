@@ -10,8 +10,6 @@ import { getSetupStatus } from "@/lib/setup/status"
 import { getSetupWizardData } from "@/lib/setup/wizard-data"
 import { parseSetupPosition, stepIndex } from "@/types/setup"
 
-export const dynamic = 'force-dynamic'
-
 export default async function SetupPage({ searchParams }: { searchParams: Promise<{ step?: string | string[] }> }) {
   const { isComplete, currentStepId } = await getSetupStatus()
 

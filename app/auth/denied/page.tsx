@@ -10,8 +10,6 @@ import { prisma } from "@/lib/prisma"
 import { icons } from "@/lib/ui/icons"
 import { redirect } from "next/navigation"
 
-export const dynamic = 'force-dynamic'
-
 export const metadata: Metadata = { title: "Not a member yet" }
 
 /**

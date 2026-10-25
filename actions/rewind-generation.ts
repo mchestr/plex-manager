@@ -6,6 +6,7 @@
  * check, enqueue and report status, and return at once.
  */
 
+import { refresh } from "next/cache"
 import { z } from "zod"
 
 import { getWrappedSettings } from "@/lib/wrapped/generation-settings"
@@ -156,6 +157,8 @@ export const adminRegenerateRewind = adminAction({
       year,
       alreadyQueued: queued.alreadyQueued,
     })
+    // The admin page that asked shows the queued run (P11.19: the action refreshes, not the client)
+    refresh()
     return ok({ alreadyQueued: queued.alreadyQueued })
   },
 })

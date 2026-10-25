@@ -34,6 +34,7 @@ import { directLimiter, type UpstreamLimiter } from "@/lib/wrapped/sources/watch
 import { resolveZone, yearWindow } from "@/lib/wrapped/time/zone"
 
 import { memberYearStatsSchema, statsFromEvents, statsFromFacts, type MemberYearStats } from "./year-stats"
+import { getActiveService } from "@/lib/data/active-service"
 
 const logger = createLogger("DISCORD_MEMBER_STATS")
 
@@ -93,7 +94,7 @@ async function readHistory(
   { year, zone, limiter, signal }: MemberYearStatsOptions
 ): Promise<MemberYearStatsResult> {
   const [tautulli, config] = await Promise.all([
-    prisma.tautulli.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
+    getActiveService("tautulli"),
     prisma.config.findUnique({ where: { id: "config" }, select: { rewindExcludedSectionIds: true } }),
   ])
   if (!tautulli) return { ok: false, code: "NO_TAUTULLI" }

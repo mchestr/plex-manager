@@ -41,17 +41,17 @@
 
 import "server-only"
 
-import { getServerSession, type Session } from "next-auth"
+import type { Session } from "next-auth"
 import { unstable_rethrow } from "next/navigation"
 import { z } from "zod"
 
 import { hasEntitlement, NOT_ENTITLED_MESSAGE, type Entitlement } from "@/lib/actions/entitlement"
 import { fail, toActionError, type ActionErrorCode, type ActionResult } from "@/lib/actions/result"
-import { authOptions } from "@/lib/auth"
 import { getRequestId } from "@/lib/observability/request-context"
 import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { generateRequestId, runWithRequestContext } from "@/lib/utils/log-context"
+import { getSession } from "@/lib/data/session"
 
 type AuthLevel = "public" | "member" | "admin" | "setup"
 
@@ -124,7 +124,7 @@ async function guard<A extends AuthLevel>(
   auth: A,
   entitlement: Entitlement | undefined
 ): Promise<{ ok: true; ctx: ActionContext<A> } | { ok: false; result: ActionResult<never> }> {
-  const session = await getServerSession(authOptions)
+  const session = await getSession()
   if (auth === "public") {
     return { ok: true, ctx: { session } as ActionContext<A> }
   }

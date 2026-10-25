@@ -12,6 +12,14 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 /**
+ * Every route may block on the request (P11.19). The `<html>` element takes
+ * the theme cookie and the stored locale, so no page has a static shell above
+ * this layout; a static shell needs the theme set by a pre-paint script and
+ * P11.20's nonce decision first.
+ */
+export const instant = false;
+
+/**
  * No zoom locks: pinch-zoom and text resize stay available (WCAG 1.4.4). The
  * browser chrome takes the resolved theme's background (P10.10).
  */

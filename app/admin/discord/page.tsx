@@ -35,8 +35,6 @@ import { discordStatus } from "@/lib/ui/status"
 import { serverZone } from "@/lib/utils/server-zone"
 import { dayKey } from "@/lib/utils/zoned-time"
 
-export const dynamic = "force-dynamic"
-
 /** The status rows and the last hour move; past windows don't, so 30 s is enough (P10.5). */
 const LIVE_INTERVAL_MS = 30_000
 const MARKED_MEDIA_PAGE_SIZE = 25

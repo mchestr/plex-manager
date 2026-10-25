@@ -32,6 +32,11 @@ A Next.js-based Plex management platform that combines server management tools, 
 - **Query keys**: Every TanStack Query key comes from `hooks/query-keys.ts`; first data arrives as Server Component props (seed a query with `initialData`), and a mutation invalidates the key its reader uses
 - **Server Actions**: For mutations, form submissions, user-triggered operations
 - **Validation**: All inputs validated with Zod before processing
+- **Cache Components** (`cacheComponents: true`, P11.19): no segment exports `dynamic`, `revalidate`, `fetchCache` or `runtime`; uncached data renders per request
+  - Session: `getSession()` from `@/lib/data/session`, never `getServerSession(authOptions)`; active service rows: `getActiveService(kind)` from `@/lib/data/active-service`. Both are React `cache()`d per request
+  - Shared, non-secret data uses `'use cache'` with `cacheTag` and `cacheLife` (`getAppSettings()` tag `app-settings`, announcements, Prometheus status, plan names), and the actions that change it call `updateTag(tag)`. Readers the bot or jobs also call go through `cachedOrDirect` (`@/lib/utils/use-cache`), and a database read calls `notDuringBuild()` first, since the Docker build has no database
+  - Never put a row with `ENCRYPTED_FIELDS`, the session or anything viewer-specific inside `'use cache'` (`__tests__/security/use-cache-no-secrets.test.ts`)
+  - An action that revalidates already refreshes the page; where the client needs a refresh, the action calls `refresh()` from `next/cache` instead of `router.refresh()`
 
 ### File Organization
 ```

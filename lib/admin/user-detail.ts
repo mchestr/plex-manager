@@ -16,6 +16,7 @@ import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { memberServices, primaryService } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import type { AuthService } from "@/types/onboarding"
+import { getActiveService } from "@/lib/data/active-service"
 
 type PlexAccess = "shared" | "notShared" | "unknown"
 
@@ -128,8 +129,8 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
   if (!user) return null
 
   const [server, jellyfinServer, config, runs] = await Promise.all([
-    prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true, token: true, adminPlexUserId: true, machineIdentifier: true } }),
-    user.jellyfinUserId ? prisma.jellyfinServer.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }) : null,
+    getActiveService("plex"),
+    user.jellyfinUserId ? getActiveService("jellyfin") : null,
     prisma.config.findUnique({ where: { id: "config" }, select: { stripeEnabled: true } }),
     activeRunStarts([user.id], seasonYear),
   ])

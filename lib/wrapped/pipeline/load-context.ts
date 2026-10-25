@@ -31,6 +31,7 @@ import { dataWindow, resolveDataWindow, resolveZone, seasonWindowAt, type Rewind
 import type { CopyProvider, PreviousCopy } from "./copy-step"
 import { storedIssueOf } from "./final-cut"
 import { RewindGenerationError } from "./generation-error"
+import { getActiveService } from "@/lib/data/active-service"
 
 export interface RewindContext {
   userId: string
@@ -150,9 +151,9 @@ export async function loadRewindContext(options: {
   const [user, config, tautulli, overseerr, sonarr, zone, exclusions, wrapped, provider, styleGuide] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { name: true, plexUserId: true, isAdmin: true, timezone: true, createdAt: true } }),
     prisma.config.findUnique({ where: { id: "config" } }),
-    prisma.tautulli.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
-    prisma.overseerr.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
-    prisma.sonarr.findFirst({ where: { isActive: true }, select: { name: true, url: true, apiKey: true, publicUrl: true } }),
+    getActiveService("tautulli"),
+    getActiveService("overseerr"),
+    getActiveService("sonarr"),
     serverZone(),
     prisma.rewindExclusion.findMany({ where: { userId }, select: { ratingKey: true } }),
     prisma.plexWrapped.findUnique({ where: { userId_year: { userId, year } }, select: { id: true, data: true, status: true } }),

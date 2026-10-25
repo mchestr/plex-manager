@@ -8,12 +8,6 @@ import { JOB_TYPES } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 import { withRequestContext } from "@/lib/actions/route"
 
-/**
- * Stripe delivers webhooks as POST requests that must be verified against the
- * raw request body, so this route must never be statically cached.
- */
-export const dynamic = "force-dynamic"
-
 const logger = createLogger("STRIPE_WEBHOOK")
 
 /** Stripe event payloads are far smaller than this; a body near 1 MiB is not from Stripe. */

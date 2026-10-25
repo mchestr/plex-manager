@@ -8,8 +8,7 @@ import { StatGrid } from "@/components/ui/stat-tile"
 import { getAdminOverview } from "@/lib/admin/overview"
 import { serverName } from "@/lib/brand"
 import { getFormat } from "@/lib/settings/app-settings"
-
-export const dynamic = "force-dynamic"
+import { connection } from "next/server"
 
 /** Refresh cadence of the monitoring pages (ui-design-system 6.3). */
 const LIVE_INTERVAL_MS = 10_000
@@ -20,6 +19,8 @@ const LIVE_INTERVAL_MS = 10_000
  * fixes it. Each source fails on its own, as a dash.
  */
 export default async function AdminOverviewPage() {
+  // The tiles read the clock: render per request, never at build
+  await connection()
   const renderedAt = new Date().getTime()
   const [overview, f, name] = await Promise.all([getAdminOverview(new Date(renderedAt)), getFormat(), serverName()])
 

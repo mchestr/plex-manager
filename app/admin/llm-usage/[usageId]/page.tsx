@@ -9,8 +9,6 @@ import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { getFormat } from "@/lib/settings/app-settings"
 import { llmConversation, llmUsage, userDetail, userRewind } from "@/lib/admin/routes"
 
-export const dynamic = 'force-dynamic'
-
 export default async function LLMUsageDetailPage({ params }: { params: Promise<{ usageId: string }> }) {
   const { usageId } = await params
   const [record, f] = await Promise.all([getLLMUsageById(usageId), getFormat()])

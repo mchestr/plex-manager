@@ -28,6 +28,7 @@ import { memberServices } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import { parseStripeLibrarySectionIds } from "@/lib/stripe/config"
 import { createLogger } from "@/lib/utils/logger"
+import { getActiveService } from "@/lib/data/active-service"
 
 const logger = createLogger("MEMBER_ACCESS")
 
@@ -60,7 +61,7 @@ type PlexGrant = { status: PlexGrantStatus } | { code: GrantAccessFailure }
  * `pending` for them to accept by email (FR-13). No email is `skipped`.
  */
 async function grantPlex(user: GrantTarget & { plexUserId: string }): Promise<PlexGrant> {
-  const active = await prisma.plexServer.findFirst({ where: { isActive: true } })
+  const active = await getActiveService("plex")
   if (!active) return { code: "NO_PLEX_SERVER" }
   const server = await withMachineIdentifier(active)
 
@@ -115,7 +116,7 @@ export async function grantServiceAccess(user: GrantTarget): Promise<GrantAccess
   const result: { plex?: PlexGrantStatus; jellyfin?: JellyfinGrantStatus } = {}
 
   if (user.jellyfinUserId) {
-    const server = await prisma.jellyfinServer.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } })
+    const server = await getActiveService("jellyfin")
     if (!server) return { success: false, code: "NO_JELLYFIN_SERVER" }
     const enabled = await setJellyfinAccountDisabled(server, user.jellyfinUserId, false)
     if (!enabled.success) return { success: false, code: "JELLYFIN_UNAVAILABLE" }
@@ -161,7 +162,7 @@ export async function revokeServiceAccess(user: {
   const services = memberServices(user)
 
   if (services.includes("plex") && user.plexUserId) {
-    const server = await prisma.plexServer.findFirst({ where: { isActive: true } })
+    const server = await getActiveService("plex")
     if (!server) {
       result.plex = "no_server"
     } else {
@@ -173,7 +174,7 @@ export async function revokeServiceAccess(user: {
   }
 
   if (services.includes("jellyfin") && user.jellyfinUserId) {
-    const server = await prisma.jellyfinServer.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } })
+    const server = await getActiveService("jellyfin")
     if (!server) {
       result.jellyfin = "no_server"
     } else {

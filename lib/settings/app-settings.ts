@@ -2,22 +2,24 @@
  * The app's settings: the server zone, `Config.locale`, the server name and
  * the light-theme flag.
  *
- * Read once per request (React `cache()`) over a 60-second data cache tagged
- * `app-settings`; saving the zone, the locale or the flag calls
- * `updateTag("app-settings")`.
+ * Read once per request (React `cache()`) over a `'use cache'` entry tagged
+ * `app-settings` (`cacheLife("minutes")`, P11.19); saving the zone, the light
+ * theme flag or the Plex or Jellyfin server calls `updateTag("app-settings")`.
+ * The entry holds no secret: the server rows are read for their names only.
  *
  * @module lib/settings/app-settings
  */
 
 import "server-only"
 
-import { unstable_cache } from "next/cache"
+import { cacheLife, cacheTag } from "next/cache"
 import { cache } from "react"
 
 import { prisma } from "@/lib/prisma"
 import { bindFormat, canonicalLocale, DEFAULT_LOCALE, type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import { serverZone } from "@/lib/utils/server-zone"
+import { cachedOrDirect, notDuringBuild } from "@/lib/utils/use-cache"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
 
 const logger = createLogger("app-settings")
@@ -38,25 +40,28 @@ export interface AppSettings extends FormatSettings {
 /** The most recently updated active row's name, never its token. */
 const activeServer = { where: { isActive: true }, orderBy: { updatedAt: "desc" }, select: { name: true } } as const
 
-const loadAppSettings = unstable_cache(
-  async (): Promise<AppSettings> => {
-    const [timeZone, config, plex, jellyfin] = await Promise.all([
-      serverZone(),
-      prisma.config.findUnique({ where: { id: "config" }, select: { locale: true, serverName: true, lightThemeEnabled: true } }),
-      prisma.plexServer.findFirst(activeServer),
-      prisma.jellyfinServer.findFirst(activeServer),
-    ])
-    const serverName = [config?.serverName, plex?.name, jellyfin?.name].map((name) => name?.trim()).find(Boolean)
-    return {
-      timeZone,
-      locale: canonicalLocale(config?.locale),
-      serverName: serverName ?? null,
-      lightThemeEnabled: config?.lightThemeEnabled ?? false,
-    }
-  },
-  [APP_SETTINGS_TAG],
-  { tags: [APP_SETTINGS_TAG], revalidate: 60 },
-)
+async function readAppSettings(): Promise<AppSettings> {
+  const [timeZone, config, plex, jellyfin] = await Promise.all([
+    serverZone(),
+    prisma.config.findUnique({ where: { id: "config" }, select: { locale: true, serverName: true, lightThemeEnabled: true } }),
+    prisma.plexServer.findFirst(activeServer),
+    prisma.jellyfinServer.findFirst(activeServer),
+  ])
+  const serverName = [config?.serverName, plex?.name, jellyfin?.name].map((name) => name?.trim()).find(Boolean)
+  return {
+    timeZone,
+    locale: canonicalLocale(config?.locale),
+    serverName: serverName ?? null,
+    lightThemeEnabled: config?.lightThemeEnabled ?? false,
+  }
+}
+
+async function cachedAppSettings(): Promise<AppSettings> {
+  "use cache"
+  cacheTag(APP_SETTINGS_TAG)
+  cacheLife("minutes")
+  return readAppSettings()
+}
 
 /**
  * `{ timeZone, locale }` for every formatter in `lib/utils/format.ts`, the
@@ -66,8 +71,9 @@ const loadAppSettings = unstable_cache(
  * failing the page.
  */
 export const getAppSettings = cache(async (): Promise<AppSettings> => {
+  await notDuringBuild()
   try {
-    return await loadAppSettings()
+    return await cachedOrDirect(cachedAppSettings, readAppSettings)
   } catch (error) {
     logger.warn("Falling back to default app settings", { error })
     return {

@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { disableRewindShare, rotateRewindShare } from "@/actions/rewind-sharing"
@@ -22,7 +21,6 @@ type OwnerBannerProps =
  * only Stop sharing.
  */
 export function OwnerBanner(props: OwnerBannerProps) {
-  const router = useRouter()
   const { showSuccess } = useToast()
   const [newUrl, setNewUrl] = useState<string | null>(null)
   const [stopped, setStopped] = useState(false)
@@ -31,7 +29,6 @@ export function OwnerBanner(props: OwnerBannerProps) {
     const result = props.kind === "v3" ? await disableRewindShare({ shareId: props.shareId }) : await disableWrappedShareLink({ year: props.year })
     if (!result.success) return { error: result.error }
     setStopped(true)
-    router.refresh()
     return {}
   }
 

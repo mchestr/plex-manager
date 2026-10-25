@@ -1,27 +1,37 @@
 /**
  * @jest-environment node
  *
- * The app's settings (P3.10, P3.9): the server zone, `Config.locale`, the
- * server name, the `app-settings` cache tag and the fallback when the database
- * is down.
+ * The app's settings (P3.10, P3.9, P11.19): the server zone, `Config.locale`,
+ * the server name, the `app-settings` cache tag, the reader outside a request
+ * and the fallback when the database is down.
  */
 
-import { unstable_cache } from "next/cache"
+import { getServerSession } from "next-auth"
+import { cacheLife, cacheTag, updateTag } from "next/cache"
 
+import { buildConfig } from "@/__tests__/helpers/factories"
+import { updateServerTimeZone } from "@/actions/admin/admin-config"
 import { prisma } from "@/lib/prisma"
 import { APP_SETTINGS_TAG, getAppSettings, getFormat, getFormatSettings } from "@/lib/settings/app-settings"
 import { serverZone } from "@/lib/utils/server-zone"
 
+// The 'use cache' directive is inert under Jest; the tag and life calls are checked.
 jest.mock("next/cache", () => ({
-  unstable_cache: jest.fn((fn: () => unknown) => fn),
+  cacheLife: jest.fn(),
+  cacheTag: jest.fn(),
+  updateTag: jest.fn(),
+  revalidatePath: jest.fn(),
 }))
+jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
+jest.mock("@/lib/auth", () => ({ authOptions: {} }))
+jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), logAuditEvent: jest.fn() }))
 
 // React's cache() only memoises inside a server request; tests call through.
 jest.mock("react", () => ({ ...jest.requireActual("react"), cache: (fn: unknown) => fn }))
 
 jest.mock("@/lib/prisma", () => ({
   prisma: {
-    config: { findUnique: jest.fn() },
+    config: { findUnique: jest.fn(), upsert: jest.fn() },
     plexServer: { findFirst: jest.fn() },
     jellyfinServer: { findFirst: jest.fn() },
   },
@@ -48,11 +58,24 @@ describe("getAppSettings", () => {
     process.env.TZ = originalTz
   })
 
-  it("caches under the app-settings tag for 60 seconds", () => {
-    expect(unstable_cache).toHaveBeenCalledWith(expect.any(Function), [APP_SETTINGS_TAG], {
-      tags: ["app-settings"],
-      revalidate: 60,
+  it("caches under the app-settings tag for minutes", async () => {
+    zone.mockResolvedValue("UTC")
+    findUnique.mockResolvedValue(null)
+
+    await getAppSettings()
+
+    expect(cacheTag).toHaveBeenCalledWith(APP_SETTINGS_TAG)
+    expect(cacheLife).toHaveBeenCalledWith("minutes")
+  })
+
+  it("reads the database directly where 'use cache' is unavailable (the bot, a job)", async () => {
+    jest.mocked(cacheTag).mockImplementationOnce(() => {
+      throw new Error('"use cache" cannot be used outside of App Router. Expected a WorkStore.')
     })
+    zone.mockResolvedValue("UTC")
+    findUnique.mockResolvedValue({ locale: "fr-FR", serverName: "Cellar", lightThemeEnabled: false })
+
+    await expect(getAppSettings()).resolves.toMatchObject({ locale: "fr-FR", serverName: "Cellar" })
   })
 
   it("returns the server zone, the stored locale, server name and light-theme flag", async () => {
@@ -134,5 +157,16 @@ describe("getAppSettings", () => {
     const f = await getFormat()
     expect(f.settings).toEqual({ timeZone: "Europe/Berlin", locale: "de-DE" })
     expect(f.number(1234)).toBe("1.234")
+  })
+})
+
+describe("saving the server zone", () => {
+  it("updates the app-settings tag, so the next request reads the new zone", async () => {
+    jest.mocked(getServerSession).mockResolvedValue({ user: { id: "admin-1", isAdmin: true }, expires: "" })
+    findUnique.mockResolvedValue({ timezone: "UTC" })
+    jest.mocked(prisma.config.upsert).mockResolvedValue(buildConfig())
+
+    await expect(updateServerTimeZone("Europe/Berlin")).resolves.toEqual({ success: true, data: { timezone: "Europe/Berlin" } })
+    expect(updateTag).toHaveBeenCalledWith("app-settings")
   })
 })

@@ -13,8 +13,6 @@ import { invitePassFor } from "@/lib/invites/pass"
 import { getFormat } from "@/lib/settings/app-settings"
 import { resolveStatus } from "@/lib/ui/status"
 
-export const dynamic = "force-dynamic"
-
 const inviteIdSchema = z.string().min(1).max(64)
 
 /**

@@ -18,8 +18,6 @@ import { withRequestContext } from "@/lib/actions/route"
  * Both bodies name the container's `PROCESS_ROLE` (`web`, `worker` or `all`,
  * P11.3). The body is anonymous: it carries no hostnames and no error text.
  */
-export const dynamic = "force-dynamic"
-export const runtime = "nodejs"
 
 const NO_STORE = { "Cache-Control": "no-store" }
 

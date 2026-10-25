@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { endUserSessions } from "@/lib/session-revocation"
 import { userIdSchema } from "@/lib/validations/shared-schemas"
+import { getActiveService } from "@/lib/data/active-service"
 
 type RemoveMemberCode = ActionErrorCode | EraseCode
 
@@ -43,7 +44,7 @@ export const setMemberJellyfinAccess = adminAction({
     if (!user) return fail("NOT_FOUND", "User not found")
     if (!user.jellyfinUserId) return fail("VALIDATION", "This member has no Jellyfin account")
 
-    const server = await prisma.jellyfinServer.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } })
+    const server = await getActiveService("jellyfin")
     if (!server) return fail("UPSTREAM_UNAVAILABLE", "No Jellyfin server is configured")
 
     const adminStatus = await isJellyfinAdmin(server, user.jellyfinUserId)

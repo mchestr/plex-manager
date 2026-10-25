@@ -11,8 +11,7 @@ import { getFormat } from "@/lib/settings/app-settings"
 import { getStripeDashboardBaseUrl } from "@/lib/stripe/client"
 import { parseTableParams } from "@/lib/ui/table-params"
 import { getSeasonYear } from "@/lib/wrapped/season"
-
-export const dynamic = "force-dynamic"
+import { connection } from "next/server"
 
 type Params = Record<string, string | string[] | undefined>
 
@@ -22,6 +21,8 @@ type Params = Record<string, string | string[] | undefined>
  * the URL, so filters default to All and Plex being down never hides anyone.
  */
 export default async function UsersPage({ searchParams }: { searchParams: Promise<Params> }) {
+  // The season year reads the clock: render per request, never at build
+  await connection()
   const [params, seasonYear, f] = await Promise.all([searchParams, getSeasonYear(), getFormat()])
   const [{ users, plexCheck }, stripeDashboardBaseUrl, config, estimateCopy] = await Promise.all([
     getAllUsersWithWrapped(seasonYear),

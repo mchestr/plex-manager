@@ -16,8 +16,6 @@ import { PROMETHEUS_CONTENT_TYPE } from "@/lib/observability/prometheus-text"
  *   constant time; anything else is a 401.
  * - A source that fails still gives a 200, with `plex_manager_scrape_error`.
  */
-export const dynamic = "force-dynamic"
-export const runtime = "nodejs"
 
 const NO_STORE = { "Cache-Control": "no-store" }
 

@@ -6,6 +6,7 @@ import { primaryService } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import { safeHref } from "@/lib/ui/markdown"
 import type { AuthService } from "@/types/onboarding"
+import { getActiveService } from "@/lib/data/active-service"
 
 /** What `/help` (and the onboarding guides, P10.23) need for one member. */
 export interface HelpData {
@@ -29,7 +30,7 @@ export async function getHelpData(userId: string): Promise<HelpData> {
       where: { id: userId },
       select: { primaryAuthService: true, plexUserId: true, jellyfinUserId: true },
     }),
-    prisma.overseerr.findFirst({ where: { isActive: true }, select: { publicUrl: true } }),
+    getActiveService("overseerr"),
     prisma.discordIntegration.findUnique({
       where: { id: "discord" },
       select: {
@@ -48,7 +49,7 @@ export async function getHelpData(userId: string): Promise<HelpData> {
   const service: AuthService = user ? primaryService(user) : "plex"
   const serverName =
     service === "jellyfin"
-      ? ((await prisma.jellyfinServer.findFirst({ where: { isActive: true }, select: { name: true } }))?.name ??
+      ? ((await getActiveService("jellyfin"))?.name ??
         (await getServerName()))
       : await getServerName()
 
