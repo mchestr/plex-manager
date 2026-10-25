@@ -467,7 +467,7 @@ Plex, Tautulli and the optional services are configured in the setup wizard or i
 - **Input validation** with Zod schemas on every action input, route parameter and external API response
 - **SQL injection protection** via Prisma parameterized queries
 - **XSS prevention** - React escapes by default; Markdown renders through a sanitising renderer
-- **Content Security Policy** and the usual security headers on every response
+- **Strict Content Security Policy** - A per-request nonce with `'strict-dynamic'` and no inline or eval scripts; violations are logged through a rate-limited report endpoint, and HSTS is configurable (`docs/operations.md`, "Security headers and CSP")
 - **CSRF protection** - Built into Next.js Server Actions
 - **Rate limiting** - Redis-backed limits (with an in-process fallback) on sign-in, invite, PIN, share and admin endpoints, keyed by the client IP behind `TRUSTED_PROXY_HOPS` proxies
 - **Audit logging** - Admin and security events, including admin reads of member content, go to stdout and an append-only `AuditLog` table
