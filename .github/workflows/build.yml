@@ -284,6 +284,9 @@ jobs:
             if docker exec app test -e "$dir"; then fail "$dir is in the image"; fi
           done
           if docker exec app sh -c 'command -v npm'; then fail "npm is in the runner"; fi
+          # P11.7: the bundled slash-command registration runs from the image
+          docker exec app node scripts/dist/register-discord-commands.cjs --dry-run | grep -F "/assistant" ||
+            fail "register-discord-commands.cjs --dry-run did not list the commands"
 
       # P11.3: one image, two roles; only the worker starts the queue Workers,
       # and it serves nothing but the health check and the metrics.

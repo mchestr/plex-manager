@@ -21,46 +21,13 @@ jest.mock("discord.js", () => {
     }
   }
 
-  class SlashCommandStringOption {
-    name = ""
-    description = ""
-    autocomplete = false
-    setName(name: string) {
-      this.name = name
-      return this
-    }
-    setDescription(description: string) {
-      this.description = description
-      return this
-    }
-    setAutocomplete(value: boolean) {
-      this.autocomplete = value
-      return this
-    }
-  }
 
-  class SlashCommandBuilder {
-    name = ""
-    description = ""
-    options: SlashCommandStringOption[] = []
-    setName(name: string) {
-      this.name = name
-      return this
-    }
-    setDescription(description: string) {
-      this.description = description
-      return this
-    }
-    addStringOption(fn: (o: SlashCommandStringOption) => SlashCommandStringOption) {
-      this.options.push(fn(new SlashCommandStringOption()))
-      return this
-    }
-  }
 
   return {
     MessageFlags: { Ephemeral: 64 },
     EmbedBuilder,
-    SlashCommandBuilder,
+    // Every definition is built on import, so one shared stub covers them all.
+    SlashCommandBuilder: jest.requireActual("./helpers/slash-command-builder-stub").SlashCommandBuilder,
   }
 })
 

@@ -47,6 +47,7 @@ check); the `no-changelog` label skips it.
 - The assistants use the member's or the server's time zone and the app locale, and `<html lang>` follows the configured locale.
 - The package is named `plex-manager`, to match the repository and the image.
 - One lease lock (database or Redis) runs the Discord bot, watchlist sync, Rewind generation and member access changes; every job type has a deduplication or deterministic id, and a job that exhausts its retries logs `queue.job_exhausted`.
+- The Discord bot starts within one poll (10 s) of "Bot enabled" being turned on with a token saved, with no restart, and `/admin/discord` says "Turned off", "Waiting for a bot token" or "Online". `ENABLE_DISCORD_BOT=false` still opts a process out. Slash commands register from the image with `docker compose exec app node scripts/dist/register-discord-commands.cjs` (or `register-discord-metadata.cjs`), and the script falls back to the token and client ID saved in admin settings.
 
 ### Security
 

@@ -30,7 +30,7 @@
  * {@link sanitizeDiscordResponse} as a privacy backstop.
  */
 
-import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js"
+import { EmbedBuilder, MessageFlags } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
@@ -39,6 +39,7 @@ import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { isJellyfinOnly, JELLYFIN_COPY } from "@/lib/discord/copy"
 import { formatResolution } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
+import { COMMAND_DEFINITIONS } from "./definitions"
 import type { InteractionContext, SlashCommand } from "./registry"
 import { requireLinkedUser } from "./require-linked-user"
 
@@ -296,9 +297,7 @@ function normalizeString(value?: string | number | null): string | undefined {
  * as an ephemeral embed. No options.
  */
 export const watchingCommand: SlashCommand = {
-  data: new SlashCommandBuilder()
-    .setName("watching")
-    .setDescription("See what you're currently watching") as SlashCommandBuilder,
+  data: COMMAND_DEFINITIONS.watching,
   commandType: "CHAT" as DiscordCommandType,
   handle: handleWatching,
 }

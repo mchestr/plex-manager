@@ -1,97 +1,87 @@
 /**
- * Script to register the bot's slash commands with Discord (deploy-time).
+ * Registers the bot's slash commands with Discord: one bulk overwrite from
+ * `lib/discord/commands/definitions.ts`. Run it whenever the command set
+ * changes (a command or option added, removed, renamed or re-described).
  *
- * Performs a bulk overwrite of the application's slash commands from the central
- * {@link COMMANDS} registry. Run this whenever the command set changes (add /
- * remove / rename a command, or edit its options).
- *
- * Guild registration (when DISCORD_GUILD_ID is set) is instant and ideal for
- * development. Global registration (no guild id) is the production path but can
- * take up to an hour to propagate.
+ * Credentials: `DISCORD_BOT_TOKEN` and `DISCORD_CLIENT_ID` (or
+ * `NEXT_PUBLIC_DISCORD_CLIENT_ID`) from the environment or `.env`. When either
+ * is missing it reads the token and client id saved in Admin, Discord, which
+ * needs `DATABASE_URL` (and the encryption key for the token).
+ * `DISCORD_GUILD_ID` registers instantly in one server instead of globally.
  *
  * Usage:
- *   DISCORD_BOT_TOKEN=your_bot_token \
- *   DISCORD_CLIENT_ID=your_client_id \
- *   npm run register-discord-commands
+ *   npm run register-discord-commands [-- --dry-run]          # from a checkout
+ *   node scripts/dist/register-discord-commands.cjs [--dry-run] # in the image
  *
- * For instant, guild-scoped registration during development, also set:
- *   DISCORD_GUILD_ID=your_dev_guild_id
- *
- * Or set these in your .env file and run:
- *   npm run register-discord-commands
+ * `--dry-run` prints the commands and exits without network or database access.
  */
 
-// Load .env before the registry: its import chain reaches lib/prisma, which
-// reads DATABASE_URL as soon as it is imported. The chain also reaches
-// `server-only` modules (lib/connections/http.ts), so the npm script runs tsx
-// with `--conditions=react-server`, under which that guard is a no-op.
+// Load .env first: the database fallback below reads DATABASE_URL on import.
 import "dotenv/config"
-import { REST, Routes } from "discord.js"
-import { COMMANDS } from "@/lib/discord/commands/registry"
+import { registerSlashCommands } from "@/lib/discord/register-commands"
 
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
-const CLIENT_ID = process.env.DISCORD_CLIENT_ID || process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID
-const GUILD_ID = process.env.DISCORD_GUILD_ID
-
-if (!BOT_TOKEN) {
-  console.error("❌ DISCORD_BOT_TOKEN environment variable is required")
-  console.error("   Get it from: https://discord.com/developers/applications → Your App → Bot → Token")
-  process.exit(1)
+function list(names: string[]) {
+  names.forEach((name, index) => console.log(`   ${index + 1}. /${name}`))
 }
 
-if (!CLIENT_ID) {
-  console.error("❌ DISCORD_CLIENT_ID environment variable is required")
-  console.error("   Get it from: https://discord.com/developers/applications → Your App → OAuth2 → Client ID")
-  process.exit(1)
-}
-
-async function main() {
-  // TypeScript guard: these are checked above but TypeScript doesn't know
-  if (!BOT_TOKEN || !CLIENT_ID) {
-    process.exit(1)
+/**
+ * The environment's token and client id, filled from the database when either
+ * is missing. A database that cannot be read leaves them missing.
+ */
+async function resolveCredentials(): Promise<{ token?: string; clientId?: string }> {
+  const fromEnv = {
+    token: process.env.DISCORD_BOT_TOKEN || undefined,
+    clientId: process.env.DISCORD_CLIENT_ID || process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || undefined,
   }
-
-  const body = COMMANDS.map((command) => command.data.toJSON())
-  const commandNames = COMMANDS.map((command) => command.data.name)
-
-  console.log("📝 Registering Discord slash commands...")
-  console.log(`   Application ID: ${CLIENT_ID}`)
-  console.log(`   Scope: ${GUILD_ID ? `guild ${GUILD_ID} (instant)` : "global (may take up to 1 hour)"}`)
-  console.log(`   Commands (${commandNames.length}): ${commandNames.map((name) => `/${name}`).join(", ")}`)
-  console.log("")
-
-  const rest = new REST().setToken(BOT_TOKEN)
+  if (fromEnv.token && fromEnv.clientId) return fromEnv
+  if (!process.env.DATABASE_URL) return fromEnv
 
   try {
-    await rest.put(
-      GUILD_ID
-        ? Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID)
-        : Routes.applicationCommands(CLIENT_ID),
-      { body }
-    )
-    console.log("✅ Successfully registered slash commands!")
-    console.log("")
-    console.log("Registered commands:")
-    commandNames.forEach((name, index) => {
-      console.log(`   ${index + 1}. /${name}`)
-    })
-    if (!GUILD_ID) {
-      console.log("")
-      console.log("💡 Global commands can take up to an hour to appear in every server.")
-      console.log("   Set DISCORD_GUILD_ID to register instantly in a single (dev) guild.")
-    }
+    const { getStoredBotCredentials } = await import("@/lib/discord/config")
+    const stored = await getStoredBotCredentials()
+    return { token: fromEnv.token ?? stored.token, clientId: fromEnv.clientId ?? stored.clientId }
   } catch (error) {
-    console.error("❌ Failed to register slash commands:")
-    if (error instanceof Error) {
-      console.error(`   ${error.message}`)
-    } else {
-      console.error(error)
-    }
-    process.exit(1)
+    console.error(`Could not read the Discord settings from the database: ${error instanceof Error ? error.message : String(error)}`)
+    return fromEnv
   }
 }
 
-main().catch((error) => {
-  console.error("Unexpected error:", error)
-  process.exit(1)
-})
+async function main(): Promise<number> {
+  if (process.argv.includes("--dry-run")) {
+    const names = await registerSlashCommands({ dryRun: true })
+    console.log(`Slash commands (${names.length}), dry run, nothing registered:`)
+    list(names)
+    return 0
+  }
+
+  const { token, clientId } = await resolveCredentials()
+  if (!token) {
+    console.error("No Discord bot token: set DISCORD_BOT_TOKEN, or save the token in Admin, Discord.")
+    return 1
+  }
+  if (!clientId) {
+    console.error("No Discord application id: set DISCORD_CLIENT_ID, or save the client ID in Admin, Discord.")
+    return 1
+  }
+
+  const guildId = process.env.DISCORD_GUILD_ID || undefined
+  console.log(`Registering slash commands for application ${clientId}`)
+  console.log(`   Scope: ${guildId ? `guild ${guildId} (instant)` : "global (may take up to an hour)"}`)
+  try {
+    const names = await registerSlashCommands({ token, clientId, guildId })
+    console.log(`Registered ${names.length} commands:`)
+    list(names)
+    return 0
+  } catch (error) {
+    console.error(`Failed to register slash commands: ${error instanceof Error ? error.message : String(error)}`)
+    return 1
+  }
+}
+
+main().then(
+  (code) => process.exit(code),
+  (error: unknown) => {
+    console.error("Unexpected error:", error)
+    process.exit(1)
+  }
+)

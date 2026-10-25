@@ -8,28 +8,25 @@
  * `/help` (Step 10), `/mark` (Step 12), `/assistant` (Step 13), and the personal
  * self-service commands `/mymarks`, `/mystats`, `/watching` (Phase 4).
  *
- * Each entry pairs the discord.js registration payload (`data`) with an audit
+ * Each command pairs the discord.js registration payload (`data`) with an audit
  * `commandType` and an async `handle` that receives a resolved
  * {@link InteractionContext}. Commands with an autocompleting option also expose
  * an `autocomplete` method the router routes `isAutocomplete()` interactions to.
- * The `data` builders are consumed at registration time (Step 14); the router
- * only needs `commandType`, `handle`, and (optionally) `autocomplete`.
+ *
+ * The `data` builders live in `definitions.ts` (P11.7), which registration
+ * imports on its own. Each entry here imports its handler module lazily, so
+ * importing the registry loads neither Prisma nor the handlers' dependencies.
  */
 
-import {
+import type {
+  AutocompleteInteraction,
+  ChatInputCommandInteraction,
+  MessageComponentInteraction,
   SlashCommandBuilder,
-  type AutocompleteInteraction,
-  type ChatInputCommandInteraction,
-  type MessageComponentInteraction,
 } from "discord.js"
 import type { VerifyDiscordUserResult } from "../services"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
-import { helpCommand } from "./help"
-import { markCommand } from "./mark"
-import { assistantCommand } from "./assistant"
-import { myMarksCommand } from "./mymarks"
-import { myStatsCommand } from "./mystats"
-import { watchingCommand } from "./watching"
+import { MARK_SELECT_PREFIX, type CommandName } from "./definitions"
 
 /**
  * Context handed to a slash-command handler after the router has resolved the
@@ -91,39 +88,44 @@ export interface SlashCommand {
   components?: ComponentHandler[]
 }
 
+
+/** One registry entry: a command's name and its lazily imported handler module. */
+interface CommandEntry {
+  name: CommandName
+  load: () => Promise<SlashCommand>
+  /** The `customId` prefixes of the components the command owns. */
+  componentPrefixes?: readonly string[]
+}
+
 /**
- * All registered slash commands. Router dispatch is keyed off
- * `data.name` (see {@link getCommand}).
+ * Every slash command, in registration order. Dispatch is keyed off `name`.
+ *
+ * @internal
  */
-export const COMMANDS: SlashCommand[] = [
-  helpCommand,
-  markCommand,
-  assistantCommand,
-  myMarksCommand,
-  myStatsCommand,
-  watchingCommand,
+export const COMMANDS: readonly CommandEntry[] = [
+  { name: "help", load: () => import("./help").then((m) => m.helpCommand) },
+  {
+    name: "mark",
+    load: () => import("./mark").then((m) => m.markCommand),
+    componentPrefixes: [MARK_SELECT_PREFIX],
+  },
+  { name: "assistant", load: () => import("./assistant").then((m) => m.assistantCommand) },
+  { name: "mymarks", load: () => import("./mymarks").then((m) => m.myMarksCommand) },
+  { name: "mystats", load: () => import("./mystats").then((m) => m.myStatsCommand) },
+  { name: "watching", load: () => import("./watching").then((m) => m.watchingCommand) },
 ]
 
-const COMMAND_BY_NAME: ReadonlyMap<string, SlashCommand> = new Map(
-  COMMANDS.map((command) => [command.data.name, command])
-)
+const ENTRY_BY_NAME: ReadonlyMap<string, CommandEntry> = new Map(COMMANDS.map((entry) => [entry.name, entry]))
 
 /**
- * Flattened list of every registered {@link ComponentHandler} across all
- * commands, in registration order. Consulted by {@link getComponentHandler}.
- */
-const COMPONENT_HANDLERS: readonly ComponentHandler[] = COMMANDS.flatMap(
-  (command) => command.components ?? []
-)
-
-/**
- * Look up a registered slash command by its (top-level) command name.
+ * Look up a registered slash command by its (top-level) command name, loading
+ * its handler module on first use.
  *
  * @param name - The `interaction.commandName` to resolve.
  * @returns The matching command, or `undefined` when none is registered.
  */
-export function getCommand(name: string): SlashCommand | undefined {
-  return COMMAND_BY_NAME.get(name)
+export async function getCommand(name: string): Promise<SlashCommand | undefined> {
+  return ENTRY_BY_NAME.get(name)?.load()
 }
 
 /**
@@ -132,11 +134,15 @@ export function getCommand(name: string): SlashCommand | undefined {
  * Matches the first handler whose {@link ComponentHandler.customIdPrefix} is a
  * prefix of `customId`. Component interactions carry no command name, so this
  * prefix match is how the router attributes a button / select-menu response back
- * to the command that created it.
+ * to the command that created it. Only the owning command's module is loaded.
  *
  * @param customId - The interaction's `custom_id`.
  * @returns The owning handler, or `undefined` when none claims the prefix.
  */
-export function getComponentHandler(customId: string): ComponentHandler | undefined {
-  return COMPONENT_HANDLERS.find((handler) => customId.startsWith(handler.customIdPrefix))
+export async function getComponentHandler(customId: string): Promise<ComponentHandler | undefined> {
+  const entry = COMMANDS.find((candidate) =>
+    candidate.componentPrefixes?.some((prefix) => customId.startsWith(prefix))
+  )
+  const command = await entry?.load()
+  return command?.components?.find((handler) => customId.startsWith(handler.customIdPrefix))
 }

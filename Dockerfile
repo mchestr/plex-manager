@@ -40,8 +40,10 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma Client and build
-RUN npx prisma generate && npm run build
+# Generate Prisma Client and build. The two Discord scripts are bundled into
+# scripts/dist/*.cjs (esbuild); discord.js stays external and resolves from the
+# standalone node_modules, because it is in serverExternalPackages (P11.7).
+RUN npx prisma generate && npm run build && npm run build:discord-scripts
 
 # Production image: root-owned app files, one writable path, no npm install
 FROM base AS runner
@@ -83,6 +85,9 @@ COPY --from=builder /app/prisma/migrations ./prisma/migrations
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/lib/generated/prisma ./lib/generated/prisma
 COPY --from=prisma-cli /opt/prisma-cli /opt/prisma-cli
+
+# `node scripts/dist/register-discord-commands.cjs` (and -metadata.cjs)
+COPY --from=builder /app/scripts/dist ./scripts/dist
 
 COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 

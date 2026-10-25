@@ -120,7 +120,7 @@ export const envSchema = z.object({
     default: "true",
   }),
   QUEUE_WORKER_CONCURRENCY: text("Jobs the worker runs at once.", { group: "Background work", default: "5" }),
-  ENABLE_DISCORD_BOT: text('"false" stops this process from running the Discord bot. One process runs it, under a database lock.', {
+  ENABLE_DISCORD_BOT: text('"false" opts this process out of the Discord bot. Otherwise it starts once Admin, Discord, "Bot enabled" is on and a token exists, with no restart. One process runs it, under a database lock.', {
     group: "Background work",
     default: "true",
   }),
