@@ -76,9 +76,9 @@ export function parseServerUrl(url: string): { protocol: "http" | "https"; hostn
     return { protocol, hostname, port }
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(`Invalid URL format: ${error.message}. Expected format: https://example.com:32400`)
+      throw new Error(`Invalid URL format: ${error.message}. Expected format: https://example.com:32400`, { cause: error })
     }
-    throw new Error(`Invalid URL format. Expected format: https://example.com:32400`)
+    throw new Error(`Invalid URL format. Expected format: https://example.com:32400`, { cause: error })
   }
 }
 

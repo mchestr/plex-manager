@@ -83,9 +83,6 @@ export async function getDevDefaults(): Promise<DevDefaults> {
     return emptyDefaults
   }
 
-  // Track if any DEV_* variables are set
-  let hasAnyDefaults = false
-
   // Plex defaults
   const plexDefaults: ServiceDefaults = {}
   if (process.env.DEV_PLEX_NAME) plexDefaults.name = process.env.DEV_PLEX_NAME
@@ -210,7 +207,7 @@ export async function getDevDefaults(): Promise<DevDefaults> {
   const llmProvider = Object.keys(llmProviderDefaults).length > 0 ? llmProviderDefaults : null
 
   // Check if any defaults are set
-  hasAnyDefaults = !!(plex || tautulli || overseerr || sonarr || radarr || discord || prometheus || chatLlmProvider || wrappedLlmProvider)
+  const hasAnyDefaults = !!(plex || tautulli || overseerr || sonarr || radarr || discord || prometheus || chatLlmProvider || wrappedLlmProvider)
 
   // Auto-submit enables zero-click setup when forms are fully populated
   const autoSubmit = process.env.DEV_SETUP_AUTO_SUBMIT === "true"
