@@ -14,8 +14,8 @@ import { Suspense } from "react";
 /**
  * Every route may block on the request (P11.19). The `<html>` element takes
  * the theme cookie and the stored locale, so no page has a static shell above
- * this layout; a static shell needs the theme set by a pre-paint script and
- * P11.20's nonce decision first.
+ * this layout. The strict CSP's per-request nonce (P11.20, proxy.ts) relies on
+ * that: a static shell would carry no nonce.
  */
 export const instant = false;
 

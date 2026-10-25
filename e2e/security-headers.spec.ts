@@ -30,4 +30,25 @@ test.describe('Security headers and image optimizer', () => {
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain("frame-ancestors 'self'");
   });
+
+  // P11.20 (SEC-53)
+  test('pages drop the deprecated headers and name the report endpoint', async ({ request }) => {
+    const headers = (await request.get('/')).headers();
+
+    expect(headers['x-xss-protection']).toBeUndefined();
+    expect(headers['x-dns-prefetch-control']).toBeUndefined();
+    expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+    expect(headers['reporting-endpoints']).toBe('csp="/api/csp-report"');
+    // http://localhost: no HSTS
+    expect(headers['strict-transport-security']).toBeUndefined();
+  });
+
+  test('the report endpoint takes a violation report', async ({ request }) => {
+    const response = await request.post('/api/csp-report', {
+      headers: { 'content-type': 'application/csp-report' },
+      data: JSON.stringify({ 'csp-report': { 'document-uri': 'http://localhost/', 'effective-directive': 'img-src', 'blocked-uri': 'https://example.com/a.png' } }),
+    });
+
+    expect(response.status()).toBe(204);
+  });
 });

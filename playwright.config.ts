@@ -82,6 +82,8 @@ const REWIND_PERF_SPECS = /perf\/[^/]*\.perf\.spec\.ts$/;
 const REWIND_E2E_SPECS = /rewind\/[^/]*\.spec\.ts$/;
 // The public share page (P7.5, design 12) and the archive article (P7.13) also run on firefox.
 const REWIND_FIREFOX_SPECS = /rewind\/(?:share-page|archive)\.spec\.ts$/;
+// The strict CSP's violation scan (P11.20) runs on all three engines.
+const CSP_SPECS = /\/csp\.spec\.ts$/;
 // The visual specs loop over the five phone sizes themselves; this is the first.
 const rewindPhone = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
 const rewindDesktop = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 };
@@ -148,6 +150,7 @@ export default defineConfig({
         REWIND_A11Y_SPECS,
         REWIND_PERF_SPECS,
         REWIND_E2E_SPECS,
+        CSP_SPECS,
       ],
     },
     {
@@ -221,6 +224,9 @@ export default defineConfig({
     { name: 'rewind-e2e-chromium', testMatch: REWIND_E2E_SPECS, use: { ...devices['Desktop Chrome'], ...rewindPhoneViewport } },
     { name: 'rewind-e2e-webkit', testMatch: REWIND_E2E_SPECS, use: { ...devices['Desktop Safari'], ...rewindPhoneViewport } },
     { name: 'rewind-e2e-firefox', testMatch: REWIND_FIREFOX_SPECS, use: { ...devices['Desktop Firefox'], ...rewindPhoneViewport } },
+    { name: 'csp-chromium', testMatch: CSP_SPECS, use: { ...devices['Desktop Chrome'] } },
+    { name: 'csp-webkit', testMatch: CSP_SPECS, use: { ...devices['Desktop Safari'] } },
+    { name: 'csp-firefox', testMatch: CSP_SPECS, use: { ...devices['Desktop Firefox'] } },
   ],
 
   /* Run the app before starting the tests */

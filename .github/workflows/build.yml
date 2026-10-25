@@ -529,6 +529,7 @@ jobs:
               --project=chromium --project=setup-wizard
               --project=rewind-e2e-chromium --project=rewind-e2e-webkit --project=rewind-e2e-firefox
               --project=rewind-a11y-chromium --project=rewind-a11y-webkit --project=rewind-a11y-firefox
+              --project=csp-chromium --project=csp-webkit --project=csp-firefox
             advisory: false
             artifact: playwright-report
             timeout: 60

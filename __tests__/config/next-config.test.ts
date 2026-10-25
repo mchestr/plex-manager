@@ -1,9 +1,10 @@
 /**
  * @jest-environment node
  *
- * next.config.js must keep the image optimizer off (SEC-01), hide the
- * framework header and send a CSP that drops 'unsafe-eval' in every phase but
- * `next dev`, whatever NODE_ENV is set (SEC-53, BP-05).
+ * next.config.js must keep the image optimizer off (SEC-01) and hide the
+ * framework header in every phase. The CSP is the proxy's since P11.20
+ * (`__tests__/proxy-csp.test.ts`); the other headers are in
+ * `__tests__/config/security-headers.test.ts`.
  */
 
 import type { NextConfig } from "next"
@@ -13,7 +14,6 @@ import {
   PHASE_PRODUCTION_SERVER,
 } from "next/constants"
 
-type Header = { key: string; value: string }
 type ConfigFactory = (phase: string) => NextConfig
 
 const env = process.env as Record<string, string | undefined>
@@ -34,28 +34,6 @@ function loadConfig(phase: string, nodeEnv?: string): NextConfig {
     throw new Error("next.config.js must export a phase function")
   }
   return factory(phase)
-}
-
-async function loadHeaders(phase: string, nodeEnv?: string): Promise<Header[]> {
-  const config = loadConfig(phase, nodeEnv)
-  if (!config.headers) throw new Error("next.config.js has no headers()")
-  const routes = await config.headers()
-  const catchAll = routes.find((route) => route.source === "/:path*")
-  if (!catchAll) throw new Error("no catch-all header route")
-  return catchAll.headers
-}
-
-async function loadCsp(phase: string, nodeEnv?: string): Promise<Map<string, string[]>> {
-  const headers = await loadHeaders(phase, nodeEnv)
-  const csp = headers.find((header) => header.key === "Content-Security-Policy")
-  if (!csp) throw new Error("no Content-Security-Policy header")
-  return new Map(
-    csp.value
-      .split(";")
-      .map((directive) => directive.trim().split(/\s+/))
-      .filter((tokens) => tokens[0] !== "")
-      .map(([name, ...sources]) => [name, sources])
-  )
 }
 
 afterEach(() => {
@@ -89,44 +67,6 @@ describe("next.config.js", () => {
       it("stops next dev from writing AGENTS.md into the repo", () => {
         expect(loadConfig(phase).agentRules).toBe(false)
       })
-
-      it("blocks plugins, base-tag hijacking and cross-origin framing", async () => {
-        const csp = await loadCsp(phase)
-
-        expect(csp.get("object-src")).toEqual(["'none'"])
-        expect(csp.get("base-uri")).toEqual(["'self'"])
-        expect(csp.get("frame-ancestors")).toEqual(["'self'"])
-      })
-
-      it("leaves form-action unset so Server Actions can redirect to Stripe", async () => {
-        const csp = await loadCsp(phase)
-
-        expect(csp.has("form-action")).toBe(false)
-      })
-    }
-  )
-
-  describe.each([PHASE_PRODUCTION_BUILD, PHASE_PRODUCTION_SERVER])(
-    "drops 'unsafe-eval' in %s",
-    (phase) => {
-      it.each([undefined, "production", "test", "development", "staging"])(
-        "with NODE_ENV=%s",
-        async (nodeEnv) => {
-          const csp = await loadCsp(phase, nodeEnv)
-
-          expect(csp.get("script-src")).toEqual(["'self'", "'unsafe-inline'"])
-          expect([...csp.values()].flat()).not.toContain("'unsafe-eval'")
-        }
-      )
-    }
-  )
-
-  it.each(["development", "test", "production"])(
-    "keeps 'unsafe-eval' for next dev with NODE_ENV=%s",
-    async (nodeEnv) => {
-      const csp = await loadCsp(PHASE_DEVELOPMENT_SERVER, nodeEnv)
-
-      expect(csp.get("script-src")).toEqual(["'self'", "'unsafe-inline'", "'unsafe-eval'"])
     }
   )
 })

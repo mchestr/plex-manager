@@ -29,6 +29,10 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `ALLOW_PLAINTEXT_SECRETS` |  | `false` | UNSAFE. "true" lets production start without a strong encryption key; every boot warns and secrets are stored as plain text. |
 | `SETUP_TOKEN` |  |  | Claims first-run setup instead of the code printed in the log. At least 16 characters: openssl rand -hex 16. |
 | `ALLOW_INSECURE_HTTP` |  | `false` | "true" lets production run on plain http (LAN only). Cookies are then not Secure; never set it on an install reachable from the internet. |
+| `HSTS_MAX_AGE` |  | `31536000` | Strict-Transport-Security max-age in seconds, sent only when NEXTAUTH_URL is https. The boot check refuses anything but a whole number. |
+| `HSTS_INCLUDE_SUBDOMAINS` |  | `false` | "true" adds includeSubDomains to Strict-Transport-Security. Set it only when every subdomain serves https. |
+| `HSTS_PRELOAD` |  | `false` | "true" adds preload to Strict-Transport-Security, for the browsers' preload list. Hard to undo: read hstspreload.org first. |
+| `CSP_REPORT_ONLY` |  | `false` | "true" sends the Content Security Policy as Content-Security-Policy-Report-Only: violations reach /api/csp-report but are not blocked. For a rollout or a suspected policy fault only. |
 | `TRUSTED_PROXY_HOPS` |  | `1` | Reverse proxies that append to X-Forwarded-For: 1 for one proxy, 2 for a CDN in front of it, 0 for none. A wrong value lets clients pick their rate-limit address. |
 | `TZ` |  | `UTC` | Server time zone (IANA name) until one is saved in Admin settings, which overrides it. |
 
