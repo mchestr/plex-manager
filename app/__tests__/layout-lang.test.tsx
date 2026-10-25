@@ -15,7 +15,7 @@ import RootLayout from "@/app/layout"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 // The data cache needs a Next request; here it is a plain call
-jest.mock("next/cache", () => ({ unstable_cache: <T,>(fn: T) => fn }))
+jest.mock("next/cache", () => ({ cacheLife: jest.fn(), cacheTag: jest.fn() }))
 jest.mock("next/server", () => ({ connection: async () => undefined }))
 jest.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }))
 jest.mock("@/lib/providers", () => ({ Providers: () => null }))
