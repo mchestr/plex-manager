@@ -45,7 +45,7 @@ function expectNoncedScripts(response: Response | null, html: string): void {
   const nonce = /'nonce-([^']+)'/.exec(policy)?.[1];
   expect(nonce).toBeTruthy();
 
-  const tags = html.match(/<script\b[^>]*>/g) ?? [];
+  const tags = html.match(/<script\b[^>]*>/gi) ?? [];
   expect(tags.length).toBeGreaterThan(0);
   for (const tag of tags) {
     expect(tag, 'every server-rendered script carries the nonce').toContain(`nonce="${nonce}"`);
