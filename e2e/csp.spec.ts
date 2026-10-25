@@ -38,14 +38,14 @@ function violations(page: Page): Promise<string[]> {
 }
 
 /** The nonce of the response's policy, and checks that every script tag in its HTML carries it. */
-async function expectNoncedScripts(response: Response | null): Promise<void> {
+function expectNoncedScripts(response: Response | null, html: string): void {
   expect(response, 'the navigation has a response').not.toBeNull();
   const policy = response!.headers()['content-security-policy'];
   expect(policy).toContain("'strict-dynamic'");
   const nonce = /'nonce-([^']+)'/.exec(policy)?.[1];
   expect(nonce).toBeTruthy();
 
-  const tags = (await response!.text()).match(/<script\b[^>]*>/g) ?? [];
+  const tags = html.match(/<script\b[^>]*>/g) ?? [];
   expect(tags.length).toBeGreaterThan(0);
   for (const tag of tags) {
     expect(tag, 'every server-rendered script carries the nonce').toContain(`nonce="${nonce}"`);
@@ -54,9 +54,12 @@ async function expectNoncedScripts(response: Response | null): Promise<void> {
 
 async function visit(page: Page, path: string, ready: string): Promise<void> {
   const response = await page.goto(path);
+  // Read the body now: a client navigation after load (/rewind moves to the
+  // current issue) lets Chromium discard it
+  const html = (await response?.text()) ?? '';
   await expect(page.getByTestId(ready)).toBeVisible();
   await page.waitForLoadState('load');
-  await expectNoncedScripts(response);
+  expectNoncedScripts(response, html);
 }
 
 /** One scan per page and audience: the interactive states of the axe table add no new page loads. */
