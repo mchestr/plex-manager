@@ -122,88 +122,88 @@ export default async function SettingsPage() {
       />
       <SettingsLayout items={nav}>
         <SettingsGroup id="media">
-        <ServiceSection type="plex" server={settings.plexServer} health={health.plex} footerMeta={saved("plex")} />
-        <ServiceSection type="tautulli" server={settings.tautulli} health={health.tautulli} footerMeta={saved("tautulli")} />
-        <ServiceSection type="overseerr" server={settings.overseerr} health={health.overseerr} footerMeta={saved("overseerr")} />
+          <ServiceSection type="plex" server={settings.plexServer} health={health.plex} footerMeta={saved("plex")} />
+          <ServiceSection type="tautulli" server={settings.tautulli} health={health.tautulli} footerMeta={saved("tautulli")} />
+          <ServiceSection type="overseerr" server={settings.overseerr} health={health.overseerr} footerMeta={saved("overseerr")} />
         </SettingsGroup>
         <SettingsGroup id="integrations">
-        <AiSection
-          chat={settings.chatLLMProvider}
-          wrapped={settings.wrappedLLMProvider}
-          llmDisabled={settings.config.llmDisabled}
-          caps={{
-            perUserUsd: settings.config.llmDailyCapPerUserUsd,
-            adminUsd: settings.config.llmDailyCapAdminUsd,
-            serverUsd: settings.config.llmDailyCapServerUsd,
-          }}
-          health={health.ai}
-          footerMeta={saved("ai")}
-        />
-        <DiscordSection
-          integration={settings.discordIntegration}
-          linkedCount={settings.discordLinkedCount}
-          portalUrl={`${baseUrl}/discord/link`}
-          state={discord.state}
-          now={new Date().toISOString()}
-          footerMeta={saved("discord")}
-        />
-        <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />
-        <WatchlistSection
-          saved={{ enabled: settings.config.watchlistSyncEnabled, intervalMinutes: settings.config.watchlistSyncIntervalMinutes }}
-          stats={watchlistStats}
-          health={health.watchlist}
-          footerMeta={saved("watchlist")}
-        />
-        <ChannelStatsSection saved={channelStats} footerMeta={saved("channelStats")} />
-        <RequestTiersSection
-          saved={requestTiers}
-          startedLabel={requestTiers.lastRun ? f.dateTime(requestTiers.lastRun.startedAt, { zoneLabel: true }) : null}
-          footerMeta={saved("requestTiers")}
-        />
-        <OtherIntegrationsSection
-          servers={other}
-          jellyfinLogin={settings.jellyfinServer?.enabledForLogin ?? null}
-          health={{ sonarr: health.sonarr, radarr: health.radarr, jellyfin: health.jellyfin, prometheus: health.prometheus }}
-          footerMeta={saved("other")}
-        />
+          <AiSection
+            chat={settings.chatLLMProvider}
+            wrapped={settings.wrappedLLMProvider}
+            llmDisabled={settings.config.llmDisabled}
+            caps={{
+              perUserUsd: settings.config.llmDailyCapPerUserUsd,
+              adminUsd: settings.config.llmDailyCapAdminUsd,
+              serverUsd: settings.config.llmDailyCapServerUsd,
+            }}
+            health={health.ai}
+            footerMeta={saved("ai")}
+          />
+          <DiscordSection
+            integration={settings.discordIntegration}
+            linkedCount={settings.discordLinkedCount}
+            portalUrl={`${baseUrl}/discord/link`}
+            state={discord.state}
+            now={new Date().toISOString()}
+            footerMeta={saved("discord")}
+          />
+          <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />
+          <WatchlistSection
+            saved={{ enabled: settings.config.watchlistSyncEnabled, intervalMinutes: settings.config.watchlistSyncIntervalMinutes }}
+            stats={watchlistStats}
+            health={health.watchlist}
+            footerMeta={saved("watchlist")}
+          />
+          <ChannelStatsSection saved={channelStats} footerMeta={saved("channelStats")} />
+          <RequestTiersSection
+            saved={requestTiers}
+            startedLabel={requestTiers.lastRun ? f.dateTime(requestTiers.lastRun.startedAt, { zoneLabel: true }) : null}
+            footerMeta={saved("requestTiers")}
+          />
+          <OtherIntegrationsSection
+            servers={other}
+            jellyfinLogin={settings.jellyfinServer?.enabledForLogin ?? null}
+            health={{ sonarr: health.sonarr, radarr: health.radarr, jellyfin: health.jellyfin, prometheus: health.prometheus }}
+            footerMeta={saved("other")}
+          />
         </SettingsGroup>
         <SettingsGroup id="rewind">
-        <RewindSettingsSection
-          saved={rewindSettingsFromConfig(settings.config)}
-          zone={zone}
-          llmDisabled={settings.config.llmDisabled}
-          discordBotOn={Boolean(settings.discordIntegration?.isEnabled && settings.discordIntegration.botEnabled)}
-          spent={f.money(spentUsd, "prose")}
-          libraries={libraries.libraries}
-          ratings={ratings}
-          status={{ redis: rewindInfra.ok ? null : rewindInfraMessage(rewindInfra.code, "admin"), tautulli: libraries.status }}
-          health={health.rewind}
-          footerMeta={saved("rewind")}
-        >
-          {/* P7.8: Prepare season moved to the season console. */}
-          <p className="text-ui text-muted-foreground" data-testid="rewind-season-data-prepared-at">
-            {seasonDataPreparedAt ? `Season data last prepared ${f.dateTime(seasonDataPreparedAt)}. ` : "Season data not prepared yet. "}
-            <Link href="/admin/rewind" className="text-foreground underline underline-offset-3" data-testid="rewind-season-console-link">
-              Prepare the season on the Season page
-            </Link>
-          </p>
-        </RewindSettingsSection>
+          <RewindSettingsSection
+            saved={rewindSettingsFromConfig(settings.config)}
+            zone={zone}
+            llmDisabled={settings.config.llmDisabled}
+            discordBotOn={Boolean(settings.discordIntegration?.isEnabled && settings.discordIntegration.botEnabled)}
+            spent={f.money(spentUsd, "prose")}
+            libraries={libraries.libraries}
+            ratings={ratings}
+            status={{ redis: rewindInfra.ok ? null : rewindInfraMessage(rewindInfra.code, "admin"), tautulli: libraries.status }}
+            health={health.rewind}
+            footerMeta={saved("rewind")}
+          >
+            {/* P7.8: Prepare season moved to the season console. */}
+            <p className="text-ui text-muted-foreground" data-testid="rewind-season-data-prepared-at">
+              {seasonDataPreparedAt ? `Season data last prepared ${f.dateTime(seasonDataPreparedAt)}. ` : "Season data not prepared yet. "}
+              <Link href="/admin/rewind" className="text-foreground underline underline-offset-3" data-testid="rewind-season-console-link">
+                Prepare the season on the Season page
+              </Link>
+            </p>
+          </RewindSettingsSection>
         </SettingsGroup>
         <SettingsGroup id="system">
-        <PrivacySection status={retention} />
-        <SecuritySection status={encryption} serviceRows={<ServiceRowsCheck />} />
-        <SystemSection
-          appearance={<LightThemeSwitch enabled={settings.config.lightThemeEnabled} />}
-          baseUrl={baseUrl}
-          nodeEnv={process.env.NODE_ENV || "development"}
-          nodeVersion={process.version}
-          databaseProvider={databaseProvider(process.env.DATABASE_URL)}
-          databaseUrl={process.env.DATABASE_URL?.replace(/\/\/.*@/, "//***@") || "Not configured"}
-          platform={PLATFORMS[process.platform] ?? process.platform}
-          configUpdated={settings.config.updatedAt ? f.dateTime(settings.config.updatedAt, { zoneLabel: true }) : "Never"}
-          timeZone={{ configured: settings.config.timezone, effective: zone }}
-          footerMeta={saved("system")}
-        />
+          <PrivacySection status={retention} />
+          <SecuritySection status={encryption} serviceRows={<ServiceRowsCheck />} />
+          <SystemSection
+            appearance={<LightThemeSwitch enabled={settings.config.lightThemeEnabled} />}
+            baseUrl={baseUrl}
+            nodeEnv={process.env.NODE_ENV || "development"}
+            nodeVersion={process.version}
+            databaseProvider={databaseProvider(process.env.DATABASE_URL)}
+            databaseUrl={process.env.DATABASE_URL?.replace(/\/\/.*@/, "//***@") || "Not configured"}
+            platform={PLATFORMS[process.platform] ?? process.platform}
+            configUpdated={settings.config.updatedAt ? f.dateTime(settings.config.updatedAt, { zoneLabel: true }) : "Never"}
+            timeZone={{ configured: settings.config.timezone, effective: zone }}
+            footerMeta={saved("system")}
+          />
         </SettingsGroup>
       </SettingsLayout>
     </div>

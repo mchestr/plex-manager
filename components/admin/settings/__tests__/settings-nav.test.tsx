@@ -61,8 +61,8 @@ describe('SettingsNav', () => {
     const onSelect = jest.fn()
     render(<SettingsNav items={ITEMS} active="plex" activeGroup="integrations" dirty={new Set()} onSelect={onSelect} />)
 
-    expect(within(screen.getByTestId('settings-nav-group-integrations')).getByText('Integrations')).toHaveAttribute('aria-current', 'true')
-    expect(within(screen.getByTestId('settings-nav-group-media')).getByText('Media servers')).not.toHaveAttribute('aria-current')
+    expect(within(screen.getByTestId('settings-nav-group-integrations')).getByText('Integrations')).toHaveAttribute('data-active', 'true')
+    expect(within(screen.getByTestId('settings-nav-group-media')).getByText('Media servers')).not.toHaveAttribute('data-active')
 
     await user.click(screen.getByRole('link', { name: /Stripe billing/ }))
 

@@ -6,7 +6,12 @@ import type { SettingsNavItem } from '@/components/admin/settings/settings-nav'
 
 const ITEMS: SettingsNavItem[] = [
   { id: 'plex', label: 'Plex server', group: 'media', status: 'ok' },
-  { id: 'stripe', label: 'Stripe billing', group: 'integrations', status: 'ok' },
+  {
+    id: 'stripe',
+    label: 'Stripe billing',
+    group: 'integrations',
+    status: 'ok',
+  },
   { id: 'system', label: 'System information', group: 'system' },
 ]
 
@@ -14,7 +19,10 @@ function renderLayout() {
   return render(
     <SettingsLayout items={ITEMS}>
       <SettingsGroup id="media">
-        <section id="plex">Plex</section>
+        <section id="plex">
+          Plex
+          <input aria-label="Plex name" />
+        </section>
       </SettingsGroup>
       <SettingsGroup id="integrations">
         <section id="stripe">Stripe</section>
@@ -71,5 +79,27 @@ describe('SettingsLayout', () => {
 
     expect(screen.getByText('System')).toBeVisible()
     expect(window.location.hash).toBe('#server-time-zone')
+  })
+
+  it('ignores a malformed or unknown hash', () => {
+    window.history.replaceState(null, '', '/#%')
+    renderLayout()
+    expect(screen.getByText('Plex')).toBeVisible()
+
+    window.history.replaceState(null, '', '/#nowhere')
+    window.dispatchEvent(new HashChangeEvent('hashchange'))
+    expect(screen.getByText('Plex')).toBeVisible()
+  })
+
+  it('keeps an unsaved edit in a hidden group', async () => {
+    const user = userEvent.setup()
+    renderLayout()
+
+    await user.type(screen.getByLabelText('Plex name'), 'edited')
+    await user.click(screen.getAllByRole('link', { name: /Stripe billing/ })[0])
+    expect(screen.getByLabelText('Plex name', { selector: 'input' })).not.toBeVisible()
+    await user.click(screen.getAllByRole('link', { name: /Plex server/ })[0])
+
+    expect(screen.getByLabelText('Plex name')).toHaveValue('edited')
   })
 })

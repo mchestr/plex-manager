@@ -78,10 +78,7 @@ export function SettingsNav({ items, active, activeGroup, dirty, onSelect }: Set
     <nav aria-label="Settings sections" className="flex flex-col gap-4" data-testid="settings-nav">
       {SETTINGS_GROUPS.map((group) => (
         <div key={group.id} className="flex flex-col gap-0.5" data-testid={`settings-nav-group-${group.id}`}>
-          <p
-            aria-current={activeGroup === group.id ? "true" : undefined}
-            className="px-2 pb-1 text-caption font-medium text-muted-foreground aria-[current=true]:text-foreground"
-          >
+          <p data-active={activeGroup === group.id || undefined} className="px-2 pb-1 text-caption font-medium text-muted-foreground data-active:text-foreground">
             {group.label}
           </p>
           {items

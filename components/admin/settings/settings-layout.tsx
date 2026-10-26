@@ -1,12 +1,12 @@
 "use client"
 
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react"
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import { SettingsJumpTo, SettingsNav, type SettingsGroupId, type SettingsNavItem } from "@/components/admin/settings/settings-nav"
 import { SettingsDirtyProvider } from "@/components/ui/settings-section"
 
 /** The id of the topmost section in view, so the nav can mark it `aria-current`. */
-function useActiveSection(ids: string[]): string | null {
+function useActiveSection(ids: string[]): [string | null, (id: string) => void] {
   const [active, setActive] = useState<string | null>(ids[0] ?? null)
   const key = ids.join(",")
 
@@ -33,7 +33,7 @@ function useActiveSection(ids: string[]): string | null {
     return () => observer.disconnect()
   }, [key])
 
-  return active
+  return [active, setActive]
 }
 
 const ActiveGroupContext = createContext<SettingsGroupId>("media")
@@ -51,7 +51,8 @@ export function SettingsGroup({ id, children }: { id: SettingsGroupId; children:
   )
 }
 
-const groupOf = (element: Element | null) => element?.closest("[data-settings-group]")?.getAttribute("data-settings-group") as SettingsGroupId | undefined
+const groupOf = (element: Element | null) =>
+  element?.closest("[data-settings-group]")?.getAttribute("data-settings-group") as SettingsGroupId | undefined
 
 interface SettingsLayoutProps {
   items: SettingsNavItem[]
@@ -66,18 +67,24 @@ interface SettingsLayoutProps {
  * Sections report their dirty state here for the nav's pip.
  */
 export function SettingsLayout({ items, children }: SettingsLayoutProps) {
-  const active = useActiveSection(items.map((item) => item.id))
+  const [active, setActive] = useActiveSection(items.map((item) => item.id))
+  const bodyRef = useRef<HTMLDivElement>(null)
   const [group, setGroup] = useState<SettingsGroupId>(items[0]?.group ?? "media")
   const [jump, setJump] = useState<{ id: string; n: number } | null>(null)
 
-  const reveal = useCallback((id: string) => {
-    const target = document.getElementById(id)
-    const next = groupOf(target)
-    if (!next) return false
-    setGroup(next)
-    setJump((prev) => ({ id, n: (prev?.n ?? 0) + 1 }))
-    return true
-  }, [])
+  const reveal = useCallback(
+    (id: string) => {
+      const target = document.getElementById(id)
+      const next = groupOf(target)
+      if (!next) return false
+      setGroup(next)
+      // The observer only sees the new group once it shows; do not leave the old section marked meanwhile
+      if (items.some((item) => item.id === id)) setActive(id)
+      setJump((prev) => ({ id, n: (prev?.n ?? 0) + 1 }))
+      return true
+    },
+    [items, setActive]
+  )
 
   const select = useCallback(
     (id: string) => {
@@ -90,26 +97,40 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
   useEffect(() => {
     if (!jump) return
     const smooth = !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-    document.getElementById(jump.id)?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" })
+    document.getElementById(jump.id)?.scrollIntoView({
+      behavior: smooth ? "smooth" : "auto",
+      block: "start",
+    })
   }, [jump])
 
+  // Before paint, so a deep link does not flash the first group
+  useLayoutEffect(() => {
+    const fromHash = () => {
+      try {
+        reveal(decodeURIComponent(window.location.hash.slice(1)))
+      } catch {
+        // A malformed hash (`#%`) names no section
+      }
+    }
+    fromHash()
+    window.addEventListener("hashchange", fromHash)
+    return () => window.removeEventListener("hashchange", fromHash)
+  }, [reveal])
+
+  // An in-page `#anchor` link in the settings, such as `#server-time-zone`, reveals its group first
   useEffect(() => {
-    const fromHash = () => reveal(decodeURIComponent(window.location.hash.slice(1)))
-    const onClick = (event: MouseEvent) => {
-      const anchor = (event.target as Element | null)?.closest?.("a[href^='#']")
-      const id = anchor?.getAttribute("href")?.slice(1)
+    const body = bodyRef.current
+    if (!body) return
+    const onClick = (event: globalThis.MouseEvent) => {
+      const id = (event.target as Element).closest("a[href^='#']")?.getAttribute("href")?.slice(1)
       if (!id || event.defaultPrevented || !reveal(id)) return
       event.preventDefault()
       window.history.pushState(null, "", `#${id}`)
     }
-    fromHash()
-    window.addEventListener("hashchange", fromHash)
-    document.addEventListener("click", onClick)
-    return () => {
-      window.removeEventListener("hashchange", fromHash)
-      document.removeEventListener("click", onClick)
-    }
+    body.addEventListener("click", onClick)
+    return () => body.removeEventListener("click", onClick)
   }, [reveal])
+
   const [dirty, setDirty] = useState<ReadonlySet<string>>(() => new Set())
 
   const onDirtyChange = useCallback((id: string, isDirty: boolean) => {
@@ -132,7 +153,9 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
       </div>
       <SettingsDirtyProvider onDirtyChange={onDirtyChange}>
         <ActiveGroupContext.Provider value={group}>
-          <div className="min-w-0">{children}</div>
+          <div ref={bodyRef} className="min-w-0">
+            {children}
+          </div>
         </ActiveGroupContext.Provider>
       </SettingsDirtyProvider>
     </div>
