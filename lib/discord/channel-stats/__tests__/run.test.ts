@@ -133,11 +133,12 @@ describe("runChannelStats", () => {
     expect(renamed()).toEqual({ [ids.status]: "MFlix Status (🔴)" })
   })
 
-  it("is offline without a Tautulli server", async () => {
+  it("renames nothing without a Tautulli server, since that is not an outage", async () => {
     ;(getActiveService as unknown as jest.Mock).mockResolvedValue(null)
     const result = await runChannelStats("scheduled")
-    expect(result?.status).toBe("offline")
+    expect(result?.skipped).toBe("No Tautulli server")
     expect(tautulli).not.toHaveBeenCalled()
+    expect(rename).not.toHaveBeenCalled()
   })
 
   it("carries on to the next channel when one rename fails", async () => {

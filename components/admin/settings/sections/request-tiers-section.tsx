@@ -89,7 +89,7 @@ export function RequestTiersSection({ saved, startedLabel, footerMeta }: { saved
           <Switch id="request-tiers-enabled" checked={values.enabled} onCheckedChange={(enabled) => set({ enabled })} disabled={form.isPending} data-testid="request-tiers-toggle" />
           <div className="flex flex-col">
             <Label htmlFor="request-tiers-enabled">Sync request limits every day</Label>
-            <span className="text-label text-muted-foreground">Overseerr is only called for a member whose quota changes.</span>
+            <span className="text-label text-muted-foreground">The first run overwrites every matched member's Overseerr quota, so turn on "Set request limits by hand" on the users to keep first. Overseerr is only called for a member whose quota changes.</span>
           </div>
         </div>
         <FormField name="runHour" label="Run at hour" description="Hour of the day in the server time zone, from 0 to 23." error={undefined}>

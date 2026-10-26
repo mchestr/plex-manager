@@ -91,6 +91,17 @@ describe("addJob", () => {
     expect(mockJobs.size).toBe(1)
   })
 
+  it.each([
+    [JOB_TYPES.DISCORD_CHANNEL_STATS, "discord:channel-stats"],
+    [JOB_TYPES.REQUEST_TIER_SYNC, "request-tiers:sync"],
+  ] as const)("collapses repeated admin runs of %s into one", async (type, id) => {
+    await addJob(type, { triggeredBy: "admin" })
+    await addJob(type, { triggeredBy: "admin" })
+
+    expect(mockJobs.size).toBe(1)
+    expect(jobIdOptions(type, { triggeredBy: "admin" })).toEqual({ deduplication: { id } })
+  })
+
   it("never falls back to a clock-based id", async () => {
     await expect(addJob(JOB_TYPES.PLEX_ACCESS_REVOKE, { userId: "u1" })).rejects.toThrow(/needs a job id/)
     expect(mockAdd).not.toHaveBeenCalled()

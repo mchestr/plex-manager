@@ -61,7 +61,7 @@ export const runChannelStatsNow = adminAction({
   fallbackError: "Could not update the channels",
   handler: async () => {
     if (isRedisConfigured()) {
-      await addJob(JOB_TYPES.DISCORD_CHANNEL_STATS, { triggeredBy: "admin" }, { attempts: 1, removeOnComplete: true, removeOnFail: true })
+      await addJob(JOB_TYPES.DISCORD_CHANNEL_STATS, { triggeredBy: "admin" }, { attempts: 1, removeOnComplete: true })
       return ok({ queued: true })
     }
     await runChannelStats("admin", { signal: AbortSignal.timeout(20_000) })

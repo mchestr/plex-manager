@@ -139,6 +139,18 @@ describe("runRequestTierSync", () => {
     expect(writeQuota).toHaveBeenCalledWith(service, 1, { movieQuotaLimit: 9, movieQuotaDays: 30, tvQuotaLimit: 8, tvQuotaDays: 30 }, expect.anything())
   })
 
+  it("records a run that was stopped early instead of passing it off as complete", async () => {
+    const controller = new AbortController()
+    overseerrUsers.mockResolvedValue({ ok: true, data: Array.from({ length: 12 }, (_, i) => member(i + 1, 100)) })
+    hoursOf.mockImplementation(async () => {
+      controller.abort()
+      return { ok: true, data: 1 }
+    })
+    const result = await runRequestTierSync("scheduled", { signal: controller.signal })
+    expect(result?.error).toMatch(/Stopped before every member/)
+    expect(storedEntries()).toHaveLength(5)
+  })
+
   it("records why a run could not start", async () => {
     activeService.mockResolvedValue(null)
     const result = await runRequestTierSync("scheduled")

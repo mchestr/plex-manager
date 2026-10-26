@@ -67,7 +67,7 @@ export const runRequestTiersNow = adminAction({
   fallbackError: "Could not run the request limits",
   handler: async () => {
     if (isRedisConfigured()) {
-      await addJob(JOB_TYPES.REQUEST_TIER_SYNC, { triggeredBy: "admin" }, { attempts: 1, removeOnComplete: true, removeOnFail: true })
+      await addJob(JOB_TYPES.REQUEST_TIER_SYNC, { triggeredBy: "admin" }, { attempts: 1, removeOnComplete: true })
       return ok({ queued: true })
     }
     await runRequestTierSync("admin", { signal: AbortSignal.timeout(20_000) })

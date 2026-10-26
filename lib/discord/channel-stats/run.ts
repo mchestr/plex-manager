@@ -6,6 +6,7 @@
  *
  * 1. Read the settings; a scheduled run stops while the job is off.
  * 2. Call `get_activity` and `get_libraries`; work out the server status.
+ *    With no Tautulli server connected nothing is renamed.
  * 3. For each assigned channel: skip it when its source call failed or its name
  *    is already what the channel was last renamed to; otherwise rename it.
  * 4. A failed rename never stops the next channel. A `429` is counted and left
@@ -63,19 +64,19 @@ export async function runChannelStats(
   })
   if (trigger === "scheduled" && !config?.discordStatsEnabled) return null
 
+  // A missing Tautulli is not an outage: the channels keep their names
   const tautulli = await getActiveService("tautulli")
-  const [activity, libraries] = tautulli
-    ? await Promise.all([
-        tautulliCommand(tautulli, "get_activity", {}, activitySchema, { signal, attempts: 1 }),
-        tautulliCommand(tautulli, "get_libraries", {}, librariesSchema, { signal, attempts: 1 }),
-      ])
-    : [null, null]
+  if (!tautulli) return { status: "offline", renamed: 0, unchanged: 0, failed: 0, rateLimited: 0, skipped: "No Tautulli server" }
+  const [activity, libraries] = await Promise.all([
+    tautulliCommand(tautulli, "get_activity", {}, activitySchema, { signal, attempts: 1 }),
+    tautulliCommand(tautulli, "get_libraries", {}, librariesSchema, { signal, attempts: 1 }),
+  ])
 
-  const status = serverStatus(Boolean(activity?.ok), Boolean(libraries?.ok))
+  const status = serverStatus(activity.ok, libraries.ok)
   const values: StatValues = {
     status: STATUS_EMOJI[status],
-    ...(activity?.ok ? activityValues(activity.data) : {}),
-    ...(libraries?.ok ? libraryValues(libraries.data) : {}),
+    ...(activity.ok ? activityValues(activity.data) : {}),
+    ...(libraries.ok ? libraryValues(libraries.data) : {}),
   }
 
   const result: ChannelStatsResult = { status, renamed: 0, unchanged: 0, failed: 0, rateLimited: 0 }

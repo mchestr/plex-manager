@@ -135,8 +135,9 @@ export async function runRequestTierSync(
     entries.push(...(await Promise.all(batch.map((match) => syncMember(match, tiers, tautulli, overseerr, signal)))))
     if (signal?.aborted) break
   }
+  const stopped = entries.length < matched.length
 
   for (const entry of entries) logger.debug(summaryLine(entry))
   logger.info("request-tiers.synced", { matched: matched.length, withoutPlexId, withoutTautulli })
-  return record(trigger, startedAt, entries)
+  return record(trigger, startedAt, entries, stopped ? "Stopped before every member was handled; the next run finishes it" : undefined)
 }
