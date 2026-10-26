@@ -99,7 +99,7 @@ describe("startPlexSignIn", () => {
     const cookie = setCookie("pm-plex-pin")
     expect(cookie).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/", maxAge: 900 })
     const pin = readPinCookie(cookie?.value)
-    expect(pin).toEqual({ pinId: nextPinId, code: `code${nextPinId}`, clientId: expect.stringMatching(UUID), inviteCode: "FRIENDS1" })
+    expect(pin).toEqual({ pinId: nextPinId, code: `code${nextPinId}`, clientId: expect.stringMatching(UUID), inviteCode: "FRIENDS1", attemptId: expect.stringMatching(UUID) })
 
     const params = new URLSearchParams(result.data.authUrl.slice(AUTH_PREFIX.length))
     expect(result.data.authUrl.startsWith(AUTH_PREFIX)).toBe(true)
@@ -316,10 +316,41 @@ describe("finishPlexSignIn", () => {
     expect(mockGetOnboardingStatus).not.toHaveBeenCalled()
   })
 
-  it("refuses without a session, and still deletes the cookie", async () => {
+  it("refuses without a session, and keeps the cookie for another signIn", async () => {
     mockGetServerSession.mockResolvedValue(null)
 
     await expect(finishPlexSignIn()).resolves.toMatchObject({ success: false, code: "UNAUTHENTICATED" })
-    expect(mockBrowser.jar.has("pm-plex-pin")).toBe(false)
+    expect(mockBrowser.jar.has("pm-plex-pin")).toBe(true)
+  })
+})
+
+describe("startPlexSignIn retry", () => {
+  const CLIENT = "6f1c2a7e-3b4d-4c5e-8f90-1a2b3c4d5e6f"
+
+  beforeEach(() => {
+    newBrowser()
+    mockCreatePin.mockResolvedValue({ ok: true, data: { id: 9, code: "newcode" } })
+    process.env.NEXT_PUBLIC_APP_URL = "https://pm.example.com"
+  })
+
+  it("keeps the invite code and callback path of the PIN it replaces", async () => {
+    mockBrowser.jar.set(
+      "pm-plex-pin",
+      pinCookie({ pinId: 5, code: "old", clientId: CLIENT, inviteCode: "ABCD1234", callbackPath: "/admin" }).value
+    )
+
+    await expect(startPlexSignIn({ retry: true })).resolves.toMatchObject({ success: true })
+
+    const pin = readPinCookie(setCookie("pm-plex-pin")?.value)
+    expect(pin).toMatchObject({ pinId: 9, inviteCode: "ABCD1234", callbackPath: "/admin" })
+    expect(pin?.attemptId).toMatch(UUID)
+  })
+
+  it("starts a plain sign-in without retry", async () => {
+    mockBrowser.jar.set("pm-plex-pin", pinCookie({ pinId: 5, code: "old", clientId: CLIENT, callbackPath: "/admin" }).value)
+
+    await startPlexSignIn({})
+
+    expect(readPinCookie(setCookie("pm-plex-pin")?.value)?.callbackPath).toBeUndefined()
   })
 })

@@ -4,8 +4,8 @@
  * - `pm-plex-client` holds the browser's own Plex client identifier, a random
  *   UUID signed for one year. plex.tv lists one Plex Manager device per browser.
  * - `pm-plex-pin` holds the PIN being authorised, with its code, that client
- *   identifier, an optional invite code and an optional same-origin path to
- *   land on afterwards, signed for 15 minutes. It is the
+ *   identifier, an optional invite code, an optional same-origin path to
+ *   land on afterwards and an attempt id for the logs, signed for 15 minutes. It is the
  *   only place the PIN id lives: the forward URL carries none.
  *
  * - `pm-setup-plex-pin` holds the PIN of setup's Connect with Plex (P10.25),
@@ -43,6 +43,8 @@ const pinCookieSchema = z.object({
   clientId: z.uuid(),
   inviteCode: inviteCodeSchema.optional(),
   callbackPath: callbackPathSchema.optional(),
+  /** Random per sign-in; tells the log lines of one attempt apart. */
+  attemptId: z.uuid().optional(),
 })
 
 export type PlexPinCookie = z.infer<typeof pinCookieSchema>
