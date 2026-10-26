@@ -540,11 +540,14 @@ jobs:
             advisory: false
             artifact: playwright-report-rewind
             timeout: 30
-          # The setup projects pull in setup-wizard, which they depend on.
+          # The setup projects pull in setup-wizard, which they depend on. The
+          # advisory suites lift playwright.config.ts's 10-failure stop, so the
+          # report lists every diff.
           - name: Visual Diffs
             projects: >-
               --project=visual-desktop --project=visual-mobile
               --project=visual-setup-desktop --project=visual-setup-mobile
+              --max-failures=0
             advisory: true
             artifact: visual-diffs
             warning: Screenshots differ from the baselines. Review the visual-diffs artifact; if the change is intended, run the Visual Baselines workflow (e2e/visual/README.md).
@@ -553,6 +556,7 @@ jobs:
             projects: >-
               --project=rewind-visual-phone-chromium --project=rewind-visual-phone-webkit
               --project=rewind-visual-desktop-chromium --project=rewind-visual-desktop-webkit
+              --max-failures=0
             advisory: true
             artifact: rewind-visual-diffs
             warning: Screenshots differ from the baselines. Review the rewind-visual-diffs artifact; if the change is intended, run the Visual Baselines workflow (e2e/visual/README.md). A 12 px text or 44 px target check may have failed instead; the job log names the page.
