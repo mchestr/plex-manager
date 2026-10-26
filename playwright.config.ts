@@ -27,10 +27,11 @@ console.log(`Running tests on ${baseURL} (${prodServer ? 'production build' : 'n
 const VISUAL_SPECS = /visual\/(member|admin|primitives)\.visual\.spec\.ts$/;
 const VISUAL_SETUP_SPEC = /visual\/setup\.visual\.spec\.ts$/;
 /*
- * The light theme (P10.10): the light projects hold the `pm-theme=light` cookie. They run the app screens plus every route in the
- * axe table, axe itself, and Rewind against the dark Rewind baselines, which
- * proves the Rewind scope does not change with the theme. Not in CI's list;
- * the Visual Baselines workflow's `light` suite takes their baselines.
+ * The light theme (P10.10): the light projects hold the `pm-theme=light`
+ * cookie. They run the app screens plus every route in the axe table, axe
+ * itself, and Rewind against the dark Rewind baselines, which proves the
+ * Rewind scope does not change with the theme. Not in CI's list; the Visual
+ * Baselines workflow's `light` suite takes their baselines.
  */
 const LIGHT_ROUTES_SPEC = /visual\/light-routes\.visual\.spec\.ts$/;
 // The light projects start with the `pm-theme=light` cookie that
