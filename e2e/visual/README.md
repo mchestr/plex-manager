@@ -9,8 +9,8 @@ In CI the diffs are **advisory**. The visual projects run in their own
 **Visual Diffs** and **Rewind Visual Diffs** jobs (`build.yml`), which are not
 required checks: a diff leaves a warning on the run and uploads the
 `visual-diffs` or `rewind-visual-diffs` artifact, but does not fail the
-workflow. The required **E2E Tests** job runs every other
-project. Refresh the baselines with the Visual Baselines workflow below.
+workflow. The required **E2E Tests** and **Rewind E2E Tests** jobs run every
+other project. Refresh the baselines with the Visual Baselines workflow below.
 
 ## What is covered
 

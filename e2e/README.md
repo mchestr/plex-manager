@@ -238,7 +238,7 @@ npm run test:e2e
 
 ### Production Mode (what CI runs)
 
-CI's `E2E Tests` job runs every project against `next build` plus
+CI's `E2E Tests` and `Rewind E2E Tests` jobs (two jobs, each with its own database, so they run side by side) run every project against `next build` plus
 `next start`, inside `mcr.microsoft.com/playwright:v<@playwright/test version>-noble`,
 on a throwaway Postgres (`plex_manager_e2e_test`) and Redis. To do the same
 locally:

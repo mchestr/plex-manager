@@ -99,6 +99,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
+  /* A broken build fails most specs; stop after a few instead of timing out through all of them. */
+  maxFailures: process.env.CI ? 10 : 0,
   workers: 1, // Run tests sequentially to avoid database race conditions
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
