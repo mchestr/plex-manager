@@ -18,6 +18,8 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-26
+
 ### Added
 
 - **Admin assistant:** read-only tools over the app's own data (`get_app_invites`, `get_app_member`, `get_app_failed_jobs`), MCP servers an admin registers in Settings, Assistant sources (Streamable HTTP, an encrypted auth header, a switch per tool; a tool is off until switched on), and GitHub-backed knowledge bases the assistant searches and cites (`search_knowledge_base`, `read_knowledge_doc`). None of these are available in Discord. See `docs/assistant.md`.
@@ -187,7 +189,8 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 - No account linking by email; the Jellyfin sign-in toggle is enforced; share routes serve a share-safe projection; a failed Tautulli match no longer shows emails; a Redis-backed rate limiter keys on the trusted proxy hop; generation is single-flight and rate-limited; the poster proxy checks access; `plexAuthToken` no longer reaches the admin browser.
 - The Discord bot no longer uses the Message Content intent, keeps its token encrypted in the database, and scrubs personal fields before the LLM.
 
-[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.4.0
 [0.3.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.3.0
 [0.2.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.2.0
 [0.1.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.1.0
