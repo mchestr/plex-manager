@@ -116,6 +116,7 @@ describe("rate-limit", () => {
         "setup:plex:choose": { points: 10, duration: 600 },
         "llm:models": { points: 30, duration: 900 },
         "llm:assistant:admin": { points: 60, duration: 3600 },
+        "llm:assistant:support": { points: 30, duration: 3600 },
         "llm:discord:dm": { points: 20, duration: 3600 },
         "llm:discord:dm:day": { points: 100, duration: 86400 },
         "discord:mystats": { points: 5, duration: 3600 },
