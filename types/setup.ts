@@ -14,7 +14,6 @@ const SETUP_STEP_IDS = [
   "llm-rewind",
   "llm-chat",
   "discord",
-  "prometheus",
 ] as const
 
 export type SetupStepId = (typeof SETUP_STEP_IDS)[number]
@@ -22,7 +21,7 @@ export type SetupStepId = (typeof SETUP_STEP_IDS)[number]
 /** Where the wizard is: a step, or the summary after the last one. */
 export type SetupPosition = SetupStepId | "summary"
 
-type SetupStepGroup = "Core" | "Requests" | "Automation" | "AI" | "Community and monitoring"
+type SetupStepGroup = "Core" | "Requests" | "Automation" | "AI" | "Community"
 
 export interface SetupStep {
   id: SetupStepId
@@ -41,8 +40,7 @@ export const SETUP_STEPS: readonly SetupStep[] = [
   { id: "radarr", title: "Radarr", description: "Connect Radarr for movies", group: "Automation", optional: true },
   { id: "llm-rewind", title: "Rewind writer", description: "The AI provider that writes each Rewind", group: "AI", optional: true },
   { id: "llm-chat", title: "Admin assistant", description: "The AI provider for the admin assistant", group: "AI", optional: true },
-  { id: "discord", title: "Discord", description: "Linked roles and the Discord bot", group: "Community and monitoring", optional: true },
-  { id: "prometheus", title: "Prometheus", description: "Server status from Prometheus", group: "Community and monitoring", optional: true },
+  { id: "discord", title: "Discord", description: "Linked roles and the Discord bot", group: "Community", optional: true },
 ]
 
 /** The ids Skip for now accepts: every step but Plex and Tautulli. */
@@ -53,7 +51,6 @@ export const OPTIONAL_SETUP_STEP_IDS = [
   "llm-rewind",
   "llm-chat",
   "discord",
-  "prometheus",
 ] as const satisfies readonly SetupStepId[]
 
 export type OptionalSetupStepId = (typeof OPTIONAL_SETUP_STEP_IDS)[number]
@@ -145,12 +142,6 @@ export interface DiscordDefaults {
   instructions?: string
 }
 
-export interface PrometheusDefaults {
-  name?: string
-  url?: string
-  query?: string
-}
-
 export interface DevDefaults {
   plex: ServiceDefaults | null
   tautulli: ServiceDefaults | null
@@ -158,7 +149,6 @@ export interface DevDefaults {
   sonarr: ServiceDefaults | null
   radarr: ServiceDefaults | null
   discord: DiscordDefaults | null
-  prometheus: PrometheusDefaults | null
   chatLlmProvider: LLMDefaults | null
   wrappedLlmProvider: LLMDefaults | null
   /** @deprecated Use chatLlmProvider or wrappedLlmProvider instead */

@@ -19,7 +19,6 @@ import { claimServer } from '@/actions/setup-claim'
 import { testLLMProviderConnection } from '@/lib/connections/llm-provider'
 import { testOverseerrConnection } from '@/lib/connections/overseerr'
 import { getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
-import { testPrometheusConnection } from '@/lib/connections/prometheus'
 import { testRadarrConnection } from '@/lib/connections/radarr'
 import { testSonarrConnection } from '@/lib/connections/sonarr'
 import { testTautulliConnection } from '@/lib/connections/tautulli'
@@ -43,10 +42,6 @@ jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn
 jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
 jest.mock('@/lib/connections/sonarr', () => ({ testSonarrConnection: jest.fn() }))
 jest.mock('@/lib/connections/radarr', () => ({ testRadarrConnection: jest.fn() }))
-jest.mock('@/lib/connections/prometheus', () => ({
-  testPrometheusConnection: jest.fn(),
-  validatePrometheusQuery: jest.fn().mockResolvedValue({ success: true, data: null }),
-}))
 jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn() }))
 jest.mock('@/lib/connections/llm-provider', () => ({ testLLMProviderConnection: jest.fn() }))
 jest.mock('@/lib/security/audit-log', () => ({ ...jest.requireActual('@/lib/security/audit-log'), logAuditEvent: jest.fn() }))
@@ -80,7 +75,6 @@ const SAMPLES: Record<string, unknown> = {
   saveDiscordIntegration: { isEnabled: false },
   saveChatLLMProvider: { provider: 'openai', apiKey: 'sk-test', model: 'gpt-4o' },
   saveLLMProvider: { provider: 'openai', apiKey: 'sk-test', model: 'gpt-4o' },
-  savePrometheus: { name: 'Prometheus', url: 'http://prometheus.example.com:9090', query: 'up' },
   skipSetupStep: { stepId: 'overseerr' },
   testSetupConnection: { service: 'tautulli', url: 'http://tautulli.example.com:8181', secret: 'tautulli-key' },
   completeSetup: undefined,
@@ -93,7 +87,6 @@ const TESTERS = [
   testOverseerrConnection,
   testSonarrConnection,
   testRadarrConnection,
-  testPrometheusConnection,
   testLLMProviderConnection,
 ]
 

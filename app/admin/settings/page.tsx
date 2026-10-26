@@ -92,7 +92,6 @@ export default async function SettingsPage() {
     sonarr: settings.sonarr,
     radarr: settings.radarr,
     jellyfin: settings.jellyfinServer,
-    prometheus: settings.prometheus,
   }
   const otherStatus = worstStatus(
     (Object.keys(other) as (keyof typeof other)[]).filter((key) => other[key]).map((key) => health[key].status)
@@ -168,7 +167,7 @@ export default async function SettingsPage() {
           <OtherIntegrationsSection
             servers={other}
             jellyfinLogin={settings.jellyfinServer?.enabledForLogin ?? null}
-            health={{ sonarr: health.sonarr, radarr: health.radarr, jellyfin: health.jellyfin, prometheus: health.prometheus }}
+            health={{ sonarr: health.sonarr, radarr: health.radarr, jellyfin: health.jellyfin }}
             footerMeta={saved("other")}
           />
         </SettingsGroup>

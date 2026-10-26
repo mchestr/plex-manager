@@ -26,7 +26,6 @@ const DEV: DevDefaults = {
   sonarr: null,
   radarr: null,
   discord: null,
-  prometheus: null,
   chatLlmProvider: null,
   wrappedLlmProvider: null,
   llmProvider: null,
@@ -59,7 +58,7 @@ describe("DiscordStep", () => {
     expect(saveDiscordIntegration).toHaveBeenCalledWith(
       expect.objectContaining({ isEnabled: true, botEnabled: true, clientId: "1234", clientSecret: undefined, botToken: undefined, guildId: "guild-1" })
     )
-    expect(mockPush).toHaveBeenCalledWith("/setup?step=prometheus")
+    expect(mockPush).toHaveBeenCalledWith("/setup?step=summary")
   })
 
   it("pre-fills the DEV_* values on a first visit only", () => {
