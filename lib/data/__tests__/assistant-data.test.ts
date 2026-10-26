@@ -66,7 +66,7 @@ describe("assistant data loaders", () => {
 
   it("returns a member without plex or jellyfin ids", async () => {
     prismaMock.user.findMany.mockResolvedValue([{ id: "1", name: "Sam" }] as never)
-    prismaMock.user.findUnique.mockResolvedValue({ id: "1", name: "Sam", plexUserId: "9", jellyfinUserId: null, exemptReason: null, plexWrapped: [], rewindGenerations: [] } as never)
+    prismaMock.user.findUnique.mockResolvedValue({ id: "1", name: "Sam", plexUserId: "9", jellyfinUserId: null, exemptNote: null, plexWrapped: [], rewindGenerations: [] } as never)
     const result = await getAssistantMember({ query: "Sam" })
     expect(result).toMatchObject({ found: true, member: { services: ["plex"], hasPlexAccount: true } })
     expect(JSON.stringify(result)).not.toContain('"plexUserId"')
@@ -79,7 +79,7 @@ describe("assistant data loaders", () => {
       name: "Sam",
       plexUserId: null,
       jellyfinUserId: null,
-      exemptReason: "friend of sam@example.com",
+      exemptNote: "friend of sam@example.com",
       plexWrapped: [{ year: 2026, status: "failed", error: `bad ${"x".repeat(500)}`, generatedAt: null }],
       rewindGenerations: [{ year: 2026, kind: "season", status: "failed", error: { code: "LLM_FAILED", detail: "mail a@b.co" } }],
     } as never)

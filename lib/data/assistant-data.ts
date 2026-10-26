@@ -86,7 +86,7 @@ export async function getAssistantMember(raw: z.input<typeof memberInput>) {
       jellyfinUserId: true,
       isAdmin: true,
       isExempt: true,
-      exemptReason: true,
+      exemptNote: true,
       disabledAt: true,
       createdAt: true,
       subscription: {
@@ -113,12 +113,12 @@ export async function getAssistantMember(raw: z.input<typeof memberInput>) {
   })
   if (!user) return { found: false as const }
 
-  const { plexUserId, jellyfinUserId, exemptReason, plexWrapped, rewindGenerations, ...rest } = user
+  const { plexUserId, jellyfinUserId, exemptNote, plexWrapped, rewindGenerations, ...rest } = user
   return {
     found: true as const,
     member: {
       ...rest,
-      exemptReason: redact(exemptReason),
+      exemptNote: redact(exemptNote),
       plexWrapped: plexWrapped.map((wrapped) => ({ ...wrapped, error: redact(wrapped.error) })),
       rewindGenerations: rewindGenerations.map((run) => ({ ...run, error: redact(run.error === null ? null : JSON.stringify(run.error)) })),
       services: memberServices({ plexUserId, jellyfinUserId }),
