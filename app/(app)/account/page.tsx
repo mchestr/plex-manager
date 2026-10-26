@@ -61,7 +61,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
         {discordHandle !== undefined && (
           <Card data-testid="account-discord">
-            <CardHeader className="pb-5">
+            <CardHeader>
               <CardTitle as="h2">Discord</CardTitle>
               <CardDescription>
                 {discordHandle ? `Linked as ${discordHandle}` : "Link Discord to get the Member role on the server."}
