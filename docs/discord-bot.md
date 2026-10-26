@@ -217,10 +217,49 @@ toolchain, so it runs uncompressed. To compress, install the toolchain before
 Because only the lock holder runs the bot, config changes are applied there. The
 lock poller watches a `configVersion` counter on the `DiscordIntegration` row
 (bumped on every settings save). When it changes, the holding pod **bounces** the
-bot — `destroy()` then `initialize()` — so it reconnects with the fresh token,
-**without a redeploy**. If the re-initialization fails, the pod releases the lease
-so another pod can take over. A bot that is not running picks the change up at
-its next poll.
+bot, which logs in again **only if the token changed**; a save that left the
+token alone keeps the gateway session, so it costs no login. A different token
+destroys the old client first, so one process never holds two. A bot that is not
+running picks the change up at its next poll.
+
+### Login limits, backoff and a reset token
+
+Discord allows about 1000 gateway logins (IDENTIFY) per bot per 24 hours and
+**resets the bot's token** above that. The bot stays far below it:
+
+- **Failed logins back off.** After a failed login the holding pod keeps the
+  lease and waits 30 s, then 60 s, doubling up to 30 min, with jitter. The delay
+  resets after the bot has been READY for a minute. A failed login always
+  destroys the client it created.
+- **Fatal errors stop.** A rejected token (close code 4004) or invalid or
+  disallowed intents (4013, 4014) will fail every time, so the bot stops trying,
+  logs `discord.login_fatal` at error and shows **Login rejected** under
+  Admin, Settings, Discord. It tries again when a different token is saved.
+- **Daily cap.** At most 100 login attempts in a rolling 24 hours, counted in
+  Redis when `REDIS_URL` is set (so restarts do not clear the count) and in
+  memory otherwise. Above it the bot logs `discord.login_daily_cap` at error and
+  shows **Login limit reached** until the count falls.
+- **A renewal that fails once does not drop the session.** The bot stays up for
+  15 s after a failed lease renewal. If this pod takes the lease back at its
+  next poll, the same gateway session carries on. If not, the bot is destroyed
+  before the lease can lapse for another pod. Turning the bot off, or stopping
+  the process, destroys it at once.
+- discord.js resumes a dropped connection by itself (`ShardReconnecting`,
+  `ShardResume`); the bot does not destroy the client for that.
+
+**After Discord resets a token:** generate a new one in the Discord Developer
+Portal (Bot, Reset Token) and paste it under Admin, Settings, Discord. The bot
+logs in within one poll. While it was reset, check `plex_manager_discord_gateway_logins_24h`
+and the `ShardDisconnect` warnings (`code`, `reason`) in the log to see what
+looped.
+
+`/api/metrics` reports (Redis required):
+`plex_manager_discord_gateway_logins_total`,
+`plex_manager_discord_gateway_logins_24h`,
+`plex_manager_discord_gateway_disconnects_total`,
+`plex_manager_discord_gateway_last_close_code` and `plex_manager_discord_bot_healthy`
+(0 while the token is rejected, the bot is backing off or the cap is hit).
+Alert when `logins_24h` passes 50.
 
 ## Support flow
 

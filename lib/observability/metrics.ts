@@ -1,12 +1,13 @@
 /**
  * The metrics `/api/metrics` serves (BP-17, P11.4), in the Prometheus text
- * format, from four sources:
+ * format, from five sources:
  *
  * | Source         | Metric                                               |
  * |----------------|------------------------------------------------------|
  * | `queues`       | `plex_manager_queue_jobs{queue,state}`               |
  * | `job_failures` | `plex_manager_job_failures_total{queue,job}`         |
  * | `llm_spend`    | `plex_manager_llm_spend_usd{purpose,period}` (60 s cache) |
+ * | `discord`      | `plex_manager_discord_*`: gateway logins (total, last 24 h), disconnects, last close code, health |
  * | the process    | `plex_manager_build_info`, `process_resident_memory_bytes`, `plex_manager_event_loop_delay_p99_seconds` |
  *
  * Each source has 2 s. One that fails or times out sets
@@ -22,6 +23,7 @@ import { monitorEventLoopDelay, type IntervalHistogram } from "node:perf_hooks"
 
 import { getEnv } from "@/lib/env"
 import { llmSpendSince } from "@/lib/llm/usage-totals"
+import { readGatewayStats } from "@/lib/discord/login-ledger"
 import { readJobFailures } from "@/lib/observability/job-failures"
 import { renderMetrics, type Metric, type Sample } from "@/lib/observability/prometheus-text"
 import { getQueueStats, QUEUE_NAME } from "@/lib/queue/client"
@@ -65,6 +67,27 @@ async function queueSamples(): Promise<Sample[]> {
 async function failureSamples(): Promise<Sample[]> {
   const failures = await readJobFailures(await redisReady())
   return failures.map(({ queue, job, count }) => ({ labels: { queue, job }, value: count }))
+}
+
+/** The Discord gateway's login and disconnect counts; empty until the bot has logged in once. */
+async function discordMetrics(): Promise<Metric[]> {
+  const stats = await readGatewayStats()
+  if (!stats) return []
+  const one = (name: string, help: string, type: Metric["type"], value: number): Metric => ({
+    name: `plex_manager_discord_${name}`,
+    help,
+    type,
+    samples: [{ value }],
+  })
+  return [
+    one("gateway_logins_total", "Gateway login (IDENTIFY) attempts.", "counter", stats.loginsTotal),
+    one("gateway_logins_24h", "Gateway login attempts in the last 24 hours; Discord resets the token near 1000.", "gauge", stats.logins24h),
+    one("gateway_disconnects_total", "Gateway disconnects.", "counter", stats.disconnectsTotal),
+    ...(stats.lastCloseCode === null
+      ? []
+      : [one("gateway_last_close_code", "Close code of the latest gateway disconnect.", "gauge", stats.lastCloseCode)]),
+    one("bot_healthy", "1 unless the bot is blocked by a rejected token, backoff or the daily login cap.", "gauge", stats.health === "ok" ? 1 : 0),
+  ]
 }
 
 let spendCache: { samples: Sample[]; expiresAt: number } | null = null
@@ -120,6 +143,9 @@ export async function collectMetrics(): Promise<string> {
       }
     })
   )
+  const discord = isRedisConfigured()
+    ? await within(discordMetrics(), SOURCE_TIMEOUT_MS).catch(() => null)
+    : []
   const samplesOf = (source: Source) => results.find((r) => r.source === source)?.samples ?? []
 
   const metrics: Metric[] = [
@@ -140,8 +166,12 @@ export async function collectMetrics(): Promise<string> {
       name: "plex_manager_scrape_error",
       help: "1 when a source failed or timed out in this scrape.",
       type: "gauge",
-      samples: results.map(({ source, samples }) => ({ labels: { source }, value: samples ? 0 : 1 })),
+      samples: [
+        ...results.map(({ source, samples }) => ({ labels: { source }, value: samples ? 0 : 1 })),
+        ...(discord ? [] : [{ labels: { source: "discord" }, value: 1 }]),
+      ],
     },
+    ...(discord ?? []),
     {
       name: "plex_manager_build_info",
       help: "The running build.",

@@ -5,7 +5,7 @@
 import { mockReset } from "jest-mock-extended"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { DiscordBot } from "@/lib/discord/bot"
-import { startDiscordBotPolling } from "@/lib/instrumentation/discord-start"
+import { LEASE_LOSS_GRACE_MS, startDiscordBotPolling } from "@/lib/instrumentation/discord-start"
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { LeaseLock } from "@/lib/locks/lease-lock"
 
@@ -28,8 +28,9 @@ jest.mock("@/lib/locks/lease-lock", () => ({
   })),
 }))
 const mockInitialize = jest.fn()
+const mockDestroy = jest.fn()
 jest.mock("@/lib/discord/bot", () => ({
-  DiscordBot: jest.fn().mockImplementation(() => ({ initialize: mockInitialize, destroy: jest.fn() })),
+  DiscordBot: jest.fn().mockImplementation(() => ({ initialize: mockInitialize, destroy: mockDestroy, isActive: true })),
 }))
 
 const POLL_MS = 10_000
@@ -131,5 +132,45 @@ describe("startDiscordBotPolling", () => {
     await jest.advanceTimersByTimeAsync(POLL_MS)
 
     expect(mockInitialize).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the gateway session when one lease renewal fails and the lease comes back", async () => {
+    stored({ botEnabled: true, botToken: "token" })
+    await startDiscordBotPolling()
+    expect(mockInitialize).toHaveBeenCalledTimes(1)
+    const lock = jest.mocked(LeaseLock).mock.results[0].value
+    lock.renew.mockResolvedValueOnce(false)
+
+    await jest.advanceTimersByTimeAsync(POLL_MS + 1)
+
+    // The poll re-acquired the lease inside the grace period: it asked the bot
+    // to initialize again (a no-op for a logged-in bot) and never destroyed it.
+    expect(mockDestroy).not.toHaveBeenCalled()
+    await jest.advanceTimersByTimeAsync(60_000)
+    expect(mockDestroy).not.toHaveBeenCalled()
+  })
+
+  it("destroys the bot after the grace period when the lease does not come back", async () => {
+    stored({ botEnabled: true, botToken: "token" })
+    await startDiscordBotPolling()
+    const lock = jest.mocked(LeaseLock).mock.results[0].value
+    lock.renew.mockResolvedValue(false)
+    lock.acquire.mockResolvedValue(false)
+
+    await jest.advanceTimersByTimeAsync(POLL_MS)
+    expect(mockDestroy).not.toHaveBeenCalled()
+    await jest.advanceTimersByTimeAsync(LEASE_LOSS_GRACE_MS)
+
+    expect(mockDestroy).toHaveBeenCalledTimes(1)
+  })
+
+  it("destroys the bot at once when it is turned off", async () => {
+    stored({ botEnabled: true, botToken: "token" })
+    await startDiscordBotPolling()
+
+    stored({ botEnabled: false, botToken: "token" })
+    await jest.advanceTimersByTimeAsync(POLL_MS)
+
+    expect(mockDestroy).toHaveBeenCalledTimes(1)
   })
 })

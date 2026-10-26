@@ -153,6 +153,9 @@ export const STATUS = {
     offline: { label: "Offline", tone: "destructive", mark: "dot", sub: "Since {time}" },
     needsSetup: { label: "Waiting for a bot token", ...warning, sub: "Add the bot token in settings" },
     off: { label: "Turned off", tone: "neutral", mark: "dot" },
+    loginRejected: { label: "Login rejected", tone: "destructive", mark: "dot", sub: "Discord refused the token or intents. Save a new bot token" },
+    loginRetrying: { label: "Retrying login", ...warning, sub: "Login failed. Retrying with a growing delay" },
+    loginCapped: { label: "Login limit reached", tone: "destructive", mark: "dot", sub: "Too many logins in 24 hours. Waiting before the next" },
   },
   discordCommand: {
     SUCCESS: { label: "Succeeded", tone: "success", mark: "dot" },
@@ -275,6 +278,8 @@ export interface DiscordState {
   hasBotToken: boolean
   /** The bot lease's last renewal, or null when no instance ever held it. */
   lastRenewedAt: Date | null
+  /** Why the login guard is holding the bot back, if it is. */
+  loginBlock?: "fatal" | "backoff" | "daily_cap" | null
 }
 
 /**
@@ -286,7 +291,16 @@ export interface DiscordState {
 export function discordStatus(state: DiscordState, now: Date, settings?: FormatSettings) {
   const linkedRoles = !state.isEnabled ? "off" : state.hasClientCredentials ? "on" : "needsSetup"
   const live = state.lastRenewedAt !== null && now.getTime() - state.lastRenewedAt.getTime() <= DISCORD_HEARTBEAT_MS
-  const supportBot = !state.botEnabled ? "off" : !state.hasBotToken ? "needsSetup" : live ? "online" : "offline"
+  const blocked = { fatal: "loginRejected", backoff: "loginRetrying", daily_cap: "loginCapped" } as const
+  const supportBot = !state.botEnabled
+    ? "off"
+    : !state.hasBotToken
+      ? "needsSetup"
+      : state.loginBlock
+        ? blocked[state.loginBlock]
+        : live
+          ? "online"
+          : "offline"
   const fill = { date: state.lastRenewedAt ?? undefined, now, settings }
   return {
     linkedRoles: resolveStatus("linkedRoles", linkedRoles),

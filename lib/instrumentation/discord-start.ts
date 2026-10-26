@@ -17,6 +17,15 @@ import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("INSTRUMENTATION")
 
+/**
+ * How long a bot outlives a lease whose renewal failed. The poll interval is
+ * shorter, so the same instance usually takes the lease back and keeps its
+ * gateway session; it is also shorter than what is left of the lease (at least
+ * 20 s), so another instance cannot log in while this one still holds a client.
+ * @internal
+ */
+export const LEASE_LOSS_GRACE_MS = 15 * 1000
+
 export async function startDiscordBotPolling(): Promise<void> {
   if (process.env.ENABLE_DISCORD_BOT === "false") {
     logger.info("discord.opted_out: ENABLE_DISCORD_BOT=false, this process never runs the bot")
@@ -40,29 +49,52 @@ export async function startDiscordBotPolling(): Promise<void> {
       10
     )
 
-    // A saved setting bumps DiscordIntegration.configVersion: a running bot
-    // bounces (destroy, then initialize with the fresh token), and a stopped
-    // one picks the change up through isDiscordBotReady on the next tick.
+    // A saved setting bumps DiscordIntegration.configVersion: the poller
+    // bounces a running bot (initialize() logs in again only when the token
+    // changed), and a stopped one picks the change up through isDiscordBotReady
+    // on the next tick.
+    let teardownTimer: ReturnType<typeof setTimeout> | undefined
+    const cancelTeardown = () => {
+      clearTimeout(teardownTimer)
+      teardownTimer = undefined
+    }
+    const destroyBot = async (why: string) => {
+      cancelTeardown()
+      try {
+        logger.info(`Discord bot ${why} - shutting down bot`)
+        await bot.destroy()
+      } catch (error) {
+        logger.error("Error shutting down bot", error)
+      }
+    }
+
     const poller = new LeasePoller(
       lock,
       {
         onLockAcquired: async () => {
+          cancelTeardown()
           try {
+            // A no-op when the bot is still logged in with the same token.
             await bot.initialize()
-            logger.info("Discord bot initialized successfully (holding distributed lock)")
           } catch (error) {
+            // The lease stays held: onHeldTick tries again, paced by the login guard.
             logger.error("Failed to initialize Discord bot", error)
-            // Release the lease so another instance can take over.
-            await lock.release()
           }
         },
-        onLockLost: async () => {
-          try {
-            logger.info("Discord bot lock lost - shutting down bot")
-            await bot.destroy()
-          } catch (error) {
-            logger.error("Error shutting down bot after lock loss", error)
+        onLockLost: async (reason) => {
+          // A bounce starts the bot again at once, and initialize() keeps the
+          // session unless the token changed.
+          if (reason === "config_changed") return
+          if (reason === "renewal_failed") {
+            cancelTeardown()
+            teardownTimer = setTimeout(() => void destroyBot("lost its lease"), LEASE_LOSS_GRACE_MS)
+            teardownTimer.unref()
+            return
           }
+          await destroyBot(reason === "disabled" ? "was turned off" : "is stopping")
+        },
+        onHeldTick: async () => {
+          if (!bot.isActive) await bot.initialize().catch((error: unknown) => logger.error("Discord login retry failed", error))
         },
         isEnabled: isDiscordBotReady,
       },
