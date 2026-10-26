@@ -45,7 +45,6 @@ const NON_SECRET_CONFIG_SELECT = {
   llmDailyCapPerUserUsd: true,
   llmDailyCapAdminUsd: true,
   llmDailyCapServerUsd: true,
-  lightThemeEnabled: true,
   updatedAt: true,
   updatedBy: true,
 } as const
@@ -110,7 +109,6 @@ export async function getConfig() {
       llmDailyCapPerUserUsd: 0.5,
       llmDailyCapAdminUsd: 5,
       llmDailyCapServerUsd: 5,
-      lightThemeEnabled: false,
       updatedAt: new Date(),
       updatedBy: null,
     }

@@ -36,10 +36,8 @@ above the scale floor the spec also fails on text under 12 px or a control
 whose hit area is under 44x44 px; below it the article offer must open. See
 the Rewind section of `e2e/README.md` for its seed.
 
-The light theme (P10.10) has its own projects. `light-theme-setup` turns
-`Config.lightThemeEnabled` on through the settings Switch (its teardown turns
-it off again), and each light project holds the `pm-theme=light` cookie
-(`e2e/helpers/light-theme.ts`):
+The light theme (P10.10) has its own projects, and each holds the
+`pm-theme=light` cookie:
 
 - `visual-light-desktop` and `visual-light-mobile` run the member, admin and
   primitives screens plus `light-routes.visual.spec.ts`, every route in

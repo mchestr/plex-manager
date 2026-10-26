@@ -2,7 +2,7 @@
  * @jest-environment node
  *
  * setAppearance (P10.10): a member's Dark or Light choice, kept in the
- * `pm-theme` cookie, refused while the light-theme flag is off.
+ * `pm-theme` cookie.
  */
 
 import { getServerSession } from "next-auth"
@@ -10,7 +10,6 @@ import { revalidatePath } from "next/cache"
 
 import { setAppearance } from "@/actions/appearance"
 import { usesSecureCookies } from "@/lib/env"
-import { getAppSettings } from "@/lib/settings/app-settings"
 
 const mockSet = jest.fn()
 jest.mock("next/headers", () => ({ cookies: async () => ({ set: mockSet }) }))
@@ -18,16 +17,11 @@ jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prism
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
-jest.mock("@/lib/settings/app-settings", () => ({ getAppSettings: jest.fn() }))
 jest.mock("@/lib/env", () => ({ usesSecureCookies: jest.fn(() => false) }))
-
-const flag = (lightThemeEnabled: boolean) =>
-  jest.mocked(getAppSettings).mockResolvedValue({ timeZone: "UTC", locale: "en-US", serverName: null, lightThemeEnabled })
 
 beforeEach(() => {
   jest.clearAllMocks()
   jest.mocked(getServerSession).mockResolvedValue({ user: { id: "member-1", isAdmin: false } })
-  flag(true)
 })
 
 describe("setAppearance", () => {
@@ -43,17 +37,6 @@ describe("setAppearance", () => {
     const send = setAppearance as (input: unknown) => ReturnType<typeof setAppearance>
 
     await expect(send(value)).resolves.toMatchObject({ success: false, code: "VALIDATION" })
-    expect(mockSet).not.toHaveBeenCalled()
-  })
-
-  it("refuses while the light-theme flag is off", async () => {
-    flag(false)
-
-    await expect(setAppearance("light")).resolves.toEqual({
-      success: false,
-      code: "FORBIDDEN",
-      error: "The light theme is not available",
-    })
     expect(mockSet).not.toHaveBeenCalled()
   })
 

@@ -10,6 +10,7 @@ import { axe, toHaveNoViolations } from 'jest-axe'
 import { signOut } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
 
+import { ToastProvider } from '@/components/ui/toast'
 import { AppShell } from '@/components/shell/app-shell'
 import { MemberNav } from '@/components/shell/member-nav'
 import { memberNav } from '@/lib/member/nav'
@@ -40,9 +41,11 @@ const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initi
 
 function renderShell(user: ShellUser = member, notice?: MemberNotice) {
   return render(
-    <AppShell serverName="Northfield Plex" user={user} nav={memberNav({ rewindYear: 2026, membership: false })} notice={notice}>
-      <p>Page</p>
-    </AppShell>
+    <ToastProvider>
+      <AppShell serverName="Northfield Plex" user={user} nav={memberNav({ rewindYear: 2026, membership: false })} notice={notice}>
+        <p>Page</p>
+      </AppShell>
+    </ToastProvider>
   )
 }
 
@@ -113,6 +116,10 @@ describe('AppShell', () => {
     await user.keyboard('{ArrowDown}')
     expect(within(menu).getByRole('menuitem', { name: 'Account settings' })).toHaveFocus()
     expect(within(menu).getByRole('menuitem', { name: 'Account settings' })).toHaveAttribute('href', '/account')
+    await user.keyboard('{ArrowDown}')
+    expect(screen.getByTestId('account-menu-appearance-dark')).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
+    expect(screen.getByTestId('account-menu-appearance-light')).toHaveFocus()
     await user.keyboard('{ArrowDown}')
     expect(screen.getByTestId('sign-out-button')).toHaveFocus()
     expect(await axe(document.body, { rules: { region: { enabled: false } } })).toHaveNoViolations()

@@ -1,12 +1,11 @@
 /**
  * @jest-environment node
  *
- * The theme resolver (P10.10, ui-design-system 4.1): dark unless the flag is
- * on and the `pm-theme` cookie says light.
+ * The theme resolver (P10.10, ui-design-system 4.1): dark unless the
+ * `pm-theme` cookie says light.
  */
 
 import { resolveAppearance, resolveTheme, THEME_COLOR, THEME_COOKIE, themeFor } from "@/lib/design/theme"
-import { getAppSettings } from "@/lib/settings/app-settings"
 
 let mockCookies: Record<string, string> = {}
 jest.mock("next/headers", () => ({
@@ -14,29 +13,17 @@ jest.mock("next/headers", () => ({
     get: (name: string) => (name in mockCookies ? { name, value: mockCookies[name] } : undefined),
   }),
 }))
-jest.mock("@/lib/settings/app-settings", () => ({ getAppSettings: jest.fn() }))
-
-const flag = (lightThemeEnabled: boolean) =>
-  jest.mocked(getAppSettings).mockResolvedValue({ timeZone: "UTC", locale: "en-US", serverName: null, lightThemeEnabled })
 
 beforeEach(() => {
   mockCookies = {}
 })
 
 describe("resolveTheme", () => {
-  it("gives dark while the flag is off, even with a light cookie", async () => {
-    flag(false)
-    mockCookies = { [THEME_COOKIE]: "light" }
-
-    await expect(resolveTheme()).resolves.toBe("dark")
-  })
-
-  it("gives light when the flag is on and the cookie says light", async () => {
-    flag(true)
+  it("gives light when the cookie says light", async () => {
     mockCookies = { [THEME_COOKIE]: "light" }
 
     await expect(resolveTheme()).resolves.toBe("light")
-    await expect(resolveAppearance()).resolves.toEqual({ enabled: true, theme: "light" })
+    await expect(resolveAppearance()).resolves.toEqual({ theme: "light" })
   })
 
   it.each([
@@ -44,8 +31,7 @@ describe("resolveTheme", () => {
     ["dark", "dark"],
     ["garbage", "LIGHT; drop table"],
     ["empty", ""],
-  ])("gives dark for a %s cookie with the flag on", async (_label, value) => {
-    flag(true)
+  ])("gives dark for a %s cookie", async (_label, value) => {
     if (value !== undefined) mockCookies = { [THEME_COOKIE]: value }
 
     await expect(resolveTheme()).resolves.toBe("dark")
@@ -57,10 +43,10 @@ describe("resolveTheme", () => {
 })
 
 describe("themeFor", () => {
-  it("is light only when both the flag and the cookie say so", () => {
-    expect(themeFor(true, "light")).toBe("light")
-    expect(themeFor(false, "light")).toBe("dark")
-    expect(themeFor(true, undefined)).toBe("dark")
+  it("is light only when the cookie says light", () => {
+    expect(themeFor("light")).toBe("light")
+    expect(themeFor("dark")).toBe("dark")
+    expect(themeFor(undefined)).toBe("dark")
   })
 })
 
