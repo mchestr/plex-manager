@@ -3,7 +3,7 @@
   "private": true,
   "description": "The Prisma CLI the Docker image runs migrations with (P4.17). Keep the versions equal to the root package-lock.json; __tests__/config/docker-prisma-pin.test.ts checks them.",
   "dependencies": {
-    "dotenv": "18.0.8",
+    "dotenv": "18.0.9",
     "prisma": "7.10.1"
   }
 }
