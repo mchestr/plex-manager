@@ -16,7 +16,7 @@
  * - credentials inside strings, such as `?X-Plex-Token=...` or `apikey=...`
  *   in a URL, and `Bearer` tokens.
  *
- * It over-redacts rather than under-redacts, and an executor's own error text
+ * It over-redacts rather than under-redacts (a key such as `tokenCount` is dropped too), and an executor's own error text
  * is replaced by a fixed line, because upstream errors can carry internal URLs
  * and keys (SEC-50). The function is pure and never throws.
  *
@@ -67,10 +67,17 @@ function scrubValue(value: unknown): unknown {
 
 /** `output` (a tool's string result) without credentials and personal fields. */
 export function scrubForRole(output: string): string {
+  let parsed: unknown
   try {
-    return JSON.stringify(scrubValue(withoutPersonalFields(JSON.parse(output))))
+    parsed = JSON.parse(output)
   } catch {
     // Not JSON (a plain-text summary): scrub it as a string
     return scrubString(output)
+  }
+  // A failure while scrubbing parsed data must not fall back to the raw output
+  try {
+    return JSON.stringify(scrubValue(withoutPersonalFields(parsed)))
+  } catch {
+    return ROLE_TOOL_UNAVAILABLE
   }
 }

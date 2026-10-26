@@ -57,7 +57,7 @@ export const chatWithAdminBot = permissionAction({
   rateLimit: { name: "llm:assistant:admin", by: "user" },
   fallbackError: "Failed to process message",
   handler: async ({ messages, conversationId }, { userId, session }): Promise<ActionResult<ChatReply>> => {
-    // A role below admin has its own, lower hourly limit on top of the shared one
+    // A role below admin has its own, lower hourly limit on top of the shared one (so the effective limit is 30 an hour)
     if (!session.user.isAdmin) {
       const limit = await consume("llm:assistant:support", userId)
       if (!limit.ok) return fail("RATE_LIMITED", RATE_LIMITED_MESSAGE, { retryAfterSec: limit.retryAfterSec })

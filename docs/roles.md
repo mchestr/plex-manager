@@ -33,6 +33,7 @@ checks `assertAdmin()` or `assertPermission()`, and an action is built with
   value are redacted (`lib/chatbot/executors/role-scrub.ts`). A tool error
   returns a fixed line, never the upstream text. Other members' viewing
   history stays visible, minus those fields, because troubleshooting needs it.
+- Redaction is by key substring, so a future field such as `tokenCount` or `cookieConsent` is dropped too; name tool output fields with that in mind.
 - Every tool call and every refusal is audited (`ASSISTANT_TOOL_CALLED`,
   `ASSISTANT_TOOL_DENIED`). The system prompt says what the caller cannot do.
 - A Support user may send 30 messages an hour (admins 60) and counts against
@@ -43,7 +44,7 @@ checks `assertAdmin()` or `assertPermission()`, and an action is built with
 
 An admin opens the users list (or a member's page) and chooses **Give Support
 role...**. Removing the role ends the user's sessions at once; assigning it
-takes effect within five minutes, or at the next sign-in. Both are audited as
+takes effect within five minutes, or at the next sign-in, and so does a change to `isAdmin`. Making a user an admin clears their role. Both are audited as
 `USER_ROLE_CHANGED`. Only an admin can do this, so a Support user cannot grant
 roles to anyone, themselves included. An admin cannot be given a role.
 

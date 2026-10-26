@@ -291,6 +291,14 @@ describe('Admin Actions Security', () => {
       expect(result).toMatchObject({ success: false, code: 'SELF' })
     })
 
+    it('clears the role when it promotes a user to admin', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: false, role: 'support' }))
+
+      await updateUserAdminStatus({ userId: 'member-1', isAdmin: true })
+
+      expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'member-1' }, data: { isAdmin: true, role: null } })
+    })
+
     it('demotes another admin and ends their sessions', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: true, plexUserId: 'plex-other' }))
 

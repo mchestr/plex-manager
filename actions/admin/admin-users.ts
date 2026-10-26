@@ -60,7 +60,8 @@ export const updateUserAdminStatus = adminAction({
       }
     }
 
-    await prisma.user.update({ where: { id: userId }, data: { isAdmin } })
+    // An admin holds every permission, so a promotion clears the role: a later demotion must not bring it back
+    await prisma.user.update({ where: { id: userId }, data: isAdmin ? { isAdmin, role: null } : { isAdmin } })
 
     logAuditEvent(isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED, actorId, {
       targetUserId: userId,
