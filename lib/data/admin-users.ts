@@ -81,7 +81,7 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUsersLi
       currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
       cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
       isExempt: user.isExempt,
-      exemptReason: user.exemptReason,
+      exemptNote: user.exemptNote,
       stripeCustomerId: subscription?.stripeCustomerId ?? null,
     }
   })
@@ -91,7 +91,7 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUsersLi
 
 async function fetchUsersWithWrappedData(year: number) {
   // Uses `include` (not `select`), so every scalar User column — including
-  // `isExempt` and `exemptReason` used by the subscription column — is returned.
+  // `isExempt` and `exemptNote` used by the subscription column — is returned.
   // The Rewind row carries only its status and date; LLM usage comes from
   // aggregate queries (BP-28), never the rows with their prompt text.
   return prisma.user.findMany({

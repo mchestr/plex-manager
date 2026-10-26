@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { getPlanName, getPlanPrice } from "@/lib/stripe/prices"
 
 /** Why a member without a subscription still has access. */
-type MembershipExemption = "comp" | "notRequired"
+type MembershipExemption = "exempt" | "notRequired"
 
 export interface MembershipSubscription {
   status: SubscriptionStatus
@@ -26,24 +26,18 @@ export interface Membership {
 /**
  * The member's plan for `/membership` (UI-37): the plan by name, never its
  * price id, and the exemption that stands in when there is no subscription
- * (an admin comp, or a member who does not need one).
+ * (an exempt member, or an admin who does not need one).
  */
 export async function getMembership(userId: string): Promise<Membership> {
   const [user, subscription] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true, isExempt: true, exemptReason: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true, isExempt: true } }),
     prisma.subscription.findUnique({
       where: { userId },
       select: { status: true, priceId: true, currentPeriodEnd: true, cancelAtPeriodEnd: true },
     }),
   ])
 
-  const exemption: MembershipExemption | null = user?.isExempt
-    ? user.exemptReason === "comp"
-      ? "comp"
-      : "notRequired"
-    : user?.isAdmin
-      ? "notRequired"
-      : null
+  const exemption: MembershipExemption | null = user?.isAdmin ? "notRequired" : user?.isExempt ? "exempt" : null
 
   if (!subscription) return { subscription: null, exemption }
 

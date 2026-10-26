@@ -156,7 +156,7 @@ export async function seedVisualFixtures(): Promise<void> {
           image: null,
           isAdmin: user.isAdmin,
           isExempt: false,
-          exemptReason: null,
+          exemptNote: null,
           primaryAuthService: user.primaryAuthService,
           onboardingStatus: user.onboardingStatus,
           createdAt: daysAgo(shown, user.isAdmin ? 120 : 60),

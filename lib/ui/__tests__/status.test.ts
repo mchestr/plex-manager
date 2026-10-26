@@ -18,9 +18,7 @@ const TABLE: Row[] = [
   ["subscription", "CANCELED", "Canceled", "destructive", icons.error],
   ["subscription", "INCOMPLETE", "Incomplete", "neutral", undefined],
   ["subscription", "none", "None", "plain", undefined],
-  ["exemption", "comp", "Comp", "info", undefined],
   ["exemption", "exempt", "Exempt", "neutral", undefined],
-  ["exemption", "grandfathered", "Grandfathered", "plain", undefined],
   ["exemption", "notRequired", "Not required", "plain", undefined],
   ["plexAccess", "shared", "Shared", "success", "dot"],
   ["plexAccess", "notShared", "Not shared", "outline", "dot"],
@@ -124,8 +122,8 @@ describe("resolveStatus sub-lines", () => {
     expect(resolveStatus("connection", "ok", { date, now }).sub).toBe("Checked 2 minutes ago")
   })
 
-  it("fills the setter and the uses left", () => {
-    expect(resolveStatus("exemption", "comp", { by: "Dana" }).sub).toBe("Set by Dana")
+  it("fills the exemption note and the uses left", () => {
+    expect(resolveStatus("exemption", "exempt", { note: "IT support" }).sub).toBe("IT support")
     expect(resolveStatus("invite", "active", { usesLeft: 3, usesTotal: 5 }).sub).toBe("3 of 5 uses left")
   })
 

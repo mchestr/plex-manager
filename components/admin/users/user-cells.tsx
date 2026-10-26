@@ -88,10 +88,7 @@ export function SubscriptionCell({ user }: { user: User }) {
     return <StatusBadge domain="subscription" value={status} sub={sub ?? ""} />
   }
   if (user.isOwner || user.isAdmin) return <StatusBadge domain="exemption" value="notRequired" />
-  if (user.isExempt) {
-    const value = user.exemptReason === "comp" ? "comp" : user.exemptReason === "grandfathered" ? "grandfathered" : "exempt"
-    return <StatusBadge domain="exemption" value={value} sub="" />
-  }
+  if (user.isExempt) return <StatusBadge domain="exemption" value="exempt" sub={user.exemptNote ?? ""} />
   return <StatusBadge domain="subscription" value="none" />
 }
 

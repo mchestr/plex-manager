@@ -67,7 +67,7 @@ export async function makeUserGatedNonMember(userId: string): Promise<void> {
     await prisma.subscription.deleteMany({ where: { userId } });
     await prisma.user.update({
       where: { id: userId },
-      data: { isExempt: false, exemptReason: null },
+      data: { isExempt: false, exemptNote: null },
     });
   } finally {
     await prisma.$disconnect();
@@ -96,7 +96,7 @@ export async function resetStripeState(userIds: string[] = []): Promise<void> {
       await prisma.subscription.deleteMany({ where: { userId } });
       await prisma.user.update({
         where: { id: userId },
-        data: { isExempt: false, exemptReason: null },
+        data: { isExempt: false, exemptNote: null },
       });
     }
   } finally {

@@ -24,7 +24,7 @@ feature safe to ship dark and enable per-deployment.
 - [Configuration (Admin UI)](#configuration-admin-ui)
 - [Registering the Webhook](#registering-the-webhook)
 - [Enabling the Feature](#enabling-the-feature)
-- [Grandfathering Existing Members](#grandfathering-existing-members)
+- [Exempting Existing Members](#exempting-existing-members)
 - [Plex and Jellyfin Members](#plex-and-jellyfin-members)
 - [Subscription Lifecycle](#subscription-lifecycle)
 - [What a Lapsed Member Can Do](#what-a-lapsed-member-can-do)
@@ -80,7 +80,7 @@ Plex login ─▶ member?  ──yes─▶ into app (unchanged)
 3. **A Redis-backed BullMQ queue** running (`REDIS_URL` configured) so webhook
    jobs are processed. See the Job Queue section of `example.env`. Without
    `REDIS_URL` the toggle refuses to enable Stripe, and the admin "Grant access
-   (comp)" action refuses too, since no job would ever run.
+   and exempt" action refuses too, since no job would ever run.
 4. **A public webhook URL.** Stripe must be able to reach
    `https://yourdomain.com/api/stripe/webhook`. For local development use the
    Stripe CLI (`stripe listen --forward-to localhost:3000/api/stripe/webhook`).
@@ -170,24 +170,25 @@ no exemption: cancel, mark the ones who should keep free access exempt on
   "Your Jellyfin account is enabled". A member with both sees both.
 - Successful subscriptions provision access automatically.
 
-## Grandfathering Existing Members
+## Exempting Existing Members
 
-Existing members are **grandfathered** so enabling the feature never removes
+Existing members are marked **exempt** so enabling the feature never removes
 anyone's current access. This is done by a **SQL data migration** (run in the
-same migration that adds the Stripe columns) that sets `isExempt = true` and
-`exemptReason = 'grandfathered'` for **all existing users**.
+same migration that adds the Stripe columns) that sets `isExempt = true` for
+**all existing users**. The migration that later renamed `exemptReason` to
+`exemptNote` cleared the marker that data step wrote; those members stay exempt.
 
 This is correct because a `User` row only exists today if the user passed the
 Plex server-access check at login. New users created after the migration default
 to `isExempt = false` and are subject to the gate. There is no runtime backfill
 and no Plex token is needed at gate time — the gate is a pure DB read.
 
-**Invite codes are comped membership.** Redeeming an admin-created invite code
+**Invite codes are exempt membership.** Redeeming an admin-created invite code
 (Plex or Jellyfin) marks the user `isExempt = true` with
-`exemptReason = 'invite'` — the same semantics as the admin "Grant access" comp
-action, since the invite already grants server access outside of Stripe. An
+and the note `Joined by invite` — the same semantics as the admin "Grant access
+and exempt" action, since the invite already grants server access outside of Stripe. An
 invited user therefore never lands on `/subscribe`. An existing exemption
-(e.g. `grandfathered`, `comp`) is never overwritten. Admins can revoke the
+and its note are never overwritten. Admins can revoke the
 exemption per-user from the admin users page if an invited user should later be
 subject to the gate.
 
@@ -198,7 +199,7 @@ Grant and revoke follow the services a member has an account on
 `jellyfinUserId`, or both), through `grantServiceAccess` and
 `revokeServiceAccess` in `lib/members/access-actions.ts`:
 
-| Service | Grant (checkout, resubscribe, comp) | Revoke (period end, unpaid) |
+| Service | Grant (checkout, resubscribe, admin grant) | Revoke (period end, unpaid) |
 | --- | --- | --- |
 | Plex | Invite the member's Plex email to the subscriber libraries and auto-accept; an existing share counts as accepted | Remove the member's share of the active server |
 | Jellyfin | Turn the account on (`IsDisabled: false`), keeping every other policy field | Turn the account off (`IsDisabled: true`); the account and its history stay |
@@ -272,7 +273,7 @@ as success, so a retried or rerun revoke settles without ending the member's
 sessions twice. If plex.tv rejects the owner's token, the job fails at once
 without retries; reconnect Plex in settings, then retry the job.
 The grant job re-checks too: it does nothing unless the user has full access
-and is exempt (comp grants) or holds an `ACTIVE` subscription, confirmed with
+and is exempt (admin grants) or holds an `ACTIVE` subscription, confirmed with
 Stripe, and it records `accepted` without a new invite when the user already
 has access to the server.
 
@@ -340,9 +341,9 @@ separate page):
 - A **subscription-state filter**.
 - Per-user row actions: **Cancel subscription** (cancels at period end via
   Stripe; the dialog names the services whose access goes then), **Grant
-  access (comp)** (Plex invite and auto-accept, or the Jellyfin account turned
+  access and exempt** (Plex invite and auto-accept, or the Jellyfin account turned
   on, plus mark exempt, independent of Stripe; the dialog says "They will get
-  access to {services}"), and **Toggle exempt**.
+  access to {services}"), and **Mark exempt** / **Remove exemption**.
 - A per-user deep link to view the customer/subscription in the Stripe Dashboard.
 
 ## Disabling the Feature (Safe & Reversible)

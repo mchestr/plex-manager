@@ -45,7 +45,7 @@ export interface AdminUserWithWrappedStats {
   currentPeriodEnd: Date | null
   cancelAtPeriodEnd: boolean
   isExempt: boolean
-  exemptReason: string | null
+  exemptNote: string | null
   stripeCustomerId: string | null
 }
 

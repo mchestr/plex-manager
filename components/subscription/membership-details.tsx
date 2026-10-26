@@ -46,7 +46,7 @@ interface MembershipDetailsProps {
 /**
  * The member's plan (UI-37): its name (never the price id), a status badge,
  * the renewal line, the price, and Manage billing, which opens the Stripe
- * Billing Portal. Without a subscription it shows the exemption ("Comp",
+ * Billing Portal. Without a subscription it shows the exemption ("Exempt",
  * "Not required") or the way to subscribe.
  */
 export function MembershipDetails({ membership, settings }: MembershipDetailsProps) {
@@ -59,7 +59,7 @@ export function MembershipDetails({ membership, settings }: MembershipDetailsPro
         <CardHeader>
           <CardTitle as="h2">{exemption ? "Your access" : "No membership yet"}</CardTitle>
           <CardDescription>
-            {exemption === "comp" && "Your access is complimentary. There is nothing to pay."}
+            {exemption === "exempt" && "You are exempt from membership. There is nothing to pay."}
             {exemption === "notRequired" && "Your account does not need a membership."}
             {!exemption && "Subscribe to keep watching."}
           </CardDescription>

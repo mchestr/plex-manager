@@ -53,10 +53,10 @@ describe('billing dialogs name the member\'s services (P11.11)', () => {
     listUserTarget(makeAdminUserWithStats({ id: 'u1', name: 'Morgan Lee', services }))
 
   it.each([
-    [['jellyfin'], 'They will get access to Jellyfin and no longer need a subscription.'],
-    [['plex', 'jellyfin'], 'They will get access to Plex and Jellyfin and no longer need a subscription.'],
+    [['jellyfin'], 'They will get access to Jellyfin and be exempt from the subscription.'],
+    [['plex', 'jellyfin'], 'They will get access to Plex and Jellyfin and be exempt from the subscription.'],
     [[], 'They have no Plex or Jellyfin account linked'],
-  ] as const)('the comp grant for %j', async (services, copy) => {
+  ] as const)('the grant for %j', async (services, copy) => {
     const user = userEvent.setup()
     render(<GrantAccessDialog user={withServices([...services])} trigger={<Button data-testid="grant-access-button">Grant</Button>} />)
 

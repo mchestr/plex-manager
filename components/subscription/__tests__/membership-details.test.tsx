@@ -73,7 +73,7 @@ describe('MembershipDetails', () => {
   })
 
   it.each([
-    ['comp', 'Comp'],
+    ['exempt', 'Exempt'],
     ['notRequired', 'Not required'],
   ] as const)('shows the %s exemption without a subscription', (exemption, label) => {
     renderDetails({ subscription: null, exemption })

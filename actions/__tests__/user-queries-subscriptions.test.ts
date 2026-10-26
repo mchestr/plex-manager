@@ -60,9 +60,9 @@ describe('getAllUsersWithWrapped - subscription attach', () => {
 
   it('loads subscriptions in a single batched query (no N+1)', async () => {
     const users = [
-      makePrismaUser({ id: 'user-1', isExempt: false, exemptReason: null }),
-      makePrismaUser({ id: 'user-2', isExempt: false, exemptReason: null }),
-      makePrismaUser({ id: 'user-3', isExempt: false, exemptReason: null }),
+      makePrismaUser({ id: 'user-1', isExempt: false, exemptNote: null }),
+      makePrismaUser({ id: 'user-2', isExempt: false, exemptNote: null }),
+      makePrismaUser({ id: 'user-3', isExempt: false, exemptNote: null }),
     ]
     mockPrisma.user.findMany.mockResolvedValue(users)
 
@@ -79,8 +79,8 @@ describe('getAllUsersWithWrapped - subscription attach', () => {
 
   it('attaches subscription fields per user from the DB', async () => {
     const users = [
-      makePrismaUser({ id: 'user-1', isExempt: false, exemptReason: null }),
-      makePrismaUser({ id: 'user-2', isExempt: false, exemptReason: null }),
+      makePrismaUser({ id: 'user-1', isExempt: false, exemptNote: null }),
+      makePrismaUser({ id: 'user-2', isExempt: false, exemptNote: null }),
     ]
     mockPrisma.user.findMany.mockResolvedValue(users)
     mockPrisma.subscription.findMany.mockResolvedValue([
@@ -111,8 +111,8 @@ describe('getAllUsersWithWrapped - subscription attach', () => {
 
   it('reflects exemption fields from the user record', async () => {
     const users = [
-      makePrismaUser({ id: 'user-1', isExempt: true, exemptReason: 'grandfathered' }),
-      makePrismaUser({ id: 'user-2', isExempt: false, exemptReason: null }),
+      makePrismaUser({ id: 'user-1', isExempt: true, exemptNote: 'IT support' }),
+      makePrismaUser({ id: 'user-2', isExempt: false, exemptNote: null }),
     ]
     mockPrisma.user.findMany.mockResolvedValue(users)
 
@@ -120,15 +120,15 @@ describe('getAllUsersWithWrapped - subscription attach', () => {
 
     const exemptUser = result.find((u) => u.id === 'user-1')!
     expect(exemptUser.isExempt).toBe(true)
-    expect(exemptUser.exemptReason).toBe('grandfathered')
+    expect(exemptUser.exemptNote).toBe('IT support')
 
     const normalUser = result.find((u) => u.id === 'user-2')!
     expect(normalUser.isExempt).toBe(false)
-    expect(normalUser.exemptReason).toBeNull()
+    expect(normalUser.exemptNote).toBeNull()
   })
 
   it('keeps existing DTO fields intact', async () => {
-    const users = [makePrismaUser({ id: 'user-1', isExempt: false, exemptReason: null })]
+    const users = [makePrismaUser({ id: 'user-1', isExempt: false, exemptNote: null })]
     mockPrisma.user.findMany.mockResolvedValue(users)
 
     const { users: result } = await getAllUsersWithWrapped(2024)

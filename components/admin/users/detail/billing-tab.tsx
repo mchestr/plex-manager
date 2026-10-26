@@ -5,14 +5,6 @@ import { detailUserTarget, type UserDetailHeaderData } from "@/lib/admin/user-de
 import { resolveStatus } from "@/lib/ui/status"
 import type { BoundFormat } from "@/lib/utils/format"
 
-/** The exemption's word: comp, invite or grandfathered members never need a subscription. */
-function exemptionOf(header: UserDetailHeaderData) {
-  if (!header.isExempt) return { tone: "plain" as const, label: "Not exempt" }
-  if (header.exemptReason === "comp") return resolveStatus("exemption", "comp")
-  if (header.exemptReason === "grandfathered") return resolveStatus("exemption", "grandfathered")
-  return resolveStatus("exemption", "exempt")
-}
-
 /** What the last grant or revoke left on each service (P11.11). */
 const PLEX_INVITE_LABELS: Record<string, string> = { accepted: "Shared", pending: "Invite pending", revoked: "Removed" }
 const JELLYFIN_ACCESS_LABELS: Record<string, string> = { enabled: "Enabled", disabled: "Disabled", skipped: "Account not found" }
@@ -42,7 +34,6 @@ export function BillingTab({ header, f }: { header: UserDetailHeaderData; f: Bou
     : subscription.cancelAtPeriodEnd && periodEnd
       ? `Ends ${f.date(periodEnd)}`
       : resolveStatus("subscription", subscription.status, { date: periodEnd ?? undefined, settings: f.settings }).sub
-  const exemption = exemptionOf(header)
   const user = detailUserTarget(header)
 
   return (
@@ -61,7 +52,11 @@ export function BillingTab({ header, f }: { header: UserDetailHeaderData; f: Bou
         <div className="flex flex-col gap-1">
           <dt className="text-label text-muted-foreground">Exemption</dt>
           <dd>
-            <StatusBadge tone={exemption.tone} label={exemption.label} />
+            {header.isExempt ? (
+              <StatusBadge domain="exemption" value="exempt" sub={header.exemptNote ?? ""} />
+            ) : (
+              <StatusBadge tone="plain" label="Not exempt" />
+            )}
           </dd>
         </div>
         {subscription && header.services.includes("plex") && (
@@ -85,7 +80,7 @@ export function BillingTab({ header, f }: { header: UserDetailHeaderData; f: Bou
                 user={user}
                 trigger={
                   <Button variant="outline" size="sm" data-testid="grant-access-button">
-                    Grant comp access
+                    Grant access and exempt
                   </Button>
                 }
               />

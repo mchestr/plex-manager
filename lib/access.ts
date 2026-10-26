@@ -13,7 +13,7 @@
  *   the subscription feature is a no-op, so everyone is entitled (matches the
  *   app's behavior before subscriptions existed).
  * - The user is an **admin**.
- * - The user is marked **exempt** (`User.isExempt`, e.g. grandfathered members).
+ * - The user is marked **exempt** (`User.isExempt`, e.g. members who never pay).
  * - The user has a subscription in an **active-enough** state (`ACTIVE` or
  *   `PAST_DUE`). `PAST_DUE` keeps access during Stripe's dunning/retry window.
  *

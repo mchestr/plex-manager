@@ -37,7 +37,7 @@ export interface UserActionTarget {
   /** The display name the dialogs name: "Remove Plex access for Morgan Lee?" */
   name: string
   plexUserId: string | null
-  /** Every linked media server, which the comp grant and cancel dialogs name (P11.11). */
+  /** Every linked media server, which the grant and cancel dialogs name (P11.11). */
   services: AuthService[]
   isAdmin: boolean
   isOwner: boolean

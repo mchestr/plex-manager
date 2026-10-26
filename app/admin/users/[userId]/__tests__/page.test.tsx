@@ -55,7 +55,7 @@ function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeader
     disabledAt: null,
     createdAt: new Date('2025-01-02T00:00:00Z'),
     isExempt: false,
-    exemptReason: null,
+    exemptNote: null,
     plexAccess: 'shared',
     subscription: null,
     stripeEnabled: false,

@@ -18,8 +18,13 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Changed
+
+- **Billing statuses:** members who do not pay now read as one state, **Exempt**, in the Users table, the user's Billing tab and `/membership`; admins and the owner read **Not required**. "Comp" and "Grandfathered" are gone from the UI and docs, and "Grant comp access" is now "Grant access and exempt". `User.exemptReason` is now `User.exemptNote`, an optional free-text note shown under the badge. Access rules are unchanged.
+
 ### Upgrade notes
 
+- **Exempt note migration:** `20270119000001_rename_exempt_reason_to_note` renames `User.exemptReason` to `exemptNote`, clears the `comp` and `grandfathered` values, and turns `invite` into `Joined by invite`. Who is exempt does not change.
 - Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds six migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables`.
 - **Setup claim:** an install whose first-run setup is still unfinished must enter the one-time setup code to continue. Find it with `docker logs <container> | grep 'Setup code'`, or set `SETUP_TOKEN` to at least 16 characters; production refuses to start with a shorter one. Finished installs are unaffected.
 - **Retention:** the first daily retention sweep deletes data past its window, including audit rows older than 400 days and Discord command logs older than 90 days. To keep more, set the `RETENTION_*_DAYS` variables (`docs/privacy.md`) before you deploy.

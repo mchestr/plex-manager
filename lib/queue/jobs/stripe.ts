@@ -412,7 +412,7 @@ export async function processStripeWebhook(
  * Why a grant job should not run for this user, or null when it should.
  *
  * The user must have full access (`getAccessLevel`: not disabled, entitled
- * with Stripe on), and be either exempt (which covers comp grants) or hold an
+ * with Stripe on), and be either exempt (which covers admin grants) or hold an
  * ACTIVE subscription, confirmed against Stripe when a client is configured.
  * A job enqueued for a member who has since canceled therefore does nothing.
  *
@@ -542,7 +542,7 @@ interface RevokeGuardTarget {
  * 1. an **admin** (`isAdmin`) — server operators keep access;
  * 2. a **Jellyfin administrator** (`jellyfinAdmin`) — never disabled, and an
  *    admin check that could not answer counts as one;
- * 3. an **exempt** user (`isExempt`) — grandfathered / comped members;
+ * 3. an **exempt** user (`isExempt`) — exempt members;
  * 4. **not Stripe-managed** — no `stripeSubscriptionId`, so their access was not
  *    provisioned by this integration;
  * 5. **past due** (`PAST_DUE`) — dunning grace period retains access (Q10a);
