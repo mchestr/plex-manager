@@ -508,8 +508,9 @@ jobs:
 
   # The Playwright projects against `next build` plus `next start`, in the
   # image the visual baselines are taken in, on a throwaway Postgres and Redis.
-  # "E2E Tests" (required) runs every functional spec, Rewind's story flows
-  # and its axe scans (chromium, webkit and firefox; the image ships all
+  # "E2E Tests" (required) runs every functional spec and the setup wizard;
+  # "Rewind E2E Tests" (required) runs Rewind's story flows, its axe scans and
+  # the strict CSP scan (chromium, webkit and firefox; the image ships all
   # three). "Visual Diffs" and "Rewind Visual Diffs" run the screenshot
   # projects and are advisory: a diff leaves a warning and the report, not a
   # failed check (refresh baselines with visual-baselines.yml). "Rewind
@@ -525,14 +526,20 @@ jobs:
       matrix:
         suite:
           - name: E2E Tests
+            projects: --project=chromium --project=setup-wizard
+            advisory: false
+            artifact: playwright-report
+            timeout: 30
+          # Its own job (and database) so it runs beside "E2E Tests"; together
+          # they were one 28 minute serial run.
+          - name: Rewind E2E Tests
             projects: >-
-              --project=chromium --project=setup-wizard
               --project=rewind-e2e-chromium --project=rewind-e2e-webkit --project=rewind-e2e-firefox
               --project=rewind-a11y-chromium --project=rewind-a11y-webkit --project=rewind-a11y-firefox
               --project=csp-chromium --project=csp-webkit --project=csp-firefox
             advisory: false
-            artifact: playwright-report
-            timeout: 60
+            artifact: playwright-report-rewind
+            timeout: 30
           # The setup projects pull in setup-wizard, which they depend on.
           - name: Visual Diffs
             projects: >-
