@@ -19,7 +19,10 @@ test.describe('Admin Functionality', () => {
     await expect(adminPage).toHaveURL(/\/admin\/settings$/, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
     await expect(adminPage.getByTestId('admin-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
     await expect(adminPage.getByTestId('settings-nav')).toBeVisible();
+    await expect(adminPage.getByTestId('settings-plex-section')).toBeVisible();
+    await adminPage.getByTestId('settings-nav-system').click();
     await expect(adminPage.getByTestId('settings-system-section')).toBeVisible();
+    await adminPage.getByTestId('settings-nav-ai').click();
     await expect(adminPage.getByTestId('settings-ai-section')).toBeVisible();
   });
 
@@ -74,6 +77,9 @@ test.describe('Admin Functionality', () => {
     // Navigate to settings
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
     await expect(adminPage.getByTestId('admin-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+
+    // Other integrations sit in the Integrations group
+    await adminPage.getByTestId('settings-nav-other').click();
 
     // Look for the Jellyfin login toggle - it should only be visible if Jellyfin is configured
     const jellyfinToggle = adminPage.getByTestId('jellyfin-login-toggle');

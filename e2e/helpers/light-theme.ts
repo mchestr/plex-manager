@@ -7,9 +7,9 @@ import { expect, type Page } from '@playwright/test';
  * 60-second cache.
  */
 
-/** Sets "Light theme for members" to `on` from `/admin/settings`; `page` must be an admin's. */
+/** Sets "Light theme for members" to `on` from `/admin/settings#system`; `page` must be an admin's. */
 export async function setLightThemeFlag(page: Page, on: boolean): Promise<void> {
-  await page.goto('/admin/settings');
+  await page.goto('/admin/settings#system');
   const toggle = page.getByTestId('settings-light-theme-switch');
   await expect(toggle).toBeVisible({ timeout: 15_000 });
   if ((await toggle.getAttribute('aria-checked')) !== String(on)) await toggle.click();
