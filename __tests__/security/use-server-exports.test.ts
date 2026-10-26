@@ -11,7 +11,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
-import { isBrandedAction } from '@/lib/actions/define-action'
+import { actionAuthOf, isBrandedAction } from '@/lib/actions/define-action'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
@@ -46,4 +46,21 @@ describe.each(useServerModules)('%s', (path) => {
 
     expect(unbranded).toEqual([])
   })
+})
+
+describe.each(useServerModules)('%s auth', (path) => {
+  it('declares what every action requires of its caller', () => {
+    const exports = jest.requireActual<Record<string, unknown>>(join(ROOT, path))
+    const undeclared = Object.entries(exports)
+      .filter(([, value]) => !/^(public|member|admin|setup|permission:[a-z:]+)$/.test(actionAuthOf(value) ?? ''))
+      .map(([name]) => name)
+
+    expect(undeclared).toEqual([])
+  })
+})
+
+it('records the permission of the actions that need one', () => {
+  const { chatWithAdminBot } = jest.requireActual<Record<string, unknown>>(join(ROOT, 'actions/chatbot/index.ts'))
+
+  expect(actionAuthOf(chatWithAdminBot)).toBe('permission:assistant:use')
 })

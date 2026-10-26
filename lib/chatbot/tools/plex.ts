@@ -5,6 +5,7 @@ import { type RegisteredTool } from "./types"
 export const PLEX_TOOLS: RegisteredTool[] = [
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     // getPlexServerIdentity returns { success, machineIdentifier }. The machine
     // identifier is a server (not personal) identifier and is required for the
@@ -18,6 +19,7 @@ export const PLEX_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     userScoped: true,
     // Output is sanitizePlexSessionsPayload(...) — viewer identifiers are already
@@ -51,6 +53,7 @@ export const PLEX_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_plex_library_sections",
       description: "Get all library sections (Movies, TV Shows, Music, etc.) from Plex",
@@ -59,6 +62,7 @@ export const PLEX_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_plex_recently_added",
       description: "Get recently added content from Plex library",
@@ -75,6 +79,7 @@ export const PLEX_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_plex_on_deck",
       description: "Get 'On Deck' content from Plex (continue watching)",

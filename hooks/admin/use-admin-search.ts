@@ -28,12 +28,12 @@ async function fetchAdminSearch(kind: AdminSearchKind, q: string, signal: AbortS
  * the next request runs, so the list never flashes empty. `q` is the
  * debounced query the results belong to.
  */
-export function useAdminSearch(kind: AdminSearchKind, query: string) {
+export function useAdminSearch(kind: AdminSearchKind, query: string, enabled = true) {
   const q = useDebouncedValue(query.trim().slice(0, ADMIN_SEARCH_MAX), DEBOUNCE_MS)
   const { data, isFetching, isError } = useQuery({
     queryKey: queryKeys.adminSearch(kind, q),
     queryFn: ({ signal }) => fetchAdminSearch(kind, q, signal),
-    enabled: q.length > 0,
+    enabled: enabled && q.length > 0,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   })

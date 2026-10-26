@@ -8,6 +8,8 @@ import { StatGrid } from "@/components/ui/stat-tile"
 import { getAdminOverview } from "@/lib/admin/overview"
 import { serverName } from "@/lib/brand"
 import { getFormat } from "@/lib/settings/app-settings"
+import { getSession } from "@/lib/data/session"
+import { redirect } from "next/navigation"
 import { connection } from "next/server"
 
 /** Refresh cadence of the monitoring pages (ui-design-system 6.3). */
@@ -19,6 +21,8 @@ const LIVE_INTERVAL_MS = 10_000
  * fixes it. Each source fails on its own, as a dash.
  */
 export default async function AdminOverviewPage() {
+  // The health, queue and spend tiles are admin-only; a role lands on its first page
+  if (!(await getSession())?.user.isAdmin) redirect("/admin/users")
   // The tiles read the clock: render per request, never at build
   await connection()
   const renderedAt = new Date().getTime()

@@ -5,6 +5,7 @@ import { type RegisteredTool } from "./types"
 export const OVERSEERR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     // /settings/about exposes only aggregate server info — no per-user data.
     discordFields: ["version", "totalRequests", "totalMediaItems"],
@@ -16,6 +17,7 @@ export const OVERSEERR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_overseerr_requests",
       description: "Get recent pending or processing media requests from Overseerr",
@@ -24,6 +26,7 @@ export const OVERSEERR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_overseerr_discover_movies",
       description: "Get popular or trending movies from Overseerr discovery",
@@ -44,6 +47,7 @@ export const OVERSEERR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_overseerr_discover_tv",
       description: "Get popular or trending TV shows from Overseerr discovery",
@@ -64,6 +68,7 @@ export const OVERSEERR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_overseerr_media_details",
       description: "Get detailed information about a movie or TV show from Overseerr",
@@ -86,6 +91,7 @@ export const OVERSEERR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_overseerr_users",
       description:
@@ -95,6 +101,7 @@ export const OVERSEERR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_overseerr_all_requests",
       description: "Get all media requests from Overseerr (not just processing)",

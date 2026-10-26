@@ -25,7 +25,7 @@ check); the `no-changelog` label skips it.
 ### Upgrade notes
 
 - **Exempt note migration:** `20270119000001_rename_exempt_reason_to_note` renames `User.exemptReason` to `exemptNote`, clears the `comp` and `grandfathered` values, and turns `invite` into `Joined by invite`. Who is exempt does not change.
-- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds six migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables`.
+- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds seven migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables` and `20270118000004_add_user_role`.
 - **Setup claim:** an install whose first-run setup is still unfinished must enter the one-time setup code to continue. Find it with `docker logs <container> | grep 'Setup code'`, or set `SETUP_TOKEN` to at least 16 characters; production refuses to start with a shorter one. Finished installs are unaffected.
 - **Retention:** the first daily retention sweep deletes data past its window, including audit rows older than 400 days and Discord command logs older than 90 days. To keep more, set the `RETENTION_*_DAYS` variables (`docs/privacy.md`) before you deploy.
 - **Stripe:** turning Stripe on now asks for confirmation when there are Jellyfin-only members who are not exempt.
@@ -40,6 +40,7 @@ check); the `no-changelog` label skips it.
 ### Added
 
 - Discord bot login safety: backoff between failed logins (30 s up to 30 min), no retries after a rejected token or disallowed intents (Admin, Settings, Discord shows "Login rejected"), a cap of 100 logins per rolling 24 hours, a destroyed client after every failed login, a kept gateway session across one failed lease renewal or a settings save that left the token alone, and `plex_manager_discord_*` metrics. If Discord reset your bot token, paste a new one in Admin, Settings, Discord (`docs/discord-bot.md`).
+- A built-in **Support** role (`docs/roles.md`): an admin gives a user the role from the users list, and they get a trimmed admin area with the assistant's read-only tools and the users list, with no settings, connections, secrets, billing or member actions. Permissions are a typed list (`lib/permissions`), `isAdmin` stays the superuser, and `permissionAction` and `assertPermission` guard actions and loaders. Assigning or removing the role is audited (`USER_ROLE_CHANGED`), and so is every assistant tool call a Support user makes or is refused (`ASSISTANT_TOOL_CALLED`, `ASSISTANT_TOOL_DENIED`).
 - Production deployment: `deploy/docker-compose.yml` for the published image, `docs/deployment.md` (compose, Caddy and nginx, the setup claim, bare metal, web and worker containers), `docs/domain-move.md`, and `docs/environment.md`, generated with `example.env` from `lib/env.ts` by `npm run env:docs` and checked in CI.
 - At-rest encryption keyring: `ENCRYPTION_KEYS` with key ids and rotation, a boot check against the database, a background and on-demand re-encryption (Admin > Settings > Security), and settings that ask you to re-enter a secret the current keys cannot read instead of failing.
 - `PROCESS_ROLE=web|worker|all` to run the job queue, schedulers and Discord bot in a separate worker container.
@@ -60,6 +61,7 @@ check); the `no-changelog` label skips it.
 
 ### Security
 
+- Every assistant tool declares the permission it needs. The tool list sent to the model and each call are checked against the caller's permissions, so a hallucinated or injected tool name is refused before any service is called. Tool output for a role below admin has credentials and personal contact details removed, and a tool error returns a fixed line instead of the upstream text. A Support user has a lower hourly message limit and counts against the member spend cap, not the admin one.
 - Stored secrets, member Plex tokens and AI prompt and reply text are encrypted by default; production refuses to start without a key unless `ALLOW_PLAINTEXT_SECRETS=true`.
 - First-run setup needs a claim: the one-time setup code from the container log, or `SETUP_TOKEN`. A wrong code is limited to 5 a minute, and after setup every setup action is admin-only.
 - The automatic Stripe revoke never removes a member whose Jellyfin admin status is "admin" or "unknown".

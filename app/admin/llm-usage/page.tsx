@@ -8,6 +8,7 @@ import { getFormat } from "@/lib/settings/app-settings"
 import { parseDateRange } from "@/lib/ui/date-range"
 import { parseTableParams } from "@/lib/ui/table-params"
 import { formatPeriod } from "@/lib/utils/day-window"
+import { assertAdmin } from "@/lib/admin"
 
 type Params = Record<string, string | string[] | undefined>
 
@@ -19,6 +20,7 @@ const filterSchema = z.object({
 })
 
 export default async function LLMUsagePage({ searchParams }: { searchParams: Promise<Params> }) {
+  await assertAdmin()
   const params = await searchParams
   const single = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
   const table = parseTableParams(params, { sortable: [], defaultSort: { id: "started", desc: true } })

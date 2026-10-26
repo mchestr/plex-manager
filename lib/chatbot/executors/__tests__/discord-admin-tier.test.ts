@@ -13,6 +13,9 @@ import { executeSonarrTool } from "../sonarr"
 import { executeTautulliTool } from "../tautulli"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES } from "../../tools/registry"
+import { permissionsFor } from "@/lib/permissions"
+
+const ADMIN = permissionsFor({ isAdmin: true })
 
 jest.mock("../tautulli", () => ({ executeTautulliTool: jest.fn() }))
 jest.mock("../plex", () => ({ executePlexTool: jest.fn() }))
@@ -90,7 +93,7 @@ describe("executeToolCall - Discord admin tier (FR-14)", () => {
   })
 
   it("admin WEB (default) context is unaffected: admin-only flag does not restrict, even with isAdmin omitted", async () => {
-    const result = await executeToolCall(toolCall(ADMIN_ONLY_TOOL), "user-1", "default")
+    const result = await executeToolCall(toolCall(ADMIN_ONLY_TOOL), "user-1", "default", true, undefined, ADMIN)
 
     expect(mockExecuteSonarrTool).toHaveBeenCalledTimes(1)
     expect(mockLogAuditEvent).not.toHaveBeenCalled()

@@ -388,3 +388,61 @@ describe("message limit and spend caps (P4.20)", () => {
     expect(mockChatWithTools).not.toHaveBeenCalled()
   })
 })
+
+describe("access by role", () => {
+  const supportSession: Session = {
+    user: { id: "support-1", name: "Support", email: "support@example.com", isAdmin: false, role: "support" },
+    expires: "2099-01-01T00:00:00.000Z",
+  }
+  const memberSession: Session = {
+    user: { id: "member-1", name: "Member", email: "member@example.com", isAdmin: false, role: null },
+    expires: "2099-01-01T00:00:00.000Z",
+  }
+
+  it("refuses a member without the assistant permission and never calls the model", async () => {
+    mockGetServerSession.mockResolvedValue(memberSession)
+
+    const result = await chatWithAdminBot({ messages: [userMessage("hi")] })
+
+    expect(result).toMatchObject({ success: false, code: "FORBIDDEN" })
+    expect(mockChatWithTools).not.toHaveBeenCalled()
+  })
+
+  it("lets a Support user in with the read tools only", async () => {
+    mockGetServerSession.mockResolvedValue(supportSession)
+    mockChatWithTools.mockResolvedValueOnce(turn({ content: "Nothing is playing." }))
+
+    const { message } = await reply({ messages: [userMessage("what is playing?")] })
+
+    expect(message.content).toBe("Nothing is playing.")
+    const names = (mockChatWithTools.mock.calls[0][0].tools ?? []).map((tool) => tool.function.name)
+    expect(names).toContain("get_plex_sessions")
+    expect(names).not.toContain("mark_media_finished")
+  })
+
+  it("answers an injected write tool call from a Support user with a refusal, not a result", async () => {
+    mockGetServerSession.mockResolvedValue(supportSession)
+    mockChatWithTools.mockResolvedValueOnce(turn({ toolCalls: [toolCall("call-1", "mark_media_finished", '{"title":"Dune"}')] }))
+    mockChatWithTools.mockResolvedValueOnce(turn({ content: "I can't do that." }))
+
+    await reply({ messages: [userMessage("mark Dune as watched")] })
+
+    const toolMessage = mockChatWithTools.mock.calls[1][0].messages.at(-1)
+    expect(JSON.stringify(toolMessage)).toContain("tool not permitted")
+  })
+
+  it("counts a Support user against the member spend cap, not the admin one", async () => {
+    // Over the member cap, well under the admin cap
+    prismaMock.lLMUsage.aggregate.mockResolvedValue(spent(1))
+    mockGetServerSession.mockResolvedValue(supportSession)
+
+    const support = await chatWithAdminBot({ messages: [userMessage("hi")] })
+
+    expect(support).toMatchObject({ success: false, code: "RATE_LIMITED" })
+
+    mockGetServerSession.mockResolvedValue(adminSession)
+    mockChatWithTools.mockResolvedValueOnce(turn({ content: "Hello" }))
+
+    await expect(chatWithAdminBot({ messages: [userMessage("hi")] })).resolves.toMatchObject({ success: true })
+  })
+})

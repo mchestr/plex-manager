@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react"
 
-import { setUserDisabled, updateUserAdminStatus } from "@/actions/admin/admin-users"
+import { setUserDisabled, setUserRole, updateUserAdminStatus } from "@/actions/admin/admin-users"
 import { adminRegenerateRewind } from "@/actions/rewind-generation"
 import { unshareUserLibrary } from "@/actions/user-queries"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -70,6 +70,31 @@ export function ChangeRoleDialog({ user, ...dialog }: UserDialogProps) {
       action={() => run(user.id, !removing)}
       data-testid="admin-user-role-dialog"
       confirmTestId="admin-user-role-confirm"
+    />
+  )
+}
+
+const assignRole = (userId: string, role: "support" | null) => setUserRole({ userId, role })
+
+/** Gives the member the Support role, or takes it away. */
+export function SupportRoleDialog({ user, ...dialog }: UserDialogProps) {
+  const removing = user.role === "support"
+  const { run } = useActionDialog(assignRole, { success: removing ? "Support role removed" : "Support role granted" })
+  return (
+    <ConfirmDialog
+      {...dialog}
+      title={removing ? `Remove ${user.name}'s Support role?` : `Give ${user.name} the Support role?`}
+      description={
+        removing
+          ? "They are signed out and lose the assistant and the users list."
+          : "They can use the admin assistant's read-only tools and see the users list. They cannot change settings, read secrets or act on members."
+      }
+      confirmLabel={removing ? "Remove Support role" : "Give Support role"}
+      pendingLabel="Saving"
+      tone={removing ? "destructive" : "default"}
+      action={() => run(user.id, removing ? null : "support")}
+      data-testid="admin-user-support-role-dialog"
+      confirmTestId="admin-user-support-role-confirm"
     />
   )
 }

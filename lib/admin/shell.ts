@@ -1,8 +1,10 @@
 import "server-only"
 
 import type { NavCounts } from "@/lib/admin/nav"
+import { navFor } from "@/lib/admin/nav"
 import { getAdminNavCounts } from "@/lib/admin/nav-counts"
 import { serverName } from "@/lib/brand"
+import { hasPermission, type PermissionSubject } from "@/lib/permissions"
 import { initialsFor } from "@/lib/member/shell"
 import { prisma } from "@/lib/prisma"
 
@@ -18,10 +20,14 @@ export interface AdminShellData {
   navCounts: NavCounts
   /** The assistant renders only while LLM calls are on and a chat provider is active. */
   assistant: boolean
+  /** The ids of the nav items the user may open. */
+  navIds: string[]
+  /** True for a non-admin role: a trimmed shell without the admin search or quick actions. */
+  scoped: boolean
 }
 
 /** Everything `AdminShell` needs, read once per admin layout render. */
-export async function getAdminShellData(session: { id: string; name?: string | null }): Promise<AdminShellData> {
+export async function getAdminShellData(session: ({ id: string; name?: string | null } & PermissionSubject)): Promise<AdminShellData> {
   const [name, navCounts, config, chatProvider] = await Promise.all([
     serverName(),
     getAdminNavCounts(),
@@ -33,7 +39,10 @@ export async function getAdminShellData(session: { id: string; name?: string | n
   return {
     serverName: name,
     user: { name: displayName, initials: initialsFor(displayName) },
-    navCounts,
-    assistant: !config?.llmDisabled && chatProvider !== null,
+    // A role sees the member count only, not invites or job health
+    navCounts: session.isAdmin ? navCounts : { users: navCounts.users, activeInvites: 0, failedJobs: null },
+    assistant: hasPermission(session, "assistant:use") && !config?.llmDisabled && chatProvider !== null,
+    navIds: navFor(session).map((item) => item.id),
+    scoped: !session.isAdmin,
   }
 }

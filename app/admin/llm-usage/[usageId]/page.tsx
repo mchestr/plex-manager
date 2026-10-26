@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { getFormat } from "@/lib/settings/app-settings"
 import { llmConversation, llmUsage, userDetail, userRewind } from "@/lib/admin/routes"
+import { assertAdmin } from "@/lib/admin"
 
 export default async function LLMUsageDetailPage({ params }: { params: Promise<{ usageId: string }> }) {
+  await assertAdmin()
   const { usageId } = await params
   const [record, f] = await Promise.all([getLLMUsageById(usageId), getFormat()])
 

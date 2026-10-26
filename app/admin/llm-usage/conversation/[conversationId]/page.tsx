@@ -12,6 +12,7 @@ import { getFormat } from "@/lib/settings/app-settings"
 import { aggregateLlmUsage } from "@/lib/utils"
 import type { BoundFormat } from "@/lib/utils/format"
 import { dayKey } from "@/lib/utils/zoned-time"
+import { assertAdmin } from "@/lib/admin"
 
 /** "Oct 12, 2026, 2:26 PM CDT to 2:28 PM", or both dates when the range spans days; always in `Config.timezone` (GAP-43). */
 function formatTimeRange(start: Date, end: Date, f: BoundFormat) {
@@ -34,6 +35,7 @@ const HEADINGS = ["#", "Time", "Model", "Tokens", "Cost"]
 
 /** One chat conversation's LLM calls (P10.6): breadcrumbs, server-formatted zoned times and the transcript. */
 export default async function LLMConversationPage({ params }: { params: Promise<{ conversationId: string }> }) {
+  await assertAdmin()
   const { conversationId } = await params
   const [{ records }, f] = await Promise.all([getLLMUsageRecords({ pageSize: 100, conversationId }), getFormat()])
 

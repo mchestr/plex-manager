@@ -27,6 +27,7 @@
 import type { LucideIcon } from "lucide-react"
 import type { Route } from "next"
 
+import { hasPermission, type Permission, type PermissionSubject } from "@/lib/permissions"
 import { icons } from "@/lib/ui/icons"
 
 export type AdminNavGroup = "Community" | "Rewind" | "Usage and cost" | "System"
@@ -55,6 +56,8 @@ export interface AdminNavItem {
   /** `tab` items sit in the mobile tab bar; the rest open from More. */
   mobile: "tab" | "more"
   badge?: (counts: NavCounts) => AdminNavBadge | null
+  /** The permission that shows the item to a non-admin role; without one, only admins see it. */
+  permission?: Permission
 }
 
 export const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = ["Community", "Rewind", "Usage and cost", "System"]
@@ -78,6 +81,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     group: "Community",
     match: "prefix",
     mobile: "tab",
+    permission: "users:read",
     badge: ({ users }) => ({ text: String(users) }),
   },
   {
@@ -215,6 +219,12 @@ export function navTestId(item: Pick<AdminNavItem, "id">): string {
 export function isActive(item: Pick<AdminNavItem, "href" | "match">, pathname: string): boolean {
   if (pathname === item.href) return true
   return item.match === "prefix" && pathname.startsWith(`${item.href}/`)
+}
+
+/** The items the subject may open: all for an admin, else those whose permission they hold. */
+export function navFor(subject: PermissionSubject): readonly AdminNavItem[] {
+  if (subject.isAdmin) return ADMIN_NAV
+  return ADMIN_NAV.filter((item) => item.permission !== undefined && hasPermission(subject, item.permission))
 }
 
 /** The items of one group, in config order (`null` for the ungrouped top). */

@@ -6,4 +6,5 @@ export {
   ALL_TOOLS,
   DISCORD_SAFE_TOOLS,
   getRegisteredTool,
+  toolsForPermissions,
 } from "./registry"

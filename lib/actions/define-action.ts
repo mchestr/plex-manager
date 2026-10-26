@@ -6,7 +6,7 @@
  *
  * ```
  * call(input)
- *   -> guard        public | member | admin   (UNAUTHENTICATED, FORBIDDEN)
+ *   -> guard        public | member | admin | permission   (UNAUTHENTICATED, FORBIDDEN)
  *                   setup: a claim before setup completes, then admin   (SETUP_UNCLAIMED)
  *   -> entitlement  member: full | read       (NOT_ENTITLED)
  *   -> safeParse    the input schema          (VALIDATION + fieldErrors)
@@ -47,13 +47,14 @@ import { z } from "zod"
 
 import { hasEntitlement, NOT_ENTITLED_MESSAGE, type Entitlement } from "@/lib/actions/entitlement"
 import { fail, toActionError, type ActionErrorCode, type ActionResult } from "@/lib/actions/result"
+import { hasPermission, type Permission } from "@/lib/permissions"
 import { getRequestId } from "@/lib/observability/request-context"
 import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { generateRequestId, runWithRequestContext } from "@/lib/utils/log-context"
 import { getSession } from "@/lib/data/session"
 
-type AuthLevel = "public" | "member" | "admin" | "setup"
+type AuthLevel = "public" | "member" | "admin" | "setup" | "permission"
 
 /**
  * What a handler receives besides its input. A setup action's `actor` is
@@ -73,6 +74,8 @@ interface RateLimitOption {
 
 interface Definition<A extends AuthLevel, S extends z.ZodType | undefined, T, C extends string> {
   auth: A
+  /** Permission actions only: the permission the caller must hold (admins hold all). */
+  permission?: Permission
   /**
    * Member actions only: `full` needs an active membership, `read` also lets a
    * lapsed member through (FR-51). With Stripe gating off, every enabled user passes.
@@ -105,10 +108,29 @@ const SETUP_UNCLAIMED_MESSAGE = "Enter the setup code from the server log to con
  */
 const ACTION_BRAND = Symbol.for("__pmAction")
 
-/** Brands `fn` with a non-enumerable {@link ACTION_BRAND}; `formAction` brands its adapters too. */
-export function brandAction<F extends (...args: never[]) => unknown>(fn: F): F {
+/** Carries what an action requires of its caller: its auth level, `permission:<name>` for a permission action. */
+const ACTION_AUTH = Symbol.for("__pmActionAuth")
+
+/**
+ * Brands `fn` with a non-enumerable {@link ACTION_BRAND}; `formAction` brands its adapters too.
+ * `auth` records the requirement, which `actionAuthOf` reads back.
+ */
+export function brandAction<F extends (...args: never[]) => unknown>(fn: F, auth?: string): F {
   Object.defineProperty(fn, ACTION_BRAND, { value: true, enumerable: false })
+  if (auth) Object.defineProperty(fn, ACTION_AUTH, { value: auth, enumerable: false })
   return fn
+}
+
+/**
+ * The requirement an action declared (`public`, `member`, `admin`, `setup` or
+ * `permission:<name>`), or undefined for a function that is not one.
+ *
+ * @internal
+ */
+export function actionAuthOf(value: unknown): string | undefined {
+  if (typeof value !== "function") return undefined
+  const auth = (value as unknown as Record<symbol, unknown>)[ACTION_AUTH]
+  return typeof auth === "string" ? auth : undefined
 }
 
 /**
@@ -122,6 +144,7 @@ export function isBrandedAction(value: unknown): boolean {
 
 async function guard<A extends AuthLevel>(
   auth: A,
+  permission: Permission | undefined,
   entitlement: Entitlement | undefined
 ): Promise<{ ok: true; ctx: ActionContext<A> } | { ok: false; result: ActionResult<never> }> {
   const session = await getSession()
@@ -146,6 +169,9 @@ async function guard<A extends AuthLevel>(
   }
   if ((auth === "admin" || auth === "setup") && !session.user.isAdmin) {
     return { ok: false, result: fail("FORBIDDEN", "Admins only.") }
+  }
+  if (auth === "permission" && !hasPermission(session.user, permission as Permission)) {
+    return { ok: false, result: fail("FORBIDDEN", "You do not have access to this.") }
   }
   if (entitlement && !(await hasEntitlement(session.user.id, entitlement))) {
     return { ok: false, result: fail("NOT_ENTITLED", NOT_ENTITLED_MESSAGE) }
@@ -174,7 +200,7 @@ export function defineAction<
 
   const run = async (requestId: string, raw: unknown): Promise<ActionResult<T, C | ActionErrorCode>> => {
     try {
-      const guarded = await guard(def.auth, def.entitlement)
+      const guarded = await guard(def.auth, def.permission, def.entitlement)
       if (!guarded.ok) return guarded.result
       const userId = (guarded.ctx as { session: Session | null }).session?.user?.id
 
@@ -209,7 +235,7 @@ export function defineAction<
       return toActionError(error, def.fallbackError ?? DEFAULT_FALLBACK)
     }
   }
-  return brandAction(action) as Action<S, T, C>
+  return brandAction(action, def.auth === "permission" ? `permission:${def.permission}` : def.auth) as Action<S, T, C>
 }
 
 type AliasDefinition<A extends AuthLevel, S extends z.ZodType | undefined, T, C extends string> = Omit<
@@ -239,6 +265,16 @@ export function adminAction<T, S extends z.ZodType | undefined = undefined, C ex
   def: AliasDefinition<"admin", S, T, C>
 ): Action<S, T, C> {
   return defineAction({ ...def, auth: "admin" })
+}
+
+/**
+ * An action for a signed-in user who holds `permission` (an admin holds every
+ * permission, a role only its own); refuses with `UNAUTHENTICATED` or `FORBIDDEN` otherwise.
+ */
+export function permissionAction<T, S extends z.ZodType | undefined = undefined, C extends string = ActionErrorCode>(
+  def: AliasDefinition<"permission", S, T, C> & { permission: Permission }
+): Action<S, T, C> {
+  return defineAction({ ...def, auth: "permission" })
 }
 
 /**

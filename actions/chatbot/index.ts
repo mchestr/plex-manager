@@ -2,10 +2,13 @@
 
 import { z } from "zod"
 
-import { adminAction } from "@/lib/actions/define-action"
+import { permissionAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionResult } from "@/lib/actions/result"
+import { permissionsFor } from "@/lib/permissions"
+import { consume } from "@/lib/security/rate-limit"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { prisma } from "@/lib/prisma"
+import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { getFormatSettings } from "@/lib/settings/app-settings"
 import { recordIdSchema } from "@/lib/validations/params"
 
@@ -40,17 +43,25 @@ interface ChatReply {
 }
 
 /**
- * One admin assistant turn. Admin-only: the default tool set reads every
- * member's data and spends the admin LLM budget. A `conversationId` must be
- * one of the caller's own conversations. Each admin may send 60 messages an
- * hour, and every LLM call in the turn is checked against the daily spend
- * caps (`lib/llm/budget.ts`).
+ * One assistant turn, for an admin or a role holding `assistant:use`. The tool
+ * list and every tool call are limited to the caller's permissions (admins
+ * hold all), and a role's tool output is scrubbed of credentials. A
+ * `conversationId` must be one of the caller's own conversations. Each caller
+ * may send 60 messages an hour (30 for a role), and every LLM call in the turn
+ * is checked against the daily spend caps (`lib/llm/budget.ts`), where a role
+ * counts against the member cap rather than the admin one.
  */
-export const chatWithAdminBot = adminAction({
+export const chatWithAdminBot = permissionAction({
+  permission: "assistant:use",
   input: chatInputSchema,
   rateLimit: { name: "llm:assistant:admin", by: "user" },
   fallbackError: "Failed to process message",
-  handler: async ({ messages, conversationId }, { userId }): Promise<ActionResult<ChatReply>> => {
+  handler: async ({ messages, conversationId }, { userId, session }): Promise<ActionResult<ChatReply>> => {
+    // A role below admin has its own, lower hourly limit on top of the shared one
+    if (!session.user.isAdmin) {
+      const limit = await consume("llm:assistant:support", userId)
+      if (!limit.ok) return fail("RATE_LIMITED", RATE_LIMITED_MESSAGE, { retryAfterSec: limit.retryAfterSec })
+    }
     if (conversationId) {
       const owned = await prisma.chatConversation.findFirst({
         where: { id: conversationId, userId },
@@ -63,7 +74,9 @@ export const chatWithAdminBot = adminAction({
       userId,
       messages: messages.map((m) => ({ ...m, timestamp: Date.now() })),
       conversationId,
-      isAdmin: true,
+      // Only a real admin gets the admin spend cap and unscrubbed tool output
+      isAdmin: session.user.isAdmin,
+      permissions: permissionsFor(session.user),
       // The admin assistant works in the server zone (P11.17)
       format: await getFormatSettings(),
     })

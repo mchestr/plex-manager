@@ -15,6 +15,7 @@ import { consume, reward } from "@/lib/security/rate-limit"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { readCookie } from "@/lib/security/signed-cookie"
 import { SessionRevokedError } from "@/lib/session-revocation"
+import { parseRole } from "@/lib/permissions"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
@@ -310,6 +311,7 @@ export const authOptions: NextAuthOptions = {
             name: dbUser.name,
             image: dbUser.image,
             isAdmin: dbUser.isAdmin,
+            role: parseRole(dbUser.role),
             sessionVersion: dbUser.sessionVersion,
           }
         } catch (error) {
@@ -439,6 +441,7 @@ export const authOptions: NextAuthOptions = {
             name: dbUser.name,
             image: dbUser.image,
             isAdmin: dbUser.isAdmin,
+            role: parseRole(dbUser.role),
             sessionVersion: dbUser.sessionVersion,
           }
         } catch (error) {
@@ -483,6 +486,7 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email as string
         session.user.image = token.picture as string
         session.user.isAdmin = token.isAdmin as boolean
+        session.user.role = token.role ?? null
       } else {
         logger.warn('Session callback - missing token.sub or session.user', {
           hasTokenSub: !!token.sub,
@@ -506,6 +510,7 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email
         token.picture = user.image
         token.isAdmin = user.isAdmin || false
+        token.role = user.role ?? null
         token.sv = user.sessionVersion
         token.accessLevel = await readAccessLevel(user.id)
         token.checkedAt = Date.now()
@@ -527,7 +532,7 @@ export const authOptions: NextAuthOptions = {
       try {
         dbUser = await prisma.user.findUnique({
           where: { id: userId },
-          select: { isAdmin: true, sessionVersion: true, disabledAt: true },
+          select: { isAdmin: true, role: true, sessionVersion: true, disabledAt: true },
         })
       } catch (error) {
         // On DB error, keep the existing token rather than logging the user
@@ -561,6 +566,7 @@ export const authOptions: NextAuthOptions = {
         })
       }
       token.isAdmin = dbUser.isAdmin
+      token.role = parseRole(dbUser.role)
       token.accessLevel = (await readAccessLevel(userId)) ?? token.accessLevel
       token.checkedAt = Date.now()
       return token

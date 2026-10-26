@@ -8,6 +8,7 @@ import {
   Gift,
   Play,
   RefreshCw,
+  LifeBuoy,
   ShieldOff,
   ShieldPlus,
   UserCheck,
@@ -20,10 +21,10 @@ import type { RowAction } from "@/components/ui/data-table/row-actions"
 import { userDetail, userRewind } from "@/lib/admin/routes"
 import { type UserActionId, type UserActionTarget, userActionIds } from "@/lib/admin/user-actions"
 
-import { ChangeRoleDialog, DisableDialog, RegenerateDialog, RemoveAccessDialog } from "./access-dialogs"
+import { ChangeRoleDialog, DisableDialog, SupportRoleDialog, RegenerateDialog, RemoveAccessDialog } from "./access-dialogs"
 import { CancelSubscriptionDialog, GrantAccessDialog, ToggleExemptDialog } from "./billing-dialogs"
 
-type DialogId = Extract<UserActionId, "regenerate" | "role" | "grant" | "exempt" | "cancel" | "disable" | "removeAccess">
+type DialogId = Extract<UserActionId, "regenerate" | "role" | "supportRole" | "grant" | "exempt" | "cancel" | "disable" | "removeAccess">
 
 interface UseUserActionsOptions {
   /** The season year that View Rewind and Regenerate act on. */
@@ -58,6 +59,10 @@ export function useUserActions({ year, stripeEnabled, stripeDashboardBaseUrl, es
       role: user.isAdmin
         ? { id: "role", label: "Remove admin role...", icon: ShieldOff, onSelect: open("role") }
         : { id: "role", label: "Make admin...", icon: ShieldPlus, onSelect: open("role") },
+      supportRole:
+        user.role === "support"
+          ? { id: "supportRole", label: "Remove Support role...", icon: LifeBuoy, onSelect: open("supportRole") }
+          : { id: "supportRole", label: "Give Support role...", icon: LifeBuoy, onSelect: open("supportRole") },
       grant: { id: "grant", label: "Grant access and exempt...", icon: Gift, onSelect: open("grant") },
       exempt: user.isExempt
         ? { id: "exempt", label: "Remove exemption...", icon: CircleSlash, onSelect: open("exempt") }
@@ -98,6 +103,7 @@ export function useUserActions({ year, stripeEnabled, stripeDashboardBaseUrl, es
     const byId: Record<DialogId, ReactNode> = {
       regenerate: <RegenerateDialog {...props} year={year} estimateCopy={estimateCopy} />,
       role: <ChangeRoleDialog {...props} />,
+      supportRole: <SupportRoleDialog {...props} />,
       grant: <GrantAccessDialog {...props} />,
       exempt: <ToggleExemptDialog {...props} />,
       cancel: <CancelSubscriptionDialog {...props} />,

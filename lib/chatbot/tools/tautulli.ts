@@ -5,6 +5,7 @@ import { type RegisteredTool } from "./types"
 export const TAUTULLI_TOOLS: RegisteredTool[] = [
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     // get_server_info response.data exposes the version + live stream count.
     discordFields: ["result", "tautulli_version", "stream_count"],
@@ -16,6 +17,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     userScoped: true,
     // The executor returns only the caller's own sessions in the Discord
@@ -57,6 +59,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_tautulli_library_stats",
       description: "Get library statistics from Tautulli (movie/show counts, library info)",
@@ -65,6 +68,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_tautulli_library_names",
       description: "Get list of library names from Tautulli",
@@ -73,6 +77,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_tautulli_users",
       description: "Get all users from Tautulli",
@@ -81,6 +86,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_tautulli_watch_history",
       description: "Get watch history from Tautulli",
@@ -101,6 +107,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_tautulli_recently_watched",
       description: "Get recently watched content from Tautulli",
@@ -117,6 +124,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_tautulli_most_watched",
       description: "Get most watched content from Tautulli",
@@ -133,6 +141,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_tautulli_top_users",
       description: "Get top users by watch time from Tautulli",
@@ -149,6 +158,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_tautulli_user_watch_stats",
       description: "Get watch time statistics for a specific user from Tautulli",

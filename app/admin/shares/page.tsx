@@ -8,10 +8,12 @@ import { getFormat } from "@/lib/settings/app-settings"
 import { parseDateRange } from "@/lib/ui/date-range"
 import { parseTableParams } from "@/lib/ui/table-params"
 import { formatPeriod } from "@/lib/utils/day-window"
+import { assertAdmin } from "@/lib/admin"
 
 type Params = Record<string, string | string[] | undefined>
 
 export default async function SharesDashboardPage({ searchParams }: { searchParams: Promise<Params> }) {
+  await assertAdmin()
   const params = await searchParams
   const range = parseDateRange(params)
   const table = parseTableParams(params, { sortable: SHARE_LINK_SORTS, defaultSort: { id: "created", desc: true } })

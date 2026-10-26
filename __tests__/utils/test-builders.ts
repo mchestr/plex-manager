@@ -56,6 +56,7 @@ export const makeAdminUserWithStats = (
   services: ['plex'],
   primaryService: 'plex',
   isAdmin: false,
+  role: null,
   isOwner: false,
   disabledAt: null,
   createdAt: new Date('2024-01-01T00:00:00Z'),
