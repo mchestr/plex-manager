@@ -4,7 +4,7 @@
  * the typed values, and errors show on their fields.
  */
 
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { updateOverseerr } from "@/actions/admin/admin-servers"
@@ -101,7 +101,7 @@ describe("ServiceSection with a SecretInput", () => {
     await user.click(screen.getByTestId("settings-overseerr-save"))
 
     expect(await screen.findByText(message)).toBeInTheDocument()
-    expect(screen.getByTestId("settings-overseerr-secret")).toHaveAttribute("aria-invalid", "true")
+    await waitFor(() => expect(screen.getByTestId("settings-overseerr-secret")).toHaveAttribute("aria-invalid", "true"))
     expect(mockShowError).not.toHaveBeenCalled()
   })
 })
