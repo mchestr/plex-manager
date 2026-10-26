@@ -111,7 +111,7 @@ const PROJECTS = new Set(
   [...fs.readFileSync(path.join(ROOT, "playwright.config.ts"), "utf8").matchAll(/name:\s*'([\w-]+)'/g)].map((m) => m[1]),
 )
 /** Backticked words shaped like a Playwright project name. */
-const PROJECT_NAME = /^(?:chromium|setup-wizard|(?:visual|a11y|light-theme|rewind-(?:visual|a11y|e2e|perf))(?:-[a-z0-9]+)*)$/
+const PROJECT_NAME = /^(?:chromium|setup-wizard|(?:visual|a11y|rewind-(?:visual|a11y|e2e|perf))(?:-[a-z0-9]+)*)$/
 
 /** Whether a `paths` glob matches a file, for `**` and `*`. */
 function globMatches(glob: string, file: string): boolean {

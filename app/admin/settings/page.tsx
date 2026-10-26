@@ -1,7 +1,6 @@
 import Link from "next/link"
 
 import { LastSaved } from "@/components/admin/settings/last-saved"
-import { LightThemeSwitch } from "@/components/admin/settings/light-theme-switch"
 import { RewindSettingsSection } from "@/components/admin/settings/rewind-settings-section"
 import { AiSection } from "@/components/admin/settings/sections/ai-section"
 import { ChannelStatsSection } from "@/components/admin/settings/sections/channel-stats-section"
@@ -193,7 +192,6 @@ export default async function SettingsPage() {
           <PrivacySection status={retention} />
           <SecuritySection status={encryption} serviceRows={<ServiceRowsCheck />} />
           <SystemSection
-            appearance={<LightThemeSwitch enabled={settings.config.lightThemeEnabled} />}
             baseUrl={baseUrl}
             nodeEnv={process.env.NODE_ENV || "development"}
             nodeVersion={process.version}

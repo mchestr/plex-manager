@@ -493,7 +493,6 @@ model Config {
   llmDailyCapPerUserUsd        Float     @default(0.5) // Daily assistant spend per member, server-zone day (P4.20)
   llmDailyCapAdminUsd          Float     @default(5) // Daily assistant spend per admin
   llmDailyCapServerUsd         Float     @default(5) // Daily assistant spend for the whole server
-  lightThemeEnabled            Boolean   @default(false) // Members may pick the light theme (P10.10, ui-design-system 3.3)
   lastRetentionRunAt           DateTime? // When the retention sweep last finished (P11.14)
   lastRetentionSummary         Json? // That run's per-rule counts (P11.14)
   discordStatsEnabled          Boolean   @default(false) // Rename Discord channels with live server stats

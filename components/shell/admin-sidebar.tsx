@@ -24,7 +24,6 @@ import {
   type NavCounts,
 } from "@/lib/admin/nav"
 import type { AdminShellUser } from "@/lib/admin/shell"
-import { useAppearance } from "@/lib/appearance-context"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 
@@ -33,10 +32,8 @@ const itemClasses = cn(
   "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
 )
 
-/** The Appearance menu beside Sign out, only while the light theme's flag is on (P10.10). */
+/** The Appearance menu beside Sign out (P10.10). */
 function AppearanceMenu() {
-  const { enabled } = useAppearance()
-  if (!enabled) return null
   return (
     <DropdownMenu>
       <RailTip label="Appearance">

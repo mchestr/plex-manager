@@ -338,7 +338,7 @@ describe('Component', () => {
   - `chromium` (every functional spec) and `setup-wizard` (the wizard and its axe scan, which reopen setup);
   - `rewind-e2e-chromium`, `rewind-e2e-webkit` and `rewind-e2e-firefox` (`e2e/rewind/*.spec.ts`; Firefox runs the share page and archive specs), and `rewind-a11y-chromium`, `rewind-a11y-webkit` and `rewind-a11y-firefox` (`e2e/a11y/rewind*.a11y.spec.ts`; Firefox only the `@article` tests);
   - `rewind-perf` (`e2e/perf/*.perf.spec.ts`, chromium: the 4x-throttled long-task gate, the 110 KB first-page budget and the admin chart budget);
-  - screenshots: `visual-desktop`, `visual-mobile`, `visual-setup-desktop`, `visual-setup-mobile`, the `rewind-visual-*` phone and desktop projects (chromium and webkit), and the light-theme projects (`visual-light-*`, `a11y-light`) behind `light-theme-setup`. See `e2e/visual/README.md`
+  - screenshots: `visual-desktop`, `visual-mobile`, `visual-setup-desktop`, `visual-setup-mobile`, the `rewind-visual-*` phone and desktop projects (chromium and webkit), and the light-theme projects (`visual-light-*`, `a11y-light`). See `e2e/visual/README.md`
 - **Auth fixtures** - Import `test` and `expect` from `e2e/fixtures/auth.ts` (`adminPage`, `regularUserPage`) or `e2e/fixtures/session.ts` (`signIn`); both mint the NextAuth session cookie, so they work against `next dev` and a production build. There is no test-token login. See `e2e/README.md`
 - **Production mode** - `E2E_SERVER=prod` runs `npm run build:e2e` then `next start`; CI runs every project that way (visual specs and `e2e/production.spec.ts` skip without it). `E2E_PREBUILT=1` skips the build when one already exists
 

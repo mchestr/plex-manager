@@ -27,9 +27,7 @@ console.log(`Running tests on ${baseURL} (${prodServer ? 'production build' : 'n
 const VISUAL_SPECS = /visual\/(member|admin|primitives)\.visual\.spec\.ts$/;
 const VISUAL_SETUP_SPEC = /visual\/setup\.visual\.spec\.ts$/;
 /*
- * The light theme (P10.10): `light-theme-setup` turns the flag on through the
- * settings Switch and its teardown turns it off; the light projects hold the
- * `pm-theme=light` cookie. They run the app screens plus every route in the
+ * The light theme (P10.10): the light projects hold the `pm-theme=light` cookie. They run the app screens plus every route in the
  * axe table, axe itself, and Rewind against the dark Rewind baselines, which
  * proves the Rewind scope does not change with the theme. Not in CI's list;
  * the Visual Baselines workflow's `light` suite takes their baselines.
@@ -178,36 +176,25 @@ export default defineConfig({
       use: visualMobile,
     },
     {
-      name: 'light-theme-setup',
-      testMatch: /light-theme\.setup\.ts$/,
-      teardown: 'light-theme-teardown',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    { name: 'light-theme-teardown', testMatch: /light-theme\.teardown\.ts$/, use: { ...devices['Desktop Chrome'] } },
-    {
       name: 'visual-light-desktop',
       testMatch: [VISUAL_SPECS, LIGHT_ROUTES_SPEC],
-      dependencies: ['light-theme-setup'],
       use: { ...visualDesktop, ...lightTheme },
     },
     {
       name: 'visual-light-mobile',
       testMatch: [VISUAL_SPECS, LIGHT_ROUTES_SPEC],
-      dependencies: ['light-theme-setup'],
       use: { ...visualMobile, ...lightTheme },
     },
     {
       // Compared with the dark phone baselines: the Rewind scope looks the same in both themes.
       name: 'visual-light-rewind',
       testMatch: /visual\/rewind\.spec\.ts$/,
-      dependencies: ['light-theme-setup'],
       snapshotPathTemplate: '{testDir}/visual/__screenshots__/rewind-visual-phone-chromium/{testFilePath}/{arg}{ext}',
       use: { ...devices['Desktop Chrome'], ...rewindPhone, ...lightTheme },
     },
     {
       name: 'a11y-light',
       testMatch: /\/accessibility\.spec\.ts$/,
-      dependencies: ['light-theme-setup'],
       use: { ...devices['Desktop Chrome'], ...lightTheme },
     },
     { name: 'rewind-visual-phone-chromium', testMatch: REWIND_VISUAL_SPECS, use: { ...devices['Desktop Chrome'], ...rewindPhone } },

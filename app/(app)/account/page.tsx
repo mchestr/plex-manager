@@ -9,7 +9,6 @@ import { YourDataSection } from "@/components/account/your-data-section"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
-import { getAppSettings } from "@/lib/settings/app-settings"
 import { discordHandleFor } from "@/lib/member/shell"
 import { getYourData } from "@/lib/member/your-data"
 import { prisma } from "@/lib/prisma"
@@ -44,12 +43,11 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const userId = session.user.id
   const { page } = parseTableParams(await searchParams, { sortable: [], defaultSort: { id: "markedAt", desc: true } })
 
-  const [user, discordHandle, notify, zone, { lightThemeEnabled }, assistantDisclosure, yourData] = await Promise.all([
+  const [user, discordHandle, notify, zone, assistantDisclosure, yourData] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
     discordHandleFor(userId),
     rewindNotify(userId),
     serverZone(),
-    getAppSettings(),
     getAssistantDisclosure(),
     getYourData(userId, page),
   ])
@@ -99,16 +97,14 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           </CardContent>
         </Card>
 
-        {lightThemeEnabled && (
-          <Card data-testid="account-appearance">
-            <CardHeader>
-              <CardTitle as="h2">Appearance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AppearancePicker testId="account-appearance-picker" />
-            </CardContent>
-          </Card>
-        )}
+        <Card data-testid="account-appearance">
+          <CardHeader>
+            <CardTitle as="h2">Appearance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AppearancePicker testId="account-appearance-picker" />
+          </CardContent>
+        </Card>
 
         <YourDataSection
           data={yourData}

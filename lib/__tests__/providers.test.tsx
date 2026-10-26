@@ -9,7 +9,7 @@ describe("Providers", () => {
       <Providers
         format={{ timeZone: "UTC", locale: "en-US" }}
         serverName="Northfield Plex"
-        appearance={{ enabled: false, theme: "dark" }}
+        appearance={{ theme: "dark" }}
       >
         <p>app</p>
       </Providers>
