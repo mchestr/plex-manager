@@ -1,6 +1,7 @@
 import "server-only"
 
 import { type ChatTool } from "@/lib/llm/chat"
+import { type Permission } from "@/lib/permissions"
 import { MEDIA_MARKING_TOOLS } from "./media-marking"
 import { OVERSEERR_TOOLS } from "./overseerr"
 import { PLEX_TOOLS } from "./plex"
@@ -110,6 +111,14 @@ export const DISCORD_SAFE_TOOL_NAMES = new Set<string>(
 export const DISCORD_ADMIN_ONLY_TOOL_NAMES = new Set<string>(
   ALL_TOOLS.filter((tool) => tool.discordAdminOnly).map((tool) => tool.function.name)
 )
+
+/**
+ * The tools a caller holding `permissions` may see and run: those whose
+ * declared permission they hold. An admin holds every permission.
+ */
+export function toolsForPermissions(permissions: ReadonlySet<Permission>): RegisteredTool[] {
+  return ALL_TOOLS.filter((tool) => permissions.has(tool.permission))
+}
 
 /**
  * Look up a registered tool (with its Discord metadata) by name. Returns

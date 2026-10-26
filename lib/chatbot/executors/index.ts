@@ -1,16 +1,18 @@
 import "server-only"
 
 import { type ChatToolCall } from "@/lib/llm/chat"
+import { type Permission } from "@/lib/permissions"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
-import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES } from "../tools/registry"
+import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES, getRegisteredTool } from "../tools/registry"
 import { executeOverseerrTool } from "./overseerr"
 import { executePlexTool } from "./plex"
 import { executeRadarrTool } from "./radarr"
 import { executeSonarrTool } from "./sonarr"
 import { executeTautulliTool } from "./tautulli"
 import { executeMediaMarkingTool } from "./media-marking"
+import { ROLE_TOOL_NOT_PERMITTED, ROLE_TOOL_UNAVAILABLE, scrubForRole } from "./role-scrub"
 import { scrubForDiscord } from "./scrub"
 
 const logger = createLogger("CHATBOT_EXECUTOR")
@@ -119,7 +121,14 @@ export async function executeToolCall(
   context?: string,
   isAdmin?: boolean,
   /** The turn's zone and locale: tool results carry times in it (P11.17). */
-  format?: FormatSettings
+  format?: FormatSettings,
+  /**
+   * The web assistant's caller permissions (`permissionsFor`). Required outside
+   * Discord: a call without them holds none and every tool is refused, so a
+   * new caller cannot reach the executors by forgetting to pass them. A caller
+   * that is not an admin also gets audited calls and scrubbed output.
+   */
+  permissions?: ReadonlySet<Permission>
 ): Promise<string> {
   const toolName = toolCall.function.name
   const rawArgs = toolCall.function.arguments || "{}"
@@ -176,6 +185,33 @@ export async function executeToolCall(
     return DISCORD_TOOL_NOT_PERMITTED
   }
 
+  // Web context: the caller must hold the permission the tool declares. Checked
+  // here, not only in the tool list sent to the model, so a hallucinated or
+  // prompt-injected name (unknown, or a write tool for a read-only role) is
+  // refused before any executor runs. Fail closed: no permissions, no tools.
+  const scoped = context !== "discord" && isAdmin !== true
+  if (context !== "discord") {
+    const required = getRegisteredTool(toolName)?.permission
+    // An unregistered name has no executor, so an admin just gets "Unknown tool" below; anyone else is refused and audited
+    if (required ? !permissions?.has(required) : scoped) {
+      logger.warn("Refusing assistant tool call outside the caller's permissions", {
+        toolName,
+        toolCallId: toolCall.id,
+        userId,
+      })
+      logAuditEvent(AuditEventType.ASSISTANT_TOOL_DENIED, userId ?? "unknown", {
+        toolName,
+        toolCallId: toolCall.id,
+        reason: required ? "missing_permission" : "unknown_tool",
+        ...(required && { required }),
+      })
+      return ROLE_TOOL_NOT_PERMITTED
+    }
+    if (scoped) {
+      logAuditEvent(AuditEventType.ASSISTANT_TOOL_CALLED, userId ?? "unknown", { toolName, toolCallId: toolCall.id })
+    }
+  }
+
   // Find the appropriate executor for this tool
   const executor = TOOL_SERVICE_MAP[toolName]
 
@@ -215,6 +251,11 @@ export async function executeToolCall(
         return DISCORD_TOOL_UNAVAILABLE
       }
       return scrubForDiscord(toolName, result)
+    }
+
+    // A role below admin: no upstream error text, and no credentials in the data
+    if (scoped) {
+      return isToolError(result) ? ROLE_TOOL_UNAVAILABLE : scrubForRole(result)
     }
 
     return result

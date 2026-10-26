@@ -10,6 +10,9 @@
 
 import { executeToolCall } from ".."
 import { executeTautulliTool } from "../tautulli"
+import { permissionsFor } from "@/lib/permissions"
+
+const ADMIN = permissionsFor({ isAdmin: true })
 
 jest.mock("../tautulli", () => ({ executeTautulliTool: jest.fn() }))
 jest.mock("../plex", () => ({ executePlexTool: jest.fn() }))
@@ -72,7 +75,7 @@ describe("executeToolCall - Discord output scrubbing", () => {
   })
 
   it("returns unscrubbed output in the default (admin) context", async () => {
-    const result = await executeToolCall(toolCall("get_tautulli_status"), "user-1", "default")
+    const result = await executeToolCall(toolCall("get_tautulli_status"), "user-1", "default", true, undefined, ADMIN)
 
     expect(result).toBe(PII_STATUS)
     expect(result).toContain("alice@example.com")
@@ -80,7 +83,7 @@ describe("executeToolCall - Discord output scrubbing", () => {
   })
 
   it("returns unscrubbed output when no context is provided (admin default)", async () => {
-    const result = await executeToolCall(toolCall("get_tautulli_status"), "user-1")
+    const result = await executeToolCall(toolCall("get_tautulli_status"), "user-1", undefined, true, undefined, ADMIN)
 
     expect(result).toBe(PII_STATUS)
     expect(result).toContain("alice@example.com")

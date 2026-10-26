@@ -1,5 +1,6 @@
 "use client"
 
+import { useAdminNav } from "@/components/shell/admin-nav-context"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
@@ -7,7 +8,7 @@ import { useState } from "react"
 import { AdminNavList } from "@/components/shell/admin-nav-list"
 import { Icon } from "@/components/ui/icon"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { ADMIN_NAV, isActive, isTabActive, mobileTabs, type NavCounts } from "@/lib/admin/nav"
+import { isActive, isTabActive, mobileTabs, type NavCounts } from "@/lib/admin/nav"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 
@@ -26,9 +27,10 @@ const activeTab = "text-foreground before:bg-primary-indicator"
 export function AdminTabBar({ navCounts }: { navCounts: NavCounts }) {
   const pathname = usePathname() ?? "/admin"
   const [open, setOpen] = useState(false)
-  const tabs = mobileTabs()
+  const { items } = useAdminNav()
+  const tabs = mobileTabs(items)
   const linked = tabs.flatMap((tab) => (tab.kind === "link" ? tab.covers : []))
-  const moreActive = ADMIN_NAV.some((item) => isActive(item, pathname) && !linked.includes(item))
+  const moreActive = items.some((item) => isActive(item, pathname) && !linked.includes(item))
   const failed = (navCounts.failedJobs ?? 0) > 0
 
   return (

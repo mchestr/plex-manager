@@ -3,6 +3,7 @@
  * sheet, the failed-jobs dot, sign out and when the assistant appears.
  */
 
+import { ADMIN_NAV } from '@/lib/admin/nav'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe, toHaveNoViolations } from 'jest-axe'
@@ -37,6 +38,8 @@ function renderShell({ counts = { users: 7, activeInvites: 3, failedJobs: 0 }, a
       user={{ name: 'Dana Whitfield', initials: 'DW' }}
       navCounts={counts}
       assistant={assistant}
+      navIds={ADMIN_NAV.map((item) => item.id)}
+      scoped={false}
     >
       <p>Page</p>
     </AdminShell>
@@ -190,6 +193,8 @@ describe('AdminShell', () => {
             user={{ name: 'Dana Whitfield', initials: 'DW' }}
             navCounts={{ users: 0, activeInvites: 0, failedJobs: 0 }}
             assistant={false}
+            navIds={ADMIN_NAV.map((item) => item.id)}
+            scoped={false}
           >
             <p>Page</p>
           </AdminShell>

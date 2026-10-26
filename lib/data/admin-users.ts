@@ -7,13 +7,14 @@
 
 import "server-only"
 
-import { assertAdmin } from "@/lib/admin"
+import { assertPermission } from "@/lib/admin"
 import { activeRunStarts } from "@/lib/admin/active-runs"
 import { getPlexServerIdentity, getPlexUsers } from "@/lib/connections/plex"
 import { activeShareFor, type PlexTvUser } from "@/lib/connections/plex-tv-users"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { usageTotalsByUser, usageTotalsForWrapped } from "@/lib/llm/usage-totals"
 import { memberServices, primaryService } from "@/lib/members/service"
+import { parseRole } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import type { AdminUsersList, AdminUserWithWrappedStats, PlexAccessCheck } from "@/types/admin"
@@ -31,8 +32,8 @@ const logger = createLogger("ADMIN_USERS")
  * an empty list.
  */
 export async function getAllUsersWithWrapped(year: number): Promise<AdminUsersList> {
-  // Admin-only: enumerates every user's PII.
-  await assertAdmin()
+  // Enumerates every user's PII: an admin, or a role that holds users:read
+  await assertPermission("users:read")
 
   const users = await fetchUsersWithWrappedData(year)
   const userIds = users.map((u) => u.id)
@@ -63,6 +64,7 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUsersLi
       services: memberServices(user),
       primaryService: primaryService(user),
       isAdmin: user.isAdmin,
+      role: parseRole(user.role),
       isOwner: Boolean(ownerPlexId && user.plexUserId && String(user.plexUserId).trim() === ownerPlexId),
       disabledAt: user.disabledAt,
       createdAt: user.createdAt,

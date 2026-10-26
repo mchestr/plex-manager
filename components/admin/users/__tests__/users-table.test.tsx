@@ -131,6 +131,7 @@ describe('UsersTable', () => {
       'View Rewind 2026',
       'Regenerate Rewind...',
       'Make admin...',
+      'Give Support role...',
       'Disable account...',
       'Remove Plex access...',
     ])

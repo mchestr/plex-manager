@@ -92,7 +92,7 @@ describe('JWT callback session version (P4.7)', () => {
 
     expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
       where: { id: 'user-1' },
-      select: { isAdmin: true, sessionVersion: true, disabledAt: true },
+      select: { isAdmin: true, role: true, sessionVersion: true, disabledAt: true },
     })
   })
 

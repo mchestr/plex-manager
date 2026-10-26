@@ -30,7 +30,7 @@ import "server-only"
 
 import { z } from "zod"
 
-import { brandAction } from "@/lib/actions/define-action"
+import { actionAuthOf, brandAction } from "@/lib/actions/define-action"
 import type { FormState } from "@/lib/actions/form-state"
 import type { ActionResult } from "@/lib/actions/result"
 
@@ -56,26 +56,29 @@ export function formAction<S extends z.ZodType, I, T, C extends string>(
   action: (input: I) => Promise<ActionResult<T, C>>,
   { schema, toInput, keep }: FormActionOptions<S, I>
 ): (previous: FormState<T>, form: FormData) => Promise<FormState<T>> {
-  return brandAction(async (_previous: FormState<T>, form: FormData): Promise<FormState<T>> => {
-    const fields = fieldsOf(form)
-    const values = Object.fromEntries(keep.map((name) => [name, fields[name] ?? ""]))
+  return brandAction(
+    async (_previous: FormState<T>, form: FormData): Promise<FormState<T>> => {
+      const fields = fieldsOf(form)
+      const values = Object.fromEntries(keep.map((name) => [name, fields[name] ?? ""]))
 
-    const parsed = schema.safeParse(fields)
-    if (!parsed.success) {
-      const { fieldErrors } = z.flattenError(parsed.error)
-      return {
-        status: "error",
-        data: null,
-        error: parsed.error.issues[0]?.message ?? "Check the form",
-        fieldErrors: fieldErrors as Record<string, string[]>,
-        values,
+      const parsed = schema.safeParse(fields)
+      if (!parsed.success) {
+        const { fieldErrors } = z.flattenError(parsed.error)
+        return {
+          status: "error",
+          data: null,
+          error: parsed.error.issues[0]?.message ?? "Check the form",
+          fieldErrors: fieldErrors as Record<string, string[]>,
+          values,
+        }
       }
-    }
 
-    const result = await action(toInput(parsed.data))
-    if (!result.success) {
-      return { status: "error", data: null, error: result.error, fieldErrors: result.fieldErrors ?? {}, values }
-    }
-    return { status: "success", data: result.data, error: null, fieldErrors: {}, values }
-  })
+      const result = await action(toInput(parsed.data))
+      if (!result.success) {
+        return { status: "error", data: null, error: result.error, fieldErrors: result.fieldErrors ?? {}, values }
+      }
+      return { status: "success", data: result.data, error: null, fieldErrors: {}, values }
+    },
+    actionAuthOf(action)
+  )
 }

@@ -88,6 +88,8 @@ interface UsersTableProps {
   estimateCopy: string
   /** The Unknown sub-line while Plex is down: "Last checked 2 minutes ago". */
   unknownSub?: string
+  /** A role without admin rights: no member actions and no link to the usage pages. */
+  readOnly?: boolean
 }
 
 /**
@@ -95,7 +97,7 @@ interface UsersTableProps {
  * the admin list pages. URL-driven filters and sort, a menu of every member
  * action headed with the member's name, and both EmptyState kinds.
  */
-export function UsersTable({ rows, total, memberCount, page, pageSize, sort, year, stripeEnabled, stripeDashboardBaseUrl, estimateCopy, unknownSub }: UsersTableProps) {
+export function UsersTable({ rows, total, memberCount, page, pageSize, sort, year, stripeEnabled, stripeDashboardBaseUrl, estimateCopy, unknownSub, readOnly = false }: UsersTableProps) {
   const f = useFormat()
   const { replace } = useReplaceParams()
   const [now] = useState(() => Date.now())
@@ -115,6 +117,7 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
       cell: ({ row }) => {
         const usage = row.original.totalLlmUsage
         if (!usage) return <span className="text-muted-foreground">–</span>
+        if (readOnly) return f.money(usage.cost, "table")
         return (
           <Link data-testid={`admin-users-cost-${row.original.id}`} href={llmUsage({ userId: row.original.id })} className="rounded-sm text-foreground hover:underline">
             {f.money(usage.cost, "table")}
@@ -161,7 +164,7 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
         data={rows}
         getRowId={(user) => user.id}
         getRowName={(user) => user.name || user.email || "Unknown member"}
-        rowActions={(user) => actionsFor(listUserTarget(user))}
+        rowActions={readOnly ? undefined : (user) => actionsFor(listUserTarget(user))}
         pagination={{ page, pageSize, total }}
         sort={sort}
         empty={empty}

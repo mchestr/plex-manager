@@ -7,10 +7,12 @@ import { getCostAnalysis } from "@/lib/admin/analytics/cost"
 import { getFormat } from "@/lib/settings/app-settings"
 import { parseDateRange } from "@/lib/ui/date-range"
 import { formatPeriod } from "@/lib/utils/day-window"
+import { assertAdmin } from "@/lib/admin"
 
 type Params = Record<string, string | string[] | undefined>
 
 export default async function CostAnalysisPage({ searchParams }: { searchParams: Promise<Params> }) {
+  await assertAdmin()
   const params = await searchParams
   // `startDate` and `endDate` were the old filter's params; bookmarks keep working.
   const range = parseDateRange(params) ?? parseDateRange(params, { from: "startDate", to: "endDate" })

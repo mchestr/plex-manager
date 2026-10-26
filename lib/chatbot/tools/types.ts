@@ -1,4 +1,5 @@
 import { type ChatTool } from "@/lib/llm/chat"
+import { type Permission } from "@/lib/permissions"
 
 /**
  * A chatbot tool definition enriched with metadata used to derive
@@ -9,6 +10,13 @@ import { type ChatTool } from "@/lib/llm/chat"
  * sends only each tool's name, description and parameters.
  */
 export interface RegisteredTool extends ChatTool {
+  /**
+   * The permission a caller needs to see and run the tool. Every tool declares
+   * one, so a new tool cannot ship without a classification: `read` for a tool
+   * that only reads, `write` for one that changes data (media marking, anything
+   * that deletes, restarts or reconfigures). Admins hold both.
+   */
+  permission: Extract<Permission, "assistant:tools:read" | "assistant:tools:write">
   /**
    * True only for tools that are safe to expose in the public Discord support
    * context. The Discord-safe set is DERIVED from this flag — never maintain a

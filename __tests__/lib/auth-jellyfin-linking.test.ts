@@ -169,6 +169,8 @@ describe('Jellyfin authorize: no email-based account linking', () => {
       name: 'owner@example.com',
       image: null,
       isAdmin: false,
+      role: null,
+      sessionVersion: undefined,
     })
     expect(mockGetJellyfinUserById).toHaveBeenCalledWith(
       { url: JELLYFIN_SERVER.url, apiKey: JELLYFIN_SERVER.apiKey },

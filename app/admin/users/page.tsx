@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/data/session"
 import { getAllUsersWithWrapped } from "@/lib/data/admin-users"
 import { ImportPlexUsersButton } from "@/components/admin/users/import-plex-users-button"
 import { PlexDownAlert } from "@/components/admin/users/plex-down-alert"
@@ -23,7 +24,7 @@ type Params = Record<string, string | string[] | undefined>
 export default async function UsersPage({ searchParams }: { searchParams: Promise<Params> }) {
   // The season year reads the clock: render per request, never at build
   await connection()
-  const [params, seasonYear, f] = await Promise.all([searchParams, getSeasonYear(), getFormat()])
+  const [params, seasonYear, f, session] = await Promise.all([searchParams, getSeasonYear(), getFormat(), getSession()])
   const [{ users, plexCheck }, stripeDashboardBaseUrl, config, estimateCopy] = await Promise.all([
     getAllUsersWithWrapped(seasonYear),
     getStripeDashboardBaseUrl(),
@@ -46,7 +47,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       <PageHeader
         title="Users"
         description="Everyone with an account, with their Plex access, billing and Rewind."
-        actions={<ImportPlexUsersButton />}
+        actions={session?.user.isAdmin ? <ImportPlexUsersButton /> : undefined}
         data-testid="admin-users-header"
       />
       <UsersStatGrid stats={stats} year={seasonYear} stripeEnabled={stripeEnabled} f={f} />
@@ -62,6 +63,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         stripeEnabled={stripeEnabled}
         stripeDashboardBaseUrl={stripeDashboardBaseUrl}
         estimateCopy={estimateCopy}
+        readOnly={!session?.user.isAdmin}
         unknownSub={stats.plexDown ? `Last checked ${checkedAgo}` : undefined}
       />
     </div>

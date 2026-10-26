@@ -11,6 +11,7 @@
  * | `rewind`       | in the users list: the season year's Rewind                   |
  * | `regenerate`   | `canRegenerate` (missing, finished, or stuck past 15 minutes) |
  * | `role`         | not the owner                                                 |
+ * | `supportRole`  | not an admin (assign or remove the Support role)              |
  * | `grant`        | Stripe on, not an admin, not exempt                           |
  * | `exempt`       | Stripe on, not an admin                                       |
  * | `cancel`       | Stripe on, subscription `ACTIVE` or `PAST_DUE`                |
@@ -27,6 +28,7 @@
 
 import { canRegenerate } from "@/lib/admin/can-regenerate"
 import { type PlexAccess, plexAccessOf } from "@/lib/admin/users-filter"
+import type { RoleKey } from "@/lib/permissions"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import type { AdminUserWithWrappedStats } from "@/types/admin"
 import type { AuthService } from "@/types/onboarding"
@@ -40,6 +42,7 @@ export interface UserActionTarget {
   /** Every linked media server, which the grant and cancel dialogs name (P11.11). */
   services: AuthService[]
   isAdmin: boolean
+  role: RoleKey | null
   isOwner: boolean
   disabled: boolean
   plexAccess: PlexAccess
@@ -55,6 +58,7 @@ export type UserActionId =
   | "rewind"
   | "regenerate"
   | "role"
+  | "supportRole"
   | "grant"
   | "exempt"
   | "cancel"
@@ -85,6 +89,7 @@ export function userActionIds(user: UserActionTarget, ctx: UserActionContext): U
     ["rewind", ctx.inList],
     ["regenerate", regenerable],
     ["role", !user.isOwner],
+    ["supportRole", !user.isAdmin],
     ["grant", billing && !user.isAdmin && !user.isExempt],
     ["exempt", billing && !user.isAdmin],
     ["cancel", billing && (user.subscriptionStatus === "ACTIVE" || user.subscriptionStatus === "PAST_DUE")],
@@ -103,6 +108,7 @@ export function listUserTarget(user: AdminUserWithWrappedStats): UserActionTarge
     plexUserId: user.plexUserId,
     services: user.services,
     isAdmin: user.isAdmin,
+    role: user.role,
     isOwner: user.isOwner,
     disabled: user.disabledAt !== null,
     plexAccess: plexAccessOf(user),

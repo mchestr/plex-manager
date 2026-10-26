@@ -7,6 +7,7 @@ import { mockReset } from "jest-mock-extended"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { buildConfig } from "@/__tests__/helpers/factories"
 import { chatWithTools } from "@/lib/llm/chat"
+import { permissionsFor } from "@/lib/permissions"
 import { runChatbotForUser } from "../assistant"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -57,5 +58,40 @@ describe("runChatbotForUser output cap", () => {
     await runChatbotForUser({ userId: "user-1", messages, conversationId: "conv-1", context: "default", format: FORMAT })
 
     expect(mockChatWithTools).toHaveBeenCalledWith(expect.objectContaining({ maxOutputTokens: undefined }))
+  })
+})
+
+describe("runChatbotForUser tool scope", () => {
+  const toolNames = () => (mockChatWithTools.mock.calls[0][0].tools ?? []).map((tool) => tool.function.name)
+
+  it("offers an admin every tool and no access section", async () => {
+    await runChatbotForUser({
+      userId: "admin-1", messages, conversationId: "conv-1", format: FORMAT, isAdmin: true, permissions: permissionsFor({ isAdmin: true }),
+    })
+
+    expect(toolNames()).toContain("mark_media_finished")
+    expect(toolNames()).toContain("get_plex_sessions")
+    expect(mockChatWithTools.mock.calls[0][0].system).not.toContain("YOUR CALLER'S ACCESS")
+  })
+
+  it("offers Support only read tools and tells the model what the caller cannot do", async () => {
+    await runChatbotForUser({
+      userId: "support-1", messages, conversationId: "conv-1", format: FORMAT, isAdmin: false,
+      permissions: permissionsFor({ isAdmin: false, role: "support" }),
+    })
+
+    expect(toolNames()).toContain("get_plex_sessions")
+    expect(toolNames()).not.toContain("mark_media_finished")
+    const system = mockChatWithTools.mock.calls[0][0].system as string
+    expect(system).toContain("YOUR CALLER'S ACCESS")
+    expect(system).toContain("read-only")
+    expect(system).toContain("needs an administrator")
+  })
+
+  it("offers a caller without permissions no tool", async () => {
+    await runChatbotForUser({ userId: "user-1", messages, conversationId: "conv-1", format: FORMAT, isAdmin: false })
+
+    expect(toolNames()).toEqual([])
+    expect(mockChatWithTools.mock.calls[0][0].system).toContain("No tools are available")
   })
 })

@@ -8,6 +8,7 @@ import { render, screen } from '@testing-library/react'
 import LLMUsageDetailPage from '@/app/admin/llm-usage/[usageId]/page'
 import { getLLMUsageById } from '@/lib/data/llm-usage'
 
+jest.mock('@/lib/admin', () => ({ assertAdmin: jest.fn() }))
 jest.mock('@/lib/data/llm-usage', () => ({ getLLMUsageById: jest.fn() }))
 
 jest.mock('next/navigation', () => ({

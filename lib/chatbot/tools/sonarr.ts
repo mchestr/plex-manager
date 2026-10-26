@@ -17,6 +17,7 @@ const SERIES_FILTER_PROPERTIES = {
 export const SONARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     // Executor returns { status, queue, health, disk }. Allowlist the safe leaf
     // keys of each raw sub-payload: version/app info, queue totals, health
@@ -45,6 +46,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "search_sonarr_series",
       description:
@@ -63,6 +65,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     // Server-wide download history reflects what everyone on the server is
     // downloading — admin-only in the Discord context (Step 19).
@@ -112,6 +115,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     // Server-wide download queue reflects what everyone on the server is
     // downloading — admin-only in the Discord context (Step 19).
@@ -144,6 +148,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_sonarr_series",
       description: "Get all TV series currently in the Sonarr library",
@@ -152,6 +157,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_sonarr_series_details",
       description:
@@ -170,6 +176,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_sonarr_episodes",
       description:
@@ -196,6 +203,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_sonarr_episode_details",
       description:
@@ -214,6 +222,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_sonarr_calendar",
       description:
@@ -236,6 +245,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_sonarr_wanted_missing",
       description:
@@ -254,6 +264,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_sonarr_root_folders",
       description: "Get root folders (storage paths) configured in Sonarr",
@@ -262,6 +273,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_sonarr_quality_profiles",
       description: "Get quality profiles configured in Sonarr",

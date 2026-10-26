@@ -5,6 +5,7 @@ import { INVITES_DEFAULT_SORT, INVITES_SORTS, parseInviteFilter } from "@/lib/ad
 import { jellyfinLibraryListing, plexLibraryListing } from "@/lib/admin/invites/libraries"
 import { listInvites } from "@/lib/admin/invites/queries"
 import { parseTableParams } from "@/lib/ui/table-params"
+import { assertAdmin } from "@/lib/admin"
 
 type Params = Record<string, string | string[] | undefined>
 
@@ -15,6 +16,7 @@ type Params = Record<string, string | string[] | undefined>
  * never waits for Plex or Jellyfin.
  */
 export default async function InvitesPage({ searchParams }: { searchParams: Promise<Params> }) {
+  await assertAdmin()
   const params = await searchParams
   const plexLibraries = plexLibraryListing()
   const jellyfinLibraries = jellyfinLibraryListing()

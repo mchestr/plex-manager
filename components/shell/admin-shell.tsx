@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { AssistantSheet } from "@/components/admin/chatbot/assistant-sheet"
 import { ChatProvider } from "@/components/admin/chatbot/chat-context"
 import { CommandMenuProvider } from "@/components/admin/command-menu"
+import { AdminNavProvider } from "@/components/shell/admin-nav-context"
 import { AdminChrome } from "@/components/shell/admin-chrome"
 import { AdminMobileBar } from "@/components/shell/admin-mobile-bar"
 import { AdminSidebar } from "@/components/shell/admin-sidebar"
@@ -23,8 +24,9 @@ export interface AdminShellProps extends AdminShellData {
  * Immersive routes draw their own chrome, so the bars and the assistant
  * step aside there (`ASSISTANT_HIDDEN`).
  */
-export function AdminShell({ serverName, user, navCounts, assistant, children }: AdminShellProps) {
+export function AdminShell({ serverName, user, navCounts, assistant, navIds, scoped, children }: AdminShellProps) {
   return (
+    <AdminNavProvider ids={navIds} scoped={scoped}>
     <ChatProvider>
       <CommandMenuProvider>
         <div className="flex min-h-dvh bg-background" data-testid="admin-shell">
@@ -55,5 +57,6 @@ export function AdminShell({ serverName, user, navCounts, assistant, children }:
         </div>
       </CommandMenuProvider>
     </ChatProvider>
+    </AdminNavProvider>
   )
 }

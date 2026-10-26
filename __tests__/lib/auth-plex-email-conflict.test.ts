@@ -136,7 +136,7 @@ describe('Plex sign-in when another row holds the Plex email (SEC-08)', () => {
 
     const result = await signInWithPlexToken('victim-token')
 
-    expect(result).toEqual({ id: 'victim-row', email: null, name: 'victim', image: null, isAdmin: false })
+    expect(result).toEqual({ id: 'victim-row', email: null, name: 'victim', image: null, isAdmin: false, role: null, sessionVersion: undefined })
     expect(mockUserCreate).toHaveBeenCalledTimes(2)
     expect(mockUserCreate.mock.calls[0][0].data).toMatchObject({ plexUserId: VICTIM.id, email: VICTIM.email })
     const retryData = mockUserCreate.mock.calls[1][0].data
@@ -159,7 +159,7 @@ describe('Plex sign-in when another row holds the Plex email (SEC-08)', () => {
 
     const result = await signInWithPlexToken('victim-token')
 
-    expect(result).toEqual({ id: 'victim-row', email: null, name: 'victim', image: null, isAdmin: false })
+    expect(result).toEqual({ id: 'victim-row', email: null, name: 'victim', image: null, isAdmin: false, role: null, sessionVersion: undefined })
     expect(mockUserUpdate).toHaveBeenCalledTimes(2)
     expect(mockUserUpdate.mock.calls[0][0]).toMatchObject({
       where: { id: 'victim-row' },

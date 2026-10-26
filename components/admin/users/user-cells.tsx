@@ -45,7 +45,7 @@ export function MemberCell({ user }: { user: User }) {
 
 /** Owner and Admin as outline badges, Member as plain text. */
 export function RoleCell({ user }: { user: User }) {
-  return <StatusBadge domain="role" value={user.isOwner ? "owner" : user.isAdmin ? "admin" : "user"} />
+  return <StatusBadge domain="role" value={user.isOwner ? "owner" : user.isAdmin ? "admin" : (user.role ?? "user")} />
 }
 
 const SERVICE_LABEL = { plex: "Plex", jellyfin: "Jellyfin" } as const

@@ -26,6 +26,13 @@ import { createLogger } from "@/lib/utils/logger"
 export enum AuditEventType {
   ADMIN_PRIVILEGE_GRANTED = "ADMIN_PRIVILEGE_GRANTED",
   ADMIN_PRIVILEGE_REVOKED = "ADMIN_PRIVILEGE_REVOKED",
+  // An admin assigned or removed a user's role (lib/permissions). Details carry
+  // the target user id and the previous and new role.
+  USER_ROLE_CHANGED = "USER_ROLE_CHANGED",
+  // A user below admin ran an assistant tool, or was refused one. Details carry
+  // the tool name, call id and (for a refusal) the reason, never arguments or output.
+  ASSISTANT_TOOL_CALLED = "ASSISTANT_TOOL_CALLED",
+  ASSISTANT_TOOL_DENIED = "ASSISTANT_TOOL_DENIED",
   USER_CREATED = "USER_CREATED",
   // Every session of a user was ended (User.sessionVersion bumped). Details carry
   // the reason, such as "unshared", "demoted", "disabled" or "subscription_revoked".
