@@ -12,6 +12,7 @@ import { getStripeProcessor } from "./stripe"
 import { getDiscordRoleProcessor } from "./discord-role"
 import { getRetentionProcessor } from "./retention"
 import { getSecretsProcessor } from "./secrets"
+import { getCommunityStatsProcessor } from "./community-stats"
 
 /**
  * Job processor function type
@@ -51,6 +52,11 @@ export function getJobProcessor(jobType: string): JobProcessor | null {
   const secretsProcessor = getSecretsProcessor(jobType)
   if (secretsProcessor) {
     return secretsProcessor
+  }
+
+  const communityStatsProcessor = getCommunityStatsProcessor(jobType)
+  if (communityStatsProcessor) {
+    return communityStatsProcessor
   }
 
   // Add more processor lookups here as new job types are added

@@ -83,7 +83,7 @@ lib/                    # Utilities, helpers, business logic
 ├── data/              # Server-only admin loaders, each checking assertAdmin() next to its data
 ├── db/                # Encrypted fields and the ?schema= parameter
 ├── design/            # Token mirror of app/globals.css and colour contrast helpers
-├── discord/           # Discord bot, commands and linking
+├── discord/           # Discord bot, commands, linking and stat channels (channel-stats/)
 ├── invites/           # Invite passes and redemption (Plex and Jellyfin)
 ├── llm/               # LLM facade (generateStructured, chatWithTools), provider registry, model table, usage
 ├── locks/             # LeaseLock and LeasePoller (database or Redis leases)
@@ -92,6 +92,7 @@ lib/                    # Utilities, helpers, business logic
 ├── og/                # App icons and the default OG card (next/og)
 │   └── fonts/         # Committed IBM Plex subsets for next/og (scripts/build-og-fonts.py)
 ├── queue/             # BullMQ queues, workers and job processors
+├── request-tiers/     # Request-limit tiers from watch time: tiers, matching, the daily sync, member limits (docs/request-limits.md)
 ├── retention/         # Retention policy and the daily sweep
 ├── rewind/            # Rewind 2026: typesetter, format rules, page registry, cards, article mode
 ├── security/          # Security utilities (rate limiting, encryption, audit logging)

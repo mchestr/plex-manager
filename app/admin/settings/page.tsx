@@ -4,9 +4,11 @@ import { LastSaved } from "@/components/admin/settings/last-saved"
 import { LightThemeSwitch } from "@/components/admin/settings/light-theme-switch"
 import { RewindSettingsSection } from "@/components/admin/settings/rewind-settings-section"
 import { AiSection } from "@/components/admin/settings/sections/ai-section"
+import { ChannelStatsSection } from "@/components/admin/settings/sections/channel-stats-section"
 import { DiscordSection } from "@/components/admin/settings/sections/discord-section"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
 import { PrivacySection } from "@/components/admin/settings/sections/privacy-section"
+import { RequestTiersSection } from "@/components/admin/settings/sections/request-tiers-section"
 import { SecuritySection } from "@/components/admin/settings/sections/security-section"
 import { ServiceSection } from "@/components/admin/settings/sections/service-section"
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
@@ -19,6 +21,7 @@ import { SettingsPageActions } from "@/components/admin/settings/settings-page-a
 import { PageHeader } from "@/components/ui/page-header"
 import { getDiscordOverview } from "@/lib/admin/discord"
 import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
+import { getChannelStatsSettings, getRequestTierSettings } from "@/lib/data/community-stats"
 import { getEncryptionStatus } from "@/lib/data/encryption"
 import { getRetentionStatus } from "@/lib/data/retention"
 import { getRewindSeasonDataPreparedAt } from "@/lib/data/rewind-season"
@@ -64,7 +67,7 @@ export default async function SettingsPage() {
     serverZone(),
     getFormat(),
   ])
-  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, retention] = await Promise.all([
+  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, retention, channelStats, requestTiers] = await Promise.all([
     getRewindSeasonDataPreparedAt(season.seasonYear),
     checkRewindInfra(),
     getRewindLibraries(),
@@ -73,6 +76,8 @@ export default async function SettingsPage() {
     getSettingsAuditMeta(),
     getDiscordOverview(),
     getRetentionStatus(),
+    getChannelStatsSettings(),
+    getRequestTierSettings(),
   ])
   // After the reads above, so it lists every secret they could not decrypt
   const encryption = await getEncryptionStatus()
@@ -96,6 +101,8 @@ export default async function SettingsPage() {
     { id: "discord", label: "Discord", group: "Features", status: health.discord.status },
     { id: "stripe", label: "Stripe billing", group: "Features", status: health.stripe.status },
     { id: "watchlist", label: "Watchlist sync", group: "Features", status: health.watchlist.status },
+    { id: "channel-stats", label: "Discord channel stats", group: "Features" },
+    { id: "request-tiers", label: "Request limits", group: "Features" },
     { id: "rewind", label: "Rewind", group: "Features", status: health.rewind.status },
     { id: "other", label: "Other integrations", group: "More", status: otherStatus },
     { id: "privacy", label: "Privacy", group: "More" },
@@ -141,6 +148,12 @@ export default async function SettingsPage() {
           stats={watchlistStats}
           health={health.watchlist}
           footerMeta={saved("watchlist")}
+        />
+        <ChannelStatsSection saved={channelStats} footerMeta={saved("channelStats")} />
+        <RequestTiersSection
+          saved={requestTiers}
+          startedLabel={requestTiers.lastRun ? f.dateTime(requestTiers.lastRun.startedAt, { zoneLabel: true }) : null}
+          footerMeta={saved("requestTiers")}
         />
         <RewindSettingsSection
           saved={rewindSettingsFromConfig(settings.config)}

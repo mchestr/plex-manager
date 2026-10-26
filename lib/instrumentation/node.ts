@@ -121,7 +121,10 @@ async function startQueueWorker() {
   const { ensureRetentionSchedule } = await import("@/lib/retention/schedule")
   await ensureRetentionSchedule().catch((error) => logger.error("Could not schedule the retention sweep", error))
 
-  // The settings save calls this too, so a change applies without a restart.
+  const { ensureChannelStatsSchedule } = await import("@/lib/discord/channel-stats/schedule")
+  const { ensureRequestTierSchedule } = await import("@/lib/request-tiers/schedule")
+  // The settings saves call these too, so a change applies without a restart.
+  await Promise.all([ensureChannelStatsSchedule(), ensureRequestTierSchedule()])
   await ensureWatchlistSchedule()
 }
 

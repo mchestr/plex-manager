@@ -29,6 +29,10 @@
  *                                    └─ success ───────────────────► editReply with the embed
  * ```
  *
+ * The embed also carries the member's request tier, the requests they have
+ * left and the hours to the next tier ({@link requestLimitFields}) while the
+ * request limits are on; a failed read leaves those fields out.
+ *
  * Audit logging and the generic error fallback are handled by the interaction
  * router / audit wrapper (commandType {@link DiscordCommandType} `CHAT` — the
  * closest fit; there is no dedicated stats audit type).
@@ -40,7 +44,10 @@ import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { isJellyfinOnly, JELLYFIN_COPY } from "@/lib/discord/copy"
 import { getMemberYearStats, memberStatsYear } from "@/lib/discord/stats/member-stats"
 import { hoursOf, type MemberYearStats } from "@/lib/discord/stats/year-stats"
+import type { MemberRequestLimits } from "@/lib/request-tiers/member-limits"
 import { prisma } from "@/lib/prisma"
+import { requestLimitFields } from "@/lib/request-tiers/discord-fields"
+import { getMemberRequestLimits } from "@/lib/request-tiers/member-limits"
 import { formatHour } from "@/lib/rewind/format"
 import { consume } from "@/lib/security/rate-limit"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
@@ -76,7 +83,7 @@ function scrub(value: string): string {
  * app locale (`Config.locale`), for the peak hour (P11.17).
  * @internal
  */
-function buildStatsEmbed(stats: MemberYearStats, locale: string): EmbedBuilder {
+function buildStatsEmbed(stats: MemberYearStats, locale: string, limits: MemberRequestLimits | null): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle("📊 Your Watch Stats")
     .setDescription(
@@ -105,6 +112,8 @@ function buildStatsEmbed(stats: MemberYearStats, locale: string): EmbedBuilder {
       inline: true,
     })
   }
+
+  if (limits) embed.addFields(...requestLimitFields(limits))
 
   return embed
 }
@@ -145,9 +154,11 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
   const { year, zone } = await memberStatsYear(user.timezone)
-  const [result, config] = await Promise.all([
+  const [result, config, limits] = await Promise.all([
     getMemberYearStats(user.id, { year, zone, signal: AbortSignal.timeout(READ_LIMIT_MS) }),
     prisma.config.findUnique({ where: { id: "config" }, select: { locale: true } }),
+    // The embed is still useful without the limits, so a failed read leaves them out
+    getMemberRequestLimits(user.id).catch(() => null),
   ])
 
   if (!result.ok) {
@@ -159,7 +170,7 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
     return
   }
 
-  await interaction.editReply({ embeds: [buildStatsEmbed(result.stats, canonicalLocale(config?.locale))] })
+  await interaction.editReply({ embeds: [buildStatsEmbed(result.stats, canonicalLocale(config?.locale), limits)] })
 }
 
 /**

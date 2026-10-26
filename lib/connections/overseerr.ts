@@ -16,14 +16,14 @@ import { type ConnectionResult } from "@/types/connection";
 
 const logger = createLogger("overseerr");
 
-type OverseerrEndpoint = Pick<OverseerrParsed, "url" | "apiKey">
+export type OverseerrEndpoint = Pick<OverseerrParsed, "url" | "apiKey">
 
 /**
  * One Overseerr API call through `serviceFetch`, authenticated with `X-Api-Key`.
  * `asUser` adds `X-Api-User`, so Overseerr acts as that user: their
  * permissions, auto-approve rules and quotas apply, and they are the requester.
  */
-function overseerrFetch<T>(
+export function overseerrFetch<T>(
   config: OverseerrEndpoint,
   path: string,
   schema: z.ZodType<T>,
@@ -52,7 +52,7 @@ function overseerrFetch<T>(
 const USER_PAGE_SIZE = 100
 
 /** Page `page` (from 0) of `/user`; Overseerr reads `take` and `skip`, and defaults `take` to 10. */
-function userPagePath(page: number): string {
+export function userPagePath(page: number): string {
   return `/user?take=${USER_PAGE_SIZE}&skip=${page * USER_PAGE_SIZE}`
 }
 

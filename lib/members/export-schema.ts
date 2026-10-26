@@ -182,4 +182,5 @@ export const EXPORT_COVERAGE: Record<string, ExportKey | { excluded: string }> =
   InviteUsage: { excluded: "which invite admitted the member; invites are server records" },
   Subscription: "subscription",
   AuditLog: { excluded: "the operator's security record, ids only" },
+  RequestTierRun: { excluded: "the operator's request-limit run history, keyed by Overseerr user, newest 30 runs" },
 }
