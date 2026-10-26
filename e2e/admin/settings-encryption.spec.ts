@@ -61,8 +61,8 @@ test.describe('Settings: encryption at rest', () => {
     await expect(page.getByTestId('settings-tautulli-save')).toBeDisabled();
 
     // The rest of the page still renders
+    await expect(page.getByTestId('settings-retention-windows')).toBeVisible();
     await page.getByTestId('settings-nav-plex').click();
     await expect(page.getByTestId('settings-plex-section')).toBeVisible();
-    await expect(page.getByTestId('settings-retention-windows')).toBeVisible();
   });
 });
