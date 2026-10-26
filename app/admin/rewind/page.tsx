@@ -23,6 +23,7 @@ import { listSeasonMembers } from "@/lib/wrapped/admin/season-members"
 import { lockedModelLabel, REWIND_LOCK, type FrozenRewindModel } from "@/lib/wrapped/freeze/lock"
 import { PROMPT_VERSION } from "@/lib/wrapped/prompt/rewind-2026"
 import { getSeasonState } from "@/lib/wrapped/season"
+import { assertAdmin } from "@/lib/admin"
 
 const EDITIONS = ["full", "pocket", "postcard"]
 const COPY_SOURCES = ["llm", "repair", "mixed", "template"]
@@ -64,6 +65,7 @@ function describePrepare(at: Date, now: number, server: string, zones: string[],
 }
 
 export default async function RewindSeasonPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  await assertAdmin()
   const params = await searchParams
   const now = new Date().getTime()
   const season = await getSeasonState(new Date(now))

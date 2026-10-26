@@ -7,11 +7,12 @@ import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { enqueueRoleSync } from "@/lib/discord/role-sync"
 import { endUserSessions } from "@/lib/session-revocation"
+import { parseRole, roleKeySchema } from "@/lib/permissions"
 import { userIdSchema } from "@/lib/validations/shared-schemas"
 import { z } from "zod"
 
 /** Why an admin action on a user was refused. */
-type UserActionRefusal = "SELF" | "OWNER" | "LAST_ADMIN" | "NOT_FOUND"
+type UserActionRefusal = "SELF" | "OWNER" | "LAST_ADMIN" | "NOT_FOUND" | "ADMIN"
 
 async function revalidateUserPages(userId: string) {
   const { revalidatePath } = await import("next/cache")
@@ -59,7 +60,8 @@ export const updateUserAdminStatus = adminAction({
       }
     }
 
-    await prisma.user.update({ where: { id: userId }, data: { isAdmin } })
+    // An admin holds every permission, so a promotion clears the role: a later demotion must not bring it back
+    await prisma.user.update({ where: { id: userId }, data: isAdmin ? { isAdmin, role: null } : { isAdmin } })
 
     logAuditEvent(isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED, actorId, {
       targetUserId: userId,
@@ -68,6 +70,49 @@ export const updateUserAdminStatus = adminAction({
     })
 
     if (!isAdmin) {
+      await endUserSessions(userId, "demoted", actorId)
+    }
+
+    await revalidateUserPages(userId)
+
+    return ok(null)
+  },
+})
+
+/**
+ * Assign a built-in role to a user, or remove it with `role: null` (admin
+ * only, audited). Only an admin can call it, so a role holder cannot grant
+ * roles, to themselves or anyone. An admin already holds every permission, so
+ * refusing them a role (`ADMIN`) keeps the two kinds of access apart. Removing
+ * a role ends the user's sessions, so the access stops at once; setting the
+ * role the user already has succeeds without a change.
+ */
+export const setUserRole = adminAction({
+  input: z.object({ userId: userIdSchema, role: roleKeySchema.nullable() }),
+  fallbackError: "Failed to update the user's role",
+  handler: async ({ userId, role }, { userId: actorId }): Promise<ActionResult<null, UserActionCode>> => {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true, role: true } })
+    if (!user) {
+      return refused("NOT_FOUND", "User not found")
+    }
+    if (user.isAdmin) {
+      return refused("ADMIN", "Admins already have every permission")
+    }
+
+    const previous = parseRole(user.role)
+    if (previous === role) {
+      return ok(null)
+    }
+
+    await prisma.user.update({ where: { id: userId }, data: { role } })
+
+    logAuditEvent(AuditEventType.USER_ROLE_CHANGED, actorId, {
+      targetUserId: userId,
+      previousRole: previous,
+      newRole: role,
+    })
+
+    if (previous !== null) {
       await endUserSessions(userId, "demoted", actorId)
     }
 

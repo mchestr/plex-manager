@@ -6,10 +6,12 @@
 
 import { setLLMDisabled } from '@/actions/admin/admin-config'
 import { getLLMUsageRecords, getLLMUsageById } from '@/lib/data/llm-usage'
-import { setUserDisabled, updateUserAdminStatus } from '@/actions/admin/admin-users'
+import { setUserDisabled, setUserRole, updateUserAdminStatus } from '@/actions/admin/admin-users'
 import { getConfig } from '@/lib/data/admin-settings'
 import { prisma } from '@/lib/prisma'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
+import { assertPermission } from '@/lib/admin'
+import { authErrorKind } from '@/lib/auth-errors'
 import { getServerSession } from 'next-auth'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -289,6 +291,14 @@ describe('Admin Actions Security', () => {
       expect(result).toMatchObject({ success: false, code: 'SELF' })
     })
 
+    it('clears the role when it promotes a user to admin', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: false, role: 'support' }))
+
+      await updateUserAdminStatus({ userId: 'member-1', isAdmin: true })
+
+      expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'member-1' }, data: { isAdmin: true, role: null } })
+    })
+
     it('demotes another admin and ends their sessions', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: true, plexUserId: 'plex-other' }))
 
@@ -409,3 +419,119 @@ describe('Admin Actions Security', () => {
   })
 })
 
+describe('Roles', () => {
+  const asSupport = () =>
+    (getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'support-1', isAdmin: false, role: 'support' } })
+
+  describe('setUserRole', () => {
+    beforeEach(() => {
+      jest.clearAllMocks()
+      asAdmin()
+      prismaMock.user.updateMany.mockResolvedValue({ count: 1 })
+    })
+
+    it('assigns the Support role and audits it', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: false, role: null }))
+
+      const result = await setUserRole({ userId: 'member-1', role: 'support' })
+
+      expect(result).toEqual({ success: true, data: null })
+      expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'member-1' }, data: { role: 'support' } })
+      expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.USER_ROLE_CHANGED, 'admin-user-id', {
+        targetUserId: 'member-1',
+        previousRole: null,
+        newRole: 'support',
+      })
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+    })
+
+    it('revokes the role, audits it and ends the user\'s sessions', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: false, role: 'support' }))
+
+      const result = await setUserRole({ userId: 'member-1', role: null })
+
+      expect(result).toEqual({ success: true, data: null })
+      expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'member-1' }, data: { role: null } })
+      expect(logAuditEvent).toHaveBeenCalledWith(
+        AuditEventType.USER_ROLE_CHANGED,
+        'admin-user-id',
+        expect.objectContaining({ previousRole: 'support', newRole: null })
+      )
+      expect(prismaMock.user.updateMany).toHaveBeenCalledWith({ where: { id: 'member-1' }, data: { sessionVersion: { increment: 1 } } })
+    })
+
+    it('changes nothing when the user already has the role', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: false, role: 'support' }))
+
+      await expect(setUserRole({ userId: 'member-1', role: 'support' })).resolves.toEqual({ success: true, data: null })
+      expect(prismaMock.user.update).not.toHaveBeenCalled()
+      expect(logAuditEvent).not.toHaveBeenCalled()
+    })
+
+    it('refuses an admin target and an unknown user', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: true }))
+      await expect(setUserRole({ userId: 'member-1', role: 'support' })).resolves.toMatchObject({ success: false, code: 'ADMIN' })
+
+      prismaMock.user.findUnique.mockResolvedValue(null)
+      await expect(setUserRole({ userId: 'member-1', role: 'support' })).resolves.toMatchObject({ success: false, code: 'NOT_FOUND' })
+      expect(prismaMock.user.update).not.toHaveBeenCalled()
+    })
+
+    it('refuses a role that does not exist', async () => {
+      const send = setUserRole as (input: unknown) => ReturnType<typeof setUserRole>
+
+      await expect(send({ userId: 'member-1', role: 'owner' })).resolves.toMatchObject({ success: false, code: 'VALIDATION' })
+    })
+
+    it('refuses signed-out callers, members and Support users, who cannot grant roles even to themselves', async () => {
+      signedOut()
+      await expect(setUserRole({ userId: 'member-1', role: 'support' })).resolves.toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
+
+      asMember()
+      await expect(setUserRole({ userId: 'member-1', role: 'support' })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+
+      asSupport()
+      await expect(setUserRole({ userId: 'support-1', role: 'support' })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      expect(prismaMock.user.update).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('admin-only actions and loaders', () => {
+    it('refuse a Support user', async () => {
+      asSupport()
+
+      await expect(setUserDisabled({ userId: 'member-1', disabled: true })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      await expect(updateUserAdminStatus({ userId: 'member-1', isAdmin: true })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      await expect(setLLMDisabled(true)).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      await expect(getConfig()).rejects.toMatchObject({ digest: expect.any(String) })
+      await expect(getLLMUsageRecords()).rejects.toMatchObject({ digest: expect.any(String) })
+    })
+  })
+
+  describe('assertPermission', () => {
+    it('passes an admin and a role that holds the permission', async () => {
+      asAdmin()
+      await expect(assertPermission('users:read')).resolves.toBeTruthy()
+
+      asSupport()
+      await expect(assertPermission('users:read')).resolves.toBeTruthy()
+    })
+
+    it('throws the forbidden digest for a permission the role lacks and for a member', async () => {
+      asSupport()
+      const lacking = await assertPermission('assistant:tools:write').catch((error: Error & { digest?: string }) => error)
+      expect(authErrorKind(lacking as Error & { digest?: string })).toBe('forbidden')
+
+      asMember()
+      const member = await assertPermission('users:read').catch((error: Error & { digest?: string }) => error)
+      expect(authErrorKind(member as Error & { digest?: string })).toBe('forbidden')
+    })
+
+    it('throws the unauthenticated digest without a session', async () => {
+      signedOut()
+      const error = await assertPermission('users:read').catch((thrown: Error & { digest?: string }) => thrown)
+
+      expect(authErrorKind(error as Error & { digest?: string })).toBe('unauthenticated')
+    })
+  })
+})

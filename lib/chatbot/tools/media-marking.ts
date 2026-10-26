@@ -5,6 +5,7 @@ import { type RegisteredTool } from "./types"
 export const MEDIA_MARKING_TOOLS: RegisteredTool[] = [
   {
     type: "function",
+    permission: "assistant:tools:write",
     discordSafe: true,
     userScoped: true,
     discordPlaintext: true,
@@ -26,6 +27,7 @@ export const MEDIA_MARKING_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:write",
     discordSafe: true,
     userScoped: true,
     discordPlaintext: true,
@@ -47,6 +49,7 @@ export const MEDIA_MARKING_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     userScoped: true,
     discordPlaintext: true,

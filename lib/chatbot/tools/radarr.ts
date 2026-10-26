@@ -17,6 +17,7 @@ const MOVIE_FILTER_PROPERTIES = {
 export const RADARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     // Executor returns { status, queue, health, disk }; mirror the Sonarr
     // allowlist (raw arr v3 shapes are identical).
@@ -43,6 +44,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "search_radarr_movies",
       description:
@@ -61,6 +63,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     // Server-wide download history reflects what everyone on the server is
     // downloading — admin-only in the Discord context (Step 19).
@@ -104,6 +107,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     discordSafe: true,
     // Server-wide download queue reflects what everyone on the server is
     // downloading — admin-only in the Discord context (Step 19).
@@ -134,6 +138,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_radarr_movies",
       description: "Get all movies currently in the Radarr library",
@@ -142,6 +147,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_radarr_movie_details",
       description:
@@ -160,6 +166,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_radarr_calendar",
       description:
@@ -182,6 +189,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_radarr_wanted_missing",
       description:
@@ -200,6 +208,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_radarr_root_folders",
       description: "Get root folders (storage paths) configured in Radarr",
@@ -208,6 +217,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:read",
     function: {
       name: "get_radarr_quality_profiles",
       description: "Get quality profiles configured in Radarr",

@@ -4,6 +4,7 @@ import type { Session } from "next-auth"
 
 import { AUTH_ERROR_DIGESTS, type AuthErrorKind } from "@/lib/auth-errors"
 import { getSession } from "@/lib/data/session"
+import { hasPermission, type Permission } from "@/lib/permissions"
 
 export type AdminGate =
   | { ok: true; session: Session }
@@ -20,6 +21,18 @@ export async function getAdminGate(): Promise<AdminGate> {
   if (!session?.user?.id) return { ok: false, reason: "unauthenticated" }
   if (!session.user.isAdmin) return { ok: false, reason: "forbidden" }
   return { ok: true, session }
+}
+
+/**
+ * The gate for the admin area's layout: an admin, or a role that holds
+ * `assistant:use` or `users:read`. Pages the role may not open check
+ * themselves (`assertAdmin`, `assertPermission`).
+ */
+export async function getAdminAreaGate(): Promise<AdminGate> {
+  const session = await getSession()
+  if (!session?.user?.id) return { ok: false, reason: "unauthenticated" }
+  const entry = session.user.isAdmin || hasPermission(session.user, "assistant:use") || hasPermission(session.user, "users:read")
+  return entry ? { ok: true, session } : { ok: false, reason: "forbidden" }
 }
 
 /** An auth error the error boundaries recognise by its digest (`lib/auth-errors.ts`). */
@@ -42,6 +55,18 @@ export async function assertAdmin(): Promise<Session> {
   const gate = await getAdminGate()
   if (!gate.ok) throw accessError(gate.reason)
   return gate.session
+}
+
+/**
+ * `assertAdmin` for a loader or page a role may also open: passes for an
+ * admin and for a user whose role holds `permission`, with the same
+ * `PM_UNAUTHENTICATED` and `PM_FORBIDDEN` errors otherwise.
+ */
+export async function assertPermission(permission: Permission): Promise<Session> {
+  const session = await getSession()
+  if (!session?.user?.id) throw accessError("unauthenticated")
+  if (!hasPermission(session.user, permission)) throw accessError("forbidden")
+  return session
 }
 
 /**

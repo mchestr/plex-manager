@@ -9,13 +9,13 @@ const target = (overrides: Parameters<typeof makeAdminUserWithStats>[0] = {}) =>
 
 describe('userActionIds', () => {
   it('offers a member everything but billing with Stripe off, the destructive pair last', () => {
-    expect(userActionIds(target(), LIST)).toEqual(['view', 'rewind', 'regenerate', 'role', 'disable', 'removeAccess'])
+    expect(userActionIds(target(), LIST)).toEqual(['view', 'rewind', 'regenerate', 'role', 'supportRole', 'disable', 'removeAccess'])
   })
 
   it('adds Grant, Toggle exempt, Cancel and View in Stripe with Stripe on', () => {
     const user = target({ subscriptionStatus: 'ACTIVE', stripeCustomerId: 'cus_1' })
     expect(userActionIds(user, BILLING)).toEqual([
-      'view', 'rewind', 'regenerate', 'role', 'grant', 'exempt', 'cancel', 'stripe', 'disable', 'removeAccess',
+      'view', 'rewind', 'regenerate', 'role', 'supportRole', 'grant', 'exempt', 'cancel', 'stripe', 'disable', 'removeAccess',
     ])
     expect(userActionIds(target({ isExempt: true, subscriptionStatus: 'CANCELED' }), BILLING)).not.toContain('grant')
     expect(userActionIds(target({ subscriptionStatus: 'CANCELED' }), BILLING)).not.toContain('cancel')

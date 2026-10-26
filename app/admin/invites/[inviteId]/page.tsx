@@ -12,6 +12,7 @@ import { getInviteDetail } from "@/lib/admin/invites/queries"
 import { invitePassFor } from "@/lib/invites/pass"
 import { getFormat } from "@/lib/settings/app-settings"
 import { resolveStatus } from "@/lib/ui/status"
+import { assertAdmin } from "@/lib/admin"
 
 const inviteIdSchema = z.string().min(1).max(64)
 
@@ -20,6 +21,7 @@ const inviteIdSchema = z.string().min(1).max(64)
  * the InvitePass exactly as the invitee sees it (P10.26), and who joined.
  */
 export default async function InviteDetailPage({ params }: { params: Promise<{ inviteId: string }> }) {
+  await assertAdmin()
   const parsed = inviteIdSchema.safeParse((await params).inviteId)
   if (!parsed.success) notFound()
   const invite = await getInviteDetail(parsed.data)

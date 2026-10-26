@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
 import { assertNoSecretKeys } from '@/__tests__/utils/assert-no-secret-keys'
-import { adminAction, defineAction, memberAction, publicAction } from '@/lib/actions/define-action'
+import { actionAuthOf, adminAction, defineAction, memberAction, permissionAction, publicAction } from '@/lib/actions/define-action'
 import { fail, ok } from '@/lib/actions/result'
 import { Prisma } from '@/lib/generated/prisma/client'
 import { actionClientIp, consume } from '@/lib/security/rate-limit'
@@ -40,6 +40,45 @@ function prismaError(code: string) {
     clientVersion: '7.0.0',
   })
 }
+
+describe('permission actions', () => {
+  const handler = jest.fn(async () => ok('done'))
+  const action = permissionAction({ permission: 'users:read', handler })
+  const support = { expires: '2099-01-01', user: { id: 'support-1', isAdmin: false, role: 'support' as const } }
+
+  it.each([
+    ['a signed-out caller', null, 'UNAUTHENTICATED'],
+    ['a member', member, 'FORBIDDEN'],
+  ] as const)('refuses %s with %s', async (_who, who, code) => {
+    session.mockResolvedValue(who)
+
+    await expect(action()).resolves.toMatchObject({ success: false, code })
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('lets a role that holds the permission and every admin through', async () => {
+    session.mockResolvedValue(support)
+    await expect(action()).resolves.toEqual({ success: true, data: 'done' })
+
+    session.mockResolvedValue(admin)
+    await expect(action()).resolves.toEqual({ success: true, data: 'done' })
+  })
+
+  it('refuses a role that lacks the permission', async () => {
+    session.mockResolvedValue(support)
+
+    await expect(permissionAction({ permission: 'assistant:tools:write', handler })()).resolves.toMatchObject({
+      success: false,
+      code: 'FORBIDDEN',
+    })
+  })
+
+  it('records its requirement on the action', () => {
+    expect(actionAuthOf(action)).toBe('permission:users:read')
+    expect(actionAuthOf(adminAction({ handler }))).toBe('admin')
+    expect(actionAuthOf(() => undefined)).toBeUndefined()
+  })
+})
 
 describe('auth levels', () => {
   const handler = jest.fn(async () => ok('done'))

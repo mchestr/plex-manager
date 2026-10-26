@@ -13,6 +13,7 @@ import { LISTED_JOB_STATUSES } from "@/lib/queue/client"
 import { MAIN_QUEUE_JOB_TYPES } from "@/lib/queue/types"
 import { getFormat } from "@/lib/settings/app-settings"
 import { parseTableParams } from "@/lib/ui/table-params"
+import { assertAdmin } from "@/lib/admin"
 
 /** Refresh cadence of the monitoring pages (ui-design-system 6.3). */
 const LIVE_INTERVAL_MS = 10_000
@@ -25,6 +26,7 @@ const filterSchema = z.object({
 type Params = Record<string, string | string[] | undefined>
 
 export default async function QueuesPage({ searchParams }: { searchParams: Promise<Params> }) {
+  await assertAdmin()
   const params = await searchParams
   const renderedAt = new Date().getTime()
   const table = parseTableParams(params, { sortable: ["created"], defaultSort: { id: "created", desc: true } })

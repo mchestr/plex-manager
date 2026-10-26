@@ -36,6 +36,7 @@ function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeader
     primaryService: 'jellyfin',
     jellyfinStatus: 'disabled',
     isAdmin: false,
+    role: null,
     isOwner: false,
     disabledAt: null,
     createdAt: new Date('2025-01-02T00:00:00Z'),

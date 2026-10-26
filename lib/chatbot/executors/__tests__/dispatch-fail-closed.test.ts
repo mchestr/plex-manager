@@ -14,6 +14,9 @@ import { executeTautulliTool } from "../tautulli"
 import { executePlexTool } from "../plex"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { DISCORD_SAFE_TOOL_NAMES } from "../../tools/registry"
+import { permissionsFor } from "@/lib/permissions"
+
+const ADMIN = permissionsFor({ isAdmin: true })
 
 jest.mock("../tautulli", () => ({ executeTautulliTool: jest.fn() }))
 jest.mock("../plex", () => ({ executePlexTool: jest.fn() }))
@@ -104,14 +107,14 @@ describe("executeToolCall - Discord fail-closed dispatch (FR-9)", () => {
   })
 
   it("runs ANY registered tool in the admin (default) context — no denial", async () => {
-    const result = await executeToolCall(toolCall(UNSAFE_TOOL), "user-1", "default")
+    const result = await executeToolCall(toolCall(UNSAFE_TOOL), "user-1", "default", true, undefined, ADMIN)
 
     expect(mockLogAuditEvent).not.toHaveBeenCalled()
     expect(result).not.toBe(JSON.stringify({ error: "tool not permitted" }))
   })
 
   it("runs ANY registered tool when no context is provided — no denial", async () => {
-    await executeToolCall(toolCall(UNSAFE_TOOL), "user-1")
+    await executeToolCall(toolCall(UNSAFE_TOOL), "user-1", undefined, true, undefined, ADMIN)
 
     expect(mockLogAuditEvent).not.toHaveBeenCalled()
   })
@@ -159,7 +162,7 @@ describe("executeToolCall - tool failures never leak error text (SEC-50)", () =>
   it("returns a code-only message, never the error text, when an executor throws in the admin context", async () => {
     mockExecuteTautulliTool.mockRejectedValue(new Error(LEAKY))
 
-    const result = await executeToolCall(toolCall(SAFE_TOOL), "user-1", "default")
+    const result = await executeToolCall(toolCall(SAFE_TOOL), "user-1", "default", true, undefined, ADMIN)
 
     expect(result).toBe("Error: tool execution failed (TOOL_EXECUTION_FAILED).")
   })
@@ -168,6 +171,6 @@ describe("executeToolCall - tool failures never leak error text (SEC-50)", () =>
     const output = JSON.stringify({ error: "Tautulli reported an error" })
     mockExecuteTautulliTool.mockResolvedValue(output)
 
-    expect(await executeToolCall(toolCall(SAFE_TOOL), "user-1", "default")).toBe(output)
+    expect(await executeToolCall(toolCall(SAFE_TOOL), "user-1", "default", true, undefined, ADMIN)).toBe(output)
   })
 })

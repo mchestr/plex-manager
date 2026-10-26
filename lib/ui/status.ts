@@ -72,6 +72,7 @@ export const STATUS = {
   role: {
     owner: { label: "Owner", tone: "outline", mark: icons.owner },
     admin: { label: "Admin", tone: "outline" },
+    support: { label: "Support", tone: "outline" },
     user: { label: "Member", tone: "plain" },
   },
   rewind: {

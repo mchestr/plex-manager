@@ -20,6 +20,7 @@ export function buildUser(overrides: Partial<User> = {}): User {
     jellyfinUserId: null,
     primaryAuthService: 'plex',
     isAdmin: false,
+    role: null,
     onboardingStatus: { plex: false, jellyfin: false },
     isExempt: false,
     exemptNote: null,

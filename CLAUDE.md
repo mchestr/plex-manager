@@ -88,6 +88,7 @@ lib/                    # Utilities, helpers, business logic
 ├── llm/               # LLM facade (generateStructured, chatWithTools), provider registry, model table, usage
 ├── locks/             # LeaseLock and LeasePoller (database or Redis leases)
 ├── members/           # Member service rule, access grant/revoke, offboarding, erase and export
+├── permissions/       # Roles and permissions: isAdmin superuser, the Support role, hasPermission (docs/roles.md)
 ├── observability/     # Request id reader, /api/metrics sources and the Prometheus text writer
 ├── og/                # App icons and the default OG card (next/og)
 │   └── fonts/         # Committed IBM Plex subsets for next/og (scripts/build-og-fonts.py)
@@ -955,6 +956,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - Stripe Subscriptions: See `docs/stripe.md`
 - Deployment, environment variables and moving hosts: See `docs/deployment.md`, `docs/environment.md` and `docs/domain-move.md`
 - Operations (backup, restore, upgrades, encryption keys, worker containers, metrics): See `docs/operations.md`
+- Roles and permissions (Support role, assistant tool gate): See `docs/roles.md`
 - Privacy (personal data inventory, member removal, export, retention): See `docs/privacy.md`
 - Releases and the changelog: See `docs/releasing.md` and `CHANGELOG.md`
 - Rewind season runbook (flags, season open, roll back, final cut): See `docs/rewind.md`

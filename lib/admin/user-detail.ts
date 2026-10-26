@@ -6,6 +6,7 @@
  * @module lib/admin/user-detail
  */
 
+import { parseRole, type RoleKey } from "@/lib/permissions"
 import "server-only"
 
 import { activeRunStarts } from "@/lib/admin/active-runs"
@@ -39,6 +40,7 @@ export interface UserDetailHeaderData {
   /** Null when the member has no Jellyfin account. */
   jellyfinStatus: JellyfinStatus | null
   isAdmin: boolean
+  role: RoleKey | null
   /** The Plex account that set the server up. */
   isOwner: boolean
   disabledAt: Date | null
@@ -108,6 +110,7 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
       jellyfinUserId: true,
       primaryAuthService: true,
       isAdmin: true,
+      role: true,
       disabledAt: true,
       createdAt: true,
       isExempt: true,
@@ -150,6 +153,7 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
     primaryService: primaryService(user),
     jellyfinStatus,
     isAdmin: user.isAdmin,
+    role: parseRole(user.role),
     isOwner: Boolean(user.plexUserId && server?.adminPlexUserId === user.plexUserId),
     disabledAt: user.disabledAt,
     createdAt: user.createdAt,
@@ -178,6 +182,7 @@ export function detailUserTarget(header: UserDetailHeaderData): UserActionTarget
     plexUserId: header.plexUserId,
     services: header.services,
     isAdmin: header.isAdmin,
+    role: header.role,
     isOwner: header.isOwner,
     disabled: header.disabledAt !== null,
     plexAccess: header.plexAccess,

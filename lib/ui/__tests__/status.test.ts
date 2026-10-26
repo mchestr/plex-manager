@@ -24,6 +24,7 @@ const TABLE: Row[] = [
   ["plexAccess", "notShared", "Not shared", "outline", "dot"],
   ["plexAccess", "unknown", "Unknown", "warning", "dot"],
   ["role", "owner", "Owner", "outline", icons.owner],
+  ["role", "support", "Support", "outline", undefined],
   ["role", "admin", "Admin", "outline", undefined],
   ["role", "user", "Member", "plain", undefined],
   ["rewind", "ready", "Ready to watch", "success", "dot"],

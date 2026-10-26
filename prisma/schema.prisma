@@ -22,6 +22,7 @@ model User {
   jellyfinUserId        String?                @unique // Jellyfin user ID (if user was created via Jellyfin invite)
   primaryAuthService    AuthService? // The service the member joined with; written at invite, sign-in and import (P11.10)
   isAdmin               Boolean                @default(false)
+  role                  String? // A built-in non-admin role key (lib/permissions); null = none. An unknown value grants nothing
   onboardingStatus      Json?                  @default("{\"plex\": false, \"jellyfin\": false}") // Track onboarding completion per service
   plexWrapped           PlexWrapped[]
   llmUsage              LLMUsage[]

@@ -1,5 +1,6 @@
 "use client"
 
+import { useAdminNav } from "@/components/shell/admin-nav-context"
 import type { LucideIcon } from "lucide-react"
 import type { Route } from "next"
 import { useRouter } from "next/navigation"
@@ -29,7 +30,6 @@ import {
 import { Icon } from "@/components/ui/icon"
 import { useAdminSearch } from "@/hooks/admin/use-admin-search"
 import { useIsClient } from "@/hooks/use-is-client"
-import { ADMIN_NAV } from "@/lib/admin/nav"
 import { ADMIN_SEARCH_MAX, type AdminSearchResult } from "@/lib/admin/search"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
@@ -183,13 +183,14 @@ function ResultItem({ kind, result, icon, onSelect }: { kind: string; result: Ad
 function CommandMenuBody({ onDone }: { onDone: () => void }) {
   const router = useRouter()
   const [search, setSearch] = useState("")
-  const users = useAdminSearch("users", search)
-  const invites = useAdminSearch("invites", search)
+  const { items, scoped } = useAdminNav()
+  const users = useAdminSearch("users", search, !scoped)
+  const invites = useAdminSearch("invites", search, !scoped)
 
   const term = search.trim().toLowerCase()
   const searching = term.length > 0
-  const destinations = ADMIN_NAV.filter((item) => matches(term, item.label, item.group))
-  const actions = QUICK_ACTIONS.filter((action) => matches(term, action.label))
+  const destinations = items.filter((item) => matches(term, item.label, item.group))
+  const actions = scoped ? [] : QUICK_ACTIONS.filter((action) => matches(term, action.label))
   const settled = users.q === search.trim().slice(0, ADMIN_SEARCH_MAX) && !users.isFetching && !invites.isFetching
 
   const go = (href: Route) => {

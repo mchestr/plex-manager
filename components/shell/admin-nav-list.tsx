@@ -1,5 +1,6 @@
 "use client"
 
+import { useAdminNav } from "@/components/shell/admin-nav-context"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useId } from "react"
@@ -9,7 +10,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import {
-  ADMIN_NAV,
   ADMIN_NAV_GROUPS,
   isActive,
   itemsIn,
@@ -52,7 +52,8 @@ function Row({ item, counts, onNavigate }: { item: AdminNavItem; counts: NavCoun
 export function AdminNavList({ counts, onNavigate }: { counts: NavCounts; onNavigate: () => void }) {
   const signOut = useSignOut()
   const idPrefix = useId()
-  const top = itemsIn(null, ADMIN_NAV)
+  const { items } = useAdminNav()
+  const top = itemsIn(null, items)
 
   return (
     <nav aria-label="Admin" className="flex flex-col gap-4">
@@ -63,13 +64,13 @@ export function AdminNavList({ counts, onNavigate }: { counts: NavCounts; onNavi
           ))}
         </ul>
       )}
-      {ADMIN_NAV_GROUPS.map((group) => (
+      {ADMIN_NAV_GROUPS.filter((group) => itemsIn(group, items).length > 0).map((group) => (
         <section key={group} aria-labelledby={`${idPrefix}-${groupSlug(group)}`}>
           <h3 id={`${idPrefix}-${groupSlug(group)}`} className="mb-1 px-3 text-caption font-medium text-muted-foreground">
             {group}
           </h3>
           <ul className="flex flex-col gap-1">
-            {itemsIn(group, ADMIN_NAV).map((item) => (
+            {itemsIn(group, items).map((item) => (
               <Row key={item.id} item={item} counts={counts} onNavigate={onNavigate} />
             ))}
           </ul>

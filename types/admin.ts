@@ -1,3 +1,4 @@
+import type { RoleKey } from "@/lib/permissions"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import type { SavedSecret } from "@/lib/security/saved-secret"
 import type { AuthService } from "@/types/onboarding"
@@ -25,6 +26,8 @@ export interface AdminUserWithWrappedStats {
   /** The member's own service (`primaryService`). */
   primaryService: AuthService
   isAdmin: boolean
+  /** A built-in non-admin role (`lib/permissions`), or null. */
+  role: RoleKey | null
   /** The Plex account that owns the configured server (`PlexServer.adminPlexUserId`). */
   isOwner: boolean
   /** Set while the account is disabled (P4.7). */
