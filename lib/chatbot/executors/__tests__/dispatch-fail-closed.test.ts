@@ -13,6 +13,7 @@ import { executeToolCall } from ".."
 import { executeTautulliTool } from "../tautulli"
 import { executePlexTool } from "../plex"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { executeMcpTool } from "../../mcp/tools"
 import { DISCORD_SAFE_TOOL_NAMES } from "../../tools/registry"
 import { permissionsFor } from "@/lib/permissions"
 
@@ -24,6 +25,9 @@ jest.mock("../sonarr", () => ({ executeSonarrTool: jest.fn() }))
 jest.mock("../radarr", () => ({ executeRadarrTool: jest.fn() }))
 jest.mock("../overseerr", () => ({ executeOverseerrTool: jest.fn() }))
 jest.mock("../media-marking", () => ({ executeMediaMarkingTool: jest.fn() }))
+jest.mock("../app-data", () => ({ executeAppDataTool: jest.fn() }))
+jest.mock("../knowledge", () => ({ executeKnowledgeTool: jest.fn() }))
+jest.mock("../../mcp/tools", () => ({ MCP_TOOL_PREFIX: "mcp_", executeMcpTool: jest.fn() }))
 
 jest.mock("@/lib/security/audit-log", () => ({
   AuditEventType: { DISCORD_COMMAND_DENIED: "DISCORD_COMMAND_DENIED" },
@@ -172,5 +176,21 @@ describe("executeToolCall - tool failures never leak error text (SEC-50)", () =>
     mockExecuteTautulliTool.mockResolvedValue(output)
 
     expect(await executeToolCall(toolCall(SAFE_TOOL), "user-1", "default", true, undefined, ADMIN)).toBe(output)
+  })
+
+  it("refuses an MCP tool in the discord context before it is routed", async () => {
+    const result = await executeToolCall(toolCall("mcp_memini_search"), "user-1", "discord")
+
+    expect(result).toBe(JSON.stringify({ error: "tool not permitted" }))
+    expect(executeMcpTool).not.toHaveBeenCalled()
+  })
+
+  it("routes an MCP tool in the admin context and hides a thrown error", async () => {
+    jest.mocked(executeMcpTool).mockResolvedValueOnce("found it")
+    expect(await executeToolCall(toolCall("mcp_memini_search"), "admin-1", undefined, true)).toBe("found it")
+    expect(executeMcpTool).toHaveBeenCalledWith("mcp_memini_search", {}, "admin-1")
+
+    jest.mocked(executeMcpTool).mockRejectedValueOnce(new Error("secret detail"))
+    expect(await executeToolCall(toolCall("mcp_memini_search"), "admin-1", undefined, true)).toBe("Error: tool execution failed (TOOL_EXECUTION_FAILED).")
   })
 })

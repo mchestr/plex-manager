@@ -18,6 +18,10 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Added
+
+- **Admin assistant:** read-only tools over the app's own data (`get_app_invites`, `get_app_member`, `get_app_failed_jobs`), MCP servers an admin registers in Settings, Assistant sources (Streamable HTTP, an encrypted auth header, a switch per tool; a tool is off until switched on), and GitHub-backed knowledge bases the assistant searches and cites (`search_knowledge_base`, `read_knowledge_doc`). None of these are available in Discord. See `docs/assistant.md`.
+
 ### Changed
 
 - **Billing statuses:** members who do not pay now read as one state, **Exempt**, in the Users table, the user's Billing tab and `/membership`; admins and the owner read **Not required**. "Comp" and "Grandfathered" are gone from the UI and docs, and "Grant comp access" is now "Grant access and exempt". `User.exemptReason` is now `User.exemptNote`, an optional free-text note shown under the badge. Access rules are unchanged.
@@ -29,6 +33,8 @@ check); the `no-changelog` label skips it.
 ### Upgrade notes
 
 - **Exempt note migration:** `20270119000001_rename_exempt_reason_to_note` renames `User.exemptReason` to `exemptNote`, clears the `comp` and `grandfathered` values, and turns `invite` into `Joined by invite`. Who is exempt does not change.
+- Adds the migration `20270119000004_add_assistant_sources` (the `McpServer` and `KnowledgeSource` tables). Run `npx prisma migrate status` after the upgrade.
+- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds seven migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables` and `20270119000002_add_request_tiers_and_channel_stats`.
 - **Discord stat channels and request limits:** both are off after the upgrade. They replace the Windmill flows `f/mflix/discord_channel_status` and `f/mflix/sync_overseerr_quotas_from_tautulli_watchtime`. In Admin > Settings, turn on "Discord channel stats" (paste each channel's ID) and "Request limits", press "Update now" and "Run now" to check the result, then disable both Windmill schedules so the two do not fight over the channel names and quotas. Members with an Overseerr quota you set by hand: turn on "Set request limits by hand" on their user page before the first run, since the sync overwrites every other matched member's quota. Both jobs need Redis and a worker. See `docs/request-limits.md`.
 - Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds nine migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables`, `20270119000001_rename_exempt_reason_to_note`, `20270119000002_add_request_tiers_and_channel_stats`, `20270119000003_add_user_role` and `20270119000004_drop_prometheus_status`. An install that already applied it under its first name, `20270119000002_add_user_role`, applies the renamed one as a no-op.
 - **Setup claim:** an install whose first-run setup is still unfinished must enter the one-time setup code to continue. Find it with `docker logs <container> | grep 'Setup code'`, or set `SETUP_TOKEN` to at least 16 characters; production refuses to start with a shorter one. Finished installs are unaffected.
