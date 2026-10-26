@@ -187,10 +187,10 @@ describe("executeToolCall - tool failures never leak error text (SEC-50)", () =>
 
   it("routes an MCP tool in the admin context and hides a thrown error", async () => {
     jest.mocked(executeMcpTool).mockResolvedValueOnce("found it")
-    expect(await executeToolCall(toolCall("mcp_memini_search"), "admin-1")).toBe("found it")
+    expect(await executeToolCall(toolCall("mcp_memini_search"), "admin-1", undefined, true)).toBe("found it")
     expect(executeMcpTool).toHaveBeenCalledWith("mcp_memini_search", {}, "admin-1")
 
     jest.mocked(executeMcpTool).mockRejectedValueOnce(new Error("secret detail"))
-    expect(await executeToolCall(toolCall("mcp_memini_search"), "admin-1")).toBe("Error: tool execution failed (TOOL_EXECUTION_FAILED).")
+    expect(await executeToolCall(toolCall("mcp_memini_search"), "admin-1", undefined, true)).toBe("Error: tool execution failed (TOOL_EXECUTION_FAILED).")
   })
 })

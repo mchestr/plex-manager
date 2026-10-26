@@ -219,7 +219,16 @@ export async function executeToolCall(
     }
     if (scoped) {
       logAuditEvent(AuditEventType.ASSISTANT_TOOL_CALLED, userId ?? "unknown", { toolName, toolCallId: toolCall.id })
-import { executeMcpTool, MCP_TOOL_PREFIX } from "../mcp/tools"
+    }
+  }
+
+  // MCP tools are dynamic: the admin enables them per server. A caller without the admin permission was refused above.
+  if (toolName.startsWith(MCP_TOOL_PREFIX)) {
+    try {
+      return await executeMcpTool(toolName, args, userId)
+    } catch (error) {
+      logger.error("Error executing MCP tool", error, { toolName, toolCallId: toolCall.id })
+      return TOOL_EXECUTION_FAILED
     }
   }
 
