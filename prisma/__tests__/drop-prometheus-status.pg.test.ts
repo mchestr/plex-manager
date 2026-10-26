@@ -68,7 +68,7 @@ describePg("drop_prometheus_status migration", (databaseUrl) => {
 
         const rows = await tx.setup.findMany({ where: { id: { startsWith: "dp-" } }, select: { currentStepId: true }, orderBy: { id: "asc" } })
         positions = rows.map((row) => row.currentStepId)
-        tableAfter = await tx.$queryRawUnsafe(`SELECT to_regclass('"Prometheus"') AS found`)
+        tableAfter = await tx.$queryRawUnsafe(`SELECT to_regclass('"Prometheus"')::text AS found`)
         throw new Rollback()
       })
       .catch((error: unknown) => {

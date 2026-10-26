@@ -152,7 +152,7 @@ test.describe('Setup Wizard', () => {
     await claimSetup(page);
     await page.goto('/setup?step=tautulli');
     await atStep(page, 'tautulli');
-    await expect(page.getByTestId('setup-stepper-compact')).toContainText('Step 2 of 9, Tautulli');
+    await expect(page.getByTestId('setup-stepper-compact')).toContainText('Step 2 of 8, Tautulli');
 
     const box = await page.getByTestId('setup-tautulli-name').boundingBox();
     expect(box).not.toBeNull();
