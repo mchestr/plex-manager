@@ -22,6 +22,10 @@ check); the `no-changelog` label skips it.
 
 - **Billing statuses:** members who do not pay now read as one state, **Exempt**, in the Users table, the user's Billing tab and `/membership`; admins and the owner read **Not required**. "Comp" and "Grandfathered" are gone from the UI and docs, and "Grant comp access" is now "Grant access and exempt". `User.exemptReason` is now `User.exemptNote`, an optional free-text note shown under the badge. Access rules are unchanged.
 
+### Fixed
+
+- **404 status after a deploy:** a share link that shares nothing, an invalid Rewind year and a membership page the member lacks now answer 404 from the first request after a new build. Before, they showed the right page with status 200 until an admin saved a setting. The postbuild step (`scripts/build/prerender-status.mjs`) drops the 200 that `next build` stores with each prerendered page, which overrode the 404 proxy.ts sets.
+
 ### Upgrade notes
 
 - **Exempt note migration:** `20270119000001_rename_exempt_reason_to_note` renames `User.exemptReason` to `exemptNote`, clears the `comp` and `grandfathered` values, and turns `invite` into `Joined by invite`. Who is exempt does not change.
