@@ -3,6 +3,7 @@ import "server-only"
 import { type ChatTool } from "@/lib/llm/chat"
 import { type Permission } from "@/lib/permissions"
 import { APP_DATA_TOOLS } from "./app-data"
+import { KNOWLEDGE_TOOLS } from "./knowledge"
 import { MEDIA_MARKING_TOOLS } from "./media-marking"
 import { OVERSEERR_TOOLS } from "./overseerr"
 import { PLEX_TOOLS } from "./plex"
@@ -24,6 +25,7 @@ const REGISTERED_TOOLS: RegisteredTool[] = [
   ...OVERSEERR_TOOLS,
   ...MEDIA_MARKING_TOOLS,
   ...APP_DATA_TOOLS,
+  ...KNOWLEDGE_TOOLS,
 ]
 
 /**
@@ -82,6 +84,8 @@ const TOOL_ORDER: readonly string[] = [
   "get_app_invites",
   "get_app_member",
   "get_app_failed_jobs",
+  "search_knowledge_base",
+  "read_knowledge_doc",
 ]
 
 const TOOLS_BY_NAME = new Map(REGISTERED_TOOLS.map((tool) => [tool.function.name, tool]))

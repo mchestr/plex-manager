@@ -9,6 +9,7 @@ import { type RegisteredTool } from "./types"
 export const APP_DATA_TOOLS: RegisteredTool[] = [
   {
     type: "function",
+    permission: "assistant:tools:admin",
     function: {
       name: "get_app_invites",
       description:
@@ -25,6 +26,7 @@ export const APP_DATA_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:admin",
     function: {
       name: "get_app_member",
       description:
@@ -38,6 +40,7 @@ export const APP_DATA_TOOLS: RegisteredTool[] = [
   },
   {
     type: "function",
+    permission: "assistant:tools:admin",
     function: {
       name: "get_app_failed_jobs",
       description:

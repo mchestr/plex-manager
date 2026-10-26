@@ -64,6 +64,13 @@ describe("chatbot tool registry drift guard", () => {
     }
   })
 
+  it("knowledge base tools are admin-only: registered, never discordSafe", () => {
+    for (const name of ["search_knowledge_base", "read_knowledge_doc"]) {
+      expect(ALL_TOOLS.find((t) => t.function.name === name)).toBeDefined()
+      expect(DISCORD_SAFE_TOOL_NAMES.has(name)).toBe(false)
+    }
+  })
+
   it("DISCORD_SAFE_TOOLS is a subset of ALL_TOOLS", () => {
     const allNames = new Set(ALL_TOOLS.map((tool) => tool.function.name))
     for (const tool of DISCORD_SAFE_TOOLS) {

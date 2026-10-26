@@ -13,6 +13,9 @@ import { runChatbotForUser } from "../assistant"
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/llm/chat", () => ({ chatWithTools: jest.fn() }))
 jest.mock("@/lib/data/assistant-data", () => ({}))
+jest.mock("@/lib/chatbot/mcp/tools", () => ({ loadMcpTools: jest.fn().mockResolvedValue({ tools: [], routes: new Map() }) }))
+jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
+jest.mock("@/lib/admin/queues", () => ({ listQueueJobs: jest.fn() }))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({ debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() })),
 }))

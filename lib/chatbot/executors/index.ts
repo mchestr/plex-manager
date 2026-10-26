@@ -6,7 +6,9 @@ import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES, getRegisteredTool } from "../tools/registry"
+import { executeMcpTool, MCP_TOOL_PREFIX } from "../mcp/tools"
 import { executeAppDataTool } from "./app-data"
+import { executeKnowledgeTool } from "./knowledge"
 import { executeOverseerrTool } from "./overseerr"
 import { executePlexTool } from "./plex"
 import { executeRadarrTool } from "./radarr"
@@ -118,6 +120,9 @@ const TOOL_SERVICE_MAP: Record<string, ToolExecutor> = {
   get_app_invites: executeAppDataTool,
   get_app_member: executeAppDataTool,
   get_app_failed_jobs: executeAppDataTool,
+  // Knowledge base tools (admin only; not Discord-safe)
+  search_knowledge_base: executeKnowledgeTool,
+  read_knowledge_doc: executeKnowledgeTool,
 }
 
 export async function executeToolCall(
@@ -214,6 +219,7 @@ export async function executeToolCall(
     }
     if (scoped) {
       logAuditEvent(AuditEventType.ASSISTANT_TOOL_CALLED, userId ?? "unknown", { toolName, toolCallId: toolCall.id })
+import { executeMcpTool, MCP_TOOL_PREFIX } from "../mcp/tools"
     }
   }
 

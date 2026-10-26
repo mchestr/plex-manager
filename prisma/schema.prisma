@@ -937,3 +937,35 @@ model RequestTierRun {
 
   @@index([startedAt])
 }
+
+// An MCP server the admin assistant can call (Streamable HTTP). A tool is off
+// until the admin turns it on: only names in `enabledTools` reach the model.
+model McpServer {
+  id              String   @id @default(cuid())
+  name            String   @unique // Shown to the admin and used in the tool names (mcp_<slug>_<tool>)
+  url             String // Full URL of the MCP endpoint
+  authHeaderName  String? // e.g. "Authorization" or "X-Api-Key"
+  authHeaderSecret String? // ENCRYPTED: the header's value, e.g. "Bearer ..."
+  isActive        Boolean  @default(true)
+  enabledTools    String[] // MCP tool names the admin turned on
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// A Markdown knowledge base in a GitHub repository the admin assistant searches
+// and cites (for example mchestr/knowledgebase).
+model KnowledgeSource {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  repo      String // owner/name
+  ref       String   @default("main") // Branch, tag or commit
+  path      String   @default("") // Only files under this folder; empty = the whole repo
+  token     String? // ENCRYPTED: a GitHub token for a private repository
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
