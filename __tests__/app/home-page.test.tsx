@@ -52,7 +52,6 @@ jest.mock('@/lib/member/home-data', () => ({
     watchlist: null,
     hasSubscription: false,
     supportChannelUrl: null,
-    uptime: { isConfigured: false, serviceName: '', segments: [], overallStatus: 'unknown' },
     format: { timeZone: 'UTC', locale: 'en-US' },
   })),
 }))

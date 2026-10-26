@@ -3,16 +3,16 @@
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
-import { savePlexServer, savePrometheus, saveRadarr, saveSonarr, saveTautulli, saveOverseerr, testSetupConnection } from "@/actions/setup"
+import { savePlexServer, saveRadarr, saveSonarr, saveTautulli, saveOverseerr, testSetupConnection } from "@/actions/setup"
 import type { TestResult } from "@/components/ui/settings-section"
 import { SERVER_LABELS, secretNoun, type ServerFormErrors, type ServerFormValues, type StoredServer } from "@/hooks/admin/use-server-form"
 import { needsSecretReentry, safeOrigin } from "@/lib/security/saved-secret"
 import { connectionTestCopy, errorCopy, type ConnectionTestCode } from "@/lib/ui/error-copy"
 import { nextStepId, type DevDefaults } from "@/types/setup"
 
-export type SetupServiceKind = "plex" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus"
+export type SetupServiceKind = "plex" | "tautulli" | "overseerr" | "sonarr" | "radarr"
 
-const FIELDS: readonly (keyof ServerFormValues)[] = ["name", "url", "publicUrl", "secret", "query"]
+const FIELDS: readonly (keyof ServerFormValues)[] = ["name", "url", "publicUrl", "secret"]
 
 /** An action's field errors on the form's fields: `token` and `apiKey` are the secret. */
 function formErrors(fieldErrors: Record<string, string[] | undefined> | undefined): ServerFormErrors {
@@ -31,8 +31,6 @@ function save(kind: SetupServiceKind, values: ServerFormValues) {
   switch (kind) {
     case "plex":
       return savePlexServer({ ...base, token: secret, publicUrl })
-    case "prometheus":
-      return savePrometheus({ ...base, query: values.query })
     case "tautulli":
       return saveTautulli({ ...base, apiKey: secret, publicUrl })
     case "overseerr":
@@ -46,14 +44,10 @@ function save(kind: SetupServiceKind, values: ServerFormValues) {
 
 function initialValues(kind: SetupServiceKind, stored: StoredServer | null, devDefaults: DevDefaults): ServerFormValues {
   if (stored) {
-    return { name: stored.name, url: stored.url, publicUrl: stored.publicUrl ?? "", secret: "", query: stored.query ?? "" }
-  }
-  if (kind === "prometheus") {
-    const dev = devDefaults.prometheus
-    return { name: dev?.name ?? "", url: dev?.url ?? "", publicUrl: "", secret: "", query: dev?.query ?? "" }
+    return { name: stored.name, url: stored.url, publicUrl: stored.publicUrl ?? "", secret: "" }
   }
   const dev = devDefaults[kind]
-  return { name: dev?.name ?? "", url: dev?.url ?? "", publicUrl: dev?.publicUrl ?? "", secret: (kind === "plex" ? dev?.token : dev?.apiKey) ?? "", query: "" }
+  return { name: dev?.name ?? "", url: dev?.url ?? "", publicUrl: dev?.publicUrl ?? "", secret: (kind === "plex" ? dev?.token : dev?.apiKey) ?? "" }
 }
 
 /**
@@ -75,7 +69,7 @@ export function useSetupServiceForm(kind: SetupServiceKind, stored: StoredServer
   const noun = secretNoun(kind)
 
   const currentOrigin = safeOrigin(values.url)
-  const blocked = kind !== "prometheus" && needsSecretReentry(stored?.secret, currentOrigin, values.secret)
+  const blocked = needsSecretReentry(stored?.secret, currentOrigin, values.secret)
 
   /** Changes fields and clears their errors and the last test. */
   const set = (patch: Partial<ServerFormValues>) => {
@@ -109,7 +103,6 @@ export function useSetupServiceForm(kind: SetupServiceKind, stored: StoredServer
         service: kind,
         url: values.url,
         secret: values.secret.trim() || undefined,
-        query: kind === "prometheus" ? values.query : undefined,
       })
       if (result.success) {
         if (result.data.status === "unreachable") return failed(result.data.code)

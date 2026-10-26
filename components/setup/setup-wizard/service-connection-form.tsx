@@ -30,10 +30,6 @@ const COPY: Record<Exclude<SetupServiceKind, "plex">, { heading: string; descrip
     heading: "Connect Radarr",
     description: "Radarr shows admins which films are downloading and missing. Find its API key in Radarr under Settings, then General.",
   },
-  prometheus: {
-    heading: "Connect Prometheus",
-    description: "Prometheus tells members whether the server is up. The query should return 1 while Plex is running.",
-  },
 }
 
 interface ServiceFieldsProps {
@@ -95,13 +91,13 @@ interface ServiceConnectionFormProps {
 }
 
 /**
- * Tautulli, Overseerr, Sonarr, Radarr and Prometheus (P10.25, DUP-05): one
+ * Tautulli, Overseerr, Sonarr and Radarr (P10.25, DUP-05): one
  * form on the settings fields and rules, in the step's card.
  */
 export function ServiceConnectionForm({ kind, stored, devDefaults }: ServiceConnectionFormProps) {
   const form = useSetupServiceForm(kind, stored, devDefaults)
   const autoSubmitted = useRef(false)
-  const complete = Boolean(form.values.name.trim() && form.values.url.trim() && (kind === "prometheus" ? form.values.query.trim() : form.values.secret.trim()))
+  const complete = Boolean(form.values.name.trim() && form.values.url.trim() && form.values.secret.trim())
 
   // A real effect: DEV_* auto-submit sends a fully pre-filled form once
   useEffect(() => {

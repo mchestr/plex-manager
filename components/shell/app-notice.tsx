@@ -15,12 +15,6 @@ function NoticeBody({ notice }: { notice: MemberNotice }) {
       return <SubscriptionBanners notice="past-due" />
     case "pending-invite":
       return <SubscriptionBanners notice="pending-invite" jellyfinEnabled={notice.jellyfinEnabled} />
-    case "outage":
-      return (
-        <Alert tone="warning" title={`${notice.serviceName || "The server"} is down`} data-testid="outage-banner">
-          Playback may not work right now. This notice goes away when it is back up.
-        </Alert>
-      )
     case "rewind-ready":
       return (
         <Alert

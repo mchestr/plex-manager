@@ -7,7 +7,6 @@ import { NewOnRow, NewOnRowSkeleton } from "@/components/dashboard/new-on-row"
 import { QuickLinks } from "@/components/dashboard/quick-links"
 import { RequestLimits } from "@/components/dashboard/request-limits"
 import { RewindCard } from "@/components/dashboard/rewind-card"
-import { UptimeStrip } from "@/components/ui/uptime-strip"
 import { WatchlistSyncCard } from "@/components/watchlist/sync-settings-card"
 import { getHomeData } from "@/lib/member/home-data"
 import { requestRewindCardModel } from "@/lib/rewind/home-card"
@@ -20,7 +19,7 @@ interface HomePageProps {
 /**
  * The signed-in home (P10.21), in the order of `home.html`: the greeting, the
  * RewindCard, announcements, the "New on" poster row (Plex members, P10.12),
- * quick links, watchlist sync, request limits, membership and help, then the uptime strip. Two columns from `lg`; below it one column in
+ * quick links, watchlist sync, request limits, membership and help. Two columns from `lg`; below it one column in
  * reading order. Nothing on it animates forever (UI-15).
  */
 export async function HomePage({ userId, isAdmin }: HomePageProps) {
@@ -87,7 +86,6 @@ export async function HomePage({ userId, isAdmin }: HomePageProps) {
           </div>
         </div>
       </div>
-      <UptimeStrip status={data.uptime} settings={data.format} />
     </div>
   )
 }

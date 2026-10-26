@@ -2,6 +2,7 @@ import Link from "next/link"
 
 import { LastSaved } from "@/components/admin/settings/last-saved"
 import { RewindSettingsSection } from "@/components/admin/settings/rewind-settings-section"
+import { AssistantSection } from "@/components/admin/settings/sections/assistant-section"
 import { AiSection } from "@/components/admin/settings/sections/ai-section"
 import { ChannelStatsSection } from "@/components/admin/settings/sections/channel-stats-section"
 import { DiscordSection } from "@/components/admin/settings/sections/discord-section"
@@ -21,6 +22,7 @@ import { PageHeader } from "@/components/ui/page-header"
 import { getDiscordOverview } from "@/lib/admin/discord"
 import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
 import { getChannelStatsSettings, getRequestTierSettings } from "@/lib/data/community-stats"
+import { getAssistantSources } from "@/lib/data/assistant-sources"
 import { getEncryptionStatus } from "@/lib/data/encryption"
 import { getRetentionStatus } from "@/lib/data/retention"
 import { getRewindSeasonDataPreparedAt } from "@/lib/data/rewind-season"
@@ -68,7 +70,7 @@ export default async function SettingsPage() {
     serverZone(),
     getFormat(),
   ])
-  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, retention, channelStats, requestTiers] = await Promise.all([
+  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, retention, channelStats, requestTiers, assistantSources] = await Promise.all([
     getRewindSeasonDataPreparedAt(season.seasonYear),
     checkRewindInfra(),
     getRewindLibraries(),
@@ -79,6 +81,7 @@ export default async function SettingsPage() {
     getRetentionStatus(),
     getChannelStatsSettings(),
     getRequestTierSettings(),
+    getAssistantSources(),
   ])
   // After the reads above, so it lists every secret they could not decrypt
   const encryption = await getEncryptionStatus()
@@ -88,7 +91,6 @@ export default async function SettingsPage() {
     sonarr: settings.sonarr,
     radarr: settings.radarr,
     jellyfin: settings.jellyfinServer,
-    prometheus: settings.prometheus,
   }
   const otherStatus = worstStatus(
     (Object.keys(other) as (keyof typeof other)[]).filter((key) => other[key]).map((key) => health[key].status)
@@ -99,6 +101,7 @@ export default async function SettingsPage() {
     { id: "tautulli", label: "Tautulli", group: "media", status: health.tautulli.status },
     { id: "overseerr", label: "Overseerr", group: "media", status: health.overseerr.status },
     { id: "ai", label: "AI provider", group: "integrations", status: health.ai.status },
+    { id: "assistant", label: "Assistant sources", group: "integrations" },
     { id: "discord", label: "Discord", group: "integrations", status: health.discord.status },
     { id: "stripe", label: "Stripe billing", group: "integrations", status: health.stripe.status },
     { id: "watchlist", label: "Watchlist sync", group: "integrations", status: health.watchlist.status },
@@ -138,6 +141,7 @@ export default async function SettingsPage() {
             health={health.ai}
             footerMeta={saved("ai")}
           />
+          <AssistantSection sources={assistantSources} />
           <DiscordSection
             integration={settings.discordIntegration}
             linkedCount={settings.discordLinkedCount}
@@ -162,7 +166,7 @@ export default async function SettingsPage() {
           <OtherIntegrationsSection
             servers={other}
             jellyfinLogin={settings.jellyfinServer?.enabledForLogin ?? null}
-            health={{ sonarr: health.sonarr, radarr: health.radarr, jellyfin: health.jellyfin, prometheus: health.prometheus }}
+            health={{ sonarr: health.sonarr, radarr: health.radarr, jellyfin: health.jellyfin }}
             footerMeta={saved("other")}
           />
         </SettingsGroup>

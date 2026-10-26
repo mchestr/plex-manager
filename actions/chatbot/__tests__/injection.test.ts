@@ -22,6 +22,7 @@ jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/llm/chat", () => ({ chatWithTools: jest.fn() }))
 jest.mock("@/lib/connections/overseerr", () => ({ getOverseerrUsers: jest.fn(), getOverseerrRequests: jest.fn() }))
+jest.mock("@/lib/admin/queues", () => ({ listQueueJobs: jest.fn() }))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({ debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() })),
 }))
@@ -47,6 +48,7 @@ function turn(partial: Partial<Extract<ChatWithToolsResult, { ok: true }>>): Cha
 
 beforeEach(() => {
   mockReset(prismaMock)
+  prismaMock.mcpServer.findMany.mockResolvedValue([])
   jest.mocked(getServerSession).mockResolvedValue(session)
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: false }))
   // Nothing spent today, so the spend caps let the calls through

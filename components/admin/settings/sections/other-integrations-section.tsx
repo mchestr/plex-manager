@@ -11,16 +11,15 @@ import { StatusBadge } from "@/components/ui/status-badge"
 import { SERVER_LABELS, type StoredServer } from "@/hooks/admin/use-server-form"
 import { worstStatus, type SectionHealth } from "@/lib/settings/connection-status"
 
-type OtherService = "sonarr" | "radarr" | "jellyfin" | "prometheus"
+type OtherService = "sonarr" | "radarr" | "jellyfin"
 
 const DESCRIPTIONS: Record<OtherService, string> = {
   sonarr: "TV library and viewing statistics",
   radarr: "Movie library and viewing statistics",
   jellyfin: "A second media server for members who don't use Plex",
-  prometheus: "The 7-day uptime strip on the home page",
 }
 
-const ORDER: OtherService[] = ["sonarr", "radarr", "jellyfin", "prometheus"]
+const ORDER: OtherService[] = ["sonarr", "radarr", "jellyfin"]
 
 interface OtherIntegrationsSectionProps {
   servers: Record<OtherService, StoredServer | null>
@@ -42,7 +41,7 @@ function rowDescription(type: OtherService, server: StoredServer | null) {
 }
 
 /**
- * Other integrations (6.4): Sonarr, Radarr, Jellyfin and Prometheus as one
+ * Other integrations (6.4): Sonarr, Radarr and Jellyfin as one
  * list card. Each row shows its badge, and Edit or Set up opens its form in a
  * Sheet. The section takes the worst status among the services set up.
  */

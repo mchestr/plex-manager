@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A Next.js-based Plex management platform that combines server management tools, member onboarding and invites, and Rewind, each member's personal year in review (formerly "Wrapped"). Integrates with Plex, Tautulli and Overseerr, with optional Jellyfin sign-in, Sonarr/Radarr, Stripe subscriptions, Discord, Prometheus and LLM providers.
+A Next.js-based Plex management platform that combines server management tools, member onboarding and invites, and Rewind, each member's personal year in review (formerly "Wrapped"). Integrates with Plex, Tautulli and Overseerr, with optional Jellyfin sign-in, Sonarr/Radarr, Stripe subscriptions, Discord and LLM providers.
 
 ## Tech Stack
 
@@ -35,7 +35,7 @@ A Next.js-based Plex management platform that combines server management tools, 
 - **Validation**: All inputs validated with Zod before processing
 - **Cache Components** (`cacheComponents: true`, P11.19): no segment exports `dynamic`, `revalidate`, `fetchCache` or `runtime`; uncached data renders per request
   - Session: `getSession()` from `@/lib/data/session`, never `getServerSession(authOptions)`; active service rows: `getActiveService(kind)` from `@/lib/data/active-service`. Both are React `cache()`d per request
-  - Shared, non-secret data uses `'use cache'` with `cacheTag` and `cacheLife` (`getAppSettings()` tag `app-settings`, Prometheus status, plan names), and the actions that change it call `updateTag(tag)`. The cache is per process, so with several `web` containers another container serves a cached value until its `cacheLife` revalidates; data that must show at once on every container (announcements) is read per request. Readers the bot or jobs also call go through `cachedOrDirect` (`@/lib/utils/use-cache`), and a database read calls `notDuringBuild()` first, since the Docker build has no database
+  - Shared, non-secret data uses `'use cache'` with `cacheTag` and `cacheLife` (`getAppSettings()` tag `app-settings`, plan names), and the actions that change it call `updateTag(tag)`. The cache is per process, so with several `web` containers another container serves a cached value until its `cacheLife` revalidates; data that must show at once on every container (announcements) is read per request. Readers the bot or jobs also call go through `cachedOrDirect` (`@/lib/utils/use-cache`), and a database read calls `notDuringBuild()` first, since the Docker build has no database
   - Never put a row with `ENCRYPTED_FIELDS`, the session or anything viewer-specific inside `'use cache'` (`__tests__/security/use-cache-no-secrets.test.ts`)
   - An action that revalidates already refreshes the page; where the client needs a refresh, the action calls `refresh()` from `next/cache` instead of `router.refresh()`
 
@@ -79,7 +79,7 @@ lib/                    # Utilities, helpers, business logic
 ├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
 ├── charts/            # Chart slot map (var(--chart-n)) and generated text summaries for ChartCard
 ├── chatbot/           # Admin assistant: tools, executors, prompts and the conversation loop (server-only)
-├── connections/       # External API clients (Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr, Prometheus)
+├── connections/       # External API clients (Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr)
 ├── data/              # Server-only admin loaders, each checking assertAdmin() next to its data
 ├── db/                # Encrypted fields and the ?schema= parameter
 ├── design/            # Token mirror of app/globals.css and colour contrast helpers
@@ -284,7 +284,7 @@ Located in `components/ui/`:
 - **Actions**: `Button` (variants `primary`, `secondary`, `outline`, `ghost`, `destructive`, `destructive-solid`, `link`; `loading` and `loadingLabel`), `SubmitButton`, `Toggle`, `SegmentedControl`
 - **Forms**: `Input`, `Textarea`, `SecretInput`, `Select` and its parts, `Checkbox`, `RadioGroup`, `Switch`, `Slider`, `Field`, `FormField`, `Label`, `DateRangeFilter`, `FilterBar`
 - **Overlays**: `Dialog`, `AlertDialog`, `ConfirmDialog` (with `useActionDialog`), `Sheet`, `Popover`, `DropdownMenu`, `Tooltip`, `Command`
-- **Display**: `Card` (compose `CardHeader`, `CardContent`, `CardFooter`), `Badge`, `StatusBadge`, `StatTile`, `DataTable`, `ChartCard`, `Tabs`, `Stepper`, `Poster`, `Time`, `MarkdownBody`, `Icon`, `PageHeader`, `SettingsSection`, `UptimeStrip`, `Wordmark`
+- **Display**: `Card` (compose `CardHeader`, `CardContent`, `CardFooter`), `Badge`, `StatusBadge`, `StatTile`, `DataTable`, `ChartCard`, `Tabs`, `Stepper`, `Poster`, `Time`, `MarkdownBody`, `Icon`, `PageHeader`, `SettingsSection`, `Wordmark`
 - **Feedback**: `Alert`, `useToast`, `Spinner`, `Skeleton`, `EmptyState`, `ErrorState`, `StatusScreen`, `LiveStatus`
 
 ESLint enforces this: a raw `<button>`, `<input>`, `<select>`, `<textarea>` or inline `<svg>` outside `components/ui/**` is an error (`no-restricted-syntax`, selectors in `eslint/restricted-syntax.mjs`). The allowlist is Rewind art (`components/rewind/**`), the dev sheet (`app/dev/**`), the `next/og` image routes and `app/api/**`. The old adapters (`StyledInput`, `StyledDropdown`, `ModalShell`, `ConfirmModal`, `LoadingSpinner` and the rest) are deleted, and importing one is an error.
