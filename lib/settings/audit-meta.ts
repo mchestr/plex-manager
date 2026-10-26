@@ -13,6 +13,7 @@
  * | Discord | `discord` (`DISCORD_INTEGRATION_CONFIG_CHANGED`) |
  * | Stripe billing | `stripe`, `stripe.enabled` |
  * | Watchlist sync, Rewind | `watchlist`, `rewind` |
+ * | Discord channel stats, Request limits | `discord.stats`, `request-tiers` |
  * | Other integrations | `sonarr`, `radarr`, `jellyfin`, `jellyfin.login`, `prometheus` |
  * | System information | `appearance`, `timezone` (`SERVER_TIMEZONE_CHANGED`) |
  *
@@ -35,6 +36,8 @@ const SECTIONS = {
   discord: ["discord"],
   stripe: ["stripe", "stripe.enabled"],
   watchlist: ["watchlist"],
+  channelStats: ["discord.stats"],
+  requestTiers: ["request-tiers"],
   rewind: ["rewind"],
   other: ["sonarr", "radarr", "jellyfin", "jellyfin.login", "prometheus"],
   system: ["appearance", "timezone"],

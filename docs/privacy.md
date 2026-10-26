@@ -63,7 +63,7 @@ What each model of the "Member data" table below becomes in the export (`EXPORT_
 - `DiscordConnection`: `discord` (username, display name, link date), without tokens.
 - `LLMUsage` and `ChatConversation`: `assistantConversations`, the newest 500 assistant calls that still have text, by conversation. Rewind generation rows are not listed; the Rewind they wrote is in `rewinds`.
 - `DiscordCommandLog`: `discordCommands`, metadata only (command, channel type, status, message length, time).
-- Left out, with the reason recorded in `EXPORT_COVERAGE`: `RewindGeneration` (run records; the Rewind is in `rewinds`), `RewindShareVisitDay` (visit counts of a link), `RewindView` (reading progress for the season totals), `WrappedShareVisit` (data about visitors), `DiscordChatSession` (a working copy of the assistant turns), `DiscordOAuthState` and `DiscordPendingSelection` (expire within minutes), `InviteUsage` (which invite admitted the member) and `AuditLog` (the operator's security record).
+- Left out, with the reason recorded in `EXPORT_COVERAGE`: `RewindGeneration` (run records; the Rewind is in `rewinds`), `RewindShareVisitDay` (visit counts of a link), `RewindView` (reading progress for the season totals), `WrappedShareVisit` (data about visitors), `DiscordChatSession` (a working copy of the assistant turns), `DiscordOAuthState` and `DiscordPendingSelection` (expire within minutes), `InviteUsage` (which invite admitted the member), `AuditLog` (the operator's security record) and `RequestTierRun` (the operator's request-limit run history, keyed by Overseerr user).
 
 On the same page a member can delete, one at a time and only their own (`actions/member-data.ts`, 60 an hour):
 
@@ -135,6 +135,7 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `InviteUsage` | which invite the member redeemed, and when | A invite detail | Cascade | No |
 | `Subscription` | Stripe customer and subscription ids, status, plan, period end, cancel date, Plex invite status, Jellyfin access status, access skip code | M status; A users list, billing tab | Stripe subscription cancelled at once, then cascade; the customer id goes to the audit row | No |
 | `AuditLog` | actor and target user ids, event details (ids and counts, never secrets) | none in the app; the operator | Kept (ids only) | No |
+| `RequestTierRun` | per run, each member's Overseerr display name, watch hours, tier and request quota before and after (no foreign key to `User`) | A request limits in settings | Not erased on removal; the daily sync keeps only the newest 30 runs, so a removed member's name leaves within about a month | No |
 
 ### Server data with no member's personal data
 

@@ -4,7 +4,9 @@ import { getUserActivityTimeline } from "@/actions/user-queries"
 import { UserActivityTimeline } from "@/components/admin/users/user-activity-timeline"
 import { ErrorState } from "@/components/ui/error-state"
 import { RemoveMemberDialog } from "@/components/admin/users/detail/remove-member-dialog"
+import { RequestTiersExclusion } from "@/components/admin/users/detail/request-tiers-exclusion"
 import type { UserDetailHeaderData } from "@/lib/admin/user-detail"
+import { prisma } from "@/lib/prisma"
 import type { BoundFormat } from "@/lib/utils/format"
 
 import { JellyfinAccess } from "./jellyfin-access"
@@ -24,7 +26,12 @@ function Item({ label, children, testId }: { label: string; children: ReactNode;
 
 /** The member's account facts, their Jellyfin access (P11.10), their activity timeline (P10.6) and the danger zone (P11.13). */
 export async function OverviewTab({ header, f }: { header: UserDetailHeaderData; f: BoundFormat }) {
-  const timeline = await getUserActivityTimeline({ userId: header.id, pageSize: 10 })
+  const [timeline, tiers] = await Promise.all([
+    getUserActivityTimeline({ userId: header.id, pageSize: 10 }),
+    header.plexUserId
+      ? prisma.user.findUnique({ where: { id: header.id }, select: { requestTiersExcluded: true } })
+      : null,
+  ])
   const { discord } = header
 
   return (
@@ -67,6 +74,8 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
           </>
         )}
       </dl>
+
+      {tiers && <RequestTiersExclusion userId={header.id} name={header.name} excluded={tiers.requestTiersExcluded} />}
 
       <section aria-labelledby="admin-user-activity-heading" className="flex flex-col gap-3">
         <h2 id="admin-user-activity-heading" className="text-h3">

@@ -50,6 +50,7 @@ jest.mock("@/lib/connections/tautulli", () => ({
   tautulliCommand: jest.fn(),
 }))
 jest.mock("@/lib/utils/server-zone", () => ({ serverZone: jest.fn(async () => "America/Chicago") }))
+jest.mock("@/lib/request-tiers/member-limits", () => ({ getMemberRequestLimits: jest.fn(async () => null) }))
 // Spy on the backstop scrubber without replacing its real redaction behaviour.
 jest.mock("@/lib/discord/chat-safety", () => {
   const actual = jest.requireActual("@/lib/discord/chat-safety")
@@ -67,6 +68,8 @@ import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { JELLYFIN_COPY } from "@/lib/discord/copy"
 import type { VerifyDiscordUserResult } from "@/lib/discord/services"
 import { MAX_HISTORY_PAGES } from "@/lib/discord/stats/member-stats"
+import { getMemberRequestLimits, type MemberRequestLimits } from "@/lib/request-tiers/member-limits"
+import { DEFAULT_TIERS, tierProgress } from "@/lib/request-tiers/tiers"
 import { minimalV3 } from "@/lib/wrapped/data/__tests__/v3-row"
 
 import { myStatsCommand } from "../mystats"
@@ -397,5 +400,44 @@ describe("myStatsCommand rate limit (P4.20)", () => {
     await myStatsCommand.handle(ctx)
 
     expect(editReply.mock.calls[0][0].embeds).toHaveLength(1)
+  })
+})
+
+describe("myStatsCommand.handle request limits", () => {
+  const limits: MemberRequestLimits = {
+    tiers: [...DEFAULT_TIERS],
+    hours: 37,
+    progress: tierProgress(37, DEFAULT_TIERS),
+    excluded: false,
+    usage: { movie: { limit: 4, days: 7, used: 1, remaining: 3 }, tv: { limit: 2, days: 7, used: 0, remaining: 2 } },
+  }
+
+  it("adds the tier, the requests left and the next tier to the embed", async () => {
+    jest.mocked(getMemberRequestLimits).mockResolvedValueOnce(limits)
+    const { ctx, editReply } = createMockContext()
+
+    await myStatsCommand.handle(ctx)
+
+    const text = embedText(editReply.mock.calls[0]![0].embeds[0] as EmbedShape)
+    expect(text).toContain("Request tier 2")
+    expect(text).toContain("Movies: 3 of 4 left")
+    expect(text).toContain("13 more hours for tier 3")
+  })
+
+  it("leaves them out when they are off", async () => {
+    const { ctx, editReply } = createMockContext()
+
+    await myStatsCommand.handle(ctx)
+
+    expect(embedText(editReply.mock.calls[0]![0].embeds[0] as EmbedShape)).not.toContain("Request tier")
+  })
+
+  it("still answers when reading them fails", async () => {
+    jest.mocked(getMemberRequestLimits).mockRejectedValueOnce(new Error("overseerr down"))
+    const { ctx, editReply } = createMockContext()
+
+    await myStatsCommand.handle(ctx)
+
+    expect(editReply.mock.calls[0]![0].embeds).toHaveLength(1)
   })
 })

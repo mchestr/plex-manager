@@ -5,6 +5,7 @@ import { HelpCard } from "@/components/dashboard/help-card"
 import { MembershipLinkCard } from "@/components/dashboard/membership-link-card"
 import { NewOnRow, NewOnRowSkeleton } from "@/components/dashboard/new-on-row"
 import { QuickLinks } from "@/components/dashboard/quick-links"
+import { RequestLimits } from "@/components/dashboard/request-limits"
 import { RewindCard } from "@/components/dashboard/rewind-card"
 import { UptimeStrip } from "@/components/ui/uptime-strip"
 import { WatchlistSyncCard } from "@/components/watchlist/sync-settings-card"
@@ -19,7 +20,7 @@ interface HomePageProps {
 /**
  * The signed-in home (P10.21), in the order of `home.html`: the greeting, the
  * RewindCard, announcements, the "New on" poster row (Plex members, P10.12),
- * quick links, watchlist sync, membership and help, then the uptime strip. Two columns from `lg`; below it one column in
+ * quick links, watchlist sync, request limits, membership and help, then the uptime strip. Two columns from `lg`; below it one column in
  * reading order. Nothing on it animates forever (UI-15).
  */
 export async function HomePage({ userId, isAdmin }: HomePageProps) {
@@ -62,6 +63,11 @@ export async function HomePage({ userId, isAdmin }: HomePageProps) {
             </div>
             <div className="order-5 empty:hidden lg:order-none">
               <WatchlistSyncCard initialSettings={data.watchlist} service={data.service} />
+            </div>
+            <div className="order-5 min-w-0 empty:hidden lg:order-none">
+              <Suspense fallback={null}>
+                <RequestLimits userId={userId} />
+              </Suspense>
             </div>
           </div>
           <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-6">

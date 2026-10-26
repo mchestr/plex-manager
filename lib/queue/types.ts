@@ -27,6 +27,9 @@ export const JOB_TYPES = {
   DISCORD_ROLE_RECONCILE: "discord:role:reconcile",
   // The daily retention sweep (P11.14)
   RETENTION_SWEEP: "retention:sweep",
+  // Server stats in Discord channel names, and request limits from watch time
+  DISCORD_CHANNEL_STATS: "discord:channel-stats",
+  REQUEST_TIER_SYNC: "request-tiers:sync",
   // Stored secrets under the primary key (P11.1)
   SECRETS_REENCRYPT: "secrets:reencrypt",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
@@ -62,6 +65,8 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.DISCORD_ROLE_SYNC]: "Discord role sync",
   [JOB_TYPES.DISCORD_ROLE_RECONCILE]: "Discord role check",
   [JOB_TYPES.RETENTION_SWEEP]: "Retention sweep",
+  [JOB_TYPES.DISCORD_CHANNEL_STATS]: "Discord channel stats",
+  [JOB_TYPES.REQUEST_TIER_SYNC]: "Request limit tiers",
   [JOB_TYPES.SECRETS_REENCRYPT]: "Secret re-encryption",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
@@ -87,6 +92,8 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.DISCORD_ROLE_SYNC,
   JOB_TYPES.DISCORD_ROLE_RECONCILE,
   JOB_TYPES.RETENTION_SWEEP,
+  JOB_TYPES.DISCORD_CHANNEL_STATS,
+  JOB_TYPES.REQUEST_TIER_SYNC,
   JOB_TYPES.SECRETS_REENCRYPT,
 ] as const satisfies readonly JobType[]
 
@@ -389,6 +396,8 @@ interface JobPayloads {
   [JOB_TYPES.DISCORD_ROLE_SYNC]: DiscordRoleSyncPayload
   [JOB_TYPES.DISCORD_ROLE_RECONCILE]: Record<string, never>
   [JOB_TYPES.RETENTION_SWEEP]: { triggeredBy: "scheduled" | "admin" }
+  [JOB_TYPES.DISCORD_CHANNEL_STATS]: { triggeredBy: "scheduled" | "admin" }
+  [JOB_TYPES.REQUEST_TIER_SYNC]: { triggeredBy: "scheduled" | "admin" }
   [JOB_TYPES.SECRETS_REENCRYPT]: { triggeredBy: "scheduled" }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
@@ -438,6 +447,8 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   [JOB_TYPES.DISCORD_ROLE_SYNC]: { deduplication: (data) => `discord:role:${data.userId}` },
   [JOB_TYPES.DISCORD_ROLE_RECONCILE]: { deduplication: () => "discord:role:reconcile" },
   [JOB_TYPES.RETENTION_SWEEP]: { deduplication: () => "retention:sweep" },
+  [JOB_TYPES.DISCORD_CHANNEL_STATS]: { deduplication: () => "discord:channel-stats" },
+  [JOB_TYPES.REQUEST_TIER_SYNC]: { deduplication: () => "request-tiers:sync" },
   [JOB_TYPES.SECRETS_REENCRYPT]: { fromCaller: "secrets:reencrypt:<kid>:<fields hash>, from enqueueSecretsReencrypt" },
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
   [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },

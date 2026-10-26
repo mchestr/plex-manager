@@ -39,6 +39,7 @@ model User {
   timezone              String? // IANA zone the member chose for Rewind; null = the server zone
   sessionVersion        Int                    @default(0) // Bumped by endUserSessions(); a JWT carrying another version ends
   disabledAt            DateTime? // Set by an admin; a disabled user cannot sign in and their sessions end
+  requestTiersExcluded  Boolean                @default(false) // The request-tier sync leaves this member's Overseerr quota alone
   announcementsSeenAt   DateTime? // The newest announcement the member has seen; later ones carry the "New" pip
   rewindGenerations     RewindGeneration[]
   rewindPrefs           RewindPrefs[]
@@ -495,6 +496,13 @@ model Config {
   lightThemeEnabled            Boolean   @default(false) // Members may pick the light theme (P10.10, ui-design-system 3.3)
   lastRetentionRunAt           DateTime? // When the retention sweep last finished (P11.14)
   lastRetentionSummary         Json? // That run's per-rule counts (P11.14)
+  discordStatsEnabled          Boolean   @default(false) // Rename Discord channels with live server stats
+  discordStatsIntervalMinutes  Int       @default(10) // Minutes between renames (minimum 10: Discord allows 2 renames per channel in 10 minutes)
+  discordStatsChannels         Json? // { [stat]: { channelId, format } }, validated by lib/discord/channel-stats/config.ts
+  discordStatsLastNames        Json? // { [stat]: name } the channels were last renamed to, so an unchanged name is not sent again
+  requestTiersEnabled          Boolean   @default(false) // Daily Overseerr request limits from Tautulli watch time
+  requestTiersRunHour          Int       @default(0) // Hour of the day (server zone) the tier sync runs
+  requestTiers                 Json? // The tier table; null uses DEFAULT_TIERS (lib/request-tiers/tiers.ts)
   encryptionCanary             String? // A known value under the primary key; boot checks it decrypts (P11.1)
   encryptionFieldsHash         String? // "<kid>:<ENCRYPTED_FIELDS hash>" the last full re-encryption finished under (P11.1)
   updatedAt                    DateTime  @updatedAt
@@ -912,4 +920,20 @@ model AuditLog {
   @@index([createdAt])
   @@index([type, createdAt])
   @@index([targetUserId])
+}
+
+/// One run of the request-tier sync (lib/request-tiers/run.ts): who got which tier and the quota before and after.
+model RequestTierRun {
+  id         String    @id @default(cuid())
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  trigger    String // "scheduled" or "admin"
+  updated    Int       @default(0) // Quotas written to Overseerr
+  unchanged  Int       @default(0) // Quotas already right, so Overseerr was not called
+  failed     Int       @default(0)
+  skipped    Int       @default(0) // Excluded members
+  entries    Json // RequestTierEntry[]
+  error      String? // Set when the run could not start (no Tautulli or Overseerr, say)
+
+  @@index([startedAt])
 }
