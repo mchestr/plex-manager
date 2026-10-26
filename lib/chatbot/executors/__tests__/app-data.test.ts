@@ -1,3 +1,5 @@
+import { z } from "zod"
+
 import { getAssistantFailedJobs, getAssistantInvites, getAssistantMember } from "@/lib/data/assistant-data"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 
@@ -21,7 +23,8 @@ describe("executeAppDataTool", () => {
       count: 1,
       invites: [
         {
-          code: "abc",
+          id: "i1",
+          codeEnd: "abc",
           serverType: "PLEX",
           maxUses: 1,
           useCount: 0,
@@ -52,6 +55,13 @@ describe("executeAppDataTool", () => {
     expect(JSON.parse(await executeAppDataTool("get_app_member", { query: "sam" }, "a"))).toEqual({ found: false })
     expect(getAssistantMember).toHaveBeenCalledWith({ query: "sam" })
     expect(JSON.parse(await executeAppDataTool("get_app_failed_jobs", {}, "a")).total).toBe(0)
+  })
+
+  it("audits before the read and turns invalid arguments into a plain error", async () => {
+    jest.mocked(getAssistantMember).mockImplementation(() => z.object({ query: z.string().min(2) }).parseAsync({ query: "a" }) as never)
+
+    expect(await executeAppDataTool("get_app_member", { query: "a" }, "admin-1")).toBe("Error: Invalid tool arguments")
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.ASSISTANT_DATA_READ, "admin-1", { toolName: "get_app_member" })
   })
 
   it("does not audit an unknown tool", async () => {

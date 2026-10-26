@@ -22,7 +22,7 @@ jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/security/rate-limit", () => ({ consume: jest.fn(), actionClientIp: jest.fn() }))
-jest.mock("@/lib/chatbot/mcp/client", () => ({ mcpListTools: jest.fn() }))
+jest.mock("@/lib/chatbot/mcp/client", () => ({ ...jest.requireActual("@/lib/chatbot/mcp/client"), mcpListTools: jest.fn() }))
 jest.mock("@/lib/chatbot/knowledge/github", () => ({ listDocs: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({
   ...jest.requireActual("@/lib/security/audit-log"),
@@ -52,6 +52,12 @@ describe("saveMcpServer", () => {
   it.each(["ftp://mcp.example.com", "https://user:pw@mcp.example.com/mcp", "https://mcp.example.com/mcp?token=abc", "not a url"])("refuses the URL %s", async (url) => {
     const result = await saveMcpServer({ ...MCP, url })
     expect(result).toMatchObject({ success: false, code: "VALIDATION", fieldErrors: { url: expect.any(Array) } })
+    expect(prismaMock.mcpServer.create).not.toHaveBeenCalled()
+  })
+
+  it.each(["Content-Type", "accept", "Host", "Mcp-Session-Id"])("refuses the protocol header %s as the auth header", async (authHeaderName) => {
+    const result = await saveMcpServer({ ...MCP, authHeaderName })
+    expect(result).toMatchObject({ success: false, code: "VALIDATION" })
     expect(prismaMock.mcpServer.create).not.toHaveBeenCalled()
   })
 
@@ -146,7 +152,7 @@ describe("discoverMcpTools", () => {
 describe("saveKnowledgeSource", () => {
   const KB = { name: "Runbooks", repo: "mchestr/knowledgebase", ref: "main", path: "/docs/", token: "", isActive: true }
 
-  it.each(["knowledgebase", "https://github.com/a/b", "a/b/c"])("refuses the repository %s", async (repo) => {
+  it.each(["knowledgebase", "https://github.com/a/b", "a/b/c", "a/..", "../b", "./."])("refuses the repository %s", async (repo) => {
     expect(await saveKnowledgeSource({ ...KB, repo })).toMatchObject({ success: false, code: "VALIDATION" })
   })
 

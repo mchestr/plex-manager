@@ -55,6 +55,24 @@ describe("mcpListTools", () => {
     expect(sent(2).body.method).toBe("tools/list")
   })
 
+  it("ends the session with a DELETE", async () => {
+    script(json({ tools: [] }, 2))
+    await mcpListTools(ENDPOINT)
+    const [, init] = fetchMock.mock.calls[3]
+    expect(init).toMatchObject({ method: "DELETE", headers: expect.objectContaining({ "Mcp-Session-Id": "s1", Authorization: "Bearer secret" }) })
+  })
+
+  it("still returns the tools when the DELETE fails", async () => {
+    script(json({ tools: [{ name: "a" }] }, 2))
+    fetchMock.mockRejectedValueOnce(new Error("405"))
+    expect(await mcpListTools(ENDPOINT)).toMatchObject({ ok: true })
+  })
+
+  it("refuses a reply larger than the cap without reading it all", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("x".repeat(1_100_000), { headers: { "content-type": "application/json" } }))
+    expect(await mcpListTools(ENDPOINT)).toEqual({ ok: false, code: "PROTOCOL" })
+  })
+
   it("reads an event-stream reply", async () => {
     script(stream({ tools: [{ name: "a" }] }, 2))
     expect(await mcpListTools(ENDPOINT)).toMatchObject({ ok: true, data: [{ name: "a" }] })

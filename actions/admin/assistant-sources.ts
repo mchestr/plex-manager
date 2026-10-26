@@ -17,7 +17,7 @@ import { z } from "zod"
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { listDocs } from "@/lib/chatbot/knowledge/github"
-import { mcpListTools } from "@/lib/chatbot/mcp/client"
+import { mcpListTools, RESERVED_HEADERS } from "@/lib/chatbot/mcp/client"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { resolveSecretForOrigin } from "@/lib/security/secret-reuse"
@@ -25,7 +25,13 @@ import { normalizeBaseUrl } from "@/lib/validations/shared-schemas"
 
 const recordId = z.string().min(1).max(100)
 const name = z.string().trim().min(1, "Enter a name").max(60)
-const headerName = z.string().trim().regex(/^[A-Za-z0-9-]{1,64}$/, "Use letters, digits and hyphens").optional().or(z.literal(""))
+const headerName = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z0-9-]{1,64}$/, "Use letters, digits and hyphens")
+  .refine((value) => !RESERVED_HEADERS.has(value.toLowerCase()), "That header is set by the protocol")
+  .optional()
+  .or(z.literal(""))
 
 const mcpInput = z.object({
   id: recordId.optional(),
@@ -41,7 +47,11 @@ const mcpInput = z.object({
 const knowledgeInput = z.object({
   id: recordId.optional(),
   name,
-  repo: z.string().trim().regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, "Use owner/name, for example mchestr/knowledgebase"),
+  repo: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, "Use owner/name, for example mchestr/knowledgebase")
+    .refine((value) => value.split("/").every((part) => !/^\.+$/.test(part)), "Use owner/name, for example mchestr/knowledgebase"),
   ref: z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9_./-]+$/, "Use a branch, tag or commit"),
   path: z.string().trim().max(200).regex(/^[A-Za-z0-9_./ -]*$/, "Use a folder path"),
   /** Blank keeps the stored token. */

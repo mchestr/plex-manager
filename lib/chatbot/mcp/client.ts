@@ -23,6 +23,20 @@ const PROTOCOL_VERSION = "2025-03-26"
 const TIMEOUT_MS = 15_000
 const MAX_PAGES = 5
 const MAX_RESULT_CHARS = 20_000
+/** The most a reply may be before it is read in full; a server cannot make us buffer more. */
+const MAX_BODY_BYTES = 1_000_000
+
+/** Headers the protocol sets itself; an admin-chosen auth header may not replace them. */
+export const RESERVED_HEADERS: ReadonlySet<string> = new Set([
+  "accept",
+  "connection",
+  "content-length",
+  "content-type",
+  "host",
+  "mcp-protocol-version",
+  "mcp-session-id",
+  "transfer-encoding",
+])
 
 export interface McpEndpoint {
   url: string
@@ -66,6 +80,25 @@ const callResult = z.object({
 class McpFailure extends Error {
   constructor(readonly code: Exclude<McpResult<never>, { ok: true }>["code"]) {
     super(code)
+  }
+}
+
+/** The reply's text, read up to {@link MAX_BODY_BYTES}; a longer reply is `PROTOCOL`. */
+async function readCapped(response: Response): Promise<string> {
+  const reader = response.body?.getReader()
+  if (!reader) return ""
+  const decoder = new TextDecoder()
+  let text = ""
+  let bytes = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) return text + decoder.decode()
+    bytes += value.byteLength
+    if (bytes > MAX_BODY_BYTES) {
+      await reader.cancel().catch(() => undefined)
+      throw new McpFailure("PROTOCOL")
+    }
+    text += decoder.decode(value, { stream: true })
   }
 }
 
@@ -121,9 +154,23 @@ class Session {
     if (response.status === 401 || response.status === 403) throw new McpFailure("UNAUTHORIZED")
     if (!response.ok) throw new McpFailure("UNREACHABLE")
     this.sessionId ??= response.headers.get("mcp-session-id")
-    const message = parseMessage(response.headers.get("content-type") ?? "", await response.text(), id)
+    const message = parseMessage(response.headers.get("content-type") ?? "", await readCapped(response), id)
     if (message.error !== undefined) throw new McpFailure("PROTOCOL")
     return message.result
+  }
+
+  /** Ends the server's session; best effort, since a server may not support it. */
+  async close(): Promise<void> {
+    if (!this.sessionId) return
+    const { url, authHeaderName, authHeaderSecret } = this.endpoint
+    const headers: Record<string, string> = { "Mcp-Session-Id": this.sessionId, "MCP-Protocol-Version": PROTOCOL_VERSION }
+    if (authHeaderName && authHeaderSecret) headers[authHeaderName] = authHeaderSecret
+    try {
+      const response = await fetchWithSafeRedirects(url, { method: "DELETE", headers, signal: AbortSignal.timeout(TIMEOUT_MS) })
+      await response?.body?.cancel().catch(() => undefined)
+    } catch {
+      // The session expires on the server
+    }
   }
 
   async open(): Promise<void> {
@@ -138,14 +185,16 @@ class Session {
 }
 
 async function withSession<T>(endpoint: McpEndpoint, run: (session: Session) => Promise<T>): Promise<McpResult<T>> {
+  const session = new Session(endpoint)
   try {
-    const session = new Session(endpoint)
     await session.open()
     return { ok: true, data: await run(session) }
   } catch (error) {
     if (error instanceof McpFailure) return { ok: false, code: error.code }
     logger.warn("MCP call failed unexpectedly", { error: String(error) })
     return { ok: false, code: "PROTOCOL" }
+  } finally {
+    await session.close()
   }
 }
 

@@ -55,6 +55,20 @@ describe("listDocs", () => {
   })
 })
 
+describe("cache size", () => {
+  it("drops the oldest listing once more than twenty are kept", async () => {
+    fetchMock.mockResolvedValue(tree([{ path: "a.md" }]))
+    const first = source()
+    await listDocs(first)
+    for (let i = 0; i < 20; i++) await listDocs(source())
+    expect(fetchMock).toHaveBeenCalledTimes(21)
+
+    await listDocs(first)
+
+    expect(fetchMock).toHaveBeenCalledTimes(22)
+  })
+})
+
 describe("readDoc", () => {
   it("reads only a path the listing returned", async () => {
     fetchMock.mockResolvedValueOnce(tree([{ path: "a.md" }])).mockResolvedValue({ ok: true, data: "# A" })

@@ -15,6 +15,9 @@ import { serviceFetch } from "@/lib/connections/http"
 const CACHE_MS = 10 * 60_000
 const MAX_DOCS = 300
 const MAX_DOC_BYTES = 200_000
+/** Entries kept per cache; the oldest goes first, so replaced sources do not pile up. */
+const MAX_TREES = 20
+const MAX_FILES = 400
 
 export interface KnowledgeRepo {
   id: string
@@ -40,6 +43,13 @@ function headers(source: KnowledgeRepo, accept: string): Record<string, string> 
     "X-GitHub-Api-Version": "2022-11-28",
     ...(source.token ? { Authorization: `Bearer ${source.token}` } : {}),
   }
+}
+
+/** Sets `key`, dropping the oldest entries beyond `max`. */
+function remember<V>(cache: Map<string, V>, key: string, value: V, max: number): void {
+  cache.delete(key)
+  cache.set(key, value)
+  while (cache.size > max) cache.delete(cache.keys().next().value as string)
 }
 
 const cacheKey = (source: KnowledgeRepo) => `${source.id}:${source.updatedAt.getTime()}`
@@ -68,7 +78,7 @@ export async function listDocs(source: KnowledgeRepo): Promise<string[] | null> 
     .filter((entry) => entry.type === "blob" && /\.mdx?$/i.test(entry.path) && entry.path.startsWith(prefix) && (entry.size ?? 0) <= MAX_DOC_BYTES)
     .map((entry) => entry.path)
     .slice(0, MAX_DOCS)
-  trees.set(key, { at: Date.now(), paths })
+  remember(trees, key, { at: Date.now(), paths }, MAX_TREES)
   return paths
 }
 
@@ -89,6 +99,6 @@ export async function readDoc(source: KnowledgeRepo, path: string): Promise<stri
     schema: z.string(),
   })
   if (!result.ok) return null
-  files.set(key, { at: Date.now(), text: result.data })
+  remember(files, key, { at: Date.now(), text: result.data }, MAX_FILES)
   return result.data
 }

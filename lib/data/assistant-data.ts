@@ -11,6 +11,7 @@ import "server-only"
 import { z } from "zod"
 
 import { assertAdmin } from "@/lib/admin"
+import { inviteStatusWhere } from "@/lib/admin/invites/queries"
 import { listQueueJobs } from "@/lib/admin/queues"
 import { memberServices } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
@@ -22,7 +23,18 @@ const invitesInput = z.object({
   limit: z.number().int().min(1).max(50).default(20),
 })
 
-/** Invites by status, optionally only those that expire within N days (admin only). */
+/** Free text from a job or a note: no email addresses, at most 200 characters. */
+function redact(text: string | null | undefined): string | null {
+  if (!text) return null
+  return text.replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, "[email]").slice(0, 200)
+}
+
+/**
+ * Invites by status, optionally only those that expire within N days (admin
+ * only). The status filter is part of the query, so `limit` applies to
+ * matching invites. A code is shown by its last four characters: it redeems
+ * the invite, and this text goes to the model provider.
+ */
 export async function getAssistantInvites(raw: z.input<typeof invitesInput> = {}) {
   await assertAdmin()
   const { status, expiresWithinDays, limit } = invitesInput.parse(raw)
@@ -30,24 +42,17 @@ export async function getAssistantInvites(raw: z.input<typeof invitesInput> = {}
   const until = expiresWithinDays ? new Date(now.getTime() + expiresWithinDays * 86_400_000) : null
 
   const rows = await prisma.invite.findMany({
-    where: {
-      ...(status === "expired" ? { expiresAt: { lt: now } } : {}),
-      ...(status === "active" || until ? { OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] } : {}),
-      ...(until ? { expiresAt: { gte: now, lte: until } } : {}),
-    },
+    where: { AND: [inviteStatusWhere(status, now), until ? { expiresAt: { gte: now, lte: until } } : {}] },
     orderBy: [{ expiresAt: "asc" }, { createdAt: "desc" }],
-    take: status === "usedUp" ? 200 : limit,
-    select: { code: true, serverType: true, maxUses: true, useCount: true, expiresAt: true, createdAt: true },
+    take: limit,
+    select: { id: true, code: true, serverType: true, maxUses: true, useCount: true, expiresAt: true, createdAt: true },
   })
 
-  const invites = rows
-    .filter((invite) => (status === "usedUp" ? invite.useCount >= invite.maxUses : true))
-    .filter((invite) => (status === "active" ? invite.useCount < invite.maxUses : true))
-    .slice(0, limit)
+  const invites = rows.map(({ code, ...invite }) => ({ ...invite, codeEnd: code.slice(-4) }))
   return { count: invites.length, invites }
 }
 
-const memberInput = z.object({ query: z.string().trim().min(1).max(100) })
+const memberInput = z.object({ query: z.string().trim().min(2).max(100) })
 
 /**
  * One member's access, subscription and recent Rewind runs, found by name,
@@ -108,11 +113,14 @@ export async function getAssistantMember(raw: z.input<typeof memberInput>) {
   })
   if (!user) return { found: false as const }
 
-  const { plexUserId, jellyfinUserId, ...rest } = user
+  const { plexUserId, jellyfinUserId, exemptReason, plexWrapped, rewindGenerations, ...rest } = user
   return {
     found: true as const,
     member: {
       ...rest,
+      exemptReason: redact(exemptReason),
+      plexWrapped: plexWrapped.map((wrapped) => ({ ...wrapped, error: redact(wrapped.error) })),
+      rewindGenerations: rewindGenerations.map((run) => ({ ...run, error: redact(run.error === null ? null : JSON.stringify(run.error)) })),
       services: memberServices({ plexUserId, jellyfinUserId }),
       hasPlexAccount: plexUserId !== null,
       hasJellyfinAccount: jellyfinUserId !== null,
@@ -128,5 +136,5 @@ export async function getAssistantFailedJobs(raw: z.input<typeof failuresInput> 
   const { limit } = failuresInput.parse(raw)
   if (!isRedisConfigured()) return { redisConfigured: false as const, total: 0, jobs: [] }
   const { rows, total } = await listQueueJobs({ status: "failed", page: 1, pageSize: limit })
-  return { redisConfigured: true as const, total, jobs: rows }
+  return { redisConfigured: true as const, total, jobs: rows.map((job) => ({ ...job, error: redact(job.error) })) }
 }
