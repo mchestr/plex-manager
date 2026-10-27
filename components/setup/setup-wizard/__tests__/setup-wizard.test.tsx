@@ -39,7 +39,6 @@ const DEV: DevDefaults = {
   sonarr: null,
   radarr: null,
   discord: null,
-  prometheus: null,
   chatLlmProvider: null,
   wrappedLlmProvider: null,
   llmProvider: null,
@@ -56,7 +55,6 @@ const NONE: Record<SetupStepId, boolean> = {
   "llm-rewind": false,
   "llm-chat": false,
   discord: false,
-  prometheus: false,
 }
 
 function data(configured: Partial<Record<SetupStepId, boolean>> = {}): SetupWizardData {
@@ -76,7 +74,6 @@ describe("SetupWizard", () => {
     ["overseerr", "service overseerr"],
     ["sonarr", "service sonarr"],
     ["radarr", "service radarr"],
-    ["prometheus", "service prometheus"],
     ["llm-rewind", "llm wrapped"],
     ["llm-chat", "llm chat"],
     ["discord", "discord"],

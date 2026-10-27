@@ -15,6 +15,7 @@ permission needs no schema change. An unknown stored role grants nothing.
 | `assistant:use` | yes | Open the admin assistant |
 | `assistant:tools:read` | yes | Assistant tools that only read (Plex, Tautulli, Sonarr, Radarr, Overseerr lookups) |
 | `assistant:tools:write` | no | Assistant tools that change data (media marking) |
+| `assistant:tools:admin` | no | Assistant tools over admin-only data and connections: app data (invites, members, failed jobs), the knowledge base and MCP servers |
 | `users:read` | yes | The users list, read-only |
 
 A Support user sees Users and the assistant in the admin area. Settings,

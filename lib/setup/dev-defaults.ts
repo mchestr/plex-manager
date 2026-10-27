@@ -2,7 +2,7 @@ import "server-only"
 
 import { requireSetupClaim } from "@/lib/setup/claim"
 import { getSetupStatus } from "@/lib/setup/status"
-import type { DevDefaults, DiscordDefaults, LLMDefaults, PrometheusDefaults, ServiceDefaults } from "@/types/setup"
+import type { DevDefaults, DiscordDefaults, LLMDefaults, ServiceDefaults } from "@/types/setup"
 
 // Valid LLM provider values
 const VALID_LLM_PROVIDERS = ["openai"] as const
@@ -65,7 +65,6 @@ export async function getDevDefaults(): Promise<DevDefaults> {
     sonarr: null,
     radarr: null,
     discord: null,
-    prometheus: null,
     chatLlmProvider: null,
     wrappedLlmProvider: null,
     llmProvider: null,
@@ -128,12 +127,6 @@ export async function getDevDefaults(): Promise<DevDefaults> {
   if (process.env.DEV_DISCORD_SERVER_INVITE_CODE) discordDefaults.serverInviteCode = process.env.DEV_DISCORD_SERVER_INVITE_CODE
   if (process.env.DEV_DISCORD_PLATFORM_NAME) discordDefaults.platformName = process.env.DEV_DISCORD_PLATFORM_NAME
   if (process.env.DEV_DISCORD_INSTRUCTIONS) discordDefaults.instructions = process.env.DEV_DISCORD_INSTRUCTIONS
-
-  // Prometheus defaults
-  const prometheusDefaults: PrometheusDefaults = {}
-  if (process.env.DEV_PROMETHEUS_NAME) prometheusDefaults.name = process.env.DEV_PROMETHEUS_NAME
-  if (process.env.DEV_PROMETHEUS_URL) prometheusDefaults.url = process.env.DEV_PROMETHEUS_URL
-  if (process.env.DEV_PROMETHEUS_QUERY) prometheusDefaults.query = process.env.DEV_PROMETHEUS_QUERY
 
   // Chat LLM defaults (separate from wrapped)
   const chatLlmDefaults: LLMDefaults = {}
@@ -201,13 +194,12 @@ export async function getDevDefaults(): Promise<DevDefaults> {
   const sonarr = Object.keys(sonarrDefaults).length > 0 ? sonarrDefaults : null
   const radarr = Object.keys(radarrDefaults).length > 0 ? radarrDefaults : null
   const discord = Object.keys(discordDefaults).length > 0 ? discordDefaults : null
-  const prometheus = Object.keys(prometheusDefaults).length > 0 ? prometheusDefaults : null
   const chatLlmProvider = Object.keys(chatLlmDefaults).length > 0 ? chatLlmDefaults : null
   const wrappedLlmProvider = Object.keys(wrappedLlmDefaults).length > 0 ? wrappedLlmDefaults : null
   const llmProvider = Object.keys(llmProviderDefaults).length > 0 ? llmProviderDefaults : null
 
   // Check if any defaults are set
-  const hasAnyDefaults = !!(plex || tautulli || overseerr || sonarr || radarr || discord || prometheus || chatLlmProvider || wrappedLlmProvider)
+  const hasAnyDefaults = !!(plex || tautulli || overseerr || sonarr || radarr || discord || chatLlmProvider || wrappedLlmProvider)
 
   // Auto-submit enables zero-click setup when forms are fully populated
   const autoSubmit = process.env.DEV_SETUP_AUTO_SUBMIT === "true"
@@ -219,7 +211,6 @@ export async function getDevDefaults(): Promise<DevDefaults> {
     sonarr,
     radarr,
     discord,
-    prometheus,
     chatLlmProvider,
     wrappedLlmProvider,
     llmProvider,

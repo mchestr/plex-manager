@@ -27,7 +27,7 @@ interface SetupWizardProps {
 
 /**
  * First-run setup (design 6.5, P10.25): a grouped vertical Stepper at `lg`
- * and up, the horizontal segments with "Step 3 of 9, Overseerr" below it, and
+ * and up, the horizontal segments with "Step 3 of 8, Overseerr" below it, and
  * one card per step. Every move is a navigation to `?step=`, which the page
  * keeps at or before the saved position, so Back and the Stepper's done steps
  * are links back.
@@ -59,7 +59,6 @@ export function SetupWizard({ position, reached, data, devDefaults, rail }: Setu
       case "overseerr":
       case "sonarr":
       case "radarr":
-      case "prometheus":
         return <ServiceConnectionForm kind={position} stored={stored.server ?? null} devDefaults={devDefaults} />
       case "llm-rewind":
         return <LLMStep purpose="wrapped" stored={stored.llm ?? null} devDefaults={devDefaults} />

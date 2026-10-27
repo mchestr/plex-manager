@@ -313,6 +313,20 @@ describe('Admin Actions Security', () => {
       })
     })
 
+    it('refuses a user that does not exist', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null)
+
+      await expect(updateUserAdminStatus({ userId: 'gone-1', isAdmin: true })).resolves.toMatchObject({ success: false, code: 'NOT_FOUND' })
+    })
+
+    it('changes nothing when the member already has that role', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: true }))
+
+      await expect(updateUserAdminStatus({ userId: 'member-1', isAdmin: true })).resolves.toEqual({ success: true, data: null })
+
+      expect(prismaMock.user.update).not.toHaveBeenCalled()
+    })
+
     it('promotes without ending sessions', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: false }))
 
@@ -371,6 +385,14 @@ describe('Admin Actions Security', () => {
         targetUserId: 'member-1',
         reason: 'disabled',
       })
+    })
+
+    it('changes nothing when the member is already in that state', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', disabledAt: null }))
+
+      await expect(setUserDisabled({ userId: 'member-1', disabled: false })).resolves.toEqual({ success: true, data: null })
+
+      expect(prismaMock.user.update).not.toHaveBeenCalled()
     })
 
     it('enables a disabled member without ending sessions', async () => {

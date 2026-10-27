@@ -18,20 +18,32 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Added
+
+- **Admin assistant:** read-only tools over the app's own data (`get_app_invites`, `get_app_member`, `get_app_failed_jobs`), MCP servers an admin registers in Settings, Assistant sources (Streamable HTTP, an encrypted auth header, a switch per tool; a tool is off until switched on), and GitHub-backed knowledge bases the assistant searches and cites (`search_knowledge_base`, `read_knowledge_doc`). None of these are available in Discord. See `docs/assistant.md`.
+
 ### Changed
 
 - **Billing statuses:** members who do not pay now read as one state, **Exempt**, in the Users table, the user's Billing tab and `/membership`; admins and the owner read **Not required**. "Comp" and "Grandfathered" are gone from the UI and docs, and "Grant comp access" is now "Grant access and exempt". `User.exemptReason` is now `User.exemptNote`, an optional free-text note shown under the badge. Access rules are unchanged.
 
+### Fixed
+
+- **404 status after a deploy:** a share link that shares nothing, an invalid Rewind year and a membership page the member lacks now answer 404 from the first request after a new build. Before, they showed the right page with status 200 until an admin saved a setting. The postbuild step (`scripts/build/prerender-status.mjs`) drops the 200 that `next build` stores with each prerendered page, which overrode the 404 proxy.ts sets.
+
 ### Upgrade notes
 
 - **Exempt note migration:** `20270119000001_rename_exempt_reason_to_note` renames `User.exemptReason` to `exemptNote`, clears the `comp` and `grandfathered` values, and turns `invite` into `Joined by invite`. Who is exempt does not change.
+- Adds the migration `20270119000004_add_assistant_sources` (the `McpServer` and `KnowledgeSource` tables). Run `npx prisma migrate status` after the upgrade.
 - Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds seven migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables` and `20270119000002_add_request_tiers_and_channel_stats`.
 - **Discord stat channels and request limits:** both are off after the upgrade. They replace the Windmill flows `f/mflix/discord_channel_status` and `f/mflix/sync_overseerr_quotas_from_tautulli_watchtime`. In Admin > Settings, turn on "Discord channel stats" (paste each channel's ID) and "Request limits", press "Update now" and "Run now" to check the result, then disable both Windmill schedules so the two do not fight over the channel names and quotas. Members with an Overseerr quota you set by hand: turn on "Set request limits by hand" on their user page before the first run, since the sync overwrites every other matched member's quota. Both jobs need Redis and a worker. See `docs/request-limits.md`.
-- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds seven migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables` and `20270119000002_add_user_role`.
+- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds seven migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables` and `20270119000003_add_user_role`. An install that already applied it under its first name, `20270119000002_add_user_role`, applies the renamed one as a no-op.
+- **Light theme migration:** `20270119000004_drop_light_theme_flag` drops `Config.lightThemeEnabled`. Every signed-in user can now pick Dark or Light; Dark stays the default until they choose.
+- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds nine migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables`, `20270119000001_rename_exempt_reason_to_note`, `20270119000002_add_request_tiers_and_channel_stats`, `20270119000003_add_user_role` and `20270119000004_drop_prometheus_status`. An install that already applied it under its first name, `20270119000002_add_user_role`, applies the renamed one as a no-op.
 - **Setup claim:** an install whose first-run setup is still unfinished must enter the one-time setup code to continue. Find it with `docker logs <container> | grep 'Setup code'`, or set `SETUP_TOKEN` to at least 16 characters; production refuses to start with a shorter one. Finished installs are unaffected.
 - **Retention:** the first daily retention sweep deletes data past its window, including audit rows older than 400 days and Discord command logs older than 90 days. To keep more, set the `RETENTION_*_DAYS` variables (`docs/privacy.md`) before you deploy.
 - **Stripe:** turning Stripe on now asks for confirmation when there are Jellyfin-only members who are not exempt.
 - **Setup steps:** an unfinished setup resumes on the matching step.
+- **Prometheus status removed:** the stored Prometheus status config (the `Prometheus` table, with its URL and query) is dropped and cannot be exported or restored except from your `pg_dump`, and the home page no longer shows the uptime strip or an outage notice. A setup that stopped on the Prometheus step resumes on the summary. Remove any `DEV_PROMETHEUS_*` variables from your `.env`; nothing reads them. The `/api/metrics` exporter and `METRICS_TOKEN` are unchanged.
 - **Duplicate service rows:** reads of a service's active row now take the most recently updated one. Before you deploy, run `npm run services:rows-audit`; where a service lists a "read after this release" row that differs from the "read today" one, run `services:rows-apply` (after a dump) soon after the deploy to keep the row you want.
 - **Deploy outside the Rewind season.** The encryption keyring and the worker role change how stored secrets are read and where the Rewind queues run, so deploy this release before the season opens on 2026-12-01 or after it closes on 2027-01-31, not while it is live.
 - **Encryption keys (breaking):** a production server now refuses to start without a key for the secrets it stores. Before you pull this release, set `ENCRYPTION_KEYS="k1:$(openssl rand -base64 32)"` (a comma-separated `kid:base64` keyring; the first entry encrypts new writes). An install that already sets only `ENCRYPTION_KEY` keeps working and writes `enc:v2:legacy:` values; to move to a keyring, add `ENCRYPTION_KEYS` beside it, run Admin > Settings > Security > "Encrypt stored secrets", then remove `ENCRYPTION_KEY`. `ALLOW_PLAINTEXT_SECRETS=true` is the unsafe escape hatch: it starts without a key, stores secrets as plain text and warns at every boot. A boot check stops the server with `crypto.key_mismatch` when the key does not match the database, so a restore under the wrong key never serves. Keep every key in your password manager, never beside a dump; rotation and lost-key recovery are in `docs/operations.md` ("Encryption keys"). After the first boot with Redis the app re-encrypts stored plaintext in the background.
@@ -59,11 +71,16 @@ check); the `no-changelog` label skips it.
 
 ### Changed
 
+- Every signed-in user can pick the Dark or Light theme under Appearance, with no admin setting to turn on first. Dark stays the default until the choice is saved. The "Light theme for members" switch in Admin > Settings is gone, and its `Config.lightThemeEnabled` column is dropped by the `20270119000004_drop_light_theme_flag` migration.
 - The setup wizard is rebuilt: string step ids, "Skip for now" on optional steps, "Connect with Plex" instead of pasting a token, one service form, and a summary step that signs the owner in. Setup and admin settings save through the same flow.
 - The assistants use the member's or the server's time zone and the app locale, and `<html lang>` follows the configured locale.
 - The package is named `plex-manager`, to match the repository and the image.
 - One lease lock (database or Redis) runs the Discord bot, watchlist sync, Rewind generation and member access changes; every job type has a deduplication or deterministic id, and a job that exhausts its retries logs `queue.job_exhausted`.
 - The Discord bot starts within one poll (10 s) of "Bot enabled" being turned on with a token saved, with no restart, and `/admin/discord` says "Turned off", "Waiting for a bot token" or "Online". `ENABLE_DISCORD_BOT=false` still opts a process out. Slash commands register from the image with `docker compose exec app node scripts/dist/register-discord-commands.cjs` (or `register-discord-metadata.cjs`), and the script falls back to the token and client ID saved in admin settings.
+
+### Removed
+
+- The Prometheus status integration: its setup step, its Admin > Settings > Other integrations entry, the stored config, the home page's 7-day uptime strip and the outage notice it drove. The app's own `/api/metrics` exporter is unchanged.
 
 ### Security
 

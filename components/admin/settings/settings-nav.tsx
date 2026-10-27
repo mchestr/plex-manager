@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 export interface SettingsNavItem {
   id: string
   label: string
-  group: "Media" | "Features" | "More"
+  group: SettingsGroupId
   /** Left out for a section with nothing to check (System information). */
   status?: ConnectionStatus
 }
@@ -19,7 +19,14 @@ const TONE_TEXT: Partial<Record<Tone, string>> = {
   destructive: "text-destructive",
 }
 
-const GROUPS = ["Media", "Features", "More"] as const
+export type SettingsGroupId = "media" | "integrations" | "rewind" | "system"
+
+const SETTINGS_GROUPS: readonly { id: SettingsGroupId; label: string }[] = [
+  { id: "media", label: "Media servers" },
+  { id: "integrations", label: "Integrations" },
+  { id: "rewind", label: "Rewind" },
+  { id: "system", label: "System & security" },
+]
 
 /** The 12px category glyph (5.6): a shape per category, with its name for screen readers. */
 function StatusGlyph({ status, decorative = false }: { status: ConnectionStatus; decorative?: boolean }) {
@@ -51,34 +58,31 @@ const LEGEND: { status: ConnectionStatus; label: string }[] = [
   { status: "notConfigured", label: "Off, not set up or not checked" },
 ]
 
-/** Scrolls to a section's anchor and moves the hash there. */
-function jumpTo(id: string) {
-  const target = document.getElementById(id)
-  if (!target) return
-  const smooth = !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-  target.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" })
-  window.history.replaceState(null, "", `#${id}`)
-}
-
 interface SettingsNavProps {
   items: SettingsNavItem[]
   /** The section in view, from the layout's IntersectionObserver. */
   active: string | null
+  activeGroup: SettingsGroupId
   dirty: ReadonlySet<string>
+  /** Reveals the section's group and scrolls to it. */
+  onSelect: (id: string) => void
 }
 
 /**
  * The settings section nav (ui-design-system 6.4): grouped links, each with
- * its tone glyph and the unsaved-changes pip, and the legend under them.
+ * its tone glyph and the unsaved-changes pip, and the legend under them. The
+ * page shows one group at a time, so the active group's heading is marked.
  */
-export function SettingsNav({ items, active, dirty }: SettingsNavProps) {
+export function SettingsNav({ items, active, activeGroup, dirty, onSelect }: SettingsNavProps) {
   return (
     <nav aria-label="Settings sections" className="flex flex-col gap-4" data-testid="settings-nav">
-      {GROUPS.map((group) => (
-        <div key={group} className="flex flex-col gap-0.5">
-          <p className="px-2 pb-1 text-caption font-medium text-muted-foreground">{group}</p>
+      {SETTINGS_GROUPS.map((group) => (
+        <div key={group.id} className="flex flex-col gap-0.5" data-testid={`settings-nav-group-${group.id}`}>
+          <p data-active={activeGroup === group.id || undefined} className="px-2 pb-1 text-caption font-medium text-muted-foreground data-active:text-foreground">
+            {group.label}
+          </p>
           {items
-            .filter((item) => item.group === group)
+            .filter((item) => item.group === group.id)
             .map((item) => (
               <a
                 key={item.id}
@@ -86,7 +90,7 @@ export function SettingsNav({ items, active, dirty }: SettingsNavProps) {
                 aria-current={active === item.id ? "true" : undefined}
                 onClick={(event) => {
                   event.preventDefault()
-                  jumpTo(item.id)
+                  onSelect(item.id)
                 }}
                 className={cn(
                   "flex h-8 items-center gap-2 rounded-md px-2 text-ui text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -119,11 +123,11 @@ export function SettingsNav({ items, active, dirty }: SettingsNavProps) {
   )
 }
 
-/** Below `md`: the nav as a "Jump to" Select that scrolls to the anchor. */
-export function SettingsJumpTo({ items, active }: Pick<SettingsNavProps, "items" | "active">) {
+/** Below `md`: the nav as a "Jump to" Select that reveals and scrolls to the section. */
+export function SettingsJumpTo({ items, active, onSelect }: Pick<SettingsNavProps, "items" | "active" | "onSelect">) {
   const selectItems = items.map((item) => ({ value: item.id, label: item.label }))
   return (
-    <Select items={selectItems} value={active ?? items[0]?.id ?? null} onValueChange={(id) => typeof id === "string" && jumpTo(id)}>
+    <Select items={selectItems} value={active ?? items[0]?.id ?? null} onValueChange={(id) => typeof id === "string" && onSelect(id)}>
       <SelectTrigger aria-label="Jump to section" data-testid="settings-jump-to">
         <span className="flex min-w-0 items-center gap-2">
           <span className="text-muted-foreground">Jump to</span>
@@ -131,11 +135,11 @@ export function SettingsJumpTo({ items, active }: Pick<SettingsNavProps, "items"
         </span>
       </SelectTrigger>
       <SelectContent>
-        {GROUPS.map((group) => (
-          <SelectGroup key={group}>
-            <SelectLabel>{group}</SelectLabel>
+        {SETTINGS_GROUPS.map((group) => (
+          <SelectGroup key={group.id}>
+            <SelectLabel>{group.label}</SelectLabel>
             {items
-              .filter((item) => item.group === group)
+              .filter((item) => item.group === group.id)
               .map((item) => (
                 <SelectItem key={item.id} value={item.id} label={item.label} data-testid={`settings-jump-to-option-${item.id}`}>
                   {item.label}

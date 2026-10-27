@@ -161,18 +161,6 @@ model Radarr {
   @@index([isActive])
 }
 
-model Prometheus {
-  id        String   @id @default(cuid())
-  name      String // Display name for the service being monitored (e.g. "Plex Server")
-  url       String // Full URL including protocol, hostname, and port (e.g. http://prometheus.example.com:9090)
-  query     String // PromQL query to determine status (e.g. up{job="plex"})
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([isActive])
-}
-
 model LLMProvider {
   id          String   @id @default(cuid())
   provider    String // Currently "openai", but extensible for other providers
@@ -493,7 +481,6 @@ model Config {
   llmDailyCapPerUserUsd        Float     @default(0.5) // Daily assistant spend per member, server-zone day (P4.20)
   llmDailyCapAdminUsd          Float     @default(5) // Daily assistant spend per admin
   llmDailyCapServerUsd         Float     @default(5) // Daily assistant spend for the whole server
-  lightThemeEnabled            Boolean   @default(false) // Members may pick the light theme (P10.10, ui-design-system 3.3)
   lastRetentionRunAt           DateTime? // When the retention sweep last finished (P11.14)
   lastRetentionSummary         Json? // That run's per-rule counts (P11.14)
   discordStatsEnabled          Boolean   @default(false) // Rename Discord channels with live server stats
@@ -936,4 +923,36 @@ model RequestTierRun {
   error      String? // Set when the run could not start (no Tautulli or Overseerr, say)
 
   @@index([startedAt])
+}
+
+// An MCP server the admin assistant can call (Streamable HTTP). A tool is off
+// until the admin turns it on: only names in `enabledTools` reach the model.
+model McpServer {
+  id              String   @id @default(cuid())
+  name            String   @unique // Shown to the admin and used in the tool names (mcp_<slug>_<tool>)
+  url             String // Full URL of the MCP endpoint
+  authHeaderName  String? // e.g. "Authorization" or "X-Api-Key"
+  authHeaderSecret String? // ENCRYPTED: the header's value, e.g. "Bearer ..."
+  isActive        Boolean  @default(true)
+  enabledTools    String[] // MCP tool names the admin turned on
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// A Markdown knowledge base in a GitHub repository the admin assistant searches
+// and cites (for example mchestr/knowledgebase).
+model KnowledgeSource {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  repo      String // owner/name
+  ref       String   @default("main") // Branch, tag or commit
+  path      String   @default("") // Only files under this folder; empty = the whole repo
+  token     String? // ENCRYPTED: a GitHub token for a private repository
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
 }

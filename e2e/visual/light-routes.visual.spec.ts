@@ -6,9 +6,8 @@ import { expect, expectScreen, settlePage, skipUnlessProductionBuild, test } fro
 
 /**
  * Every route in the axe route table, in the light theme (P10.10). Only the
- * `visual-light-*` projects run this file: they hold `pm-theme=light` and
- * depend on `light-theme-setup`, which turns the flag on. The member and
- * admin screens of the dark projects run there too, beside these.
+ * `visual-light-*` projects run this file: they hold `pm-theme=light`. The
+ * member and admin screens of the dark projects run there too, beside these.
  */
 
 skipUnlessProductionBuild();

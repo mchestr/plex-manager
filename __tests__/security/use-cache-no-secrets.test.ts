@@ -69,7 +69,7 @@ describe("'use cache' modules hold no secrets", () => {
   const cached = ["app", "lib", "actions", "components"].flatMap(sourceFiles).filter((file) => USE_CACHE.test(readFileSync(path.join(ROOT, file), "utf8")))
 
   it("finds the cached modules", () => {
-    expect(cached).toEqual(expect.arrayContaining(["lib/settings/app-settings.ts", "actions/prometheus-status.ts", "lib/stripe/prices.ts"]))
+    expect(cached).toEqual(expect.arrayContaining(["lib/settings/app-settings.ts", "lib/stripe/prices.ts"]))
   })
 
   it("selects no ENCRYPTED_FIELDS column and reads no whole secret-bearing row", () => {

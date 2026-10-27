@@ -48,6 +48,7 @@ jest.mock("@/lib/connections/overseerr", () => ({
   getOverseerrRequests: jest.fn(),
 }))
 
+jest.mock("@/lib/admin/queues", () => ({ listQueueJobs: jest.fn() }))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({
     debug: jest.fn(),
@@ -105,6 +106,7 @@ async function reply(input: Parameters<typeof chatWithAdminBot>[0]) {
 
 beforeEach(() => {
   mockReset(prismaMock)
+  prismaMock.mcpServer.findMany.mockResolvedValue([])
   jest.clearAllMocks()
 
   mockGetServerSession.mockResolvedValue(adminSession)

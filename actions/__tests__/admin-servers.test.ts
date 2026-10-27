@@ -16,7 +16,6 @@ import {
   updateJellyfinServer,
   updateOverseerr,
   updatePlexServer,
-  updatePrometheus,
   updateRadarr,
   updateSonarr,
   updateTautulli,
@@ -25,7 +24,6 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { testJellyfinConnection } from '@/lib/connections/jellyfin'
 import { testOverseerrConnection } from '@/lib/connections/overseerr'
 import { getPlexServerIdentity, getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
-import { testPrometheusConnection, validatePrometheusQuery } from '@/lib/connections/prometheus'
 import { testRadarrConnection } from '@/lib/connections/radarr'
 import { testSonarrConnection } from '@/lib/connections/sonarr'
 import { testTautulliConnection } from '@/lib/connections/tautulli'
@@ -58,10 +56,6 @@ jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn
 jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
 jest.mock('@/lib/connections/sonarr', () => ({ testSonarrConnection: jest.fn() }))
 jest.mock('@/lib/connections/radarr', () => ({ testRadarrConnection: jest.fn() }))
-jest.mock('@/lib/connections/prometheus', () => ({
-  testPrometheusConnection: jest.fn(),
-  validatePrometheusQuery: jest.fn(),
-}))
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 const mockRevalidatePath = revalidatePath as jest.MockedFunction<typeof revalidatePath>
@@ -261,34 +255,6 @@ describe.each(SERVICES)('$name: a stored secret never goes to a new address', (s
     })
     expect(service.delegate().create).not.toHaveBeenCalled()
     expect(mockAudit).not.toHaveBeenCalled()
-  })
-})
-
-describe('updatePrometheus', () => {
-  it('saves and audits the URL as an origin only', async () => {
-    ;(testPrometheusConnection as jest.Mock).mockResolvedValue({ success: true })
-    ;(validatePrometheusQuery as jest.Mock).mockResolvedValue({ success: true })
-    prismaMock.prometheus.findFirst.mockResolvedValue(null)
-
-    const result = await updatePrometheus({ name: 'Plex', url: 'http://prom.lan:9090', query: 'up{job="plex"}' })
-
-    expect(result).toEqual({ success: true, data: null })
-    expect(mockAudit).toHaveBeenCalledWith(AuditEventType.CONFIG_CHANGED, 'admin-123', {
-      section: 'prometheus',
-      changedFields: ['name', 'query', 'url'],
-      secretChanged: false,
-      origins: { before: null, after: { url: 'http://prom.lan:9090' } },
-    })
-  })
-
-  it('refuses an invalid query', async () => {
-    ;(testPrometheusConnection as jest.Mock).mockResolvedValue({ success: true })
-    ;(validatePrometheusQuery as jest.Mock).mockResolvedValue({ success: false, error: 'bad PromQL' })
-
-    const result = await updatePrometheus({ name: 'Plex', url: 'http://prom.lan:9090', query: 'up{' })
-
-    expect(result).toEqual({ success: false, code: 'VALIDATION', error: 'bad PromQL' })
-    expect(prismaMock.prometheus.create).not.toHaveBeenCalled()
   })
 })
 

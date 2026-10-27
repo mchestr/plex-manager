@@ -7,6 +7,7 @@ import {
   generateSystemPrompt,
   toolsForPermissions,
 } from "@/lib/chatbot/tools"
+import { loadMcpTools } from "@/lib/chatbot/mcp/tools"
 import { type ChatMessage, type ChatResponse } from "@/lib/chatbot/types"
 import { type ChatTool } from "@/lib/llm/chat"
 import { type Permission } from "@/lib/permissions"
@@ -49,9 +50,15 @@ interface RunChatbotOptions {
   format: FormatSettings
 }
 
-function getToolsForContext(context: ChatbotContext | undefined, permissions: ReadonlySet<Permission> | undefined): ChatTool[] {
+/**
+ * Discord gets the Discord-safe set only. The web chat gets the tools the caller's permissions cover, and an
+ * admin also gets the tools of the MCP servers they enabled.
+ */
+async function getToolsForContext(context: ChatbotContext | undefined, permissions: ReadonlySet<Permission> | undefined): Promise<ChatTool[]> {
   if (context === "discord") return DISCORD_SAFE_TOOLS
-  return toolsForPermissions(permissions ?? new Set())
+  const granted = permissions ?? new Set<Permission>()
+  const tools: ChatTool[] = toolsForPermissions(granted)
+  return granted.has("assistant:tools:admin") ? [...tools, ...(await loadMcpTools()).tools] : tools
 }
 
 /**
@@ -135,7 +142,7 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
       activeConversationId = conversation.id
     }
 
-    const toolset = getToolsForContext(options.context, options.permissions)
+    const toolset = await getToolsForContext(options.context, options.permissions)
     const scope = options.context !== "discord" && options.isAdmin !== true ? (options.permissions ?? new Set<Permission>()) : null
     const systemPrompt = await getSystemPrompt(options.context, toolset, options.format, scope)
 

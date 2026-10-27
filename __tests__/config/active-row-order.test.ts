@@ -15,7 +15,7 @@ import path from 'path'
 const ROOT = path.resolve(__dirname, '../..')
 const DIRS = ['app', 'actions', 'components', 'evals', 'hooks', 'lib', 'scripts']
 const SKIP = new Set(['__tests__', 'generated', 'node_modules', 'dist'])
-const CALL = /\.(plexServer|jellyfinServer|tautulli|overseerr|sonarr|radarr|prometheus)\s*\.\s*findFirst(?:OrThrow)?\s*\(/g
+const CALL = /\.(plexServer|jellyfinServer|tautulli|overseerr|sonarr|radarr)\s*\.\s*findFirst(?:OrThrow)?\s*\(/g
 const MARKER = 'active-row-order: unordered'
 
 function sourceFiles(dir: string): string[] {
@@ -82,7 +82,7 @@ describe('active service row reads', () => {
       'prisma.overseerr.findFirst({ where: { isActive: true }, orderBy: { updatedAt: "desc" } })',
       'prisma.lLMProvider.findFirst({ where: { isActive: true } })',
       `// ${MARKER}`,
-      'prisma.prometheus.findFirst({ where: { isActive: true } })',
+      'prisma.radarr.findFirst({ where: { isActive: true } })',
     ].join('\n')
     expect(unorderedActiveReads(path.join(ROOT, 'x.ts'), source)).toEqual(['x.ts:3', 'x.ts:4', 'x.ts:5'])
   })

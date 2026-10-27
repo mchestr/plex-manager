@@ -50,7 +50,6 @@ export const BARREL_TARGETS: Record<string, Record<string, string>> = {
     updateOverseerr: '@/actions/admin/admin-servers',
     updateSonarr: '@/actions/admin/admin-servers',
     updateRadarr: '@/actions/admin/admin-servers',
-    updatePrometheus: '@/actions/admin/admin-servers',
     updateUserAdminStatus: '@/actions/admin/admin-users',
     setUserDisabled: '@/actions/admin/admin-users',
     getAdminSettings: '@/lib/data/admin-settings',
