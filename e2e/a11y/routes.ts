@@ -7,6 +7,7 @@ import {
   VISUAL_REWIND_ID,
   VISUAL_REWIND_YEAR,
 } from '../helpers/seed-fixtures';
+import { editSection } from '../helpers/settings';
 import { A11Y_CONVERSATION_ID, A11Y_SHARE_TOKEN, clearA11yShareVisits } from './seed';
 
 /**
@@ -135,10 +136,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
     as: 'admin',
     ready: 'settings-plex-section',
     state: 'plex editing',
-    setup: async (page) => {
-      await page.getByTestId('settings-plex-edit').click();
-      await expect(page.getByTestId('settings-plex-form')).toBeVisible();
-    },
+    setup: (page) => editSection(page, 'plex'),
   },
   // The public share route records a visit; a worker restart's re-seed drops it.
   { path: '/admin/shares', as: 'admin', ready: 'admin-shares-header', reset: clearA11yShareVisits },

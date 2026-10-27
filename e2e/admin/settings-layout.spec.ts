@@ -1,5 +1,6 @@
 import { expect, test } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
+import { editSection } from '../helpers/settings';
 
 /**
  * P10.19: the settings layout. The section nav reaches every section, Test
@@ -91,7 +92,7 @@ test.describe('Settings layout', () => {
 
     // The seed has no Overseerr, so the section reads "Not set up." with Set up
     await expect(page.getByTestId('settings-overseerr-empty')).toHaveText('Not set up.');
-    await page.getByTestId('settings-overseerr-edit').click();
+    await editSection(page, 'overseerr');
     await page.getByTestId('settings-overseerr-name').fill('Requests (edited)');
 
     await expect(page.getByTestId('settings-overseerr-unsaved')).toBeVisible();

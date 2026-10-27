@@ -6,6 +6,7 @@ import {
   VISUAL_INVITE_IDS,
   VISUAL_PLEX_SERVER,
 } from '../helpers/seed-fixtures';
+import { editSection } from '../helpers/settings';
 import { capture, expect, settlePage, skipUnlessProductionBuild, test } from './visual-test';
 
 /**
@@ -76,8 +77,7 @@ test.describe('Admin screens', () => {
   test('settings, editing the Plex server', async ({ page }) => {
     await page.goto('/admin/settings');
     await settlePage(page);
-    await page.getByTestId('settings-plex-edit').click();
-    await expect(page.getByTestId('settings-plex-form')).toBeVisible();
+    await editSection(page, 'plex');
     await expect(page.getByTestId('settings-plex-section')).toHaveScreenshot('admin-settings-plex-editing.png', {
       mask: [page.getByTestId(/-timestamp$/)],
     });

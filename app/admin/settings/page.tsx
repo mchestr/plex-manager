@@ -91,7 +91,8 @@ export default async function SettingsPage() {
   ])
   // After the reads above, so it lists every secret they could not decrypt
   const encryption = await getEncryptionStatus()
-  const saved = (id: keyof typeof audit) => <LastSaved id={id} meta={audit[id]} />
+  // Nothing before a first save, so a read-only section shows no empty footer
+  const saved = (id: keyof typeof audit) => audit[id] && <LastSaved id={id} meta={audit[id]} />
   const baseUrl = getBaseUrl()
   const other = {
     sonarr: settings.sonarr,

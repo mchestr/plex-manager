@@ -1,5 +1,6 @@
 import { expect, test } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
+import { editSection } from '../helpers/settings';
 
 /**
  * P10.20 (SEC-31, design 6.4): a changed address never reuses a stored key.
@@ -35,7 +36,7 @@ test.describe('Settings: a stored key stays with its address', () => {
     const save = page.getByTestId('settings-overseerr-save');
 
     // Set up an Overseerr with a key, so there is one to protect
-    await page.getByTestId('settings-overseerr-edit').click();
+    await editSection(page, 'overseerr');
     await page.getByTestId('settings-overseerr-name').fill('Requests');
     await page.getByTestId('settings-overseerr-url').fill(SAVED_URL);
     await key.fill('e2e-overseerr-key-a91c');
@@ -44,12 +45,12 @@ test.describe('Settings: a stored key stays with its address', () => {
     // The save returns the section to its summary: the key shows only by its last four
     await expect(page.getByTestId('settings-overseerr-summary-secret')).toContainText('Saved, ends in a91c');
     await expect(page.getByTestId('settings-overseerr-summary')).not.toContainText('e2e-overseerr-key');
-    await expect(page.getByTestId('settings-overseerr-summary-url')).toHaveText(SAVED_URL);
+    await expect(page.getByTestId('settings-overseerr-summary-url').locator('dd')).toHaveText(SAVED_URL);
     await expect(page.getByTestId('settings-overseerr-last-saved')).toContainText('Last saved just now');
     await expect(page.getByTestId('settings-overseerr-edit')).toBeFocused();
 
     // Editing shows the stored key as saved, never as a value
-    await page.getByTestId('settings-overseerr-edit').click();
+    await editSection(page, 'overseerr');
     await expect(page.getByTestId('settings-overseerr-secret-saved')).toBeVisible();
     await expect(key).toHaveValue('');
     await expect(key).toHaveAttribute('placeholder', /a91c$/);

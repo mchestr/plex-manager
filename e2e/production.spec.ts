@@ -1,6 +1,7 @@
 import { expect, test } from './fixtures/session';
 import { TEST_USERS } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
+import { editSection } from './helpers/settings';
 
 /**
  * Checks that only mean something against `next build` plus `next start`
@@ -69,7 +70,7 @@ test.describe('Production build', () => {
       await prisma.config.upsert({ where: { id: 'config' }, update: { serverName: name }, create: { id: 'config', serverName: name } });
 
       await page.goto('/admin/settings#server-time-zone');
-      await page.getByTestId('settings-system-edit').click();
+      await editSection(page, 'system');
       await page.getByTestId('server-time-zone-select').click();
       await page.getByTestId('server-time-zone-select-option-Pacific/Auckland').click();
       await page.getByTestId('settings-system-save').click();

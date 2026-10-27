@@ -4,6 +4,7 @@ import { TEST_USERS } from '../fixtures/auth';
 import { expect, test } from '../fixtures/session';
 import { createE2EPrismaClient } from '../helpers/prisma';
 import { clearRewindSeed, REWIND_MEMBERS, REWIND_YEAR, seedRewind } from '../helpers/seed-rewind';
+import { editSection } from '../helpers/settings';
 
 /**
  * P7.12: the Rewind section of `/admin/settings`. Saving "Admins only" hides
@@ -35,12 +36,6 @@ async function setFlags(data: Partial<Flags>): Promise<void> {
   } finally {
     await prisma.$disconnect();
   }
-}
-
-/** Opens the section's form. */
-async function editSettings(page: Page): Promise<void> {
-  await page.getByTestId('settings-rewind-edit').click();
-  await expect(page.getByTestId('settings-rewind-form')).toBeVisible();
 }
 
 /**
@@ -99,7 +94,7 @@ test.describe('Rewind settings section', () => {
     await signIn(TEST_USERS.ADMIN.id);
     await page.goto('/admin/settings#rewind');
 
-    await editSettings(page);
+    await editSection(page, 'rewind');
     await page.getByTestId('rewind-settings-audience-trigger').click();
     await page.getByTestId('rewind-settings-audience-option-admins').click();
     await saveSettings(page);
@@ -117,7 +112,7 @@ test.describe('Rewind settings section', () => {
     await signIn(TEST_USERS.ADMIN.id);
     await page.goto('/admin/settings#rewind');
 
-    await editSettings(page);
+    await editSection(page, 'rewind');
     await page.getByTestId('rewind-settings-pages-people').click();
     await saveSettings(page);
 

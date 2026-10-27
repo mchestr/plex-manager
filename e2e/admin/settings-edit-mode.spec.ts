@@ -1,4 +1,5 @@
 import { expect, test } from '../fixtures/auth';
+import { editSection } from '../helpers/settings';
 
 /**
  * Settings sections open read-only and edit one at a time (design 6.4): Edit
@@ -17,11 +18,14 @@ test.describe('Settings: read-only sections with an Edit mode', () => {
     await expect(section.getByRole('textbox')).toHaveCount(0);
     await expect(section.getByRole('button', { name: 'Test connection for Plex server' })).toBeVisible();
 
+    // Edit is server-rendered before it hydrates, so press until the form opens
     const edit = section.getByRole('button', { name: 'Edit Plex server' });
-    await edit.focus();
-    await page.keyboard.press('Enter');
+    await expect(async () => {
+      await edit.focus();
+      await page.keyboard.press('Enter');
+      await expect(page.getByTestId('settings-plex-form')).toBeVisible({ timeout: 1000 });
+    }).toPass();
 
-    await expect(page.getByTestId('settings-plex-form')).toBeVisible();
     await expect(page.getByTestId('settings-plex-editing')).toHaveText('Editing');
     await expect(page.getByTestId('settings-plex-name')).toBeFocused();
     await expect(page.getByTestId('settings-plex-name')).toBeInViewport();
@@ -37,7 +41,7 @@ test.describe('Settings: read-only sections with an Edit mode', () => {
     await page.goto('/admin/settings');
     const name = page.getByTestId('settings-plex-name');
 
-    await page.getByTestId('settings-plex-edit').click();
+    await editSection(page, 'plex');
     const saved = await name.inputValue();
     await name.fill(`${saved} (edited)`);
     await expect(page.getByTestId('settings-plex-unsaved')).toBeVisible();
@@ -61,8 +65,7 @@ test.describe('Settings: read-only sections with an Edit mode', () => {
   test('opening another section closes a clean one, and Save with nothing changed just closes', async ({ adminPage: page }) => {
     await page.goto('/admin/settings');
 
-    await page.getByTestId('settings-plex-edit').click();
-    await expect(page.getByTestId('settings-plex-form')).toBeVisible();
+    await editSection(page, 'plex');
 
     // The seed has no Tautulli: its button reads Set up
     await expect(page.getByTestId('settings-tautulli-edit')).toHaveText(/Set up/);
