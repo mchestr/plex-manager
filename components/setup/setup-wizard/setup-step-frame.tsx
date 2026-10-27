@@ -21,7 +21,6 @@ const STEP_ICONS: Record<SetupStepId | "summary", (typeof icons)[keyof typeof ic
   "llm-rewind": icons.rewind,
   "llm-chat": icons.assistant,
   discord: icons.discord,
-  prometheus: icons.prometheus,
   summary: icons.success,
 }
 

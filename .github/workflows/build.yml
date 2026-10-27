@@ -508,8 +508,9 @@ jobs:
 
   # The Playwright projects against `next build` plus `next start`, in the
   # image the visual baselines are taken in, on a throwaway Postgres and Redis.
-  # "E2E Tests" (required) runs every functional spec, Rewind's story flows
-  # and its axe scans (chromium, webkit and firefox; the image ships all
+  # "E2E Tests" (required) runs every functional spec and the setup wizard;
+  # "Rewind E2E Tests" (required) runs Rewind's story flows, its axe scans and
+  # the strict CSP scan (chromium, webkit and firefox; the image ships all
   # three). "Visual Diffs" and "Rewind Visual Diffs" run the screenshot
   # projects and are advisory: a diff leaves a warning and the report, not a
   # failed check (refresh baselines with visual-baselines.yml). "Rewind
@@ -525,19 +526,28 @@ jobs:
       matrix:
         suite:
           - name: E2E Tests
+            projects: --project=chromium --project=setup-wizard
+            advisory: false
+            artifact: playwright-report
+            timeout: 30
+          # Its own job (and database) so it runs beside "E2E Tests"; together
+          # they were one 28 minute serial run.
+          - name: Rewind E2E Tests
             projects: >-
-              --project=chromium --project=setup-wizard
               --project=rewind-e2e-chromium --project=rewind-e2e-webkit --project=rewind-e2e-firefox
               --project=rewind-a11y-chromium --project=rewind-a11y-webkit --project=rewind-a11y-firefox
               --project=csp-chromium --project=csp-webkit --project=csp-firefox
             advisory: false
-            artifact: playwright-report
-            timeout: 60
-          # The setup projects pull in setup-wizard, which they depend on.
+            artifact: playwright-report-rewind
+            timeout: 30
+          # The setup projects pull in setup-wizard, which they depend on. The
+          # advisory suites lift playwright.config.ts's 10-failure stop, so the
+          # report lists every diff.
           - name: Visual Diffs
             projects: >-
               --project=visual-desktop --project=visual-mobile
               --project=visual-setup-desktop --project=visual-setup-mobile
+              --max-failures=0
             advisory: true
             artifact: visual-diffs
             warning: Screenshots differ from the baselines. Review the visual-diffs artifact; if the change is intended, run the Visual Baselines workflow (e2e/visual/README.md).
@@ -546,6 +556,7 @@ jobs:
             projects: >-
               --project=rewind-visual-phone-chromium --project=rewind-visual-phone-webkit
               --project=rewind-visual-desktop-chromium --project=rewind-visual-desktop-webkit
+              --max-failures=0
             advisory: true
             artifact: rewind-visual-diffs
             warning: Screenshots differ from the baselines. Review the rewind-visual-diffs artifact; if the change is intended, run the Visual Baselines workflow (e2e/visual/README.md). A 12 px text or 44 px target check may have failed instead; the job log names the page.

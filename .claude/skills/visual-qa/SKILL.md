@@ -24,7 +24,7 @@ the projects live in `playwright.config.ts`.
 | `csp-chromium`, `csp-webkit`, `csp-firefox` | `e2e/csp.spec.ts`: no CSP violation and a nonce on every server-rendered script, on every axe route and the Rewind story | E2E Tests (required) |
 | `rewind-e2e-chromium`, `rewind-e2e-webkit`, `rewind-e2e-firefox` | the Rewind flows in `e2e/rewind/` | E2E Tests (required) |
 | `rewind-perf` | `e2e/perf/rewind.perf.spec.ts` and `e2e/perf/rewind-budget.perf.spec.ts` | Rewind Performance (required) |
-| `visual-light-desktop`, `visual-light-mobile`, `visual-light-rewind`, `a11y-light` | the light theme, after `light-theme-setup` | not in CI |
+| `visual-light-desktop`, `visual-light-mobile`, `visual-light-rewind`, `a11y-light` | the light theme (the `pm-theme=light` cookie) | not in CI |
 
 ## Running
 

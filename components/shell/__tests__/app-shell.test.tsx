@@ -10,6 +10,7 @@ import { axe, toHaveNoViolations } from 'jest-axe'
 import { signOut } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
 
+import { ToastProvider } from '@/components/ui/toast'
 import { AppShell } from '@/components/shell/app-shell'
 import { MemberNav } from '@/components/shell/member-nav'
 import { memberNav } from '@/lib/member/nav'
@@ -34,15 +35,17 @@ const mockPathname = usePathname as jest.Mock
 jest.mock('@/components/subscription/subscription-banners', () => ({ SubscriptionBanners: () => null }))
 jest.mock('next/dynamic', () => () => require('@/components/shell/app-chrome').AppChrome)
 
-const OUTAGE: MemberNotice = { kind: 'outage', serviceName: 'Plex' }
+const NOTICE: MemberNotice = { kind: 'past-due' }
 
 const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initials: 'TM', isAdmin: false, membership: false }
 
 function renderShell(user: ShellUser = member, notice?: MemberNotice) {
   return render(
-    <AppShell serverName="Northfield Plex" user={user} nav={memberNav({ rewindYear: 2026, membership: false })} notice={notice}>
-      <p>Page</p>
-    </AppShell>
+    <ToastProvider>
+      <AppShell serverName="Northfield Plex" user={user} nav={memberNav({ rewindYear: 2026, membership: false })} notice={notice}>
+        <p>Page</p>
+      </AppShell>
+    </ToastProvider>
   )
 }
 
@@ -82,7 +85,7 @@ describe('AppShell', () => {
 
   it('steps aside on Rewind pages, which draw their own chrome', () => {
     mockPathname.mockReturnValue('/rewind/2026')
-    renderShell(member, OUTAGE)
+    renderShell(member, NOTICE)
 
     expect(screen.queryByTestId('app-top-bar')).not.toBeInTheDocument()
     expect(screen.queryByTestId('app-notice')).not.toBeInTheDocument()
@@ -90,9 +93,9 @@ describe('AppShell', () => {
   })
 
   it('renders the notice under the top bar', () => {
-    renderShell(member, OUTAGE)
+    renderShell(member, NOTICE)
 
-    expect(screen.getByTestId('app-notice')).toHaveTextContent('Plex is down')
+    expect(screen.getByTestId('app-notice')).toBeInTheDocument()
   })
 
   it('opens the account menu by keyboard and signs out', async () => {
@@ -113,6 +116,10 @@ describe('AppShell', () => {
     await user.keyboard('{ArrowDown}')
     expect(within(menu).getByRole('menuitem', { name: 'Account settings' })).toHaveFocus()
     expect(within(menu).getByRole('menuitem', { name: 'Account settings' })).toHaveAttribute('href', '/account')
+    await user.keyboard('{ArrowDown}')
+    expect(screen.getByTestId('account-menu-appearance-dark')).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
+    expect(screen.getByTestId('account-menu-appearance-light')).toHaveFocus()
     await user.keyboard('{ArrowDown}')
     expect(screen.getByTestId('sign-out-button')).toHaveFocus()
     expect(await axe(document.body, { rules: { region: { enabled: false } } })).toHaveNoViolations()

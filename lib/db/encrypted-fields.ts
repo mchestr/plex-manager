@@ -28,5 +28,7 @@ export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   LLMUsage: ["prompt", "response"],
   DiscordIntegration: ["clientSecret", "botToken"],
   DiscordConnection: ["accessToken", "refreshToken"],
+  McpServer: ["authHeaderSecret"],
+  KnowledgeSource: ["token"],
   Config: ["stripeSecretKey", "stripeWebhookSecret", "rewindSerialKey"],
 }

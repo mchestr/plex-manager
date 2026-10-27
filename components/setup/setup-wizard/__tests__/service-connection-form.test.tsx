@@ -19,7 +19,6 @@ jest.mock("@/actions/setup", () => ({
   saveOverseerr: jest.fn(),
   saveSonarr: jest.fn(),
   saveRadarr: jest.fn(),
-  savePrometheus: jest.fn(),
   skipSetupStep: jest.fn(),
   testSetupConnection: jest.fn(),
 }))
@@ -37,7 +36,6 @@ const DEV: DevDefaults = {
   sonarr: null,
   radarr: null,
   discord: null,
-  prometheus: null,
   chatLlmProvider: null,
   wrappedLlmProvider: null,
   llmProvider: null,
@@ -97,7 +95,7 @@ describe("ServiceConnectionForm", () => {
 
     await user.click(screen.getByTestId("setup-overseerr-test"))
 
-    expect(testSetupConnection).toHaveBeenCalledWith({ service: "overseerr", url: "http://localhost:5055", secret: undefined, query: undefined })
+    expect(testSetupConnection).toHaveBeenCalledWith({ service: "overseerr", url: "http://localhost:5055", secret: undefined })
     expect(await screen.findByText("Nothing answered at this address", { selector: "p" })).toBeInTheDocument()
     expect(screen.getByTestId("setup-overseerr-test-result")).toHaveAttribute("role", "status")
   })

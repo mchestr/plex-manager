@@ -32,7 +32,6 @@ import {
   Film,
   FlaskConical,
   GalleryHorizontalEnd,
-  Gauge,
   House,
   Info,
   KeyRound,
@@ -78,7 +77,6 @@ export const icons = {
   sonarr: TvMinimal,
   radarr: Film,
   jellyfin: Server,
-  prometheus: Gauge,
   // Areas
   rewind: Rewind,
   rewindOpen: Play,

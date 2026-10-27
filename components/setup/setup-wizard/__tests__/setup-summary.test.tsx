@@ -30,7 +30,6 @@ const ALL: Record<SetupStepId, boolean> = {
   "llm-rewind": true,
   "llm-chat": true,
   discord: true,
-  prometheus: true,
 }
 
 beforeEach(() => jest.clearAllMocks())
@@ -97,6 +96,6 @@ describe("SetupSummary", () => {
 
     await user.click(screen.getByTestId("setup-back"))
 
-    expect(mockPush).toHaveBeenCalledWith("/setup?step=prometheus")
+    expect(mockPush).toHaveBeenCalledWith("/setup?step=discord")
   })
 })

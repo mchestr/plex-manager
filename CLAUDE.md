@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A Next.js-based Plex management platform that combines server management tools, member onboarding and invites, and Rewind, each member's personal year in review (formerly "Wrapped"). Integrates with Plex, Tautulli and Overseerr, with optional Jellyfin sign-in, Sonarr/Radarr, Stripe subscriptions, Discord, Prometheus and LLM providers.
+A Next.js-based Plex management platform that combines server management tools, member onboarding and invites, and Rewind, each member's personal year in review (formerly "Wrapped"). Integrates with Plex, Tautulli and Overseerr, with optional Jellyfin sign-in, Sonarr/Radarr, Stripe subscriptions, Discord and LLM providers.
 
 ## Tech Stack
 
@@ -35,7 +35,7 @@ A Next.js-based Plex management platform that combines server management tools, 
 - **Validation**: All inputs validated with Zod before processing
 - **Cache Components** (`cacheComponents: true`, P11.19): no segment exports `dynamic`, `revalidate`, `fetchCache` or `runtime`; uncached data renders per request
   - Session: `getSession()` from `@/lib/data/session`, never `getServerSession(authOptions)`; active service rows: `getActiveService(kind)` from `@/lib/data/active-service`. Both are React `cache()`d per request
-  - Shared, non-secret data uses `'use cache'` with `cacheTag` and `cacheLife` (`getAppSettings()` tag `app-settings`, Prometheus status, plan names), and the actions that change it call `updateTag(tag)`. The cache is per process, so with several `web` containers another container serves a cached value until its `cacheLife` revalidates; data that must show at once on every container (announcements) is read per request. Readers the bot or jobs also call go through `cachedOrDirect` (`@/lib/utils/use-cache`), and a database read calls `notDuringBuild()` first, since the Docker build has no database
+  - Shared, non-secret data uses `'use cache'` with `cacheTag` and `cacheLife` (`getAppSettings()` tag `app-settings`, plan names), and the actions that change it call `updateTag(tag)`. The cache is per process, so with several `web` containers another container serves a cached value until its `cacheLife` revalidates; data that must show at once on every container (announcements) is read per request. Readers the bot or jobs also call go through `cachedOrDirect` (`@/lib/utils/use-cache`), and a database read calls `notDuringBuild()` first, since the Docker build has no database
   - Never put a row with `ENCRYPTED_FIELDS`, the session or anything viewer-specific inside `'use cache'` (`__tests__/security/use-cache-no-secrets.test.ts`)
   - An action that revalidates already refreshes the page; where the client needs a refresh, the action calls `refresh()` from `next/cache` instead of `router.refresh()`
 
@@ -79,7 +79,7 @@ lib/                    # Utilities, helpers, business logic
 ├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
 ├── charts/            # Chart slot map (var(--chart-n)) and generated text summaries for ChartCard
 ├── chatbot/           # Admin assistant: tools, executors, prompts and the conversation loop (server-only)
-├── connections/       # External API clients (Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr, Prometheus)
+├── connections/       # External API clients (Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr)
 ├── data/              # Server-only admin loaders, each checking assertAdmin() next to its data
 ├── db/                # Encrypted fields and the ?schema= parameter
 ├── design/            # Token mirror of app/globals.css and colour contrast helpers
@@ -284,7 +284,7 @@ Located in `components/ui/`:
 - **Actions**: `Button` (variants `primary`, `secondary`, `outline`, `ghost`, `destructive`, `destructive-solid`, `link`; `loading` and `loadingLabel`), `SubmitButton`, `Toggle`, `SegmentedControl`
 - **Forms**: `Input`, `Textarea`, `SecretInput`, `Select` and its parts, `Checkbox`, `RadioGroup`, `Switch`, `Slider`, `Field`, `FormField`, `Label`, `DateRangeFilter`, `FilterBar`
 - **Overlays**: `Dialog`, `AlertDialog`, `ConfirmDialog` (with `useActionDialog`), `Sheet`, `Popover`, `DropdownMenu`, `Tooltip`, `Command`
-- **Display**: `Card` (compose `CardHeader`, `CardContent`, `CardFooter`), `Badge`, `StatusBadge`, `StatTile`, `DataTable`, `ChartCard`, `Tabs`, `Stepper`, `Poster`, `Time`, `MarkdownBody`, `Icon`, `PageHeader`, `SettingsSection`, `UptimeStrip`, `Wordmark`
+- **Display**: `Card` (compose `CardHeader`, `CardContent`, `CardFooter`), `Badge`, `StatusBadge`, `StatTile`, `DataTable`, `ChartCard`, `Tabs`, `Stepper`, `Poster`, `Time`, `MarkdownBody`, `Icon`, `PageHeader`, `SettingsSection`, `Wordmark`
 - **Feedback**: `Alert`, `useToast`, `Spinner`, `Skeleton`, `EmptyState`, `ErrorState`, `StatusScreen`, `LiveStatus`
 
 ESLint enforces this: a raw `<button>`, `<input>`, `<select>`, `<textarea>` or inline `<svg>` outside `components/ui/**` is an error (`no-restricted-syntax`, selectors in `eslint/restricted-syntax.mjs`). The allowlist is Rewind art (`components/rewind/**`), the dev sheet (`app/dev/**`), the `next/og` image routes and `app/api/**`. The old adapters (`StyledInput`, `StyledDropdown`, `ModalShell`, `ConfirmModal`, `LoadingSpinner` and the rest) are deleted, and importing one is an error.
@@ -338,7 +338,7 @@ describe('Component', () => {
   - `chromium` (every functional spec) and `setup-wizard` (the wizard and its axe scan, which reopen setup);
   - `rewind-e2e-chromium`, `rewind-e2e-webkit` and `rewind-e2e-firefox` (`e2e/rewind/*.spec.ts`; Firefox runs the share page and archive specs), and `rewind-a11y-chromium`, `rewind-a11y-webkit` and `rewind-a11y-firefox` (`e2e/a11y/rewind*.a11y.spec.ts`; Firefox only the `@article` tests);
   - `rewind-perf` (`e2e/perf/*.perf.spec.ts`, chromium: the 4x-throttled long-task gate, the 110 KB first-page budget and the admin chart budget);
-  - screenshots: `visual-desktop`, `visual-mobile`, `visual-setup-desktop`, `visual-setup-mobile`, the `rewind-visual-*` phone and desktop projects (chromium and webkit), and the light-theme projects (`visual-light-*`, `a11y-light`) behind `light-theme-setup`. See `e2e/visual/README.md`
+  - screenshots: `visual-desktop`, `visual-mobile`, `visual-setup-desktop`, `visual-setup-mobile`, the `rewind-visual-*` phone and desktop projects (chromium and webkit), and the light-theme projects (`visual-light-*`, `a11y-light`). See `e2e/visual/README.md`
 - **Auth fixtures** - Import `test` and `expect` from `e2e/fixtures/auth.ts` (`adminPage`, `regularUserPage`) or `e2e/fixtures/session.ts` (`signIn`); both mint the NextAuth session cookie, so they work against `next dev` and a production build. There is no test-token login. See `e2e/README.md`
 - **Production mode** - `E2E_SERVER=prod` runs `npm run build:e2e` then `next start`; CI runs every project that way (visual specs and `e2e/production.spec.ts` skip without it). `E2E_PREBUILT=1` skips the build when one already exists
 
@@ -362,7 +362,7 @@ describe('Component', () => {
 
 ### CI Checks
 
-`.github/workflows/build.yml` ("Checks") runs the checks that `main` requires: Lint (ESLint and actionlint), Typecheck, Audit (`scripts/audit-gate.mjs`; exceptions in `.github/audit-exceptions.json`, at most 14 days each), Knip, Design System (`design:check` and `design:rewind-motion`), Unit Tests (with coverage floors, then `rewind:fixtures --check`, `rewind:freeze --check` and `env:docs --check`), Integration, Schema Drift (a schema change without its migration fails, and `scripts/check-migrations.mjs` checks migration names), Build, E2E Tests (production build, Postgres and Redis: `chromium`, `setup-wizard`, and the Rewind E2E and axe projects on chromium, webkit and firefox) and Rewind Performance (`rewind-perf`, blocking). Visual Diffs and Rewind Visual Diffs run the screenshot projects and are advisory, not required: a diff leaves a warning and the `visual-diffs` or `rewind-visual-diffs` artifact but does not fail the workflow, and the Visual Baselines workflow (`.github/workflows/visual-baselines.yml`, see `e2e/visual/README.md`) refreshes the baselines. The light-theme projects run only locally. Image Smoke Test runs on pull requests but is not required: it builds the image, starts it on a fresh Postgres and Redis until its `HEALTHCHECK` reports healthy (migrations, `SKIP_MIGRATIONS`, read-only files, tini, `docker stop`) and scans it with Trivy. Shared setup lives in `.github/actions/setup/action.yml`, and every action is pinned by SHA
+`.github/workflows/build.yml` ("Checks") runs the checks that `main` requires: Lint (ESLint and actionlint), Typecheck, Audit (`scripts/audit-gate.mjs`; exceptions in `.github/audit-exceptions.json`, at most 14 days each), Knip, Design System (`design:check` and `design:rewind-motion`), Unit Tests (with coverage floors, then `rewind:fixtures --check`, `rewind:freeze --check` and `env:docs --check`), Integration, Schema Drift (a schema change without its migration fails, and `scripts/check-migrations.mjs` checks migration names), Build, E2E Tests (production build, Postgres and Redis: `chromium` and `setup-wizard`), Rewind E2E Tests (the same, for the Rewind E2E, axe and CSP projects on chromium, webkit and firefox) and Rewind Performance (`rewind-perf`, blocking). Visual Diffs and Rewind Visual Diffs run the screenshot projects and are advisory, not required: a diff leaves a warning and the `visual-diffs` or `rewind-visual-diffs` artifact but does not fail the workflow, and the Visual Baselines workflow (`.github/workflows/visual-baselines.yml`, see `e2e/visual/README.md`) refreshes the baselines. The light-theme projects run only locally. Image Smoke Test runs on pull requests but is not required: it builds the image, starts it on a fresh Postgres and Redis until its `HEALTHCHECK` reports healthy (migrations, `SKIP_MIGRATIONS`, read-only files, tini, `docker stop`) and scans it with Trivy. Shared setup lives in `.github/actions/setup/action.yml`, and every action is pinned by SHA
 
 Other workflows: `freeze-gate.yml` fails a pull request while the `CODE_FREEZE` repository variable is `on`, unless it carries `freeze:data` or `freeze:security` (`docs/operations.md`, "Code freeze gate"); `rewind-gallery.yml` builds the Rewind review gallery by hand; `docker-publish.yml` publishes the image from `main` and `v*` tags.
 

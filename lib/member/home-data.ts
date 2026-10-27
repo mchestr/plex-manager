@@ -19,7 +19,6 @@
 import "server-only"
 
 import { getActiveAnnouncements, type AnnouncementData } from "@/actions/announcements"
-import { getPrometheusStatus, type StatusData } from "@/actions/prometheus-status"
 import { getWatchlistSyncSettings } from "@/actions/watchlist"
 import type { QuickLinksProps } from "@/components/dashboard/quick-links"
 import type { WatchlistSyncSettings } from "@/hooks/use-watchlist-sync"
@@ -38,8 +37,6 @@ import { getActiveService } from "@/lib/data/active-service"
 /** Home shows the three announcements at the top of the list; `/announcements` has the rest. */
 const HOME_ANNOUNCEMENTS = 3
 
-const UNCONFIGURED: StatusData = { isConfigured: false, serviceName: "", segments: [], overallStatus: "unknown" }
-
 export interface HomeData {
   serverName: string
   /** "Good evening, Morgan" */
@@ -53,7 +50,6 @@ export interface HomeData {
   watchlist: WatchlistSyncSettings | null
   hasSubscription: boolean
   supportChannelUrl: string | null
-  uptime: StatusData
   format: FormatSettings
 }
 
@@ -108,7 +104,7 @@ async function mediaLink(service: AuthService, serverName: string): Promise<Medi
 }
 
 export async function getHomeData(userId: string, now: Date = new Date()): Promise<HomeData> {
-  const [user, help, serverName, format, announcementsResult, uptimeResult, watchlistResult, subscription] =
+  const [user, help, serverName, format, announcementsResult, watchlistResult, subscription] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
@@ -118,7 +114,6 @@ export async function getHomeData(userId: string, now: Date = new Date()): Promi
       getServerName(),
       getFormatSettings(),
       getActiveAnnouncements(),
-      getPrometheusStatus(),
       getWatchlistSyncSettings(),
       prisma.subscription.findUnique({ where: { userId }, select: { id: true } }),
     ])
@@ -141,7 +136,6 @@ export async function getHomeData(userId: string, now: Date = new Date()): Promi
     watchlist: watchlistResult.success ? watchlistResult.data : null,
     hasSubscription: Boolean(subscription),
     supportChannelUrl: help.discord?.supportChannelUrl ?? null,
-    uptime: uptimeResult.success ? uptimeResult.data : UNCONFIGURED,
     format,
   }
 }

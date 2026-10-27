@@ -150,8 +150,9 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `Overseerr` | URL and API key | `apiKey` |
 | `Sonarr` | URL and API key | `apiKey` |
 | `Radarr` | URL and API key | `apiKey` |
-| `Prometheus` | URL | No |
 | `LLMProvider` | provider, model and API key | `apiKey` |
+| `McpServer` | name, URL, auth header name and value, and the tools the admin turned on | `authHeaderSecret` |
+| `KnowledgeSource` | name, GitHub repository, branch, folder and an optional GitHub token | `token` |
 | `Config` | app settings, Stripe keys, Rewind settings | `stripeSecretKey`, `stripeWebhookSecret`, `rewindSerialKey` |
 | `DiscordIntegration` | Discord app credentials and bot settings; `updatedBy` admin id | `clientSecret`, `botToken` |
 | `LeaseLock` | which instance holds each lease (Discord bot, watchlist sync, retention) and until when | No |

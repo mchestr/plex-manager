@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { SettingsSection } from "@/components/ui/settings-section"
 
 interface SystemSectionProps {
-  /** The light theme switch (P10.10); it saves on its own. */
-  appearance: ReactNode
   baseUrl: string
+  /** package.json version, with the short build commit when the image set one. */
+  appVersion: string
   nodeEnv: string
   nodeVersion: string
   databaseProvider: string
@@ -35,18 +35,19 @@ function Row({ label, children, testId }: { label: string; children: ReactNode; 
 }
 
 /**
- * System information (6.4): the light theme switch, base URL, environment,
- * runtime and database, and the server time zone, which saves through the
- * section footer (P10.20).
+ * System information (6.4): base URL, environment, runtime and database, and
+ * the server time zone, which saves through the section footer (P10.20).
  */
-export function SystemSection({ appearance, baseUrl, nodeEnv, nodeVersion, databaseProvider, databaseUrl, platform, configUpdated, timeZone, footerMeta }: SystemSectionProps) {
+export function SystemSection({ baseUrl, appVersion, nodeEnv, nodeVersion, databaseProvider, databaseUrl, platform, configUpdated, timeZone, footerMeta }: SystemSectionProps) {
   const zone = useTimeZoneForm(timeZone)
   return (
     <SettingsSection id="system" title="System information" description="Runtime, database and the server time zone." form={zone.form} footerMeta={footerMeta}>
-      {appearance}
       <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Row label="Base URL">
           <span className="font-mono break-all">{baseUrl}</span>
+        </Row>
+        <Row label="App version" testId="settings-app-version">
+          <span className="font-mono">{appVersion}</span>
         </Row>
         <Row label="Environment">
           <Badge variant={nodeEnv === "production" ? "success" : "warning"}>{nodeEnv}</Badge>

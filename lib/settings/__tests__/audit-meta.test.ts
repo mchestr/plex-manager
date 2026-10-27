@@ -46,7 +46,7 @@ describe("getSettingsAuditMeta", () => {
         ["llm", "llm.chat", "llm.wrapped", "llm.caps"],
         ["discord"],
         ["stripe", "stripe.enabled"],
-        ["sonarr", "radarr", "jellyfin", "jellyfin.login", "prometheus"],
+        ["sonarr", "radarr", "jellyfin", "jellyfin.login"],
         ["appearance", "timezone"],
       ])
     )

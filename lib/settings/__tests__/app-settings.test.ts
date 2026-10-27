@@ -73,24 +73,23 @@ describe("getAppSettings", () => {
       throw new Error('"use cache" cannot be used outside of App Router. Expected a WorkStore.')
     })
     zone.mockResolvedValue("UTC")
-    findUnique.mockResolvedValue({ locale: "fr-FR", serverName: "Cellar", lightThemeEnabled: false })
+    findUnique.mockResolvedValue({ locale: "fr-FR", serverName: "Cellar" })
 
     await expect(getAppSettings()).resolves.toMatchObject({ locale: "fr-FR", serverName: "Cellar" })
   })
 
-  it("returns the server zone, the stored locale, server name and light-theme flag", async () => {
+  it("returns the server zone, the stored locale, server name", async () => {
     zone.mockResolvedValue("Europe/Berlin")
-    findUnique.mockResolvedValue({ locale: "de-DE", serverName: "Northfield Plex", lightThemeEnabled: true })
+    findUnique.mockResolvedValue({ locale: "de-DE", serverName: "Northfield Plex" })
 
     await expect(getAppSettings()).resolves.toEqual({
       timeZone: "Europe/Berlin",
       locale: "de-DE",
       serverName: "Northfield Plex",
-      lightThemeEnabled: true,
     })
     expect(findUnique).toHaveBeenCalledWith({
       where: { id: "config" },
-      select: { locale: true, serverName: true, lightThemeEnabled: true },
+      select: { locale: true, serverName: true },
     })
   })
 
@@ -101,7 +100,7 @@ describe("getAppSettings", () => {
     zone.mockResolvedValue("UTC")
     findUnique.mockResolvedValue(row)
 
-    await expect(getAppSettings()).resolves.toEqual({ timeZone: "UTC", locale: "en-US", serverName: null, lightThemeEnabled: false })
+    await expect(getAppSettings()).resolves.toEqual({ timeZone: "UTC", locale: "en-US", serverName: null })
   })
 
   it("takes the zone from serverZone(), so it follows Config.timezone, then TZ, then UTC", async () => {
@@ -145,7 +144,6 @@ describe("getAppSettings", () => {
       timeZone: "America/Los_Angeles",
       locale: "en-US",
       serverName: null,
-      lightThemeEnabled: false,
     })
   })
 

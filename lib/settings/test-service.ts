@@ -14,9 +14,6 @@
  * 2. Validate the values with the service's own schema (`VALIDATION`).
  * 3. Run the service's tester through `probeConnection`, cut off at 5 s, and
  *    return `{ status, code }`. The tester's message never leaves the server.
- * 4. Prometheus only: once it answers, run the query. A query Prometheus
- *    rejects is a `VALIDATION` error on `query` with Prometheus's own
- *    `errorType: error` (GAP-09), so the form shows the parse error inline.
  *
  * @module lib/settings/test-service
  */
@@ -28,31 +25,27 @@ import type { z } from "zod"
 import { testJellyfinConnection } from "@/lib/connections/jellyfin-connection"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { testPlexConnection } from "@/lib/connections/plex-connection"
-import { testPrometheusConnection, validatePrometheusQuery } from "@/lib/connections/prometheus"
 import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { resolveSecretForOrigin } from "@/lib/security/secret-reuse"
-import { PROBE_TIMEOUT_MS, probeConnection, type Probe } from "@/lib/settings/probe"
+import { probeConnection, type Probe } from "@/lib/settings/probe"
 import { jellyfinServerSchema } from "@/lib/validations/jellyfin"
 import { overseerrSchema } from "@/lib/validations/overseerr"
 import { plexServerSchema } from "@/lib/validations/plex"
-import { prometheusSchema } from "@/lib/validations/prometheus"
 import { radarrSchema } from "@/lib/validations/radarr"
 import { sonarrSchema } from "@/lib/validations/sonarr"
 import { tautulliSchema } from "@/lib/validations/tautulli"
 
-export const TESTABLE_SERVICES = ["plex", "jellyfin", "tautulli", "overseerr", "sonarr", "radarr", "prometheus"] as const
+export const TESTABLE_SERVICES = ["plex", "jellyfin", "tautulli", "overseerr", "sonarr", "radarr"] as const
 type TestableService = (typeof TESTABLE_SERVICES)[number]
 
 export interface ServiceTestInput {
   service: TestableService
   url: string
-  /** As typed; blank asks to reuse the stored secret. Prometheus takes none. */
+  /** As typed; blank asks to reuse the stored secret. */
   secret?: string
-  /** Prometheus only. */
-  query?: string
 }
 
 /** The stored secret and the URL it was saved with, or null without an active row. */
@@ -64,7 +57,7 @@ export interface StoredSecret {
 export type ServiceTestResult =
   | { ok: true; probe: Probe }
   | { ok: false; code: "SECRET_REQUIRED" }
-  | { ok: false; code: "VALIDATION"; field: "url" | "secret" | "query"; message: string }
+  | { ok: false; code: "VALIDATION"; field: "url" | "secret"; message: string }
 
 type Tester = () => Promise<{ success: boolean; error?: string }>
 
@@ -76,8 +69,6 @@ function storedRow(service: TestableService): Promise<StoredSecret | null> {
   switch (service) {
     case "plex":
       return prisma.plexServer.findFirst({ ...where, select: { url: true, token: true } }).then((row) => row && { url: row.url, secret: row.token })
-    case "prometheus":
-      return Promise.resolve(null)
     case "jellyfin":
       return prisma.jellyfinServer.findFirst({ ...where, select: { url: true, apiKey: true } }).then(apiKeyRow)
     case "tautulli":
@@ -101,11 +92,11 @@ function parsed<S extends z.ZodType>(schema: S, values: z.input<S>, run: (config
   if (result.success) return run(result.data)
   const issue = result.error.issues[0]
   const path = issue?.path[0]
-  const field = path === "query" ? "query" : path === "url" ? "url" : "secret"
+  const field = path === "url" ? "url" : "secret"
   return { ok: false, code: "VALIDATION", field, message: issue?.message ?? "Invalid value" }
 }
 
-function testerFor(service: TestableService, url: string, secret: string, query: string): Tester | ServiceTestResult {
+function testerFor(service: TestableService, url: string, secret: string): Tester | ServiceTestResult {
   const base = { name: TEST_NAME, url }
   switch (service) {
     case "plex":
@@ -120,8 +111,6 @@ function testerFor(service: TestableService, url: string, secret: string, query:
       return parsed(sonarrSchema, { ...base, apiKey: secret }, (config) => () => testSonarrConnection(config))
     case "radarr":
       return parsed(radarrSchema, { ...base, apiKey: secret }, (config) => () => testRadarrConnection(config))
-    case "prometheus":
-      return parsed(prometheusSchema, { ...base, query }, (config) => () => testPrometheusConnection(config))
   }
 }
 
@@ -130,23 +119,12 @@ function testerFor(service: TestableService, url: string, secret: string, query:
  * active row; setup passes its own.
  */
 export async function testService(input: ServiceTestInput, stored?: StoredSecret | null): Promise<ServiceTestResult> {
-  let secret = ""
-  if (input.service !== "prometheus") {
-    // A typed secret is used as it is; only a blank one reads the stored row
-    const row = input.secret?.trim() ? null : stored === undefined ? await storedRow(input.service) : stored
-    const resolution = resolveSecretForOrigin({ submitted: input.secret, stored: row, submittedUrl: input.url })
-    if (!resolution.ok) return { ok: false, code: "SECRET_REQUIRED" }
-    secret = resolution.secret
-  }
+  // A typed secret is used as it is; only a blank one reads the stored row
+  const row = input.secret?.trim() ? null : stored === undefined ? await storedRow(input.service) : stored
+  const resolution = resolveSecretForOrigin({ submitted: input.secret, stored: row, submittedUrl: input.url })
+  if (!resolution.ok) return { ok: false, code: "SECRET_REQUIRED" }
 
-  const tester = testerFor(input.service, input.url, secret, input.query ?? "")
+  const tester = testerFor(input.service, input.url, resolution.secret)
   if (typeof tester !== "function") return tester
-  const probe = await probeConnection(input.service, tester)
-  if (input.service === "prometheus" && probe.status === "ok") {
-    // Parsed again for the normalised URL; the tester above already passed this parse
-    const config = prometheusSchema.parse({ name: TEST_NAME, url: input.url, query: input.query ?? "" })
-    const query = await validatePrometheusQuery(config, { timeoutMs: PROBE_TIMEOUT_MS })
-    if (!query.success) return { ok: false, code: "VALIDATION", field: "query", message: query.error }
-  }
-  return { ok: true, probe }
+  return { ok: true, probe: await probeConnection(input.service, tester) }
 }

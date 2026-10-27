@@ -2,7 +2,7 @@
 
 /**
  * Admin settings for the connected services (Plex, Jellyfin, Tautulli,
- * Overseerr, Sonarr, Radarr, Prometheus).
+ * Overseerr, Sonarr, Radarr).
  *
  * Every save runs the flow setup shares (`saveServiceConnection`, P10.24):
  * a blank token or API key means "keep the stored one", but only for the
@@ -10,8 +10,8 @@
  * rule and answers with code copy on a field (P10.20); the row becomes the
  * service's one active row; and the save is audited as `CONFIG_CHANGED`
  * with a redacted diff (SEC-55). A save also expires the cached connection
- * health, a Plex or Jellyfin save the cached app settings (the server name
- * falls back to theirs) and a Prometheus save the cached status (P11.19).
+ * health, and a Plex or Jellyfin save the cached app settings (the server name
+ * falls back to theirs, P11.19).
  */
 
 import { revalidatePath, updateTag } from "next/cache"
@@ -25,7 +25,7 @@ import { configDiff } from "@/lib/security/config-diff"
 import { SERVICE_DESCRIPTORS, type ServiceKind } from "@/lib/services/descriptors"
 import { saveServiceConnection } from "@/lib/services/service-save"
 import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
-import { CONNECTION_HEALTH_TAG, PROMETHEUS_STATUS_TAG } from "@/lib/settings/connection-status"
+import { CONNECTION_HEALTH_TAG } from "@/lib/settings/connection-status"
 
 /** A settings save for one service (admin only). */
 function serviceUpdate<K extends ServiceKind>(kind: K, fallbackError: string) {
@@ -38,9 +38,7 @@ function serviceUpdate<K extends ServiceKind>(kind: K, fallbackError: string) {
         // The settings page re-renders and the cached health checks run again
         updateTag(CONNECTION_HEALTH_TAG)
         if (kind === "plex" || kind === "jellyfin") updateTag(APP_SETTINGS_TAG)
-        if (kind === "prometheus") updateTag(PROMETHEUS_STATUS_TAG)
         revalidatePath("/admin/settings")
-        if (kind === "prometheus") revalidatePath("/") // The home page shows the status
       }
       return result
     },
@@ -58,8 +56,6 @@ export const updateOverseerr = serviceUpdate("overseerr", "Failed to update Over
 export const updateSonarr = serviceUpdate("sonarr", "Failed to update Sonarr configuration")
 
 export const updateRadarr = serviceUpdate("radarr", "Failed to update Radarr configuration")
-
-export const updatePrometheus = serviceUpdate("prometheus", "Failed to update Prometheus configuration")
 
 /**
  * Allow Jellyfin sign-in, or turn it off (admin only)
