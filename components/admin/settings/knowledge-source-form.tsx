@@ -1,24 +1,31 @@
 "use client"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 
 import { deleteKnowledgeSource, saveKnowledgeSource } from "@/actions/admin/assistant-sources"
+import { SheetForm, type SheetFormControls } from "@/components/admin/settings/sheet-form"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { SecretInput } from "@/components/ui/secret-input"
-import { SettingsFormFooter } from "@/components/ui/settings-section"
-import { Switch } from "@/components/ui/switch"
+import { SettingsFormFooter } from "@/components/ui/settings-form-footer"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 import type { KnowledgeSourceSettings } from "@/lib/data/assistant-sources"
 
 type Errors = Partial<Record<"name" | "repo" | "ref" | "path", string>>
 
-/** One GitHub repository of Markdown the assistant searches and cites. */
-export function KnowledgeSourceForm({ source, onDone }: { source: KnowledgeSourceSettings | null; onDone?: () => void }) {
+/**
+ * One GitHub repository of Markdown the assistant searches and cites: the
+ * edit mode of its row, in a Sheet. A save reads the repository once and
+ * says how many documents it found.
+ */
+export function KnowledgeSourceForm({ source, onDone, onCancel, onDirtyChange, onPendingChange }: { source: KnowledgeSourceSettings | null } & SheetFormControls) {
   const toast = useToast()
+  const activeId = useId()
   const [errors, setErrors] = useState<Errors>({})
 
   const { values, set, form } = useSettingsForm(
@@ -36,27 +43,18 @@ export function KnowledgeSourceForm({ source, onDone }: { source: KnowledgeSourc
         const field = (key: keyof Errors) => result.fieldErrors?.[key]?.[0]
         setErrors({ name: field("name"), repo: field("repo"), ref: field("ref"), path: field("path") })
         toast.showError(result.error)
-        return
+        return { ok: false }
       }
       setErrors({})
       const { docCount } = result.data
       if (docCount === null) toast.showError("Saved, but GitHub could not be read. Check the repository, branch and token.")
       else toast.showSuccess(`Knowledge base saved: ${docCount} documents found`)
-      onDone?.()
-      return { ...current, token: "" }
+      return { ok: true, keep: { ...current, token: "" } }
     }
   )
 
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault()
-        if (form.isDirty) form.onSave()
-      }}
-      noValidate
-      className="flex flex-col gap-6"
-      data-testid="settings-knowledge-form"
-    >
+    <SheetForm form={form} onDone={onDone} onDirtyChange={onDirtyChange} onPendingChange={onPendingChange} data-testid="settings-knowledge-form">
       <div className="grid grid-cols-1 gap-4">
         <FormField name="kb-name" label="Name" error={errors.name}>
           <Input value={values.name} onValueChange={(name) => set({ name })} placeholder="Runbooks" required disabled={form.isPending} data-testid="settings-knowledge-name" />
@@ -73,12 +71,12 @@ export function KnowledgeSourceForm({ source, onDone }: { source: KnowledgeSourc
         <FormField name="kb-token" label="GitHub token" optional description="Only for a private repository. Sent to api.github.com only.">
           <SecretInput value={values.token} onValueChange={(token) => set({ token })} saved={source?.token} noun="token" disabled={form.isPending} data-testid="settings-knowledge-token" />
         </FormField>
-        <div className="flex items-center justify-between gap-3">
-          <label htmlFor="kb-active" className="text-ui text-foreground">Use this knowledge base</label>
-          <Switch id="kb-active" checked={values.isActive} onCheckedChange={(isActive) => set({ isActive })} disabled={form.isPending} data-testid="settings-knowledge-active" />
+        <div className="flex items-center gap-2">
+          <Checkbox id={activeId} checked={values.isActive} onCheckedChange={(isActive) => set({ isActive })} disabled={form.isPending} data-testid="settings-knowledge-active" />
+          <Label htmlFor={activeId}>Use this knowledge base</Label>
         </div>
       </div>
-      <SettingsFormFooter id="knowledge" form={form} className="px-0" />
+      <SettingsFormFooter id="knowledge" title={source?.name ?? "the new knowledge base"} form={form} editing onCancel={onCancel} className="px-0" />
       {source && (
         <ConfirmDialog
           trigger={
@@ -101,6 +99,6 @@ export function KnowledgeSourceForm({ source, onDone }: { source: KnowledgeSourc
           }}
         />
       )}
-    </form>
+    </SheetForm>
   )
 }

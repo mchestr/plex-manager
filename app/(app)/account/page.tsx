@@ -34,7 +34,7 @@ async function rewindNotify(userId: string): Promise<boolean> {
  * The member's account settings (ui-design-system 6.1, UI-30): Discord,
  * the Rewind ready notification, the time zone, Appearance while the
  * light theme's flag is on (P10.10), and Your data: what admins can see
- * (P11.16), the export and single-item deletes (P11.15). `?page=` pages the
+ * (P11.16) and single-item deletes (P11.15). `?page=` pages the
  * marks table.
  */
 export default async function AccountPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

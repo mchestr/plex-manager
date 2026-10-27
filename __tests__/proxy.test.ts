@@ -269,7 +269,7 @@ describe('proxy lapsed-member redirect (P4.5, FR-51)', () => {
     expectSubscribeRedirect(await proxy(request('/?from=/', headers)))
   })
 
-  it.each(['/rewind/2026', '/rewind', '/rewind/2025', '/account/export'])('lets a lapsed member open %s', async (path) => {
+  it.each(['/rewind/2026', '/rewind', '/rewind/2025'])('lets a lapsed member open %s', async (path) => {
     signedIn('lapsed')
 
     expectPassedThrough(await proxy(request(path)))

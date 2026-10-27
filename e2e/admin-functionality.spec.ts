@@ -84,22 +84,16 @@ test.describe('Admin Functionality', () => {
     // Look for the Jellyfin login toggle - it should only be visible if Jellyfin is configured
     const jellyfinToggle = adminPage.getByTestId('jellyfin-login-toggle');
 
-    // If Jellyfin is configured, test the toggle functionality
+    // If Jellyfin is configured, its row carries the switch, which saves at once
     if (await jellyfinToggle.isVisible({ timeout: 5000 }).catch(() => false)) {
-      // Get current button text
-      const buttonText = await jellyfinToggle.textContent();
+      const checked = (await jellyfinToggle.getAttribute('aria-checked')) ?? 'false';
 
-      // Click the toggle
       await jellyfinToggle.click();
+      await expect(jellyfinToggle).not.toHaveAttribute('aria-checked', checked, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
-      // Wait for the toggle to update (button text should change)
-      await expect(jellyfinToggle).not.toHaveText(buttonText!, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-
-      // Click again to restore original state
+      // Restore the original state
       await jellyfinToggle.click();
-
-      // Verify it changed back
-      await expect(jellyfinToggle).toHaveText(buttonText!, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+      await expect(jellyfinToggle).toHaveAttribute('aria-checked', checked, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
     }
   });
 

@@ -16,22 +16,35 @@ const MAX_USER_PAGES = 100
 
 const quotaField = z.number().int().nullish().transform((value) => value ?? null)
 
+const quotaUserSchema = z.looseObject({
+  id: z.number().int(),
+  plexId: z.number().int().nullish(),
+  displayName: z.string().nullish(),
+  username: z.string().nullish(),
+  plexUsername: z.string().nullish(),
+  permissions: z.number().int().nullish(),
+  movieQuotaLimit: quotaField,
+  movieQuotaDays: quotaField,
+  tvQuotaLimit: quotaField,
+  tvQuotaDays: quotaField,
+})
+
 const quotaUserPageSchema = z.object({
   pageInfo: z.looseObject({ page: z.number(), pages: z.number() }),
-  results: z.array(
-    z.looseObject({
-      id: z.number().int(),
-      plexId: z.number().int().nullish(),
-      displayName: z.string().nullish(),
-      username: z.string().nullish(),
-      plexUsername: z.string().nullish(),
-      movieQuotaLimit: quotaField,
-      movieQuotaDays: quotaField,
-      tvQuotaLimit: quotaField,
-      tvQuotaDays: quotaField,
-    })
-  ),
+  results: z.array(quotaUserSchema),
 })
+
+function toQuotaUser(user: z.infer<typeof quotaUserSchema>): OverseerrQuotaUser {
+  return {
+    id: user.id,
+    plexId: user.plexId ?? null,
+    name: user.displayName || user.plexUsername || user.username || `User ${user.id}`,
+    movieQuotaLimit: user.movieQuotaLimit,
+    movieQuotaDays: user.movieQuotaDays,
+    tvQuotaLimit: user.tvQuotaLimit,
+    tvQuotaDays: user.tvQuotaDays,
+  }
+}
 
 /**
  * Every Overseerr user with the quota they have now, paged 100 at a time.
@@ -46,22 +59,32 @@ export async function listOverseerrQuotaUsers(
   for (let page = 0; page < MAX_USER_PAGES; page++) {
     const result = await overseerrFetch(config, userPagePath(page), quotaUserPageSchema, { signal })
     if (!result.ok) return result
-    for (const user of result.data.results) {
-      users.push({
-        id: user.id,
-        plexId: user.plexId ?? null,
-        name: user.displayName || user.plexUsername || user.username || `User ${user.id}`,
-        movieQuotaLimit: user.movieQuotaLimit,
-        movieQuotaDays: user.movieQuotaDays,
-        tvQuotaLimit: user.tvQuotaLimit,
-        tvQuotaDays: user.tvQuotaDays,
-      })
-    }
+    users.push(...result.data.results.map(toQuotaUser))
     if (result.data.results.length === 0 || result.data.pageInfo.page >= result.data.pageInfo.pages) {
       return { ok: true, data: users }
     }
   }
   return { ok: false, code: "PAGE_LIMIT" }
+}
+
+/** Overseerr's Admin (2) and Manage Users (8) permission bits. */
+const QUOTA_BYPASS_PERMISSIONS = 2 | 8
+
+export interface OverseerrQuotaMember extends OverseerrQuotaUser {
+  /** An Overseerr admin or user manager: no quota applies, and Overseerr ignores a write to theirs. */
+  bypassesQuota: boolean
+}
+
+/** `GET /user/{id}`: one user's quota now, for the admin's check of a member's tier. */
+export async function getOverseerrQuotaMember(
+  config: OverseerrEndpoint,
+  overseerrUserId: number,
+  { signal }: { signal?: AbortSignal } = {}
+): Promise<ServiceResult<OverseerrQuotaMember>> {
+  const result = await overseerrFetch(config, `/user/${overseerrUserId}`, quotaUserSchema, { signal })
+  if (!result.ok) return result
+  const bypassesQuota = result.data.id === 1 || ((result.data.permissions ?? 0) & QUOTA_BYPASS_PERMISSIONS) !== 0
+  return { ok: true, data: { ...toQuotaUser(result.data), bypassesQuota } }
 }
 
 /** Writes a user's request quota. Overseerr is called only when the caller found a change. */

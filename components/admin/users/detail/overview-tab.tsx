@@ -1,30 +1,25 @@
-import type { ReactNode } from "react"
+import { Suspense } from "react"
 
 import { getUserActivityTimeline } from "@/actions/user-queries"
 import { UserActivityTimeline } from "@/components/admin/users/user-activity-timeline"
 import { ErrorState } from "@/components/ui/error-state"
+import { Skeleton } from "@/components/ui/skeleton"
 import { RemoveMemberDialog } from "@/components/admin/users/detail/remove-member-dialog"
 import { RequestTiersExclusion } from "@/components/admin/users/detail/request-tiers-exclusion"
 import type { UserDetailHeaderData } from "@/lib/admin/user-detail"
 import { prisma } from "@/lib/prisma"
 import type { BoundFormat } from "@/lib/utils/format"
 
+import { DetailItem } from "./detail-item"
 import { JellyfinAccess } from "./jellyfin-access"
+import { RequestTierCheck } from "./request-tier-check"
 
 const SERVICE_LABEL = { plex: "Plex", jellyfin: "Jellyfin" } as const
 
-function Item({ label, children, testId }: { label: string; children: ReactNode; testId?: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <dt className="text-label text-muted-foreground">{label}</dt>
-      <dd className="text-ui text-foreground" data-testid={testId}>
-        {children}
-      </dd>
-    </div>
-  )
-}
-
-/** The member's account facts, their Jellyfin access (P11.10), their activity timeline (P10.6) and the danger zone (P11.13). */
+/**
+ * The member's account facts, their Jellyfin access (P11.10), their request
+ * tier, their activity timeline (P10.6) and the danger zone (P11.13).
+ */
 export async function OverviewTab({ header, f }: { header: UserDetailHeaderData; f: BoundFormat }) {
   const [timeline, tiers] = await Promise.all([
     getUserActivityTimeline({ userId: header.id, pageSize: 10 }),
@@ -37,8 +32,8 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
   return (
     <div className="flex flex-col gap-6">
       <dl className="grid grid-cols-1 gap-4 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="admin-user-overview">
-        <Item label="Email">{header.email ?? "Not set"}</Item>
-        <Item label="Service" testId="admin-user-service">
+        <DetailItem label="Email">{header.email ?? "Not set"}</DetailItem>
+        <DetailItem label="Service" testId="admin-user-service">
           {SERVICE_LABEL[header.primaryService]}
           {header.services
             .filter((service) => service !== header.primaryService)
@@ -47,11 +42,11 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
                 Also on {SERVICE_LABEL[service]}
               </span>
             ))}
-        </Item>
-        <Item label="Joined" testId="admin-user-created-timestamp">
+        </DetailItem>
+        <DetailItem label="Joined" testId="admin-user-created-timestamp">
           {f.dateTime(header.createdAt, { zoneLabel: true })}
-        </Item>
-        <Item label="Discord">
+        </DetailItem>
+        <DetailItem label="Discord">
           {discord ? (
             <>
               {discord.displayName}
@@ -62,20 +57,30 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
           ) : (
             "Not linked"
           )}
-        </Item>
+        </DetailItem>
         {header.jellyfinUserId && (
           <>
-            <Item label="Jellyfin ID" testId="admin-user-jellyfin-id">
+            <DetailItem label="Jellyfin ID" testId="admin-user-jellyfin-id">
               <span className="font-mono text-label break-all">{header.jellyfinUserId}</span>
-            </Item>
-            <Item label="Jellyfin access">
+            </DetailItem>
+            <DetailItem label="Jellyfin access">
               <JellyfinAccess userId={header.id} name={header.name} status={header.jellyfinStatus ?? "unknown"} />
-            </Item>
+            </DetailItem>
           </>
         )}
       </dl>
 
-      {tiers && <RequestTiersExclusion userId={header.id} name={header.name} excluded={tiers.requestTiersExcluded} />}
+      {tiers && (
+        <section aria-labelledby="admin-user-request-limits-heading" className="flex flex-col gap-3" data-testid="admin-user-request-limits">
+          <h2 id="admin-user-request-limits-heading" className="text-h3">
+            Request limits
+          </h2>
+          <Suspense fallback={<Skeleton className="h-36 w-full rounded-lg" data-testid="admin-user-tier-loading" />}>
+            <RequestTierCheck userId={header.id} name={header.name} f={f} />
+          </Suspense>
+          <RequestTiersExclusion userId={header.id} name={header.name} excluded={tiers.requestTiersExcluded} />
+        </section>
+      )}
 
       <section aria-labelledby="admin-user-activity-heading" className="flex flex-col gap-3">
         <h2 id="admin-user-activity-heading" className="text-h3">

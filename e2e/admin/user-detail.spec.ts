@@ -85,6 +85,9 @@ test.describe('Admin user detail', () => {
     await expect(adminPage).toHaveURL(new RegExp(`/admin/users/${MEMBER.id}$`));
     await expect(adminPage.getByTestId('admin-user-header')).toContainText(MEMBER.name);
     await expect(adminPage.getByTestId('admin-user-rewind-badge')).toContainText('Stuck');
+    // The tab row scrolls sideways when it overflows, never up and down
+    const tabs = adminPage.getByTestId('admin-user-tabs');
+    expect(await tabs.evaluate((el) => el.scrollHeight - el.clientHeight)).toBe(0);
 
     await adminPage.getByTestId('admin-user-tab-overview').focus();
     await adminPage.keyboard.press('ArrowRight');

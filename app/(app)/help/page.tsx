@@ -31,9 +31,8 @@ function HelpSection({ id, title, children }: { id: string; title: string; child
 /**
  * Help (ui-design-system 6.1, UI-30): the onboarding guides for the member's
  * own service, at `#playback`, `#requests` and `#support`, which home links
- * to, and what admins can see at `#privacy` (P11.16), which links the
- * export on `/account` (P11.15). Requests shows only
- * with a public request URL.
+ * to, and what admins can see at `#privacy` (P11.16), which links Your data
+ * on `/account` (P11.15). Requests shows only with a public request URL.
  */
 export default async function HelpPage() {
   const session = await getSession()
@@ -65,7 +64,7 @@ export default async function HelpPage() {
             <p>Server admins can see your watch activity and your Rewind. Some Rewind text is written by an AI service.</p>
             <p data-testid="help-assistant-disclosure">{assistantDisclosure}</p>
             <p>
-              Download a copy of your data, or delete marks, watchlist items and assistant conversations, in{" "}
+              Delete marks and watchlist items in{" "}
               <Link href="/account#your-data" className="text-foreground underline underline-offset-3" data-testid="help-your-data-link">
                 Your data
               </Link>

@@ -8,7 +8,7 @@
  * user's usage in the current period.
  */
 
-import { getOverseerrUserUsage, listOverseerrQuotaUsers, setOverseerrUserQuota } from "@/lib/connections/overseerr-quota"
+import { getOverseerrQuotaMember, getOverseerrUserUsage, listOverseerrQuotaUsers, setOverseerrUserQuota } from "@/lib/connections/overseerr-quota"
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
@@ -54,6 +54,37 @@ describe("listOverseerrQuotaUsers", () => {
     mockFetch.mockResolvedValue(json({ pageInfo: { page: 1, pages: 1 }, results: [{ id: 9, plexId: 5 }] }))
     const result = await listOverseerrQuotaUsers(config)
     expect(result.ok && result.data[0]!.name).toBe("User 9")
+  })
+})
+
+describe("getOverseerrQuotaMember", () => {
+  const user = { id: 7, plexId: 11, displayName: "Sam", permissions: 32, movieQuotaLimit: 4, movieQuotaDays: 7, tvQuotaLimit: null, tvQuotaDays: null }
+
+  it("reads one user's quota", async () => {
+    mockFetch.mockResolvedValue(json(user))
+
+    const result = await getOverseerrQuotaMember(config, 7)
+
+    expect(result).toEqual({
+      ok: true,
+      data: { id: 7, plexId: 11, name: "Sam", movieQuotaLimit: 4, movieQuotaDays: 7, tvQuotaLimit: null, tvQuotaDays: null, bypassesQuota: false },
+    })
+    expect(String(mockFetch.mock.calls[0]![0])).toBe("http://overseerr.local:5055/api/v1/user/7")
+  })
+
+  it.each([
+    ["an admin", { permissions: 2 | 32 }],
+    ["a user manager", { permissions: 8 }],
+    ["the owner", { id: 1, permissions: 0 }],
+  ])("flags %s, whose quota Overseerr ignores", async (_name, overrides) => {
+    mockFetch.mockResolvedValue(json({ ...user, ...overrides }))
+    const result = await getOverseerrQuotaMember(config, 7)
+    expect(result.ok && result.data.bypassesQuota).toBe(true)
+  })
+
+  it("reports a user Overseerr does not have", async () => {
+    mockFetch.mockResolvedValue(json({ message: "User not found." }, 404))
+    expect(await getOverseerrQuotaMember(config, 7)).toMatchObject({ ok: false, code: "HTTP", status: 404 })
   })
 })
 

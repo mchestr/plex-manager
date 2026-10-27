@@ -18,6 +18,25 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Added
+
+- **Request limits on the user page:** the Overview tab of a Plex member shows their request tier, checked live: all-time watch time from Tautulli, the tier it earns, the hours to the next tier, and the quota Overseerr has for them now. A badge says whether the two match, and **Update Overseerr** writes the tier's quota for that one member, with the daily sync on or off. A step that fails is named (such as "Could not reach Overseerr"), and Overseerr admins and user managers, whose quotas Overseerr ignores, are marked **No limits**. See `docs/request-limits.md`.
+
+### Changed
+
+- **Admin settings open read-only:** each section of Admin > Settings now shows its saved values as a summary, with its status, Test connection and "Last saved", and an Edit button (Set up, when nothing is saved) opens its form in place. Save returns to the summary; Cancel and Escape ask before discarding unsaved changes, one section is edited at a time, and the browser asks before a tab with unsaved changes closes. The AI features, Stripe Subscriptions and Allow Jellyfin sign-in switches still take effect at once (Allow Jellyfin sign-in moved from the Jellyfin form to its row), and the other on/off settings are checkboxes saved with Save.
+- **Rewind time zone:** a member's Rewind now reads their own clock by default. The first time a signed-in member opens the app, their browser's time zone is saved as their time zone (never over one already saved), so the busiest hour, after-dark share and other clock figures are no longer counted in the server zone, or in UTC when no server zone is set. The account page's time zone list now always saves a zone; the "Server time zone" entry is gone. Rewinds already made keep their times until they are made again; an admin can regenerate one from Admin, Rewind.
+
+### Removed
+
+- The member data export: the "Download my data" button on Account, Your data, and `/account/export`.
+- Deleting an assistant conversation from Account, Your data, and the conversation list there. Single deletes of marks and watchlist items stay; conversations still age out under retention.
+
+### Fixed
+
+- **Member home on phones:** the home page no longer scrolls sideways. The "New on" poster row's hidden "(opens Plex)" labels escaped the row and widened the page by the row's full length (about 1,950 px at every width, desktop included). Long words (an email-style username in the greeting, a long server name, an announcement title or a URL) now wrap inside their card. The request-limits table keeps "200 h" and "/ 7 d" together and spaces its columns, the help card's links grow to fit a wrapped label, the top bar's links no longer wrap at tablet widths, and the loading skeleton uses the page's own layout, so nothing jumps sideways when the page loads.
+- **Tab bars:** the tab row on the user page and in the AI settings no longer shows a vertical scrollbar where scrollbars are always drawn (Windows, Linux), and the active tab's underline shows at its full 2px.
+
 ## [0.4.0] - 2026-10-26
 
 ### Added

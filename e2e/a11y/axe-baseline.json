@@ -16,6 +16,7 @@
   "admin /admin/queues": {},
   "admin /admin/rewind/playground": {},
   "admin /admin/settings": {},
+  "admin /admin/settings [plex editing]": {},
   "admin /admin/shares": {},
   "admin /admin/users": {},
   "admin /admin/users [role filter open]": {},

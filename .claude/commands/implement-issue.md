@@ -60,4 +60,4 @@ You are tasked with implementing a GitHub issue. Follow these steps:
 - Follow all patterns and conventions from CLAUDE.md
 - Don't over-engineer - implement exactly what's requested
 - Reference the issue in commit messages: `git commit -m "feat: implement feature (#123)"`
-- When ready, create a PR from the feature branch to main
+- When ready, open a PR from the feature branch to main, unless the change is a security fix; then push the branch and wait to be asked (see "Opening Pull Requests" in CLAUDE.md)

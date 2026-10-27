@@ -34,7 +34,7 @@ function Avatar({ initials }: { initials: string }) {
 /**
  * The account menu (ui-design-system 6.1): the name and email, the Discord
  * link state (UI-01), Membership when it exists, Account settings,
- * Appearance (P10.10), Admin for admins,
+ * Appearance (P10.10), Admin for admins and Support,
  * and Sign out.
  */
 export function AccountMenu({ user }: { user: ShellUser }) {
@@ -91,7 +91,7 @@ export function AccountMenu({ user }: { user: ShellUser }) {
         <DropdownMenuSeparator />
         <AppearancePicker variant="menu" testId="account-menu-appearance" />
         <DropdownMenuSeparator />
-        {user.isAdmin && (
+        {user.adminArea && (
           <DropdownMenuLinkItem
             render={<Link href="/admin" />}
             icon={<Icon icon={icons.owner} />}
