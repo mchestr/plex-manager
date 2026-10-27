@@ -23,7 +23,6 @@ describe("icons", () => {
     ["sonarr", "TvMinimal"],
     ["radarr", "Film"],
     ["jellyfin", "Server"],
-    ["prometheus", "Gauge"],
     ["rewind", "Rewind"],
     ["rewindOpen", "Play"],
     ["invites", "Ticket"],

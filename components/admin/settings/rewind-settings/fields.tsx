@@ -5,8 +5,10 @@ import { useId, type ReactNode } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { FormField } from "@/components/ui/form-field"
+import { labelClasses } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
 import { daysInMonth } from "@/lib/validations/rewind-settings"
 
 interface SwitchFieldProps {
@@ -18,11 +20,13 @@ interface SwitchFieldProps {
   disabled?: boolean
 }
 
-/** A labelled switch with its description, in a `FormField`. */
+/** A labelled switch with its description, in a `FormField`; the control sits in a slot as tall as an input so a row lines up. */
 export function SwitchField({ name, label, description, checked, onChange, disabled }: SwitchFieldProps) {
   return (
     <FormField name={name} label={label} description={description}>
-      <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} data-testid={`rewind-settings-${name}`} />
+      <div className="flex h-10 items-center md:h-9">
+        <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} data-testid={`rewind-settings-${name}`} />
+      </div>
     </FormField>
   )
 }
@@ -40,15 +44,19 @@ interface SelectFieldProps {
   value: string
   onChange: (value: string) => void
   disabled?: boolean
+  /** Keeps the label as the trigger's accessible name only, for a field a legend already labels. */
+  hideLabel?: boolean
 }
 
-/** A labelled Select; the trigger carries the label as its name. */
-export function SelectField({ name, label, description, items, value, onChange, disabled }: SelectFieldProps) {
+/** A labelled Select (label, control, description: the `FormField` slots); the trigger carries the label as its name. */
+export function SelectField({ name, label, description, items, value, onChange, disabled, hideLabel }: SelectFieldProps) {
   return (
     <Field name={name} disabled={disabled}>
-      <FieldLabel nativeLabel={false} render={<div />}>
-        {label}
-      </FieldLabel>
+      {!hideLabel && (
+        <FieldLabel nativeLabel={false} render={<div />}>
+          {label}
+        </FieldLabel>
+      )}
       <Select items={items} value={value} onValueChange={(next) => next && onChange(next)} disabled={disabled}>
         <SelectTrigger aria-label={label} data-testid={`rewind-settings-${name}-trigger`}>
           <SelectValue />
@@ -97,10 +105,10 @@ export function MonthDayField({ name, label, value, onChange, error }: MonthDayF
 
   return (
     <fieldset className="flex flex-col gap-1.5" data-testid={`rewind-settings-${name}`}>
-      <legend className="mb-1.5 text-ui font-medium text-foreground">{label}</legend>
+      <legend className={cn(labelClasses, "mb-1.5")}>{label}</legend>
       <div className="grid grid-cols-[2fr_1fr] gap-2">
-        <SelectField name={`${name}-month`} label={`${label}: month`} items={MONTH_ITEMS} value={month} onChange={setMonth} />
-        <SelectField name={`${name}-day`} label={`${label}: day`} items={dayItems} value={day} onChange={(next) => onChange(`${month}-${next}`)} />
+        <SelectField name={`${name}-month`} label={`${label}: month`} hideLabel items={MONTH_ITEMS} value={month} onChange={setMonth} />
+        <SelectField name={`${name}-day`} label={`${label}: day`} hideLabel items={dayItems} value={day} onChange={(next) => onChange(`${month}-${next}`)} />
       </div>
       {error && <p className="text-label text-destructive">{error}</p>}
     </fieldset>

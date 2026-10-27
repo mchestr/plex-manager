@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import { updateJellyfinServer, updateOverseerr, updatePlexServer, updatePrometheus, updateRadarr, updateSonarr, updateTautulli } from "@/actions/admin/admin-servers"
+import { updateJellyfinServer, updateOverseerr, updatePlexServer, updateRadarr, updateSonarr, updateTautulli } from "@/actions/admin/admin-servers"
 import { testServiceConnection } from "@/actions/admin/test-connection"
 import type { TestResult } from "@/components/ui/settings-section"
 import { useToast } from "@/components/ui/toast"
@@ -10,7 +10,7 @@ import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 import { needsSecretReentry, safeOrigin, type SavedSecret } from "@/lib/security/saved-secret"
 import { connectionTestCopy, errorCopy, type ConnectionTestCode } from "@/lib/ui/error-copy"
 
-export type ServerType = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus"
+export type ServerType = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr"
 
 /**
  * The active server config, with its secret replaced by `{ last4, origin }`
@@ -20,7 +20,6 @@ export interface StoredServer {
   name: string
   url: string
   publicUrl?: string | null
-  query?: string
   secret?: SavedSecret | null
 }
 
@@ -30,7 +29,6 @@ export interface ServerFormValues {
   publicUrl: string
   /** The Plex token or the API key, as typed; blank keeps the stored one. */
   secret: string
-  query: string
 }
 
 type Field = keyof ServerFormValues
@@ -43,7 +41,6 @@ export const SERVER_LABELS: Record<ServerType, string> = {
   overseerr: "Overseerr",
   sonarr: "Sonarr",
   radarr: "Radarr",
-  prometheus: "Prometheus",
 }
 
 /** "Plex token" or "API key", for labels and copy. */
@@ -61,11 +58,10 @@ function save(type: ServerType, values: ServerFormValues) {
   const secret = values.secret.trim() || undefined
   const publicUrl = values.publicUrl || undefined
   if (type === "plex") return updatePlexServer({ name: values.name, url: values.url, token: secret, publicUrl })
-  if (type === "prometheus") return updatePrometheus({ name: values.name, url: values.url, query: values.query })
   return API_KEY_ACTIONS[type]({ name: values.name, url: values.url, apiKey: secret, publicUrl })
 }
 
-const FIELDS: readonly Field[] = ["name", "url", "publicUrl", "secret", "query"]
+const FIELDS: readonly Field[] = ["name", "url", "publicUrl", "secret"]
 
 /** The form field an action's field error belongs to: `token` and `apiKey` are the secret. */
 function fieldOf(key: string): Field | undefined {
@@ -101,7 +97,6 @@ export function useServerForm(type: ServerType, server: StoredServer | null) {
     url: server?.url ?? "",
     publicUrl: server?.publicUrl ?? "",
     secret: "",
-    query: server?.query ?? "",
   }
 
   const settings = useSettingsForm(initial, async (values) => {
@@ -119,7 +114,7 @@ export function useServerForm(type: ServerType, server: StoredServer | null) {
   })
 
   const currentOrigin = safeOrigin(settings.values.url)
-  const blocked = type !== "prometheus" && needsSecretReentry(server?.secret, currentOrigin, settings.values.secret)
+  const blocked = needsSecretReentry(server?.secret, currentOrigin, settings.values.secret)
 
   /** Changes fields and clears their errors. */
   const set = (patch: Partial<ServerFormValues>) => {
@@ -133,7 +128,6 @@ export function useServerForm(type: ServerType, server: StoredServer | null) {
       service: type,
       url: values.url,
       secret: values.secret.trim() || undefined,
-      query: type === "prometheus" ? values.query : undefined,
     })
     const failed = (code: ConnectionTestCode): TestResult => {
       const copy = connectionTestCopy(code, noun)

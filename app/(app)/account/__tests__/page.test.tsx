@@ -1,6 +1,6 @@
 /**
  * The /account page (P6.11, ui-design-system 6.1): Discord, Notifications and
- * Time zone sections, with Appearance held back until P10.10.
+ * Time zone and Appearance sections.
  */
 
 import { render, screen, within } from '@testing-library/react'
@@ -27,6 +27,7 @@ jest.mock('@/lib/member/your-data', () => ({ getYourData: jest.fn() }))
 jest.mock('@/components/account/your-data-section', () => ({
   YourDataSection: ({ disclosure }: { disclosure: string }) => <div data-testid="account-your-data">{disclosure}</div>,
 }))
+jest.mock('@/components/account/appearance-picker', () => ({ AppearancePicker: () => <div data-testid="account-appearance-picker" /> }))
 jest.mock('@/lib/utils/server-zone', () => ({ serverZone: jest.fn().mockResolvedValue('America/Chicago') }))
 jest.mock('@/lib/wrapped/season', () => ({
   getSeasonState: jest.fn().mockResolvedValue({ seasonYear: 2026 }),
@@ -68,15 +69,15 @@ describe('AccountPage', () => {
     expect(redirect).toHaveBeenCalledWith('/')
   })
 
-  it('renders the sections, with Appearance absent', async () => {
+  it('renders the sections, Appearance included', async () => {
     render(await AccountPage(props()))
 
     expect(screen.getByRole('heading', { level: 1, name: 'Account' })).toBeInTheDocument()
     expect(screen.queryByRole('main')).not.toBeInTheDocument()
-    for (const title of ['Discord', 'Notifications', 'Time zone']) {
+    for (const title of ['Discord', 'Notifications', 'Time zone', 'Appearance']) {
       expect(screen.getByRole('heading', { level: 2, name: title })).toBeInTheDocument()
     }
-    expect(screen.queryByText(/Appearance/)).not.toBeInTheDocument()
+    expect(screen.getByTestId('account-appearance-picker')).toBeInTheDocument()
     expect(fieldProps[0]).toMatchObject({ value: 'Europe/London', serverZone: 'America/Chicago' })
     expect(fieldProps[0].options).toEqual(expect.arrayContaining(['UTC', 'America/Chicago']))
   })

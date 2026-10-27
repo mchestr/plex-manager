@@ -43,7 +43,6 @@ import { getStripeConfig } from "@/lib/data/admin-settings"
 import { testJellyfinConnection } from "@/lib/connections/jellyfin-connection"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { testPlexConnection } from "@/lib/connections/plex-connection"
-import { testPrometheusConnection } from "@/lib/connections/prometheus"
 import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
@@ -52,9 +51,8 @@ import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { probeConnection, type Tester } from "@/lib/settings/probe"
 import { CONNECTION_HEALTH_TAG, worstStatus, type HealthCode, type SectionHealth, type SettingsHealth } from "@/lib/settings/connection-status"
 import { discordStatus, type ConnectionStatus } from "@/lib/ui/status"
-import { getActiveService } from "@/lib/data/active-service"
 
-type ConnectionId = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus" | "ai"
+type ConnectionId = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "ai"
 
 interface ConnectionHealthEntry {
   id: ConnectionId
@@ -74,14 +72,13 @@ const SERVICE = { where: { isActive: true }, orderBy: { updatedAt: "desc" }, sel
 
 /** Runs every tester now, without the cache. @internal */
 export async function checkConnections(now: Date = new Date()): Promise<ConnectionHealth> {
-  const [plex, jellyfin, tautulli, overseerr, sonarr, radarr, prometheus, config, llmProviders] = await Promise.all([
+  const [plex, jellyfin, tautulli, overseerr, sonarr, radarr, config, llmProviders] = await Promise.all([
     prisma.plexServer.findFirst({ ...SERVICE, select: { ...SERVICE.select, token: true } }),
     prisma.jellyfinServer.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
     prisma.tautulli.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
     prisma.overseerr.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
     prisma.sonarr.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
     prisma.radarr.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
-    getActiveService("prometheus"),
     prisma.config.findUnique({ where: { id: "config" }, select: { llmDisabled: true } }),
     prisma.lLMProvider.count({ where: { isActive: true } }),
   ])
@@ -94,7 +91,6 @@ export async function checkConnections(now: Date = new Date()): Promise<Connecti
     ["overseerr", "Overseerr", overseerr && (() => testOverseerrConnection(overseerr))],
     ["sonarr", "Sonarr", sonarr && (() => testSonarrConnection({ ...sonarr, publicUrl: publicUrl(sonarr) }))],
     ["radarr", "Radarr", radarr && (() => testRadarrConnection({ ...radarr, publicUrl: publicUrl(radarr) }))],
-    ["prometheus", "Prometheus", prometheus && (() => testPrometheusConnection(prometheus))],
   ]
   const services = await Promise.all(
     tests.map(
@@ -204,6 +200,5 @@ export async function getSettingsHealth(now: Date = new Date()): Promise<Setting
     sonarr: service("sonarr"),
     radarr: service("radarr"),
     jellyfin: service("jellyfin"),
-    prometheus: service("prometheus"),
   }
 }

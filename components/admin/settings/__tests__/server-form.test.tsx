@@ -12,7 +12,7 @@ import { testServiceConnection } from "@/actions/admin/test-connection"
 import { ServiceSection } from "@/components/admin/settings/sections/service-section"
 import { ServerForm } from "@/components/admin/settings/server-form"
 
-jest.mock("@/actions/admin/admin-servers", () => ({ updateJellyfinServer: jest.fn(), updateOverseerr: jest.fn(), updatePlexServer: jest.fn(), updatePrometheus: jest.fn(), updateRadarr: jest.fn(), updateSonarr: jest.fn(), updateTautulli: jest.fn() }))
+jest.mock("@/actions/admin/admin-servers", () => ({ updateJellyfinServer: jest.fn(), updateOverseerr: jest.fn(), updatePlexServer: jest.fn(), updateRadarr: jest.fn(), updateSonarr: jest.fn(), updateTautulli: jest.fn() }))
 jest.mock("@/actions/admin/test-connection", () => ({ testServiceConnection: jest.fn() }))
 
 const mockRefresh = jest.fn()
@@ -86,7 +86,7 @@ describe("ServiceSection with a SecretInput", () => {
     await user.type(screen.getByTestId("settings-overseerr-url"), "/x")
     await user.click(screen.getByTestId("settings-overseerr-test"))
 
-    expect(testServiceConnection).toHaveBeenCalledWith({ service: "overseerr", url: "http://localhost:5055/x", secret: undefined, query: undefined })
+    expect(testServiceConnection).toHaveBeenCalledWith({ service: "overseerr", url: "http://localhost:5055/x", secret: undefined })
     expect(await screen.findByText("Check the scheme, host and port, and that the service is running.")).toBeInTheDocument()
     expect(screen.getByTestId("settings-overseerr-url")).toHaveAccessibleDescription(/Nothing answered at this address/)
   })

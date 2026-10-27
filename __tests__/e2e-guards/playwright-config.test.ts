@@ -151,15 +151,14 @@ describe("playwright.config.ts database guard", () => {
     expect(projects.find((project) => project.name === "rewind-a11y-firefox")?.grep).toEqual(/@article/)
   })
 
-  it("runs the light projects after the flag is on, with the light cookie (P10.10)", () => {
+  it("runs the light projects with the light cookie (P10.10)", () => {
     env.E2E_DATABASE_URL = TEST_URL
     const projects = loadConfig().projects ?? []
     const byName = (name: string) => projects.find((project) => project.name === name)
 
-    expect(byName("light-theme-setup")?.teardown).toBe("light-theme-teardown")
     for (const name of ["visual-light-desktop", "visual-light-mobile", "visual-light-rewind", "a11y-light"]) {
       const project = byName(name)
-      expect(project?.dependencies).toEqual(["light-theme-setup"])
+      expect(project?.dependencies).toBeUndefined()
       expect(project?.use?.storageState).toEqual({
         cookies: [expect.objectContaining({ name: "pm-theme", value: "light", path: "/" })],
         origins: [],

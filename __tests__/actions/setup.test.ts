@@ -18,7 +18,6 @@ import {
   saveLLMProvider,
   saveOverseerr,
   savePlexServer,
-  savePrometheus,
   saveRadarr,
   saveSonarr,
   saveTautulli,
@@ -27,7 +26,6 @@ import {
 import { testLLMProviderConnection } from '@/lib/connections/llm-provider'
 import { testOverseerrConnection } from '@/lib/connections/overseerr'
 import { getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
-import { testPrometheusConnection } from '@/lib/connections/prometheus'
 import { testRadarrConnection } from '@/lib/connections/radarr'
 import { testSonarrConnection } from '@/lib/connections/sonarr'
 import { testTautulliConnection } from '@/lib/connections/tautulli'
@@ -47,10 +45,6 @@ jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn
 jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
 jest.mock('@/lib/connections/sonarr', () => ({ testSonarrConnection: jest.fn() }))
 jest.mock('@/lib/connections/radarr', () => ({ testRadarrConnection: jest.fn() }))
-jest.mock('@/lib/connections/prometheus', () => ({
-  testPrometheusConnection: jest.fn(),
-  validatePrometheusQuery: jest.fn().mockResolvedValue({ success: true, data: null }),
-}))
 jest.mock('@/lib/connections/llm-provider', () => ({ testLLMProviderConnection: jest.fn() }))
 jest.mock('@/lib/security/audit-log', () => ({ ...jest.requireActual('@/lib/security/audit-log'), logAuditEvent: jest.fn() }))
 jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), updateTag: jest.fn(), unstable_cache: (load: unknown) => load }))
@@ -69,7 +63,6 @@ const TESTERS = [
   testOverseerrConnection,
   testSonarrConnection,
   testRadarrConnection,
-  testPrometheusConnection,
   testLLMProviderConnection,
 ]
 
@@ -125,8 +118,7 @@ describe('each save moves the wizard to the step after it', () => {
     ['saveRadarr', () => saveRadarr({ ...service, url: 'http://radarr.lan:7878' }), 'radarr', 'llm-rewind'],
     ['saveLLMProvider', () => saveLLMProvider({ provider: 'openai', apiKey: 'sk-1' }), 'llm-rewind', 'llm-chat'],
     ['saveChatLLMProvider', () => saveChatLLMProvider({ provider: 'openai', apiKey: 'sk-1' }), 'llm-chat', 'discord'],
-    ['saveDiscordIntegration', () => saveDiscordIntegration({ isEnabled: false }), 'discord', 'prometheus'],
-    ['savePrometheus', () => savePrometheus({ name: 'Plex', url: 'http://prom.lan:9090', query: 'up' }), 'prometheus', 'summary'],
+    ['saveDiscordIntegration', () => saveDiscordIntegration({ isEnabled: false }), 'discord', 'summary'],
   ])('%s: %s to %s', async (_name, save, from, to) => {
     wizardAt(from)
 
@@ -251,9 +243,9 @@ describe('skipSetupStep', () => {
   })
 
   it('skips the last step to the summary', async () => {
-    wizardAt('prometheus')
+    wizardAt('discord')
 
-    await skipSetupStep({ stepId: 'prometheus' })
+    await skipSetupStep({ stepId: 'discord' })
 
     expect(movedTo()).toBe('summary')
   })
@@ -261,7 +253,7 @@ describe('skipSetupStep', () => {
   it('refuses a step the wizard has not reached', async () => {
     wizardAt('tautulli')
 
-    await expect(skipSetupStep({ stepId: 'prometheus' })).resolves.toMatchObject({ success: false, code: 'CONFLICT' })
+    await expect(skipSetupStep({ stepId: 'discord' })).resolves.toMatchObject({ success: false, code: 'CONFLICT' })
     expect(movedTo()).toBeNull()
     expect(logAuditEvent).not.toHaveBeenCalled()
   })

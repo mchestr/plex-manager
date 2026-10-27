@@ -24,6 +24,21 @@ test.describe('Settings layout', () => {
     }
   });
 
+  test('shows one group at a time, and anchors reveal their group', async ({ adminPage: page }) => {
+    await page.goto('/admin/settings');
+    await expect(page.getByTestId('settings-plex-section')).toBeVisible();
+    await expect(page.getByTestId('settings-stripe-section')).toBeHidden();
+
+    await page.goto('/admin/settings#rewind');
+    await expect(page.getByTestId('settings-rewind-section')).toBeVisible();
+    await expect(page.getByTestId('settings-plex-section')).toBeHidden();
+
+    await page.getByTestId('rewind-settings-time-zone-link').click();
+    await expect(page.getByTestId('settings-system-section')).toBeVisible();
+    await expect(page).toHaveURL(/#server-time-zone$/);
+    await expect(page.locator('#server-time-zone')).toBeInViewport();
+  });
+
   test('every nav glyph is labelled, with the legend below', async ({ adminPage: page }) => {
     await page.goto('/admin/settings');
 

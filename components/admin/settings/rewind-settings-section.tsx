@@ -129,7 +129,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
     >
       <RewindSettingsStatusLine status={status} />
       <div className="flex flex-col gap-8">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
           <SwitchField
             name="enabled"
             label="Rewind"
@@ -148,7 +148,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
         </div>
 
         <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
             <MonthDayField name="opens" label="Season opens" value={draft.rewindSeasonOpens} onChange={set("rewindSeasonOpens")} />
             <MonthDayField
               name="closes"
@@ -166,7 +166,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
           <SelectField
             name="llm-mode"
             label="LLM mode"
@@ -195,7 +195,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           </FormField>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
           <SwitchField
             name="public-links"
             label="Public links"
