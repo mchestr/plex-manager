@@ -25,16 +25,26 @@ function UsageRow({ label, usage, testId }: { label: string; usage: QuotaUsage; 
   )
 }
 
+/** "Unlimited / 7 d": on a phone the period wraps under the number as one piece. */
+function LimitCell({ limit, days }: { limit: number; days: number }) {
+  return (
+    <td className="py-1.5 pr-3 last:pr-2">
+      {limitNumber(limit)} <span className="whitespace-nowrap">/ {days} d</span>
+    </td>
+  )
+}
+
+/** Every tier; on a phone each cell wraps between its words, never inside "200 h" or "/ 7 d". */
 function TierTable({ tiers, current }: { tiers: RequestTier[]; current: number | null }) {
   return (
     <table className="w-full text-ui" data-testid="request-limits-table">
       <caption className="sr-only">Request limits by watch time</caption>
       <thead>
-        <tr className="text-left text-label text-muted-foreground">
-          <th scope="col" className="py-1 font-normal">Tier</th>
-          <th scope="col" className="py-1 font-normal">Watch time</th>
-          <th scope="col" className="py-1 font-normal">Movies</th>
-          <th scope="col" className="py-1 font-normal">Shows</th>
+        <tr className="text-left align-bottom text-label text-muted-foreground">
+          <th scope="col" className="py-1 pr-3 pl-2 font-normal">Tier</th>
+          <th scope="col" className="py-1 pr-3 font-normal">Watch time</th>
+          <th scope="col" className="py-1 pr-3 font-normal">Movies</th>
+          <th scope="col" className="py-1 pr-2 font-normal">Shows</th>
         </tr>
       </thead>
       <tbody>
@@ -42,13 +52,15 @@ function TierTable({ tiers, current }: { tiers: RequestTier[]; current: number |
           <tr
             key={tier.overHours}
             aria-current={index === current ? "true" : undefined}
-            className={cn("border-t", index === current && "bg-secondary font-medium")}
+            className={cn("border-t align-top", index === current && "bg-secondary font-medium")}
             data-testid={`request-limits-tier-${index + 1}`}
           >
-            <th scope="row" className="py-1.5 pl-2 text-left font-normal">{index + 1}</th>
-            <td className="py-1.5">{tier.overHours === 0 ? "Any" : `Over ${tier.overHours} h`}</td>
-            <td className="py-1.5">{limitNumber(tier.movieLimit)} / {tier.days} d</td>
-            <td className="py-1.5">{limitNumber(tier.tvLimit)} / {tier.days} d</td>
+            <th scope="row" className="py-1.5 pr-3 pl-2 text-left font-normal">{index + 1}</th>
+            <td className="py-1.5 pr-3">
+              {tier.overHours === 0 ? "Any" : <>Over <span className="whitespace-nowrap">{tier.overHours} h</span></>}
+            </td>
+            <LimitCell limit={tier.movieLimit} days={tier.days} />
+            <LimitCell limit={tier.tvLimit} days={tier.days} />
           </tr>
         ))}
       </tbody>

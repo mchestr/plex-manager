@@ -27,6 +27,10 @@ check); the `no-changelog` label skips it.
 - The member data export: the "Download my data" button on Account, Your data, and `/account/export`.
 - Deleting an assistant conversation from Account, Your data, and the conversation list there. Single deletes of marks and watchlist items stay; conversations still age out under retention.
 
+### Fixed
+
+- **Member home on phones:** the home page no longer scrolls sideways. The "New on" poster row's hidden "(opens Plex)" labels escaped the row and widened the page by the row's full length (about 1,950 px at every width, desktop included). Long words (an email-style username in the greeting, a long server name, an announcement title or a URL) now wrap inside their card. The request-limits table keeps "200 h" and "/ 7 d" together and spaces its columns, the help card's links grow to fit a wrapped label, the top bar's links no longer wrap at tablet widths, and the loading skeleton uses the page's own layout, so nothing jumps sideways when the page loads.
+
 ## [0.4.0] - 2026-10-26
 
 ### Added

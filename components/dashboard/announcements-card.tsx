@@ -55,7 +55,7 @@ export function AnnouncementsCard({ announcements, seenAt }: AnnouncementsCardPr
                 {isNewAnnouncement(announcement.createdAt, seenAt) && (
                   <NewPip data-testid={`announcement-${announcement.id}-new`} />
                 )}
-                <h3 id={titleId} className="text-ui font-semibold text-foreground">
+                <h3 id={titleId} className="min-w-0 text-ui font-semibold text-foreground wrap-anywhere">
                   {announcement.title}
                 </h3>
                 <Time
