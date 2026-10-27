@@ -20,7 +20,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import { PrismaClient } from "@/lib/generated/prisma/client"
 import { describePg } from "@/test/helpers/integration"
 
-const MIGRATION = path.join(__dirname, "..", "migrations", "20270119000004_drop_prometheus_status", "migration.sql")
+const MIGRATION = path.join(__dirname, "..", "migrations", "20270119000006_drop_prometheus_status", "migration.sql")
 
 /** The migration's statements, comments removed. */
 function statements(): string[] {
