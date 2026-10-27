@@ -18,6 +18,8 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-26
+
 ### Added
 
 - **Admin assistant:** read-only tools over the app's own data (`get_app_invites`, `get_app_member`, `get_app_failed_jobs`), MCP servers an admin registers in Settings, Assistant sources (Streamable HTTP, an encrypted auth header, a switch per tool; a tool is off until switched on), and GitHub-backed knowledge bases the assistant searches and cites (`search_knowledge_base`, `read_knowledge_doc`). None of these are available in Discord. See `docs/assistant.md`.
@@ -32,13 +34,13 @@ check); the `no-changelog` label skips it.
 
 ### Upgrade notes
 
+- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds seven migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables` and `20270119000002_add_request_tiers_and_channel_stats`.
 - **Exempt note migration:** `20270119000001_rename_exempt_reason_to_note` renames `User.exemptReason` to `exemptNote`, clears the `comp` and `grandfathered` values, and turns `invite` into `Joined by invite`. Who is exempt does not change.
 - Adds the migration `20270119000004_add_assistant_sources` (the `McpServer` and `KnowledgeSource` tables). Run `npx prisma migrate status` after the upgrade.
-- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds seven migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables` and `20270119000002_add_request_tiers_and_channel_stats`.
 - **Discord stat channels and request limits:** both are off after the upgrade. They replace the Windmill flows `f/mflix/discord_channel_status` and `f/mflix/sync_overseerr_quotas_from_tautulli_watchtime`. In Admin > Settings, turn on "Discord channel stats" (paste each channel's ID) and "Request limits", press "Update now" and "Run now" to check the result, then disable both Windmill schedules so the two do not fight over the channel names and quotas. Members with an Overseerr quota you set by hand: turn on "Set request limits by hand" on their user page before the first run, since the sync overwrites every other matched member's quota. Both jobs need Redis and a worker. See `docs/request-limits.md`.
 - Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds seven migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables` and `20270119000003_add_user_role`. An install that already applied it under its first name, `20270119000002_add_user_role`, applies the renamed one as a no-op.
-- **Light theme migration:** `20270119000004_drop_light_theme_flag` drops `Config.lightThemeEnabled`. Every signed-in user can now pick Dark or Light; Dark stays the default until they choose.
-- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds nine migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables`, `20270119000001_rename_exempt_reason_to_note`, `20270119000002_add_request_tiers_and_channel_stats`, `20270119000003_add_user_role` and `20270119000004_drop_prometheus_status`. An install that already applied it under its first name, `20270119000002_add_user_role`, applies the renamed one as a no-op.
+- **Light theme migration:** `20270119000005_drop_light_theme_flag` drops `Config.lightThemeEnabled`. Every signed-in user can now pick Dark or Light; Dark stays the default until they choose.
+- Take a `pg_dump -Fc` before you start the new release, and check afterwards that `npx prisma migrate status` reports the schema is up to date. This release adds nine migrations: `20270117000001_p1111_subscription_jellyfin_access`, `20270117000004_p1114_retention_run`, `20270117000009_p1132_setup_claim`, `20270117000010_p1024_setup_step_ids`, `20270118000002_p111_encryption_canary` and `20270118000003_p113_drop_legacy_lock_tables`, `20270119000001_rename_exempt_reason_to_note`, `20270119000002_add_request_tiers_and_channel_stats`, `20270119000003_add_user_role` and `20270119000006_drop_prometheus_status`. An install that already applied it under its first name, `20270119000002_add_user_role`, applies the renamed one as a no-op.
 - **Setup claim:** an install whose first-run setup is still unfinished must enter the one-time setup code to continue. Find it with `docker logs <container> | grep 'Setup code'`, or set `SETUP_TOKEN` to at least 16 characters; production refuses to start with a shorter one. Finished installs are unaffected.
 - **Retention:** the first daily retention sweep deletes data past its window, including audit rows older than 400 days and Discord command logs older than 90 days. To keep more, set the `RETENTION_*_DAYS` variables (`docs/privacy.md`) before you deploy.
 - **Stripe:** turning Stripe on now asks for confirmation when there are Jellyfin-only members who are not exempt.
@@ -71,7 +73,7 @@ check); the `no-changelog` label skips it.
 
 ### Changed
 
-- Every signed-in user can pick the Dark or Light theme under Appearance, with no admin setting to turn on first. Dark stays the default until the choice is saved. The "Light theme for members" switch in Admin > Settings is gone, and its `Config.lightThemeEnabled` column is dropped by the `20270119000004_drop_light_theme_flag` migration.
+- Every signed-in user can pick the Dark or Light theme under Appearance, with no admin setting to turn on first. Dark stays the default until the choice is saved. The "Light theme for members" switch in Admin > Settings is gone, and its `Config.lightThemeEnabled` column is dropped by the `20270119000005_drop_light_theme_flag` migration.
 - The setup wizard is rebuilt: string step ids, "Skip for now" on optional steps, "Connect with Plex" instead of pasting a token, one service form, and a summary step that signs the owner in. Setup and admin settings save through the same flow.
 - The assistants use the member's or the server's time zone and the app locale, and `<html lang>` follows the configured locale.
 - The package is named `plex-manager`, to match the repository and the image.
@@ -187,7 +189,8 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 - No account linking by email; the Jellyfin sign-in toggle is enforced; share routes serve a share-safe projection; a failed Tautulli match no longer shows emails; a Redis-backed rate limiter keys on the trusted proxy hop; generation is single-flight and rate-limited; the poster proxy checks access; `plexAuthToken` no longer reaches the admin browser.
 - The Discord bot no longer uses the Message Content intent, keeps its token encrypted in the database, and scrubs personal fields before the LLM.
 
-[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.4.0
 [0.3.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.3.0
 [0.2.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.2.0
 [0.1.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.1.0
