@@ -28,7 +28,8 @@ import { getRetentionStatus } from "@/lib/data/retention"
 import { getRewindSeasonDataPreparedAt } from "@/lib/data/rewind-season"
 import { plexLibraryListing } from "@/lib/admin/invites/libraries"
 import { getWatchlistSyncStats } from "@/lib/admin/watchlist-stats"
-import { getBaseUrl } from "@/lib/env"
+import packageJson from "@/package.json"
+import { getBaseUrl, getEnv } from "@/lib/env"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
 import { getRewindSeasonSpend } from "@/lib/llm/usage-totals"
@@ -44,6 +45,11 @@ import { connection } from "next/server"
 import { assertAdmin } from "@/lib/admin"
 
 const PLATFORMS: Record<string, string> = { darwin: "macOS", win32: "Windows", linux: "Linux" }
+
+function appVersion() {
+  const commit = getEnv().BUILD_COMMIT
+  return commit && commit !== "unknown" ? `${packageJson.version} (${commit.slice(0, 7)})` : packageJson.version
+}
 
 function databaseProvider(url: string | undefined) {
   if (!url) return "Not configured"
@@ -197,6 +203,7 @@ export default async function SettingsPage() {
           <SecuritySection status={encryption} serviceRows={<ServiceRowsCheck />} />
           <SystemSection
             baseUrl={baseUrl}
+            appVersion={appVersion()}
             nodeEnv={process.env.NODE_ENV || "development"}
             nodeVersion={process.version}
             databaseProvider={databaseProvider(process.env.DATABASE_URL)}
