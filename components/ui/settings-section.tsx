@@ -43,6 +43,9 @@ function firstField(form: HTMLFormElement): HTMLElement | null {
   return Array.from(fields).find((field) => !field.closest("[hidden]") && !field.matches(":disabled, [aria-disabled=true], [data-disabled]")) ?? null
 }
 
+/** A field marked invalid; Base UI's Field sets `data-invalid` a render before `aria-invalid`. */
+const INVALID_FIELD = "[aria-invalid=true], input[data-invalid], textarea[data-invalid], [role=combobox][data-invalid], [role=checkbox][data-invalid]"
+
 interface SettingsSectionProps {
   /** The anchor for the section nav, with `scroll-margin-top`; the root is `settings-<id>-section`. */
   id: string
@@ -72,8 +75,12 @@ interface SettingsSectionProps {
   notSetUp?: boolean
   /** Both modes, above the summary or fields and outside the form: switches that save at once, status rows. */
   live?: ReactNode
-  /** Both modes, after the summary or fields: last runs, notes, actions on the saved values. */
-  after?: ReactNode
+  /**
+   * Both modes, after the summary or fields: last runs and notes. A function
+   * gets whether the section is editing, so an action on the saved values
+   * (Run now) can show in view mode only.
+   */
+  after?: ReactNode | ((editing: boolean) => ReactNode)
   /** The fields while editing; without `form`, the section's content. */
   children?: ReactNode
   className?: string
@@ -123,6 +130,7 @@ export function SettingsSection({
   const [failures, setFailures] = useState(0)
   const formRef = useRef<HTMLFormElement>(null)
   const editRef = useRef<HTMLButtonElement>(null)
+  const focusedFailures = useRef(0)
   // The newest form, for leaving edit mode after an await
   const latest = useRef(form)
   useLayoutEffect(() => {
@@ -150,10 +158,15 @@ export function SettingsSection({
     if (exits > 0) editRef.current?.focus()
   }, [exits])
 
-  // A failed save: the first field that says what is wrong
+  // A failed save: the first field that says what is wrong, once the save has
+  // settled (fields are disabled while it runs) and the fields show their errors
+  const pending = Boolean(form?.isPending)
   useEffect(() => {
-    if (failures > 0) formRef.current?.querySelector<HTMLElement>("[aria-invalid=true]")?.focus()
-  }, [failures])
+    if (pending || failures === focusedFailures.current) return
+    focusedFailures.current = failures
+    const frame = requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>(INVALID_FIELD)?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [failures, pending])
 
   const exit = () => {
     latest.current?.onDiscard()
@@ -260,7 +273,7 @@ export function SettingsSection({
         <CardContent className="flex flex-col gap-6">
           {live}
           {body}
-          {after}
+          {typeof after === "function" ? after(editing) : after}
         </CardContent>
         {(editing || footerTest || footerMeta) && (
           <SettingsFormFooter

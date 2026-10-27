@@ -4,7 +4,7 @@ import { useSettingsForm } from '@/hooks/admin/use-settings-form'
 
 describe('useSettingsForm', () => {
   it('is dirty after a change and Discard restores the saved values (the JSDoc example)', () => {
-    const rename = jest.fn(async () => ({ success: true }))
+    const rename = jest.fn(async (values: { name: string }) => ({ success: values.name.length > 0 }))
     const { result } = renderHook(() =>
       useSettingsForm({ name: 'Home' }, async (values) => {
         const outcome = await rename(values)

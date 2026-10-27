@@ -18,15 +18,15 @@ function formatUsd(value: number): string {
   return Number.isInteger(value) ? `$${value}` : `$${value.toFixed(3).replace(/0$/, "")}`
 }
 
-/** "$2 / $10 per 1M tokens, as of Oct 17, 2026", or a note when the price is unknown. */
-function priceLabel(info: ModelInfo, at: Date, f: BoundFormat): string {
+/** "$2 / $10 per 1M tokens, as of Oct 17, 2026", or a note when the price is unknown. The picker and the AI section's summary show it. */
+export function priceLabel(info: ModelInfo, at: Date, f: BoundFormat): string {
   const price = priceAt(info, at)
   if (!price) return "Price unknown: usage of this model is recorded at $0"
   return `${formatUsd(price.input)} / ${formatUsd(price.output)} per 1M tokens, as of ${f.dayKey(price.asOf)}`
 }
 
-/** "Retires on Oct 23, 2026" within 60 days of retirement (or after it), else null. */
-function retirementLabel(info: ModelInfo, now: Date, f: BoundFormat): string | null {
+/** "Retires on Oct 23, 2026" within 60 days of retirement (or after it), else null. The picker and the AI section's summary show it. */
+export function retirementLabel(info: ModelInfo, now: Date, f: BoundFormat): string | null {
   if (!info.retiresOn) return null
   const days = (Date.parse(`${info.retiresOn}T00:00:00Z`) - now.getTime()) / DAY_MS
   if (days > RETIREMENT_WINDOW_DAYS) return null

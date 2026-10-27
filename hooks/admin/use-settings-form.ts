@@ -57,7 +57,14 @@ export function useSettingsForm<T>(initial: T, save: (values: T) => Promise<Save
     onSave: () =>
       new Promise<boolean>((resolve) => {
         startTransition(async () => {
-          const outcome = await save(values)
+          let outcome: SaveOutcome<T>
+          try {
+            outcome = await save(values)
+          } catch (error) {
+            // A rejected call (the network, not a refused save): settle, then let the error boundary have it
+            resolve(false)
+            throw error
+          }
           if (outcome.ok && outcome.keep) setValues(outcome.keep)
           resolve(outcome.ok)
         })

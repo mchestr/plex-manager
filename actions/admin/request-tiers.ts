@@ -55,7 +55,7 @@ export const updateRequestTierSettings = adminAction({
     if (!schedule.ok) {
       return fail(
         "UPSTREAM_UNAVAILABLE",
-        "Settings saved, but the job queue did not answer, so the schedule was not updated. Save again once the queue is back."
+        "Settings saved, but the job queue did not answer, so the schedule was not updated. The worker updates it the next time it starts."
       )
     }
     return ok(null)

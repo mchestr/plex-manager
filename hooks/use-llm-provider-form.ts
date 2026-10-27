@@ -47,30 +47,28 @@ function initialState(stored: StoredLLMProvider | null): LLMFormState {
   }
 }
 
-function optionalNumber(value: string): number | undefined {
-  if (!value.trim()) return undefined
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
+/** A typed number, or undefined when blank or not a number. */
+const optionalNumber = (value: string) => (value.trim() && Number.isFinite(Number(value)) ? Number(value) : undefined)
 
-function listRequest(purpose: "chat" | "wrapped", state: LLMFormState) {
-  return {
-    purpose,
-    provider: state.provider,
-    apiKey: state.apiKey.trim() || undefined,
-    baseUrl: state.provider === "openai-compatible" ? state.baseUrl : undefined,
-  }
-}
+/** What both actions take from the form: a blank key keeps the stored one where the action allows it. */
+const connection = (state: LLMFormState) => ({
+  provider: state.provider,
+  apiKey: state.apiKey.trim() || undefined,
+  baseUrl: state.provider === "openai-compatible" ? state.baseUrl : undefined,
+})
 
 /**
- * State and actions of one purpose's LLM provider form, always open (UI-31):
- * the fields and their dirty state, which settings the chosen model takes,
- * whether the stored key can be reused, the provider's model list, Test and
- * Save. The AI settings section holds one per purpose.
+ * State and actions of one purpose's LLM provider form, which the AI section
+ * shows after Edit: the fields and their dirty state, which settings the
+ * chosen model takes, whether the stored key can be reused, the provider's
+ * model list, Test and Save. The section holds one per purpose above its
+ * view and edit modes, so a Test from the summary feeds the picker after Edit.
  *
  * The picker starts from the static catalogue in `lib/llm/models.ts`, so
  * opening the page asks the provider for nothing (P10.7); Test connection
  * loads the provider's own list and adds the models the catalogue lacks.
+ * Discard (Cancel) also clears the field errors, and the list when the
+ * fields had changed, since it may be another provider's.
  */
 export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "chat" | "wrapped") {
   const toast = useToast()
@@ -81,16 +79,13 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
   const settings = useSettingsForm(initialState(stored), async (form) => {
     if (!form.model.trim()) {
       setErrors({ model: "Choose a model" })
-      return
+      return { ok: false }
     }
     const info = lookupModel(form.provider, form.model)
     const levels = info?.capabilities.effortLevels ?? null
     const action = purpose === "chat" ? updateChatLLMProvider : updateWrappedLLMProvider
     const result = await action({
-      provider: form.provider,
-      // A blank key keeps the stored one when the action allows it
-      apiKey: form.apiKey.trim() || undefined,
-      baseUrl: form.provider === "openai-compatible" ? form.baseUrl : undefined,
+      ...connection(form),
       model: form.model.trim(),
       customModel: form.custom,
       effort: levels && form.effort ? (form.effort as EffortLevel) : undefined,
@@ -102,12 +97,12 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
       // A field error shows on its field; anything else is a toast
       if (field) setErrors({ [field]: result.fieldErrors?.[field]?.[0] })
       else toast.showError(result.error)
-      return
+      return { ok: false }
     }
     // The action revalidates the page, so the stored provider follows
     setErrors({})
     toast.showSuccess(`${purpose === "chat" ? "Admin assistant" : "Rewind"} model saved`)
-    return { ...form, apiKey: "" }
+    return { ok: true, keep: { ...form, apiKey: "" } }
   })
   const form = settings.values
 
@@ -149,11 +144,20 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
     update({ baseUrl })
   }
 
-  /** Loads the provider's model list with the typed values, and says whether the model is in it. */
+  /** Puts the saved values back and clears the errors, and the model list when it may be another provider's. */
+  const onDiscard = () => {
+    if (settings.form.isDirty) setLiveModels(null)
+    settings.form.onDiscard()
+    setErrors({})
+  }
+
+  /** Loads the provider's model list with the form's values, and says whether the model is in it. */
   const testConnection = async (): Promise<TestResult> => {
+    // Nothing saved and nothing typed: the provider would only be asked for a key
+    if (!stored && !settings.form.isDirty) return { ok: false, message: "Nothing to test yet", detail: "Set up this model first, then test it." }
     setIsLoading(true)
     try {
-      const result = await listLLMModels(listRequest(purpose, form))
+      const result = await listLLMModels({ purpose, ...connection(form) })
       setLiveModels(result.success ? result.data.models : null)
       if (!result.success) return { ok: false, message: result.error }
       const listed = !form.model || form.custom || result.data.models.includes(form.model)
@@ -169,7 +173,7 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
     form,
     update,
     errors,
-    settingsForm: { ...settings.form, blockedReason: blocked ? "Enter the API key to test or save" : undefined },
+    settingsForm: { ...settings.form, onDiscard, blockedReason: blocked ? "Enter the API key to test or save" : undefined },
     liveModels,
     busy: settings.form.isPending || isLoading,
     effortLevels,

@@ -1,16 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 
 import { deleteMcpServer, discoverMcpTools, saveMcpServer } from "@/actions/admin/assistant-sources"
+import { SheetForm, type SheetFormControls } from "@/components/admin/settings/sheet-form"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { SecretInput } from "@/components/ui/secret-input"
-import { SettingsFormFooter } from "@/components/ui/settings-section"
-import { Switch } from "@/components/ui/switch"
+import { SettingsFormFooter } from "@/components/ui/settings-form-footer"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 import type { McpServerSettings } from "@/lib/data/assistant-sources"
@@ -25,12 +27,14 @@ interface DiscoveredTool {
 type Errors = Partial<Record<"name" | "url" | "authHeaderName" | "authHeaderSecret", string>>
 
 /**
- * One MCP server: its address, an optional auth header, and (once saved) a
- * switch per tool. A tool is off until it is switched on, so a new server
- * adds nothing to the assistant by itself.
+ * One MCP server, the edit mode of its row in a Sheet: its address, an
+ * optional auth header, and (once saved) a checkbox per tool. A tool is off
+ * until it is allowed, so a new server adds nothing to the assistant by
+ * itself. Every change, the checkboxes included, saves with Save.
  */
-export function McpServerForm({ server, onDone }: { server: McpServerSettings | null; onDone?: () => void }) {
+export function McpServerForm({ server, onDone, onCancel, onDirtyChange, onPendingChange }: { server: McpServerSettings | null } & SheetFormControls) {
   const toast = useToast()
+  const activeId = useId()
   const [errors, setErrors] = useState<Errors>({})
   const [tools, setTools] = useState<DiscoveredTool[] | null>(null)
   const [discovering, setDiscovering] = useState(false)
@@ -50,12 +54,11 @@ export function McpServerForm({ server, onDone }: { server: McpServerSettings | 
         const field = (key: keyof Errors) => result.fieldErrors?.[key]?.[0]
         setErrors({ name: field("name"), url: field("url"), authHeaderName: field("authHeaderName"), authHeaderSecret: field("authHeaderSecret") })
         toast.showError(result.error)
-        return
+        return { ok: false }
       }
       setErrors({})
       toast.showSuccess("MCP server saved")
-      onDone?.()
-      return { ...values, authHeaderSecret: "" }
+      return { ok: true, keep: { ...values, authHeaderSecret: "" } }
     }
   )
   const { values, set, form } = settings
@@ -75,15 +78,7 @@ export function McpServerForm({ server, onDone }: { server: McpServerSettings | 
   const known = tools ?? values.enabledTools.map((name) => ({ name, description: "", readOnlyHint: false }))
 
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault()
-        if (form.isDirty) form.onSave()
-      }}
-      noValidate
-      className="flex flex-col gap-6"
-      data-testid="settings-mcp-form"
-    >
+    <SheetForm form={form} onDone={onDone} onDirtyChange={onDirtyChange} onPendingChange={onPendingChange} data-testid="settings-mcp-form">
       <div className="grid grid-cols-1 gap-4">
         <FormField name="mcp-name" label="Name" error={errors.name}>
           <Input value={values.name} onValueChange={(name) => set({ name })} placeholder="Memini" required disabled={form.isPending} data-testid="settings-mcp-name" />
@@ -107,9 +102,9 @@ export function McpServerForm({ server, onDone }: { server: McpServerSettings | 
             />
           </FormField>
         )}
-        <div className="flex items-center justify-between gap-3">
-          <label htmlFor="mcp-active" className="text-ui text-foreground">Use this server</label>
-          <Switch id="mcp-active" checked={values.isActive} onCheckedChange={(isActive) => set({ isActive })} disabled={form.isPending} data-testid="settings-mcp-active" />
+        <div className="flex items-center gap-2">
+          <Checkbox id={activeId} checked={values.isActive} onCheckedChange={(isActive) => set({ isActive })} disabled={form.isPending} data-testid="settings-mcp-active" />
+          <Label htmlFor={activeId}>Use this server</Label>
         </div>
       </div>
 
@@ -117,8 +112,8 @@ export function McpServerForm({ server, onDone }: { server: McpServerSettings | 
         <div className="flex flex-col gap-3 border-t pt-4" data-testid="settings-mcp-tools">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h4 className="text-ui font-medium text-foreground">Tools</h4>
-              <p className="text-label text-muted-foreground">Only tools you switch on reach the assistant. Switch on only the tools you trust it to call.</p>
+              <h3 className="text-ui font-medium text-foreground">Tools</h3>
+              <p className="text-label text-muted-foreground">Only tools you allow reach the assistant. Allow only the tools you trust it to call.</p>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={discover} loading={discovering} loadingLabel="Listing" data-testid="settings-mcp-discover">
               List tools
@@ -130,12 +125,17 @@ export function McpServerForm({ server, onDone }: { server: McpServerSettings | 
             <ul className="flex flex-col divide-y">
               {known.map((tool) => (
                 <li key={tool.name} className="flex items-center gap-3 py-2" data-testid={`settings-mcp-tool-${tool.name}`}>
+                  <Checkbox
+                    aria-label={`Allow ${tool.name}`}
+                    checked={values.enabledTools.includes(tool.name)}
+                    onCheckedChange={(on) => toggle(tool.name, on)}
+                    disabled={form.isPending}
+                  />
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate font-mono text-ui text-foreground">{tool.name}</span>
                     {tool.description && <span className="truncate text-label text-muted-foreground">{tool.description}</span>}
                   </div>
                   {tools && <Badge variant={tool.readOnlyHint ? "success" : "warning"}>{tool.readOnlyHint ? "read-only" : "can change data"}</Badge>}
-                  <Switch label={`Allow ${tool.name}`} checked={values.enabledTools.includes(tool.name)} onCheckedChange={(on) => toggle(tool.name, on)} disabled={form.isPending} />
                 </li>
               ))}
             </ul>
@@ -143,7 +143,7 @@ export function McpServerForm({ server, onDone }: { server: McpServerSettings | 
         </div>
       )}
 
-      <SettingsFormFooter id="mcp" form={form} className="px-0" />
+      <SettingsFormFooter id="mcp" title={server?.name ?? "the new MCP server"} form={form} editing onCancel={onCancel} className="px-0" />
       {server && (
         <ConfirmDialog
           trigger={
@@ -166,6 +166,6 @@ export function McpServerForm({ server, onDone }: { server: McpServerSettings | 
           }}
         />
       )}
-    </form>
+    </SheetForm>
   )
 }

@@ -2,9 +2,11 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 
+import { FormField } from '@/components/ui/form-field'
+import { Input } from '@/components/ui/input'
 import { SettingsEditProvider, useSettingsEdit } from '@/components/ui/settings-edit-context'
 import { SettingsSection, type TestResult } from '@/components/ui/settings-section'
-import type { SettingsFormState } from '@/hooks/admin/use-settings-form'
+import { useSettingsForm, type SettingsFormState } from '@/hooks/admin/use-settings-form'
 
 function formState(overrides: Partial<SettingsFormState> = {}): SettingsFormState {
   return { isDirty: false, isPending: false, onDiscard: jest.fn(), onSave: jest.fn(async () => true), ...overrides }
@@ -144,6 +146,49 @@ describe('SettingsSection', () => {
 
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Local URL' })).toHaveFocus())
     expect(screen.getByRole('form', { name: 'Tautulli' })).toBeInTheDocument()
+  })
+
+  it('after a refused save, focuses the field with the error once the fields are enabled again', async () => {
+    const user = userEvent.setup()
+    // As the real sections do: fields disabled while saving, errors through FormField
+    function RefusedSection() {
+      const [error, setError] = useState<string>()
+      const settings = useSettingsForm({ name: 'Home', url: 'http://a' }, async () => {
+        setError('Nothing answered at this address.')
+        return { ok: false }
+      })
+      return (
+        <SettingsSection id="tautulli" title="Tautulli" description="Watch history" form={settings.form} view={<p>saved</p>}>
+          <FormField name="tautulli-name" label="Name">
+            <Input value={settings.values.name} onValueChange={(name) => settings.set({ name })} disabled={settings.form.isPending} />
+          </FormField>
+          <FormField name="tautulli-url" label="Local URL" error={error}>
+            <Input value={settings.values.url} onValueChange={(url) => settings.set({ url })} disabled={settings.form.isPending} />
+          </FormField>
+        </SettingsSection>
+      )
+    }
+    render(<RefusedSection />)
+
+    await user.click(screen.getByTestId('settings-tautulli-edit'))
+    await user.type(screen.getByRole('textbox', { name: 'Local URL' }), 'b')
+    await user.click(screen.getByTestId('settings-tautulli-save'))
+
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Local URL' })).toHaveFocus())
+    expect(screen.getByRole('form', { name: 'Tautulli' })).toBeInTheDocument()
+  })
+
+  it('tells `after` whether the section is editing, for actions on the saved values', async () => {
+    const user = userEvent.setup()
+    render(
+      <SettingsSection id="request-tiers" title="Request limits" description="Quotas" form={formState()} view={<p>saved</p>} after={(editing) => !editing && <span>Run now</span>}>
+        <input aria-label="Run hour" />
+      </SettingsSection>
+    )
+
+    expect(screen.getByText('Run now')).toBeInTheDocument()
+    await user.click(screen.getByTestId('settings-request-tiers-edit'))
+    expect(screen.queryByText('Run now')).not.toBeInTheDocument()
   })
 
   it('Cancel on a clean form closes at once, with focus on Edit', async () => {

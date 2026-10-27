@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { SecretInput } from "@/components/ui/secret-input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/toast"
-import { useSettingsForm } from "@/hooks/admin/use-settings-form"
+import { useSettingsForm, type SaveOutcome } from "@/hooks/admin/use-settings-form"
 import type { SavedSecret } from "@/lib/security/saved-secret"
 
 /**
@@ -59,11 +59,17 @@ export function initialDiscordValues(integration: StoredDiscordIntegration | nul
 export type DiscordValues = ReturnType<typeof initialDiscordValues>
 type DiscordErrors = Partial<Record<keyof DiscordValues, string>>
 
-/** The Discord form, always open (UI-31): values, dirty state, Discard and Save, and field errors. */
+/**
+ * The Discord section's form, shown when Edit opens it: values, dirty state,
+ * Cancel (which also clears the field errors) and Save, and field errors
+ * from the action. A failed save reports `ok: false`, so the section stays
+ * open on the first invalid field; a successful one clears the typed secrets
+ * and lets the section return to its summary.
+ */
 export function useDiscordForm(integration: StoredDiscordIntegration | null) {
   const toast = useToast()
   const [errors, setErrors] = useState<DiscordErrors>({})
-  const settings = useSettingsForm(initialDiscordValues(integration), async (values) => {
+  const settings = useSettingsForm(initialDiscordValues(integration), async (values): Promise<SaveOutcome<DiscordValues>> => {
     const result = await updateDiscordIntegrationSettings({
       ...values,
       clientSecret: values.clientSecret.trim() || undefined,
@@ -74,12 +80,13 @@ export function useDiscordForm(integration: StoredDiscordIntegration | null) {
         Object.entries(result.fieldErrors ?? {}).flatMap(([field, messages]) => (field in values && messages[0] ? [[field, messages[0]]] : []))
       )
       setErrors(fieldErrors)
+      // A field error says it where it belongs; the toast is for the rest
       if (Object.keys(fieldErrors).length === 0) toast.showError(result.error)
-      return
+      return { ok: false }
     }
     setErrors({})
     toast.showSuccess("Discord settings saved")
-    return { ...values, clientSecret: "", botToken: "" }
+    return { ok: true, keep: { ...values, clientSecret: "", botToken: "" } }
   })
 
   /** Changes fields and clears their errors. */
@@ -88,7 +95,18 @@ export function useDiscordForm(integration: StoredDiscordIntegration | null) {
     setErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([field]) => !(field in patch))))
   }
 
-  return { values: settings.values, set, errors, form: settings.form }
+  return {
+    values: settings.values,
+    set,
+    errors,
+    form: {
+      ...settings.form,
+      onDiscard: () => {
+        settings.form.onDiscard()
+        setErrors({})
+      },
+    },
+  }
 }
 
 type DiscordForm = ReturnType<typeof useDiscordForm>
@@ -101,9 +119,10 @@ interface DiscordIntegrationFieldsProps {
 
 /**
  * The Discord credentials and support settings as FormFields (UI-13). The
- * two feature switches sit in the section's status rows. The client secret
- * and bot token are SecretInputs in the saved state only: their destination
- * is fixed, so no address change asks for them again.
+ * two feature flags sit outside them: in the section's status rows, and in
+ * setup's own rows. The client secret and bot token are SecretInputs in the
+ * saved state only: their destination is fixed, so no address change asks
+ * for them again.
  */
 export function DiscordIntegrationFields({ integration, state }: DiscordIntegrationFieldsProps) {
   const { values, set, errors, form } = state

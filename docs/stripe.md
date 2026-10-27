@@ -89,14 +89,16 @@ Plex login ─▶ member?  ──yes─▶ into app (unchanged)
 
 All Stripe settings are configured in the app — no redeploy or env vars needed.
 
-Go to **Admin → Settings → Stripe Subscriptions** and fill in:
+Go to **Admin → Settings → Stripe billing** (in Integrations). The section shows
+the saved settings; select **Set up** (or **Edit** once something is saved) and
+fill in:
 
 | Field | Where to find it | Notes |
 | --- | --- | --- |
-| **Secret Key** | Stripe Dashboard → Developers → API keys → *Secret key* (`sk_live_…` / `sk_test_…`) | Stored **encrypted**. Leave blank on later saves to keep the existing value. |
-| **Webhook Signing Secret** | Created when you register the webhook endpoint (`whsec_…`) — see below | Stored **encrypted**. Leave blank to keep existing. |
+| **Secret key** | Stripe Dashboard → Developers → API keys → *Secret key* (`sk_live_…` / `sk_test_…`) | Stored **encrypted**. Leave blank on later saves to keep the existing value. |
+| **Webhook signing secret** | Created when you register the webhook endpoint (`whsec_…`) — see below | Stored **encrypted**. Leave blank to keep existing. |
 | **Price IDs** | Stripe Dashboard → Products → your recurring price(s) (`price_…`) | One per line or comma-separated. At least one required. |
-| **Subscriber Library Access** | Checkbox list of your Plex libraries | Libraries shared with subscribers when access is granted. Leave all unchecked to share every library. |
+| **Subscriber library access** | Checkbox list of your Plex libraries | Libraries shared with subscribers when access is granted. Leave all unchecked to share every library. |
 
 > **If a configured library is later deleted** (or recreated with a new section
 > id), grants continue with the libraries that still exist and a warning is
@@ -104,8 +106,11 @@ Go to **Admin → Settings → Stripe Subscriptions** and fill in:
 > (and retry) until you update the selection here — access is never silently
 > widened to all libraries.
 
-Click **Save**. Secrets are never sent back to the browser; the form only shows
-whether a value is stored.
+Click **Save changes**; the section closes back to its summary. **Cancel** (or
+Escape) leaves without saving, and asks first when something was changed.
+Secrets are never sent back to the browser: the summary shows only that a key
+is saved and its last four characters, and a key the current encryption key
+can't read offers **Enter it again**.
 
 ## Registering the Webhook
 
@@ -124,7 +129,8 @@ whether a value is stored.
    - `customer.subscription.deleted`
    - `invoice.payment_failed`
 4. Save, then copy the endpoint's **Signing secret** (`whsec_…`) into the
-   **Webhook Signing Secret** field in the admin settings and Save.
+   **Webhook signing secret** field (Stripe billing, **Edit**) in the admin
+   settings and select **Save changes**.
 
 The route (`app/api/stripe/webhook/route.ts`) is `force-dynamic` and verifies the
 signature against the raw request body. It requires **no** admin auth — the
@@ -141,8 +147,9 @@ was never processed recovers it (see
 
 ## Enabling the Feature
 
-The master **Enable Stripe subscriptions** toggle is **blocked** until Stripe is
-fully configured (FR-3). It stays greyed out with a "Missing: …" hint until all
+The master **Subscriptions** switch at the top of the Stripe billing section is
+**blocked** until Stripe is fully configured (FR-3). It stays greyed out, with a
+"Subscriptions can't be turned on yet." alert naming what is missing, until all
 of the following are present:
 
 - a secret key,
@@ -150,7 +157,8 @@ of the following are present:
 - at least one price ID, and
 - the job queue (`REDIS_URL` set on the server).
 
-Once all four are in place, flip the toggle on. If any members sign in with
+Once all four are in place, flip the switch on. It takes effect at once, without
+Edit or Save changes. If any members sign in with
 Jellyfin only and are not exempt, the toggle first asks you to confirm, naming
 them ("3 Jellyfin members will be asked to subscribe"). These accounts were
 usually made in Jellyfin itself rather than through an app invite, so they have
