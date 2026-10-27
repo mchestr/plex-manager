@@ -29,6 +29,10 @@ beforeEach(() => {
   jest.clearAllMocks()
   jest.mocked(browserTimeZone).mockReturnValue("Europe/Berlin")
 })
+afterEach(() => jest.restoreAllMocks())
+
+/** Pins the clock, so the greeting and the question print 1:00 PM in Berlin and 4:00 AM in Los Angeles. */
+const pinClock = () => jest.spyOn(Date, "now").mockReturnValue(Date.parse("2026-12-01T12:00:00Z"))
 
 // The app zone; the browser's is Europe/Berlin
 function renderSheet() {
@@ -128,6 +132,7 @@ describe("AssistantSheet", () => {
 
   it("shows each message's time in the browser's zone, not the app zone", async () => {
     // 17:05 in Berlin, 08:05 in Los Angeles
+    pinClock()
     replyWith("ok", Date.parse("2026-12-01T16:05:00Z"))
     const { user, dialog } = await open()
     await ask("status?", user)
@@ -139,6 +144,7 @@ describe("AssistantSheet", () => {
 
   it("falls back to the app zone, and sends no zone, when the browser's is not one the app knows", async () => {
     jest.mocked(browserTimeZone).mockReturnValue(null)
+    pinClock()
     replyWith("ok", Date.parse("2026-12-01T16:05:00Z"))
     const { user, dialog } = await open()
     await ask("status?", user)

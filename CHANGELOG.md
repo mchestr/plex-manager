@@ -18,9 +18,13 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Changed
+
+- **Rewind times are implicit:** Rewind no longer prints a time zone. The "Times in America/Chicago, the server's time zone" notes are gone from the bookends, clock, short list and centrefold pages, the desktop Notes, article mode, chart and table captions and the clock and centrefold share cards; the times and days are the member's own, as before.
+
 ### Fixed
 
-- **Assistant times in your own zone:** the admin assistant now gives times in your browser's time zone, both in its answers and under each message, instead of the server zone (UTC when no server zone is set). A browser zone the app does not know falls back to the server zone.
+- **Assistant times in your own zone:** the admin assistant now gives times in your browser's time zone, both in its answers and under each message, instead of the server zone (UTC when no server zone is set). A browser zone the app does not know falls back to the server zone. Sonarr, Radarr, Overseerr, background job and library times reach it as local times too, and both assistants (web and Discord) now give plain local times without naming a zone or offset.
 
 ## [0.5.0] - 2026-10-27
 

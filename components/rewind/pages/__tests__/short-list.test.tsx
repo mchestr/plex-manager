@@ -56,10 +56,11 @@ describe("Short list (pocket edition)", () => {
     rows.forEach((row, i) => expect(row).toHaveTextContent(titleOf(heavy, data, i + 1)))
   })
 
-  it("prints tz.note under the clock time it shows", () => {
+  it("prints the usual start time with no zone note", () => {
     renderList(heavy)
     expect(screen.getByTestId("rewind-short-list-start").textContent).toBe(`You usually pressed play around ${heavy.facts["hours.medianStart"]!.display}.`)
-    expect(screen.getByTestId("rewind-short-list-tz")).toHaveTextContent(`Times in ${heavy.facts["tz.label"]!.display}, the server's time zone`)
+    expect(document.body).not.toHaveTextContent(heavy.facts["tz.label"]!.display)
+    expect(document.body).not.toHaveTextContent(/time zone/i)
   })
 
   it("says the words are templates only when every word is one", () => {

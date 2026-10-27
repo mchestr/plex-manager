@@ -17,6 +17,7 @@ import { executeTautulliTool } from "./tautulli"
 import { executeMediaMarkingTool } from "./media-marking"
 import { ROLE_TOOL_NOT_PERMITTED, ROLE_TOOL_UNAVAILABLE, scrubForRole } from "./role-scrub"
 import { scrubForDiscord } from "./scrub"
+import { withLocalInstants } from "./timestamps"
 
 const logger = createLogger("CHATBOT_EXECUTOR")
 
@@ -251,7 +252,9 @@ export async function executeToolCall(
   })
 
   try {
-    const result = await executor(toolName, args, userId, context, format)
+    const output = await executor(toolName, args, userId, context, format)
+    // Every instant the model reads is local wall time with its offset (P11.17)
+    const result = format ? withLocalInstants(output, format.timeZone) : output
 
     logger.debug("Chatbot tool execution completed", {
       toolName,

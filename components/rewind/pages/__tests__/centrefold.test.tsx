@@ -79,7 +79,7 @@ describe("16 Centrefold", () => {
     renderPage(data, issue)
     expect(screen.getByText(facts["hours.afterDarkShare"]!.display)).toBeInTheDocument()
     expect(document.body).toHaveTextContent("after dark")
-    expect(document.body).toHaveTextContent(`Times in ${facts["tz.label"]!.display}`)
+    expect(document.body).not.toHaveTextContent(facts["tz.label"]!.display)
     expect(screen.getByText("No. K7Q4")).toBeInTheDocument()
   })
 

@@ -1,7 +1,7 @@
 /**
  * 09 The clock card (design 6.4): the card headline, the evidence clock with
  * the after-dark window (10 PM to 4 AM) bracketed in the spot colour and its
- * share in the centre, then the busiest and quietest hours and the zone.
+ * share in the centre, then the busiest and quietest hours.
  *
  * @module lib/rewind/cards/clock
  */
@@ -11,7 +11,7 @@ import type { ReactElement } from "react"
 import type { CardInput } from "@/lib/wrapped/data/share-safe"
 
 import { cardInk, Frame, type CardInk } from "./frame"
-import { CardHeadline, LABEL, ringSvg } from "./parts"
+import { CardHeadline, ringSvg } from "./parts"
 import { CARD_MEASURE, Graphic, Line, Text } from "./type"
 
 const AFTER_DARK = { from: 22, to: 3 }
@@ -52,7 +52,6 @@ export function ClockCard(input: CardInput): ReactElement {
   const { facts, hours } = input.page
   const peak = facts["hours.peak"]?.display
   const quietest = facts["hours.quietest"]?.display
-  const zone = facts["tz.label"]?.display
   const share = facts["hours.afterDarkShare"]?.display ?? null
   const size = og ? 300 : 640
 
@@ -71,7 +70,6 @@ export function ClockCard(input: CardInput): ReactElement {
         {peak ? <HourStat value={peak} label="busiest hour" width={og ? 340 : 440} /> : null}
         {quietest ? <HourStat value={quietest} label="quietest hour" width={og ? 340 : 440} /> : null}
       </div>
-      {zone && !og ? <Line text={`Times in ${zone}`} face={{ ...LABEL, size: 27, measure }} style={{ marginTop: 40 }} /> : null}
     </Frame>
   )
 }

@@ -62,13 +62,13 @@ describe("10 The calendar", () => {
     expect(screen.getByTestId("rewind-figure").querySelector("svg rect")).toBeNull()
   })
 
-  it("tabulates the minutes of each day played, with the zone in the caption", () => {
+  it("tabulates the minutes of each day played, with no zone in the caption", () => {
     const issue = issues.light
     const data = dataOf(issue)
     const table = registry.calendar.table!(data, issue.facts, { locale: "en-US" })!
     expect(table.rows).toHaveLength(data.days.filter((d) => d.minutes > 0).length)
     expect(table.columns).toEqual(["Day", "Watched", "Most watched"])
-    expect(table.caption).toContain(issue.facts["tz.label"]!.display)
+    expect(table.caption).not.toContain(issue.facts["tz.label"]!.display)
   })
 
   it("summarises the page deterministically", () => {

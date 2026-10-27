@@ -33,12 +33,10 @@ export const monthName = (month: number, locale: string, style: "long" | "short"
 
 /**
  * How a list counts, for the desktop Notes: "Counted from January 1 to
- * November 30 in America/Chicago, the server’s time zone. Rewatches count;
- * trailers and extras do not."
+ * November 30. Rewatches count; trailers and extras do not."
  */
-function countingRule(facts: RewindFactsV3, zone: NotesContext["zone"]): string {
-  const whose = zone === "server" ? "the server’s time zone" : "your time zone"
-  return `Counted from ${shown(facts, "window.from")} to ${shown(facts, "window.through")} in ${shown(facts, "tz.label")}, ${whose}. Rewatches count; trailers and extras do not.`
+function countingRule(facts: RewindFactsV3): string {
+  return `Counted from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}. Rewatches count; trailers and extras do not.`
 }
 
 /**
@@ -58,7 +56,7 @@ function topShowsNotes(data: TopShowsData, facts: RewindFactsV3, ctx: NotesConte
   const title = rows.length === 1 ? "Your one series" : `All ${count.format(rows.length)} series, ranked by time watched`
   return [
     { kind: "heading", text: plain(title) },
-    { kind: "paragraph", text: plain(countingRule(facts, ctx.zone)) },
+    { kind: "paragraph", text: plain(countingRule(facts)) },
     { kind: "table", table: { caption: `${title}.`, columns: ["No.", "Series", "Episodes", "Watched"], rows } },
   ]
 }

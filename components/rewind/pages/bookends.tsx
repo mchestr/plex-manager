@@ -4,7 +4,7 @@ import { shown } from "@/lib/rewind/pages/facts"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { renderCopy } from "@/lib/wrapped/copy/render-copy"
-import { copyLocals, headline, tzNote } from "@/lib/wrapped/copy/templates"
+import { copyLocals, headline } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { CopyText } from "./copy-text"
@@ -72,16 +72,11 @@ export function BookendsPage({ data, issue }: PageProps<BookendsData>) {
       <p style={{ fontSize: u(18.5), lineHeight: 1.3, marginTop: u(14) }}>
         <CopyText text={deckText(issue, "bookends")} source={facts} />
       </p>
-      <div className="mt-auto">
-        {lifetime && (
-          <p className="font-display" style={{ fontSize: ut(14), fontVariationSettings: axes(100, 650) }} data-testid="rewind-bookends-lifetime">
-            {lifetime}
-          </p>
-        )}
-        <p className="italic" style={{ fontSize: ut(13.5), lineHeight: 1.25, marginTop: u(6) }}>
-          <CopyText text={tzNote(issue.zone)} source={facts} />
+      {lifetime && (
+        <p className="mt-auto font-display" style={{ fontSize: ut(14), fontVariationSettings: axes(100, 650) }} data-testid="rewind-bookends-lifetime">
+          {lifetime}
         </p>
-      </div>
+      )}
     </div>
   )
 }

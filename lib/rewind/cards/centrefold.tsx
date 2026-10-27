@@ -16,7 +16,7 @@ import type { CardInput } from "@/lib/wrapped/data/share-safe"
 
 import { Clock } from "./clock"
 import { cardInk, Frame } from "./frame"
-import { CardHeadline, LABEL, StatsRow } from "./parts"
+import { CardHeadline, StatsRow } from "./parts"
 import { CARD_MEASURE, fitNameplate, Line, Nameplate, Text } from "./type"
 
 const WINDOW_CAPTION: Partial<Record<FactId, string>> = {
@@ -33,7 +33,6 @@ export function CentrefoldCard(input: CardInput): ReactElement {
   const ring = archetype ? RINGS[archetype.id] : undefined
   const ringShare = ring ? page.facts[ring.share]?.display ?? null : null
   const peak = page.facts["hours.peak"]?.display ?? null
-  const zone = page.facts["tz.label"]?.display
   const clockSize = og ? 300 : 480
 
   const clock = page.hours ? (
@@ -79,7 +78,6 @@ export function CentrefoldCard(input: CardInput): ReactElement {
           <div style={{ display: "flex", width: 220 }} />
         </div>
       )}
-      {zone && !og ? <Line text={`Times in ${zone}`} face={{ ...LABEL, size: 27, measure }} style={{ marginBottom: 28 }} /> : null}
       <div style={{ display: "flex", marginTop: og ? 24 : 0 }}>
         <StatsRow input={input} ink={ink} width={measure} />
       </div>

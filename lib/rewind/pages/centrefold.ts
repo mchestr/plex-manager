@@ -197,7 +197,7 @@ export const centrefoldPage: PageDefinition<CentrefoldData> = {
   share: {
     facts: [
       "archetype.name", "archetype.rarityShare", "archetype.rarityCount", "archetype.scoredMembers",
-      "archetype.evidence[1]", "archetype.evidence[2]", "archetype.evidence[3]", "tz.label",
+      "archetype.evidence[1]", "archetype.evidence[2]", "archetype.evidence[3]",
       // The card's evidence clock: its peak label and the share its arc brackets.
       "hours.peak", "hours.afterDarkShare", "hours.goldenShare",
     ],

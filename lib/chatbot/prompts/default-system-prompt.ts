@@ -202,8 +202,8 @@ For each user question, follow this pattern:
 === CURRENT CONTEXT ===
 
 User time zone: ${timeZone}
-Local time now: ${formatIsoWithOffset(now, timeZone)} (${formatDateTime(now, settings, { zoneLabel: true })})
-Timestamps in tool results are in this zone, with their offset; give times in it, and "today" and "yesterday" mean the user's.
+Local time now: ${formatIsoWithOffset(now, timeZone)} (${formatDateTime(now, settings)})
+Timestamps in tool results are in this zone, with their offset; "today" and "yesterday" mean the user's. Give every time as a plain local time in this zone and never name a time zone or an offset (no "UTC", "PST" or "+01:00"): the user reads times on their own clock.
 
 Remember: You are a tool-driven assistant. Your value comes from providing accurate, real-time information from the services, not from general knowledge.`
 }

@@ -149,7 +149,7 @@ All grafts the judges proposed were adopted, some adapted. "G" grafts came from 
 | D9 | Per-title monthly small multiples (shared scale, December faded) and "#1 of N viewers here" (N of 3 or more, no names) | signature | Page 05 and row sheets |
 | D10 | "Your Nth Rewind", a genre timeline, and the share watched within 14 days of release | signature | Pages 03, 07 |
 | D11 | Peak concurrent streams and server-wide requests fulfilled in the Standing community box, each with 3 or more contributors | signature | Page 15 |
-| D13 | Rarity over this year's issues ("6 of 31 Rewinds"), scored in the aggregate job; the clock labelled with the zone used; the percentile always from the server-wide history pass (the `get_home_stats` fast path was dropped in review because it ignores exclusions, the minimum-play rule and member zones); `ip_address` and `get_user_ips` never read | signature | Sections 7.2, 7.4, 7.7 |
+| D13 | Rarity over this year's issues ("6 of 31 Rewinds"), scored in the aggregate job; the clock counted in the member's zone, which it does not name (7.7); the percentile always from the server-wide history pass (the `get_home_stats` fast path was dropped in review because it ignores exclusions, the minimum-play rule and member zones); `ip_address` and `get_user_ips` never read | signature | Sections 7.2, 7.4, 7.7 |
 | D14 | Pocket edition template-only by default | both runners-up | Section 4.5 |
 | D15 | Gaps shared by all three candidates: Jellyfin handling, admin library and content-rating exclusions, managed accounts excluded by default, a minimum-play rule with `grouping=1` (RWP-07), the roster leak on a failed Tautulli match (RWP-02), weekly bins on public cards | data judge | FR-44 to FR-49 |
 
@@ -417,7 +417,7 @@ Data tags: **EXISTING** is computed today (the bracket names any fix it needs); 
 
 - **Purpose:** when you watch; it sets up the centrefold evidence.
 - **Facts:** `hours.histogram[24]`, `hours.peak`, EXISTING [time zone], H; `hours.afterDarkShare` ("started 10 PM to 4 AM", hours 22-3; D8), EXISTING as an archetype input, NEW as an output, H; `hours.medianStart`, `hours.latestStart` ("2:47 AM on a Sunday"; D6), NEW, H; `days.weekdayShare[7]`, EXISTING, H; `tz.label`, NEW.
-- **Copy:** T headline ("Your hour is 10 PM"), `deck.clock` (LLM). The footnote is the template `tz.note`: "Times in America/Chicago, the server's time zone" or "Times in Europe/London, your time zone" (F9, FR-29, Section 7.7).
+- **Copy:** T headline ("Your hour is 10 PM"), `deck.clock` (LLM). No zone footnote: the times are the member's own (Section 7.7).
 - **Visual:** the evidence clock (Section 5.7, `hour-ring`): a 24-hour ring with midnight at the top, square-root bar lengths, the after-dark arc bracketed and filled with the spot colour, a leader-line label on the peak hour, the share in the centre; a weekday row of 7 bars (weekend solid).
 - **Motion:** bars draw clockwise from midnight (900 ms, 30 ms per hour), then the arc sweeps.
 - **Empty or light:** eligible with more than 10 plays.
@@ -1122,7 +1122,7 @@ Exclusions are applied as events are read: library sections in `Config.rewindExc
 - **Data window during the season:** generation uses `through = 30 November 23:59:59` in each member's own Rewind zone, and elapsed days for averages are counted in that zone: 334 (335 in a leap year). The final cut uses the full year.
 - **When the season starts.** The data window must be closed for every member before anything is computed, so `REWIND_SEASON_PREPARE` is scheduled for 1 December 00:15 in the **westernmost** Rewind zone in use (the latest instant of "1 December 00:15" across `Config.timezone` and every eligible member's `User.timezone`); with a Chicago server and one member in Los Angeles it runs at 02:15 Chicago time. The final cut uses the same rule for 1 January 00:30.
 - **Season dates** are stored as month-day values (`rewindSeasonOpens: "12-01"`, `rewindSeasonCloses: "01-31"`) and evaluated in `Config.timezone` (GAP-40). `/rewind` resolves the latest year with a completed Rewind for the member; from 1 January the viewer still opens the 2026 issue (RWP-04).
-- Every page that shows clock times prints the zone. The strings are defined once in `lib/wrapped/copy/templates.ts`: `tz.note`, "Times in America/Chicago, the server's time zone" or "Times in Europe/London, your time zone", on pages 03, 09 and 10, the pocket Short list, row sheets, Table sheets, the desktop Notes and article mode; and `tz.short`, "Times in America/Chicago", where space is tight (the centrefold key row and the clock and centrefold cards). City-only forms ("Times in Chicago") are not used.
+- Clock times are implicit: every time and day is on the member's own clock, so no page, sheet, Note, caption, article block or card names a zone or says whose it is. The `tz.note` and `tz.short` templates were removed on 2026-10-27; `tz.label` stays in the catalogue as the record of the zone an issue was counted in, and no copy prints it.
 - Tests run the stats under `TZ=UTC` with zones `America/Los_Angeles`, `Europe/Berlin` and `Australia/Sydney`, across the March and November DST changes and the 31 December boundary.
 
 ### 7.8 The fact sheet

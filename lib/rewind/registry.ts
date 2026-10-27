@@ -110,8 +110,6 @@ export interface SelectContext {
 /** What a page's desktop Notes read besides its data and facts (P7.4). */
 export interface NotesContext {
   locale: string
-  /** Whose time zone the issue counts in: the counting rule names it. */
-  zone: "member" | "server"
   /** Rating keys the member hid (P7.7), left out before the no-LLM regeneration lands. */
   hiddenKeys?: ReadonlySet<string>
   /** The December features (P8.3); the calendar reads `calendar.grid`. */

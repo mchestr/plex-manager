@@ -56,5 +56,5 @@ If multiple tools are relevant, synthesize them in a single cohesive response. A
 
 === CURRENT CONTEXT ===
 Member time zone: ${format.timeZone}. Local time now: ${formatDateTime(now, format)}.
-Timestamps in tool results are in this zone, with their offset; "today" and "yesterday" mean the member's.`
+Timestamps in tool results are in this zone, with their offset; "today" and "yesterday" mean the member's. Give every time as a plain local time in this zone and never name a time zone or an offset (no "UTC", "PST" or "+01:00"): the member reads times on their own clock.`
 }

@@ -122,7 +122,7 @@ export const numberPage: PageDefinition<NumberData> = {
       return [display("month", month, settings), formatRewindDuration(minutes, settings), passed.join(", ")]
     })
     return {
-      caption: `Watch time by month from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}, counted in ${shown(facts, "tz.label")}.`,
+      caption: `Watch time by month from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}.`,
       columns: ["Month", "Watched", "Milestones"],
       rows,
     }

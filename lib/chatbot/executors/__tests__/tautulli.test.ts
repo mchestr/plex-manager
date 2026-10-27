@@ -454,7 +454,7 @@ describe("epochs reach the model as ISO strings with an offset (P11.17)", () => 
     mockTautulliFindFirst.mockResolvedValue({ id: "tautulli-1", name: "Tautulli", url: "http://t", apiKey: "k", publicUrl: null } as never)
   })
 
-  it("converts history epochs into the server zone", async () => {
+  it("converts history epochs into the turn's zone", async () => {
     // 1793590200 is 2026-11-02T03:30:00Z: 19:30 on 1 November in Los Angeles
     jest.mocked(getTautulliHistory).mockResolvedValue({
       success: true,

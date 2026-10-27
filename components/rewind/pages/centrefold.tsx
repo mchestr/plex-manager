@@ -5,7 +5,7 @@ import type { CentrefoldData } from "@/lib/rewind/pages/centrefold.schema"
 import { has, shown } from "@/lib/rewind/pages/facts"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
-import { headline, slotTemplate, tzShort, whyReasons } from "@/lib/wrapped/copy/templates"
+import { headline, slotTemplate, whyReasons } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { CentrefoldWhy } from "./centrefold-why"
@@ -30,7 +30,7 @@ export function archetypeNameFit(name: string) {
 }
 
 /**
- * The ring's key: the arc's swatch, the quietest hour and the short zone note.
+ * The ring's key: the arc's swatch and the quietest hour.
  * Other graphics carry their own captions. It starts below the ring's "noon"
  * label, and where its 12 px text floor outgrows the measure (below the 0.8
  * scale floor) it wraps between items, never inside the swatch or the hour.
@@ -51,9 +51,6 @@ function KeyRow({ graphic, facts }: { graphic: Extract<CentrefoldData["graphic"]
           Quietest: <CopyText text="{{fact:hours.quietest}}" source={facts} />
         </span>
       )}
-      <span className="italic">
-        <CopyText text={tzShort()} source={facts} />
-      </span>
     </div>
   )
 }

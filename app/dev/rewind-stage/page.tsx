@@ -41,7 +41,7 @@ function placeholder(type: IssuePageType, name: string, index: number, count: nu
 
 function placeholderTable(name: string): PageTable {
   return {
-    caption: `${name} by month, 1 January to 30 November 2026. Times in America/Chicago, the server's time zone`,
+    caption: `${name} by month, 1 January to 30 November 2026.`,
     columns: ["Month", "Hours"],
     rows: [
       ["January", "42"],

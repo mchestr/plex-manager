@@ -7,7 +7,7 @@ import { shown } from "@/lib/rewind/pages/facts"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { renderCopy } from "@/lib/wrapped/copy/render-copy"
-import { headline, tzNote } from "@/lib/wrapped/copy/templates"
+import { headline } from "@/lib/wrapped/copy/templates"
 
 import { CopyText } from "./copy-text"
 import { FittedLines } from "./fitted-lines"
@@ -104,9 +104,6 @@ export function ClockPage({ data, issue }: PageProps<ClockData>) {
         />
         <WeekdayRow shares={data.weekdays} />
       </RewindFigure>
-      <p className="italic" style={{ fontSize: ut(13.5), lineHeight: 1.25, marginTop: u(10) }}>
-        <CopyText text={tzNote(issue.zone)} source={facts} />
-      </p>
     </div>
   )
 }

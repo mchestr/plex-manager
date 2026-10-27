@@ -1,6 +1,6 @@
 /**
- * 09 The clock's Notes (P8.4): the 24 hours and the 7 weekdays as tables
- * under the zone note, and the after-dark rule.
+ * 09 The clock's Notes (P8.4): the 24 hours and the 7 weekdays as tables,
+ * and the after-dark rule.
  *
  * @module lib/rewind/notes/clock
  */
@@ -10,7 +10,7 @@ import { formatHero, formatHour, formatShare } from "@/lib/rewind/format"
 import type { ClockData } from "@/lib/rewind/pages/clock.schema"
 import { has, shown } from "@/lib/rewind/pages/facts"
 
-import { headingBlock, paragraphBlock, zoneNote, type CoreNotes } from "./context"
+import { headingBlock, paragraphBlock, type CoreNotes } from "./context"
 
 /** Monday first, as the page's weekday row runs. */
 const weekdayName = (i: number, locale: string) => new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(Date.UTC(2024, 0, 1 + i))
@@ -18,7 +18,6 @@ const weekdayName = (i: number, locale: string) => new Intl.DateTimeFormat(local
 export const clockNotes: CoreNotes<ClockData> = (data, facts, ctx) => {
   const blocks: ArticleBlock[] = [
     headingBlock("When you pressed play"),
-    zoneNote(facts, ctx),
     {
       kind: "table",
       table: { caption: "Plays by the hour they started.", columns: ["Hour", "Plays"], rows: data.hours.map((plays, hour) => [formatHour(hour, ctx), formatHero(plays, ctx)]) },

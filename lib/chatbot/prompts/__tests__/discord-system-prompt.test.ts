@@ -15,6 +15,7 @@ describe("generateDiscordSystemPrompt", () => {
     const prompt = generateDiscordSystemPrompt([], { format: { timeZone: "Europe/Berlin", locale: "en-GB" }, now: NOW })
 
     expect(prompt).toContain("Member time zone: Europe/Berlin. Local time now: 1 Dec 2026, 17:05.")
+    expect(prompt).toContain("never name a time zone or an offset")
   })
 })
 
@@ -23,7 +24,8 @@ describe("generateSystemPrompt", () => {
     const prompt = generateSystemPrompt([], { timeZone: "America/Los_Angeles", locale: "en-US" }, NOW)
 
     expect(prompt).toContain("User time zone: America/Los_Angeles")
-    expect(prompt).toContain("Local time now: 2026-12-01T08:05:00-08:00 (Dec 1, 2026, 8:05 AM PST)")
+    expect(prompt).toContain("Local time now: 2026-12-01T08:05:00-08:00 (Dec 1, 2026, 8:05 AM)")
+    expect(prompt).toContain("never name a time zone or an offset")
     expect(prompt).not.toContain(NOW.toISOString())
   })
 })

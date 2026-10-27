@@ -7,10 +7,10 @@
  * @module lib/rewind/pages/bookends
  */
 
-import { heading, note, paragraph, plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
+import { heading, paragraph, plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
 import { formatCount } from "@/lib/rewind/format"
 import type { PageDefinition } from "@/lib/rewind/registry"
-import { copyLocals, headline, tzNote } from "@/lib/wrapped/copy/templates"
+import { copyLocals, headline } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { BookendsDataSchema, type BookendsData } from "./bookends.schema"
@@ -73,7 +73,7 @@ export const bookendsPage: PageDefinition<BookendsData> = {
       paragraph(pageDeck(ctx, facts, "bookends"), facts),
     ]
     if (lifetime) blocks.push({ kind: "paragraph", text: plain(lifetime) })
-    return [...blocks, note(tzNote(ctx.zone), facts)]
+    return blocks
   },
   share: {
     facts: ["bookends.first.title", "bookends.first.date", "bookends.last.title", "bookends.last.date", "member.since"],

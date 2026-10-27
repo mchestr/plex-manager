@@ -99,7 +99,7 @@ export async function executeTautulliTool(
       if (!statsResult.success) {
         return JSON.stringify({ error: statsResult.error })
       }
-      return JSON.stringify(statsResult.data)
+      return JSON.stringify(local(statsResult.data))
     }
     case "get_tautulli_library_names": {
       const namesResult = await getTautulliLibraryNames(config)

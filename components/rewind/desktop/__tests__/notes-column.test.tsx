@@ -18,7 +18,7 @@ beforeAll(async () => {
   heavy = await fixtureIssue("heavy")
 })
 
-const ctx = { locale: "en-US", zone: "server" } as const
+const ctx = { locale: "en-US" } as const
 const pageOf = (type: IssuePageType) => heavy.pages.find((p) => p.type === type)!
 const entryOf = (type: IssuePageType): RegistryEntry => registry[type]
 
@@ -47,7 +47,8 @@ describe("NotesColumn (P7.4)", () => {
 
     const notes = screen.getByRole("complementary", { name: /^Notes on page \d\d, Top shows$/ })
     expect(within(notes).getByRole("heading", { name: `All ${all} series, ranked by time watched` })).toBeInTheDocument()
-    expect(notes).toHaveTextContent(/Counted from .+ to .+ in .+, the server’s time zone\. Rewatches count; trailers and extras do not\./)
+    expect(notes).toHaveTextContent(/Counted from .+ to .+\. Rewatches count; trailers and extras do not\./)
+    expect(notes).not.toHaveTextContent(/time zone/i)
     const table = within(notes).getByRole("table")
     expect(within(table).getAllByRole("row")).toHaveLength(all + 1)
     expect(within(table).getByRole("rowheader", { name: String(all) })).toBeInTheDocument()
