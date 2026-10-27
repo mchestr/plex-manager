@@ -25,6 +25,7 @@ check); the `no-changelog` label skips it.
 ### Changed
 
 - **Admin settings open read-only:** each section of Admin > Settings now shows its saved values as a summary, with its status, Test connection and "Last saved", and an Edit button (Set up, when nothing is saved) opens its form in place. Save returns to the summary; Cancel and Escape ask before discarding unsaved changes, one section is edited at a time, and the browser asks before a tab with unsaved changes closes. The AI features, Stripe Subscriptions and Allow Jellyfin sign-in switches still take effect at once (Allow Jellyfin sign-in moved from the Jellyfin form to its row), and the other on/off settings are checkboxes saved with Save.
+- **Rewind time zone:** a member's Rewind now reads their own clock by default. The first time a signed-in member opens the app, their browser's time zone is saved as their time zone (never over one already saved), so the busiest hour, after-dark share and other clock figures are no longer counted in the server zone, or in UTC when no server zone is set. The account page's time zone list now always saves a zone; the "Server time zone" entry is gone. Rewinds already made keep their times until they are made again; an admin can regenerate one from Admin, Rewind.
 
 ### Removed
 

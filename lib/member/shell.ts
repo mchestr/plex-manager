@@ -25,6 +25,8 @@ export interface AppShellData {
   serverName: string
   user: ShellUser
   nav: MemberNavItem[]
+  /** No `User.timezone` yet: the layout saves the browser's zone. */
+  timeZoneUnset: boolean
 }
 
 /** Up to two initials from the name's first words; "?" for an empty name. */
@@ -59,11 +61,11 @@ export async function discordHandleFor(userId: string): Promise<string | null | 
   return integration?.isEnabled && integration.clientId && integration.clientSecret ? null : undefined
 }
 
-/** Everything `AppShell` needs for the signed-in member, read once per layout render. */
+/** Everything the member layout needs for the signed-in member, read once per layout render. */
 export async function getAppShellData(session: { id: string } & PermissionSubject): Promise<AppShellData> {
   const [name, user, rewindYear, discordHandle, membership] = await Promise.all([
     serverName(),
-    prisma.user.findUnique({ where: { id: session.id }, select: { name: true, email: true } }),
+    prisma.user.findUnique({ where: { id: session.id }, select: { name: true, email: true, timezone: true } }),
     rewindYearFor(session.id, session.isAdmin),
     discordHandleFor(session.id),
     hasMembershipPage(session.id),
@@ -81,5 +83,6 @@ export async function getAppShellData(session: { id: string } & PermissionSubjec
       ...(discordHandle === undefined ? {} : { discordHandle }),
     },
     nav: memberNav({ rewindYear, membership }),
+    timeZoneUnset: user !== null && user.timezone === null,
   }
 }

@@ -2,9 +2,10 @@
 
 /**
  * The member's own settings on `/account` (ui-design-system 6.1): the Rewind
- * ready notification (Rewind 9.7) and the time zone Rewind reads (7.7).
+ * ready notification (Rewind 9.7) and the time zone Rewind reads (7.7), which
+ * the member layout first takes from the browser.
  *
- * Neither needs an active membership, so a lapsed member can still change them.
+ * None needs an active membership, so a lapsed member can still change them.
  *
  * @module actions/account
  */
@@ -38,15 +39,13 @@ export const setRewindNotify = memberAction({
 })
 
 /**
- * A zone the settings can store under its canonical IANA name
- * (`US/Pacific` becomes `America/Los_Angeles`), or null for the server zone.
+ * A zone the settings can store, under its canonical IANA name
+ * (`US/Pacific` becomes `America/Los_Angeles`).
  */
 const timeZoneSchema = z
   .string()
   .max(64)
-  .nullable()
   .transform((value, ctx) => {
-    if (value === null) return null
     const zone = normalizeTimeZone(value)
     if (!zone) {
       ctx.addIssue({ code: "custom", message: "Choose a time zone from the list" })
@@ -62,5 +61,19 @@ export const setUserTimezone = memberAction({
     await prisma.user.update({ where: { id: userId }, data: { timezone: timeZone } })
     revalidatePath("/account")
     return ok({ timeZone })
+  },
+})
+
+/**
+ * Saves the browser's zone for a member who has none, so Rewind buckets
+ * their plays by their own clock rather than the server's. It never replaces
+ * a saved zone, so a later move or a choice on `/account` stays put.
+ */
+export const adoptBrowserTimezone = memberAction({
+  input: z.strictObject({ timeZone: timeZoneSchema }),
+  fallbackError: "Could not save the time zone",
+  handler: async ({ timeZone }, { userId }) => {
+    await prisma.user.updateMany({ where: { id: userId, timezone: null }, data: { timezone: timeZone } })
+    return ok(null)
   },
 })
