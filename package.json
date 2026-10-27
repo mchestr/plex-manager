@@ -86,7 +86,7 @@
     "rate-limiter-flexible": "11.2.3",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "react-is": "19.3.0",
+    "react-is": "19.3.1",
     "react-markdown": "^10.1.0",
     "recharts": "3.10.1",
     "server-only": "0.0.1",
