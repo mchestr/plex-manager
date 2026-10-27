@@ -18,9 +18,12 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-27
+
 ### Added
 
 - **Request limits on the user page:** the Overview tab of a Plex member shows their request tier, checked live: all-time watch time from Tautulli, the tier it earns, the hours to the next tier, and the quota Overseerr has for them now. A badge says whether the two match, and **Update Overseerr** writes the tier's quota for that one member, with the daily sync on or off. A step that fails is named (such as "Could not reach Overseerr"), and Overseerr admins and user managers, whose quotas Overseerr ignores, are marked **No limits**. See `docs/request-limits.md`.
+- **App version in System information:** Admin > Settings, System now shows the running version from `package.json`.
 
 ### Changed
 
@@ -36,6 +39,12 @@ check); the `no-changelog` label skips it.
 
 - **Member home on phones:** the home page no longer scrolls sideways. The "New on" poster row's hidden "(opens Plex)" labels escaped the row and widened the page by the row's full length (about 1,950 px at every width, desktop included). Long words (an email-style username in the greeting, a long server name, an announcement title or a URL) now wrap inside their card. The request-limits table keeps "200 h" and "/ 7 d" together and spaces its columns, the help card's links grow to fit a wrapped label, the top bar's links no longer wrap at tablet widths, and the loading skeleton uses the page's own layout, so nothing jumps sideways when the page loads.
 - **Tab bars:** the tab row on the user page and in the AI settings no longer shows a vertical scrollbar where scrollbars are always drawn (Windows, Linux), and the active tab's underline shows at its full 2px.
+- **Admin link for Support users:** the member app's top bar, account menu and mobile menu now show the Admin link to Support users, not only to admins, so they can reach the trimmed admin area and the assistant without typing the URL.
+
+### Upgrade notes
+
+- Take a `pg_dump -Fc` before you start the new release. This release adds no migrations and no environment variables.
+- **Rewind time zone:** members' existing Rewinds keep their server-zone times. To recount one in the member's own zone, wait until they have signed in once (their browser zone is saved then) and regenerate it from Admin, Rewind.
 
 ## [0.4.0] - 2026-10-26
 
@@ -208,7 +217,8 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 - No account linking by email; the Jellyfin sign-in toggle is enforced; share routes serve a share-safe projection; a failed Tautulli match no longer shows emails; a Redis-backed rate limiter keys on the trusted proxy hop; generation is single-flight and rate-limited; the poster proxy checks access; `plexAuthToken` no longer reaches the admin browser.
 - The Discord bot no longer uses the Message Content intent, keeps its token encrypted in the database, and scrubs personal fields before the LLM.
 
-[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.4.0...HEAD
+[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.5.0
 [0.4.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.4.0
 [0.3.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.3.0
 [0.2.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.2.0
