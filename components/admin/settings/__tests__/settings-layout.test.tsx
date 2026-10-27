@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 
@@ -131,12 +131,13 @@ describe('SettingsLayout', () => {
     await user.click(screen.getByTestId('settings-plex-edit'))
     expect(leave()).toBe(true)
     await user.type(screen.getByRole('textbox', { name: 'Plex name' }), 'x')
-    // dispatchEvent returns false once a listener prevented it: the browser asks
-    expect(leave()).toBe(false)
+    // dispatchEvent returns false once a listener prevented it: the browser asks.
+    // The listener follows the section's dirty report, an effect later, so wait for it
+    await waitFor(() => expect(leave()).toBe(false))
 
     await user.click(screen.getByTestId('settings-plex-cancel'))
     await user.click(await screen.findByTestId('settings-plex-discard-dialog-confirm'))
     expect(await screen.findByText('Home')).toBeInTheDocument()
-    expect(leave()).toBe(true)
+    await waitFor(() => expect(leave()).toBe(true))
   })
 })
