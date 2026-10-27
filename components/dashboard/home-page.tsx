@@ -29,7 +29,7 @@ export async function HomePage({ userId, isAdmin }: HomePageProps) {
   return (
     <div className="flex flex-1 flex-col" data-testid="home-page">
       <div className="mx-auto w-full max-w-280 flex-1 px-4 pt-6 pb-10 sm:px-6 md:pt-10 md:pb-14 lg:px-8">
-        <header className="mb-5 flex flex-col gap-1.5 md:mb-7">
+        <header className="mb-5 flex flex-col gap-1.5 wrap-anywhere md:mb-7">
           <h1 className="text-display text-foreground" data-testid="home-greeting">
             {data.greeting}
           </h1>

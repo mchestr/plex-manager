@@ -15,7 +15,9 @@ interface NewOnRowProps {
   format: FormatSettings
 }
 
-const ROW_CLASS = "flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2"
+// `relative` makes the row the containing block of each link's sr-only text, so
+// the row clips it; otherwise the off-screen items' text widens the whole page
+const ROW_CLASS = "relative flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2"
 const ITEM_CLASS = "w-40 shrink-0 snap-start"
 
 function weekLine(count: number | null, format: FormatSettings): string | null {
@@ -38,7 +40,7 @@ export async function NewOnRow({ userId, isAdmin, serverName, browseUrl, format 
     <section aria-labelledby="home-new-on-title" className="flex min-w-0 flex-col gap-3.5" data-testid="home-new-on-row">
       <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div className="flex flex-col gap-0.5">
-          <h2 id="home-new-on-title" className="text-lead font-semibold text-foreground">
+          <h2 id="home-new-on-title" className="text-lead font-semibold text-foreground wrap-anywhere">
             New on {serverName}
           </h2>
           {line && <p className="text-caption text-muted-foreground">{line}</p>}
@@ -57,13 +59,13 @@ export async function NewOnRow({ userId, isAdmin, serverName, browseUrl, format 
           </Button>
         )}
       </div>
-      <ul className={ROW_CLASS}>
+      <ul className={ROW_CLASS} data-testid="home-new-on-list">
         {items.map((item) => {
           const body = (
             <>
               <Poster ratingKey={item.ratingKey} title={item.title} size="md" decorative />
               <span className="flex flex-col gap-0.5">
-                <span className="line-clamp-2 text-label text-foreground">{item.title}</span>
+                <span className="line-clamp-2 text-label text-foreground wrap-anywhere">{item.title}</span>
                 <span className="text-caption text-muted-foreground">{newOnMeta(item)}</span>
               </span>
             </>
