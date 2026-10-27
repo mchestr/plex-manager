@@ -18,7 +18,6 @@ describe('SETUP_STEPS (P10.24)', () => {
       'llm-rewind',
       'llm-chat',
       'discord',
-      'prometheus',
     ])
   })
 
@@ -31,8 +30,7 @@ describe('SETUP_STEPS (P10.24)', () => {
       ['radarr', 'Automation'],
       ['llm-rewind', 'AI'],
       ['llm-chat', 'AI'],
-      ['discord', 'Community and monitoring'],
-      ['prometheus', 'Community and monitoring'],
+      ['discord', 'Community'],
     ])
   })
 
@@ -47,25 +45,26 @@ describe('step navigation', () => {
     expect(nextStepId('plex')).toBe('tautulli')
     expect(nextStepId('radarr')).toBe('llm-rewind')
     expect(nextStepId('llm-rewind')).toBe('llm-chat')
-    expect(nextStepId('prometheus')).toBe('summary')
+    expect(nextStepId('discord')).toBe('summary')
   })
 
   it('goes back one step, with nothing before Plex', () => {
     expect(previousStepId('plex')).toBeNull()
     expect(previousStepId('tautulli')).toBe('plex')
-    expect(previousStepId('summary')).toBe('prometheus')
+    expect(previousStepId('summary')).toBe('discord')
   })
 
   it('indexes positions from Plex to the summary', () => {
     expect(stepIndex('plex')).toBe(0)
-    expect(stepIndex('prometheus')).toBe(8)
-    expect(stepIndex('summary')).toBe(9)
+    expect(stepIndex('discord')).toBe(7)
+    expect(stepIndex('summary')).toBe(8)
   })
 
   it('parses only known positions', () => {
     expect(parseSetupPosition('discord')).toBe('discord')
     expect(parseSetupPosition('summary')).toBe('summary')
     expect(parseSetupPosition('7')).toBeNull()
+    expect(parseSetupPosition('prometheus')).toBeNull()
     expect(parseSetupPosition(['plex'])).toBeNull()
     expect(parseSetupPosition(undefined)).toBeNull()
   })

@@ -20,7 +20,7 @@ jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }))
 
-const DELEGATES = ['plexServer', 'jellyfinServer', 'tautulli', 'overseerr', 'sonarr', 'radarr', 'prometheus']
+const DELEGATES = ['plexServer', 'jellyfinServer', 'tautulli', 'overseerr', 'sonarr', 'radarr']
 const NOW = Date.parse('2027-01-20T12:00:00Z')
 
 type Row = { id: string; isActive: boolean; url: string; createdAt: Date; updatedAt: Date }

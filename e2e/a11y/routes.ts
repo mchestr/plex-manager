@@ -128,7 +128,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/admin/discord', as: 'admin', ready: 'discord-status' },
   { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },
   { path: '/admin/queues', as: 'admin', ready: 'queue-status' },
-  { path: '/admin/settings', as: 'admin', ready: 'settings-stripe-section' },
+  { path: '/admin/settings', as: 'admin', ready: 'settings-plex-section' },
   // The public share route records a visit; a worker restart's re-seed drops it.
   { path: '/admin/shares', as: 'admin', ready: 'admin-shares-header', reset: clearA11yShareVisits },
   { path: '/admin/llm-usage', as: 'admin', ready: 'admin-llm-usage-header' },

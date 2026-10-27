@@ -45,7 +45,6 @@ const NON_SECRET_CONFIG_SELECT = {
   llmDailyCapPerUserUsd: true,
   llmDailyCapAdminUsd: true,
   llmDailyCapServerUsd: true,
-  lightThemeEnabled: true,
   updatedAt: true,
   updatedBy: true,
 } as const
@@ -110,7 +109,6 @@ export async function getConfig() {
       llmDailyCapPerUserUsd: 0.5,
       llmDailyCapAdminUsd: 5,
       llmDailyCapServerUsd: 5,
-      lightThemeEnabled: false,
       updatedAt: new Date(),
       updatedBy: null,
     }
@@ -222,7 +220,6 @@ export async function getAdminSettings() {
     overseerr,
     sonarr,
     radarr,
-    prometheus,
     discordIntegration,
     discordLinkedCount,
   ] = await Promise.all([
@@ -235,7 +232,6 @@ export async function getAdminSettings() {
     getActiveService("overseerr"),
     getActiveService("sonarr"),
     getActiveService("radarr"),
-    getActiveService("prometheus"),
     prisma.discordIntegration.findUnique({ where: { id: "discord" } }),
     prisma.discordConnection.count({ where: { revokedAt: null } }),
   ])
@@ -271,7 +267,6 @@ export async function getAdminSettings() {
     overseerr: omitSecret("Overseerr", overseerr, "apiKey", serverUrl),
     sonarr: omitSecret("Sonarr", sonarr, "apiKey", serverUrl),
     radarr: omitSecret("Radarr", radarr, "apiKey", serverUrl),
-    prometheus,
     discordIntegration: sanitizedDiscordIntegration,
     discordLinkedCount,
   }

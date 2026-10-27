@@ -1,19 +1,13 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/auth';
-import { setLightThemeFlag as setFlag } from './helpers/light-theme';
-import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
 
 /**
- * The light theme behind its flag (P10.10, ui-design-system 4.1): the admin
- * turns on "Light theme for members", a member picks Light on /account, and
- * the server renders light from the first byte (no `dark` class, the light
- * theme colour) after a reload. The account menu shows the choice, a Rewind
- * ink prints exactly as it does in dark, and turning the flag off puts the
- * member back on dark with the cookie still set.
- *
- * The admin flips the flag through the settings Switch, whose action
- * revalidates the cached app settings at once.
+ * The light theme (P10.10, ui-design-system 4.1): any signed-in user, member
+ * or admin, picks Light on /account (or in the menus), and the server renders
+ * light from the first byte (no `dark` class, the light theme colour) after a
+ * reload. Dark is the default with no cookie, the account menu shows the
+ * choice, and a Rewind ink prints exactly as it does in dark.
  */
 
 const isDark = (page: Page) => page.evaluate(() => document.documentElement.classList.contains('dark'));
@@ -42,33 +36,16 @@ function rewindInk(page: Page) {
 }
 
 test.describe('Light theme', () => {
-  test.describe.configure({ mode: 'serial' });
-
-  test.afterAll(async () => {
-    // Leave the flag off for later specs even when a test failed before the
-    // last one turned it off (the app's settings cache may hold it up to a minute).
-    const prisma = createE2EPrismaClient();
-    try {
-      await prisma.config.updateMany({ data: { lightThemeEnabled: false } });
-    } finally {
-      await prisma.$disconnect();
-    }
+  test('dark is the default with no cookie', async ({ regularUserPage: page }) => {
+    await page.goto('/account');
+    await expect(page.getByTestId('account-appearance-picker-dark')).toHaveAttribute('aria-checked', 'true', {
+      timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+    });
+    expect(await isDark(page)).toBe(true);
+    expect(await firstPaint(page, '/account')).toEqual({ dark: true, themeColor: '#1a1c1e' });
   });
 
-  test('with the flag off, /account has no Appearance and the menu offers none', async ({ adminPage, regularUserPage }) => {
-    await setFlag(adminPage, false);
-
-    await regularUserPage.goto('/account');
-    await expect(regularUserPage.getByTestId('account-timezone-section')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    await expect(regularUserPage.getByTestId('account-appearance')).toHaveCount(0);
-    await regularUserPage.getByTestId('account-menu-trigger').click();
-    await expect(regularUserPage.getByTestId('account-menu')).toBeVisible();
-    await expect(regularUserPage.getByTestId('account-menu-appearance')).toHaveCount(0);
-  });
-
-  test('a member picks Light on /account and the first paint is light', async ({ adminPage, regularUserPage: page }) => {
-    await setFlag(adminPage, true);
-
+  test('a member picks Light on /account and the first paint is light', async ({ regularUserPage: page }) => {
     await page.goto('/account');
     const dark = await rewindInk(page);
     expect(await isDark(page)).toBe(true);
@@ -92,17 +69,27 @@ test.describe('Light theme', () => {
     expect(await rewindInk(page)).toEqual(dark);
   });
 
-  test('turning the flag off puts the member back on dark, cookie or not', async ({ adminPage, regularUserPage: page }) => {
-    await setFlag(adminPage, true);
+  test('a member switches back to Dark from the account menu', async ({ regularUserPage: page }) => {
     await page.goto('/account');
     await page.getByTestId('account-appearance-picker-light').click();
     await expect.poll(() => isDark(page)).toBe(false);
 
-    await setFlag(adminPage, false);
+    await page.getByTestId('account-menu-trigger').click();
+    await page.getByTestId('account-menu-appearance-dark').click();
+    await expect.poll(() => isDark(page)).toBe(true);
+
     await page.reload();
-    await expect(page.getByTestId('account-timezone-section')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    expect(await isDark(page)).toBe(true);
     expect(await firstPaint(page, '/account')).toEqual({ dark: true, themeColor: '#1a1c1e' });
-    await expect(page.getByTestId('account-appearance')).toHaveCount(0);
+  });
+
+  test('an admin picks Light from the admin menu', async ({ adminPage: page }) => {
+    await page.goto('/admin');
+    await page.getByTestId('admin-appearance-trigger').click();
+    await page.getByTestId('admin-appearance-light').click();
+    await expect.poll(() => isDark(page)).toBe(false);
+
+    await page.reload();
+    expect(await isDark(page)).toBe(false);
+    expect(await firstPaint(page, '/admin')).toEqual({ dark: false, themeColor: '#f9fafb' });
   });
 });

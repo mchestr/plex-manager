@@ -6,6 +6,9 @@ import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES, getRegisteredTool } from "../tools/registry"
+import { executeMcpTool, MCP_TOOL_PREFIX } from "../mcp/tools"
+import { executeAppDataTool } from "./app-data"
+import { executeKnowledgeTool } from "./knowledge"
 import { executeOverseerrTool } from "./overseerr"
 import { executePlexTool } from "./plex"
 import { executeRadarrTool } from "./radarr"
@@ -113,6 +116,13 @@ const TOOL_SERVICE_MAP: Record<string, ToolExecutor> = {
   mark_media_finished: executeMediaMarkingTool,
   mark_media_keep: executeMediaMarkingTool,
   get_my_marks: executeMediaMarkingTool,
+  // App data tools (admin only; not Discord-safe)
+  get_app_invites: executeAppDataTool,
+  get_app_member: executeAppDataTool,
+  get_app_failed_jobs: executeAppDataTool,
+  // Knowledge base tools (admin only; not Discord-safe)
+  search_knowledge_base: executeKnowledgeTool,
+  read_knowledge_doc: executeKnowledgeTool,
 }
 
 export async function executeToolCall(
@@ -209,6 +219,16 @@ export async function executeToolCall(
     }
     if (scoped) {
       logAuditEvent(AuditEventType.ASSISTANT_TOOL_CALLED, userId ?? "unknown", { toolName, toolCallId: toolCall.id })
+    }
+  }
+
+  // MCP tools are dynamic: the admin enables them per server. A caller without the admin permission was refused above.
+  if (toolName.startsWith(MCP_TOOL_PREFIX)) {
+    try {
+      return await executeMcpTool(toolName, args, userId)
+    } catch (error) {
+      logger.error("Error executing MCP tool", error, { toolName, toolCallId: toolCall.id })
+      return TOOL_EXECUTION_FAILED
     }
   }
 

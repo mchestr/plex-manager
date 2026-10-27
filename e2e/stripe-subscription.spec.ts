@@ -294,6 +294,9 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
       await expect(adminPage.getByTestId('admin-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
+      // Stripe sits in the Integrations group.
+      await adminPage.getByTestId('settings-nav-stripe').click();
+
       // The Stripe settings card and its form are present.
       const form = adminPage.getByTestId('stripe-settings-form');
       await expect(form).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });

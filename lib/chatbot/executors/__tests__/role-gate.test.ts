@@ -5,6 +5,9 @@
  */
 
 import { executeToolCall } from ".."
+import { executeAppDataTool } from "../app-data"
+import { executeKnowledgeTool } from "../knowledge"
+import { executeMcpTool } from "../../mcp/tools"
 import { executeMediaMarkingTool } from "../media-marking"
 import { executePlexTool } from "../plex"
 import { executeTautulliTool } from "../tautulli"
@@ -17,6 +20,9 @@ jest.mock("../sonarr", () => ({ executeSonarrTool: jest.fn() }))
 jest.mock("../radarr", () => ({ executeRadarrTool: jest.fn() }))
 jest.mock("../overseerr", () => ({ executeOverseerrTool: jest.fn() }))
 jest.mock("../media-marking", () => ({ executeMediaMarkingTool: jest.fn() }))
+jest.mock("../app-data", () => ({ executeAppDataTool: jest.fn() }))
+jest.mock("../knowledge", () => ({ executeKnowledgeTool: jest.fn() }))
+jest.mock("../../mcp/tools", () => ({ MCP_TOOL_PREFIX: "mcp_", executeMcpTool: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({
   ...jest.requireActual("@/lib/security/audit-log"),
   logAuditEvent: jest.fn(),
@@ -69,6 +75,19 @@ describe("a Support caller", () => {
     )
   })
 
+  it.each(["get_app_member", "get_app_invites", "get_app_failed_jobs", "search_knowledge_base", "read_knowledge_doc", "mcp_memini_search"])(
+    "is refused the admin-only tool %s before any executor runs, and the refusal is audited",
+    async (name) => {
+      const result = await executeToolCall(call(name), "support-1", "default", false, undefined, SUPPORT)
+
+      expect(result).toBe(NOT_PERMITTED)
+      expect(executeAppDataTool).not.toHaveBeenCalled()
+      expect(executeKnowledgeTool).not.toHaveBeenCalled()
+      expect(executeMcpTool).not.toHaveBeenCalled()
+      expect(denied).toHaveBeenCalledWith(AuditEventType.ASSISTANT_TOOL_DENIED, "support-1", expect.objectContaining({ toolName: name }))
+    }
+  )
+
   it.each(["delete_user", "restart_plex", "set_config", "__proto__", "constructor"])(
     "is refused a hallucinated or injected tool name (%s) and the refusal is audited",
     async (name) => {
@@ -101,6 +120,16 @@ describe("an admin", () => {
     expect(JSON.parse(plex)).toEqual({ server: { name: "Home", accessToken: "plex-secret" } })
     expect(mark).toBe("Marked")
     expect(denied).not.toHaveBeenCalled()
+  })
+
+  it("runs the admin-only app data, knowledge base and MCP tools", async () => {
+    jest.mocked(executeAppDataTool).mockResolvedValue("invites")
+    jest.mocked(executeKnowledgeTool).mockResolvedValue("docs")
+    jest.mocked(executeMcpTool).mockResolvedValue("mcp")
+
+    expect(await executeToolCall(call("get_app_invites"), "admin-1", "default", true, undefined, ADMIN)).toBe("invites")
+    expect(await executeToolCall(call("search_knowledge_base"), "admin-1", "default", true, undefined, ADMIN)).toBe("docs")
+    expect(await executeToolCall(call("mcp_memini_search"), "admin-1", "default", true, undefined, ADMIN)).toBe("mcp")
   })
 
   it("still gets the old message for an unknown tool", async () => {

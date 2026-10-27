@@ -54,6 +54,23 @@ const INHERENTLY_GLOBAL_DISCORD_TOOLS = new Set<string>([
 ])
 
 describe("chatbot tool registry drift guard", () => {
+  it("app-data tools are admin-only: registered, never discordSafe", () => {
+    const names = ["get_app_invites", "get_app_member", "get_app_failed_jobs"]
+    for (const name of names) {
+      const tool = ALL_TOOLS.find((t) => t.function.name === name)
+      expect(tool).toBeDefined()
+      expect(tool?.discordSafe).toBeFalsy()
+      expect(DISCORD_SAFE_TOOL_NAMES.has(name)).toBe(false)
+    }
+  })
+
+  it("knowledge base tools are admin-only: registered, never discordSafe", () => {
+    for (const name of ["search_knowledge_base", "read_knowledge_doc"]) {
+      expect(ALL_TOOLS.find((t) => t.function.name === name)).toBeDefined()
+      expect(DISCORD_SAFE_TOOL_NAMES.has(name)).toBe(false)
+    }
+  })
+
   it("DISCORD_SAFE_TOOLS is a subset of ALL_TOOLS", () => {
     const allNames = new Set(ALL_TOOLS.map((tool) => tool.function.name))
     for (const tool of DISCORD_SAFE_TOOLS) {

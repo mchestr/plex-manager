@@ -10,9 +10,7 @@
   "admin /admin/llm-usage/conversation/a11y-conversation": {},
   "admin /admin/llm-usage/visual-llm-usage-1": {},
   "admin /admin/prompts": {},
-  "admin /admin/prompts/new": {
-    "color-contrast|incomplete": 1
-  },
+  "admin /admin/prompts/new": {},
   "admin /admin/prompts/visual-prompt-active": {},
   "admin /admin/prompts/visual-prompt-active/edit": {},
   "admin /admin/queues": {},

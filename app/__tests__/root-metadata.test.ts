@@ -58,8 +58,8 @@ describe("generateViewport", () => {
   }
 
   it("keeps zoom available on the dark canvas colour (UI-11)", async () => {
-    settings.mockResolvedValue({ timeZone: "UTC", locale: "en-US", serverName: null, lightThemeEnabled: false })
-    withCookie("light")
+    settings.mockResolvedValue({ timeZone: "UTC", locale: "en-US", serverName: null })
+    withCookie(undefined)
     const viewport = await generateViewport()
 
     expect(viewport).toEqual({ width: "device-width", initialScale: 1, themeColor: "#1a1c1e" })
@@ -67,8 +67,8 @@ describe("generateViewport", () => {
     expect(viewport).not.toHaveProperty("userScalable")
   })
 
-  it("takes the light canvas colour when the flag is on and the member chose Light", async () => {
-    settings.mockResolvedValue({ timeZone: "UTC", locale: "en-US", serverName: null, lightThemeEnabled: true })
+  it("takes the light canvas colour when the member chose Light", async () => {
+    settings.mockResolvedValue({ timeZone: "UTC", locale: "en-US", serverName: null })
     withCookie("light")
 
     expect((await generateViewport()).themeColor).toBe("#f9fafb")
