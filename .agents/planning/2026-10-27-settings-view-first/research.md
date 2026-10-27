@@ -44,12 +44,12 @@
 | Mode cues | Card border in `primary-indicator`, an "Editing" badge in place of Edit, Cancel and Save; the form is a landmark named by the section | 4 |
 | Save | Enabled while editing; clean Save closes with no server call; success returns to view with focus on Edit; failure stays open on the first invalid field. `blockedReason` (SEC-31 secret re-entry, Rewind's budget and date rules) still disables Save with its reason | 6, 8 |
 | Cancel and Escape | Close at once when clean; when dirty, "Discard changes to <section>?" with Keep editing. Escape ignores keys a popup already handled | 7 |
-| One at a time | Opening a section closes a clean one; a dirty one stays open (and shows its nav pip) until saved or discarded | 5, 7 |
+| One at a time | Opening a section closes a clean one (clearing its draft and errors, as Cancel would); a dirty one stays open, and shows its nav pip, until saved or discarded, even if its changes are typed away by hand. A save that finishes after the admin moved on never pulls focus back | 5, 7, 8 |
 | Unsaved work outside the page | `beforeunload` while any section is dirty, removed when none is | 7 |
 | Nothing stored | "Not set up." and a "Set up" button; never an empty form on load | 1, 11 |
 | Instant switches | AI features, Stripe Subscriptions, Allow Jellyfin sign-in stay live in both modes, outside any form, labelled "Takes effect at once."; Jellyfin's moved from its Sheet to its row | 10 |
 | Other booleans | `Checkbox` in edit mode, saved with Save | 10 |
-| List sections | Rows are the view, each row's Sheet the edit mode: Cancel, Save that closes the Sheet, the same discard question | 2, 7 |
+| List sections | Rows are the view, each row's Sheet the edit mode: Cancel, Save that closes the Sheet, the same discard question; an open Sheet's unsaved changes count as its section's for the nav pip and the leave prompt | 2, 7 |
 | Unreadable secrets | View says "Can't be read with the current encryption key" with "Enter it again", which opens the form on that field | 11 |
 | Setup wizard | Unchanged: it is a single-task flow where always-open forms are right; shared fields keep their markup and test ids | PatternFly (don't use edit mode when editing is the view's purpose) |
 
