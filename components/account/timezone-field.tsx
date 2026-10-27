@@ -9,11 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/toast"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
 
-/** The Select value that stands for "use the server zone", stored as null. */
-const SERVER = "server"
-
 interface TimezoneFieldProps {
-  /** `User.timezone`; null follows the server zone. */
+  /** `User.timezone`; null reads as the server zone until one is saved. */
   value: string | null
   serverZone: string
   /** `timeZoneOptions()` from the server, so the list matches what the action accepts. */
@@ -35,39 +32,33 @@ function useBrowserZone(options: string[]): string | null {
 }
 
 /**
- * The member's time zone for Rewind (Rewind 7.7). While nothing is saved and
- * the browser's zone differs from the server's, the field suggests the
- * browser's zone and shows "Unsaved changes" until Save.
+ * The member's time zone for Rewind (Rewind 7.7). The member layout saves the
+ * browser's zone the first time; while nothing is saved and the browser's zone
+ * differs from the server's, the field suggests it and shows "Unsaved changes"
+ * until Save.
  */
 export function TimezoneField({ value, serverZone, options }: TimezoneFieldProps) {
-  const [saved, setSaved] = useState<string>(value ?? SERVER)
+  const [saved, setSaved] = useState<string | null>(value)
   const [choice, setChoice] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const { showError, showSuccess } = useToast()
   const browserZone = useBrowserZone(options)
 
-  const suggested = saved === SERVER && browserZone && browserZone !== serverZone ? browserZone : saved
-  const selected = choice ?? suggested
-  const dirty = selected !== saved
+  const current = saved ?? serverZone
+  const selected = choice ?? (saved === null && browserZone ? browserZone : current)
+  const dirty = selected !== current
 
-  const items = useMemo(
-    () => [
-      { value: SERVER, label: `Server time zone (${serverZone})` },
-      ...options.map((zone) => ({ value: zone, label: zone })),
-    ],
-    [options, serverZone]
-  )
+  const items = useMemo(() => options.map((zone) => ({ value: zone, label: zone })), [options])
 
   const save = () => {
     startTransition(async () => {
-      const result = await setUserTimezone({ timeZone: selected === SERVER ? null : selected })
+      const result = await setUserTimezone({ timeZone: selected })
       if (!result.success) {
         showError(result.error)
         return
       }
-      const stored = result.data.timeZone ?? SERVER
-      setSaved(stored)
-      setChoice(stored)
+      setSaved(result.data.timeZone)
+      setChoice(result.data.timeZone)
       showSuccess("Time zone saved")
     })
   }
@@ -96,7 +87,7 @@ export function TimezoneField({ value, serverZone, options }: TimezoneFieldProps
           </SelectContent>
         </Select>
         <FieldDescription>
-          Used for times in your Rewind. A change applies the next time your Rewind is made.
+          Used for times in your Rewind, and first set from your browser. A change applies the next time your Rewind is made.
         </FieldDescription>
       </Field>
       <div className="flex items-center justify-end gap-3">

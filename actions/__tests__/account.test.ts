@@ -2,8 +2,8 @@
  * @jest-environment node
  *
  * Tests for actions/account.ts (P6.11): the Rewind ready switch is the
- * season year's `RewindPrefs.notify`, and the time zone is stored under its
- * canonical IANA name or as null for the server zone.
+ * season year's `RewindPrefs.notify`, the time zone is stored under its
+ * canonical IANA name, and the browser's zone fills only an empty one.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -12,7 +12,7 @@ import { revalidatePath } from "next/cache"
 
 import { buildUser } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { setRewindNotify, setUserTimezone } from "@/actions/account"
+import { adoptBrowserTimezone, setRewindNotify, setUserTimezone } from "@/actions/account"
 import { getSeasonState } from "@/lib/wrapped/season"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -55,13 +55,6 @@ describe("setUserTimezone", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/account")
   })
 
-  it("stores null for the server zone", async () => {
-    const result = await setUserTimezone({ timeZone: null })
-
-    expect(result).toEqual({ success: true, data: { timeZone: null } })
-    expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: "member-1" }, data: { timezone: null } })
-  })
-
   it("refuses a call without a session", async () => {
     jest.mocked(getServerSession).mockResolvedValue(null)
 
@@ -69,6 +62,37 @@ describe("setUserTimezone", () => {
 
     expect(result).toMatchObject({ success: false, code: "UNAUTHENTICATED" })
     expect(prismaMock.user.update).not.toHaveBeenCalled()
+  })
+})
+
+describe("adoptBrowserTimezone", () => {
+  beforeEach(() => prismaMock.user.updateMany.mockResolvedValue({ count: 1 }))
+
+  it("saves the canonical zone only while none is saved", async () => {
+    const result = await adoptBrowserTimezone({ timeZone: "US/Pacific" })
+
+    expect(result).toEqual({ success: true, data: null })
+    expect(prismaMock.user.updateMany).toHaveBeenCalledWith({
+      where: { id: "member-1", timezone: null },
+      data: { timezone: "America/Los_Angeles" },
+    })
+    expect(prismaMock.user.update).not.toHaveBeenCalled()
+  })
+
+  it("leaves the member on the server zone when the browser's zone is not on the list", async () => {
+    const result = await adoptBrowserTimezone({ timeZone: "+05:00" })
+
+    expect(result).toMatchObject({ success: false, code: "VALIDATION" })
+    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+  })
+
+  it("refuses a call without a session", async () => {
+    jest.mocked(getServerSession).mockResolvedValue(null)
+
+    const result = await adoptBrowserTimezone({ timeZone: "Europe/London" })
+
+    expect(result).toMatchObject({ success: false, code: "UNAUTHENTICATED" })
+    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
   })
 })
 

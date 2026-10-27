@@ -72,6 +72,14 @@ describe('getAppShellData', () => {
     expect(user.discordHandle).toBe(handle)
     expect('discordHandle' in user).toBe(handle !== undefined)
   })
+
+  it('flags a member with no time zone saved, so the layout saves the browser zone', async () => {
+    setup()
+    expect((await getAppShellData({ id: 'u1', isAdmin: false })).timeZoneUnset).toBe(true)
+
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ timezone: 'America/Los_Angeles' }))
+    expect((await getAppShellData({ id: 'u1', isAdmin: false })).timeZoneUnset).toBe(false)
+  })
 })
 
 describe('getAppShellData admin area', () => {

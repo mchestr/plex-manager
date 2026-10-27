@@ -7,7 +7,12 @@ and the season close. It is written for the 2026 season; the dates move with
 
 Times are **server time** (`Config.timezone`, set under Admin, Settings,
 "Server time zone") unless a line says "in each member's zone". A member's
-Rewind zone is the zone they chose (`User.timezone`), else the server's.
+Rewind zone is `User.timezone`: their browser's zone, saved the first time
+they open the app after signing in, or the one they chose on `/account`. A
+member who has not opened the app since then, or whose browser reports a
+zone the settings cannot store, gets the server's, so set the server zone
+before the season opens. A zone change applies the next time that member's
+Rewind is made.
 
 Sections marked **Pending** describe steps that have not merged yet. They say
 what the step will add, and are filled in when it merges; until then the
