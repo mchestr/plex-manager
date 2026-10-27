@@ -50,11 +50,10 @@ Admins can see each member's watch activity and Rewind (and its past versions), 
 
 From Account, Your data, a member can delete, one at a time and only their own (`actions/member-data.ts`, 60 an hour):
 
-- a mark (Discord `/mymarks` links here; there is no `/unmark`);
-- a watchlist history item. If the title is still on their Plex watchlist, the next sync can request it again;
-- an assistant conversation. The `ChatConversation` row and its Discord chat session are deleted, and its `LLMUsage` rows lose their prompt and response but keep tokens and cost.
+- a mark (Discord `/mymarks` links here; there is no `/unmark`); and
+- a watchlist history item. If the title is still on their Plex watchlist, the next sync can request it again.
 
-Share links and hidden titles keep their own controls on the Rewind.
+Assistant conversations cannot be deleted by the member; the retention sweep below removes them. Share links and hidden titles keep their own controls on the Rewind.
 
 ## Retention
 

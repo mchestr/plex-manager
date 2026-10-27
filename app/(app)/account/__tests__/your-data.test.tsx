@@ -7,14 +7,14 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { resetUrl } from '@/__tests__/helpers/url-router'
-import { deleteMyConversation, deleteMyMark, forgetWatchlistItem } from '@/actions/member-data'
+import { deleteMyMark, forgetWatchlistItem } from '@/actions/member-data'
 import { YourDataSection } from '@/components/account/your-data-section'
 import type { YourData } from '@/lib/member/your-data'
 
 jest.mock('server-only', () => ({}))
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))
 jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').navigationModule)
-jest.mock('@/actions/member-data', () => ({ deleteMyMark: jest.fn(), forgetWatchlistItem: jest.fn(), deleteMyConversation: jest.fn() }))
+jest.mock('@/actions/member-data', () => ({ deleteMyMark: jest.fn(), forgetWatchlistItem: jest.fn() }))
 const mockShowSuccess = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: mockShowSuccess, showError: jest.fn() }) }))
 
@@ -23,7 +23,6 @@ const AT = '2026-12-01T09:00:00.000Z'
 const DATA: YourData = {
   marks: { page: 1, total: 1, rows: [{ id: 'mark-1', title: 'Arrival (2016)', mark: 'Finished Watching', markedAt: AT }] },
   watchlist: { total: 1, rows: [{ id: 'item-1', title: 'Dune (2021)', at: AT }] },
-  conversations: { total: 0, rows: [] },
 }
 
 beforeEach(() => {
@@ -32,18 +31,17 @@ beforeEach(() => {
 })
 
 describe('YourDataSection', () => {
-  it('renders the disclosure and the three lists', () => {
+  it('renders the disclosure and the two lists', () => {
     render(<YourDataSection data={DATA} disclosure="Server admins can review assistant conversations." />)
 
     const section = screen.getByTestId('account-your-data')
     expect(within(section).getByRole('heading', { level: 2, name: 'Your data' })).toBeInTheDocument()
     expect(section).toHaveTextContent('Server admins can review assistant conversations.')
-    for (const title of ['Marks', 'Watchlist history', 'Assistant conversations']) {
+    for (const title of ['Marks', 'Watchlist history']) {
       expect(within(section).getByRole('heading', { level: 3, name: title })).toBeInTheDocument()
     }
     expect(screen.getByText('Arrival (2016)')).toBeInTheDocument()
     expect(screen.getByText('Dune (2021)')).toBeInTheDocument()
-    expect(screen.getByTestId('account-conversations-empty')).toHaveTextContent('No conversations with the assistant.')
     expect(screen.getByTestId('account-rewind-link')).toHaveAttribute('href', '/rewind')
   })
 
@@ -73,6 +71,5 @@ describe('YourDataSection', () => {
 
     expect(forgetWatchlistItem).toHaveBeenCalledWith({ historyId: 'item-1' })
     expect(await within(dialog).findByText('That item is already gone')).toBeInTheDocument()
-    expect(deleteMyConversation).not.toHaveBeenCalled()
   })
 })

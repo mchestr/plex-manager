@@ -24,7 +24,8 @@ check); the `no-changelog` label skips it.
 
 ### Removed
 
-- The member data export: the "Download my data" button on Account, Your data, and `/account/export`. Single deletes of marks, watchlist items and assistant conversations stay.
+- The member data export: the "Download my data" button on Account, Your data, and `/account/export`.
+- Deleting an assistant conversation from Account, Your data, and the conversation list there. Single deletes of marks and watchlist items stay; conversations still age out under retention.
 
 ## [0.4.0] - 2026-10-26
 

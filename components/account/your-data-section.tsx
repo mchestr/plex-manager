@@ -31,7 +31,7 @@ interface YourDataSectionProps {
 
 /**
  * The account page's "Your data" (P11.15, GAP-36): marks, watchlist history
- * and assistant conversations the member can delete one by one. Share links and hidden titles keep their own controls on the
+ * the member can delete one by one. Share links and hidden titles keep their own controls on the
  * Rewind.
  */
 export function YourDataSection({ data, disclosure }: YourDataSectionProps) {
@@ -46,15 +46,7 @@ export function YourDataSection({ data, disclosure }: YourDataSectionProps) {
           <MarksTable rows={data.marks.rows} page={data.marks.page} pageSize={MARKS_PAGE_SIZE} total={data.marks.total} />
         </Part>
         <Part title="Watchlist history" note={newest(data.watchlist.total)}>
-          <DataItemList kind="watchlist" items={data.watchlist.rows} empty="No watchlist items synced yet." data-testid="account-watchlist" />
-        </Part>
-        <Part title="Assistant conversations" note={newest(data.conversations.total)}>
-          <DataItemList
-            kind="conversation"
-            items={data.conversations.rows}
-            empty="No conversations with the assistant."
-            data-testid="account-conversations"
-          />
+          <DataItemList items={data.watchlist.rows} empty="No watchlist items synced yet." data-testid="account-watchlist" />
         </Part>
         <p className="text-ui text-muted-foreground">
           Share links and hidden titles are managed on{" "}

@@ -64,7 +64,7 @@ export default async function HelpPage() {
             <p>Server admins can see your watch activity and your Rewind. Some Rewind text is written by an AI service.</p>
             <p data-testid="help-assistant-disclosure">{assistantDisclosure}</p>
             <p>
-              Delete marks, watchlist items and assistant conversations, in{" "}
+              Delete marks and watchlist items in{" "}
               <Link href="/account#your-data" className="text-foreground underline underline-offset-3" data-testid="help-your-data-link">
                 Your data
               </Link>

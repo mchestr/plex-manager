@@ -54,7 +54,7 @@ Plex Management System combines server management tools, member onboarding and i
 - **Guided onboarding**: playback settings for each device, how to request titles, and a support link (the Discord server, when configured, and the admin's own instructions)
 - **Home page** with Rewind, quick links to the request site and other services, what is new on the server, and in-app announcements
 - **Media requests** through the Overseerr request site
-- **Account** page: time zone, appearance, Rewind notifications, and **Your data**: delete single marks, watchlist items and assistant conversations
+- **Account** page: time zone, appearance, Rewind notifications, and **Your data**: delete single marks and watchlist items
 
 ### Rewind
 Each member's year on the server, as a story of pages (formerly "Plex Wrapped"):
@@ -473,7 +473,7 @@ Plex, Tautulli and the optional services are configured in the setup wizard or i
 - **Signed webhooks** - Stripe webhooks are verified against the raw request body (no admin auth needed)
 - **Opt-in sharing** - A Rewind is private until its member makes a link; a link serves a share-safe copy and can be revoked at once
 - **Member removal** - Admins can remove a member: their access, sessions, Stripe subscription, Discord grant and stored data go. [docs/privacy.md](docs/privacy.md) lists every table of personal data and what removal does to it
-- **Your data** - Members delete single marks, watchlist items and assistant conversations from Account, Your data
+- **Your data** - Members delete single marks and watchlist items from Account, Your data
 - **Retention** - A daily sweep deletes content past its window (`docs/privacy.md`, "Retention")
 
 See [CLAUDE.md](CLAUDE.md) for detailed security best practices.
