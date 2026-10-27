@@ -10,11 +10,10 @@ export type MemberNotice =
   | { kind: "past-due" }
   /** `jellyfinEnabled`: a member with both services, whose Jellyfin account is already on (P11.11). */
   | { kind: "pending-invite"; jellyfinEnabled?: true }
-  | { kind: "outage"; serviceName: string }
   | { kind: "rewind-ready"; year: number; finalCut?: true }
 
 /** Highest first. P7.14 produces `rewind-ready`. */
-const PRIORITY: ReadonlyArray<MemberNotice["kind"]> = ["past-due", "pending-invite", "outage", "rewind-ready"]
+const PRIORITY: ReadonlyArray<MemberNotice["kind"]> = ["past-due", "pending-invite", "rewind-ready"]
 
 /** The one notice to show of every candidate, or `null`. */
 export function pickNotice(candidates: ReadonlyArray<MemberNotice | null>): MemberNotice | null {

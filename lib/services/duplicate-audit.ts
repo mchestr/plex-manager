@@ -33,7 +33,7 @@ import "server-only"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 import { testService, type TESTABLE_SERVICES } from "@/lib/settings/test-service"
 
-export const SERVICE_TABLES = ["PlexServer", "JellyfinServer", "Tautulli", "Overseerr", "Sonarr", "Radarr", "Prometheus"] as const
+export const SERVICE_TABLES = ["PlexServer", "JellyfinServer", "Tautulli", "Overseerr", "Sonarr", "Radarr"] as const
 export type ServiceTable = (typeof SERVICE_TABLES)[number]
 
 const KIND: Record<ServiceTable, (typeof TESTABLE_SERVICES)[number]> = {
@@ -43,7 +43,6 @@ const KIND: Record<ServiceTable, (typeof TESTABLE_SERVICES)[number]> = {
   Overseerr: "overseerr",
   Sonarr: "sonarr",
   Radarr: "radarr",
-  Prometheus: "prometheus",
 }
 
 /** An active row as the audit reads it; the secret fields stay inside this module. */
@@ -54,7 +53,6 @@ interface ActiveServiceRow {
   updatedAt: Date
   token?: string
   apiKey?: string
-  query?: string
 }
 
 /** The calls the audit and the apply make; structural, so each model's delegate (or a transaction's) fits. */
@@ -72,7 +70,6 @@ export function tableDelegate(db: PrismaTransactionClient, table: ServiceTable):
     Overseerr: db.overseerr,
     Sonarr: db.sonarr,
     Radarr: db.radarr,
-    Prometheus: db.prometheus,
   }
   return delegates[table]
 }
@@ -101,7 +98,7 @@ export type RowTester = (table: ServiceTable, row: ActiveServiceRow) => Promise<
 
 /** Tests a row's saved values with the settings tester (P10.20), cut off at 5 s. @internal */
 export const testSavedRow: RowTester = async (table, row) => {
-  const result = await testService({ service: KIND[table], url: row.url, secret: row.token ?? row.apiKey, query: row.query })
+  const result = await testService({ service: KIND[table], url: row.url, secret: row.token ?? row.apiKey })
   if (!result.ok) return result.code
   return result.probe.status === "ok" ? "ok" : result.probe.code
 }

@@ -73,8 +73,6 @@ export const saveSonarr = serviceSave("sonarr", "sonarr")
 
 export const saveRadarr = serviceSave("radarr", "radarr")
 
-export const savePrometheus = serviceSave("prometheus", "prometheus")
-
 /**
  * Saves the Discord integration. Its secrets go only to Discord, a fixed
  * destination, so a blank field keeps the stored one (as in settings).

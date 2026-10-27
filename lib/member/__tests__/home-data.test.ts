@@ -24,9 +24,6 @@ jest.mock('@/lib/settings/app-settings', () => ({
   getFormatSettings: jest.fn(async () => ({ timeZone: 'America/New_York', locale: 'en-US' })),
 }))
 jest.mock('@/actions/announcements', () => ({ getActiveAnnouncements: jest.fn() }))
-jest.mock('@/actions/prometheus-status', () => ({
-  getPrometheusStatus: jest.fn(async () => ({ success: false, code: 'INTERNAL', error: 'off' })),
-}))
 jest.mock('@/actions/watchlist', () => ({
   getWatchlistSyncSettings: jest.fn(async () => ({ success: false, code: 'INTERNAL', error: 'off' })),
 }))
@@ -142,7 +139,6 @@ describe('getHomeData', () => {
 
     expect(data.quickLinks.requestsUrl).toBeNull()
     expect(data.announcements.map((a) => a.id)).toEqual(['a', 'b', 'c'])
-    expect(data.uptime.isConfigured).toBe(false)
     expect(data.watchlist).toBeNull()
   })
 

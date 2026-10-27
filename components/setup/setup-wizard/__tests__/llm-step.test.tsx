@@ -29,7 +29,6 @@ const DEV: DevDefaults = {
   sonarr: null,
   radarr: null,
   discord: null,
-  prometheus: null,
   chatLlmProvider: null,
   wrappedLlmProvider: null,
   llmProvider: null,

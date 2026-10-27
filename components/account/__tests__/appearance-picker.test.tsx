@@ -1,6 +1,5 @@
 /**
- * The Appearance picker (P10.10): hidden while the light-theme flag is off,
- * a named radio group on /account and `menuitemradio`s in the account menu,
+ * The Appearance picker (P10.10): a named radio group on /account and `menuitemradio`s in the account menu,
  * driven by the keyboard, saving through setAppearance, which revalidates the layout.
  */
 
@@ -23,7 +22,7 @@ jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), refre
 const mockShowError = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showError: mockShowError }) }))
 
-const ON: Appearance = { enabled: true, theme: 'dark' }
+const DARK: Appearance = { theme: 'dark' }
 const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initials: 'TM', isAdmin: false, membership: false }
 
 function renderWith(appearance: Appearance, ui: React.ReactNode) {
@@ -36,20 +35,14 @@ beforeEach(() => {
 })
 
 describe('AppearancePicker', () => {
-  it('renders nothing while the flag is off', () => {
-    const { container } = renderWith({ enabled: false, theme: 'dark' }, <AppearancePicker />)
+  it('renders without a provider, on dark', () => {
+    render(<AppearancePicker />)
 
-    expect(container).toBeEmptyDOMElement()
-  })
-
-  it('renders nothing without a provider', () => {
-    const { container } = render(<AppearancePicker />)
-
-    expect(container).toBeEmptyDOMElement()
+    expect(screen.getByRole('radio', { name: 'Dark' })).toBeChecked()
   })
 
   it('is a named radio group with Dark checked, and no axe violations', async () => {
-    const { container } = renderWith(ON, <AppearancePicker />)
+    const { container } = renderWith(DARK, <AppearancePicker />)
 
     const group = screen.getByRole('radiogroup', { name: 'Theme' })
     expect(within(group).getByRole('radio', { name: 'Dark' })).toBeChecked()
@@ -59,7 +52,7 @@ describe('AppearancePicker', () => {
 
   it('moves to Light with the arrow keys and saves it', async () => {
     const user = userEvent.setup()
-    renderWith(ON, <AppearancePicker />)
+    renderWith(DARK, <AppearancePicker />)
 
     await user.tab()
     expect(screen.getByRole('radio', { name: 'Dark' })).toHaveFocus()
@@ -78,7 +71,7 @@ describe('AppearancePicker', () => {
       code: 'FORBIDDEN',
       error: 'The light theme is not available',
     })
-    renderWith(ON, <AppearancePicker />)
+    renderWith(DARK, <AppearancePicker />)
 
     await user.click(screen.getByRole('radio', { name: 'Light' }))
 
@@ -88,26 +81,16 @@ describe('AppearancePicker', () => {
   })
 
   it('starts from the resolved theme', () => {
-    renderWith({ enabled: true, theme: 'light' }, <AppearancePicker />)
+    renderWith({ theme: 'light' }, <AppearancePicker />)
 
     expect(screen.getByRole('radio', { name: 'Light' })).toBeChecked()
   })
 })
 
 describe('AccountMenu Appearance', () => {
-  it('is absent while the flag is off', async () => {
-    const user = userEvent.setup()
-    renderWith({ enabled: false, theme: 'dark' }, <AccountMenu user={member} />)
-
-    await user.click(screen.getByTestId('account-menu-trigger'))
-    const menu = await screen.findByRole('menu')
-
-    expect(within(menu).queryByRole('menuitemradio')).not.toBeInTheDocument()
-  })
-
   it('offers Dark and Light as menu radios and saves the choice from the keyboard', async () => {
     const user = userEvent.setup()
-    renderWith(ON, <AccountMenu user={member} />)
+    renderWith(DARK, <AccountMenu user={member} />)
 
     await user.click(screen.getByTestId('account-menu-trigger'))
     const menu = await screen.findByRole('menu')

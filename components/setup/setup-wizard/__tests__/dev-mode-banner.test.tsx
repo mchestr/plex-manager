@@ -12,7 +12,6 @@ function defaults(patch: Partial<DevDefaults> = {}): DevDefaults {
     plex: null,
     tautulli: null,
     overseerr: null,
-    prometheus: null,
     sonarr: null,
     radarr: null,
     discord: null,

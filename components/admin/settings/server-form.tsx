@@ -24,7 +24,6 @@ const PLACEHOLDERS: Record<ServerType, string> = {
   overseerr: "http://example.com:5055",
   sonarr: "http://example.com:8989",
   radarr: "http://example.com:7878",
-  prometheus: "http://example.com:9090",
 }
 
 interface ServerFormFieldsProps {
@@ -44,8 +43,8 @@ interface ServerFormFieldsProps {
 /**
  * A service's fields, always open (UI-31), in a two-column FormField grid
  * (UI-13): name, local URL, then the public URL and the token or API key as
- * a `SecretInput`, or Prometheus's query. Errors from Test and Save show on
- * their field. Setup (P10.25) reuses these fields.
+ * a `SecretInput`. Errors from Test and Save show on their
+ * field. Setup (P10.25) reuses these fields.
  */
 export function ServerFormFields({ type, values, set, errors, saved, currentOrigin, disabled, testIdPrefix = "settings" }: ServerFormFieldsProps) {
   const label = SERVER_LABELS[type]
@@ -60,30 +59,22 @@ export function ServerFormFields({ type, values, set, errors, saved, currentOrig
       <FormField name={id("url")} label="Local URL" error={errors.url}>
         <Input value={values.url} onValueChange={(url) => set({ url })} placeholder={PLACEHOLDERS[type]} required disabled={disabled} data-testid={`${testIdPrefix}-${type}-url`} />
       </FormField>
-      {type === "prometheus" ? (
-        <FormField name={id("query")} label="PromQL query" description={'For example up{job="plex"}'} error={errors.query} className="md:col-span-2">
-          <Input value={values.query} onValueChange={(query) => set({ query })} placeholder='up{job="plex"}' required disabled={disabled} data-testid={`${testIdPrefix}-prometheus-query`} />
-        </FormField>
-      ) : (
-        <>
-          <FormField name={id("public-url")} label="Public URL" optional description="Shown to members" error={errors.publicUrl}>
-            <Input value={values.publicUrl} onValueChange={(publicUrl) => set({ publicUrl })} placeholder={`https://${type}.example.com`} disabled={disabled} data-testid={`${testIdPrefix}-${type}-public-url`} />
-          </FormField>
-          <FormField name={id("secret")} label={noun} error={errors.secret}>
-            <SecretInput
-              value={values.secret}
-              onValueChange={(secret) => set({ secret })}
-              saved={saved}
-              currentOrigin={currentOrigin}
-              noun={type === "plex" ? "token" : "key"}
-              placeholder={`${label} ${noun}`}
-              required
-              disabled={disabled}
-              data-testid={`${testIdPrefix}-${type}-secret`}
-            />
-          </FormField>
-        </>
-      )}
+      <FormField name={id("public-url")} label="Public URL" optional description="Shown to members" error={errors.publicUrl}>
+        <Input value={values.publicUrl} onValueChange={(publicUrl) => set({ publicUrl })} placeholder={`https://${type}.example.com`} disabled={disabled} data-testid={`${testIdPrefix}-${type}-public-url`} />
+      </FormField>
+      <FormField name={id("secret")} label={noun} error={errors.secret}>
+        <SecretInput
+          value={values.secret}
+          onValueChange={(secret) => set({ secret })}
+          saved={saved}
+          currentOrigin={currentOrigin}
+          noun={type === "plex" ? "token" : "key"}
+          placeholder={`${label} ${noun}`}
+          required
+          disabled={disabled}
+          data-testid={`${testIdPrefix}-${type}-secret`}
+        />
+      </FormField>
     </div>
   )
 }

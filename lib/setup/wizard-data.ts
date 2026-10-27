@@ -53,10 +53,6 @@ async function storedFor(position: SetupPosition): Promise<SetupWizardData["stor
       const row = await (delegate.findFirst as (args: typeof active) => Promise<{ name: string; url: string; publicUrl: string | null; apiKey: string } | null>)(active)
       return { server: storedServer(row, row?.apiKey) }
     }
-    case "prometheus": {
-      const row = await prisma.prometheus.findFirst(active)
-      return { server: row && { name: row.name, url: row.url, query: row.query } }
-    }
     case "llm-rewind":
     case "llm-chat": {
       const purpose = position === "llm-chat" ? "chat" : "wrapped"
@@ -84,7 +80,7 @@ async function storedFor(position: SetupPosition): Promise<SetupWizardData["stor
 
 /** The wizard's data for `position`; the caller has checked the claim. */
 export async function getSetupWizardData(position: SetupPosition): Promise<SetupWizardData> {
-  const [plex, tautulli, overseerr, sonarr, radarr, wrapped, chat, discord, prometheus, stored, jar] = await Promise.all([
+  const [plex, tautulli, overseerr, sonarr, radarr, wrapped, chat, discord, stored, jar] = await Promise.all([
     prisma.plexServer.count(active),
     prisma.tautulli.count(active),
     prisma.overseerr.count(active),
@@ -93,7 +89,6 @@ export async function getSetupWizardData(position: SetupPosition): Promise<Setup
     prisma.lLMProvider.count({ where: { isActive: true, purpose: "wrapped" } }),
     prisma.lLMProvider.count({ where: { isActive: true, purpose: "chat" } }),
     prisma.discordIntegration.count({ where: { OR: [{ isEnabled: true }, { botEnabled: true }] } }),
-    prisma.prometheus.count(active),
     storedFor(position),
     cookies(),
   ])
@@ -107,7 +102,6 @@ export async function getSetupWizardData(position: SetupPosition): Promise<Setup
       "llm-rewind": wrapped > 0,
       "llm-chat": chat > 0,
       discord: discord > 0,
-      prometheus: prometheus > 0,
     },
     stored,
     plexPending: readSetupPinCookie(jar.get(SETUP_PLEX_PIN_COOKIE)?.value) !== null,

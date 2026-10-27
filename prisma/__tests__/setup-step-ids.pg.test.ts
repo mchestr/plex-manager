@@ -5,7 +5,7 @@
 /**
  * The `p1024_setup_step_ids` migration against a real PostgreSQL database
  * (P10.24): every stored wizard number maps to its step id by the old order,
- * 10 resumes on Prometheus, and no service row's `isActive` changes.
+ * 10 resumes on Prometheus (the drop_prometheus_status migration moves it on), and no service row's `isActive` changes.
  *
  * The test database is already migrated, so the test puts the old
  * `currentStep` column back, runs the whole migration, and rolls the
@@ -35,7 +35,7 @@ function statements(): string[] {
 
 class Rollback extends Error {}
 
-const SERVICE_TABLES = ["PlexServer", "JellyfinServer", "Tautulli", "Overseerr", "Sonarr", "Radarr", "Prometheus"]
+const SERVICE_TABLES = ["PlexServer", "JellyfinServer", "Tautulli", "Overseerr", "Sonarr", "Radarr"]
 
 describePg("setup_step_ids migration", (databaseUrl) => {
   let db: PrismaClient

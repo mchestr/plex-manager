@@ -136,6 +136,15 @@ export enum AuditEventType {
   // An admin opened a member's stored Rewind (P7.9, GAP-33). Details carry the
   // target user, the year and the wrapped id.
   REWIND_ADMIN_VIEWED = "REWIND_ADMIN_VIEWED",
+  // The admin assistant read app data for an admin through a tool. Details carry
+  // the tool name and the conversation, never the arguments' values or the result.
+  ASSISTANT_DATA_READ = "ASSISTANT_DATA_READ",
+  // The admin assistant called a tool on an MCP server. Details carry the server
+  // id and the tool name, never the arguments or the result.
+  ASSISTANT_MCP_CALL = "ASSISTANT_MCP_CALL",
+  // An admin added, changed or removed an MCP server or knowledge base source.
+  // Details carry the kind, the action and the row id, never a secret.
+  ASSISTANT_SOURCE_CHANGED = "ASSISTANT_SOURCE_CHANGED",
   // An admin restored a member's previous Rewind (P7.9). Details carry the
   // target user, the year, the source generation and the new one.
   REWIND_ROLLED_BACK = "REWIND_ROLLED_BACK",

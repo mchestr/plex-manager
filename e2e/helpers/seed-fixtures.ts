@@ -100,7 +100,6 @@ export async function seedVisualFixtures(): Promise<void> {
       await tx.overseerr.deleteMany();
       await tx.sonarr.deleteMany();
       await tx.radarr.deleteMany();
-      await tx.prometheus.deleteMany();
       await tx.lLMProvider.deleteMany();
       await tx.jellyfinServer.deleteMany();
       await tx.plexServer.deleteMany();

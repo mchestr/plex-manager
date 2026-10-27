@@ -22,7 +22,6 @@ jest.mock('@/lib/prisma', () => ({
     overseerr: { findFirst: jest.fn() },
     sonarr: { findFirst: jest.fn() },
     radarr: { findFirst: jest.fn() },
-    prometheus: { findFirst: jest.fn() },
     discordIntegration: { findUnique: jest.fn() },
     discordConnection: { count: jest.fn() },
     config: { findUnique: jest.fn(), create: jest.fn() },
@@ -45,7 +44,6 @@ const mockPrisma = prisma as unknown as {
   overseerr: { findFirst: jest.Mock }
   sonarr: { findFirst: jest.Mock }
   radarr: { findFirst: jest.Mock }
-  prometheus: { findFirst: jest.Mock }
   discordIntegration: { findUnique: jest.Mock }
   discordConnection: { count: jest.Mock }
   config: { findUnique: jest.Mock; create: jest.Mock }
@@ -85,7 +83,6 @@ describe('getAdminSettings secret hiding', () => {
     mockPrisma.overseerr.findFirst.mockResolvedValue(null)
     mockPrisma.sonarr.findFirst.mockResolvedValue(null)
     mockPrisma.radarr.findFirst.mockResolvedValue(null)
-    mockPrisma.prometheus.findFirst.mockResolvedValue(null)
     mockPrisma.discordIntegration.findUnique.mockResolvedValue(null)
     mockPrisma.discordConnection.count.mockResolvedValue(0)
   })

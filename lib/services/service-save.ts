@@ -10,8 +10,7 @@
  * 2. Run the service's tester with the 5 s cut-off. A failure is
  *    `UPSTREAM_UNAVAILABLE` with code copy on the URL or secret field, never
  *    the tester's message (P10.20).
- * 3. Build the row (`toRow`: the Plex owner and machine id, the Prometheus
- *    query check).
+ * 3. Build the row (`toRow`: the Plex owner and machine id).
  * 4. In one transaction, {@link saveActiveService} plus the caller's own
  *    writes (`within`: the wizard's step).
  * 5. Audit `CONFIG_CHANGED` with a redacted diff (SEC-55).
@@ -67,22 +66,19 @@ export async function saveServiceConnection<K extends ServiceKind>(
   const stored = await service.delegate(prisma).findFirst({ where: { isActive: true }, orderBy: { updatedAt: "desc" } })
   const storedSecret = stored ? service.secretOf(stored) : undefined
 
-  let secret: string | undefined
-  if (service.secretField) {
-    const resolution = resolveSecretForOrigin({
-      submitted: service.secretOf(input),
-      stored: stored && storedSecret !== undefined ? { secret: storedSecret, url: stored.url } : null,
-      submittedUrl: input.url,
-    })
-    if (!resolution.ok) return secretRefusal(service.secretField, !stored)
-    secret = resolution.secret
-  }
-  const config = service.withSecret(input, secret ?? "")
+  const resolution = resolveSecretForOrigin({
+    submitted: service.secretOf(input),
+    stored: stored && storedSecret !== undefined ? { secret: storedSecret, url: stored.url } : null,
+    submittedUrl: input.url,
+  })
+  if (!resolution.ok) return secretRefusal(service.secretField, !stored)
+  const { secret } = resolution
+  const config = service.withSecret(input, secret)
 
   const probe = await probeConnection(kind, () => service.test(config))
   if (probe.status !== "ok") {
     const copy = connectionTestCopy(probe.code, service.secretField === "token" ? "Plex token" : "API key")
-    const field = copy.field === "secret" && service.secretField ? service.secretField : "url"
+    const field = copy.field === "secret" ? service.secretField : "url"
     return { success: false, code: "UPSTREAM_UNAVAILABLE", error: `${copy.title}. ${copy.fix}`, fieldErrors: { [field]: [copy.fieldError] } }
   }
 
@@ -99,7 +95,7 @@ export async function saveServiceConnection<K extends ServiceKind>(
     actor,
     configDiff(section, stored && audited(stored, storedSecret), audited(config, secret), {
       secretFields: ["secret"],
-      urlFields: service.secretField ? ["url", "publicUrl"] : ["url"],
+      urlFields: ["url", "publicUrl"],
     })
   )
   return ok(null)

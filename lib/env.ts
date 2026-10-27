@@ -222,7 +222,7 @@ export const envSchema = z.object({
     example: "postgresql://postgres:your-postgres-password@localhost:5433/plex_manager_test?schema=public",
   }),
   E2E_PORT: text("Test only: the Playwright web server port.", { group: "Test only", default: "3100" }),
-  SKIP_CONNECTION_TESTS: text('Test only: "true" skips live Plex and Prometheus checks.', { group: "Test only" }),
+  SKIP_CONNECTION_TESTS: text('Test only: "true" skips live Plex checks.', { group: "Test only" }),
   ENABLE_DEV_UI: text('Development only: "1" serves the /dev/ui primitives sheet (Playwright sets it).', { group: "Test only" }),
 })
 

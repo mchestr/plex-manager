@@ -1,10 +1,9 @@
 /**
- * The app's settings: the server zone, `Config.locale`, the server name and
- * the light-theme flag.
+ * The app's settings: the server zone, `Config.locale` and the server name.
  *
  * Read once per request (React `cache()`) over a `'use cache'` entry tagged
- * `app-settings` (`cacheLife("minutes")`, P11.19); saving the zone, the light
- * theme flag or the Plex or Jellyfin server calls `updateTag("app-settings")`.
+ * `app-settings` (`cacheLife("minutes")`, P11.19); saving the zone or the
+ * Plex or Jellyfin server calls `updateTag("app-settings")`.
  * The entry holds no secret: the server rows are read for their names only.
  *
  * @module lib/settings/app-settings
@@ -33,8 +32,6 @@ export interface AppSettings extends FormatSettings {
    * in `lib/brand.ts`, which falls back to the product name.
    */
   serverName: string | null
-  /** `Config.lightThemeEnabled`: members may pick the light theme (P10.10). */
-  lightThemeEnabled: boolean
 }
 
 /** The most recently updated active row's name, never its token. */
@@ -43,7 +40,7 @@ const activeServer = { where: { isActive: true }, orderBy: { updatedAt: "desc" }
 async function readAppSettings(): Promise<AppSettings> {
   const [timeZone, config, plex, jellyfin] = await Promise.all([
     serverZone(),
-    prisma.config.findUnique({ where: { id: "config" }, select: { locale: true, serverName: true, lightThemeEnabled: true } }),
+    prisma.config.findUnique({ where: { id: "config" }, select: { locale: true, serverName: true } }),
     prisma.plexServer.findFirst(activeServer),
     prisma.jellyfinServer.findFirst(activeServer),
   ])
@@ -52,7 +49,6 @@ async function readAppSettings(): Promise<AppSettings> {
     timeZone,
     locale: canonicalLocale(config?.locale),
     serverName: serverName ?? null,
-    lightThemeEnabled: config?.lightThemeEnabled ?? false,
   }
 }
 
@@ -65,10 +61,9 @@ async function cachedAppSettings(): Promise<AppSettings> {
 
 /**
  * `{ timeZone, locale }` for every formatter in `lib/utils/format.ts`, the
- * server name for `lib/brand.ts` and the light-theme flag for
- * `lib/design/theme.ts`. The root layout reads it on every page, so a
- * database outage falls back to `TZ`, en-US, no name and dark instead of
- * failing the page.
+ * server name for `lib/brand.ts`. The root layout reads it on every page, so
+ * a database outage falls back to `TZ`, en-US and no name instead of failing
+ * the page.
  */
 export const getAppSettings = cache(async (): Promise<AppSettings> => {
   await notDuringBuild()
@@ -80,7 +75,6 @@ export const getAppSettings = cache(async (): Promise<AppSettings> => {
       timeZone: normalizeTimeZone(process.env.TZ) ?? "UTC",
       locale: DEFAULT_LOCALE,
       serverName: null,
-      lightThemeEnabled: false,
     }
   }
 })
