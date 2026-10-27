@@ -1,6 +1,7 @@
 /**
- * The settings page's reads for the Discord stat channels and the request-limit
- * tiers: server-only, each admin-checked (P11.5).
+ * The admin reads for the Discord stat channels and the request-limit tiers
+ * (the settings page, and a member's tier on their user page): server-only,
+ * each admin-checked (P11.5).
  *
  * @module lib/data/community-stats
  */
@@ -12,6 +13,7 @@ import { serverName } from "@/lib/brand"
 import { channelsFromConfig, type StatChannels } from "@/lib/discord/channel-stats/config"
 import { prisma } from "@/lib/prisma"
 import { parseEntries, type RequestTierEntry } from "@/lib/request-tiers/entries"
+import { checkMemberTier, type MemberTierCheck } from "@/lib/request-tiers/member-check"
 import { tiersFromConfig, type RequestTier } from "@/lib/request-tiers/tiers"
 
 export interface ChannelStatsSettingsData {
@@ -72,4 +74,10 @@ export async function getRequestTierSettings(): Promise<RequestTierSettingsData>
     tiers: [...tiersFromConfig(config?.requestTiers)],
     lastRun: run && { ...run, entries: parseEntries(run.entries) },
   }
+}
+
+/** A member's tier and Overseerr quota, read live; null when they have no Plex account to match. */
+export async function getMemberTierCheck(userId: string): Promise<MemberTierCheck | null> {
+  await assertAdmin()
+  return checkMemberTier(userId)
 }

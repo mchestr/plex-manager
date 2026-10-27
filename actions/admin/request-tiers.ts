@@ -2,8 +2,8 @@
 
 /**
  * The request-limit tier settings (admin only, audited as `CONFIG_CHANGED`
- * section `request-tiers`), "Run now", and the per-member exclusion from the
- * sync.
+ * section `request-tiers`), "Run now", and per member: the exclusion from the
+ * sync and "Update Overseerr", which writes their tier's quota now.
  *
  * @module actions/admin/request-tiers
  */
@@ -18,6 +18,7 @@ import { prisma } from "@/lib/prisma"
 import { addJob } from "@/lib/queue/client"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { JOB_TYPES } from "@/lib/queue/types"
+import { applyMemberTier } from "@/lib/request-tiers/member-check"
 import { runRequestTierSync } from "@/lib/request-tiers/run"
 import { ensureRequestTierSchedule } from "@/lib/request-tiers/schedule"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
@@ -88,5 +89,22 @@ export const setMemberTiersExcluded = adminAction({
     revalidatePath(`/admin/users/${userId}`)
     revalidatePath("/")
     return ok(null)
+  },
+})
+
+/** Writes a member's tier quota to Overseerr now, as the daily sync would, so an admin can test it on one member. */
+export const applyMemberRequestTier = adminAction({
+  input: z.object({ userId: userIdSchema }),
+  rateLimit: { name: "admin" },
+  fallbackError: "Could not update the member's request limits",
+  handler: async ({ userId }, { userId: actorId }) => {
+    const result = await applyMemberTier(userId)
+    if (!result.ok) return fail(result.code, result.message)
+
+    if (result.quota) {
+      logAuditEvent(AuditEventType.CONFIG_CHANGED, actorId, { section: "request-tiers.member", targetUserId: userId, quota: result.quota })
+    }
+    revalidatePath(`/admin/users/${userId}`)
+    return ok({ updated: result.quota !== null })
   },
 })
