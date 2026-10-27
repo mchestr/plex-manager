@@ -18,6 +18,10 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Changed
+
+- **Admin settings open read-only:** each section of Admin > Settings now shows its saved values as a summary, with its status, Test connection and "Last saved", and an Edit button (Set up, when nothing is saved) opens its form in place. Save returns to the summary; Cancel and Escape ask before discarding unsaved changes, one section is edited at a time, and the browser asks before a tab with unsaved changes closes. The AI features, Stripe Subscriptions and Allow Jellyfin sign-in switches still take effect at once (Allow Jellyfin sign-in moved from the Jellyfin form to its row), and the other on/off settings are checkboxes saved with Save.
+
 ## [0.4.0] - 2026-10-26
 
 ### Added

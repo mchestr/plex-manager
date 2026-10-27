@@ -4,6 +4,7 @@ import { TEST_USERS } from '../fixtures/auth';
 import { expect, test } from '../fixtures/session';
 import { createE2EPrismaClient } from '../helpers/prisma';
 import { clearRewindSeed, REWIND_MEMBERS, REWIND_YEAR, seedRewind } from '../helpers/seed-rewind';
+import { editSection } from '../helpers/settings';
 
 /**
  * P7.12: the Rewind section of `/admin/settings`. Saving "Admins only" hides
@@ -38,15 +39,14 @@ async function setFlags(data: Partial<Flags>): Promise<void> {
 }
 
 /**
- * Saves the section and waits for the write. Save is disabled while the
- * action runs too, so wait for "Unsaved changes" to go, which happens only
- * once the saved settings come back.
+ * Saves the section and waits for the write: the section returns to its
+ * summary only once the saved settings come back.
  */
 async function saveSettings(page: Page): Promise<void> {
   await expect(page.getByTestId('settings-rewind-unsaved')).toBeVisible();
   await page.getByTestId('settings-rewind-save').click();
+  await expect(page.getByTestId('settings-rewind-summary')).toBeVisible();
   await expect(page.getByTestId('settings-rewind-unsaved')).toHaveCount(0);
-  await expect(page.getByTestId('settings-rewind-save')).toBeDisabled();
 }
 
 test.describe('Rewind settings section', () => {
@@ -84,16 +84,21 @@ test.describe('Rewind settings section', () => {
     const section = page.getByTestId('settings-rewind-section');
     await expect(section).toBeVisible();
     await expect(section.getByTestId('rewind-settings-status')).toBeVisible();
-    await expect(page.getByTestId('settings-rewind-save')).toBeDisabled();
+    // Read-only until Edit
+    await expect(section.getByTestId('settings-rewind-summary')).toBeVisible();
+    await expect(page.getByTestId('settings-rewind-edit')).toBeVisible();
+    await expect(page.getByTestId('settings-rewind-save')).toHaveCount(0);
   });
 
   test('"Admins only" hides the home RewindCard from a member and keeps it for an admin', async ({ page, signIn }) => {
     await signIn(TEST_USERS.ADMIN.id);
     await page.goto('/admin/settings#rewind');
 
+    await editSection(page, 'rewind');
     await page.getByTestId('rewind-settings-audience-trigger').click();
     await page.getByTestId('rewind-settings-audience-option-admins').click();
     await saveSettings(page);
+    await expect(page.getByTestId('settings-rewind-summary-audience')).toContainText('Admins');
 
     await page.goto('/');
     await expect(page.getByTestId('rewind-card')).toBeVisible();
@@ -107,6 +112,7 @@ test.describe('Rewind settings section', () => {
     await signIn(TEST_USERS.ADMIN.id);
     await page.goto('/admin/settings#rewind');
 
+    await editSection(page, 'rewind');
     await page.getByTestId('rewind-settings-pages-people').click();
     await saveSettings(page);
 

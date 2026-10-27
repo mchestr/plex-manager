@@ -106,8 +106,8 @@ install stored it off, the console's Regenerate is refused; set it back with
 and off on a fresh `Config`. They share `rewindDisabledPages`: a feature is on
 only while the list holds `+<key>` and not the plain `<key>` (the plain key
 beside it switches it off again), so a deploy never turns one on by itself.
-The "Features added in December" switches in the Rewind section write or
-remove the `+` entry, audited as `CONFIG_CHANGED`. Turn each on in production
+The "Features added in December" checkboxes in the Rewind section (Edit, then
+Save changes) write or remove the `+` entry, audited as `CONFIG_CHANGED`. Turn each on in production
 only after checking it on the heavy test member, and record the enable, with
 the date and the check, in `ship-check.md`. A flag that misbehaves stays off.
 

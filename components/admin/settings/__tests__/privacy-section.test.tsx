@@ -37,6 +37,14 @@ describe("PrivacySection", () => {
     expect(screen.getByTestId("settings-retention-last-run")).toHaveTextContent("Not run yet.")
   })
 
+  it("has nothing to edit, so it shows no Edit button or form", () => {
+    render(<PrivacySection status={{ policy: POLICY, lastRun: null }} />)
+
+    expect(screen.queryByTestId("settings-privacy-edit")).not.toBeInTheDocument()
+    expect(screen.queryByRole("form")).not.toBeInTheDocument()
+    expect(screen.getByTestId("settings-retention-run")).toBeInTheDocument()
+  })
+
   it("shows the last run and its count per rule", () => {
     render(
       <PrivacySection status={{ policy: POLICY, lastRun: { at: "2027-02-01T03:30:00.000Z", counts: { auditLog: 12, rewindViews: 4 } } }} />

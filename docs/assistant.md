@@ -29,7 +29,7 @@ Settings, Assistant sources, MCP servers, Add.
   other service keys, a blank value is kept only while the URL's origin is
   unchanged.
 - **Tools:** after saving, open the server and choose List tools. A tool is
-  off until you switch it on, and tools that do not declare `readOnlyHint` are
+  off until you tick "Allow <tool>" and save, and tools that do not declare `readOnlyHint` are
   marked "can change data". The assistant sees `mcp_<server>_<tool>` and the
   call is audit-logged (`ASSISTANT_MCP_CALL`) by server and tool.
 

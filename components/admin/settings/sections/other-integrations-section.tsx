@@ -4,9 +4,8 @@ import type { ReactNode } from "react"
 
 import { JellyfinLoginToggle } from "@/components/admin/settings/jellyfin-login-toggle"
 import { ServerForm } from "@/components/admin/settings/server-form"
-import { Button } from "@/components/ui/button"
+import { SettingsSheet } from "@/components/admin/settings/settings-sheet"
 import { SettingsSection } from "@/components/ui/settings-section"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { SERVER_LABELS, type StoredServer } from "@/hooks/admin/use-server-form"
 import { worstStatus, type SectionHealth } from "@/lib/settings/connection-status"
@@ -41,9 +40,11 @@ function rowDescription(type: OtherService, server: StoredServer | null) {
 }
 
 /**
- * Other integrations (6.4): Sonarr, Radarr and Jellyfin as one
- * list card. Each row shows its badge, and Edit or Set up opens its form in a
- * Sheet. The section takes the worst status among the services set up.
+ * Other integrations (6.4): Sonarr, Radarr and Jellyfin as one list card.
+ * The rows are the view, each with its badge; Edit or Set up opens the
+ * service's form in a Sheet, its edit mode. Allow Jellyfin sign-in saves at
+ * once, so it stays live in the Jellyfin row rather than in the Sheet. The
+ * section takes the worst status among the services set up.
  */
 export function OtherIntegrationsSection({ servers, jellyfinLogin, health, footerMeta }: OtherIntegrationsSectionProps) {
   const configured = ORDER.filter((type) => servers[type])
@@ -70,20 +71,34 @@ export function OtherIntegrationsSection({ servers, jellyfinLogin, health, foote
                 </span>
               </div>
               <StatusBadge domain="connection" value={health[type].status} />
-              <Sheet>
-                <SheetTrigger render={<Button variant="ghost" size="sm" data-testid={`settings-other-${type}-edit`} />}>
-                  {server ? "Edit" : "Set up"}
-                  <span className="sr-only"> {label}</span>
-                </SheetTrigger>
-                <SheetContent side="right" className="max-w-[480px]" data-testid={`settings-other-${type}-sheet`}>
-                  <SheetHeader>
-                    <SheetTitle>{label}</SheetTitle>
-                    <SheetDescription>{DESCRIPTIONS[type]}</SheetDescription>
-                  </SheetHeader>
-                  <ServerForm type={type} server={server} footerMeta={footerMeta} />
-                  {type === "jellyfin" && jellyfinLogin !== null && <JellyfinLoginToggle enabledForLogin={jellyfinLogin} />}
-                </SheetContent>
-              </Sheet>
+              <SettingsSheet
+                section="other"
+                id={type}
+                name={label}
+                title={label}
+                description={DESCRIPTIONS[type]}
+                trigger={server ? "Edit" : "Set up"}
+                triggerLabel={label}
+                triggerTestId={`settings-other-${type}-edit`}
+                sheetTestId={`settings-other-${type}-sheet`}
+              >
+                {(sheet) => (
+                  <ServerForm
+                    type={type}
+                    server={server}
+                    footerMeta={footerMeta}
+                    onDone={sheet.onDone}
+                    onCancel={sheet.onCancel}
+                    onDirtyChange={sheet.onDirtyChange}
+                    onPendingChange={sheet.onPendingChange}
+                  />
+                )}
+              </SettingsSheet>
+              {type === "jellyfin" && jellyfinLogin !== null && (
+                <div className="basis-full">
+                  <JellyfinLoginToggle enabledForLogin={jellyfinLogin} />
+                </div>
+              )}
             </li>
           )
         })}

@@ -7,6 +7,7 @@ import {
   VISUAL_REWIND_ID,
   VISUAL_REWIND_YEAR,
 } from '../helpers/seed-fixtures';
+import { editSection } from '../helpers/settings';
 import { A11Y_CONVERSATION_ID, A11Y_SHARE_TOKEN, clearA11yShareVisits } from './seed';
 
 /**
@@ -129,6 +130,14 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },
   { path: '/admin/queues', as: 'admin', ready: 'queue-status' },
   { path: '/admin/settings', as: 'admin', ready: 'settings-plex-section' },
+  // A section in edit mode: its form, Save and Cancel, beside the read-only sections
+  {
+    path: '/admin/settings',
+    as: 'admin',
+    ready: 'settings-plex-section',
+    state: 'plex editing',
+    setup: (page) => editSection(page, 'plex'),
+  },
   // The public share route records a visit; a worker restart's re-seed drops it.
   { path: '/admin/shares', as: 'admin', ready: 'admin-shares-header', reset: clearA11yShareVisits },
   { path: '/admin/llm-usage', as: 'admin', ready: 'admin-llm-usage-header' },

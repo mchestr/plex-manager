@@ -1,15 +1,24 @@
 "use client"
 
-import Link from "next/link"
 import { type ReactNode, useState, useTransition } from "react"
 
 import { updateRewindSettings } from "@/actions/admin/rewind-settings"
-import { CheckboxList, MonthDayField, SelectField, SwitchField } from "@/components/admin/settings/rewind-settings/fields"
+import {
+  AUDIENCES,
+  CheckboxField,
+  CheckboxList,
+  LLM_MODES,
+  MonthDayField,
+  SelectField,
+  TimeZoneNote,
+} from "@/components/admin/settings/rewind-settings/fields"
 import { RewindSettingsStatusLine, type RewindSettingsStatus } from "@/components/admin/settings/rewind-settings/status-line"
+import { RewindSettingsSummary } from "@/components/admin/settings/rewind-settings/summary"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { SettingsSection } from "@/components/ui/settings-section"
 import { useToast } from "@/components/ui/toast"
+import { useFormat } from "@/lib/format-context"
 import type { SectionHealth } from "@/lib/settings/connection-status"
 import { enableEntry, isFeatureEntry, REWIND_FEATURES } from "@/lib/rewind/features"
 import { REWIND_CUT_PAGES, REWIND_DISABLED_PAGE_ENTRIES, rewindBudgetSchema, type RewindSettings } from "@/lib/validations/rewind-settings"
@@ -34,24 +43,13 @@ interface RewindSettingsSectionProps {
   health: SectionHealth
   /** "Last saved ... by ..." from the audit log (P10.20). */
   footerMeta?: ReactNode
-  /** The season console note, under the fields. */
+  /** The season console note, after the summary or the fields in both modes. */
   children?: ReactNode
 }
 
 type Draft = Omit<RewindSettings, "rewindLlmBudgetUsd"> & { rewindLlmBudgetUsd: string }
 
 const toDraft = (saved: RewindSettings): Draft => ({ ...saved, rewindLlmBudgetUsd: String(saved.rewindLlmBudgetUsd) })
-
-const AUDIENCES = [
-  { value: "admins", label: "Admins only" },
-  { value: "all", label: "Everyone" },
-]
-
-const LLM_MODES = [
-  { value: "standard", label: "Standard" },
-  { value: "economy", label: "Economy (the budget model)" },
-  { value: "off", label: "Off (template copy)" },
-]
 
 /** A `rewindDisabledPages` draft in its stored order, so a change undone reads as no change. */
 const storedOrder = (entries: readonly string[]) => REWIND_DISABLED_PAGE_ENTRIES.filter((entry) => entries.includes(entry))
@@ -67,10 +65,15 @@ function withStored(options: { value: string; label: string }[], stored: readonl
 /**
  * The Rewind section of the admin settings (P7.12, design 10.4 and 13.2):
  * every admin-facing Rewind flag, saved together with `updateRewindSettings`.
- * Save stays disabled until something changed; Discard restores the stored values.
+ * It opens on the saved settings ({@link RewindSettingsSummary}); Edit swaps
+ * in the form, whose flags are checkboxes because they save with Save. The
+ * Redis and Tautulli status line and the season console note show in both
+ * modes. A budget the schema refuses or a season that opens and closes on
+ * the same day holds Save with the reason; Cancel puts the stored values back.
  */
 export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, spent, libraries, ratings, status, health, footerMeta, children }: RewindSettingsSectionProps) {
   const { showError, showSuccess } = useToast()
+  const f = useFormat()
   const [isPending, startTransition] = useTransition()
   const [draft, setDraft] = useState(() => toDraft(saved))
 
@@ -88,17 +91,24 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
   const budgetError = budget.success ? undefined : budget.error.issues[0]?.message
   const datesError = draft.rewindSeasonOpens === draft.rewindSeasonCloses ? "The season cannot open and close on the same day" : undefined
 
-  const save = () => {
-    if (!budget.success) return
-    startTransition(async () => {
-      const result = await updateRewindSettings({ ...draft, rewindLlmBudgetUsd: budget.data })
-      if (result.success) {
-        showSuccess("Rewind settings saved")
-      } else {
-        showError(result.error)
+  // Resolves true once the write succeeded, so the section returns to its summary
+  const save = () =>
+    new Promise<boolean>((resolve) => {
+      if (!budget.success || datesError) {
+        resolve(false)
+        return
       }
+      const values = { ...draft, rewindLlmBudgetUsd: budget.data }
+      startTransition(async () => {
+        const result = await updateRewindSettings(values)
+        if (result.success) {
+          showSuccess("Rewind settings saved")
+        } else {
+          showError(result.error)
+        }
+        resolve(result.success)
+      })
     })
-  }
 
   const libraryOptions = withStored(
     (libraries ?? []).map((library) => ({ value: library.id, label: library.name })),
@@ -126,11 +136,23 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
         onSave: save,
         blockedReason: budgetError || datesError ? "Fix the marked fields to save." : undefined,
       }}
+      live={<RewindSettingsStatusLine status={status} />}
+      view={
+        <RewindSettingsSummary
+          saved={saved}
+          zone={zone}
+          llmDisabled={llmDisabled}
+          discordBotOn={discordBotOn}
+          budget={f.money(saved.rewindLlmBudgetUsd, "prose")}
+          spent={spent}
+          libraries={libraries}
+        />
+      }
+      after={children}
     >
-      <RewindSettingsStatusLine status={status} />
       <div className="flex flex-col gap-8">
         <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
-          <SwitchField
+          <CheckboxField
             name="enabled"
             label="Rewind"
             description="Turns /rewind and the home card on for the audience below."
@@ -158,12 +180,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
               error={datesError}
             />
           </div>
-          <p className="text-label text-muted-foreground" data-testid="rewind-settings-zone">
-            Dates are in {zone}. A season that crosses the new year belongs to the year it opens in.{" "}
-            <Link data-testid="rewind-settings-time-zone-link" href="#server-time-zone" className="text-foreground underline underline-offset-3">
-              Change the server time zone
-            </Link>
-          </p>
+          <TimeZoneNote zone={zone} />
         </div>
 
         <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
@@ -196,35 +213,35 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
         </div>
 
         <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
-          <SwitchField
+          <CheckboxField
             name="public-links"
             label="Public links"
             description="Off refuses new links, and existing links stop opening without being deleted. Turning it back on restores them."
             checked={draft.rewindPublicLinks}
             onChange={set("rewindPublicLinks")}
           />
-          <SwitchField
+          <CheckboxField
             name="public-counts"
             label="Public counts"
             description="Show counts instead of percentages on public cards."
             checked={draft.rewindPublicCounts}
             onChange={set("rewindPublicCounts")}
           />
-          <SwitchField
+          <CheckboxField
             name="server-name"
             label="Server name on cards"
             description="The name is the one set with the Plex server."
             checked={draft.rewindShowServerNameOnCards}
             onChange={set("rewindShowServerNameOnCards")}
           />
-          <SwitchField
+          <CheckboxField
             name="artwork"
             label="Artwork on cards"
             description="Let members include posters on their cards."
             checked={draft.rewindAllowArtOnCards}
             onChange={set("rewindAllowArtOnCards")}
           />
-          <SwitchField
+          <CheckboxField
             name="managed"
             label="Include managed accounts"
             description={`Plex Home managed accounts get a Rewind too. ${NEXT_GENERATION}`}
@@ -259,7 +276,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           selected={draft.rewindDisabledPages}
           onChange={(pages) => set("rewindDisabledPages")(storedOrder([...pages, ...draft.rewindDisabledPages.filter(isFeatureEntry)]))}
         />
-        {/* The December features (P8.3, P8.4) share the list: a switch writes or removes its `+key` entry. */}
+        {/* The December features (P8.3, P8.4) share the list: a checkbox writes or removes its `+key` entry. */}
         <CheckboxList
           name="features"
           legend="Features added in December"
@@ -284,7 +301,6 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           onChange={(channels) => set("rewindNotifyChannels")(channels as Draft["rewindNotifyChannels"])}
         />
       </div>
-      {children}
     </SettingsSection>
   )
 }

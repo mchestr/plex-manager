@@ -5,8 +5,9 @@ import { createE2EPrismaClient } from '../helpers/prisma';
 
 /**
  * P11.1 (SEC-32): the Security section shows the encryption status, and a
- * stored Tautulli key that no configured key can read turns into an "enter
- * it again" field and a warning, while the rest of the settings page works.
+ * stored Tautulli key that no configured key can read says so in the
+ * section's summary, whose "Enter it again" opens the form on an empty,
+ * required key field, while the rest of the settings page works.
  *
  * The seed has no Tautulli, so the spec writes one whose key is encrypted
  * under a kid the server does not have (playwright.config.ts gives it `e2e`)
@@ -52,17 +53,24 @@ test.describe('Settings: encryption at rest', () => {
     await expect(page.getByTestId('settings-reencrypt-button')).toBeVisible();
     await expect(page.getByTestId('settings-security-unreadable')).toContainText('Tautulli API key');
 
+    // The rest of the page still renders
+    await expect(page.getByTestId('settings-retention-windows')).toBeVisible();
+    await page.getByTestId('settings-nav-plex').click();
+    await expect(page.getByTestId('settings-plex-section')).toBeVisible();
+
+    // Tautulli's summary says the key can't be read, and Test waits for a new one
+    await expect(page.getByTestId('settings-tautulli-summary-secret')).toContainText("Can't be read with the current encryption key.");
+    await expect(page.getByTestId('settings-tautulli-test')).toBeDisabled();
+
+    // "Enter it again" opens the form on the key field
+    await page.getByTestId('settings-tautulli-summary-secret-reenter').click();
     const key = page.getByTestId('settings-tautulli-secret');
+    await expect(key).toBeFocused();
     await expect(key).toHaveAttribute('data-state', 'reenter-required');
     await expect(key).toHaveValue('');
     await expect(page.getByTestId('settings-tautulli-secret-unreadable')).toContainText(
       "can't be read with the current encryption key. Enter it again."
     );
     await expect(page.getByTestId('settings-tautulli-save')).toBeDisabled();
-
-    // The rest of the page still renders
-    await expect(page.getByTestId('settings-retention-windows')).toBeVisible();
-    await page.getByTestId('settings-nav-plex').click();
-    await expect(page.getByTestId('settings-plex-section')).toBeVisible();
   });
 });
