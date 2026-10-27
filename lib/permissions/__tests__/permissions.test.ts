@@ -1,4 +1,4 @@
-import { hasPermission, parseRole, permissionsFor, PERMISSIONS, ROLES } from '@/lib/permissions'
+import { canEnterAdminArea, hasPermission, parseRole, permissionsFor, PERMISSIONS, ROLES } from '@/lib/permissions'
 
 describe('permissionsFor', () => {
   it('gives an admin every permission', () => {
@@ -37,6 +37,16 @@ describe('hasPermission', () => {
     expect(hasPermission({ isAdmin: false, role: 'support' }, 'users:read')).toBe(true)
     expect(hasPermission({ isAdmin: false, role: 'support' }, 'assistant:tools:write')).toBe(false)
     expect(hasPermission(null, 'users:read')).toBe(false)
+  })
+})
+
+describe('canEnterAdminArea', () => {
+  it('lets in an admin and the Support role, and nobody else', () => {
+    expect(canEnterAdminArea({ isAdmin: true })).toBe(true)
+    expect(canEnterAdminArea({ isAdmin: false, role: 'support' })).toBe(true)
+    expect(canEnterAdminArea({ isAdmin: false, role: null })).toBe(false)
+    expect(canEnterAdminArea({ isAdmin: false, role: 'nonsense' })).toBe(false)
+    expect(canEnterAdminArea(null)).toBe(false)
   })
 })
 

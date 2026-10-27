@@ -30,7 +30,7 @@ export default async function AppGuardLayout({
   }
 
   const [shell, notice] = await Promise.all([
-    getAppShellData({ id: session.user.id, isAdmin: session.user.isAdmin }),
+    getAppShellData({ id: session.user.id, isAdmin: session.user.isAdmin, role: session.user.role }),
     getMemberNotice(session.user.id),
   ])
 

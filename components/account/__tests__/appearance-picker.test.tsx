@@ -23,7 +23,7 @@ const mockShowError = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showError: mockShowError }) }))
 
 const DARK: Appearance = { theme: 'dark' }
-const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initials: 'TM', isAdmin: false, membership: false }
+const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initials: 'TM', adminArea: false, membership: false }
 
 function renderWith(appearance: Appearance, ui: React.ReactNode) {
   return render(<AppearanceProvider value={appearance}>{ui}</AppearanceProvider>)

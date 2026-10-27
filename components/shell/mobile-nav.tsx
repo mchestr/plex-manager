@@ -16,7 +16,7 @@ const linkClasses =
   "flex h-11 items-center rounded-md px-3 text-body font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
 
 /** Below `md`: a menu button that opens a right Sheet with the top bar's links (ui-design-system 6.1). */
-export function MobileNav({ items, isAdmin }: { items: MemberNavItem[]; isAdmin: boolean }) {
+export function MobileNav({ items, adminArea }: { items: MemberNavItem[]; adminArea: boolean }) {
   const pathname = usePathname() ?? "/"
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
@@ -51,7 +51,7 @@ export function MobileNav({ items, isAdmin }: { items: MemberNavItem[]; isAdmin:
                 </li>
               )
             })}
-            {isAdmin && (
+            {adminArea && (
               <li>
                 <Link href="/admin" onClick={close} className={linkClasses} data-testid="member-menu-admin">
                   Admin

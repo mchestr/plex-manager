@@ -74,6 +74,17 @@ describe('getAppShellData', () => {
   })
 })
 
+describe('getAppShellData admin area', () => {
+  it.each([
+    ['an admin', { isAdmin: true }, true],
+    ['the Support role', { isAdmin: false, role: 'support' }, true],
+    ['a member', { isAdmin: false, role: null }, false],
+  ] as const)('links %s to the admin area: %p', async (_label, subject, adminArea) => {
+    setup()
+    expect((await getAppShellData({ id: 'u1', ...subject })).user.adminArea).toBe(adminArea)
+  })
+})
+
 describe('getAppShellData membership', () => {
   it('adds Membership to the nav and the account menu when Stripe is on', async () => {
     setup()
