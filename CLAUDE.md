@@ -890,6 +890,11 @@ The project includes custom slash commands in `.claude/commands/`:
 - `/sync-main` - Switch to `main` and pull
 - `/update-pr` - Rebase a pull request on `main` and address its comments
 
+### Opening Pull Requests
+
+- Security-related fixes (auth, permissions, secrets, encryption, injection, CSP, dependency advisories, anything that would carry `freeze:security`): push the branch, then stop and wait for Mike to ask before opening the PR.
+- Everything else: open the PR as soon as the work is done and checks pass locally; no need to ask.
+
 ### Agent Patterns
 
 **DO NOT create service-specific agents** (e.g., Sonarr-agent, Radarr-agent). Instead:
