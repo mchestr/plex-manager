@@ -5,8 +5,8 @@ import { formatIsoWithOffset, type FormatSettings } from "@/lib/utils/format"
 /**
  * The zone and locale a tool formats in when its caller passes none: UTC, so
  * a timestamp still carries an explicit offset. The assistant always passes
- * the turn's own (the member's zone in Discord, the server zone in the admin
- * chat; P11.17).
+ * the turn's own (the member's zone in Discord, the caller's browser zone in
+ * the admin chat; P11.17).
  */
 export const UTC_FORMAT: FormatSettings = { timeZone: "UTC", locale: "en-US" }
 

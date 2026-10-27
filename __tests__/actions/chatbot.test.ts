@@ -1,14 +1,15 @@
 /**
  * Tests for actions/chatbot: sources tracking, the registry loop, the bounded
  * history and conversation ownership (P4.15, SEC-42), usage rows that
- * store only each call's own content (SEC-45), and the message limit and
- * daily spend caps (P4.20, SEC-23).
+ * store only each call's own content (SEC-45), the message limit and
+ * daily spend caps (P4.20, SEC-23), and the caller's browser zone (P11.17).
  */
 
 import { chatWithAdminBot } from "@/actions/chatbot"
 import { chatWithTools, type ChatToolCall, type ChatWithToolsResult } from "@/lib/llm/chat"
 import type { LLMProvider, Sonarr, PlexServer, ChatConversation } from "@/lib/generated/prisma/client"
 import { getServerSession, type Session } from "next-auth"
+import { getFormatSettings } from "@/lib/settings/app-settings"
 import { mockReset } from "jest-mock-extended"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { buildConfig } from "@/__tests__/helpers/factories"
@@ -16,6 +17,7 @@ import { buildConfig } from "@/__tests__/helpers/factories"
 jest.mock("@/lib/llm/chat", () => ({ chatWithTools: jest.fn() }))
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
+jest.mock("@/lib/settings/app-settings", () => ({ getFormatSettings: jest.fn() }))
 
 jest.mock("@/lib/connections/plex", () => ({
   getPlexServerIdentity: jest.fn(),
@@ -110,6 +112,8 @@ beforeEach(() => {
   jest.clearAllMocks()
 
   mockGetServerSession.mockResolvedValue(adminSession)
+  // The server zone and the app locale
+  jest.mocked(getFormatSettings).mockResolvedValue({ timeZone: "America/Chicago", locale: "en-US" })
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: false }))
   prismaMock.lLMProvider.findFirst.mockResolvedValue({ id: "provider-1", provider: "openai" } as LLMProvider)
   prismaMock.chatConversation.create.mockResolvedValue({ id: "conversation-1", userId: "user-1" } as ChatConversation)
@@ -241,6 +245,35 @@ describe("on the provider registry", () => {
       code: "UPSTREAM_UNAVAILABLE",
       error: "Failed to communicate with AI provider",
     })
+  })
+})
+
+describe("the caller's browser zone (P11.17)", () => {
+  const messages = [userMessage("What played last night?")]
+
+  beforeEach(() => mockChatWithTools.mockResolvedValue(turn({ content: "Nothing" })))
+
+  it("states the browser's zone, in its canonical name, in the system prompt", async () => {
+    await reply({ messages, timeZone: "Europe/Berlin" })
+    expect(mockChatWithTools.mock.calls[0][0].system).toContain("User time zone: Europe/Berlin")
+
+    await reply({ messages, timeZone: "US/Pacific" })
+    expect(mockChatWithTools.mock.calls[1][0].system).toContain("User time zone: America/Los_Angeles")
+  })
+
+  it("falls back to the server zone for no zone or one the app does not know", async () => {
+    await reply({ messages })
+    await reply({ messages, timeZone: "Mars/Base" })
+    await reply({ messages, timeZone: "+05:00" })
+
+    for (const [call] of mockChatWithTools.mock.calls) {
+      expect(call.system).toContain("User time zone: America/Chicago")
+    }
+  })
+
+  it("refuses a zone longer than 64 characters", async () => {
+    expect(await chatWithAdminBot({ messages, timeZone: "x".repeat(65) })).toMatchObject({ success: false, code: "VALIDATION" })
+    expect(mockChatWithTools).not.toHaveBeenCalled()
   })
 })
 

@@ -18,6 +18,10 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Assistant times in your own zone:** the admin assistant now gives times in your browser's time zone, both in its answers and under each message, instead of the server zone (UTC when no server zone is set). A browser zone the app does not know falls back to the server zone.
+
 ## [0.5.0] - 2026-10-27
 
 ### Added

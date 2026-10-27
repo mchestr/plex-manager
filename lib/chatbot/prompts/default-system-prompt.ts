@@ -4,9 +4,9 @@ import { type ChatTool } from "@/lib/llm/chat"
 import { formatDateTime, formatIsoWithOffset, type FormatSettings } from "@/lib/utils/format"
 
 /**
- * The admin assistant's prompt. `settings` is the server zone and the app
- * locale: the prompt states the local time with its offset, and tool results
- * carry times in the same zone (P11.17).
+ * The admin assistant's prompt. `settings` is the caller's browser zone (else
+ * the server zone) and the app locale: the prompt states the local time with
+ * its offset, and tool results carry times in the same zone (P11.17).
  */
 export function generateSystemPrompt(toolset: ChatTool[], settings: FormatSettings, now: Date): string {
   const { timeZone } = settings
@@ -201,9 +201,9 @@ For each user question, follow this pattern:
 
 === CURRENT CONTEXT ===
 
-Server time zone: ${timeZone}
+User time zone: ${timeZone}
 Local time now: ${formatIsoWithOffset(now, timeZone)} (${formatDateTime(now, settings, { zoneLabel: true })})
-Timestamps in tool results are in this zone, with their offset.
+Timestamps in tool results are in this zone, with their offset; give times in it, and "today" and "yesterday" mean the user's.
 
 Remember: You are a tool-driven assistant. Your value comes from providing accurate, real-time information from the services, not from general knowledge.`
 }

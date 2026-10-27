@@ -44,8 +44,8 @@ interface RunChatbotOptions {
   permissions?: ReadonlySet<Permission>
   /**
    * The turn's zone and locale (P11.17): the member's zone in Discord, the
-   * server zone in the admin chat. The prompt states the local time in it and
-   * tool results carry their times in it.
+   * caller's browser zone in the admin chat. The prompt states the local time
+   * in it and tool results carry their times in it.
    */
   format: FormatSettings
 }
