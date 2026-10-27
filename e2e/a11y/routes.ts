@@ -129,6 +129,17 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },
   { path: '/admin/queues', as: 'admin', ready: 'queue-status' },
   { path: '/admin/settings', as: 'admin', ready: 'settings-plex-section' },
+  // A section in edit mode: its form, Save and Cancel, beside the read-only sections
+  {
+    path: '/admin/settings',
+    as: 'admin',
+    ready: 'settings-plex-section',
+    state: 'plex editing',
+    setup: async (page) => {
+      await page.getByTestId('settings-plex-edit').click();
+      await expect(page.getByTestId('settings-plex-form')).toBeVisible();
+    },
+  },
   // The public share route records a visit; a worker restart's re-seed drops it.
   { path: '/admin/shares', as: 'admin', ready: 'admin-shares-header', reset: clearA11yShareVisits },
   { path: '/admin/llm-usage', as: 'admin', ready: 'admin-llm-usage-header' },

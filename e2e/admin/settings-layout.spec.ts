@@ -3,8 +3,9 @@ import { createE2EPrismaClient } from '../helpers/prisma';
 
 /**
  * P10.19: the settings layout. The section nav reaches every section, Test
- * all connections re-checks them ("Checked just now"), and at phone width
- * the page does not scroll sideways and Jump to reaches a section.
+ * all connections re-checks them ("Checked just now"), a section being edited
+ * marks itself in the nav, and at phone width the page does not scroll
+ * sideways and Jump to reaches a section.
  */
 
 const SECTIONS = ['plex', 'tautulli', 'overseerr', 'ai', 'discord', 'stripe', 'watchlist', 'rewind', 'other', 'system'];
@@ -33,10 +34,12 @@ test.describe('Settings layout', () => {
     await expect(page.getByTestId('settings-rewind-section')).toBeVisible();
     await expect(page.getByTestId('settings-plex-section')).toBeHidden();
 
+    // "Change the server time zone" opens the System section on its time zone field
     await page.getByTestId('rewind-settings-time-zone-link').click();
     await expect(page.getByTestId('settings-system-section')).toBeVisible();
     await expect(page).toHaveURL(/#server-time-zone$/);
     await expect(page.locator('#server-time-zone')).toBeInViewport();
+    await expect(page.getByTestId('server-time-zone-select')).toBeFocused();
   });
 
   test('every nav glyph is labelled, with the legend below', async ({ adminPage: page }) => {
@@ -83,17 +86,24 @@ test.describe('Settings layout', () => {
     });
   });
 
-  test('a dirty section shows its pip in the nav', async ({ adminPage: page }) => {
+  test('a dirty section shows its pip in the nav, and Cancel asks before discarding', async ({ adminPage: page }) => {
     await page.goto('/admin/settings');
 
+    // The seed has no Overseerr, so the section reads "Not set up." with Set up
+    await expect(page.getByTestId('settings-overseerr-empty')).toHaveText('Not set up.');
+    await page.getByTestId('settings-overseerr-edit').click();
     await page.getByTestId('settings-overseerr-name').fill('Requests (edited)');
 
     await expect(page.getByTestId('settings-overseerr-unsaved')).toBeVisible();
     await expect(page.getByTestId('settings-nav-overseerr').getByRole('img', { name: 'Unsaved changes' })).toBeVisible();
-    await expect(page.getByTestId('settings-overseerr-save')).toBeEnabled();
 
-    await page.getByTestId('settings-overseerr-discard').click();
-    await expect(page.getByTestId('settings-overseerr-save')).toBeDisabled();
+    await page.getByTestId('settings-overseerr-cancel').click();
+    await expect(page.getByTestId('settings-overseerr-discard-dialog')).toContainText('Discard changes to Overseerr?');
+    await page.getByTestId('settings-overseerr-discard-dialog-confirm').click();
+
+    await expect(page.getByTestId('settings-overseerr-empty')).toBeVisible();
+    await expect(page.getByTestId('settings-overseerr-edit')).toBeFocused();
+    await expect(page.getByTestId('settings-nav-overseerr').getByRole('img', { name: 'Unsaved changes' })).toHaveCount(0);
   });
 
   test.describe('at phone width', () => {

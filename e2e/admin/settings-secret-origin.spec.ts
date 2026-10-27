@@ -3,7 +3,8 @@ import { createE2EPrismaClient } from '../helpers/prisma';
 
 /**
  * P10.20 (SEC-31, design 6.4): a changed address never reuses a stored key.
- * Changing Overseerr's host empties the key field and makes it required,
+ * The saved section shows the key only by its last four. In edit mode,
+ * changing Overseerr's host empties the key field and makes it required,
  * Test and Save stay disabled until a key is typed, and a submit that gets
  * past the browser is refused by the server with SECRET_REQUIRED on the field.
  *
@@ -33,14 +34,25 @@ test.describe('Settings: a stored key stays with its address', () => {
     const testButton = page.getByTestId('settings-overseerr-test');
     const save = page.getByTestId('settings-overseerr-save');
 
-    // Save an Overseerr with a key, so there is one to protect
+    // Set up an Overseerr with a key, so there is one to protect
+    await page.getByTestId('settings-overseerr-edit').click();
     await page.getByTestId('settings-overseerr-name').fill('Requests');
     await page.getByTestId('settings-overseerr-url').fill(SAVED_URL);
     await key.fill('e2e-overseerr-key-a91c');
     await save.click();
-    await expect(page.getByTestId('settings-overseerr-secret-saved')).toBeVisible();
-    await expect(key).toHaveAttribute('placeholder', /a91c$/);
+
+    // The save returns the section to its summary: the key shows only by its last four
+    await expect(page.getByTestId('settings-overseerr-summary-secret')).toContainText('Saved, ends in a91c');
+    await expect(page.getByTestId('settings-overseerr-summary')).not.toContainText('e2e-overseerr-key');
+    await expect(page.getByTestId('settings-overseerr-summary-url')).toHaveText(SAVED_URL);
     await expect(page.getByTestId('settings-overseerr-last-saved')).toContainText('Last saved just now');
+    await expect(page.getByTestId('settings-overseerr-edit')).toBeFocused();
+
+    // Editing shows the stored key as saved, never as a value
+    await page.getByTestId('settings-overseerr-edit').click();
+    await expect(page.getByTestId('settings-overseerr-secret-saved')).toBeVisible();
+    await expect(key).toHaveValue('');
+    await expect(key).toHaveAttribute('placeholder', /a91c$/);
 
     // A new host: the key field is empty and required, Test and Save are disabled
     await page.getByTestId('settings-overseerr-url').fill(NEW_URL);
@@ -65,7 +77,9 @@ test.describe('Settings: a stored key stays with its address', () => {
       (button as HTMLButtonElement).form?.requestSubmit(button as HTMLButtonElement);
     });
 
+    // The refused save keeps the section open, with the error on the field
     await expect(section.getByTestId('overseerr-secret-error')).toHaveText('Enter the API key again to use it with the new address.');
     await expect(key).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByTestId('settings-overseerr-form')).toBeVisible();
   });
 });
