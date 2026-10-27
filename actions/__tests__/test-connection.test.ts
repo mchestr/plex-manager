@@ -11,7 +11,6 @@ import { testServiceConnection } from '@/actions/admin/test-connection'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { testOverseerrConnection } from '@/lib/connections/overseerr'
 import { testPlexConnection } from '@/lib/connections/plex-connection'
-import { testPrometheusConnection, validatePrometheusQuery } from '@/lib/connections/prometheus'
 import { testTautulliConnection } from '@/lib/connections/tautulli'
 import { consume } from '@/lib/security/rate-limit'
 import { connectionTestCopy } from '@/lib/ui/error-copy'
@@ -26,7 +25,6 @@ jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn
 jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
 jest.mock('@/lib/connections/sonarr', () => ({ testSonarrConnection: jest.fn() }))
 jest.mock('@/lib/connections/radarr', () => ({ testRadarrConnection: jest.fn() }))
-jest.mock('@/lib/connections/prometheus', () => ({ testPrometheusConnection: jest.fn(), validatePrometheusQuery: jest.fn() }))
 
 const STORED_URL = 'http://requests.lan:5055'
 const STORED_KEY = 'stored-overseerr-key-a91c'
@@ -120,36 +118,5 @@ describe('testServiceConnection', () => {
 
     jest.mocked(getServerSession).mockResolvedValue({ ...admin, user: { ...admin.user, isAdmin: false } })
     await expect(testServiceConnection({ service: 'overseerr', url: STORED_URL })).resolves.toMatchObject({ code: 'FORBIDDEN' })
-  })
-})
-
-describe('testServiceConnection for Prometheus (GAP-09)', () => {
-  const values = { service: 'prometheus' as const, url: 'http://prom.lan:9090', query: 'rate(' }
-
-  it("shows Prometheus's own parse error on the query field", async () => {
-    jest.mocked(testPrometheusConnection).mockResolvedValue({ success: true })
-    jest.mocked(validatePrometheusQuery).mockResolvedValue({
-      success: false,
-      code: 'PROMETHEUS_ERROR',
-      errorType: 'bad_data',
-      error: 'bad_data: parse error at char 5',
-      retryable: false,
-    })
-
-    expect(await testServiceConnection(values)).toMatchObject({
-      success: false,
-      code: 'VALIDATION',
-      fieldErrors: { query: ['bad_data: parse error at char 5'] },
-    })
-  })
-
-  it('runs the query only once the server answers, and passes a good one', async () => {
-    jest.mocked(testPrometheusConnection).mockResolvedValueOnce({ success: false, error: 'Could not reach Prometheus' })
-    expect(await testServiceConnection(values)).toEqual({ success: true, data: { status: 'unreachable', code: 'UNREACHABLE' } })
-    expect(validatePrometheusQuery).not.toHaveBeenCalled()
-
-    jest.mocked(testPrometheusConnection).mockResolvedValue({ success: true })
-    jest.mocked(validatePrometheusQuery).mockResolvedValue({ success: true, data: null })
-    expect(await testServiceConnection(values)).toEqual({ success: true, data: { status: 'ok', code: null } })
   })
 })

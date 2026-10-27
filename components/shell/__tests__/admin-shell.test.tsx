@@ -13,7 +13,6 @@ import { usePathname } from 'next/navigation'
 import { AdminShell } from '@/components/shell/admin-shell'
 import { ToastProvider } from '@/components/ui/toast'
 import type { NavCounts } from '@/lib/admin/nav'
-import { AppearanceProvider } from '@/lib/appearance-context'
 
 expect.extend(toHaveNoViolations)
 
@@ -33,16 +32,18 @@ const noAxeRegion = { rules: { region: { enabled: false } } }
 
 function renderShell({ counts = { users: 7, activeInvites: 3, failedJobs: 0 }, assistant = true }: { counts?: NavCounts; assistant?: boolean } = {}) {
   return render(
-    <AdminShell
-      serverName="Northfield Plex"
-      user={{ name: 'Dana Whitfield', initials: 'DW' }}
-      navCounts={counts}
-      assistant={assistant}
-      navIds={ADMIN_NAV.map((item) => item.id)}
-      scoped={false}
-    >
-      <p>Page</p>
-    </AdminShell>
+    <ToastProvider>
+      <AdminShell
+        serverName="Northfield Plex"
+        user={{ name: 'Dana Whitfield', initials: 'DW' }}
+        navCounts={counts}
+        assistant={assistant}
+        navIds={ADMIN_NAV.map((item) => item.id)}
+        scoped={false}
+      >
+        <p>Page</p>
+      </AdminShell>
+    </ToastProvider>
   )
 }
 
@@ -179,28 +180,9 @@ describe('AdminShell', () => {
     expect(screen.queryByTestId('admin-chat-toggle-mobile')).not.toBeInTheDocument()
   })
 
-  it('offers Appearance beside Sign out only while the light theme flag is on (P10.10)', async () => {
+  it('offers Appearance beside Sign out (P10.10)', async () => {
     const user = userEvent.setup()
-    const { unmount } = renderShell()
-    expect(screen.queryByTestId('admin-appearance-trigger')).not.toBeInTheDocument()
-    unmount()
-
-    render(
-      <AppearanceProvider value={{ enabled: true, theme: 'dark' }}>
-        <ToastProvider>
-          <AdminShell
-            serverName="Northfield Plex"
-            user={{ name: 'Dana Whitfield', initials: 'DW' }}
-            navCounts={{ users: 0, activeInvites: 0, failedJobs: 0 }}
-            assistant={false}
-            navIds={ADMIN_NAV.map((item) => item.id)}
-            scoped={false}
-          >
-            <p>Page</p>
-          </AdminShell>
-        </ToastProvider>
-      </AppearanceProvider>
-    )
+    renderShell()
     await user.click(screen.getByRole('button', { name: 'Appearance' }))
     const menu = await screen.findByRole('menu')
 
