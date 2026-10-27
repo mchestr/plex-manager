@@ -135,7 +135,7 @@
     "zlib-sync": "^0.1.10"
   },
   "overrides": {
-    "immer": "11.1.21",
+    "immer": "11.2.9",
     "eslint-plugin-import": {
       "eslint": "$eslint"
     },
