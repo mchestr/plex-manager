@@ -65,11 +65,11 @@ describe('AppGuardLayout', () => {
 
   it('renders the AppShell with the notice for a signed-in member', async () => {
     mockGate.mockResolvedValue(undefined)
-    mockSession.mockResolvedValue({ user: { id: 'u1', isAdmin: true } })
+    mockSession.mockResolvedValue({ user: { id: 'u1', isAdmin: false, role: 'support' } })
     mockNotice.mockResolvedValue({ kind: 'past-due' })
     await renderLayout()
 
-    expect(mockShell).toHaveBeenCalledWith({ id: 'u1', isAdmin: true })
+    expect(mockShell).toHaveBeenCalledWith({ id: 'u1', isAdmin: false, role: 'support' })
     expect(screen.getByTestId('app-shell')).toContainElement(screen.getByTestId('page'))
     expect(screen.getByTestId('app-notice')).toHaveTextContent('past-due')
   })
