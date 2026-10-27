@@ -43,7 +43,7 @@ A Next.js-based Plex management platform that combines server management tools, 
 ```
 app/                     # Next.js App Router (pages, layouts, routes)
 ├── (app)/              # Authenticated member layout group
-│   ├── account/        # Account page and /account/export (the member's data)
+│   ├── account/        # Account page and Your data (single-item deletes)
 │   ├── announcements/  # In-app announcements
 │   ├── discord/        # Discord account linking
 │   ├── help/           # Help and support
@@ -284,7 +284,7 @@ Located in `components/ui/`:
 - **Actions**: `Button` (variants `primary`, `secondary`, `outline`, `ghost`, `destructive`, `destructive-solid`, `link`; `loading` and `loadingLabel`), `SubmitButton`, `Toggle`, `SegmentedControl`
 - **Forms**: `Input`, `Textarea`, `SecretInput`, `Select` and its parts, `Checkbox`, `RadioGroup`, `Switch`, `Slider`, `Field`, `FormField`, `Label`, `DateRangeFilter`, `FilterBar`
 - **Overlays**: `Dialog`, `AlertDialog`, `ConfirmDialog` (with `useActionDialog`), `Sheet`, `Popover`, `DropdownMenu`, `Tooltip`, `Command`
-- **Display**: `Card` (compose `CardHeader`, `CardContent`, `CardFooter`), `Badge`, `StatusBadge`, `StatTile`, `DataTable`, `ChartCard`, `Tabs`, `Stepper`, `Poster`, `Time`, `MarkdownBody`, `Icon`, `PageHeader`, `SettingsSection`, `Wordmark`
+- **Display**: `Card` (compose `CardHeader`, `CardContent`, `CardFooter`), `Badge`, `StatusBadge`, `StatTile`, `DataTable`, `ChartCard`, `Tabs`, `Stepper`, `Poster`, `Time`, `MarkdownBody`, `Icon`, `PageHeader`, `SettingsSection` (read-only first, with Edit; its view is a `SettingsSummary` from `settings-summary.tsx`), `Wordmark`
 - **Feedback**: `Alert`, `useToast`, `Spinner`, `Skeleton`, `EmptyState`, `ErrorState`, `StatusScreen`, `LiveStatus`
 
 ESLint enforces this: a raw `<button>`, `<input>`, `<select>`, `<textarea>` or inline `<svg>` outside `components/ui/**` is an error (`no-restricted-syntax`, selectors in `eslint/restricted-syntax.mjs`). The allowlist is Rewind art (`components/rewind/**`), the dev sheet (`app/dev/**`), the `next/og` image routes and `app/api/**`. The old adapters (`StyledInput`, `StyledDropdown`, `ModalShell`, `ConfirmModal`, `LoadingSpinner` and the rest) are deleted, and importing one is an error.
@@ -889,6 +889,11 @@ The project includes custom slash commands in `.claude/commands/`:
 - `/label-issues` - Apply labels to GitHub issues
 - `/sync-main` - Switch to `main` and pull
 - `/update-pr` - Rebase a pull request on `main` and address its comments
+
+### Opening Pull Requests
+
+- Security-related fixes (auth, permissions, secrets, encryption, injection, CSP, dependency advisories, anything that would carry `freeze:security`): push the branch, then stop and wait for Mike to ask before opening the PR.
+- Everything else: open the PR as soon as the work is done and checks pass locally; no need to ask.
 
 ### Agent Patterns
 

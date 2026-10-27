@@ -3,6 +3,7 @@ import "server-only"
 import { serverName } from "@/lib/brand"
 import { hasMembershipPage } from "@/lib/member/membership-page"
 import { memberNav, type MemberNavItem } from "@/lib/member/nav"
+import { canEnterAdminArea, type PermissionSubject } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { requestRewindCardModel } from "@/lib/rewind/home-card"
 import { rewindNavYear } from "@/lib/rewind/home-card-state"
@@ -12,7 +13,8 @@ export interface ShellUser {
   name: string
   email: string | null
   initials: string
-  isAdmin: boolean
+  /** Whether the shell links to `/admin`: admins, and roles such as Support that may enter it. */
+  adminArea: boolean
   /** The linked Discord handle, `null` when unlinked, and absent when Discord is off. */
   discordHandle?: string | null
   /** Whether `/membership` exists for them, for the account menu. */
@@ -23,6 +25,8 @@ export interface AppShellData {
   serverName: string
   user: ShellUser
   nav: MemberNavItem[]
+  /** No `User.timezone` yet: the layout saves the browser's zone. */
+  timeZoneUnset: boolean
 }
 
 /** Up to two initials from the name's first words; "?" for an empty name. */
@@ -57,11 +61,11 @@ export async function discordHandleFor(userId: string): Promise<string | null | 
   return integration?.isEnabled && integration.clientId && integration.clientSecret ? null : undefined
 }
 
-/** Everything `AppShell` needs for the signed-in member, read once per layout render. */
-export async function getAppShellData(session: { id: string; isAdmin: boolean }): Promise<AppShellData> {
+/** Everything the member layout needs for the signed-in member, read once per layout render. */
+export async function getAppShellData(session: { id: string } & PermissionSubject): Promise<AppShellData> {
   const [name, user, rewindYear, discordHandle, membership] = await Promise.all([
     serverName(),
-    prisma.user.findUnique({ where: { id: session.id }, select: { name: true, email: true } }),
+    prisma.user.findUnique({ where: { id: session.id }, select: { name: true, email: true, timezone: true } }),
     rewindYearFor(session.id, session.isAdmin),
     discordHandleFor(session.id),
     hasMembershipPage(session.id),
@@ -74,10 +78,11 @@ export async function getAppShellData(session: { id: string; isAdmin: boolean })
       name: displayName,
       email: user?.email ?? null,
       initials: initialsFor(displayName),
-      isAdmin: session.isAdmin,
+      adminArea: canEnterAdminArea(session),
       membership,
       ...(discordHandle === undefined ? {} : { discordHandle }),
     },
     nav: memberNav({ rewindYear, membership }),
+    timeZoneUnset: user !== null && user.timezone === null,
   }
 }

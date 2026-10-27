@@ -1,7 +1,7 @@
 /**
  * The member layout (P6.3): the guards run first, so a gated member goes to
  * `/subscribe`; signed out the page renders bare; signed in it sits in the
- * AppShell with the notice.
+ * AppShell with the notice, and saves the browser's zone while none is saved.
  */
 
 import { render, screen } from '@testing-library/react'
@@ -21,6 +21,9 @@ jest.mock('@/lib/guards', () => ({
 }))
 jest.mock('@/lib/member/notice', () => ({ getMemberNotice: jest.fn() }))
 jest.mock('@/lib/member/shell', () => ({ getAppShellData: jest.fn() }))
+jest.mock('@/components/account/browser-time-zone', () => ({
+  BrowserTimeZone: () => <div data-testid="browser-time-zone" />,
+}))
 jest.mock('@/components/shell/app-shell', () => ({
   AppShell: ({ children, notice }: { children: React.ReactNode; notice?: { kind: string } | null }) => (
     <div data-testid="app-shell">
@@ -37,7 +40,7 @@ const mockShell = getAppShellData as jest.Mock
 
 beforeEach(() => {
   jest.clearAllMocks()
-  mockShell.mockResolvedValue({ serverName: 'Northfield Plex', user: {}, nav: [] })
+  mockShell.mockResolvedValue({ serverName: 'Northfield Plex', user: {}, nav: [], timeZoneUnset: false })
   mockNotice.mockResolvedValue(null)
 })
 
@@ -65,12 +68,22 @@ describe('AppGuardLayout', () => {
 
   it('renders the AppShell with the notice for a signed-in member', async () => {
     mockGate.mockResolvedValue(undefined)
-    mockSession.mockResolvedValue({ user: { id: 'u1', isAdmin: true } })
+    mockSession.mockResolvedValue({ user: { id: 'u1', isAdmin: false, role: 'support' } })
     mockNotice.mockResolvedValue({ kind: 'past-due' })
     await renderLayout()
 
-    expect(mockShell).toHaveBeenCalledWith({ id: 'u1', isAdmin: true })
+    expect(mockShell).toHaveBeenCalledWith({ id: 'u1', isAdmin: false, role: 'support' })
     expect(screen.getByTestId('app-shell')).toContainElement(screen.getByTestId('page'))
     expect(screen.getByTestId('app-notice')).toHaveTextContent('past-due')
+    expect(screen.queryByTestId('browser-time-zone')).not.toBeInTheDocument()
+  })
+
+  it('saves the browser zone for a member with none saved', async () => {
+    mockGate.mockResolvedValue(undefined)
+    mockSession.mockResolvedValue({ user: { id: 'u1', isAdmin: false } })
+    mockShell.mockResolvedValue({ serverName: 'Northfield Plex', user: {}, nav: [], timeZoneUnset: true })
+    await renderLayout()
+
+    expect(screen.getByTestId('app-shell')).toContainElement(screen.getByTestId('browser-time-zone'))
   })
 })

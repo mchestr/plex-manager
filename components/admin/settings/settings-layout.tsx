@@ -3,7 +3,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import { SettingsJumpTo, SettingsNav, type SettingsGroupId, type SettingsNavItem } from "@/components/admin/settings/settings-nav"
-import { SettingsDirtyProvider } from "@/components/ui/settings-section"
+import { SettingsEditProvider } from "@/components/ui/settings-edit-context"
 
 /** The id of the topmost section in view, so the nav can mark it `aria-current`. */
 function useActiveSection(ids: string[]): [string | null, (id: string) => void] {
@@ -64,7 +64,8 @@ interface SettingsLayoutProps {
  * beside a 760px column showing one `SettingsGroup`, and below `md` a sticky
  * "Jump to" Select. A hash, a nav link or any in-page `#anchor` link (such as
  * `#server-time-zone`) reveals the group that holds its target.
- * Sections report their dirty state here for the nav's pip.
+ * Sections report their dirty state here for the nav's pip, and while any
+ * section has unsaved changes the browser asks before the page is left.
  */
 export function SettingsLayout({ items, children }: SettingsLayoutProps) {
   const [active, setActive] = useActiveSection(items.map((item) => item.id))
@@ -143,6 +144,15 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
     })
   }, [])
 
+  // A backstop for unsaved changes: the browser asks before the tab closes or reloads (MDN, beforeunload)
+  const anyDirty = dirty.size > 0
+  useEffect(() => {
+    if (!anyDirty) return
+    const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault()
+    window.addEventListener("beforeunload", onBeforeUnload)
+    return () => window.removeEventListener("beforeunload", onBeforeUnload)
+  }, [anyDirty])
+
   return (
     <div className="flex flex-col gap-6 md:grid md:grid-cols-[200px_minmax(0,760px)] md:items-start md:gap-8" data-testid="settings-layout">
       <div className="sticky top-14 z-(--z-sticky) -mx-4 border-b bg-background px-4 py-2 sm:-mx-6 sm:px-6 md:hidden">
@@ -151,13 +161,13 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
       <div className="hidden md:sticky md:top-6 md:block">
         <SettingsNav items={items} active={active} activeGroup={group} dirty={dirty} onSelect={select} />
       </div>
-      <SettingsDirtyProvider onDirtyChange={onDirtyChange}>
+      <SettingsEditProvider onDirtyChange={onDirtyChange}>
         <ActiveGroupContext.Provider value={group}>
           <div ref={bodyRef} className="min-w-0">
             {children}
           </div>
         </ActiveGroupContext.Provider>
-      </SettingsDirtyProvider>
+      </SettingsEditProvider>
     </div>
   )
 }

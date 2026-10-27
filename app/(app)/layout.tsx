@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 
+import { BrowserTimeZone } from "@/components/account/browser-time-zone"
 import { AppShell } from "@/components/shell/app-shell"
 import {
   ensureOnboardingComplete,
@@ -14,6 +15,7 @@ import { getSession } from "@/lib/data/session"
  * The member layout: the setup, onboarding and access guards (a gated member
  * goes to `/subscribe`), then the AppShell with its one notice. Signed out it
  * renders the page bare, because the signed-out `/` draws its own PublicShell.
+ * A member with no time zone saved gets their browser's.
  */
 export default async function AppGuardLayout({
   children,
@@ -29,13 +31,14 @@ export default async function AppGuardLayout({
     return children
   }
 
-  const [shell, notice] = await Promise.all([
-    getAppShellData({ id: session.user.id, isAdmin: session.user.isAdmin }),
+  const [{ timeZoneUnset, ...shell }, notice] = await Promise.all([
+    getAppShellData({ id: session.user.id, isAdmin: session.user.isAdmin, role: session.user.role }),
     getMemberNotice(session.user.id),
   ])
 
   return (
     <AppShell {...shell} notice={notice}>
+      {timeZoneUnset && <BrowserTimeZone />}
       {children}
     </AppShell>
   )

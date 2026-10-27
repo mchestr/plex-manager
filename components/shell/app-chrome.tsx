@@ -20,7 +20,7 @@ export interface AppChromeProps {
 
 /**
  * The member shell's top bar and notice (ui-design-system 6.1, UI-30): the
- * Wordmark, the nav, an Admin link for admins and the account menu; below
+ * Wordmark, the nav, an Admin link for admins and Support and the account menu; below
  * `md` a 56px bar whose menu button opens a Sheet with the same links.
  * `ShellChrome` loads it only off the immersive routes.
  */
@@ -37,7 +37,7 @@ export function AppChrome({ serverName, user, nav, notice }: AppChromeProps) {
           </Link>
           <MemberNav items={nav} />
           <div className="ml-auto flex shrink-0 items-center gap-1">
-            {user.isAdmin && (
+            {user.adminArea && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -50,7 +50,7 @@ export function AppChrome({ serverName, user, nav, notice }: AppChromeProps) {
               </Button>
             )}
             <AccountMenu user={user} />
-            <MobileNav items={nav} isAdmin={user.isAdmin} />
+            <MobileNav items={nav} adminArea={user.adminArea} />
           </div>
         </div>
       </header>

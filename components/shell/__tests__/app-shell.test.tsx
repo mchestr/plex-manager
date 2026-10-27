@@ -37,7 +37,7 @@ jest.mock('next/dynamic', () => () => require('@/components/shell/app-chrome').A
 
 const NOTICE: MemberNotice = { kind: 'past-due' }
 
-const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initials: 'TM', isAdmin: false, membership: false }
+const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initials: 'TM', adminArea: false, membership: false }
 
 function renderShell(user: ShellUser = member, notice?: MemberNotice) {
   return render(
@@ -131,7 +131,7 @@ describe('AppShell', () => {
 
   it('shows the linked handle and Admin for a linked admin', async () => {
     const user = userEvent.setup()
-    renderShell({ ...member, isAdmin: true, discordHandle: 'theo.marsh' })
+    renderShell({ ...member, adminArea: true, discordHandle: 'theo.marsh' })
 
     expect(screen.getByTestId('app-admin-link')).toHaveAttribute('href', '/admin')
     await user.click(screen.getByTestId('account-menu-trigger'))
@@ -174,7 +174,7 @@ describe('AppShell', () => {
   it('opens the mobile Sheet with the same links and closes it on navigation', async () => {
     const user = userEvent.setup()
     mockPathname.mockReturnValue('/discord/link')
-    renderShell({ ...member, isAdmin: true })
+    renderShell({ ...member, adminArea: true })
 
     await user.click(screen.getByTestId('member-menu-button'))
     const sheet = await screen.findByRole('dialog', { name: 'Menu' })

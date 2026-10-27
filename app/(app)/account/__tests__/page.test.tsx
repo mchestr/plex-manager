@@ -55,7 +55,6 @@ beforeEach(() => {
   jest.mocked(getYourData).mockResolvedValue({
     marks: { rows: [], page: 1, total: 0 },
     watchlist: { rows: [], total: 0 },
-    conversations: { rows: [], total: 0 },
   })
 })
 

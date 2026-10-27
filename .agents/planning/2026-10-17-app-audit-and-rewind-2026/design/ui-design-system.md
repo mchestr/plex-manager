@@ -1084,10 +1084,15 @@ interface SettingsSectionProps {
   description: string
   status: ConnectionStatus                    // from lib/ui/status.ts
   checkedAt?: Date | null                     // "Checked 4 minutes ago"
-  children: ReactNode                         // FormField grid
+  view?: ReactNode | ((edit) => ReactNode)    // view mode: the saved values as a SettingsSummary (<dl>)
+  notSetUp?: boolean                          // nothing stored: "Not set up." and a "Set up" button
+  live?: ReactNode                            // both modes, outside the form: instant switches, status rows
+  after?: ReactNode                           // both modes: last runs, notes, actions on saved values
+  children: ReactNode                         // edit mode: the FormField grid
   footerMeta?: ReactNode                      // "Last saved Oct 2 by Dana Whitfield"
-  onTest?: () => Promise<TestResult>          // "Test connection"; result renders inline (role="status")
-  form: { isDirty: boolean; isPending: boolean; onDiscard: () => void;   // Save disabled until dirty; "Unsaved changes" pip
+  onTest?: () => Promise<TestResult>          // "Test connection" in both modes; result renders inline (role="status")
+  form: { isDirty: boolean; isPending: boolean; onDiscard: () => void;   // "Unsaved changes" pip while editing
+          onSave: () => Promise<boolean>;     // true: back to the summary; false: stays open on the first invalid field
           blockedReason?: string }            // "Enter the API key to test or save": disables Test and Save
 }
 
@@ -1277,7 +1282,7 @@ export const STATUS = {
 | | available | Available | success, `check` | |
 | | declined | Declined | destructive | |
 
-Discord gets two separate status rows, "Linked roles" and "Support bot", each with its own Connection badge beside its switch and no section-level badge, so "Feature Enabled" next to "Bot Status: Disabled" can't recur (`UI-31`). `admin-settings.html` draws it that way.
+Discord gets two separate status rows, "Linked roles" and "Support bot", each with its own Connection badge (and, in edit mode, its checkbox) and no section-level badge, so "Feature Enabled" next to "Bot Status: Disabled" can't recur (`UI-31`). `admin-settings.html` draws it that way.
 
 **Settings section nav.** Each nav item carries a 12px tone glyph with `role="img"` and an `aria-label`, never a bare colour dot, so the four categories differ by shape for sighted users too (WCAG 1.4.1; success and destructive are only ΔE 2.9 apart under deuteranopia, 3.4). The legend under the nav uses the same glyphs.
 
@@ -1364,7 +1369,15 @@ System
 
 - **One page with an in-page section nav** (sticky 200px column, `max-w-[760px]` content): groups Media (Plex server, Tautulli, Overseerr), Features (AI provider, Discord, Stripe billing, Rewind) and More (Other integrations, System information). Each nav item carries a 12px tone glyph mapped from its section's status ([5.6](#56-status-vocabulary-libuistatusts)), plus the pip when the section is dirty; the legend under the nav uses the same glyphs (Working, Needs attention, Not working, Off or not set up or not checked, Unsaved changes).
 - **Page actions:** "Test all connections" (secondary) and the Assistant button.
-- **Every section is a `SettingsSection`:** status badge from `lib/ui/status.ts` with "Checked ..." under it; fields in a 2-column `FormField` grid; stored secrets as `SecretInput` with the "Saved" lock; field-level errors ("Nothing answered at this address") plus an inline `Alert` with the concrete failure and fix; a footer with meta on the left and Test connection plus Save changes on the right. **Save is disabled until the section is dirty**; a dirty section shows an "Unsaved changes" pip and Discard. Each section saves on its own. One editing pattern everywhere: always-open forms (no read-only/Edit toggle, `UI-31`).
+- **Every section is a `SettingsSection`:** status badge from `lib/ui/status.ts` with "Checked ..." under it; fields in a 2-column `FormField` grid; stored secrets as `SecretInput` with the "Saved" lock; field-level errors ("Nothing answered at this address") plus an inline `Alert` with the concrete failure and fix; a footer with meta on the left and Test connection plus Save changes on the right. Each section saves on its own.
+- **One editing pattern everywhere: read-only first, then Edit** (`UI-31` asked for one pattern; this replaces the always-open forms of P10.19, see `.agents/planning/2026-10-27-settings-view-first/research.md`).
+  - **View mode (the default).** The saved values as a summary list (`SettingsSummary`, a `<dl>` in the form's grid; GOV.UK "Summary list", SLDS view mode): text, never disabled or read-only inputs (Carbon "Read-only states"); "Not set" for gaps; secrets as "Saved, ends in 1234" with the lock, or "Can't be read with the current encryption key" with "Enter it again". The status badge, Test connection (on the saved values) and "Last saved" stay. A section with nothing stored says "Not set up." and its button reads "Set up".
+  - **Edit** (`Button` secondary, top right of the card header, named "Edit Plex server" with visually hidden text, WCAG 2.5.3) swaps the summary for the form in place and focuses the first field. Edit mode shows three cues (NN/g "Modes"): the card border turns `primary-indicator`, an "Editing" badge replaces Edit, and Cancel and Save show in the footer. The form is a landmark named by the section title.
+  - **Save** stays enabled while editing (Primer "Saving"); with nothing changed it just closes. A successful save returns to the summary with focus on Edit; a failed one stays open and focuses the first invalid field. Only `blockedReason` (`SEC-31`) disables Save and Test, and says why.
+  - **Cancel and Escape** close the form; with unsaved changes they ask first, "Discard changes to Plex server?", with Keep editing (Cloudscape "Unsaved changes"). A dirty section is always open, shows the pip in the nav, and the browser asks before the tab is closed (`beforeunload`, registered only while something is dirty).
+  - **One section at a time** (Primer "Saving"): Edit on another section closes a clean one; a section with unsaved changes stays open until it is saved or discarded, so nothing typed is lost without asking.
+  - **Switches.** A switch acts at once (NN/g "Toggle-switch guidelines"), so the three master switches that save immediately (AI features, Stripe Subscriptions, Allow Jellyfin sign-in) stay live outside any form in both modes, each with "Takes effect at once." Every other on/off setting reads "On" or "Off" in view mode and is a `Checkbox` in edit mode, saved with Save.
+  - **Lists** (Assistant sources, Other integrations) are the same pattern one level down: the rows are the view, and each row's Sheet is its edit mode, with Cancel, a Save that closes the Sheet, and the same discard question. Privacy and Security have nothing to edit and no Edit button. Actions on saved values (Update now, Run now) show in view mode only.
 - **A changed address never reuses a stored secret** (`SEC-31`). When a URL field's origin differs from the origin the secret was saved with, every `SecretInput` in that section switches to "Re-enter to use with the new address": the saved marker becomes an empty required field, and Test connection and Save stay disabled until a value is entered. The server actions enforce it too: `resolveSecret` reuses a stored secret only when the submitted URL's origin equals the stored row's, in settings and in setup alike. The dirty Overseerr section in `admin-settings.html` shows this state.
 - **Every save is audited** (`SEC-55`): URL and credential changes emit `CONFIG_CHANGED` with a redacted diff (field names, a `secretChanged` boolean, old and new origins) into the persisted audit log. E2E `e2e/admin/settings-secret-origin.spec.ts`: change Overseerr's host, see the key field empty and required with Test and Save disabled, enter a key and see them enable; a crafted request with a blank key and a new origin is rejected.
 - **AI provider:** the master switch ("AI features", with the consequence "Rewind then uses template copy"; it is `Config.llmDisabled`, which forces Rewind's `rewindLlmMode` to `off`, Rewind 8.7), Tabs for Admin assistant and Rewind generation, Provider and Model Selects (the model list includes "Enter a custom model..."), optional fields showing their defaults.

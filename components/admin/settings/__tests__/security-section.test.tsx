@@ -30,6 +30,13 @@ describe("SecuritySection", () => {
     expect(screen.queryByTestId("settings-security-unreadable")).not.toBeInTheDocument()
   })
 
+  it("has nothing to edit, so it shows no Edit button or form", () => {
+    render(<SecuritySection status={ON} />)
+    expect(screen.queryByTestId("settings-security-edit")).not.toBeInTheDocument()
+    expect(screen.queryByRole("form")).not.toBeInTheDocument()
+    expect(screen.getByTestId("settings-reencrypt-button")).toBeInTheDocument()
+  })
+
   it("says encryption is off without a key and offers no run", () => {
     render(<SecuritySection status={{ configured: false, primaryKid: null, unreadable: [] }} />)
     expect(screen.getByTestId("settings-security-status")).toHaveTextContent("Encryption is off.")

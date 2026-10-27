@@ -18,7 +18,7 @@ export function navTestId(item: MemberNavItem): string {
 export function MemberNav({ items }: { items: MemberNavItem[] }) {
   const pathname = usePathname() ?? "/"
   return (
-    <nav aria-label="Main" className="hidden h-full md:block">
+    <nav aria-label="Main" className="hidden h-full shrink-0 md:block">
       <ul className="flex h-full items-stretch gap-1">
         {items.map((item) => {
           const active = isNavActive(item, pathname)
@@ -29,7 +29,7 @@ export function MemberNav({ items }: { items: MemberNavItem[] }) {
                 aria-current={active ? "page" : undefined}
                 data-testid={navTestId(item)}
                 className={cn(
-                  "relative flex items-center rounded-sm px-3 text-ui font-medium text-muted-foreground transition-colors hover:text-foreground",
+                  "relative flex items-center rounded-sm px-3 text-ui font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground",
                   "after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full",
                   active && "text-foreground after:bg-primary-indicator"
                 )}

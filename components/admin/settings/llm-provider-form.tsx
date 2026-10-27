@@ -42,17 +42,21 @@ interface LLMProviderFieldsProps {
   purpose: "chat" | "wrapped"
   /** `useLLMProviderForm(stored, purpose)`, held by the AI section. */
   state: LLMProviderFormState
+  /** Locks the fields while another part of the section saves, so nothing typed then is lost. */
+  disabled?: boolean
 }
 
 /**
- * The LLM provider fields for one purpose, always open (UI-31), as FormFields
- * (UI-13): provider, base URL (OpenAI-compatible only), the key as a
- * `SecretInput` that asks for re-entry when the provider or its address
- * changes (SEC-31), model with its price, and only the settings the model
- * supports. The AI section's footer tests and saves them.
+ * The LLM provider fields for one purpose, which the AI section swaps in for
+ * its summary on Edit, as FormFields (UI-13): provider, base URL
+ * (OpenAI-compatible only), the key as a `SecretInput` that asks for re-entry
+ * when the provider or its address changes (SEC-31), model with its price,
+ * and only the settings the model supports. The AI section's footer tests
+ * and saves them.
  */
-export function LLMProviderFields({ purpose, state }: LLMProviderFieldsProps) {
-  const { form, update, busy, effortLevels, errors } = state
+export function LLMProviderFields({ purpose, state, disabled = false }: LLMProviderFieldsProps) {
+  const { form, update, effortLevels, errors } = state
+  const busy = state.busy || disabled
   const idPrefix = `llm-${purpose}`
 
   return (

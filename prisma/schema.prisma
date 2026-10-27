@@ -36,7 +36,7 @@ model User {
   subscription          Subscription?
   isExempt              Boolean                @default(false) // Exempt from the subscription requirement; the only flag that grants access without a subscription
   exemptNote            String? // Optional admin note about the exemption (e.g. "IT support"); no behavior
-  timezone              String? // IANA zone the member chose for Rewind; null = the server zone
+  timezone              String? // IANA zone for Rewind: the browser's on first visit, or the member's choice; null = the server zone
   sessionVersion        Int                    @default(0) // Bumped by endUserSessions(); a JWT carrying another version ends
   disabledAt            DateTime? // Set by an admin; a disabled user cannot sign in and their sessions end
   requestTiersExcluded  Boolean                @default(false) // The request-tier sync leaves this member's Overseerr quota alone

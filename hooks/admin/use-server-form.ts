@@ -80,9 +80,10 @@ function formErrors(fieldErrors: Record<string, string[]> | undefined): ServerFo
 }
 
 /**
- * One service's always-open form (UI-31): values, dirty state, Discard and
- * Save, field errors from the actions, and Test connection with the typed
- * values (`testServiceConnection`).
+ * One service's form: values, dirty state, Discard (which also clears the
+ * field errors) and Save, field errors from the actions, and Test connection
+ * with the values in the form (`testServiceConnection`): the saved ones
+ * while the section is read-only, the typed ones while editing.
  *
  * While the URL's origin differs from the one the secret was saved for and
  * nothing is typed, `form.blockedReason` disables Test and Save (SEC-31); the
@@ -106,11 +107,11 @@ export function useServerForm(type: ServerType, server: StoredServer | null) {
       setErrors(fieldErrors)
       // A field error says it where it belongs; the toast is for the rest
       if (Object.keys(fieldErrors).length === 0) toast.showError(result.error)
-      return
+      return { ok: false }
     }
     setErrors({})
     toast.showSuccess(`${SERVER_LABELS[type]} settings saved`)
-    return { ...values, secret: "" }
+    return { ok: true, keep: { ...values, secret: "" } }
   })
 
   const currentOrigin = safeOrigin(settings.values.url)
@@ -151,6 +152,13 @@ export function useServerForm(type: ServerType, server: StoredServer | null) {
     errors,
     currentOrigin,
     test,
-    form: { ...settings.form, blockedReason: blocked ? `Enter the ${type === "plex" ? "token" : "API key"} to test or save` : undefined },
+    form: {
+      ...settings.form,
+      onDiscard: () => {
+        settings.form.onDiscard()
+        setErrors({})
+      },
+      blockedReason: blocked ? `Enter the ${type === "plex" ? "token" : "API key"} to test or save` : undefined,
+    },
   }
 }

@@ -5,8 +5,10 @@ import { useState } from "react"
 import { updateLlmCaps } from "@/actions/admin/admin-config"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
+import { SettingsSummary, SettingsSummaryRow } from "@/components/ui/settings-summary"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
+import { useFormat } from "@/lib/format-context"
 
 export interface SpendCaps {
   perUserUsd: number
@@ -15,9 +17,9 @@ export interface SpendCaps {
 }
 
 const FIELDS = [
-  { key: "perUserUsd", id: "llm-cap-user", label: "Per member", action: "llmDailyCapPerUserUsd" },
-  { key: "adminUsd", id: "llm-cap-admin", label: "Per admin", action: "llmDailyCapAdminUsd" },
-  { key: "serverUsd", id: "llm-cap-server", label: "Whole server", action: "llmDailyCapServerUsd" },
+  { key: "perUserUsd", id: "llm-cap-user", summary: "user", label: "Per member", off: "for members", action: "llmDailyCapPerUserUsd" },
+  { key: "adminUsd", id: "llm-cap-admin", summary: "admin", label: "Per admin", off: "for admins", action: "llmDailyCapAdminUsd" },
+  { key: "serverUsd", id: "llm-cap-server", summary: "server", label: "Whole server", off: "for everyone", action: "llmDailyCapServerUsd" },
 ] as const
 
 type CapKey = (typeof FIELDS)[number]["key"]
@@ -31,9 +33,10 @@ function isInvalid(value: string) {
 }
 
 /**
- * The assistant's daily spend caps as part of the AI section's form (UI-31):
- * values, dirty state and Save through the section footer. They cover the
- * admin assistant and the Discord assistant, not Rewind.
+ * The assistant's daily spend caps as part of the AI section's form, shown
+ * after Edit: values, dirty state and Save through the section footer. An
+ * empty or negative cap stops the save, which keeps the section open. They
+ * cover the admin assistant and the Discord assistant, not Rewind.
  */
 export function useSpendCapsForm(caps: SpendCaps) {
   const toast = useToast()
@@ -44,7 +47,7 @@ export function useSpendCapsForm(caps: SpendCaps) {
     const invalid = FIELDS.filter(({ key }) => isInvalid(values[key]))
     if (invalid.length) {
       setErrors(Object.fromEntries(invalid.map(({ key }) => [key, INVALID])))
-      return
+      return { ok: false }
     }
     const result = await updateLlmCaps({
       llmDailyCapPerUserUsd: Number(values.perUserUsd),
@@ -57,13 +60,23 @@ export function useSpendCapsForm(caps: SpendCaps) {
       )
       setErrors(fieldErrors)
       if (Object.keys(fieldErrors).length === 0) toast.showError(result.error)
-      return
+      return { ok: false }
     }
+    // The action revalidates the page, so the stored caps follow
     setErrors({})
     toast.showSuccess("Assistant spend caps saved")
+    return { ok: true }
   })
 
-  return { values: settings.values, set: settings.set, errors, form: settings.form }
+  const form = {
+    ...settings.form,
+    onDiscard: () => {
+      settings.form.onDiscard()
+      setErrors({})
+    },
+  }
+
+  return { values: settings.values, set: settings.set, errors, form }
 }
 
 type SpendCapsForm = ReturnType<typeof useSpendCapsForm>
@@ -95,5 +108,28 @@ export function LlmSpendCapsFields({ state, disabled }: { state: SpendCapsForm; 
         ))}
       </div>
     </fieldset>
+  )
+}
+
+/**
+ * The saved caps in the AI section's view mode, in the form's three columns:
+ * "$0.50 a day", and a cap of 0 says the assistant is off for that group.
+ */
+export function SpendCapsSummary({ caps }: { caps: SpendCaps }) {
+  const f = useFormat()
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-0.5">
+        <h3 className="text-ui font-medium text-foreground">Daily spend caps</h3>
+        <p className="text-label text-muted-foreground">The assistant stops answering at a cap until midnight server time.</p>
+      </div>
+      <SettingsSummary className="sm:grid-cols-3 md:grid-cols-3" data-testid="settings-ai-summary-caps">
+        {FIELDS.map(({ key, summary, label, off }) => (
+          <SettingsSummaryRow key={key} label={label} data-testid={`settings-ai-summary-caps-${summary}`}>
+            {f.money(caps[key], "prose")} a day{caps[key] === 0 && `, assistant off ${off}`}
+          </SettingsSummaryRow>
+        ))}
+      </SettingsSummary>
+    </div>
   )
 }

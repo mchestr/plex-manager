@@ -2,18 +2,20 @@
  * @jest-environment node
  *
  * The request-limit tier actions: settings save (audited, schedule moved),
- * "Run now", and excluding a member from the sync.
+ * "Run now", excluding a member from the sync, and writing one member's tier
+ * to Overseerr.
  */
 
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 import { mockReset } from "jest-mock-extended"
 
-import { runRequestTiersNow, setMemberTiersExcluded, updateRequestTierSettings } from "@/actions/admin/request-tiers"
+import { applyMemberRequestTier, runRequestTiersNow, setMemberTiersExcluded, updateRequestTierSettings } from "@/actions/admin/request-tiers"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { getActiveService } from "@/lib/data/active-service"
 import { addJob } from "@/lib/queue/client"
 import { isRedisConfigured } from "@/lib/queue/connection"
+import { applyMemberTier } from "@/lib/request-tiers/member-check"
 import { runRequestTierSync } from "@/lib/request-tiers/run"
 import { ensureRequestTierSchedule } from "@/lib/request-tiers/schedule"
 import { DEFAULT_TIERS } from "@/lib/request-tiers/tiers"
@@ -29,6 +31,7 @@ jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
 jest.mock("@/lib/queue/client", () => ({ addJob: jest.fn() }))
 jest.mock("@/lib/queue/connection", () => ({ isRedisConfigured: jest.fn() }))
 jest.mock("@/lib/request-tiers/run", () => ({ runRequestTierSync: jest.fn() }))
+jest.mock("@/lib/request-tiers/member-check", () => ({ applyMemberTier: jest.fn() }))
 jest.mock("@/lib/request-tiers/schedule", () => ({ ensureRequestTierSchedule: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), logAuditEvent: jest.fn() }))
 
@@ -122,5 +125,43 @@ describe("setMemberTiersExcluded", () => {
   it("refuses a member", async () => {
     jest.mocked(getServerSession).mockResolvedValue({ user: { id: "m1", isAdmin: false } })
     await expect(setMemberTiersExcluded({ userId: "u1", excluded: true })).resolves.toMatchObject({ success: false, code: "FORBIDDEN" })
+  })
+})
+
+describe("applyMemberRequestTier", () => {
+  const quota = { movieQuotaLimit: 4, movieQuotaDays: 7, tvQuotaLimit: 2, tvQuotaDays: 7 }
+
+  it("writes the member's tier, audits it and refreshes their page", async () => {
+    jest.mocked(applyMemberTier).mockResolvedValue({ ok: true, quota })
+
+    await expect(applyMemberRequestTier({ userId: "u1" })).resolves.toEqual({ success: true, data: { updated: true } })
+
+    expect(applyMemberTier).toHaveBeenCalledWith("u1")
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.CONFIG_CHANGED, "admin-1", expect.objectContaining({ targetUserId: "u1", quota }))
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/users/u1")
+  })
+
+  it("audits nothing when Overseerr already had it", async () => {
+    jest.mocked(applyMemberTier).mockResolvedValue({ ok: true, quota: null })
+
+    await expect(applyMemberRequestTier({ userId: "u1" })).resolves.toEqual({ success: true, data: { updated: false } })
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
+  it("passes on why it could not write", async () => {
+    jest.mocked(applyMemberTier).mockResolvedValue({ ok: false, code: "UPSTREAM_UNAVAILABLE", message: "Could not reach Overseerr" })
+
+    await expect(applyMemberRequestTier({ userId: "u1" })).resolves.toMatchObject({
+      success: false,
+      code: "UPSTREAM_UNAVAILABLE",
+      error: "Could not reach Overseerr",
+    })
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
+  it("refuses a member", async () => {
+    jest.mocked(getServerSession).mockResolvedValue({ user: { id: "m1", isAdmin: false } })
+    await expect(applyMemberRequestTier({ userId: "u1" })).resolves.toMatchObject({ success: false, code: "FORBIDDEN" })
+    expect(applyMemberTier).not.toHaveBeenCalled()
   })
 })

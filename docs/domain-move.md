@@ -48,7 +48,7 @@ Each of these holds the old URL, and the app cannot change it for you.
    - `customer.subscription.deleted`
    - `invoice.payment_failed`
 4. **The new endpoint's signing secret.** Copy its `whsec_…` secret into Admin →
-   Settings → Stripe Subscriptions → Webhook Signing Secret and save, **before**
+   Settings → Stripe billing → Edit → Webhook Signing Secret and Save changes, **before**
    you delete the old endpoint. Then send a test event from the Dashboard and
    check that it is delivered; only then delete the old endpoint. Events the old
    endpoint failed to deliver are retried by Stripe, and a resend is safe, since

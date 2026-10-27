@@ -6,6 +6,7 @@ import {
   VISUAL_INVITE_IDS,
   VISUAL_PLEX_SERVER,
 } from '../helpers/seed-fixtures';
+import { editSection } from '../helpers/settings';
 import { capture, expect, settlePage, skipUnlessProductionBuild, test } from './visual-test';
 
 /**
@@ -67,8 +68,18 @@ test.describe('Admin screens', () => {
     await page.goto('/admin/settings#rewind');
     await settlePage(page);
     // The status line reports this run's Redis and Tautulli
-    await expect(page.getByTestId('rewind-settings-section')).toHaveScreenshot('admin-settings-rewind.png', {
+    await expect(page.getByTestId('settings-rewind-section')).toHaveScreenshot('admin-settings-rewind.png', {
       mask: [page.getByTestId('rewind-settings-status')],
+    });
+  });
+
+  // A section in edit mode: the form in place of its summary, Cancel and Save
+  test('settings, editing the Plex server', async ({ page }) => {
+    await page.goto('/admin/settings');
+    await settlePage(page);
+    await editSection(page, 'plex');
+    await expect(page.getByTestId('settings-plex-section')).toHaveScreenshot('admin-settings-plex-editing.png', {
+      mask: [page.getByTestId(/-timestamp$/)],
     });
   });
 

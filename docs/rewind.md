@@ -7,7 +7,12 @@ and the season close. It is written for the 2026 season; the dates move with
 
 Times are **server time** (`Config.timezone`, set under Admin, Settings,
 "Server time zone") unless a line says "in each member's zone". A member's
-Rewind zone is the zone they chose (`User.timezone`), else the server's.
+Rewind zone is `User.timezone`: their browser's zone, saved the first time
+they open the app after signing in, or the one they chose on `/account`. A
+member who has not opened the app since then, or whose browser reports a
+zone the settings cannot store, gets the server's, so set the server zone
+before the season opens. A zone change applies the next time that member's
+Rewind is made.
 
 Sections marked **Pending** describe steps that have not merged yet. They say
 what the step will add, and are filled in when it merges; until then the
@@ -106,8 +111,8 @@ install stored it off, the console's Regenerate is refused; set it back with
 and off on a fresh `Config`. They share `rewindDisabledPages`: a feature is on
 only while the list holds `+<key>` and not the plain `<key>` (the plain key
 beside it switches it off again), so a deploy never turns one on by itself.
-The "Features added in December" switches in the Rewind section write or
-remove the `+` entry, audited as `CONFIG_CHANGED`. Turn each on in production
+The "Features added in December" checkboxes in the Rewind section (Edit, then
+Save changes) write or remove the `+` entry, audited as `CONFIG_CHANGED`. Turn each on in production
 only after checking it on the heavy test member, and record the enable, with
 the date and the check, in `ship-check.md`. A flag that misbehaves stays off.
 

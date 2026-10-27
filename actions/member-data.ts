@@ -2,11 +2,10 @@
 
 /**
  * A member deleting single items of their own data from `/account` (P11.15,
- * GAP-36): a media mark, a watchlist history item, or an assistant
- * conversation.
+ * GAP-36): a media mark or a watchlist history item.
  *
  * Ownership sits in the `where` of each write, so another member's id
- * matches nothing and returns `NOT_FOUND`. The three share the
+ * matches nothing and returns `NOT_FOUND`. The two share the
  * `account:data` limit, 60 an hour per member.
  *
  * @module actions/member-data
@@ -50,27 +49,3 @@ export const forgetWatchlistItem = memberAction({
   },
 })
 
-/**
- * Deletes one assistant conversation. Its usage rows lose their text but keep
- * tokens and cost, so the server's spend totals stay right; its Discord chat
- * session goes with it.
- */
-export const deleteMyConversation = memberAction({
-  input: z.strictObject({ conversationId: recordIdSchema }),
-  rateLimit: RATE_LIMIT,
-  fallbackError: "Could not delete the conversation",
-  handler: async ({ conversationId }, { userId }) => {
-    const deleted = await prisma.$transaction(async (tx) => {
-      // Before the delete, which would set chatConversationId to null
-      await tx.lLMUsage.updateMany({
-        where: { chatConversationId: conversationId, chatConversation: { userId } },
-        data: { prompt: null, response: null },
-      })
-      const { count } = await tx.chatConversation.deleteMany({ where: { id: conversationId, userId } })
-      return count
-    })
-    if (deleted === 0) return fail("NOT_FOUND", "That conversation is already gone")
-    revalidatePath("/account")
-    return ok(null)
-  },
-})

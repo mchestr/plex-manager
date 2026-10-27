@@ -20,7 +20,7 @@ Windmill flow `f/mflix/discord_channel_status`.
 | Episodes | `Episodes: N` | `child_count` of `show` libraries |
 
 - **Status:** both Tautulli calls succeed, 🟢 Online; one, 🟡 Degraded; none, 🔴 Offline.
-- **Channels:** paste each channel's ID in Admin > Settings > Discord channel stats. A stat with no ID is left alone. The bot needs the Manage Channels permission on those channels.
+- **Channels:** paste each channel's ID in Admin > Settings > Discord channel stats (Edit, then Save changes). A stat with no ID is left alone. The bot needs the Manage Channels permission on those channels.
 - **Name formats:** `{value}` is the number (an emoji for status) and `{server}` is the server name from the brand settings.
 - **Failures:** a failed `get_activity` skips the three activity channels, a failed `get_libraries` skips the three library channels, and a failed rename never stops the next channel.
 - **Rate limit:** Discord allows two renames per channel in ten minutes, so the interval is ten minutes or more. A channel is renamed only when its name changed since the last successful rename, and a `429` is left for the next run (a global `429` ends the run).
@@ -44,11 +44,12 @@ A tier applies when the member has watched *more than* its hours:
 - **Matching:** an Overseerr user's `plexId` is the Tautulli `user_id`. Overseerr users without a Plex id are skipped. Every Overseerr user is read (100 per page), not only the first page.
 - **Writes:** `POST /user/{id}/settings/main` runs only when the tier's quota differs from the quota Overseerr has. A limit of 0 is unlimited whatever the period.
 - **Excluded members:** turn on "Set request limits by hand" on a member's admin page to keep a quota you set yourself.
+- **Checking one member:** a Plex member's admin page (Overview, Request limits) checks their tier live: the hours Tautulli has, the tier they earn, and the quota Overseerr has now, with a badge for **In sync**, **Out of sync**, **Set by hand**, **No limits** (an Overseerr admin or user manager, whose quota Overseerr ignores) or **Can't check**, which names the step that failed. **Update Overseerr** writes the tier's quota for that member now, whether or not the daily sync is on, and the page then reads Overseerr again. Overseerr's user list is cached for 10 minutes, so a member who has just signed in to Overseerr can take that long to appear.
 - **Last run:** each run is stored (member, hours, tier, old and new quota); the settings page shows the latest, and the newest 30 runs are kept.
 - **Members:** the home page shows the tier, the requests used and left (`GET /user/{id}/quota`), the hours to the next tier with a progress bar and the tier table. Discord `/mystats` adds the same figures.
 
 ## Moving off Windmill
 
-1. Turn on both jobs and press "Update now" and "Run now".
+1. Turn on both jobs (Edit each section, tick its checkbox, Save changes), then press "Update now" and "Run now".
 2. Check the channel names and the last run.
 3. Disable the two Windmill schedules.
