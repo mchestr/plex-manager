@@ -60,7 +60,7 @@
     "build:discord-scripts": "esbuild scripts/register-discord-commands.ts scripts/register-discord-metadata.ts --bundle --platform=node --target=node24 --format=cjs --outdir=scripts/dist --out-extension:.js=.cjs --tsconfig=tsconfig.scripts.json --conditions=react-server --external:discord.js --log-level=warning"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "4.0.88",
+    "@ai-sdk/anthropic": "4.0.90",
     "@ai-sdk/google": "4.0.106",
     "@ai-sdk/openai": "4.0.104",
     "@ai-sdk/openai-compatible": "3.0.79",
