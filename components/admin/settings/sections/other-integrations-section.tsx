@@ -72,6 +72,7 @@ export function OtherIntegrationsSection({ servers, jellyfinLogin, health, foote
               </div>
               <StatusBadge domain="connection" value={health[type].status} />
               <SettingsSheet
+                section="other"
                 id={type}
                 name={label}
                 title={label}

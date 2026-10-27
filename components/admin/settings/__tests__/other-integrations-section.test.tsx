@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event"
 
 import { toggleJellyfinLogin, updateRadarr, updateSonarr } from "@/actions/admin/admin-servers"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
+import { SettingsEditProvider } from "@/components/ui/settings-edit-context"
 import type { StoredServer } from "@/hooks/admin/use-server-form"
 import type { SectionHealth } from "@/lib/settings/connection-status"
 
@@ -202,5 +203,24 @@ describe("OtherIntegrationsSection", () => {
     await user.keyboard("{Escape}")
     await waitFor(() => expect(screen.queryByTestId("settings-other-sonarr-sheet")).not.toBeInTheDocument())
     expect(screen.queryByTestId("settings-sonarr-discard-dialog")).not.toBeInTheDocument()
+  })
+
+  it("counts an open Sheet's unsaved changes as the section's, for the nav pip and the leave prompt", async () => {
+    const user = userEvent.setup()
+    const onDirtyChange = jest.fn()
+    render(
+      <SettingsEditProvider onDirtyChange={onDirtyChange}>
+        <OtherIntegrationsSection servers={{ sonarr: SONARR, radarr: null, jellyfin: null }} jellyfinLogin={null} health={HEALTH} />
+      </SettingsEditProvider>
+    )
+
+    const sheet = await openSonarr(user)
+    expect(onDirtyChange).not.toHaveBeenCalledWith("other", true)
+    await user.type(within(sheet).getByTestId("settings-sonarr-name"), " (edited)")
+    expect(onDirtyChange).toHaveBeenLastCalledWith("other", true)
+
+    await user.click(within(sheet).getByTestId("settings-sonarr-cancel"))
+    await user.click(await screen.findByTestId("settings-sonarr-discard-dialog-confirm"))
+    await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith("other", false))
   })
 })

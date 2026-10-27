@@ -1,13 +1,16 @@
 "use client"
 
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useEffect, useState } from "react"
 
 import type { SheetFormControls } from "@/components/admin/settings/sheet-form"
 import { Button } from "@/components/ui/button"
 import { DiscardChangesDialog } from "@/components/ui/discard-changes-dialog"
+import { useReportDirty } from "@/components/ui/settings-edit-context"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
 interface SettingsSheetProps {
+  /** The list section it belongs to, whose nav item shows the "Unsaved changes" pip while the form is dirty. */
+  section: string
   /** The form's footer id ("mcp", "sonarr"): the guard is `settings-<id>-discard-dialog`. */
   id: string
   /** What the guard names: "Discard changes to Sonarr?" */
@@ -31,13 +34,24 @@ interface SettingsSheetProps {
  * the backdrop, Close and Cancel close it too, but with unsaved changes they
  * ask first (Cloudscape, "Unsaved changes"): Keep editing stays, Discard
  * closes. While a save is in flight they do nothing, as in a section: the
- * save's outcome closes the Sheet or keeps it open.
+ * save's outcome closes the Sheet or keeps it open. Its unsaved changes
+ * count as its section's, for the nav pip and the browser's leave prompt.
  */
-export function SettingsSheet({ id, name, title, description, trigger, triggerLabel, triggerTestId, sheetTestId, children }: SettingsSheetProps) {
+export function SettingsSheet({ section, id, name, title, description, trigger, triggerLabel, triggerTestId, sheetTestId, children }: SettingsSheetProps) {
   const [open, setOpen] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [pending, setPending] = useState(false)
   const [confirming, setConfirming] = useState(false)
+
+  // Sheets are modal, so one open Sheet speaks for its section at a time
+  const reportDirty = useReportDirty()
+  const unsaved = open && dirty
+  useEffect(() => {
+    if (unsaved) reportDirty?.(section, true)
+    return () => {
+      if (unsaved) reportDirty?.(section, false)
+    }
+  }, [reportDirty, section, unsaved])
 
   const close = () => {
     setOpen(false)

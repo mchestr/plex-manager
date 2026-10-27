@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react"
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef, useState } from "react"
 
 /** A request to open a section for editing. */
 export interface EditRequest {
@@ -12,8 +12,8 @@ export interface EditRequest {
 }
 
 interface SettingsEditContextValue {
-  /** The section open for editing, if any. Only one at a time (Primer, "Saving"). */
-  editingId: string | null
+  /** The sections open for editing: the one last opened, and any left with unsaved changes (Primer, "Saving"). */
+  openIds: ReadonlySet<string>
   request: EditRequest | null
   requestEdit: (id: string, options?: { focus?: string }) => void
   endEdit: (id: string) => void
@@ -23,27 +23,44 @@ interface SettingsEditContextValue {
 const SettingsEditContext = createContext<SettingsEditContextValue | null>(null)
 
 /**
- * The settings page's edit state: which section is open for editing, and
- * each section's dirty flag for the section nav's "Unsaved changes" pip.
- * Opening a section closes the one open before it; a section with unsaved
- * changes stays open until it is saved or its changes are discarded, so
- * nothing typed is ever thrown away without asking.
+ * The settings page's edit state: which sections are open for editing, and
+ * each section's (or Sheet's) dirty flag for the section nav's "Unsaved
+ * changes" pip. Opening a section closes the clean ones open before it; one
+ * with unsaved changes stays open until it is saved or its changes are
+ * discarded, even if they are typed away by hand, so nothing is ever thrown
+ * away without asking.
  */
 export function SettingsEditProvider({ onDirtyChange, children }: { onDirtyChange: (id: string, dirty: boolean) => void; children: ReactNode }) {
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(() => new Set())
   const [request, setRequest] = useState<EditRequest | null>(null)
+  const dirtyIds = useRef(new Set<string>())
+
+  const reportDirty = useCallback(
+    (id: string, dirty: boolean) => {
+      if (dirty) dirtyIds.current.add(id)
+      else dirtyIds.current.delete(id)
+      onDirtyChange(id, dirty)
+    },
+    [onDirtyChange]
+  )
 
   const requestEdit = useCallback((id: string, options?: { focus?: string }) => {
-    setEditingId(id)
+    setOpenIds(new Set([...dirtyIds.current, id]))
     setRequest((prev) => ({ id, focus: options?.focus, n: (prev?.n ?? 0) + 1 }))
   }, [])
 
-  const endEdit = useCallback((id: string) => setEditingId((prev) => (prev === id ? null : prev)), [])
-
-  const value = useMemo(
-    () => ({ editingId, request, requestEdit, endEdit, reportDirty: onDirtyChange }),
-    [editingId, request, requestEdit, endEdit, onDirtyChange]
+  const endEdit = useCallback(
+    (id: string) =>
+      setOpenIds((prev) => {
+        if (!prev.has(id)) return prev
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      }),
+    []
   )
+
+  const value = useMemo(() => ({ openIds, request, requestEdit, endEdit, reportDirty }), [openIds, request, requestEdit, endEdit, reportDirty])
 
   return <SettingsEditContext.Provider value={value}>{children}</SettingsEditContext.Provider>
 }
@@ -53,6 +70,11 @@ export function useSettingsEdit() {
   return useContext(SettingsEditContext)?.requestEdit ?? null
 }
 
+/** Reports a Sheet's unsaved changes to the page (the nav pip, the browser's leave prompt). Null outside the settings page. */
+export function useReportDirty() {
+  return useContext(SettingsEditContext)?.reportDirty ?? null
+}
+
 /** One section's mode: from the page's provider, or its own state when it stands alone. */
 export function useSectionEditing(id: string) {
   const context = useContext(SettingsEditContext)
@@ -60,7 +82,7 @@ export function useSectionEditing(id: string) {
 
   if (context) {
     return {
-      editing: context.editingId === id,
+      editing: context.openIds.has(id),
       request: context.request?.id === id ? context.request : null,
       requestEdit: (options?: { focus?: string }) => context.requestEdit(id, options),
       endEdit: () => context.endEdit(id),

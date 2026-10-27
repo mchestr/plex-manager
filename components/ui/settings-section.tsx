@@ -128,9 +128,13 @@ export function SettingsSection({
   const [confirming, setConfirming] = useState(false)
   const [exits, setExits] = useState(0)
   const [failures, setFailures] = useState(0)
+  const sectionRef = useRef<HTMLElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const editRef = useRef<HTMLButtonElement>(null)
   const focusedFailures = useRef(0)
+  // Set while exit() closes the form, so the close below doesn't discard twice
+  const exiting = useRef(false)
+  const wasEditing = useRef(editing)
   // The newest form, for leaving edit mode after an await
   const latest = useRef(form)
   useLayoutEffect(() => {
@@ -143,14 +147,23 @@ export function SettingsSection({
   }, [reportDirty, id, dirty])
   useEffect(() => () => reportDirty?.(id, false), [reportDirty, id])
 
-  // Edit, Set up or a link from elsewhere: focus the requested control or the first field
+  /** Focus may move here only while the admin is still in this section (or nowhere), never out of another one. */
+  const focusIsHere = () => {
+    const active = document.activeElement
+    return !active || active === document.body || Boolean(sectionRef.current?.contains(active))
+  }
+
+  // Edit, Set up or a link from elsewhere: focus the requested control, else the first
+  // field, else the form itself (its fields are disabled while a Test runs)
   const requestN = mode.request?.n
   const requestFocus = mode.request?.focus
   useEffect(() => {
     const element = formRef.current
     if (requestN === undefined || !element) return
-    const target = (requestFocus ? element.querySelector<HTMLElement>(requestFocus) : null) ?? firstField(element)
-    target?.focus()
+    const requested = requestFocus ? element.querySelector<HTMLElement>(requestFocus) : null
+    const usable = requested && !requested.matches(":disabled, [aria-disabled=true], [data-disabled]") ? requested : null
+    const target = usable ?? firstField(element) ?? element
+    target.focus()
   }, [requestN, requestFocus])
 
   // Back in view mode: focus returns to Edit, which stands where the form's trigger was
@@ -158,21 +171,32 @@ export function SettingsSection({
     if (exits > 0) editRef.current?.focus()
   }, [exits])
 
+  // Closed without exit(), because another section was opened: the form forgets its edits and errors too
+  useEffect(() => {
+    if (wasEditing.current && !editing && !exiting.current) latest.current?.onDiscard()
+    wasEditing.current = editing
+    exiting.current = false
+  }, [editing])
+
   // A failed save: the first field that says what is wrong, once the save has
   // settled (fields are disabled while it runs) and the fields show their errors
   const pending = Boolean(form?.isPending)
   useEffect(() => {
     if (pending || failures === focusedFailures.current) return
     focusedFailures.current = failures
-    const frame = requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>(INVALID_FIELD)?.focus())
+    const frame = requestAnimationFrame(() => {
+      if (focusIsHere()) formRef.current?.querySelector<HTMLElement>(INVALID_FIELD)?.focus()
+    })
     return () => cancelAnimationFrame(frame)
   }, [failures, pending])
 
-  const exit = () => {
+  /** Leaves edit mode, discarding the draft; `focusEdit` false when the admin has since moved elsewhere. */
+  const exit = (focusEdit = true) => {
+    exiting.current = true
     latest.current?.onDiscard()
     mode.endEdit()
     setConfirming(false)
-    setExits((n) => n + 1)
+    if (focusEdit) setExits((n) => n + 1)
   }
 
   const cancel = () => {
@@ -189,8 +213,10 @@ export function SettingsSection({
       return
     }
     void form.onSave().then((ok) => {
-      // In a transition, so the summary shows with the refreshed saved values
-      if (ok) startTransition(exit)
+      // In a transition, so the summary shows with the refreshed saved values; a
+      // slow save never pulls focus out of a section the admin has moved on to
+      const focusEdit = focusIsHere()
+      if (ok) startTransition(() => exit(focusEdit))
       else setFailures((n) => n + 1)
     })
   }
@@ -220,7 +246,9 @@ export function SettingsSection({
           noValidate
           onSubmit={submit}
           onKeyDown={onKeyDown}
-          className="flex flex-col gap-6"
+          // Takes focus only when no field can
+          tabIndex={-1}
+          className="flex flex-col gap-6 outline-none"
           data-testid={formId}
         >
           {children}
@@ -238,7 +266,7 @@ export function SettingsSection({
   }
 
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className={cn("scroll-mt-24", className)} data-testid={`settings-${id}-section`}>
+    <section ref={sectionRef} id={id} aria-labelledby={`${id}-title`} className={cn("scroll-mt-24", className)} data-testid={`settings-${id}-section`}>
       <Card data-editing={editing || undefined} className="data-editing:border-primary-indicator">
         <CardHeader className="pb-2">
           <CardTitle as="h2" id={`${id}-title`}>
@@ -293,7 +321,7 @@ export function SettingsSection({
           open={confirming}
           onOpenChange={setConfirming}
           title={title}
-          onDiscard={exit}
+          onDiscard={() => exit()}
           data-testid={`settings-${id}-discard-dialog`}
         />
       )}

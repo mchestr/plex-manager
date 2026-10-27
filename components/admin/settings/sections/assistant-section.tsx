@@ -26,6 +26,7 @@ function McpRow({ server }: { server: McpServerSettings }) {
       </div>
       <Badge variant={server.isActive ? "success" : "neutral"}>{toolCount(server)}</Badge>
       <SettingsSheet
+        section="assistant"
         id="mcp"
         name={server.name}
         title={server.name}
@@ -53,6 +54,7 @@ function KnowledgeRow({ source }: { source: KnowledgeSourceSettings }) {
       </div>
       <Badge variant={source.isActive ? "success" : "neutral"}>{source.isActive ? "on" : "off"}</Badge>
       <SettingsSheet
+        section="assistant"
         id="knowledge"
         name={source.name}
         title={source.name}
@@ -87,6 +89,7 @@ export function AssistantSection({ sources }: { sources: AssistantSources }) {
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-ui font-medium text-foreground">MCP servers</h3>
             <SettingsSheet
+              section="assistant"
               id="mcp"
               name="the new MCP server"
               title="Add an MCP server"
@@ -109,6 +112,7 @@ export function AssistantSection({ sources }: { sources: AssistantSources }) {
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-ui font-medium text-foreground">Knowledge bases</h3>
             <SettingsSheet
+              section="assistant"
               id="knowledge"
               name="the new knowledge base"
               title="Add a knowledge base"

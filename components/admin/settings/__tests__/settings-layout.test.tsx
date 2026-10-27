@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 
 import { SettingsGroup, SettingsLayout } from '@/components/admin/settings/settings-layout'
 import type { SettingsNavItem } from '@/components/admin/settings/settings-nav'
+import { SettingsSection } from '@/components/ui/settings-section'
 
 const ITEMS: SettingsNavItem[] = [
   { id: 'plex', label: 'Plex server', group: 'media', status: 'ok' },
@@ -101,5 +103,40 @@ describe('SettingsLayout', () => {
     await user.click(screen.getAllByRole('link', { name: /Plex server/ })[0])
 
     expect(screen.getByLabelText('Plex name')).toHaveValue('edited')
+  })
+
+  it('has the browser ask before leaving only while a section has unsaved changes', async () => {
+    const user = userEvent.setup()
+    /** A section whose form is dirty while its name differs from "Home". */
+    function PlexSection() {
+      const [name, setName] = useState('Home')
+      const form = { isDirty: name !== 'Home', isPending: false, onDiscard: () => setName('Home'), onSave: async () => true }
+      return (
+        <SettingsSection id="plex" title="Plex server" description="Server" form={form} view={<p>{name}</p>}>
+          <input aria-label="Plex name" value={name} onChange={(event) => setName(event.target.value)} />
+        </SettingsSection>
+      )
+    }
+    render(
+      <SettingsLayout items={ITEMS}>
+        <SettingsGroup id="media">
+          <PlexSection />
+        </SettingsGroup>
+      </SettingsLayout>
+    )
+    const leave = () => window.dispatchEvent(new Event('beforeunload', { cancelable: true }))
+
+    expect(leave()).toBe(true)
+
+    await user.click(screen.getByTestId('settings-plex-edit'))
+    expect(leave()).toBe(true)
+    await user.type(screen.getByRole('textbox', { name: 'Plex name' }), 'x')
+    // dispatchEvent returns false once a listener prevented it: the browser asks
+    expect(leave()).toBe(false)
+
+    await user.click(screen.getByTestId('settings-plex-cancel'))
+    await user.click(await screen.findByTestId('settings-plex-discard-dialog-confirm'))
+    expect(await screen.findByText('Home')).toBeInTheDocument()
+    expect(leave()).toBe(true)
   })
 })

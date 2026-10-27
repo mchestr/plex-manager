@@ -13,6 +13,11 @@ import { Button } from '@/components/ui/button'
 import { SettingsEditProvider, useSettingsEdit } from '@/components/ui/settings-edit-context'
 
 jest.mock('@/actions/admin/admin-config', () => ({ updateServerTimeZone: jest.fn() }))
+// A short zone list: the picker renders every IANA zone, which takes seconds per test in jsdom
+jest.mock('@/lib/utils/zoned-time', () => ({
+  ...jest.requireActual('@/lib/utils/zoned-time'),
+  timeZoneOptions: () => ['America/New_York', 'Europe/Berlin', 'Europe/London', 'Pacific/Auckland', 'UTC'],
+}))
 
 const mockShowSuccess = jest.fn()
 const mockShowError = jest.fn()

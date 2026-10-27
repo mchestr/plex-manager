@@ -339,6 +339,82 @@ describe('SettingsSection', () => {
     expect(screen.getByRole('form', { name: 'Overseerr' })).toBeInTheDocument()
   })
 
+  it('a slow save that ends after the admin moved to another section leaves focus where they are', async () => {
+    const user = userEvent.setup()
+    let finish: (ok: boolean) => void = () => {}
+    const slowSave = () => new Promise<boolean>((resolve) => (finish = resolve))
+    render(
+      <SettingsEditProvider onDirtyChange={jest.fn()}>
+        <LiveSection id="plex" title="Plex" save={slowSave} />
+        <LiveSection id="tautulli" title="Tautulli" />
+      </SettingsEditProvider>
+    )
+
+    await user.click(screen.getByTestId('settings-plex-edit'))
+    await user.type(screen.getByRole('textbox', { name: 'Plex name' }), 'x')
+    await user.click(screen.getByTestId('settings-plex-save'))
+    await user.click(screen.getByTestId('settings-tautulli-edit'))
+    const tautulli = screen.getByRole('textbox', { name: 'Tautulli name' })
+    expect(tautulli).toHaveFocus()
+
+    await act(async () => finish(true))
+
+    expect(tautulli).toHaveFocus()
+  })
+
+  it('a section left open with unsaved changes stays open when they are typed away by hand', async () => {
+    const user = userEvent.setup()
+    render(
+      <SettingsEditProvider onDirtyChange={jest.fn()}>
+        <LiveSection id="plex" title="Plex" />
+        <LiveSection id="tautulli" title="Tautulli" />
+      </SettingsEditProvider>
+    )
+
+    await user.click(screen.getByTestId('settings-plex-edit'))
+    await user.type(screen.getByRole('textbox', { name: 'Plex name' }), 'x')
+    await user.click(screen.getByTestId('settings-tautulli-edit'))
+    const plex = screen.getByRole('textbox', { name: 'Plex name' })
+    await user.click(plex)
+    await user.keyboard('{End}{Backspace}')
+
+    expect(plex).toHaveValue('Home')
+    expect(screen.getByRole('form', { name: 'Plex' })).toBeInTheDocument()
+    expect(plex).toHaveFocus()
+  })
+
+  it('a clean section closed by opening another forgets its errors, as Cancel would', async () => {
+    const user = userEvent.setup()
+    const plexForm = formState()
+    render(
+      <SettingsEditProvider onDirtyChange={jest.fn()}>
+        <SettingsSection id="plex" title="Plex" description="Server" form={plexForm} view={<p>saved</p>}>
+          <input aria-label="Plex name" />
+        </SettingsSection>
+        <LiveSection id="tautulli" title="Tautulli" />
+      </SettingsEditProvider>
+    )
+
+    await user.click(screen.getByTestId('settings-plex-edit'))
+    await user.click(screen.getByTestId('settings-tautulli-edit'))
+
+    expect(screen.queryByRole('form', { name: 'Plex' })).not.toBeInTheDocument()
+    expect(plexForm.onDiscard).toHaveBeenCalledTimes(1)
+  })
+
+  it('focuses the form itself when no field can take focus, so focus never drops to the page', async () => {
+    const user = userEvent.setup()
+    render(
+      <SettingsSection id="ai" title="AI provider" description="Models" form={formState()} view={<p>saved</p>}>
+        <input aria-label="Model" disabled />
+      </SettingsSection>
+    )
+
+    await user.click(screen.getByTestId('settings-ai-edit'))
+
+    expect(screen.getByRole('form', { name: 'AI provider' })).toHaveFocus()
+  })
+
   it('opens from elsewhere on the page and focuses the requested control', async () => {
     const user = userEvent.setup()
     function Link() {

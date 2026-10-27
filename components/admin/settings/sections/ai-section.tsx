@@ -153,13 +153,13 @@ export function AiSection({ chat, wrapped, llmDisabled, caps, health, footerMeta
         panels={{
           chat: (
             <>
-              <LLMProviderFields purpose="chat" state={forms.chat} />
+              <LLMProviderFields purpose="chat" state={forms.chat} disabled={form.isPending} />
               <div className="border-t pt-4">
-                <LlmSpendCapsFields state={spendCaps} disabled={spendCaps.form.isPending} />
+                <LlmSpendCapsFields state={spendCaps} disabled={form.isPending} />
               </div>
             </>
           ),
-          wrapped: <LLMProviderFields purpose="wrapped" state={forms.wrapped} />,
+          wrapped: <LLMProviderFields purpose="wrapped" state={forms.wrapped} disabled={form.isPending} />,
         }}
       />
     </SettingsSection>

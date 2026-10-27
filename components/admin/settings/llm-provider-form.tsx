@@ -42,6 +42,8 @@ interface LLMProviderFieldsProps {
   purpose: "chat" | "wrapped"
   /** `useLLMProviderForm(stored, purpose)`, held by the AI section. */
   state: LLMProviderFormState
+  /** Locks the fields while another part of the section saves, so nothing typed then is lost. */
+  disabled?: boolean
 }
 
 /**
@@ -52,8 +54,9 @@ interface LLMProviderFieldsProps {
  * and only the settings the model supports. The AI section's footer tests
  * and saves them.
  */
-export function LLMProviderFields({ purpose, state }: LLMProviderFieldsProps) {
-  const { form, update, busy, effortLevels, errors } = state
+export function LLMProviderFields({ purpose, state, disabled = false }: LLMProviderFieldsProps) {
+  const { form, update, effortLevels, errors } = state
+  const busy = state.busy || disabled
   const idPrefix = `llm-${purpose}`
 
   return (
