@@ -1,6 +1,7 @@
 "use client"
 
 import { Download, Share } from "lucide-react"
+import type { Route } from "next"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useId, useRef, useState, type Ref } from "react"
@@ -19,6 +20,7 @@ import type { CardFactId, SharePageType } from "@/lib/wrapped/data/share-safe-sc
 import { CARD_STATS } from "./card-stats"
 import { useShare } from "./share-context"
 import { ShareLink } from "./share-link"
+import { ShareOffSheet } from "./share-off-sheet"
 import { useCardFile } from "./use-card-file"
 import { canShareFiles, saveFile, shareFile } from "./web-share"
 
@@ -33,6 +35,8 @@ interface ShareSheetProps {
   page: RewindPageType
   /** Opened from the back cover's "Change": focus starts on the switches. */
   atSettings: boolean
+  /** Without a share setup (the previews): the viewer's own Rewind, when the preview shows it. */
+  ownRewindHref?: Route
 }
 
 interface SwitchRowProps {
@@ -77,9 +81,11 @@ function SwitchRow({ id, label, hint, checked, disabled, onChange, testId, input
  * posted), the sign, artwork and daily-detail switches, and Share image
  * (only where the browser shares files), Save image and Copy link. The card
  * PNG is fetched into a `File` as soon as the sheet opens and after every
- * change, so Share image keeps the tap's user activation.
+ * change, so Share image keeps the tap's user activation. Outside a
+ * `ShareProvider` (the previews) it is `ShareOffSheet`, which says where
+ * sharing happens.
  */
-export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps) {
+export function ShareSheet({ open, onClose, page, atSettings, ownRewindHref }: ShareSheetProps) {
   const share = useShare()
   const recordShare = useRecordShare()
   const id = useId()
@@ -96,7 +102,7 @@ export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps)
   const name = setup && current ? cardFileName(setup.year, current) : "rewind.png"
   const file = useCardFile(url, name)
 
-  if (!share || !setup || !choices) return null
+  if (!share || !setup || !choices) return <ShareOffSheet open={open} onClose={onClose} href={ownRewindHref} />
   const artOffered = current !== null && setup.allowArt && setup.artCards.includes(current)
   const membership = lapsed || !setup.canShare
   const editing = setup.features.editCard && current !== null && EDIT_CARD_PAGES.includes(current) && setup.cardFactOptions.length > CARD_STATS

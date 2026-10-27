@@ -47,15 +47,18 @@ jest.mock("@/lib/brand", () => ({ serverName: jest.fn().mockResolvedValue("Test 
 jest.mock("@/lib/settings/app-settings", () => ({ getAppSettings: jest.fn().mockResolvedValue({ locale: "en-US" }) }))
 // The real stage, on the stage fixture's pages, in the mode the issue passes it.
 jest.mock("@/components/rewind/rewind-issue", () => ({
-  RewindIssue: ({ adminPreview }: { adminPreview?: boolean }) => (
-    <StoryStage
-      pages={stagePages(["cover", "number", "back-cover"])}
-      year={2026}
-      archetype={null}
-      closeHref="/admin/users/member-1"
-      copy={LLM_COPY}
-      mode={adminPreview ? "admin-preview" : "member"}
-    />
+  RewindIssue: ({ adminPreview, ownRewindHref }: { adminPreview?: boolean; ownRewindHref?: string }) => (
+    <>
+      <span data-testid="rewind-issue-props" data-own={ownRewindHref} />
+      <StoryStage
+        pages={stagePages(["cover", "number", "back-cover"])}
+        year={2026}
+        archetype={null}
+        closeHref="/admin/users/member-1"
+        copy={LLM_COPY}
+        mode={adminPreview ? "admin-preview" : "member"}
+      />
+    </>
   ),
 }))
 
@@ -119,6 +122,17 @@ it("renders a v3 row as the framed stage in admin-preview mode, under the banner
     year: 2026,
     wrappedId: "wrapped-1",
   })
+})
+
+it("links the preview's share sheet to the admin's own Rewind only when it is theirs", async () => {
+  showView({ kind: "issue", id: "wrapped-1", data: minimalV3() as unknown as RewindDataV3 })
+  const { unmount } = await renderPage()
+  expect(screen.getByTestId("rewind-issue-props")).not.toHaveAttribute("data-own")
+  unmount()
+
+  jest.mocked(getAdminGate).mockResolvedValue({ ok: true, session: { user: { id: "member-1", isAdmin: true } } } as never)
+  await renderPage()
+  expect(screen.getByTestId("rewind-issue-props")).toHaveAttribute("data-own", "/rewind/2026?sheet=share")
 })
 
 it("reads the issue as an article with ?view=article", async () => {

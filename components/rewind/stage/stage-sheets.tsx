@@ -28,6 +28,8 @@ interface StageSheetsProps {
   prefs: StagePrefs
   articleHref: Route
   copy: CopyAuthor
+  /** The previews' share sheet: the viewer's own Rewind, when the preview shows it. */
+  ownRewindHref?: Route
 }
 
 /**
@@ -37,12 +39,19 @@ interface StageSheetsProps {
  * `CLOSE_SHEET`, which resumes only if the story was playing. They portal
  * through the scope's container and print on paper. Share (P5.11) opens from
  * S, the share buttons and `?sheet=share`, and from the back cover's
- * "Change" at its switches; it renders only inside a `ShareProvider`.
+ * "Change" at its switches; outside a `ShareProvider` (the previews) it
+ * says that sharing is off there and where it happens.
  */
-export function StageSheets({ sheet, onClose, pageName, page, table, prefs, articleHref, copy }: StageSheetsProps) {
+export function StageSheets({ sheet, onClose, pageName, page, table, prefs, articleHref, copy, ownRewindHref }: StageSheetsProps) {
   return (
     <>
-      <ShareSheet open={sheet === "share" || sheet === SHARE_SETTINGS_SHEET} onClose={onClose} page={page} atSettings={sheet === SHARE_SETTINGS_SHEET} />
+      <ShareSheet
+        open={sheet === "share" || sheet === SHARE_SETTINGS_SHEET}
+        onClose={onClose}
+        page={page}
+        atSettings={sheet === SHARE_SETTINGS_SHEET}
+        ownRewindHref={ownRewindHref}
+      />
       <SettingsSheet
         open={sheet === "settings"}
         onClose={onClose}

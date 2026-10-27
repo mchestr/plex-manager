@@ -21,11 +21,13 @@ interface StageKeysOptions {
   preview: boolean
   shortcuts: boolean
   close: () => void
+  /** Leaves full screen while the stage is in it, so Esc steps out of full screen before it closes the story. */
+  exitFullscreen: (() => void) | null
   onToggleNotesTable: () => void
 }
 
 /** The stage's `onKeyDown`: the member's keymap (design 4.6) turned into player events. */
-export function stageKeyDown({ state, send, last, playing, hasTable, framed, preview, shortcuts, close, onToggleNotesTable }: StageKeysOptions) {
+export function stageKeyDown({ state, send, last, playing, hasTable, framed, preview, shortcuts, close, exitFullscreen, onToggleNotesTable }: StageKeysOptions) {
   const run = (command: StageCommand) => {
     switch (command) {
       case "next":
@@ -42,7 +44,8 @@ export function stageKeyDown({ state, send, last, playing, hasTable, framed, pre
         if (state.mode === "cover" || state.mode === "ended") return
         return send({ type: playing ? "PAUSE" : "PLAY" })
       case "escape":
-        return state.mode === "sheet" ? send({ type: "CLOSE_SHEET" }) : close()
+        if (state.mode === "sheet") return send({ type: "CLOSE_SHEET" })
+        return exitFullscreen ? exitFullscreen() : close()
       case "table":
         if (!hasTable) return
         // On the spread, T swaps the Notes for the page's table instead of opening the sheet.

@@ -42,6 +42,8 @@ interface RewindIssueProps {
   adminPreview?: boolean
   /** Where the stage's "Read as an article" goes, when not the member's own article. */
   articleHref?: Route
+  /** The admin preview of the admin's own Rewind: its share sheet opens this instead of sharing. */
+  ownRewindHref?: Route
 }
 
 /** "Browse the library" on the postcard: the server's own Plex web app when it has a public URL. */
@@ -73,6 +75,7 @@ export async function RewindIssue({
   preview = false,
   adminPreview = false,
   articleHref,
+  ownRewindHref,
   initialPage,
   still = false,
 }: RewindIssueProps) {
@@ -161,6 +164,7 @@ export async function RewindIssue({
       initialSheet={initialSheet}
       mode={mode}
       articleHref={articleHref}
+      ownRewindHref={ownRewindHref}
       views={mode === "member" ? { rewindId, record: recordRewindView } : undefined}
       initialIndex={mode === "preview" ? Math.max(0, pages.findIndex((page) => page.type === initialPage)) : undefined}
       still={mode === "preview" && still}

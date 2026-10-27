@@ -95,6 +95,8 @@ export default async function AdminUserRewindPage({ params, searchParams }: Prev
   }
 
   const here = userRewind(userId, year)
+  // An admin shares their own Rewind from the member view; the preview's share sheet links there.
+  const ownRewindHref = userId === gate.session.user.id ? (`/rewind/${year}?sheet=share` as Route) : undefined
   const reading = view.kind === "issue" && (await searchParams).view === "article"
   const articleHref = `${here}?view=article` as Route
   const toggle = view.kind === "issue" ? (reading ? { href: here, label: "Play the story" } : { href: articleHref, label: "Read as an article" }) : null
@@ -136,7 +138,15 @@ export default async function AdminUserRewindPage({ params, searchParams }: Prev
               className="relative mx-auto aspect-9/16 h-[min(52.75rem,calc(100dvh-16rem))] min-h-96 max-w-full overflow-hidden rounded-lg border border-border"
               data-testid="admin-rewind-preview-frame"
             >
-              <RewindIssue rewindId={view.id} data={view.data} userId={userId} returnTo={userDetail(userId)} articleHref={articleHref} adminPreview />
+              <RewindIssue
+                rewindId={view.id}
+                data={view.data}
+                userId={userId}
+                returnTo={userDetail(userId)}
+                articleHref={articleHref}
+                ownRewindHref={ownRewindHref}
+                adminPreview
+              />
             </div>
           )
         ) : view.kind === "legacy" ? (
