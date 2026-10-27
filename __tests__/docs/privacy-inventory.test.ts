@@ -2,7 +2,7 @@
  * @jest-environment node
  *
  * `docs/privacy.md` is the personal-data inventory that member removal, the
- * retention jobs and the export follow (P11.13), so every model in
+ * retention jobs follow (P11.13), so every model in
  * `prisma/schema.prisma` must have a row in one of its tables, and the doc
  * must not list a model that no longer exists.
  */

@@ -43,7 +43,7 @@ A Next.js-based Plex management platform that combines server management tools, 
 ```
 app/                     # Next.js App Router (pages, layouts, routes)
 ├── (app)/              # Authenticated member layout group
-│   ├── account/        # Account page and /account/export (the member's data)
+│   ├── account/        # Account page and Your data (single-item deletes)
 │   ├── announcements/  # In-app announcements
 │   ├── discord/        # Discord account linking
 │   ├── help/           # Help and support
