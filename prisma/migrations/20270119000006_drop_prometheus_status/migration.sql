@@ -9,4 +9,4 @@
 UPDATE "Setup" SET "currentStepId" = 'summary' WHERE "currentStepId" = 'prometheus';
 
 -- DropTable
-DROP TABLE "Prometheus";
+DROP TABLE IF EXISTS "Prometheus";

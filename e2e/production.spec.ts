@@ -68,7 +68,7 @@ test.describe('Production build', () => {
       await page.goto('/');
       await prisma.config.upsert({ where: { id: 'config' }, update: { serverName: name }, create: { id: 'config', serverName: name } });
 
-      await page.goto('/admin/settings');
+      await page.goto('/admin/settings#server-time-zone');
       await page.getByTestId('server-time-zone-select').click();
       await page.getByTestId('server-time-zone-select-option-Pacific/Auckland').click();
       await page.getByTestId('settings-system-save').click();
