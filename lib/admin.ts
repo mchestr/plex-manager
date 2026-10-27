@@ -4,7 +4,7 @@ import type { Session } from "next-auth"
 
 import { AUTH_ERROR_DIGESTS, type AuthErrorKind } from "@/lib/auth-errors"
 import { getSession } from "@/lib/data/session"
-import { hasPermission, type Permission } from "@/lib/permissions"
+import { canEnterAdminArea, hasPermission, type Permission } from "@/lib/permissions"
 
 export type AdminGate =
   | { ok: true; session: Session }
@@ -31,8 +31,7 @@ export async function getAdminGate(): Promise<AdminGate> {
 export async function getAdminAreaGate(): Promise<AdminGate> {
   const session = await getSession()
   if (!session?.user?.id) return { ok: false, reason: "unauthenticated" }
-  const entry = session.user.isAdmin || hasPermission(session.user, "assistant:use") || hasPermission(session.user, "users:read")
-  return entry ? { ok: true, session } : { ok: false, reason: "forbidden" }
+  return canEnterAdminArea(session.user) ? { ok: true, session } : { ok: false, reason: "forbidden" }
 }
 
 /** An auth error the error boundaries recognise by its digest (`lib/auth-errors.ts`). */

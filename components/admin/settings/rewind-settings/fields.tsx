@@ -1,39 +1,68 @@
 "use client"
 
+import Link from "next/link"
 import { useId, type ReactNode } from "react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
-import { FormField } from "@/components/ui/form-field"
-import { labelClasses } from "@/components/ui/label"
+import { Label, labelClasses } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+import { useSettingsEdit } from "@/components/ui/settings-edit-context"
 import { cn } from "@/lib/utils"
 import { daysInMonth } from "@/lib/validations/rewind-settings"
 
-interface SwitchFieldProps {
+interface Option {
+  value: string
+  label: string
+}
+
+/** The Audience choices, shared by the Select and the summary. */
+export const AUDIENCES: readonly Option[] = [
+  { value: "admins", label: "Admins only" },
+  { value: "all", label: "Everyone" },
+]
+
+/** The LLM mode choices, shared by the Select and the summary. */
+export const LLM_MODES: readonly Option[] = [
+  { value: "standard", label: "Standard" },
+  { value: "economy", label: "Economy (the budget model)" },
+  { value: "off", label: "Off (template copy)" },
+]
+
+interface CheckboxFieldProps {
   name: string
   label: string
   description?: ReactNode
   checked: boolean
   onChange: (checked: boolean) => void
-  disabled?: boolean
 }
 
-/** A labelled switch with its description, in a `FormField`; the control sits in a slot as tall as an input so a row lines up. */
-export function SwitchField({ name, label, description, checked, onChange, disabled }: SwitchFieldProps) {
+/**
+ * A labelled checkbox with its description under the label, for a flag that
+ * saves with the section's Save. A switch would read as acting at once, so a
+ * form with an explicit Save uses a checkbox (NN/g, "Toggle-switch guidelines").
+ */
+export function CheckboxField({ name, label, description, checked, onChange }: CheckboxFieldProps) {
+  const id = useId()
   return (
-    <FormField name={name} label={label} description={description}>
-      <div className="flex h-10 items-center md:h-9">
-        <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} data-testid={`rewind-settings-${name}`} />
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id={id}
+          checked={checked}
+          onCheckedChange={onChange}
+          aria-describedby={description ? `${id}-description` : undefined}
+          data-testid={`rewind-settings-${name}`}
+        />
+        <Label htmlFor={id}>{label}</Label>
       </div>
-    </FormField>
+      {description && (
+        <p id={`${id}-description`} className="pl-6 text-label text-muted-foreground">
+          {description}
+        </p>
+      )}
+    </div>
   )
-}
-
-interface Option {
-  value: string
-  label: string
 }
 
 interface SelectFieldProps {
@@ -46,19 +75,21 @@ interface SelectFieldProps {
   disabled?: boolean
   /** Keeps the label as the trigger's accessible name only, for a field a legend already labels. */
   hideLabel?: boolean
+  /** The id of an error shown outside the field: marks the trigger invalid and describes it by the error. */
+  errorId?: string
 }
 
 /** A labelled Select (label, control, description: the `FormField` slots); the trigger carries the label as its name. */
-export function SelectField({ name, label, description, items, value, onChange, disabled, hideLabel }: SelectFieldProps) {
+export function SelectField({ name, label, description, items, value, onChange, disabled, hideLabel, errorId }: SelectFieldProps) {
   return (
-    <Field name={name} disabled={disabled}>
+    <Field name={name} disabled={disabled} invalid={Boolean(errorId)}>
       {!hideLabel && (
         <FieldLabel nativeLabel={false} render={<div />}>
           {label}
         </FieldLabel>
       )}
       <Select items={items} value={value} onValueChange={(next) => next && onChange(next)} disabled={disabled}>
-        <SelectTrigger aria-label={label} data-testid={`rewind-settings-${name}-trigger`}>
+        <SelectTrigger aria-label={label} aria-describedby={errorId} data-testid={`rewind-settings-${name}-trigger`}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -81,6 +112,38 @@ const MONTHS = [
 
 const MONTH_ITEMS = MONTHS.map((label, index) => ({ value: String(index + 1).padStart(2, "0"), label }))
 
+/** An `MM-DD` day as the month and day Selects read it: "December 1". */
+export function monthDayLabel(value: string): string {
+  const [month, day] = value.split("-")
+  return `${MONTHS[Number(month) - 1]} ${Number(day)}`
+}
+
+/** The System section's time zone control, which the zone note's link focuses. */
+const SERVER_TIME_ZONE_FIELD = '[data-testid="server-time-zone-select"]'
+
+/**
+ * The zone the season dates are evaluated in, with "Change the server time
+ * zone". The `#server-time-zone` href reveals the System group (`SettingsLayout`),
+ * and the click also opens the System section on its time zone field, since
+ * "Change" says the admin means to edit it (GOV.UK, "Check answers").
+ */
+export function TimeZoneNote({ zone }: { zone: string }) {
+  const requestEdit = useSettingsEdit()
+  return (
+    <p className="text-label text-muted-foreground" data-testid="rewind-settings-zone">
+      Dates are in {zone}. A season that crosses the new year belongs to the year it opens in.{" "}
+      <Link
+        data-testid="rewind-settings-time-zone-link"
+        href="#server-time-zone"
+        onClick={() => requestEdit?.("system", { focus: SERVER_TIME_ZONE_FIELD })}
+        className="text-foreground underline underline-offset-3"
+      >
+        Change the server time zone
+      </Link>
+    </p>
+  )
+}
+
 interface MonthDayFieldProps {
   name: string
   /** "Opens" or "Closes". */
@@ -91,8 +154,14 @@ interface MonthDayFieldProps {
   error?: string
 }
 
-/** A month Select and a day Select for one `MM-DD` date; the day clamps to the month's length. */
+/**
+ * A month Select and a day Select for one `MM-DD` date; the day clamps to the
+ * month's length. An error marks both Selects invalid and describes them by
+ * it, so a refused save can focus the date.
+ */
 export function MonthDayField({ name, label, value, onChange, error }: MonthDayFieldProps) {
+  const errorId = useId()
+  const describedBy = error ? errorId : undefined
   const [month, day] = value.split("-")
   const dayItems = Array.from({ length: daysInMonth(Number(month)) }, (_, i) => {
     const text = String(i + 1)
@@ -107,10 +176,22 @@ export function MonthDayField({ name, label, value, onChange, error }: MonthDayF
     <fieldset className="flex flex-col gap-1.5" data-testid={`rewind-settings-${name}`}>
       <legend className={cn(labelClasses, "mb-1.5")}>{label}</legend>
       <div className="grid grid-cols-[2fr_1fr] gap-2">
-        <SelectField name={`${name}-month`} label={`${label}: month`} hideLabel items={MONTH_ITEMS} value={month} onChange={setMonth} />
-        <SelectField name={`${name}-day`} label={`${label}: day`} hideLabel items={dayItems} value={day} onChange={(next) => onChange(`${month}-${next}`)} />
+        <SelectField name={`${name}-month`} label={`${label}: month`} hideLabel items={MONTH_ITEMS} value={month} onChange={setMonth} errorId={describedBy} />
+        <SelectField
+          name={`${name}-day`}
+          label={`${label}: day`}
+          hideLabel
+          items={dayItems}
+          value={day}
+          onChange={(next) => onChange(`${month}-${next}`)}
+          errorId={describedBy}
+        />
       </div>
-      {error && <p className="text-label text-destructive">{error}</p>}
+      {error && (
+        <p id={errorId} className="text-label text-destructive">
+          {error}
+        </p>
+      )}
     </fieldset>
   )
 }

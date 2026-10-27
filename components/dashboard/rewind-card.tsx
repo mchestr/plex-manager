@@ -166,7 +166,7 @@ export function RewindCard({ state, archive, name, settings, specimen = false }:
         )}
         <div className="flex items-center gap-2.5">
           {ready?.unread && <span role="img" aria-label="New" data-testid="rewind-card-unread" className="size-2 shrink-0 rounded-[2px] bg-primary" />}
-          <h2 className="text-h2" data-testid="rewind-card-title">
+          <h2 className="text-h2 wrap-anywhere" data-testid="rewind-card-title">
             {copy.title}
           </h2>
         </div>

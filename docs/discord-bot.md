@@ -248,7 +248,8 @@ Discord allows about 1000 gateway logins (IDENTIFY) per bot per 24 hours and
   `ShardResume`); the bot does not destroy the client for that.
 
 **After Discord resets a token:** generate a new one in the Discord Developer
-Portal (Bot, Reset Token) and paste it under Admin, Settings, Discord. The bot
+Portal (Bot, Reset Token) and paste it under Admin, Settings, Discord (Edit,
+then Save changes). The bot
 logs in within one poll. While it was reset, check `plex_manager_discord_gateway_logins_24h`
 and the `ShardDisconnect` warnings (`code`, `reason`) in the log to see what
 looped.

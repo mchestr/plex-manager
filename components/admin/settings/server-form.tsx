@@ -2,10 +2,11 @@
 
 import type { ReactNode } from "react"
 
+import { SheetForm, type SheetFormControls } from "@/components/admin/settings/sheet-form"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { SecretInput } from "@/components/ui/secret-input"
-import { SettingsFormFooter } from "@/components/ui/settings-section"
+import { SettingsFormFooter } from "@/components/ui/settings-form-footer"
 import {
   SERVER_LABELS,
   secretNoun,
@@ -41,10 +42,10 @@ interface ServerFormFieldsProps {
 }
 
 /**
- * A service's fields, always open (UI-31), in a two-column FormField grid
- * (UI-13): name, local URL, then the public URL and the token or API key as
- * a `SecretInput`. Errors from Test and Save show on their
- * field. Setup (P10.25) reuses these fields.
+ * A service's fields in a two-column FormField grid (UI-13): name, local
+ * URL, then the public URL and the token or API key as a `SecretInput`.
+ * Errors from Test and Save show on their field. A settings section shows
+ * them in edit mode and a Sheet as its form; setup (P10.25) reuses them.
  */
 export function ServerFormFields({ type, values, set, errors, saved, currentOrigin, disabled, testIdPrefix = "settings" }: ServerFormFieldsProps) {
   const label = SERVER_LABELS[type]
@@ -79,21 +80,34 @@ export function ServerFormFields({ type, values, set, errors, saved, currentOrig
   )
 }
 
-/** A service's form on its own, for the Other integrations Sheet. */
-export function ServerForm({ type, server, footerMeta }: { type: ServerType; server: StoredServer | null; footerMeta?: ReactNode }) {
+interface ServerFormProps extends SheetFormControls {
+  type: ServerType
+  server: StoredServer | null
+  /** "Last saved ... by ..." from the audit log, shown while the form is clean. */
+  footerMeta?: ReactNode
+}
+
+/**
+ * A service's form on its own: the edit mode of an Other integrations row,
+ * in its Sheet. Test connection tries the typed values; Save with nothing
+ * changed, or a save that works, calls `onDone`, and a failed one keeps the
+ * form open with the errors on their fields.
+ */
+export function ServerForm({ type, server, footerMeta, onDone, onCancel, onDirtyChange, onPendingChange }: ServerFormProps) {
   const { values, set, errors, currentOrigin, test, form } = useServerForm(type, server)
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault()
-        if (form.isDirty) form.onSave()
-      }}
-      noValidate
-      className="flex flex-col gap-6"
-      data-testid={`settings-${type}-form`}
-    >
+    <SheetForm form={form} onDone={onDone} onDirtyChange={onDirtyChange} onPendingChange={onPendingChange} data-testid={`settings-${type}-form`}>
       <ServerFormFields type={type} values={values} set={set} errors={errors} saved={server?.secret} currentOrigin={currentOrigin} disabled={form.isPending} />
-      <SettingsFormFooter id={type} form={form} onTest={test} footerMeta={footerMeta} className="px-0" />
-    </form>
+      <SettingsFormFooter
+        id={type}
+        title={SERVER_LABELS[type]}
+        form={form}
+        editing
+        onCancel={onCancel}
+        onTest={test}
+        footerMeta={footerMeta}
+        className="px-0"
+      />
+    </SheetForm>
   )
 }

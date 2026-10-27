@@ -182,7 +182,7 @@ export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCar
               {sync.lastSyncError}
             </p>
           ) : (
-            sync?.lastSyncError && <p className="line-clamp-2 text-caption text-destructive">{sync.lastSyncError}</p>
+            sync?.lastSyncError && <p className="line-clamp-2 text-caption text-destructive wrap-anywhere">{sync.lastSyncError}</p>
           )}
 
           {settings.recentHistory.length > 0 && (

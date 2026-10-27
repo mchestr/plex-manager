@@ -15,7 +15,7 @@ interface HelpCardProps {
 }
 
 const rowClass =
-  "-mx-2 flex h-9 items-center gap-2.5 rounded-md px-2 text-ui text-foreground hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring"
+  "-mx-2 flex min-h-9 items-center gap-2.5 rounded-md px-2 py-1.5 text-ui text-foreground hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring"
 
 function Row({ icon, end, children }: { icon: LucideIcon; end: LucideIcon; children: ReactNode }) {
   return (

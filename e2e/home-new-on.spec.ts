@@ -115,6 +115,19 @@ test.describe('Home: New on row', () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 
+  test('on a phone the row scrolls inside itself, never the page', async ({ adminPage: page }) => {
+    // At 320 px the third poster starts past the edge, where its link's
+    // sr-only text once widened the page by the row's whole length
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.goto('/');
+    const list = page.getByTestId('home-new-on-list');
+    await expect(list).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+    expect(await list.evaluate((row) => row.scrollWidth > row.clientWidth)).toBe(true);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+
   test('a Jellyfin member sees no row', async ({ regularUserPage: page }) => {
     const prisma = createE2EPrismaClient();
     try {

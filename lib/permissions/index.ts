@@ -89,3 +89,8 @@ export function permissionsFor(subject: PermissionSubject | null | undefined): R
 export function hasPermission(subject: PermissionSubject | null | undefined, permission: Permission): boolean {
   return permissionsFor(subject).has(permission)
 }
+
+/** Whether the subject may enter the admin area: an admin, or a role holding `assistant:use` or `users:read`. */
+export function canEnterAdminArea(subject: PermissionSubject | null | undefined): boolean {
+  return hasPermission(subject, "assistant:use") || hasPermission(subject, "users:read")
+}

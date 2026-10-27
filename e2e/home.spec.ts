@@ -1,11 +1,12 @@
-import { expect, test } from './fixtures/auth';
+import { expect, test, TEST_USERS } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
 
 /**
  * The signed-in home (P10.21): headings run h1 then h2, nothing animates
- * forever, the quick links go to the right places, and an announcement's
- * "New" pip shows once and is gone after a reload.
+ * forever, the quick links go to the right places, an announcement's "New"
+ * pip shows once and is gone after a reload, and long words stay inside a
+ * phone screen.
  */
 
 const TITLE = 'E2E Home Pip Announcement';
@@ -13,7 +14,7 @@ const TITLE = 'E2E Home Pip Announcement';
 async function removeAnnouncements() {
   const prisma = createE2EPrismaClient();
   try {
-    await prisma.announcement.deleteMany({ where: { title: TITLE } });
+    await prisma.announcement.deleteMany({ where: { title: { startsWith: TITLE } } });
   } finally {
     await prisma.$disconnect();
   }
@@ -102,5 +103,32 @@ test.describe('Home page', () => {
     await page.reload();
     await expect(page.getByTestId(`announcement-${id}`)).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(page.getByTestId(`announcement-${id}-new`)).toHaveCount(0);
+  });
+
+  test('a long username and an unbroken announcement title never widen a phone screen', async ({ regularUserPage: page }) => {
+    const prisma = createE2EPrismaClient();
+    try {
+      // A Plex username is often an email address: one word, no spaces to wrap at
+      await prisma.user.update({ where: { id: TEST_USERS.REGULAR.id }, data: { name: 'christopher.thompson.plexwatcher@example.com' } });
+      await prisma.announcement.create({
+        data: {
+          title: `${TITLE} ${'Unbroken'.repeat(8)}`,
+          content: `Details at https://example.com/${'path'.repeat(20)}`,
+          priority: 1000,
+          isActive: true,
+          createdBy: 'admin-user-id',
+        },
+      });
+
+      await page.setViewportSize({ width: 320, height: 700 });
+      await page.goto('/');
+      await expect(page.getByTestId('announcements-card')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+    } finally {
+      await prisma.user.update({ where: { id: TEST_USERS.REGULAR.id }, data: { name: TEST_USERS.REGULAR.name } });
+      await prisma.$disconnect();
+    }
   });
 });

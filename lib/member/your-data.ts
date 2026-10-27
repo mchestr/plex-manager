@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 
 /** Marks per page of the account page's table. */
 export const MARKS_PAGE_SIZE = 25
-/** The newest watchlist items and conversations the account page lists. */
+/** The newest watchlist items the account page lists. */
 export const LIST_LIMIT = 50
 
 export interface MarkRow {
@@ -24,7 +24,6 @@ export interface DataItem {
 export interface YourData {
   marks: { rows: MarkRow[]; page: number; total: number }
   watchlist: { rows: DataItem[]; total: number }
-  conversations: { rows: DataItem[]; total: number }
 }
 
 function markTitle(mark: { title: string; year: number | null; parentTitle: string | null; seasonNumber: number | null; episodeNumber: number | null }) {
@@ -35,10 +34,10 @@ function markTitle(mark: { title: string; year: number | null; parentTitle: stri
 
 /**
  * The "Your data" lists on `/account` (P11.15): one page of the member's
- * marks, and the newest watchlist history items and assistant conversations.
+ * marks, and the newest watchlist history items.
  */
 export async function getYourData(userId: string, marksPage: number): Promise<YourData> {
-  const [marks, markTotal, history, historyTotal, conversations, conversationTotal] = await Promise.all([
+  const [marks, markTotal, history, historyTotal] = await Promise.all([
     prisma.userMediaMark.findMany({
       where: { userId },
       orderBy: [{ markedAt: "desc" }, { id: "asc" }],
@@ -54,13 +53,6 @@ export async function getYourData(userId: string, marksPage: number): Promise<Yo
       select: { id: true, title: true, year: true, syncedAt: true },
     }),
     prisma.watchlistSyncHistory.count({ where: { userId } }),
-    prisma.chatConversation.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: LIST_LIMIT,
-      select: { id: true, createdAt: true },
-    }),
-    prisma.chatConversation.count({ where: { userId } }),
   ])
 
   return {
@@ -72,10 +64,6 @@ export async function getYourData(userId: string, marksPage: number): Promise<Yo
     watchlist: {
       total: historyTotal,
       rows: history.map((item) => ({ id: item.id, title: item.year ? `${item.title} (${item.year})` : item.title, at: item.syncedAt.toISOString() })),
-    },
-    conversations: {
-      total: conversationTotal,
-      rows: conversations.map((conversation) => ({ id: conversation.id, title: "Assistant conversation", at: conversation.createdAt.toISOString() })),
     },
   }
 }

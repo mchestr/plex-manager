@@ -18,7 +18,8 @@ permission needs no schema change. An unknown stored role grants nothing.
 | `assistant:tools:admin` | no | Assistant tools over admin-only data and connections: app data (invites, members, failed jobs), the knowledge base and MCP servers |
 | `users:read` | yes | The users list, read-only |
 
-A Support user sees Users and the assistant in the admin area. Settings,
+A Support user sees Users and the assistant in the admin area, and the member
+app shows them the same Admin link an admin gets (`canEnterAdminArea`). Settings,
 connections, LLM providers, Stripe, invites, queues, usage and cost, a
 member's detail page and role management are refused on the server (a page
 checks `assertAdmin()` or `assertPermission()`, and an action is built with

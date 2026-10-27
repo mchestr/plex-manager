@@ -40,10 +40,11 @@ function missingStripeSetup(config: StripeConfigStatus): string[] {
 type StripeField = "secretKey" | "webhookSecret" | "priceIds" | "librarySectionIds"
 
 /**
- * The Stripe keys, price ids and subscriber libraries as one always-open
- * form (UI-31) saved by the section footer. Blank keys keep the stored ones:
- * both go only to Stripe, so they never ask for re-entry. Errors appear only
- * after a save attempt.
+ * The Stripe keys, price ids and subscriber libraries: the form behind the
+ * section's Edit, saved by its footer. Blank keys keep the stored ones: both
+ * go only to Stripe, so they never ask for re-entry. Errors appear only
+ * after a save attempt, a failed save keeps the section open, and Cancel
+ * clears the errors with the edits.
  */
 export function useStripeForm(config: StripeConfigStatus) {
   const toast = useToast()
@@ -70,12 +71,12 @@ export function useStripeForm(config: StripeConfigStatus) {
       }
       setErrors(fieldErrors)
       if (Object.keys(fieldErrors).length === 0) toast.showError(result.error)
-      return
+      return { ok: false }
     }
     // The action revalidates the page, so the saved state follows
     setErrors({})
     toast.showSuccess("Stripe settings saved")
-    return { ...values, secretKey: "", webhookSecret: "" }
+    return { ok: true, keep: { ...values, secretKey: "", webhookSecret: "" } }
   })
 
   const set = (patch: Partial<typeof initial>) => {
@@ -83,7 +84,18 @@ export function useStripeForm(config: StripeConfigStatus) {
     setErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([field]) => !(field in patch))))
   }
 
-  return { values: settings.values, set, errors, form: settings.form }
+  return {
+    values: settings.values,
+    set,
+    errors,
+    form: {
+      ...settings.form,
+      onDiscard: () => {
+        settings.form.onDiscard()
+        setErrors({})
+      },
+    },
+  }
 }
 
 interface JellyfinMembers {
@@ -126,7 +138,10 @@ function JellyfinMembersConfirm({ members, onClose }: { members: JellyfinMembers
   )
 }
 
-/** The master switch: it saves on its own, and stays off until every prerequisite is saved. */
+/**
+ * The master switch: it saves at once, outside Edit (NN/g, "Toggle-switch
+ * guidelines"), and stays off until every prerequisite is saved.
+ */
 function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; missing: string[] }) {
   const toast = useToast()
   const [isToggling, startToggling] = useTransition()
@@ -162,9 +177,28 @@ function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; 
       <div className="flex flex-col">
         <Label htmlFor="stripe-enabled">Subscriptions</Label>
         <span id="stripe-enabled-hint" className="text-label text-muted-foreground">
-          Non-members can subscribe for access. Turning it off cancels nothing.
+          Non-members can subscribe for access. Turning it off cancels nothing. Takes effect at once.
         </span>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Stripe's live controls, in both modes and outside the form: the
+ * Subscriptions switch and its one prerequisite Alert
+ * (`stripe-enable-requirements`), read from the saved settings only.
+ */
+export function StripeSubscriptions({ config }: { config: StripeConfigStatus }) {
+  const missing = missingStripeSetup(config)
+  return (
+    <div className="flex flex-col gap-6" data-testid="stripe-settings-form">
+      <SubscriptionsSwitch config={config} missing={missing} />
+      {!config.enabled && missing.length > 0 && (
+        <Alert tone="warning" role="status" title="Subscriptions can't be turned on yet." data-testid="stripe-enable-requirements">
+          Save {missing.join(", ")} first.
+        </Alert>
+      )}
     </div>
   )
 }
@@ -212,25 +246,18 @@ function LibraryChecklist({ libraries, selected, onToggle, disabled }: LibraryCh
 }
 
 /**
- * Stripe's switch, its one prerequisite Alert (`stripe-enable-requirements`)
- * and the fields. The keys are SecretInputs in the saved state.
+ * The fields behind Edit: both keys as SecretInputs in the saved state, the
+ * price ids and the subscriber library checklist.
  */
 export function StripeSettingsFields({ config, state, libraries }: StripeSettingsFieldsProps) {
   const { values, set, errors, form } = state
-  const missing = missingStripeSetup(config)
   const disabled = form.isPending
 
   const toggleLibrary = (id: number, checked: boolean) =>
     set({ librarySectionIds: checked ? [...values.librarySectionIds, id] : values.librarySectionIds.filter((existing) => existing !== id) })
 
   return (
-    <div className="flex flex-col gap-6" data-testid="stripe-settings-form">
-      <SubscriptionsSwitch config={config} missing={missing} />
-      {!config.enabled && missing.length > 0 && (
-        <Alert tone="warning" role="status" title="Subscriptions can't be turned on yet." data-testid="stripe-enable-requirements">
-          Save {missing.join(", ")} first.
-        </Alert>
-      )}
+    <>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField name="stripe-secret-key" label="Secret key" description="Required before subscriptions can be turned on." error={errors.secretKey}>
           <SecretInput
@@ -279,10 +306,15 @@ export function StripeSettingsFields({ config, state, libraries }: StripeSetting
       <fieldset className="flex flex-col gap-2" data-testid="stripe-library-access">
         <legend className="text-ui font-medium text-foreground">Subscriber library access</legend>
         <p className="text-label text-muted-foreground">Libraries shared with subscribers. Leave all unchecked to share every library.</p>
+        {errors.librarySectionIds && (
+          <p className="text-label text-destructive" data-testid="stripe-library-access-error">
+            {errors.librarySectionIds}
+          </p>
+        )}
         <Suspense fallback={<p className="text-label text-muted-foreground">Loading libraries</p>}>
           <LibraryChecklist libraries={libraries} selected={values.librarySectionIds} onToggle={toggleLibrary} disabled={disabled} />
         </Suspense>
       </fieldset>
-    </div>
+    </>
   )
 }

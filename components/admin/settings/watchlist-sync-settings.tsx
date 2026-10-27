@@ -4,11 +4,11 @@ import { Suspense, use, useState } from "react"
 
 import { updateGlobalWatchlistSyncSettings } from "@/actions/admin/watchlist"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
-import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 import type { WatchlistSyncStats as SyncStats } from "@/lib/admin/watchlist-stats"
@@ -34,31 +34,57 @@ function intervalError(value: string): string | undefined {
   return Number.isInteger(minutes) && minutes >= 15 && minutes <= 1440 ? undefined : INTERVAL_ERROR
 }
 
-/** The global switch and interval as one always-open form (UI-31), saved by the section footer. */
+/**
+ * The global sync flag and interval: the form behind the section's Edit,
+ * saved by its footer. An interval out of range stops the save on its field;
+ * while the draft is off the interval field is hidden, so a bad value there
+ * gives way to the saved one rather than blocking the save. Cancel clears
+ * the error with the edits.
+ */
 export function useWatchlistForm(saved: WatchlistGlobalSettings) {
   const toast = useToast()
   const [error, setError] = useState<string>()
   const settings = useSettingsForm({ enabled: saved.enabled, interval: String(saved.intervalMinutes) }, async (values) => {
-    const invalid = intervalError(values.interval)
+    const interval = values.enabled || !intervalError(values.interval) ? values.interval : String(saved.intervalMinutes)
+    const invalid = intervalError(interval)
     if (invalid) {
       setError(invalid)
-      return
+      return { ok: false }
     }
     const result = await updateGlobalWatchlistSyncSettings({
       watchlistSyncEnabled: values.enabled,
-      watchlistSyncIntervalMinutes: Number(values.interval),
+      watchlistSyncIntervalMinutes: Number(interval),
     })
-    if (!result.success) {
+    // UPSTREAM_UNAVAILABLE comes after the write, so it closes the form like a success
+    if (!result.success && result.code !== "UPSTREAM_UNAVAILABLE") {
       const field = result.fieldErrors?.watchlistSyncIntervalMinutes?.[0]
       if (field) setError(field)
       else toast.showError(result.error)
-      return
+      return { ok: false }
     }
     setError(undefined)
-    // The action revalidates the page, so the section's status follows the switch
-    toast.showSuccess("Watchlist sync saved")
+    // The action revalidates the page, so the summary and the section's status follow
+    if (result.success) toast.showSuccess("Watchlist sync saved")
+    // Saved, but the job queue did not answer: the copy asks for another save later
+    else toast.showError(result.error)
+    return { ok: true, keep: { ...values, interval } }
   })
-  return { ...settings, error }
+  return {
+    values: settings.values,
+    /** Changes fields; a new interval replaces a refused one's error with the live check. */
+    set: (patch: Partial<typeof settings.values>) => {
+      settings.set(patch)
+      if ("interval" in patch) setError(undefined)
+    },
+    error,
+    form: {
+      ...settings.form,
+      onDiscard: () => {
+        settings.form.onDiscard()
+        setError(undefined)
+      },
+    },
+  }
 }
 
 /** Members, items and recent requests; the page streams them in, so they never hold the settings up. */
@@ -90,18 +116,32 @@ function WatchlistSyncStats({ stats: pending }: { stats: Promise<SyncStats | nul
   )
 }
 
-/** The Watchlist sync controls: the global switch, the interval while it is on, and the statistics. */
-export function WatchlistSyncFields({ state, stats }: { state: ReturnType<typeof useWatchlistForm>; stats: Promise<SyncStats | null> }) {
+/** The figures, in both modes: they describe the saved setting, so they show while it is on. */
+export function WatchlistSyncFigures({ stats }: { stats: Promise<SyncStats | null> }) {
+  return (
+    <Suspense fallback={null}>
+      <WatchlistSyncStats stats={stats} />
+    </Suspense>
+  )
+}
+
+/**
+ * The fields behind Edit: the global flag as a Checkbox, since it saves with
+ * Save (NN/g, "Toggle-switch guidelines"), and the interval while the draft
+ * is on.
+ */
+export function WatchlistSyncFields({ state }: { state: ReturnType<typeof useWatchlistForm> }) {
   const { values, set, form, error } = state
   return (
     <div className="flex flex-col gap-6" data-testid="watchlist-sync-settings">
       <div className="flex items-start gap-3">
-        <Switch
+        <Checkbox
           id="watchlist-sync-enabled"
           checked={values.enabled}
           onCheckedChange={(enabled) => set({ enabled })}
           disabled={form.isPending}
           aria-describedby="watchlist-sync-enabled-hint"
+          className="mt-0.5"
           data-testid="watchlist-sync-global-toggle"
         />
         <div className="flex flex-col">
@@ -124,11 +164,6 @@ export function WatchlistSyncFields({ state, stats }: { state: ReturnType<typeof
             data-testid="watchlist-sync-interval-input"
           />
         </FormField>
-      )}
-      {values.enabled && (
-        <Suspense fallback={null}>
-          <WatchlistSyncStats stats={stats} />
-        </Suspense>
       )}
     </div>
   )

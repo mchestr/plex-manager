@@ -7,14 +7,11 @@
  * listed; `__tests__/proxy.test.ts` checks every route folder against this.
  *
  * ```
- * level    (app) path         /rewind, /rewind/*,   other paths
- *                             /account/export
+ * level    (app) path         /rewind, /rewind/*    other paths
  * full     open               open                  open
  * lapsed   -> /subscribe      open                  open
  * none     -> /subscribe      -> /subscribe         open
  * ```
- *
- * A lapsed member keeps the data export (P11.15): it is their data.
  *
  * A plain module (no `server-only`), so `proxy.ts` and the `(app)` layout share it.
  *
@@ -30,10 +27,10 @@ const NON_APP_SEGMENTS = new Set(["admin", "api", "auth", "dev", "invite", "onbo
 const PUBLIC_PATH = /^\/rewind\/s(\/|$)/
 
 /**
- * The read-only Rewind pages a lapsed member keeps (FR-51), and the data
- * export (P11.15). `/wrapped*` redirects here before the proxy runs.
+ * The read-only Rewind pages a lapsed member keeps (FR-51). `/wrapped*`
+ * redirects here before the proxy runs.
  */
-const LAPSED_OPEN_PATH = /^\/rewind(\/|$)|^\/account\/export$/
+const LAPSED_OPEN_PATH = /^\/rewind(\/|$)/
 
 /** A file such as `/robots.txt`: never a page. */
 const FILE_PATH = /\/[^/]*\.[A-Za-z0-9]+$/

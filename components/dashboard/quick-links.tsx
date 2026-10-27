@@ -81,7 +81,7 @@ function Tile({ link }: { link: QuickLink }) {
       <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-secondary text-foreground">
         <Icon icon={link.icon} size={20} />
       </span>
-      <span className="flex min-w-0 flex-col gap-0.5 pr-5">
+      <span className="flex min-w-0 flex-col gap-0.5 pr-5 wrap-anywhere">
         <span className="text-ui font-semibold text-foreground">{link.title}</span>
         <span className="text-caption text-muted-foreground">{link.description}</span>
       </span>
