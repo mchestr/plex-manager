@@ -1,12 +1,9 @@
-import { Download } from "lucide-react"
 import Link from "next/link"
 import type { ReactNode } from "react"
 
 import { DataItemList } from "@/components/account/data-item-list"
 import { MarksTable } from "@/components/account/marks-table"
-import { Button } from "@/components/ui/button"
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Icon } from "@/components/ui/icon"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LIST_LIMIT, MARKS_PAGE_SIZE, type YourData } from "@/lib/member/your-data"
 
 function Part({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
@@ -33,9 +30,8 @@ interface YourDataSectionProps {
 }
 
 /**
- * The account page's "Your data" (P11.15, GAP-36): the JSON download, and
- * marks, watchlist history and assistant conversations the member can delete
- * one by one. Share links and hidden titles keep their own controls on the
+ * The account page's "Your data" (P11.15, GAP-36): marks, watchlist history
+ * and assistant conversations the member can delete one by one. Share links and hidden titles keep their own controls on the
  * Rewind.
  */
 export function YourDataSection({ data, disclosure }: YourDataSectionProps) {
@@ -44,12 +40,6 @@ export function YourDataSection({ data, disclosure }: YourDataSectionProps) {
       <CardHeader>
         <CardTitle as="h2">Your data</CardTitle>
         <CardDescription>{disclosure}</CardDescription>
-        <CardAction>
-          <Button variant="secondary" size="sm" nativeButton={false} render={<a href="/account/export" download aria-label="Download my data" />} data-testid="account-export-button">
-            <Icon icon={Download} />
-            Download my data
-          </Button>
-        </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-8">
         <Part title="Marks">

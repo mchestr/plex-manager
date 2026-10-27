@@ -40,8 +40,6 @@ export const LIMITS = {
   "admin:invites": { points: 30, duration: 10 * MINUTE },
   // Member removals per admin (P11.13)
   "admin:remove-member": { points: 10, duration: HOUR },
-  // The member's data export, per member (P11.15)
-  "account:export": { points: 3, duration: DAY },
   // Deleting a mark, a watchlist item or a conversation from /account, per member (P11.15)
   "account:data": { points: 60, duration: HOUR },
   checkout: { points: 10, duration: MINUTE },

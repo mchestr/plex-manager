@@ -1,6 +1,5 @@
 /**
- * The account page's "Your data" section (P11.15): the download link, the
- * marks table with Delete in each row's menu, and the watchlist and
+ * The account page's "Your data" section (P11.15): the marks table with Delete in each row's menu, and the watchlist and
  * conversation lists, each delete behind a confirm.
  */
 
@@ -33,13 +32,12 @@ beforeEach(() => {
 })
 
 describe('YourDataSection', () => {
-  it('renders the download link, the disclosure and the three lists', () => {
+  it('renders the disclosure and the three lists', () => {
     render(<YourDataSection data={DATA} disclosure="Server admins can review assistant conversations." />)
 
     const section = screen.getByTestId('account-your-data')
     expect(within(section).getByRole('heading', { level: 2, name: 'Your data' })).toBeInTheDocument()
     expect(section).toHaveTextContent('Server admins can review assistant conversations.')
-    expect(screen.getByTestId('account-export-button')).toHaveAttribute('href', '/account/export')
     for (const title of ['Marks', 'Watchlist history', 'Assistant conversations']) {
       expect(within(section).getByRole('heading', { level: 3, name: title })).toBeInTheDocument()
     }

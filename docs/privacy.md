@@ -2,7 +2,7 @@
 
 This is the inventory of the personal data Plex Manager stores, and what happens to each piece when an admin removes a member. It updates the October 2026 audit's inventory (`.agents/planning/2026-10-17-app-audit-and-rewind-2026/research/additional-findings.md`, "Privacy: personal-data inventory") for the Rewind 2026 (v3) models and every column added since.
 
-The inventory drives member removal (`lib/members/erase.ts`), the member export (`lib/members/export.ts`), and later the retention jobs. A test (`__tests__/docs/privacy-inventory.test.ts`) fails when a model in `prisma/schema.prisma` is missing from the tables below, so a new table or personal-data column updates this file in the same pull request.
+The inventory drives member removal (`lib/members/erase.ts`) and the retention jobs. A test (`__tests__/docs/privacy-inventory.test.ts`) fails when a model in `prisma/schema.prisma` is missing from the tables below, so a new table or personal-data column updates this file in the same pull request.
 
 ## Removing a member
 
@@ -46,26 +46,9 @@ Unsharing a member (`unshareUserLibrary`) and the Stripe revoke job (`PLEX_ACCES
 
 Admins can see each member's watch activity and Rewind (and its past versions), the assistant conversations stored in `LLMUsage` (prompts, responses and tool results), Discord command history (assistant messages as a length only), media marks and watchlist sync history. Opening one member's content writes `MEMBER_CONTENT_VIEWED` (once an hour per admin, member and page); pages that list every member's content write `MEMBER_CONTENT_LISTED`; unsharing, importing members and regenerating a Rewind are audited too. `AuditLog` rows are kept for 400 days (P11.14).
 
-## Your data: export and single deletes
+## Your data: single deletes
 
-A member downloads their data from Account, Your data ("Download my data", `/account/export`). The file is JSON (`format: "plex-manager-member-export"`, `version: 1`), checked against a strict schema (`MemberExportV1` in `lib/members/export-schema.ts`) so nothing outside it reaches the file: no token, token hash, share asset key, Stripe id or Discord token. It is limited to three a day per member, and a member whose membership lapsed can still download it.
-
-What each model of the "Member data" table below becomes in the export (`EXPORT_COVERAGE`; a test fails when a model there has no entry):
-
-- `User`: `profile` (name, email, image, services, Plex and Jellyfin user ids, time zone, joined date). Never `plexAuthToken`.
-- `PlexWrapped`: `rewinds`, one per year with edition, status, generated date and data. Rewind 2026 data is copied as stored; older years go through the stored-Rewind parser.
-- `RewindPrefs`: `rewindPrefs`.
-- `RewindExclusion`: `rewindExclusions` (the titles hidden from the Rewind).
-- `RewindShare`: `rewindShares` (pages, signed, options, dates and status), without the token hash or asset key.
-- `UserMediaMark`: `marks`.
-- `WatchlistSyncSettings` and `WatchlistSyncHistory`: `watchlist` (settings and history).
-- `Subscription`: `subscription` (status, plan name, period end, cancel date), without Stripe ids.
-- `DiscordConnection`: `discord` (username, display name, link date), without tokens.
-- `LLMUsage` and `ChatConversation`: `assistantConversations`, the newest 500 assistant calls that still have text, by conversation. Rewind generation rows are not listed; the Rewind they wrote is in `rewinds`.
-- `DiscordCommandLog`: `discordCommands`, metadata only (command, channel type, status, message length, time).
-- Left out, with the reason recorded in `EXPORT_COVERAGE`: `RewindGeneration` (run records; the Rewind is in `rewinds`), `RewindShareVisitDay` (visit counts of a link), `RewindView` (reading progress for the season totals), `WrappedShareVisit` (data about visitors), `DiscordChatSession` (a working copy of the assistant turns), `DiscordOAuthState` and `DiscordPendingSelection` (expire within minutes), `InviteUsage` (which invite admitted the member), `AuditLog` (the operator's security record) and `RequestTierRun` (the operator's request-limit run history, keyed by Overseerr user).
-
-On the same page a member can delete, one at a time and only their own (`actions/member-data.ts`, 60 an hour):
+From Account, Your data, a member can delete, one at a time and only their own (`actions/member-data.ts`, 60 an hour):
 
 - a mark (Discord `/mymarks` links here; there is no `/unmark`);
 - a watchlist history item. If the title is still on their Plex watchlist, the next sync can request it again;

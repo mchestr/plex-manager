@@ -1,18 +1,15 @@
-import fs from 'node:fs/promises';
-
 import { expect, test, TEST_USERS } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { clearRateLimits } from './helpers/rate-limits';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
 
 /**
- * Your data on /account (P11.15): "Download my data" saves a JSON export
- * holding the member's own seeded mark, and deleting a mark from its row
- * menu keeps it gone after a reload.
+ * Your data on /account (P11.15): deleting a mark from its row menu keeps it
+ * gone after a reload.
  */
 
 const MEMBER_ID = TEST_USERS.REGULAR.id;
-const MARK_TITLE = 'E2E Export Mark';
+const MARK_TITLE = 'E2E Data Mark';
 const RATING_KEY = '987654';
 
 async function resetMarks() {
@@ -48,26 +45,9 @@ test.describe('Your data', () => {
   test.describe.configure({ mode: 'serial' });
   test.beforeEach(async () => {
     await resetMarks();
-    if (process.env.REDIS_URL) await clearRateLimits(process.env.REDIS_URL, ['account:export', 'account:data']);
+    if (process.env.REDIS_URL) await clearRateLimits(process.env.REDIS_URL, ['account:data']);
   });
   test.afterAll(resetMarks);
-
-  test('downloads a JSON export with the seeded mark', async ({ regularUserPage: page }) => {
-    await seedMark();
-    await page.goto('/account');
-    const button = page.getByTestId('account-export-button');
-    await expect(button).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-
-    const [download] = await Promise.all([page.waitForEvent('download'), button.click()]);
-    expect(download.suggestedFilename()).toMatch(/^plex-manager-data-\d{4}-\d{2}-\d{2}\.json$/);
-    const file = await download.path();
-    const data = JSON.parse(await fs.readFile(file, 'utf8'));
-
-    expect(data.format).toBe('plex-manager-member-export');
-    expect(data.version).toBe(1);
-    expect(data.marks).toEqual(expect.arrayContaining([expect.objectContaining({ title: MARK_TITLE, markType: 'KEEP_FOREVER' })]));
-    expect(JSON.stringify(data)).not.toMatch(/plexAuthToken|tokenHash|accessToken/);
-  });
 
   test('a deleted mark stays gone after a reload', async ({ regularUserPage: page }) => {
     const markId = await seedMark();
