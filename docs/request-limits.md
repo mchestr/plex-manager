@@ -46,7 +46,7 @@ A tier applies when the member has watched *more than* its hours:
 - **Excluded members:** turn on "Set request limits by hand" on a member's admin page to keep a quota you set yourself.
 - **Checking one member:** a Plex member's admin page (Overview, Request limits) checks their tier live: the hours Tautulli has, the tier they earn, and the quota Overseerr has now, with a badge for **In sync**, **Out of sync**, **Set by hand**, **No limits** (an Overseerr admin or user manager, whose quota Overseerr ignores) or **Can't check**, which names the step that failed. **Update Overseerr** writes the tier's quota for that member now, whether or not the daily sync is on, and the page then reads Overseerr again. Overseerr's user list is cached for 10 minutes, so a member who has just signed in to Overseerr can take that long to appear.
 - **Last run:** each run is stored (member, hours, tier, old and new quota); the settings page shows the latest, and the newest 30 runs are kept.
-- **Members:** the home page shows the tier, the requests used and left (`GET /user/{id}/quota`), the hours to the next tier with a progress bar and the tier table. Discord `/mystats` adds the same figures.
+- **Members:** the home page shows the member's tier and its limits, and the requests used and left (`GET /user/{id}/quota`). It also shows the hours to the next tier, with a progress bar and that tier's limits (and its period, when it differs). Only admins see the full tier table. Discord `/mystats` adds the same figures.
 
 ## Moving off Windmill
 

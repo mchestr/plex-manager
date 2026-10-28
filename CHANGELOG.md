@@ -20,6 +20,7 @@ check); the `no-changelog` label skips it.
 
 ### Changed
 
+- **Request limits on home:** the home page no longer shows the full tier table. Members now see their own tier, its limits, the requests they have left, and the hours to the next tier and its limits. Only admins see the full table, in Admin > Settings, Request limits. Discord `/mystats` already showed only these figures. The card gives the next tier's period when it differs from the member's own, and tells the member when it cannot read their limits. A one-day period reads "every day", not "every 1 days".
 - **Rewind times are implicit:** Rewind no longer prints a time zone. The "Times in America/Chicago, the server's time zone" notes are gone from the bookends, clock, short list and centrefold pages, the desktop Notes, article mode, chart and table captions and the clock and centrefold share cards. Times and days are still counted in the member's Rewind zone (their saved zone, else the server's), and nothing on the page names it.
 
 ### Fixed

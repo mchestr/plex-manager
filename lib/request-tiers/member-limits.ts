@@ -2,6 +2,8 @@
  * A member's request limits for the home page and `/mystats`: their tier from
  * all-time watch time, how far they are from the next, and the requests they
  * have used and have left in this period (Overseerr's `/user/{id}/quota`).
+ * Only admins see the full tier table, so the result carries just the
+ * member's own tier and the next one.
  *
  * Nothing here throws. It returns `null` when the feature is off, the member
  * has no Plex account, or Tautulli or Overseerr is not connected; a call that
@@ -17,10 +19,9 @@ import { getOverseerrUserUsage, type OverseerrUserUsage } from "@/lib/connection
 import { getAllTimeWatchHours } from "@/lib/connections/tautulli-watch-time"
 import { getActiveService } from "@/lib/data/active-service"
 import { prisma } from "@/lib/prisma"
-import { tierProgress, tiersFromConfig, type RequestTier, type TierProgress } from "@/lib/request-tiers/tiers"
+import { tierProgress, tiersFromConfig, type TierProgress } from "@/lib/request-tiers/tiers"
 
 export interface MemberRequestLimits {
-  tiers: RequestTier[]
   /** The member's all-time hours; null when Tautulli did not answer. */
   hours: number | null
   progress: TierProgress | null
@@ -48,12 +49,10 @@ export async function getMemberRequestLimits(userId: string): Promise<MemberRequ
     overseerrUserId === null ? null : getOverseerrUserUsage(overseerr, overseerrUserId, { signal }),
   ])
 
-  const tiers = [...tiersFromConfig(config.requestTiers)]
   const hours = watch?.ok ? watch.data : null
   return {
-    tiers,
     hours,
-    progress: hours === null ? null : tierProgress(hours, tiers),
+    progress: hours === null ? null : tierProgress(hours, tiersFromConfig(config.requestTiers)),
     excluded: user.requestTiersExcluded,
     usage: usage?.ok ? usage.data : null,
   }
