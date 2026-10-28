@@ -17,24 +17,41 @@ const TYPES: IssuePageType[] = ["cover", "number", "back-cover"]
 
 function renderStage({ mode, pages = stagePages(TYPES), ownRewindHref }: { mode?: "member" | "preview" | "admin-preview"; pages?: StoryStagePage[]; ownRewindHref?: Route } = {}) {
   return render(
-    <div data-theme="rewind">
-      <PortalContainerProvider popupProps={{ "data-field": "paper" }}>
-        <StoryStage pages={pages} year={2026} archetype="midnight-marathoner" closeHref="/home" copy={LLM_COPY} mode={mode} ownRewindHref={ownRewindHref} />
-      </PortalContainerProvider>
-    </div>
+    <main>
+      {/* The admin page's header beside the Rewind scope */}
+      <a href="/admin/users" data-testid="outside">
+        Users
+      </a>
+      <div data-theme="rewind">
+        <PortalContainerProvider popupProps={{ "data-field": "paper" }}>
+          <StoryStage pages={pages} year={2026} archetype="midnight-marathoner" closeHref="/home" copy={LLM_COPY} mode={mode} ownRewindHref={ownRewindHref} />
+        </PortalContainerProvider>
+      </div>
+    </main>
   )
 }
 
 const stage = () => screen.getByTestId("rewind-stage")
 
-/** jsdom has no Fullscreen API: this one enters and leaves at once and reports `fullscreenchange`. */
-function fakeFullscreenApi() {
+/** jsdom has no Fullscreen API: this one enters (at once, or when `enter` is called) and leaves, and reports `fullscreenchange`. */
+function fakeFullscreenApi({ deferred = false }: { deferred?: boolean } = {}) {
   let element: Element | null = null
+  let finish: (() => void) | null = null
   const change = () => document.dispatchEvent(new Event("fullscreenchange"))
-  const request = jest.fn(async () => {
+  const enter = () => {
     element = document.documentElement
     change()
-  })
+  }
+  const request = jest.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = () => {
+          enter()
+          resolve()
+        }
+        if (!deferred) finish()
+      })
+  )
   const exit = jest.fn(async () => {
     element = null
     change()
@@ -46,6 +63,8 @@ function fakeFullscreenApi() {
   return {
     request,
     exit,
+    /** The browser finishes entering a deferred request. */
+    finish: () => finish?.(),
     /** The browser's own exit: Esc or the back gesture. */
     leave: () => {
       element = null
@@ -102,6 +121,9 @@ describe("StoryStage full screen", () => {
     expect(stage()).toHaveClass("absolute", "contain-paint")
     expect(stage()).toHaveAttribute("data-rw-framed")
 
+    // In the frame Full screen takes Close's place, so three circles still fit a narrow frame.
+    expect(screen.queryByTestId("rewind-close")).not.toBeInTheDocument()
+
     await user.click(screen.getByRole("button", { name: "Full screen" }))
     expect(stage()).toHaveAttribute("data-fullscreen")
     expect(stage()).toHaveClass("fixed")
@@ -109,11 +131,17 @@ describe("StoryStage full screen", () => {
     // Still framed for the layout: the story, not the desktop spread, whose bars have no Exit full screen.
     expect(stage()).toHaveAttribute("data-rw-framed")
     expect(document.documentElement.style.overflow).toBe("hidden")
+    expect(screen.getByTestId("rewind-close")).toHaveAttribute("href", "/home")
+    // The admin page behind it is out of reach, the story is not.
+    expect(screen.getByTestId("outside")).toHaveAttribute("inert")
+    expect(stage()).not.toHaveAttribute("inert")
+    expect(stage().closest("[inert]")).toBeNull()
 
     await user.keyboard("{Escape}")
     expect(stage()).not.toHaveAttribute("data-fullscreen")
     expect(stage()).toHaveClass("absolute")
     expect(document.documentElement.style.overflow).toBe("")
+    expect(screen.getByTestId("outside")).not.toHaveAttribute("inert")
     expect(push).not.toHaveBeenCalled()
 
     await user.keyboard("{Escape}")
@@ -128,6 +156,19 @@ describe("StoryStage full screen", () => {
     expect(api.request).toHaveBeenCalled()
 
     await user.click(screen.getByRole("button", { name: "Exit full screen" }))
+    expect(api.exit).toHaveBeenCalled()
+    expect(stage()).not.toHaveAttribute("data-fullscreen")
+  })
+
+  it("leaves the browser's full screen when it arrives after the admin preview already stepped back into its frame", async () => {
+    const user = userEvent.setup()
+    const api = fakeFullscreenApi({ deferred: true })
+    renderStage({ mode: "admin-preview" })
+    await user.click(screen.getByTestId("rewind-fullscreen"))
+    await user.click(screen.getByRole("button", { name: "Exit full screen" }))
+    expect(api.exit).not.toHaveBeenCalled()
+
+    await act(async () => api.finish())
     expect(api.exit).toHaveBeenCalled()
     expect(stage()).not.toHaveAttribute("data-fullscreen")
   })

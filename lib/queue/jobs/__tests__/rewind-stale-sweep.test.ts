@@ -40,6 +40,7 @@ const enqueue = jest.mocked(enqueueRewindGeneration)
 interface Row {
   id: string
   kind?: string
+  copyPolicy?: string
   status: string
   startedAt: Date | null
   createdAt: Date
@@ -107,6 +108,14 @@ describe('processRewindStaleSweep', () => {
     expect(result).toMatchObject({ workerLost: 1, requeued: 1 })
     expect(rows[0]).toMatchObject({ status: 'failed', error: { code: 'WORKER_LOST', requeuedAs: 'gen-retry-1' } })
     expect(enqueue).toHaveBeenCalledWith({ userId: 'user-1', year: 2026, kind: 'member' })
+  })
+
+  it('re-enqueues a lost hide or unhide as one, so it keeps template copy and the stored window', async () => {
+    table([{ id: 'gen-1', copyPolicy: 'no-llm', status: 'running', startedAt: minutesAgo(16), createdAt: minutesAgo(17) }])
+
+    await processRewindStaleSweep()
+
+    expect(enqueue).toHaveBeenCalledWith({ userId: 'user-1', year: 2026, kind: 'member', exclusion: {} })
   })
 
   it('re-enqueues a lost final-cut run of an earlier version as a season run', async () => {

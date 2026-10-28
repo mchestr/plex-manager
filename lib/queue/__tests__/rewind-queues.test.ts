@@ -33,7 +33,11 @@ jest.mock("@/lib/queue/jobs", () => ({ getJobProcessor: jest.fn(), getRegistered
 jest.mock("@/lib/instrumentation/shutdown", () => ({ onShutdown: jest.fn() }))
 jest.mock("@/lib/queue/jobs/rewind", () => ({ processRewindGenerateUser: jest.fn(async () => "generated") }))
 jest.mock("@/lib/queue/jobs/rewind-stale-sweep", () => ({ processRewindStaleSweep: jest.fn(async () => "swept") }))
-jest.mock("@/lib/rewind/season-runs", () => ({ scheduleSeasonOpenRun: jest.fn(async () => null), cancelScheduledFinalCut: jest.fn(async () => 0) }))
+jest.mock("@/lib/rewind/season-runs", () => ({
+  scheduleSeasonOpenRun: jest.fn(async () => null),
+  cancelScheduledFinalCut: jest.fn(async () => 0),
+  LEGACY_FINAL_CUT_JOB: "rewind:final-cut",
+}))
 jest.mock("@/lib/queue/jobs/rewind-season", () => ({ REWIND_SEASON_PROCESSORS: {} }))
 const mockUpsertJobScheduler = jest.fn(async () => ({}))
 jest.mock("@/lib/queue/rewind-producers", () => ({
@@ -112,6 +116,13 @@ describe("Rewind queues", () => {
     await startWorker()
 
     expect(cancelScheduledFinalCut).toHaveBeenCalledTimes(1)
+  })
+
+  it("completes a final cut that was already due at start without doing anything", async () => {
+    await startWorker()
+    const batch = mockWorkers.find((w) => w.name === "rewind-batch")!
+
+    await expect(batch.processor({ id: "rewind-final-2026-1", name: "rewind:final-cut" } as Job)).resolves.toEqual({ skipped: true })
   })
 
   it("fails a job with no registered processor", async () => {

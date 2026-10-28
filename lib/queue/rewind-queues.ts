@@ -35,7 +35,7 @@ import { processRewindSeasonOpen } from "@/lib/queue/jobs/rewind-season-open"
 import { processRewindStaleSweep } from "@/lib/queue/jobs/rewind-stale-sweep"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
 import { scheduleSeasonAudienceSwitch } from "@/lib/rewind/season-open"
-import { cancelScheduledFinalCut, scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
+import { cancelScheduledFinalCut, LEGACY_FINAL_CUT_JOB, scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
 import { JOB_TYPES } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -49,11 +49,18 @@ const REWIND_QUEUES = {
 
 export type RewindQueueName = keyof typeof REWIND_QUEUES
 
+/** 0.5.0's 1 January final cut, when a Worker takes it before `cancelScheduledFinalCut` removes it: there is nothing to do. */
+async function skipLegacyFinalCut(job: Job) {
+  logger.info("Skipped the 1 January Rewind final cut an earlier version scheduled", { jobId: job.id })
+  return { skipped: true }
+}
+
 /** Processors by job name, per queue. Later steps add their jobs here. */
 const PROCESSORS: Record<RewindQueueName, Record<string, JobProcessor>> = {
   "rewind-batch": {
     ...REWIND_BATCH_PROCESSORS,
     ...REWIND_SEASON_PROCESSORS,
+    [LEGACY_FINAL_CUT_JOB]: skipLegacyFinalCut,
   },
   "rewind-gen": { [JOB_TYPES.REWIND_GENERATE_USER]: processRewindGenerateUser as JobProcessor },
   "rewind-aux": {

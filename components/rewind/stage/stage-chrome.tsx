@@ -37,6 +37,8 @@ interface StageChromeProps {
   serverName?: string
   year: number
   closeHref: Route
+  /** The top bar's Close circle; not in the admin preview's frame. */
+  showClose: boolean
   /** The top bar's Full screen control, or null where it is not offered. */
   fullscreen: { active: boolean; onToggle: () => void } | null
   onNext: () => void
@@ -65,6 +67,7 @@ export function StageChrome({
   serverName,
   year,
   closeHref,
+  showClose,
   fullscreen,
   onNext,
 }: StageChromeProps) {
@@ -98,6 +101,7 @@ export function StageChrome({
           showPause={state.mode !== "cover" && state.mode !== "ended"}
           playing={playing}
           closeHref={closeHref}
+          showClose={showClose}
           fullscreen={fullscreen}
           onSettings={() => send({ type: "OPEN_SHEET", sheet: "settings" })}
           onTogglePlay={() => send({ type: playing ? "PAUSE" : "PLAY" })}

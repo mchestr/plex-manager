@@ -167,7 +167,7 @@ function Stage({
   const safeArea = useRef<HTMLDivElement>(null)
   const offered = useRef(false)
   const framed = mode === "admin-preview"
-  const fullscreen = useStageFullscreen(framed)
+  const fullscreen = useStageFullscreen(framed, root)
   // In full screen the admin preview's stage leaves its frame and fits the window.
   const inFrame = framed && !fullscreen.active
   const fit = useFitStage(root, safeArea, inFrame)
@@ -342,6 +342,8 @@ function Stage({
               serverName={serverName}
               year={year}
               closeHref={closeHref}
+              // In its frame, Full screen takes Close's place: the page's breadcrumbs, Esc and a swipe down still leave.
+              showClose={!inFrame}
               fullscreen={fullscreen.available ? { active: fullscreen.active, onToggle: fullscreen.toggle } : null}
               onNext={forward}
             />

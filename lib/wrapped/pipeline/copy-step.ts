@@ -3,7 +3,8 @@
  *
  * ```
  * pocket or postcard ─────────────────────────────► no copy (templates at render), 0 calls
- * same factsHash, prompt and model as last time ──► reuse that copy, 0 calls
+ * same factsHash, prompt and model as last time,
+ *   and no older template's words in it ───────────► reuse that copy, 0 calls
  * copyPolicy 'no-llm' ────────────────────────────► keep slots whose dependency hash held, template the rest
  * llmDisabled, mode 'off', provider mismatch,
  *   no provider, budget ──────────────────────────► templates, 0 calls
@@ -28,9 +29,10 @@
  * {@link planKeptSlots} keeps (or, for a stored copy without its issue,
  * whose dependency hash held), and the stored archetype and poster line
  * while their slot holds; every other slot is a template. A kept text with
- * window words ("so far", "still") can only be an older template, because
- * model copy may not use them, so it is templated again instead of kept.
- * `copyMeta.slotHashes` is rewritten for every slot.
+ * window words ("so far", "still") or "final cut" can only be an older
+ * template, because model copy may not use them, so it is templated again
+ * instead of kept; for the same reason such a stored copy is never reused
+ * whole. `copyMeta.slotHashes` is rewritten for every slot.
  *
  * @module lib/wrapped/pipeline/copy-step
  */
@@ -164,11 +166,16 @@ export async function runCopyStep(input: CopyInput): Promise<CopyResult> {
   const planned = plannedModel(llm)
   const plannedKey = llm.provider && planned ? modelKey(llm.provider.provider, planned) : null
 
-  if (previous?.factsHash === input.factsHash && previous.promptVersion === input.promptVersion && previous.model === plannedKey) {
+  const slots = textSlots(input.selected)
+  if (
+    previous?.factsHash === input.factsHash &&
+    previous.promptVersion === input.promptVersion &&
+    previous.model === plannedKey &&
+    !slots.some((id) => isStale(wireText(previous.copy, id)))
+  ) {
     return { copy: previous.copy, source: previous.copySource, model: previous.model, slotHashes: hashes, trail: { ...trail, path: "reused" } }
   }
 
-  const slots = textSlots(input.selected)
   const templates = { facts: input.facts, userId: input.userId, locals: copyLocals({ year: input.year }) }
   const draft = templateDraft(slots, input.archetype.id, templates)
   const finish = (path: CopyTrail["path"], model: string | null, reason?: string): CopyResult => {
@@ -270,7 +277,9 @@ function applyArchetype(draft: CopyDraft, chosen: RewindCopyV3Wire["archetype"],
   trail.fallbacks.push("archetype.posterLineId")
 }
 
-const WINDOW_WORDS = new RegExp(`\\b(${WINDOW_PHRASES.join("|")})\\b`, "i")
+/** Words only an older template used: the window words, and the final cut it once promised. */
+const STALE_WORDS = new RegExp(`\\b(${[...WINDOW_PHRASES, "final cut"].join("|")})\\b`, "i")
+const isStale = (text: string | null) => text !== null && STALE_WORDS.test(text)
 
 /** The input with the facts of the stored archetype, when that was the model's still-allowed pick. */
 function withStoredChoice(input: CopyInput, previous: PreviousCopy): CopyInput {
@@ -289,12 +298,12 @@ function keptSlots(input: CopyInput, previous: PreviousCopy): Set<SlotId> {
   return new Set(keep)
 }
 
-/** Puts the kept slots' stored text into the draft; a text with window words is templated again. */
+/** Puts the kept slots' stored text into the draft; a text with an older template's words is templated again. */
 function keepSlots(draft: CopyDraft, previous: PreviousCopy, keep: ReadonlySet<SlotId>, selection: ArchetypeSelection) {
   const origin = previous.copySource === "template" ? "template" : "llm"
   for (const id of draft.texts.keys()) {
     const text = wireText(previous.copy, id)
-    if (text !== null && keep.has(id) && !WINDOW_WORDS.test(text)) draft.texts.set(id, { text, origin })
+    if (text !== null && keep.has(id) && !isStale(text)) draft.texts.set(id, { text, origin })
   }
   // The stored archetype, the model's pick from the shortlist included, while code's pick and shortlist allow it.
   const stored = previous.copy.archetype

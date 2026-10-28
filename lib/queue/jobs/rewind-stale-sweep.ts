@@ -10,8 +10,9 @@
  *
  * "Once": a lost run is re-enqueued only when no newer generation exists for
  * that member and year and the run is not itself a re-enqueue (an earlier
- * row's `error.requeuedAs` names it); a `final-cut` run of 0.5.0 and earlier
- * comes back as a `season` one. Every close is a compare-and-set on the
+ * row's `error.requeuedAs` names it); a hide or unhide comes back as one
+ * (`copyPolicy: 'no-llm'`), and a `final-cut` run of 0.5.0 and earlier as a
+ * `season` one. Every close is a compare-and-set on the
  * row's status, so a run that finishes during the sweep keeps its outcome.
  *
  * Each sweep also re-checks the season-open run's schedule (P7.8,
@@ -80,7 +81,7 @@ export async function processRewindStaleSweep(): Promise<SweepResult> {
 
   const running = await prisma.rewindGeneration.findMany({
     where: { status: "running", startedAt: { lt: new Date(now - STALE_RUN_MS) } },
-    select: { id: true, userId: true, year: true, kind: true, wrappedId: true, jobId: true, createdAt: true },
+    select: { id: true, userId: true, year: true, kind: true, copyPolicy: true, wrappedId: true, jobId: true, createdAt: true },
   })
   for (const row of running) {
     if (await jobIsLive(queue, row.jobId)) continue
@@ -96,6 +97,8 @@ export async function processRewindStaleSweep(): Promise<SweepResult> {
         userId: row.userId,
         year: row.year,
         kind: kindOf(row.kind),
+        // A lost hide or unhide comes back as one: template copy and the stored issue's window.
+        ...(row.copyPolicy === "no-llm" && { exclusion: {} }),
       })
       await prisma.rewindGeneration.update({
         where: { id: row.id },

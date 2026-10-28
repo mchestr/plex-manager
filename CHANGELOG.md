@@ -43,10 +43,9 @@ check); the `no-changelog` label skips it.
 ### Upgrade notes
 
 - Take a `pg_dump -Fc` before you start the new release. This release adds no migrations and no environment variables.
-- **Final cut cancelled:** 0.2.0 to 0.5.0 keep a final cut scheduled for 00:30 on 1 January in the westernmost zone (the delayed `rewind:final-cut` job on the `rewind-batch` queue). The new worker removes it at start and every 10 minutes, and an older worker adds it again, so upgrade every worker container before 00:30 on 1 January in the westernmost zone.
-- **Sign-off:** a Rewind made before the upgrade keeps its stored "See you in the final cut" sign-off. Regenerate it from Admin, Rewind to replace it. An upgrade before 1 December needs nothing more, because the season-open run regenerates every Rewind.
+- **Final cut cancelled:** 0.2.0 to 0.5.0 keep a final cut scheduled for 00:30 on 1 January in the westernmost zone (the delayed `rewind:final-cut` job on the `rewind-batch` queue). The new worker removes it at start and every 10 minutes, and one it picks up first completes without doing anything. An older worker adds it again, and would run it, so upgrade every worker container before 00:30 on 1 January in the westernmost zone.
+- **Sign-off:** a Rewind made before the upgrade keeps its stored "See you in the final cut" sign-off (or "The final cut lands in the new year") until it is generated again. An upgrade before 1 December needs nothing more, because the season-open run regenerates every Rewind; after it, a Regenerate from Admin, Rewind, or the member hiding a title, writes it again, since copy with an older template's words is never reused or kept.
 - **`REWIND_STAGING`** now only gates the season-open rehearsal (`npm run rewind:season-open -- --rehearse`).
-
 
 ## [0.5.0] - 2026-10-27
 

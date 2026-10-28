@@ -186,7 +186,7 @@ export async function scheduleSeasonOpenRun(): Promise<Date | null> {
 }
 
 /** The job 0.5.0 and earlier kept delayed on `rewind-batch` for 00:30 on 1 January. */
-const LEGACY_FINAL_CUT_JOB = "rewind:final-cut"
+export const LEGACY_FINAL_CUT_JOB = "rewind:final-cut"
 
 /**
  * Removes every `rewind:final-cut` job that has not started: a Rewind is
@@ -194,6 +194,8 @@ const LEGACY_FINAL_CUT_JOB = "rewind:final-cut"
  * Runs at worker start and in the stale sweep, because an older worker's
  * sweep adds the job again during a rolling deploy. BullMQ frees the job's
  * deduplication id (`rewind:final:{year}`) with it. Returns how many it removed.
+ * One that a Worker takes first (it was already due at start) completes
+ * without doing anything (`rewind-queues.ts`).
  */
 export async function cancelScheduledFinalCut(): Promise<number> {
   const queue = await batchQueue()

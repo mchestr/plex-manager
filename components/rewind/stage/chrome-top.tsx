@@ -21,6 +21,8 @@ interface ChromeTopProps {
   showPause: boolean
   playing: boolean
   closeHref: Route
+  /** Close is left out in the admin preview's frame, where Full screen takes its place. */
+  showClose: boolean
   /** Full screen (`useStageFullscreen`), or null where the stage does not offer it. */
   fullscreen: { active: boolean; onToggle: () => void } | null
   onSettings: () => void
@@ -30,11 +32,12 @@ interface ChromeTopProps {
 /**
  * The top chrome, in CSS pixels outside the scaled artboard: the progress
  * segments, the folio (the only place a page name appears) and the Full
- * screen (where offered), Settings, Pause and Close circles (design 4.6). A
- * 500 ms press on Pause opens Settings instead of toggling it. The page name
- * truncates on the narrowest phones rather than push the circles off.
+ * screen (where offered), Settings, Pause and Close circles (design 4.6), at
+ * most three of them inside the admin preview's narrow frame. A 500 ms press
+ * on Pause opens Settings instead of toggling it. The page name truncates on
+ * the narrowest phones rather than push the circles off.
  */
-export function ChromeTop({ compact, progress, page, pageCount, pageName, showPause, playing, closeHref, fullscreen, onSettings, onTogglePlay }: ChromeTopProps) {
+export function ChromeTop({ compact, progress, page, pageCount, pageName, showPause, playing, closeHref, showClose, fullscreen, onSettings, onTogglePlay }: ChromeTopProps) {
   const pressedAt = useRef<number | null>(null)
   const pad = (n: number) => String(n).padStart(2, "0")
 
@@ -83,16 +86,18 @@ export function ChromeTop({ compact, progress, page, pageCount, pageName, showPa
               <Icon icon={playing ? Pause : Play} />
             </Button>
           )}
-          <Button
-            variant="ink-outline"
-            size="icon-pill"
-            aria-label="Close Rewind"
-            data-testid="rewind-close"
-            nativeButton={false}
-            render={<Link href={closeHref} />}
-          >
-            <Icon icon={X} />
-          </Button>
+          {showClose && (
+            <Button
+              variant="ink-outline"
+              size="icon-pill"
+              aria-label="Close Rewind"
+              data-testid="rewind-close"
+              nativeButton={false}
+              render={<Link href={closeHref} />}
+            >
+              <Icon icon={X} />
+            </Button>
+          )}
         </div>
       </div>
     </div>

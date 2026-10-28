@@ -165,6 +165,22 @@ describe('runCopyStep', () => {
     expect(model.calls()).toBe(1)
   })
 
+  it("writes a stored template copy again, instead of reusing it, when an older template's words are in it", async () => {
+    const model = answer()
+    const old = { ...GOOD, signOff: 'See you in the final cut, {{fact:member.firstName}}.' }
+    const previous: PreviousCopy = { factsHash: issue.factsHash, promptVersion: 'rewind-2026.1', model: null, copy: old, copySource: 'template', slotHashes: {} }
+
+    const result = await runCopyStep(input({ previous }, { provider: null }))
+
+    expect(model.calls()).toBe(0)
+    expect(result.trail.path).toBe('template')
+    expect(result.copy?.signOff).toBe(slotTemplate('signOff', { facts: issue.facts, userId: FIXTURE_USER_ID, locals: copyLocals({ year: 2026 }) }))
+    expect(result.copy?.signOff).not.toMatch(/final cut/i)
+    // The same copy without those words is reused as before
+    const reused = await runCopyStep(input({ previous: { ...previous, copy: result.copy! } }, { provider: null }))
+    expect(reused.trail.path).toBe('reused')
+  })
+
   it('no-llm keeps the slots whose dependency hash held and templates the rest', async () => {
     answer(reply(JSON.stringify(GOOD)))
     const first = await runCopyStep(input())
@@ -289,6 +305,17 @@ describe("copyPolicy 'no-llm' with the stored issue (a hide or unhide, P7.7)", (
     expect(model.calls()).toBe(0)
     expect(result).toMatchObject({ source: 'llm', model: previous.model, trail: { path: 'no-llm', calls: 0 } })
     expect(result.copy).toEqual(previous.copy)
+  })
+
+  it('templates a kept sign-off that promises the final cut again', async () => {
+    const stored = await storedCopy()
+    const previous = { ...stored, copy: { ...stored.copy, signOff: 'The year is not over yet. The final cut lands in the new year.' } }
+    answer()
+
+    const result = await runCopyStep(input({ policy: 'no-llm', previous }))
+
+    expect(result.copy?.signOff).toBe(slotTemplate('signOff', { facts: issue.facts, userId: FIXTURE_USER_ID, locals: copyLocals({ year: 2026 }) }))
+    expect(result.copy?.decks).toEqual(stored.copy.decks)
   })
 
   it('templates a kept text with window words again', async () => {

@@ -618,14 +618,19 @@ Prepare season (it ends with Generate all) rather than Generate all alone.
 **Upgrading from 0.2.0 to 0.5.0.** Those releases keep a final cut scheduled
 for 00:30 on 1 January in the westernmost zone: a delayed `rewind:final-cut`
 job on `rewind-batch` that regenerates every issue. The worker removes it at
-start and in every stale sweep (every 10 minutes), and an older worker's sweep
-adds it again, so every worker container must run the new release before
-00:30 on 1 January in the westernmost zone. Afterwards
+start and in every stale sweep (every 10 minutes), and one that a worker takes
+before then completes without doing anything. An older worker's sweep adds it
+again, so every worker container must run the new release before 00:30 on
+1 January in the westernmost zone. Afterwards
 `redis-cli ZRANGE bull:rewind-batch:delayed 0 -1` lists no
 `rewind-final-2026-<epoch ms>`. Issues made before the upgrade keep their
 stored sign-off until they are generated again: an upgrade before 1 December
-needs nothing more, because the season-open Prepare regenerates every issue;
-after it, run Generate all (in January, Prepare season).
+needs nothing more, because the season-open Prepare regenerates every issue.
+After it, any new generation of an issue (the member's own run, a hide, an
+admin Regenerate, or Generate all in December) writes the sign-off again:
+copy with an older template's words is never reused or kept. In January,
+regenerate only the issues that need it, because a run then reads the whole
+year.
 
 ## Season close
 
