@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe, toHaveNoViolations } from "jest-axe"
+import { useRef } from "react"
 
 import { Button } from "@/components/ui/button"
 import { CONFIRM_FALLBACK_ERROR, ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -104,6 +105,38 @@ describe("ConfirmDialog", () => {
     expect(action).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
     await waitFor(() => expect(trigger).toHaveFocus())
+  })
+
+  it("moves focus to successFocus once the action succeeds, and back to the trigger on Cancel", async () => {
+    // The action removes the row its trigger sits in, so focus goes to the next control
+    function Row() {
+      const next = useRef<HTMLButtonElement>(null)
+      return (
+        <>
+          <ConfirmDialog
+            trigger={<Button variant="destructive">Remove access</Button>}
+            title="Remove Plex access for Sam Rivera?"
+            description="Sam loses every shared library now."
+            confirmLabel="Remove access"
+            successFocus={next}
+            action={async () => ({})}
+          />
+          <Button ref={next}>Next member</Button>
+        </>
+      )
+    }
+    const user = userEvent.setup()
+    render(<Row />)
+    const trigger = screen.getByRole("button", { name: "Remove access" })
+
+    await open(user)
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
+    await waitFor(() => expect(trigger).toHaveFocus())
+
+    const dialog = await open(user)
+    await user.click(confirmButton(dialog))
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole("button", { name: "Next member" })).toHaveFocus())
   })
 
   it("gates confirm on typeToConfirm, ignoring case", async () => {

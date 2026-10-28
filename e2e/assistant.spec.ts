@@ -75,14 +75,14 @@ test.describe('Assistant page', () => {
     await expect(item).toHaveAttribute('aria-current', 'page');
     await expect(page.getByTestId('admin-assistant-title')).toHaveText(question);
 
-    // The follow-up's context comes from the stored turns, and both stay after a reload
+    // The model reads the follow-up after the stored first turn, and a reload shows both turns in order
     const followUp = 'And Radarr?';
     await input.fill(followUp);
     await page.getByTestId('admin-chat-send').click();
-    await expect(log).toContainText(mockLlmReply(followUp), { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(log).toContainText(mockLlmReply(followUp, 2), { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await page.reload();
-    await expect(log).toContainText(mockLlmReply(question), { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    await expect(log).toContainText(mockLlmReply(followUp));
+    await expect(log.getByTestId('admin-chat-question')).toHaveText([question, followUp], { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(log.getByTestId('admin-chat-answer')).toContainText([mockLlmReply(question), mockLlmReply(followUp, 2)]);
 
     await page.getByTestId(`admin-assistant-history-delete-${id}`).click();
     await page.getByTestId('admin-assistant-delete-confirm').click();
@@ -122,7 +122,23 @@ test.describe('Assistant page', () => {
     await expect(page.getByTestId('admin-assistant-history-sheet')).toBeHidden();
     await expect(page.getByTestId('admin-chat-log')).toContainText('It is transcoding 4K to 1080p.');
     await expect(page.getByTestId('admin-chat-log')).toContainText('Get Plex Sessions');
+    // Focus follows the conversation to its title, whatever order the sheet and the page finish in
+    await expect(page.getByTestId('admin-assistant-title')).toBeFocused();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  });
+
+  test('keeps the conversation readable on a short, zoomed-in screen', async ({ adminPage: page }) => {
+    // 1280x1024 at 400% zoom (WCAG 1.4.10): the page keeps a floor of height and scrolls instead
+    await page.setViewportSize({ width: 320, height: 256 });
+    await page.goto('/admin/assistant');
+    const log = page.getByTestId('admin-chat-log');
+    await expect(log).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+    expect((await log.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(100);
+    const input = page.getByTestId('admin-chat-input');
+    await input.scrollIntoViewIfNeeded();
+    await expect(input).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
   });
 
   test("does not open another user's conversation", async ({ adminPage: page }) => {

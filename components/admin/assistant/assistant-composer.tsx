@@ -37,14 +37,17 @@ export function AssistantComposer({ pending, disabled, onSend, ref }: AssistantC
     if ((await onSend(text)) === "failed") setDraft((current) => (current.trim() ? current : text))
   }
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    // Send turns disabled as the message goes, so focus moves to the box rather than dropping to the page
+    const box = event.currentTarget.elements.namedItem("message")
+    if (box instanceof HTMLTextAreaElement) box.focus()
     void send()
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Not while an input method is composing a character
-    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return
+    // Not while an input method is composing a character; Safari reports the Enter that ends one as key code 229
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
     event.preventDefault()
     void send()
   }
@@ -57,6 +60,7 @@ export function AssistantComposer({ pending, disabled, onSend, ref }: AssistantC
       <Textarea
         ref={ref}
         id={inputId}
+        name="message"
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={onKeyDown}

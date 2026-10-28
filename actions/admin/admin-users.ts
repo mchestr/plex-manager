@@ -2,6 +2,7 @@
 
 import { adminAction } from "@/lib/actions/define-action"
 import { ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
+import { endConversationsOf } from "@/lib/chatbot/history"
 import { isPlexServerOwner } from "@/lib/members/owner"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
@@ -28,8 +29,9 @@ type UserActionCode = ActionErrorCode | UserActionRefusal
  *
  * Refuses to demote the caller (`SELF`), the Plex server owner, whom the next
  * login would promote again (`OWNER`), and the last remaining admin
- * (`LAST_ADMIN`). A demotion ends the user's sessions. Setting the status the
- * user already has succeeds without a change.
+ * (`LAST_ADMIN`). A demotion ends the user's sessions and their assistant page
+ * conversations (`lib/chatbot/history.ts`). Setting the status the user
+ * already has succeeds without a change.
  */
 export const updateUserAdminStatus = adminAction({
   input: z.object({ userId: userIdSchema, isAdmin: z.boolean() }),
@@ -71,6 +73,7 @@ export const updateUserAdminStatus = adminAction({
 
     if (!isAdmin) {
       await endUserSessions(userId, "demoted", actorId)
+      await endConversationsOf(userId)
     }
 
     await revalidateUserPages(userId)

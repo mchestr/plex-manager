@@ -77,7 +77,11 @@ it("opens one of the caller's conversations with its newest messages, oldest fir
   expect(prismaMock.chatConversation.findFirst).toHaveBeenCalledWith(
     expect.objectContaining({ where: { ...OWN, id: "c1" } })
   )
-  expect(prismaMock.chatConversation.findFirst.mock.calls[0][0]?.select?.messages).toMatchObject({ take: TRANSCRIPT_LIMIT })
+  // The newest messages, read newest first and shown oldest first
+  expect(prismaMock.chatConversation.findFirst.mock.calls[0][0]?.select?.messages).toMatchObject({
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: TRANSCRIPT_LIMIT,
+  })
   expect(page.conversation).toEqual({
     id: "c1",
     title: "Is Sonarr up?",
@@ -94,15 +98,31 @@ it("has no conversation for an id that is not the caller's", async () => {
   expect((await getAssistantPage("someone-elses")).conversation).toBeNull()
 })
 
-it("names the provider and the retention windows", async () => {
-  const page = await getAssistantPage(null)
+it("names the provider and the retention windows, each from its own setting", async () => {
+  process.env.RETENTION_ASSISTANT_CHAT_DAYS = "30"
+  try {
+    const page = await getAssistantPage(null)
 
-  expect(page).toMatchObject({
-    available: true,
-    disclosure: "Server admins can review assistant conversations, and messages are processed by Anthropic.",
-    usageTextDays: 90,
-    historyDays: 90,
-  })
+    expect(page).toMatchObject({
+      available: true,
+      disclosure: "Server admins can review assistant conversations, and messages are processed by Anthropic.",
+      usageTextDays: 90,
+      historyDays: 30,
+    })
+  } finally {
+    delete process.env.RETENTION_ASSISTANT_CHAT_DAYS
+  }
+})
+
+it("says when the history reached its limit", async () => {
+  const row = { title: "Is Plex up?", lastMessageAt: at }
+  prismaMock.chatConversation.findMany.mockResolvedValue(
+    Array.from({ length: HISTORY_LIMIT }, (_, i) => ({ ...row, id: `c${i}` })) as ChatConversation[]
+  )
+
+  expect((await getAssistantPage(null)).historyCapped).toBe(true)
+  prismaMock.chatConversation.findMany.mockResolvedValue([{ ...row, id: "c1" }] as ChatConversation[])
+  expect((await getAssistantPage(null)).historyCapped).toBe(false)
 })
 
 it.each([

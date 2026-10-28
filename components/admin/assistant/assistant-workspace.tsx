@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import { AssistantComposer } from "@/components/admin/assistant/assistant-composer"
 import { AssistantHistory } from "@/components/admin/assistant/assistant-history"
@@ -44,8 +44,10 @@ interface AssistantWorkspaceProps {
   usageTextDays: number
   historyDays: number
   history: AssistantHistoryItem[]
+  /** The history stops at its limit, so older conversations are not listed. */
+  historyCapped: boolean
   conversation: AssistantConversation | null
-  /** The server's render time, for the history's date groups. */
+  /** The server's render time, for the history's date groups and which messages show their date. */
   now: number
   /** An admin can turn the assistant on in Settings; a role has to ask one. */
   canConfigure: boolean
@@ -62,6 +64,7 @@ export function AssistantWorkspace({
   usageTextDays,
   historyDays,
   history,
+  historyCapped,
   conversation,
   now,
   canConfigure,
@@ -69,7 +72,28 @@ export function AssistantWorkspace({
   const chat = useAssistantChat(conversation)
   const [historyOpen, setHistoryOpen] = useState(false)
   const composer = useRef<HTMLTextAreaElement>(null)
-  const historyProps = { items: history, activeId: chat.id, now, usageTextDays, historyDays }
+  const heading = useRef<HTMLHeadingElement>(null)
+  const historyProps = {
+    items: history,
+    capped: historyCapped,
+    activeId: chat.id,
+    now,
+    usageTextDays,
+    historyDays,
+    onNew: chat.reset,
+    onLeave: chat.leave,
+  }
+  // The server's conversation once the transcript is it; a new one (or one the URL has not caught up with) has no title yet
+  const title = conversation && conversation.id === chat.id ? conversation.title : "Assistant"
+
+  // A real effect: the router keeps a page it leaves, so the sheet closes as the page hides and is closed on the way back
+  useLayoutEffect(() => () => setHistoryOpen(false), [])
+
+  // A real effect: when another conversation takes the transcript, focus moves to its title, which reads it out and
+  // leaves the message box next in the tab order rather than the rest of the history
+  useEffect(() => {
+    if (chat.opens > 0) heading.current?.focus()
+  }, [chat.opens])
 
   const ask = (question: string) => {
     // The suggestion leaves with the welcome, so focus moves to the message box
@@ -79,8 +103,12 @@ export function AssistantWorkspace({
 
   return (
     // Below `md` the shell's 56px top bar and main's tab-bar padding (4rem and the safe area) take the rest of
-    // the screen; from `md` the page takes all of it, over main's 24px bottom padding
-    <div className="flex h-[calc(100dvh-7.5rem-env(safe-area-inset-bottom))] md:-mb-6 md:h-dvh" data-testid="admin-assistant-page">
+    // the screen; from `md` the page takes all of it, over main's 24px bottom padding. On a screen too short
+    // (zoomed in) the page keeps 20rem and scrolls, so the conversation never shrinks to nothing
+    <div
+      className="flex h-[max(calc(100dvh-7.5rem-env(safe-area-inset-bottom)),20rem)] md:-mb-6 md:h-[max(100dvh,20rem)]"
+      data-testid="admin-assistant-page"
+    >
       <div className="hidden w-64 shrink-0 flex-col border-r border-border p-3 lg:flex xl:w-72">
         <AssistantHistory {...historyProps} testId="admin-assistant-history" />
       </div>
@@ -98,14 +126,14 @@ export function AssistantWorkspace({
               <AssistantHistory {...historyProps} testId="admin-assistant-history-mobile" onNavigate={() => setHistoryOpen(false)} />
             </SheetContent>
           </Sheet>
-          <h1 className="min-w-0 flex-1 truncate text-h3" data-testid="admin-assistant-title">
-            {conversation?.title ?? "Assistant"}
+          <h1 ref={heading} tabIndex={-1} className="min-w-0 flex-1 truncate text-h3 outline-none" data-testid="admin-assistant-title">
+            {title}
           </h1>
           <Button
             variant="ghost"
             size="icon"
             className="-mr-2 lg:hidden"
-            render={<Link href={assistant()} />}
+            render={<Link href={assistant()} onNavigate={chat.reset} />}
             nativeButton={false}
             aria-label="New conversation"
             data-testid="admin-assistant-new-mobile"
@@ -117,6 +145,7 @@ export function AssistantWorkspace({
           messages={chat.messages}
           pending={chat.pending}
           session={chat.session}
+          now={now}
           empty={<AssistantWelcome suggest={available} onPick={ask} />}
         />
         <div className="shrink-0 px-4 pb-4 md:px-6">

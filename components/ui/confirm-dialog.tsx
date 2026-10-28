@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useState, useTransition, type ReactElement } from "react"
+import { useId, useRef, useState, useTransition, type ReactElement, type RefObject } from "react"
 
 import { Alert } from "@/components/ui/alert"
 import {
@@ -38,6 +38,11 @@ interface ConfirmDialogProps {
    * resolves; an `{ error }` renders inside the dialog, and success closes it.
    */
   action: () => Promise<{ error?: string }>
+  /**
+   * Where focus goes once the action succeeds, for an action that removes its
+   * own trigger (a row's delete). Cancel still returns focus to the trigger.
+   */
+  successFocus?: RefObject<HTMLElement | null>
   open?: boolean
   onOpenChange?: (open: boolean) => void
   "data-testid"?: string
@@ -60,6 +65,7 @@ export function ConfirmDialog({
   tone = "default",
   typeToConfirm,
   action,
+  successFocus,
   open: openProp,
   onOpenChange,
   "data-testid": testId,
@@ -70,6 +76,7 @@ export function ConfirmDialog({
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [typed, setTyped] = useState("")
+  const succeeded = useRef(false)
   const inputId = useId()
 
   const setOpen = (next: boolean) => {
@@ -89,7 +96,10 @@ export function ConfirmDialog({
         result = { error: CONFIRM_FALLBACK_ERROR }
       }
       if (result.error) setError(result.error)
-      else setOpen(false)
+      else {
+        succeeded.current = true
+        setOpen(false)
+      }
     })
   }
 
@@ -104,13 +114,16 @@ export function ConfirmDialog({
         setOpen(next)
       }}
       onOpenChangeComplete={(isOpen) => {
-        if (isOpen) return
+        if (isOpen) {
+          succeeded.current = false
+          return
+        }
         setError(null)
         setTyped("")
       }}
     >
       {trigger && <AlertDialogTrigger render={trigger} />}
-      <AlertDialogContent data-testid={testId}>
+      <AlertDialogContent data-testid={testId} finalFocus={successFocus && (() => (succeeded.current ? successFocus.current : true))}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>

@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useRef, type RefObject } from "react"
 
 import { deleteAssistantConversation } from "@/actions/chatbot"
 import { Button } from "@/components/ui/button"
@@ -20,10 +21,13 @@ interface RowProps {
   active: boolean
   usageTextDays: number
   testId: string
+  /** Takes focus once the row is deleted, since its delete button goes with it. */
+  afterDelete: RefObject<HTMLElement | null>
+  onLeave: () => void
   onNavigate?: () => void
 }
 
-function Row({ item, active, usageTextDays, testId, onNavigate }: RowProps) {
+function Row({ item, active, usageTextDays, testId, afterDelete, onLeave, onNavigate }: RowProps) {
   const router = useRouter()
   const toast = useToast()
 
@@ -31,6 +35,7 @@ function Row({ item, active, usageTextDays, testId, onNavigate }: RowProps) {
     <li className={cn("group flex items-center gap-1 rounded-md pr-1 hover:bg-accent", active && "bg-accent")}>
       <Link
         href={assistant(item.id)}
+        onNavigate={active ? undefined : onLeave}
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         title={item.title}
@@ -62,9 +67,11 @@ function Row({ item, active, usageTextDays, testId, onNavigate }: RowProps) {
         confirmLabel="Delete"
         pendingLabel="Deleting"
         tone="destructive"
+        successFocus={afterDelete}
         action={async () => {
           const result = await deleteAssistantConversation({ conversationId: item.id })
-          if (!result.success) return { error: result.error }
+          // Already gone (deleted in another tab, or ended by the retention sweep) is what was asked for
+          if (!result.success && result.code !== "NOT_FOUND") return { error: result.error }
           toast.showSuccess("Conversation deleted")
           // The action does not refresh: on the deleted conversation's own URL that would render it as not found first
           if (active) router.replace(assistant())
@@ -80,6 +87,8 @@ function Row({ item, active, usageTextDays, testId, onNavigate }: RowProps) {
 
 interface AssistantHistoryProps {
   items: AssistantHistoryItem[]
+  /** The list stops at its limit, so older conversations are not in it. */
+  capped: boolean
   /** The conversation on screen. */
   activeId: string | null
   /** The server's render time, for the date groups. */
@@ -90,6 +99,10 @@ interface AssistantHistoryProps {
   historyDays: number
   /** `admin-assistant-history` in the side panel, `admin-assistant-history-mobile` in the sheet. */
   testId: string
+  /** Empties the transcript as "New conversation" navigates, so a reply on its way never lands in it. */
+  onNew: () => void
+  /** Drops a reply on its way as another conversation's link navigates. */
+  onLeave: () => void
   /** Closes the sheet the list sits in. */
   onNavigate?: () => void
 }
@@ -99,9 +112,21 @@ interface AssistantHistoryProps {
  * clock, under "New conversation". Each one opens by its link and deletes
  * after a confirm.
  */
-export function AssistantHistory({ items, activeId, now, usageTextDays, historyDays, testId, onNavigate }: AssistantHistoryProps) {
+export function AssistantHistory({
+  items,
+  capped,
+  activeId,
+  now,
+  usageTextDays,
+  historyDays,
+  testId,
+  onNew,
+  onLeave,
+  onNavigate,
+}: AssistantHistoryProps) {
   const f = useBrowserFormat()
   const groups = groupHistory(items, now, f.settings.timeZone)
+  const newConversation = useRef<HTMLAnchorElement>(null)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -109,7 +134,7 @@ export function AssistantHistory({ items, activeId, now, usageTextDays, historyD
         variant="outline"
         className="justify-start"
         icon={<Icon icon={icons.newConversation} />}
-        render={<Link href={assistant()} />}
+        render={<Link href={assistant()} ref={newConversation} onNavigate={onNew} />}
         nativeButton={false}
         onClick={onNavigate}
         data-testid={`${testId}-new`}
@@ -134,6 +159,8 @@ export function AssistantHistory({ items, activeId, now, usageTextDays, historyD
                       active={item.id === activeId}
                       usageTextDays={usageTextDays}
                       testId={testId}
+                      afterDelete={newConversation}
+                      onLeave={onLeave}
                       onNavigate={onNavigate}
                     />
                   ))}
@@ -144,6 +171,7 @@ export function AssistantHistory({ items, activeId, now, usageTextDays, historyD
         )}
       </nav>
       <p className="px-3 text-caption text-muted-foreground" data-testid={`${testId}-window`}>
+        {capped && `Showing your ${items.length} most recent conversations. `}
         Conversations leave this list {historyDays} {historyDays === 1 ? "day" : "days"} after their last message.
       </p>
     </div>

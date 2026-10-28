@@ -7,28 +7,32 @@ import { Badge } from "@/components/ui/badge"
 import { MarkdownBody } from "@/components/ui/markdown-body"
 import { Spinner } from "@/components/ui/spinner"
 import { useBrowserFormat } from "@/lib/format-context"
+import { dayKey } from "@/lib/utils/zoned-time"
 
 /** `get_sonarr_status` reads "Get Sonarr Status". */
 function toolName(tool: string): string {
   return tool.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
-function Question({ message }: { message: ChatMessage }) {
-  // The viewer's own clock, as the assistant's answers use it
-  const f = useBrowserFormat()
+interface MessageProps {
+  message: ChatMessage
+  /** When it was sent, on the viewer's own clock. */
+  stamp: string
+}
+
+function Question({ message, stamp }: MessageProps) {
   return (
     <div className="flex flex-col items-end gap-1" data-testid="admin-chat-question">
       <div className="max-w-[85%] rounded-lg border border-border-strong bg-secondary px-4 py-2 text-ui whitespace-pre-wrap break-words text-secondary-foreground">
         <span className="sr-only">You: </span>
         {message.content}
       </div>
-      <span className="text-caption text-muted-foreground">{f.time(message.timestamp)}</span>
+      <span className="text-caption text-muted-foreground">{stamp}</span>
     </div>
   )
 }
 
-function Answer({ message }: { message: ChatMessage }) {
-  const f = useBrowserFormat()
+function Answer({ message, stamp }: MessageProps) {
   return (
     <div className="flex flex-col gap-2" data-testid="admin-chat-answer">
       <span className="sr-only">Assistant:</span>
@@ -43,7 +47,7 @@ function Answer({ message }: { message: ChatMessage }) {
           ))}
         </div>
       )}
-      <span className="text-caption text-muted-foreground">{f.time(message.timestamp)}</span>
+      <span className="text-caption text-muted-foreground">{stamp}</span>
     </div>
   )
 }
@@ -53,6 +57,8 @@ interface AssistantTranscriptProps {
   pending: boolean
   /** Changes when another conversation opens, so the log starts over rather than announcing every old message. */
   session: number
+  /** The server's render time: a message from before its day shows the date as well. */
+  now: number
   /** What an empty conversation shows. */
   empty: ReactNode
 }
@@ -62,8 +68,12 @@ interface AssistantTranscriptProps {
  * at reading width with the tools they used. It scrolls on its own, keeping
  * the newest message in view.
  */
-export function AssistantTranscript({ messages, pending, session, empty }: AssistantTranscriptProps) {
+export function AssistantTranscript({ messages, pending, session, now, empty }: AssistantTranscriptProps) {
   const logRef = useRef<HTMLDivElement>(null)
+  // The viewer's own clock, as the assistant's answers use it
+  const f = useBrowserFormat()
+  const today = dayKey(now, f.settings.timeZone)
+  const stamp = (at: number) => (dayKey(at, f.settings.timeZone) === today ? f.time(at) : f.dateTime(at))
 
   // A real effect: the transcript keeps its newest message in view. It scrolls
   // the log itself: scrollIntoView would also move where the next Tab starts
@@ -88,9 +98,9 @@ export function AssistantTranscript({ messages, pending, session, empty }: Assis
           ? empty
           : messages.map((message, index) =>
               message.role === "user" ? (
-                <Question key={`${message.timestamp}-${index}`} message={message} />
+                <Question key={`${message.timestamp}-${index}`} message={message} stamp={stamp(message.timestamp)} />
               ) : (
-                <Answer key={`${message.timestamp}-${index}`} message={message} />
+                <Answer key={`${message.timestamp}-${index}`} message={message} stamp={stamp(message.timestamp)} />
               )
             )}
         {pending && (

@@ -8,12 +8,13 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
  * spec points an `openai-compatible` chat `LLMProvider.baseUrl` at it.
  *
  * `POST .../chat/completions` answers every request with one text reply that
- * quotes the newest user message, and never calls a tool.
+ * quotes the newest user message and counts the conversation's messages before
+ * it, so a spec can tell the model saw the earlier turns. It never calls a tool.
  */
 
-/** The reply to `question`, so a spec can wait for it. */
-export function mockLlmReply(question: string): string {
-  return `Checked for you: "${question}". Every service answered.`;
+/** The reply to `question` after `earlier` messages of the conversation, so a spec can wait for it. */
+export function mockLlmReply(question: string, earlier = 0): string {
+  return `Checked for you: "${question}", after ${earlier} earlier messages. Every service answered.`;
 }
 
 async function readJson(req: IncomingMessage): Promise<unknown> {
@@ -23,15 +24,26 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   return text ? JSON.parse(text) : {};
 }
 
-/** The text of the request's newest user message. */
-function lastQuestion(body: unknown): string {
-  const messages = (body as { messages?: { role?: string; content?: unknown }[] }).messages ?? [];
-  const content = messages.filter((message) => message.role === 'user').at(-1)?.content;
+interface MockMessage {
+  role?: string;
+  content?: unknown;
+}
+
+function textOf(content: unknown): string {
   if (typeof content === 'string') return content;
   if (Array.isArray(content)) {
     return content.map((part: { text?: unknown }) => (typeof part.text === 'string' ? part.text : '')).join('');
   }
   return '';
+}
+
+/** The request's newest user message, and how many user and assistant messages came before it. */
+function lastQuestion(body: unknown): { question: string; earlier: number } {
+  const turns = ((body as { messages?: MockMessage[] }).messages ?? []).filter(
+    (message) => message.role === 'user' || message.role === 'assistant'
+  );
+  const last = turns.findLastIndex((message) => message.role === 'user');
+  return { question: last === -1 ? '' : textOf(turns[last].content), earlier: Math.max(last, 0) };
 }
 
 function send(res: ServerResponse, status: number, body: unknown) {
@@ -51,12 +63,13 @@ export async function startMockLlm(): Promise<{ url: string; server: Server }> {
       return send(res, 404, { error: { message: `No mock for ${req.method} ${pathname}` } });
     }
     const body = await readJson(req);
+    const { question, earlier } = lastQuestion(body);
     return send(res, 200, {
       id: 'chatcmpl-e2e',
       object: 'chat.completion',
       created: Math.floor(Date.now() / 1000),
       model: (body as { model?: string }).model ?? 'gpt-e2e',
-      choices: [{ index: 0, message: { role: 'assistant', content: mockLlmReply(lastQuestion(body)) }, finish_reason: 'stop' }],
+      choices: [{ index: 0, message: { role: 'assistant', content: mockLlmReply(question, earlier) }, finish_reason: 'stop' }],
       usage: { prompt_tokens: 12, completion_tokens: 8, total_tokens: 20 },
     });
   }

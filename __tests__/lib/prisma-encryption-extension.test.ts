@@ -8,6 +8,7 @@
 
 import crypto from "node:crypto"
 
+import { ENCRYPTED_FIELDS, FREE_TEXT_FIELDS } from "@/lib/db/encrypted-fields"
 import { encryptionQuery, withStoredSecrets } from "@/lib/db/encryption-extension"
 import { encryptSecret } from "@/lib/security/crypto"
 import { isUnreadable, listUnreadable, resetUnreadable } from "@/lib/security/unreadable-secrets"
@@ -129,6 +130,37 @@ describe("encryption extension: nested writes", () => {
     await run("Config", "upsert", args)
     expect(args.create.stripeSecretKey).toMatch(/^enc:v2:k1:/)
     expect(args.update.stripeSecretKey).toMatch(/^enc:v2:k1:/)
+  })
+})
+
+describe("encryption extension: free text", () => {
+  it("seals text that looks like a stored secret, so it reads back as typed and never as the secret", async () => {
+    const pasted = encryptSecret("sk_live_secret")
+    const args = { data: [{ conversationId: "c-1", role: "user", content: pasted }] }
+    await run("ChatConversationMessage", "createMany", args)
+
+    const stored = args.data[0].content
+    expect(stored).toMatch(/^enc:v2:k1:/)
+    expect(stored).not.toBe(pasted)
+    const { result } = await run("ChatConversationMessage", "findMany", {}, [{ id: "m-1", content: stored }])
+    expect(result).toEqual([{ id: "m-1", content: pasted }])
+  })
+
+  it("seals a title set with the update operator, and keeps an encrypted secret as it is", async () => {
+    const pasted = encryptSecret("plex-token")
+    const title = { where: { id: "c-1" }, data: { title: { set: pasted } } }
+    await run("ChatConversation", "update", title)
+    expect(title.data.title.set).not.toBe(pasted)
+
+    const server = { where: { id: "s-1" }, data: { token: pasted } }
+    await run("PlexServer", "update", server)
+    expect(server.data.token).toBe(pasted)
+  })
+
+  it("lists only encrypted columns as free text", () => {
+    for (const [model, fields] of Object.entries(FREE_TEXT_FIELDS)) {
+      expect([model, ENCRYPTED_FIELDS[model]]).toEqual([model, expect.arrayContaining([...fields])])
+    }
   })
 })
 

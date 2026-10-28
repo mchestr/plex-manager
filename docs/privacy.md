@@ -57,7 +57,7 @@ A member's Discord assistant conversations cannot be deleted by the member; the 
 
 ## Assistant page history
 
-The admin assistant (`/admin/assistant`) keeps each conversation's questions and answers (`ChatConversationMessage`, encrypted at rest) so its owner can reopen it; nobody else sees that history there. An admin or Support user deletes their own conversations from it (`deleteAssistantConversation`, 60 an hour): the messages and title go at once and the conversation ends. The conversation's `LLMUsage` rows are not touched, so admins can still read its calls on the LLM usage pages until the assistant AI text window below clears them, and the day's spend caps keep counting their cost. A conversation idle past its window leaves the history the same way.
+The admin assistant (`/admin/assistant`) keeps each conversation's questions and answers (`ChatConversationMessage`, encrypted at rest) so its owner can reopen it; nobody else sees that history there. An admin or Support user deletes their own conversations from it, where their newest 100 are listed (`deleteAssistantConversation`, 60 an hour): the messages and title go at once and the conversation ends. The conversation's `LLMUsage` rows are not touched, so admins can still read its calls on the LLM usage pages until the assistant AI text window below clears them, and the day's spend caps keep counting their cost. A conversation idle past its window leaves the history the same way, and so does every conversation of an admin who is demoted (`updateUserAdminStatus`), so a role never reads answers built from tool output only an admin may see.
 
 ## Retention
 
@@ -67,7 +67,7 @@ A daily sweep (`lib/queue/jobs/retention.ts`) removes personal data once it is o
 |---|---|---|---|
 | Rewind AI text (`LLMUsage` rows with no conversation, or tied to a Rewind) | 120 days | `prompt` and `response` set to null; tokens, cost and model kept (design 7.10) | `RETENTION_REWIND_LLM_TEXT_DAYS` |
 | Assistant AI text (`LLMUsage` rows in a conversation) | 90 days | `prompt` and `response` set to null; tokens, cost and model kept | `RETENTION_ASSISTANT_LLM_TEXT_DAYS` |
-| Assistant page history (`ChatConversation.title`, `ChatConversationMessage`) | 90 days after its last message | Messages and title removed, and the conversation ended | `RETENTION_ASSISTANT_CHAT_DAYS` |
+| Assistant page history (`ChatConversation.title`, `ChatConversationMessage`) | 90 days after its last message, or after it started when no turn was stored (a first reply that failed, or a side-panel conversation from before the page) | Messages and title removed, and the conversation ended | `RETENTION_ASSISTANT_CHAT_DAYS` |
 | Assistant conversations (`ChatConversation`) | 180 days after it ends | Deleted; its `LLMUsage` rows keep their cost without the link, and its Discord sessions go with it. A conversation ends on an idle or manual reset, when its Discord session is deleted, or when it is deleted from the assistant page or idle there past its window | `RETENTION_CHAT_CONVERSATION_DAYS` |
 | Discord chat turns (`DiscordChatSession.messages`) | 1 idle day | `messages` emptied | `RETENTION_DISCORD_CHAT_MESSAGES_DAYS` |
 | Discord chat sessions (`DiscordChatSession`) | 30 idle days | Deleted, and its conversation ended | `RETENTION_DISCORD_CHAT_SESSION_DAYS` |
@@ -111,7 +111,7 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `WrappedShareVisit` | v2 share visits: hashed IP, user agent, referer of visitors | none | Cascade (through `PlexWrapped`) | IP is a salted hash |
 | `LLMUsage` | prompt and response text (viewing stats, assistant turns, tool output), tokens, cost, model | A LLM usage pages, conversation page, Rewind history | Cascade for the member's rows; admins' rows about the member keep cost but lose their text | Prompt and response text |
 | `ChatConversation` | which member a conversation belongs to, start and end; on the assistant page its title (from the first question) and last message time | M assistant page (own); A via LLM usage | Cascade | `title` |
-| `ChatConversationMessage` | an assistant page conversation's questions and answers, and the tools each answer used | M assistant page (own) | Cascade (through `ChatConversation`); removed when its owner deletes the conversation or it is idle past its window | `content` |
+| `ChatConversationMessage` | an assistant page conversation's questions and answers, and the tools each answer used | M assistant page (own) | Cascade (through `ChatConversation`); removed when its owner deletes the conversation, it is idle past its window or its owner stops being an admin | `content` |
 | `DiscordConnection` | Discord id, username, global name, avatar; access and refresh tokens | M link panel; A user detail | Grant revoked at Discord, then deleted (also on unlink) | Tokens |
 | `DiscordChatSession` | the last assistant turns of a Discord chat, Discord id, channel id | none (LLM context only) | Deleted by Discord id, and through `ChatConversation` (also on unlink) | No |
 | `DiscordOAuthState` | a pending link attempt and its redirect | none | Cascade | No |

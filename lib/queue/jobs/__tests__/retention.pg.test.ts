@@ -72,6 +72,9 @@ async function seed(db: PrismaClient) {
   const recentChat = await db.chatConversation.create({
     data: { userId: MEMBER, title: "Is Sonarr up?", lastMessageAt: ago(89), messages: { create: [{ role: "user", content: "q" }] } },
   })
+  // A first reply that failed stores no turn, so its conversation counts from when it started
+  const neverAnswered = await db.chatConversation.create({ data: { userId: MEMBER, createdAt: ago(91) } })
+  const justStarted = await db.chatConversation.create({ data: { userId: MEMBER, createdAt: ago(89) } })
 
   // Conversations: 180 days after they end
   const ended = await db.chatConversation.create({ data: { userId: MEMBER, endedAt: ago(181) } })
@@ -112,7 +115,21 @@ async function seed(db: PrismaClient) {
   await db.auditLog.create({ data: { type: "TEST", actorUserId: RUN, createdAt: ago(399) } })
   await db.auditLog.create({ data: { type: "TEST", actorUserId: RUN, createdAt: ago(401) } })
 
-  return { generation, rewind, assistant, idleChat, recentChat, ended, endedUsage, recentlyEnded, chatty, idleConversation, argsLog }
+  return {
+    generation,
+    rewind,
+    assistant,
+    idleChat,
+    recentChat,
+    neverAnswered,
+    justStarted,
+    ended,
+    endedUsage,
+    recentlyEnded,
+    chatty,
+    idleConversation,
+    argsLog,
+  }
 }
 
 describePg("the retention sweep on PostgreSQL", (databaseUrl) => {
@@ -140,7 +157,7 @@ describePg("the retention sweep on PostgreSQL", (databaseUrl) => {
     expect(first.counts).toEqual({
       rewindLlmText: 1,
       assistantLlmText: 3,
-      assistantChats: 1,
+      assistantChats: 2,
       chatConversations: 1,
       discordChatMessages: 1,
       discordChatSessions: 1,
@@ -181,6 +198,8 @@ describePg("the retention sweep on PostgreSQL", (databaseUrl) => {
 
     expect(await conversation(fixture.idleChat.id)).toEqual({ endedAt: NOW, title: null, _count: { messages: 0 } })
     expect(await conversation(fixture.recentChat.id)).toEqual({ endedAt: null, title: "Is Sonarr up?", _count: { messages: 1 } })
+    expect((await conversation(fixture.neverAnswered.id)).endedAt).toEqual(NOW)
+    expect((await conversation(fixture.justStarted.id)).endedAt).toBeNull()
   })
 
   it("deletes ended conversations, keeping their usage cost without the link", async () => {

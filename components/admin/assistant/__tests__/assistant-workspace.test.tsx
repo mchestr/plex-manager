@@ -6,10 +6,10 @@
  * sends, the history by day with its deletes, and the off state.
  */
 
-import { act, render, screen, waitFor, within } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe, toHaveNoViolations } from "jest-axe"
-import type { ComponentProps } from "react"
+import { Activity, type ComponentProps } from "react"
 
 import { chatWithAdminBot, deleteAssistantConversation } from "@/actions/chatbot"
 import { AssistantWorkspace } from "@/components/admin/assistant/assistant-workspace"
@@ -26,6 +26,23 @@ jest.mock("@/lib/utils/browser-zone", () => ({ browserTimeZone: jest.fn() }))
 // One router for the whole test, as Next gives the page
 const router = { replace: jest.fn(), refresh: jest.fn(), push: jest.fn(), prefetch: jest.fn() }
 jest.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/admin/assistant" }))
+// A client navigation as the app router's Link makes one: a plain click calls onNavigate, then pushes
+jest.mock("next/link", () => {
+  const MockLink = ({ href, onNavigate, onClick, ...props }: { href: string; onNavigate?: () => void } & React.ComponentProps<"a">) => (
+    <a
+      href={href}
+      {...props}
+      onClick={(event) => {
+        onClick?.(event)
+        if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+        event.preventDefault()
+        onNavigate?.()
+        router.push(href)
+      }}
+    />
+  )
+  return MockLink
+})
 
 const NOW = Date.parse("2026-12-01T12:00:00Z")
 const noRegion = { rules: { region: { enabled: false } } }
@@ -46,9 +63,11 @@ function ui(overrides: Partial<Props>) {
         <AssistantWorkspace
           available
           disclosure="Server admins can review assistant conversations, and messages are processed by Anthropic."
+          // Distinct windows, so the delete confirm and the history caption cannot swap them unseen
           usageTextDays={90}
-          historyDays={90}
+          historyDays={30}
           history={[]}
+          historyCapped={false}
           conversation={null}
           now={NOW}
           canConfigure
@@ -128,18 +147,46 @@ describe("AssistantWorkspace", () => {
     const { rerenderWith } = view()
     const user = await ask("Who is streaming?")
     await screen.findByText("Two streams.")
-
     expect(router.replace).toHaveBeenCalledWith("/admin/assistant?conversation=conv-1", { scroll: false })
+
+    // A follow-up goes before the server's render of that URL arrives, and its reply after
+    const finish = holdReply()
+    await ask("Any transcodes?", user)
+    const log = screen.getByRole("log")
     rerenderWith({ conversation: conversation("conv-1", "Who is streaming?", "Two streams."), history: [{ id: "conv-1", title: "Who is streaming?", lastMessageAt: NOW }] })
 
+    expect(screen.getByRole("log")).toBe(log)
     expect(screen.getByRole("heading", { level: 1, name: "Who is streaming?" })).toBeInTheDocument()
-    expect(screen.getAllByTestId("admin-chat-answer")).toHaveLength(1)
-    expect(router.replace).toHaveBeenCalledTimes(1)
-
-    replyWith("None are transcoding.")
-    await ask("Any transcodes?", user)
-    await screen.findByText("None are transcoding.")
+    expect(input()).toHaveFocus()
+    await finish("None are transcoding.", "conv-1")
+    expect(screen.getByText("None are transcoding.")).toBeInTheDocument()
     expect(jest.mocked(chatWithAdminBot).mock.calls[1][0]).toMatchObject({ message: "Any transcodes?", conversationId: "conv-1" })
+    expect(router.replace).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the box focused after Send is pressed from the keyboard", async () => {
+    replyWith("ok")
+    const user = userEvent.setup()
+    view()
+    await user.type(input(), "status?")
+
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Send" })).toHaveFocus()
+    await user.keyboard("{Enter}")
+
+    expect(chatWithAdminBot).toHaveBeenCalledTimes(1)
+    expect(input()).toHaveFocus()
+  })
+
+  it("does not send on the Enter that ends an input method's composition in Safari", () => {
+    view()
+    fireEvent.change(input(), { target: { value: "東京" } })
+
+    // WebKit reports that Enter after compositionend, with isComposing false and key code 229
+    fireEvent.keyDown(input(), { key: "Enter", keyCode: 229 })
+
+    expect(chatWithAdminBot).not.toHaveBeenCalled()
+    expect(input()).toHaveValue("東京")
   })
 
   it("keeps focus in the box while a reply loads, and sends nothing on Enter meanwhile", async () => {
@@ -224,18 +271,40 @@ describe("AssistantWorkspace", () => {
     expect(await screen.findByText("Get Sonarr Status")).toHaveAttribute("title", "Sonarr health")
   })
 
-  it("opens a stored conversation and replaces the transcript when another opens", () => {
+  it("opens a stored conversation and replaces the transcript when another opens, moving focus to its title", () => {
     const { rerenderWith } = view({ conversation: conversation("a", "Is Plex up?", "Plex is up.") })
     expect(screen.getByText("Plex is up.")).toBeInTheDocument()
     expect(screen.queryByTestId("admin-chat-welcome")).not.toBeInTheDocument()
+    // Not on the first render
+    expect(screen.getByRole("heading", { level: 1 })).not.toHaveFocus()
 
     rerenderWith({ conversation: conversation("b", "Is Sonarr up?", "Sonarr is up.") })
 
     expect(screen.getByText("Sonarr is up.")).toBeInTheDocument()
     expect(screen.queryByText("Plex is up.")).not.toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Is Sonarr up?" })).toHaveFocus()
 
     rerenderWith({ conversation: null })
     expect(screen.getByTestId("admin-chat-welcome")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Assistant" })).toHaveFocus()
+  })
+
+  it("shows the date on messages from before today", () => {
+    const yesterday = NOW - 24 * 60 * 60 * 1000
+    view({
+      conversation: {
+        id: "a",
+        title: "Is Plex up?",
+        messages: [
+          { role: "user", content: "Is Plex up?", timestamp: yesterday },
+          { role: "assistant", content: "Plex is up.", timestamp: NOW },
+        ],
+      },
+    })
+
+    // Berlin, the browser's zone
+    expect(within(screen.getByTestId("admin-chat-question")).getByText("Nov 30, 2026, 1:00 PM")).toBeInTheDocument()
+    expect(within(screen.getByTestId("admin-chat-answer")).getByText("1:00 PM")).toBeInTheDocument()
   })
 
   it("drops a late reply for a conversation that was left", async () => {
@@ -249,6 +318,37 @@ describe("AssistantWorkspace", () => {
     expect(screen.queryByText("the late answer")).not.toBeInTheDocument()
     expect(screen.queryByText("first question")).not.toBeInTheDocument()
     expect(screen.getByText("Sonarr is up.")).toBeInTheDocument()
+    expect(router.replace).not.toHaveBeenCalled()
+  })
+
+  it("empties the transcript as New conversation is picked, dropping the reply still on its way", async () => {
+    const finish = holdReply()
+    const user = userEvent.setup()
+    view({ conversation: conversation("a", "Is Plex up?", "Plex is up.") })
+    await ask("And Sonarr?", user)
+
+    await user.click(screen.getByTestId("admin-assistant-new-mobile"))
+    expect(screen.getByTestId("admin-chat-welcome")).toBeInTheDocument()
+    expect(screen.queryByTestId("admin-chat-thinking")).not.toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Assistant" })).toHaveFocus()
+
+    await finish("the late answer", "a")
+    expect(screen.queryByText("the late answer")).not.toBeInTheDocument()
+    expect(screen.getByTestId("admin-chat-welcome")).toBeInTheDocument()
+  })
+
+  it("starts over on New conversation while a new conversation's first reply loads, without opening it", async () => {
+    const finish = holdReply()
+    const user = userEvent.setup()
+    view()
+    await ask("first question", user)
+
+    // Already on /admin/assistant: the URL does not change, so only the reset clears the transcript
+    await user.click(screen.getByTestId("admin-assistant-history-new"))
+    expect(screen.queryByText("first question")).not.toBeInTheDocument()
+
+    await finish("the late answer", "conv-1")
+    expect(screen.queryByText("the late answer")).not.toBeInTheDocument()
     expect(router.replace).not.toHaveBeenCalled()
   })
 
@@ -297,7 +397,15 @@ describe("the history", () => {
     expect(screen.getByTestId("admin-assistant-history-item-today")).toHaveAttribute("aria-current", "page")
     expect(screen.getByTestId("admin-assistant-history-item-older")).toHaveAttribute("href", "/admin/assistant?conversation=older")
     expect(screen.getByTestId("admin-assistant-history-new")).toHaveAttribute("href", "/admin/assistant")
-    expect(screen.getByTestId("admin-assistant-history-window")).toHaveTextContent("90 days after their last message")
+    expect(screen.getByTestId("admin-assistant-history-window")).toHaveTextContent(/^Conversations leave this list 30 days after their last message\.$/)
+  })
+
+  it("says when the list stops at its limit", () => {
+    view({ history, historyCapped: true })
+
+    expect(screen.getByTestId("admin-assistant-history-window")).toHaveTextContent(
+      "Showing your 2 most recent conversations. Conversations leave this list 30 days after their last message."
+    )
   })
 
   it("says when there is nothing yet", () => {
@@ -322,14 +430,82 @@ describe("the history", () => {
     expect(router.refresh).not.toHaveBeenCalled()
   })
 
+  it("moves focus to New conversation after a delete, since the row goes with its button; Cancel keeps it on the row", async () => {
+    jest.mocked(deleteAssistantConversation).mockResolvedValue({ success: true, data: null })
+    const user = userEvent.setup()
+    view({ history, conversation: conversation("today", "Is Plex up?", "Plex is up.") })
+    const remove = screen.getByTestId("admin-assistant-history-delete-older")
+
+    await user.click(remove)
+    await user.click(within(await screen.findByTestId("admin-assistant-delete-dialog")).getByRole("button", { name: "Cancel" }))
+    await waitFor(() => expect(remove).toHaveFocus())
+
+    await user.click(remove)
+    await user.click(within(await screen.findByTestId("admin-assistant-delete-dialog")).getByTestId("admin-assistant-delete-confirm"))
+    await waitFor(() => expect(screen.getByTestId("admin-assistant-history-new")).toHaveFocus())
+  })
+
+  it("drops a first reply that lands while another conversation loads, so the URL never follows it", async () => {
+    const finish = holdReply()
+    const user = userEvent.setup()
+    view({ history })
+    await ask("first question", user)
+
+    // The router has not rendered the clicked conversation yet
+    await user.click(screen.getByTestId("admin-assistant-history-item-older"))
+    expect(router.push).toHaveBeenCalledWith("/admin/assistant?conversation=older")
+    expect(screen.queryByTestId("admin-chat-thinking")).not.toBeInTheDocument()
+
+    await finish("the late answer", "conv-new")
+    expect(screen.queryByText("the late answer")).not.toBeInTheDocument()
+    expect(router.replace).not.toHaveBeenCalled()
+  })
+
+  it("keeps a reply for the open conversation when its own link is clicked", async () => {
+    const finish = holdReply()
+    const user = userEvent.setup()
+    view({ history, conversation: conversation("today", "Is Plex up?", "Plex is up.") })
+    await ask("And Sonarr?", user)
+
+    await user.click(screen.getByTestId("admin-assistant-history-item-today"))
+    await finish("Sonarr is up too.", "today")
+
+    expect(screen.getByText("Sonarr is up too.")).toBeInTheDocument()
+  })
+
+  it("closes the history sheet as the router hides the page, so it is closed on the way back", async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<Activity mode="visible">{ui({ history })}</Activity>)
+    await user.click(screen.getByTestId("admin-assistant-history-open"))
+    await screen.findByRole("dialog", { name: "History" })
+
+    rerender(<Activity mode="hidden">{ui({ history })}</Activity>)
+    rerender(<Activity mode="visible">{ui({ history })}</Activity>)
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "History" })).not.toBeInTheDocument())
+    expect(screen.getByTestId("admin-assistant-history-open")).toBeVisible()
+  })
+
+  it("treats a conversation that is already gone as deleted", async () => {
+    jest.mocked(deleteAssistantConversation).mockResolvedValue({ success: false, code: "NOT_FOUND", error: "That conversation is already gone" })
+    const user = userEvent.setup()
+    view({ history, conversation: conversation("today", "Is Plex up?", "Plex is up.") })
+
+    await user.click(screen.getByTestId("admin-assistant-history-delete-today"))
+    await user.click(within(await screen.findByTestId("admin-assistant-delete-dialog")).getByTestId("admin-assistant-delete-confirm"))
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/admin/assistant"))
+    expect(screen.queryByText("That conversation is already gone")).not.toBeInTheDocument()
+  })
+
   it("refreshes the list after deleting another conversation, and shows a refusal in the dialog", async () => {
-    jest.mocked(deleteAssistantConversation).mockResolvedValueOnce({ success: false, code: "NOT_FOUND", error: "That conversation is already gone" })
+    jest.mocked(deleteAssistantConversation).mockResolvedValueOnce({ success: false, code: "RATE_LIMITED", error: "Too many requests. Try again later." })
     const user = userEvent.setup()
     view({ history, conversation: conversation("today", "Is Plex up?", "Plex is up.") })
 
     await user.click(screen.getByTestId("admin-assistant-history-delete-older"))
     await user.click(within(await screen.findByTestId("admin-assistant-delete-dialog")).getByTestId("admin-assistant-delete-confirm"))
-    expect(await screen.findByText("That conversation is already gone")).toBeInTheDocument()
+    expect(await screen.findByText("Too many requests. Try again later.")).toBeInTheDocument()
 
     jest.mocked(deleteAssistantConversation).mockResolvedValueOnce({ success: true, data: null })
     await user.click(screen.getByTestId("admin-assistant-delete-confirm"))

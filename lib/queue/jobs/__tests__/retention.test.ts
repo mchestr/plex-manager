@@ -81,14 +81,18 @@ describe("the windows and their boundaries", () => {
     expect(findMany()).toHaveBeenCalledWith(expect.objectContaining({ where }))
   })
 
-  it("ends assistant page conversations idle for 90 days and removes their history, in one transaction", async () => {
+  it("ends assistant page conversations idle for 90 days, or started 90 days ago without a turn, and removes their history, in one transaction", async () => {
     prismaMock.chatConversation.findMany.mockResolvedValueOnce(ids("chat-1"))
     prismaMock.chatConversation.updateMany.mockResolvedValue({ count: 1 })
     prismaMock.chatConversationMessage.deleteMany.mockResolvedValue({ count: 6 })
 
     const result = await runRetentionSweep({ now: NOW })
 
-    const where = { endedAt: null, lastMessageAt: { lt: daysAgo(90) }, discordSessions: { none: {} } }
+    const where = {
+      endedAt: null,
+      OR: [{ lastMessageAt: { lt: daysAgo(90) } }, { lastMessageAt: null, createdAt: { lt: daysAgo(90) } }],
+      discordSessions: { none: {} },
+    }
     expect(prismaMock.chatConversation.findMany).toHaveBeenCalledWith({ where, select: { id: true }, take: 1000 })
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
     expect(prismaMock.chatConversation.updateMany).toHaveBeenCalledWith({

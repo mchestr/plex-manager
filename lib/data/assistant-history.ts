@@ -35,6 +35,8 @@ export interface AssistantPageData {
   /** How long a conversation stays in the history after its last message. */
   historyDays: number
   history: AssistantHistoryItem[]
+  /** The history reached {@link HISTORY_LIMIT}, so older conversations are not listed. */
+  historyCapped: boolean
   /** The open conversation: null for a new one, and for an id that is not one of the caller's open conversations. */
   conversation: AssistantConversation | null
 }
@@ -71,6 +73,7 @@ export async function getAssistantPage(conversationId: string | null): Promise<A
     usageTextDays: days.assistantLlmText,
     historyDays: days.assistantChats,
     history: rows.map((row) => ({ id: row.id, title: row.title ?? UNTITLED, lastMessageAt: row.lastMessageAt?.getTime() ?? 0 })),
+    historyCapped: rows.length === HISTORY_LIMIT,
     conversation: open && {
       id: open.id,
       title: open.title ?? UNTITLED,

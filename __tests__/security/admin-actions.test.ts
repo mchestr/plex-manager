@@ -14,7 +14,7 @@ import { assertPermission } from '@/lib/admin'
 import { authErrorKind } from '@/lib/auth-errors'
 import { getServerSession } from 'next-auth'
 import { mockReset } from 'jest-mock-extended'
-import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { buildUser } from '@/__tests__/helpers/factories'
 
 jest.mock('@/lib/security/audit-log', () => ({
@@ -299,8 +299,10 @@ describe('Admin Actions Security', () => {
       expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'member-1' }, data: { isAdmin: true, role: null } })
     })
 
-    it('demotes another admin and ends their sessions', async () => {
+    it('demotes another admin, ends their sessions and ends their assistant page conversations', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: true, plexUserId: 'plex-other' }))
+      prismaMock.$transaction.mockImplementation((callback) => callback(asTransactionClient(prismaMock)))
+      prismaMock.chatConversation.updateMany.mockResolvedValue({ count: 2 })
 
       const result = await updateUserAdminStatus({ userId: 'member-1', isAdmin: false })
 
@@ -310,6 +312,14 @@ describe('Admin Actions Security', () => {
       expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.SESSIONS_REVOKED, 'admin-user-id', {
         targetUserId: 'member-1',
         reason: 'demoted',
+      })
+      // Answers built from admin-only tool output are not left for a role to read
+      expect(prismaMock.chatConversation.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'member-1', endedAt: null, discordSessions: { none: {} } },
+        data: { endedAt: expect.any(Date), title: null },
+      })
+      expect(prismaMock.chatConversationMessage.deleteMany).toHaveBeenCalledWith({
+        where: { conversation: { userId: 'member-1', endedAt: { not: null } } },
       })
     })
 
@@ -333,6 +343,7 @@ describe('Admin Actions Security', () => {
       await expect(updateUserAdminStatus({ userId: 'member-1', isAdmin: true })).resolves.toEqual({ success: true, data: null })
 
       expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+      expect(prismaMock.chatConversation.updateMany).not.toHaveBeenCalled()
     })
   })
 

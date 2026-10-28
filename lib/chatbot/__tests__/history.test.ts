@@ -20,10 +20,11 @@ describe("titleFrom", () => {
   })
 
   it("cuts a longer question at a word, with an ellipsis", () => {
-    const title = titleFrom(`${"word ".repeat(20)}tail`)
+    // The 79th character falls inside a word, so a plain cut would end on "ab"
+    const title = titleFrom("abcdef ".repeat(15))
 
+    expect(title).toBe(`${"abcdef ".repeat(11).trim()}…`)
     expect(title.length).toBeLessThanOrEqual(80)
-    expect(title).toMatch(/^(word )+word…$/)
   })
 
   it("cuts mid-word when there is no space late enough", () => {

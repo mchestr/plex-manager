@@ -20,7 +20,7 @@ check); the `no-changelog` label skips it.
 
 ### Added
 
-- **Assistant page:** the admin assistant is now a page of its own, `/admin/assistant`, opened from **Assistant** at the top of the admin sidebar (and from the assistant button in the phone's top bar) instead of a side panel. Conversations are saved: the history beside the conversation (a sheet on phones) lists them by day, each one opens at its own address and carries on where it left off, and **Delete** removes one from your history. A new conversation offers a few questions to start with; Enter sends and Shift+Enter starts a new line. Admins and Support users see only their own history, and admins still review every conversation on the LLM usage pages. A conversation leaves the history 90 days after its last message (`RETENTION_ASSISTANT_CHAT_DAYS`).
+- **Assistant page:** the admin assistant is now a page of its own, `/admin/assistant`, opened from **Assistant** at the top of the admin sidebar (and from the assistant button in the phone's top bar) instead of a side panel. Conversations are saved: the history beside the conversation (a sheet on phones) lists them by day, each one opens at its own address and carries on where it left off, and **Delete** removes one from your history. A new conversation offers a few questions to start with; Enter sends and Shift+Enter starts a new line. Admins and Support users see only their own history, and admins still review every conversation on the LLM usage pages. A conversation leaves the history 90 days after its last message (`RETENTION_ASSISTANT_CHAT_DAYS`), and removing an admin's role ends all of their conversations. Member removal's dry run counts the saved messages too.
 
 ### Changed
 
@@ -34,7 +34,7 @@ check); the `no-changelog` label skips it.
 ### Upgrade notes
 
 - Take a `pg_dump -Fc` before you start the new release. It adds the migration `20270119000007_add_assistant_chat_history` (a title on assistant conversations and the `ChatConversationMessage` table, both encrypted at rest) and the optional `RETENTION_ASSISTANT_CHAT_DAYS` (default 90).
-- The side panel never stored its conversations, so everyone's assistant history starts empty.
+- The side panel never stored its conversations, so everyone's assistant history starts empty. Its conversation records end 90 days after they started (the new rule), and the existing `RETENTION_CHAT_CONVERSATION_DAYS` rule deletes them 180 days after that; their LLM usage keeps its cost.
 
 ## [0.5.0] - 2026-10-27
 

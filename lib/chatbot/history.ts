@@ -6,13 +6,15 @@
  *
  * The browser sends only the new message. The turns before it are read here,
  * so a client cannot write the assistant's side of a conversation (SEC-42). A
- * turn is stored once it succeeds, question and answer together, so a stored
- * conversation alternates and ends with an answer.
+ * turn is stored once it succeeds, question and answer together and after any
+ * turn stored while it ran (another tab), so a stored conversation alternates
+ * and ends with an answer.
  *
  * ## Ending a conversation
  *
- * Deleting a conversation, or leaving it idle past its retention window, ends
- * it rather than removing the row: the title and messages go, while its
+ * Deleting a conversation, leaving it idle past its retention window, or
+ * demoting the admin it belongs to ends it rather than removing the row: the
+ * title and messages go, while its
  * `LLMUsage` rows keep their link. The day's spend caps (`lib/llm/budget.ts`)
  * count only rows with a conversation, so a removed row would hand back the
  * day's spend; and the LLM usage pages keep showing the calls until their own
@@ -120,17 +122,25 @@ interface Turn {
  * the answer was being written.
  */
 export async function saveTurn({ conversationId, question, answer, title }: Turn): Promise<boolean> {
-  const answeredAt = new Date(answer.timestamp)
   return prisma.$transaction(async (tx) => {
+    // The update locks the row, so a turn another tab stores at the same time waits for this one, or this one for it
     const { count } = await tx.chatConversation.updateMany({
       where: { id: conversationId, endedAt: null },
-      data: { lastMessageAt: answeredAt, ...(title ? { title } : {}) },
+      data: { lastMessageAt: new Date(answer.timestamp), ...(title ? { title } : {}) },
     })
     if (count === 0) return false
+    // After the newest stored message, so a question asked before another tab's answer still sits beside its own
+    const latest = await tx.chatConversationMessage.findFirst({
+      where: { conversationId },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: { createdAt: true },
+    })
+    const askedAt = Math.max(question.at.getTime(), (latest?.createdAt.getTime() ?? 0) + 1)
+    const answeredAt = Math.max(answer.timestamp, askedAt + 1)
     await tx.chatConversationMessage.createMany({
       data: [
-        { conversationId, role: "user", content: question.content, createdAt: question.at },
-        { conversationId, role: "assistant", content: answer.content, sources: answer.sources, createdAt: answeredAt },
+        { conversationId, role: "user", content: question.content, createdAt: new Date(askedAt) },
+        { conversationId, role: "assistant", content: answer.content, sources: answer.sources, createdAt: new Date(answeredAt) },
       ],
     })
     return true
@@ -151,5 +161,17 @@ export async function endConversation(userId: string, conversationId: string, no
     if (count === 0) return false
     await tx.chatConversationMessage.deleteMany({ where: { conversationId } })
     return true
+  })
+}
+
+/**
+ * Ends every one of a user's conversations the same way, for a demoted admin:
+ * a role never reads answers built from tool output only an admin may see.
+ */
+export async function endConversationsOf(userId: string, now: Date = new Date()): Promise<number> {
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.chatConversation.updateMany({ where: openConversationsOf(userId), data: { endedAt: now, title: null } })
+    await tx.chatConversationMessage.deleteMany({ where: { conversation: { userId, endedAt: { not: null } } } })
+    return count
   })
 }
