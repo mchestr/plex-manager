@@ -94,7 +94,6 @@ export function RecentCommandsTable({ rows, total }: { rows: RecentCommand[]; to
           kind="first-use"
           icon={icons.discordBot}
           title="No commands yet"
-          description="The bot logs each command that members run in Discord."
         />
       }
       data-testid="discord-recent-commands"
