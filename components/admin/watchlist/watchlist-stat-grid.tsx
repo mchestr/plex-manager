@@ -16,13 +16,13 @@ export function WatchlistStatGrid({ stats, f }: { stats: WatchlistStats; f: Boun
       <StatTile
         label="Not allowed"
         value={f.number(stats.notAllowed)}
-        meta="Overseerr refused: quota or permission"
+        meta="Overseerr refused them for quota or permissions"
         data-testid="admin-watchlist-stat-not-allowed"
       />
       <StatTile
         label="No TMDB match"
         value={f.number(stats.noMatch)}
-        meta="Tried again on every sync"
+        meta="Each sync tries them again"
         data-testid="admin-watchlist-stat-no-match"
       />
     </StatGrid>

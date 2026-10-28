@@ -134,11 +134,11 @@ describe("WatchlistTable", () => {
   it("shows the first-use empty state, naming the global switch while it is off", () => {
     const { unmount } = renderTable({ rows: [], total: 0, all: 0 })
     expect(screen.getByTestId("admin-watchlist-empty")).toHaveTextContent("No watchlist titles yet")
-    expect(screen.getByTestId("admin-watchlist-empty")).toHaveTextContent("once a member with sync on adds one")
+    expect(screen.getByTestId("admin-watchlist-empty")).toHaveTextContent("when a member with sync on adds it")
     unmount()
 
     renderTable({ rows: [], total: 0, all: 0, syncEnabled: false })
-    expect(screen.getByTestId("admin-watchlist-empty")).toHaveTextContent("Turn watchlist sync on in Sync settings")
+    expect(screen.getByTestId("admin-watchlist-empty")).toHaveTextContent("Turn on watchlist sync in Sync settings")
   })
 
   it("shows the filtered empty state, and Clear filters drops every filter", async () => {
