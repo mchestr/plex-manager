@@ -50,9 +50,9 @@ empty result:
 
 | Command | Reply for a Jellyfin-only member |
 |---|---|
-| `/mystats` | "Stats use Plex watch history, and your account is on Jellyfin, so they aren't available yet." |
-| `/watching` | "I can only see Plex streams for now." |
-| `/mark` | "Marking works with the Plex library only." |
+| `/mystats` | "Stats use Plex watch history. Your account is on Jellyfin, so stats are not available yet." |
+| `/watching` | "This command shows Plex streams only. Your account is on Jellyfin." |
+| `/mark` | "`/mark` works with the Plex library only. Your account is on Jellyfin." |
 
 The assistant's Plex and Tautulli session tools return
 `{"unavailable":"jellyfin-member"}` for them, and the Discord system prompt

@@ -28,7 +28,7 @@ describe("SetupClaimStep", () => {
     expect(field).toHaveAttribute("spellcheck", "false")
     expect(field).toHaveClass("font-mono")
     expect(field).toHaveAccessibleDescription(/docker logs plex-manager/)
-    expect(screen.getByRole("heading", { name: "What happens next" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Next steps" })).toBeInTheDocument()
   })
 
   it("shows a wrong code's error and stays on the claim", async () => {

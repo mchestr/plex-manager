@@ -350,7 +350,7 @@ describe("routeInteraction", () => {
       expect.objectContaining({ status: "FAILED", error: "kaboom" })
     )
     expect(reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("something went wrong") })
+      expect.objectContaining({ content: expect.stringContaining("That command failed") })
     )
   })
 
@@ -372,7 +372,7 @@ describe("routeInteraction", () => {
     await routeInteraction(interaction, deps)
 
     expect(reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("Unknown command") })
+      expect.objectContaining({ content: expect.stringContaining("There is no command") })
     )
     expect(deps.verifyDiscordUser).not.toHaveBeenCalled()
     expect(mockCreate).not.toHaveBeenCalled()
@@ -471,7 +471,7 @@ describe("routeInteraction", () => {
       expect.objectContaining({ status: "FAILED", error: "kaboom" })
     )
     expect(reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("something went wrong") })
+      expect.objectContaining({ content: expect.stringContaining("That action failed") })
     )
   })
 
@@ -531,7 +531,7 @@ describe("routeInteraction", () => {
     expect(mockCreate).not.toHaveBeenCalled()
     expect(reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: expect.stringContaining("link your account"),
+        content: expect.stringContaining("Link your account"),
         flags: 64,
       })
     )

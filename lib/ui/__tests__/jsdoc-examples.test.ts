@@ -54,17 +54,17 @@ describe('JSDoc Documentation Examples', () => {
 
   it('errorCopy', () => {
     expect(errorCopy('TIMEOUT', { audience: 'member' }).description).toBe(
-      'Making your Rewind took too long. Please try again in a few minutes.'
+      'Your Rewind took too long to make. Try again in a few minutes.'
     )
     expect(errorCopy("Can't reach database server at db:5432", { audience: 'admin' }).title).toBe(
-      'Something went wrong on our side'
+      'Something went wrong on the server'
     )
   })
 
   it('boundaryCopy', () => {
     expect(boundaryCopy(Object.assign(new Error('x'), { digest: 'PM_FORBIDDEN' })).title).toBe('Admins only')
     expect(boundaryCopy(Object.assign(new Error('db:5432'), { digest: 'abc123' })).code).toBe('abc123')
-    expect(boundaryCopy(new Error('db:5432')).title).toBe('Something went wrong on our side')
+    expect(boundaryCopy(new Error('db:5432')).title).toBe('Something went wrong on the server')
   })
 
   it('readFlash', () => {

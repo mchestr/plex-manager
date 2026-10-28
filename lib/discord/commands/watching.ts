@@ -46,7 +46,7 @@ import { requireLinkedUser } from "./require-linked-user"
 const logger = createLogger("DISCORD_WATCHING_COMMAND")
 
 /** Friendly copy shown when the caller has no active streams. */
-const EMPTY_STATE = "You're not watching anything right now."
+const EMPTY_STATE = "You have no Plex streams now."
 
 /** Discord caps an embed at 25 fields; one field per active stream. */
 const MAX_STREAM_FIELDS = 25
@@ -192,8 +192,8 @@ function buildWatchingEmbed(sessions: PlexSession[]): EmbedBuilder {
     .setDescription(
       safeText(
         sessions.length === 1
-          ? "Here's your current stream:"
-          : `You have ${sessions.length} active streams:`
+          ? "Your current stream:"
+          : `Your ${sessions.length} current streams:`
       )
     )
 
@@ -224,7 +224,7 @@ async function handleWatching(ctx: InteractionContext): Promise<void> {
   const { interaction } = ctx
 
   const user = await requireLinkedUser(ctx, {
-    action: "I can show what you're watching",
+    action: "see your streams",
   })
   if (!user) return
 
@@ -245,7 +245,7 @@ async function handleWatching(ctx: InteractionContext): Promise<void> {
   const config = await getActivePlexServerConfig()
   if (!config) {
     await interaction.editReply({
-      content: "No active Plex server configured. Please contact an admin.",
+      content: "This server has no Plex connection. Tell an admin.",
     })
     return
   }
@@ -256,7 +256,7 @@ async function handleWatching(ctx: InteractionContext): Promise<void> {
       error: result.error,
     })
     await interaction.editReply({
-      content: "Sorry, I couldn't reach Plex to check your streams. Please try again shortly.",
+      content: "Plex did not answer, so I could not get your streams. Try again in a few minutes.",
     })
     return
   }

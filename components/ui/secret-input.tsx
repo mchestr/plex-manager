@@ -151,7 +151,7 @@ export function SecretInput({
         <FieldDescription className="flex items-start gap-1.5" data-testid={testId && `${testId}-reenter`}>
           <Icon icon={icons.reenterSecret} size={12} className="mt-1" />
           <span>
-            Re-enter to use with the new address. The saved {noun} only goes to <span className="font-mono">{hostOf(saved.origin)}</span>.
+            Enter it again to use it with the new address. The saved {noun} goes only to <span className="font-mono">{hostOf(saved.origin)}</span>.
           </span>
         </FieldDescription>
       )}

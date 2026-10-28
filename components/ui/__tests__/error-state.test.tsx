@@ -2,8 +2,8 @@ import { ErrorState } from '@/components/ui/error-state'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-const GENERIC_TITLE = 'Something went wrong on our side'
-const GENERIC_DESCRIPTION = 'Please try again. If it keeps happening, let the server admin know.'
+const GENERIC_TITLE = 'Something went wrong on the server'
+const GENERIC_DESCRIPTION = 'Try again. If the problem continues, tell the server admin.'
 
 function withDigest(message: string, digest: string): Error & { digest?: string } {
   return Object.assign(new Error(message), { digest })

@@ -50,7 +50,7 @@ describe("SetupSummary", () => {
     render(<SetupSummary configured={ALL} />)
 
     expect(screen.queryByTestId("setup-summary-skipped")).not.toBeInTheDocument()
-    expect(screen.getByText("Nothing. Every integration is set up.")).toBeInTheDocument()
+    expect(screen.getByText("None.")).toBeInTheDocument()
   })
 
   it("completes setup, then signs the owner in with Plex towards /admin", async () => {

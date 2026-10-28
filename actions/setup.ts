@@ -45,7 +45,7 @@ function serviceSave<K extends ServiceKind>(kind: K, step: SetupStepId) {
   const service = SERVICE_DESCRIPTORS[kind]
   return setupAction({
     input: service.input,
-    fallbackError: `Failed to save ${service.label} configuration`,
+    fallbackError: `Could not save the ${service.label} settings`,
     handler: async (input, { actor }): Promise<ActionResult<null, SetupCode>> => {
       const result = await saveServiceConnection(kind, input, {
         actor,
@@ -79,7 +79,7 @@ export const saveRadarr = serviceSave("radarr", "radarr")
  */
 export const saveDiscordIntegration = setupAction({
   input: discordIntegrationSchema,
-  fallbackError: "Failed to save Discord integration",
+  fallbackError: "Could not save the Discord settings",
   handler: async (validated, { actor }) => {
     const isEnabled = validated.isEnabled ?? false
     const botEnabled = validated.botEnabled ?? false
@@ -133,7 +133,7 @@ export const saveDiscordIntegration = setupAction({
 function llmProviderSave(purpose: "chat" | "wrapped", step: SetupStepId) {
   return setupAction({
     input: setupLLMProviderSchema,
-    fallbackError: "Failed to save LLM provider configuration",
+    fallbackError: "Could not save the AI provider settings",
     handler: async (validated, { actor }) => {
       const stored = await prisma.lLMProvider.findFirst({ where: { isActive: true, purpose, provider: "openai", baseUrl: null } })
       const apiKey = validated.apiKey?.trim() || stored?.apiKey
@@ -142,7 +142,7 @@ function llmProviderSave(purpose: "chat" | "wrapped", step: SetupStepId) {
       // The model field is free text, as before P2.12
       const connectionTest = await testLLMProviderConnection({ ...validated, apiKey }, { customModel: true })
       if (!connectionTest.success) {
-        return fail("UPSTREAM_UNAVAILABLE", connectionTest.error || "Failed to connect to LLM provider")
+        return fail("UPSTREAM_UNAVAILABLE", connectionTest.error || "Could not connect to the AI provider")
       }
 
       const model = validated.model || DEFAULT_OPENAI_MODEL
@@ -195,7 +195,7 @@ export const testSetupConnection = setupAction({
  */
 export const skipSetupStep = setupAction({
   input: z.object({ stepId: z.enum(OPTIONAL_SETUP_STEP_IDS, { message: "This step can't be skipped" }) }),
-  fallbackError: "Failed to skip this step",
+  fallbackError: "Could not skip this step",
   handler: async ({ stepId }, { actor }) => {
     const skipped = await prisma.$transaction(async (tx) => {
       const position = (await wizardRow(tx))?.position ?? "plex"
@@ -214,7 +214,7 @@ export const skipSetupStep = setupAction({
 /** Marks setup complete and ends the claim; from then on these saves are admin only. */
 export const completeSetup = setupAction({
   input: z.undefined(),
-  fallbackError: "Failed to finish setup",
+  fallbackError: "Could not complete setup",
   handler: async (_input, { actor }) => {
     const setup = await prisma.setup.findFirst({ orderBy: { createdAt: "desc" } })
     if (setup) {

@@ -24,20 +24,20 @@ export const MARK_TYPE_CHOICES: { name: string; value: MarkType }[] = [
 
 const help = new SlashCommandBuilder()
   .setName("help")
-  .setDescription("Show available commands and how to use them")
+  .setDescription("Show the commands and how to use them")
   .addStringOption((option) =>
     option
       .setName("command")
-      .setDescription("Get detailed help for a specific command")
+      .setDescription("Show help for one command")
       .setAutocomplete(true)
   ) as SlashCommandBuilder
 
 const markSubcommands: [name: string, description: string][] = [
-  ["finished", "Mark as finished watching (marks it watched on your Plex account)"],
-  ["keep", "Mark as keep forever (protected from auto-deletion)"],
-  ["notinterested", "Mark as not interested (won't be recommended)"],
-  ["rewatch", "Mark as a rewatch candidate"],
-  ["badquality", "Report media as poor quality (may be re-downloaded)"],
+  ["finished", "Mark it as finished. Plex also marks it as watched on your account"],
+  ["keep", "Mark it to keep forever. Automatic deletion does not remove it"],
+  ["notinterested", "Mark it as not interesting to you. It is not recommended to you"],
+  ["rewatch", "Mark it as a title to watch again"],
+  ["badquality", "Report poor quality. The server may download it again"],
 ]
 
 const mark = markSubcommands.reduce(
@@ -46,9 +46,9 @@ const mark = markSubcommands.reduce(
       sub
         .setName(name)
         .setDescription(description)
-        .addStringOption((option) => option.setName("title").setDescription("Title to search for").setRequired(true))
+        .addStringOption((option) => option.setName("title").setDescription("The title to find").setRequired(true))
     ) as SlashCommandBuilder,
-  new SlashCommandBuilder().setName("mark").setDescription("Mark a movie or show in your Plex library")
+  new SlashCommandBuilder().setName("mark").setDescription("Mark a movie or show in the Plex library")
 )
 
 const assistant = new SlashCommandBuilder()
@@ -57,33 +57,33 @@ const assistant = new SlashCommandBuilder()
   .addSubcommand((sub) =>
     sub
       .setName("ask")
-      .setDescription("Ask a question. Only you see the answer; server admins can review assistant chats")
+      .setDescription("Ask a question. Only you see the answer. Server admins can review assistant chats")
       .addStringOption((option) =>
-        option.setName("prompt").setDescription("What would you like to ask?").setRequired(true)
+        option.setName("prompt").setDescription("Your question").setRequired(true)
       )
   )
   .addSubcommand((sub) =>
-    sub.setName("reset").setDescription("Clear your assistant conversation context")
+    sub.setName("reset").setDescription("Clear your conversation with the assistant")
   ) as SlashCommandBuilder
 
 const mymarks = new SlashCommandBuilder()
   .setName("mymarks")
-  .setDescription("Show the media you've marked")
+  .setDescription("Show the titles you marked")
   .addStringOption((option) =>
     option
       .setName("type")
-      .setDescription("Only show marks of this type")
+      .setDescription("Show only marks of this type")
       .setRequired(false)
       .addChoices(...MARK_TYPE_CHOICES)
   ) as SlashCommandBuilder
 
 const mystats = new SlashCommandBuilder()
   .setName("mystats")
-  .setDescription("See your own Plex watch stats for this year (only visible to you)")
+  .setDescription("Show your Plex watch stats for this year. Only you see them")
 
 const watching = new SlashCommandBuilder()
   .setName("watching")
-  .setDescription("See what you're currently watching")
+  .setDescription("Show your current Plex streams")
 
 /** Every slash command's builder, by name, in registration order. */
 export const COMMAND_DEFINITIONS = {

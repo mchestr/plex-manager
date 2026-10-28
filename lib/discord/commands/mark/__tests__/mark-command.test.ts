@@ -221,7 +221,7 @@ describe("markCommand.handle", () => {
 
     expect(reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: expect.stringContaining("link your account"),
+        content: expect.stringContaining("Link your account"),
         flags: 64,
       })
     )
@@ -237,7 +237,7 @@ describe("markCommand.handle", () => {
 
     await markCommand.handle(ctx)
 
-    expect(reply).toHaveBeenCalledWith({ content: "Marking works with the Plex library only.", flags: 64 })
+    expect(reply).toHaveBeenCalledWith({ content: "`/mark` works with the Plex library only. Your account is on Jellyfin.", flags: 64 })
     expect(deferReply).not.toHaveBeenCalled()
     expect(mockSearch).not.toHaveBeenCalled()
   })
@@ -250,7 +250,7 @@ describe("markCommand.handle", () => {
 
     expect(deferReply).toHaveBeenCalledWith(expect.objectContaining({ flags: 64 }))
     expect(editReply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("No active Plex server") })
+      expect.objectContaining({ content: expect.stringContaining("no Plex connection") })
     )
     expect(mockSearch).not.toHaveBeenCalled()
   })
@@ -262,7 +262,7 @@ describe("markCommand.handle", () => {
     await markCommand.handle(ctx)
 
     expect(editReply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("No media found") })
+      expect.objectContaining({ content: expect.stringContaining("Nothing in the Plex library matches") })
     )
     expect(mockApplyMark).not.toHaveBeenCalled()
   })
@@ -306,7 +306,7 @@ describe("markCommand.handle", () => {
     await markCommand.handle(ctx)
 
     expect(editReply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("Unsupported media type") })
+      expect.objectContaining({ content: expect.stringContaining("You cannot mark this type of item") })
     )
   })
 
@@ -329,7 +329,7 @@ describe("markCommand.handle", () => {
       })
     )
     const editArg = editReply.mock.calls[0][0]
-    expect(editArg.content).toContain("Found multiple matches")
+    expect(editArg.content).toContain("More than one title matches")
     expect(editArg.components).toHaveLength(1)
     // The select menu carries the same customId we persisted.
     const menu = editArg.components[0].components[0]
@@ -344,7 +344,7 @@ describe("markCommand.handle", () => {
     await markCommand.handle(ctx)
 
     expect(editReply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("Failed to search") })
+      expect.objectContaining({ content: expect.stringContaining("The Plex search for") })
     )
   })
 })

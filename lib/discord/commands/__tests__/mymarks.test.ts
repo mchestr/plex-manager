@@ -199,7 +199,7 @@ describe("myMarksCommand.handle — unlinked", () => {
 
     expect(reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: expect.stringContaining("link your account"),
+        content: expect.stringContaining("Link your account"),
         flags: 64,
       })
     )
@@ -276,7 +276,7 @@ describe("myMarksCommand.handle — rendering", () => {
     await myMarksCommand.handle(ctx)
 
     const editArg = editReply.mock.calls[0][0]
-    expect(editArg.content).toMatch(/haven't marked anything/i)
+    expect(editArg.content).toMatch(/You have no marks yet/i)
     expect(editArg.embeds ?? []).toHaveLength(0)
   })
 

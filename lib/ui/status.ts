@@ -150,8 +150,8 @@ export const STATUS = {
     needsSetup: { label: "Waiting for a bot token", ...warning, sub: "Add the bot token in settings" },
     off: { label: "Turned off", tone: "neutral", mark: "dot" },
     loginRejected: { label: "Login rejected", tone: "destructive", mark: "dot", sub: "Discord refused the token or intents. Save a new bot token" },
-    loginRetrying: { label: "Retrying login", ...warning, sub: "Login failed. Retrying with a growing delay" },
-    loginCapped: { label: "Login limit reached", tone: "destructive", mark: "dot", sub: "Too many logins in 24 hours. Waiting before the next" },
+    loginRetrying: { label: "Retrying login", ...warning, sub: "Login failed. Each new try waits longer" },
+    loginCapped: { label: "Login limit reached", tone: "destructive", mark: "dot", sub: "Too many logins in 24 hours. The bot waits before it tries again" },
   },
   discordCommand: {
     SUCCESS: { label: "Succeeded", tone: "success", mark: "dot" },

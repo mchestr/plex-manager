@@ -41,8 +41,8 @@ import { connectionTestCopy } from "@/lib/ui/error-copy"
 import { plexServerSchema } from "@/lib/validations/plex"
 import type { SetupPlexPoll } from "@/types/setup"
 
-const START_FAILED = "We couldn't reach Plex. Try again in a moment."
-const RECONNECT = "Connect with Plex again: the sign-in ran out."
+const START_FAILED = "Plex did not answer. Try again in a few seconds."
+const RECONNECT = "The Plex sign-in expired. Connect with Plex again."
 const LIST_FAILED = "plex.tv didn't list your servers. Try again in a moment."
 
 async function setupPin(): Promise<SetupPlexPinCookie | null> {
