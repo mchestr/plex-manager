@@ -81,12 +81,17 @@ export function ConfirmDialog({
   const popup = useRef<HTMLDivElement>(null)
   // Where the page moved focus while the action ran; the focus trap can pull it back before the close commits
   const pageFocus = useRef<HTMLElement | null>(null)
+  // The element that opened the dialog: focus going back to it is the dialog's own doing, not the page's
+  const opener = useRef<Element | null>(null)
   const inputId = useId()
+
+  const ownFocus = (element: Element) =>
+    popup.current?.contains(element) || element === opener.current || element.hasAttribute("data-base-ui-focus-guard")
 
   // Focus the page moved itself, outside this dialog, while the dialog closed
   const focusTaken = () => {
     const active = document.activeElement
-    return active !== null && active !== document.body && !popup.current?.contains(active)
+    return active !== null && active !== document.body && !ownFocus(active)
   }
 
   const finalFocus = () => {
@@ -111,10 +116,7 @@ export function ConfirmDialog({
     pageFocus.current = null
     const notePageFocus = (event: FocusEvent) => {
       const target = event.target
-      // Base UI's focus guards sit outside the popup and belong to the trap, not the page
-      if (target instanceof HTMLElement && !popup.current?.contains(target) && !target.hasAttribute("data-base-ui-focus-guard")) {
-        pageFocus.current = target
-      }
+      if (target instanceof HTMLElement && !ownFocus(target)) pageFocus.current = target
     }
     startTransition(async () => {
       let result: { error?: string }
@@ -146,6 +148,7 @@ export function ConfirmDialog({
           details.cancel()
           return
         }
+        if (next) opener.current = details.trigger ?? document.activeElement
         setOpen(next)
       }}
       onOpenChangeComplete={(isOpen) => {
