@@ -58,8 +58,8 @@ export interface GenerateUserOptions {
   kind: RewindGenerationKind
   /** The batch's last data day (`YYYY-11-30` or `YYYY-12-31`); defaults to the current one. */
   through?: string
-  /** The final cut's full-year window with an earlier `through` (a staging rehearsal, P8.5). */
-  finalCut?: boolean
+  /** A hide or unhide's regeneration (P7.7): keep the stored issue's data window, a season issue's even after the year ends. */
+  keepWindow?: boolean
   mode: "persist" | "dry-run"
   copyPolicy: CopyPolicy
   signal: AbortSignal
@@ -113,7 +113,7 @@ const defaultDeps: PipelineDeps = {
 /** Generates (or, in a dry run, only builds) the member's v3 Rewind. */
 export async function generateUserRewind(options: GenerateUserOptions, deps: PipelineDeps = defaultDeps): Promise<GenerateUserResult> {
   const { userId, year, signal } = options
-  const ctx = await deps.loadContext({ userId, year, kind: options.kind, through: options.through, finalCut: options.finalCut })
+  const ctx = await deps.loadContext({ userId, year, kind: options.kind, through: options.through, keepWindow: options.keepWindow })
   const eligibility = await deps.checkEligibility(ctx, options.audience ?? "config")
   if (!eligibility.ok) return { status: "skipped", reason: eligibility.reason }
 

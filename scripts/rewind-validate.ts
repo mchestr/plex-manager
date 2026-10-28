@@ -4,7 +4,6 @@
  *
  * Usage (from a checkout; the runtime image has no scripts/ and no tsx):
  *   DATABASE_URL=postgresql://... npm run rewind:validate -- --year=2026
- *   DATABASE_URL=postgresql://... npm run rewind:validate -- --year=2026 --final-cut
  *
  * It reads each eligible member's (enabled, with a Plex identity) Rewind row
  * and latest generation, and every live share link of the year, and runs
@@ -32,22 +31,22 @@ import {
   type YearReport,
 } from "@/lib/wrapped/maintenance/validate-year"
 
-const USAGE = "Usage: npm run rewind:validate -- --year=<year> [--final-cut]"
+const USAGE = "Usage: npm run rewind:validate -- --year=<year>"
 
 export type ValidateArgs = { ok: true; options: ValidateOptions } | { ok: false; help: boolean; error?: string }
 
-/** `--year=<year>` is required; `--final-cut` adds the final-cut checks. */
+/** `--year=<year>` is required. */
 export function parseValidateArgs(argv: readonly string[]): ValidateArgs {
   try {
     const { values } = parseArgs({
       args: [...argv],
-      options: { year: { type: "string" }, "final-cut": { type: "boolean", default: false }, help: { type: "boolean", short: "h", default: false } },
+      options: { year: { type: "string" }, help: { type: "boolean", short: "h", default: false } },
       strict: true,
     })
     if (values.help) return { ok: false, help: true }
     const year = yearSchema.safeParse(Number(values.year))
     if (!year.success) return { ok: false, help: false, error: "--year must be a year, such as --year=2026." }
-    return { ok: true, options: { year: year.data, finalCut: values["final-cut"] } }
+    return { ok: true, options: { year: year.data } }
   } catch (error) {
     return { ok: false, help: false, error: error instanceof Error ? error.message : String(error) }
   }
@@ -59,7 +58,7 @@ export async function loadMemberRows(year: number): Promise<MemberRow[]> {
     where: { disabledAt: null, plexUserId: { not: null } },
     select: {
       id: true,
-      plexWrapped: { where: { year }, select: { id: true, status: true, data: true, finalCutAt: true } },
+      plexWrapped: { where: { year }, select: { id: true, status: true, data: true } },
       rewindGenerations: { where: { year }, orderBy: { createdAt: "desc" }, take: 1, select: { status: true, error: true } },
     },
   })
@@ -128,7 +127,7 @@ export async function main(argv: readonly string[], deps: ValidateDeps): Promise
   }
   const { options } = args
   const [members, shares] = await Promise.all([deps.loadMembers(options.year), deps.loadShares(options.year)])
-  const report = validateYear(members, shares, options)
+  const report = validateYear(members, shares)
   formatYearReport(report, options).forEach((line) => print(line))
   return { code: report.failing.length === 0 ? 0 : 1, report }
 }

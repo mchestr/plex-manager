@@ -141,7 +141,7 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `RewindServerAggregate` | server-wide yearly totals, no per-member rows | No |
 | `MediaMetadataCache` | Plex metadata per title | No |
 | `RewindEvalRun` | Rewind copy eval results on fixture data; `createdBy` admin id | No |
-| `RewindBatch` | provider batch submissions for the final cut | No |
+| `RewindBatch` | provider batch submissions; unused, nothing writes it | No |
 | `PromptTemplate` | prompt text; `updatedBy` admin id | No |
 | `Invite` | invite codes and library settings; `createdBy` admin id | No |
 | `Announcement` | announcement text; `createdBy` admin id | No |

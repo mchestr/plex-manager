@@ -143,7 +143,7 @@ describe("Race scrubber and Replay (P8.3)", () => {
     expect(slider).toHaveAttribute("aria-valuetext", "November")
   })
 
-  it("reaches December on a 12-frame race after the final cut", async () => {
+  it("reaches December on the 12-frame race of a whole-year issue", async () => {
     jest.mocked(useReducedMotion).mockReturnValue(true)
     const user = userEvent.setup()
     const lastFrame = data.frames.at(-1)!

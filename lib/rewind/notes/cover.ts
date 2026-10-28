@@ -6,16 +6,14 @@
  */
 
 import { plain } from "@/lib/rewind/article/blocks"
-import { has, isFinalCut, shown } from "@/lib/rewind/pages/facts"
+import { has, isWholeYear, shown } from "@/lib/rewind/pages/facts"
 import type { CoverData } from "@/lib/rewind/pages/cover.schema"
 
 import { headingBlock, paragraphBlock, windowRange, type CoreNotes } from "./context"
 
 export const coverNotes: CoreNotes<CoverData> = (_data, facts, ctx) => {
   const pages = ctx.pages ?? []
-  const window = isFinalCut(facts)
-    ? `The whole year, ${windowRange(facts)}: the final cut.`
-    : `Data from ${windowRange(facts)}. December arrives with the final cut.`
+  const window = isWholeYear(facts) ? `The whole year, ${windowRange(facts)}.` : `Data from ${windowRange(facts)}.`
   return [
     headingBlock("In this issue"),
     ...(pages.length > 0

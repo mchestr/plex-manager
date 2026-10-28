@@ -12,10 +12,10 @@
  *
  * Each slot has two or three variants. `hash(userId, slotId)` picks one among
  * the variants whose tokens the member has, so a member always reads the same
- * line and the last, token-free variant always renders. A variant may be
- * `{ open, final }`: window wording ("so far", "still") appears only in
- * templates and follows `window.finalCut`, so no sentence goes stale in
- * January.
+ * line and the last, token-free variant always renders. An issue is finished
+ * the day it is generated, so no template says "so far" or promises more of
+ * the year: each line reads true for 1 January to 30 November and for the
+ * whole year alike.
  *
  * P5.5 to P5.7 add their pages' headlines and decks here; P5.7 adds the
  * "Why this?" reasons (`whyReasons`).
@@ -33,8 +33,6 @@ import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import { POSTER_LINES } from "./poster-lines"
 import { tokenIds, type TokenSource } from "./render-copy"
 import type { SlotId } from "./slots"
-
-type Variant = string | { open: string; final: string }
 
 export interface TemplateContext {
   facts: RewindFactsV3
@@ -56,15 +54,13 @@ function pickIndex(userId: string, key: string, n: number): number {
   return parseInt(sha256Hex(`${userId}:${key}`).slice(0, 8), 16) % n
 }
 
-const isFinal = (facts: RewindFactsV3) => facts["window.finalCut"]?.value === 1
-const resolve = (v: Variant, facts: RewindFactsV3) => (typeof v === "string" ? v : isFinal(facts) ? v.final : v.open)
 const t = (id: string) => `{{fact:${id}}}`
 
 /** Every slot's fallback variants; P8.1's freeze lock hashes them. */
-export const SLOT_TEMPLATES: Readonly<Record<Exclude<SlotId, "archetype.posterLineId" | "archetype.tagline">, readonly Variant[]>> = {
+export const SLOT_TEMPLATES: Readonly<Record<Exclude<SlotId, "archetype.posterLineId" | "archetype.tagline">, readonly string[]>> = {
   "deck.number": [
-    { open: `That's ${t("time.daysHours")} of screen time, about ${t("time.perDay")} for every day of the year so far.`, final: `That's ${t("time.daysHours")} of screen time, about ${t("time.perDay")} for every day of the year.` },
-    { open: `Put end to end, that's ${t("time.daysHours")}, or about ${t("time.perDay")} a day so far.`, final: `Put end to end, that's ${t("time.daysHours")}, or about ${t("time.perDay")} a day.` },
+    `That's ${t("time.daysHours")} of screen time, about ${t("time.perDay")} a day.`,
+    `Put end to end, that's ${t("time.daysHours")}, or about ${t("time.perDay")} a day.`,
     "Every minute of it counted from your own history.",
   ],
   "deck.bookends": [
@@ -98,7 +94,7 @@ export const SLOT_TEMPLATES: Readonly<Record<Exclude<SlotId, "archetype.posterLi
     "When you pressed play, hour by hour.",
   ],
   "deck.calendar": [
-    { open: `You pressed play on ${t("days.active")} of ${t("window.elapsedDays")} so far.`, final: `You pressed play on ${t("days.active")} of ${t("window.elapsedDays")}.` },
+    `You pressed play on ${t("days.active")} of ${t("window.elapsedDays")}.`,
     `Your biggest day was ${t("days.biggest.date")}, at ${t("days.biggest.minutes")}.`,
     "Every square is a day; the darker, the longer.",
   ],
@@ -113,7 +109,7 @@ export const SLOT_TEMPLATES: Readonly<Record<Exclude<SlotId, "archetype.posterLi
     "Every request, and what became of it.",
   ],
   "deck.standing": [
-    { open: `Across the server, members pressed play for ${t("community.hours")} hours so far.`, final: `Across the server, members pressed play for ${t("community.hours")} hours this year.` },
+    `Across the server, members pressed play for ${t("community.hours")} hours this year.`,
     `The server's favourite series was ${t("community.topSeries")}.`,
     "Where you stand, with nobody named.",
   ],
@@ -126,10 +122,7 @@ export const SLOT_TEMPLATES: Readonly<Record<Exclude<SlotId, "archetype.posterLi
     `Picked from your own history, not from a quiz. ${t("archetype.runnerUp")} came second.`,
     "Every reason here comes from what you watched, not from a guess.",
   ],
-  signOff: [
-    { open: `See you in the final cut, ${t("member.firstName")}.`, final: `See you next year, ${t("member.firstName")}.` },
-    { open: "The year is not over yet. The final cut lands in the new year.", final: "That was the year. Thanks for pressing play." },
-  ],
+  signOff: [`See you next year, ${t("member.firstName")}.`, "That was the year. Thanks for pressing play."],
 }
 
 function choose(variants: readonly string[], key: string, ctx: TemplateContext): string {
@@ -151,7 +144,7 @@ export function posterLineTemplate(archetype: ArchetypeId, userId: string): stri
  * @example
  * ```ts
  * slotTemplate("deck.number", { facts, userId })
- * // "That's {{fact:time.daysHours}} of screen time, about {{fact:time.perDay}} for every day of the year so far."
+ * // "That's {{fact:time.daysHours}} of screen time, about {{fact:time.perDay}} a day."
  * ```
  */
 export function slotTemplate(slot: Exclude<SlotId, "archetype.posterLineId">, ctx: TemplateContext): string {
@@ -160,12 +153,12 @@ export function slotTemplate(slot: Exclude<SlotId, "archetype.posterLineId">, ct
     const lines = id ? posterLineIds(id).map((line) => POSTER_LINES[line]) : ["Your year, in a word."]
     return choose(lines, slot, ctx)
   }
-  return choose(SLOT_TEMPLATES[slot].map((v) => resolve(v, ctx.facts)), slot, ctx)
+  return choose(SLOT_TEMPLATES[slot], slot, ctx)
 }
 
-/** "Data through November 30" during the season, "Final cut" after it. */
-export function windowLine(facts: RewindFactsV3): string {
-  return isFinal(facts) ? "Final cut" : `Data through ${t("window.through")}`
+/** "Data through November 30", or "Data through December 31" for an issue made after the year ended. */
+export function windowLine(): string {
+  return `Data through ${t("window.through")}`
 }
 
 /** The pocket edition's note, which says "template" only when every word is one (design 4.5). */

@@ -69,7 +69,7 @@ describe("slotDependencyHash", () => {
     expect(slotDependencyHash(clock, { ...base, "hours.afterDarkShare": fact(0.52, "share") })).not.toBe(slotDependencyHash(clock, base))
   })
 
-  it("holds across the final cut, so a deck whose numbers only grew keeps its copy", () => {
+  it("ignores whether the window is the whole year, so a deck whose numbers only grew keeps its copy", () => {
     const number = COPY_SLOTS["deck.number"]
     expect(slotDependencyHash(number, { "window.finalCut": fact(1) })).toBe(slotDependencyHash(number, { "window.finalCut": fact(0) }))
   })

@@ -1,16 +1,17 @@
 /**
  * Which data a batch covers. A batch is keyed by `(year, through)`, where
  * `through` is the last day of data: 30 November during the season, 31
- * December after the final cut (design 7.7). Every member is read over that
- * span in their own Rewind zone, so the server-wide pass reads the union of
- * every member's window.
+ * December once the year has ended (design 7.7). Every member is read over
+ * that span in their own Rewind zone, so the server-wide pass reads the union
+ * of every member's window. `finalCut` names the whole-year window, as the
+ * stored `window.finalCut` does.
  *
  * @module lib/wrapped/aggregate/window
  */
 
 import { dataWindow, yearWindow, type TimeWindow } from "@/lib/wrapped/time/zone"
 
-/** The batch a Rewind reads: its year, its last day of data and the server zone. */
+/** The batch a Rewind reads: its year, whether it covers the whole year, and the server zone. */
 export interface BatchWindow {
   year: number
   finalCut: boolean
@@ -30,13 +31,13 @@ export function throughFor(year: number, { finalCut }: { finalCut: boolean }): s
   return finalCut ? `${year}-12-31` : `${year}-11-30`
 }
 
-/** Whether `through` is the final cut's last day. */
+/** Whether `through` is the whole year's last day, 31 December. */
 export function isFinalCut(year: number, through: string): boolean {
   return through === throughFor(year, { finalCut: true })
 }
 
 /**
- * The batch for `year` as of `now`: the final cut once the year has ended in
+ * The batch for `year` as of `now`: the whole year once the year has ended in
  * the server zone, the season before.
  */
 export function batchWindowAt(year: number, serverZone: string, now: number): BatchWindow {

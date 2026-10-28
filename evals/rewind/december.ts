@@ -1,6 +1,7 @@
 /**
  * The golden fixtures' December (P8.5): a deterministic extension of each
- * fixture's plays into December, for the final cut's golden test.
+ * fixture's plays into December, for the whole-year golden test (a Rewind
+ * generated after the year has ended).
  *
  * A member who played in the last week of November keeps going: their plays
  * of 3 to 30 November repeat four weeks later, on 1 to 28 December, so
@@ -14,7 +15,7 @@
  *   `hours.afterDarkShare` below its band.
  *
  * `generate-fixtures.ts --december` writes `fixtures/december/<id>.json`,
- * and the final cut's golden test checks them against this builder.
+ * and the whole-year golden test checks them against this builder.
  *
  * @module evals/rewind/december
  */
@@ -106,7 +107,7 @@ export function decemberExtension(fixture: Fixture): DecemberExtension {
 }
 
 /**
- * The fixture as its final cut reads it: the full-year window, with December's plays.
+ * The fixture as a Rewind generated after the year ends reads it: the whole-year window, with December's plays.
  * @internal
  */
 export function withDecember(fixture: Fixture, december: DecemberExtension): Fixture {

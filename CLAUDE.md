@@ -964,6 +964,6 @@ The project includes custom slash commands in `.claude/commands/`:
 - Roles and permissions (Support role, assistant tool gate): See `docs/roles.md`
 - Privacy (personal data inventory, member removal, export, retention): See `docs/privacy.md`
 - Releases and the changelog: See `docs/releasing.md` and `CHANGELOG.md`
-- Rewind season runbook (flags, season open, roll back, final cut): See `docs/rewind.md`
+- Rewind season runbook (flags, season open, roll back, season close): See `docs/rewind.md`
 - Performance Testing: See `docs/performance-testing.md`
 - Project README: See `README.md`

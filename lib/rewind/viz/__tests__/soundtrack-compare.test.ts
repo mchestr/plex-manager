@@ -31,7 +31,7 @@ describe("soundtrackCompare (P8.4)", () => {
     expect(strip.max).toBe(240)
   })
 
-  it("compares the same window for both years: November 30 in the season, the full year after the final cut", () => {
+  it("compares the same window for both years: November 30 in the season, the full year in a whole-year issue", () => {
     expect(soundtrackCompare(series(334, () => 1), series(334, () => 1), opts).days).toBe(334)
     expect(soundtrackCompare(series(334, () => 1), series(365, () => 1), opts).days).toBe(334)
     expect(soundtrackCompare(series(365, () => 1), series(365, () => 1), opts).days).toBe(365)

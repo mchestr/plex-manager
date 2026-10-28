@@ -25,9 +25,9 @@ import "dotenv/config"
 
 import { parseArgs } from "node:util"
 
+import { getEnv } from "@/lib/env"
 import { prisma } from "@/lib/prisma"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
-import { isRewindStaging } from "@/lib/queue/jobs/rewind-final-cut"
 import { JOB_TYPES, type RewindSeasonPreparePayload } from "@/lib/queue/types"
 import { rewindFeatureOn } from "@/lib/rewind/features"
 import { openRewindToEveryone, seasonAudienceSwitchAt, seasonOpenReadiness, type SeasonOpenReadiness } from "@/lib/rewind/season-open"
@@ -179,7 +179,7 @@ if (require.main === module) {
   const queue = () => getRewindQueue("rewind-batch")
   const deps: SeasonOpenDeps = {
     schedule: loadSchedule,
-    staging: isRewindStaging,
+    staging: () => getEnv().REWIND_STAGING === "1",
     enqueuePrepare: async (data) => {
       const job = await queue().add(JOB_TYPES.REWIND_SEASON_PREPARE, data, {
         attempts: 3,

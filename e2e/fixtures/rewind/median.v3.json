@@ -4138,7 +4138,7 @@
       "dedication": "Every reason here comes from what you watched, not from a guess.",
       "posterLineId": "gh.5"
     },
-    "signOff": "See you in the final cut, {{fact:member.firstName}}."
+    "signOff": "See you next year, {{fact:member.firstName}}."
   },
   "copySource": "template",
   "copyMeta": {

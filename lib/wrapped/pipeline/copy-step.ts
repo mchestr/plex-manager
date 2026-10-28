@@ -5,7 +5,6 @@
  * pocket or postcard ─────────────────────────────► no copy (templates at render), 0 calls
  * same factsHash, prompt and model as last time ──► reuse that copy, 0 calls
  * copyPolicy 'no-llm' ────────────────────────────► keep slots whose dependency hash held, template the rest
- * copyPolicy 'changed-slots' (the final cut) ─────► keep those slots, write only the rest (below)
  * llmDisabled, mode 'off', provider mismatch,
  *   no provider, budget ──────────────────────────► templates, 0 calls
  * otherwise: copy call ─► ground each slot ─► one repair call on the budget model
@@ -25,15 +24,13 @@
  *
  * ## Kept slots
  *
- * `no-llm` and `changed-slots` keep the slots that {@link planFinalCut}
- * keeps (or, for a stored copy without its issue, whose dependency hash
- * held). A kept text with window words ("so far", "still") can only be a
- * template, because model copy may not use them, so it is templated again
- * for the new window instead of kept. `changed-slots` sends only the other
- * slots to the model, with the same grounding, single repair and per-slot
- * fallback, and keeps the stored archetype and poster line unless their
- * slots changed. Without a stored copy it writes every slot, as `default`.
- * `copyMeta.slotHashes` is rewritten for every slot either way.
+ * `no-llm` (a hide or unhide, P7.7) keeps the slots that
+ * {@link planKeptSlots} keeps (or, for a stored copy without its issue,
+ * whose dependency hash held), and the stored archetype and poster line
+ * while their slot holds; every other slot is a template. A kept text with
+ * window words ("so far", "still") can only be an older template, because
+ * model copy may not use them, so it is templated again instead of kept.
+ * `copyMeta.slotHashes` is rewritten for every slot.
  *
  * @module lib/wrapped/pipeline/copy-step
  */
@@ -53,7 +50,7 @@ import { buildFactSheet } from "@/lib/wrapped/facts/fact-sheet"
 
 import { copySourceOf, templateDraft, textSlots, toWire, wireText, type CopyDraft, type CopySource, type TextSlotId } from "./copy-draft"
 import { callCopy, callRepair, type LlmCall } from "./copy-llm"
-import { planFinalCut, type FinalCutPlan, type StoredIssue } from "./final-cut"
+import { planKeptSlots, type StoredIssue } from "./kept-slots"
 
 export interface PreviousCopy {
   factsHash: string
@@ -62,11 +59,11 @@ export interface PreviousCopy {
   copy: RewindCopyV3Wire
   copySource: CopySource
   slotHashes: Readonly<Record<string, string>>
-  /** The stored issue the copy belongs to, for {@link planFinalCut}; absent on older callers. */
+  /** The stored issue the copy belongs to, for {@link planKeptSlots}; absent on older callers. */
   issue?: StoredIssue
 }
 
-export type CopyPolicy = "default" | "no-llm" | "changed-slots"
+export type CopyPolicy = "default" | "no-llm"
 
 /** The model the copy step writes with (`getFrozenRewindModel()`). */
 export interface CopyProvider {
@@ -110,10 +107,8 @@ export interface CopyInput {
 }
 
 export interface CopyTrail {
-  path: "none" | "reused" | "no-llm" | "changed-slots" | "template" | "llm"
+  path: "none" | "reused" | "no-llm" | "template" | "llm"
   reason?: string
-  /** `changed-slots`: the slots written again and why (P8.5). */
-  plan?: FinalCutPlan
   raw: unknown
   issues: Partial<Record<string, GroundingIssue[]>>
   repaired: string[]
@@ -186,41 +181,24 @@ export async function runCopyStep(input: CopyInput): Promise<CopyResult> {
     return { copy: parsed.data, source, model: source === "template" ? null : model, slotHashes: hashes, trail: { ...trail, path, reason } }
   }
 
-  if (input.policy !== "default" && previous) {
-    const { plan, keep } = keptSlots(withStoredChoice(input, previous), previous)
-    keepSlots(draft, previous, keep, input.archetype)
-    if (input.policy === "no-llm") return finish("no-llm", previous.model)
-    if (plan) trail.plan = plan
-    const write = slots.filter((id) => !keep.has(id))
-    const posterLine = !keep.has("archetype.posterLineId")
-    if (write.length === 0 && !posterLine) return finish("changed-slots", previous.model)
-    return withModel(input, draft, write, posterLine, trail, finish, "changed-slots")
+  if (input.policy === "no-llm") {
+    if (previous) keepSlots(draft, previous, keptSlots(withStoredChoice(input, previous), previous), input.archetype)
+    return finish("no-llm", previous?.model ?? null)
   }
-  if (input.policy === "no-llm") return finish("no-llm", null)
-  return withModel(input, draft, slots, true, trail, finish, "llm")
+  return withModel(input, draft, slots, trail, finish)
 }
 
 type Finish = (path: CopyTrail["path"], model: string | null, reason?: string) => CopyResult
 
 /**
- * Writes `slots` (and, with `posterLine`, the archetype choice) with the
- * model: the copy call, grounding, one repair call and per-slot templates.
- * Every other slot keeps what the draft holds.
+ * Writes `slots` and the archetype choice with the model: the copy call,
+ * grounding, one repair call and per-slot templates.
  */
-async function withModel(
-  input: CopyInput,
-  draft: CopyDraft,
-  slots: TextSlotId[],
-  posterLine: boolean,
-  trail: CopyTrail,
-  finish: Finish,
-  path: "llm" | "changed-slots"
-): Promise<CopyResult> {
+async function withModel(input: CopyInput, draft: CopyDraft, slots: TextSlotId[], trail: CopyTrail, finish: Finish): Promise<CopyResult> {
   const { llm } = input
   const archetype = input.archetype!
   const planned = plannedModel(llm)
   const plannedKey = llm.provider && planned ? modelKey(llm.provider.provider, planned) : null
-  const kept = path === "changed-slots" ? (input.previous?.model ?? null) : null
   const reason = llm.disabled
     ? "LLM_DISABLED"
     : llm.mode === "off"
@@ -233,21 +211,21 @@ async function withModel(
             ? "BUDGET_REACHED"
             : null
   if (reason === "PROVIDER_MISMATCH") warnMismatch()
-  if (reason || !llm.provider || !plannedKey) return finish(path === "llm" ? "template" : path, kept, reason ?? "NO_PROVIDER")
+  if (reason || !llm.provider || !plannedKey) return finish("template", null, reason ?? "NO_PROVIDER")
 
   const call: LlmCall = { ...input.call, provider: llm.provider.provider }
   const allowed = [...new Set(slots.flatMap((id) => COPY_SLOTS[id].allowedFacts))]
   const promptInput = {
     factSheet: buildFactSheet(input.facts, allowed),
     slots,
-    archetype: { id: archetype.id, shortlist: archetype.shortlist.map((s) => s.id), mayChoose: posterLine && archetype.llmMayChoose },
+    archetype: { id: archetype.id, shortlist: archetype.shortlist.map((s) => s.id), mayChoose: archetype.llmMayChoose },
   }
   // The call runs on the active row; any other model, the lock's included, goes as an override.
   const rowModel = llm.provider.rowModel ?? llm.provider.model
   const override = (model: string | null) => (model && model !== rowModel ? model : undefined)
   const first = await callCopy(call, promptInput, override(planned))
   trail.calls++
-  if (!first.ok) return finish(path, path === "llm" ? plannedKey : kept, first.error.code)
+  if (!first.ok) return finish("llm", plannedKey, first.error.code)
   trail.raw = first.value.output
   trail.costUsd += first.value.cost
 
@@ -259,7 +237,7 @@ async function withModel(
     if (result.ok) draft.texts.set(id, { text: text!, origin: "llm" })
     else failing.set(id, result.issues)
   }
-  if (posterLine) applyArchetype(draft, first.value.output.archetype, archetype, trail)
+  applyArchetype(draft, first.value.output.archetype, archetype, trail)
   failing.forEach((issues, id) => (trail.issues[id] = issues))
 
   if (failing.size > 0) {
@@ -274,7 +252,7 @@ async function withModel(
       } else trail.fallbacks.push(id)
     }
   }
-  return finish(path, plannedKey)
+  return finish("llm", plannedKey)
 }
 
 function missing(id: TextSlotId): GroundingIssue {
@@ -301,17 +279,14 @@ function withStoredChoice(input: CopyInput, previous: PreviousCopy): CopyInput {
   return { ...input, facts: input.factsFor(stored.id) }
 }
 
-/** The slots a `no-llm` or `changed-slots` run keeps; see the module comment. */
-function keptSlots(input: CopyInput, previous: PreviousCopy): { plan: FinalCutPlan | null; keep: Set<SlotId> } {
+/** The slots a `no-llm` run keeps; see the module comment. */
+function keptSlots(input: CopyInput, previous: PreviousCopy): Set<SlotId> {
+  if (previous.issue) return new Set(planKeptSlots(previous.issue, { edition: input.edition, selected: input.selected, facts: input.facts }).keep)
   const hashes = slotHashes(input)
-  if (previous.issue) {
-    const plan = planFinalCut(previous.issue, { edition: input.edition, selected: input.selected, facts: input.facts })
-    return { plan, keep: new Set(plan.keep) }
-  }
   const keep = slotsForPages(input.selected)
     .map((s) => s.id)
     .filter((id) => previous.slotHashes[id] !== undefined && previous.slotHashes[id] === hashes[id])
-  return { plan: null, keep: new Set(keep) }
+  return new Set(keep)
 }
 
 /** Puts the kept slots' stored text into the draft; a text with window words is templated again. */

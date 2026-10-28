@@ -117,7 +117,7 @@ export default async function RewindArticlePage({ params, searchParams }: ReadPa
       </noscript>
       <ArticleDocument
         title={`The ${data.year} issue`}
-        masthead={[plain(volume ? `${brand}, ${volume}` : brand), copyText(windowLine(data.facts), data.facts)]}
+        masthead={[plain(volume ? `${brand}, ${volume}` : brand), copyText(windowLine(), data.facts)]}
         sections={sections}
         actions={
           <>

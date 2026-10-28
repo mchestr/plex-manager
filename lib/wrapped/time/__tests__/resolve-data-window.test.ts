@@ -3,9 +3,9 @@
  */
 
 /**
- * The one window rule (P8.5). Every instant is written in UTC, and the rule
- * reads only the member's zone, so the process zone (TZ=UTC in CI) cannot
- * move the answer.
+ * The one window rule (design 7.7). Every instant is written in UTC, and
+ * the rule reads only the member's zone, so the process zone (TZ=UTC in CI)
+ * cannot move the answer.
  */
 
 import { dayKey, latestLocalInstant, resolveDataWindow, seasonWindowAt, yearWindow } from "@/lib/wrapped/time/zone"
@@ -33,10 +33,10 @@ describe("resolveDataWindow", () => {
     expect(resolveDataWindow({ year: 2026, zone: LA, now: at("2026-12-31T13:00:00Z") }).finalCut).toBe(false)
   })
 
-  it("keeps the full year for a regeneration on 3 January, such as a hide", () => {
-    const hide = resolveDataWindow({ year: 2026, zone: LA, now: at("2027-01-03T18:00:00Z") })
-    expect(hide.finalCut).toBe(true)
-    expect(through(hide)).toBe("2026-12-31")
+  it("reads the whole year for a Rewind generated on 3 January", () => {
+    const january = resolveDataWindow({ year: 2026, zone: LA, now: at("2027-01-03T18:00:00Z") })
+    expect(january.finalCut).toBe(true)
+    expect(through(january)).toBe("2026-12-31")
   })
 
   it("ends the season window at the end of yesterday before 30 November", () => {
@@ -49,7 +49,7 @@ describe("resolveDataWindow", () => {
 
 describe("latestLocalInstant", () => {
   it("is the westernmost zone's wall time", () => {
-    expect(latestLocalInstant("2027-01-01", "00:30", ["America/Chicago", LA]).toISOString()).toBe("2027-01-01T08:30:00.000Z")
-    expect(latestLocalInstant("2027-01-01", "00:30", [SYDNEY, "Europe/London"]).toISOString()).toBe("2027-01-01T00:30:00.000Z")
+    expect(latestLocalInstant("2026-12-01", "00:15", ["America/Chicago", LA]).toISOString()).toBe("2026-12-01T08:15:00.000Z")
+    expect(latestLocalInstant("2026-12-01", "00:15", [SYDNEY, "Europe/London"]).toISOString()).toBe("2026-12-01T00:15:00.000Z")
   })
 })

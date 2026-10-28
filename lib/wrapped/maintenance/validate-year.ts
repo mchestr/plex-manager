@@ -6,8 +6,7 @@
  * `scripts/rewind-validate.ts` loads each eligible member's row and every
  * live share link, and this module decides, without any I/O, whether each
  * would render and share as stored. It runs against production after the
- * season generation (2026-12-02), in every final-cut dry run, and after the
- * final cut with `finalCut`.
+ * season generation (2026-12-02), and at any time after.
  *
  * ## Checks (each failure has its own code)
  *
@@ -22,7 +21,6 @@
  * | `SLOT_TOKEN` | every token is allowed, present and on a selected page (rule 5) |
  * | `SLOT_GROUNDING` | every slot passes the rest of `groundSlot` (a template is grounded as a template) |
  * | `SLOT_HASH_STALE` | `copyMeta.slotHashes` equal `slotDependencyHash()` |
- * | `NOT_FINAL_CUT` / `FINAL_CUT_AT_MISSING` | with `finalCut`: `window.finalCut` and `finalCutAt` |
  * | `SHARE_KEYS` / `SHARE_PROJECTION` | each live share's `toShareSafe()` output passes the strict allow-list |
  *
  * A text equal to the slot's template for the stored facts is grounded as a
@@ -47,15 +45,15 @@ import { textSlots, wireText } from "@/lib/wrapped/pipeline/copy-draft"
 
 const VALIDATION_CODES = [
   "NOT_COMPLETED", "UNPARSABLE", "NOT_V3", "PAGE_SCHEMA", "FACTS_HASH_MISMATCH", "SLOT_MISSING", "SLOT_TOO_LONG",
-  "SLOT_TOKEN", "SLOT_GROUNDING", "SLOT_HASH_STALE", "NOT_FINAL_CUT", "FINAL_CUT_AT_MISSING", "SHARE_KEYS", "SHARE_PROJECTION",
+  "SLOT_TOKEN", "SLOT_GROUNDING", "SLOT_HASH_STALE", "SHARE_KEYS", "SHARE_PROJECTION",
 ] as const
 
-export type ValidationCode = (typeof VALIDATION_CODES)[number]
+type ValidationCode = (typeof VALIDATION_CODES)[number]
 
 /** One eligible member: their Rewind row and their latest generation, either possibly missing. */
 export interface MemberRow {
   userId: string
-  wrapped: { id: string; status: string; data: string | null; finalCutAt: Date | null } | null
+  wrapped: { id: string; status: string; data: string | null } | null
   latest: { status: string; code: string | null } | null
 }
 
@@ -68,7 +66,6 @@ export interface ShareRow {
 
 export interface ValidateOptions {
   year: number
-  finalCut: boolean
 }
 
 export interface YearReport {
@@ -107,8 +104,11 @@ function copyCodes(data: RewindDataV3, userId: string): ValidationCode[] {
   return codes
 }
 
-/** Every code a completed row fails, without repeats; empty when it passes. */
-export function validateStoredRow(row: NonNullable<MemberRow["wrapped"]> & { userId: string }, options: ValidateOptions): ValidationCode[] {
+/**
+ * Every code a completed row fails, without repeats; empty when it passes.
+ * @internal
+ */
+export function validateStoredRow(row: NonNullable<MemberRow["wrapped"]> & { userId: string }): ValidationCode[] {
   const stored = parseStoredRewind(row.data)
   if (stored.version === "invalid") return ["UNPARSABLE"]
   if (stored.version !== 3) return ["NOT_V3"]
@@ -117,8 +117,6 @@ export function validateStoredRow(row: NonNullable<MemberRow["wrapped"]> & { use
   if (!data.pages.every(pageValid)) codes.push("PAGE_SCHEMA")
   if (factsHash(data.facts) !== data.factsHash) codes.push("FACTS_HASH_MISMATCH")
   codes.push(...copyCodes(data, row.userId))
-  if (options.finalCut && !data.window.finalCut) codes.push("NOT_FINAL_CUT")
-  if (options.finalCut && !row.finalCutAt) codes.push("FINAL_CUT_AT_MISSING")
   return [...new Set(codes)]
 }
 
@@ -137,7 +135,7 @@ export function validateShare(share: ShareRow): ValidationCode | null {
 }
 
 /** Validates the year; see the module comment. */
-export function validateYear(members: readonly MemberRow[], shares: readonly ShareRow[], options: ValidateOptions): YearReport {
+export function validateYear(members: readonly MemberRow[], shares: readonly ShareRow[]): YearReport {
   const report: YearReport = { checked: 0, passed: 0, failures: {}, failing: [], skipped: {}, shares: { checked: 0, failed: 0 } }
   const fail = (id: string, codes: ValidationCode[]) => {
     report.failing.push({ id, codes })
@@ -154,7 +152,7 @@ export function validateYear(members: readonly MemberRow[], shares: readonly Sha
       continue
     }
     report.checked++
-    const codes = validateStoredRow({ ...wrapped, userId: member.userId }, options)
+    const codes = validateStoredRow({ ...wrapped, userId: member.userId })
     if (codes.length === 0) report.passed++
     else fail(wrapped.id, codes)
   }
@@ -173,7 +171,7 @@ export function validateYear(members: readonly MemberRow[], shares: readonly Sha
 export function formatYearReport(report: YearReport, options: ValidateOptions): string[] {
   const total = Object.values(report.failures).reduce((sum, n) => sum + (n ?? 0), 0)
   const lines = [
-    `Rewind ${options.year}${options.finalCut ? " (final cut)" : ""}: ${report.checked} checked, ${report.passed} passed, ${report.failing.length} failing.`,
+    `Rewind ${options.year}: ${report.checked} checked, ${report.passed} passed, ${report.failing.length} failing.`,
     `Shares: ${report.shares.checked} checked, ${report.shares.failed} failed.`,
   ]
   if (total === 0) lines.push("Failures: none.")

@@ -12,7 +12,7 @@ interface SmallMultipleProps {
   monthly: readonly number[]
   /** The largest month across every row, so all rows share one scale. */
   max: number
-  /** Months counted; a later month shows as a dashed "not yet counted" box. */
+  /** Months counted; a month after the window shows as a dashed box. */
   months: number
   className?: string
 }

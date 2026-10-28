@@ -63,7 +63,7 @@ Each member's year on the server, as a story of pages (formerly "Plex Wrapped"):
 - **Article mode**: every Rewind also reads as a plain article at `/rewind/<year>/read`, which needs no JavaScript and is not indexed by search engines; earlier years open as archive articles
 - **Opt-in sharing**: nothing is public until the member makes a link and picks the pages it shows. A link serves a share-safe copy (no other member's name, no server-wide ranking), is signed with the member's name only when they choose, expires at the season close by default, and can be rotated or turned off at any time. Admins can turn public links off for the server
 - **Hide titles**: a member can hide titles from their Rewind
-- See the [Rewind runbook](docs/rewind.md) for the season, its flags and the final cut
+- See the [Rewind runbook](docs/rewind.md) for the season, its flags and the season close
 
 ### Invites
 - **Plex and Jellyfin invites** with a code, a use limit, an expiry and the libraries to share; redemption shares the Plex libraries or creates the Jellyfin account
@@ -332,7 +332,7 @@ Install with the production compose file `deploy/docker-compose.yml` and the gui
 | [Environment reference](docs/environment.md) | Every variable, whether production requires it, and its default |
 | [Domain move](docs/domain-move.md) | Moving an install to a new host name |
 | [Operations](docs/operations.md) | Backups, restores, migrations, encryption keys, request IDs and metrics, member roles and Jellyfin sign-in |
-| [Rewind runbook](docs/rewind.md) | The season: flags, opening, monitoring, roll back and the final cut |
+| [Rewind runbook](docs/rewind.md) | The season: flags, opening, monitoring, roll back and the season close |
 | [Privacy](docs/privacy.md) | Every table of personal data, member removal, export and retention |
 | [Stripe](docs/stripe.md) | Subscriptions, the webhook, and Plex and Jellyfin access |
 | [Discord bot](docs/discord-bot.md) | The bot, slash commands and linked roles |

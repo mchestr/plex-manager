@@ -15,7 +15,7 @@ import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { BookendsDataSchema, type BookendsData } from "./bookends.schema"
 import { pageDeck } from "./deck"
-import { has, isFinalCut, issueYear, num, shown } from "./facts"
+import { has, isWholeYear, issueYear, num, shown } from "./facts"
 import { ratingKeyOf } from "./title-key"
 
 const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"]
@@ -25,8 +25,8 @@ const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seven
 /** What a masked bookend reads in place of its title. */
 export const maskedTitle = (topShowsFolio: number) => `a series you will meet on page ${String(topShowsFolio).padStart(2, "0")}`
 
-/** The lead of the second block: the latest play in the season, the last after the final cut. */
-export const lastLead = (facts: RewindFactsV3) => (isFinalCut(facts) ? "And you closed it with" : "And most recently,")
+/** The lead of the second block: the latest play, or the last in a whole-year issue. */
+export const lastLead = (facts: RewindFactsV3) => (isWholeYear(facts) ? "And you closed it with" : "And most recently,")
 
 /** "Member since 2023, 3,940 hours in all, your fourth Rewind", from whichever facts the member has. */
 export function lifetimeLine(facts: RewindFactsV3, locale: string): string | null {
@@ -53,7 +53,7 @@ export const bookendsPage: PageDefinition<BookendsData> = {
   },
   schema: BookendsDataSchema,
   srSummary: (data, facts) => {
-    const closing = isFinalCut(facts) ? "It closed with" : "The latest was"
+    const closing = isWholeYear(facts) ? "It closed with" : "The latest was"
     return `${issueYear(facts)} opened with ${end(facts, "first", data.first.masked)}. ${closing} ${end(facts, "last", data.last.masked)}.`
   },
   article: (data, facts, ctx) => {

@@ -4,27 +4,21 @@
  *
  * ```
  * afterRewindCompleted (kind season | member, member in the live audience) ─┐
- * afterRewindCompleted (kind final-cut, a member who read the season issue) ─┤
  * updateRewindSettings: audience becomes everyone ─ enqueueSeasonReadyNotifications ─┤
  *                                                                           ▼
  *   REWIND_NOTIFY { wrappedId, userId, year, kind }, dedup rewind:notify:{year}:{userId}:{kind}
  *     ├─ outside 09:00-20:00 in the member's Rewind zone ─► delays itself to the next 09:00
- *     │    (final-cut: never before 09:00 on 2 January there)
  *     ├─ re-checks: viewable, entitlement, RewindPrefs.notify, `discord` channel, bot on, linked
- *     ├─ claims PlexWrapped.notifiedAt (null → now; final-cut: null or before finalCutAt → now)
+ *     ├─ claims PlexWrapped.notifiedAt (null → now)
  *     │    no row updated ─► another job sent it
- *     └─ sendDiscordDirectMessage ─► DMs closed (50007): logged, not retried
+ *     └─ sendDiscordDirectMessage "Your {name} is ready." ─► DMs closed (50007): logged, not retried
  * ```
  *
  * ## Special cases
  *
- * - Admin regenerations and dry runs never notify: only `season`, `member`
- *   and `final-cut` generations enqueue.
- * - `final-cut` (P8.5, design 9.6 step 5) says "Your {serverName} Rewind
- *   {year} now includes December." to members with a `RewindView` from
- *   before the final cut, December's readers, once each. The season send
- *   already set `notifiedAt`, so its claim compares two columns (a Prisma
- *   field reference) and needs no new column.
+ * - Admin regenerations and dry runs never notify: only `season` and
+ *   `member` generations enqueue. The claim sends one DM per Rewind, so a
+ *   Rewind generated again (a hide, the member's own run) sends no second one.
  * - A completion while the member cannot view Rewind yet (admins-only
  *   audience) enqueues nothing. The audience switch fans out instead, so a
  *   member east of the server is not skipped for good by a job that ran in
@@ -48,7 +42,6 @@ import { getRewindQueue } from "@/lib/queue/rewind-producers"
 import { JOB_TYPES, type RewindNotifyPayload } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 import { serverZone } from "@/lib/utils/server-zone"
-import { wallTimeToInstant } from "@/lib/utils/zoned-time"
 import { notifyChannels } from "@/lib/wrapped/notify/notice"
 import { nextSendWindow } from "@/lib/wrapped/notify/window"
 import { onRewindCompleted, type CompletedRewind } from "@/lib/wrapped/pipeline/after-complete"
@@ -111,14 +104,7 @@ export async function enqueueSeasonReadyNotifications(year: number): Promise<num
   return rows.length
 }
 
-/** Whether the member opened the season issue before the final cut replaced it: December's readers. */
-async function readSeasonIssue(wrappedId: string): Promise<boolean> {
-  const row = await prisma.plexWrapped.findUnique({ where: { id: wrappedId }, select: { finalCutAt: true } })
-  if (!row?.finalCutAt) return false
-  return (await prisma.rewindView.count({ where: { wrappedId, createdAt: { lt: row.finalCutAt } } })) > 0
-}
-
-/** The `afterRewindCompleted()` hook: a `season`, `member` or `final-cut` run of a member in the live audience. */
+/** The `afterRewindCompleted()` hook: a `season` or `member` run of a member in the live audience. */
 async function notifyOnCompletion(rewind: CompletedRewind): Promise<void> {
   const [generation, config, user] = await Promise.all([
     prisma.rewindGeneration.findUnique({ where: { id: rewind.generationId }, select: { kind: true } }),
@@ -126,19 +112,9 @@ async function notifyOnCompletion(rewind: CompletedRewind): Promise<void> {
     prisma.user.findUnique({ where: { id: rewind.userId }, select: { isAdmin: true } }),
   ])
   const kind = generation?.kind
-  if (kind !== "season" && kind !== "member" && kind !== "final-cut") return
+  if (kind !== "season" && kind !== "member") return
   if (!user || !inLiveAudience(config, user.isAdmin)) return
-  if (kind === "final-cut" && !(await readSeasonIssue(rewind.wrappedId))) return
   await enqueueRewindNotify({ wrappedId: rewind.wrappedId, userId: rewind.userId, year: rewind.year, kind })
-}
-
-/** The final-cut message goes out from 09:00 on 2 January of the next year in the member's zone. */
-const finalCutSendsFrom = (year: number, zone: string) => wallTimeToInstant(`${year + 1}-01-02T09:00`, zone)
-
-/** Whether this kind's message already went out: once per Rewind, and once more after its final cut. */
-function alreadySent(kind: RewindNotifyPayload["kind"], row: { notifiedAt: Date | null; finalCutAt: Date | null }): boolean {
-  if (!row.notifiedAt) return false
-  return kind !== "final-cut" || (row.finalCutAt !== null && row.notifiedAt >= row.finalCutAt)
 }
 
 /** Registers the completion hook; the Rewind Workers call it once. */
@@ -171,19 +147,14 @@ export async function processRewindNotify(job: Job<RewindNotifyPayload>, token?:
       year: true,
       status: true,
       notifiedAt: true,
-      finalCutAt: true,
       user: { select: { timezone: true, isAdmin: true, discordConnection: { select: { discordUserId: true } } } },
     },
   })
-  const { kind } = job.data
   if (!row || row.userId !== userId || row.status !== "completed") return skipped("NOT_READY")
-  if (kind === "final-cut" && !row.finalCutAt) return skipped("NOT_READY")
-  if (alreadySent(kind, row)) return skipped("ALREADY_SENT")
+  if (row.notifiedAt) return skipped("ALREADY_SENT")
 
   const now = new Date()
-  const zone = resolveZone(row.user, await serverZone()).zone
-  const earliest = kind === "final-cut" ? new Date(Math.max(now.getTime(), finalCutSendsFrom(row.year, zone).getTime())) : now
-  const sendAt = nextSendWindow(earliest, zone)
+  const sendAt = nextSendWindow(now, resolveZone(row.user, await serverZone()).zone)
   if (sendAt.getTime() > now.getTime()) {
     await job.moveToDelayed(sendAt.getTime(), token)
     throw new DelayedError()
@@ -193,15 +164,10 @@ export async function processRewindNotify(job: Job<RewindNotifyPayload>, token?:
   const blocker = await sendBlocker(userId, row.year, row.user.isAdmin, discordUserId !== null)
   if (blocker || !discordUserId) return skipped(blocker ?? "NOT_LINKED")
 
-  const unclaimed =
-    kind === "final-cut"
-      ? { OR: [{ notifiedAt: null }, { notifiedAt: { lt: prisma.plexWrapped.fields.finalCutAt } }] }
-      : { notifiedAt: null }
-  const claim = await prisma.plexWrapped.updateMany({ where: { id: wrappedId, ...unclaimed }, data: { notifiedAt: now } })
+  const claim = await prisma.plexWrapped.updateMany({ where: { id: wrappedId, notifiedAt: null }, data: { notifiedAt: now } })
   if (claim.count === 0) return skipped("ALREADY_SENT")
 
-  const name = await rewindName(row.year)
-  const content = `${kind === "final-cut" ? `Your ${name} now includes December.` : `Your ${name} is ready.`}\n${getBaseUrl()}/rewind`
+  const content = `Your ${await rewindName(row.year)} is ready.\n${getBaseUrl()}/rewind`
   try {
     await sendDiscordDirectMessage(discordUserId, content, AbortSignal.any([AbortSignal.timeout(SEND_LIMIT_MS), shutdownSignal]))
   } catch (error) {
@@ -209,9 +175,9 @@ export async function processRewindNotify(job: Job<RewindNotifyPayload>, token?:
       logger.info("The member's Discord DMs are closed; not retrying", { wrappedId, userId })
       return skipped("DMS_CLOSED")
     }
-    await prisma.plexWrapped.updateMany({ where: { id: wrappedId, notifiedAt: now }, data: { notifiedAt: row.notifiedAt } })
+    await prisma.plexWrapped.updateMany({ where: { id: wrappedId, notifiedAt: now }, data: { notifiedAt: null } })
     throw error
   }
-  logger.info("Sent the Rewind ready DM", { wrappedId, userId, kind })
+  logger.info("Sent the Rewind ready DM", { wrappedId, userId, kind: job.data.kind })
   return { sent: true }
 }

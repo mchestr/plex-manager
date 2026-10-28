@@ -36,8 +36,8 @@ const limitSignal = (ms: number) => AbortSignal.any([AbortSignal.timeout(ms), sh
 
 async function processServerAggregate(job: Job<RewindServerAggregatePayload>) {
   const signal = limitSignal(AGGREGATE_LIMIT_MS)
-  const { warm = "enqueue", ...batch } = job.data
-  const run = await runServerAggregate(batch, { signal, limiter: redisLimiter, redis: await batchCacheRedis() })
+  const { year, through, warm = "enqueue" } = job.data
+  const run = await runServerAggregate({ year, through }, { signal, limiter: redisLimiter, redis: await batchCacheRedis() })
   const summary = { aggregateId: run.aggregateId, members: run.members, historyPages: run.historyPages, warmJobs: run.warmJobs.length }
   // Season prepare (P7.8) adds the warm batches as its own children.
   if (warm === "return") return { ...summary, warmBatches: run.warmJobs }

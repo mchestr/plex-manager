@@ -11,7 +11,7 @@ import { POSTER_LINES } from "../poster-lines"
 import { renderCopyText, tokenIds } from "../render-copy"
 import { slotsForPages } from "../slots"
 import {
-  copyLocals, coverLines, headline, pocketNote, posterLineTemplate, quizCallback, quizHeadline, quizReveal, slotTemplate, windowLine,
+  copyLocals, coverLines, headline, pocketNote, posterLineTemplate, quizCallback, quizHeadline, quizReveal, SLOT_TEMPLATES, slotTemplate, windowLine,
 } from "../templates"
 import { fixtureCopyInputs, type FixtureCopyInput } from "./fixture-facts"
 
@@ -59,20 +59,32 @@ describe("slot templates", () => {
     expect(slotTemplate("deck.taste", { facts: {}, userId: USER })).toBe("Genres as the server tags them, counted by minutes.")
   })
 
-  it("key the window wording on window.finalCut", () => {
+  it("reads as a finished issue in either window, with the same line for both and no \"so far\"", () => {
     const facts = (finalCut: 0 | 1): RewindFactsV3 => ({
       "window.finalCut": { value: finalCut, display: String(finalCut), unit: "count" },
       "window.through": { value: "2026-11-30", display: "November\u00A030", unit: "date" },
       "time.daysHours": { value: 78420, display: "54\u00A0days, 11\u00A0hours", unit: "days-hours" },
       "time.perDay": { value: 234, display: "3\u00A0h 54\u00A0m", unit: "duration" },
     })
-    const open = (userId: string) => renderCopyText(slotTemplate("deck.number", { facts: facts(0), userId }), facts(0))
-    const final = (userId: string) => renderCopyText(slotTemplate("deck.number", { facts: facts(1), userId }), facts(1))
     const users = ["a", "b", "c", "d", "e", "f"]
-    expect(users.some((u) => open(u).includes("so far"))).toBe(true)
-    expect(users.every((u) => !final(u).includes("so far"))).toBe(true)
-    expect(renderCopyText(windowLine(facts(0)), facts(0))).toBe("Data through November\u00A030")
-    expect(windowLine(facts(1))).toBe("Final cut")
+    for (const slot of ["deck.number", "deck.calendar", "deck.standing", "signOff"] as const) {
+      for (const userId of users) {
+        const lines = ([0, 1] as const).map((cut) => slotTemplate(slot, { facts: facts(cut), userId }))
+        expect(lines[0]).toBe(lines[1])
+        expect(lines[0]).not.toMatch(/so far|final cut|not over/i)
+      }
+    }
+    for (const variants of Object.values(SLOT_TEMPLATES)) for (const line of variants) expect(line).not.toMatch(/so far|final cut|not over/i)
+    expect(renderCopyText(windowLine(), facts(0))).toBe("Data through November\u00A030")
+  })
+
+  it("signs off as a finished issue, whatever the window", () => {
+    const facts = (finalCut: 0 | 1): RewindFactsV3 => ({
+      "window.finalCut": { value: finalCut, display: String(finalCut), unit: "count" },
+      "member.firstName": { value: "Mike", display: "Mike", unit: "name" },
+    })
+    const lines = ["a", "b", "c", "d", "e", "f"].flatMap((userId) => [0, 1].map((cut) => renderCopyText(slotTemplate("signOff", { facts: facts(cut as 0 | 1), userId }), facts(cut as 0 | 1))))
+    expect(new Set(lines)).toEqual(new Set(["See you next year, Mike.", "That was the year. Thanks for pressing play."]))
   })
 })
 

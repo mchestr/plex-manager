@@ -1,9 +1,10 @@
 # Rewind operator runbook
 
 How to run a Rewind season: what it needs, the switches, the soft launch, the
-season open hour by hour, daily monitoring, failures, roll back, the final cut
-and the season close. It is written for the 2026 season; the dates move with
-`rewindSeasonOpens` and `rewindSeasonCloses`, and the rest carries over.
+season open hour by hour, daily monitoring, failures, roll back, the issues
+made after 1 January and the season close. It is written for the 2026 season;
+the dates move with `rewindSeasonOpens` and `rewindSeasonCloses`, and the rest
+carries over.
 
 Times are **server time** (`Config.timezone`, set under Admin, Settings,
 "Server time zone") unless a line says "in each member's zone". A member's
@@ -32,7 +33,7 @@ fallback they name applies.
 - [When something goes wrong](#when-something-goes-wrong)
 - [Roll back](#roll-back)
 - [Backups and migrations](#backups-and-migrations)
-- [The final cut](#the-final-cut)
+- [After 1 January](#after-1-january)
 - [Season close](#season-close)
 - [Error and skip codes](#error-and-skip-codes)
 
@@ -62,7 +63,7 @@ fallback they name applies.
 | Season dates, the season year | `lib/wrapped/season.ts` |
 | Preflight rows | `lib/wrapped/admin/preflight.ts` |
 | Prepare, Generate all, Retry failed, the season-open schedule | `actions/admin/rewind-season.ts`, `lib/rewind/season-runs.ts`, `lib/queue/jobs/rewind-season.ts` |
-| The 08:00 audience switch and the staging rehearsal | `lib/rewind/season-open.ts`, `lib/queue/jobs/rewind-season-open.ts`, `scripts/rewind-season-open.ts` |
+| The 08:00 audience switch and the staging rehearsal | `lib/rewind/season-open.ts`, `lib/queue/jobs/rewind-season-open.ts`, `scripts/rewind-season-open.ts`, `scripts/rewind-staging-neutralise.sql` |
 | The freeze lock and the frozen model | `lib/wrapped/freeze/rewind-2026.1.lock.json`, `lib/wrapped/freeze/lock.ts`, `scripts/rewind-freeze.ts`, `getFrozenRewindModel()` in `lib/llm/registry.ts` |
 | Lost-run sweep (every 10 minutes) | `lib/queue/jobs/rewind-stale-sweep.ts` |
 | Eligibility and skip reasons | `lib/wrapped/pipeline/eligibility.ts`, `lib/wrapped/generation-errors.ts` |
@@ -136,12 +137,11 @@ renumber with it; the two Next year part keys apply when the issue is next
 generated. Work down the list in this order; the plan-level cuts come
 first:
 
-1. the final-cut batch adapters (already dropped for 2026);
-2. the playground swap (P8.8): the old playground keeps working;
-3. the eval results page (already moved to January);
-4. Edit card (P8.4);
-5. the non-core cards (P7.6): those pages keep Copy link only;
-6. then the pages, by key:
+1. the playground swap (P8.8): the old playground keeps working;
+2. the eval results page (already moved to January);
+3. Edit card (P8.4);
+4. the non-core cards (P7.6): those pages keep Copy link only;
+5. then the pages, by key:
 
 | Order | Key | Removes |
 | --- | --- | --- |
@@ -168,7 +168,7 @@ season close. It holds a sha256 of `canonicalJson` for each section:
 | --- | --- |
 | `promptVersion` | `PROMPT_VERSION` (`rewind-2026.1`, also OpenAI's `prompt_cache_key`) |
 | `systemPrompt`, `wireSchema` | the frozen system block and the copy's JSON schema |
-| `copySlots` | each slot's length cap, allowed facts, identity facts and bands; no slot lists `window.finalCut` (P8.5), so the final cut re-calls only changed slots |
+| `copySlots` | each slot's length cap, allowed facts, identity facts and bands; no slot lists `window.finalCut` (P8.5) |
 | `grounding` | banned and window phrases, number words, quantifier thresholds and the word list |
 | `posterLines`, `slotTemplates` | the sixty poster lines and every slot's fallback templates |
 | `catalogue` | `CATALOGUE_VERSION` and each fact's id, group, unit and format; `statsVersion` stays outside, because a stats fix is a data fix |
@@ -198,8 +198,8 @@ December features never trip it.
   setting the provider back, not by editing the lock.
 - **Settings.** From the season's opening to its close, saving the Rewind
   provider refuses a provider, model or base-URL change ("Rewind's model is
-  frozen until the season closes on 31 January"): member and hide
-  regenerations still run after the final cut. Rotating the key works, the
+  frozen until the season closes on 31 January"): member, admin and hide
+  regenerations still run in January. Rotating the key works, the
   assistant's provider is never blocked, and LLM mode stays the emergency
   switch.
 - **Prices are not frozen.** `costUsd()` takes the dated entry in
@@ -225,11 +225,8 @@ December features never trip it.
 | 1 Dec, 08:00 | Audience to Everyone: the scheduled switch when `+season.auto-open` is on and the run is clean, else by hand. |
 | 2 Dec | Validator against production: `npm run rewind:validate -- --year=2026`, zero failures. |
 | 10 Dec | Feature freeze. |
-| 11 Dec | First final-cut dry run on staging. |
 | 14 Dec, 00:00 | Code freeze: `CODE_FREEZE` on; only `freeze:data` or `freeze:security` PRs merge. |
-| 28 Dec | Second final-cut dry run on staging. |
-| 1 Jan 2027, 00:30 in the westernmost zone | Final cut. Dump first. |
-| 2 Jan 2027 | Final-cut notifications, from 09:00 in each member's zone. |
+| 1 Jan 2027 | The year ends. Nothing runs by itself; issues generated from now read the whole year (see [After 1 January](#after-1-january)). |
 | 31 Jan 2027 | Season close. |
 
 ### Owner checklist, 30 November to 2 December
@@ -356,21 +353,70 @@ that day.
   running; it schedules the run at start and every 10 minutes.
 - Settings read: Rewind on, Audience "Admins only", LLM mode standard.
 
-**30 November, evening.** Rehearse on staging and record the timings in
-`ship-check.md`. Deploy blackout from 18:00.
+**30 November, evening: the staging rehearsal.** Rehearse the season open on
+a staging copy of production, in the evening when production is quiet, and
+record the timings in `ship-check.md`. Deploy blackout from 18:00.
 
-```
-REWIND_STAGING=1 DATABASE_URL=<staging> REDIS_URL=<staging redis> npm run rewind:season-open -- --year=2026 --rehearse
-```
+1. **Restore** the dump taken before the deploy (decrypted) into a new
+   database on the same private network. Do not use `--create`: it would
+   recreate the dump's own database, which is production's.
 
-It refuses without `REWIND_STAGING=1`. It enqueues the season-open Prepare at
-once with audience `all`, waits for it and every generation it started, then
-switches the audience the way the 08:00 job does, and prints the timings.
-With a failed member it stops before the switch: use Retry failed on the
-staging console, then run it again with `--switch-only`. Without a mode,
-`npm run rewind:season-open -- --year=2026` prints the production schedule
-read-only: the Prepare's instant, the switch's instant and whether the
-scheduled switch is on.
+   ```bash
+   createdb plex_manager_staging
+   pg_restore -d postgresql://user:password@host:5432/plex_manager_staging --no-owner plex-manager-….dump
+   DATABASE_URL=postgresql://…/plex_manager_staging npx prisma migrate status   # nothing pending
+   ```
+
+2. **Redis.** Start a throwaway `redis:7` for staging
+   (`docker run -d --rm --name rewind-staging-redis -p 127.0.0.1:6380:6379 redis:7`).
+   Never point staging at production Redis: the queue names are the same, so
+   staging workers would take production's jobs.
+3. **Neutralise** the side effects before the first boot. The budget is the
+   season's mark of $0.03 per member plus 50%, so `budget=9` for 200 members:
+
+   ```bash
+   psql -v budget=<USD> -d postgresql://…/plex_manager_staging -f scripts/rewind-staging-neutralise.sql
+   ```
+
+   It refuses any database but `plex_manager_staging`, turns Discord off and
+   clears its bot token, turns watchlist sync off, sets the notification
+   channels to `["banner"]`, nulls the Stripe keys (leaving `stripeEnabled`,
+   so entitlement skips match production) and sets `rewindLlmBudgetUsd`.
+   Copy its output into `ship-check.md`. The model calls are real and billed
+   to the production key.
+4. **Boot** the production image digest from `season-log.md`, not a fresh
+   build, with: `DATABASE_URL` on staging; `REDIS_URL` on the throwaway Redis;
+   the production `ENCRYPTION_KEYS` or legacy `ENCRYPTION_KEY` (so stored keys
+   decrypt); a new `NEXTAUTH_SECRET`; both app URLs on
+   `http://127.0.0.1:3100`, reached through an SSH tunnel;
+   `ENABLE_DISCORD_BOT=false`, `ENABLE_WATCHLIST_SYNC=false`,
+   `REWIND_STAGING=1` and `LOG_LEVEL=debug` (Tautulli's 429s log at debug);
+   never `E2E_TEST_MODE`. The worker schedules staging's own 00:15 Prepare and
+   08:00 switch, which the teardown removes.
+5. **Run** from a checkout, against staging:
+
+   ```bash
+   REWIND_STAGING=1 DATABASE_URL=… REDIS_URL=redis://127.0.0.1:6380 \
+     npm run rewind:season-open -- --year=2026 --rehearse
+   ```
+
+   It refuses without `REWIND_STAGING=1`, which production never sets. It
+   enqueues the season-open Prepare at once with audience `all`, under its own
+   deduplication id so it never joins the delayed 00:15 run, waits for it and
+   every generation it started, then switches the audience the way the 08:00
+   job does, and prints the timings. With a failed member it stops before the
+   switch: use Retry failed on the staging console, then run it again with
+   `--switch-only`.
+6. **Validate:** `DATABASE_URL=… npm run rewind:validate -- --year=2026` must
+   report zero failures.
+7. **Tear down** the same evening, before 00:15 in the westernmost zone: stop
+   the staging app and Redis, then `dropdb plex_manager_staging` and delete the
+   decrypted dump, so no copy of member data or tokens lingers and staging's
+   own season-open run never fires.
+
+Without a mode, `npm run rewind:season-open -- --year=2026` prints the
+production schedule read-only: the Prepare's instant, the switch's instant and
+whether the scheduled switch is on.
 
 **1 December, 00:15 in the westernmost zone (02:15 Chicago).** The scheduled
 Prepare runs with audience "all": the server aggregate with data through 30
@@ -442,20 +488,18 @@ Once a day through December, on `/admin/rewind`:
 
 ### The validator
 
-`npm run rewind:validate -- --year=2026 [--final-cut]` runs
+`npm run rewind:validate -- --year=2026` runs
 `scripts/rewind-validate.ts` read-only from a checkout (the runtime image has
 no scripts) against `DATABASE_URL`. For each eligible member it checks that
 the stored issue parses as v3, that every page passes its schema (so the
 viewer drops none), that `factsHash` and every `copyMeta.slotHashes` entry
 match the stored facts, and that every copy slot passes grounding again with
 today's displays; for every live share link, that its projection passes the
-allow-list. `--final-cut` adds `window.finalCut` and `finalCutAt`. It prints
-counts per code, the skipped members by reason and the failing row ids, never
-a title or a name, and exits 1 on any failure.
+allow-list. It prints counts per code, the skipped members by reason and the
+failing row ids, never a title or a name, and exits 1 on any failure.
 
-Run it on 2 December, after every bulk run, in each final-cut dry run and
-after the final cut; it must report zero failures. A failure is a data fix:
-regenerate the members it names.
+Run it on 2 December and after every bulk run; it must report zero failures.
+A failure is a data fix: regenerate the members it names.
 
 | Code | Meaning |
 |---|---|
@@ -464,7 +508,6 @@ regenerate the members it names.
 | `PAGE_SCHEMA` | A page fails its registry schema; the viewer would drop it. |
 | `FACTS_HASH_MISMATCH`, `SLOT_HASH_STALE` | The stored hashes do not match the stored facts. |
 | `SLOT_MISSING`, `SLOT_TOO_LONG`, `SLOT_TOKEN`, `SLOT_GROUNDING` | A copy slot is empty, too long, cites a fact it may not, or breaks another grounding rule. |
-| `NOT_FINAL_CUT`, `FINAL_CUT_AT_MISSING` | With `--final-cut`: the issue is still the season's. |
 | `SHARE_KEYS`, `SHARE_PROJECTION` | A live link's projection carries an unlisted key, or cannot be built. |
 
 ## When something goes wrong
@@ -529,29 +572,20 @@ From the smallest to the largest:
    > roll back undoes the first. It is refused while a run is queued or
    > running.
 
-3. **Every final-cut issue**: `npm run rewind:rollback-final-cut -- --year=2026`
-   counts the members whose latest completed generation is a final cut;
-   `--apply --admin=<your user id>` rolls each back to the season issue with
-   P7.9's roll back, one audited transaction (`REWIND_ROLLED_BACK`) each,
-   under the member's generation lock, skipping members whose run is queued or
-   running. It needs `DATABASE_URL` and `REDIS_URL`. A second `--apply`
-   changes nothing, and a member skipped as generating is picked up by the
-   next one. Set **LLM mode** to `off` first if the model is the problem.
-
-4. **Sharing**: turn **Public links** off. Every link answers 404 at once; no
+3. **Sharing**: turn **Public links** off. Every link answers 404 at once; no
    row is deleted, and turning it back on restores them.
-5. **Everything (kill switch)**: turn **Rewind** off. `/rewind` and the home
+4. **Everything (kill switch)**: turn **Rewind** off. `/rewind` and the home
    card disappear at once and no data is lost. Members never saw an issue
    while Audience was "Admins only".
-6. **Last resort**: restore the dump taken before the deploy, following
+5. **Last resort**: restore the dump taken before the deploy, following
    [operations.md](operations.md#restore), and start the previous release.
 
 ## Backups and migrations
 
 Follow `docs/operations.md`: take a dump before every deploy that carries a
 migration, encrypt it, keep it off the host and delete it after 30 days. For
-the season, also take one before the soft-launch release (24 November), before
-the season-open release (30 November) and before the final cut (1 January).
+the season, also take one before the soft-launch release (24 November) and
+before the season-open release (30 November).
 
 No migration merges from 25 November 2026 to 2 January 2027 except a named
 freeze exception, recorded in `season-log.md`, which ships with a dump first
@@ -559,140 +593,47 @@ and `SKIP_MIGRATIONS=true` on every replica but one. The last pre-season
 migrations are listed in the Phase 8 plan's migration calendar; the newest in
 this release is `prisma/migrations/20261124000700_p77_rewind_exclusion_title`.
 
-## The final cut
+## After 1 January
 
-On 1 January every issue is regenerated with the whole year, almost for
-free. `REWIND_FINAL_CUT` runs by itself at 00:30 on 1 January in the
-westernmost zone (the worker and the stale sweep keep it scheduled, as they do
-the season-open Prepare). The console's **Run final cut** button reads
-"Available from 1 January" and is disabled until then; after it, it asks to
-confirm, joins the scheduled run when that is waiting or running
-(`rewind:final:<year>`) and writes `REWIND_FINAL_CUT_STARTED`.
+A Rewind is final once it is generated. Nothing regenerates the issues in
+January and no second notification goes out: a member is told once, when
+their issue is first ready.
 
-The job runs three steps:
+Which days an issue reads depends on when it is generated:
 
-1. `REWIND_SERVER_AGGREGATE` for the full year (through 31 December), with the
-   archetype counts and medians;
-2. `REWIND_METADATA_WARM` for the titles not warm yet, in practice those first
-   watched in December;
-3. `REWIND_GENERATE_ALL` with `kind: 'final-cut'`, one generation per member
-   with `copyPolicy: 'changed-slots'`: facts, pages and cards are rebuilt, and
-   the model is called only for slots whose identity facts changed (a new
-   No. 1), whose band was crossed or whose page is new. Every other slot keeps
-   its text, and numbers re-render through their tokens. A member without a
-   completed season issue gets a full generation; `JOINED_LATE` stays skipped.
-   The season issue is kept in `previousData`, and the budget cap still
-   applies.
+- **During the season**: 1 January to 30 November.
+- **After the year has ended in the member's zone**: the whole year. A
+  member's request, Generate all, Retry failed and an admin Regenerate after
+  1 January all read the whole year (Generate all and Retry failed from
+  midnight in the server zone). An issue made during the season keeps its
+  window unless it is generated again.
+- **A hide or an unhide** keeps the stored issue's window: its template-only
+  regeneration reads the same days the issue already did.
 
-The job never retries; start it again if it fails, and it leaves out the
-members it already finished. Every later 2026 regeneration (a member's
-request, an admin run, a hide) keeps the full-year window, so issues keep
-"Final cut". December's readers (members who opened the season issue) get one
-DM, "Your <server> Rewind 2026 now includes December.", from 09:00 on 2 January
-in their zone, and the banner uses the same words.
+Only a **Prepare season** after the year ends computes the whole-year server
+aggregate. Without it, whole-year issues leave out the Standing page and the
+other comparisons with the server, so a bulk run in January should be a
+Prepare season (it ends with Generate all) rather than Generate all alone.
 
-**Before it:** take a dump. **After it:** check the dashboard (every member
-`completed`, spend under the cap) and run
-`npm run rewind:validate -- --year=2026 --final-cut`, which must report zero
-failures. A bad final cut is rolled back with the bulk roll back above.
-
-### Dry runs
-
-`npm run rewind:final-cut -- --year=2026 [--through=YYYY-MM-DD] [--with-llm]`
-runs every eligible member through the pipeline in dry-run mode with the
-full-year window and writes nothing. Without `--with-llm` it calls no model
-(changed slots get templates) and estimates the cost from the price table. It
-prints "N of M keep all copy, K re-call (reasons)", the re-call share (pass
-mark under 30%), the cost and the validator's result.
-
-### Staging rehearsal
-
-Rehearse the real final cut on a staging copy of production on 11 December
-(P8.10, `--through=2026-12-10`) and 28 December (P9.2,
-`--through=2026-12-27`), in the evening when production is quiet. Record
-everything in the plan's `final-cut-dry-run.md`, which has a section per run.
-
-1. **Restore** the latest dump (decrypted) into a new database on the same
-   private network. Do not use `--create`: it would recreate the dump's own
-   database, which is production's.
-
-   ```bash
-   createdb plex_manager_staging
-   pg_restore -d postgresql://user:password@host:5432/plex_manager_staging --no-owner plex-manager-….dump
-   DATABASE_URL=postgresql://…/plex_manager_staging npx prisma migrate status   # nothing pending
-   ```
-
-2. **Redis.** Start a throwaway `redis:7` for staging
-   (`docker run -d --rm --name rewind-staging-redis -p 127.0.0.1:6380:6379 redis:7`).
-   Never point staging at production Redis: the queue names are the same, so
-   staging workers would take production's jobs.
-3. **Neutralise** the side effects before the first boot. Estimate the cost
-   first with the plan (`npm run rewind:final-cut -- --year=2026 --through=<day>`
-   against staging), then pass that estimate plus 50% as the budget:
-
-   ```bash
-   psql -v budget=<USD> -d postgresql://…/plex_manager_staging -f scripts/rewind-staging-neutralise.sql
-   ```
-
-   It refuses any database but `plex_manager_staging`, turns Discord off and
-   clears its bot token, turns watchlist sync off, sets the notification
-   channels to `["banner"]`, nulls the Stripe keys (leaving `stripeEnabled`,
-   so entitlement skips match production) and sets `rewindLlmBudgetUsd`.
-   Copy its output into the report. The model calls are real and billed to the
-   production key.
-4. **Boot** the production image digest from `season-log.md`, not a fresh
-   build, with: `DATABASE_URL` on staging; `REDIS_URL` on the throwaway Redis;
-   the production `ENCRYPTION_KEY` (so stored keys decrypt); a new
-   `NEXTAUTH_SECRET`; both app URLs on `http://127.0.0.1:3100`, reached through
-   an SSH tunnel; `ENABLE_DISCORD_BOT=false`, `ENABLE_WATCHLIST_SYNC=false`,
-   `REWIND_STAGING=1` and `LOG_LEVEL=debug` (Tautulli's 429s log at debug);
-   never `E2E_TEST_MODE`. The worker schedules its own 1 January final cut,
-   which the teardown removes; the season-open Prepare has passed, so it
-   schedules none (check the console's queue).
-5. **Run** from a checkout, against staging:
-
-   ```bash
-   REWIND_STAGING=1 DATABASE_URL=… REDIS_URL=redis://127.0.0.1:6380 \
-     npm run rewind:final-cut -- --year=2026 --through=2026-12-10 --with-llm --apply
-   ```
-
-   `--apply` enqueues `REWIND_FINAL_CUT` with the full-year window and
-   `window.finalCut: true`. With a `--through` before 31 December it refuses
-   unless `REWIND_STAGING=1`, which production never sets, and it gets its own
-   deduplication id (`rewind:final:2026:2026-12-10`), so it never joins the
-   delayed 1 January run. Note the time you started it.
-6. **Measure** once the console shows every member finished:
-
-   ```bash
-   docker logs <staging app> > staging-worker.log 2>&1
-   DATABASE_URL=… npm run rewind:final-cut-report -- --year=2026 --since=<start time> --log=staging-worker.log --warn=20
-   ```
-
-   It prints the re-call rate (completed final-cut generations with a model
-   call, overall and for full editions), the per-slot reasons, the cost per
-   member, the timings, failures by code, skips by reason and the Tautulli
-   429s, and exits 1 on a failure or a rate of 30% or more. Use `--warn=20` on
-   11 December (real data stops three weeks short) and `--warn=25` on
-   28 December. One slot behind most re-calls usually means its `COPY_SLOTS`
-   entry is wrong.
-7. **Validate:** `DATABASE_URL=… npm run rewind:validate -- --year=2026 --final-cut`
-   must report zero failures.
-8. **Tear down** the same day: stop the staging app and Redis, then
-   `dropdb plex_manager_staging` and delete `staging-worker.log` and the
-   decrypted dump, so no copy of member data or tokens lingers and staging's
-   own 1 January final cut never fires.
-
-A failure is fixed in an ordinary PR before the code freeze (14 December),
-and the rehearsal is repeated on a fresh copy; after it, only under the freeze
-rules.
+**Upgrading from 0.2.0 to 0.5.0.** Those releases keep a final cut scheduled
+for 00:30 on 1 January in the westernmost zone: a delayed `rewind:final-cut`
+job on `rewind-batch` that regenerates every issue. The worker removes it at
+start and in every stale sweep (every 10 minutes), and an older worker's sweep
+adds it again, so every worker container must run the new release before
+00:30 on 1 January in the westernmost zone. Afterwards
+`redis-cli ZRANGE bull:rewind-batch:delayed 0 -1` lists no
+`rewind-final-2026-<epoch ms>`. Issues made before the upgrade keep their
+stored sign-off until they are generated again: an upgrade before 1 December
+needs nothing more, because the season-open Prepare regenerates every issue;
+after it, run Generate all (in January, Prepare season).
 
 ## Season close
 
 On 31 January (`rewindSeasonCloses`) the season closes: members can no longer
 request a generation, share links made with the default expiry stop opening,
 and old v2 share links stop opening. Issues stay readable at `/rewind/<year>`.
-The freeze on the Rewind model lifts (P8.1). Set `CODE_FREEZE` back to off once the
-final cut has finished.
+The freeze on the Rewind model lifts (P8.1). Set `CODE_FREEZE` back to off at
+the close.
 
 ## Error and skip codes
 

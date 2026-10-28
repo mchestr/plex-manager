@@ -11,10 +11,10 @@ import type { PageDefinition } from "@/lib/rewind/registry"
 import { copyLocals, coverLines, headline } from "@/lib/wrapped/copy/templates"
 
 import { CoverDataSchema, type CoverData } from "./cover.schema"
-import { has, isFinalCut, issueYear, shown } from "./facts"
+import { has, issueYear, shown } from "./facts"
 
 /** The soundtrack's caption, under the cover's graphic. */
-export const coverCaption = (finalCut: boolean) => `Every line is a day you pressed play.${finalCut ? "" : " December is still being written."}`
+export const COVER_CAPTION = "Every line is a day you pressed play."
 
 export const coverPage: PageDefinition<CoverData> = {
   select: (_facts, { stats }) => ({ minutes: stats.calendar.minutes.map((day) => day.minutes) }),
@@ -31,7 +31,7 @@ export const coverPage: PageDefinition<CoverData> = {
       heading(headline("cover", facts), source),
       ...pocket,
       ...figure(coverPage.srSummary(data, facts)),
-      { kind: "note", text: plain(coverCaption(isFinalCut(facts))) },
+      { kind: "note", text: plain(COVER_CAPTION) },
       ...(lines.length > 0 ? [{ kind: "rankedList" as const, label: "In this issue", items: lines.map((line) => ({ rank: line.folio, title: line.text })) }] : []),
     ]
   },

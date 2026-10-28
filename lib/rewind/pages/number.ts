@@ -14,7 +14,7 @@ import { display } from "@/lib/wrapped/facts/display"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { pageDeck } from "./deck"
-import { has, isFinalCut, issueYear, num, shown } from "./facts"
+import { has, isWholeYear, issueYear, num, shown } from "./facts"
 import { NumberDataSchema, type NumberData } from "./number.schema"
 
 const HERO_HOURS = 10
@@ -39,7 +39,7 @@ export function splitShare(facts: RewindFactsV3, side: "series" | "films"): stri
 export const hasSplit = (facts: RewindFactsV3) => num(facts, "time.seriesShare") > 0 && num(facts, "time.filmsShare") > 0
 
 /** The vs-2025 stamp's words after the change: "on 2025", or "on the same months of 2025" in the season. */
-const vsLastYearLabel = (facts: RewindFactsV3) => (isFinalCut(facts) ? `on ${issueYear(facts) - 1}` : `on the same months of ${issueYear(facts) - 1}`)
+const vsLastYearLabel = (facts: RewindFactsV3) => (isWholeYear(facts) ? `on ${issueYear(facts) - 1}` : `on the same months of ${issueYear(facts) - 1}`)
 
 /** The milestones the member passed: `{ hours, date }` displays plus the date key. */
 export function milestoneFacts(facts: RewindFactsV3) {

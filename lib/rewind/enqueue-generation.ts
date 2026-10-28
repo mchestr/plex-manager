@@ -29,7 +29,7 @@ import { getRewindQueue } from "@/lib/queue/rewind-producers"
 import { JOB_TYPES, type RewindGenerateUserPayload } from "@/lib/queue/types"
 import { toStoredError } from "@/lib/wrapped/generation-errors"
 
-export type RewindGenerationKind = "member" | "admin" | "season" | "final-cut"
+export type RewindGenerationKind = "member" | "admin" | "season"
 
 /**
  * A hide or unhide's regeneration (P7.7): `no-llm` copy, its own

@@ -6,6 +6,7 @@ import type { Job } from "bullmq"
 
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { startWorker, stopWorker } from "@/lib/queue/worker"
+import { cancelScheduledFinalCut } from "@/lib/rewind/season-runs"
 
 type Processor = (job: Job) => Promise<unknown>
 
@@ -32,8 +33,7 @@ jest.mock("@/lib/queue/jobs", () => ({ getJobProcessor: jest.fn(), getRegistered
 jest.mock("@/lib/instrumentation/shutdown", () => ({ onShutdown: jest.fn() }))
 jest.mock("@/lib/queue/jobs/rewind", () => ({ processRewindGenerateUser: jest.fn(async () => "generated") }))
 jest.mock("@/lib/queue/jobs/rewind-stale-sweep", () => ({ processRewindStaleSweep: jest.fn(async () => "swept") }))
-jest.mock("@/lib/rewind/season-runs", () => ({ scheduleSeasonOpenRun: jest.fn(async () => null), scheduleFinalCutRun: jest.fn(async () => null) }))
-jest.mock("@/lib/queue/jobs/rewind-final-cut", () => ({ processRewindFinalCut: jest.fn() }))
+jest.mock("@/lib/rewind/season-runs", () => ({ scheduleSeasonOpenRun: jest.fn(async () => null), cancelScheduledFinalCut: jest.fn(async () => 0) }))
 jest.mock("@/lib/queue/jobs/rewind-season", () => ({ REWIND_SEASON_PROCESSORS: {} }))
 const mockUpsertJobScheduler = jest.fn(async () => ({}))
 jest.mock("@/lib/queue/rewind-producers", () => ({
@@ -103,6 +103,15 @@ describe("Rewind queues", () => {
       { every: 600_000 },
       { name: "rewind:stale:sweep", data: {}, opts: { attempts: 1 } }
     )
+  })
+
+  it("removes the 1 January final cut an earlier version scheduled, once", async () => {
+    jest.mocked(cancelScheduledFinalCut).mockClear()
+
+    await startWorker()
+    await startWorker()
+
+    expect(cancelScheduledFinalCut).toHaveBeenCalledTimes(1)
   })
 
   it("fails a job with no registered processor", async () => {

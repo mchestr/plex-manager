@@ -83,7 +83,7 @@ export function SoundtrackStrip({ input, ink, width, height }: { input: CardInpu
   if (!soundtrack) return null
   const daily = soundtrack.grain === "daily"
   const through = input.page.facts["window.through"]?.display
-  const windowLine = input.window.finalCut ? "Final cut" : through ? `Data through ${through}` : ""
+  const windowLine = through ? `Data through ${through}` : ""
   return (
     <div style={{ display: "flex", flexDirection: "column", width }}>
       <Graphic svg={soundtrackSvg(soundtrack.bins, daily, width, height, ink.on)} width={width} height={height} />

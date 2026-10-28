@@ -18,15 +18,35 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Added
+
+- **Full screen for Rewind:** a Full screen control in the story's top bar. In the admin preview of a member's Rewind (Admin, Users, a member, Rewind) it lifts the story out of its frame to fill the screen in any browser, iPhone Safari included; where the browser supports it (Android, iPad and desktop browsers) it also hides the browser's bars, and on a member's own Rewind it shows only in those browsers. Esc, the browser's own exit or the control returns to the frame.
+
 ### Changed
 
 - **Request limits on home:** the home page no longer shows the full tier table. Members now see their own tier, its limits, the requests they have left, and the hours to the next tier and its limits. Only admins see the full table, in Admin > Settings, Request limits. Discord `/mystats` already showed only these figures. The card gives the next tier's period when it differs from the member's own, and tells the member when it cannot read their limits. A one-day period reads "every day", not "every 1 days".
 - **Rewind times are implicit:** Rewind no longer prints a time zone. The "Times in America/Chicago, the server's time zone" notes are gone from the bookends, clock, short list and centrefold pages, the desktop Notes, article mode, chart and table captions and the clock and centrefold share cards. Times and days are still counted in the member's Rewind zone (their saved zone, else the server's), and nothing on the page names it.
 - **Tables on phones and tablets:** the users list and every other admin table, and the marks list on Account, now lay out by the room the table itself has, not the window's width, so the admin sidebar counts. A narrow table shows each row as a card: the name and its actions on top, then every other column under its own label in two columns (four on a tablet), with nothing hidden or unlabelled. The users list shows cards up to about 1,100 px and its table from there, with the Rewind column from 1,440 px; a long email is cut short in the table and shown in full on the card. While a table shows cards, its toolbar offers Filters (in a sheet) and Sort; beside a table, the filters sit in one row that no longer breaks into a block. The page is laid out before it loads, so a phone no longer shows the desktop table first.
+- **No final cut:** a Rewind is final when it is generated. The back cover, cover, Notes, cards and home card no longer promise December or a "final cut" in January (the cover and cards read "Data through November 30"), the sign-off reads "See you next year" or "That was the year", and the template decks no longer say "so far". Rewinds made before this release keep their stored sign-off until they are generated again.
+- **Hiding a title keeps the issue's days:** hiding or unhiding a title after 1 January no longer turns a 1 January to 30 November Rewind into a whole-year one; it reads the same days as before.
+
+### Removed
+
+- The 1 January final cut (the scheduled rebuild of every Rewind with December), **Run final cut** on Admin, Rewind, the "now includes December" Discord message and banner, `npm run rewind:final-cut`, `rewind:final-cut-report` and `rewind:rollback-final-cut`, and `npm run rewind:validate -- --final-cut`.
 
 ### Fixed
 
 - **Assistant times in your own zone:** the admin assistant now gives times in your browser's time zone, both in its answers and under each message, instead of the server zone (UTC when no server zone is set). A browser zone the app does not know falls back to the server zone. Sonarr, Radarr, Overseerr, background job and library times reach it as local times too, and both assistants (web and Discord) now give plain local times without naming a zone or offset.
+- **Rewind preview on phones:** the cover's colour field no longer spreads over the whole admin page behind the framed preview, and the "screen is small" article offer no longer covers the admin preview (its header already has Read as an article).
+- **Share in previews:** Share the poster and Change on the back cover of the admin preview and of a playground dry run opened nothing. They now open a sheet that says sharing is off in previews, and on an admin's own Rewind it links to that Rewind's share sheet.
+
+### Upgrade notes
+
+- Take a `pg_dump -Fc` before you start the new release. This release adds no migrations and no environment variables.
+- **Final cut cancelled:** 0.2.0 to 0.5.0 keep a final cut scheduled for 00:30 on 1 January in the westernmost zone (the delayed `rewind:final-cut` job on the `rewind-batch` queue). The new worker removes it at start and every 10 minutes, and an older worker adds it again, so upgrade every worker container before 00:30 on 1 January in the westernmost zone.
+- **Sign-off:** a Rewind made before the upgrade keeps its stored "See you in the final cut" sign-off. Regenerate it from Admin, Rewind to replace it. An upgrade before 1 December needs nothing more, because the season-open run regenerates every Rewind.
+- **`REWIND_STAGING`** now only gates the season-open rehearsal (`npm run rewind:season-open -- --rehearse`).
+
 
 ## [0.5.0] - 2026-10-27
 

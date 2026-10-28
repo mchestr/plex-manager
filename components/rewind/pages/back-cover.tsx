@@ -50,7 +50,7 @@ export function BackCoverPage({ data, issue }: PageProps<BackCoverData>) {
         <SoundtrackStrip minutes={data.minutes} from={from} locale={locale} width={MEASURE} height={STRIP_H} />
       </RewindFigure>
       <p className="italic" style={{ fontSize: ut(14), lineHeight: 1.25, marginTop: tight(6) }}>
-        {backCoverCaption(facts, issue.year, locale)}
+        {backCoverCaption(facts)}
       </p>
       {signOff && (
         <p style={{ fontSize: u(17), lineHeight: 1.3, marginTop: tight(8) }} data-testid="rewind-sign-off">

@@ -4,7 +4,7 @@
  * ```
  * RewindGeneration queued ──► lock rw:lock:gen:{year}:{userId}
  *                               ├─ held by another job ─► skipped (LOCKED); an exclusion run waits 30 s, 10 times at most
- *                               └─ taken ─► running ─► generateUserRewind({ mode: 'persist', signal })
+ *                               └─ taken ─► running ─► generateUserRewind({ mode: 'persist', signal, keepWindow: exclusion })
  *                                             ├─ completed ─► (its one $transaction: previousData, v3 data, completed)
  *                                             │    └─ exclusion run whose exclusionsVersion moved ─► one more run
  *                                             ├─ not eligible ─► skipped with the typed reason
@@ -145,11 +145,11 @@ async function followUpHides(userId: string, year: number, versionRead: number):
   }
 }
 
-const copyPolicyOf = (stored: string): CopyPolicy => (stored === "no-llm" || stored === "changed-slots" ? stored : "default")
+const copyPolicyOf = (stored: string): CopyPolicy => (stored === "no-llm" ? "no-llm" : "default")
 
 /** Generates one member's Rewind; see the module comment. */
 export async function processRewindGenerateUser(job: Job<RewindGenerateUserPayload>): Promise<GenerateResult> {
-  const { generationId, userId, year, audience, through, finalCut } = job.data
+  const { generationId, userId, year, audience, through } = job.data
   const generation = await prisma.rewindGeneration.findUnique({
     where: { id: generationId },
     select: { wrappedId: true, status: true, kind: true, copyPolicy: true },
@@ -188,7 +188,8 @@ export async function processRewindGenerateUser(job: Job<RewindGenerateUserPaylo
       generationId,
       audience,
       through,
-      finalCut,
+      // A hide or unhide keeps the stored issue's data window.
+      keepWindow: job.data.exclusion,
     })
     if (result.status === "skipped") {
       await fail(run, result.reason, "skipped")

@@ -5,7 +5,8 @@
  * `$transaction` then copies the data it replaces into
  * `RewindGeneration.previousData`, writes `PlexWrapped.data` with
  * `dataVersion: 3`, `edition`, `factsHash`, `dataThrough` and
- * `status: 'completed'`, and closes the generation with its `copySource`,
+ * `status: 'completed'` (and, for a whole-year issue, `finalCutAt`, kept as
+ * a record), and closes the generation with its `copySource`,
  * `copyPolicy`, `llmCalls` and `costUsd` (from its `LLMUsage` rows). Nothing
  * before this transaction touches the member's Rewind, so a failure anywhere
  * leaves the old data and its share links as they were. After the commit,

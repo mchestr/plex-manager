@@ -3,7 +3,7 @@ import { ViewTransition } from "react"
 import { RewindFigure } from "@/components/rewind/a11y/figure"
 import { formatCount, formatRunningTime } from "@/lib/rewind/format"
 import { volumeLine } from "@/lib/rewind/pages/facts"
-import { coverCaption, coverPage } from "@/lib/rewind/pages/cover"
+import { COVER_CAPTION, coverPage } from "@/lib/rewind/pages/cover"
 import type { CoverData } from "@/lib/rewind/pages/cover.schema"
 import { issueDurationMs, POCKET_ESTIMATE } from "@/lib/rewind/registry"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
@@ -49,7 +49,6 @@ export function CoverPage({ data, issue }: PageProps<CoverData>) {
   const pocketTypes = issue.cuts?.pocket ?? POCKET_ESTIMATE
   const full = pocketMember || !fullTypes ? null : cut("Read the full issue", fullTypes.length, issueDurationMs(fullTypes), locale)
   const pocket = cut("Pocket edition", pocketTypes.length, issueDurationMs(pocketTypes), locale)
-  const finalCut = facts["window.finalCut"]?.value === 1
 
   return (
     <div className="flex h-full flex-col font-text" style={{ padding: `${u(4)} ${u(16)} ${u(16)}` }} data-testid="rewind-page-cover">
@@ -71,7 +70,7 @@ export function CoverPage({ data, issue }: PageProps<CoverData>) {
       <div className="flex justify-between border-t-[1.5px] border-current font-display" style={{ marginTop: u(10), paddingTop: u(7), fontSize: ut(13), lineHeight: 1.2, fontVariationSettings: axes(100, 600) }}>
         <span>The {issue.year} issue</span>
         <span data-testid="rewind-cover-window">
-          <CopyText text={windowLine(facts)} source={source} />
+          <CopyText text={windowLine()} source={source} />
         </span>
       </div>
       {/* The strip is the column's one part that gives way, so the cut choice stays inside the artboard (design 4.7) */}
@@ -79,7 +78,7 @@ export function CoverPage({ data, issue }: PageProps<CoverData>) {
         <SoundtrackStrip minutes={data.minutes} from={String(facts["window.from"]?.value)} locale={locale} width={MEASURE} height={STRIP_H} months fit />
       </RewindFigure>
       <p className="italic" style={{ fontSize: u(14.5), lineHeight: 1.25, marginTop: u(4) }}>
-        {coverCaption(finalCut)}
+        {COVER_CAPTION}
       </p>
       <h2 tabIndex={-1} className="font-lead outline-none" style={{ fontSize: u(36), lineHeight: 1.02, marginTop: u(14), letterSpacing: "-0.01em" }}>
         <CopyText text={headline("cover", facts)} source={source} />

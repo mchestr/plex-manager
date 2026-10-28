@@ -12,7 +12,7 @@ import { formatHero, formatRewindDuration } from "@/lib/rewind/format"
 import type { NotesContext, PageDefinition } from "@/lib/rewind/registry"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
-import { isFinalCut, shown } from "./facts"
+import { isWholeYear, shown } from "./facts"
 import { ratingKeyOf } from "./title-key"
 import { TopShowsDataSchema, type TopShowsData } from "./top-lists.schema"
 
@@ -20,9 +20,9 @@ import { TopShowsDataSchema, type TopShowsData } from "./top-lists.schema"
 export const seriesFact = (i: number, field: string) => `series[${i + 1}].${field}` as FactId
 export const filmFact = (i: number, field: string) => `films[${i + 1}].${field}` as FactId
 
-/** Months the window counts: 12 after the final cut, else through `window.through`'s month. */
+/** Months the window counts: 12 in a whole-year issue, else through `window.through`'s month. */
 export function countedMonths(facts: RewindFactsV3): number {
-  if (isFinalCut(facts)) return 12
+  if (isWholeYear(facts)) return 12
   const through = facts["window.through"]?.value
   return typeof through === "string" ? Number(through.slice(5, 7)) : 12
 }
