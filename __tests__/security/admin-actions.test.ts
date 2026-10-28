@@ -239,11 +239,35 @@ describe('Admin Actions Security', () => {
   describe('updateUserAdminStatus', () => {
     const bump = { where: { id: 'member-1' }, data: { sessionVersion: { increment: 1 } } }
 
+    // Each write made inside a transaction, with that transaction's number, so a test can tell which share one
+    let transaction = 0
+    let open = false
+    const transactional: string[] = []
+
     beforeEach(() => {
       asAdmin()
       prismaMock.plexServer.findFirst.mockResolvedValue({ adminPlexUserId: 'plex-owner' } as never)
       prismaMock.user.count.mockResolvedValue(2)
       prismaMock.user.updateMany.mockResolvedValue({ count: 1 })
+      transaction = 0
+      transactional.length = 0
+      prismaMock.$transaction.mockImplementation(async (callback) => {
+        transaction += 1
+        open = true
+        try {
+          return await callback(asTransactionClient(prismaMock))
+        } finally {
+          open = false
+        }
+      })
+      prismaMock.user.update.mockImplementation((async () => {
+        if (open) transactional.push(`user.update in ${transaction}`)
+        return buildUser({ id: 'member-1' })
+      }) as never)
+      prismaMock.chatConversation.updateMany.mockImplementation((async () => {
+        if (open) transactional.push(`chatConversation.updateMany in ${transaction}`)
+        return { count: 2 }
+      }) as never)
     })
 
     it('refuses to demote the Plex server owner', async () => {
@@ -301,8 +325,6 @@ describe('Admin Actions Security', () => {
 
     it('demotes another admin, ends their sessions and ends their assistant page conversations', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: true, plexUserId: 'plex-other' }))
-      prismaMock.$transaction.mockImplementation((callback) => callback(asTransactionClient(prismaMock)))
-      prismaMock.chatConversation.updateMany.mockResolvedValue({ count: 2 })
 
       const result = await updateUserAdminStatus({ userId: 'member-1', isAdmin: false })
 
@@ -321,6 +343,19 @@ describe('Admin Actions Security', () => {
       expect(prismaMock.chatConversationMessage.deleteMany).toHaveBeenCalledWith({
         where: { conversation: { userId: 'member-1', endedAt: { not: null } } },
       })
+      // One transaction, so a failure ending them undoes the demotion and a retry does both
+      expect(transactional).toEqual(['user.update in 1', 'chatConversation.updateMany in 1'])
+    })
+
+    it('reports a failure ending the conversations without auditing the demotion or ending sessions', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', isAdmin: true, plexUserId: 'plex-other' }))
+      prismaMock.chatConversation.updateMany.mockRejectedValue(new Error('connection lost'))
+
+      const result = await updateUserAdminStatus({ userId: 'member-1', isAdmin: false })
+
+      expect(result).toMatchObject({ success: false, code: 'INTERNAL' })
+      expect(logAuditEvent).not.toHaveBeenCalledWith(AuditEventType.ADMIN_PRIVILEGE_REVOKED, expect.anything(), expect.anything())
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
     })
 
     it('refuses a user that does not exist', async () => {

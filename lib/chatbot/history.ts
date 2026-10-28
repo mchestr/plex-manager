@@ -30,7 +30,7 @@ import { z } from "zod"
 
 import type { ChatMessage } from "@/lib/chatbot/types"
 import type { Prisma } from "@/lib/generated/prisma/client"
-import { prisma } from "@/lib/prisma"
+import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 
 /** What the model sees of a conversation: its newest 40 messages and 60,000 characters at most (SEC-42). @internal */
 export const CONTEXT_LIMITS = { messages: 40, chars: 60_000 } as const
@@ -114,18 +114,25 @@ interface Turn {
   answer: ChatMessage
   /** A first turn's title. */
   title?: string
+  /**
+   * The turn ran with an admin's access, so it is stored only while its user
+   * is still an admin: a session keeps admin access for up to five minutes
+   * after a demotion, and the role they keep must not read what it produced.
+   */
+  asAdmin?: boolean
 }
 
 /**
  * Stores a turn that succeeded, and moves its conversation to the top of the
  * history. False, storing nothing, when the conversation was deleted while
- * the answer was being written.
+ * the answer was being written, or an admin's turn outlived their admin role.
  */
-export async function saveTurn({ conversationId, question, answer, title }: Turn): Promise<boolean> {
+export async function saveTurn({ conversationId, question, answer, title, asAdmin }: Turn): Promise<boolean> {
   return prisma.$transaction(async (tx) => {
-    // The update locks the row, so a turn another tab stores at the same time waits for this one, or this one for it
+    // The update locks the row, so a turn another tab stores at the same time waits for this one, or this one for
+    // it, and a demotion's ending of the conversation (endConversationsOf) waits for the turn or sees it as gone
     const { count } = await tx.chatConversation.updateMany({
-      where: { id: conversationId, endedAt: null },
+      where: { id: conversationId, endedAt: null, ...(asAdmin ? { user: { isAdmin: true } } : {}) },
       data: { lastMessageAt: new Date(answer.timestamp), ...(title ? { title } : {}) },
     })
     if (count === 0) return false
@@ -165,13 +172,12 @@ export async function endConversation(userId: string, conversationId: string, no
 }
 
 /**
- * Ends every one of a user's conversations the same way, for a demoted admin:
- * a role never reads answers built from tool output only an admin may see.
+ * Ends every one of a user's conversations the same way, in the demotion's
+ * transaction: a role never reads answers built from tool output only an
+ * admin may see.
  */
-export async function endConversationsOf(userId: string, now: Date = new Date()): Promise<number> {
-  return prisma.$transaction(async (tx) => {
-    const { count } = await tx.chatConversation.updateMany({ where: openConversationsOf(userId), data: { endedAt: now, title: null } })
-    await tx.chatConversationMessage.deleteMany({ where: { conversation: { userId, endedAt: { not: null } } } })
-    return count
-  })
+export async function endConversationsOf(tx: PrismaTransactionClient, userId: string, now: Date = new Date()): Promise<number> {
+  const { count } = await tx.chatConversation.updateMany({ where: openConversationsOf(userId), data: { endedAt: now, title: null } })
+  await tx.chatConversationMessage.deleteMany({ where: { conversation: { userId, endedAt: { not: null } } } })
+  return count
 }

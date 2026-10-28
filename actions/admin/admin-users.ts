@@ -62,8 +62,12 @@ export const updateUserAdminStatus = adminAction({
       }
     }
 
-    // An admin holds every permission, so a promotion clears the role: a later demotion must not bring it back
-    await prisma.user.update({ where: { id: userId }, data: isAdmin ? { isAdmin, role: null } : { isAdmin } })
+    // An admin holds every permission, so a promotion clears the role: a later demotion must not bring it back.
+    // A demotion ends the user's assistant page conversations in the same transaction, so a failure undoes both
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: userId }, data: isAdmin ? { isAdmin, role: null } : { isAdmin } })
+      if (!isAdmin) await endConversationsOf(tx, userId)
+    })
 
     logAuditEvent(isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED, actorId, {
       targetUserId: userId,
@@ -73,7 +77,6 @@ export const updateUserAdminStatus = adminAction({
 
     if (!isAdmin) {
       await endUserSessions(userId, "demoted", actorId)
-      await endConversationsOf(userId)
     }
 
     await revalidateUserPages(userId)

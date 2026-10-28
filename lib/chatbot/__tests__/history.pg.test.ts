@@ -146,7 +146,7 @@ describePg("the assistant page history on PostgreSQL", (databaseUrl) => {
     await prisma.discordChatSession.create({ data: { discordUserId: `${RUN}-discord`, discordChannelId: `${RUN}-dm`, chatConversationId: discord.id, messages: [] } })
     const others = await prisma.chatConversation.create({ data: { userId: USER, ...withHistory } })
 
-    expect(await history.endConversationsOf(demoted)).toBe(1)
+    expect(await prisma.$transaction((tx) => history.endConversationsOf(tx, demoted))).toBe(1)
 
     const state = (id: string) =>
       prisma.chatConversation.findUniqueOrThrow({ where: { id }, select: { endedAt: true, title: true, _count: { select: { messages: true } } } })
@@ -154,6 +154,26 @@ describePg("the assistant page history on PostgreSQL", (databaseUrl) => {
     expect((await state(discord.id)).endedAt).toBeNull()
     expect(await state(others.id)).toEqual({ endedAt: null, title: "Who has an invite?", _count: { messages: 1 } })
     await prisma.user.delete({ where: { id: demoted } })
+  })
+
+  it("stores an admin's turn only while they are still an admin", async () => {
+    const former = `${RUN}-former-admin`
+    await prisma.user.create({ data: { id: former, name: former, isAdmin: false, role: "support" } })
+    const conversation = await prisma.chatConversation.create({ data: { userId: former } })
+    const turn = (asAdmin: boolean) =>
+      history.saveTurn({
+        conversationId: conversation.id,
+        question: { content: "Which invite codes are active?", at: new Date() },
+        answer: { role: "assistant", content: "Active invite codes: ...", timestamp: Date.now() },
+        asAdmin,
+      })
+
+    // Their session still said admin when the turn started, the demotion has committed since
+    expect(await turn(true)).toBe(false)
+    expect(await prisma.chatConversationMessage.count({ where: { conversationId: conversation.id } })).toBe(0)
+    // A turn they start as Support is theirs to keep
+    expect(await turn(false)).toBe(true)
+    await prisma.user.delete({ where: { id: former } })
   })
 
   it("stores nothing for a conversation that ended while the answer was written", async () => {

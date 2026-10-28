@@ -352,8 +352,9 @@ describe("the stored history", () => {
 
     expect(sent()).toEqual([{ role: "user", content: "Who is   streaming?" }])
     expect(prismaMock.chatConversationMessage.findMany).not.toHaveBeenCalled()
+    // An admin's turn is stored only while they are still an admin
     expect(prismaMock.chatConversation.updateMany).toHaveBeenCalledWith({
-      where: { id: "conversation-1", endedAt: null },
+      where: { id: "conversation-1", endedAt: null, user: { isAdmin: true } },
       data: { lastMessageAt: expect.any(Date), title: "Who is streaming?" },
     })
     expect(prismaMock.chatConversationMessage.createMany).toHaveBeenCalledWith({
@@ -383,7 +384,7 @@ describe("the stored history", () => {
       { role: "user", content: "And Radarr?" },
     ])
     expect(prismaMock.chatConversation.updateMany).toHaveBeenCalledWith({
-      where: { id: "mine", endedAt: null },
+      where: { id: "mine", endedAt: null, user: { isAdmin: true } },
       data: { lastMessageAt: expect.any(Date) },
     })
   })
@@ -548,6 +549,8 @@ describe("access by role", () => {
     const names = (mockChatWithTools.mock.calls[0][0].tools ?? []).map((tool) => tool.function.name)
     expect(names).toContain("get_plex_sessions")
     expect(names).not.toContain("mark_media_finished")
+    // A role's turn does not depend on the admin flag
+    expect(prismaMock.chatConversation.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "conversation-1", endedAt: null } }))
   })
 
   it("answers an injected write tool call from a Support user with a refusal, not a result", async () => {

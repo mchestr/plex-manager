@@ -87,6 +87,7 @@ export const chatWithAdminBot = permissionAction({
         question: { content: message, at: new Date(question.timestamp) },
         answer: result.message,
         title: conversationId ? undefined : titleFrom(message),
+        asAdmin: session.user.isAdmin,
       })
       if (!stored) return fail("NOT_FOUND", GONE)
       // The history lists the conversation first
