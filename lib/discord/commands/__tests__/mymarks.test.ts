@@ -250,8 +250,8 @@ describe("myMarksCommand.handle — rendering", () => {
 
     // One field per non-empty mark-type group (field names carry a count suffix).
     const fieldNames = embed.fields.map((f) => f.name).join(" | ")
-    expect(fieldNames).toContain("Finished Watching")
-    expect(fieldNames).toContain("Keep Forever")
+    expect(fieldNames).toContain("Finished watching")
+    expect(fieldNames).toContain("Keep forever")
 
     const allValues = embed.fields.map((f) => f.value).join("\n")
     expect(allValues).toContain("The Office (2005)")

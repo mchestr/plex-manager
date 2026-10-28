@@ -151,7 +151,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
 function getCategoryLabel(category: CommandCategory): string {
   switch (category) {
     case "chat":
-      return "Chat & Assistant"
+      return "Chat and assistant"
     case "media":
       return "Media"
     case "utility":
@@ -202,7 +202,7 @@ export function findCommand(searchTerm: string): CommandDefinition | undefined {
  */
 export function buildFullHelpMessage(): string {
   const lines: string[] = [
-    "**Available Commands**",
+    "**Commands**",
     "",
   ]
 
@@ -281,7 +281,7 @@ const AUTOCOMPLETE_CHOICE_LIMIT = 25
  */
 function buildFullHelpEmbed(disclosure: string): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle("Available Commands")
+    .setTitle("Commands")
     .setDescription(
       "Use `/help command:<name>` to see help for one command."
     )

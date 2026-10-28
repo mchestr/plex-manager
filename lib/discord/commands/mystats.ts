@@ -85,7 +85,7 @@ function scrub(value: string): string {
  */
 function buildStatsEmbed(stats: MemberYearStats, locale: string, limits: MemberRequestLimits | null): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle("📊 Your Watch Stats")
+    .setTitle("📊 Your watch stats")
     .setDescription(
       `You've watched **${formatDuration(stats.totalMinutes, "long", { largestUnit: "day" })}** in ${stats.year} (${hoursOf(stats)} hours).`
     )
@@ -96,18 +96,18 @@ function buildStatsEmbed(stats: MemberYearStats, locale: string, limits: MemberR
     )
 
   if (stats.topShow) {
-    embed.addFields({ name: "🏆 Top Show", value: scrub(stats.topShow), inline: true })
+    embed.addFields({ name: "🏆 Top show", value: scrub(stats.topShow), inline: true })
   }
   if (stats.topFilm) {
-    embed.addFields({ name: "🥇 Top Movie", value: scrub(stats.topFilm), inline: true })
+    embed.addFields({ name: "🥇 Top movie", value: scrub(stats.topFilm), inline: true })
   }
   if (stats.longestStreakDays) {
     const days = stats.longestStreakDays
-    embed.addFields({ name: "🔥 Longest Streak", value: `${days} ${days === 1 ? "day" : "days"}`, inline: true })
+    embed.addFields({ name: "🔥 Longest streak", value: `${days} ${days === 1 ? "day" : "days"}`, inline: true })
   }
   if (stats.peakHour !== null) {
     embed.addFields({
-      name: "⏰ Peak Viewing Hour",
+      name: "⏰ Peak viewing hour",
       value: formatHour(stats.peakHour, { locale }).replace(/\u00A0/g, " "),
       inline: true,
     })

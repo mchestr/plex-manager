@@ -17,22 +17,22 @@ export type WatchStatusSync = "synced" | "no_plex_sign_in" | "failed" | "not_app
  * `formatMarkType` in the chatbot executor.
  *
  * @param markType - The mark type to label.
- * @returns A title-cased, space-separated label (e.g. `"Finished Watching"`).
+ * @returns A sentence-case, space-separated label (e.g. `"Finished watching"`).
  */
 export function getMarkTypeLabel(markType: MarkType): string {
   switch (markType) {
     case MarkType.FINISHED_WATCHING:
-      return "Finished Watching"
+      return "Finished watching"
     case MarkType.NOT_INTERESTED:
-      return "Not Interested"
+      return "Not interested"
     case MarkType.KEEP_FOREVER:
-      return "Keep Forever"
+      return "Keep forever"
     case MarkType.REWATCH_CANDIDATE:
-      return "Rewatch Candidate"
+      return "Rewatch candidate"
     case MarkType.POOR_QUALITY:
-      return "Poor Quality"
+      return "Poor quality"
     case MarkType.WRONG_VERSION:
-      return "Wrong Version"
+      return "Wrong version"
     default:
       return markType
   }

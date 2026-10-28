@@ -172,12 +172,12 @@ describe("buildFullHelpMessage", () => {
   })
 
   it("should include title", () => {
-    expect(helpMessage).toContain("**Available Commands**")
+    expect(helpMessage).toContain("**Commands**")
   })
 
   it("should include all non-empty category headers", () => {
     expect(helpMessage).toContain("**Utility**")
-    expect(helpMessage).toContain("**Chat & Assistant**")
+    expect(helpMessage).toContain("**Chat and assistant**")
     expect(helpMessage).toContain("**Media**")
     // The context/clear category is gone.
     expect(helpMessage).not.toContain("Context Management")
@@ -402,11 +402,11 @@ describe("helpCommand (slash)", () => {
       const call = reply.mock.calls[0][0]
       expect(call.flags).toBe(64) // MessageFlags.Ephemeral
       const embed = getEmbedData(reply)
-      expect(embed.title).toBe("Available Commands")
+      expect(embed.title).toBe("Commands")
 
       const fieldNames = embed.fields.map((f) => f.name).join(" ")
       expect(fieldNames).toContain("Utility")
-      expect(fieldNames).toContain("Chat & Assistant")
+      expect(fieldNames).toContain("Chat and assistant")
       expect(fieldNames).toContain("Media")
       expect(fieldNames).not.toContain("Context Management")
 

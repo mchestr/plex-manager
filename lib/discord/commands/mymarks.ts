@@ -114,7 +114,7 @@ function buildMarksEmbed(
   const rendered = marks.slice(0, MAX_MARKS_RENDERED)
 
   const embed = new EmbedBuilder().setTitle(
-    filterType ? `Your ${getMarkTypeLabel(filterType)} Marks` : "Your Marks"
+    filterType ? `Your marks: ${getMarkTypeLabel(filterType)}` : "Your marks"
   )
 
   const groups = groupByType(rendered)

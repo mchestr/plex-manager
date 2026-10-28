@@ -188,7 +188,7 @@ function formatStreamDetail(session: PlexSession): string {
  */
 function buildWatchingEmbed(sessions: PlexSession[]): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle("Now Watching")
+    .setTitle("Now watching")
     .setDescription(
       safeText(
         sessions.length === 1

@@ -380,7 +380,7 @@ describe("select-menu component handler", () => {
     )
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: expect.stringContaining("Not Interested"),
+        content: expect.stringContaining("Not interested"),
         components: [],
       })
     )

@@ -14,7 +14,8 @@ interface EmptyStateProps {
   kind: EmptyStateKind
   icon: LucideIcon
   title: string
-  description: string
+  /** Only a consequence, a constraint or the next step; leave it out rather than restate the title. */
+  description?: string
   primaryAction?: ReactNode
   secondaryAction?: ReactNode
   className?: string
@@ -54,7 +55,7 @@ export function EmptyState({
       </span>
       <div className="flex max-w-sm flex-col gap-1">
         <p className="text-h3 text-foreground">{title}</p>
-        <p className="text-ui text-muted-foreground">{description}</p>
+        {description && <p className="text-ui text-muted-foreground">{description}</p>}
       </div>
       {(primaryAction || secondaryAction) && (
         <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
