@@ -1014,7 +1014,7 @@ interface PageHeaderProps {
 
 // components/ui/data-table/data-table.tsx (TanStack Table)
 interface DataTableProps<T> {
-  columns: ColumnDef<T>[]                     // meta: { align?: 'end'; priority?: 1 | 2 | 3; mobile?: 'title' | 'sub' | 'badges' | 'meta' | 'hidden' }
+  columns: ColumnDef<T>[]                     // meta: { align?: 'end'; priority?: 1 | 2 | 3; card?: 'title' | 'sub' | 'field' | 'hidden' }
   data: T[]
   getRowHref?: (row: T) => Route              // first cell renders a real <Link>, no tr onClick (UI-23)
   rowActions?: (row: T) => RowAction[]        // ghost icon button "Actions for {name}" + DropdownMenu
@@ -1023,9 +1023,14 @@ interface DataTableProps<T> {
   sort?: { id: string; desc: boolean }        // URL-driven, aria-sort on headers
   empty: ReactNode                            // <EmptyState kind="first-use" | "filtered" | "unavailable">
   loading?: boolean                           // renders skeleton rows
+  size?: 'narrow' | 'default' | 'wide'        // how much room the columns need; cards below 24, 40 or 60rem of the table's own width
   'data-testid'?: string
 }
-// Below md the same column defs render a stacked list (no sideways scroll).
+// One <table> at every width, with explicit table roles. Container queries on the table's own width (never the
+// viewport, so the admin sidebar counts and the server HTML is right on a phone) lay rows out as cards below the
+// size's card width: `title` heads the card, `sub` lines follow it, every `field` sits in a 2-column grid (4 from
+// 36rem) under its header as a label, and the actions button sits in the card's corner. No sideways scroll.
+// priority: 3 drops a column in the band just above the card width (28, 45 or 68rem).
 
 // components/ui/filter-bar.tsx
 interface FilterBarProps {
@@ -1035,7 +1040,7 @@ interface FilterBarProps {
   resultCount: { shown: number; total: number; noun: string }   // aria-live="polite": "7 members"
 }
 // Shows active-filter chips with "Clear filters" and a ghost "Reset" only when a filter differs from its default.
-// Below md: search, then "Filters" (opens a bottom Sheet with the same Selects, applied-count badge) and "Sort".
+// While the DataTable around it renders cards: search, then "Filters" (opens a bottom Sheet with the same Selects, applied-count badge) and "Sort".
 
 // components/ui/stat-tile.tsx
 interface StatTileProps {
@@ -1357,7 +1362,7 @@ System
 2. When Plex can't be reached, everyone is still listed with Plex access **Unknown**, a warning `Alert` sits above the table ("Plex didn't respond, so 2 members couldn't be verified. Everyone is still listed, and their access shows as Unknown until Plex answers. Last checked 2 minutes ago." with **Check again**), and the Plex access tile reads "2 not verified".
 3. Role: an outline badge for Owner (with `shield`) and Admin, plain text for Member. Otherwise only states get badges; Plex access is a dot plus a word; avatars are neutral initials.
 4. Row actions open a menu headed with the member's name; "Remove Plex access..." is last and opens a typed `ConfirmDialog`.
-5. Below `md` rows stack: avatar, name and cost on one line, email, a badge row (worded: "Access unknown", "Past due"), then a meta line.
+5. Below 60rem of the table's own width (`size="wide"`) rows become cards: avatar, name and email with the actions button beside them, then every other column as a labelled field in a 2-column grid (4 from 36rem): Role, Service, Plex access, Subscription, Rewind, LLM cost, Joined. From 60rem it is a table; Rewind joins it from 68rem.
 6. Pagination renders only when there is more than one page. Otherwise the footer reads "Showing all 7 members", the same string on desktop and mobile, with no Previous and Next.
 7. Test ids follow `admin-<area>-<element>[-<id>]` (`admin-users-row-<id>`, `admin-users-actions-<id>`); primitives forward `data-testid`, table rows emit `<table>-row-<id>`, and the styled inputs lose their `setup-input-*` default test id (`UI-46`).
 
@@ -1516,7 +1521,7 @@ The CI copy check ([9.6](#96-guardrails)) catches the first two and the Wrapped 
 | 1.3.5 Identify input purpose | `autocomplete` on email, name and one-time-code fields. |
 | 1.4.1 Use of colour | Every status has a word and an icon; dots sit beside words; meters have text legends; links in prose are underlined. The settings nav uses four distinct glyphs, not colour dots ([5.6](#56-status-vocabulary-libuistatusts)). The `UptimeStrip` draws degraded segments at half height and down segments hatched, and lists its incidents in an sr-only list beside the `aria-hidden` strip. |
 | 1.4.3 Contrast (minimum) | Every text token at 4.5:1 or more on every surface it can sit on (section 3.4); no text token dimmer than `muted-foreground`; placeholder and disabled text use `muted-foreground`. |
-| 1.4.4 Resize text, 1.4.10 Reflow | Zoom enabled (`maximumScale` and `userScalable` removed, `UI-11`); layouts reflow at 320px with no horizontal page scroll; tables become stacked lists below `md`. |
+| 1.4.4 Resize text, 1.4.10 Reflow | Zoom enabled (`maximumScale` and `userScalable` removed, `UI-11`); layouts reflow at 320px with no horizontal page scroll; tables become cards of labelled fields when their own container is too narrow, keeping their table semantics. |
 | 1.4.11 Non-text contrast | `input`, `ring` and `primary-indicator` at 3:1 or more on background, card, popover, muted and sidebar in both themes; switches and checkboxes use `input` boundaries off and `primary-indicator` fills on; light-theme `primary` is never a state mark (3.4). Inside Rewind every mark is the ink at 7:1 or a spot at 3:1 (4.4). |
 | 1.4.12 Text spacing | No fixed-height text containers; badges and buttons grow. |
 | 1.4.13 Content on hover or focus | Tooltips are dismissible with Escape, hoverable and persistent (Base UI). |

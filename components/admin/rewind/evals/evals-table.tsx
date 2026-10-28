@@ -48,17 +48,17 @@ export function EvalsTable({ rows, total, page, pageSize, sort }: EvalsTableProp
           )}
         </div>
       ),
-      meta: { mobile: "title" },
+      meta: { card: "title" },
     },
-    { id: "promptVersion", header: "Prompt", cell: ({ row }) => row.original.results.promptVersion, meta: { mobile: "sub", priority: 3 } },
+    { id: "promptVersion", header: "Prompt", cell: ({ row }) => row.original.results.promptVersion, meta: { card: "sub", priority: 3 } },
     {
       id: "firstPass",
       header: "First-pass grounding",
       enableSorting: true,
       cell: ({ row }) => rate(row.original.results.rates.firstPass),
-      meta: { align: "end", mobile: "meta" },
+      meta: { align: "end", card: "field" },
     },
-    { id: "afterRepair", header: "After repair", cell: ({ row }) => rate(row.original.results.rates.afterRepair), meta: { align: "end", mobile: "meta" } },
+    { id: "afterRepair", header: "After repair", cell: ({ row }) => rate(row.original.results.rates.afterRepair), meta: { align: "end", card: "field" } },
     {
       id: "judge",
       header: "Judge",
@@ -66,12 +66,12 @@ export function EvalsTable({ rows, total, page, pageSize, sort }: EvalsTableProp
         const mean = row.original.results.judgeMean
         return mean === null ? dash : f.number(mean, { maximumFractionDigits: 2 })
       },
-      meta: { align: "end", mobile: "meta" },
+      meta: { align: "end", card: "field" },
     },
-    { id: "cost", header: "Cost", enableSorting: true, cell: ({ row }) => f.money(row.original.results.cost.totalUsd, "table"), meta: { align: "end", mobile: "meta" } },
+    { id: "cost", header: "Cost", enableSorting: true, cell: ({ row }) => f.money(row.original.results.cost.totalUsd, "table"), meta: { align: "end", card: "field" } },
     { id: "p50", header: "p50", cell: ({ row }) => seconds(row.original.results.latencyMs.p50), meta: { align: "end", priority: 3 } },
-    { id: "p95", header: "p95", enableSorting: true, cell: ({ row }) => seconds(row.original.results.latencyMs.p95), meta: { align: "end", mobile: "meta" } },
-    { id: "started", header: "Started", enableSorting: true, cell: ({ row }) => f.date(row.original.results.startedAt, "short"), meta: { mobile: "meta" } },
+    { id: "p95", header: "p95", enableSorting: true, cell: ({ row }) => seconds(row.original.results.latencyMs.p95), meta: { align: "end", card: "field" } },
+    { id: "started", header: "Started", enableSorting: true, cell: ({ row }) => f.date(row.original.results.startedAt, "short"), meta: { card: "field" } },
   ]
 
   return (

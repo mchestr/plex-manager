@@ -16,9 +16,9 @@ const columns: ColumnDef<Fact>[] = [
     header: "Fact id",
     accessorKey: "id",
     cell: ({ row }) => <code className="font-mono text-label">{row.original.id}</code>,
-    meta: { mobile: "title" },
+    meta: { card: "title" },
   },
-  { id: "display", header: "Display", accessorKey: "display", meta: { mobile: "sub" } },
+  { id: "display", header: "Display", accessorKey: "display", meta: { card: "sub" } },
 ]
 
 interface FactsPaneProps {
@@ -41,7 +41,7 @@ export function FactsPane({ view }: FactsPaneProps) {
               id: "kind",
               header: "Kind",
               cell: ({ row }) => (titles.has(row.original.display) ? <Badge variant="info">Title</Badge> : null),
-              meta: { mobile: "badges" },
+              meta: { card: "sub" },
             },
           ]}
           data={view.facts}

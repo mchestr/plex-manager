@@ -8,17 +8,15 @@ import type { ReactNode } from "react"
 
 import { Icon } from "@/components/ui/icon"
 import { TableSkeleton } from "@/components/ui/skeleton"
-import { useMediaQuery } from "@/hooks/use-media-query"
 import { useReplaceParams } from "@/hooks/use-replace-params"
 import { sortParam, type TableSort } from "@/lib/ui/table-params"
-import { cn } from "@/lib/utils"
 
+import { ACTIONS_CELL_CLASS, cardSlot, CELL_LABEL_CLASS, cellClass, headerClass, ROW_CLASS, type TableSize } from "./layout"
 import { TablePagination } from "./pagination"
 import { type RowAction, RowActions } from "./row-actions"
-import { StackedList } from "./stacked-list"
 
 /** How a row links out: its first cell's href, its action menu, and the name that heads the menu. */
-export interface RowLinks<T> {
+interface RowLinks<T> {
   /** The first cell renders a real Link to it; rows never take an onClick (UI-23). */
   getRowHref?: (row: T) => Route
   rowActions?: (row: T) => RowAction[]
@@ -31,7 +29,8 @@ export interface RowLinks<T> {
 interface DataTableProps<T> extends RowLinks<T> {
   /**
    * The columns. A column sorts only with `enableSorting: true`, and its `id`
-   * is the `?sort=` value. `meta` takes `DataTableColumnMeta`.
+   * is the `?sort=` value. `meta` takes `DataTableColumnMeta`; a column's
+   * header is a string, which also labels its field on a card.
    */
   columns: ColumnDef<T>[]
   data: T[]
@@ -49,10 +48,13 @@ interface DataTableProps<T> extends RowLinks<T> {
   empty: ReactNode
   /** Skeleton rows in place of the body. */
   loading?: boolean
+  /**
+   * How much room the columns need, on the table's own width (`layout.ts`):
+   * `narrow` for two or three short columns, `wide` for eight or more.
+   */
+  size?: TableSize
   "data-testid"?: string
 }
-
-const ALIGN_END = "text-right [&>button]:ml-auto"
 
 function nextSort(sort: TableSort | undefined, id: string): TableSort | null {
   if (sort?.id !== id) return { id, desc: false }
@@ -65,8 +67,11 @@ function nextSort(sort: TableSort | undefined, id: string): TableSort | null {
  * reads them with `parseTableParams`, slices the rows and passes them in.
  *
  * Headers are `<th scope="col">` with `aria-sort`; a sort button replaces
- * `?sort=` and goes back to page 1. Below `md` the same columns render a
- * stacked list from `meta.mobile`. Rows emit `${testId}-row-${id}`.
+ * `?sort=` and goes back to page 1. It is one `<table>` at every width: below
+ * its `size`'s card width (a container query on the table's own width, so the
+ * server HTML is already right on a phone) CSS lays each row out as a card of
+ * labelled fields from `meta.card`, and the explicit table roles keep its
+ * semantics through the display change. Rows emit `${testId}-row-${id}`.
  */
 export function DataTable<T>({
   columns,
@@ -80,6 +85,7 @@ export function DataTable<T>({
   sort,
   empty,
   loading = false,
+  size = "default",
   getRowHref,
   rowActions,
   getRowName,
@@ -87,7 +93,6 @@ export function DataTable<T>({
   ...props
 }: DataTableProps<T>) {
   const testId = props["data-testid"] ?? "data-table"
-  const stacked = useMediaQuery("(max-width: 47.9375rem)")
   const { replace } = useReplaceParams()
 
   const table = useReactTable({
@@ -117,14 +122,11 @@ export function DataTable<T>({
     return (
       <th
         key={header.id}
+        role="columnheader"
         scope="col"
         aria-sort={sortable ? direction : undefined}
         data-testid={`${testId}-column-${header.column.id}`}
-        className={cn(
-          "h-10 px-4 text-left text-label font-medium whitespace-nowrap text-muted-foreground",
-          columnDef.meta?.align === "end" && ALIGN_END,
-          columnDef.meta?.priority === 3 && "hidden lg:table-cell"
-        )}
+        className={headerClass(columnDef.meta, cardSlot(columnDef.meta, header.index))}
       >
         {sortable ? (
           <button
@@ -151,53 +153,40 @@ export function DataTable<T>({
 
   let body: ReactNode
   if (loading) {
-    body = <TableSkeleton rows={Math.min(pagination.pageSize, 8)} columns={Math.min(columns.length, stacked ? 2 : 6)} />
+    body = <TableSkeleton rows={Math.min(pagination.pageSize, 8)} columns={Math.min(columns.length, 6)} />
   } else if (data.length === 0) {
     body = empty
-  } else if (stacked) {
-    body = (
-      <StackedList
-        rows={rows}
-        label={label}
-        getRowHref={getRowHref}
-        rowActions={rowActions}
-        getRowName={getRowName}
-        onRowActionsOpenChange={onRowActionsOpenChange}
-        testId={testId}
-      />
-    )
   } else {
     body = (
-      <table aria-label={label} className="w-full border-collapse text-ui">
-        <thead className="border-b">
+      <table role="table" aria-label={label} className="w-full border-collapse text-ui dt-cards:block">
+        <thead className="border-b dt-cards:hidden">
           {table.getHeaderGroups().map((group) => (
-            <tr key={group.id}>
+            <tr key={group.id} role="row">
               {group.headers.map(headerCell)}
               {withActions && (
-                <th scope="col" className="w-12 px-2">
+                <th role="columnheader" scope="col" className="w-12 px-2">
                   <span className="sr-only">Actions</span>
                 </th>
               )}
             </tr>
           ))}
         </thead>
-        <tbody className="divide-y">
+        <tbody className="divide-y dt-cards:block">
           {rows.map((row) => {
             const href = getRowHref?.(row.original)
             return (
-              <tr key={row.id} className="hover:bg-accent/40" data-testid={`${testId}-row-${row.id}`}>
+              <tr key={row.id} role="row" className={ROW_CLASS} data-testid={`${testId}-row-${row.id}`}>
                 {row.getVisibleCells().map((cell, index) => {
-                  const { meta } = cell.column.columnDef
-                  const content = flexRender(cell.column.columnDef.cell, cell.getContext())
+                  const { columnDef } = cell.column
+                  const slot = cardSlot(columnDef.meta, index)
+                  const content = flexRender(columnDef.cell, cell.getContext())
                   return (
-                    <td
-                      key={cell.id}
-                      className={cn(
-                        "px-4 py-3 align-middle",
-                        meta?.align === "end" && "text-right tabular-nums",
-                        meta?.priority === 3 && "hidden lg:table-cell"
+                    <td key={cell.id} role="cell" data-card={slot} className={cellClass(columnDef.meta, slot, withActions)}>
+                      {slot === "field" && typeof columnDef.header === "string" && (
+                        <span data-slot="cell-label" className={CELL_LABEL_CLASS}>
+                          {columnDef.header}
+                        </span>
                       )}
-                    >
                       {index === 0 && href ? (
                         <Link data-testid={`${testId}-link-${row.id}`} href={href} className="rounded-sm font-medium text-foreground hover:underline">
                           {content}
@@ -209,7 +198,7 @@ export function DataTable<T>({
                   )
                 })}
                 {withActions && (
-                  <td className="px-2 py-1.5 text-right">
+                  <td role="cell" data-card="actions" className={ACTIONS_CELL_CLASS}>
                     <RowActions
                       name={getRowName!(row.original)}
                       actions={rowActions!(row.original)}
@@ -227,12 +216,18 @@ export function DataTable<T>({
   }
 
   return (
-    <div data-slot="data-table" className="flex flex-col gap-3" data-testid={testId}>
+    <div
+      data-slot="data-table"
+      data-table-size={size}
+      className="@container/data-table flex w-full min-w-0 flex-col gap-3"
+      data-testid={testId}
+    >
       {toolbar}
-      {/* Before hydration a phone gets the table (the media query's server snapshot is
-          desktop); it scrolls inside its card instead of widening the page. `relative`
+      {/* A table wider than its card scrolls inside it instead of widening the page. `relative`
           keeps the sr-only header labels, which are absolutely placed, inside the scroll. */}
-      <div className="relative overflow-x-auto rounded-lg border bg-card">{body}</div>
+      <div className="relative overflow-x-auto rounded-lg border bg-card" data-testid={`${testId}-scroll`}>
+        {body}
+      </div>
       {!loading && data.length > 0 && (
         <TablePagination
           page={pagination.page}

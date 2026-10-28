@@ -79,9 +79,9 @@ export function InvitesTable({ rows, total, all, page, pageSize, sort, createAct
       header: "Code",
       enableSorting: true,
       cell: ({ row }) => <span className="font-mono font-medium tracking-wider">{row.original.code}</span>,
-      meta: { mobile: "title" },
+      meta: { card: "title" },
     },
-    { id: "server", header: "Server", cell: ({ row }) => (row.original.serverType === "JELLYFIN" ? "Jellyfin" : "Plex"), meta: { mobile: "sub" } },
+    { id: "server", header: "Server", cell: ({ row }) => (row.original.serverType === "JELLYFIN" ? "Jellyfin" : "Plex"), meta: { card: "sub" } },
     {
       id: "uses",
       header: "Uses",
@@ -90,20 +90,20 @@ export function InvitesTable({ rows, total, all, page, pageSize, sort, createAct
           {row.original.useCount} of {row.original.maxUses}
         </span>
       ),
-      meta: { mobile: "meta" },
+      meta: { card: "field" },
     },
     {
       id: "status",
       header: "Status",
       cell: ({ row }) => <StatusBadge domain="invite" value={row.original.status} />,
-      meta: { mobile: "badges" },
+      meta: { card: "field" },
     },
     {
       id: "expires",
       header: "Expires",
       enableSorting: true,
       cell: ({ row }) => (row.original.expiresAt ? f.date(row.original.expiresAt, "short") : "Never"),
-      meta: { mobile: "meta" },
+      meta: { card: "field" },
     },
     { id: "created", header: "Created", enableSorting: true, cell: ({ row }) => f.date(row.original.createdAt, "short"), meta: { priority: 3 } },
   ]

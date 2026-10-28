@@ -62,19 +62,19 @@ const labelOf = (options: { value: string; label: string }[], value: string | nu
 function columns(f: BoundFormat, now: number): ColumnDef<SeasonMemberRow>[] {
   const when = (iso: string | null) => (iso ? f.relative(iso, now) : "—")
   return [
-    { id: "name", header: "Name", accessorKey: "name", meta: { mobile: "title" } },
-    { id: "state", header: "Status", cell: ({ row }) => <StateBadge state={row.original.state} />, meta: { mobile: "badges" } },
-    { id: "edition", header: "Edition", cell: ({ row }) => labelOf(EDITIONS, row.original.edition), meta: { mobile: "meta" } },
-    { id: "copy", header: "Copy", cell: ({ row }) => labelOf(COPY_SOURCES, row.original.copySource), meta: { mobile: "meta", priority: 3 } },
+    { id: "name", header: "Name", accessorKey: "name", meta: { card: "title" } },
+    { id: "state", header: "Status", cell: ({ row }) => <StateBadge state={row.original.state} />, meta: { card: "field" } },
+    { id: "edition", header: "Edition", cell: ({ row }) => labelOf(EDITIONS, row.original.edition), meta: { card: "field" } },
+    { id: "copy", header: "Copy", cell: ({ row }) => labelOf(COPY_SOURCES, row.original.copySource), meta: { card: "field", priority: 3 } },
     { id: "facts", header: "Facts age", cell: ({ row }) => when(row.original.factsAt), meta: { priority: 3 } },
-    { id: "generated", header: "Last generated", cell: ({ row }) => when(row.original.lastGeneratedAt), meta: { mobile: "sub" } },
-    { id: "cost", header: "Cost", cell: ({ row }) => f.money(row.original.costUsd), meta: { align: "end", mobile: "meta" } },
+    { id: "generated", header: "Last generated", cell: ({ row }) => when(row.original.lastGeneratedAt), meta: { card: "sub" } },
+    { id: "cost", header: "Cost", cell: ({ row }) => f.money(row.original.costUsd), meta: { align: "end", card: "field" } },
     { id: "share", header: "Share", cell: ({ row }) => (row.original.shared ? "On" : "Off"), meta: { priority: 3 } },
     {
       id: "failure",
       header: "Failure",
       cell: ({ row }) => (row.original.failureCode ? <Badge variant="outline">{row.original.failureCode}</Badge> : null),
-      meta: { mobile: "badges" },
+      meta: { card: "sub" },
     },
   ]
 }

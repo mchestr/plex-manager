@@ -47,14 +47,6 @@ function renderTable(props: Partial<Parameters<typeof InvitesTable>[0]> = {}) {
 beforeEach(() => {
   resetUrl('/admin/invites')
   jest.clearAllMocks()
-  window.matchMedia = jest.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-  }))
 })
 
 describe('InvitesTable', () => {

@@ -23,7 +23,7 @@ const PURPOSE_OPTIONS = [
 
 function columns(f: BoundFormat): ColumnDef<LlmUsageGroupRow>[] {
   return [
-    { id: "started", header: "Started", cell: ({ row }) => <Time value={row.original.startedAt} />, meta: { mobile: "title" } },
+    { id: "started", header: "Started", cell: ({ row }) => <Time value={row.original.startedAt} />, meta: { card: "title" } },
     {
       id: "member",
       header: "Member",
@@ -32,9 +32,9 @@ function columns(f: BoundFormat): ColumnDef<LlmUsageGroupRow>[] {
           {row.original.memberName}
         </Link>
       ),
-      meta: { mobile: "sub" },
+      meta: { card: "sub" },
     },
-    { id: "context", header: "Context", accessorKey: "context", meta: { mobile: "meta" } },
+    { id: "context", header: "Context", accessorKey: "context", meta: { card: "field" } },
     {
       id: "model",
       header: "Model",
@@ -42,7 +42,7 @@ function columns(f: BoundFormat): ColumnDef<LlmUsageGroupRow>[] {
       meta: { priority: 3 },
     },
     { id: "tokens", header: "Tokens", cell: ({ row }) => f.number(row.original.tokens), meta: { align: "end" } },
-    { id: "cost", header: "Cost", cell: ({ row }) => f.money(row.original.cost), meta: { align: "end", mobile: "meta" } },
+    { id: "cost", header: "Cost", cell: ({ row }) => f.money(row.original.cost), meta: { align: "end", card: "field" } },
   ]
 }
 
