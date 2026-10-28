@@ -31,7 +31,7 @@ interface ChatState {
   opens: number
 }
 
-const UNREACHABLE = "The assistant could not be reached. Try again."
+const UNREACHABLE = "Could not connect to the assistant. Try again."
 
 /** The transcript of `conversation`, or of a new one; after `prev`, it counts as another conversation taking over. */
 function opened(conversation: AssistantConversation | null, prev?: ChatState): ChatState {

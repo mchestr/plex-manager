@@ -62,7 +62,7 @@ function ui(overrides: Partial<Props>) {
       <ToastProvider>
         <AssistantWorkspace
           available
-          disclosure="Server admins can review assistant conversations, and messages are processed by Anthropic."
+          disclosure="Server admins can read assistant conversations. The app sends messages to Anthropic."
           // Distinct windows, so the delete confirm and the history caption cannot swap them unseen
           usageTextDays={90}
           historyDays={30}
@@ -124,7 +124,7 @@ describe("AssistantWorkspace", () => {
     expect(within(log).getByRole("heading", { name: "Ask about your server" })).toBeInTheDocument()
     expect(input()).toHaveAttribute("data-testid", "admin-chat-input")
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled()
-    expect(screen.getByTestId("admin-chat-disclosure")).toHaveTextContent("processed by Anthropic")
+    expect(screen.getByTestId("admin-chat-disclosure")).toHaveTextContent("sends messages to Anthropic")
     expect(await axe(container, noRegion)).toHaveNoViolations()
   })
 
@@ -233,7 +233,7 @@ describe("AssistantWorkspace", () => {
     await user.type(input(), "second")
     await act(async () => fail(new Error("offline")))
 
-    expect(await screen.findByTestId("admin-chat-error")).toHaveTextContent("The assistant could not be reached. Try again.")
+    expect(await screen.findByTestId("admin-chat-error")).toHaveTextContent("Could not connect to the assistant. Try again.")
     expect(input()).toHaveValue("second")
   })
 
@@ -406,7 +406,7 @@ describe("AssistantWorkspace", () => {
   it("tells a Support user to ask an admin, without the settings link, and offers no suggestions", () => {
     view({ available: false, canConfigure: false })
 
-    expect(screen.getByTestId("admin-chat-unavailable")).toHaveTextContent("An admin needs to turn on AI features")
+    expect(screen.getByTestId("admin-chat-unavailable")).toHaveTextContent("An admin must turn on AI features")
     expect(screen.queryByTestId("admin-chat-open-settings")).not.toBeInTheDocument()
     expect(screen.queryByTestId("admin-chat-suggestion-0")).not.toBeInTheDocument()
   })
@@ -426,21 +426,21 @@ describe("the history", () => {
     expect(screen.getByTestId("admin-assistant-history-item-today")).toHaveAttribute("aria-current", "page")
     expect(screen.getByTestId("admin-assistant-history-item-older")).toHaveAttribute("href", "/admin/assistant?conversation=older")
     expect(screen.getByTestId("admin-assistant-history-new")).toHaveAttribute("href", "/admin/assistant")
-    expect(screen.getByTestId("admin-assistant-history-window")).toHaveTextContent(/^Conversations leave this list 30 days after their last message\.$/)
+    expect(screen.getByTestId("admin-assistant-history-window")).toHaveTextContent(/^A conversation leaves this list 30 days after its last message\.$/)
   })
 
   it("says when the list stops at its limit", () => {
     view({ history, historyCapped: true })
 
     expect(screen.getByTestId("admin-assistant-history-window")).toHaveTextContent(
-      "Showing your 2 most recent conversations. Conversations leave this list 30 days after their last message."
+      "This list shows only your 2 most recent conversations. A conversation leaves this list 30 days after its last message."
     )
   })
 
   it("says when there is nothing yet", () => {
     view()
 
-    expect(screen.getByTestId("admin-assistant-history-empty")).toHaveTextContent("No conversations yet.")
+    expect(screen.getByTestId("admin-assistant-history-empty")).toHaveTextContent("No conversations.")
   })
 
   it("deletes the open conversation after a confirm and leaves its URL, moving focus once, to the title", async () => {
@@ -450,7 +450,7 @@ describe("the history", () => {
 
     await user.click(screen.getByTestId("admin-assistant-history-delete-today"))
     const dialog = await screen.findByTestId("admin-assistant-delete-dialog")
-    expect(dialog).toHaveTextContent("“Is Plex up?” leaves your history")
+    expect(dialog).toHaveTextContent("You cannot restore “Is Plex up?”")
     expect(dialog).toHaveTextContent("for up to 90 days")
     // Every element that takes focus from the confirm on
     const trail: string[] = []

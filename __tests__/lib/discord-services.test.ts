@@ -56,7 +56,7 @@ describe("handleDiscordChat: the assistant disclosure (P11.16)", () => {
     revokedAt: null,
     user: { id: "user-1", isAdmin: false, isExempt: false, disabledAt: null, subscription: null },
   }
-  const DISCLOSURE = "Server admins can review assistant conversations, and messages are processed by Anthropic."
+  const DISCLOSURE = "Server admins can read assistant conversations. The app sends messages to Anthropic."
 
   beforeEach(() => {
     jest.clearAllMocks()

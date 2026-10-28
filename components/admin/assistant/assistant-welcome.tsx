@@ -13,7 +13,7 @@ interface AssistantWelcomeProps {
   onPick: (question: string) => void
 }
 
-/** What a new conversation shows: what the assistant reads, and questions to start with. */
+/** What a new conversation shows: what to ask about, and questions to start with. */
 export function AssistantWelcome({ suggest, onPick }: AssistantWelcomeProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 py-12 text-center" data-testid="admin-chat-welcome">
@@ -23,8 +23,7 @@ export function AssistantWelcome({ suggest, onPick }: AssistantWelcomeProps) {
       <div className="flex max-w-md flex-col gap-2">
         <h2 className="text-h2">Ask about your server</h2>
         <p className="text-ui text-muted-foreground">
-          The assistant reads your media server and the services connected to it. Ask about streams, watch history,
-          requests, downloads or service health.
+          Ask about streams, watch history, requests, downloads or service health.
         </p>
       </div>
       {suggest && (

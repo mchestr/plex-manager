@@ -65,7 +65,7 @@ function Row({ item, active, usageTextDays, testId, afterDelete, onLeave, onNew,
           </Button>
         }
         title="Delete this conversation?"
-        description={`“${item.title}” leaves your history and can't be restored. Admins can still read its messages on the LLM usage pages for up to ${usageTextDays} days after they were sent.`}
+        description={`You cannot restore “${item.title}”. Admins can read its messages on the LLM usage pages for up to ${usageTextDays} days after they were sent.`}
         confirmLabel="Delete"
         pendingLabel="Deleting"
         tone="destructive"
@@ -149,7 +149,7 @@ export function AssistantHistory({
       <nav aria-label="Conversation history" className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1" data-testid={testId}>
         {groups.length === 0 ? (
           <p className="px-3 py-2 text-ui text-muted-foreground" data-testid={`${testId}-empty`}>
-            No conversations yet.
+            No conversations.
           </p>
         ) : (
           <div className="flex flex-col gap-4">
@@ -177,8 +177,8 @@ export function AssistantHistory({
         )}
       </nav>
       <p className="px-3 text-caption text-muted-foreground" data-testid={`${testId}-window`}>
-        {capped && `Showing your ${items.length} most recent conversations. `}
-        Conversations leave this list {historyDays} {historyDays === 1 ? "day" : "days"} after their last message.
+        {capped && `This list shows only your ${items.length} most recent conversations. `}
+        A conversation leaves this list {historyDays} {historyDays === 1 ? "day" : "days"} after its last message.
       </p>
     </div>
   )
