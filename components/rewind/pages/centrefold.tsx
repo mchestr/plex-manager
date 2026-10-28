@@ -103,8 +103,8 @@ function Foot({ data, issue }: { data: CentrefoldData; issue: IssueContext }) {
 /**
  * 16 Centrefold (design 4.3, `slide-16-centrefold.png`): the pull-out
  * poster. Crop marks, "Pull-out poster" and the serial, "You are the" and the
- * archetype name as a nameplate, the tagline, the evidence graphic, the key
- * row ending in the zone, and the foot with the rarity stamp, the runner-up
+ * archetype name as a nameplate, the tagline, the evidence graphic, its key
+ * row, and the foot with the rarity stamp, the runner-up
  * and "Why this?". The stage's bottom chrome adds Table and "Share the
  * poster".
  *

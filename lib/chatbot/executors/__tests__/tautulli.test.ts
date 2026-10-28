@@ -477,6 +477,19 @@ describe("epochs reach the model as ISO strings with an offset (P11.17)", () => 
     })
   })
 
+  it("converts the libraries table's last access, and keeps a numeric last-played title", async () => {
+    mockGetTautulliLibraryStats.mockResolvedValue({
+      success: true,
+      data: { data: [{ section_name: "Movies", last_accessed: 1793590200, last_played: "1917" }] },
+    } as never)
+
+    const result = JSON.parse(
+      await executeTautulliTool("get_tautulli_library_stats", {}, "admin-1", "default", { timeZone: "America/Los_Angeles", locale: "en-US" })
+    )
+
+    expect(result.data[0]).toEqual({ section_name: "Movies", last_accessed: "2026-11-01T19:30:00-08:00", last_played: "1917" })
+  })
+
   it("writes UTC with an explicit offset when no zone is given", async () => {
     jest.mocked(getTautulliHomeStat).mockResolvedValue({ success: true, data: [{ user: "Sam", last_play: 1793590200 }] })
 

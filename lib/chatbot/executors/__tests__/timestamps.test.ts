@@ -17,9 +17,26 @@ describe("withLocalInstants", () => {
     })
 
     expect(JSON.parse(withLocalInstants(output, LA))).toEqual({
-      records: [{ airDateUtc: "2026-11-01T19:30:00-08:00", estimatedCompletionTime: "2026-10-27T03:00:00-07:00" }],
+      records: [{ airDateLocal: "2026-11-01T19:30:00-08:00", estimatedCompletionTime: "2026-10-27T03:00:00-07:00" }],
       createdAt: "2026-11-01T19:30:00-08:00",
     })
+  })
+
+  it("keeps a calendar day sent as UTC midnight on its day, and still converts an instant that falls at midnight", () => {
+    const movie = { digitalRelease: "2026-11-20T00:00:00Z", inCinemas: "2026-11-06T00:00:00Z", added: "2026-10-01T12:34:56Z" }
+    const series = { firstAired: "2011-04-17T00:00:00Z", episode: { airDateUtc: "2026-11-03T00:00:00Z" } }
+    const media = { releases: { results: [{ release_dates: [{ release_date: "2026-11-24T00:00:00.000Z" }] }] } }
+
+    expect(JSON.parse(withLocalInstants(JSON.stringify({ movie, series, media }), LA))).toEqual({
+      movie: { digitalRelease: "2026-11-20", inCinemas: "2026-11-06", added: "2026-10-01T05:34:56-07:00" },
+      series: { firstAired: "2011-04-17", episode: { airDateLocal: "2026-11-02T16:00:00-08:00" } },
+      media: { releases: { results: [{ release_dates: [{ release_date: "2026-11-24" }] }] } },
+    })
+  })
+
+  it("leaves .NET's DateTime.MinValue, Sonarr's and Radarr's \"never added\", as it is", () => {
+    const data = { added: "0001-01-01T00:00:00Z" }
+    expect(JSON.parse(withLocalInstants(JSON.stringify(data), LA))).toEqual(data)
   })
 
   it("leaves calendar days, other strings, numbers and an invalid instant as they are", () => {

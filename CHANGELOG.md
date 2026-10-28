@@ -20,7 +20,7 @@ check); the `no-changelog` label skips it.
 
 ### Changed
 
-- **Rewind times are implicit:** Rewind no longer prints a time zone. The "Times in America/Chicago, the server's time zone" notes are gone from the bookends, clock, short list and centrefold pages, the desktop Notes, article mode, chart and table captions and the clock and centrefold share cards; the times and days are the member's own, as before.
+- **Rewind times are implicit:** Rewind no longer prints a time zone. The "Times in America/Chicago, the server's time zone" notes are gone from the bookends, clock, short list and centrefold pages, the desktop Notes, article mode, chart and table captions and the clock and centrefold share cards. Times and days are still counted in the member's Rewind zone (their saved zone, else the server's), and nothing on the page names it.
 
 ### Fixed
 

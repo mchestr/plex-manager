@@ -22,7 +22,7 @@ export interface TimeWindow {
   zone: string
 }
 
-/** The zone Rewind buckets in, and whose choice it is (drives `tz.note`). */
+/** The zone Rewind buckets in, and whose choice it is. */
 export interface RewindZone {
   zone: string
   source: "member" | "server"

@@ -226,7 +226,8 @@ export async function executeToolCall(
   // MCP tools are dynamic: the admin enables them per server. A caller without the admin permission was refused above.
   if (toolName.startsWith(MCP_TOOL_PREFIX)) {
     try {
-      return await executeMcpTool(toolName, args, userId)
+      const output = await executeMcpTool(toolName, args, userId)
+      return format ? withLocalInstants(output, format.timeZone) : output
     } catch (error) {
       logger.error("Error executing MCP tool", error, { toolName, toolCallId: toolCall.id })
       return TOOL_EXECUTION_FAILED

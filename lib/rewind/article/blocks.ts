@@ -19,7 +19,7 @@
  * | `table` | a captioned table with scoped headers (P5.3's contract) |
  * | `definitionList` | a `dl`, such as the billing block; an entry with `href` links its detail |
  * | `figure` | a graphic's `srSummary` text |
- * | `note` | small print: the zone note, a caption |
+ * | `note` | small print: a caption, the colophon |
  * | `calendar` | the month tables, then P8.3's roving-focus grid once hydrated |
  *
  * Text that can hold facts is `ArticleText`: `renderCopy` segments, where a

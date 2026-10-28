@@ -100,6 +100,6 @@ describe("executeToolCall - the turn's zone (P11.17)", () => {
 
     const result = await executeToolCall(toolCall("get_sonarr_calendar"), "user-1", "default", true, { timeZone: "America/Los_Angeles", locale: "en-US" }, ADMIN)
 
-    expect(JSON.parse(result)).toEqual({ records: [{ title: "Pilot", airDateUtc: "2026-11-01T19:30:00-08:00" }] })
+    expect(JSON.parse(result)).toEqual({ records: [{ title: "Pilot", airDateLocal: "2026-11-01T19:30:00-08:00" }] })
   })
 })

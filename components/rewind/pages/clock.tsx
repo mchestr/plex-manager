@@ -62,8 +62,8 @@ function WeekdayRow({ shares }: { shares: readonly number[] }) {
 /**
  * 09 The clock (design 4.3): "Your hour is 10 PM" with the hour as a
  * nameplate, the deck, the evidence clock with the after-dark window
- * bracketed and its share in the centre, the weekday row (weekends solid)
- * and the zone note, since the page shows clock times.
+ * bracketed and its share in the centre, and the weekday row (weekends
+ * solid).
  */
 export function ClockPage({ data, issue }: PageProps<ClockData>) {
   const { facts } = issue

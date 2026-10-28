@@ -76,8 +76,8 @@ export type Edition = "full" | "pocket" | "postcard"
  * A chart page's table: the same data as the graphic, for the Table sheet,
  * the desktop Notes and article mode (design 4.6, 11.1, FR-16).
  *
- * - `caption` names what is counted, the counting window and, on pages that
- *   show clock times, the `tz.note` zone.
+ * - `caption` names what is counted and the counting window. It never names
+ *   a time zone: times are the member's own (design 7.7).
  * - `columns` are the header cells (`th scope="col"`).
  * - Each row has one display string per column; its first cell names the row
  *   (`th scope="row"`).

@@ -5,8 +5,8 @@ export const HourHistogramSchema = z.array(z.number().int().nonnegative()).lengt
 
 /**
  * 09 The clock: counted plays by start hour, and the share of plays by start
- * weekday from Monday, for the weekday row. The peak, the after-dark share
- * and the zone are facts (`hours.*`, `tz.label`).
+ * weekday from Monday, for the weekday row. The peak and the after-dark
+ * share are facts (`hours.*`).
  */
 export const ClockDataSchema = z.strictObject({
   hours: HourHistogramSchema,
