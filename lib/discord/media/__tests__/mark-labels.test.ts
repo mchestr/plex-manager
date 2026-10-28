@@ -3,12 +3,12 @@ import { MarkType } from "@/lib/generated/prisma/client"
 
 describe("getMarkTypeLabel", () => {
   it.each([
-    [MarkType.FINISHED_WATCHING, "Finished Watching"],
-    [MarkType.NOT_INTERESTED, "Not Interested"],
-    [MarkType.KEEP_FOREVER, "Keep Forever"],
-    [MarkType.REWATCH_CANDIDATE, "Rewatch Candidate"],
-    [MarkType.POOR_QUALITY, "Poor Quality"],
-    [MarkType.WRONG_VERSION, "Wrong Version"],
+    [MarkType.FINISHED_WATCHING, "Finished watching"],
+    [MarkType.NOT_INTERESTED, "Not interested"],
+    [MarkType.KEEP_FOREVER, "Keep forever"],
+    [MarkType.REWATCH_CANDIDATE, "Rewatch candidate"],
+    [MarkType.POOR_QUALITY, "Poor quality"],
+    [MarkType.WRONG_VERSION, "Wrong version"],
   ])("labels %s as %s", (markType, expected) => {
     expect(getMarkTypeLabel(markType)).toBe(expected)
   })

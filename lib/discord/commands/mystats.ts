@@ -57,13 +57,13 @@ import type { InteractionContext, SlashCommand } from "./registry"
 import { requireLinkedUser } from "./require-linked-user"
 
 const NO_TAUTULLI =
-  "Watch statistics are unavailable right now — no Tautulli server is configured. Please contact an admin."
+  "Watch stats are not available because this server has no Tautulli connection. Tell an admin."
 
 const GENERIC_ERROR =
-  "Sorry, I couldn't load your stats right now. Please try again in a moment."
+  "I could not load your stats. Try again in a few minutes."
 
 const NO_DATA =
-  "You don't have any watch stats yet for this year. Watch something and check back later!"
+  "You have no watch stats for this year yet. They show here after you watch something."
 
 /** A history read gives up after this long; a deferred reply may be edited for 15 minutes. */
 const READ_LIMIT_MS = 90_000
@@ -85,7 +85,7 @@ function scrub(value: string): string {
  */
 function buildStatsEmbed(stats: MemberYearStats, locale: string, limits: MemberRequestLimits | null): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle("📊 Your Watch Stats")
+    .setTitle("📊 Your watch stats")
     .setDescription(
       `You've watched **${formatDuration(stats.totalMinutes, "long", { largestUnit: "day" })}** in ${stats.year} (${hoursOf(stats)} hours).`
     )
@@ -96,18 +96,18 @@ function buildStatsEmbed(stats: MemberYearStats, locale: string, limits: MemberR
     )
 
   if (stats.topShow) {
-    embed.addFields({ name: "🏆 Top Show", value: scrub(stats.topShow), inline: true })
+    embed.addFields({ name: "🏆 Top show", value: scrub(stats.topShow), inline: true })
   }
   if (stats.topFilm) {
-    embed.addFields({ name: "🥇 Top Movie", value: scrub(stats.topFilm), inline: true })
+    embed.addFields({ name: "🥇 Top movie", value: scrub(stats.topFilm), inline: true })
   }
   if (stats.longestStreakDays) {
     const days = stats.longestStreakDays
-    embed.addFields({ name: "🔥 Longest Streak", value: `${days} ${days === 1 ? "day" : "days"}`, inline: true })
+    embed.addFields({ name: "🔥 Longest streak", value: `${days} ${days === 1 ? "day" : "days"}`, inline: true })
   }
   if (stats.peakHour !== null) {
     embed.addFields({
-      name: "⏰ Peak Viewing Hour",
+      name: "⏰ Peak viewing hour",
       value: formatHour(stats.peakHour, { locale }).replace(/\u00A0/g, " "),
       inline: true,
     })
@@ -131,7 +131,7 @@ function failureCopy(code: "NO_PLEX_ACCOUNT" | "NO_TAUTULLI" | "UNAVAILABLE"): s
 async function handleMyStats(ctx: InteractionContext): Promise<void> {
   const { interaction } = ctx
 
-  const user = await requireLinkedUser(ctx, { action: "viewing your stats" })
+  const user = await requireLinkedUser(ctx, { action: "see your stats" })
   if (!user) return
 
   if (isJellyfinOnly(user.services)) {
@@ -143,7 +143,7 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
   const limit = await consume("discord:mystats", user.id)
   if (!limit.ok) {
     await interaction.reply({
-      content: `You've checked your stats a lot this hour. You can look again ${retryAfterCopy(limit.retryAfterSec)}.`,
+      content: `You looked at your stats too many times this hour. You can look again ${retryAfterCopy(limit.retryAfterSec)}.`,
       flags: MessageFlags.Ephemeral,
     })
     return

@@ -125,7 +125,7 @@ export function PlexConnectStep({ pending, stored, devDefaults }: PlexConnectSte
     <SetupStepFrame
       position="plex"
       heading="Connect your Plex server"
-      description="Sign in with the Plex account that owns the server. Plex Manager lists your servers, so there's no token to look up."
+      description="Sign in with the Plex account that owns the server. Then choose the server from the list."
       onSubmit={() => (usingToken ? tokenForm.submit() : choose())}
       busy={busy}
       primary={
@@ -159,15 +159,15 @@ export function PlexConnectStep({ pending, stored, devDefaults }: PlexConnectSte
         ) : connect.state === "waiting" ? (
           <p role="status" className="flex items-center gap-2 text-ui text-muted-foreground" data-testid="setup-plex-waiting">
             <Spinner size={16} />
-            Waiting for plex.tv to confirm the sign-in
+            Wait for plex.tv to confirm the sign-in
           </p>
         ) : (
           <div className="flex flex-col gap-2.5">
-            {connect.state === "expired" && <Alert tone="warning" title="The Plex sign-in ran out">Connect with Plex again to list your servers.</Alert>}
+            {connect.state === "expired" && <Alert tone="warning" title="The Plex sign-in expired">Connect with Plex again to list your servers.</Alert>}
             <Button size="lg" className="w-full sm:w-auto" icon={<Icon icon={icons.signIn} />} onClick={start} loading={starting} loadingLabel="Opening Plex" data-testid="setup-plex-connect">
               Connect with Plex
             </Button>
-            <p className="max-w-[52ch] text-label text-muted-foreground">plex.tv opens. Approve Plex Manager there, and your servers appear here.</p>
+            <p className="max-w-[52ch] text-label text-muted-foreground">Approve Plex Manager on plex.tv. Your servers then show here.</p>
           </div>
         )}
         {error && (
@@ -182,7 +182,7 @@ export function PlexConnectStep({ pending, stored, devDefaults }: PlexConnectSte
               Enter a token instead
             </summary>
             <div className="flex flex-col gap-4 border-t px-3 py-4">
-              <p className="text-label text-muted-foreground">For a server that doesn&apos;t show up, or if you can&apos;t sign in to plex.tv from this browser.</p>
+              <p className="text-label text-muted-foreground">Use this if your server is not in the list, or if you cannot sign in to plex.tv from this browser.</p>
               <SetupServiceFields kind="plex" form={tokenForm} stored={stored} />
             </div>
           </details>

@@ -76,7 +76,7 @@ export function SetupWizard({ position, reached, data, devDefaults, rail }: Setu
       <aside aria-label="Setup steps" className="hidden flex-col gap-6 lg:flex">
         <div className="flex flex-col gap-1">
           <h2 className="text-h3 text-foreground">Set up your server</h2>
-          <p className="text-label text-muted-foreground">Two steps are required. Everything else can wait.</p>
+          <p className="text-label text-muted-foreground">Plex and Tautulli are required. The other steps are optional.</p>
         </div>
         <Stepper steps={steps} orientation="vertical" label="Setup" onSelect={goTo} data-testid="setup-stepper" />
         {rail}

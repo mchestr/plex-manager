@@ -52,7 +52,7 @@ describe('app/error.tsx', () => {
 
     expect(screen.queryByTestId('unauthorized-error-page')).not.toBeInTheDocument()
     expect(screen.queryByTestId('unauthenticated-error-page')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1, name: 'Something went wrong on our side' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Something went wrong on the server' })).toBeInTheDocument()
     expect(screen.getByTestId('status-screen-code')).toHaveTextContent('12345')
     expect(screen.getByRole('link', { name: 'Go to home' })).toHaveAttribute('href', '/')
   })

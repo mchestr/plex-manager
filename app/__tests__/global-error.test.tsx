@@ -40,7 +40,7 @@ describe("app/global-error.tsx", () => {
     const html = markup("abc123")
 
     expect(html).toContain("abc123")
-    expect(html).toContain("Something went wrong on our side")
+    expect(html).toContain("Something went wrong on the server")
     expect(html).not.toContain("db:5432")
   })
 })

@@ -40,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     ...(base ? { metadataBase: new URL(base) } : {}),
     title: { template: `%s - ${name}`, default: name },
-    description: "Your Plex media manager",
+    description: "Member access and Rewind for this Plex server",
   };
 }
 

@@ -13,9 +13,9 @@ import { Input } from "@/components/ui/input"
 import { icons } from "@/lib/ui/icons"
 
 const NEXT = [
-  { text: "Connect your Plex server by signing in with Plex.", note: "Required" },
+  { text: "Sign in with Plex to connect your Plex server.", note: "Required" },
   { text: "Connect Tautulli for watch history.", note: "Required" },
-  { text: "Requests, automation, AI, Discord and monitoring.", note: "Each can wait" },
+  { text: "Connect Overseerr, Sonarr, Radarr, AI and Discord.", note: "Optional" },
 ]
 
 /**
@@ -62,8 +62,8 @@ export function SetupClaimStep() {
               Claim this server
             </h1>
             <p className="text-ui text-muted-foreground">
-              This proves you&apos;re the owner before anything is connected. Paste the setup code printed in the server log at startup, or the
-              value of <span className="font-mono">SETUP_TOKEN</span> if you set one.
+              Paste the setup code from the server log, or the value of <span className="font-mono">SETUP_TOKEN</span> if you set one. The code
+              shows that you own the server.
             </p>
           </div>
           <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
@@ -72,7 +72,7 @@ export function SetupClaimStep() {
               label="Setup code"
               description={
                 <>
-                  Find it with <span className="font-mono">docker logs plex-manager</span>. It works once and expires when setup finishes.
+                  Run <span className="font-mono">docker logs plex-manager</span> to find it. You can use it one time. It expires when setup is complete.
                 </>
               }
             >
@@ -101,7 +101,7 @@ export function SetupClaimStep() {
       </Card>
       <Card>
         <CardContent className="flex flex-col gap-3 py-4">
-          <h2 className="text-h3 text-foreground">What happens next</h2>
+          <h2 className="text-h3 text-foreground">Next steps</h2>
           <ol className="flex flex-col gap-2.5">
             {NEXT.map((item, index) => (
               <li key={item.text} className="flex items-start gap-3 text-ui text-foreground">

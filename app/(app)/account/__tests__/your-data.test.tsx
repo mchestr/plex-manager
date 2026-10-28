@@ -21,7 +21,7 @@ jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: mock
 const AT = '2026-12-01T09:00:00.000Z'
 
 const DATA: YourData = {
-  marks: { page: 1, total: 1, rows: [{ id: 'mark-1', title: 'Arrival (2016)', mark: 'Finished Watching', markedAt: AT }] },
+  marks: { page: 1, total: 1, rows: [{ id: 'mark-1', title: 'Arrival (2016)', mark: 'Finished watching', markedAt: AT }] },
   watchlist: { total: 1, rows: [{ id: 'item-1', title: 'Dune (2021)', at: AT }] },
 }
 

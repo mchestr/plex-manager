@@ -132,7 +132,7 @@ async function routeChatInputCommand(
 
   if (!command) {
     await interaction.reply({
-      content: `Unknown command: \`/${interaction.commandName}\`.`,
+      content: `There is no command \`/${interaction.commandName}\`.`,
       flags: MessageFlags.Ephemeral,
     })
     return
@@ -166,12 +166,12 @@ async function routeChatInputCommand(
     // user-facing error without leaking internals. Guard against double-reply.
     if (!interaction.replied && !interaction.deferred) {
       await interaction.reply({
-        content: "Sorry, something went wrong running that command. Please try again in a moment.",
+        content: "That command failed. Try again in a few minutes.",
         flags: MessageFlags.Ephemeral,
       })
     } else {
       await interaction.followUp({
-        content: "Sorry, something went wrong running that command. Please try again in a moment.",
+        content: "That command failed. Try again in a few minutes.",
         flags: MessageFlags.Ephemeral,
       })
     }
@@ -193,7 +193,7 @@ async function routeComponent(
 
   if (!handler) {
     await interaction.reply({
-      content: "This control has expired or is no longer available.",
+      content: "This control expired. Run the command again.",
       flags: MessageFlags.Ephemeral,
     })
     return
@@ -233,12 +233,12 @@ async function routeComponent(
   } catch {
     if (!interaction.replied && !interaction.deferred) {
       await interaction.reply({
-        content: "Sorry, something went wrong handling that action. Please try again in a moment.",
+        content: "That action failed. Try again in a few minutes.",
         flags: MessageFlags.Ephemeral,
       })
     } else {
       await interaction.followUp({
-        content: "Sorry, something went wrong handling that action. Please try again in a moment.",
+        content: "That action failed. Try again in a few minutes.",
         flags: MessageFlags.Ephemeral,
       })
     }

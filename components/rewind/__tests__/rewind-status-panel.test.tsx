@@ -54,7 +54,7 @@ describe('RewindStatusPanel', () => {
 
     expect(document.body).not.toHaveTextContent('ECONNREFUSED')
     expect(document.body).not.toHaveTextContent('mona')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Something went wrong on our side')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Something went wrong on the server')
   })
 
   it('polls only while generating', () => {

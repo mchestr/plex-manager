@@ -37,7 +37,7 @@ function startValues(stored: StoredDiscordIntegration | null, devDefaults: DevDe
 
 const ROWS = [
   { key: "isEnabled", label: "Linked roles", hint: "Members link their Discord account and get a role while they have access." },
-  { key: "botEnabled", label: "Support bot", hint: "A bot that answers members' questions in your support channel." },
+  { key: "botEnabled", label: "Support bot", hint: "Answers member questions in your support channel." },
 ] as const
 
 interface DiscordStepProps {
@@ -80,7 +80,7 @@ export function DiscordStep({ stored, devDefaults }: DiscordStepProps) {
     <SetupStepFrame
       position="discord"
       heading="Connect Discord"
-      description="Linked roles give members a role on your Discord server, and the support bot answers questions there. Turn on either, or skip both."
+      description="Both need an application in the Discord Developer Portal."
       onSubmit={submit}
       busy={saving}
       primary={

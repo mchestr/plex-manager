@@ -23,7 +23,7 @@ export function DiscardChangesDialog({ open, onOpenChange, title, onDiscard, "da
       open={open}
       onOpenChange={onOpenChange}
       title={`Discard changes to ${title}?`}
-      description="The changes you made won't be saved."
+      description="You will lose your changes."
       confirmLabel="Discard changes"
       cancelLabel="Keep editing"
       tone="destructive"

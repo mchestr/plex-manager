@@ -60,7 +60,7 @@ test.describe('Settings: a stored key stays with its address', () => {
     await expect(key).toHaveValue('');
     await expect(key).toHaveAttribute('data-state', 'reenter-required');
     await expect(key).toHaveAttribute('required', '');
-    await expect(page.getByTestId('settings-overseerr-secret-reenter')).toContainText('Re-enter to use with the new address');
+    await expect(page.getByTestId('settings-overseerr-secret-reenter')).toContainText('Enter it again to use it with the new address');
     await expect(testButton).toBeDisabled();
     await expect(save).toBeDisabled();
 

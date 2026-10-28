@@ -153,7 +153,7 @@ describe("assistantCommand.handle — ask", () => {
 
     expect(reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: expect.stringContaining("link your account"),
+        content: expect.stringContaining("Link your account"),
         flags: 64,
       })
     )
@@ -205,7 +205,7 @@ describe("assistantCommand.handle — ask", () => {
     await assistantCommand.handle(ctx)
 
     expect(editReply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("link your account") })
+      expect.objectContaining({ content: expect.stringContaining("Link your account") })
     )
   })
 
@@ -239,7 +239,7 @@ describe("assistantCommand.handle — reset", () => {
 
     expect(reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: expect.stringContaining("link your account"),
+        content: expect.stringContaining("Link your account"),
         flags: 64,
       })
     )

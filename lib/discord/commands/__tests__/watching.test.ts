@@ -190,7 +190,7 @@ describe("watchingCommand.handle", () => {
 
     expect(reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: expect.stringContaining("link your account"),
+        content: expect.stringContaining("Link your account"),
         flags: 64,
       })
     )
@@ -206,7 +206,7 @@ describe("watchingCommand.handle", () => {
 
     await watchingCommand.handle(ctx)
 
-    expect(reply).toHaveBeenCalledWith({ content: "I can only see Plex streams for now.", flags: 64 })
+    expect(reply).toHaveBeenCalledWith({ content: "This command shows Plex streams only. Your account is on Jellyfin.", flags: 64 })
     expect(deferReply).not.toHaveBeenCalled()
     expect(mockGetSessions).not.toHaveBeenCalled()
   })
@@ -284,7 +284,7 @@ describe("watchingCommand.handle", () => {
 
     await watchingCommand.handle(ctx)
 
-    expect(editReply.mock.calls[0][0].content).toMatch(/not watching anything/i)
+    expect(editReply.mock.calls[0][0].content).toMatch(/no Plex streams now/i)
   })
 
   it("shows a friendly empty state when the caller is watching nothing", async () => {
@@ -297,7 +297,7 @@ describe("watchingCommand.handle", () => {
     await watchingCommand.handle(ctx)
 
     const editArg = editReply.mock.calls[0][0]
-    expect(editArg.content).toMatch(/not watching anything/i)
+    expect(editArg.content).toMatch(/no Plex streams now/i)
     expect(editArg.embeds).toBeUndefined()
   })
 
@@ -310,7 +310,7 @@ describe("watchingCommand.handle", () => {
 
     await watchingCommand.handle(ctx)
 
-    expect(editReply.mock.calls[0][0].content).toMatch(/not watching anything/i)
+    expect(editReply.mock.calls[0][0].content).toMatch(/no Plex streams now/i)
   })
 
   it("edits with an ephemeral error when no Plex server is configured", async () => {
@@ -321,7 +321,7 @@ describe("watchingCommand.handle", () => {
 
     expect(mockGetSessions).not.toHaveBeenCalled()
     expect(editReply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("No active Plex server") })
+      expect.objectContaining({ content: expect.stringContaining("no Plex connection") })
     )
   })
 
@@ -331,7 +331,7 @@ describe("watchingCommand.handle", () => {
 
     await watchingCommand.handle(ctx)
 
-    expect(editReply.mock.calls[0][0].content).toMatch(/couldn't|failed|unable/i)
+    expect(editReply.mock.calls[0][0].content).toMatch(/could not|failed|unable/i)
   })
 
   it("handles a single (non-array) session object for the caller", async () => {
