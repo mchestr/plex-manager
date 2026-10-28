@@ -18,6 +18,10 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Changed
+
+- **Watchlist sync has its own page:** Admin → Community → Watchlist sync (`/admin/watchlist`) now holds the watchlist sync switch and interval, which have left Settings. Under them are the figures and a table of every title members' watchlists have synced: the member, how its Overseerr request went and when, with a search by title or member, Status and Type filters, and sorting by title, member or date. It replaces the few recent titles the settings section listed, and opening it is audited as a listing of members' content.
+
 ## [0.6.0] - 2026-10-28
 
 ### Added

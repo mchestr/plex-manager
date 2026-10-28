@@ -12,10 +12,13 @@
  * | AI provider | `llm`, `llm.chat`, `llm.wrapped`, `llm.caps` |
  * | Discord | `discord` (`DISCORD_INTEGRATION_CONFIG_CHANGED`) |
  * | Stripe billing | `stripe`, `stripe.enabled` |
- * | Watchlist sync, Rewind | `watchlist`, `rewind` |
+ * | Rewind | `rewind` |
  * | Discord channel stats, Request limits | `discord.stats`, `request-tiers` |
  * | Other integrations | `sonarr`, `radarr`, `jellyfin`, `jellyfin.login` |
  * | System information | `appearance`, `timezone` (`SERVER_TIMEZONE_CHANGED`) |
+ *
+ * Watchlist sync's settings card, on its own page (`/admin/watchlist`), reads
+ * `watchlist` the same way through `getWatchlistLastSaved()`.
  *
  * The lookups go out as one batched transaction, then one read of the actors'
  * names. Details are never returned, only the time and the name.
@@ -35,7 +38,6 @@ const SECTIONS = {
   ai: ["llm", "llm.chat", "llm.wrapped", "llm.caps"],
   discord: ["discord"],
   stripe: ["stripe", "stripe.enabled"],
-  watchlist: ["watchlist"],
   channelStats: ["discord.stats"],
   requestTiers: ["request-tiers"],
   rewind: ["rewind"],
@@ -56,15 +58,14 @@ export type SettingsAuditMeta = Record<SettingsAuditSection, LastSaved | null>
 /** The audit types that record a settings save. */
 const SAVE_TYPES = [AuditEventType.CONFIG_CHANGED, AuditEventType.DISCORD_INTEGRATION_CONFIG_CHANGED, AuditEventType.SERVER_TIMEZONE_CHANGED]
 
-/** The newest save of every settings section, or null for a section never saved. */
-export async function getSettingsAuditMeta(): Promise<SettingsAuditMeta> {
-  const ids = Object.keys(SECTIONS) as SettingsAuditSection[]
+/** The newest save in each group of audit sections, in order; null for a group never saved. */
+async function newestSaves(groups: readonly (readonly string[])[]): Promise<(LastSaved | null)[]> {
   const rows = await prisma.$transaction(
-    ids.map((id) =>
+    groups.map((sections) =>
       prisma.auditLog.findFirst({
         where: {
           type: { in: SAVE_TYPES },
-          OR: SECTIONS[id].map((section) => ({ details: { path: ["section"], equals: section } })),
+          OR: sections.map((section) => ({ details: { path: ["section"], equals: section } })),
         },
         orderBy: { createdAt: "desc" },
         select: { actorUserId: true, createdAt: true },
@@ -78,10 +79,18 @@ export async function getSettingsAuditMeta(): Promise<SettingsAuditMeta> {
     : []
   const nameOf = new Map(actors.map((actor) => [actor.id, actor.name || actor.email || "an admin"]))
 
-  return Object.fromEntries(
-    ids.map((id, index) => {
-      const row = rows[index]
-      return [id, row ? { at: row.createdAt, by: nameOf.get(row.actorUserId) ?? "an admin" } : null]
-    })
-  ) as SettingsAuditMeta
+  return rows.map((row) => (row ? { at: row.createdAt, by: nameOf.get(row.actorUserId) ?? "an admin" } : null))
+}
+
+/** The newest save of every settings section, or null for a section never saved. */
+export async function getSettingsAuditMeta(): Promise<SettingsAuditMeta> {
+  const ids = Object.keys(SECTIONS) as SettingsAuditSection[]
+  const saves = await newestSaves(ids.map((id) => SECTIONS[id]))
+  return Object.fromEntries(ids.map((id, index) => [id, saves[index]])) as SettingsAuditMeta
+}
+
+/** Watchlist sync's newest save, for its settings card on `/admin/watchlist`; null before a first save. */
+export async function getWatchlistLastSaved(): Promise<LastSaved | null> {
+  const [saved] = await newestSaves([["watchlist"]])
+  return saved ?? null
 }

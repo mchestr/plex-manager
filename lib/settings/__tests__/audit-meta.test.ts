@@ -1,12 +1,13 @@
 /**
  * getSettingsAuditMeta (P10.20, SEC-55): each settings section's last audited
- * save and who made it, from the persisted audit log.
+ * save and who made it, from the persisted audit log, and the same for
+ * Watchlist sync's card on its own page.
  */
 
 import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { getSettingsAuditMeta } from "@/lib/settings/audit-meta"
+import { getSettingsAuditMeta, getWatchlistLastSaved } from "@/lib/settings/audit-meta"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 
@@ -69,5 +70,29 @@ describe("getSettingsAuditMeta", () => {
 
     expect(meta.plex?.by).toBe("ops@example.com")
     expect(meta.rewind?.by).toBe("an admin")
+  })
+
+  it("leaves Watchlist sync to its own page", async () => {
+    const meta = await getSettingsAuditMeta()
+
+    expect(meta).not.toHaveProperty("watchlist")
+    const calls = prismaMock.auditLog.findFirst.mock.calls.map(([args]) => args as unknown as FindFirstArgs)
+    expect(calls.flatMap(sectionsOf)).not.toContain("watchlist")
+  })
+})
+
+describe("getWatchlistLastSaved", () => {
+  it("reads the newest watchlist save and names who made it", async () => {
+    prismaMock.auditLog.findFirst.mockResolvedValue({ actorUserId: "u1", createdAt: SAVED_AT } as never)
+    prismaMock.user.findMany.mockResolvedValue([{ id: "u1", name: "Dana Whitfield", email: null }] as never)
+
+    await expect(getWatchlistLastSaved()).resolves.toEqual({ at: SAVED_AT, by: "Dana Whitfield" })
+    const calls = prismaMock.auditLog.findFirst.mock.calls.map(([args]) => args as unknown as FindFirstArgs)
+    expect(calls.map(sectionsOf)).toEqual([["watchlist"]])
+  })
+
+  it("is null before a first save", async () => {
+    await expect(getWatchlistLastSaved()).resolves.toBeNull()
+    expect(prismaMock.user.findMany).not.toHaveBeenCalled()
   })
 })

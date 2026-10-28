@@ -1,16 +1,16 @@
 /**
- * Watchlist sync (P10.20): the saved flag and interval as a summary until
- * Edit swaps in the form, where the flag is a Checkbox that saves with Save
- * and the interval shows while the draft is on. The figures stream in from
- * the page's promise and follow in both modes while the saved setting is on.
+ * Watchlist sync's settings card (P10.20, on its own page since it left
+ * Settings): the saved flag and interval as a summary until Edit swaps in the
+ * form, where the flag is a Checkbox that saves with Save and the interval
+ * shows while the draft is on. Unsaved changes make the browser ask before
+ * the tab closes.
  */
 
 import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { updateGlobalWatchlistSyncSettings } from "@/actions/admin/watchlist"
-import { WatchlistSection } from "@/components/admin/settings/sections/watchlist-section"
-import type { WatchlistSyncStats } from "@/lib/admin/watchlist-stats"
+import { SyncSettingsSection } from "@/components/admin/watchlist/sync-settings-section"
 
 jest.mock("@/actions/admin/watchlist", () => ({ updateGlobalWatchlistSyncSettings: jest.fn() }))
 
@@ -22,18 +22,9 @@ const HEALTH = { status: "ok" as const, code: null, checkedAt: null }
 const ON = { enabled: true, intervalMinutes: 60 }
 const OFF = { enabled: false, intervalMinutes: 60 }
 
-const STATS: WatchlistSyncStats = {
-  usersWithSyncEnabled: 4,
-  totalItemsSynced: 12,
-  totalItemsRequested: 7,
-  totalItemsSkipped: 1,
-  totalItemsNotPermitted: 2,
-  recentHistory: [{ id: "h1", title: "Severance", status: "REQUESTED", user: { name: "Ana", email: null } }],
-}
-
-async function renderSection(saved = ON, stats: Promise<WatchlistSyncStats | null> = Promise.resolve(STATS)) {
+async function renderSection(saved = ON) {
   await act(async () => {
-    render(<WatchlistSection saved={saved} stats={stats} health={HEALTH} />)
+    render(<SyncSettingsSection saved={saved} health={HEALTH} />)
   })
 }
 
@@ -45,17 +36,15 @@ async function edit(user: ReturnType<typeof userEvent.setup>) {
 
 beforeEach(() => jest.clearAllMocks())
 
-describe("WatchlistSection", () => {
+describe("SyncSettingsSection", () => {
   describe("view mode", () => {
-    it("summarises sync as On with its interval, and shows the figures", async () => {
+    it("summarises sync as On with its interval", async () => {
       await renderSection()
 
-      expect(screen.getByRole("button", { name: "Edit Watchlist sync" })).toBeInTheDocument()
+      expect(screen.getByRole("heading", { name: "Sync settings" })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: "Edit Sync settings" })).toBeInTheDocument()
       expect(summaryRow("enabled")).toHaveTextContent(/^Watchlist syncOn$/)
       expect(summaryRow("interval")).toHaveTextContent(/^Sync intervalEvery 60 minutes$/)
-      const stats = await screen.findByTestId("watchlist-sync-stats")
-      expect(stats).toHaveTextContent("Members with sync on")
-      expect(within(stats).getByRole("list", { name: "Recent activity" })).toHaveTextContent("Severance")
       // No controls, and no input test id reused
       expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
       expect(screen.queryByRole("switch")).not.toBeInTheDocument()
@@ -64,24 +53,16 @@ describe("WatchlistSection", () => {
       expect(screen.queryByTestId("settings-watchlist-form")).not.toBeInTheDocument()
     })
 
-    it("says Off with no interval and no figures while sync is off", async () => {
+    it("says Off with no interval while sync is off", async () => {
       await renderSection(OFF)
 
       expect(summaryRow("enabled")).toHaveTextContent(/^Watchlist syncOff$/)
       expect(screen.queryByTestId("settings-watchlist-summary-interval")).not.toBeInTheDocument()
-      expect(screen.queryByTestId("watchlist-sync-stats")).not.toBeInTheDocument()
-    })
-
-    it("hides the figures when they could not be read", async () => {
-      await renderSection(ON, Promise.resolve(null))
-
-      expect(summaryRow("enabled")).toHaveTextContent("On")
-      expect(screen.queryByTestId("watchlist-sync-stats")).not.toBeInTheDocument()
     })
   })
 
   describe("edit mode", () => {
-    it("puts the flag in a Checkbox, focuses it, and keeps the figures after the form", async () => {
+    it("puts the flag in a Checkbox and focuses it", async () => {
       const user = userEvent.setup()
       await renderSection()
 
@@ -95,7 +76,6 @@ describe("WatchlistSection", () => {
       expect(screen.queryByRole("switch")).not.toBeInTheDocument()
       expect(within(form).getByTestId("watchlist-sync-interval-input")).toHaveValue(60)
       expect(screen.queryByTestId("settings-watchlist-summary")).not.toBeInTheDocument()
-      expect(form).not.toContainElement(screen.getByTestId("watchlist-sync-stats"))
       await waitFor(() => expect(toggle).toHaveFocus())
     })
 
@@ -108,8 +88,6 @@ describe("WatchlistSection", () => {
 
       await user.click(screen.getByTestId("watchlist-sync-global-toggle"))
       expect(screen.getByTestId("watchlist-sync-interval-input")).toHaveValue(60)
-      // The figures follow the saved setting, not the draft
-      expect(screen.queryByTestId("watchlist-sync-stats")).not.toBeInTheDocument()
     })
 
     it("closes on a Save with nothing changed, without calling the server", async () => {
@@ -235,6 +213,25 @@ describe("WatchlistSection", () => {
       await waitFor(() => expect(mockShowError).toHaveBeenCalledWith(queueDown))
       expect(mockShowSuccess).not.toHaveBeenCalled()
       expect(await screen.findByTestId("settings-watchlist-summary")).toBeInTheDocument()
+    })
+  })
+
+  describe("unsaved changes", () => {
+    /** Whether the browser would ask before the tab closes. */
+    const leaveIsGuarded = () => !window.dispatchEvent(new Event("beforeunload", { cancelable: true }))
+
+    it("asks before the tab closes only while the draft differs from the saved values", async () => {
+      const user = userEvent.setup()
+      await renderSection()
+
+      await edit(user)
+      expect(leaveIsGuarded()).toBe(false)
+
+      await user.click(screen.getByTestId("watchlist-sync-global-toggle"))
+      expect(leaveIsGuarded()).toBe(true)
+
+      await user.click(screen.getByTestId("watchlist-sync-global-toggle"))
+      expect(leaveIsGuarded()).toBe(false)
     })
   })
 })

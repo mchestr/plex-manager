@@ -7,7 +7,7 @@
  *
  * ```
  * Overview            ungrouped, at the top (P10.8)
- * Community           Users, Invites, Announcements, Discord bot
+ * Community           Users, Invites, Announcements, Discord bot, Watchlist sync
  * Rewind              Season, Playground, Share analytics
  * Usage and cost      LLM usage, Cost analysis
  * System              Job queues, Settings
@@ -107,6 +107,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Discord bot",
     href: "/admin/discord",
     icon: icons.discordBot,
+    group: "Community",
+    match: "prefix",
+    mobile: "more",
+  },
+  {
+    id: "watchlist",
+    label: "Watchlist sync",
+    href: "/admin/watchlist",
+    icon: icons.watchlist,
     group: "Community",
     match: "prefix",
     mobile: "more",

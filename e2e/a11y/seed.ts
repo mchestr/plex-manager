@@ -4,7 +4,8 @@ import { clearVisualFixtures, seedVisualFixtures, VISUAL_REWIND_ID } from '../he
 
 /**
  * The axe spec's seed: P1.6's visual seed plus the rows only the axe routes
- * read (a share link on the seeded Rewind and one chat conversation).
+ * read (a share link on the seeded Rewind, one chat conversation and a few
+ * watchlist titles).
  */
 
 /** 43 base64url characters, the shape `generateShareToken` makes. */
@@ -14,6 +15,27 @@ export const A11Y_CONVERSATION_ID = 'a11y-conversation';
 
 /** Starts with `visual-llm-usage-`, so `clearVisualFixtures` removes it. */
 export const A11Y_CHAT_USAGE_ID = 'visual-llm-usage-chat';
+
+const A11Y_WATCHLIST_PREFIX = 'a11y-watchlist-';
+
+/**
+ * One title per status tone for `/admin/watchlist`, on the admin's own
+ * watchlist so the member's Your data list on `/account` stays as it was.
+ */
+const A11Y_WATCHLIST = (['REQUESTED', 'ALREADY_AVAILABLE', 'NOT_PERMITTED', 'FAILED', 'REMOVED_FROM_WATCHLIST'] as const).map(
+  (status, index) => ({
+    id: `${A11Y_WATCHLIST_PREFIX}${index}`,
+    userId: TEST_USERS.ADMIN.id,
+    plexRatingKey: `${A11Y_WATCHLIST_PREFIX}${index}`,
+    guid: `plex://movie/${A11Y_WATCHLIST_PREFIX}${index}`,
+    mediaType: 'MOVIE' as const,
+    title: `Watchlist title ${index + 1}`,
+    year: 2020 + index,
+    status,
+    syncedAt: new Date(`2026-10-1${index}T12:00:00Z`),
+    requestedAt: status === 'REQUESTED' ? new Date('2026-10-10T12:05:00Z') : null,
+  })
+);
 
 export async function seedA11yFixtures(): Promise<void> {
   await seedVisualFixtures();
@@ -39,6 +61,8 @@ export async function seedA11yFixtures(): Promise<void> {
           createdAt: new Date('2026-10-15T10:01:00Z'),
         },
       }),
+      prisma.watchlistSyncHistory.deleteMany({ where: { id: { startsWith: A11Y_WATCHLIST_PREFIX } } }),
+      prisma.watchlistSyncHistory.createMany({ data: A11Y_WATCHLIST }),
     ]);
   } finally {
     await prisma.$disconnect();
@@ -64,6 +88,7 @@ export async function clearA11yFixtures(): Promise<void> {
   const prisma = createE2EPrismaClient();
   try {
     await prisma.chatConversation.deleteMany({ where: { id: A11Y_CONVERSATION_ID } });
+    await prisma.watchlistSyncHistory.deleteMany({ where: { id: { startsWith: A11Y_WATCHLIST_PREFIX } } });
   } finally {
     await prisma.$disconnect();
   }

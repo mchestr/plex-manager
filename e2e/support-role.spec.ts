@@ -33,6 +33,7 @@ const REFUSED_PATHS = [
   '/admin/rewind',
   '/admin/shares',
   '/admin/announcements',
+  '/admin/watchlist',
 ];
 
 test.describe('Support role', () => {

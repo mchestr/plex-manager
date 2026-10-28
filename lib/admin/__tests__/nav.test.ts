@@ -31,7 +31,7 @@ describe("ADMIN_NAV", () => {
   })
 
   it("keeps the test ids the E2E specs use", () => {
-    for (const id of ["overview", "users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "queues", "season", "playground", "settings"]) {
+    for (const id of ["overview", "users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "watchlist", "queues", "season", "playground", "settings"]) {
       expect(ADMIN_NAV.map(navTestId)).toContain(`admin-nav-${id}`)
     }
   })
@@ -70,6 +70,7 @@ describe("isActive", () => {
     ["playground", "/admin/rewind/playground", true],
     ["season", "/admin/rewind/playground", false],
     ["invites", "/admin/invites/i1", true],
+    ["watchlist", "/admin/watchlist", true],
     ["settings", "/admin/users", false],
   ])("%s on %s is %s", (id, pathname, expected) => {
     expect(isActive(byId(id), pathname)).toBe(expected)
