@@ -39,7 +39,6 @@ export interface LlmCall {
   provider: string
   signal: AbortSignal
   attribution: UsageAttribution
-  styleGuide: string | null
   /** A reasoning effort for this run only (dry runs); `low` by default. */
   effort?: EffortLevel
 }
@@ -56,7 +55,7 @@ async function waitForSlot(call: LlmCall): Promise<void> {
 function base(call: LlmCall, modelOverride: string | undefined) {
   return {
     purpose: "wrapped" as const,
-    system: systemPrompt(call.styleGuide),
+    system: systemPrompt(),
     effort: call.effort ?? "low",
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     cacheKey: PROMPT_VERSION,

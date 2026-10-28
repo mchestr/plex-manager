@@ -25,14 +25,14 @@ interface SettingsSheetProps {
   prefs: StagePrefs
   onChange: (patch: Partial<StagePrefs>) => void
   articleHref: Route
-  /** The "About the words" line, from `aboutTheWords(copyMeta)`. */
-  aboutTheWords: string
+  /** The "About the words" line, from `aboutTheWords(copyMeta)`; null when every word is a template. */
+  aboutTheWords: string | null
 }
 
 /**
  * The story's Settings sheet (Rewind design 4.6): the per-device switches,
- * "Read as an article", the member's hidden titles (P7.7) and the "About the
- * words" disclosure (8.1). It opens
+ * "Read as an article", the member's hidden titles (P7.7) and, when a model
+ * wrote some of the words, the "About the words" disclosure (8.1). It opens
  * from the Settings button, the comma key and a long press on Pause, and
  * prints on paper through the scope's portal.
  */
@@ -68,14 +68,16 @@ export function SettingsSheet({ open, onClose, prefs, onChange, articleHref, abo
           Read as an article
         </Button>
         <HiddenTitles />
-        <section aria-labelledby={`${id}-words`} className="flex flex-col gap-1 border-t border-border pt-4">
-          <h3 id={`${id}-words`} className="text-ui font-semibold">
-            About the words
-          </h3>
-          <p className="font-text text-ui" data-testid="rewind-about-words">
-            {aboutTheWords}
-          </p>
-        </section>
+        {aboutTheWords && (
+          <section aria-labelledby={`${id}-words`} className="flex flex-col gap-1 border-t border-border pt-4">
+            <h3 id={`${id}-words`} className="text-ui font-semibold">
+              About the words
+            </h3>
+            <p className="font-text text-ui" data-testid="rewind-about-words">
+              {aboutTheWords}
+            </p>
+          </section>
+        )}
       </SheetContent>
     </Sheet>
   )

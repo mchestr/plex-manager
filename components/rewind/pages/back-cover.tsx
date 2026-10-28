@@ -1,6 +1,5 @@
 import { RewindFigure } from "@/components/rewind/a11y/figure"
 import { billingBlock } from "@/lib/rewind/billing-block"
-import { backCoverDisclosure } from "@/lib/rewind/copy-disclosure"
 import { backCoverCaption, backCoverPage, colophon } from "@/lib/rewind/pages/back-cover"
 import type { BackCoverData } from "@/lib/rewind/pages/back-cover.schema"
 import { registry } from "@/lib/rewind/registry"
@@ -19,10 +18,10 @@ const STRIP_H = 40
 /**
  * 18 Back cover (design 4.3, `slide-18-back-cover.png`): paper in the
  * archetype's deep ink (the stage sets it), "That was your 2026, Mike.", the
- * billing block of the member's eligible credits, the soundtrack, the AI
- * disclosure, "Share the poster" with the privacy line, the colophon and the
- * footer: "Read again", "Contents" and "Done". Nothing autoplays here. P8.4
- * adds "Save all {n} cards".
+ * billing block of the member's eligible credits, the soundtrack, the
+ * sign-off when the words have one, "Share the poster" with the privacy
+ * line, the colophon and the footer: "Read again", "Contents" and "Done".
+ * Nothing autoplays here. P8.4 adds "Save all {n} cards".
  */
 export function BackCoverPage({ data, issue }: PageProps<BackCoverData>) {
   const { facts, locale } = issue
@@ -57,9 +56,6 @@ export function BackCoverPage({ data, issue }: PageProps<BackCoverData>) {
           <CopyText text={signOff} source={facts} />
         </p>
       )}
-      <p style={{ fontSize: u(16), lineHeight: 1.3, marginTop: tight(8) }} data-testid="rewind-back-cover-disclosure">
-        {backCoverDisclosure(issue.copySource)}
-      </p>
       <div style={{ marginTop: tight(12) }}>
         <BackCoverShare />
       </div>

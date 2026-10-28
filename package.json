@@ -43,7 +43,6 @@
     "rewind:season-open": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-season-open.ts",
     "rewind:validate": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-validate.ts",
     "rewind:probe-sources": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-probe-sources.ts",
-    "rewind:gallery": "tsx --tsconfig tsconfig.scripts.json scripts/rewind-gallery.ts",
     "services:rows-audit": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/service-rows-audit.ts",
     "services:rows-apply": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/service-rows-apply.ts",
     "db:generate": "prisma generate",

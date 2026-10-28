@@ -3,8 +3,9 @@
  *
  * ```
  * pocket or postcard ─────────────────────────────► no copy (templates at render), 0 calls
- * same factsHash, prompt and model as last time,
- *   and no older template's words in it ───────────► reuse that copy, 0 calls
+ * a model's copy with the same factsHash, prompt and
+ *   model as last time, and no older template's
+ *   words in it ───────────────────────────────────► reuse that copy, 0 calls
  * copyPolicy 'no-llm' ────────────────────────────► keep slots whose dependency hash held, template the rest
  * llmDisabled, mode 'off', provider mismatch,
  *   no provider, budget ──────────────────────────► templates, 0 calls
@@ -28,11 +29,14 @@
  * `no-llm` (a hide or unhide, P7.7) keeps the slots that
  * {@link planKeptSlots} keeps (or, for a stored copy without its issue,
  * whose dependency hash held), and the stored archetype and poster line
- * while their slot holds; every other slot is a template. A kept text with
- * window words ("so far", "still") or "final cut" can only be an older
- * template, because model copy may not use them, so it is templated again
- * instead of kept; for the same reason such a stored copy is never reused
- * whole. `copyMeta.slotHashes` is rewritten for every slot.
+ * while their slot holds; every other slot is a template. A template-only
+ * copy is never reused or kept: its slots are rendered from today's
+ * templates, which costs nothing and follows any change to them. In a
+ * model's copy, a kept text with window words ("so far", "still") or "final
+ * cut" can only be an older template, because model copy may not use them,
+ * so it is templated again instead of kept; for the same reason such a
+ * stored copy is never reused whole. `copyMeta.slotHashes` is rewritten for
+ * every slot.
  *
  * @module lib/wrapped/pipeline/copy-step
  */
@@ -169,6 +173,7 @@ export async function runCopyStep(input: CopyInput): Promise<CopyResult> {
   const slots = textSlots(input.selected)
   if (
     previous?.factsHash === input.factsHash &&
+    previous.copySource !== "template" &&
     previous.promptVersion === input.promptVersion &&
     previous.model === plannedKey &&
     !slots.some((id) => isStale(wireText(previous.copy, id)))
@@ -298,10 +303,14 @@ function keptSlots(input: CopyInput, previous: PreviousCopy): Set<SlotId> {
   return new Set(keep)
 }
 
-/** Puts the kept slots' stored text into the draft; a text with an older template's words is templated again. */
+/**
+ * Puts the kept slots' stored model text into the draft; a text with an older
+ * template's words is templated again. A template-only copy keeps no text:
+ * the draft already holds today's templates.
+ */
 function keepSlots(draft: CopyDraft, previous: PreviousCopy, keep: ReadonlySet<SlotId>, selection: ArchetypeSelection) {
   const origin = previous.copySource === "template" ? "template" : "llm"
-  for (const id of draft.texts.keys()) {
+  for (const id of origin === "llm" ? draft.texts.keys() : []) {
     const text = wireText(previous.copy, id)
     if (text !== null && keep.has(id) && !isStale(text)) draft.texts.set(id, { text, origin })
   }

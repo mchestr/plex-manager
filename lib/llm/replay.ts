@@ -2,7 +2,8 @@
  * The replay provider (P7.11): a dry run with the model `replay:selected`
  * answers each model call from the recording of the model that
  * `evals/rewind/selected.json` names (P5.13), through P5.9's recording
- * replay, so the gallery shows the bake-off winner's real copy at no cost.
+ * replay, so the playground's "Selected model, recorded answers" shows the
+ * bake-off winner's real copy at no cost.
  *
  * ```
  * selected.json { model: "anthropic:claude-…" }
@@ -12,7 +13,7 @@
  *
  * No provider is called and no `LLMUsage` row is written. Until the bake-off
  * names a model, or while its recordings are missing, there is nothing to
- * replay and the gallery offers "Templates only".
+ * replay and the playground does not offer it.
  *
  * @module lib/llm/replay
  */

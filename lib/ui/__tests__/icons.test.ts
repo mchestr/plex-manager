@@ -28,7 +28,6 @@ describe("icons", () => {
     ["invites", "Ticket"],
     ["users", "Users"],
     ["announcements", "Megaphone"],
-    ["prompts", "FileText"],
     ["playground", "FlaskConical"],
     ["llmUsage", "Activity"],
     ["cost", "Coins"],

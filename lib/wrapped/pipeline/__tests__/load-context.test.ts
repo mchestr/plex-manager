@@ -22,7 +22,6 @@ jest.mock('@/lib/llm/registry', () => ({ getFrozenRewindModel: jest.fn(async () 
 jest.mock('@/lib/llm/usage-totals', () => ({ getRewindSeasonSpend: jest.fn(async () => 0) }))
 jest.mock('@/lib/data/active-service', () => ({ getActiveService: jest.fn(async () => null) }))
 jest.mock('@/lib/utils/server-zone', () => ({ serverZone: jest.fn(async () => 'America/Chicago') }))
-jest.mock('@/lib/wrapped/prompt/store', () => ({ findRewindStyleGuide: jest.fn(async () => null) }))
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }))

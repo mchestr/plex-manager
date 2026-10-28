@@ -84,8 +84,9 @@ export function ArticleBlockView({ block }: { block: ArticleBlock }) {
         <div>
           {block.label && <p className="font-display font-semibold">{block.label}</p>}
           <dl className="mt-1 flex flex-col gap-2" data-testid="rewind-article-dl">
-            {block.entries.map((entry) => (
-              <div key={entry.term}>
+            {/* Terms can repeat: a box score's numerals ("3" and "3"). */}
+            {block.entries.map((entry, i) => (
+              <div key={i}>
                 <dt className="font-display font-semibold">{entry.term}</dt>
                 <dd>
                   {entry.href ? (

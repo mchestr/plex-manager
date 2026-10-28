@@ -19,12 +19,17 @@ function leaveDocumentFullscreen(requested: { current: boolean }) {
   requested.current = false
 }
 
-/** Makes every element beside `from` and beside each of its ancestors inert; returns the ones it changed. */
+/**
+ * Makes every element beside `from` and beside each of its ancestors inert,
+ * except the app's toasts, which portal to the body and stay reachable;
+ * returns the ones it changed.
+ */
 function inertAround(from: Element): Element[] {
+  const toasts = document.querySelector("[data-slot=toast-viewport]")
   const changed: Element[] = []
   for (let el: Element = from; el.parentElement && el !== document.body; el = el.parentElement) {
     for (const sibling of el.parentElement.children) {
-      if (sibling === el || sibling.hasAttribute("inert")) continue
+      if (sibling === el || sibling.hasAttribute("inert") || (toasts && sibling.contains(toasts))) continue
       sibling.setAttribute("inert", "")
       changed.push(sibling)
     }
@@ -39,7 +44,8 @@ function inertAround(from: Element): Element[] {
  *   window, in every browser, iPhone Safari included. The page behind it
  *   stops scrolling, and everything outside the Rewind scope (the admin
  *   shell, the page header) is inert, so focus and a screen reader stay on
- *   the story and its sheets, which portal into the scope.
+ *   the story and its sheets, which portal into the scope. The toasts stay
+ *   live: they portal to the body, above the story.
  * - Where the browser has the Fullscreen API (Android, iPad and desktop
  *   browsers, not iPhone Safari), the document goes full screen as well,
  *   which hides the browser's own bars. The whole document, not the stage,

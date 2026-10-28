@@ -57,6 +57,13 @@ describe("billingBlock", () => {
     if (!facts["standing.percentile"]) expect(entries.some((e) => e.term === "Standing")).toBe(false)
   })
 
+  it("credits a standing only in the top half, as the Standing page names it", () => {
+    const at = (value: number) => block({ ...issues.heavy.facts, "standing.percentile": { value, display: `Top ${value}%`, unit: "percentile" } }).entries
+    expect(at(4).find((e) => e.term === "Standing")?.detail).toBe("Top 4%")
+    expect(at(50).find((e) => e.term === "Standing")?.detail).toBe("Top 50%")
+    expect(at(84).some((e) => e.term === "Standing")).toBe(false)
+  })
+
   it("leaves the member out of an unsigned card and the showtime out without the clock", () => {
     const { entries } = block(issues.heavy.facts, { named: false, showtime: false })
     expect(entries.map((e) => e.term)).not.toContain("Starring")
@@ -73,7 +80,7 @@ describe("billingBlock", () => {
 })
 
 describe("18 Back cover", () => {
-  it("names the member, prints the billing block and its list, the soundtrack note and the disclosure", () => {
+  it("names the member, prints the billing block and its list and the soundtrack note, with no words disclosure", () => {
     const issue = issues.heavy
     renderPage(issue)
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("That was your 2026, Mike.")
@@ -84,7 +91,8 @@ describe("18 Back cover", () => {
     expect(screen.getAllByTestId("rewind-billing-line").length).toBeGreaterThanOrEqual(6)
     expect(flat(document.body.textContent!)).toContain("One line per day, January 1 to November 30.")
     expect(document.body.textContent).not.toMatch(/final cut|still being written/i)
-    expect(screen.getByTestId("rewind-back-cover-disclosure")).toHaveTextContent("Every word here comes from a template.")
+    expect(screen.queryByTestId("rewind-back-cover-disclosure")).toBeNull()
+    expect(document.body).not.toHaveTextContent(/comes from a template|written by AI/)
     expect(screen.getByTestId("rewind-privacy-status")).toHaveTextContent("Public link off. Cards unsigned, no artwork.")
   })
 
@@ -147,15 +155,6 @@ describe("18 Back cover", () => {
     await userEvent.setup().click(rows[1])
     expect(send).toHaveBeenCalledWith({ type: "CLOSE_SHEET" })
     expect(send).toHaveBeenCalledWith({ type: "GOTO", index: 1, source: "button" })
-  })
-
-  it("names the AI only when a model wrote some words", () => {
-    render(
-      <PlayerProvider value={jest.fn()}>
-        <BackCoverPage data={dataOf(issues.heavy)} issue={issueContext(issues.heavy, { copySource: "llm" })} />
-      </PlayerProvider>
-    )
-    expect(screen.getByTestId("rewind-back-cover-disclosure")).toHaveTextContent("The numbers come from your history. Some of the words are written by AI.")
   })
 
   it("summarises the page deterministically", () => {

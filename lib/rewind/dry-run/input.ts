@@ -1,8 +1,7 @@
 /**
  * What an admin dry run takes (P7.10): the subject (a member or a golden
- * fixture), the year, and this run's model, prompt version, effort, style
- * guide and copy policy. Shared by the playground actions and the
- * `REWIND_DRY_RUN` payload.
+ * fixture), the year, and this run's model, prompt version, effort and copy
+ * policy. Shared by the playground actions and the `REWIND_DRY_RUN` payload.
  *
  * @module lib/rewind/dry-run/input
  */
@@ -12,7 +11,6 @@ import { z } from "zod"
 import type { EffortLevel } from "@/lib/llm/models"
 import { recordIdSchema } from "@/lib/validations/params"
 import { yearSchema } from "@/lib/validations/shared-schemas"
-import { styleGuideSchema } from "@/lib/validations/prompt"
 import { PROMPT_VERSION } from "@/lib/wrapped/prompt/rewind-2026"
 
 export const DRY_RUN_EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const satisfies readonly EffortLevel[]
@@ -40,8 +38,6 @@ export const DryRunInput = z.strictObject({
   model: z.string().trim().min(1).max(120).optional(),
   promptVersion: z.literal(PROMPT_VERSION).default(PROMPT_VERSION),
   effort: z.enum(DRY_RUN_EFFORTS).default("low"),
-  /** Replaces the stored style guide for this run; null runs with none, absent keeps the stored one. */
-  styleGuide: styleGuideSchema.nullable().optional(),
   /** `no-llm` is "Templates only". */
   copyPolicy: z.enum(["default", "no-llm"]).default("default"),
 })

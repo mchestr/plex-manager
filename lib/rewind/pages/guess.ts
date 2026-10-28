@@ -12,7 +12,9 @@
  * @module lib/rewind/pages/guess
  */
 
+import { andList, heading, plain } from "@/lib/rewind/article/blocks"
 import type { PageDefinition } from "@/lib/rewind/registry"
+import { quizHeadline } from "@/lib/wrapped/copy/templates"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import type { MemberStats } from "@/lib/wrapped/stats/compute"
 
@@ -66,6 +68,8 @@ export const guessPage: PageDefinition<GuessData> = {
   },
   schema: GuessDataSchema,
   srSummary: (data) => `A quiz with ${data.options.length} options: ${data.options.map((o) => o.title).join(", ")}.`,
+  // The question and its options in the stored order; Top shows (or Top films) gives the answer.
+  article: (data, facts) => [heading(quizHeadline(data.kind), facts), { kind: "paragraph", text: plain(`${andList(data.options.map((option) => option.title), "or")}?`) }],
   // The "Guess my No. 1" teaser (P7.6) prints the runners-up only, never the answer, `series[1]`.
   share: {
     facts: ["series[2].title", "series[3].title", "series[4].title"],

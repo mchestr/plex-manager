@@ -11,8 +11,9 @@
  * ## Variants
  *
  * Each slot has two or three variants. `hash(userId, slotId)` picks one among
- * the variants whose tokens the member has, so a member always reads the same
- * line and the last, token-free variant always renders. An issue is finished
+ * the variants whose tokens the member has, none of them a count or share of
+ * zero, so a member always reads the same line and the last, token-free
+ * variant always renders. An issue is finished
  * the day it is generated, so no template says "so far" or promises more of
  * the year: each line reads true for 1 January to 30 November and for the
  * whole year alike.
@@ -29,6 +30,7 @@ import type { IssuePageType } from "@/lib/rewind/registry"
 import { getArchetype, posterLineIds, type ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 import type { PageType } from "@/lib/wrapped/data/page-types"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
+import type { FactUnit } from "@/lib/wrapped/facts/display"
 
 import { POSTER_LINES } from "./poster-lines"
 import { tokenIds, type TokenSource } from "./render-copy"
@@ -58,75 +60,62 @@ const t = (id: string) => `{{fact:${id}}}`
 
 /** Every slot's fallback variants; P8.1's freeze lock hashes them. */
 export const SLOT_TEMPLATES: Readonly<Record<Exclude<SlotId, "archetype.posterLineId" | "archetype.tagline">, readonly string[]>> = {
-  "deck.number": [
-    `That's ${t("time.daysHours")} of screen time, about ${t("time.perDay")} a day.`,
-    `Put end to end, that's ${t("time.daysHours")}, or about ${t("time.perDay")} a day.`,
-    "Every minute of it counted from your own history.",
-  ],
-  "deck.bookends": [
-    `You have pressed play here since ${t("member.since")}, ${t("member.lifetimeHours")} hours in all.`,
-    `Here since ${t("member.since")}, and this is how the year opened and closed.`,
-    "How the year opened, and where it stands now.",
-  ],
+  "deck.number": [`That's ${t("time.daysHours")}, about ${t("time.perDay")} a day.`, `End to end, that's ${t("time.daysHours")}.`, "Here's to more of it."],
+  // The lifetime line under the deck already names the member's history.
+  "deck.bookends": ["Opening night to last call.", "First in, last out."],
   "deck.topShows": [
     `${t("series[1].title")} came first, and ${t("series[2].title")} came next.`,
-    `${t("series[1].episodes")} episodes of ${t("series[1].title")}, across ${t("series[1].monthsActive")} months.`,
-    "The series you kept returning to, in order.",
+    `Your biggest night with ${t("series[1].title")} was ${t("series[1].biggestNight.date")}.`,
+    "Just one more episode.",
   ],
   "deck.topFilms": [
     `You finished ${t("films.finishedShare")} of the films you started.`,
     `The longest was ${t("films.longest.title")}, at ${t("films.longest.minutes")}.`,
-    "Your films of the year, ranked by plays.",
+    "Lights down, phones away.",
   ],
-  "deck.taste": [
-    `After ${t("taste.genre[1].name")} came ${t("taste.genre[2].name")} and ${t("taste.genre[3].name")}.`,
-    `The oldest thing you watched was ${t("taste.oldest.title")}, from ${t("taste.oldest.year")}.`,
-    "Genres as the server tags them, counted by minutes.",
-  ],
+  "deck.taste": [`The oldest thing you watched was ${t("taste.oldest.title")}, from ${t("taste.oldest.year")}.`, "Your kind of thing."],
   "deck.people": [
     `${t("people.actor[1].name")} led the cast list, with ${t("people.actor[2].name")} next.`,
     `Behind the camera, ${t("people.director[1].name")} came up first.`,
-    "The names that kept coming back on screen.",
+    "The usual suspects.",
   ],
   "deck.clock": [
     `${t("hours.afterDarkShare")} of your viewing started after dark.`,
     `Your latest start was ${t("hours.latestStart.time")} on a ${t("hours.latestStart.weekday")}.`,
-    "When you pressed play, hour by hour.",
+    "Any time is a good time.",
   ],
   "deck.calendar": [
     `You pressed play on ${t("days.active")} of ${t("window.elapsedDays")}.`,
     `Your biggest day was ${t("days.biggest.date")}, at ${t("days.biggest.minutes")}.`,
-    "Every square is a day; the darker, the longer.",
+    "Big days and quiet ones.",
   ],
-  "deck.records": [
-    `You finished ${t("records.completionShare")} of what you started.`,
-    `The longest run was ${t("records.longestBinge.title")}, on ${t("records.longestBinge.date")}.`,
-    "Personal bests, set against nobody but yourself.",
-  ],
-  "deck.requests": [
-    `${t("requests.available")} of them have arrived on the server.`,
-    `Your requests leaned toward ${t("requests.genre[1]")}.`,
-    "Every request, and what became of it.",
-  ],
+  "deck.records": [`The longest run was ${t("records.longestBinge.title")}, on ${t("records.longestBinge.date")}.`, "Beat them next year."],
+  "deck.requests": [`Your requests leaned toward ${t("requests.genre[1]")}.`, "Keep them coming."],
   "deck.standing": [
     `Across the server, members pressed play for ${t("community.hours")} hours this year.`,
     `The server's favourite series was ${t("community.topSeries")}.`,
-    "Where you stand, with nobody named.",
+    "All in good fun.",
   ],
   "deck.nextYear": [
     `${t("next.leftForLater[1].title")} is waiting where you left it.`,
     `A pick for the new year: ${t("next.picks[1].title")}.`,
-    "Things to pick up when the new year starts.",
+    "Something to look forward to.",
   ],
-  "archetype.dedication": [
-    `Picked from your own history, not from a quiz. ${t("archetype.runnerUp")} came second.`,
-    "Every reason here comes from what you watched, not from a guess.",
-  ],
+  "archetype.dedication": [`For ${t("series[1].title")}, which kept you company.`, `For ${t("films[1].title")}, your film of the year.`, "Wear it well."],
   signOff: [`See you next year, ${t("member.firstName")}.`, "That was the year. Thanks for pressing play."],
 }
 
+/** The units that count something, where 0 means none; a weekday, time or hour of 0 is Sunday or midnight. */
+const QUANTITY_UNITS: ReadonlySet<FactUnit> = new Set(["hours", "duration", "days-hours", "count", "decimal", "days", "times", "share"])
+
+/** Whether a variant may cite this token: the member has it, and it counts more than none ("0% of your viewing started after dark"). */
+function citable(id: string, ctx: TemplateContext): boolean {
+  const fact = ctx.facts[id as keyof RewindFactsV3]
+  return fact ? !(fact.value === 0 && QUANTITY_UNITS.has(fact.unit)) : Boolean(ctx.locals?.[id])
+}
+
 function choose(variants: readonly string[], key: string, ctx: TemplateContext): string {
-  const usable = variants.filter((v) => tokenIds(v).every((id) => ctx.facts[id as keyof RewindFactsV3] ?? ctx.locals?.[id]))
+  const usable = variants.filter((v) => tokenIds(v).every((id) => citable(id, ctx)))
   const from = usable.length > 0 ? usable : variants.slice(-1)
   return from[pickIndex(ctx.userId, key, from.length)]
 }
@@ -144,7 +133,7 @@ export function posterLineTemplate(archetype: ArchetypeId, userId: string): stri
  * @example
  * ```ts
  * slotTemplate("deck.number", { facts, userId })
- * // "That's {{fact:time.daysHours}} of screen time, about {{fact:time.perDay}} a day."
+ * // "That's {{fact:time.daysHours}}, about {{fact:time.perDay}} a day."
  * ```
  */
 export function slotTemplate(slot: Exclude<SlotId, "archetype.posterLineId">, ctx: TemplateContext): string {
@@ -161,21 +150,17 @@ export function windowLine(): string {
   return `Data through ${t("window.through")}`
 }
 
-/** The pocket edition's note, which says "template" only when every word is one (design 4.5). */
-export function pocketNote(copySource: "llm" | "repair" | "template" | "mixed"): string {
-  return copySource === "template"
-    ? "Six pages for a quieter year, and every word on them comes from a template."
-    : "The six pages that sum up your year."
-}
+/** The pocket edition's note (design 4.5). */
+export const POCKET_NOTE = "The six pages that sum up your year."
 
 /** The pocket Short list's headline, by how many titles it lists (P7.3, `pocket-short-list.png`). */
 export function shortListHeadline(rows: number): string {
   return rows >= 3 ? "Three things you made time for" : rows === 2 ? "Two things you made time for" : "The one thing you made time for"
 }
 
-/** The Short list's deck: template-only, for a pocket member and for a full issue's pocket cut alike. */
+/** The Short list's deck: template-only, for a pocket member and for a full issue's pocket cut alike. The total is The number's. */
 export function shortListDeck(edition: "full" | "pocket" | "postcard"): string {
-  return edition === "full" ? `The titles at the top of ${t("time.totalMinutes")} in all.` : `A small year, well chosen: ${t("time.totalMinutes")} in all.`
+  return edition === "full" ? "The titles at the top of your year." : "A small year, well chosen."
 }
 
 /** The postcard's headline (design 4.5); the server name is plain text, never a token. */

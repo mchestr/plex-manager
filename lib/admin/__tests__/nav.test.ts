@@ -31,7 +31,7 @@ describe("ADMIN_NAV", () => {
   })
 
   it("keeps the test ids the E2E specs use", () => {
-    for (const id of ["overview", "users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "queues", "season", "prompts", "playground", "gallery", "evals", "settings"]) {
+    for (const id of ["overview", "users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "queues", "season", "playground", "settings"]) {
       expect(ADMIN_NAV.map(navTestId)).toContain(`admin-nav-${id}`)
     }
   })
@@ -67,8 +67,6 @@ describe("isActive", () => {
     ["users", "/admin/users", true],
     ["users", "/admin/users/abc", true],
     ["users", "/admin/users-archive", false],
-    ["prompts", "/admin/prompts/p1/edit", true],
-    ["prompts", "/admin/rewind/playground", false],
     ["playground", "/admin/rewind/playground", true],
     ["season", "/admin/rewind/playground", false],
     ["invites", "/admin/invites/i1", true],

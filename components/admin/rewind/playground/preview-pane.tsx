@@ -5,7 +5,6 @@ import { Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Icon } from "@/components/ui/icon"
-import { previewCardUrl } from "@/lib/rewind/gallery/review"
 
 interface PreviewPaneProps {
   previewId: string
@@ -51,7 +50,7 @@ export function PreviewPane({ previewId, year, cards }: PreviewPaneProps) {
             <li key={card} className="flex flex-col gap-1.5" data-testid="playground-card" data-page={card}>
               {/* eslint-disable-next-line @next/next/no-img-element -- the card route returns a finished PNG; next/image would re-encode it */}
               <img
-                src={previewCardUrl(previewId, card)}
+                src={`/api/rewind/card/preview/${previewId}/${card}?daily=1`}
                 alt={`The ${card} card`}
                 width={135}
                 height={240}

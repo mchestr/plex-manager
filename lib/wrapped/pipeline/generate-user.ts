@@ -70,8 +70,6 @@ export interface GenerateUserOptions {
   promptVersion?: string
   /** The copy call's reasoning effort for this run only (dry runs). */
   effort?: EffortLevel
-  /** Replaces the stored style guide for this run (the playground). */
-  styleGuide?: string | null
   /** The fan-out's audience (P7.8); `config` when absent. */
   audience?: GenerationAudience
   /** Reads the member's inputs instead of Tautulli and the batch cache (fixtures). */
@@ -164,7 +162,6 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
       consume: deps.consume ?? ((provider) => consume("rw:llm", provider)),
       signal,
       effort: options.effort,
-      styleGuide: options.styleGuide === undefined ? ctx.styleGuide : options.styleGuide,
       attribution: {
         userId,
         wrappedId: persist ? ctx.wrappedId : null,

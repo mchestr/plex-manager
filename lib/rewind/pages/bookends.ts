@@ -7,7 +7,7 @@
  * @module lib/rewind/pages/bookends
  */
 
-import { heading, paragraph, plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
+import { deckBlock, heading, plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
 import { formatCount } from "@/lib/rewind/format"
 import type { PageDefinition } from "@/lib/rewind/registry"
 import { copyLocals, headline } from "@/lib/wrapped/copy/templates"
@@ -63,14 +63,15 @@ export const bookendsPage: PageDefinition<BookendsData> = {
     const lifetime = lifetimeLine(facts, ctx.locale)
     const blocks: ArticleBlock[] = [
       heading(headline("bookends", facts), { ...facts, ...copyLocals({ year: ctx.year, firstTitle: title("first") }) }),
+      ...deckBlock(pageDeck(ctx, facts, "bookends"), facts, lifetime ? ["member.since", "member.lifetimeHours", "member.nthRewind"] : []),
       {
         kind: "definitionList",
         entries: [
-          { term: "The first play", detail: plain(`${title("first")}, ${when("first")}`) },
-          { term: lastLead(facts), detail: plain(`${title("last")}, ${when("last")}`) },
+          // The headline names the first title.
+          { term: "First play", detail: plain(when("first")) },
+          { term: isWholeYear(facts) ? "Last play" : "Latest play", detail: plain(`${title("last")}, ${when("last")}`) },
         ],
       },
-      paragraph(pageDeck(ctx, facts, "bookends"), facts),
     ]
     if (lifetime) blocks.push({ kind: "paragraph", text: plain(lifetime) })
     return blocks

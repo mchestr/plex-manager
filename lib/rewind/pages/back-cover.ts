@@ -7,9 +7,8 @@
  * @module lib/rewind/pages/back-cover
  */
 
-import { figure, heading, paragraph, plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
+import { heading, paragraph, plain } from "@/lib/rewind/article/blocks"
 import { billingBlock } from "@/lib/rewind/billing-block"
-import { backCoverDisclosure } from "@/lib/rewind/copy-disclosure"
 import type { PageDefinition } from "@/lib/rewind/registry"
 import { copyLocals, headline } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
@@ -40,7 +39,8 @@ export const backCoverPage: PageDefinition<BackCoverData> = {
     const days = has(facts, "days.active") ? shown(facts, "days.active") : "0"
     return `The soundtrack of ${issueYear(facts)} again: one line for each day, ${days} of ${data.minutes.length} days with something played.`
   },
-  article: (data, facts, ctx) => {
+  // The heading and the billing as credits: the soundtrack's days are the calendar's, and the colophon is the masthead.
+  article: (_data, facts, ctx) => {
     const block = billingBlock(facts, {
       serverName: ctx.serverName,
       named: true,
@@ -50,14 +50,11 @@ export const backCoverPage: PageDefinition<BackCoverData> = {
       metrics: ctx.metrics,
     })
     const signOff = ctx.copy?.signOff
-    const blocks: ArticleBlock[] = [
+    return [
       heading(headline("back-cover", facts), { ...facts, ...copyLocals({ year: ctx.year }) }),
       { kind: "definitionList", label: "The billing", entries: block.entries.map((entry) => ({ term: entry.term, detail: plain(entry.detail) })) },
-      ...figure(backCoverPage.srSummary(data, facts)),
-      { kind: "note", text: plain(backCoverCaption(facts)) },
+      ...(signOff ? [paragraph(signOff, facts)] : []),
     ]
-    if (signOff) blocks.push(paragraph(signOff, facts))
-    return [...blocks, { kind: "paragraph", text: plain(backCoverDisclosure(ctx.copySource)) }, { kind: "note", text: plain(colophon(facts, ctx)) }]
   },
   share: {
     facts: [

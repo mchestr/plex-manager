@@ -7,7 +7,6 @@ import { serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
 import { copyText, plain } from "@/lib/rewind/article/blocks"
 import { articleSections } from "@/lib/rewind/article/sections"
-import { rewindFeatureFlags } from "@/lib/rewind/features"
 import { volumeLine } from "@/lib/rewind/pages/facts"
 import { validatePagesOnRead } from "@/lib/rewind/select-pages"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
@@ -40,10 +39,7 @@ export async function AdminRewindArticle({ data, userId }: { data: RewindDataV3;
     edition: data.edition,
     pages,
     copy: data.copy,
-    copySource: data.copySource,
-    model: data.copyMeta.model,
     metrics: pageMetrics,
-    features: rewindFeatureFlags(config),
   })
   const volume = volumeLine(data.facts)
 

@@ -132,11 +132,6 @@ export const STATUS = {
     available: { label: "Available", tone: "success", mark: icons.done },
     declined: { label: "Declined", tone: "destructive" },
   },
-  prompt: {
-    inUse: { label: "In use", tone: "success", mark: "dot" },
-    notInUse: { label: "Not in use", tone: "neutral" },
-    v2: { label: "v2, not used", tone: "outline" },
-  },
   // The announcements admin table (P10.5)
   announcement: {
     active: { label: "Active", tone: "success", mark: "dot" },

@@ -109,7 +109,6 @@ export function fixtureContext(fixture: Fixture, inputs: FixtureInputs, model: M
     previous,
     llmProvider: { provider: model.provider, model: model.id },
     spentUsd: 0,
-    styleGuide: null,
   }
 }
 

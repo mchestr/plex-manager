@@ -15,7 +15,7 @@ jest.mock('next/navigation', () => ({
   notFound: jest.fn(),
 }))
 
-jest.mock('@/components/admin/prompts/expandable-prompt', () => ({
+jest.mock('@/components/admin/llm-usage/expandable-prompt', () => ({
   ExpandablePrompt: ({ title, content }: { title: string; content: string }) => (
     <section data-testid={`expandable-${title}`}>{content}</section>
   ),

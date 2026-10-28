@@ -9,9 +9,9 @@ import { expect, test } from '../fixtures/auth';
 /** A dry run can take 90 s on a shared runner. */
 const RUN_TIMEOUT_MS = 240_000;
 
-test('the old playground address redirects, keeping a template as the style guide', async ({ adminPage }) => {
-  await adminPage.goto('/admin/playground?templateId=tpl_1');
-  await expect(adminPage).toHaveURL(/\/admin\/rewind\/playground\?.*styleGuideId=tpl_1/);
+test('the old playground address redirects', async ({ adminPage }) => {
+  await adminPage.goto('/admin/playground');
+  await expect(adminPage).toHaveURL(/\/admin\/rewind\/playground$/);
   await expect(adminPage.getByTestId('admin-rewind-playground-header')).toBeVisible();
 });
 

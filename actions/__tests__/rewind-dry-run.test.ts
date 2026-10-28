@@ -4,8 +4,7 @@
 
 /**
  * The dry-run actions (P7.10): admin only, `rw:dryrun` at 10 per 10 minutes
- * (the real in-process limiter), an estimate that calls no provider, and the
- * style guide's 1,200-character limit.
+ * (the real in-process limiter), and an estimate that calls no provider.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -45,7 +44,6 @@ beforeEach(() => {
   jest.mocked(getRewindQueue).mockReturnValue({ add, getJob } as never)
   add.mockResolvedValue({ id: "job" })
   prismaMock.lLMProvider.findFirst.mockResolvedValue({ provider: "openai", model: "gpt-6-sol" } as never)
-  prismaMock.promptTemplate.findFirst.mockResolvedValue(null)
 })
 
 describe("startRewindDryRun", () => {
@@ -79,17 +77,12 @@ describe("startRewindDryRun", () => {
     expect(add).toHaveBeenCalledTimes(10)
   })
 
-  it("refuses an over-long style guide, an unknown fixture, the wrong year and an unknown member", async () => {
-    expect(await startRewindDryRun({ ...fixtureRun, styleGuide: "x".repeat(1201) })).toMatchObject({ success: false, code: "VALIDATION" })
+  it("refuses an unknown fixture, the wrong year and an unknown member", async () => {
     expect(await startRewindDryRun({ ...fixtureRun, subject: { kind: "fixture", fixtureId: "nobody" } })).toMatchObject({ success: false, code: "NOT_FOUND" })
     expect(await startRewindDryRun({ ...fixtureRun, year: 2025 })).toMatchObject({ success: false, code: "VALIDATION" })
     prismaMock.user.findUnique.mockResolvedValue(null)
     expect(await startRewindDryRun({ ...fixtureRun, subject: { kind: "member", userId: "user-9" } })).toMatchObject({ success: false, code: "NOT_FOUND" })
     expect(add).not.toHaveBeenCalled()
-  })
-
-  it("accepts a style guide of exactly 1,200 characters", async () => {
-    expect((await startRewindDryRun({ ...fixtureRun, styleGuide: "x".repeat(1200) })).success).toBe(true)
   })
 })
 

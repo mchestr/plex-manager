@@ -58,7 +58,6 @@ function setup() {
     }) as EvalIO['liveDeps'],
     writeResults: jest.fn(async (fileName: string, results: EvalResults) => void written.push({ fileName, results })),
     writeRecording: jest.fn(async () => {}),
-    saveRun: jest.fn(async () => {}),
   } satisfies EvalIO
   return { io, events, written }
 }
@@ -115,7 +114,7 @@ describe('runEval', () => {
     await expect(runEval(options({ model: 'ollama:qwen3.6:27b' }), fixtures, io)).rejects.toThrow(/--allow-unpriced/)
   })
 
-  it('writes a results file that validates, with advisory judge scores, and a RewindEvalRun row', async () => {
+  it('writes a results file that validates, with advisory judge scores', async () => {
     const { io, written } = setup()
     const results = await runEval(options({ yes: true, judge: 'openai:gpt-6-astra', record: true }), fixtures, io)
 
@@ -132,7 +131,6 @@ describe('runEval', () => {
     })
     expect(results!.fixtures.find((f) => f.id === 'light')).toMatchObject({ calls: 0, judge: null })
     expect(results!.cost.judgeUsd).toBeGreaterThan(0)
-    expect(io.saveRun).toHaveBeenCalledWith(expect.objectContaining({ model: 'anthropic:claude-sonnet-5-5', fixtures: ['heavy', 'light'], results }))
     expect(io.writeRecording).toHaveBeenCalledWith(
       'anthropic-claude-sonnet-5-5',
       expect.objectContaining({ fixture: 'heavy', model: 'anthropic:claude-sonnet-5-5', calls: [expect.objectContaining({ kind: 'copy' }), expect.objectContaining({ kind: 'repair' })] })

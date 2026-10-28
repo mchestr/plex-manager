@@ -50,14 +50,15 @@ describe("WhySheet", () => {
     return screen.findByTestId("rewind-why-sheet")
   }
 
-  it("lists the shortlist with plain reasons, the dedication and the template disclosure", async () => {
+  it("lists the shortlist with plain reasons and the dedication, with no words disclosure", async () => {
     const sheet = await renderOpen()
     const candidates = within(sheet).getAllByTestId("rewind-why-candidate")
     expect(candidates).toHaveLength(centrefold(heavy).shortlist.length)
     expect(candidates[0]).toHaveTextContent(`${heavy.facts["archetype.name"]!.display}, your archetype`)
     expect(candidates[0]).toHaveTextContent(`${heavy.facts["hours.afterDarkShare"]!.display} of your plays started between 10 PM and 4 AM.`)
-    expect(within(sheet).getByTestId("rewind-why-disclosure")).toHaveTextContent("Every word here comes from a template.")
-    expect(sheet).toHaveTextContent(/Picked from your own history|Every reason here comes from/)
+    expect(sheet).toHaveTextContent(/For .+|Wear it well\./)
+    expect(within(sheet).queryByTestId("rewind-why-disclosure")).toBeNull()
+    expect(sheet).not.toHaveTextContent(/comes from a template|Every reason here/)
   })
 
   it("closes through the player on Escape", async () => {
@@ -65,15 +66,6 @@ describe("WhySheet", () => {
     await renderOpen(send)
     await userEvent.setup().keyboard("{Escape}")
     expect(send).toHaveBeenCalledWith({ type: "CLOSE_SHEET" })
-  })
-
-  it("names the provider when a model wrote the words", async () => {
-    render(
-      <PlayerProvider value={jest.fn()} sheet="why">
-        <CentrefoldPage data={centrefold(heavy)} issue={issueContext(heavy, { copySource: "llm", model: "anthropic:claude-sonnet-5-5" })} />
-      </PlayerProvider>
-    )
-    expect(await screen.findByTestId("rewind-why-disclosure")).toHaveTextContent("(Anthropic)")
   })
 
   it("is reachable from the registry's selected page", () => {

@@ -121,7 +121,7 @@ the date and the check, in `ship-check.md`. A flag that misbehaves stays off.
 |---|---|---|---|
 | The race: scrubber and Replay | `race.scrubber` | A month slider and Replay under the race, after its single run (at once under reduced motion or on a revisit) | Autoplay once, then the final frame |
 | The calendar: Pick a day | `calendar.day-picker` | "Pick a day" under the calendar: a bottom sheet with a month selector and a row per day | The grid only |
-| Notes and article calendar: arrow-key grid | `calendar.grid` | The desktop Notes and article calendars become a roving-focus grid once hydrated; without JavaScript they stay month tables | Month tables |
+| Notes calendar: arrow-key grid | `calendar.grid` | The desktop Notes calendar becomes a roving-focus grid once hydrated; without JavaScript it stays month tables | Month tables |
 | First tap completes a count-up | `stage.tap-completes` | A forward tap on a page whose count-up is still running lands it; the next tap turns | Every tap turns |
 | The number: Compare with last year | `number.compare-2025` | "Compare with 2025" on page 02: both years as mirrored 7-day averages; hidden without last-year history | The daily strip only |
 | Share: Edit card | `share.edit-card` | Three poster stats on the centrefold and back cover, from the member's allow-list, saved in their prefs and on a live link | The default stats |
@@ -138,10 +138,9 @@ generated. Work down the list in this order; the plan-level cuts come
 first:
 
 1. the playground swap (P8.8): the old playground keeps working;
-2. the eval results page (already moved to January);
-3. Edit card (P8.4);
-4. the non-core cards (P7.6): those pages keep Copy link only;
-5. then the pages, by key:
+2. Edit card (P8.4);
+3. the non-core cards (P7.6): those pages keep Copy link only;
+4. then the pages, by key:
 
 | Order | Key | Removes |
 | --- | --- | --- |
@@ -218,7 +217,7 @@ December features never trip it.
 | From 20 Nov | Home cards show "before season" (exempt from the flags). Owner turns on `rewindEnabled` with Audience "Admins only" and runs admin-audience generations on production data after each deploy. |
 | 24 Nov | Soft-launch release cut: the last pre-season migration. Dump, then deploy. |
 | 25 Nov | Migration freeze starts (to 2 Jan 2027); no sign-in, invite, onboarding or subscribe change merges until 10 Dec except security fixes. This runbook is merged. |
-| 25 and 27 Nov | Gallery review and sign-off; admin soft launch on 27 Nov (may slip to 29 Nov). |
+| 25 and 27 Nov | Sign-off; admin soft launch on 27 Nov (may slip to 29 Nov). |
 | 30 Nov, 12:00 | Cutoff for sign-off fixes. Then tag `rewind-2026.1`, dump, deploy **before 18:00**, rehearse on staging in the evening. |
 | 30 Nov 18:00 to 1 Dec 12:00 | **Deploy blackout.** |
 | 1 Dec, 00:15 in the westernmost zone | Season-open Prepare runs by itself. |
@@ -312,25 +311,13 @@ The preflight must be green before any run:
 | AI copy | the frozen model (or, before the lock names one, the provider's), priced and not retiring before 2027-01-02; template-only mode shows as degraded on purpose; a provider other than the lock's is red |
 | Entitlement (Stripe on only) | every member entitled, else the skip count you expect |
 
-**Soft launch (25 to 27 November).** Review the gallery, confirm Rewind on,
-"Admins only", LLM mode standard and the budget at its season value, then run
-Prepare season and Generate all. Check on real data: every admin's issue
-completes under $0.03 per member; each admin opens it on an iPhone, an Android
-phone and a desktop browser; a share link is created, unfurled in Discord,
-rotated and revoked; any new P0 is filed as `rewind-signoff`. Confirm that log
-redaction is live (open a share link and an invite, then search the logs for
-unmasked tokens).
-
-**Gallery.** `/admin/rewind/gallery` renders every page and card of the five
-review fixtures (heavy, median, light, postcard, extreme) from dry runs, which
-write nothing and expire after one hour. Each tab starts or reuses its dry run;
-the copy replays the selected model's recordings, or is "Templates only" until
-`evals/rewind/selected.json` names a model. "Desktop spread" switches the
-frames to 1440 x 900. For the same set headless, run `npm run rewind:gallery --
---base-url=<server>` against a server started for E2E (it signs in as the first
-admin with `NEXTAUTH_SECRET` and needs a `_test` database), or run the manual
-Rewind Gallery workflow and download its `rewind-gallery` artifact; open
-`index.html` for the contact sheet.
+**Soft launch (25 to 27 November).** Confirm Rewind on, "Admins only", LLM
+mode standard and the budget at its season value, then run Prepare season and
+Generate all. Check on real data: every admin's issue completes under $0.03
+per member; each admin opens it on an iPhone, an Android phone and a desktop
+browser; a share link is created, unfurled in Discord, rotated and revoked; any
+new P0 is filed as `rewind-signoff`. Confirm that log redaction is live (open a
+share link and an invite, then search the logs for unmasked tokens).
 
 ## Season open, hour by hour
 

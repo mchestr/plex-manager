@@ -1,5 +1,4 @@
 import { RewindFigure } from "@/components/rewind/a11y/figure"
-import { aboutTheWords } from "@/lib/rewind/copy-disclosure"
 import { centrefoldPage, graphicSummary, nameAfterLead, showsRarity, STANDING } from "@/lib/rewind/pages/centrefold"
 import type { CentrefoldData } from "@/lib/rewind/pages/centrefold.schema"
 import { has, shown } from "@/lib/rewind/pages/facts"
@@ -93,7 +92,6 @@ function Foot({ data, issue }: { data: CentrefoldData; issue: IssueContext }) {
             reasons: candidate.reasons.map((reason, r) => <CopyText key={r} text={reason} source={facts} />),
           }))}
           dedication={<CopyText text={dedication} source={facts} />}
-          disclosure={aboutTheWords({ copySource: issue.copySource, model: issue.model })}
         />
       )}
     </div>

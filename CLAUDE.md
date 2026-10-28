@@ -49,7 +49,7 @@ app/                     # Next.js App Router (pages, layouts, routes)
 │   ├── help/           # Help and support
 │   ├── membership/     # Stripe membership (when enabled)
 │   └── rewind/         # Rewind: /rewind, /rewind/[year] (story), /rewind/[year]/read (article), the scope layout
-├── admin/              # Admin pages: overview, users, invites, settings, rewind, prompts, queues, LLM usage
+├── admin/              # Admin pages: overview, users, invites, settings, rewind, queues, LLM usage
 ├── api/                # API routes (webhooks, health, metrics, admin search, Rewind cards and posters)
 ├── auth/               # Plex sign-in callback, access denied and auth error pages (sign-in itself is on /)
 ├── dev/                # Development-only UI sheet
@@ -364,7 +364,7 @@ describe('Component', () => {
 
 `.github/workflows/build.yml` ("Checks") runs the checks that `main` requires: Lint (ESLint and actionlint), Typecheck, Audit (`scripts/audit-gate.mjs`; exceptions in `.github/audit-exceptions.json`, at most 14 days each), Knip, Design System (`design:check` and `design:rewind-motion`), Unit Tests (with coverage floors, then `rewind:fixtures --check`, `rewind:freeze --check` and `env:docs --check`), Integration, Schema Drift (a schema change without its migration fails, and `scripts/check-migrations.mjs` checks migration names), Build, E2E Tests (production build, Postgres and Redis: `chromium` and `setup-wizard`), Rewind E2E Tests (the same, for the Rewind E2E, axe and CSP projects on chromium, webkit and firefox) and Rewind Performance (`rewind-perf`, blocking). Visual Diffs and Rewind Visual Diffs run the screenshot projects and are advisory, not required: a diff leaves a warning and the `visual-diffs` or `rewind-visual-diffs` artifact but does not fail the workflow, and the Visual Baselines workflow (`.github/workflows/visual-baselines.yml`, see `e2e/visual/README.md`) refreshes the baselines. The light-theme projects run only locally. Image Smoke Test runs on pull requests but is not required: it builds the image, starts it on a fresh Postgres and Redis until its `HEALTHCHECK` reports healthy (migrations, `SKIP_MIGRATIONS`, read-only files, tini, `docker stop`) and scans it with Trivy. Shared setup lives in `.github/actions/setup/action.yml`, and every action is pinned by SHA
 
-Other workflows: `freeze-gate.yml` fails a pull request while the `CODE_FREEZE` repository variable is `on`, unless it carries `freeze:data` or `freeze:security` (`docs/operations.md`, "Code freeze gate"); `rewind-gallery.yml` builds the Rewind review gallery by hand; `docker-publish.yml` publishes the image from `main` and `v*` tags.
+Other workflows: `freeze-gate.yml` fails a pull request while the `CODE_FREEZE` repository variable is `on`, unless it carries `freeze:data` or `freeze:security` (`docs/operations.md`, "Code freeze gate"); `docker-publish.yml` publishes the image from `main` and `v*` tags.
 
 The Changelog check (`.github/workflows/changelog.yml`) fails a pull request that touches `prisma/migrations/**`, `lib/env.ts`, `docker-entrypoint.sh`, `Dockerfile` or `deploy/**`, or carries the `breaking` label, without a line under Unreleased in `CHANGELOG.md` (put operator steps under "Upgrade notes"); the `no-changelog` label skips it. A `v*` tag publishes the versioned image and, through `.github/workflows/release.yml`, the GitHub Release; see `docs/releasing.md`.
 
@@ -749,7 +749,7 @@ if (!result.ok) return { error: result.error.message } // TRUNCATED, REFUSAL, SC
   `recordUsage` (`lib/llm/usage.ts`).
 - The admin playground (`/admin/rewind/playground`) runs `generateUserRewind`
   in dry-run mode through `startRewindDryRun` (`actions/admin/rewind-playground.ts`);
-  try prompts and models there, never in a copy of the pipeline.
+  try models there, never in a copy of the pipeline.
 - The admin assistant (`lib/chatbot/`) and the Discord `/assistant` command run
   through `chatWithTools` (`lib/llm/chat.ts`) on the `chat` purpose's row of
   the same registry. Every surface that offers the assistant shows

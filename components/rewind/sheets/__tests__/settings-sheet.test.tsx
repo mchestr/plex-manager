@@ -68,11 +68,18 @@ describe("SettingsSheet", () => {
   it.each([
     [{ copySource: "llm", model: "anthropic:claude-sonnet-5-5" } as const, "Some of the words were written by Claude Sonnet 5.5 (Anthropic)."],
     [{ copySource: "mixed", model: "openai-compatible:qwen3.6:27b" } as const, "Some of the words were written by a model running on this server."],
-    [{ copySource: "template", model: null } as const, "Every word here comes from a template."],
   ])("names who wrote the words (%o)", async (copy, line) => {
     const user = userEvent.setup()
     renderStage([...TYPES], { copy })
     const sheet = await openSettings(user)
     expect(within(sheet).getByTestId("rewind-about-words")).toHaveTextContent(line)
+  })
+
+  it("leaves About the words out when every word is a template", async () => {
+    const user = userEvent.setup()
+    renderStage([...TYPES], { copy: { copySource: "template", model: null } })
+    const sheet = await openSettings(user)
+    expect(within(sheet).queryByTestId("rewind-about-words")).toBeNull()
+    expect(within(sheet).queryByRole("heading", { name: "About the words" })).toBeNull()
   })
 })

@@ -29,7 +29,6 @@ import { serverAggregateSchema, type ServerAggregate } from "@/lib/wrapped/aggre
 import { dataThroughDate, isFinalCut, throughFor } from "@/lib/wrapped/aggregate/window"
 import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
-import { findRewindStyleGuide } from "@/lib/wrapped/prompt/store"
 import { excludedContentRatingsSchema, excludedSectionIdsSchema } from "@/lib/wrapped/sources/schemas"
 import type { SonarrEndpoint } from "@/lib/wrapped/sources/sonarr-calendar"
 import { dataWindow, resolveDataWindow, resolveZone, seasonWindowAt, type RewindZone, type TimeWindow } from "@/lib/wrapped/time/zone"
@@ -77,7 +76,6 @@ export interface RewindContext {
   /** The active row names another provider than the freeze lock (P8.1). */
   llmProviderMismatch?: boolean
   spentUsd: number
-  styleGuide: string | null
 }
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
@@ -156,7 +154,7 @@ export async function loadRewindContext(options: {
   keepWindow?: boolean
 }): Promise<RewindContext> {
   const { userId, year } = options
-  const [user, config, tautulli, overseerr, sonarr, zone, exclusions, wrapped, provider, styleGuide] = await Promise.all([
+  const [user, config, tautulli, overseerr, sonarr, zone, exclusions, wrapped, provider] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { name: true, plexUserId: true, isAdmin: true, timezone: true, createdAt: true } }),
     prisma.config.findUnique({ where: { id: "config" } }),
     getActiveService("tautulli"),
@@ -166,7 +164,6 @@ export async function loadRewindContext(options: {
     prisma.rewindExclusion.findMany({ where: { userId }, select: { ratingKey: true } }),
     prisma.plexWrapped.findUnique({ where: { userId_year: { userId, year } }, select: { id: true, data: true, status: true } }),
     getFrozenRewindModel(),
-    findRewindStyleGuide(),
   ])
   if (!user) throw new RewindGenerationError("NOT_CONFIGURED", { retryable: false })
 
@@ -217,7 +214,6 @@ export async function loadRewindContext(options: {
     llmProvider: provider && provider.status !== "mismatch" ? { provider: provider.provider, model: provider.model, budgetModel: provider.budgetModel, rowModel: provider.rowModel } : null,
     llmProviderMismatch: provider?.status === "mismatch",
     spentUsd: spent,
-    styleGuide,
   }
 }
 

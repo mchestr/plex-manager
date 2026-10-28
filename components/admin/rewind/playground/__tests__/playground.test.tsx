@@ -39,7 +39,6 @@ const options: PlaygroundOptions = {
   replay: false,
   promptVersions: ["rewind-2026.1"],
   efforts: ["low", "medium"],
-  styleGuides: [],
 }
 
 const form: PlaygroundForm = {
@@ -49,7 +48,6 @@ const form: PlaygroundForm = {
   model: DEFAULT_MODEL,
   promptVersion: "rewind-2026.1",
   effort: "low",
-  styleGuide: "stored",
   copyPolicy: "default",
 }
 

@@ -60,9 +60,10 @@ Plex Management System combines server management tools, member onboarding and i
 Each member's year on the server, as a story of pages (formerly "Plex Wrapped"):
 - **A season**: generation opens on 1 December and closes on 31 January by default (both set in Admin, Settings); the admin prepares and opens it from the season console at `/admin/rewind`
 - **Built from Tautulli history**: totals, top titles, habits, an archetype, and copy written by the configured AI provider, or template copy without one
-- **Article mode**: every Rewind also reads as a plain article at `/rewind/<year>/read`, which needs no JavaScript and is not indexed by search engines; earlier years open as archive articles
+- **Article mode**: every Rewind also reads as a short plain article at `/rewind/<year>/read` (each page's headline, a line and at most one small table), which needs no JavaScript and is not indexed by search engines; earlier years open as archive articles
 - **Opt-in sharing**: nothing is public until the member makes a link and picks the pages it shows. A link serves a share-safe copy (no other member's name, no server-wide ranking), is signed with the member's name only when they choose, expires at the season close by default, and can be rotated or turned off at any time. Admins can turn public links off for the server
 - **Hide titles**: a member can hide titles from their Rewind
+- **Playground**: admins try the real pipeline on a member or a golden fixture at `/admin/rewind/playground`; nothing is stored
 - See the [Rewind runbook](docs/rewind.md) for the season, its flags and the season close
 
 ### Invites
@@ -79,7 +80,6 @@ Each member's year on the server, as a story of pages (formerly "Plex Wrapped"):
 - **Admin assistant** in the admin pages, which can read the server's state through Plex, Tautulli, Overseerr, Sonarr and Radarr tools
 - **Discord assistant** (`/assistant` and direct messages to the bot) for linked members
 - Every surface that offers an assistant says that server admins can review assistant conversations and names the AI provider that processes them
-- **Prompt templates** (`/admin/prompts`): the style guides that set the voice of the Rewind copy, tried out in the Rewind playground (`/admin/rewind/playground`) before a season
 
 ### Discord (Optional)
 - **Linked roles** that follow a member's access and watch hours

@@ -203,7 +203,7 @@ export async function seedVisualFixtures(): Promise<void> {
         },
       });
 
-      // Rewind, LLM usage, prompts and the announcement
+      // Rewind, LLM usage and the announcement
       await tx.plexWrapped.deleteMany();
       const rewindData = generateMockWrappedData({
         promptName: TEST_USERS.REGULAR.name,
@@ -253,32 +253,6 @@ export async function seedVisualFixtures(): Promise<void> {
         });
       }
 
-      await tx.promptTemplate.deleteMany();
-      await tx.promptTemplate.create({
-        data: {
-          id: 'visual-prompt-active',
-          name: 'Rewind narrator',
-          description: 'Warm, cinematic copy for the yearly Rewind.',
-          template: 'Write the Rewind for {{userName}} covering {{year}}.',
-          isActive: true,
-          version: 3,
-          createdAt: daysAgo(shown, 20),
-          updatedAt: daysAgo(shown, 5),
-        },
-      });
-      await tx.promptTemplate.create({
-        data: {
-          id: 'visual-prompt-draft',
-          name: 'Short and dry',
-          description: 'A terse alternative for testing.',
-          template: 'Summarise {{year}} for {{userName}} in three lines.',
-          isActive: false,
-          version: 1,
-          createdAt: daysAgo(shown, 8),
-          updatedAt: daysAgo(shown, 8),
-        },
-      });
-
       await tx.announcement.deleteMany();
       await tx.announcement.create({
         data: {
@@ -318,7 +292,6 @@ export async function clearVisualFixtures(): Promise<void> {
     await prisma.$transaction([
       prisma.discordIntegration.deleteMany(),
       prisma.announcement.deleteMany({ where: { id: 'visual-announcement' } }),
-      prisma.promptTemplate.deleteMany({ where: { id: { in: ['visual-prompt-active', 'visual-prompt-draft'] } } }),
       prisma.lLMUsage.deleteMany({ where: { id: { startsWith: 'visual-llm-usage-' } } }),
       prisma.invite.deleteMany({ where: { code: { in: [VISUAL_INVITES.valid, VISUAL_INVITES.expired] } } }),
       prisma.plexWrapped.deleteMany({ where: { userId: TEST_USERS.REGULAR.id, year: VISUAL_REWIND_YEAR } }),

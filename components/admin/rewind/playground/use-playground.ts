@@ -9,7 +9,7 @@ export type DryRunRequest = z.input<typeof DryRunInput>
 
 export type Effort = NonNullable<DryRunRequest["effort"]>
 
-/** The form's choices. `model` is a model id or `default`, the provider's own model; `styleGuide` is `stored`, `none` or a row id. */
+/** The form's choices. `model` is a model id or `default`, the provider's own model. */
 export interface PlaygroundForm {
   subject: "fixture" | "member"
   fixtureId: string
@@ -17,7 +17,6 @@ export interface PlaygroundForm {
   model: string
   promptVersion: string
   effort: Effort
-  styleGuide: string
   copyPolicy: "default" | "no-llm"
 }
 
@@ -93,17 +92,14 @@ export const REPLAY_MODEL = "replay:selected"
  * for, and only the overrides the admin chose, so an untouched field keeps
  * the server's setting.
  */
-export function toDryRunRequest(form: PlaygroundForm, context: { year: number; styleGuides: ReadonlyArray<{ id: string; text: string }> }): DryRunRequest {
+export function toDryRunRequest(form: PlaygroundForm, context: { year: number }): DryRunRequest {
   const subject = form.subject === "fixture" ? { kind: "fixture" as const, fixtureId: form.fixtureId } : { kind: "member" as const, userId: form.userId }
-  const styleGuide =
-    form.styleGuide === "stored" ? undefined : form.styleGuide === "none" ? null : context.styleGuides.find((g) => g.id === form.styleGuide)?.text
   return {
     subject,
     year: context.year,
     effort: form.effort,
     copyPolicy: form.copyPolicy,
     ...(form.model !== DEFAULT_MODEL && form.copyPolicy === "default" ? { model: form.model } : {}),
-    ...(styleGuide !== undefined ? { styleGuide } : {}),
   }
 }
 

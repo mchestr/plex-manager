@@ -6,10 +6,11 @@
  * @module lib/rewind/pages/cover
  */
 
-import { figure, heading, plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
+import { heading, paragraph, plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
 import type { PageDefinition } from "@/lib/rewind/registry"
 import { copyLocals, coverLines, headline } from "@/lib/wrapped/copy/templates"
 
+import { DAYS_PLAYED } from "./calendar"
 import { CoverDataSchema, type CoverData } from "./cover.schema"
 import { has, issueYear, shown } from "./facts"
 
@@ -23,15 +24,16 @@ export const coverPage: PageDefinition<CoverData> = {
     const days = has(facts, "days.active") ? shown(facts, "days.active") : "0"
     return `The soundtrack of ${issueYear(facts)}: one line for each day, ${days} of ${data.minutes.length} days with something played.`
   },
-  article: (data, facts, ctx) => {
+  // The soundtrack's one number, days played, is the calendar page's; without that page the cover states it.
+  article: (_data, facts, ctx) => {
     const source = { ...facts, ...copyLocals({ year: ctx.year }) }
     const pocket: ArticleBlock[] = ctx.edition === "pocket" ? [{ kind: "paragraph", text: plain("The pocket edition") }] : []
+    const days = !ctx.pages.some((page) => page.type === "calendar") && has(facts, "days.active") ? [paragraph(DAYS_PLAYED, facts)] : []
     const lines = coverLines(ctx.pages)
     return [
       heading(headline("cover", facts), source),
       ...pocket,
-      ...figure(coverPage.srSummary(data, facts)),
-      { kind: "note", text: plain(COVER_CAPTION) },
+      ...days,
       ...(lines.length > 0 ? [{ kind: "rankedList" as const, label: "In this issue", items: lines.map((line) => ({ rank: line.folio, title: line.text })) }] : []),
     ]
   },

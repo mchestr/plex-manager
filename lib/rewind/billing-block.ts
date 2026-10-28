@@ -18,7 +18,8 @@
  *    `<dl>` screen readers get, so the visual block and the list carry the
  *    same content. A missing fact or a zero count drops its credit (RWV-11),
  *    and with it its connector; the showtime appears only when the clock
- *    page is in the issue.
+ *    page is in the issue, and the standing only in the top half, as on
+ *    the Standing page.
  * 2. **Lines.** The credits fall into the poster's seven lines; a line left
  *    without a credit is dropped, and "featuring" moves down to the title
  *    line when the films line is gone.
@@ -36,6 +37,7 @@
 
 import { formatCount } from "@/lib/rewind/format"
 import { has, num, shown } from "@/lib/rewind/pages/facts"
+import { namesPercentile } from "@/lib/rewind/pages/standing"
 import { measurer, type FontMetrics } from "@/lib/rewind/typeset/measure"
 import type { CardFactId } from "@/lib/wrapped/data/share-safe-schema"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
@@ -128,7 +130,8 @@ function credits(facts: RewindFactsV3, opts: CreditOptions): Credit[][] {
       : [
           ...credit("showtime", "Showtime", opts.showtime && shown(facts, "hours.peak")),
           ...credit("longest run", "Longest run", num(facts, "streak.longest.days") >= 2 && shown(facts, "streak.longest.days")),
-          ...credit("standing", "Standing", shown(facts, "standing.percentile")),
+          // The Standing page's rule: a percentile only in the top half.
+          ...credit("standing", "Standing", namesPercentile(facts) && shown(facts, "standing.percentile")),
         ],
     credit("and introducing", "And introducing", shown(facts, "archetype.name")),
   ]

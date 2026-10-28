@@ -22,7 +22,7 @@
 export const REWIND_FEATURES = [
   { key: "race.scrubber", label: "The race: scrubber and Replay" },
   { key: "calendar.day-picker", label: "The calendar: Pick a day" },
-  { key: "calendar.grid", label: "Notes and article calendar: arrow-key grid" },
+  { key: "calendar.grid", label: "Notes calendar: arrow-key grid" },
   { key: "stage.tap-completes", label: "First tap completes a count-up" },
   { key: "number.compare-2025", label: "The number: Compare with last year" },
   { key: "share.edit-card", label: "Share: Edit card" },

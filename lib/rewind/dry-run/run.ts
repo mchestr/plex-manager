@@ -2,7 +2,7 @@
  * One dry run of the production pipeline (P7.10): `generateUserRewind` in
  * `dry-run` mode, on a member (their real context and Tautulli history) or on
  * a golden fixture (its rows through `fixtureSource()`, with this server's
- * LLM settings, provider, style guide and season spend).
+ * LLM settings, provider and season spend).
  *
  * ```
  * member  ─► generateUserRewind({ mode: "dry-run", kind: "admin" })
@@ -28,7 +28,6 @@ import { replayGenerate, selectedReplay, type ReplaySource } from "@/lib/llm/rep
 import { prisma } from "@/lib/prisma"
 import { generateUserRewind, type GenerateUserOptions, type GenerateUserResult } from "@/lib/wrapped/pipeline/generate-user"
 import type { RewindContext } from "@/lib/wrapped/pipeline/load-context"
-import { findRewindStyleGuide } from "@/lib/wrapped/prompt/store"
 import { resolveZone } from "@/lib/wrapped/time/zone"
 
 import { readDryRunFixture } from "./fixtures"
@@ -39,10 +38,9 @@ const stringList = (value: unknown) => (Array.isArray(value) ? value.filter((v):
 /** A fixture member on this server: Rewind on, the fixture's zone and window, the server's LLM settings. */
 async function fixtureContext(fixture: Fixture, inputs: Awaited<ReturnType<typeof fixtureInputs>>): Promise<RewindContext> {
   const year = fixture.window.year
-  const [config, provider, styleGuide, spent] = await Promise.all([
+  const [config, provider, spent] = await Promise.all([
     prisma.config.findUnique({ where: { id: "config" } }),
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" }, select: { provider: true, model: true } }),
-    findRewindStyleGuide(),
     prisma.lLMUsage.aggregate({ where: { generation: { year } }, _sum: { cost: true } }),
   ])
   return {
@@ -77,7 +75,6 @@ async function fixtureContext(fixture: Fixture, inputs: Awaited<ReturnType<typeo
     previous: null,
     llmProvider: provider && isLLMProviderId(provider.provider) && provider.model ? { provider: provider.provider, model: provider.model } : null,
     spentUsd: spent._sum.cost ?? 0,
-    styleGuide,
   }
 }
 
@@ -104,7 +101,6 @@ export async function runDryRun(input: DryRunInput, signal: AbortSignal): Promis
     model: input.model,
     promptVersion: input.promptVersion,
     effort: input.effort,
-    styleGuide: input.styleGuide,
   } satisfies Partial<GenerateUserOptions>
   const { subject } = input
   const replay = input.model === REPLAY_SELECTED

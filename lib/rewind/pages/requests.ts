@@ -14,7 +14,7 @@
  * @module lib/rewind/pages/requests
  */
 
-import { figure, heading, paragraph } from "@/lib/rewind/article/blocks"
+import { deckBlock, heading, plain } from "@/lib/rewind/article/blocks"
 import type { PageDefinition } from "@/lib/rewind/registry"
 import { headline } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
@@ -46,10 +46,14 @@ export const requestsPage: PageDefinition<RequestsData> = {
   },
   schema: RequestsDataSchema,
   srSummary: requestsSummary,
-  article: (data, facts, ctx) => [
-    heading(headline("requests", facts), facts),
-    paragraph(pageDeck(ctx, facts, "requests"), facts),
-    ...figure(requestsSummary(data, facts)),
-  ],
+  // The headline gives made and watched (watched whenever it is above 0); the list gives each other ledger line.
+  article: (data, facts, ctx) => {
+    const lines = data.lines.filter((id) => id !== "requests.watched")
+    return [
+      heading(headline("requests", facts), facts),
+      ...deckBlock(pageDeck(ctx, facts, "requests"), facts, ["requests.made", ...data.lines]),
+      ...(lines.length > 0 ? [{ kind: "definitionList" as const, entries: lines.map((id) => ({ term: LEDGER_LABELS[id], detail: plain(shown(facts, id)) })) }] : []),
+    ]
+  },
   share: { facts: ["requests.made", "requests.approved", "requests.available", "requests.watched"] },
 }

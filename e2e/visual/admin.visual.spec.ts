@@ -109,10 +109,6 @@ test.describe('Admin screens', () => {
   test('LLM usage', async ({ page }) => {
     await capture(page, '/admin/llm-usage', 'admin-llm-usage');
   });
-
-  test('prompts', async ({ page }) => {
-    await capture(page, '/admin/prompts', 'admin-prompts');
-  });
 });
 
 test.describe('Status screens', () => {

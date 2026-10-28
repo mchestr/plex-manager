@@ -19,7 +19,6 @@ const contextOf = (issue: FixtureIssue, extra: Partial<CoreNotesContext> = {}): 
   pages: issue.pages.map((page) => ({ folio: page.folio, name: registry[page.type].name, type: page.type })),
   earlierYears: [2025, 2024],
   serverName: "Chester Family Plex",
-  copySource: "template",
   cards: ["Cover", "The number"],
   ...extra,
 })
@@ -150,6 +149,6 @@ describe("page by page on heavy", () => {
     expect(text).toContain("Presented by Chester Family Plex")
     expect(text).toContain("The 2 cards you can share")
     expect(text).toContain("Server admins can view your Rewind.")
-    expect(text).toContain("Every word here comes from a template.")
+    expect(text).not.toContain("Every word here comes from a template.")
   })
 })

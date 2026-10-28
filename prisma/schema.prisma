@@ -353,7 +353,7 @@ model RewindView {
   @@index([createdAt])
 }
 
-// One run of the Rewind copy eval harness
+// One run of the Rewind copy eval harness. Nothing reads or writes it since the admin Evals page was removed
 model RewindEvalRun {
   id            String   @id @default(cuid())
   model         String
@@ -600,7 +600,7 @@ model DiscordPendingSelection {
   @@index([expiresAt])
 }
 
-// Prompt Template for LLM generation
+// A prompt template or Rewind style guide. Nothing reads or writes it since the admin Prompts page was removed
 model PromptTemplate {
   id          String   @id @default(cuid())
   name        String // Human-readable name for the template

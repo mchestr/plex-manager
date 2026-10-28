@@ -42,7 +42,6 @@ export function Playground({ initialForm, options, children }: PlaygroundProps) 
   const request = () =>
     toDryRunRequest(form, {
       year: form.subject === "fixture" ? (options.fixtures.find((f) => f.id === form.fixtureId)?.year ?? options.memberYear) : options.memberYear,
-      styleGuides: options.styleGuides,
     })
 
   const start = async () => {

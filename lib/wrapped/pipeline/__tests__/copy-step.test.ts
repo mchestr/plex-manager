@@ -107,7 +107,6 @@ function input(overrides: Partial<CopyInput> = {}, llm: Partial<CopyInput['llm']
       consume: jest.fn(async () => ({ ok: true as const })),
       signal: new AbortController().signal,
       attribution: { userId: FIXTURE_USER_ID },
-      styleGuide: null,
     },
     ...overrides,
   }
@@ -165,7 +164,7 @@ describe('runCopyStep', () => {
     expect(model.calls()).toBe(1)
   })
 
-  it("writes a stored template copy again, instead of reusing it, when an older template's words are in it", async () => {
+  it("writes a stored template copy again from today's templates, instead of reusing it", async () => {
     const model = answer()
     const old = { ...GOOD, signOff: 'See you in the final cut, {{fact:member.firstName}}.' }
     const previous: PreviousCopy = { factsHash: issue.factsHash, promptVersion: 'rewind-2026.1', model: null, copy: old, copySource: 'template', slotHashes: {} }
@@ -176,9 +175,23 @@ describe('runCopyStep', () => {
     expect(result.trail.path).toBe('template')
     expect(result.copy?.signOff).toBe(slotTemplate('signOff', { facts: issue.facts, userId: FIXTURE_USER_ID, locals: copyLocals({ year: 2026 }) }))
     expect(result.copy?.signOff).not.toMatch(/final cut/i)
-    // The same copy without those words is reused as before
-    const reused = await runCopyStep(input({ previous: { ...previous, copy: result.copy! } }, { provider: null }))
-    expect(reused.trail.path).toBe('reused')
+    // Rendering it again costs nothing, and gives the same copy while the templates hold
+    const again = await runCopyStep(input({ previous: { ...previous, copy: result.copy! } }, { provider: null }))
+    expect(again.trail.path).toBe('template')
+    expect(again.copy).toEqual(result.copy)
+  })
+
+  it("no-llm writes a template copy's slots from today's templates, kept or not", async () => {
+    const fresh = await runCopyStep(input({}, { provider: null }))
+    const old = { ...fresh.copy!, decks: { ...fresh.copy!.decks, standing: 'Where you stand, with nobody named.' } }
+    const previous: PreviousCopy = {
+      factsHash: 'older', promptVersion: 'rewind-2026.1', model: null, copy: old, copySource: 'template', slotHashes: fresh.slotHashes,
+    }
+
+    const result = await runCopyStep(input({ policy: 'no-llm', previous }, { provider: null }))
+
+    expect(result.source).toBe('template')
+    expect(result.copy).toEqual(fresh.copy)
   })
 
   it('no-llm keeps the slots whose dependency hash held and templates the rest', async () => {

@@ -11,7 +11,7 @@ import { POSTER_LINES } from "../poster-lines"
 import { renderCopyText, tokenIds } from "../render-copy"
 import { slotsForPages } from "../slots"
 import {
-  copyLocals, coverLines, headline, pocketNote, posterLineTemplate, quizCallback, quizHeadline, quizReveal, SLOT_TEMPLATES, slotTemplate, windowLine,
+  copyLocals, coverLines, headline, POCKET_NOTE, posterLineTemplate, quizCallback, quizHeadline, quizReveal, SLOT_TEMPLATES, slotTemplate, windowLine,
 } from "../templates"
 import { fixtureCopyInputs, type FixtureCopyInput } from "./fixture-facts"
 
@@ -56,7 +56,32 @@ describe("slot templates", () => {
   })
 
   it("fall back to the token-free variant when the member lacks every fact", () => {
-    expect(slotTemplate("deck.taste", { facts: {}, userId: USER })).toBe("Genres as the server tags them, counted by minutes.")
+    expect(slotTemplate("deck.taste", { facts: {}, userId: USER })).toBe("Your kind of thing.")
+  })
+
+  it("never cite a count or share of zero, but cite a Sunday or midnight", () => {
+    const zero = { "hours.afterDarkShare": { value: 0, display: "0%", unit: "share" } } satisfies RewindFactsV3
+    const picks = new Set(Array.from({ length: 30 }, (_, n) => slotTemplate("deck.clock", { facts: zero, userId: `member-${n}` })))
+    expect([...picks]).toEqual(["Any time is a good time."])
+    const sunday = {
+      "hours.latestStart.time": { value: 0, display: "12:00 AM", unit: "time" },
+      "hours.latestStart.weekday": { value: 0, display: "Sunday", unit: "weekday" },
+    } satisfies RewindFactsV3
+    const sundayPicks = new Set(Array.from({ length: 30 }, (_, n) => slotTemplate("deck.clock", { facts: sunday, userId: `member-${n}` })))
+    expect(sundayPicks).toContain("Your latest start was {{fact:hours.latestStart.time}} on a {{fact:hours.latestStart.weekday}}.")
+
+    const failures: string[] = []
+    for (const input of inputs) {
+      for (const slot of slotsForPages(input.selected)) {
+        if (slot.id === "archetype.posterLineId") continue
+        const text = slotTemplate(slot.id, { facts: input.facts, userId: USER, locals: copyLocals({ year: input.year }) })
+        for (const id of tokenIds(text)) {
+          const fact = input.facts[id as keyof RewindFactsV3]
+          if (fact?.value === 0 && !["weekday", "time", "hour"].includes(fact.unit)) failures.push(`${input.id} ${slot.id}: ${id} is zero`)
+        }
+      }
+    }
+    expect(failures).toEqual([])
   })
 
   it("reads as a finished issue in either window, with the same line for both and no \"so far\"", () => {
@@ -164,8 +189,7 @@ describe("headlines and page lines", () => {
     expect(coverLines(short).map((l) => l.folio)).toEqual([2, 5])
   })
 
-  it("keys the pocket note on copySource", () => {
-    expect(pocketNote("template")).toMatch(/comes from a template/)
-    expect(pocketNote("mixed")).toBe("The six pages that sum up your year.")
+  it("keeps the pocket note to what the edition is", () => {
+    expect(POCKET_NOTE).toBe("The six pages that sum up your year.")
   })
 })

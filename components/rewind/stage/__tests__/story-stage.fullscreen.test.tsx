@@ -4,6 +4,7 @@ import type { Route } from "next"
 
 import { BackCoverShare } from "@/components/rewind/pages/back-cover-actions"
 import { PortalContainerProvider } from "@/components/ui/portal-container"
+import { ToastProvider } from "@/components/ui/toast"
 import type { IssuePageType } from "@/lib/rewind/registry"
 
 import { StoryStage, type StoryStagePage } from "../story-stage"
@@ -16,18 +17,21 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push }) }))
 const TYPES: IssuePageType[] = ["cover", "number", "back-cover"]
 
 function renderStage({ mode, pages = stagePages(TYPES), ownRewindHref }: { mode?: "member" | "preview" | "admin-preview"; pages?: StoryStagePage[]; ownRewindHref?: Route } = {}) {
+  // The app's toasts portal to the body, beside the page.
   return render(
-    <main>
-      {/* The admin page's header beside the Rewind scope */}
-      <a href="/admin/users" data-testid="outside">
-        Users
-      </a>
-      <div data-theme="rewind">
-        <PortalContainerProvider popupProps={{ "data-field": "paper" }}>
-          <StoryStage pages={pages} year={2026} archetype="midnight-marathoner" closeHref="/home" copy={LLM_COPY} mode={mode} ownRewindHref={ownRewindHref} />
-        </PortalContainerProvider>
-      </div>
-    </main>
+    <ToastProvider>
+      <main>
+        {/* The admin page's header beside the Rewind scope */}
+        <a href="/admin/users" data-testid="outside">
+          Users
+        </a>
+        <div data-theme="rewind">
+          <PortalContainerProvider popupProps={{ "data-field": "paper" }}>
+            <StoryStage pages={pages} year={2026} archetype="midnight-marathoner" closeHref="/home" copy={LLM_COPY} mode={mode} ownRewindHref={ownRewindHref} />
+          </PortalContainerProvider>
+        </div>
+      </main>
+    </ToastProvider>
   )
 }
 
@@ -132,10 +136,11 @@ describe("StoryStage full screen", () => {
     expect(stage()).toHaveAttribute("data-rw-framed")
     expect(document.documentElement.style.overflow).toBe("hidden")
     expect(screen.getByTestId("rewind-close")).toHaveAttribute("href", "/home")
-    // The admin page behind it is out of reach, the story is not.
+    // The admin page behind it is out of reach, the story and the toasts are not.
     expect(screen.getByTestId("outside")).toHaveAttribute("inert")
     expect(stage()).not.toHaveAttribute("inert")
     expect(stage().closest("[inert]")).toBeNull()
+    expect(screen.getByTestId("toast-viewport").closest("[inert]")).toBeNull()
 
     await user.keyboard("{Escape}")
     expect(stage()).not.toHaveAttribute("data-fullscreen")

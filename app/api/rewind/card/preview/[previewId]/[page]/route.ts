@@ -24,7 +24,7 @@ const dailySchema = z.enum(["0", "1"]).default("0")
  * A dry run's card (P7.10), for admins only: the stored preview through
  * `toShareSafe` with the default options (unsigned, no art, no daily detail,
  * no chosen facts), exactly as the owner route draws the same data. The
- * gallery (P7.11) passes `daily=1`, so the calendar card exists. Every
+ * playground passes `daily=1`, so the calendar card exists. Every
  * response is noindex; anything unauthorised, unknown or expired is a 404.
  */
 async function handleGet(request: NextRequest, context: { params: Promise<{ previewId: string; page: string }> }) {
