@@ -18,6 +18,10 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Removed
+
+- The planning documents under `.agents/planning/` (about 12 MB of plans, mockups and fonts). Git history keeps them.
+
 ## [0.6.0] - 2026-10-28
 
 ### Added

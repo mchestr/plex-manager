@@ -1,6 +1,6 @@
 ---
 name: rewind-design-system
-description: The Rewind 2026 visual system as this repository implements it. Use when building or changing anything inside the Rewind scope (story pages, the stage chrome, sheets, the share page, cards) to get the ink and field model, the Archivo and Newsreader roles, the typesetter, the motion and reduced-motion rules, and the poster rules right. Points at the source files and design sections that own each value.
+description: The Rewind 2026 visual system as this repository implements it. Use when building or changing anything inside the Rewind scope (story pages, the stage chrome, sheets, the share page, cards) to get the ink and field model, the Archivo and Newsreader roles, the typesetter, the motion and reduced-motion rules, and the poster rules right. Points at the source files that own each value.
 paths:
   - "components/rewind/**"
   - "lib/rewind/**"
@@ -11,14 +11,10 @@ paths:
 # Rewind design system
 
 Rewind is the one place where the app becomes a printed publication. The
-values live in code and in the design; this skill tells you where, so read the
-source rather than copying numbers from here.
+values live in code; this skill tells you where, so read the source rather
+than copying numbers from here.
 
-Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-2026-design.md`
-(section 5) and the scope contract in
-`.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/ui-design-system.md` (4.4).
-
-## The scope contract (ui-design-system 4.4, design 5.1)
+## The scope contract
 
 - Every Rewind surface renders inside `RewindScope`
   (`components/rewind/stage/rewind-scope.tsx`): the member layout
@@ -30,8 +26,8 @@ Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-202
   inside the scope. A portal to `body` leaves the scope and renders graphite.
 - An element that prints in an ink spreads `inkProps(ink, opts)` from
   `lib/design/tokens.ts`: it sets `data-field`, the `.light` or `.dark` class,
-  and `data-spot="arch"` or `data-ink="arch-deep"` where design 5.3 needs
-  them. No Rewind component writes a colour, a hex value or a palette class.
+  and `data-spot="arch"` or `data-ink="arch-deep"` where the page's spot
+  rule needs them. No Rewind component writes a colour, a hex value or a palette class.
 - The twelve inks: `InkName` and `rewindInks` in `lib/design/tokens.ts` (hex,
   for Satori and charts) mirror the OKLCH values in the Rewind block of
   `app/globals.css` (between the `rewind-scope:start` and `rewind-scope:end`
@@ -41,7 +37,7 @@ Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-202
   petrol) carry `.dark`, the eight light inks `.light`. The app's `dark:`
   variant is bounded, so it never fires under a `.light` element. Never nest a
   `.dark` element inside a `.light` one.
-- Two-ink discipline (design 5.2 and 5.3): one field and one ink per page,
+- Two-ink discipline: one field and one ink per page,
   plus at most one spot colour. Text is the ink on the field, or the deep ink
   on paper, never the spot. Marks that differ are told apart by solid versus
   hatched or outlined, never by colour alone. No gradients, no status colours
@@ -55,7 +51,7 @@ Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-202
   Rewind-only Button variants (`ink`, `ink-outline`) and sizes (`pill`,
   `icon-pill`) exist only here.
 
-## Type (design 5.4)
+## Type
 
 - Fonts: `lib/rewind/fonts.ts` loads Archivo (variable width and weight) and
   Newsreader (static Text, Text Italic and Display Italic) with
@@ -63,9 +59,8 @@ Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-202
   scope use the `font-display` (Archivo: headlines, numerals, labels, chrome)
   and `font-text` (Newsreader: decks, notes, captions) utilities. IBM Plex
   never renders inside Rewind.
-- Roles and sizes are design 5.4's table. Sizes are artboard units: `u()`,
-  `ut()` (never under 12 px rendered) and `MEASURE` in
-  `components/rewind/pages/units.ts`.
+- Sizes are artboard units: `u()`, `ut()` (never under 12 px rendered) and
+  `MEASURE` in `components/rewind/pages/units.ts`.
 - Headlines and numerals are fitted before render by `fitLines` in
   `lib/rewind/typeset/fit-lines.ts`, with `pageMetrics` from
   `lib/rewind/typeset/metrics.ts`. That module is `server-only`: fit in a
@@ -77,7 +72,7 @@ Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-202
   `formatDayMonth`): it puts U+00A0 between a number and its unit, so "10 PM"
   never breaks, and nothing reads "1 films".
 
-## Motion (design 5.6)
+## Motion
 
 - Page choreography is CSS in the Rewind block of `app/globals.css`: the
   `--rw-dur-*` durations and the `--rw-ease-stretch`, `--rw-ease-ink`,
@@ -98,7 +93,7 @@ Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-202
   swaps the nameplate stretch for a transform and drops the paper grain.
   Components read it with `useLowEnd` (`components/rewind/stage/low-end.tsx`).
 
-## Imagery (design 5.8)
+## Imagery
 
 - Posters render only through `RewindPoster` (`components/rewind/media/poster.tsx`),
   a wrapper over `components/ui/poster.tsx` and the poster proxy

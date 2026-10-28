@@ -1,6 +1,6 @@
 # Privacy: personal data and member removal
 
-This is the inventory of the personal data Plex Manager stores, and what happens to each piece when an admin removes a member. It updates the October 2026 audit's inventory (`.agents/planning/2026-10-17-app-audit-and-rewind-2026/research/additional-findings.md`, "Privacy: personal-data inventory") for the Rewind 2026 (v3) models and every column added since.
+This is the inventory of the personal data Plex Manager stores, and what happens to each piece when an admin removes a member.
 
 The inventory drives member removal (`lib/members/erase.ts`) and the retention jobs. A test (`__tests__/docs/privacy-inventory.test.ts`) fails when a model in `prisma/schema.prisma` is missing from the tables below, so a new table or personal-data column updates this file in the same pull request.
 

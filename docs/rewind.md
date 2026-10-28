@@ -19,6 +19,11 @@ Sections marked **Pending** describe steps that have not merged yet. They say
 what the step will add, and are filled in when it merges; until then the
 fallback they name applies.
 
+The owner keeps the season's records outside the repository: `ship-check.md`
+(each check and each flag turned on), `season-log.md` (the daily log, the
+production image digest and the freeze exceptions) and `model-selection.md`
+(the model bake-off).
+
 ## Contents
 
 - [Requirements](#requirements)
@@ -576,9 +581,9 @@ before the season-open release (30 November).
 
 No migration merges from 25 November 2026 to 2 January 2027 except a named
 freeze exception, recorded in `season-log.md`, which ships with a dump first
-and `SKIP_MIGRATIONS=true` on every replica but one. The last pre-season
-migrations are listed in the Phase 8 plan's migration calendar; the newest in
-this release is `prisma/migrations/20261124000700_p77_rewind_exclusion_title`.
+and `SKIP_MIGRATIONS=true` on every replica but one. The newest
+pre-season migration in this release is
+`prisma/migrations/20261124000700_p77_rewind_exclusion_title`.
 
 ## After 1 January
 

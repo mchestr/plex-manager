@@ -10,13 +10,10 @@ paths:
 
 Every card is public, so a card is drawn from the share-safe projection and
 nothing else, by a Satori-safe component, and the owner sees exactly what a
-stranger with the link would see.
+stranger with the link would see. Colours and type follow
+`rewind-design-system`.
 
-Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-2026-design.md`
-6.1 (the projection), 6.4 (the renderer) and 6.7 (the OG card); colours and
-type follow `rewind-design-system`.
-
-## Data: `toShareSafe` only (design 6.1)
+## Data: `toShareSafe` only
 
 - Both routes call `projectCard` in `lib/rewind/cards/serve.ts`, which runs
   `toShareSafe` (`lib/wrapped/data/share-safe.ts`) and builds a `CardInput`
@@ -35,7 +32,7 @@ type follow `rewind-design-system`.
   `lib/rewind/cards/index.ts` (`renderCard`, `hasCard`). Setup and Next year
   have no card. A new card needs both lists and its eligibility rule.
 
-## Satori rules (design 6.4, P5.10)
+## Satori rules
 
 - `display: flex` on every element with children; no grid, CSS variables,
   `calc()`, pseudo-elements, `box-shadow`, `filter`, blend modes,
@@ -61,8 +58,8 @@ type follow `rewind-design-system`.
   `fitNameplate` (`lib/rewind/cards/type.tsx`), which call `fitLines` with
   `cardMetrics` on a measure divided by `1 + CARD_SLACK` (Satori's unkerned
   word spacing), and is set `nowrap`, so Satori never re-wraps it. Text the
-  card fonts cannot set falls back to `safeFit`, one Noto line. Card roles
-  are design 6.4's list, not the page's.
+  card fonts cannot set falls back to `safeFit`, one Noto line. Cards use
+  their own type roles, not the page's.
 - Rebuilding the fonts or metrics is `scripts/build-rewind-fonts.py`.
 
 ## Sizes, version, cache and limits

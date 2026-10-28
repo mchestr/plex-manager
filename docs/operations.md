@@ -192,8 +192,7 @@ throwaway pull requests, then set it back to `off` and close them unmerged:
 | The same change, labelled `freeze:data` | Passes |
 | A change only under `.agents/planning/`, no label | Passes |
 
-Record the three run ids in
-`.agents/planning/2026-10-17-app-audit-and-rewind-2026/implementation/ship-check.md`.
+Record the three run ids in `ship-check.md`.
 
 At 00:00 server time on 2026-12-14, set `CODE_FREEZE` to `on`. Changing the
 variable does not re-run the checks of pull requests that are already open, so

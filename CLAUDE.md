@@ -950,7 +950,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - Where a skill's advice conflicts with this file (for example SWR instead of TanStack Query, or throwing from Server Actions), this file wins.
 - Shell execution from skills is off (`disableSkillShellExecution` in `.claude/settings.json`).
 - `.claude/skills/THIRD_PARTY.md` records each skill's source, SHA or npm version, licence, review and local changes, and the update procedure: review the upstream diff at a new SHA, copy, record. Never run `npx skills add` or `npx skills update` here.
-- The project-authored skills point at source files and design sections instead of copying values; `scripts/__tests__/project-skills.test.ts` fails when a path, export, npm script or Playwright project they name disappears, so update the skill in the same PR as the code it describes.
+- The project-authored skills point at source files instead of copying values; `scripts/__tests__/project-skills.test.ts` fails when a path, export, npm script or Playwright project they name disappears, so update the skill in the same PR as the code it describes.
 - Any change to `.claude/skills/**` or `.mcp.json` needs a `/security-review` before merge.
 
 ## Additional Resources

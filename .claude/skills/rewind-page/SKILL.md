@@ -15,9 +15,6 @@ page prints, what data it holds and what every other surface (screen readers,
 Table, article mode, Notes, cards) says about it; the component only draws
 that data. Follow `rewind-design-system` for how it looks.
 
-Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-2026-design.md`
-4.2 (the catalogue), 4.3 (each page's rule, data and test ids) and 7.8 (the facts).
-
 ## 1. Metadata and the registry entry
 
 - Page id: add it to `lib/wrapped/data/page-types.ts` in issue order.
@@ -64,14 +61,13 @@ Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-202
 ## 3. Omission, the cut list and test ids
 
 - The page omits itself (FR-2): `select` returns null when the page has
-  nothing true to say (design 4.3 gives each page's rule); never print a zero
-  count or an empty list. `selectPages` and `eligiblePages` in
+  nothing true to say; never print a zero count or an empty list. `selectPages` and `eligiblePages` in
   `lib/rewind/select-pages.ts` apply the rule and the edition.
 - A non-core page joins the cut list, `REWIND_CUT_PAGES` in
   `lib/validations/rewind-settings.ts`, so the admin can switch it off
   through `Config.rewindDisabledPages`. The cover, the centrefold and the
   back cover always stay.
-- Test ids follow design 4.3: the page root is `rewind-page-<page>`, its
+- Test ids: the page root is `rewind-page-<page>`, its
   parts `rewind-<page>-<part>` (for example `rewind-record-cell`). Every
   interactive element has one.
 
