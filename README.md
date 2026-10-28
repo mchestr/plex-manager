@@ -13,6 +13,19 @@ their watch history.
 > Plex Manager is not at version 1.0. Until then, a new release can change the
 > features, the settings and the database.
 
+<p align="center">
+  <img src="docs/images/rewind.png" alt="The cover page of a member's Rewind on a phone" width="21%">
+  <img src="docs/images/home.png" alt="The member home page" width="74%">
+</p>
+
+<details>
+<summary>More screenshots</summary>
+<br>
+<img src="docs/images/admin.png" alt="The admin users page">
+<br><br>
+<img src="docs/images/setup.png" alt="The first step of the setup wizard">
+</details>
+
 ## Features
 
 - **Sign-in and invites.** Members sign in with their Plex account. If you
