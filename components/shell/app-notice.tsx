@@ -19,7 +19,7 @@ function NoticeBody({ notice }: { notice: MemberNotice }) {
       return (
         <Alert
           tone="info"
-          title={notice.finalCut ? `Your Rewind ${notice.year} now includes December` : `Your Rewind ${notice.year} is ready`}
+          title={`Your Rewind ${notice.year} is ready`}
           action={
             <Button
               size="sm"

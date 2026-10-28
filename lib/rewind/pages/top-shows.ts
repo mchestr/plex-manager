@@ -7,12 +7,14 @@
  * @module lib/rewind/pages/top-shows
  */
 
-import { plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
+import { andList, deckBlock, heading, plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
 import { formatHero, formatRewindDuration } from "@/lib/rewind/format"
 import type { NotesContext, PageDefinition } from "@/lib/rewind/registry"
+import { headline } from "@/lib/wrapped/copy/templates"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
-import { isFinalCut, shown } from "./facts"
+import { pageDeck } from "./deck"
+import { isWholeYear, shown } from "./facts"
 import { ratingKeyOf } from "./title-key"
 import { TopShowsDataSchema, type TopShowsData } from "./top-lists.schema"
 
@@ -20,9 +22,9 @@ import { TopShowsDataSchema, type TopShowsData } from "./top-lists.schema"
 export const seriesFact = (i: number, field: string) => `series[${i + 1}].${field}` as FactId
 export const filmFact = (i: number, field: string) => `films[${i + 1}].${field}` as FactId
 
-/** Months the window counts: 12 after the final cut, else through `window.through`'s month. */
+/** Months the window counts: 12 in a whole-year issue, else through `window.through`'s month. */
 export function countedMonths(facts: RewindFactsV3): number {
-  if (isFinalCut(facts)) return 12
+  if (isWholeYear(facts)) return 12
   const through = facts["window.through"]?.value
   return typeof through === "string" ? Number(through.slice(5, 7)) : 12
 }
@@ -30,6 +32,19 @@ export function countedMonths(facts: RewindFactsV3): number {
 /** "September" or "Sep". */
 export const monthName = (month: number, locale: string, style: "long" | "short") =>
   new Intl.DateTimeFormat(locale, { month: style, timeZone: "UTC" }).format(Date.UTC(2026, month - 1, 1))
+
+/** The months a series was watched in, as runs: "January to October", or "March and May to July". */
+function monthsWatched(monthly: readonly number[], locale: string): string {
+  const runs: Array<{ from: number; to: number }> = []
+  monthly.forEach((minutes, m) => {
+    if (minutes <= 0) return
+    const run = runs.at(-1)
+    if (run && run.to === m - 1) run.to = m
+    else runs.push({ from: m, to: m })
+  })
+  const name = (m: number) => monthName(m + 1, locale, "long")
+  return andList(runs.map(({ from, to }) => (from === to ? name(from) : `${name(from)} to ${name(to)}`)))
+}
 
 /**
  * How a list counts, for the desktop Notes: "Counted from January 1 to
@@ -76,7 +91,7 @@ export const topShowsPage: PageDefinition<TopShowsData> = {
   table: (data, facts, settings) => {
     const months = countedMonths(facts)
     return {
-      caption: `Minutes of each series by month, from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}.`,
+      caption: "Minutes of each series by month.",
       columns: ["Series", ...Array.from({ length: months }, (_, m) => monthName(m + 1, settings.locale, "short")), "In all"],
       rows: data.rows.map((row, i) => [
         shown(facts, seriesFact(i, "title")),
@@ -84,6 +99,23 @@ export const topShowsPage: PageDefinition<TopShowsData> = {
         shown(facts, seriesFact(i, "minutes")),
       ]),
     }
+  },
+  // Each series with its total and the months it was watched in; the minutes per month stay in the Table sheet and the Notes.
+  article: (data, facts, ctx) => {
+    const months = countedMonths(facts)
+    const printed = data.rows.flatMap((_row, i) => [seriesFact(i, "title"), seriesFact(i, "minutes")])
+    return [
+      heading(headline("top-shows", facts), facts),
+      ...deckBlock(pageDeck(ctx, facts, "topShows"), facts, printed),
+      {
+        kind: "table",
+        table: {
+          caption: "Your top series",
+          columns: ["Series", "Watched", "Months"],
+          rows: data.rows.map((row, i) => [shown(facts, seriesFact(i, "title")), shown(facts, seriesFact(i, "minutes")), monthsWatched(row.monthly.slice(0, months), ctx.locale)]),
+        },
+      },
+    ]
   },
   notes: topShowsNotes,
   share: {

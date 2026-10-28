@@ -6,7 +6,6 @@
  */
 
 import { plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
-import type { CopyAuthor } from "@/lib/rewind/copy-disclosure"
 import { shown } from "@/lib/rewind/pages/facts"
 import type { NotesContext, RewindPageType } from "@/lib/rewind/registry"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
@@ -22,7 +21,6 @@ export interface CoreNotesContext extends NotesContext {
   earlierYears?: readonly number[]
   /** `serverName()`, the billing block's first credit. */
   serverName?: string
-  copySource?: CopyAuthor["copySource"]
   /** The names of the cards the member can share (`eligibleCards`), for the back cover. */
   cards?: readonly string[]
 }

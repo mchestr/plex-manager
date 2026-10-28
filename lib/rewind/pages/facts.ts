@@ -24,8 +24,8 @@ export function issueYear(facts: RewindFactsV3): number {
   return typeof from === "string" ? Number(from.slice(0, 4)) : 0
 }
 
-/** The window is the full year: after the final cut. */
-export const isFinalCut = (facts: RewindFactsV3): boolean => num(facts, "window.finalCut") === 1
+/** The window is the whole year: the issue was made after the year ended (the stored fact keeps its old name, `window.finalCut`). */
+export const isWholeYear = (facts: RewindFactsV3): boolean => num(facts, "window.finalCut") === 1
 
 /** "Vol. 4, No. K7Q4" from the member's volume and serial, or "" without them. */
 export const volumeLine = (facts: RewindFactsV3): string =>

@@ -7,26 +7,22 @@
  * @module lib/rewind/pages/back-cover
  */
 
-import { figure, heading, paragraph, plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
+import { heading, paragraph, plain } from "@/lib/rewind/article/blocks"
 import { billingBlock } from "@/lib/rewind/billing-block"
-import { backCoverDisclosure } from "@/lib/rewind/copy-disclosure"
-import { formatDayMonth } from "@/lib/rewind/format"
 import type { PageDefinition } from "@/lib/rewind/registry"
 import { copyLocals, headline } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { BackCoverDataSchema, type BackCoverData } from "./back-cover.schema"
-import { has, isFinalCut, issueYear, shown, volumeLine } from "./facts"
+import { has, isWholeYear, issueYear, shown, volumeLine } from "./facts"
 import { ratingKeyOf } from "./title-key"
 
 /** The page's measure in artboard px; the billing block's lines are justified to it. */
 const MEASURE = 358
 
-/** The soundtrack's caption: the season's promise of the final cut, or the whole year. */
-export function backCoverCaption(facts: RewindFactsV3, year: number, locale: string): string {
-  return isFinalCut(facts)
-    ? "One line per day, the whole year."
-    : `One line per day. December is still being written; it joins in the final cut on ${formatDayMonth(`${year + 1}-01-01`, { locale })}.`
+/** The soundtrack's caption: the days the issue counts, "January 1 to November 30" or the whole year. */
+export function backCoverCaption(facts: RewindFactsV3): string {
+  return isWholeYear(facts) ? "One line per day, the whole year." : `One line per day, ${shown(facts, "window.from")} to ${shown(facts, "window.through")}.`
 }
 
 /** "Chester Family Plex Rewind 2026, Vol. 4, No. K7Q4". */
@@ -43,7 +39,8 @@ export const backCoverPage: PageDefinition<BackCoverData> = {
     const days = has(facts, "days.active") ? shown(facts, "days.active") : "0"
     return `The soundtrack of ${issueYear(facts)} again: one line for each day, ${days} of ${data.minutes.length} days with something played.`
   },
-  article: (data, facts, ctx) => {
+  // The heading and the billing as credits: the soundtrack's days are the calendar's, and the colophon is the masthead.
+  article: (_data, facts, ctx) => {
     const block = billingBlock(facts, {
       serverName: ctx.serverName,
       named: true,
@@ -53,14 +50,11 @@ export const backCoverPage: PageDefinition<BackCoverData> = {
       metrics: ctx.metrics,
     })
     const signOff = ctx.copy?.signOff
-    const blocks: ArticleBlock[] = [
+    return [
       heading(headline("back-cover", facts), { ...facts, ...copyLocals({ year: ctx.year }) }),
       { kind: "definitionList", label: "The billing", entries: block.entries.map((entry) => ({ term: entry.term, detail: plain(entry.detail) })) },
-      ...figure(backCoverPage.srSummary(data, facts)),
-      { kind: "note", text: plain(backCoverCaption(facts, ctx.year, ctx.locale)) },
+      ...(signOff ? [paragraph(signOff, facts)] : []),
     ]
-    if (signOff) blocks.push(paragraph(signOff, facts))
-    return [...blocks, { kind: "paragraph", text: plain(backCoverDisclosure(ctx.copySource)) }, { kind: "note", text: plain(colophon(facts, ctx)) }]
   },
   share: {
     facts: [

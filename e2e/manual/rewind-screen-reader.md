@@ -53,8 +53,9 @@ Swipe right or left moves between elements; double-tap activates; the rotor
    headers are read with each cell. Close it with the Close button (and with a
    two-finger scrub). Expect focus back on "Table".
 9. **"Why this?".** On the centrefold, double-tap "Why this?". Expect the
-   dialog's title, the reasons, and the provider named. Close it; focus
-   returns to "Why this?".
+   dialog's title, the reasons and the dedication. Close it; focus returns
+   to "Why this?". On an issue with model-written words, Settings' "About
+   the words" names the provider; an all-template issue has no such section.
 10. **The share sheet.** Open Share. Expect each switch read as "switch
     button, on/off" with its label, and toggling read once. Double-tap Copy
     link (or "Create a public link…" then confirm). Expect the confirmation

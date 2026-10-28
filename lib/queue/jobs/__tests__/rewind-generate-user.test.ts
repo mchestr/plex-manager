@@ -37,10 +37,10 @@ const release = jest.fn(async () => true)
 
 const COMPLETED = { status: 'completed', data: { version: 3 }, trail: {} }
 
-function job(overrides: { id?: string; attemptsMade?: number; attempts?: number } = {}): Job<RewindGenerateUserPayload> {
+function job(overrides: { id?: string; attemptsMade?: number; attempts?: number; exclusion?: true } = {}): Job<RewindGenerateUserPayload> {
   return {
     id: overrides.id ?? 'gen-1',
-    data: { generationId: overrides.id ?? 'gen-1', userId: 'user-1', year: 2026 },
+    data: { generationId: overrides.id ?? 'gen-1', userId: 'user-1', year: 2026, ...(overrides.exclusion && { exclusion: true }) },
     attemptsMade: overrides.attemptsMade ?? 0,
     opts: { attempts: overrides.attempts ?? 3 },
   } as unknown as Job<RewindGenerateUserPayload>
@@ -203,5 +203,16 @@ describe('processRewindGenerateUser', () => {
       generationId: 'gen-1',
       signal: expect.any(AbortSignal),
     })
+  })
+
+  it('keeps the stored data window for a hide or unhide (P7.7), and only for one', async () => {
+    generate.mockResolvedValue(COMPLETED as never)
+    prismaMock.rewindGeneration.findUnique.mockResolvedValue({ ...QUEUED, copyPolicy: 'no-llm' } as never)
+
+    await processRewindGenerateUser(job({ exclusion: true }))
+    await processRewindGenerateUser(job())
+
+    expect(generate.mock.calls.map(([options]) => options.keepWindow)).toEqual([true, undefined])
+    expect(generate).toHaveBeenNthCalledWith(1, expect.objectContaining({ copyPolicy: 'no-llm' }))
   })
 })

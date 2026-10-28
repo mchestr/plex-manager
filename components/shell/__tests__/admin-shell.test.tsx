@@ -97,9 +97,6 @@ describe('AdminShell', () => {
     expect(within(within(sheet).getByRole('region', { name: 'Rewind' })).getAllByRole('link').map((a) => a.textContent)).toEqual([
       'Season',
       'Playground',
-      'Gallery',
-      'Evals',
-      'Prompts',
       'Share analytics',
     ])
     expect(within(sheet).getByTestId('admin-nav-users-mobile')).toHaveAttribute('aria-current', 'page')

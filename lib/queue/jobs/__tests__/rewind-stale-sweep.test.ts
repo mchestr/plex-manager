@@ -5,7 +5,8 @@
 /**
  * `REWIND_STALE_SWEEP` (P2.17, design 9.3): a run lost with its worker is
  * failed as `WORKER_LOST` and re-enqueued once; a queued run whose job
- * vanished is `JOB_LOST`; a run still inside 15 minutes is left alone.
+ * vanished is `JOB_LOST`; a run still inside 15 minutes is left alone. Each
+ * sweep removes the 1 January final cut an earlier version scheduled.
  */
 
 import { mockReset } from 'jest-mock-extended'
@@ -14,11 +15,15 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { processRewindStaleSweep } from '@/lib/queue/jobs/rewind-stale-sweep'
 import { getRewindQueue } from '@/lib/queue/rewind-producers'
 import { enqueueRewindGeneration } from '@/lib/rewind/enqueue-generation'
+import { cancelScheduledFinalCut } from '@/lib/rewind/season-runs'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/queue/rewind-producers', () => ({ getRewindQueue: jest.fn() }))
 jest.mock('@/lib/rewind/enqueue-generation', () => ({ enqueueRewindGeneration: jest.fn() }))
-jest.mock('@/lib/rewind/season-runs', () => ({ scheduleSeasonOpenRun: jest.fn(async () => null), scheduleFinalCutRun: jest.fn(async () => null) }))
+jest.mock('@/lib/rewind/season-runs', () => ({ scheduleSeasonOpenRun: jest.fn(async () => null), cancelScheduledFinalCut: jest.fn(async () => 0) }))
+jest.mock('@/lib/utils/logger', () => ({
+  createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+}))
 jest.mock('@/lib/rewind/season-open', () => ({ scheduleSeasonAudienceSwitch: jest.fn(async () => null) }))
 
 const NOW = new Date('2026-12-05T12:00:00Z')
@@ -34,6 +39,8 @@ const enqueue = jest.mocked(enqueueRewindGeneration)
 
 interface Row {
   id: string
+  kind?: string
+  copyPolicy?: string
   status: string
   startedAt: Date | null
   createdAt: Date
@@ -101,6 +108,22 @@ describe('processRewindStaleSweep', () => {
     expect(result).toMatchObject({ workerLost: 1, requeued: 1 })
     expect(rows[0]).toMatchObject({ status: 'failed', error: { code: 'WORKER_LOST', requeuedAs: 'gen-retry-1' } })
     expect(enqueue).toHaveBeenCalledWith({ userId: 'user-1', year: 2026, kind: 'member' })
+  })
+
+  it('re-enqueues a lost hide or unhide as one, so it keeps template copy and the stored window', async () => {
+    table([{ id: 'gen-1', copyPolicy: 'no-llm', status: 'running', startedAt: minutesAgo(16), createdAt: minutesAgo(17) }])
+
+    await processRewindStaleSweep()
+
+    expect(enqueue).toHaveBeenCalledWith({ userId: 'user-1', year: 2026, kind: 'member', exclusion: {} })
+  })
+
+  it('re-enqueues a lost final-cut run of an earlier version as a season run', async () => {
+    table([{ id: 'gen-1', kind: 'final-cut', status: 'running', startedAt: minutesAgo(16), createdAt: minutesAgo(17) }])
+
+    await processRewindStaleSweep()
+
+    expect(enqueue).toHaveBeenCalledWith({ userId: 'user-1', year: 2026, kind: 'season' })
   })
 
   it('does not re-enqueue a re-run that is lost again', async () => {
@@ -181,5 +204,21 @@ describe('processRewindStaleSweep', () => {
       },
       data: { status: 'failed', error: '{"code":"WORKER_LOST"}' },
     })
+  })
+
+  it('removes the final cut an earlier version scheduled on every sweep', async () => {
+    table([])
+
+    await processRewindStaleSweep()
+    await processRewindStaleSweep()
+
+    expect(cancelScheduledFinalCut).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not fail the sweep when the final cut cannot be removed', async () => {
+    table([{ id: 'gen-lost', status: 'queued', startedAt: null, createdAt: minutesAgo(5) }])
+    jest.mocked(cancelScheduledFinalCut).mockRejectedValueOnce(new Error('Connection is closed.'))
+
+    await expect(processRewindStaleSweep()).resolves.toMatchObject({ jobLost: 1 })
   })
 })

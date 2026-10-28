@@ -20,13 +20,13 @@ beforeAll(async () => {
 
 const dataOf = (issue: FixtureIssue) => registry["short-list"].select(issue.facts, { edition: "pocket", archetype: null, disabledPages: [], stats: issue.stats })!
 
-function renderList(issue: FixtureIssue, copySource: "template" | "llm" = "template") {
+function renderList(issue: FixtureIssue, edition: "pocket" | "full" = "pocket") {
   const data = dataOf(issue)
   render(
     <div data-theme="rewind">
       <PortalContainerProvider popupProps={{ "data-field": "paper" }}>
         <PlayerProvider value={jest.fn()}>
-          <ShortListPage data={data} issue={issueContext(issue, { copySource, edition: copySource === "template" ? "pocket" : "full" })} />
+          <ShortListPage data={data} issue={issueContext(issue, { edition })} />
         </PlayerProvider>
       </PortalContainerProvider>
     </div>
@@ -49,7 +49,7 @@ describe("Short list (pocket edition)", () => {
   })
 
   it("lists Nos. 2 and 3 as rows that open their sheets", () => {
-    const data = renderList(heavy, "llm")
+    const data = renderList(heavy, "full")
     expect(data.rows).toHaveLength(3)
     const rows = screen.getAllByTestId("rewind-list-row")
     expect(rows).toHaveLength(2)
@@ -63,15 +63,16 @@ describe("Short list (pocket edition)", () => {
     expect(document.body).not.toHaveTextContent(/time zone/i)
   })
 
-  it("says the words are templates only when every word is one", () => {
-    renderList(light, "template")
-    expect(screen.getByTestId("rewind-short-list-note")).toHaveTextContent("every word on them comes from a template")
+  it("notes a pocket member's six pages, with a deck that leaves the total to The number", () => {
+    renderList(light)
+    expect(screen.getByTestId("rewind-short-list-note")).toHaveTextContent("The six pages that sum up your year.")
+    expect(screen.getByTestId("rewind-short-list-deck")).toHaveTextContent(/^A small year, well chosen\.$/)
   })
 
-  it("names a full issue's cut without the template claim", () => {
-    renderList(heavy, "llm")
+  it("names a full issue's cut the same way", () => {
+    renderList(heavy, "full")
     expect(screen.getByTestId("rewind-short-list-note")).toHaveTextContent("The six pages that sum up your year.")
-    expect(within(screen.getByTestId("rewind-page-short-list")).getByTestId("rewind-short-list-deck")).toHaveTextContent("The titles at the top of")
+    expect(within(screen.getByTestId("rewind-page-short-list")).getByTestId("rewind-short-list-deck")).toHaveTextContent(/^The titles at the top of your year\.$/)
   })
 
   it("summarises the list deterministically", () => {

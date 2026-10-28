@@ -1,3 +1,0 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
-
-exports[`re-calls the model for fewer than 30% of the fixtures: the two written Decembers and a close race 1`] = `"17 of 20 keep all copy, 3 re-call (band-crossed: hours.afterDarkShare; band-crossed: records.rewatchShare; identity-changed: days.biggest.date; identity-changed: next.picks[1].title; identity-changed: people.actor[1].name; identity-changed: series[1].title; identity-changed: streak.longest.from; identity-changed: taste.genre[1].name)"`;

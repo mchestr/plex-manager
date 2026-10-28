@@ -11,17 +11,16 @@
  *   repeating the number (RWV-10).
  * - `identity`: the facts its claim depends on, such as the No. 1 title. No
  *   slot lists `window.finalCut`: model copy may not use window words
- *   (grounding rule 6), so window wording lives in the templates (design
- *   8.3), and listing it would re-call the model for every full issue at the
- *   final cut (P8.5).
+ *   (grounding rule 6), so no model claim depends on the window, and window
+ *   wording lives in the templates (design 8.3).
  * - `bands`: thresholds a quantifier depends on ("most" needs a share of 0.5).
  *
  * ## Dependency hash
  *
  * `slotDependencyHash` hashes the identity values and the side of each band.
- * The final cut and no-LLM regenerations (P7.7, P8.5) re-write a slot only
- * when that hash changes: numbers that merely grew re-render through tokens
- * for free.
+ * No-LLM regenerations (a hide or unhide, P7.7) re-write a slot only when
+ * that hash changes: numbers that merely moved re-render through tokens for
+ * free.
  *
  * @module lib/wrapped/copy/slots
  */

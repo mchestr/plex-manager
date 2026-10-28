@@ -10,7 +10,7 @@ export type MemberNotice =
   | { kind: "past-due" }
   /** `jellyfinEnabled`: a member with both services, whose Jellyfin account is already on (P11.11). */
   | { kind: "pending-invite"; jellyfinEnabled?: true }
-  | { kind: "rewind-ready"; year: number; finalCut?: true }
+  | { kind: "rewind-ready"; year: number }
 
 /** Highest first. P7.14 produces `rewind-ready`. */
 const PRIORITY: ReadonlyArray<MemberNotice["kind"]> = ["past-due", "pending-invite", "rewind-ready"]

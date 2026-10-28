@@ -62,7 +62,6 @@ beforeEach(() => {
   jest.mocked(getRedisConnection).mockReturnValue({ set } as never)
   prismaMock.config.findUnique.mockResolvedValue(buildConfig())
   prismaMock.lLMProvider.findFirst.mockResolvedValue({ provider: MODEL.provider, model: MODEL.id } as never)
-  prismaMock.promptTemplate.findFirst.mockResolvedValue(null)
   prismaMock.lLMUsage.aggregate.mockResolvedValue({ _sum: { cost: 0 } } as never)
 })
 

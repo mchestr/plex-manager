@@ -17,7 +17,7 @@ other project. Refresh the baselines with the Visual Baselines workflow below.
 | Spec | Screens |
 | --- | --- |
 | `member.visual.spec.ts` | sign-in (signed-out `/`), home, onboarding step 2, invite valid and expired, `/subscribe`, `/discord/link`, `/auth/denied`, the stored v2 Rewind at `/rewind` |
-| `admin.visual.spec.ts` | users, users with Plex down, user detail, settings, invites, queues, LLM usage, prompts; a 404 and an error state |
+| `admin.visual.spec.ts` | users, users with Plex down, user detail, settings, invites, queues, LLM usage; a 404 and an error state |
 | `setup.visual.spec.ts` | setup wizard step 3 |
 | `primitives.visual.spec.ts` | the `/dev/ui` primitives sheet (P3.4), dark and light; the web server sets `ENABLE_DEV_UI=1` |
 | `rewind.spec.ts` | every page of the heavy, median and light Rewind issues, the article offer below the 0.8 scale floor, and one normal-motion pass per issue (P5.4) |
@@ -59,7 +59,7 @@ it off the list before its baseline.
 - **Production build only.** The specs skip unless `E2E_SERVER=prod`, which
   makes `playwright.config.ts` run `npm run build:e2e` and `next start`.
 - **Seed.** `e2e/helpers/seed-fixtures.ts` resets every table the screens read
-  (users, invites, Rewind, LLM usage, prompts, announcement, service configs)
+  (users, invites, Rewind, LLM usage, announcement, service configs)
   before each spec file, and removes its extra rows afterwards. The server
   clock is not frozen, so dates shown relative to it ("Yesterday") are
   offsets from seed time; dates printed in full are fixed, so their width

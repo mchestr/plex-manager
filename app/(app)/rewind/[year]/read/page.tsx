@@ -8,7 +8,6 @@ import { rewindName, serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
 import { copyText, plain } from "@/lib/rewind/article/blocks"
 import { articleSections } from "@/lib/rewind/article/sections"
-import { rewindFeatureFlags } from "@/lib/rewind/features"
 import { volumeLine } from "@/lib/rewind/pages/facts"
 import { safeReturnPath } from "@/lib/rewind/return-to"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
@@ -48,8 +47,7 @@ export async function generateMetadata({ params }: ReadPageProps): Promise<Metad
 
 /**
  * Article mode (P5.12, RWV-09, UI-09): the member's v3 issue as one semantic
- * document, with no client component on the page but P8.3's calendar grid
- * (behind `calendar.grid`, rendered as tables first), for small screens, large
+ * document, with no client component on the page, for small screens, large
  * text, assistive technology and print. A stored v1 or v2 year renders the
  * same archive article as the story route (P7.13); any other year goes to
  * the story route, which shows its status panel.
@@ -103,10 +101,7 @@ export default async function RewindArticlePage({ params, searchParams }: ReadPa
     edition: data.edition,
     pages,
     copy: data.copy,
-    copySource: data.copySource,
-    model: data.copyMeta.model,
     metrics: pageMetrics,
-    features: rewindFeatureFlags(config),
   })
   const volume = volumeLine(data.facts)
 
@@ -117,7 +112,7 @@ export default async function RewindArticlePage({ params, searchParams }: ReadPa
       </noscript>
       <ArticleDocument
         title={`The ${data.year} issue`}
-        masthead={[plain(volume ? `${brand}, ${volume}` : brand), copyText(windowLine(data.facts), data.facts)]}
+        masthead={[plain(volume ? `${brand}, ${volume}` : brand), copyText(windowLine(), data.facts)]}
         sections={sections}
         actions={
           <>

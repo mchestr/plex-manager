@@ -35,13 +35,12 @@ interface RewindIssueProps {
   initialSheet?: SheetName
   /** An admin's dry run (P7.10): no share setup, and the stage runs in preview mode. */
   preview?: boolean
-  /** Preview only (P7.11): open on this page, and with `still`, hold it settled. */
-  initialPage?: string
-  still?: boolean
   /** A member's stored Rewind in the admin shell (P7.9): no share setup, and the stage runs framed in admin-preview mode. */
   adminPreview?: boolean
   /** Where the stage's "Read as an article" goes, when not the member's own article. */
   articleHref?: Route
+  /** The admin preview of the admin's own Rewind: its share sheet opens this instead of sharing. */
+  ownRewindHref?: Route
 }
 
 /** "Browse the library" on the postcard: the server's own Plex web app when it has a public URL. */
@@ -73,8 +72,7 @@ export async function RewindIssue({
   preview = false,
   adminPreview = false,
   articleHref,
-  initialPage,
-  still = false,
+  ownRewindHref,
 }: RewindIssueProps) {
   const mode = adminPreview ? "admin-preview" : preview ? "preview" : "member"
   const [settings, brand, config] = await Promise.all([
@@ -106,8 +104,6 @@ export async function RewindIssue({
     edition: data.edition,
     pages,
     copy: data.copy,
-    copySource: data.copySource,
-    model: data.copyMeta.model,
     returnTo,
     facts: data.facts,
     cuts: { full: data.edition === "full" ? types(pages) : null, pocket: types(pocket ?? pages) },
@@ -124,7 +120,6 @@ export async function RewindIssue({
       pages: list.map((page) => ({ folio: page.folio, name: registry[page.type].name, type: page.type })),
       earlierYears: earlier,
       serverName: brand,
-      copySource: data.copySource,
       cards: share?.cards.map((card) => registry[card].name),
     }
     return list.map((page) => {
@@ -161,9 +156,8 @@ export async function RewindIssue({
       initialSheet={initialSheet}
       mode={mode}
       articleHref={articleHref}
+      ownRewindHref={ownRewindHref}
       views={mode === "member" ? { rewindId, record: recordRewindView } : undefined}
-      initialIndex={mode === "preview" ? Math.max(0, pages.findIndex((page) => page.type === initialPage)) : undefined}
-      still={mode === "preview" && still}
       tapCompletes={features["stage.tap-completes"]}
     />
   )

@@ -6,7 +6,7 @@
  * | Section | Value hashed |
  * |---|---|
  * | `promptVersion` | `PROMPT_VERSION` |
- * | `systemPrompt` | `systemPrompt("")`, the frozen system block without a style guide |
+ * | `systemPrompt` | `systemPrompt()`, the frozen system block |
  * | `wireSchema` | `z.toJSONSchema(RewindCopyV3Wire)` |
  * | `copySlots` | each slot's id, `maxChars`, `allowedFacts`, `identity` and `bands` |
  * | `grounding` | banned and window phrases, number words, counted nouns, quantifier thresholds and the word-list hash |
@@ -70,7 +70,7 @@ const sorted = (values: Iterable<string>) => [...values].sort()
 export function freezeInputs(model: LockModel | null): FreezeInputs {
   return {
     promptVersion: PROMPT_VERSION,
-    systemPrompt: systemPrompt(""),
+    systemPrompt: systemPrompt(),
     wireSchema: z.toJSONSchema(RewindCopyV3Wire),
     copySlots: Object.values(COPY_SLOTS).map(({ id, maxChars, allowedFacts, identity, bands }) => ({ id, maxChars, allowedFacts, identity, bands })),
     grounding: {

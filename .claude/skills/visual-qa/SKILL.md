@@ -63,13 +63,8 @@ the projects live in `playwright.config.ts`.
   CI). Open them with `npx playwright show-report`; changed pixels are red.
 - A diff you cannot explain from your own change is a regression.
 
-## Quick looks and the gallery
+## Quick looks
 
 - The committed `chrome-devtools` MCP server (`.mcp.json`, headless) is for a
   quick look at a running page; it needs a local Chrome. Tests still use
   Playwright.
-- `npm run rewind:gallery` screenshots every page of the review fixtures at
-  390x844 and 1440x900 and downloads every card into a contact sheet. It needs
-  a running server and its `_test` database (`scripts/rewind-gallery.ts`); in
-  CI run the Rewind Gallery workflow (`.github/workflows/rewind-gallery.yml`).
-  The same pages are at `/admin/rewind/gallery`.

@@ -105,7 +105,7 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | Variable | Required in production | Default | Description |
 |---|---|---|---|
 | `REWIND_CACHE_DIR` |  | `.next/cache/rewind` | Rewind poster, card and font cache, resolved against the working directory. It can be rebuilt, so it needs no backup. |
-| `REWIND_STAGING` |  |  | Staging only: "1" lets a final-cut rehearsal run with an early --through (P8.5). Never set in production. |
+| `REWIND_STAGING` |  |  | Staging only: "1" lets the season-open rehearsal run (npm run rewind:season-open -- --rehearse). Never set in production. |
 
 ## Test only
 

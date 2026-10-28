@@ -1,7 +1,7 @@
 import heavy from '../fixtures/rewind/heavy.v3.json';
 import { expect, test } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
-import { REWIND_YEAR } from '../helpers/seed-rewind';
+import { REWIND_YEAR, seedRewindIssue } from '../helpers/seed-rewind';
 
 /**
  * The admin Rewind preview (P7.9): Preview from the season console opens the
@@ -10,7 +10,8 @@ import { REWIND_YEAR } from '../helpers/seed-rewind';
  * restores the earlier version, which changes the status badge.
  *
  * The member's 2026 row failed after an earlier completed run, which kept
- * the heavy issue in `previousData`.
+ * the heavy issue in `previousData`. The full screen and share tests store the
+ * heavy issue as the member's completed Rewind instead.
  */
 
 const MEMBER = { id: 'rewind-preview-user-id', plexUserId: 'rewind-preview-plex-id', name: 'Aaa Preview Member', email: 'rewind-preview@example.com' };
@@ -79,5 +80,48 @@ test.describe('Admin Rewind preview', () => {
 
     await expect(header).toContainText('Ready to watch');
     await expect(adminPage.getByTestId('admin-rewind-preview-frame')).toBeVisible();
+  });
+
+  test('Full screen lifts the story out of its frame, keeps the cover inside the frame before, and Esc puts it back', async ({ adminPage }) => {
+    await seedRewindIssue(MEMBER.id, 'heavy');
+    await adminPage.goto(`/admin/users/${MEMBER.id}/rewind/${REWIND_YEAR}`);
+    const frame = adminPage.getByTestId('admin-rewind-preview-frame');
+    const stage = adminPage.getByTestId('rewind-stage');
+    await expect(stage).toHaveAttribute('data-fitted');
+    await expect(adminPage.getByTestId('rewind-article-offer')).toHaveCount(0);
+
+    // The cover's fixed field layer stays inside the frame, not over the admin page.
+    const frameBox = await frame.boundingBox();
+    const fieldBox = await adminPage.getByTestId('rewind-cover-field').boundingBox();
+    expect(fieldBox?.width).toBeLessThanOrEqual((frameBox?.width ?? 0) + 1);
+    expect(fieldBox?.height).toBeLessThanOrEqual((frameBox?.height ?? 0) + 1);
+
+    await adminPage.getByTestId('rewind-fullscreen').click();
+    await expect(stage).toHaveAttribute('data-fullscreen');
+    await expect(adminPage.getByTestId('rewind-fullscreen')).toHaveAccessibleName('Exit full screen');
+    const viewport = adminPage.viewportSize();
+    const stageBox = await stage.boundingBox();
+    expect(stageBox?.width).toBe(viewport?.width);
+    expect(stageBox?.height).toBe(viewport?.height);
+
+    await stage.focus();
+    await adminPage.keyboard.press('Escape');
+    await expect(stage).not.toHaveAttribute('data-fullscreen');
+    await expect(adminPage).toHaveURL(new RegExp(`/admin/users/${MEMBER.id}/rewind/${REWIND_YEAR}$`));
+    await expect(frame).toContainText('Cover');
+  });
+
+  test('Share the poster in the preview says that sharing is off', async ({ adminPage }) => {
+    await seedRewindIssue(MEMBER.id, 'heavy');
+    await adminPage.goto(`/admin/users/${MEMBER.id}/rewind/${REWIND_YEAR}`);
+    const stage = adminPage.getByTestId('rewind-stage');
+    await expect(stage).toHaveAttribute('data-fitted');
+    await stage.focus();
+    await adminPage.keyboard.press('End');
+    await adminPage.getByTestId('rewind-back-cover-share').click();
+
+    await expect(adminPage.getByTestId('rewind-share-off')).toContainText('Sharing is off in this preview.');
+    // Someone else's Rewind: no link to the admin's own.
+    await expect(adminPage.getByTestId('rewind-share-off-open')).toHaveCount(0);
   });
 });

@@ -4,14 +4,15 @@
  * read-only: it never writes, and never prints a title, a name or a key.
  *
  * Usage (from a checkout; the sources are server-only modules):
- *   npm run rewind:probe-sources -- --user <User.id> --year 2026 [--final-cut] [--server] [--library]
+ *   npm run rewind:probe-sources -- --user <User.id> --year 2026 [--whole-year] [--server] [--library]
  *
  * It prints the Tautulli pages read, the plays kept, the counted plays and
- * the minutes for the member's data window in their Rewind zone, which should
- * match Tautulli's own user stats for the same dates to within a minute; then
- * lifetime plays, and the member's Overseerr requests. `--server` adds the
- * server-wide history and request passes, `--library` the Plex sections.
- * Rows that fail their schema are logged as warnings with field paths only.
+ * the minutes for the member's data window in their Rewind zone (the season,
+ * or the whole year with `--whole-year`), which should match Tautulli's own
+ * user stats for the same dates to within a minute; then lifetime plays, and
+ * the member's Overseerr requests. `--server` adds the server-wide history
+ * and request passes, `--library` the Plex sections. Rows that fail their
+ * schema are logged as warnings with field paths only.
  */
 
 import "dotenv/config"
@@ -60,7 +61,7 @@ async function main() {
     options: {
       user: { type: "string" },
       year: { type: "string" },
-      "final-cut": { type: "boolean", default: false },
+      "whole-year": { type: "boolean", default: false },
       server: { type: "boolean", default: false },
       library: { type: "boolean", default: false },
     },
@@ -79,7 +80,7 @@ async function main() {
   ])
 
   const { zone, source } = resolveZone(user, await serverZone())
-  const window = dataWindow(year, zone, { finalCut: values["final-cut"] })
+  const window = dataWindow(year, zone, { finalCut: values["whole-year"] })
   console.log(`Window: ${new Date(window.start).toISOString()} to ${new Date(window.end).toISOString()} (${zone}, ${source} zone)`)
 
   if (tautulli) {

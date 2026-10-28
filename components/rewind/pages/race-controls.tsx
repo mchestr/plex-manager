@@ -22,7 +22,7 @@ interface RaceControlsProps {
 
 /**
  * The race's scrubber and Replay (P8.3, design 4.3 page 11): a `Slider` from
- * the first frame to the last (11 during the season, 12 after the final cut)
+ * the first frame to the last (11 during the season, 12 in a whole-year issue)
  * whose value is spoken as the month, and an outline Replay pill. While a
  * finger is down on them or focus is inside, the story is `interacting`, so
  * autoplay waits. A polite live line reads the standings 400 ms after the

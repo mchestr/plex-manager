@@ -6,7 +6,7 @@
  * options ─► refuse an unpriced model or a same-family judge
  *         ─► print the estimate ─► confirm (unless --yes, or nothing is paid)
  *         ─► each fixture: generateUserRewind (dry run) on a live model or a replay
- *         ─► checks.ts gates ─► advisory judge ─► results JSON ─► RewindEvalRun row
+ *         ─► checks.ts gates ─► advisory judge ─► results JSON
  *         └─ --record: recordings/<model>/<fixture>.json
  * ```
  *
@@ -59,8 +59,6 @@ export interface EvalIO {
   liveDeps: (ref: ModelRef, effort: string | null) => StructuredDeps
   writeResults: (fileName: string, results: EvalResults) => Promise<void>
   writeRecording: (set: string, recording: Recording) => Promise<void>
-  /** Writes the `RewindEvalRun` row, or warns and skips it with no database. */
-  saveRun: (row: { model: string; promptVersion: string; fixtures: string[]; results: EvalResults; costUsd: number }) => Promise<void>
 }
 
 const usd = (n: number) => formatMoney(n, "prose", { locale: "en-US" })
@@ -207,7 +205,6 @@ export async function runEval(options: EvalOptions, allFixtures: readonly Fixtur
   } satisfies EvalResults)
 
   await io.writeResults(`${startedAt.toISOString().slice(0, 10)}-${slugFor(label)}.json`, results)
-  await io.saveRun({ model: label, promptVersion: PROMPT_VERSION, fixtures: fixtures.map((f) => f.id), results, costUsd: results.cost.totalUsd })
 
   io.log(`First-pass grounding: ${pct(results.rates.firstPass)}; after repair: ${pct(results.rates.afterRepair)}`)
   io.log(`Gates: ${results.gates.passed ? "passed" : `${results.gates.issues.length} issue(s)`}; max deck overlap ${results.gates.maxOverlap ? results.gates.maxOverlap.value.toFixed(2) : "n/a"}`)

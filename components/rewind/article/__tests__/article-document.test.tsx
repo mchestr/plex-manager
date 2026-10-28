@@ -77,6 +77,19 @@ describe("ArticleDocument", () => {
     expect(article).toHaveAttribute("data-field", "paper")
   })
 
+  it("keeps a definition list's repeated terms, as the light member's box score has", async () => {
+    const light = await fixtureIssue("light")
+    const records = articleSections(light.pages, light.facts, articleContext(light)).filter((section) => section.type === "records")
+    const dl = records[0]?.blocks.find((block) => block.kind === "definitionList")
+    const terms = dl?.kind === "definitionList" ? dl.entries.map((entry) => entry.term) : []
+    expect(new Set(terms).size).toBeLessThan(terms.length)
+    const error = jest.spyOn(console, "error").mockImplementation(() => {})
+    render(<ArticleDocument title="The 2026 issue" masthead={[]} sections={records} />)
+    expect(screen.getAllByRole("term").map((dt) => dt.textContent)).toEqual(terms)
+    expect(error).not.toHaveBeenCalled()
+    error.mockRestore()
+  })
+
   it("renders a legacy block list with every kind", () => {
     const section: ArticleSection = { id: "legacy", folio: null, name: "Your 2024", type: null, blocks: Object.values(LEGACY_BLOCKS) }
     render(<ArticleDocument title="The 2024 issue" masthead={[]} sections={[section]} />)

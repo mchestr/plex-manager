@@ -3,14 +3,15 @@
  * longest streak bracketed, the biggest day ringed and the longest gap
  * underlined. Always kept; under 5 active days the page sets one row of the
  * active dates instead of the grid. Its Table lists the minutes of each day
- * played, month by month.
+ * played, month by month; article mode gives one line and the days played
+ * in each month, and the desktop Notes every day.
  *
  * @module lib/rewind/pages/calendar
  */
 
-import { figure, heading, paragraph, plain, tableBlock, type ArticleBlock } from "@/lib/rewind/article/blocks"
+import { deckBlock, figure, heading, paragraph, plain, tableBlock, type ArticleBlock } from "@/lib/rewind/article/blocks"
 import type { RewindFeatureFlags } from "@/lib/rewind/features"
-import { formatDayMonth, formatRewindDuration } from "@/lib/rewind/format"
+import { formatDayMonth, formatHero, formatRewindDuration } from "@/lib/rewind/format"
 import type { PageDefinition, PageTable } from "@/lib/rewind/registry"
 import { headline } from "@/lib/wrapped/copy/templates"
 import { formatDayKey } from "@/lib/utils/format"
@@ -25,6 +26,15 @@ import { has, num, shown } from "./facts"
 export const GRID_ACTIVE_DAYS = 5
 
 const DAY_MS = 86_400_000
+
+/** Days played out of the window's days: the calendar's line, and the cover's in an issue without the calendar. */
+export const DAYS_PLAYED = "You pressed play on {{fact:days.active}} of {{fact:window.elapsedDays}}."
+
+/** The facts {@link calendarLine} can print, so the deck never repeats one. */
+const CALENDAR_LINE_FACTS = [
+  "days.active", "window.elapsedDays", "streak.longest.days", "streak.longest.from", "streak.longest.to",
+  "days.biggest.date", "days.biggest.minutes", "days.longestGap.days", "days.longestGap.month",
+]
 
 /** The window's days as `{ date, minutes, key }`, dated from `window.from`. */
 export function calendarDays(data: CalendarData, facts: RewindFactsV3) {
@@ -76,13 +86,8 @@ function playedRows(data: CalendarData, facts: RewindFactsV3, settings: { locale
     }))
 }
 
-/**
- * Article mode's calendar: one table per month with a day played, holding
- * the Table's rows for that month (P8.3 adds the roving-focus grid).
- *
- * @internal Exported for the tests.
- */
-export function monthTables(data: CalendarData, facts: RewindFactsV3, settings: { locale: string }): PageTable[] {
+/** The Notes' calendar: one table per month with a day played, holding the Table's rows for that month (P8.3 adds the roving-focus grid). */
+function monthTables(data: CalendarData, facts: RewindFactsV3, settings: { locale: string }): PageTable[] {
   const months = new Map<number, string[][]>()
   for (const { month, row } of playedRows(data, facts, settings)) months.set(month, [...(months.get(month) ?? []), row])
   return [...months].map(([month, rows]) => ({
@@ -93,7 +98,7 @@ export function monthTables(data: CalendarData, facts: RewindFactsV3, settings: 
 }
 
 /**
- * The day blocks of the Notes and article mode: the month tables, or with
+ * The day blocks of the Notes: the month tables, or with
  * `calendar.grid` on (P8.3) one `calendar` block that holds them for the
  * server render and the grid's month rows for the hydrated island.
  */
@@ -111,6 +116,33 @@ function dayBlocks(
   }))
   const caption = `Every day from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}, a row per month. Use the arrow keys to move, and Enter to read a day.`
   return [{ kind: "calendar", caption, tables, months }]
+}
+
+/** Article mode's one line: the days played, the run (the headline's), the biggest day and the longest gap. */
+function calendarLine(facts: RewindFactsV3): string {
+  return [
+    has(facts, "days.active") && DAYS_PLAYED,
+    num(facts, "streak.longest.days") >= 2 && "The run went from {{fact:streak.longest.from}} to {{fact:streak.longest.to}}.",
+    has(facts, "days.biggest.date") && "Your biggest day was {{fact:days.biggest.date}}, at {{fact:days.biggest.minutes}}.",
+    has(facts, "days.longestGap.days") && "The longest gap was {{fact:days.longestGap.days}}, in {{fact:days.longestGap.month}}.",
+  ]
+    .filter((part): part is string => typeof part === "string")
+    .join(" ")
+}
+
+/** Each month of the window with a play, with the days played out of its days in the window: "28 of 31". */
+function daysByMonthTable(data: CalendarData, facts: RewindFactsV3, settings: { locale: string }): PageTable {
+  const months = new Map<number, { played: number; days: number }>()
+  for (const day of calendarDays(data, facts)) {
+    const month = Number(day.date.slice(5, 7))
+    const count = months.get(month) ?? { played: 0, days: 0 }
+    months.set(month, { played: count.played + (day.minutes > 0 ? 1 : 0), days: count.days + 1 })
+  }
+  return {
+    caption: "Days played by month",
+    columns: ["Month", "Days played"],
+    rows: [...months].filter(([, { played }]) => played > 0).map(([month, { played, days }]) => [display("month", month, settings), `${formatHero(played, settings)} of ${formatHero(days, settings)}`]),
+  }
 }
 
 export const calendarPage: PageDefinition<CalendarData> = {
@@ -139,17 +171,21 @@ export const calendarPage: PageDefinition<CalendarData> = {
     const played = playedRows(data, facts, settings)
     if (played.length === 0) return null
     return {
-      caption: `Minutes watched on each day you pressed play, from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}.`,
+      caption: "Minutes watched on each day you pressed play.",
       columns: COLUMNS,
       rows: played.map((day) => day.row),
     }
   },
-  article: (data, facts, ctx) => [
-    heading(headline("calendar", facts), facts),
-    paragraph(pageDeck(ctx, facts, "calendar"), facts),
-    ...figure(calendarPage.srSummary(data, facts)),
-    ...dayBlocks(data, facts, ctx),
-  ],
+  // Every day with its minutes and top title stays in the Notes, Pick a day and the Table sheet.
+  article: (data, facts, ctx) => {
+    const line = calendarLine(facts)
+    return [
+      heading(headline("calendar", facts), facts),
+      ...deckBlock(pageDeck(ctx, facts, "calendar"), facts, CALENDAR_LINE_FACTS),
+      ...(line ? [paragraph(line, facts)] : []),
+      { kind: "table", table: daysByMonthTable(data, facts, ctx) },
+    ]
+  },
   // Minutes per day, one table per month, or the roving-focus grid under `calendar.grid` (P8.3).
   notes: (data, facts, ctx) => {
     const blocks = dayBlocks(data, facts, ctx)

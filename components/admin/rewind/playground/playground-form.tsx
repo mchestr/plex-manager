@@ -23,7 +23,6 @@ export interface PlaygroundOptions {
   replay: boolean
   promptVersions: readonly string[]
   efforts: readonly Effort[]
-  styleGuides: ReadonlyArray<{ id: string; name: string; text: string; isActive: boolean }>
 }
 
 interface Option {
@@ -70,18 +69,13 @@ interface PlaygroundFormProps {
   onRun: () => void
 }
 
-/** The dry run's inputs (design 10.2): subject, model, prompt version, effort, style guide and copy policy. */
+/** The dry run's inputs (design 10.2): subject, model, prompt version, effort and copy policy. */
 export function PlaygroundForm({ form, options, busy, onChange, onRun }: PlaygroundFormProps) {
   const providerDefault = options.provider ? `Provider default (${options.provider.model})` : "Provider default"
   const models: Option[] = [
     { value: DEFAULT_MODEL, label: providerDefault },
     ...options.models.filter((m) => m.id !== options.provider?.model).map((m) => ({ value: m.id, label: m.label })),
     ...(options.replay && form.subject === "fixture" ? [{ value: REPLAY_MODEL, label: "Selected model, recorded answers" }] : []),
-  ]
-  const styleGuides: Option[] = [
-    { value: "stored", label: "Active style guide" },
-    { value: "none", label: "No style guide" },
-    ...options.styleGuides.map((g) => ({ value: g.id, label: g.isActive ? `${g.name} (active)` : g.name })),
   ]
   const templatesOnly = form.copyPolicy === "no-llm"
   const missingSubject = form.subject === "fixture" ? !form.fixtureId : !form.userId
@@ -160,14 +154,6 @@ export function PlaygroundForm({ form, options, busy, onChange, onRun }: Playgro
           items={options.promptVersions.map((v) => ({ value: v, label: v }))}
           value={form.promptVersion}
           onChange={(promptVersion) => onChange({ promptVersion })}
-          disabled={busy || templatesOnly}
-        />
-        <ChoiceField
-          name="style-guide"
-          label="Style guide"
-          items={styleGuides}
-          value={form.styleGuide}
-          onChange={(styleGuide) => onChange({ styleGuide })}
           disabled={busy || templatesOnly}
         />
       </div>

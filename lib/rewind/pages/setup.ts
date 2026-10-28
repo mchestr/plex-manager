@@ -12,7 +12,7 @@
  * @module lib/rewind/pages/setup
  */
 
-import { figure, heading, tableBlock } from "@/lib/rewind/article/blocks"
+import { heading, tableBlock } from "@/lib/rewind/article/blocks"
 import type { PageDefinition, PageTable } from "@/lib/rewind/registry"
 import { headline } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
@@ -50,7 +50,7 @@ function setupTable(data: SetupData, facts: RewindFactsV3): PageTable | null {
   if (has(facts, "setup.topProduct")) rows.push(["Top app", shown(facts, "setup.topProduct")])
   if (rows.length === 0) return null
   return {
-    caption: `How you watched: shares of your plays, from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}.`,
+    caption: "How you watched",
     columns: ["Measure", "Value"],
     rows,
   }
@@ -65,6 +65,6 @@ export const setupPage: PageDefinition<SetupData> = {
   schema: SetupDataSchema,
   srSummary: setupSummary,
   table: (data, facts) => setupTable(data, facts),
-  article: (data, facts) => [heading(headline("setup", facts), facts), ...figure(setupSummary(data, facts)), ...tableBlock(setupTable(data, facts))],
+  article: (data, facts) => [heading(headline("setup", facts), facts), ...tableBlock(setupTable(data, facts))],
   share: { facts: [] },
 }

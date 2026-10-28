@@ -7,7 +7,7 @@ const Minutes = z.number().int().nonnegative()
 /**
  * 11 The race: the runners (the member's top series in final standing
  * order, with their keys and display titles) and one frame per month of the
- * window (11 during the season, 12 after the final cut): each runner's
+ * window (11 during the season, 12 in a whole-year issue): each runner's
  * cumulative minutes at the month's end and the month's leader. P8.3's
  * scrubber reads only these stored frames, so no member is regenerated for
  * it under the freeze.

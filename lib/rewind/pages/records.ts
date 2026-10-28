@@ -24,7 +24,7 @@
  * @module lib/rewind/pages/records
  */
 
-import { figure, heading, paragraph, plain } from "@/lib/rewind/article/blocks"
+import { deckBlock, heading, plain } from "@/lib/rewind/article/blocks"
 import { formatRewindDuration, pluralWord } from "@/lib/rewind/format"
 import type { PageDefinition } from "@/lib/rewind/registry"
 import { headline } from "@/lib/wrapped/copy/templates"
@@ -92,6 +92,16 @@ function stampOf(cells: readonly RecordCell[], facts: RewindFactsV3, pausedMinut
   return best?.cell ?? null
 }
 
+/** The facts each cell prints, so the article's deck never repeats one. */
+const CELL_FACTS: Record<RecordCell, FactId[]> = {
+  binge: ["records.longestBinge.episodes", "records.longestBinge.title"],
+  day: ["records.mostEpisodesDay"],
+  week: ["days.biggestWeek", "days.biggestWeek.from"],
+  completion: ["records.completionShare"],
+  paused: ["records.mostPaused.title"],
+  latest: ["hours.latestStart.time", "hours.latestStart.weekday"],
+}
+
 /** A cell as printed: its numeral, and its label in parts (a title part sets in italics). */
 export function recordCell(cell: RecordCell, data: RecordsData, facts: RewindFactsV3): { numeral: string; label: Array<{ text: string; title?: true }> } {
   const word = (id: FactId, one: string, other: string) => pluralWord(num(facts, id), { one, other }, COPY_LOCALE)
@@ -152,18 +162,17 @@ export const recordsPage: PageDefinition<RecordsData> = {
   },
   schema: RecordsDataSchema,
   srSummary: recordsSummary,
+  // The box score as number, then what it counts, the way the page reads.
   article: (data, facts, ctx) => [
     heading(headline("records", facts), facts),
-    paragraph(pageDeck(ctx, facts, "records"), facts),
+    ...deckBlock(pageDeck(ctx, facts, "records"), facts, data.cells.flatMap((cell) => CELL_FACTS[cell])),
     {
       kind: "definitionList",
-      label: "Personal bests",
       entries: data.cells.map((cell) => {
         const { numeral, label } = recordCell(cell, data, facts)
-        return { term: label.map((part) => part.text).join(""), detail: plain(numeral) }
+        return { term: numeral, detail: plain(label.map((part) => part.text).join("")) }
       }),
     },
-    ...figure(recordsSummary(data, facts)),
   ],
   share: {
     facts: [

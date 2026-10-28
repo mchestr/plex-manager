@@ -18,15 +18,42 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Added
+
+- **Full screen for Rewind:** a Full screen control in the story's top bar. In the admin preview of a member's Rewind (Admin, Users, a member, Rewind) it lifts the story out of its frame to fill the screen in any browser, iPhone Safari included; where the browser supports it (Android, iPad and desktop browsers) it also hides the browser's bars, and on a member's own Rewind it shows only in those browsers. Esc, the browser's own exit or the control returns to the frame.
+
 ### Changed
 
 - **Request limits on home:** the home page no longer shows the full tier table. Members now see their own tier, its limits, the requests they have left, and the hours to the next tier and its limits. Only admins see the full table, in Admin > Settings, Request limits. Discord `/mystats` already showed only these figures. The card gives the next tier's period when it differs from the member's own, and tells the member when it cannot read their limits. A one-day period reads "every day", not "every 1 days".
 - **Rewind times are implicit:** Rewind no longer prints a time zone. The "Times in America/Chicago, the server's time zone" notes are gone from the bookends, clock, short list and centrefold pages, the desktop Notes, article mode, chart and table captions and the clock and centrefold share cards. Times and days are still counted in the member's Rewind zone (their saved zone, else the server's), and nothing on the page names it.
 - **Tables on phones and tablets:** the users list and every other admin table, and the marks list on Account, now lay out by the room the table itself has, not the window's width, so the admin sidebar counts. A narrow table shows each row as a card: the name and its actions on top, then every other column under its own label in two columns (four on a tablet), with nothing hidden or unlabelled. The users list shows cards up to about 1,100 px and its table from there, with the Rewind column from 1,440 px; a long email is cut short in the table and shown in full on the card. While a table shows cards, its toolbar offers Filters (in a sheet) and Sort; beside a table, the filters sit in one row that no longer breaks into a block. The page is laid out before it loads, so a phone no longer shows the desktop table first.
+- **No final cut:** a Rewind is final when it is generated. The back cover, cover, Notes, cards and home card no longer promise December or a "final cut" in January (the cover and cards read "Data through November 30"), the sign-off reads "See you next year" or "That was the year", and the template decks no longer say "so far". Rewinds made before this release keep their stored sign-off until they are generated again.
+- **Hiding a title keeps the issue's days:** hiding or unhiding a title after 1 January no longer turns a 1 January to 30 November Rewind into a whole-year one; it reads the same days as before.
+- **A lighter Rewind article:** article mode states each fact once. Each page gives its headline, a line and at most one small table, with no summary that repeats the table, no date range in a caption and no method lines ("Nobody is named", "Every reason here comes from what you watched"). Guess, Top shows and Top films get sections of their own. Every hour, day and month stays in the story's Table sheets and the desktop Notes.
+- **Shorter template lines:** the template decks and the centrefold dedication end on a short line instead of describing the page or the method ("Here's to more of it.", "All in good fun." in place of "Every minute of it counted from your own history.", "Where you stand, with nobody named."), and never cite a count or share of zero ("0% of your viewing started after dark"). The Short list deck no longer repeats the total. A Regenerate or a hide writes a template-only Rewind's words from the current templates instead of reusing the stored ones.
+- **About the words** in the story's Settings shows only when a model wrote some of the words.
+
+### Removed
+
+- The 1 January final cut (the scheduled rebuild of every Rewind with December), **Run final cut** on Admin, Rewind, the "now includes December" Discord message and banner, `npm run rewind:final-cut`, `rewind:final-cut-report` and `rewind:rollback-final-cut`, and `npm run rewind:validate -- --final-cut`.
+- The admin Rewind **Gallery** (Admin, Rewind, Gallery), `npm run rewind:gallery`, the manual Rewind Gallery workflow and the story preview's `?page=` and `still=1`. The playground still previews a fixture's story and cards.
+- The admin Rewind **Evals** page (Admin, Rewind, Evals). Evals stay on the command line (`npm run eval:rewind`, `npm run eval:rewind:select`), which now writes only its results file and no longer a `RewindEvalRun` row.
+- The "Every word here comes from a template" line on the back cover, in article mode, in Why this?, in the desktop Notes and in Settings, the back cover's "Some of the words are written by AI" line and the Why this? provider line. Settings' About the words keeps the one AI disclosure.
+- The admin **Prompts** page (`/admin/prompts`), the editable Rewind style guide and the playground's Style guide field: every Rewind is written in the same built-in voice. A style guide that was in use no longer applies to new copy, though a Rewind whose facts have not changed keeps the copy it has. Stored templates stay in the database, unused.
 
 ### Fixed
 
 - **Assistant times in your own zone:** the admin assistant now gives times in your browser's time zone, both in its answers and under each message, instead of the server zone (UTC when no server zone is set). A browser zone the app does not know falls back to the server zone. Sonarr, Radarr, Overseerr, background job and library times reach it as local times too, and both assistants (web and Discord) now give plain local times without naming a zone or offset.
+- **Rewind preview on phones:** the cover's colour field no longer spreads over the whole admin page behind the framed preview, and the "screen is small" article offer no longer covers the admin preview (its header already has Read as an article).
+- **Standing in the credits:** the back cover's billing, its Notes and the Standing Table sheet name a percentile only in the top half, as the Standing page does, so no member reads "Standing: Top 84%".
+- **Share in previews:** Share the poster and Change on the back cover of the admin preview and of a playground dry run opened nothing. They now open a sheet that says sharing is off in previews, and on an admin's own Rewind it links to that Rewind's share sheet.
+
+### Upgrade notes
+
+- Take a `pg_dump -Fc` before you start the new release. This release adds no migrations and no environment variables.
+- **Final cut cancelled:** 0.2.0 to 0.5.0 keep a final cut scheduled for 00:30 on 1 January in the westernmost zone (the delayed `rewind:final-cut` job on the `rewind-batch` queue). The new worker removes it at start and every 10 minutes, and one it picks up first completes without doing anything. An older worker adds it again, and would run it, so upgrade every worker container before 00:30 on 1 January in the westernmost zone.
+- **Sign-off and template lines:** a Rewind made before the upgrade keeps its stored "See you in the final cut" sign-off (or "The final cut lands in the new year") and its older template lines until it is generated again. An upgrade before 1 December needs nothing more, because the season-open run regenerates every Rewind; after it, a Regenerate from Admin, Rewind, or the member hiding a title, writes the sign-off again, since copy that mentions the final cut is never reused or kept, and renders a template-only Rewind's lines from the current templates. In a Rewind with model-written words, an older template line in a slot the model did not write stays until the Rewind's facts change. Until then `npm run rewind:validate` may count those older lines as model copy, because it compares each slot with the current templates.
+- **`REWIND_STAGING`** now only gates the season-open rehearsal (`npm run rewind:season-open -- --rehearse`).
 
 ## [0.5.0] - 2026-10-27
 

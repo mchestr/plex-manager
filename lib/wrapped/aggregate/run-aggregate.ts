@@ -64,17 +64,13 @@ function countingTautulli(limiter: UpstreamLimiter): { limiter: UpstreamLimiter;
   }
 }
 
-/**
- * Runs one aggregate for `(year, through)`. Throws on a failure a retry may
- * fix. `finalCut` reads the full year with an earlier `through` (a staging
- * rehearsal of the final cut, P8.5).
- */
+/** Runs one aggregate for `(year, through)`. Throws on a failure a retry may fix. */
 export async function runServerAggregate(
-  { year, through, finalCut }: { year: number; through: string; finalCut?: boolean },
+  { year, through }: { year: number; through: string },
   ctx: SourceContext & { redis: BatchCacheRedis }
 ): Promise<AggregateRun> {
   const setup = await loadBatchSetup()
-  const batch: BatchWindow = { year, finalCut: finalCut ?? isFinalCut(year, through), serverZone: setup.serverZone }
+  const batch: BatchWindow = { year, finalCut: isFinalCut(year, through), serverZone: setup.serverZone }
   const members = await matchMembers(setup, ctx)
 
   const counter = countingTautulli(ctx.limiter)

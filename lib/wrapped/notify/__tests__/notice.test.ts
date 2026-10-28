@@ -39,22 +39,6 @@ describe('getRewindNotice', () => {
     expect(await getRewindNotice('member-1', NOW)).toBeNull()
   })
 
-  it("gives December's readers the final cut's copy once the final cut lands (P8.5)", async () => {
-    const finalCutAt = new Date('2027-01-01T08:40:00Z')
-    const january = new Date('2027-01-05T18:00:00Z')
-    prismaMock.plexWrapped.findUnique.mockResolvedValue(
-      buildPlexWrapped({ id: 'wrapped-1', userId: 'member-1', year: 2026, status: 'completed', generatedAt: finalCutAt, finalCutAt })
-    )
-    prismaMock.rewindView.findMany.mockResolvedValue([])
-
-    prismaMock.rewindView.count.mockResolvedValue(1)
-    expect(await getRewindNotice('member-1', january)).toEqual({ kind: 'rewind-ready', year: 2026, finalCut: true })
-    expect(prismaMock.rewindView.count).toHaveBeenCalledWith({ where: { wrappedId: 'wrapped-1', createdAt: { lt: finalCutAt } } })
-
-    prismaMock.rewindView.count.mockResolvedValue(0)
-    expect(await getRewindNotice('member-1', january)).toEqual({ kind: 'rewind-ready', year: 2026 })
-  })
-
   it('stays off with notify off', async () => {
     prismaMock.rewindPrefs.findUnique.mockResolvedValue({ notify: false } as never)
 

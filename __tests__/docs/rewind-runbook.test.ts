@@ -55,8 +55,8 @@ describe('docs/rewind.md', () => {
     for (const key of keys) expect(runbook).toContain(`\`${key}\``)
   })
 
-  it('covers the requirements, the season open, roll back and the final cut', () => {
-    for (const heading of ['## Requirements', '## Season open, hour by hour', '## Roll back', '## The final cut', '## Error and skip codes']) {
+  it('covers the requirements, the season open, roll back and the issues made after 1 January', () => {
+    for (const heading of ['## Requirements', '## Season open, hour by hour', '## Roll back', '## After 1 January', '## Error and skip codes']) {
       expect(runbook).toContain(heading)
     }
     expect(runbook).toContain('Tautulli 2.17 or later')

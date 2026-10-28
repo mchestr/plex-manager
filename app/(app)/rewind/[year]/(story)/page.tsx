@@ -42,11 +42,10 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
   }
   const year = parsedYear.data
   const userId = session.user.id
-  const { from, sheet, preview, page, still } = await searchParams
+  const { from, sheet, preview } = await searchParams
   const returnTo = safeReturnPath(typeof from === "string" ? from : null)
 
   // An admin's dry run (P7.10); members get the 404 the route gives any unknown page.
-  // The gallery's `page` and `still` (P7.11) work only here.
   if (preview !== undefined) {
     if (!session.user.isAdmin) notFound()
     const found = await readPreview(preview, year)
@@ -54,15 +53,7 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
       return <RewindStatusPanel kind="not-found" code="REWIND_NOT_FOUND" year={year} returnTo={returnTo} audience="admin" />
     }
     return (
-      <RewindIssue
-        rewindId={found.id}
-        data={found.run.data}
-        userId={previewOwnerId(found.run.subject)}
-        returnTo={returnTo}
-        preview
-        initialPage={typeof page === "string" ? page : undefined}
-        still={still === "1"}
-      />
+      <RewindIssue rewindId={found.id} data={found.run.data} userId={previewOwnerId(found.run.subject)} returnTo={returnTo} preview />
     )
   }
 

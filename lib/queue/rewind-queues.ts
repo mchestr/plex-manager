@@ -7,7 +7,7 @@
  *
  * | Queue          | Concurrency | Jobs (registered by)                         |
  * |----------------|-------------|----------------------------------------------|
- * | `rewind-batch` | 1           | season prepare, aggregate, metadata warm (P2.6), final cut (P8.5) |
+ * | `rewind-batch` | 1           | season prepare, aggregate, metadata warm (P2.6) |
  * | `rewind-gen`   | 4           | `REWIND_GENERATE_USER` (P2.17)               |
  * | `rewind-aux`   | 2           | `REWIND_STALE_SWEEP` (P2.17, every 10 min), `REWIND_CARD_PREWARM` and the daily `REWIND_CARD_SWEEP` (P5.10), `REWIND_DRY_RUN` (P7.10), `REWIND_NOTIFY` (P7.14), `REWIND_SEASON_OPEN` (P8.2) |
  *
@@ -26,7 +26,6 @@ import { jobRequestId, runJobInContext } from "@/lib/queue/job-meta"
 import { closeWorker, getRedisConnection } from "@/lib/queue/connection"
 import type { JobProcessor } from "@/lib/queue/jobs"
 import { REWIND_BATCH_PROCESSORS } from "@/lib/queue/jobs/rewind-batch"
-import { processRewindFinalCut } from "@/lib/queue/jobs/rewind-final-cut"
 import { processRewindGenerateUser } from "@/lib/queue/jobs/rewind"
 import { REWIND_SEASON_PROCESSORS } from "@/lib/queue/jobs/rewind-season"
 import { processRewindCardPrewarm, processRewindCardSweep, registerCardJobs } from "@/lib/queue/jobs/rewind-cards"
@@ -36,7 +35,7 @@ import { processRewindSeasonOpen } from "@/lib/queue/jobs/rewind-season-open"
 import { processRewindStaleSweep } from "@/lib/queue/jobs/rewind-stale-sweep"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
 import { scheduleSeasonAudienceSwitch } from "@/lib/rewind/season-open"
-import { scheduleFinalCutRun, scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
+import { cancelScheduledFinalCut, LEGACY_FINAL_CUT_JOB, scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
 import { JOB_TYPES } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -50,12 +49,18 @@ const REWIND_QUEUES = {
 
 export type RewindQueueName = keyof typeof REWIND_QUEUES
 
+/** 0.5.0's 1 January final cut, when a Worker takes it before `cancelScheduledFinalCut` removes it: there is nothing to do. */
+async function skipLegacyFinalCut(job: Job) {
+  logger.info("Skipped the 1 January Rewind final cut an earlier version scheduled", { jobId: job.id })
+  return { skipped: true }
+}
+
 /** Processors by job name, per queue. Later steps add their jobs here. */
 const PROCESSORS: Record<RewindQueueName, Record<string, JobProcessor>> = {
   "rewind-batch": {
     ...REWIND_BATCH_PROCESSORS,
     ...REWIND_SEASON_PROCESSORS,
-    [JOB_TYPES.REWIND_FINAL_CUT]: processRewindFinalCut as JobProcessor,
+    [LEGACY_FINAL_CUT_JOB]: skipLegacyFinalCut,
   },
   "rewind-gen": { [JOB_TYPES.REWIND_GENERATE_USER]: processRewindGenerateUser as JobProcessor },
   "rewind-aux": {
@@ -125,7 +130,11 @@ export function startRewindWorkers(): void {
   onShutdown("rewind-workers", "drain", stopRewindWorkers)
   scheduleStaleSweep().catch((error: unknown) => logger.error("Could not schedule the Rewind stale sweep", error))
   scheduleSeasonOpenRun().catch((error: unknown) => logger.error("Could not schedule the season-open Rewind run", error))
-  scheduleFinalCutRun().catch((error: unknown) => logger.error("Could not schedule the Rewind final cut", error))
+  cancelScheduledFinalCut()
+    .then((removed) => {
+      if (removed > 0) logger.info("Cancelled the 1 January Rewind final cut an earlier version scheduled", { removed })
+    })
+    .catch((error: unknown) => logger.error("Could not cancel the scheduled Rewind final cut", error))
   scheduleSeasonAudienceSwitch().catch((error: unknown) => logger.error("Could not schedule the season open's audience switch", error))
   registerCardJobs()
   registerNotifyJobs()

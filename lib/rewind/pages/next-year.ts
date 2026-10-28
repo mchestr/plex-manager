@@ -14,7 +14,7 @@
  * @module lib/rewind/pages/next-year
  */
 
-import { figure, heading, paragraph } from "@/lib/rewind/article/blocks"
+import { andList, deckBlock, heading, plain, type ArticleBlock, type ArticleContext } from "@/lib/rewind/article/blocks"
 import type { PageDefinition } from "@/lib/rewind/registry"
 import { headline } from "@/lib/wrapped/copy/templates"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
@@ -58,6 +58,21 @@ function nextYearSummary(data: NextYearData, facts: RewindFactsV3): string {
   return parts.join(" ")
 }
 
+/** Article mode: each part with rows as one listing, its titles and a returning series' season and date, under a deck that names none of them again. */
+function nextYearArticle(data: NextYearData, facts: RewindFactsV3, ctx: ArticleContext): ArticleBlock[] {
+  const ids = (part: NextYearPart, rows: readonly unknown[]) => rows.map((_row, i) => partTitle(part, i))
+  const named = (part: NextYearPart, rows: readonly unknown[]) => plain(andList(ids(part, rows).map((id) => shown(facts, id))))
+  const dates = data.returning.map((_row, i) => `next.returning[${i + 1}].date` as FactId)
+  const returning = data.returning.map((row, i) => `${shown(facts, partTitle("returning", i))} season ${row.season}, ${shown(facts, dates[i])}`)
+  const entries = [
+    ...(data.leftForLater.length > 0 ? [{ term: "Left for later", detail: named("leftForLater", data.leftForLater) }] : []),
+    ...(returning.length > 0 ? [{ term: PART_HEADINGS.returning, detail: plain(returning.join("; ")) }] : []),
+    ...(data.picks.length > 0 ? [{ term: PART_HEADINGS.picks, detail: named("picks", data.picks) }] : []),
+  ]
+  const printed = [...ids("leftForLater", data.leftForLater), ...ids("returning", data.returning), ...dates, ...ids("picks", data.picks)]
+  return [heading(headline("next-year", facts), facts), ...deckBlock(pageDeck(ctx, facts, "nextYear"), facts, printed), { kind: "definitionList", entries }]
+}
+
 export const nextYearPage: PageDefinition<NextYearData> = {
   select: (facts, { stats, disabledPages }) => {
     const next = stats.nextYear
@@ -71,10 +86,6 @@ export const nextYearPage: PageDefinition<NextYearData> = {
   },
   schema: NextYearDataSchema,
   srSummary: nextYearSummary,
-  article: (data, facts, ctx) => [
-    heading(headline("next-year", facts), facts),
-    paragraph(pageDeck(ctx, facts, "nextYear"), facts),
-    ...figure(nextYearSummary(data, facts)),
-  ],
+  article: nextYearArticle,
   share: { facts: [] },
 }

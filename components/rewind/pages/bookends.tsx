@@ -30,7 +30,7 @@ function When({ facts, side }: { facts: RewindFactsV3; side: "first" | "last" })
 
 /**
  * 03 Bookends (design 4.3): the year's first play in the headline, the latest
- * (or, after the final cut, the last) below it, each a nameplate title with
+ * (or, in a whole-year issue, the last) below it, each a nameplate title with
  * its date and time, then the deck and the member's lifetime line. A bookend
  * that is the No. 1 series reads "a series you will meet on page 05" instead.
  */

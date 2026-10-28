@@ -8,8 +8,7 @@
  * Keys come from the environment: ANTHROPIC_API_KEY, OPENAI_API_KEY,
  * GOOGLE_GENERATIVE_AI_API_KEY; an OpenAI-compatible server (`ollama:<tag>`)
  * reads OPENAI_COMPATIBLE_BASE_URL (default http://localhost:11434/v1) and
- * an optional OPENAI_COMPATIBLE_API_KEY. The `RewindEvalRun` row is written
- * when DATABASE_URL is set. See evals/rewind/README.md.
+ * an optional OPENAI_COMPATIBLE_API_KEY. See evals/rewind/README.md.
  */
 
 import "dotenv/config"
@@ -45,7 +44,6 @@ async function main() {
   })
 
   // The model registry imports the Prisma client, which needs a URL to load; it never connects without a query
-  const database = Boolean(process.env.DATABASE_URL)
   process.env.DATABASE_URL ??= "postgresql://eval@localhost:5432/eval_unused"
 
   const [{ runEval }, { evalRow }, { resolveModel }, { loadFixtures }] = await Promise.all([
@@ -92,18 +90,6 @@ async function main() {
         const dir = path.join(ROOT, "recordings", set)
         await mkdir(dir, { recursive: true })
         await writeFile(path.join(dir, `${recording.fixture}.json`), `${JSON.stringify(recording, null, 2)}\n`)
-      },
-      saveRun: async (row) => {
-        if (!database) {
-          console.warn("No DATABASE_URL: the RewindEvalRun row was not written")
-          return
-        }
-        const { prisma } = await import("@/lib/prisma")
-        await prisma.rewindEvalRun.create({
-          data: { model: row.model, promptVersion: row.promptVersion, fixtures: row.fixtures, results: row.results, costUsd: row.costUsd.toFixed(4) },
-        })
-        await prisma.$disconnect()
-        console.log("Wrote a RewindEvalRun row")
       },
     }
   )

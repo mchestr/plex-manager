@@ -1,7 +1,5 @@
 import { aboutTheWords } from "../copy-disclosure"
 
-const TEMPLATE_WORDS = "Every word here comes from a template."
-
 const RECEIVED = "It received your titles and totals, never your email or anything about other members."
 
 describe("aboutTheWords", () => {
@@ -9,7 +7,7 @@ describe("aboutTheWords", () => {
     expect(aboutTheWords({ copySource: "llm", model: "anthropic:claude-sonnet-5-5" })).toBe(
       `Some of the words were written by Claude Sonnet 5.5 (Anthropic). ${RECEIVED}`
     )
-    expect(aboutTheWords({ copySource: "template", model: null })).toBe("Every word here comes from a template.")
+    expect(aboutTheWords({ copySource: "template", model: null })).toBeNull()
   })
 
   it("names a model on an OpenAI-compatible server as running on this server", () => {
@@ -24,7 +22,7 @@ describe("aboutTheWords", () => {
     expect(aboutTheWords({ copySource: "llm", model: "openai:gpt-9" })).toContain("gpt-9 (OpenAI)")
   })
 
-  it("says template when no model is recorded", () => {
-    expect(aboutTheWords({ copySource: "llm", model: null })).toBe(TEMPLATE_WORDS)
+  it("has no line when no model is recorded", () => {
+    expect(aboutTheWords({ copySource: "llm", model: null })).toBeNull()
   })
 })

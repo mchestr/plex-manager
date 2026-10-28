@@ -36,7 +36,7 @@ export interface Soundtrack {
   d: string
   /** The y of the centre line. */
   centre: number
-  /** The days the window has not reached, as a dotted centre line; null after the final cut. */
+  /** The days the window has not reached, as a dotted centre line; null in a whole-year issue. */
   dotted: { x1: number; x2: number } | null
   /** Each month's first day: where its initial goes. */
   months: Array<{ month: number; x: number }>

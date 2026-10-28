@@ -77,6 +77,8 @@ describe("15 Standing", () => {
       ["Your standing", "Top 4%"],
       ["Members who pressed play", "31"],
     ])
+    const lower = at(issues.median, 51)
+    expect(registry.standing.table!(dataOf(issues.median)!, lower.facts, { locale: "en-US" })!.rows.map(([measure]) => measure)).not.toContain("Your standing")
   })
 
   it("summarises the page deterministically", () => {

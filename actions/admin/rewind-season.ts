@@ -14,18 +14,9 @@ import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { hasActiveGeneration } from "@/lib/rewind/generation-guards"
 import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
 import { findRollbackTarget, rollbackStoredRewind } from "@/lib/rewind/rollback"
-import {
-  enqueueFinalCut,
-  enqueueGenerateAll,
-  enqueueSeasonPrepare,
-  finalCutOpensAt,
-  seasonThrough,
-  seasonZones,
-  type RunStarted,
-} from "@/lib/rewind/season-runs"
+import { enqueueGenerateAll, enqueueSeasonPrepare, seasonThrough, type RunStarted } from "@/lib/rewind/season-runs"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
-import { throughFor } from "@/lib/wrapped/aggregate/window"
 import { getSeasonCounts, type SeasonCounts } from "@/lib/wrapped/admin/season"
 import { loadSeasonEstimate } from "@/lib/wrapped/admin/season-estimate"
 
@@ -98,37 +89,6 @@ export const retryFailedRewinds = adminAction({
   input: yearInput,
   fallbackError: "Could not retry the failed Rewinds",
   handler: async ({ year }, { userId }) => startFanOut(year, "failed", userId),
-})
-
-/** The final cut's opening copy, shown beside the disabled button. */
-const FINAL_CUT_NOT_YET = "Available from 1 January"
-
-/**
- * Run final cut (P8.5): refused until 00:30 on 1 January in the westernmost
- * zone, when the scheduled run starts too; then it enqueues
- * `REWIND_FINAL_CUT`, joining the scheduled run when that is waiting or
- * running, and audits it with the member count and the cost estimate.
- */
-export const runRewindFinalCut = adminAction({
-  input: yearInput,
-  fallbackError: "Could not start the final cut",
-  handler: async ({ year }, { userId }) => {
-    if (Date.now() < finalCutOpensAt(year, await seasonZones()).getTime()) return fail("CONFLICT", FINAL_CUT_NOT_YET)
-    const refused = await infraRefusal()
-    if (refused) return refused
-    const through = throughFor(year, { finalCut: true })
-    const estimate = await loadSeasonEstimate(year, through, "all")
-    const run = await enqueueFinalCut({ year, through, triggeredBy: "admin" })
-    logAuditEvent(AuditEventType.REWIND_FINAL_CUT_STARTED, userId, {
-      year,
-      through,
-      members: estimate.members,
-      estimatedCostUsd: estimate.costUsd,
-      jobId: run.jobId,
-      alreadyQueued: run.alreadyQueued,
-    })
-    return ok<RunStarted>(run)
-  },
 })
 
 /**

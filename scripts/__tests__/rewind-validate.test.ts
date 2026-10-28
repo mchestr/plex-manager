@@ -13,9 +13,9 @@ jest.mock('@/lib/prisma', () => ({ prisma: {} }))
 jest.mock('@/lib/wrapped/data/share-context', () => ({ loadShareContext: jest.fn() }))
 
 describe('parseValidateArgs', () => {
-  it('needs a year, and takes --final-cut', () => {
-    expect(parseValidateArgs(['--year=2026'])).toEqual({ ok: true, options: { year: 2026, finalCut: false } })
-    expect(parseValidateArgs(['--year=2026', '--final-cut'])).toEqual({ ok: true, options: { year: 2026, finalCut: true } })
+  it('needs a year, and no longer takes --final-cut', () => {
+    expect(parseValidateArgs(['--year=2026'])).toEqual({ ok: true, options: { year: 2026 } })
+    expect(parseValidateArgs(['--year=2026', '--final-cut'])).toMatchObject({ ok: false, help: false })
     expect(parseValidateArgs([])).toMatchObject({ ok: false, help: false })
     expect(parseValidateArgs(['--year=2026', '--apply'])).toMatchObject({ ok: false, help: false })
     expect(parseValidateArgs(['--help'])).toEqual({ ok: false, help: true })

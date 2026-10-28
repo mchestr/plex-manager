@@ -58,7 +58,7 @@ describe.each(ZONES)("computeRace in %s", (zone) => {
     expect(computeRace(events, statsContext(zone, { hidden: ["c"] }))).toEqual({ eligible: false })
   })
 
-  it("runs December after the final cut", () => {
+  it("runs December in a whole-year issue", () => {
     const race = computeRace([watch("a", 1, 600), watch("b", 3, 300), watch("c", 12, 90)], statsContext(zone, { finalCut: true }))
     expect(race.eligible && race.months.length).toBe(12)
   })

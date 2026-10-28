@@ -195,8 +195,8 @@ export function TopShowsPage({ data, issue }: PageProps<TopShowsData>) {
       {months < 12 && (
         <>
           <Gap px={6} />
-          <p className="italic" style={{ fontSize: ut(12.5), lineHeight: 1.2 }}>
-            December is not yet counted.
+          <p className="italic" style={{ fontSize: ut(12.5), lineHeight: 1.2 }} data-testid="rewind-top-shows-counted">
+            Counted through {monthName(months, locale, "long")}.
           </p>
         </>
       )}

@@ -11,7 +11,7 @@
  *
  * Both years are read over the same window: the shorter of the two series,
  * which is 1 January to 30 November during the season (what `time.vsLastYear`
- * counts) and the full years after the final cut. Pure geometry: no `<text>`.
+ * counts) and the full years in a whole-year issue. Pure geometry: no `<text>`.
  *
  * @module lib/rewind/viz/soundtrack-compare
  */

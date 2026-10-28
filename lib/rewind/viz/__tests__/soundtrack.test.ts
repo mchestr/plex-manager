@@ -16,7 +16,7 @@ describe("soundtrack", () => {
     expect(Math.max(...ys)).toBe(150)
   })
 
-  it("dots December during the season and draws it after the final cut", () => {
+  it("dots December during the season and draws it in a whole-year issue", () => {
     const season = soundtrack(minutes(334), { variant: "daily", window: YEAR, width: 365, height: 100 })
     expect(season.dotted).toEqual({ x1: 334, x2: 365 })
     const final = soundtrack(minutes(365), { variant: "daily", window: YEAR, width: 365, height: 100 })

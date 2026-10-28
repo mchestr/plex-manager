@@ -36,7 +36,7 @@ If Stripe, Plex or Jellyfin fails, removal stops before the transaction with a c
 - **Stripe's own records.** Stripe keeps the customer, invoices and the cancelled subscription; delete those in the Stripe dashboard if the member asks.
 - **Media server history.** Plex, Jellyfin and Tautulli keep their own accounts and watch history, outside this app. Removal unshares Plex and disables Jellyfin; it does not delete accounts or history there.
 - **Server logs.** Lines already written to stdout stay until the operator's log rotation removes them.
-- **Admin ids on server content.** An admin's id on invites, announcements, prompt templates and eval runs (`createdBy`, `updatedBy`) stays after that admin is removed. It is no longer linked to a person.
+- **Admin ids on server content.** An admin's id on invites, announcements and prompt templates (`createdBy`, `updatedBy`) stays after that admin is removed. It is no longer linked to a person.
 
 ### Losing access without removal
 
@@ -140,9 +140,9 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `LeaseLock` | which instance holds each lease (Discord bot, watchlist sync, retention) and until when | No |
 | `RewindServerAggregate` | server-wide yearly totals, no per-member rows | No |
 | `MediaMetadataCache` | Plex metadata per title | No |
-| `RewindEvalRun` | Rewind copy eval results on fixture data; `createdBy` admin id | No |
-| `RewindBatch` | provider batch submissions for the final cut | No |
-| `PromptTemplate` | prompt text; `updatedBy` admin id | No |
+| `RewindEvalRun` | Rewind copy eval results on fixture data; unused, nothing reads or writes it | No |
+| `RewindBatch` | provider batch submissions; unused, nothing writes it | No |
+| `PromptTemplate` | old prompt templates and style guides; unused, nothing reads or writes it; `updatedBy` admin id | No |
 | `Invite` | invite codes and library settings; `createdBy` admin id | No |
 | `Announcement` | announcement text; `createdBy` admin id | No |
 | `StripeEvent` | Stripe event ids and types, for webhook idempotency | No |

@@ -23,7 +23,7 @@ const dayOfMonth = (date: string) => Number(date.slice(8, 10))
 const step = (minutes: number) => (minutes === 0 ? "" : minutes < 60 ? "bg-current/25" : minutes < 180 ? "bg-current/60" : "bg-current")
 
 /**
- * The calendar grid (P8.3, FR-9) in the desktop Notes and article mode. The
+ * The calendar grid (P8.3, FR-9) in the desktop Notes. The
  * server renders the month tables; once hydrated, the island becomes a
  * `grid` of month rows (the month is the `rowheader`) and 24 px day cells
  * with a roving `tabindex`: one cell is 0 and the rest -1. Left and Right

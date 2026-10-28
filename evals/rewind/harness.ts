@@ -73,8 +73,8 @@ export function evalRow(ref: ModelRef, options: { apiKey?: string; baseUrl?: str
 
 /**
  * The dry-run context of a fixture member: an admin run on a server with
- * Rewind on and no database. `previous` is a stored issue's copy (the final
- * cut's golden test passes the season run's). @internal
+ * Rewind on and no database. `previous` is a stored issue's copy, for a run
+ * that may reuse it or keep its slots. @internal
  */
 export function fixtureContext(fixture: Fixture, inputs: FixtureInputs, model: ModelRef, previous: PreviousCopy | null = null): RewindContext {
   return {
@@ -109,7 +109,6 @@ export function fixtureContext(fixture: Fixture, inputs: FixtureInputs, model: M
     previous,
     llmProvider: { provider: model.provider, model: model.id },
     spentUsd: 0,
-    styleGuide: null,
   }
 }
 

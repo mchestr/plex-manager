@@ -30,7 +30,7 @@ export function CoverCard(input: CardInput): ReactElement {
   const headline = fitNameplate(page.headline, measure, og ? 96 : 150, og ? 2 : 4)
   const daily = page.soundtrack?.grain === "daily"
   const through = page.facts["window.through"]?.display
-  const windowLine = input.window.finalCut ? "Final cut" : through ? `Data through ${through}` : ""
+  const windowLine = through ? `Data through ${through}` : ""
   const stripHeight = og ? 120 : 220
 
   return (

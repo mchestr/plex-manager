@@ -77,7 +77,7 @@ export const FACTS = {
   ...group("window", {
     "window.from": f("date", "January 1", "window"),
     "window.through": f("date", "November 30", "window"),
-    "window.finalCut": f("count", "0", "window: 1 after the final cut"),
+    "window.finalCut": f("count", "0", "window: 1 when the window is the whole year"),
     "window.elapsedDays": f("days", "334 days", "window"),
     "tz.label": f("text", "America/Chicago", "Rewind zone"),
   }),

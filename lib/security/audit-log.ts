@@ -110,8 +110,10 @@ export enum AuditEventType {
   REWIND_TITLE_UNHIDDEN = "REWIND_TITLE_UNHIDDEN",
   // The server time zone (Config.timezone) changed. Details carry the old and new zone.
   SERVER_TIMEZONE_CHANGED = "SERVER_TIMEZONE_CHANGED",
-  // A prompt template or Rewind style guide was created, edited, activated or
-  // deleted (P5.9). Details carry the kind and changed field names, never the text.
+  /**
+   * @public A prompt template or Rewind style guide was created, edited, activated
+   * or deleted (P5.9). Kept so stored rows stay known; the Prompts page was removed.
+   */
   PROMPT_TEMPLATE_CHANGED = "PROMPT_TEMPLATE_CHANGED",
   /**
    * @public An LLM provider save, as P2.12 logged it. Kept so the type stays
@@ -131,7 +133,10 @@ export enum AuditEventType {
   REWIND_SEASON_PREPARED = "REWIND_SEASON_PREPARED",
   REWIND_GENERATE_ALL_STARTED = "REWIND_GENERATE_ALL_STARTED",
   REWIND_RETRY_FAILED = "REWIND_RETRY_FAILED",
-  /** Run final cut enqueued `REWIND_FINAL_CUT` (P8.5). */
+  /**
+   * @public P8.5's Run final cut press (year, last data day, estimate, job id).
+   * Kept so stored rows stay known; the final cut was removed.
+   */
   REWIND_FINAL_CUT_STARTED = "REWIND_FINAL_CUT_STARTED",
   // An admin opened a member's stored Rewind (P7.9, GAP-33). Details carry the
   // target user, the year and the wrapped id.
@@ -172,9 +177,9 @@ export enum AuditEventType {
   // The duplicate active service rows were deactivated (P11.31). Details carry
   // the kept and deactivated ids per table and where the dump taken first lives.
   SERVICE_ROWS_DEDUPED = "SERVICE_ROWS_DEDUPED",
-  // A credential, settings, setup or prompt-template change. Details carry the
-  // redacted diff from lib/security/config-diff.ts: changed field names, whether
-  // a secret changed, and URL origins only.
+  // A credential, settings or setup change. Details carry the redacted diff
+  // from lib/security/config-diff.ts: changed field names, whether a secret
+  // changed, and URL origins only.
   CONFIG_CHANGED = "CONFIG_CHANGED",
   // A browser claimed the server before first-run setup (P11.32, SEC-30).
   // Details carry the method (code or token) and the masked IP, never the code.

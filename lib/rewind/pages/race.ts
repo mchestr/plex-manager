@@ -10,14 +10,13 @@
  * @module lib/rewind/pages/race
  */
 
-import { figure, heading, tableBlock } from "@/lib/rewind/article/blocks"
+import { heading, plain } from "@/lib/rewind/article/blocks"
 import { formatRewindDuration } from "@/lib/rewind/format"
 import type { PageDefinition, PageTable } from "@/lib/rewind/registry"
 import { raceGeometry } from "@/lib/rewind/viz/race"
 import { headline } from "@/lib/wrapped/copy/templates"
-import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
+import type { FactId } from "@/lib/wrapped/facts/catalogue"
 
-import { shown } from "./facts"
 import { RaceDataSchema, type RaceData } from "./race.schema"
 import { ratingKeyOf } from "./title-key"
 import { monthName } from "./top-shows"
@@ -44,23 +43,29 @@ export function standingsAfter(data: RaceData, m: number, locale = COPY_LOCALE):
   return `Standings after ${month}: ${order.map((runner, place) => `${runner.title} ${PLACES[place]}`).join(", ")}.`
 }
 
-function raceSummary(data: RaceData): string {
-  const last = data.frames.length - 1
-  const { finalOrder, strip } = raceGeometry(data.frames, { pitch: 1 })
-  const standings = finalOrder.map((i, place) => `${data.series[i].title} ${PLACES[place]}`).join(", ")
-  const runs = strip
+/** The who-led strip in words: "Severance from January to October, then Andor in November". */
+function whoLed(data: RaceData): string {
+  const { strip } = raceGeometry(data.frames, { pitch: 1 })
+  return strip
     .filter((s) => s.leader !== null)
     .map((s) => {
       const title = data.series[s.leader!].title
       const from = frameMonth(data, s.start)
       return s.length === 1 ? `${title} in ${from}` : `${title} from ${from} to ${frameMonth(data, s.start + s.length - 1)}`
     })
-  return `Final standings after ${frameMonth(data, last)}: ${standings}. Who led: ${runs.join(", then ")}.`
+    .join(", then ")
 }
 
-function raceTable(data: RaceData, facts: RewindFactsV3, settings: { locale: string }): PageTable {
+function raceSummary(data: RaceData): string {
+  const last = data.frames.length - 1
+  const { finalOrder } = raceGeometry(data.frames, { pitch: 1 })
+  const standings = finalOrder.map((i, place) => `${data.series[i].title} ${PLACES[place]}`).join(", ")
+  return `Final standings after ${frameMonth(data, last)}: ${standings}. Who led: ${whoLed(data)}.`
+}
+
+function raceTable(data: RaceData, settings: { locale: string }): PageTable {
   return {
-    caption: `Minutes watched of your top series, added up month by month, from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}.`,
+    caption: "Minutes watched of your top series, added up month by month.",
     columns: ["Month", ...data.series.map((s) => s.title)],
     rows: data.frames.map((frame, m) => [
       frameMonth(data, m, settings.locale),
@@ -85,8 +90,12 @@ export const racePage: PageDefinition<RaceData> = {
   },
   schema: RaceDataSchema,
   srSummary: (data) => raceSummary(data),
-  table: raceTable,
-  article: (data, facts, ctx) => [heading(headline("race", facts), facts), ...figure(raceSummary(data)), ...tableBlock(raceTable(data, facts, ctx))],
+  table: (data, _facts, settings) => raceTable(data, settings),
+  // The headline and every change of lead; the final order is Top shows' table, the monthly totals the Table sheet's.
+  article: (data, facts) => [
+    heading(headline("race", facts), facts),
+    ...(facts["race.leadChanges"]?.value === 0 ? [] : [{ kind: "paragraph" as const, text: plain(`Who led: ${whoLed(data)}.`) }]),
+  ],
   // The card's final standings (P7.6): the runners are the top series in rank order, so runner i is `series[i + 1]`.
   share: {
     facts: [
