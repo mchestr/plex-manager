@@ -354,7 +354,8 @@ configured locale.
 ## Encryption keys
 
 Service keys and tokens, member Plex tokens, the Discord and Stripe secrets,
-the Rewind serial key and AI prompt and reply text (`ENCRYPTED_FIELDS` in
+the Rewind serial key, AI prompt and reply text, and the assistant page's
+conversation titles and messages (`ENCRYPTED_FIELDS` in
 `lib/db/encrypted-fields.ts`) are encrypted with AES-256-GCM before they reach
 the database. A production server refuses to start without a key
 (`env.invalid ENCRYPTION_KEY`) unless `ALLOW_PLAINTEXT_SECRETS=true`, which
