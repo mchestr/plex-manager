@@ -89,7 +89,7 @@ export function RewindTable({ userId, name, rows, estimateCopy }: RewindTablePro
         getRowName={(row) => String(row.year)}
         rowActions={actionsFor}
         pagination={{ page: 1, pageSize: Math.max(rows.length, 1), total: rows.length }}
-        empty={<EmptyState kind="first-use" icon={Sparkles} title="No Rewind yet" description="This member's Rewind years show here once one is generated." />}
+        empty={<EmptyState kind="first-use" icon={Sparkles} title="No Rewind yet" description="Start a run from the Season page." />}
         data-testid="admin-user-rewind"
       />
       {rollback && (

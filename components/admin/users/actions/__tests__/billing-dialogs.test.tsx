@@ -53,9 +53,9 @@ describe('billing dialogs name the member\'s services (P11.11)', () => {
     listUserTarget(makeAdminUserWithStats({ id: 'u1', name: 'Morgan Lee', services }))
 
   it.each([
-    [['jellyfin'], 'They will get access to Jellyfin and be exempt from the subscription.'],
-    [['plex', 'jellyfin'], 'They will get access to Plex and Jellyfin and be exempt from the subscription.'],
-    [[], 'They have no Plex or Jellyfin account linked'],
+    [['jellyfin'], 'They get access to Jellyfin and become exempt from the subscription.'],
+    [['plex', 'jellyfin'], 'They get access to Plex and Jellyfin and become exempt from the subscription.'],
+    [[], 'They have no linked Plex or Jellyfin account'],
   ] as const)('the grant for %j', async (services, copy) => {
     const user = userEvent.setup()
     render(<GrantAccessDialog user={withServices([...services])} trigger={<Button data-testid="grant-access-button">Grant</Button>} />)
@@ -64,11 +64,11 @@ describe('billing dialogs name the member\'s services (P11.11)', () => {
     expect(await screen.findByTestId('admin-user-grant-dialog')).toHaveTextContent(copy)
   })
 
-  it('the cancel dialog says which access is removed at period end', async () => {
+  it('the cancel dialog says which access stops at period end', async () => {
     const user = userEvent.setup()
     render(<CancelSubscriptionDialog user={withServices(['jellyfin'])} trigger={<Button data-testid="cancel-subscription-button">Cancel</Button>} />)
 
     await user.click(screen.getByTestId('cancel-subscription-button'))
-    expect(await screen.findByTestId('admin-user-cancel-dialog')).toHaveTextContent('when their Jellyfin access is removed')
+    expect(await screen.findByTestId('admin-user-cancel-dialog')).toHaveTextContent('Then their Jellyfin access stops.')
   })
 })

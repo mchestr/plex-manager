@@ -39,7 +39,6 @@ export default async function InvitesPage({ searchParams }: { searchParams: Prom
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-invites-page">
       <PageHeader
         title="Invites"
-        description="Links that let someone join your Plex or Jellyfin server."
         actions={create("generate-invite-button", true)}
         data-testid="admin-invites-header"
       />

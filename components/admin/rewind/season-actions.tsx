@@ -45,7 +45,7 @@ export function SeasonActions({ year, estimates }: SeasonActionsProps) {
   const run = (action: BulkAction, done: string) => async () => {
     const result = await action({ year })
     if (!result.success) return { error: result.error }
-    toast.showSuccess(result.data.alreadyQueued ? "That run is already going" : done)
+    toast.showSuccess(result.data.alreadyQueued ? "That run is already running" : done)
     await queryClient.invalidateQueries({ queryKey: queryKeys.rewindSeasonStatus(year) })
     router.refresh()
     return {}
@@ -84,7 +84,7 @@ export function SeasonActions({ year, estimates }: SeasonActionsProps) {
       <ConfirmDialog
         trigger={<Button data-testid="admin-rewind-prepare-button">Prepare season</Button>}
         title={`Prepare the ${year} season?`}
-        description={describe("Reads the server's plays and warms titles, then generates for", estimates.all)}
+        description={describe("Reads the server's plays and caches title data, then generates for", estimates.all)}
         confirmLabel="Prepare season"
         pendingLabel="Starting"
         action={run(prepareRewindSeason, "Preparing the season. This can take a few minutes.")}

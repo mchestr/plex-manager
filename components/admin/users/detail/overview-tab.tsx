@@ -104,7 +104,7 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
               Danger zone
             </h2>
             <p className="text-ui text-muted-foreground">
-              Removing a member cancels their subscription, removes their server access and deletes their data here.
+              This cancels their subscription, removes their server access and deletes their data in this app.
             </p>
           </div>
           <RemoveMemberDialog userId={header.id} name={header.name} />

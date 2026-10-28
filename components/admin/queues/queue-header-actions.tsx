@@ -17,7 +17,7 @@ interface QueueHeaderActionsProps {
   disabled: boolean
 }
 
-const PAUSE_CONSEQUENCE = "Waiting jobs, including Stripe access changes and Rewind generations, won't run until you resume."
+const PAUSE_CONSEQUENCE = "Waiting jobs don't run until you resume the queue. This includes Stripe access changes and Rewind runs."
 
 /**
  * The page's actions: a watchlist sync, and Pause or Resume behind a confirm
@@ -71,7 +71,7 @@ export function QueueHeaderActions({ paused, disabled }: QueueHeaderActionsProps
           </Button>
         }
         title={paused ? "Resume the job queue?" : "Pause the job queue?"}
-        description={paused ? "Waiting jobs start running again." : PAUSE_CONSEQUENCE}
+        description={paused ? "Waiting jobs start again." : PAUSE_CONSEQUENCE}
         confirmLabel={paused ? "Resume queue" : "Pause queue"}
         pendingLabel={paused ? "Resuming" : "Pausing"}
         action={toggle}

@@ -97,7 +97,7 @@ export function RemoveMemberDialog({ userId, name }: RemoveMemberDialogProps) {
         <AlertDialogHeader>
           <AlertDialogTitle>Remove {name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This ends their access and deletes their data from this app. It can&apos;t be undone.
+            This ends their access and deletes their data from this app. You can&apos;t undo this.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

@@ -80,7 +80,7 @@ export function ShareLinksTable({ rows, total, page, pageSize, sort }: ShareLink
           kind="first-use"
           icon={Link2}
           title="No share links yet"
-          description="Links show here when members share their Rewind."
+          description="Members create share links from their Rewind."
         />
       }
       data-testid="admin-shares"

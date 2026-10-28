@@ -136,7 +136,7 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
               kind="filtered"
               icon={icons.discordBot}
               title="No commands in this period"
-              description="Pick a longer period, or check that the support bot is online."
+              description="Select a longer period, or make sure that the support bot is online."
               data-testid="discord-empty-period"
             />
           </Card>
@@ -171,7 +171,7 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
                 }
                 summary={`Help requests by topic, ${periodText}`}
                 spec={helpTopicsSpec(help)}
-                empty={{ title: "No help requests", description: "Nobody asked the bot for help in this period." }}
+                empty={{ title: "No help requests", description: "Select a longer period." }}
                 data-testid="discord-help-chart"
               />
               <ChartCard
@@ -183,7 +183,7 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
                 }
                 summary={`Account link requests per day, ${periodText}`}
                 spec={linkRequestsSpec(keys, linking)}
-                empty={{ title: "No link requests", description: "No unlinked member asked to link in this period." }}
+                empty={{ title: "No link requests", description: "Select a longer period." }}
                 data-testid="discord-linking-chart"
               />
               <ChartCard
@@ -191,7 +191,7 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
                 description={context ? `${f.number(context.totalClears)} context clears` : undefined}
                 summary={`Context clears by command, ${periodText}`}
                 spec={contextClearsSpec(context)}
-                empty={{ title: "No context clears", description: "Nobody cleared their chat context in this period." }}
+                empty={{ title: "No context clears", description: "Select a longer period." }}
                 data-testid="discord-context-chart"
               />
               <ChartCard
@@ -203,7 +203,7 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
                 }
                 summary={`Selection menu choices by option, ${periodText}`}
                 spec={selectionSpec(selection)}
-                empty={{ title: "No selections", description: "Nobody used a selection menu in this period." }}
+                empty={{ title: "No selections", description: "Select a longer period." }}
                 data-testid="discord-selection-chart"
               />
               <DiscordTopList
@@ -231,14 +231,14 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
                 description={marking ? `${f.number(markTotal)} marks` : undefined}
                 summary={`Media marks by command, ${periodText}`}
                 spec={markingCommandsSpec(marking)}
-                empty={{ title: "No marks", description: "Nobody marked media from Discord in this period." }}
+                empty={{ title: "No marks", description: "Select a longer period." }}
                 data-testid="discord-marking-chart"
               />
               <ChartCard
                 title="Most marked media"
                 summary={`Titles marked most often, ${periodText}`}
                 spec={topMarkedSpec(marking)}
-                empty={{ title: "No marks", description: "Nobody marked media from Discord in this period." }}
+                empty={{ title: "No marks", description: "Select a longer period." }}
                 data-testid="discord-top-marked-chart"
               />
               <ChartCard
@@ -276,7 +276,7 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
             <h2 id="discord-marked-heading" className="text-h3">
               Marked media
             </h2>
-            <p className="text-ui text-muted-foreground">What members marked in this period, from Discord or the web.</p>
+            <p className="text-ui text-muted-foreground">Marks from Discord and the web in this period.</p>
           </div>
           <Card>
             <CardContent>

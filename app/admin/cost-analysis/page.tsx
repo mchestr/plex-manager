@@ -25,7 +25,6 @@ export default async function CostAnalysisPage({ searchParams }: { searchParams:
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-cost-analysis-page">
       <PageHeader
         title="Cost analysis"
-        description="What LLM calls cost, by day, model, member and provider."
         meta={<span data-testid="admin-cost-analysis-period">Period: {period}</span>}
         data-testid="admin-cost-analysis-header"
       />
@@ -51,7 +50,7 @@ export default async function CostAnalysisPage({ searchParams }: { searchParams:
           series: [{ id: "cost", label: "Cost", values: cost.daily.map((day) => day.cost) }],
           format: "money",
         }}
-        empty={{ title: "No LLM calls in this period", description: "Pick a longer range to see spending." }}
+        empty={{ title: "No LLM calls in this period", description: "Select a longer period." }}
         data-testid="cost-daily-chart"
       />
       <div className="grid gap-6 lg:grid-cols-2">

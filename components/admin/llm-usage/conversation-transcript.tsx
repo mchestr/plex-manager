@@ -10,7 +10,7 @@ import { parseTranscript } from "@/lib/admin/conversation-transcript"
 export function ConversationTranscript({ prompt }: { prompt: string }) {
   const messages = parseTranscript(prompt)
   if (!messages) {
-    return <ExpandablePrompt content={prompt} title="Latest Conversation Prompt" characterCount={prompt.length} />
+    return <ExpandablePrompt content={prompt} title="Latest prompt" characterCount={prompt.length} />
   }
 
   return (

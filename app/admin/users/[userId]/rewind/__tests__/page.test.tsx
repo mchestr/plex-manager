@@ -104,7 +104,7 @@ it("renders a v3 row as the framed stage in admin-preview mode, under the banner
 
   expect(loadRewindYearView).toHaveBeenCalledWith({ userId: "member-1", isAdmin: true }, 2026)
   expect(screen.getByTestId("admin-rewind-preview-banner")).toHaveTextContent(
-    "You are viewing Morgan Lee's Rewind as an admin. Members are told that admins can view their Rewind."
+    "You are viewing Morgan Lee's Rewind as an admin. The app tells members that admins can view their Rewind."
   )
   expect(screen.getByTestId("admin-rewind-preview-header")).toHaveTextContent("Users/Morgan Lee/Rewind 2026")
   const stage = screen.getByTestId("rewind-stage")

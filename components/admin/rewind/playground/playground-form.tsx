@@ -121,7 +121,7 @@ export function PlaygroundForm({ form, options, busy, onChange, onRun }: Playgro
           <ChoiceField
             name="member"
             label="Member"
-            description={`Runs on their ${options.memberYear} history. Nothing is stored.`}
+            description={`Runs on their ${options.memberYear} history.`}
             items={options.members.map((m) => ({ value: m.id, label: m.name }))}
             value={form.userId}
             onChange={(userId) => onChange({ userId })}
@@ -162,7 +162,7 @@ export function PlaygroundForm({ form, options, busy, onChange, onRun }: Playgro
           {busy && <Spinner />}
           {busy ? "Running" : "Run dry run"}
         </Button>
-        <p className="text-label text-muted-foreground">Dry runs store nothing. Ten per ten minutes.</p>
+        <p className="text-label text-muted-foreground">Dry runs store nothing. You can start ten in ten minutes.</p>
       </div>
     </form>
   )

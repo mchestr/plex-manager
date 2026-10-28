@@ -17,7 +17,7 @@ import type { AccountLinkingMetrics } from "@/lib/discord/audit/metrics/users"
 
 export const COMMAND_TYPE_LABELS: Record<string, string> = {
   CHAT: "Chat",
-  MEDIA_MARK: "Media marking",
+  MEDIA_MARK: "Media mark",
   CLEAR_CONTEXT: "Clear context",
   SELECTION: "Selection",
   LINK_REQUEST: "Link request",

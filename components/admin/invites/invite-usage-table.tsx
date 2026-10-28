@@ -54,7 +54,7 @@ export function InviteUsageTable({ usages }: { usages: InviteUsageRow[] }) {
           kind="first-use"
           icon={icons.users}
           title="No one has joined yet"
-          description="Members who join with this invite show here."
+          description="Copy the link and send it to the person you invite."
           data-testid="admin-invite-usage-empty"
         />
       }

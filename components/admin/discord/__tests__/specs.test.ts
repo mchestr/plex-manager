@@ -98,7 +98,7 @@ describe("Discord ChartCard specs", () => {
       errorsByCommand: [],
       errorTrend: [],
     })
-    expect(errors.x).toEqual({ type: "category", labels: ["Chat", "Media marking"] })
+    expect(errors.x).toEqual({ type: "category", labels: ["Chat", "Media mark"] })
 
     const marking = { byCommand: [{ commandName: "!notinterested", count: 4, successCount: 4, failedCount: 0 }], topMediaMarked: [{ title: "Dune", count: 2 }] }
     expect(markingCommandsSpec(marking).x).toEqual({ type: "category", labels: ["Not interested"] })

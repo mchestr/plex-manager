@@ -20,8 +20,8 @@ export function GrantAccessDialog({ user, ...dialog }: UserDialogProps) {
       title={`Grant ${user.name} access?`}
       description={
         user.services.length > 0
-          ? `They will get access to ${serviceNames(user.services)} and be exempt from the subscription.`
-          : "They have no Plex or Jellyfin account linked, so there is nothing to share yet. They are exempt from the subscription."
+          ? `They get access to ${serviceNames(user.services)} and become exempt from the subscription.`
+          : "They have no linked Plex or Jellyfin account, so there is nothing to share yet. They become exempt from the subscription."
       }
       confirmLabel="Grant access"
       pendingLabel="Granting"
@@ -58,12 +58,12 @@ export function ToggleExemptDialog({ user, ...dialog }: UserDialogProps) {
 /** Cancels at period end: Stripe stops renewing, and the webhook removes access on each service then. */
 export function CancelSubscriptionDialog({ user, ...dialog }: UserDialogProps) {
   const { run } = useActionDialog(cancel, { success: "Subscription set to cancel at period end" })
-  const removed = user.services.length > 0 ? `their ${serviceNames(user.services)} access is removed` : "access is removed"
+  const removed = user.services.length > 0 ? `their ${serviceNames(user.services)} access stops` : "their access stops"
   return (
     <ConfirmDialog
       {...dialog}
       title={`Cancel ${user.name}'s subscription?`}
-      description={`It won't renew. They keep access until the end of the paid period, when ${removed}.`}
+      description={`It won't renew. They keep access until the paid period ends. Then ${removed}.`}
       confirmLabel="Cancel subscription"
       cancelLabel="Keep subscription"
       pendingLabel="Canceling"

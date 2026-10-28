@@ -187,7 +187,7 @@ describe('AnnouncementDialog', () => {
 
   it('names the zone the expiry is typed in', () => {
     renderDialog()
-    expect(screen.getByTestId('announcement-expires-zone')).toHaveTextContent('Times in America/Chicago.')
+    expect(screen.getByTestId('announcement-expires-zone')).toHaveTextContent('Times are in America/Chicago.')
   })
 })
 

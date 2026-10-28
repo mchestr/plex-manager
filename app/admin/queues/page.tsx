@@ -47,7 +47,6 @@ export default async function QueuesPage({ searchParams }: { searchParams: Promi
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 md:px-6" data-testid="admin-queues-page">
         <PageHeader
           title="Job queues"
-          description="Background jobs: watchlist syncs, Stripe access changes and Discord roles."
           meta={<LiveRefreshStatus data-testid="queue-live" />}
           actions={<QueueHeaderActions paused={dashboard.paused === true} disabled={!dashboard.redisConnected} />}
           data-testid="admin-queues-header"
@@ -59,7 +58,7 @@ export default async function QueuesPage({ searchParams }: { searchParams: Promi
         )}
         {dashboard.redisConfigured && !dashboard.redisConnected && (
           <Alert tone="destructive" title="Redis isn't answering" data-testid="queue-redis-alert">
-            Jobs can't be queued or run until it is back. This page keeps checking.
+            Jobs can't start until Redis answers. This page checks again at each refresh.
           </Alert>
         )}
         <QueueStatusRow
