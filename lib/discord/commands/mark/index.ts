@@ -129,6 +129,11 @@ function buildConfirmation(item: PlexMediaItem, markType: MarkType, watched: Wat
   return `✅ Marked "${formatItemLabel(item)}" as **${getMarkTypeLabel(markType)}**.${note ? ` ${note}` : ""}`
 }
 
+/** The reply for a search result that is not a movie, show or episode. */
+function unsupportedType(mediaType: string): string {
+  return `You cannot mark this type of item (${mediaType}). Mark a movie, a TV show or an episode.`
+}
+
 /**
  * Apply a mark for a single resolved item and edit the deferred reply with the
  * confirmation (or an unsupported-type error).
@@ -152,7 +157,7 @@ async function markAndConfirm(
 
   if (!result.ok) {
     await interaction.editReply({
-      content: `Unsupported media type: ${result.mediaType}. Only movies, TV shows, and episodes are supported.`,
+      content: unsupportedType(result.mediaType),
     })
     return
   }
@@ -169,7 +174,7 @@ async function markAndConfirm(
 async function handleMark(ctx: InteractionContext): Promise<void> {
   const { interaction } = ctx
 
-  const user = await requireLinkedUser(ctx, { action: "marking media" })
+  const user = await requireLinkedUser(ctx, { action: "mark titles" })
   if (!user) return
 
   if (isJellyfinOnly(user.services)) {
@@ -182,7 +187,7 @@ async function handleMark(ctx: InteractionContext): Promise<void> {
   if (!markType) {
     logger.error("Unknown /mark subcommand", undefined, { subcommand })
     await interaction.reply({
-      content: "Unknown mark type. Please try again.",
+      content: "That mark type does not exist. Try again.",
       flags: MessageFlags.Ephemeral,
     })
     return
@@ -197,7 +202,7 @@ async function handleMark(ctx: InteractionContext): Promise<void> {
   const plexConfig = await getActivePlexServerConfig()
   if (!plexConfig) {
     await interaction.editReply({
-      content: "No active Plex server configured. Please contact an admin.",
+      content: "This server has no Plex connection. Tell an admin.",
     })
     return
   }
@@ -205,7 +210,7 @@ async function handleMark(ctx: InteractionContext): Promise<void> {
   const searchResult = await searchPlexMedia(plexConfig, title)
   if (!searchResult.success || !searchResult.data) {
     await interaction.editReply({
-      content: `Failed to search for "${title}": ${searchResult.error || "Unknown error"}`,
+      content: `The Plex search for "${title}" failed. Try again in a few minutes.`,
     })
     return
   }
@@ -214,7 +219,7 @@ async function handleMark(ctx: InteractionContext): Promise<void> {
 
   if (results.length === 0) {
     await interaction.editReply({
-      content: `No media found matching "${title}". Try a different search term.`,
+      content: `Nothing in the Plex library matches "${title}". Try a different title.`,
     })
     return
   }
@@ -238,7 +243,7 @@ async function handleMark(ctx: InteractionContext): Promise<void> {
 
   const menu = new StringSelectMenuBuilder()
     .setCustomId(customId)
-    .setPlaceholder("Select the correct match")
+    .setPlaceholder("Choose the correct title")
     .addOptions(
       options.map((item, index) => {
         const description = formatItemDescription(item)
@@ -253,7 +258,7 @@ async function handleMark(ctx: InteractionContext): Promise<void> {
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu)
 
   await interaction.editReply({
-    content: `Found multiple matches for "${title}". Select the correct one:`,
+    content: `More than one title matches "${title}". Choose the correct one:`,
     components: [row],
   })
 }
@@ -273,7 +278,7 @@ async function handleSelect(interaction: MessageComponentInteraction): Promise<v
   const pending = await findByCustomId(select.customId)
   if (!pending) {
     await select.update({
-      content: "That selection has expired. Please run the command again.",
+      content: "That choice expired. Run the command again.",
       components: [],
     })
     return
@@ -296,7 +301,7 @@ async function handleSelect(interaction: MessageComponentInteraction): Promise<v
   const item = pending.results[index]
   if (!item) {
     await select.update({
-      content: "That selection is no longer valid. Please run the command again.",
+      content: "That choice is no longer valid. Run the command again.",
       components: [],
     })
     await deleteById(pending.id)
@@ -306,7 +311,7 @@ async function handleSelect(interaction: MessageComponentInteraction): Promise<v
   const plexConfig = await getActivePlexServerConfig()
   if (!plexConfig) {
     await select.update({
-      content: "No active Plex server configured. Please contact an admin.",
+      content: "This server has no Plex connection. Tell an admin.",
       components: [],
     })
     await deleteById(pending.id)
@@ -324,7 +329,7 @@ async function handleSelect(interaction: MessageComponentInteraction): Promise<v
 
   const content = result.ok
     ? buildConfirmation(item, pending.markType, result.watched)
-    : `Unsupported media type: ${result.mediaType}. Only movies, TV shows, and episodes are supported.`
+    : unsupportedType(result.mediaType)
 
   await select.update({ content, components: [] })
   await deleteById(pending.id)
@@ -340,7 +345,7 @@ async function verifyPendingOwner(
   clickingDiscordUserId: string
 ): Promise<{ ok: true; userId: string } | { ok: false; message: string }> {
   if (pendingDiscordUserId !== clickingDiscordUserId) {
-    return { ok: false, message: "This selection belongs to someone else." }
+    return { ok: false, message: "This list belongs to someone else." }
   }
 
   const { verifyDiscordUser } = await import("@/lib/discord/services")
@@ -349,7 +354,7 @@ async function verifyPendingOwner(
     return {
       ok: false,
       message:
-        "You need to link your account before marking media. Use the link provided earlier.",
+        "Link your account to mark titles. Use the link from the earlier message.",
     }
   }
   return { ok: true, userId: verified.user.id }

@@ -48,7 +48,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
   {
     name: "/help",
     aliases: [],
-    description: "Show available commands and how to use them",
+    description: "Show the commands and how to use them",
     syntax: "/help [command]",
     examples: ["/help", "/help mark finished"],
     category: "utility",
@@ -59,7 +59,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
     name: "/assistant",
     aliases: [],
     description:
-      "Ask the AI assistant a question (`ask prompt:<text>`), or start over with `reset`. Server admins can review assistant conversations",
+      "Ask the AI assistant a question with `ask prompt:<text>`. Use `reset` to start a new conversation. Server admins can review assistant conversations",
     syntax: "/assistant ask prompt:<text> | /assistant reset",
     examples: [
       "/assistant ask prompt:How do I request a movie?",
@@ -70,7 +70,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
   {
     name: "/mystats",
     aliases: [],
-    description: "See your own Plex watch stats for this year (only visible to you)",
+    description: "Show your Plex watch stats for this year. Only you see them",
     syntax: "/mystats",
     examples: ["/mystats"],
     category: "chat",
@@ -78,7 +78,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
   {
     name: "/watching",
     aliases: [],
-    description: "See what you're currently watching",
+    description: "Show your current Plex streams",
     syntax: "/watching",
     examples: ["/watching"],
     category: "chat",
@@ -88,7 +88,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
   {
     name: "/mymarks",
     aliases: [],
-    description: "Show the media you've marked (optionally filtered by type)",
+    description: "Show the titles you marked. Add `type` to show one type only",
     syntax: "/mymarks [type]",
     examples: ["/mymarks", "/mymarks type:keep"],
     category: "media",
@@ -98,7 +98,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
   {
     name: "/mark finished",
     aliases: [],
-    description: "Mark media as finished watching (also marks as watched in Plex)",
+    description: "Mark a title as finished. Plex also marks it as watched on your account",
     syntax: "/mark finished title:<name>",
     examples: ["/mark finished title:The Office"],
     category: "media",
@@ -108,7 +108,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
   {
     name: "/mark keep",
     aliases: [],
-    description: "Mark media as keep forever (protected from auto-deletion)",
+    description: "Mark a title to keep forever. Automatic deletion does not remove it",
     syntax: "/mark keep title:<name>",
     examples: ["/mark keep title:The Godfather"],
     category: "media",
@@ -118,7 +118,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
   {
     name: "/mark notinterested",
     aliases: [],
-    description: "Mark media as not interested (won't be recommended)",
+    description: "Mark a title as not interesting to you. It is not recommended to you",
     syntax: "/mark notinterested title:<name>",
     examples: ["/mark notinterested title:Reality Show"],
     category: "media",
@@ -128,7 +128,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
   {
     name: "/mark rewatch",
     aliases: [],
-    description: "Mark media as a rewatch candidate",
+    description: "Mark a title to watch again",
     syntax: "/mark rewatch title:<name>",
     examples: ["/mark rewatch title:Friends"],
     category: "media",
@@ -138,7 +138,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
   {
     name: "/mark badquality",
     aliases: [],
-    description: "Report media as poor quality (may be re-downloaded)",
+    description: "Report poor quality. The server may download it again",
     syntax: "/mark badquality title:<name>",
     examples: ["/mark badquality title:Blurry Movie"],
     category: "media",
@@ -151,7 +151,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
 function getCategoryLabel(category: CommandCategory): string {
   switch (category) {
     case "chat":
-      return "Chat & Assistant"
+      return "Chat and assistant"
     case "media":
       return "Media"
     case "utility":
@@ -202,7 +202,7 @@ export function findCommand(searchTerm: string): CommandDefinition | undefined {
  */
 export function buildFullHelpMessage(): string {
   const lines: string[] = [
-    "**Available Commands**",
+    "**Commands**",
     "",
   ]
 
@@ -224,9 +224,9 @@ export function buildFullHelpMessage(): string {
   }
 
   lines.push("**Tips:**")
-  lines.push("• Use `/help command:<name>` for detailed info on a specific command")
-  lines.push("• You can also DM me directly to chat with the assistant")
-  lines.push("• Media commands search your Plex library by title")
+  lines.push("• Use `/help command:<name>` to see help for one command")
+  lines.push("• Send me a direct message to talk to the assistant")
+  lines.push("• Media commands find titles in the Plex library")
 
   return lines.join("\n")
 }
@@ -281,9 +281,9 @@ const AUTOCOMPLETE_CHOICE_LIMIT = 25
  */
 function buildFullHelpEmbed(disclosure: string): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setTitle("Available Commands")
+    .setTitle("Commands")
     .setDescription(
-      "Use `/help command:<name>` for details on a specific command."
+      "Use `/help command:<name>` to see help for one command."
     )
 
   const categories: CommandCategory[] = ["utility", "chat", "media"]
@@ -361,7 +361,7 @@ export const helpCommand: SlashCommand = {
     // but gating keeps the surface uniform and the nudge points unlinked users at
     // the portal so they still learn how to link. (Autocomplete stays ungated — it
     // is a typeahead callback, not an invocation, and surfaces only command names.)
-    const user = await requireLinkedUser(ctx, { action: "using the bot" })
+    const user = await requireLinkedUser(ctx, { action: "use the bot" })
     if (!user) return
 
     const search = ctx.interaction.options.getString("command")
@@ -370,7 +370,7 @@ export const helpCommand: SlashCommand = {
       const command = findCommand(search)
       if (!command) {
         await ctx.interaction.reply({
-          content: `Command not found: \`${search}\`. Use \`/help\` to see all available commands.`,
+          content: `There is no command \`${search}\`. Use \`/help\` to see all commands.`,
           flags: MessageFlags.Ephemeral,
         })
         return

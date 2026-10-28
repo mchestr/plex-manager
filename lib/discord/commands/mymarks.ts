@@ -114,7 +114,7 @@ function buildMarksEmbed(
   const rendered = marks.slice(0, MAX_MARKS_RENDERED)
 
   const embed = new EmbedBuilder().setTitle(
-    filterType ? `Your ${getMarkTypeLabel(filterType)} Marks` : "Your Marks"
+    filterType ? `Your marks: ${getMarkTypeLabel(filterType)}` : "Your marks"
   )
 
   const groups = groupByType(rendered)
@@ -155,7 +155,7 @@ function buildMarksEmbed(
 async function handleMyMarks(ctx: InteractionContext): Promise<void> {
   const { interaction } = ctx
 
-  const user = await requireLinkedUser(ctx, { action: "viewing your marks" })
+  const user = await requireLinkedUser(ctx, { action: "see your marks" })
   if (!user) return
 
   const userId = user.id
@@ -191,7 +191,7 @@ async function handleMyMarks(ctx: InteractionContext): Promise<void> {
       await interaction.editReply({
         content: filterType
           ? `You have no marks of that type yet.`
-          : "You haven't marked anything yet. Use `/mark` to get started.",
+          : "You have no marks yet. Use `/mark` to mark a title.",
       })
       return
     }
@@ -202,7 +202,7 @@ async function handleMyMarks(ctx: InteractionContext): Promise<void> {
   } catch (error) {
     logger.error("Failed to fetch user marks", error, { userId })
     await interaction.editReply({
-      content: "Sorry, I couldn't load your marks right now. Please try again later.",
+      content: "I could not load your marks. Try again later.",
     })
   }
 }

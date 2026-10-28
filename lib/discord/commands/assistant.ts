@@ -52,7 +52,7 @@ import {
 
 const logger = createLogger("DISCORD_ASSISTANT_COMMAND")
 
-const LINK_NUDGE_ACTION = "using the assistant"
+const LINK_NUDGE_ACTION = "use the assistant"
 
 /** Appended to `/assistant ask` answers so users know where to continue. */
 const CONTINUE_IN_DM_NOTE =
@@ -129,7 +129,7 @@ async function handleAsk(ctx: InteractionContext): Promise<void> {
 async function handleReset(ctx: InteractionContext): Promise<void> {
   const { interaction, discordUserId, channelId } = ctx
 
-  const user = await requireLinkedUser(ctx, { action: "using the assistant" })
+  const user = await requireLinkedUser(ctx, { action: "use the assistant" })
   if (!user) return
 
   const result = await clearDiscordChat({ discordUserId, channelId })

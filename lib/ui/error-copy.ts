@@ -59,29 +59,29 @@ type Audience = "member" | "admin"
 type CopyEntry = { member: ErrorCopy; admin?: ErrorCopy }
 
 const GENERIC: ErrorCopy = {
-  title: "Something went wrong on our side",
-  description: "Please try again. If it keeps happening, let the server admin know.",
+  title: "Something went wrong on the server",
+  description: "Try again. If the problem continues, tell the server admin.",
 }
 
 const SIGN_IN: CopyEntry = {
-  member: { title: "Please sign in", description: "Your session has ended. Sign in again to continue." },
+  member: { title: "Sign in again", description: "Your session has ended." },
 }
 const FORBIDDEN: CopyEntry = {
   member: { title: "You don't have access", description: "This page or action is for server admins only." },
 }
 const NOT_FOUND: CopyEntry = {
-  member: { title: "Not found", description: "We couldn't find what you were looking for. It may have been removed." },
+  member: { title: "Not found", description: "The link may be old, or someone may have deleted the item." },
 }
 const INVALID: CopyEntry = {
-  member: { title: "Check what you entered", description: "Some of the details aren't valid. Fix them and try again." },
+  member: { title: "Check what you entered", description: "Some values are not valid. Correct them and try again." },
 }
 const RATE_LIMITED: CopyEntry = {
-  member: { title: "Too many tries", description: "Please wait a few minutes, then try again." },
+  member: { title: "Too many tries", description: "Wait a few minutes, then try again." },
 }
 const INTERNAL: CopyEntry = { member: GENERIC }
 
 const REWIND_TITLE = "Your Rewind couldn't be made"
-const INTERRUPTED = "Making your Rewind was interrupted. Please try again."
+const INTERRUPTED = "Your Rewind stopped before it was complete. Try again."
 
 const rewind = (description: string): CopyEntry => ({ member: { title: REWIND_TITLE, description } })
 
@@ -95,7 +95,7 @@ const DISCORD_NOT_LINKED = "Discord wasn't linked"
 const discord = (description: string): CopyEntry => ({ member: { title: DISCORD_NOT_LINKED, description } })
 
 const SIGN_IN_FAILED: CopyEntry = {
-  member: { title: "Sign-in didn't work", description: "We couldn't sign you in. Please try again." },
+  member: { title: "Sign-in didn't work", description: "Try again. If it fails again, tell the server admin." },
 }
 
 const COPY = {
@@ -114,17 +114,17 @@ const COPY = {
   NOT_ENTITLED: {
     member: {
       title: "Your membership isn't active",
-      description: "This needs an active membership. Renew your subscription to continue.",
+      description: "Renew your subscription to continue.",
     },
   },
   CONFLICT: {
-    member: { title: "That changed in the meantime", description: "Someone else changed this first. Reload and try again." },
+    member: { title: "Someone else changed this", description: "Reload the page and try again." },
   },
   UPSTREAM_UNAVAILABLE: {
-    member: { title: "A connected service didn't answer", description: "Please try again in a few minutes." },
+    member: { title: "A connected service didn't answer", description: "Try again in a few minutes." },
     admin: {
       title: "A connected service didn't answer",
-      description: "Plex, Tautulli, Overseerr or another service is unreachable. Check its connection in Settings.",
+      description: "Check the Plex, Tautulli and Overseerr connections in Admin, Settings.",
     },
   },
   INVITE_INVALID: {
@@ -151,18 +151,18 @@ const COPY = {
   SECRET_REQUIRED: {
     member: {
       title: "Enter the key again",
-      description: "The address changed, so the saved key can't be used with it. Enter the key again.",
+      description: "The address changed. The saved key goes only to its original address.",
     },
   },
 
   // lib/wrapped/generation-errors.ts RewindErrorCode
   TAUTULLI_USER_NOT_FOUND: rewind(
-    "We couldn't find your account in Tautulli yet. Ask the server admin to refresh Tautulli's user list."
+    "Tautulli does not have your account yet. Ask the server admin to refresh the Tautulli user list."
   ),
-  GENERATION_FAILED: rewind("Something went wrong while making your Rewind. Please try again."),
-  TIMEOUT: rewind("Making your Rewind took too long. Please try again in a few minutes."),
-  UPSTREAM_ERROR: rewind("We couldn't read your watch history just now. Please try again in a few minutes."),
-  LLM_FAILED: rewind("We couldn't write your Rewind this time. Please try again."),
+  GENERATION_FAILED: rewind("An error stopped your Rewind. Try again."),
+  TIMEOUT: rewind("Your Rewind took too long to make. Try again in a few minutes."),
+  UPSTREAM_ERROR: rewind("The server could not read your watch history. Try again in a few minutes."),
+  LLM_FAILED: rewind("The AI could not write your Rewind. Try again."),
   NOT_CONFIGURED: rewind("Rewind isn't fully set up on this server yet. Ask the server admin."),
   WORKER_LOST: rewind(INTERRUPTED),
   JOB_LOST: rewind(INTERRUPTED),
@@ -174,7 +174,7 @@ const COPY = {
 
   // RewindPanelCode: the /rewind/<year> status panels
   REWIND_GENERATING: {
-    member: { title: "Setting your pages", description: "Your Rewind is being made. This page opens it when it's ready." },
+    member: { title: "Setting your pages", description: "This page opens your Rewind when it is ready." },
   },
   REWIND_UNREADABLE: {
     member: {
@@ -183,7 +183,7 @@ const COPY = {
     },
   },
   REWIND_NOT_FOUND: {
-    member: { title: "No Rewind for this year", description: "You don't have a Rewind for this year." },
+    member: { title: "No Rewind for this year", description: "Open another year from the Rewind page." },
   },
   REWIND_NOT_MADE: {
     member: { title: "Your Rewind isn't made yet", description: "Start it from the home page. It takes a few minutes." },
@@ -201,14 +201,14 @@ const COPY = {
   REDIS_UNAVAILABLE: infra("REDIS_UNAVAILABLE"),
 
   // lib/ui/flash-codes.ts FlashErrorCode: the Discord link routes
-  discord_failed: discord("Something went wrong while linking. Please try again."),
-  discord_expired: discord("That link expired. Start linking again."),
-  discord_session_mismatch: discord("Finish linking in the browser and account you started in."),
+  discord_failed: discord("Try again from the Discord page."),
+  discord_expired: discord("The link expired. Try again from the Discord page."),
+  discord_session_mismatch: discord("Use the same browser and account that you started with."),
   discord_rate_limited: {
-    member: { title: "Too many Discord link attempts", description: "Please wait a few minutes, then try again." },
+    member: { title: "Too many Discord link attempts", description: "Wait a few minutes, then try again." },
   },
   discord_unavailable: {
-    member: { title: "Discord linking is unavailable", description: "Please try again in a few minutes." },
+    member: { title: "Discord linking is unavailable", description: "Try again in a few minutes." },
   },
 
   // lib/ui/flash-codes.ts FlashErrorCode: NextAuth's sign-in errors
@@ -220,14 +220,14 @@ const COPY = {
   Configuration: {
     member: {
       title: "Sign-in isn't working",
-      description: "Something is wrong with this server's sign-in settings. Let the server admin know.",
+      description: "The sign-in settings on this server have a problem. Tell the server admin.",
     },
   },
   Verification: {
-    member: { title: "That sign-in expired", description: "Start signing in again." },
+    member: { title: "That sign-in expired", description: "Sign in again." },
   },
   RateLimited: {
-    member: { title: "Too many attempts", description: "Please wait a few minutes, then sign in again." },
+    member: { title: "Too many attempts", description: "Wait a few minutes, then sign in again." },
   },
 } satisfies Record<AppErrorCode, CopyEntry>
 
@@ -245,9 +245,9 @@ function isKnownCode(code: unknown): code is AppErrorCode {
  * @example
  * ```ts
  * errorCopy("TIMEOUT", { audience: "member" }).description
- * // "Making your Rewind took too long. Please try again in a few minutes."
+ * // "Your Rewind took too long to make. Try again in a few minutes."
  * errorCopy("Can't reach database server at db:5432", { audience: "admin" }).title
- * // "Something went wrong on our side"
+ * // "Something went wrong on the server"
  * ```
  */
 export function errorCopy(code: unknown, { audience }: { audience: Audience }): ErrorCopy {
@@ -260,11 +260,11 @@ export function errorCopy(code: unknown, { audience }: { audience: Audience }): 
 const AUTH_COPY: Record<AuthErrorKind, ErrorCopy> = {
   unauthenticated: {
     title: "Sign in to continue",
-    description: "The admin pages need you to sign in with your Plex account first.",
+    description: "Sign in with your Plex account to open the admin pages.",
   },
   forbidden: {
     title: "Admins only",
-    description: "These pages are for the server's admins, and your account isn't one.",
+    description: "Your account is not an admin on this server.",
   },
 }
 
@@ -285,14 +285,14 @@ interface BoundaryCopy extends ErrorCopy {
  * The copy an `error.tsx` boundary renders (SEC-20, UI-19). The auth errors
  * are told apart by digest (`authErrorKind`), since a production build strips
  * their name and message; any other error gets the copy for its digest when
- * that is a known code, else "Something went wrong on our side". The message
+ * that is a known code, else "Something went wrong on the server". The message
  * is never read.
  *
  * @example
  * ```ts
  * boundaryCopy(Object.assign(new Error("x"), { digest: "PM_FORBIDDEN" })).title // "Admins only"
  * boundaryCopy(Object.assign(new Error("db:5432"), { digest: "abc123" })).code // "abc123"
- * boundaryCopy(new Error("db:5432")).title // "Something went wrong on our side"
+ * boundaryCopy(new Error("db:5432")).title // "Something went wrong on the server"
  * ```
  */
 export function boundaryCopy(error: Error & { digest?: string }): BoundaryCopy {
@@ -362,7 +362,7 @@ export function connectionTestCopy(code: ConnectionTestCode, noun = "API key"): 
         field: "secret",
         fieldError: `Enter the ${noun} again to use it with the new address`,
         title: `Enter the ${noun} again`,
-        fix: `The saved ${noun} is only sent to the address it was saved with.`,
+        fix: `Plex Manager sends the saved ${noun} only to the address you saved it with.`,
       }
   }
 }

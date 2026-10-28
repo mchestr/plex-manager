@@ -6,7 +6,7 @@
 import { errorCopy } from '../error-copy'
 import { ErrorCode } from '@/lib/security/error-handler'
 
-const GENERIC_TITLE = 'Something went wrong on our side'
+const GENERIC_TITLE = 'Something went wrong on the server'
 
 const ACTION_CODES = [
   'UNAUTHENTICATED',
@@ -57,9 +57,9 @@ describe('errorCopy', () => {
     expect(admin.description).toContain('Settings')
   })
 
-  it('keeps the stored Rewind copy unchanged', () => {
+  it('returns the fixed copy for a stored Rewind code', () => {
     expect(errorCopy('TAUTULLI_USER_NOT_FOUND', { audience: 'member' }).description).toBe(
-      "We couldn't find your account in Tautulli yet. Ask the server admin to refresh Tautulli's user list."
+      "Tautulli does not have your account yet. Ask the server admin to refresh the Tautulli user list."
     )
   })
 

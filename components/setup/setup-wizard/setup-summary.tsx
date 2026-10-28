@@ -12,7 +12,7 @@ import { icons } from "@/lib/ui/icons"
 import { redirectTo } from "@/lib/utils/navigation"
 import { SETUP_STEPS, type SetupStepId } from "@/types/setup"
 
-const START_FAILED = "Setup is finished, but Plex didn't answer. Sign in from the home page."
+const START_FAILED = "Setup is complete, but Plex did not answer. Sign in from the home page."
 
 /**
  * The last card: what is connected and what was skipped. "Open admin" marks
@@ -75,7 +75,7 @@ export function SetupSummary({ configured }: { configured: Record<SetupStepId, b
             Skipped
           </h2>
           {skipped.length === 0 ? (
-            <p className="text-ui text-muted-foreground">Nothing. Every integration is set up.</p>
+            <p className="text-ui text-muted-foreground">None.</p>
           ) : (
             <>
               <ul className="flex flex-col gap-1.5" data-testid="setup-summary-skipped">
@@ -86,7 +86,7 @@ export function SetupSummary({ configured }: { configured: Record<SetupStepId, b
                   </li>
                 ))}
               </ul>
-              <p className="text-label text-muted-foreground">Set up later in Admin, Settings.</p>
+              <p className="text-label text-muted-foreground">Set them up in Admin, Settings.</p>
             </>
           )}
         </section>

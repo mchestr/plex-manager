@@ -106,7 +106,7 @@ describe("SecretInput", () => {
     expect(input).toHaveAttribute("data-state", "reenter-required")
 
     const hint = screen.getByTestId("key-reenter")
-    expect(hint).toHaveTextContent("Re-enter to use with the new address. The saved key only goes to localhost:5055.")
+    expect(hint).toHaveTextContent("Enter it again to use it with the new address. The saved key goes only to localhost:5055.")
     expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(hint.id)
     expect(await axe(container)).toHaveNoViolations()
   })

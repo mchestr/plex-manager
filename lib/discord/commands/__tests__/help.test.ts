@@ -172,12 +172,12 @@ describe("buildFullHelpMessage", () => {
   })
 
   it("should include title", () => {
-    expect(helpMessage).toContain("**Available Commands**")
+    expect(helpMessage).toContain("**Commands**")
   })
 
   it("should include all non-empty category headers", () => {
     expect(helpMessage).toContain("**Utility**")
-    expect(helpMessage).toContain("**Chat & Assistant**")
+    expect(helpMessage).toContain("**Chat and assistant**")
     expect(helpMessage).toContain("**Media**")
     // The context/clear category is gone.
     expect(helpMessage).not.toContain("Context Management")
@@ -191,16 +191,16 @@ describe("buildFullHelpMessage", () => {
   })
 
   it("should include command descriptions", () => {
-    expect(helpMessage).toContain("Show available commands and how to use them")
+    expect(helpMessage).toContain("Show the commands and how to use them")
     expect(helpMessage).toContain("Ask the AI assistant a question")
-    expect(helpMessage).toContain("Mark media as finished watching")
+    expect(helpMessage).toContain("Mark a title as finished")
   })
 
   it("should include tips section", () => {
     expect(helpMessage).toContain("**Tips:**")
-    expect(helpMessage).toContain("Use `/help command:<name>` for detailed info")
-    expect(helpMessage).toContain("DM me directly")
-    expect(helpMessage).toContain("Media commands search your Plex library")
+    expect(helpMessage).toContain("Use `/help command:<name>` to see help for one command")
+    expect(helpMessage).toContain("Send me a direct message")
+    expect(helpMessage).toContain("Media commands find titles in the Plex library")
   })
 
   it("should have proper formatting with newlines", () => {
@@ -215,7 +215,7 @@ describe("buildCommandHelpMessage", () => {
     const message = buildCommandHelpMessage(helpEntry)
 
     expect(message).toContain("**Command: /help**")
-    expect(message).toContain("Show available commands and how to use them")
+    expect(message).toContain("Show the commands and how to use them")
     expect(message).toContain("**Syntax:** `/help [command]`")
     // Slash commands have no aliases.
     expect(message).not.toContain("**Aliases:**")
@@ -231,7 +231,7 @@ describe("buildCommandHelpMessage", () => {
     const message = buildCommandHelpMessage(rewatchCommand)
 
     expect(message).toContain("**Command: /mark rewatch**")
-    expect(message).toContain("Mark media as a rewatch candidate")
+    expect(message).toContain("Mark a title to watch again")
     expect(message).toContain("**Syntax:** `/mark rewatch title:<name>`")
     expect(message).not.toContain("**Aliases:**")
     expect(message).toContain("`/mark rewatch title:Friends`")
@@ -374,7 +374,7 @@ describe("helpCommand (slash)", () => {
       expect(reply).toHaveBeenCalledTimes(1)
       const call = reply.mock.calls[0][0]
       expect(call.flags).toBe(64) // ephemeral
-      expect(call.content).toContain("link your account")
+      expect(call.content).toContain("Link your account")
       expect(call.embeds).toBeUndefined()
     })
 
@@ -402,17 +402,17 @@ describe("helpCommand (slash)", () => {
       const call = reply.mock.calls[0][0]
       expect(call.flags).toBe(64) // MessageFlags.Ephemeral
       const embed = getEmbedData(reply)
-      expect(embed.title).toBe("Available Commands")
+      expect(embed.title).toBe("Commands")
 
       const fieldNames = embed.fields.map((f) => f.name).join(" ")
       expect(fieldNames).toContain("Utility")
-      expect(fieldNames).toContain("Chat & Assistant")
+      expect(fieldNames).toContain("Chat and assistant")
       expect(fieldNames).toContain("Media")
       expect(fieldNames).not.toContain("Context Management")
 
       const allValues = embed.fields.map((f) => f.value).join("\n")
       expect(allValues).toContain("/help [command]")
-      expect(allValues).toContain("Show available commands and how to use them")
+      expect(allValues).toContain("Show the commands and how to use them")
       expect(allValues).toContain("/mark finished title:<name>")
     })
 
@@ -452,7 +452,7 @@ describe("helpCommand (slash)", () => {
       expect(call.flags).toBe(64)
       const embed = getEmbedData(reply)
       expect(embed.title).toBe("Command: /mark finished")
-      expect(embed.description).toContain("Mark media as finished watching")
+      expect(embed.description).toContain("Mark a title as finished")
 
       const byName = Object.fromEntries(embed.fields.map((f) => [f.name, f.value]))
       expect(byName["Syntax"]).toBe("`/mark finished title:<name>`")
@@ -485,7 +485,7 @@ describe("helpCommand (slash)", () => {
       await helpCommand.handle(ctx)
 
       expect(reply).toHaveBeenCalledWith({
-        content: expect.stringContaining("Command not found: `bogus`"),
+        content: expect.stringContaining("There is no command `bogus`"),
         flags: 64,
       })
     })

@@ -48,13 +48,13 @@ export type LinkedUser = NonNullable<VerifyDiscordUserResult["user"]>
 
 /** Build the "please link your account" nudge for an unlinked user. */
 export function buildNotLinkedMessage(action?: string): string {
-  const tail = action ? ` before ${action}` : ""
-  return `You need to link your account${tail}. Link it here: ${getDiscordPortalUrl()}`
+  const tail = action ? ` to ${action}` : ""
+  return `Link your account${tail}: ${getDiscordPortalUrl()}`
 }
 
 /** Build the "subscription required" nudge for a linked-but-unentitled user. */
 export function buildNotEntitledMessage(): string {
-  return `Your account is linked but doesn't have an active membership, so bot commands are unavailable. Manage your account here: ${getDiscordPortalUrl()}`
+  return `Your account is linked, but your membership is not active. Bot commands work only with an active membership. Manage your account here: ${getDiscordPortalUrl()}`
 }
 
 /**
@@ -66,7 +66,7 @@ export function buildNotEntitledMessage(): string {
  *
  * @param ctx - The resolved interaction context.
  * @param opts - Optional overrides; `action` customises the not-linked nudge
- *   (e.g. `"viewing your marks"`).
+ *   (e.g. `"see your marks"`).
  * @returns The entitled user, or `null` when the gate rejects (a reply was sent).
  */
 export async function requireLinkedUser(

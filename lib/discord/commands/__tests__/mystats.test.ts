@@ -218,7 +218,7 @@ describe("myStatsCommand.handle", () => {
 
     await myStatsCommand.handle(ctx)
 
-    expect(reply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining("link your account"), flags: 64 }))
+    expect(reply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining("Link your account"), flags: 64 }))
     expect(deferReply).not.toHaveBeenCalled()
     expect(mockCommand).not.toHaveBeenCalled()
   })
@@ -306,7 +306,7 @@ describe("myStatsCommand.handle", () => {
     await myStatsCommand.handle(ctx)
 
     expect(mockCommand).toHaveBeenCalledTimes(MAX_HISTORY_PAGES)
-    expect(editReply.mock.calls[0][0]).toEqual({ content: expect.stringMatching(/couldn't load your stats/) })
+    expect(editReply.mock.calls[0][0]).toEqual({ content: expect.stringMatching(/could not load your stats/) })
   })
 
   it("takes the year in the member's zone: 16:30 on 31 December in Los Angeles is still 2026", async () => {
@@ -355,7 +355,7 @@ describe("myStatsCommand.handle", () => {
 
     const editArg = editReply.mock.calls[0][0]
     expect(editArg.embeds).toBeUndefined()
-    expect(editArg.content).toMatch(/don't have any watch stats/)
+    expect(editArg.content).toMatch(/no watch stats for this year/)
   })
 
   it("shows an ephemeral error (no internals leaked) when Tautulli fails", async () => {
@@ -366,7 +366,7 @@ describe("myStatsCommand.handle", () => {
 
     const editArg = editReply.mock.calls[0][0]
     expect(editArg.embeds).toBeUndefined()
-    expect(editArg.content).toMatch(/couldn't load your stats/)
+    expect(editArg.content).toMatch(/could not load your stats/)
     expect(editArg.content).not.toContain("HTTP_ERROR")
   })
 })

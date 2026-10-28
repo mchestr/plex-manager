@@ -15,20 +15,19 @@ import type { DevDefaults } from "@/types/setup"
 const COPY: Record<Exclude<SetupServiceKind, "plex">, { heading: string; description: string }> = {
   tautulli: {
     heading: "Connect Tautulli",
-    description: "Tautulli keeps the watch history behind Rewind and members' stats. Find its API key in Tautulli under Settings, then Web Interface.",
+    description: "Rewind and member stats use its watch history. Find the API key in Tautulli under Settings, Web Interface.",
   },
   overseerr: {
     heading: "Connect Overseerr",
-    description:
-      "Overseerr lets members ask for films and series that aren't on the server yet. Skip this if you don't run it; you can add it later in Admin settings.",
+    description: "Members use it to request films and series. Find the API key in Overseerr under Settings, General.",
   },
   sonarr: {
     heading: "Connect Sonarr",
-    description: "Sonarr shows admins which series are downloading and missing. Find its API key in Sonarr under Settings, then General.",
+    description: "The admin pages show its download queue and missing series. Find the API key in Sonarr under Settings, General.",
   },
   radarr: {
     heading: "Connect Radarr",
-    description: "Radarr shows admins which films are downloading and missing. Find its API key in Radarr under Settings, then General.",
+    description: "The admin pages show its download queue and missing films. Find the API key in Radarr under Settings, General.",
   },
 }
 

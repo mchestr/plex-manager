@@ -38,7 +38,7 @@ export function PlexServerPicker({ servers, selected, onSelect, uri, onUriChange
 
   const detail = (server: PickerServer) => {
     if (!server.owned) return "Shared with you. Only its owner can set it up."
-    if (!server.online) return server.lastSeenAt ? `Not reachable since ${f.date(server.lastSeenAt)}. Start it to choose it.` : "Not reachable. Start it to choose it."
+    if (!server.online) return server.lastSeenAt ? `Not reachable since ${f.date(server.lastSeenAt)}. Start the server to choose it.` : "Not reachable. Start the server to choose it."
     return [server.version && `Plex Media Server ${server.version}`, server.platform && `on ${server.platform}`].filter(Boolean).join(" ") || "Plex Media Server"
   }
 

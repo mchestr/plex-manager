@@ -19,12 +19,12 @@ const COPY = {
   wrapped: {
     position: "llm-rewind",
     heading: "Choose the Rewind writer",
-    description: "The OpenAI model that writes each member's Rewind. You can switch to another provider later in Admin settings.",
+    description: "Setup supports OpenAI only. You can choose another provider later in Admin settings.",
   },
   chat: {
     position: "llm-chat",
     heading: "Choose the admin assistant",
-    description: "The OpenAI model behind the admin assistant, which answers questions about the server. Other providers are in Admin settings.",
+    description: "Setup supports OpenAI only. You can choose another provider later in Admin settings.",
   },
 } as const
 
@@ -115,7 +115,7 @@ export function LLMStep({ purpose, stored, devDefaults }: LLMStepProps) {
         <FormField name={`setup-${purpose}-model`} label="Model" error={errors.model} className="md:col-span-2">
           <LLMModelPicker provider="openai" model={model.id} custom={model.custom} liveModels={null} onChange={(id, custom) => setModel({ id, custom })} disabled={saving} />
         </FormField>
-        <FormField name={`setup-${purpose}-temperature`} label="Temperature" optional description="From 0.0 to 2.0, for models that take one.">
+        <FormField name={`setup-${purpose}-temperature`} label="Temperature" optional description="From 0.0 to 2.0. Some models do not use it.">
           <Input type="number" min="0" max="2" step="0.1" value={temperature} onValueChange={setTemperature} placeholder="Model default" disabled={saving} data-testid={`setup-${copy.position}-temperature`} />
         </FormField>
         <FormField name={`setup-${purpose}-max-tokens`} label="Max tokens" optional description="From 1 to 100,000.">

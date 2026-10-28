@@ -101,7 +101,7 @@ describe("ServiceSection with a SecretInput", () => {
     const key = screen.getByTestId("settings-overseerr-secret")
     expect(key).toHaveAttribute("data-state", "reenter-required")
     expect(key).toBeRequired()
-    expect(screen.getByTestId("settings-overseerr-secret-reenter")).toHaveTextContent("Re-enter to use with the new address")
+    expect(screen.getByTestId("settings-overseerr-secret-reenter")).toHaveTextContent("Enter it again to use it with the new address")
     expect(screen.getByTestId("settings-overseerr-test")).toBeDisabled()
     expect(screen.getByTestId("settings-overseerr-save")).toBeDisabled()
     expect(screen.getByTestId("settings-overseerr-unsaved")).toHaveTextContent("Enter the API key to test or save")

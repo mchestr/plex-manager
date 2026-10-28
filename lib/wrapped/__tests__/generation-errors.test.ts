@@ -74,7 +74,7 @@ describe('member copy for stored codes (errorCopy)', () => {
 
   it('returns the fixed copy for a missing Tautulli account', () => {
     expect(memberErrorCopy('TAUTULLI_USER_NOT_FOUND')).toBe(
-      "We couldn't find your account in Tautulli yet. Ask the server admin to refresh Tautulli's user list."
+      "Tautulli does not have your account yet. Ask the server admin to refresh the Tautulli user list."
     )
   })
 
@@ -82,7 +82,7 @@ describe('member copy for stored codes (errorCopy)', () => {
     const copy = memberErrorCopy(readStoredError(LEGACY_ROSTER_ERROR))
     expect(copy).not.toContain('alice')
     expect(copy).not.toContain('@example.com')
-    expect(copy).toBe('Something went wrong while making your Rewind. Please try again.')
+    expect(copy).toBe('An error stopped your Rewind. Try again.')
   })
 })
 

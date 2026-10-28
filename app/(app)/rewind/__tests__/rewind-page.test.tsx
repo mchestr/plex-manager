@@ -331,7 +331,7 @@ describe('/rewind/[year] branches', () => {
 
     expect(panel()).toHaveAttribute('data-kind', 'failed')
     expect(screen.getByTestId('rewind-status-message')).toHaveTextContent(
-      "We couldn't find your account in Tautulli yet. Ask the server admin to refresh Tautulli's user list."
+      "Tautulli does not have your account yet. Ask the server admin to refresh the Tautulli user list."
     )
     expect(document.body).not.toHaveTextContent('mona')
   })

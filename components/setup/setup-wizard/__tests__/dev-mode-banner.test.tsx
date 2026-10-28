@@ -38,7 +38,7 @@ describe('DevModeBanner', () => {
     expect(banner).toHaveAttribute('aria-live', 'polite')
     expect(screen.getByText('Development mode is on')).toBeInTheDocument()
     expect(screen.getByText('DEV_*')).toBeInTheDocument()
-    expect(screen.getByText(/never use them in production/i)).toBeInTheDocument()
+    expect(screen.getByText(/do not use them in production/i)).toBeInTheDocument()
     expect(document.querySelector('[data-slot="icon"]')).toHaveAttribute('aria-hidden', 'true')
   })
 
