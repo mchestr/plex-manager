@@ -13,9 +13,9 @@
  * @module lib/rewind/pages/short-list
  */
 
-import { heading, note, paragraph } from "@/lib/rewind/article/blocks"
+import { heading, paragraph } from "@/lib/rewind/article/blocks"
 import type { PageDefinition } from "@/lib/rewind/registry"
-import { shortListDeck, shortListHeadline, tzNote } from "@/lib/wrapped/copy/templates"
+import { shortListDeck, shortListHeadline } from "@/lib/wrapped/copy/templates"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import { compareRanked } from "@/lib/wrapped/stats/rank"
 
@@ -79,7 +79,6 @@ export const shortListPage: PageDefinition<ShortListData> = {
       label: "Your short list",
       items: data.rows.map((row, i) => ({ rank: i + 1, title: shown(facts, shortListFact(row, "title")), detail: shown(facts, shortListFact(row, "minutes")) })),
     },
-    ...(has(facts, "hours.medianStart") ? [note(tzNote(ctx.zone), facts)] : []),
   ],
   // The Short list card (P7.6) prints its own rows: each title with its minutes.
   share: {

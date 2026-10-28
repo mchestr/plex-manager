@@ -8,7 +8,7 @@
 
 import type { ArticleBlock } from "@/lib/rewind/article/blocks"
 import { formatRewindDuration } from "@/lib/rewind/format"
-import { issueYear, shown } from "@/lib/rewind/pages/facts"
+import { issueYear } from "@/lib/rewind/pages/facts"
 import { milestoneFacts } from "@/lib/rewind/pages/number"
 import type { NumberData } from "@/lib/rewind/pages/number.schema"
 import { display } from "@/lib/wrapped/facts/display"
@@ -31,7 +31,6 @@ function byMonth(minutes: readonly number[], from: string): Map<number, number> 
 export const numberNotes: CoreNotes<NumberData> = (data, facts, ctx) => {
   const year = issueYear(facts)
   const from = String(facts["window.from"]?.value)
-  const whose = ctx.zone === "server" ? "the server’s time zone" : "your time zone"
   const current = byMonth(data.minutes, from)
   const last = data.lastYearDaily && data.lastYearDaily.some((m) => m > 0) ? byMonth(data.lastYearDaily, `${year - 1}${from.slice(4)}`) : null
   const rows = [...current].map(([month, minutes]) => [
@@ -43,7 +42,7 @@ export const numberNotes: CoreNotes<NumberData> = (data, facts, ctx) => {
   const blocks: ArticleBlock[] = [
     headingBlock("How the hours are counted"),
     paragraphBlock(
-      `Every film and episode you played from ${windowRange(facts)}, counted in ${shown(facts, "tz.label")}, ${whose}. A play counts from its first minute; rewatches count, trailers and extras do not.`
+      `Every film and episode you played from ${windowRange(facts)}. A play counts from its first minute; rewatches count, trailers and extras do not.`
     ),
     {
       kind: "table",
@@ -60,7 +59,7 @@ export const numberNotes: CoreNotes<NumberData> = (data, facts, ctx) => {
   if (last) {
     blocks.push(
       paragraphBlock(
-        `${year - 1} is recounted from your play history with this year’s rules, over the same days and in the same time zone, so the two years compare like for like. It can differ from what last year’s Rewind showed.`
+        `${year - 1} is recounted from your play history with this year’s rules, over the same days, so the two years compare like for like. It can differ from what last year’s Rewind showed.`
       )
     )
   }

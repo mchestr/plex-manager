@@ -6,7 +6,7 @@ import { shortListFact, shortListKind } from "@/lib/rewind/pages/short-list"
 import type { ShortListData, ShortListRow } from "@/lib/rewind/pages/short-list.schema"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
-import { pocketNote, shortListDeck, shortListHeadline, tzNote } from "@/lib/wrapped/copy/templates"
+import { pocketNote, shortListDeck, shortListHeadline } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { CopyText } from "./copy-text"
@@ -54,7 +54,7 @@ function rowDetail(row: ShortListRow, facts: RewindFactsV3, locale: string): Lis
  * Short list (design 4.5, `pocket-short-list.png`): the pocket edition's top
  * 3 titles of any type. The No. 1 is a nameplate with its full-colour poster
  * (or the hero-size title card), its minutes and the member's usual start
- * time with `tz.note` under it; Nos. 2 and 3 are P5.6's list rows, with
+ * time; Nos. 2 and 3 are P5.6's list rows, with
  * minute-level numbers ("48 minutes"). The pocket note follows `copySource`.
  */
 export function ShortListPage({ data, issue }: PageProps<ShortListData>) {
@@ -117,11 +117,6 @@ export function ShortListPage({ data, issue }: PageProps<ShortListData>) {
         <div style={{ marginTop: tight(12) }}>
           <ListRows rows={rows} start={2} label={`Numbers 2 to ${rows.length + 1}`} />
         </div>
-      )}
-      {start && (
-        <p className="italic" style={{ fontSize: ut(12.5), lineHeight: 1.2, marginTop: tight(6) }} data-testid="rewind-short-list-tz">
-          <CopyText text={tzNote(issue.zone)} source={facts} />
-        </p>
       )}
       <p className="flex items-start" style={{ gap: u(10), marginTop: tight(10), fontSize: ut(14.5), lineHeight: 1.3 }} data-testid="rewind-short-list-note">
         <span className="shrink-0 rounded-sm border-[1.5px] border-current font-display" style={{ padding: `${u(2)} ${u(6)}`, fontVariationSettings: axes(100, 700) }}>

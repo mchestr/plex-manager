@@ -9,7 +9,7 @@ import { Icon } from "@/components/ui/icon"
 import { Input } from "@/components/ui/input"
 import { MarkdownBody } from "@/components/ui/markdown-body"
 import { Spinner } from "@/components/ui/spinner"
-import { useFormat } from "@/lib/format-context"
+import { useBrowserFormat } from "@/lib/format-context"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 
@@ -19,7 +19,8 @@ function toolName(tool: string): string {
 }
 
 function Message({ message }: { message: ChatMessage }) {
-  const f = useFormat()
+  // The viewer's own clock, as the assistant's answers use it
+  const f = useBrowserFormat()
   const mine = message.role === "user"
   return (
     <div className={cn("flex", mine ? "justify-end" : "justify-start")}>

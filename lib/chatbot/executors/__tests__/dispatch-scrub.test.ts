@@ -9,6 +9,7 @@
  */
 
 import { executeToolCall } from ".."
+import { executeSonarrTool } from "../sonarr"
 import { executeTautulliTool } from "../tautulli"
 import { permissionsFor } from "@/lib/permissions"
 
@@ -90,5 +91,15 @@ describe("executeToolCall - Discord output scrubbing", () => {
 
     expect(result).toBe(PII_STATUS)
     expect(result).toContain("alice@example.com")
+  })
+})
+
+describe("executeToolCall - the turn's zone (P11.17)", () => {
+  it("gives a service's UTC instants in the turn's zone, with their offset", async () => {
+    jest.mocked(executeSonarrTool).mockResolvedValue(JSON.stringify({ records: [{ title: "Pilot", airDateUtc: "2026-11-02T03:30:00Z" }] }))
+
+    const result = await executeToolCall(toolCall("get_sonarr_calendar"), "user-1", "default", true, { timeZone: "America/Los_Angeles", locale: "en-US" }, ADMIN)
+
+    expect(JSON.parse(result)).toEqual({ records: [{ title: "Pilot", airDateLocal: "2026-11-01T19:30:00-08:00" }] })
   })
 })

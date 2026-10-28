@@ -14,7 +14,7 @@ interface TableSheetProps {
 /**
  * A chart page's data as a real table (Rewind design 4.6, 11.1, FR-16): a
  * bottom sheet on paper with a scrollable `<table>` whose caption names the
- * counting window and zone. Opens from the "Table" button and the T key.
+ * counting window. Opens from the "Table" button and the T key.
  */
 export function TableSheet({ open, onClose, pageName, table }: TableSheetProps) {
   return (

@@ -454,7 +454,7 @@ describe("epochs reach the model as ISO strings with an offset (P11.17)", () => 
     mockTautulliFindFirst.mockResolvedValue({ id: "tautulli-1", name: "Tautulli", url: "http://t", apiKey: "k", publicUrl: null } as never)
   })
 
-  it("converts history epochs into the server zone", async () => {
+  it("converts history epochs into the turn's zone", async () => {
     // 1793590200 is 2026-11-02T03:30:00Z: 19:30 on 1 November in Los Angeles
     jest.mocked(getTautulliHistory).mockResolvedValue({
       success: true,
@@ -475,6 +475,19 @@ describe("epochs reach the model as ISO strings with an offset (P11.17)", () => 
       stopped: "2026-11-01T21:30:00-08:00",
       duration: 7200,
     })
+  })
+
+  it("converts the libraries table's last access, and keeps a numeric last-played title", async () => {
+    mockGetTautulliLibraryStats.mockResolvedValue({
+      success: true,
+      data: { data: [{ section_name: "Movies", last_accessed: 1793590200, last_played: "1917" }] },
+    } as never)
+
+    const result = JSON.parse(
+      await executeTautulliTool("get_tautulli_library_stats", {}, "admin-1", "default", { timeZone: "America/Los_Angeles", locale: "en-US" })
+    )
+
+    expect(result.data[0]).toEqual({ section_name: "Movies", last_accessed: "2026-11-01T19:30:00-08:00", last_played: "1917" })
   })
 
   it("writes UTC with an explicit offset when no zone is given", async () => {

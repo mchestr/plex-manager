@@ -160,7 +160,7 @@ let options: string[] | null = null
 /**
  * ICU still names these zones by their old CLDR ids (`Asia/Saigon`,
  * `Europe/Kiev`), so `Intl` hands them back for the current IANA names. The
- * zone a member picks is the one Rewind prints in `tz.label` (design 7.7),
+ * zone a member picks is the one Rewind records in `tz.label` (design 7.7),
  * so the options and the normalised value use the IANA name. Only renames of
  * the same place are listed, never zones that IANA merged into another.
  */

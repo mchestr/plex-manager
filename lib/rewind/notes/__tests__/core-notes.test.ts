@@ -15,7 +15,6 @@ beforeAll(async () => {
 
 const contextOf = (issue: FixtureIssue, extra: Partial<CoreNotesContext> = {}): CoreNotesContext => ({
   locale: "en-US",
-  zone: "server",
   coreNotes: true,
   pages: issue.pages.map((page) => ({ folio: page.folio, name: registry[page.type].name, type: page.type })),
   earlierYears: [2025, 2024],
@@ -70,10 +69,12 @@ describe.each(["heavy", "median", "light"])("the core pages' Notes on %s (P8.4)"
     }
   })
 
-  it("names the zone wherever a Note prints a clock time", () => {
+  it("never names a time zone in a Note: the times are the member's own", () => {
     const issue = issues[id]
-    for (const page of pagesOf().filter((p) => ["cover", "bookends", "clock"].includes(p.type))) {
-      expect(textOfNotes(pageNotes(page, issue.facts, contextOf(issue)))).toContain(`Times in ${issue.facts["tz.label"]!.display}, the server's time zone`)
+    for (const page of issue.pages) {
+      const text = textOfNotes(pageNotes(page, issue.facts, contextOf(issue)))
+      expect(text).not.toContain(issue.facts["tz.label"]!.display)
+      expect(text).not.toMatch(/time zone/i)
     }
   })
 })

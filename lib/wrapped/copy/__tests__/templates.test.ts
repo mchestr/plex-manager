@@ -11,8 +11,7 @@ import { POSTER_LINES } from "../poster-lines"
 import { renderCopyText, tokenIds } from "../render-copy"
 import { slotsForPages } from "../slots"
 import {
-  copyLocals, coverLines, headline, pocketNote, posterLineTemplate, quizCallback, quizHeadline, quizReveal, slotTemplate, tzNote, tzShort,
-  windowLine,
+  copyLocals, coverLines, headline, pocketNote, posterLineTemplate, quizCallback, quizHeadline, quizReveal, slotTemplate, windowLine,
 } from "../templates"
 import { fixtureCopyInputs, type FixtureCopyInput } from "./fixture-facts"
 
@@ -139,13 +138,6 @@ describe("headlines and page lines", () => {
     expect(headline("cover", { "member.firstName": { value: "Mike", display: "Mike", unit: "name" } })).toBe(
       "{{fact:member.firstName}}'s year in film and television"
     )
-  })
-
-  it("has both tz.note forms and tz.short", () => {
-    const facts: RewindFactsV3 = { "tz.label": { value: "America/Chicago", display: "America/Chicago", unit: "text" } }
-    expect(renderCopyText(tzNote("server"), facts)).toBe("Times in America/Chicago, the server's time zone")
-    expect(renderCopyText(tzNote("member"), facts)).toBe("Times in America/Chicago, your time zone")
-    expect(renderCopyText(tzShort(), facts)).toBe("Times in America/Chicago")
   })
 
   it("builds four cover lines with the selected folios, in folio order", () => {

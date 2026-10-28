@@ -23,7 +23,7 @@ describe("03 Bookends", () => {
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(`You opened 2026 with ${first}`.replace(/\s+/g, " "))
     expect(document.body).toHaveTextContent(issue.facts["bookends.first.date"]!.display.replace(/\u00A0/g, " "))
     expect(document.body).toHaveTextContent(issue.facts["bookends.last.time"]!.display.replace(/[\u00A0\u202F]/g, " "))
-    expect(document.body).toHaveTextContent(/Times in America\/Chicago, the server's time zone/)
+    expect(document.body).not.toHaveTextContent(/time zone|America\/Chicago/)
   })
 
   it("prints the lifetime line from the member's facts", () => {

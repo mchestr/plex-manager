@@ -2,7 +2,7 @@
 
 exports[`09 The clock summarises the page deterministically 1`] = `
 [
-  "Plays by the hour they started. Times in America/Chicago. 34% of your plays started between 10 PM and 4 AM. Your busiest hour was 10 PM, and your quietest 5 AM.",
-  "Plays by the hour they started. Times in America/New_York. 91% of your plays started between 10 PM and 4 AM. Your busiest hour was 11 PM, and your quietest 2 AM.",
+  "Plays by the hour they started. 34% of your plays started between 10 PM and 4 AM. Your busiest hour was 10 PM, and your quietest 5 AM.",
+  "Plays by the hour they started. 91% of your plays started between 10 PM and 4 AM. Your busiest hour was 11 PM, and your quietest 2 AM.",
 ]
 `;

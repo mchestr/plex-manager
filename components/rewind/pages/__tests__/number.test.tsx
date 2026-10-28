@@ -76,7 +76,7 @@ describe("02 The number", () => {
     expect(table.columns).toEqual(["Month", "Watched", "Milestones"])
     expect(table.rows).toHaveLength(11)
     expect(table.rows[0][0]).toBe("January")
-    expect(table.caption).toContain("America/Chicago")
+    expect(table.caption).not.toContain("America/Chicago")
     expect(table.rows.flatMap((r) => (r[2] ? [r[2]] : []))).toHaveLength(4)
   })
 

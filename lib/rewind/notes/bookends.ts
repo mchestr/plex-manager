@@ -1,6 +1,6 @@
 /**
- * 03 Bookends' Notes (P8.4): the first and last plays with their date, time
- * and zone, and the member's earlier Rewind years. A bookend the page masks
+ * 03 Bookends' Notes (P8.4): the first and last plays with their date and
+ * time, and the member's earlier Rewind years. A bookend the page masks
  * (it is the quiz's answer) stays masked until the quiz is answered.
  *
  * @module lib/rewind/notes/bookends
@@ -13,7 +13,7 @@ import type { BookendsData } from "@/lib/rewind/pages/bookends.schema"
 import { has, shown } from "@/lib/rewind/pages/facts"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
-import { headingBlock, zoneNote, type CoreNotes, type CoreNotesContext } from "./context"
+import { headingBlock, type CoreNotes, type CoreNotesContext } from "./context"
 
 const MASK = "Your No. 1 (the quiz comes first)"
 
@@ -28,7 +28,7 @@ export const bookendsNotes: CoreNotes<BookendsData> = (data, facts, ctx) => {
   const entries = [...bookend(facts, "first", data.first.masked, ctx), ...bookend(facts, "last", data.last.masked, ctx)]
   const years = ctx.earlierYears ?? []
   const blocks: ArticleBlock[] = [headingBlock("Where the year starts and ends")]
-  if (entries.length > 0) blocks.push({ kind: "definitionList", label: "Bookends", entries }, zoneNote(facts, ctx))
+  if (entries.length > 0) blocks.push({ kind: "definitionList", label: "Bookends", entries })
   if (years.length > 0) {
     blocks.push({
       kind: "definitionList",

@@ -1,6 +1,6 @@
 /**
- * 01 Cover's Notes (P8.4): the contents with folios, the data window under
- * its zone note, and what the serial is for.
+ * 01 Cover's Notes (P8.4): the contents with folios, the data window and
+ * what the serial is for.
  *
  * @module lib/rewind/notes/cover
  */
@@ -9,7 +9,7 @@ import { plain } from "@/lib/rewind/article/blocks"
 import { has, isFinalCut, shown } from "@/lib/rewind/pages/facts"
 import type { CoverData } from "@/lib/rewind/pages/cover.schema"
 
-import { headingBlock, paragraphBlock, windowRange, zoneNote, type CoreNotes } from "./context"
+import { headingBlock, paragraphBlock, windowRange, type CoreNotes } from "./context"
 
 export const coverNotes: CoreNotes<CoverData> = (_data, facts, ctx) => {
   const pages = ctx.pages ?? []
@@ -22,7 +22,6 @@ export const coverNotes: CoreNotes<CoverData> = (_data, facts, ctx) => {
       ? [{ kind: "rankedList" as const, label: "Contents", items: pages.map((page) => ({ rank: page.folio, title: page.name })) }]
       : []),
     paragraphBlock(window),
-    zoneNote(facts, ctx),
     ...(has(facts, "member.serial")
       ? [{ kind: "paragraph" as const, text: plain(`No. ${shown(facts, "member.serial")} links your cards without naming you.`) }]
       : []),

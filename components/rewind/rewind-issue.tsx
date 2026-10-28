@@ -109,7 +109,6 @@ export async function RewindIssue({
     copySource: data.copySource,
     model: data.copyMeta.model,
     returnTo,
-    zone: data.window.zone === settings.timeZone ? "server" : "member",
     facts: data.facts,
     cuts: { full: data.edition === "full" ? types(pages) : null, pocket: types(pocket ?? pages) },
     libraryHref: library,
@@ -119,7 +118,6 @@ export async function RewindIssue({
   const slots = (list: readonly SelectedPage[], context: IssueContext) => {
     const notesCtx: CoreNotesContext = {
       locale: settings.locale,
-      zone: context.zone,
       hiddenKeys,
       features,
       coreNotes: features["notes.core"],

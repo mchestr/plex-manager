@@ -36,7 +36,7 @@ describe("Top shows Notes and hidden titles", () => {
   it("leaves a series hidden since generation out of the Notes, renumbering the rest", async () => {
     const heavy = await fixtureIssue("heavy")
     const data = heavy.pages.find((p) => p.type === "top-shows")!.data as TopShowsData
-    const ctx = { locale: "en-US", zone: "server" } as const
+    const ctx = { locale: "en-US" } as const
     const all = topShowsPage.notes!(data, heavy.facts, ctx)
     const hiddenRow = data.more![0]
 

@@ -4,6 +4,7 @@ import { useCallback, useState } from "react"
 
 import { chatWithAdminBot } from "@/actions/chatbot"
 import type { ChatMessage } from "@/lib/chatbot/types"
+import { browserTimeZone } from "@/lib/utils/browser-zone"
 
 /** The newest turns that fit the action's bounds: 40 messages and 60,000 characters (SEC-42). */
 function boundedHistory(messages: ChatMessage[]) {
@@ -47,6 +48,8 @@ export function useAssistantChat(userName?: string) {
         const response = await chatWithAdminBot({
           messages: boundedHistory([...messages, userMessage]),
           conversationId,
+          // The assistant gives its times in the admin's own zone
+          timeZone: browserTimeZone() ?? undefined,
         })
         if (response.success) {
           if (response.data.conversationId) setConversationId(response.data.conversationId)

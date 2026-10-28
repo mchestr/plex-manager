@@ -79,6 +79,13 @@ describe("article blocks over the 20 golden fixtures", () => {
     }
   })
 
+  it.each(FIXTURE_IDS)("%s: never names a time zone: the times are the member's own", (id) => {
+    const { issue, sections } = article(id)
+    const all = JSON.stringify(sections)
+    expect(all).not.toContain(String(issue.facts["tz.label"]?.display))
+    expect(all).not.toMatch(/time zone/i)
+  })
+
   it("names the member's archetype on the centrefold, without the article", () => {
     const { issue, sections } = article("heavy")
     const heading = sections.find((s) => s.type === "centrefold")!.blocks[0]

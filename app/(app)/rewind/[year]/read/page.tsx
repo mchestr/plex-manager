@@ -105,7 +105,6 @@ export default async function RewindArticlePage({ params, searchParams }: ReadPa
     copy: data.copy,
     copySource: data.copySource,
     model: data.copyMeta.model,
-    zone: data.window.zone === settings.timeZone ? "server" : "member",
     metrics: pageMetrics,
     features: rewindFeatureFlags(config),
   })

@@ -86,7 +86,7 @@ export function monthTables(data: CalendarData, facts: RewindFactsV3, settings: 
   const months = new Map<number, string[][]>()
   for (const { month, row } of playedRows(data, facts, settings)) months.set(month, [...(months.get(month) ?? []), row])
   return [...months].map(([month, rows]) => ({
-    caption: `${display("month", month, settings)}: minutes watched on each day you pressed play, by day in ${shown(facts, "tz.label")}.`,
+    caption: `${display("month", month, settings)}: minutes watched on each day you pressed play.`,
     columns: COLUMNS,
     rows,
   }))
@@ -109,7 +109,7 @@ function dayBlocks(
     label: display("month", month, ctx),
     days: rows.filter((row) => row.month === month),
   }))
-  const caption = `Every day from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}, a row per month, by day in ${shown(facts, "tz.label")}. Use the arrow keys to move, and Enter to read a day.`
+  const caption = `Every day from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}, a row per month. Use the arrow keys to move, and Enter to read a day.`
   return [{ kind: "calendar", caption, tables, months }]
 }
 
@@ -139,7 +139,7 @@ export const calendarPage: PageDefinition<CalendarData> = {
     const played = playedRows(data, facts, settings)
     if (played.length === 0) return null
     return {
-      caption: `Minutes watched on each day you pressed play, from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}, by day in ${shown(facts, "tz.label")}.`,
+      caption: `Minutes watched on each day you pressed play, from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}.`,
       columns: COLUMNS,
       rows: played.map((day) => day.row),
     }

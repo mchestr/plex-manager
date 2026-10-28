@@ -1,7 +1,7 @@
 /**
  * Every deterministic word of a Rewind issue (design 4.2, 8.5): page
- * headlines, the fallback for every copy slot, the window wording, the time
- * zone notes, the cover lines and the pocket-edition note.
+ * headlines, the fallback for every copy slot, the window wording, the
+ * cover lines and the pocket-edition note.
  *
  * Templates are token strings like model copy, rendered through
  * `renderCopy`, so a number or title enters them only as a token. Values that
@@ -166,16 +166,6 @@ export function slotTemplate(slot: Exclude<SlotId, "archetype.posterLineId">, ct
 /** "Data through November 30" during the season, "Final cut" after it. */
 export function windowLine(facts: RewindFactsV3): string {
   return isFinal(facts) ? "Final cut" : `Data through ${t("window.through")}`
-}
-
-/** The zone note under every clock time (design 7.7). */
-export function tzNote(zone: "member" | "server"): string {
-  return `Times in ${t("tz.label")}, ${zone === "member" ? "your" : "the server's"} time zone`
-}
-
-/** The short zone note where space is tight: the centrefold key row and cards. */
-export function tzShort(): string {
-  return `Times in ${t("tz.label")}`
 }
 
 /** The pocket edition's note, which says "template" only when every word is one (design 4.5). */

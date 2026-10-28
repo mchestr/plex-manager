@@ -79,7 +79,7 @@ export async function executePlexTool(
     case "get_plex_library_sections": {
       const result = await getPlexLibrarySections(config)
       if (!result.success) return result.error || "Error fetching library sections"
-      return JSON.stringify(result.data)
+      return JSON.stringify(withLocalTimestamps(result.data, PLEX_EPOCH_KEYS, format.timeZone))
     }
     case "get_plex_recently_added": {
       const limit = typeof args.limit === "number" ? args.limit : 20

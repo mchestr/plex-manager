@@ -15,7 +15,7 @@ import path from "path"
 import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { getPlexRecentlyAdded, getPlexSessions } from "@/lib/connections/plex"
+import { getPlexLibrarySections, getPlexRecentlyAdded, getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 
 import { executePlexTool } from "../plex"
@@ -95,5 +95,16 @@ describe("executePlexTool get_plex_recently_added", () => {
     await executePlexTool("get_plex_recently_added", { limit: 5 })
 
     expect(getPlexRecentlyAdded).toHaveBeenCalledWith(CONFIG, 5)
+  })
+})
+
+describe("executePlexTool get_plex_library_sections (P11.17)", () => {
+  it("gives each section's scan and change times in the turn's zone", async () => {
+    // 1793590200 is 2026-11-02T03:30:00Z: 19:30 on 1 November in Los Angeles
+    jest.mocked(getPlexLibrarySections).mockResolvedValue({ success: true, data: [{ title: "Movies", scannedAt: 1793590200, contentChangedAt: 1793590200 }] } as never)
+
+    const result = JSON.parse(await executePlexTool("get_plex_library_sections", {}, "admin-1", "default", { timeZone: "America/Los_Angeles", locale: "en-US" }))
+
+    expect(result).toEqual([{ title: "Movies", scannedAt: "2026-11-01T19:30:00-08:00", contentChangedAt: "2026-11-01T19:30:00-08:00" }])
   })
 })
