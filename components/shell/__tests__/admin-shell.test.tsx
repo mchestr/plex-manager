@@ -36,7 +36,7 @@ function renderShell({ counts = { users: 7, activeInvites: 3, failedJobs: 0 }, a
         serverName="Northfield Plex"
         user={{ name: 'Dana Whitfield', initials: 'DW' }}
         navCounts={counts}
-        // The server leaves Assistant out of the ids while it is off (lib/admin/shell.ts)
+        // The server leaves Assistant out of the ids for a user without assistant:use (lib/admin/shell.ts)
         navIds={ADMIN_NAV.map((item) => item.id).filter((id) => assistant || id !== 'assistant')}
         scoped={false}
       >
@@ -160,7 +160,7 @@ describe('AdminShell', () => {
     expect(screen.getByTestId('admin-assistant-link-mobile')).toHaveAttribute('aria-current', 'page')
   })
 
-  it('has no assistant link when it is off (LLM disabled or no chat provider)', () => {
+  it('has no assistant link for a user without assistant:use', () => {
     renderShell({ assistant: false })
 
     expect(screen.queryByTestId('admin-nav-assistant')).not.toBeInTheDocument()
