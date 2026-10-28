@@ -495,6 +495,17 @@ describe("the history", () => {
     expect(router.replace).not.toHaveBeenCalled()
   })
 
+  it("leaves the transcript alone when a link to another conversation has no reply to drop", async () => {
+    const user = userEvent.setup()
+    view({ history })
+    const log = screen.getByRole("log")
+
+    await user.click(screen.getByTestId("admin-assistant-history-item-older"))
+
+    // The same log element, so it keeps its scroll position while the other conversation loads
+    expect(screen.getByRole("log")).toBe(log)
+  })
+
   it("leaves focus in the message box when the user went back to it before the conversation arrived", async () => {
     const user = userEvent.setup()
     const { rerenderWith } = view({ history, conversation: conversation("today", "Is Plex up?", "Plex is up.") })

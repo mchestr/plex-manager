@@ -122,11 +122,12 @@ export function useAssistantChat(conversation: AssistantConversation | null) {
    * Drops a new conversation's first reply still on its way as a link leaves
    * for another conversation: landing meanwhile, it would move the URL to its
    * own conversation and override the navigation. A stored conversation's
-   * reply lands in its own transcript, so it stays.
+   * reply lands in its own transcript, so it stays, and with nothing to drop
+   * the transcript (and its scroll position) is left alone.
    */
   const leave = useCallback(() => {
-    if (state.id === null) setState((prev) => ({ ...prev, pending: false, session: prev.session + 1 }))
-  }, [state.id])
+    if (state.id === null && state.pending) setState((prev) => ({ ...prev, pending: false, session: prev.session + 1 }))
+  }, [state.id, state.pending])
 
   return { ...state, send, reset, leave }
 }
