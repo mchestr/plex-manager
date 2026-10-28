@@ -190,6 +190,7 @@ export const envSchema = z.object({
   // Retention windows in days (P11.14, docs/privacy.md); each at least 1
   RETENTION_REWIND_LLM_TEXT_DAYS: text("Days Rewind AI prompts and replies keep their text.", { group: "Data retention", default: "120" }),
   RETENTION_ASSISTANT_LLM_TEXT_DAYS: text("Days assistant prompts and replies keep their text.", { group: "Data retention", default: "90" }),
+  RETENTION_ASSISTANT_CHAT_DAYS: text("Idle days before an assistant page conversation leaves its owner's history.", { group: "Data retention", default: "90" }),
   RETENTION_CHAT_CONVERSATION_DAYS: text("Days an ended assistant conversation is kept.", { group: "Data retention", default: "180" }),
   RETENTION_DISCORD_CHAT_MESSAGES_DAYS: text("Idle days before a Discord chat's stored turns are emptied.", { group: "Data retention", default: "1" }),
   RETENTION_DISCORD_CHAT_SESSION_DAYS: text("Idle days before a Discord chat session is deleted.", { group: "Data retention", default: "30" }),

@@ -47,6 +47,11 @@ export function llmUsageDetail(id: string): Route {
   return `/admin/llm-usage/${seg(id)}` as Route
 }
 
+/** The assistant page: a new conversation, or one of the caller's own. */
+export function assistant(conversationId?: string): Route {
+  return (conversationId ? `/admin/assistant?conversation=${seg(conversationId)}` : "/admin/assistant") as Route
+}
+
 /** One assistant conversation's calls. */
 export function llmConversation(id: string): Route {
   return `/admin/llm-usage/conversation/${seg(id)}` as Route

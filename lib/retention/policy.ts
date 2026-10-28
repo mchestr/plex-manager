@@ -34,6 +34,7 @@ interface WindowDef {
 export const RETENTION_WINDOWS = {
   rewindLlmText: { env: "RETENTION_REWIND_LLM_TEXT_DAYS", days: 120, label: "Rewind AI prompts and replies", effect: "Text removed; tokens, cost and model kept" },
   assistantLlmText: { env: "RETENTION_ASSISTANT_LLM_TEXT_DAYS", days: 90, label: "Assistant prompts and replies", effect: "Text removed; tokens, cost and model kept" },
+  assistantChats: { env: "RETENTION_ASSISTANT_CHAT_DAYS", days: 90, label: "Assistant page history", effect: "Messages and title removed once idle, and the conversation ended" },
   chatConversations: { env: "RETENTION_CHAT_CONVERSATION_DAYS", days: 180, label: "Ended assistant conversations", effect: "Deleted, counted from when they ended" },
   discordChatMessages: { env: "RETENTION_DISCORD_CHAT_MESSAGES_DAYS", days: 1, label: "Discord chat turns", effect: "Emptied once the chat is idle" },
   discordChatSessions: { env: "RETENTION_DISCORD_CHAT_SESSION_DAYS", days: 30, label: "Discord chat sessions", effect: "Deleted once idle, and their conversation ended" },

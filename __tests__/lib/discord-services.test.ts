@@ -583,7 +583,7 @@ describe("clearDiscordChat: a manual reset ends the conversation (P11.14)", () =
     }
     mockPrisma.discordChatSession.findUnique.mockResolvedValue(session)
     mockPrisma.chatConversation.updateMany.mockResolvedValue({ count: 1 })
-    mockPrisma.chatConversation.create.mockResolvedValue({ id: "conversation-new", userId: "user-1", createdAt: now, endedAt: null })
+    mockPrisma.chatConversation.create.mockResolvedValue({ id: "conversation-new", userId: "user-1", title: null, lastMessageAt: null, createdAt: now, endedAt: null })
     mockPrisma.discordChatSession.update.mockResolvedValue({ ...session, chatConversationId: "conversation-new" })
 
     const result = await clearDiscordChat({ discordUserId: "discord-123", channelId: "channel-123" })

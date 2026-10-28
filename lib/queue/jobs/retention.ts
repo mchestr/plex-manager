@@ -9,7 +9,8 @@
  * |---|---|---|
  * | `rewindLlmText` | `LLMUsage` outside a conversation, or tied to a Rewind | text nulled |
  * | `assistantLlmText` | `LLMUsage` in a conversation | text nulled |
- * | `chatConversations` | `ChatConversation` by `endedAt` | deleted (usage keeps cost, sessions cascade) |
+ * | `assistantChats` | open assistant page `ChatConversation` by `lastMessageAt` | ended, its title nulled and messages deleted |
+ * | `chatConversations` | `ChatConversation` by `endedAt` | deleted (usage keeps cost, sessions and messages cascade) |
  * | `discordChatMessages` | `DiscordChatSession` by `lastMessageAt` | `messages` emptied |
  * | `discordChatSessions` | `DiscordChatSession` by `lastMessageAt` | row deleted, then its conversation ended once no session is left |
  * | `discordCommandArgs` / `discordCommandLog` | `DiscordCommandLog` by `createdAt` | args nulled / deleted |
@@ -152,6 +153,30 @@ async function endIdleChatSessions(ctx: Ctx, days: number): Promise<number> {
   )
 }
 
+/**
+ * Ends the assistant page's conversations idle past their window and removes
+ * their history, as deleting one from the page does (`lib/chatbot/history.ts`).
+ * A conversation that took a message since the select is not ended, so its
+ * messages stay.
+ */
+function endIdleAssistantChats(ctx: Ctx, days: number): Promise<number> {
+  const where: Prisma.ChatConversationWhereInput = {
+    endedAt: null,
+    lastMessageAt: { lt: ctx.before(days) },
+    discordSessions: { none: {} },
+  }
+  return inBatches(
+    ctx,
+    async (take) => ids(await prisma.chatConversation.findMany({ where, select: { id: true }, take })),
+    (batch) =>
+      prisma.$transaction(async (tx) => {
+        const ended = await tx.chatConversation.updateMany({ where: { AND: [where, { id: { in: batch } }] }, data: { endedAt: ctx.now, title: null } })
+        await tx.chatConversationMessage.deleteMany({ where: { conversationId: { in: batch }, conversation: { endedAt: { not: null } } } })
+        return ended
+      })
+  )
+}
+
 async function deleteShareVisitDays(ctx: Ctx, days: number): Promise<number> {
   const where = { day: { lt: ctx.before(days) } }
   let keys: { shareId: string; day: Date }[] = []
@@ -171,6 +196,7 @@ function ruleRunners(days: ReturnType<typeof retentionDays>): RuleRunners {
   return {
     rewindLlmText: (ctx) => nullUsageText(ctx, REWIND_USAGE, days.rewindLlmText),
     assistantLlmText: (ctx) => nullUsageText(ctx, ASSISTANT_USAGE, days.assistantLlmText),
+    assistantChats: (ctx) => endIdleAssistantChats(ctx, days.assistantChats),
     chatConversations: (ctx) =>
       deleteWhere(ctx, prisma.chatConversation, { endedAt: { lt: ctx.before(days.chatConversations) } }),
     discordChatMessages: (ctx) => {

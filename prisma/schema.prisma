@@ -391,16 +391,42 @@ model WrappedShareVisit {
 }
 
 model ChatConversation {
-  id              String               @id @default(cuid())
+  id              String                    @id @default(cuid())
   userId          String
-  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt       DateTime             @default(now())
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The admin assistant's history label, from the first message (encrypted at rest); null in Discord and once ended
+  title           String?
+  /// When the admin assistant last stored a turn; null in Discord
+  lastMessageAt   DateTime?
+  createdAt       DateTime                  @default(now())
   endedAt         DateTime?
   usage           LLMUsage[]
   discordSessions DiscordChatSession[]
+  messages        ChatConversationMessage[]
 
-  @@index([userId])
+  @@index([userId, lastMessageAt])
+  @@index([lastMessageAt])
   @@index([createdAt])
+}
+
+/// One message of an admin assistant conversation, kept for its history page (lib/chatbot/history.ts)
+model ChatConversationMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           ChatMessageRole
+  /// Encrypted at rest
+  content        String
+  /// The tools an answer used, as `[{ tool, description }]`
+  sources        Json?
+  createdAt      DateTime         @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+enum ChatMessageRole {
+  user
+  assistant
 }
 
 // LLM Usage tracking for cost analysis
@@ -928,15 +954,15 @@ model RequestTierRun {
 // An MCP server the admin assistant can call (Streamable HTTP). A tool is off
 // until the admin turns it on: only names in `enabledTools` reach the model.
 model McpServer {
-  id              String   @id @default(cuid())
-  name            String   @unique // Shown to the admin and used in the tool names (mcp_<slug>_<tool>)
-  url             String // Full URL of the MCP endpoint
-  authHeaderName  String? // e.g. "Authorization" or "X-Api-Key"
+  id               String   @id @default(cuid())
+  name             String   @unique // Shown to the admin and used in the tool names (mcp_<slug>_<tool>)
+  url              String // Full URL of the MCP endpoint
+  authHeaderName   String? // e.g. "Authorization" or "X-Api-Key"
   authHeaderSecret String? // ENCRYPTED: the header's value, e.g. "Bearer ..."
-  isActive        Boolean  @default(true)
-  enabledTools    String[] // MCP tool names the admin turned on
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  isActive         Boolean  @default(true)
+  enabledTools     String[] // MCP tool names the admin turned on
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([isActive])
 }

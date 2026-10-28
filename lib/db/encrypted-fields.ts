@@ -26,6 +26,8 @@ export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   Radarr: ["apiKey"],
   LLMProvider: ["apiKey"],
   LLMUsage: ["prompt", "response"],
+  ChatConversation: ["title"],
+  ChatConversationMessage: ["content"],
   DiscordIntegration: ["clientSecret", "botToken"],
   DiscordConnection: ["accessToken", "refreshToken"],
   McpServer: ["authHeaderSecret"],

@@ -18,13 +18,23 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Added
+
+- **Assistant page:** the admin assistant is now a page of its own, `/admin/assistant`, opened from **Assistant** at the top of the admin sidebar (and from the assistant button in the phone's top bar) instead of a side panel. Conversations are saved: the history beside the conversation (a sheet on phones) lists them by day, each one opens at its own address and carries on where it left off, and **Delete** removes one from your history. A new conversation offers a few questions to start with; Enter sends and Shift+Enter starts a new line. Admins and Support users see only their own history, and admins still review every conversation on the LLM usage pages. A conversation leaves the history 90 days after its last message (`RETENTION_ASSISTANT_CHAT_DAYS`).
+
 ### Changed
 
+- **No more assistant side panel:** the panel and its buttons in the sidebar and on Admin, Settings are gone; the Settings button opens the page. The model now reads a conversation's earlier turns from the server, never from the browser.
 - **Rewind times are implicit:** Rewind no longer prints a time zone. The "Times in America/Chicago, the server's time zone" notes are gone from the bookends, clock, short list and centrefold pages, the desktop Notes, article mode, chart and table captions and the clock and centrefold share cards. Times and days are still counted in the member's Rewind zone (their saved zone, else the server's), and nothing on the page names it.
 
 ### Fixed
 
 - **Assistant times in your own zone:** the admin assistant now gives times in your browser's time zone, both in its answers and under each message, instead of the server zone (UTC when no server zone is set). A browser zone the app does not know falls back to the server zone. Sonarr, Radarr, Overseerr, background job and library times reach it as local times too, and both assistants (web and Discord) now give plain local times without naming a zone or offset.
+
+### Upgrade notes
+
+- Take a `pg_dump -Fc` before you start the new release. It adds the migration `20270119000007_add_assistant_chat_history` (a title on assistant conversations and the `ChatConversationMessage` table, both encrypted at rest) and the optional `RETENTION_ASSISTANT_CHAT_DAYS` (default 90).
+- The side panel never stored its conversations, so everyone's assistant history starts empty.
 
 ## [0.5.0] - 2026-10-27
 

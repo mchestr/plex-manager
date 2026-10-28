@@ -3,14 +3,15 @@ import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
 
 /**
- * The AdminShell (P6.1, ui-design-system 6.2): on a phone the assistant opens
- * from the top bar and closes, each tab is the element under its own centre,
- * and nothing scrolls sideways; on desktop every sidebar link opens its page
- * and marks itself current.
+ * The AdminShell (P6.1, ui-design-system 6.2): on a phone the top bar opens
+ * the assistant page, each tab is the element under its own centre, and
+ * nothing scrolls sideways; on desktop every sidebar link opens its page and
+ * marks itself current.
  */
 const CHAT_PROVIDER_ID = 'e2e-admin-shell-chat';
 
 const SIDEBAR_LINKS: Array<[testId: string, path: RegExp]> = [
+  ['admin-nav-assistant', /\/admin\/assistant$/],
   ['admin-nav-users', /\/admin\/users$/],
   ['admin-nav-invites', /\/admin\/invites$/],
   ['admin-nav-announcements', /\/admin\/announcements$/],
@@ -30,8 +31,9 @@ test.describe('Admin shell', () => {
     const prisma = createE2EPrismaClient();
     await prisma.lLMProvider.upsert({
       where: { id: CHAT_PROVIDER_ID },
-      create: { id: CHAT_PROVIDER_ID, provider: 'openai', purpose: 'chat', apiKey: 'sk-e2e', model: 'gpt-e2e' },
-      update: { isActive: true },
+      // The mock chat model (e2e/mocks/llm-server.ts), so nothing reaches a real provider
+      create: { id: CHAT_PROVIDER_ID, provider: 'openai-compatible', purpose: 'chat', apiKey: '', model: 'gpt-e2e', baseUrl: process.env.E2E_LLM_URL },
+      update: { isActive: true, baseUrl: process.env.E2E_LLM_URL },
     });
     await prisma.$disconnect();
   });
@@ -42,18 +44,18 @@ test.describe('Admin shell', () => {
     await prisma.$disconnect();
   });
 
-  test('on a phone: the assistant opens and closes, the tabs are hit-testable, nothing scrolls sideways', async ({ adminPage: page }) => {
+  test('on a phone: the top bar opens the assistant, the tabs are hit-testable, nothing scrolls sideways', async ({ adminPage: page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/admin/users');
     await expect(page.getByTestId('admin-tab-bar')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(page.getByTestId('admin-sidebar')).toBeHidden();
 
-    await page.getByTestId('admin-chat-toggle-mobile').click();
-    await expect(page.getByTestId('admin-chat-sheet')).toBeVisible();
+    await page.getByTestId('admin-assistant-link-mobile').click();
+    await expect(page).toHaveURL(/\/admin\/assistant$/);
     await expect(page.getByTestId('admin-chat-input')).toBeVisible();
-    await page.getByTestId('admin-chat-close').click();
-    await expect(page.getByTestId('admin-chat-sheet')).toBeHidden();
-    await expect(page.getByTestId('admin-chat-toggle-mobile')).toBeFocused();
+    await expect(page.getByTestId('admin-assistant-link-mobile')).toHaveAttribute('aria-current', 'page');
+    await page.goto('/admin/users');
+    await expect(page.getByTestId('admin-tab-bar')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
     for (const id of ['overview', 'users', 'rewind', 'settings', 'more']) {
       const tab = page.getByTestId(`admin-tab-${id}`);

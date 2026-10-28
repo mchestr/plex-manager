@@ -81,6 +81,27 @@ describe("the windows and their boundaries", () => {
     expect(findMany()).toHaveBeenCalledWith(expect.objectContaining({ where }))
   })
 
+  it("ends assistant page conversations idle for 90 days and removes their history, in one transaction", async () => {
+    prismaMock.chatConversation.findMany.mockResolvedValueOnce(ids("chat-1"))
+    prismaMock.chatConversation.updateMany.mockResolvedValue({ count: 1 })
+    prismaMock.chatConversationMessage.deleteMany.mockResolvedValue({ count: 6 })
+
+    const result = await runRetentionSweep({ now: NOW })
+
+    const where = { endedAt: null, lastMessageAt: { lt: daysAgo(90) }, discordSessions: { none: {} } }
+    expect(prismaMock.chatConversation.findMany).toHaveBeenCalledWith({ where, select: { id: true }, take: 1000 })
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
+    expect(prismaMock.chatConversation.updateMany).toHaveBeenCalledWith({
+      where: { AND: [where, { id: { in: ["chat-1"] } }] },
+      data: { endedAt: NOW, title: null },
+    })
+    // Only the conversations the update ended: one that took a message since the select keeps its messages
+    expect(prismaMock.chatConversationMessage.deleteMany).toHaveBeenCalledWith({
+      where: { conversationId: { in: ["chat-1"] }, conversation: { endedAt: { not: null } } },
+    })
+    expect(result.counts.assistantChats).toBe(1)
+  })
+
   it("keeps audit rows at 399 days and deletes them at 401", async () => {
     await runRetentionSweep({ now: NOW })
 
