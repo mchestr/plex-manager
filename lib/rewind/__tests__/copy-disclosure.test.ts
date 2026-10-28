@@ -1,6 +1,6 @@
 import { aboutTheWords } from "../copy-disclosure"
 
-const RECEIVED = "It received your titles and totals, never your email or anything about other members."
+const RECEIVED = "It received your titles and totals only, not your email or data about other members."
 
 describe("aboutTheWords", () => {
   it("matches the documented examples", () => {

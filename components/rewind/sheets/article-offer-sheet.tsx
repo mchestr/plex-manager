@@ -28,8 +28,8 @@ export function ArticleOfferSheet({ open, articleHref, onChoose }: ArticleOfferS
     <Sheet open={open} onOpenChange={(next) => !next && onChoose("story")}>
       <SheetContent side="bottom" grabber data-testid="rewind-article-offer" className="font-display">
         <SheetHeader>
-          <SheetTitle>This screen is small for the story layout</SheetTitle>
-          <SheetDescription>The article has every page, with text that reflows to your screen and text size.</SheetDescription>
+          <SheetTitle>This screen is too small for the story</SheetTitle>
+          <SheetDescription>The article has every page. Its text fits your screen and text size.</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-3">
           <Button

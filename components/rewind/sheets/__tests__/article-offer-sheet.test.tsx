@@ -47,7 +47,7 @@ describe("ArticleOfferSheet", () => {
     setViewport(360, 640)
     renderStage(["cover", "number", "back-cover"])
     const offer = await screen.findByTestId("rewind-article-offer")
-    expect(offer).toHaveTextContent("This screen is small for the story layout")
+    expect(offer).toHaveTextContent("This screen is too small for the story")
     expect(offer).toHaveAttribute("data-field", "paper")
     const read = screen.getByTestId("rewind-article-offer-read")
     const play = screen.getByTestId("rewind-article-offer-story")

@@ -35,7 +35,7 @@ export function WhySheet({ open, onClose, name, shortlist, dedication }: WhyShee
       <SheetContent side="bottom" grabber data-testid="rewind-why-sheet" className="font-text">
         <SheetHeader>
           <SheetTitle className="font-display">Why {name}?</SheetTitle>
-          <SheetDescription>Picked from your own history by the same rules for every member.</SheetDescription>
+          <SheetDescription>Rewind picks it from your history. The same rules apply to every member.</SheetDescription>
         </SheetHeader>
         <ol className="flex flex-col gap-4">
           {shortlist.map((candidate) => (

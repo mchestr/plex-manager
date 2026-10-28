@@ -218,13 +218,13 @@ const MONTH_WORDS = ["", "one month", "two months", "three months", "four months
  * 11 The race's headline from its events (design 4.3): "Severance led for
  * ten months. Then came November." when the lead changed, naming the leader
  * the final overtake displaced and how long its run lasted, or "Severance
- * led all year. Nothing came close." when it never did.
+ * led all year." when it never did.
  */
 function raceHeadline(f: RewindFactsV3): string {
   const leaderOf = (month: number) => `race.leader[${month}]` as FactId
   const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter((m) => f[leaderOf(m)])
   if (months.length === 0) return "The race for your attention"
-  if (f["race.leadChanges"]?.value === 0) return `${t(leaderOf(months[0]))} led all year. Nothing came close.`
+  if (f["race.leadChanges"]?.value === 0) return `${t(leaderOf(months[0]))} led all year.`
   const overtake = Number(f["race.overtakeMonth"]?.value)
   const before = months.filter((m) => m < overtake)
   const displaced = before.at(-1)
@@ -254,7 +254,7 @@ const HEADLINES: Readonly<Record<IssuePageType, (facts: RewindFactsV3) => string
   calendar: (f) => (Number(f["streak.longest.days"]?.value) >= 2 ? `${t("streak.longest.days")} without a night off` : "Your year, day by day"),
   race: raceHeadline,
   records: () => "Personal bests",
-  setup: (f) => (Number(f["setup.directPlayShare"]?.value) >= 0.8 ? `${t("setup.directPlayShare")} direct play. Your setup is dialled in.` : "How you watched"),
+  setup: (f) => (Number(f["setup.directPlayShare"]?.value) >= 0.8 ? `${t("setup.directPlayShare")} direct play` : "How you watched"),
   requests: (f) => (Number(f["requests.watched"]?.value) > 0 ? `You asked for ${t("requests.made")}. You watched ${t("requests.watched")} of them.` : `You asked for ${t("requests.made")}.`),
   standing: (f) =>
     Number(f["standing.percentile"]?.value) <= 50

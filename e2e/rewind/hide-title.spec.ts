@@ -73,7 +73,7 @@ test.describe('Rewind hide a title', () => {
     await expect(sheet).toContainText(NO1_TITLE);
     await sheet.getByTestId('rewind-hide-title').click();
     await adminPage.getByTestId('rewind-hide-confirm').click();
-    await expect(sheet.getByTestId('rewind-hide-done')).toHaveText('Hidden. Your pages update in about a minute.', {
+    await expect(sheet.getByTestId('rewind-hide-done')).toHaveText('Hidden. Your pages change in about 1 minute.', {
       timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION,
     });
 

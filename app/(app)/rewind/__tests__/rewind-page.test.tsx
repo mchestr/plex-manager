@@ -349,7 +349,7 @@ describe('/rewind/[year] branches', () => {
 
     await renderYear('2026')
     expect(panel()).toHaveAttribute('data-kind', 'unavailable')
-    expect(screen.getByTestId('rewind-status-message')).toHaveTextContent("Rewind isn't available on this server yet")
+    expect(screen.getByTestId('rewind-status-message')).toHaveTextContent("Rewind is not available on this server")
 
     signIn(true)
     await renderYear('2026')

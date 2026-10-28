@@ -24,7 +24,7 @@ export function RewindNotifyMe({ year, action }: { year: number; action: typeof 
       return
     }
     setState("done")
-    showSuccess("We'll let you know")
+    showSuccess("You get a notification when it is ready")
   }
 
   return (

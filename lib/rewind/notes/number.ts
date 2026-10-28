@@ -42,7 +42,7 @@ export const numberNotes: CoreNotes<NumberData> = (data, facts, ctx) => {
   const blocks: ArticleBlock[] = [
     headingBlock("How the hours are counted"),
     paragraphBlock(
-      `Every film and episode you played from ${windowRange(facts)}. A play counts from its first minute; rewatches count, trailers and extras do not.`
+      `Every film and episode you played from ${windowRange(facts)}. A play counts from its first minute. Rewatches count. Trailers and extras do not.`
     ),
     {
       kind: "table",
@@ -59,7 +59,7 @@ export const numberNotes: CoreNotes<NumberData> = (data, facts, ctx) => {
   if (last) {
     blocks.push(
       paragraphBlock(
-        `${year - 1} is recounted from your play history with this year’s rules, over the same days, so the two years compare like for like. It can differ from what last year’s Rewind showed.`
+        `${year - 1} is counted again from your play history, with this year’s rules and the same days. The result can differ from last year’s Rewind.`
       )
     )
   }

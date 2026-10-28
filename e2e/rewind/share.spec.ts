@@ -80,7 +80,7 @@ test.describe('Rewind share sheet', () => {
 
     // A later visit no longer knows the URL: copying makes a new address and stops the old one.
     await adminPage.goto(`/rewind/${YEAR}?sheet=share`);
-    await expect(sheet.getByTestId('rewind-share-copy-link')).toHaveText('Copy a new link...', { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(sheet.getByTestId('rewind-share-copy-link')).toHaveText('Copy a new link', { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
     await sheet.getByTestId('rewind-share-copy-link').click();
     await sheet.getByTestId('rewind-share-create').click();
     await expect(sheet.getByTestId('rewind-share-url')).toContainText('/rewind/s/');
@@ -92,7 +92,7 @@ test.describe('Rewind share sheet', () => {
     expect((await adminPage.request.get(`/api/rewind/card/s/${second}/cover`)).status()).toBe(200);
 
     await sheet.getByTestId('rewind-share-stop').click();
-    await expect(sheet.getByTestId('rewind-share-copy-link')).toHaveText('Create a public link...');
+    await expect(sheet.getByTestId('rewind-share-copy-link')).toHaveText('Create a public link');
     expect((await adminPage.request.get(`/api/rewind/card/s/${second}/cover`)).status()).toBe(404);
   });
 

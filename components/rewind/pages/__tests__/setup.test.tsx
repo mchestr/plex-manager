@@ -23,7 +23,7 @@ describe("13 Setup", () => {
     const data = dataOf(issue)!
     render(<SetupPage data={data} issue={issueContext(issue)} />)
     const share = issue.facts["setup.directPlayShare"]!.display
-    expect(text(screen.getByRole("heading", { level: 2 }).textContent!)).toBe(text(`${share} direct play. Your setup is dialled in.`))
+    expect(text(screen.getByRole("heading", { level: 2 }).textContent!)).toBe(text(`${share} direct play`))
     expect(screen.getByTestId("rewind-setup-platform")).toHaveTextContent(`Mostly watched on${issue.facts["setup.topPlatform"]!.display}`)
     expect(screen.getByTestId("rewind-setup-platform")).toHaveTextContent(`in ${issue.facts["setup.topProduct"]!.display}`)
     expect(screen.getByTestId("rewind-figure")).toHaveAttribute("aria-label", registry.setup.srSummary(data, issue.facts))

@@ -16,7 +16,7 @@ import { headingBlock, paragraphBlock, windowRange, type CoreNotes } from "./con
 export const guessNotes: CoreNotes<GuessData> = (data, facts, ctx) => {
   const what = data.kind === "series" ? "series" : "title, film or series,"
   const rules = paragraphBlock(
-    `Pick the ${what} you watched most from ${windowRange(facts)}. The ${data.options.length} choices are your top ${data.kind === "series" ? "series" : "titles"} by time watched, in an order fixed for you. Skipping is fine; your answer stays on this device.`
+    `Pick the ${what} you watched most from ${windowRange(facts)}. The ${data.options.length} choices are your top ${data.kind === "series" ? "series" : "titles"} by time watched, in a fixed order. You can skip the quiz. Your answer stays on this device.`
   )
   if (!ctx.quizAnswered) return [headingBlock("How the quiz works"), rules]
   const ranked = data.options.filter((option) => !ctx.hiddenKeys?.has(ratingKeyOf(option.key))).sort((a, b) => a.rank - b.rank)
