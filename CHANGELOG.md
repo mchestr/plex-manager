@@ -20,6 +20,7 @@ check); the `no-changelog` label skips it.
 
 ### Changed
 
+- **A shorter README:** the README is now a short landing page in ASD-STE100 Simplified Technical English: what Plex Manager does, a Docker Compose install, the upgrade steps and a map of the guides. The development setup and checks moved to `.github/CONTRIBUTING.md`; the full upgrade procedure, the `db push` baseline commands and the notes from before 0.1.0 moved to `docs/operations.md`; the setup wizard steps moved to `docs/deployment.md`.
 - **Entrypoint in `docker/`:** the image's entrypoint script moved from `docker-entrypoint.sh` to `docker/entrypoint.sh` in the repository. The image still runs it as `/app/docker-entrypoint.sh`, so a custom `entrypoint:` keeps working.
 - **Repository root:** the Renovate config moved to `.github/renovate.json` and the integration-test helper to `__tests__/helpers/integration.ts`. `.mise.toml` now pins only Node.js; its tasks repeated the npm scripts, and `mise run setup` still used `db:push`.
 
@@ -245,7 +246,7 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 
 ### Upgrade notes
 
-- Take an encrypted `pg_dump` before you start the new release: a migration clears the stored emails of Jellyfin-only members and cannot be undone. Before deploying, list the accounts that hold both a Plex and a Jellyfin id and review them (README, "Upgrading to the release that stops email linking").
+- Take an encrypted `pg_dump` before you start the new release: a migration clears the stored emails of Jellyfin-only members and cannot be undone. Before deploying, list the accounts that hold both a Plex and a Jellyfin id and review them (`docs/operations.md`, "Upgrade notes from before 0.1.0").
 - **Proxies:** with more than one proxy in front of the app, set `TRUSTED_PROXY_HOPS` (default 1). `docker-compose.yml` publishes the app on `127.0.0.1:3000` only.
 - **Test and dev settings:** test tokens need `E2E_TEST_MODE=true` and the setup prefill needs `DEV_SETUP_PREFILL`; never set either on a public host. E2E refuses a database whose name does not end in `_test`.
 - **Sharing:** share links are opt-in. After deploying, run `npm run rewind:strip-leaderboards` as a dry run, then with `--apply`, then once more to confirm zero changes. A share token that is not 43 URL-safe characters stops resolving.

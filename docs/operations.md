@@ -15,10 +15,12 @@ Installing is in [deployment](deployment.md), every variable is in the
 - [Restore](#restore)
 - [Dump before every migration](#dump-before-every-migration)
 - [Applying migrations](#applying-migrations)
+- [Upgrade](#upgrade)
 - [Web and worker containers](#web-and-worker-containers)
 - [Migration calendar for the 2026 season](#migration-calendar-for-the-2026-season)
 - [Code freeze gate](#code-freeze-gate)
 - [Installed with db push](#installed-with-db-push)
+- [Upgrade notes from before 0.1.0](#upgrade-notes-from-before-010)
 - [Request IDs and metrics](#request-ids-and-metrics)
 - [Security headers and CSP](#security-headers-and-csp)
 - [Locale](#locale)
@@ -132,6 +134,31 @@ Use `SKIP_MIGRATIONS=true`:
 Afterwards, `npx prisma migrate status` must report "Database schema is up to
 date!".
 
+## Upgrade
+
+Pin a release in production: set `PLEX_MANAGER_VERSION` in `.env`, or use a
+version tag such as `:0.6.0`. The `latest` tag follows `main` and changes with
+every merge. For every upgrade:
+
+1. **Take a dump** ([Backup](#backup)), encrypt it and keep it off the host.
+   Prisma has no down migrations, so the dump is the only way back.
+2. **Read the upgrade notes** in `CHANGELOG.md` for every version you move
+   past, and the [notes from before 0.1.0](#upgrade-notes-from-before-010)
+   when you start from a release older than that.
+3. **Get the new release.** With Compose, set the new `PLEX_MANAGER_VERSION`
+   and run `docker compose pull && docker compose up -d`. From a checkout,
+   check out the new tag, then run `npm ci` and `npm run build`.
+4. **Apply migrations.** The container applies them at start
+   ([Applying migrations](#applying-migrations)). Outside Docker, run
+   `npm run db:deploy`.
+5. **Check the app.** Sign in, and check that `/api/health` answers 200 with
+   `"database":"ok"` and `"redis":"ok"`. `docker compose ps` shows the app
+   `(healthy)`.
+
+To roll back, restore the dump taken before the upgrade ([Restore](#restore))
+and start the previous release's tag. A newer image would apply its migrations
+again at start.
+
 ## Web and worker containers
 
 `PROCESS_ROLE` picks what a container runs. Every role runs the same image
@@ -216,17 +243,48 @@ An install made with `npm run db:push` (now contributor-only) has no migration
 history, and `db:deploy` would fail on tables that already exist. Baseline it
 once, on the old release before upgrading, after a dump:
 
-1. `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`
-   must exit 0 (no difference). If it does not, stop: the database has drifted.
-2. `npx prisma migrate resolve --applied <name>` for each folder in
-   `prisma/migrations`.
-3. Only if Stripe was never enabled, run the exempt-all `UPDATE` from
-   `20260703000000_add_stripe_subscriptions` through `npx prisma db execute --stdin`
-   (see [stripe.md](stripe.md#exempting-existing-members)).
+1. Check that the database matches the old release's schema. This must exit 0
+   and report no difference:
+   ```bash
+   npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+   ```
+   If it reports a difference, stop: the database has drifted, and marking
+   migrations applied would hide that.
+2. Mark every folder in `prisma/migrations` as applied:
+   ```bash
+   for dir in prisma/migrations/*/; do npx prisma migrate resolve --applied "$(basename "$dir")"; done
+   ```
+3. Only if Stripe subscriptions were **never** enabled, run the exempt-all
+   update from `20260703000000_add_stripe_subscriptions`, which `db push`
+   skipped (see [stripe.md](stripe.md#exempting-existing-members)):
+   ```bash
+   echo "UPDATE \"User\" SET \"isExempt\" = true;" | npx prisma db execute --stdin
+   ```
 
-The README's [Installed with `db push`?](../README.md#installed-with-db-push)
-section has the exact commands. The new release's migrations then apply
-normally.
+Then [upgrade](#upgrade) as usual. The new release's migrations, including
+their data steps, apply normally.
+
+## Upgrade notes from before 0.1.0
+
+These came with the 0.1.0 release (`CHANGELOG.md`). Read them when you upgrade an
+install from a release before it.
+
+- **Upgrading to a release with `TRUSTED_PROXY_HOPS`**: earlier releases keyed rate limits on the leftmost `X-Forwarded-For` entry, which the client controls; the app now reads the entry the outermost trusted proxy wrote. Check `TRUSTED_PROXY_HOPS` against your proxy chain when you upgrade (see `example.env`). Behind a CDN and a proxy, leaving it at `1` keys every visitor by the CDN's edge address, so visitors who share an edge share the sign-in, invite, share-page and poster limits and get false "Too many attempts" errors.
+- **Upgrading to the release that stops email linking**: earlier releases linked a Jellyfin sign-in to any account whose email matched the Jellyfin username, so a Jellyfin user could take over an account, the admin's included, by renaming themselves to its email. The upgrade keeps those links, and the sessions they produced, so every server that allowed Jellyfin sign-in should check them:
+  1. Take a database dump before deploying, and store it encrypted. The release runs a migration that clears data and cannot be undone.
+  2. Before deploying, list the accounts that hold both a Plex and a Jellyfin ID, and keep the output. Each row is a link an earlier release made by email: either a Jellyfin sign-in onto a Plex account, which the server logs record as "Linked Jellyfin account to existing user" with the Jellyfin username, or a Plex invite redeemed onto a Jellyfin account, which was not logged.
+     ```sql
+     SELECT id, name, email, "isAdmin", "plexUserId", "jellyfinUserId" FROM "User" WHERE "jellyfinUserId" IS NOT NULL AND "plexUserId" IS NOT NULL;
+     ```
+  3. For each row whose Jellyfin account you do not recognise as that member's own, remove the link and the email it may have written: `UPDATE "User" SET "jellyfinUserId" = NULL, "email" = NULL WHERE id = '...';`. For each other row whose email is not that member's own address (an earlier release wrote the Jellyfin username there at every Jellyfin sign-in), clear the email only: `UPDATE "User" SET "email" = NULL WHERE id = '...';`. The migration leaves these rows alone, so this review is the only step that removes such an email. The member's Plex email comes back on their next Plex sign-in.
+  4. If you removed any link, rotate `NEXTAUTH_SECRET` and restart the app. Everyone has to sign in again, which ends the sessions the Jellyfin user still holds on that account: they last up to 7 days and keep the account's admin rights. Then search the server logs for `ADMIN_PRIVILEGE_GRANTED` and `ADMIN_PRIVILEGE_REVOKED` audit events on those accounts, and review the settings, invites and users changed while the link existed.
+
+  The migration then clears the stored email of every account that has a Jellyfin ID and no Plex ID, because such an email can only have come from a Jellyfin username. Accounts with a Plex ID keep their email unless you cleared it in step 3. An account whose email is cleared finds only the Overseerr requests of an Overseerr user with its Plex ID (none for an account without a Plex ID), cannot start Stripe Checkout, and cannot be invited to Plex by the Stripe grant, until a Plex sign-in stores its Plex email again.
+- **Upgrading to the release where the share page reads the database**: a Rewind share link now opens only when its token is exactly 43 URL-safe characters (`A-Z`, `a-z`, `0-9`, `-` and `_`), the shape the app's link generator makes. A link with any other token answers 404 without a database lookup, and nothing is logged. Before deploying, count the shared Rewinds whose token has another shape:
+  ```sql
+  SELECT count(*) FROM "PlexWrapped" WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';
+  ```
+  If the count is not 0, those links stop working after the upgrade. Clear their tokens (`UPDATE "PlexWrapped" SET "shareToken" = NULL WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';`) and tell the owners to turn sharing on again for a new link, or keep the release back until those links can lapse.
 
 ## Request IDs and metrics
 

@@ -967,3 +967,4 @@ The project includes custom slash commands in `.claude/commands/`:
 - Rewind season runbook (flags, season open, roll back, season close): See `docs/rewind.md`
 - Performance Testing: See `docs/performance-testing.md`
 - Project README: See `README.md`
+- Contributing (development setup, checks, pull requests): See `.github/CONTRIBUTING.md`

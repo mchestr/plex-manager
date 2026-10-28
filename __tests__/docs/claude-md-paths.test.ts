@@ -2,9 +2,10 @@
  * @jest-environment node
  *
  * Every repository path CLAUDE.md names in inline code must exist, because
- * every agent session reads that file (GAP-22, P1.2). README.md and every
- * `docs/*.md` are held to the same rule, and every `npm run` script either
- * file names must exist in package.json (P11.26).
+ * every agent session reads that file (GAP-22, P1.2). README.md,
+ * `.github/CONTRIBUTING.md` and every `docs/*.md` are held to the same rule,
+ * and every `npm run` script those files name must exist in package.json
+ * (P11.26).
  *
  * Checked: inline-code spans outside fenced blocks that start with one of the
  * source roots below, or with the `@/` alias (resolved like an import). Not
@@ -20,6 +21,7 @@ const ROOTS = ['app', 'actions', 'components', 'lib', 'types', 'prisma', 'docs',
 // README and every operator doc (P11.24, P11.26) are held to the same rule.
 const DOCS = [
   'README.md',
+  '.github/CONTRIBUTING.md',
   ...fs
     .readdirSync(path.join(ROOT, 'docs'))
     .filter((name) => name.endsWith('.md'))
@@ -73,12 +75,12 @@ describe('README and docs paths', () => {
   })
 })
 
-describe('npm scripts named in README.md and CLAUDE.md', () => {
+describe('npm scripts named in README.md, CONTRIBUTING.md and CLAUDE.md', () => {
   const scripts = Object.keys(
     (JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts,
   )
 
-  it.each(['README.md', 'CLAUDE.md'])('every `npm run` script in %s exists', (file) => {
+  it.each(['README.md', '.github/CONTRIBUTING.md', 'CLAUDE.md'])('every `npm run` script in %s exists', (file) => {
     const markdown = fs.readFileSync(path.join(ROOT, file), 'utf8')
     const named = Array.from(new Set(Array.from(markdown.matchAll(/npm run ([a-z0-9:-]+)/g), (match) => match[1])))
     expect(named.length).toBeGreaterThan(0)
