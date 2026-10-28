@@ -207,6 +207,37 @@ describe("ConfirmDialog", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Page title" })).toHaveFocus())
   })
 
+  it("still takes focus to successFocus when focus goes back to the trigger before the close, as on a slow runner", async () => {
+    function Row() {
+      const next = useRef<HTMLButtonElement>(null)
+      return (
+        <>
+          <ConfirmDialog
+            trigger={<Button variant="destructive">Remove access</Button>}
+            title="Remove Plex access for Sam Rivera?"
+            description="Sam loses every shared library now."
+            confirmLabel="Remove access"
+            successFocus={next}
+            action={async () => {
+              // The dialog's own return of focus to its trigger, which a loaded runner can run before the close
+              screen.getByRole("button", { name: "Remove access", hidden: true, expanded: true }).focus()
+              return {}
+            }}
+          />
+          <Button ref={next}>Next member</Button>
+        </>
+      )
+    }
+    const user = userEvent.setup()
+    render(<Row />)
+
+    const dialog = await open(user)
+    await user.click(confirmButton(dialog))
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole("button", { name: "Next member" })).toHaveFocus())
+  })
+
   it("closes as the router hides the page, so it is not open again on the way back", async () => {
     const user = userEvent.setup()
     const dialog = (mode: "visible" | "hidden") => (
