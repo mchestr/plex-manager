@@ -52,7 +52,7 @@ describe('WatchlistSyncCard', () => {
     render(<WatchlistSyncCard initialSettings={settings('success', null)} service="plex" />)
 
     expect(screen.getByTestId('watchlist-sync-card')).toBeInTheDocument()
-    expect(screen.getByRole('switch', { name: 'Watchlist Sync' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('switch', { name: 'Watchlist sync' })).toHaveAttribute('aria-checked', 'true')
     expect(getWatchlistSyncSettings).not.toHaveBeenCalled()
   })
 

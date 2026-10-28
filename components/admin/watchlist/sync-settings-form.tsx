@@ -98,7 +98,7 @@ export function WatchlistSyncFields({ state }: { state: ReturnType<typeof useWat
         </div>
       </div>
       {values.enabled && (
-        <FormField name="watchlist-sync-interval" label="Sync interval" description="Minutes between checks, from 15 to 1440." error={error ?? intervalError(values.interval)}>
+        <FormField name="watchlist-sync-interval" label="Sync interval" description="Minutes between syncs, from 15 to 1440." error={error ?? intervalError(values.interval)}>
           <Input
             type="number"
             min="15"

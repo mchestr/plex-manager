@@ -138,8 +138,8 @@ export function WatchlistTable({ rows, total, all, page, pageSize, sort, syncEna
         title="No watchlist titles yet"
         description={
           syncEnabled
-            ? "Titles show up here once a member with sync on adds one to their Plex watchlist."
-            : "Turn watchlist sync on in Sync settings, then members can turn it on for themselves."
+            ? "A title appears here when a member with sync on adds it to their Plex watchlist."
+            : "Turn on watchlist sync in Sync settings. Then members can turn on sync from their home page."
         }
         data-testid="admin-watchlist-empty"
       />
@@ -148,7 +148,6 @@ export function WatchlistTable({ rows, total, all, page, pageSize, sort, syncEna
         kind="filtered"
         icon={SearchX}
         title="No titles match these filters"
-        description="Clear the filters to see every title."
         primaryAction={
           <Button data-testid="admin-watchlist-clear-filters" variant="secondary" onClick={() => replace({ q: null, status: null, type: null, page: null })}>
             Clear filters
