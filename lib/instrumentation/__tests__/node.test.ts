@@ -15,7 +15,7 @@ import { issueSetupCode } from "@/lib/setup/claim"
 import { startRetentionFallback } from "@/lib/retention/fallback"
 import { ensureRetentionSchedule } from "@/lib/retention/schedule"
 import { assertEncryptionKey } from "@/lib/instrumentation/encryption-canary"
-import { enqueueSecretsReencrypt } from "@/lib/queue/jobs/secrets"
+import { enqueueSecretsReencrypt, reencryptSecretsWithoutQueue } from "@/lib/queue/jobs/secrets"
 
 // The queue worker and the bot poller start side by side, so a Redis that is
 // down at boot never stops the Discord bot (BP-13).
@@ -59,7 +59,10 @@ jest.mock("@/lib/discord/bot", () => ({ DiscordBot: jest.fn() }))
 jest.mock("@/lib/prisma", () => ({ prisma: {} }))
 jest.mock("@/lib/setup/claim", () => ({ issueSetupCode: jest.fn() }))
 jest.mock("@/lib/instrumentation/encryption-canary", () => ({ assertEncryptionKey: jest.fn().mockResolvedValue(undefined) }))
-jest.mock("@/lib/queue/jobs/secrets", () => ({ enqueueSecretsReencrypt: jest.fn().mockResolvedValue("current") }))
+jest.mock("@/lib/queue/jobs/secrets", () => ({
+  enqueueSecretsReencrypt: jest.fn().mockResolvedValue("current"),
+  reencryptSecretsWithoutQueue: jest.fn().mockResolvedValue("current"),
+}))
 
 const originalEnv = process.env
 
@@ -207,16 +210,29 @@ describe("startNodeInstrumentation() and the encryption key (P11.1)", () => {
     expect(issueSetupCode).toHaveBeenCalled()
   })
 
-  it("queues the re-encryption once the worker runs, and only with Redis", async () => {
+  it("queues the re-encryption once the worker runs with Redis, and runs it in the process without", async () => {
     jest.mocked(waitForRedis).mockResolvedValue(true)
     jest.mocked(startWorker).mockResolvedValue(undefined)
     await startNodeInstrumentation()
     expect(enqueueSecretsReencrypt).toHaveBeenCalledTimes(1)
+    expect(reencryptSecretsWithoutQueue).not.toHaveBeenCalled()
 
     jest.clearAllMocks()
     delete process.env.REDIS_URL
     await startNodeInstrumentation()
     expect(enqueueSecretsReencrypt).not.toHaveBeenCalled()
+    expect(reencryptSecretsWithoutQueue).toHaveBeenCalledTimes(1)
+  })
+
+  it("logs a failed re-encryption without Redis and still starts the fallbacks", async () => {
+    delete process.env.REDIS_URL
+    jest.mocked(reencryptSecretsWithoutQueue).mockRejectedValueOnce(new Error("database down"))
+
+    await startNodeInstrumentation()
+
+    expect(mockError).toHaveBeenCalledWith("Secret re-encryption failed", expect.any(Error))
+    expect(startWatchlistFallback).toHaveBeenCalledTimes(1)
+    expect(startRetentionFallback).toHaveBeenCalledTimes(1)
   })
 
   it("logs a failure to queue it without stopping the rest", async () => {

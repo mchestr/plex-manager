@@ -72,6 +72,7 @@ describe('HelpPage', () => {
     expect(container.querySelector('#playback')).not.toBeNull()
     expect(container.querySelector('#requests')).not.toBeNull()
     expect(container.querySelector('#support')).not.toBeNull()
+    expect(container.querySelector('#privacy')).toBeNull()
     expect(screen.getByTestId('requests-guide-link')).toHaveAttribute('href', 'https://requests.example.com/')
     expect(screen.getByTestId('support-guide-channel')).toHaveAttribute('href', 'https://discord.com/channels/g1/c1')
     expect(screen.getByTestId('support-guide-join')).toHaveAttribute('href', 'https://discord.gg/abc')

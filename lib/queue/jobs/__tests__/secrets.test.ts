@@ -2,7 +2,8 @@
  * @jest-environment node
  *
  * SECRETS_REENCRYPT (P11.1): boot queues it once per primary kid and field
- * list, deduplicated on `secrets:reencrypt:<kid>:<fields hash>`.
+ * list, deduplicated on `secrets:reencrypt:<kid>:<fields hash>`, and without
+ * Redis runs the same pass in its own process.
  */
 
 import crypto from "node:crypto"
@@ -11,7 +12,7 @@ import { mockReset } from "jest-mock-extended"
 import { buildConfig } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { addJob } from "@/lib/queue/client"
-import { enqueueSecretsReencrypt, getSecretsProcessor } from "@/lib/queue/jobs/secrets"
+import { enqueueSecretsReencrypt, getSecretsProcessor, reencryptSecretsWithoutQueue } from "@/lib/queue/jobs/secrets"
 import { JOB_TYPES } from "@/lib/queue/types"
 import { reencryptMarker, reencryptSecrets } from "@/lib/security/reencrypt"
 
@@ -62,6 +63,28 @@ describe("enqueueSecretsReencrypt", () => {
     delete process.env.ENCRYPTION_KEYS
     await expect(enqueueSecretsReencrypt()).resolves.toBe("no-key")
     expect(prismaMock.config.findUnique).not.toHaveBeenCalled()
+  })
+})
+
+describe("reencryptSecretsWithoutQueue", () => {
+  it("runs a full re-encryption in this process when no run finished under this kid", async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ encryptionFieldsHash: reencryptMarker("k0") }))
+
+    await expect(reencryptSecretsWithoutQueue()).resolves.toBe("ran")
+    expect(reencryptSecrets).toHaveBeenCalledWith(expect.objectContaining({ dryRun: false }))
+    expect(addJob).not.toHaveBeenCalled()
+  })
+
+  it("runs nothing once a run finished under this kid and field list", async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ encryptionFieldsHash: reencryptMarker("k1") }))
+    await expect(reencryptSecretsWithoutQueue()).resolves.toBe("current")
+    expect(reencryptSecrets).not.toHaveBeenCalled()
+  })
+
+  it("does nothing without a key", async () => {
+    delete process.env.ENCRYPTION_KEYS
+    await expect(reencryptSecretsWithoutQueue()).resolves.toBe("no-key")
+    expect(reencryptSecrets).not.toHaveBeenCalled()
   })
 })
 

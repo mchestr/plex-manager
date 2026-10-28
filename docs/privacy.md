@@ -57,7 +57,7 @@ Assistant conversations cannot be deleted by the member; the retention sweep bel
 
 ## Retention
 
-A daily sweep (`lib/queue/jobs/retention.ts`) removes personal data once it is older than its window. It runs at 03:30 in the server zone on the job queue; without Redis, one app process runs it under the `retention` database lease when the last run is more than 24 hours old. Each window can be changed with its `RETENTION_<NAME>_DAYS` variable (`lib/retention/policy.ts`, at least 1 day). **Admin → Settings → Privacy** lists the windows and the last run with its counts per rule, and **Run now** runs the sweep at once (audited as `RETENTION_RUN`). The sweep never touches a row before its window ends, and running it twice removes nothing more.
+A daily sweep (`lib/queue/jobs/retention.ts`) removes personal data once it is older than its window. It runs at 03:30 in the server zone on the job queue; without Redis, one app process runs it under the `retention` database lease when the last run is more than 24 hours old. Each window can be changed with its `RETENTION_<NAME>_DAYS` variable (`lib/retention/policy.ts`, at least 1 day). **Admin → Settings → Privacy** shows when the sweep last finished. The sweep never touches a row before its window ends, and running it twice removes nothing more.
 
 | Data | Kept for | Then | Variable |
 |---|---|---|---|

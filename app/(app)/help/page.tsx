@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { redirect } from "next/navigation"
 import type { ReactNode } from "react"
 
@@ -7,7 +6,6 @@ import { PlaybackGuide } from "@/components/guides/playback-guide"
 import { RequestsGuide } from "@/components/guides/requests-guide"
 import { SupportGuide } from "@/components/guides/support-guide"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import { getHelpData } from "@/lib/member/help"
 import { getSession } from "@/lib/data/session"
 
@@ -31,14 +29,13 @@ function HelpSection({ id, title, children }: { id: string; title: string; child
 /**
  * Help (ui-design-system 6.1, UI-30): the onboarding guides for the member's
  * own service, at `#playback`, `#requests` and `#support`, which home links
- * to, and what admins can see at `#privacy` (P11.16), which links Your data
- * on `/account` (P11.15). Requests shows only with a public request URL.
+ * to. Requests shows only with a public request URL.
  */
 export default async function HelpPage() {
   const session = await getSession()
   if (!session?.user?.id) redirect("/")
 
-  const [help, assistantDisclosure] = await Promise.all([getHelpData(session.user.id), getAssistantDisclosure()])
+  const help = await getHelpData(session.user.id)
 
   return (
     <div className="px-4 py-10 sm:px-6">
@@ -57,20 +54,6 @@ export default async function HelpPage() {
 
         <HelpSection id="support" title="Report a problem">
           <SupportGuide discord={help.discord} instructions={help.instructions} />
-        </HelpSection>
-
-        <HelpSection id="privacy" title="Privacy">
-          <div className="flex flex-col gap-3 text-ui text-muted-foreground">
-            <p>Server admins can see your watch activity and your Rewind. Some Rewind text is written by an AI service.</p>
-            <p data-testid="help-assistant-disclosure">{assistantDisclosure}</p>
-            <p>
-              Delete marks and watchlist items in{" "}
-              <Link href="/account#your-data" className="text-foreground underline underline-offset-3" data-testid="help-your-data-link">
-                Your data
-              </Link>
-              .
-            </p>
-          </div>
         </HelpSection>
       </div>
     </div>

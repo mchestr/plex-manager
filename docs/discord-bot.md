@@ -288,9 +288,9 @@ channel/thread IDs remain configurable (informational only).
   types to the assistant (`argsLength`), never the text; `/admin/discord`
   shows "Message, N characters".
 - Members are told: the first reply of each chat session, `/help`, the
-  `/assistant ask` description, the sign-in screen, `/help#privacy` and the
-  account page say that server admins can review assistant conversations and
-  name the provider that processes them.
+  `/assistant ask` description, the sign-in screen and the account page say
+  that server admins can review assistant conversations and name the provider
+  that processes them.
 - **Data-leak prevention (defense in depth):**
   1. **Single tool registry** — each chatbot tool declares `discordSafe`,
      `userScoped`, and an output-field allowlist (`discordFields`).

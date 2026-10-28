@@ -18,6 +18,20 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Changed
+
+- **Privacy in admin settings:** Admin > Settings, Privacy now says only that old personal data is deleted once a day, and when that last ran. The table of retention windows is gone (`docs/privacy.md` lists them, and the `RETENTION_*_DAYS` variables still set them), and so is **Run now**: the daily sweep needs no button.
+- **Secret re-encryption without Redis:** an install without Redis now re-encrypts its stored secrets at boot when they are not all under the primary key, as installs with Redis already did through the queue. Moving to a keyring or rotating a key is now: restart with the new key first, then wait for `secrets.reencrypted` in the log (`docs/operations.md`, "Encryption keys").
+
+### Removed
+
+- The **Security** section of Admin > Settings, with **Encrypt stored secrets** and **Check service rows**. Boot re-encrypts stored secrets on its own, each service's section still asks again for a key that can't be read, and `npm run services:rows-audit` and `services:rows-apply` still find and fix a service with more than one active row.
+- The **Privacy** card on Help. Account, Your data, still tells members what admins can see.
+
+### Upgrade notes
+
+- Without Redis, the first boot after the upgrade re-encrypts any stored secret still in plain text or under an older key, in the app process, and logs `secrets.reencrypted` when it finishes.
+
 ## [0.6.0] - 2026-10-28
 
 ### Added

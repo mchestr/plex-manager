@@ -82,7 +82,7 @@ export const envSchema = z.object({
     group: "Core",
     requiredInProduction: true,
   }),
-  ENCRYPTION_KEY: text("Older single key for stored secrets, at least 32 characters: openssl rand -hex 32. Never reuse NEXTAUTH_SECRET. It still reads what it wrote and, without ENCRYPTION_KEYS, encrypts new writes as kid legacy; move to ENCRYPTION_KEYS with Settings > Security.", {
+  ENCRYPTION_KEY: text("Older single key for stored secrets, at least 32 characters: openssl rand -hex 32. Never reuse NEXTAUTH_SECRET. It still reads what it wrote and, without ENCRYPTION_KEYS, encrypts new writes as kid legacy; to move to ENCRYPTION_KEYS, see docs/operations.md.", {
     group: "Core",
   }),
   ALLOW_PLAINTEXT_SECRETS: text('UNSAFE. "true" lets production start without a strong encryption key; every boot warns and secrets are stored as plain text.', {

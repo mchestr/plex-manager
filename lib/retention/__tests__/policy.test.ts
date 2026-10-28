@@ -8,10 +8,8 @@ import path from "node:path"
 import {
   lastExpiredPreviousDataYear,
   MIN_RETENTION_DAYS,
-  RETENTION_RULES,
   RETENTION_WINDOWS,
   retentionDays,
-  retentionPolicy,
 } from "@/lib/retention/policy"
 
 describe("retentionDays", () => {
@@ -65,15 +63,6 @@ describe("lastExpiredPreviousDataYear", () => {
     expect(lastExpiredPreviousDataYear(new Date("2027-06-30T23:59:59Z"))).toBe(2025)
     expect(lastExpiredPreviousDataYear(new Date("2027-07-01T00:00:00Z"))).toBe(2026)
     expect(lastExpiredPreviousDataYear(new Date("2027-01-15T00:00:00Z"))).toBe(2025)
-  })
-})
-
-describe("retentionPolicy", () => {
-  it("lists every rule the sweep runs, with its window", () => {
-    const rows = retentionPolicy(retentionDays({ RETENTION_DISCORD_CHAT_MESSAGES_DAYS: "1" }))
-    expect(rows.map((row) => row.rule)).toEqual([...RETENTION_RULES])
-    expect(rows.find((row) => row.rule === "discordChatMessages")?.keptFor).toBe("1 day")
-    expect(rows.find((row) => row.rule === "auditLog")?.keptFor).toBe("400 days")
   })
 })
 

@@ -5,6 +5,7 @@
 import { startNodeInstrumentation } from "@/lib/instrumentation/node"
 import { LeasePoller } from "@/lib/locks/lease-poller"
 import { waitForRedis } from "@/lib/queue/connection"
+import { reencryptSecretsWithoutQueue } from "@/lib/queue/jobs/secrets"
 import { startWorker } from "@/lib/queue/worker"
 import { startRetentionFallback } from "@/lib/retention/fallback"
 import { ensureRetentionSchedule } from "@/lib/retention/schedule"
@@ -39,6 +40,10 @@ jest.mock("@/lib/watchlist/fallback", () => ({ startWatchlistFallback: jest.fn()
 jest.mock("@/lib/watchlist/schedule", () => ({ ensureWatchlistSchedule: jest.fn() }))
 jest.mock("@/lib/retention/fallback", () => ({ startRetentionFallback: jest.fn().mockResolvedValue(null) }))
 jest.mock("@/lib/retention/schedule", () => ({ ensureRetentionSchedule: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("@/lib/queue/jobs/secrets", () => ({
+  enqueueSecretsReencrypt: jest.fn().mockResolvedValue("current"),
+  reencryptSecretsWithoutQueue: jest.fn().mockResolvedValue("current"),
+}))
 jest.mock("@/lib/locks/lease-poller", () => ({
   DEFAULT_POLL_INTERVAL_MS: 10_000,
   LeasePoller: jest.fn().mockImplementation(() => ({
@@ -88,6 +93,7 @@ describe("startNodeInstrumentation() by PROCESS_ROLE", () => {
 
     expect(startWatchlistFallback).not.toHaveBeenCalled()
     expect(startRetentionFallback).not.toHaveBeenCalled()
+    expect(reencryptSecretsWithoutQueue).not.toHaveBeenCalled()
   })
 
   it.each(["worker", "all", undefined])("starts everything in the %s role", async (role) => {
@@ -111,6 +117,7 @@ describe("startNodeInstrumentation() by PROCESS_ROLE", () => {
 
     expect(startWatchlistFallback).toHaveBeenCalledTimes(1)
     expect(startRetentionFallback).toHaveBeenCalledTimes(1)
+    expect(reencryptSecretsWithoutQueue).toHaveBeenCalledTimes(1)
     expect(startWorker).not.toHaveBeenCalled()
   })
 })

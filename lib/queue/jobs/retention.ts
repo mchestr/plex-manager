@@ -1,9 +1,7 @@
 /**
  * The daily retention sweep (P11.14, GAP-35): `RETENTION_SWEEP`, on the main
  * queue at 03:30 in the server zone, or under the `retention` lease without
- * Redis (`lib/retention/fallback.ts`). The admin Privacy section's "Run now"
- * queues the same job, or without Redis calls {@link runRetentionSweep} under
- * a time budget (`actions/admin/retention.ts`).
+ * Redis (`lib/retention/fallback.ts`).
  *
  * | Rule | Rows | Outcome |
  * |---|---|---|
