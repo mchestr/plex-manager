@@ -1,3 +1,5 @@
+import type { Locator, Page } from '@playwright/test';
+
 import { expect, test, TEST_USERS } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
@@ -12,6 +14,13 @@ import { mockLlmReply } from './mocks/llm-server';
 const CHAT_PROVIDER_ID = 'e2e-assistant-page-chat';
 const SEEDED_ID = 'e2e-assistant-seeded';
 const OTHER_USERS_ID = 'e2e-assistant-other-user';
+
+/** The element's bottom edge is above the fixed tab bar's top edge, with the page as it is now scrolled. */
+async function expectAboveTabBar(page: Page, element: Locator) {
+  const box = await element.boundingBox();
+  const bar = await page.getByTestId('admin-tab-bar').boundingBox();
+  expect(box && bar && box.y + box.height <= bar.y + 1).toBe(true);
+}
 
 /** The admin's assistant conversations, so each run starts with an empty history. */
 const ADMIN_CHATS = { userId: TEST_USERS.ADMIN.id, lastMessageAt: { not: null } };
@@ -135,10 +144,21 @@ test.describe('Assistant page', () => {
     await expect(log).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
     expect((await log.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(100);
+    // Focus brings the message box clear of the fixed tab bar (WCAG 2.4.11)
     const input = page.getByTestId('admin-chat-input');
-    await input.scrollIntoViewIfNeeded();
-    await expect(input).toBeInViewport();
+    await input.focus();
+    await expectAboveTabBar(page, input);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  });
+
+  test('keeps the message box pinned above the tab bar on a landscape phone', async ({ adminPage: page }) => {
+    await page.setViewportSize({ width: 667, height: 330 });
+    await page.goto('/admin/assistant');
+    const input = page.getByTestId('admin-chat-input');
+    await expect(input).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+    await expectAboveTabBar(page, input);
+    expect((await page.getByTestId('admin-chat-log').boundingBox())?.height ?? 0).toBeGreaterThan(0);
   });
 
   test("does not open another user's conversation", async ({ adminPage: page }) => {

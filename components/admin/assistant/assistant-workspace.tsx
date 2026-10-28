@@ -82,7 +82,6 @@ export function AssistantWorkspace({
     historyDays,
     onNew: chat.reset,
     onLeave: chat.leave,
-    onDiscard: chat.discard,
   }
   // The server's conversation once the transcript is it; a new one (or one the URL has not caught up with) has no title yet
   const title = conversation && conversation.id === chat.id ? conversation.title : "Assistant"
@@ -111,10 +110,11 @@ export function AssistantWorkspace({
 
   return (
     // Below `md` the shell's 56px top bar and main's tab-bar padding (4rem and the safe area) take the rest of
-    // the screen; from `md` the page takes all of it, over main's 24px bottom padding. On a screen too short
-    // (zoomed in) the page keeps 20rem and scrolls, so the conversation never shrinks to nothing
+    // the screen; from `md` the page takes all of it, over main's 24px bottom padding. On a narrow screen too short
+    // for the conversation (zoomed in, WCAG 1.4.10) the page keeps 24rem, room for the transcript beside the "off"
+    // alert, and scrolls; a landscape phone is wider than `sm` and keeps its message box pinned above the tab bar
     <div
-      className="flex h-[max(calc(100dvh-7.5rem-env(safe-area-inset-bottom)),20rem)] md:-mb-6 md:h-[max(100dvh,20rem)]"
+      className="flex h-[calc(100dvh-7.5rem-env(safe-area-inset-bottom))] max-sm:h-[max(calc(100dvh-7.5rem-env(safe-area-inset-bottom)),24rem)] md:-mb-6 md:h-[max(100dvh,20rem)]"
       data-testid="admin-assistant-page"
     >
       <div className="hidden w-64 shrink-0 flex-col border-r border-border p-3 lg:flex xl:w-72">

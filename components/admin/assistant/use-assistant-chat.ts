@@ -20,11 +20,13 @@ interface ChatState {
   /** A new number each time another conversation replaces the transcript, so a late reply is dropped. */
   session: number
   /**
-   * The server's conversation the transcript last followed. It sits in the
-   * same state as the transcript, so a render that switches conversations
-   * moves both or neither, however React rebases the updates.
+   * The server's render of the conversation the transcript last followed:
+   * each server render brings a new object, while a re-render of the page
+   * keeps it, so a fresh render of the same URL still reopens it after a
+   * reset. It sits in the same state as the transcript, so a switch moves
+   * both or neither, however React rebases the updates.
    */
-  shownId: string | null
+  shown: AssistantConversation | null
   /** How many times another conversation, stored or new, took the transcript, so the page can move focus to it. */
   opens: number
 }
@@ -39,7 +41,7 @@ function opened(conversation: AssistantConversation | null, prev?: ChatState): C
     pending: false,
     error: null,
     session: prev ? prev.session + 1 : 0,
-    shownId: conversation?.id ?? null,
+    shown: conversation,
     opens: prev ? prev.opens + 1 : 0,
   }
 }
@@ -53,8 +55,8 @@ function inSession(sentIn: number, update: (prev: ChatState) => ChatState) {
  * The assistant page's transcript: the open conversation's stored messages,
  * the turn in flight and the last error. The page stays mounted from one
  * conversation's URL to the next, so the transcript is replaced here when the
- * server sends another conversation or "New conversation" calls `reset`, and a
- * new conversation's URL follows its id once the first reply gives it one.
+ * server sends another conversation or `reset` starts a new one, and a new
+ * conversation's URL follows its id once the first reply gives it one.
  */
 export function useAssistantChat(conversation: AssistantConversation | null) {
   const router = useRouter()
@@ -62,9 +64,9 @@ export function useAssistantChat(conversation: AssistantConversation | null) {
   const [state, setState] = useState(() => opened(conversation))
   const session = useRef(state.session)
 
-  if (serverId !== state.shownId) {
-    // The URL catching up with a new conversation's id is still this transcript
-    setState(serverId === state.id ? { ...state, shownId: serverId } : opened(conversation, state))
+  if (conversation !== state.shown) {
+    // The URL catching up with a new conversation's id, or a refresh of the open one, is still this transcript
+    setState(serverId === state.id ? { ...state, shown: conversation } : opened(conversation, state))
   }
 
   // A real effect: a reply checks it to tell whether its conversation is still open. In the
@@ -109,21 +111,13 @@ export function useAssistantChat(conversation: AssistantConversation | null) {
   )
 
   /**
-   * Starts a new conversation as "New conversation" navigates. On
-   * `/admin/assistant` the URL does not change, so the transcript is emptied
-   * here and a reply still on its way is dropped; from a stored conversation
-   * the navigation's render replaces it, as any other conversation's would.
+   * Empties the transcript for a new conversation at once, dropping any reply
+   * still on its way: for "New conversation", and for the open conversation's
+   * delete. It keeps following the server's current render, so only a fresh
+   * one reopens a conversation: going back to this one before the new page
+   * arrives finds it whole.
    */
-  const reset = useCallback(() => {
-    if (serverId === null) setState((prev) => opened(null, prev))
-  }, [serverId])
-
-  /**
-   * Empties the transcript at once when its conversation is gone (deleted),
-   * as the page leaves its URL: focus moves to the new title once, and the
-   * URL's change then finds nothing left to replace.
-   */
-  const discard = useCallback(() => setState((prev) => ({ ...opened(null, prev), shownId: prev.shownId })), [])
+  const reset = useCallback(() => setState((prev) => ({ ...opened(null, prev), shown: prev.shown })), [])
 
   /**
    * Drops a new conversation's first reply still on its way as a link leaves
@@ -136,5 +130,5 @@ export function useAssistantChat(conversation: AssistantConversation | null) {
     if (state.id === null && state.pending) setState((prev) => ({ ...prev, pending: false, session: prev.session + 1 }))
   }, [state.id, state.pending])
 
-  return { ...state, send, reset, leave, discard }
+  return { ...state, send, reset, leave }
 }

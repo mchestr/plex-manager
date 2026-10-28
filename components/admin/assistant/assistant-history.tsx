@@ -24,11 +24,12 @@ interface RowProps {
   /** Takes focus once the row is deleted, since its delete button goes with it. */
   afterDelete: RefObject<HTMLElement | null>
   onLeave: () => void
-  onDiscard: () => void
+  /** Empties the transcript as the open conversation is deleted. */
+  onNew: () => void
   onNavigate?: () => void
 }
 
-function Row({ item, active, usageTextDays, testId, afterDelete, onLeave, onDiscard, onNavigate }: RowProps) {
+function Row({ item, active, usageTextDays, testId, afterDelete, onLeave, onNew, onNavigate }: RowProps) {
   const router = useRouter()
   const toast = useToast()
 
@@ -77,7 +78,7 @@ function Row({ item, active, usageTextDays, testId, afterDelete, onLeave, onDisc
           toast.showSuccess("Conversation deleted")
           // The action does not refresh: on the deleted conversation's own URL that would render it as not found first
           if (active) {
-            onDiscard()
+            onNew()
             router.replace(assistant())
           } else router.refresh()
           return {}
@@ -103,12 +104,10 @@ interface AssistantHistoryProps {
   historyDays: number
   /** `admin-assistant-history` in the side panel, `admin-assistant-history-mobile` in the sheet. */
   testId: string
-  /** Empties the transcript as "New conversation" navigates, so a reply on its way never lands in it. */
+  /** Empties the transcript as "New conversation" navigates, or the open conversation is deleted. */
   onNew: () => void
   /** Drops a reply on its way as another conversation's link navigates. */
   onLeave: () => void
-  /** Empties the transcript as the open conversation is deleted. */
-  onDiscard: () => void
   /** Closes the sheet the list sits in. */
   onNavigate?: () => void
 }
@@ -128,7 +127,6 @@ export function AssistantHistory({
   testId,
   onNew,
   onLeave,
-  onDiscard,
   onNavigate,
 }: AssistantHistoryProps) {
   const f = useBrowserFormat()
@@ -168,7 +166,7 @@ export function AssistantHistory({
                       testId={testId}
                       afterDelete={newConversation}
                       onLeave={onLeave}
-                      onDiscard={onDiscard}
+                      onNew={onNew}
                       onNavigate={onNavigate}
                     />
                   ))}

@@ -37,6 +37,7 @@ export function AdminTabBar({ navCounts }: { navCounts: NavCounts }) {
     <nav
       aria-label="Admin tabs"
       className="fixed inset-x-0 bottom-0 z-(--z-tabbar) border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
+      data-slot="admin-tab-bar"
       data-testid="admin-tab-bar"
     >
       <ul className="flex h-16">

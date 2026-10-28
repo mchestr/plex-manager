@@ -321,21 +321,35 @@ describe("AssistantWorkspace", () => {
     expect(router.replace).not.toHaveBeenCalled()
   })
 
-  it("starts a new conversation from a stored one when its page renders, keeping a reply that lands first", async () => {
+  it("empties the transcript as New conversation is picked, dropping the reply still on its way", async () => {
     const finish = holdReply()
     const user = userEvent.setup()
-    const { rerenderWith } = view({ conversation: conversation("a", "Is Plex up?", "Plex is up.") })
+    view({ conversation: conversation("a", "Is Plex up?", "Plex is up.") })
     await ask("And Sonarr?", user)
 
     await user.click(screen.getByTestId("admin-assistant-new-mobile"))
     expect(router.push).toHaveBeenCalledWith("/admin/assistant")
-    // Until the router renders the new page the transcript stays this conversation's, so its reply still lands in it
-    await finish("Sonarr is up too.", "a")
-    expect(screen.getByText("Sonarr is up too.")).toBeInTheDocument()
-
-    rerenderWith({ conversation: null })
     expect(screen.getByTestId("admin-chat-welcome")).toBeInTheDocument()
+    expect(screen.queryByTestId("admin-chat-thinking")).not.toBeInTheDocument()
     expect(screen.getByRole("heading", { level: 1, name: "Assistant" })).toHaveFocus()
+
+    await finish("the late answer", "a")
+    expect(screen.queryByText("the late answer")).not.toBeInTheDocument()
+  })
+
+  it("reopens the conversation when its own page arrives again after New conversation, as going back to it does", async () => {
+    const user = userEvent.setup()
+    const { rerenderWith } = view({ history: [{ id: "a", title: "Is Plex up?", lastMessageAt: NOW }], conversation: conversation("a", "Is Plex up?", "Plex is up.") })
+
+    await user.click(screen.getByTestId("admin-assistant-new-mobile"))
+    expect(screen.getByTestId("admin-chat-welcome")).toBeInTheDocument()
+
+    // Clicking it again before /admin/assistant arrives: the router renders ?conversation=a afresh
+    await user.click(screen.getByTestId("admin-assistant-history-item-a"))
+    rerenderWith({ history: [{ id: "a", title: "Is Plex up?", lastMessageAt: NOW }], conversation: conversation("a", "Is Plex up?", "Plex is up.") })
+
+    expect(screen.getByText("Plex is up.")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Is Plex up?" })).toBeInTheDocument()
   })
 
   it("drops a reply that lands after New conversation's page renders", async () => {
