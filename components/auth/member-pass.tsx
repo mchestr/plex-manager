@@ -11,7 +11,7 @@ import { startPlexSignIn } from "@/lib/plex-auth"
 import { icons } from "@/lib/ui/icons"
 import { redirectTo } from "@/lib/utils/navigation"
 
-const START_FAILED = "We couldn't reach Plex. Please try again in a moment."
+const START_FAILED = "Could not connect to Plex. Try again in a minute."
 
 interface MemberPassProps {
   serverName: string
@@ -40,7 +40,6 @@ export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }
         <h1 id={headingId} className="mt-5 text-display text-foreground">
           Sign in to {serverName}
         </h1>
-        <p className="mt-2 text-lead text-muted-foreground">Members manage their account and find links to everything on the server here.</p>
         {plex ? (
           <PlexOptions serverName={serverName} jellyfin={jellyfin} callbackUrl={callbackUrl} />
         ) : (
@@ -51,8 +50,7 @@ export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }
       </div>
       <PassStub>
         <p className="text-label text-muted-foreground">Member pass</p>
-        <p className="text-ui font-medium text-foreground">Good for every account on the share</p>
-        <p className="text-caption text-muted-foreground">Not a member yet? Ask the server owner for an invite link.</p>
+        <p className="text-caption text-muted-foreground">To become a member, ask the server owner for an invite link.</p>
       </PassStub>
     </Pass>
   )
@@ -96,8 +94,8 @@ function PlexOptions({ serverName, jellyfin, callbackUrl }: Omit<MemberPassProps
         Continue with Plex
       </Button>
       <p className="mt-2 text-caption text-muted-foreground" data-testid="member-pass-token-copy">
-        You&apos;ll approve access on plex.tv. {serverName} keeps your Plex sign-in token to sync your watchlist and
-        accept invites for you.
+        Approve access on plex.tv. {serverName} keeps your Plex sign-in token. It uses the token to sync your
+        watchlist and accept invites.
       </p>
       {error && (
         <Alert tone="destructive" className="mt-4" data-testid="sign-in-error">

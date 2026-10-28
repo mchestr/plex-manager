@@ -78,7 +78,7 @@ describe('DiscordLinkChecklist', () => {
     renderChecklist()
 
     expect(screen.getByTestId('discord-link-privacy')).toHaveTextContent(
-      'We keep your Discord ID and name to give you the member role. Unlink any time.'
+      'We keep your Discord ID and name to give you the Member role. You can unlink at any time.'
     )
   })
 

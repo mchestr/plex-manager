@@ -54,7 +54,7 @@ describe('MembershipDetails', () => {
     unmount()
 
     renderDetails(subscription({ currentPeriodEnd: null }))
-    expect(screen.getByTestId('subscription-period')).toHaveTextContent('Renews at the end of the current period')
+    expect(screen.getByTestId('subscription-period')).toHaveTextContent('Renews when the current period ends')
   })
 
   it('shows Past due with the retry day and the payment notice', () => {

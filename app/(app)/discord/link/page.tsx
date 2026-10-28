@@ -33,7 +33,7 @@ export default async function DiscordLinkPage() {
         <div className="flex flex-col gap-2">
           <h1 className="text-h1 text-foreground">Link your Discord account</h1>
           <p className="text-body text-muted-foreground">
-            Linking proves you&apos;re a member and gives you the Member role in the {name} Discord.
+            Linking gives you the Member role in the {name} Discord.
           </p>
         </div>
         {/* Only non-secret integration fields cross into the client component. */}

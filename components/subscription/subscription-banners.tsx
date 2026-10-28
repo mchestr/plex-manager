@@ -44,8 +44,8 @@ export function SubscriptionBanners({ notice, jellyfinEnabled = false }: Subscri
           title="Check your email"
           data-testid="pending-invite-banner"
         >
-          We&apos;ve sent a Plex invite to your email. Accept it to finish setting
-          up your access to the media server.
+          We sent a Plex invite to your email. Accept it to get access to the
+          server.
           {jellyfinEnabled && " Your Jellyfin account is enabled."}
         </Alert>
       )}

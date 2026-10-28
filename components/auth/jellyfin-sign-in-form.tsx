@@ -13,14 +13,14 @@ import { idleFormState } from "@/lib/actions/form-state"
 import { icons } from "@/lib/ui/icons"
 import { safeHref } from "@/lib/ui/markdown"
 
-const REDEEM_FAILED = "Your account could not be created. Please try again."
+const REDEEM_FAILED = "Could not create your account. Try again."
 const ERROR_ID = "jellyfin-invite-error"
 
 type RedeemState = Awaited<ReturnType<typeof redeemJellyfinInviteForm>>
 
 interface JellyfinSignInFormProps {
   inviteCode: string
-  /** The Jellyfin server's name: "Creates an account on {serverName}". */
+  /** The Jellyfin server's name, for the success copy. */
   serverName: string
   "data-testid"?: string
 }
@@ -82,7 +82,6 @@ export function JellyfinSignInForm({ inviteCode, serverName, "data-testid": test
 
   return (
     <form action={formAction} className="flex w-full flex-col gap-4" data-testid={testId} noValidate>
-      <p className="text-caption text-muted-foreground">Creates an account on {serverName}</p>
       <div className="flex flex-col gap-2">
         <Label htmlFor="jellyfin-invite-username">Username</Label>
         <Input
@@ -90,14 +89,13 @@ export function JellyfinSignInForm({ inviteCode, serverName, "data-testid": test
           name="username"
           type="text"
           defaultValue={state.values.username ?? ""}
-          placeholder="Choose a username"
           autoComplete="username"
           aria-invalid={invalid("username")}
           aria-describedby={describedBy("username", "jellyfin-username-hint")}
           data-testid="jellyfin-username-input"
         />
         <p id="jellyfin-username-hint" className="text-caption text-muted-foreground">
-          3 to 32 letters, numbers, dots, dashes or underscores
+          Use 3 to 32 letters, numbers, dots, dashes or underscores.
         </p>
       </div>
 
@@ -107,7 +105,6 @@ export function JellyfinSignInForm({ inviteCode, serverName, "data-testid": test
           id="jellyfin-invite-password"
           name="password"
           type="password"
-          placeholder="Create a password"
           autoComplete="new-password"
           aria-invalid={invalid("password")}
           aria-describedby={describedBy("password")}
@@ -121,7 +118,6 @@ export function JellyfinSignInForm({ inviteCode, serverName, "data-testid": test
           id="jellyfin-invite-confirm-password"
           name="confirmPassword"
           type="password"
-          placeholder="Confirm your password"
           autoComplete="new-password"
           aria-invalid={invalid("confirmPassword")}
           aria-describedby={describedBy("confirmPassword")}

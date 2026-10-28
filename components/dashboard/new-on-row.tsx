@@ -22,7 +22,7 @@ const ITEM_CLASS = "w-40 shrink-0 snap-start"
 
 function weekLine(count: number | null, format: FormatSettings): string | null {
   if (!count) return null
-  return count === 1 ? "1 title was added this week." : `${formatNumber(count, format)} titles were added this week.`
+  return count === 1 ? "1 new title this week" : `${formatNumber(count, format)} new titles this week`
 }
 
 /**

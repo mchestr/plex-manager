@@ -49,7 +49,7 @@ export function YourDataSection({ data, disclosure }: YourDataSectionProps) {
           <DataItemList items={data.watchlist.rows} empty="No watchlist items synced yet." data-testid="account-watchlist" />
         </Part>
         <p className="text-ui text-muted-foreground">
-          Share links and hidden titles are managed on{" "}
+          Manage share links and hidden titles on{" "}
           <Link href="/rewind" className="text-foreground underline underline-offset-3" data-testid="account-rewind-link">
             your Rewind
           </Link>

@@ -53,7 +53,7 @@ export function MarksTable({ rows, page, pageSize, total }: MarksTableProps) {
           open
           onOpenChange={(open) => !open && setDeleting(null)}
           title={`Delete your mark on ${deleting.title}?`}
-          description="It leaves your marks here and in /mymarks."
+          description="This removes it from this list and from /mymarks in Discord."
           confirmLabel="Delete"
           pendingLabel="Deleting"
           tone="destructive"

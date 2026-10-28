@@ -43,7 +43,7 @@ describe('JellyfinSignInButton', () => {
     await submit()
 
     expect(await screen.findByTestId('jellyfin-error')).toHaveTextContent(
-      'Invalid username or password. Please try again.'
+      'Incorrect username or password.'
     )
     // P10.7: a <form action> resets its fields; the username is re-seeded, the password is not
     expect(screen.getByTestId('jellyfin-username')).toHaveValue('alice')

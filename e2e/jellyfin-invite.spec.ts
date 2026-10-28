@@ -349,7 +349,7 @@ test.describe('Jellyfin Invite Flow', () => {
         await waitForLoadingGone(page);
 
         // The voided pass with the used-up headline
-        await expect(page.getByTestId('invalid-invite-heading')).toHaveText('This invite has been used up', {
+        await expect(page.getByTestId('invalid-invite-heading')).toHaveText('This invite has no uses left', {
           timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
         });
         await expect(page.getByTestId('invalid-invite-heading')).toHaveAttribute('data-state', 'used-up');

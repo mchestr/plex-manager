@@ -77,14 +77,14 @@ export function OnboardingWizard({ data, initialStepId = "welcome" }: Onboarding
           Get set up
         </p>
         <p className="text-ui text-muted-foreground" data-testid="onboarding-wizard-subheading">
-          A few things to know before you start watching on {data.serverName}.
+          Read these steps before you watch on {data.serverName}.
         </p>
       </div>
 
       <Stepper
         steps={stepperSteps}
         orientation="horizontal"
-        label="Getting started"
+        label="Setup steps"
         meta="About a minute"
         data-testid="onboarding-stepper"
       />

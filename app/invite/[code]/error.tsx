@@ -28,7 +28,7 @@ export default function Error({
       icon={icons.invites}
       code={boundaryCopy(error).code}
       title="This invite couldn't be checked"
-      description="Something went wrong on our side while opening the invite. Please try again."
+      description="The problem is on our side. Try again."
       primaryAction={
         <Button size="lg" onClick={reset} data-testid="error-retry">
           Try again

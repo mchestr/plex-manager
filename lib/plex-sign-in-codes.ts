@@ -34,20 +34,20 @@ export type ShownPlexSignInCode = Exclude<PlexSignInCode, "access_denied">
 export const PLEX_SIGN_IN_COPY: Record<ShownPlexSignInCode, { title: string; message: string }> = {
   plex_pin_expired: {
     title: "Sign-in didn't finish",
-    message: "This sign-in expired or was started in another browser. Try again to start a new one.",
+    message: "The sign-in expired, or it started in a different browser. Try again to start a new sign-in.",
   },
   invite_invalid: {
     title: "This invite can't be used",
-    message: "This invite can't be used. It may have expired, been used up, or be for another server.",
+    message: "It expired, has no uses left, or is for a different server. Ask for a new invite.",
   },
   plex_unavailable: {
     title: "Plex is temporarily unavailable",
-    message: "Plex is temporarily unavailable. Try again in a minute.",
+    message: "Plex did not answer. Try again in a minute.",
   },
   rate_limited: { title: "Too many attempts", message: RATE_LIMITED_MESSAGE },
   sign_in_failed: {
     title: "Sign-in didn't finish",
-    message: "We couldn't sign you in with Plex. Please try again.",
+    message: "Could not sign you in with Plex. Try again.",
   },
 }
 

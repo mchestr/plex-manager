@@ -87,7 +87,7 @@ export function TimezoneField({ value, serverZone, options }: TimezoneFieldProps
           </SelectContent>
         </Select>
         <FieldDescription>
-          Used for times in your Rewind, and first set from your browser. A change applies the next time your Rewind is made.
+          Rewind shows times in this zone. The first value comes from your browser. A change applies to your next Rewind.
         </FieldDescription>
       </Field>
       <div className="flex items-center justify-end gap-3">

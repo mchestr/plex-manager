@@ -63,7 +63,7 @@ describe('/subscribe/success', () => {
     mockProvisioning.mockResolvedValue({ success: true, data: { ...PAID, plexInviteStatus: 'accepted' } })
     render(withQuery(await SubscribeSuccessPage()))
 
-    expect(screen.getByRole('heading', { level: 1, name: "You're in" })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Checkout complete' })).toBeInTheDocument()
     expect(screen.queryByText('Thanks for subscribing!')).not.toBeInTheDocument()
     expect(screen.getByTestId('subscribe-success-page')).toBeInTheDocument()
     expect(screen.getByTestId('subscribe-success-payment')).toHaveTextContent('Payment confirmed')
@@ -115,7 +115,7 @@ describe('ProvisioningChecklist', () => {
   it('asks the member to accept the invite by email when auto-accept could not run', async () => {
     render(withQuery(<ProvisioningChecklist initial={{ ...PAID, plexInviteStatus: 'pending', libraryCount: null }} />))
 
-    expect(screen.getByTestId('subscribe-success-pending')).toHaveTextContent("We've sent a Plex invite to your email")
+    expect(screen.getByTestId('subscribe-success-pending')).toHaveTextContent('We sent a Plex invite to your email')
     await tick(30_000)
     expect(mockProvisioning).not.toHaveBeenCalled()
   })
@@ -149,7 +149,7 @@ describe('ProvisioningChecklist', () => {
       })
       render(withQuery(<ProvisioningChecklist initial={{ ...PAID, services: ['plex', 'jellyfin'], plexInviteStatus: 'pending' }} />))
 
-      expect(screen.getByTestId('subscribe-success-pending')).toHaveTextContent("We've sent a Plex invite to your email")
+      expect(screen.getByTestId('subscribe-success-pending')).toHaveTextContent('We sent a Plex invite to your email')
       expect(screen.getByTestId('subscribe-success-jellyfin-provisioning')).toBeInTheDocument()
       await tick(3_000)
       expect(screen.getByTestId('subscribe-success-pending')).toBeInTheDocument()

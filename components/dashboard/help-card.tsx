@@ -42,7 +42,7 @@ export function HelpCard({ service, supportChannelUrl }: HelpCardProps) {
       <CardContent className="flex flex-col pt-2.5 pb-4">
         <Link href={"/help#playback" as Route} className={rowClass} data-testid="home-help-playback">
           <Row icon={icons.playback} end={icons.internalLink}>
-            Revisit the quality guide
+            Open the quality guide
           </Row>
         </Link>
         {supportChannelUrl ? (

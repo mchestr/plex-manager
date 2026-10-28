@@ -157,7 +157,7 @@ describe('PlanList', () => {
     await user.click(screen.getByTestId('subscribe-button-price_month'))
 
     expect(await screen.findByTestId('subscribe-plan-error-price_month')).toHaveTextContent(
-      'Could not start checkout. Please try again.'
+      'Could not start checkout. Try again.'
     )
   })
 })
