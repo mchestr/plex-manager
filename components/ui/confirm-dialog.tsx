@@ -104,6 +104,12 @@ export function ConfirmDialog({
   // than opening again over it on the way back
   useLayoutEffect(() => () => setUncontrolledOpen(false), [])
 
+  // A new open starts without a success. Reset as the open commits, not in onOpenChangeComplete: that report comes a
+  // frame later and can land after a fast confirm has already succeeded
+  useLayoutEffect(() => {
+    if (open) succeeded.current = false
+  }, [open])
+
   const setOpen = (next: boolean) => {
     if (openProp === undefined) setUncontrolledOpen(next)
     onOpenChange?.(next)
@@ -113,6 +119,7 @@ export function ConfirmDialog({
 
   const confirm = () => {
     setError(null)
+    succeeded.current = false
     pageFocus.current = null
     const notePageFocus = (event: FocusEvent) => {
       const target = event.target
@@ -152,10 +159,7 @@ export function ConfirmDialog({
         setOpen(next)
       }}
       onOpenChangeComplete={(isOpen) => {
-        if (isOpen) {
-          succeeded.current = false
-          return
-        }
+        if (isOpen) return
         setError(null)
         setTyped("")
       }}
