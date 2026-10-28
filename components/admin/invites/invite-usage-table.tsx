@@ -30,14 +30,14 @@ export function InviteUsageTable({ usages }: { usages: InviteUsageRow[] }) {
           {row.original.user.name || row.original.user.email || "Unknown member"}
         </Link>
       ),
-      meta: { mobile: "title" },
+      meta: { card: "title" },
     },
-    { id: "email", header: "Email", cell: ({ row }) => row.original.user.email ?? "–", meta: { mobile: "sub", priority: 2 } },
+    { id: "email", header: "Email", cell: ({ row }) => row.original.user.email ?? "–", meta: { card: "sub", priority: 2 } },
     {
       id: "usedAt",
       header: "Joined",
       cell: ({ row }) => f.dateTime(row.original.usedAt, { zoneLabel: true }),
-      meta: { mobile: "meta" },
+      meta: { card: "field" },
     },
   ]
 

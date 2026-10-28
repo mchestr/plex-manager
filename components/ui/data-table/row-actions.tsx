@@ -64,7 +64,16 @@ export function RowActions({ name, actions, onOpenChange, ...props }: RowActions
   return (
     <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger
-        render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${name}`} data-testid={testId} />}
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            // 32px to the eye; on touch screens the ::before, on the 30px padding box, makes 30 + 2 x 7 = 44px
+            className="relative pointer-coarse:before:absolute pointer-coarse:before:-inset-1.75"
+            aria-label={`Actions for ${name}`}
+            data-testid={testId}
+          />
+        }
       >
         <Icon icon={Ellipsis} />
       </DropdownMenuTrigger>

@@ -20,12 +20,12 @@ import { DeletePromptDialog, UseForRewindDialog } from "./prompt-dialogs"
 
 function columns(f: BoundFormat): ColumnDef<PromptRow>[] {
   return [
-    { id: "name", header: "Name", accessorKey: "name", meta: { mobile: "title" } },
+    { id: "name", header: "Name", accessorKey: "name", meta: { card: "title" } },
     {
       id: "status",
       header: "Status",
       cell: ({ row }) => <StatusBadge domain="prompt" value={row.original.status} />,
-      meta: { mobile: "badges" },
+      meta: { card: "field" },
     },
     { id: "version", header: "Version", cell: ({ row }) => `v${row.original.version}`, meta: { priority: 3 } },
     {
@@ -35,9 +35,9 @@ function columns(f: BoundFormat): ColumnDef<PromptRow>[] {
         row.original.status === "v2"
           ? f.number(row.original.length)
           : `${f.number(row.original.length)} of ${f.number(STYLE_GUIDE_MAX_CHARS)}`,
-      meta: { mobile: "meta", priority: 2 },
+      meta: { card: "field", priority: 2 },
     },
-    { id: "updated", header: "Updated", cell: ({ row }) => f.date(row.original.updatedAt), meta: { mobile: "sub" } },
+    { id: "updated", header: "Updated", cell: ({ row }) => f.date(row.original.updatedAt), meta: { card: "sub" } },
     { id: "updatedBy", header: "Updated by", cell: ({ row }) => row.original.updatedByName ?? "—", meta: { priority: 3 } },
   ]
 }

@@ -1,3 +1,4 @@
+import { axeFor } from '../a11y/scan';
 import { expect, test } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
 
@@ -6,6 +7,10 @@ import { createE2EPrismaClient } from '../helpers/prisma';
  * dead address every member is still listed as Unknown under the Plex-down
  * Alert, a filter change lands in the URL with a chip, and Make admin and
  * Disable run from a row's action menu through their confirms (UI-46).
+ *
+ * The layout follows the table's own width: cards of labelled fields up to
+ * the 984px a 1280 window leaves it, then the table, with Rewind from 1440.
+ * Neither the page nor the table scrolls sideways, before hydration either.
  */
 
 const MEMBER = { id: 'users-list-e2e-id', plexUserId: 'users-list-e2e-plex', name: 'Aaa Users Member', email: 'users-list@example.com' };
@@ -96,5 +101,103 @@ test.describe('Admin users list', () => {
     // The refreshed row now offers Enable instead
     await adminPage.getByTestId(`admin-users-actions-${MEMBER.id}`).click();
     await expect(adminPage.getByTestId('admin-user-disable-button')).toContainText('Enable account');
+  });
+});
+
+const LONG = {
+  id: 'users-layout-e2e-id',
+  plexUserId: 'users-layout-e2e-plex',
+  name: 'Jordan Smith-Wellington',
+  email: 'users-layout-e2e.jordan.smith-wellington@fastmail.example',
+};
+
+const LAYOUTS = [
+  { width: 320, cards: true },
+  { width: 390, cards: true },
+  { width: 768, cards: true },
+  { width: 1024, cards: true },
+  { width: 1280, cards: false, rewind: false },
+  { width: 1440, cards: false, rewind: true },
+];
+
+test.describe('Admin users list layout', () => {
+  test.beforeAll(async () => {
+    const prisma = createE2EPrismaClient();
+    try {
+      const row = { ...LONG, isAdmin: false, disabledAt: null, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true, jellyfin: false } };
+      await prisma.user.upsert({ where: { id: LONG.id }, create: row, update: row });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  test.afterAll(async () => {
+    const prisma = createE2EPrismaClient();
+    try {
+      await prisma.user.deleteMany({ where: { id: LONG.id } });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  for (const { width, cards, rewind } of LAYOUTS) {
+    test(`at ${width}px the rows are ${cards ? 'cards' : 'a table'} and nothing scrolls sideways`, async ({ adminPage }) => {
+      await adminPage.setViewportSize({ width, height: 900 });
+      await adminPage.goto('/admin/users');
+
+      await expect(adminPage.getByTestId(`admin-users-row-${LONG.id}`)).toHaveCSS('display', cards ? 'grid' : 'table-row');
+      if (cards) {
+        await expect(adminPage.getByTestId('admin-users-column-name')).toBeHidden();
+        await expect(adminPage.getByTestId('admin-users-filters-filter-role')).toBeHidden();
+        await expect(adminPage.getByTestId('admin-users-filters-sort')).toBeVisible();
+      } else {
+        await expect(adminPage.getByTestId('admin-users-column-name')).toBeVisible();
+        await expect(adminPage.getByTestId('admin-users-filters-filter-role')).toBeVisible();
+        await expect(adminPage.getByTestId('admin-users-filters-sort')).toBeHidden();
+        await expect(adminPage.getByTestId('admin-users-column-rewind')).toBeVisible({ visible: rewind });
+      }
+
+      const overflow = await adminPage.evaluate(() => {
+        const scroll = document.querySelector('[data-testid="admin-users-scroll"]');
+        return {
+          page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          table: scroll ? scroll.scrollWidth - scroll.clientWidth : null,
+        };
+      });
+      expect(overflow).toEqual({ page: 0, table: 0 });
+    });
+  }
+
+  test('at 390px a card keeps a tappable actions button and has no axe violations', async ({ adminPage }) => {
+    await adminPage.setViewportSize({ width: 390, height: 844 });
+    await adminPage.goto('/admin/users');
+
+    // Until React swaps in the streamed page, a hidden copy shares the test id
+    const trigger = adminPage.getByTestId(`admin-users-actions-${LONG.id}`);
+    await expect(trigger).toBeVisible();
+    const actions = await trigger.boundingBox();
+    expect(actions?.width).toBeGreaterThanOrEqual(24);
+    expect(actions?.height).toBeGreaterThanOrEqual(24);
+    const results = await axeFor(adminPage).include('[data-testid="admin-users"]').analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  // Blocking the app's script chunks holds the page before hydration: Next's
+  // inline scripts still reveal the streamed HTML, but React never hydrates.
+  test('a phone gets the cards before hydration', async ({ adminPage, browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      storageState: await adminPage.context().storageState(),
+    });
+    try {
+      const page = await context.newPage();
+      await page.route('**/_next/static/chunks/**/*.js', (route) => route.abort());
+      await page.goto(new URL('/admin/users', test.info().project.use.baseURL).toString());
+      await expect(page.getByTestId(`admin-users-row-${LONG.id}`)).toHaveCSS('display', 'grid');
+      const width = await page.evaluate(() => document.documentElement.scrollWidth);
+      expect(width).toBe(390);
+    } finally {
+      await context.close();
+    }
   });
 });

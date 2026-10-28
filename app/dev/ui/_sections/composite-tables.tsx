@@ -25,22 +25,22 @@ const ACCESS = {
 } as const
 
 const userColumns: ColumnDef<FixtureUser>[] = [
-  { id: "name", header: "Name", accessorKey: "name", meta: { mobile: "title" } },
-  { id: "email", header: "Email", accessorKey: "email", meta: { mobile: "sub", priority: 3 } },
+  { id: "name", header: "Name", accessorKey: "name", meta: { card: "title" } },
+  { id: "email", header: "Email", accessorKey: "email", meta: { card: "sub", priority: 3 } },
   {
     id: "role",
     header: "Role",
     cell: ({ row }) =>
       row.original.role === "Member" ? "Member" : <Badge variant="outline">{row.original.role}</Badge>,
-    meta: { mobile: "badges" },
+    meta: { card: "field" },
   },
   {
     id: "access",
     header: "Plex access",
     cell: ({ row }) => <StatusDot {...ACCESS[row.original.access]} />,
-    meta: { mobile: "meta" },
+    meta: { card: "field" },
   },
-  { id: "plays", header: "Plays", accessorKey: "plays", meta: { align: "end", mobile: "meta" } },
+  { id: "plays", header: "Plays", accessorKey: "plays", meta: { align: "end", card: "field" } },
 ]
 
 const userActions = () => [
@@ -50,17 +50,17 @@ const userActions = () => [
 ]
 
 const playColumns: ColumnDef<FixturePlay>[] = [
-  { id: "title", header: "Title", accessorKey: "title", enableSorting: true, meta: { mobile: "title" } },
-  { id: "member", header: "Member", accessorKey: "member", meta: { mobile: "sub" } },
-  { id: "kind", header: "Kind", cell: ({ row }) => (row.original.kind === "movie" ? "Film" : "Episode"), meta: { mobile: "meta" } },
+  { id: "title", header: "Title", accessorKey: "title", enableSorting: true, meta: { card: "title" } },
+  { id: "member", header: "Member", accessorKey: "member", meta: { card: "sub" } },
+  { id: "kind", header: "Kind", cell: ({ row }) => (row.original.kind === "movie" ? "Film" : "Episode"), meta: { card: "field" } },
   {
     id: "date",
     header: "Played",
     enableSorting: true,
     cell: ({ row }) => formatDateTime(row.original.playedAt, { timeZone: FIXTURE_ZONE, locale: "en-US" }),
-    meta: { mobile: "meta", priority: 3 },
+    meta: { card: "field", priority: 3 },
   },
-  { id: "minutes", header: "Minutes", accessorKey: "minutes", enableSorting: true, meta: { align: "end", mobile: "meta" } },
+  { id: "minutes", header: "Minutes", accessorKey: "minutes", enableSorting: true, meta: { align: "end", card: "field" } },
 ]
 
 const FILTERS = [

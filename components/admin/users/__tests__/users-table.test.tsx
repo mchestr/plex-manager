@@ -38,19 +38,6 @@ const ROWS = [
   member('u-dana', 'Dana Whitfield', { isAdmin: true, isOwner: true }),
 ]
 
-function mockViewport(mobile: boolean) {
-  window.matchMedia = jest.fn().mockImplementation((query: string) => ({
-    matches: mobile,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  }))
-}
-
 function renderTable(props: Partial<Parameters<typeof UsersTable>[0]> = {}) {
   return render(
     <UsersTable
@@ -80,7 +67,6 @@ async function openAction(name: string, item: string) {
 beforeEach(() => {
   jest.useFakeTimers({ now: NOW, advanceTimers: true })
   resetUrl('/admin/users')
-  mockViewport(false)
   jest.clearAllMocks()
 })
 
@@ -94,7 +80,7 @@ describe('UsersTable', () => {
 
     const sam = screen.getByTestId('admin-users-row-u-sam')
     expect(within(sam).getByRole('link', { name: 'Sam Rivera' })).toHaveAttribute('href', '/admin/users/u-sam')
-    expect(sam).toHaveTextContent('Member')
+    expect(within(sam).getAllByRole('cell')[1]).toHaveTextContent('Member')
     expect(screen.getByTestId('admin-users-plex-u-sam')).toHaveTextContent('UnknownLast checked 2 minutes ago')
     expect(sam).toHaveTextContent('Past dueRetrying Oct 20')
     expect(within(sam).getByRole('link', { name: '$0.031' })).toHaveAttribute('href', '/admin/llm-usage?userId=u-sam')
@@ -202,11 +188,24 @@ describe('UsersTable', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Plex refused the invite')
   })
 
-  it('keeps every action on the stacked rows below md', async () => {
-    mockViewport(true)
+  it('places every column on the card, each field under its label, and keeps the actions', async () => {
     renderTable()
 
-    expect(screen.getByTestId('admin-users-list')).toBeInTheDocument()
+    expect(screen.getByTestId('admin-users')).toHaveAttribute('data-table-size', 'wide')
+    const sam = screen.getByTestId('admin-users-row-u-sam')
+    const cells = within(sam).getAllByRole('cell')
+    expect(cells.map((cell) => cell.dataset.card)).toEqual(['title', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'actions'])
+    expect(cells[0].querySelector('[data-slot="cell-label"]')).toBeNull()
+    expect([...sam.querySelectorAll('[data-slot="cell-label"]')].map((label) => label.textContent)).toEqual([
+      'Role',
+      'Service',
+      'Plex access',
+      'Subscription',
+      'Rewind 2026',
+      'LLM cost',
+      'Joined',
+    ])
+
     await openAction('Sam Rivera', 'Remove Plex access...')
     expect(await screen.findByTestId('admin-user-remove-access-dialog')).toBeInTheDocument()
   })

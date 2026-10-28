@@ -25,6 +25,7 @@ interface TablePaginationProps {
 /**
  * A table's footer (ui-design-system 6.3, item 6). One page reads "Showing
  * all {n} {noun}" with no pager; more pages show the range, Previous and Next.
+ * It sits in the DataTable's container and goes onto one line from 36rem of it.
  */
 export function TablePagination({
   page,
@@ -59,14 +60,14 @@ export function TablePagination({
   return (
     <div
       data-slot="table-pagination"
-      className={cn("flex flex-col items-center justify-between gap-3 py-3 sm:flex-row", className)}
+      className={cn("flex flex-col items-center justify-between gap-3 py-3 @xl/data-table:flex-row", className)}
       data-testid={testId}
     >
       <p className="text-label text-muted-foreground tabular-nums" data-testid={`${testId}-info`}>
         {paged ? `Showing ${start} to ${end} of ${total} ${noun}` : `Showing all ${total} ${noun}`}
       </p>
       {paged && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           {onPageSizeChange && (
             <Select items={items} value={String(pageSize)} onValueChange={(value) => value && onPageSizeChange(Number(value))}>
               <SelectTrigger size="sm" className="w-20" aria-label="Rows per page" data-testid={`${testId}-page-size`}>

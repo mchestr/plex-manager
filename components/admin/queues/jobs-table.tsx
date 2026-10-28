@@ -49,20 +49,20 @@ function ErrorCell({ error }: { error: string | null }) {
 
 function columns(f: BoundFormat): ColumnDef<QueueJobRow>[] {
   return [
-    { id: "type", header: "Job", accessorKey: "typeLabel", meta: { mobile: "title" } },
+    { id: "type", header: "Job", accessorKey: "typeLabel", meta: { card: "title" } },
     {
       id: "status",
       header: "Status",
       cell: ({ row }) => <StatusBadge domain="queueJob" value={row.original.status} />,
-      meta: { mobile: "badges" },
+      meta: { card: "field" },
     },
     {
       id: "attempts",
       header: "Attempts",
       cell: ({ row }) => `${row.original.attempts} of ${row.original.maxAttempts}`,
-      meta: { align: "end", mobile: "meta" },
+      meta: { align: "end", card: "field" },
     },
-    { id: "created", header: "Created", cell: ({ row }) => <Time value={row.original.createdAt} />, meta: { mobile: "sub" } },
+    { id: "created", header: "Created", cell: ({ row }) => <Time value={row.original.createdAt} />, meta: { card: "sub" } },
     {
       id: "duration",
       header: "Duration",
@@ -70,7 +70,7 @@ function columns(f: BoundFormat): ColumnDef<QueueJobRow>[] {
         row.original.durationMs === null
           ? "—"
           : f.duration(row.original.durationMs / 60_000, "short", { smallestUnit: "second" }),
-      meta: { align: "end", mobile: "meta" },
+      meta: { align: "end", card: "field" },
     },
     { id: "error", header: "Error", cell: ({ row }) => <ErrorCell error={row.original.error} />, meta: { priority: 3 } },
   ]

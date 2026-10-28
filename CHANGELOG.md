@@ -21,6 +21,7 @@ check); the `no-changelog` label skips it.
 ### Changed
 
 - **Rewind times are implicit:** Rewind no longer prints a time zone. The "Times in America/Chicago, the server's time zone" notes are gone from the bookends, clock, short list and centrefold pages, the desktop Notes, article mode, chart and table captions and the clock and centrefold share cards. Times and days are still counted in the member's Rewind zone (their saved zone, else the server's), and nothing on the page names it.
+- **Tables on phones and tablets:** the users list and every other admin table, and the marks list on Account, now lay out by the room the table itself has, not the window's width, so the admin sidebar counts. A narrow table shows each row as a card: the name and its actions on top, then every other column under its own label in two columns (four on a tablet), with nothing hidden or unlabelled. The users list shows cards up to about 1,100 px and its table from there, with the Rewind column from 1,440 px; a long email is cut short in the table and shown in full on the card. While a table shows cards, its toolbar offers Filters (in a sheet) and Sort; beside a table, the filters sit in one row that no longer breaks into a block. The page is laid out before it loads, so a phone no longer shows the desktop table first.
 
 ### Fixed
 

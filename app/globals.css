@@ -23,6 +23,23 @@
 /* A short window (a 720px laptop): the admin sidebar tightens so its whole nav stays within the viewport */
 @custom-variant short (@media (max-height: 50rem));
 
+/*
+ * DataTable (components/ui/data-table): the table's own width, never the viewport, picks its layout.
+ * dt-cards: narrower than its size's card width, rows render as labelled cards. dt-compact: the band
+ * just above, a table without its priority-3 columns. Sizes are TABLE_SIZES in data-table/layout.ts
+ * (layout.test.ts keeps them in step). Both apply only inside the root's @container/data-table.
+ */
+@custom-variant dt-cards {
+  [data-table-size="narrow"] & { @container data-table (width < 24rem) { @slot; } }
+  [data-table-size="default"] & { @container data-table (width < 40rem) { @slot; } }
+  [data-table-size="wide"] & { @container data-table (width < 60rem) { @slot; } }
+}
+@custom-variant dt-compact {
+  [data-table-size="narrow"] & { @container data-table (24rem <= width < 28rem) { @slot; } }
+  [data-table-size="default"] & { @container data-table (40rem <= width < 50rem) { @slot; } }
+  [data-table-size="wide"] & { @container data-table (60rem <= width < 68rem) { @slot; } }
+}
+
 /* ---------- 1. Light values (shadcn convention; ships behind a flag, ui-design-system 3.3) ---------- */
 :root {
   color-scheme: light;

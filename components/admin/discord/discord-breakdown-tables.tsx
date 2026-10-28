@@ -33,14 +33,15 @@ export function ActiveMembersTable({ rows }: { rows: ActiveMember[] }) {
       id: "member",
       header: "Member",
       cell: ({ row }) => <DiscordMember name={row.original.discordUsername ?? row.original.discordUserId} userId={row.original.userId} />,
-      meta: { mobile: "title" },
+      meta: { card: "title" },
     },
-    { id: "commands", header: "Commands", cell: ({ row }) => f.number(row.original.commandCount), meta: { align: "end", mobile: "meta" } },
-    { id: "last", header: "Last active", cell: ({ row }) => <Time value={row.original.lastActiveAt} />, meta: { mobile: "sub" } },
+    { id: "commands", header: "Commands", cell: ({ row }) => f.number(row.original.commandCount), meta: { align: "end", card: "field" } },
+    { id: "last", header: "Last active", cell: ({ row }) => <Time value={row.original.lastActiveAt} />, meta: { card: "sub" } },
   ]
   return (
     <DataTable
       label="Most active members"
+      size="narrow"
       noun="members"
       columns={columns}
       data={rows}
@@ -62,18 +63,19 @@ export function CommandTypesTable({ rows, total }: { rows: CommandTypeRow[]; tot
   const f = useFormat()
   const sorted = [...rows].sort((a, b) => b.count - a.count)
   const columns: ColumnDef<CommandTypeRow>[] = [
-    { id: "type", header: "Type", cell: ({ row }) => COMMAND_TYPE_LABELS[row.original.type] ?? row.original.type, meta: { mobile: "title" } },
-    { id: "count", header: "Commands", cell: ({ row }) => f.number(row.original.count), meta: { align: "end", mobile: "meta" } },
+    { id: "type", header: "Type", cell: ({ row }) => COMMAND_TYPE_LABELS[row.original.type] ?? row.original.type, meta: { card: "title" } },
+    { id: "count", header: "Commands", cell: ({ row }) => f.number(row.original.count), meta: { align: "end", card: "field" } },
     {
       id: "share",
       header: "Share",
       cell: ({ row }) => (total > 0 ? f.percent(row.original.count / total) : "—"),
-      meta: { align: "end", mobile: "meta" },
+      meta: { align: "end", card: "field" },
     },
   ]
   return (
     <DataTable
       label="Commands by type"
+      size="narrow"
       noun="types"
       columns={columns}
       data={sorted}

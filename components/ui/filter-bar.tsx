@@ -104,7 +104,7 @@ function SearchField({ param, placeholder, testId }: { param: string; placeholde
 interface FilterBarProps {
   search?: { param: string; placeholder: string }
   filters: FilterDef[]
-  /** Below `md` only; the first option is the default. Desktop sorts from the table headers. */
+  /** Shown only while the DataTable around the bar renders cards; the first option is the default. A table sorts from its headers. */
   sort?: { param: string; options: Option[] }
   /** Announced politely: "7 members", or "3 of 7 members". */
   resultCount: { shown: number; total: number; noun: string }
@@ -116,7 +116,9 @@ interface FilterBarProps {
  * The toolbar above a DataTable (ui-design-system 5.5): search into `?q=`
  * after a 250ms pause, one FilterSelect per filter, chips for the filters
  * that differ from their defaults with "Clear filters", and the result count.
- * Below `md` the Selects move into a bottom Sheet behind "Filters".
+ * It follows the DataTable it sits in (its `toolbar`): while the rows render
+ * as cards, the Selects move into a bottom Sheet behind "Filters" beside the
+ * Sort Select. Outside a DataTable the bar stays inline.
  */
 export function FilterBar({ search, filters, sort, resultCount, className, ...props }: FilterBarProps) {
   const testId = props["data-testid"] ?? "filter-bar"
@@ -146,59 +148,59 @@ export function FilterBar({ search, filters, sort, resultCount, className, ...pr
 
   return (
     <div data-slot="filter-bar" className={cn("flex flex-col gap-3", className)} data-testid={testId}>
-      <div className="flex flex-col gap-3 md:flex-row md:items-end">
+      <div className="flex flex-wrap items-end gap-3">
         {search && (
-          <div className="md:w-72">
+          <div className="max-w-80 min-w-48 grow basis-60 dt-cards:max-w-none">
             <SearchField param={search.param} placeholder={search.placeholder} testId={testId} />
           </div>
         )}
-        <div className="hidden flex-wrap items-end gap-3 md:flex">
-          {filters.map((filter) => (
-            <FilterSelect key={filter.param} {...filter} data-testid={`${testId}-filter-${filter.param}`} />
-          ))}
-        </div>
-        <div className="flex items-center gap-2 md:hidden">
-          {filters.length > 0 && (
-            <Sheet>
-              <SheetTrigger render={<Button variant="outline" size="sm" data-testid={`${testId}-filters-open`} />}>
-                <Icon icon={ListFilter} />
-                Filters
-                {active.length > 0 && <Badge variant="info">{active.length}</Badge>}
-              </SheetTrigger>
-              <SheetContent side="bottom" grabber>
-                <SheetHeader>
-                  <SheetTitle>Filters</SheetTitle>
-                </SheetHeader>
-                <div className="flex flex-col gap-4">
-                  {filters.map((filter) => (
-                    <FilterSelect key={filter.param} {...filter} data-testid={`${testId}-sheet-filter-${filter.param}`} />
+        {filters.map((filter) => (
+          <FilterSelect key={filter.param} {...filter} className="dt-cards:hidden" data-testid={`${testId}-filter-${filter.param}`} />
+        ))}
+        {(filters.length > 0 || sort) && (
+          <div className="hidden min-w-0 grow basis-72 gap-3 dt-cards:flex">
+            {filters.length > 0 && (
+              <Sheet>
+                <SheetTrigger render={<Button variant="outline" size="sm" className="flex-1" data-testid={`${testId}-filters-open`} />}>
+                  <Icon icon={ListFilter} />
+                  Filters
+                  {active.length > 0 && <Badge variant="info">{active.length}</Badge>}
+                </SheetTrigger>
+                <SheetContent side="bottom" grabber>
+                  <SheetHeader>
+                    <SheetTitle>Filters</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col gap-4">
+                    {filters.map((filter) => (
+                      <FilterSelect key={filter.param} {...filter} data-testid={`${testId}-sheet-filter-${filter.param}`} />
+                    ))}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
+            {sort && (
+              <Select
+                items={sort.options}
+                value={sortValue}
+                onValueChange={(next) => replace({ [sort.param]: !next || next === sort.options[0]?.value ? null : next, page: null })}
+              >
+                <SelectTrigger size="sm" aria-label="Sort" className="w-auto min-w-0 flex-1" data-testid={`${testId}-sort`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {sort.options.map((option) => (
+                    <SelectItem key={option.value} value={option.value} label={option.label}>
+                      {option.label}
+                    </SelectItem>
                   ))}
-                </div>
-              </SheetContent>
-            </Sheet>
-          )}
-          {sort && (
-            <Select
-              items={sort.options}
-              value={sortValue}
-              onValueChange={(next) => replace({ [sort.param]: !next || next === sort.options[0]?.value ? null : next, page: null })}
-            >
-              <SelectTrigger size="sm" aria-label="Sort" className="w-auto" data-testid={`${testId}-sort`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {sort.options.map((option) => (
-                  <SelectItem key={option.value} value={option.value} label={option.label}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
         <p
           aria-live="polite"
-          className="text-label text-muted-foreground tabular-nums md:ml-auto md:pb-1.5"
+          className="ml-auto pb-1.5 text-label whitespace-nowrap text-muted-foreground tabular-nums dt-cards:ml-0 dt-cards:self-center dt-cards:pb-0"
           data-testid={`${testId}-count`}
         >
           {count}

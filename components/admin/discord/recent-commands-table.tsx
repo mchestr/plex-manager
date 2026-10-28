@@ -45,7 +45,7 @@ function columns(f: BoundFormat): ColumnDef<RecentCommand>[] {
       cell: ({ row }) => (
         <DiscordMember name={row.original.discordUsername ?? row.original.discordUserId} userId={row.original.userId} />
       ),
-      meta: { mobile: "title" },
+      meta: { card: "title" },
     },
     {
       id: "command",
@@ -59,13 +59,13 @@ function columns(f: BoundFormat): ColumnDef<RecentCommand>[] {
           </span>
         )
       },
-      meta: { mobile: "sub" },
+      meta: { card: "sub" },
     },
     {
       id: "status",
       header: "Status",
       cell: ({ row }) => <StatusBadge domain="discordCommand" value={row.original.status} />,
-      meta: { mobile: "badges" },
+      meta: { card: "field" },
     },
     {
       id: "response",
@@ -73,7 +73,7 @@ function columns(f: BoundFormat): ColumnDef<RecentCommand>[] {
       cell: ({ row }) => (row.original.responseTimeMs === null ? "—" : `${f.number(row.original.responseTimeMs)} ms`),
       meta: { align: "end", priority: 3 },
     },
-    { id: "when", header: "When", cell: ({ row }) => <Time value={row.original.createdAt} />, meta: { mobile: "meta" } },
+    { id: "when", header: "When", cell: ({ row }) => <Time value={row.original.createdAt} />, meta: { card: "field" } },
   ]
 }
 

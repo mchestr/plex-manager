@@ -110,7 +110,7 @@ describe("FilterBar", () => {
     }
   })
 
-  it("counts the active filters on the mobile Filters button", () => {
+  it("counts the active filters on the Filters button cards show", () => {
     resetUrl("/admin/users?role=admin&access=unknown")
     render(<Example />)
     expect(screen.getByTestId("admin-users-filters-filters-open")).toHaveTextContent("Filters2")

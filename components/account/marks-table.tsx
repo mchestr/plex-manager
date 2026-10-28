@@ -13,9 +13,9 @@ import { useToast } from "@/components/ui/toast"
 import type { MarkRow } from "@/lib/member/your-data"
 
 const COLUMNS: ColumnDef<MarkRow>[] = [
-  { id: "title", header: "Title", accessorKey: "title", meta: { mobile: "title" } },
-  { id: "mark", header: "Mark", accessorKey: "mark", meta: { mobile: "meta" } },
-  { id: "markedAt", header: "Marked", cell: ({ row }) => <Time value={row.original.markedAt} />, meta: { mobile: "sub" } },
+  { id: "title", header: "Title", accessorKey: "title", meta: { card: "title" } },
+  { id: "mark", header: "Mark", accessorKey: "mark", meta: { card: "field" } },
+  { id: "markedAt", header: "Marked", cell: ({ row }) => <Time value={row.original.markedAt} />, meta: { card: "sub" } },
 ]
 
 interface MarksTableProps {
@@ -34,6 +34,7 @@ export function MarksTable({ rows, page, pageSize, total }: MarksTableProps) {
     <>
       <DataTable
         label="Your marks"
+      size="narrow"
         noun="marks"
         columns={COLUMNS}
         data={rows}
