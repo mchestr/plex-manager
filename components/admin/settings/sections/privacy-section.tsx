@@ -7,7 +7,7 @@ import { Time } from "@/components/ui/time"
  */
 export function PrivacySection({ lastRun }: { lastRun: Date | null }) {
   return (
-    <SettingsSection id="privacy" title="Privacy" description="Old personal data is deleted once a day.">
+    <SettingsSection id="privacy" title="Privacy" description="A daily sweep deletes old personal data.">
       <p className="text-ui text-muted-foreground" data-testid="settings-retention-last-run">
         {lastRun ? (
           <>

@@ -20,17 +20,17 @@ check); the `no-changelog` label skips it.
 
 ### Changed
 
-- **Privacy in admin settings:** Admin > Settings, Privacy now says only that old personal data is deleted once a day, and when that last ran. The table of retention windows is gone (`docs/privacy.md` lists them, and the `RETENTION_*_DAYS` variables still set them), and so is **Run now**: the daily sweep needs no button.
-- **Secret re-encryption without Redis:** an install without Redis now re-encrypts its stored secrets at boot when they are not all under the primary key, as installs with Redis already did through the queue. Moving to a keyring or rotating a key is now: restart with the new key first, then wait for `secrets.reencrypted` in the log (`docs/operations.md`, "Encryption keys").
+- **Privacy in admin settings:** the Privacy section now shows only when the daily sweep of old personal data last ran. The table of retention windows and **Run now** are gone. The `RETENTION_*_DAYS` variables still set the windows, and `docs/privacy.md` lists them.
+- **Secret re-encryption without Redis:** an install without Redis now re-encrypts stored secrets at boot, as installs with Redis already did through the queue. To move to a keyring or rotate a key, put the new key first in `ENCRYPTION_KEYS` and restart. Then wait for `secrets.reencrypted` in the log before you remove the old key (`docs/operations.md`, "Encryption keys").
 
 ### Removed
 
-- The **Security** section of Admin > Settings, with **Encrypt stored secrets** and **Check service rows**. Boot re-encrypts stored secrets on its own, each service's section still asks again for a key that can't be read, and `npm run services:rows-audit` and `services:rows-apply` still find and fix a service with more than one active row.
+- The **Security** section of Admin > Settings, with **Encrypt stored secrets** and **Check service rows**. Boot re-encrypts stored secrets. Each service's section still asks again for a key that the app cannot read. `npm run services:rows-audit` and `services:rows-apply` still find and fix a service with more than one active row.
 - The **Privacy** card on Help. Account, Your data, still tells members what admins can see.
 
 ### Upgrade notes
 
-- Without Redis, the first boot after the upgrade re-encrypts any stored secret still in plain text or under an older key, in the app process, and logs `secrets.reencrypted` when it finishes.
+- Without Redis, the first boot after the upgrade re-encrypts each stored secret that is in plain text or under an older key. The app process does this work, and logs `secrets.reencrypted` when it finishes.
 
 ## [0.6.0] - 2026-10-28
 

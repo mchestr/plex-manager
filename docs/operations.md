@@ -383,13 +383,13 @@ the background instead.
 
 ### Encrypt what is stored
 
-Values written before a key was set, and values under an older kid, are
-rewritten under the primary key at boot, once per primary kid and field list
-(`Config.encryptionFieldsHash` records the last finished run). With Redis,
-boot queues `SECRETS_REENCRYPT` for the worker; without it, the app process
-runs the same pass itself. Either way the log shows `secrets.reencrypted`
-with the counts when it finishes, and a run that fails or is cut short
-(`aborted: true`) runs again at the next boot. A second run changes nothing.
+At boot, the app re-encrypts with the primary key each stored secret that is
+in plain text or under an older kid. It does this one time for each primary
+kid and field list, and `Config.encryptionFieldsHash` records the last
+finished run. With Redis, boot queues `SECRETS_REENCRYPT` for the worker.
+Without Redis, the app process does the same work. When the run finishes, the
+log shows `secrets.reencrypted` with the counts. A run that fails or stops
+early (`aborted: true`) runs again at the next boot.
 
 ### Move from ENCRYPTION_KEY to a keyring
 
@@ -409,10 +409,10 @@ with the counts when it finishes, and a run that fails or is cut short
 
 ### Lost key
 
-A value no configured key can read is never fatal at run time: it reads as
-empty, `crypto.decrypt_failed` is logged once per field and kid, and the
-settings page asks for that secret again ("The stored key can't be read with
-the current encryption key. Enter it again."). To recover:
+A value that no configured key can read does not stop the app. The app reads
+it as empty and logs `crypto.decrypt_failed` one time for each field and kid.
+The settings page asks for that secret again ("The stored key can't be read
+with the current encryption key. Enter it again."). To recover:
 
 - **Set the right key**, if you still have it anywhere (an older `.env`, the
   password manager). Nothing else is needed.

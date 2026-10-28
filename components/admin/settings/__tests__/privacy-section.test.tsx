@@ -11,7 +11,7 @@ describe("PrivacySection", () => {
   it("says when the sweep runs, before its first run", () => {
     render(<PrivacySection lastRun={null} />)
 
-    expect(screen.getByTestId("settings-privacy-section")).toHaveTextContent("Old personal data is deleted once a day.")
+    expect(screen.getByTestId("settings-privacy-section")).toHaveTextContent("A daily sweep deletes old personal data.")
     expect(screen.getByTestId("settings-retention-last-run")).toHaveTextContent("Not run yet.")
   })
 
