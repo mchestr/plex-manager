@@ -59,7 +59,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
     name: "/assistant",
     aliases: [],
     description:
-      "Ask the AI assistant a question with `ask prompt:<text>`. Use `reset` to start a new conversation. Server admins can review assistant conversations",
+      "Ask the AI assistant a question with `ask prompt:<text>`. Use `reset` to start a new conversation. Server admins can read assistant conversations",
     syntax: "/assistant ask prompt:<text> | /assistant reset",
     examples: [
       "/assistant ask prompt:How do I request a movie?",

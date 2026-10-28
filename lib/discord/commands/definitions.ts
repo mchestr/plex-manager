@@ -57,7 +57,7 @@ const assistant = new SlashCommandBuilder()
   .addSubcommand((sub) =>
     sub
       .setName("ask")
-      .setDescription("Ask a question. Only you see the answer. Server admins can review assistant chats")
+      .setDescription("Ask a question. Only you see the answer. Server admins can read assistant conversations")
       .addStringOption((option) =>
         option.setName("prompt").setDescription("Your question").setRequired(true)
       )

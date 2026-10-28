@@ -287,8 +287,8 @@ channel/thread IDs remain configurable (informational only).
 - The command log (`DiscordCommandLog`) keeps only the length of what a member
   types to the assistant (`argsLength`), never the text; `/admin/discord`
   shows "Message, N characters".
-- The app tells members that server admins can review assistant
-  conversations, and names the provider that processes them. It does this in
+- The app tells members that server admins can read assistant
+  conversations, and names the provider that the app sends messages to. It does this in
   the first reply of each chat session, `/help`, the `/assistant ask`
   description, the sign-in screen and the account page.
 - **Data-leak prevention (defense in depth):**

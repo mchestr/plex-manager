@@ -74,7 +74,7 @@ function buildLinkNudge(discordUserId: string, portalUrl: string): {
   allowedMentions: { users: string[] }
 } {
   return {
-    content: `Hi <@${discordUserId}>! To talk with the assistant, please link your account first: ${portalUrl}`,
+    content: `Hi <@${discordUserId}>. Link your account to use the assistant: ${portalUrl}`,
     allowedMentions: { users: [discordUserId] },
   }
 }
@@ -85,7 +85,7 @@ function buildNotEntitledNudge(discordUserId: string, portalUrl: string): {
   allowedMentions: { users: string[] }
 } {
   return {
-    content: `Hi <@${discordUserId}>! Your account is linked but doesn't have an active membership, so the assistant is unavailable. Manage your account here: ${portalUrl}`,
+    content: `Hi <@${discordUserId}>. Your account is linked, but your membership is not active. The assistant works only with an active membership. Manage your account here: ${portalUrl}`,
     allowedMentions: { users: [discordUserId] },
   }
 }
@@ -146,14 +146,14 @@ export async function routeDirectMessage(
           throw new Error(result.error || "Failed to clear chat context")
         }
         await message.reply({
-          content: "✅ Chat context cleared! Starting fresh.",
+          content: "✅ Conversation cleared. Your next message starts a new one.",
           allowedMentions: { users: [discordUserId] },
         })
       }
     ).catch(async () => {
       await message.reply({
         content:
-          "Sorry, I couldn't clear the chat context right now. Please try again in a moment.",
+          "I could not clear your conversation. Try again in a few minutes.",
         allowedMentions: { users: [discordUserId] },
       })
     })
@@ -163,7 +163,7 @@ export async function routeDirectMessage(
   // Nothing actionable to send to the assistant.
   if (!trimmed) {
     await message.reply({
-      content: "I didn't catch a question. Please include a message so I can help.",
+      content: "Your message is empty. Send a question.",
       allowedMentions: { users: [discordUserId] },
     })
     return
@@ -220,7 +220,7 @@ export async function routeDirectMessage(
   ).catch(async () => {
     await message.reply({
       content:
-        "Sorry, I couldn't reach the assistant right now. Please try again in a moment.",
+        "The assistant did not answer. Try again in a few minutes.",
       allowedMentions: { users: [discordUserId] },
     })
   })

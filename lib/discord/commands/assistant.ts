@@ -56,7 +56,7 @@ const LINK_NUDGE_ACTION = "use the assistant"
 
 /** Appended to `/assistant ask` answers so users know where to continue. */
 const CONTINUE_IN_DM_NOTE =
-  "\n\n_Tip: DM me directly to keep the conversation going._"
+  "\n\n_Send me a direct message to continue the conversation._"
 
 /**
  * Handle `/assistant ask prompt:<q>`.
@@ -107,7 +107,7 @@ async function handleAsk(ctx: InteractionContext): Promise<void> {
     })
     await interaction.editReply({
       content:
-        "Sorry, I couldn't reach the assistant right now. Please try again in a moment.",
+        "The assistant did not answer. Try again in a few minutes.",
     })
     return
   }
@@ -142,14 +142,14 @@ async function handleReset(ctx: InteractionContext): Promise<void> {
     })
     await interaction.reply({
       content:
-        "Sorry, I couldn't clear the chat context right now. Please try again in a moment.",
+        "I could not clear your conversation. Try again in a few minutes.",
       flags: MessageFlags.Ephemeral,
     })
     return
   }
 
   await interaction.reply({
-    content: "✅ Chat context cleared! Starting fresh.",
+    content: "✅ Conversation cleared. Your next message starts a new one.",
     flags: MessageFlags.Ephemeral,
   })
 }
