@@ -172,7 +172,10 @@ test.describe('Admin users list layout', () => {
     await adminPage.setViewportSize({ width: 390, height: 844 });
     await adminPage.goto('/admin/users');
 
-    const actions = await adminPage.getByTestId(`admin-users-actions-${LONG.id}`).boundingBox();
+    // Until React swaps in the streamed page, a hidden copy shares the test id
+    const trigger = adminPage.getByTestId(`admin-users-actions-${LONG.id}`);
+    await expect(trigger).toBeVisible();
+    const actions = await trigger.boundingBox();
     expect(actions?.width).toBeGreaterThanOrEqual(24);
     expect(actions?.height).toBeGreaterThanOrEqual(24);
     const results = await axeFor(adminPage).include('[data-testid="admin-users"]').analyze();
