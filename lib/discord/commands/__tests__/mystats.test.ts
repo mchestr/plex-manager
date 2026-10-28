@@ -405,7 +405,6 @@ describe("myStatsCommand rate limit (P4.20)", () => {
 
 describe("myStatsCommand.handle request limits", () => {
   const limits: MemberRequestLimits = {
-    tiers: [...DEFAULT_TIERS],
     hours: 37,
     progress: tierProgress(37, DEFAULT_TIERS),
     excluded: false,

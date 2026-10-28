@@ -40,7 +40,7 @@ describe("getMemberRequestLimits", () => {
 
     expect(limits).toMatchObject({ hours: 37, excluded: false, usage })
     expect(limits?.progress).toMatchObject({ index: 1, hoursToNext: 13, percent: 50 })
-    expect(limits?.tiers).toHaveLength(5)
+    expect(limits).not.toHaveProperty("tiers")
     expect(getOverseerrUserUsage).toHaveBeenCalledWith(service, 7, expect.anything())
     expect(getAllTimeWatchHours).toHaveBeenCalledWith(service, 100, expect.anything())
   })
