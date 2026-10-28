@@ -567,6 +567,22 @@ describe("the history", () => {
     expect(screen.getByText("Sonarr is up too.")).toBeInTheDocument()
   })
 
+  it("does not move focus again when the router shows the page it kept", () => {
+    const conversationA = conversation("a", "Is Plex up?", "Plex is up.")
+    const conversationB = conversation("b", "Is Sonarr up?", "Sonarr is up.")
+    const { rerender } = render(<Activity mode="visible">{ui({ conversation: conversationA })}</Activity>)
+    rerender(<Activity mode="visible">{ui({ conversation: conversationB })}</Activity>)
+    expect(screen.getByRole("heading", { level: 1, name: "Is Sonarr up?" })).toHaveFocus()
+
+    // The user moves on, the router hides the page and later shows it again with nothing new
+    act(() => input().focus())
+    rerender(<Activity mode="hidden">{ui({ conversation: conversationB })}</Activity>)
+    act(() => input().blur())
+    rerender(<Activity mode="visible">{ui({ conversation: conversationB })}</Activity>)
+
+    expect(screen.getByRole("heading", { level: 1, name: "Is Sonarr up?" })).not.toHaveFocus()
+  })
+
   it("closes the history sheet as the router hides the page, so it is closed on the way back", async () => {
     const user = userEvent.setup()
     const { rerender } = render(<Activity mode="visible">{ui({ history })}</Activity>)

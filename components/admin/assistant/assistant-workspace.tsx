@@ -97,9 +97,13 @@ export function AssistantWorkspace({
   }
 
   // A real effect: focus then moves to the title, which reads it out and leaves the message box next in the tab order
-  // rather than the rest of the history. A message box the user already went back to keeps focus
+  // rather than the rest of the history. A message box the user already went back to keeps focus. Only for a switch
+  // not handled yet: the effect runs again when the router shows the page it kept (and twice in StrictMode)
+  const handledOpens = useRef(chat.opens)
   useEffect(() => {
-    if (chat.opens > 0 && document.activeElement !== composer.current) heading.current?.focus()
+    if (chat.opens === handledOpens.current) return
+    handledOpens.current = chat.opens
+    if (document.activeElement !== composer.current) heading.current?.focus()
   }, [chat.opens])
 
   const ask = (question: string) => {
