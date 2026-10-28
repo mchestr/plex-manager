@@ -1,4 +1,4 @@
-# Node 24 LTS, pinned by digest; Dependabot's docker entry keeps tag and digest current.
+# Node 24 LTS, pinned by digest; Renovate keeps the digest current, and a Node major moves by hand.
 FROM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS base
 
 # Install dependencies only when needed
@@ -22,14 +22,6 @@ WORKDIR /opt/prisma-cli
 COPY docker/prisma-cli/package.json docker/prisma-cli/package-lock.json ./
 RUN npm ci --omit=dev --prefix /opt/prisma-cli && \
     npm cache clean --force
-
-# Dev stage with source code for docker-compose
-FROM base AS dev
-WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN npx prisma generate
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -89,7 +81,7 @@ COPY --from=prisma-cli /opt/prisma-cli /opt/prisma-cli
 # `node scripts/dist/register-discord-commands.cjs` (and -metadata.cjs)
 COPY --from=builder /app/scripts/dist ./scripts/dist
 
-COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --chmod=755 docker/entrypoint.sh ./docker-entrypoint.sh
 
 # The one writable path: Next's own cache (images, data cache) and Rewind's.
 RUN mkdir -p .next/cache/rewind && \

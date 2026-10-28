@@ -19,14 +19,16 @@ in [the environment reference](environment.md). Backups and upgrades are in
 
 ## What you need
 
-- A host with Docker Engine and the Compose plugin (or Node.js 22.9 or later
-  for [bare metal](#bare-metal); the image runs Node.js 24).
+- A host with Docker Engine and the Compose plugin (or, for
+  [bare metal](#bare-metal), Node.js 24 or a 22.x release from 22.13; the image
+  runs Node.js 24).
 - A host name, such as `plex.example.com`, pointing at the host, and a reverse
   proxy that terminates TLS. A production server refuses to start unless its
   URLs are https (see `ALLOW_INSECURE_HTTP` for a LAN-only install).
-- A Plex server. Jellyfin, Tautulli, Overseerr, Discord, Stripe and an LLM
-  provider are optional and configured in the setup wizard or later in Admin →
-  Settings.
+- A Plex server you own, and Tautulli: the setup wizard needs both.
+  Overseerr, Sonarr, Radarr, OpenAI (for the Rewind writer and the admin
+  assistant) and Discord are optional wizard steps; Jellyfin, Stripe and the
+  other AI providers are set up later in Admin → Settings.
 
 ## Install with Docker Compose
 
@@ -171,10 +173,26 @@ docker compose logs app | grep 'Setup code'
 
 Open `https://plex.example.com/setup`, enter the code, and follow the wizard: it
 connects your Plex server and the optional services, and the Plex server owner
-becomes the admin. Jellyfin is added afterwards in Admin → Settings. To use a
-fixed value instead of the printed code, set `SETUP_TOKEN` (at least 16
-characters, `openssl rand -hex 16`) in `.env` and restart; it stays valid while
-it is set, so remove it once setup is done.
+becomes the admin. The claim lasts 12 hours in that browser and ends when setup
+completes. Jellyfin is added afterwards in Admin → Settings. To use a fixed
+value instead of the printed code, set `SETUP_TOKEN` (at least 16 characters,
+`openssl rand -hex 16`) in `.env` and run `docker compose up -d` (a plain
+restart does not read `.env` again); it stays valid while it is set, so remove
+it once setup is done.
+
+In the wizard:
+
+- **Plex.** Choose **Connect with Plex** and approve Plex Manager on plex.tv
+  with the account that owns the server, then pick the server and the address
+  to use (a local one is fastest). Only servers that account owns can be
+  chosen. If the server is missing, or the browser cannot reach plex.tv, open
+  **Enter a token instead** and type the server URL (for example
+  `https://plex.example.com:32400`) and an X-Plex-Token.
+- **Tautulli** (URL such as `http://tautulli.example.com:8181`) is required.
+  Every other step has **Skip for now** and can be set up later in Admin →
+  Settings.
+- **Open admin** on the summary finishes setup and signs you in with the Plex
+  account you connected.
 
 ## Web and worker containers
 
@@ -189,7 +207,8 @@ or `all` container no jobs run. The roles and their trade-offs are in
 
 ## Bare metal
 
-Without Docker, run the app with Node.js 22.9 or later against your own
+Without Docker, run the app with Node.js 24 (or a 22.x release from 22.13)
+against your own
 PostgreSQL 16 and (recommended) Redis 7:
 
 ```bash

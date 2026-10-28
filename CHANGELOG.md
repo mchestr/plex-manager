@@ -12,7 +12,7 @@ the upgrade notes of every version you skip. `docs/releasing.md` describes how
 a release is cut, and `docs/operations.md` how to back up and restore.
 
 Pull requests add their lines under Unreleased. A pull request that touches
-`prisma/migrations/**`, `lib/env.ts`, `docker-entrypoint.sh`, `Dockerfile` or
+`prisma/migrations/**`, `lib/env.ts`, `docker/entrypoint.sh`, `Dockerfile` or
 `deploy/**`, or carries the `breaking` label, must add one (the Changelog
 check); the `no-changelog` label skips it.
 
@@ -29,11 +29,18 @@ check); the `no-changelog` label skips it.
 - **Secret re-encryption without Redis:** an install without Redis now re-encrypts stored secrets at boot, as installs with Redis already did through the queue. To move to a keyring or rotate a key, put the new key first in `ENCRYPTION_KEYS` and restart. Then wait for `secrets.reencrypted` in the log before you remove the old key (`docs/operations.md`, "Encryption keys").
 - **Watchlist sync has its own page:** Admin → Community → Watchlist sync (`/admin/watchlist`) now holds the watchlist sync switch and interval, which have left Settings. Under them are the figures and a table of every title members' watchlists have synced: the member, how its Overseerr request went and when, with a search by title or member, Status and Type filters, and sorting by title, member or date. It replaces the few recent titles the settings section listed, and opening it is audited as a listing of members' content.
 - **Plain text across the app:** the text on member, admin, setup, Rewind, help and Discord bot pages follows ASD-STE100 Simplified Technical English. Descriptions that repeated their heading are gone.
+- **A shorter README:** the README is now a short landing page in ASD-STE100 Simplified Technical English: what Plex Manager does, a Docker Compose install, the upgrade steps and a map of the guides. The development setup and checks moved to `.github/CONTRIBUTING.md`; the full upgrade procedure, the `db push` baseline commands and the notes from before 0.1.0 moved to `docs/operations.md`; the setup wizard steps moved to `docs/deployment.md`.
+- **Entrypoint in `docker/`:** the image's entrypoint script moved from `docker-entrypoint.sh` to `docker/entrypoint.sh` in the repository. The image still runs it as `/app/docker-entrypoint.sh`, so a custom `entrypoint:` keeps working.
+- **Node.js floor:** `engines.node` is now `^22.13.0 || >=24`, the versions that Prisma 7 and ESLint 10 support. The docs said 22.9, where `npm ci` fails in Prisma's preinstall. The image and CI already run Node.js 24.
+- **Repository root:** the Renovate config moved to `.github/renovate.json` and the integration-test helper to `__tests__/helpers/integration.ts`. `.mise.toml` now pins only Node.js; its tasks repeated the npm scripts, and `mise run setup` still used `db:push`.
 
 ### Removed
 
 - The **Security** section of Admin > Settings, with **Encrypt stored secrets** and **Check service rows**. Boot re-encrypts stored secrets. Each service's section still asks again for a key that the app cannot read. `npm run services:rows-audit` and `services:rows-apply` still find and fix a service with more than one active row.
 - The **Privacy** card on Help. Account, Your data, still tells members what admins can see.
+- The planning documents under `.agents/planning/` (about 12 MB of plans, mockups and fonts). Git history keeps them: read them at tag `v0.6.0`.
+- The Dockerfile's `dev` stage. Nothing built it, and it could not build without a `DATABASE_URL`.
+- The finished one-off codemods and their npm scripts: `codemod:spinners`, `codemod:icons` and `codemod:adapters`, and the barrel-import and framer-motion codemods. `codemod:tokens` stays.
 
 ### Upgrade notes
 
@@ -222,7 +229,7 @@ The 2026 refresh from Phase 1 to Phase 11 wave 1, by milestone: baselines and CI
 ### Upgrade notes
 
 - Take a `pg_dump -Fc` before you start the new release, and keep it off the host. This release carries many migrations, among them one that adds `AuditLog`, one that versions sessions and the Rewind v3 tables. Check afterwards that `npx prisma migrate status` reports the schema is up to date.
-- **Migrations:** `npm run db:deploy` (`prisma migrate deploy`) is the only install and upgrade command; `db:push` and `db:migrate` are contributor-only. The image logs `prisma migrate status` and then applies migrations at every start; set `SKIP_MIGRATIONS=true` to apply them by hand. An install whose schema was created with `db push` must be baselined on the old release first (README, "Installed with `db push`?").
+- **Migrations:** `npm run db:deploy` (`prisma migrate deploy`) is the only install and upgrade command; `db:push` and `db:migrate` are contributor-only. The image logs `prisma migrate status` and then applies migrations at every start; set `SKIP_MIGRATIONS=true` to apply them by hand. An install whose schema was created with `db push` must be baselined on the old release first (`docs/operations.md`, "Installed with db push").
 - **Boot refusal:** a production server now exits with code 1, logging `env.invalid` and the variable's name, when `NEXTAUTH_SECRET` is missing, shorter than 32 characters, has fewer than 10 distinct characters or is a published placeholder; when `NEXTAUTH_URL` or `NEXT_PUBLIC_APP_URL` is not `https:` (loopback excepted; `ALLOW_INSECURE_HTTP=true` for a LAN-only install); or when `PLEX_CLIENT_IDENTIFIER` is empty. Check these before you pull.
 - **Compose:** `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required, Postgres and Redis publish on `127.0.0.1` only, and the database moves from Postgres 15 to 16. Postgres 16 cannot open a 15 data directory: dump the `db` volume while it still runs 15, remove the volume, start the new one and restore the dump. A volume created before this change keeps its old password (`postgres`).
 - **Image:** Node.js 24 under `tini` as the unprivileged `nextjs` user, with read-only app files. The one writable path is `/app/.next/cache` (Next's cache and Rewind's posters, cards and fonts); mount a volume there to keep it. The `HEALTHCHECK` calls `/api/health?probe=live`, and `GET /api/health` checks the database and Redis.
@@ -259,7 +266,7 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 
 ### Upgrade notes
 
-- Take an encrypted `pg_dump` before you start the new release: a migration clears the stored emails of Jellyfin-only members and cannot be undone. Before deploying, list the accounts that hold both a Plex and a Jellyfin id and review them (README, "Upgrading to the release that stops email linking").
+- Take an encrypted `pg_dump` before you start the new release: a migration clears the stored emails of Jellyfin-only members and cannot be undone. Before deploying, list the accounts that hold both a Plex and a Jellyfin id and review them (`docs/operations.md`, "Upgrade notes from before 0.1.0").
 - **Proxies:** with more than one proxy in front of the app, set `TRUSTED_PROXY_HOPS` (default 1). `docker-compose.yml` publishes the app on `127.0.0.1:3000` only.
 - **Test and dev settings:** test tokens need `E2E_TEST_MODE=true` and the setup prefill needs `DEV_SETUP_PREFILL`; never set either on a public host. E2E refuses a database whose name does not end in `_test`.
 - **Sharing:** share links are opt-in. After deploying, run `npm run rewind:strip-leaderboards` as a dry run, then with `--apply`, then once more to confirm zero changes. A share token that is not 43 URL-safe characters stops resolving.

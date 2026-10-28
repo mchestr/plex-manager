@@ -12,7 +12,7 @@
 
 import { randomBytes, randomUUID } from 'node:crypto'
 
-import { describePg } from '@/test/helpers/integration'
+import { describePg } from '@/__tests__/helpers/integration'
 
 const RUN = `assistant-${randomUUID()}`
 

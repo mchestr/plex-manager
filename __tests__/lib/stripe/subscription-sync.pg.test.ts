@@ -8,7 +8,7 @@
  * into ACTIVE is reported only from UNPAID, CANCELED or INCOMPLETE, and two
  * concurrent writes of the same transition report it once.
  *
- * Gated by `describePg` (test/helpers/integration.ts) and run only by
+ * Gated by `describePg` (__tests__/helpers/integration.ts) and run only by
  * `npm run test:integration`. The suite only touches rows whose user id
  * starts with its own run prefix.
  */
@@ -18,7 +18,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 
 import { applySubscriptionState, type LiveSubscriptionState } from '@/lib/stripe/subscription-sync'
 import { PrismaClient, SubscriptionStatus } from '@/lib/generated/prisma/client'
-import { describePg } from '@/test/helpers/integration'
+import { describePg } from '@/__tests__/helpers/integration'
 
 let mockDb: PrismaClient | null = null
 jest.mock('@/lib/prisma', () => ({

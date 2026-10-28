@@ -23,7 +23,7 @@ checks this table against the folders.
 
 These four are written in this repository (P11.27), not vendored, so they have
 no upstream pin and fall under the repository's own `LICENSE`. They point at
-the code and design sections they describe instead of copying values, and
+the source files they describe instead of copying values, and
 `scripts/__tests__/project-skills.test.ts` fails when a path, export, npm
 script or Playwright project they name stops existing. Update the skill in the
 same pull request as the code it describes.
@@ -41,10 +41,9 @@ archives is vendored.
 
 ## Notes on fit
 
-- **`accessibility-review` targets WCAG 2.1 AA.** The project bar is WCAG 2.2 AA
-  (section 8 of
-  `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/ui-design-system.md`). When using the skill, also check the 2.2
-  criteria it leaves out: 2.4.11 Focus Not Obscured, 2.5.7 Dragging Movements,
+- **`accessibility-review` targets WCAG 2.1 AA.** The project bar is WCAG 2.2 AA.
+  When using the skill, also check the 2.2 criteria it leaves out: 2.4.11
+  Focus Not Obscured, 2.5.7 Dragging Movements,
   2.5.8 Target Size (Minimum), 3.2.6 Consistent Help, 3.3.7 Redundant Entry and
   3.3.8 Accessible Authentication. The skill is not patched for this.
 - **`motion` is written for the `motion` package.** Its rule "never import from

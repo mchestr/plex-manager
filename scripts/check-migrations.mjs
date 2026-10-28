@@ -7,7 +7,8 @@
  *
  * Create a migration with
  * `npx prisma migrate dev --create-only --name <descriptive_name>` against a
- * `_test` database; never hand-type its timestamp.
+ * `_test` database. Raise its timestamp only when it does not sort after the
+ * newest folder; some folders carry January 2027 plan dates.
  */
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs'

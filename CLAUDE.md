@@ -87,7 +87,7 @@ lib/                    # Utilities, helpers, business logic
 ├── invites/           # Invite passes and redemption (Plex and Jellyfin)
 ├── llm/               # LLM facade (generateStructured, chatWithTools), provider registry, model table, usage
 ├── locks/             # LeaseLock and LeasePoller (database or Redis leases)
-├── members/           # Member service rule, access grant/revoke, offboarding, erase and export
+├── members/           # Member service rule, access grant/revoke, offboarding and erase
 ├── permissions/       # Roles and permissions: isAdmin superuser, the Support role, hasPermission (docs/roles.md)
 ├── observability/     # Request id reader, /api/metrics sources and the Prometheus text writer
 ├── og/                # App icons and the default OG card (next/og)
@@ -356,7 +356,7 @@ describe('Component', () => {
 - Run tests: `npm test` (unit), `npm run test:e2e` (E2E)
 - Type-check app and tests: `npm run typecheck` (`tsconfig.json`, which also covers `e2e/`, then `tsconfig.test.json` for the Jest files)
 - Unused code: `npm run knip` (production mode; it is a CI gate)
-- **Integration suites** - A Postgres-backed test is `*.pg.test.ts` and wraps its body in `describePg`; a Redis-backed one is `*.redis.test.ts` with `describeRedis` (both in `test/helpers/integration.ts`). `npm test` leaves them out; `TEST_DATABASE_URL=... TEST_REDIS_URL=redis://localhost:6379/0 npm run test:integration` runs them serially. Locally a missing variable skips them; under `CI` it fails them
+- **Integration suites** - A Postgres-backed test is `*.pg.test.ts` and wraps its body in `describePg`; a Redis-backed one is `*.redis.test.ts` with `describeRedis` (both in `__tests__/helpers/integration.ts`). `npm test` leaves them out; `TEST_DATABASE_URL=... TEST_REDIS_URL=redis://localhost:6379/0 npm run test:integration` runs them serially. Locally a missing variable skips them; under `CI` it fails them
 - **Coverage ratchet** - Jest fails below the floors in `jest.coverage-thresholds.json`. After raising coverage, run `npm run test:coverage` then `node scripts/coverage-ratchet.mjs --update`, which only ever raises floors. CI's unit run sets `DATABASE_URL=""`: `prisma` from `@/lib/prisma` builds its client on first use, so a test that imports it without the shared mock fails rather than reaching a database
 - **Throwaway Postgres** - For a production-mode E2E run on a fresh database: `docker run --rm -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=plex_manager_e2e_test -p 5433:5432 postgres:16`, then point `E2E_DATABASE_URL` at it and run `prisma migrate deploy`
 
@@ -366,7 +366,7 @@ describe('Component', () => {
 
 Other workflows: `freeze-gate.yml` fails a pull request while the `CODE_FREEZE` repository variable is `on`, unless it carries `freeze:data` or `freeze:security` (`docs/operations.md`, "Code freeze gate"); `docker-publish.yml` publishes the image from `main` and `v*` tags.
 
-The Changelog check (`.github/workflows/changelog.yml`) fails a pull request that touches `prisma/migrations/**`, `lib/env.ts`, `docker-entrypoint.sh`, `Dockerfile` or `deploy/**`, or carries the `breaking` label, without a line under Unreleased in `CHANGELOG.md` (put operator steps under "Upgrade notes"); the `no-changelog` label skips it. A `v*` tag publishes the versioned image and, through `.github/workflows/release.yml`, the GitHub Release; see `docs/releasing.md`.
+The Changelog check (`.github/workflows/changelog.yml`) fails a pull request that touches `prisma/migrations/**`, `lib/env.ts`, `docker/entrypoint.sh`, `Dockerfile` or `deploy/**`, or carries the `breaking` label, without a line under Unreleased in `CHANGELOG.md` (put operator steps under "Upgrade notes"); the `no-changelog` label skips it. A `v*` tag publishes the versioned image and, through `.github/workflows/release.yml`, the GitHub Release; see `docs/releasing.md`.
 
 ## JSDoc Documentation Strategy
 
@@ -476,7 +476,7 @@ npm run db:studio      # Open database GUI
 ```
 
 #### Creating a migration
-- Create it with `npx prisma migrate dev --create-only --name <descriptive_name>` against a database whose name ends in `_test`, review the generated `migration.sql`, then apply it with `npm run db:deploy`. Never hand-type a timestamp or rename a folder, and never edit a merged migration.
+- Create it with `npx prisma migrate dev --create-only --name <descriptive_name>` against a database whose name ends in `_test`, review the generated `migration.sql`, then apply it with `npm run db:deploy`. If Prisma's timestamp does not sort after the newest folder (22 folders carry January 2027 plan dates), raise it in the folder name before you apply it. Never edit a merged migration.
 - `node scripts/check-migrations.mjs` (in CI's Schema Drift job) checks every folder not listed in `prisma/migrations/.legacy-names.json`: a 14-digit timestamp later than every earlier folder's and not in the future, at least two lowercase words (`add_member_export`, not `latest` or `fix_changes`), and a `migration.sql`. Never add a folder to that list.
 - Schema Drift also runs `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code` against a migrated database: a schema change without its migration fails.
 - `20250101000000_init` is a retroactive baseline: an install made with `prisma db push` marks every folder applied with `npx prisma migrate resolve --applied <name>` (`docs/operations.md`, "Installed with db push").
@@ -950,7 +950,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - Where a skill's advice conflicts with this file (for example SWR instead of TanStack Query, or throwing from Server Actions), this file wins.
 - Shell execution from skills is off (`disableSkillShellExecution` in `.claude/settings.json`).
 - `.claude/skills/THIRD_PARTY.md` records each skill's source, SHA or npm version, licence, review and local changes, and the update procedure: review the upstream diff at a new SHA, copy, record. Never run `npx skills add` or `npx skills update` here.
-- The project-authored skills point at source files and design sections instead of copying values; `scripts/__tests__/project-skills.test.ts` fails when a path, export, npm script or Playwright project they name disappears, so update the skill in the same PR as the code it describes.
+- The project-authored skills point at source files instead of copying values; `scripts/__tests__/project-skills.test.ts` fails when a path, export, npm script or Playwright project they name disappears, so update the skill in the same PR as the code it describes.
 - Any change to `.claude/skills/**` or `.mcp.json` needs a `/security-review` before merge.
 
 ## Additional Resources
@@ -962,8 +962,10 @@ The project includes custom slash commands in `.claude/commands/`:
 - Deployment, environment variables and moving hosts: See `docs/deployment.md`, `docs/environment.md` and `docs/domain-move.md`
 - Operations (backup, restore, upgrades, encryption keys, worker containers, metrics): See `docs/operations.md`
 - Roles and permissions (Support role, assistant tool gate): See `docs/roles.md`
-- Privacy (personal data inventory, member removal, export, retention): See `docs/privacy.md`
+- Privacy (personal data inventory, member removal, retention): See `docs/privacy.md`
 - Releases and the changelog: See `docs/releasing.md` and `CHANGELOG.md`
 - Rewind season runbook (flags, season open, roll back, season close): See `docs/rewind.md`
 - Performance Testing: See `docs/performance-testing.md`
 - Project README: See `README.md`
+- Contributing (development setup, checks, pull requests): See `.github/CONTRIBUTING.md`
+- Removed planning documents (the plans, the Rewind 2026 and UI design documents, the mockups): comments cite them by step (`P11.26`), section (`design 6.2`, `ui-design-system 9.3`) or file name. Read them at tag `v0.6.0` under `.agents/planning/`

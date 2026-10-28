@@ -183,11 +183,12 @@ describe("the committed CHANGELOG.md", () => {
 
   it("is explained in the README: pinning, the changelog and rolling back", () => {
     const readme = readFileSync(path.join(ROOT, "README.md"), "utf8")
-    const start = readme.indexOf("### Versions and upgrades")
-    const section = readme.slice(start, readme.indexOf("\n### ", start + 1))
+    const start = readme.indexOf("\n## Upgrade\n")
+    const section = readme.slice(start, readme.indexOf("\n## ", start + 1))
     expect(start).toBeGreaterThan(-1)
-    expect(section).toContain(":latest` tracks `main`")
+    expect(section).toContain("Use a release tag in production")
+    expect(section).toMatch(/`latest` tag is the newest build of `main`/)
     expect(section).toContain("CHANGELOG.md")
-    expect(section).toMatch(/Rolling back means restoring the dump/)
+    expect(section).toMatch(/restore the dump/)
   })
 })

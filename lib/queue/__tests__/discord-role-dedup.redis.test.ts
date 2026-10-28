@@ -15,7 +15,7 @@ import type Redis from "ioredis"
 import { roleSyncJobOptions } from "@/lib/discord/role-sync"
 import { createFailFastRedis, readyWithin } from "@/lib/queue/connection"
 import { JOB_TYPES } from "@/lib/queue/types"
-import { describeRedis } from "@/test/helpers/integration"
+import { describeRedis } from "@/__tests__/helpers/integration"
 
 jest.mock("@/lib/discord/integration", () => ({
   getDiscordIntegration: jest.fn(),

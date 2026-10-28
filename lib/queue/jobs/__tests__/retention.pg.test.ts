@@ -18,7 +18,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 
 import { PrismaClient } from "@/lib/generated/prisma/client"
 import { runRetentionSweep } from "@/lib/queue/jobs/retention"
-import { describePg } from "@/test/helpers/integration"
+import { describePg } from "@/__tests__/helpers/integration"
 
 let mockDb: PrismaClient
 jest.mock("@/lib/prisma", () => ({

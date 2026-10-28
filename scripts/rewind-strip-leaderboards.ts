@@ -27,8 +27,12 @@
  * - Run --apply soon after the release, before admins regenerate Rewinds:
  *   nothing records which tokens a member turned on, so an auto-minted token
  *   on a Rewind written after --opt-in-since (an admin regeneration, a retry
- *   of a failed row, a playground save) is kept. The P0.20 operator path in
- *   the plan has the query that lists them for a hand check.
+ *   of a failed row, a playground save) is kept. Before --apply, list them
+ *   (SELECT id, "userId", year, "updatedAt" FROM "PlexWrapped" WHERE
+ *   "shareToken" IS NOT NULL AND "updatedAt" >= '<opt-in-since>' AND NOT EXISTS
+ *   (SELECT 1 FROM "WrappedShareVisit" v WHERE v."wrappedId" = "PlexWrapped".id))
+ *   and compare them with the SHARE_LINK_CREATED audit lines in the server
+ *   logs; null any token without one by hand.
  * - Take an encrypted dump (it holds the rosters being purged), run --apply,
  *   then a dry run that shows zeros.
  *

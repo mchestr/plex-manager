@@ -21,7 +21,7 @@ import { PrismaClient } from '@/lib/generated/prisma/client'
 import { revokeServiceAccess } from '@/lib/members/access-actions'
 import { eraseMember } from '@/lib/members/erase'
 import { cancelStripeSubscription } from '@/lib/members/erase-external'
-import { describePg } from '@/test/helpers/integration'
+import { describePg } from '@/__tests__/helpers/integration'
 
 let mockDb: PrismaClient
 jest.mock('@/lib/prisma', () => ({

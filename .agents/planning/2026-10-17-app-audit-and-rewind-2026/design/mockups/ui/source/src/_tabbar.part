@@ -1,7 +1,0 @@
-  <nav class="tabbar" aria-label="Admin sections">
-    <a href="#">{{i:layout-dashboard:i-20}}<span>Overview</span></a>
-    <a href="#" class="%T_USERS%" %T_USERS_CUR%>{{i:users:i-20}}<span>Users</span></a>
-    <a href="#">{{i:rewind:i-20}}<span>Rewind</span></a>
-    <a href="#" class="%T_SETTINGS%" %T_SETTINGS_CUR%>{{i:settings:i-20}}<span>Settings</span></a>
-    <a href="#" aria-label="More, 2 failed jobs">{{i:ellipsis:i-20}}<span>More</span><i class="tb-dot" aria-hidden="true"></i></a>
-  </nav>

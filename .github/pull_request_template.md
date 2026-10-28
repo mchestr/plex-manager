@@ -1,10 +1,10 @@
 ## Summary
 
-<!-- What this changes and why. Link the issue and the plan step id. -->
+<!-- What this changes and why. Link the issue. -->
 
 ## Checklist
 
-- [ ] Matches the reference mockup or the components sheet; visual diff attached
+- [ ] Matches the components sheet (`/dev/ui`); visual diff attached
 - [ ] `npm run design:check` passes; any new allowlist entry in `scripts/design-system/allowlist.mjs` says why
 - [ ] New interactive elements have a `data-testid`
 - [ ] Golden snapshot changes reviewed by the owner (`evals/rewind/fixtures/**`, `evals/rewind/profiles/**`, `evals/rewind/__tests__/__snapshots__/**`)

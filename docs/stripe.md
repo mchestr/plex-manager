@@ -386,7 +386,7 @@ See the Job Queue section of `example.env` for details. There is intentionally n
 
 ## Build-Time Open Items
 
-These were flagged during design (`design/detailed-design.md` §8.4) and should be
+These were flagged during design and should be
 re-verified against the **installed** `stripe` SDK:
 
 1. **SDK version / `apiVersion`.** `lib/stripe/client.ts` intentionally does

@@ -6,7 +6,7 @@
  * `recordAuditEvent` against a real PostgreSQL (P4.6, SEC-55): rows land in the
  * order they were written, with sanitised JSON details.
  *
- * Gated by `describePg` (test/helpers/integration.ts) and run only by
+ * Gated by `describePg` (__tests__/helpers/integration.ts) and run only by
  * `npm run test:integration`. The database needs the app's migrations applied.
  * The suite only touches `AuditLog` rows whose actor is its own run id.
  *
@@ -18,7 +18,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 
 import { PrismaClient } from "@/lib/generated/prisma/client"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
-import { describePg } from "@/test/helpers/integration"
+import { describePg } from "@/__tests__/helpers/integration"
 
 const RUN = `p46-${randomUUID()}`
 

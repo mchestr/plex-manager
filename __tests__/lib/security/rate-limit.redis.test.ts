@@ -4,7 +4,7 @@
 
 /**
  * Redis-backed tests for lib/security/rate-limit.ts, run against the server in
- * TEST_REDIS_URL. Gated by `describeRedis` (test/helpers/integration.ts) and
+ * TEST_REDIS_URL. Gated by `describeRedis` (__tests__/helpers/integration.ts) and
  * run only by `npm run test:integration`.
  *
  * Two copies of the module stand in for two app processes on one Redis.
@@ -13,7 +13,7 @@
 import { randomInt, randomUUID } from "node:crypto"
 import type Redis from "ioredis"
 
-import { describeRedis } from "@/test/helpers/integration"
+import { describeRedis } from "@/__tests__/helpers/integration"
 
 type RateLimitModule = typeof import("@/lib/security/rate-limit")
 

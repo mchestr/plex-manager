@@ -1,6 +1,6 @@
 # Privacy: personal data and member removal
 
-This is the inventory of the personal data Plex Manager stores, and what happens to each piece when an admin removes a member. It updates the October 2026 audit's inventory (`.agents/planning/2026-10-17-app-audit-and-rewind-2026/research/additional-findings.md`, "Privacy: personal-data inventory") for the Rewind 2026 (v3) models and every column added since.
+This is the inventory of the personal data Plex Manager stores, and what happens to each piece when an admin removes a member.
 
 The inventory drives member removal (`lib/members/erase.ts`) and the retention jobs. A test (`__tests__/docs/privacy-inventory.test.ts`) fails when a model in `prisma/schema.prisma` is missing from the tables below, so a new table or personal-data column updates this file in the same pull request.
 
@@ -65,7 +65,7 @@ A daily sweep (`lib/queue/jobs/retention.ts`) removes personal data once it is o
 
 | Data | Kept for | Then | Variable |
 |---|---|---|---|
-| Rewind AI text (`LLMUsage` rows with no conversation, or tied to a Rewind) | 120 days | `prompt` and `response` set to null; tokens, cost and model kept (design 7.10) | `RETENTION_REWIND_LLM_TEXT_DAYS` |
+| Rewind AI text (`LLMUsage` rows with no conversation, or tied to a Rewind) | 120 days | `prompt` and `response` set to null; tokens, cost and model kept | `RETENTION_REWIND_LLM_TEXT_DAYS` |
 | Assistant AI text (`LLMUsage` rows in a conversation) | 90 days | `prompt` and `response` set to null; tokens, cost and model kept | `RETENTION_ASSISTANT_LLM_TEXT_DAYS` |
 | Assistant page history (`ChatConversation.title`, `ChatConversationMessage`) | 90 days after its last message, or after it started when no turn was stored (a first reply that failed, or a side-panel conversation from before the page) | Messages and title removed, and the conversation ended | `RETENTION_ASSISTANT_CHAT_DAYS` |
 | Assistant conversations (`ChatConversation`) | 180 days after it ends | Deleted; its `LLMUsage` rows keep their cost without the link, and its Discord sessions go with it. A conversation ends on an idle or manual reset, when its Discord session is deleted, when it is deleted from the assistant page or idle there past its window, or, for an assistant page conversation, when its owner stops being an admin | `RETENTION_CHAT_CONVERSATION_DAYS` |
@@ -73,12 +73,12 @@ A daily sweep (`lib/queue/jobs/retention.ts`) removes personal data once it is o
 | Discord chat sessions (`DiscordChatSession`) | 30 idle days | Deleted, and its conversation ended | `RETENTION_DISCORD_CHAT_SESSION_DAYS` |
 | Discord command arguments (`DiscordCommandLog.commandArgs`) | 7 days | `commandArgs` set to null | `RETENTION_DISCORD_COMMAND_ARGS_DAYS` |
 | Discord command log (`DiscordCommandLog`) | 90 days | Deleted | `RETENTION_DISCORD_COMMAND_LOG_DAYS` |
-| Share-link visit counts (`RewindShareVisitDay`) | 90 days | Deleted (design 6.2) | `RETENTION_SHARE_VISITS_DAYS` |
-| Rewind reading records (`RewindView`) | 120 days | Deleted (design 7.10) | `RETENTION_REWIND_VIEW_DAYS` |
+| Share-link visit counts (`RewindShareVisitDay`) | 90 days | Deleted | `RETENTION_SHARE_VISITS_DAYS` |
+| Rewind reading records (`RewindView`) | 120 days | Deleted | `RETENTION_REWIND_VIEW_DAYS` |
 | Titles removed from a watchlist (`WatchlistSyncHistory`) | 30 days after the sync saw them gone | Deleted. A complete watchlist read marks missing titles `REMOVED_FROM_WATCHLIST`; other rows stay while the member has sync | `RETENTION_WATCHLIST_REMOVED_DAYS` |
 | Discord link attempts (`DiscordOAuthState`) | 1 day after it expires | Deleted | `RETENTION_DISCORD_OAUTH_STATE_DAYS` |
 | Parked Discord searches (`DiscordPendingSelection`) | until it expires | Deleted | none |
-| Replaced Rewinds (`RewindGeneration.previousData`) | until 30 June after its season (2026's until 2027-06-30) | Set to null; the one rollback is then gone (design 7.9) | none |
+| Replaced Rewinds (`RewindGeneration.previousData`) | until 30 June after its season (2026's until 2027-06-30) | Set to null; the one rollback is then gone | none |
 | Audit log (`AuditLog`) | 400 days | Deleted; this is the only way audit rows are removed | `RETENTION_AUDIT_LOG_DAYS` |
 
 Every other row in the member tables below is kept while the member is, and goes when they are removed. `WrappedShareVisit` (v2 share visits) is deleted with its Rewind. Server logs are kept for as long as the operator's log rotation keeps them.

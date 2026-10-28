@@ -28,7 +28,7 @@ must do under `### Upgrade notes`. That block always starts with "Take a
 
 The **Changelog** check (`.github/workflows/changelog.yml`, rules in
 `scripts/release/changelog.mjs`) fails a pull request that touches
-`prisma/migrations/**`, `lib/env.ts`, `docker-entrypoint.sh`, `Dockerfile` or
+`prisma/migrations/**`, `lib/env.ts`, `docker/entrypoint.sh`, `Dockerfile` or
 `deploy/**`, or carries the `breaking` label, and adds no line under
 Unreleased. The `no-changelog` label skips it. Run it locally with
 `node scripts/check-changelog.mjs --base origin/main --head HEAD`.
@@ -76,5 +76,5 @@ prerelease `v0.0.1-test` and the image `ghcr.io/<fork owner>/plex-manager:0.0.1-
 
 Prisma has no down migrations. To roll back an upgrade, stop the app, restore
 the dump taken before it (`docs/operations.md`, "Restore"), and start the
-previous version's tag, never `latest`. The README's "Upgrading" checklist has
-the full upgrade path.
+previous version's tag, never `latest`. [Operations](operations.md#roll-back)
+has the exact steps.

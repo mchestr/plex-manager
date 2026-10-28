@@ -11,7 +11,7 @@ import { randomUUID } from "node:crypto"
 import Redis from "ioredis"
 
 import { recordShareVisit } from "@/lib/wrapped/share/visit-counter"
-import { describeRedis } from "@/test/helpers/integration"
+import { describeRedis } from "@/__tests__/helpers/integration"
 
 // The counter takes its writer as a dependency; the real client is never used here.
 jest.mock("@/lib/prisma", () => ({ prisma: {} }))

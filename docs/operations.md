@@ -15,10 +15,12 @@ Installing is in [deployment](deployment.md), every variable is in the
 - [Restore](#restore)
 - [Dump before every migration](#dump-before-every-migration)
 - [Applying migrations](#applying-migrations)
+- [Upgrade](#upgrade)
 - [Web and worker containers](#web-and-worker-containers)
 - [Migration calendar for the 2026 season](#migration-calendar-for-the-2026-season)
 - [Code freeze gate](#code-freeze-gate)
 - [Installed with db push](#installed-with-db-push)
+- [Upgrade notes from before 0.1.0](#upgrade-notes-from-before-010)
 - [Request IDs and metrics](#request-ids-and-metrics)
 - [Security headers and CSP](#security-headers-and-csp)
 - [Locale](#locale)
@@ -67,7 +69,9 @@ A dump holds every member's data and the encrypted secrets, so:
 
 Restoring replaces the database with the dump, including Prisma's
 `_prisma_migrations` table, so `prisma migrate status` afterwards shows the
-state at dump time. Decrypt the dump first (`age -d` or `gpg -d`).
+state at dump time. Decrypt the dump first (`age -d` or `gpg -d`). To roll
+back an upgrade, follow [Roll back](#roll-back) instead: the last command below
+starts the newer release again, and it applies its migrations again at start.
 
 ```bash
 docker compose stop app
@@ -86,10 +90,7 @@ worker or replica).
 Outside compose, with the app stopped, connect to any other database on the
 server: `pg_restore -d postgresql://user:password@host:5432/postgres --clean --if-exists --create --no-owner plex-manager-….dump`.
 
-If you are rolling back an upgrade, start the **previous** release's image tag
-(`CHANGELOG.md` lists them; see `docs/releasing.md`): the new one would apply
-its migrations again at start. To start any release without
-applying migrations, set `SKIP_MIGRATIONS=true`.
+To start any release without applying migrations, set `SKIP_MIGRATIONS=true`.
 
 ## Dump before every migration
 
@@ -131,6 +132,46 @@ Use `SKIP_MIGRATIONS=true`:
 
 Afterwards, `npx prisma migrate status` must report "Database schema is up to
 date!".
+
+## Upgrade
+
+Pin a release in production: set `PLEX_MANAGER_VERSION` in `.env`, or use a
+version tag such as `:0.6.0`. The `latest` tag follows `main` and changes with
+every merge. For every upgrade:
+
+1. **Take a dump** ([Backup](#backup)), encrypt it and keep it off the host.
+   Prisma has no down migrations, so the dump is the only way back.
+2. **Read the upgrade notes** in `CHANGELOG.md` for every version you move
+   past, and the [notes from before 0.1.0](#upgrade-notes-from-before-010)
+   when you start from a release older than that. If the schema was made with
+   `npm run db:push`, first do [Installed with db push](#installed-with-db-push)
+   on the old release.
+3. **Get the new release.** With Compose, set the new `PLEX_MANAGER_VERSION`
+   and run `docker compose pull && docker compose up -d`. From a checkout,
+   check out the new tag, then run `npm ci` and `npm run build`.
+4. **Apply migrations.** The container applies them at start
+   ([Applying migrations](#applying-migrations)). Outside Docker, run
+   `npm run db:deploy`, then restart the app (`npm run start:prod` under your
+   service manager).
+5. **Check the app.** Sign in, and check that `/api/health` answers 200 with
+   `"database":"ok"` and `"redis":"ok"`. `docker compose ps` shows the app
+   `(healthy)`.
+
+### Roll back
+
+Prisma has no down migrations, so rolling back means the dump taken before the
+upgrade and the previous release's tag (`CHANGELOG.md` lists them):
+
+1. Stop the app, and every worker or replica: `docker compose stop app`.
+2. Set `PLEX_MANAGER_VERSION` in `.env` to the previous release.
+3. Restore the dump with the `pg_restore` line of [Restore](#restore). Leave out
+   its last line, `docker compose start app`.
+4. Start the previous release: `docker compose up -d`.
+
+Never use `docker compose start app` here: it starts the container of the newer
+release, which applies its migrations to the restored database again. Outside
+Docker, check out the previous tag, run `npm ci` and `npm run build`, restore
+the dump, then start the app.
 
 ## Web and worker containers
 
@@ -192,8 +233,8 @@ throwaway pull requests, then set it back to `off` and close them unmerged:
 | The same change, labelled `freeze:data` | Passes |
 | A change only under `.agents/planning/`, no label | Passes |
 
-Record the three run ids in
-`.agents/planning/2026-10-17-app-audit-and-rewind-2026/implementation/ship-check.md`.
+Record the three run ids in `ship-check.md`, which the owner keeps outside the
+repository (see the [Rewind runbook](rewind.md)).
 
 At 00:00 server time on 2026-12-14, set `CODE_FREEZE` to `on`. Changing the
 variable does not re-run the checks of pull requests that are already open, so
@@ -217,17 +258,48 @@ An install made with `npm run db:push` (now contributor-only) has no migration
 history, and `db:deploy` would fail on tables that already exist. Baseline it
 once, on the old release before upgrading, after a dump:
 
-1. `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`
-   must exit 0 (no difference). If it does not, stop: the database has drifted.
-2. `npx prisma migrate resolve --applied <name>` for each folder in
-   `prisma/migrations`.
-3. Only if Stripe was never enabled, run the exempt-all `UPDATE` from
-   `20260703000000_add_stripe_subscriptions` through `npx prisma db execute --stdin`
-   (see [stripe.md](stripe.md#exempting-existing-members)).
+1. Check that the database matches the old release's schema. This must exit 0
+   and report no difference:
+   ```bash
+   npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+   ```
+   If it reports a difference, stop: the database has drifted, and marking
+   migrations applied would hide that.
+2. Mark every folder in `prisma/migrations` as applied:
+   ```bash
+   for dir in prisma/migrations/*/; do npx prisma migrate resolve --applied "$(basename "$dir")"; done
+   ```
+3. Only if Stripe subscriptions were **never** enabled, run the exempt-all
+   update from `20260703000000_add_stripe_subscriptions`, which `db push`
+   skipped (see [stripe.md](stripe.md#exempting-existing-members)):
+   ```bash
+   echo "UPDATE \"User\" SET \"isExempt\" = true;" | npx prisma db execute --stdin
+   ```
 
-The README's [Installed with `db push`?](../README.md#installed-with-db-push)
-section has the exact commands. The new release's migrations then apply
-normally.
+Then [upgrade](#upgrade) as usual. The new release's migrations, including
+their data steps, apply normally.
+
+## Upgrade notes from before 0.1.0
+
+These came with the 0.1.0 release (`CHANGELOG.md`). Read them when you upgrade an
+install from a release before it.
+
+- **Upgrading to a release with `TRUSTED_PROXY_HOPS`**: earlier releases keyed rate limits on the leftmost `X-Forwarded-For` entry, which the client controls; the app now reads the entry the outermost trusted proxy wrote. Check `TRUSTED_PROXY_HOPS` against your proxy chain when you upgrade (see `example.env`). Behind a CDN and a proxy, leaving it at `1` keys every visitor by the CDN's edge address, so visitors who share an edge share the sign-in, invite, share-page and poster limits and get false "Too many attempts" errors.
+- **Upgrading to the release that stops email linking**: earlier releases linked a Jellyfin sign-in to any account whose email matched the Jellyfin username, so a Jellyfin user could take over an account, the admin's included, by renaming themselves to its email. The upgrade keeps those links, and the sessions they produced, so every server that allowed Jellyfin sign-in should check them:
+  1. Take a database dump before deploying, and store it encrypted. The release runs a migration that clears data and cannot be undone.
+  2. Before deploying, list the accounts that hold both a Plex and a Jellyfin ID, and keep the output. Each row is a link an earlier release made by email: either a Jellyfin sign-in onto a Plex account, which the server logs record as "Linked Jellyfin account to existing user" with the Jellyfin username, or a Plex invite redeemed onto a Jellyfin account, which was not logged.
+     ```sql
+     SELECT id, name, email, "isAdmin", "plexUserId", "jellyfinUserId" FROM "User" WHERE "jellyfinUserId" IS NOT NULL AND "plexUserId" IS NOT NULL;
+     ```
+  3. For each row whose Jellyfin account you do not recognise as that member's own, remove the link and the email it may have written: `UPDATE "User" SET "jellyfinUserId" = NULL, "email" = NULL WHERE id = '...';`. For each other row whose email is not that member's own address (an earlier release wrote the Jellyfin username there at every Jellyfin sign-in), clear the email only: `UPDATE "User" SET "email" = NULL WHERE id = '...';`. The migration leaves these rows alone, so this review is the only step that removes such an email. The member's Plex email comes back on their next Plex sign-in.
+  4. If you removed any link, rotate `NEXTAUTH_SECRET` and restart the app. Everyone has to sign in again, which ends the sessions the Jellyfin user still holds on that account: they last up to 7 days and keep the account's admin rights. Then search the server logs for `ADMIN_PRIVILEGE_GRANTED` and `ADMIN_PRIVILEGE_REVOKED` audit events on those accounts, and review the settings, invites and users changed while the link existed.
+
+  The migration then clears the stored email of every account that has a Jellyfin ID and no Plex ID, because such an email can only have come from a Jellyfin username. Accounts with a Plex ID keep their email unless you cleared it in step 3. An account whose email is cleared finds only the Overseerr requests of an Overseerr user with its Plex ID (none for an account without a Plex ID), cannot start Stripe Checkout, and cannot be invited to Plex by the Stripe grant, until a Plex sign-in stores its Plex email again.
+- **Upgrading to the release where the share page reads the database**: a Rewind share link now opens only when its token is exactly 43 URL-safe characters (`A-Z`, `a-z`, `0-9`, `-` and `_`), the shape the app's link generator makes. A link with any other token answers 404 without a database lookup, and nothing is logged. Before deploying, count the shared Rewinds whose token has another shape:
+  ```sql
+  SELECT count(*) FROM "PlexWrapped" WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';
+  ```
+  If the count is not 0, those links stop working after the upgrade. Clear their tokens (`UPDATE "PlexWrapped" SET "shareToken" = NULL WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';`) and tell the owners to turn sharing on again for a new link, or keep the release back until those links can lapse.
 
 ## Request IDs and metrics
 
@@ -289,6 +361,7 @@ groups:
         for: 15m
       - alert: LlmSpendHigh
         expr: sum(plex_manager_llm_spend_usd{period="day"}) > 1
+```
 
 ## Security headers and CSP
 
@@ -321,7 +394,8 @@ https, with `max-age` from `HSTS_MAX_AGE` (default 31536000, one year).
 `HSTS_INCLUDE_SUBDOMAINS=true` adds `includeSubDomains`, and
 `HSTS_PRELOAD=true` adds `preload`; set them only when every subdomain serves
 https, because browsers keep both for the whole `max-age`. These are read at
-start, so a restart applies a change. If your reverse proxy already sends
+start, so `docker compose up -d` applies a change (a plain `docker compose
+restart` does not read `.env` again). If your reverse proxy already sends
 HSTS, keep one of the two.
 
 The other headers are fixed in `next.config.js`: `X-Frame-Options: SAMEORIGIN`,
@@ -398,17 +472,21 @@ early (`aborted: true`) runs again at the next boot.
 ### Move from ENCRYPTION_KEY to a keyring
 
 1. Take a dump.
-2. Add `ENCRYPTION_KEYS=k1:<new key>` and keep `ENCRYPTION_KEY` set. Restart.
+2. Add `ENCRYPTION_KEYS=k1:<new key>` and keep `ENCRYPTION_KEY` set. Run
+   `docker compose up -d` (a plain `docker compose restart` does not read
+   `.env` again).
 3. Wait for `secrets.reencrypted` with `aborted: false` in the log.
-4. Remove `ENCRYPTION_KEY` and restart.
+4. Remove `ENCRYPTION_KEY` and run `docker compose up -d`.
 
 ### Rotate
 
 1. Take a dump.
-2. Put the new kid first and keep the old one: `ENCRYPTION_KEYS=k2:<new>,k1:<old>`. Restart.
+2. Put the new kid first and keep the old one: `ENCRYPTION_KEYS=k2:<new>,k1:<old>`.
+   Run `docker compose up -d`.
 3. Wait for `secrets.reencrypted` with `aborted: false` in the log. The run
    also moves the boot canary to `k2`.
-4. Remove `k1:<old>` and restart. Removing it before step 3 finishes stops the
+4. Remove `k1:<old>` and run `docker compose up -d`. Removing it before step 3
+   finishes stops the
    next boot with `crypto.key_mismatch` (the canary is still under `k1`).
 
 ### Lost key
@@ -478,3 +556,11 @@ with the current encryption key. Enter it again."). To recover:
   Jellyfin server, listed under the client "Plex Wrapped" and the device ID
   `plex-wrapped-server` (or your `JELLYFIN_DEVICE_ID`); a Jellyfin
   administrator can delete them in Dashboard → Devices.
+- **Watchlist sync**: turn it on and set the interval in Admin → Settings →
+  Watchlist sync. Each member must also turn it on in the card on their home
+  page; nothing syncs while either is off, whoever starts the run. Requests are
+  filed as the member's own Overseerr user, matched by Plex account ID, so each
+  member must have signed in to Overseerr with Plex once (or been added with
+  Overseerr's **Import Plex Users**). A member without a match is skipped, and
+  their card says why. **Sync now** on the card works at most 4 times an hour
+  per member.

@@ -17,7 +17,7 @@
 
 import { randomBytes, randomUUID } from "node:crypto"
 
-import { describePg } from "@/test/helpers/integration"
+import { describePg } from "@/__tests__/helpers/integration"
 
 const RUN = `history-${randomUUID().slice(0, 8)}`
 const USER = `${RUN}-user`

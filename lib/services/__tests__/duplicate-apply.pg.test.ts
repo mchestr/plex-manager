@@ -18,7 +18,7 @@ import { PrismaClient } from '@/lib/generated/prisma/client'
 import { AuditEventType } from '@/lib/security/audit-log'
 import { applyServiceRowKeeps, type ServiceRowKeeps } from '@/lib/services/duplicate-apply'
 import { auditServiceRows } from '@/lib/services/duplicate-audit'
-import { describePg } from '@/test/helpers/integration'
+import { describePg } from '@/__tests__/helpers/integration'
 
 let mockDb: PrismaClient
 jest.mock('@/lib/prisma', () => ({

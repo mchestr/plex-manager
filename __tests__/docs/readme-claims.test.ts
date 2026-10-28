@@ -25,16 +25,23 @@ describe('README claims', () => {
     },
   )
 
-  it.each(['Rewind', 'Stripe', 'Jellyfin', 'Invites', 'Watchlist Sync', 'Assistants'])('the feature list names %s', (feature) => {
-    expect(features(readme)).toContain(`### ${feature}`)
+  it.each(['Rewind', 'Stripe', 'Jellyfin', 'Invites', 'Watchlist sync', 'Assistants'])('the feature list names %s', (feature) => {
+    expect(features(readme).toLowerCase()).toContain(feature.toLowerCase())
   })
 
-  it('links every operator doc from the Deployment section', () => {
-    const start = readme.indexOf('\n## Deployment\n')
-    const deployment = readme.slice(start, readme.indexOf('\n### ', start))
-    for (const doc of ['deployment', 'environment', 'domain-move', 'operations', 'rewind', 'privacy', 'stripe', 'discord-bot']) {
-      expect(deployment).toContain(`(docs/${doc}.md)`)
+  it('links every operator doc from the Documentation section', () => {
+    const start = readme.indexOf('\n## Documentation\n')
+    const documentation = readme.slice(start, readme.indexOf('\n## ', start + 1))
+    expect(start).toBeGreaterThan(-1)
+    for (const doc of fs.readdirSync(path.join(ROOT, 'docs')).filter((name) => name.endsWith('.md'))) {
+      if (doc === 'performance-testing.md') continue // contributor-facing; CONTRIBUTING.md is the way in
+      expect(documentation).toContain(`(docs/${doc})`)
     }
-    expect(deployment).toContain('(CHANGELOG.md)')
+    expect(documentation).toContain('(CHANGELOG.md)')
+  })
+
+  it('sends contributors to the contributing guide', () => {
+    expect(readme).toContain('(.github/CONTRIBUTING.md)')
+    expect(fs.existsSync(path.join(ROOT, '.github/CONTRIBUTING.md'))).toBe(true)
   })
 })
