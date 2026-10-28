@@ -387,40 +387,36 @@ the background instead.
 
 ### Encrypt what is stored
 
-Values written before a key was set, and values under an older kid, are
-rewritten under the primary key by the re-encryption job:
-
-- with Redis, boot queues `SECRETS_REENCRYPT` once per primary kid and field
-  list (`Config.encryptionFieldsHash` records the last finished run);
-- with or without Redis, Settings > Security > **Encrypt stored secrets**
-  counts first (a dry run), then rewrites after you confirm. The run is
-  audited as `SECRETS_REENCRYPTED`.
-
-Both are idempotent: a second run changes nothing.
+At boot, the app re-encrypts with the primary key each stored secret that is
+in plain text or under an older kid. It does this one time for each primary
+kid and field list, and `Config.encryptionFieldsHash` records the last
+finished run. With Redis, boot queues `SECRETS_REENCRYPT` for the worker.
+Without Redis, the app process does the same work. When the run finishes, the
+log shows `secrets.reencrypted` with the counts. A run that fails or stops
+early (`aborted: true`) runs again at the next boot.
 
 ### Move from ENCRYPTION_KEY to a keyring
 
 1. Take a dump.
 2. Add `ENCRYPTION_KEYS=k1:<new key>` and keep `ENCRYPTION_KEY` set. Restart.
-3. Run **Encrypt stored secrets** (or let the boot job finish) until Security
-   shows every value under `k1`.
+3. Wait for `secrets.reencrypted` with `aborted: false` in the log.
 4. Remove `ENCRYPTION_KEY` and restart.
 
 ### Rotate
 
 1. Take a dump.
 2. Put the new kid first and keep the old one: `ENCRYPTION_KEYS=k2:<new>,k1:<old>`. Restart.
-3. Run **Encrypt stored secrets**. It also moves the boot canary to `k2`.
+3. Wait for `secrets.reencrypted` with `aborted: false` in the log. The run
+   also moves the boot canary to `k2`.
 4. Remove `k1:<old>` and restart. Removing it before step 3 finishes stops the
    next boot with `crypto.key_mismatch` (the canary is still under `k1`).
 
 ### Lost key
 
-A value no configured key can read is never fatal at run time: it reads as
-empty, `crypto.decrypt_failed` is logged once per field and kid, the settings
-page asks for that secret again ("The stored key can't be read with the
-current encryption key. Enter it again."), and Security lists every unreadable
-field. To recover:
+A value that no configured key can read does not stop the app. The app reads
+it as empty and logs `crypto.decrypt_failed` one time for each field and kid.
+The settings page asks for that secret again ("The stored key can't be read
+with the current encryption key. Enter it again."). To recover:
 
 - **Set the right key**, if you still have it anywhere (an older `.env`, the
   password manager). Nothing else is needed.

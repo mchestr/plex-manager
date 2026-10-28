@@ -3,9 +3,9 @@
  *
  * The Prisma extension turns a field it cannot decrypt into null and records
  * it here, so the settings page can ask for that secret again ("enter it
- * again") and the Security section can list what is unreadable. The record is
- * in memory, per process: it fills as rows are read, and a row that decrypts
- * again (after a re-entry or the right key) clears itself.
+ * again"). The record is in memory, per process: it fills as rows are read,
+ * and a row that decrypts again (after a re-entry or the right key) clears
+ * itself.
  *
  * Nothing here holds a value, only model, field, row id, kid and code.
  *
@@ -14,6 +14,7 @@
 
 import type { DecryptFailureCode } from "@/lib/security/crypto"
 
+/** @internal */
 export interface UnreadableField {
   model: string
   field: string
@@ -56,7 +57,7 @@ export function isUnreadable(model: string, field: string, id: string | undefine
   return rows.has(id ?? ANY_ROW)
 }
 
-/** Every unreadable field, for the Security section. */
+/** @internal Every unreadable field, for tests. */
 export function listUnreadable(): UnreadableField[] {
   return [...unreadable.entries()].map(([key, rows]) => {
     const [model, field] = key.split(".")

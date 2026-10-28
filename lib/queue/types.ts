@@ -373,7 +373,7 @@ interface JobPayloads {
   [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokePayload
   [JOB_TYPES.DISCORD_ROLE_SYNC]: DiscordRoleSyncPayload
   [JOB_TYPES.DISCORD_ROLE_RECONCILE]: Record<string, never>
-  [JOB_TYPES.RETENTION_SWEEP]: { triggeredBy: "scheduled" | "admin" }
+  [JOB_TYPES.RETENTION_SWEEP]: { triggeredBy: "scheduled" }
   [JOB_TYPES.DISCORD_CHANNEL_STATS]: { triggeredBy: "scheduled" | "admin" }
   [JOB_TYPES.REQUEST_TIER_SYNC]: { triggeredBy: "scheduled" | "admin" }
   [JOB_TYPES.SECRETS_REENCRYPT]: { triggeredBy: "scheduled" }

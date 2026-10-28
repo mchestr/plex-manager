@@ -60,7 +60,7 @@ app/                     # Next.js App Router (pages, layouts, routes)
 └── subscribe/          # Stripe subscription flow
 
 actions/                # Server Actions, built with publicAction/memberAction/adminAction
-├── admin/             # Admin actions (users, servers, invites, settings, Rewind season, retention)
+├── admin/             # Admin actions (users, servers, invites, settings, Rewind season)
 └── chatbot/           # Admin assistant chat action
 components/             # React components
 ├── admin/             # Admin-specific components
