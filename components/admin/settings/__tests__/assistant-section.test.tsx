@@ -70,7 +70,7 @@ describe("AssistantSection", () => {
     }
     render(<AssistantSection sources={sources} />)
     expect(screen.getByTestId("settings-mcp-m1")).toHaveTextContent("2 tools on")
-    expect(screen.getByTestId("settings-mcp-m2")).toHaveTextContent("off")
+    expect(screen.getByTestId("settings-mcp-m2")).toHaveTextContent("Off")
   })
 
   it("has no section Edit: the rows and Add open their Sheets", () => {
@@ -97,7 +97,7 @@ describe("AssistantSection", () => {
     const remove = screen.getByRole("checkbox", { name: "Allow delete" })
     expect(search).toBeChecked()
     expect(remove).not.toBeChecked()
-    expect(screen.getByTestId("settings-mcp-tool-delete")).toHaveTextContent("can change data")
+    expect(screen.getByTestId("settings-mcp-tool-delete")).toHaveTextContent("Can change data")
 
     await user.click(remove)
     await user.click(screen.getByTestId("settings-mcp-save"))
@@ -228,7 +228,7 @@ describe("AssistantSection", () => {
     await user.click(screen.getByTestId("settings-knowledge-save"))
 
     expect(saveKnowledgeSource).toHaveBeenCalledWith(expect.objectContaining({ name: "Runbooks", repo: "mchestr/knowledgebase", ref: "main" }))
-    expect(mockShowSuccess).toHaveBeenCalledWith("Knowledge base saved: 12 documents found")
+    expect(mockShowSuccess).toHaveBeenCalledWith("Knowledge base saved. Found 12 documents.")
     await waitFor(() => expect(screen.queryByTestId("settings-knowledge-add-sheet")).not.toBeInTheDocument())
   })
 
@@ -249,7 +249,7 @@ describe("AssistantSection", () => {
 
     finish({ success: true, data: { id: "k2", docCount: 3 } })
     await waitFor(() => expect(screen.queryByTestId("settings-knowledge-add-sheet")).not.toBeInTheDocument())
-    expect(mockShowSuccess).toHaveBeenCalledWith("Knowledge base saved: 3 documents found")
+    expect(mockShowSuccess).toHaveBeenCalledWith("Knowledge base saved. Found 3 documents.")
   })
 
   it("asks before closing a new knowledge base with something typed", async () => {

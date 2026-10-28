@@ -60,7 +60,7 @@ export function ServerFormFields({ type, values, set, errors, saved, currentOrig
       <FormField name={id("url")} label="Local URL" error={errors.url}>
         <Input value={values.url} onValueChange={(url) => set({ url })} placeholder={PLACEHOLDERS[type]} required disabled={disabled} data-testid={`${testIdPrefix}-${type}-url`} />
       </FormField>
-      <FormField name={id("public-url")} label="Public URL" optional description="Shown to members" error={errors.publicUrl}>
+      <FormField name={id("public-url")} label="Public URL" optional description="Members see this URL." error={errors.publicUrl}>
         <Input value={values.publicUrl} onValueChange={(publicUrl) => set({ publicUrl })} placeholder={`https://${type}.example.com`} disabled={disabled} data-testid={`${testIdPrefix}-${type}-public-url`} />
       </FormField>
       <FormField name={id("secret")} label={noun} error={errors.secret}>

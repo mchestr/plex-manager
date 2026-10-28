@@ -24,7 +24,7 @@ export function SettingsPageActions() {
       }
       const broken = Object.values(result.data).filter((health) => health.status === "unreachable").length
       if (broken > 0) toast.showError(broken === 1 ? "1 connection is not working" : `${broken} connections are not working`)
-      else toast.showSuccess("Every connection answered")
+      else toast.showSuccess("All connections answered")
     })
 
   return (

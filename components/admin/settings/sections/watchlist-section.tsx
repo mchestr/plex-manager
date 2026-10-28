@@ -49,7 +49,7 @@ export function WatchlistSection({ saved, stats, health, footerMeta }: Watchlist
     <SettingsSection
       id="watchlist"
       title="Watchlist sync"
-      description="Turns members' Plex watchlists into Overseerr requests. Members turn it on for themselves."
+      description="Needs Overseerr. Each member must also turn on sync on their home page."
       status={health.status}
       checkedAt={health.checkedAt}
       form={watchlist.form}

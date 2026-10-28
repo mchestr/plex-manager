@@ -98,7 +98,7 @@ export function SystemSection({ timeZone, footerMeta, ...runtime }: SystemSectio
     <SettingsSection
       id="system"
       title="System information"
-      description="Runtime, database and the server time zone."
+      description="You can change only the server time zone here."
       form={zone.form}
       footerMeta={footerMeta}
       live={<Runtime {...runtime} />}

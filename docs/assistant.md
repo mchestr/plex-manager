@@ -30,7 +30,7 @@ Settings, Assistant sources, MCP servers, Add.
   unchanged.
 - **Tools:** after saving, open the server and choose List tools. A tool is
   off until you tick "Allow <tool>" and save, and tools that do not declare `readOnlyHint` are
-  marked "can change data". The assistant sees `mcp_<server>_<tool>` and the
+  marked "Can change data". The assistant sees `mcp_<server>_<tool>` and the
   call is audit-logged (`ASSISTANT_MCP_CALL`) by server and tool.
 
 Everything an MCP server returns is untrusted data. Results reach the model

@@ -101,7 +101,7 @@ export function StripeSection({ config, libraries, health, footerMeta }: StripeS
     <SettingsSection
       id="stripe"
       title="Stripe billing"
-      description="Gate server access behind a Stripe subscription for non-members."
+      description="Non-members pay with a Stripe subscription to get server access."
       status={health.status}
       checkedAt={health.checkedAt}
       form={stripe.form}

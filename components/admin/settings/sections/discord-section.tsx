@@ -42,7 +42,7 @@ const FEATURES = [
     field: "botEnabled",
     status: "supportBot",
     label: "Support bot",
-    description: "Watches the support channel and answers members.",
+    description: "The bot answers members in the support channel.",
   },
 ] as const
 
@@ -180,7 +180,7 @@ function PortalAndLinks({ portalUrl, linkedCount }: { portalUrl: string; linkedC
       await navigator.clipboard.writeText(portalUrl)
       toast.showSuccess("Portal URL copied")
     } catch {
-      toast.showError("Could not copy. Select the address and copy it instead.")
+      toast.showError("Could not copy. Select the URL and copy it.")
     }
   }
 
@@ -200,7 +200,7 @@ function PortalAndLinks({ portalUrl, linkedCount }: { portalUrl: string; linkedC
             </Button>
           }
         />
-        <span className="text-label text-muted-foreground">Set it as the Linked Roles Verification URL in the Discord developer portal.</span>
+        <span className="text-label text-muted-foreground">In the Discord developer portal, set this as the Linked Roles Verification URL.</span>
       </div>
       <dl className="flex flex-col gap-1.5">
         <dt className="text-label text-muted-foreground">Linked accounts</dt>
@@ -227,7 +227,7 @@ export function DiscordSection({ integration, linkedCount, portalUrl, state, now
     <SettingsSection
       id="discord"
       title="Discord"
-      description="Linked roles for members, and the support bot."
+      description="Needs an application in the Discord developer portal."
       form={discord.form}
       notSetUp={!integration}
       live={<PortalAndLinks portalUrl={portalUrl} linkedCount={linkedCount} />}

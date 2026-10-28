@@ -80,7 +80,7 @@ describe("StripeSection", () => {
 
       const live = screen.getByTestId("stripe-settings-form")
       expect(live).toContainElement(screen.getByTestId("stripe-enabled-toggle"))
-      expect(screen.getByRole("switch", { name: "Subscriptions" })).toHaveAccessibleDescription(/Takes effect at once\.$/)
+      expect(screen.getByRole("switch", { name: "Subscriptions" })).toHaveAccessibleDescription(/This saves at once\./)
 
       await edit(user)
       expect(screen.getByTestId("settings-stripe-form")).not.toContainElement(screen.getByTestId("stripe-enabled-toggle"))
@@ -109,8 +109,8 @@ describe("StripeSection", () => {
 
       await user.click(screen.getByTestId("stripe-enabled-toggle"))
       const dialog = await screen.findByTestId("stripe-enable-jellyfin-confirm")
-      expect(dialog).toHaveTextContent("3 Jellyfin members will be asked to subscribe")
-      expect(dialog).toHaveTextContent("Ana, Ben and 1 more sign in with Jellyfin only")
+      expect(dialog).toHaveTextContent("Ask 3 Jellyfin members to subscribe?")
+      expect(dialog).toHaveTextContent("Ana, Ben and 1 more sign in only with Jellyfin")
       expect(mockShowSuccess).not.toHaveBeenCalled()
 
       await user.click(screen.getByTestId("stripe-enable-jellyfin-confirm-button"))
@@ -218,7 +218,7 @@ describe("StripeSection", () => {
       for (const id of ["stripe-secret-key-input", "stripe-webhook-secret-input", "stripe-price-ids-input"]) {
         expect(screen.getByTestId(id)).not.toHaveAttribute("aria-invalid", "true")
       }
-      expect(screen.getByTestId("stripe-webhook-secret-input")).toHaveAccessibleDescription(/Required before subscriptions can be turned on/)
+      expect(screen.getByTestId("stripe-webhook-secret-input")).toHaveAccessibleDescription(/Save this before you turn on subscriptions/)
       expect(await screen.findByTestId("stripe-library-checkbox-1")).toBeInTheDocument()
       await waitFor(() => expect(screen.getByTestId("stripe-secret-key-input")).toHaveFocus())
     })

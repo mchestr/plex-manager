@@ -9,9 +9,9 @@ import { secretNoun, useServerForm, type StoredServer } from "@/hooks/admin/use-
 import type { SectionHealth } from "@/lib/settings/connection-status"
 
 const COPY = {
-  plex: { title: "Plex server", description: "Sign-in, library access and the Watch on Plex link. Required." },
-  tautulli: { title: "Tautulli", description: "Watch history and play statistics. Rewind needs it to count everyone's year." },
-  overseerr: { title: "Overseerr", description: "Media requests. Powers Request a title and Watchlist sync." },
+  plex: { title: "Plex server", description: "Required. Members sign in and get library access through this server." },
+  tautulli: { title: "Tautulli", description: "Rewind and Request limits read watch history from Tautulli." },
+  overseerr: { title: "Overseerr", description: "Request a title and Watchlist sync send requests to Overseerr." },
 } as const
 
 type ServiceType = keyof typeof COPY

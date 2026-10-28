@@ -84,7 +84,7 @@ export function LLMProviderFields({ purpose, state, disabled = false }: LLMProvi
         <FormField
           name={`${idPrefix}-base-url`}
           label="Base URL"
-          description="The server's OpenAI-compatible API, including its path (usually /v1)."
+          description="Include the path of the OpenAI-compatible API, usually /v1."
           error={errors.baseUrl}
           className="md:col-span-2"
         >

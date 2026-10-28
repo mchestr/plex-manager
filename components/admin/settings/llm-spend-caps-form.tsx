@@ -87,8 +87,7 @@ export function LlmSpendCapsFields({ state, disabled }: { state: SpendCapsForm; 
     <fieldset className="flex flex-col gap-3" data-testid="llm-spend-caps-form">
       <legend className="text-ui font-medium text-foreground">Daily spend caps (USD)</legend>
       <p className="text-label text-muted-foreground">
-        The assistant stops answering once a cap is reached, and starts again at midnight server time. A cap of 0 turns the assistant off
-        for that group.
+        At a cap, the assistant stops until midnight, server time. A cap of 0 turns off the assistant for that group.
       </p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {FIELDS.map(({ key, id, label }) => (
@@ -121,7 +120,7 @@ export function SpendCapsSummary({ caps }: { caps: SpendCaps }) {
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-0.5">
         <h3 className="text-ui font-medium text-foreground">Daily spend caps</h3>
-        <p className="text-label text-muted-foreground">The assistant stops answering at a cap until midnight server time.</p>
+        <p className="text-label text-muted-foreground">At a cap, the assistant stops until midnight, server time.</p>
       </div>
       <SettingsSummary className="sm:grid-cols-3 md:grid-cols-3" data-testid="settings-ai-summary-caps">
         {FIELDS.map(({ key, summary, label, off }) => (

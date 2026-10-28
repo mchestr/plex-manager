@@ -149,7 +149,7 @@ was never processed recovers it (see
 
 The master **Subscriptions** switch at the top of the Stripe billing section is
 **blocked** until Stripe is fully configured (FR-3). It stays greyed out, with a
-"Subscriptions can't be turned on yet." alert naming what is missing, until all
+"You cannot turn on subscriptions yet." alert naming what is missing, until all
 of the following are present:
 
 - a secret key,
@@ -160,7 +160,7 @@ of the following are present:
 Once all four are in place, flip the switch on. It takes effect at once, without
 Edit or Save changes. If any members sign in with
 Jellyfin only and are not exempt, the toggle first asks you to confirm, naming
-them ("3 Jellyfin members will be asked to subscribe"). These accounts were
+them ("Ask 3 Jellyfin members to subscribe?"). These accounts were
 usually made in Jellyfin itself rather than through an app invite, so they have
 no exemption: cancel, mark the ones who should keep free access exempt on
 **Admin → Users**, then turn it on. From that point:

@@ -16,8 +16,8 @@ export function RequestsGuide({ requestsUrl }: RequestsGuideProps) {
   return (
     <div className="flex flex-col gap-3 text-ui text-foreground" data-testid="requests-guide">
       <p className="text-muted-foreground">
-        Missing a movie or show? Request it, and it is added when it becomes available. Sign in with the same account
-        you use to watch.
+        When a title that you request is available, it shows in the library. Sign in with the account that you use
+        to watch.
       </p>
       <div>
         <Button

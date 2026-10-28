@@ -7,12 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { SettingsSection } from "@/components/ui/settings-section"
 import type { AssistantSources, KnowledgeSourceSettings, McpServerSettings } from "@/lib/data/assistant-sources"
 
-const MCP_DESCRIPTION = "Address, credentials and the tools the assistant may call."
-const KNOWLEDGE_DESCRIPTION = "The GitHub repository the assistant searches and cites."
+const MCP_DESCRIPTION = "Allow only the tools that the assistant can use."
+const KNOWLEDGE_DESCRIPTION = "The assistant searches this GitHub repository and cites it in answers."
 
-/** "1 tool on", "3 tools on" or "off". */
+/** "1 tool on", "3 tools on" or "Off". */
 function toolCount(server: McpServerSettings) {
-  if (!server.isActive) return "off"
+  if (!server.isActive) return "Off"
   const count = server.enabledTools.length
   return `${count} ${count === 1 ? "tool" : "tools"} on`
 }
@@ -52,7 +52,7 @@ function KnowledgeRow({ source }: { source: KnowledgeSourceSettings }) {
           {source.path && `/${source.path}`}
         </span>
       </div>
-      <Badge variant={source.isActive ? "success" : "neutral"}>{source.isActive ? "on" : "off"}</Badge>
+      <Badge variant={source.isActive ? "success" : "neutral"}>{source.isActive ? "On" : "Off"}</Badge>
       <SettingsSheet
         section="assistant"
         id="knowledge"
@@ -82,7 +82,7 @@ export function AssistantSection({ sources }: { sources: AssistantSources }) {
     <SettingsSection
       id="assistant"
       title="Assistant sources"
-      description="Extra tools and knowledge for the admin assistant. Discord never uses them."
+      description="Only the admin assistant uses these sources. The Discord assistant does not."
     >
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2" data-testid="settings-mcp-list">
@@ -93,7 +93,7 @@ export function AssistantSection({ sources }: { sources: AssistantSources }) {
               id="mcp"
               name="the new MCP server"
               title="Add an MCP server"
-              description="Save it first, then list its tools and allow the ones the assistant may call."
+              description="Save the server first. Then list its tools and allow the tools that the assistant can use."
               trigger="Add"
               triggerLabel="MCP server"
               triggerTestId="settings-mcp-add-open"
@@ -116,7 +116,7 @@ export function AssistantSection({ sources }: { sources: AssistantSources }) {
               id="knowledge"
               name="the new knowledge base"
               title="Add a knowledge base"
-              description="A GitHub repository of Markdown, for example mchestr/knowledgebase."
+              description="Use a GitHub repository of Markdown files, for example mchestr/knowledgebase."
               trigger="Add"
               triggerLabel="knowledge base"
               triggerTestId="settings-knowledge-add-open"
