@@ -237,7 +237,7 @@ describe("article blocks over the 20 golden fixtures", () => {
     const section = articleSections(pages, issue.facts, articleContext({ ...issue, pages })).find((s) => s.type === "bookends")!
     const all = section.blocks.flatMap(texts).map(textOf).join(" ")
     const folio = String(pages.find((p) => p.type === "top-shows")!.folio).padStart(2, "0")
-    expect(all).toContain(`a series you will meet on page ${folio}`)
+    expect(all).toContain(`a show you will meet on page ${folio}`)
     expect(all).not.toContain(String(issue.facts["bookends.first.title"]?.display))
   })
 })

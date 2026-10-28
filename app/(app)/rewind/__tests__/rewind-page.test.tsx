@@ -299,7 +299,7 @@ describe('/rewind/[year] branches', () => {
     render(ui)
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Chester Family Plex Rewind 2025')
-    expect(screen.getByTestId('rewind-article-mode')).toHaveTextContent('Your most watched films')
+    expect(screen.getByTestId('rewind-article-mode')).toHaveTextContent('Your most watched movies')
   })
 
   it('shows parse-error for a completed row that does not parse', async () => {

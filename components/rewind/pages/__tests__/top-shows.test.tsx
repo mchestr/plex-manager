@@ -128,7 +128,7 @@ describe("05 Top shows", () => {
   it("tabulates every row by month, and summarises deterministically", () => {
     const issue = issues.heavy
     const table = registry["top-shows"].table!(dataOf(issue)!, issue.facts, { locale: "en-US" })!
-    expect(table.columns[0]).toBe("Series")
+    expect(table.columns[0]).toBe("Show")
     expect(table.columns).toHaveLength(1 + 11 + 1)
     expect(table.rows).toHaveLength(5)
     expect(registry["top-shows"].srSummary(dataOf(issue)!, issue.facts)).toMatchSnapshot()

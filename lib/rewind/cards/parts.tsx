@@ -111,8 +111,8 @@ export function ringSvg(hours: readonly number[], { size, arc, peak, ink }: { si
 /** What each poster stat reads under its value. */
 const STAT_LABEL: Record<CardFactId, string> = {
   "time.totalHours": "hours this year",
-  "time.seriesHours": "hours of series",
-  "counts.films": "films",
+  "time.seriesHours": "hours of shows",
+  "counts.films": "movies",
   "counts.episodes": "episodes",
   "standing.percentile": "on the server",
   "hours.peak": "busiest hour",

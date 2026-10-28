@@ -41,16 +41,16 @@ export function generateMockWrappedData(args: {
       dedication: `Hey ${promptName}: a year of showing up, night after night, earns you a place in the spotlight. The screen never went dark for long.`,
     },
     narratives: {
-      opening: `Welcome to your <highlight>${year}</highlight> premiere. Tonight, we look back at your year in film and television.`,
+      opening: `Welcome to your <highlight>${year}</highlight> premiere. Tonight, we look back at your year in movies and shows.`,
       totalWatchTime: `You spent <highlight>${totalWatchTime}</highlight> watching content this year. A truly committed performance.`,
-      movies: `You screened <highlight>${statistics.moviesWatched} films</highlight>, totaling <highlight>${formatDuration(statistics.totalWatchTime.movies, "long", { largestUnit: "day" })}</highlight>.`,
-      shows: `You followed <highlight>${statistics.showsWatched} series</highlight> across <highlight>${statistics.episodesWatched} episodes</highlight>.`,
+      movies: `You screened <highlight>${statistics.moviesWatched} movies</highlight>, totaling <highlight>${formatDuration(statistics.totalWatchTime.movies, "long", { largestUnit: "day" })}</highlight>.`,
+      shows: `You followed <highlight>${statistics.showsWatched} shows</highlight> across <highlight>${statistics.episodesWatched} episodes</highlight>.`,
       topMovies: topMovie
         ? `Leading the bill: <highlight>${topMovie.title}</highlight>, with ${formatDuration(topMovie.watchTime, "long", { largestUnit: "day" })} on screen.`
-        : "Your top films earned their place on the marquee.",
+        : "Your top movies earned their place on the marquee.",
       topShows: topShow
-        ? `Headlining your series: <highlight>${topShow.title}</highlight> — ${topShow.episodesWatched} episodes deep.`
-        : "Your top series kept you coming back.",
+        ? `Headlining your shows: <highlight>${topShow.title}</highlight> — ${topShow.episodesWatched} episodes deep.`
+        : "Your top shows kept you coming back.",
       streaksAndPatterns: streak
         ? `Your longest streak ran <highlight>${streak.days} days</highlight>${peakHour ? `, and your favorite showtime was <highlight>${peakHour.label}</highlight>` : ""}.`
         : "Your viewing patterns tell their own story.",
@@ -76,7 +76,7 @@ export function generateMockWrappedData(args: {
         `You watched ${statistics.episodesWatched} episodes total`,
       ],
     },
-    summary: `In ${year}, I watched ${totalWatchTime} of content! ${topMovie ? `My top movie was ${topMovie.title}` : "I explored many amazing films"} and I binged ${statistics.showsWatched} shows with ${statistics.episodesWatched} episodes. What a year!`,
+    summary: `In ${year}, I watched ${totalWatchTime} of content! ${topMovie ? `My top movie was ${topMovie.title}` : "I explored many amazing movies"} and I binged ${statistics.showsWatched} shows with ${statistics.episodesWatched} episodes. What a year!`,
   }
 
   return assembleWrappedData({ output, statistics, userId, userName: displayName, year })

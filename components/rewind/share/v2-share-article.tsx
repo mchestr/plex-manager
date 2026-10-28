@@ -34,8 +34,8 @@ export function V2ShareArticle({ share, locale }: V2ShareArticleProps) {
   const settings = { locale }
   const totals = [
     share.totals.minutes > 0 ? formatRewindDuration(share.totals.minutes, settings) : null,
-    share.totals.movies > 0 ? formatCount(share.totals.movies, { one: "film", other: "films" }, settings) : null,
-    share.totals.shows > 0 ? formatCount(share.totals.shows, { one: "series", other: "series" }, settings) : null,
+    share.totals.movies > 0 ? formatCount(share.totals.movies, { one: "movie", other: "movies" }, settings) : null,
+    share.totals.shows > 0 ? formatCount(share.totals.shows, { one: "show", other: "shows" }, settings) : null,
     share.totals.episodes > 0 ? formatCount(share.totals.episodes, { one: "episode", other: "episodes" }, settings) : null,
   ].filter((total): total is string => total !== null)
 
@@ -51,7 +51,7 @@ export function V2ShareArticle({ share, locale }: V2ShareArticleProps) {
           </p>
         ) : null}
       </header>
-      <TopList title="Top films" items={share.topMovies} locale={locale} testId="rewind-share-v2-films" />
+      <TopList title="Top movies" items={share.topMovies} locale={locale} testId="rewind-share-v2-films" />
       <TopList title="Top shows" items={share.topShows} locale={locale} testId="rewind-share-v2-shows" />
     </article>
   )

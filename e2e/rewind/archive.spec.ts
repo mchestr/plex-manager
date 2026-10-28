@@ -60,6 +60,6 @@ test.describe('Rewind archive articles', () => {
     await page.goto(`/rewind/${ARCHIVE_YEAR}/read`);
 
     await expect(page).toHaveURL(new RegExp(`/rewind/${ARCHIVE_YEAR}/read$`));
-    await expect(page.getByTestId('rewind-article-mode')).toContainText('Top films', { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('rewind-article-mode')).toContainText('Top movies', { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
   });
 });

@@ -42,7 +42,7 @@ export const numberNotes: CoreNotes<NumberData> = (data, facts, ctx) => {
   const blocks: ArticleBlock[] = [
     headingBlock("How the hours are counted"),
     paragraphBlock(
-      `Every film and episode you played from ${windowRange(facts)}. A play counts from its first minute. Rewatches count. Trailers and extras do not.`
+      `Every movie and episode you played from ${windowRange(facts)}. A play counts from its first minute. Rewatches count. Trailers and extras do not.`
     ),
     {
       kind: "table",

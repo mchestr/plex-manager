@@ -80,7 +80,7 @@ describe("assembleWrappedData", () => {
     // Fallback = motif + real numbers (1008 hours, 85 films, 412 episodes)
     expect(data.archetype?.dedication).toContain("one more episode always wins")
     expect(data.archetype?.dedication).toContain("<highlight>1008 hours</highlight>")
-    expect(data.archetype?.dedication).toContain("<highlight>85 films</highlight>")
+    expect(data.archetype?.dedication).toContain("<highlight>85 movies</highlight>")
     expect(data.archetype?.dedication).toContain("<highlight>412 episodes</highlight>")
 
     const reveal = data.sections.find((s) => s.type === "archetype-reveal")

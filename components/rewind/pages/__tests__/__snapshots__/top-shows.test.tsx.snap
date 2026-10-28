@@ -1,3 +1,3 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`05 Top shows tabulates every row by month, and summarises deterministically 1`] = `"Your top series: The Lord of the Rings: The Rings of Power, 55 h 50 m; Severance, 55 h; The Sopranos, 49 h 30 m; Breaking Bad, 41 h 40 m; Game of Thrones, 38 h 40 m."`;
+exports[`05 Top shows tabulates every row by month, and summarises deterministically 1`] = `"Your top shows: The Lord of the Rings: The Rings of Power, 55 h 50 m; Severance, 55 h; The Sopranos, 49 h 30 m; Breaking Bad, 41 h 40 m; Game of Thrones, 38 h 40 m."`;

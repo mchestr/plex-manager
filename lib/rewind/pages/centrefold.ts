@@ -65,7 +65,7 @@ export const METER_CAPTION: Partial<Record<FactId, string>> = {
   "taste.freshShare": "of your plays within two weeks of a release",
   "records.deepestBinge.episodes": "episodes in your deepest binge",
   "counts.titlesPer10Hours": "new titles for every ten hours",
-  "series.top3Share": "of your series time on your top three",
+  "series.top3Share": "of your show time on your top three",
 }
 
 /** The archetypes whose evidence is the clock: the window the arc brackets and the share in its centre. */

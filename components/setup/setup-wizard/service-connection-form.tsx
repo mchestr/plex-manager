@@ -19,15 +19,15 @@ const COPY: Record<Exclude<SetupServiceKind, "plex">, { heading: string; descrip
   },
   overseerr: {
     heading: "Connect Overseerr",
-    description: "Members use it to request films and series. Find the API key in Overseerr under Settings, General.",
+    description: "Members use it to request movies and shows. Find the API key in Overseerr under Settings, General.",
   },
   sonarr: {
     heading: "Connect Sonarr",
-    description: "The admin pages show its download queue and missing series. Find the API key in Sonarr under Settings, General.",
+    description: "The admin pages show its download queue and missing shows. Find the API key in Sonarr under Settings, General.",
   },
   radarr: {
     heading: "Connect Radarr",
-    description: "The admin pages show its download queue and missing films. Find the API key in Radarr under Settings, General.",
+    description: "The admin pages show its download queue and missing movies. Find the API key in Radarr under Settings, General.",
   },
 }
 

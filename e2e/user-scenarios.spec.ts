@@ -222,7 +222,7 @@ test.describe('User Scenarios', () => {
         // article, without cards (P7.5)
         const article = anonymousPage.getByTestId('rewind-share-v2');
         await expect(article).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-        await expect(article.getByTestId('rewind-share-v2-totals')).toContainText('10 films');
+        await expect(article.getByTestId('rewind-share-v2-totals')).toContainText('10 movies');
         await expect(article.getByTestId('rewind-share-v2-films')).toContainText('Test Movie');
         await expect(article.getByTestId('rewind-share-v2-shows')).toContainText('Test Show');
         await expect(anonymousPage.getByTestId('rewind-share-cards')).toHaveCount(0);

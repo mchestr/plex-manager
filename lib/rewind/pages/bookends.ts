@@ -23,7 +23,7 @@ const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seven
 /** `series:77` to `77`: the rating key a hidden title is stored under. */
 
 /** What a masked bookend reads in place of its title. */
-export const maskedTitle = (topShowsFolio: number) => `a series you will meet on page ${String(topShowsFolio).padStart(2, "0")}`
+export const maskedTitle = (topShowsFolio: number) => `a show you will meet on page ${String(topShowsFolio).padStart(2, "0")}`
 
 /** The lead of the second block: the latest play, or the last in a whole-year issue. */
 export const lastLead = (facts: RewindFactsV3) => (isWholeYear(facts) ? "And you closed it with" : "And most recently,")
@@ -40,7 +40,7 @@ export function lifetimeLine(facts: RewindFactsV3, locale: string): string | nul
 }
 
 function end(facts: RewindFactsV3, side: "first" | "last", masked: boolean): string {
-  const title = masked ? "a series you will meet on the Top shows page" : shown(facts, `bookends.${side}.title`)
+  const title = masked ? "a show you will meet on the Top shows page" : shown(facts, `bookends.${side}.title`)
   return `${title}, on ${shown(facts, `bookends.${side}.date`)} at ${shown(facts, `bookends.${side}.time`)}`
 }
 

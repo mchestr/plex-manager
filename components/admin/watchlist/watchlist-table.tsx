@@ -20,7 +20,7 @@ import { resolveStatus } from "@/lib/ui/status"
 import type { TableSort } from "@/lib/ui/table-params"
 import type { BoundFormat } from "@/lib/utils/format"
 
-const TYPE_LABEL: Record<MediaType, string> = { MOVIE: "Film", TV_SERIES: "Series", EPISODE: "Episode" }
+const TYPE_LABEL: Record<MediaType, string> = { MOVIE: "Movie", TV_SERIES: "Show", EPISODE: "Episode" }
 
 const FILTERS = [
   {

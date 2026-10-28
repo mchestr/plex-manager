@@ -47,7 +47,7 @@ const tileOf = (rank: number) => {
 describe("04 Guess", () => {
   it("is a radiogroup named by the question, with four poster options and Skip", () => {
     renderGuess()
-    const group = screen.getByRole("radiogroup", { name: "Which series did you watch most this year?" })
+    const group = screen.getByRole("radiogroup", { name: "Which show did you watch most this year?" })
     expect(within(group).getAllByRole("radio")).toHaveLength(4)
     expect(screen.getByTestId("rewind-quiz-skip")).toBeInTheDocument()
     expect(screen.getByTestId("rewind-quiz-reveal")).toHaveTextContent("")

@@ -52,7 +52,7 @@ const userActions = () => [
 const playColumns: ColumnDef<FixturePlay>[] = [
   { id: "title", header: "Title", accessorKey: "title", enableSorting: true, meta: { card: "title" } },
   { id: "member", header: "Member", accessorKey: "member", meta: { card: "sub" } },
-  { id: "kind", header: "Kind", cell: ({ row }) => (row.original.kind === "movie" ? "Film" : "Episode"), meta: { card: "field" } },
+  { id: "kind", header: "Kind", cell: ({ row }) => (row.original.kind === "movie" ? "Movie" : "Episode"), meta: { card: "field" } },
   {
     id: "date",
     header: "Played",
@@ -69,7 +69,7 @@ const FILTERS = [
     label: "Kind",
     options: [
       { value: "all", label: "All" },
-      { value: "movie", label: "Films" },
+      { value: "movie", label: "Movies" },
       { value: "episode", label: "Episodes" },
     ],
   },

@@ -91,7 +91,7 @@ describe("The desktop spread (P7.4)", () => {
     await user.click(screen.getByTestId("rewind-spread-next"))
     expect(current()).toHaveAttribute("data-index", "4")
     expect(screen.getByTestId("rewind-spread-prev")).toHaveAccessibleName("Previous page: 04 Guess")
-    expect(screen.getByTestId("rewind-spread-next")).toHaveAccessibleName("Next page: 06 Top films")
+    expect(screen.getByTestId("rewind-spread-next")).toHaveAccessibleName("Next page: 06 Top movies")
 
     await user.click(screen.getByTestId("rewind-spread-prev"))
     expect(current()).toHaveAttribute("data-index", "3")

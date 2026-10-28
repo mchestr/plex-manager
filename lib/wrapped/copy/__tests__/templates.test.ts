@@ -171,9 +171,9 @@ describe("headlines and page lines", () => {
   })
 
   it("names the member on the cover only when there is a name", () => {
-    expect(headline("cover", {})).toBe("Your year in film and television")
+    expect(headline("cover", {})).toBe("Your year in movies and shows")
     expect(headline("cover", { "member.firstName": { value: "Mike", display: "Mike", unit: "name" } })).toBe(
-      "{{fact:member.firstName}}'s year in film and television"
+      "{{fact:member.firstName}}'s year in movies and shows"
     )
   })
 
