@@ -90,13 +90,13 @@ describe('safeHref', () => {
 describe('assistantDisclosure', () => {
   it('names the provider', () => {
     expect(assistantDisclosure('anthropic')).toBe(
-      'Server admins can review assistant conversations, and messages are processed by Anthropic.'
+      'Server admins can read assistant conversations. The app sends messages to Anthropic.'
     )
   })
 
   it('falls back without a known provider', () => {
-    expect(assistantDisclosure(null)).toContain("processed by the server's AI provider.")
-    expect(assistantDisclosure('mystery')).toContain("processed by the server's AI provider.")
+    expect(assistantDisclosure(null)).toContain("sends messages to the server's AI provider.")
+    expect(assistantDisclosure('mystery')).toContain("sends messages to the server's AI provider.")
   })
 })
 

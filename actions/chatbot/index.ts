@@ -21,6 +21,7 @@ import { type ChatMessage } from "@/lib/chatbot/types"
 const MAX_MESSAGE_CHARS = 8000
 
 const GONE = "That conversation no longer exists. Start a new one."
+const NO_ANSWER = "The assistant could not answer. Try again."
 
 const chatInputSchema = z.object({
   message: z.string().trim().min(1, "Type a message").max(MAX_MESSAGE_CHARS),
@@ -49,7 +50,7 @@ export const chatWithAdminBot = permissionAction({
   permission: "assistant:use",
   input: chatInputSchema,
   rateLimit: { name: "llm:assistant:admin", by: "user" },
-  fallbackError: "Failed to process message",
+  fallbackError: NO_ANSWER,
   handler: async ({ message, conversationId, timeZone }, { userId, session }): Promise<ActionResult<ChatReply>> => {
     // A role below admin has its own, lower hourly limit on top of the shared one (so the effective limit is 30 an hour)
     if (!session.user.isAdmin) {
@@ -76,9 +77,9 @@ export const chatWithAdminBot = permissionAction({
       // The admin assistant works in the caller's browser zone, else the server zone (P11.17)
       format: { ...settings, timeZone: normalizeTimeZone(timeZone) ?? settings.timeZone },
     })
-    if (result.refusal === "BUDGET_EXCEEDED") return fail("RATE_LIMITED", result.error ?? "Daily budget reached")
+    if (result.refusal === "BUDGET_EXCEEDED") return fail("RATE_LIMITED", result.error ?? "The assistant reached its daily spend limit. Try again tomorrow.")
     if (!result.success || !result.message) {
-      return fail("UPSTREAM_UNAVAILABLE", result.error ?? "Failed to process message")
+      return fail("UPSTREAM_UNAVAILABLE", result.error ?? NO_ANSWER)
     }
     // No conversation when AI features are off: the reply says so and nothing is stored
     if (result.conversationId) {

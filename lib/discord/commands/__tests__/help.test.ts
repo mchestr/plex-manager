@@ -37,7 +37,7 @@ jest.mock("@/lib/discord/config", () => ({
   getDiscordPortalUrl: () => "https://example.com/discord/link",
 }))
 
-const DISCLOSURE = "Server admins can review assistant conversations, and messages are processed by OpenAI."
+const DISCLOSURE = "Server admins can read assistant conversations. The app sends messages to OpenAI."
 jest.mock("@/lib/llm/assistant-disclosure", () => ({
   getAssistantDisclosure: jest.fn(async () => DISCLOSURE),
 }))

@@ -105,7 +105,7 @@ it("names the provider and the retention windows, each from its own setting", as
 
     expect(page).toMatchObject({
       available: true,
-      disclosure: "Server admins can review assistant conversations, and messages are processed by Anthropic.",
+      disclosure: "Server admins can read assistant conversations. The app sends messages to Anthropic.",
       usageTextDays: 90,
       historyDays: 30,
     })

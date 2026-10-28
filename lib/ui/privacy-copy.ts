@@ -13,7 +13,7 @@ const PROVIDER_NAMES: Record<string, string> = {
   openai: "OpenAI",
   anthropic: "Anthropic",
   google: "Google",
-  "openai-compatible": "a model server the server admins chose",
+  "openai-compatible": "a model server that the server admins selected",
 }
 
 const FALLBACK_PROVIDER = "the server's AI provider"
@@ -26,12 +26,12 @@ const FALLBACK_PROVIDER = "the server's AI provider"
  * @example
  * ```ts
  * assistantDisclosure("anthropic")
- * // "Server admins can review assistant conversations, and messages are processed by Anthropic."
+ * // "Server admins can read assistant conversations. The app sends messages to Anthropic."
  * ```
  */
 export function assistantDisclosure(provider: string | null): string {
   const name = (provider && PROVIDER_NAMES[provider]) || FALLBACK_PROVIDER
-  return `Server admins can review assistant conversations, and messages are processed by ${name}.`
+  return `Server admins can read assistant conversations. The app sends messages to ${name}.`
 }
 
 /**
