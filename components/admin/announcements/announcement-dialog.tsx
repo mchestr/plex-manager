@@ -86,7 +86,7 @@ function AnnouncementForm({ announcement, zone, onSaved }: AnnouncementFormProps
         />
       </FormField>
       <section aria-label="Preview" className="flex flex-col gap-2" data-testid="announcement-preview">
-        <p className="text-label text-muted-foreground">Preview, as a member sees it on home</p>
+        <p className="text-label text-muted-foreground">Preview, as members see it on the home page</p>
         <div className="rounded-lg border bg-card p-4">
           <AnnouncementItem
             announcement={{ id: "preview", title: title || "Untitled", content, createdAt }}
@@ -111,7 +111,7 @@ function AnnouncementForm({ announcement, zone, onSaved }: AnnouncementFormProps
           name="expiresAt"
           label="Expires"
           optional
-          description={<span data-testid="announcement-expires-zone">Times in {zone}. Leave empty to keep it up.</span>}
+          description={<span data-testid="announcement-expires-zone">Times are in {zone}. Leave it empty for no end date.</span>}
           error={fieldError("expiresAt")}
         >
           <Input

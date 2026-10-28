@@ -36,7 +36,7 @@ export function RequestTiersExclusion({ userId, name, excluded }: RequestTiersEx
       />
       <div className="flex flex-col">
         <Label htmlFor="admin-user-tiers-excluded">Set request limits by hand</Label>
-        <span className="text-label text-muted-foreground">The daily request limit sync leaves this member's Overseerr quota alone.</span>
+        <span className="text-label text-muted-foreground">The daily request limit sync doesn't change this member's Overseerr quota.</span>
       </div>
     </div>
   )

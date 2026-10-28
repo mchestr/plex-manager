@@ -110,7 +110,7 @@ export function UserActivityTimeline({ userId, initialData }: UserActivityTimeli
   const total = data.pages[0]?.total ?? 0
 
   if (items.length === 0) {
-    return <p className="rounded-lg border bg-card p-6 text-center text-ui text-muted-foreground">No activity recorded for this member yet.</p>
+    return <p className="rounded-lg border bg-card p-6 text-center text-ui text-muted-foreground">This member has no activity yet.</p>
   }
 
   return (

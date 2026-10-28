@@ -86,7 +86,7 @@ describe('ImportPlexUsersButton', () => {
     expect(mockRefresh).not.toHaveBeenCalled()
   })
 
-  it('reports managed users and pending invites left out', async () => {
+  it('reports managed users and pending invites not imported', async () => {
     const user = userEvent.setup()
     jest.spyOn(importPlexUsersAction, 'importPlexUsers').mockResolvedValue({
       success: true,
@@ -97,7 +97,7 @@ describe('ImportPlexUsersButton', () => {
     await user.click(screen.getByText('Import from Plex'))
 
     await waitFor(() =>
-      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 3 users, 1 managed, 2 pending invites left out')
+      expect(mockShowSuccess).toHaveBeenCalledWith('Imported 3 users, 1 managed, 2 pending invites not imported')
     )
   })
 
@@ -132,7 +132,7 @@ describe('ImportPlexUsersButton', () => {
 
     await waitFor(() => {
       expect(mockShowSuccess).toHaveBeenCalledWith(
-        'Imported 3 users, 2 skipped (already exist)')
+        'Imported 3 users, 2 already had an account')
     })
   })
 
@@ -240,7 +240,7 @@ describe('ImportPlexUsersButton', () => {
 
     await waitFor(() => {
       expect(mockShowSuccess).toHaveBeenCalledWith(
-        'Imported 5 users, 3 skipped (already exist), 2 errors')
+        'Imported 5 users, 3 already had an account, 2 errors')
     })
   })
 

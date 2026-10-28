@@ -100,7 +100,7 @@ export function UsageTable({ rows, total, page, pageSize, filtered, options, zon
             kind="filtered"
             icon={SearchX}
             title="No LLM usage matches these filters"
-            description="Clear the filters or pick a longer range."
+            description="Clear the filters or select a longer period."
           />
         ) : (
           <EmptyState kind="first-use" icon={Cpu} title="No LLM usage yet" description="Calls show here once Rewind or the assistant runs." />

@@ -33,7 +33,7 @@ export function PreviewPane({ previewId, year, cards }: PreviewPaneProps) {
           <DialogContent size="form" data-testid="playground-preview-dialog">
             <DialogHeader>
               <DialogTitle>Story preview</DialogTitle>
-              <DialogDescription>The run as a member would read it. Nothing is stored.</DialogDescription>
+              <DialogDescription>The run as a member sees it.</DialogDescription>
             </DialogHeader>
             <iframe
               src={`/rewind/${year}?preview=${previewId}`}

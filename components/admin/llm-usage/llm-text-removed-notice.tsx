@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-const LLM_TEXT_REMOVED_NOTICE = "Text removed in the October 2026 privacy clean-up"
+const LLM_TEXT_REMOVED_NOTICE = "The October 2026 privacy clean-up removed this text."
 
 /** Stands in for LLM prompt or response text that the October 2026 clean-up removed (P0.20). */
 export function LlmTextRemovedNotice({ title }: { title: string }) {

@@ -76,7 +76,7 @@ export function FactsPane({ view }: FactsPaneProps) {
             ))}
           </ul>
         ) : (
-          <p className="text-ui text-muted-foreground">No page was omitted.</p>
+          <p className="text-ui text-muted-foreground">The run omitted no pages.</p>
         )}
       </div>
     </section>

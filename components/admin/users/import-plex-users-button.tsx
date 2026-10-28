@@ -27,10 +27,10 @@ export function ImportPlexUsersButton() {
         parts.push(`${managed} managed`)
       }
       if (skipped > 0) {
-        parts.push(`${skipped} skipped (already exist)`)
+        parts.push(`${skipped} already had an account`)
       }
       if (pending > 0) {
-        parts.push(`${pending} pending invite${pending !== 1 ? "s" : ""} left out`)
+        parts.push(`${pending} pending invite${pending !== 1 ? "s" : ""} not imported`)
       }
       if (errors.length > 0) {
         parts.push(`${errors.length} error${errors.length !== 1 ? "s" : ""}`)

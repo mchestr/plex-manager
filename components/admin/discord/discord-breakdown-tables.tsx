@@ -14,7 +14,7 @@ import { COMMAND_TYPE_LABELS } from "./specs"
 const onePage = (rows: unknown[]) => ({ page: 1, pageSize: Math.max(rows.length, 1), total: rows.length })
 
 const noCommands = (
-  <EmptyState kind="first-use" icon={icons.discordBot} title="No commands in this period" description="Pick a longer period above." />
+  <EmptyState kind="first-use" icon={icons.discordBot} title="No commands in this period" description="Select a longer period." />
 )
 
 interface ActiveMember {

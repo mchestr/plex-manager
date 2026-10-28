@@ -125,7 +125,7 @@ export default async function AdminUserRewindPage({ params, searchParams }: Prev
         data-testid="admin-rewind-preview-header"
       />
       <Alert tone="info" data-testid="admin-rewind-preview-banner">
-        You are viewing {name}&apos;s Rewind as an admin. Members are told that admins can view their Rewind.
+        You are viewing {name}&apos;s Rewind as an admin. The app tells members that admins can view their Rewind.
       </Alert>
       <RewindScope fontClassName={rewindFontVariables}>
         {view.kind === "issue" ? (

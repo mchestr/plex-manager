@@ -86,7 +86,7 @@ describe('Admin users page', () => {
 
     const alert = screen.getByTestId('admin-users-plex-alert')
     expect(alert).toHaveTextContent("Plex didn't respond, so 2 members couldn't be verified.")
-    expect(alert).toHaveTextContent('Everyone is still listed, and their access shows as Unknown until Plex answers. Last checked 2 minutes ago.')
+    expect(alert).toHaveTextContent('All members stay in the list. Their access shows as Unknown until Plex responds. Last checked 2 minutes ago.')
     expect(within(alert).getByRole('button', { name: 'Check again' })).toBeInTheDocument()
     expect(screen.getByTestId('admin-users-plex-u1')).toHaveTextContent('Last checked 2 minutes ago')
     expect(screen.getByTestId('admin-users-stat-plex')).toHaveTextContent('4of 7 shared')

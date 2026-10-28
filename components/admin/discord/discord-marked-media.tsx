@@ -57,11 +57,11 @@ type BadgeVariant = NonNullable<ComponentProps<typeof Badge>["variant"]>
 /** Human label and Badge variant for each MarkType. */
 const MARK_TYPE_META: Record<MarkType, { label: string; variant: BadgeVariant }> = {
   FINISHED_WATCHING: { label: "Finished", variant: "success" },
-  KEEP_FOREVER: { label: "Keep Forever", variant: "info" },
-  NOT_INTERESTED: { label: "Not Interested", variant: "neutral" },
+  KEEP_FOREVER: { label: "Keep forever", variant: "info" },
+  NOT_INTERESTED: { label: "Not interested", variant: "neutral" },
   REWATCH_CANDIDATE: { label: "Rewatch", variant: "info" },
-  POOR_QUALITY: { label: "Poor Quality", variant: "warning" },
-  WRONG_VERSION: { label: "Wrong Version", variant: "destructive" },
+  POOR_QUALITY: { label: "Poor quality", variant: "warning" },
+  WRONG_VERSION: { label: "Wrong version", variant: "destructive" },
 }
 
 const MARK_TYPE_OPTIONS = [
@@ -209,7 +209,7 @@ export function DiscordMarkedMedia({
           <Input
             name="marksSearch"
             defaultValue={filters.search}
-            placeholder="Search by title…"
+            placeholder="Search titles"
             className="flex-1"
             data-testid="marks-search-input"
           />
@@ -236,7 +236,7 @@ export function DiscordMarkedMedia({
                   Mark
                 </th>
                 <th className="px-4 py-3 text-left text-label font-medium text-muted-foreground">
-                  Marked By
+                  Marked by
                 </th>
                 <th className="px-4 py-3 text-left text-label font-medium text-muted-foreground">
                   Source
@@ -271,7 +271,7 @@ export function DiscordMarkedMedia({
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-foreground">
-                        {mark.user.name ?? mark.user.email ?? "Unknown user"}
+                        {mark.user.name ?? mark.user.email ?? "Unknown member"}
                       </span>
                     </td>
                     <td className="px-4 py-3">

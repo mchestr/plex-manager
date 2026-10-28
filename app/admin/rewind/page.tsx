@@ -109,7 +109,7 @@ export default async function RewindSeasonPage({ searchParams }: { searchParams:
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 md:px-6" data-testid="admin-rewind-page">
       <PageHeader
         title="Season"
-        description={`Rewind ${year}: prepare the season's data, generate every member's Rewind and follow the runs.`}
+        description={`Rewind ${year}`}
         actions={<SeasonActions year={year} estimates={{ all, failed }} />}
         data-testid="admin-rewind-header"
       />

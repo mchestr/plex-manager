@@ -88,10 +88,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
             >
               Back to LLM usage
             </Link>
-            <h1 data-testid="admin-llm-usage-detail-heading" className="text-2xl sm:text-3xl font-bold text-foreground mb-2">LLM Request Details</h1>
-            <p className="text-sm text-muted-foreground">
-              Investigate LLM request details, token usage, and response data
-            </p>
+            <h1 data-testid="admin-llm-usage-detail-heading" className="text-2xl sm:text-3xl font-bold text-foreground mb-2">LLM request</h1>
           </div>
 
         <StatGrid className="mb-6">
@@ -112,7 +109,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <Card>
             <CardHeader>
-              <CardTitle as="h2">User Information</CardTitle>
+              <CardTitle as="h2">Member</CardTitle>
             </CardHeader>
             <CardContent>
             <div className="flex items-center gap-4">
@@ -120,7 +117,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                 <div className="relative w-16 h-16 rounded-full overflow-hidden bg-secondary">
                   <Image
                     src={record.user.image}
-                    alt={record.user.name || "User"}
+                    alt={record.user.name || "Member"}
                     width={64}
                     height={64}
                     className="w-full h-full object-cover"
@@ -135,7 +132,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                 </div>
               )}
               <div>
-                <div className="text-lg font-medium text-foreground">{record.user.name || "Unknown"}</div>
+                <div className="text-lg font-medium text-foreground">{record.user.name || "Unknown member"}</div>
                 {record.user.email && (
                   <div className="text-sm text-muted-foreground">{record.user.email}</div>
                 )}
@@ -144,14 +141,14 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                   href={userDetail(record.user.id)}
                   className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground mt-1 inline-block"
                 >
-                  View user
+                  View member
                 </Link>
                 <Link
                   href={llmUsage({ userId: record.userId, year: record.wrapped?.year })}
                   className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground mt-1 ml-4 inline-block"
                   data-testid="llm-usage-detail-view-all"
                 >
-                  View all
+                  View all their calls
                 </Link>
               </div>
             </div>
@@ -160,7 +157,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
 
           <Card>
             <CardHeader>
-              <CardTitle as="h2">Usage Context</CardTitle>
+              <CardTitle as="h2">Context</CardTitle>
             </CardHeader>
             <CardContent>
             {record.wrapped || record.chatConversation ? (
@@ -195,7 +192,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                 )}
                 {record.chatConversation && (
                   <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground mb-1">Chat Conversation</div>
+                    <div className="text-sm text-muted-foreground mb-1">Chat conversation</div>
                     <div className="text-sm text-foreground">
                       Started {f.dateTime(record.chatConversation.createdAt, { zoneLabel: true })}
                     </div>
@@ -204,14 +201,14 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                       href={llmConversation(record.chatConversation.id)}
                       className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground inline-block mt-2"
                     >
-                      View Conversation Calls
+                      View conversation calls
                     </Link>
                   </div>
                 )}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Not associated with a wrapped or chat conversation.
+                Not part of a Rewind or a chat conversation.
               </p>
             )}
             </CardContent>
@@ -220,10 +217,10 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle as="h2">Request Details</CardTitle>
+            <CardTitle as="h2">Request</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-muted-foreground mb-2">Created At</div>
+            <div className="text-sm text-muted-foreground mb-2">Created</div>
             <div className="text-sm text-foreground">{f.dateTime(record.createdAt, { zoneLabel: true })}</div>
           </CardContent>
         </Card>
@@ -236,7 +233,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
             content={formattedPrompt}
             title="Prompt"
             characterCount={record.prompt.length}
-            characterCountSuffix={promptIsChatMessages ? "(Chat messages)" : promptIsJson ? "(JSON formatted)" : undefined}
+            characterCountSuffix={promptIsChatMessages ? "(Chat messages)" : promptIsJson ? "(JSON)" : undefined}
           />
         )}
 
@@ -248,7 +245,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
             content={formattedResponse}
             title="Response"
             characterCount={record.response.length}
-            characterCountSuffix={isJson ? "(JSON formatted)" : undefined}
+            characterCountSuffix={isJson ? "(JSON)" : undefined}
           />
         )}
       </div>

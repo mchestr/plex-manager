@@ -138,7 +138,7 @@ export default async function RewindPlaygroundPage({ searchParams }: { searchPar
   } else if (query.preview) {
     result = (
       <Alert tone="info" title="That run has expired" data-testid="playground-expired">
-        A dry run is kept for an hour. Run it again.
+        The app keeps a dry run for one hour. Run it again.
       </Alert>
     )
   }
@@ -147,7 +147,7 @@ export default async function RewindPlaygroundPage({ searchParams }: { searchPar
     <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 sm:p-6">
       <PageHeader
         title="Playground"
-        description="Dry runs of the real Rewind pipeline on a member or a golden fixture. Nothing is stored."
+        description="Dry runs of the real Rewind pipeline on a member or a golden fixture."
         data-testid="admin-rewind-playground-header"
       />
       <Playground initialForm={initialForm} options={options}>
