@@ -15,18 +15,18 @@ import type { InkName } from "@/lib/design/tokens"
 
 /** Every archetype, in the v2 order the stored v2 rows and prompt use. */
 export const ARCHETYPES = [
-  { id: "midnight-marathoner", name: "The Midnight Marathoner", motif: "Watches deep into the night, one more episode always wins" },
-  { id: "credits-roller", name: "The Credits Roller", motif: "Finishes what they start — every film watched to the last frame" },
-  { id: "comfort-rewatcher", name: "The Comfort Rewatcher", motif: "Returns to beloved favorites again and again" },
-  { id: "premiere-chaser", name: "The Premiere Chaser", motif: "First in line for new releases and fresh episodes" },
-  { id: "series-devourer", name: "The Series Devourer", motif: "Consumes entire seasons in sittings, binges without mercy" },
-  { id: "weekend-double-feature", name: "The Weekend Double Feature", motif: "Saves it all up for marathon weekend sessions" },
-  { id: "curator", name: "The Curator", motif: "A carefully chosen catalog — quality over quantity" },
-  { id: "explorer", name: "The Explorer", motif: "Always discovering something new, rarely repeats" },
-  { id: "loyalist", name: "The Loyalist", motif: "Devoted to a handful of shows above all others" },
-  { id: "golden-hour-viewer", name: "The Golden Hour Viewer", motif: "Reliable evening ritual, the same prime-time slot every day" },
-  { id: "festival-juror", name: "The Festival Juror", motif: "Broad taste across films — a serious cinema diet" },
-  { id: "casual-critic", name: "The Casual Critic", motif: "Drops in when something's worth it, watches on their own terms" },
+  { id: "midnight-marathoner", name: "The Midnight Marathoner", motif: "Watches deep into the night" },
+  { id: "credits-roller", name: "The Credits Roller", motif: "Finishes what they start and stays to the end" },
+  { id: "comfort-rewatcher", name: "The Comfort Rewatcher", motif: "Returns to favourite titles again and again" },
+  { id: "premiere-chaser", name: "The Premiere Chaser", motif: "Watches new releases and new episodes soon after they come out" },
+  { id: "series-devourer", name: "The Series Devourer", motif: "Watches whole seasons in long sittings" },
+  { id: "weekend-double-feature", name: "The Weekend Double Feature", motif: "Saves the long viewing sessions for the weekend" },
+  { id: "curator", name: "The Curator", motif: "Keeps to a short list of carefully chosen titles" },
+  { id: "explorer", name: "The Explorer", motif: "Keeps finding something new and rarely watches a title again" },
+  { id: "loyalist", name: "The Loyalist", motif: "Comes back to a few shows above all others" },
+  { id: "golden-hour-viewer", name: "The Golden Hour Viewer", motif: "Keeps a regular evening slot for watching" },
+  { id: "festival-juror", name: "The Festival Juror", motif: "Gives a large part of their time to movies" },
+  { id: "casual-critic", name: "The Casual Critic", motif: "Watches now and then, when something is worth it" },
 ] as const
 
 export type ArchetypeId = (typeof ARCHETYPES)[number]["id"]

@@ -56,13 +56,13 @@ describe("slot templates", () => {
   })
 
   it("fall back to the token-free variant when the member lacks every fact", () => {
-    expect(slotTemplate("deck.taste", { facts: {}, userId: USER })).toBe("Your kind of thing.")
+    expect(slotTemplate("deck.taste", { facts: {}, userId: USER })).toBe("Your taste, by genre and year.")
   })
 
   it("never cite a count or share of zero, but cite a Sunday or midnight", () => {
     const zero = { "hours.afterDarkShare": { value: 0, display: "0%", unit: "share" } } satisfies RewindFactsV3
     const picks = new Set(Array.from({ length: 30 }, (_, n) => slotTemplate("deck.clock", { facts: zero, userId: `member-${n}` })))
-    expect([...picks]).toEqual(["Any time is a good time."])
+    expect([...picks]).toEqual(["When in the day you pressed play."])
     const sunday = {
       "hours.latestStart.time": { value: 0, display: "12:00 AM", unit: "time" },
       "hours.latestStart.weekday": { value: 0, display: "Sunday", unit: "weekday" },

@@ -4,12 +4,12 @@
   "model": null,
   "hashes": {
     "promptVersion": "fce634116ff7f5ae70294e0f3651547080f3eacec22b418768182a23767e775e",
-    "systemPrompt": "ba73512fcfc3f9a0565fdac8f0958cf54aa1feb4d700a1a827e034e6dddd573f",
+    "systemPrompt": "8552760877e626fcd7977881a78ae45173e10069014a8677eee85196e0ed560b",
     "wireSchema": "a324cbd0b4ce0a37ac5b7849d1c2cad259a1085bef6b26ba510c386418e20985",
     "copySlots": "aa222f77e096af80477d303ae3e7b504d9aae9aae2468a72376ed2456ee5384b",
-    "grounding": "3f68de6b63346e58bd88e0dc17015e8253766cae475bde9f7cbdc1da7c391f1f",
-    "posterLines": "3134f1bbb2b41f33c416672a22fd664fa3e07f42ac30ebe0d12b1e5873feb513",
-    "slotTemplates": "ada204e9fea1dfa2257d41affa1a9da43b57c7b6e64c946abf51ca49a2f3baa8",
+    "grounding": "44448abb78e965c8f7940170fe6dc9dfdd9beda5595b86c4c5fed1f019a2a845",
+    "posterLines": "31ffc99adbb8a0cec47f288a61ce0995af21621d86865fdd83ef0fc1448eb7fa",
+    "slotTemplates": "a932f6d19b6a3619142e3106124679e81006408e432b622531c1c5bb4a576cb8",
     "catalogue": "f703241b748eeff8cedf4512d3a4f2ce97469fefb680143e86774d75de59a210",
     "model": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
   },
@@ -25,6 +25,10 @@
     {
       "on": "2026-10-28",
       "reason": "Shorter template decks and dedication: no method or meta lines; each slot keeps a token-free last variant"
+    },
+    {
+      "on": "2026-10-28",
+      "reason": "Plain copy for archetype motifs, poster lines and token-free slot templates; movie and show terms; movie and movies counted in grounding"
     }
   ]
 }
