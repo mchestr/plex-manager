@@ -80,7 +80,7 @@
     "fflate": "0.8.3",
     "ioredis": "5.11.1",
     "lucide-react": "^1.58.0",
-    "motion": "14.3.0",
+    "motion": "14.7.1",
     "next": "^16.4.2",
     "next-auth": "^4.24.15",
     "rate-limiter-flexible": "11.2.3",
