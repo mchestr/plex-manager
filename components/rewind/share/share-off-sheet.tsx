@@ -29,9 +29,7 @@ export function ShareOffSheet({ open, onClose, href }: ShareOffSheetProps) {
           <SheetDescription>Sharing is off in this preview.</SheetDescription>
         </SheetHeader>
         <p className="font-text text-ui" data-testid="rewind-share-off-line">
-          {href
-            ? "This is the admin preview of your own Rewind. Open your Rewind to share its cards or a public link."
-            : "Members share from their own Rewind: Share this page on a page with a card, or Share the poster on the centrefold and the back cover."}
+          {href ? "This is your own Rewind. Open it to share its cards or a link." : "Members share cards and links from their own Rewind."}
         </p>
         {href ? (
           <Button variant="ink" size="pill" nativeButton={false} render={<Link href={href} />} data-testid="rewind-share-off-open">

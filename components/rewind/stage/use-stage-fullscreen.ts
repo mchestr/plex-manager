@@ -22,7 +22,7 @@ function leaveDocumentFullscreen(requested: { current: boolean }) {
 /**
  * Makes every element beside `from` and beside each of its ancestors inert,
  * except the app's toasts, which portal to the body and stay reachable;
- * returns the ones it changed.
+ * returns the ones it changed. A snapshot: an element added later stays live.
  */
 function inertAround(from: Element): Element[] {
   const toasts = document.querySelector("[data-slot=toast-viewport]")

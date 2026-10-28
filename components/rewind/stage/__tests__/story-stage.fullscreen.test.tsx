@@ -198,7 +198,7 @@ describe("StoryStage share in the previews", () => {
 
     expect(stage()).toHaveAttribute("data-mode", "sheet")
     expect(screen.getByTestId("rewind-share-off")).toHaveTextContent("Sharing is off in this preview.")
-    expect(screen.getByTestId("rewind-share-off-line")).toHaveTextContent("Members share from their own Rewind")
+    expect(screen.getByTestId("rewind-share-off-line")).toHaveTextContent("Members share cards and links from their own Rewind.")
     expect(screen.queryByTestId("rewind-share-off-open")).not.toBeInTheDocument()
   })
 
@@ -208,7 +208,7 @@ describe("StoryStage share in the previews", () => {
     await user.keyboard("{End}")
     await user.click(screen.getByTestId("rewind-privacy-change"))
 
-    expect(screen.getByTestId("rewind-share-off-line")).toHaveTextContent("admin preview of your own Rewind")
+    expect(screen.getByTestId("rewind-share-off-line")).toHaveTextContent("This is your own Rewind.")
     expect(screen.getByTestId("rewind-share-off-open")).toHaveAttribute("href", "/rewind/2026?sheet=share")
   })
 })
