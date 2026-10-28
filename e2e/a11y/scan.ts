@@ -33,10 +33,30 @@ export async function analyzeAtRest(page: Page, builder: AxeBuilder): Promise<Ax
 }
 
 /**
+ * Removes the trigger-sized hole that Base UI's InternalBackdrop clips out
+ * while a modal popup, such as a Select, is open.
+ *
+ * axe's `isModalOpen` samples five viewport points (the centre and four
+ * corners of the middle 75%) for one fixed element under all of them. The
+ * cutout lets that backdrop miss a point that lands on the trigger, so axe
+ * would decide no modal is open, and the result would depend on where the
+ * trigger sits on the page. Contrast checks drop fixed elements above a
+ * target, so the hole matters to nothing else.
+ */
+async function fillPopupBackdropCutouts(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (const backdrop of document.querySelectorAll<HTMLElement>('[role="presentation"][data-base-ui-inert]')) {
+      backdrop.style.clipPath = '';
+    }
+  });
+}
+
+/**
  * Scans `page` and checks the counts against the baseline entry `name`, or
  * lowers that entry when `UPDATE_AXE_BASELINE=1`.
  */
 export async function scanAgainstBaseline(page: Page, name: string): Promise<void> {
+  await fillPopupBackdropCutouts(page);
   const results = await analyzeAtRest(page, axeFor(page));
   try {
     enforceBaseline({
