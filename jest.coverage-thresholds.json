@@ -1,9 +1,9 @@
 {
   "global": {
-    "statements": 85,
-    "branches": 76,
-    "functions": 84,
-    "lines": 86
+    "statements": 86,
+    "branches": 78,
+    "functions": 86,
+    "lines": 87
   },
   "./lib/auth.ts": {
     "statements": 95,
@@ -31,13 +31,13 @@
   },
   "./actions/admin/": {
     "statements": 97,
-    "branches": 91,
+    "branches": 93,
     "functions": 97,
-    "lines": 98
+    "lines": 99
   },
   "./lib/queue/": {
     "statements": 86,
-    "branches": 80,
+    "branches": 81,
     "functions": 77,
     "lines": 88
   },
@@ -91,9 +91,9 @@
   },
   "./components/setup/": {
     "statements": 87,
-    "branches": 77,
+    "branches": 79,
     "functions": 86,
-    "lines": 88
+    "lines": 89
   },
   "./actions/setup.ts": {
     "statements": 100,
