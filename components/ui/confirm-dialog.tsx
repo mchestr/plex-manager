@@ -79,12 +79,20 @@ export function ConfirmDialog({
   const [typed, setTyped] = useState("")
   const succeeded = useRef(false)
   const popup = useRef<HTMLDivElement>(null)
+  // Where the page moved focus while the action ran; the focus trap can pull it back before the close commits
+  const pageFocus = useRef<HTMLElement | null>(null)
   const inputId = useId()
 
   // Focus the page moved itself, outside this dialog, while the dialog closed
   const focusTaken = () => {
     const active = document.activeElement
     return active !== null && active !== document.body && !popup.current?.contains(active)
+  }
+
+  const finalFocus = () => {
+    if (!succeeded.current) return true
+    if (pageFocus.current?.isConnected) return pageFocus.current
+    return !focusTaken() && (successFocus?.current ?? false)
   }
 
   // A real effect: the router keeps a page it leaves (Activity), so an open confirm closes as the page hides rather
@@ -100,12 +108,23 @@ export function ConfirmDialog({
 
   const confirm = () => {
     setError(null)
+    pageFocus.current = null
+    const notePageFocus = (event: FocusEvent) => {
+      const target = event.target
+      // Base UI's focus guards sit outside the popup and belong to the trap, not the page
+      if (target instanceof HTMLElement && !popup.current?.contains(target) && !target.hasAttribute("data-base-ui-focus-guard")) {
+        pageFocus.current = target
+      }
+    }
     startTransition(async () => {
       let result: { error?: string }
+      document.addEventListener("focusin", notePageFocus, true)
       try {
         result = await action()
       } catch {
         result = { error: CONFIRM_FALLBACK_ERROR }
+      } finally {
+        document.removeEventListener("focusin", notePageFocus, true)
       }
       const failure = result.error
       if (failure) {
@@ -142,7 +161,7 @@ export function ConfirmDialog({
       <AlertDialogContent
         ref={popup}
         data-testid={testId}
-        finalFocus={successFocus && (() => (succeeded.current ? !focusTaken() && successFocus.current : true))}
+        finalFocus={successFocus && finalFocus}
       >
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
