@@ -50,8 +50,8 @@ export interface ShareSetup {
 /** Edit card's name for each poster stat. */
 export const CARD_FACT_LABELS: Record<CardFactId, string> = {
   "time.totalHours": "Hours watched",
-  "time.seriesHours": "Hours of series",
-  "counts.films": "Films",
+  "time.seriesHours": "Hours of shows",
+  "counts.films": "Movies",
   "counts.episodes": "Episodes",
   "standing.percentile": "Standing on the server",
   "hours.peak": "Busiest hour",

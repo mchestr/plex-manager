@@ -74,6 +74,7 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 |---|---|---|---|
 | `RETENTION_REWIND_LLM_TEXT_DAYS` |  | `120` | Days Rewind AI prompts and replies keep their text. |
 | `RETENTION_ASSISTANT_LLM_TEXT_DAYS` |  | `90` | Days assistant prompts and replies keep their text. |
+| `RETENTION_ASSISTANT_CHAT_DAYS` |  | `90` | Idle days before an assistant page conversation leaves its owner's history. |
 | `RETENTION_CHAT_CONVERSATION_DAYS` |  | `180` | Days an ended assistant conversation is kept. |
 | `RETENTION_DISCORD_CHAT_MESSAGES_DAYS` |  | `1` | Idle days before a Discord chat's stored turns are emptied. |
 | `RETENTION_DISCORD_CHAT_SESSION_DAYS` |  | `30` | Idle days before a Discord chat session is deleted. |

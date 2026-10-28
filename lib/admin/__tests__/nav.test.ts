@@ -1,6 +1,7 @@
 /**
  * The admin nav config (P6.1, ui-design-system 6.2): unique ids, sentence-case
- * Rewind copy, the active rule, the mobile tabs and the immersive routes.
+ * Rewind copy, the active rule, the mobile tabs, the Assistant item and the
+ * immersive routes.
  */
 
 import type { Route } from "next"
@@ -10,10 +11,10 @@ import {
   ADMIN_NAV_GROUPS,
   activeItem,
   isActive,
-  isAssistantHidden,
   isImmersive,
   isTabActive,
   mobileTabs,
+  navFor,
   navTestId,
   titleFor,
   type AdminNavItem,
@@ -31,7 +32,7 @@ describe("ADMIN_NAV", () => {
   })
 
   it("keeps the test ids the E2E specs use", () => {
-    for (const id of ["overview", "users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "queues", "season", "playground", "settings"]) {
+    for (const id of ["overview", "users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "watchlist", "queues", "season", "playground", "settings"]) {
       expect(ADMIN_NAV.map(navTestId)).toContain(`admin-nav-${id}`)
     }
   })
@@ -70,6 +71,7 @@ describe("isActive", () => {
     ["playground", "/admin/rewind/playground", true],
     ["season", "/admin/rewind/playground", false],
     ["invites", "/admin/invites/i1", true],
+    ["watchlist", "/admin/watchlist", true],
     ["settings", "/admin/users", false],
   ])("%s on %s is %s", (id, pathname, expected) => {
     expect(isActive(byId(id), pathname)).toBe(expected)
@@ -124,23 +126,33 @@ describe("Overview (P10.8)", () => {
   })
 })
 
-describe("isAssistantHidden", () => {
-  it.each([
-    ["/admin/users/u1/rewind/2025", true],
-    ["/admin/wrapped/w1/history/l1", true],
-    ["/admin/users/u1/wrapped", false],
-    ["/admin/users/u1", false],
-    ["/admin/users", false],
-    ["/admin/rewind/playground", true],
-    ["/admin/rewind", false],
-  ])("%s is %s", (pathname, expected) => {
-    expect(isAssistantHidden(pathname)).toBe(expected)
+describe("Assistant", () => {
+  it("follows Overview, ungrouped, and opens from More on a phone", () => {
+    expect(ADMIN_NAV[1]).toMatchObject({
+      id: "assistant",
+      label: "Assistant",
+      href: "/admin/assistant",
+      group: null,
+      mobile: "more",
+      permission: "assistant:use",
+    })
+    expect(mobileTabs().map((tab) => tab.id)).not.toContain("assistant")
+  })
+
+  it("lights on each conversation's URL", () => {
+    expect(activeItem("/admin/assistant")?.id).toBe("assistant")
+    expect(titleFor("/admin/assistant")).toBe("Assistant")
+  })
+
+  it("is in a Support user's nav beside Users, and in no one's without a role", () => {
+    expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).toEqual(["assistant", "users"])
+    expect(navFor({ isAdmin: false, role: null })).toEqual([])
   })
 })
 
 describe("isImmersive", () => {
   it.each([
-    // The admin Rewind preview keeps the nav (P7.9): only the assistant steps aside.
+    // The admin Rewind preview keeps the nav (P7.9)
     ["/admin/users/u1/rewind/2025", false],
     ["/admin/wrapped/w1/history/l1", true],
     ["/admin/users/u1", false],

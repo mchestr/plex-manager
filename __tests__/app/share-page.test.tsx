@@ -170,7 +170,7 @@ describe("a v3 link", () => {
     const banner = screen.getByTestId("rewind-share-owner-banner")
     expect(banner).toHaveTextContent("This page is public until 31 Jan 2027.")
     expect(within(banner).getByTestId("rewind-share-change-cards")).toHaveAttribute("href", "/rewind/2026?sheet=share")
-    expect(within(banner).getByTestId("rewind-share-rotate")).toHaveTextContent("Rotate link")
+    expect(within(banner).getByTestId("rewind-share-rotate")).toHaveTextContent("Make a new link")
     expect(within(banner).getByTestId("rewind-share-stop-sharing")).toHaveTextContent("Stop sharing")
     expect(screen.getByTestId("rewind-share-open-own")).toHaveAttribute("href", "/rewind")
   })

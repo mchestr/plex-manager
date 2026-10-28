@@ -47,7 +47,7 @@ export default async function LLMConversationPage({ params }: { params: Promise<
           title="Conversation"
           data-testid="admin-llm-conversation-heading"
         />
-        <EmptyState kind="first-use" icon={MessagesSquare} title="No calls" description="No LLM usage records were found for this conversation." />
+        <EmptyState kind="first-use" icon={MessagesSquare} title="No calls" />
       </div>
     )
   }
@@ -65,7 +65,6 @@ export default async function LLMConversationPage({ params }: { params: Promise<
       <PageHeader
         breadcrumbs={[{ label: "LLM usage", href: llmUsage() }, { label: name, href: llmUsage({ userId: user.id }) }, { label: "Conversation" }]}
         title={`${name}'s conversation`}
-        description="Each LLM call in this chat conversation."
         data-testid="admin-llm-conversation-heading"
       />
 
@@ -88,7 +87,7 @@ export default async function LLMConversationPage({ params }: { params: Promise<
       </StatGrid>
 
       {latestRecord.prompt === null ? (
-        <LlmTextRemovedNotice title="Latest Conversation Prompt" />
+        <LlmTextRemovedNotice title="Latest prompt" />
       ) : (
         <ConversationTranscript prompt={latestRecord.prompt} />
       )}

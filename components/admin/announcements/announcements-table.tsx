@@ -100,7 +100,6 @@ export function AnnouncementsTable({ rows, onEdit, onDelete, createAction }: Ann
           kind="first-use"
           icon={icons.announcements}
           title="No announcements yet"
-          description="Announcements show on every member's home page."
           primaryAction={createAction}
           data-testid="announcements-empty-state"
         />

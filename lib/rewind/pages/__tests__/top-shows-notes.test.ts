@@ -46,6 +46,6 @@ describe("Top shows Notes and hidden titles", () => {
     expect(rows.map((row) => row[1])).not.toContain(hiddenRow.title)
     expect(rows.map((row) => row[1])).not.toContain(heavy.facts["series[1].title"]!.display)
     expect(rows.map((row) => row[0])).toEqual(rows.map((_row, i) => String(i + 1)))
-    expect(headingOf(notes)).toBe(`All ${rows.length} series, ranked by time watched`)
+    expect(headingOf(notes)).toBe(`All ${rows.length} shows, ranked by time watched`)
   })
 })

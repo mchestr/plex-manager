@@ -25,12 +25,12 @@ export const topFilmsNotes: CoreNotes<TopFilmsData> = (data, facts, ctx) => {
     .map(({ i }, n) => [formatHero(n + 1, ctx), shown(facts, filmFact(i, "title")), shown(facts, filmFact(i, "plays")), shown(facts, filmFact(i, "minutes"))])
   if (rows.length === 0) return []
   const blocks: ArticleBlock[] = [
-    headingBlock(rows.length === 1 ? "Your one film" : "Your films, ranked by plays"),
+    headingBlock(rows.length === 1 ? "Your one movie" : "Your movies, ranked by plays"),
     paragraphBlock(`Ranked by plays, then minutes, from ${windowRange(facts)}. A rewatch is a second play.`),
-    { kind: "table", table: { caption: "Your films by plays.", columns: ["No.", "Film", "Plays", "Watched"], rows } },
+    { kind: "table", table: { caption: "Your movies by plays.", columns: ["No.", "Movie", "Plays", "Watched"], rows } },
   ]
   if (has(facts, "films.finishedShare")) {
-    blocks.push(paragraphBlock(`You finished ${shown(facts, "films.finishedShare")} of the films you started this year.`))
+    blocks.push(paragraphBlock(`You finished ${shown(facts, "films.finishedShare")} of the movies you started this year.`))
   }
   return blocks
 }

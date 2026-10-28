@@ -38,7 +38,7 @@ export const updateGlobalWatchlistSyncSettings = adminAction({
     })
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("watchlist", before, values))
-    revalidatePath("/admin/settings")
+    revalidatePath("/admin/watchlist")
 
     // With Redis the BullMQ scheduler follows the save at once; without it the
     // fallback poller reads the new settings on its next poll.

@@ -54,7 +54,7 @@ function AiTabs({ tab, onTabChange, panels, unsaved, "data-testid": testId }: Ai
         {panels.chat}
       </TabsPanel>
       <TabsPanel value="wrapped" className="flex flex-col gap-6">
-        <p className="text-label text-muted-foreground">The model that writes each issue&apos;s lines; mode and budget are in the Rewind section.</p>
+        <p className="text-label text-muted-foreground">This model writes the Rewind text. Set the mode and budget in the Rewind section.</p>
         {panels.wrapped}
       </TabsPanel>
     </Tabs>
@@ -117,7 +117,7 @@ export function AiSection({ chat, wrapped, llmDisabled, caps, health, footerMeta
     <SettingsSection
       id="ai"
       title="AI provider"
-      description="Writes Rewind copy and answers questions in the admin assistant."
+      description="Rewind and the assistant use these models."
       status={health.status}
       checkedAt={health.checkedAt}
       onTest={() => forms[tab].testConnection()}

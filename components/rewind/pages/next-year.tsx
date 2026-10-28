@@ -94,7 +94,7 @@ function listings(data: NextYearData, issue: IssueContext): Record<NextYearPart,
     })),
     picks: data.picks.map((row, i) => ({
       key: row.ratingKey,
-      when: row.year === null ? (row.kind === "film" ? "Film" : "Series") : String(row.year),
+      when: row.year === null ? (row.kind === "film" ? "Movie" : "Show") : String(row.year),
       title: shown(facts, partTitle("picks", i)),
       href: plex(row.ratingKey),
       note: <CopyText text={pickReason(row.because)} source={facts} />,

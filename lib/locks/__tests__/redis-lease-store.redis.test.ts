@@ -13,7 +13,7 @@ import Redis from "ioredis"
 
 import { LeaseLock, type LeaseName } from "@/lib/locks/lease-lock"
 import { RedisLeaseStore } from "@/lib/locks/redis-lease-store"
-import { describeRedis } from "@/test/helpers/integration"
+import { describeRedis } from "@/__tests__/helpers/integration"
 
 describeRedis("RedisLeaseStore", (redisUrl) => {
   let inspector: Redis

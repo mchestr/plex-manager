@@ -205,7 +205,19 @@ function seal(plaintext: string, kid: string, key: Buffer): string {
  *   misconfigured keyring never silently writes plaintext
  */
 export function encryptSecret(plaintext: string): string {
-  if (plaintext === "" || isEncrypted(plaintext)) return plaintext
+  return isEncrypted(plaintext) ? plaintext : encryptText(plaintext)
+}
+
+/**
+ * Encrypts free text under the primary key, even text that looks like an
+ * encrypted value: what a person typed or a model wrote then reads back
+ * exactly as written, never as the secret it imitates. Returns the text
+ * unchanged when it is empty or no key is configured.
+ *
+ * @throws Error when `ENCRYPTION_KEYS` is set but holds no valid entry
+ */
+export function encryptText(plaintext: string): string {
+  if (plaintext === "") return plaintext
   const { primary, ringConfigured } = getKeyring()
   if (!primary) {
     if (ringConfigured) throw new Error("ENCRYPTION_KEYS has no valid entry; no secret can be written")

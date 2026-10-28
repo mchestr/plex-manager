@@ -121,7 +121,7 @@ describe("page by page on heavy", () => {
   it("number: the counting rule and both years by month", () => {
     const table = notesOf("number").find((block) => block.kind === "table")
     expect(table?.kind === "table" && table.table.columns).toEqual(["Month", "2026", "2025"])
-    expect(textOfNotes(notesOf("number"))).toContain("2025 is recounted from your play history")
+    expect(textOfNotes(notesOf("number"))).toContain("2025 is counted again from your play history")
   })
 
   it("bookends: links to the earlier years", () => {

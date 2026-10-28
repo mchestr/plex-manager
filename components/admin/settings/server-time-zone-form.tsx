@@ -41,7 +41,7 @@ function zoneGroups() {
 function effectiveNote({ configured, effective }: ServerTimeZone, editing: boolean) {
   const uses = "Season dates, announcement expiry and Rewind times use it."
   if (configured) return `In effect: ${zoneLabel(effective)}. ${uses}`
-  const override = editing ? " Saving a zone here overrides it." : ""
+  const override = editing ? " A zone that you save here replaces it." : ""
   return `In effect: ${zoneLabel(effective)}, from the TZ environment variable or UTC.${override} ${uses}`
 }
 

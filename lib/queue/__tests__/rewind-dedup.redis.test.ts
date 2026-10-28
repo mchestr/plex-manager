@@ -15,7 +15,7 @@ import { Queue } from "bullmq"
 import type Redis from "ioredis"
 
 import { createFailFastRedis, readyWithin } from "@/lib/queue/connection"
-import { describeRedis } from "@/test/helpers/integration"
+import { describeRedis } from "@/__tests__/helpers/integration"
 
 describeRedis("rewind-gen deduplication", (redisUrl) => {
   let connection: Redis

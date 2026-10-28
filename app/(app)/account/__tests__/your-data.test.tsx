@@ -32,11 +32,11 @@ beforeEach(() => {
 
 describe('YourDataSection', () => {
   it('renders the disclosure and the two lists', () => {
-    render(<YourDataSection data={DATA} disclosure="Server admins can review assistant conversations." />)
+    render(<YourDataSection data={DATA} disclosure="Server admins can read assistant conversations." />)
 
     const section = screen.getByTestId('account-your-data')
     expect(within(section).getByRole('heading', { level: 2, name: 'Your data' })).toBeInTheDocument()
-    expect(section).toHaveTextContent('Server admins can review assistant conversations.')
+    expect(section).toHaveTextContent('Server admins can read assistant conversations.')
     for (const title of ['Marks', 'Watchlist history']) {
       expect(within(section).getByRole('heading', { level: 3, name: title })).toBeInTheDocument()
     }

@@ -17,6 +17,7 @@ describe("retentionDays", () => {
     expect(retentionDays({})).toEqual({
       rewindLlmText: 120,
       assistantLlmText: 90,
+      assistantChats: 90,
       chatConversations: 180,
       discordChatMessages: 1,
       discordChatSessions: 30,

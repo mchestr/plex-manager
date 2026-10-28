@@ -35,7 +35,7 @@ describe("01 Cover", () => {
     expect(screen.getByText("Rewind")).toBeInTheDocument()
     expect(screen.getByText("The 2026 issue")).toBeInTheDocument()
     expect(screen.getByTestId("rewind-cover-window")).toHaveTextContent("Data through November 30")
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Mike's year in film and television")
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Mike's year in movies and shows")
   })
 
   it("prints four cover lines whose folios point at the selected pages", () => {

@@ -1,6 +1,6 @@
 # Privacy: personal data and member removal
 
-This is the inventory of the personal data Plex Manager stores, and what happens to each piece when an admin removes a member. It updates the October 2026 audit's inventory (`.agents/planning/2026-10-17-app-audit-and-rewind-2026/research/additional-findings.md`, "Privacy: personal-data inventory") for the Rewind 2026 (v3) models and every column added since.
+This is the inventory of the personal data Plex Manager stores, and what happens to each piece when an admin removes a member.
 
 The inventory drives member removal (`lib/members/erase.ts`) and the retention jobs. A test (`__tests__/docs/privacy-inventory.test.ts`) fails when a model in `prisma/schema.prisma` is missing from the tables below, so a new table or personal-data column updates this file in the same pull request.
 
@@ -44,7 +44,7 @@ Unsharing a member (`unshareUserLibrary`) and the Stripe revoke job (`PLEX_ACCES
 
 ## Admin access
 
-Admins can see each member's watch activity and Rewind (and its past versions), the assistant conversations stored in `LLMUsage` (prompts, responses and tool results), Discord command history (assistant messages as a length only), media marks and watchlist sync history. Opening one member's content writes `MEMBER_CONTENT_VIEWED` (once an hour per admin, member and page); pages that list every member's content write `MEMBER_CONTENT_LISTED`; unsharing, importing members and regenerating a Rewind are audited too. `AuditLog` rows are kept for 400 days (P11.14).
+Admins can see each member's watch activity and Rewind (and its past versions), the assistant conversations stored in `LLMUsage` (prompts, responses and tool results; the assistant page's own history shows each user only their own conversations), Discord command history (assistant messages as a length only), media marks and watchlist sync history. Opening one member's content writes `MEMBER_CONTENT_VIEWED` (once an hour per admin, member and page); pages that list every member's content write `MEMBER_CONTENT_LISTED`; unsharing, importing members and regenerating a Rewind are audited too. `AuditLog` rows are kept for 400 days (P11.14).
 
 ## Your data: single deletes
 
@@ -53,7 +53,11 @@ From Account, Your data, a member can delete, one at a time and only their own (
 - a mark (Discord `/mymarks` links here; there is no `/unmark`); and
 - a watchlist history item. If the title is still on their Plex watchlist, the next sync can request it again.
 
-Assistant conversations cannot be deleted by the member; the retention sweep below removes them. Share links and hidden titles keep their own controls on the Rewind.
+A member's Discord assistant conversations cannot be deleted by the member; the retention sweep below removes them. Share links and hidden titles keep their own controls on the Rewind.
+
+## Assistant page history
+
+The admin assistant (`/admin/assistant`) keeps each conversation's questions and answers (`ChatConversationMessage`, encrypted at rest) so its owner can reopen it; nobody else sees that history there. An admin or Support user deletes their own conversations from it, where their newest 100 are listed (`deleteAssistantConversation`, 60 an hour): the messages and title go at once and the conversation ends. The conversation's `LLMUsage` rows are not touched, so admins can still read its calls on the LLM usage pages until the assistant AI text window below clears them, and the day's spend caps keep counting their cost. A conversation idle past its window leaves the history the same way, and so does every conversation of an admin who is demoted (`updateUserAdminStatus`), so a role never reads answers built from tool output only an admin may see.
 
 ## Retention
 
@@ -61,19 +65,20 @@ A daily sweep (`lib/queue/jobs/retention.ts`) removes personal data once it is o
 
 | Data | Kept for | Then | Variable |
 |---|---|---|---|
-| Rewind AI text (`LLMUsage` rows with no conversation, or tied to a Rewind) | 120 days | `prompt` and `response` set to null; tokens, cost and model kept (design 7.10) | `RETENTION_REWIND_LLM_TEXT_DAYS` |
+| Rewind AI text (`LLMUsage` rows with no conversation, or tied to a Rewind) | 120 days | `prompt` and `response` set to null; tokens, cost and model kept | `RETENTION_REWIND_LLM_TEXT_DAYS` |
 | Assistant AI text (`LLMUsage` rows in a conversation) | 90 days | `prompt` and `response` set to null; tokens, cost and model kept | `RETENTION_ASSISTANT_LLM_TEXT_DAYS` |
-| Assistant conversations (`ChatConversation`) | 180 days after it ends | Deleted; its `LLMUsage` rows keep their cost without the link, and its Discord sessions go with it. A conversation ends on an idle or manual reset, or when its Discord session is deleted | `RETENTION_CHAT_CONVERSATION_DAYS` |
+| Assistant page history (`ChatConversation.title`, `ChatConversationMessage`) | 90 days after its last message, or after it started when no turn was stored (a first reply that failed, or a side-panel conversation from before the page) | Messages and title removed, and the conversation ended | `RETENTION_ASSISTANT_CHAT_DAYS` |
+| Assistant conversations (`ChatConversation`) | 180 days after it ends | Deleted; its `LLMUsage` rows keep their cost without the link, and its Discord sessions go with it. A conversation ends on an idle or manual reset, when its Discord session is deleted, when it is deleted from the assistant page or idle there past its window, or, for an assistant page conversation, when its owner stops being an admin | `RETENTION_CHAT_CONVERSATION_DAYS` |
 | Discord chat turns (`DiscordChatSession.messages`) | 1 idle day | `messages` emptied | `RETENTION_DISCORD_CHAT_MESSAGES_DAYS` |
 | Discord chat sessions (`DiscordChatSession`) | 30 idle days | Deleted, and its conversation ended | `RETENTION_DISCORD_CHAT_SESSION_DAYS` |
 | Discord command arguments (`DiscordCommandLog.commandArgs`) | 7 days | `commandArgs` set to null | `RETENTION_DISCORD_COMMAND_ARGS_DAYS` |
 | Discord command log (`DiscordCommandLog`) | 90 days | Deleted | `RETENTION_DISCORD_COMMAND_LOG_DAYS` |
-| Share-link visit counts (`RewindShareVisitDay`) | 90 days | Deleted (design 6.2) | `RETENTION_SHARE_VISITS_DAYS` |
-| Rewind reading records (`RewindView`) | 120 days | Deleted (design 7.10) | `RETENTION_REWIND_VIEW_DAYS` |
+| Share-link visit counts (`RewindShareVisitDay`) | 90 days | Deleted | `RETENTION_SHARE_VISITS_DAYS` |
+| Rewind reading records (`RewindView`) | 120 days | Deleted | `RETENTION_REWIND_VIEW_DAYS` |
 | Titles removed from a watchlist (`WatchlistSyncHistory`) | 30 days after the sync saw them gone | Deleted. A complete watchlist read marks missing titles `REMOVED_FROM_WATCHLIST`; other rows stay while the member has sync | `RETENTION_WATCHLIST_REMOVED_DAYS` |
 | Discord link attempts (`DiscordOAuthState`) | 1 day after it expires | Deleted | `RETENTION_DISCORD_OAUTH_STATE_DAYS` |
 | Parked Discord searches (`DiscordPendingSelection`) | until it expires | Deleted | none |
-| Replaced Rewinds (`RewindGeneration.previousData`) | until 30 June after its season (2026's until 2027-06-30) | Set to null; the one rollback is then gone (design 7.9) | none |
+| Replaced Rewinds (`RewindGeneration.previousData`) | until 30 June after its season (2026's until 2027-06-30) | Set to null; the one rollback is then gone | none |
 | Audit log (`AuditLog`) | 400 days | Deleted; this is the only way audit rows are removed | `RETENTION_AUDIT_LOG_DAYS` |
 
 Every other row in the member tables below is kept while the member is, and goes when they are removed. `WrappedShareVisit` (v2 share visits) is deleted with its Rewind. Server logs are kept for as long as the operator's log rotation keeps them.
@@ -105,7 +110,8 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `RewindExclusion` | titles the member hid from their Rewind | M | Cascade | No |
 | `WrappedShareVisit` | v2 share visits: hashed IP, user agent, referer of visitors | none | Cascade (through `PlexWrapped`) | IP is a salted hash |
 | `LLMUsage` | prompt and response text (viewing stats, assistant turns, tool output), tokens, cost, model | A LLM usage pages, conversation page, Rewind history | Cascade for the member's rows; admins' rows about the member keep cost but lose their text | Prompt and response text |
-| `ChatConversation` | which member a conversation belongs to, start and end | A via LLM usage | Cascade | No |
+| `ChatConversation` | which member a conversation belongs to, start and end; on the assistant page its title (from the first question) and last message time | M assistant page (own); A via LLM usage | Cascade | `title` |
+| `ChatConversationMessage` | an assistant page conversation's questions and answers, and the tools each answer used | M assistant page (own) | Cascade (through `ChatConversation`); removed when its owner deletes the conversation, it is idle past its window or its owner stops being an admin | `content` |
 | `DiscordConnection` | Discord id, username, global name, avatar; access and refresh tokens | M link panel; A user detail | Grant revoked at Discord, then deleted (also on unlink) | Tokens |
 | `DiscordChatSession` | the last assistant turns of a Discord chat, Discord id, channel id | none (LLM context only) | Deleted by Discord id, and through `ChatConversation` (also on unlink) | No |
 | `DiscordOAuthState` | a pending link attempt and its redirect | none | Cascade | No |
@@ -113,7 +119,7 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `DiscordCommandLog` | Discord id and username, linked user id, command name and arguments (assistant messages as a length only, `argsLength`), channel and guild | A Discord activity, user timeline | Deleted by user id and by Discord id. If a `User` row is deleted any other way, the foreign key sets `userId` to null | No |
 | `UserMediaMark` | titles the member marked and how | M `/mymarks`; A marked media, timeline | Cascade | No |
 | `WatchlistSyncSettings` | sync choice, last result and counters | M card; A counts | Cascade. Unshare and the Stripe revoke turn sync off | No |
-| `WatchlistSyncHistory` | titles from the member's private Plex watchlist and their request status | M recent items; A recent items | Cascade | No |
+| `WatchlistSyncHistory` | titles from the member's private Plex watchlist and their request status | M recent items; A every member's items (Admin → Watchlist sync) | Cascade | No |
 | `InviteUsage` | which invite the member redeemed, and when | A invite detail | Cascade | No |
 | `Subscription` | Stripe customer and subscription ids, status, plan, period end, cancel date, Plex invite status, Jellyfin access status, access skip code | M status; A users list, billing tab | Stripe subscription cancelled at once, then cascade; the customer id goes to the audit row | No |
 | `AuditLog` | actor and target user ids, event details (ids and counts, never secrets) | none in the app; the operator | Kept (ids only) | No |

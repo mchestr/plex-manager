@@ -28,7 +28,7 @@ describe('JellyfinLoginToggle', () => {
     const toggle = screen.getByRole('switch', { name: 'Allow Jellyfin sign-in' })
     expect(toggle).toHaveAttribute('data-testid', 'jellyfin-login-toggle')
     expect(toggle).toHaveAttribute('aria-checked', 'true')
-    expect(toggle).toHaveAccessibleDescription(/Takes effect at once\.$/)
+    expect(toggle).toHaveAccessibleDescription(/This saves at once\.$/)
   })
 
   it('reads off when sign-in is off', () => {

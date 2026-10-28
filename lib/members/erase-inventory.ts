@@ -39,6 +39,7 @@ export type InventoryCounts = Record<
   | "llmUsage"
   | "llmUsageAnonymised"
   | "chatConversation"
+  | "chatConversationMessage"
   | "discordChatSession"
   | "discordCommandLog"
   | "discordPendingSelection"
@@ -89,9 +90,9 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
   const byWrapped = { where: { wrappedId: { in: wrappedIds } } }
   const [
     user, plexWrapped, rewindGeneration, rewindShare, rewindShareVisitDay, rewindView, wrappedShareVisit,
-    rewindPrefs, rewindExclusion, llmUsage, llmUsageAnonymised, chatConversation, discordChatSession,
-    discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState, userMediaMark,
-    watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription,
+    rewindPrefs, rewindExclusion, llmUsage, llmUsageAnonymised, chatConversation, chatConversationMessage,
+    discordChatSession, discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState,
+    userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription,
   ] = await Promise.all([
     prisma.user.count({ where: { id: userId } }),
     prisma.plexWrapped.count(byUser),
@@ -105,6 +106,7 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
     prisma.lLMUsage.count(byUser),
     prisma.lLMUsage.count({ where: anonymiseWhere(subject) }),
     prisma.chatConversation.count(byUser),
+    prisma.chatConversationMessage.count({ where: { conversation: { userId } } }),
     prisma.discordChatSession.count({
       where: { OR: [{ discordUserId: { in: discordUserIds } }, { chatConversation: { userId } }] },
     }),
@@ -120,9 +122,9 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
   ])
   return {
     user, plexWrapped, rewindGeneration, rewindShare, rewindShareVisitDay, rewindView, wrappedShareVisit,
-    rewindPrefs, rewindExclusion, llmUsage, llmUsageAnonymised, chatConversation, discordChatSession,
-    discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState, userMediaMark,
-    watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription,
+    rewindPrefs, rewindExclusion, llmUsage, llmUsageAnonymised, chatConversation, chatConversationMessage,
+    discordChatSession, discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState,
+    userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription,
   }
 }
 

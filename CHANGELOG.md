@@ -12,24 +12,41 @@ the upgrade notes of every version you skip. `docs/releasing.md` describes how
 a release is cut, and `docs/operations.md` how to back up and restore.
 
 Pull requests add their lines under Unreleased. A pull request that touches
-`prisma/migrations/**`, `lib/env.ts`, `docker-entrypoint.sh`, `Dockerfile` or
+`prisma/migrations/**`, `lib/env.ts`, `docker/entrypoint.sh`, `Dockerfile` or
 `deploy/**`, or carries the `breaking` label, must add one (the Changelog
 check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Added
+
+- **Assistant page:** the admin assistant is now a page of its own, `/admin/assistant`, opened from **Assistant** at the top of the admin sidebar (and from the assistant button in the phone's top bar) instead of a side panel. Conversations are saved: the history beside the conversation (a sheet on phones) lists them by day, each one opens at its own address and carries on where it left off, and **Delete** removes one from your history. A new conversation offers a few questions to start with; Enter sends and Shift+Enter starts a new line. While AI features are off or no chat model is chosen, Assistant stays in the nav for anyone with saved conversations, and its page keeps them readable and deletable, saying why nothing can be sent. Admins and Support users see only their own history, and admins still review every conversation on the LLM usage pages. A conversation leaves the history 90 days after its last message (`RETENTION_ASSISTANT_CHAT_DAYS`), and removing an admin's role ends all of their conversations on the page. Member removal's dry run counts the saved messages too.
+
 ### Changed
 
+- **No more assistant side panel:** the panel and its buttons in the sidebar and on Admin, Settings are gone; the Settings button opens the page. The model now reads a conversation's earlier turns from the server, never from the browser.
 - **Privacy in admin settings:** the Privacy section now shows only when the daily sweep of old personal data last ran. The table of retention windows and **Run now** are gone. The `RETENTION_*_DAYS` variables still set the windows, and `docs/privacy.md` lists them.
 - **Secret re-encryption without Redis:** an install without Redis now re-encrypts stored secrets at boot, as installs with Redis already did through the queue. To move to a keyring or rotate a key, put the new key first in `ENCRYPTION_KEYS` and restart. Then wait for `secrets.reencrypted` in the log before you remove the old key (`docs/operations.md`, "Encryption keys").
+- **Watchlist sync has its own page:** Admin → Community → Watchlist sync (`/admin/watchlist`) now holds the watchlist sync switch and interval, which have left Settings. Under them are the figures and a table of every title members' watchlists have synced: the member, how its Overseerr request went and when, with a search by title or member, Status and Type filters, and sorting by title, member or date. It replaces the few recent titles the settings section listed, and opening it is audited as a listing of members' content.
+- **Plain text across the app:** the text on member, admin, setup, Rewind, help and Discord bot pages follows ASD-STE100 Simplified Technical English. Descriptions that repeated their heading are gone.
+- **A shorter README:** the README is now a short landing page in ASD-STE100 Simplified Technical English: what Plex Manager does, a Docker Compose install, the upgrade steps and a map of the guides. The development setup and checks moved to `.github/CONTRIBUTING.md`; the full upgrade procedure, the `db push` baseline commands and the notes from before 0.1.0 moved to `docs/operations.md`; the setup wizard steps moved to `docs/deployment.md`.
+- **Entrypoint in `docker/`:** the image's entrypoint script moved from `docker-entrypoint.sh` to `docker/entrypoint.sh` in the repository. The image still runs it as `/app/docker-entrypoint.sh`, so a custom `entrypoint:` keeps working.
+- **Node.js floor:** `engines.node` is now `^22.13.0 || >=24`, the versions that Prisma 7 and ESLint 10 support. The docs said 22.9, where `npm ci` fails in Prisma's preinstall. The image and CI already run Node.js 24.
+- **Repository root:** the Renovate config moved to `.github/renovate.json` and the integration-test helper to `__tests__/helpers/integration.ts`. `.mise.toml` now pins only Node.js; its tasks repeated the npm scripts, and `mise run setup` still used `db:push`.
 
 ### Removed
 
 - The **Security** section of Admin > Settings, with **Encrypt stored secrets** and **Check service rows**. Boot re-encrypts stored secrets. Each service's section still asks again for a key that the app cannot read. `npm run services:rows-audit` and `services:rows-apply` still find and fix a service with more than one active row.
 - The **Privacy** card on Help. Account, Your data, still tells members what admins can see.
+- The planning documents under `.agents/planning/` (about 12 MB of plans, mockups and fonts). Git history keeps them: read them at tag `v0.6.0`.
+- The Dockerfile's `dev` stage. Nothing built it, and it could not build without a `DATABASE_URL`.
+- The finished one-off codemods and their npm scripts: `codemod:spinners`, `codemod:icons` and `codemod:adapters`, and the barrel-import and framer-motion codemods. `codemod:tokens` stays.
 
 ### Upgrade notes
 
+- Take a `pg_dump -Fc` before you upgrade. This release adds the migration `20270119000007_add_assistant_chat_history` (a title on assistant conversations and the `ChatConversationMessage` table, both encrypted at rest) and the optional `RETENTION_ASSISTANT_CHAT_DAYS` (default 90).
+- **Assistant history starts empty:** the side panel never stored its conversations, so everyone's assistant history starts empty. Its conversation records end 90 days after they started (the new rule), and the existing `RETENTION_CHAT_CONVERSATION_DAYS` rule deletes them 180 days after that; their LLM usage keeps its cost.
+- Run `npm run register-discord-commands` (`node scripts/dist/register-discord-commands.cjs` in the image) after the upgrade, because the slash command descriptions changed.
 - Without Redis, the first boot after the upgrade re-encrypts each stored secret that is in plain text or under an older key. The app process does this work, and logs `secrets.reencrypted` when it finishes.
 
 ## [0.6.0] - 2026-10-28
@@ -47,6 +64,7 @@ check); the `no-changelog` label skips it.
 - **Hiding a title keeps the issue's days:** hiding or unhiding a title after 1 January no longer turns a 1 January to 30 November Rewind into a whole-year one; it reads the same days as before.
 - **A lighter Rewind article:** article mode states each fact once. Each page gives its headline, a line and at most one small table, with no summary that repeats the table, no date range in a caption and no method lines ("Nobody is named", "Every reason here comes from what you watched"). Guess, Top shows and Top films get sections of their own. Every hour, day and month stays in the story's Table sheets and the desktop Notes.
 - **Shorter template lines:** the template decks and the centrefold dedication end on a short line instead of describing the page or the method ("Here's to more of it.", "All in good fun." in place of "Every minute of it counted from your own history.", "Where you stand, with nobody named."), and never cite a count or share of zero ("0% of your viewing started after dark"). The Short list deck no longer repeats the total. A Regenerate or a hide writes a template-only Rewind's words from the current templates instead of reusing the stored ones.
+- **Plainer Rewind lines:** the archetype motifs, the poster lines and the token-free template lines say what the member's plays show, in short plain sentences, with no slogans or filler ("Much of your viewing started after dark." in place of "Up past the credits, every night."; "Earned from your own viewing." in place of "Wear it well."). Rewind, the setup wizard and the watchlist say "movie" and "show" in place of "film" and "series". The `rewind-2026.1` freeze lock is rewritten for it.
 - **About the words** in the story's Settings shows only when a model wrote some of the words.
 
 ### Removed
@@ -212,7 +230,7 @@ The 2026 refresh from Phase 1 to Phase 11 wave 1, by milestone: baselines and CI
 ### Upgrade notes
 
 - Take a `pg_dump -Fc` before you start the new release, and keep it off the host. This release carries many migrations, among them one that adds `AuditLog`, one that versions sessions and the Rewind v3 tables. Check afterwards that `npx prisma migrate status` reports the schema is up to date.
-- **Migrations:** `npm run db:deploy` (`prisma migrate deploy`) is the only install and upgrade command; `db:push` and `db:migrate` are contributor-only. The image logs `prisma migrate status` and then applies migrations at every start; set `SKIP_MIGRATIONS=true` to apply them by hand. An install whose schema was created with `db push` must be baselined on the old release first (README, "Installed with `db push`?").
+- **Migrations:** `npm run db:deploy` (`prisma migrate deploy`) is the only install and upgrade command; `db:push` and `db:migrate` are contributor-only. The image logs `prisma migrate status` and then applies migrations at every start; set `SKIP_MIGRATIONS=true` to apply them by hand. An install whose schema was created with `db push` must be baselined on the old release first (`docs/operations.md`, "Installed with db push").
 - **Boot refusal:** a production server now exits with code 1, logging `env.invalid` and the variable's name, when `NEXTAUTH_SECRET` is missing, shorter than 32 characters, has fewer than 10 distinct characters or is a published placeholder; when `NEXTAUTH_URL` or `NEXT_PUBLIC_APP_URL` is not `https:` (loopback excepted; `ALLOW_INSECURE_HTTP=true` for a LAN-only install); or when `PLEX_CLIENT_IDENTIFIER` is empty. Check these before you pull.
 - **Compose:** `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required, Postgres and Redis publish on `127.0.0.1` only, and the database moves from Postgres 15 to 16. Postgres 16 cannot open a 15 data directory: dump the `db` volume while it still runs 15, remove the volume, start the new one and restore the dump. A volume created before this change keeps its old password (`postgres`).
 - **Image:** Node.js 24 under `tini` as the unprivileged `nextjs` user, with read-only app files. The one writable path is `/app/.next/cache` (Next's cache and Rewind's posters, cards and fonts); mount a volume there to keep it. The `HEALTHCHECK` calls `/api/health?probe=live`, and `GET /api/health` checks the database and Redis.
@@ -249,7 +267,7 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 
 ### Upgrade notes
 
-- Take an encrypted `pg_dump` before you start the new release: a migration clears the stored emails of Jellyfin-only members and cannot be undone. Before deploying, list the accounts that hold both a Plex and a Jellyfin id and review them (README, "Upgrading to the release that stops email linking").
+- Take an encrypted `pg_dump` before you start the new release: a migration clears the stored emails of Jellyfin-only members and cannot be undone. Before deploying, list the accounts that hold both a Plex and a Jellyfin id and review them (`docs/operations.md`, "Upgrade notes from before 0.1.0").
 - **Proxies:** with more than one proxy in front of the app, set `TRUSTED_PROXY_HOPS` (default 1). `docker-compose.yml` publishes the app on `127.0.0.1:3000` only.
 - **Test and dev settings:** test tokens need `E2E_TEST_MODE=true` and the setup prefill needs `DEV_SETUP_PREFILL`; never set either on a public host. E2E refuses a database whose name does not end in `_test`.
 - **Sharing:** share links are opt-in. After deploying, run `npm run rewind:strip-leaderboards` as a dry run, then with `--apply`, then once more to confirm zero changes. A share token that is not 43 URL-safe characters stops resolving.

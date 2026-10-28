@@ -48,9 +48,7 @@ export function CreateInviteDialog({ plexLibraries, jellyfinLibraries, openFromP
         <DialogContent size="form" align="top" data-testid="admin-invites-create-dialog">
           <DialogHeader>
             <DialogTitle>{created ? "Invite created" : "Create invite"}</DialogTitle>
-            <DialogDescription>
-              {created ? "Send the link to the person you're inviting." : "A link that lets someone join your server."}
-            </DialogDescription>
+            {created && <DialogDescription>Send the link to the person you invite.</DialogDescription>}
           </DialogHeader>
           {created ? (
             <CreatedInviteView invite={created} />

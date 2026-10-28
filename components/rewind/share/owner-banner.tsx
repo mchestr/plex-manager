@@ -15,7 +15,7 @@ type OwnerBannerProps =
 
 /**
  * The share page's banner for the link's owner (design 6.6): when the page
- * stops being public, then "Change cards" (the share sheet), "Rotate link"
+ * stops being public, then "Change cards" (the share sheet), "Make a new link"
  * and "Stop sharing", each a confirm step. Rotate shows the new address once,
  * with Copy; the old one is a 404 from then on. A surviving v2 link offers
  * only Stop sharing.
@@ -61,7 +61,7 @@ export function OwnerBanner(props: OwnerBannerProps) {
   if (newUrl) {
     return (
       <section aria-label="Your new link" className="flex flex-col gap-3 border-y border-current py-4" data-testid="rewind-share-owner-banner">
-        <p className="font-text text-body">The old address stopped working. This is the new one, shown only now:</p>
+        <p className="font-text text-body">The old link no longer works. Copy the new link now. It shows only one time:</p>
         <p className="font-text text-ui break-all" data-testid="rewind-share-new-url">
           {newUrl}
         </p>
@@ -86,13 +86,13 @@ export function OwnerBanner(props: OwnerBannerProps) {
             <ConfirmDialog
               trigger={
                 <Button variant="ink-outline" size="pill" data-testid="rewind-share-rotate">
-                  Rotate link
+                  Make a new link
                 </Button>
               }
-              title="Make a new address for this page?"
-              description="The address you shared stops working at once. The new one is shown here once."
-              confirmLabel="Rotate link"
-              pendingLabel="Rotating"
+              title="Make a new link for this page?"
+              description="The link you shared stops working immediately. The new link shows here one time."
+              confirmLabel="Make a new link"
+              pendingLabel="Making"
               action={rotate}
               confirmTestId="rewind-share-rotate-confirm"
             />
@@ -105,7 +105,7 @@ export function OwnerBanner(props: OwnerBannerProps) {
             </Button>
           }
           title="Stop sharing this page?"
-          description="Anyone with the link sees “This Rewind is no longer shared” from now on."
+          description="After this, the link shows “This Rewind is no longer shared”."
           confirmLabel="Stop sharing"
           pendingLabel="Stopping"
           tone="destructive"

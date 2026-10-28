@@ -25,11 +25,11 @@ function useDescribe() {
     const members = estimate.members === 1 ? "1 member" : `${f.number(estimate.members)} members`
     const cost =
       estimate.llmMembers === 0
-        ? "Every Rewind uses template copy, so it costs nothing."
+        ? "Every Rewind uses template text, so it costs nothing."
         : `Estimated AI cost: ${f.money(estimate.costUsd, "prose")} for ${f.number(estimate.llmMembers)} AI-written Rewinds.`
     const cap =
       estimate.pastCap > 0
-        ? ` ${f.number(estimate.pastCap)} would get template copy because the season budget runs out.`
+        ? ` ${f.number(estimate.pastCap)} would get template text because the season budget runs out.`
         : ""
     return `${lead} ${members}. ${cost}${cap}`
   }
@@ -45,7 +45,7 @@ export function SeasonActions({ year, estimates }: SeasonActionsProps) {
   const run = (action: BulkAction, done: string) => async () => {
     const result = await action({ year })
     if (!result.success) return { error: result.error }
-    toast.showSuccess(result.data.alreadyQueued ? "That run is already going" : done)
+    toast.showSuccess(result.data.alreadyQueued ? "That run is already running" : done)
     await queryClient.invalidateQueries({ queryKey: queryKeys.rewindSeasonStatus(year) })
     router.refresh()
     return {}
@@ -84,7 +84,7 @@ export function SeasonActions({ year, estimates }: SeasonActionsProps) {
       <ConfirmDialog
         trigger={<Button data-testid="admin-rewind-prepare-button">Prepare season</Button>}
         title={`Prepare the ${year} season?`}
-        description={describe("Reads the server's plays and warms titles, then generates for", estimates.all)}
+        description={describe("Reads the server's plays and caches title data, then generates for", estimates.all)}
         confirmLabel="Prepare season"
         pendingLabel="Starting"
         action={run(prepareRewindSeason, "Preparing the season. This can take a few minutes.")}

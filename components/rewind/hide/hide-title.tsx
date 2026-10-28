@@ -6,7 +6,7 @@ import { posterKey } from "@/lib/rewind/pages/title-key"
 
 import { useHideTitles } from "./hide-context"
 
-const HIDDEN_NOTE = "Hidden. Your pages update in about a minute."
+const HIDDEN_NOTE = "Hidden. Your pages change in about 1 minute."
 
 /**
  * "Hide this title" in a row sheet (P7.7), with its confirm step. Renders
@@ -35,7 +35,7 @@ export function HideTitle({ titleKey, title }: { titleKey: string; title: string
         </Button>
       }
       title={`Hide ${title} from your Rewind?`}
-      description="It still counts toward your hours, and it leaves your cards and public link now."
+      description="It still counts in your hours. Your cards and public link stop showing it immediately."
       confirmLabel="Hide"
       pendingLabel="Hiding"
       confirmTestId="rewind-hide-confirm"

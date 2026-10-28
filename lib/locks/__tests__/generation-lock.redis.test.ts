@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto"
 import Redis from "ioredis"
 
 import { acquireGenerationLock } from "@/lib/locks/generation-lock"
-import { describeRedis } from "@/test/helpers/integration"
+import { describeRedis } from "@/__tests__/helpers/integration"
 
 describeRedis("redis generation lock", (redisUrl) => {
   let inspector: Redis

@@ -464,6 +464,10 @@
 @layer base {
   * { @apply border-border outline-ring; }
   html { scroll-padding-top: 4.5rem; -webkit-text-size-adjust: 100%; }
+  /* Below md the admin tab bar is fixed to the bottom: a focused field or a scrolled-to target stops clear of it */
+  html:has([data-slot="admin-tab-bar"]) {
+    @variant max-md { scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
+  }
   body { @apply bg-background text-foreground font-sans text-body antialiased; }
   h1, h2, h3, .text-display, .text-h1, .text-h2 { text-wrap: balance; }
   p, li, dd { text-wrap: pretty; }

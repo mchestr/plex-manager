@@ -44,7 +44,7 @@ describe("03 Bookends", () => {
     const issue = issues.median
     expect(dataOf(issue)!.first.masked).toBe(true)
     render(<BookendsPage data={dataOf(issue)!} issue={issueContext(issue)} />)
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("You opened 2026 with a series you will meet on page 05")
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("You opened 2026 with a show you will meet on page 05")
     expect(screen.getByRole("heading", { level: 2 })).not.toHaveTextContent(issue.facts["bookends.first.title"]!.display)
   })
 
@@ -53,7 +53,7 @@ describe("03 Bookends", () => {
     const data: BookendsData = { ...dataOf(issue)!, first: { ...dataOf(issue)!.first, masked: true } }
     render(<BookendsPage data={data} issue={issueContext(issue)} />)
     const folio = issue.pages.find((p) => p.type === "top-shows")!.folio
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(`You opened 2026 with a series you will meet on page 0${folio}`)
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(`You opened 2026 with a show you will meet on page 0${folio}`)
     expect(screen.queryByText(issue.facts["bookends.first.title"]!.display)).not.toBeInTheDocument()
   })
 

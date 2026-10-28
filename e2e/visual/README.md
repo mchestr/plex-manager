@@ -41,8 +41,7 @@ The light theme (P10.10) has its own projects, and each holds the
 
 - `visual-light-desktop` and `visual-light-mobile` run the member, admin and
   primitives screens plus `light-routes.visual.spec.ts`, every route in
-  `e2e/a11y/routes.ts`. Review them against the mockups
-  `home--desktop-light.png` and `admin-users--desktop-light.png`.
+  `e2e/a11y/routes.ts`.
 - `visual-light-rewind` runs `rewind.spec.ts` on the chromium phone against
   the **dark** `rewind-visual-phone-chromium` baselines: the Rewind scope
   re-declares its tokens, so the story must match pixel for pixel.

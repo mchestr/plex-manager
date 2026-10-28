@@ -35,9 +35,9 @@
 
 import { AsyncLocalStorage } from "node:async_hooks"
 
-import { ENCRYPTED_FIELDS } from "@/lib/db/encrypted-fields"
+import { ENCRYPTED_FIELDS, FREE_TEXT_FIELDS } from "@/lib/db/encrypted-fields"
 import { Prisma } from "@/lib/generated/prisma/client"
-import { encryptSecret, tryDecryptSecret } from "@/lib/security/crypto"
+import { encryptSecret, encryptText, tryDecryptSecret } from "@/lib/security/crypto"
 import { clearUnreadable, markUnreadable } from "@/lib/security/unreadable-secrets"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -90,12 +90,14 @@ function each(value: unknown, fn: (item: Row) => void): void {
 function encryptWrite(model: string, data: unknown): void {
   if (!isObject(data)) return
   for (const field of ENCRYPTED_FIELDS[model] ?? []) {
+    // Free text is sealed even when it looks encrypted, so it reads back as written
+    const encrypt = FREE_TEXT_FIELDS[model]?.includes(field) ? encryptText : encryptSecret
     const value = data[field]
     if (typeof value === "string") {
-      data[field] = encryptSecret(value)
+      data[field] = encrypt(value)
     } else if (isObject(value) && typeof value.set === "string") {
       // Update operator form, e.g. { set: "..." }
-      value.set = encryptSecret(value.set)
+      value.set = encrypt(value.set)
     }
   }
   const shape = shapeOf(model)

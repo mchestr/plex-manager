@@ -49,7 +49,7 @@ export function AnnouncementsManager({ rows, zone }: AnnouncementsManagerProps) 
     <>
       <PageHeader
         title="Announcements"
-        description="News on every member's home page and the announcements page."
+        description="Members see announcements on their home page and on the Announcements page."
         actions={newButton("create-announcement-button")}
         data-testid="admin-announcements-header"
       />
@@ -69,7 +69,7 @@ export function AnnouncementsManager({ rows, zone }: AnnouncementsManagerProps) 
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
         title={deleting ? `Delete the announcement '${deleting.title}'?` : "Delete the announcement?"}
-        description="It leaves home and the announcements page. This can't be undone."
+        description="Members stop seeing it. You can't undo this."
         confirmLabel="Delete announcement"
         pendingLabel="Deleting"
         tone="destructive"

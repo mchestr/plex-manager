@@ -316,7 +316,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       // asks first, naming them (P11.11).
       const confirm = adminPage.getByTestId('stripe-enable-jellyfin-confirm');
       if (await confirm.waitFor({ timeout: 5_000 }).then(() => true, () => false)) {
-        await expect(confirm).toContainText('will be asked to subscribe');
+        await expect(confirm).toContainText('to subscribe?');
         await adminPage.getByTestId('stripe-enable-jellyfin-confirm-button').click();
       }
 

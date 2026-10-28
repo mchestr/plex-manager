@@ -9,13 +9,13 @@
  * It deletes every limiter key in the database it is given, so it runs on
  * database 15 of the TEST_REDIS_URL server, away from the other Redis suites
  * that may be counting in parallel. Gated by `describeRedis`
- * (test/helpers/integration.ts) and run only by `npm run test:integration`.
+ * (__tests__/helpers/integration.ts) and run only by `npm run test:integration`.
  */
 
 import Redis from "ioredis"
 
 import { clearRateLimits } from "@/e2e/helpers/rate-limits"
-import { describeRedis } from "@/test/helpers/integration"
+import { describeRedis } from "@/__tests__/helpers/integration"
 
 describeRedis("clearRateLimits", (testRedisUrl) => {
   let redisUrl: string

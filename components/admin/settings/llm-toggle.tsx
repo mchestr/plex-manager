@@ -40,7 +40,7 @@ export function LLMToggle({ disabled }: LLMToggleProps) {
           AI features
         </label>
         <p id="ai-features-hint" className="text-label text-muted-foreground">
-          Turn off to stop every LLM request from the app. Rewind then uses template copy. Takes effect at once.
+          When this is off, the app sends no LLM requests and Rewind uses template text. This saves at once.
         </p>
       </div>
       <Switch

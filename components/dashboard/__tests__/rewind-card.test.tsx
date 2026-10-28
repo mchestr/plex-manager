@@ -48,23 +48,23 @@ function renderCard(state: RewindCardState, archive: RewindArchiveYear[] = []) {
 describe("RewindCard", () => {
   it.each<[RewindCardState, string, string]>([
     [READY, "Your Northfield Plex Rewind 2026 is ready", "Your year on the server, set as an issue to page through."],
-    [{ kind: "generating", year: 2026 }, "Setting your pages", "Usually a minute or two. You can leave this page; it keeps going."],
-    [{ kind: "failed", year: 2026, code: "TIMEOUT" }, "Your Rewind couldn't be finished", "It took too long to finish. The server admin can see what happened."],
+    [{ kind: "generating", year: 2026 }, "Setting your pages", "This usually takes 1 or 2 minutes. You can leave this page."],
+    [{ kind: "failed", year: 2026, code: "TIMEOUT" }, "Your Rewind is not finished", "It took too long to finish. The server admin can see what happened."],
     [
       { kind: "before-season", year: 2026, opensOn: new Date("2026-12-01T06:00:00Z"), lastYear: null },
       "Your Rewind arrives on December 1",
       "Everything you watch until November 30 counts.",
     ],
     [{ kind: "not-eligible", reason: "jellyfin-only" }, "Rewind needs Plex watch history", "Jellyfin support is planned."],
-    [{ kind: "not-eligible", reason: "joined-late", firstYear: 2027 }, "Your first Rewind arrives next year", "Rewind needs a few months of watching, so this year's season starts without you."],
+    [{ kind: "not-eligible", reason: "joined-late", firstYear: 2027 }, "Your first Rewind arrives next year", "Rewind needs a few months of watch history. You are not in this year's season."],
     [
       { kind: "closed", year: 2026, closedOn: new Date("2027-02-01T06:00:00Z"), ink: "forest", soundtrack: null },
-      "Rewind 2026 is still yours",
-      "The season closed on January 31. Open it any time.",
+      "Your Rewind 2026",
+      "The season closed on January 31. You can still open it.",
     ],
-    [{ kind: "not-started", year: 2026 }, "Your Rewind 2026 is on its way", "The server sets every issue this month. Check back soon."],
-    [{ kind: "unavailable", year: 2026, viewerIsAdmin: false, code: "REDIS_NOT_CONFIGURED" }, "Rewind isn't available on this server yet", "Ask the server admin when it's coming."],
-    [{ kind: "unavailable", year: 2026, viewerIsAdmin: true, code: "REDIS_NOT_CONFIGURED" }, "Rewind isn't available on this server yet", "Rewind needs Redis (REDIS_URL)"],
+    [{ kind: "not-started", year: 2026 }, "Your Rewind 2026 is on its way", "The server makes every issue this month. Come back soon."],
+    [{ kind: "unavailable", year: 2026, viewerIsAdmin: false, code: "REDIS_NOT_CONFIGURED" }, "Rewind is not available on this server", "Ask the server admin when it will be available."],
+    [{ kind: "unavailable", year: 2026, viewerIsAdmin: true, code: "REDIS_NOT_CONFIGURED" }, "Rewind is not available on this server", "Rewind needs Redis (REDIS_URL)"],
   ])("prints the %# state's copy, with no generate action", async (state, title, lead) => {
     const { container } = renderCard(state)
 

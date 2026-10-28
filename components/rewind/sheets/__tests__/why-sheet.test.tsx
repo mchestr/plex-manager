@@ -56,7 +56,7 @@ describe("WhySheet", () => {
     expect(candidates).toHaveLength(centrefold(heavy).shortlist.length)
     expect(candidates[0]).toHaveTextContent(`${heavy.facts["archetype.name"]!.display}, your archetype`)
     expect(candidates[0]).toHaveTextContent(`${heavy.facts["hours.afterDarkShare"]!.display} of your plays started between 10 PM and 4 AM.`)
-    expect(sheet).toHaveTextContent(/For .+|Wear it well\./)
+    expect(sheet).toHaveTextContent(/For .+|Earned from your own viewing\./)
     expect(within(sheet).queryByTestId("rewind-why-disclosure")).toBeNull()
     expect(sheet).not.toHaveTextContent(/comes from a template|Every reason here/)
   })

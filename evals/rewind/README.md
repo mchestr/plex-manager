@@ -221,8 +221,7 @@ npm run eval:rewind:select
 
 The bake-off itself (live sweeps from 2026-11-16, the 18-20 November
 decision, `model-selection.md`, `selected.json`, `budgetModelFor()` and the
-production `wrapped` provider row) is the owner's: see
-`.agents/planning/2026-10-17-app-audit-and-rewind-2026/implementation/model-selection.md`.
+production `wrapped` provider row) is the owner's.
 
 ## Sign-off
 

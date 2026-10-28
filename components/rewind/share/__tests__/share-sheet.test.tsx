@@ -83,7 +83,7 @@ describe("ShareSheet", () => {
     renderSheet()
     expect(screen.queryByTestId("rewind-share-image")).not.toBeInTheDocument()
     expect(screen.getByTestId("rewind-share-save")).toBeInTheDocument()
-    expect(screen.getByTestId("rewind-share-copy-link")).toHaveTextContent("Create a public link...")
+    expect(screen.getByTestId("rewind-share-copy-link")).toHaveTextContent("Create a public link")
   })
 
   it("has the File ready before the tap, and shares the files only", async () => {
@@ -148,10 +148,10 @@ describe("ShareSheet", () => {
     disableRewindShare.mockResolvedValue({ success: true, data: null })
     const user = userEvent.setup()
     renderSheet({ setup: { ...SETUP, link: { shareId: "share-1", pages: ["cover"], expiresAt: null } } })
-    expect(screen.getByTestId("rewind-share-copy-link")).toHaveTextContent("Copy a new link...")
+    expect(screen.getByTestId("rewind-share-copy-link")).toHaveTextContent("Copy a new link")
     await user.click(screen.getByTestId("rewind-share-stop"))
     expect(disableRewindShare).toHaveBeenCalledWith({ shareId: "share-1" })
-    await waitFor(() => expect(screen.getByTestId("rewind-share-copy-link")).toHaveTextContent("Create a public link..."))
+    await waitFor(() => expect(screen.getByTestId("rewind-share-copy-link")).toHaveTextContent("Create a public link"))
     expect(screen.queryByTestId("rewind-share-stop")).not.toBeInTheDocument()
   })
 

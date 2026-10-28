@@ -39,7 +39,7 @@ const TABLE: Row[] = [
   ["connection", "untested", "Not checked", "neutral", undefined],
   ["connection", "disabled", "Off", "neutral", undefined],
   ["connection", "notConfigured", "Not set up", "outline", undefined],
-  ["connection", "degraded", "Template copy", "warning", icons.warning],
+  ["connection", "degraded", "Template text", "warning", icons.warning],
   ["queueJob", "active", "Running", "info", "spinner"],
   ["queueJob", "waiting", "Waiting", "neutral", undefined],
   ["queueJob", "completed", "Done", "success", icons.done],
@@ -65,6 +65,14 @@ const TABLE: Row[] = [
   ["request", "processing", "Requested", "info", icons.pending],
   ["request", "available", "Available", "success", icons.done],
   ["request", "declined", "Declined", "destructive", undefined],
+  ["watchlistSync", "REQUESTED", "Requested", "info", icons.pending],
+  ["watchlistSync", "ALREADY_AVAILABLE", "Available", "success", icons.done],
+  ["watchlistSync", "ALREADY_REQUESTED", "Already requested", "neutral", undefined],
+  ["watchlistSync", "NOT_PERMITTED", "Not allowed", "warning", icons.warning],
+  ["watchlistSync", "SKIPPED_NO_EXTERNAL_ID", "No TMDB match", "neutral", undefined],
+  ["watchlistSync", "FAILED", "Failed", "destructive", undefined],
+  ["watchlistSync", "REMOVED_FROM_WATCHLIST", "Removed from watchlist", "outline", undefined],
+  ["watchlistSync", "SYNCED", "Synced", "neutral", undefined],
   ["announcement", "active", "Active", "success", "dot"],
   ["announcement", "hidden", "Hidden", "neutral", undefined],
   ["announcement", "expired", "Expired", "destructive", undefined],
@@ -135,7 +143,7 @@ describe("resolveStatus sub-lines", () => {
   })
 
   it("keeps a fixed sub-line", () => {
-    expect(resolveStatus("connection", "degraded").sub).toBe("Rewind uses template copy while AI is off")
+    expect(resolveStatus("connection", "degraded").sub).toBe("Rewind uses template text while AI is off")
   })
 })
 

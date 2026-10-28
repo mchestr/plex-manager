@@ -30,6 +30,7 @@ interface WindowDef {
 export const RETENTION_WINDOWS = {
   rewindLlmText: { env: "RETENTION_REWIND_LLM_TEXT_DAYS", days: 120 },
   assistantLlmText: { env: "RETENTION_ASSISTANT_LLM_TEXT_DAYS", days: 90 },
+  assistantChats: { env: "RETENTION_ASSISTANT_CHAT_DAYS", days: 90 },
   chatConversations: { env: "RETENTION_CHAT_CONVERSATION_DAYS", days: 180 },
   discordChatMessages: { env: "RETENTION_DISCORD_CHAT_MESSAGES_DAYS", days: 1 },
   discordChatSessions: { env: "RETENTION_DISCORD_CHAT_SESSION_DAYS", days: 30 },

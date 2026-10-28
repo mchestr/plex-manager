@@ -33,7 +33,7 @@ export function NumberCard(input: CardInput): ReactElement {
       </div>
       <div style={{ display: "flex", flexDirection: "column", marginTop: og ? 16 : 120 }}>
         <Nameplate fit={heroFit} lineHeight={0.86} />
-        {hoursHero ? <Text text="hours of film and television" family="display" size={og ? 40 : 72} style={{ marginTop: og ? 4 : 20 }} /> : null}
+        {hoursHero ? <Text text="hours of movies and shows" family="display" size={og ? 40 : 72} style={{ marginTop: og ? 4 : 20 }} /> : null}
       </div>
       {og ? null : <div style={{ display: "flex", flexGrow: 1 }} />}
       {og ? null : <SoundtrackStrip input={input} ink={ink} width={measure} height={200} />}

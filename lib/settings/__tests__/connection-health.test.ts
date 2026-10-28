@@ -1,6 +1,7 @@
 /**
  * Connection health (P10.8, P10.19): statuses and codes, never error text,
- * the 5 s cut-off, the 5-minute cache tag, and the settings sections.
+ * the 5 s cut-off, the 5-minute cache tag, the settings sections and
+ * Watchlist sync's card on its own page.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -13,7 +14,7 @@ import { testTautulliConnection } from "@/lib/connections/tautulli"
 import { getStripeConfig } from "@/lib/data/admin-settings"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
-import { checkConnections, getSettingsHealth } from "@/lib/settings/connection-health"
+import { checkConnections, getSettingsHealth, getWatchlistHealth } from "@/lib/settings/connection-health"
 import { PROBE_TIMEOUT_MS } from "@/lib/settings/probe"
 import { CONNECTION_HEALTH_TAG } from "@/lib/settings/connection-status"
 
@@ -152,16 +153,45 @@ describe("getSettingsHealth", () => {
     expect((await getSettingsHealth(NOW)).stripe.status).toBe("ok")
   })
 
-  it("ties Watchlist sync to Overseerr and Rewind to Redis, then Tautulli", async () => {
-    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ watchlistSyncEnabled: true }))
-    prismaMock.overseerr.findFirst.mockResolvedValue({ name: "O", url: "http://o:5055", publicUrl: null, apiKey: "k" } as never)
-    jest.mocked(testOverseerrConnection).mockResolvedValue({ success: true })
+  it("ties Rewind to Redis, then Tautulli", async () => {
     const health = await getSettingsHealth(NOW)
 
-    expect(health.watchlist.status).toBe("ok")
     expect(health.rewind).toMatchObject({ status: "unreachable", code: "DEPENDENCY" })
 
     jest.mocked(checkRewindInfra).mockResolvedValue({ ok: false, code: "REDIS_UNAVAILABLE" })
     expect((await getSettingsHealth(NOW)).rewind).toMatchObject({ status: "unreachable", code: "REDIS_UNAVAILABLE" })
+  })
+
+  it("leaves Watchlist sync to its own page", async () => {
+    expect(await getSettingsHealth(NOW)).not.toHaveProperty("watchlist")
+  })
+})
+
+describe("getWatchlistHealth", () => {
+  const OVERSEERR = { name: "O", url: "http://o:5055", publicUrl: null, apiKey: "k" }
+
+  it("reads Off while the global switch is off, without asking Overseerr", async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ watchlistSyncEnabled: false }))
+
+    expect(await getWatchlistHealth(NOW)).toEqual({ status: "disabled", code: null, checkedAt: NOW.toISOString() })
+  })
+
+  it("follows Overseerr's check while it is on", async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ watchlistSyncEnabled: true }))
+    prismaMock.overseerr.findFirst.mockResolvedValue(OVERSEERR as never)
+    jest.mocked(testOverseerrConnection).mockResolvedValue({ success: true })
+    expect((await getWatchlistHealth(NOW)).status).toBe("ok")
+
+    jest.mocked(testOverseerrConnection).mockResolvedValue({ success: false, error: SECRET })
+    const broken = await getWatchlistHealth(NOW)
+    expect(broken).toMatchObject({ status: "unreachable", code: "DEPENDENCY" })
+    expect(JSON.stringify(broken)).not.toContain("hunter2")
+  })
+
+  it("needs setup while it is on without an Overseerr server", async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ watchlistSyncEnabled: true }))
+    prismaMock.overseerr.findFirst.mockResolvedValue(null)
+
+    expect(await getWatchlistHealth(NOW)).toEqual({ status: "incomplete", code: "MISSING_SETUP", checkedAt: NOW.toISOString() })
   })
 })

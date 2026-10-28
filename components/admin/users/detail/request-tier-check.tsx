@@ -24,7 +24,7 @@ function statusCopy(status: MemberTierStatus, enabled: boolean): string {
     case "out-of-sync":
       return enabled ? "Overseerr's limits differ from this tier's. The next daily sync sets them." : "Overseerr's limits differ from this tier's."
     case "excluded":
-      return "The daily sync leaves this member's Overseerr limits alone."
+      return "The daily sync doesn't change this member's Overseerr limits."
     case "bypass":
       return "This member is an Overseerr admin or user manager, so Overseerr applies no request limits to them."
     default:

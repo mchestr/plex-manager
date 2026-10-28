@@ -29,7 +29,6 @@ export default async function SharesDashboardPage({ searchParams }: { searchPara
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-shares-page">
       <PageHeader
         title="Share analytics"
-        description="Public Rewind links: how many are on, and how often they are opened."
         meta={<span data-testid="admin-shares-period">Period: {period}</span>}
         data-testid="admin-shares-header"
       />
@@ -50,7 +49,7 @@ export default async function SharesDashboardPage({ searchParams }: { searchPara
         <StatTile
           label="Visits per link"
           value={f.number(stats.averageVisitsPerLink, { maximumFractionDigits: 1 })}
-          meta="Visits in the period over links on"
+          meta="Visits in the period for each link that is on"
           data-testid="shares-average"
         />
       </StatGrid>

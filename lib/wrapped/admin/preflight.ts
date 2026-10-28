@@ -87,14 +87,14 @@ async function optionalRows(): Promise<PreflightRow[]> {
       : { id: "overseerr", label: "Overseerr", status: "notConfigured", detail: "Optional: the Requests page uses it" },
     sonarr > 0
       ? { id: "sonarr", label: "Sonarr", status: "ok", detail: "Set up" }
-      : { id: "sonarr", label: "Sonarr", status: "notConfigured", detail: "Optional: Next year's series picks use it" },
+      : { id: "sonarr", label: "Sonarr", status: "notConfigured", detail: "Optional: Next year's show picks use it" },
   ]
 }
 
 async function llmRow(config: { llmDisabled: boolean; rewindLlmMode: string } | null): Promise<PreflightRow> {
   const label = "AI copy"
   if (config?.llmDisabled || config?.rewindLlmMode === "off") {
-    return { id: "llm", label, status: "degraded", detail: "Template-only mode: Rewind writes template copy" }
+    return { id: "llm", label, status: "degraded", detail: "Template-only mode: Rewind writes template text" }
   }
   const provider = await prisma.lLMProvider.findFirst({
     where: { isActive: true, purpose: "wrapped" },
@@ -106,11 +106,11 @@ async function llmRow(config: { llmDisabled: boolean; rewindLlmMode: string } | 
       id: "llm",
       label,
       status: "unreachable",
-      detail: `The Rewind provider is ${frozen.provider}, but the frozen model is ${lockedModelLabel(frozen.locked)}: Rewind writes template copy`,
+      detail: `The Rewind provider is ${frozen.provider}, but the frozen model is ${lockedModelLabel(frozen.locked)}: Rewind writes template text`,
     }
   }
   if (!frozen || !isLLMProviderId(frozen.provider)) {
-    return { id: "llm", label, status: "degraded", detail: "No AI provider: Rewind writes template copy" }
+    return { id: "llm", label, status: "degraded", detail: "No AI provider: Rewind writes template text" }
   }
   const info = lookupModel(frozen.provider, frozen.model)
   if (!info.pricing) {

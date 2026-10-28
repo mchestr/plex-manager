@@ -21,7 +21,7 @@ type BadgeVariant = "success" | "warning" | "destructive" | "info" | "neutral"
 
 const LAST_STATUS: Record<string, { label: string; variant: BadgeVariant }> = {
   success: { label: "Success", variant: "success" },
-  partial: { label: "Partial", variant: "warning" },
+  partial: { label: "Some failed", variant: "warning" },
   failed: { label: "Failed", variant: "destructive" },
   skipped: { label: "Skipped", variant: "neutral" },
 }
@@ -29,7 +29,7 @@ const LAST_STATUS: Record<string, { label: string; variant: BadgeVariant }> = {
 const ITEM_STATUS: Record<string, { label: string; variant: BadgeVariant }> = {
   REQUESTED: { label: "Requested", variant: "info" },
   ALREADY_AVAILABLE: { label: "Available", variant: "success" },
-  ALREADY_REQUESTED: { label: "Pending", variant: "neutral" },
+  ALREADY_REQUESTED: { label: "Already requested", variant: "neutral" },
   FAILED: { label: "Failed", variant: "destructive" },
   SYNCED: { label: "Synced", variant: "neutral" },
   SKIPPED_NO_EXTERNAL_ID: { label: "No TMDB match", variant: "neutral" },
@@ -81,7 +81,7 @@ export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCar
     startTransition(async () => {
       const result = await updateWatchlistSyncSettings({ syncEnabled: next })
       if (result.success) {
-        showSuccess(next ? "Watchlist sync enabled" : "Watchlist sync disabled")
+        showSuccess(next ? "Watchlist sync is on" : "Watchlist sync is off")
         await reload()
       } else {
         showError(result.error)
@@ -106,9 +106,9 @@ export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCar
         } else if (notModified) {
           showInfo("Your watchlist has not changed since the last sync")
         } else if (counts) {
-          showInfo(hasCounts(counts) ? watchlistCountsText(counts) : "No new items on your watchlist")
+          showInfo(hasCounts(counts) ? watchlistCountsText(counts) : "No new titles on your watchlist")
         }
-        if (itemsFailed && itemsFailed > 0) showError(`${itemsFailed} items failed to sync`)
+        if (itemsFailed && itemsFailed > 0) showError(`Could not sync ${itemsFailed} ${itemsFailed === 1 ? "title" : "titles"}`)
       }
       await reload()
     } finally {
@@ -129,9 +129,9 @@ export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCar
           </span>
           <div className="flex flex-col gap-1">
             <CardTitle as="h2" id="watchlist-sync-title">
-              Watchlist Sync
+              Watchlist sync
             </CardTitle>
-            <CardDescription>Anything you add to your Plex watchlist is requested for you.</CardDescription>
+            <CardDescription>Each title you add to your Plex watchlist becomes a request.</CardDescription>
           </div>
         </div>
         <CardAction>
@@ -139,7 +139,7 @@ export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCar
             checked={isEnabled}
             onCheckedChange={handleToggle}
             loading={isPending}
-            label="Watchlist Sync"
+            label="Watchlist sync"
             data-testid="watchlist-sync-toggle"
           />
         </CardAction>
@@ -186,7 +186,7 @@ export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCar
           )}
 
           {settings.recentHistory.length > 0 && (
-            <ul className="flex flex-col" aria-label="Recent items">
+            <ul className="flex flex-col" aria-label="Recent titles">
               {settings.recentHistory.map((item) => {
                 const status = ITEM_STATUS[item.status]
                 return (
@@ -194,7 +194,7 @@ export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCar
                     <span className="flex min-w-0 flex-col">
                       <span className="truncate text-ui font-medium text-foreground">{item.title}</span>
                       <span className="text-caption text-muted-foreground">
-                        {item.mediaType === "MOVIE" ? "Film" : "Series"}
+                        {item.mediaType === "MOVIE" ? "Movie" : "Show"}
                         {item.year ? `, ${item.year}` : ""}
                       </span>
                     </span>

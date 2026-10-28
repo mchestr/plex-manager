@@ -29,11 +29,11 @@ export const topFilmsPage: PageDefinition<TopFilmsData> = {
   schema: TopFilmsDataSchema,
   srSummary: (data, facts) => {
     const rows = data.rows.map((_row, i) => `${shown(facts, filmFact(i, "title"))}, ${shown(facts, filmFact(i, "minutes"))}`)
-    return rows.length === 1 ? `Your film of the year: ${rows[0]}.` : `Your top films: ${rows.join("; ")}.`
+    return rows.length === 1 ? `Your movie of the year: ${rows[0]}.` : `Your top movies: ${rows.join("; ")}.`
   },
   table: (data, facts) => ({
-    caption: "Your top films",
-    columns: ["Film", "Plays", "Watched"],
+    caption: "Your top movies",
+    columns: ["Movie", "Plays", "Watched"],
     rows: data.rows.map((_row, i) => [shown(facts, filmFact(i, "title")), shown(facts, filmFact(i, "plays")), shown(facts, filmFact(i, "minutes"))]),
   }),
   article: (data, facts, ctx) => [

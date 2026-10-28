@@ -88,13 +88,12 @@ export function RecentCommandsTable({ rows, total }: { rows: RecentCommand[]; to
       data={rows}
       getRowId={(row) => row.id}
       pagination={{ page: 1, pageSize: Math.max(rows.length, 1), total: rows.length }}
-      toolbar={<p className="text-label text-muted-foreground">{f.number(total)} commands logged in all</p>}
+      toolbar={<p className="text-label text-muted-foreground">{f.number(total)} commands in the log</p>}
       empty={
         <EmptyState
           kind="first-use"
           icon={icons.discordBot}
           title="No commands yet"
-          description="Commands members run in Discord show here."
         />
       }
       data-testid="discord-recent-commands"

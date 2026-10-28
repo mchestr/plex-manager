@@ -61,7 +61,7 @@ function resolveDedication(args: {
   const hours = Math.floor(args.statistics.totalWatchTime.total / 60)
   return (
     `${args.motif}. In ${args.year} you gave <highlight>${hours} hours</highlight> to the screen — ` +
-    `<highlight>${args.statistics.moviesWatched} films</highlight> and ` +
+    `<highlight>${args.statistics.moviesWatched} movies</highlight> and ` +
     `<highlight>${args.statistics.episodesWatched} episodes</highlight>. A performance worthy of the title.`
   )
 }
@@ -125,7 +125,7 @@ export function assembleWrappedData(args: {
         prominentStat: {
           value: Math.floor(statistics.totalWatchTime.total / 60),
           label: "hours watched",
-          description: `Your year in film and television, ${year}`,
+          description: `Your year in movies and shows, ${year}`,
         },
       },
     },
@@ -149,7 +149,7 @@ export function assembleWrappedData(args: {
     {
       id: "shows-breakdown",
       type: "shows-breakdown",
-      title: "The Series",
+      title: "The Shows",
       content: output.narratives.shows,
       data: {
         showsWatched: statistics.showsWatched,
@@ -163,7 +163,7 @@ export function assembleWrappedData(args: {
     sections.push({
       id: "top-movies",
       type: "top-movies",
-      title: "Top Billing — Films",
+      title: "Top Billing — Movies",
       content: output.narratives.topMovies,
       data: { movies: statistics.topMovies },
     })
@@ -173,7 +173,7 @@ export function assembleWrappedData(args: {
     sections.push({
       id: "top-shows",
       type: "top-shows",
-      title: "Top Billing — Series",
+      title: "Top Billing — Shows",
       content: output.narratives.topShows,
       data: { shows: statistics.topShows },
     })

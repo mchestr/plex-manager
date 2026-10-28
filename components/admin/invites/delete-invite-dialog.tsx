@@ -30,7 +30,7 @@ export function DeleteInviteDialog({ invite, onOpenChange, onDeleted }: DeleteIn
       open={invite !== null}
       onOpenChange={onOpenChange}
       title={invite ? `Delete invite ${invite.code}?` : "Delete invite?"}
-      description="Its link stops working at once. Members who already joined keep their access. This can't be undone."
+      description="Its link stops working at once. Members who already joined keep their access. You can't undo this."
       confirmLabel="Delete invite"
       pendingLabel="Deleting"
       tone="destructive"

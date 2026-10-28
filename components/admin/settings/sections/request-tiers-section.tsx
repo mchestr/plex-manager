@@ -146,7 +146,7 @@ export function RequestTiersSection({ saved, startedLabel, footerMeta }: { saved
     <SettingsSection
       id={SECTION_ID}
       title="Request limits"
-      description="Sets each member's Overseerr request quota from their all-time watch time in Tautulli. Needs both."
+      description="Sets each member's Overseerr request quota from their total watch time in Tautulli. Needs Overseerr and Tautulli."
       form={{
         ...form,
         onDiscard: () => {
@@ -185,15 +185,15 @@ export function RequestTiersSection({ saved, startedLabel, footerMeta }: { saved
           <div className="flex flex-col">
             <Label htmlFor="request-tiers-enabled">Sync request limits every day</Label>
             <span id="request-tiers-enabled-hint" className="text-label text-muted-foreground">
-              The first run overwrites every matched member's Overseerr quota, so turn on "Set request limits by hand" on the users to keep first. Overseerr is only called for a member whose quota changes.
+              The first run replaces the Overseerr quota of each matched member. To keep a member's quota, first turn on "Set request limits by hand" for that user.
             </span>
           </div>
         </div>
-        <FormField name="runHour" label="Run at hour" description="Hour of the day in the server time zone, from 0 to 23.">
+        <FormField name="runHour" label="Run at hour" description="From 0 to 23, in the server time zone.">
           <Input type="number" min="0" max="23" value={values.runHour} onValueChange={(runHour) => set({ runHour })} disabled={form.isPending} className="w-24" data-testid="request-tiers-hour" />
         </FormField>
         <fieldset className="flex flex-col gap-3" disabled={form.isPending}>
-          <legend className="mb-1 text-label text-muted-foreground">Tiers. A limit of 0 is unlimited. The first tier starts at 0 hours.</legend>
+          <legend className="mb-1 text-label text-muted-foreground">Tiers. A limit of 0 means no limit. The first tier starts at 0 hours.</legend>
           <div className="grid grid-cols-[2rem_repeat(4,minmax(0,1fr))] items-end gap-2 text-caption text-muted-foreground max-sm:hidden">
             <span>Tier</span>
             {COLUMNS.map((column) => (

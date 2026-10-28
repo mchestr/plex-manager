@@ -14,7 +14,7 @@
 import { listKnownModels, lookupModel, normalizeModelId } from "@/lib/llm/models"
 import { isLLMProviderId, LLM_PROVIDER_LABELS } from "@/lib/llm/provider-presets"
 
-const RECEIVED = "It received your titles and totals, never your email or anything about other members."
+const RECEIVED = "It received your titles and totals only, not your email or data about other members."
 
 export interface CopyAuthor {
   copySource: "llm" | "repair" | "template" | "mixed"
@@ -37,7 +37,7 @@ function author(model: string): string {
  * @example
  * ```ts
  * aboutTheWords({ copySource: "llm", model: "anthropic:claude-sonnet-5-5" })
- * // "Some of the words were written by Claude Sonnet 5.5 (Anthropic). It received your titles and totals, never your email or anything about other members."
+ * // "Some of the words were written by Claude Sonnet 5.5 (Anthropic). It received your titles and totals only, not your email or data about other members."
  * aboutTheWords({ copySource: "template", model: null }) // null
  * ```
  */

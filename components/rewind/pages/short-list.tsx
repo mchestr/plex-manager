@@ -24,14 +24,14 @@ const ROW_TITLE = 230
 
 const featureTitle = (title: string) => fitLines(title, { role: "nameplate", metrics: pageMetrics, weight: 900, measure: MEASURE, maxLines: 3, sizeMin: 30, sizeMax: 52, widths: [62] })
 
-/** "Series, 3 episodes", "Film, 2 plays" or "Film". */
+/** "Show, 3 episodes", "Movie, 2 plays" or "Movie". */
 function rowNote(row: ShortListRow, facts: RewindFactsV3, locale: string): string {
   if (shortListKind(row) === "series") {
     const episodes = num(facts, shortListFact(row, "episodes"))
-    return episodes > 0 ? `Series, ${shown(facts, shortListFact(row, "episodes"))} ${pluralWord(episodes, EPISODES, { locale })}` : "Series"
+    return episodes > 0 ? `Show, ${shown(facts, shortListFact(row, "episodes"))} ${pluralWord(episodes, EPISODES, { locale })}` : "Show"
   }
   const plays = num(facts, shortListFact(row, "plays"))
-  return plays > 1 ? `Film, ${shown(facts, shortListFact(row, "plays"))} ${pluralWord(plays, PLAYS, { locale })}` : "Film"
+  return plays > 1 ? `Movie, ${shown(facts, shortListFact(row, "plays"))} ${pluralWord(plays, PLAYS, { locale })}` : "Movie"
 }
 
 function rowDetail(row: ShortListRow, facts: RewindFactsV3, locale: string): ListRow["detail"] {

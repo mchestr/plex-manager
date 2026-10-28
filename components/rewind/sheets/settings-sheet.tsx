@@ -14,8 +14,8 @@ import type { StagePrefs } from "@/lib/rewind/stage/prefs"
 type SwitchPref = "autoplay" | "slowerPacing" | "shortcuts"
 
 const ROWS: { pref: SwitchPref; label: string; hint: string; testId?: string }[] = [
-  { pref: "autoplay", label: "Autoplay", hint: "Turn the page when its time is up." },
-  { pref: "slowerPacing", label: "Slower pacing", hint: "Stay on each page half as long again." },
+  { pref: "autoplay", label: "Autoplay", hint: "Go to the next page automatically." },
+  { pref: "slowerPacing", label: "Slower pacing", hint: "Show each page 50% longer." },
   { pref: "shortcuts", label: "Keyboard shortcuts", hint: "K pauses, S shares, T opens the table and comma opens Settings.", testId: "rewind-shortcuts-switch" },
 ]
 
@@ -43,7 +43,7 @@ export function SettingsSheet({ open, onClose, prefs, onChange, articleHref, abo
       <SheetContent side="bottom" grabber data-testid="rewind-settings-sheet" className="font-display">
         <SheetHeader>
           <SheetTitle>Settings</SheetTitle>
-          <SheetDescription>These settings stay on this device.</SheetDescription>
+          <SheetDescription>These settings apply to this device only.</SheetDescription>
         </SheetHeader>
         <ul className="flex flex-col gap-4">
           {ROWS.map(({ pref, label, hint, testId }) => (

@@ -299,7 +299,7 @@ describe('/rewind/[year] branches', () => {
     render(ui)
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Chester Family Plex Rewind 2025')
-    expect(screen.getByTestId('rewind-article-mode')).toHaveTextContent('Your most watched films')
+    expect(screen.getByTestId('rewind-article-mode')).toHaveTextContent('Your most watched movies')
   })
 
   it('shows parse-error for a completed row that does not parse', async () => {
@@ -349,7 +349,7 @@ describe('/rewind/[year] branches', () => {
 
     await renderYear('2026')
     expect(panel()).toHaveAttribute('data-kind', 'unavailable')
-    expect(screen.getByTestId('rewind-status-message')).toHaveTextContent("Rewind isn't available on this server yet")
+    expect(screen.getByTestId('rewind-status-message')).toHaveTextContent("Rewind is not available on this server")
 
     signIn(true)
     await renderYear('2026')

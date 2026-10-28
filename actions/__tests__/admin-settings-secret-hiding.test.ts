@@ -68,8 +68,6 @@ describe('getAdminSettings secret hiding', () => {
       rewindSeasonOpens: '12-01',
       rewindSeasonCloses: '01-31',
       timezone: null,
-      watchlistSyncEnabled: false,
-      watchlistSyncIntervalMinutes: 60,
       stripeEnabled: false,
       stripePriceIds: null,
       updatedAt: new Date(),

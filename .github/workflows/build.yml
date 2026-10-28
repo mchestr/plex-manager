@@ -404,7 +404,7 @@ jobs:
           retention-days: 7
 
   # The Postgres- and Redis-backed suites (*.pg.test.ts, *.redis.test.ts),
-  # gated by describePg and describeRedis (test/helpers/integration.ts). Under
+  # gated by describePg and describeRedis (__tests__/helpers/integration.ts). Under
   # CI a missing TEST_DATABASE_URL or TEST_REDIS_URL fails them instead of
   # skipping them.
   integration:

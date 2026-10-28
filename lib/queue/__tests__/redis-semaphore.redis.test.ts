@@ -12,7 +12,7 @@
 import Redis from "ioredis"
 
 import { createRedisSemaphore, type RedisSemaphore, type SemaphoreHolder } from "@/lib/queue/redis-semaphore"
-import { describeRedis } from "@/test/helpers/integration"
+import { describeRedis } from "@/__tests__/helpers/integration"
 
 const KEY = "rw:sem:tautulli"
 

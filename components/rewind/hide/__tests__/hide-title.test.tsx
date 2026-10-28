@@ -36,7 +36,7 @@ describe("Hide this title (P7.7)", () => {
     await user.click(screen.getByTestId("rewind-hide-confirm"))
 
     expect(hide.actions.hide).toHaveBeenCalledWith({ year: 2026, ratingKey: "4123", kind: "series" })
-    expect(await screen.findByTestId("rewind-hide-done")).toHaveTextContent("Hidden. Your pages update in about a minute.")
+    expect(await screen.findByTestId("rewind-hide-done")).toHaveTextContent("Hidden. Your pages change in about 1 minute.")
     expect(within(screen.getByTestId("rewind-hidden-titles")).getByText("Severance")).toBeInTheDocument()
     expect(screen.getByTestId("watching")).toBeInTheDocument()
   })

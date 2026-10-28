@@ -22,7 +22,7 @@ async function copy(url: string, showSuccess: (message: string) => void, onCopie
 }
 
 /**
- * Copy link, or "Create a public link..." and its confirm step (design 6.5
+ * Copy link, or "Create a public link" and its confirm step (design 6.5
  * step 4). The confirm step names exactly what becomes public: how many
  * cards, whether the name shows, and when the link stops; no expiry is a
  * choice made there. A link made in an earlier visit has no URL to copy (only
@@ -80,7 +80,7 @@ export function ShareLink({ onNeedsMembership, stopOnly = false }: { onNeedsMemb
         </h3>
         <p className="font-text text-ui" data-testid="rewind-share-confirm-line">
           {link
-            ? "The link you made before stops working, and a new address is copied."
+            ? "Your old link stops working. The new link is copied."
             : confirmLine({ cards: setup.cards.length, signed: choices.signed, expires: never ? null : setup.seasonCloses })}
         </p>
         {link ? null : (
@@ -109,7 +109,7 @@ export function ShareLink({ onNeedsMembership, stopOnly = false }: { onNeedsMemb
         onClick={() => (url ? void copy(url, showSuccess, () => recordShare("link")) : setStep("confirm"))}
         data-testid="rewind-share-copy-link"
       >
-        {url ? "Copy link" : link ? "Copy a new link..." : "Create a public link..."}
+        {url ? "Copy link" : link ? "Copy a new link" : "Create a public link"}
       </Button>
       {url ? (
         <p className="font-text text-ui break-all" data-testid="rewind-share-url">

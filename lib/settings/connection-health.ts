@@ -16,7 +16,7 @@
  * | No active row | `notConfigured` |
  * | Tester succeeds | `ok` |
  * | Tester fails, throws or times out | `unreachable`, with `TIMEOUT`, `UNAUTHORIZED`, `NOT_FOUND` or `UNREACHABLE` |
- * | AI with `Config.llmDisabled` on | `degraded` ("Template copy", UI-31) |
+ * | AI with `Config.llmDisabled` on | `degraded` ("Template text", UI-31) |
  * | AI with a provider row | `ok` (no billed test call) |
  *
  * `getSettingsHealth()` adds the settings page's feature sections to the
@@ -28,8 +28,11 @@
  * | AI | `degraded` with `llmDisabled`, else the cached check |
  * | Discord | the worst of its enabled rows (`discordStatus`); `disabled` with both off |
  * | Stripe | `getStripeConfig()`: `disabled`, `incomplete` while a prerequisite is missing, else `ok` |
- * | Watchlist sync | `disabled`, else Overseerr's check (`incomplete` without Overseerr) |
  * | Rewind | `checkRewindInfra()`, then Tautulli's check |
+ *
+ * `getWatchlistHealth()` reads Watchlist sync's health the same way, for its
+ * own page (`/admin/watchlist`): `disabled`, else Overseerr's check
+ * (`incomplete` without Overseerr).
  *
  * @module lib/settings/connection-health
  */
@@ -153,6 +156,13 @@ async function stripeHealth(now: Date): Promise<SectionHealth> {
   return ready ? live("ok", null, now) : live("incomplete", "MISSING_SETUP", now)
 }
 
+/** One service's cached check; `notConfigured`, with nothing checked, without an active row. */
+function serviceHealth(cached: ConnectionHealth, id: ConnectionId): SectionHealth {
+  const entry = cached.connections.find((connection) => connection.id === id)
+  if (!entry || entry.status === "notConfigured") return { status: "notConfigured", code: null, checkedAt: null }
+  return { status: entry.status, code: entry.code, checkedAt: cached.checkedAt }
+}
+
 /** A service's check, as the dependency of a feature that is on. */
 function dependsOn(service: SectionHealth, now: Date): SectionHealth {
   if (service.status === "notConfigured") return live("incomplete", "MISSING_SETUP", now)
@@ -178,15 +188,11 @@ async function rewindHealth(tautulli: SectionHealth, now: Date): Promise<Section
 export async function getSettingsHealth(now: Date = new Date()): Promise<SettingsHealth> {
   const [cached, config, discord, stripe] = await Promise.all([
     getConnectionHealth(),
-    prisma.config.findUnique({ where: { id: "config" }, select: { llmDisabled: true, watchlistSyncEnabled: true } }),
+    prisma.config.findUnique({ where: { id: "config" }, select: { llmDisabled: true } }),
     discordHealth(now),
     stripeHealth(now),
   ])
-  const service = (id: ConnectionId): SectionHealth => {
-    const entry = cached.connections.find((connection) => connection.id === id)
-    if (!entry || entry.status === "notConfigured") return { status: "notConfigured", code: null, checkedAt: null }
-    return { status: entry.status, code: entry.code, checkedAt: cached.checkedAt }
-  }
+  const service = (id: ConnectionId) => serviceHealth(cached, id)
 
   return {
     plex: service("plex"),
@@ -195,10 +201,23 @@ export async function getSettingsHealth(now: Date = new Date()): Promise<Setting
     ai: config?.llmDisabled ? live("degraded", "LLM_DISABLED", now) : service("ai"),
     discord,
     stripe,
-    watchlist: config?.watchlistSyncEnabled ? dependsOn(service("overseerr"), now) : live("disabled", null, now),
     rewind: await rewindHealth(service("tautulli"), now),
     sonarr: service("sonarr"),
     radarr: service("radarr"),
     jellyfin: service("jellyfin"),
   }
+}
+
+/**
+ * Watchlist sync's health, for its settings card on `/admin/watchlist`:
+ * `disabled` while the global switch is off, else Overseerr's cached check,
+ * `incomplete` without Overseerr. Read live, so a save shows at once.
+ */
+export async function getWatchlistHealth(now: Date = new Date()): Promise<SectionHealth> {
+  const [cached, config] = await Promise.all([
+    getConnectionHealth(),
+    prisma.config.findUnique({ where: { id: "config" }, select: { watchlistSyncEnabled: true } }),
+  ])
+  if (!config?.watchlistSyncEnabled) return live("disabled", null, now)
+  return dependsOn(serviceHealth(cached, "overseerr"), now)
 }

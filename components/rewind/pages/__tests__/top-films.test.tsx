@@ -32,7 +32,7 @@ describe("06 Top films", () => {
     const rows = within(screen.getByRole("list")).getAllByRole("listitem")
     expect(rows).toHaveLength(dataOf(issue)!.rows.length - 1)
     rows.forEach((row, i) => expect(row).toHaveTextContent(title(issue, i + 2)))
-    expect(document.body).not.toHaveTextContent(/\b0 films?\b/)
+    expect(document.body).not.toHaveTextContent(/\b0 movies?\b/)
   })
 
   it("is a single feature with fewer than 3 films, and omitted with none", () => {
@@ -61,7 +61,7 @@ describe("06 Top films", () => {
   it("tabulates the films and summarises deterministically", () => {
     const issue = issues.heavy
     const table = registry["top-films"].table!(dataOf(issue)!, issue.facts, { locale: "en-US" })!
-    expect(table.columns).toEqual(["Film", "Plays", "Watched"])
+    expect(table.columns).toEqual(["Movie", "Plays", "Watched"])
     expect(table.rows.map((r) => r[0])).toEqual([1, 2, 3, 4, 5].map((n) => title(issue, n)))
     expect(registry["top-films"].srSummary(dataOf(issue)!, issue.facts)).toMatchSnapshot()
   })

@@ -21,7 +21,7 @@ export interface UserDialogProps {
   onOpenChange?: (open: boolean) => void
 }
 
-const ALREADY_GENERATING = "This member's Rewind is already being made. Try again when it finishes."
+const ALREADY_GENERATING = "This member's Rewind is already generating. Try again when it finishes."
 
 async function regenerate(user: UserActionTarget, year: number) {
   const result = await adminRegenerateRewind({ userId: user.id, year })
@@ -61,7 +61,7 @@ export function ChangeRoleDialog({ user, ...dialog }: UserDialogProps) {
       title={removing ? `Remove ${user.name}'s admin role?` : `Make ${user.name} an admin?`}
       description={
         removing
-          ? "They keep their account and Rewind, and lose every admin page."
+          ? "They keep their account and Rewind. They lose access to all admin pages and their saved assistant conversations."
           : "They can open every admin page, change settings and act on any member."
       }
       confirmLabel={removing ? "Remove admin role" : "Make admin"}
@@ -111,8 +111,8 @@ export function DisableDialog({ user, ...dialog }: UserDialogProps) {
       title={enabling ? `Enable ${user.name}'s account?` : `Disable ${user.name}'s account?`}
       description={
         enabling
-          ? `${user.name} will be able to sign in again.`
-          : `${user.name} will be signed out within five minutes and can't sign in until the account is enabled again.`
+          ? `${user.name} can sign in again.`
+          : `${user.name} is signed out within five minutes. They can't sign in until you enable the account again.`
       }
       confirmLabel={enabling ? "Enable" : "Disable"}
       pendingLabel="Saving"

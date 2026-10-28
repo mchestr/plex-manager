@@ -46,7 +46,6 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-users-page">
       <PageHeader
         title="Users"
-        description="Everyone with an account, with their Plex access, billing and Rewind."
         actions={session?.user.isAdmin ? <ImportPlexUsersButton /> : undefined}
         data-testid="admin-users-header"
       />

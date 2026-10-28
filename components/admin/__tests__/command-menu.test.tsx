@@ -88,7 +88,8 @@ describe('CommandMenu', () => {
 
     await user.keyboard('{ArrowDown}{Enter}')
 
-    expect(mockPush).toHaveBeenCalledWith('/admin/users')
+    // Overview, then Assistant: the ungrouped items lead the list
+    expect(mockPush).toHaveBeenCalledWith('/admin/assistant')
     await waitFor(() => expect(dialog).not.toBeInTheDocument())
   })
 

@@ -39,7 +39,7 @@ type PreviewPageProps = {
 }
 
 const EDITIONS: Record<string, string> = { full: "Full edition", pocket: "Pocket edition", postcard: "Postcard" }
-const COPY_SOURCES: Record<string, string> = { llm: "AI copy", repair: "AI copy, repaired", mixed: "Mixed copy", template: "Template copy" }
+const COPY_SOURCES: Record<string, string> = { llm: "AI text", repair: "AI text, repaired", mixed: "Mixed text", template: "Template text" }
 
 /** The view's state as the season console's status vocabulary. */
 function ViewStatus({ view }: { view: RewindYearView }) {
@@ -125,7 +125,7 @@ export default async function AdminUserRewindPage({ params, searchParams }: Prev
         data-testid="admin-rewind-preview-header"
       />
       <Alert tone="info" data-testid="admin-rewind-preview-banner">
-        You are viewing {name}&apos;s Rewind as an admin. Members are told that admins can view their Rewind.
+        You are viewing {name}&apos;s Rewind as an admin. The app tells members that admins can view their Rewind.
       </Alert>
       <RewindScope fontClassName={rewindFontVariables}>
         {view.kind === "issue" ? (

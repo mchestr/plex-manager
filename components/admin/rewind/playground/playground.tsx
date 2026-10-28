@@ -100,14 +100,14 @@ export function Playground({ initialForm, options, children }: PlaygroundProps) 
         />
       )}
       {phase.kind === "failed" && (
-        <Alert tone="destructive" title="No dry run" data-testid="playground-failed">
+        <Alert tone="destructive" title="The dry run failed" data-testid="playground-failed">
           {phase.message}
         </Alert>
       )}
       {(phase.kind === "starting" || phase.kind === "running") && (
         <p className="flex items-center gap-2 text-ui text-muted-foreground" data-testid="playground-running">
           <Spinner />
-          Running the dry run. It can take up to a minute and a half.
+          The dry run is in progress. It can take up to 90 seconds.
         </p>
       )}
       {children}

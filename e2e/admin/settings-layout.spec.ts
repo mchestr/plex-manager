@@ -9,7 +9,7 @@ import { editSection } from '../helpers/settings';
  * sideways and Jump to reaches a section.
  */
 
-const SECTIONS = ['plex', 'tautulli', 'overseerr', 'ai', 'discord', 'stripe', 'watchlist', 'rewind', 'other', 'system'];
+const SECTIONS = ['plex', 'tautulli', 'overseerr', 'ai', 'discord', 'stripe', 'rewind', 'other', 'system'];
 
 test.describe('Settings layout', () => {
   test('nav links reach their sections', async ({ adminPage: page }) => {

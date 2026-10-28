@@ -103,11 +103,11 @@ interface JellyfinMembers {
   names: string[]
 }
 
-/** "Ana, Ben and 2 more sign in with Jellyfin only ..." */
+/** "Ana, Ben and 2 more sign in only with Jellyfin ..." */
 function jellyfinConfirmCopy({ count, names }: JellyfinMembers): string {
   const more = count - names.length
   const who = more > 0 ? `${names.join(", ")} and ${more} more` : names.join(", ")
-  return `${who} sign in with Jellyfin only and aren't exempt. Their accounts were made in Jellyfin, not through an invite, so mark anyone who should keep free access exempt first.`
+  return `${who} sign in only with Jellyfin and are not exempt. To give a member free access, first mark that member exempt.`
 }
 
 /**
@@ -127,7 +127,7 @@ function JellyfinMembersConfirm({ members, onClose }: { members: JellyfinMembers
     <ConfirmDialog
       open={members !== null}
       onOpenChange={(open) => !open && onClose()}
-      title={`${count} Jellyfin ${count === 1 ? "member" : "members"} will be asked to subscribe`}
+      title={`Ask ${count} Jellyfin ${count === 1 ? "member" : "members"} to subscribe?`}
       description={members ? jellyfinConfirmCopy(members) : ""}
       confirmLabel="Turn on subscriptions"
       pendingLabel="Turning on"
@@ -177,7 +177,7 @@ function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; 
       <div className="flex flex-col">
         <Label htmlFor="stripe-enabled">Subscriptions</Label>
         <span id="stripe-enabled-hint" className="text-label text-muted-foreground">
-          Non-members can subscribe for access. Turning it off cancels nothing. Takes effect at once.
+          Non-members can subscribe to get access. This saves at once. If you turn it off, Stripe subscriptions stay active.
         </span>
       </div>
     </div>
@@ -195,7 +195,7 @@ export function StripeSubscriptions({ config }: { config: StripeConfigStatus }) 
     <div className="flex flex-col gap-6" data-testid="stripe-settings-form">
       <SubscriptionsSwitch config={config} missing={missing} />
       {!config.enabled && missing.length > 0 && (
-        <Alert tone="warning" role="status" title="Subscriptions can't be turned on yet." data-testid="stripe-enable-requirements">
+        <Alert tone="warning" role="status" title="You cannot turn on subscriptions yet." data-testid="stripe-enable-requirements">
           Save {missing.join(", ")} first.
         </Alert>
       )}
@@ -259,7 +259,7 @@ export function StripeSettingsFields({ config, state, libraries }: StripeSetting
   return (
     <>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <FormField name="stripe-secret-key" label="Secret key" description="Required before subscriptions can be turned on." error={errors.secretKey}>
+        <FormField name="stripe-secret-key" label="Secret key" description="Save this before you turn on subscriptions." error={errors.secretKey}>
           <SecretInput
             value={values.secretKey}
             onValueChange={(secretKey) => set({ secretKey })}
@@ -272,7 +272,7 @@ export function StripeSettingsFields({ config, state, libraries }: StripeSetting
         <FormField
           name="stripe-webhook-secret"
           label="Webhook signing secret"
-          description="Required before subscriptions can be turned on. In Stripe, open Developers, then Webhooks."
+          description="Save this before you turn on subscriptions. In Stripe, open Developers, then Webhooks."
           error={errors.webhookSecret}
         >
           <SecretInput
@@ -288,7 +288,7 @@ export function StripeSettingsFields({ config, state, libraries }: StripeSetting
         <FormField
           name="stripe-price-ids"
           label="Price IDs"
-          description="The prices offered on the subscribe page, one per line or separated by commas. At least one is required before subscriptions can be turned on."
+          description="The prices on the subscribe page. Put one on each line, or separate them with commas. Save one or more before you turn on subscriptions."
           error={errors.priceIds}
           className="md:col-span-2"
         >
@@ -305,7 +305,7 @@ export function StripeSettingsFields({ config, state, libraries }: StripeSetting
       </div>
       <fieldset className="flex flex-col gap-2" data-testid="stripe-library-access">
         <legend className="text-ui font-medium text-foreground">Subscriber library access</legend>
-        <p className="text-label text-muted-foreground">Libraries shared with subscribers. Leave all unchecked to share every library.</p>
+        <p className="text-label text-muted-foreground">If you select none, subscribers get all libraries.</p>
         {errors.librarySectionIds && (
           <p className="text-label text-destructive" data-testid="stripe-library-access-error">
             {errors.librarySectionIds}

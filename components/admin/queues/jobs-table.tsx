@@ -142,7 +142,7 @@ export function JobsTable({ rows, total, allJobs, page, pageSize, filtered }: Jo
           filtered ? (
             <EmptyState kind="filtered" icon={SearchX} title="No jobs match" description="Clear the filters to see every job." />
           ) : (
-            <EmptyState kind="first-use" icon={Layers} title="No jobs yet" description="Jobs show here when something is queued." />
+            <EmptyState kind="first-use" icon={Layers} title="No jobs yet" />
           )
         }
         data-testid="queue-jobs"
@@ -151,7 +151,7 @@ export function JobsTable({ rows, total, allJobs, page, pageSize, filtered }: Jo
         open={removing !== null}
         onOpenChange={(open) => !open && setRemoving(null)}
         title={removing ? `Remove this ${removing.typeLabel} job?` : "Remove this job?"}
-        description="It leaves the queue and won't run or be retried."
+        description="The job leaves the queue. It doesn't run or retry."
         confirmLabel="Remove job"
         pendingLabel="Removing"
         tone="destructive"

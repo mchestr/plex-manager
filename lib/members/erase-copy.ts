@@ -22,6 +22,7 @@ const LABELS: Record<keyof InventoryCounts, string> = {
   llmUsage: "AI usage records",
   llmUsageAnonymised: "Admin AI records about them (text removed)",
   chatConversation: "Assistant conversations",
+  chatConversationMessage: "Assistant page messages",
   discordChatSession: "Discord chat sessions",
   discordCommandLog: "Discord command log entries",
   discordPendingSelection: "Pending Discord selections",

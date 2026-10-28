@@ -1,33 +1,34 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useState } from "react"
 
-import { AssistantTrigger } from "@/components/admin/chatbot/assistant-sheet"
 import { CommandMenuTrigger } from "@/components/admin/command-menu"
-import { AdminChrome } from "@/components/shell/admin-chrome"
+import { useAdminNav } from "@/components/shell/admin-nav-context"
 import { AdminNavList } from "@/components/shell/admin-nav-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Wordmark } from "@/components/ui/wordmark"
-import type { NavCounts } from "@/lib/admin/nav"
+import { isActive, type NavCounts } from "@/lib/admin/nav"
 import { icons } from "@/lib/ui/icons"
 
 interface AdminMobileBarProps {
   serverName: string
   navCounts: NavCounts
-  assistant: boolean
 }
 
 /**
  * Below `md`: a 56px top bar with the menu (the grouped nav in a right
  * Sheet), the Wordmark, the "Admin" badge, the command menu's search
- * button (P10.16) and the assistant button.
+ * button (P10.16) and a link to the assistant page for a user who has it.
  */
-export function AdminMobileBar({ serverName, navCounts, assistant }: AdminMobileBarProps) {
+export function AdminMobileBar({ serverName, navCounts }: AdminMobileBarProps) {
   const [open, setOpen] = useState(false)
+  const pathname = usePathname() ?? "/admin"
+  const assistant = useAdminNav().items.find((item) => item.id === "assistant")
 
   return (
     <header
@@ -55,12 +56,17 @@ export function AdminMobileBar({ serverName, navCounts, assistant }: AdminMobile
         <span className="sr-only">Search or jump to</span>
       </CommandMenuTrigger>
       {assistant && (
-        <AdminChrome part="assistant">
-          <AssistantTrigger size="icon" data-testid="admin-chat-toggle-mobile">
-            <Icon icon={icons.assistant} size={20} />
-            <span className="sr-only">Assistant</span>
-          </AssistantTrigger>
-        </AdminChrome>
+        <Button
+          variant="ghost"
+          size="icon"
+          render={<Link href={assistant.href} />}
+          nativeButton={false}
+          aria-current={isActive(assistant, pathname) ? "page" : undefined}
+          data-testid="admin-assistant-link-mobile"
+        >
+          <Icon icon={icons.assistant} size={20} />
+          <span className="sr-only">Assistant</span>
+        </Button>
       )}
     </header>
   )

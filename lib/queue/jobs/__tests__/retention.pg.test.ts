@@ -18,7 +18,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 
 import { PrismaClient } from "@/lib/generated/prisma/client"
 import { runRetentionSweep } from "@/lib/queue/jobs/retention"
-import { describePg } from "@/test/helpers/integration"
+import { describePg } from "@/__tests__/helpers/integration"
 
 let mockDb: PrismaClient
 jest.mock("@/lib/prisma", () => ({
@@ -60,6 +60,22 @@ async function seed(db: PrismaClient) {
     nulledAt100: await db.lLMUsage.create({ data: { ...usage, chatConversationId: live.id, createdAt: ago(100) } }),
   }
 
+  // Assistant page history: 90 days after the last message, then the conversation ends
+  const idleChat = await db.chatConversation.create({
+    data: {
+      userId: MEMBER,
+      title: "Why did Plex restart?",
+      lastMessageAt: ago(91),
+      messages: { create: [{ role: "user", content: "q", createdAt: ago(92) }, { role: "assistant", content: "a", createdAt: ago(91) }] },
+    },
+  })
+  const recentChat = await db.chatConversation.create({
+    data: { userId: MEMBER, title: "Is Sonarr up?", lastMessageAt: ago(89), messages: { create: [{ role: "user", content: "q" }] } },
+  })
+  // A first reply that failed stores no turn, so its conversation counts from when it started
+  const neverAnswered = await db.chatConversation.create({ data: { userId: MEMBER, createdAt: ago(91) } })
+  const justStarted = await db.chatConversation.create({ data: { userId: MEMBER, createdAt: ago(89) } })
+
   // Conversations: 180 days after they end
   const ended = await db.chatConversation.create({ data: { userId: MEMBER, endedAt: ago(181) } })
   const endedUsage = await db.lLMUsage.create({ data: { ...usage, chatConversationId: ended.id, createdAt: ago(200) } })
@@ -99,7 +115,21 @@ async function seed(db: PrismaClient) {
   await db.auditLog.create({ data: { type: "TEST", actorUserId: RUN, createdAt: ago(399) } })
   await db.auditLog.create({ data: { type: "TEST", actorUserId: RUN, createdAt: ago(401) } })
 
-  return { generation, rewind, assistant, ended, endedUsage, recentlyEnded, chatty, idleConversation, argsLog }
+  return {
+    generation,
+    rewind,
+    assistant,
+    idleChat,
+    recentChat,
+    neverAnswered,
+    justStarted,
+    ended,
+    endedUsage,
+    recentlyEnded,
+    chatty,
+    idleConversation,
+    argsLog,
+  }
 }
 
 describePg("the retention sweep on PostgreSQL", (databaseUrl) => {
@@ -127,6 +157,7 @@ describePg("the retention sweep on PostgreSQL", (databaseUrl) => {
     expect(first.counts).toEqual({
       rewindLlmText: 1,
       assistantLlmText: 3,
+      assistantChats: 2,
       chatConversations: 1,
       discordChatMessages: 1,
       discordChatSessions: 1,
@@ -159,6 +190,16 @@ describePg("the retention sweep on PostgreSQL", (databaseUrl) => {
     expect(await text(fixture.assistant.kept.id)).toMatchObject({ prompt: "p", response: "r" })
     expect(await text(fixture.assistant.nulled.id)).toMatchObject({ prompt: null, response: null })
     expect(await text(fixture.assistant.nulledAt100.id)).toMatchObject({ prompt: null, response: null })
+  })
+
+  it("ends assistant page conversations idle past 90 days, removing their title and messages", async () => {
+    const conversation = (id: string) =>
+      mockDb.chatConversation.findUniqueOrThrow({ where: { id }, select: { endedAt: true, title: true, _count: { select: { messages: true } } } })
+
+    expect(await conversation(fixture.idleChat.id)).toEqual({ endedAt: NOW, title: null, _count: { messages: 0 } })
+    expect(await conversation(fixture.recentChat.id)).toEqual({ endedAt: null, title: "Is Sonarr up?", _count: { messages: 1 } })
+    expect((await conversation(fixture.neverAnswered.id)).endedAt).toEqual(NOW)
+    expect((await conversation(fixture.justStarted.id)).endedAt).toBeNull()
   })
 
   it("deletes ended conversations, keeping their usage cost without the link", async () => {

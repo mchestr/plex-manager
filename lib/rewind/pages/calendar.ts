@@ -114,7 +114,7 @@ function dayBlocks(
     label: display("month", month, ctx),
     days: rows.filter((row) => row.month === month),
   }))
-  const caption = `Every day from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}, a row per month. Use the arrow keys to move, and Enter to read a day.`
+  const caption = `Every day from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}, a row per month. Use the arrow keys to move. Press Enter to read a day.`
   return [{ kind: "calendar", caption, tables, months }]
 }
 

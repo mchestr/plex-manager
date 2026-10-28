@@ -125,6 +125,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   },
   { path: `/admin/invites/${VISUAL_INVITE_IDS.valid}`, as: 'admin', ready: 'admin-invite-header' },
   { path: '/admin/announcements', as: 'admin', ready: 'admin-announcements-header' },
+  { path: '/admin/watchlist', as: 'admin', ready: 'admin-watchlist-header' },
   { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-header' },
   { path: '/admin/discord', as: 'admin', ready: 'discord-status' },
   { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },
@@ -140,6 +141,9 @@ export const A11Y_ROUTES: A11yRoute[] = [
   },
   // The public share route records a visit; a worker restart's re-seed drops it.
   { path: '/admin/shares', as: 'admin', ready: 'admin-shares-header', reset: clearA11yShareVisits },
+  // No chat model in the seed, so the page also shows its "assistant is off" state
+  { path: '/admin/assistant', as: 'admin', ready: 'admin-chat-input' },
+  { path: `/admin/assistant?conversation=${A11Y_CONVERSATION_ID}`, as: 'admin', ready: 'admin-chat-answer' },
   { path: '/admin/llm-usage', as: 'admin', ready: 'admin-llm-usage-header' },
   { path: '/admin/llm-usage/visual-llm-usage-1', as: 'admin', ready: 'admin-llm-usage-detail-heading' },
   {

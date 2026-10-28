@@ -26,11 +26,13 @@ function section(markdown: string, heading: string): string {
 
 const readme = read('README.md')
 const claudeMd = read('CLAUDE.md')
+const contributing = read('.github/CONTRIBUTING.md')
 
 describe('install and upgrade docs', () => {
   it.each([
-    ['README Installation', () => section(readme, '### Installation')],
-    ['README Upgrading', () => section(readme, '### Upgrading')],
+    ['README Upgrade', () => section(readme, '## Upgrade')],
+    ['CONTRIBUTING development setup', () => section(contributing, '## Prepare a development environment')],
+    ['docs/operations.md Upgrade', () => section(read('docs/operations.md'), '## Upgrade')],
     ['CLAUDE.md Deployment Checklist', () => section(claudeMd, '## Deployment Checklist')],
   ])('%s names db:deploy', (_name, body) => {
     expect(body()).toContain('npm run db:deploy')
@@ -39,6 +41,7 @@ describe('install and upgrade docs', () => {
   it.each([
     ['README.md', readme],
     ['CLAUDE.md', claudeMd],
+    ['.github/CONTRIBUTING.md', contributing],
   ])('every %s line naming db:push or db:migrate says contributor-only', (_file, markdown) => {
     const offenders = markdown
       .split('\n')

@@ -22,10 +22,10 @@ const ADMIN_CAN_SEE = "The server admin can see what happened."
 
 const FAILURE_LEADS: Partial<Record<RewindErrorCode, string>> = {
   TIMEOUT: "It took too long to finish.",
-  UPSTREAM_ERROR: "The watch history service didn't answer.",
-  LLM_FAILED: "The words for your pages couldn't be written.",
-  NOT_CONFIGURED: "Rewind isn't fully set up on this server yet.",
-  TAUTULLI_USER_NOT_FOUND: "Your account wasn't found in the server's watch history.",
+  UPSTREAM_ERROR: "The watch history service did not answer.",
+  LLM_FAILED: "Rewind could not write the words for your pages.",
+  NOT_CONFIGURED: "Rewind is not fully set up on this server.",
+  TAUTULLI_USER_NOT_FOUND: "Your account is not in the server's watch history.",
 }
 
 /** The failed state's lead for `code`. @internal */
@@ -67,9 +67,9 @@ export function cardCopy(state: RewindCardState, name: string, settings: FormatS
         badge: null,
       }
     case "generating":
-      return { title: "Setting your pages", lead: "Usually a minute or two. You can leave this page; it keeps going.", badge: "Generating" }
+      return { title: "Setting your pages", lead: "This usually takes 1 or 2 minutes. You can leave this page.", badge: "Generating" }
     case "failed":
-      return { title: "Your Rewind couldn't be finished", lead: failureLead(state.code), badge: "Couldn't finish" }
+      return { title: "Your Rewind is not finished", lead: failureLead(state.code), badge: "Couldn't finish" }
     case "before-season":
       return {
         title: `Your Rewind arrives on ${formatDate(state.opensOn, "day-month", settings)}`,
@@ -81,24 +81,24 @@ export function cardCopy(state: RewindCardState, name: string, settings: FormatS
         ? { title: "Rewind needs Plex watch history", lead: "Jellyfin support is planned.", badge: "Not eligible yet" }
         : {
             title: "Your first Rewind arrives next year",
-            lead: "Rewind needs a few months of watching, so this year's season starts without you.",
+            lead: "Rewind needs a few months of watch history. You are not in this year's season.",
             badge: "Not eligible yet",
           }
     case "closed":
       return {
-        title: `Rewind ${state.year} is still yours`,
-        lead: `The season closed on ${formatDate(lastCountedDay(state.closedOn), "day-month", settings)}. Open it any time.`,
+        title: `Your Rewind ${state.year}`,
+        lead: `The season closed on ${formatDate(lastCountedDay(state.closedOn), "day-month", settings)}. You can still open it.`,
         badge: null,
       }
     case "not-started":
-      return { title: `Your Rewind ${state.year} is on its way`, lead: "The server sets every issue this month. Check back soon.", badge: null }
+      return { title: `Your Rewind ${state.year} is on its way`, lead: "The server makes every issue this month. Come back soon.", badge: null }
     case "unavailable":
       if (state.code === "REDIS_UNAVAILABLE") {
         return { title: "Rewind is temporarily unavailable", lead: "Try again in a few minutes.", badge: null }
       }
       return {
         title: rewindInfraMessage(state.code, "member"),
-        lead: state.viewerIsAdmin ? rewindInfraMessage(state.code, "admin") : "Ask the server admin when it's coming.",
+        lead: state.viewerIsAdmin ? rewindInfraMessage(state.code, "admin") : "Ask the server admin when it will be available.",
         badge: null,
       }
   }

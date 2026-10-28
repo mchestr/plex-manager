@@ -93,7 +93,7 @@ describe('RewindSettingsSection', () => {
       expect(summaryRow('llm-mode')).toHaveTextContent('Standard')
       expect(summaryRow('llm-mode')).not.toHaveTextContent('AI features are off')
       expect(summaryRow('budget')).toHaveTextContent('$10.00')
-      expect(summaryRow('budget')).toHaveTextContent('Spent so far this season: $1.20.')
+      expect(summaryRow('budget')).toHaveTextContent('Spent this season: $1.20.')
       expect(summaryRow('public-links')).toHaveTextContent('On')
       expect(summaryRow('public-counts')).toHaveTextContent('Off')
       expect(summaryRow('server-name')).toHaveTextContent('On')
@@ -101,7 +101,7 @@ describe('RewindSettingsSection', () => {
       expect(summaryRow('managed')).toHaveTextContent('Off')
       expect(summaryRow('libraries')).toHaveTextContent('None')
       expect(summaryRow('ratings')).toHaveTextContent('None')
-      expect(summaryRow('pages')).toHaveTextContent('None, every page is included')
+      expect(summaryRow('pages')).toHaveTextContent('None. All pages show.')
       expect(summaryRow('features')).toHaveTextContent('None on')
       expect(summaryRow('channels')).toHaveTextContent('Discord DM, Dashboard banner')
       expect(summaryRow('channels')).not.toHaveTextContent('Discord bot is off')
@@ -111,7 +111,7 @@ describe('RewindSettingsSection', () => {
       renderSection()
 
       const headings = within(screen.getByTestId('settings-rewind-summary')).getAllByRole('heading', { level: 3 })
-      expect(headings.map((heading) => heading.textContent)).toEqual(['Availability', 'Season', 'AI copy', 'Sharing', 'Content', 'Notifications'])
+      expect(headings.map((heading) => heading.textContent)).toEqual(['Availability', 'Season', 'AI text', 'Sharing', 'Content', 'Notifications'])
     })
 
     it('shows the status line, the zone note with its link, the season console note and Last saved', () => {
@@ -149,7 +149,7 @@ describe('RewindSettingsSection', () => {
 
       expect(summaryRow('enabled')).toHaveTextContent('On')
       expect(summaryRow('audience')).toHaveTextContent('Everyone')
-      expect(summaryRow('llm-mode')).toHaveTextContent('Economy (the budget model)')
+      expect(summaryRow('llm-mode')).toHaveTextContent('Economy (lower-cost model)')
       expect(summaryRow('libraries')).toHaveTextContent('Films, Library 7')
       expect(summaryRow('ratings')).toHaveTextContent('PG, R')
       expect(summaryRow('pages')).toHaveTextContent('People, Taste')
@@ -170,9 +170,9 @@ describe('RewindSettingsSection', () => {
       renderSection({ llmDisabled: true, discordBotOn: false })
 
       expect(summaryRow('llm-mode')).toHaveTextContent('Standard')
-      expect(summaryRow('llm-mode')).toHaveTextContent('AI features are off, so Rewind uses template copy.')
+      expect(summaryRow('llm-mode')).toHaveTextContent('AI features are off. Rewind uses template text.')
       expect(summaryRow('channels')).toHaveTextContent('Discord DM, Dashboard banner')
-      expect(summaryRow('channels')).toHaveTextContent('The Discord bot is off, so no DMs can be sent.')
+      expect(summaryRow('channels')).toHaveTextContent('The Discord bot is off. Turn it on to send DMs.')
     })
 
     it('"Change the server time zone" opens the System section on its time zone field', async () => {
@@ -332,14 +332,14 @@ describe('RewindSettingsSection', () => {
 
       const discord = screen.getByRole('checkbox', { name: 'Discord DM' })
       expect(discord).toHaveAttribute('aria-disabled', 'true')
-      expect(discord).toHaveAccessibleDescription('The Discord bot is off, so no DMs can be sent.')
+      expect(discord).toHaveAccessibleDescription('The Discord bot is off. Turn it on to send DMs.')
       expect(screen.getByRole('checkbox', { name: 'Dashboard banner' })).not.toHaveAttribute('aria-disabled', 'true')
     })
 
     it('shows LLM mode disabled with the template note while AI features are off', async () => {
       await renderEditing({ llmDisabled: true })
 
-      expect(screen.getByText('AI features are off, so Rewind uses template copy.')).toBeInTheDocument()
+      expect(screen.getByText('AI features are off. Rewind uses template text.')).toBeInTheDocument()
       expect(screen.getByRole('combobox', { name: 'LLM mode' })).toHaveAttribute('data-disabled')
     })
 

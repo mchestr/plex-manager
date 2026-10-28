@@ -152,7 +152,6 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
         kind="filtered"
         icon={SearchX}
         title="No members match these filters"
-        description="Clear the filters to see everyone."
         primaryAction={
           <Button data-testid="admin-users-clear-filters" variant="secondary" onClick={clearFilters}>
             Clear filters

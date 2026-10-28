@@ -48,10 +48,10 @@ function monthsWatched(monthly: readonly number[], locale: string): string {
 
 /**
  * How a list counts, for the desktop Notes: "Counted from January 1 to
- * November 30. Rewatches count; trailers and extras do not."
+ * November 30. Rewatches count. Trailers and extras do not."
  */
 function countingRule(facts: RewindFactsV3): string {
-  return `Counted from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}. Rewatches count; trailers and extras do not.`
+  return `Counted from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}. Rewatches count. Trailers and extras do not.`
 }
 
 /**
@@ -68,11 +68,11 @@ function topShowsNotes(data: TopShowsData, facts: RewindFactsV3, ctx: NotesConte
   const more = (data.more ?? []).filter((row) => shownKey(row.key)).map((row) => [row.title, count.format(row.episodes), formatRewindDuration(row.minutes, ctx)])
   const rows = [...top, ...more].map((row, i) => [count.format(i + 1), ...row])
   if (rows.length === 0) return []
-  const title = rows.length === 1 ? "Your one series" : `All ${count.format(rows.length)} series, ranked by time watched`
+  const title = rows.length === 1 ? "Your one show" : `All ${count.format(rows.length)} shows, ranked by time watched`
   return [
     { kind: "heading", text: plain(title) },
     { kind: "paragraph", text: plain(countingRule(facts)) },
-    { kind: "table", table: { caption: `${title}.`, columns: ["No.", "Series", "Episodes", "Watched"], rows } },
+    { kind: "table", table: { caption: `${title}.`, columns: ["No.", "Show", "Episodes", "Watched"], rows } },
   ]
 }
 
@@ -86,13 +86,13 @@ export const topShowsPage: PageDefinition<TopShowsData> = {
   schema: TopShowsDataSchema,
   srSummary: (data, facts) => {
     const rows = data.rows.map((_row, i) => `${shown(facts, seriesFact(i, "title"))}, ${shown(facts, seriesFact(i, "minutes"))}`)
-    return rows.length === 1 ? `Your series of the year: ${rows[0]}.` : `Your top series: ${rows.join("; ")}.`
+    return rows.length === 1 ? `Your show of the year: ${rows[0]}.` : `Your top shows: ${rows.join("; ")}.`
   },
   table: (data, facts, settings) => {
     const months = countedMonths(facts)
     return {
-      caption: "Minutes of each series by month.",
-      columns: ["Series", ...Array.from({ length: months }, (_, m) => monthName(m + 1, settings.locale, "short")), "In all"],
+      caption: "Minutes of each show by month.",
+      columns: ["Show", ...Array.from({ length: months }, (_, m) => monthName(m + 1, settings.locale, "short")), "In all"],
       rows: data.rows.map((row, i) => [
         shown(facts, seriesFact(i, "title")),
         ...row.monthly.slice(0, months).map((minutes) => (minutes > 0 ? formatRewindDuration(minutes, settings) : "")),
@@ -110,8 +110,8 @@ export const topShowsPage: PageDefinition<TopShowsData> = {
       {
         kind: "table",
         table: {
-          caption: "Your top series",
-          columns: ["Series", "Watched", "Months"],
+          caption: "Your top shows",
+          columns: ["Show", "Watched", "Months"],
           rows: data.rows.map((row, i) => [shown(facts, seriesFact(i, "title")), shown(facts, seriesFact(i, "minutes")), monthsWatched(row.monthly.slice(0, months), ctx.locale)]),
         },
       },

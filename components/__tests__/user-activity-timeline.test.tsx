@@ -55,7 +55,7 @@ describe('UserActivityTimeline', () => {
 
   it('shows the empty copy with no activity', () => {
     renderTimeline(makeUserActivityTimelineData({ items: [], total: 0 }))
-    expect(screen.getByText('No activity recorded for this member yet.')).toBeInTheDocument()
+    expect(screen.getByText('This member has no activity yet.')).toBeInTheDocument()
   })
 
   it('has no "Show older activity" on the last page', () => {

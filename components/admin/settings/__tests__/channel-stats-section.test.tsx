@@ -131,7 +131,7 @@ describe("ChannelStatsSection", () => {
       const toggle = screen.getByRole("checkbox", { name: "Update the channels" })
       expect(toggle).toHaveAttribute("data-testid", "channel-stats-toggle")
       expect(toggle).toHaveAttribute("aria-checked", "false")
-      expect(toggle).toHaveAccessibleDescription("Channels without an ID are left alone.")
+      expect(toggle).toHaveAccessibleDescription("The bot skips each stat that has no channel ID.")
       await waitFor(() => expect(toggle).toHaveFocus())
       expect(screen.queryByRole("switch")).not.toBeInTheDocument()
       expect(screen.getByTestId("channel-stats-interval")).toHaveValue(10)

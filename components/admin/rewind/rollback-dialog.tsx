@@ -31,7 +31,7 @@ export function RollbackDialog({ userId, year, name, from, trigger, open, onOpen
       open={open}
       onOpenChange={onOpenChange}
       title={`Roll back ${name}'s Rewind ${year} to ${version}?`}
-      description="The current version is kept, so rolling back again restores it."
+      description="The current version stays. Roll back again to restore it."
       confirmLabel="Roll back"
       pendingLabel="Rolling back"
       tone="destructive"

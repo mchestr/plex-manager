@@ -21,7 +21,7 @@ function formatUsd(value: number): string {
 /** "$2 / $10 per 1M tokens, as of Oct 17, 2026", or a note when the price is unknown. The picker and the AI section's summary show it. */
 export function priceLabel(info: ModelInfo, at: Date, f: BoundFormat): string {
   const price = priceAt(info, at)
-  if (!price) return "Price unknown: usage of this model is recorded at $0"
+  if (!price) return "Price unknown. The app records usage of this model at $0."
   return `${formatUsd(price.input)} / ${formatUsd(price.output)} per 1M tokens, as of ${f.dayKey(price.asOf)}`
 }
 

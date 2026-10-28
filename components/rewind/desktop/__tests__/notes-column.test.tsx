@@ -46,8 +46,8 @@ describe("NotesColumn (P7.4)", () => {
     expect(all).toBe(heavy.stats.titles.series.length + heavy.stats.titles.moreSeries.length)
 
     const notes = screen.getByRole("complementary", { name: /^Notes on page \d\d, Top shows$/ })
-    expect(within(notes).getByRole("heading", { name: `All ${all} series, ranked by time watched` })).toBeInTheDocument()
-    expect(notes).toHaveTextContent(/Counted from .+ to .+\. Rewatches count; trailers and extras do not\./)
+    expect(within(notes).getByRole("heading", { name: `All ${all} shows, ranked by time watched` })).toBeInTheDocument()
+    expect(notes).toHaveTextContent(/Counted from .+ to .+\. Rewatches count\. Trailers and extras do not\./)
     expect(notes).not.toHaveTextContent(/time zone/i)
     const table = within(notes).getByRole("table")
     expect(within(table).getAllByRole("row")).toHaveLength(all + 1)
@@ -98,7 +98,7 @@ describe("NotesColumn (P7.4)", () => {
       />
     )
     expect(screen.getByTestId("rewind-notes-body")).toHaveAttribute("data-view", "table")
-    expect(screen.getByRole("table")).toHaveAccessibleName(/^Minutes of each series by month/)
+    expect(screen.getByRole("table")).toHaveAccessibleName(/^Minutes of each show by month/)
     expect(screen.getByTestId("rewind-notes-table-toggle")).toHaveAttribute("aria-pressed", "true")
     expect(screen.queryByTestId("rewind-notes-formats")).not.toBeInTheDocument()
   })

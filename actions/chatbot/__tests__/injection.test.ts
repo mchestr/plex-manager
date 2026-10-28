@@ -10,7 +10,7 @@ import type { Session } from "next-auth"
 import { getServerSession } from "next-auth"
 
 import { chatWithAdminBot } from "@/actions/chatbot"
-import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { asTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { buildConfig } from "@/__tests__/helpers/factories"
 import { executeOverseerrTool } from "@/lib/chatbot/executors/overseerr"
 import { getOverseerrRequests, getOverseerrUsers } from "@/lib/connections/overseerr"
@@ -21,6 +21,7 @@ jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prism
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/llm/chat", () => ({ chatWithTools: jest.fn() }))
+jest.mock("next/cache", () => ({ ...jest.requireActual<object>("next/cache"), refresh: jest.fn() }))
 jest.mock("@/lib/connections/overseerr", () => ({ getOverseerrUsers: jest.fn(), getOverseerrRequests: jest.fn() }))
 jest.mock("@/lib/admin/queues", () => ({ listQueueJobs: jest.fn() }))
 jest.mock("@/lib/utils/logger", () => ({
@@ -57,6 +58,8 @@ beforeEach(() => {
   >)
   prismaMock.lLMProvider.findFirst.mockResolvedValue({ id: "provider-1" } as LLMProvider)
   prismaMock.chatConversation.create.mockResolvedValue({ id: "conv-1", userId: "admin-1" } as ChatConversation)
+  prismaMock.$transaction.mockImplementation((callback) => callback(asTransactionClient(prismaMock)))
+  prismaMock.chatConversation.updateMany.mockResolvedValue({ count: 1 })
   prismaMock.overseerr.findFirst.mockResolvedValue({
     id: "o-1",
     name: "Overseerr",
@@ -85,7 +88,7 @@ beforeEach(() => {
 
 describe("an injected Overseerr display name", () => {
   it("reaches the model wrapped as untrusted_data, with no email", async () => {
-    const result = await chatWithAdminBot({ messages: [{ role: "user", content: "List the Overseerr users" }] })
+    const result = await chatWithAdminBot({ message: "List the Overseerr users" })
     expect(result.success).toBe(true)
 
     const toolMessage = jest.mocked(chatWithTools).mock.calls[1][0].messages.at(-1)

@@ -66,7 +66,7 @@ export const NUMBER_WORDS = new Set([
 export const COUNTED = new Set([
   "hour", "hours", "minute", "minutes", "episode", "episodes", "film", "films", "series", "season", "seasons",
   "night", "nights", "day", "days", "week", "weeks", "month", "months", "time", "times", "title", "titles",
-  "show", "shows",
+  "show", "shows", "movie", "movies",
 ])
 
 export const MONTHS = new Set([

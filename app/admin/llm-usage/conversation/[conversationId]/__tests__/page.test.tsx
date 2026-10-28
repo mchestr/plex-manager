@@ -73,7 +73,7 @@ describe('Admin conversation LLM usage page', () => {
     })
     await renderPage()
 
-    expect(screen.getByTestId('llm-text-removed-notice')).toHaveTextContent('Text removed in the October 2026 privacy clean-up')
+    expect(screen.getByTestId('llm-text-removed-notice')).toHaveTextContent('The October 2026 privacy clean-up removed this text.')
     expect(screen.getByRole('link', { name: /^Call 1,/ })).toHaveAttribute('href', '/admin/llm-usage/call-2')
     expect(screen.queryByText('User:')).not.toBeInTheDocument()
   })
@@ -97,6 +97,6 @@ describe('Admin conversation LLM usage page', () => {
     mockGetLLMUsageRecords.mockResolvedValue({ records: [call('call-1', '2026-10-12T19:26:00Z', 'plain text prompt')] })
     await renderPage()
 
-    expect(screen.getByTestId('expandable-Latest Conversation Prompt')).toHaveTextContent('plain text prompt')
+    expect(screen.getByTestId('expandable-Latest prompt')).toHaveTextContent('plain text prompt')
   })
 })

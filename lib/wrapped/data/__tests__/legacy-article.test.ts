@@ -68,8 +68,8 @@ describe("legacyToArticle on a stored v2 row", () => {
       kind: "factRow",
       items: [
         { value: "60,480", label: "minutes watched" },
-        { value: "85", label: "films" },
-        { value: "23", label: "series" },
+        { value: "85", label: "movies" },
+        { value: "23", label: "shows" },
         { value: "412", label: "episodes" },
       ],
     })
@@ -122,7 +122,7 @@ describe("legacyToArticle on a stored v1 row", () => {
     expect(text).toContain("Your 2024 Rewind is here.")
     expect(text).toContain("You watched Heat twice in one week.")
     expect(text).toContain("Made December 3, 2024.")
-    expect(article.sections.map((section) => section.name)).toEqual(["The year in numbers", "Top films", "Top shows", "More from the year"])
+    expect(article.sections.map((section) => section.name)).toEqual(["The year in numbers", "Top movies", "Top shows", "More from the year"])
     expect(JSON.stringify(article)).not.toMatch(/leaderboard|Jon Snow|Alice Smith|@/i)
   })
 

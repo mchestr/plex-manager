@@ -21,7 +21,6 @@ const HEALTH_KEYS = [
   "ai",
   "discord",
   "stripe",
-  "watchlist",
   "rewind",
   "sonarr",
   "radarr",

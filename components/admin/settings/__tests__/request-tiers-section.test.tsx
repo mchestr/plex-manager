@@ -175,7 +175,7 @@ describe("RequestTiersSection", () => {
       const toggle = screen.getByRole("checkbox", { name: "Sync request limits every day" })
       expect(toggle).toHaveAttribute("data-testid", "request-tiers-toggle")
       expect(toggle).toHaveAttribute("aria-checked", "true")
-      expect(toggle).toHaveAccessibleDescription(expect.stringContaining("The first run overwrites every matched member's Overseerr quota"))
+      expect(toggle).toHaveAccessibleDescription(expect.stringContaining("The first run replaces the Overseerr quota of each matched member"))
       await waitFor(() => expect(toggle).toHaveFocus())
       expect(screen.queryByRole("switch")).not.toBeInTheDocument()
       expect(screen.getByTestId("request-tiers-last-run")).toHaveTextContent("No run yet.")

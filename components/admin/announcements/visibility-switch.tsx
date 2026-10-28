@@ -26,7 +26,7 @@ export function VisibilitySwitch({ id, title, isActive }: VisibilitySwitchProps)
     startTransition(async () => {
       setVisible(next)
       const result = await setAnnouncementActive({ id, isActive: next })
-      if (result.success) showSuccess(next ? `"${title}" shows on home` : `"${title}" is hidden`)
+      if (result.success) showSuccess(next ? `"${title}" shows on the home page` : `"${title}" is hidden`)
       else showError(result.error)
     })
 

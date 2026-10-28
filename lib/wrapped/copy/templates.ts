@@ -60,48 +60,48 @@ const t = (id: string) => `{{fact:${id}}}`
 
 /** Every slot's fallback variants; P8.1's freeze lock hashes them. */
 export const SLOT_TEMPLATES: Readonly<Record<Exclude<SlotId, "archetype.posterLineId" | "archetype.tagline">, readonly string[]>> = {
-  "deck.number": [`That's ${t("time.daysHours")}, about ${t("time.perDay")} a day.`, `End to end, that's ${t("time.daysHours")}.`, "Here's to more of it."],
+  "deck.number": [`That's ${t("time.daysHours")}, about ${t("time.perDay")} a day.`, `End to end, that's ${t("time.daysHours")}.`, "Every play of the year, added up."],
   // The lifetime line under the deck already names the member's history.
   "deck.bookends": ["Opening night to last call.", "First in, last out."],
   "deck.topShows": [
     `${t("series[1].title")} came first, and ${t("series[2].title")} came next.`,
     `Your biggest night with ${t("series[1].title")} was ${t("series[1].biggestNight.date")}.`,
-    "Just one more episode.",
+    "Your shows, ranked by time watched.",
   ],
   "deck.topFilms": [
-    `You finished ${t("films.finishedShare")} of the films you started.`,
+    `You finished ${t("films.finishedShare")} of the movies you started.`,
     `The longest was ${t("films.longest.title")}, at ${t("films.longest.minutes")}.`,
-    "Lights down, phones away.",
+    "Your movies, ranked by plays.",
   ],
-  "deck.taste": [`The oldest thing you watched was ${t("taste.oldest.title")}, from ${t("taste.oldest.year")}.`, "Your kind of thing."],
+  "deck.taste": [`The oldest thing you watched was ${t("taste.oldest.title")}, from ${t("taste.oldest.year")}.`, "Your taste, by genre and year."],
   "deck.people": [
     `${t("people.actor[1].name")} led the cast list, with ${t("people.actor[2].name")} next.`,
     `Behind the camera, ${t("people.director[1].name")} came up first.`,
-    "The usual suspects.",
+    "The names that came up in your viewing.",
   ],
   "deck.clock": [
     `${t("hours.afterDarkShare")} of your viewing started after dark.`,
     `Your latest start was ${t("hours.latestStart.time")} on a ${t("hours.latestStart.weekday")}.`,
-    "Any time is a good time.",
+    "When in the day you pressed play.",
   ],
   "deck.calendar": [
     `You pressed play on ${t("days.active")} of ${t("window.elapsedDays")}.`,
     `Your biggest day was ${t("days.biggest.date")}, at ${t("days.biggest.minutes")}.`,
     "Big days and quiet ones.",
   ],
-  "deck.records": [`The longest run was ${t("records.longestBinge.title")}, on ${t("records.longestBinge.date")}.`, "Beat them next year."],
-  "deck.requests": [`Your requests leaned toward ${t("requests.genre[1]")}.`, "Keep them coming."],
+  "deck.records": [`The longest run was ${t("records.longestBinge.title")}, on ${t("records.longestBinge.date")}.`, "The biggest marks you set this year."],
+  "deck.requests": [`Your requests leaned toward ${t("requests.genre[1]")}.`, "What you asked the server for."],
   "deck.standing": [
     `Across the server, members pressed play for ${t("community.hours")} hours this year.`,
-    `The server's favourite series was ${t("community.topSeries")}.`,
-    "All in good fun.",
+    `The server's favourite show was ${t("community.topSeries")}.`,
+    "How your year compares on the server.",
   ],
   "deck.nextYear": [
     `${t("next.leftForLater[1].title")} is waiting where you left it.`,
     `A pick for the new year: ${t("next.picks[1].title")}.`,
     "Something to look forward to.",
   ],
-  "archetype.dedication": [`For ${t("series[1].title")}, which kept you company.`, `For ${t("films[1].title")}, your film of the year.`, "Wear it well."],
+  "archetype.dedication": [`For ${t("series[1].title")}, which kept you company.`, `For ${t("films[1].title")}, your movie of the year.`, "Earned from your own viewing."],
   signOff: [`See you next year, ${t("member.firstName")}.`, "That was the year. Thanks for pressing play."],
 }
 
@@ -175,20 +175,20 @@ const REASONS: Partial<Record<FactId, string>> = {
   "hours.peak": `Your busiest hour was ${t("hours.peak")}.`,
   "hours.quietest": `Your quietest hour was ${t("hours.quietest")}.`,
   "records.completionShare": `You finished ${t("records.completionShare")} of what you started.`,
-  "films.finishedShare": `You finished ${t("films.finishedShare")} of the films you started.`,
+  "films.finishedShare": `You finished ${t("films.finishedShare")} of the movies you started.`,
   "records.rewatchShare": `${t("records.rewatchShare")} of your plays went to titles you kept coming back to.`,
   "records.rewatchedTitles": `Titles you came back to: ${t("records.rewatchedTitles")}.`,
   "taste.freshShare": `${t("taste.freshShare")} of your plays came within two weeks of a release.`,
-  "time.seriesShare": `Series took ${t("time.seriesShare")} of your time.`,
-  "time.filmsShare": `Films took ${t("time.filmsShare")} of your time.`,
+  "time.seriesShare": `Shows took ${t("time.seriesShare")} of your time.`,
+  "time.filmsShare": `Movies took ${t("time.filmsShare")} of your time.`,
   "records.deepestBinge.episodes": `Episodes in your deepest binge: ${t("records.deepestBinge.episodes")}.`,
   "days.weekendShare": `${t("days.weekendShare")} of your plays started at the weekend.`,
   "time.totalHours": `Hours you watched in all: ${t("time.totalHours")}.`,
   "time.totalMinutes": `Time you watched in all: ${t("time.totalMinutes")}.`,
   "counts.titles": `Different titles you watched: ${t("counts.titles")}.`,
   "counts.titlesPer10Hours": `New titles for every ten hours: ${t("counts.titlesPer10Hours")}.`,
-  "counts.films": `Films you watched: ${t("counts.films")}.`,
-  "series.top3Share": `Your top three series took ${t("series.top3Share")} of your series time.`,
+  "counts.films": `Movies you watched: ${t("counts.films")}.`,
+  "series.top3Share": `Your top three shows took ${t("series.top3Share")} of your show time.`,
   "series[1].title": `${t("series[1].title")} came first, by a distance.`,
   "days.active": `Days you pressed play: ${t("days.active")}.`,
 }
@@ -218,13 +218,13 @@ const MONTH_WORDS = ["", "one month", "two months", "three months", "four months
  * 11 The race's headline from its events (design 4.3): "Severance led for
  * ten months. Then came November." when the lead changed, naming the leader
  * the final overtake displaced and how long its run lasted, or "Severance
- * led all year. Nothing came close." when it never did.
+ * led all year." when it never did.
  */
 function raceHeadline(f: RewindFactsV3): string {
   const leaderOf = (month: number) => `race.leader[${month}]` as FactId
   const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter((m) => f[leaderOf(m)])
   if (months.length === 0) return "The race for your attention"
-  if (f["race.leadChanges"]?.value === 0) return `${t(leaderOf(months[0]))} led all year. Nothing came close.`
+  if (f["race.leadChanges"]?.value === 0) return `${t(leaderOf(months[0]))} led all year.`
   const overtake = Number(f["race.overtakeMonth"]?.value)
   const before = months.filter((m) => m < overtake)
   const displaced = before.at(-1)
@@ -239,10 +239,10 @@ function raceHeadline(f: RewindFactsV3): string {
 }
 
 const HEADLINES: Readonly<Record<IssuePageType, (facts: RewindFactsV3) => string>> = {
-  cover: (f) => (f["member.firstName"] ? `${t("member.firstName")}'s year in film and television` : "Your year in film and television"),
+  cover: (f) => (f["member.firstName"] ? `${t("member.firstName")}'s year in movies and shows` : "Your year in movies and shows"),
   number: () => "This year you pressed play for",
   bookends: () => `You opened ${t("copy.year")} with ${t("copy.firstTitle")}`,
-  guess: () => "Which series did you watch most this year?",
+  guess: () => "Which show did you watch most this year?",
   "top-shows": () => "The shows you kept coming back to",
   "top-films": () => "Your double features",
   taste: (f) => {
@@ -254,7 +254,7 @@ const HEADLINES: Readonly<Record<IssuePageType, (facts: RewindFactsV3) => string
   calendar: (f) => (Number(f["streak.longest.days"]?.value) >= 2 ? `${t("streak.longest.days")} without a night off` : "Your year, day by day"),
   race: raceHeadline,
   records: () => "Personal bests",
-  setup: (f) => (Number(f["setup.directPlayShare"]?.value) >= 0.8 ? `${t("setup.directPlayShare")} direct play. Your setup is dialled in.` : "How you watched"),
+  setup: (f) => (Number(f["setup.directPlayShare"]?.value) >= 0.8 ? `${t("setup.directPlayShare")} direct play` : "How you watched"),
   requests: (f) => (Number(f["requests.watched"]?.value) > 0 ? `You asked for ${t("requests.made")}. You watched ${t("requests.watched")} of them.` : `You asked for ${t("requests.made")}.`),
   standing: (f) =>
     Number(f["standing.percentile"]?.value) <= 50
@@ -350,5 +350,5 @@ export function coverLines(selected: ReadonlyArray<{ type: PageType; folio: numb
  */
 export function titleFreeHeadline(page: IssuePageType): string {
   const line = COVER_LINES.find(([type]) => type === page)?.[1]
-  return line ?? (page === "cover" ? "A year in film and television" : "That was the year")
+  return line ?? (page === "cover" ? "A year in movies and shows" : "That was the year")
 }

@@ -46,11 +46,11 @@ import { dayKey, wallTimeToInstant } from "@/lib/utils/zoned-time"
 const logger = createLogger("LLM_BUDGET")
 
 /** The reply when a cap is reached. */
-export const ASSISTANT_BUDGET_MESSAGE = "I've hit today's assistant budget. It resets at midnight server time."
+export const ASSISTANT_BUDGET_MESSAGE = "The assistant reached its daily spend limit. The limit resets at midnight server time."
 
 /** The reply when the check itself fails, so the call is refused. */
 export const ASSISTANT_BUDGET_UNAVAILABLE_MESSAGE =
-  "I can't check today's assistant budget right now, so I can't answer. Please try again in a few minutes."
+  "The assistant could not check its daily spend limit, so it cannot answer. Try again in a few minutes."
 
 /** The caps a missing `Config` row stands for: the column defaults. */
 const DEFAULT_CAPS = { llmDailyCapPerUserUsd: 0.5, llmDailyCapAdminUsd: 5, llmDailyCapServerUsd: 5 }

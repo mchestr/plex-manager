@@ -33,7 +33,7 @@ const NAMED_PERCENTILE = 50
 /** Each community line's label in the box and the Table. */
 export const COMMUNITY_LABELS: Record<CommunityFact, string> = {
   "community.hours": "Hours watched here",
-  "community.topSeries": "The server's favourite series",
+  "community.topSeries": "The server's favourite show",
   "community.busiestNight": "The busiest night",
   "community.peakConcurrent": "Most streams at once",
   "community.requestsFulfilled": "Requests fulfilled",

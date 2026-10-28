@@ -56,7 +56,7 @@ describe("handleDiscordChat: the assistant disclosure (P11.16)", () => {
     revokedAt: null,
     user: { id: "user-1", isAdmin: false, isExempt: false, disabledAt: null, subscription: null },
   }
-  const DISCLOSURE = "Server admins can review assistant conversations, and messages are processed by Anthropic."
+  const DISCLOSURE = "Server admins can read assistant conversations. The app sends messages to Anthropic."
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -133,7 +133,7 @@ describe("handleDiscordChat", () => {
         message: {
           role: "assistant",
           content:
-            "AI features are currently disabled or not configured. Please configure a chat OpenAI model in Settings to use the troubleshooting assistant.",
+            "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
           timestamp: Date.now(),
         },
       })
@@ -146,7 +146,7 @@ describe("handleDiscordChat", () => {
 
       expect(result.success).toBe(true)
       expect(result.linked).toBe(true)
-      expect(result.message?.content).toContain("AI features are currently disabled")
+      expect(result.message?.content).toContain("The assistant is off")
       expect(mockRunChatbotForUser).toHaveBeenCalledWith({
         userId: "user-1",
         messages: expect.arrayContaining([
@@ -177,7 +177,7 @@ describe("handleDiscordChat", () => {
         message: {
           role: "assistant",
           content:
-            "AI features are currently disabled or not configured. Please configure a chat OpenAI model in Settings to use the troubleshooting assistant.",
+            "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
           timestamp: Date.now(),
         },
         conversationId: "new-conversation-1",
@@ -191,7 +191,7 @@ describe("handleDiscordChat", () => {
 
       expect(result.success).toBe(true)
       expect(result.linked).toBe(true)
-      expect(result.message?.content).toContain("AI features are currently disabled")
+      expect(result.message?.content).toContain("The assistant is off")
       expect(result.conversationId).toBe("new-conversation-1")
       expect(mockGetOrCreateSession).toHaveBeenCalledWith({
         discordUserId: "discord-123",
@@ -484,7 +484,7 @@ describe("handleDiscordChat", () => {
       mockRunChatbotForUser.mockResolvedValue({
         success: false,
         refusal: "BUDGET_EXCEEDED",
-        error: "I've hit today's assistant budget. It resets at midnight server time.",
+        error: "The assistant reached its daily spend limit. The limit resets at midnight server time.",
         conversationId: "conversation-1",
       })
 
@@ -493,7 +493,7 @@ describe("handleDiscordChat", () => {
       expect(result).toMatchObject({
         success: false,
         linked: true,
-        refusal: "I've hit today's assistant budget. It resets at midnight server time.",
+        refusal: "The assistant reached its daily spend limit. The limit resets at midnight server time.",
       })
       expect(mockAppendTurn).not.toHaveBeenCalled()
     })
@@ -583,7 +583,7 @@ describe("clearDiscordChat: a manual reset ends the conversation (P11.14)", () =
     }
     mockPrisma.discordChatSession.findUnique.mockResolvedValue(session)
     mockPrisma.chatConversation.updateMany.mockResolvedValue({ count: 1 })
-    mockPrisma.chatConversation.create.mockResolvedValue({ id: "conversation-new", userId: "user-1", createdAt: now, endedAt: null })
+    mockPrisma.chatConversation.create.mockResolvedValue({ id: "conversation-new", userId: "user-1", title: null, lastMessageAt: null, createdAt: now, endedAt: null })
     mockPrisma.discordChatSession.update.mockResolvedValue({ ...session, chatConversationId: "conversation-new" })
 
     const result = await clearDiscordChat({ discordUserId: "discord-123", channelId: "channel-123" })

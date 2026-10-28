@@ -6,7 +6,6 @@ import { LiveRefreshProvider, LiveRefreshStatus } from "@/components/ui/live-sta
 import { PageHeader } from "@/components/ui/page-header"
 import { StatGrid } from "@/components/ui/stat-tile"
 import { getAdminOverview } from "@/lib/admin/overview"
-import { serverName } from "@/lib/brand"
 import { getFormat } from "@/lib/settings/app-settings"
 import { getSession } from "@/lib/data/session"
 import { redirect } from "next/navigation"
@@ -26,14 +25,13 @@ export default async function AdminOverviewPage() {
   // The tiles read the clock: render per request, never at build
   await connection()
   const renderedAt = new Date().getTime()
-  const [overview, f, name] = await Promise.all([getAdminOverview(new Date(renderedAt)), getFormat(), serverName()])
+  const [overview, f] = await Promise.all([getAdminOverview(new Date(renderedAt)), getFormat()])
 
   return (
     <LiveRefreshProvider renderedAt={renderedAt} intervalMs={LIVE_INTERVAL_MS}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 md:px-6" data-testid="admin-overview-page">
         <PageHeader
           title="Overview"
-          description={`${name} at a glance`}
           meta={<LiveRefreshStatus data-testid="admin-overview-live" />}
           data-testid="admin-overview-header"
         />

@@ -90,7 +90,7 @@ export const STATUS = {
     untested: { label: "Not checked", tone: "neutral", sub: "Test after saving" },
     disabled: { label: "Off", tone: "neutral" },
     notConfigured: { label: "Not set up", tone: "outline" },
-    degraded: { label: "Template copy", ...warning, sub: "Rewind uses template copy while AI is off" },
+    degraded: { label: "Template text", ...warning, sub: "Rewind uses template text while AI is off" },
   },
   queueJob: {
     active: { label: "Running", tone: "info", mark: "spinner" },
@@ -131,6 +131,17 @@ export const STATUS = {
     processing: { label: "Requested", tone: "info", mark: icons.pending },
     available: { label: "Available", tone: "success", mark: icons.done },
     declined: { label: "Declined", tone: "destructive" },
+  },
+  // The watchlist sync admin table, one row per `WatchlistSyncStatus`
+  watchlistSync: {
+    REQUESTED: { label: "Requested", tone: "info", mark: icons.pending },
+    ALREADY_AVAILABLE: { label: "Available", tone: "success", mark: icons.done },
+    ALREADY_REQUESTED: { label: "Already requested", tone: "neutral" },
+    NOT_PERMITTED: { label: "Not allowed", ...warning },
+    SKIPPED_NO_EXTERNAL_ID: { label: "No TMDB match", tone: "neutral" },
+    FAILED: { label: "Failed", tone: "destructive" },
+    REMOVED_FROM_WATCHLIST: { label: "Removed from watchlist", tone: "outline" },
+    SYNCED: { label: "Synced", tone: "neutral" },
   },
   // The announcements admin table (P10.5)
   announcement: {

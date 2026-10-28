@@ -104,7 +104,7 @@ export async function runConversationLoop(
       // A provider or model-choice problem tells the admin what to change; anything else stays generic
       return {
         success: false,
-        error: response.configurationError ? response.error : "Failed to communicate with AI provider",
+        error: response.configurationError ? response.error : "The assistant could not connect to the AI provider. Try again.",
       }
     }
 
@@ -153,6 +153,6 @@ export async function runConversationLoop(
 
   return {
     success: false,
-    error: "Maximum conversation turns exceeded",
+    error: "The assistant could not finish the answer in the permitted number of steps. Ask a more specific question.",
   }
 }
