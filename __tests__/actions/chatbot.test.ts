@@ -192,8 +192,8 @@ describe("LLM disabled", () => {
 
     const { message } = await reply({ message: "Check Plex status" })
 
-    expect(message.content).toContain("AI features are currently disabled")
-    expect(message.content).toContain("configure a chat model")
+    expect(message.content).toContain("The assistant is off")
+    expect(message.content).toContain("select a chat model")
     expect(mockChatWithTools).not.toHaveBeenCalled()
     expect(prismaMock.chatConversation.create).not.toHaveBeenCalled()
   })
@@ -256,7 +256,7 @@ describe("on the provider registry", () => {
     expect(await chatWithAdminBot({ message })).toMatchObject({
       success: false,
       code: "UPSTREAM_UNAVAILABLE",
-      error: "Failed to communicate with AI provider",
+      error: "The assistant could not connect to the AI provider. Try again.",
     })
   })
 })

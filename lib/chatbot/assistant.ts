@@ -107,7 +107,7 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
   try {
     const lastMessage = options.messages[options.messages.length - 1]
     if (!lastMessage || lastMessage.role !== "user") {
-      return { success: false, error: "Invalid message history" }
+      return { success: false, error: "The assistant could not answer. Try again." }
     }
 
     const [config, llmProvider] = await Promise.all([
@@ -127,8 +127,7 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
         success: true,
         message: {
           role: "assistant",
-          content:
-            "AI features are currently disabled or not configured. Please configure a chat model in Settings to use the troubleshooting assistant.",
+          content: "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
           timestamp: Date.now(),
         },
       }
@@ -168,7 +167,7 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
     })
     return {
       success: false,
-      error: "Failed to process message",
+      error: "The assistant could not answer. Try again.",
     }
   }
 }
