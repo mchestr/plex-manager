@@ -16,7 +16,7 @@
  * | No active row | `notConfigured` |
  * | Tester succeeds | `ok` |
  * | Tester fails, throws or times out | `unreachable`, with `TIMEOUT`, `UNAUTHORIZED`, `NOT_FOUND` or `UNREACHABLE` |
- * | AI with `Config.llmDisabled` on | `degraded` ("Template copy", UI-31) |
+ * | AI with `Config.llmDisabled` on | `degraded` ("Template text", UI-31) |
  * | AI with a provider row | `ok` (no billed test call) |
  *
  * `getSettingsHealth()` adds the settings page's feature sections to the

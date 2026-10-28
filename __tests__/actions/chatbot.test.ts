@@ -498,7 +498,7 @@ describe("message limit and spend caps (P4.20)", () => {
     expect(response).toMatchObject({
       success: false,
       code: "RATE_LIMITED",
-      error: "I've hit today's assistant budget. It resets at midnight server time.",
+      error: "The assistant reached its daily spend limit. The limit resets at midnight server time.",
     })
   })
 

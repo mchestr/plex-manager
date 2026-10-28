@@ -115,7 +115,7 @@ export async function regenerateEstimateCopy(year: number, f: BoundFormat): Prom
   const estimate = await getRegenerateEstimate(year)
   return estimate.costUsd > 0
     ? `About ${f.money(estimate.costUsd)} of the ${f.money(estimate.budgetUsd)} season budget.`
-    : "It uses template copy, so it costs nothing."
+    : "It uses template text, so it costs nothing."
 }
 
 export interface UserUsageData {

@@ -25,11 +25,11 @@ function useDescribe() {
     const members = estimate.members === 1 ? "1 member" : `${f.number(estimate.members)} members`
     const cost =
       estimate.llmMembers === 0
-        ? "Every Rewind uses template copy, so it costs nothing."
+        ? "Every Rewind uses template text, so it costs nothing."
         : `Estimated AI cost: ${f.money(estimate.costUsd, "prose")} for ${f.number(estimate.llmMembers)} AI-written Rewinds.`
     const cap =
       estimate.pastCap > 0
-        ? ` ${f.number(estimate.pastCap)} would get template copy because the season budget runs out.`
+        ? ` ${f.number(estimate.pastCap)} would get template text because the season budget runs out.`
         : ""
     return `${lead} ${members}. ${cost}${cap}`
   }

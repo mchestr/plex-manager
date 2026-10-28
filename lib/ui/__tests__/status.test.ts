@@ -39,7 +39,7 @@ const TABLE: Row[] = [
   ["connection", "untested", "Not checked", "neutral", undefined],
   ["connection", "disabled", "Off", "neutral", undefined],
   ["connection", "notConfigured", "Not set up", "outline", undefined],
-  ["connection", "degraded", "Template copy", "warning", icons.warning],
+  ["connection", "degraded", "Template text", "warning", icons.warning],
   ["queueJob", "active", "Running", "info", "spinner"],
   ["queueJob", "waiting", "Waiting", "neutral", undefined],
   ["queueJob", "completed", "Done", "success", icons.done],
@@ -135,7 +135,7 @@ describe("resolveStatus sub-lines", () => {
   })
 
   it("keeps a fixed sub-line", () => {
-    expect(resolveStatus("connection", "degraded").sub).toBe("Rewind uses template copy while AI is off")
+    expect(resolveStatus("connection", "degraded").sub).toBe("Rewind uses template text while AI is off")
   })
 })
 

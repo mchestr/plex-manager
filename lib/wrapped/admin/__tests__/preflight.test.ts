@@ -94,7 +94,7 @@ describe('getRewindPreflight', () => {
     prismaMock.lLMProvider.findFirst.mockResolvedValue({ provider: 'openai', model: 'gpt-6-sol' } as never)
     expect(row(await getRewindPreflight(), 'llm')).toMatchObject({
       status: 'unreachable',
-      detail: 'The Rewind provider is openai, but the frozen model is anthropic:claude-sonnet-5-5: Rewind writes template copy',
+      detail: 'The Rewind provider is openai, but the frozen model is anthropic:claude-sonnet-5-5: Rewind writes template text',
     })
   })
 

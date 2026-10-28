@@ -38,9 +38,9 @@ const listOf = (value: unknown) => (Array.isArray(value) ? value.filter((v) => t
 
 /** The model line: the frozen model, the row's own before the lock names one, or why it writes templates. */
 function describeModel(frozen: FrozenRewindModel | null, templateOnly: boolean): string {
-  if (templateOnly) return "Template copy only"
+  if (templateOnly) return "Template text only"
   if (!frozen) return "None set"
-  if (frozen.status === "mismatch") return `Template copy: the provider is ${frozen.provider}, the frozen model ${lockedModelLabel(frozen.locked)}`
+  if (frozen.status === "mismatch") return `Template text: the provider is ${frozen.provider}, the frozen model ${lockedModelLabel(frozen.locked)}`
   return frozen.model
 }
 

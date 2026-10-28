@@ -484,7 +484,7 @@ describe("handleDiscordChat", () => {
       mockRunChatbotForUser.mockResolvedValue({
         success: false,
         refusal: "BUDGET_EXCEEDED",
-        error: "I've hit today's assistant budget. It resets at midnight server time.",
+        error: "The assistant reached its daily spend limit. The limit resets at midnight server time.",
         conversationId: "conversation-1",
       })
 
@@ -493,7 +493,7 @@ describe("handleDiscordChat", () => {
       expect(result).toMatchObject({
         success: false,
         linked: true,
-        refusal: "I've hit today's assistant budget. It resets at midnight server time.",
+        refusal: "The assistant reached its daily spend limit. The limit resets at midnight server time.",
       })
       expect(mockAppendTurn).not.toHaveBeenCalled()
     })

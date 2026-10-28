@@ -39,7 +39,7 @@ type PreviewPageProps = {
 }
 
 const EDITIONS: Record<string, string> = { full: "Full edition", pocket: "Pocket edition", postcard: "Postcard" }
-const COPY_SOURCES: Record<string, string> = { llm: "AI copy", repair: "AI copy, repaired", mixed: "Mixed copy", template: "Template copy" }
+const COPY_SOURCES: Record<string, string> = { llm: "AI text", repair: "AI text, repaired", mixed: "Mixed text", template: "Template text" }
 
 /** The view's state as the season console's status vocabulary. */
 function ViewStatus({ view }: { view: RewindYearView }) {

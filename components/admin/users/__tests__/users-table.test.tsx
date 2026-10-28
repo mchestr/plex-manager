@@ -50,7 +50,7 @@ function renderTable(props: Partial<Parameters<typeof UsersTable>[0]> = {}) {
       year={2026}
       stripeEnabled={false}
       stripeDashboardBaseUrl={null}
-      estimateCopy="It uses template copy, so it costs nothing."
+      estimateCopy="It uses template text, so it costs nothing."
       unknownSub="Last checked 2 minutes ago"
       {...props}
     />
@@ -152,7 +152,7 @@ describe('UsersTable', () => {
     const user = await openAction('Sam Rivera', 'Regenerate Rewind...')
     const dialog = await screen.findByTestId('admin-user-regenerate-dialog')
     expect(dialog).toHaveTextContent("Regenerate Sam Rivera's Rewind 2026?")
-    expect(dialog).toHaveTextContent('It uses template copy, so it costs nothing.')
+    expect(dialog).toHaveTextContent('It uses template text, so it costs nothing.')
     await user.click(screen.getByTestId('admin-user-regenerate-confirm'))
 
     expect(adminRegenerateRewind).toHaveBeenCalledWith({ userId: 'u-sam', year: 2026 })
