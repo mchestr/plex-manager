@@ -82,6 +82,7 @@ export function AssistantWorkspace({
     historyDays,
     onNew: chat.reset,
     onLeave: chat.leave,
+    onDiscard: chat.discard,
   }
   // The server's conversation once the transcript is it; a new one (or one the URL has not caught up with) has no title yet
   const title = conversation && conversation.id === chat.id ? conversation.title : "Assistant"

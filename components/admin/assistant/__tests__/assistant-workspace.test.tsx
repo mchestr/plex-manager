@@ -438,16 +438,26 @@ describe("the history", () => {
     const dialog = await screen.findByTestId("admin-assistant-delete-dialog")
     expect(dialog).toHaveTextContent("“Is Plex up?” leaves your history")
     expect(dialog).toHaveTextContent("for up to 90 days")
-    await user.click(within(dialog).getByTestId("admin-assistant-delete-confirm"))
+    // Every element that takes focus from the confirm on
+    const trail: string[] = []
+    const track = (event: FocusEvent) => trail.push((event.target as HTMLElement).dataset.testid ?? (event.target as HTMLElement).tagName)
+    document.addEventListener("focusin", track)
+    try {
+      await user.click(within(dialog).getByTestId("admin-assistant-delete-confirm"))
 
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/admin/assistant"))
-    expect(deleteAssistantConversation).toHaveBeenCalledWith({ conversationId: "today" })
-    expect(router.refresh).not.toHaveBeenCalled()
-    await waitFor(() => expect(screen.queryByTestId("admin-assistant-delete-dialog")).not.toBeInTheDocument())
-    expect(screen.getByTestId("admin-assistant-history-new")).not.toHaveFocus()
+      await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/admin/assistant"))
+      expect(deleteAssistantConversation).toHaveBeenCalledWith({ conversationId: "today" })
+      expect(router.refresh).not.toHaveBeenCalled()
+      await waitFor(() => expect(screen.queryByTestId("admin-assistant-delete-dialog")).not.toBeInTheDocument())
+      // The page empties at once, before its new URL renders
+      expect(screen.getByTestId("admin-chat-welcome")).toBeInTheDocument()
 
-    rerenderWith({ history: history.filter((item) => item.id !== "today"), conversation: null })
-    expect(screen.getByRole("heading", { level: 1, name: "Assistant" })).toHaveFocus()
+      rerenderWith({ history: history.filter((item) => item.id !== "today"), conversation: null })
+      expect(screen.getByRole("heading", { level: 1, name: "Assistant" })).toHaveFocus()
+      expect(trail.slice(trail.indexOf("admin-assistant-delete-confirm") + 1)).toEqual(["admin-assistant-title"])
+    } finally {
+      document.removeEventListener("focusin", track)
+    }
   })
 
   it("moves focus to New conversation after a delete, since the row goes with its button; Cancel keeps it on the row", async () => {

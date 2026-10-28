@@ -40,7 +40,8 @@ interface ConfirmDialogProps {
   action: () => Promise<{ error?: string }>
   /**
    * Where focus goes once the action succeeds, for an action that removes its
-   * own trigger (a row's delete). Cancel still returns focus to the trigger.
+   * own trigger (a row's delete), unless the page has moved focus elsewhere
+   * meanwhile. Cancel still returns focus to the trigger.
    */
   successFocus?: RefObject<HTMLElement | null>
   open?: boolean
@@ -77,7 +78,14 @@ export function ConfirmDialog({
   const [error, setError] = useState<string | null>(null)
   const [typed, setTyped] = useState("")
   const succeeded = useRef(false)
+  const popup = useRef<HTMLDivElement>(null)
   const inputId = useId()
+
+  // Focus the page moved itself, outside this dialog, while the dialog closed
+  const focusTaken = () => {
+    const active = document.activeElement
+    return active !== null && active !== document.body && !popup.current?.contains(active)
+  }
 
   // A real effect: the router keeps a page it leaves (Activity), so an open confirm closes as the page hides rather
   // than opening again over it on the way back
@@ -127,7 +135,11 @@ export function ConfirmDialog({
       }}
     >
       {trigger && <AlertDialogTrigger render={trigger} />}
-      <AlertDialogContent data-testid={testId} finalFocus={successFocus && (() => (succeeded.current ? successFocus.current : true))}>
+      <AlertDialogContent
+        ref={popup}
+        data-testid={testId}
+        finalFocus={successFocus && (() => (succeeded.current ? !focusTaken() && successFocus.current : true))}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>

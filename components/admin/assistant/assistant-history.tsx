@@ -24,10 +24,11 @@ interface RowProps {
   /** Takes focus once the row is deleted, since its delete button goes with it. */
   afterDelete: RefObject<HTMLElement | null>
   onLeave: () => void
+  onDiscard: () => void
   onNavigate?: () => void
 }
 
-function Row({ item, active, usageTextDays, testId, afterDelete, onLeave, onNavigate }: RowProps) {
+function Row({ item, active, usageTextDays, testId, afterDelete, onLeave, onDiscard, onNavigate }: RowProps) {
   const router = useRouter()
   const toast = useToast()
 
@@ -67,7 +68,7 @@ function Row({ item, active, usageTextDays, testId, afterDelete, onLeave, onNavi
         confirmLabel="Delete"
         pendingLabel="Deleting"
         tone="destructive"
-        // The open conversation's delete leaves its URL, and the page then moves focus to the title
+        // Deleting the open conversation empties the page at once, which moves focus to its title
         successFocus={active ? undefined : afterDelete}
         action={async () => {
           const result = await deleteAssistantConversation({ conversationId: item.id })
@@ -75,8 +76,10 @@ function Row({ item, active, usageTextDays, testId, afterDelete, onLeave, onNavi
           if (!result.success && result.code !== "NOT_FOUND") return { error: result.error }
           toast.showSuccess("Conversation deleted")
           // The action does not refresh: on the deleted conversation's own URL that would render it as not found first
-          if (active) router.replace(assistant())
-          else router.refresh()
+          if (active) {
+            onDiscard()
+            router.replace(assistant())
+          } else router.refresh()
           return {}
         }}
         data-testid="admin-assistant-delete-dialog"
@@ -104,6 +107,8 @@ interface AssistantHistoryProps {
   onNew: () => void
   /** Drops a reply on its way as another conversation's link navigates. */
   onLeave: () => void
+  /** Empties the transcript as the open conversation is deleted. */
+  onDiscard: () => void
   /** Closes the sheet the list sits in. */
   onNavigate?: () => void
 }
@@ -123,6 +128,7 @@ export function AssistantHistory({
   testId,
   onNew,
   onLeave,
+  onDiscard,
   onNavigate,
 }: AssistantHistoryProps) {
   const f = useBrowserFormat()
@@ -162,6 +168,7 @@ export function AssistantHistory({
                       testId={testId}
                       afterDelete={newConversation}
                       onLeave={onLeave}
+                      onDiscard={onDiscard}
                       onNavigate={onNavigate}
                     />
                   ))}

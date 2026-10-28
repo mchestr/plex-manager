@@ -119,6 +119,13 @@ export function useAssistantChat(conversation: AssistantConversation | null) {
   }, [serverId])
 
   /**
+   * Empties the transcript at once when its conversation is gone (deleted),
+   * as the page leaves its URL: focus moves to the new title once, and the
+   * URL's change then finds nothing left to replace.
+   */
+  const discard = useCallback(() => setState((prev) => ({ ...opened(null, prev), shownId: prev.shownId })), [])
+
+  /**
    * Drops a new conversation's first reply still on its way as a link leaves
    * for another conversation: landing meanwhile, it would move the URL to its
    * own conversation and override the navigation. A stored conversation's
@@ -129,5 +136,5 @@ export function useAssistantChat(conversation: AssistantConversation | null) {
     if (state.id === null && state.pending) setState((prev) => ({ ...prev, pending: false, session: prev.session + 1 }))
   }, [state.id, state.pending])
 
-  return { ...state, send, reset, leave }
+  return { ...state, send, reset, leave, discard }
 }
