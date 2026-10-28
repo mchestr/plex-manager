@@ -19,12 +19,29 @@ interface ChatState {
   error: string | null
   /** A new number each time another conversation replaces the transcript, so a late reply is dropped. */
   session: number
+  /**
+   * The server's conversation the transcript last followed. It sits in the
+   * same state as the transcript, so a render that switches conversations
+   * moves both or neither, however React rebases the updates.
+   */
+  shownId: string | null
+  /** How many times another conversation, stored or new, took the transcript, so the page can move focus to it. */
+  opens: number
 }
 
 const UNREACHABLE = "The assistant could not be reached. Try again."
 
-function opened(conversation: AssistantConversation | null, session: number): ChatState {
-  return { id: conversation?.id ?? null, messages: conversation?.messages ?? [], pending: false, error: null, session }
+/** The transcript of `conversation`, or of a new one; after `prev`, it counts as another conversation taking over. */
+function opened(conversation: AssistantConversation | null, prev?: ChatState): ChatState {
+  return {
+    id: conversation?.id ?? null,
+    messages: conversation?.messages ?? [],
+    pending: false,
+    error: null,
+    session: prev ? prev.session + 1 : 0,
+    shownId: conversation?.id ?? null,
+    opens: prev ? prev.opens + 1 : 0,
+  }
 }
 
 /** An update for the transcript a send started in: once another conversation has replaced it, the update does nothing. */
@@ -42,19 +59,12 @@ function inSession(sentIn: number, update: (prev: ChatState) => ChatState) {
 export function useAssistantChat(conversation: AssistantConversation | null) {
   const router = useRouter()
   const serverId = conversation?.id ?? null
-  const [state, setState] = useState(() => opened(conversation, 0))
-  const [shownId, setShownId] = useState(serverId)
-  // How many times another conversation, stored or new, took the transcript, so the page can move focus to it
-  const [opens, setOpens] = useState(0)
+  const [state, setState] = useState(() => opened(conversation))
   const session = useRef(state.session)
 
-  if (serverId !== shownId) {
-    setShownId(serverId)
+  if (serverId !== state.shownId) {
     // The URL catching up with a new conversation's id is still this transcript
-    if (serverId !== state.id) {
-      setState(opened(conversation, state.session + 1))
-      setOpens(opens + 1)
-    }
+    setState(serverId === state.id ? { ...state, shownId: serverId } : opened(conversation, state))
   }
 
   // A real effect: a reply checks it to tell whether its conversation is still open. In the
@@ -98,19 +108,25 @@ export function useAssistantChat(conversation: AssistantConversation | null) {
     [state.id, state.pending, state.session]
   )
 
-  /** Empties the transcript for a new conversation before its URL has loaded, dropping any reply still on its way. */
+  /**
+   * Starts a new conversation as "New conversation" navigates. On
+   * `/admin/assistant` the URL does not change, so the transcript is emptied
+   * here and a reply still on its way is dropped; from a stored conversation
+   * the navigation's render replaces it, as any other conversation's would.
+   */
   const reset = useCallback(() => {
-    setState((prev) => opened(null, prev.session + 1))
-    setOpens((count) => count + 1)
-  }, [])
+    if (serverId === null) setState((prev) => opened(null, prev))
+  }, [serverId])
 
   /**
-   * Drops any reply still on its way as a link leaves for another
-   * conversation, keeping the transcript until that one loads: a first reply
-   * landing meanwhile would otherwise move the URL to its own conversation,
-   * overriding the navigation.
+   * Drops a new conversation's first reply still on its way as a link leaves
+   * for another conversation: landing meanwhile, it would move the URL to its
+   * own conversation and override the navigation. A stored conversation's
+   * reply lands in its own transcript, so it stays.
    */
-  const leave = useCallback(() => setState((prev) => ({ ...prev, pending: false, session: prev.session + 1 })), [])
+  const leave = useCallback(() => {
+    if (state.id === null) setState((prev) => ({ ...prev, pending: false, session: prev.session + 1 }))
+  }, [state.id])
 
-  return { ...state, opens, send, reset, leave }
+  return { ...state, send, reset, leave }
 }

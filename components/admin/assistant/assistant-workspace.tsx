@@ -89,10 +89,17 @@ export function AssistantWorkspace({
   // A real effect: the router keeps a page it leaves, so the sheet closes as the page hides and is closed on the way back
   useLayoutEffect(() => () => setHistoryOpen(false), [])
 
-  // A real effect: when another conversation takes the transcript, focus moves to its title, which reads it out and
-  // leaves the message box next in the tab order rather than the rest of the history
+  // When another conversation takes the transcript, the history sheet has done its job
+  const [seenOpens, setSeenOpens] = useState(chat.opens)
+  if (chat.opens !== seenOpens) {
+    setSeenOpens(chat.opens)
+    setHistoryOpen(false)
+  }
+
+  // A real effect: focus then moves to the title, which reads it out and leaves the message box next in the tab order
+  // rather than the rest of the history. A message box the user already went back to keeps focus
   useEffect(() => {
-    if (chat.opens > 0) heading.current?.focus()
+    if (chat.opens > 0 && document.activeElement !== composer.current) heading.current?.focus()
   }, [chat.opens])
 
   const ask = (question: string) => {

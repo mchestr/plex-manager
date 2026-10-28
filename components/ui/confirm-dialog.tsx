@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useRef, useState, useTransition, type ReactElement, type RefObject } from "react"
+import { useId, useLayoutEffect, useRef, useState, useTransition, type ReactElement, type RefObject } from "react"
 
 import { Alert } from "@/components/ui/alert"
 import {
@@ -78,6 +78,10 @@ export function ConfirmDialog({
   const [typed, setTyped] = useState("")
   const succeeded = useRef(false)
   const inputId = useId()
+
+  // A real effect: the router keeps a page it leaves (Activity), so an open confirm closes as the page hides rather
+  // than opening again over it on the way back
+  useLayoutEffect(() => () => setUncontrolledOpen(false), [])
 
   const setOpen = (next: boolean) => {
     if (openProp === undefined) setUncontrolledOpen(next)

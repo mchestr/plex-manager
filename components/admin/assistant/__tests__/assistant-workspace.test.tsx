@@ -321,18 +321,33 @@ describe("AssistantWorkspace", () => {
     expect(router.replace).not.toHaveBeenCalled()
   })
 
-  it("empties the transcript as New conversation is picked, dropping the reply still on its way", async () => {
+  it("starts a new conversation from a stored one when its page renders, keeping a reply that lands first", async () => {
     const finish = holdReply()
     const user = userEvent.setup()
-    view({ conversation: conversation("a", "Is Plex up?", "Plex is up.") })
+    const { rerenderWith } = view({ conversation: conversation("a", "Is Plex up?", "Plex is up.") })
     await ask("And Sonarr?", user)
 
     await user.click(screen.getByTestId("admin-assistant-new-mobile"))
-    expect(screen.getByTestId("admin-chat-welcome")).toBeInTheDocument()
-    expect(screen.queryByTestId("admin-chat-thinking")).not.toBeInTheDocument()
-    expect(screen.getByRole("heading", { level: 1, name: "Assistant" })).toHaveFocus()
+    expect(router.push).toHaveBeenCalledWith("/admin/assistant")
+    // Until the router renders the new page the transcript stays this conversation's, so its reply still lands in it
+    await finish("Sonarr is up too.", "a")
+    expect(screen.getByText("Sonarr is up too.")).toBeInTheDocument()
 
+    rerenderWith({ conversation: null })
+    expect(screen.getByTestId("admin-chat-welcome")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Assistant" })).toHaveFocus()
+  })
+
+  it("drops a reply that lands after New conversation's page renders", async () => {
+    const finish = holdReply()
+    const user = userEvent.setup()
+    const { rerenderWith } = view({ conversation: conversation("a", "Is Plex up?", "Plex is up.") })
+    await ask("And Sonarr?", user)
+
+    await user.click(screen.getByTestId("admin-assistant-new-mobile"))
+    rerenderWith({ conversation: null })
     await finish("the late answer", "a")
+
     expect(screen.queryByText("the late answer")).not.toBeInTheDocument()
     expect(screen.getByTestId("admin-chat-welcome")).toBeInTheDocument()
   })
@@ -414,10 +429,10 @@ describe("the history", () => {
     expect(screen.getByTestId("admin-assistant-history-empty")).toHaveTextContent("No conversations yet.")
   })
 
-  it("deletes the open conversation after a confirm and leaves its URL", async () => {
+  it("deletes the open conversation after a confirm and leaves its URL, moving focus once, to the title", async () => {
     jest.mocked(deleteAssistantConversation).mockResolvedValue({ success: true, data: null })
     const user = userEvent.setup()
-    view({ history, conversation: conversation("today", "Is Plex up?", "Plex is up.") })
+    const { rerenderWith } = view({ history, conversation: conversation("today", "Is Plex up?", "Plex is up.") })
 
     await user.click(screen.getByTestId("admin-assistant-history-delete-today"))
     const dialog = await screen.findByTestId("admin-assistant-delete-dialog")
@@ -428,6 +443,11 @@ describe("the history", () => {
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/admin/assistant"))
     expect(deleteAssistantConversation).toHaveBeenCalledWith({ conversationId: "today" })
     expect(router.refresh).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.queryByTestId("admin-assistant-delete-dialog")).not.toBeInTheDocument())
+    expect(screen.getByTestId("admin-assistant-history-new")).not.toHaveFocus()
+
+    rerenderWith({ history: history.filter((item) => item.id !== "today"), conversation: null })
+    expect(screen.getByRole("heading", { level: 1, name: "Assistant" })).toHaveFocus()
   })
 
   it("moves focus to New conversation after a delete, since the row goes with its button; Cancel keeps it on the row", async () => {
@@ -459,6 +479,45 @@ describe("the history", () => {
     await finish("the late answer", "conv-new")
     expect(screen.queryByText("the late answer")).not.toBeInTheDocument()
     expect(router.replace).not.toHaveBeenCalled()
+  })
+
+  it("keeps a stored conversation's reply that lands while another conversation loads", async () => {
+    const finish = holdReply()
+    const user = userEvent.setup()
+    view({ history, conversation: conversation("today", "Is Plex up?", "Plex is up.") })
+    await ask("And Sonarr?", user)
+
+    await user.click(screen.getByTestId("admin-assistant-history-item-older"))
+    await finish("Sonarr is up too.", "today")
+
+    // It lands in its own transcript, and the URL has nothing to follow
+    expect(screen.getByText("Sonarr is up too.")).toBeInTheDocument()
+    expect(router.replace).not.toHaveBeenCalled()
+  })
+
+  it("leaves focus in the message box when the user went back to it before the conversation arrived", async () => {
+    const user = userEvent.setup()
+    const { rerenderWith } = view({ history, conversation: conversation("today", "Is Plex up?", "Plex is up.") })
+
+    await user.click(screen.getByTestId("admin-assistant-history-item-older"))
+    await user.click(input())
+    rerenderWith({ history, conversation: conversation("older", "What did members request?", "Two films.") })
+
+    expect(screen.getByText("Two films.")).toBeInTheDocument()
+    expect(input()).toHaveFocus()
+  })
+
+  it("closes the history sheet when another conversation opens, so focus is not left behind it", async () => {
+    const user = userEvent.setup()
+    const { rerenderWith } = view({ history, conversation: conversation("today", "Is Plex up?", "Plex is up.") })
+    await user.click(screen.getByTestId("admin-assistant-history-open"))
+    await screen.findByRole("dialog", { name: "History" })
+
+    // The browser's Back button, say, brings another conversation in while the sheet is open
+    rerenderWith({ history, conversation: conversation("older", "What did members request?", "Two films.") })
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "History" })).not.toBeInTheDocument())
+    expect(screen.getByRole("heading", { level: 1, name: "What did members request?" })).toHaveFocus()
   })
 
   it("keeps a reply for the open conversation when its own link is clicked", async () => {

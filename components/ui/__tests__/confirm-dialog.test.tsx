@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe, toHaveNoViolations } from "jest-axe"
-import { useRef } from "react"
+import { Activity, useRef } from "react"
 
 import { Button } from "@/components/ui/button"
 import { CONFIRM_FALLBACK_ERROR, ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -137,6 +137,29 @@ describe("ConfirmDialog", () => {
     await user.click(confirmButton(dialog))
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
     await waitFor(() => expect(screen.getByRole("button", { name: "Next member" })).toHaveFocus())
+  })
+
+  it("closes as the router hides the page, so it is not open again on the way back", async () => {
+    const user = userEvent.setup()
+    const dialog = (mode: "visible" | "hidden") => (
+      <Activity mode={mode}>
+        <ConfirmDialog
+          trigger={<Button variant="destructive">Remove access</Button>}
+          title="Remove Plex access for Sam Rivera?"
+          description="Sam loses every shared library now."
+          confirmLabel="Remove access"
+          action={async () => ({})}
+        />
+      </Activity>
+    )
+    const { rerender } = render(dialog("visible"))
+    await open(user)
+
+    rerender(dialog("hidden"))
+    rerender(dialog("visible"))
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
+    expect(screen.getByRole("button", { name: "Remove access" })).toBeVisible()
   })
 
   it("gates confirm on typeToConfirm, ignoring case", async () => {

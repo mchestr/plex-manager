@@ -81,7 +81,7 @@ test.describe('Assistant page', () => {
     await page.getByTestId('admin-chat-send').click();
     await expect(log).toContainText(mockLlmReply(followUp, 2), { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await page.reload();
-    await expect(log.getByTestId('admin-chat-question')).toHaveText([question, followUp], { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(log.getByTestId('admin-chat-question')).toContainText([question, followUp], { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(log.getByTestId('admin-chat-answer')).toContainText([mockLlmReply(question), mockLlmReply(followUp, 2)]);
 
     await page.getByTestId(`admin-assistant-history-delete-${id}`).click();

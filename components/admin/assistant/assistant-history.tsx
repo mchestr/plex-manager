@@ -67,7 +67,8 @@ function Row({ item, active, usageTextDays, testId, afterDelete, onLeave, onNavi
         confirmLabel="Delete"
         pendingLabel="Deleting"
         tone="destructive"
-        successFocus={afterDelete}
+        // The open conversation's delete leaves its URL, and the page then moves focus to the title
+        successFocus={active ? undefined : afterDelete}
         action={async () => {
           const result = await deleteAssistantConversation({ conversationId: item.id })
           // Already gone (deleted in another tab, or ended by the retention sweep) is what was asked for
