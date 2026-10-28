@@ -81,7 +81,7 @@ describe("/invite/[code] page", () => {
 
   it.each([
     ["expired", "This invite has expired"],
-    ["used-up", "This invite has been used up"],
+    ["used-up", "This invite has no uses left"],
     ["unknown", "We couldn't find that invite"],
   ] as const)("renders the %s copy with Ask on Discord", async (state, title) => {
     lookup({ ok: true, pass: pass(state) })

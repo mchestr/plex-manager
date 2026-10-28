@@ -98,7 +98,7 @@ describe('MemberPass', () => {
       fireEvent.click(screen.getByTestId('sign-in-button'))
     })
 
-    expect(screen.getByTestId('sign-in-error')).toHaveTextContent("We couldn't reach Plex")
+    expect(screen.getByTestId('sign-in-error')).toHaveTextContent('Could not connect to Plex')
     expect(screen.queryByText(/db:5432/)).not.toBeInTheDocument()
   })
 
@@ -132,7 +132,7 @@ describe('MemberPass', () => {
     renderPass()
 
     expect(screen.getByTestId('member-pass-token-copy')).toHaveTextContent(
-      "You'll approve access on plex.tv. Northfield Plex keeps your Plex sign-in token to sync your watchlist and accept invites for you."
+      'Approve access on plex.tv. Northfield Plex keeps your Plex sign-in token. It uses the token to sync your watchlist and accept invites.'
     )
   })
 
@@ -140,7 +140,6 @@ describe('MemberPass', () => {
     renderPass()
 
     expect(screen.getByText('Member pass')).toBeInTheDocument()
-    expect(screen.getByText('Good for every account on the share')).toBeInTheDocument()
-    expect(screen.getByText('Not a member yet? Ask the server owner for an invite link.')).toBeInTheDocument()
+    expect(screen.getByText('To become a member, ask the server owner for an invite link.')).toBeInTheDocument()
   })
 })

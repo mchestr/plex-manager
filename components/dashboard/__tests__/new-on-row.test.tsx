@@ -38,7 +38,7 @@ describe('NewOnRow', () => {
     await renderRow(ROW)
 
     expect(screen.getByRole('heading', { level: 2, name: 'New on Northfield Plex' })).toBeInTheDocument()
-    expect(screen.getByText('1,037 titles were added this week.')).toBeInTheDocument()
+    expect(screen.getByText('1,037 new titles this week')).toBeInTheDocument()
     expect(getNewOn).toHaveBeenCalledWith({ userId: 'member-1', isAdmin: false })
   })
 
@@ -63,8 +63,8 @@ describe('NewOnRow', () => {
 
     const film = screen.getByTestId('home-new-on-item-50101')
     expect(within(film).getByText('Glasshouse')).toBeInTheDocument()
-    expect(within(film).getByText('Film, 2026')).toBeInTheDocument()
-    expect(within(screen.getByTestId('home-new-on-item-70210')).getByText('Series, season 1')).toBeInTheDocument()
+    expect(within(film).getByText('Movie, 2026')).toBeInTheDocument()
+    expect(within(screen.getByTestId('home-new-on-item-70210')).getByText('Show, season 1')).toBeInTheDocument()
     // the art is decorative and loads lazily
     const img = film.querySelector('img')
     expect(img).toHaveAttribute('alt', '')
@@ -101,6 +101,6 @@ describe('NewOnRow', () => {
     await renderRow({ items: [{ ...ROW.items[0], href: null }], addedThisWeek: 1 })
 
     expect(screen.getByTestId('home-new-on-item-50101').tagName).toBe('DIV')
-    expect(screen.getByText('1 title was added this week.')).toBeInTheDocument()
+    expect(screen.getByText('1 new title this week')).toBeInTheDocument()
   })
 })

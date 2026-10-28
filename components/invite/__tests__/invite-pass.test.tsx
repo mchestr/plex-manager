@@ -56,13 +56,13 @@ describe("InvitePass, valid", () => {
     renderPass()
 
     expect(screen.getByTestId("invite-pass-inviter")).toHaveTextContent("Dana Whitfield invited you")
-    const libraries = screen.getByRole("list", { name: "Libraries this invite gives you" })
+    const libraries = screen.getByRole("list", { name: "Libraries in this invite" })
     expect(within(libraries).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["Movies", "TV Shows"])
     expect(screen.getByTestId("invite-pass-code")).toHaveTextContent("NORTH7Q2")
     expect(screen.getByTestId("invite-pass-code")).toHaveClass("font-mono")
     expect(screen.getByTestId("invite-pass-uses")).toHaveTextContent("3 of 5")
     expect(screen.getByTestId("invite-pass-expiry")).toHaveTextContent("October 31, 2026")
-    expect(screen.getByText("Good for one Plex account")).toBeInTheDocument()
+    expect(screen.getByText("For one Plex account")).toBeInTheDocument()
   })
 
   it("accepts with Plex through the sign-in island, with the invite code", async () => {
@@ -76,12 +76,13 @@ describe("InvitePass, valid", () => {
     expect(redirectTo).toHaveBeenCalledWith("https://app.plex.tv/auth#?code=X")
   })
 
-  it("shows the Jellyfin account form naming the Jellyfin server", () => {
+  it("shows the Jellyfin account form under the Jellyfin server's name", () => {
     renderPass({ serverType: "JELLYFIN", serverName: "Northfield Jellyfin" })
 
-    expect(screen.getByTestId("jellyfin-invite-form")).toHaveTextContent("Creates an account on Northfield Jellyfin")
+    expect(screen.getByTestId("valid-invite-heading")).toHaveTextContent("You're invited to Northfield Jellyfin")
+    expect(screen.getByTestId("jellyfin-invite-form")).toBeInTheDocument()
     expect(screen.queryByTestId("plex-invite-sign-in")).not.toBeInTheDocument()
-    expect(screen.getByText("Good for one Jellyfin account")).toBeInTheDocument()
+    expect(screen.getByText("For one Jellyfin account")).toBeInTheDocument()
   })
 
   it("draws an inert accept in the admin preview", () => {
@@ -94,9 +95,9 @@ describe("InvitePass, valid", () => {
 
 describe("InvitePass, voided", () => {
   it.each([
-    ["expired", "This invite has expired", /stopped working on October 31, 2026/],
-    ["used-up", "This invite has been used up", /Every use of this invite has been taken/],
-    ["unknown", "We couldn't find that invite", /may have been deleted/],
+    ["expired", "This invite has expired", /expired on October 31, 2026/],
+    ["used-up", "This invite has no uses left", /Ask Dana Whitfield, who sent it, for a new link/],
+    ["unknown", "We couldn't find that invite", /the invite was deleted/],
   ] as const)("%s has its own headline on the StatusScreen", async (state, title, description) => {
     const { container } = renderPass({ state, inviter: state === "unknown" ? null : "Dana Whitfield" })
 

@@ -66,7 +66,7 @@ function PlexStep({ data, paid }: { data: SubscriptionProvisioning; paid: boolea
   if (paid && data.plexInviteStatus === "pending") {
     return (
       <Step icon={icons.info} tone="action" data-testid="subscribe-success-pending">
-        We&apos;ve sent a Plex invite to your email. Accept it to finish.
+        We sent a Plex invite to your email. Accept it to finish.
       </Step>
     )
   }
@@ -89,7 +89,7 @@ function JellyfinStep({ data, paid }: { data: SubscriptionProvisioning; paid: bo
   if (paid && data.jellyfinAccessStatus === "skipped") {
     return (
       <Step icon={icons.info} tone="action" data-testid="subscribe-success-jellyfin-skipped">
-        We couldn&apos;t find your Jellyfin account. Ask the server admin to check it.
+        We could not find your Jellyfin account. Ask the server owner to check it.
       </Step>
     )
   }
@@ -102,7 +102,7 @@ function JellyfinStep({ data, paid }: { data: SubscriptionProvisioning; paid: bo
 
 /**
  * The success page's live checklist (UI-40): Payment confirmed, then one line
- * per service the member uses (P11.11): the Plex share or "We've sent a Plex
+ * per service the member uses (P11.11): the Plex share or "We sent a Plex
  * invite to your email", and "Your Jellyfin account is enabled". Polled
  * through `getSubscriptionProvisioning` until all settle or 2 minutes pass.
  * Below it, the member-since and renewal dates once the subscription row has
@@ -146,7 +146,7 @@ export function ProvisioningChecklist({ initial }: { initial: SubscriptionProvis
 
       {timedOut && !isSettled(data) && (
         <p className="text-ui text-muted-foreground" data-testid="subscribe-success-slow">
-          This is taking longer than usual. Your access keeps setting up; check back from home in a few minutes.
+          This is taking longer than usual. The setup continues. Look at Home again in a few minutes.
         </p>
       )}
 

@@ -47,7 +47,7 @@ function quickLinksFor({ media, requestsUrl, discord }: QuickLinksProps): QuickL
       id: "requests",
       icon: icons.requests,
       title: "Request a title",
-      description: "Ask for a film or series that's missing",
+      description: "Ask for a movie or show that is missing",
       href: requestsUrl,
       external: true,
     })
@@ -57,7 +57,7 @@ function quickLinksFor({ media, requestsUrl, discord }: QuickLinksProps): QuickL
       id: "discord",
       icon: icons.discord,
       title: discord.handle ? "Discord" : "Link Discord",
-      description: discord.handle ? `Linked as ${discord.handle}` : "Get help and server news on Discord",
+      description: discord.handle ? `Linked as ${discord.handle}` : "Get the Member role on Discord",
       href: "/discord/link",
       external: false,
     })

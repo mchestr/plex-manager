@@ -56,7 +56,7 @@ export function PlanList({ plans }: PlanListProps) {
       // Stay busy until the navigation to Stripe happens.
       redirectTo(result.data.url)
     } catch {
-      fail(priceId, "Could not start checkout. Please try again.")
+      fail(priceId, "Could not start checkout. Try again.")
     }
   }
 

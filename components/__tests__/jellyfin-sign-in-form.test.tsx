@@ -51,7 +51,7 @@ describe('JellyfinSignInForm', () => {
     renderForm()
 
     expect(screen.getByTestId('jellyfin-username-input')).toHaveAccessibleDescription(
-      '3 to 32 letters, numbers, dots, dashes or underscores'
+      'Use 3 to 32 letters, numbers, dots, dashes or underscores.'
     )
   })
 
@@ -144,13 +144,9 @@ describe('JellyfinSignInForm', () => {
 
     await submit('jane.doe')
 
-    expect(await screen.findByTestId('jellyfin-form-error')).toHaveTextContent('Your account could not be created. Please try again.')
+    expect(await screen.findByTestId('jellyfin-form-error')).toHaveTextContent('Could not create your account. Try again.')
     expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument()
     expect(screen.getByTestId('jellyfin-username-input')).toHaveValue('jane.doe')
   })
 
-  it('names the server the account is created on', () => {
-    renderForm()
-    expect(screen.getByText('Creates an account on Home')).toBeInTheDocument()
-  })
 })

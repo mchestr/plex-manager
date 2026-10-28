@@ -91,7 +91,7 @@ describe('ManageSubscriptionButton', () => {
     await waitFor(() => {
       expect(screen.getByTestId('manage-subscription-button')).toHaveAttribute('aria-busy', 'true')
     })
-    expect(screen.getByText('Opening...')).toBeInTheDocument()
+    expect(screen.getByText('Opening Stripe')).toBeInTheDocument()
 
     resolvePortal!({ url: 'https://billing.stripe.com/session/bps_1' })
   })
@@ -129,7 +129,7 @@ describe('ManageSubscriptionButton', () => {
 
     await waitFor(() => {
       expect(mockShowError).toHaveBeenCalledWith(
-        'Could not open the billing portal. Please try again.'
+        'Could not open the billing portal. Try again.'
       )
     })
     expect(mockRedirectTo).not.toHaveBeenCalled()

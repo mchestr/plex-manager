@@ -57,7 +57,7 @@ describe('PlexSignInButton (the invite pass accept)', () => {
     const button = screen.getByTestId('sign-in-with-plex')
     await user.click(button)
 
-    expect(await screen.findByTestId('plex-invite-error')).toHaveTextContent("We couldn't reach Plex. Please try again in a moment.")
+    expect(await screen.findByTestId('plex-invite-error')).toHaveTextContent('Could not connect to Plex. Try again in a minute.')
     expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument()
     expect(button).not.toBeDisabled()
   })

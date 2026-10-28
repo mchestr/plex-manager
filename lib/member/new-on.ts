@@ -98,10 +98,10 @@ const rowCache = createLoadingCache<string, { items: CachedItem[]; addedThisWeek
   keep: (value) => value !== null,
 })
 
-/** "Film, 2026", "Series, season 1" (the newest season), or just the kind. */
+/** "Movie, 2026", "Show, season 1" (the newest season), or just the kind. */
 export function newOnMeta({ kind, year, seasons }: Pick<NewOnItem, "kind" | "year" | "seasons">): string {
-  if (kind === "movie") return year ? `Film, ${year}` : "Film"
-  return seasons ? `Series, season ${seasons}` : "Series"
+  if (kind === "movie") return year ? `Movie, ${year}` : "Movie"
+  return seasons ? `Show, season ${seasons}` : "Show"
 }
 
 async function loadSections(server: Server): Promise<MediaSection[] | null> {

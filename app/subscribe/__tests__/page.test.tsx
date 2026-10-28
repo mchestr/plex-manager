@@ -100,7 +100,7 @@ describe('/subscribe', () => {
     await renderPage()
 
     expect(screen.getByTestId('subscribe-plan-list')).toBeInTheDocument()
-    expect(screen.getByTestId('subscribe-lapsed-note')).toHaveTextContent('Your finished Rewinds stay readable')
+    expect(screen.getByTestId('subscribe-lapsed-note')).toHaveTextContent('You can still read your finished Rewinds')
   })
 
   it('shows the unavailable screen with Sign out when no prices are offered', async () => {

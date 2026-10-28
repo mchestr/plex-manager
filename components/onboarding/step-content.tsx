@@ -85,14 +85,13 @@ export function StepContent({ stepId, data, headingRef }: StepContentProps) {
           <StepHeading stepId={stepId} headingRef={headingRef}>
             Welcome to {data.serverName}
           </StepHeading>
-          <Lead>A few tips before you start watching. It takes about a minute.</Lead>
           <TopicList
             items={[
               { icon: icons.plex, title: "Playback", text: "Get the best picture on every device." },
               ...(data.requestsUrl
                 ? [{ icon: icons.requests, title: "Requests", text: "Ask for movies and shows that are missing." }]
                 : []),
-              { icon: icons.info, title: "Support", text: "Where to go when something goes wrong." },
+              { icon: icons.info, title: "Support", text: "Where to get help when something does not work." },
             ]}
           />
         </>
@@ -124,7 +123,7 @@ export function StepContent({ stepId, data, headingRef }: StepContentProps) {
       return (
         <>
           <StepHeading stepId={stepId} headingRef={headingRef}>
-            Get help when you need it
+            Get help
           </StepHeading>
           <SupportGuide discord={data.discord} linkHref={ONBOARDING_DISCORD_CONNECT} instructions={data.instructions} />
         </>
@@ -146,7 +145,7 @@ export function StepContent({ stepId, data, headingRef }: StepContentProps) {
             </section>
           )}
           <p className="text-ui text-muted-foreground" data-testid="onboarding-help-note">
-            You can find this guide again under Help.
+            This guide is also on the Help page.
           </p>
         </>
       )

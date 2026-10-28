@@ -69,7 +69,7 @@ export function ManageSubscriptionButton({
       // navigation to Stripe happens.
       redirectTo(result.data.url)
     } catch {
-      showError("Could not open the billing portal. Please try again.")
+      showError("Could not open the billing portal. Try again.")
     }
   }
 
@@ -79,7 +79,7 @@ export function ManageSubscriptionButton({
       variant={variant}
       size={size}
       loading={isPending}
-      loadingLabel="Opening..."
+      loadingLabel="Opening Stripe"
       onClick={handleClick}
       className={className}
       aria-describedby={description ? descriptionId : undefined}

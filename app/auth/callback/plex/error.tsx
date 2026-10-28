@@ -27,7 +27,7 @@ export default function Error({
       icon={icons.warning}
       code={boundaryCopy(error).code}
       title="Sign-in didn't finish"
-      description="We couldn't finish signing you in. Please try again."
+      description="An error stopped the sign-in. Try again."
       primaryAction={
         <Button size="lg" onClick={reset} data-testid="error-retry">
           Try again

@@ -9,7 +9,7 @@ import { startPlexSignIn } from "@/lib/plex-auth"
 import { icons } from "@/lib/ui/icons"
 import { redirectTo } from "@/lib/utils/navigation"
 
-const START_FAILED = "We couldn't reach Plex. Please try again in a moment."
+const START_FAILED = "Could not connect to Plex. Try again in a minute."
 
 /**
  * The invite pass's "Accept with Plex" (ui-design-system 6.6): one click
@@ -52,7 +52,7 @@ export function PlexSignInButton({ inviteCode }: { inviteCode: string }) {
       >
         Accept with Plex
       </Button>
-      <p className="text-caption text-muted-foreground">You&apos;ll approve access on plex.tv, then come straight back.</p>
+      <p className="text-caption text-muted-foreground">You approve access on plex.tv, then return to this site.</p>
       {error && (
         <Alert tone="destructive" data-testid="plex-invite-error">
           {error}

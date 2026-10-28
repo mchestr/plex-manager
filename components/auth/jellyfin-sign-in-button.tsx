@@ -36,7 +36,7 @@ const IDLE: SignInState = { error: null, username: "" }
 async function signInWithJellyfin(form: FormData, callbackUrl: string | undefined): Promise<SignInState> {
   const username = String(form.get("username") ?? "")
   const password = String(form.get("password") ?? "")
-  if (!username || !password) return { error: "Username and password are required", username }
+  if (!username || !password) return { error: "Enter your username and password.", username }
 
   try {
     const result = await signIn("jellyfin", { username, password, redirect: false })
@@ -46,12 +46,12 @@ async function signInWithJellyfin(form: FormData, callbackUrl: string | undefine
       return { error: null, username }
     }
     if (result?.error) {
-      return { error: isRateLimitedSignInError(result.error) ? RATE_LIMITED_MESSAGE : "Invalid username or password. Please try again.", username }
+      return { error: isRateLimitedSignInError(result.error) ? RATE_LIMITED_MESSAGE : "Incorrect username or password.", username }
     }
-    return { error: "An unexpected error occurred. Please try again.", username }
+    return { error: "Could not sign in. Try again.", username }
   } catch (err) {
     logger.error("Sign-in error", err)
-    return { error: "We couldn't sign you in. Please check your connection and try again.", username }
+    return { error: "Could not sign in. Check your connection, then try again.", username }
   }
 }
 
@@ -72,7 +72,6 @@ export function JellyfinSignInButton({ serverName, showDisclaimer = true, callba
             name="username"
             type="text"
             defaultValue={state.username}
-            placeholder="Enter your Jellyfin username"
             required
             autoComplete="username"
             aria-invalid={state.error ? true : undefined}
@@ -87,7 +86,6 @@ export function JellyfinSignInButton({ serverName, showDisclaimer = true, callba
             id="jellyfin-password"
             name="password"
             type="password"
-            placeholder="Enter your password"
             required
             autoComplete="current-password"
             aria-invalid={state.error ? true : undefined}
@@ -109,7 +107,7 @@ export function JellyfinSignInButton({ serverName, showDisclaimer = true, callba
 
       {showDisclaimer && (
         <p className="text-xs text-muted-foreground text-center">
-          By signing in, you agree to allow this application to access your {serverName || "Jellyfin"} account information.
+          When you sign in, this app can read your {serverName || "Jellyfin"} account information.
         </p>
       )}
     </div>

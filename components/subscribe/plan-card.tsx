@@ -62,7 +62,7 @@ export function PlanCard({ plan, primary, pending, disabled, error, settings, on
           variant={primary ? "primary" : "secondary"}
           data-variant={primary ? "primary" : "secondary"}
           loading={pending}
-          loadingLabel="Redirecting"
+          loadingLabel="Opening Stripe"
           disabled={disabled}
           onClick={() => onSubscribe(plan.priceId)}
           data-testid={`subscribe-button-${plan.priceId}`}

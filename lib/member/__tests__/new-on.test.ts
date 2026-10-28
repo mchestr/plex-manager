@@ -231,10 +231,10 @@ describe('getNewOn', () => {
 })
 
 describe('newOnMeta', () => {
-  it('reads "Film, 2026" and "Series, season 1"', () => {
-    expect(newOnMeta({ kind: 'movie', year: 2026, seasons: null })).toBe('Film, 2026')
-    expect(newOnMeta({ kind: 'show', year: 2026, seasons: 1 })).toBe('Series, season 1')
-    expect(newOnMeta({ kind: 'movie', year: null, seasons: null })).toBe('Film')
-    expect(newOnMeta({ kind: 'show', year: null, seasons: null })).toBe('Series')
+  it('reads "Movie, 2026" and "Show, season 1"', () => {
+    expect(newOnMeta({ kind: 'movie', year: 2026, seasons: null })).toBe('Movie, 2026')
+    expect(newOnMeta({ kind: 'show', year: 2026, seasons: 1 })).toBe('Show, season 1')
+    expect(newOnMeta({ kind: 'movie', year: null, seasons: null })).toBe('Movie')
+    expect(newOnMeta({ kind: 'show', year: null, seasons: null })).toBe('Show')
   })
 })
