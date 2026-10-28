@@ -78,6 +78,7 @@ export function EvalsTable({ rows, total, page, pageSize, sort }: EvalsTableProp
     <DataTable
       label="Eval runs"
       noun="runs"
+      size="wide"
       columns={columns}
       data={rows}
       getRowId={(run) => run.id}

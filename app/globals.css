@@ -36,7 +36,7 @@
 }
 @custom-variant dt-compact {
   [data-table-size="narrow"] & { @container data-table (24rem <= width < 28rem) { @slot; } }
-  [data-table-size="default"] & { @container data-table (40rem <= width < 45rem) { @slot; } }
+  [data-table-size="default"] & { @container data-table (40rem <= width < 50rem) { @slot; } }
   [data-table-size="wide"] & { @container data-table (60rem <= width < 68rem) { @slot; } }
 }
 

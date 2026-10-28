@@ -68,11 +68,12 @@ test.describe('admin composites on /dev/ui', () => {
     // At 320px the tables still fit; the page's other specimens are not under test here
     await page.setViewportSize({ width: 320, height: 844 });
     for (const table of ['dev-ui-users-table', 'dev-ui-plays-table']) {
+      // scrollWidth counts any toolbar, card or pager content that spills out of the table's root
       const fit = await page.getByTestId(table).evaluate((root) => {
         const scroll = root.querySelector<HTMLElement>('[data-testid$="-scroll"]');
-        return { right: root.getBoundingClientRect().right <= document.documentElement.clientWidth, scroll: scroll ? scroll.scrollWidth - scroll.clientWidth : null };
+        return { root: root.scrollWidth - root.clientWidth, scroll: scroll ? scroll.scrollWidth - scroll.clientWidth : null };
       });
-      expect(fit, table).toEqual({ right: true, scroll: 0 });
+      expect(fit, table).toEqual({ root: 0, scroll: 0 });
     }
   });
 

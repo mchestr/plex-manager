@@ -10,7 +10,7 @@ import type { DataTableColumnMeta } from "./column-meta"
  * | size    | cards below | priority 3 leaves the table below |
  * |---------|-------------|-----------------------------------|
  * | narrow  | 24rem       | 28rem                             |
- * | default | 40rem       | 45rem                             |
+ * | default | 40rem       | 50rem                             |
  * | wide    | 60rem       | 68rem                             |
  *
  * @internal
@@ -39,7 +39,8 @@ export function headerClass(meta: DataTableColumnMeta | undefined, slot: CardSlo
 
 const CARD_CELL: Record<CardSlot, string> = {
   title: "dt-cards:order-first dt-cards:col-span-full dt-cards:block dt-cards:min-w-0 dt-cards:p-0",
-  sub: "dt-cards:-order-1 dt-cards:col-span-full dt-cards:-mt-2 dt-cards:block dt-cards:min-w-0 dt-cards:truncate dt-cards:p-0 dt-cards:text-label dt-cards:text-muted-foreground",
+  // An empty sub (the cell rendered nothing) leaves the grid, so it adds no row gap
+  sub: "dt-cards:-order-1 dt-cards:col-span-full dt-cards:-mt-2 dt-cards:block dt-cards:min-w-0 dt-cards:truncate dt-cards:p-0 dt-cards:text-label dt-cards:text-muted-foreground dt-cards:empty:hidden",
   field: "dt-cards:block dt-cards:min-w-0 dt-cards:p-0 dt-cards:text-left dt-cards:break-words",
   hidden: "",
 }

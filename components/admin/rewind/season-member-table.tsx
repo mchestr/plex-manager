@@ -123,6 +123,7 @@ export function SeasonMemberTable({ year, rows, total, members, page, pageSize, 
     <DataTable
       label="Members"
       noun="members"
+      size="wide"
       columns={columns(f, now)}
       data={rows}
       getRowId={(row) => row.id}

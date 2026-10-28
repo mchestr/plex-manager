@@ -174,6 +174,7 @@ export function DataTable<T>({
         <tbody className="divide-y dt-cards:block">
           {rows.map((row) => {
             const href = getRowHref?.(row.original)
+            const actions = withActions ? rowActions!(row.original) : []
             return (
               <tr key={row.id} role="row" className={ROW_CLASS} data-testid={`${testId}-row-${row.id}`}>
                 {row.getVisibleCells().map((cell, index) => {
@@ -199,12 +200,14 @@ export function DataTable<T>({
                 })}
                 {withActions && (
                   <td role="cell" data-card="actions" className={ACTIONS_CELL_CLASS}>
-                    <RowActions
-                      name={getRowName!(row.original)}
-                      actions={rowActions!(row.original)}
-                      onOpenChange={onRowActionsOpenChange}
-                      data-testid={`${testId}-actions-${row.id}`}
-                    />
+                    {actions.length > 0 && (
+                      <RowActions
+                        name={getRowName!(row.original)}
+                        actions={actions}
+                        onOpenChange={onRowActionsOpenChange}
+                        data-testid={`${testId}-actions-${row.id}`}
+                      />
+                    )}
                   </td>
                 )}
               </tr>

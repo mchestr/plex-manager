@@ -1030,7 +1030,7 @@ interface DataTableProps<T> {
 // viewport, so the admin sidebar counts and the server HTML is right on a phone) lay rows out as cards below the
 // size's card width: `title` heads the card, `sub` lines follow it, every `field` sits in a 2-column grid (4 from
 // 36rem) under its header as a label, and the actions button sits in the card's corner. No sideways scroll.
-// priority: 3 drops a column in the band just above the card width (28, 45 or 68rem).
+// priority: 3 drops a column in the band just above the card width (up to 28, 50 or 68rem).
 
 // components/ui/filter-bar.tsx
 interface FilterBarProps {

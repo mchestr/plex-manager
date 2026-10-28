@@ -67,7 +67,7 @@ export function TablePagination({
         {paged ? `Showing ${start} to ${end} of ${total} ${noun}` : `Showing all ${total} ${noun}`}
       </p>
       {paged && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           {onPageSizeChange && (
             <Select items={items} value={String(pageSize)} onValueChange={(value) => value && onPageSizeChange(Number(value))}>
               <SelectTrigger size="sm" className="w-20" aria-label="Rows per page" data-testid={`${testId}-page-size`}>

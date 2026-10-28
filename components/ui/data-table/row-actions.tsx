@@ -68,8 +68,8 @@ export function RowActions({ name, actions, onOpenChange, ...props }: RowActions
           <Button
             variant="ghost"
             size="icon-sm"
-            // 32px to the eye, a 44px hit area on touch screens
-            className="relative pointer-coarse:before:absolute pointer-coarse:before:-inset-1.5"
+            // 32px to the eye; on touch screens the ::before, on the 30px padding box, makes 30 + 2 x 7 = 44px
+            className="relative pointer-coarse:before:absolute pointer-coarse:before:-inset-1.75"
             aria-label={`Actions for ${name}`}
             data-testid={testId}
           />

@@ -42,7 +42,7 @@ export function TableSkeleton({ rows, columns }: { rows: number; columns: number
   )
   return (
     <div data-slot="table-skeleton" className="divide-y rounded-lg border bg-card">
-      {row(-1, "h-3 w-20")}
+      {row(-1, "h-3 w-20 max-w-full")}
       {Array.from({ length: rows }, (_, index) => row(index, "h-4"))}
     </div>
   )

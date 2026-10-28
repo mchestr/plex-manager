@@ -153,6 +153,27 @@ describe("DataTable", () => {
     expect(onRemove).toHaveBeenCalledWith("m3")
   })
 
+  it("draws no actions button on a row without actions, and keeps its cell", () => {
+    render(
+      <DataTable
+        label="Jobs"
+        noun="jobs"
+        columns={columns}
+        data={members.slice(0, 2)}
+        getRowId={(member) => member.id}
+        getRowName={(member) => member.name}
+        rowActions={(member) => (member.id === "m1" ? [] : [{ id: "remove", label: "Remove", onSelect: jest.fn() }])}
+        pagination={{ page: 1, pageSize: 25, total: 2 }}
+        empty={null}
+        data-testid="jobs"
+      />
+    )
+    const idle = screen.getByTestId("jobs-row-m1")
+    expect(within(idle).queryByRole("button", { name: "Actions for Member 1" })).not.toBeInTheDocument()
+    expect(within(idle).getAllByRole("cell").at(-1)).toHaveAttribute("data-card", "actions")
+    expect(within(screen.getByTestId("jobs-row-m2")).getByRole("button", { name: "Actions for Member 2" })).toBeInTheDocument()
+  })
+
   it("makes a column without a card slot the title when first and leaves it out otherwise", () => {
     render(
       <DataTable
