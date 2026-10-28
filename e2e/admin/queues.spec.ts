@@ -24,7 +24,7 @@ test.describe('Job queues', () => {
     const toggle = adminPage.getByTestId('queue-pause-resume-btn');
     await expect(toggle).toHaveText('Pause queue');
     await toggle.click();
-    await expect(adminPage.getByTestId('queue-pause-dialog')).toContainText("won't run until you resume");
+    await expect(adminPage.getByTestId('queue-pause-dialog')).toContainText("don't run until you resume");
     await adminPage.getByTestId('queue-pause-confirm').click();
     await expect(adminPage.getByTestId('queue-status-queue')).toHaveText('Queue paused');
     await expect(toggle).toHaveText('Resume queue');
