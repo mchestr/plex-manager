@@ -107,8 +107,12 @@ export function ConfirmDialog({
       } catch {
         result = { error: CONFIRM_FALLBACK_ERROR }
       }
-      if (result.error) setError(result.error)
-      else {
+      const failure = result.error
+      if (failure) {
+        // A transition again after the await: the error then commits with the end of the pending state, never
+        // beside a confirm button that still spins
+        startTransition(() => setError(failure))
+      } else {
         succeeded.current = true
         setOpen(false)
       }
