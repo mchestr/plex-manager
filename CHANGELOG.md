@@ -18,6 +18,8 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-28
+
 ### Added
 
 - **Full screen for Rewind:** a Full screen control in the story's top bar. In the admin preview of a member's Rewind (Admin, Users, a member, Rewind) it lifts the story out of its frame to fill the screen in any browser, iPhone Safari included; where the browser supports it (Android, iPad and desktop browsers) it also hides the browser's bars, and on a member's own Rewind it shows only in those browsers. Esc, the browser's own exit or the control returns to the frame.
@@ -254,7 +256,8 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 - No account linking by email; the Jellyfin sign-in toggle is enforced; share routes serve a share-safe projection; a failed Tautulli match no longer shows emails; a Redis-backed rate limiter keys on the trusted proxy hop; generation is single-flight and rate-limited; the poster proxy checks access; `plexAuthToken` no longer reaches the admin browser.
 - The Discord bot no longer uses the Message Content intent, keeps its token encrypted in the database, and scrubs personal fields before the LLM.
 
-[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.6.0
 [0.5.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.5.0
 [0.4.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.4.0
 [0.3.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.3.0
