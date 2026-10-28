@@ -1,31 +1,15 @@
 "use client"
 
-import { Suspense, use, useState } from "react"
+import { useState } from "react"
 
 import { updateGlobalWatchlistSyncSettings } from "@/actions/admin/watchlist"
-import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
-import type { WatchlistSyncStats as SyncStats } from "@/lib/admin/watchlist-stats"
-
-/** The badge tone for each sync history status; anything else is neutral. */
-const SYNC_STATUS_VARIANT: Record<string, "success" | "info" | "warning" | "destructive"> = {
-  REQUESTED: "success",
-  ALREADY_AVAILABLE: "info",
-  ALREADY_REQUESTED: "warning",
-  FAILED: "destructive",
-  NOT_PERMITTED: "warning",
-}
-
-export interface WatchlistGlobalSettings {
-  enabled: boolean
-  intervalMinutes: number
-}
+import type { WatchlistGlobalSettings } from "@/lib/data/watchlist"
 
 const INTERVAL_ERROR = "Enter a whole number of minutes from 15 to 1440"
 
@@ -85,44 +69,6 @@ export function useWatchlistForm(saved: WatchlistGlobalSettings) {
       },
     },
   }
-}
-
-/** Members, items and recent requests; the page streams them in, so they never hold the settings up. */
-function WatchlistSyncStats({ stats: pending }: { stats: Promise<SyncStats | null> }) {
-  const stats = use(pending)
-  if (!stats) return null
-  return (
-    <div className="flex flex-col gap-4 border-t pt-6" data-testid="watchlist-sync-stats">
-      <StatGrid className="grid-cols-2 lg:grid-cols-5">
-        <StatTile label="Members with sync on" value={stats.usersWithSyncEnabled} />
-        <StatTile label="Items synced" value={stats.totalItemsSynced} />
-        <StatTile label="Requests created" value={stats.totalItemsRequested} />
-        <StatTile label="No TMDB match" value={stats.totalItemsSkipped} />
-        <StatTile label="Not allowed" value={stats.totalItemsNotPermitted} />
-      </StatGrid>
-      {stats.recentHistory.length > 0 && (
-        <ul className="flex flex-col gap-2" aria-label="Recent activity">
-          {stats.recentHistory.slice(0, 5).map((item) => (
-            <li key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-secondary px-3 py-2 text-ui">
-              <span className="min-w-0 truncate text-foreground">
-                {item.title} <span className="text-label text-muted-foreground">by {item.user.name || item.user.email || "Unknown"}</span>
-              </span>
-              <Badge variant={SYNC_STATUS_VARIANT[item.status] ?? "neutral"}>{item.status.charAt(0) + item.status.slice(1).replace(/_/g, " ").toLowerCase()}</Badge>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-
-/** The figures, in both modes: they describe the saved setting, so they show while it is on. */
-export function WatchlistSyncFigures({ stats }: { stats: Promise<SyncStats | null> }) {
-  return (
-    <Suspense fallback={null}>
-      <WatchlistSyncStats stats={stats} />
-    </Suspense>
-  )
 }
 
 /**

@@ -18,10 +18,17 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Added
+
+- **Assistant page:** the admin assistant is now a page of its own, `/admin/assistant`, opened from **Assistant** at the top of the admin sidebar (and from the assistant button in the phone's top bar) instead of a side panel. Conversations are saved: the history beside the conversation (a sheet on phones) lists them by day, each one opens at its own address and carries on where it left off, and **Delete** removes one from your history. A new conversation offers a few questions to start with; Enter sends and Shift+Enter starts a new line. While AI features are off or no chat model is chosen, Assistant stays in the nav for anyone with saved conversations, and its page keeps them readable and deletable, saying why nothing can be sent. Admins and Support users see only their own history, and admins still review every conversation on the LLM usage pages. A conversation leaves the history 90 days after its last message (`RETENTION_ASSISTANT_CHAT_DAYS`), and removing an admin's role ends all of their conversations on the page. Member removal's dry run counts the saved messages too.
+
 ### Changed
 
+- **No more assistant side panel:** the panel and its buttons in the sidebar and on Admin, Settings are gone; the Settings button opens the page. The model now reads a conversation's earlier turns from the server, never from the browser.
 - **Privacy in admin settings:** the Privacy section now shows only when the daily sweep of old personal data last ran. The table of retention windows and **Run now** are gone. The `RETENTION_*_DAYS` variables still set the windows, and `docs/privacy.md` lists them.
 - **Secret re-encryption without Redis:** an install without Redis now re-encrypts stored secrets at boot, as installs with Redis already did through the queue. To move to a keyring or rotate a key, put the new key first in `ENCRYPTION_KEYS` and restart. Then wait for `secrets.reencrypted` in the log before you remove the old key (`docs/operations.md`, "Encryption keys").
+- **Watchlist sync has its own page:** Admin → Community → Watchlist sync (`/admin/watchlist`) now holds the watchlist sync switch and interval, which have left Settings. Under them are the figures and a table of every title members' watchlists have synced: the member, how its Overseerr request went and when, with a search by title or member, Status and Type filters, and sorting by title, member or date. It replaces the few recent titles the settings section listed, and opening it is audited as a listing of members' content.
+- **Plain text across the app:** the text on member, admin, setup, Rewind, help and Discord bot pages follows ASD-STE100 Simplified Technical English. Descriptions that repeated their heading are gone.
 
 ### Removed
 
@@ -30,6 +37,9 @@ check); the `no-changelog` label skips it.
 
 ### Upgrade notes
 
+- Take a `pg_dump -Fc` before you upgrade. This release adds the migration `20270119000007_add_assistant_chat_history` (a title on assistant conversations and the `ChatConversationMessage` table, both encrypted at rest) and the optional `RETENTION_ASSISTANT_CHAT_DAYS` (default 90).
+- **Assistant history starts empty:** the side panel never stored its conversations, so everyone's assistant history starts empty. Its conversation records end 90 days after they started (the new rule), and the existing `RETENTION_CHAT_CONVERSATION_DAYS` rule deletes them 180 days after that; their LLM usage keeps its cost.
+- Run `npm run register-discord-commands` (`node scripts/dist/register-discord-commands.cjs` in the image) after the upgrade, because the slash command descriptions changed.
 - Without Redis, the first boot after the upgrade re-encrypts each stored secret that is in plain text or under an older key. The app process does this work, and logs `secrets.reencrypted` when it finishes.
 
 ## [0.6.0] - 2026-10-28
@@ -37,12 +47,10 @@ check); the `no-changelog` label skips it.
 ### Added
 
 - **Full screen for Rewind:** a Full screen control in the story's top bar. In the admin preview of a member's Rewind (Admin, Users, a member, Rewind) it lifts the story out of its frame to fill the screen in any browser, iPhone Safari included; where the browser supports it (Android, iPad and desktop browsers) it also hides the browser's bars, and on a member's own Rewind it shows only in those browsers. Esc, the browser's own exit or the control returns to the frame.
-- **Assistant page:** the admin assistant is now a page of its own, `/admin/assistant`, opened from **Assistant** at the top of the admin sidebar (and from the assistant button in the phone's top bar) instead of a side panel. Conversations are saved: the history beside the conversation (a sheet on phones) lists them by day, each one opens at its own address and carries on where it left off, and **Delete** removes one from your history. A new conversation offers a few questions to start with; Enter sends and Shift+Enter starts a new line. While AI features are off or no chat model is chosen, Assistant stays in the nav for anyone with saved conversations, and its page keeps them readable and deletable, saying why nothing can be sent. Admins and Support users see only their own history, and admins still review every conversation on the LLM usage pages. A conversation leaves the history 90 days after its last message (`RETENTION_ASSISTANT_CHAT_DAYS`), and removing an admin's role ends all of their conversations on the page. Member removal's dry run counts the saved messages too.
 
 ### Changed
 
 - **Request limits on home:** the home page no longer shows the full tier table. Members now see their own tier, its limits, the requests they have left, and the hours to the next tier and its limits. Only admins see the full table, in Admin > Settings, Request limits. Discord `/mystats` already showed only these figures. The card gives the next tier's period when it differs from the member's own, and tells the member when it cannot read their limits. A one-day period reads "every day", not "every 1 days".
-- **No more assistant side panel:** the panel and its buttons in the sidebar and on Admin, Settings are gone; the Settings button opens the page. The model now reads a conversation's earlier turns from the server, never from the browser.
 - **Rewind times are implicit:** Rewind no longer prints a time zone. The "Times in America/Chicago, the server's time zone" notes are gone from the bookends, clock, short list and centrefold pages, the desktop Notes, article mode, chart and table captions and the clock and centrefold share cards. Times and days are still counted in the member's Rewind zone (their saved zone, else the server's), and nothing on the page names it.
 - **Tables on phones and tablets:** the users list and every other admin table, and the marks list on Account, now lay out by the room the table itself has, not the window's width, so the admin sidebar counts. A narrow table shows each row as a card: the name and its actions on top, then every other column under its own label in two columns (four on a tablet), with nothing hidden or unlabelled. The users list shows cards up to about 1,100 px and its table from there, with the Rewind column from 1,440 px; a long email is cut short in the table and shown in full on the card. While a table shows cards, its toolbar offers Filters (in a sheet) and Sort; beside a table, the filters sit in one row that no longer breaks into a block. The page is laid out before it loads, so a phone no longer shows the desktop table first.
 - **No final cut:** a Rewind is final when it is generated. The back cover, cover, Notes, cards and home card no longer promise December or a "final cut" in January (the cover and cards read "Data through November 30"), the sign-off reads "See you next year" or "That was the year", and the template decks no longer say "so far". Rewinds made before this release keep their stored sign-off until they are generated again.
@@ -68,11 +76,10 @@ check); the `no-changelog` label skips it.
 
 ### Upgrade notes
 
-- Take a `pg_dump -Fc` before you start the new release. It adds the migration `20270119000007_add_assistant_chat_history` (a title on assistant conversations and the `ChatConversationMessage` table, both encrypted at rest) and the optional `RETENTION_ASSISTANT_CHAT_DAYS` (default 90).
+- Take a `pg_dump -Fc` before you start the new release. This release adds no migrations and no environment variables.
 - **Final cut cancelled:** 0.2.0 to 0.5.0 keep a final cut scheduled for 00:30 on 1 January in the westernmost zone (the delayed `rewind:final-cut` job on the `rewind-batch` queue). The new worker removes it at start and every 10 minutes, and one it picks up first completes without doing anything. An older worker adds it again, and would run it, so upgrade every worker container before 00:30 on 1 January in the westernmost zone.
 - **Sign-off and template lines:** a Rewind made before the upgrade keeps its stored "See you in the final cut" sign-off (or "The final cut lands in the new year") and its older template lines until it is generated again. An upgrade before 1 December needs nothing more, because the season-open run regenerates every Rewind; after it, a Regenerate from Admin, Rewind, or the member hiding a title, writes the sign-off again, since copy that mentions the final cut is never reused or kept, and renders a template-only Rewind's lines from the current templates. In a Rewind with model-written words, an older template line in a slot the model did not write stays until the Rewind's facts change. Until then `npm run rewind:validate` may count those older lines as model copy, because it compares each slot with the current templates.
 - **`REWIND_STAGING`** now only gates the season-open rehearsal (`npm run rewind:season-open -- --rehearse`).
-- **Assistant history starts empty:** the side panel never stored its conversations, so everyone's assistant history starts empty. Its conversation records end 90 days after they started (the new rule), and the existing `RETENTION_CHAT_CONVERSATION_DAYS` rule deletes them 180 days after that; their LLM usage keeps its cost.
 
 ## [0.5.0] - 2026-10-27
 

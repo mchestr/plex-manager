@@ -18,6 +18,7 @@
   "admin /admin/users [role filter open]": {},
   "admin /admin/users/regular-user-id": {},
   "admin /admin/users/regular-user-id/rewind/2026": {},
+  "admin /admin/watchlist": {},
   "admin /admin/wrapped/visual-rewind/history/visual-llm-usage-1": {},
   "member /": {},
   "member /account": {},

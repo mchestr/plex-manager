@@ -12,7 +12,6 @@ import { RequestTiersSection } from "@/components/admin/settings/sections/reques
 import { ServiceSection } from "@/components/admin/settings/sections/service-section"
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 import { SystemSection } from "@/components/admin/settings/sections/system-section"
-import { WatchlistSection } from "@/components/admin/settings/sections/watchlist-section"
 import { SettingsGroup, SettingsLayout } from "@/components/admin/settings/settings-layout"
 import type { SettingsNavItem } from "@/components/admin/settings/settings-nav"
 import { SettingsPageActions } from "@/components/admin/settings/settings-page-actions"
@@ -24,7 +23,6 @@ import { getAssistantSources } from "@/lib/data/assistant-sources"
 import { getLastRetentionRun } from "@/lib/data/retention"
 import { getRewindSeasonDataPreparedAt } from "@/lib/data/rewind-season"
 import { plexLibraryListing } from "@/lib/admin/invites/libraries"
-import { getWatchlistSyncStats } from "@/lib/admin/watchlist-stats"
 import packageJson from "@/package.json"
 import { getBaseUrl, getEnv } from "@/lib/env"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
@@ -62,9 +60,8 @@ export default async function SettingsPage() {
   await assertAdmin()
   // The health checks read the clock: render per request, never at build
   await connection()
-  // Started, not awaited: the sections stream these in (P10.7)
+  // Started, not awaited: the section streams it in (P10.7)
   const plexLibraries = plexLibraryListing()
-  const watchlistStats = getWatchlistSyncStats()
   const [settings, stripeConfig, health, season, zone, f] = await Promise.all([
     getAdminSettings(),
     getStripeConfig(),
@@ -106,7 +103,6 @@ export default async function SettingsPage() {
     { id: "assistant", label: "Assistant sources", group: "integrations" },
     { id: "discord", label: "Discord", group: "integrations", status: health.discord.status },
     { id: "stripe", label: "Stripe billing", group: "integrations", status: health.stripe.status },
-    { id: "watchlist", label: "Watchlist sync", group: "integrations", status: health.watchlist.status },
     { id: "channel-stats", label: "Discord channel stats", group: "integrations" },
     { id: "request-tiers", label: "Request limits", group: "integrations" },
     { id: "other", label: "Other integrations", group: "integrations", status: otherStatus },
@@ -152,12 +148,6 @@ export default async function SettingsPage() {
             footerMeta={saved("discord")}
           />
           <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />
-          <WatchlistSection
-            saved={{ enabled: settings.config.watchlistSyncEnabled, intervalMinutes: settings.config.watchlistSyncIntervalMinutes }}
-            stats={watchlistStats}
-            health={health.watchlist}
-            footerMeta={saved("watchlist")}
-          />
           <ChannelStatsSection saved={channelStats} footerMeta={saved("channelStats")} />
           <RequestTiersSection
             saved={requestTiers}

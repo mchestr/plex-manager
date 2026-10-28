@@ -262,7 +262,7 @@ export type MemberReadSurface =
   | "chatbot-tautulli"
 
 /** The admin pages that list many members' content. */
-export type MemberListSurface = "discord-activity" | "watchlist-panel"
+export type MemberListSurface = "discord-activity" | "watchlist-history"
 
 /** True the first time `key` is seen in the hour; a limiter failure counts as first, so a read is never lost. */
 async function firstThisHour(key: string): Promise<boolean> {
