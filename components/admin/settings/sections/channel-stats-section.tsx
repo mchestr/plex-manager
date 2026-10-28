@@ -128,7 +128,7 @@ export function ChannelStatsSection({ saved, footerMeta }: { saved: ChannelStats
     <SettingsSection
       id={SECTION_ID}
       title="Discord channel stats"
-      description="Renames voice channels with live numbers from Tautulli, such as Current Streams: 3. Needs the Discord bot with the Manage Channels permission."
+      description="Shows live Tautulli numbers in voice channel names, for example Current Streams: 3. The Discord bot needs the Manage Channels permission."
       form={{
         ...form,
         onDiscard: () => {
@@ -163,14 +163,14 @@ export function ChannelStatsSection({ saved, footerMeta }: { saved: ChannelStats
           <div className="flex flex-col">
             <Label htmlFor="channel-stats-enabled">Update the channels</Label>
             <span id="channel-stats-enabled-hint" className="text-label text-muted-foreground">
-              Channels without an ID are left alone.
+              The bot skips each stat that has no channel ID.
             </span>
           </div>
         </div>
         <FormField
           name="intervalMinutes"
           label="Interval"
-          description="Minutes between updates, from 10 to 1440. Discord allows two renames per channel in ten minutes."
+          description="Minutes between updates, from 10 to 1440. Discord lets a bot rename a channel two times in 10 minutes."
           error={errors.intervalMinutes}
         >
           <Input

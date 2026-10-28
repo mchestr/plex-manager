@@ -29,7 +29,7 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
         // The action revalidates the page, so the switch re-renders with the saved value
         toast.showSuccess(`Jellyfin sign-in turned ${on ? "on" : "off"}`)
       } else {
-        toast.showError(result.error || "Failed to update the Jellyfin sign-in setting")
+        toast.showError(result.error || "Could not change Jellyfin sign-in")
       }
     })
   }
@@ -39,7 +39,7 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
       <div className="flex flex-col gap-0.5">
         <Label htmlFor="jellyfin-login">Allow Jellyfin sign-in</Label>
         <p id="jellyfin-login-hint" className="text-label text-muted-foreground">
-          Members can sign in with their Jellyfin account. Off hides it from the sign-in page. Takes effect at once.
+          Members can sign in with their Jellyfin account. This saves at once.
         </p>
       </div>
       <Switch

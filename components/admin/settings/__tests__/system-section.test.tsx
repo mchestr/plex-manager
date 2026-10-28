@@ -204,7 +204,7 @@ describe('SystemSection', () => {
 
     expect(trigger()).toHaveTextContent('Select a time zone')
     expect(screen.getByTestId('server-time-zone-effective')).toHaveTextContent(
-      'In effect: America/New York, from the TZ environment variable or UTC. Saving a zone here overrides it.'
+      'In effect: America/New York, from the TZ environment variable or UTC. A zone that you save here replaces it.'
     )
     expect(screen.queryByTestId('settings-system-unsaved')).not.toBeInTheDocument()
 

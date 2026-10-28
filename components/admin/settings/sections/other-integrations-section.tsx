@@ -15,7 +15,7 @@ type OtherService = "sonarr" | "radarr" | "jellyfin"
 const DESCRIPTIONS: Record<OtherService, string> = {
   sonarr: "TV library and viewing statistics",
   radarr: "Movie library and viewing statistics",
-  jellyfin: "A second media server for members who don't use Plex",
+  jellyfin: "A second media server for members who do not use Plex",
 }
 
 const ORDER: OtherService[] = ["sonarr", "radarr", "jellyfin"]
@@ -54,7 +54,7 @@ export function OtherIntegrationsSection({ servers, jellyfinLogin, health, foote
     <SettingsSection
       id="other"
       title="Other integrations"
-      description="Optional services. Each opens its own form."
+      description="These services are optional."
       status={worstStatus(configured.map((type) => health[type].status))}
       checkedAt={checkedAt}
     >

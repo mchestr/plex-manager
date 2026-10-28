@@ -107,7 +107,7 @@ function WatchlistSyncStats({ stats: pending }: { stats: Promise<SyncStats | nul
               <span className="min-w-0 truncate text-foreground">
                 {item.title} <span className="text-label text-muted-foreground">by {item.user.name || item.user.email || "Unknown"}</span>
               </span>
-              <Badge variant={SYNC_STATUS_VARIANT[item.status] ?? "neutral"}>{item.status.replace(/_/g, " ").toLowerCase()}</Badge>
+              <Badge variant={SYNC_STATUS_VARIANT[item.status] ?? "neutral"}>{item.status.charAt(0) + item.status.slice(1).replace(/_/g, " ").toLowerCase()}</Badge>
             </li>
           ))}
         </ul>
@@ -147,7 +147,7 @@ export function WatchlistSyncFields({ state }: { state: ReturnType<typeof useWat
         <div className="flex flex-col">
           <Label htmlFor="watchlist-sync-enabled">Watchlist sync</Label>
           <span id="watchlist-sync-enabled-hint" className="text-label text-muted-foreground">
-            While it is off, members can't turn sync on for themselves. It needs Overseerr.
+            While this is off, members cannot turn on sync.
           </span>
         </div>
       </div>

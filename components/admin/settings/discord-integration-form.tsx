@@ -152,7 +152,7 @@ export function DiscordIntegrationFields({ integration, state }: DiscordIntegrat
           data-testid="settings-discord-client-secret"
         />
       </FormField>
-      <FormField name="discord-bot-token" label="Bot token" optional description="Falls back to DISCORD_BOT_TOKEN when blank." error={errors.botToken}>
+      <FormField name="discord-bot-token" label="Bot token" optional description="If you leave this blank, the bot uses DISCORD_BOT_TOKEN." error={errors.botToken}>
         <SecretInput
           value={values.botToken}
           onValueChange={(botToken) => set({ botToken })}
@@ -179,7 +179,7 @@ export function DiscordIntegrationFields({ integration, state }: DiscordIntegrat
       <FormField name="discord-platform-name" label="Platform name" description="Shown on members' Discord profiles." error={errors.platformName}>
         <Input data-testid="settings-discord-platform-name" value={values.platformName} onValueChange={(platformName) => set({ platformName })} disabled={disabled} />
       </FormField>
-      <FormField name="discord-support-channel" label="Support channel ID" optional description="The channel the bot watches for support." error={errors.supportChannelId}>
+      <FormField name="discord-support-channel" label="Support channel ID" optional description="The bot answers questions in this channel." error={errors.supportChannelId}>
         <Input data-testid="settings-discord-support-channel" value={values.supportChannelId} onValueChange={(supportChannelId) => set({ supportChannelId })} disabled={disabled} />
       </FormField>
       <FormField name="discord-support-threads" label="Support thread IDs" optional description="Separate them with commas." error={errors.supportThreadIds}>

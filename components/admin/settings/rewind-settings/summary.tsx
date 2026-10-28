@@ -52,7 +52,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 
 /**
  * The Rewind section's saved settings in view mode, grouped as the form is
- * (Availability, Season, AI copy, Sharing, Content, Notifications), each
+ * (Availability, Season, AI text, Sharing, Content, Notifications), each
  * group an `h3` over a `SettingsSummary` (GOV.UK "Summary list").
  *
  * ## Decoding
@@ -97,12 +97,12 @@ export function RewindSettingsSummary({ saved, zone, llmDisabled, discordBotOn, 
         </SettingsSummaryRow>
       </Group>
 
-      <Group title="AI copy">
+      <Group title="AI text">
         <SettingsSummaryRow label="LLM mode" data-testid={row("llm-mode")}>
-          <WithNote note={llmDisabled && "AI features are off, so Rewind uses template copy."}>{labelOf(LLM_MODES, saved.rewindLlmMode)}</WithNote>
+          <WithNote note={llmDisabled && "AI features are off. Rewind uses template text."}>{labelOf(LLM_MODES, saved.rewindLlmMode)}</WithNote>
         </SettingsSummaryRow>
         <SettingsSummaryRow label="Season budget" data-testid={row("budget")}>
-          <WithNote note={`Spent so far this season: ${spent}.`}>{budget}</WithNote>
+          <WithNote note={`Spent this season: ${spent}.`}>{budget}</WithNote>
         </SettingsSummaryRow>
       </Group>
 
@@ -132,7 +132,7 @@ export function RewindSettingsSummary({ saved, zone, llmDisabled, discordBotOn, 
           {list(saved.rewindExcludedContentRatings, "None")}
         </SettingsSummaryRow>
         <SettingsSummaryRow label="Disabled pages" data-testid={row("pages")}>
-          {list(pages, "None, every page is included")}
+          {list(pages, "None. All pages show.")}
         </SettingsSummaryRow>
         <SettingsSummaryRow label="Features added in December" wide data-testid={row("features")}>
           {features.length > 0 ? (
@@ -149,7 +149,7 @@ export function RewindSettingsSummary({ saved, zone, llmDisabled, discordBotOn, 
 
       <Group title="Notifications">
         <SettingsSummaryRow label="Ready notifications" data-testid={row("channels")}>
-          <WithNote note={!discordBotOn && "The Discord bot is off, so no DMs can be sent."}>{list(channels, "None")}</WithNote>
+          <WithNote note={!discordBotOn && "The Discord bot is off. Turn it on to send DMs."}>{list(channels, "None")}</WithNote>
         </SettingsSummaryRow>
       </Group>
     </div>

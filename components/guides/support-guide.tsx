@@ -55,10 +55,10 @@ export function SupportGuide({ discord, linkHref = "/discord/link", instructions
     <div className="flex flex-col gap-4 text-ui text-foreground" data-testid="support-guide">
       <div className="flex flex-col gap-2">
         <p className="text-muted-foreground">
-          Trouble with playback, subtitles or a missing episode? Tell us and we will fix it as soon as we can.
+          Tell us about problems with playback, subtitles or missing episodes.
         </p>
         <p className="text-muted-foreground">
-          Include the title, the episode if it is a show, the device you watch on and what went wrong.
+          Include the title, the episode if it is a show, your device and what went wrong.
         </p>
       </div>
 
@@ -66,7 +66,7 @@ export function SupportGuide({ discord, linkHref = "/discord/link", instructions
         <div className="flex flex-col gap-3 rounded-md border bg-muted p-4" data-testid="support-guide-discord">
           <p>
             {discord.supportChannelUrl
-              ? "The fastest way to get help is the support channel on Discord."
+              ? "For the fastest help, use the support channel on Discord."
               : "Get help and outage news on Discord."}
             {discord.handle && ` You are linked as ${discord.handle}.`}
           </p>

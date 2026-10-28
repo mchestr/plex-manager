@@ -25,8 +25,8 @@ export const AUDIENCES: readonly Option[] = [
 /** The LLM mode choices, shared by the Select and the summary. */
 export const LLM_MODES: readonly Option[] = [
   { value: "standard", label: "Standard" },
-  { value: "economy", label: "Economy (the budget model)" },
-  { value: "off", label: "Off (template copy)" },
+  { value: "economy", label: "Economy (lower-cost model)" },
+  { value: "off", label: "Off (template text)" },
 ]
 
 interface CheckboxFieldProps {

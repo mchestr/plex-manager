@@ -83,14 +83,14 @@ export function McpServerForm({ server, onDone, onCancel, onDirtyChange, onPendi
         <FormField name="mcp-name" label="Name" error={errors.name}>
           <Input value={values.name} onValueChange={(name) => set({ name })} placeholder="Memini" required disabled={form.isPending} data-testid="settings-mcp-name" />
         </FormField>
-        <FormField name="mcp-url" label="MCP URL" description="A Streamable HTTP endpoint" error={errors.url}>
+        <FormField name="mcp-url" label="MCP URL" description="Use a Streamable HTTP endpoint." error={errors.url}>
           <Input value={values.url} onValueChange={(url) => set({ url })} placeholder="https://mcp.example.com/mcp" required disabled={form.isPending} data-testid="settings-mcp-url" />
         </FormField>
-        <FormField name="mcp-header-name" label="Auth header" optional description="For example Authorization" error={errors.authHeaderName}>
+        <FormField name="mcp-header-name" label="Auth header" optional description="For example, Authorization." error={errors.authHeaderName}>
           <Input value={values.authHeaderName} onValueChange={(authHeaderName) => set({ authHeaderName })} placeholder="Authorization" disabled={form.isPending} data-testid="settings-mcp-header-name" />
         </FormField>
         {values.authHeaderName.trim() !== "" && (
-          <FormField name="mcp-header-value" label="Header value" description="For example Bearer followed by a token" error={errors.authHeaderSecret}>
+          <FormField name="mcp-header-value" label="Header value" description="For example, Bearer and then a token." error={errors.authHeaderSecret}>
             <SecretInput
               value={values.authHeaderSecret}
               onValueChange={(authHeaderSecret) => set({ authHeaderSecret })}
@@ -113,7 +113,7 @@ export function McpServerForm({ server, onDone, onCancel, onDirtyChange, onPendi
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-ui font-medium text-foreground">Tools</h3>
-              <p className="text-label text-muted-foreground">Only tools you allow reach the assistant. Allow only the tools you trust it to call.</p>
+              <p className="text-label text-muted-foreground">The assistant can use only the tools that you allow.</p>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={discover} loading={discovering} loadingLabel="Listing" data-testid="settings-mcp-discover">
               List tools
@@ -135,7 +135,7 @@ export function McpServerForm({ server, onDone, onCancel, onDirtyChange, onPendi
                     <span className="truncate font-mono text-ui text-foreground">{tool.name}</span>
                     {tool.description && <span className="truncate text-label text-muted-foreground">{tool.description}</span>}
                   </div>
-                  {tools && <Badge variant={tool.readOnlyHint ? "success" : "warning"}>{tool.readOnlyHint ? "read-only" : "can change data"}</Badge>}
+                  {tools && <Badge variant={tool.readOnlyHint ? "success" : "warning"}>{tool.readOnlyHint ? "Read-only" : "Can change data"}</Badge>}
                 </li>
               ))}
             </ul>

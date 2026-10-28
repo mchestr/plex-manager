@@ -12,7 +12,7 @@ const STEPS: Record<AuthService, { app: string; steps: string[] }> = {
     app: "Plex",
     steps: [
       "Open Settings in the Plex app on your device.",
-      "Go to Video, or Quality on some apps.",
+      "Go to Video (Quality on some apps).",
       "Set Remote Streaming (or Internet Streaming) to Maximum or Original.",
       "Turn off Adjust Automatically.",
     ],
@@ -38,8 +38,8 @@ export function PlaybackGuide({ service, serverName }: PlaybackGuideProps) {
   return (
     <div className="flex flex-col gap-3 text-ui text-foreground" data-testid="playback-guide">
       <p className="text-muted-foreground">
-        Some {app} apps limit video to 720p by default. {serverName} then converts the video on the fly, which lowers
-        the quality and can cause buffering.
+        Some {app} apps set video to 720p by default. Then {serverName} must convert the video while you watch. This
+        lowers the quality and can cause buffering.
       </p>
       <ol className="flex list-decimal flex-col gap-2 pl-5" data-testid="playback-guide-steps">
         {steps.map((step) => (
@@ -47,7 +47,7 @@ export function PlaybackGuide({ service, serverName }: PlaybackGuideProps) {
         ))}
       </ol>
       <p className="text-caption text-muted-foreground">
-        The names differ a little between the TV, phone and web apps. Look for the quality or playback settings.
+        The names are a little different on TV, phone and web apps. Look for the quality or playback settings.
       </p>
     </div>
   )

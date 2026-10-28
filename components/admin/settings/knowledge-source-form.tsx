@@ -47,8 +47,8 @@ export function KnowledgeSourceForm({ source, onDone, onCancel, onDirtyChange, o
       }
       setErrors({})
       const { docCount } = result.data
-      if (docCount === null) toast.showError("Saved, but GitHub could not be read. Check the repository, branch and token.")
-      else toast.showSuccess(`Knowledge base saved: ${docCount} documents found`)
+      if (docCount === null) toast.showError("Saved. Could not read the repository on GitHub. Check the repository, branch and token.")
+      else toast.showSuccess(`Knowledge base saved. Found ${docCount} documents.`)
       return { ok: true, keep: { ...current, token: "" } }
     }
   )
@@ -65,10 +65,10 @@ export function KnowledgeSourceForm({ source, onDone, onCancel, onDirtyChange, o
         <FormField name="kb-ref" label="Branch or tag" error={errors.ref}>
           <Input value={values.ref} onValueChange={(ref) => set({ ref })} placeholder="main" required disabled={form.isPending} data-testid="settings-knowledge-ref" />
         </FormField>
-        <FormField name="kb-path" label="Folder" optional description="Only Markdown files under it. Leave empty for the whole repository." error={errors.path}>
+        <FormField name="kb-path" label="Folder" optional description="The assistant uses only the Markdown files in this folder. Leave empty to use all of the repository." error={errors.path}>
           <Input value={values.path} onValueChange={(path) => set({ path })} placeholder="docs" disabled={form.isPending} data-testid="settings-knowledge-path" />
         </FormField>
-        <FormField name="kb-token" label="GitHub token" optional description="Only for a private repository. Sent to api.github.com only.">
+        <FormField name="kb-token" label="GitHub token" optional description="Needed only for a private repository. The app sends it only to api.github.com.">
           <SecretInput value={values.token} onValueChange={(token) => set({ token })} saved={source?.token} noun="token" disabled={form.isPending} data-testid="settings-knowledge-token" />
         </FormField>
         <div className="flex items-center gap-2">
@@ -85,7 +85,7 @@ export function KnowledgeSourceForm({ source, onDone, onCancel, onDirtyChange, o
             </Button>
           }
           title={`Remove ${source.name}?`}
-          description="The assistant stops searching it. The repository is not touched."
+          description="The assistant stops searching it. The repository does not change."
           confirmLabel="Remove"
           pendingLabel="Removing"
           tone="destructive"
