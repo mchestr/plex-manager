@@ -74,11 +74,11 @@ function ValidMain({ code, serverType, serverName, inviter, libraries, preview }
       </h1>
       <p className="mt-2.5 max-w-[46ch] text-body text-muted-foreground">
         {plex
-          ? "Accept to watch its libraries, request titles and get your own Rewind every December."
-          : "Choose a username and password to watch its libraries and request titles."}
+          ? "Accept the invite to watch its libraries and request titles."
+          : "Choose a username and password for your new Jellyfin account."}
       </p>
       {libraries.length > 0 && (
-        <ul aria-label="Libraries this invite gives you" className="mt-4 flex flex-wrap gap-1.5" data-testid="invite-pass-libraries">
+        <ul aria-label="Libraries in this invite" className="mt-4 flex flex-wrap gap-1.5" data-testid="invite-pass-libraries">
           {libraries.map((library) => (
             <li key={library}>
               <Badge variant="neutral">{library}</Badge>
@@ -141,7 +141,7 @@ function InviteStub({ state, code, serverType, monogram, usesLeft, expiresOn, vo
       <div className="flex items-center gap-2.5">
         <Monogram letter={monogram} size="sm" />
         <span className="text-caption text-muted-foreground">
-          Good for one {serverType === "JELLYFIN" ? "Jellyfin" : "Plex"} account
+          For one {serverType === "JELLYFIN" ? "Jellyfin" : "Plex"} account
         </span>
       </div>
     </PassStub>

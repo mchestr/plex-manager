@@ -45,7 +45,7 @@ export function DataItemList({ items, empty, "data-testid": testId }: DataItemLi
               </Button>
             }
             title={`Forget ${item.title}?`}
-            description="It leaves your watchlist history. If it is still on your Plex watchlist, the next sync can request it again."
+            description="This removes it from your watchlist history. If it is still on your Plex watchlist, the next sync can request it again."
             confirmLabel="Forget"
             pendingLabel="Forgetting"
             tone="destructive"

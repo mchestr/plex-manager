@@ -53,7 +53,7 @@ function EntitledScreen({ billing }: { billing: boolean }) {
       <StatusScreen
         icon={icons.success}
         title="You already have access"
-        description="Your account is on the server, so there is nothing to buy."
+        description="Your account is on the server. You do not need to subscribe."
         primaryAction={
           billing ? (
             <Button size="lg" nativeButton={false} render={<Link href="/membership" />} data-testid="subscribe-manage-billing">
@@ -77,8 +77,8 @@ function UnavailableScreen({ inviteCode }: { inviteCode: string | null }) {
         title="Subscriptions aren't open right now"
         description={
           inviteCode
-            ? "There is no plan to join yet. Ask the server owner on Discord when they open."
-            : "There is no plan to join yet. Ask the server owner when they open."
+            ? "Ask the server owner on Discord when subscriptions open."
+            : "Ask the server owner when subscriptions open."
         }
         primaryAction={
           inviteCode ? (
@@ -145,7 +145,7 @@ export default async function SubscribePage() {
         </div>
         {accessLevel === "lapsed" && (
           <Alert tone="info" data-testid="subscribe-lapsed-note">
-            Your finished Rewinds stay readable while you&apos;re away.
+            You can still read your finished Rewinds.
           </Alert>
         )}
         <PlanList plans={plans} />

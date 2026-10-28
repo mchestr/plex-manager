@@ -107,7 +107,7 @@ test.describe('Home: New on row', () => {
     const link = page.getByTestId('home-new-on-item-90201');
     await expect(link).toHaveAttribute('href', /^https:\/\/app\.plex\.tv\/desktop\/#!\/server\/[A-Za-z0-9-]+\/details\?key=%2Flibrary%2Fmetadata%2F90201$/);
     await expect(link).toHaveAttribute('target', '_blank');
-    await expect(link).toContainText('Series, season 1');
+    await expect(link).toContainText('Show, season 1');
     await expect(page.getByTestId('home-new-on-browse')).toHaveAttribute('rel', 'noopener noreferrer');
 
     // the row scrolls inside itself: the page never scrolls sideways

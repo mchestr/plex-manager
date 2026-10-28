@@ -40,7 +40,7 @@ export default async function AnnouncementsPage() {
               kind="first-use"
               icon={icons.announcements}
               title="No announcements yet"
-              description="News from the server shows here when it is posted."
+              description="Announcements from the server owner show here."
               data-testid="announcements-empty"
             />
           </Card>

@@ -40,10 +40,10 @@ interface Step {
 
 function stepsFor({ plexAccount, connection, isOnServer }: DiscordLinkChecklistProps): Step[] {
   const roleDone = Boolean(connection?.metadataSyncedAt) && isOnServer !== false
-  let roleDetail = "Given automatically once you link"
+  let roleDetail = "You get it when you link Discord"
   if (roleDone) roleDetail = "You have the Member role"
-  else if (connection && isOnServer === false) roleDetail = "Join the server to get it"
-  else if (connection) roleDetail = "Not synced yet. Resync to try again."
+  else if (connection && isOnServer === false) roleDetail = "Join the Discord server to get it"
+  else if (connection) roleDetail = "Not synced. Resync the role to try again."
 
   return [
     {
@@ -121,7 +121,7 @@ export function DiscordLinkChecklist(props: DiscordLinkChecklistProps) {
           <div className="flex flex-col gap-1">
             <h2 className="text-h3 text-foreground">Linking is not available yet</h2>
             <p className="text-ui text-muted-foreground">
-              The server owner needs to finish setting up Discord before you can link your account.
+              The server owner has not finished the Discord setup.
             </p>
           </div>
           {serverInviteCode && <JoinButton inviteCode={serverInviteCode} serverName={serverName} primary={false} />}
@@ -208,7 +208,7 @@ export function DiscordLinkChecklist(props: DiscordLinkChecklistProps) {
       </div>
 
       <p className="text-label text-muted-foreground" data-testid="discord-link-privacy">
-        We keep your Discord ID and name to give you the member role. Unlink any time.
+        We keep your Discord ID and name to give you the Member role. You can unlink at any time.
       </p>
     </div>
   )

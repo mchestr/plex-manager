@@ -128,7 +128,7 @@ describe('PlexCallbackPageClient', () => {
 
     expect(await screen.findByTestId('plex-callback-error-plex_unavailable')).toBeInTheDocument()
     expect(screen.getByTestId('plex-callback-error-heading')).toHaveTextContent('Plex is temporarily unavailable')
-    expect(screen.getByText('Plex is temporarily unavailable. Try again in a minute.')).toBeInTheDocument()
+    expect(screen.getByText('Plex did not answer. Try again in a minute.')).toBeInTheDocument()
     expect(screen.getByTestId('plex-callback-retry')).toBeInTheDocument()
     expect(mockPush).not.toHaveBeenCalledWith('/auth/denied')
   })

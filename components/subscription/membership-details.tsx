@@ -32,9 +32,9 @@ function periodLine(subscription: MembershipSubscription, f: Format): string {
       return "Waiting for the first payment"
     default:
       if (subscription.cancelAtPeriodEnd) {
-        return end ? `Ends ${f.date(end, "long")}` : "Ends at the end of the current period"
+        return end ? `Ends ${f.date(end, "long")}` : "Ends when the current period ends"
       }
-      return end ? `Renews ${f.date(end, "long")}` : "Renews at the end of the current period"
+      return end ? `Renews ${f.date(end, "long")}` : "Renews when the current period ends"
   }
 }
 
@@ -59,7 +59,7 @@ export function MembershipDetails({ membership, settings }: MembershipDetailsPro
         <CardHeader>
           <CardTitle as="h2">{exemption ? "Your access" : "No membership yet"}</CardTitle>
           <CardDescription>
-            {exemption === "exempt" && "You are exempt from membership. There is nothing to pay."}
+            {exemption === "exempt" && "You do not need to pay for membership."}
             {exemption === "notRequired" && "Your account does not need a membership."}
             {!exemption && "Subscribe to keep watching."}
           </CardDescription>
