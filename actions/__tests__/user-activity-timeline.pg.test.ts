@@ -16,7 +16,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 
 import { getUserActivityTimeline } from '@/actions/user-queries'
 import { PrismaClient } from '@/lib/generated/prisma/client'
-import { describePg } from '@/test/helpers/integration'
+import { describePg } from '@/__tests__/helpers/integration'
 
 let mockDb: PrismaClient
 jest.mock('@/lib/prisma', () => ({

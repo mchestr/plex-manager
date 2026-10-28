@@ -89,7 +89,7 @@ COPY --from=prisma-cli /opt/prisma-cli /opt/prisma-cli
 # `node scripts/dist/register-discord-commands.cjs` (and -metadata.cjs)
 COPY --from=builder /app/scripts/dist ./scripts/dist
 
-COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --chmod=755 docker/entrypoint.sh ./docker-entrypoint.sh
 
 # The one writable path: Next's own cache (images, data cache) and Rewind's.
 RUN mkdir -p .next/cache/rewind && \

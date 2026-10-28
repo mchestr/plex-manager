@@ -52,7 +52,7 @@ describe("checkChangelog", () => {
     expect(result).toEqual({ ok: true, message: expect.stringContaining("no-changelog") })
   })
 
-  it.each(["lib/env.ts", "docker-entrypoint.sh", "Dockerfile", "deploy/docker-compose.yml"])("needs an entry for %s", (file) => {
+  it.each(["lib/env.ts", "docker/entrypoint.sh", "Dockerfile", "deploy/docker-compose.yml"])("needs an entry for %s", (file) => {
     expect(check([file]).ok).toBe(false)
     expect(check([file], { head: withEntry("Changed.") }).ok).toBe(true)
   })

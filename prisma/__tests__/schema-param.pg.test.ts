@@ -17,7 +17,7 @@ import path from "node:path"
 
 import { Client } from "pg"
 
-import { describePg } from "@/test/helpers/integration"
+import { describePg } from "@/__tests__/helpers/integration"
 
 const SCHEMA = "pm_schema_test"
 const ROOT = path.join(__dirname, "..", "..")

@@ -12,15 +12,21 @@ the upgrade notes of every version you skip. `docs/releasing.md` describes how
 a release is cut, and `docs/operations.md` how to back up and restore.
 
 Pull requests add their lines under Unreleased. A pull request that touches
-`prisma/migrations/**`, `lib/env.ts`, `docker-entrypoint.sh`, `Dockerfile` or
+`prisma/migrations/**`, `lib/env.ts`, `docker/entrypoint.sh`, `Dockerfile` or
 `deploy/**`, or carries the `breaking` label, must add one (the Changelog
 check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Changed
+
+- **Entrypoint in `docker/`:** the image's entrypoint script moved from `docker-entrypoint.sh` to `docker/entrypoint.sh` in the repository. The image still runs it as `/app/docker-entrypoint.sh`, so a custom `entrypoint:` keeps working.
+- **Repository root:** the Renovate config moved to `.github/renovate.json` and the integration-test helper to `__tests__/helpers/integration.ts`. `.mise.toml` now pins only Node.js; its tasks repeated the npm scripts, and `mise run setup` still used `db:push`.
+
 ### Removed
 
 - The planning documents under `.agents/planning/` (about 12 MB of plans, mockups and fonts). Git history keeps them.
+- The finished one-off codemods and their npm scripts: `codemod:spinners`, `codemod:icons` and `codemod:adapters`, and the barrel-import and framer-motion codemods. `codemod:tokens` stays.
 
 ## [0.6.0] - 2026-10-28
 

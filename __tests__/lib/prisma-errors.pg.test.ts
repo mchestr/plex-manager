@@ -8,7 +8,7 @@
  * catches a Prisma or adapter upgrade that moves it (the Plex sign-in and
  * invite retries would otherwise stop firing without notice).
  *
- * Gated by `describePg` (test/helpers/integration.ts) and run only by
+ * Gated by `describePg` (__tests__/helpers/integration.ts) and run only by
  * `npm run test:integration`. The database needs the app's migrations applied. The
  * suite only touches `User` rows whose id starts with its own run prefix.
  *
@@ -20,7 +20,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 
 import { PrismaClient } from '@/lib/generated/prisma/client'
 import { isUniqueEmailConflict } from '@/lib/prisma-errors'
-import { describePg } from '@/test/helpers/integration'
+import { describePg } from '@/__tests__/helpers/integration'
 
 const RUN = `p05-${randomUUID()}`
 

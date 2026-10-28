@@ -18,7 +18,7 @@ import path from "node:path"
 import { PrismaPg } from "@prisma/adapter-pg"
 
 import { PrismaClient } from "@/lib/generated/prisma/client"
-import { describePg } from "@/test/helpers/integration"
+import { describePg } from "@/__tests__/helpers/integration"
 
 const MIGRATION = path.join(
   __dirname,

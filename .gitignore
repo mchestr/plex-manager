@@ -37,15 +37,11 @@ yarn-error.log*
 next-env.d.ts
 
 .swc/
-prisma/dev.db
-prisma/dev.db-journal
 
 # Generated Prisma client (Prisma v7+)
 /lib/generated/prisma/
-# Docker volume for ./data (docker-compose.yml); anchored so lib/wrapped/data/ is tracked
+# Local data folder; anchored so lib/wrapped/data/ is tracked
 /data/
-test.db
-test.db-journal
 test-results/
 playwright-report/
 
@@ -54,9 +50,6 @@ playwright-report/
 
 # Token codemod review list (scripts/codemods/tokens.ts, P10.13)
 /codemod-review.md
-# Spinner and icon codemod review lists (scripts/codemods/{spinners,icons}.ts, P10.15)
-/codemod-spinners-review.md
-/codemod-icons-review.md
 
 # Bundled Discord scripts (npm run build:discord-scripts, P11.7); the image builds its own
 /scripts/dist/

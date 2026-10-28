@@ -29,7 +29,7 @@ import { processRewindGenerateAll } from '@/lib/queue/jobs/rewind-season'
 import { acquireGenerationLock } from '@/lib/locks/generation-lock'
 import { JOB_TYPES, type RewindGenerateAllPayload, type RewindGenerateUserPayload } from '@/lib/queue/types'
 import { generateUserRewind } from '@/lib/wrapped/pipeline/generate-user'
-import { describeRedis } from '@/test/helpers/integration'
+import { describeRedis } from '@/__tests__/helpers/integration'
 
 const mockQueues: { gen: Queue | null; batch: Queue | null; redis: Redis | null } = { gen: null, batch: null, redis: null }
 

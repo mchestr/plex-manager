@@ -10,7 +10,7 @@ const createJestConfig = nextJest({
 // whole tables, so they must run one at a time and apart from the other suites.
 // `npm run test:integration` sets JEST_INTEGRATION=1, which stops ignoring them,
 // and selects only them in a serial run; every other run leaves them out. See
-// test/helpers/integration.ts for how a missing variable is handled.
+// __tests__/helpers/integration.ts for how a missing variable is handled.
 const integrationRun = process.env.JEST_INTEGRATION === '1'
 
 // Coverage floors that only rise: `node scripts/coverage-ratchet.mjs --update`

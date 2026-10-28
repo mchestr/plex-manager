@@ -20,7 +20,7 @@ import { encryptionQuery } from "@/lib/db/encryption-extension"
 import { PrismaClient } from "@/lib/generated/prisma/client"
 import { kidOf } from "@/lib/security/crypto"
 import { reencryptSecrets } from "@/lib/security/reencrypt"
-import { describePg } from "@/test/helpers/integration"
+import { describePg } from "@/__tests__/helpers/integration"
 
 const createClient = (databaseUrl: string) =>
   new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) }).$extends({

@@ -40,10 +40,6 @@ README.md
 *.swo
 *~
 
-# Prisma
-prisma/dev.db
-prisma/dev.db-journal
-
 # Build artifacts
 build
 dist

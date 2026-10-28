@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * docker-entrypoint.sh logs pending migrations, applies them unless
+ * docker/entrypoint.sh logs pending migrations, applies them unless
  * SKIP_MIGRATIONS=true, and never starts the app after a failed deploy
  * (GAP-14, P1.10). A stub PRISMA_BIN records each call instead of running
  * Prisma, and the same stub stands in for the app command.
@@ -12,7 +12,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-const ENTRYPOINT = path.resolve(__dirname, '../../docker-entrypoint.sh')
+const ENTRYPOINT = path.resolve(__dirname, '../../docker/entrypoint.sh')
 
 // Appends its arguments to $STUB_LOG, and exits 1 when they match $STUB_FAIL.
 const STUB = `#!/bin/sh
@@ -45,7 +45,7 @@ function run(env: Record<string, string> = {}) {
   return { status: result.status, stdout: result.stdout, calls }
 }
 
-describe('docker-entrypoint.sh', () => {
+describe('docker/entrypoint.sh', () => {
   it('checks status, deploys, then starts the app by default', () => {
     const { status, calls } = run()
 

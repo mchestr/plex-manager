@@ -8,7 +8,7 @@
  * relation (P4.5, SEC-28). It must select the same users `isAccessAllowed`
  * allows.
  *
- * Gated by `describePg` (test/helpers/integration.ts) and run only by
+ * Gated by `describePg` (__tests__/helpers/integration.ts) and run only by
  * `npm run test:integration`. The suite only touches rows whose user id
  * starts with its own run prefix.
  */
@@ -18,7 +18,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 
 import { entitledUserWhere } from '@/lib/access'
 import { PrismaClient, type SubscriptionStatus } from '@/lib/generated/prisma/client'
-import { describePg } from '@/test/helpers/integration'
+import { describePg } from '@/__tests__/helpers/integration'
 
 // lib/access imports the app's client; this suite queries through its own.
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))

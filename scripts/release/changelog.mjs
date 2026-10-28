@@ -26,7 +26,7 @@ const REPO_URL = 'https://github.com/mchestr/plex-manager'
 export const WATCHED_PATHS = [
   /^prisma\/migrations\//,
   /^lib\/env\.ts$/,
-  /^docker-entrypoint\.sh$/,
+  /^docker\/entrypoint\.sh$/,
   /^Dockerfile$/,
   /^deploy\//,
 ]

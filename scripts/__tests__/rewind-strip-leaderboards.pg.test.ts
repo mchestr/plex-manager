@@ -5,7 +5,7 @@
 /**
  * The roster clean-up CLI against a real PostgreSQL database (P0.20).
  *
- * Gated by `describePg` (test/helpers/integration.ts) and run only by
+ * Gated by `describePg` (__tests__/helpers/integration.ts) and run only by
  * `npm run test:integration`. The suite empties the PlexWrapped, LLMUsage,
  * ChatConversation and WrappedShareVisit tables of that database and asserts
  * whole-table counts, because the script scans every row, so it must not run
@@ -22,7 +22,7 @@ import { maskDatabaseUrl } from "@/lib/security/test-mode"
 import { buildLeaderboards, buildStatistics, LEADERBOARD_MEMBER_EMAIL } from "@/lib/wrapped/__tests__/fixtures"
 import { toShareSafeV2 } from "@/lib/wrapped/data/share-safe-v2"
 import { main } from "@/scripts/rewind-strip-leaderboards"
-import { describePg } from "@/test/helpers/integration"
+import { describePg } from "@/__tests__/helpers/integration"
 
 const ID = "p020"
 const OWNER_EMAIL = "mike@example.com"

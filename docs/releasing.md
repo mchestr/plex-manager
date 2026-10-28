@@ -28,7 +28,7 @@ must do under `### Upgrade notes`. That block always starts with "Take a
 
 The **Changelog** check (`.github/workflows/changelog.yml`, rules in
 `scripts/release/changelog.mjs`) fails a pull request that touches
-`prisma/migrations/**`, `lib/env.ts`, `docker-entrypoint.sh`, `Dockerfile` or
+`prisma/migrations/**`, `lib/env.ts`, `docker/entrypoint.sh`, `Dockerfile` or
 `deploy/**`, or carries the `breaking` label, and adds no line under
 Unreleased. The `no-changelog` label skips it. Run it locally with
 `node scripts/check-changelog.mjs --base origin/main --head HEAD`.

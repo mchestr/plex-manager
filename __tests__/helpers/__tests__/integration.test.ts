@@ -7,7 +7,7 @@ import {
   describeRedis,
   resolveTestDatabaseUrl,
   resolveTestRedisUrl,
-} from "@/test/helpers/integration"
+} from "@/__tests__/helpers/integration"
 
 const TEST_URL = "postgresql://postgres:postgres@localhost:5432/plex_manager_test"
 const REDIS_URL = "redis://localhost:6379/0"
