@@ -61,7 +61,7 @@ function WhoLed({ data, strip, winner }: { data: RaceData; strip: LeadSegment[];
         </span>
         <span className="flex items-center" style={{ gap: u(4) }}>
           <span className="inline-block border-[1.5px] border-current" style={{ width: u(12), height: u(8) }} />
-          another series
+          another show
         </span>
       </p>
     </div>

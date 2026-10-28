@@ -60,7 +60,7 @@ describe("WatchlistTable", () => {
 
     const severance = screen.getByTestId("admin-watchlist-row-h1")
     expect(severance).toHaveTextContent("Severance (2022)")
-    expect(severance).toHaveTextContent("Series")
+    expect(severance).toHaveTextContent("Show")
     expect(within(severance).getByRole("link", { name: "Ana Lima" })).toHaveAttribute("href", "/admin/users/u1")
     expect(severance).toHaveTextContent("Requested")
     expect(severance).toHaveTextContent("Oct 20, 2026")
@@ -73,7 +73,7 @@ describe("WatchlistTable", () => {
     const arrival = screen.getByTestId("admin-watchlist-row-h2")
     expect(arrival).toHaveTextContent("Arrival")
     expect(arrival).not.toHaveTextContent("(")
-    expect(arrival).toHaveTextContent("Film")
+    expect(arrival).toHaveTextContent("Movie")
     expect(within(arrival).getByTestId("admin-watchlist-member-h2")).toHaveTextContent("sam@example.com")
     expect(arrival).toHaveTextContent("Not allowed")
     expect(arrival).toHaveTextContent("—")
@@ -128,7 +128,7 @@ describe("WatchlistTable", () => {
     await user.click(await screen.findByTestId("admin-watchlist-filters-filter-type-option-movie"))
 
     expect(currentHref()).toBe("/admin/watchlist?type=movie")
-    expect(await screen.findByTestId("admin-watchlist-filters-chip-type")).toHaveTextContent("Type: Film")
+    expect(await screen.findByTestId("admin-watchlist-filters-chip-type")).toHaveTextContent("Type: Movie")
   })
 
   it("shows the first-use empty state, naming the global switch while it is off", () => {

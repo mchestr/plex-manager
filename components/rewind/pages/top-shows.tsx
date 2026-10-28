@@ -171,7 +171,7 @@ export function TopShowsPage({ data, issue }: PageProps<TopShowsData>) {
               {shown(facts, seriesFact(0, "minutes"))}
             </p>
             <p style={{ fontSize: u(15.5), lineHeight: 1.25, marginTop: tight(5) }}>
-              your most-watched series, {shown(facts, seriesFact(0, "episodes"))} {pluralWord(num(facts, seriesFact(0, "episodes")), EPISODES, { locale })}
+              your most-watched show, {shown(facts, seriesFact(0, "episodes"))} {pluralWord(num(facts, seriesFact(0, "episodes")), EPISODES, { locale })}
               {seasons > 1 && ` across ${shown(facts, seriesFact(0, "seasons"))} ${pluralWord(seasons, SEASONS, { locale })}`}
             </p>
             {night >= 2 && (

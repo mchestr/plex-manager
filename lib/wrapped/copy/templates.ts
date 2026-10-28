@@ -239,10 +239,10 @@ function raceHeadline(f: RewindFactsV3): string {
 }
 
 const HEADLINES: Readonly<Record<IssuePageType, (facts: RewindFactsV3) => string>> = {
-  cover: (f) => (f["member.firstName"] ? `${t("member.firstName")}'s year in film and television` : "Your year in film and television"),
+  cover: (f) => (f["member.firstName"] ? `${t("member.firstName")}'s year in movies and shows` : "Your year in movies and shows"),
   number: () => "This year you pressed play for",
   bookends: () => `You opened ${t("copy.year")} with ${t("copy.firstTitle")}`,
-  guess: () => "Which series did you watch most this year?",
+  guess: () => "Which show did you watch most this year?",
   "top-shows": () => "The shows you kept coming back to",
   "top-films": () => "Your double features",
   taste: (f) => {
@@ -350,5 +350,5 @@ export function coverLines(selected: ReadonlyArray<{ type: PageType; folio: numb
  */
 export function titleFreeHeadline(page: IssuePageType): string {
   const line = COVER_LINES.find(([type]) => type === page)?.[1]
-  return line ?? (page === "cover" ? "A year in film and television" : "That was the year")
+  return line ?? (page === "cover" ? "A year in movies and shows" : "That was the year")
 }

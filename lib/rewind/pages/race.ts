@@ -65,7 +65,7 @@ function raceSummary(data: RaceData): string {
 
 function raceTable(data: RaceData, settings: { locale: string }): PageTable {
   return {
-    caption: "Minutes watched of your top series, added up month by month.",
+    caption: "Minutes watched of your top shows, added up month by month.",
     columns: ["Month", ...data.series.map((s) => s.title)],
     rows: data.frames.map((frame, m) => [
       frameMonth(data, m, settings.locale),

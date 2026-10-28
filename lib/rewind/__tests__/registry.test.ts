@@ -9,7 +9,7 @@ const CATALOGUE = [
   ["03", "Bookends", "paper"],
   ["04", "Guess", "rose"],
   ["05", "Top shows", "paper"],
-  ["06", "Top films", "marigold"],
+  ["06", "Top movies", "marigold"],
   ["07", "Taste", "petrol"],
   ["08", "People", "paper"],
   ["09", "The clock", "forest"],

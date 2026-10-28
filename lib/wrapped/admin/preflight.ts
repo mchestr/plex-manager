@@ -87,7 +87,7 @@ async function optionalRows(): Promise<PreflightRow[]> {
       : { id: "overseerr", label: "Overseerr", status: "notConfigured", detail: "Optional: the Requests page uses it" },
     sonarr > 0
       ? { id: "sonarr", label: "Sonarr", status: "ok", detail: "Set up" }
-      : { id: "sonarr", label: "Sonarr", status: "notConfigured", detail: "Optional: Next year's series picks use it" },
+      : { id: "sonarr", label: "Sonarr", status: "notConfigured", detail: "Optional: Next year's show picks use it" },
   ]
 }
 

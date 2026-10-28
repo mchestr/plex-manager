@@ -34,9 +34,9 @@ describe("02 The number", () => {
     renderNumber(issues.heavy)
     // the halftone duplicate of the numeral is aria-hidden
     expect(screen.getByRole("heading", { level: 2 })).toHaveAccessibleName("This year you pressed play for 1,307 hours")
-    expect(screen.getByTestId("rewind-number-split")).toHaveTextContent("Series 872 h, 67%")
-    expect(screen.getByTestId("rewind-number-split")).toHaveTextContent("Films 435 h, 33%")
-    for (const text of ["586", "31", "112", "episodes", "films"]) expect(screen.getAllByText(text).length).toBeGreaterThan(0)
+    expect(screen.getByTestId("rewind-number-split")).toHaveTextContent("Shows 872 h, 67%")
+    expect(screen.getByTestId("rewind-number-split")).toHaveTextContent("Movies 435 h, 33%")
+    for (const text of ["586", "31", "112", "episodes", "movies"]) expect(screen.getAllByText(text).length).toBeGreaterThan(0)
     expect(screen.getByText("The road to 1,307")).toBeInTheDocument()
   })
 
@@ -67,8 +67,8 @@ describe("02 The number", () => {
   it("hides the split bar and the zero count when there are no films", () => {
     renderNumber(issues["zero-films"])
     expect(screen.queryByTestId("rewind-number-split")).not.toBeInTheDocument()
-    expect(screen.queryByText("films")).not.toBeInTheDocument()
-    expect(document.body).not.toHaveTextContent(/\b0 films?\b/)
+    expect(screen.queryByText("movies")).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent(/\b0 movies?\b/)
   })
 
   it("tabulates watch time by month with the milestones", () => {

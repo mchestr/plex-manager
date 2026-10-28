@@ -59,7 +59,7 @@ export function PopoverSpecimen() {
           <PopoverContent>
             <PopoverTitle>What counts as a play</PopoverTitle>
             <PopoverDescription>
-              Tautulli logs a play once someone watches more than half of an episode or film.
+              Tautulli logs a play once someone watches more than half of an episode or movie.
             </PopoverDescription>
           </PopoverContent>
         </Popover>

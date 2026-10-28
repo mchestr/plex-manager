@@ -82,10 +82,10 @@ export function TopFilmsPage({ data, issue }: PageProps<TopFilmsData>) {
             <p style={{ fontSize: u(15), marginTop: u(4) }}>
               {plays >= 2 ? (
                 <>
-                  your most-played film, <Rewatch facts={facts} i={0} />
+                  your most-played movie, <Rewatch facts={facts} i={0} />
                 </>
               ) : (
-                "your most-played film"
+                "your most-played movie"
               )}
             </p>
           </div>

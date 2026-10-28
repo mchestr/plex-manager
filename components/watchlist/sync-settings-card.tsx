@@ -194,7 +194,7 @@ export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCar
                     <span className="flex min-w-0 flex-col">
                       <span className="truncate text-ui font-medium text-foreground">{item.title}</span>
                       <span className="text-caption text-muted-foreground">
-                        {item.mediaType === "MOVIE" ? "Film" : "Series"}
+                        {item.mediaType === "MOVIE" ? "Movie" : "Show"}
                         {item.year ? `, ${item.year}` : ""}
                       </span>
                     </span>

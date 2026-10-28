@@ -24,8 +24,8 @@ const DAY_MS = 86_400_000
 /** The counts row under the split, in order. */
 export const NUMBER_COUNTS: ReadonlyArray<[FactId, { one: string; other: string }]> = [
   ["counts.episodes", { one: "episode", other: "episodes" }],
-  ["counts.series", { one: "series", other: "series" }],
-  ["counts.films", { one: "film", other: "films" }],
+  ["counts.series", { one: "show", other: "shows" }],
+  ["counts.films", { one: "movie", other: "movies" }],
 ]
 
 /** "872 h, 67%", or "4%" under an hour: one side of the series and films split. */
@@ -75,10 +75,10 @@ function numberArticle(data: NumberData, facts: RewindFactsV3, ctx: ArticleConte
     ? [
         {
           kind: "definitionList",
-          label: "Series and films",
+          label: "Shows and movies",
           entries: [
-            { term: "Series", detail: plain(splitShare(facts, "series")) },
-            { term: "Films", detail: plain(splitShare(facts, "films")) },
+            { term: "Shows", detail: plain(splitShare(facts, "series")) },
+            { term: "Movies", detail: plain(splitShare(facts, "films")) },
           ],
         },
       ]
@@ -123,9 +123,9 @@ export const numberPage: PageDefinition<NumberData> = {
   },
   schema: NumberDataSchema,
   srSummary: (data, facts) => {
-    const parts = [`${heroText(data, facts)} of film and television`]
+    const parts = [`${heroText(data, facts)} of movies and shows`]
     if (has(facts, "time.seriesHours") && has(facts, "time.filmsHours")) {
-      parts.push(`${shown(facts, "time.seriesHours")} hours of series and ${shown(facts, "time.filmsHours")} hours of films`)
+      parts.push(`${shown(facts, "time.seriesHours")} hours of shows and ${shown(facts, "time.filmsHours")} hours of movies`)
     }
     const marks = milestoneFacts(facts).map((m) => `${m.hours} hours on ${m.date}`)
     if (marks.length > 0) parts.push(`passing ${marks.join(", ")}`)

@@ -40,7 +40,7 @@ describe("billingBlock", () => {
     const text = lines.map((line) => flat(line.parts.map((p) => p.text).join(" ")))
     expect(text[0]).toBe("CHESTER FAMILY PLEX presents MIKE")
     expect(text[1]).toMatch(/^in [\d,]+ HOURS of [\d,]+ EPISODES$/)
-    expect(text[2]).toMatch(/^and [\d,]+ FILMS featuring$/)
+    expect(text[2]).toMatch(/^and [\d,]+ MOVIES featuring$/)
     expect(text[3]).toBe(issues.heavy.facts["series[1].title"]!.display.toUpperCase())
     expect(text.at(-1)).toBe(`and introducing ${issues.heavy.facts["archetype.name"]!.display.toUpperCase()}`)
     expect(entries.find((e) => e.term === "Starring")?.detail).toBe("Mike")

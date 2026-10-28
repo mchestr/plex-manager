@@ -63,7 +63,7 @@ export const pageMeta = {
   bookends: meta("bookends", { name: "Bookends", act: "front", field: "paper", altField: null, core: true, pocket: false, dwell: 7000 }),
   guess: meta("guess", { name: "Guess", act: "features", field: "rose", altField: "lilac", core: true, pocket: false, dwell: "hold" }),
   "top-shows": meta("top-shows", { name: "Top shows", act: "features", field: "paper", altField: null, core: true, pocket: "short-list", dwell: 9000 }),
-  "top-films": meta("top-films", { name: "Top films", act: "features", field: "marigold", altField: "sky", core: true, pocket: "short-list", dwell: 8000 }),
+  "top-films": meta("top-films", { name: "Top movies", act: "features", field: "marigold", altField: "sky", core: true, pocket: "short-list", dwell: 8000 }),
   taste: meta("taste", { name: "Taste", act: "features", field: "petrol", altField: "oxblood", core: false, pocket: false, dwell: 8000 }),
   people: meta("people", { name: "People", act: "features", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }),
   clock: meta("clock", { name: "The clock", act: "habits", field: "forest", altField: "ultramarine", core: true, pocket: "clock-or-calendar", dwell: 8000 }),

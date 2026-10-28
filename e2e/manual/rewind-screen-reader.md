@@ -40,7 +40,7 @@ Swipe right or left moves between elements; double-tap activates; the rotor
    (for example "Top shows, heading level 2"), and nothing from the live
    region on these turns.
 5. **Automatic turns.** Leave autoplay running with focus on a heading for
-   two turns. Expect "Page 6 of N: Top films" (the live region) read once per
+   two turns. Expect "Page 6 of N: Top movies" (the live region) read once per
    turn, and focus to stay where it was.
 6. **Pause.** Swipe to Pause, double-tap. Expect "Pause, button" before and
    the playing state to stop; no further turns.

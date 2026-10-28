@@ -106,13 +106,13 @@ export function legacyToArticle(legacy: StoredWrappedData, { year, brand, locale
     kind: "factRow",
     items: [
       { value: formatHero(s.totalWatchTime.total, settings), label: `${words(s.totalWatchTime.total, "minute", "minutes")} watched` },
-      { value: formatHero(s.moviesWatched, settings), label: words(s.moviesWatched, "film", "films") },
-      { value: formatHero(s.showsWatched, settings), label: words(s.showsWatched, "series", "series") },
+      { value: formatHero(s.moviesWatched, settings), label: words(s.moviesWatched, "movie", "movies") },
+      { value: formatHero(s.showsWatched, settings), label: words(s.showsWatched, "show", "shows") },
       { value: formatHero(s.episodesWatched, settings), label: words(s.episodesWatched, "episode", "episodes") },
     ],
   })
   const films = ranked(s.topMovies, (m) => formatRewindDuration(m.watchTime, settings))
-  if (films.length) add("films", { kind: "rankedList", label: "Your most watched films", items: films })
+  if (films.length) add("films", { kind: "rankedList", label: "Your most watched movies", items: films })
   const shows = ranked(s.topShows, (t) => formatCount(t.episodesWatched, { one: "episode", other: "episodes" }, settings))
   if (shows.length) add("shows", { kind: "rankedList", label: "Your most watched shows", items: shows })
 
@@ -167,7 +167,7 @@ export function legacyToArticle(legacy: StoredWrappedData, { year, brand, locale
 
   const names: Record<SectionId, string> = {
     numbers: "The year in numbers",
-    films: "Top films",
+    films: "Top movies",
     shows: "Top shows",
     archetype: "Your archetype",
     habits: "Watching habits",

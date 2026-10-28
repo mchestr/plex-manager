@@ -90,8 +90,8 @@ type CreditOptions = Pick<BillingOptions, "serverName" | "named" | "showtime" | 
 /** Each poster stat as a tail credit: its connector and term. */
 const TAIL_CREDITS: Record<CardFactId, [connector: string, term: string]> = {
   "time.totalHours": ["watched", "Watch time"],
-  "time.seriesHours": ["series", "Series hours"],
-  "counts.films": ["films", "Films"],
+  "time.seriesHours": ["shows", "Show hours"],
+  "counts.films": ["movies", "Movies"],
   "counts.episodes": ["episodes", "Episodes"],
   "standing.percentile": ["standing", "Standing"],
   "hours.peak": ["showtime", "Showtime"],
@@ -117,14 +117,14 @@ function credits(facts: RewindFactsV3, opts: CreditOptions): Credit[][] {
   const films = titles(facts, ["films[1].title", "films[2].title", "films[3].title"])
   const [lead, ...others] = series.length > 0 ? series : films
   const film = series.length > 0 ? films[0] : null
-  const filmsLine = credit("and", "Films", count("counts.films", { one: "film", other: "films" }))
+  const filmsLine = credit("and", "Movies", count("counts.films", { one: "movie", other: "movies" }))
 
   return [
     [...credit(null, "Presented by", opts.serverName), ...credit("presents", "Starring", opts.named && shown(facts, "member.firstName"))],
     [...credit("in", "Watch time", hours), ...credit("of", "Episodes", count("counts.episodes", { one: "episode", other: "episodes" }))],
     filmsLine.length > 0 && lead ? [...filmsLine, { connector: "featuring", entry: null }] : filmsLine,
-    credit(filmsLine.length > 0 ? null : "featuring", series.length > 0 ? "Top series" : "Top film", lead),
-    [...credit("with", "Also featuring", others.length > 0 && others.join(", ")), ...credit(others.length > 0 ? "and" : "with", "Top film", film)],
+    credit(filmsLine.length > 0 ? null : "featuring", series.length > 0 ? "Top show" : "Top movie", lead),
+    [...credit("with", "Also featuring", others.length > 0 && others.join(", ")), ...credit(others.length > 0 ? "and" : "with", "Top movie", film)],
     opts.tail && opts.tail.length > 0
       ? opts.tail.flatMap((id) => credit(TAIL_CREDITS[id][0], TAIL_CREDITS[id][1], has(facts, id) && tailDetail(facts, id)))
       : [

@@ -117,7 +117,7 @@ test.describe('Admin watchlist sync', () => {
     await expect(page.getByTestId(rowOf('heat'))).toHaveCount(0);
   });
 
-  test('the Status filter lands in the URL with a chip, and Type narrows to films', async ({ adminPage: page }) => {
+  test('the Status filter lands in the URL with a chip, and Type narrows to movies', async ({ adminPage: page }) => {
     await page.goto(`/admin/watchlist?q=${encodeURIComponent('Watchlist E2E')}`);
     await expect(page.getByTestId(rowOf('severance'))).toBeVisible();
 

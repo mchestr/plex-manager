@@ -18,8 +18,8 @@ export function NumberSplit({ facts }: { facts: RewindFactsV3 }) {
   return (
     <div className="font-display" style={{ marginTop: u(14) }} data-testid="rewind-number-split">
       <p className="flex justify-between" style={{ fontSize: ut(13), fontVariationSettings: axes(100, 600) }}>
-        <span>Series {splitShare(facts, "series")}</span>
-        <span>Films {splitShare(facts, "films")}</span>
+        <span>Shows {splitShare(facts, "series")}</span>
+        <span>Movies {splitShare(facts, "films")}</span>
       </p>
       <div aria-hidden className="rw-grow flex" style={{ height: u(24), gap: u(4), marginTop: u(5) }}>
         <span className="bg-current" style={{ flexGrow: series }} />
