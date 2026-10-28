@@ -7,7 +7,7 @@
       "matchPackageNames": ["next", "eslint-config-next", "@next/*", "react", "react-dom", "@types/react", "@types/react-dom"]
     },
     {
-      "description": "TypeScript 7 (@typescript/native, runs tsc) and the TypeScript 6 API package (typescript) move together; see P11.23 in the Phase 11 plan",
+      "description": "TypeScript 7 (@typescript/native, runs tsc) and the TypeScript 6 API package (typescript) move together",
       "groupName": "typescript",
       "matchPackageNames": ["typescript", "@typescript/native", "@typescript/typescript6"]
     },

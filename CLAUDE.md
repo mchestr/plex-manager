@@ -87,7 +87,7 @@ lib/                    # Utilities, helpers, business logic
 ├── invites/           # Invite passes and redemption (Plex and Jellyfin)
 ├── llm/               # LLM facade (generateStructured, chatWithTools), provider registry, model table, usage
 ├── locks/             # LeaseLock and LeasePoller (database or Redis leases)
-├── members/           # Member service rule, access grant/revoke, offboarding, erase and export
+├── members/           # Member service rule, access grant/revoke, offboarding and erase
 ├── permissions/       # Roles and permissions: isAdmin superuser, the Support role, hasPermission (docs/roles.md)
 ├── observability/     # Request id reader, /api/metrics sources and the Prometheus text writer
 ├── og/                # App icons and the default OG card (next/og)
@@ -476,7 +476,7 @@ npm run db:studio      # Open database GUI
 ```
 
 #### Creating a migration
-- Create it with `npx prisma migrate dev --create-only --name <descriptive_name>` against a database whose name ends in `_test`, review the generated `migration.sql`, then apply it with `npm run db:deploy`. Never hand-type a timestamp or rename a folder, and never edit a merged migration.
+- Create it with `npx prisma migrate dev --create-only --name <descriptive_name>` against a database whose name ends in `_test`, review the generated `migration.sql`, then apply it with `npm run db:deploy`. If Prisma's timestamp does not sort after the newest folder (22 folders carry January 2027 plan dates), raise it in the folder name before you apply it. Never edit a merged migration.
 - `node scripts/check-migrations.mjs` (in CI's Schema Drift job) checks every folder not listed in `prisma/migrations/.legacy-names.json`: a 14-digit timestamp later than every earlier folder's and not in the future, at least two lowercase words (`add_member_export`, not `latest` or `fix_changes`), and a `migration.sql`. Never add a folder to that list.
 - Schema Drift also runs `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code` against a migrated database: a schema change without its migration fails.
 - `20250101000000_init` is a retroactive baseline: an install made with `prisma db push` marks every folder applied with `npx prisma migrate resolve --applied <name>` (`docs/operations.md`, "Installed with db push").
@@ -962,9 +962,10 @@ The project includes custom slash commands in `.claude/commands/`:
 - Deployment, environment variables and moving hosts: See `docs/deployment.md`, `docs/environment.md` and `docs/domain-move.md`
 - Operations (backup, restore, upgrades, encryption keys, worker containers, metrics): See `docs/operations.md`
 - Roles and permissions (Support role, assistant tool gate): See `docs/roles.md`
-- Privacy (personal data inventory, member removal, export, retention): See `docs/privacy.md`
+- Privacy (personal data inventory, member removal, retention): See `docs/privacy.md`
 - Releases and the changelog: See `docs/releasing.md` and `CHANGELOG.md`
 - Rewind season runbook (flags, season open, roll back, season close): See `docs/rewind.md`
 - Performance Testing: See `docs/performance-testing.md`
 - Project README: See `README.md`
 - Contributing (development setup, checks, pull requests): See `.github/CONTRIBUTING.md`
+- Removed planning documents (the plans, the Rewind 2026 and UI design documents, the mockups): comments cite them by step (`P11.26`), section (`design 6.2`, `ui-design-system 9.3`) or file name. Read them at tag `v0.6.0` under `.agents/planning/`

@@ -56,3 +56,6 @@ playwright-report/
 
 # Redis snapshot from a local redis-server started in the checkout
 dump.rdb
+
+# Claude Code worktrees: full copies of the repository
+/.claude/worktrees/

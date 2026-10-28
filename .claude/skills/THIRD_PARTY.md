@@ -23,7 +23,7 @@ checks this table against the folders.
 
 These four are written in this repository (P11.27), not vendored, so they have
 no upstream pin and fall under the repository's own `LICENSE`. They point at
-the code and design sections they describe instead of copying values, and
+the source files they describe instead of copying values, and
 `scripts/__tests__/project-skills.test.ts` fails when a path, export, npm
 script or Playwright project they name stops existing. Update the skill in the
 same pull request as the code it describes.

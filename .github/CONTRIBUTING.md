@@ -1,6 +1,6 @@
 # Contributing to Plex Manager
 
-Thank you for your help. This guide tells you how to prepare a development
+Thank you for your work on Plex Manager. This guide tells you how to prepare a development
 environment, which checks to do, and how to send a pull request.
 [CLAUDE.md](../CLAUDE.md) gives the architecture and the code conventions. Read
 it before you change the code.
@@ -12,7 +12,7 @@ If you are not sure about a change, open an
 
 You must have these items:
 
-- Node.js 24 and npm. Node.js 22.9 or later also works.
+- Node.js 24 and npm. Node.js 22.13 or a later 22.x release also works.
 - Docker with Docker Compose, for PostgreSQL 16 and Redis 7. You can also use
   your own PostgreSQL and Redis.
 - A Plex Media Server that you own, and Tautulli, to use the app with real
@@ -20,7 +20,7 @@ You must have these items:
 
 ## Prepare a development environment
 
-1. Get the code and install the dependencies:
+1. Get the code. Then install the dependencies:
 
    ```bash
    git clone https://github.com/mchestr/plex-manager.git
@@ -54,7 +54,7 @@ You must have these items:
    docker compose up -d db redis
    ```
 
-5. Make the Prisma client and update the database:
+5. Make the Prisma client. Then update the database:
 
    ```bash
    npm run db:generate
@@ -76,9 +76,10 @@ until the setup is complete.
 
 ## Checks
 
-Do these checks before you send a pull request. CI does them too.
+Do these checks before you send a pull request. CI also does them.
+`.github/workflows/build.yml` lists the other checks that CI does.
 
-| Command | What it checks |
+| Command | Check |
 | --- | --- |
 | `npm run lint` | The ESLint rules |
 | `npm run typecheck` | The TypeScript types of the app and the tests |
@@ -86,13 +87,16 @@ Do these checks before you send a pull request. CI does them too.
 | `npm run test:coverage` | The unit tests and the coverage floors |
 | `npm run knip` | Unused files, exports and dependencies |
 | `npm run design:check` | The rules of the design system |
+| `npm run env:docs -- --check` | That `docs/environment.md` and `example.env` show the variables of `lib/env.ts`. To change them, type `npm run env:docs`. |
 
-Two more test suites:
+There are two more test suites:
 
 - `npm run test:e2e` starts the Playwright tests. [e2e/README.md](../e2e/README.md)
   tells you how to prepare them.
 - `npm run test:integration` starts the PostgreSQL and Redis suites. Set
-  `TEST_DATABASE_URL` and `TEST_REDIS_URL` first.
+  `TEST_DATABASE_URL` and `TEST_REDIS_URL` first. The name of the test
+  database must end in `_test`. Before the suites, update that database with
+  `DATABASE_URL="$TEST_DATABASE_URL" npm run db:deploy`.
 
 The [performance guide](../docs/performance-testing.md) tells you where CI
 measures performance.
@@ -111,12 +115,17 @@ To change the database schema:
 3. Read the new `migration.sql`.
 4. Update the database with `npm run db:deploy`.
 
-Let Prisma make the timestamp of each migration. Do not change a migration
-after it merges. CI makes sure that each schema change has a migration, and
-that each migration name has two or more words.
+Prisma puts the current time at the start of the folder name. That timestamp
+must be later than the timestamp of each folder in `prisma/migrations`. Some
+folders have dates in 2027, from the project plan. If the new timestamp is not
+later, change it in the folder name before step 4. Do not change a migration
+after it merges. CI makes sure that each schema change has a migration, that
+each migration name has two or more words, and that the timestamps increase.
 
-`npm run db:push` and `npm run db:migrate` are contributor-only commands. Use
-them only on a database that you can lose.
+> [!CAUTION]
+> Use the contributor-only commands `npm run db:push` and `npm run db:migrate`
+> only on a database that you can lose. These commands can delete the data in
+> that database.
 
 > [!CAUTION]
 > Use `npm run db:seed` only on a local database or on a database whose name
@@ -141,19 +150,23 @@ app/          Next.js routes: pages, layouts and API routes
 actions/      Server Actions
 components/   React components (components/ui/ holds the shared primitives)
 hooks/        Client hooks and the TanStack Query keys
+types/        Shared TypeScript types
 lib/          Business logic, service clients, jobs and the Rewind pipeline
 prisma/       The database schema and the migrations
 docs/         Guides for operators
 e2e/          Playwright tests
+__tests__/    The shared test helpers, and the tests that are not next to their module
 evals/        Rewind fixtures and the eval harness
 scripts/      Build, CI and maintenance scripts
 docker/       The image entrypoint and the pinned Prisma CLI
 deploy/       The production Compose file
 ```
 
-[CLAUDE.md](../CLAUDE.md) gives the full tree. `package.json` lists each npm
-script. The `rewind:*` scripts are for the Rewind season, and the
-[Rewind runbook](../docs/rewind.md) tells you when to use each one.
+[CLAUDE.md](../CLAUDE.md) tells you more about the source folders.
+`package.json` lists each npm script. The [Rewind runbook](../docs/rewind.md)
+tells you when to use `rewind:freeze`, `rewind:season-open` and
+`rewind:validate`. The other `rewind:*` scripts give their options at the top
+of their files.
 
 ## Tech stack
 

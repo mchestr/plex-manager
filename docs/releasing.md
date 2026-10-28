@@ -76,5 +76,5 @@ prerelease `v0.0.1-test` and the image `ghcr.io/<fork owner>/plex-manager:0.0.1-
 
 Prisma has no down migrations. To roll back an upgrade, stop the app, restore
 the dump taken before it (`docs/operations.md`, "Restore"), and start the
-previous version's tag, never `latest`. [Operations](operations.md#upgrade)
-has the full upgrade path.
+previous version's tag, never `latest`. [Operations](operations.md#roll-back)
+has the exact steps.

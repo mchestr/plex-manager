@@ -19,14 +19,16 @@ in [the environment reference](environment.md). Backups and upgrades are in
 
 ## What you need
 
-- A host with Docker Engine and the Compose plugin (or Node.js 22.9 or later
-  for [bare metal](#bare-metal); the image runs Node.js 24).
+- A host with Docker Engine and the Compose plugin (or, for
+  [bare metal](#bare-metal), Node.js 24 or a 22.x release from 22.13; the image
+  runs Node.js 24).
 - A host name, such as `plex.example.com`, pointing at the host, and a reverse
   proxy that terminates TLS. A production server refuses to start unless its
   URLs are https (see `ALLOW_INSECURE_HTTP` for a LAN-only install).
 - A Plex server you own, and Tautulli: the setup wizard needs both.
-  Overseerr, Sonarr, Radarr, an LLM provider and Discord are optional wizard
-  steps; Jellyfin and Stripe are set up later in Admin → Settings.
+  Overseerr, Sonarr, Radarr, OpenAI (for the Rewind writer and the admin
+  assistant) and Discord are optional wizard steps; Jellyfin, Stripe and the
+  other AI providers are set up later in Admin → Settings.
 
 ## Install with Docker Compose
 
@@ -174,8 +176,9 @@ connects your Plex server and the optional services, and the Plex server owner
 becomes the admin. The claim lasts 12 hours in that browser and ends when setup
 completes. Jellyfin is added afterwards in Admin → Settings. To use a fixed
 value instead of the printed code, set `SETUP_TOKEN` (at least 16 characters,
-`openssl rand -hex 16`) in `.env` and restart; it stays valid while it is set,
-so remove it once setup is done.
+`openssl rand -hex 16`) in `.env` and run `docker compose up -d` (a plain
+restart does not read `.env` again); it stays valid while it is set, so remove
+it once setup is done.
 
 In the wizard:
 
@@ -204,7 +207,8 @@ or `all` container no jobs run. The roles and their trade-offs are in
 
 ## Bare metal
 
-Without Docker, run the app with Node.js 22.9 or later against your own
+Without Docker, run the app with Node.js 24 (or a 22.x release from 22.13)
+against your own
 PostgreSQL 16 and (recommended) Redis 7:
 
 ```bash

@@ -3,7 +3,7 @@
  *
  * The Docker image migrates with its own Prisma CLI (docker/prisma-cli, P4.17,
  * SEC-03). Its exact pins must be the versions the app was built and tested
- * with, so a Dependabot bump of the root lockfile fails here until the image's
+ * with, so a Renovate bump of the root lockfile fails here until the image's
  * copy follows.
  */
 

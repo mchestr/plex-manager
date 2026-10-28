@@ -22,11 +22,13 @@ check); the `no-changelog` label skips it.
 
 - **A shorter README:** the README is now a short landing page in ASD-STE100 Simplified Technical English: what Plex Manager does, a Docker Compose install, the upgrade steps and a map of the guides. The development setup and checks moved to `.github/CONTRIBUTING.md`; the full upgrade procedure, the `db push` baseline commands and the notes from before 0.1.0 moved to `docs/operations.md`; the setup wizard steps moved to `docs/deployment.md`.
 - **Entrypoint in `docker/`:** the image's entrypoint script moved from `docker-entrypoint.sh` to `docker/entrypoint.sh` in the repository. The image still runs it as `/app/docker-entrypoint.sh`, so a custom `entrypoint:` keeps working.
+- **Node.js floor:** `engines.node` is now `^22.13.0 || >=24`, the versions that Prisma 7 and ESLint 10 support. The docs said 22.9, where `npm ci` fails in Prisma's preinstall. The image and CI already run Node.js 24.
 - **Repository root:** the Renovate config moved to `.github/renovate.json` and the integration-test helper to `__tests__/helpers/integration.ts`. `.mise.toml` now pins only Node.js; its tasks repeated the npm scripts, and `mise run setup` still used `db:push`.
 
 ### Removed
 
-- The planning documents under `.agents/planning/` (about 12 MB of plans, mockups and fonts). Git history keeps them.
+- The planning documents under `.agents/planning/` (about 12 MB of plans, mockups and fonts). Git history keeps them: read them at tag `v0.6.0`.
+- The Dockerfile's `dev` stage. Nothing built it, and it could not build without a `DATABASE_URL`.
 - The finished one-off codemods and their npm scripts: `codemod:spinners`, `codemod:icons` and `codemod:adapters`, and the barrel-import and framer-motion codemods. `codemod:tokens` stays.
 
 ## [0.6.0] - 2026-10-28
@@ -209,7 +211,7 @@ The 2026 refresh from Phase 1 to Phase 11 wave 1, by milestone: baselines and CI
 ### Upgrade notes
 
 - Take a `pg_dump -Fc` before you start the new release, and keep it off the host. This release carries many migrations, among them one that adds `AuditLog`, one that versions sessions and the Rewind v3 tables. Check afterwards that `npx prisma migrate status` reports the schema is up to date.
-- **Migrations:** `npm run db:deploy` (`prisma migrate deploy`) is the only install and upgrade command; `db:push` and `db:migrate` are contributor-only. The image logs `prisma migrate status` and then applies migrations at every start; set `SKIP_MIGRATIONS=true` to apply them by hand. An install whose schema was created with `db push` must be baselined on the old release first (README, "Installed with `db push`?").
+- **Migrations:** `npm run db:deploy` (`prisma migrate deploy`) is the only install and upgrade command; `db:push` and `db:migrate` are contributor-only. The image logs `prisma migrate status` and then applies migrations at every start; set `SKIP_MIGRATIONS=true` to apply them by hand. An install whose schema was created with `db push` must be baselined on the old release first (`docs/operations.md`, "Installed with db push").
 - **Boot refusal:** a production server now exits with code 1, logging `env.invalid` and the variable's name, when `NEXTAUTH_SECRET` is missing, shorter than 32 characters, has fewer than 10 distinct characters or is a published placeholder; when `NEXTAUTH_URL` or `NEXT_PUBLIC_APP_URL` is not `https:` (loopback excepted; `ALLOW_INSECURE_HTTP=true` for a LAN-only install); or when `PLEX_CLIENT_IDENTIFIER` is empty. Check these before you pull.
 - **Compose:** `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required, Postgres and Redis publish on `127.0.0.1` only, and the database moves from Postgres 15 to 16. Postgres 16 cannot open a 15 data directory: dump the `db` volume while it still runs 15, remove the volume, start the new one and restore the dump. A volume created before this change keeps its old password (`postgres`).
 - **Image:** Node.js 24 under `tini` as the unprivileged `nextjs` user, with read-only app files. The one writable path is `/app/.next/cache` (Next's cache and Rewind's posters, cards and fonts); mount a volume there to keep it. The `HEALTHCHECK` calls `/api/health?probe=live`, and `GET /api/health` checks the database and Redis.

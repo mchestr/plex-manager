@@ -17,7 +17,7 @@ import fs from 'fs'
 import path from 'path'
 
 const ROOT = path.resolve(__dirname, '../..')
-const ROOTS = ['app', 'actions', 'components', 'lib', 'types', 'prisma', 'docs', 'e2e', 'scripts', 'hooks', 'deploy']
+const ROOTS = ['app', 'actions', 'components', 'lib', 'types', 'prisma', 'docs', 'e2e', 'scripts', 'hooks', 'deploy', 'docker', 'evals', 'eslint', 'public', '.github']
 // README and every operator doc (P11.24, P11.26) are held to the same rule.
 const DOCS = [
   'README.md',

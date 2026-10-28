@@ -31,14 +31,16 @@ their watch history.
 - **Sign-in and invites.** Members sign in with their Plex account. If you
   enable Jellyfin sign-in, members can also sign in with a Jellyfin account.
   Invites share your Plex libraries or make a Jellyfin account. Each invite has
-  a code, a list of libraries, a maximum number of members and an end date.
+  a code, the libraries to share, a maximum number of members and, if you set
+  one, an end date.
 - **Member guide.** New members get the playback settings for their devices,
-  the steps to request titles, and the place to get help.
-- **Rewind.** By default, from 1 December to 31 January, each Plex member can
-  open a Rewind of their year, made from Tautulli history. If you connect an AI
-  provider, it writes the text. If not, Plex Manager uses templates. Until a
-  member makes a share link, only that member and the admins can see their
-  Rewind.
+  the steps to request titles, and the place to report a problem.
+- **Rewind.** Plex Manager can make a Rewind of the year for each Plex member,
+  from Tautulli history. An AI provider writes the text, or Plex Manager uses
+  templates. Rewind is off until you enable it in **Admin > Settings**. There,
+  you also set the audience (admins only by default) and the season (1 December
+  to 31 January by default). Until a member makes a share link, only that
+  member and the admins can see their Rewind.
 - **Requests and watchlist sync.** Members request titles in Overseerr. A Plex
   member can also let Plex Manager request the titles on their Plex watchlist.
   Each request goes to Overseerr from the Overseerr account of that member.
@@ -46,8 +48,9 @@ their watch history.
   give more requests to members who watch more.
 - **Assistants.** An AI assistant in the admin pages can read the state of your
   server from Plex, Tautulli, Overseerr, Sonarr and Radarr. Members with a
-  linked Discord account can also use an assistant in Discord. Each assistant
-  tells its users that admins can read the conversations.
+  linked Discord account can also use an assistant in Discord. The Discord
+  assistant and the Help and Account pages tell members that server admins can
+  read assistant conversations, and which AI provider gets the messages.
 - **Discord.** Linked roles change with the access and the watch hours of each
   member. Members can use slash commands, for example `/mystats` and
   `/watching`.
@@ -101,13 +104,14 @@ other ways to install, and all the details, refer to the
 
 2. Set these values in `.env`. Replace each `<openssl ...>` value with the
    output of that command. Use the same two passwords in `DATABASE_URL` and
-   `REDIS_URL`. Set `PLEX_MANAGER_VERSION` to the newest
-   [release](https://github.com/mchestr/plex-manager/releases).
+   `REDIS_URL`. Set `PLEX_MANAGER_VERSION` to the number of the newest
+   [release](https://github.com/mchestr/plex-manager/releases), without the `v`
+   (for example, `0.6.0`).
 
    ```env
    POSTGRES_PASSWORD="<openssl rand -hex 16>"
    REDIS_PASSWORD="<openssl rand -hex 16>"
-   PLEX_MANAGER_VERSION="<newest release>"
+   PLEX_MANAGER_VERSION="<newest release number>"
 
    NEXTAUTH_URL="https://plex.example.com"
    NEXT_PUBLIC_APP_URL="https://plex.example.com"
@@ -164,15 +168,24 @@ and it changes with each merge.
 2. Read the upgrade notes in [CHANGELOG.md](CHANGELOG.md) for each release
    after your current release.
 3. Set `PLEX_MANAGER_VERSION` in `.env` to the new release.
-4. Start the new release with `docker compose pull` and
-   `docker compose up -d`.
+4. Download the new image with `docker compose pull`. Then start the new
+   release with `docker compose up -d`.
 
 The container updates the database when it starts. Outside Docker, update the
 database with `npm run db:deploy`.
 
-To return to the release that you used before, restore the dump. Then set
-`PLEX_MANAGER_VERSION` to that release. [Operations](docs/operations.md#upgrade)
-gives the full procedure.
+To return to the release that you used before:
+
+> [!CAUTION]
+> Do not use `docker compose start app` after you restore the dump. That
+> command starts the newer release, which updates the restored database again.
+
+1. Stop the app with `docker compose stop app`.
+2. Set `PLEX_MANAGER_VERSION` in `.env` to the release that you used before.
+3. Restore the dump. Refer to [Roll back](docs/operations.md#roll-back).
+4. Start the app with `docker compose up -d`.
+
+[Operations](docs/operations.md#upgrade) gives the full upgrade procedure.
 
 ## Documentation
 
@@ -185,7 +198,7 @@ The guides in `docs/` give the full details:
 | [Operations](docs/operations.md) | Backups, restores, upgrades, encryption keys, metrics and security headers |
 | [Domain move](docs/domain-move.md) | How to move Plex Manager to a new host name |
 | [Rewind runbook](docs/rewind.md) | The Rewind season: its settings, its start and end, and the daily checks |
-| [Privacy](docs/privacy.md) | The personal data that Plex Manager keeps, how to remove or export it, and retention |
+| [Privacy](docs/privacy.md) | The personal data that Plex Manager keeps, how to remove it, and retention |
 | [Roles](docs/roles.md) | Admins, the Support role and permissions |
 | [Assistant](docs/assistant.md) | The data, MCP servers and knowledge base that the admin assistant can use |
 | [Request limits](docs/request-limits.md) | Request limits from watch time, and the Discord stat channels |
@@ -193,7 +206,7 @@ The guides in `docs/` give the full details:
 | [Discord bot](docs/discord-bot.md) | The bot, slash commands and linked roles |
 | [Releases](docs/releasing.md) and [CHANGELOG.md](CHANGELOG.md) | Versions, tags and the upgrade notes of each release |
 
-## Get help
+## Bugs and questions
 
 To report a bug or to ask a question, open an
 [issue](https://github.com/mchestr/plex-manager/issues).

@@ -69,7 +69,9 @@ A dump holds every member's data and the encrypted secrets, so:
 
 Restoring replaces the database with the dump, including Prisma's
 `_prisma_migrations` table, so `prisma migrate status` afterwards shows the
-state at dump time. Decrypt the dump first (`age -d` or `gpg -d`).
+state at dump time. Decrypt the dump first (`age -d` or `gpg -d`). To roll
+back an upgrade, follow [Roll back](#roll-back) instead: the last command below
+starts the newer release again, and it applies its migrations again at start.
 
 ```bash
 docker compose stop app
@@ -88,10 +90,7 @@ worker or replica).
 Outside compose, with the app stopped, connect to any other database on the
 server: `pg_restore -d postgresql://user:password@host:5432/postgres --clean --if-exists --create --no-owner plex-manager-….dump`.
 
-If you are rolling back an upgrade, start the **previous** release's image tag
-(`CHANGELOG.md` lists them; see `docs/releasing.md`): the new one would apply
-its migrations again at start. To start any release without
-applying migrations, set `SKIP_MIGRATIONS=true`.
+To start any release without applying migrations, set `SKIP_MIGRATIONS=true`.
 
 ## Dump before every migration
 
@@ -144,20 +143,35 @@ every merge. For every upgrade:
    Prisma has no down migrations, so the dump is the only way back.
 2. **Read the upgrade notes** in `CHANGELOG.md` for every version you move
    past, and the [notes from before 0.1.0](#upgrade-notes-from-before-010)
-   when you start from a release older than that.
+   when you start from a release older than that. If the schema was made with
+   `npm run db:push`, first do [Installed with db push](#installed-with-db-push)
+   on the old release.
 3. **Get the new release.** With Compose, set the new `PLEX_MANAGER_VERSION`
    and run `docker compose pull && docker compose up -d`. From a checkout,
    check out the new tag, then run `npm ci` and `npm run build`.
 4. **Apply migrations.** The container applies them at start
    ([Applying migrations](#applying-migrations)). Outside Docker, run
-   `npm run db:deploy`.
+   `npm run db:deploy`, then restart the app (`npm run start:prod` under your
+   service manager).
 5. **Check the app.** Sign in, and check that `/api/health` answers 200 with
    `"database":"ok"` and `"redis":"ok"`. `docker compose ps` shows the app
    `(healthy)`.
 
-To roll back, restore the dump taken before the upgrade ([Restore](#restore))
-and start the previous release's tag. A newer image would apply its migrations
-again at start.
+### Roll back
+
+Prisma has no down migrations, so rolling back means the dump taken before the
+upgrade and the previous release's tag (`CHANGELOG.md` lists them):
+
+1. Stop the app, and every worker or replica: `docker compose stop app`.
+2. Set `PLEX_MANAGER_VERSION` in `.env` to the previous release.
+3. Restore the dump with the `pg_restore` line of [Restore](#restore). Leave out
+   its last line, `docker compose start app`.
+4. Start the previous release: `docker compose up -d`.
+
+Never use `docker compose start app` here: it starts the container of the newer
+release, which applies its migrations to the restored database again. Outside
+Docker, check out the previous tag, run `npm ci` and `npm run build`, restore
+the dump, then start the app.
 
 ## Web and worker containers
 
@@ -219,7 +233,8 @@ throwaway pull requests, then set it back to `off` and close them unmerged:
 | The same change, labelled `freeze:data` | Passes |
 | A change only under `.agents/planning/`, no label | Passes |
 
-Record the three run ids in `ship-check.md`.
+Record the three run ids in `ship-check.md`, which the owner keeps outside the
+repository (see the [Rewind runbook](rewind.md)).
 
 At 00:00 server time on 2026-12-14, set `CODE_FREEZE` to `on`. Changing the
 variable does not re-run the checks of pull requests that are already open, so
@@ -346,6 +361,7 @@ groups:
         for: 15m
       - alert: LlmSpendHigh
         expr: sum(plex_manager_llm_spend_usd{period="day"}) > 1
+```
 
 ## Security headers and CSP
 
@@ -378,7 +394,8 @@ https, with `max-age` from `HSTS_MAX_AGE` (default 31536000, one year).
 `HSTS_INCLUDE_SUBDOMAINS=true` adds `includeSubDomains`, and
 `HSTS_PRELOAD=true` adds `preload`; set them only when every subdomain serves
 https, because browsers keep both for the whole `max-age`. These are read at
-start, so a restart applies a change. If your reverse proxy already sends
+start, so `docker compose up -d` applies a change (a plain `docker compose
+restart` does not read `.env` again). If your reverse proxy already sends
 HSTS, keep one of the two.
 
 The other headers are fixed in `next.config.js`: `X-Frame-Options: SAMEORIGIN`,
@@ -454,17 +471,21 @@ Both are idempotent: a second run changes nothing.
 ### Move from ENCRYPTION_KEY to a keyring
 
 1. Take a dump.
-2. Add `ENCRYPTION_KEYS=k1:<new key>` and keep `ENCRYPTION_KEY` set. Restart.
+2. Add `ENCRYPTION_KEYS=k1:<new key>` and keep `ENCRYPTION_KEY` set. Run
+   `docker compose up -d` (a plain `docker compose restart` does not read
+   `.env` again).
 3. Run **Encrypt stored secrets** (or let the boot job finish) until Security
    shows every value under `k1`.
-4. Remove `ENCRYPTION_KEY` and restart.
+4. Remove `ENCRYPTION_KEY` and run `docker compose up -d`.
 
 ### Rotate
 
 1. Take a dump.
-2. Put the new kid first and keep the old one: `ENCRYPTION_KEYS=k2:<new>,k1:<old>`. Restart.
+2. Put the new kid first and keep the old one: `ENCRYPTION_KEYS=k2:<new>,k1:<old>`.
+   Run `docker compose up -d`.
 3. Run **Encrypt stored secrets**. It also moves the boot canary to `k2`.
-4. Remove `k1:<old>` and restart. Removing it before step 3 finishes stops the
+4. Remove `k1:<old>` and run `docker compose up -d`. Removing it before step 3
+   finishes stops the
    next boot with `crypto.key_mismatch` (the canary is still under `k1`).
 
 ### Lost key
@@ -535,3 +556,11 @@ field. To recover:
   Jellyfin server, listed under the client "Plex Wrapped" and the device ID
   `plex-wrapped-server` (or your `JELLYFIN_DEVICE_ID`); a Jellyfin
   administrator can delete them in Dashboard → Devices.
+- **Watchlist sync**: turn it on and set the interval in Admin → Settings →
+  Watchlist sync. Each member must also turn it on in the card on their home
+  page; nothing syncs while either is off, whoever starts the run. Requests are
+  filed as the member's own Overseerr user, matched by Plex account ID, so each
+  member must have signed in to Overseerr with Plex once (or been added with
+  Overseerr's **Import Plex Users**). A member without a match is skipped, and
+  their card says why. **Sync now** on the card works at most 4 times an hour
+  per member.

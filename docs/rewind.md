@@ -48,7 +48,7 @@ production image digest and the freeze exceptions) and `model-selection.md`
 | --- | --- | --- |
 | Redis (`REDIS_URL`) | **Yes** | Rewind has no fallback without it (FR-50). The queue, the per-member lock, the rate limits and dry-run previews live there. Without `REDIS_URL` admins see "Rewind needs Redis (REDIS_URL)"; while it is down everyone sees "Rewind is temporarily unavailable. Try again in a few minutes." |
 | A queue worker | **Yes** | An `all` or `worker` container runs it, never a `web` one (`ENABLE_QUEUE_WORKER`, `PROCESS_ROLE`; see `example.env` and `docs/operations.md`). It must be running at 00:15 on the opening day for the season-open run. At start it retries Redis for about two minutes, then stays off until the next restart. |
-| Node 22 or later | **Yes** | `engines.node` in `package.json`; the Docker image ships it. |
+| Node 24, or a 22.x release from 22.13 | **Yes** | `engines.node` in `package.json`; the Docker image ships Node 24. |
 | PostgreSQL | **Yes** | Migrated with `npm run db:deploy` (the image does it at start). |
 | Plex and Tautulli | **Yes** | Rewind reads every play from Tautulli. Use **Tautulli 2.17 or later**: the season console warns below it ("Update Tautulli: versions before 2.17 are affected by CVE-2026-31799"). A member Tautulli does not list is skipped with `TAUTULLI_USER_NOT_FOUND`. |
 | `REWIND_CACHE_DIR` | No | Where posters, cards and fonts are cached (default `.next/cache/rewind`). Rebuildable; it needs no backup, but it must be writable. |
@@ -581,9 +581,9 @@ before the season-open release (30 November).
 
 No migration merges from 25 November 2026 to 2 January 2027 except a named
 freeze exception, recorded in `season-log.md`, which ships with a dump first
-and `SKIP_MIGRATIONS=true` on every replica but one. The newest
-pre-season migration in this release is
-`prisma/migrations/20261124000700_p77_rewind_exclusion_title`.
+and `SKIP_MIGRATIONS=true` on every replica but one. Every migration
+in this release applies before the season. The folders dated January 2027
+carry dates from the project plan: they merged in October 2026.
 
 ## After 1 January
 
