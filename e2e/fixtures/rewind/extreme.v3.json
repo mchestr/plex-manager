@@ -3222,26 +3222,26 @@
   },
   "copy": {
     "decks": {
-      "number": "Every minute of it counted from your own history.",
-      "bookends": "Here since {{fact:member.since}}, and this is how the year opened and closed.",
-      "topShows": "The series you kept returning to, in order.",
+      "number": "Here's to more of it.",
+      "bookends": "First in, last out.",
+      "topShows": "Just one more episode.",
       "topFilms": null,
-      "taste": "After {{fact:taste.genre[1].name}} came {{fact:taste.genre[2].name}} and {{fact:taste.genre[3].name}}.",
+      "taste": "The oldest thing you watched was {{fact:taste.oldest.title}}, from {{fact:taste.oldest.year}}.",
       "people": "{{fact:people.actor[1].name}} led the cast list, with {{fact:people.actor[2].name}} next.",
       "clock": "Your latest start was {{fact:hours.latestStart.time}} on a {{fact:hours.latestStart.weekday}}.",
       "calendar": "Your biggest day was {{fact:days.biggest.date}}, at {{fact:days.biggest.minutes}}.",
       "records": null,
       "requests": null,
-      "standing": "Where you stand, with nobody named.",
+      "standing": "All in good fun.",
       "nextYear": null
     },
     "archetype": {
       "id": "midnight-marathoner",
       "tagline": "Up past the credits, every night.",
-      "dedication": "Every reason here comes from what you watched, not from a guess.",
+      "dedication": "Wear it well.",
       "posterLineId": "mm.5"
     },
-    "signOff": "See you in the final cut, {{fact:member.firstName}}."
+    "signOff": "See you next year, {{fact:member.firstName}}."
   },
   "copySource": "template",
   "copyMeta": {

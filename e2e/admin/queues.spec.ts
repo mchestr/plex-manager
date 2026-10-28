@@ -70,9 +70,9 @@ test.describe('Job queues', () => {
     expect(width).toBe(390);
   });
 
-  // Before hydration a phone gets the desktop table (the media query's server
-  // snapshot). Blocking the app's script chunks holds the page there: Next's
-  // inline scripts still reveal the streamed HTML, but React never hydrates.
+  // The cards come from container queries, so the server HTML already fits a
+  // phone. Blocking the app's script chunks holds the page before hydration:
+  // Next's inline scripts still reveal the streamed HTML, but React never hydrates.
   test('fits a phone before hydration, with a job in the table', async ({ adminPage, browser }) => {
     const queue = new Queue(QUEUE_NAME, { connection: { url: process.env.REDIS_URL ?? 'redis://localhost:6379' } });
     const job = await queue.add(SEEDED_TYPE, {}, { jobId: `e2e-delayed-${Date.now()}`, delay: 60 * 60 * 1000 });

@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test';
 import { axeFor } from './a11y/scan';
 
 // The admin composites on /dev/ui (plan step P6.5, ui-design-system 5.5):
-// the 120-play table sorts and pages through the URL, rows stack with their
-// actions at 390px, and filtering to zero rows offers Clear filters.
+// the 120-play table sorts and pages through the URL, at 390px rows become
+// cards in the same table and keep their actions, and filtering to zero rows
+// offers Clear filters.
 
 const COMPOSITES = ['page-header', 'stat-tile', 'data-table', 'empty-state'] as const;
 
@@ -45,11 +46,17 @@ test.describe('admin composites on /dev/ui', () => {
     await expect(page.getByTestId('dev-ui-plays-table-pagination-info')).toHaveText('Showing 1 to 25 of 120 plays');
   });
 
-  test('at 390px rows stack and keep their actions', async ({ page }) => {
+  test('at 390px rows become cards in the same table and keep their actions', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const users = page.getByTestId('dev-ui-users-table');
-    await expect(users.getByRole('table')).toHaveCount(0);
-    await expect(page.getByTestId('dev-ui-users-table-list')).toBeVisible();
+    await expect(users.getByRole('table')).toHaveCount(1);
+    await expect(page.getByTestId('dev-ui-users-table-row-u3')).toHaveCSS('display', 'grid');
+    await expect(page.getByTestId('dev-ui-users-table-column-name')).toBeHidden();
+    // The headers leave with the cards, so the toolbar sorts and filters instead
+    await expect(page.getByTestId('dev-ui-plays-table-sort-title')).toBeHidden();
+    await expect(page.getByTestId('dev-ui-plays-filters-sort')).toBeVisible();
+    await expect(page.getByTestId('dev-ui-plays-filters-filter-kind')).toBeHidden();
+    await expect(page.getByTestId('dev-ui-plays-filters-filters-open')).toBeVisible();
 
     await page.getByTestId('dev-ui-users-table-actions-u3').click();
     await expect(page.getByRole('menu')).toContainText('Sam Rivera');
@@ -57,6 +64,45 @@ test.describe('admin composites on /dev/ui', () => {
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
+
+    // At 320px the tables still fit; the page's other specimens are not under test here
+    await page.setViewportSize({ width: 320, height: 844 });
+    for (const table of ['dev-ui-users-table', 'dev-ui-plays-table']) {
+      // scrollWidth counts any toolbar, card or pager content that spills out of the table's root
+      const fit = await page.getByTestId(table).evaluate((root) => {
+        const scroll = root.querySelector<HTMLElement>('[data-testid$="-scroll"]');
+        return { root: root.scrollWidth - root.clientWidth, scroll: scroll ? scroll.scrollWidth - scroll.clientWidth : null };
+      });
+      expect(fit, table).toEqual({ root: 0, scroll: 0 });
+    }
+  });
+
+  test('at 390px every focus stop in the table panel is on screen', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByTestId('dev-ui-plays-filters-search').focus();
+    for (let stop = 0; stop < 40; stop++) {
+      await page.keyboard.press('Tab');
+      const focus = await page.evaluate(() => {
+        const element = document.activeElement;
+        if (!element?.closest('[data-testid="dev-ui-data-table"]')) return null;
+        const box = element.getBoundingClientRect();
+        return { id: element.getAttribute('data-testid') ?? element.tagName, width: box.width, height: box.height };
+      });
+      if (!focus) break;
+      expect(focus.width, `${focus.id} is drawn`).toBeGreaterThan(1);
+      expect(focus.height, `${focus.id} is drawn`).toBeGreaterThan(1);
+    }
+  });
+
+  test('the tables and their FilterBar have no axe violations as cards at 390px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByTestId('dev-ui-users-table-row-u3')).toHaveCSS('display', 'grid');
+    const results = await axeFor(page)
+      .include('[data-testid="dev-ui-users-table"]')
+      .include('[data-testid="dev-ui-plays-filters"]')
+      .include('[data-testid="dev-ui-plays-table-scroll"]')
+      .analyze();
+    expect(results.violations).toEqual([]);
   });
 
   for (const composite of COMPOSITES) {

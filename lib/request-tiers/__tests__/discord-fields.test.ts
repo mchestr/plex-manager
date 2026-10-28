@@ -5,7 +5,6 @@ import type { MemberRequestLimits } from "../member-limits"
 import { DEFAULT_TIERS, tierProgress } from "../tiers"
 
 const limits = (hours: number, patch: Partial<MemberRequestLimits> = {}): MemberRequestLimits => ({
-  tiers: [...DEFAULT_TIERS],
   hours,
   progress: tierProgress(hours, DEFAULT_TIERS),
   excluded: false,

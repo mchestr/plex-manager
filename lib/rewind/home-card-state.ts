@@ -67,7 +67,7 @@ export type RewindCardState =
       /** False for a lapsed member while Stripe is on (FR-51). */
       canShare: boolean
       unread: boolean
-      /** "Data through November 30", or "Final cut" (FR-34); null for a pre-v3 row. */
+      /** "Data through November 30" (FR-34); null for a pre-v3 row. */
       dataThrough: string | null
     }
   | { kind: "generating"; year: number }

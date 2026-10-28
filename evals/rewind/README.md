@@ -186,8 +186,7 @@ npm run eval:rewind:select
 
 - `run.ts` (command line) and `run-eval.ts`: estimate, confirm, then each
   fixture through `generateUserRewind` in dry-run mode (`harness.ts`), the
-  gates, the judge, `results/<date>-<model>.json` and a `RewindEvalRun`
-  row (skipped with a warning without `DATABASE_URL`). `--record` writes
+  gates, the judge and `results/<date>-<model>.json`. `--record` writes
   `recordings/<model-slug>/<fixture>.json` with each call's answer, served
   model, tokens and latency, so a replay reports the real cost and latency.
 - The estimate is design 8.2's: 4,400 input and 1,500 output tokens for each

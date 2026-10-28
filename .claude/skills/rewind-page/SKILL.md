@@ -36,8 +36,8 @@ Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-202
   - `schema`: stored pages are parsed with it on read (`validatePagesOnRead`
     in `lib/rewind/select-pages.ts`), so data holds fact ids, rating keys and
     geometry inputs, never a second copy of a number a fact displays.
-  - `PageDefinition.srSummary(data, facts)`: the deterministic text for screen readers, the
-    Notes fallback and article mode. Every number on the page appears in it.
+  - `PageDefinition.srSummary(data, facts)`: the deterministic text for screen readers and the
+    Notes fallback. Every number on the page appears in it.
   - `table(data, facts, settings)` on chart pages (the Table sheet), or none.
   - `share`: `facts` the card may print, `titles` (facts that name a title),
     `art`, `share.titleKeys` (so a hidden title leaves the projection at once) and
@@ -82,9 +82,11 @@ Design: `.agents/planning/2026-10-17-app-audit-and-rewind-2026/design/rewind-202
   `components/rewind/pages/page-body.tsx`. It prints in the stage's ink, with
   sizes in artboard units (`u()`, `ut()` from `components/rewind/pages/units.ts`)
   and posters through `RewindPoster`.
-- Article mode (P5.12): `article(data, facts, ctx)` returns blocks built with
-  the helpers in `lib/rewind/article/blocks.ts`, from the same data, table and
-  copy as the story page. Without one the page reads as its summary and table.
+- Article mode (P5.12): `article(data, facts, ctx)` is required. It returns
+  blocks built with the helpers in `lib/rewind/article/blocks.ts`, from the
+  same data, table and copy as the story page, and states each fact once: the
+  deck through `deckBlock`, at most one table of 12 rows or fewer with a short
+  caption and no date range, and no summary that repeats another block.
 - Desktop Notes (P7.4): `notes(data, facts, ctx)` adds what the page does not
   already say; otherwise `pageNotes` (`lib/rewind/notes/index.ts`) shows the
   summary. Notes render in `components/rewind/desktop/notes-column.tsx`.

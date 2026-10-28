@@ -20,18 +20,16 @@ interface WhySheetProps {
   shortlist: readonly WhyCandidate[]
   /** `archetype.dedication`, rendered on the server; in-app only. */
   dedication: ReactNode
-  /** The AI disclosure naming the provider, as in Settings' "About the words". */
-  disclosure: string
 }
 
 /**
  * "Why this?" (Rewind design 4.3 page 16): the shortlist code scored, each
  * archetype with the plain-language reasons its scorer cites, then the
- * dedication and the AI disclosure. A bottom sheet on paper, opened from
+ * dedication. A bottom sheet on paper, opened from
  * `rewind-archetype-why` through the player's sheet mode, so Esc closes it
  * before the story.
  */
-export function WhySheet({ open, onClose, name, shortlist, dedication, disclosure }: WhySheetProps) {
+export function WhySheet({ open, onClose, name, shortlist, dedication }: WhySheetProps) {
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       <SheetContent side="bottom" grabber data-testid="rewind-why-sheet" className="font-text">
@@ -55,9 +53,6 @@ export function WhySheet({ open, onClose, name, shortlist, dedication, disclosur
           ))}
         </ol>
         <p className="border-t border-border-strong pt-3 text-ui italic">{dedication}</p>
-        <p className="text-ui text-muted-foreground" data-testid="rewind-why-disclosure">
-          {disclosure}
-        </p>
       </SheetContent>
     </Sheet>
   )

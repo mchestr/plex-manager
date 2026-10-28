@@ -40,8 +40,6 @@ export const JOB_TYPES = {
   // Season console (P7.8), on `rewind-batch`
   REWIND_SEASON_PREPARE: "rewind:season:prepare",
   REWIND_GENERATE_ALL: "rewind:generate:all",
-  // The final cut (P8.5), on `rewind-batch`
-  REWIND_FINAL_CUT: "rewind:final-cut",
   // Share cards (P5.10), on `rewind-aux`
   REWIND_CARD_PREWARM: "rewind:card:prewarm",
   REWIND_CARD_SWEEP: "rewind:card:sweep",
@@ -74,7 +72,6 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.REWIND_STALE_SWEEP]: "Rewind stale sweep",
   [JOB_TYPES.REWIND_SEASON_PREPARE]: "Rewind season prepare",
   [JOB_TYPES.REWIND_GENERATE_ALL]: "Rewind generate all",
-  [JOB_TYPES.REWIND_FINAL_CUT]: "Rewind final cut",
   [JOB_TYPES.REWIND_CARD_PREWARM]: "Rewind card prewarm",
   [JOB_TYPES.REWIND_CARD_SWEEP]: "Rewind card sweep",
   [JOB_TYPES.REWIND_DRY_RUN]: "Rewind dry run",
@@ -268,8 +265,6 @@ export interface RewindServerAggregatePayload {
    * enqueuing them, so `REWIND_SEASON_PREPARE` adds them as its children.
    */
   warm?: "enqueue" | "return"
-  /** The full-year window with an earlier `through`: a staging rehearsal of the final cut (P8.5). */
-  finalCut?: true
 }
 
 /**
@@ -302,8 +297,6 @@ export interface RewindGenerateUserPayload {
   /** Set by the season fan-out (P7.8): whose Rewinds it generates, and the batch's last data day. */
   audience?: GenerationAudience
   through?: string
-  /** The final cut's full-year window, set by its fan-out (P8.5); with an early `through` only on staging. */
-  finalCut?: true
 }
 
 /**
@@ -325,22 +318,7 @@ export interface RewindGenerateAllPayload {
   through: string
   audience: GenerationAudience
   scope: "all" | "failed"
-  /** `final-cut` children keep unchanged slots (`copyPolicy: 'changed-slots'`, P8.5); `season` when absent. */
-  kind?: "season" | "final-cut"
-  finalCut?: true
   step?: "fan-out" | "done"
-}
-
-/**
- * The final cut (P8.5): the full-year aggregate, the warm batches, then a
- * `final-cut` fan-out. `through` is `YYYY-12-31`, or an earlier day on a
- * staging rehearsal (`REWIND_STAGING=1`), which still reads the full-year window.
- */
-export interface RewindFinalCutPayload {
-  year: number
-  through: string
-  triggeredBy: "scheduled" | "admin" | "script"
-  step?: "aggregate" | "warm" | "generate" | "done"
 }
 
 /** Renders the cover, centrefold and back cover of one completed Rewind with the member's saved options. */
@@ -357,14 +335,14 @@ export interface RewindDryRunPayload {
 
 /**
  * One "your Rewind is ready" message (P7.14), deduplicated on
- * `rewind:notify:{year}:{userId}:{kind}`. `final-cut` tells December's
- * readers that their issue now includes December (P8.5).
+ * `rewind:notify:{year}:{userId}:{kind}`: `kind` is the generation's, a
+ * season run or the member's own.
  */
 export interface RewindNotifyPayload {
   wrappedId: string
   userId: string
   year: number
-  kind: "season" | "member" | "final-cut"
+  kind: "season" | "member"
 }
 
 /**
@@ -405,7 +383,6 @@ interface JobPayloads {
   [JOB_TYPES.REWIND_STALE_SWEEP]: Record<string, never>
   [JOB_TYPES.REWIND_SEASON_PREPARE]: RewindSeasonPreparePayload
   [JOB_TYPES.REWIND_GENERATE_ALL]: RewindGenerateAllPayload
-  [JOB_TYPES.REWIND_FINAL_CUT]: RewindFinalCutPayload
   [JOB_TYPES.REWIND_CARD_PREWARM]: RewindCardPrewarmPayload
   [JOB_TYPES.REWIND_CARD_SWEEP]: Record<string, never>
   [JOB_TYPES.REWIND_DRY_RUN]: RewindDryRunPayload
@@ -456,7 +433,6 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   [JOB_TYPES.REWIND_STALE_SWEEP]: { fromCaller: "the rewind-stale-sweep scheduler" },
   [JOB_TYPES.REWIND_SEASON_PREPARE]: { fromCaller: "rewind:prepare-now:<year>:<through>, or the season-open run" },
   [JOB_TYPES.REWIND_GENERATE_ALL]: { fromCaller: "the parent run's step id; BullMQ's own id for the console button, which never joins a run" },
-  [JOB_TYPES.REWIND_FINAL_CUT]: { fromCaller: "the final-cut run" },
   [JOB_TYPES.REWIND_CARD_PREWARM]: { fromCaller: "rewind:cards:<wrappedId>:<facts hash>" },
   [JOB_TYPES.REWIND_CARD_SWEEP]: { fromCaller: "the rewind-card-sweep scheduler" },
   [JOB_TYPES.REWIND_DRY_RUN]: { jobId: (data) => data.previewId },

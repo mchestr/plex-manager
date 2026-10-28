@@ -15,7 +15,8 @@
  * @module lib/rewind/pages/standing
  */
 
-import { figure, heading, paragraph, tableBlock } from "@/lib/rewind/article/blocks"
+import { deckBlock, heading, paragraph, type ArticleBlock } from "@/lib/rewind/article/blocks"
+import { formatHero } from "@/lib/rewind/format"
 import type { PageDefinition, PageTable } from "@/lib/rewind/registry"
 import { headline } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
@@ -54,10 +55,11 @@ function standingSummary(data: StandingData, facts: RewindFactsV3): string {
 
 function standingTable(data: StandingData, facts: RewindFactsV3): PageTable {
   return {
-    caption: `Where you stand by hours watched, and the server's year, from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}. Nobody is named.`,
+    caption: "Where you stand by hours watched, and the server's year.",
     columns: ["Measure", "Value"],
     rows: [
-      ["Your standing", shown(facts, "standing.percentile")],
+      // The percentile only in the top half, as the headline names it.
+      ...(namesPercentile(facts) ? [["Your standing", shown(facts, "standing.percentile")]] : []),
       ["Members who pressed play", shown(facts, "standing.members")],
       ...data.community.map((id) => [COMMUNITY_LABELS[id], shown(facts, id)]),
     ],
@@ -74,11 +76,16 @@ export const standingPage: PageDefinition<StandingData> = {
   schema: StandingDataSchema,
   srSummary: standingSummary,
   table: (data, facts) => standingTable(data, facts),
-  article: (data, facts, ctx) => [
-    heading(headline("standing", facts), facts),
-    paragraph(pageDeck(ctx, facts, "standing"), facts),
-    ...figure(standingSummary(data, facts)),
-    ...tableBlock(standingTable(data, facts)),
-  ],
+  // The strip's one mark is the member's rank, given only in the top half, as the headline does.
+  article: (data, facts, ctx) => {
+    const rank: ArticleBlock[] = namesPercentile(facts)
+      ? [paragraph(`You were number ${formatHero(data.rank, ctx)} of {{fact:standing.members}} members who pressed play.`, facts)]
+      : []
+    const box: ArticleBlock[] =
+      data.community.length > 0
+        ? [{ kind: "table", table: { caption: "The server's year", columns: ["Measure", "Value"], rows: data.community.map((id) => [COMMUNITY_LABELS[id], shown(facts, id)]) } }]
+        : []
+    return [heading(headline("standing", facts), facts), ...deckBlock(pageDeck(ctx, facts, "standing"), facts, ["standing.percentile", "standing.members", ...data.community]), ...rank, ...box]
+  },
   share: { facts: ["standing.percentile"] },
 }

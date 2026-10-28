@@ -198,7 +198,7 @@ model PlexWrapped {
   edition     String? // v3: "full", "pocket" or "postcard"
   factsHash   String? // v3: sha256 of the canonical facts JSON
   dataThrough DateTime? // v3: end of the data window this issue covers
-  finalCutAt  DateTime? // v3: when the full-year final cut replaced the season issue
+  finalCutAt  DateTime? // v3: when a whole-year issue was written; nothing reads it since the final cut was removed
   notifiedAt  DateTime? // v3: when the member was told the issue is ready
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
@@ -222,7 +222,7 @@ model RewindGeneration {
   userId       String
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   year         Int
-  kind         String // "season", "final-cut", "admin", "member"
+  kind         String // "season", "admin", "member"
   status       String      @default("queued") // "queued", "running", "completed", "failed", "skipped"
   jobId        String?
   startedAt    DateTime?
@@ -230,7 +230,7 @@ model RewindGeneration {
   error        Json? // typed error code, never a roster
   factsHash    String?
   copySource   String? // "llm", "repair", "template", "mixed"
-  copyPolicy   String      @default("default") // "default", "no-llm", "changed-slots"
+  copyPolicy   String      @default("default") // "default", "no-llm"
   llmCalls     Int         @default(0)
   costUsd      Decimal?    @db.Decimal(10, 4)
   previousData String? // the PlexWrapped.data this generation replaced, kept until 2027-06-30
@@ -353,7 +353,7 @@ model RewindView {
   @@index([createdAt])
 }
 
-// One run of the Rewind copy eval harness
+// One run of the Rewind copy eval harness. Nothing reads or writes it since the admin Evals page was removed
 model RewindEvalRun {
   id            String   @id @default(cuid())
   model         String
@@ -365,7 +365,7 @@ model RewindEvalRun {
   createdAt     DateTime @default(now())
 }
 
-// One provider Batch API submission (final cut)
+// One provider Batch API submission. Nothing writes it since the final cut it was for was removed
 model RewindBatch {
   id          String    @id @default(cuid())
   provider    String
@@ -626,7 +626,7 @@ model DiscordPendingSelection {
   @@index([expiresAt])
 }
 
-// Prompt Template for LLM generation
+// A prompt template or Rewind style guide. Nothing reads or writes it since the admin Prompts page was removed
 model PromptTemplate {
   id          String   @id @default(cuid())
   name        String // Human-readable name for the template

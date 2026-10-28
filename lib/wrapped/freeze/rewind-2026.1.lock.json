@@ -9,7 +9,7 @@
     "copySlots": "aa222f77e096af80477d303ae3e7b504d9aae9aae2468a72376ed2456ee5384b",
     "grounding": "3f68de6b63346e58bd88e0dc17015e8253766cae475bde9f7cbdc1da7c391f1f",
     "posterLines": "3134f1bbb2b41f33c416672a22fd664fa3e07f42ac30ebe0d12b1e5873feb513",
-    "slotTemplates": "b749883d26032a318e0b81a6ef56de28782ff5c314abb28a7686f148f06d41f8",
+    "slotTemplates": "ada204e9fea1dfa2257d41affa1a9da43b57c7b6e64c946abf51ca49a2f3baa8",
     "catalogue": "f703241b748eeff8cedf4512d3a4f2ce97469fefb680143e86774d75de59a210",
     "model": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
   },
@@ -17,6 +17,14 @@
     {
       "on": "2026-10-21",
       "reason": "Lock rewind-2026.1: the prompt, the catalogue and the copy slots, with window.finalCut out of every identity list (P8.5). No model yet: the bake-off sets it in evals/rewind/selected.json."
+    },
+    {
+      "on": "2026-10-27",
+      "reason": "No final cut: every slot template is one finished line (no open/final variants, no \"so far\"), and the sign-off no longer promises a final cut in the new year."
+    },
+    {
+      "on": "2026-10-28",
+      "reason": "Shorter template decks and dedication: no method or meta lines; each slot keeps a token-free last variant"
     }
   ]
 }

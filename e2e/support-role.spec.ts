@@ -35,7 +35,6 @@ const REFUSED_PATHS = [
   '/admin/queues',
   '/admin/discord',
   '/admin/rewind',
-  '/admin/prompts',
   '/admin/shares',
   '/admin/announcements',
 ];

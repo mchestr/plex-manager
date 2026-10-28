@@ -14,8 +14,8 @@
  * - `schema` is the strict Zod schema of that data, in
  *   `lib/rewind/pages/<page>.schema.ts`; a stored page is parsed with it on
  *   read (`validatePagesOnRead`).
- * - `srSummary(data, facts)` is the deterministic text a screen reader, the
- *   desktop Notes and article mode read for the page's graphic.
+ * - `srSummary(data, facts)` is the deterministic text a screen reader and
+ *   the desktop Notes read for the page's graphic.
  * - `table(data, facts, settings)` is the chart pages' Table sheet (P5.3).
  * - `share.facts` are the facts the page's card may print (P5.10).
  * - `article(data, facts, ctx)` is the page in article mode (P5.12).
@@ -76,8 +76,9 @@ export type Edition = "full" | "pocket" | "postcard"
  * A chart page's table: the same data as the graphic, for the Table sheet,
  * the desktop Notes and article mode (design 4.6, 11.1, FR-16).
  *
- * - `caption` names what is counted and the counting window. It never names
- *   a time zone: times are the member's own (design 7.7).
+ * - `caption` names what is counted in a few words; never the window, which
+ *   the masthead and cover carry, nor a time zone: times are the member's
+ *   own (design 7.7).
  * - `columns` are the header cells (`th scope="col"`).
  * - Each row has one display string per column; its first cell names the row
  *   (`th scope="row"`).
@@ -124,10 +125,9 @@ export interface PageDefinition<D> {
   table?(data: D, facts: RewindFactsV3, settings: { locale: string }): PageTable | null
   /**
    * The page in article mode (P5.12), from the same data, tables and copy as
-   * its story page. A page without one reads as its summary and Table
-   * (`articleBlocks`).
+   * its story page, stating each fact once.
    */
-  article?(data: D, facts: RewindFactsV3, ctx: ArticleContext): ArticleBlock[]
+  article(data: D, facts: RewindFactsV3, ctx: ArticleContext): ArticleBlock[]
   /**
    * The page's desktop Notes (P7.4): blocks that extend the page rather than
    * repeat it. P7.4 writes Top shows, the calendar and the centrefold; P8.4

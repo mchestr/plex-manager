@@ -10,7 +10,7 @@ import { getFrozenRewindModel } from "@/lib/llm/registry"
 import { prisma } from "@/lib/prisma"
 import { rewindFeatureOn } from "@/lib/rewind/features"
 import { seasonAudienceSwitchAt } from "@/lib/rewind/season-open"
-import { finalCutOpensAt, seasonPrepareAt, seasonThrough, seasonZones } from "@/lib/rewind/season-runs"
+import { seasonPrepareAt, seasonThrough, seasonZones } from "@/lib/rewind/season-runs"
 import { getFormat } from "@/lib/settings/app-settings"
 import { parseTableParams } from "@/lib/ui/table-params"
 import { serverZone } from "@/lib/utils/server-zone"
@@ -103,7 +103,6 @@ export default async function RewindSeasonPage({ searchParams }: { searchParams:
   const prepareAt = seasonPrepareAt(year, opensMd, zones)
   const switchAt = seasonAudienceSwitchAt(year, opensMd, zone)
   const longDate = (date: Date) => f.date(date, "long")
-  const finalCutOpen = now >= finalCutOpensAt(year, zones).getTime()
   const lastDay = through.endsWith("12-31") ? "31 December" : "30 November"
 
   return (
@@ -111,7 +110,7 @@ export default async function RewindSeasonPage({ searchParams }: { searchParams:
       <PageHeader
         title="Season"
         description={`Rewind ${year}: prepare the season's data, generate every member's Rewind and follow the runs.`}
-        actions={<SeasonActions year={year} estimates={{ all, failed }} finalCutOpen={finalCutOpen} />}
+        actions={<SeasonActions year={year} estimates={{ all, failed }} />}
         data-testid="admin-rewind-header"
       />
       <SeasonProgress year={year} initial={counts} budget={budget} />

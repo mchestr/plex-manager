@@ -19,9 +19,11 @@
  * minutes. The buttons' runs use another deduplication id, so pressing
  * Prepare season never joins the delayed season-open run.
  *
- * {@link keepDelayedRun} is the one keep-it-scheduled rule, for this run, the
- * final cut (P8.5) and the season open's audience switch (P8.2,
- * `lib/rewind/season-open.ts`).
+ * {@link keepDelayedRun} is the one keep-it-scheduled rule, for this run and
+ * the season open's audience switch (P8.2, `lib/rewind/season-open.ts`).
+ * There is no January rebuild: a Rewind is final once it is generated, and
+ * {@link cancelScheduledFinalCut} removes the final cut 0.5.0 and earlier
+ * kept scheduled for 1 January.
  *
  * @module
  */
@@ -34,10 +36,10 @@ import { prisma } from "@/lib/prisma"
 import { readyWithin, getRequestPathRedis } from "@/lib/queue/connection"
 import { sanitizeJobId } from "@/lib/queue/job-id"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
-import { JOB_TYPES, type RewindFinalCutPayload, type RewindGenerateAllPayload, type RewindSeasonPreparePayload } from "@/lib/queue/types"
+import { JOB_TYPES, type RewindGenerateAllPayload, type RewindSeasonPreparePayload } from "@/lib/queue/types"
 import { serverZone } from "@/lib/utils/server-zone"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
-import { batchWindowAt, isFinalCut, throughFor } from "@/lib/wrapped/aggregate/window"
+import { batchWindowAt, throughFor } from "@/lib/wrapped/aggregate/window"
 import { DEFAULT_SEASON, getSeasonYear, parseMonthDay } from "@/lib/wrapped/season"
 import { latestLocalInstant } from "@/lib/wrapped/time/zone"
 
@@ -57,19 +59,6 @@ const RUN_OPTIONS: JobsOptions = { attempts: 3, backoff: { type: "exponential", 
 export function seasonPrepareAt(year: number, opens: string, zones: readonly string[]): Date {
   const md = parseMonthDay(opens) ?? parseMonthDay(DEFAULT_SEASON.opens)!
   return latestLocalInstant(`${year}-${String(md.month).padStart(2, "0")}-${String(md.day).padStart(2, "0")}`, "00:15", zones)
-}
-
-/**
- * When the final cut of `year` runs and may be started (P8.5): 00:30 on
- * 1 January of the next year in the westernmost of `zones`.
- *
- * @example
- * ```ts
- * finalCutOpensAt(2026, ["America/Chicago", "America/Los_Angeles"]).toISOString() // "2027-01-01T08:30:00.000Z"
- * ```
- */
-export function finalCutOpensAt(year: number, zones: readonly string[]): Date {
-  return latestLocalInstant(`${year + 1}-01-01`, "00:30", zones)
 }
 
 /** The server zone and every zone an eligible member chose, without repeats. */
@@ -104,10 +93,10 @@ export interface RunStarted {
   alreadyQueued: boolean
 }
 
-async function addDeduplicated(name: string, data: object, deduplicationId: string, options: JobsOptions = {}): Promise<RunStarted> {
+async function addDeduplicated(name: string, data: object, deduplicationId: string): Promise<RunStarted> {
   const queue = await batchQueue()
   const existing = await queue.getDeduplicationJobId(deduplicationId)
-  const job = await queue.add(name, data, { ...RUN_OPTIONS, ...options, deduplication: { id: deduplicationId } })
+  const job = await queue.add(name, data, { ...RUN_OPTIONS, deduplication: { id: deduplicationId } })
   return { jobId: job.id ?? "", alreadyQueued: existing !== null && job.id === existing }
 }
 
@@ -196,51 +185,21 @@ export async function scheduleSeasonOpenRun(): Promise<Date | null> {
   return ensureSeasonPrepareScheduled(await getSeasonYear())
 }
 
-/**
- * Run final cut (P8.5): one `REWIND_FINAL_CUT` per year, deduplicated on
- * `rewind:final:{year}`, so the button joins the scheduled run when it is
- * waiting or running. It never retries; a failed final cut is started again.
- *
- * A staging rehearsal (a `through` before 31 December, P8.10) gets its own
- * id, `rewind:final:{year}:{through}`: the staging worker has already
- * scheduled the 1 January run under the year's id, and joining that delayed
- * job would leave the rehearsal waiting until New Year.
- */
-export async function enqueueFinalCut(data: Omit<RewindFinalCutPayload, "step">): Promise<RunStarted> {
-  const deduplicationId = isFinalCut(data.year, data.through)
-    ? finalCutDeduplicationId(data.year)
-    : `${finalCutDeduplicationId(data.year)}:${data.through}`
-  return addDeduplicated(JOB_TYPES.REWIND_FINAL_CUT, data, deduplicationId, { attempts: 1 })
-}
-
-/** The final cut's deduplication id: one run per year. */
-const finalCutDeduplicationId = (year: number) => `rewind:final:${year}`
+/** The job 0.5.0 and earlier kept delayed on `rewind-batch` for 00:30 on 1 January. */
+export const LEGACY_FINAL_CUT_JOB = "rewind:final-cut"
 
 /**
- * Keeps one delayed `REWIND_FINAL_CUT` for {@link finalCutOpensAt}, replacing
- * it when the westernmost zone moves; at worker start and in the stale sweep.
- * Returns the instant, or null once it has passed.
- *
- * @internal callers use {@link scheduleFinalCutRun}, which picks the season year
+ * Removes every `rewind:final-cut` job that has not started: a Rewind is
+ * final once it is generated, so nothing rebuilds the issues in January.
+ * Runs at worker start and in the stale sweep, because an older worker's
+ * sweep adds the job again during a rolling deploy. BullMQ frees the job's
+ * deduplication id (`rewind:final:{year}`) with it. Returns how many it removed.
+ * One that a Worker takes first (it was already due at start) completes
+ * without doing anything (`rewind-queues.ts`).
  */
-export async function ensureFinalCutScheduled(year: number, now: number = Date.now()): Promise<Date | null> {
-  const at = finalCutOpensAt(year, await seasonZones())
-  const data: RewindFinalCutPayload = { year, through: throughFor(year, { finalCut: true }), triggeredBy: "scheduled" }
-  return keepDelayedRun(
-    {
-      queue: "rewind-batch",
-      name: JOB_TYPES.REWIND_FINAL_CUT,
-      data,
-      at,
-      deduplicationId: finalCutDeduplicationId(year),
-      jobId: sanitizeJobId(`rewind:final:${year}:${at.getTime()}`),
-      options: { attempts: 1 },
-    },
-    now
-  )
-}
-
-/** {@link ensureFinalCutScheduled} for the current season year. */
-export async function scheduleFinalCutRun(): Promise<Date | null> {
-  return ensureFinalCutScheduled(await getSeasonYear())
+export async function cancelScheduledFinalCut(): Promise<number> {
+  const queue = await batchQueue()
+  const legacy = (await queue.getJobs(["delayed", "waiting", "prioritized"])).filter((job) => job?.name === LEGACY_FINAL_CUT_JOB)
+  await Promise.all(legacy.map((job) => job.remove()))
+  return legacy.length
 }

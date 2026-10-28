@@ -11,7 +11,7 @@ import { POSTER_LINES } from "../poster-lines"
 import { renderCopyText, tokenIds } from "../render-copy"
 import { slotsForPages } from "../slots"
 import {
-  copyLocals, coverLines, headline, pocketNote, posterLineTemplate, quizCallback, quizHeadline, quizReveal, slotTemplate, windowLine,
+  copyLocals, coverLines, headline, POCKET_NOTE, posterLineTemplate, quizCallback, quizHeadline, quizReveal, SLOT_TEMPLATES, slotTemplate, windowLine,
 } from "../templates"
 import { fixtureCopyInputs, type FixtureCopyInput } from "./fixture-facts"
 
@@ -56,23 +56,60 @@ describe("slot templates", () => {
   })
 
   it("fall back to the token-free variant when the member lacks every fact", () => {
-    expect(slotTemplate("deck.taste", { facts: {}, userId: USER })).toBe("Genres as the server tags them, counted by minutes.")
+    expect(slotTemplate("deck.taste", { facts: {}, userId: USER })).toBe("Your kind of thing.")
   })
 
-  it("key the window wording on window.finalCut", () => {
+  it("never cite a count or share of zero, but cite a Sunday or midnight", () => {
+    const zero = { "hours.afterDarkShare": { value: 0, display: "0%", unit: "share" } } satisfies RewindFactsV3
+    const picks = new Set(Array.from({ length: 30 }, (_, n) => slotTemplate("deck.clock", { facts: zero, userId: `member-${n}` })))
+    expect([...picks]).toEqual(["Any time is a good time."])
+    const sunday = {
+      "hours.latestStart.time": { value: 0, display: "12:00 AM", unit: "time" },
+      "hours.latestStart.weekday": { value: 0, display: "Sunday", unit: "weekday" },
+    } satisfies RewindFactsV3
+    const sundayPicks = new Set(Array.from({ length: 30 }, (_, n) => slotTemplate("deck.clock", { facts: sunday, userId: `member-${n}` })))
+    expect(sundayPicks).toContain("Your latest start was {{fact:hours.latestStart.time}} on a {{fact:hours.latestStart.weekday}}.")
+
+    const failures: string[] = []
+    for (const input of inputs) {
+      for (const slot of slotsForPages(input.selected)) {
+        if (slot.id === "archetype.posterLineId") continue
+        const text = slotTemplate(slot.id, { facts: input.facts, userId: USER, locals: copyLocals({ year: input.year }) })
+        for (const id of tokenIds(text)) {
+          const fact = input.facts[id as keyof RewindFactsV3]
+          if (fact?.value === 0 && !["weekday", "time", "hour"].includes(fact.unit)) failures.push(`${input.id} ${slot.id}: ${id} is zero`)
+        }
+      }
+    }
+    expect(failures).toEqual([])
+  })
+
+  it("reads as a finished issue in either window, with the same line for both and no \"so far\"", () => {
     const facts = (finalCut: 0 | 1): RewindFactsV3 => ({
       "window.finalCut": { value: finalCut, display: String(finalCut), unit: "count" },
       "window.through": { value: "2026-11-30", display: "November\u00A030", unit: "date" },
       "time.daysHours": { value: 78420, display: "54\u00A0days, 11\u00A0hours", unit: "days-hours" },
       "time.perDay": { value: 234, display: "3\u00A0h 54\u00A0m", unit: "duration" },
     })
-    const open = (userId: string) => renderCopyText(slotTemplate("deck.number", { facts: facts(0), userId }), facts(0))
-    const final = (userId: string) => renderCopyText(slotTemplate("deck.number", { facts: facts(1), userId }), facts(1))
     const users = ["a", "b", "c", "d", "e", "f"]
-    expect(users.some((u) => open(u).includes("so far"))).toBe(true)
-    expect(users.every((u) => !final(u).includes("so far"))).toBe(true)
-    expect(renderCopyText(windowLine(facts(0)), facts(0))).toBe("Data through November\u00A030")
-    expect(windowLine(facts(1))).toBe("Final cut")
+    for (const slot of ["deck.number", "deck.calendar", "deck.standing", "signOff"] as const) {
+      for (const userId of users) {
+        const lines = ([0, 1] as const).map((cut) => slotTemplate(slot, { facts: facts(cut), userId }))
+        expect(lines[0]).toBe(lines[1])
+        expect(lines[0]).not.toMatch(/so far|final cut|not over/i)
+      }
+    }
+    for (const variants of Object.values(SLOT_TEMPLATES)) for (const line of variants) expect(line).not.toMatch(/so far|final cut|not over/i)
+    expect(renderCopyText(windowLine(), facts(0))).toBe("Data through November\u00A030")
+  })
+
+  it("signs off as a finished issue, whatever the window", () => {
+    const facts = (finalCut: 0 | 1): RewindFactsV3 => ({
+      "window.finalCut": { value: finalCut, display: String(finalCut), unit: "count" },
+      "member.firstName": { value: "Mike", display: "Mike", unit: "name" },
+    })
+    const lines = ["a", "b", "c", "d", "e", "f"].flatMap((userId) => [0, 1].map((cut) => renderCopyText(slotTemplate("signOff", { facts: facts(cut as 0 | 1), userId }), facts(cut as 0 | 1))))
+    expect(new Set(lines)).toEqual(new Set(["See you next year, Mike.", "That was the year. Thanks for pressing play."]))
   })
 })
 
@@ -152,8 +189,7 @@ describe("headlines and page lines", () => {
     expect(coverLines(short).map((l) => l.folio)).toEqual([2, 5])
   })
 
-  it("keys the pocket note on copySource", () => {
-    expect(pocketNote("template")).toMatch(/comes from a template/)
-    expect(pocketNote("mixed")).toBe("The six pages that sum up your year.")
+  it("keeps the pocket note to what the edition is", () => {
+    expect(POCKET_NOTE).toBe("The six pages that sum up your year.")
   })
 })

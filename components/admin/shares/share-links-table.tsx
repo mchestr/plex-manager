@@ -14,8 +14,8 @@ import type { BoundFormat } from "@/lib/utils/format"
 
 function columns(f: BoundFormat): ColumnDef<ShareLinkRow>[] {
   return [
-    { id: "member", header: "Member", accessorKey: "memberName", meta: { mobile: "title" } },
-    { id: "year", header: "Year", accessorKey: "year", meta: { mobile: "sub" } },
+    { id: "member", header: "Member", accessorKey: "memberName", meta: { card: "title" } },
+    { id: "year", header: "Year", accessorKey: "year", meta: { card: "sub" } },
     {
       id: "pages",
       header: "Pages published",
@@ -27,7 +27,7 @@ function columns(f: BoundFormat): ColumnDef<ShareLinkRow>[] {
       header: "Created",
       enableSorting: true,
       cell: ({ row }) => f.date(row.original.createdAt),
-      meta: { mobile: "meta" },
+      meta: { card: "field" },
     },
     {
       id: "expires",
@@ -40,13 +40,13 @@ function columns(f: BoundFormat): ColumnDef<ShareLinkRow>[] {
       id: "status",
       header: "Status",
       cell: ({ row }) => <StatusBadge domain="share" value={row.original.status} />,
-      meta: { mobile: "badges" },
+      meta: { card: "field" },
     },
     {
       id: "visits",
       header: "Visits",
       cell: ({ row }) => f.number(row.original.visits),
-      meta: { align: "end", mobile: "meta" },
+      meta: { align: "end", card: "field" },
     },
   ]
 }

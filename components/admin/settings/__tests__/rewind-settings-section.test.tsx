@@ -422,7 +422,7 @@ describe('RewindSettingsSection', () => {
 
       const features = within(screen.getByTestId('rewind-settings-features')).getAllByRole('checkbox')
       expect(features.length).toBeGreaterThanOrEqual(4)
-      expect(screen.getByRole('checkbox', { name: 'Notes and article calendar: arrow-key grid' })).toBeChecked()
+      expect(screen.getByRole('checkbox', { name: 'Notes calendar: arrow-key grid' })).toBeChecked()
       expect(screen.getByRole('checkbox', { name: 'The race: scrubber and Replay' })).not.toBeChecked()
 
       await user.click(screen.getByRole('checkbox', { name: 'The race: scrubber and Replay' }))

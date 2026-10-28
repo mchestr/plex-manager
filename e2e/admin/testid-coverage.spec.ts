@@ -31,7 +31,6 @@ const INTERACTIVE = [
 const DETAIL_ROUTES = [
   `/admin/users/${TEST_USERS.REGULAR.id}`,
   `/admin/invites/${VISUAL_INVITE_IDS.valid}`,
-  '/admin/prompts/visual-prompt-active',
   '/admin/llm-usage/visual-llm-usage-1',
 ];
 

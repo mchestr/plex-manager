@@ -120,7 +120,7 @@ async function completedIssue(
     edition: data.edition,
     ink: archetype ? archetypeInks[archetype].field : "paper",
     soundtrack: strip && { d: strip.d, centre: strip.centre, dotted: strip.dotted, ...STRIP },
-    dataThrough: data.window.finalCut ? "Final cut" : `Data through ${formatDayMonth(data.window.through, ctx.settings)}`,
+    dataThrough: `Data through ${formatDayMonth(data.window.through, ctx.settings)}`,
   }
 }
 

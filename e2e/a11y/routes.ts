@@ -150,10 +150,6 @@ export const A11Y_ROUTES: A11yRoute[] = [
     as: 'admin',
     ready: 'admin-llm-conversation-heading',
   },
-  { path: '/admin/prompts', as: 'admin', ready: 'admin-prompts-heading' },
-  { path: '/admin/prompts/new', as: 'admin', ready: 'admin-prompt-new-heading' },
-  { path: '/admin/prompts/visual-prompt-active', as: 'admin', ready: 'admin-prompt-detail-heading' },
-  { path: '/admin/prompts/visual-prompt-active/edit', as: 'admin', ready: 'admin-prompt-edit-heading' },
   {
     path: `/admin/wrapped/${VISUAL_REWIND_ID}/history/visual-llm-usage-1`,
     as: 'admin',

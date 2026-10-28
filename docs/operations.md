@@ -101,8 +101,7 @@ During the 2026 Rewind season, take one at these moments too, whether or not the
 release carries a migration:
 
 - before the soft-launch release (2026-11-24);
-- before the season-open release (2026-11-30);
-- before the final cut (2027-01-01).
+- before the season-open release (2026-11-30).
 
 ## Applying migrations
 
@@ -209,8 +208,8 @@ done
 
 Pull requests from forks may not see repository variables, and then the gate
 reads `CODE_FREEZE` as unset and passes; review any fork pull request by hand
-during the freeze. Once the final cut has finished (P9.3), set `CODE_FREEZE`
-back to `off`.
+during the freeze. At the season close (2027-01-31), set `CODE_FREEZE` back
+to `off`.
 
 ## Installed with db push
 

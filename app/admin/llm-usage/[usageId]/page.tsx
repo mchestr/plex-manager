@@ -1,6 +1,6 @@
 import { getLLMUsageById } from "@/lib/data/llm-usage"
 import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
-import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
+import { ExpandablePrompt } from "@/components/admin/llm-usage/expandable-prompt"
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"

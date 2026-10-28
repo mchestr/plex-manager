@@ -1,7 +1,6 @@
 /**
  * One eval run's results file, `evals/rewind/results/<date>-<model>.json`
- * (P5.13), and the `RewindEvalRun.results` column. The bake-off reads these
- * files back through `selectModel`.
+ * (P5.13). The bake-off reads these files back through `selectModel`.
  *
  * @module evals/rewind/results-schema
  */

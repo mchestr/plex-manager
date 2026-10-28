@@ -11,7 +11,7 @@
  * @module lib/rewind/pages/people
  */
 
-import { figure, heading, paragraph } from "@/lib/rewind/article/blocks"
+import { andList, deckBlock, heading, plain } from "@/lib/rewind/article/blocks"
 import type { PageDefinition } from "@/lib/rewind/registry"
 import { headline } from "@/lib/wrapped/copy/templates"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
@@ -22,6 +22,8 @@ import { PeopleDataSchema, type PeopleData } from "./people.schema"
 
 const actorFact = (i: number) => `people.actor[${i + 1}].name` as FactId
 const directorFact = (i: number) => `people.director[${i + 1}].name` as FactId
+/** Every name the billing can print. */
+const PEOPLE_FACTS = [0, 1, 2, 3, 4].map(actorFact).concat([0, 1, 2].map(directorFact))
 
 /** The billed names, in order. */
 export function billedNames(data: PeopleData, facts: RewindFactsV3): { actors: string[]; directors: string[] } {
@@ -29,11 +31,6 @@ export function billedNames(data: PeopleData, facts: RewindFactsV3): { actors: s
     actors: Array.from({ length: data.actors }, (_, i) => shown(facts, actorFact(i))),
     directors: Array.from({ length: data.directors }, (_, i) => shown(facts, directorFact(i))),
   }
-}
-
-/** "A", "A and B", "A, B and C". */
-function andList(names: readonly string[]): string {
-  return names.length < 2 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`
 }
 
 function peopleSummary(data: PeopleData, facts: RewindFactsV3): string {
@@ -53,10 +50,20 @@ export const peoplePage: PageDefinition<PeopleData> = {
   },
   schema: PeopleDataSchema,
   srSummary: peopleSummary,
-  article: (data, facts, ctx) => [
-    heading(headline("people", facts), facts),
-    paragraph(pageDeck(ctx, facts, "people"), facts),
-    ...figure(peopleSummary(data, facts)),
-  ],
-  share: { facts: [0, 1, 2, 3, 4].map(actorFact).concat([0, 1, 2].map(directorFact)) },
+  // Every billed name, in billing order; a deck that only names them again is left out.
+  article: (data, facts, ctx) => {
+    const { actors, directors } = billedNames(data, facts)
+    return [
+      heading(headline("people", facts), facts),
+      ...deckBlock(pageDeck(ctx, facts, "people"), facts, PEOPLE_FACTS),
+      {
+        kind: "definitionList",
+        entries: [
+          ...(actors.length > 0 ? [{ term: "Cast", detail: plain(andList(actors)) }] : []),
+          ...(directors.length > 0 ? [{ term: "Directed by", detail: plain(andList(directors)) }] : []),
+        ],
+      },
+    ]
+  },
+  share: { facts: PEOPLE_FACTS },
 }

@@ -6,15 +6,15 @@
  * @module lib/rewind/pages/number
  */
 
-import { figure, heading, paragraph, plain, tableBlock, type ArticleBlock, type ArticleContext } from "@/lib/rewind/article/blocks"
+import { deckBlock, heading, plain, tableBlock, type ArticleBlock, type ArticleContext } from "@/lib/rewind/article/blocks"
 import { formatRewindDuration, pluralWord } from "@/lib/rewind/format"
-import type { PageDefinition } from "@/lib/rewind/registry"
+import type { PageDefinition, PageTable } from "@/lib/rewind/registry"
 import { headline } from "@/lib/wrapped/copy/templates"
 import { display } from "@/lib/wrapped/facts/display"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { pageDeck } from "./deck"
-import { has, isFinalCut, issueYear, num, shown } from "./facts"
+import { has, isWholeYear, issueYear, num, shown } from "./facts"
 import { NumberDataSchema, type NumberData } from "./number.schema"
 
 const HERO_HOURS = 10
@@ -39,7 +39,7 @@ export function splitShare(facts: RewindFactsV3, side: "series" | "films"): stri
 export const hasSplit = (facts: RewindFactsV3) => num(facts, "time.seriesShare") > 0 && num(facts, "time.filmsShare") > 0
 
 /** The vs-2025 stamp's words after the change: "on 2025", or "on the same months of 2025" in the season. */
-const vsLastYearLabel = (facts: RewindFactsV3) => (isFinalCut(facts) ? `on ${issueYear(facts) - 1}` : `on the same months of ${issueYear(facts) - 1}`)
+const vsLastYearLabel = (facts: RewindFactsV3) => (isWholeYear(facts) ? `on ${issueYear(facts) - 1}` : `on the same months of ${issueYear(facts) - 1}`)
 
 /** The milestones the member passed: `{ hours, date }` displays plus the date key. */
 export function milestoneFacts(facts: RewindFactsV3) {
@@ -65,7 +65,7 @@ function monthlyMinutes(minutes: readonly number[], from: string): Map<number, n
   return months
 }
 
-/** The hero in the headline, the stamp, the deck, the split, the counts, the road's summary and its Table. */
+/** The hero in the headline, the stamp, the deck, the split, the counts and the road's Table, whose milestones the summary would repeat. */
 function numberArticle(data: NumberData, facts: RewindFactsV3, ctx: ArticleContext): ArticleBlock[] {
   const hours = data.hero === "time.totalHours"
   const stamp: ArticleBlock[] = has(facts, "time.vsLastYear")
@@ -83,16 +83,35 @@ function numberArticle(data: NumberData, facts: RewindFactsV3, ctx: ArticleConte
         },
       ]
     : []
-  const counts = NUMBER_COUNTS.filter(([id]) => num(facts, id) > 0).map(([id, forms]) => ({ value: shown(facts, id), label: pluralWord(num(facts, id), forms, ctx) }))
+  const counted = NUMBER_COUNTS.filter(([id]) => num(facts, id) > 0)
+  const counts = counted.map(([id, forms]) => ({ value: shown(facts, id), label: pluralWord(num(facts, id), forms, ctx) }))
+  const printed: FactId[] = [
+    data.hero,
+    ...(stamp.length > 0 ? (["time.vsLastYear"] as const) : []),
+    ...(split.length > 0 ? (["time.seriesHours", "time.seriesShare", "time.filmsHours", "time.filmsShare"] as const) : []),
+    ...counted.map(([id]) => id),
+  ]
   return [
     heading(`${headline("number", facts)} {{fact:${data.hero}}}${hours ? " hours" : ""}`, facts),
     ...stamp,
-    paragraph(pageDeck(ctx, facts, "number"), facts),
+    ...deckBlock(pageDeck(ctx, facts, "number"), facts, printed),
     ...split,
     ...(counts.length > 0 ? [{ kind: "factRow" as const, items: counts }] : []),
-    ...figure(numberPage.srSummary(data, facts)),
-    ...tableBlock(numberPage.table?.(data, facts, ctx)),
+    ...tableBlock(hoursByMonth(data, facts, ctx, { playedOnly: true })),
   ]
+}
+
+/** Watch time and milestones by month; article mode leaves out the months with no plays, the story's Table keeps them. */
+function hoursByMonth(data: NumberData, facts: RewindFactsV3, settings: { locale: string }, { playedOnly = false } = {}): PageTable | null {
+  const from = facts["window.from"]?.value
+  if (typeof from !== "string") return null
+  const months = [...monthlyMinutes(data.minutes, from)].filter(([, minutes]) => !playedOnly || minutes > 0)
+  const marks = milestoneFacts(facts)
+  const rows = months.map(([month, minutes]) => {
+    const passed = marks.filter((m) => Number(m.key.slice(5, 7)) === month).map((m) => `${m.hours} hours on ${m.date}`)
+    return [display("month", month, settings), formatRewindDuration(minutes, settings), passed.join(", ")]
+  })
+  return { caption: "Hours by month", columns: ["Month", "Watched", "Milestones"], rows }
 }
 
 export const numberPage: PageDefinition<NumberData> = {
@@ -112,21 +131,7 @@ export const numberPage: PageDefinition<NumberData> = {
     if (marks.length > 0) parts.push(`passing ${marks.join(", ")}`)
     return `${parts.join(", ")}.`
   },
-  table: (data, facts, settings) => {
-    const from = facts["window.from"]?.value
-    if (typeof from !== "string") return null
-    const months = monthlyMinutes(data.minutes, from)
-    const marks = milestoneFacts(facts)
-    const rows = [...months].map(([month, minutes]) => {
-      const passed = marks.filter((m) => Number(m.key.slice(5, 7)) === month).map((m) => `${m.hours} hours on ${m.date}`)
-      return [display("month", month, settings), formatRewindDuration(minutes, settings), passed.join(", ")]
-    })
-    return {
-      caption: `Watch time by month from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}.`,
-      columns: ["Month", "Watched", "Milestones"],
-      rows,
-    }
-  },
+  table: (data, facts, settings) => hoursByMonth(data, facts, settings),
   article: numberArticle,
   share: { facts: ["time.totalHours", "time.totalMinutes", "window.through", "window.finalCut"] },
 }

@@ -4,16 +4,13 @@
 
 /**
  * The read-only validator (P8.5) on pipeline output: the heavy fixture's
- * season issue (on its hand recording) and its final cut (with its
- * December), then one broken copy of them per failure code.
+ * season issue (on its hand recording), then one broken copy of it per
+ * failure code. The whole-year issues are checked in
+ * `lib/wrapped/pipeline/__tests__/full-year.golden.test.ts`.
  */
 
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
-
-import { withDecember, type DecemberExtension } from '@/evals/rewind/december'
 import { readRecording, replayDeps, runFixture } from '@/evals/rewind/harness'
-import { FIXTURE_DIR, loadFixtures } from '@/evals/rewind/__tests__/load-fixtures'
+import { loadFixtures } from '@/evals/rewind/__tests__/load-fixtures'
 import { shareContext, shareOptions } from '@/lib/wrapped/data/__tests__/share-fixture'
 import type { RewindDataV3 } from '@/lib/wrapped/data/schema-v3'
 import { toShareSafe } from '@/lib/wrapped/data/share-safe'
@@ -24,7 +21,6 @@ import {
   validateYear,
   type MemberRow,
 } from '@/lib/wrapped/maintenance/validate-year'
-import { storedIssueOf } from '@/lib/wrapped/pipeline/final-cut'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/utils/logger', () => ({
@@ -33,45 +29,19 @@ jest.mock('@/lib/utils/logger', () => ({
 
 const MODEL = { provider: 'anthropic', id: 'claude-sonnet-5-5' } as const
 const USER = 'fixture-user'
-const FINAL_CUT_AT = new Date('2027-01-01T08:40:00Z')
 
 let season: RewindDataV3
-let finalCut: RewindDataV3
 
 beforeAll(async () => {
   const heavy = loadFixtures().find((f) => f.id === 'heavy')!
   const first = await runFixture(heavy, MODEL, replayDeps(readRecording('hand', 'heavy'), MODEL).deps)
   if (first.result.status !== 'completed') throw new Error('season not completed')
   season = first.result.data
-
-  const december = JSON.parse(readFileSync(path.join(FIXTURE_DIR, 'december', 'heavy.json'), 'utf8')) as DecemberExtension
-  const failing = { fixture: 'heavy', promptVersion: 'rewind-2026.1', calls: Array.from({ length: 10 }, () => ({ kind: 'copy' as const, finishReason: 'error' as const })) }
-  const second = await runFixture(withDecember(heavy, december), MODEL, replayDeps(failing, MODEL).deps, {
-    copyPolicy: 'changed-slots',
-    previous: {
-      factsHash: season.factsHash,
-      promptVersion: season.copyMeta.promptVersion,
-      model: season.copyMeta.model,
-      copy: season.copy!,
-      copySource: season.copySource,
-      slotHashes: season.copyMeta.slotHashes,
-      issue: storedIssueOf(season),
-    },
-  })
-  if (second.result.status !== 'completed') throw new Error('final cut not completed')
-  finalCut = second.result.data
 }, 60_000)
 
-const row = (data: unknown, finalCutAt: Date | null = null) => ({
-  id: 'wrapped-1',
-  userId: USER,
-  status: 'completed',
-  data: JSON.stringify(data),
-  finalCutAt,
-})
+const row = (data: unknown) => ({ id: 'wrapped-1', userId: USER, status: 'completed', data: JSON.stringify(data) })
 
-const codes = (data: unknown, finalCut = false, finalCutAt: Date | null = null) =>
-  validateStoredRow(row(data, finalCutAt), { year: 2026, finalCut })
+const codes = (data: unknown) => validateStoredRow(row(data))
 
 /** The fact id of the first token in any deck. */
 function deckToken(data: RewindDataV3): keyof RewindDataV3['facts'] {
@@ -86,16 +56,6 @@ describe('validateStoredRow', () => {
   it('passes a valid season v3 row', () => {
     expect(season.copy).not.toBeNull()
     expect(codes(season)).toEqual([])
-  })
-
-  it('passes a valid final-cut row with --final-cut, and fails the season row there', () => {
-    expect(codes(finalCut, true, FINAL_CUT_AT)).toEqual([])
-    expect(codes(season, true, null)).toEqual(['NOT_FINAL_CUT', 'FINAL_CUT_AT_MISSING'])
-  })
-
-  it('fails a final-cut row without finalCutAt, and one whose window is not the final cut', () => {
-    expect(codes(finalCut, true, null)).toEqual(['FINAL_CUT_AT_MISSING'])
-    expect(codes({ ...finalCut, window: { ...finalCut.window, finalCut: false } }, true, FINAL_CUT_AT)).toContain('NOT_FINAL_CUT')
   })
 
   it('fails a page that does not pass its schema', () => {
@@ -122,8 +82,8 @@ describe('validateStoredRow', () => {
   })
 
   it('fails rows that are not v3 or do not parse', () => {
-    expect(validateStoredRow({ ...row(season), data: '{"version":2,"statistics":{}}' }, { year: 2026, finalCut: false })).toEqual(['NOT_V3'])
-    expect(validateStoredRow({ ...row(season), data: 'not json' }, { year: 2026, finalCut: false })).toEqual(['UNPARSABLE'])
+    expect(validateStoredRow({ ...row(season), data: '{"version":2,"statistics":{}}' })).toEqual(['NOT_V3'])
+    expect(validateStoredRow({ ...row(season), data: 'not json' })).toEqual(['UNPARSABLE'])
   })
 })
 
@@ -144,14 +104,14 @@ describe('validateShare', () => {
 
 describe('validateYear and its report', () => {
   const members = (): MemberRow[] => [
-    { userId: USER, wrapped: { id: 'w-ok', status: 'completed', data: JSON.stringify(season), finalCutAt: null }, latest: { status: 'completed', code: null } },
-    { userId: 'u2', wrapped: { id: 'w-bad', status: 'completed', data: JSON.stringify({ ...season, factsHash: 'x' }), finalCutAt: null }, latest: null },
+    { userId: USER, wrapped: { id: 'w-ok', status: 'completed', data: JSON.stringify(season) }, latest: { status: 'completed', code: null } },
+    { userId: 'u2', wrapped: { id: 'w-bad', status: 'completed', data: JSON.stringify({ ...season, factsHash: 'x' }) }, latest: null },
     { userId: 'u3', wrapped: null, latest: { status: 'skipped', code: 'NOT_ENTITLED' } },
-    { userId: 'u4', wrapped: { id: 'w-failed', status: 'failed', data: '{}', finalCutAt: null }, latest: { status: 'failed', code: 'UPSTREAM_ERROR' } },
+    { userId: 'u4', wrapped: { id: 'w-failed', status: 'failed', data: '{}' }, latest: { status: 'failed', code: 'UPSTREAM_ERROR' } },
   ]
 
   it('counts failures by code and skips by reason', () => {
-    const report = validateYear(members(), [{ shareId: 'share-1', wrappedId: 'w-ok', project: () => ({ email: 'x' }) }], { year: 2026, finalCut: false })
+    const report = validateYear(members(), [{ shareId: 'share-1', wrappedId: 'w-ok', project: () => ({ email: 'x' }) }])
     expect(report).toMatchObject({
       checked: 2,
       passed: 1,
@@ -162,8 +122,8 @@ describe('validateYear and its report', () => {
   })
 
   it('prints counts and ids, never a title or a name', () => {
-    const report = validateYear(members(), [], { year: 2026, finalCut: false })
-    const text = formatYearReport(report, { year: 2026, finalCut: false }).join('\n')
+    const report = validateYear(members(), [])
+    const text = formatYearReport(report, { year: 2026 }).join('\n')
     expect(text).toContain('FACTS_HASH_MISMATCH')
     expect(text).toContain('NOT_ENTITLED')
     const titles = Object.values(season.facts)
@@ -175,7 +135,7 @@ describe('validateYear and its report', () => {
   })
 
   it('reports zero failures for a clean year', () => {
-    const report = validateYear(members().slice(0, 1), [], { year: 2026, finalCut: false })
-    expect(formatYearReport(report, { year: 2026, finalCut: false })).toContain('Failures: none.')
+    const report = validateYear(members().slice(0, 1), [])
+    expect(formatYearReport(report, { year: 2026 })).toEqual(expect.arrayContaining(['Rewind 2026: 1 checked, 1 passed, 0 failing.', 'Failures: none.']))
   })
 })

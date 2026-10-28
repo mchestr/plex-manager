@@ -1,6 +1,6 @@
 /**
  * 03 Bookends card (design 6.4): the card headline, then the year's first
- * play and its latest (its last after the final cut), each a title with its
+ * play and its latest (its last in a whole-year issue), each a title with its
  * date, and "Member since". A hidden title is not in the projection, so its
  * block is left out.
  *

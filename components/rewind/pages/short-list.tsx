@@ -6,7 +6,7 @@ import { shortListFact, shortListKind } from "@/lib/rewind/pages/short-list"
 import type { ShortListData, ShortListRow } from "@/lib/rewind/pages/short-list.schema"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
-import { pocketNote, shortListDeck, shortListHeadline } from "@/lib/wrapped/copy/templates"
+import { POCKET_NOTE, shortListDeck, shortListHeadline } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { CopyText } from "./copy-text"
@@ -55,7 +55,7 @@ function rowDetail(row: ShortListRow, facts: RewindFactsV3, locale: string): Lis
  * 3 titles of any type. The No. 1 is a nameplate with its full-colour poster
  * (or the hero-size title card), its minutes and the member's usual start
  * time; Nos. 2 and 3 are P5.6's list rows, with
- * minute-level numbers ("48 minutes"). The pocket note follows `copySource`.
+ * minute-level numbers ("48 minutes"), then the pocket note.
  */
 export function ShortListPage({ data, issue }: PageProps<ShortListData>) {
   const { facts, locale } = issue
@@ -122,7 +122,7 @@ export function ShortListPage({ data, issue }: PageProps<ShortListData>) {
         <span className="shrink-0 rounded-sm border-[1.5px] border-current font-display" style={{ padding: `${u(2)} ${u(6)}`, fontVariationSettings: axes(100, 700) }}>
           Pocket edition
         </span>
-        <span>{pocketNote(issue.copySource)}</span>
+        <span>{POCKET_NOTE}</span>
       </p>
     </div>
   )

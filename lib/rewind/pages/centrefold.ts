@@ -17,7 +17,6 @@
  */
 
 import { copyText, figure, paragraph, plain, tableBlock, type ArticleBlock, type ArticleContext } from "@/lib/rewind/article/blocks"
-import { aboutTheWords } from "@/lib/rewind/copy-disclosure"
 import type { PageDefinition } from "@/lib/rewind/registry"
 import { headline, slotTemplate, whyReasons } from "@/lib/wrapped/copy/templates"
 import { ARCHETYPE_STYLE, type ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
@@ -56,6 +55,9 @@ const METERS: Partial<Record<ArchetypeId, MeterSpec>> = {
   explorer: { fact: "counts.titlesPer10Hours", scale: (v) => Math.max(v, 10) },
   loyalist: { fact: "series.top3Share" },
 }
+
+/** The server median a meter's fact is set against, when it has one. */
+const medianOf = (fact: FactId) => Object.values(METERS).find((spec) => spec?.fact === fact)?.median
 
 /** What a meter's number counts, after the number: "94% of what you started, finished". */
 export const METER_CAPTION: Partial<Record<FactId, string>> = {
@@ -129,7 +131,7 @@ export function graphicSummary(graphic: EvidenceGraphic | null, facts: RewindFac
     case "hour-ring":
       return ringSummary(facts, graphic.share)
     case "meter":
-      return `${shown(facts, graphic.fact)} ${METER_CAPTION[graphic.fact] ?? ""}${graphic.median === null ? "" : `, against the server's median of ${shown(facts, `${graphic.fact}.median` as FactId)}`}.`
+      return `${shown(facts, graphic.fact)} ${METER_CAPTION[graphic.fact] ?? ""}${graphic.median === null ? "" : `, against the server's median of ${shown(facts, medianOf(graphic.fact)!)}`}.`
     case "calendar-dots":
       return `You pressed play on ${shown(facts, "days.active")} of ${shown(facts, "window.elapsedDays")}${graphic.weekends ? `, ${shown(facts, "days.weekendShare")} of it at the weekend` : ""}.`
     case "shelf":
@@ -137,28 +139,45 @@ export function graphicSummary(graphic: EvidenceGraphic | null, facts: RewindFac
   }
 }
 
-/** The reveal, the tagline, the graphic's summary, the foot, "Why this?" with its disclosure, and the 24 hours. */
+/**
+ * Article mode's "Why this?": the chosen archetype with its reasons, then the
+ * runners-up by name only. A meter's server median follows the reason that
+ * cites the meter's fact: "You finished 100% of what you started. The
+ * server's median was 84%."
+ */
+function whyArticle(data: CentrefoldData, facts: RewindFactsV3): ArticleBlock[] {
+  const [chosen, ...rest] = whyReasons(data.shortlist)
+  if (!chosen) return []
+  const meter = data.graphic?.kind === "meter" && data.graphic.median !== null ? data.graphic.fact : null
+  const median = meter && medianOf(meter)
+  const reasons = chosen.reasons.flatMap((reason) =>
+    median && reason.includes(`{{fact:${meter}}}`) ? [reason, `The server's median was {{fact:${median}}}.`] : [reason]
+  )
+  return [
+    {
+      kind: "definitionList",
+      label: `Why ${shown(facts, "archetype.name")}?`,
+      entries: [{ term: chosen.name, detail: copyText(reasons.join(" "), facts) }, ...rest.map((candidate, i) => ({ term: STANDING[i + 1], detail: plain(candidate.name) }))],
+    },
+  ]
+}
+
+/** The reveal, the tagline, the rarity and "Why this?". The hours are The clock's. */
 function centrefoldArticle(data: CentrefoldData, facts: RewindFactsV3, ctx: ArticleContext): ArticleBlock[] {
   const name = shown(facts, "archetype.name")
-  const template = (slot: "archetype.tagline" | "archetype.dedication") => slotTemplate(slot, { facts, userId: ctx.userId })
   const reveal: ArticleBlock = name
     ? { kind: "heading", text: [{ kind: "text", text: `${headline("centrefold", facts)} ` }, { kind: "token", id: "archetype.name", text: nameAfterLead(name) }] }
     : { kind: "heading", text: plain("You are a viewer of your own kind") }
   const blocks: ArticleBlock[] = [reveal]
-  if (name) blocks.push(paragraph(`\u201C${ctx.copy?.archetype.tagline ?? template("archetype.tagline")}\u201D`, facts))
-  blocks.push(...figure(graphicSummary(data.graphic, facts)))
+  if (name) blocks.push(paragraph(`\u201C${ctx.copy?.archetype.tagline ?? slotTemplate("archetype.tagline", { facts, userId: ctx.userId })}\u201D`, facts))
   if (showsRarity(facts)) {
     blocks.push({ kind: "factRow", items: [{ value: `${shown(facts, "archetype.rarityCount")} of ${shown(facts, "archetype.scoredMembers")}`, label: "Rewinds here" }] })
   }
-  if (has(facts, "archetype.runnerUp")) blocks.push({ kind: "definitionList", entries: [{ term: "Close second", detail: plain(shown(facts, "archetype.runnerUp")) }] })
-  if (data.shortlist.length > 0) {
-    blocks.push(
-      ...whyBlock(data, facts),
-      paragraph(ctx.copy?.archetype.dedication ?? template("archetype.dedication"), facts),
-      { kind: "note", text: plain(aboutTheWords({ copySource: ctx.copySource, model: ctx.model })) }
-    )
+  blocks.push(...whyArticle(data, facts))
+  if (data.shortlist.length === 0 && has(facts, "archetype.runnerUp")) {
+    blocks.push({ kind: "definitionList", entries: [{ term: "Close second", detail: plain(shown(facts, "archetype.runnerUp")) }] })
   }
-  return [...blocks, ...tableBlock(centrefoldPage.table?.(data, facts, ctx))]
+  return blocks
 }
 
 /** "Why this?": each shortlisted archetype with its reasons, the chosen one first. */
@@ -187,7 +206,7 @@ export const centrefoldPage: PageDefinition<CentrefoldData> = {
     const name = shown(facts, "archetype.name")
     return [name ? `You are ${name.replace(/^The /, "the ")}.` : "You are a viewer of your own kind.", graphicSummary(data.graphic, facts)].filter(Boolean).join(" ")
   },
-  table: (data, facts, settings) => (data.hours.some((n) => n > 0) ? hoursTable(data.hours, facts, settings) : null),
+  table: (data, _facts, settings) => (data.hours.some((n) => n > 0) ? hoursTable(data.hours, settings) : null),
   article: centrefoldArticle,
   // The shortlist with its reasons, then the 24 hours.
   notes: (data, facts, ctx) => {

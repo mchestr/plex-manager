@@ -5,7 +5,7 @@
 import { rewindFeatureOn } from '@/lib/rewind/features'
 import { shareFormats } from '@/lib/rewind/page-meta'
 import { seasonAudienceSwitchAt } from '@/lib/rewind/season-open'
-import { finalCutOpensAt, seasonPrepareAt } from '@/lib/rewind/season-runs'
+import { seasonPrepareAt } from '@/lib/rewind/season-runs'
 import { saveAllCards } from '@/lib/rewind/share-sheet'
 
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))
@@ -23,10 +23,6 @@ describe('JSDoc Documentation Examples', () => {
     expect(rewindFeatureOn({ rewindDisabledPages: ['+race.scrubber'] }, 'race.scrubber')).toBe(true)
     expect(rewindFeatureOn({ rewindDisabledPages: ['+race.scrubber', 'race.scrubber'] }, 'race.scrubber')).toBe(false)
     expect(rewindFeatureOn(null, 'race.scrubber')).toBe(false)
-  })
-
-  it('finalCutOpensAt: 00:30 on 1 January in the westernmost zone', () => {
-    expect(finalCutOpensAt(2026, ['America/Chicago', 'America/Los_Angeles']).toISOString()).toBe('2027-01-01T08:30:00.000Z')
   })
 
   it('shareFormats: a card page names its card, Setup offers none', () => {

@@ -214,7 +214,7 @@ export const envSchema = z.object({
     default: "plex-manager-<16 hex characters>",
   }),
   LLM_REQUEST_TIMEOUT_MS: text("LLM request timeout in milliseconds.", { group: "Integrations", default: "300000" }),
-  REWIND_STAGING: text('Staging only: "1" lets a final-cut rehearsal run with an early --through (P8.5). Never set in production.', {
+  REWIND_STAGING: text('Staging only: "1" lets the season-open rehearsal run (npm run rewind:season-open -- --rehearse). Never set in production.', {
     group: "Rewind",
   }),
   E2E_TEST_MODE: text('Test only: "true" arms the seed outside production. Never set it in .env; pass it inline.', { group: "Test only" }),

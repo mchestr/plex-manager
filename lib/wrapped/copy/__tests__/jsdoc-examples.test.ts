@@ -34,7 +34,7 @@ describe("JSDoc Documentation Examples", () => {
   })
 
   it("templates", () => {
-    expect(slotTemplate("deck.number", { facts, userId: "a" })).toMatch(/^(That.s|Put|Every)/)
+    expect(slotTemplate("deck.number", { facts, userId: "a" })).toMatch(/^(That.s|End|Here)/)
     expect(titleFreeHeadline("bookends")).toBe("How the year opened")
     expect(coverLines([{ type: "number", folio: 2 }, { type: "centrefold", folio: 9 }])).toEqual([
       { folio: 2, text: "One very large number" },

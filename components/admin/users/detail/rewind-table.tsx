@@ -32,15 +32,15 @@ export interface RewindTableRow {
 }
 
 const COLUMNS: ColumnDef<RewindTableRow>[] = [
-  { id: "year", header: "Year", accessorKey: "year", meta: { mobile: "title" } },
+  { id: "year", header: "Year", accessorKey: "year", meta: { card: "title" } },
   {
     id: "status",
     header: "Status",
     cell: ({ row }) => <RewindStateBadge state={row.original.state} data-testid={`admin-user-rewind-status-${row.original.year}`} />,
-    meta: { mobile: "badges" },
+    meta: { card: "field" },
   },
-  { id: "edition", header: "Edition", accessorKey: "edition", meta: { mobile: "meta" } },
-  { id: "generated", header: "Generated", accessorKey: "generated", meta: { mobile: "sub" } },
+  { id: "edition", header: "Edition", accessorKey: "edition", meta: { card: "field" } },
+  { id: "generated", header: "Generated", accessorKey: "generated", meta: { card: "sub" } },
   { id: "share", header: "Share", cell: ({ row }) => (row.original.shared ? "On" : "Off"), meta: { priority: 3 } },
   { id: "visits", header: "Visits", accessorKey: "visits", meta: { align: "end", priority: 3 } },
 ]

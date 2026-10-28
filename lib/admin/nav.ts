@@ -8,15 +8,14 @@
  * ```
  * Overview, Assistant ungrouped, at the top (P10.8)
  * Community           Users, Invites, Announcements, Discord bot
- * Rewind              Season, Playground, Gallery, Evals, Prompts, Share analytics
+ * Rewind              Season, Playground, Share analytics
  * Usage and cost      LLM usage, Cost analysis
  * System              Job queues, Settings
  * ```
  *
  * `typedRoutes` rejects links to routes that do not exist yet, so the step
- * that ships a route adds its item: Season (P7.8, shipped), Gallery (P7.11,
- * shipped), Playground (P8.8, `/admin/rewind/playground`), Overview (P10.8,
- * shipped) and Evals (P11.30, shipped).
+ * that ships a route adds its item: Season (P7.8, shipped), Playground (P8.8,
+ * `/admin/rewind/playground`) and Overview (P10.8, shipped).
  *
  * Labels are sentence case, equal the page titles (UI-21) and say Rewind,
  * never Wrapped (UI-32). Each item's test id is `admin-nav-<id>`.
@@ -129,7 +128,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/rewind",
     icon: icons.rewind,
     group: "Rewind",
-    // Exact: the Rewind pages below it (Playground, Gallery) light their own items.
+    // Exact: the Rewind page below it (Playground) lights its own item.
     match: "exact",
     mobile: "more",
   },
@@ -138,33 +137,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Playground",
     href: "/admin/rewind/playground",
     icon: icons.playground,
-    group: "Rewind",
-    match: "prefix",
-    mobile: "more",
-  },
-  {
-    id: "gallery",
-    label: "Gallery",
-    href: "/admin/rewind/gallery",
-    icon: icons.gallery,
-    group: "Rewind",
-    match: "prefix",
-    mobile: "more",
-  },
-  {
-    id: "evals",
-    label: "Evals",
-    href: "/admin/rewind/evals",
-    icon: icons.evals,
-    group: "Rewind",
-    match: "prefix",
-    mobile: "more",
-  },
-  {
-    id: "prompts",
-    label: "Prompts",
-    href: "/admin/prompts",
-    icon: icons.prompts,
     group: "Rewind",
     match: "prefix",
     mobile: "more",

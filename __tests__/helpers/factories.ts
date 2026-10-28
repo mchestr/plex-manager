@@ -3,7 +3,7 @@
  * mocks (`prismaMock.user.findUnique.mockResolvedValue(buildUser())`) get a
  * valid shape without casts.
  */
-import { Prisma, type Config, type Invite, type JellyfinServer, type LLMUsage, type PlexServer, type PlexWrapped, type PromptTemplate, type RewindShare, type Setup, type User } from '@/lib/generated/prisma/client'
+import { Prisma, type Config, type Invite, type JellyfinServer, type LLMUsage, type PlexServer, type PlexWrapped, type RewindShare, type Setup, type User } from '@/lib/generated/prisma/client'
 
 // A fresh Date per row, so a test that mutates one cannot leak into another.
 const fixedDate = () => new Date('2026-01-01T00:00:00.000Z')
@@ -55,22 +55,6 @@ export function buildPlexWrapped(overrides: Partial<PlexWrapped> = {}): PlexWrap
     notifiedAt: null,
     createdAt: fixedDate(),
     updatedAt: fixedDate(),
-    ...overrides,
-  }
-}
-
-export function buildPromptTemplate(overrides: Partial<PromptTemplate> = {}): PromptTemplate {
-  return {
-    id: 'template-1',
-    name: 'Test template',
-    description: null,
-    template: 'Hello {{userName}}',
-    kind: 'v2-full',
-    isActive: true,
-    version: 1,
-    createdAt: fixedDate(),
-    updatedAt: fixedDate(),
-    updatedBy: null,
     ...overrides,
   }
 }

@@ -84,7 +84,8 @@ export function yearWindow(year: number, zone: string): TimeWindow {
 
 /**
  * The span a Rewind is computed over: during the season, 1 January to the end
- * of 30 November (23:59:59.999) in `zone`; after the final cut, the full year.
+ * of 30 November (23:59:59.999) in `zone`; with `finalCut` (the year has
+ * ended), the whole year.
  */
 export function dataWindow(year: number, zone: string, { finalCut }: { finalCut: boolean }): TimeWindow {
   if (finalCut) return yearWindow(year, zone)
@@ -95,7 +96,7 @@ const isLeapYear = (year: number) => new Date(Date.UTC(year, 1, 29)).getUTCMonth
 
 /**
  * Days the data window covers, for per-day averages: 334 during the season
- * (335 in a leap year), or the whole year after the final cut.
+ * (335 in a leap year), or the whole year once it has ended.
  */
 export function elapsedDays(year: number, { finalCut }: { finalCut: boolean }): number {
   const leap = isLeapYear(year) ? 1 : 0
@@ -133,19 +134,20 @@ export function inWindow(ms: number, window: Pick<TimeWindow, "start" | "end">):
 
 const startOfDayIn = (ms: number, zone: string) => wallTimeToInstant(`${dayKey(ms, zone)}T00:00`, zone).getTime()
 
-/** A member's data window as of `now`, and whether it is the final cut. */
+/** A member's data window as of `now`, and whether it is the whole year. */
 export interface ResolvedDataWindow {
   window: TimeWindow
   finalCut: boolean
 }
 
 /**
- * The one window rule (design 7.7, P8.5): until 1 January 00:00 of the next
- * year in `zone`, the season window, ending at the end of 30 November or of
- * yesterday when that is earlier; from then on the full year, `finalCut`.
- * Every regeneration (fan-outs, member requests, admin runs, hide runs, the
- * stale sweep's re-runs) reads it, so a title hidden on 3 January keeps the
- * issue's "Final cut".
+ * The one window rule (design 7.7): until 1 January 00:00 of the next year in
+ * `zone`, the season window, ending at the end of 30 November or of yesterday
+ * when that is earlier; from then on the whole year, `finalCut`. A Rewind is
+ * final when it is generated, so a member who generates theirs in January
+ * gets the whole year, and one who generated it in December keeps the season
+ * window: a hide or unhide keeps the stored issue's window
+ * (`loadRewindContext`'s `keepWindow`).
  *
  * @example
  * ```ts
@@ -168,12 +170,12 @@ export function seasonWindowAt(year: number, zone: string, now: number): TimeWin
 /**
  * The latest instant, across `zones`, at which clocks read `time` (`HH:MM`)
  * on `day` (`YYYY-MM-DD`): the westernmost zone's. The season-open Prepare
- * (00:15 on the opening day) and the final cut (00:30 on 1 January) run then.
+ * runs then (00:15 on the opening day).
  *
  * @example
  * ```ts
- * latestLocalInstant("2027-01-01", "00:30", ["America/Chicago", "America/Los_Angeles"]).toISOString()
- * // "2027-01-01T08:30:00.000Z"
+ * latestLocalInstant("2026-12-01", "00:15", ["America/Chicago", "America/Los_Angeles"]).toISOString()
+ * // "2026-12-01T08:15:00.000Z"
  * ```
  */
 export function latestLocalInstant(day: string, time: string, zones: readonly string[]): Date {

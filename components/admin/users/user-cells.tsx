@@ -18,11 +18,15 @@ function initials(label: string): string {
   return ((words[0]?.[0] ?? "?") + (words.length > 1 ? (words[1]?.[0] ?? "") : "")).toUpperCase()
 }
 
-/** Neutral initials, the name as a link to the detail page, then the email (6.3). */
+/**
+ * Neutral initials, the name as a link to the detail page, then the email (6.3).
+ * In the table a long email truncates (its full text in `title`), so the table fits its card;
+ * a card gives it the full width.
+ */
 export function MemberCell({ user }: { user: User }) {
   const name = user.name || user.email || "Unknown member"
   return (
-    <div className="flex min-w-0 items-center gap-3">
+    <div className="flex max-w-60 min-w-0 items-center gap-3 dt-cards:max-w-none">
       <span
         aria-hidden="true"
         className="flex size-8 shrink-0 items-center justify-center rounded-full border bg-muted text-caption font-medium text-muted-foreground"
@@ -37,7 +41,11 @@ export function MemberCell({ user }: { user: User }) {
         >
           {name}
         </Link>
-        {user.email && user.email !== name && <span className="truncate text-label text-muted-foreground">{user.email}</span>}
+        {user.email && user.email !== name && (
+          <span title={user.email} className="truncate text-label text-muted-foreground">
+            {user.email}
+          </span>
+        )}
       </div>
     </div>
   )

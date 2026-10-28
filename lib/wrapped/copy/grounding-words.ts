@@ -92,7 +92,7 @@ export const QUANTIFIERS: ReadonlyArray<{ phrase: string; re: RegExp; min: numbe
 /** Voice: phrases no Rewind copy uses. */
 export const BANNED_PHRASES = ["your plex server", "plex rewind", "wrapped", "journey", "dive in", "unleash", "epic", "binge-worthy"]
 
-/** Window words, which only templates may use: a model sentence would go stale in January. */
+/** Window words, which only templates may use: a model sentence must not say the year is unfinished. */
 export const WINDOW_PHRASES = ["so far", "still"]
 
 export const THIRD_PERSON = /\b(the|this) (viewer|member|user|watcher|subscriber)s?\b/i

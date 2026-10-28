@@ -19,7 +19,7 @@
  * else ──────────────────────► the calendar (its active-dates row under 5 active days)
  * ```
  *
- * The design leaves this open; the gallery review (P7.16) confirms it.
+ * The design leaves this open.
  *
  * A postcard is one page whatever the cut.
  *

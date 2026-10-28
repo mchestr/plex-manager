@@ -32,9 +32,9 @@ const members: Member[] = Array.from({ length: 60 }, (_, index) => ({
 }))
 
 const columns: ColumnDef<Member>[] = [
-  { id: "name", header: "Name", accessorKey: "name", enableSorting: true, meta: { mobile: "title" } },
-  { id: "email", header: "Email", accessorKey: "email", meta: { mobile: "sub" } },
-  { id: "plays", header: "Plays", accessorKey: "plays", enableSorting: true, meta: { align: "end", mobile: "meta" } },
+  { id: "name", header: "Name", accessorKey: "name", enableSorting: true, meta: { card: "title" } },
+  { id: "email", header: "Email", accessorKey: "email", meta: { card: "sub" } },
+  { id: "plays", header: "Plays", accessorKey: "plays", enableSorting: true, meta: { align: "end", card: "field" } },
 ]
 
 const onRemove = jest.fn()
@@ -66,22 +66,8 @@ function Page({ rows = members }: { rows?: Member[] }) {
   )
 }
 
-function mockViewport(mobile: boolean) {
-  window.matchMedia = jest.fn().mockImplementation((query: string) => ({
-    matches: mobile,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  }))
-}
-
 beforeEach(() => {
   resetUrl("/admin/users?conversationId=c_42")
-  mockViewport(false)
   onRemove.mockClear()
 })
 
@@ -146,18 +132,70 @@ describe("DataTable", () => {
     expect(onRemove).toHaveBeenCalledWith("m2")
   })
 
-  it("stacks rows below md and keeps their actions", async () => {
-    mockViewport(true)
+  it("renders one table at every width, its cells tagged for the card layout", async () => {
     const user = userEvent.setup()
     render(<Page />)
-    expect(screen.queryByRole("table")).not.toBeInTheDocument()
-    const list = screen.getByRole("list", { name: "Members" })
-    const row = within(list).getByTestId("admin-users-row-m3")
-    expect(within(row).getByRole("link", { name: "Member 3" })).toHaveAttribute("href", "/admin/users/m3")
-    expect(row).toHaveTextContent("member3@example.com")
+    expect(screen.getByTestId("admin-users")).toHaveAttribute("data-table-size", "default")
+    expect(screen.getAllByRole("table", { name: "Members" })).toHaveLength(1)
+    expect(screen.queryByRole("list")).not.toBeInTheDocument()
+
+    const row = screen.getByTestId("admin-users-row-m3")
+    expect(row).toHaveAttribute("role", "row")
+    const cells = within(row).getAllByRole("cell")
+    expect(cells.map((cell) => cell.dataset.card)).toEqual(["title", "sub", "field", "actions"])
+    // Only a field carries its header as a label, for the card
+    expect([...row.querySelectorAll('[data-slot="cell-label"]')].map((label) => label.textContent)).toEqual(["Plays"])
+    expect(within(cells[0]).getByRole("link", { name: "Member 3" })).toHaveAttribute("href", "/admin/users/m3")
+    expect(cells[1]).toHaveTextContent("member3@example.com")
+
     await user.click(within(row).getByRole("button", { name: "Actions for Member 3" }))
     await user.click(await screen.findByRole("menuitem", { name: /Remove Plex access/ }))
     expect(onRemove).toHaveBeenCalledWith("m3")
+  })
+
+  it("draws no actions button on a row without actions, and keeps its cell", () => {
+    render(
+      <DataTable
+        label="Jobs"
+        noun="jobs"
+        columns={columns}
+        data={members.slice(0, 2)}
+        getRowId={(member) => member.id}
+        getRowName={(member) => member.name}
+        rowActions={(member) => (member.id === "m1" ? [] : [{ id: "remove", label: "Remove", onSelect: jest.fn() }])}
+        pagination={{ page: 1, pageSize: 25, total: 2 }}
+        empty={null}
+        data-testid="jobs"
+      />
+    )
+    const idle = screen.getByTestId("jobs-row-m1")
+    expect(within(idle).queryByRole("button", { name: "Actions for Member 1" })).not.toBeInTheDocument()
+    expect(within(idle).getAllByRole("cell").at(-1)).toHaveAttribute("data-card", "actions")
+    expect(within(screen.getByTestId("jobs-row-m2")).getByRole("button", { name: "Actions for Member 2" })).toBeInTheDocument()
+  })
+
+  it("makes a column without a card slot the title when first and leaves it out otherwise", () => {
+    render(
+      <DataTable
+        label="Plays"
+        noun="plays"
+        size="wide"
+        columns={[
+          { id: "title", header: "Title", accessorKey: "name" },
+          { id: "plays", header: "Plays", accessorKey: "plays" },
+        ]}
+        data={members.slice(0, 1)}
+        getRowId={(member) => member.id}
+        pagination={{ page: 1, pageSize: 25, total: 1 }}
+        empty={null}
+        data-testid="plays"
+      />
+    )
+    expect(screen.getByTestId("plays")).toHaveAttribute("data-table-size", "wide")
+    const cells = within(screen.getByTestId("plays-row-m1")).getAllByRole("cell")
+    expect(cells.map((cell) => cell.dataset.card)).toEqual(["title", "hidden"])
+    expect(cells[1]).toHaveClass("dt-cards:hidden")
+    expect(screen.getByTestId("plays-column-plays")).toHaveClass("dt-cards:hidden")
   })
 
   it("pages through the URL", async () => {

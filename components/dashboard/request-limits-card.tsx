@@ -2,10 +2,10 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { QuotaUsage } from "@/lib/connections/overseerr-quota"
 import type { MemberRequestLimits } from "@/lib/request-tiers/member-limits"
-import { limitCopy, limitNumber, type RequestTier } from "@/lib/request-tiers/tiers"
-import { cn } from "@/lib/utils"
+import { limitCopy } from "@/lib/request-tiers/tiers"
 
 const hoursCopy = (hours: number) => `${Math.ceil(hours)} ${Math.ceil(hours) === 1 ? "hour" : "hours"}`
+const daysCopy = (days: number) => (days === 1 ? "day" : `${days} days`)
 
 /** "3 of 4 left" or "Unlimited", for the requests of one kind in this period. */
 function UsageRow({ label, usage, testId }: { label: string; usage: QuotaUsage; testId: string }) {
@@ -17,7 +17,7 @@ function UsageRow({ label, usage, testId }: { label: string; usage: QuotaUsage; 
           "Unlimited"
         ) : (
           <>
-            {usage.remaining} left <span className="text-label text-muted-foreground">({usage.used} of {usage.limit} used, per {usage.days} days)</span>
+            {usage.remaining} left <span className="text-label text-muted-foreground">({usage.used} of {usage.limit} used, per {daysCopy(usage.days)})</span>
           </>
         )}
       </dd>
@@ -25,56 +25,9 @@ function UsageRow({ label, usage, testId }: { label: string; usage: QuotaUsage; 
   )
 }
 
-/** "Unlimited / 7 d": on a phone the period wraps under the number as one piece. */
-function LimitCell({ limit, days }: { limit: number; days: number }) {
-  return (
-    <td className="py-1.5 pr-3 last:pr-2">
-      {limitNumber(limit)} <span className="whitespace-nowrap">/ {days} d</span>
-    </td>
-  )
-}
-
-/** Every tier; on a phone each cell wraps between its words, never inside "200 h" or "/ 7 d". */
-function TierTable({ tiers, current }: { tiers: RequestTier[]; current: number | null }) {
-  return (
-    <table className="w-full text-ui" data-testid="request-limits-table">
-      <caption className="sr-only">Request limits by watch time</caption>
-      <thead>
-        <tr className="text-left align-bottom text-label text-muted-foreground">
-          <th scope="col" className="py-1 pr-3 pl-2 font-normal">Tier</th>
-          <th scope="col" className="py-1 pr-3 font-normal">Watch time</th>
-          <th scope="col" className="py-1 pr-3 font-normal">Movies</th>
-          <th scope="col" className="py-1 pr-2 font-normal">Shows</th>
-        </tr>
-      </thead>
-      <tbody>
-        {tiers.map((tier, index) => (
-          <tr
-            key={tier.overHours}
-            aria-current={index === current ? "true" : undefined}
-            className={cn("border-t align-top", index === current && "bg-secondary font-medium")}
-            data-testid={`request-limits-tier-${index + 1}`}
-          >
-            <th scope="row" className="py-1.5 pr-3 pl-2 text-left font-normal">{index + 1}</th>
-            <td className="py-1.5 pr-3">
-              {tier.overHours === 0 ? "Any" : <>Over <span className="whitespace-nowrap">{tier.overHours} h</span></>}
-            </td>
-            <LimitCell limit={tier.movieLimit} days={tier.days} />
-            <LimitCell limit={tier.tvLimit} days={tier.days} />
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
-
-/**
- * Home's request-limits card: the member's tier and how many movie and show
- * requests they have left, the watch time to the next tier with a progress
- * bar, and the full table so they know how to earn more.
- */
+/** Members see only their own tier and the next one; only admins see the full tier table. */
 export function RequestLimitsCard({ limits }: { limits: MemberRequestLimits }) {
-  const { progress, usage, excluded, tiers, hours } = limits
+  const { progress, usage, excluded, hours } = limits
 
   return (
     <Card aria-labelledby="home-request-limits-title" role="region" data-testid="home-request-limits-card">
@@ -93,7 +46,7 @@ export function RequestLimitsCard({ limits }: { limits: MemberRequestLimits }) {
           <div className="flex items-center gap-2" data-testid="request-limits-tier">
             <Badge variant="info">Tier {progress.index + 1}</Badge>
             <span className="text-ui text-foreground">
-              {limitCopy(progress.tier.movieLimit, "movies")} and {limitCopy(progress.tier.tvLimit, "shows")} every {progress.tier.days} days
+              {limitCopy(progress.tier.movieLimit, "movies")} and {limitCopy(progress.tier.tvLimit, "shows")} every {daysCopy(progress.tier.days)}
             </span>
           </div>
         )}
@@ -119,7 +72,8 @@ export function RequestLimitsCard({ limits }: { limits: MemberRequestLimits }) {
                 </div>
                 <p className="text-label text-muted-foreground">
                   Watch {hoursCopy(progress.hoursToNext)} more for Tier {progress.index + 2}:{" "}
-                  {limitCopy(progress.next.movieLimit, "movies")} and {limitCopy(progress.next.tvLimit, "shows")}.
+                  {limitCopy(progress.next.movieLimit, "movies")} and {limitCopy(progress.next.tvLimit, "shows")}
+                  {progress.next.days !== progress.tier.days && ` every ${daysCopy(progress.next.days)}`}.
                 </p>
               </>
             ) : (
@@ -127,12 +81,16 @@ export function RequestLimitsCard({ limits }: { limits: MemberRequestLimits }) {
             )}
           </div>
         )}
-        {!excluded && hours === null && (
+        {!excluded && hours === null && usage && (
           <p className="text-label text-muted-foreground" data-testid="request-limits-no-hours">
             Your watch time isn't available right now.
           </p>
         )}
-        <TierTable tiers={tiers} current={excluded ? null : (progress?.index ?? null)} />
+        {!usage && (excluded || hours === null) && (
+          <p className="text-label text-muted-foreground" data-testid="request-limits-unavailable">
+            Your request limits aren't available right now.
+          </p>
+        )}
       </CardContent>
     </Card>
   )

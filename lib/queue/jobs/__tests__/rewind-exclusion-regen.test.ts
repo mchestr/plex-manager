@@ -157,7 +157,6 @@ describe('hiding the No. 1 series', () => {
         consume: jest.fn(async () => ({ ok: true as const })),
         signal: new AbortController().signal,
         attribution: { userId: FIXTURE_USER_ID },
-        styleGuide: null,
       },
       ...overrides,
     }

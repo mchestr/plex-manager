@@ -64,7 +64,7 @@ describe("dataWindow", () => {
     expect(inWindow(Date.parse("2026-11-30T23:00:00Z"), window)).toBe(false)
   })
 
-  it("is the whole year after the final cut", () => {
+  it("is the whole year once the year has ended", () => {
     expect(dataWindow(2026, "UTC", { finalCut: true })).toEqual(yearWindow(2026, "UTC"))
   })
 })

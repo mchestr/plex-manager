@@ -20,13 +20,12 @@ const form: PlaygroundForm = {
   model: DEFAULT_MODEL,
   promptVersion: "rewind-2026.1",
   effort: "low",
-  styleGuide: "stored",
   copyPolicy: "default",
 }
 
 const idle: PlaygroundState = { form, phase: { kind: "idle" } }
 const estimate = { provider: "anthropic", model: "claude-sonnet-5-5", costUsd: 0.02, maxCostUsd: 0.03 }
-const context = { year: 2026, styleGuides: [{ id: "g1", text: "Keep it short." }] }
+const context = { year: 2026 }
 
 describe("playgroundReducer", () => {
   it("walks a paid run: estimate, confirm, start, poll, finish", () => {
@@ -68,13 +67,11 @@ describe("toDryRunRequest", () => {
     expect(DryRunInput.safeParse(request).success).toBe(true)
   })
 
-  it("passes a member, a model, and a style guide's text or none", () => {
-    expect(toDryRunRequest({ ...form, subject: "member", model: "claude-haiku-5", styleGuide: "g1" }, context)).toMatchObject({
+  it("passes a member and a model", () => {
+    expect(toDryRunRequest({ ...form, subject: "member", model: "claude-haiku-5" }, context)).toMatchObject({
       subject: { kind: "member", userId: form.userId },
       model: "claude-haiku-5",
-      styleGuide: "Keep it short.",
     })
-    expect(toDryRunRequest({ ...form, styleGuide: "none" }, context).styleGuide).toBeNull()
   })
 
   it("sends no model for Templates only", () => {

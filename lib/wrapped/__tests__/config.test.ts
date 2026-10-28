@@ -75,7 +75,6 @@ describe('the copy step under llmDisabled', () => {
         consume: jest.fn(async () => ({ ok: true as const })),
         signal: new AbortController().signal,
         attribution: { userId: FIXTURE_USER_ID },
-        styleGuide: null,
       },
     })
 

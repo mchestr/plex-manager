@@ -18,7 +18,6 @@ const SIDEBAR_LINKS: Array<[testId: string, path: RegExp]> = [
   ['admin-nav-discord', /\/admin\/discord$/],
   ['admin-nav-season', /\/admin\/rewind$/],
   ['admin-nav-playground', /\/admin\/rewind\/playground$/],
-  ['admin-nav-prompts', /\/admin\/prompts$/],
   ['admin-nav-share-analytics', /\/admin\/shares$/],
   ['admin-nav-llm-usage', /\/admin\/llm-usage$/],
   ['admin-nav-cost-analysis', /\/admin\/cost-analysis$/],

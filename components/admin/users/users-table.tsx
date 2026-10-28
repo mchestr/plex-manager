@@ -64,7 +64,8 @@ const FILTERS = [
   },
 ]
 
-const MOBILE_SORTS = [
+/** The sort Select shown while rows are cards and the sortable headers are hidden. */
+const CARD_SORTS = [
   { value: "-joined", label: "Joined, newest" },
   { value: "joined", label: "Joined, oldest" },
   { value: "name", label: "Name" },
@@ -104,12 +105,12 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
   const { actionsFor, dialogs } = useUserActions({ year, stripeEnabled, stripeDashboardBaseUrl, estimateCopy, inList: true })
 
   const columns: ColumnDef<User>[] = [
-    { id: "name", header: "Member", enableSorting: true, cell: ({ row }) => <MemberCell user={row.original} />, meta: { mobile: "title" } },
-    { id: "role", header: "Role", cell: ({ row }) => <RoleCell user={row.original} />, meta: { mobile: "hidden" } },
-    { id: "service", header: "Service", cell: ({ row }) => <ServiceCell user={row.original} />, meta: { mobile: "badges" } },
-    { id: "plexAccess", header: "Plex access", cell: ({ row }) => <PlexAccessCell user={row.original} unknownSub={unknownSub} />, meta: { mobile: "badges" } },
-    { id: "subscription", header: "Subscription", cell: ({ row }) => <SubscriptionCell user={row.original} />, meta: { mobile: "badges" } },
-    { id: "rewind", header: `Rewind ${year}`, cell: ({ row }) => <RewindCell user={row.original} now={now} />, meta: { mobile: "hidden", priority: 3 } },
+    { id: "name", header: "Member", enableSorting: true, cell: ({ row }) => <MemberCell user={row.original} />, meta: { card: "title" } },
+    { id: "role", header: "Role", cell: ({ row }) => <RoleCell user={row.original} />, meta: { card: "field" } },
+    { id: "service", header: "Service", cell: ({ row }) => <ServiceCell user={row.original} />, meta: { card: "field" } },
+    { id: "plexAccess", header: "Plex access", cell: ({ row }) => <PlexAccessCell user={row.original} unknownSub={unknownSub} />, meta: { card: "field" } },
+    { id: "subscription", header: "Subscription", cell: ({ row }) => <SubscriptionCell user={row.original} />, meta: { card: "field" } },
+    { id: "rewind", header: `Rewind ${year}`, cell: ({ row }) => <RewindCell user={row.original} now={now} />, meta: { card: "field", priority: 3 } },
     {
       id: "cost",
       header: "LLM cost",
@@ -124,9 +125,15 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
           </Link>
         )
       },
-      meta: { align: "end", mobile: "meta" },
+      meta: { align: "end", card: "field" },
     },
-    { id: "joined", header: "Joined", enableSorting: true, cell: ({ row }) => f.date(row.original.createdAt, "short"), meta: { mobile: "meta" } },
+    {
+      id: "joined",
+      header: "Joined",
+      enableSorting: true,
+      cell: ({ row }) => <span className="whitespace-nowrap">{f.date(row.original.createdAt, "short")}</span>,
+      meta: { card: "field" },
+    },
   ]
 
   const clearFilters = () => replace({ q: null, role: null, service: null, plexAccess: null, subscription: null, page: null })
@@ -160,6 +167,7 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
       <DataTable
         label="Members"
         noun="members"
+        size="wide"
         columns={columns}
         data={rows}
         getRowId={(user) => user.id}
@@ -172,7 +180,7 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
           <FilterBar
             search={{ param: "q", placeholder: "Search name or email" }}
             filters={FILTERS}
-            sort={{ param: "sort", options: MOBILE_SORTS }}
+            sort={{ param: "sort", options: CARD_SORTS }}
             resultCount={{ shown: total, total: memberCount, noun: "members" }}
             data-testid="admin-users-filters"
           />

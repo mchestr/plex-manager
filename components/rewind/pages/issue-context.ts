@@ -6,7 +6,6 @@ import type { Edition, RewindPageType } from "@/lib/rewind/registry"
 import type { SelectedPage } from "@/lib/rewind/select-pages"
 import type { ItemLinks } from "@/lib/ui/plex-links"
 import type { RewindCopyV3Wire } from "@/lib/wrapped/copy/schema"
-import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 /** What every page of one issue shares at render. */
@@ -20,11 +19,8 @@ export interface IssueContext {
   /** The selected list: folios, cover lines and the page counts read it. */
   pages: readonly SelectedPage[]
   copy: RewindCopyV3Wire | null
-  copySource: RewindDataV3["copySource"]
   /** Where Close and the back cover's "Done" go: P5.1's `safeReturnPath(from)`. */
   returnTo: Route
-  /** `copyMeta.model`, for the AI disclosure in "Why this?". */
-  model: string | null
   facts: RewindFactsV3
   /**
    * The page types of both cuts (P7.3), for the cover's cut buttons: `full`

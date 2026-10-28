@@ -37,13 +37,12 @@ export const metadata: Metadata = { title: "Playground", robots: { index: false 
 const querySchema = z.object({
   subject: recordIdSchema.optional().catch(undefined),
   fixture: z.string().optional().catch(undefined),
-  styleGuideId: z.string().max(64).optional().catch(undefined),
   preview: previewIdSchema.optional().catch(undefined),
 })
 
 const DisabledPagesSchema = z.array(z.string()).catch([])
 
-/** The cards the run's printed pages project, as the gallery and the share sheet list them. */
+/** The cards the run's printed pages project, as the share sheet lists them. */
 async function previewCards(run: CompletedDryRun): Promise<string[]> {
   const [config, shareCtx] = await Promise.all([
     prisma.config.findUnique({ where: { id: "config" }, select: { rewindDisabledPages: true } }),
@@ -71,14 +70,9 @@ async function storedDiff(run: CompletedDryRun): Promise<StoredDiff | null> {
 }
 
 async function loadOptions(): Promise<PlaygroundOptions> {
-  const [users, provider, guides, memberYear, fixtureIds] = await Promise.all([
+  const [users, provider, memberYear, fixtureIds] = await Promise.all([
     prisma.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" }, select: { provider: true, model: true } }),
-    prisma.promptTemplate.findMany({
-      where: { kind: "rewind-style-guide" },
-      select: { id: true, name: true, template: true, isActive: true },
-      orderBy: { name: "asc" },
-    }),
     getSeasonYear(),
     listDryRunFixtures(),
   ])
@@ -95,16 +89,15 @@ async function loadOptions(): Promise<PlaygroundOptions> {
     replay: selectedReplay() !== null,
     promptVersions: [PROMPT_VERSION],
     efforts: DRY_RUN_EFFORTS,
-    styleGuides: guides.map((g) => ({ id: g.id, name: g.name, text: g.template, isActive: g.isActive })),
   }
 }
 
 /**
  * `/admin/rewind/playground` (P8.8, design 10.2): P7.10's dry runs of the
  * production pipeline (`generateUserRewind` in dry-run mode) on a member or
- * a golden fixture, with this run's model, prompt version, effort, style
- * guide and copy policy. A finished run (`?preview=<id>`) shows its facts,
- * page selection, raw output, grounding trail, cost and a story preview.
+ * a golden fixture, with this run's model, prompt version, effort and copy
+ * policy. A finished run (`?preview=<id>`) shows its facts, page selection,
+ * raw output, grounding trail, cost and a story preview.
  * `/admin/playground` redirects here (`next.config.js`).
  */
 export default async function RewindPlaygroundPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -122,7 +115,6 @@ export default async function RewindPlaygroundPage({ searchParams }: { searchPar
     model: DEFAULT_MODEL,
     promptVersion: PROMPT_VERSION,
     effort: "low",
-    styleGuide: options.styleGuides.some((g) => g.id === query.styleGuideId) && query.styleGuideId ? query.styleGuideId : "stored",
     copyPolicy: options.provider ? "default" : "no-llm",
   }
 

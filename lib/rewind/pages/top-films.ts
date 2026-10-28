@@ -7,9 +7,12 @@
  * @module lib/rewind/pages/top-films
  */
 
+import { deckBlock, heading, tableBlock } from "@/lib/rewind/article/blocks"
 import type { PageDefinition } from "@/lib/rewind/registry"
+import { headline } from "@/lib/wrapped/copy/templates"
 import type { FactId } from "@/lib/wrapped/facts/catalogue"
 
+import { pageDeck } from "./deck"
 import { shown } from "./facts"
 import { ratingKeyOf } from "./title-key"
 import { TopFilmsDataSchema, type TopFilmsData } from "./top-lists.schema"
@@ -29,10 +32,15 @@ export const topFilmsPage: PageDefinition<TopFilmsData> = {
     return rows.length === 1 ? `Your film of the year: ${rows[0]}.` : `Your top films: ${rows.join("; ")}.`
   },
   table: (data, facts) => ({
-    caption: `Your films by plays, from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}.`,
+    caption: "Your top films",
     columns: ["Film", "Plays", "Watched"],
     rows: data.rows.map((_row, i) => [shown(facts, filmFact(i, "title")), shown(facts, filmFact(i, "plays")), shown(facts, filmFact(i, "minutes"))]),
   }),
+  article: (data, facts, ctx) => [
+    heading(headline("top-films", facts), facts),
+    ...deckBlock(pageDeck(ctx, facts, "topFilms"), facts, data.rows.flatMap((_row, i) => [filmFact(i, "title"), filmFact(i, "plays"), filmFact(i, "minutes")])),
+    ...tableBlock(topFilmsPage.table?.(data, facts, ctx)),
+  ],
   share: {
     facts: [1, 2, 3, 4, 5].flatMap((n) => [`films[${n}].title`, `films[${n}].plays`, `films[${n}].minutes`] as FactId[]),
     titles: [1, 2, 3, 4, 5].map((n) => `films[${n}].title` as FactId),

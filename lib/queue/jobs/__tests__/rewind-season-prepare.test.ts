@@ -7,6 +7,7 @@
  * pattern, a retry resumes at the stored step, the scheduled run carries
  * audience `all`, and `ensureSeasonPrepareScheduled` targets 00:15 on the
  * opening day in the westernmost zone, moving when a member's zone changes.
+ * `cancelScheduledFinalCut` removes the final cut an earlier version scheduled.
  */
 
 import { WaitingChildrenError, type Job } from 'bullmq'
@@ -17,7 +18,7 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { processRewindSeasonPrepare } from '@/lib/queue/jobs/rewind-season'
 import { getRewindQueue } from '@/lib/queue/rewind-producers'
 import { JOB_TYPES, type RewindSeasonPreparePayload } from '@/lib/queue/types'
-import { enqueueFinalCut, ensureFinalCutScheduled, ensureSeasonPrepareScheduled } from '@/lib/rewind/season-runs'
+import { cancelScheduledFinalCut, ensureSeasonPrepareScheduled } from '@/lib/rewind/season-runs'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/queue/rewind-producers', () => ({ getRewindQueue: jest.fn() }))
@@ -32,6 +33,7 @@ interface FakeQueue {
   addBulk: jest.Mock
   getDeduplicationJobId: jest.Mock
   getJob: jest.Mock
+  getJobs: jest.Mock
 }
 
 let queue: FakeQueue
@@ -43,6 +45,7 @@ beforeEach(() => {
     addBulk: jest.fn(async () => []),
     getDeduplicationJobId: jest.fn(async () => null),
     getJob: jest.fn(),
+    getJobs: jest.fn(async () => []),
   }
   jest.mocked(getRewindQueue).mockReturnValue(queue as never)
 })
@@ -176,49 +179,26 @@ describe('ensureSeasonPrepareScheduled', () => {
   })
 })
 
-describe('ensureFinalCutScheduled (P8.5)', () => {
-  const NOW = Date.parse('2026-12-20T12:00:00Z')
-  const AT = Date.parse('2027-01-01T08:30:00Z') // 00:30 in Los Angeles
+describe('cancelScheduledFinalCut', () => {
+  const job = (name: string) => ({ name, remove: jest.fn(async () => undefined) })
 
-  it('keeps one delayed REWIND_FINAL_CUT for 00:30 on 1 January in the westernmost zone, never retried', async () => {
-    prismaMock.user.findMany.mockResolvedValue([{ timezone: 'America/Los_Angeles' }] as never)
+  it('removes only the final cut jobs that have not started, and counts them', async () => {
+    const finalCut = job('rewind:final-cut')
+    const rehearsal = job('rewind:final-cut')
+    const prepare = job(JOB_TYPES.REWIND_SEASON_PREPARE)
+    queue.getJobs.mockResolvedValue([finalCut, prepare, rehearsal])
 
-    expect((await ensureFinalCutScheduled(2026, NOW))?.toISOString()).toBe('2027-01-01T08:30:00.000Z')
-    expect(queue.add).toHaveBeenCalledWith(
-      JOB_TYPES.REWIND_FINAL_CUT,
-      { year: 2026, through: '2026-12-31', triggeredBy: 'scheduled' },
-      expect.objectContaining({ attempts: 1, jobId: `rewind-final-2026-${AT}`, delay: AT - NOW, deduplication: { id: 'rewind:final:2026' } })
-    )
+    expect(await cancelScheduledFinalCut()).toBe(2)
+    expect(getRewindQueue).toHaveBeenCalledWith('rewind-batch')
+    expect(queue.getJobs).toHaveBeenCalledWith(['delayed', 'waiting', 'prioritized'])
+    expect(finalCut.remove).toHaveBeenCalled()
+    expect(rehearsal.remove).toHaveBeenCalled()
+    expect(prepare.remove).not.toHaveBeenCalled()
   })
 
-  it('keeps the delayed job while the instant holds, and schedules nothing once it has passed', async () => {
-    prismaMock.user.findMany.mockResolvedValue([{ timezone: 'America/Los_Angeles' }] as never)
-    queue.getDeduplicationJobId.mockResolvedValue(`rewind-final-2026-${AT}`)
+  it('removes nothing when no final cut is scheduled', async () => {
+    queue.getJobs.mockResolvedValue([job(JOB_TYPES.REWIND_SEASON_PREPARE)])
 
-    await ensureFinalCutScheduled(2026, NOW)
-    expect(queue.add).not.toHaveBeenCalled()
-    expect(await ensureFinalCutScheduled(2026, AT)).toBeNull()
-  })
-})
-
-describe('enqueueFinalCut (P8.5, P8.10)', () => {
-  it('joins the year run for the real final cut', async () => {
-    await enqueueFinalCut({ year: 2026, through: '2026-12-31', triggeredBy: 'admin' })
-    expect(queue.add).toHaveBeenCalledWith(
-      JOB_TYPES.REWIND_FINAL_CUT,
-      { year: 2026, through: '2026-12-31', triggeredBy: 'admin' },
-      expect.objectContaining({ attempts: 1, deduplication: { id: 'rewind:final:2026' } })
-    )
-  })
-
-  it('gives a staging rehearsal its own id, so it never joins the delayed 1 January run', async () => {
-    queue.getDeduplicationJobId.mockResolvedValue('rewind-final-2026-1798792200000')
-    const run = await enqueueFinalCut({ year: 2026, through: '2026-12-10', triggeredBy: 'script' })
-    expect(queue.add).toHaveBeenCalledWith(
-      JOB_TYPES.REWIND_FINAL_CUT,
-      { year: 2026, through: '2026-12-10', triggeredBy: 'script' },
-      expect.objectContaining({ deduplication: { id: 'rewind:final:2026:2026-12-10' } })
-    )
-    expect(run.alreadyQueued).toBe(false)
+    expect(await cancelScheduledFinalCut()).toBe(0)
   })
 })

@@ -14,7 +14,7 @@ jest.mock('@/lib/data/llm-usage', () => ({ getLLMUsageRecords: jest.fn() }))
 jest.mock('@/lib/settings/app-settings', () => ({
   getFormat: async () => (await import('@/lib/utils/format')).bindFormat({ timeZone: 'America/Chicago', locale: 'en-US' }),
 }))
-jest.mock('@/components/admin/prompts/expandable-prompt', () => ({
+jest.mock('@/components/admin/llm-usage/expandable-prompt', () => ({
   ExpandablePrompt: ({ title, content }: { title: string; content: string }) => <section data-testid={`expandable-${title}`}>{content}</section>,
 }))
 

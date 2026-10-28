@@ -32,7 +32,7 @@ function columns(f: BoundFormat, onEdit: (row: AdminAnnouncementRow) => void): C
           {row.original.title}
         </Button>
       ),
-      meta: { mobile: "title" },
+      meta: { card: "title" },
     },
     {
       id: "preview",
@@ -42,7 +42,7 @@ function columns(f: BoundFormat, onEdit: (row: AdminAnnouncementRow) => void): C
           {row.original.content}
         </MarkdownBody>
       ),
-      meta: { mobile: "sub", priority: 2 },
+      meta: { card: "sub", priority: 2 },
     },
     {
       id: "status",
@@ -53,13 +53,13 @@ function columns(f: BoundFormat, onEdit: (row: AdminAnnouncementRow) => void): C
           {row.original.priority > 0 && <Badge variant="info">Priority {row.original.priority}</Badge>}
         </span>
       ),
-      meta: { mobile: "badges" },
+      meta: { card: "field" },
     },
     {
       id: "visible",
       header: "Visible on home page",
       cell: ({ row }) => <VisibilitySwitch id={row.original.id} title={row.original.title} isActive={row.original.isActive} />,
-      meta: { mobile: "meta" },
+      meta: { card: "field" },
     },
     {
       id: "expires",

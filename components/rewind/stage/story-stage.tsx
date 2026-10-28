@@ -36,6 +36,7 @@ import { useFitStage } from "./use-fit-stage"
 import { usePerfProbe } from "./use-perf-probe"
 import { useRewindPrefs } from "./use-rewind-prefs"
 import { useStageA11y } from "./use-stage-a11y"
+import { useStageFullscreen } from "./use-stage-fullscreen"
 import { useStageGestures } from "./use-stage-gestures"
 import { useStoryCut } from "./use-story-cut"
 import { useStoryPlayer } from "./use-story-player"
@@ -81,12 +82,10 @@ interface StoryStageProps {
   mode?: "member" | "preview" | "admin-preview"
   /** Where "Read as an article" goes; the member's `/rewind/{year}/read` by default. */
   articleHref?: Route
+  /** Previews only: the viewer's own Rewind, which the preview's share sheet opens when the preview shows it. */
+  ownRewindHref?: Route
   /** View tracking (P7.14); only the member mode records views. */
   views?: ViewTracking
-  /** Preview only (P7.11's gallery): the page to open on, an index into `pages`. */
-  initialIndex?: number
-  /** Preview only: no autoplay and motion settled, so the page holds its reduced-motion final state. */
-  still?: boolean
   /** `stage.tap-completes` (P8.3): a forward tap first lands a running count-up. */
   tapCompletes?: boolean
 }
@@ -152,9 +151,8 @@ function Stage({
   initialSheet,
   mode = "member",
   articleHref: articleHrefProp,
+  ownRewindHref,
   views,
-  initialIndex = 0,
-  still = false,
   tapCompletes = false,
 }: Omit<StoryStageProps, "share" | "hide">) {
   const router = useRouter()
@@ -163,12 +161,15 @@ function Stage({
   const safeArea = useRef<HTMLDivElement>(null)
   const offered = useRef(false)
   const framed = mode === "admin-preview"
-  const fit = useFitStage(root, safeArea, framed)
+  const fullscreen = useStageFullscreen(framed, root)
+  // In full screen the admin preview's stage leaves its frame and fits the window.
+  const inFrame = framed && !fullscreen.active
+  const fit = useFitStage(root, safeArea, inFrame)
   const prefs = useRewindPrefs()
   const [cut, chooseCut] = useStoryCut(year)
   const pages = cut === "pocket" && pocket ? pocket : fullPages
   const entries = pages.map((page) => pageMeta[page.type])
-  const { state, send: sendPlayer } = useStoryPlayer(kindsOf(pages), prefs.autoplay && !still)
+  const { state, send: sendPlayer } = useStoryPlayer(kindsOf(pages), prefs.autoplay)
   // The cover's cut (FR-4): the page list swaps while the story is still on the cover, then the story starts.
   const send = useCallback(
     (event: PlayerEvent) => {
@@ -220,18 +221,14 @@ function Stage({
     if (initialSheet) send({ type: "OPEN_SHEET", sheet: initialSheet })
   }, [initialSheet, send])
 
-  // The gallery's `?page=`: open on that page.
-  useEffect(() => {
-    if (initialIndex > 0) send({ type: "GOTO", index: initialIndex, source: "key" })
-  }, [initialIndex, send])
-
   // Offer article mode once, on load, below the scale floor or at large text sizes.
   // A layout effect, so the first fitted paint (`data-fitted`) already has the sheet open.
+  // Not in the admin preview's frame: its header has the article and Full screen offers its own way out.
   useLayoutEffect(() => {
-    if (offered.current || !shouldOfferArticle(fit, readPrefs().smallScreenChoice)) return
+    if (offered.current || framed || !shouldOfferArticle(fit, readPrefs().smallScreenChoice)) return
     offered.current = true
     send({ type: "OPEN_SHEET", sheet: ARTICLE_OFFER })
-  }, [fit, send])
+  }, [fit, framed, send])
 
   const close = () => router.push(closeHref)
   // NEXT, not a cut-less CHOOSE_CUT, on the cover too (the reducer turns the same way): a second press that lands
@@ -260,6 +257,7 @@ function Stage({
     preview,
     shortcuts: prefs.shortcuts,
     close,
+    exitFullscreen: fullscreen.active ? fullscreen.exit : null,
     onToggleNotesTable: () => setNotesTable((on) => !on),
   })
 
@@ -270,7 +268,7 @@ function Stage({
   return (
     <PlayerProvider value={send} sheet={state.mode === "sheet" ? state.sheet : null}>
       <QuizProvider year={year}>
-        <MotionConfig reducedMotion={still ? "always" : "user"}>
+        <MotionConfig reducedMotion="user">
           {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the labelled stage region takes the story keys while focus is inside it (design 4.6) */}
           <section
             ref={root}
@@ -279,13 +277,20 @@ function Stage({
             data-testid="rewind-stage"
             data-mode={state.mode}
             data-preview={preview || undefined}
-            data-still={still || undefined}
             data-chrome={fit.chrome}
             data-fitted={fit.measured || undefined}
+            data-fullscreen={fullscreen.active || undefined}
             style={FIT_DEFAULTS}
             onKeyDown={onKeyDown}
             data-rw-framed={framed || undefined}
-            className={cn(framed ? "absolute" : "fixed", "inset-0 overflow-hidden overscroll-none outline-none rw-spread:bg-(--rw-paper)", FIT_VARS)}
+            className={cn(
+              // In its frame, paint containment keeps the cover's fixed field layer inside the frame instead of over the admin page.
+              inFrame ? "absolute contain-paint" : "fixed",
+              // Out of its frame, the admin preview covers the admin shell's bars (the tab bar is the highest) and stays under the sheets.
+              framed && !inFrame && "z-(--z-dropdown)",
+              "inset-0 overflow-hidden overscroll-none outline-none rw-spread:bg-(--rw-paper)",
+              FIT_VARS
+            )}
           >
             <Button
               {...chromeInk}
@@ -325,6 +330,9 @@ function Stage({
               serverName={serverName}
               year={year}
               closeHref={closeHref}
+              // In its frame, Full screen takes Close's place: the page's breadcrumbs, Esc and a swipe down still leave.
+              showClose={!inFrame}
+              fullscreen={fullscreen.available ? { active: fullscreen.active, onToggle: fullscreen.toggle } : null}
               onNext={forward}
             />
             {mode === "preview" && (
@@ -348,6 +356,7 @@ function Stage({
                 prefs={prefs}
                 articleHref={articleHref}
                 copy={copy}
+                ownRewindHref={ownRewindHref}
               />
             </RecordShareProvider>
           </section>
