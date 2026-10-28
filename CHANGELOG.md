@@ -18,6 +18,8 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-28
+
 ### Added
 
 - **Assistant page:** the admin assistant is now a page of its own, `/admin/assistant`, opened from **Assistant** at the top of the admin sidebar (and from the assistant button in the phone's top bar) instead of a side panel. Conversations are saved: the history beside the conversation (a sheet on phones) lists them by day, each one opens at its own address and carries on where it left off, and **Delete** removes one from your history. A new conversation offers a few questions to start with; Enter sends and Shift+Enter starts a new line. While AI features are off or no chat model is chosen, Assistant stays in the nav for anyone with saved conversations, and its page keeps them readable and deletable, saying why nothing can be sent. Admins and Support users see only their own history, and admins still review every conversation on the LLM usage pages. A conversation leaves the history 90 days after its last message (`RETENTION_ASSISTANT_CHAT_DAYS`), and removing an admin's role ends all of their conversations on the page. Member removal's dry run counts the saved messages too.
@@ -33,6 +35,7 @@ check); the `no-changelog` label skips it.
 - **Entrypoint in `docker/`:** the image's entrypoint script moved from `docker-entrypoint.sh` to `docker/entrypoint.sh` in the repository. The image still runs it as `/app/docker-entrypoint.sh`, so a custom `entrypoint:` keeps working.
 - **Node.js floor:** `engines.node` is now `^22.13.0 || >=24`, the versions that Prisma 7 and ESLint 10 support. The docs said 22.9, where `npm ci` fails in Prisma's preinstall. The image and CI already run Node.js 24.
 - **Repository root:** the Renovate config moved to `.github/renovate.json` and the integration-test helper to `__tests__/helpers/integration.ts`. `.mise.toml` now pins only Node.js; its tasks repeated the npm scripts, and `mise run setup` still used `db:push`.
+- **Plainer Rewind lines:** the archetype motifs, the poster lines and the token-free template lines say what the member's plays show, in short plain sentences, with no slogans or filler ("Much of your viewing started after dark." in place of "Up past the credits, every night."; "Earned from your own viewing." in place of "Wear it well."). Rewind, the setup wizard and the watchlist say "movie" and "show" in place of "film" and "series". The `rewind-2026.1` freeze lock is rewritten for it.
 
 ### Removed
 
@@ -64,7 +67,6 @@ check); the `no-changelog` label skips it.
 - **Hiding a title keeps the issue's days:** hiding or unhiding a title after 1 January no longer turns a 1 January to 30 November Rewind into a whole-year one; it reads the same days as before.
 - **A lighter Rewind article:** article mode states each fact once. Each page gives its headline, a line and at most one small table, with no summary that repeats the table, no date range in a caption and no method lines ("Nobody is named", "Every reason here comes from what you watched"). Guess, Top shows and Top films get sections of their own. Every hour, day and month stays in the story's Table sheets and the desktop Notes.
 - **Shorter template lines:** the template decks and the centrefold dedication end on a short line instead of describing the page or the method ("Here's to more of it.", "All in good fun." in place of "Every minute of it counted from your own history.", "Where you stand, with nobody named."), and never cite a count or share of zero ("0% of your viewing started after dark"). The Short list deck no longer repeats the total. A Regenerate or a hide writes a template-only Rewind's words from the current templates instead of reusing the stored ones.
-- **Plainer Rewind lines:** the archetype motifs, the poster lines and the token-free template lines say what the member's plays show, in short plain sentences, with no slogans or filler ("Much of your viewing started after dark." in place of "Up past the credits, every night."; "Earned from your own viewing." in place of "Wear it well."). Rewind, the setup wizard and the watchlist say "movie" and "show" in place of "film" and "series". The `rewind-2026.1` freeze lock is rewritten for it.
 - **About the words** in the story's Settings shows only when a model wrote some of the words.
 
 ### Removed
@@ -288,7 +290,8 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 - No account linking by email; the Jellyfin sign-in toggle is enforced; share routes serve a share-safe projection; a failed Tautulli match no longer shows emails; a Redis-backed rate limiter keys on the trusted proxy hop; generation is single-flight and rate-limited; the poster proxy checks access; `plexAuthToken` no longer reaches the admin browser.
 - The Discord bot no longer uses the Message Content intent, keeps its token encrypted in the database, and scrubs personal fields before the LLM.
 
-[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.6.0...HEAD
+[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.7.0
 [0.6.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.6.0
 [0.5.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.5.0
 [0.4.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.4.0
