@@ -4,10 +4,9 @@ import { expect, test } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
 
 /**
- * P11.1 (SEC-32): the Security section shows the encryption status, and a
- * stored Tautulli key that no configured key can read says so in the
- * section's summary, whose "Enter it again" opens the form on an empty,
- * required key field, while the rest of the settings page works.
+ * P11.1 (SEC-32): a stored Tautulli key that no configured key can read says
+ * so in the section's summary, whose "Enter it again" opens the form on an
+ * empty, required key field, while the rest of the settings page works.
  *
  * The seed has no Tautulli, so the spec writes one whose key is encrypted
  * under a kid the server does not have (playwright.config.ts gives it `e2e`)
@@ -46,16 +45,10 @@ test.describe('Settings: encryption at rest', () => {
     }
   });
 
-  test('shows the status, and asks for an unreadable key again while the page works', async ({ adminPage: page }) => {
-    await page.goto('/admin/settings#security');
-
-    await expect(page.getByTestId('settings-security-status')).toContainText('Encryption is on');
-    await expect(page.getByTestId('settings-reencrypt-button')).toBeVisible();
-    await expect(page.getByTestId('settings-security-unreadable')).toContainText('Tautulli API key');
+  test('asks for an unreadable key again while the page works', async ({ adminPage: page }) => {
+    await page.goto('/admin/settings#tautulli');
 
     // The rest of the page still renders
-    await expect(page.getByTestId('settings-retention-windows')).toBeVisible();
-    await page.getByTestId('settings-nav-plex').click();
     await expect(page.getByTestId('settings-plex-section')).toBeVisible();
 
     // Tautulli's summary says the key can't be read, and Test waits for a new one

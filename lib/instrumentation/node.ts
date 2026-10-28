@@ -12,7 +12,7 @@
  * setup code, because web containers serve the wizard; `worker` and `all`
  * (the default) also start the queue Workers, their schedulers (watchlist,
  * role reconcile, retention and the Rewind runs), the Discord bot poller and,
- * without Redis, the database-lease fallbacks.
+ * without Redis, the database-lease fallbacks and the secret re-encryption.
  *
  * Imported dynamically from instrumentation.ts so the Edge runtime never
  * analyses its Node-only dependencies.
@@ -65,8 +65,9 @@ async function issueSetupCode() {
 
 /**
  * Starts the BullMQ worker once Redis answers. Without `REDIS_URL` the
- * database-lease watchlist and retention fallbacks run instead; with it,
- * never, so two sync or sweep paths never run at once.
+ * database-lease watchlist and retention fallbacks run instead, and the
+ * secret re-encryption runs in this process when it is due; with it, never,
+ * so two sync or sweep paths never run at once.
  */
 async function startQueueWorker() {
   if (process.env.ENABLE_QUEUE_WORKER === "false") {
@@ -79,11 +80,13 @@ async function startQueueWorker() {
     logger.debug("Queue worker disabled: REDIS_URL not configured")
     const { startWatchlistFallback } = await import("@/lib/watchlist/fallback")
     const { startRetentionFallback } = await import("@/lib/retention/fallback")
+    const { reencryptSecretsWithoutQueue } = await import("@/lib/queue/jobs/secrets")
     await Promise.all([
       startWatchlistFallback({ signal: shutdownSignal }),
       startRetentionFallback({ signal: shutdownSignal }).catch((error) =>
         logger.error("Retention fallback start failed", error)
       ),
+      reencryptSecretsWithoutQueue().catch((error) => logger.error("Secret re-encryption failed", error)),
     ])
     return
   }

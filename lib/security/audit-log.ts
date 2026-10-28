@@ -165,15 +165,6 @@ export enum AuditEventType {
   // An admin opened a page listing many members' content (P11.16): one row per
   // admin and surface per hour. Details carry the surface and the filters.
   MEMBER_CONTENT_LISTED = "MEMBER_CONTENT_LISTED",
-  // An admin ran the retention sweep from settings (P11.14). Details carry the
-  // per-rule counts.
-  RETENTION_RUN = "RETENTION_RUN",
-  // An admin re-encrypted the stored secrets from settings (P11.1). Details
-  // carry the primary kid and counts, never a value.
-  SECRETS_REENCRYPTED = "SECRETS_REENCRYPTED",
-  // An admin listed the services with more than one active row (P11.31).
-  // Details carry each listed table and its row ids, never a URL or key.
-  SERVICE_ROWS_AUDITED = "SERVICE_ROWS_AUDITED",
   // The duplicate active service rows were deactivated (P11.31). Details carry
   // the kept and deactivated ids per table and where the dump taken first lives.
   SERVICE_ROWS_DEDUPED = "SERVICE_ROWS_DEDUPED",
