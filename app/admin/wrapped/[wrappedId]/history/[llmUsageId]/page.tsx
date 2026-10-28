@@ -34,7 +34,6 @@ export default async function HistoricalWrappedPage({ params }: { params: Promis
           kind="unavailable"
           icon={SearchX}
           title="This version can't be shown"
-          description="The app can't find or read the stored version."
           data-testid="admin-wrapped-history-missing"
         />
       </div>

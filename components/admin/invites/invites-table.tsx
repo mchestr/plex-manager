@@ -123,7 +123,6 @@ export function InvitesTable({ rows, total, all, page, pageSize, sort, createAct
         kind="filtered"
         icon={SearchX}
         title="No invites match these filters"
-        description="Change the search or the filters."
         primaryAction={
           <Button data-testid="admin-invites-clear-filters" variant="secondary" onClick={() => replace({ q: null, status: null, server: null, page: null })}>
             Clear filters

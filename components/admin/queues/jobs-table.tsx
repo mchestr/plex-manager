@@ -142,7 +142,7 @@ export function JobsTable({ rows, total, allJobs, page, pageSize, filtered }: Jo
           filtered ? (
             <EmptyState kind="filtered" icon={SearchX} title="No jobs match" description="Clear the filters to see every job." />
           ) : (
-            <EmptyState kind="first-use" icon={Layers} title="No jobs yet" description="Jobs show here when something is queued." />
+            <EmptyState kind="first-use" icon={Layers} title="No jobs yet" />
           )
         }
         data-testid="queue-jobs"

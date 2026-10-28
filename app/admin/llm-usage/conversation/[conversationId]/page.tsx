@@ -47,7 +47,7 @@ export default async function LLMConversationPage({ params }: { params: Promise<
           title="Conversation"
           data-testid="admin-llm-conversation-heading"
         />
-        <EmptyState kind="first-use" icon={MessagesSquare} title="No calls" description="This conversation has no LLM usage records." />
+        <EmptyState kind="first-use" icon={MessagesSquare} title="No calls" />
       </div>
     )
   }
