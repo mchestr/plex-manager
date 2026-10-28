@@ -18,7 +18,7 @@ permission needs no schema change. An unknown stored role grants nothing.
 | `assistant:tools:admin` | no | Assistant tools over admin-only data and connections: app data (invites, members, failed jobs), the knowledge base and MCP servers |
 | `users:read` | yes | The users list, read-only |
 
-A Support user sees Users and the assistant in the admin area, and the member
+A Support user sees Users and the Assistant page in the admin area, and the member
 app shows them the same Admin link an admin gets (`canEnterAdminArea`). Settings,
 connections, LLM providers, Stripe, invites, queues, usage and cost, a
 member's detail page and role management are refused on the server (a page
@@ -27,6 +27,11 @@ checks `assertAdmin()` or `assertPermission()`, and an action is built with
 
 ### The assistant for a Support user
 
+- The assistant is a page, `/admin/assistant`, with the user's own conversation
+  history. They can reopen and delete their own conversations and no one
+  else's; admins still review every conversation on the LLM usage pages
+  (`docs/privacy.md`, "Assistant page history"). Demoting an admin ends their
+  conversations there, so a Support user never reads answers an admin was given.
 - The tools sent to the model are those whose declared permission the user
   holds. `executeToolCall` checks again on every call and fails closed, so a
   prompt-injected tool name is refused before any service is called.

@@ -63,7 +63,9 @@ async function seedMember(db: PrismaClient) {
   await db.wrappedShareVisit.create({ data: { wrappedId: wrapped.id, userAgent: 'test' } })
   await db.rewindPrefs.create({ data: { userId: MEMBER, year: 2026 } })
   await db.rewindExclusion.create({ data: { userId: MEMBER, ratingKey: '42', kind: 'film', title: 'Hidden' } })
-  const conversation = await db.chatConversation.create({ data: { userId: MEMBER } })
+  const conversation = await db.chatConversation.create({
+    data: { userId: MEMBER, title: 'Is Plex up?', lastMessageAt: new Date(), messages: { create: [{ role: 'user', content: 'Is Plex up?' }] } },
+  })
   const usage = { provider: 'openai', promptTokens: 1, completionTokens: 1, totalTokens: 2, cost: 0.5, prompt: 'stats', response: 'copy' }
   await db.lLMUsage.create({ data: { ...usage, userId: MEMBER, chatConversationId: conversation.id } })
   // An admin regeneration: the row is the admin's, its text is about the member
@@ -156,6 +158,7 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
       mockDb.rewindExclusion.count(byUser),
       mockDb.lLMUsage.count(byUser),
       mockDb.chatConversation.count(byUser),
+      mockDb.chatConversationMessage.count({ where: { conversationId: ids.conversationId } }),
       mockDb.discordChatSession.count(byDiscord),
       mockDb.discordCommandLog.count({ where: { OR: [{ userId: MEMBER }, { discordUserId: DISCORD }] } }),
       mockDb.discordPendingSelection.count(byDiscord),

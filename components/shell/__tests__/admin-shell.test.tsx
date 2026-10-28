@@ -1,6 +1,6 @@
 /**
  * The admin shell (P6.1, ui-design-system 6.2): the current item, the More
- * sheet, the failed-jobs dot, sign out and when the assistant appears.
+ * sheet, the failed-jobs dot, sign out and when the assistant's links appear.
  */
 
 import { ADMIN_NAV } from '@/lib/admin/nav'
@@ -18,7 +18,6 @@ expect.extend(toHaveNoViolations)
 
 jest.mock('next-auth/react', () => ({ signOut: jest.fn().mockResolvedValue(undefined) }))
 jest.mock('@/actions/appearance', () => ({ setAppearance: jest.fn() }))
-jest.mock('@/actions/chatbot', () => ({ chatWithAdminBot: jest.fn() }))
 
 const push = jest.fn()
 const refresh = jest.fn()
@@ -37,8 +36,8 @@ function renderShell({ counts = { users: 7, activeInvites: 3, failedJobs: 0 }, a
         serverName="Northfield Plex"
         user={{ name: 'Dana Whitfield', initials: 'DW' }}
         navCounts={counts}
-        assistant={assistant}
-        navIds={ADMIN_NAV.map((item) => item.id)}
+        // The server leaves Assistant out without assistant:use, or while AI is off and the user has no saved conversations (lib/admin/shell.ts)
+        navIds={ADMIN_NAV.map((item) => item.id).filter((id) => assistant || id !== 'assistant')}
         scoped={false}
       >
         <p>Page</p>
@@ -46,10 +45,6 @@ function renderShell({ counts = { users: 7, activeInvites: 3, failedJobs: 0 }, a
     </ToastProvider>
   )
 }
-
-beforeAll(() => {
-  Element.prototype.scrollIntoView = jest.fn()
-})
 
 beforeEach(() => {
   jest.clearAllMocks()
@@ -143,38 +138,49 @@ describe('AdminShell', () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith('/'))
   })
 
-  it('offers the assistant in the sidebar and the top bar', () => {
+  it('links to the assistant page from the sidebar, after Overview, and from the top bar', () => {
     renderShell()
 
-    expect(screen.getByTestId('admin-chat-toggle')).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.getByTestId('admin-chat-toggle-mobile')).toHaveAttribute('aria-expanded', 'false')
+    const sidebar = within(screen.getByTestId('admin-sidebar'))
+    expect(sidebar.getByTestId('admin-nav-assistant')).toHaveAttribute('href', '/admin/assistant')
+    const nav = within(sidebar.getByRole('navigation', { name: 'Admin' }))
+    expect(nav.getAllByRole('link').slice(0, 3).map((link) => link.textContent)).toEqual(['Overview', 'Assistant', 'Users7'])
+    expect(screen.getByTestId('admin-assistant-link-mobile')).toHaveAttribute('href', '/admin/assistant')
+    expect(screen.getByTestId('admin-assistant-link-mobile')).not.toHaveAttribute('aria-current')
   })
 
-  it('has no assistant when it is off (LLM disabled or no chat provider)', () => {
+  it('marks the assistant current on its page', () => {
+    mockPathname.mockReturnValue('/admin/assistant')
+    renderShell()
+
+    expect(within(screen.getByTestId('admin-sidebar')).getByTestId('admin-nav-assistant')).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByTestId('admin-assistant-link-mobile')).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('has no assistant link when the server leaves it out', () => {
     renderShell({ assistant: false })
 
-    expect(screen.queryByTestId('admin-chat-toggle')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('admin-chat-toggle-mobile')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('admin-nav-assistant')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('admin-assistant-link-mobile')).not.toBeInTheDocument()
   })
 
-  it('steps aside on an immersive route, assistant included', () => {
+  it('steps aside on an immersive route, assistant link included', () => {
     mockPathname.mockReturnValue('/admin/wrapped/w1/history/l1')
     renderShell()
 
     expect(screen.queryByTestId('admin-sidebar')).not.toBeInTheDocument()
     expect(screen.queryByTestId('admin-tab-bar')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('admin-chat-toggle')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('admin-assistant-link-mobile')).not.toBeInTheDocument()
     expect(screen.getByRole('main')).toHaveTextContent('Page')
   })
 
-  it('keeps the nav on the admin Rewind preview and hides only the assistant (P7.9)', () => {
+  it('keeps the nav, the assistant link included, on the admin Rewind preview (P7.9)', () => {
     mockPathname.mockReturnValue('/admin/users/u1/rewind/2026')
     renderShell()
 
     expect(screen.getByTestId('admin-sidebar')).toBeInTheDocument()
     expect(screen.getByTestId('admin-tab-bar')).toBeInTheDocument()
-    expect(screen.queryByTestId('admin-chat-toggle')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('admin-chat-toggle-mobile')).not.toBeInTheDocument()
+    expect(screen.getByTestId('admin-assistant-link-mobile')).toBeInTheDocument()
   })
 
   it('offers Appearance beside Sign out (P10.10)', async () => {

@@ -61,6 +61,8 @@ export const LIMITS = {
   "llm:assistant:admin": { points: 60, duration: HOUR },
   // A role below admin (Support) on top of the shared limit above
   "llm:assistant:support": { points: 30, duration: HOUR },
+  // Deleting a conversation from the assistant page's history, per user
+  "assistant:history": { points: 60, duration: HOUR },
   "llm:discord:dm": { points: 20, duration: HOUR },
   "llm:discord:dm:day": { points: 100, duration: DAY },
   "discord:mystats": { points: 5, duration: HOUR },

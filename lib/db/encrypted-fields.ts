@@ -26,9 +26,24 @@ export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   Radarr: ["apiKey"],
   LLMProvider: ["apiKey"],
   LLMUsage: ["prompt", "response"],
+  ChatConversation: ["title"],
+  ChatConversationMessage: ["content"],
   DiscordIntegration: ["clientSecret", "botToken"],
   DiscordConnection: ["accessToken", "refreshToken"],
   McpServer: ["authHeaderSecret"],
   KnowledgeSource: ["token"],
   Config: ["stripeSecretKey", "stripeWebhookSecret", "rewindSerialKey"],
+}
+
+/**
+ * The encrypted columns that hold free text, what a person typed or a model
+ * wrote. They are encrypted on every write, even text that starts like an
+ * encrypted value (`encryptText`), so pasting a stored secret's ciphertext
+ * never reads back as the secret. The other columns keep a value that is
+ * already encrypted as it is.
+ */
+export const FREE_TEXT_FIELDS: Record<string, readonly string[]> = {
+  LLMUsage: ["prompt", "response"],
+  ChatConversation: ["title"],
+  ChatConversationMessage: ["content"],
 }

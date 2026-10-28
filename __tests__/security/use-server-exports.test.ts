@@ -60,7 +60,8 @@ describe.each(useServerModules)('%s auth', (path) => {
 })
 
 it('records the permission of the actions that need one', () => {
-  const { chatWithAdminBot } = jest.requireActual<Record<string, unknown>>(join(ROOT, 'actions/chatbot/index.ts'))
+  const { chatWithAdminBot, deleteAssistantConversation } = jest.requireActual<Record<string, unknown>>(join(ROOT, 'actions/chatbot/index.ts'))
 
   expect(actionAuthOf(chatWithAdminBot)).toBe('permission:assistant:use')
+  expect(actionAuthOf(deleteAssistantConversation)).toBe('permission:assistant:use')
 })

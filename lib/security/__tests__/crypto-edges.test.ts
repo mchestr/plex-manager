@@ -8,7 +8,7 @@
 
 import crypto from "node:crypto"
 
-import { decryptSecret, encryptForPrimary, kidOf, parseKeyringEntries, tryDecryptSecret } from "@/lib/security/crypto"
+import { decryptSecret, encryptForPrimary, encryptSecret, encryptText, kidOf, parseKeyringEntries, tryDecryptSecret } from "@/lib/security/crypto"
 import { clearUnreadable, isUnreadable, listUnreadable, markUnreadable, resetUnreadable } from "@/lib/security/unreadable-secrets"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -29,6 +29,24 @@ function setKeys(keys?: string) {
 afterEach(() => {
   setKeys()
   resetUnreadable()
+})
+
+describe("free text", () => {
+  it("seals text that looks encrypted, which encryptSecret keeps as it is", () => {
+    setKeys(`k1:${K1}`)
+    const lookalike = encryptSecret("secret")
+
+    expect(encryptSecret(lookalike)).toBe(lookalike)
+    const sealed = encryptText(lookalike)
+    expect(sealed).not.toBe(lookalike)
+    expect(tryDecryptSecret(sealed)).toEqual({ ok: true, value: lookalike })
+  })
+
+  it("keeps empty text, and any text without a key", () => {
+    expect(encryptText("hello")).toBe("hello")
+    setKeys(`k1:${K1}`)
+    expect(encryptText("")).toBe("")
+  })
 })
 
 describe("keyring edges", () => {

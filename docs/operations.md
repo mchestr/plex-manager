@@ -353,7 +353,8 @@ configured locale.
 ## Encryption keys
 
 Service keys and tokens, member Plex tokens, the Discord and Stripe secrets,
-the Rewind serial key and AI prompt and reply text (`ENCRYPTED_FIELDS` in
+the Rewind serial key, AI prompt and reply text, and the assistant page's
+conversation titles and messages (`ENCRYPTED_FIELDS` in
 `lib/db/encrypted-fields.ts`) are encrypted with AES-256-GCM before they reach
 the database. A production server refuses to start without a key
 (`env.invalid ENCRYPTION_KEY`) unless `ALLOW_PLAINTEXT_SECRETS=true`, which
@@ -367,7 +368,10 @@ echo "ENCRYPTION_KEYS=k1:$(openssl rand -base64 32)"
 
 `ENCRYPTION_KEYS` is a comma-separated keyring of `kid:base64` entries, each 32
 bytes. The first entry encrypts every new write (`enc:v2:<kid>:…`); the others
-only read. A kid is 1 to 32 letters, digits, `_` or `-`, and `legacy` is
+only read. A secret that is already encrypted is stored as it is, while free
+text (AI prompts and replies, the assistant page's titles and messages,
+`FREE_TEXT_FIELDS`) is encrypted every time, so text that looks like a stored
+value never reads back as the secret it copies. A kid is 1 to 32 letters, digits, `_` or `-`, and `legacy` is
 reserved. An entry that is not 32 bytes stops a production boot
 (`ENCRYPTION_KEYS weak`).
 

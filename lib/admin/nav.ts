@@ -6,7 +6,7 @@
  * ## Groups
  *
  * ```
- * Overview            ungrouped, at the top (P10.8)
+ * Overview, Assistant ungrouped, at the top (P10.8)
  * Community           Users, Invites, Announcements, Discord bot
  * Rewind              Season, Playground, Share analytics
  * Usage and cost      LLM usage, Cost analysis
@@ -48,7 +48,7 @@ export interface AdminNavItem {
   label: string
   href: Route
   icon: LucideIcon
-  /** `null` for the ungrouped Overview at the top. */
+  /** `null` for the ungrouped items at the top, Overview and Assistant. */
   group: AdminNavGroup | null
   /** `exact` lights only on `href`; `prefix` also lights on its subpaths. */
   match: "exact" | "prefix"
@@ -71,6 +71,17 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     // Exact: every admin page sits under /admin and lights its own item.
     match: "exact",
     mobile: "tab",
+  },
+  {
+    id: "assistant",
+    label: "Assistant",
+    href: "/admin/assistant",
+    icon: icons.assistant,
+    group: null,
+    match: "prefix",
+    // Below `md` the top bar's assistant button opens it too
+    mobile: "more",
+    permission: "assistant:use",
   },
   {
     id: "users",
@@ -273,21 +284,10 @@ export function titleFor(pathname: string): string {
 
 /**
  * Immersive routes draw their own full-screen chrome, so the shell hides its
- * sidebar, bars and the assistant there: a stored generation's history.
+ * sidebar and bars there: a stored generation's history.
  */
 const IMMERSIVE: readonly RegExp[] = [/^\/admin\/wrapped\/[^/]+\/history\//]
 
-/**
- * Routes that hide only the assistant: the immersive ones, the admin Rewind
- * preview (P7.9), which keeps the nav around its framed stage, and the
- * playground, whose story preview opens in a Dialog (P8.8).
- */
-const ASSISTANT_HIDDEN: readonly RegExp[] = [...IMMERSIVE, /^\/admin\/users\/[^/]+\/rewind(?:\/|$)/, /^\/admin\/rewind\/playground(?:\/|$)/]
-
 export function isImmersive(pathname: string): boolean {
   return IMMERSIVE.some((pattern) => pattern.test(pathname))
-}
-
-export function isAssistantHidden(pathname: string): boolean {
-  return ASSISTANT_HIDDEN.some((pattern) => pattern.test(pathname))
 }

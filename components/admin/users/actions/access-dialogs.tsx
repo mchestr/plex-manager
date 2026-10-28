@@ -61,7 +61,7 @@ export function ChangeRoleDialog({ user, ...dialog }: UserDialogProps) {
       title={removing ? `Remove ${user.name}'s admin role?` : `Make ${user.name} an admin?`}
       description={
         removing
-          ? "They keep their account and Rewind. They lose access to all admin pages."
+          ? "They keep their account and Rewind. They lose access to all admin pages and their saved assistant conversations."
           : "They can open every admin page, change settings and act on any member."
       }
       confirmLabel={removing ? "Remove admin role" : "Make admin"}

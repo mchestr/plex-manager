@@ -4,7 +4,8 @@ import { clearVisualFixtures, seedVisualFixtures, VISUAL_REWIND_ID } from '../he
 
 /**
  * The axe spec's seed: P1.6's visual seed plus the rows only the axe routes
- * read (a share link on the seeded Rewind and one chat conversation).
+ * read (a share link on the seeded Rewind, and one chat conversation with its
+ * usage row and the assistant page's stored turns).
  */
 
 /** 43 base64url characters, the shape `generateShareToken` makes. */
@@ -22,7 +23,24 @@ export async function seedA11yFixtures(): Promise<void> {
     await prisma.$transaction([
       prisma.plexWrapped.update({ where: { id: VISUAL_REWIND_ID }, data: { shareToken: A11Y_SHARE_TOKEN } }),
       prisma.chatConversation.create({
-        data: { id: A11Y_CONVERSATION_ID, userId: TEST_USERS.ADMIN.id, createdAt: new Date('2026-10-15T10:00:00Z') },
+        data: {
+          id: A11Y_CONVERSATION_ID,
+          userId: TEST_USERS.ADMIN.id,
+          title: 'Why is the living room TV buffering?',
+          lastMessageAt: new Date('2026-10-15T10:01:00Z'),
+          createdAt: new Date('2026-10-15T10:00:00Z'),
+          messages: {
+            create: [
+              { role: 'user', content: 'Why is the living room TV buffering?', createdAt: new Date('2026-10-15T10:00:30Z') },
+              {
+                role: 'assistant',
+                content: 'It is **transcoding** a 4K file to 1080p:\n\n- Remote quality is set to 20 Mbps\n- Two other streams direct play',
+                sources: [{ tool: 'get_plex_sessions', description: 'Current Plex sessions' }],
+                createdAt: new Date('2026-10-15T10:01:00Z'),
+              },
+            ],
+          },
+        },
       }),
       prisma.lLMUsage.create({
         data: {

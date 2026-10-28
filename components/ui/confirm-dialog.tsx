@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useState, useTransition, type ReactElement } from "react"
+import { useId, useLayoutEffect, useRef, useState, useTransition, type ReactElement, type RefObject } from "react"
 
 import { Alert } from "@/components/ui/alert"
 import {
@@ -38,6 +38,12 @@ interface ConfirmDialogProps {
    * resolves; an `{ error }` renders inside the dialog, and success closes it.
    */
   action: () => Promise<{ error?: string }>
+  /**
+   * Where focus goes once the action succeeds, for an action that removes its
+   * own trigger (a row's delete), unless the page has moved focus elsewhere
+   * meanwhile. Cancel still returns focus to the trigger.
+   */
+  successFocus?: RefObject<HTMLElement | null>
   open?: boolean
   onOpenChange?: (open: boolean) => void
   "data-testid"?: string
@@ -60,6 +66,7 @@ export function ConfirmDialog({
   tone = "default",
   typeToConfirm,
   action,
+  successFocus,
   open: openProp,
   onOpenChange,
   "data-testid": testId,
@@ -70,7 +77,19 @@ export function ConfirmDialog({
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [typed, setTyped] = useState("")
+  const succeeded = useRef(false)
+  const popup = useRef<HTMLDivElement>(null)
   const inputId = useId()
+
+  // Focus the page moved itself, outside this dialog, while the dialog closed
+  const focusTaken = () => {
+    const active = document.activeElement
+    return active !== null && active !== document.body && !popup.current?.contains(active)
+  }
+
+  // A real effect: the router keeps a page it leaves (Activity), so an open confirm closes as the page hides rather
+  // than opening again over it on the way back
+  useLayoutEffect(() => () => setUncontrolledOpen(false), [])
 
   const setOpen = (next: boolean) => {
     if (openProp === undefined) setUncontrolledOpen(next)
@@ -88,8 +107,15 @@ export function ConfirmDialog({
       } catch {
         result = { error: CONFIRM_FALLBACK_ERROR }
       }
-      if (result.error) setError(result.error)
-      else setOpen(false)
+      const failure = result.error
+      if (failure) {
+        // A transition again after the await: the error then commits with the end of the pending state, never
+        // beside a confirm button that still spins
+        startTransition(() => setError(failure))
+      } else {
+        succeeded.current = true
+        setOpen(false)
+      }
     })
   }
 
@@ -104,13 +130,20 @@ export function ConfirmDialog({
         setOpen(next)
       }}
       onOpenChangeComplete={(isOpen) => {
-        if (isOpen) return
+        if (isOpen) {
+          succeeded.current = false
+          return
+        }
         setError(null)
         setTyped("")
       }}
     >
       {trigger && <AlertDialogTrigger render={trigger} />}
-      <AlertDialogContent data-testid={testId}>
+      <AlertDialogContent
+        ref={popup}
+        data-testid={testId}
+        finalFocus={successFocus && (() => (succeeded.current ? !focusTaken() && successFocus.current : true))}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>

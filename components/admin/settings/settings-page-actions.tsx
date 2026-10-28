@@ -1,12 +1,13 @@
 "use client"
 
+import Link from "next/link"
 import { useTransition } from "react"
 
 import { recheckConnections } from "@/actions/admin/connection-health"
-import { AssistantTrigger } from "@/components/admin/chatbot/assistant-sheet"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { useToast } from "@/components/ui/toast"
+import { assistant } from "@/lib/admin/routes"
 import { icons } from "@/lib/ui/icons"
 
 /** The settings page actions (6.4): "Test all connections" (secondary) and the Assistant. */
@@ -28,10 +29,15 @@ export function SettingsPageActions() {
 
   return (
     <>
-      <AssistantTrigger data-testid="settings-assistant">
-        <Icon icon={icons.assistant} />
+      <Button
+        variant="ghost"
+        icon={<Icon icon={icons.assistant} />}
+        render={<Link href={assistant()} />}
+        nativeButton={false}
+        data-testid="settings-assistant"
+      >
         Assistant
-      </AssistantTrigger>
+      </Button>
       <Button
         variant="secondary"
         icon={<Icon icon={icons.testConnection} />}

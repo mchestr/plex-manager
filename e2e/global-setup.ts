@@ -2,6 +2,7 @@ import { createE2EPrismaClient } from './helpers/prisma';
 import { clearRateLimits, redisAnswers } from './helpers/rate-limits';
 import { JELLYFIN_MEMBERS } from './helpers/jellyfin-members';
 import { startMockJellyfin } from './mocks/jellyfin-server';
+import { startMockLlm } from './mocks/llm-server';
 
 /**
  * Global setup for Playwright tests
@@ -135,8 +136,14 @@ async function globalSetup() {
   const jellyfin = await startMockJellyfin();
   process.env.E2E_JELLYFIN_URL = jellyfin.url;
   console.log(`[E2E Setup] Mock Jellyfin listening at ${jellyfin.url}`);
+  // The same for the assistant's chat model: specs point an openai-compatible provider at it
+  const llm = await startMockLlm();
+  process.env.E2E_LLM_URL = llm.url;
+  console.log(`[E2E Setup] Mock LLM listening at ${llm.url}`);
   return async () => {
-    await new Promise<void>((resolve) => jellyfin.server.close(() => resolve()));
+    await Promise.all(
+      [jellyfin.server, llm.server].map((server) => new Promise<void>((resolve) => server.close(() => resolve())))
+    );
   };
 }
 

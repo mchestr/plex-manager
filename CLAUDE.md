@@ -49,7 +49,7 @@ app/                     # Next.js App Router (pages, layouts, routes)
 │   ├── help/           # Help and support
 │   ├── membership/     # Stripe membership (when enabled)
 │   └── rewind/         # Rewind: /rewind, /rewind/[year] (story), /rewind/[year]/read (article), the scope layout
-├── admin/              # Admin pages: overview, users, invites, settings, rewind, queues, LLM usage
+├── admin/              # Admin pages: overview, assistant, users, invites, settings, rewind, queues, LLM usage
 ├── api/                # API routes (webhooks, health, metrics, admin search, Rewind cards and posters)
 ├── auth/               # Plex sign-in callback, access denied and auth error pages (sign-in itself is on /)
 ├── dev/                # Development-only UI sheet

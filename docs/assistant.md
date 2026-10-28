@@ -1,6 +1,6 @@
 # Admin assistant sources
 
-The admin assistant (the chat sheet in the admin shell) can read this app's own
+The admin assistant (Admin, Assistant: `/admin/assistant`) can read this app's own
 data, call tools on MCP servers you connect, and search a knowledge base. All of
 it is admin-only: the Discord `/assistant` command never gets these tools
 (`DISCORD_SAFE_TOOLS` is derived from each tool's `discordSafe` flag, and none of

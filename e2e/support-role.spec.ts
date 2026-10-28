@@ -1,16 +1,20 @@
 import { test as base, expect } from '@playwright/test';
+import { TEST_USERS } from './fixtures/auth';
 import { signInAs } from './fixtures/session';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
+import { mockLlmReply } from './mocks/llm-server';
 
 /**
  * The Support role's scoped admin area (RBAC): a non-admin with
  * `User.role = "support"` gets a trimmed shell with the assistant and the
  * users list, and every other admin page is refused server-side, not just
- * hidden from the navigation.
+ * hidden from the navigation. The assistant page shows them only their own
+ * conversations.
  */
 const SUPPORT_ID = 'e2e-support-user-id';
 const CHAT_PROVIDER_ID = 'e2e-support-role-chat';
+const ADMINS_CONVERSATION_ID = 'e2e-support-role-admins-chat';
 
 const test = base.extend<{ supportPage: import('@playwright/test').Page }>({
   supportPage: async ({ browser, baseURL }, use) => {
@@ -52,10 +56,15 @@ test.describe('Support role', () => {
       },
       update: { role: 'support', isAdmin: false, disabledAt: null },
     });
+    // The mock chat model (e2e/mocks/llm-server.ts), so nothing reaches a real provider
     await prisma.lLMProvider.upsert({
       where: { id: CHAT_PROVIDER_ID },
-      create: { id: CHAT_PROVIDER_ID, provider: 'openai', purpose: 'chat', apiKey: 'sk-e2e', model: 'gpt-e2e' },
-      update: { isActive: true },
+      create: { id: CHAT_PROVIDER_ID, provider: 'openai-compatible', purpose: 'chat', apiKey: '', model: 'gpt-e2e', baseUrl: process.env.E2E_LLM_URL },
+      update: { isActive: true, baseUrl: process.env.E2E_LLM_URL },
+    });
+    await prisma.chatConversation.deleteMany({ where: { OR: [{ id: ADMINS_CONVERSATION_ID }, { userId: SUPPORT_ID }] } });
+    await prisma.chatConversation.create({
+      data: { id: ADMINS_CONVERSATION_ID, userId: TEST_USERS.ADMIN.id, title: 'An admin question', lastMessageAt: new Date() },
     });
     await prisma.$disconnect();
   });
@@ -63,6 +72,7 @@ test.describe('Support role', () => {
   test.afterAll(async () => {
     const prisma = createE2EPrismaClient();
     await prisma.lLMProvider.deleteMany({ where: { id: CHAT_PROVIDER_ID } });
+    await prisma.chatConversation.deleteMany({ where: { OR: [{ id: ADMINS_CONVERSATION_ID }, { userId: SUPPORT_ID }] } });
     await prisma.user.deleteMany({ where: { id: SUPPORT_ID } });
     await prisma.$disconnect();
   });
@@ -78,15 +88,28 @@ test.describe('Support role', () => {
     }
   });
 
-  test('has the assistant, and no member actions on the users list', async ({ supportPage: page }) => {
+  test('has no member actions on the users list', async ({ supportPage: page }) => {
     await page.goto('/admin/users');
-    await expect(page.getByTestId('admin-chat-toggle')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    await page.getByTestId('admin-chat-toggle').click();
-    await expect(page.getByTestId('admin-chat-sheet')).toBeVisible();
-    await expect(page.getByTestId('admin-chat-input')).toBeVisible();
-    await page.getByTestId('admin-chat-close').click();
+    await expect(page.getByTestId('admin-users-page')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
     await expect(page.getByRole('button', { name: /actions/i })).toHaveCount(0);
+  });
+
+  test("chats on the assistant page, which lists only their own conversations", async ({ supportPage: page }) => {
+    await page.goto('/admin/users');
+    await page.getByTestId('admin-nav-assistant').click();
+    await expect(page).toHaveURL(/\/admin\/assistant$/, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('admin-assistant-history-empty')).toBeVisible();
+
+    const question = 'Who is streaming right now?';
+    await page.getByTestId('admin-chat-input').fill(question);
+    await page.getByTestId('admin-chat-input').press('Enter');
+    await expect(page.getByTestId('admin-chat-log')).toContainText(mockLlmReply(question), { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('admin-assistant-history')).toContainText(question);
+    await expect(page.getByTestId('admin-assistant-history')).not.toContainText('An admin question');
+
+    await page.goto(`/admin/assistant?conversation=${ADMINS_CONVERSATION_ID}`);
+    await expect(page.getByTestId('not-found-home')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
   });
 
   for (const path of REFUSED_PATHS) {

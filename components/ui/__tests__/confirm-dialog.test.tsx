@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe, toHaveNoViolations } from "jest-axe"
+import { Activity, useRef } from "react"
 
 import { Button } from "@/components/ui/button"
 import { CONFIRM_FALLBACK_ERROR, ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -104,6 +105,94 @@ describe("ConfirmDialog", () => {
     expect(action).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
     await waitFor(() => expect(trigger).toHaveFocus())
+  })
+
+  it("moves focus to successFocus once the action succeeds, and back to the trigger on Cancel", async () => {
+    // The action removes the row its trigger sits in, so focus goes to the next control
+    function Row() {
+      const next = useRef<HTMLButtonElement>(null)
+      return (
+        <>
+          <ConfirmDialog
+            trigger={<Button variant="destructive">Remove access</Button>}
+            title="Remove Plex access for Sam Rivera?"
+            description="Sam loses every shared library now."
+            confirmLabel="Remove access"
+            successFocus={next}
+            action={async () => ({})}
+          />
+          <Button ref={next}>Next member</Button>
+        </>
+      )
+    }
+    const user = userEvent.setup()
+    render(<Row />)
+    const trigger = screen.getByRole("button", { name: "Remove access" })
+
+    await open(user)
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
+    await waitFor(() => expect(trigger).toHaveFocus())
+
+    const dialog = await open(user)
+    await user.click(confirmButton(dialog))
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole("button", { name: "Next member" })).toHaveFocus())
+  })
+
+  it("leaves focus where the page moved it while the dialog closed, rather than taking it to successFocus", async () => {
+    function Row() {
+      const next = useRef<HTMLButtonElement>(null)
+      const elsewhere = useRef<HTMLButtonElement>(null)
+      return (
+        <>
+          <ConfirmDialog
+            trigger={<Button variant="destructive">Remove access</Button>}
+            title="Remove Plex access for Sam Rivera?"
+            description="Sam loses every shared library now."
+            confirmLabel="Remove access"
+            successFocus={next}
+            action={async () => {
+              // The page moves focus itself as the action finishes
+              elsewhere.current?.focus()
+              return {}
+            }}
+          />
+          <Button ref={next}>Next member</Button>
+          <Button ref={elsewhere}>Page title</Button>
+        </>
+      )
+    }
+    const user = userEvent.setup()
+    render(<Row />)
+
+    const dialog = await open(user)
+    await user.click(confirmButton(dialog))
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole("button", { name: "Page title" })).toHaveFocus())
+  })
+
+  it("closes as the router hides the page, so it is not open again on the way back", async () => {
+    const user = userEvent.setup()
+    const dialog = (mode: "visible" | "hidden") => (
+      <Activity mode={mode}>
+        <ConfirmDialog
+          trigger={<Button variant="destructive">Remove access</Button>}
+          title="Remove Plex access for Sam Rivera?"
+          description="Sam loses every shared library now."
+          confirmLabel="Remove access"
+          action={async () => ({})}
+        />
+      </Activity>
+    )
+    const { rerender } = render(dialog("visible"))
+    await open(user)
+
+    rerender(dialog("hidden"))
+    rerender(dialog("visible"))
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
+    expect(screen.getByRole("button", { name: "Remove access" })).toBeVisible()
   })
 
   it("gates confirm on typeToConfirm, ignoring case", async () => {

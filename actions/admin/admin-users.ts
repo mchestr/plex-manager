@@ -2,6 +2,7 @@
 
 import { adminAction } from "@/lib/actions/define-action"
 import { ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
+import { endConversationsOf } from "@/lib/chatbot/history"
 import { isPlexServerOwner } from "@/lib/members/owner"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
@@ -28,8 +29,9 @@ type UserActionCode = ActionErrorCode | UserActionRefusal
  *
  * Refuses to demote the caller (`SELF`), the Plex server owner, whom the next
  * login would promote again (`OWNER`), and the last remaining admin
- * (`LAST_ADMIN`). A demotion ends the user's sessions. Setting the status the
- * user already has succeeds without a change.
+ * (`LAST_ADMIN`). A demotion ends the user's sessions and their assistant page
+ * conversations (`lib/chatbot/history.ts`). Setting the status the user
+ * already has succeeds without a change.
  */
 export const updateUserAdminStatus = adminAction({
   input: z.object({ userId: userIdSchema, isAdmin: z.boolean() }),
@@ -60,8 +62,12 @@ export const updateUserAdminStatus = adminAction({
       }
     }
 
-    // An admin holds every permission, so a promotion clears the role: a later demotion must not bring it back
-    await prisma.user.update({ where: { id: userId }, data: isAdmin ? { isAdmin, role: null } : { isAdmin } })
+    // An admin holds every permission, so a promotion clears the role: a later demotion must not bring it back.
+    // A demotion ends the user's assistant page conversations in the same transaction, so a failure undoes both
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: userId }, data: isAdmin ? { isAdmin, role: null } : { isAdmin } })
+      if (!isAdmin) await endConversationsOf(tx, userId)
+    })
 
     logAuditEvent(isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED, actorId, {
       targetUserId: userId,
