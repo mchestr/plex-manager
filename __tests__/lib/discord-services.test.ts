@@ -133,7 +133,7 @@ describe("handleDiscordChat", () => {
         message: {
           role: "assistant",
           content:
-            "AI features are currently disabled or not configured. Please configure a chat OpenAI model in Settings to use the troubleshooting assistant.",
+            "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
           timestamp: Date.now(),
         },
       })
@@ -146,7 +146,7 @@ describe("handleDiscordChat", () => {
 
       expect(result.success).toBe(true)
       expect(result.linked).toBe(true)
-      expect(result.message?.content).toContain("AI features are currently disabled")
+      expect(result.message?.content).toContain("The assistant is off")
       expect(mockRunChatbotForUser).toHaveBeenCalledWith({
         userId: "user-1",
         messages: expect.arrayContaining([
@@ -177,7 +177,7 @@ describe("handleDiscordChat", () => {
         message: {
           role: "assistant",
           content:
-            "AI features are currently disabled or not configured. Please configure a chat OpenAI model in Settings to use the troubleshooting assistant.",
+            "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
           timestamp: Date.now(),
         },
         conversationId: "new-conversation-1",
@@ -191,7 +191,7 @@ describe("handleDiscordChat", () => {
 
       expect(result.success).toBe(true)
       expect(result.linked).toBe(true)
-      expect(result.message?.content).toContain("AI features are currently disabled")
+      expect(result.message?.content).toContain("The assistant is off")
       expect(result.conversationId).toBe("new-conversation-1")
       expect(mockGetOrCreateSession).toHaveBeenCalledWith({
         discordUserId: "discord-123",
