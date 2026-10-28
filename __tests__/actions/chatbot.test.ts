@@ -193,7 +193,7 @@ describe("LLM disabled", () => {
     const { message } = await reply({ message: "Check Plex status" })
 
     expect(message.content).toContain("The assistant is off")
-    expect(message.content).toContain("configure a chat model")
+    expect(message.content).toContain("select a chat model")
     expect(mockChatWithTools).not.toHaveBeenCalled()
     expect(prismaMock.chatConversation.create).not.toHaveBeenCalled()
   })
