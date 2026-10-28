@@ -132,6 +132,17 @@ describe.each(FIXTURES)("the %s fixture", (id) => {
     }
   })
 
+  it("never names a time zone on a card, nor carries the zone fact: the times are the member's own", () => {
+    const rewind = rewinds.get(id)!
+    const zone = String(rewind.facts["tz.label"]?.display)
+    for (const input of [...inputs(rewind), ...inputs(rewind, { dailyDetail: true, includeArt: true })]) {
+      expect(input.page.facts["tz.label"]).toBeUndefined()
+      const text = texts(renderCard(input)).join(" ")
+      expect(text).not.toContain(zone)
+      expect(text).not.toMatch(/time zone|Times in/i)
+    }
+  })
+
   it("names the member in the back cover's billing only when signed", () => {
     const rewind = rewinds.get(id)!
     const first = rewind.facts["member.firstName"]?.display

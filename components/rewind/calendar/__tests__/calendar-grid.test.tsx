@@ -13,7 +13,7 @@ jest.mock("server-only", () => ({}))
 let heavy: FixtureIssue
 let block: Extract<ArticleBlock, { kind: "calendar" }>
 
-const ctx = (grid: boolean) => ({ locale: "en-US", zone: "server" as const, features: { "calendar.grid": grid } })
+const ctx = (grid: boolean) => ({ locale: "en-US", features: { "calendar.grid": grid } })
 
 beforeAll(async () => {
   heavy = await fixtureIssue("heavy")

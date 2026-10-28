@@ -76,8 +76,8 @@ export type Edition = "full" | "pocket" | "postcard"
  * A chart page's table: the same data as the graphic, for the Table sheet,
  * the desktop Notes and article mode (design 4.6, 11.1, FR-16).
  *
- * - `caption` names what is counted, the counting window and, on pages that
- *   show clock times, the `tz.note` zone.
+ * - `caption` names what is counted and the counting window. It never names
+ *   a time zone: times are the member's own (design 7.7).
  * - `columns` are the header cells (`th scope="col"`).
  * - Each row has one display string per column; its first cell names the row
  *   (`th scope="row"`).
@@ -110,8 +110,6 @@ export interface SelectContext {
 /** What a page's desktop Notes read besides its data and facts (P7.4). */
 export interface NotesContext {
   locale: string
-  /** Whose time zone the issue counts in: the counting rule names it. */
-  zone: "member" | "server"
   /** Rating keys the member hid (P7.7), left out before the no-LLM regeneration lands. */
   hiddenKeys?: ReadonlySet<string>
   /** The December features (P8.3); the calendar reads `calendar.grid`. */

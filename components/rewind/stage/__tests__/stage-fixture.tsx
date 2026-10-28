@@ -8,7 +8,7 @@ import { registry, type IssuePageType, type PageTable, type RewindPageType } fro
 import { StoryStage, type StoryStagePage } from "../story-stage"
 
 export const TABLE: PageTable = {
-  caption: "Hours by month, 1 January to 30 November 2026. Times in America/Chicago, the server's time zone",
+  caption: "Hours by month, 1 January to 30 November 2026.",
   columns: ["Month", "Hours"],
   rows: [
     ["January", "42"],

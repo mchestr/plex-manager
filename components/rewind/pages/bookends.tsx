@@ -4,7 +4,7 @@ import { shown } from "@/lib/rewind/pages/facts"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { renderCopy } from "@/lib/wrapped/copy/render-copy"
-import { copyLocals, headline, tzNote } from "@/lib/wrapped/copy/templates"
+import { copyLocals, headline } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { CopyText } from "./copy-text"
@@ -31,9 +31,8 @@ function When({ facts, side }: { facts: RewindFactsV3; side: "first" | "last" })
 /**
  * 03 Bookends (design 4.3): the year's first play in the headline, the latest
  * (or, after the final cut, the last) below it, each a nameplate title with
- * its date and time, then the deck, the member's lifetime line and the zone
- * note, since the blocks show clock times. A bookend that is the No. 1 series
- * reads "a series you will meet on page 05" instead.
+ * its date and time, then the deck and the member's lifetime line. A bookend
+ * that is the No. 1 series reads "a series you will meet on page 05" instead.
  */
 export function BookendsPage({ data, issue }: PageProps<BookendsData>) {
   const { facts, locale } = issue
@@ -72,16 +71,11 @@ export function BookendsPage({ data, issue }: PageProps<BookendsData>) {
       <p style={{ fontSize: u(18.5), lineHeight: 1.3, marginTop: u(14) }}>
         <CopyText text={deckText(issue, "bookends")} source={facts} />
       </p>
-      <div className="mt-auto">
-        {lifetime && (
-          <p className="font-display" style={{ fontSize: ut(14), fontVariationSettings: axes(100, 650) }} data-testid="rewind-bookends-lifetime">
-            {lifetime}
-          </p>
-        )}
-        <p className="italic" style={{ fontSize: ut(13.5), lineHeight: 1.25, marginTop: u(6) }}>
-          <CopyText text={tzNote(issue.zone)} source={facts} />
+      {lifetime && (
+        <p className="mt-auto font-display" style={{ fontSize: ut(14), fontVariationSettings: axes(100, 650) }} data-testid="rewind-bookends-lifetime">
+          {lifetime}
         </p>
-      </div>
+      )}
     </div>
   )
 }

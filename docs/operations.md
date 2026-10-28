@@ -336,10 +336,12 @@ is no `X-Powered-By`.
 Admin settings hold two values that shape how the app writes dates and numbers:
 
 - **Time zone** (`Config.timezone`, else the `TZ` variable, else UTC): the
-  server zone. Day boundaries, admin timestamps and the admin assistant use it.
+  server zone. Day boundaries and admin timestamps use it.
   A member who sets their own zone gets it for Rewind and the Discord
   assistant, which states the local time and gives every date in that zone, so
-  "yesterday" means the member's yesterday.
+  "yesterday" means the member's yesterday. The admin assistant does the same
+  in the browser's zone, in its answers and under each message, and falls back
+  to the server zone when the browser's is not one the app knows.
 - **Locale** (`Config.locale`, a BCP 47 tag such as `en-GB`; default `en-US`):
   number and date formats ("1 December" against "December 1") and the page's
   `<html lang>`. A value `Intl` rejects falls back to `en-US`.

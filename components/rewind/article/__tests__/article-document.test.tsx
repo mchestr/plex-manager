@@ -28,7 +28,7 @@ const LEGACY_BLOCKS: Record<Exclude<ArticleBlockKind, "calendar">, ArticleBlock>
   table: { kind: "table", table: { caption: "Hours by month.", columns: ["Month", "Hours"], rows: [["January", "30"]] } },
   definitionList: { kind: "definitionList", label: "Highlights", entries: [{ term: "Longest binge", detail: plain("9 episodes") }] },
   figure: { kind: "figure", summary: "A chart of hours by month." },
-  note: { kind: "note", text: plain("Times in America/Chicago.") },
+  note: { kind: "note", text: plain("Data through November 30.") },
 }
 
 describe("ArticleDocument", () => {
@@ -89,6 +89,6 @@ describe("ArticleDocument", () => {
     expect(screen.getByRole("rowheader", { name: "January" })).toBeInTheDocument()
     expect(screen.getByTestId("rewind-article-dl")).toHaveTextContent("Longest binge9 episodes")
     expect(screen.getByTestId("rewind-article-figure")).toHaveTextContent("A chart of hours by month.")
-    expect(screen.getByText("Times in America/Chicago.")).toBeInTheDocument()
+    expect(screen.getByText("Data through November 30.")).toBeInTheDocument()
   })
 })

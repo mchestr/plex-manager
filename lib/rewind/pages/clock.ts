@@ -6,10 +6,10 @@
  * @module lib/rewind/pages/clock
  */
 
-import { figure, heading, note, paragraph, tableBlock } from "@/lib/rewind/article/blocks"
+import { figure, heading, paragraph, tableBlock } from "@/lib/rewind/article/blocks"
 import { formatCount, formatHour, formatShare } from "@/lib/rewind/format"
 import type { PageDefinition, PageTable } from "@/lib/rewind/registry"
-import { headline, tzNote } from "@/lib/wrapped/copy/templates"
+import { headline } from "@/lib/wrapped/copy/templates"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { ClockDataSchema, type ClockData } from "./clock.schema"
@@ -19,9 +19,6 @@ import { has, shown } from "./facts"
 /** Design 4.3: the clock needs more than 10 counted plays. @internal */
 export const CLOCK_PLAYS = 10
 
-/** "Times in America/Chicago." for a caption or a summary. */
-const zoneSentence = (facts: RewindFactsV3) => `Times in ${shown(facts, "tz.label")}.`
-
 /** Sunday-first weekday shares, Monday first. */
 const mondayFirst = (shares: readonly number[]) => [...shares.slice(1), shares[0]]
 
@@ -29,7 +26,7 @@ const mondayFirst = (shares: readonly number[]) => [...shares.slice(1), shares[0
 export function hoursTable(hours: readonly number[], facts: RewindFactsV3, settings: { locale: string }): PageTable {
   const total = hours.reduce((sum, n) => sum + n, 0)
   return {
-    caption: `Plays by the hour they started, from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}. ${zoneSentence(facts)}`,
+    caption: `Plays by the hour they started, from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}.`,
     columns: ["Hour", "Plays", "Share"],
     rows: hours.map((n, hour) => [
       formatHour(hour, settings),
@@ -46,7 +43,7 @@ const WINDOWS: Partial<Record<FactId, string>> = {
 
 /** The ring's text alternative, naming the share its arc brackets. */
 export function ringSummary(facts: RewindFactsV3, share: FactId = "hours.afterDarkShare"): string {
-  const parts = [`Plays by the hour they started. ${zoneSentence(facts)}`]
+  const parts = ["Plays by the hour they started."]
   if (has(facts, share)) parts.push(`${shown(facts, share)} of your plays started ${WINDOWS[share]}.`)
   if (has(facts, "hours.peak")) parts.push(`Your busiest hour was ${shown(facts, "hours.peak")}, and your quietest ${shown(facts, "hours.quietest")}.`)
   return parts.join(" ")
@@ -63,7 +60,6 @@ export const clockPage: PageDefinition<ClockData> = {
     paragraph(pageDeck(ctx, facts, "clock"), facts),
     ...figure(ringSummary(facts)),
     ...tableBlock(hoursTable(data.hours, facts, ctx)),
-    note(tzNote(ctx.zone), facts),
   ],
-  share: { facts: ["hours.peak", "hours.afterDarkShare", "hours.quietest", "tz.label"] },
+  share: { facts: ["hours.peak", "hours.afterDarkShare", "hours.quietest"] },
 }

@@ -1,6 +1,6 @@
 /**
  * The assistants' prompts state the turn's zone and local time (P11.17,
- * GAP-44): the member's zone in Discord, the server zone with its offset in
+ * GAP-44): the member's zone in Discord, the caller's zone with its offset in
  * the admin chat.
  */
 
@@ -15,15 +15,17 @@ describe("generateDiscordSystemPrompt", () => {
     const prompt = generateDiscordSystemPrompt([], { format: { timeZone: "Europe/Berlin", locale: "en-GB" }, now: NOW })
 
     expect(prompt).toContain("Member time zone: Europe/Berlin. Local time now: 1 Dec 2026, 17:05.")
+    expect(prompt).toContain("never name a time zone or an offset")
   })
 })
 
 describe("generateSystemPrompt", () => {
-  it("states the server zone and the local time with its offset, not UTC", () => {
+  it("states the caller's zone and the local time with its offset, not UTC", () => {
     const prompt = generateSystemPrompt([], { timeZone: "America/Los_Angeles", locale: "en-US" }, NOW)
 
-    expect(prompt).toContain("Server time zone: America/Los_Angeles")
-    expect(prompt).toContain("Local time now: 2026-12-01T08:05:00-08:00 (Dec 1, 2026, 8:05 AM PST)")
+    expect(prompt).toContain("User time zone: America/Los_Angeles")
+    expect(prompt).toContain("Local time now: 2026-12-01T08:05:00-08:00 (Dec 1, 2026, 8:05 AM)")
+    expect(prompt).toContain("never name a time zone or an offset")
     expect(prompt).not.toContain(NOW.toISOString())
   })
 })

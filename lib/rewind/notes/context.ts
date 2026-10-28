@@ -5,11 +5,10 @@
  * @module lib/rewind/notes/context
  */
 
-import { note, plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
+import { plain, type ArticleBlock } from "@/lib/rewind/article/blocks"
 import type { CopyAuthor } from "@/lib/rewind/copy-disclosure"
 import { shown } from "@/lib/rewind/pages/facts"
 import type { NotesContext, RewindPageType } from "@/lib/rewind/registry"
-import { tzNote } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 export interface CoreNotesContext extends NotesContext {
@@ -33,9 +32,6 @@ export type CoreNotes<D> = (data: D, facts: RewindFactsV3, ctx: CoreNotesContext
 
 /** "January 1 to November 30": the issue's data window. */
 export const windowRange = (facts: RewindFactsV3) => `${shown(facts, "window.from")} to ${shown(facts, "window.through")}`
-
-/** The zone note every Notes time sits under (design 7.7). */
-export const zoneNote = (facts: RewindFactsV3, ctx: NotesContext): ArticleBlock => note(tzNote(ctx.zone), facts)
 
 export const headingBlock = (text: string): ArticleBlock => ({ kind: "heading", text: plain(text) })
 export const paragraphBlock = (text: string): ArticleBlock => ({ kind: "paragraph", text: plain(text) })

@@ -10,6 +10,7 @@ import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { prisma } from "@/lib/prisma"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { getFormatSettings } from "@/lib/settings/app-settings"
+import { normalizeTimeZone } from "@/lib/utils/zoned-time"
 import { recordIdSchema } from "@/lib/validations/params"
 
 import { type ChatMessage } from "@/lib/chatbot/types"
@@ -35,6 +36,8 @@ const chatInputSchema = z.object({
       "The conversation is too long. Start a new one."
     ),
   conversationId: recordIdSchema.optional(),
+  /** The browser's zone; a zone the app does not know falls back to the server zone. */
+  timeZone: z.string().max(64).optional(),
 })
 
 interface ChatReply {
@@ -56,7 +59,7 @@ export const chatWithAdminBot = permissionAction({
   input: chatInputSchema,
   rateLimit: { name: "llm:assistant:admin", by: "user" },
   fallbackError: "Failed to process message",
-  handler: async ({ messages, conversationId }, { userId, session }): Promise<ActionResult<ChatReply>> => {
+  handler: async ({ messages, conversationId, timeZone }, { userId, session }): Promise<ActionResult<ChatReply>> => {
     // A role below admin has its own, lower hourly limit on top of the shared one (so the effective limit is 30 an hour)
     if (!session.user.isAdmin) {
       const limit = await consume("llm:assistant:support", userId)
@@ -70,6 +73,7 @@ export const chatWithAdminBot = permissionAction({
       if (!owned) return fail("NOT_FOUND", "That conversation no longer exists. Start a new one.")
     }
 
+    const settings = await getFormatSettings()
     const result = await runChatbotForUser({
       userId,
       messages: messages.map((m) => ({ ...m, timestamp: Date.now() })),
@@ -77,8 +81,8 @@ export const chatWithAdminBot = permissionAction({
       // Only a real admin gets the admin spend cap and unscrubbed tool output
       isAdmin: session.user.isAdmin,
       permissions: permissionsFor(session.user),
-      // The admin assistant works in the server zone (P11.17)
-      format: await getFormatSettings(),
+      // The admin assistant works in the caller's browser zone, else the server zone (P11.17)
+      format: { ...settings, timeZone: normalizeTimeZone(timeZone) ?? settings.timeZone },
     })
     if (result.refusal === "BUDGET_EXCEEDED") return fail("RATE_LIMITED", result.error ?? "Daily budget reached")
     if (!result.success || !result.message) {

@@ -25,8 +25,6 @@ export interface IssueContext {
   returnTo: Route
   /** `copyMeta.model`, for the AI disclosure in "Why this?". */
   model: string | null
-  /** Whose zone `tz.label` is, for the `tz.note` wording. */
-  zone: "member" | "server"
   facts: RewindFactsV3
   /**
    * The page types of both cuts (P7.3), for the cover's cut buttons: `full`

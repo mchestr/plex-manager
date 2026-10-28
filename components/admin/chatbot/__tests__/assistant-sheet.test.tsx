@@ -2,6 +2,7 @@
  * The admin assistant sheet (P6.1, UI-04): a dialog named "Assistant" that
  * closes by button and Escape back to its trigger, with log semantics and
  * labelled controls; answers render through MarkdownBody (P3.8, SEC-42).
+ * Times read in the browser's zone, which each turn also sends (P11.17).
  */
 
 import { render, screen, waitFor, within } from "@testing-library/react"
@@ -11,24 +12,37 @@ import { axe, toHaveNoViolations } from "jest-axe"
 import { chatWithAdminBot } from "@/actions/chatbot"
 import { AssistantSheet, AssistantTrigger } from "@/components/admin/chatbot/assistant-sheet"
 import { ChatProvider } from "@/components/admin/chatbot/chat-context"
+import { FormatProvider } from "@/lib/format-context"
+import { browserTimeZone } from "@/lib/utils/browser-zone"
 
 expect.extend(toHaveNoViolations)
 
 jest.mock("@/actions/chatbot", () => ({ chatWithAdminBot: jest.fn() }))
 jest.mock("next/navigation", () => ({ usePathname: () => "/admin/users" }))
+jest.mock("@/lib/utils/browser-zone", () => ({ browserTimeZone: jest.fn() }))
 
 beforeAll(() => {
   // jsdom has no scrollIntoView; the transcript scrolls to each new message.
   Element.prototype.scrollIntoView = jest.fn()
 })
-beforeEach(() => jest.clearAllMocks())
+beforeEach(() => {
+  jest.clearAllMocks()
+  jest.mocked(browserTimeZone).mockReturnValue("Europe/Berlin")
+})
+afterEach(() => jest.restoreAllMocks())
 
+/** Pins the clock, so the greeting and the question print 1:00 PM in Berlin and 4:00 AM in Los Angeles. */
+const pinClock = () => jest.spyOn(Date, "now").mockReturnValue(Date.parse("2026-12-01T12:00:00Z"))
+
+// The app zone; the browser's is Europe/Berlin
 function renderSheet() {
   return render(
-    <ChatProvider>
-      <AssistantTrigger data-testid="admin-chat-toggle">Assistant</AssistantTrigger>
-      <AssistantSheet userName="Admin" />
-    </ChatProvider>
+    <FormatProvider value={{ timeZone: "America/Los_Angeles", locale: "en-US" }}>
+      <ChatProvider>
+        <AssistantTrigger data-testid="admin-chat-toggle">Assistant</AssistantTrigger>
+        <AssistantSheet userName="Admin" />
+      </ChatProvider>
+    </FormatProvider>
   )
 }
 
@@ -40,10 +54,10 @@ async function open() {
   return { user, dialog }
 }
 
-function replyWith(content: string) {
+function replyWith(content: string, timestamp = Date.now()) {
   jest.mocked(chatWithAdminBot).mockResolvedValue({
     success: true,
-    data: { message: { role: "assistant", content, timestamp: Date.now() }, conversationId: "conv-1" },
+    data: { message: { role: "assistant", content, timestamp }, conversationId: "conv-1" },
   })
 }
 
@@ -95,7 +109,7 @@ describe("AssistantSheet", () => {
     expect(await screen.findByText("All good")).toBeInTheDocument()
   })
 
-  it("sends only roles and content, and the conversation id once it has one", async () => {
+  it("sends only roles and content, the browser's zone, and the conversation id once it has one", async () => {
     replyWith("ok")
     const { user } = await open()
     await ask("status?", user)
@@ -110,9 +124,34 @@ describe("AssistantSheet", () => {
         { role: "user", content: "status?" },
       ],
       conversationId: undefined,
+      timeZone: "Europe/Berlin",
     })
     expect(calls[1][0].conversationId).toBe("conv-1")
     expect(calls[1][0].messages.at(-1)).toEqual({ role: "user", content: "again" })
+  })
+
+  it("shows each message's time in the browser's zone, not the app zone", async () => {
+    // 17:05 in Berlin, 08:05 in Los Angeles
+    pinClock()
+    replyWith("ok", Date.parse("2026-12-01T16:05:00Z"))
+    const { user, dialog } = await open()
+    await ask("status?", user)
+    await screen.findByText("ok")
+
+    expect(within(dialog).getByText("5:05 PM")).toBeInTheDocument()
+    expect(within(dialog).queryByText("8:05 AM")).not.toBeInTheDocument()
+  })
+
+  it("falls back to the app zone, and sends no zone, when the browser's is not one the app knows", async () => {
+    jest.mocked(browserTimeZone).mockReturnValue(null)
+    pinClock()
+    replyWith("ok", Date.parse("2026-12-01T16:05:00Z"))
+    const { user, dialog } = await open()
+    await ask("status?", user)
+    await screen.findByText("ok")
+
+    expect(within(dialog).getByText("8:05 AM")).toBeInTheDocument()
+    expect(jest.mocked(chatWithAdminBot).mock.calls[0][0].timeZone).toBeUndefined()
   })
 
   it("renders answers through MarkdownBody, with no image and no javascript: link", async () => {

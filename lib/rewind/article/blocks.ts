@@ -19,7 +19,7 @@
  * | `table` | a captioned table with scoped headers (P5.3's contract) |
  * | `definitionList` | a `dl`, such as the billing block; an entry with `href` links its detail |
  * | `figure` | a graphic's `srSummary` text |
- * | `note` | small print: the zone note, a caption |
+ * | `note` | small print: a caption, the colophon |
  * | `calendar` | the month tables, then P8.3's roving-focus grid once hydrated |
  *
  * Text that can hold facts is `ArticleText`: `renderCopy` segments, where a
@@ -79,7 +79,6 @@ export interface ArticleContext {
   copy: RewindCopyV3Wire | null
   copySource: RewindDataV3["copySource"]
   model: string | null
-  zone: "member" | "server"
   /** The page font metrics (`pageMetrics`), passed in so no page module imports the server-only JSON. */
   metrics: FontMetrics
   /** The December features (P8.3); the calendar reads `calendar.grid`. */
@@ -94,7 +93,6 @@ export const copyText = (text: string, source: TokenSource): ArticleText => rend
 
 export const heading = (text: string, source: TokenSource): ArticleBlock => ({ kind: "heading", text: copyText(text, source) })
 export const paragraph = (text: string, source: TokenSource): ArticleBlock => ({ kind: "paragraph", text: copyText(text, source) })
-export const note = (text: string, source: TokenSource): ArticleBlock => ({ kind: "note", text: copyText(text, source) })
 export const figure = (summary: string): ArticleBlock[] => (summary ? [{ kind: "figure", summary }] : [])
 
 /** A page's Table as a block, or nothing when the page has none. */

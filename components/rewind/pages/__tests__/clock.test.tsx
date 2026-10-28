@@ -40,23 +40,20 @@ describe("09 The clock", () => {
     expect(screen.getByTestId("rewind-figure")).toHaveAttribute("aria-label", registry.clock.srSummary(data, issue.facts))
   })
 
-  it("names the server's zone, or the member's own", () => {
+  it("never names a time zone: the times are the member's own", () => {
     const issue = issues.heavy
-    const zone = issue.facts["tz.label"]!.display
-    const { unmount } = render(<ClockPage data={dataOf(issue)!} issue={issueContext(issue)} />)
-    expect(document.body).toHaveTextContent(`Times in ${zone}, the server's time zone`)
-    unmount()
-    render(<ClockPage data={dataOf(issue)!} issue={issueContext(issue, { zone: "member" })} />)
-    expect(document.body).toHaveTextContent(`Times in ${zone}, your time zone`)
+    render(<ClockPage data={dataOf(issue)!} issue={issueContext(issue)} />)
+    expect(document.body).not.toHaveTextContent(issue.facts["tz.label"]!.display)
+    expect(document.body).not.toHaveTextContent(/time zone/i)
   })
 
-  it("tabulates the 24 hours with the zone in the caption", () => {
+  it("tabulates the 24 hours, with no zone in the caption", () => {
     const issue = issues.heavy
     const table = registry.clock.table!(dataOf(issue)!, issue.facts, { locale: "en-US" })!
     expect(table.rows).toHaveLength(24)
     expect(table.columns).toEqual(["Hour", "Plays", "Share"])
     expect(text(table.rows[22][0])).toBe("10 PM")
-    expect(table.caption).toContain(`Times in ${issue.facts["tz.label"]!.display}.`)
+    expect(table.caption).not.toContain(issue.facts["tz.label"]!.display)
   })
 
   it("summarises the page deterministically", () => {
