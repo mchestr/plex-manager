@@ -28,7 +28,7 @@ export const backCoverNotes: CoreNotes<BackCoverData> = (_data, facts, ctx) => {
   blocks.push(
     headingBlock("Privacy"),
     paragraphBlock("Server admins can view your Rewind. Cards never show other members."),
-    paragraphBlock("Something wrong? Report a problem to your server admin, or hide a title from your Rewind.")
+    paragraphBlock("To report a problem, tell your server admin. To remove a title from your Rewind, hide it.")
   )
   return blocks
 }

@@ -47,7 +47,7 @@ describe("NotesColumn (P7.4)", () => {
 
     const notes = screen.getByRole("complementary", { name: /^Notes on page \d\d, Top shows$/ })
     expect(within(notes).getByRole("heading", { name: `All ${all} series, ranked by time watched` })).toBeInTheDocument()
-    expect(notes).toHaveTextContent(/Counted from .+ to .+\. Rewatches count; trailers and extras do not\./)
+    expect(notes).toHaveTextContent(/Counted from .+ to .+\. Rewatches count\. Trailers and extras do not\./)
     expect(notes).not.toHaveTextContent(/time zone/i)
     const table = within(notes).getByRole("table")
     expect(within(table).getAllByRole("row")).toHaveLength(all + 1)

@@ -112,7 +112,7 @@ describe('requestRewindGeneration', () => {
       await expect(requestRewindGeneration({ year: 2026 })).resolves.toEqual({
         success: false,
         code: 'REDIS_NOT_CONFIGURED',
-        error: "Rewind isn't available on this server yet",
+        error: "Rewind is not available on this server",
       })
     } finally {
       if (url !== undefined) process.env.REDIS_URL = url

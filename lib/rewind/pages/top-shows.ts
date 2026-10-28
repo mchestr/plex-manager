@@ -48,10 +48,10 @@ function monthsWatched(monthly: readonly number[], locale: string): string {
 
 /**
  * How a list counts, for the desktop Notes: "Counted from January 1 to
- * November 30. Rewatches count; trailers and extras do not."
+ * November 30. Rewatches count. Trailers and extras do not."
  */
 function countingRule(facts: RewindFactsV3): string {
-  return `Counted from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}. Rewatches count; trailers and extras do not.`
+  return `Counted from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}. Rewatches count. Trailers and extras do not.`
 }
 
 /**

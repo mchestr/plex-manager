@@ -13,11 +13,11 @@ export type RewindInfraCode = "REDIS_NOT_CONFIGURED" | "REDIS_UNAVAILABLE"
  * @example
  * ```ts
  * rewindInfraMessage("REDIS_NOT_CONFIGURED", "admin") // "Rewind needs Redis (REDIS_URL)"
- * rewindInfraMessage("REDIS_NOT_CONFIGURED", "member") // "Rewind isn't available on this server yet"
+ * rewindInfraMessage("REDIS_NOT_CONFIGURED", "member") // "Rewind is not available on this server"
  * rewindInfraMessage("REDIS_UNAVAILABLE", "member") // "Rewind is temporarily unavailable. Try again in a few minutes."
  * ```
  */
 export function rewindInfraMessage(code: RewindInfraCode, audience: "admin" | "member"): string {
   if (code === "REDIS_UNAVAILABLE") return "Rewind is temporarily unavailable. Try again in a few minutes."
-  return audience === "admin" ? "Rewind needs Redis (REDIS_URL)" : "Rewind isn't available on this server yet"
+  return audience === "admin" ? "Rewind needs Redis (REDIS_URL)" : "Rewind is not available on this server"
 }

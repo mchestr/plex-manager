@@ -117,7 +117,7 @@ describe("11 The race", () => {
   it("reads the race events: who led, then the month the lead changed", () => {
     const facts = issues.get("heavy")!.facts
     const text = plainText(renderCopyText(headline("race", facts), facts))
-    expect(text).toMatch(/ led (for (one month|[a-z]+ months)\. Then came [A-Z][a-z]+\.|all year\. Nothing came close\.)$/)
+    expect(text).toMatch(/ led (for (one month|[a-z]+ months)\. Then came [A-Z][a-z]+\.|all year\.)$/)
   })
 
   it("summarises the page deterministically", () => {

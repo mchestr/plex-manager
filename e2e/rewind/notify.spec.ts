@@ -68,7 +68,7 @@ test.describe('Rewind ready notifications', () => {
     await expect(page.getByTestId('rewind-status-panel')).toHaveAttribute('data-kind', 'generating');
     await page.getByTestId('rewind-notify-me').click();
 
-    await expect(page.getByText("We'll let you know")).toBeVisible();
+    await expect(page.getByText("You get a notification when it is ready")).toBeVisible();
     await expect
       .poll(() =>
         withPrisma((prisma) => prisma.rewindPrefs.findUnique({ where: { userId_year: { userId: member.id, year: REWIND_YEAR } }, select: { notify: true } }))

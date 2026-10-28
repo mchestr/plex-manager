@@ -180,7 +180,7 @@ export function ShareSheet({ open, onClose, page, atSettings, ownRewindHref }: S
           <SwitchRow
             id={`${id}-daily`}
             label="Daily detail"
-            hint={current === "calendar" ? "This card shows which days you watched" : "One line per day, instead of one bar per week."}
+            hint={current === "calendar" ? "This card always shows each day." : "Show one line per day, not one bar per week."}
             checked={choices.dailyDetail}
             disabled={current === "calendar"}
             onChange={(dailyDetail) => share.choose({ dailyDetail })}
