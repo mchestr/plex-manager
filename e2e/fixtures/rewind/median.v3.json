@@ -4119,23 +4119,23 @@
   },
   "copy": {
     "decks": {
-      "number": "Here's to more of it.",
+      "number": "Every play of the year, added up.",
       "bookends": "First in, last out.",
-      "topShows": "Just one more episode.",
+      "topShows": "Your shows, ranked by time watched.",
       "topFilms": "The longest was {{fact:films.longest.title}}, at {{fact:films.longest.minutes}}.",
       "taste": "The oldest thing you watched was {{fact:taste.oldest.title}}, from {{fact:taste.oldest.year}}.",
       "people": "Behind the camera, {{fact:people.director[1].name}} came up first.",
-      "clock": "Any time is a good time.",
+      "clock": "When in the day you pressed play.",
       "calendar": "Your biggest day was {{fact:days.biggest.date}}, at {{fact:days.biggest.minutes}}.",
-      "records": "Beat them next year.",
-      "requests": "Keep them coming.",
-      "standing": "All in good fun.",
+      "records": "The biggest marks you set this year.",
+      "requests": "What you asked the server for.",
+      "standing": "How your year compares on the server.",
       "nextYear": null
     },
     "archetype": {
       "id": "golden-hour-viewer",
-      "tagline": "Same time, every evening.",
-      "dedication": "Wear it well.",
+      "tagline": "The early evening was your time to watch.",
+      "dedication": "Earned from your own viewing.",
       "posterLineId": "gh.5"
     },
     "signOff": "See you next year, {{fact:member.firstName}}."

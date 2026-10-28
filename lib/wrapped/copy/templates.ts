@@ -60,48 +60,48 @@ const t = (id: string) => `{{fact:${id}}}`
 
 /** Every slot's fallback variants; P8.1's freeze lock hashes them. */
 export const SLOT_TEMPLATES: Readonly<Record<Exclude<SlotId, "archetype.posterLineId" | "archetype.tagline">, readonly string[]>> = {
-  "deck.number": [`That's ${t("time.daysHours")}, about ${t("time.perDay")} a day.`, `End to end, that's ${t("time.daysHours")}.`, "Here's to more of it."],
+  "deck.number": [`That's ${t("time.daysHours")}, about ${t("time.perDay")} a day.`, `End to end, that's ${t("time.daysHours")}.`, "Every play of the year, added up."],
   // The lifetime line under the deck already names the member's history.
   "deck.bookends": ["Opening night to last call.", "First in, last out."],
   "deck.topShows": [
     `${t("series[1].title")} came first, and ${t("series[2].title")} came next.`,
     `Your biggest night with ${t("series[1].title")} was ${t("series[1].biggestNight.date")}.`,
-    "Just one more episode.",
+    "Your shows, ranked by time watched.",
   ],
   "deck.topFilms": [
-    `You finished ${t("films.finishedShare")} of the films you started.`,
+    `You finished ${t("films.finishedShare")} of the movies you started.`,
     `The longest was ${t("films.longest.title")}, at ${t("films.longest.minutes")}.`,
-    "Lights down, phones away.",
+    "Your movies, ranked by plays.",
   ],
-  "deck.taste": [`The oldest thing you watched was ${t("taste.oldest.title")}, from ${t("taste.oldest.year")}.`, "Your kind of thing."],
+  "deck.taste": [`The oldest thing you watched was ${t("taste.oldest.title")}, from ${t("taste.oldest.year")}.`, "Your taste, by genre and year."],
   "deck.people": [
     `${t("people.actor[1].name")} led the cast list, with ${t("people.actor[2].name")} next.`,
     `Behind the camera, ${t("people.director[1].name")} came up first.`,
-    "The usual suspects.",
+    "The names that came up in your viewing.",
   ],
   "deck.clock": [
     `${t("hours.afterDarkShare")} of your viewing started after dark.`,
     `Your latest start was ${t("hours.latestStart.time")} on a ${t("hours.latestStart.weekday")}.`,
-    "Any time is a good time.",
+    "When in the day you pressed play.",
   ],
   "deck.calendar": [
     `You pressed play on ${t("days.active")} of ${t("window.elapsedDays")}.`,
     `Your biggest day was ${t("days.biggest.date")}, at ${t("days.biggest.minutes")}.`,
     "Big days and quiet ones.",
   ],
-  "deck.records": [`The longest run was ${t("records.longestBinge.title")}, on ${t("records.longestBinge.date")}.`, "Beat them next year."],
-  "deck.requests": [`Your requests leaned toward ${t("requests.genre[1]")}.`, "Keep them coming."],
+  "deck.records": [`The longest run was ${t("records.longestBinge.title")}, on ${t("records.longestBinge.date")}.`, "The biggest marks you set this year."],
+  "deck.requests": [`Your requests leaned toward ${t("requests.genre[1]")}.`, "What you asked the server for."],
   "deck.standing": [
     `Across the server, members pressed play for ${t("community.hours")} hours this year.`,
-    `The server's favourite series was ${t("community.topSeries")}.`,
-    "All in good fun.",
+    `The server's favourite show was ${t("community.topSeries")}.`,
+    "How your year compares on the server.",
   ],
   "deck.nextYear": [
     `${t("next.leftForLater[1].title")} is waiting where you left it.`,
     `A pick for the new year: ${t("next.picks[1].title")}.`,
     "Something to look forward to.",
   ],
-  "archetype.dedication": [`For ${t("series[1].title")}, which kept you company.`, `For ${t("films[1].title")}, your film of the year.`, "Wear it well."],
+  "archetype.dedication": [`For ${t("series[1].title")}, which kept you company.`, `For ${t("films[1].title")}, your movie of the year.`, "Earned from your own viewing."],
   signOff: [`See you next year, ${t("member.firstName")}.`, "That was the year. Thanks for pressing play."],
 }
 

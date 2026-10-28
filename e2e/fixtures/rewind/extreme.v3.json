@@ -3222,9 +3222,9 @@
   },
   "copy": {
     "decks": {
-      "number": "Here's to more of it.",
+      "number": "Every play of the year, added up.",
       "bookends": "First in, last out.",
-      "topShows": "Just one more episode.",
+      "topShows": "Your shows, ranked by time watched.",
       "topFilms": null,
       "taste": "The oldest thing you watched was {{fact:taste.oldest.title}}, from {{fact:taste.oldest.year}}.",
       "people": "{{fact:people.actor[1].name}} led the cast list, with {{fact:people.actor[2].name}} next.",
@@ -3232,13 +3232,13 @@
       "calendar": "Your biggest day was {{fact:days.biggest.date}}, at {{fact:days.biggest.minutes}}.",
       "records": null,
       "requests": null,
-      "standing": "All in good fun.",
+      "standing": "How your year compares on the server.",
       "nextYear": null
     },
     "archetype": {
       "id": "midnight-marathoner",
-      "tagline": "Up past the credits, every night.",
-      "dedication": "Wear it well.",
+      "tagline": "Much of your viewing started after dark.",
+      "dedication": "Earned from your own viewing.",
       "posterLineId": "mm.5"
     },
     "signOff": "See you next year, {{fact:member.firstName}}."

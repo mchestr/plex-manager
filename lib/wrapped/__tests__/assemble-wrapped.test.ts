@@ -78,7 +78,7 @@ describe("assembleWrappedData", () => {
     })
 
     // Fallback = motif + real numbers (1008 hours, 85 films, 412 episodes)
-    expect(data.archetype?.dedication).toContain("one more episode always wins")
+    expect(data.archetype?.dedication).toContain("Watches deep into the night")
     expect(data.archetype?.dedication).toContain("<highlight>1008 hours</highlight>")
     expect(data.archetype?.dedication).toContain("<highlight>85 movies</highlight>")
     expect(data.archetype?.dedication).toContain("<highlight>412 episodes</highlight>")
@@ -98,7 +98,7 @@ describe("assembleWrappedData", () => {
       ...BASE_ARGS,
     })
 
-    expect(data.archetype?.dedication).toContain("one more episode always wins")
+    expect(data.archetype?.dedication).toContain("Watches deep into the night")
   })
 
   it("keeps a substantive dedication untouched", () => {
