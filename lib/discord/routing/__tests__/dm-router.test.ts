@@ -302,7 +302,7 @@ describe("routeDirectMessage", () => {
       expect.objectContaining({ status: "FAILED", error: "boom" })
     )
     expect(reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("couldn't reach the assistant") })
+      expect.objectContaining({ content: expect.stringContaining("The assistant did not answer") })
     )
   })
 
@@ -368,7 +368,7 @@ describe("routeDirectMessage", () => {
 
     expect(deps.handleDiscordChat).not.toHaveBeenCalled()
     expect(reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("didn't catch") })
+      expect.objectContaining({ content: expect.stringContaining("Your message is empty") })
     )
   })
 })

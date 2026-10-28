@@ -179,7 +179,7 @@ describe("assistantCommand.handle — ask", () => {
     const editArg = editReply.mock.calls[0][0]
     expect(editArg.content).toContain("Everything looks healthy.")
     // Points the user to DM the bot for the ongoing conversation.
-    expect(editArg.content).toMatch(/DM/i)
+    expect(editArg.content).toMatch(/direct message/i)
   })
 
   it("fits a long answer and the DM note into one 2,000-character reply (SEC-51)", async () => {
@@ -195,7 +195,7 @@ describe("assistantCommand.handle — ask", () => {
     const { content } = editReply.mock.calls[0][0]
     expect(content.length).toBeLessThanOrEqual(2000)
     expect(content).toContain("(Reply cut short.)")
-    expect(content).toMatch(/DM me directly/)
+    expect(content).toMatch(/Send me a direct message/)
   })
 
   it("nudges via editReply when the chat result reports the user is not linked", async () => {
@@ -226,7 +226,7 @@ describe("assistantCommand.handle — ask", () => {
     await assistantCommand.handle(ctx)
 
     expect(editReply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("couldn't reach the assistant") })
+      expect.objectContaining({ content: expect.stringContaining("The assistant did not answer") })
     )
   })
 })
@@ -270,7 +270,7 @@ describe("assistantCommand.handle — reset", () => {
     await assistantCommand.handle(ctx)
 
     expect(reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("couldn't clear") })
+      expect.objectContaining({ content: expect.stringContaining("could not clear") })
     )
   })
 })

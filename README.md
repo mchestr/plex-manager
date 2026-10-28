@@ -79,7 +79,7 @@ Each member's year on the server, as a story of pages (formerly "Plex Wrapped"):
 ### Assistants (Optional)
 - **Admin assistant** in the admin pages, which can read the server's state through Plex, Tautulli, Overseerr, Sonarr and Radarr tools
 - **Discord assistant** (`/assistant` and direct messages to the bot) for linked members
-- Every surface that offers an assistant says that server admins can review assistant conversations and names the AI provider that processes them
+- Every surface that offers an assistant says that server admins can read assistant conversations and names the AI provider that the app sends messages to
 
 ### Discord (Optional)
 - **Linked roles** that follow a member's access and watch hours
