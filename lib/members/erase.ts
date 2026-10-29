@@ -12,8 +12,8 @@
  *    Stripe cancel ─► Plex unshare / Jellyfin disable ─► Discord role, grant
  *    and link ─► end sessions ─► remove queued jobs
  * 2. one $transaction: Discord-keyed rows, admin LLM text about the member,
- *    unused affiliate invites, the User row (the rest cascades), and the
- *    MEMBER_ERASED audit row
+ *    unused affiliate invites, the User row (the rest cascades), the
+ *    affiliate block when asked for, and the MEMBER_ERASED audit row
  * ```
  *
  * A Stripe or service failure stops before the transaction with its code;
@@ -31,6 +31,7 @@
 import "server-only"
 
 import type { ActionResult } from "@/lib/actions/result"
+import { blockPlexAccount } from "@/lib/affiliates/block"
 import { clearDiscordRoleForUser, type DiscordUnlinkResult } from "@/lib/discord/integration"
 import { revokeServiceAccess, type RevokeAccessFailure, type RevokeAccessResult } from "@/lib/members/access-actions"
 import { countInventory, deleteInventory, loadEraseSubject, type InventoryCounts } from "@/lib/members/erase-inventory"
@@ -90,10 +91,11 @@ const failure = (code: EraseCode) => ({ success: false as const, code, error: ER
  * @param userId - The member to remove.
  * @param options.actorId - The admin removing them, for the refusals and the audit row.
  * @param options.dryRun - Count only.
+ * @param options.block - Also block the member's Plex account from affiliate invites (`AffiliateBlock`).
  */
 export async function eraseMember(
   userId: string,
-  { actorId, dryRun }: { actorId: string; dryRun: boolean }
+  { actorId, dryRun, block = false }: { actorId: string; dryRun: boolean; block?: boolean }
 ): Promise<ActionResult<EraseReport, EraseCode>> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -143,6 +145,7 @@ export async function eraseMember(
   const counts = await countInventory(subject)
   await prisma.$transaction(async (tx) => {
     await deleteInventory(tx, subject)
+    if (block && user.plexUserId) await blockPlexAccount(tx, user.plexUserId, actorId)
     await recordAuditEvent(
       AuditEventType.MEMBER_ERASED,
       actorId,

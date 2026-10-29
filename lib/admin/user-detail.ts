@@ -10,7 +10,7 @@ import { parseRole, type RoleKey } from "@/lib/permissions"
 import "server-only"
 
 import { activeRunStarts } from "@/lib/admin/active-runs"
-import type { UserActionTarget } from "@/lib/admin/user-actions"
+import { invitedByOf, type InvitedBy, type UserActionTarget } from "@/lib/admin/user-actions"
 import { getJellyfinUserById } from "@/lib/connections/jellyfin-users"
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
@@ -71,6 +71,8 @@ export interface UserDetailHeaderData {
     linkedAt: Date
     revokedAt: Date | null
   } | null
+  /** The affiliate whose invite they joined with. */
+  invitedBy: InvitedBy
 }
 
 type ActivePlexServer = { url: string; token: string; adminPlexUserId: string | null; machineIdentifier: string | null } | null
@@ -127,6 +129,7 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
       },
       plexWrapped: { where: { year: seasonYear }, select: { status: true } },
       discordConnection: { select: { username: true, globalName: true, discordUserId: true, linkedAt: true, revokedAt: true } },
+      affiliateJoin: { select: { affiliate: { select: { id: true, name: true, email: true } } } },
     },
   })
   if (!user) return null
@@ -166,6 +169,7 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
     discord: discord
       ? { displayName: discord.globalName || discord.username, discordUserId: discord.discordUserId, linkedAt: discord.linkedAt, revokedAt: discord.revokedAt }
       : null,
+    invitedBy: invitedByOf(user.affiliateJoin),
   }
 }
 
@@ -191,5 +195,6 @@ export function detailUserTarget(header: UserDetailHeaderData): UserActionTarget
     subscriptionStatus: header.subscription?.status ?? null,
     isExempt: header.isExempt,
     stripeCustomerId: header.subscription?.stripeCustomerId ?? null,
+    invitedBy: header.invitedBy,
   }
 }

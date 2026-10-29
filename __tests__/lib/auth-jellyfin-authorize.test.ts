@@ -101,7 +101,7 @@ describe('Jellyfin authorize for Jellyfin members', () => {
     await expect(signIn(false)).resolves.toMatchObject({ id: 'both' })
 
     expect(prismaMock.user.create).not.toHaveBeenCalled()
-    expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'both' }, data: { name: 'jo' } })
+    expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'both' }, data: { name: 'jo', accessEndedAt: null } })
   })
 
   it('refuses a disabled account (P0.5)', async () => {
@@ -120,7 +120,7 @@ describe('Jellyfin authorize for Jellyfin members', () => {
 
     await expect(signIn(true)).resolves.toMatchObject({ id: 'jf-row', isAdmin: true })
 
-    expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'jf-row' }, data: { name: 'jo', isAdmin: true } })
+    expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'jf-row' }, data: { name: 'jo', isAdmin: true, accessEndedAt: null } })
     expect(logAuditEvent).toHaveBeenCalledWith('ADMIN_PRIVILEGE_GRANTED', 'jf-row', expect.objectContaining({ jellyfinUserId: 'jf-1' }))
   })
 
@@ -131,7 +131,7 @@ describe('Jellyfin authorize for Jellyfin members', () => {
 
     await expect(signIn('unknown')).resolves.toMatchObject({ id: 'jf-admin', isAdmin: true })
 
-    expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'jf-admin' }, data: { name: 'jo' } })
+    expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'jf-admin' }, data: { name: 'jo', accessEndedAt: null } })
     expect(logAuditEvent).not.toHaveBeenCalled()
   })
 })

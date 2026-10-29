@@ -61,6 +61,7 @@ import { grantServiceAccess, NO_MEMBER_SERVICE, revokeServiceAccess } from "@/li
 import { memberServices } from "@/lib/members/service"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { stopSyncAndClearPlexToken } from "@/lib/members/offboard"
+import { endAffiliateStatus } from "@/lib/affiliates/end-status"
 import { endUserSessions, SYSTEM_ACTOR } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
 import { getActiveService } from "@/lib/data/active-service"
@@ -497,6 +498,11 @@ export async function processAccessGrant(
     throw new Error(grant.code)
   }
 
+  const granted = grant.plex === "accepted" || grant.jellyfin === "enabled"
+  if (granted) {
+    await prisma.user.updateMany({ where: { id: userId }, data: { accessEndedAt: null } })
+  }
+
   await prisma.subscription.updateMany({
     where: { userId },
     data: {
@@ -506,7 +512,6 @@ export async function processAccessGrant(
     },
   })
 
-  const granted = grant.plex === "accepted" || grant.jellyfin === "enabled"
   logger.info("Access grant complete", { userId, plex: grant.plex, jellyfin: grant.jellyfin, skipCode: grant.skipCode })
   if (granted) {
     await enqueueRoleSync(userId, "access_granted")
@@ -720,6 +725,7 @@ export async function processAccessRevoke(
   if (revoke.jellyfin === "no_server") throw new Error("NO_JELLYFIN_SERVER")
 
   await stopSyncAndClearPlexToken(userId)
+  await endAffiliateStatus(userId, "ACCESS_REVOKED", "system")
 
   // An access already gone whose removal is already recorded is a rerun:
   // succeed without ending the sessions a second time.

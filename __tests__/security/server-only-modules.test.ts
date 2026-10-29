@@ -20,7 +20,7 @@ const filesIn = (dir: string, recursive = false): string[] =>
 const TYPE_ONLY = new Set(['lib/chatbot/types.ts', 'lib/chatbot/tools/types.ts'])
 
 /** Affiliate modules that client components import: pure, with no database read. */
-const AFFILIATE_CLIENT_SAFE = new Set(['lib/affiliates/copy.ts'])
+const AFFILIATE_CLIENT_SAFE = new Set(['lib/affiliates/copy.ts', 'lib/affiliates/flags.ts', 'lib/affiliates/tiers.ts'])
 
 const MODULES = [
   ...filesIn('lib/data'),

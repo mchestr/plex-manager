@@ -1,5 +1,5 @@
 import { makeAdminUserWithStats } from '@/__tests__/utils/test-builders'
-import { listUserTarget, type UserActionContext, userActionIds } from '@/lib/admin/user-actions'
+import { invitedByOf, listUserTarget, type UserActionContext, userActionIds } from '@/lib/admin/user-actions'
 
 const NOW = Date.parse('2026-12-03T12:00:00Z')
 const LIST: UserActionContext = { now: NOW, stripeEnabled: false, hasStripeDashboard: false, inList: true }
@@ -52,5 +52,22 @@ describe('listUserTarget', () => {
       disabled: true,
       plexAccess: 'shared',
     })
+  })
+})
+
+describe('invitedByOf', () => {
+  it('names the inviter from the join record, by email without a name', () => {
+    expect(invitedByOf({ affiliate: { id: 'sam', name: 'Sam', email: null } })).toEqual({ id: 'sam', name: 'Sam' })
+    expect(invitedByOf({ affiliate: { id: 'sam', name: null, email: 'sam@example.com' } })).toEqual({ id: 'sam', name: 'sam@example.com' })
+  })
+
+  it('is null without a join or once the inviter is removed', () => {
+    expect(invitedByOf(null)).toBeNull()
+    expect(invitedByOf({ affiliate: null })).toBeNull()
+  })
+
+  it('reaches the action target, null when the row has none', () => {
+    expect(target({ invitedBy: { id: 'sam', name: 'Sam' } }).invitedBy).toEqual({ id: 'sam', name: 'Sam' })
+    expect(target().invitedBy).toBeNull()
   })
 })

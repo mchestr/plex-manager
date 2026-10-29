@@ -33,6 +33,15 @@ import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import type { AdminUserWithWrappedStats } from "@/types/admin"
 import type { AuthService } from "@/types/onboarding"
 
+/** The affiliate whose invite the member joined with, for "Invited by Sam". */
+export type InvitedBy = { id: string; name: string } | null
+
+/** The inviter from the member's join record, named like any member. */
+export function invitedByOf(join: { affiliate: { id: string; name: string | null; email: string | null } | null } | null): InvitedBy {
+  const affiliate = join?.affiliate
+  return affiliate ? { id: affiliate.id, name: affiliate.name || affiliate.email || "Unknown member" } : null
+}
+
 /** What the actions and their dialogs need to know about a member. */
 export interface UserActionTarget {
   id: string
@@ -51,6 +60,8 @@ export interface UserActionTarget {
   subscriptionStatus: SubscriptionStatus | null
   isExempt: boolean
   stripeCustomerId: string | null
+  /** Null, or left out, when they did not join through an affiliate invite. */
+  invitedBy?: InvitedBy
 }
 
 export type UserActionId =
@@ -117,5 +128,6 @@ export function listUserTarget(user: AdminUserWithWrappedStats): UserActionTarge
     subscriptionStatus: user.subscriptionStatus,
     isExempt: user.isExempt,
     stripeCustomerId: user.stripeCustomerId,
+    invitedBy: user.invitedBy ?? null,
   }
 }

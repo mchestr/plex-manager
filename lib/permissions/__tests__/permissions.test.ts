@@ -19,6 +19,7 @@ describe('permissionsFor', () => {
     expect(support.has('assistant:use')).toBe(true)
     expect(support.has('assistant:tools:read')).toBe(true)
     expect(support.has('users:read')).toBe(true)
+    expect(support.has('affiliates:read')).toBe(true)
     expect(support.has('assistant:tools:write')).toBe(false)
   })
 

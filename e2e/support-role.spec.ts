@@ -15,6 +15,7 @@ import { mockLlmReply } from './mocks/llm-server';
 const SUPPORT_ID = 'e2e-support-user-id';
 const CHAT_PROVIDER_ID = 'e2e-support-role-chat';
 const ADMINS_CONVERSATION_ID = 'e2e-support-role-admins-chat';
+const APPLICANT_ID = 'e2e-support-role-applicant';
 
 const test = base.extend<{ supportPage: import('@playwright/test').Page }>({
   supportPage: async ({ browser, baseURL }, use) => {
@@ -67,6 +68,17 @@ test.describe('Support role', () => {
     await prisma.chatConversation.create({
       data: { id: ADMINS_CONVERSATION_ID, userId: TEST_USERS.ADMIN.id, title: 'An admin question', lastMessageAt: new Date() },
     });
+    await prisma.user.deleteMany({ where: { id: APPLICANT_ID } });
+    await prisma.user.create({
+      data: {
+        id: APPLICANT_ID,
+        name: 'Affiliate Applicant',
+        plexUserId: 'e2e-support-role-applicant-plex',
+        primaryAuthService: 'plex',
+        onboardingStatus: { plex: true, jellyfin: false },
+        affiliateApplications: { create: { openUserId: APPLICANT_ID, status: 'PENDING', hoursAtApply: 120 } },
+      },
+    });
     await prisma.$disconnect();
   });
 
@@ -74,7 +86,7 @@ test.describe('Support role', () => {
     const prisma = createE2EPrismaClient();
     await prisma.lLMProvider.deleteMany({ where: { id: CHAT_PROVIDER_ID } });
     await prisma.chatConversation.deleteMany({ where: { OR: [{ id: ADMINS_CONVERSATION_ID }, { userId: SUPPORT_ID }] } });
-    await prisma.user.deleteMany({ where: { id: SUPPORT_ID } });
+    await prisma.user.deleteMany({ where: { id: { in: [SUPPORT_ID, APPLICANT_ID] } } });
     await prisma.$disconnect();
   });
 
@@ -122,6 +134,19 @@ test.describe('Support role', () => {
       });
     });
   }
+
+  test('reads Affiliates without decisions or the History tab', async ({ supportPage: page }) => {
+    await page.goto('/admin/affiliates?tab=history');
+    await expect(page.getByTestId('admin-affiliates-panel-applications')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('admin-affiliates-panel-applications')).toContainText('Affiliate Applicant');
+    await expect(page.getByTestId('admin-affiliates-tab-history')).toHaveCount(0);
+    await expect(page.getByTestId(/^admin-affiliates-(approve|refuse)-/)).toHaveCount(0);
+
+    await page.getByTestId('admin-affiliates-tab-affiliates').click();
+    await expect(page.getByTestId('admin-affiliates-panel-affiliates')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await page.getByTestId('admin-affiliates-tab-tree').click();
+    await expect(page.getByTestId('admin-affiliates-panel-tree')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+  });
 
   test("is refused a member's detail page", async ({ supportPage: page }) => {
     await page.goto('/admin/users/regular-user-id');

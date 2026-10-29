@@ -293,6 +293,8 @@ export const authOptions: NextAuthOptions = {
                   ...email,
                   image: plexUser.thumb,
                   ...(promotesOwner && { isAdmin: true }),
+                  // Access is back, so the member is one again
+                  ...(accessCheck.status === "granted" && { accessEndedAt: null }),
                 },
               })
             )
@@ -424,6 +426,8 @@ export const authOptions: NextAuthOptions = {
               data: {
                 name: jellyfinUser.username,
                 ...(promotes && { isAdmin: true }),
+                // Jellyfin signs in only an enabled account, so access is back
+                accessEndedAt: null,
               },
             })
 

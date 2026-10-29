@@ -3,6 +3,7 @@
 import { z } from "zod"
 
 import { adminAction, memberAction } from "@/lib/actions/define-action"
+import { endAffiliateStatus } from "@/lib/affiliates/end-status"
 import { type ActionErrorCode, type ActionResult, fail, ok } from "@/lib/actions/result"
 import { unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { type PlexUnshareErrorCode } from "@/lib/connections/plex-invitations"
@@ -136,6 +137,7 @@ export const unshareUserLibrary = adminAction({
     }
 
     await stopSyncAndClearPlexToken(user.id)
+    await endAffiliateStatus(user.id, "UNSHARED", actorId)
     await endUserSessions(user.id, "unshared", actorId)
     logAuditEvent(AuditEventType.MEMBER_UNSHARED, actorId, { targetUserId: user.id, status: result.status })
 

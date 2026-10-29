@@ -1,6 +1,7 @@
 /** The admin route builders (P6.1, UI-06): each carries the year it is given and encodes ids. */
 
 import {
+  affiliates,
   invite,
   llmConversation,
   llmUsage,
@@ -13,6 +14,12 @@ import {
 } from "@/lib/admin/routes"
 
 describe("admin routes", () => {
+  it("builds the Affiliates page, with the default tab left out", () => {
+    expect(affiliates()).toBe("/admin/affiliates")
+    expect(affiliates({ tab: "applications" })).toBe("/admin/affiliates")
+    expect(affiliates({ tab: "history" })).toBe("/admin/affiliates?tab=history")
+  })
+
   it("builds the user pages, with the year on the Rewind link", () => {
     expect(userDetail("u1")).toBe("/admin/users/u1")
     expect(userDetail("u1", { tab: "overview" })).toBe("/admin/users/u1")

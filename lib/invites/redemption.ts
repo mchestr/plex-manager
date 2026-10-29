@@ -9,18 +9,13 @@
 import "server-only"
 
 import { affiliateInviteRefusal, type AffiliateInviteRefusal } from "@/lib/affiliates/invite-state"
-import { InviteKind, Prisma, ServerType } from "@/lib/generated/prisma/client"
+import { inSerializable, isTransactionConflict } from "@/lib/db/serializable"
+import { InviteKind, ServerType } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("INVITE")
-
-const TRANSACTION_TIMEOUT_MS = 10000
-
-// Retry configuration for transaction conflicts
-const MAX_TRANSACTION_RETRIES = 3
-const INITIAL_RETRY_DELAY_MS = 100
 
 // Redeeming an invite is admin-granted membership, so the user is marked exempt
 // from the Stripe subscription gate. Applied only when the user is not already
@@ -29,66 +24,6 @@ export const INVITE_EXEMPTION = { isExempt: true, exemptNote: "Joined by invite"
 
 /** The exemption for a member who joined through an affiliate's invite. */
 export const AFFILIATE_INVITE_EXEMPTION = { isExempt: true, exemptNote: "Joined by member invite" }
-
-/**
- * Check if an error is a Prisma transaction conflict (P2034)
- */
-function isTransactionConflict(error: unknown): boolean {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    return error.code === "P2034"
-  }
-  return false
-}
-
-/**
- * Sleep for a specified duration
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-/**
- * Execute a function with exponential backoff retry on transaction conflicts
- */
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: {
-    maxRetries?: number
-    initialDelayMs?: number
-    onConflict?: (attempt: number) => void
-  } = {}
-): Promise<T> {
-  const maxRetries = options.maxRetries ?? MAX_TRANSACTION_RETRIES
-  const initialDelay = options.initialDelayMs ?? INITIAL_RETRY_DELAY_MS
-
-  let lastError: unknown
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn()
-    } catch (error) {
-      lastError = error
-
-      if (!isTransactionConflict(error) || attempt >= maxRetries) {
-        throw error
-      }
-
-      // Log transaction conflict for monitoring
-      options.onConflict?.(attempt + 1)
-
-      // Exponential backoff with jitter
-      const delay = initialDelay * Math.pow(2, attempt) * (0.5 + Math.random() * 0.5)
-      logger.warn("Transaction conflict, retrying", {
-        attempt: attempt + 1,
-        maxRetries,
-        delayMs: Math.round(delay),
-      })
-      await sleep(delay)
-    }
-  }
-
-  throw lastError
-}
 
 // Types for invite with full data
 interface InviteData {
@@ -187,14 +122,17 @@ export async function rollbackInviteUsage(
  * Jellyfin code never reaches the Plex share or the invite exemption (SEC-29).
  * An affiliate invite must also pass `affiliateInviteRefusal`, read inside the
  * transaction; its use sets the join record (`joinedAt`) and clears its label.
- * Note: This function re-throws P2034 transaction conflicts for retry handling
+ * The label is cleared when the use is counted, and a rollback does not bring it back.
+ * The transaction is retried on conflicts (`inSerializable`); a conflict on
+ * the last attempt is re-thrown.
  */
 export async function validateAndUseInvite(
   code: string,
-  expectedServerType: ServerType
+  expectedServerType: ServerType,
+  { onConflict }: { onConflict?: (attempt: number) => void } = {}
 ): Promise<ValidateAndUseResult> {
   try {
-    const result = await prisma.$transaction(
+    const result = await inSerializable(
       async (tx): Promise<ValidateAndUseResult> => {
         // Find invite by code inside the transaction
         const invite = await tx.invite.findUnique({
@@ -260,15 +198,12 @@ export async function validateAndUseInvite(
           },
         }
       },
-      {
-        timeout: TRANSACTION_TIMEOUT_MS,
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      }
+      { onConflict }
     )
 
     return result
   } catch (error) {
-    // Re-throw P2034 errors for retry handling at the caller level
+    // A conflict that outlasted the retries
     if (isTransactionConflict(error)) {
       throw error
     }

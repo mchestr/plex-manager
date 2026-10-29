@@ -61,6 +61,16 @@ export enum AuditEventType {
   // An affiliate invite refused a redemption. Details carry the invite id and
   // the reason; the target is the affiliate whose invite it was.
   AFFILIATE_REDEMPTION_REFUSED = "AFFILIATE_REDEMPTION_REFUSED",
+  // An admin decided on an affiliate application, revoked or ended a status,
+  // changed an override, or blocked or unblocked a Plex account. Details hold
+  // ids, counts and text lengths only, never the note, a reason or a label.
+  AFFILIATE_APPROVED = "AFFILIATE_APPROVED",
+  AFFILIATE_REFUSED = "AFFILIATE_REFUSED",
+  AFFILIATE_REVOKED = "AFFILIATE_REVOKED",
+  AFFILIATE_ENDED = "AFFILIATE_ENDED",
+  AFFILIATE_OVERRIDE_CHANGED = "AFFILIATE_OVERRIDE_CHANGED",
+  AFFILIATE_ACCOUNT_BLOCKED = "AFFILIATE_ACCOUNT_BLOCKED",
+  AFFILIATE_ACCOUNT_UNBLOCKED = "AFFILIATE_ACCOUNT_UNBLOCKED",
   // Announcement events
   ANNOUNCEMENT_CREATED = "ANNOUNCEMENT_CREATED",
   ANNOUNCEMENT_UPDATED = "ANNOUNCEMENT_UPDATED",

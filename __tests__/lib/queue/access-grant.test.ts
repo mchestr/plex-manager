@@ -147,6 +147,8 @@ describe('processAccessGrant', () => {
       where: { userId: 'user-1' },
       data: { accessSkipCode: null, plexInviteStatus: 'accepted' },
     })
+    // A member again: the admin affiliate tables stop showing "No longer a member"
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({ where: { id: 'user-1' }, data: { accessEndedAt: null } })
     expect(result).toEqual({ userId: 'user-1', granted: true })
   })
 
@@ -226,6 +228,7 @@ describe('processAccessGrant', () => {
       where: { userId: 'user-2' },
       data: { accessSkipCode: null, plexInviteStatus: 'pending' },
     })
+    expect(prisma.user.updateMany).not.toHaveBeenCalled()
     expect(result).toEqual({ userId: 'user-2', granted: false })
   })
 

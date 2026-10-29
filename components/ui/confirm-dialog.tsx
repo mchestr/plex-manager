@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useLayoutEffect, useRef, useState, useTransition, type ReactElement, type RefObject } from "react"
+import { useId, useLayoutEffect, useRef, useState, useTransition, type ReactElement, type ReactNode, type RefObject } from "react"
 
 import { Alert } from "@/components/ui/alert"
 import {
@@ -33,6 +33,8 @@ interface ConfirmDialogProps {
   tone?: "default" | "destructive"
   /** Confirm stays disabled until this text is typed, ignoring case. */
   typeToConfirm?: string
+  /** Extra controls between the description and the footer, such as an option or a reason. */
+  children?: ReactNode
   /**
    * Runs when the member confirms. The dialog stays open and pending until it
    * resolves; an `{ error }` renders inside the dialog, and success closes it.
@@ -65,6 +67,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   tone = "default",
   typeToConfirm,
+  children,
   action,
   successFocus,
   open: openProp,
@@ -174,6 +177,7 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         {typeToConfirm !== undefined && (
           <div className="flex flex-col gap-2">
             <label htmlFor={inputId} className="text-ui font-medium">

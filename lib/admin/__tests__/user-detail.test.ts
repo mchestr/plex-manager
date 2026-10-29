@@ -20,7 +20,7 @@ jest.mock('@/lib/connections/jellyfin-users', () => ({ getJellyfinUserById: jest
 jest.mock('@/lib/connections/plex', () => ({ checkUserServerAccess: jest.fn() }))
 jest.mock('@/lib/admin/active-runs', () => ({ activeRunStarts: jest.fn(async () => new Map()) }))
 
-const JELLYFIN_MEMBER = { ...buildUser({ id: 'jf-member', plexUserId: null, jellyfinUserId: 'jf-1', primaryAuthService: 'jellyfin' }), subscription: null, plexWrapped: [], discordConnection: null }
+const JELLYFIN_MEMBER = { ...buildUser({ id: 'jf-member', plexUserId: null, jellyfinUserId: 'jf-1', primaryAuthService: 'jellyfin' }), subscription: null, plexWrapped: [], discordConnection: null, affiliateJoin: null }
 
 function jellyfinAnswers(result: Awaited<ReturnType<typeof getJellyfinUserById>>) {
   jest.mocked(getJellyfinUserById).mockResolvedValue(result)
@@ -57,6 +57,11 @@ describe('getUserDetailHeader: services', () => {
   ] as const)('reads %s access', async (status, result) => {
     jellyfinAnswers(result)
     await expect(getUserDetailHeader('jf-member', 2026)).resolves.toMatchObject({ jellyfinStatus: status })
+  })
+
+  it('names the affiliate who invited the member', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ ...JELLYFIN_MEMBER, affiliateJoin: { affiliate: { id: 'sam', name: 'Sam', email: null } } } as never)
+    await expect(getUserDetailHeader('jf-member', 2026)).resolves.toMatchObject({ invitedBy: { id: 'sam', name: 'Sam' } })
   })
 
   it('is unknown without an active Jellyfin server, and null for a Plex-only member', async () => {

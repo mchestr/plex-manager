@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { makePrismaUser, makePrismaWrapped, makePrismaLlmUsage } from '../utils/test-builders'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { endAffiliateStatus } from '@/lib/affiliates/end-status'
 import { stopSyncAndClearPlexToken } from '@/lib/members/offboard'
 
 jest.mock('next-auth', () => ({
@@ -28,6 +29,7 @@ jest.mock('@/lib/llm/usage-totals', () => ({
 beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/members/offboard', () => ({ stopSyncAndClearPlexToken: jest.fn() }))
+jest.mock('@/lib/affiliates/end-status', () => ({ endAffiliateStatus: jest.fn() }))
 
 jest.mock('@/lib/connections/plex', () => ({
   checkUserServerAccess: jest.fn(),
@@ -330,6 +332,7 @@ describe('getAllUsersWithWrapped', () => {
             plexWrapped: true,
           },
         },
+        affiliateJoin: { select: { affiliate: { select: { id: true, name: true, email: true } } } },
       },
     })
   })
@@ -623,6 +626,8 @@ describe('unshareUserLibrary', () => {
     })
     // GAP-31: the watchlist sync stops and the stored Plex token goes
     expect(stopSyncAndClearPlexToken).toHaveBeenCalledWith('member-1')
+    // Their affiliate status ends, with no wait to apply again
+    expect(endAffiliateStatus).toHaveBeenCalledWith('member-1', 'UNSHARED', 'admin-1')
   })
 
   it('reports a share that is already gone as success, and still ends the sessions', async () => {
@@ -645,6 +650,7 @@ describe('unshareUserLibrary', () => {
     await expect(unshareUserLibrary({ userId: 'member-1' })).resolves.toEqual({ success: false, code, error })
 
     expect(mockPrisma.user.updateMany).not.toHaveBeenCalled()
+    expect(endAffiliateStatus).not.toHaveBeenCalled()
   })
 
   it('never returns the text of a thrown error', async () => {

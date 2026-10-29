@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 import { adminAction } from "@/lib/actions/define-action"
+import { inviterApplicationId, revokeAffiliate } from "@/lib/affiliates/end-status"
 import { type ActionErrorCode, type ActionResult, fail, ok } from "@/lib/actions/result"
 import { setJellyfinAccountDisabled } from "@/lib/connections/jellyfin-users"
 import { enqueueRoleSync } from "@/lib/discord/role-sync"
@@ -12,6 +13,7 @@ import { eraseMember, type EraseCode, type EraseReport } from "@/lib/members/era
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { endUserSessions } from "@/lib/session-revocation"
+import { revokeInviterSchema } from "@/lib/validations/affiliates"
 import { userIdSchema } from "@/lib/validations/shared-schemas"
 import { getActiveService } from "@/lib/data/active-service"
 
@@ -99,15 +101,25 @@ export const previewMemberRemoval = adminAction({
  * P11.13, GAP-31). `confirmName` must be the member's display name, typed
  * (case and outer spaces ignored), or the action refuses with `VALIDATION`.
  * Limited to 10 per hour per admin. See `lib/members/erase.ts` for the order
- * and the refusals.
+ * and the refusals. `block` also blocks their Plex account from affiliate
+ * invites, in the removal's transaction; `revokeInviter` revokes the status of
+ * the affiliate who invited them, once the removal succeeded.
  *
- * @param input - `{ userId, confirmName }`
+ * @param input - `{ userId, confirmName, block?, revokeInviter? }`
  */
 export const removeMember = adminAction({
-  input: z.object({ userId: userIdSchema, confirmName: z.string().max(200) }),
+  input: z.object({
+    userId: userIdSchema,
+    confirmName: z.string().max(200),
+    block: z.boolean().optional(),
+    revokeInviter: revokeInviterSchema,
+  }),
   rateLimit: { name: "admin:remove-member" },
   fallbackError: "Could not remove the member",
-  handler: async ({ userId, confirmName }, { userId: actorId }): Promise<ActionResult<EraseReport, RemoveMemberCode>> => {
+  handler: async (
+    { userId, confirmName, block, revokeInviter },
+    { userId: actorId }
+  ): Promise<ActionResult<EraseReport, RemoveMemberCode>> => {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
     if (!user) return fail("NOT_FOUND", "That member no longer exists.")
     const displayName = user.name ?? user.email ?? "Unknown member"
@@ -117,8 +129,11 @@ export const removeMember = adminAction({
       })
     }
 
-    const result = await eraseMember(userId, { actorId, dryRun: false })
+    // Read before the removal, which clears the join record
+    const inviter = revokeInviter ? await inviterApplicationId(userId) : null
+    const result = await eraseMember(userId, { actorId, dryRun: false, block })
     if (result.success) {
+      if (inviter) await revokeAffiliate(inviter, { reason: revokeInviter?.reason ?? null, actorId })
       revalidatePath("/admin/users")
     }
     return result

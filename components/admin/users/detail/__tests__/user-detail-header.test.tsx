@@ -37,6 +37,7 @@ function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeader
     stripeEnabled: false,
     season: { year: 2026, status: 'completed', runStartedAt: null },
     discord: null,
+    invitedBy: null,
     ...overrides,
   }
 }

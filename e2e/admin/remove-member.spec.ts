@@ -68,3 +68,62 @@ test.describe('Admin removes a member', () => {
     }
   });
 });
+
+/**
+ * A member who joined through an affiliate invite: the dialog names the
+ * inviter, and the checked option revokes the inviter's status once the
+ * removal succeeds. The member has no Plex id, so the block option is absent.
+ */
+const INVITER = { id: `remove-member-inviter-${Date.now()}`, name: 'Aaa Inviting Affiliate' };
+const INVITEE = { id: `remove-member-invitee-${Date.now()}`, name: 'Aaa Invited Member' };
+
+test.describe('Admin removes a member an affiliate invited', () => {
+  test.beforeAll(async () => {
+    const prisma = createE2EPrismaClient();
+    try {
+      for (const member of [INVITER, INVITEE]) {
+        await prisma.user.create({ data: { ...member, primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } } });
+      }
+      await prisma.affiliateApplication.create({ data: { userId: INVITER.id, openUserId: INVITER.id, status: 'APPROVED', hoursAtApply: 100 } });
+      await prisma.invite.create({
+        data: { code: `${INVITEE.id}-code`, kind: 'AFFILIATE', affiliateUserId: INVITER.id, joinedUserId: INVITEE.id, joinedAt: new Date(), useCount: 1, librarySectionIds: '[1]' },
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  test.afterAll(async () => {
+    const prisma = createE2EPrismaClient();
+    try {
+      await prisma.invite.deleteMany({ where: { code: `${INVITEE.id}-code` } });
+      await prisma.user.deleteMany({ where: { id: { in: [INVITER.id, INVITEE.id] } } });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  test("names the inviter, and revokes the inviter's status with the removal", async ({ adminPage }) => {
+    await adminPage.goto(`/admin/users/${INVITEE.id}`);
+    await expect(adminPage.getByTestId('admin-user-invited-by-link')).toHaveText(INVITER.name);
+
+    await adminPage.getByTestId('admin-remove-member-open').click();
+    await expect(adminPage.getByTestId('admin-remove-member-preview')).toBeVisible();
+    await expect(adminPage.getByTestId('admin-remove-member-revoke-inviter-fields')).toContainText(`Invited by ${INVITER.name}`);
+    await expect(adminPage.getByTestId('admin-remove-member-block')).toHaveCount(0);
+
+    await adminPage.getByTestId('admin-remove-member-revoke-inviter').click();
+    await adminPage.getByTestId('admin-remove-member-revoke-inviter-reason').fill('Invited a reseller');
+    await adminPage.getByTestId('admin-remove-member-confirm-input').fill(INVITEE.name);
+    await adminPage.getByTestId('admin-remove-member-button').click();
+    await expect(adminPage).toHaveURL(/\/admin\/users(\?|$)/);
+
+    const prisma = createE2EPrismaClient();
+    try {
+      const application = await prisma.affiliateApplication.findFirstOrThrow({ where: { userId: INVITER.id } });
+      expect(application).toMatchObject({ status: 'REVOKED', reason: 'Invited a reseller', openUserId: null });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+});
