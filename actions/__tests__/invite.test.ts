@@ -28,7 +28,7 @@ import type { Invite, JellyfinServer, PlexServer } from '@/lib/generated/prisma/
 import { getServerSession, type Session } from 'next-auth'
 import { mockReset } from 'jest-mock-extended'
 import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
-import { buildInvite } from '@/__tests__/helpers/factories'
+import { buildInvite, buildUser } from '@/__tests__/helpers/factories'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
@@ -215,6 +215,18 @@ describe('invite actions', () => {
       mockAcceptPlexInvite.mockResolvedValue({ success: true })
     })
 
+    it('refuses a disabled account before it spends a use, shares the server or sets an exemption', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(buildUser({ plexUserId: mockPlexUser.id, disabledAt: new Date() }))
+
+      const result = await redeemPlex('TESTCODE', 'plex-token')
+
+      expect(result).toEqual({ success: false, code: 'FORBIDDEN', error: 'This account is disabled.' })
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled()
+      expect(mockInviteUserToPlexServer).not.toHaveBeenCalled()
+      expect(mockAcceptPlexInvite).not.toHaveBeenCalled()
+      expect(mockPrisma.user.update).not.toHaveBeenCalled()
+    })
+
     it('should atomically validate and use invite in transaction', async () => {
       // Mock transaction to simulate atomic behavior
       const mockTx = {
@@ -325,39 +337,39 @@ describe('invite actions', () => {
     })
   })
 
-  describe('redeemPlexInvite - rollback and audit logging', () => {
+  describe('redeemPlexInvite - record, share, rollback and audit logging', () => {
+    const PLEX_REDEEM_FAILED = "We couldn't finish setting up your access. Please try again or ask the server owner."
+
+    // One transaction client for every prisma.$transaction callback, so the record and its undo can be asserted on
+    const tx = {
+      invite: { findUnique: jest.fn(), update: jest.fn() },
+      user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+      inviteUsage: { create: jest.fn(), delete: jest.fn() },
+    }
+
+    const auditedWith = (type: AuditEventType) =>
+      mockLogAuditEvent.mock.calls.filter(([event]) => event === type).map(([, , details]) => details)
+
     beforeEach(() => {
       mockGetPlexUserInfo.mockResolvedValue({ success: true, data: mockPlexUser })
       mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer)
+      mockInviteUserToPlexServer.mockResolvedValue({ success: true, inviteID: 12345 })
       mockAcceptPlexInvite.mockResolvedValue({ success: true })
-
-      // Mock successful transactions by default
-      mockPrisma.$transaction.mockImplementation(async (fn) => {
-        if (typeof fn === 'function') {
-          const txClient = {
-            invite: {
-              findUnique: jest.fn().mockResolvedValue(mockInvite),
-              update: jest.fn().mockResolvedValue({ ...mockInvite, useCount: 1 }),
-            },
-            user: {
-              findUnique: jest.fn().mockResolvedValue(null),
-              create: jest.fn().mockResolvedValue({ id: 'user-1' }),
-              update: jest.fn().mockResolvedValue({ id: 'user-1' }),
-            },
-            inviteUsage: {
-              create: jest.fn().mockResolvedValue({}),
-            },
-          }
-          return fn(asTransactionClient(txClient))
-        }
-        return Promise.resolve()
-      })
+      mockPrisma.$transaction.mockImplementation(async (fn) =>
+        typeof fn === 'function' ? fn(asTransactionClient(tx)) : Promise.resolve()
+      )
+      tx.invite.findUnique.mockResolvedValue(mockInvite)
+      tx.invite.update.mockResolvedValue({ ...mockInvite, useCount: 1 })
+      tx.user.findUnique.mockResolvedValue(null)
+      tx.user.create.mockResolvedValue({ id: 'user-1' })
+      tx.user.update.mockResolvedValue({ id: 'user-1' })
+      tx.user.delete.mockResolvedValue({ id: 'user-1' })
+      tx.inviteUsage.create.mockResolvedValue({ id: 'usage-1' })
+      tx.inviteUsage.delete.mockResolvedValue({ id: 'usage-1' })
     })
 
     it('should process invite successfully and log audit event', async () => {
-      mockInviteUserToPlexServer.mockResolvedValue({ success: true, inviteID: 12345 })
-
-      const result = await redeemPlex('TESTCODE', 'plex-auth-token')
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
 
       expect(result.success).toBe(true)
       expect(mockLogAuditEvent).toHaveBeenCalledWith(
@@ -370,52 +382,105 @@ describe('invite actions', () => {
       )
     })
 
-    it('should rollback invite when Plex invite fails', async () => {
-      mockInviteUserToPlexServer.mockResolvedValue({
-        success: false,
-        error: 'Plex server unavailable',
+    it('records the member and the use before it shares the server', async () => {
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result).toEqual({ success: true, data: null })
+      expect(tx.inviteUsage.create).toHaveBeenCalledWith({
+        data: { inviteId: 'invite-123', userId: 'user-1' },
+        select: { id: true },
       })
-
-      const result = await redeemPlex('TESTCODE', 'plex-auth-token')
-
-      // The upstream reason goes to the audit log, never to the caller (SEC-20)
-      expect(result).toEqual({ success: false, code: 'UPSTREAM_UNAVAILABLE', error: "We couldn't finish setting up your access. Please try again or ask the server owner." })
-
-      // Should log the failure
-      expect(mockLogAuditEvent).toHaveBeenCalledWith(
-        AuditEventType.INVITE_PLEX_FAILURE,
-        'system',
-        expect.objectContaining({
-          stage: 'invite_to_server',
-        })
-      )
-
-      // Should attempt rollback
-      expect(mockLogAuditEvent).toHaveBeenCalledWith(
-        AuditEventType.INVITE_ROLLBACK,
-        'system',
-        expect.objectContaining({
-          inviteId: 'invite-123',
-          reason: 'Plex server unavailable',
-        })
+      expect(tx.inviteUsage.create.mock.invocationCallOrder[0]).toBeLessThan(
+        mockInviteUserToPlexServer.mock.invocationCallOrder[0]!
       )
     })
 
-    it('should rollback invite when accept invite fails', async () => {
-      mockInviteUserToPlexServer.mockResolvedValue({ success: true, inviteID: 12345 })
+    it('shares nothing and restores the use when the record fails', async () => {
+      tx.inviteUsage.create.mockRejectedValueOnce(new Error('write failed'))
+
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result).toEqual({ success: false, code: 'INTERNAL', error: PLEX_REDEEM_FAILED })
+      expect(mockInviteUserToPlexServer).not.toHaveBeenCalled()
+      expect(auditedWith(AuditEventType.INVITE_PLEX_FAILURE)).toEqual([
+        expect.objectContaining({ stage: 'record_usage' }),
+      ])
+      expect(auditedWith(AuditEventType.INVITE_ROLLBACK)).toEqual([expect.objectContaining({ inviteId: 'invite-123' })])
+    })
+
+    it('deletes the row it created and restores the use when the share fails', async () => {
+      mockInviteUserToPlexServer.mockResolvedValue({ success: false, error: 'Plex server unavailable' })
+
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      // The upstream reason goes to the audit log, never to the caller (SEC-20)
+      expect(result).toEqual({ success: false, code: 'UPSTREAM_UNAVAILABLE', error: PLEX_REDEEM_FAILED })
+      expect(auditedWith(AuditEventType.INVITE_PLEX_FAILURE)).toEqual([
+        expect.objectContaining({ stage: 'invite_to_server' }),
+      ])
+      expect(tx.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } })
+      expect(mockPrisma.invite.updateMany).toHaveBeenCalledWith({
+        where: { id: 'invite-123', useCount: { gt: 0 } },
+        data: { useCount: { decrement: 1 } },
+      })
+      expect(auditedWith(AuditEventType.INVITE_ROLLBACK)).toEqual([
+        expect.objectContaining({ inviteId: 'invite-123', reason: 'Plex server unavailable' }),
+      ])
+      expect(mockAcceptPlexInvite).not.toHaveBeenCalled()
+    })
+
+    it('removes the use and the exemption it set on an existing row when the share fails', async () => {
+      tx.user.findUnique.mockResolvedValue({ id: 'user-1', isExempt: false })
+      mockInviteUserToPlexServer.mockResolvedValue({ success: false, error: 'Plex server unavailable' })
+
+      await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(tx.user.delete).not.toHaveBeenCalled()
+      expect(tx.inviteUsage.delete).toHaveBeenCalledWith({ where: { id: 'usage-1' } })
+      expect(tx.user.update).toHaveBeenLastCalledWith({
+        where: { id: 'user-1' },
+        data: { isExempt: false, exemptNote: null },
+      })
+      expect(auditedWith(AuditEventType.INVITE_ROLLBACK)).toHaveLength(1)
+    })
+
+    it('keeps an exemption the row already had when the share fails', async () => {
+      tx.user.findUnique.mockResolvedValue({ id: 'user-1', isExempt: true })
+      mockInviteUserToPlexServer.mockResolvedValue({ success: false, error: 'Plex server unavailable' })
+
+      await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(tx.inviteUsage.delete).toHaveBeenCalledWith({ where: { id: 'usage-1' } })
+      expect(tx.user.update).toHaveBeenCalledTimes(1)
+      expect(tx.user.update.mock.calls[0][0].data).not.toHaveProperty('isExempt')
+    })
+
+    it('keeps the use counted and audits the row when the undo fails', async () => {
+      mockInviteUserToPlexServer.mockResolvedValue({ success: false, error: 'Plex server unavailable' })
+      tx.user.delete.mockRejectedValueOnce(new Error('database unavailable'))
+
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result).toMatchObject({ success: false, code: 'UPSTREAM_UNAVAILABLE' })
+      expect(auditedWith(AuditEventType.INVITE_ROLLBACK_FAILED)).toEqual([
+        expect.objectContaining({ inviteId: 'invite-123', userId: 'user-1', stage: 'undo_record' }),
+      ])
+      expect(mockPrisma.invite.updateMany).not.toHaveBeenCalled()
+      expect(auditedWith(AuditEventType.INVITE_ROLLBACK)).toEqual([])
+    })
+
+    it('keeps the redemption when the accept fails, since the share exists', async () => {
       mockAcceptPlexInvite.mockRejectedValue(new Error('Accept failed'))
 
-      const result = await redeemPlex('TESTCODE', 'plex-auth-token')
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
 
-      expect(result).toEqual({ success: false, code: 'UPSTREAM_UNAVAILABLE', error: "We couldn't finish setting up your access. Please try again or ask the server owner." })
-
-      expect(mockLogAuditEvent).toHaveBeenCalledWith(
-        AuditEventType.INVITE_PLEX_FAILURE,
-        'system',
-        expect.objectContaining({
-          stage: 'accept_invite',
-        })
-      )
+      expect(result).toEqual({ success: true, data: null })
+      expect(auditedWith(AuditEventType.INVITE_PLEX_FAILURE)).toEqual([
+        expect.objectContaining({ stage: 'accept_invite', error: 'Error: Accept failed' }),
+      ])
+      expect(tx.user.delete).not.toHaveBeenCalled()
+      expect(tx.inviteUsage.delete).not.toHaveBeenCalled()
+      expect(auditedWith(AuditEventType.INVITE_ROLLBACK)).toEqual([])
     })
   })
 
@@ -604,6 +669,7 @@ describe('invite actions', () => {
       })
       expect(tx.inviteUsage.create).toHaveBeenCalledWith({
         data: { inviteId: 'invite-123', userId: 'victim-row' },
+        select: { id: true },
       })
     })
 
@@ -630,6 +696,7 @@ describe('invite actions', () => {
       expect(tx.inviteUsage.create).toHaveBeenCalledTimes(1)
       expect(tx.inviteUsage.create).toHaveBeenCalledWith({
         data: { inviteId: 'invite-123', userId: 'victim-row' },
+        select: { id: true },
       })
       expect(mockWarn).toHaveBeenCalledWith('invite.email_conflict', {
         existingUserId: 'jellyfin-row',
@@ -668,6 +735,7 @@ describe('invite actions', () => {
 
       expect(result.success).toBe(false)
       expect(tx.user.create).toHaveBeenCalledTimes(1)
+      expect(mockInviteUserToPlexServer).not.toHaveBeenCalled()
       expect(mockWarn).not.toHaveBeenCalledWith('invite.email_conflict', expect.anything())
       expect(mockLogAuditEvent).toHaveBeenCalledWith(
         AuditEventType.INVITE_ROLLBACK,

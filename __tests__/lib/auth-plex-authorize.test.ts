@@ -194,6 +194,14 @@ describe('Plex authorize redeems the invite in the cookie', () => {
     expect(prismaMock.user.update).not.toHaveBeenCalled()
   })
 
+  it('refuses a disabled account the redemption turned away, as a disabled sign-in does', async () => {
+    mockRedeemPlexInvite.mockResolvedValue({ success: false, code: 'FORBIDDEN', error: 'This account is disabled.' })
+
+    await expect(authorize(undefined, plexPinRequest({ inviteCode: 'FRIENDS1' }))).resolves.toBeNull()
+    expect(mockGetPlexUserInfo).not.toHaveBeenCalled()
+    expect(prismaMock.user.update).not.toHaveBeenCalled()
+  })
+
   it('throws sign_in_failed when Plex was unavailable during the redemption', async () => {
     mockRedeemPlexInvite.mockResolvedValue({ success: false, code: 'UPSTREAM_UNAVAILABLE', error: 'x' })
 
