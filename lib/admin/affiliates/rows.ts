@@ -8,7 +8,8 @@
  * - **State**: `paid` while a subscription is ACTIVE or PAST_DUE (paused),
  *   `override_zero` while the override is 0 (paused), else `active`.
  * - **Invite tree**: an affiliate's invitees, nested where an invitee also
- *   invited people. A removed invitee has no id and shows as a removed member.
+ *   invited people. A removed invitee has no id and shows as a removed member;
+ *   the joins of a removed affiliate sit under one root with no id.
  *
  * @module lib/admin/affiliates/rows
  */
@@ -18,12 +19,16 @@ import type { Allowance } from "@/lib/affiliates/tiers"
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000
 
 export interface AffiliateInviteFacts {
-  id: string
-  code: string
-  label: string | null
   expiresAt: Date | null
   cancelledAt: Date | null
   joinedAt: Date | null
+}
+
+/** An invite with its code and label, which only an admin's read loads. */
+export interface LabelledInviteFacts extends AffiliateInviteFacts {
+  id: string
+  code: string
+  label: string | null
 }
 
 export interface InviteCounts {
@@ -64,7 +69,7 @@ export interface OpenInvite {
 }
 
 /** The affiliate's open invites, for admins only. */
-export function openInvites(invites: readonly AffiliateInviteFacts[], now: Date): OpenInvite[] {
+export function openInvites(invites: readonly LabelledInviteFacts[], now: Date): OpenInvite[] {
   return invites
     .filter((invite) => isOpen(invite, now))
     .map((invite) => ({ id: invite.id, label: invite.label, expiresAt: invite.expiresAt!, codeEnd: invite.code.slice(-4) }))
@@ -79,7 +84,8 @@ export function affiliateState(paid: boolean, allowance: Allowance): AffiliateSt
 }
 
 export interface JoinEdge {
-  affiliateUserId: string
+  /** Null once the affiliate was removed. */
+  affiliateUserId: string | null
   /** Null once the invitee was removed. */
   joinedUserId: string | null
   joinedAt: Date
@@ -96,27 +102,31 @@ export interface TreeNode {
 /**
  * The invite tree: every member who invited someone, with their invitees,
  * nested where an invitee also invited people. A root is an inviter whom no
- * other inviter in the tree invited.
+ * other inviter in the tree invited; the joins of removed affiliates share one
+ * last root with no id.
  */
 export function buildInviteTree(edges: readonly JoinEdge[], names: ReadonlyMap<string, string>): TreeNode[] {
-  const byInviter = new Map<string, JoinEdge[]>()
+  const byInviter = new Map<string | null, JoinEdge[]>()
   for (const edge of edges) byInviter.set(edge.affiliateUserId, [...(byInviter.get(edge.affiliateUserId) ?? []), edge])
   const invited = new Set(edges.flatMap((edge) => (edge.joinedUserId ? [edge.joinedUserId] : [])))
 
-  const node = (userId: string, joinedAt: Date | null, seen: ReadonlySet<string>): TreeNode => {
-    const path = new Set(seen).add(userId)
-    const children = (byInviter.get(userId) ?? [])
+  const childrenOf = (inviter: string | null, path: ReadonlySet<string>): TreeNode[] =>
+    (byInviter.get(inviter) ?? [])
       .toSorted((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime())
       .map((edge) =>
         edge.joinedUserId && !path.has(edge.joinedUserId)
           ? node(edge.joinedUserId, edge.joinedAt, path)
           : { userId: null, name: null, joinedAt: edge.joinedAt, children: [] }
       )
-    return { userId, name: names.get(userId) ?? null, joinedAt, children }
+
+  const node = (userId: string, joinedAt: Date | null, seen: ReadonlySet<string>): TreeNode => {
+    const path = new Set(seen).add(userId)
+    return { userId, name: names.get(userId) ?? null, joinedAt, children: childrenOf(userId, path) }
   }
 
-  return [...byInviter.keys()]
-    .filter((userId) => !invited.has(userId))
+  const roots = [...byInviter.keys()]
+    .filter((userId): userId is string => userId !== null && !invited.has(userId))
     .map((userId) => node(userId, null, new Set()))
     .toSorted((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
+  return byInviter.has(null) ? [...roots, { userId: null, name: null, joinedAt: null, children: childrenOf(null, new Set()) }] : roots
 }

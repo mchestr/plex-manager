@@ -110,13 +110,15 @@ describe("approveAffiliate", () => {
 })
 
 describe("refuseAffiliate", () => {
+  beforeEach(() => prismaMock.affiliateApplication.findUnique.mockResolvedValue(buildAffiliateApplication()))
+
   it("refuses with a trimmed reason, frees openUserId, and audits only its length", async () => {
     await expect(refuseAffiliate({ applicationId: "application-1", reason: "  Not yet  " })).resolves.toEqual({ success: true, data: null })
     expect(prismaMock.affiliateApplication.updateMany).toHaveBeenCalledWith({
       where: { id: "application-1", status: "PENDING" },
       data: { status: "REFUSED", reason: "Not yet", decidedAt: expect.any(Date), decidedBy: "admin-1", openUserId: null },
     })
-    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.AFFILIATE_REFUSED, "admin-1", { applicationId: "application-1", reasonLength: 7 })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.AFFILIATE_REFUSED, "admin-1", { targetUserId: "user-1", applicationId: "application-1", reasonLength: 7 })
   })
 
   it("stores a blank reason as null", async () => {
@@ -128,8 +130,11 @@ describe("refuseAffiliate", () => {
     await expect(refuseAffiliate({ applicationId: "application-1", reason: "x".repeat(501) })).resolves.toMatchObject({ code: "VALIDATION" })
   })
 
-  it("is CONFLICT when the application was already decided", async () => {
+  it("is CONFLICT when the application was already decided, or is gone", async () => {
     prismaMock.affiliateApplication.updateMany.mockResolvedValue({ count: 0 })
+    await expect(refuseAffiliate({ applicationId: "application-1" })).resolves.toMatchObject({ code: "CONFLICT" })
+
+    prismaMock.affiliateApplication.findUnique.mockResolvedValue(null)
     await expect(refuseAffiliate({ applicationId: "application-1" })).resolves.toMatchObject({ code: "CONFLICT" })
   })
 })
@@ -155,13 +160,13 @@ describe("setAffiliateOverride", () => {
   it("sets 0, and audits from and to", async () => {
     await expect(setAffiliateOverride({ applicationId: "application-1", override: 0 })).resolves.toEqual({ success: true, data: null })
     expect(prismaMock.affiliateApplication.updateMany).toHaveBeenCalledWith({ where: { id: "application-1", status: "APPROVED" }, data: { inviteOverride: 0 } })
-    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.AFFILIATE_OVERRIDE_CHANGED, "admin-1", { applicationId: "application-1", from: null, to: 0 })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.AFFILIATE_OVERRIDE_CHANGED, "admin-1", { targetUserId: "user-1", applicationId: "application-1", from: null, to: 0 })
   })
 
   it("clears it with null", async () => {
     prismaMock.affiliateApplication.findUnique.mockResolvedValue(buildAffiliateApplication({ status: "APPROVED", inviteOverride: 4 }))
     await setAffiliateOverride({ applicationId: "application-1", override: null })
-    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.AFFILIATE_OVERRIDE_CHANGED, "admin-1", { applicationId: "application-1", from: 4, to: null })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.AFFILIATE_OVERRIDE_CHANGED, "admin-1", { targetUserId: "user-1", applicationId: "application-1", from: 4, to: null })
   })
 
   it("changes nothing for the same value", async () => {

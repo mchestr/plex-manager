@@ -24,6 +24,7 @@ import { PAID_STATUSES } from "@/lib/affiliates/eligibility"
 import { affiliateFlags, type AffiliateFlag } from "@/lib/affiliates/flags"
 import { affiliateAllowance, affiliateTiersFromConfig, type Allowance } from "@/lib/affiliates/tiers"
 import { prisma } from "@/lib/prisma"
+import { auditMemberListed } from "@/lib/security/audit-log"
 
 const memberSelect = {
   id: true,
@@ -64,7 +65,9 @@ export interface ApplicationRow {
 
 /** Pending applications, oldest first. */
 export async function listAffiliateApplications(): Promise<ApplicationRow[]> {
-  await assertPermission("affiliates:read")
+  const session = await assertPermission("affiliates:read")
+  // The rows carry members' notes
+  await auditMemberListed("affiliates", session.user.id)
   const now = new Date()
   const rows = await prisma.affiliateApplication.findMany({
     where: { status: "PENDING" },
@@ -98,6 +101,20 @@ export interface AffiliateRow extends InviteCounts {
   openInvites: OpenInvite[] | null
 }
 
+/**
+ * The open invites of the given affiliates, by affiliate. Only an admin's read
+ * calls it, so a Support read never loads a code or a label.
+ */
+async function openInvitesByAffiliate(userIds: string[], now: Date): Promise<Map<string, OpenInvite[]>> {
+  const rows = await prisma.invite.findMany({
+    where: { kind: "AFFILIATE", affiliateUserId: { in: userIds }, joinedAt: null, cancelledAt: null, expiresAt: { gt: now } },
+    select: { id: true, code: true, label: true, expiresAt: true, cancelledAt: true, joinedAt: true, affiliateUserId: true },
+  })
+  const byAffiliate = new Map<string, OpenInvite[]>()
+  for (const userId of userIds) byAffiliate.set(userId, openInvites(rows.filter((row) => row.affiliateUserId === userId), now))
+  return byAffiliate
+}
+
 /** Approved affiliates, by name. */
 export async function listAffiliates(): Promise<AffiliateRow[]> {
   const session = await assertPermission("affiliates:read")
@@ -116,7 +133,7 @@ export async function listAffiliates(): Promise<AffiliateRow[]> {
             ...memberSelect,
             affiliateInvites: {
               where: { kind: "AFFILIATE" },
-              select: { id: true, code: true, label: true, expiresAt: true, cancelledAt: true, joinedAt: true },
+              select: { expiresAt: true, cancelledAt: true, joinedAt: true },
             },
           },
         },
@@ -125,6 +142,7 @@ export async function listAffiliates(): Promise<AffiliateRow[]> {
     prisma.config.findUnique({ where: { id: "config" }, select: { affiliateTiers: true } }),
   ])
   const tiers = affiliateTiersFromConfig(config?.affiliateTiers)
+  const open = admin ? await openInvitesByAffiliate(rows.map((row) => row.user.id), now) : null
 
   return rows
     .map((row): AffiliateRow => {
@@ -139,7 +157,7 @@ export async function listAffiliates(): Promise<AffiliateRow[]> {
         flags: affiliateFlags({ ...factsOf(user), plexEmailShared: row.plexEmailShared, tierRaisedAt: row.tierRaisedAt }, now),
         inviteOverride: row.inviteOverride,
         ...countInvites(user.affiliateInvites, now),
-        openInvites: admin ? openInvites(user.affiliateInvites, now) : null,
+        openInvites: open?.get(user.id) ?? null,
       }
     })
     .sort((a, b) => a.member.name.localeCompare(b.member.name))
@@ -149,14 +167,14 @@ export async function listAffiliates(): Promise<AffiliateRow[]> {
 export async function getInviteTree(): Promise<TreeNode[]> {
   await assertPermission("affiliates:read")
   const joins = await prisma.invite.findMany({
-    where: { kind: "AFFILIATE", joinedAt: { not: null }, affiliateUserId: { not: null } },
+    where: { kind: "AFFILIATE", joinedAt: { not: null } },
     select: { affiliateUserId: true, joinedUserId: true, joinedAt: true },
   })
-  const ids = [...new Set(joins.flatMap((join) => [join.affiliateUserId!, ...(join.joinedUserId ? [join.joinedUserId] : [])]))]
+  const ids = [...new Set(joins.flatMap((join) => [join.affiliateUserId, join.joinedUserId].filter((id): id is string => id !== null)))]
   const users = await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, email: true } })
   const names = new Map(users.map((user) => [user.id, displayName(user)]))
   return buildInviteTree(
-    joins.map((join) => ({ affiliateUserId: join.affiliateUserId!, joinedUserId: join.joinedUserId, joinedAt: join.joinedAt! })),
+    joins.map((join) => ({ affiliateUserId: join.affiliateUserId, joinedUserId: join.joinedUserId, joinedAt: join.joinedAt! })),
     names
   )
 }

@@ -414,7 +414,7 @@ describe('Admin Actions Security', () => {
     it('disables a member, audits it and ends their sessions', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', plexUserId: 'plex-member' }))
 
-      await expect(setUserDisabled({ userId: 'member-1', disabled: true })).resolves.toEqual({ success: true, data: null })
+      await expect(setUserDisabled({ userId: 'member-1', disabled: true })).resolves.toEqual({ success: true, data: { inviterRevoked: null } })
 
       expect(prismaMock.user.update).toHaveBeenCalledWith({
         where: { id: 'member-1' },
@@ -436,7 +436,7 @@ describe('Admin Actions Security', () => {
     it('changes nothing when the member is already in that state', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', disabledAt: null }))
 
-      await expect(setUserDisabled({ userId: 'member-1', disabled: false })).resolves.toEqual({ success: true, data: null })
+      await expect(setUserDisabled({ userId: 'member-1', disabled: false })).resolves.toEqual({ success: true, data: { inviterRevoked: null } })
 
       expect(prismaMock.user.update).not.toHaveBeenCalled()
     })
@@ -444,7 +444,7 @@ describe('Admin Actions Security', () => {
     it('enables a disabled member without ending sessions', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', disabledAt: new Date() }))
 
-      await expect(setUserDisabled({ userId: 'member-1', disabled: false })).resolves.toEqual({ success: true, data: null })
+      await expect(setUserDisabled({ userId: 'member-1', disabled: false })).resolves.toEqual({ success: true, data: { inviterRevoked: null } })
 
       expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'member-1' }, data: { disabledAt: null } })
       expect(prismaMock.user.updateMany).not.toHaveBeenCalled()

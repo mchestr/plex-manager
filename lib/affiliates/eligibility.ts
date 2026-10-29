@@ -13,8 +13,9 @@
  * | no open application (skipped when approving) | `OPEN_APPLICATION` |
  * | no REFUSED or REVOKED decision in the last 30 days | `WAIT` |
  *
- * A paid subscription (`ACTIVE` or `PAST_DUE`) does not refuse an approval:
- * the result says `paid`, and the affiliate is paused while it lasts.
+ * A paid subscription (`ACTIVE` or `PAST_DUE`) refuses an application
+ * (`PAID`) but not an approval: the result says `paid`, and the affiliate is
+ * paused while it lasts.
  *
  * @module lib/affiliates/eligibility
  */
@@ -44,6 +45,7 @@ type EligibilityCode =
   | "HOURS_UNAVAILABLE"
   | "OPEN_APPLICATION"
   | "WAIT"
+  | "PAID"
 
 const COPY: Record<EligibilityCode, string> = {
   SWITCH_OFF: "Affiliate invites are off.",
@@ -55,6 +57,7 @@ const COPY: Record<EligibilityCode, string> = {
   HOURS_UNAVAILABLE: "Tautulli did not answer, so their watch hours are not known. Try again.",
   OPEN_APPLICATION: "This member already has an open application.",
   WAIT: "This member was refused or revoked less than 30 days ago.",
+  PAID: "Members with a paid subscription can't be affiliates.",
 }
 
 export type Eligibility =
@@ -101,6 +104,7 @@ export async function checkAffiliateEligibility(userId: string, { approving }: {
   })
   if (recent) return refuse("WAIT")
 
-  const status = user.subscription?.status
-  return { ok: true, paid: (PAID_STATUSES as readonly string[]).includes(status ?? ""), hours: hours.allTime }
+  const paid = (PAID_STATUSES as readonly string[]).includes(user.subscription?.status ?? "")
+  if (paid && !approving) return refuse("PAID")
+  return { ok: true, paid, hours: hours.allTime }
 }

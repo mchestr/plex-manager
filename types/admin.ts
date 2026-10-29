@@ -51,7 +51,7 @@ export interface AdminUserWithWrappedStats {
   exemptNote: string | null
   stripeCustomerId: string | null
   /** The affiliate whose invite they joined with (`lib/admin/user-actions`). */
-  invitedBy?: { id: string; name: string } | null
+  invitedBy?: { id: string; name: string; approved: boolean } | null
 }
 
 /**

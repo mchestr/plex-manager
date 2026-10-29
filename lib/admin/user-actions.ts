@@ -34,12 +34,31 @@ import type { AdminUserWithWrappedStats } from "@/types/admin"
 import type { AuthService } from "@/types/onboarding"
 
 /** The affiliate whose invite the member joined with, for "Invited by Sam". */
-export type InvitedBy = { id: string; name: string } | null
+export type InvitedBy = {
+  id: string
+  name: string
+  /** The inviter is an affiliate now, so the Disable and Remove dialogs offer to revoke them. */
+  approved: boolean
+} | null
+
+/** The `User.affiliateJoin` select {@link invitedByOf} reads. */
+export const INVITED_BY_SELECT = {
+  select: {
+    affiliate: {
+      select: { id: true, name: true, email: true, affiliateApplications: { where: { status: "APPROVED" as const }, select: { id: true }, take: 1 } },
+    },
+  },
+}
+
+interface JoinRecord {
+  affiliate: { id: string; name: string | null; email: string | null; affiliateApplications: { id: string }[] } | null
+}
 
 /** The inviter from the member's join record, named like any member. */
-export function invitedByOf(join: { affiliate: { id: string; name: string | null; email: string | null } | null } | null): InvitedBy {
+export function invitedByOf(join: JoinRecord | null): InvitedBy {
   const affiliate = join?.affiliate
-  return affiliate ? { id: affiliate.id, name: affiliate.name || affiliate.email || "Unknown member" } : null
+  if (!affiliate) return null
+  return { id: affiliate.id, name: affiliate.name || affiliate.email || "Unknown member", approved: affiliate.affiliateApplications.length > 0 }
 }
 
 /** What the actions and their dialogs need to know about a member. */

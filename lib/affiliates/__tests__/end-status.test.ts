@@ -4,7 +4,7 @@ import { mockReset } from "jest-mock-extended"
 
 import { buildAffiliateApplication, buildInvite } from "@/__tests__/helpers/factories"
 import { asAppTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { endAffiliateStatus, inviterApplicationId, revokeAffiliate } from "@/lib/affiliates/end-status"
+import { endAffiliateStatus, inviterApplicationId, revokeAffiliate, revokeInviterAfter } from "@/lib/affiliates/end-status"
 import { inSerializable } from "@/lib/db/serializable"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
 
@@ -22,7 +22,7 @@ beforeEach(() => {
 })
 
 const cancelled = {
-  where: { kind: "AFFILIATE", affiliateUserId: "user-1", joinedAt: null, cancelledAt: null },
+  where: { kind: "AFFILIATE", affiliateUserId: "user-1", joinedAt: null, cancelledAt: null, expiresAt: { gt: expect.any(Date) } },
   data: { cancelledAt: expect.any(Date), label: null },
 }
 
@@ -55,10 +55,16 @@ describe("revokeAffiliate", () => {
 describe("inviterApplicationId", () => {
   it("finds the inviter's open application from the join record", async () => {
     prismaMock.invite.findUnique.mockResolvedValue(buildInvite({ affiliateUserId: "sam" }))
-    prismaMock.affiliateApplication.findUnique.mockResolvedValue(buildAffiliateApplication({ id: "sam-app" }))
+    prismaMock.affiliateApplication.findUnique.mockResolvedValue(buildAffiliateApplication({ id: "sam-app", status: "APPROVED" }))
     await expect(inviterApplicationId("invitee")).resolves.toBe("sam-app")
     expect(prismaMock.invite.findUnique).toHaveBeenCalledWith({ where: { joinedUserId: "invitee" }, select: { affiliateUserId: true } })
-    expect(prismaMock.affiliateApplication.findUnique).toHaveBeenCalledWith({ where: { openUserId: "sam" }, select: { id: true } })
+    expect(prismaMock.affiliateApplication.findUnique).toHaveBeenCalledWith({ where: { openUserId: "sam" }, select: { id: true, status: true } })
+  })
+
+  it("is null for an inviter whose open application is still pending", async () => {
+    prismaMock.invite.findUnique.mockResolvedValue(buildInvite({ affiliateUserId: "sam" }))
+    prismaMock.affiliateApplication.findUnique.mockResolvedValue(buildAffiliateApplication({ status: "PENDING" }))
+    await expect(inviterApplicationId("invitee")).resolves.toBeNull()
   })
 
   it("is null without a join, an erased inviter, or an inviter with no open application", async () => {
@@ -69,6 +75,26 @@ describe("inviterApplicationId", () => {
     prismaMock.invite.findUnique.mockResolvedValue(buildInvite({ affiliateUserId: "sam" }))
     prismaMock.affiliateApplication.findUnique.mockResolvedValue(null)
     await expect(inviterApplicationId("invitee")).resolves.toBeNull()
+  })
+})
+
+describe("revokeInviterAfter", () => {
+  const options = { reason: null, actorId: "admin-1" }
+
+  it("is null without an application, true once revoked, and null when it was no longer approved", async () => {
+    await expect(revokeInviterAfter(null, options)).resolves.toBeNull()
+    expect(inSerializable).not.toHaveBeenCalled()
+
+    prismaMock.affiliateApplication.findUnique.mockResolvedValue(buildAffiliateApplication({ status: "APPROVED" }))
+    await expect(revokeInviterAfter("application-1", options)).resolves.toBe(true)
+
+    prismaMock.affiliateApplication.findUnique.mockResolvedValue(buildAffiliateApplication({ status: "ENDED" }))
+    await expect(revokeInviterAfter("application-1", options)).resolves.toBeNull()
+  })
+
+  it("is false, without throwing, when the revoke fails", async () => {
+    jest.mocked(inSerializable).mockRejectedValue(new Error("database down"))
+    await expect(revokeInviterAfter("application-1", options)).resolves.toBe(false)
   })
 })
 

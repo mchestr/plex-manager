@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 import { adminAction } from "@/lib/actions/define-action"
-import { inviterApplicationId, revokeAffiliate } from "@/lib/affiliates/end-status"
+import { inviterApplicationId, revokeInviterAfter } from "@/lib/affiliates/end-status"
 import { type ActionErrorCode, type ActionResult, fail, ok } from "@/lib/actions/result"
 import { setJellyfinAccountDisabled } from "@/lib/connections/jellyfin-users"
 import { enqueueRoleSync } from "@/lib/discord/role-sync"
@@ -103,7 +103,9 @@ export const previewMemberRemoval = adminAction({
  * Limited to 10 per hour per admin. See `lib/members/erase.ts` for the order
  * and the refusals. `block` also blocks their Plex account from affiliate
  * invites, in the removal's transaction; `revokeInviter` revokes the status of
- * the affiliate who invited them, once the removal succeeded.
+ * the affiliate who invited them, once the removal succeeded; `inviterRevoked`
+ * says how that went (`true`, `false` when it failed, `null` when not asked or
+ * nothing to revoke).
  *
  * @param input - `{ userId, confirmName, block?, revokeInviter? }`
  */
@@ -119,7 +121,7 @@ export const removeMember = adminAction({
   handler: async (
     { userId, confirmName, block, revokeInviter },
     { userId: actorId }
-  ): Promise<ActionResult<EraseReport, RemoveMemberCode>> => {
+  ): Promise<ActionResult<EraseReport & { inviterRevoked: boolean | null }, RemoveMemberCode>> => {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
     if (!user) return fail("NOT_FOUND", "That member no longer exists.")
     const displayName = user.name ?? user.email ?? "Unknown member"
@@ -132,10 +134,9 @@ export const removeMember = adminAction({
     // Read before the removal, which clears the join record
     const inviter = revokeInviter ? await inviterApplicationId(userId) : null
     const result = await eraseMember(userId, { actorId, dryRun: false, block })
-    if (result.success) {
-      if (inviter) await revokeAffiliate(inviter, { reason: revokeInviter?.reason ?? null, actorId })
-      revalidatePath("/admin/users")
-    }
-    return result
+    if (!result.success) return result
+    const inviterRevoked = await revokeInviterAfter(inviter, { reason: revokeInviter?.reason ?? null, actorId })
+    revalidatePath("/admin/users")
+    return ok({ ...result.data, inviterRevoked })
   },
 })

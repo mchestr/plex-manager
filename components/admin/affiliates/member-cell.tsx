@@ -20,7 +20,7 @@ export function MemberCell({ member, linked }: { member: { id: string; name: str
   return (
     <span className="flex flex-wrap items-center gap-2">
       {linked ? (
-        <Link href={userDetail(member.id)} className="font-medium hover:underline">
+        <Link href={userDetail(member.id)} className="font-medium hover:underline" data-testid={`admin-affiliates-member-${member.id}`}>
           {member.name}
         </Link>
       ) : (

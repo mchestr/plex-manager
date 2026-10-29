@@ -60,8 +60,8 @@ describe('getUserDetailHeader: services', () => {
   })
 
   it('names the affiliate who invited the member', async () => {
-    prismaMock.user.findUnique.mockResolvedValue({ ...JELLYFIN_MEMBER, affiliateJoin: { affiliate: { id: 'sam', name: 'Sam', email: null } } } as never)
-    await expect(getUserDetailHeader('jf-member', 2026)).resolves.toMatchObject({ invitedBy: { id: 'sam', name: 'Sam' } })
+    prismaMock.user.findUnique.mockResolvedValue({ ...JELLYFIN_MEMBER, affiliateJoin: { affiliate: { id: 'sam', name: 'Sam', email: null, affiliateApplications: [] } } } as never)
+    await expect(getUserDetailHeader('jf-member', 2026)).resolves.toMatchObject({ invitedBy: { id: 'sam', name: 'Sam', approved: false } })
   })
 
   it('is unknown without an active Jellyfin server, and null for a Plex-only member', async () => {

@@ -10,7 +10,7 @@ import { parseRole, type RoleKey } from "@/lib/permissions"
 import "server-only"
 
 import { activeRunStarts } from "@/lib/admin/active-runs"
-import { invitedByOf, type InvitedBy, type UserActionTarget } from "@/lib/admin/user-actions"
+import { INVITED_BY_SELECT, invitedByOf, type InvitedBy, type UserActionTarget } from "@/lib/admin/user-actions"
 import { getJellyfinUserById } from "@/lib/connections/jellyfin-users"
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
@@ -129,7 +129,7 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
       },
       plexWrapped: { where: { year: seasonYear }, select: { status: true } },
       discordConnection: { select: { username: true, globalName: true, discordUserId: true, linkedAt: true, revokedAt: true } },
-      affiliateJoin: { select: { affiliate: { select: { id: true, name: true, email: true } } } },
+      affiliateJoin: INVITED_BY_SELECT,
     },
   })
   if (!user) return null

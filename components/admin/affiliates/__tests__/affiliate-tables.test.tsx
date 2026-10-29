@@ -50,7 +50,7 @@ describe('ApplicationsTable', () => {
     expect(row).toHaveTextContent('I share with family')
     expect(within(row).getByTestId('admin-affiliates-application-flags-app-1-shared_email')).toHaveTextContent('Plex email on another account')
     expect(screen.getByTestId('admin-affiliates-approve-app-1')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Sam' })).toHaveAttribute('href', '/admin/users/sam')
+    expect(screen.getByTestId('admin-affiliates-member-sam')).toHaveAttribute('href', '/admin/users/sam')
   })
 
   it('gives Support no decisions and no member links', () => {
@@ -113,6 +113,11 @@ describe('InviteTree', () => {
     )
     expect(within(screen.getByTestId('admin-affiliates-tree-node-sam')).getByTestId('admin-affiliates-tree-node-ana')).toHaveTextContent('Ana, joined Oct 1, 2026')
     expect(screen.getByTestId('admin-affiliates-tree-removed')).toHaveTextContent('a removed member')
+  })
+
+  it('heads the joins of removed affiliates as "A removed member"', () => {
+    render(<InviteTree f={f} roots={[{ userId: null, name: null, joinedAt: null, children: [{ userId: 'ana', name: 'Ana', joinedAt: null, children: [] }] }]} />)
+    expect(screen.getByTestId('admin-affiliates-tree-removed-root')).toHaveTextContent(/^A removed memberAna$/)
   })
 
   it('shows the empty state', () => {
