@@ -29,6 +29,7 @@ import { getServerSession, type Session } from 'next-auth'
 import { mockReset } from 'jest-mock-extended'
 import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { buildInvite, buildUser } from '@/__tests__/helpers/factories'
+import { screenAffiliateRedeemer } from '@/lib/affiliates/redemption-gate'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
@@ -58,7 +59,13 @@ jest.mock('@/lib/security/audit-log', () => ({
     INVITE_ROLLBACK: 'INVITE_ROLLBACK',
     INVITE_ROLLBACK_FAILED: 'INVITE_ROLLBACK_FAILED',
     INVITE_TRANSACTION_CONFLICT: 'INVITE_TRANSACTION_CONFLICT',
+    AFFILIATE_REDEMPTION_REFUSED: 'AFFILIATE_REDEMPTION_REFUSED',
   },
+}))
+
+jest.mock('@/lib/affiliates/redemption-gate', () => ({
+  ...jest.requireActual('@/lib/affiliates/redemption-gate'),
+  screenAffiliateRedeemer: jest.fn(),
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
@@ -342,9 +349,12 @@ describe('invite actions', () => {
 
     // One transaction client for every prisma.$transaction callback, so the record and its undo can be asserted on
     const tx = {
-      invite: { findUnique: jest.fn(), update: jest.fn() },
+      invite: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
       user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
       inviteUsage: { create: jest.fn(), delete: jest.fn() },
+      config: { findUnique: jest.fn() },
+      plexServer: { findFirst: jest.fn() },
+      affiliateApplication: { findUnique: jest.fn() },
     }
 
     const auditedWith = (type: AuditEventType) =>
@@ -421,7 +431,7 @@ describe('invite actions', () => {
       expect(tx.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } })
       expect(mockPrisma.invite.updateMany).toHaveBeenCalledWith({
         where: { id: 'invite-123', useCount: { gt: 0 } },
-        data: { useCount: { decrement: 1 } },
+        data: { useCount: { decrement: 1 }, joinedAt: null, joinedUserId: null },
       })
       expect(auditedWith(AuditEventType.INVITE_ROLLBACK)).toEqual([
         expect.objectContaining({ inviteId: 'invite-123', reason: 'Plex server unavailable' }),
@@ -481,6 +491,123 @@ describe('invite actions', () => {
       expect(tx.user.delete).not.toHaveBeenCalled()
       expect(tx.inviteUsage.delete).not.toHaveBeenCalled()
       expect(auditedWith(AuditEventType.INVITE_ROLLBACK)).toEqual([])
+    })
+  })
+
+  describe('redeemPlexInvite - affiliate invites', () => {
+    const affiliateInvite = buildInvite({
+      id: 'aff-invite-1',
+      code: 'AFFCODE1',
+      kind: 'AFFILIATE',
+      affiliateUserId: 'affiliate-1',
+      label: 'for my brother',
+      maxUses: 1,
+      expiresAt: new Date(Date.now() + 86400000),
+      librarySectionIds: '[1,2]',
+    })
+    const SWITCH_ON = { affiliateInvitesEnabled: true, affiliateLibrarySectionIds: [1, 2], affiliatePlexMachineId: 'machine-1' }
+
+    const tx = {
+      invite: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
+      user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+      inviteUsage: { create: jest.fn(), delete: jest.fn() },
+      config: { findUnique: jest.fn() },
+      plexServer: { findFirst: jest.fn() },
+      affiliateApplication: { findUnique: jest.fn() },
+    }
+
+    const auditedRefusals = () =>
+      mockLogAuditEvent.mock.calls.filter(([event]) => event === AuditEventType.AFFILIATE_REDEMPTION_REFUSED).map(([, , details]) => details)
+
+    beforeEach(() => {
+      mockGetPlexUserInfo.mockResolvedValue({ success: true, data: mockPlexUser })
+      mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer)
+      mockPrisma.invite.findUnique.mockResolvedValue(affiliateInvite)
+      mockInviteUserToPlexServer.mockResolvedValue({ success: true, inviteID: 12345 })
+      mockAcceptPlexInvite.mockResolvedValue({ success: true })
+      jest.mocked(screenAffiliateRedeemer).mockResolvedValue(null)
+      mockPrisma.$transaction.mockImplementation(async (fn) =>
+        typeof fn === 'function' ? fn(asTransactionClient(tx)) : Promise.resolve()
+      )
+      tx.invite.findUnique.mockResolvedValue(affiliateInvite)
+      tx.invite.update.mockResolvedValue({ ...affiliateInvite, useCount: 1 })
+      tx.config.findUnique.mockResolvedValue(SWITCH_ON)
+      tx.plexServer.findFirst.mockResolvedValue({ machineIdentifier: 'machine-1' })
+      tx.affiliateApplication.findUnique.mockResolvedValue({ status: 'APPROVED' })
+      // The affiliate is read by id, the redeeming account by its Plex id
+      tx.user.findUnique.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+        where.id === 'affiliate-1' ? { disabledAt: null } : null
+      )
+      tx.user.create.mockResolvedValue({ id: 'invitee-1' })
+      tx.inviteUsage.create.mockResolvedValue({ id: 'usage-1' })
+    })
+
+    it('screens the account before the use is counted and audits a refusal against the affiliate', async () => {
+      jest.mocked(screenAffiliateRedeemer).mockResolvedValue({ code: 'INVITE_ALREADY_MEMBER', reason: 'had_access' })
+
+      const result = await redeemPlex('AFFCODE1', 'plex-auth-token')
+
+      expect(result).toEqual({ success: false, code: 'INVITE_ALREADY_MEMBER', error: "You're already a member. Sign in instead." })
+      expect(screenAffiliateRedeemer).toHaveBeenCalledWith(mockPlexUser, mockPlexServer)
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled()
+      expect(mockInviteUserToPlexServer).not.toHaveBeenCalled()
+      expect(auditedRefusals()).toEqual([{ inviteId: 'aff-invite-1', reason: 'had_access', targetUserId: 'affiliate-1' }])
+    })
+
+    it('does not screen an admin invite', async () => {
+      mockPrisma.invite.findUnique.mockResolvedValue(mockInvite)
+      tx.invite.findUnique.mockResolvedValue(mockInvite)
+      tx.invite.update.mockResolvedValue({ ...mockInvite, useCount: 1 })
+
+      await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(screenAffiliateRedeemer).not.toHaveBeenCalled()
+      expect(tx.user.create.mock.calls[0][0].data).toMatchObject({ exemptNote: 'Joined by invite' })
+    })
+
+    it('joins with the member-invite exemption, writes the join record and clears the label', async () => {
+      const result = await runProcessInvite('AFFCODE1', 'plex-auth-token')
+
+      expect(result).toEqual({ success: true, data: null })
+      expect(tx.invite.update).toHaveBeenNthCalledWith(1, {
+        where: { id: 'aff-invite-1' },
+        data: { useCount: { increment: 1 }, joinedAt: expect.any(Date), label: null },
+      })
+      expect(tx.user.create.mock.calls[0][0].data).toMatchObject({ isExempt: true, exemptNote: 'Joined by member invite' })
+      expect(tx.invite.update).toHaveBeenNthCalledWith(2, { where: { id: 'aff-invite-1' }, data: { joinedUserId: 'invitee-1' } })
+      expect(mockInviteUserToPlexServer).toHaveBeenCalledWith(
+        expect.anything(),
+        mockPlexUser.email,
+        { librarySectionIds: [1, 2], allowDownloads: false }
+      )
+      expect(auditedRefusals()).toEqual([])
+    })
+
+    it.each([
+      ['switch_off', () => tx.config.findUnique.mockResolvedValue({ ...SWITCH_ON, affiliateInvitesEnabled: false })],
+      ['switch_off', () => tx.plexServer.findFirst.mockResolvedValue({ machineIdentifier: 'another-server' })],
+      ['cancelled', () => tx.invite.findUnique.mockResolvedValue({ ...affiliateInvite, cancelledAt: new Date() })],
+      ['no_libraries', () => tx.invite.findUnique.mockResolvedValue({ ...affiliateInvite, librarySectionIds: '[]' })],
+      ['not_affiliate', () => tx.affiliateApplication.findUnique.mockResolvedValue({ status: 'REVOKED' })],
+      ['not_affiliate', () => tx.affiliateApplication.findUnique.mockResolvedValue(null)],
+    ] as const)('refuses inside the transaction (%s) without counting the use, and audits it', async (reason, arrange) => {
+      arrange()
+
+      const result = await runProcessInvite('AFFCODE1', 'plex-auth-token')
+
+      expect(result).toEqual({ success: false, code: 'INVITE_INVALID', error: "This invite can't be used" })
+      expect(tx.invite.update).not.toHaveBeenCalled()
+      expect(mockInviteUserToPlexServer).not.toHaveBeenCalled()
+      expect(auditedRefusals()).toEqual([{ inviteId: 'aff-invite-1', reason, targetUserId: 'affiliate-1' }])
+    })
+
+    it('refuses an invite whose affiliate is disabled', async () => {
+      tx.user.findUnique.mockResolvedValue({ disabledAt: new Date() })
+
+      const result = await runProcessInvite('AFFCODE1', 'plex-auth-token')
+
+      expect(result).toMatchObject({ success: false, code: 'INVITE_INVALID' })
+      expect(auditedRefusals()).toEqual([expect.objectContaining({ reason: 'not_affiliate' })])
     })
   })
 
@@ -951,7 +1078,7 @@ describe('invite actions', () => {
     function expectInviteRestored() {
       expect(mockPrisma.invite.updateMany).toHaveBeenCalledWith({
         where: { id: 'invite-123', useCount: { gt: 0 } },
-        data: { useCount: { decrement: 1 } },
+        data: { useCount: { decrement: 1 }, joinedAt: null, joinedUserId: null },
       })
     }
 

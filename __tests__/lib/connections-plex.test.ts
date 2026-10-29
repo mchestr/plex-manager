@@ -376,6 +376,22 @@ describe('Plex Connection', () => {
       expect(result.error).toContain('None of the configured library section IDs exist')
     })
 
+    it('refuses an empty library list instead of sharing every library', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        text: async () => '<?xml version="1.0" encoding="UTF-8"?>\n<MediaContainer machineIdentifier="test-machine-id" />\n',
+      })
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ librarySections: [{ id: 1001, key: 1, title: 'Movies', type: 'movie' }] }),
+      })
+
+      const result = await inviteUserToPlexServer(mockServerConfig, 'user@example.com', { librarySectionIds: [] })
+
+      expect(result).toEqual({ success: false, error: 'The invite has no libraries to share' })
+      expect(global.fetch).toHaveBeenCalledTimes(2)
+    })
+
     it('should share the valid subset when some configured library IDs are stale', async () => {
       // Mock identity response (XML)
       const identityXml = `<?xml version="1.0" encoding="UTF-8"?>

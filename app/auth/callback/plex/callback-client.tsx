@@ -105,7 +105,7 @@ export function PlexCallbackPageClient() {
  * "Sign-in didn't finish" and its siblings (ui-design-system 6.6): fixed copy
  * by code, never server text. Try again starts a new PIN at once, keeping the
  * invite code and callback path of the failed one; a refused
- * invite only goes home.
+ * invite only goes home, which is the sign-in.
  */
 function CallbackFailure({
   code,
@@ -132,22 +132,23 @@ function CallbackFailure({
     setRestarting(false)
   }
 
+  const refusedInvite = code === "invite_invalid" || code === "invite_already_member"
   const goHome = (
-    <Button size="lg" variant={code === "invite_invalid" ? "primary" : "secondary"} nativeButton={false} render={<Link href="/" />} data-testid="plex-callback-home">
-      Go to home
+    <Button size="lg" variant={refusedInvite ? "primary" : "secondary"} nativeButton={false} render={<Link href="/" />} data-testid="plex-callback-home">
+      {code === "invite_already_member" ? "Sign in" : "Go to home"}
     </Button>
   )
 
   return (
     <div className="flex w-full justify-center" data-testid={`plex-callback-error-${code}`}>
       <StatusScreen
-        icon={code === "invite_invalid" ? icons.invites : icons.warning}
+        icon={refusedInvite ? icons.invites : icons.warning}
         code={code}
         title={copy.title}
         titleTestId="plex-callback-error-heading"
         description={copy.message}
         primaryAction={
-          code === "invite_invalid" ? (
+          refusedInvite ? (
             goHome
           ) : (
             <Button size="lg" loading={restarting} loadingLabel="Opening Plex" onClick={tryAgain} data-testid="plex-callback-retry">
@@ -155,7 +156,7 @@ function CallbackFailure({
             </Button>
           )
         }
-        secondaryAction={code === "invite_invalid" ? undefined : goHome}
+        secondaryAction={refusedInvite ? undefined : goHome}
       />
     </div>
   )

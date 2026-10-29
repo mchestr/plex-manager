@@ -19,6 +19,9 @@ const filesIn = (dir: string, recursive = false): string[] =>
 /** The chatbot's type-only modules hold no code to protect. */
 const TYPE_ONLY = new Set(['lib/chatbot/types.ts', 'lib/chatbot/tools/types.ts'])
 
+/** Affiliate modules that client components import: pure, with no database read. */
+const AFFILIATE_CLIENT_SAFE = new Set(['lib/affiliates/copy.ts'])
+
 const MODULES = [
   ...filesIn('lib/data'),
   'lib/admin.ts',
@@ -27,11 +30,17 @@ const MODULES = [
   'lib/jellyfin-auth.ts',
   'lib/setup/status.ts',
   ...filesIn('lib/chatbot', true).filter((path) => !TYPE_ONLY.has(path)),
+  ...filesIn('lib/affiliates').filter((path) => !AFFILIATE_CLIENT_SAFE.has(path)),
 ].sort()
 
-it('covers the loaders and the chatbot', () => {
+it('covers the loaders, the chatbot and the affiliate modules', () => {
   expect(MODULES).toEqual(
-    expect.arrayContaining(['lib/data/discord-activity.ts', 'lib/data/admin-users.ts', 'lib/chatbot/executors/sonarr.ts'])
+    expect.arrayContaining([
+      'lib/data/discord-activity.ts',
+      'lib/data/admin-users.ts',
+      'lib/chatbot/executors/sonarr.ts',
+      'lib/affiliates/settings.ts',
+    ])
   )
 })
 

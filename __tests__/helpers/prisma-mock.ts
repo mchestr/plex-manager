@@ -22,6 +22,7 @@
  */
 import { mockDeep, type DeepMockProxy } from 'jest-mock-extended'
 import type { Prisma, PrismaClient } from '@/lib/generated/prisma/client'
+import type { PrismaTransactionClient } from '@/lib/prisma'
 
 export const prismaMock: DeepMockProxy<PrismaClient> = mockDeep<PrismaClient>()
 
@@ -34,6 +35,15 @@ export const prismaModule = { prisma: prismaMock }
  */
 export function asTransactionClient(partial: object): Prisma.TransactionClient {
   return partial as unknown as Prisma.TransactionClient
+}
+
+/**
+ * {@link prismaMock} (or a hand-built client) as the app's own transaction
+ * client type, for a function that takes `db: PrismaTransactionClient` and is
+ * called directly. The extended client's type differs only in name.
+ */
+export function asAppTransactionClient(client: object): PrismaTransactionClient {
+  return client as unknown as PrismaTransactionClient
 }
 
 /**

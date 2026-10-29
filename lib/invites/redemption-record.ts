@@ -2,14 +2,16 @@
  * Recording a Plex invite redemption, and undoing that record. The Plex
  * redemption records first and shares the server after, so a share never
  * exists without its user row, its `InviteUsage` and its exemption. When the
- * share fails, {@link undoInviteUse} removes only what the record added.
+ * share fails, {@link undoInviteUse} removes only what the record added. For
+ * an affiliate invite the record also links the invitee to the invite
+ * (`Invite.joinedUserId`), and the exemption note names a member invite.
  *
  * @module lib/invites/redemption-record
  */
 
 import "server-only"
 
-import { INVITE_EXEMPTION } from "@/lib/invites/redemption"
+import { AFFILIATE_INVITE_EXEMPTION, INVITE_EXEMPTION } from "@/lib/invites/redemption"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 import { isUniqueEmailConflict } from "@/lib/prisma-errors"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
@@ -37,6 +39,8 @@ export interface RecordedUse {
 
 type FoundUser = Pick<RecordedUse, "userId" | "createdUser" | "exempted">
 
+type Exemption = typeof INVITE_EXEMPTION
+
 /**
  * Find or create the user for a Plex identity, matched by `plexUserId` only.
  *
@@ -49,7 +53,8 @@ type FoundUser = Pick<RecordedUse, "userId" | "createdUser" | "exempted">
 async function findOrCreateUser(
   tx: PrismaTransactionClient,
   plexUser: PlexIdentity,
-  email: string | null
+  email: string | null,
+  exemption: Exemption
 ): Promise<FoundUser> {
   const user = await tx.user.findUnique({
     where: { plexUserId: plexUser.id },
@@ -61,7 +66,7 @@ async function findOrCreateUser(
       data: {
         ...(email === null ? {} : { email, emailVerified: new Date() }),
         image: plexUser.thumb,
-        ...(user.isExempt ? {} : INVITE_EXEMPTION),
+        ...(user.isExempt ? {} : exemption),
       },
     })
     return { userId: user.id, createdUser: false, exempted: !user.isExempt }
@@ -75,7 +80,7 @@ async function findOrCreateUser(
       image: plexUser.thumb,
       emailVerified: email === null ? null : new Date(),
       primaryAuthService: "plex",
-      ...INVITE_EXEMPTION,
+      ...exemption,
     },
   })
   return { userId: created.id, createdUser: true, exempted: true }
@@ -83,21 +88,30 @@ async function findOrCreateUser(
 
 /**
  * Record the use of an invite: create or update the user row and add the
- * `InviteUsage`, in one transaction.
+ * `InviteUsage`, in one transaction. For an affiliate invite, also link the
+ * invitee to the invite.
  *
  * If another row already holds the Plex email, the write is retried once
  * without it, so that row can neither absorb nor block the redeeming user. The
  * retry runs in a new transaction because PostgreSQL aborts a transaction once
  * a statement in it fails.
  */
-export async function recordInviteUse(inviteId: string, plexUser: PlexIdentity): Promise<RecordedUse> {
+export async function recordInviteUse(
+  inviteId: string,
+  plexUser: PlexIdentity,
+  { affiliate = false }: { affiliate?: boolean } = {}
+): Promise<RecordedUse> {
+  const exemption = affiliate ? AFFILIATE_INVITE_EXEMPTION : INVITE_EXEMPTION
   const record = (email: string | null) =>
     prisma.$transaction(async (tx): Promise<RecordedUse> => {
-      const user = await findOrCreateUser(tx, plexUser, email)
+      const user = await findOrCreateUser(tx, plexUser, email, exemption)
       const usage = await tx.inviteUsage.create({
         data: { inviteId, userId: user.userId },
         select: { id: true },
       })
+      if (affiliate) {
+        await tx.invite.update({ where: { id: inviteId }, data: { joinedUserId: user.userId } })
+      }
       return { inviteId, usageId: usage.id, ...user }
     })
 
@@ -122,8 +136,9 @@ export async function recordInviteUse(inviteId: string, plexUser: PlexIdentity):
 
 /**
  * Remove what {@link recordInviteUse} wrote, in one transaction: a row it
- * created is deleted (its `InviteUsage` goes with it); otherwise the
- * `InviteUsage` is deleted and an exemption it set is cleared. The email and
+ * created is deleted (its `InviteUsage` goes with it, and the foreign key
+ * clears an affiliate invite's link to it); otherwise the `InviteUsage` and
+ * that link are removed and an exemption it set is cleared. The email and
  * image it copied from Plex stay.
  *
  * Returns false, with an `INVITE_ROLLBACK_FAILED` audit entry, if the undo
@@ -137,6 +152,10 @@ export async function undoInviteUse(recorded: RecordedUse, reason: string): Prom
         return
       }
       await tx.inviteUsage.delete({ where: { id: recorded.usageId } })
+      await tx.invite.updateMany({
+        where: { id: recorded.inviteId, joinedUserId: recorded.userId },
+        data: { joinedUserId: null },
+      })
       if (recorded.exempted) {
         await tx.user.update({ where: { id: recorded.userId }, data: { isExempt: false, exemptNote: null } })
       }

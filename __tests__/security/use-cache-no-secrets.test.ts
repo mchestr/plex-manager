@@ -76,6 +76,10 @@ describe("'use cache' modules hold no secrets", () => {
     expect(cached.flatMap(violations)).toEqual([])
   })
 
+  it("never caches the affiliate switch or the invite page's lookup, so a switched-off invite stops at once", () => {
+    expect(cached.filter((file) => file.startsWith("lib/affiliates/") || file === "lib/invites/pass.ts")).toEqual([])
+  })
+
   it("would catch a cached module that reads a secret", () => {
     const tokenRead = `"use cache"\nawait prisma.plexServer.findFirst({ where: { isActive: true } })\nselect: { token: true }`
     expect(new RegExp(`\\btoken\\s*:\\s*true\\b`).test(tokenRead)).toBe(true)

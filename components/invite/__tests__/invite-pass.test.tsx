@@ -21,6 +21,7 @@ const VALID: InvitePassProps = {
   state: "valid",
   code: "NORTH7Q2",
   serverType: "PLEX",
+  kind: "ADMIN",
   serverName: "Northfield Plex",
   monogram: "N",
   inviter: "Dana Whitfield",
@@ -85,6 +86,20 @@ describe("InvitePass, valid", () => {
     expect(screen.getByText("For one Jellyfin account")).toBeInTheDocument()
   })
 
+  it("puts the affiliate in the headline of an affiliate invite, with no separate inviter line", async () => {
+    const { container } = renderPass({ kind: "AFFILIATE", inviter: "Sam", usesLeft: { left: 1, total: 1 } })
+
+    expect(screen.getByTestId("valid-invite-heading")).toHaveTextContent("Sam invited you to Northfield Plex")
+    expect(screen.queryByTestId("invite-pass-inviter")).not.toBeInTheDocument()
+    expect(screen.getByTestId("plex-invite-sign-in")).toBeInTheDocument()
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("falls back to the plain headline for an affiliate without a usable name", () => {
+    renderPass({ kind: "AFFILIATE", inviter: null })
+    expect(screen.getByTestId("valid-invite-heading")).toHaveTextContent("You're invited to Northfield Plex")
+  })
+
   it("draws an inert accept in the admin preview", () => {
     renderPass({ preview: true })
 
@@ -97,9 +112,11 @@ describe("InvitePass, voided", () => {
   it.each([
     ["expired", "This invite has expired", /expired on October 31, 2026/],
     ["used-up", "This invite has no uses left", /Ask Dana Whitfield, who sent it, for a new link/],
+    ["unusable", "This invite can't be used", /Ask the person who sent it for a new link/],
     ["unknown", "We couldn't find that invite", /the invite was deleted/],
   ] as const)("%s has its own headline on the StatusScreen", async (state, title, description) => {
-    const { container } = renderPass({ state, inviter: state === "unknown" ? null : "Dana Whitfield" })
+    const named = state === "expired" || state === "used-up"
+    const { container } = renderPass({ state, inviter: named ? "Dana Whitfield" : null })
 
     const heading = screen.getByTestId("invalid-invite-heading")
     expect(heading).toHaveTextContent(title)

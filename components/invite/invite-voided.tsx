@@ -19,6 +19,7 @@ interface InviteVoidedProps {
 const COPY: Record<VoidedState, { icon: LucideIcon; title: string }> = {
   expired: { icon: icons.pending, title: "This invite has expired" },
   "used-up": { icon: icons.invites, title: "This invite has no uses left" },
+  unusable: { icon: icons.invites, title: "This invite can't be used" },
   unknown: { icon: icons.notFound, title: "We couldn't find that invite" },
 }
 
@@ -28,6 +29,7 @@ function description({ state, inviter, expiresOn }: InviteVoidedProps): string {
     case "expired":
       return expiresOn ? `It expired on ${expiresOn}. ${ask}` : ask
     case "used-up":
+    case "unusable":
       return ask
     case "unknown":
       return "The link can be incorrect, or the invite was deleted. Ask the person who sent it for a new link."

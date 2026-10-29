@@ -8,7 +8,8 @@
 
 import "server-only"
 
-import { Prisma, ServerType } from "@/lib/generated/prisma/client"
+import { affiliateInviteRefusal, type AffiliateInviteRefusal } from "@/lib/affiliates/invite-state"
+import { InviteKind, Prisma, ServerType } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
@@ -25,6 +26,9 @@ const INITIAL_RETRY_DELAY_MS = 100
 // from the Stripe subscription gate. Applied only when the user is not already
 // exempt, so an existing exemptNote is never overwritten.
 export const INVITE_EXEMPTION = { isExempt: true, exemptNote: "Joined by invite" }
+
+/** The exemption for a member who joined through an affiliate's invite. */
+export const AFFILIATE_INVITE_EXEMPTION = { isExempt: true, exemptNote: "Joined by member invite" }
 
 /**
  * Check if an error is a Prisma transaction conflict (P2034)
@@ -91,6 +95,8 @@ interface InviteData {
   id: string
   code: string
   serverType: ServerType
+  kind: InviteKind
+  affiliateUserId: string | null
   maxUses: number
   useCount: number
   expiresAt: Date | null
@@ -106,7 +112,14 @@ type InviteErrorCode = "INVITE_WRONG_SERVICE" | "INVITE_INVALID" | "INTERNAL"
 
 type ValidateAndUseResult =
   | { success: true; invite: InviteData }
-  | { success: false; code: InviteErrorCode; error: string }
+  | { success: false; code: InviteErrorCode; error: string; affiliate?: AffiliateRefused }
+
+/** Why an affiliate invite was refused inside the transaction, for the audit entry. */
+interface AffiliateRefused {
+  inviteId: string
+  affiliateUserId: string | null
+  refusal: AffiliateInviteRefusal
+}
 
 const SERVER_LABELS: Record<ServerType, string> = {
   [ServerType.PLEX]: "Plex",
@@ -117,7 +130,8 @@ const SERVER_LABELS: Record<ServerType, string> = {
  * Rollback invite usage by decrementing the use count.
  * Used as a compensating transaction when a redemption fails after the invite
  * was consumed. The `useCount > 0` guard keeps a double compensation from
- * taking the count below zero.
+ * taking the count below zero. An affiliate invite's join record is cleared
+ * with it; an admin invite has none.
  */
 export async function rollbackInviteUsage(
   inviteId: string,
@@ -127,7 +141,7 @@ export async function rollbackInviteUsage(
   try {
     await prisma.invite.updateMany({
       where: { id: inviteId, useCount: { gt: 0 } },
-      data: { useCount: { decrement: 1 } },
+      data: { useCount: { decrement: 1 }, joinedAt: null, joinedUserId: null },
     })
 
     logger.info("Invite usage rolled back successfully", {
@@ -171,6 +185,8 @@ export async function rollbackInviteUsage(
  * This ensures that concurrent requests cannot both pass validation.
  * An invite for another service is rejected before its use is counted, so a
  * Jellyfin code never reaches the Plex share or the invite exemption (SEC-29).
+ * An affiliate invite must also pass `affiliateInviteRefusal`, read inside the
+ * transaction; its use sets the join record (`joinedAt`) and clears its label.
  * Note: This function re-throws P2034 transaction conflicts for retry handling
  */
 export async function validateAndUseInvite(
@@ -197,8 +213,22 @@ export async function validateAndUseInvite(
           }
         }
 
+        const now = new Date()
+        const affiliate = invite.kind === InviteKind.AFFILIATE
+        if (affiliate) {
+          const refusal = await affiliateInviteRefusal(tx, invite, now)
+          if (refusal) {
+            return {
+              success: false,
+              code: "INVITE_INVALID",
+              error: "This invite can't be used",
+              affiliate: { inviteId: invite.id, affiliateUserId: invite.affiliateUserId, refusal },
+            }
+          }
+        }
+
         // Validate expiration
-        if (invite.expiresAt && invite.expiresAt < new Date()) {
+        if (invite.expiresAt && invite.expiresAt < now) {
           return { success: false, code: "INVITE_INVALID", error: "Invite has expired" }
         }
 
@@ -210,7 +240,7 @@ export async function validateAndUseInvite(
         // Atomically increment the use count
         const updatedInvite = await tx.invite.update({
           where: { id: invite.id },
-          data: { useCount: { increment: 1 } },
+          data: { useCount: { increment: 1 }, ...(affiliate ? { joinedAt: now, label: null } : {}) },
         })
 
         return {
@@ -219,6 +249,8 @@ export async function validateAndUseInvite(
             id: updatedInvite.id,
             code: updatedInvite.code,
             serverType: updatedInvite.serverType,
+            kind: updatedInvite.kind,
+            affiliateUserId: updatedInvite.affiliateUserId,
             maxUses: updatedInvite.maxUses,
             useCount: updatedInvite.useCount,
             expiresAt: updatedInvite.expiresAt,
