@@ -6,7 +6,8 @@
  * {@link MIN_RETENTION_DAYS}. Three rules have no window in days: parked
  * Discord selections go when they expire, a replaced Rewind
  * (`RewindGeneration.previousData`) is kept until 30 June after its season
- * (design 7.9), and an expired affiliate invite loses its private label. `docs/privacy.md` states the same windows, and the daily sweep
+ * (design 7.9), and an expired affiliate invite loses its private label.
+ * `docs/privacy.md` states the same windows, and the daily sweep
  * (`lib/queue/jobs/retention.ts`) applies them.
  *
  * @module
