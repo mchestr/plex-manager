@@ -4,6 +4,7 @@
  * | Change | Rule |
  * |---|---|
  * | on | needs a library list, Tautulli and the active Plex server's machine id, which it stores in `affiliatePlexMachineId` |
+ * | stays on | refused when the active machine id is not the stored one, so the old server's library keys never move to a new server |
  * | off | cancels every open affiliate invite (`cancelledAt = now`, `label = null`), which frees their places |
  * | Plex server change | turns the switch off the same way when the active machine id is not the stored one |
  *
@@ -57,6 +58,9 @@ async function switchOnTarget(): Promise<{ ok: true; machineId: string } | { ok:
   return { ok: true, machineId: machineIdentifier }
 }
 
+const SERVER_CHANGED =
+  "The Plex server changed after affiliate invites were turned on. Turn the switch off and save. Then check the libraries and turn it on again."
+
 export type SaveAffiliateSettingsResult = { ok: true; invitesCancelled: number } | { ok: false; reason: string }
 
 /**
@@ -67,8 +71,12 @@ export async function saveAffiliateSettings(input: AffiliateSettingsInput, actor
   const target = input.enabled ? await switchOnTarget() : null
   if (target && !target.ok) return target
 
-  return inSerializable(async (tx) => {
+  return inSerializable(async (tx): Promise<SaveAffiliateSettingsResult> => {
     const before = await tx.config.findUnique({ where: { id: "config" }, select: CONFIG_FIELDS })
+    // Keeping the switch on never moves it to another server: its library keys were chosen on the old one
+    if (target && before?.affiliateInvitesEnabled && before.affiliatePlexMachineId !== target.machineId) {
+      return { ok: false, reason: SERVER_CHANGED }
+    }
     const after = {
       affiliateInvitesEnabled: input.enabled,
       affiliateTiers: input.tiers,
@@ -84,7 +92,7 @@ export async function saveAffiliateSettings(input: AffiliateSettingsInput, actor
     const invitesCancelled =
       before?.affiliateInvitesEnabled && !input.enabled ? await cancelAllOpenInvites(tx, "switch_off", actorId, new Date()) : 0
     await recordAuditEvent(AuditEventType.CONFIG_CHANGED, actorId, configDiff("affiliates", before, after), tx)
-    return { ok: true, invitesCancelled } as const
+    return { ok: true, invitesCancelled }
   })
 }
 

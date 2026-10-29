@@ -42,8 +42,8 @@ export const AFFILIATE_CAP_MAX = 1000
 /**
  * The affiliate settings an admin saves. `cap` is the places for all
  * affiliates: joins in the last 30 days and open invites (null: no cap; 0
- * stops new invites). The switch needs
- * at least one library: an empty list is never "every library".
+ * stops new invites). The switch needs at least one library: an empty list
+ * is never "every library".
  */
 export const affiliateSettingsSchema = z
   .object({

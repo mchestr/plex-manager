@@ -78,6 +78,20 @@ describe('saveAffiliateSettings', () => {
     expect(inSerializable).not.toHaveBeenCalled()
   })
 
+  it('saves while the switch stays on the same server', async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ affiliateInvitesEnabled: true, affiliatePlexMachineId: 'machine-1' }))
+    await expect(saveAffiliateSettings({ ...input, cap: 20 }, 'admin-1')).resolves.toEqual({ ok: true, invitesCancelled: 0 })
+    expect(prismaMock.config.upsert).toHaveBeenCalled()
+  })
+
+  it('refuses to keep the switch on after the Plex server changed, and writes nothing', async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ affiliateInvitesEnabled: true, affiliatePlexMachineId: 'machine-old' }))
+
+    await expect(saveAffiliateSettings(input, 'admin-1')).resolves.toEqual({ ok: false, reason: expect.stringMatching(/Plex server changed/) })
+    expect(prismaMock.config.upsert).not.toHaveBeenCalled()
+    expect(recordAuditEvent).not.toHaveBeenCalled()
+  })
+
   it('turns the switch off, cancels every open invite and audits the count', async () => {
     prismaMock.config.findUnique.mockResolvedValue(buildConfig({ affiliateInvitesEnabled: true, affiliatePlexMachineId: 'machine-1' }))
 

@@ -115,6 +115,8 @@ Affiliates, used invites and history stay.
 When you change the Plex server, the switch goes off and the open invites are
 cancelled. A library number can be a different library on a different server.
 Make sure that the library list is correct, then turn the switch on again.
+If the switch shows on after a server change, the app does not save the
+settings with the switch on. Turn the switch off and save first.
 
 ## The Support role
 
