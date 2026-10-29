@@ -154,6 +154,8 @@ export const authOptions: NextAuthOptions = {
           const redeemed = await redeemPlexInvite(inviteCode, authToken)
           if (!redeemed.success) {
             logger.warn("auth.plex_invite_refused", { code: redeemed.code })
+            // A disabled account: the same result as the disabled check below
+            if (redeemed.code === "FORBIDDEN") return null
             const invalid = redeemed.code === "INVITE_INVALID" || redeemed.code === "INVITE_WRONG_SERVICE"
             throw new Error(invalid ? "invite_invalid" : "sign_in_failed")
           }

@@ -18,6 +18,10 @@ check); the `no-changelog` label skips it.
 
 ## [Unreleased]
 
+### Security
+
+- **Disabled members and Plex invites:** a disabled member who opens a valid Plex invite no longer gets the server shared again or a Stripe exemption. The redemption refuses the account before it counts the use, and the sign-in ends as it does for any disabled account.
+
 ## [0.7.0] - 2026-10-28
 
 ### Added

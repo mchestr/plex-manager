@@ -187,6 +187,14 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
     }
     const plexUser = userInfoResult.data
 
+    // A disabled account gets nothing through an invite: refuse before the use, the share and the exemption.
+    // Sign-in refuses the account too, but only after this function returns
+    const existing = await prisma.user.findUnique({ where: { plexUserId: plexUser.id }, select: { disabledAt: true } })
+    if (existing?.disabledAt) {
+      logger.warn("invite.disabled_redeemer", { inviteCodePrefix: code.slice(0, 2) })
+      return fail("FORBIDDEN", "This account is disabled.")
+    }
+
     const earlierUse = await prisma.inviteUsage.findFirst({
       where: { invite: { code }, user: { plexUserId: plexUser.id } },
       select: { id: true },

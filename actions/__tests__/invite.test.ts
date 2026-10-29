@@ -28,7 +28,7 @@ import type { Invite, JellyfinServer, PlexServer } from '@/lib/generated/prisma/
 import { getServerSession, type Session } from 'next-auth'
 import { mockReset } from 'jest-mock-extended'
 import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
-import { buildInvite } from '@/__tests__/helpers/factories'
+import { buildInvite, buildUser } from '@/__tests__/helpers/factories'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
@@ -213,6 +213,18 @@ describe('invite actions', () => {
         inviteID: 12345,
       })
       mockAcceptPlexInvite.mockResolvedValue({ success: true })
+    })
+
+    it('refuses a disabled account before it spends a use, shares the server or sets an exemption', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(buildUser({ plexUserId: mockPlexUser.id, disabledAt: new Date() }))
+
+      const result = await redeemPlex('TESTCODE', 'plex-token')
+
+      expect(result).toEqual({ success: false, code: 'FORBIDDEN', error: 'This account is disabled.' })
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled()
+      expect(mockInviteUserToPlexServer).not.toHaveBeenCalled()
+      expect(mockAcceptPlexInvite).not.toHaveBeenCalled()
+      expect(mockPrisma.user.update).not.toHaveBeenCalled()
     })
 
     it('should atomically validate and use invite in transaction', async () => {
