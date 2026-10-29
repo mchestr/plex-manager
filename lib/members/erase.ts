@@ -12,7 +12,8 @@
  *    Stripe cancel ─► Plex unshare / Jellyfin disable ─► Discord role, grant
  *    and link ─► end sessions ─► remove queued jobs
  * 2. one $transaction: Discord-keyed rows, admin LLM text about the member,
- *    the User row (the rest cascades), and the MEMBER_ERASED audit row
+ *    unused affiliate invites, the User row (the rest cascades), and the
+ *    MEMBER_ERASED audit row
  * ```
  *
  * A Stripe or service failure stops before the transaction with its code;

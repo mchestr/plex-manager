@@ -6,7 +6,9 @@
  * The retention sweep on PostgreSQL (P11.14): rows seeded either side of
  * every window; the first run reports exactly the rows past their window, the
  * second reports zeros; Rewind and assistant LLM text are split correctly; and
- * audit rows at 399 days stay while those at 401 go.
+ * audit rows at 399 days stay while those at 401 go. Affiliate applications
+ * and unused affiliate invites go after 365 days; admin invites and used
+ * affiliate invites stay, and expired affiliate invites lose their label.
  *
  * The sweep reads the whole database, so a first run at the suite's clock
  * clears whatever earlier suites left behind before the fixture is seeded.
@@ -112,6 +114,20 @@ async function seed(db: PrismaClient) {
     data: { discordUserId: DISCORD, channelId: "c", customId: `${RUN}-pick`, markType: "FINISHED_WATCHING", results: [], expiresAt: ago(0.01) },
   })
 
+  // Affiliate rows: 365 days; an expired invite loses its label at once
+  const application = { userId: MEMBER, hoursAtApply: 100 }
+  await db.affiliateApplication.create({ data: { ...application, status: "REFUSED", appliedAt: ago(370), decidedAt: ago(366) } })
+  await db.affiliateApplication.create({ data: { ...application, status: "REFUSED", appliedAt: ago(370), decidedAt: ago(364) } })
+  await db.affiliateApplication.create({ data: { ...application, status: "ENDED", appliedAt: ago(500), endedAt: ago(364) } })
+  await db.affiliateApplication.create({ data: { ...application, status: "APPROVED", openUserId: MEMBER, appliedAt: ago(500), decidedAt: ago(499) } })
+  const affiliate = { kind: "AFFILIATE" as const, affiliateUserId: MEMBER, label: "For Sam" }
+  await db.invite.create({ data: { ...affiliate, code: `${RUN}-expired-old`, expiresAt: ago(366) } })
+  await db.invite.create({ data: { ...affiliate, code: `${RUN}-cancelled-old`, cancelledAt: ago(366), expiresAt: ago(364) } })
+  await db.invite.create({ data: { ...affiliate, code: `${RUN}-expired`, expiresAt: ago(10) } })
+  await db.invite.create({ data: { ...affiliate, code: `${RUN}-live`, expiresAt: ago(-1) } })
+  await db.invite.create({ data: { ...affiliate, label: null, code: `${RUN}-used`, expiresAt: ago(400), useCount: 1, joinedAt: ago(401) } })
+  await db.invite.create({ data: { code: `${RUN}-admin`, expiresAt: ago(400) } })
+
   await db.auditLog.create({ data: { type: "TEST", actorUserId: RUN, createdAt: ago(399) } })
   await db.auditLog.create({ data: { type: "TEST", actorUserId: RUN, createdAt: ago(401) } })
 
@@ -146,6 +162,7 @@ describePg("the retention sweep on PostgreSQL", (databaseUrl) => {
     await mockDb.discordCommandLog.deleteMany({ where: { discordUserId: DISCORD } })
     await mockDb.discordChatSession.deleteMany({ where: { discordUserId: DISCORD } })
     await mockDb.discordPendingSelection.deleteMany({ where: { discordUserId: DISCORD } })
+    await mockDb.invite.deleteMany({ where: { code: { startsWith: RUN } } })
     await mockDb.user.deleteMany({ where: { id: MEMBER } })
     await mockDb.$disconnect()
   })
@@ -170,6 +187,9 @@ describePg("the retention sweep on PostgreSQL", (databaseUrl) => {
       discordPendingSelections: 1,
       rewindPreviousData: 1,
       auditLog: 1,
+      affiliateApplications: 1,
+      affiliateInvites: 2,
+      affiliateInviteLabels: 1,
     })
 
     const second = await runRetentionSweep({ now: NOW, signal })
@@ -228,6 +248,19 @@ describePg("the retention sweep on PostgreSQL", (databaseUrl) => {
     const history = await mockDb.watchlistSyncHistory.findMany({ where: { userId: MEMBER }, select: { plexRatingKey: true }, orderBy: { plexRatingKey: "asc" } })
     expect(history.map((row) => row.plexRatingKey)).toEqual([`${RUN}-2`, `${RUN}-3`])
     expect((await mockDb.rewindGeneration.findUniqueOrThrow({ where: { id: fixture.generation.id } })).previousData).toBeNull()
+  })
+
+  it("deletes old ended applications and unused affiliate invites, keeping admin and used invites", async () => {
+    const applications = await mockDb.affiliateApplication.findMany({ where: { userId: MEMBER }, select: { status: true } })
+    expect(applications.map((row) => row.status).sort()).toEqual(["APPROVED", "ENDED", "REFUSED"])
+
+    const invites = await mockDb.invite.findMany({ where: { code: { startsWith: RUN } }, select: { code: true, label: true }, orderBy: { code: "asc" } })
+    expect(invites).toEqual([
+      { code: `${RUN}-admin`, label: null },
+      { code: `${RUN}-expired`, label: null },
+      { code: `${RUN}-live`, label: "For Sam" },
+      { code: `${RUN}-used`, label: null },
+    ])
   })
 
   it("keeps audit rows at 399 days and deletes those at 401", async () => {

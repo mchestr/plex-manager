@@ -28,7 +28,15 @@ describe("retentionDays", () => {
       watchlistRemoved: 30,
       discordOAuthStates: 1,
       auditLog: 400,
+      affiliateApplications: 365,
+      affiliateInvites: 365,
     })
+  })
+
+  it("reads one RETENTION_AFFILIATE_DAYS for both affiliate windows", () => {
+    const days = retentionDays({ RETENTION_AFFILIATE_DAYS: "90" })
+    expect(days.affiliateApplications).toBe(90)
+    expect(days.affiliateInvites).toBe(90)
   })
 
   it("takes each RETENTION_<NAME>_DAYS override", () => {

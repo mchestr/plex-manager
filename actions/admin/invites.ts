@@ -108,13 +108,16 @@ export const createInvite = adminAction({
   },
 })
 
-/** Delete an invite; its usage rows go with it. Audited and rate-limited (P11.5). */
+/**
+ * Delete an admin invite; its usage rows go with it. An affiliate invite id
+ * reads as not found. Audited and rate-limited (P11.5).
+ */
 export const deleteInvite = adminAction({
   input: z.object({ id: z.string().min(1).max(64) }),
   rateLimit: INVITES_LIMIT,
   fallbackError: "Could not delete the invite",
   handler: async ({ id }, { userId }) => {
-    const deleted = await prisma.invite.delete({ where: { id }, select: { id: true, serverType: true, useCount: true } })
+    const deleted = await prisma.invite.delete({ where: { id, kind: "ADMIN" }, select: { id: true, serverType: true, useCount: true } })
     logAuditEvent(AuditEventType.INVITE_DELETED, userId, {
       inviteId: id,
       serverType: deleted.serverType,

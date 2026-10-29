@@ -33,20 +33,20 @@ describe('inviteStatusWhere', () => {
   const maxUses = () => prismaMock.invite.fields.maxUses
 
   it('reads expired as a past expiry', () => {
-    expect(inviteStatusWhere('expired', NOW)).toEqual({ expiresAt: { lt: NOW } })
+    expect(inviteStatusWhere('expired', NOW)).toEqual({ kind: 'ADMIN', expiresAt: { lt: NOW } })
   })
 
   it('compares the two columns through a field reference for used up', () => {
     const where = inviteStatusWhere('usedUp', NOW)
-    expect(where).toEqual({ AND: [notExpired, { useCount: { gte: maxUses() } }] })
+    expect(where).toEqual({ kind: 'ADMIN', AND: [notExpired, { useCount: { gte: maxUses() } }] })
   })
 
   it('reads active as neither expired nor used up', () => {
-    expect(inviteStatusWhere('active', NOW)).toEqual({ AND: [notExpired, { useCount: { lt: maxUses() } }] })
+    expect(inviteStatusWhere('active', NOW)).toEqual({ kind: 'ADMIN', AND: [notExpired, { useCount: { lt: maxUses() } }] })
   })
 
-  it('adds nothing for all', () => {
-    expect(inviteStatusWhere('all', NOW)).toEqual({})
+  it('adds only the admin kind for all, so no affiliate invite is listed or counted', () => {
+    expect(inviteStatusWhere('all', NOW)).toEqual({ kind: 'ADMIN' })
   })
 })
 
@@ -72,8 +72,9 @@ describe('listInvites', () => {
 
     const result = await listInvites({ q: 'audit', status: 'expired', server: 'jellyfin', page: 2, pageSize: 25, sort: { id: 'code', desc: false } })
 
-    const where = { AND: [{ expiresAt: { lt: NOW } }, { serverType: 'JELLYFIN' }, { code: { contains: 'AUDIT' } }] }
+    const where = { AND: [{ kind: 'ADMIN', expiresAt: { lt: NOW } }, { serverType: 'JELLYFIN' }, { code: { contains: 'AUDIT' } }] }
     expect(prismaMock.invite.count).toHaveBeenNthCalledWith(1, { where })
+    expect(prismaMock.invite.count).toHaveBeenNthCalledWith(2, { where: { kind: 'ADMIN' } })
     expect(prismaMock.invite.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where, orderBy: [{ code: 'asc' }, { id: 'asc' }], skip: 25, take: 25 })
     )
@@ -121,7 +122,7 @@ describe('getInviteDetail', () => {
     const detail = await getInviteDetail('invite-1')
 
     const args = prismaMock.invite.findUnique.mock.calls[0][0]
-    expect(args.where).toEqual({ id: 'invite-1' })
+    expect(args.where).toEqual({ id: 'invite-1', kind: 'ADMIN' })
     expect(args.select?.usages).toEqual({
       select: { id: true, usedAt: true, user: { select: publicUserSelect } },
       orderBy: { usedAt: 'desc' },

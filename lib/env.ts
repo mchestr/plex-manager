@@ -201,6 +201,10 @@ export const envSchema = z.object({
   RETENTION_WATCHLIST_REMOVED_DAYS: text("Days a title removed from a watchlist stays in sync history.", { group: "Data retention", default: "30" }),
   RETENTION_DISCORD_OAUTH_STATE_DAYS: text("Days an expired Discord link attempt is kept.", { group: "Data retention", default: "1" }),
   RETENTION_AUDIT_LOG_DAYS: text("Days audit log rows are kept.", { group: "Data retention", default: "400" }),
+  RETENTION_AFFILIATE_DAYS: text("Days refused, revoked and closed affiliate applications and unused affiliate invites are kept.", {
+    group: "Data retention",
+    default: "365",
+  }),
   DISCORD_BOT_TOKEN: text("Discord bot token, used when none is stored in Admin settings.", { group: "Integrations" }),
   DISCORD_CLIENT_ID: text("Discord application id for the slash-command and metadata scripts.", { group: "Integrations" }),
   NEXT_PUBLIC_DISCORD_CLIENT_ID: text("Discord application id the scripts fall back to.", { group: "Integrations" }),

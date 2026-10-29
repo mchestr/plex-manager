@@ -150,7 +150,7 @@ describe('deleteInvite', () => {
 
     await expect(deleteInvite({ id: 'invite-1' })).resolves.toEqual({ success: true, data: null })
     expect(prismaMock.invite.delete).toHaveBeenCalledWith({
-      where: { id: 'invite-1' },
+      where: { id: 'invite-1', kind: 'ADMIN' },
       select: { id: true, serverType: true, useCount: true },
     })
     expect(consume).toHaveBeenCalledWith('admin:invites', 'admin-1')
@@ -177,6 +177,15 @@ describe('deleteInvite', () => {
 
     await expect(deleteInvite({ id: 'gone' })).resolves.toMatchObject({ success: false, code: 'NOT_FOUND' })
     expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('reports an affiliate invite id as not found', async () => {
+    prismaMock.invite.delete.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Record not found', { code: 'P2025', clientVersion: 'test' })
+    )
+
+    await expect(deleteInvite({ id: 'affiliate-invite' })).resolves.toMatchObject({ success: false, code: 'NOT_FOUND' })
+    expect(prismaMock.invite.delete).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'affiliate-invite', kind: 'ADMIN' } }))
   })
 
   it('refuses an empty id', async () => {
