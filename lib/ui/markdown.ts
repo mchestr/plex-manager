@@ -24,7 +24,12 @@
 
 import { isHttpUrl } from "@/lib/validations/shared-schemas"
 
-/** Every element MarkdownBody keeps (ui-design-system 5.5). No `img`, no `h1`. */
+/**
+ * Every element MarkdownBody keeps (ui-design-system 5.5). No `img`. An `h1`
+ * renders as an `h2` and `h5` and `h6` as an `h4`, so no `h1` reaches the
+ * page. Tables and strikethrough come from `remark-gfm`; its task-list
+ * checkboxes are not kept.
+ */
 export const MARKDOWN_ELEMENTS = [
   "p",
   "strong",
@@ -36,11 +41,21 @@ export const MARKDOWN_ELEMENTS = [
   "code",
   "pre",
   "blockquote",
+  "h1",
   "h2",
   "h3",
   "h4",
+  "h5",
+  "h6",
   "hr",
   "br",
+  "del",
+  "table",
+  "thead",
+  "tbody",
+  "tr",
+  "th",
+  "td",
 ]
 
 /** Used only when NEXT_PUBLIC_APP_URL is unset; `.invalid` never resolves. */

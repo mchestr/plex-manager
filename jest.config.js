@@ -62,7 +62,7 @@ const customJestConfig = {
 // them. next/jest ignores all of node_modules except its own transpiled
 // packages (a custom pattern can only add to that list), so these join its
 // exception here rather than the app's transpilePackages.
-// The second group is react-markdown's tree (67 ES-module packages), written
+// The second group is react-markdown's and remark-gfm's tree of ES-module packages, written
 // as regex alternatives so a new micromark or unist helper is covered too.
 const ESM_ONLY_PACKAGES = [
   'ai', '@ai-sdk', '@standard-schema', '@workflow/serde', 'eventsource-parser',
@@ -71,6 +71,7 @@ const ESM_ONLY_PACKAGES = [
   'is-(?:alphabetical|alphanumerical|decimal|hexadecimal|plain-obj)', '(?:comma|space)-separated-tokens',
   'decode-named-character-reference', 'estree-util-is-identifier-name', 'html-url-attributes', 'longest-streak',
   'parse-entities', 'property-information', 'stringify-entities', 'trim-lines', '@ungap/structured-clone',
+  'escape-string-regexp', 'markdown-table',
 ]
 const NEXT_EXCEPTION = '/node_modules/(?!.pnpm)(?!('
 
