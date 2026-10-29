@@ -1,6 +1,5 @@
 "use server"
 
-import { randomInt } from "crypto"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
@@ -8,12 +7,11 @@ import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { invite as inviteRoute } from "@/lib/admin/routes"
 import { ServerType } from "@/lib/generated/prisma/client"
+import { generateInviteCode } from "@/lib/invites/code"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { EXPIRES_IN_OPTIONS, type ExpiresIn } from "@/lib/validations/invite"
 
-const INVITE_CODE_LENGTH = 8
-const INVITE_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // No 0, O, I, l or 1
 const HOUR_MS = 60 * 60 * 1000
 const EXPIRES_IN_HOURS: Record<Exclude<ExpiresIn, "never">, number> = { "1d": 24, "48h": 48, "7d": 7 * 24, "30d": 30 * 24 }
 
@@ -34,18 +32,6 @@ const createInviteSchema = z.object({
   // Jellyfin-specific: undefined grants every library
   jellyfinLibraryIds: z.array(z.string().min(1).max(64)).max(100).optional(),
 })
-
-/**
- * A random code from unambiguous characters. `crypto.randomInt`, because a
- * code grants server access and must not be predictable from earlier ones.
- */
-function generateInviteCode(): string {
-  let result = ""
-  for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
-    result += INVITE_CODE_CHARS.charAt(randomInt(INVITE_CODE_CHARS.length))
-  }
-  return result
-}
 
 /** The expiry for an option; 48 hours when none is given, never for `never`. */
 function expiresAtFor(expiresIn: ExpiresIn = "48h"): Date | null {

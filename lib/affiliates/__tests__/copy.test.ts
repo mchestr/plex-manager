@@ -1,4 +1,4 @@
-import { affiliateInviteHeadline } from "@/lib/affiliates/copy"
+import { affiliateInviteHeadline, inviterDisplayName } from "@/lib/affiliates/copy"
 
 describe("affiliateInviteHeadline", () => {
   it("names the affiliate", () => {
@@ -7,5 +7,15 @@ describe("affiliateInviteHeadline", () => {
 
   it("is the plain headline without a name", () => {
     expect(affiliateInviteHeadline(null, "Northfield Plex")).toBe("You're invited to Northfield Plex")
+  })
+})
+
+describe("inviterDisplayName", () => {
+  it("trims the name", () => {
+    expect(inviterDisplayName("  Sam ")).toBe("Sam")
+  })
+
+  it.each([null, undefined, "", "   ", "sam@example.com"])("names no one for %p", (name) => {
+    expect(inviterDisplayName(name)).toBeNull()
   })
 })

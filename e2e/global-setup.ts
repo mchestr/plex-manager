@@ -3,6 +3,7 @@ import { clearRateLimits, redisAnswers } from './helpers/rate-limits';
 import { JELLYFIN_MEMBERS } from './helpers/jellyfin-members';
 import { startMockJellyfin } from './mocks/jellyfin-server';
 import { startMockLlm } from './mocks/llm-server';
+import { startMockTautulli } from './mocks/tautulli-server';
 
 /**
  * Global setup for Playwright tests
@@ -140,9 +141,13 @@ async function globalSetup() {
   const llm = await startMockLlm();
   process.env.E2E_LLM_URL = llm.url;
   console.log(`[E2E Setup] Mock LLM listening at ${llm.url}`);
+  // And for Tautulli, which making an affiliate invite reads live: specs point an active Tautulli row at it
+  const tautulli = await startMockTautulli();
+  process.env.E2E_TAUTULLI_URL = tautulli.url;
+  console.log(`[E2E Setup] Mock Tautulli listening at ${tautulli.url}`);
   return async () => {
     await Promise.all(
-      [jellyfin.server, llm.server].map((server) => new Promise<void>((resolve) => server.close(() => resolve())))
+      [jellyfin.server, llm.server, tautulli.server].map((server) => new Promise<void>((resolve) => server.close(() => resolve())))
     );
   };
 }

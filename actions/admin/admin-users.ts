@@ -8,7 +8,7 @@ import { isPlexServerOwner } from "@/lib/members/owner"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { enqueueRoleSync } from "@/lib/discord/role-sync"
-import { endUserSessions } from "@/lib/session-revocation"
+import { endUserSessions, sessionsEndedSince } from "@/lib/session-revocation"
 import { parseRole, roleKeySchema } from "@/lib/permissions"
 import { revokeInviterSchema } from "@/lib/validations/affiliates"
 import { userIdSchema } from "@/lib/validations/shared-schemas"
@@ -137,8 +137,9 @@ export const setUserRole = adminAction({
  * user cannot sign in. It also ends their affiliate status (no wait to apply
  * again), and with `revokeInviter` revokes the status of the affiliate who
  * invited them, once the disable succeeded. A disable of an account that is
- * already disabled runs both again, so a retry finishes what a failed one
- * left; both are idempotent. Enabling clears `disabledAt` and does not bring
+ * already disabled runs all three again, so a retry finishes what a failed
+ * one left: the sessions end unless a `SESSIONS_REVOKED` event already
+ * followed this disable, and the other two are idempotent. Enabling clears `disabledAt` and does not bring
  * an affiliate status back. Refuses the caller (`SELF`) and the Plex server
  * owner (`OWNER`).
  *
@@ -178,15 +179,17 @@ export const setUserDisabled = adminAction({
         targetUserId: userId,
       })
 
-      if (disabled) {
-        await endUserSessions(userId, "disabled", actorId)
-      } else {
+      if (!disabled) {
         await enqueueRoleSync(userId, "enabled")
       }
     }
 
     let inviterRevoked: boolean | null = null
     if (disabled) {
+      // A retry ends the sessions a failed disable left; once they ended for this disable it stays quiet
+      if (!user.disabledAt || !(await sessionsEndedSince(userId, user.disabledAt))) {
+        await endUserSessions(userId, "disabled", actorId)
+      }
       await endAffiliateStatus(userId, "DISABLED", actorId)
       const inviter = revokeInviter ? await inviterApplicationId(userId) : null
       inviterRevoked = await revokeInviterAfter(inviter, { reason: revokeInviter?.reason ?? null, actorId })

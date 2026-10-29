@@ -1,6 +1,6 @@
 import { mockReset } from 'jest-mock-extended'
 
-import { buildUser } from '@/__tests__/helpers/factories'
+import { buildConfig, buildPlexServer, buildUser } from '@/__tests__/helpers/factories'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { getAppShellData, initialsFor } from '@/lib/member/shell'
 import { requestRewindCardModel, type RewindCardModel } from '@/lib/rewind/home-card'
@@ -108,6 +108,18 @@ describe('getAppShellData membership', () => {
     prismaMock.subscription.findUnique.mockResolvedValue({ id: 's1' } as Awaited<ReturnType<typeof prismaMock.subscription.findUnique>>)
 
     expect((await getAppShellData({ id: 'u1', isAdmin: false })).user.membership).toBe(true)
+  })
+})
+
+describe('getAppShellData invites', () => {
+  it('adds Invites to the nav while affiliate invites are on for a member with a Plex id', async () => {
+    setup()
+    prismaMock.config.findUnique.mockResolvedValue(
+      buildConfig({ affiliateInvitesEnabled: true, affiliateLibrarySectionIds: [1], affiliatePlexMachineId: 'machine-1' })
+    )
+    prismaMock.plexServer.findFirst.mockResolvedValue(buildPlexServer({ machineIdentifier: 'machine-1' }))
+
+    expect((await getAppShellData({ id: 'u1', isAdmin: false })).nav.map((item) => item.label)).toEqual(['Home', 'Invites', 'Help'])
   })
 })
 

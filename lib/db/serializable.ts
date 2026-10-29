@@ -1,7 +1,8 @@
 /**
  * Serializable transactions with a retry on conflict. Postgres aborts one of
  * two Serializable transactions that read and write the same rows, and Prisma
- * reports it as P2034; the retry runs the whole body again on fresh reads.
+ * reports it as P2034 (or, at COMMIT, as the adapter's write conflict); the
+ * retry runs the whole body again on fresh reads.
  *
  * @module lib/db/serializable
  */
@@ -18,9 +19,18 @@ const TRANSACTION_TIMEOUT_MS = 10000
 const MAX_RETRIES = 3
 const INITIAL_RETRY_DELAY_MS = 100
 
-/** Whether the error is a Prisma transaction conflict (P2034). */
+/**
+ * Whether the error is a transaction conflict: P2034 from a query, or the pg
+ * adapter's own `DriverAdapterError` (`TransactionWriteConflict`), which is
+ * how a conflict Postgres finds at COMMIT reaches the caller.
+ */
 export function isTransactionConflict(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034"
+  if (error instanceof Prisma.PrismaClientKnownRequestError) return error.code === "P2034"
+  return (
+    error instanceof Error &&
+    error.name === "DriverAdapterError" &&
+    (error.cause as { kind?: unknown } | undefined)?.kind === "TransactionWriteConflict"
+  )
 }
 
 function sleep(ms: number): Promise<void> {
