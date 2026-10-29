@@ -1,10 +1,11 @@
 /**
  * Redeeming a Plex invite for a Plex account: the invite is consumed in one
  * serializable transaction (a Jellyfin code is refused before its use is
- * counted, SEC-29), the account is shared and auto-accepted, and the user row
- * and `InviteUsage` are recorded; a failure after the use was counted restores
- * it. The Plex provider's `authorize` runs it with the token it read from
- * plex.tv itself, so no client ever holds the token (SEC-11).
+ * counted, SEC-29), the user row and `InviteUsage` are recorded, and only then
+ * is the account shared and auto-accepted. A failed record restores the use
+ * and shares nothing; a failed share undoes the record, then restores the use.
+ * The Plex provider's `authorize` runs it with the token it read from plex.tv
+ * itself, so no client ever holds the token (SEC-11).
  *
  * @module lib/invites/plex-redemption
  */
@@ -14,14 +15,9 @@ import "server-only"
 import { fail, ok, toActionError, type ActionResult } from "@/lib/actions/result"
 import { acceptPlexInvite, getPlexUserInfo, inviteUserToPlexServer } from "@/lib/connections/plex"
 import { ServerType } from "@/lib/generated/prisma/client"
-import {
-  INVITE_EXEMPTION,
-  rollbackInviteUsage,
-  validateAndUseInvite,
-  withRetry,
-} from "@/lib/invites/redemption"
-import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
-import { isUniqueEmailConflict } from "@/lib/prisma-errors"
+import { rollbackInviteUsage, validateAndUseInvite, withRetry } from "@/lib/invites/redemption"
+import { recordInviteUse, undoInviteUse, type RecordedUse } from "@/lib/invites/redemption-record"
+import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -30,95 +26,6 @@ const logger = createLogger("INVITE")
 const PLEX_PROPAGATION_DELAY_MS = 2000
 
 const PLEX_REDEEM_FAILED = "We couldn't finish setting up your access. Please try again or ask the server owner."
-
-interface PlexUser {
-  id: string
-  username: string
-  email: string
-  thumb?: string | null
-}
-
-/**
- * Find or create the user for a Plex identity, matched by `plexUserId` only.
- *
- * Matching by email would let a row that claimed the address first (a
- * Jellyfin user can rename themselves to any address) absorb this Plex
- * identity. `email` is the address to store, or null when another row already
- * holds it: a new row is then created without one, and an existing row keeps
- * the email it has.
- */
-async function findOrCreateUser(
-  tx: PrismaTransactionClient,
-  plexUser: PlexUser,
-  email: string | null
-): Promise<{ id: string }> {
-  const user = await tx.user.findUnique({
-    where: { plexUserId: plexUser.id },
-  })
-
-  if (user) {
-    return tx.user.update({
-      where: { id: user.id },
-      data: {
-        ...(email === null ? {} : { email, emailVerified: new Date() }),
-        image: plexUser.thumb,
-        ...(user.isExempt ? {} : INVITE_EXEMPTION),
-      },
-    })
-  }
-
-  return tx.user.create({
-    data: {
-      name: plexUser.username,
-      email,
-      plexUserId: plexUser.id,
-      image: plexUser.thumb,
-      emailVerified: email === null ? null : new Date(),
-      primaryAuthService: "plex",
-      ...INVITE_EXEMPTION,
-    },
-  })
-}
-
-/**
- * Record invite usage and create/update user.
- *
- * If another row already holds the Plex email, the write is retried once
- * without it, so that row can neither absorb nor block the redeeming user. The
- * retry runs in a new transaction because PostgreSQL aborts a transaction once
- * a statement in it fails.
- */
-async function recordInviteUsage(inviteId: string, plexUser: PlexUser): Promise<void> {
-  const record = (email: string | null) =>
-    prisma.$transaction(async (tx) => {
-      const user = await findOrCreateUser(tx, plexUser, email)
-
-      await tx.inviteUsage.create({
-        data: {
-          inviteId,
-          userId: user.id,
-        },
-      })
-    })
-
-  try {
-    await record(plexUser.email)
-  } catch (error) {
-    if (!isUniqueEmailConflict(error)) {
-      throw error
-    }
-
-    const existingUser = await prisma.user.findUnique({
-      where: { email: plexUser.email },
-      select: { id: true },
-    })
-    logger.warn("invite.email_conflict", {
-      existingUserId: existingUser?.id ?? null,
-      plexUserId: plexUser.id,
-    })
-    await record(null)
-  }
-}
 
 /**
  * Wait for Plex to propagate changes
@@ -165,12 +72,27 @@ async function getActivePlexServer() {
 }
 
 /**
- * Redeem a Plex invite for the account behind `plexAuthToken`: invite it to
- * the server, accept the share on its behalf and record the use.
+ * Undo a recorded redemption whose share failed. The use is restored only once
+ * the record is gone; if the undo fails, the use stays counted and
+ * `undoInviteUse` audits the user id for an admin.
+ */
+async function undoRedemption(recorded: RecordedUse, plexUserEmail: string, reason: string): Promise<void> {
+  if (await undoInviteUse(recorded, reason)) {
+    await rollbackInviteUsage(recorded.inviteId, plexUserEmail, reason)
+  }
+}
+
+/**
+ * Redeem a Plex invite for the account behind `plexAuthToken`: record the use,
+ * invite the account to the server and accept the share on its behalf.
  *
  * - Retries the validate-and-use transaction on conflicts (P2034).
- * - Restores the invite's use if a Plex step or the record fails after it was
- *   counted, with audit entries for each failure.
+ * - Records the user row, its exemption and the `InviteUsage` before the
+ *   share, so a shared account always has its record. A failed record restores
+ *   the use and shares nothing; a failed share undoes the record and restores
+ *   the use. Each failure has an audit entry.
+ * - Keeps the redemption when the auto-accept fails: the share exists, and the
+ *   member can accept it in Plex.
  * - Is idempotent per account: a Plex account that already redeemed this code
  *   (a second sign-in attempt with the same PIN) succeeds without spending
  *   another use.
@@ -237,7 +159,7 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
       plexUserEmail: plexUser.email,
     })
 
-    // Build invite settings from stored invite data
+    // Build invite settings from stored invite data, before anything is recorded
     const inviteSettings = {
       librarySectionIds: invite.librarySectionIds
         ? (JSON.parse(invite.librarySectionIds) as number[])
@@ -245,54 +167,11 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
       allowDownloads: invite.allowDownloads,
     }
 
-    // Attempt Plex operations - if these fail, we need to rollback the invite usage
-    const plexInviteResult = await inviteUserToPlexServer(
-      {
-        url: plexServer.url,
-        token: plexServer.token,
-        machineIdentifier: plexServer.machineIdentifier,
-      },
-      plexUser.email,
-      inviteSettings
-    )
-
-    if (!plexInviteResult.success) {
-      // Plex invite failed - rollback the invite usage
-      const failureReason = plexInviteResult.error || "Failed to invite user to Plex server"
-
-      logAuditEvent(AuditEventType.INVITE_PLEX_FAILURE, "system", {
-        inviteId: invite.id,
-        plexUserEmail: plexUser.email,
-        stage: "invite_to_server",
-        error: failureReason,
-      })
-
-      await rollbackInviteUsage(invite.id, plexUser.email, failureReason)
-      return fail("UPSTREAM_UNAVAILABLE", PLEX_REDEEM_FAILED)
-    }
-
+    // Record the user row and the use before the share, so no share exists without its record
+    let recorded: RecordedUse
     try {
-      await acceptInviteWithPropagationDelay(plexAuthToken, plexInviteResult.inviteID)
-    } catch (acceptError) {
-      // Accept failed - rollback the invite usage
-      const failureReason = String(acceptError)
-
-      logAuditEvent(AuditEventType.INVITE_PLEX_FAILURE, "system", {
-        inviteId: invite.id,
-        plexUserEmail: plexUser.email,
-        stage: "accept_invite",
-        error: failureReason,
-      })
-
-      await rollbackInviteUsage(invite.id, plexUser.email, failureReason)
-      return fail("UPSTREAM_UNAVAILABLE", PLEX_REDEEM_FAILED)
-    }
-
-    try {
-      await recordInviteUsage(invite.id, plexUser)
+      recorded = await recordInviteUse(invite.id, plexUser)
     } catch (recordError) {
-      // Recording usage failed - rollback the invite usage
-      // Note: The user may already be on Plex, but we should still restore the invite
       const failureReason = String(recordError)
 
       logAuditEvent(AuditEventType.INVITE_PLEX_FAILURE, "system", {
@@ -304,6 +183,42 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
 
       await rollbackInviteUsage(invite.id, plexUser.email, failureReason)
       return fail("INTERNAL", PLEX_REDEEM_FAILED)
+    }
+
+    const plexInviteResult = await inviteUserToPlexServer(
+      {
+        url: plexServer.url,
+        token: plexServer.token,
+        machineIdentifier: plexServer.machineIdentifier,
+      },
+      plexUser.email,
+      inviteSettings
+    )
+
+    if (!plexInviteResult.success) {
+      const failureReason = plexInviteResult.error || "Failed to invite user to Plex server"
+
+      logAuditEvent(AuditEventType.INVITE_PLEX_FAILURE, "system", {
+        inviteId: invite.id,
+        plexUserEmail: plexUser.email,
+        stage: "invite_to_server",
+        error: failureReason,
+      })
+
+      await undoRedemption(recorded, plexUser.email, failureReason)
+      return fail("UPSTREAM_UNAVAILABLE", PLEX_REDEEM_FAILED)
+    }
+
+    try {
+      await acceptInviteWithPropagationDelay(plexAuthToken, plexInviteResult.inviteID)
+    } catch (acceptError) {
+      // The share exists and is recorded, so the redemption stands: the member can accept the share in Plex
+      logAuditEvent(AuditEventType.INVITE_PLEX_FAILURE, "system", {
+        inviteId: invite.id,
+        plexUserEmail: plexUser.email,
+        stage: "accept_invite",
+        error: String(acceptError),
+      })
     }
 
     return ok(null)
