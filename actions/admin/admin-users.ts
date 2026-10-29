@@ -137,9 +137,11 @@ export const setUserRole = adminAction({
  * user cannot sign in. It also ends their affiliate status (no wait to apply
  * again), and with `revokeInviter` revokes the status of the affiliate who
  * invited them, once the disable succeeded. A disable of an account that is
- * already disabled runs both again, so a retry finishes what a failed one
- * left; both are idempotent. Enabling clears `disabledAt` and does not bring
- * an affiliate status back. Refuses the caller (`SELF`) and the Plex server
+ * already disabled runs those two affiliate steps again (both idempotent), so
+ * a retry finishes what a failed one left; it does not end the sessions again,
+ * since the session check refuses a disabled account at its next recheck
+ * anyway. Enabling clears `disabledAt` and does not bring an affiliate status
+ * back. Refuses the caller (`SELF`) and the Plex server
  * owner (`OWNER`).
  *
  * `inviterRevoked` is `true` when the inviter's status was revoked, `false`
