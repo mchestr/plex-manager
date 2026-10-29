@@ -526,7 +526,7 @@ model Config {
   affiliateInvitesEnabled      Boolean   @default(false) // Members approved as affiliates can make Plex invites
   affiliateTiers               Json? // The affiliate tier table; null uses the defaults
   affiliateServerCap           Int?      @default(10) // Affiliate invites joined per rolling 30 days, server-wide
-  affiliateLibrarySectionIds   Json? // JSON array of Plex library section keys shared with invitees (null = all libraries)
+  affiliateLibrarySectionIds   Json? // JSON array of Plex library section keys every affiliate invite shares; null or [] = not set (never all libraries)
   affiliatePlexMachineId       String? // The Plex server affiliate invites share
   affiliateBlockKey            String? // HMAC key for AffiliateBlock hashes (encrypted at rest)
   encryptionCanary             String? // A known value under the primary key; boot checks it decrypts (P11.1)
@@ -740,7 +740,7 @@ model AffiliateApplication {
   @@index([userId, decidedAt])
 }
 
-/// A Plex account that may not become an affiliate. Kept until an admin unblocks it.
+/// A Plex account that affiliate invites refuse (blocked from the Remove dialog). Kept until an admin unblocks it.
 model AffiliateBlock {
   id         String   @id @default(cuid())
   plexIdHash String   @unique // HMAC-SHA256(Config.affiliateBlockKey, plexUserId), hex
