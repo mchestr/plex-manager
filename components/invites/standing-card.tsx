@@ -20,7 +20,10 @@ function copyFor(standing: Standing, f: Format): { title: string; description: s
   const hours = (value: number) => `${f.number(Math.floor(value))} h`
   switch (standing.state) {
     case "below_bar":
-      return { title: "Apply to send invites", description: `You have ${hours(standing.hours)}; you can apply at ${hours(standing.barHours)}.` }
+      return {
+        title: "Apply to send invites",
+        description: `You had ${hours(standing.hours)} at the last check; you can apply at more than ${hours(standing.barHours)}. Apply checks your watch time again.`,
+      }
     case "can_apply":
       return { title: "Apply to send invites", description: "An admin reads each application. You can add a note for them." }
     case "pending":
@@ -40,12 +43,16 @@ function copyFor(standing: Standing, f: Format): { title: string; description: s
   }
 }
 
-/** The member's standing (`data-state`), with the apply form when they can apply. */
+/**
+ * The member's standing (`data-state`), with the apply form when they can
+ * apply. Below the bar keeps the form too: the stored hours change only on a
+ * live check, and Apply is that check.
+ */
 export function StandingCard({ standing, hoursUnavailable, onHoursUnavailable }: StandingCardProps) {
   const f = useFormat()
   const { title, description } = copyFor(standing, f)
   const reason = standing.state === "refused" || standing.state === "revoked" ? standing.reason : null
-  const canApply = standing.state === "can_apply"
+  const canApply = standing.state === "can_apply" || standing.state === "below_bar"
   return (
     <Card data-testid="invites-standing" data-state={standing.state}>
       <CardHeader>

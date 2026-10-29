@@ -19,7 +19,15 @@ function allowanceLine({ allowance, free, nextBackAt }: AffiliatePanel, f: Forma
   return `${allowance} every 30 days, ${free} free now${next}`
 }
 
-function Affiliate({ panel, inviterName, onHoursUnavailable }: { panel: AffiliatePanel; inviterName: string | null; onHoursUnavailable: () => void }) {
+interface AffiliateProps {
+  panel: AffiliatePanel
+  inviterName: string | null
+  /** A paid affiliate: open invites still work, but no new ones. */
+  paused: boolean
+  onHoursUnavailable: () => void
+}
+
+function Affiliate({ panel, inviterName, paused, onHoursUnavailable }: AffiliateProps) {
   const f = useFormat()
   const { capReached } = panel
   return (
@@ -34,7 +42,7 @@ function Affiliate({ panel, inviterName, onHoursUnavailable }: { panel: Affiliat
               {allowanceLine(panel, f)}
             </p>
           </div>
-          <MakeInviteDialog inviterName={inviterName} disabled={panel.free === 0 || capReached !== null} onHoursUnavailable={onHoursUnavailable} />
+          <MakeInviteDialog inviterName={inviterName} disabled={paused || panel.free === 0 || capReached !== null} onHoursUnavailable={onHoursUnavailable} />
         </div>
         {capReached && (
           <Alert tone="info" data-testid="invites-cap-reached">
@@ -61,7 +69,14 @@ export function InvitesView({ data }: { data: InvitesPageData }) {
   return (
     <>
       <StandingCard standing={data.standing} hoursUnavailable={hoursUnavailable} onHoursUnavailable={onHoursUnavailable} />
-      {data.affiliate && <Affiliate panel={data.affiliate} inviterName={data.inviterName} onHoursUnavailable={onHoursUnavailable} />}
+      {data.affiliate && (
+        <Affiliate
+          panel={data.affiliate}
+          inviterName={data.inviterName}
+          paused={data.standing.state === "paused"}
+          onHoursUnavailable={onHoursUnavailable}
+        />
+      )}
     </>
   )
 }

@@ -104,8 +104,8 @@ async function affiliatePanel(userId: string, allowance: number, cap: number | n
   return {
     allowance,
     free: freePlaces(allowance, held.length),
-    nextBackAt: nextPlaceBack(held),
-    capReached: serverHeld && serverCapReached(cap, serverHeld.length) ? { backAt: nextPlaceBack(serverHeld) } : null,
+    nextBackAt: nextPlaceBack(held, allowance),
+    capReached: serverHeld && cap !== null && serverCapReached(cap, serverHeld.length) ? { backAt: nextPlaceBack(serverHeld, cap) } : null,
     open: open.map((invite) => ({ ...invite, expiresAt: invite.expiresAt ?? now })),
     joined: joined.map(({ id, joinedAt, joinedUser }) => ({
       id,

@@ -39,6 +39,12 @@ function AffiliateSettingsSummary({ saved, libraries, shareCount }: AffiliateSet
     <SettingsSummary data-testid="settings-affiliates-summary">
       <SettingsSummaryRow label="Affiliate invites" data-testid={row("enabled")}>
         {saved.enabled ? "On" : "Off"}
+        {saved.enabled && !saved.inEffect && (
+          <span className="block text-label text-muted-foreground" data-testid={row("not-in-effect")}>
+            Members can&apos;t use it: the active Plex server is not the one it was turned on for. Turn the switch off and save,
+            then check the libraries and turn it on again.
+          </span>
+        )}
       </SettingsSummaryRow>
       <SettingsSummaryRow label="Server cap" data-testid={row("cap")}>
         {capText(saved.cap)}

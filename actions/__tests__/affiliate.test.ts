@@ -85,6 +85,18 @@ describe("applyForAffiliate", () => {
     expect(prismaMock.affiliateApplication.create).not.toHaveBeenCalled()
   })
 
+  it("refreshes the page after an under-the-bar refusal, so it shows the hours the check stored", async () => {
+    jest.mocked(checkAffiliateEligibility).mockResolvedValue({ ok: false, code: "UNDER_BAR", message: "admin copy" })
+    await applyForAffiliate({})
+    expect(revalidatePath).toHaveBeenCalledWith("/invites")
+  })
+
+  it("does not refresh the page after a refusal that stored no hours", async () => {
+    jest.mocked(checkAffiliateEligibility).mockResolvedValue({ ok: false, code: "HOURS_UNAVAILABLE", message: "admin copy" })
+    await applyForAffiliate({})
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
   it("reads a parallel apply's unique conflict as CONFLICT", async () => {
     prismaMock.affiliateApplication.create.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError("unique", { code: "P2002", clientVersion: "7", meta: { target: ["openUserId"] } })

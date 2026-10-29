@@ -91,12 +91,12 @@ async function makeInTransaction(tx: PrismaTransactionClient, userId: string, ho
   const config = await tx.config.findUnique({ where: { id: "config" }, select: { affiliateTiers: true, affiliateServerCap: true } })
   const allowance = affiliateAllowance(hours, application.inviteOverride, affiliateTiersFromConfig(config?.affiliateTiers))
   const held = await readHeldInvites(tx, now, userId)
-  if (freePlaces(allowance.invites, held.length) === 0) return refuse({ code: "NO_PLACES", backAt: nextPlaceBack(held) })
+  if (freePlaces(allowance.invites, held.length) === 0) return refuse({ code: "NO_PLACES", backAt: nextPlaceBack(held, allowance.invites) })
 
   const cap = config?.affiliateServerCap ?? null
   if (cap !== null) {
     const serverHeld = await readHeldInvites(tx, now)
-    if (serverCapReached(cap, serverHeld.length)) return refuse({ code: "CAP", backAt: nextPlaceBack(serverHeld) })
+    if (serverCapReached(cap, serverHeld.length)) return refuse({ code: "CAP", backAt: nextPlaceBack(serverHeld, cap) })
   }
 
   const expiresAt = new Date(now.getTime() + AFFILIATE_INVITE_LIFE_MS)
@@ -122,9 +122,10 @@ async function makeInTransaction(tx: PrismaTransactionClient, userId: string, ho
  * use first) or has ended.
  */
 export async function cancelOwnAffiliateInvite(userId: string, inviteId: string): Promise<boolean> {
+  const now = new Date()
   const { count } = await prisma.invite.updateMany({
-    where: { id: inviteId, affiliateUserId: userId, kind: "AFFILIATE", useCount: 0, joinedAt: null, cancelledAt: null },
-    data: { cancelledAt: new Date(), label: null },
+    where: { id: inviteId, affiliateUserId: userId, kind: "AFFILIATE", useCount: 0, joinedAt: null, cancelledAt: null, expiresAt: { gt: now } },
+    data: { cancelledAt: now, label: null },
   })
   return count === 1
 }

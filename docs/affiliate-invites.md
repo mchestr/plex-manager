@@ -17,11 +17,19 @@ A member can apply when all of these are true:
 - Their account is not disabled.
 - Their total watch hours in Tautulli are more than the hours of the first
   tier.
-- They have no pending application.
+- They are not an affiliate already, and they have no pending application.
 - No admin refused or revoked them in the last 30 days.
 
+The Invites page shows the watch hours from the last check. **Apply** checks
+them again in Tautulli, so a member below the first tier can apply again when
+they have more hours.
+
 Before you approve an application, the app does these checks again with live
-data. If a check fails, the app tells you why and does not approve.
+data. If a check fails, the app tells you why and does not approve. One check
+is different: when the member now pays for a subscription, the app approves
+them as a paused affiliate (see [Paid affiliates](#paid-affiliates)).
+
+You can approve and refuse applications while the switch is off.
 
 ## Tiers
 
@@ -59,6 +67,8 @@ their places.
 - Empty: no cap.
 - 0: no new affiliate invites.
 
+Your own invites from **Admin > Invites** do not use places.
+
 The Settings tab also shows how many users the Plex server shares with now.
 
 ## The invites
@@ -82,6 +92,13 @@ Only a new Plex account can join. The app refuses:
 
 A person who joins does not pay. The app makes them exempt, with the note
 "Joined by member invite".
+
+## Paid affiliates
+
+An affiliate who starts a paid subscription (`ACTIVE` or `PAST_DUE`) is paused.
+They stay an affiliate, and their open invites still work, but they cannot make
+new invites. When the subscription ends and they still have access, they can
+make invites again.
 
 ## Ending an affiliate
 

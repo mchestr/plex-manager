@@ -46,7 +46,7 @@ describe('InvitesPage', () => {
     render(await InvitesPage())
     expect(screen.getByRole('heading', { level: 1, name: 'Invites' })).toBeInTheDocument()
     expect(screen.getByTestId('invites-standing')).toHaveAttribute('data-state', 'below_bar')
-    expect(screen.getByTestId('invites-standing')).toHaveTextContent('You have 23 h; you can apply at 50 h.')
+    expect(screen.getByTestId('invites-standing')).toHaveTextContent('You had 23 h at the last check; you can apply at more than 50 h.')
   })
 
   it('is a 404 while the switch is off', async () => {
