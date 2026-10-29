@@ -18,19 +18,35 @@ describe("heldInvitesWhere", () => {
 })
 
 describe("nextPlaceBack", () => {
+  const joined = (iso: string) => ({ joinedAt: new Date(iso), expiresAt: null })
+  const open = { joinedAt: null, expiresAt: new Date("2026-10-30T12:00:00Z") }
+
   it("is null when nothing is held", () => {
-    expect(nextPlaceBack([])).toBeNull()
+    expect(nextPlaceBack([], 3)).toBeNull()
   })
 
-  it("gives a join's place back 30 days after the join, and an open invite's when it expires", () => {
-    const joinedAt = new Date("2026-10-10T08:00:00Z")
-    const expiresAt = new Date("2026-10-30T12:00:00Z")
-    expect(nextPlaceBack([{ joinedAt, expiresAt: new Date("2026-10-11T08:00:00Z") }])).toEqual(new Date("2026-11-09T08:00:00Z"))
-    expect(nextPlaceBack([{ joinedAt, expiresAt: null }, { joinedAt: null, expiresAt }])).toEqual(expiresAt)
+  it("gives a join's place back 30 days after the join", () => {
+    expect(nextPlaceBack([joined("2026-10-10T08:00:00Z")], 1)).toEqual(new Date("2026-11-09T08:00:00Z"))
   })
 
-  it("skips an open invite without an expiry", () => {
-    expect(nextPlaceBack([{ joinedAt: null, expiresAt: null }])).toBeNull()
+  it("gives no date for open invites, which hold their place for 30 more days if someone joins", () => {
+    expect(nextPlaceBack([open], 1)).toBeNull()
+    expect(nextPlaceBack([open, joined("2026-10-10T08:00:00Z")], 2)).toEqual(new Date("2026-11-09T08:00:00Z"))
+  })
+
+  it("takes the join that brings the held count under a lowered limit", () => {
+    const held = [joined("2026-10-01T00:00:00Z"), joined("2026-10-05T00:00:00Z"), joined("2026-10-09T00:00:00Z")]
+    // 3 held under a limit of 1: all three must come back before one place is free
+    expect(nextPlaceBack(held, 1)).toEqual(new Date("2026-11-08T00:00:00Z"))
+    expect(nextPlaceBack(held, 3)).toEqual(new Date("2026-10-31T00:00:00Z"))
+  })
+
+  it("is null when the joins alone cannot free a place", () => {
+    expect(nextPlaceBack([open, open, joined("2026-10-10T08:00:00Z")], 1)).toBeNull()
+  })
+
+  it("is null under a limit of 0, where no place ever comes back", () => {
+    expect(nextPlaceBack([joined("2026-10-10T08:00:00Z")], 0)).toBeNull()
   })
 })
 

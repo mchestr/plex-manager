@@ -26,7 +26,7 @@ jest.mock('@/components/admin/affiliates/applications-table', () => ({ Applicati
 jest.mock('@/components/admin/affiliates/affiliates-table', () => ({ AffiliatesTable: () => <p>affiliates panel</p> }))
 jest.mock('@/components/admin/affiliates/invite-tree', () => ({ InviteTree: () => <p>tree panel</p> }))
 jest.mock('@/lib/data/affiliate-settings', () => ({
-  getAffiliateSettingsView: jest.fn(async () => ({ enabled: false, tiers: [], cap: 10, libraryIds: [] })),
+  getAffiliateSettingsView: jest.fn(async () => ({ enabled: false, inEffect: false, tiers: [], cap: 10, libraryIds: [] })),
   getPlexShareCount: jest.fn(async () => 4),
 }))
 jest.mock('@/lib/admin/invites/libraries', () => ({ plexLibraryListing: jest.fn(async () => ({ ok: true, libraries: [] })) }))

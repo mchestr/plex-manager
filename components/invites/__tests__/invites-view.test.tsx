@@ -59,7 +59,6 @@ const card = () => screen.getByTestId('invites-standing')
 
 describe('standing card', () => {
   it.each([
-    [{ state: 'below_bar', hours: 23.7, barHours: 50 } as Standing, 'You have 23 h; you can apply at 50 h.'],
     [{ state: 'pending', appliedAt: new Date('2026-10-20T12:00:00Z') } as Standing, 'You applied on October 20, 2026.'],
     [{ state: 'approved' } as Standing, 'Each invite is for one person and works for 48 hours.'],
     [{ state: 'paused' } as Standing, 'You can make invites again when your subscription ends.'],
@@ -70,6 +69,13 @@ describe('standing card', () => {
     expect(card()).toHaveAttribute('data-state', standing.state)
     expect(card()).toHaveTextContent(text)
     expect(screen.queryByTestId('invites-apply-submit')).not.toBeInTheDocument()
+  })
+
+  it('keeps Apply below the bar, since Apply checks the watch time again', () => {
+    view({ state: 'below_bar', hours: 23.7, barHours: 50 })
+    expect(card()).toHaveAttribute('data-state', 'below_bar')
+    expect(card()).toHaveTextContent('You had 23 h at the last check; you can apply at more than 50 h. Apply checks your watch time again.')
+    expect(screen.getByTestId('invites-apply-submit')).toBeInTheDocument()
   })
 
   it('shows a refusal with its reason', () => {
@@ -117,6 +123,12 @@ describe('affiliate panel', () => {
     view({ state: 'approved' }, { ...PANEL, capReached: { backAt: new Date('2026-11-02T12:00:00Z') } })
     expect(screen.getByTestId('invites-allowance')).toHaveTextContent('3 every 30 days, 1 free now, next back on Nov 12')
     expect(screen.getByTestId('invites-cap-reached')).toHaveTextContent('The server has no free invites now. One comes back on Nov 2.')
+    expect(screen.getByTestId('invites-make-open')).toBeDisabled()
+  })
+
+  it('stops Make for a paused affiliate, who still has free places', () => {
+    view({ state: 'paused' }, PANEL)
+    expect(screen.getByTestId('invites-allowance')).toHaveTextContent('1 free now')
     expect(screen.getByTestId('invites-make-open')).toBeDisabled()
   })
 

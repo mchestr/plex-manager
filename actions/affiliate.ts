@@ -49,6 +49,8 @@ export const applyForAffiliate = memberAction({
   handler: async ({ note }, { userId }): Promise<ActionResult<null, AffiliateCode>> => {
     const eligible = await checkAffiliateEligibility(userId, { approving: false })
     if (!eligible.ok) {
+      // The live check stored the member's hours, so the page shows the new figure
+      if (eligible.code === "UNDER_BAR") refresh()
       const [code, error] = APPLY_REFUSALS[eligible.code]
       return { success: false, code, error }
     }

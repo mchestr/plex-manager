@@ -42,14 +42,18 @@ export interface HeldInvite {
   expiresAt: Date | null
 }
 
-/** The earliest date one of the held invites gives its place back, or null when none is held. */
-export function nextPlaceBack(held: readonly HeldInvite[]): Date | null {
-  let next: number | null = null
-  for (const invite of held) {
-    const back = invite.joinedAt ? invite.joinedAt.getTime() + WINDOW_MS : invite.expiresAt?.getTime()
-    if (back !== undefined && (next === null || back < next)) next = back
-  }
-  return next === null ? null : new Date(next)
+/**
+ * The date one more place is sure to be free under `limit` (an allowance or
+ * the server cap): the join, 30 days on, that brings the held count back
+ * under it. Open invites give no date: one that someone joins with holds its
+ * place for 30 more days. Null when `limit` is 0 or the joins alone cannot
+ * bring the count under it.
+ */
+export function nextPlaceBack(held: readonly HeldInvite[], limit: number): Date | null {
+  if (limit <= 0) return null
+  const needed = Math.max(1, held.length - limit + 1)
+  const backs = held.flatMap((invite) => (invite.joinedAt ? [invite.joinedAt.getTime() + WINDOW_MS] : [])).sort((a, b) => a - b)
+  return backs.length >= needed ? new Date(backs[needed - 1]!) : null
 }
 
 /** Free places: the allowance less the held invites, never below 0. */

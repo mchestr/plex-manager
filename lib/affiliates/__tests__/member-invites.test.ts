@@ -8,7 +8,7 @@
 import { mockReset } from "jest-mock-extended"
 
 import { buildAffiliateApplication, buildConfig, buildInvite, buildPlexServer, buildUser } from "@/__tests__/helpers/factories"
-import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { asAppTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { cancelOwnAffiliateInvite, makeAffiliateInvite } from "@/lib/affiliates/member-invites"
 import { readAffiliateSettings } from "@/lib/affiliates/settings"
 import { readWatchHours } from "@/lib/affiliates/watch-hours"
@@ -17,7 +17,6 @@ import { getActiveService } from "@/lib/data/active-service"
 import { inSerializable } from "@/lib/db/serializable"
 import { Prisma, type Subscription, type User } from "@/lib/generated/prisma/client"
 import { generateInviteCode } from "@/lib/invites/code"
-import type { PrismaTransactionClient } from "@/lib/prisma"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/affiliates/settings", () => ({ readAffiliateSettings: jest.fn() }))
@@ -43,7 +42,7 @@ beforeEach(() => {
   mockReset(prismaMock)
   jest.clearAllMocks()
   jest.useFakeTimers({ now: NOW, doNotFake: ["nextTick", "setImmediate"] })
-  jest.mocked(inSerializable).mockImplementation((fn) => fn(prismaMock as unknown as PrismaTransactionClient))
+  jest.mocked(inSerializable).mockImplementation((fn) => fn(asAppTransactionClient(prismaMock)))
   jest.mocked(readWatchHours).mockResolvedValue({ ok: true, allTime: 120, last30Days: 10 })
   jest.mocked(getActiveService).mockResolvedValue(buildPlexServer())
   jest.mocked(checkUserServerAccess).mockResolvedValue({ status: "granted" })
@@ -140,10 +139,10 @@ describe("makeAffiliateInvite", () => {
   })
 
   it("counts every affiliate's held invites against the cap", async () => {
-    const expiresAt = new Date(NOW.getTime() + 5 * HOUR)
+    const joinedAt = new Date(NOW.getTime() - 5 * HOUR)
     prismaMock.config.findUnique.mockResolvedValue(buildConfig({ affiliateTiers: null, affiliateServerCap: 1 }))
-    prismaMock.invite.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([buildInvite({ joinedAt: null, expiresAt })])
-    await expect(make()).resolves.toEqual({ ok: false, refusal: { code: "CAP", backAt: expiresAt } })
+    prismaMock.invite.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([buildInvite({ joinedAt, expiresAt: null })])
+    await expect(make()).resolves.toEqual({ ok: false, refusal: { code: "CAP", backAt: new Date(joinedAt.getTime() + 30 * 24 * HOUR) } })
     expect(prismaMock.invite.findMany.mock.calls[1]?.[0]?.where).not.toHaveProperty("affiliateUserId")
   })
 
@@ -188,7 +187,7 @@ describe("cancelOwnAffiliateInvite", () => {
     prismaMock.invite.updateMany.mockResolvedValue({ count: 1 })
     await expect(cancelOwnAffiliateInvite("user-1", "inv-1")).resolves.toBe(true)
     expect(prismaMock.invite.updateMany).toHaveBeenCalledWith({
-      where: { id: "inv-1", affiliateUserId: "user-1", kind: "AFFILIATE", useCount: 0, joinedAt: null, cancelledAt: null },
+      where: { id: "inv-1", affiliateUserId: "user-1", kind: "AFFILIATE", useCount: 0, joinedAt: null, cancelledAt: null, expiresAt: { gt: NOW } },
       data: { cancelledAt: NOW, label: null },
     })
   })

@@ -38,7 +38,24 @@ describe("getAffiliateSettingsView", () => {
     prismaMock.config.findUnique.mockResolvedValue(
       buildConfig({ affiliateInvitesEnabled: true, affiliateTiers: [{ overHours: 10, invites: 2 }], affiliateServerCap: null, affiliateLibrarySectionIds: [3, 4] })
     )
-    await expect(getAffiliateSettingsView()).resolves.toEqual({ enabled: true, tiers: [{ overHours: 10, invites: 2 }], cap: null, libraryIds: [3, 4] })
+    await expect(getAffiliateSettingsView()).resolves.toEqual({
+      enabled: true,
+      inEffect: false,
+      tiers: [{ overHours: 10, invites: 2 }],
+      cap: null,
+      libraryIds: [3, 4],
+    })
+  })
+
+  it("is in effect only while the active Plex server is the one the switch was turned on for", async () => {
+    prismaMock.config.findUnique.mockResolvedValue(
+      buildConfig({ affiliateInvitesEnabled: true, affiliateLibrarySectionIds: [3], affiliatePlexMachineId: "m1" })
+    )
+    prismaMock.plexServer.findFirst.mockResolvedValue(buildPlexServer({ machineIdentifier: "m1" }))
+    await expect(getAffiliateSettingsView()).resolves.toMatchObject({ enabled: true, inEffect: true })
+
+    prismaMock.plexServer.findFirst.mockResolvedValue(buildPlexServer({ machineIdentifier: "m2" }))
+    await expect(getAffiliateSettingsView()).resolves.toMatchObject({ enabled: true, inEffect: false })
   })
 
   it("falls back to the defaults without a Config row or with a bad library list", async () => {

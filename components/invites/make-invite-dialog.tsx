@@ -11,6 +11,7 @@ import { FormField } from "@/components/ui/form-field"
 import { Icon } from "@/components/ui/icon"
 import { Input } from "@/components/ui/input"
 import { useCopyInviteLink } from "@/hooks/use-copy-invite-link"
+import { publicInviteUrl } from "@/lib/admin/routes"
 import { affiliateInviteHeadline } from "@/lib/affiliates/copy"
 import { useServerName } from "@/lib/brand-context"
 import { AFFILIATE_LABEL_MAX } from "@/lib/validations/affiliates"
@@ -72,7 +73,7 @@ export function MakeInviteDialog({ inviterName, disabled, onHoursUnavailable }: 
           {madeCode ? (
             <div className="flex flex-col gap-6">
               <p className="rounded-lg border bg-muted p-4 font-mono text-ui break-all text-foreground" data-testid="invites-make-link">
-                /invite/{madeCode}
+                {publicInviteUrl(madeCode, window.location.origin)}
               </p>
               <DialogFooter>
                 <DialogClose render={<Button type="button" variant="ghost" data-testid="invites-make-done" />}>Done</DialogClose>

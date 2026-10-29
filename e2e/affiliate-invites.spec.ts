@@ -174,8 +174,11 @@ test.describe('Member invites (affiliates)', () => {
       const page = await memberPage(browser, baseURL!, row.id);
       await page.goto('/invites');
       await expect(page.getByTestId('invites-standing')).toHaveAttribute('data-state', state, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-      if (state === 'below_bar') await expect(page.getByTestId('invites-standing')).toContainText('You have 23 h; you can apply at 50 h.');
-      if (state === 'can_apply') await expect(page.getByTestId('invites-apply-submit')).toBeVisible();
+      if (state === 'below_bar') {
+        await expect(page.getByTestId('invites-standing')).toContainText('You had 23 h at the last check; you can apply at more than 50 h.');
+      }
+      // Below the bar keeps Apply: the stored hours change only when Apply checks them again
+      if (state === 'below_bar' || state === 'can_apply') await expect(page.getByTestId('invites-apply-submit')).toBeVisible();
       if (state === 'refused') await expect(page.getByTestId('invites-standing-reason')).toContainText('Your account is too new.');
       await page.context().close();
     });
@@ -194,10 +197,12 @@ test.describe('Member invites (affiliates)', () => {
 
     const link = page.getByTestId('invites-make-link');
     await expect(link).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    const path = (await link.textContent())?.trim() ?? '';
+    const url = (await link.textContent())?.trim() ?? '';
+    const path = new URL(url).pathname;
+    expect(url).toBe(`${new URL(baseURL!).origin}${path}`);
     expect(path).toMatch(/^\/invite\/[A-Z2-9]{8}$/);
     await page.getByTestId('invites-make-copy').click();
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${new URL(baseURL!).origin}${path}`);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
     await page.getByTestId('invites-make-done').click();
 
     await expect(page.getByTestId('invites-allowance')).toContainText('0 free now');

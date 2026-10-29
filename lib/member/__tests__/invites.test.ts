@@ -102,12 +102,21 @@ describe("getInvitesPageData affiliate panel", () => {
     await expect(getInvitesPageData("user-1", NOW)).resolves.toMatchObject({ standing: { state: "paused" }, affiliate: { allowance: 1 } })
   })
 
-  it("reports the cap with when a place comes back", async () => {
-    const expiresAt = new Date(NOW.getTime() + 10 * 60 * 60 * 1000)
+  it("reports the cap with when a join's place comes back", async () => {
+    const joinedAt = new Date(NOW.getTime() - 10 * 24 * 60 * 60 * 1000)
     prismaMock.config.findUnique.mockResolvedValue(buildConfig({ affiliateTiers: null, affiliateServerCap: 1 }))
-    invites({ serverHeld: [buildInvite({ joinedAt: null, expiresAt })] })
+    invites({ serverHeld: [buildInvite({ joinedAt, expiresAt: null })] })
 
-    await expect(getInvitesPageData("user-1", NOW)).resolves.toMatchObject({ affiliate: { capReached: { backAt: expiresAt } } })
+    await expect(getInvitesPageData("user-1", NOW)).resolves.toMatchObject({
+      affiliate: { capReached: { backAt: new Date(joinedAt.getTime() + 30 * 24 * 60 * 60 * 1000) } },
+    })
+  })
+
+  it("gives no cap date while only open invites hold the places", async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ affiliateTiers: null, affiliateServerCap: 1 }))
+    invites({ serverHeld: [buildInvite({ joinedAt: null, expiresAt: new Date(NOW.getTime() + 60 * 60 * 1000) })] })
+
+    await expect(getInvitesPageData("user-1", NOW)).resolves.toMatchObject({ affiliate: { capReached: { backAt: null } } })
   })
 
   it("lists the open invites and the joins, never saying why someone left", async () => {

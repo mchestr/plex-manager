@@ -8,6 +8,7 @@
 import "server-only"
 
 import { assertAdmin } from "@/lib/admin"
+import { readAffiliateSettings } from "@/lib/affiliates/settings"
 import { affiliateTiersFromConfig, type AffiliateTier } from "@/lib/affiliates/tiers"
 import { getPlexUsers } from "@/lib/connections/plex"
 import { withMachineIdentifier } from "@/lib/connections/plex-machine-id"
@@ -21,6 +22,8 @@ const logger = createLogger("affiliate-settings")
 
 export interface AffiliateSettingsView {
   enabled: boolean
+  /** Whether members have the switch now: false while it is on but the active Plex server is not the one it was turned on for. */
+  inEffect: boolean
   tiers: readonly AffiliateTier[]
   /** Places for all affiliates: joins in the last 30 days and open invites; null is no cap. */
   cap: number | null
@@ -36,6 +39,7 @@ export async function getAffiliateSettingsView(): Promise<AffiliateSettingsView>
   const libraries = plexLibrarySectionIdsSchema.safeParse(config?.affiliateLibrarySectionIds)
   return {
     enabled: config?.affiliateInvitesEnabled ?? false,
+    inEffect: (await readAffiliateSettings()).on,
     tiers: affiliateTiersFromConfig(config?.affiliateTiers),
     // No row yet reads as the schema default
     cap: config ? config.affiliateServerCap : 10,

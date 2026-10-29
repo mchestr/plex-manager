@@ -32,8 +32,8 @@ const DEFAULTS = [
   { overHours: 200, invites: 2 },
   { overHours: 500, invites: 3 },
 ]
-const OFF: AffiliateSettingsView = { enabled: false, tiers: DEFAULTS, cap: 10, libraryIds: [] }
-const ON: AffiliateSettingsView = { enabled: true, tiers: DEFAULTS, cap: null, libraryIds: [2] }
+const OFF: AffiliateSettingsView = { enabled: false, inEffect: false, tiers: DEFAULTS, cap: 10, libraryIds: [] }
+const ON: AffiliateSettingsView = { enabled: true, inEffect: true, tiers: DEFAULTS, cap: null, libraryIds: [2] }
 
 /** A promise React reads at once, as it does one a Server Component streamed in that already settled. */
 function settled<T>(value: T): Promise<T> {
@@ -70,6 +70,17 @@ describe("AffiliateSettingsSection", () => {
       expect(summary("tier-3")).toHaveTextContent("More than 500 h: 3 invites per 30 days")
       expect(summary("libraries")).toHaveTextContent("TV Shows")
       expect(screen.queryByRole("switch")).not.toBeInTheDocument()
+    })
+
+    it("says when the switch is on but members can't use it after a Plex server change", async () => {
+      await renderSection({ ...ON, inEffect: false })
+      expect(summary("enabled")).toHaveTextContent("On")
+      expect(summary("not-in-effect")).toHaveTextContent("Members can't use it: the active Plex server is not the one it was turned on for.")
+    })
+
+    it("has no note while the switch is in effect", async () => {
+      await renderSection(ON)
+      expect(screen.queryByTestId("settings-affiliates-summary-not-in-effect")).not.toBeInTheDocument()
     })
 
     it("says when Plex can't count the shares, and when no library is set", async () => {
