@@ -101,6 +101,18 @@ describe("makeAffiliateInvite", () => {
     await expect(make()).resolves.toMatchObject({ refusal: { code: "NO_ACCESS" } })
   })
 
+  it("refuses an account whose Plex id is gone since the hours were read", async () => {
+    prismaMock.user.findUnique.mockResolvedValue(affiliate(undefined, { plexUserId: null }))
+    await expect(make()).resolves.toEqual({ ok: false, refusal: { code: "NO_ACCESS" } })
+    expect(checkUserServerAccess).not.toHaveBeenCalled()
+  })
+
+  it("applies no cap without a config row", async () => {
+    prismaMock.config.findUnique.mockResolvedValue(null)
+    await expect(make()).resolves.toMatchObject({ ok: true })
+    expect(prismaMock.invite.findMany).toHaveBeenCalledTimes(1)
+  })
+
   it("re-checks the switch, the approval, the account and the subscription inside the transaction", async () => {
     jest.mocked(readAffiliateSettings).mockResolvedValueOnce({ on: false, librarySectionIds: [] })
     await expect(make()).resolves.toMatchObject({ refusal: { code: "SWITCH_OFF" } })
@@ -133,6 +145,12 @@ describe("makeAffiliateInvite", () => {
     prismaMock.invite.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([buildInvite({ joinedAt: null, expiresAt })])
     await expect(make()).resolves.toEqual({ ok: false, refusal: { code: "CAP", backAt: expiresAt } })
     expect(prismaMock.invite.findMany.mock.calls[1]?.[0]?.where).not.toHaveProperty("affiliateUserId")
+  })
+
+  it("makes the invite while the server is under its cap", async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ affiliateTiers: null, affiliateServerCap: 5 }))
+    prismaMock.invite.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([buildInvite({ joinedAt: NOW })])
+    await expect(make()).resolves.toMatchObject({ ok: true })
   })
 
   it("makes no affiliate invite under a cap of 0", async () => {
