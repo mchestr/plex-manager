@@ -1,3 +1,0 @@
-### Added
-
-- **Affiliate invites:** members who watch a lot can apply to be affiliates on their Invites page. An admin approves them in **Admin > Affiliates**, and then they can make single-use Plex invites that expire after 48 hours. Their watch hours set how many invites they get in 30 days, and a server cap limits the affiliate invites for the whole server. The person who joins gets the libraries that the admin selected, with downloads off, and does not pay. The feature is off until an admin turns it on in **Admin > Affiliates > Settings**, which needs a library list, Tautulli and a Plex server. Turning it off, or changing the Plex server, cancels all open affiliate invites. See `docs/affiliate-invites.md`.
