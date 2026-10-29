@@ -139,9 +139,9 @@ export const setUserRole = adminAction({
  * invited them, once the disable succeeded. A disable of an account that is
  * already disabled runs all three again, so a retry finishes what a failed
  * one left: the sessions end unless a `SESSIONS_REVOKED` event already
- * followed this disable, and the other two are idempotent. Enabling clears `disabledAt` and does not bring
- * an affiliate status back. Refuses the caller (`SELF`) and the Plex server
- * owner (`OWNER`).
+ * followed this disable, and the other two are idempotent. Enabling clears
+ * `disabledAt` and does not bring an affiliate status back. Refuses the caller
+ * (`SELF`) and the Plex server owner (`OWNER`).
  *
  * `inviterRevoked` is `true` when the inviter's status was revoked, `false`
  * when that revoke failed (the disable stands), and `null` otherwise.

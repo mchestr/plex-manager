@@ -110,9 +110,9 @@ async function openInvitesByAffiliate(userIds: string[], now: Date): Promise<Map
     where: { kind: "AFFILIATE", affiliateUserId: { in: userIds }, joinedAt: null, cancelledAt: null, expiresAt: { gt: now } },
     select: { id: true, code: true, label: true, expiresAt: true, cancelledAt: true, joinedAt: true, affiliateUserId: true },
   })
-  const byAffiliate = new Map<string, OpenInvite[]>()
-  for (const userId of userIds) byAffiliate.set(userId, openInvites(rows.filter((row) => row.affiliateUserId === userId), now))
-  return byAffiliate
+  const byAffiliate = new Map<string, typeof rows>(userIds.map((userId) => [userId, []]))
+  for (const row of rows) if (row.affiliateUserId) byAffiliate.get(row.affiliateUserId)?.push(row)
+  return new Map([...byAffiliate].map(([userId, invites]) => [userId, openInvites(invites, now)]))
 }
 
 /** Approved affiliates, by name. */
