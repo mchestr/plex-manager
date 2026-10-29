@@ -16,7 +16,7 @@
  * only rows it created, keyed by its own run prefix.
  */
 
-import { randomUUID } from 'node:crypto'
+import { createHmac, randomUUID } from 'node:crypto'
 import { PrismaPg } from '@prisma/adapter-pg'
 
 import { PrismaClient } from '@/lib/generated/prisma/client'
@@ -121,10 +121,13 @@ async function seedMember(db: PrismaClient) {
 
 describePg('eraseMember on PostgreSQL', (databaseUrl) => {
   let ids: Awaited<ReturnType<typeof seedMember>>
+  let createdConfig = false
 
   beforeAll(async () => {
     mockDb = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) })
     ids = await seedMember(mockDb)
+    createdConfig = !(await mockDb.config.findUnique({ where: { id: 'config' }, select: { id: true } }))
+    if (createdConfig) await mockDb.config.create({ data: { id: 'config' } })
     jest.mocked(revokeServiceAccess).mockResolvedValue({ success: true, plex: 'removed' })
     jest.mocked(cancelStripeSubscription).mockResolvedValue({ success: true, status: 'canceled' })
   })
@@ -134,6 +137,8 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
     await mockDb.invite.deleteMany({ where: { code: { startsWith: RUN } } })
     await mockDb.user.deleteMany({ where: { id: { in: [ADMIN, MEMBER] } } })
     await mockDb.auditLog.deleteMany({ where: { OR: [{ actorUserId: { in: [ADMIN, MEMBER] } }, { targetUserId: MEMBER }] } })
+    await mockDb.affiliateBlock.deleteMany({ where: { createdBy: ADMIN } })
+    if (createdConfig) await mockDb.config.delete({ where: { id: 'config' } })
     await mockDb.$disconnect()
   })
 
@@ -150,7 +155,7 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
   })
 
   it('leaves no row that references the member, and audits ids only', async () => {
-    const result = await eraseMember(MEMBER, { actorId: ADMIN, dryRun: false })
+    const result = await eraseMember(MEMBER, { actorId: ADMIN, dryRun: false, block: true })
     expect(result).toMatchObject({ success: true, data: { outcome: { stripe: 'canceled' } } })
 
     const byUser = { where: { userId: MEMBER } }
@@ -199,6 +204,13 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
     expect(details).toContain(`${RUN}-cus`)
     expect(details).not.toContain(EMAIL)
     expect(details).not.toContain(NAME)
+  })
+
+  it('blocked their Plex account by its keyed hash, in the same transaction', async () => {
+    const { affiliateBlockKey } = await mockDb.config.findUniqueOrThrow({ where: { id: 'config' }, select: { affiliateBlockKey: true } })
+    const hash = createHmac('sha256', affiliateBlockKey!).update(`${RUN}-plex`).digest('hex')
+    await expect(mockDb.affiliateBlock.findUnique({ where: { plexIdHash: hash } })).resolves.toMatchObject({ createdBy: ADMIN })
+    await expect(mockDb.auditLog.count({ where: { type: 'AFFILIATE_ACCOUNT_BLOCKED', actorUserId: ADMIN } })).resolves.toBe(1)
   })
 
   it('reports NOT_FOUND on a rerun once the member is gone', async () => {

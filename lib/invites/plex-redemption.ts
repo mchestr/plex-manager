@@ -20,7 +20,7 @@ import { fail, ok, toActionError, type ActionFailure, type ActionResult } from "
 import { acceptPlexInvite, getPlexUserInfo, inviteUserToPlexServer } from "@/lib/connections/plex"
 import { InviteKind, ServerType } from "@/lib/generated/prisma/client"
 import { parsePlexLibrarySectionIds } from "@/lib/invites/plex-library-ids"
-import { rollbackInviteUsage, validateAndUseInvite, withRetry } from "@/lib/invites/redemption"
+import { rollbackInviteUsage, validateAndUseInvite } from "@/lib/invites/redemption"
 import { recordInviteUse, undoInviteUse, type RecordedUse } from "@/lib/invites/redemption-record"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
@@ -149,9 +149,10 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
     }
     const plexServer = serverResult.data
 
-    // An affiliate invite screens the account before its use is counted
+    // An affiliate invite screens the account
     const target = await prisma.invite.findUnique({ where: { code }, select: { id: true, kind: true, affiliateUserId: true } })
     if (target?.kind === InviteKind.AFFILIATE) {
+      // Before the use is counted on purpose; the transaction re-checks the invite's own state
       const refused = await screenAffiliateRedeemer(plexUser, plexServer)
       if (refused) {
         auditAffiliateRedemptionRefusal(target, refused.reason)
@@ -159,21 +160,18 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
       }
     }
 
-    // Atomically validate and mark the invite as used with retry logic for transaction conflicts
+    // Atomically validate and mark the invite as used, retried on transaction conflicts
     // This prevents race conditions where multiple requests could use the same invite
-    const inviteResult = await withRetry(
-      () => validateAndUseInvite(code, ServerType.PLEX),
-      {
-        onConflict: (attempt) => {
-          // Log transaction conflict for monitoring/alerting
-          logAuditEvent(AuditEventType.INVITE_TRANSACTION_CONFLICT, "system", {
-            inviteCodePrefix: code.slice(0, 2),
-            plexUserEmail: plexUser.email,
-            attempt,
-          })
-        },
-      }
-    )
+    const inviteResult = await validateAndUseInvite(code, ServerType.PLEX, {
+      onConflict: (attempt) => {
+        // Log transaction conflict for monitoring/alerting
+        logAuditEvent(AuditEventType.INVITE_TRANSACTION_CONFLICT, "system", {
+          inviteCodePrefix: code.slice(0, 2),
+          plexUserEmail: plexUser.email,
+          attempt,
+        })
+      },
+    })
     if (!inviteResult.success) {
       if (inviteResult.affiliate) {
         auditAffiliateRedemptionRefusal(
@@ -194,7 +192,8 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
     })
 
     // Parsed before anything is recorded, so a malformed value records and shares nothing.
-    // An admin invite without libraries shares every library; an affiliate invite always has some
+    // An admin invite without libraries shares every library. An affiliate invite's list passes as is, even
+    // empty, so inviteUserToPlexServer refuses [] rather than sharing everything
     const librarySectionIds = parsePlexLibrarySectionIds(invite.librarySectionIds)
     if (!librarySectionIds) {
       logAuditEvent(AuditEventType.INVITE_PLEX_FAILURE, "system", {
@@ -207,7 +206,7 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
       return fail("INTERNAL", PLEX_REDEEM_FAILED)
     }
     const inviteSettings = {
-      librarySectionIds: librarySectionIds.length > 0 ? librarySectionIds : undefined,
+      librarySectionIds: affiliate || librarySectionIds.length > 0 ? librarySectionIds : undefined,
       allowDownloads: invite.allowDownloads,
     }
 

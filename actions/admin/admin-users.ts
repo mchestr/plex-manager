@@ -1,6 +1,7 @@
 "use server"
 
 import { adminAction } from "@/lib/actions/define-action"
+import { endAffiliateStatus, inviterApplicationId, revokeAffiliate } from "@/lib/affiliates/end-status"
 import { ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
 import { endConversationsOf } from "@/lib/chatbot/history"
 import { isPlexServerOwner } from "@/lib/members/owner"
@@ -9,6 +10,7 @@ import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { enqueueRoleSync } from "@/lib/discord/role-sync"
 import { endUserSessions } from "@/lib/session-revocation"
 import { parseRole, roleKeySchema } from "@/lib/permissions"
+import { revokeInviterSchema } from "@/lib/validations/affiliates"
 import { userIdSchema } from "@/lib/validations/shared-schemas"
 import { z } from "zod"
 
@@ -132,13 +134,16 @@ export const setUserRole = adminAction({
  * Disable or re-enable a user's account (admin only, audited).
  *
  * Disabling sets `User.disabledAt` and ends the user's sessions; a disabled
- * user cannot sign in. Enabling clears it. Refuses the caller (`SELF`) and the
+ * user cannot sign in. It also ends their affiliate status (no wait to apply
+ * again), and with `revokeInviter` revokes the status of the affiliate who
+ * invited them, once the disable succeeded. Enabling clears `disabledAt` and
+ * does not bring an affiliate status back. Refuses the caller (`SELF`) and the
  * Plex server owner (`OWNER`).
  */
 export const setUserDisabled = adminAction({
-  input: z.object({ userId: userIdSchema, disabled: z.boolean() }),
+  input: z.object({ userId: userIdSchema, disabled: z.boolean(), revokeInviter: revokeInviterSchema }),
   fallbackError: "Failed to update the account",
-  handler: async ({ userId, disabled }, { userId: actorId }): Promise<ActionResult<null, UserActionCode>> => {
+  handler: async ({ userId, disabled, revokeInviter }, { userId: actorId }): Promise<ActionResult<null, UserActionCode>> => {
     if (actorId === userId) {
       return refused("SELF", "You cannot disable your own account")
     }
@@ -170,6 +175,9 @@ export const setUserDisabled = adminAction({
 
     if (disabled) {
       await endUserSessions(userId, "disabled", actorId)
+      await endAffiliateStatus(userId, "DISABLED", actorId)
+      const inviter = revokeInviter ? await inviterApplicationId(userId) : null
+      if (inviter) await revokeAffiliate(inviter, { reason: revokeInviter?.reason ?? null, actorId })
     } else {
       await enqueueRoleSync(userId, "enabled")
     }

@@ -17,11 +17,13 @@ permission needs no schema change. An unknown stored role grants nothing.
 | `assistant:tools:write` | no | Assistant tools that change data (media marking) |
 | `assistant:tools:admin` | no | Assistant tools over admin-only data and connections: app data (invites, members, failed jobs), the knowledge base and MCP servers |
 | `users:read` | yes | The users list, read-only |
+| `affiliates:read` | yes | The Affiliates page's Applications, Affiliates and Invite tree tabs, read-only: no invite codes or labels, no History tab (with its block list) and no affiliate settings |
 
-A Support user sees Users and the Assistant page in the admin area, and the member
+A Support user sees Users and the Assistant page in the admin area, can open Affiliates (`/admin/affiliates`), and the member
 app shows them the same Admin link an admin gets (`canEnterAdminArea`). Settings,
 connections, LLM providers, Stripe, invites, queues, usage and cost, a
-member's detail page and role management are refused on the server (a page
+member's detail page, role management and every affiliate decision (approve,
+refuse, revoke, overrides, unblock) are refused on the server (a page
 checks `assertAdmin()` or `assertPermission()`, and an action is built with
 `adminAction` or `permissionAction`), not only hidden from the navigation.
 

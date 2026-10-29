@@ -1,10 +1,11 @@
 "use client"
 
-import type { ReactElement } from "react"
+import { useState, type ReactElement } from "react"
 
 import { setUserDisabled, setUserRole, updateUserAdminStatus } from "@/actions/admin/admin-users"
 import { adminRegenerateRewind } from "@/actions/rewind-generation"
 import { unshareUserLibrary } from "@/actions/user-queries"
+import { NO_REVOKE, RevokeInviterFields } from "@/components/admin/affiliates/revoke-inviter-fields"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useActionDialog } from "@/hooks/use-action-dialog"
 import type { UserActionTarget } from "@/lib/admin/user-actions"
@@ -99,12 +100,19 @@ export function SupportRoleDialog({ user, ...dialog }: UserDialogProps) {
   )
 }
 
-const setDisabled = (userId: string, disabled: boolean) => setUserDisabled({ userId, disabled })
+const setDisabled = (userId: string, disabled: boolean, revokeInviter?: { reason: string }) =>
+  setUserDisabled({ userId, disabled, revokeInviter })
 
-/** Disables the account, ending its sessions (P4.7), or enables it again. */
+/**
+ * Disables the account, ending its sessions (P4.7), or enables it again. A
+ * member who joined through an affiliate invite shows who invited them, with
+ * the option to revoke that affiliate's status too.
+ */
 export function DisableDialog({ user, ...dialog }: UserDialogProps) {
   const enabling = user.disabled
   const { run } = useActionDialog(setDisabled, { success: enabling ? "Account enabled" : "Account disabled" })
+  const [inviter, setInviter] = useState(NO_REVOKE)
+  const invitedBy = enabling ? null : user.invitedBy
   return (
     <ConfirmDialog
       {...dialog}
@@ -117,10 +125,23 @@ export function DisableDialog({ user, ...dialog }: UserDialogProps) {
       confirmLabel={enabling ? "Enable" : "Disable"}
       pendingLabel="Saving"
       tone={enabling ? "default" : "destructive"}
-      action={() => run(user.id, !enabling)}
+      action={() => run(user.id, !enabling, invitedBy && inviter.revoke ? { reason: inviter.reason } : undefined)}
+      onOpenChange={(open) => {
+        if (!open) setInviter(NO_REVOKE)
+        dialog.onOpenChange?.(open)
+      }}
       data-testid="admin-user-disable-dialog"
       confirmTestId="admin-user-disable-confirm"
-    />
+    >
+      {invitedBy && (
+        <RevokeInviterFields
+          inviterName={invitedBy.name}
+          value={inviter}
+          onChange={setInviter}
+          testId="admin-user-disable-revoke-inviter"
+        />
+      )}
+    </ConfirmDialog>
   )
 }
 

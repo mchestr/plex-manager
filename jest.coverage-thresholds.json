@@ -1,13 +1,13 @@
 {
   "global": {
-    "statements": 86,
-    "branches": 78,
-    "functions": 86,
-    "lines": 87
+    "statements": 88,
+    "branches": 79,
+    "functions": 87,
+    "lines": 88
   },
   "./lib/auth.ts": {
     "statements": 95,
-    "branches": 93,
+    "branches": 94,
     "functions": 100,
     "lines": 95
   },
@@ -30,16 +30,16 @@
     "lines": 94
   },
   "./actions/admin/": {
-    "statements": 97,
+    "statements": 98,
     "branches": 93,
     "functions": 97,
     "lines": 99
   },
   "./lib/queue/": {
-    "statements": 86,
-    "branches": 81,
-    "functions": 77,
-    "lines": 88
+    "statements": 88,
+    "branches": 83,
+    "functions": 79,
+    "lines": 90
   },
   "./lib/security/crypto.ts": {
     "statements": 100,

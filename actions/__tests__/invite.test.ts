@@ -583,6 +583,14 @@ describe('invite actions', () => {
       expect(auditedRefusals()).toEqual([])
     })
 
+    it('passes an empty affiliate library list on as is, so the Plex invite refuses it rather than sharing every library', async () => {
+      tx.invite.update.mockResolvedValueOnce({ ...affiliateInvite, useCount: 1, librarySectionIds: '[]' })
+
+      await runProcessInvite('AFFCODE1', 'plex-auth-token')
+
+      expect(mockInviteUserToPlexServer).toHaveBeenCalledWith(expect.anything(), mockPlexUser.email, { librarySectionIds: [], allowDownloads: false })
+    })
+
     it.each([
       ['switch_off', () => tx.config.findUnique.mockResolvedValue({ ...SWITCH_ON, affiliateInvitesEnabled: false })],
       ['switch_off', () => tx.plexServer.findFirst.mockResolvedValue({ machineIdentifier: 'another-server' })],

@@ -9,6 +9,7 @@ import "server-only"
 
 import { assertPermission } from "@/lib/admin"
 import { activeRunStarts } from "@/lib/admin/active-runs"
+import { invitedByOf } from "@/lib/admin/user-actions"
 import { getPlexServerIdentity, getPlexUsers } from "@/lib/connections/plex"
 import { activeShareFor, type PlexTvUser } from "@/lib/connections/plex-tv-users"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
@@ -85,6 +86,7 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUsersLi
       isExempt: user.isExempt,
       exemptNote: user.exemptNote,
       stripeCustomerId: subscription?.stripeCustomerId ?? null,
+      invitedBy: invitedByOf(user.affiliateJoin),
     }
   })
 
@@ -114,6 +116,7 @@ async function fetchUsersWithWrappedData(year: number) {
           plexWrapped: true,
         },
       },
+      affiliateJoin: { select: { affiliate: { select: { id: true, name: true, email: true } } } },
     },
   })
 }

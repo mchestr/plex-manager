@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Suspense } from "react"
 
 import { getUserActivityTimeline } from "@/actions/user-queries"
@@ -6,6 +7,7 @@ import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RemoveMemberDialog } from "@/components/admin/users/detail/remove-member-dialog"
 import { RequestTiersExclusion } from "@/components/admin/users/detail/request-tiers-exclusion"
+import { userDetail } from "@/lib/admin/routes"
 import type { UserDetailHeaderData } from "@/lib/admin/user-detail"
 import { prisma } from "@/lib/prisma"
 import type { BoundFormat } from "@/lib/utils/format"
@@ -46,6 +48,13 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
         <DetailItem label="Joined" testId="admin-user-created-timestamp">
           {f.dateTime(header.createdAt, { zoneLabel: true })}
         </DetailItem>
+        {header.invitedBy && (
+          <DetailItem label="Invited by" testId="admin-user-invited-by">
+            <Link href={userDetail(header.invitedBy.id)} className="font-medium hover:underline" data-testid="admin-user-invited-by-link">
+              {header.invitedBy.name}
+            </Link>
+          </DetailItem>
+        )}
         <DetailItem label="Discord">
           {discord ? (
             <>
@@ -107,7 +116,7 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
               This cancels their subscription, removes their server access and deletes their data in this app.
             </p>
           </div>
-          <RemoveMemberDialog userId={header.id} name={header.name} />
+          <RemoveMemberDialog userId={header.id} name={header.name} invitedBy={header.invitedBy} hasPlexId={header.plexUserId !== null} />
         </section>
       )}
     </div>

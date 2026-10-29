@@ -15,15 +15,15 @@ import path from "path"
 import { mockReset } from "jest-mock-extended"
 import { getServerSession } from "next-auth"
 
-import { buildPlexServer, buildUser } from "@/__tests__/helpers/factories"
-import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { buildAffiliateApplication, buildPlexServer, buildUser } from "@/__tests__/helpers/factories"
+import { asTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { importPlexUsers } from "@/actions/import-plex-users"
 import { adminRegenerateRewind } from "@/actions/rewind-generation"
 import { unshareUserLibrary } from "@/actions/user-queries"
 import { getAllPlexServerUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
-import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { AuditEventType, logAuditEvent, recordAuditEvent } from "@/lib/security/audit-log"
 import { checkRewindEligibility } from "@/lib/wrapped/eligibility"
 import { getWrappedSettings } from "@/lib/wrapped/generation-settings"
 
@@ -43,6 +43,7 @@ jest.mock("@/lib/wrapped/eligibility", () => ({ checkRewindEligibility: jest.fn(
 jest.mock("@/lib/security/audit-log", () => ({
   ...jest.requireActual("@/lib/security/audit-log"),
   logAuditEvent: jest.fn(),
+  recordAuditEvent: jest.fn(),
 }))
 
 const ADMIN = "admin-1"
@@ -68,6 +69,21 @@ describe("admin writes to member data", () => {
 
     expect(events(AuditEventType.MEMBER_UNSHARED)).toEqual([
       [AuditEventType.MEMBER_UNSHARED, ADMIN, { targetUserId: "member-1", status: "removed" }],
+    ])
+  })
+
+  it("an unshare ends the member's affiliate status with one AFFILIATE_ENDED in its transaction", async () => {
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: "member-1", plexUserId: "plex-1", isAdmin: false }))
+    jest.mocked(unshareUserFromPlexServer).mockResolvedValue({ success: true, status: "removed" })
+    prismaMock.affiliateApplication.findUnique.mockResolvedValue(buildAffiliateApplication({ userId: "member-1", status: "APPROVED" }))
+    prismaMock.invite.updateMany.mockResolvedValue({ count: 1 })
+    prismaMock.$transaction.mockImplementation(async (fn) => (typeof fn === "function" ? fn(asTransactionClient(prismaMock)) : []))
+
+    await expect(unshareUserLibrary({ userId: "member-1" })).resolves.toMatchObject({ success: true })
+
+    const ended = jest.mocked(recordAuditEvent).mock.calls.filter(([type]) => type === AuditEventType.AFFILIATE_ENDED)
+    expect(ended.map((call) => call.slice(0, 3))).toEqual([
+      [AuditEventType.AFFILIATE_ENDED, ADMIN, { targetUserId: "member-1", applicationId: "application-1", cause: "UNSHARED", invitesCancelled: 1 }],
     ])
   })
 

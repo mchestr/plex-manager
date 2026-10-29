@@ -3,7 +3,7 @@
  */
 
 import { tautulliCommand } from "@/lib/connections/tautulli"
-import { getAllTimeWatchHours, listTautulliUserIds } from "@/lib/connections/tautulli-watch-time"
+import { getAllTimeWatchHours, getWatchHours, listTautulliUserIds } from "@/lib/connections/tautulli-watch-time"
 
 jest.mock("@/lib/connections/tautulli", () => ({ tautulliCommand: jest.fn() }))
 
@@ -47,5 +47,25 @@ describe("getAllTimeWatchHours", () => {
   it("passes a failure on", async () => {
     command.mockResolvedValue({ ok: false, code: "TAUTULLI_ERROR" })
     await expect(getAllTimeWatchHours(config, 7)).resolves.toEqual({ ok: false, code: "TAUTULLI_ERROR" })
+  })
+})
+
+describe("getWatchHours", () => {
+  const answer = (rows: unknown) => command.mockImplementation(async (_config, _cmd, _params, schema) => ({ ok: true, data: schema.parse(rows) }))
+
+  it("asks for 30 days and all time in one call", async () => {
+    answer([{ query_days: 30, total_time: 36_000 }, { query_days: 0, total_time: 360_000 }])
+    await expect(getWatchHours(config, 7)).resolves.toEqual({ ok: true, data: { allTime: 100, last30Days: 10 } })
+    expect(command).toHaveBeenCalledWith(config, "get_user_watch_time_stats", { user_id: 7, query_days: "30,0" }, expect.anything(), {})
+  })
+
+  it("is zero hours for a row Tautulli leaves out", async () => {
+    answer([{ query_days: "0", total_time: "7200" }])
+    await expect(getWatchHours(config, 7)).resolves.toEqual({ ok: true, data: { allTime: 2, last30Days: 0 } })
+  })
+
+  it("passes a failure on", async () => {
+    command.mockResolvedValue({ ok: false, code: "HTTP" })
+    await expect(getWatchHours(config, 7)).resolves.toEqual({ ok: false, code: "HTTP" })
   })
 })

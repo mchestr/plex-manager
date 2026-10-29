@@ -35,6 +35,8 @@ export const PERMISSIONS = [
   "assistant:tools:admin",
   /** The users list in the admin area. */
   "users:read",
+  /** The admin Affiliates page without codes, labels, the block list or settings; decides nothing. */
+  "affiliates:read",
 ] as const
 
 export type Permission = (typeof PERMISSIONS)[number]
@@ -53,8 +55,8 @@ interface RoleDefinition {
 export const ROLES = {
   support: {
     label: "Support",
-    description: "Troubleshoots with the assistant's read-only tools and sees the users list. No settings, secrets or changes.",
-    permissions: ["assistant:use", "assistant:tools:read", "users:read"],
+    description: "Troubleshoots with the assistant's read-only tools and sees the users list and affiliates. No settings, secrets or changes.",
+    permissions: ["assistant:use", "assistant:tools:read", "users:read", "affiliates:read"],
   },
 } as const satisfies Record<string, RoleDefinition>
 

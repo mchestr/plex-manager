@@ -152,6 +152,17 @@ describe('Plex authorize reads the PIN cookie', () => {
     expect(mockRedeemPlexInvite).not.toHaveBeenCalled()
   })
 
+  it('clears accessEndedAt on a sign-in with access, and keeps it for a non-member Stripe lets in', async () => {
+    await authorize(undefined, plexPinRequest())
+    expect(prismaMock.user.update.mock.calls[0]![0]!.data).toMatchObject({ accessEndedAt: null })
+
+    prismaMock.user.update.mockClear()
+    mockCheckUserServerAccess.mockResolvedValue({ status: 'denied' })
+    prismaMock.config.findUnique.mockResolvedValue({ stripeEnabled: true } as never)
+    await authorize(undefined, plexPinRequest())
+    expect(prismaMock.user.update.mock.calls[0]![0]!.data).not.toHaveProperty('accessEndedAt')
+  })
+
   it('ignores a token sent in the credentials', async () => {
     await authorize({ authToken: 'attacker-token' }, plexPinRequest())
 

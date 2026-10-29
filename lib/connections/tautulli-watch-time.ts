@@ -1,6 +1,6 @@
 /**
- * Tautulli reads for the request-tier sync: every user's id, and one user's
- * all-time watch time in hours.
+ * Tautulli reads for the request-tier sync and affiliate tiers: every user's
+ * id, and one user's watch time in hours.
  *
  * @module lib/connections/tautulli-watch-time
  */
@@ -28,4 +28,12 @@ export async function getAllTimeWatchHours(config: Endpoint, userId: number, opt
   if (!result.ok) return result
   const row = result.data.find((entry) => entry.query_days === 0) ?? result.data[0]
   return { ok: true as const, data: (row?.total_time ?? 0) / 3600 }
+}
+
+/** All-time and last-30-days watch time in hours, from one `query_days=30,0` call. */
+export async function getWatchHours(config: Endpoint, userId: number, opts: { signal?: AbortSignal } = {}) {
+  const result = await tautulliCommand(config, "get_user_watch_time_stats", { user_id: userId, query_days: "30,0" }, watchTimeSchema, opts)
+  if (!result.ok) return result
+  const hours = (days: number) => (result.data.find((entry) => entry.query_days === days)?.total_time ?? 0) / 3600
+  return { ok: true as const, data: { allTime: hours(0), last30Days: hours(30) } }
 }

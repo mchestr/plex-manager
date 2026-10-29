@@ -13,6 +13,7 @@ import { mockReset } from 'jest-mock-extended'
 
 import { buildUser } from '@/__tests__/helpers/factories'
 import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { blockPlexAccount } from '@/lib/affiliates/block'
 import { clearDiscordRoleForUser } from '@/lib/discord/integration'
 import { revokeServiceAccess } from '@/lib/members/access-actions'
 import { eraseMember } from '@/lib/members/erase'
@@ -36,6 +37,7 @@ jest.mock('@/lib/members/erase-inventory', () => ({
   deleteInventory: jest.fn(),
 }))
 jest.mock('@/lib/members/owner', () => ({ isPlexServerOwner: jest.fn() }))
+jest.mock('@/lib/affiliates/block', () => ({ blockPlexAccount: jest.fn() }))
 jest.mock('@/lib/security/audit-log', () => ({ ...jest.requireActual('@/lib/security/audit-log'), recordAuditEvent: jest.fn() }))
 jest.mock('@/lib/session-revocation', () => ({ endUserSessions: jest.fn() }))
 jest.mock('@/lib/utils/logger', () => ({
@@ -74,6 +76,21 @@ beforeEach(() => {
 const erase = (dryRun = false) => eraseMember('member-1', { actorId: 'admin-1', dryRun })
 
 describe('eraseMember', () => {
+  it('blocks the Plex account inside the transaction only when asked', async () => {
+    await erase()
+    expect(blockPlexAccount).not.toHaveBeenCalled()
+
+    await eraseMember('member-1', { actorId: 'admin-1', dryRun: false, block: true })
+    expect(blockPlexAccount).toHaveBeenCalledWith(TX, 'plex-1', 'admin-1')
+  })
+
+  it('blocks nothing on a dry run or for a member without a Plex id', async () => {
+    await eraseMember('member-1', { actorId: 'admin-1', dryRun: true, block: true })
+    prismaMock.user.findUnique.mockResolvedValue(memberRow({ plexUserId: null, jellyfinUserId: 'jf-1' }) as never)
+    await eraseMember('member-1', { actorId: 'admin-1', dryRun: false, block: true })
+    expect(blockPlexAccount).not.toHaveBeenCalled()
+  })
+
   it('runs every external effect before the one transaction, then audits ids and counts only', async () => {
     const result = await erase()
 

@@ -36,6 +36,7 @@ import { mockReset } from 'jest-mock-extended'
 import type Stripe from 'stripe'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { stopSyncAndClearPlexToken } from '@/lib/members/offboard'
+import { endAffiliateStatus } from '@/lib/affiliates/end-status'
 import { setJellyfinAccountDisabled } from '@/lib/connections/jellyfin-users'
 import { isJellyfinAdmin } from '@/lib/jellyfin-auth'
 import { buildConfig } from '@/__tests__/helpers/factories'
@@ -62,6 +63,7 @@ jest.mock('@/lib/connections/plex-invitations', () => ({
 }))
 
 jest.mock('@/lib/members/offboard', () => ({ stopSyncAndClearPlexToken: jest.fn() }))
+jest.mock('@/lib/affiliates/end-status', () => ({ endAffiliateStatus: jest.fn() }))
 jest.mock('@/lib/connections/jellyfin-users', () => ({
   ...jest.requireActual('@/lib/connections/jellyfin-users'),
   setJellyfinAccountDisabled: jest.fn(),
@@ -326,6 +328,11 @@ describe('processAccessRevoke', () => {
     )
     // GAP-31: the watchlist sync stops and the stored Plex token goes
     expect(stopSyncAndClearPlexToken).toHaveBeenCalledWith('user-1')
+    // Their affiliate status ends, after the token is cleared
+    expect(endAffiliateStatus).toHaveBeenCalledWith('user-1', 'ACCESS_REVOKED', 'system')
+    expect(jest.mocked(endAffiliateStatus).mock.invocationCallOrder[0]).toBeGreaterThan(
+      jest.mocked(stopSyncAndClearPlexToken).mock.invocationCallOrder[0]!
+    )
     expect(result).toEqual({ userId: 'user-1', revoked: true })
   })
 

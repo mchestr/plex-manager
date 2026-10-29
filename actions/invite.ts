@@ -14,7 +14,6 @@ import {
   INVITE_EXEMPTION,
   rollbackInviteUsage,
   validateAndUseInvite,
-  withRetry,
 } from "@/lib/invites/redemption"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
@@ -246,19 +245,16 @@ async function redeemJellyfinInvite(
     }
     const jellyfinServer = serverResult.data
 
-    // Atomically validate and mark the invite as used with retry logic for transaction conflicts
-    const inviteResult = await withRetry(
-      () => validateAndUseInvite(code, ServerType.JELLYFIN),
-      {
-        onConflict: (attempt) => {
-          logAuditEvent(AuditEventType.INVITE_TRANSACTION_CONFLICT, "system", {
-            inviteCodePrefix: code.slice(0, 2),
-            jellyfinUsername: username,
-            attempt,
-          })
-        },
-      }
-    )
+    // Atomically validate and mark the invite as used, retried on transaction conflicts
+    const inviteResult = await validateAndUseInvite(code, ServerType.JELLYFIN, {
+      onConflict: (attempt) => {
+        logAuditEvent(AuditEventType.INVITE_TRANSACTION_CONFLICT, "system", {
+          inviteCodePrefix: code.slice(0, 2),
+          jellyfinUsername: username,
+          attempt,
+        })
+      },
+    })
 
     if (!inviteResult.success) {
       return { success: false, code: inviteResult.code, error: inviteResult.error }
