@@ -96,12 +96,20 @@ describe('MarkdownBody', () => {
     expect(link).not.toHaveAttribute('target')
   })
 
-  it('unwraps an h1 to its text', () => {
-    const { container } = renderMarkdown('# Big title\n\n## Section')
+  it('renders an h1 as an h2 and h5 and h6 as h4', () => {
+    const { container } = renderMarkdown('# Big title\n\n## Section\n\n##### Five\n\n###### Six')
 
-    expect(container.querySelector('h1')).toBeNull()
-    expect(screen.getByText('Big title')).toBeInTheDocument()
-    expect(container.querySelector('h2')).toHaveTextContent('Section')
+    expect(container.querySelector('h1, h5, h6')).toBeNull()
+    expect([...container.querySelectorAll('h2')].map((h) => h.textContent)).toEqual(['Big title', 'Section'])
+    expect([...container.querySelectorAll('h4')].map((h) => h.textContent)).toEqual(['Five', 'Six'])
+  })
+
+  it('keeps a footnote link on the page', () => {
+    const { container } = renderMarkdown('Text[^1]\n\n[^1]: note')
+
+    const ref = container.querySelector('a[data-footnote-ref]')
+    expect(ref?.getAttribute('href')).toMatch(/^#user-content-fn-1$/)
+    expect(container.querySelector('#user-content-fn-1')).toHaveTextContent('note')
   })
 
   it('keeps the allowed inline and block elements', () => {
@@ -110,5 +118,42 @@ describe('MarkdownBody', () => {
     for (const tag of ['strong', 'em', 'code', 'blockquote', 'hr', 'pre']) {
       expect(container.querySelector(tag)).not.toBeNull()
     }
+  })
+
+  it('renders a GFM table inside the typeset scroll wrapper', () => {
+    const { container } = renderMarkdown(
+      '| User | State |\n|---|:---:|\n| mchestr | Playing |\n| darren_6 | Paused |'
+    )
+
+    const table = container.querySelector('.typeset-scroll > table')
+    expect(table).not.toBeNull()
+    expect(table?.querySelectorAll('thead th')).toHaveLength(2)
+    expect(table?.querySelectorAll('tbody tr')).toHaveLength(2)
+    expect(table?.querySelector('tbody td:last-child')).toHaveTextContent('Playing')
+    expect(table?.querySelector('thead th:last-child')).toHaveStyle({ textAlign: 'center' })
+    expect(table).not.toHaveAttribute('node')
+  })
+
+  it('renders strikethrough as del', () => {
+    const { container } = renderMarkdown('~~gone~~ kept')
+
+    expect(container.querySelector('del')).toHaveTextContent('gone')
+  })
+
+  it('links a bare URL through SafeLink and leaves a bare javascript: URL as text', () => {
+    const { container } = renderMarkdown('See https://docs.example.com/guide and javascript:alert(1)')
+
+    const links = container.querySelectorAll('a')
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAttribute('href', 'https://docs.example.com/guide')
+    expect(links[0]).toHaveTextContent(/^https:\/\/docs\.example\.com\/guide$/)
+  })
+
+  it('keeps a task list item text but renders no checkbox', () => {
+    const { container } = renderMarkdown('- [x] done\n- [ ] todo')
+
+    expect(container.querySelector('input')).toBeNull()
+    expect(container.querySelectorAll('li')).toHaveLength(2)
+    expect(screen.getByText(/todo/)).toBeInTheDocument()
   })
 })

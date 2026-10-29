@@ -11,9 +11,17 @@ type SafeLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
  * A link that allows only http and https (SEC-57). Anything else renders as
  * plain text. An external link shows its full destination after the label,
  * opens in a new tab without an opener, and ends in an arrow icon; a link on
- * the app's own origin renders as a normal link.
+ * the app's own origin renders as a normal link, and a fragment (a GFM
+ * footnote) stays on the page.
  */
 export function SafeLink({ href, children, node, ...props }: SafeLinkProps) {
+  if (href?.startsWith("#")) {
+    return (
+      <a {...props} href={href}>
+        {children}
+      </a>
+    )
+  }
   const link = safeLink(href)
   if (!link) return <span>{children}</span>
   if (!link.external) {
