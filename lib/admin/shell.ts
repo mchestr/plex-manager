@@ -5,7 +5,7 @@ import { navFor } from "@/lib/admin/nav"
 import { getAdminNavCounts } from "@/lib/admin/nav-counts"
 import { serverName } from "@/lib/brand"
 import { openConversationsOf } from "@/lib/chatbot/history"
-import type { PermissionSubject } from "@/lib/permissions"
+import { hasPermission, type PermissionSubject } from "@/lib/permissions"
 import { initialsFor } from "@/lib/member/shell"
 import { prisma } from "@/lib/prisma"
 
@@ -57,8 +57,15 @@ export async function getAdminShellData(session: ({ id: string; name?: string | 
   return {
     serverName: name,
     user: { name: displayName, initials: initialsFor(displayName) },
-    // A role sees the member count only, not invites or job health
-    navCounts: session.isAdmin ? navCounts : { users: navCounts.users, activeInvites: 0, failedJobs: null },
+    // A role sees the member count and, with affiliates:read, the pending applications; never invites or job health
+    navCounts: session.isAdmin
+      ? navCounts
+      : {
+          users: navCounts.users,
+          activeInvites: 0,
+          pendingAffiliates: hasPermission(session, "affiliates:read") ? navCounts.pendingAffiliates : 0,
+          failedJobs: null,
+        },
     navIds: items.filter((item) => item.id !== "assistant" || assistant).map((item) => item.id),
     scoped: !session.isAdmin,
   }

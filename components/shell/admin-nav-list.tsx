@@ -39,7 +39,11 @@ function Row({ item, counts, onNavigate }: { item: AdminNavItem; counts: NavCoun
       >
         <Icon icon={item.icon} size={20} />
         <span className="flex-1 truncate">{item.label}</span>
-        {badge && <Badge variant={badge.tone ?? "neutral"}>{badge.text}</Badge>}
+        {badge && (
+          <Badge variant={badge.tone ?? "neutral"} data-testid={`${navTestId(item)}-mobile-badge`}>
+            {badge.text}
+          </Badge>
+        )}
       </Link>
     </li>
   )

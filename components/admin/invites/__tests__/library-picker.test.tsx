@@ -70,3 +70,20 @@ describe('LibraryPicker', () => {
     expect(screen.getByTestId('invite-library-error')).toHaveTextContent('No active Plex server configured')
   })
 })
+
+describe('LibraryPicker without All libraries', () => {
+  it('always lists the libraries, with the prefixed test ids', () => {
+    render(<LibraryPicker listing={LISTING} value={['2']} onChange={jest.fn()} serverLabel="Plex" allowAll={false} testIdPrefix="settings-affiliates-library" />)
+
+    expect(screen.queryByRole('checkbox', { name: 'All libraries' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('settings-affiliates-library-2')).toBeChecked()
+    expect(screen.getByTestId('settings-affiliates-library-1')).not.toBeChecked()
+  })
+
+  it('does not offer all libraries when the listing fails', () => {
+    render(<LibraryPicker listing={{ ok: false, reason: 'Plex is down.' }} value={[]} onChange={jest.fn()} serverLabel="Plex" allowAll={false} testIdPrefix="settings-affiliates-library" />)
+
+    expect(screen.getByTestId('settings-affiliates-library-error')).toHaveTextContent("Can't list the Plex libraries. Plex is down.")
+    expect(screen.getByTestId('settings-affiliates-library-error')).not.toHaveTextContent('all of them')
+  })
+})

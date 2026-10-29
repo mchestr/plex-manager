@@ -52,14 +52,16 @@ describe("ADMIN_NAV", () => {
     expect(order).toEqual([...order].sort((a, b) => a - b))
   })
 
-  it("badges members, active invites and failed jobs", () => {
-    const counts = { users: 7, activeInvites: 3, failedJobs: 2 }
+  it("badges members, active invites, pending applications and failed jobs", () => {
+    const counts = { users: 7, activeInvites: 3, pendingAffiliates: 2, failedJobs: 2 }
     expect(byId("users").badge?.(counts)).toEqual({ text: "7" })
     expect(byId("invites").badge?.(counts)).toEqual({ text: "3 active" })
     expect(byId("queues").badge?.(counts)).toEqual({ text: "2 failed", tone: "destructive" })
     expect(byId("invites").badge?.({ ...counts, activeInvites: 0 })).toBeNull()
     expect(byId("queues").badge?.({ ...counts, failedJobs: 0 })).toBeNull()
     expect(byId("queues").badge?.({ ...counts, failedJobs: null })).toBeNull()
+    expect(byId("affiliates").badge?.(counts)).toEqual({ text: "2 pending" })
+    expect(byId("affiliates").badge?.({ ...counts, pendingAffiliates: 0 })).toBeNull()
   })
 })
 
@@ -145,7 +147,7 @@ describe("Assistant", () => {
   })
 
   it("is in a Support user's nav beside Users, and in no one's without a role", () => {
-    expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).toEqual(["assistant", "users"])
+    expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).toEqual(["assistant", "users", "affiliates"])
     expect(navFor({ isAdmin: false, role: null })).toEqual([])
   })
 })

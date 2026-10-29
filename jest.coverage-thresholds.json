@@ -5,6 +5,12 @@
     "functions": 87,
     "lines": 88
   },
+  "./lib/affiliates/": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "./lib/auth.ts": {
     "statements": 95,
     "branches": 94,
@@ -32,7 +38,7 @@
   "./actions/admin/": {
     "statements": 98,
     "branches": 93,
-    "functions": 97,
+    "functions": 98,
     "lines": 99
   },
   "./lib/queue/": {

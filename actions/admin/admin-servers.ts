@@ -11,7 +11,8 @@
  * service's one active row; and the save is audited as `CONFIG_CHANGED`
  * with a redacted diff (SEC-55). A save also expires the cached connection
  * health, and a Plex or Jellyfin save the cached app settings (the server name
- * falls back to theirs, P11.19).
+ * falls back to theirs, P11.19). A Plex save that changes the active server
+ * turns the affiliate switch off (`turnOffForServerChange`).
  */
 
 import { revalidatePath, updateTag } from "next/cache"
@@ -19,6 +20,7 @@ import { z } from "zod"
 
 import { adminAction } from "@/lib/actions/define-action"
 import { ok } from "@/lib/actions/result"
+import { turnOffForServerChange } from "@/lib/affiliates/switch"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
@@ -26,6 +28,9 @@ import { SERVICE_DESCRIPTORS, type ServiceKind } from "@/lib/services/descriptor
 import { saveServiceConnection } from "@/lib/services/service-save"
 import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
 import { CONNECTION_HEALTH_TAG } from "@/lib/settings/connection-status"
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("admin-servers")
 
 /** A settings save for one service (admin only). */
 function serviceUpdate<K extends ServiceKind>(kind: K, fallbackError: string) {
@@ -38,6 +43,9 @@ function serviceUpdate<K extends ServiceKind>(kind: K, fallbackError: string) {
         // The settings page re-renders and the cached health checks run again
         updateTag(CONNECTION_HEALTH_TAG)
         if (kind === "plex" || kind === "jellyfin") updateTag(APP_SETTINGS_TAG)
+        // A library key can name a different library on another server. The switch
+        // already reads as off on a mismatch, so a failure here does not fail the save
+        if (kind === "plex") await turnOffForServerChange(userId).catch((error: unknown) => logger.error("affiliate.server_change_off_failed", error))
         revalidatePath("/admin/settings")
       }
       return result

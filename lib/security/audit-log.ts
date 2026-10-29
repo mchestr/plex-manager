@@ -71,6 +71,9 @@ export enum AuditEventType {
   AFFILIATE_OVERRIDE_CHANGED = "AFFILIATE_OVERRIDE_CHANGED",
   AFFILIATE_ACCOUNT_BLOCKED = "AFFILIATE_ACCOUNT_BLOCKED",
   AFFILIATE_ACCOUNT_UNBLOCKED = "AFFILIATE_ACCOUNT_UNBLOCKED",
+  // The affiliate switch went off and cancelled every open affiliate invite.
+  // Details carry the cause ("switch_off" or "server_change") and the count.
+  AFFILIATE_INVITE_CANCELLED = "AFFILIATE_INVITE_CANCELLED",
   // Announcement events
   ANNOUNCEMENT_CREATED = "ANNOUNCEMENT_CREATED",
   ANNOUNCEMENT_UPDATED = "ANNOUNCEMENT_UPDATED",

@@ -76,6 +76,7 @@ components/             # React components
 hooks/                  # Shared client hooks; query-keys.ts holds every TanStack Query key
 lib/                    # Utilities, helpers, business logic
 ├── actions/           # The action helpers (define-action.ts), ActionResult, route handler helpers
+├── affiliates/        # Affiliate invites: tiers, eligibility, the switch, end status, block list (docs/affiliate-invites.md)
 ├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
 ├── charts/            # Chart slot map (var(--chart-n)) and generated text summaries for ChartCard
 ├── chatbot/           # Admin assistant: tools, executors, prompts and the conversation loop (server-only)
@@ -962,6 +963,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - Deployment, environment variables and moving hosts: See `docs/deployment.md`, `docs/environment.md` and `docs/domain-move.md`
 - Operations (backup, restore, upgrades, encryption keys, worker containers, metrics): See `docs/operations.md`
 - Roles and permissions (Support role, assistant tool gate): See `docs/roles.md`
+- Affiliate invites (tiers, slots, server cap, the switch): See `docs/affiliate-invites.md`
 - Privacy (personal data inventory, member removal, retention): See `docs/privacy.md`
 - Releases and the changelog: See `docs/releasing.md` and `CHANGELOG.md`
 - Rewind season runbook (flags, season open, roll back, season close): See `docs/rewind.md`

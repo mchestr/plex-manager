@@ -29,7 +29,7 @@ jest.mock('next/navigation', () => ({
 const mockPathname = usePathname as jest.Mock
 const noAxeRegion = { rules: { region: { enabled: false } } }
 
-function renderShell({ counts = { users: 7, activeInvites: 3, failedJobs: 0 }, assistant = true }: { counts?: NavCounts; assistant?: boolean } = {}) {
+function renderShell({ counts = { users: 7, activeInvites: 3, pendingAffiliates: 2, failedJobs: 0 }, assistant = true }: { counts?: NavCounts; assistant?: boolean } = {}) {
   return render(
     <ToastProvider>
       <AdminShell
@@ -66,12 +66,13 @@ describe('AdminShell', () => {
   })
 
   it('shows the counts and labels the tab bar', () => {
-    renderShell({ counts: { users: 7, activeInvites: 3, failedJobs: 2 } })
+    renderShell({ counts: { users: 7, activeInvites: 3, pendingAffiliates: 2, failedJobs: 2 } })
 
     const sidebar = screen.getByTestId('admin-sidebar')
     expect(within(sidebar).getByTestId('admin-nav-users')).toHaveTextContent('7')
     expect(within(sidebar).getByTestId('admin-nav-invites')).toHaveTextContent('3 active')
     expect(within(sidebar).getByTestId('admin-nav-queues')).toHaveTextContent('2 failed')
+    expect(within(sidebar).getByTestId('admin-nav-affiliates-badge')).toHaveTextContent('2 pending')
     const tabs = within(screen.getByTestId('admin-tab-bar')).getAllByRole('listitem')
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Users', 'Rewind', 'Settings', 'More, jobs have failed'])
     expect(screen.getByTestId('admin-tab-rewind')).toHaveAttribute('href', '/admin/rewind')
@@ -103,14 +104,14 @@ describe('AdminShell', () => {
   })
 
   it('puts a destructive dot on More while jobs have failed', () => {
-    renderShell({ counts: { users: 1, activeInvites: 0, failedJobs: 4 } })
+    renderShell({ counts: { users: 1, activeInvites: 0, pendingAffiliates: 0, failedJobs: 4 } })
 
     expect(screen.getByTestId('admin-tab-more-failed')).toBeInTheDocument()
     expect(screen.getByTestId('admin-tab-more')).toHaveAccessibleName(/^More ?, jobs have failed$/)
   })
 
   it('draws no dot when Redis is down', () => {
-    renderShell({ counts: { users: 1, activeInvites: 0, failedJobs: null } })
+    renderShell({ counts: { users: 1, activeInvites: 0, pendingAffiliates: 0, failedJobs: null } })
 
     expect(screen.queryByTestId('admin-tab-more-failed')).not.toBeInTheDocument()
   })
