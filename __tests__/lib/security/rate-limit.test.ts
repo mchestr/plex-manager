@@ -100,6 +100,8 @@ describe("rate-limit", () => {
         'admin:queue': { points: 30, duration: 60 },
         'admin:affiliates': { points: 60, duration: 600 },
         'admin:invites': { points: 30, duration: 600 },
+        'affiliate:apply': { points: 5, duration: 3600 },
+        'affiliate:invite': { points: 20, duration: 3600 },
         'admin:remove-member': { points: 10, duration: 3600 },
         'account:data': { points: 60, duration: 3600 },
         checkout: { points: 10, duration: 60 },

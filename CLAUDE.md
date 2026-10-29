@@ -47,6 +47,7 @@ app/                     # Next.js App Router (pages, layouts, routes)
 │   ├── announcements/  # In-app announcements
 │   ├── discord/        # Discord account linking
 │   ├── help/           # Help and support
+│   ├── invites/        # Affiliate invites: apply, make, copy and cancel invites (a 404 while the switch is off)
 │   ├── membership/     # Stripe membership (when enabled)
 │   └── rewind/         # Rewind: /rewind, /rewind/[year] (story), /rewind/[year]/read (article), the scope layout
 ├── admin/              # Admin pages: overview, assistant, users, invites, watchlist sync, settings, rewind, queues, LLM usage

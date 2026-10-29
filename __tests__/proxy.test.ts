@@ -26,7 +26,7 @@ import { consume } from '@/lib/security/rate-limit'
 import { config as proxyConfig, proxy } from '@/proxy'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
-import { buildConfig } from '@/__tests__/helpers/factories'
+import { buildConfig, buildUser } from '@/__tests__/helpers/factories'
 
 const mockLogError = jest.fn()
 const mockLogDebug = jest.fn()
@@ -370,12 +370,40 @@ describe('proxy /membership status (P10.22)', () => {
     const error = new Error('Database unavailable')
     prismaMock.config.findUnique.mockRejectedValue(error)
     expectPassedThrough(await proxy(request('/membership')))
-    expect(mockLogError).toHaveBeenCalledWith('Membership page check failed', error)
+    expect(mockLogError).toHaveBeenCalledWith('Member page check failed', error, { pathname: '/membership' })
   })
 
   it('never checks another path', async () => {
     expectPassedThrough(await proxy(request('/help')))
     expect(prismaMock.config.findUnique).not.toHaveBeenCalled()
+  })
+})
+
+describe('proxy /invites status', () => {
+  const SWITCH_ON = { affiliateInvitesEnabled: true, affiliateLibrarySectionIds: [1], affiliatePlexMachineId: 'machine-1' }
+  type PlexServer = Awaited<ReturnType<typeof prismaMock.plexServer.findFirst>>
+
+  beforeEach(() => {
+    mockGetToken.mockResolvedValue({ sub: 'member-1', isAdmin: false, accessLevel: 'full' })
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig(SWITCH_ON))
+    prismaMock.plexServer.findFirst.mockResolvedValue({ machineIdentifier: 'machine-1' } as PlexServer)
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ plexUserId: 'plex-1' }))
+  })
+
+  it('passes it through while the switch is on for a member with a Plex id', async () => {
+    expectPassedThrough(await proxy(request('/invites')))
+  })
+
+  it('answers with a 404 and the same page while the switch is off', async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ ...SWITCH_ON, affiliateInvitesEnabled: false }))
+
+    expectNotFoundRewrite(await proxy(request('/invites')), '/invites')
+  })
+
+  it('answers with a 404 for a member without a Plex id', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ plexUserId: null }))
+
+    expectNotFoundRewrite(await proxy(request('/invites')), '/invites')
   })
 })
 

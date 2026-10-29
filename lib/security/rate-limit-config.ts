@@ -40,6 +40,9 @@ export const LIMITS = {
   "admin:invites": { points: 30, duration: 10 * MINUTE },
   // Affiliate decisions, overrides and unblocks per admin
   "admin:affiliates": { points: 60, duration: 10 * MINUTE },
+  // Affiliate applications and affiliate invites made, per member
+  "affiliate:apply": { points: 5, duration: HOUR },
+  "affiliate:invite": { points: 20, duration: HOUR },
   // Member removals per admin (P11.13)
   "admin:remove-member": { points: 10, duration: HOUR },
   // Deleting a mark or a watchlist item from /account, per member (P11.15)

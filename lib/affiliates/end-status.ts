@@ -89,7 +89,7 @@ export async function revokeInviterAfter(
 ): Promise<boolean | null> {
   if (!applicationId) return null
   try {
-    // Not approved any more (someone ended it first) is nothing to revoke, not a failure
+    // A refused revoke (already ended, or decided by someone else) reads as "nothing to revoke", not as a failure
     return (await revokeAffiliate(applicationId, options)).ok ? true : null
   } catch (error) {
     logger.error("affiliate.inviter_revoke_failed", error, { applicationId })

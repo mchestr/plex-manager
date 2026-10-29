@@ -8,7 +8,7 @@ import { isPlexServerOwner } from "@/lib/members/owner"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { enqueueRoleSync } from "@/lib/discord/role-sync"
-import { endUserSessions } from "@/lib/session-revocation"
+import { endUserSessions, sessionsEndedSince } from "@/lib/session-revocation"
 import { parseRole, roleKeySchema } from "@/lib/permissions"
 import { revokeInviterSchema } from "@/lib/validations/affiliates"
 import { userIdSchema } from "@/lib/validations/shared-schemas"
@@ -137,12 +137,11 @@ export const setUserRole = adminAction({
  * user cannot sign in. It also ends their affiliate status (no wait to apply
  * again), and with `revokeInviter` revokes the status of the affiliate who
  * invited them, once the disable succeeded. A disable of an account that is
- * already disabled runs those two affiliate steps again (both idempotent), so
- * a retry finishes what a failed one left; it does not end the sessions again,
- * since the session check refuses a disabled account at its next recheck
- * anyway. Enabling clears `disabledAt` and does not bring an affiliate status
- * back. Refuses the caller (`SELF`) and the Plex server
- * owner (`OWNER`).
+ * already disabled runs all three again, so a retry finishes what a failed
+ * one left: the sessions end unless a `SESSIONS_REVOKED` event already
+ * followed this disable, and the other two are idempotent. Enabling clears
+ * `disabledAt` and does not bring an affiliate status back. Refuses the caller
+ * (`SELF`) and the Plex server owner (`OWNER`).
  *
  * `inviterRevoked` is `true` when the inviter's status was revoked, `false`
  * when that revoke failed (the disable stands), and `null` otherwise.
@@ -180,15 +179,17 @@ export const setUserDisabled = adminAction({
         targetUserId: userId,
       })
 
-      if (disabled) {
-        await endUserSessions(userId, "disabled", actorId)
-      } else {
+      if (!disabled) {
         await enqueueRoleSync(userId, "enabled")
       }
     }
 
     let inviterRevoked: boolean | null = null
     if (disabled) {
+      // A retry ends the sessions a failed disable left; once they ended for this disable it stays quiet
+      if (!user.disabledAt || !(await sessionsEndedSince(userId, user.disabledAt))) {
+        await endUserSessions(userId, "disabled", actorId)
+      }
       await endAffiliateStatus(userId, "DISABLED", actorId)
       const inviter = revokeInviter ? await inviterApplicationId(userId) : null
       inviterRevoked = await revokeInviterAfter(inviter, { reason: revokeInviter?.reason ?? null, actorId })

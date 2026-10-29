@@ -3,7 +3,7 @@
  */
 
 import { Prisma } from '@/lib/generated/prisma/client'
-import { isUniqueEmailConflict } from '@/lib/prisma-errors'
+import { isUniqueConflict, isUniqueEmailConflict } from '@/lib/prisma-errors'
 
 function knownError(code: string, meta: Record<string, unknown>) {
   return new Prisma.PrismaClientKnownRequestError('Request failed', { code, clientVersion: '7.10.1', meta })
@@ -47,5 +47,24 @@ describe('isUniqueEmailConflict', () => {
   it('is false for an error that is not a Prisma request error', () => {
     expect(isUniqueEmailConflict(new Error('Unique constraint failed on the fields: (`email`)'))).toBe(false)
     expect(isUniqueEmailConflict({ code: 'P2002', meta: { target: ['email'] } })).toBe(false)
+  })
+})
+
+describe('isUniqueConflict', () => {
+  const invite = { index: 'Invite_code_key', field: 'code' }
+
+  it.each([
+    ['the adapter constraint name', adapterMeta({ index: 'Invite_code_key' })],
+    ['the adapter column list', adapterMeta({ fields: ['code'] })],
+    ['the classic target column list', { target: ['code'] }],
+    ['the classic target constraint name', { target: 'Invite_code_key' }],
+  ])('is true for a P2002 on the named column reported by %s', (_label, meta) => {
+    expect(isUniqueConflict(knownError('P2002', meta), invite)).toBe(true)
+  })
+
+  it('is false for another column, another code or another error', () => {
+    expect(isUniqueConflict(knownError('P2002', { target: ['joinedUserId'] }), invite)).toBe(false)
+    expect(isUniqueConflict(knownError('P2034', { target: ['code'] }), invite)).toBe(false)
+    expect(isUniqueConflict(new Error('code'), invite)).toBe(false)
   })
 })

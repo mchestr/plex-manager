@@ -64,3 +64,24 @@ describe("isTransactionConflict", () => {
     expect(isTransactionConflict(new Error("x"))).toBe(false)
   })
 })
+
+describe("isTransactionConflict", () => {
+  /** The pg adapter's error for a conflict found at COMMIT, as Prisma 7.10 throws it. */
+  function commitConflict(kind: string) {
+    const error = new Error(kind, { cause: { kind, originalCode: "40001" } })
+    error.name = "DriverAdapterError"
+    return error
+  }
+
+  it("is true for P2034 and for the adapter's write conflict at COMMIT", () => {
+    expect(isTransactionConflict(conflict())).toBe(true)
+    expect(isTransactionConflict(commitConflict("TransactionWriteConflict"))).toBe(true)
+  })
+
+  it("is false for another known error, another adapter error or a plain error", () => {
+    expect(isTransactionConflict(new Prisma.PrismaClientKnownRequestError("unique", { code: "P2002", clientVersion: "7" }))).toBe(false)
+    expect(isTransactionConflict(commitConflict("UniqueConstraintViolation"))).toBe(false)
+    expect(isTransactionConflict(new Error("TransactionWriteConflict"))).toBe(false)
+    expect(isTransactionConflict("P2034")).toBe(false)
+  })
+})

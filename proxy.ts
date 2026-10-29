@@ -31,6 +31,7 @@ import { getAccessLevel } from "@/lib/access"
 import { processRole } from "@/lib/db/pool-config"
 import { isMemberAppPath, needsSubscribeRedirect } from "@/lib/access-paths"
 import { getEnv, usesSecureCookies } from "@/lib/env"
+import { hasInvitesPage } from "@/lib/member/invites-page"
 import { hasMembershipPage } from "@/lib/member/membership-page"
 import { isValidRequestId, PATHNAME_HEADER, REQUEST_ID_HEADER } from "@/lib/request-headers"
 import { contentSecurityPolicy, createNonce, cspHeaderName, NONCE_HEADER, REPORTING_ENDPOINTS } from "@/lib/security/csp"
@@ -84,21 +85,30 @@ async function pageToken(request: NextRequest) {
   return getToken({ req: request, secret: getEnv().NEXTAUTH_SECRET, secureCookie: usesSecureCookies() })
 }
 
+/** The member pages that exist only for some members, with the check that says whether this one has it. */
+const CONDITIONAL_MEMBER_PAGES: Readonly<Record<string, (userId: string) => Promise<boolean>>> = {
+  "/membership": hasMembershipPage,
+  "/invites": hasInvitesPage,
+}
+
 /**
- * Whether the path is `/membership` for a signed-in member who has no such
- * page: Stripe is off and they have no subscription row (P10.22). The page
- * renders its not-found itself, but streamed behind `app/loading.tsx`, so this
- * gives it the 404 status, as for a Rewind year. A failed check decides nothing.
+ * Whether the path is a conditional member page the signed-in member does not
+ * have: `/membership` while Stripe is off and they have no subscription row
+ * (P10.22), or `/invites` while affiliate invites are off or they have no Plex
+ * id. The page renders its not-found itself, but streamed behind
+ * `app/loading.tsx`, so this gives it the 404 status, as for a Rewind year. A
+ * failed check decides nothing.
  */
-async function isMissingMembershipPage(request: NextRequest): Promise<boolean> {
-  if (request.nextUrl.pathname !== "/membership" || (request.method !== "GET" && request.method !== "HEAD")) {
+async function isMissingMemberPage(request: NextRequest): Promise<boolean> {
+  const hasPage = CONDITIONAL_MEMBER_PAGES[request.nextUrl.pathname]
+  if (!hasPage || (request.method !== "GET" && request.method !== "HEAD")) {
     return false
   }
   try {
     const userId = (await pageToken(request))?.sub
-    return userId ? !(await hasMembershipPage(userId)) : false
+    return userId ? !(await hasPage(userId)) : false
   } catch (error) {
-    logger.error("Membership page check failed", error)
+    logger.error("Member page check failed", error, { pathname: request.nextUrl.pathname })
     return false
   }
 }
@@ -244,10 +254,10 @@ export async function proxy(request: NextRequest) {
     }
 
     // Create response: the same page, with a 404 status for an invalid Rewind
-    // year, a share token that shares nothing or a membership page the member lacks
+    // year, a share token that shares nothing or a member page the member lacks
     const init = { request: { headers: pageRequestHeaders(request.headers, pathname, headers) } }
     const notFound =
-      isInvalidRewindYearPath(pathname) || share === "missing" || (await isMissingMembershipPage(request))
+      isInvalidRewindYearPath(pathname) || share === "missing" || (await isMissingMemberPage(request))
     const response = notFound
       ? NextResponse.rewrite(request.nextUrl, { ...init, status: 404 })
       : NextResponse.next(init)
