@@ -33,6 +33,10 @@ their watch history.
   Invites share your Plex libraries or make a Jellyfin account. Each invite has
   a code, the libraries to share, a maximum number of members and, if you set
   one, an end date.
+- **Affiliate invites.** Members who watch a lot can apply to be affiliates.
+  When an admin approves them, they can make single-use Plex invites, from a
+  number of invites per 30 days that their watch hours set. This feature is
+  off until you enable it.
 - **Member guide.** New members get the playback settings for their devices,
   the steps to request titles, and the place to report a problem.
 - **Rewind.** Plex Manager can make a Rewind of the year for each Plex member,
@@ -200,6 +204,7 @@ The guides in `docs/` give the full details:
 | [Rewind runbook](docs/rewind.md) | The Rewind season: its settings, its start and end, and the daily checks |
 | [Privacy](docs/privacy.md) | The personal data that Plex Manager keeps, how to remove it, and retention |
 | [Roles](docs/roles.md) | Admins, the Support role and permissions |
+| [Affiliate invites](docs/affiliate-invites.md) | Affiliates, their tiers and invites, the server cap and the switch |
 | [Assistant](docs/assistant.md) | The data, MCP servers and knowledge base that the admin assistant can use |
 | [Request limits](docs/request-limits.md) | Request limits from watch time, and the Discord stat channels |
 | [Stripe](docs/stripe.md) | Subscriptions, the webhook, and Plex and Jellyfin access |

@@ -7,7 +7,7 @@
  *
  * ```
  * Overview, Assistant ungrouped, at the top (P10.8)
- * Community           Users, Invites, Announcements, Discord bot, Watchlist sync
+ * Community           Users, Invites, Affiliates, Announcements, Discord bot, Watchlist sync
  * Rewind              Season, Playground, Share analytics
  * Usage and cost      LLM usage, Cost analysis
  * System              Job queues, Settings
@@ -35,6 +35,8 @@ export type AdminNavGroup = "Community" | "Rewind" | "Usage and cost" | "System"
 export interface NavCounts {
   users: number
   activeInvites: number
+  /** Affiliate applications waiting for a decision. */
+  pendingAffiliates: number
   failedJobs: number | null
 }
 
@@ -103,6 +105,17 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     match: "prefix",
     mobile: "more",
     badge: ({ activeInvites }) => (activeInvites > 0 ? { text: `${activeInvites} active` } : null),
+  },
+  {
+    id: "affiliates",
+    label: "Affiliates",
+    href: "/admin/affiliates",
+    icon: icons.affiliates,
+    group: "Community",
+    match: "prefix",
+    mobile: "more",
+    permission: "affiliates:read",
+    badge: ({ pendingAffiliates }) => (pendingAffiliates > 0 ? { text: `${pendingAffiliates} pending` } : null),
   },
   {
     id: "announcements",

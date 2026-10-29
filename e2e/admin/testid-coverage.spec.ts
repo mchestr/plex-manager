@@ -32,6 +32,8 @@ const DETAIL_ROUTES = [
   `/admin/users/${TEST_USERS.REGULAR.id}`,
   `/admin/invites/${VISUAL_INVITE_IDS.valid}`,
   '/admin/llm-usage/visual-llm-usage-1',
+  '/admin/affiliates?tab=history',
+  '/admin/affiliates?tab=settings',
 ];
 
 const ROUTES = [...new Set([...ADMIN_NAV.map((item) => item.href as string), ...DETAIL_ROUTES])];

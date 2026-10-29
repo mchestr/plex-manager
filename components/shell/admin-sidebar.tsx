@@ -87,7 +87,7 @@ function NavLink({ item, counts, pathname }: { item: AdminNavItem; counts: NavCo
           <Icon icon={item.icon} />
           <span className="sr-only lg:not-sr-only lg:flex-1 lg:truncate">{item.label}</span>
           {badge && (
-            <Badge variant={badge.tone ?? "neutral"} className="hidden lg:inline-flex">
+            <Badge variant={badge.tone ?? "neutral"} className="hidden lg:inline-flex" data-testid={`${navTestId(item)}-badge`}>
               {badge.text}
             </Badge>
           )}

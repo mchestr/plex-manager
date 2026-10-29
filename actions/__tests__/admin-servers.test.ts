@@ -27,6 +27,7 @@ import { getPlexServerIdentity, getPlexUserInfo, testPlexConnection } from '@/li
 import { testRadarrConnection } from '@/lib/connections/radarr'
 import { testSonarrConnection } from '@/lib/connections/sonarr'
 import { testTautulliConnection } from '@/lib/connections/tautulli'
+import { turnOffForServerChange } from '@/lib/affiliates/switch'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
@@ -51,6 +52,7 @@ jest.mock('@/lib/connections/plex', () => ({
   getPlexUserInfo: jest.fn(),
   getPlexServerIdentity: jest.fn(),
 }))
+jest.mock('@/lib/affiliates/switch', () => ({ turnOffForServerChange: jest.fn().mockResolvedValue(false) }))
 jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn() }))
 jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn() }))
 jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
@@ -210,6 +212,17 @@ describe.each(SERVICES)('$name: a stored secret never goes to a new address', (s
       },
     })
     expect(JSON.stringify(details)).not.toContain(STORED_SECRET)
+  })
+
+  it('checks the affiliate switch after a Plex save only', async () => {
+    await service.save({ name: 'Renamed', url: `${STORED_URL}/` })
+    if (service.name === 'plex') expect(turnOffForServerChange).toHaveBeenCalledWith('admin-123')
+    else expect(turnOffForServerChange).not.toHaveBeenCalled()
+  })
+
+  it('keeps a saved Plex server when the affiliate switch check fails', async () => {
+    jest.mocked(turnOffForServerChange).mockRejectedValueOnce(new Error('db down'))
+    await expect(service.save({ name: 'Renamed', url: `${STORED_URL}/` })).resolves.toEqual({ success: true, data: null })
   })
 
   it('sends a newly entered secret to a new address and records secretChanged: true', async () => {

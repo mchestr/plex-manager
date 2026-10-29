@@ -76,6 +76,8 @@ export enum AuditEventType {
   // the label or the code.
   AFFILIATE_APPLIED = "AFFILIATE_APPLIED",
   AFFILIATE_INVITE_CREATED = "AFFILIATE_INVITE_CREATED",
+  // An admin's switch-off or a Plex server change also writes it, with
+  // the cause ("switch_off" or "server_change") and the count.
   AFFILIATE_INVITE_CANCELLED = "AFFILIATE_INVITE_CANCELLED",
   // Announcement events
   ANNOUNCEMENT_CREATED = "ANNOUNCEMENT_CREATED",

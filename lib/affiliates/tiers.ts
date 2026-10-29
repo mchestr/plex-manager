@@ -30,10 +30,10 @@ export interface AffiliateTier {
   invites: number
 }
 
-const MAX_AFFILIATE_TIERS = 5
+export const MAX_AFFILIATE_TIERS = 5
 export const MAX_AFFILIATE_INVITES = 10
 
-const DEFAULT_AFFILIATE_TIERS: readonly AffiliateTier[] = [
+export const DEFAULT_AFFILIATE_TIERS: readonly AffiliateTier[] = [
   { overHours: 50, invites: 1 },
   { overHours: 200, invites: 2 },
   { overHours: 500, invites: 3 },
@@ -45,7 +45,7 @@ const tierSchema = z.object({
 })
 
 /** The tier table: 1 to 5 tiers, each with more hours than the one before. */
-const affiliateTiersSchema = z
+export const affiliateTiersSchema = z
   .array(tierSchema)
   .min(1)
   .max(MAX_AFFILIATE_TIERS)

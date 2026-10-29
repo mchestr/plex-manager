@@ -58,7 +58,7 @@ export function llmConversation(id: string): Route {
 }
 
 /** The Affiliates page's tabs; `applications` is the default and leaves the URL bare. */
-export const AFFILIATE_TABS = ["applications", "affiliates", "tree", "history"] as const
+export const AFFILIATE_TABS = ["applications", "affiliates", "tree", "history", "settings"] as const
 export type AffiliateTab = (typeof AFFILIATE_TABS)[number]
 
 export function affiliates({ tab }: { tab?: AffiliateTab } = {}): Route {
