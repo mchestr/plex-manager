@@ -11,25 +11,13 @@ restoring the dump taken before the upgrade and running the previous tag. Read
 the upgrade notes of every version you skip. `docs/releasing.md` describes how
 a release is cut, and `docs/operations.md` how to back up and restore.
 
-Pull requests add their lines under Unreleased. A pull request that touches
-`prisma/migrations/**`, `lib/env.ts`, `docker/entrypoint.sh`, `Dockerfile` or
-`deploy/**`, or carries the `breaking` label, must add one (the Changelog
-check); the `no-changelog` label skips it.
-
-## [Unreleased]
-
-### Changed
-
-- **Database for affiliate invites:** the database gets the tables and columns for affiliate invites. The feature is not in the app yet, so nothing changes for members or admins. The new optional variable `RETENTION_AFFILIATE_DAYS` (default 365) sets how many days ended affiliate applications and unused affiliate invites are kept. The next boot runs one automatic pass that re-encrypts the stored secrets, because a new secret column is added.
-
-### Fixed
-
-- **Markdown tables:** assistant answers, saved conversations and announcements now render GitHub-flavored Markdown, so a table shows as a table (scrolling sideways when it is wide) instead of a line of pipes, and `~~strikethrough~~` and bare links work. A `#` heading shows as a section heading instead of plain text, and a footnote link stays on the page instead of opening the home page. The assistant's prompt says which Markdown renders, and the Discord prompt says Discord shows no tables.
-
-### Security
-
-- **Disabled members and Plex invites:** a disabled member who opens a valid Plex invite no longer gets the server shared again or a Stripe exemption. The redemption refuses the account before it counts the use, and the sign-in ends as it does for any disabled account.
-- **Plex invites record before they share:** a Plex invite now records the member, their exemption and the use before it shares the server. If the share fails, the redemption removes that record and gives the use back. Before, a record that failed after the share left the person with access but no record and no exemption. If Plex's automatic accept fails, the redemption now stays, because the share exists: the member can accept it in Plex.
+Pull requests never edit this file. Each adds its entry as a file under
+[`changelog.d/`](changelog.d/README.md), and the release script merges those
+files into the next version's section, so changes waiting for a release are
+in `changelog.d/`. A pull request that touches `prisma/migrations/**`,
+`lib/env.ts`, `docker/entrypoint.sh`, `Dockerfile` or `deploy/**`, or carries
+the `breaking` label, must add one (the Changelog check); the `no-changelog`
+label skips it.
 
 ## [0.7.0] - 2026-10-28
 
@@ -303,7 +291,6 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 - No account linking by email; the Jellyfin sign-in toggle is enforced; share routes serve a share-safe projection; a failed Tautulli match no longer shows emails; a Redis-backed rate limiter keys on the trusted proxy hop; generation is single-flight and rate-limited; the poster proxy checks access; `plexAuthToken` no longer reaches the admin browser.
 - The Discord bot no longer uses the Message Content intent, keeps its token encrypted in the database, and scrubs personal fields before the LLM.
 
-[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.7.0...HEAD
 [0.7.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.7.0
 [0.6.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.6.0
 [0.5.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.5.0

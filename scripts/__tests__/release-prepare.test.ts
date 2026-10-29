@@ -4,21 +4,24 @@
 
 /**
  * The release preparation (P11.25): on a temp copy, the version bump, the
- * Unreleased section moved under a dated heading with a new empty one above
- * it, and refusals that write nothing. Also checks the committed
- * CHANGELOG.md keeps the shape the release workflow needs.
+ * changelog.d/ fragments merged under a dated heading and deleted, and
+ * refusals that write nothing. Also checks the committed CHANGELOG.md and
+ * fragments keep the shape the release workflow needs.
  */
 
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 
 import {
   compareSemver,
   cutRelease,
+  hasUnreleasedSection,
+  isFragmentPath,
+  parseFragment,
+  PG_DUMP_NOTE,
   releasedVersions,
   releaseNotes,
-  unreleasedBody,
   upgradeNoteProblems,
 } from "../release/changelog.mjs"
 import { prepareRelease } from "../release/prepare.mjs"
@@ -29,30 +32,26 @@ const CHANGELOG = `# Changelog
 
 Intro.
 
-## [Unreleased]
-
-### Upgrade notes
-
-- Take a \`pg_dump -Fc\` before you start the new release.
-- Set \`NEW_VARIABLE\`.
-
-### Added
-
-- A thing.
-
 ## [0.3.0] - 2026-10-23
 
 ### Upgrade notes
 
 - Take a \`pg_dump -Fc\` first.
 
-[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.3.0
 `
 
+const FRAGMENTS: Record<string, string> = {
+  "b-variable.md": "### Fixed\n\n- A fix.\n\n### Upgrade notes\n\n- Set `NEW_VARIABLE`.\n",
+  "a-thing.md": "### Added\n\n- A thing.\n",
+  "README.md": "# Changelog fragments\n",
+}
+
 let dir: string
 
-function write(changelog = CHANGELOG, version = "0.3.0") {
+function write(changelog = CHANGELOG, version = "0.3.0", fragments = FRAGMENTS) {
+  mkdirSync(path.join(dir, "changelog.d"), { recursive: true })
+  for (const [name, text] of Object.entries(fragments)) writeFileSync(path.join(dir, "changelog.d", name), text)
   writeFileSync(path.join(dir, "package.json"), `${JSON.stringify({ name: "plex-manager", version, private: true }, null, 2)}\n`)
   writeFileSync(
     path.join(dir, "package-lock.json"),
@@ -83,18 +82,24 @@ describe("prepareRelease", () => {
     expect(read("package.json").endsWith("}\n")).toBe(true)
   })
 
-  it("moves Unreleased under the dated heading and leaves a new empty Unreleased", () => {
+  it("merges the fragments under the dated heading, pg_dump first, and deletes them", () => {
     write()
     const notes = prepareRelease(dir, "0.4.0", "2027-02-09")
     const changelog = read("CHANGELOG.md")
 
-    expect(changelog).toContain("## [Unreleased]\n\n## [0.4.0] - 2027-02-09\n\n### Upgrade notes\n")
-    expect(unreleasedBody(changelog)?.filter((line: string) => line.trim() !== "")).toEqual([])
+    expect(changelog).toContain("Intro.\n\n## [0.4.0] - 2027-02-09\n\n### Upgrade notes\n")
     expect(releasedVersions(changelog)).toEqual(["0.4.0", "0.3.0"])
     expect(releaseNotes(changelog, "0.4.0")).toBe(notes)
-    expect(notes).toContain("- Set `NEW_VARIABLE`.")
-    expect(notes).toContain("- A thing.")
+    expect(notes).toBe(
+      ["### Upgrade notes", "", PG_DUMP_NOTE, "- Set `NEW_VARIABLE`.", "", "### Added", "", "- A thing.", "", "### Fixed", "", "- A fix."].join("\n")
+    )
     expect(releaseNotes(changelog, "0.3.0")).toBe("### Upgrade notes\n\n- Take a `pg_dump -Fc` first.")
+    expect(readdirSync(path.join(dir, "changelog.d"))).toEqual(["README.md"])
+  })
+
+  it("lists fragments in name order and joins their items in one list", () => {
+    write(CHANGELOG, "0.3.0", { "b.md": "### Added\n\n- From b.\n", "a.md": "### Added\n\n- From a.\n" })
+    expect(prepareRelease(dir, "0.4.0", "2027-02-09")).toContain("### Added\n\n- From a.\n- From b.")
   })
 
   it("points the link definitions at the new tag", () => {
@@ -102,10 +107,10 @@ describe("prepareRelease", () => {
     prepareRelease(dir, "0.4.0", "2027-02-09")
     const changelog = read("CHANGELOG.md")
 
-    expect(changelog).toContain("[unreleased]: https://github.com/mchestr/plex-manager/compare/v0.4.0...HEAD\n")
+    expect(changelog).toContain("[0.4.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.4.0\n[0.3.0]")
     expect(changelog).toContain("[0.4.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.4.0\n")
     expect(changelog).toContain("[0.3.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.3.0\n")
-    expect(changelog.match(/^\[unreleased\]: /gim)).toHaveLength(1)
+    expect(changelog.match(/^\[0\.4\.0\]: /gm)).toHaveLength(1)
   })
 
   it.each([
@@ -115,10 +120,10 @@ describe("prepareRelease", () => {
     ["a prerelease of the current version", "0.3.0-rc.1", "0.3.0"],
   ])("refuses a version %s and writes nothing", (_name, version, packageVersion) => {
     write(CHANGELOG, packageVersion)
-    const before = [read("package.json"), read("package-lock.json"), read("CHANGELOG.md")]
+    const before = [read("package.json"), read("package-lock.json"), read("CHANGELOG.md"), read("changelog.d/a-thing.md")]
 
     expect(() => prepareRelease(dir, version, "2027-02-09")).toThrow(/not greater than/)
-    expect([read("package.json"), read("package-lock.json"), read("CHANGELOG.md")]).toEqual(before)
+    expect([read("package.json"), read("package-lock.json"), read("CHANGELOG.md"), read("changelog.d/a-thing.md")]).toEqual(before)
   })
 
   it("refuses a version that is not semver", () => {
@@ -126,25 +131,33 @@ describe("prepareRelease", () => {
     expect(() => prepareRelease(dir, "v0.4.0", "2027-02-09")).toThrow(/Not a semantic version/)
   })
 
-  it("refuses an empty Unreleased section", () => {
-    write(CHANGELOG.replace(/## \[Unreleased\][\s\S]*?(?=## \[0\.3\.0\])/, "## [Unreleased]\n\n### Upgrade notes\n\n"))
-    expect(() => prepareRelease(dir, "0.4.0", "2027-02-09")).toThrow(/empty/)
+  it("refuses a release with no fragments", () => {
+    write(CHANGELOG, "0.3.0", { "README.md": "# Changelog fragments\n" })
+    expect(() => prepareRelease(dir, "0.4.0", "2027-02-09")).toThrow(/nothing to release/)
+
+    rmSync(path.join(dir, "changelog.d"), { recursive: true })
+    expect(() => prepareRelease(dir, "0.4.0", "2027-02-09")).toThrow(/nothing to release/)
   })
 
-  it("refuses an Unreleased section without upgrade notes that start with a pg_dump", () => {
-    write(CHANGELOG.replace("- Take a `pg_dump -Fc` before you start the new release.\n", ""))
-    expect(() => prepareRelease(dir, "0.4.0", "2027-02-09")).toThrow(/pg_dump/)
+  it("refuses a malformed fragment and deletes nothing", () => {
+    write(CHANGELOG, "0.3.0", { ...FRAGMENTS, "c-bad.md": "### Improved\n\n- A thing.\n" })
+    expect(() => prepareRelease(dir, "0.4.0", "2027-02-09")).toThrow(/changelog\.d\/c-bad\.md: "### Improved"/)
+    expect(existsSync(path.join(dir, "changelog.d", "a-thing.md"))).toBe(true)
+    expect(read("CHANGELOG.md")).toBe(CHANGELOG)
+  })
 
-    write(CHANGELOG.replace("### Upgrade notes\n\n- Take a `pg_dump -Fc` before you start the new release.\n- Set `NEW_VARIABLE`.\n\n", ""))
-    expect(() => prepareRelease(dir, "0.4.0", "2027-02-09")).toThrow(/no "### Upgrade notes" block/)
+  it("refuses a changelog that still has an Unreleased section", () => {
+    write(CHANGELOG.replace("## [0.3.0]", "## [Unreleased]\n\n## [0.3.0]"))
+    expect(() => prepareRelease(dir, "0.4.0", "2027-02-09")).toThrow(/Unreleased/)
   })
 })
 
 describe("cutRelease", () => {
   it("adds link definitions to a changelog that has none", () => {
-    const text = "# Changelog\n\n## [Unreleased]\n\n### Upgrade notes\n\n- Take a `pg_dump`.\n"
-    const out = cutRelease(text, "1.0.0", "2027-03-01")
-    expect(out.endsWith("[unreleased]: https://github.com/mchestr/plex-manager/compare/v1.0.0...HEAD\n[1.0.0]: https://github.com/mchestr/plex-manager/releases/tag/v1.0.0\n")).toBe(true)
+    const out = cutRelease("# Changelog\n", "1.0.0", "2027-03-01", [{ name: "changelog.d/a.md", text: "### Added\n\n- A.\n" }])
+    expect(out).toContain("# Changelog\n\n## [1.0.0] - 2027-03-01\n\n### Upgrade notes\n")
+    expect(out.endsWith("- A.\n\n[1.0.0]: https://github.com/mchestr/plex-manager/releases/tag/v1.0.0\n")).toBe(true)
+    expect(upgradeNoteProblems((releaseNotes(out, "1.0.0") ?? "").split("\n"))).toEqual([])
   })
 })
 
@@ -176,10 +189,17 @@ describe("the committed CHANGELOG.md", () => {
     }
   )
 
-  it("has an Unreleased section and a link for it", () => {
-    expect(unreleasedBody(changelog)).not.toBeNull()
-    expect(changelog).toContain(`[unreleased]: https://github.com/mchestr/plex-manager/compare/v${versions[0]}...HEAD\n`)
+  it("has no Unreleased section: pending entries are changelog.d/ fragments", () => {
+    expect(hasUnreleasedSection(changelog)).toBe(false)
+    expect(changelog).not.toMatch(/^\[unreleased\]: /im)
   })
+
+  it.each(readdirSync(path.join(ROOT, "changelog.d")).map((name) => `changelog.d/${name}`).filter(isFragmentPath))(
+    "%s is a well-formed fragment",
+    (name) => {
+      expect(parseFragment(readFileSync(path.join(ROOT, name), "utf8")).problems).toEqual([])
+    }
+  )
 
   it("is explained in the README: pinning, the changelog and rolling back", () => {
     const readme = readFileSync(path.join(ROOT, "README.md"), "utf8")

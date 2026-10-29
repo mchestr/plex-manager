@@ -366,7 +366,7 @@ describe('Component', () => {
 
 Other workflows: `freeze-gate.yml` fails a pull request while the `CODE_FREEZE` repository variable is `on`, unless it carries `freeze:data` or `freeze:security` (`docs/operations.md`, "Code freeze gate"); `docker-publish.yml` publishes the image from `main` and `v*` tags.
 
-The Changelog check (`.github/workflows/changelog.yml`) fails a pull request that touches `prisma/migrations/**`, `lib/env.ts`, `docker/entrypoint.sh`, `Dockerfile` or `deploy/**`, or carries the `breaking` label, without a line under Unreleased in `CHANGELOG.md` (put operator steps under "Upgrade notes"); the `no-changelog` label skips it. A `v*` tag publishes the versioned image and, through `.github/workflows/release.yml`, the GitHub Release; see `docs/releasing.md`.
+The Changelog check (`.github/workflows/changelog.yml`) fails a pull request that touches `prisma/migrations/**`, `lib/env.ts`, `docker/entrypoint.sh`, `Dockerfile` or `deploy/**`, or carries the `breaking` label, without adding a fragment, `changelog.d/<topic>.md` (format in `changelog.d/README.md`; put operator steps under "Upgrade notes"); the `no-changelog` label skips that. Pull requests never edit `CHANGELOG.md`: the check fails a malformed fragment or an `## [Unreleased]` section there, and `scripts/release/prepare.mjs` merges the fragments into the release. A `v*` tag publishes the versioned image and, through `.github/workflows/release.yml`, the GitHub Release; see `docs/releasing.md`.
 
 ## JSDoc Documentation Strategy
 

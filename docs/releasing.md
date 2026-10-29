@@ -19,18 +19,23 @@ patterns, and the image's `org.opencontainers.image.version` label is the
 version. `/api/metrics` reports `package.json`'s version in
 `plex_manager_build_info`.
 
-## Day to day: the changelog check
+## Day to day: changelog fragments
 
-Every pull request adds its lines under `## [Unreleased]`, in the Added,
-Changed, Fixed, Security or Removed subsection, and puts anything an operator
-must do under `### Upgrade notes`. That block always starts with "Take a
-`pg_dump -Fc` before you start the new release".
+Pull requests never edit `CHANGELOG.md`, so they never conflict there. Each
+one adds a fragment, `changelog.d/<topic>.md`, with its Added, Changed,
+Deprecated, Removed, Fixed or Security items, and anything an operator must do
+under `### Upgrade notes`. [`changelog.d/README.md`](../changelog.d/README.md)
+has the format. A fragment leaves out the `pg_dump` item: the release adds
+"Take a `pg_dump -Fc` before you start the new release" as the first upgrade
+note.
 
 The **Changelog** check (`.github/workflows/changelog.yml`, rules in
-`scripts/release/changelog.mjs`) fails a pull request that touches
-`prisma/migrations/**`, `lib/env.ts`, `docker/entrypoint.sh`, `Dockerfile` or
-`deploy/**`, or carries the `breaking` label, and adds no line under
-Unreleased. The `no-changelog` label skips it. Run it locally with
+`scripts/release/changelog.mjs`) fails a pull request whose fragment is
+malformed or that adds an `## [Unreleased]` section to `CHANGELOG.md`. It
+also fails one that touches `prisma/migrations/**`, `lib/env.ts`,
+`docker/entrypoint.sh`, `Dockerfile` or `deploy/**`, or carries the
+`breaking` label, and adds no fragment; the `no-changelog` label skips that
+part. Run it locally on committed work with
 `node scripts/check-changelog.mjs --base origin/main --head HEAD`.
 
 ## Cutting a release
@@ -40,12 +45,13 @@ Unreleased. The `no-changelog` label skips it. Run it locally with
    node scripts/release/prepare.mjs 0.4.0
    ```
    It refuses a version that is not greater than `package.json`'s and every
-   version in the changelog, an empty Unreleased section, and one without an
-   upgrade-notes block that starts with a `pg_dump`. Otherwise it bumps
-   `package.json` and `package-lock.json`, moves Unreleased under
-   `## [0.4.0] - <today>` with a new empty Unreleased above it, updates the
-   link definitions, commits on `release/v0.4.0`, pushes, and opens the PR
-   `chore(release): v0.4.0` with the notes in its body. `--date YYYY-MM-DD`
+   version in the changelog, an empty `changelog.d/`, and a malformed
+   fragment. Otherwise it bumps `package.json` and `package-lock.json`,
+   merges the fragments, in file-name order, into `## [0.4.0] - <today>`
+   (each subsection once, upgrade notes first and opening with the `pg_dump`
+   item), adds the tag's link definition, deletes the fragments, commits on
+   `release/v0.4.0`, pushes, and opens the PR `chore(release): v0.4.0` with
+   the notes in its body. `--date YYYY-MM-DD`
    sets the date; `--no-pr` only edits the files.
 2. **Merge** the release PR once Checks pass. Edit the notes in the PR if they
    need it; the release uses what merges.
@@ -68,7 +74,7 @@ Unreleased. The `no-changelog` label skips it. Run it locally with
 ## Trying the flow on a fork
 
 On a fork with Actions enabled, run `node scripts/release/prepare.mjs
-0.0.1-test --no-pr` after adding a line under Unreleased, commit it to the
+0.0.1-test --no-pr` after adding a fragment to `changelog.d/`, commit it to the
 fork's `main`, wait for Checks, then push `v0.0.1-test`. The fork gets a
 prerelease `v0.0.1-test` and the image `ghcr.io/<fork owner>/plex-manager:0.0.1-test`.
 
