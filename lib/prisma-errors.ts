@@ -24,6 +24,30 @@ const targetMetaSchema = z.object({
 })
 
 /**
+ * True when `error` is a unique-constraint violation (P2002) on one column:
+ * its constraint `index` (such as `Invite_code_key`) or its `field`.
+ */
+export function isUniqueConflict(error: unknown, { index, field }: { index: string; field: string }): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+    return false
+  }
+
+  const adapter = driverAdapterMetaSchema.safeParse(error.meta)
+  if (adapter.success) {
+    const constraint = adapter.data.driverAdapterError.cause.constraint
+    return constraint.index === index || constraint.fields?.includes(field) === true
+  }
+
+  const classic = targetMetaSchema.safeParse(error.meta)
+  if (classic.success) {
+    const { target } = classic.data
+    return Array.isArray(target) ? target.includes(field) : target === index
+  }
+
+  return false
+}
+
+/**
  * True when `error` is a unique-constraint violation (P2002) on `User.email`.
  *
  * Callers use it around a `User` write that stores an email address, to retry
@@ -40,21 +64,5 @@ const targetMetaSchema = z.object({
  * ```
  */
 export function isUniqueEmailConflict(error: unknown): boolean {
-  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
-    return false
-  }
-
-  const adapter = driverAdapterMetaSchema.safeParse(error.meta)
-  if (adapter.success) {
-    const { index, fields } = adapter.data.driverAdapterError.cause.constraint
-    return index === "User_email_key" || fields?.includes("email") === true
-  }
-
-  const classic = targetMetaSchema.safeParse(error.meta)
-  if (classic.success) {
-    const { target } = classic.data
-    return Array.isArray(target) ? target.includes("email") : target === "User_email_key"
-  }
-
-  return false
+  return isUniqueConflict(error, { index: "User_email_key", field: "email" })
 }

@@ -42,7 +42,7 @@ const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initi
 function renderShell(user: ShellUser = member, notice?: MemberNotice) {
   return render(
     <ToastProvider>
-      <AppShell serverName="Northfield Plex" user={user} nav={memberNav({ rewindYear: 2026, membership: false })} notice={notice}>
+      <AppShell serverName="Northfield Plex" user={user} nav={memberNav({ rewindYear: 2026, invites: false, membership: false })} notice={notice}>
         <p>Page</p>
       </AppShell>
     </ToastProvider>
@@ -77,7 +77,7 @@ describe('AppShell', () => {
   it('marks Rewind current on its subpaths', () => {
     // The shell hides its bar on Rewind pages, so this reads the nav island itself.
     mockPathname.mockReturnValue('/rewind/2025/read')
-    render(<MemberNav items={memberNav({ rewindYear: 2026, membership: false })} />)
+    render(<MemberNav items={memberNav({ rewindYear: 2026, invites: false, membership: false })} />)
 
     expect(screen.getByTestId('member-nav-rewind')).toHaveAttribute('aria-current', 'page')
     expect(screen.getByTestId('member-nav-home')).not.toHaveAttribute('aria-current')

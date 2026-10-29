@@ -2,8 +2,8 @@
  * The member top bar's links (ui-design-system 6.1).
  *
  * `memberNav()` starts with Home and, when the member can open something
- * there, "Rewind {year}", then Membership when the member has that page and
- * Help always (Account settings lives in the account menu). Each step that
+ * there, "Rewind {year}", then Invites and Membership when the member has
+ * those pages, and Help always (Account settings lives in the account menu). Each step that
  * ships a route adds its entry, because `typedRoutes` rejects links to routes
  * that do not exist yet.
  *
@@ -22,13 +22,16 @@ export interface MemberNavItem {
 interface MemberNavOptions {
   /** The season year, for the "Rewind {year}" label; `null` hides the item. */
   rewindYear: number | null
+  /** The affiliate switch is on and the member has a Plex id, so `/invites` exists. */
+  invites: boolean
   /** Stripe is on or the member has a subscription row, so `/membership` exists. */
   membership: boolean
 }
 
-export function memberNav({ rewindYear, membership }: MemberNavOptions): MemberNavItem[] {
+export function memberNav({ rewindYear, invites, membership }: MemberNavOptions): MemberNavItem[] {
   const items: MemberNavItem[] = [{ href: "/", label: "Home", match: "exact" }]
   if (rewindYear !== null) items.push({ href: "/rewind", label: `Rewind ${rewindYear}`, match: "prefix" })
+  if (invites) items.push({ href: "/invites", label: "Invites", match: "exact" })
   if (membership) items.push({ href: "/membership", label: "Membership", match: "exact" })
   items.push({ href: "/help", label: "Help", match: "exact" })
   return items

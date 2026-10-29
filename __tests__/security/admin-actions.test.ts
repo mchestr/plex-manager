@@ -433,6 +433,33 @@ describe('Admin Actions Security', () => {
       })
     })
 
+    it('ends the sessions on a retry of a disable whose session end failed', async () => {
+      const disabledAt = new Date('2026-10-01T10:00:00Z')
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', disabledAt }))
+      prismaMock.auditLog.findFirst.mockResolvedValue(null)
+
+      await expect(setUserDisabled({ userId: 'member-1', disabled: true })).resolves.toEqual({ success: true, data: { inviterRevoked: null } })
+
+      expect(prismaMock.user.update).not.toHaveBeenCalled()
+      expect(prismaMock.auditLog.findFirst).toHaveBeenCalledWith({
+        where: { type: AuditEventType.SESSIONS_REVOKED, targetUserId: 'member-1', createdAt: { gte: disabledAt } },
+        select: { id: true },
+      })
+      expect(prismaMock.user.updateMany).toHaveBeenCalledWith({ where: { id: 'member-1' }, data: { sessionVersion: { increment: 1 } } })
+      expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.SESSIONS_REVOKED, 'admin-user-id', { targetUserId: 'member-1', reason: 'disabled' })
+      expect(logAuditEvent).not.toHaveBeenCalledWith(AuditEventType.USER_DISABLED, expect.anything(), expect.anything())
+    })
+
+    it('stays quiet on a retry once the sessions ended for this disable', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', disabledAt: new Date() }))
+      prismaMock.auditLog.findFirst.mockResolvedValue({ id: 'event-1' } as never)
+
+      await expect(setUserDisabled({ userId: 'member-1', disabled: true })).resolves.toEqual({ success: true, data: { inviterRevoked: null } })
+
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+      expect(logAuditEvent).not.toHaveBeenCalled()
+    })
+
     it('changes nothing when the member is already in that state', async () => {
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', disabledAt: null }))
 

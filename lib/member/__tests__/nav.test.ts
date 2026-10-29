@@ -2,8 +2,8 @@ import { isImmersiveRoute, isNavActive, memberNav } from '@/lib/member/nav'
 
 describe('memberNav', () => {
   it('starts with Home, adds "Rewind {year}" when the member can open it, and ends with Help', () => {
-    expect(memberNav({ rewindYear: null, membership: false }).map((item) => item.label)).toEqual(['Home', 'Help'])
-    expect(memberNav({ rewindYear: 2026, membership: false })).toEqual([
+    expect(memberNav({ rewindYear: null, invites: false, membership: false }).map((item) => item.label)).toEqual(['Home', 'Help'])
+    expect(memberNav({ rewindYear: 2026, invites: false, membership: false })).toEqual([
       { href: '/', label: 'Home', match: 'exact' },
       { href: '/rewind', label: 'Rewind 2026', match: 'prefix' },
       { href: '/help', label: 'Help', match: 'exact' },
@@ -11,8 +11,17 @@ describe('memberNav', () => {
   })
 
   it('adds Membership before Help when the member has that page', () => {
-    expect(memberNav({ rewindYear: null, membership: true }).map((item) => item.href)).toEqual([
+    expect(memberNav({ rewindYear: null, invites: false, membership: true }).map((item) => item.href)).toEqual([
       '/',
+      '/membership',
+      '/help',
+    ])
+  })
+
+  it('adds Invites before Membership when the member has that page', () => {
+    expect(memberNav({ rewindYear: null, invites: true, membership: true }).map((item) => item.href)).toEqual([
+      '/',
+      '/invites',
       '/membership',
       '/help',
     ])
@@ -20,7 +29,7 @@ describe('memberNav', () => {
 })
 
 describe('isNavActive', () => {
-  const [home, rewind] = memberNav({ rewindYear: 2026, membership: false })
+  const [home, rewind] = memberNav({ rewindYear: 2026, invites: false, membership: false })
 
   it.each([
     ['/', true, false],
