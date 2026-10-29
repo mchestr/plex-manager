@@ -18,6 +18,12 @@
  * | `discordOAuthStates` / `discordPendingSelections` | by `expiresAt` | deleted |
  * | `rewindPreviousData` | `RewindGeneration` of expired seasons | `previousData` nulled |
  * | `auditLog` | `AuditLog` by `createdAt` (its only delete path) | deleted |
+ * | `affiliateApplications` | refused, revoked, ended and closed `AffiliateApplication` by their last date, never inside 30 days | deleted |
+ * | `affiliateInvites` | unused affiliate `Invite` by `cancelledAt` or `expiresAt` | deleted |
+ * | `affiliateInviteLabels` | expired affiliate `Invite` | `label` nulled |
+ *
+ * Admin invites and used affiliate invites (an invitee's join record) are
+ * never touched.
  *
  * Each rule selects up to {@link RETENTION_BATCH_SIZE} ids and then updates or
  * deletes by id under the same filter, so transactions stay short and a row
@@ -44,6 +50,9 @@ const logger = createLogger("RETENTION")
 export const RETENTION_BATCH_SIZE = 1000
 
 const DAY_MS = 24 * 60 * 60 * 1000
+
+/** A refusal waits 30 days before the member can apply again, so its row stays at least that long. */
+const AFFILIATE_REAPPLY_WAIT_DAYS = 30
 
 export interface RetentionSweepResult {
   counts: Record<RetentionRule, number>
@@ -240,6 +249,30 @@ function ruleRunners(days: ReturnType<typeof retentionDays>): RuleRunners {
       )
     },
     auditLog: (ctx) => deleteWhere(ctx, prisma.auditLog, { createdAt: { lt: ctx.before(days.auditLog) } }),
+    affiliateApplications: (ctx) => {
+      const before = ctx.before(Math.max(days.affiliateApplications, AFFILIATE_REAPPLY_WAIT_DAYS))
+      return deleteWhere(ctx, prisma.affiliateApplication, {
+        status: { in: ["REFUSED", "REVOKED", "ENDED", "CLOSED"] },
+        appliedAt: { lt: before },
+        AND: [{ OR: [{ decidedAt: null }, { decidedAt: { lt: before } }] }, { OR: [{ endedAt: null }, { endedAt: { lt: before } }] }],
+      } satisfies Prisma.AffiliateApplicationWhereInput)
+    },
+    affiliateInvites: (ctx) => {
+      const before = ctx.before(days.affiliateInvites)
+      return deleteWhere(ctx, prisma.invite, {
+        kind: "AFFILIATE",
+        joinedAt: null,
+        OR: [{ cancelledAt: { lt: before } }, { expiresAt: { lt: before } }],
+      } satisfies Prisma.InviteWhereInput)
+    },
+    affiliateInviteLabels: (ctx) => {
+      const where: Prisma.InviteWhereInput = { kind: "AFFILIATE", label: { not: null }, expiresAt: { lt: ctx.now } }
+      return inBatches(
+        ctx,
+        async (take) => ids(await prisma.invite.findMany({ where, select: { id: true }, take })),
+        (batch) => prisma.invite.updateMany({ where: { AND: [where, { id: { in: batch } }] }, data: { label: null } })
+      )
+    },
   }
 }
 

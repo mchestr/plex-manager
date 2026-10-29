@@ -30,7 +30,8 @@ async function searchUsers(q: string): Promise<AdminSearchResult[]> {
 async function searchInvites(q: string): Promise<AdminSearchResult[]> {
   const invites = await prisma.invite.findMany({
     // New codes are stored uppercase (SEC-56); older ones may not be
-    where: { code: { startsWith: q, mode: "insensitive" } },
+    // Admin invites only: a member's affiliate invite is not shown in Admin → Invites
+    where: { kind: "ADMIN", code: { startsWith: q, mode: "insensitive" } },
     select: { id: true, code: true, serverType: true, useCount: true, maxUses: true, expiresAt: true },
     orderBy: { code: "asc" },
     take: TAKE,

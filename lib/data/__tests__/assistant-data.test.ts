@@ -2,6 +2,7 @@ import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { assertAdmin } from "@/lib/admin"
+import type { Prisma } from "@/lib/generated/prisma/client"
 import { getAssistantFailedJobs, getAssistantInvites, getAssistantMember } from "@/lib/data/assistant-data"
 
 jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
@@ -34,6 +35,13 @@ describe("assistant data loaders", () => {
     const args = prismaMock.invite.findMany.mock.calls[0][0]
     expect(args?.take).toBe(5)
     expect(JSON.stringify(args?.where)).toContain("expiresAt")
+  })
+
+  it("reads admin invites only, never an affiliate invite", async () => {
+    prismaMock.invite.findMany.mockResolvedValue([])
+    await getAssistantInvites({ status: "all" })
+    const where = prismaMock.invite.findMany.mock.calls[0][0]?.where as { AND: Prisma.InviteWhereInput[] }
+    expect(where.AND[0]).toEqual({ kind: "ADMIN" })
   })
 
   it("keeps the expired filter when expiresWithinDays is also given", async () => {

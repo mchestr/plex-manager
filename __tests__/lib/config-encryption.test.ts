@@ -13,7 +13,7 @@ const ENCRYPTION_PREFIX = 'enc:v2:legacy:'
 
 // The crypto module caches the derived key at module load, so each scenario
 // resets modules and re-imports with the desired ENCRYPTION_KEY state.
-const CONFIG_SECRET_FIELDS = ['stripeSecretKey', 'stripeWebhookSecret', 'rewindSerialKey'] as const
+const CONFIG_SECRET_FIELDS = ['stripeSecretKey', 'stripeWebhookSecret', 'rewindSerialKey', 'affiliateBlockKey'] as const
 
 describe('Config Stripe secret encryption', () => {
   const originalKey = process.env.ENCRYPTION_KEY
@@ -85,7 +85,7 @@ describe('Config Stripe secret encryption', () => {
     // Guards against accidental removal of the Stripe secrets from the registry,
     // which would silently store them in plaintext.
     const { ENCRYPTED_FIELDS } = require('@/lib/prisma')
-    expect(ENCRYPTED_FIELDS.Config).toEqual(['stripeSecretKey', 'stripeWebhookSecret', 'rewindSerialKey'])
+    expect(ENCRYPTED_FIELDS.Config).toEqual(['stripeSecretKey', 'stripeWebhookSecret', 'rewindSerialKey', 'affiliateBlockKey'])
     // Non-secret Stripe columns must NOT be encrypted (they are read/filtered plainly).
     expect(ENCRYPTED_FIELDS.Config).not.toContain('stripePriceIds')
     expect(ENCRYPTED_FIELDS.Config).not.toContain('stripeEnabled')

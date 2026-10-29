@@ -25,6 +25,7 @@ Removal runs in this order:
 2. **One database transaction:**
    - Discord command log rows, chat sessions and pending selections, by app user id and by Discord id;
    - prompts and responses of LLM rows that admins generated about the member (for example an admin regeneration of their Rewind) are set to null, keeping tokens and cost;
+   - the member's unused affiliate invites are deleted;
    - the `User` row is deleted, and the rest cascades;
    - one `MEMBER_ERASED` audit row is written.
 
@@ -36,6 +37,7 @@ If Stripe, Plex or Jellyfin fails, removal stops before the transaction with a c
 - **Stripe's own records.** Stripe keeps the customer, invoices and the cancelled subscription; delete those in the Stripe dashboard if the member asks.
 - **Media server history.** Plex, Jellyfin and Tautulli keep their own accounts and watch history, outside this app. Removal unshares Plex and disables Jellyfin; it does not delete accounts or history there.
 - **Server logs.** Lines already written to stdout stay until the operator's log rotation removes them.
+- **Used affiliate invites.** An affiliate invite that someone joined with is that member's join record, so it stays. When the affiliate is removed, its `affiliateUserId` is set to null. When the invitee is removed, its `joinedUserId` is set to null, so only the join date is left. Its label is already gone, since it is nulled on use.
 - **Admin ids on server content.** An admin's id on invites, announcements and prompt templates (`createdBy`, `updatedBy`) stays after that admin is removed. It is no longer linked to a person.
 
 ### Losing access without removal
@@ -80,6 +82,9 @@ A daily sweep (`lib/queue/jobs/retention.ts`) removes personal data once it is o
 | Parked Discord searches (`DiscordPendingSelection`) | until it expires | Deleted | none |
 | Replaced Rewinds (`RewindGeneration.previousData`) | until 30 June after its season (2026's until 2027-06-30) | Set to null; the one rollback is then gone | none |
 | Audit log (`AuditLog`) | 400 days | Deleted; this is the only way audit rows are removed | `RETENTION_AUDIT_LOG_DAYS` |
+| Ended affiliate applications (`AffiliateApplication`: refused, revoked, ended or closed) | 365 days after their last date, and never less than 30 days, so a refusal stays for its 30-day wait before the member can apply again | Deleted. Pending and approved applications stay | `RETENTION_AFFILIATE_DAYS` |
+| Unused affiliate invites (`Invite` of kind `AFFILIATE` that nobody joined with) | 365 days after it is cancelled or expires | Deleted. Used affiliate invites and admin invites stay | `RETENTION_AFFILIATE_DAYS` |
+| Affiliate invite labels (`Invite.label`) | until the invite is used, cancelled or expires | Set to null | none |
 
 Every other row in the member tables below is kept while the member is, and goes when they are removed. `WrappedShareVisit` (v2 share visits) is deleted with its Rewind. Server logs are kept for as long as the operator's log rotation keeps them.
 
@@ -89,6 +94,7 @@ Every other row in the member tables below is kept while the member is, and goes
 - **`DiscordConnection` access and refresh tokens**: kept until the member unlinks, and revoked at Discord on unlink and on removal.
 - **Invite codes** (`Invite.code`): kept until the invite is deleted. Admins see them to share them, so they are not hashed.
 - **Rewind share tokens**: stored only as SHA-256 hashes (`RewindShare.tokenHash`); the token itself is never stored.
+- **Affiliate blocks**: a blocked Plex account is stored only as an HMAC-SHA256 of its Plex id (`AffiliateBlock.plexIdHash`), keyed by `Config.affiliateBlockKey` (encrypted at rest). The Plex id itself is not stored. A block is kept until an admin unblocks it.
 - **Service keys** (Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr, LLM providers, Stripe, Discord app): kept until an admin replaces them.
 - Every secret column, and the AI prompt and reply text, is encrypted at rest under the keyring in `ENCRYPTION_KEYS` (the last column of the tables below); production refuses to start without a key ([operations](operations.md#encryption-keys)).
 
@@ -100,7 +106,7 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 
 | Model | Personal data | Readers | Removal does | Encrypted at rest |
 |---|---|---|---|---|
-| `User` | name, email, image, `plexUserId`, `jellyfinUserId`, `primaryAuthService`, `timezone`, exemption note, role, `disabledAt`; `plexAuthToken` (credential) | M own; A users list and detail; P name and image on a signed share | Deleted. Unshare and the Stripe revoke clear `plexAuthToken` | `plexAuthToken` |
+| `User` | name, email, image, `plexUserId`, `jellyfinUserId`, `primaryAuthService`, `timezone`, exemption note, role, `disabledAt`, `accessEndedAt`; a Tautulli watch-hours snapshot (`watchHours`, `watchHoursLast30Days`, `watchHoursReadAt`); `plexAuthToken` (credential) | M own; A users list and detail; P name and image on a signed share | Deleted. Unshare and the Stripe revoke clear `plexAuthToken` | `plexAuthToken` |
 | `PlexWrapped` | the member's Rewind: viewing history facts, LLM copy, summary, archetype, legacy share token | M viewer; A Rewind pages; P published pages of a share | Cascade | No |
 | `RewindGeneration` | run status, error code, `previousData` (the replaced Rewind) | A Rewind history | Cascade | No |
 | `RewindShare` | published page list, card facts, token hash and asset key | M sharing panel; P the public link | Cascade (through `PlexWrapped`); the link returns 404 | Token stored as a SHA-256 hash only |
@@ -121,6 +127,9 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `WatchlistSyncSettings` | sync choice, last result and counters | M card; A counts | Cascade. Unshare and the Stripe revoke turn sync off | No |
 | `WatchlistSyncHistory` | titles from the member's private Plex watchlist and their request status | M recent items; A every member's items (Admin → Watchlist sync) | Cascade | No |
 | `InviteUsage` | which invite the member redeemed, and when | A invite detail | Cascade | No |
+| `Invite` | admin invites: codes and library settings, `createdBy` admin id. An affiliate invite also holds the affiliate's user id (`affiliateUserId`), a private label for the affiliate, and the invitee's user id and join date (`joinedUserId`, `joinedAt`) | A Admin → Invites (admin invites only); M the affiliate's own invites | Unused affiliate invites the member made are deleted. A used one stays, and the foreign key sets `affiliateUserId` to null. The invite the member joined with stays, and the foreign key sets `joinedUserId` to null | No |
+| `AffiliateApplication` | one affiliate application: the member's note, watch hours when they applied, whether they shared their Plex email, the admin's decision and reason, end date and cause, invite override and tier | M own; A affiliate pages | Cascade | No |
+| `AffiliateBlock` | an HMAC-SHA256 of a blocked Plex id, no foreign key to `User`, and the admin id that made it | A affiliate pages | Not erased on removal: it holds no Plex id, and it stays until an admin unblocks it | Keyed hash only |
 | `Subscription` | Stripe customer and subscription ids, status, plan, period end, cancel date, Plex invite status, Jellyfin access status, access skip code | M status; A users list, billing tab | Stripe subscription cancelled at once, then cascade; the customer id goes to the audit row | No |
 | `AuditLog` | actor and target user ids, event details (ids and counts, never secrets) | none in the app; the operator | Kept (ids only) | No |
 | `RequestTierRun` | per run, each member's Overseerr display name, watch hours, tier and request quota before and after (no foreign key to `User`) | A request limits in settings | Not erased on removal; the daily sync keeps only the newest 30 runs, so a removed member's name leaves within about a month | No |
@@ -141,7 +150,7 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `LLMProvider` | provider, model and API key | `apiKey` |
 | `McpServer` | name, URL, auth header name and value, and the tools the admin turned on | `authHeaderSecret` |
 | `KnowledgeSource` | name, GitHub repository, branch, folder and an optional GitHub token | `token` |
-| `Config` | app settings, Stripe keys, Rewind settings | `stripeSecretKey`, `stripeWebhookSecret`, `rewindSerialKey` |
+| `Config` | app settings, Stripe keys, Rewind settings, affiliate invite settings and the affiliate block key | `stripeSecretKey`, `stripeWebhookSecret`, `rewindSerialKey`, `affiliateBlockKey` |
 | `DiscordIntegration` | Discord app credentials and bot settings; `updatedBy` admin id | `clientSecret`, `botToken` |
 | `LeaseLock` | which instance holds each lease (Discord bot, watchlist sync, retention) and until when | No |
 | `RewindServerAggregate` | server-wide yearly totals, no per-member rows | No |
@@ -149,6 +158,5 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `RewindEvalRun` | Rewind copy eval results on fixture data; unused, nothing reads or writes it | No |
 | `RewindBatch` | provider batch submissions; unused, nothing writes it | No |
 | `PromptTemplate` | old prompt templates and style guides; unused, nothing reads or writes it; `updatedBy` admin id | No |
-| `Invite` | invite codes and library settings; `createdBy` admin id | No |
 | `Announcement` | announcement text; `createdBy` admin id | No |
 | `StripeEvent` | Stripe event ids and types, for webhook idempotency | No |

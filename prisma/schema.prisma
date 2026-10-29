@@ -45,6 +45,13 @@ model User {
   rewindPrefs           RewindPrefs[]
   rewindExclusions      RewindExclusion[]
   discordCommandLogs    DiscordCommandLog[]
+  affiliateApplications AffiliateApplication[]
+  affiliateInvites      Invite[]               @relation("AffiliateInvites")
+  affiliateJoin         Invite?                @relation("AffiliateJoin")
+  watchHours            Float? // All-time Tautulli watch hours, from the last read
+  watchHoursLast30Days  Float? // Tautulli watch hours in the last 30 days, from the last read
+  watchHoursReadAt      DateTime? // When watchHours was last read
+  accessEndedAt         DateTime? // When the member's media server access last ended
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
 
@@ -516,6 +523,12 @@ model Config {
   requestTiersEnabled          Boolean   @default(false) // Daily Overseerr request limits from Tautulli watch time
   requestTiersRunHour          Int       @default(0) // Hour of the day (server zone) the tier sync runs
   requestTiers                 Json? // The tier table; null uses DEFAULT_TIERS (lib/request-tiers/tiers.ts)
+  affiliateInvitesEnabled      Boolean   @default(false) // Members approved as affiliates can make Plex invites
+  affiliateTiers               Json? // The affiliate tier table; null uses the defaults
+  affiliateServerCap           Int?      @default(10) // Affiliate invites joined per rolling 30 days, server-wide
+  affiliateLibrarySectionIds   Json? // JSON array of Plex library section keys shared with invitees (null = all libraries)
+  affiliatePlexMachineId       String? // The Plex server affiliate invites share
+  affiliateBlockKey            String? // HMAC key for AffiliateBlock hashes (encrypted at rest)
   encryptionCanary             String? // A known value under the primary key; boot checks it decrypts (P11.1)
   encryptionFieldsHash         String? // "<kid>:<ENCRYPTED_FIELDS hash>" the last full re-encryption finished under (P11.1)
   updatedAt                    DateTime  @updatedAt
@@ -665,7 +678,74 @@ model Invite {
 
   usages InviteUsage[]
 
+  // Affiliate invites: a member's single-use Plex invite. Admin invites keep the defaults
+  kind            InviteKind @default(ADMIN)
+  affiliateUserId String? // The inviter; null on admin invites and once the affiliate is erased
+  affiliate       User?      @relation("AffiliateInvites", fields: [affiliateUserId], references: [id], onDelete: SetNull)
+  label           String?    @db.VarChar(60) // Private; nulled on use, cancel and (retention sweep) expiry
+  cancelledAt     DateTime?
+  joinedAt        DateTime? // The join record: set in the transaction that counts the use
+  joinedUserId    String?    @unique // The invitee; null once they are removed
+  joinedUser      User?      @relation("AffiliateJoin", fields: [joinedUserId], references: [id], onDelete: SetNull)
+
   @@index([serverType])
+  @@index([kind, affiliateUserId, joinedAt])
+  @@index([kind, joinedAt])
+  @@index([kind, expiresAt])
+}
+
+enum InviteKind {
+  ADMIN
+  AFFILIATE
+}
+
+enum AffiliateStatus {
+  PENDING
+  APPROVED
+  REFUSED
+  REVOKED
+  ENDED
+  CLOSED
+}
+
+enum AffiliateEndCause {
+  DISABLED
+  REMOVED
+  UNSHARED
+  ACCESS_REVOKED
+}
+
+/// One row per application: one affiliate "stint".
+model AffiliateApplication {
+  id              String             @id @default(cuid())
+  userId          String
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  openUserId      String?            @unique // = userId while PENDING or APPROVED, else null (stands in for a partial unique index)
+  status          AffiliateStatus    @default(PENDING)
+  note            String?            @db.VarChar(500)
+  hoursAtApply    Float
+  plexEmailShared Boolean            @default(false)
+  appliedAt       DateTime           @default(now())
+  decidedAt       DateTime?
+  decidedBy       String? // Admin user ID, not a FK (like AuditLog.actorUserId)
+  reason          String?            @db.VarChar(500)
+  endedAt         DateTime?
+  endCause        AffiliateEndCause?
+  inviteOverride  Int? // 0..10 invites per 30 days; null = the tiers
+  tierIndex       Int?
+  tierRaisedAt    DateTime?
+  updatedAt       DateTime           @updatedAt
+
+  @@index([status, appliedAt])
+  @@index([userId, decidedAt])
+}
+
+/// A Plex account that may not become an affiliate. Kept until an admin unblocks it.
+model AffiliateBlock {
+  id         String   @id @default(cuid())
+  plexIdHash String   @unique // HMAC-SHA256(Config.affiliateBlockKey, plexUserId), hex
+  createdAt  DateTime @default(now())
+  createdBy  String // Admin user ID, not a FK
 }
 
 model InviteUsage {

@@ -7,7 +7,9 @@
  * every inventory table for one member; after the removal no table holds a
  * row that references the member's user id or Discord id, the admin's LLM
  * row about the member keeps its cost but loses its text, and the single
- * `MEMBER_ERASED` row holds no name or email.
+ * `MEMBER_ERASED` row holds no name or email. The member's unused affiliate
+ * invite goes; their used one and the one they joined with stay, without
+ * their id.
  *
  * Stripe and the media servers are mocked; everything else is real. Gated by
  * `describePg` and run only by `npm run test:integration`. The suite touches
@@ -104,6 +106,13 @@ async function seedMember(db: PrismaClient) {
   })
   const invite = await db.invite.create({ data: { code: `${RUN}-invite`, createdBy: ADMIN } })
   await db.inviteUsage.create({ data: { inviteId: invite.id, userId: MEMBER } })
+  await db.affiliateApplication.create({ data: { userId: MEMBER, openUserId: MEMBER, status: 'APPROVED', hoursAtApply: 120 } })
+  const affiliate = { kind: 'AFFILIATE' as const, maxUses: 1, expiresAt: new Date(Date.now() + 48 * 3_600_000) }
+  await db.invite.create({ data: { ...affiliate, code: `${RUN}-unused`, affiliateUserId: MEMBER, label: 'For Sam' } })
+  await db.invite.create({ data: { ...affiliate, code: `${RUN}-used`, affiliateUserId: MEMBER, useCount: 1, joinedAt: new Date() } })
+  await db.invite.create({
+    data: { ...affiliate, code: `${RUN}-joined`, affiliateUserId: ADMIN, useCount: 1, joinedAt: new Date(), joinedUserId: MEMBER },
+  })
   await db.subscription.create({
     data: { userId: MEMBER, stripeCustomerId: `${RUN}-cus`, stripeSubscriptionId: `${RUN}-sub`, status: 'ACTIVE' },
   })
@@ -122,7 +131,7 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
 
   afterAll(async () => {
     await mockDb.lLMUsage.deleteMany({ where: { userId: ADMIN } })
-    await mockDb.invite.deleteMany({ where: { code: `${RUN}-invite` } })
+    await mockDb.invite.deleteMany({ where: { code: { startsWith: RUN } } })
     await mockDb.user.deleteMany({ where: { id: { in: [ADMIN, MEMBER] } } })
     await mockDb.auditLog.deleteMany({ where: { OR: [{ actorUserId: { in: [ADMIN, MEMBER] } }, { targetUserId: MEMBER }] } })
     await mockDb.$disconnect()
@@ -169,8 +178,17 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
       mockDb.watchlistSyncHistory.count(byUser),
       mockDb.inviteUsage.count(byUser),
       mockDb.subscription.count(byUser),
+      mockDb.affiliateApplication.count(byUser),
+      mockDb.invite.count({ where: { OR: [{ affiliateUserId: MEMBER }, { joinedUserId: MEMBER }] } }),
     ])
     expect(remaining.every((count) => count === 0)).toBe(true)
+
+    const kept = await mockDb.invite.findMany({ where: { code: { startsWith: RUN } }, select: { code: true, affiliateUserId: true, joinedUserId: true } })
+    expect(kept.sort((a, b) => a.code.localeCompare(b.code))).toEqual([
+      { code: `${RUN}-invite`, affiliateUserId: null, joinedUserId: null },
+      { code: `${RUN}-joined`, affiliateUserId: ADMIN, joinedUserId: null },
+      { code: `${RUN}-used`, affiliateUserId: null, joinedUserId: null },
+    ])
 
     const adminUsage = await mockDb.lLMUsage.findFirstOrThrow({ where: { userId: ADMIN } })
     expect(adminUsage).toMatchObject({ prompt: null, response: null, cost: 0.5, generationId: null, wrappedId: null })

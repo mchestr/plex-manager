@@ -3,10 +3,10 @@
  *
  * Each window is a number of days with a default, overridable by its
  * `RETENTION_<NAME>_DAYS` variable (`lib/env.ts`), never below
- * {@link MIN_RETENTION_DAYS}. Two rules have no window in days: parked
- * Discord selections go when they expire, and a replaced Rewind
+ * {@link MIN_RETENTION_DAYS}. Three rules have no window in days: parked
+ * Discord selections go when they expire, a replaced Rewind
  * (`RewindGeneration.previousData`) is kept until 30 June after its season
- * (design 7.9). `docs/privacy.md` states the same windows, and the daily sweep
+ * (design 7.9), and an expired affiliate invite loses its private label. `docs/privacy.md` states the same windows, and the daily sweep
  * (`lib/queue/jobs/retention.ts`) applies them.
  *
  * @module
@@ -41,15 +41,18 @@ export const RETENTION_WINDOWS = {
   watchlistRemoved: { env: "RETENTION_WATCHLIST_REMOVED_DAYS", days: 30 },
   discordOAuthStates: { env: "RETENTION_DISCORD_OAUTH_STATE_DAYS", days: 1 },
   auditLog: { env: "RETENTION_AUDIT_LOG_DAYS", days: 400 },
+  affiliateApplications: { env: "RETENTION_AFFILIATE_DAYS", days: 365 },
+  affiliateInvites: { env: "RETENTION_AFFILIATE_DAYS", days: 365 },
 } as const satisfies Record<string, WindowDef>
 
 export type RetentionWindow = keyof typeof RETENTION_WINDOWS
 
-/** Every rule the sweep runs: the windows plus the two without a window in days. */
+/** Every rule the sweep runs: the windows plus the three without a window in days. */
 export const RETENTION_RULES = [
   ...(Object.keys(RETENTION_WINDOWS) as RetentionWindow[]),
   "discordPendingSelections",
   "rewindPreviousData",
+  "affiliateInviteLabels",
 ] as const
 
 export type RetentionRule = (typeof RETENTION_RULES)[number]

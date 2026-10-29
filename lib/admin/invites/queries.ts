@@ -46,17 +46,20 @@ export interface AdminInviteList {
 
 const notExpired = (now: Date): Prisma.InviteWhereInput => ({ OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] })
 
-/** The `where` for one status filter; `all` adds nothing. */
+/** Admin → Invites shows, counts and deletes admin invites only, never a member's affiliate invite. */
+const adminInvites = { kind: "ADMIN" } as const satisfies Prisma.InviteWhereInput
+
+/** The `where` for one status filter, on admin invites only; `all` adds only that. */
 export function inviteStatusWhere(status: InviteFilter["status"], now: Date): Prisma.InviteWhereInput {
   switch (status) {
     case "expired":
-      return { expiresAt: { lt: now } }
+      return { ...adminInvites, expiresAt: { lt: now } }
     case "usedUp":
-      return { AND: [notExpired(now), { useCount: { gte: prisma.invite.fields.maxUses } }] }
+      return { ...adminInvites, AND: [notExpired(now), { useCount: { gte: prisma.invite.fields.maxUses } }] }
     case "active":
-      return { AND: [notExpired(now), { useCount: { lt: prisma.invite.fields.maxUses } }] }
+      return { ...adminInvites, AND: [notExpired(now), { useCount: { lt: prisma.invite.fields.maxUses } }] }
     case "all":
-      return {}
+      return adminInvites
   }
 }
 
@@ -101,7 +104,7 @@ export async function listInvites({
 }: InviteFilter & { page: number; pageSize: number; sort: TableSort }): Promise<AdminInviteList> {
   const now = new Date()
   const where = listWhere(filter, now)
-  const [total, all] = await Promise.all([prisma.invite.count({ where }), prisma.invite.count()])
+  const [total, all] = await Promise.all([prisma.invite.count({ where }), prisma.invite.count({ where: adminInvites })])
   const lastPage = Math.max(1, Math.ceil(total / pageSize))
   const rows = await prisma.invite.findMany({
     where,
@@ -122,8 +125,8 @@ const detailSelect = {
 
 export type AdminInviteDetail = Prisma.InviteGetPayload<{ select: typeof detailSelect }> & { status: InviteStatus }
 
-/** One invite with its redemptions, newest first; null when there is no such invite. */
+/** One admin invite with its redemptions, newest first; null when there is no such admin invite. */
 export async function getInviteDetail(id: string): Promise<AdminInviteDetail | null> {
-  const invite = await prisma.invite.findUnique({ where: { id }, select: detailSelect })
+  const invite = await prisma.invite.findUnique({ where: { id, ...adminInvites }, select: detailSelect })
   return invite && { ...invite, status: inviteStatus(invite, new Date()) }
 }

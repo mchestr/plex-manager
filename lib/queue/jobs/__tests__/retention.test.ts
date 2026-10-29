@@ -37,6 +37,8 @@ beforeEach(() => {
     prismaMock.rewindGeneration,
     prismaMock.auditLog,
     prismaMock.rewindShareVisitDay,
+    prismaMock.affiliateApplication,
+    prismaMock.invite,
   ]) {
     model.findMany.mockResolvedValue([])
   }
@@ -187,6 +189,60 @@ describe("the windows and their boundaries", () => {
     }
 
     expect(prismaMock.auditLog.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { createdAt: { lt: daysAgo(30) } } }))
+  })
+})
+
+describe("affiliate rows", () => {
+  const ENDED = ["REFUSED", "REVOKED", "ENDED", "CLOSED"]
+  const applicationWhere = (cutoff: Date) => ({
+    status: { in: ENDED },
+    appliedAt: { lt: cutoff },
+    AND: [{ OR: [{ decidedAt: null }, { decidedAt: { lt: cutoff } }] }, { OR: [{ endedAt: null }, { endedAt: { lt: cutoff } }] }],
+  })
+
+  async function sweepWith(days: string) {
+    process.env.RETENTION_AFFILIATE_DAYS = days
+    try {
+      await runRetentionSweep({ now: NOW })
+    } finally {
+      delete process.env.RETENTION_AFFILIATE_DAYS
+    }
+  }
+
+  it("deletes ended applications and unused affiliate invites after 365 days, never admin or used invites", async () => {
+    await runRetentionSweep({ now: NOW })
+
+    expect(prismaMock.affiliateApplication.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: applicationWhere(daysAgo(365)) }))
+    expect(prismaMock.invite.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      where: { kind: "AFFILIATE", joinedAt: null, OR: [{ cancelledAt: { lt: daysAgo(365) } }, { expiresAt: { lt: daysAgo(365) } }] },
+    }))
+  })
+
+  it("keeps an application at least 30 days, so a short window never ends a refusal's wait early", async () => {
+    await sweepWith("7")
+
+    expect(prismaMock.affiliateApplication.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: applicationWhere(daysAgo(30)) }))
+    expect(prismaMock.invite.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      where: expect.objectContaining({ OR: [{ cancelledAt: { lt: daysAgo(7) } }, { expiresAt: { lt: daysAgo(7) } }] }),
+    }))
+  })
+
+  it("takes a longer RETENTION_AFFILIATE_DAYS for applications", async () => {
+    await sweepWith("400")
+
+    expect(prismaMock.affiliateApplication.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: applicationWhere(daysAgo(400)) }))
+  })
+
+  it("nulls the private label of expired affiliate invites", async () => {
+    prismaMock.invite.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce(ids("invite-1"))
+    prismaMock.invite.updateMany.mockResolvedValue({ count: 1 })
+
+    const result = await runRetentionSweep({ now: NOW })
+
+    const where = { kind: "AFFILIATE", label: { not: null }, expiresAt: { lt: NOW } }
+    expect(prismaMock.invite.findMany).toHaveBeenNthCalledWith(2, { where, select: { id: true }, take: 1000 })
+    expect(prismaMock.invite.updateMany).toHaveBeenCalledWith({ where: { AND: [where, { id: { in: ["invite-1"] } }] }, data: { label: null } })
+    expect(result.counts.affiliateInviteLabels).toBe(1)
   })
 })
 

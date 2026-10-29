@@ -32,7 +32,7 @@ export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   DiscordConnection: ["accessToken", "refreshToken"],
   McpServer: ["authHeaderSecret"],
   KnowledgeSource: ["token"],
-  Config: ["stripeSecretKey", "stripeWebhookSecret", "rewindSerialKey"],
+  Config: ["stripeSecretKey", "stripeWebhookSecret", "rewindSerialKey", "affiliateBlockKey"],
 }
 
 /**
