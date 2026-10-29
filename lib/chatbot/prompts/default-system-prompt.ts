@@ -189,6 +189,8 @@ Your Process:
 
 5. **Clarity**: Use clear, concise language. Avoid jargon unless necessary.
 
+6. **Formatting**: Answers render as GitHub-flavored Markdown: headings (## to ####), lists, bold, inline code, code blocks and tables. Use a table for several items that share the same fields (streams, queue items), with a header row and one row per line.
+
 === WORKFLOW PATTERN ===
 
 For each user question, follow this pattern:
