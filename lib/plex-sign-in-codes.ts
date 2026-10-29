@@ -10,7 +10,9 @@
  *   a timeout). Sign-in still fails, but it is never shown as a verdict
  *   (GAP-05).
  * - The rest are shown on the callback page's StatusScreen with the copy
- *   below; every one but `invite_invalid` offers Try again.
+ *   below; every one but `invite_invalid` and `invite_already_member` (an
+ *   affiliate invite refused an account that already has, or had, access)
+ *   offers Try again.
  *
  * A non-member with Stripe on is not a failure: they sign in, and
  * `finishPlexSignIn` sends them to `/subscribe`.
@@ -25,6 +27,7 @@ export type PlexSignInCode =
   | "access_denied"
   | "plex_unavailable"
   | "invite_invalid"
+  | "invite_already_member"
   | "rate_limited"
   | "sign_in_failed"
 
@@ -40,6 +43,10 @@ export const PLEX_SIGN_IN_COPY: Record<ShownPlexSignInCode, { title: string; mes
     title: "This invite can't be used",
     message: "It expired, has no uses left, or is for a different server. Ask for a new invite.",
   },
+  invite_already_member: {
+    title: "You're already a member",
+    message: "This invite is for people who are new to the server. Sign in instead.",
+  },
   plex_unavailable: {
     title: "Plex is temporarily unavailable",
     message: "Plex did not answer. Try again in a minute.",
@@ -51,7 +58,13 @@ export const PLEX_SIGN_IN_COPY: Record<ShownPlexSignInCode, { title: string; mes
   },
 }
 
-const AUTHORIZE_CODES = new Set<string>(["plex_pin_expired", "access_denied", "plex_unavailable", "invite_invalid"])
+const AUTHORIZE_CODES = new Set<string>([
+  "plex_pin_expired",
+  "access_denied",
+  "plex_unavailable",
+  "invite_invalid",
+  "invite_already_member",
+])
 
 /** The code for the `error` that next-auth's `signIn("plex")` returned. */
 export function plexSignInCodeFor(error: string | null | undefined): PlexSignInCode {

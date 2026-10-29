@@ -136,6 +136,7 @@ describe('PlexCallbackPageClient', () => {
   it.each<[string, string, ShownPlexSignInCode]>([
     ['the PIN cookie is missing or expired', 'plex_pin_expired', 'plex_pin_expired'],
     ['the invite is refused', 'invite_invalid', 'invite_invalid'],
+    ['an affiliate invite refuses a member', 'invite_already_member', 'invite_already_member'],
     ['the sign-in route is rate-limited', 'RateLimited', 'rate_limited'],
     ['anything else failed', 'CredentialsSignin', 'sign_in_failed'],
     ['the error is server text', 'Error: connect ECONNREFUSED db:5432', 'sign_in_failed'],
@@ -218,6 +219,17 @@ describe('PlexCallbackPageClient', () => {
     render(<PlexCallbackPageClient />)
 
     expect(await screen.findByRole('link', { name: 'Go to home' })).toHaveAttribute('href', '/')
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+  })
+
+  it('offers only Sign in to an account that is already a member', async () => {
+    pollReturns('ready')
+    mockSignIn.mockResolvedValue({ ok: false, error: 'invite_already_member', status: 401, url: null })
+
+    render(<PlexCallbackPageClient />)
+
+    expect(await screen.findByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/')
+    expect(screen.getByTestId('plex-callback-error-heading')).toHaveTextContent("You're already a member")
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
   })
 

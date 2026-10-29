@@ -7,6 +7,7 @@ import { mockReset } from "jest-mock-extended"
 
 import { buildInvite, buildUser } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { affiliateInviteRefusal } from "@/lib/affiliates/invite-state"
 import { getJellyfinLibraries } from "@/lib/connections/jellyfin-connection"
 import { serviceFetch } from "@/lib/connections/http"
 import { getInvitePass } from "@/lib/invites/pass"
@@ -29,6 +30,7 @@ jest.mock("@/lib/connections/plex-config", () => ({
 }))
 jest.mock("@/lib/connections/http", () => ({ serviceFetch: jest.fn(), serviceErrorMessage: () => "Plex failed" }))
 jest.mock("@/lib/connections/jellyfin-connection", () => ({ getJellyfinLibraries: jest.fn() }))
+jest.mock("@/lib/affiliates/invite-state", () => ({ affiliateInviteRefusal: jest.fn() }))
 jest.mock("next/cache", () => ({ unstable_cache: (fn: () => unknown) => fn }))
 // The page test covers what the page draws; here only its lookups count.
 jest.mock("@/components/invite/invite-pass", () => ({ InvitePass: () => null }))
@@ -162,6 +164,46 @@ describe("getInvitePass inviter and libraries", () => {
     })
     const pass = await passFor({ serverType: "JELLYFIN", jellyfinLibraryIds: JSON.stringify(["a".repeat(32), "b".repeat(32)]) })
     expect(pass.libraries).toEqual(["Films", "1 more"])
+  })
+})
+
+describe("getInvitePass for an affiliate invite", () => {
+  const affiliateInvite = {
+    kind: "AFFILIATE" as const,
+    createdBy: null,
+    affiliateUserId: "affiliate-1",
+    maxUses: 1,
+    expiresAt: new Date(Date.now() + DAY),
+  }
+
+  beforeEach(() => jest.mocked(affiliateInviteRefusal).mockReset())
+
+  it("is valid and names the affiliate while the invite can be used", async () => {
+    jest.mocked(affiliateInviteRefusal).mockResolvedValue(null)
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: "affiliate-1", name: "Sam" }))
+
+    const pass = await passFor(affiliateInvite)
+
+    expect(pass).toMatchObject({ state: "valid", kind: "AFFILIATE", inviter: "Sam", usesLeft: { left: 1, total: 1 } })
+    expect(prismaMock.user.findUnique).toHaveBeenCalledWith({ where: { id: "affiliate-1" }, select: { name: true } })
+  })
+
+  it.each(["switch_off", "cancelled", "used", "expired", "not_affiliate"] as const)(
+    "is unusable and names no one when the invite is refused (%s)",
+    async (refusal) => {
+      jest.mocked(affiliateInviteRefusal).mockResolvedValue(refusal)
+
+      const pass = await passFor(affiliateInvite)
+
+      expect(pass).toMatchObject({ state: "unusable", kind: "AFFILIATE", inviter: null })
+      expect(prismaMock.user.findUnique).not.toHaveBeenCalled()
+    }
+  )
+
+  it("asks nothing of the affiliate checks for an admin invite", async () => {
+    const pass = await passFor({ kind: "ADMIN" })
+    expect(pass).toMatchObject({ state: "valid", kind: "ADMIN" })
+    expect(affiliateInviteRefusal).not.toHaveBeenCalled()
   })
 })
 

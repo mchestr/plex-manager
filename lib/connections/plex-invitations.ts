@@ -69,6 +69,11 @@ export async function inviteUserToPlexServer(
 
     let librarySectionIds: number[]
 
+    // No list shares every library; an empty list is a mistake upstream, never "every library"
+    if (inviteSettings?.librarySectionIds?.length === 0) {
+      return { success: false, error: "The invite has no libraries to share" }
+    }
+
     if (inviteSettings?.librarySectionIds && inviteSettings.librarySectionIds.length > 0) {
       // Find Plex.tv sections that match the requested local server keys
       // Plex.tv sections have both 'key' (local server key) and 'id' (Plex.tv API ID)

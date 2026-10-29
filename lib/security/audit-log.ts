@@ -58,6 +58,9 @@ export enum AuditEventType {
   // its server type, uses and expiry; the code is the credential, so never it.
   INVITE_CREATED = "INVITE_CREATED",
   INVITE_DELETED = "INVITE_DELETED",
+  // An affiliate invite refused a redemption. Details carry the invite id and
+  // the reason; the target is the affiliate whose invite it was.
+  AFFILIATE_REDEMPTION_REFUSED = "AFFILIATE_REDEMPTION_REFUSED",
   // Announcement events
   ANNOUNCEMENT_CREATED = "ANNOUNCEMENT_CREATED",
   ANNOUNCEMENT_UPDATED = "ANNOUNCEMENT_UPDATED",

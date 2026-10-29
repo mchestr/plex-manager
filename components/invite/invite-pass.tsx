@@ -5,6 +5,7 @@ import { InviteVoided, voidedTitle } from "@/components/invite/invite-voided"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
+import { affiliateInviteHeadline } from "@/lib/affiliates/copy"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 import type { InvitePassData } from "@/types/invite"
@@ -21,11 +22,14 @@ const HEADING_ID = "invite-pass-heading"
 /**
  * The invite as a ticket (ui-design-system 6.6, UI-36, UI-40). The main part
  * names the inviter and the server, lists the libraries and holds the accept
- * action: `PlexSignInButton` for Plex, `JellyfinSignInForm` for Jellyfin. The
- * stub shows the code in mono, the uses left, the expiry and the monogram.
+ * action: `PlexSignInButton` for Plex, `JellyfinSignInForm` for Jellyfin. An
+ * affiliate invite puts the affiliate in the headline itself ("Sam invited you
+ * to …"). The stub shows the code in mono, the uses left, the expiry and the
+ * monogram.
  *
- * Expired, used-up and unknown invites draw a voided pass: a StatusScreen
- * with their own headline, the code struck through and the stub muted.
+ * Expired, used-up, unusable and unknown invites draw a voided pass: a
+ * StatusScreen with their own headline, the code struck through and the stub
+ * muted.
  * No client directive: the accept actions are the only client islands.
  */
 export function InvitePass(props: InvitePassProps) {
@@ -54,11 +58,12 @@ export function InvitePass(props: InvitePassProps) {
   )
 }
 
-function ValidMain({ code, serverType, serverName, inviter, libraries, preview }: InvitePassProps) {
+function ValidMain({ code, serverType, kind, serverName, inviter, libraries, preview }: InvitePassProps) {
   const plex = serverType === "PLEX"
+  const affiliate = kind === "AFFILIATE"
   return (
     <>
-      {inviter && (
+      {inviter && !affiliate && (
         <p className="mb-4 flex items-center gap-2.5 text-ui text-muted-foreground" data-testid="invite-pass-inviter">
           <span
             aria-hidden="true"
@@ -70,7 +75,7 @@ function ValidMain({ code, serverType, serverName, inviter, libraries, preview }
         </p>
       )}
       <h1 id={HEADING_ID} className="text-display text-foreground" data-testid="valid-invite-heading">
-        You&apos;re invited to {serverName}
+        {affiliate ? affiliateInviteHeadline(inviter, serverName) : <>You&apos;re invited to {serverName}</>}
       </h1>
       <p className="mt-2.5 max-w-[46ch] text-body text-muted-foreground">
         {plex

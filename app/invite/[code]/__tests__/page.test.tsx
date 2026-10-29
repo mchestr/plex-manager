@@ -25,6 +25,7 @@ function pass(state: InviteState): InvitePassData {
     state,
     code: "NORTH7Q2",
     serverType: "PLEX",
+    kind: "ADMIN",
     serverName: "Northfield Plex",
     monogram: "N",
     inviter: "Dana Whitfield",
@@ -56,7 +57,7 @@ describe("/invite/[code] metadata", () => {
     expect(JSON.stringify(metadata)).not.toContain("NORTH7Q2")
   })
 
-  it.each(["expired", "used-up", "unknown"] as const)("titles a %s invite Invite unavailable", async (state) => {
+  it.each(["expired", "used-up", "unusable", "unknown"] as const)("titles a %s invite Invite unavailable", async (state) => {
     lookup({ ok: true, pass: pass(state) })
     const metadata = await generateMetadata({ params })
 
@@ -82,6 +83,7 @@ describe("/invite/[code] page", () => {
   it.each([
     ["expired", "This invite has expired"],
     ["used-up", "This invite has no uses left"],
+    ["unusable", "This invite can't be used"],
     ["unknown", "We couldn't find that invite"],
   ] as const)("renders the %s copy with Ask on Discord", async (state, title) => {
     lookup({ ok: true, pass: pass(state) })

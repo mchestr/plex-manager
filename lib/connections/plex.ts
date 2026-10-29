@@ -20,7 +20,7 @@ export {
   getPlexUsers,
   getAllPlexServerUsers,
 } from "./plex-user-info"
-export { checkUserServerAccess } from "./plex-user-access"
+export { checkUserServerAccess, type PlexAccessServerConfig } from "./plex-user-access"
 
 // Invitation and sharing
 export {

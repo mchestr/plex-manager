@@ -207,6 +207,18 @@ describe('Plex authorize redeems the invite in the cookie', () => {
 
     await expect(authorize(undefined, plexPinRequest({ inviteCode: 'FRIENDS1' }))).rejects.toThrow('sign_in_failed')
   })
+
+  it('throws invite_already_member when an affiliate invite refuses an account that has or had access', async () => {
+    mockRedeemPlexInvite.mockResolvedValue({
+      success: false,
+      code: 'INVITE_ALREADY_MEMBER',
+      error: "You're already a member. Sign in instead.",
+    })
+
+    await expect(authorize(undefined, plexPinRequest({ inviteCode: 'AFFCODE1' }))).rejects.toThrow('invite_already_member')
+    expect(mockGetPlexUserInfo).not.toHaveBeenCalled()
+    expect(prismaMock.user.update).not.toHaveBeenCalled()
+  })
 })
 
 describe('the next-auth route passes the cookie header to authorize', () => {

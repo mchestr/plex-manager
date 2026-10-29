@@ -13,7 +13,9 @@
  *    server is active, reads as `unknown`.
  * 4. Otherwise the state is `expired` (past `expiresAt`), `used-up`
  *    (`useCount >= maxUses`) or `valid`, with the inviter's name, the library
- *    names and the stub fields.
+ *    names and the stub fields. An affiliate invite is `valid` only while
+ *    `affiliateInviteRefusal` finds nothing, and `unusable`, naming no one,
+ *    otherwise; its inviter is the affiliate.
  *
  * Redemption still validates on its own, atomically (`validateAndUseInvite`);
  * this is for display only.
@@ -25,6 +27,7 @@ import "server-only"
 
 import { cache } from "react"
 
+import { affiliateInviteRefusal } from "@/lib/affiliates/invite-state"
 import type { Prisma } from "@/lib/generated/prisma/client"
 import { monogramFor, serverName as brandServerName } from "@/lib/brand"
 import { inviteLibraryNames } from "@/lib/invites/library-names"
@@ -40,10 +43,14 @@ export type InvitePassLookup = { ok: true; pass: InvitePassData } | { ok: false;
 export const invitePassSelect = {
   code: true,
   serverType: true,
+  kind: true,
   maxUses: true,
   useCount: true,
   expiresAt: true,
   createdBy: true,
+  affiliateUserId: true,
+  cancelledAt: true,
+  joinedAt: true,
   librarySectionIds: true,
   jellyfinLibraryIds: true,
 } as const satisfies Prisma.InviteSelect
@@ -59,6 +66,7 @@ function unknownPass(code: string, serverName: string): InvitePassData {
     state: "unknown",
     code,
     serverType: "PLEX",
+    kind: "ADMIN",
     serverName,
     monogram: monogramFor(serverName),
     inviter: null,
@@ -123,16 +131,21 @@ export async function invitePassFor(invite: InvitePassSource, brand?: string): P
     serverName = jellyfinName
   }
 
+  const now = new Date()
+  const affiliate = invite.kind === "AFFILIATE"
+  const state = affiliate ? ((await affiliateInviteRefusal(prisma, invite, now)) ? "unusable" : "valid") : stateOf(invite, now)
+
   const [inviter, libraries, format] = await Promise.all([
-    inviterName(invite.createdBy),
+    state === "unusable" ? null : inviterName(affiliate ? invite.affiliateUserId : invite.createdBy),
     inviteLibraryNames(invite),
     getFormat(),
   ])
 
   return {
-    state: stateOf(invite, new Date()),
+    state,
     code: invite.code,
     serverType: invite.serverType,
+    kind: invite.kind,
     serverName,
     monogram: monogramFor(serverName),
     inviter,

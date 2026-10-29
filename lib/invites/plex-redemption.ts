@@ -4,17 +4,22 @@
  * counted, SEC-29), the user row and `InviteUsage` are recorded, and only then
  * is the account shared and auto-accepted. A failed record restores the use
  * and shares nothing; a failed share undoes the record, then restores the use.
- * The Plex provider's `authorize` runs it with the token it read from plex.tv
- * itself, so no client ever holds the token (SEC-11).
+ * An affiliate invite first screens the account (`screenAffiliateRedeemer`)
+ * and then must pass its own state check inside the transaction; each refusal
+ * is audited against the affiliate. The Plex provider's `authorize` runs it
+ * with the token it read from plex.tv itself, so no client ever holds the
+ * token (SEC-11).
  *
  * @module lib/invites/plex-redemption
  */
 
 import "server-only"
 
-import { fail, ok, toActionError, type ActionResult } from "@/lib/actions/result"
+import { auditAffiliateRedemptionRefusal, screenAffiliateRedeemer } from "@/lib/affiliates/redemption-gate"
+import { fail, ok, toActionError, type ActionFailure, type ActionResult } from "@/lib/actions/result"
 import { acceptPlexInvite, getPlexUserInfo, inviteUserToPlexServer } from "@/lib/connections/plex"
-import { ServerType } from "@/lib/generated/prisma/client"
+import { InviteKind, ServerType } from "@/lib/generated/prisma/client"
+import { parsePlexLibrarySectionIds } from "@/lib/invites/plex-library-ids"
 import { rollbackInviteUsage, validateAndUseInvite, withRetry } from "@/lib/invites/redemption"
 import { recordInviteUse, undoInviteUse, type RecordedUse } from "@/lib/invites/redemption-record"
 import { prisma } from "@/lib/prisma"
@@ -26,6 +31,15 @@ const logger = createLogger("INVITE")
 const PLEX_PROPAGATION_DELAY_MS = 2000
 
 const PLEX_REDEEM_FAILED = "We couldn't finish setting up your access. Please try again or ask the server owner."
+
+const AFFILIATE_REFUSAL_COPY = {
+  INVITE_INVALID: "This invite can't be used.",
+  INVITE_ALREADY_MEMBER: "You're already a member. Sign in instead.",
+  UPSTREAM_UNAVAILABLE: "We couldn't check your Plex account. Please try again.",
+} as const
+
+/** A redemption's result: an affiliate invite can also refuse an account that is already a member. */
+export type PlexRedemptionResult = ActionResult<null> | ActionFailure<"INVITE_ALREADY_MEMBER">
 
 /**
  * Wait for Plex to propagate changes
@@ -93,13 +107,16 @@ async function undoRedemption(recorded: RecordedUse, plexUserEmail: string, reas
  *   the use. Each failure has an audit entry.
  * - Keeps the redemption when the auto-accept fails: the share exists, and the
  *   member can accept it in Plex.
+ * - For an affiliate invite, refuses a blocked or former account and one that
+ *   is already a member before the use is counted, and joins with the
+ *   "Joined by member invite" exemption.
  * - Is idempotent per account: a Plex account that already redeemed this code
  *   (a second sign-in attempt with the same PIN) succeeds without spending
  *   another use.
  *
  * Never throws; failures are action codes with fixed copy.
  */
-export async function redeemPlexInvite(code: string, plexAuthToken: string): Promise<ActionResult<null>> {
+export async function redeemPlexInvite(code: string, plexAuthToken: string): Promise<PlexRedemptionResult> {
   try {
     // Get user info and server config first (before consuming the invite)
     const userInfoResult = await getPlexUserInfo(plexAuthToken)
@@ -132,6 +149,16 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
     }
     const plexServer = serverResult.data
 
+    // An affiliate invite screens the account before its use is counted
+    const target = await prisma.invite.findUnique({ where: { code }, select: { id: true, kind: true, affiliateUserId: true } })
+    if (target?.kind === InviteKind.AFFILIATE) {
+      const refused = await screenAffiliateRedeemer(plexUser, plexServer)
+      if (refused) {
+        auditAffiliateRedemptionRefusal(target, refused.reason)
+        return { success: false, code: refused.code, error: AFFILIATE_REFUSAL_COPY[refused.code] }
+      }
+    }
+
     // Atomically validate and mark the invite as used with retry logic for transaction conflicts
     // This prevents race conditions where multiple requests could use the same invite
     const inviteResult = await withRetry(
@@ -148,9 +175,16 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
       }
     )
     if (!inviteResult.success) {
+      if (inviteResult.affiliate) {
+        auditAffiliateRedemptionRefusal(
+          { id: inviteResult.affiliate.inviteId, affiliateUserId: inviteResult.affiliate.affiliateUserId },
+          inviteResult.affiliate.refusal
+        )
+      }
       return { success: false, code: inviteResult.code, error: inviteResult.error }
     }
     const invite = inviteResult.invite
+    const affiliate = invite.kind === InviteKind.AFFILIATE
 
     // Audit log that the invite was consumed
     logAuditEvent(AuditEventType.INVITE_CONSUMED, "system", {
@@ -159,18 +193,28 @@ export async function redeemPlexInvite(code: string, plexAuthToken: string): Pro
       plexUserEmail: plexUser.email,
     })
 
-    // Build invite settings from stored invite data, before anything is recorded
+    // Parsed before anything is recorded, so a malformed value records and shares nothing.
+    // An admin invite without libraries shares every library; an affiliate invite always has some
+    const librarySectionIds = parsePlexLibrarySectionIds(invite.librarySectionIds)
+    if (!librarySectionIds) {
+      logAuditEvent(AuditEventType.INVITE_PLEX_FAILURE, "system", {
+        inviteId: invite.id,
+        plexUserEmail: plexUser.email,
+        stage: "parse_libraries",
+        error: "Invite library ids are malformed",
+      })
+      await rollbackInviteUsage(invite.id, plexUser.email, "Invite library ids are malformed")
+      return fail("INTERNAL", PLEX_REDEEM_FAILED)
+    }
     const inviteSettings = {
-      librarySectionIds: invite.librarySectionIds
-        ? (JSON.parse(invite.librarySectionIds) as number[])
-        : undefined,
+      librarySectionIds: librarySectionIds.length > 0 ? librarySectionIds : undefined,
       allowDownloads: invite.allowDownloads,
     }
 
     // Record the user row and the use before the share, so no share exists without its record
     let recorded: RecordedUse
     try {
-      recorded = await recordInviteUse(invite.id, plexUser)
+      recorded = await recordInviteUse(invite.id, plexUser, { affiliate })
     } catch (recordError) {
       const failureReason = String(recordError)
 
