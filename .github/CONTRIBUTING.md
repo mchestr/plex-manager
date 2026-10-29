@@ -134,10 +134,11 @@ each migration name has two or more words, and that the timestamps increase.
 
 ## Pull requests
 
-- Add a line under "Unreleased" in [CHANGELOG.md](../CHANGELOG.md) for each
-  change that affects operators. The Changelog check fails a pull request that
-  changes `prisma/migrations/**`, `lib/env.ts`, `docker/entrypoint.sh`,
-  `Dockerfile` or `deploy/**` without that line.
+- For each change that affects operators, add a changelog fragment,
+  `changelog.d/<topic>.md` ([format](../changelog.d/README.md)), instead of
+  editing [CHANGELOG.md](../CHANGELOG.md). The Changelog check fails a pull
+  request that changes `prisma/migrations/**`, `lib/env.ts`,
+  `docker/entrypoint.sh`, `Dockerfile` or `deploy/**` without one.
 - Answer each item in the pull request template.
 - For a change to `.claude/skills/**` or `.mcp.json`, do a `/security-review`
   before the merge.

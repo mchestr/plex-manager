@@ -1,8 +1,9 @@
 # The changelog check (P11.25). A pull request that touches
 # prisma/migrations/**, lib/env.ts, docker/entrypoint.sh, Dockerfile or
-# deploy/**, or carries the breaking label, must add a line under
-# "## [Unreleased]" in CHANGELOG.md. The no-changelog label skips it. The
-# rules are in scripts/release/changelog.mjs; docs/releasing.md has the flow.
+# deploy/**, or carries the breaking label, must add a changelog.d/ fragment;
+# the no-changelog label skips that. Every fragment must be well formed, and
+# CHANGELOG.md never gets an Unreleased section. The rules are in
+# scripts/release/changelog.mjs; docs/releasing.md has the flow.
 #
 # Labels are read from the API at run time, not from the event payload, so a
 # re-run after a label change judges the pull request as it is now. The token

@@ -14,7 +14,7 @@
 import { execFileSync } from 'node:child_process'
 import { parseArgs } from 'node:util'
 
-import { checkChangelog } from './release/changelog.mjs'
+import { checkChangelog, isFragmentPath } from './release/changelog.mjs'
 
 const { values } = parseArgs({
   options: {
@@ -28,15 +28,20 @@ function git(args) {
   return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
 }
 
-function changelogAt(ref) {
+function fileAt(ref, file) {
   try {
-    return git(['show', `${ref}:CHANGELOG.md`])
+    return git(['show', `${ref}:${file}`])
   } catch {
     return ''
   }
 }
 
-const files = git(['diff', '--name-only', values.base, values.head]).split('\n').filter(Boolean)
+function changed(filter) {
+  return git(['diff', '--name-only', `--diff-filter=${filter}`, values.base, values.head]).split('\n').filter(Boolean)
+}
+
+const files = changed('ACDMRT')
+const fragmentPaths = changed('AMR').filter(isFragmentPath)
 const labels = values.labels
   .split('\n')
   .map((label) => label.trim())
@@ -45,8 +50,9 @@ const labels = values.labels
 const result = checkChangelog({
   files,
   labels,
-  baseChangelog: changelogAt(values.base),
-  headChangelog: changelogAt(values.head),
+  fragments: fragmentPaths.map((name) => ({ name, text: fileAt(values.head, name) })),
+  addedFragments: changed('A').filter(isFragmentPath),
+  headChangelog: fileAt(values.head, 'CHANGELOG.md'),
 })
 
 if (!result.ok) {

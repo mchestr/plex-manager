@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
  * Prepares a release (plan step P11.25): bumps package.json and
- * package-lock.json, moves CHANGELOG.md's Unreleased section under the new
- * version with today's date, then commits on a `release/v<version>` branch,
- * pushes it and opens the PR `chore(release): v<version>`.
+ * package-lock.json, merges the changelog.d/ fragments into a CHANGELOG.md
+ * section for the new version with today's date and deletes them, then
+ * commits on a `release/v<version>` branch, pushes it and opens the PR
+ * `chore(release): v<version>`.
  *
  *   node scripts/release/prepare.mjs 0.4.0 [--date 2027-02-09] [--no-pr]
  *
@@ -12,17 +13,33 @@
  */
 
 import { execFileSync } from 'node:child_process'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
-import { compareSemver, cutRelease, releaseNotes } from './changelog.mjs'
+import { compareSemver, cutRelease, FRAGMENT_DIR, isFragmentPath, releaseNotes } from './changelog.mjs'
+
+/** The fragments under `root`, sorted by name so a release lists them the same way every time. */
+function readFragments(root) {
+  let names
+  try {
+    names = readdirSync(join(root, FRAGMENT_DIR))
+  } catch {
+    return []
+  }
+  return names
+    .map((name) => `${FRAGMENT_DIR}/${name}`)
+    .filter(isFragmentPath)
+    .sort()
+    .map((name) => ({ name, text: readFileSync(join(root, name), 'utf8') }))
+}
 
 /**
- * Edits the three files under `root` for `version`. Throws, before writing
- * anything, when the version is not greater than package.json's or than every
- * version the changelog lists, or when Unreleased cannot be released.
+ * Edits the files under `root` for `version` and deletes the fragments it
+ * released. Throws, before writing anything, when the version is not greater
+ * than package.json's or than every version the changelog lists, when there
+ * are no fragments, or when one is malformed.
  */
 export function prepareRelease(root, version, date) {
   const pkgPath = join(root, 'package.json')
@@ -30,7 +47,8 @@ export function prepareRelease(root, version, date) {
   const changelogPath = join(root, 'CHANGELOG.md')
 
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
-  const changelog = cutRelease(readFileSync(changelogPath, 'utf8'), version, date)
+  const fragments = readFragments(root)
+  const changelog = cutRelease(readFileSync(changelogPath, 'utf8'), version, date, fragments)
   if (compareSemver(version, pkg.version) <= 0) {
     throw new Error(`${version} is not greater than package.json's ${pkg.version}`)
   }
@@ -43,6 +61,7 @@ export function prepareRelease(root, version, date) {
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
   writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`)
   writeFileSync(changelogPath, changelog)
+  for (const fragment of fragments) rmSync(join(root, fragment.name))
   return releaseNotes(changelog, version)
 }
 
@@ -75,13 +94,14 @@ function main() {
     console.error(`prepare: ${error instanceof Error ? error.message : String(error)}`)
     process.exit(1)
   }
-  console.log(`prepare: package.json, package-lock.json and CHANGELOG.md are at ${version} (${date}).`)
+  console.log(`prepare: package.json, package-lock.json and CHANGELOG.md are at ${version} (${date}); ${FRAGMENT_DIR}/ is released.`)
   if (values['no-pr']) return
 
   const branch = `release/v${version}`
   const title = `chore(release): v${version}`
   run('git', ['switch', '-c', branch])
-  run('git', ['commit', '-m', title, '--', 'package.json', 'package-lock.json', 'CHANGELOG.md'])
+  run('git', ['add', '--all', '--', 'package.json', 'package-lock.json', 'CHANGELOG.md', FRAGMENT_DIR])
+  run('git', ['commit', '-m', title])
   run('git', ['push', '-u', 'origin', branch])
   const body = [
     `Release v${version}. After this merges, push the tag from the merge commit on main (docs/releasing.md):`,
