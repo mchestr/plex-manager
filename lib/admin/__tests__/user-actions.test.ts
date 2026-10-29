@@ -57,8 +57,12 @@ describe('listUserTarget', () => {
 
 describe('invitedByOf', () => {
   it('names the inviter from the join record, by email without a name', () => {
-    expect(invitedByOf({ affiliate: { id: 'sam', name: 'Sam', email: null } })).toEqual({ id: 'sam', name: 'Sam' })
-    expect(invitedByOf({ affiliate: { id: 'sam', name: null, email: 'sam@example.com' } })).toEqual({ id: 'sam', name: 'sam@example.com' })
+    expect(invitedByOf({ affiliate: { id: 'sam', name: 'Sam', email: null, affiliateApplications: [{ id: 'app' }] } })).toEqual({ id: 'sam', name: 'Sam', approved: true })
+    expect(invitedByOf({ affiliate: { id: 'sam', name: null, email: 'sam@example.com', affiliateApplications: [] } })).toEqual({
+      id: 'sam',
+      name: 'sam@example.com',
+      approved: false,
+    })
   })
 
   it('is null without a join or once the inviter is removed', () => {
@@ -67,7 +71,7 @@ describe('invitedByOf', () => {
   })
 
   it('reaches the action target, null when the row has none', () => {
-    expect(target({ invitedBy: { id: 'sam', name: 'Sam' } }).invitedBy).toEqual({ id: 'sam', name: 'Sam' })
+    expect(target({ invitedBy: { id: 'sam', name: 'Sam', approved: true } }).invitedBy).toEqual({ id: 'sam', name: 'Sam', approved: true })
     expect(target().invitedBy).toBeNull()
   })
 })

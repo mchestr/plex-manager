@@ -1,11 +1,11 @@
 /** The Affiliates page's counts, states and invite tree. */
 
-import { affiliateState, buildInviteTree, countInvites, openInvites, type AffiliateInviteFacts } from "@/lib/admin/affiliates/rows"
+import { affiliateState, buildInviteTree, countInvites, openInvites, type LabelledInviteFacts } from "@/lib/admin/affiliates/rows"
 
 const NOW = new Date("2026-10-29T12:00:00Z")
 const days = (n: number) => new Date(NOW.getTime() + n * 24 * 60 * 60 * 1000)
 
-const invite = (id: string, facts: Partial<AffiliateInviteFacts>): AffiliateInviteFacts => ({
+const invite = (id: string, facts: Partial<LabelledInviteFacts>): LabelledInviteFacts => ({
   id,
   code: `CODE${id}WXYZ`,
   label: null,
@@ -77,6 +77,27 @@ describe("buildInviteTree", () => {
         ],
       },
     ])
+  })
+
+  it("puts the joins of removed affiliates under one last root with no id", () => {
+    const tree = buildInviteTree(
+      [
+        { affiliateUserId: null, joinedUserId: "ana", joinedAt: days(-5) },
+        { affiliateUserId: null, joinedUserId: null, joinedAt: days(-6) },
+        { affiliateUserId: "sam", joinedUserId: "bo", joinedAt: days(-2) },
+      ],
+      names
+    )
+    expect(tree.map((root) => root.userId)).toEqual(["sam", null])
+    expect(tree[1]).toEqual({
+      userId: null,
+      name: null,
+      joinedAt: null,
+      children: [
+        { userId: null, name: null, joinedAt: days(-6), children: [] },
+        { userId: "ana", name: "Ana", joinedAt: days(-5), children: [] },
+      ],
+    })
   })
 
   it("is empty without joins", () => {

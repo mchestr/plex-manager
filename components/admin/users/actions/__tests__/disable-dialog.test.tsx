@@ -11,10 +11,11 @@ jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').nav
 jest.mock('@/actions/admin/admin-users', () => ({ setUserDisabled: jest.fn(), setUserRole: jest.fn(), updateUserAdminStatus: jest.fn() }))
 jest.mock('@/actions/user-queries', () => ({ unshareUserLibrary: jest.fn() }))
 jest.mock('@/actions/rewind-generation', () => ({ adminRegenerateRewind: jest.fn() }))
-jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: jest.fn(), showError: jest.fn() }) }))
+const mockShowError = jest.fn()
+jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: jest.fn(), showError: mockShowError }) }))
 
 const target = (overrides: Parameters<typeof makeAdminUserWithStats>[0] = {}) =>
-  listUserTarget(makeAdminUserWithStats({ id: 'u1', name: 'Morgan Lee', invitedBy: { id: 'sam', name: 'Sam' }, ...overrides }))
+  listUserTarget(makeAdminUserWithStats({ id: 'u1', name: 'Morgan Lee', invitedBy: { id: 'sam', name: 'Sam', approved: true }, ...overrides }))
 
 const open = async (user: ReturnType<typeof listUserTarget>) => {
   const events = userEvent.setup()
@@ -26,7 +27,7 @@ const open = async (user: ReturnType<typeof listUserTarget>) => {
 
 beforeEach(() => {
   jest.clearAllMocks()
-  jest.mocked(setUserDisabled).mockResolvedValue({ success: true, data: null })
+  jest.mocked(setUserDisabled).mockResolvedValue({ success: true, data: { inviterRevoked: null } })
 })
 
 describe('DisableDialog for a member an affiliate invited', () => {
@@ -47,6 +48,22 @@ describe('DisableDialog for a member an affiliate invited', () => {
 
     expect(setUserDisabled).toHaveBeenCalledWith({ userId: 'u1', disabled: true, revokeInviter: { reason: 'Invited a reseller' } })
     await waitFor(() => expect(screen.queryByTestId('admin-user-disable-dialog')).not.toBeInTheDocument())
+  })
+
+  it('says so when the disable worked but the revoke did not', async () => {
+    jest.mocked(setUserDisabled).mockResolvedValue({ success: true, data: { inviterRevoked: false } })
+    const user = await open(target())
+    await user.click(screen.getByTestId('admin-user-disable-revoke-inviter'))
+    await user.click(screen.getByTestId('admin-user-disable-confirm'))
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith("Sam's affiliate status was not revoked. Revoke it on the Affiliates page."))
+  })
+
+  it('names an inviter who is no longer an affiliate, without the revoke option', async () => {
+    const user = await open(target({ invitedBy: { id: 'sam', name: 'Sam', approved: false } }))
+    expect(screen.getByTestId('admin-user-disable-revoke-inviter-fields')).toHaveTextContent('Invited by Sam')
+    expect(screen.queryByTestId('admin-user-disable-revoke-inviter')).not.toBeInTheDocument()
+    await user.click(screen.getByTestId('admin-user-disable-confirm'))
+    expect(setUserDisabled).toHaveBeenCalledWith({ userId: 'u1', disabled: true, revokeInviter: undefined })
   })
 
   it('offers nothing when enabling', async () => {

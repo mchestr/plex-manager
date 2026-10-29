@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
 import { previewMemberRemoval, removeMember } from "@/actions/admin/member-access"
-import { NO_REVOKE, RevokeInviterFields } from "@/components/admin/affiliates/revoke-inviter-fields"
+import { inviterRevokeFailed, NO_REVOKE, RevokeInviterFields } from "@/components/admin/affiliates/revoke-inviter-fields"
 import { queryKeys } from "@/hooks/query-keys"
 import { Alert } from "@/components/ui/alert"
 import {
@@ -27,6 +27,7 @@ import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/components/ui/toast"
 import type { InvitedBy } from "@/lib/admin/user-actions"
 import { countLines, planLines } from "@/lib/members/erase-copy"
 import { withFlash } from "@/lib/ui/flash-codes"
@@ -56,6 +57,7 @@ export function RemoveMemberDialog({ userId, name, invitedBy, hasPlexId }: Remov
   const [inviter, setInviter] = useState(NO_REVOKE)
   const [block, setBlock] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const { showError } = useToast()
 
   const preview = useQuery({
     queryKey: queryKeys.removeMemberPreview(userId),
@@ -80,12 +82,13 @@ export function RemoveMemberDialog({ userId, name, invitedBy, hasPlexId }: Remov
           userId,
           confirmName: typed,
           block: hasPlexId && block,
-          revokeInviter: invitedBy && inviter.revoke ? { reason: inviter.reason } : undefined,
+          revokeInviter: invitedBy?.approved && inviter.revoke ? { reason: inviter.reason } : undefined,
         })
         if (!result.success) {
           setError(result.error)
           return
         }
+        if (result.data.inviterRevoked === false && invitedBy) showError(inviterRevokeFailed(invitedBy.name))
         router.push(withFlash("/admin/users", "member_removed") as Route)
       } catch {
         setError(CONFIRM_FALLBACK_ERROR)
@@ -143,6 +146,7 @@ export function RemoveMemberDialog({ userId, name, invitedBy, hasPlexId }: Remov
         {invitedBy && (
           <RevokeInviterFields
             inviterName={invitedBy.name}
+            canRevoke={invitedBy.approved}
             value={inviter}
             onChange={setInviter}
             disabled={isPending}

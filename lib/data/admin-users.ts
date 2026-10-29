@@ -9,7 +9,7 @@ import "server-only"
 
 import { assertPermission } from "@/lib/admin"
 import { activeRunStarts } from "@/lib/admin/active-runs"
-import { invitedByOf } from "@/lib/admin/user-actions"
+import { INVITED_BY_SELECT, invitedByOf } from "@/lib/admin/user-actions"
 import { getPlexServerIdentity, getPlexUsers } from "@/lib/connections/plex"
 import { activeShareFor, type PlexTvUser } from "@/lib/connections/plex-tv-users"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
@@ -116,7 +116,7 @@ async function fetchUsersWithWrappedData(year: number) {
           plexWrapped: true,
         },
       },
-      affiliateJoin: { select: { affiliate: { select: { id: true, name: true, email: true } } } },
+      affiliateJoin: INVITED_BY_SELECT,
     },
   })
 }

@@ -1,7 +1,7 @@
 "use server"
 
 import { adminAction } from "@/lib/actions/define-action"
-import { endAffiliateStatus, inviterApplicationId, revokeAffiliate } from "@/lib/affiliates/end-status"
+import { endAffiliateStatus, inviterApplicationId, revokeInviterAfter } from "@/lib/affiliates/end-status"
 import { ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
 import { endConversationsOf } from "@/lib/chatbot/history"
 import { isPlexServerOwner } from "@/lib/members/owner"
@@ -136,14 +136,22 @@ export const setUserRole = adminAction({
  * Disabling sets `User.disabledAt` and ends the user's sessions; a disabled
  * user cannot sign in. It also ends their affiliate status (no wait to apply
  * again), and with `revokeInviter` revokes the status of the affiliate who
- * invited them, once the disable succeeded. Enabling clears `disabledAt` and
- * does not bring an affiliate status back. Refuses the caller (`SELF`) and the
- * Plex server owner (`OWNER`).
+ * invited them, once the disable succeeded. A disable of an account that is
+ * already disabled runs both again, so a retry finishes what a failed one
+ * left; both are idempotent. Enabling clears `disabledAt` and does not bring
+ * an affiliate status back. Refuses the caller (`SELF`) and the Plex server
+ * owner (`OWNER`).
+ *
+ * `inviterRevoked` is `true` when the inviter's status was revoked, `false`
+ * when that revoke failed (the disable stands), and `null` otherwise.
  */
 export const setUserDisabled = adminAction({
   input: z.object({ userId: userIdSchema, disabled: z.boolean(), revokeInviter: revokeInviterSchema }),
   fallbackError: "Failed to update the account",
-  handler: async ({ userId, disabled, revokeInviter }, { userId: actorId }): Promise<ActionResult<null, UserActionCode>> => {
+  handler: async (
+    { userId, disabled, revokeInviter },
+    { userId: actorId }
+  ): Promise<ActionResult<{ inviterRevoked: boolean | null }, UserActionCode>> => {
     if (actorId === userId) {
       return refused("SELF", "You cannot disable your own account")
     }
@@ -156,35 +164,37 @@ export const setUserDisabled = adminAction({
       return refused("NOT_FOUND", "User not found")
     }
 
-    if ((user.disabledAt !== null) === disabled) {
-      return ok(null)
+    if ((user.disabledAt !== null) !== disabled) {
+      if (disabled && (await isPlexServerOwner(user.plexUserId))) {
+        return refused("OWNER", "The Plex server owner cannot be disabled")
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { disabledAt: disabled ? new Date() : null },
+      })
+
+      logAuditEvent(disabled ? AuditEventType.USER_DISABLED : AuditEventType.USER_ENABLED, actorId, {
+        targetUserId: userId,
+      })
+
+      if (disabled) {
+        await endUserSessions(userId, "disabled", actorId)
+      } else {
+        await enqueueRoleSync(userId, "enabled")
+      }
     }
 
-    if (disabled && (await isPlexServerOwner(user.plexUserId))) {
-      return refused("OWNER", "The Plex server owner cannot be disabled")
-    }
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { disabledAt: disabled ? new Date() : null },
-    })
-
-    logAuditEvent(disabled ? AuditEventType.USER_DISABLED : AuditEventType.USER_ENABLED, actorId, {
-      targetUserId: userId,
-    })
-
+    let inviterRevoked: boolean | null = null
     if (disabled) {
-      await endUserSessions(userId, "disabled", actorId)
       await endAffiliateStatus(userId, "DISABLED", actorId)
       const inviter = revokeInviter ? await inviterApplicationId(userId) : null
-      if (inviter) await revokeAffiliate(inviter, { reason: revokeInviter?.reason ?? null, actorId })
-    } else {
-      await enqueueRoleSync(userId, "enabled")
+      inviterRevoked = await revokeInviterAfter(inviter, { reason: revokeInviter?.reason ?? null, actorId })
     }
 
     await revalidateUserPages(userId)
 
-    return ok(null)
+    return ok({ inviterRevoked })
   },
 })
 

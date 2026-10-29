@@ -5,10 +5,12 @@ import type { TreeNode } from "@/lib/admin/affiliates/rows"
 import type { BoundFormat } from "@/lib/utils/format"
 
 function Branch({ node, f, depth }: { node: TreeNode; f: BoundFormat; depth: number }) {
+  const removed = depth === 0 ? "A removed member" : "a removed member"
+  const testId = node.userId ? `admin-affiliates-tree-node-${node.userId}` : depth === 0 ? "admin-affiliates-tree-removed-root" : "admin-affiliates-tree-removed"
   return (
-    <li className="flex flex-col gap-1" data-testid={node.userId ? `admin-affiliates-tree-node-${node.userId}` : "admin-affiliates-tree-removed"}>
+    <li className="flex flex-col gap-1" data-testid={testId}>
       <span className="text-ui">
-        <span className={node.userId ? "font-medium" : "text-muted-foreground"}>{node.name ?? "a removed member"}</span>
+        <span className={node.userId ? "font-medium" : "text-muted-foreground"}>{node.name ?? removed}</span>
         {node.joinedAt && <span className="text-muted-foreground">, joined {f.date(node.joinedAt)}</span>}
       </span>
       {node.children.length > 0 && (
@@ -30,7 +32,7 @@ export function InviteTree({ roots, f }: { roots: TreeNode[]; f: BoundFormat }) 
   return (
     <ul className="flex flex-col gap-4 rounded-lg border bg-card p-4" data-testid="admin-affiliates-tree">
       {roots.map((root) => (
-        <Branch key={root.userId} node={root} f={f} depth={0} />
+        <Branch key={root.userId ?? "removed"} node={root} f={f} depth={0} />
       ))}
     </ul>
   )

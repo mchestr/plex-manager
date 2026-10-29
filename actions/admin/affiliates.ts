@@ -37,6 +37,7 @@ export const approveAffiliate = adminAction({
 
     const config = await prisma.config.findUnique({ where: { id: "config" }, select: { affiliateTiers: true } })
     const tierIndex = affiliateTierIndex(eligible.hours, affiliateTiersFromConfig(config?.affiliateTiers))
+    // The checks above read outside a transaction; a status ended meanwhile is no longer PENDING, so this writes nothing
     const { count } = await prisma.affiliateApplication.updateMany({
       where: { id: applicationId, status: "PENDING" },
       data: { status: "APPROVED", decidedAt: new Date(), decidedBy: actorId, tierIndex },
@@ -55,13 +56,15 @@ export const refuseAffiliate = adminAction({
   rateLimit: RATE_LIMIT,
   fallbackError: "Could not refuse the application",
   handler: async ({ applicationId, reason }, { userId: actorId }) => {
+    const application = await prisma.affiliateApplication.findUnique({ where: { id: applicationId }, select: { userId: true } })
+    if (!application) return fail("CONFLICT", CHANGED)
     const { count } = await prisma.affiliateApplication.updateMany({
       where: { id: applicationId, status: "PENDING" },
       data: { status: "REFUSED", reason, decidedAt: new Date(), decidedBy: actorId, openUserId: null },
     })
     if (count === 0) return fail("CONFLICT", CHANGED)
 
-    logAuditEvent(AuditEventType.AFFILIATE_REFUSED, actorId, { applicationId, reasonLength: reason?.length ?? 0 })
+    logAuditEvent(AuditEventType.AFFILIATE_REFUSED, actorId, { targetUserId: application.userId, applicationId, reasonLength: reason?.length ?? 0 })
     refresh()
     return ok(null)
   },
@@ -93,7 +96,7 @@ export const setAffiliateOverride = adminAction({
   rateLimit: RATE_LIMIT,
   fallbackError: "Could not change the invites",
   handler: async ({ applicationId, override }, { userId: actorId }) => {
-    const application = await prisma.affiliateApplication.findUnique({ where: { id: applicationId }, select: { status: true, inviteOverride: true } })
+    const application = await prisma.affiliateApplication.findUnique({ where: { id: applicationId }, select: { userId: true, status: true, inviteOverride: true } })
     if (application?.status !== "APPROVED") return fail("CONFLICT", CHANGED)
     if (application.inviteOverride === override) return ok(null)
 
@@ -103,7 +106,12 @@ export const setAffiliateOverride = adminAction({
     })
     if (count === 0) return fail("CONFLICT", CHANGED)
 
-    logAuditEvent(AuditEventType.AFFILIATE_OVERRIDE_CHANGED, actorId, { applicationId, from: application.inviteOverride, to: override })
+    logAuditEvent(AuditEventType.AFFILIATE_OVERRIDE_CHANGED, actorId, {
+      targetUserId: application.userId,
+      applicationId,
+      from: application.inviteOverride,
+      to: override,
+    })
     refresh()
     return ok(null)
   },

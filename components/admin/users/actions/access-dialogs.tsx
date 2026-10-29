@@ -5,8 +5,9 @@ import { useState, type ReactElement } from "react"
 import { setUserDisabled, setUserRole, updateUserAdminStatus } from "@/actions/admin/admin-users"
 import { adminRegenerateRewind } from "@/actions/rewind-generation"
 import { unshareUserLibrary } from "@/actions/user-queries"
-import { NO_REVOKE, RevokeInviterFields } from "@/components/admin/affiliates/revoke-inviter-fields"
+import { inviterRevokeFailed, NO_REVOKE, RevokeInviterFields } from "@/components/admin/affiliates/revoke-inviter-fields"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useToast } from "@/components/ui/toast"
 import { useActionDialog } from "@/hooks/use-action-dialog"
 import type { UserActionTarget } from "@/lib/admin/user-actions"
 import { adminErrorHint } from "@/lib/wrapped/generation-errors"
@@ -100,9 +101,6 @@ export function SupportRoleDialog({ user, ...dialog }: UserDialogProps) {
   )
 }
 
-const setDisabled = (userId: string, disabled: boolean, revokeInviter?: { reason: string }) =>
-  setUserDisabled({ userId, disabled, revokeInviter })
-
 /**
  * Disables the account, ending its sessions (P4.7), or enables it again. A
  * member who joined through an affiliate invite shows who invited them, with
@@ -110,9 +108,15 @@ const setDisabled = (userId: string, disabled: boolean, revokeInviter?: { reason
  */
 export function DisableDialog({ user, ...dialog }: UserDialogProps) {
   const enabling = user.disabled
+  const { showError } = useToast()
+  const invitedBy = enabling ? null : user.invitedBy
+  const setDisabled = async (userId: string, disabled: boolean, revokeInviter?: { reason: string }) => {
+    const result = await setUserDisabled({ userId, disabled, revokeInviter })
+    if (result.success && result.data.inviterRevoked === false && invitedBy) showError(inviterRevokeFailed(invitedBy.name))
+    return result
+  }
   const { run } = useActionDialog(setDisabled, { success: enabling ? "Account enabled" : "Account disabled" })
   const [inviter, setInviter] = useState(NO_REVOKE)
-  const invitedBy = enabling ? null : user.invitedBy
   return (
     <ConfirmDialog
       {...dialog}
@@ -125,7 +129,7 @@ export function DisableDialog({ user, ...dialog }: UserDialogProps) {
       confirmLabel={enabling ? "Enable" : "Disable"}
       pendingLabel="Saving"
       tone={enabling ? "default" : "destructive"}
-      action={() => run(user.id, !enabling, invitedBy && inviter.revoke ? { reason: inviter.reason } : undefined)}
+      action={() => run(user.id, !enabling, invitedBy?.approved && inviter.revoke ? { reason: inviter.reason } : undefined)}
       onOpenChange={(open) => {
         if (!open) setInviter(NO_REVOKE)
         dialog.onOpenChange?.(open)
@@ -136,6 +140,7 @@ export function DisableDialog({ user, ...dialog }: UserDialogProps) {
       {invitedBy && (
         <RevokeInviterFields
           inviterName={invitedBy.name}
+          canRevoke={invitedBy.approved}
           value={inviter}
           onChange={setInviter}
           testId="admin-user-disable-revoke-inviter"

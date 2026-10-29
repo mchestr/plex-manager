@@ -50,6 +50,11 @@ describe("checkAffiliateEligibility", () => {
     await expect(approve()).resolves.toMatchObject({ ok: true, paid: false })
   })
 
+  it("refuses a paid member's application", async () => {
+    prismaMock.user.findUnique.mockResolvedValue(member({}, "ACTIVE"))
+    await expect(apply()).resolves.toEqual({ ok: false, code: "PAID", message: "Members with a paid subscription can't be affiliates." })
+  })
+
   it("refuses while the switch is off, except for an approval", async () => {
     jest.mocked(readAffiliateSettings).mockResolvedValue({ on: false, librarySectionIds: [] })
     await expect(apply()).resolves.toMatchObject({ ok: false, code: "SWITCH_OFF" })

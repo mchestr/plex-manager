@@ -3,6 +3,8 @@
  * mocks (`prismaMock.user.findUnique.mockResolvedValue(buildUser())`) get a
  * valid shape without casts.
  */
+import type { EraseReport } from '@/lib/members/erase'
+import type { InventoryCounts } from '@/lib/members/erase-inventory'
 import { Prisma, type AffiliateApplication, type Config, type Invite, type JellyfinServer, type LLMUsage, type PlexServer, type PlexWrapped, type RewindShare, type Setup, type User } from '@/lib/generated/prisma/client'
 
 // A fresh Date per row, so a test that mutates one cannot leak into another.
@@ -261,6 +263,17 @@ export function buildAffiliateApplication(overrides: Partial<AffiliateApplicatio
     tierIndex: null,
     tierRaisedAt: null,
     updatedAt: fixedDate(),
+    ...overrides,
+  }
+}
+
+/** A removal's report, with zero counts unless overridden (`lib/members/erase`). */
+export function buildEraseReport(overrides: Partial<EraseReport> = {}): EraseReport {
+  return {
+    dryRun: false,
+    plan: { cancelStripe: false, services: ['plex'], discordLinked: false },
+    counts: {} as unknown as InventoryCounts,
+    outcome: null,
     ...overrides,
   }
 }

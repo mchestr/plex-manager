@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { makePrismaUser, makePrismaWrapped, makePrismaLlmUsage } from '../utils/test-builders'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { INVITED_BY_SELECT } from '@/lib/admin/user-actions'
 import { endAffiliateStatus } from '@/lib/affiliates/end-status'
 import { stopSyncAndClearPlexToken } from '@/lib/members/offboard'
 
@@ -332,7 +333,7 @@ describe('getAllUsersWithWrapped', () => {
             plexWrapped: true,
           },
         },
-        affiliateJoin: { select: { affiliate: { select: { id: true, name: true, email: true } } } },
+        affiliateJoin: INVITED_BY_SELECT,
       },
     })
   })

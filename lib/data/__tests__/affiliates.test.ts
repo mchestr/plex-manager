@@ -12,10 +12,12 @@ import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { authErrorKind } from "@/lib/auth-errors"
 import { getAffiliateHistory } from "@/lib/data/affiliate-history"
 import { getInviteTree, listAffiliateApplications, listAffiliates } from "@/lib/data/affiliates"
+import { auditMemberListed } from "@/lib/security/audit-log"
 
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
+jest.mock("@/lib/security/audit-log", () => ({ auditMemberListed: jest.fn() }))
 
 const session = jest.mocked(getServerSession)
 const ADMIN = { user: { id: "admin-1", isAdmin: true }, expires: "" }
@@ -95,12 +97,18 @@ describe("listAffiliateApplications", () => {
     ])
     expect(prismaMock.affiliateApplication.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { status: "PENDING" }, orderBy: { appliedAt: "asc" } }))
   })
+
+  it("audits the listing as a read of member content, since it shows notes", async () => {
+    prismaMock.affiliateApplication.findMany.mockResolvedValue([])
+    await listAffiliateApplications()
+    expect(auditMemberListed).toHaveBeenCalledWith("affiliates", "admin-1")
+  })
 })
 
 describe("listAffiliates", () => {
   const invites = [
-    { id: "i1", code: "AAAA1234", label: "For Ana", expiresAt: days(1), cancelledAt: null, joinedAt: null },
-    { id: "i2", code: "BBBB5678", label: null, expiresAt: days(-5), cancelledAt: null, joinedAt: days(-6) },
+    { expiresAt: days(1), cancelledAt: null, joinedAt: null },
+    { expiresAt: days(-5), cancelledAt: null, joinedAt: days(-6) },
   ]
 
   beforeEach(() => {
@@ -111,6 +119,7 @@ describe("listAffiliates", () => {
   })
 
   it("computes the allowance, the counts and the state, sorted by name", async () => {
+    prismaMock.invite.findMany.mockResolvedValue([])
     const rows = await listAffiliates()
     expect(rows.map((row) => row.member.name)).toEqual(["Amy", "Zed"])
     expect(rows[0]).toMatchObject({ allowance: { invites: 0, source: "override" }, state: "paid", slotsUsed: 0 })
@@ -118,20 +127,51 @@ describe("listAffiliates", () => {
   })
 
   it("shows admins the open invites by label, expiry and the code's last 4 characters only", async () => {
+    prismaMock.invite.findMany.mockResolvedValue([
+      { id: "i1", code: "AAAA1234", label: "For Ana", expiresAt: days(1), cancelledAt: null, joinedAt: null, affiliateUserId: "zed" },
+    ] as never)
     const rows = await listAffiliates()
     expect(rows[1]!.openInvites).toEqual([{ id: "i1", label: "For Ana", expiresAt: days(1), codeEnd: "1234" }])
+    expect(rows[0]!.openInvites).toEqual([])
     expect(JSON.stringify(rows)).not.toContain("AAAA1234")
+    expect(prismaMock.invite.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ affiliateUserId: { in: ["zed", "amy"] }, expiresAt: { gt: expect.any(Date) } }) })
+    )
   })
 
-  it("gives Support no open invites, so no labels", async () => {
+  it("never loads a code or a label for Support", async () => {
     session.mockResolvedValue(SUPPORT)
     const rows = await listAffiliates()
     expect(rows.every((row) => row.openInvites === null)).toBe(true)
-    expect(JSON.stringify(rows)).not.toContain("For Ana")
+    expect(prismaMock.invite.findMany).not.toHaveBeenCalled()
+    const select = JSON.stringify(prismaMock.affiliateApplication.findMany.mock.calls[0]![0])
+    expect(select).not.toContain("code")
+    expect(select).not.toContain("label")
   })
 })
 
 describe("getInviteTree", () => {
+  it("keeps the joins of a removed affiliate under one unnamed root", async () => {
+    prismaMock.invite.findMany.mockResolvedValue([
+      { affiliateUserId: null, joinedUserId: "ana", joinedAt: days(-3) },
+      { affiliateUserId: "ana", joinedUserId: "bo", joinedAt: days(-1) },
+    ] as never)
+    prismaMock.user.findMany.mockResolvedValue([
+      { id: "ana", name: "Ana", email: null },
+      { id: "bo", name: "Bo", email: null },
+    ] as never)
+
+    await expect(getInviteTree()).resolves.toEqual([
+      {
+        userId: null,
+        name: null,
+        joinedAt: null,
+        children: [{ userId: "ana", name: "Ana", joinedAt: days(-3), children: [{ userId: "bo", name: "Bo", joinedAt: days(-1), children: [] }] }],
+      },
+    ])
+    expect(prismaMock.invite.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { kind: "AFFILIATE", joinedAt: { not: null } } }))
+  })
+
   it("names each member and leaves a removed invitee unnamed", async () => {
     prismaMock.invite.findMany.mockResolvedValue([
       { affiliateUserId: "sam", joinedUserId: "ana", joinedAt: days(-3) },

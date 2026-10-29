@@ -161,7 +161,7 @@ describe('UsersTable', () => {
 
   it('changes the role and disables the account through their confirms, closing on success', async () => {
     jest.mocked(updateUserAdminStatus).mockResolvedValue({ success: true, data: null })
-    jest.mocked(setUserDisabled).mockResolvedValue({ success: true, data: null })
+    jest.mocked(setUserDisabled).mockResolvedValue({ success: true, data: { inviterRevoked: null } })
     renderTable()
 
     let user = await openAction('Sam Rivera', 'Make admin...')

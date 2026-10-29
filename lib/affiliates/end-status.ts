@@ -8,8 +8,8 @@
  * | revoke | - | REVOKED, with the reason the member sees |
  * | disable, removal, unshare, the Stripe access revoke | CLOSED | ENDED, with an `endCause` |
  *
- * Either way `openUserId` goes to null and the member's open invites are
- * cancelled (`cancelledAt = now`, `label = null`), which frees the places;
+ * Either way `openUserId` goes to null and the member's open (unexpired)
+ * invites are cancelled (`cancelledAt = now`, `label = null`), which frees the places;
  * the people they invited stay members. Each runs in one Serializable
  * transaction, so it conflicts with a parallel redemption or make-invite
  * instead of leaving an open invite behind. Enabling a disabled member again
@@ -24,11 +24,14 @@ import { inSerializable } from "@/lib/db/serializable"
 import type { AffiliateEndCause } from "@/lib/generated/prisma/client"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
+import { createLogger } from "@/lib/utils/logger"
 
-/** Cancels the affiliate's invites that nobody used or cancelled; returns how many. */
+const logger = createLogger("AFFILIATES")
+
+/** Cancels the affiliate's open invites (not used, not cancelled, not expired); returns how many. */
 async function cancelOpenInvites(tx: PrismaTransactionClient, userId: string, now: Date): Promise<number> {
   const { count } = await tx.invite.updateMany({
-    where: { kind: "AFFILIATE", affiliateUserId: userId, joinedAt: null, cancelledAt: null },
+    where: { kind: "AFFILIATE", affiliateUserId: userId, joinedAt: null, cancelledAt: null, expiresAt: { gt: now } },
     data: { cancelledAt: now, label: null },
   })
   return count
@@ -64,14 +67,33 @@ export async function revokeAffiliate(
 }
 
 /**
- * The open application of the affiliate whose invite `inviteeId` joined with,
- * or null. Read it before removing the invitee: removal clears the join record.
+ * The APPROVED application of the affiliate whose invite `inviteeId` joined
+ * with, or null. Read it before removing the invitee: removal clears the join
+ * record.
  */
 export async function inviterApplicationId(inviteeId: string): Promise<string | null> {
   const join = await prisma.invite.findUnique({ where: { joinedUserId: inviteeId }, select: { affiliateUserId: true } })
   if (!join?.affiliateUserId) return null
-  const application = await prisma.affiliateApplication.findUnique({ where: { openUserId: join.affiliateUserId }, select: { id: true } })
-  return application?.id ?? null
+  const application = await prisma.affiliateApplication.findUnique({ where: { openUserId: join.affiliateUserId }, select: { id: true, status: true } })
+  return application?.status === "APPROVED" ? application.id : null
+}
+
+/**
+ * Revokes the inviter's status after the invitee's disable or removal
+ * succeeded, without failing that action: `true` when revoked, `null` when
+ * there was nothing to revoke, `false` when the revoke failed.
+ */
+export async function revokeInviterAfter(
+  applicationId: string | null,
+  options: { reason: string | null; actorId: string }
+): Promise<boolean | null> {
+  if (!applicationId) return null
+  try {
+    return (await revokeAffiliate(applicationId, options)).ok ? true : null
+  } catch (error) {
+    logger.error("affiliate.inviter_revoke_failed", error, { applicationId })
+    return false
+  }
 }
 
 /**

@@ -13,8 +13,13 @@ export interface RevokeInviterValue {
 
 export const NO_REVOKE: RevokeInviterValue = { revoke: false, reason: "" }
 
+/** The error toast when the disable or removal worked but the inviter's revoke did not. */
+export const inviterRevokeFailed = (name: string) => `${name}'s affiliate status was not revoked. Revoke it on the Affiliates page.`
+
 interface RevokeInviterFieldsProps {
   inviterName: string
+  /** The inviter is an affiliate now; otherwise only "Invited by" shows. */
+  canRevoke: boolean
   value: RevokeInviterValue
   onChange: (value: RevokeInviterValue) => void
   disabled?: boolean
@@ -24,24 +29,27 @@ interface RevokeInviterFieldsProps {
 
 /**
  * "Invited by Sam", and the option to revoke Sam's affiliate status with an
- * optional reason, for the Disable and Remove dialogs. Off by default.
+ * optional reason, for the Disable and Remove dialogs. Off by default, and
+ * offered only while the inviter is an affiliate.
  */
-export function RevokeInviterFields({ inviterName, value, onChange, disabled, testId }: RevokeInviterFieldsProps) {
+export function RevokeInviterFields({ inviterName, canRevoke, value, onChange, disabled, testId }: RevokeInviterFieldsProps) {
   return (
     <div className="flex flex-col gap-3" data-testid={`${testId}-fields`}>
       <p className="text-ui text-muted-foreground">Invited by {inviterName}</p>
-      <div className="flex items-start gap-3">
-        <Checkbox
-          id={testId}
-          checked={value.revoke}
-          onCheckedChange={(revoke) => onChange({ ...value, revoke })}
-          disabled={disabled}
-          className="mt-0.5"
-          data-testid={testId}
-        />
-        <Label htmlFor={testId}>Also revoke {inviterName}&apos;s affiliate status</Label>
-      </div>
-      {value.revoke && (
+      {canRevoke && (
+        <div className="flex items-start gap-3">
+          <Checkbox
+            id={testId}
+            checked={value.revoke}
+            onCheckedChange={(revoke) => onChange({ ...value, revoke })}
+            disabled={disabled}
+            className="mt-0.5"
+            data-testid={testId}
+          />
+          <Label htmlFor={testId}>Also revoke {inviterName}&apos;s affiliate status</Label>
+        </div>
+      )}
+      {canRevoke && value.revoke && (
         <FormField name={`${testId}-reason`} label={`Reason for ${inviterName}`} optional description="They see this reason.">
           <Textarea
             value={value.reason}
