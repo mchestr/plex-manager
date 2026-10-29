@@ -6,7 +6,7 @@ import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
-import { useCopyInviteLink } from "@/hooks/admin/use-copy-invite-link"
+import { useCopyInviteLink } from "@/hooks/use-copy-invite-link"
 
 import { DeleteInviteDialog } from "./delete-invite-dialog"
 

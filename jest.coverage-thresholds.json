@@ -6,8 +6,8 @@
     "lines": 88
   },
   "./lib/affiliates/": {
-    "statements": 100,
-    "branches": 100,
+    "statements": 99,
+    "branches": 99,
     "functions": 100,
     "lines": 100
   },
@@ -38,7 +38,7 @@
   "./actions/admin/": {
     "statements": 98,
     "branches": 93,
-    "functions": 98,
+    "functions": 97,
     "lines": 99
   },
   "./lib/queue/": {

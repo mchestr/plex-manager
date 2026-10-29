@@ -68,3 +68,15 @@ export async function endUserSessions(
     .then(({ enqueueRoleSync }) => enqueueRoleSync(userId, reason))
     .catch((error: unknown) => logger.warn("discord.role_sync_enqueue_failed", { userId, reason, error }))
 }
+
+/**
+ * Whether a `SESSIONS_REVOKED` event for `userId` was recorded at or after
+ * `since`, so a retried disable knows its sessions already ended.
+ */
+export async function sessionsEndedSince(userId: string, since: Date): Promise<boolean> {
+  const event = await prisma.auditLog.findFirst({
+    where: { type: AuditEventType.SESSIONS_REVOKED, targetUserId: userId, createdAt: { gte: since } },
+    select: { id: true },
+  })
+  return event !== null
+}

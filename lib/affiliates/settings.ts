@@ -17,32 +17,19 @@
 
 import "server-only"
 
-import { plexLibrarySectionIdsSchema } from "@/lib/invites/plex-library-ids"
+import { affiliateSettingsFrom, affiliateSwitchSelect, type AffiliateSettings } from "@/lib/affiliates/switch-state"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
-
-export interface AffiliateSettings {
-  on: boolean
-  /** The libraries every affiliate invite shares; empty while none are set. */
-  librarySectionIds: number[]
-}
 
 /**
  * The switch and the library list. Pass the transaction client from inside a
  * transaction, so a concurrent change to the switch conflicts with it.
  */
 export async function readAffiliateSettings(db: PrismaTransactionClient = prisma): Promise<AffiliateSettings> {
-  const config = await db.config.findUnique({
-    where: { id: "config" },
-    select: { affiliateInvitesEnabled: true, affiliateLibrarySectionIds: true, affiliatePlexMachineId: true },
-  })
+  const config = await db.config.findUnique({ where: { id: "config" }, select: affiliateSwitchSelect })
   const active = await db.plexServer.findFirst({
     where: { isActive: true },
     orderBy: { updatedAt: "desc" },
     select: { machineIdentifier: true },
   })
-
-  const libraries = plexLibrarySectionIdsSchema.safeParse(config?.affiliateLibrarySectionIds)
-  const librarySectionIds = libraries.success ? libraries.data : []
-  const sameServer = !!config?.affiliatePlexMachineId && active?.machineIdentifier === config.affiliatePlexMachineId
-  return { on: !!config?.affiliateInvitesEnabled && librarySectionIds.length > 0 && sameServer, librarySectionIds }
+  return affiliateSettingsFrom(config, active?.machineIdentifier)
 }

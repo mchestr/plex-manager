@@ -22,7 +22,7 @@ const logger = createLogger("affiliate-settings")
 export interface AffiliateSettingsView {
   enabled: boolean
   tiers: readonly AffiliateTier[]
-  /** Joins per rolling 30 days across all affiliates; null is no cap. */
+  /** Places for all affiliates: joins in the last 30 days and open invites; null is no cap. */
   cap: number | null
   libraryIds: number[]
 }

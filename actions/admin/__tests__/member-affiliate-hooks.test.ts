@@ -27,7 +27,7 @@ jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/security/rate-limit", () => ({ consume: jest.fn(), actionClientIp: jest.fn() }))
 jest.mock("@/lib/members/owner", () => ({ isPlexServerOwner: jest.fn() }))
 jest.mock("@/lib/members/erase", () => ({ eraseMember: jest.fn() }))
-jest.mock("@/lib/session-revocation", () => ({ endUserSessions: jest.fn() }))
+jest.mock("@/lib/session-revocation", () => ({ endUserSessions: jest.fn(), sessionsEndedSince: jest.fn().mockResolvedValue(true) }))
 jest.mock("@/lib/discord/role-sync", () => ({ enqueueRoleSync: jest.fn() }))
 jest.mock("@/lib/affiliates/end-status", () => ({ endAffiliateStatus: jest.fn(), inviterApplicationId: jest.fn(), revokeInviterAfter: jest.fn() }))
 

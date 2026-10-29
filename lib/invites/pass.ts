@@ -27,6 +27,7 @@ import "server-only"
 
 import { cache } from "react"
 
+import { inviterDisplayName } from "@/lib/affiliates/copy"
 import { affiliateInviteRefusal } from "@/lib/affiliates/invite-state"
 import type { Prisma } from "@/lib/generated/prisma/client"
 import { monogramFor, serverName as brandServerName } from "@/lib/brand"
@@ -80,8 +81,7 @@ function unknownPass(code: string, serverName: string): InvitePassData {
 async function inviterName(userId: string | null): Promise<string | null> {
   if (!userId) return null
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } })
-  const name = user?.name?.trim()
-  return name && !name.includes("@") ? name : null
+  return inviterDisplayName(user?.name)
 }
 
 /** The active Jellyfin server's name, or null when none is active. */

@@ -18,11 +18,31 @@ export const revokeInviterSchema = z.object({ reason: affiliateReasonSchema }).o
 
 export const affiliateIdSchema = z.string().min(1).max(100)
 
+export const AFFILIATE_NOTE_MAX = 500
+export const AFFILIATE_LABEL_MAX = 60
+
+/** A member's optional note to the admins when they apply: trimmed, at most 500 characters, blank as null. */
+export const affiliateNoteSchema = z
+  .string()
+  .trim()
+  .max(AFFILIATE_NOTE_MAX)
+  .optional()
+  .transform((value) => value || null)
+
+/** An affiliate's private label for an invite: trimmed, at most 60 characters, blank as null. */
+export const affiliateLabelSchema = z
+  .string()
+  .trim()
+  .max(AFFILIATE_LABEL_MAX)
+  .optional()
+  .transform((value) => value || null)
+
 export const AFFILIATE_CAP_MAX = 1000
 
 /**
- * The affiliate settings an admin saves. `cap` is joins per rolling 30 days
- * across all affiliates (null: no cap; 0 stops new invites). The switch needs
+ * The affiliate settings an admin saves. `cap` is the places for all
+ * affiliates: joins in the last 30 days and open invites (null: no cap; 0
+ * stops new invites). The switch needs
  * at least one library: an empty list is never "every library".
  */
 export const affiliateSettingsSchema = z

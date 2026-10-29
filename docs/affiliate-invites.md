@@ -51,8 +51,10 @@ is free again.
 
 ## Server cap
 
-The server cap is the number of people who can join with affiliate invites in
-30 days, from all affiliates together. Set a number from 0 to 1000.
+The server cap is the number of places for all affiliates together. Each
+person who joined in the last 30 days uses a place, and each open invite holds
+one. Set a number from 0 to 1000. When you lower the cap, open invites keep
+their places.
 
 - Empty: no cap.
 - 0: no new affiliate invites.

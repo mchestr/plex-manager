@@ -59,8 +59,9 @@ async function failedJobs(): Promise<number | null> {
 
 /**
  * The admin sidebar's badges: members, invites that can still be redeemed,
- * affiliate applications waiting for a decision, and failed jobs. Cached for 30 seconds under `admin-nav-counts`, so every
- * admin page render does not count again.
+ * affiliate applications waiting for a decision, and failed jobs. Cached for
+ * 30 seconds under `admin-nav-counts`, so every admin page render does not
+ * count again.
  */
 export const getAdminNavCounts = unstable_cache(
   async (): Promise<NavCounts> => {

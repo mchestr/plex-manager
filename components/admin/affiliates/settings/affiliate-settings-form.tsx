@@ -132,7 +132,7 @@ export function AffiliateSettingsFields({ state, libraries, shareCount }: Fields
         optional
         description={
           <>
-            Joins per 30 days from all affiliates, from 0 to {AFFILIATE_CAP_MAX}. Empty means no cap. 0 stops all new affiliate invites.{" "}
+            Places for all affiliates, from 0 to {AFFILIATE_CAP_MAX}. Each join in the last 30 days and each open invite uses one. Empty means no cap. 0 stops all new affiliate invites.{" "}
             <ShareCount count={shareCount} />
           </>
         }

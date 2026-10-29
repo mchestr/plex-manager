@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 
-import { useCopyInviteLink } from '@/hooks/admin/use-copy-invite-link'
+import { useCopyInviteLink } from '@/hooks/use-copy-invite-link'
 
 const mockShowSuccess = jest.fn()
 const mockShowError = jest.fn()

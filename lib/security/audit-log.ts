@@ -71,8 +71,13 @@ export enum AuditEventType {
   AFFILIATE_OVERRIDE_CHANGED = "AFFILIATE_OVERRIDE_CHANGED",
   AFFILIATE_ACCOUNT_BLOCKED = "AFFILIATE_ACCOUNT_BLOCKED",
   AFFILIATE_ACCOUNT_UNBLOCKED = "AFFILIATE_ACCOUNT_UNBLOCKED",
-  // The affiliate switch went off and cancelled every open affiliate invite.
-  // Details carry the cause ("switch_off" or "server_change") and the count.
+  // A member applied to be an affiliate, or an affiliate made or cancelled an
+  // invite. Details hold ids, hours, dates and text lengths, never the note,
+  // the label or the code.
+  AFFILIATE_APPLIED = "AFFILIATE_APPLIED",
+  AFFILIATE_INVITE_CREATED = "AFFILIATE_INVITE_CREATED",
+  // An admin's switch-off or a Plex server change also writes it, with
+  // the cause ("switch_off" or "server_change") and the count.
   AFFILIATE_INVITE_CANCELLED = "AFFILIATE_INVITE_CANCELLED",
   // Announcement events
   ANNOUNCEMENT_CREATED = "ANNOUNCEMENT_CREATED",

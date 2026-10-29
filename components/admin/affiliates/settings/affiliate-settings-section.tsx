@@ -24,7 +24,7 @@ const row = (key: string) => `settings-affiliates-summary-${key}`
 function capText(cap: number | null): string {
   if (cap === null) return "No cap"
   if (cap === 0) return "0. No new affiliate invites."
-  return `${cap} ${cap === 1 ? "join" : "joins"} per 30 days`
+  return `${cap} ${cap === 1 ? "place" : "places"}`
 }
 
 /** The saved library keys as names, or as keys while Plex can't list them. */
