@@ -19,6 +19,29 @@ in `changelog.d/`. A pull request that touches `prisma/migrations/**`,
 the `breaking` label, must add one (the Changelog check); the `no-changelog`
 label skips it.
 
+## [0.8.0] - 2026-10-29
+
+### Upgrade notes
+
+- Take a `pg_dump -Fc` before you start the new release.
+
+### Added
+
+- **Affiliate invites:** members who watch a lot can apply to be affiliates on their Invites page. An admin approves them in **Admin > Affiliates**, and then they can make single-use Plex invites that expire after 48 hours. Their watch hours set how many invites they get in 30 days, and a server cap limits the affiliate invites for the whole server. The person who joins gets the libraries that the admin selected, with downloads off, and does not pay. The feature is off until an admin turns it on in **Admin > Affiliates > Settings**, which needs a library list, Tautulli and a Plex server. Turning it off, or changing the Plex server, cancels all open affiliate invites. See `docs/affiliate-invites.md`.
+
+### Changed
+
+- **Database for affiliate invites:** the database gets the tables and columns for affiliate invites. The new optional variable `RETENTION_AFFILIATE_DAYS` (default 365) sets how many days ended affiliate applications and unused affiliate invites are kept. The next boot runs one automatic pass that re-encrypts the stored secrets, because a new secret column is added.
+
+### Fixed
+
+- **Markdown tables:** assistant answers, saved conversations and announcements now render GitHub-flavored Markdown, so a table shows as a table (scrolling sideways when it is wide) instead of a line of pipes, and `~~strikethrough~~` and bare links work. A `#` heading shows as a section heading instead of plain text, and a footnote link stays on the page instead of opening the home page. The assistant's prompt says which Markdown renders, and the Discord prompt says Discord shows no tables.
+
+### Security
+
+- **Disabled members and Plex invites:** a disabled member who opens a valid Plex invite no longer gets the server shared again or a Stripe exemption. The redemption refuses the account before it counts the use, and the sign-in ends as it does for any disabled account.
+- **Plex invites record before they share:** a Plex invite now records the member, their exemption and the use before it shares the server. If the share fails, the redemption removes that record and gives the use back. Before, a record that failed after the share left the person with access but no record and no exemption. If Plex's automatic accept fails, the redemption now stays, because the share exists: the member can accept it in Plex.
+
 ## [0.7.0] - 2026-10-28
 
 ### Added
@@ -291,6 +314,7 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 - No account linking by email; the Jellyfin sign-in toggle is enforced; share routes serve a share-safe projection; a failed Tautulli match no longer shows emails; a Redis-backed rate limiter keys on the trusted proxy hop; generation is single-flight and rate-limited; the poster proxy checks access; `plexAuthToken` no longer reaches the admin browser.
 - The Discord bot no longer uses the Message Content intent, keeps its token encrypted in the database, and scrubs personal fields before the LLM.
 
+[0.8.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.8.0
 [0.7.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.7.0
 [0.6.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.6.0
 [0.5.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.5.0

@@ -194,12 +194,17 @@ describe("the committed CHANGELOG.md", () => {
     expect(changelog).not.toMatch(/^\[unreleased\]: /im)
   })
 
-  it.each(readdirSync(path.join(ROOT, "changelog.d")).map((name) => `changelog.d/${name}`).filter(isFragmentPath))(
-    "%s is a well-formed fragment",
-    (name) => {
+  const fragments = readdirSync(path.join(ROOT, "changelog.d")).map((name) => `changelog.d/${name}`).filter(isFragmentPath)
+  // Right after a release changelog.d/ holds only its README, and it.each refuses an empty table
+  if (fragments.length === 0) {
+    it("has no fragments waiting for a release", () => {
+      expect(fragments).toEqual([])
+    })
+  } else {
+    it.each(fragments)("%s is a well-formed fragment", (name) => {
       expect(parseFragment(readFileSync(path.join(ROOT, name), "utf8")).problems).toEqual([])
-    }
-  )
+    })
+  }
 
   it("is explained in the README: pinning, the changelog and rolling back", () => {
     const readme = readFileSync(path.join(ROOT, "README.md"), "utf8")
