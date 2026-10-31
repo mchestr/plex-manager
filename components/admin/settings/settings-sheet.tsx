@@ -27,8 +27,8 @@ interface SettingsSheetProps {
 }
 
 /**
- * One row's edit mode in a list section (Assistant sources, Other
- * integrations): the row is the view, and its Edit, Set up or Add opens the
+ * One row's edit mode in a list section (Assistant sources; Sonarr, Radarr,
+ * Jellyfin): the row is the view, and its Edit, Set up or Add opens the
  * row's `SheetForm` in this Sheet (list-detail, NN/g "Progressive
  * disclosure"). A save closes it and focus returns to the trigger. Escape,
  * the backdrop, Close and Cancel close it too, but with unsaved changes they

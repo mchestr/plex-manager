@@ -20,7 +20,7 @@ Windmill flow `f/mflix/discord_channel_status`.
 | Episodes | `Episodes: N` | `child_count` of `show` libraries |
 
 - **Status:** both Tautulli calls succeed, 🟢 Online; one, 🟡 Degraded; none, 🔴 Offline.
-- **Channels:** paste each channel's ID in Admin > Settings > Discord channel stats (Edit, then Save changes). A stat with no ID is left alone. The bot needs the Manage Channels permission on those channels.
+- **Channels:** paste each channel's ID in Admin > Settings > Discord > Channel stats (Edit, then Save changes). A stat with no ID is left alone. The bot needs the Manage Channels permission on those channels.
 - **Name formats:** `{value}` is the number (an emoji for status) and `{server}` is the server name from the brand settings.
 - **Failures:** a failed `get_activity` skips the three activity channels, a failed `get_libraries` skips the three library channels, and a failed rename never stops the next channel.
 - **Rate limit:** Discord allows two renames per channel in ten minutes, so the interval is ten minutes or more. A channel is renamed only when its name changed since the last successful rename, and a `429` is left for the next run (a global `429` ends the run).

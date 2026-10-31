@@ -1,5 +1,5 @@
 /**
- * The Discord channel stats section: a summary of the saved flag, interval
+ * The Channel stats section (Discord group): a summary of the saved flag, interval
  * and channels with "Update now" until Edit swaps in the form, where each
  * stat has a channel and a name format with a live preview, the flag is a
  * Checkbox and the save sends the interval as a number.
@@ -63,7 +63,7 @@ describe("ChannelStatsSection", () => {
       expect(summaryRow("enabled")).toHaveTextContent("Off")
       expect(summaryRow("interval")).toHaveTextContent("Every 10 minutes")
       expect(summaryRow("channels")).toHaveTextContent("None set")
-      expect(screen.getByRole("button", { name: "Edit Discord channel stats" })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: "Edit Channel stats" })).toBeInTheDocument()
       expect(screen.queryByTestId("settings-channel-stats-form")).not.toBeInTheDocument()
       expect(screen.queryByTestId("channel-stats-toggle")).not.toBeInTheDocument()
       expect(screen.queryByTestId("channel-stats-interval")).not.toBeInTheDocument()

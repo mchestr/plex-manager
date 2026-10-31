@@ -50,7 +50,8 @@ interface SettingsSectionProps {
   /** The anchor for the section nav, with `scroll-margin-top`; the root is `settings-<id>-section`. */
   id: string
   title: string
-  description: ReactNode
+  /** One line under the title, only when the title and contents leave something unsaid. */
+  description?: ReactNode
   /** The section's health from `lib/ui/status.ts`. Left out for a section with nothing to check. */
   status?: ConnectionStatus
   /** When `status` was checked: "Checked 4 minutes ago". */
@@ -272,7 +273,7 @@ export function SettingsSection({
           <CardTitle as="h2" id={`${id}-title`}>
             {title}
           </CardTitle>
-          <CardDescription>{description}</CardDescription>
+          {description && <CardDescription>{description}</CardDescription>}
           {(status || form) && (
             <CardAction className="flex items-start gap-3 max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-auto max-sm:justify-self-start">
               {status && <SectionStatus id={id} status={status} checkedAt={checkedAt} />}

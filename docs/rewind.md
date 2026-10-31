@@ -7,7 +7,7 @@ the dates move with `rewindSeasonOpens` and `rewindSeasonCloses`, and the rest
 carries over.
 
 Times are **server time** (`Config.timezone`, set under Admin, Settings,
-"Server time zone") unless a line says "in each member's zone". A member's
+System, "Time zone") unless a line says "in each member's zone". A member's
 Rewind zone is `User.timezone`: their browser's zone, saved the first time
 they open the app after signing in, or the one they chose on `/account`. A
 member who has not opened the app since then, or whose browser reports a

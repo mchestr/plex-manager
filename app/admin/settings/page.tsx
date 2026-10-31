@@ -12,8 +12,9 @@ import { RequestTiersSection } from "@/components/admin/settings/sections/reques
 import { ServiceSection } from "@/components/admin/settings/sections/service-section"
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 import { SystemSection } from "@/components/admin/settings/sections/system-section"
+import { TimeZoneSection } from "@/components/admin/settings/sections/time-zone-section"
+import { settingsNavItems } from "@/components/admin/settings/settings-groups"
 import { SettingsGroup, SettingsLayout } from "@/components/admin/settings/settings-layout"
-import type { SettingsNavItem } from "@/components/admin/settings/settings-nav"
 import { SettingsPageActions } from "@/components/admin/settings/settings-page-actions"
 import { PageHeader } from "@/components/ui/page-header"
 import { getDiscordOverview } from "@/lib/admin/discord"
@@ -54,7 +55,9 @@ function databaseProvider(url: string | undefined) {
 
 /**
  * Settings (ui-design-system 6.4, P10.19): a grouped section nav with tone
- * glyphs beside the active group's `SettingsSection`s, each with its live health.
+ * glyphs beside the active group's `SettingsSection`s, each with its live
+ * health. The groups and their order are `settingsNavItems`; each
+ * `SettingsGroup` below renders its sections in that order.
  */
 export default async function SettingsPage() {
   await assertAdmin()
@@ -95,21 +98,16 @@ export default async function SettingsPage() {
     (Object.keys(other) as (keyof typeof other)[]).filter((key) => other[key]).map((key) => health[key].status)
   )
 
-  const nav: SettingsNavItem[] = [
-    { id: "plex", label: "Plex server", group: "media", status: health.plex.status },
-    { id: "tautulli", label: "Tautulli", group: "media", status: health.tautulli.status },
-    { id: "overseerr", label: "Overseerr", group: "media", status: health.overseerr.status },
-    { id: "ai", label: "AI provider", group: "integrations", status: health.ai.status },
-    { id: "assistant", label: "Assistant sources", group: "integrations" },
-    { id: "discord", label: "Discord", group: "integrations", status: health.discord.status },
-    { id: "stripe", label: "Stripe billing", group: "integrations", status: health.stripe.status },
-    { id: "channel-stats", label: "Discord channel stats", group: "integrations" },
-    { id: "request-tiers", label: "Request limits", group: "integrations" },
-    { id: "other", label: "Other integrations", group: "integrations", status: otherStatus },
-    { id: "rewind", label: "Rewind", group: "rewind", status: health.rewind.status },
-    { id: "privacy", label: "Privacy", group: "system" },
-    { id: "system", label: "System information", group: "system" },
-  ]
+  const nav = settingsNavItems({
+    plex: health.plex.status,
+    tautulli: health.tautulli.status,
+    overseerr: health.overseerr.status,
+    other: otherStatus,
+    stripe: health.stripe.status,
+    ai: health.ai.status,
+    discord: health.discord.status,
+    rewind: health.rewind.status,
+  })
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6">
@@ -124,8 +122,22 @@ export default async function SettingsPage() {
           <ServiceSection type="plex" server={settings.plexServer} health={health.plex} footerMeta={saved("plex")} />
           <ServiceSection type="tautulli" server={settings.tautulli} health={health.tautulli} footerMeta={saved("tautulli")} />
           <ServiceSection type="overseerr" server={settings.overseerr} health={health.overseerr} footerMeta={saved("overseerr")} />
+          <OtherIntegrationsSection
+            servers={other}
+            jellyfinLogin={settings.jellyfinServer?.enabledForLogin ?? null}
+            health={{ sonarr: health.sonarr, radarr: health.radarr, jellyfin: health.jellyfin }}
+            footerMeta={saved("other")}
+          />
         </SettingsGroup>
-        <SettingsGroup id="integrations">
+        <SettingsGroup id="members">
+          <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />
+          <RequestTiersSection
+            saved={requestTiers}
+            startedLabel={requestTiers.lastRun ? f.dateTime(requestTiers.lastRun.startedAt, { zoneLabel: true }) : null}
+            footerMeta={saved("requestTiers")}
+          />
+        </SettingsGroup>
+        <SettingsGroup id="ai">
           <AiSection
             chat={settings.chatLLMProvider}
             wrapped={settings.wrappedLLMProvider}
@@ -139,6 +151,8 @@ export default async function SettingsPage() {
             footerMeta={saved("ai")}
           />
           <AssistantSection sources={assistantSources} />
+        </SettingsGroup>
+        <SettingsGroup id="discord">
           <DiscordSection
             integration={settings.discordIntegration}
             linkedCount={settings.discordLinkedCount}
@@ -147,19 +161,7 @@ export default async function SettingsPage() {
             now={new Date().toISOString()}
             footerMeta={saved("discord")}
           />
-          <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />
           <ChannelStatsSection saved={channelStats} footerMeta={saved("channelStats")} />
-          <RequestTiersSection
-            saved={requestTiers}
-            startedLabel={requestTiers.lastRun ? f.dateTime(requestTiers.lastRun.startedAt, { zoneLabel: true }) : null}
-            footerMeta={saved("requestTiers")}
-          />
-          <OtherIntegrationsSection
-            servers={other}
-            jellyfinLogin={settings.jellyfinServer?.enabledForLogin ?? null}
-            health={{ sonarr: health.sonarr, radarr: health.radarr, jellyfin: health.jellyfin }}
-            footerMeta={saved("other")}
-          />
         </SettingsGroup>
         <SettingsGroup id="rewind">
           <RewindSettingsSection
@@ -184,6 +186,7 @@ export default async function SettingsPage() {
           </RewindSettingsSection>
         </SettingsGroup>
         <SettingsGroup id="system">
+          <TimeZoneSection timeZone={{ configured: settings.config.timezone, effective: zone }} footerMeta={saved("timeZone")} />
           <PrivacySection lastRun={lastRetentionRun} />
           <SystemSection
             baseUrl={baseUrl}
@@ -194,8 +197,6 @@ export default async function SettingsPage() {
             databaseUrl={process.env.DATABASE_URL?.replace(/\/\/.*@/, "//***@") || "Not configured"}
             platform={PLATFORMS[process.platform] ?? process.platform}
             configUpdated={settings.config.updatedAt ? f.dateTime(settings.config.updatedAt, { zoneLabel: true }) : "Never"}
-            timeZone={{ configured: settings.config.timezone, effective: zone }}
-            footerMeta={saved("system")}
           />
         </SettingsGroup>
       </SettingsLayout>

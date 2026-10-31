@@ -13,9 +13,9 @@
  * | Discord | `discord` (`DISCORD_INTEGRATION_CONFIG_CHANGED`) |
  * | Stripe billing | `stripe`, `stripe.enabled` |
  * | Rewind | `rewind` |
- * | Discord channel stats, Request limits | `discord.stats`, `request-tiers` |
- * | Other integrations | `sonarr`, `radarr`, `jellyfin`, `jellyfin.login` |
- * | System information | `appearance`, `timezone` (`SERVER_TIMEZONE_CHANGED`) |
+ * | Channel stats, Request limits | `discord.stats`, `request-tiers` |
+ * | Sonarr, Radarr, Jellyfin | `sonarr`, `radarr`, `jellyfin`, `jellyfin.login` |
+ * | Time zone | `appearance`, `timezone` (`SERVER_TIMEZONE_CHANGED`) |
  *
  * Watchlist sync's settings card, on its own page (`/admin/watchlist`), reads
  * `watchlist` the same way through `getWatchlistLastSaved()`.
@@ -42,7 +42,7 @@ const SECTIONS = {
   requestTiers: ["request-tiers"],
   rewind: ["rewind"],
   other: ["sonarr", "radarr", "jellyfin", "jellyfin.login"],
-  system: ["appearance", "timezone"],
+  timeZone: ["appearance", "timezone"],
 } as const satisfies Record<string, readonly string[]>
 
 type SettingsAuditSection = keyof typeof SECTIONS

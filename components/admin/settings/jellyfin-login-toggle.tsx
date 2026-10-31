@@ -13,7 +13,7 @@ interface JellyfinLoginToggleProps {
 }
 
 /**
- * "Allow Jellyfin sign-in", live in the Jellyfin row of Other integrations
+ * "Allow Jellyfin sign-in", live in the Jellyfin row of Sonarr, Radarr, Jellyfin
  * and outside its Sheet: it saves at once, so it is a switch, not a field
  * behind Edit (NN/g, "Toggle-switch guidelines"), and its hint says so. Off
  * refuses Jellyfin sign-in and hides it from the sign-in page.

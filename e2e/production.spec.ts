@@ -69,13 +69,13 @@ test.describe('Production build', () => {
       await page.goto('/');
       await prisma.config.upsert({ where: { id: 'config' }, update: { serverName: name }, create: { id: 'config', serverName: name } });
 
-      await page.goto('/admin/settings#server-time-zone');
-      await editSection(page, 'system');
+      await page.goto('/admin/settings#time-zone');
+      await editSection(page, 'time-zone');
       await page.getByTestId('server-time-zone-select').click();
       await page.getByTestId('server-time-zone-select-option-Pacific/Auckland').click();
-      await page.getByTestId('settings-system-save').click();
+      await page.getByTestId('settings-time-zone-save').click();
       // A successful save returns the section to its summary
-      await expect(page.getByTestId('settings-system-summary-time-zone')).toContainText('Pacific/Auckland');
+      await expect(page.getByTestId('settings-time-zone-summary-time-zone')).toContainText('Pacific/Auckland');
       await page.goto('/');
       await expect(page).toHaveTitle(new RegExp(`- ${name}$`));
     } finally {

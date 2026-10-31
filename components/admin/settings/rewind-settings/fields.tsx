@@ -118,13 +118,13 @@ export function monthDayLabel(value: string): string {
   return `${MONTHS[Number(month) - 1]} ${Number(day)}`
 }
 
-/** The System section's time zone control, which the zone note's link focuses. */
+/** The Time zone section's control, which the zone note's link focuses. */
 const SERVER_TIME_ZONE_FIELD = '[data-testid="server-time-zone-select"]'
 
 /**
  * The zone the season dates are evaluated in, with "Change the server time
- * zone". The `#server-time-zone` href reveals the System group (`SettingsLayout`),
- * and the click also opens the System section on its time zone field, since
+ * zone". The `#time-zone` href reveals the System group (`SettingsLayout`),
+ * and the click also opens the Time zone section on its field, since
  * "Change" says the admin means to edit it (GOV.UK, "Check answers").
  */
 export function TimeZoneNote({ zone }: { zone: string }) {
@@ -134,8 +134,8 @@ export function TimeZoneNote({ zone }: { zone: string }) {
       Dates are in {zone}. A season that crosses the new year belongs to the year it opens in.{" "}
       <Link
         data-testid="rewind-settings-time-zone-link"
-        href="#server-time-zone"
-        onClick={() => requestEdit?.("system", { focus: SERVER_TIME_ZONE_FIELD })}
+        href="#time-zone"
+        onClick={() => requestEdit?.("time-zone", { focus: SERVER_TIME_ZONE_FIELD })}
         className="text-foreground underline underline-offset-3"
       >
         Change the server time zone

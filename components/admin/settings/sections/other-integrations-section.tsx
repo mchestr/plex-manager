@@ -40,7 +40,7 @@ function rowDescription(type: OtherService, server: StoredServer | null) {
 }
 
 /**
- * Other integrations (6.4): Sonarr, Radarr and Jellyfin as one list card.
+ * Sonarr, Radarr and Jellyfin (6.4), in the Media group as one list card.
  * The rows are the view, each with its badge; Edit or Set up opens the
  * service's form in a Sheet, its edit mode. Allow Jellyfin sign-in saves at
  * once, so it stays live in the Jellyfin row rather than in the Sheet. The
@@ -53,7 +53,7 @@ export function OtherIntegrationsSection({ servers, jellyfinLogin, health, foote
   return (
     <SettingsSection
       id="other"
-      title="Other integrations"
+      title="Sonarr, Radarr, Jellyfin"
       description="These services are optional."
       status={worstStatus(configured.map((type) => health[type].status))}
       checkedAt={checkedAt}

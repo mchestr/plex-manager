@@ -454,6 +454,16 @@ describe('SettingsSection', () => {
     expect(screen.queryByTestId('settings-overseerr-save')).not.toBeInTheDocument()
   })
 
+  it('shows a description only when one is given', () => {
+    const { container, rerender } = render(<SettingsSection id="system" title="System information" />)
+
+    expect(screen.getByRole('heading', { name: 'System information' })).toBeInTheDocument()
+    expect(container.querySelector('[data-slot="card-description"]')).toBeNull()
+
+    rerender(<SettingsSection id="system" title="System information" description="Runtime" />)
+    expect(container.querySelector('[data-slot="card-description"]')).toHaveTextContent('Runtime')
+  })
+
   it('ignores Cancel and Escape while a save is pending', async () => {
     const form = formState({ isDirty: true, isPending: true })
     renderSection(form)

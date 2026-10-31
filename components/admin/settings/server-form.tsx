@@ -88,7 +88,7 @@ interface ServerFormProps extends SheetFormControls {
 }
 
 /**
- * A service's form on its own: the edit mode of an Other integrations row,
+ * A service's form on its own: the edit mode of a Sonarr, Radarr or Jellyfin row,
  * in its Sheet. Test connection tries the typed values; Save with nothing
  * changed, or a save that works, calls `onDone`, and a failed one keeps the
  * form open with the errors on their fields.

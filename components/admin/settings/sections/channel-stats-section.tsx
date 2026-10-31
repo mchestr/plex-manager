@@ -69,7 +69,7 @@ function ChannelStatsSummary({ saved }: { saved: ChannelStatsSettingsData }) {
 }
 
 /**
- * Discord stat channels: which channel shows which number, and how its name
+ * Channel stats (Discord group): which channel shows which number, and how its name
  * reads. The job renames a channel only when its name would change, and
  * Discord allows two renames per channel in ten minutes, so the interval stops
  * at ten.
@@ -127,7 +127,7 @@ export function ChannelStatsSection({ saved, footerMeta }: { saved: ChannelStats
   return (
     <SettingsSection
       id={SECTION_ID}
-      title="Discord channel stats"
+      title="Channel stats"
       description="Shows live Tautulli numbers in voice channel names, for example Current Streams: 3. The Discord bot needs the Manage Channels permission."
       form={{
         ...form,
