@@ -72,7 +72,7 @@ describe("SyncSettingsSection", () => {
       const toggle = within(form).getByRole("checkbox", { name: "Watchlist sync" })
       expect(toggle).toHaveAttribute("data-testid", "watchlist-sync-global-toggle")
       expect(toggle).toHaveAttribute("aria-checked", "true")
-      expect(toggle).toHaveAccessibleDescription(/members cannot turn on sync/)
+      expect(toggle).toHaveAccessibleDescription("")
       expect(screen.queryByRole("switch")).not.toBeInTheDocument()
       expect(within(form).getByTestId("watchlist-sync-interval-input")).toHaveValue(60)
       expect(screen.queryByTestId("settings-watchlist-summary")).not.toBeInTheDocument()

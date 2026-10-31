@@ -11,7 +11,7 @@ interface ConversationUsageRowProps {
     totalTokens: string
     tokenSplit: string
     cost: string
-    /** Nullable since the October 2026 privacy clean-up (P0.20); chat calls keep their text. */
+    /** Null when the text isn't kept (`LlmTextRemovedNotice`): the retention sweep clears it, or the October 2026 clean-up did (P0.20). */
     prompt: string | null
   }
   index: number

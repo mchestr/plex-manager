@@ -262,7 +262,7 @@ export function DiscordMarkedMedia({
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {mark.mediaType.replace(/_/g, " ")}
-                          {mark.note ? ` · ${mark.note}` : ""}
+                          {mark.note ? `, ${mark.note}` : ""}
                         </span>
                       </div>
                     </td>

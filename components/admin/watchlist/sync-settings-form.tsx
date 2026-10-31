@@ -86,16 +86,10 @@ export function WatchlistSyncFields({ state }: { state: ReturnType<typeof useWat
           checked={values.enabled}
           onCheckedChange={(enabled) => set({ enabled })}
           disabled={form.isPending}
-          aria-describedby="watchlist-sync-enabled-hint"
           className="mt-0.5"
           data-testid="watchlist-sync-global-toggle"
         />
-        <div className="flex flex-col">
-          <Label htmlFor="watchlist-sync-enabled">Watchlist sync</Label>
-          <span id="watchlist-sync-enabled-hint" className="text-label text-muted-foreground">
-            While this is off, members cannot turn on sync.
-          </span>
-        </div>
+        <Label htmlFor="watchlist-sync-enabled">Watchlist sync</Label>
       </div>
       {values.enabled && (
         <FormField name="watchlist-sync-interval" label="Sync interval" description="Minutes between syncs, from 15 to 1440." error={error ?? intervalError(values.interval)}>

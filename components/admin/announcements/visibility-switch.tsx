@@ -13,7 +13,7 @@ interface VisibilitySwitchProps {
 }
 
 /**
- * "Visible on home page" for one row (P10.5). The switch moves at once
+ * "Visible to members" for one row (P10.5). The switch moves at once
  * (`useOptimistic`); a failed save shows the error and the switch falls back
  * to the saved state when the transition ends.
  */
@@ -26,7 +26,7 @@ export function VisibilitySwitch({ id, title, isActive }: VisibilitySwitchProps)
     startTransition(async () => {
       setVisible(next)
       const result = await setAnnouncementActive({ id, isActive: next })
-      if (result.success) showSuccess(next ? `"${title}" shows on the home page` : `"${title}" is hidden`)
+      if (result.success) showSuccess(next ? `"${title}" is visible to members` : `"${title}" is hidden`)
       else showError(result.error)
     })
 
@@ -35,7 +35,7 @@ export function VisibilitySwitch({ id, title, isActive }: VisibilitySwitchProps)
       checked={visible}
       onCheckedChange={onCheckedChange}
       disabled={pending}
-      label={`Visible on home page: ${title}`}
+      label={`Visible to members: ${title}`}
       data-testid={`toggle-announcement-${id}`}
     />
   )

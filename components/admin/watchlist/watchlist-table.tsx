@@ -139,7 +139,7 @@ export function WatchlistTable({ rows, total, all, page, pageSize, sort, syncEna
         description={
           syncEnabled
             ? "A title appears here when a member with sync on adds it to their Plex watchlist."
-            : "Turn on watchlist sync in Sync settings. Then members can turn on sync from their home page."
+            : "Turn on watchlist sync in Sync settings."
         }
         data-testid="admin-watchlist-empty"
       />

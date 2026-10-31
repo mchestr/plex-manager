@@ -397,7 +397,7 @@ describe("AssistantWorkspace", () => {
   it("says the assistant is off, keeps the history readable and sends nothing", () => {
     view({ available: false, conversation: conversation("a", "Is Plex up?", "Plex is up.") })
 
-    expect(screen.getByTestId("admin-chat-unavailable")).toHaveTextContent("The assistant is off")
+    expect(screen.getByTestId("admin-chat-unavailable")).toHaveTextContent("The assistant is offTurn on AI features and select a chat model.Open AI settings")
     expect(screen.getByTestId("admin-chat-open-settings")).toHaveAttribute("href", "/admin/settings#ai")
     expect(screen.getByText("Plex is up.")).toBeInTheDocument()
     expect(input()).toBeDisabled()
@@ -406,7 +406,7 @@ describe("AssistantWorkspace", () => {
   it("tells a Support user to ask an admin, without the settings link, and offers no suggestions", () => {
     view({ available: false, canConfigure: false })
 
-    expect(screen.getByTestId("admin-chat-unavailable")).toHaveTextContent("An admin must turn on AI features")
+    expect(screen.getByTestId("admin-chat-unavailable")).toHaveTextContent(/An admin must turn on AI features and select a chat model\.$/)
     expect(screen.queryByTestId("admin-chat-open-settings")).not.toBeInTheDocument()
     expect(screen.queryByTestId("admin-chat-suggestion-0")).not.toBeInTheDocument()
   })

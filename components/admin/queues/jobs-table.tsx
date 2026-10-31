@@ -151,7 +151,7 @@ export function JobsTable({ rows, total, allJobs, page, pageSize, filtered }: Jo
         open={removing !== null}
         onOpenChange={(open) => !open && setRemoving(null)}
         title={removing ? `Remove this ${removing.typeLabel} job?` : "Remove this job?"}
-        description="The job leaves the queue. It doesn't run or retry."
+        description="It won't run or retry."
         confirmLabel="Remove job"
         pendingLabel="Removing"
         tone="destructive"

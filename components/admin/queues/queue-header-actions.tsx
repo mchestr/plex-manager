@@ -17,7 +17,8 @@ interface QueueHeaderActionsProps {
   disabled: boolean
 }
 
-const PAUSE_CONSEQUENCE = "Waiting jobs don't run until you resume the queue. This includes Stripe access changes and Rewind runs."
+// Pausing holds the main queue only; Rewind runs on its own queues (lib/queue/rewind-queues.ts)
+const PAUSE_CONSEQUENCE = "Waiting jobs don't run until you resume the queue. This includes Stripe access changes."
 
 /**
  * The page's actions: a watchlist sync, and Pause or Resume behind a confirm

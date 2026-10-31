@@ -57,7 +57,7 @@ function columns(f: BoundFormat, onEdit: (row: AdminAnnouncementRow) => void): C
     },
     {
       id: "visible",
-      header: "Visible on home page",
+      header: "Visible to members",
       cell: ({ row }) => <VisibilitySwitch id={row.original.id} title={row.original.title} isActive={row.original.isActive} />,
       meta: { card: "field" },
     },

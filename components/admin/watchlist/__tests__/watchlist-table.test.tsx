@@ -138,7 +138,7 @@ describe("WatchlistTable", () => {
     unmount()
 
     renderTable({ rows: [], total: 0, all: 0, syncEnabled: false })
-    expect(screen.getByTestId("admin-watchlist-empty")).toHaveTextContent("Turn on watchlist sync in Sync settings")
+    expect(screen.getByTestId("admin-watchlist-empty")).toHaveTextContent(/Turn on watchlist sync in Sync settings\.$/)
   })
 
   it("shows the filtered empty state, and Clear filters drops every filter", async () => {

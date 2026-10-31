@@ -44,7 +44,7 @@ const TABLE: Row[] = [
   ["queueJob", "waiting", "Waiting", "neutral", undefined],
   ["queueJob", "completed", "Done", "success", icons.done],
   ["queueJob", "failed", "Failed", "destructive", undefined],
-  ["queueJob", "delayed", "Paused", "warning", icons.paused],
+  ["queueJob", "delayed", "Delayed", "warning", icons.scheduled],
   ["queueJob", "paused", "Paused", "warning", icons.paused],
   ["worker", "running", "Worker running", "success", "dot"],
   ["worker", "stopped", "Worker stopped", "destructive", "dot"],

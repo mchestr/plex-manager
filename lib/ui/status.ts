@@ -97,7 +97,7 @@ export const STATUS = {
     waiting: { label: "Waiting", tone: "neutral" },
     completed: { label: "Done", tone: "success", mark: icons.done },
     failed: { label: "Failed", tone: "destructive" },
-    delayed: { label: "Paused", tone: "warning", mark: icons.paused },
+    delayed: { label: "Delayed", tone: "warning", mark: icons.scheduled },
     paused: { label: "Paused", tone: "warning", mark: icons.paused },
   },
   worker: {

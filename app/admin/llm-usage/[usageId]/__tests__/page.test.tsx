@@ -61,7 +61,7 @@ describe('Admin LLM request page', () => {
     expect(notices[0]).toHaveTextContent('Prompt')
     expect(notices[1]).toHaveTextContent('Response')
     notices.forEach((notice) =>
-      expect(notice).toHaveTextContent('The October 2026 privacy clean-up removed this text.')
+      expect(notice).toHaveTextContent("For privacy, this text isn't kept.")
     )
     expect(screen.queryByTestId('expandable-Prompt')).not.toBeInTheDocument()
     expect(screen.queryByTestId('expandable-Response')).not.toBeInTheDocument()

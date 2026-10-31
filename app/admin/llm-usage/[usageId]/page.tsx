@@ -20,7 +20,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
   }
 
   // Try to parse response as JSON for better display. Prompt and response are
-  // null on rows the October 2026 privacy clean-up stripped (P0.20).
+  // null when the text isn't kept (`LlmTextRemovedNotice`).
   let formattedResponse = record.response ?? ""
   let isJson = false
   try {
