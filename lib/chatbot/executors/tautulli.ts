@@ -2,16 +2,17 @@ import "server-only"
 
 import { z } from "zod"
 
-import { toConnectionResult } from "@/lib/connections/http"
-import { findTautulliUser, getTautulliActivity, getTautulliHistory, getTautulliHomeStat, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliServerInfo, getTautulliUserWatchTimeStats, getTautulliUsers, tautulliCommand } from "@/lib/connections/tautulli"
+import { findTautulliUser, getTautulliActivity, getTautulliHistory, getTautulliHomeStat, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliServerInfo, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
 import { getActiveService } from "@/lib/data/active-service"
 import { isJellyfinOnly } from "@/lib/discord/copy"
 import { memberServices } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
-import { auditMemberRead } from "@/lib/security/audit-log"
 import { type FormatSettings } from "@/lib/utils/format"
-import { countArg, MAX_PAGE, textArg, userIdArg } from "./plex-tautulli-reply"
-import { activityReply, LIMITS, matchingSessions, mostWatchedReply, recentPlaysReply, topUsersReply, usersReply, watchHistoryReply, type HistoryQuery } from "./tautulli-lists"
+import { countArg, flagArg, MAX_PAGE, textArg, userIdArg } from "./plex-tautulli-reply"
+import { auditTautulliMemberReads, historyPage } from "./tautulli-history"
+import { activityReply, LIMITS, mostWatchedReply, recentPlaysReply, topUsersReply, watchHistoryReply, type HistoryQuery } from "./tautulli-lists"
+import { sessionOf } from "./tautulli-projections"
+import { usersReply } from "./tautulli-users"
 import { TAUTULLI_EPOCH_KEYS, UTC_FORMAT, withLocalTimestamps } from "./timestamps"
 import { JELLYFIN_MEMBER, toToolOutput } from "./tool-output"
 
@@ -34,9 +35,11 @@ const NOT_A_USER_ID = JSON.stringify({ error: "userId must be a Tautulli user_id
  * caller, no Plex user ID, a failed or empty lookup, or an activity payload of
  * an unexpected shape all return no sessions; a Jellyfin-only member is told
  * why (P11.12). Sessions are projected as for an admin, and the Discord
- * allowlist then drops the viewer fields.
+ * allowlist then drops the viewer fields. A search is not applied: it could
+ * only hide the caller's own streams, and a search for someone else would
+ * read as "not watching".
  */
-async function scopeActivityToCaller(config: TautulliConfig, data: unknown, userId: string | undefined, search: string | undefined) {
+async function scopeActivityToCaller(config: TautulliConfig, data: unknown, userId: string | undefined) {
   const activity = activitySchema.safeParse(data)
   if (!activity.success || !userId) return UNMAPPED_ACTIVITY
 
@@ -48,25 +51,20 @@ async function scopeActivityToCaller(config: TautulliConfig, data: unknown, user
   if (!lookup.ok) return UNMAPPED_ACTIVITY
 
   const tautulliUserId = String(lookup.user.user_id)
-  const sessions = matchingSessions(activity.data.sessions.filter((session) => String(session.user_id) === tautulliUserId), search)
+  const sessions = activity.data.sessions.filter((session) => String(session.user_id) === tautulliUserId).map(sessionOf)
   return { session_count: sessions.length, sessions, scope: "caller" }
 }
 
-/**
- * Audit an admin's per-member Tautulli read (P11.16, GAP-33). Tautulli's user
- * id is the Plex account id, so the member is the app user with that Plex id;
- * a Plex user with no account here has nothing to attach the row to.
- */
-async function auditTautulliMemberRead(tautulliUserId: number | undefined, actorUserId: string | undefined) {
-  if (tautulliUserId === undefined || !actorUserId) return
-  const member = await prisma.user.findFirst({ where: { plexUserId: String(tautulliUserId) }, select: { id: true } })
-  if (member && member.id !== actorUserId) await auditMemberRead("chatbot-tautulli", member.id, actorUserId)
-}
-
-/** One page of `get_history`, newest first (Tautulli's order), for one user or a search when given. */
-async function historyPage(config: TautulliConfig, { userId, search, limit, page }: HistoryQuery) {
-  const params = { user_id: userId, search, length: limit, start: (page - 1) * limit }
-  return toConnectionResult("Tautulli", await tautulliCommand(config, "get_history", params, z.unknown()))
+/** The watch history page `args` ask for, or `null` for a userId that is not a user id. */
+function historyQuery(args: Record<string, unknown>): HistoryQuery | null {
+  const userId = userIdArg(args.userId)
+  if (userId === null) return null
+  return {
+    userId,
+    search: textArg(args.search),
+    limit: countArg(args.limit, LIMITS.history.fallback, LIMITS.history.max),
+    page: countArg(args.page, 1, MAX_PAGE),
+  }
 }
 
 export async function executeTautulliTool(
@@ -95,8 +93,8 @@ export async function executeTautulliTool(
     case "get_tautulli_activity": {
       const activity = await getTautulliActivity(config)
       if (!activity.success) return toToolOutput(activity)
-      const search = textArg(args.search)
-      return JSON.stringify(context === "discord" ? await scopeActivityToCaller(config, activity.data, userId, search) : activityReply(activity.data, search))
+      if (context === "discord") return JSON.stringify(await scopeActivityToCaller(config, activity.data, userId))
+      return JSON.stringify(activityReply(activity.data, textArg(args.search)))
     }
     case "get_tautulli_library_stats": {
       const stats = await getTautulliLibraryStats(config)
@@ -106,22 +104,21 @@ export async function executeTautulliTool(
       return toToolOutput(await getTautulliLibraryNames(config))
     case "get_tautulli_users": {
       const users = await getTautulliUsers(config)
+      if (!users.success) return toToolOutput(users)
       const limit = countArg(args.limit, LIMITS.users.fallback, LIMITS.users.max)
-      return users.success ? JSON.stringify(usersReply(users.data, { search: textArg(args.search), limit }, timeZone)) : toToolOutput(users)
+      const query = { search: textArg(args.search), active: flagArg(args.active), limit, page: countArg(args.page, 1, MAX_PAGE) }
+      return JSON.stringify(usersReply(users.data, query, timeZone))
     }
     case "get_tautulli_watch_history": {
-      const tautulliUserId = userIdArg(args.userId)
-      if (tautulliUserId === null) return NOT_A_USER_ID
-      const query: HistoryQuery = {
-        userId: tautulliUserId,
-        search: textArg(args.search),
-        limit: countArg(args.limit, LIMITS.history.fallback, LIMITS.history.max),
-        page: countArg(args.page, 1, MAX_PAGE),
-      }
+      const query = historyQuery(args)
+      if (!query) return NOT_A_USER_ID
       const history = await historyPage(config, query)
       if (!history.success) return toToolOutput(history)
-      await auditTautulliMemberRead(tautulliUserId, userId)
-      return JSON.stringify(watchHistoryReply(history.data, query, timeZone))
+      const reply = watchHistoryReply(history.data, query, timeZone)
+      // The member asked for is read, and so is each one a search finds (by name, say)
+      const searched = query.search === undefined ? [] : reply.plays.map((play) => play.user_id)
+      await auditTautulliMemberReads([query.userId, ...searched], userId)
+      return JSON.stringify(reply)
     }
     case "get_tautulli_recently_watched": {
       // get_history is newest first by default
@@ -149,7 +146,7 @@ export async function executeTautulliTool(
       const tautulliUserId = userIdArg(args.userId)
       if (tautulliUserId === null || tautulliUserId === undefined) return NOT_A_USER_ID
       const stats = await getTautulliUserWatchTimeStats(config, tautulliUserId)
-      if (stats.success) await auditTautulliMemberRead(tautulliUserId, userId)
+      if (stats.success) await auditTautulliMemberReads([tautulliUserId], userId)
       return toToolOutput(stats)
     }
     default:

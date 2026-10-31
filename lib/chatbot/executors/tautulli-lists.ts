@@ -1,7 +1,7 @@
 import "server-only"
 
-import { containsText, isRecord, listOf, REPLY_BUDGET, showing, wholeNumber, withinBudget, type Row } from "./plex-tautulli-reply"
-import { activityTotalsOf, homeStatRows, isActiveUser, playOf, sessionOf, topTitleOf, topUserOf, userOf } from "./tautulli-projections"
+import { containsText, cutShort, firstIndex, isRecord, listOf, REPLY_BUDGET, rowRange, showing, ways, wholeNumber, withinBudget, type Paged, type Row } from "./plex-tautulli-reply"
+import { activityTotalsOf, homeStatRows, playOf, sessionOf, topTitleOf, topUserOf } from "./tautulli-projections"
 import { TAUTULLI_EPOCH_KEYS, withLocalTimestamps } from "./timestamps"
 
 /**
@@ -13,9 +13,14 @@ import { TAUTULLI_EPOCH_KEYS, withLocalTimestamps } from "./timestamps"
  * @module
  */
 
-/** Each list tool's default count and the most it returns, sized for a 40,000-character result on a large server. */
+/**
+ * Each list tool's default count and the most it returns, sized for a
+ * 40,000-character result on a large server. A user with 15 libraries and
+ * content restrictions takes about 200 characters, so a page of 150 still
+ * fits whole and paging at the largest limit skips no one.
+ */
 export const LIMITS = {
-  users: { fallback: 100, max: 200 },
+  users: { fallback: 100, max: 150 },
   history: { fallback: 20, max: 50 },
   topTitles: { fallback: 20, max: 50 },
   topUsers: { fallback: 10, max: 100 },
@@ -25,68 +30,44 @@ export const LIMITS = {
 const HOME_STATS_PERIOD = "in the last 30 days"
 
 /** Rows with their epoch seconds as ISO times in the turn's zone (P11.17). */
-function local(rows: Row[], timeZone: string): Row[] {
+export function local(rows: Row[], timeZone: string): Row[] {
   return withLocalTimestamps(rows, TAUTULLI_EPOCH_KEYS, timeZone) as Row[]
 }
 
-/** The ways to see more that apply, as one hint: "pass page 2 for older plays, or a larger limit (at most 50)". */
-const ways = (options: (string | false)[]) => options.filter((option) => option !== false).join(", or ")
+/** Whether a stream is that of the user or the title `search` names: exactly a user_id, or part of a name or title. */
+const isMatch = (search: string) => (session: Row) =>
+  String(session.user_id) === search || containsText(search, session.friendly_name, session.full_title, session.title, session.grandparent_title)
 
-const nameOf = (user: Row) => String(user.friendly_name ?? user.username ?? "")
-const byName = (a: Row, b: Row) => nameOf(a).localeCompare(nameOf(b), undefined, { sensitivity: "base" })
-
-/** Tautulli's users by name, found by a name, a username or a user_id when `search` is given. */
-export function usersReply(data: unknown, { search, limit }: { search?: string; limit: number }, timeZone: string) {
-  const all = listOf(data).map(userOf).sort(byName)
-  const found = search === undefined ? all : all.filter((user) => String(user.user_id) === search || containsText(search, user.friendly_name, user.username))
-  const users = withinBudget(local(found.slice(0, limit), timeZone))
-  const line = search === undefined ? `showing ${users.length} of ${all.length} users, by name` : `showing ${users.length} of ${found.length} users matching "${search}"`
-  const more = [
-    search === undefined ? "pass a search (a name, username or user_id) to find someone" : "use a longer search",
-    limit < LIMITS.users.max && `a larger limit (at most ${LIMITS.users.max})`,
-  ]
-  return { showing: showing(line, users.length < found.length, ways(more)), total: all.length, active: all.filter(isActiveUser).length, users }
-}
-
-/** `sessions` projected, and only those of the user or title `search` names when it is given. */
-export function matchingSessions(sessions: unknown[], search: string | undefined): Row[] {
-  const projected = sessions.map(sessionOf)
-  if (search === undefined) return projected
-  return projected.filter(
-    (session) => String(session.user_id) === search || containsText(search, session.friendly_name, session.full_title, session.title, session.grandparent_title)
-  )
-}
-
-/** Everyone's streams (the admin's view): the server's totals, then each stream. */
+/** Everyone's streams (the admin's view): the server's totals, then each stream, or only those `search` names. */
 export function activityReply(data: unknown, search: string | undefined) {
-  const all = listOf(isRecord(data) ? data.sessions : undefined)
-  const found = matchingSessions(all, search)
+  const all = listOf(isRecord(data) ? data.sessions : undefined).map(sessionOf)
+  const found = search === undefined ? all : all.filter(isMatch(search))
   const sessions = withinBudget(found)
   const line = search === undefined ? `showing ${sessions.length} of ${all.length} streams` : `showing ${sessions.length} of ${found.length} streams matching "${search}"`
   return { ...activityTotalsOf(data), showing: showing(line, sessions.length < found.length, "pass a search (a user or a title) to see the others"), sessions }
 }
 
-export interface HistoryQuery {
+export interface HistoryQuery extends Paged {
   userId?: number
   search?: string
-  limit: number
-  page: number
 }
 
-/** A `get_history` page: its plays, how many match, and `more` when the reply does not reach the last of them. */
-function historyReply(data: unknown, query: HistoryQuery, timeZone: string, more: string) {
+/**
+ * A `get_history` page: its plays, how many match, and `more` when the reply
+ * does not reach the last of them, or `cut` when the reply budget held fewer
+ * plays than the page read.
+ */
+function historyReply(data: unknown, query: HistoryQuery, timeZone: string, { more, cut }: { more: string; cut?: string }) {
   const page = isRecord(data) ? data : {}
-  const plays = withinBudget(local(listOf(page.data).map(playOf), timeZone))
-  const total = wholeNumber(page.recordsFiltered) ?? plays.length
-  const first = (query.page - 1) * query.limit + 1
+  const read = listOf(page.data).map(playOf)
+  const plays = withinBudget(local(read, timeZone))
+  const total = wholeNumber(page.recordsFiltered) ?? read.length
   const label = [`${total} plays`, query.userId !== undefined && `by user_id ${query.userId}`, query.search !== undefined && `matching "${query.search}"`]
     .filter(Boolean)
     .join(" ")
-  const line =
-    plays.length === 0 && query.page > 1
-      ? `none on page ${query.page}; there are ${label}`
-      : `showing ${query.page === 1 ? plays.length : `${first}-${first + plays.length - 1}`} of ${label}, newest first`
-  return { showing: showing(line, first - 1 + plays.length < total, more), total, plays }
+  const line = read.length === 0 && query.page > 1 ? `none on page ${query.page}; there are ${label}` : `showing ${rowRange(query, plays.length)} of ${label}, newest first`
+  const hint = plays.length < read.length ? cutShort(plays.length, read.length, "plays", cut) : more
+  return { showing: showing(line, firstIndex(query) + plays.length < total, hint), total, plays }
 }
 
 /** One page of the watch history, for one user or a search when given. */
@@ -96,7 +77,7 @@ export function watchHistoryReply(data: unknown, query: HistoryQuery, timeZone: 
     query.limit < LIMITS.history.max && `a larger limit (at most ${LIMITS.history.max})`,
     query.userId === undefined && query.search === undefined && "a userId or a search to narrow them",
   ]
-  return historyReply(data, query, timeZone, ways(more))
+  return historyReply(data, query, timeZone, { more: ways(more) })
 }
 
 /** The newest plays on the server. */
@@ -105,7 +86,8 @@ export function recentPlaysReply(data: unknown, limit: number, timeZone: string)
     limit < LIMITS.history.max && `pass a larger limit (at most ${LIMITS.history.max})`,
     "use get_tautulli_watch_history with page, userId or search for older plays",
   ]
-  return historyReply(data, { limit, page: 1 }, timeZone, ways(more))
+  const cut = "use get_tautulli_watch_history with a smaller limit and page through them"
+  return historyReply(data, { limit, page: 1 }, timeZone, { more: ways(more), cut })
 }
 
 const largerLimit = (shown: number, limit: number, max: number) => shown >= limit && limit < max

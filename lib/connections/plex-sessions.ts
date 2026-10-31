@@ -53,11 +53,12 @@ export function containerPage(size: number, start = 0): Record<string, string> {
 }
 
 /**
- * Get recently added content from Plex server, `limit` items, paged with the
- * container headers (the PMS ignores a `?limit=` parameter).
+ * Get recently added content from Plex server, `limit` items from the
+ * `start`th newest (0 is the newest), paged with the container headers (the
+ * PMS ignores a `?limit=` parameter).
  */
-export async function getPlexRecentlyAdded(serverConfig: PlexServerConfig, limit = 20): Promise<PlexResult> {
-  return plexGet(serverConfig, "/library/recentlyAdded", containerPage(limit))
+export async function getPlexRecentlyAdded(serverConfig: PlexServerConfig, limit = 20, start = 0): Promise<PlexResult> {
+  return plexGet(serverConfig, "/library/recentlyAdded", containerPage(limit, start))
 }
 
 /**

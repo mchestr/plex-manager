@@ -10,7 +10,7 @@ import { type FormatSettings } from "@/lib/utils/format"
 import { JELLYFIN_MEMBER } from "./tool-output"
 import { onDeckReply, RECENTLY_ADDED, recentlyAddedReply } from "./plex-projections"
 import { sanitizePlexSessionsPayload } from "./plex-sanitizer"
-import { countArg } from "./plex-tautulli-reply"
+import { countArg, firstIndex, MAX_PAGE } from "./plex-tautulli-reply"
 import { PLEX_EPOCH_KEYS, UTC_FORMAT, withLocalTimestamps } from "./timestamps"
 
 /** `/status/sessions` as the PMS sends it: one session comes as an object, several as a list. */
@@ -68,10 +68,10 @@ export async function executePlexTool(
       return JSON.stringify(withLocalTimestamps(result.data, PLEX_EPOCH_KEYS, format.timeZone))
     }
     case "get_plex_recently_added": {
-      const limit = countArg(args.limit, RECENTLY_ADDED.fallback, RECENTLY_ADDED.max)
-      const result = await getPlexRecentlyAdded(config, limit)
+      const query = { limit: countArg(args.limit, RECENTLY_ADDED.fallback, RECENTLY_ADDED.max), page: countArg(args.page, 1, MAX_PAGE) }
+      const result = await getPlexRecentlyAdded(config, query.limit, firstIndex(query))
       if (!result.success) return JSON.stringify({ error: result.error || "Error fetching recently added" })
-      return JSON.stringify(recentlyAddedReply(result.data, limit, format.timeZone))
+      return JSON.stringify(recentlyAddedReply(result.data, query, format.timeZone))
     }
     case "get_plex_on_deck": {
       const result = await getPlexOnDeck(config)

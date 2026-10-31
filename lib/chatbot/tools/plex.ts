@@ -66,14 +66,16 @@ export const PLEX_TOOLS: RegisteredTool[] = [
     permission: "assistant:tools:read",
     function: {
       name: "get_plex_recently_added",
-      description: "Get the newest items added to the Plex libraries, newest first: type, title, show and episode, year, library, when added and resolution",
+      description:
+        "Get the items added to the Plex libraries, newest first, and page back through older ones: type, title, show and episode, year, library, when added and resolution",
       parameters: {
         type: "object",
         properties: {
           limit: {
             type: "integer",
-            description: `Number of items to retrieve (default ${RECENTLY_ADDED.fallback}, at most ${RECENTLY_ADDED.max})`,
+            description: `Number of items per page (default ${RECENTLY_ADDED.fallback}, at most ${RECENTLY_ADDED.max})`,
           },
+          page: { type: "integer", description: "Page of items, from 1 (the newest) back through older ones (default 1)" },
         },
       },
     },

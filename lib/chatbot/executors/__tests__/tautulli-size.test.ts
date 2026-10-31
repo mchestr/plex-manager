@@ -52,10 +52,11 @@ const rawUser = (i: number) => ({
   keep_history: 1,
   allow_guest: 0,
   server_token: `server-token-${i}`,
-  shared_libraries: ["1", "2", "3", "4", "5", "6", "7", "8"],
+  // 15 libraries, and content restrictions on every tenth user
+  shared_libraries: Array.from({ length: 15 }, (_, n) => String(n + 1)),
   filter_all: "",
-  filter_movies: "",
-  filter_tv: "",
+  filter_movies: i % 10 === 5 ? "contentRating=G|PG|TV-Y|TV-Y7|TV-G|TV-PG&label!=horror" : "",
+  filter_tv: i % 10 === 5 ? "contentRating=TV-Y|TV-Y7|TV-G|TV-PG&label!=horror" : "",
   filter_music: "",
   filter_photos: "",
 })
@@ -91,17 +92,28 @@ const rawSession = (i: number) => ({
   platform: "Android",
   player: `${name(i)}'s Living Room Television`,
   location: "wan",
+  relayed: 0,
+  secure: 1,
   bandwidth: "21500",
+  bitrate: "64872",
+  stream_bitrate: "20000",
   quality_profile: "Original (Remux 4K HDR)",
   transcode_decision: "transcode",
   video_decision: "transcode",
   audio_decision: "transcode",
   subtitle_decision: "burn",
+  subtitle_codec: "pgs",
   container: "mkv",
   video_codec: "hevc",
+  stream_video_codec: "h264",
   video_resolution: "4k",
   stream_video_resolution: "1080",
+  video_dynamic_range: "HDR",
+  stream_video_dynamic_range: "SDR",
   audio_codec: "truehd",
+  stream_audio_codec: "eac3",
+  transcode_speed: "1.4",
+  transcode_throttled: 1,
   transcode_hw_decoding: 1,
   transcode_hw_encoding: 1,
 })
@@ -217,10 +229,11 @@ async function size(tool: string, args: Record<string, unknown> = {}): Promise<n
 beforeEach(() => {
   mockReset(prismaMock)
   prismaMock.tautulli.findFirst.mockResolvedValue({ id: "t-1", name: "Tautulli", url: "http://t", apiKey: "k", publicUrl: null } as never)
+  prismaMock.user.findMany.mockResolvedValue([])
   jest.mocked(getTautulliUsers).mockResolvedValue({ success: true, data: Array.from({ length: 500 }, (_, i) => rawUser(i)) })
   jest.mocked(getTautulliActivity).mockResolvedValue({ success: true, data: activity(25) })
-  // Tautulli returns as many plays and rows as asked for
-  jest.mocked(tautulliCommand).mockImplementation(async (_config, _cmd, params) => ({ ok: true, data: historyPage(Number(params.length)) }) as never)
+  // Tautulli returns as many plays and rows as asked for (the page length is in the DataTables request)
+  jest.mocked(tautulliCommand).mockImplementation(async (_config, _cmd, params) => ({ ok: true, data: historyPage(JSON.parse(String(params.json_data)).length) }) as never)
   jest.mocked(getTautulliHistory).mockImplementation(async (_config, _user, limit = 20) => ({ success: true, data: historyPage(limit) }))
   jest.mocked(getTautulliHomeStat).mockImplementation(async (_config, statId, count) => ({
     success: true,
@@ -231,11 +244,15 @@ beforeEach(() => {
 describe("Tautulli tool results on a large server stay under the MCP limit", () => {
   it.each([
     ["get_tautulli_users", {}],
-    ["get_tautulli_users", { limit: 200 }],
+    ["get_tautulli_users", { limit: 150 }],
+    ["get_tautulli_users", { limit: 150, page: 2 }],
     ["get_tautulli_users", { limit: 100_000, search: "Member" }],
+    ["get_tautulli_users", { limit: 100_000, active: true }],
     ["get_tautulli_activity", {}],
+    ["get_tautulli_activity", { search: "Member" }],
     ["get_tautulli_watch_history", {}],
     ["get_tautulli_watch_history", { limit: 100_000, page: 3 }],
+    ["get_tautulli_watch_history", { limit: 100_000, page: 2, search: "A Series With An Unusually Long Name" }],
     ["get_tautulli_recently_watched", {}],
     ["get_tautulli_recently_watched", { limit: 100_000 }],
     ["get_tautulli_most_watched", {}],
@@ -246,14 +263,34 @@ describe("Tautulli tool results on a large server stay under the MCP limit", () 
     expect(await size(tool, args)).toBeLessThanOrEqual(MCP_LIMIT)
   })
 
-  it("lists 100 of the 500 users by default and at most 200, and says so", async () => {
+  it("lists 100 of the 500 users by default and at most 150, and says so", async () => {
     const byDefault = JSON.parse(await executeTautulliTool("get_tautulli_users", {}))
     const most = JSON.parse(await executeTautulliTool("get_tautulli_users", { limit: 1000 }))
 
     expect(byDefault.users).toHaveLength(100)
-    expect(byDefault.showing).toMatch(/^showing 100 of 500 users, by name; pass a search/)
-    expect(most.users).toHaveLength(200)
+    expect(byDefault.showing).toMatch(/^showing 100 of 500 users, by name; pass page 2 for more, or a search/)
+    expect(most.users).toHaveLength(150)
+    expect(most.showing).toMatch(/^showing 150 of 500 users, by name; pass page 2 for more, or a search .*access$/)
     expect(most).toMatchObject({ total: 500, active: 450 })
+  })
+
+  it("reaches every one of the 500 users, page by page at the largest limit, with their libraries", async () => {
+    const pages = await Promise.all([1, 2, 3, 4].map(async (page) => JSON.parse(await executeTautulliTool("get_tautulli_users", { limit: 150, page }))))
+    const ids = new Set(pages.flatMap((page) => page.users.map((user: { user_id: number }) => user.user_id)))
+
+    // Each page fits the reply whole, so no user falls between two pages
+    expect(pages.map((page) => page.users.length)).toEqual([150, 150, 150, 50])
+    expect(ids.size).toBe(500)
+    expect(pages[3].showing).toBe("showing 451-500 of 500 users, by name")
+    expect(pages[0].users[0].shared_libraries).toBe("1,2,3,4,5,6,7,8,9,10,11,12,13,14,15")
+  })
+
+  it("lists the 50 users who no longer have access", async () => {
+    const result = JSON.parse(await executeTautulliTool("get_tautulli_users", { active: false }))
+
+    expect(result.users).toHaveLength(50)
+    expect(result.users.every((user: { is_active: number }) => user.is_active === 0)).toBe(true)
+    expect(result.showing).toBe("showing 50 of 50 users without access, by name")
   })
 
   it("gives every one of 25 streams with the server's totals", async () => {
@@ -282,6 +319,8 @@ describe("Tautulli tool results on a large server stay under the MCP limit", () 
     const output = await executeTautulliTool("get_tautulli_recently_watched", { limit: 50 })
 
     expect(output.length).toBeLessThanOrEqual(MCP_LIMIT)
-    expect(JSON.parse(output).showing).toMatch(/^showing \d of 50 plays, newest first; use get_tautulli_watch_history with page/)
+    expect(JSON.parse(output).showing).toMatch(
+      /^showing (\d) of 50 plays, newest first; the reply holds only \1 of the 50 plays it read; use get_tautulli_watch_history with a smaller limit and page through them$/
+    )
   })
 })

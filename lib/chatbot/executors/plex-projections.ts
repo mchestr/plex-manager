@@ -15,7 +15,7 @@ import "server-only"
 
 import { PLEX_PAGE_SIZE } from "@/lib/connections/plex-sessions"
 import { formatResolution } from "@/lib/utils/format"
-import { isRecord, listOf, pick, showing, wholeNumber, withinBudget, type Row } from "./plex-tautulli-reply"
+import { cutShort, firstIndex, isRecord, listOf, pick, rowRange, showing, ways, wholeNumber, withinBudget, type Paged, type Row } from "./plex-tautulli-reply"
 import { PLEX_EPOCH_KEYS, withLocalTimestamps } from "./timestamps"
 
 /** Recently added items: the default count and the most the tool returns. */
@@ -61,17 +61,29 @@ function local(rows: Row[], timeZone: string): Row[] {
   return withLocalTimestamps(rows, PLEX_EPOCH_KEYS, timeZone) as Row[]
 }
 
+/** A Recently Added page's `showing` line; without the PMS's `totalSize`, the items are counted from the newest. */
+function recentlyAddedLine(query: Paged, shown: number, read: number, total: number | undefined): string {
+  if (read === 0 && query.page > 1) return total === undefined ? `none on page ${query.page}` : `none on page ${query.page}; there are ${total} items`
+  if (total !== undefined) return `showing ${rowRange(query, shown)} of ${total} items, newest first`
+  return query.page === 1 ? `showing the ${shown} newest items` : `showing items ${rowRange(query, shown)}, newest first`
+}
+
 /**
- * The newest items across the libraries, newest first. The total is the
- * PMS's `totalSize`; without one, a full page may not be all there is.
+ * A page of the newest items across the libraries, newest first. The total is
+ * the PMS's `totalSize`; without one, a full page may not be all there is.
  */
-export function recentlyAddedReply(data: unknown, limit: number, timeZone: string) {
+export function recentlyAddedReply(data: unknown, query: Paged, timeZone: string) {
   const box = containerOf(data)
-  const items = withinBudget(local(itemsOf(box).slice(0, limit).map(recentItemOf), timeZone))
+  const read = itemsOf(box).slice(0, query.limit).map(recentItemOf)
+  const items = withinBudget(local(read, timeZone))
   const total = wholeNumber(box.totalSize)
-  const line = total === undefined ? `showing the ${items.length} newest items` : `showing ${items.length} of ${total} items, newest first`
-  const capped = (total === undefined ? items.length >= limit : items.length < total) && limit < RECENTLY_ADDED.max
-  return { showing: showing(line, capped, `pass a larger limit (at most ${RECENTLY_ADDED.max}) to see more`), ...(total !== undefined && { total }), items }
+  const rest = total === undefined ? read.length >= query.limit : firstIndex(query) + items.length < total
+  const more =
+    items.length < read.length
+      ? cutShort(items.length, read.length, "items")
+      : ways([`pass page ${query.page + 1} for older items`, query.limit < RECENTLY_ADDED.max && `a larger limit (at most ${RECENTLY_ADDED.max})`])
+  const line = recentlyAddedLine(query, items.length, read.length, total)
+  return { showing: showing(line, items.length < read.length || rest, more), ...(total !== undefined && { total }), items }
 }
 
 /** The server owner's On Deck (the PMS token is theirs): what they are part-way through or watch next. */

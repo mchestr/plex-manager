@@ -28,6 +28,7 @@ import {
   getTautulliLibraryNames,
   getTautulliLibraryStats,
   getTautulliUsers,
+  getTautulliUserWatchTimeStats,
   tautulliCommand,
 } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
@@ -377,29 +378,69 @@ describe("Discord tool gating - get_tautulli_users", () => {
 })
 
 describe("per-member reads are audited (P11.16, GAP-33)", () => {
+  const plays = (...userIds: number[]) => ({ ok: true as const, data: { recordsFiltered: userIds.length, data: userIds.map((user_id) => ({ user_id, full_title: "Heat" })) } })
+
   beforeEach(() => {
     jest.clearAllMocks()
     mockTautulliFindFirst.mockResolvedValue({ id: "tautulli-1", name: "Tautulli", url: "http://t", apiKey: "k", publicUrl: null } as never)
     jest.mocked(tautulliCommand).mockResolvedValue({ ok: true, data: { data: [] } })
+    prismaMock.user.findMany.mockResolvedValue([])
   })
 
   it("writes one read for the member whose Plex id the tool was given", async () => {
-    prismaMock.user.findFirst.mockResolvedValue({ id: "member-7" } as never)
+    prismaMock.user.findMany.mockResolvedValue([{ id: "member-7" }] as never)
 
     await executeTautulliTool("get_tautulli_watch_history", { userId: 7 }, "admin-1")
 
-    expect(prismaMock.user.findFirst).toHaveBeenCalledWith({ where: { plexUserId: "7" }, select: { id: true } })
+    expect(prismaMock.user.findMany).toHaveBeenCalledWith({ where: { plexUserId: { in: ["7"] } }, select: { id: true } })
+    expect(auditMemberRead).toHaveBeenCalledTimes(1)
     expect(auditMemberRead).toHaveBeenCalledWith("chatbot-tautulli", "member-7", "admin-1")
   })
 
+  it("writes a read for each member whose plays a search finds, such as by their name", async () => {
+    jest.mocked(tautulliCommand).mockResolvedValue(plays(7, 8, 7, 9))
+    prismaMock.user.findMany.mockResolvedValue([{ id: "member-7" }, { id: "member-8" }] as never)
+
+    await executeTautulliTool("get_tautulli_watch_history", { search: "Sam" }, "admin-1")
+
+    // Plex user 9 has no account here
+    expect(prismaMock.user.findMany).toHaveBeenCalledWith({ where: { plexUserId: { in: ["7", "8", "9"] } }, select: { id: true } })
+    expect(jest.mocked(auditMemberRead).mock.calls).toEqual([
+      ["chatbot-tautulli", "member-7", "admin-1"],
+      ["chatbot-tautulli", "member-8", "admin-1"],
+    ])
+  })
+
+  it("writes one read for the member asked for when a search narrows their plays", async () => {
+    jest.mocked(tautulliCommand).mockResolvedValue(plays(7, 7))
+    prismaMock.user.findMany.mockResolvedValue([{ id: "member-7" }] as never)
+
+    await executeTautulliTool("get_tautulli_watch_history", { userId: 7, search: "Heat" }, "admin-1")
+
+    expect(prismaMock.user.findMany).toHaveBeenCalledWith({ where: { plexUserId: { in: ["7"] } }, select: { id: true } })
+    expect(auditMemberRead).toHaveBeenCalledTimes(1)
+  })
+
   it("writes nothing for the server-wide history, an unknown Plex user or the admin's own", async () => {
+    jest.mocked(tautulliCommand).mockResolvedValue(plays(7, 8))
     await executeTautulliTool("get_tautulli_watch_history", {}, "admin-1")
-    prismaMock.user.findFirst.mockResolvedValueOnce(null)
+    expect(prismaMock.user.findMany).not.toHaveBeenCalled()
+
+    prismaMock.user.findMany.mockResolvedValueOnce([])
     await executeTautulliTool("get_tautulli_watch_history", { userId: 8 }, "admin-1")
-    prismaMock.user.findFirst.mockResolvedValueOnce({ id: "admin-1" } as never)
-    await executeTautulliTool("get_tautulli_watch_history", { userId: 9 }, "admin-1")
+    prismaMock.user.findMany.mockResolvedValueOnce([{ id: "admin-1" }] as never)
+    await executeTautulliTool("get_tautulli_watch_history", { search: "Heat" }, "admin-1")
 
     expect(auditMemberRead).not.toHaveBeenCalled()
+  })
+
+  it("writes a read for the member whose watch time stats were read", async () => {
+    jest.mocked(getTautulliUserWatchTimeStats).mockResolvedValue({ success: true, data: [] })
+    prismaMock.user.findMany.mockResolvedValue([{ id: "member-7" }] as never)
+
+    await executeTautulliTool("get_tautulli_user_watch_stats", { userId: 7 }, "admin-1")
+
+    expect(auditMemberRead).toHaveBeenCalledWith("chatbot-tautulli", "member-7", "admin-1")
   })
 })
 

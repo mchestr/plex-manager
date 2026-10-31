@@ -100,25 +100,29 @@ describe("executePlexTool get_plex_sessions in Discord without a caller", () => 
 describe("executePlexTool get_plex_recently_added", () => {
   const RECENTLY_ADDED = JSON.parse(readFileSync(path.join(__dirname, "../../../../lib/connections/__tests__/fixtures/pms/recently-added.json"), "utf8"))
 
-  it("passes the requested count through", async () => {
+  it("passes the requested count through, from the newest", async () => {
     jest.mocked(getPlexRecentlyAdded).mockResolvedValue({ success: true, data: {} })
 
     await executePlexTool("get_plex_recently_added", { limit: 5 })
 
-    expect(getPlexRecentlyAdded).toHaveBeenCalledWith(CONFIG, 5)
+    expect(getPlexRecentlyAdded).toHaveBeenCalledWith(CONFIG, 5, 0)
   })
 
   it.each([
-    [{ limit: 5000 }, 100],
-    [{ limit: "30" }, 30],
-    [{ limit: "many" }, 20],
-    [{}, 20],
-  ])("reads limit %j as %i", async (args, limit) => {
+    [{ limit: 5000 }, 100, 0],
+    [{ limit: "30" }, 30, 0],
+    [{ limit: "many" }, 20, 0],
+    [{}, 20, 0],
+    [{ page: 3 }, 20, 40],
+    [{ limit: 100, page: "2" }, 100, 100],
+    [{ page: 0 }, 20, 0],
+    [{ page: "last" }, 20, 0],
+  ])("reads %j as %i items from the %ith newest", async (args, limit, start) => {
     jest.mocked(getPlexRecentlyAdded).mockResolvedValue({ success: true, data: {} })
 
     await executePlexTool("get_plex_recently_added", args)
 
-    expect(getPlexRecentlyAdded).toHaveBeenCalledWith(CONFIG, limit)
+    expect(getPlexRecentlyAdded).toHaveBeenCalledWith(CONFIG, limit, start)
   })
 
   it("keeps what each item is, where, and when it was added, in the turn's zone", async () => {
@@ -128,12 +132,21 @@ describe("executePlexTool get_plex_recently_added", () => {
     const result = JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 2 }, "admin-1", "default", { timeZone: "America/Los_Angeles", locale: "en-US" }))
 
     expect(result).toEqual({
-      showing: "showing the 2 newest items; pass a larger limit (at most 100) to see more",
+      showing: "showing the 2 newest items; pass page 2 for older items, or a larger limit (at most 100)",
       items: [
         { type: "movie", title: "Dune: Part Two", year: 2024, librarySectionTitle: "Movies", addedAt: "2025-10-09T01:56:40-07:00" },
         { type: "episode", title: "The Eightfold Fence", grandparentTitle: "Shogun", parentIndex: 1, index: 4, librarySectionTitle: "TV Shows", addedAt: "2025-10-09T01:55:00-07:00" },
       ],
     })
+  })
+
+  it("counts a later page from the newest when the server sends no total", async () => {
+    jest.mocked(getPlexRecentlyAdded).mockResolvedValue({ success: true, data: RECENTLY_ADDED })
+
+    expect(JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 2, page: 4 })).showing).toBe(
+      "showing items 7-8, newest first; pass page 5 for older items, or a larger limit (at most 100)"
+    )
+    expect(JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 5, page: 2 })).showing).toBe("showing items 6-7, newest first")
   })
 
   it("gives the server's total when it sends one", async () => {
@@ -144,9 +157,24 @@ describe("executePlexTool get_plex_recently_added", () => {
 
     const result = JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 1 }))
 
-    expect(result.showing).toBe("showing 1 of 312 items, newest first; pass a larger limit (at most 100) to see more")
+    expect(result.showing).toBe("showing 1 of 312 items, newest first; pass page 2 for older items, or a larger limit (at most 100)")
     expect(result.total).toBe(312)
     expect(result.items[0].videoResolution).toBe("4K")
+  })
+
+  it("pages back to the oldest item, and says when a page is past it", async () => {
+    const container = (count: number) => ({ MediaContainer: { totalSize: 312, Metadata: Array.from({ length: count }, (_, i) => ({ type: "movie", title: `Film ${i}` })) } })
+
+    jest.mocked(getPlexRecentlyAdded).mockResolvedValue({ success: true, data: container(100) })
+    expect(JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 100, page: 2 })).showing).toBe(
+      "showing 101-200 of 312 items, newest first; pass page 3 for older items"
+    )
+
+    jest.mocked(getPlexRecentlyAdded).mockResolvedValue({ success: true, data: container(12) })
+    expect(JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 100, page: 4 })).showing).toBe("showing 301-312 of 312 items, newest first")
+
+    jest.mocked(getPlexRecentlyAdded).mockResolvedValue({ success: true, data: container(0) })
+    expect(JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 100, page: 9 }))).toEqual({ showing: "none on page 9; there are 312 items", total: 312, items: [] })
   })
 
   it("returns the client's error as an error", async () => {
@@ -314,19 +342,24 @@ describe("Plex tool results on a large server stay under the MCP limit", () => {
   it.each([
     ["get_plex_recently_added", {}],
     ["get_plex_recently_added", { limit: 100_000 }],
+    ["get_plex_recently_added", { limit: 100_000, page: 45 }],
     ["get_plex_on_deck", {}],
     ["get_plex_sessions", {}],
   ])("%s %j", async (tool, args) => {
     expect(await size(tool, args)).toBeLessThanOrEqual(MCP_LIMIT)
   })
 
-  it("lists 20 recently added by default and at most 100, of the server's total", async () => {
+  it("lists 20 recently added by default and at most 100 a page, of the server's total, and pages back through the rest", async () => {
     const byDefault = JSON.parse(await executePlexTool("get_plex_recently_added", {}))
     const most = JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 1000 }))
+    const later = JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 1000, page: 7 }))
 
     expect(byDefault.items).toHaveLength(20)
-    expect(byDefault.showing).toBe("showing 20 of 4500 items, newest first; pass a larger limit (at most 100) to see more")
+    expect(byDefault.showing).toBe("showing 20 of 4500 items, newest first; pass page 2 for older items, or a larger limit (at most 100)")
+    // A page of 100 fits the reply whole, so paging skips no item
     expect(most.items).toHaveLength(100)
-    expect(most.showing).toBe("showing 100 of 4500 items, newest first")
+    expect(most.showing).toBe("showing 100 of 4500 items, newest first; pass page 2 for older items")
+    expect(later.showing).toBe("showing 601-700 of 4500 items, newest first; pass page 8 for older items")
+    expect(getPlexRecentlyAdded).toHaveBeenLastCalledWith(CONFIG, 100, 600)
   })
 })

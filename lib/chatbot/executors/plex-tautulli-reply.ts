@@ -69,6 +69,14 @@ export function textArg(value: unknown): string | undefined {
   return text === "" ? undefined : text
 }
 
+/** A yes or no: a flag, or "true"/"false", "yes"/"no" or 1/0 as text or a number; anything else is `undefined`. */
+export function flagArg(value: unknown): boolean | undefined {
+  if (typeof value === "boolean") return value
+  const text = typeof value === "string" || typeof value === "number" ? String(value).trim().toLowerCase() : ""
+  if (["true", "yes", "1"].includes(text)) return true
+  return ["false", "no", "0"].includes(text) ? false : undefined
+}
+
 /**
  * A Tautulli user id (the plex.tv account id): `undefined` when none was
  * given, `null` when the argument is not a whole number (a name passed by
@@ -99,4 +107,31 @@ export function containsText(needle: string, ...fields: unknown[]): boolean {
 /** `line`, followed by how to see the rest when the reply does not show everything. */
 export function showing(line: string, capped: boolean, more: string): string {
   return capped ? `${line}; ${more}` : line
+}
+
+/** The ways to see more that apply, as one hint: "pass page 2 for older plays, or a larger limit (at most 50)". */
+export const ways = (options: (string | false)[]) => options.filter((option) => option !== false).join(", or ")
+
+/** One page of a list: `limit` rows a page, from page 1. */
+export interface Paged {
+  limit: number
+  page: number
+}
+
+/** The index of a page's first row in the whole list. */
+export const firstIndex = ({ limit, page }: Paged) => (page - 1) * limit
+
+/** The rows a page holds, for its `showing` line: "20" on page 1, "21-40" on page 2. */
+export function rowRange(query: Paged, shown: number): string {
+  const first = firstIndex(query) + 1
+  return query.page === 1 || shown === 0 ? String(shown) : `${first}-${first + shown - 1}`
+}
+
+/**
+ * How to see the rest when the reply budget held fewer rows than the tool
+ * read. The next page starts after the rows read, so it would skip the ones
+ * left out: smaller pages are the way on.
+ */
+export function cutShort(shown: number, read: number, what: string, how = "pass a smaller limit and page through them"): string {
+  return `the reply holds only ${shown} of the ${read} ${what} it read; ${how}`
 }

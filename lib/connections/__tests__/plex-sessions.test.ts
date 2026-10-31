@@ -52,6 +52,12 @@ describe("getPlexRecentlyAdded", () => {
       "X-Plex-Container-Size": "5",
     })
   })
+
+  it("starts a later page at its offset from the newest", async () => {
+    await getPlexRecentlyAdded(SERVER, 20, 40)
+
+    expect(lastRequest().headers).toMatchObject({ "X-Plex-Container-Start": "40", "X-Plex-Container-Size": "20" })
+  })
 })
 
 describe("getPlexOnDeck", () => {

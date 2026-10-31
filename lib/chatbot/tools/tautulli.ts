@@ -30,10 +30,12 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
     discordSafe: true,
     userScoped: true,
     // The executor returns only the caller's own sessions in the Discord
-    // context, or none with scope "unmapped", each projected to the fields
-    // below plus the viewer's user_id and friendly_name, which an admin sees.
-    // Keep ONLY non-identifying media/player/quality/progress fields here;
-    // every identifier (user_id, friendly_name, player name...) is excluded.
+    // context, or none with scope "unmapped", each projected as for an admin:
+    // the viewer (user_id, friendly_name), the player's name, where it plays
+    // from, bandwidth and the transcode detail as well as the fields below.
+    // This allowlist drops all of that: keep ONLY non-identifying
+    // media/player/quality/progress fields here; every identifier (user_id,
+    // friendly_name, player name...) is excluded.
     discordFields: [
       // The reply and its sessions
       "result", "stream_count", "session_count", "scope", "sessions",
@@ -47,11 +49,14 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
     function: {
       name: "get_tautulli_activity",
       description:
-        "Get the streams playing now from Tautulli: title, progress, player, location, bandwidth (kbps), quality and transcode decisions, with the server's stream and bandwidth totals",
+        "Get the streams playing now from Tautulli: each one's title, progress, player, connection (location, relay, bandwidth in kbps), quality, transcode decisions and transcoder speed, with the server's stream and bandwidth totals. A Discord member sees only their own streams' title, progress, quality and player type",
       parameters: {
         type: "object",
         properties: {
-          search: { type: "string", description: "Part of a user's name or of a title, or a user_id, to show only the matching streams (optional)" },
+          search: {
+            type: "string",
+            description: "Part of a user's name or of a title, or a user_id, to show only the matching streams (optional; ignored in Discord, where a member sees only their own)",
+          },
         },
       },
     },
@@ -80,12 +85,14 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
     function: {
       name: "get_tautulli_users",
       description:
-        "Find Tautulli users by name, username or user_id, or list them by name: each user's user_id (which the other Tautulli tools take), names, and whether they still have access (is_active)",
+        "Find Tautulli users by name, username or user_id, or list them by name a page at a time: each user's user_id (which the other Tautulli tools take), names, whether they still have access (is_active), the library section ids they can see (shared_libraries; names from get_tautulli_library_names) and their content restrictions (filter_*)",
       parameters: {
         type: "object",
         properties: {
           search: { type: "string", description: "Part of a name or username, or a user_id (optional)" },
-          limit: limit("users", LIMITS.users),
+          active: { type: "boolean", description: "true for only the users who still have access, false for only those who no longer do (optional)" },
+          limit: limit("users per page", LIMITS.users),
+          page: { type: "integer", description: "Page of users, from 1, in steps of limit (default 1)" },
         },
       },
     },
@@ -101,7 +108,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
         type: "object",
         properties: {
           userId: { type: "integer", description: `Only this user's plays: ${USER_ID} (optional)` },
-          search: { type: "string", description: "Part of a title, user name, platform or player, to show only matching plays (optional)" },
+          search: { type: "string", description: "Part of a title, platform or player, to show only matching plays (optional); for one user's plays, pass userId instead" },
           limit: limit("plays per page", LIMITS.history),
           page: { type: "integer", description: "Page of plays, from 1 (newest) back through older ones (default 1)" },
         },
