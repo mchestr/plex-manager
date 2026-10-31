@@ -164,7 +164,8 @@ describe("shared projections", () => {
     expect(day("2027-01-16")).toBe("2027-01-16")
   })
 
-  const queueItem = (statusMessages: unknown, errorMessage?: string) => z.object(queueFields).parse({ title: "Show.S01.1080p.WEB-DL", statusMessages, errorMessage })
+  const queueItem = (statusMessages: unknown, errorMessage?: string, outputPath?: string) =>
+    z.object(queueFields).parse({ title: "Show.S01.1080p.WEB-DL", statusMessages, errorMessage, outputPath })
 
   it("reads a blocked import as Sonarr sends it: the summary title, then each file's name and errors", () => {
     // CompletedDownloadService: a summary with no messages, then one entry per file not imported
@@ -211,11 +212,28 @@ describe("shared projections", () => {
     const discord = queueOf(item, true)
 
     expect(discord.statusMessage).toBe(
-      "No files found are eligible for import in …/Show.S01; […/Show.S02] is not a valid local path. You may need a Remote Path Mapping.; Couldn't read …/Show (US)\\Season 1, see https://wiki.servarr.com/sonarr/faq and/or retry"
+      "No files found are eligible for import in …/Show.S01; […/Show.S02] is not a valid local path. You may need a Remote Path Mapping.; Couldn't read …/Season 1, see https://wiki.servarr.com/sonarr/faq and/or retry"
     )
     expect(discord.errorMessage).toBe("Error: [Errno 2] No such file or directory: '…/Show.S01'")
     expect(queueOf(item).statusMessage).toContain("/data/downloads/complete/tv/Show.S01")
     expect(queueOf(item).errorMessage).toContain("/downloads/incomplete/Show.S01")
+  })
+
+  it("cuts the item's own outputPath whole when pathless, whatever its names hold, and never returns it", () => {
+    const outputPath = "C:\\Users\\J. R. Smith\\Downloads\\complete\\Show.S01.1080p.WEB-DL"
+    const item = queueItem(
+      [{ title: "Show.S01.1080p.WEB-DL", messages: [`Import failed, path does not exist or is not accessible by Sonarr: ${outputPath}. Ensure the path exists`] }],
+      `Unpacking failed in ${outputPath}`,
+      outputPath
+    )
+
+    const discord = queueOf(item, true)
+
+    expect(discord.statusMessage).toBe("Import failed, path does not exist or is not accessible by Sonarr: …/Show.S01.1080p.WEB-DL. Ensure the path exists")
+    expect(discord.errorMessage).toBe("Unpacking failed in …/Show.S01.1080p.WEB-DL")
+    expect(JSON.stringify(discord)).not.toContain("Smith")
+    expect(queueOf(item)).not.toHaveProperty("outputPath")
+    expect(queueOf(item).statusMessage).toContain(outputPath)
   })
 
   it("names a quality profile's cutoff, or keeps its id when no item has it", () => {

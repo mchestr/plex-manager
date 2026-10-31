@@ -180,18 +180,56 @@ describe("in Discord", () => {
     expect(JSON.stringify(scrubbed)).not.toMatch(/\/data|downloads/)
   })
 
-  it("keeps the history's event, release, quality and movie title", async () => {
+  it("keeps the history's event, release, quality and movie title, and why a download failed without its path", async () => {
     serve({ "/api/v3/history": paged(movieHistory) })
 
-    const scrubbed = JSON.parse(scrubForDiscord("get_radarr_history", await executeRadarrTool("get_radarr_history", {})))
+    const scrubbed = JSON.parse(scrubForDiscord("get_radarr_history", await executeRadarrTool("get_radarr_history", {}, "user-1", "discord")))
 
     expect(scrubbed.records[0]).toEqual({
       date: "2027-01-12T21:04:11Z",
       eventType: "downloadFailed",
       sourceTitle: "Heat.1995.REMASTERED.1080p.BluRay.x264-AMIABLE",
       quality: "Bluray-1080p",
+      message: "Import failed: not enough free space on …/movies",
       movie: { title: "Heat" },
     })
+    expect(JSON.stringify(scrubbed)).not.toMatch(/\/data|TorrentLeech|qBittorrent|movieId|0123456789ABCDEF/)
+  })
+
+  it("offers a movieName to narrow the history and the queue, never an id no Discord tool gives", async () => {
+    serve({ "/api/v3/history": paged(range(150, radarrHistory), 25000), "/api/v3/history/movie": range(400, radarrHistory), "/api/v3/queue": paged(range(50, radarrQueueItem), 400) })
+
+    const showing = async (toolName: string, args: Record<string, unknown> = {}) => JSON.parse(await executeRadarrTool(toolName, args, "user-1", "discord")).showing
+
+    expect(await showing("get_radarr_history")).toBe("showing 20 of 25000; pass a pageSize up to 50, or pass a movieName")
+    expect(await showing("get_radarr_history", { movieId: 1 })).toBe("showing 20 of 400; pass a pageSize up to 50")
+    expect(await showing("get_radarr_queue")).toBe("showing 50 of 400; pass a movieName to see only its items")
+  })
+
+  it("cuts a queue item's own folder out of its messages, whatever its names hold", async () => {
+    const outputPath = "/mnt/user/Media Downloads/complete/movies/Heat.1995.REMASTERED.2160p"
+    const [heat] = queue.records
+    const stuck = { ...heat, outputPath, statusMessages: [{ title: heat.title, messages: [`No files found are eligible for import in ${outputPath}`] }] }
+    serve({ "/api/v3/queue": { ...queue, totalRecords: 1, records: [stuck] } })
+
+    const scrubbed = JSON.parse(scrubForDiscord("get_radarr_queue", await executeRadarrTool("get_radarr_queue", {}, "user-1", "discord")))
+
+    expect(scrubbed.records[0].statusMessage).toBe("No files found are eligible for import in …/Heat.1995.REMASTERED.2160p")
+    expect(JSON.stringify(scrubbed)).not.toMatch(/Media Downloads|\/mnt/)
+  })
+
+  it("cuts the paths in the status tool's health messages, which every member may read", async () => {
+    serve({
+      "/api/v3/system/status": { appName: "Radarr", version: "5.14.0.9383" },
+      "/api/v3/queue": paged([], 0),
+      "/api/v3/health": [{ source: "RootFolderCheck", type: "error", message: "Missing root folder: C:\\Users\\Jane Doe\\Movies" }],
+      "/api/v3/diskspace": [],
+    })
+
+    const scrubbed = JSON.parse(scrubForDiscord("get_radarr_status", await executeRadarrTool("get_radarr_status", {}, "user-1", "discord")))
+
+    expect(scrubbed.health[0].message).toBe("Missing root folder: …/Movies")
+    expect((await run("get_radarr_status")).health[0].message).toBe("Missing root folder: C:\\Users\\Jane Doe\\Movies")
   })
 })
 
@@ -265,9 +303,19 @@ describe("search_radarr_movies", () => {
       overview: expect.stringMatching(/^A long synopsis.{150,}…$/),
       radarrId: 2,
       inLibrary: true,
+      hasFile: true,
+      monitored: true,
     })
+    // Same title as the library's movie 1, but another movie: no library state either
     expect(output.records[1]).toMatchObject({ title: movieTitle(0), inLibrary: false })
-    expect(output.records[1].radarrId).toBeUndefined()
+    for (const field of ["radarrId", "hasFile", "monitored"]) expect(output.records[1]).not.toHaveProperty(field)
+  })
+
+  it("says a monitored movie in the library is not downloaded yet, from the library", async () => {
+    // Movie 3 has no file: "in the library" alone read as downloaded
+    serve({ "/api/v3/movie/lookup": [radarrMovie(3)], "/api/v3/movie": [radarrMovie(3)] })
+
+    expect((await run("search_radarr_movies", { term: "spider-verse" })).records[0]).toMatchObject({ radarrId: 4, inLibrary: true, hasFile: false, monitored: true })
   })
 
   it("asks for a term", async () => {

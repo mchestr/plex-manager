@@ -30,6 +30,20 @@ const EVERY_MISSING = "to find every missing one, list the series' episodes with
 
 type Args = Record<string, unknown>
 
+/** How to name a series: in Discord only by its title, since no Discord tool gives a seriesId. */
+function passSeries(discord: boolean): string {
+  return discord ? "pass a seriesName" : PASS_SERIES
+}
+
+/**
+ * How to narrow a history reply: to a series, then to one of its episodes.
+ * In Discord only to a series by name: no Discord tool gives an episodeId.
+ */
+function narrowerHistory(seriesId: number | undefined, discord: boolean): string | undefined {
+  if (seriesId === undefined) return discord ? passSeries(true) : `${PASS_SERIES} or an episodeId`
+  return discord ? undefined : "pass an episodeId (from get_sonarr_episodes) for one episode's history"
+}
+
 /**
  * The series a tool asks about: `seriesId`, or the library series whose title
  * matches `seriesName`. Neither given is every series; a name with no match,
@@ -53,18 +67,21 @@ function seriesFilter(seriesId: number | undefined, season?: number): ArrFilter 
   return seriesId === undefined ? undefined : { key: "seriesId", id: seriesId, season }
 }
 
-/** get_sonarr_history: a series reads /history/series and an episode /history?episodeId=, so Sonarr filters. */
-export async function historyOutput(config: SonarrParsed, args: Args): Promise<string> {
+/**
+ * get_sonarr_history: a series reads /history/series and an episode
+ * /history?episodeId=, so Sonarr filters. `discord` cuts the paths in its
+ * failure messages and offers only what Discord can pass.
+ */
+export async function historyOutput(config: SonarrParsed, args: Args, discord: boolean): Promise<string> {
   const pageSize = wholeArg(args.pageSize, 20, HISTORY_MAX)
   const episode = optionalWhole(args, "episodeId")
   if ("error" in episode) return episode.error
   const series = await resolveSeries(config, args)
   if ("error" in series) return series.error
   const episodeId = episode.value
-  const narrower =
-    episodeId !== undefined ? undefined : series.seriesId === undefined ? `${PASS_SERIES} or an episodeId` : "pass an episodeId (from get_sonarr_episodes) for one episode's history"
-  const more = orElse(pageSize < HISTORY_MAX && `pass a pageSize up to ${HISTORY_MAX}`, narrower)
-  return arrPageOutput(await getSonarrHistory(config, { pageSize, seriesId: series.seriesId, episodeId }), { project: historyRecord, limit: pageSize, more })
+  const more = orElse(pageSize < HISTORY_MAX && `pass a pageSize up to ${HISTORY_MAX}`, episodeId === undefined && narrowerHistory(series.seriesId, discord))
+  const reply = { project: historyRecord(discord), limit: pageSize, more }
+  return arrPageOutput(await getSonarrHistory(config, { pageSize, seriesId: series.seriesId, episodeId }), reply)
 }
 
 /**
@@ -81,7 +98,7 @@ export async function queueOutput(config: SonarrParsed, args: Args, discord: boo
   const project = queueRecord(discord)
   if (series.seriesId === undefined) {
     if (season.value !== undefined) return "Error: 'seasonNumber' needs a series (seriesId or seriesName)"
-    return arrPageOutput(await getSonarrQueue(config, QUEUE_MAX), { project, limit: QUEUE_MAX, more: `${PASS_SERIES} to see only its items` })
+    return arrPageOutput(await getSonarrQueue(config, QUEUE_MAX), { project, limit: QUEUE_MAX, more: `${passSeries(discord)} to see only its items` })
   }
   const more = season.value === undefined ? "pass seasonNumber to see one season's items" : undefined
   return arrPageOutput(await getSonarrQueue(config, ARR_MAX_RECORDS), { project, limit: ARR_MAX_RECORDS, more }, seriesFilter(series.seriesId, season.value))

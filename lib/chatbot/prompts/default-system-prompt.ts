@@ -59,12 +59,12 @@ You have access to the following tools for retrieving real-time service data:
 Use this decision tree to select the appropriate tool(s):
 
 **For TV Series Questions:**
-- Search for series → search_sonarr_series (returns sonarrId if in library - use this for episode/history queries)
+- Search for series → search_sonarr_series (returns sonarrId if in library - use this for episode/history queries - and how many of its episodes are downloaded)
 - List or count library series → get_sonarr_series (50 per page, sorted by title; pass search to find titles)
 - Series details → get_sonarr_series_details (use sonarrId from search)
 - Get episodes for a series → get_sonarr_episodes (use sonarrId from search, returns episode IDs; pass seasonNumber for one season)
 - Episode details → get_sonarr_episode_details (use episode ID from get_sonarr_episodes)
-- History/download issues → get_sonarr_history (use seriesId or episodeId from search/episode results)
+- History/download issues → get_sonarr_history (seriesName, or seriesId or episodeId from search/episode results)
 - Upcoming episodes → get_sonarr_calendar (at most 100; narrow startDate/endDate for a busy week)
 - Missing episodes → get_sonarr_wanted_missing
 - Queue status → get_sonarr_queue
@@ -75,10 +75,10 @@ Use this decision tree to select the appropriate tool(s):
 3. Finally query history using get_sonarr_history with the episodeId
 
 **For Movie Questions:**
-- Search for movie → search_radarr_movies (returns radarrId if in library - use this for history queries)
+- Search for movie → search_radarr_movies (returns radarrId if in library - use this for history queries - and whether it is downloaded)
 - List or count library movies → get_radarr_movies (50 per page, sorted by title; pass search to find titles)
 - Movie details → get_radarr_movie_details (use radarrId from search)
-- History/download issues → get_radarr_history (use movieId/radarrId from search results)
+- History/download issues → get_radarr_history (movieName, or movieId/radarrId from search results)
 - Upcoming releases → get_radarr_calendar (at most 100; narrow startDate/endDate for more)
 - Missing movies → get_radarr_wanted_missing
 - Queue status → get_radarr_queue
@@ -147,10 +147,11 @@ Your Process:
 **Example 2: Download History**
 User: "What happened with The Office downloads?"
 Your Process:
-1. Recognize this is a TV series history question
-2. Call get_sonarr_history tool
-3. Filter/search results for "The Office" in the response
+1. Recognize this is a history question about one TV series
+2. Call get_sonarr_history with seriesName "The Office" (or with seriesId, the sonarrId from search_sonarr_series), so Sonarr returns only that series' history
+3. Read each record's eventType (a grab, an import or a failure) and message (why a download failed)
 4. Respond: "Based on Sonarr history, The Office shows [X successful downloads, Y failures]. Recent activity: [details]."
+For a movie, do the same with get_radarr_history and movieName (or movieId, the radarrId from search_radarr_movies).
 
 **Example 3: Out-of-Scope Question**
 User: "How do I install Docker?"

@@ -5,9 +5,10 @@ import { getActiveService } from "@/lib/data/active-service"
 
 import { optionalWhole, textArg, wholeArg, wholeOrNone } from "./arr-args"
 import { arrLocalPage, arrSearchOutput, asList, byTitle, projectEach, titleMatches } from "./arr-output"
+import { healthWithoutPaths } from "./arr-paths"
 import { qualityProfile, rootFolder, trimDetails } from "./arr-projections"
 import { calendarOutput, historyOutput, queueOutput, wantedMissingOutput } from "./sonarr-lists"
-import { episodesOutput, libraryIds, lookupItem, seriesItem, withSonarrId } from "./sonarr-projections"
+import { episodesOutput, librarySeries, lookupItem, seriesItem, withSonarrId } from "./sonarr-projections"
 
 /** Most series a page holds, so it stays under the tool result limit (see arr-output). */
 const SERIES_PAGE_SIZE = 50
@@ -32,6 +33,9 @@ export async function executeSonarrTool(
     publicUrl: server.publicUrl || undefined,
   }
 
+  // Discord is a shared channel: its replies name no download folder's tree
+  const discord = context === "discord"
+
   switch (toolName) {
     case "get_sonarr_status": {
       const [statusResult, queueResult, healthResult, diskResult] = await Promise.all([
@@ -43,7 +47,7 @@ export async function executeSonarrTool(
       return JSON.stringify({
         status: statusResult.success ? statusResult.data : { error: statusResult.error },
         queue: queueResult.success ? { totalRecords: queueResult.data.totalRecords } : { error: queueResult.error },
-        health: healthResult.success ? healthResult.data : { error: healthResult.error },
+        health: healthResult.success ? (discord ? healthWithoutPaths(healthResult.data) : healthResult.data) : { error: healthResult.error },
         disk: diskResult.success ? diskResult.data : { error: diskResult.error },
       })
     }
@@ -52,16 +56,16 @@ export async function executeSonarrTool(
       if (term === undefined) return "Error: 'term' parameter is required and must be a string"
       const lookup = await searchSonarrSeries(config, term)
       if (!lookup.success) return JSON.stringify({ error: lookup.error })
-      // Sonarr gives a series it holds its id; the library's TVDB ids cover a version that does not
+      // Sonarr gives a series it holds its id; the library's TVDB ids cover a version that does not, and give its download state
       const library = await getSonarrSeries(config)
-      const ids = libraryIds(library.success ? library.data : [])
-      const results = projectEach(asList(lookup.data), lookupItem).map((result) => withSonarrId(result, ids))
+      const held = librarySeries(library.success ? library.data : [])
+      const results = projectEach(asList(lookup.data), lookupItem).map((result) => withSonarrId(result, held))
       return arrSearchOutput(results, term, "tvdb:<tvdbId> for one series")
     }
     case "get_sonarr_history":
-      return historyOutput(config, args)
+      return historyOutput(config, args, discord)
     case "get_sonarr_queue":
-      return queueOutput(config, args, context === "discord")
+      return queueOutput(config, args, discord)
     case "get_sonarr_series": {
       const library = await getSonarrSeries(config)
       if (!library.success) return JSON.stringify({ error: library.error })

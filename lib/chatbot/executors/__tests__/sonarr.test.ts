@@ -230,19 +230,82 @@ describe("in Discord", () => {
     expect(records[4]).toMatchObject({ downloadClient: "SABnzbd", added: "2026-10-31T14:00:00Z" })
   })
 
-  it("keeps the history's event, release, quality, series and episode", async () => {
+  it("keeps the history's event, release, quality, series and episode, and why a download failed without its path", async () => {
     serve({ "/api/v3/history": paged(range(3, sonarrHistory)) })
 
-    const scrubbed = JSON.parse(scrubForDiscord("get_sonarr_history", await executeSonarrTool("get_sonarr_history", {})))
+    const scrubbed = JSON.parse(scrubForDiscord("get_sonarr_history", await executeSonarrTool("get_sonarr_history", {}, "user-1", "discord")))
 
     expect(scrubbed.records[0]).toEqual({
       date: "2026-10-30T21:04:11Z",
       eventType: "downloadFailed",
       sourceTitle: expect.stringContaining("S01E1"),
       quality: "WEBDL-2160p",
+      message: "Import failed, path does not exist or is not accessible by Sonarr: …/release",
       series: { title: showTitle(0) },
       episode: { title: "An Episode Title That Runs Long, Part 1", seasonNumber: 1, episodeNumber: 1 },
     })
+    expect(JSON.stringify(scrubbed)).not.toMatch(/\/data|downloads\/|NZBgeek|SABnzbd|seriesId|episodeId/)
+  })
+
+  it("keeps the history's path whole outside Discord", async () => {
+    serve({ "/api/v3/history": paged(range(3, sonarrHistory)) })
+
+    const { records } = await run("get_sonarr_history")
+
+    expect(records[0]).toMatchObject({ message: "Import failed, path does not exist or is not accessible by Sonarr: /data/downloads/complete/tv/release", indexer: "NZBgeek (Prowlarr)" })
+  })
+
+  it("offers a seriesName to narrow the history, never an id no Discord tool gives", async () => {
+    serve({ "/api/v3/history": paged(range(150, sonarrHistory), 25000), "/api/v3/history/series": range(340, sonarrHistory) })
+
+    const discord = async (args: Record<string, unknown>) => JSON.parse(await executeSonarrTool("get_sonarr_history", args, "user-1", "discord")).showing
+
+    expect(await discord({})).toBe("showing 20 of 25000; pass a pageSize up to 50, or pass a seriesName")
+    expect(await discord({ seriesId: 1 })).toBe("showing 20 of 340; pass a pageSize up to 50")
+    expect(await discord({ seriesId: 1, pageSize: 50 })).toBe("showing 50 of 340")
+  })
+
+  it("offers a seriesName to narrow the queue", async () => {
+    serve({ "/api/v3/queue": paged(range(50, sonarrQueueItem), 400) })
+
+    const output = JSON.parse(await executeSonarrTool("get_sonarr_queue", {}, "user-1", "discord"))
+
+    expect(output.showing).toBe("showing 50 of 400; pass a seriesName to see only its items")
+  })
+
+  it("cuts a queue item's own folder out of its messages, whatever its names hold", async () => {
+    const outputPath = "C:\\Users\\J. R. Smith\\Downloads\\complete\\Severance.S02E10"
+    const item = sonarrQueueItem(4)
+    const stuck = {
+      ...item,
+      outputPath,
+      statusMessages: [{ title: item.title, messages: [`Import failed, path does not exist or is not accessible by Sonarr: ${outputPath}. Ensure the path exists`] }],
+      errorMessage: `Unpacking failed, write error in ${outputPath}`,
+    }
+    serve({ "/api/v3/queue": paged([stuck]) })
+
+    const scrubbed = JSON.parse(scrubForDiscord("get_sonarr_queue", await executeSonarrTool("get_sonarr_queue", {}, "user-1", "discord")))
+
+    expect(scrubbed.records[0]).toMatchObject({
+      statusMessage: "Import failed, path does not exist or is not accessible by Sonarr: …/Severance.S02E10. Ensure the path exists",
+      errorMessage: "Unpacking failed, write error in …/Severance.S02E10",
+    })
+    expect(JSON.stringify(scrubbed)).not.toMatch(/Smith|Users|outputPath/)
+  })
+
+  it("cuts the paths in the status tool's health messages, which every member may read", async () => {
+    serve({
+      "/api/v3/system/status": { appName: "Sonarr", version: "4.0.10" },
+      "/api/v3/queue": paged([], 0),
+      "/api/v3/health": [{ source: "RemotePathMappingCheck", type: "error", message: "Remote download client SABnzbd places downloads in /home/jane doe/downloads/complete but this directory does not appear to exist" }],
+      "/api/v3/diskspace": [],
+    })
+
+    const scrubbed = JSON.parse(scrubForDiscord("get_sonarr_status", await executeSonarrTool("get_sonarr_status", {}, "user-1", "discord")))
+    const admin = await run("get_sonarr_status")
+
+    expect(scrubbed.health[0].message).toBe("Remote download client SABnzbd places downloads in …/complete but this directory does not appear to exist")
+    expect(admin.health[0].message).toContain("/home/jane doe/downloads/complete")
   })
 })
 
@@ -339,10 +402,20 @@ describe("search_sonarr_series", () => {
       overview: expect.stringMatching(/^A long synopsis.{150,}…$/),
       sonarrId: 2,
       inLibrary: true,
+      monitored: true,
+      episodeFileCount: 76,
+      episodeCount: 80,
     })
-    // Same title as the library's series 1, but another show
+    // Same title as the library's series 1, but another show: no library state either
     expect(output.records[1]).toMatchObject({ title: showTitle(0), inLibrary: false })
-    expect(output.records[1].sonarrId).toBeUndefined()
+    for (const field of ["sonarrId", "monitored", "episodeFileCount", "episodeCount"]) expect(output.records[1]).not.toHaveProperty(field)
+  })
+
+  it("says how much of a series in the library is downloaded, from the library", async () => {
+    const unmonitored = { ...sonarrSeries(3), monitored: false, statistics: { ...sonarrSeries(3).statistics, episodeFileCount: 0, episodeCount: 12 } }
+    serve({ "/api/v3/series/lookup": [sonarrLookup(3)], "/api/v3/series": [unmonitored] })
+
+    expect((await run("search_sonarr_series", { term: "maisel" })).records[0]).toMatchObject({ sonarrId: 4, inLibrary: true, monitored: false, episodeFileCount: 0, episodeCount: 12 })
   })
 
   it("takes the id Sonarr gives a series it holds", async () => {
@@ -494,7 +567,7 @@ describe("get_sonarr_queue for one series", () => {
 })
 
 describe("get_sonarr_history for one series", () => {
-  it("offers an episode when it cannot show all of the series' history", async () => {
+  it("offers an episode when it cannot show all of the series' history (outside Discord)", async () => {
     serve({ "/api/v3/history/series": range(340, sonarrHistory) })
 
     expect((await run("get_sonarr_history", { seriesId: 1, pageSize: 50 })).showing).toBe(

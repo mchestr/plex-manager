@@ -70,37 +70,52 @@ export const lookupItem = z
     sonarrId: known(series.id),
   }))
 
-/** The library's series ids by TVDB id. */
-export function libraryIds(library: unknown): Map<number, number> {
-  const ids = new Map<number, number>()
-  for (const series of projectEach(asList(library), z.object({ id: num, tvdbId: num }))) {
-    const id = known(series.id)
+/** A library series as a search result in the library shows it: its id, whether it is monitored, and its episode counts. */
+interface HeldSeries {
+  sonarrId: number
+  monitored?: boolean
+  episodeFileCount?: number
+  episodeCount?: number
+}
+
+/** The library's series by TVDB id. */
+export function librarySeries(library: unknown): Map<number, HeldSeries> {
+  const held = new Map<number, HeldSeries>()
+  for (const series of projectEach(asList(library), z.object({ id: num, tvdbId: num, monitored: flag, statistics }))) {
+    const sonarrId = known(series.id)
     const tvdbId = known(series.tvdbId)
-    if (id !== undefined && tvdbId !== undefined) ids.set(tvdbId, id)
+    if (sonarrId === undefined || tvdbId === undefined) continue
+    held.set(tvdbId, { sonarrId, monitored: series.monitored, episodeFileCount: series.statistics?.episodeFileCount, episodeCount: series.statistics?.episodeCount })
   }
-  return ids
+  return held
 }
 
 /**
- * A lookup result marked `inLibrary`, with its `sonarrId`: its own, or the
- * library series with the same TVDB id. Never by title alone, which would
- * give a remake the original's id.
+ * A lookup result marked `inLibrary`. One in the library has its `sonarrId`
+ * (its own, or the library series' with the same TVDB id; never by title
+ * alone, which would give a remake the original's id) and, from the library,
+ * whether it is `monitored` and how much of it is downloaded:
+ * `episodeFileCount` of its `episodeCount` monitored, aired episodes.
  */
-export function withSonarrId(result: z.output<typeof lookupItem>, library: Map<number, number>) {
-  const sonarrId = result.sonarrId ?? (result.tvdbId === undefined ? undefined : library.get(result.tvdbId))
-  return { ...result, sonarrId, inLibrary: sonarrId !== undefined }
+export function withSonarrId(result: z.output<typeof lookupItem>, library: Map<number, HeldSeries>) {
+  const held = result.tvdbId === undefined ? undefined : library.get(result.tvdbId)
+  const sonarrId = result.sonarrId ?? held?.sonarrId
+  if (sonarrId === undefined) return { ...result, inLibrary: false }
+  return { ...result, sonarrId, inLibrary: true, monitored: held?.monitored, episodeFileCount: held?.episodeFileCount, episodeCount: held?.episodeCount }
 }
 
-/** A history record: the event, the release, its series and episode, and why it failed. */
-export const historyRecord = z
-  .object({ ...historyFields, seriesId: num, episodeId: num, series: seriesRef, episode: episodeRef })
-  .transform((record) => ({
-    ...historyOf(record),
+const historyItem = z.object({ ...historyFields, seriesId: num, episodeId: num, series: seriesRef, episode: episodeRef })
+
+/** A history record: the event, the release, its series and episode, and why it failed; `pathless` in Discord (see `historyOf`). */
+export function historyRecord(pathless: boolean) {
+  return historyItem.transform((record) => ({
+    ...historyOf(record, pathless),
     seriesId: record.seriesId,
     episodeId: record.episodeId,
     series: seriesOf(record.series),
     episode: episodeOf(record.episode),
   }))
+}
 
 const queueItem = z.object({ ...queueFields, seriesId: num, episodeId: num, series: seriesRef, episode: episodeRef })
 

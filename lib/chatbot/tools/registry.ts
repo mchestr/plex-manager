@@ -103,9 +103,14 @@ export const ALL_TOOLS: RegisteredTool[] = TOOL_ORDER.map((name) => {
 
 /**
  * Discord-safe tools, DERIVED from the `discordSafe` metadata flag. This is the
- * security keystone: adding a tool to Discord requires only tagging it.
+ * security keystone: adding a tool to Discord requires only tagging it. Each
+ * carries its `discordDescription` in place of its description when it has
+ * one, so the Discord model and prompt read what the tool returns there.
  */
-export const DISCORD_SAFE_TOOLS: ChatTool[] = ALL_TOOLS.filter((tool) => tool.discordSafe)
+export const DISCORD_SAFE_TOOLS: ChatTool[] = ALL_TOOLS.filter((tool) => tool.discordSafe).map(({ type, function: fn, discordDescription }) => ({
+  type,
+  function: { ...fn, description: discordDescription ?? fn.description },
+}))
 
 export const DISCORD_SAFE_TOOL_NAMES = new Set<string>(
   DISCORD_SAFE_TOOLS.map((tool) => tool.function.name)

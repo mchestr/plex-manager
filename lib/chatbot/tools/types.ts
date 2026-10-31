@@ -7,7 +7,8 @@ import { type Permission } from "@/lib/permissions"
  * phases, to scrub tool output before it reaches a public channel.
  *
  * The extra fields never reach a provider: `chatWithTools` (`lib/llm/chat.ts`)
- * sends only each tool's name, description and parameters.
+ * sends only each tool's name, description and parameters (in Discord, the
+ * `discordDescription` when a tool has one).
  */
 export interface RegisteredTool extends ChatTool {
   /**
@@ -42,6 +43,15 @@ export interface RegisteredTool extends ChatTool {
    * JSON) — see below.
    */
   discordFields?: string[]
+  /**
+   * The description the Discord context reads in place of
+   * `function.description` (the tool list sent to the model and the Discord
+   * system prompt, both from `DISCORD_SAFE_TOOLS`). Give one to a
+   * `discordSafe` tool whose description promises fields its `discordFields`
+   * drop, or points at tools that are not Discord-safe, so the Discord model
+   * never promises what it will not get or reaches for a tool it cannot call.
+   */
+  discordDescription?: string
   /**
    * True for `discordSafe` tools whose executor returns an already-safe,
    * caller-scoped human-readable STRING (not JSON) — e.g. the media-marking

@@ -7,6 +7,7 @@
  * that let us trust the derived set.
  */
 
+import { generateDiscordSystemPrompt } from "@/lib/chatbot/prompts/discord-system-prompt"
 import {
   ALL_TOOLS,
   DISCORD_ADMIN_ONLY_TOOL_NAMES,
@@ -132,5 +133,46 @@ describe("chatbot tool registry drift guard", () => {
         expect(DISCORD_ADMIN_ONLY_TOOL_NAMES.has(name)).toBe(false)
       }
     }
+  })
+})
+
+describe("what the Discord model reads", () => {
+  const byName = new Map(ALL_TOOLS.map((tool) => [tool.function.name, tool]))
+
+  it("is each tool's discordDescription when it has one, else its description, with the same name and parameters", () => {
+    for (const tool of DISCORD_SAFE_TOOLS) {
+      const registered = byName.get(tool.function.name)
+      expect(tool.function.description).toBe(registered?.discordDescription ?? registered?.function.description)
+      expect(tool.function.parameters).toBe(registered?.function.parameters)
+    }
+    // The admin assistant and MCP keep the full description
+    expect(byName.get("get_sonarr_history")?.function.description).toContain("IMPORTANT: Use seriesId or episodeId")
+  })
+
+  // A description that promised a dropped field told a Discord admin no reason was recorded; one that
+  // pointed at a tool the Discord set lacks got the call refused (DISCORD_COMMAND_DENIED)
+  it.each(["get_sonarr_history", "get_sonarr_queue", "get_radarr_history", "get_radarr_queue"])(
+    "%s promises only what Discord keeps and names no tool or id Discord cannot use",
+    (name) => {
+      const description = DISCORD_SAFE_TOOLS.find((tool) => tool.function.name === name)?.function.description ?? ""
+      const unusable = ALL_TOOLS.map((tool) => tool.function.name).filter((other) => !DISCORD_SAFE_TOOL_NAMES.has(other))
+
+      expect(description).not.toBe(byName.get(name)?.function.description)
+      expect(description).not.toMatch(/download client|when it was added|indexer|seriesId|episodeId|movieId|sonarrId|radarrId/)
+      for (const other of unusable) expect(description).not.toContain(other)
+      expect(description).toMatch(name.startsWith("get_sonarr") ? /seriesName/ : /movieName/)
+    }
+  )
+
+  it("keeps why a download failed in the history tools' Discord allowlists", () => {
+    expect(byName.get("get_sonarr_history")?.discordFields).toContain("message")
+    expect(byName.get("get_radarr_history")?.discordFields).toContain("message")
+  })
+
+  it("is what the Discord prompt lists", () => {
+    const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { format: { timeZone: "UTC", locale: "en-US" }, now: new Date("2026-10-31T12:00:00Z") })
+
+    expect(prompt).toContain(`- get_radarr_queue: ${byName.get("get_radarr_queue")?.discordDescription}`)
+    expect(prompt).not.toMatch(/get_sonarr_episodes|search_sonarr_series|search_radarr_movies|download client, when it was added/)
   })
 })

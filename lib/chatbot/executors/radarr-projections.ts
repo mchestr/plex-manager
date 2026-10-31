@@ -64,31 +64,44 @@ export const lookupItem = z
     radarrId: known(movie.id),
   }))
 
-/** The library's movie ids by TMDB id. */
-export function libraryIds(library: unknown): Map<number, number> {
-  const ids = new Map<number, number>()
-  for (const movie of projectEach(asList(library), z.object({ id: num, tmdbId: num }))) {
-    const id = known(movie.id)
+/** A library movie as a search result in the library shows it: its id, whether it is downloaded, and whether it is monitored. */
+interface HeldMovie {
+  radarrId: number
+  hasFile?: boolean
+  monitored?: boolean
+}
+
+/** The library's movies by TMDB id. */
+export function libraryMovies(library: unknown): Map<number, HeldMovie> {
+  const held = new Map<number, HeldMovie>()
+  for (const movie of projectEach(asList(library), z.object({ id: num, tmdbId: num, hasFile: flag, monitored: flag }))) {
+    const radarrId = known(movie.id)
     const tmdbId = known(movie.tmdbId)
-    if (id !== undefined && tmdbId !== undefined) ids.set(tmdbId, id)
+    if (radarrId === undefined || tmdbId === undefined) continue
+    held.set(tmdbId, { radarrId, hasFile: movie.hasFile, monitored: movie.monitored })
   }
-  return ids
+  return held
 }
 
 /**
- * A lookup result marked `inLibrary`, with its `radarrId`: its own, or the
- * library movie with the same TMDB id. Never by title alone, which would give
- * a remake the original's id.
+ * A lookup result marked `inLibrary`. One in the library has its `radarrId`
+ * (its own, or the library movie's with the same TMDB id; never by title
+ * alone, which would give a remake the original's id) and, from the library,
+ * whether it is downloaded (`hasFile`) and `monitored`.
  */
-export function withRadarrId(result: z.output<typeof lookupItem>, library: Map<number, number>) {
-  const radarrId = result.radarrId ?? (result.tmdbId === undefined ? undefined : library.get(result.tmdbId))
-  return { ...result, radarrId, inLibrary: radarrId !== undefined }
+export function withRadarrId(result: z.output<typeof lookupItem>, library: Map<number, HeldMovie>) {
+  const held = result.tmdbId === undefined ? undefined : library.get(result.tmdbId)
+  const radarrId = result.radarrId ?? held?.radarrId
+  if (radarrId === undefined) return { ...result, inLibrary: false }
+  return { ...result, radarrId, inLibrary: true, hasFile: held?.hasFile, monitored: held?.monitored }
 }
 
-/** A history record: the event, the release, its movie, and why it failed. */
-export const historyRecord = z
-  .object({ ...historyFields, movieId: num, movie: movieRef })
-  .transform((record) => ({ ...historyOf(record), movieId: record.movieId, movie: movieOf(record.movie) }))
+const historyItem = z.object({ ...historyFields, movieId: num, movie: movieRef })
+
+/** A history record: the event, the release, its movie, and why it failed; `pathless` in Discord (see `historyOf`). */
+export function historyRecord(pathless: boolean) {
+  return historyItem.transform((record) => ({ ...historyOf(record, pathless), movieId: record.movieId, movie: movieOf(record.movie) }))
+}
 
 const queueItem = z.object({ ...queueFields, movieId: num, movie: movieRef })
 

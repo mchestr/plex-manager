@@ -2,6 +2,8 @@ import "server-only"
 
 import { z } from "zod"
 
+import { withoutPaths } from "./arr-paths"
+
 /**
  * Field schemas and projections the Sonarr and Radarr tools share. Upstream
  * records carry whole nested series, movies, files, images and custom
@@ -46,14 +48,20 @@ const historyData = z.object({ message: text, reason: text, indexer: text }).opt
 export const historyFields = { date: text, eventType: text, sourceTitle: text, quality, data: historyData }
 const historyShape = z.object(historyFields)
 
-/** A history record's event, release, flat quality name, and why it failed or was deleted. */
-export function historyOf(record: z.output<typeof historyShape>) {
+/**
+ * A history record's event, release, flat quality name, indexer, and why it
+ * failed or was deleted. `pathless` (the Discord context, whose allowlist
+ * keeps the message but not the indexer) cuts the paths the message names to
+ * their last part ("...not accessible by Sonarr: …/Show.S01").
+ */
+export function historyOf(record: z.output<typeof historyShape>, pathless: boolean) {
+  const why = record.data?.message ?? record.data?.reason
   return {
     date: record.date,
     eventType: record.eventType,
     sourceTitle: clip(record.sourceTitle, RELEASE_MAX),
     quality: record.quality?.quality?.name,
-    message: clip(record.data?.message ?? record.data?.reason, MESSAGE_MAX),
+    message: clip(pathless && why !== undefined ? withoutPaths(why) : why, MESSAGE_MAX),
     indexer: record.data?.indexer,
   }
 }
@@ -61,7 +69,11 @@ export function historyOf(record: z.output<typeof historyShape>) {
 const statusEntry = z.object({ title: text, messages: z.array(z.string()).optional().catch(undefined) }).optional().catch(undefined)
 const statusMessages = z.array(statusEntry).optional().catch(undefined)
 
-/** The fields of a queue item both services share, read with {@link queueOf}. */
+/**
+ * The fields of a queue item both services share, read with {@link queueOf}.
+ * `outputPath` (the download's folder) is read only to cut it out of the
+ * messages, and never returned.
+ */
 export const queueFields = {
   title: text,
   quality,
@@ -76,6 +88,7 @@ export const queueFields = {
   downloadClient: text,
   errorMessage: text,
   statusMessages,
+  outputPath: text,
 }
 const queueShape = z.object(queueFields)
 
@@ -86,35 +99,28 @@ const queueShape = z.object(queueFields)
  * release"), then one entry per file, titled with the file's name, whose
  * messages are its errors; a warning about the whole download is titled with
  * the release. Each entry reads as its title, "title: message; message", or
- * its messages alone when the title is the release (`release`).
+ * its messages alone when the title is the release (`release`). `cut` is
+ * applied to each title and message.
  */
-function statusLine(entries: z.output<typeof statusMessages>, release: string | undefined): string | undefined {
+function statusLine(entries: z.output<typeof statusMessages>, release: string | undefined, cut: (text: string) => string): string | undefined {
   const lines = (entries ?? []).map((entry) => {
-    const messages = (entry?.messages ?? []).filter(Boolean).join("; ")
-    const title = entry?.title === release ? "" : (entry?.title ?? "")
+    const messages = (entry?.messages ?? []).filter(Boolean).map(cut).join("; ")
+    const title = entry?.title === undefined || entry.title === release ? "" : cut(entry.title)
     return title && messages ? `${title}: ${messages}` : title || messages
   })
   const distinct = [...new Set(lines.filter((line) => line !== ""))]
   return distinct.length > 0 ? distinct.join(" | ") : undefined
 }
 
-/** An absolute path (Unix, Windows or UNC) up to the first space, bracket, quote or bar. */
-const ABSOLUTE_PATH = /(?<=^|[\s[('"=])(?:[A-Za-z]:[\\/]|\\\\|\/)[^\s\]'"|]+/g
-
-/** `message` with each absolute path cut to its last part ("/data/downloads/tv/Show.S01" is "…/Show.S01"). */
-function withoutPaths(message: string): string {
-  return message.replace(ABSOLUTE_PATH, (path) => `…/${path.split(/[\\/]/).filter(Boolean).pop() ?? ""}`)
-}
-
 /**
  * A queue item's release, progress, state and download client, with why it
  * is stuck: `errorMessage` from the download client, `statusMessage` from the
  * import. `pathless` (the Discord context, whose allowlist keeps both
- * messages) cuts the paths they name to the last part, so no download path
- * reaches Discord.
+ * messages) cuts the paths they name to their last part, the item's own
+ * `outputPath` first, so no download folder's tree reaches Discord.
  */
 export function queueOf(item: z.output<typeof queueShape>, pathless = false) {
-  const message = (value: string | undefined) => clip(pathless && value !== undefined ? withoutPaths(value) : value, MESSAGE_MAX)
+  const cut = (value: string) => (pathless ? withoutPaths(value, item.outputPath) : value)
   return {
     title: clip(item.title, RELEASE_MAX),
     quality: item.quality?.quality?.name,
@@ -127,8 +133,8 @@ export function queueOf(item: z.output<typeof queueShape>, pathless = false) {
     estimatedCompletionTime: item.estimatedCompletionTime,
     added: item.added,
     downloadClient: clip(item.downloadClient, TITLE_MAX),
-    errorMessage: message(item.errorMessage),
-    statusMessage: message(statusLine(item.statusMessages, item.title)),
+    errorMessage: clip(item.errorMessage === undefined ? undefined : cut(item.errorMessage), MESSAGE_MAX),
+    statusMessage: clip(statusLine(item.statusMessages, item.title, cut), MESSAGE_MAX),
   }
 }
 

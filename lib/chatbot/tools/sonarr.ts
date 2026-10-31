@@ -50,7 +50,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     function: {
       name: "search_sonarr_series",
       description:
-        "Search for a TV series in Sonarr to check if it exists or get its metadata (ids, status, network, a short overview). Returns up to 10 results with 'sonarrId' field if the series is already in the library (use this ID for episode queries and history). The reply's 'showing' line says how many were found; narrow with a more specific term or tvdb:<tvdbId>.",
+        "Search for a TV series in Sonarr to check if it exists or get its metadata (ids, status, network, a short overview). Returns up to 10 results; one already in the library has inLibrary true, its 'sonarrId' (use this ID for episode queries and history), whether it is monitored, and how much of it is downloaded: episodeFileCount of its episodeCount monitored, aired episodes. The reply's 'showing' line says how many were found; narrow with a more specific term or tvdb:<tvdbId>.",
       parameters: {
         type: "object",
         properties: {
@@ -70,8 +70,10 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     // Server-wide download history reflects what everyone on the server is
     // downloading — admin-only in the Discord context (Step 19).
     discordAdminOnly: true,
-    // Paged history: keep event/title/quality/date leaf fields. Exclude
-    // downloadId, download client, indexer, and file paths (infra/tracker detail).
+    // Paged history: keep event/title/quality/date leaf fields, and why a
+    // download failed (message), whose paths the executor cuts to their last
+    // part in Discord. Exclude downloadId, download client, indexer, ids and
+    // file paths (infra/tracker detail).
     discordFields: [
       "showing",
       "totalRecords",
@@ -85,7 +87,11 @@ export const SONARR_TOOLS: RegisteredTool[] = [
       "title",
       "seasonNumber",
       "episodeNumber",
+      "message",
     ],
+    // The allowlist drops the ids, and no Discord tool gives one: a series by name only
+    discordDescription:
+      "Get recent download history from Sonarr, newest first, with each record's event, release, quality, series and episode titles, and why a download failed or a file was deleted (paths cut to their last part), to check for download issues or successes. Without a series it is the whole server's history; give seriesName, the series' title, for only that series' history. The reply's 'showing' line says how many records were returned out of the total.",
     function: {
       name: "get_sonarr_history",
       description:
@@ -142,6 +148,9 @@ export const SONARR_TOOLS: RegisteredTool[] = [
       "seasonNumber",
       "episodeNumber",
     ],
+    // Without the download client and added time the allowlist drops, and a series by name only
+    discordDescription:
+      "Get the current download queue from Sonarr, with each item's release, series and episode, quality, progress (size and time left), state, and any error or import problem (paths cut to their last part), up to 50 items. Give seriesName, the series' title, to see only that series' items, and a seasonNumber for one season's: the latest 150 queue items are read and every one of that series that fits in the reply is returned (a season pack is one item per episode). The reply's 'showing' line says how many items were returned out of the total.",
     function: {
       name: "get_sonarr_queue",
       description:

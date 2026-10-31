@@ -48,7 +48,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
     function: {
       name: "search_radarr_movies",
       description:
-        "Search for a movie in Radarr to check if it exists or get its metadata (ids, status, studio, a short overview). Returns up to 10 results with 'radarrId' field if the movie is already in the library (use this ID for history queries). The reply's 'showing' line says how many were found; narrow with a more specific term, tmdb:<tmdbId> or imdb:<imdbId>.",
+        "Search for a movie in Radarr to check if it exists or get its metadata (ids, status, studio, a short overview). Returns up to 10 results; one already in the library has inLibrary true, its 'radarrId' (use this ID for history queries), whether it is downloaded (hasFile) and whether it is monitored. The reply's 'showing' line says how many were found; narrow with a more specific term, tmdb:<tmdbId> or imdb:<imdbId>.",
       parameters: {
         type: "object",
         properties: {
@@ -68,8 +68,10 @@ export const RADARR_TOOLS: RegisteredTool[] = [
     // Server-wide download history reflects what everyone on the server is
     // downloading — admin-only in the Discord context (Step 19).
     discordAdminOnly: true,
-    // Paged history: keep event/title/quality/date leaf fields. Exclude
-    // downloadId, download client, indexer, and file paths.
+    // Paged history: keep event/title/quality/date leaf fields, and why a
+    // download failed (message), whose paths the executor cuts to their last
+    // part in Discord. Exclude downloadId, download client, indexer, ids and
+    // file paths.
     discordFields: [
       "showing",
       "totalRecords",
@@ -81,7 +83,11 @@ export const RADARR_TOOLS: RegisteredTool[] = [
       "quality_profile",
       "movie",
       "title",
+      "message",
     ],
+    // The allowlist drops the ids, and no Discord tool gives one: a movie by name only
+    discordDescription:
+      "Get recent download history from Radarr, newest first, with each record's event, release, quality and movie title, and why a download failed or a file was deleted (paths cut to their last part), to check for download issues or successes. Without a movie it is the whole server's history; give movieName, the movie's title, for only that movie's history. The reply's 'showing' line says how many records were returned out of the total.",
     function: {
       name: "get_radarr_history",
       description:
@@ -132,6 +138,9 @@ export const RADARR_TOOLS: RegisteredTool[] = [
       "statusMessage",
       "quality",
     ],
+    // Without the download client and added time the allowlist drops, and a movie by name only
+    discordDescription:
+      "Get the current download queue from Radarr, with each item's release, movie title, quality, progress (size and time left), state, and any error or import problem (paths cut to their last part), up to 50 items. Give movieName, the movie's title, to see only that movie's items: the latest 150 queue items are read and filtered to it. The reply's 'showing' line says how many items were returned out of the total.",
     function: {
       name: "get_radarr_queue",
       description:
