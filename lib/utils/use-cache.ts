@@ -1,10 +1,16 @@
 /**
  * Helpers for `'use cache'` functions (P11.19).
  *
- * A `'use cache'` function throws outside a Next request ("cannot be used
- * outside of App Router"): the Discord bot, the queue workers and scripts
- * call the same readers. {@link cachedOrDirect} runs the cached reader in a
- * request and the plain one everywhere else.
+ * A `'use cache'` function cannot run outside a Next request: the Discord
+ * bot, the queue workers and scripts call the same readers.
+ * {@link cachedOrDirect} runs the cached reader in a request and the plain one
+ * everywhere else.
+ *
+ * How it fails depends on the bundle. Next compiles the directive only in the
+ * App Router layers, so a reader reached from a route throws "cannot be used
+ * outside of App Router". In the instrumentation bundle, which starts the
+ * queue worker and the bot, the directive is left as a plain string, so the
+ * function runs and its first `cacheTag()` or `cacheLife()` call throws instead.
  *
  * @module lib/utils/use-cache
  */
@@ -13,7 +19,8 @@ import "server-only"
 
 import { connection } from "next/server"
 
-const OUTSIDE_APP_ROUTER = /"use cache" cannot be used outside of App Router/
+const OUTSIDE_APP_ROUTER =
+  /"use cache" cannot be used outside of App Router|`cache(?:Tag|Life)\(\)` (?:can only be called|is only available)/
 
 /**
  * `cached()` in a request; `direct()` where `'use cache'` is unavailable.
