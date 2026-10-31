@@ -170,6 +170,22 @@ describe("titles", () => {
     expect(idForTitle(library, "?!")).toBeUndefined()
   })
 
+  it("never matches a name across the words of a title", () => {
+    const library = [
+      { id: 1, title: "The A-Team", titleSlug: "34544" },
+      { id: 2, title: "Fate/Grand Order - Absolute Demonic Front: Babylonia", titleSlug: "fate-grand-order" },
+      { id: 3, title: "Hello Kitty: Super Cute Adventures", titleSlug: "hello-kitty" },
+      { id: 4, title: "The Room", titleSlug: "17473" },
+    ]
+    // "theateam" holds "heat", "fategrandorder" "andor", "hellokitty" "loki" and "theroom" "hero"
+    for (const name of ["Heat", "Andor", "Loki", "Hero"]) expect(idForTitle(library, name)).toBeUndefined()
+    // Punctuation is dropped ("A-Team" is "ateam") or read as a space ("a team", "fate grand")
+    expect(idForTitle(library, "A-Team")).toBe(1)
+    expect(idForTitle(library, "a team")).toBe(1)
+    expect(idForTitle(library, "Grand Order: Absolute")).toBe(2)
+    expect(idForTitle(library, "Hello Kitty Super Cute")).toBe(3)
+  })
+
   it("keeps the exact title first, then a title or slug that contains the name", () => {
     const library = [
       { id: 1, title: "Heat!", titleSlug: "heat-2024" },

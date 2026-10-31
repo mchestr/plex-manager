@@ -165,6 +165,19 @@ export function arrLocalPage<T>({ items, page, pageSize, what, more }: ArrLocalP
 
 /** `value` in lower case with only its letters and digits: "Spider-Man: Across" is "spidermanacross". */
 const bare = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")
+/**
+ * `value` in lower case, its words one space apart, its punctuation dropped
+ * when `joined` ("Spider-Man" is "spiderman") or else read as a space ("Fate/Grand"
+ * is "fate grand").
+ */
+const words = (value: string, joined: boolean) =>
+  value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, joined ? "" : " ")
+    .replace(/\s+/g, " ")
+    .trim()
+/** Whether `title` holds `name` as whole words, with punctuation dropped or read as a space. */
+const holdsWords = (title: string, name: string) => [true, false].some((joined) => ` ${words(title, joined)} `.includes(` ${words(name, joined)} `))
 
 /** True when `title` contains `search`, ignoring case and punctuation ("agents of shield" finds "Agents of S.H.I.E.L.D."). */
 export function titleMatches(title: string | undefined, search: string): boolean {
@@ -179,11 +192,13 @@ export function byTitle<T extends { title?: string }>(items: T[]): T[] {
 
 /**
  * The id of the library item whose title is `name` (case-insensitive), or
- * else the first whose title or slug contains it, or else the same two
- * ignoring punctuation, as {@link titleMatches} does ("Spiderman Across the
- * Spider-Verse" finds "Spider-Man: Across the Spider-Verse"), or `undefined`.
- * An exact title wins, so "The Office" never picks "The Office Christmas
- * Special", and "Spiderman" picks "Spider-Man" over a longer title.
+ * else the first whose title or slug contains it, or else, ignoring
+ * punctuation as {@link titleMatches} does, a title equal to it ("Spiderman
+ * Across the Spider-Verse" finds "Spider-Man: Across the Spider-Verse") or
+ * one holding it as whole words ("Mission Impossible Fallout" finds
+ * "Mission: Impossible - Fallout"), or `undefined`. An exact title wins, so
+ * "The Office" never picks "The Office Christmas Special", and a name never
+ * matches across words ("Heat" is not in "The A-Team").
  */
 export function idForTitle(library: unknown, name: string): number | undefined {
   const needle = name.trim().toLowerCase()
@@ -194,18 +209,18 @@ export function idForTitle(library: unknown, name: string): number | undefined {
   const match =
     titled((title) => title.toLowerCase() === needle) ??
     items.find((item) => [item.title, item.titleSlug].some((value) => typeof value === "string" && value.toLowerCase().includes(needle))) ??
-    // Then ignoring punctuation, never for a name with no letters or digits, which every title would contain
-    (unpunctuated === "" ? undefined : (titled((title) => bare(title) === unpunctuated) ?? titled((title) => bare(title).includes(unpunctuated))))
+    // Then ignoring punctuation, never for a name with no letters or digits, which every title would hold
+    (unpunctuated === "" ? undefined : (titled((title) => bare(title) === unpunctuated) ?? titled((title) => holdsWords(title, needle))))
   return typeof match?.id === "number" ? match.id : undefined
 }
 
 /**
- * Discord's answer to a series or movie name that no library title matches
- * (`what`: "series in the Sonarr library"). Discord shows an error as "that
- * tool isn't available right now", which reads as the service being down, so
- * this is a reply its allowlists keep, asking for the exact title. The admin
- * web and MCP get an error.
+ * The reply to a series or movie name that no library title matches (`what`:
+ * "series in the Sonarr library"), with `next`, what to do about it. A reply
+ * rather than an error: the call worked, and Discord and the Support role
+ * show any error as "that tool isn't available right now", which reads as
+ * the service being down. Discord's allowlists keep all three fields.
  */
-export function noTitleMatch(what: string, name: string): string {
-  return JSON.stringify({ showing: `no ${what} has a title matching "${name}"; ask for the exact title`, totalRecords: 0, records: [] })
+export function noTitleMatch(what: string, name: string, next: string): string {
+  return JSON.stringify({ showing: `no ${what} has a title matching "${name}"; ${next}`, totalRecords: 0, records: [] })
 }

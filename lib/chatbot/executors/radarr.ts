@@ -32,9 +32,9 @@ function passMovie(discord: boolean): string {
 /**
  * The movie a tool asks about: `movieId`, or the library movie whose title
  * matches `movieName`. Neither given is every movie. A movieId that cannot be
- * read with no name to fall back on, or a name with no match, is the tool
- * `output` to return instead: an error, but in Discord a name with no match
- * asks for the exact title (see noTitleMatch).
+ * read with no name to fall back on is an error `output` to return instead,
+ * and a name with no match a reply saying so (see noTitleMatch), which in
+ * Discord asks for the exact title.
  */
 async function resolveMovie(config: RadarrParsed, args: Record<string, unknown>, discord = false): Promise<{ movieId?: number } | { output: string }> {
   const id = optionalWhole(args, "movieId")
@@ -46,8 +46,8 @@ async function resolveMovie(config: RadarrParsed, args: Record<string, unknown>,
   if (!library.success) return { output: JSON.stringify({ error: library.error }) }
   const movieId = idForTitle(library.data, name.value)
   if (movieId !== undefined) return { movieId }
-  if (discord) return { output: noTitleMatch("movie in the Radarr library", name.value) }
-  return { output: JSON.stringify({ error: `Movie "${name.value}" not found in Radarr library` }) }
+  const next = discord ? "ask for the exact title" : "search_radarr_movies finds a movie by part of its title"
+  return { output: noTitleMatch("movie in the Radarr library", name.value, next) }
 }
 
 /** Queue records name their movie in `movieId`; calendar and wanted records are movies, so `id`. */

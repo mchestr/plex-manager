@@ -145,7 +145,11 @@ describe("why didn't Severance download?", () => {
   it("names a series that is not in the library", async () => {
     serve({ "/api/v3/series": library })
 
-    expect(await run("get_sonarr_history", { seriesName: "Andor" })).toEqual({ error: 'Series "Andor" not found in Sonarr library' })
+    expect(await run("get_sonarr_history", { seriesName: "Andor" })).toEqual({
+      showing: 'no series in the Sonarr library has a title matching "Andor"; search_sonarr_series finds a series by part of its title',
+      totalRecords: 0,
+      records: [],
+    })
   })
 
   it("refuses an id it cannot read rather than answering for the whole server", async () => {

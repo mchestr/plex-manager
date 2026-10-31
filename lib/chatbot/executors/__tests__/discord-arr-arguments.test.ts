@@ -6,12 +6,14 @@
  *   is dropped from a Discord call. The AI SDK does not check arguments
  *   against the schema, so a guessed seriesId used to outrank the seriesName
  *   and return another title's items under "this title".
- * - A title that matches nothing in the library is, in Discord, a reply that
- *   asks for the exact title. As an error it became "that tool isn't
- *   available right now", which told the member the service was down.
+ * - A title that matches nothing in the library is a reply saying so, not an
+ *   error: Discord and the Support role show any error as "that tool isn't
+ *   available right now", which reads as the service being down. In Discord
+ *   it asks for the exact title; elsewhere it names the search tool.
+ * - In Discord, a queue seasonNumber with no series asks for the series'
+ *   title, for the same reason.
  *
- * The admin web and MCP keep both: the id wins, and a title with no match is
- * an error.
+ * The admin web, the Support role and MCP keep the ids, and an id wins.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -42,6 +44,7 @@ jest.mock("../knowledge", () => ({ executeKnowledgeTool: jest.fn() }))
 jest.mock("../../mcp/tools", () => ({ MCP_TOOL_PREFIX: "mcp_", executeMcpTool: jest.fn() }))
 
 const ADMIN = permissionsFor({ isAdmin: true })
+const SUPPORT = permissionsFor({ isAdmin: false, role: "support" })
 const UTC = { timeZone: "UTC", locale: "en-US" }
 
 const series = [
@@ -57,10 +60,11 @@ let mockFetch: jest.Mock
 
 const call = (name: string, args: Record<string, unknown>) => ({ id: "call_1", type: "function" as const, function: { name, arguments: JSON.stringify(args) } })
 
-/** The tool as a Discord admin asks it (the Sonarr and Radarr tools are admin-only there), the admin web, and MCP. */
+/** The tool as a Discord admin asks it (the Sonarr and Radarr tools are admin-only there), the admin web, the Support role, and MCP. */
 const contexts = {
   discord: (name: string, args: Record<string, unknown>) => executeToolCall(call(name, args), "admin-1", "discord", true, UTC),
   web: (name: string, args: Record<string, unknown>) => executeToolCall(call(name, args), "admin-1", "default", true, UTC, ADMIN),
+  support: (name: string, args: Record<string, unknown>) => executeToolCall(call(name, args), "support-1", "default", false, UTC, SUPPORT),
   mcp: (name: string, args: Record<string, unknown>) => executeToolCall(call(name, args), "admin-1", undefined, true, UTC, ADMIN),
 }
 
@@ -121,6 +125,16 @@ describe("a parameter the Discord model is not shown", () => {
     expect(reads()).toEqual(["/api/v3/movie", "/api/v3/history/movie movieId=9"])
   })
 
+  it.each([
+    ["no series", { seasonNumber: 4 }],
+    ["only a guessed seriesId, which is dropped", { seriesId: 31, seasonNumber: 4 }],
+  ])("answers a queue seasonNumber with %s by asking for the series' title", async (_case, args) => {
+    const output = await contexts.discord("get_sonarr_queue", args)
+
+    expect(JSON.parse(output)).toEqual({ showing: "seasonNumber needs a series: pass seriesName, the series' title, or ask which series", totalRecords: 0, records: [] })
+    expect(reads()).toEqual([])
+  })
+
   it("leaves the parameters the Discord model is shown", async () => {
     const queued = async (seasonNumber: number) => titles(await contexts.discord("get_sonarr_queue", { seriesName: "Slow Horses", seasonNumber }))
 
@@ -145,15 +159,23 @@ describe("a title that matches nothing in the library", () => {
   })
 
   it.each([
-    ["get_sonarr_queue", { seriesName: "Andor" }, 'Series "Andor" not found in Sonarr library'],
-    ["get_radarr_history", { movieName: "Collateral" }, 'Movie "Collateral" not found in Radarr library'],
-  ])("%s stays an error on the admin web and in MCP", async (tool, args, error) => {
+    ["get_sonarr_queue", { seriesName: "Andor" }, 'no series in the Sonarr library has a title matching "Andor"; search_sonarr_series finds a series by part of its title'],
+    ["get_radarr_history", { movieName: "Collateral" }, 'no movie in the Radarr library has a title matching "Collateral"; search_radarr_movies finds a movie by part of its title'],
+  ])("%s names the search tool on the admin web, for the Support role and in MCP, as a reply", async (tool, args, showing) => {
     serveArr({ "/api/v3/series": series, "/api/v3/movie": movies })
 
-    for (const output of [await contexts.web(tool, args), await contexts.mcp(tool, args)]) {
-      expect(JSON.parse(output)).toEqual({ error })
-      expect(isToolError(output)).toBe(true)
+    for (const output of [await contexts.web(tool, args), await contexts.support(tool, args), await contexts.mcp(tool, args)]) {
+      expect(JSON.parse(output)).toEqual({ showing, totalRecords: 0, records: [] })
+      expect(isToolError(output)).toBe(false)
     }
+  })
+
+  it("never reads a name across the words of another title", async () => {
+    // "theateam" holds "heat", but "The A-Team" holds no word "heat"
+    serveArr({ "/api/v3/movie": [{ id: 21, title: "The A-Team", titleSlug: "34544" }] })
+
+    expect(JSON.parse(await contexts.web("get_radarr_queue", { movieName: "Heat" })).showing).toMatch(/^no movie in the Radarr library has a title matching "Heat"/)
+    expect(reads()).toEqual(["/api/v3/movie"])
   })
 
   it("finds a title written without its punctuation, in every context", async () => {

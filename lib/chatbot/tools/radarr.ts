@@ -10,7 +10,7 @@ const MOVIE_FILTER_PROPERTIES = {
   },
   movieName: {
     type: "string",
-    description: "Only the library movie with this title, or else the first whose title contains it",
+    description: "Only the library movie with this title, or else the first whose title holds it (case ignored, then punctuation)",
   },
 }
 

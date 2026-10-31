@@ -30,6 +30,9 @@ const EVERY_MISSING = "to find every missing one, list the series' episodes with
 
 type Args = Record<string, unknown>
 
+/** Discord's reply to a queue call with a seasonNumber and no series. */
+const SEASON_WITHOUT_SERIES = JSON.stringify({ showing: "seasonNumber needs a series: pass seriesName, the series' title, or ask which series", totalRecords: 0, records: [] })
+
 /** How to name a series: in Discord only by its title, since no Discord tool gives a seriesId. */
 function passSeries(discord: boolean): string {
   return discord ? "pass a seriesName" : PASS_SERIES
@@ -47,9 +50,9 @@ function narrowerHistory(seriesId: number | undefined, discord: boolean): string
 /**
  * The series a tool asks about: `seriesId`, or the library series whose title
  * matches `seriesName`. Neither given is every series. A seriesId that cannot
- * be read with no name to fall back on, or a name with no match, is the tool
- * `output` to return instead: an error, but in Discord a name with no match
- * asks for the exact title (see noTitleMatch).
+ * be read with no name to fall back on is an error `output` to return
+ * instead, and a name with no match a reply saying so (see noTitleMatch),
+ * which in Discord asks for the exact title.
  */
 async function resolveSeries(config: SonarrParsed, args: Args, discord = false): Promise<{ seriesId?: number } | { output: string }> {
   const id = optionalWhole(args, "seriesId")
@@ -61,8 +64,8 @@ async function resolveSeries(config: SonarrParsed, args: Args, discord = false):
   if (!library.success) return { output: JSON.stringify({ error: library.error }) }
   const seriesId = idForTitle(library.data, name.value)
   if (seriesId !== undefined) return { seriesId }
-  if (discord) return { output: noTitleMatch("series in the Sonarr library", name.value) }
-  return { output: JSON.stringify({ error: `Series "${name.value}" not found in Sonarr library` }) }
+  const next = discord ? "ask for the exact title" : "search_sonarr_series finds a series by part of its title"
+  return { output: noTitleMatch("series in the Sonarr library", name.value, next) }
 }
 
 function seriesFilter(seriesId: number | undefined, season?: number): ArrFilter | undefined {
@@ -91,8 +94,9 @@ export async function historyOutput(config: SonarrParsed, args: Args, discord: b
  * get_sonarr_queue: the queue cannot filter by series on every Sonarr
  * version, so a series' items, or one season's, are read up to the cap and
  * filtered here, keeping every match that fits, since a season pack is one
- * item per episode. `discord` cuts the paths in its messages and asks for the
- * exact title of a name with no match.
+ * item per episode. `discord` cuts the paths in its messages, and answers a
+ * seasonNumber with no series by asking for the series' title: Discord would
+ * show the error as the tool being unavailable.
  */
 export async function queueOutput(config: SonarrParsed, args: Args, discord: boolean): Promise<string> {
   const season = optionalWhole(args, "seasonNumber", 0)
@@ -101,7 +105,7 @@ export async function queueOutput(config: SonarrParsed, args: Args, discord: boo
   if ("output" in series) return series.output
   const project = queueRecord(discord)
   if (series.seriesId === undefined) {
-    if (season.value !== undefined) return "Error: 'seasonNumber' needs a series (seriesId or seriesName)"
+    if (season.value !== undefined) return discord ? SEASON_WITHOUT_SERIES : "Error: 'seasonNumber' needs a series (seriesId or seriesName)"
     return arrPageOutput(await getSonarrQueue(config, QUEUE_MAX), { project, limit: QUEUE_MAX, more: `${passSeries(discord)} to see only its items` })
   }
   const more = season.value === undefined ? "pass seasonNumber to see one season's items" : undefined

@@ -147,7 +147,11 @@ describe("why didn't Heat download?", () => {
   it("names a movie that is not in the library", async () => {
     serve({ "/api/v3/movie": library })
 
-    expect(await run("get_radarr_queue", { movieName: "Collateral" })).toEqual({ error: 'Movie "Collateral" not found in Radarr library' })
+    expect(await run("get_radarr_queue", { movieName: "Collateral" })).toEqual({
+      showing: 'no movie in the Radarr library has a title matching "Collateral"; search_radarr_movies finds a movie by part of its title',
+      totalRecords: 0,
+      records: [],
+    })
   })
 })
 
