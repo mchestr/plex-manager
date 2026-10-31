@@ -27,7 +27,7 @@
     "statements": 98,
     "branches": 98,
     "functions": 98,
-    "lines": 98
+    "lines": 99
   },
   "./lib/stripe/": {
     "statements": 95,
