@@ -177,7 +177,8 @@ describe("discordStatus", () => {
   it("reads both rows on when everything is set up and the lease is fresh", () => {
     const { linkedRoles, supportBot } = rows({})
     expect(linkedRoles.label).toBe("On")
-    expect(supportBot).toMatchObject({ label: "Online", tone: "success", sub: "Lease renewed 12 seconds ago" })
+    expect(supportBot).toMatchObject({ label: "Online", tone: "success" })
+    expect(supportBot.sub).toBeUndefined()
   })
 
   it.each([
@@ -207,6 +208,11 @@ describe("discordStatus", () => {
     const stale = rows({ lastRenewedAt: new Date("2026-10-20T14:14:00Z") }).supportBot
     expect(stale).toMatchObject({ label: "Offline", tone: "destructive", sub: "Since Oct 20, 2026, 9:14 AM CDT" })
     expect(rows({ lastRenewedAt: null }).supportBot.sub).toBeUndefined()
+  })
+
+  it("names what is wrong with a login without narrating the retries", () => {
+    expect(rows({ loginBlock: "backoff" }).supportBot.sub).toBeUndefined()
+    expect(rows({ loginBlock: "daily_cap" }).supportBot.sub).toBe("Too many logins in 24 hours")
   })
 
   it("keeps linked roles on while the bot is offline", () => {

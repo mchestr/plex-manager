@@ -137,4 +137,10 @@ describe("ChartCard", () => {
     )
     expect(screen.getByText("No commands in this period")).toBeInTheDocument()
   })
+
+  it("says there was no activity, once, when a chart has nothing to draw and no empty state of its own", () => {
+    render(<ChartCard title="Cost by model" summary="Cost by model" spec={{ ...daily, x: { type: "day", keys: [] }, series: [] }} data-testid="models" />)
+
+    expect(screen.getByTestId("models-empty")).toHaveTextContent(/^No activity in this period$/)
+  })
 })
