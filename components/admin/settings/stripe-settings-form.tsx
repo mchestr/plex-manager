@@ -25,17 +25,21 @@ function parsePriceIds(input: string): string[] {
 }
 
 /**
- * What the Subscriptions switch still waits for (FR-3), from the saved
- * settings only: `setStripeEnabled` refuses on the same list.
+ * The settings the Subscriptions switch still waits for (FR-3), from the
+ * saved settings only. With the job queue (`REDIS_URL`, set in the
+ * environment rather than here), they are the list `setStripeEnabled`
+ * refuses on.
  */
-function missingStripeSetup(config: StripeConfigStatus): string[] {
-  const missing: string[] = []
-  if (!config.hasSecretKey) missing.push("a secret key")
-  if (!config.hasWebhookSecret) missing.push("a webhook signing secret")
-  if (config.priceIds.length === 0) missing.push("at least one price ID")
-  if (!config.hasJobQueue) missing.push("the job queue (REDIS_URL)")
-  return missing
+function unsavedStripeSettings(config: StripeConfigStatus): string[] {
+  const unsaved: string[] = []
+  if (!config.hasSecretKey) unsaved.push("a secret key")
+  if (!config.hasWebhookSecret) unsaved.push("a webhook signing secret")
+  if (config.priceIds.length === 0) unsaved.push("at least one price ID")
+  return unsaved
 }
+
+/** "a, b and c". */
+const listOf = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items.at(-1)}` : items[0])
 
 type StripeField = "secretKey" | "webhookSecret" | "priceIds" | "librarySectionIds"
 
@@ -142,7 +146,7 @@ function JellyfinMembersConfirm({ members, onClose }: { members: JellyfinMembers
  * The master switch: it saves at once, outside Edit (NN/g, "Toggle-switch
  * guidelines"), and stays off until every prerequisite is saved.
  */
-function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; missing: string[] }) {
+function SubscriptionsSwitch({ config, blocked }: { config: StripeConfigStatus; blocked: boolean }) {
   const toast = useToast()
   const [isToggling, startToggling] = useTransition()
   const [jellyfinMembers, setJellyfinMembers] = useState<JellyfinMembers | null>(null)
@@ -169,7 +173,7 @@ function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; 
         id="stripe-enabled"
         checked={config.enabled}
         onCheckedChange={toggle}
-        disabled={isToggling || (!config.enabled && missing.length > 0)}
+        disabled={isToggling || (!config.enabled && blocked)}
         loading={isToggling}
         aria-describedby="stripe-enabled-hint"
         data-testid="stripe-enabled-toggle"
@@ -177,7 +181,7 @@ function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; 
       <div className="flex flex-col">
         <Label htmlFor="stripe-enabled">Subscriptions</Label>
         <span id="stripe-enabled-hint" className="text-label text-muted-foreground">
-          Non-members can subscribe to get access. This saves at once. If you turn it off, Stripe subscriptions stay active.
+          If you turn it off, Stripe subscriptions stay active.
         </span>
       </div>
     </div>
@@ -190,13 +194,14 @@ function SubscriptionsSwitch({ config, missing }: { config: StripeConfigStatus; 
  * (`stripe-enable-requirements`), read from the saved settings only.
  */
 export function StripeSubscriptions({ config }: { config: StripeConfigStatus }) {
-  const missing = missingStripeSetup(config)
+  const unsaved = unsavedStripeSettings(config)
+  const blocked = unsaved.length > 0 || !config.hasJobQueue
   return (
     <div className="flex flex-col gap-6" data-testid="stripe-settings-form">
-      <SubscriptionsSwitch config={config} missing={missing} />
-      {!config.enabled && missing.length > 0 && (
+      <SubscriptionsSwitch config={config} blocked={blocked} />
+      {!config.enabled && blocked && (
         <Alert tone="warning" role="status" title="You cannot turn on subscriptions yet." data-testid="stripe-enable-requirements">
-          Save {missing.join(", ")} first.
+          {[unsaved.length > 0 && `Save ${listOf(unsaved)} first.`, !config.hasJobQueue && "Set REDIS_URL to run the job queue."].filter(Boolean).join(" ")}
         </Alert>
       )}
     </div>
@@ -259,7 +264,7 @@ export function StripeSettingsFields({ config, state, libraries }: StripeSetting
   return (
     <>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <FormField name="stripe-secret-key" label="Secret key" description="Save this before you turn on subscriptions." error={errors.secretKey}>
+        <FormField name="stripe-secret-key" label="Secret key" error={errors.secretKey}>
           <SecretInput
             value={values.secretKey}
             onValueChange={(secretKey) => set({ secretKey })}
@@ -272,7 +277,7 @@ export function StripeSettingsFields({ config, state, libraries }: StripeSetting
         <FormField
           name="stripe-webhook-secret"
           label="Webhook signing secret"
-          description="Save this before you turn on subscriptions. In Stripe, open Developers, then Webhooks."
+          description="In Stripe, open Developers, then Webhooks."
           error={errors.webhookSecret}
         >
           <SecretInput
@@ -288,7 +293,7 @@ export function StripeSettingsFields({ config, state, libraries }: StripeSetting
         <FormField
           name="stripe-price-ids"
           label="Price IDs"
-          description="The prices on the subscribe page. Put one on each line, or separate them with commas. Save one or more before you turn on subscriptions."
+          description="One per line, or separated by commas."
           error={errors.priceIds}
           className="md:col-span-2"
         >

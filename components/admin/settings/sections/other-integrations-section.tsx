@@ -13,8 +13,8 @@ import { worstStatus, type SectionHealth } from "@/lib/settings/connection-statu
 type OtherService = "sonarr" | "radarr" | "jellyfin"
 
 const DESCRIPTIONS: Record<OtherService, string> = {
-  sonarr: "TV library and viewing statistics",
-  radarr: "Movie library and viewing statistics",
+  sonarr: "TV library",
+  radarr: "Movie library",
   jellyfin: "A second media server for members who do not use Plex",
 }
 
@@ -54,7 +54,6 @@ export function OtherIntegrationsSection({ servers, jellyfinLogin, health, foote
     <SettingsSection
       id="other"
       title="Sonarr, Radarr, Jellyfin"
-      description="These services are optional."
       status={worstStatus(configured.map((type) => health[type].status))}
       checkedAt={checkedAt}
     >

@@ -113,7 +113,6 @@ export default async function SettingsPage() {
     <div className="flex flex-col gap-6 p-4 sm:p-6">
       <PageHeader
         title="Settings"
-        description="Connections and features for this server. Changes apply to everyone."
         actions={<SettingsPageActions />}
         data-testid="admin-settings-header"
       />

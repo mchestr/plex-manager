@@ -14,8 +14,8 @@ interface LLMToggleProps {
 /**
  * The master "AI features" switch, live in both of the AI section's modes
  * and outside its form: it saves at once, so it is a switch, not a field
- * behind Edit (NN/g, "Toggle-switch guidelines"), and its hint says so. Off
- * forces Rewind onto template copy.
+ * behind Edit (NN/g, "Toggle-switch guidelines"). Off forces Rewind onto
+ * template copy.
  */
 export function LLMToggle({ disabled }: LLMToggleProps) {
   const [isPending, startTransition] = useTransition()
@@ -40,7 +40,7 @@ export function LLMToggle({ disabled }: LLMToggleProps) {
           AI features
         </label>
         <p id="ai-features-hint" className="text-label text-muted-foreground">
-          When this is off, the app sends no LLM requests and Rewind uses template text. This saves at once.
+          When this is off, the app sends no LLM requests and Rewind uses template text.
         </p>
       </div>
       <Switch

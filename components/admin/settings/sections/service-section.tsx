@@ -8,13 +8,14 @@ import { NotSet, SecretSummary, SettingsSummary, SettingsSummaryRow } from "@/co
 import { secretNoun, useServerForm, type StoredServer } from "@/hooks/admin/use-server-form"
 import type { SectionHealth } from "@/lib/settings/connection-status"
 
-const COPY = {
-  plex: { title: "Plex server", description: "Required. Members sign in and get library access through this server." },
-  tautulli: { title: "Tautulli", description: "Rewind and Request limits read watch history from Tautulli." },
-  overseerr: { title: "Overseerr", description: "Request a title and Watchlist sync send requests to Overseerr." },
-} as const
+type ServiceType = "plex" | "tautulli" | "overseerr"
 
-type ServiceType = keyof typeof COPY
+/** Plex and Tautulli are the two services setup requires. */
+const COPY: Record<ServiceType, { title: string; description?: string }> = {
+  plex: { title: "Plex server", description: "Required." },
+  tautulli: { title: "Tautulli", description: "Required." },
+  overseerr: { title: "Overseerr" },
+}
 
 interface ServiceSectionProps {
   type: ServiceType

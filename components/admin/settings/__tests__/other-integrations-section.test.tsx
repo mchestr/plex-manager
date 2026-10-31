@@ -60,7 +60,7 @@ describe("OtherIntegrationsSection", () => {
     renderSection()
 
     expect(screen.getByTestId("settings-other-sonarr")).toHaveTextContent("sonarr.lan:8989")
-    expect(screen.getByTestId("settings-other-radarr")).toHaveTextContent("Movie library and viewing statistics")
+    expect(screen.getByTestId("settings-other-radarr")).toHaveTextContent(/^RadarrMovie libraryNot set up/)
     expect(screen.getByRole("button", { name: "Edit Sonarr" })).toHaveAttribute("data-testid", "settings-other-sonarr-edit")
     expect(screen.getByRole("button", { name: "Set up Radarr" })).toHaveAttribute("data-testid", "settings-other-radarr-edit")
     expect(screen.getByRole("button", { name: "Edit Jellyfin" })).toHaveAttribute("data-testid", "settings-other-jellyfin-edit")

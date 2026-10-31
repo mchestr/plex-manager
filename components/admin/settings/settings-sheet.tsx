@@ -16,7 +16,7 @@ interface SettingsSheetProps {
   /** What the guard names: "Discard changes to Sonarr?" */
   name: string
   title: string
-  description: string
+  description?: string
   /** "Edit", "Set up" or "Add". */
   trigger: string
   /** Ends the trigger's accessible name for screen readers: "Edit Memini". */
@@ -86,7 +86,7 @@ export function SettingsSheet({ section, id, name, title, description, trigger, 
       <SheetContent side="right" className="max-w-[480px]" data-testid={sheetTestId}>
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>{description}</SheetDescription>
+          {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
         {children({ onDone: close, onCancel: cancel, onDirtyChange: setDirty, onPendingChange: setPending })}
         {/* Inside the Sheet, so it stacks above it and Escape closes only the question */}

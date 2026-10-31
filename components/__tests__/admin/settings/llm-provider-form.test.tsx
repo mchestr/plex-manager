@@ -100,7 +100,7 @@ describe('AI section, view mode', () => {
 
     const toggle = screen.getByRole('switch', { name: 'AI features' })
     expect(toggle).toHaveAttribute('data-testid', 'settings-ai-features')
-    expect(toggle).toHaveAccessibleDescription(/This saves at once\.$/)
+    expect(toggle).toHaveAccessibleDescription('When this is off, the app sends no LLM requests and Rewind uses template text.')
     expect(screen.queryByRole('form')).not.toBeInTheDocument()
   })
 

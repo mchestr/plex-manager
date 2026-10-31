@@ -146,7 +146,7 @@ export function RequestTiersSection({ saved, startedLabel, footerMeta }: { saved
     <SettingsSection
       id={SECTION_ID}
       title="Request limits"
-      description="Sets each member's Overseerr request quota from their total watch time in Tautulli. Needs Overseerr and Tautulli."
+      description="Sets each member's Overseerr request quota from their total Tautulli watch time."
       form={{
         ...form,
         onDiscard: () => {

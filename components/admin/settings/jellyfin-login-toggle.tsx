@@ -15,7 +15,7 @@ interface JellyfinLoginToggleProps {
 /**
  * "Allow Jellyfin sign-in", live in the Jellyfin row of Sonarr, Radarr, Jellyfin
  * and outside its Sheet: it saves at once, so it is a switch, not a field
- * behind Edit (NN/g, "Toggle-switch guidelines"), and its hint says so. Off
+ * behind Edit (NN/g, "Toggle-switch guidelines"). Off
  * refuses Jellyfin sign-in and hides it from the sign-in page.
  */
 export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProps) {
@@ -35,21 +35,9 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
   }
 
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex flex-col gap-0.5">
-        <Label htmlFor="jellyfin-login">Allow Jellyfin sign-in</Label>
-        <p id="jellyfin-login-hint" className="text-label text-muted-foreground">
-          Members can sign in with their Jellyfin account. This saves at once.
-        </p>
-      </div>
-      <Switch
-        id="jellyfin-login"
-        checked={enabledForLogin}
-        onCheckedChange={toggle}
-        loading={isPending}
-        aria-describedby="jellyfin-login-hint"
-        data-testid="jellyfin-login-toggle"
-      />
+    <div className="flex items-center justify-between gap-4">
+      <Label htmlFor="jellyfin-login">Allow Jellyfin sign-in</Label>
+      <Switch id="jellyfin-login" checked={enabledForLogin} onCheckedChange={toggle} loading={isPending} data-testid="jellyfin-login-toggle" />
     </div>
   )
 }

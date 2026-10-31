@@ -90,7 +90,7 @@ export const STATUS = {
     untested: { label: "Not checked", tone: "neutral", sub: "Test after saving" },
     disabled: { label: "Off", tone: "neutral" },
     notConfigured: { label: "Not set up", tone: "outline" },
-    degraded: { label: "Template text", ...warning, sub: "Rewind uses template text while AI is off" },
+    degraded: { label: "Template text", ...warning },
   },
   queueJob: {
     active: { label: "Running", tone: "info", mark: "spinner" },

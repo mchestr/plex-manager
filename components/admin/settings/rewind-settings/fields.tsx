@@ -131,7 +131,7 @@ export function TimeZoneNote({ zone }: { zone: string }) {
   const requestEdit = useSettingsEdit()
   return (
     <p className="text-label text-muted-foreground" data-testid="rewind-settings-zone">
-      Dates are in {zone}. A season that crosses the new year belongs to the year it opens in.{" "}
+      Dates are in {zone}.{" "}
       <Link
         data-testid="rewind-settings-time-zone-link"
         href="#time-zone"

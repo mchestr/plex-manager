@@ -111,13 +111,13 @@ is generated again.
 install stored it off, the console's Regenerate is refused; set it back with
 `UPDATE "Config" SET "wrappedEnabled" = true;` after a dump.
 
-### Features added in December
+### Opt-in features
 
 `lib/rewind/features.ts` lists the P1 interactions, each behind its own flag
 and off on a fresh `Config`. They share `rewindDisabledPages`: a feature is on
 only while the list holds `+<key>` and not the plain `<key>` (the plain key
 beside it switches it off again), so a deploy never turns one on by itself.
-The "Features added in December" checkboxes in the Rewind section (Edit, then
+The "Opt-in features" checkboxes in the Rewind section (Edit, then
 Save changes) write or remove the `+` entry, audited as `CONFIG_CHANGED`. Turn each on in production
 only after checking it on the heavy test member, and record the enable, with
 the date and the check, in `ship-check.md`. A flag that misbehaves stays off.
@@ -427,7 +427,7 @@ soft-launch issues are regenerated with the rest.
   Check members only through counts, not by opening their issues.
 
 **08:00.** Rewind opens to everyone. With `+season.auto-open` on (the
-"Season open" switch under Features added in December), `REWIND_SEASON_OPEN`
+"Season open" switch under Opt-in features), `REWIND_SEASON_OPEN`
 does it on `rewind-aux` at 08:00 server time
 (`lib/queue/jobs/rewind-season-open.ts`), kept scheduled at worker start and
 by the stale sweep like the Prepare; the console's "Opens to everyone" fact

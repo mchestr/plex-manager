@@ -179,7 +179,7 @@ export function DiscordIntegrationFields({ integration, state }: DiscordIntegrat
       <FormField name="discord-platform-name" label="Platform name" description="Shown on members' Discord profiles." error={errors.platformName}>
         <Input data-testid="settings-discord-platform-name" value={values.platformName} onValueChange={(platformName) => set({ platformName })} disabled={disabled} />
       </FormField>
-      <FormField name="discord-support-channel" label="Support channel ID" optional description="The bot answers questions in this channel." error={errors.supportChannelId}>
+      <FormField name="discord-support-channel" label="Support channel ID" optional error={errors.supportChannelId}>
         <Input data-testid="settings-discord-support-channel" value={values.supportChannelId} onValueChange={(supportChannelId) => set({ supportChannelId })} disabled={disabled} />
       </FormField>
       <FormField name="discord-support-threads" label="Support thread IDs" optional description="Separate them with commas." error={errors.supportThreadIds}>

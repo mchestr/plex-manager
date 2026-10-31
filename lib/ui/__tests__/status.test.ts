@@ -140,10 +140,11 @@ describe("resolveStatus sub-lines", () => {
     expect(resolveStatus("subscription", "ACTIVE").sub).toBeUndefined()
     expect(resolveStatus("invite", "active", { usesLeft: 3 }).sub).toBeUndefined()
     expect(resolveStatus("connection", "ok", { date }).sub).toBeUndefined()
+    expect(resolveStatus("connection", "degraded").sub).toBeUndefined()
   })
 
   it("keeps a fixed sub-line", () => {
-    expect(resolveStatus("connection", "degraded").sub).toBe("Rewind uses template text while AI is off")
+    expect(resolveStatus("connection", "untested").sub).toBe("Test after saving")
   })
 })
 

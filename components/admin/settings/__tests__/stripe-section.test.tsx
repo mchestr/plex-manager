@@ -70,17 +70,24 @@ describe("StripeSection", () => {
 
       expect(screen.getByTestId("stripe-enabled-toggle")).toBeDisabled()
       expect(screen.getByTestId("stripe-enable-requirements")).toHaveTextContent(
-        "Save a secret key, a webhook signing secret, at least one price ID first."
+        "Save a secret key, a webhook signing secret and at least one price ID first."
       )
     })
 
-    it("sits outside the form in both modes, and says it takes effect at once", async () => {
+    it("asks for REDIS_URL, which is not saved here, when only the job queue is missing", async () => {
+      await renderSection({ ...READY, hasJobQueue: false })
+
+      expect(screen.getByTestId("stripe-enabled-toggle")).toBeDisabled()
+      expect(screen.getByTestId("stripe-enable-requirements")).toHaveTextContent(/^You cannot turn on subscriptions yet\.\s*Set REDIS_URL to run the job queue\.$/)
+    })
+
+    it("sits outside the form in both modes, and says what turning it off leaves", async () => {
       const user = userEvent.setup()
       await renderSection(READY)
 
       const live = screen.getByTestId("stripe-settings-form")
       expect(live).toContainElement(screen.getByTestId("stripe-enabled-toggle"))
-      expect(screen.getByRole("switch", { name: "Subscriptions" })).toHaveAccessibleDescription(/This saves at once\./)
+      expect(screen.getByRole("switch", { name: "Subscriptions" })).toHaveAccessibleDescription("If you turn it off, Stripe subscriptions stay active.")
 
       await edit(user)
       expect(screen.getByTestId("settings-stripe-form")).not.toContainElement(screen.getByTestId("stripe-enabled-toggle"))
@@ -218,7 +225,7 @@ describe("StripeSection", () => {
       for (const id of ["stripe-secret-key-input", "stripe-webhook-secret-input", "stripe-price-ids-input"]) {
         expect(screen.getByTestId(id)).not.toHaveAttribute("aria-invalid", "true")
       }
-      expect(screen.getByTestId("stripe-webhook-secret-input")).toHaveAccessibleDescription(/Save this before you turn on subscriptions/)
+      expect(screen.getByTestId("stripe-webhook-secret-input")).toHaveAccessibleDescription("In Stripe, open Developers, then Webhooks.")
       expect(await screen.findByTestId("stripe-library-checkbox-1")).toBeInTheDocument()
       await waitFor(() => expect(screen.getByTestId("stripe-secret-key-input")).toHaveFocus())
     })
