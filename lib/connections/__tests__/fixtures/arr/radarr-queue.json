@@ -1,0 +1,53 @@
+{
+  "page": 1,
+  "pageSize": 50,
+  "sortKey": "timeleft",
+  "sortDirection": "ascending",
+  "totalRecords": 2,
+  "records": [
+    {
+      "id": 41001,
+      "movieId": 9,
+      "title": "Heat.1995.REMASTERED.2160p.UHD.BluRay.x265-B0MBARDiERS",
+      "status": "downloading",
+      "trackedDownloadStatus": "ok",
+      "trackedDownloadState": "downloading",
+      "statusMessages": [],
+      "size": 32212254720,
+      "sizeleft": 16106127360,
+      "timeleft": "00:42:10",
+      "estimatedCompletionTime": "2027-01-12T22:00:00Z",
+      "downloadId": "0123456789ABCDEF0123456789ABCDEF01234567",
+      "protocol": "torrent",
+      "downloadClient": "qBittorrent",
+      "indexer": "TorrentLeech (Prowlarr)",
+      "outputPath": "/data/downloads/complete/movies/Heat.1995.REMASTERED.2160p",
+      "quality": { "quality": { "id": 19, "name": "Bluray-2160p" } },
+      "movie": { "id": 9, "title": "Heat", "year": 1995, "tmdbId": 949 }
+    },
+    {
+      "id": 41002,
+      "movieId": 14,
+      "title": "Dune.Part.Two.2024.1080p.WEB-DL.DDP5.1.Atmos.H.264-FLUX",
+      "status": "completed",
+      "trackedDownloadStatus": "warning",
+      "trackedDownloadState": "importBlocked",
+      "statusMessages": [
+        {
+          "title": "Dune.Part.Two.2024.1080p.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv",
+          "messages": ["Not an upgrade for existing movie file. Existing quality: Bluray-1080p. New Quality WEBDL-1080p."]
+        }
+      ],
+      "size": 8589934592,
+      "sizeleft": 0,
+      "timeleft": "00:00:00",
+      "downloadId": "FEDCBA9876543210FEDCBA9876543210FEDCBA98",
+      "protocol": "torrent",
+      "downloadClient": "qBittorrent",
+      "indexer": "TorrentLeech (Prowlarr)",
+      "outputPath": "/data/downloads/complete/movies/Dune.Part.Two.2024",
+      "quality": { "quality": { "id": 3, "name": "WEBDL-1080p" } },
+      "movie": { "id": 14, "title": "Dune: Part Two", "year": 2024, "tmdbId": 693134 }
+    }
+  ]
+}

@@ -60,12 +60,12 @@ Use this decision tree to select the appropriate tool(s):
 
 **For TV Series Questions:**
 - Search for series → search_sonarr_series (returns sonarrId if in library - use this for episode/history queries)
-- List all series → get_sonarr_series
+- List or count library series → get_sonarr_series (50 per page, sorted by title; pass search to find titles)
 - Series details → get_sonarr_series_details (use sonarrId from search)
-- Get episodes for a series → get_sonarr_episodes (use sonarrId from search, returns episode IDs)
+- Get episodes for a series → get_sonarr_episodes (use sonarrId from search, returns episode IDs; pass seasonNumber for one season)
 - Episode details → get_sonarr_episode_details (use episode ID from get_sonarr_episodes)
 - History/download issues → get_sonarr_history (use seriesId or episodeId from search/episode results)
-- Upcoming episodes → get_sonarr_calendar
+- Upcoming episodes → get_sonarr_calendar (at most 100; narrow startDate/endDate for a busy week)
 - Missing episodes → get_sonarr_wanted_missing
 - Queue status → get_sonarr_queue
 
@@ -76,10 +76,10 @@ Use this decision tree to select the appropriate tool(s):
 
 **For Movie Questions:**
 - Search for movie → search_radarr_movies (returns radarrId if in library - use this for history queries)
-- List all movies → get_radarr_movies
+- List or count library movies → get_radarr_movies (50 per page, sorted by title; pass search to find titles)
 - Movie details → get_radarr_movie_details (use radarrId from search)
 - History/download issues → get_radarr_history (use movieId/radarrId from search results)
-- Upcoming releases → get_radarr_calendar
+- Upcoming releases → get_radarr_calendar (at most 100; narrow startDate/endDate for more)
 - Missing movies → get_radarr_wanted_missing
 - Queue status → get_radarr_queue
 
