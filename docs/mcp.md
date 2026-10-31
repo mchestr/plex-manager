@@ -68,9 +68,25 @@ As a last guard, the server redacts credentials from every result before it
 leaves (`lib/mcp/redact.ts`): the string value of a key that names one (a key
 ending in `token`, or containing `apikey`, `secret`, `password` or `passkey`,
 and every encrypted credential column), and inside every string, free text
-included, a credential in a URL or query string (`apikey=`, `X-Plex-Token=`), in
-JSON written into a string, in an `Authorization` header, or after `Bearer` or
-`Basic` (a single word there is a title, such as "Basic Instinct", and is kept).
+included, what `lib/security/redact-text.ts` finds, the rules the assistant
+also applies for a Support user:
+
+- A credential pair: `apikey=` or `X-Plex-Token=` in a URL or query string,
+  percent-encoded too (`%3D`, `%253D`); `X-Api-Key: ...` or `password = ...`
+  in a header or config line; `"apiKey": "..."` in JSON or a dict written into
+  a string, escaped JSON included. After a quoted name only a quoted string
+  counts, so `"tokenCount": 42` stays, and a name ending in `tokens` is a count.
+- An `Authorization` header's credentials, in any letter case and after any
+  prefix ending in `-` (`Proxy-Authorization`, `X-Emby-Authorization`). The
+  header name and scheme stay and the credentials go: the token after
+  `Bearer`, `Basic`, `Bot` or `Token`, and after any other scheme a
+  token-shaped run or an auth-param list (`MediaBrowser Client="...",
+  Token="..."`).
+- A token after a bare `Bearer` or `Basic`, which runs on past `@ : % ! ,`. A
+  single word there is a title, such as "Basic Instinct", and is kept; written
+  in another case (`basic`, `BEARER`) only a token-shaped run counts, so
+  "basic 1080p/2160p" stays.
+
 It matches names, so it backs up the loaders' own masking rather than replacing
 it.
 
