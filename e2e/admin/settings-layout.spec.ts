@@ -16,7 +16,7 @@ const GROUPS: Record<string, string[]> = {
   ai: ['ai', 'assistant'],
   discord: ['discord', 'channel-stats'],
   rewind: ['rewind'],
-  system: ['time-zone', 'privacy', 'system'],
+  system: ['time-zone', 'api-access', 'privacy', 'system'],
 };
 
 const SECTIONS = Object.values(GROUPS).flat();

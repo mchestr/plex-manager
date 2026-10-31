@@ -18,6 +18,7 @@ import * as adminAffiliates from "@/actions/admin/affiliates"
 import * as assistantSources from "@/actions/admin/assistant-sources"
 import * as connectionHealth from "@/actions/admin/connection-health"
 import * as discordStats from "@/actions/admin/discord-stats"
+import * as inactivity from "@/actions/admin/inactivity"
 import * as invites from "@/actions/admin/invites"
 import * as memberAccess from "@/actions/admin/member-access"
 import * as queue from "@/actions/admin/queue"
@@ -58,6 +59,7 @@ export const ACTION_MODULES: Readonly<Record<string, Record<string, unknown>>> =
   "admin/assistant-sources": assistantSources,
   "admin/connection-health": connectionHealth,
   "admin/discord-stats": discordStats,
+  "admin/inactivity": inactivity,
   "admin/invites": invites,
   "admin/member-access": memberAccess,
   "admin/queue": queue,

@@ -31,7 +31,7 @@ describe('settings groups', () => {
       ai: ['AI provider', 'Assistant sources'],
       discord: ['Discord', 'Channel stats'],
       rewind: ['Rewind'],
-      system: ['Time zone', 'Privacy', 'System information'],
+      system: ['Time zone', 'API access', 'Privacy', 'System information'],
     })
   })
 
@@ -52,6 +52,7 @@ describe('settings groups', () => {
       'channel-stats',
       'rewind',
       'time-zone',
+      'api-access',
       'privacy',
       'system',
     ])
@@ -75,6 +76,7 @@ describe('settings groups', () => {
       'channel-stats': undefined,
       rewind: 'ok',
       'time-zone': undefined,
+      'api-access': undefined,
       privacy: undefined,
       system: undefined,
     })
