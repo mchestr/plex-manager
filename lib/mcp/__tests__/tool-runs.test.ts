@@ -39,10 +39,10 @@ jest.mock('@/lib/wrapped/season', () => ({ getSeasonState: jest.fn(async () => (
 
 const admin: Session = { user: { id: 'admin-1', name: 'Mike', isAdmin: true, role: null }, expires: '' }
 
-function run(name: string, args: Record<string, unknown>, session = admin) {
+function run(name: string, args: Record<string, unknown>, session = admin, scope: 'full' | 'read' = 'full') {
   const tool = allTools().get(name)
   if (!tool) throw new Error(`no tool ${name}`)
-  return runAsPrincipal(session, () => tool.run(args, session))
+  return runAsPrincipal(session, () => tool.run(args, { session, scope }))
 }
 
 beforeEach(() => {
@@ -204,6 +204,27 @@ describe('a read tool', () => {
   it('throws for anyone below admin, which the server turns into a failure', async () => {
     const member: Session = { user: { id: 'm-1', isAdmin: false, role: null }, expires: '' }
     await expect(run('list_users', {}, member)).rejects.toMatchObject({ digest: expect.any(String) })
+  })
+})
+
+describe('invites for a read-only token', () => {
+  const row = { id: 'inv-1', code: 'ABCD2345', serverType: 'PLEX', useCount: 0, maxUses: 1, expiresAt: null, createdAt: new Date('2026-10-01') }
+
+  beforeEach(() => {
+    prismaMock.invite.count.mockResolvedValue(1)
+    prismaMock.invite.findMany.mockResolvedValue([row] as never)
+  })
+
+  it('shows a full token the code and the link', async () => {
+    const data = JSON.parse((await run('list_invites', {})).text).data
+    expect(data.rows[0]).toMatchObject({ code: 'ABCD2345', url: 'https://plex.example.com/invite/ABCD2345' })
+  })
+
+  it('shows a read token only the last four characters, and no link', async () => {
+    const data = JSON.parse((await run('list_invites', {}, admin, 'read')).text).data
+    expect(data.rows[0]).toMatchObject({ id: 'inv-1', codeEnd: '2345' })
+    expect(data.rows[0]).not.toHaveProperty('code')
+    expect(data.rows[0]).not.toHaveProperty('url')
   })
 })
 

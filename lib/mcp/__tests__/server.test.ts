@@ -24,6 +24,10 @@ jest.mock('@/lib/mcp/catalog', () => ({
     const tool = tools.get(name)
     return tool && usable(tool, session, scope) ? tool : undefined
   },
+  blockedByScope: (session: Session, name: string, scope: string) => {
+    const tool = tools.get(name)
+    return Boolean(tool && tool.allowed(session) && !usable(tool, session, scope))
+  },
 }))
 
 const session: Session = { user: { id: 'admin-1', name: 'Mike', isAdmin: true, role: null }, expires: '2026-10-31T12:05:00Z' }
@@ -223,17 +227,25 @@ describe('a read-only token', () => {
     expect((list as { result: { tools: { name: string }[] } }).result.tools.map((t) => t.name)).toEqual(['list_users'])
 
     const init = await readCall({ jsonrpc: '2.0', id: 2, method: 'initialize', params: {} })
-    expect((init as { result: { instructions: string } }).result.instructions).toContain('This token is read-only')
+    const { instructions } = (init as { result: { instructions: string } }).result
+    expect(instructions).toContain('This token is read-only')
+    expect(instructions).not.toMatch(/create_invite|remove_member|set_user_role/)
   })
 
   it('refuses a tool that changes something without running it', async () => {
     const response = await readCall({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'create_invite' } })
-    expect(response).toMatchObject({ error: { code: -32602, message: 'Unknown tool: create_invite' } })
+    expect(response).toMatchObject({ error: { code: -32602, message: 'create_invite changes something, and this token is read-only' } })
     expect(tools.get('create_invite')?.run).not.toHaveBeenCalled()
   })
 
-  it('runs a tool that reads', async () => {
+  it('runs a tool that reads, telling it the caller is read-only', async () => {
     const response = await readCall({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'list_users' } })
     expect(response).toMatchObject({ result: { isError: false } })
+    expect(tools.get('list_users')?.run).toHaveBeenCalledWith({}, { session, scope: 'read' })
+  })
+
+  it('still calls an unknown name unknown', async () => {
+    const response = await readCall({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'nope' } })
+    expect(response).toMatchObject({ error: { code: -32602, message: 'Unknown tool: nope' } })
   })
 })

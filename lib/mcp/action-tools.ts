@@ -63,8 +63,8 @@ const INVITE_RESULTS: ReadonlySet<string> = new Set(["createInvite", "createAffi
 
 /** Adds `url`, the public invite link, to a successful invite result. */
 function withInviteUrl(result: ActionResult<unknown, string>): ActionResult<unknown, string> {
-  if (!result.success || typeof result.data !== "object" || result.data === null) return result
-  const { code } = result.data as { code?: unknown }
+  if (!result.success || typeof result.data !== "object" || result.data === null || !("code" in result.data)) return result
+  const { code } = result.data
   return typeof code === "string" ? { ...result, data: { ...result.data, url: publicInviteUrl(code, getBaseUrl()) } } : result
 }
 
@@ -94,6 +94,15 @@ export const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set([
   "listLLMModels",
   "previewMemberRemoval",
 ])
+
+/**
+ * Actions named like a read (get, list, preview, estimate, discover) that
+ * change something, so the catalog test does not push them onto
+ * {@link READ_ONLY_ACTIONS}. None today; a `getOrCreate*` action would go here.
+ *
+ * @internal Exported for the catalog test.
+ */
+export const WRITES_DESPITE_READ_NAME: ReadonlySet<string> = new Set<string>()
 
 const DESTRUCTIVE_PREFIXES = ["delete", "remove", "revoke", "unshare", "rollback", "cancel", "disable", "adminCancel"]
 

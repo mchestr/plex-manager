@@ -56,6 +56,12 @@ export function toolsFor(session: Session, scope: ApiTokenScope): McpTool[] {
   return [...allTools().values()].filter((tool) => usable(tool, session, scope))
 }
 
+/** Whether the named tool is one `session` may use but a token of `scope` may not: a change, for a read token. */
+export function blockedByScope(session: Session, name: string, scope: ApiTokenScope): boolean {
+  const tool = allTools().get(name)
+  return Boolean(tool && tool.allowed(session) && !usable(tool, session, scope))
+}
+
 /** The named tool when `session` may call it with a token of `scope`. */
 export function toolFor(session: Session, name: string, scope: ApiTokenScope): McpTool | undefined {
   const tool = allTools().get(name)

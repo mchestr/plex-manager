@@ -7,8 +7,10 @@ import { join, relative } from 'node:path'
 import type { Session } from 'next-auth'
 
 import { ACTION_MODULES, EXCLUDED_MODULES } from '@/lib/mcp/action-modules'
-import { EXCLUDED, READ_ONLY_ACTIONS, toolName } from '@/lib/mcp/action-tools'
-import { allTools, toolsFor } from '@/lib/mcp/catalog'
+import { EXCLUDED, READ_ONLY_ACTIONS, toolName, WRITES_DESPITE_READ_NAME } from '@/lib/mcp/action-tools'
+import { ADMIN_READ_TOOLS } from '@/lib/mcp/assistant-tools'
+import { allTools, blockedByScope, toolFor, toolsFor } from '@/lib/mcp/catalog'
+import { ALL_TOOLS } from '@/lib/chatbot/tools'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
@@ -85,8 +87,9 @@ describe('the catalog', () => {
   it('marks as read-only exactly the reviewed actions, and every action named like a read is reviewed', () => {
     const actions = Object.values(ACTION_MODULES).flatMap((module) => Object.keys(module))
     const readNamed = actions.filter((name) => /^(get|list|preview|estimate|discover)[A-Z]/.test(name) && !EXCLUDED[name])
-    expect(readNamed.filter((name) => !READ_ONLY_ACTIONS.has(name))).toEqual([])
+    expect(readNamed.filter((name) => !READ_ONLY_ACTIONS.has(name) && !WRITES_DESPITE_READ_NAME.has(name))).toEqual([])
     expect([...READ_ONLY_ACTIONS].filter((name) => !actions.includes(name))).toEqual([])
+    expect([...READ_ONLY_ACTIONS].filter((name) => WRITES_DESPITE_READ_NAME.has(name))).toEqual([])
 
     const readOnlyActionTools = tools.filter((tool) => tool.source === 'action' && tool.annotations.readOnlyHint).map((tool) => tool.name).sort()
     expect(readOnlyActionTools).toEqual([...READ_ONLY_ACTIONS].map(toolName).sort())
@@ -123,9 +126,29 @@ describe('toolsFor', () => {
   })
 })
 
+describe('the assistant tools', () => {
+  it('marks as read-only the read tier and exactly the listed admin-tier reads, so a new admin tool is reviewed', () => {
+    const adminTier = ALL_TOOLS.filter((tool) => tool.permission === 'assistant:tools:admin').map((tool) => tool.function.name)
+    expect(adminTier.sort()).toEqual([...ADMIN_READ_TOOLS].sort())
+    for (const tool of ALL_TOOLS) {
+      const readOnly = tool.permission === 'assistant:tools:read' || ADMIN_READ_TOOLS.has(tool.function.name)
+      expect([tool.function.name, allTools().get(tool.function.name)?.annotations.readOnlyHint]).toEqual([tool.function.name, readOnly])
+    }
+  })
+})
+
 describe('a read-only token', () => {
   const read = toolsFor(admin, 'read')
   const names = read.map((tool) => tool.name)
+
+  it('cannot reach a change by name, and is told why', () => {
+    expect(toolFor(admin, 'create_invite', 'read')).toBeUndefined()
+    expect(toolFor(admin, 'list_users', 'read')?.name).toBe('list_users')
+    expect(blockedByScope(admin, 'create_invite', 'read')).toBe(true)
+    expect(blockedByScope(admin, 'create_invite', 'full')).toBe(false)
+    expect(blockedByScope(admin, 'no_such_tool', 'read')).toBe(false)
+    expect(blockedByScope(member, 'create_invite', 'read')).toBe(false)
+  })
 
   it('gets only the tools that read', () => {
     expect(read.every((tool) => tool.annotations.readOnlyHint)).toBe(true)
@@ -137,6 +160,13 @@ describe('a read-only token', () => {
       expect(names).not.toContain(name)
     }
   })
+})
+
+it('names only real tools in the server instructions', () => {
+  const source = readFileSync(join(ROOT, 'lib/mcp/server.ts'), 'utf8')
+  const named = [...new Set(source.match(/\b(?:create|list|get|delete|set|remove)_[a-z_]+\b/g) ?? [])]
+  expect(named.length).toBeGreaterThan(5)
+  expect(named.filter((name) => !allTools().has(name))).toEqual([])
 })
 
 describe('toolName', () => {

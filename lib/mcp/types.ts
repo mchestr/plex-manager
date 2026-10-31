@@ -1,5 +1,13 @@
 import type { Session } from "next-auth"
 
+import type { ApiTokenScope } from "@/lib/generated/prisma/client"
+
+/** Who is calling a tool: the token owner's session and the token's scope. */
+export interface McpCaller {
+  session: Session
+  scope: ApiTokenScope
+}
+
 /** What a tool call hands back: MCP `content` text, and whether it failed. */
 export interface McpToolResult {
   text: string
@@ -24,5 +32,5 @@ export interface McpTool {
   /** Where the tool comes from, for the audit entry. */
   source: "action" | "loader" | "assistant"
   allowed: (session: Session) => boolean
-  run: (args: Record<string, unknown>, session: Session) => Promise<McpToolResult>
+  run: (args: Record<string, unknown>, caller: McpCaller) => Promise<McpToolResult>
 }

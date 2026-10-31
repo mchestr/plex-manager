@@ -30,8 +30,13 @@ header works the same way.
 - A token is `pmk_` and 43 characters. Keep it secret: it acts as you.
 - **Access** is either everything you can do, or **Read only**: a read-only
   token lists and calls only the tools that read (the admin reads, the
-  assistant's lookups and the actions on the reviewed read-only list in
-  `lib/mcp/action-tools.ts`), so a leaked one cannot change anything.
+  assistant's read tools and the actions on the reviewed read-only list in
+  `lib/mcp/action-tools.ts`), so a leaked one cannot make a change through the
+  endpoint. Because an invite code makes an account, a read-only token sees
+  each code only by its last four characters, with no link.
+- A few reads keep their usual bookkeeping: `get_admin_settings` creates the
+  settings row on a fresh install, `get_affiliate_settings` records the Plex
+  server's machine id, and `get_discord_overview` prunes old sign-in records.
 - It works only while you are an admin and your account is enabled. Demoting
   or disabling you stops every token of yours at once, with no wait.
 - It expires after 30 days, 90 days (the default), a year, or never.
@@ -56,10 +61,14 @@ A tool call runs the action itself, inside the token owner's session
 audit entry all apply. Results are the action's own JSON,
 `{ "success": true, "data": ... }` or
 `{ "success": false, "code": "...", "error": "..." }`, with `isError` set on a
-refusal. Secrets in settings show only their last four, as on the settings page,
-and as a last guard the server redacts any string under a credential column's
-name (`apiKey`, `token`, `botToken` and the rest of `ENCRYPTED_FIELDS` that is
-not free text) before a result leaves it (`lib/mcp/redact.ts`).
+refusal. Secrets in settings show only their last four, as on the settings page.
+As a last guard, the server redacts credentials from every result before it
+leaves (`lib/mcp/redact.ts`): the string value of a key that names one (a key
+ending in `token`, or containing `apikey`, `secret`, `password` or `passkey`,
+and every encrypted credential column), and inside every string, free text
+included, a credential in a URL or query string (`apikey=`, `X-Plex-Token=`), in
+JSON written into a string, or after `Bearer`. It matches names, so it backs up
+the loaders' own masking rather than replacing it.
 
 Left out, with the reasons in `lib/mcp/action-modules.ts` and
 `lib/mcp/action-tools.ts`: public actions and forms, actions that need a

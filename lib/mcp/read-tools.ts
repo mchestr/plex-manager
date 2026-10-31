@@ -29,7 +29,7 @@ import { getUserDetailHeader } from "@/lib/admin/user-detail"
 import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
 import { getAllUsersWithWrapped } from "@/lib/data/admin-users"
 import { matches, pageFields, paginate } from "@/lib/mcp/paging"
-import { idArg, inviteUrl, readTool, seasonYear, yearArg } from "@/lib/mcp/read-tool"
+import { idArg, inviteForCaller, readTool, seasonYear, yearArg } from "@/lib/mcp/read-tool"
 import { communityReadTools } from "@/lib/mcp/read-tools-community"
 import { llmReadTools } from "@/lib/mcp/read-tools-llm"
 import type { McpTool } from "@/lib/mcp/types"
@@ -77,20 +77,22 @@ export function readTools(): McpTool[] {
   return [
     readTool({
       name: "list_invites",
-      description: "Admin invites by status and server, newest first, with each invite's code, uses, expiry and `url`, the link to send. Pages with page and pageSize.",
+      description:
+        "Admin invites by status and server, newest first, with each invite's code, uses, expiry and `url`, the link to send (a read-only token sees only the code's last four characters). Pages with page and pageSize.",
       input: listInvitesInput,
-      read: async ({ sort, desc, ...rest }) => {
+      read: async ({ sort, desc, ...rest }, caller) => {
         const list = await listInvites({ ...rest, sort: { id: sort, desc } })
-        return { ...list, rows: list.rows.map((row) => ({ ...row, url: inviteUrl(row.code) })) }
+        return { ...list, rows: list.rows.map((row) => inviteForCaller(row, caller)) }
       },
     }),
     readTool({
       name: "get_invite",
-      description: "One admin invite by id: its settings, libraries, who redeemed it, and `url`, the link to send.",
+      description:
+        "One admin invite by id: its settings, libraries, who redeemed it, and `url`, the link to send (a read-only token sees only the code's last four characters).",
       input: z.object({ inviteId: idArg }),
-      read: async ({ inviteId }) => {
+      read: async ({ inviteId }, caller) => {
         const invite = await getInviteDetail(inviteId)
-        return invite && { ...invite, url: inviteUrl(invite.code) }
+        return invite && inviteForCaller(invite, caller)
       },
     }),
     readTool({

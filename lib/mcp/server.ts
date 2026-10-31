@@ -34,7 +34,7 @@ import "server-only"
 import { z } from "zod"
 
 import { serverName } from "@/lib/brand"
-import { toolFor, toolsFor } from "@/lib/mcp/catalog"
+import { blockedByScope, toolFor, toolsFor } from "@/lib/mcp/catalog"
 import { runAsPrincipal } from "@/lib/mcp/principal"
 import { redactCredentials } from "@/lib/mcp/redact"
 import { limitResult, MAX_RESULT_CHARS } from "@/lib/mcp/result-limit"
@@ -87,18 +87,29 @@ export function rpcError(id: JsonRpcId, code: number, message: string): JsonRpcR
  */
 async function instructions(principal: TokenPrincipal): Promise<string> {
   const name = principal.session.user.name ?? "the token's owner"
+  const coverage =
+    principal.scope === "read"
+      ? [
+          "This token is read-only: it lists and calls only the tools that read. They cover invites (list_invites, get_invite,",
+          "with each code's last four characters), members (list_users, get_user), settings, announcements, affiliates, Rewind,",
+          "job queues, LLM usage, Discord, and lookups in Plex, Tautulli, Sonarr, Radarr and Overseerr.",
+        ]
+      : [
+          "The tools cover invites (create_invite, list_invites, delete_invite), members and their access (list_users, get_user,",
+          "set_user_role, set_user_disabled, remove_member, subscriptions), settings and connections, announcements, affiliates,",
+          "Rewind (season, generation, sharing), job queues, LLM usage, Discord, and lookups in Plex, Tautulli, Sonarr, Radarr",
+          "and Overseerr.",
+        ]
   return [
     `Plex Manager for ${await serverName()}. Every tool acts as ${name}, with their permissions, and is audited.`,
-    "The tools cover invites (create_invite, list_invites, delete_invite), members and their access (list_users, get_user,",
-    "set_user_role, set_user_disabled, remove_member, subscriptions), settings and connections, announcements, affiliates,",
-    "Rewind (season, generation, sharing), job queues, LLM usage, Discord, and lookups in Plex, Tautulli, Sonarr, Radarr",
-    "and Overseerr. Search for a tool by what you want to do.",
+    ...coverage,
+    "Search for a tool by what you want to do.",
     "Read tools (`list_*`, `get_*`) give the ids that the other tools take; list tools take `page` and `pageSize`, and",
     "lookups take a search, filter or limit.",
-    "Results are JSON, `{ success: true, data }` or `{ success: false, code, error }`, of at most",
-    `${MAX_RESULT_CHARS} characters: a larger result is refused with RESULT_TOO_LARGE, so ask for less.`,
-    "An invite's `url` is the link to send to the invitee.",
-    ...(principal.scope === "read" ? ["This token is read-only: it lists and calls only the tools that read."] : []),
+    "Results are JSON, `{ success: true, data }` or `{ success: false, code, error }`. A read's result of more than",
+    `${MAX_RESULT_CHARS} characters is refused with RESULT_TOO_LARGE, so ask for less; a change too large to show reports`,
+    "its outcome without the result.",
+    ...(principal.scope === "full" ? ["An invite's `url` is the link to send to the invitee."] : []),
   ].join(" ")
 }
 
@@ -107,12 +118,17 @@ async function callTool(id: JsonRpcId, principal: TokenPrincipal, requestIdValue
   if (!parsed.success) return rpcError(id, INVALID_PARAMS, "Invalid tool call")
   const { session, tokenId, scope } = principal
   const tool = toolFor(session, parsed.data.name, scope)
-  if (!tool) return rpcError(id, INVALID_PARAMS, `Unknown tool: ${parsed.data.name}`)
+  if (!tool) {
+    const message = blockedByScope(session, parsed.data.name, scope)
+      ? `${parsed.data.name} changes something, and this token is read-only`
+      : `Unknown tool: ${parsed.data.name}`
+    return rpcError(id, INVALID_PARAMS, message)
+  }
 
   let outcome: { text: string; isError: boolean }
   try {
     outcome = await runWithRequestContext(requestIdValue, session.user.id, () =>
-      runAsPrincipal(session, () => tool.run(parsed.data.arguments ?? {}, session))
+      runAsPrincipal(session, () => tool.run(parsed.data.arguments ?? {}, { session, scope }))
     )
   } catch (error) {
     logger.error("MCP tool failed", error, { tool: tool.name, credentialId: tokenId })
