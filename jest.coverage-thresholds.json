@@ -1,9 +1,9 @@
 {
   "global": {
-    "statements": 88,
-    "branches": 79,
-    "functions": 87,
-    "lines": 88
+    "statements": 89,
+    "branches": 81,
+    "functions": 88,
+    "lines": 90
   },
   "./lib/affiliates/": {
     "statements": 100,
@@ -25,7 +25,7 @@
   },
   "./lib/security/": {
     "statements": 98,
-    "branches": 97,
+    "branches": 98,
     "functions": 98,
     "lines": 98
   },
@@ -37,14 +37,14 @@
   },
   "./actions/admin/": {
     "statements": 98,
-    "branches": 93,
-    "functions": 98,
+    "branches": 94,
+    "functions": 99,
     "lines": 99
   },
   "./lib/queue/": {
     "statements": 88,
-    "branches": 83,
-    "functions": 79,
+    "branches": 84,
+    "functions": 80,
     "lines": 90
   },
   "./lib/security/crypto.ts": {
@@ -79,7 +79,7 @@
   },
   "./lib/queue/request-path.ts": {
     "statements": 100,
-    "branches": 90,
+    "branches": 91,
     "functions": 100,
     "lines": 100
   },
