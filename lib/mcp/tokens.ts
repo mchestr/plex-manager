@@ -38,7 +38,9 @@ const SESSION_TTL_MS = 5 * 60 * 1000
 const TOKEN_PATTERN = /^pmk_[A-Za-z0-9_-]{43}$/
 
 /**
- * The stored form of a token: SHA-256, hex.
+ * The stored form of a token: SHA-256, hex. A fast digest is right here: the
+ * input is 256 random bits, which no slow password hash would protect better,
+ * and the endpoint hashes it on every request to find the row.
  *
  * @internal Exported for the token tests.
  */

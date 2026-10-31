@@ -18,12 +18,32 @@ import { generateRequestId, getLogContext } from "@/lib/utils/log-context"
  *   it (the transport's DNS rebinding rule); MCP clients send none.
  * - 600 requests a minute per address (`mcp:ip`) before the token is looked
  *   up, then 120 a minute per token (`mcp`), on top of each action's own limit.
- * - A body over 1 MB, by its Content-Length or its bytes once read, is a 413.
+ * - A body over 1 MB is a 413: by its Content-Length before it is read, else
+ *   when reading passes 1 MB, so a chunked upload never buffers more.
  * - GET (a server stream) and DELETE (a session) are 405: the server is stateless.
  */
 
 const NO_STORE = { "Cache-Control": "no-store" }
 const MAX_BODY_BYTES = 1_000_000
+
+/** The body as text, or null once it passes {@link MAX_BODY_BYTES}; reading stops there. */
+async function readBody(request: Request): Promise<string | null> {
+  if (!request.body) return ""
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel()
+      return null
+    }
+    chunks.push(value)
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks))
+}
 
 function tooLarge() {
   return NextResponse.json(rpcError(null, INVALID_REQUEST, "Request too large"), { status: 413, headers: NO_STORE })
@@ -65,8 +85,8 @@ async function handlePost(request: NextRequest) {
   }
 
   if (Number(request.headers.get("content-length")) > MAX_BODY_BYTES) return tooLarge()
-  const text = await request.text()
-  if (Buffer.byteLength(text, "utf8") > MAX_BODY_BYTES) return tooLarge()
+  const text = await readBody(request)
+  if (text === null) return tooLarge()
   let body: unknown
   try {
     body = JSON.parse(text)

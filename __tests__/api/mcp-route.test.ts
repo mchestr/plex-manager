@@ -122,6 +122,27 @@ it('refuses a body over 1 MB in bytes though under it in characters', async () =
   expect(handleMessage).not.toHaveBeenCalled()
 })
 
+it('stops reading a chunked body without Content-Length once it passes 1 MB', async () => {
+  let pulled = 0
+  const chunk = new Uint8Array(256 * 1024).fill(32)
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      pulled++
+      controller.enqueue(chunk)
+    },
+  })
+  // A stream body needs duplex: 'half', which RequestInit does not declare yet
+  const init: RequestInit & { duplex: 'half' } = { method: 'POST', body, headers: { Authorization: `Bearer ${TOKEN}` }, duplex: 'half' }
+  const request = new NextRequest(new Request('https://plex.example.com/api/mcp', init))
+
+  const response = await POST(request)
+
+  expect(response.status).toBe(413)
+  expect(handleMessage).not.toHaveBeenCalled()
+  // Four chunks reach 1 MB and the fifth passes it; an endless stream is never drained
+  expect(pulled).toBeLessThan(10)
+})
+
 it('refuses a declared Content-Length over 1 MB before reading the body', async () => {
   const response = await post(ping, { 'Content-Length': '2000000' })
   expect(response.status).toBe(413)
