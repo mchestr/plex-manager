@@ -13,6 +13,7 @@ import queue from "@/lib/connections/__tests__/fixtures/arr/radarr-queue.json"
 import calendar from "@/lib/connections/__tests__/fixtures/arr/radarr-calendar.json"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import type { Radarr } from "@/lib/generated/prisma/client"
+import { MAX_RESULT_CHARS } from "@/lib/utils/tool-result-limit"
 
 import { executeRadarrTool } from "../radarr"
 import { scrubForDiscord } from "../scrub"
@@ -370,7 +371,7 @@ describe("configuration", () => {
 })
 
 describe("on a large server (3,000 movies, long titles), every reply fits in a tool result", () => {
-  const LIMIT = 40_000
+  const LIMIT = MAX_RESULT_CHARS
   const movies = range(3000, radarrMovie)
 
   /** The output, and the same with the zone offsets the dispatcher adds, both within the limit. */

@@ -19,9 +19,10 @@
  */
 
 import type { McpToolResult } from "@/lib/mcp/types"
+import { MAX_RESULT_CHARS } from "@/lib/utils/tool-result-limit"
 
-/** The most characters a tool result may have, unless the tool declares more. */
-export const MAX_RESULT_CHARS = 40_000
+// Defined apart from this module so the assistant's tools can size their replies from it
+export { MAX_RESULT_CHARS }
 
 /** JSON averages about 3.5 characters a token. */
 const CHARS_PER_TOKEN = 3.5

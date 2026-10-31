@@ -17,6 +17,7 @@ import { mockReset } from "jest-mock-extended"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { getPlexLibrarySections, getPlexOnDeck, getPlexRecentlyAdded, getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
+import { MAX_RESULT_CHARS } from "@/lib/utils/tool-result-limit"
 
 import { executePlexTool } from "../plex"
 
@@ -272,7 +273,7 @@ describe("executePlexTool get_plex_library_sections (P11.17)", () => {
  * endpoint accepts.
  */
 describe("Plex tool results on a large server stay under the MCP limit", () => {
-  const MCP_LIMIT = 40_000
+  const MCP_LIMIT = MAX_RESULT_CHARS
   const LA = { timeZone: "America/Los_Angeles", locale: "en-US" }
 
   const heavyItem = (i: number) => ({

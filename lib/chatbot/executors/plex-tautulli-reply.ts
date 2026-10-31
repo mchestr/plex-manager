@@ -1,5 +1,7 @@
 import "server-only"
 
+import { MAX_RESULT_CHARS } from "@/lib/utils/tool-result-limit"
+
 /**
  * Arguments, projections and reply sizing for the Plex and Tautulli tools.
  *
@@ -14,7 +16,7 @@ import "server-only"
  */
 
 /** Most characters of records one reply holds, leaving room under 40,000 for the rest of it. */
-export const REPLY_BUDGET = 36_000
+export const REPLY_BUDGET = MAX_RESULT_CHARS - 4_000
 
 /** A projected record: only text, numbers and flags. */
 export type Row = Record<string, string | number | boolean>

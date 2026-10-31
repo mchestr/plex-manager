@@ -6,6 +6,8 @@
 
 import { z } from "zod"
 
+import { MAX_RESULT_CHARS } from "@/lib/utils/tool-result-limit"
+
 import { calendarRange, optionalText, optionalWhole, textArg, wholeArg, wholeOrNone } from "../arr-args"
 import { arrLocalPage, arrPageOutput, arrSearchOutput, idForTitle, orElse, titleMatches } from "../arr-output"
 import { clip, day, queueFields, queueOf, qualityProfile, rootFolder, trimDetails } from "../arr-projections"
@@ -78,7 +80,7 @@ describe("replies", () => {
     const reply = arrLocalPage({ items, page: 1, pageSize: 50, what: "series, sorted by title" })
 
     expect(reply.records.length).toBeLessThan(50)
-    expect(JSON.stringify(reply).length).toBeLessThanOrEqual(40_000)
+    expect(JSON.stringify(reply).length).toBeLessThanOrEqual(MAX_RESULT_CHARS)
     expect(reply.showing).toBe(`showing ${reply.records.length} of 50 series, sorted by title; only ${reply.records.length} of this page fit in one reply: pass a smaller pageSize`)
   })
 
@@ -87,7 +89,7 @@ describe("replies", () => {
 
     const output = arrPageOutput({ success: true, data: { records, totalRecords: 900 } }, { project: titled, limit: 50, more: "pass a series" })
 
-    expect(output.length).toBeLessThanOrEqual(40_000)
+    expect(output.length).toBeLessThanOrEqual(MAX_RESULT_CHARS)
     expect(JSON.parse(output).showing).toMatch(/^showing 1\d of 900; pass a series$/)
   })
 

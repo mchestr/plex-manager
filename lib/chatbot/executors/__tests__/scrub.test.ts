@@ -153,6 +153,28 @@ describe("scrubForDiscord", () => {
       expect(flat).not.toContain("apiKey")
       expect(flat).not.toContain("SECRET")
     })
+
+    it("drops a list of plain values under a key that is not allowlisted", () => {
+      const status = {
+        response: { data: { tautulli_version: "2.13.4", emails: ["alice@example.com"], ip_addresses: ["10.1.2.3"] } },
+      }
+      // An unlisted list inside an allowlisted record, and the raw queue shape whose import messages named paths
+      const sessions = { sessions: [{ mediaTitle: "Dune", ipAddresses: ["10.0.0.4"], notes: ["Resolution: 4K"] }] }
+      const queue = { records: [{ title: "Show.S01", statusMessages: [{ title: "Show.S01", messages: ["/data/downloads/complete/tv/Show.S01"] }] }] }
+
+      expect(parse(scrubForDiscord("get_tautulli_status", status))).toEqual({ response: { data: { tautulli_version: "2.13.4" } } })
+      expect(parse(scrubForDiscord("get_plex_sessions", sessions))).toEqual({ sessions: [{ mediaTitle: "Dune", notes: ["Resolution: 4K"] }] })
+      expect(scrubForDiscord("get_sonarr_queue", queue)).not.toContain("/data/downloads")
+    })
+
+    it("keeps a list of plain values under an allowlisted key", () => {
+      const raw = {
+        success: true,
+        sessions: [{ mediaTitle: "Dune", notes: ["Resolution: 4K", "Video codec: hevc", "Bitrate: 12 Mbps"] }],
+      }
+
+      expect(parse(scrubForDiscord("get_plex_sessions", raw))).toEqual(raw)
+    })
   })
 
   describe("robustness (never throws on unexpected shapes)", () => {

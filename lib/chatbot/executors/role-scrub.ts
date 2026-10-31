@@ -14,7 +14,9 @@
  * - the personal fields `withoutPersonalFields` drops for everyone (email,
  *   addresses, per-user tokens);
  * - credentials inside strings, such as `?X-Plex-Token=...` or `apikey=...`
- *   in a URL, and `Bearer` tokens.
+ *   in a URL, an `Authorization` header's value, and a `Bearer` or `Basic`
+ *   token (a single word after a bare scheme is a title such as "Basic
+ *   Instinct", and is kept).
  *
  * It over-redacts rather than under-redacts (a key such as `tokenCount` is dropped too), and an executor's own error text
  * is replaced by a fixed line, because upstream errors can carry internal URLs
@@ -43,9 +45,21 @@ export const REDACTED = "[redacted]"
 /** Normalised key fragments that mark a credential. */
 const SECRET_KEY_FRAGMENTS = ["token", "apikey", "secret", "password", "passwd", "authorization", "cookie", "credential", "passkey"]
 
-/** A `name=value` pair in a URL or query string whose name is a credential. */
-const SECRET_PAIR = /\b((?:[\w-]*(?:token|api[_-]?key|secret|password|passwd|authorization)[\w-]*))=([^&\s"'<>]+)/gi
-const BEARER = /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/g
+/**
+ * A `name=value` pair in a URL or query string whose name is a credential.
+ * The name is the whole run of name characters, read once by a lookahead
+ * (which is never backtracked into, so a long hyphenated run costs one pass),
+ * then checked for a secret word.
+ */
+const SECRET_PAIR = /(?<![\w-])(?=([\w-]+))\1(?<=(?:token|api[_-]?key|secret|password|passwd|passkey|authorization)[\w-]*)=([^&\s"'<>]+)/gi
+/**
+ * Group 1 is an `Authorization` header name and scheme, whose value is always
+ * a credential. Group 2 is a bare scheme, whose value is one only when it is
+ * not a single word of letters (a title such as "Basic Instinct", at most
+ * followed by a full stop).
+ */
+const BEARER =
+  /\b([Aa]uthorization[\s"':=]*(?:Bearer|Basic))\s+[A-Za-z0-9._~+/=-]{8,}|\b(Bearer|Basic)\s+(?![A-Z]?[a-z]+\.?(?![A-Za-z0-9._~+/=-]))[A-Za-z0-9._~+/=-]{8,}/g
 
 function isSecretKey(key: string): boolean {
   const normalised = key.toLowerCase().replace(/[^a-z0-9]/g, "")
@@ -53,7 +67,9 @@ function isSecretKey(key: string): boolean {
 }
 
 function scrubString(value: string): string {
-  return value.replace(SECRET_PAIR, `$1=${REDACTED}`).replace(BEARER, `$1 ${REDACTED}`)
+  return value
+    .replace(SECRET_PAIR, `$1=${REDACTED}`)
+    .replace(BEARER, (_match, header: string | undefined, scheme: string | undefined) => `${header ?? scheme} ${REDACTED}`)
 }
 
 function scrubValue(value: unknown): unknown {

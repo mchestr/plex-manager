@@ -75,4 +75,43 @@ describe('redactCredentials', () => {
     expect(redactCredentials('Marked Severance as finished')).toEqual({ text: 'Marked Severance as finished', redacted: false })
     expect(redactCredentials('see http://sonarr/feed?apikey=raw-key')).toEqual({ text: `see http://sonarr/feed?apikey=${REDACTED}`, redacted: true })
   })
+
+  it.each([
+    'Basic Instinct',
+    'Basic Instinct 2',
+    'M*A*S*H - Basic Training',
+    'Basic training is brutal',
+    'Bearer Instruments Part One',
+    'We watched Basic Instinct.',
+    'Basic Instinct (1992)',
+  ])('keeps the title "%s"', (title) => {
+    const text = JSON.stringify({ title, episodeTitle: title, showing: `showing 1 of 1 results for "${title}"` })
+    expect(redactCredentials(text)).toEqual({ text, redacted: false })
+  })
+
+  it.each([
+    ['Basic dXNlcjpwYXNz', 'dXNlcjpwYXNz'],
+    ['Bearer eyJhbGciOiJIUzI1NiJ9.a.b', 'eyJhbGciOiJIUzI1NiJ9'],
+    ['Bearer sk-ant-api03-abcdef', 'sk-ant-api03-abcdef'],
+    ['Bearer abcdefghij.klmnop', 'abcdefghij.klmnop'],
+    ['Authorization: Bearer abcdefghijklmnop', 'abcdefghijklmnop'],
+    ['Authorization Bearer abcdefghijklmnop', 'abcdefghijklmnop'],
+    ['curl -H "authorization: Basic abcdefghijkl" http://sonarr', 'abcdefghijkl'],
+  ])('redacts the credential in "%s"', (note, secret) => {
+    const { text, redacted } = redactCredentials(JSON.stringify({ note }))
+    expect(redacted).toBe(true)
+    expect(text).not.toContain(secret)
+    expect(JSON.parse(text).note).toMatch(/(Bearer|Basic) \[redacted\]/)
+  })
+
+  it.each([
+    ['a "token-" run', 'token-'.repeat(3_400)],
+    ['a "token_token-" run', 'token_token-'.repeat(1_700)],
+    ['a quoted "token-" run', `"${'token-'.repeat(3_400)}`],
+  ])('reads %s of 20,000 characters in one pass', (_label, value) => {
+    const start = performance.now()
+    redactCredentials(JSON.stringify({ player: value }))
+    redactCredentials(value)
+    expect(performance.now() - start).toBeLessThan(100)
+  })
 })

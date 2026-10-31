@@ -13,6 +13,7 @@ import "server-only"
 import { randomUUID } from "node:crypto"
 
 import { executeToolCall } from "@/lib/chatbot/executors"
+import { isToolError } from "@/lib/chatbot/executors/tool-output"
 import { ALL_TOOLS } from "@/lib/chatbot/tools"
 import type { McpTool } from "@/lib/mcp/types"
 import { permissionsFor } from "@/lib/permissions"
@@ -57,7 +58,8 @@ export function assistantTools(): McpTool[] {
         await getFormatSettings(),
         permissionsFor(session.user)
       )
-      return { text, isError: text.startsWith("Error") }
+      // An executor reports a failure as "Error..." text or as JSON with `error` or `success: false`
+      return { text, isError: isToolError(text) }
     },
   }))
 }

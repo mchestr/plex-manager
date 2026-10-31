@@ -13,6 +13,7 @@ import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { generateSystemPrompt } from "@/lib/chatbot/prompts/default-system-prompt"
 import { OVERSEERR_TOOLS } from "@/lib/chatbot/tools/overseerr"
 import type { Overseerr } from "@/lib/generated/prisma/client"
+import { MAX_RESULT_CHARS } from "@/lib/utils/tool-result-limit"
 
 import { executeOverseerrTool } from "../overseerr"
 import { discoverPage, largestRequest, movieDetails, overseerrMedia, overseerrRequest, overseerrUser, REQUESTS, requestPage, tvDetails } from "./overseerr-fixtures"
@@ -23,7 +24,7 @@ jest.mock("@/lib/utils/logger", () => ({
 }))
 
 /** The most an MCP tool result may hold. */
-const MCP_RESULT_MAX = 40_000
+const MCP_RESULT_MAX = MAX_RESULT_CHARS
 
 const overseerrRow = { id: "o-1", name: "Overseerr", url: "http://overseerr.lan:5055", apiKey: "key", publicUrl: null, isActive: true } as Overseerr
 

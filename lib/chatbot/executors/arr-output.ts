@@ -3,6 +3,7 @@ import "server-only"
 import { type z } from "zod"
 
 import { type ArrPage } from "@/lib/connections/arr-client"
+import { MAX_RESULT_CHARS } from "@/lib/utils/tool-result-limit"
 import { type ConnectionResult } from "@/types/connection"
 
 /**
@@ -41,7 +42,7 @@ interface ArrCut<T> {
 }
 
 /** Most characters of records in one reply. */
-const ARR_REPLY_BUDGET = 36_000
+const ARR_REPLY_BUDGET = MAX_RESULT_CHARS - 4_000
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)

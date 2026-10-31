@@ -4,6 +4,7 @@
 import type { Session } from 'next-auth'
 
 import { principalSession } from '@/lib/mcp/principal'
+import { MAX_RESULT_CHARS } from '@/lib/mcp/result-limit'
 import { handleMessage } from '@/lib/mcp/server'
 import type { McpTool } from '@/lib/mcp/types'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
@@ -150,7 +151,7 @@ describe('tools/call', () => {
   })
 
   it('refuses a result over the size limit, and audits it', async () => {
-    tools.set('big', tool('big', { run: jest.fn().mockResolvedValue({ text: 'x'.repeat(40_001), isError: false }) }))
+    tools.set('big', tool('big', { run: jest.fn().mockResolvedValue({ text: 'x'.repeat(MAX_RESULT_CHARS + 1), isError: false }) }))
 
     const response = await call({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'big' } })
 
@@ -161,7 +162,7 @@ describe('tools/call', () => {
   })
 
   it("keeps a change's outcome when its result is too large, so a client does not retry it", async () => {
-    tools.set('import', tool('import', { annotations: { readOnlyHint: false }, run: jest.fn().mockResolvedValue({ text: 'x'.repeat(40_001), isError: false }) }))
+    tools.set('import', tool('import', { annotations: { readOnlyHint: false }, run: jest.fn().mockResolvedValue({ text: 'x'.repeat(MAX_RESULT_CHARS + 1), isError: false }) }))
 
     const response = await call({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'import' } })
 

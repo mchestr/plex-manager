@@ -8,6 +8,7 @@ import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import type { Overseerr } from "@/lib/generated/prisma/client"
+import { MAX_RESULT_CHARS } from "@/lib/utils/tool-result-limit"
 
 import { executeOverseerrTool } from "../overseerr"
 import { MEMBERS, userPage } from "./overseerr-fixtures"
@@ -109,6 +110,6 @@ it.each([1, 5])("keeps page %i of 500 members within an MCP result (40,000 chara
 
   const output = await executeOverseerrTool("get_overseerr_users", { page })
 
-  expect(output.length).toBeLessThanOrEqual(40_000)
+  expect(output.length).toBeLessThanOrEqual(MAX_RESULT_CHARS)
   expect(JSON.parse(output).users).toHaveLength(100)
 })

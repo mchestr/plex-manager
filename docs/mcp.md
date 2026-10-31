@@ -61,14 +61,18 @@ A tool call runs the action itself, inside the token owner's session
 audit entry all apply. Results are the action's own JSON,
 `{ "success": true, "data": ... }` or
 `{ "success": false, "code": "...", "error": "..." }`, with `isError` set on a
-refusal. Secrets in settings show only their last four, as on the settings page.
+refusal. An assistant tool's failure, an `Error: ...` line or JSON with `error`
+or `success: false`, sets `isError` too, and is audited as one.
+Secrets in settings show only their last four, as on the settings page.
 As a last guard, the server redacts credentials from every result before it
 leaves (`lib/mcp/redact.ts`): the string value of a key that names one (a key
 ending in `token`, or containing `apikey`, `secret`, `password` or `passkey`,
 and every encrypted credential column), and inside every string, free text
 included, a credential in a URL or query string (`apikey=`, `X-Plex-Token=`), in
-JSON written into a string, or after `Bearer`. It matches names, so it backs up
-the loaders' own masking rather than replacing it.
+JSON written into a string, in an `Authorization` header, or after `Bearer` or
+`Basic` (a single word there is a title, such as "Basic Instinct", and is kept).
+It matches names, so it backs up the loaders' own masking rather than replacing
+it.
 
 Left out, with the reasons in `lib/mcp/action-modules.ts` and
 `lib/mcp/action-tools.ts`: public actions and forms, actions that need a
@@ -88,7 +92,7 @@ Each connected client pays for the tool list and for every result it reads.
   2.5k tokens for this server, and loads a tool's definition when Claude
   searches for it. The instructions say what the tools cover, since Claude
   finds them by searching names and descriptions. Run `/context` to see the
-  tools marked "(deferred)". All of them load up front (about 20-25k tokens)
+  tools marked "(deferred)". All of them load up front (about 25-28k tokens)
   with `ENABLE_TOOL_SEARCH=false`, with `ENABLE_TOOL_SEARCH=auto` on a 1M-token
   window, or on models without tool search. In claude.ai and Claude Desktop,
   choose **Auto** or **On demand** under Tool access.
@@ -102,10 +106,19 @@ Each connected client pays for the tool list and for every result it reads.
   of each prompt and response (`get_llm_usage` reads one, clipped to 15,000
   characters each), and `list_announcements` a preview (`get_announcement`
   reads one). The Sonarr, Radarr, Overseerr, Tautulli and Plex lookups return
-  the fields an answer needs, with a search, filter or limit and a "showing N
-  of M" line. Only reads of one whole record that cannot be split
-  (`get_user_plex_wrapped`, `get_rewind_dry_run`) may return up to 120,000
-  characters.
+  the fields an answer needs. Their list and search tools take a search,
+  filter, page or limit, and a "showing N of M" line says how to see the
+  rest: history, queues, calendars and wanted lists, the Sonarr and Radarr
+  libraries and searches, Overseerr requests, discovery and users, Tautulli
+  users, plays, top lists and activity, and Plex's recently added.
+  `get_plex_sessions` and `get_plex_on_deck` take no arguments:
+  `get_plex_sessions` holds the streams that fit, and its showing line points
+  to `get_tautulli_activity`'s search when some are left out, and On Deck
+  reads its first 50 items. Status and detail tools return one record; the
+  Plex and Tautulli library lists and the Sonarr and Radarr root folders and
+  quality profiles are short and return whole. Only reads of one whole record
+  that cannot be split (`get_user_plex_wrapped`, `get_rewind_dry_run`) may
+  return up to 120,000 characters.
 
 ## Limits and transport
 

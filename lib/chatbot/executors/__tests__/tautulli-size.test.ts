@@ -9,6 +9,7 @@ import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { getTautulliActivity, getTautulliHistory, getTautulliHomeStat, getTautulliUsers, tautulliCommand } from "@/lib/connections/tautulli"
+import { MAX_RESULT_CHARS } from "@/lib/utils/tool-result-limit"
 
 import { executeTautulliTool } from "../tautulli"
 
@@ -26,7 +27,7 @@ jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({ debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() })),
 }))
 
-const MCP_LIMIT = 40_000
+const MCP_LIMIT = MAX_RESULT_CHARS
 const LA = { timeZone: "America/Los_Angeles", locale: "en-US" }
 
 const name = (i: number) => `Member With A Fairly Long Display Name ${i}`
