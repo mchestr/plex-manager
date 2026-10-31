@@ -2,6 +2,7 @@ import Link from "next/link"
 
 import { LastSaved } from "@/components/admin/settings/last-saved"
 import { RewindSettingsSection } from "@/components/admin/settings/rewind-settings-section"
+import { ApiAccessSection } from "@/components/admin/settings/sections/api-access-section"
 import { AssistantSection } from "@/components/admin/settings/sections/assistant-section"
 import { AiSection } from "@/components/admin/settings/sections/ai-section"
 import { ChannelStatsSection } from "@/components/admin/settings/sections/channel-stats-section"
@@ -21,6 +22,7 @@ import { getDiscordOverview } from "@/lib/admin/discord"
 import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
 import { getChannelStatsSettings, getRequestTierSettings } from "@/lib/data/community-stats"
 import { getAssistantSources } from "@/lib/data/assistant-sources"
+import { listOwnApiTokens } from "@/lib/data/api-tokens"
 import { getLastRetentionRun } from "@/lib/data/retention"
 import { getRewindSeasonDataPreparedAt } from "@/lib/data/rewind-season"
 import { plexLibraryListing } from "@/lib/admin/invites/libraries"
@@ -73,7 +75,7 @@ export default async function SettingsPage() {
     serverZone(),
     getFormat(),
   ])
-  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, lastRetentionRun, channelStats, requestTiers, assistantSources] = await Promise.all([
+  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, lastRetentionRun, channelStats, requestTiers, assistantSources, apiTokens] = await Promise.all([
     getRewindSeasonDataPreparedAt(season.seasonYear),
     checkRewindInfra(),
     getRewindLibraries(),
@@ -85,6 +87,7 @@ export default async function SettingsPage() {
     getChannelStatsSettings(),
     getRequestTierSettings(),
     getAssistantSources(),
+    listOwnApiTokens(),
   ])
   // Nothing before a first save, so a read-only section shows no empty footer
   const saved = (id: keyof typeof audit) => audit[id] && <LastSaved id={id} meta={audit[id]} />
@@ -186,6 +189,7 @@ export default async function SettingsPage() {
         </SettingsGroup>
         <SettingsGroup id="system">
           <TimeZoneSection timeZone={{ configured: settings.config.timezone, effective: zone }} footerMeta={saved("timeZone")} />
+          <ApiAccessSection tokens={apiTokens} endpoint={`${baseUrl}/api/mcp`} />
           <PrivacySection lastRun={lastRetentionRun} />
           <SystemSection
             baseUrl={baseUrl}

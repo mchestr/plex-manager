@@ -111,6 +111,9 @@ const ACTION_BRAND = Symbol.for("__pmAction")
 /** Carries what an action requires of its caller: its auth level, `permission:<name>` for a permission action. */
 const ACTION_AUTH = Symbol.for("__pmActionAuth")
 
+/** Carries an action's input schema, which the MCP endpoint turns into a tool's JSON Schema. */
+const ACTION_INPUT = Symbol.for("__pmActionInput")
+
 /**
  * Brands `fn` with a non-enumerable {@link ACTION_BRAND}; `formAction` brands its adapters too.
  * `auth` records the requirement, which `actionAuthOf` reads back.
@@ -124,13 +127,22 @@ export function brandAction<F extends (...args: never[]) => unknown>(fn: F, auth
 /**
  * The requirement an action declared (`public`, `member`, `admin`, `setup` or
  * `permission:<name>`), or undefined for a function that is not one.
- *
- * @internal
  */
 export function actionAuthOf(value: unknown): string | undefined {
   if (typeof value !== "function") return undefined
   const auth = (value as unknown as Record<symbol, unknown>)[ACTION_AUTH]
   return typeof auth === "string" ? auth : undefined
+}
+
+/**
+ * The input schema an action declared, null for an action that takes no
+ * input, or undefined for a function that is not one built by {@link defineAction}.
+ */
+export function actionInputOf(value: unknown): z.ZodType | null | undefined {
+  if (typeof value !== "function") return undefined
+  const record = value as unknown as Record<symbol, unknown>
+  if (!(ACTION_INPUT in record)) return undefined
+  return (record[ACTION_INPUT] as z.ZodType | null) ?? null
 }
 
 /**
@@ -235,6 +247,7 @@ export function defineAction<
       return toActionError(error, def.fallbackError ?? DEFAULT_FALLBACK)
     }
   }
+  Object.defineProperty(action, ACTION_INPUT, { value: def.input ?? null, enumerable: false })
   return brandAction(action, def.auth === "permission" ? `permission:${def.permission}` : def.auth) as Action<S, T, C>
 }
 

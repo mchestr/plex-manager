@@ -42,6 +42,7 @@ export function settingsNavItems(status: SettingsNavStatuses): SettingsNavItem[]
     { id: "channel-stats", label: "Channel stats", group: "discord" },
     { id: "rewind", label: "Rewind", group: "rewind", status: status.rewind },
     { id: "time-zone", label: "Time zone", group: "system" },
+    { id: "api-access", label: "API access", group: "system" },
     { id: "privacy", label: "Privacy", group: "system" },
     { id: "system", label: "System information", group: "system" },
   ]

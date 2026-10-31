@@ -37,7 +37,7 @@ A Next.js-based Plex management platform that combines server management tools, 
   - Session: `getSession()` from `@/lib/data/session`, never `getServerSession(authOptions)`; active service rows: `getActiveService(kind)` from `@/lib/data/active-service`. Both are React `cache()`d per request
   - Shared, non-secret data uses `'use cache'` with `cacheTag` and `cacheLife` (`getAppSettings()` tag `app-settings`, plan names), and the actions that change it call `updateTag(tag)`. The cache is per process, so with several `web` containers another container serves a cached value until its `cacheLife` revalidates; data that must show at once on every container (announcements) is read per request. Readers the bot or jobs also call go through `cachedOrDirect` (`@/lib/utils/use-cache`), and a database read calls `notDuringBuild()` first, since the Docker build has no database
   - Never put a row with `ENCRYPTED_FIELDS`, the session or anything viewer-specific inside `'use cache'` (`__tests__/security/use-cache-no-secrets.test.ts`)
-  - An action that revalidates already refreshes the page; where the client needs a refresh, the action calls `refresh()` from `next/cache` instead of `router.refresh()`
+  - An action that revalidates already refreshes the page; where the client needs a refresh, the action calls `refreshView()` from `@/lib/actions/invalidate` instead of `router.refresh()`. Actions expire a tag with `expireTag()` from the same module, never `updateTag()` or `refresh()` directly (ESLint): `/api/mcp` runs actions from a route handler, where those two throw
 
 ### File Organization
 ```
@@ -91,6 +91,7 @@ lib/                    # Utilities, helpers, business logic
 ├── llm/               # LLM facade (generateStructured, chatWithTools), provider registry, model table, usage
 ├── inactivity/        # Last seen from Tautulli and the opt-in inactivity sweep: rules, run, schedule (docs/inactive-members.md)
 ├── locks/             # LeaseLock and LeasePoller (database or Redis leases)
+├── mcp/               # The MCP endpoint (/api/mcp): API tokens, the tool catalog from actions, loaders and assistant tools (docs/mcp.md)
 ├── members/           # Member service rule, access grant/revoke, offboarding and erase
 ├── permissions/       # Roles and permissions: isAdmin superuser, the Support role, hasPermission (docs/roles.md)
 ├── observability/     # Request id reader, /api/metrics sources and the Prometheus text writer
@@ -185,6 +186,7 @@ export const renameThing = memberAction({
 - Never return `error.message`; ESLint bans `error instanceof Error ? error.message : ...` in `actions/` and `app/api/`.
 - Route handlers validate params with `parseRouteParams` / `parseSearchParams` (`@/lib/actions/route`) and the schemas in `@/lib/validations/params`.
 - Every export of a `'use server'` module is an endpoint, so each is built by the helper (or `formAction`), which brands it; `__tests__/security/use-server-exports.test.ts` fails on a raw export. The admin and users action barrels are gone (ESLint bans them): import from the defining module.
+- Every action is also an MCP tool (`lib/mcp/action-tools.ts`, docs/mcp.md): a new file under `actions/` goes in `ACTION_MODULES` or `EXCLUDED_MODULES` (`lib/mcp/action-modules.ts`), and `npm run mcp:docs` refreshes the tool descriptions from the actions' JSDoc.
 - Server-side reads are loaders, not actions: `lib/data/*` (`import 'server-only'`) start with `assertAdmin()` from `@/lib/admin`, which throws the `PM_FORBIDDEN` / `PM_UNAUTHENTICATED` digests the error boundaries render. A layout is not an authorisation boundary.
 
 ### Styling
@@ -967,6 +969,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - Deployment, environment variables and moving hosts: See `docs/deployment.md`, `docs/environment.md` and `docs/domain-move.md`
 - Operations (backup, restore, upgrades, encryption keys, worker containers, metrics): See `docs/operations.md`
 - Roles and permissions (Support role, assistant tool gate): See `docs/roles.md`
+- MCP endpoint (API tokens, connecting Claude Code, the tool catalog): See `docs/mcp.md`
 - Affiliate invites (tiers, slots, server cap, the switch): See `docs/affiliate-invites.md`
 - Inactive members (last seen from Tautulli, the inactivity sweep and its safety rules): See `docs/inactive-members.md`
 - Audit log (who can read it, categories, what Support sees): See `docs/roles.md` and `docs/privacy.md`

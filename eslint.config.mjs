@@ -123,6 +123,30 @@ export default defineConfig([
     },
   },
   {
+    // An action also runs from /api/mcp, a route handler, where updateTag()
+    // and refresh() throw: actions use expireTag() and refreshView()
+    // from lib/actions/invalidate.ts. Repeats the bans above, since this
+    // block's setting replaces theirs for actions/.
+    files: ["actions/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            ...chartImportBans,
+            ...barrelImportBans,
+            {
+              name: "next/cache",
+              importNames: ["updateTag", "refresh"],
+              message: "Use expireTag() or refreshView() from @/lib/actions/invalidate, which also work in an MCP tool call.",
+            },
+          ],
+          patterns: chartPatternBans,
+        },
+      ],
+    },
+  },
+  {
     // CLAUDE.md's file size limits (BP-30, P11.21): components and actions
     // fail above 300 lines, lib and hooks warn above 150. A cohesive file
     // that must stay whole carries a file-level `/* eslint max-lines: ... */`

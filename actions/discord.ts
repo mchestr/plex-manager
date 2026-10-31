@@ -1,7 +1,8 @@
 "use server"
 
-import { revalidatePath, updateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 
+import { expireTag } from "@/lib/actions/invalidate"
 import { adminAction, memberAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { clearDiscordRoleForUser, syncDiscordRoleConnection } from "@/lib/discord/integration"
@@ -118,7 +119,7 @@ export const updateDiscordIntegrationSettings = adminAction({
     }
 
     // The Discord section's status follows the switches
-    updateTag(CONNECTION_HEALTH_TAG)
+    expireTag(CONNECTION_HEALTH_TAG)
     revalidatePath("/admin/settings")
     revalidatePath("/discord/link")
     return ok(null)

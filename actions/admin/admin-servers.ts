@@ -15,9 +15,10 @@
  * turns the affiliate switch off (`turnOffForServerChange`).
  */
 
-import { revalidatePath, updateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
+import { expireTag } from "@/lib/actions/invalidate"
 import { adminAction } from "@/lib/actions/define-action"
 import { ok } from "@/lib/actions/result"
 import { turnOffForServerChange } from "@/lib/affiliates/switch"
@@ -41,8 +42,8 @@ function serviceUpdate<K extends ServiceKind>(kind: K, fallbackError: string) {
       const result = await saveServiceConnection(kind, input, { actor: userId, section: kind })
       if (result.success) {
         // The settings page re-renders and the cached health checks run again
-        updateTag(CONNECTION_HEALTH_TAG)
-        if (kind === "plex" || kind === "jellyfin") updateTag(APP_SETTINGS_TAG)
+        expireTag(CONNECTION_HEALTH_TAG)
+        if (kind === "plex" || kind === "jellyfin") expireTag(APP_SETTINGS_TAG)
         // A library key can name a different library on another server. The switch
         // already reads as off on a mismatch, so a failure here does not fail the save
         if (kind === "plex") await turnOffForServerChange(userId).catch((error: unknown) => logger.error("affiliate.server_change_off_failed", error))

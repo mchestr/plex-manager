@@ -10,6 +10,7 @@ import { getServerSession } from "next-auth"
 
 import { assertAdmin, getAdminGate } from "@/lib/admin"
 import { getSession } from "@/lib/data/session"
+import { runAsPrincipal } from "@/lib/mcp/principal"
 
 type Memos = { sessionTestMemos?: Array<Map<string, unknown>> }
 
@@ -68,5 +69,12 @@ describe("getSession", () => {
 
     await expect(getAdminGate()).resolves.toEqual({ ok: false, reason: "unauthenticated" })
     expect(session).toHaveBeenCalledTimes(2)
+  })
+
+  it("gives an MCP tool call its token owner's session without reading a cookie", async () => {
+    const owner = { user: { id: "admin-2", isAdmin: true }, expires: "" }
+
+    await expect(runAsPrincipal(owner, () => getAdminGate())).resolves.toEqual({ ok: true, session: owner })
+    expect(session).not.toHaveBeenCalled()
   })
 })

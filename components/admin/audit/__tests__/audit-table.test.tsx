@@ -100,6 +100,7 @@ describe("AuditTable", () => {
       "Billing",
       "Rewind",
       "Assistant",
+      "API access",
       "Discord",
       "Announcements",
       "Job queues",

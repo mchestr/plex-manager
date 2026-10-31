@@ -57,6 +57,8 @@ describe("eventLabel and eventCategory", () => {
     [AuditEventType.SESSIONS_REVOKED, "Signed out everywhere", "sessions"],
     [AuditEventType.AUDIT_LOG_VIEWED, "Audit log opened", "reads"],
     [AuditEventType.MEMBER_CONTENT_VIEWED, "Member's content opened", "reads"],
+    [AuditEventType.MCP_TOOL_CALLED, "Tool used through MCP", "api"],
+    [AuditEventType.API_TOKEN_CREATED, "MCP token made", "api"],
     // Retired, but stored rows still carry it
     [AuditEventType.LLM_PROVIDER_CHANGED, "LLM provider changed", "settings"],
   ])("labels %s", (type, label, category) => {

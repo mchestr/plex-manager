@@ -13,6 +13,7 @@
  * | `billing`       | Subscriptions, exemptions and failed Stripe events                            |
  * | `rewind`        | Shares, hidden titles, prompts, regeneration and the season console           |
  * | `assistant`     | Assistant tool calls, refusals and sources                                    |
+ * | `api`           | Personal MCP tokens and the tool calls made with them                         |
  * | `discord`       | Discord links, refused commands and the bot settings                          |
  * | `announcements` | Announcements                                                                 |
  * | `jobs`          | The job queues                                                                |
@@ -39,6 +40,7 @@ export const AUDIT_CATEGORIES = [
   "billing",
   "rewind",
   "assistant",
+  "api",
   "discord",
   "announcements",
   "jobs",
@@ -61,6 +63,7 @@ export const CATEGORY_LABELS: Record<AuditCategory, string> = {
   billing: "Billing",
   rewind: "Rewind",
   assistant: "Assistant",
+  api: "API access",
   discord: "Discord",
   announcements: "Announcements",
   jobs: "Job queues",
@@ -139,6 +142,10 @@ const AUDIT_EVENTS: Record<AuditEventName, EventWords> = {
   ASSISTANT_TOOL_DENIED: { label: "Assistant tool refused", category: "assistant" },
   ASSISTANT_MCP_CALL: { label: "Assistant MCP tool used", category: "assistant" },
   ASSISTANT_SOURCE_CHANGED: { label: "Assistant source changed", category: "assistant" },
+
+  API_TOKEN_CREATED: { label: "MCP token made", category: "api" },
+  API_TOKEN_REVOKED: { label: "MCP token revoked", category: "api" },
+  MCP_TOOL_CALLED: { label: "Tool used through MCP", category: "api" },
 
   DISCORD_ACCOUNT_LINKED: { label: "Discord account linked", category: "discord" },
   DISCORD_ACCOUNT_UNLINKED: { label: "Discord account unlinked", category: "discord" },

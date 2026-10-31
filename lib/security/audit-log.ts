@@ -33,6 +33,14 @@ export enum AuditEventType {
   // the tool name, call id and (for a refusal) the reason, never arguments or output.
   ASSISTANT_TOOL_CALLED = "ASSISTANT_TOOL_CALLED",
   ASSISTANT_TOOL_DENIED = "ASSISTANT_TOOL_DENIED",
+  // An MCP client ran a tool with a personal API token (/api/mcp). Details
+  // carry the tool, where it comes from, the token's row id (credentialId) and
+  // whether it succeeded, never arguments or output.
+  MCP_TOOL_CALLED = "MCP_TOOL_CALLED",
+  // An admin made or revoked a personal API token. Details carry its row id
+  // (credentialId) and, on create, its expiry option; never the token.
+  API_TOKEN_CREATED = "API_TOKEN_CREATED",
+  API_TOKEN_REVOKED = "API_TOKEN_REVOKED",
   USER_CREATED = "USER_CREATED",
   // Every session of a user was ended (User.sessionVersion bumped). Details carry
   // the reason, such as "unshared", "demoted", "disabled" or "subscription_revoked".

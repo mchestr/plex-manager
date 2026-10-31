@@ -1,8 +1,8 @@
 "use server"
 
-import { refresh } from "next/cache"
 import { z } from "zod"
 
+import { refreshView } from "@/lib/actions/invalidate"
 import { permissionAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionResult } from "@/lib/actions/result"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
@@ -92,7 +92,7 @@ export const chatWithAdminBot = permissionAction({
       })
       if (!stored) return fail("NOT_FOUND", GONE)
       // The history lists the conversation first
-      refresh()
+      refreshView()
     }
     return ok({ message: result.message, conversationId: result.conversationId })
   },

@@ -13,9 +13,10 @@
  * `CONFIG_CHANGED` with the actor `setup` during the first run.
  */
 
-import { revalidatePath, updateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
+import { expireTag } from "@/lib/actions/invalidate"
 import { setupAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionErrorCode, type ActionResult } from "@/lib/actions/result"
 import { testLLMProviderConnection } from "@/lib/connections/llm-provider"
@@ -55,7 +56,7 @@ function serviceSave<K extends ServiceKind>(kind: K, step: SetupStepId) {
       if (result.success) {
         revalidatePath("/setup")
         // The server name falls back to the Plex server's (P11.19)
-        if (kind === "plex") updateTag(APP_SETTINGS_TAG)
+        if (kind === "plex") expireTag(APP_SETTINGS_TAG)
       }
       return result
     },

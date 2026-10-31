@@ -1,7 +1,6 @@
 "use server"
 
-import { updateTag } from "next/cache"
-
+import { expireTag } from "@/lib/actions/invalidate"
 import { adminAction } from "@/lib/actions/define-action"
 import { ok } from "@/lib/actions/result"
 import { getSettingsHealth } from "@/lib/settings/connection-health"
@@ -16,7 +15,7 @@ export const recheckConnections = adminAction({
   rateLimit: { name: "admin" },
   fallbackError: "Could not check the connections",
   handler: async () => {
-    updateTag(CONNECTION_HEALTH_TAG)
+    expireTag(CONNECTION_HEALTH_TAG)
     return ok(await getSettingsHealth())
   },
 })
