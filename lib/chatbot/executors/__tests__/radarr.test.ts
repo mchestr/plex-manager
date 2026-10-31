@@ -94,9 +94,19 @@ describe("why didn't Heat download?", () => {
         size: 8589934592,
         sizeleft: 0,
         timeleft: "00:00:00",
-        statusMessage: "Not an upgrade for existing movie file. Existing quality: Bluray-1080p. New Quality WEBDL-1080p.",
+        downloadClient: "qBittorrent",
+        statusMessage:
+          "One or more movies expected in this release were not imported or missing | Dune.Part.Two.2024.1080p.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv: Not an upgrade for existing movie file. Existing quality: Bluray-1080p. New Quality WEBDL-1080p.",
       },
     ])
+  })
+
+  it("refuses a movieId it cannot read rather than answering for the whole server", async () => {
+    serve({})
+
+    expect(await executeRadarrTool("get_radarr_queue", { movieId: "fourteen" })).toBe("Error: 'movieId' must be a whole number of at least 1, or left out")
+    expect(await executeRadarrTool("get_radarr_history", { movieId: 0 })).toBe("Error: 'movieId' must be a whole number of at least 1, or left out")
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 
   it("filters the calendar by movieId, with release dates as days", async () => {
@@ -141,10 +151,10 @@ describe("why didn't Heat download?", () => {
 })
 
 describe("in Discord", () => {
-  it("keeps the queue's allowlisted fields and drops download ids, clients, paths and status messages", async () => {
+  it("keeps the queue's allowlisted fields, with why an import is blocked, and drops download ids, clients and paths", async () => {
     serve({ "/api/v3/queue": queue })
 
-    const scrubbed = JSON.parse(scrubForDiscord("get_radarr_queue", await executeRadarrTool("get_radarr_queue", {})))
+    const scrubbed = JSON.parse(scrubForDiscord("get_radarr_queue", await executeRadarrTool("get_radarr_queue", {}, "user-1", "discord")))
 
     expect(scrubbed.records[1]).toEqual({
       movie: { title: "Dune: Part Two" },
@@ -156,8 +166,18 @@ describe("in Discord", () => {
       size: 8589934592,
       sizeleft: 0,
       timeleft: "00:00:00",
+      statusMessage: expect.stringMatching(/^One or more movies expected in this release were not imported or missing \| Dune\..+\.mkv: Not an upgrade for existing movie file/),
     })
     expect(JSON.stringify(scrubbed)).not.toMatch(/qBittorrent|TorrentLeech|downloads|0123456789ABCDEF/)
+  })
+
+  it("cuts the paths a queue item's import warning names to the folder's own name", async () => {
+    serve({ "/api/v3/queue": paged(range(8, radarrQueueItem)) })
+
+    const scrubbed = JSON.parse(scrubForDiscord("get_radarr_queue", await executeRadarrTool("get_radarr_queue", {}, "user-1", "discord")))
+
+    expect(scrubbed.records[4].statusMessage).toBe(`No files found are eligible for import in …/${scrubbed.records[4].title}`)
+    expect(JSON.stringify(scrubbed)).not.toMatch(/\/data|downloads/)
   })
 
   it("keeps the history's event, release, quality and movie title", async () => {
@@ -176,7 +196,7 @@ describe("in Discord", () => {
 })
 
 describe("the library", () => {
-  it("lists a page of movies sorted by title, with ids, file and size", async () => {
+  it("lists a page of movies sorted by title, with ids, file, quality and size", async () => {
     serve({ "/api/v3/movie": range(120, radarrMovie) })
 
     const output = await run("get_radarr_movies", { pageSize: 1000 })
@@ -192,10 +212,15 @@ describe("the library", () => {
       status: "released",
       monitored: true,
       hasFile: true,
+      quality: "WEBDL-2160p",
       sizeOnDisk: 64424509440,
       added: "2024-05-20T09:30:00Z",
       qualityProfileId: 2,
     })
+    // A movie with no file has no quality
+    const withoutFile = output.records.filter((movie: { hasFile: boolean }) => !movie.hasFile)
+    expect(withoutFile.length).toBeGreaterThan(0)
+    expect(withoutFile.map((movie: { quality?: string }) => movie.quality)).toEqual(withoutFile.map(() => undefined))
   })
 
   it("finds movies whose title contains the search", async () => {
@@ -210,12 +235,12 @@ describe("the library", () => {
   })
 
   it("drops images and keeps five alternate titles in a movie's details, with its file", async () => {
-    serve({ "/api/v3/movie/1": radarrMovie(0) })
+    serve({ "/api/v3/movie/2": radarrMovie(1) })
 
-    const output = await run("get_radarr_movie_details", { movieId: 1 })
+    const output = await run("get_radarr_movie_details", { movieId: 2 })
 
     expect(output.images).toBeUndefined()
-    expect(output.alternateTitles.map((alternate: { title: string }) => alternate.title)).toEqual(range(5, (n) => `${movieTitle(0)} (alternate ${n})`))
+    expect(output.alternateTitles.map((alternate: { title: string }) => alternate.title)).toEqual(range(5, (n) => `${movieTitle(1)} (alternate ${n})`))
     expect(output.alternateTitleCount).toBe(20)
     expect(output.movieFile.mediaInfo.videoDynamicRangeType).toBe("DV HDR10Plus")
   })
@@ -260,12 +285,23 @@ describe("get_radarr_wanted_missing", () => {
     expect(output.showing).toBe("showing 50 of 5000; pass a movie (movieId or movieName)")
   })
 
-  it("filters to a movie from the latest 150", async () => {
-    serve({ "/api/v3/wanted/missing": paged(range(150, (i) => ({ ...radarrMovie(i), id: 1 + (i % 2) })), 5000) })
+  it("finds a movie among the latest 150, and says how to check one past them", async () => {
+    serve({ "/api/v3/wanted/missing": paged(range(150, radarrMovie), 5000) })
 
-    const output = await run("get_radarr_wanted_missing", { movieId: 2 })
+    const found = await run("get_radarr_wanted_missing", { movieId: 2 })
+    const past = await run("get_radarr_wanted_missing", { movieId: 2999 })
 
-    expect(output.showing).toBe("showing 20 of the 75 for this title, from the latest 150 of 5000; pass a pageSize up to 50")
+    expect(found.records.map((movie: { id: number }) => movie.id)).toEqual([2])
+    expect(past.records).toEqual([])
+    expect(past.showing).toBe(
+      "showing 0 for this title, from the latest 150 of 5000; if it is not among them, check the movie itself with get_radarr_movie_details (monitored, hasFile, isAvailable)"
+    )
+  })
+
+  it("needs no hint when the latest missing movies are all there are", async () => {
+    serve({ "/api/v3/wanted/missing": paged(range(40, radarrMovie)) })
+
+    expect((await run("get_radarr_wanted_missing", { movieId: 2 })).showing).toBe("showing 1 for this title, from the latest 40 of 40")
   })
 })
 
@@ -328,10 +364,14 @@ describe("on a large server (3,000 movies, long titles), every reply fits in a t
   it.each([
     [{}, 20],
     [{ pageSize: 1000 }, 50],
-    [{ movieId: 1, pageSize: 1000 }, 50],
   ])("get_radarr_wanted_missing %j", async (args, count) => {
     serve({ "/api/v3/wanted/missing": paged(range(150, (i) => ({ ...radarrMovie(i), id: 1 })), 5000) })
     expect((await fits("get_radarr_wanted_missing", args)).records).toHaveLength(count)
+  })
+
+  it("get_radarr_wanted_missing for a movie, with every one of the latest 150 its own", async () => {
+    serve({ "/api/v3/wanted/missing": paged(range(150, (i) => ({ ...radarrMovie(i), id: 1 })), 5000) })
+    expect((await fits("get_radarr_wanted_missing", { movieId: 1, pageSize: 1000 })).records.length).toBeGreaterThan(50)
   })
 
   it("search_radarr_movies", async () => {

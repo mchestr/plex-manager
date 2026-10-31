@@ -117,10 +117,59 @@ describe("why didn't Severance download?", () => {
     })
   })
 
+  it("says why a season pack's import is blocked: the summary, then each file and its errors", async () => {
+    // Sonarr's CompletedDownloadService: a summary with no messages, then one entry per file not imported
+    const blocked = {
+      ...queue.records[0],
+      title: "Severance.S02.1080p.WEB.H264",
+      trackedDownloadStatus: "warning",
+      trackedDownloadState: "importBlocked",
+      downloadClient: "SABnzbd",
+      added: "2027-01-12T20:00:00Z",
+      statusMessages: [
+        { title: "One or more episodes expected in this release were not imported or missing from the release", messages: [] },
+        { title: "Severance.S02E09.1080p.WEB.H264.mkv", messages: ["Not an upgrade for existing episode file(s). Existing quality: WEBDL-1080p. New Quality WEBDL-1080p."] },
+      ],
+    }
+    serve({ "/api/v3/queue": { ...queue, totalRecords: 1, records: [blocked] } })
+
+    const [item] = (await run("get_sonarr_queue", { seriesId: 12 })).records
+
+    expect(item).toMatchObject({ trackedDownloadState: "importBlocked", downloadClient: "SABnzbd", added: "2027-01-12T20:00:00Z" })
+    expect(item.statusMessage).toBe(
+      "One or more episodes expected in this release were not imported or missing from the release | Severance.S02E09.1080p.WEB.H264.mkv: Not an upgrade for existing episode file(s). Existing quality: WEBDL-1080p. New Quality WEBDL-1080p."
+    )
+  })
+
   it("names a series that is not in the library", async () => {
     serve({ "/api/v3/series": library })
 
     expect(await run("get_sonarr_history", { seriesName: "Andor" })).toEqual({ error: 'Series "Andor" not found in Sonarr library' })
+  })
+
+  it("refuses an id it cannot read rather than answering for the whole server", async () => {
+    serve({})
+
+    for (const [toolName, args, error] of [
+      ["get_sonarr_queue", { seriesId: 0 }, "Error: 'seriesId' must be a whole number of at least 1, or left out"],
+      ["get_sonarr_wanted_missing", { seriesId: 1.5 }, "Error: 'seriesId' must be a whole number of at least 1, or left out"],
+      ["get_sonarr_history", { episodeId: -4 }, "Error: 'episodeId' must be a whole number of at least 1, or left out"],
+      ["get_sonarr_episodes", { seriesId: 12, seasonNumber: "two" }, "Error: 'seasonNumber' must be a whole number of at least 0, or left out"],
+      ["get_sonarr_calendar", { seriesName: { title: "Severance" } }, "Error: 'seriesName' must be text, or left out"],
+      ["get_sonarr_queue", { seasonNumber: 2 }, "Error: 'seasonNumber' needs a series (seriesId or seriesName)"],
+    ] as const) {
+      expect(await executeSonarrTool(toolName, args)).toBe(error)
+    }
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it("falls back on seriesName when the seriesId cannot be read, and reads a number as a title", async () => {
+    serve({ "/api/v3/series": [...library, { id: 40, title: "1883" }], "/api/v3/history/series": [] })
+
+    await run("get_sonarr_history", { seriesId: 0, seriesName: "Severance" })
+    await run("get_sonarr_history", { seriesName: 1883 })
+
+    expect([query(1).get("seriesId"), query(3).get("seriesId")]).toEqual(["12", "40"])
   })
 
   it("picks the series whose title is the name over one that only contains it", async () => {
@@ -146,10 +195,10 @@ it("reports the whole queue's total in the status tool", async () => {
 })
 
 describe("in Discord", () => {
-  it("keeps the queue's allowlisted fields and drops download paths, ids and status messages", async () => {
+  it("keeps the queue's allowlisted fields, with why an import is blocked, and drops download paths, clients and ids", async () => {
     serve({ "/api/v3/queue": paged(range(8, sonarrQueueItem)) })
 
-    const scrubbed = JSON.parse(scrubForDiscord("get_sonarr_queue", await executeSonarrTool("get_sonarr_queue", {})))
+    const scrubbed = JSON.parse(scrubForDiscord("get_sonarr_queue", await executeSonarrTool("get_sonarr_queue", {}, "user-1", "discord")))
 
     expect(scrubbed.showing).toBe("showing 8 of 8")
     expect(scrubbed.records[0]).toEqual({
@@ -165,8 +214,20 @@ describe("in Discord", () => {
       timeleft: "00:12:30",
       estimatedCompletionTime: "2026-10-31T15:12:30Z",
       errorMessage: "The download is stalled with no connections",
+      statusMessage: expect.stringMatching(/^One or more episodes expected in this release were not imported or missing from the release \| The\.Lord\.of\.the\.Rings\.\S+S01E1\.\S+\.mkv: Not an upgrade/),
     })
-    expect(JSON.stringify(scrubbed)).not.toMatch(/downloads|SABnzbd|NZBgeek|seriesId/)
+    // A warning that names the download's folder keeps only the folder's own name
+    expect(scrubbed.records[4].statusMessage).toBe(`No files found are eligible for import in …/${scrubbed.records[4].title}`)
+    expect(JSON.stringify(scrubbed)).not.toMatch(/downloads|SABnzbd|NZBgeek|seriesId|added/)
+  })
+
+  it("leaves the paths whole outside Discord", async () => {
+    serve({ "/api/v3/queue": paged(range(8, sonarrQueueItem)) })
+
+    const { records } = await run("get_sonarr_queue")
+
+    expect(records[4].statusMessage).toBe(`No files found are eligible for import in /data/downloads/complete/tv/${records[4].title}`)
+    expect(records[4]).toMatchObject({ downloadClient: "SABnzbd", added: "2026-10-31T14:00:00Z" })
   })
 
   it("keeps the history's event, release, quality, series and episode", async () => {
@@ -186,7 +247,7 @@ describe("in Discord", () => {
 })
 
 describe("the library", () => {
-  it("lists a page of series sorted by title, with ids, counts and size", async () => {
+  it("lists a page of series sorted by title, with ids, type, network, counts and size", async () => {
     serve({ "/api/v3/series": range(120, sonarrSeries) })
 
     const output = await run("get_sonarr_series")
@@ -201,6 +262,8 @@ describe("the library", () => {
       tvdbId: 300006,
       tmdbId: 60006,
       status: "ended",
+      seriesType: "standard",
+      network: "Prime Video",
       monitored: true,
       seasonCount: 8,
       episodeFileCount: 76,
@@ -227,6 +290,14 @@ describe("the library", () => {
 
     expect(output.records).toEqual([])
     expect(output.showing).toBe("showing 0 of 120 series, sorted by title (page 9 of 3); pass a page from 1 to 3")
+  })
+
+  it("holds at most 75 series a page", async () => {
+    serve({ "/api/v3/series": range(120, sonarrSeries) })
+
+    expect((await run("get_sonarr_series", { pageSize: 100 })).showing).toBe(
+      "showing 75 of 120 series, sorted by title (page 1 of 2); pass page 2 for the next 75, or pass search to find a title"
+    )
   })
 
   it("drops images and keeps five alternate titles in a series' details", async () => {
@@ -380,13 +451,58 @@ describe("get_sonarr_wanted_missing", () => {
     expect(output.showing).toBe("showing 50 of 5000; pass a series (seriesId or seriesName)")
   })
 
-  it("filters to a series from the latest 150", async () => {
+  it("returns every missing episode of a series among the latest 150, past any pageSize, and how to find older ones", async () => {
     serve({ "/api/v3/wanted/missing": paged(range(150, (i) => sonarrEpisode(i, { seriesIndex: i % 2 })), 5000) })
 
-    const output = await run("get_sonarr_wanted_missing", { seriesId: 2 })
+    const output = await run("get_sonarr_wanted_missing", { seriesId: 2, pageSize: 10 })
 
-    expect(output.records).toHaveLength(20)
-    expect(output.showing).toBe("showing 20 of the 75 for this title, from the latest 150 of 5000; pass a pageSize up to 50")
+    expect(query(0).get("pageSize")).toBe("50")
+    expect(output.records).toHaveLength(75)
+    expect(output.showing).toBe(
+      "showing 75 for this title, from the latest 150 of 5000; to find every missing one, list the series' episodes with get_sonarr_episodes: a monitored, aired episode with hasFile false is missing"
+    )
+  })
+
+  it("needs no hint when the latest missing episodes are all there are", async () => {
+    serve({ "/api/v3/wanted/missing": paged(range(40, (i) => sonarrEpisode(i, { seriesIndex: i % 2 }))) })
+
+    expect((await run("get_sonarr_wanted_missing", { seriesId: 2 })).showing).toBe("showing 20 for this title, from the latest 40 of 40")
+  })
+})
+
+describe("get_sonarr_queue for one series", () => {
+  // A complete-series pack: one queue item per episode, across eight seasons
+  const pack = paged(range(150, (i) => ({ ...sonarrQueueItem(i), seriesId: 1 })), 400)
+
+  it("keeps every item that fits, and offers a season when they do not all fit", async () => {
+    serve({ "/api/v3/queue": pack })
+
+    const output = await run("get_sonarr_queue", { seriesId: 1 })
+
+    expect(output.records.length).toBeGreaterThan(50)
+    expect(output.showing).toBe(`showing ${output.records.length} of the 150 for this title, from the latest 150 of 400; pass seasonNumber to see one season's items`)
+  })
+
+  it("filters to one season", async () => {
+    serve({ "/api/v3/queue": pack })
+
+    const output = await run("get_sonarr_queue", { seriesId: 1, seasonNumber: 3 })
+
+    expect(output.showing).toBe("showing 19 for this title, from the latest 150 of 400")
+    expect(new Set(output.records.map((item: { episode: { seasonNumber: number } }) => item.episode.seasonNumber))).toEqual(new Set([3]))
+  })
+})
+
+describe("get_sonarr_history for one series", () => {
+  it("offers an episode when it cannot show all of the series' history", async () => {
+    serve({ "/api/v3/history/series": range(340, sonarrHistory) })
+
+    expect((await run("get_sonarr_history", { seriesId: 1, pageSize: 50 })).showing).toBe(
+      "showing 50 of 340; pass an episodeId (from get_sonarr_episodes) for one episode's history"
+    )
+    expect((await run("get_sonarr_history", { seriesId: 1 })).showing).toBe(
+      "showing 20 of 340; pass a pageSize up to 50, or pass an episodeId (from get_sonarr_episodes) for one episode's history"
+    )
   })
 })
 
@@ -426,9 +542,13 @@ describe("on a large server (1,500 series, long titles), every reply fits in a t
     return JSON.parse(output)
   }
 
-  it.each([{}, { page: 15, pageSize: 1000 }, { search: "the" }])("get_sonarr_series %j", async (args) => {
+  it.each([
+    [{}, 50],
+    [{ page: 15, pageSize: 1000 }, 75],
+    [{ search: "the" }, 50],
+  ])("get_sonarr_series %j", async (args, count) => {
     serve({ "/api/v3/series": seriesLibrary })
-    expect((await fits("get_sonarr_series", args)).records.length).toBeGreaterThanOrEqual(50)
+    expect((await fits("get_sonarr_series", args)).records).toHaveLength(count)
   })
 
   it.each([{}, { pageSize: 1000 }, { seriesId: 1, pageSize: 1000 }])("get_sonarr_history %j", async (args) => {
@@ -436,9 +556,23 @@ describe("on a large server (1,500 series, long titles), every reply fits in a t
     expect((await fits("get_sonarr_history", args)).records.length).toBe("pageSize" in args ? 50 : 20)
   })
 
-  it.each([{}, { seriesId: 1 }])("get_sonarr_queue %j", async (args) => {
+  it.each([
+    [{}, 50],
+    [{ seriesId: 1, seasonNumber: 1 }, 19],
+  ])("get_sonarr_queue %j", async (args, count) => {
     serve({ "/api/v3/queue": paged(range(150, (i) => ({ ...sonarrQueueItem(i), seriesId: 1 })), 400) })
-    expect((await fits("get_sonarr_queue", args)).records).toHaveLength(50)
+    expect((await fits("get_sonarr_queue", args)).records).toHaveLength(count)
+  })
+
+  it("get_sonarr_queue for a series whose pack fills the latest 150 items", async () => {
+    serve({ "/api/v3/queue": paged(range(150, (i) => ({ ...sonarrQueueItem(i), seriesId: 1 })), 400) })
+    expect((await fits("get_sonarr_queue", { seriesId: 1 })).records.length).toBeGreaterThan(50)
+  })
+
+  it("get_sonarr_queue in Discord", async () => {
+    serve({ "/api/v3/queue": paged(range(150, (i) => ({ ...sonarrQueueItem(i), seriesId: 1 })), 400) })
+    const output = await executeSonarrTool("get_sonarr_queue", { seriesId: 1 }, "user-1", "discord")
+    expect(scrubForDiscord("get_sonarr_queue", withLocalInstants(output, "Asia/Kolkata")).length).toBeLessThanOrEqual(LIMIT)
   })
 
   it.each([{}, { seriesId: 1 }])("get_sonarr_calendar %j", async (args) => {
@@ -446,9 +580,19 @@ describe("on a large server (1,500 series, long titles), every reply fits in a t
     expect((await fits("get_sonarr_calendar", args)).records).toHaveLength(100)
   })
 
-  it.each([{}, { pageSize: 1000 }, { seriesId: 1, pageSize: 1000 }])("get_sonarr_wanted_missing %j", async (args) => {
+  it.each([
+    [{}, 20],
+    [{ pageSize: 1000 }, 50],
+  ])("get_sonarr_wanted_missing %j", async (args, count) => {
     serve({ "/api/v3/wanted/missing": paged(range(150, (i) => ({ ...sonarrEpisode(i), seriesId: 1 })), 5000) })
-    expect((await fits("get_sonarr_wanted_missing", args)).records.length).toBe("pageSize" in args ? 50 : 20)
+    expect((await fits("get_sonarr_wanted_missing", args)).records).toHaveLength(count)
+  })
+
+  it("get_sonarr_wanted_missing for a series whose every one of the latest 150 is missing", async () => {
+    serve({ "/api/v3/wanted/missing": paged(range(150, (i) => ({ ...sonarrEpisode(i), seriesId: 1 })), 5000) })
+    const output = await fits("get_sonarr_wanted_missing", { seriesId: 1 })
+    expect(output.records.length).toBeGreaterThan(100)
+    expect(output.showing).toMatch(/^showing \d+ of the 150 for this title, from the latest 150 of 5000; to find every missing one, list the series' episodes with get_sonarr_episodes/)
   })
 
   it.each([{}, { seasonNumber: 1 }, { page: 40 }])("get_sonarr_episodes of a daily show %j", async (args) => {

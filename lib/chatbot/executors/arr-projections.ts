@@ -36,8 +36,8 @@ export function day(value: string | undefined): string | undefined {
   return value !== undefined && /^\d{4}-\d{2}-\d{2}T/.test(value) ? value.slice(0, 10) : value
 }
 
-/** `{ quality: { quality: { name } } }`, as history and queue records carry it. */
-const quality = z.object({ quality: z.object({ name: text }).optional().catch(undefined) }).optional().catch(undefined)
+/** `{ quality: { quality: { name } } }`, as history and queue records and movie files carry it. */
+export const quality = z.object({ quality: z.object({ name: text }).optional().catch(undefined) }).optional().catch(undefined)
 
 /** The `data` fields of a history record that say why: a failure's message, a deletion's reason, a grab's indexer. */
 const historyData = z.object({ message: text, reason: text, indexer: text }).optional().catch(undefined)
@@ -58,7 +58,8 @@ export function historyOf(record: z.output<typeof historyShape>) {
   }
 }
 
-const statusMessages = z.array(z.object({ messages: z.array(z.string()).optional().catch(undefined) })).optional().catch(undefined)
+const statusEntry = z.object({ title: text, messages: z.array(z.string()).optional().catch(undefined) }).optional().catch(undefined)
+const statusMessages = z.array(statusEntry).optional().catch(undefined)
 
 /** The fields of a queue item both services share, read with {@link queueOf}. */
 export const queueFields = {
@@ -71,18 +72,49 @@ export const queueFields = {
   sizeleft: num,
   timeleft: text,
   estimatedCompletionTime: text,
+  added: text,
+  downloadClient: text,
   errorMessage: text,
   statusMessages,
 }
 const queueShape = z.object(queueFields)
 
 /**
- * A queue item's release, progress and state. `statusMessage` joins the
- * distinct `statusMessages` (why an import is blocked) into one line; it is
- * not on the Discord allowlist, since such messages can name download paths.
+ * A queue item's `statusMessages` (why its import is blocked) as one line.
+ * Sonarr and Radarr send a summary as a title with no messages ("One or more
+ * episodes expected in this release were not imported or missing from the
+ * release"), then one entry per file, titled with the file's name, whose
+ * messages are its errors; a warning about the whole download is titled with
+ * the release. Each entry reads as its title, "title: message; message", or
+ * its messages alone when the title is the release (`release`).
  */
-export function queueOf(item: z.output<typeof queueShape>) {
-  const messages = [...new Set((item.statusMessages ?? []).flatMap((entry) => entry.messages ?? []))]
+function statusLine(entries: z.output<typeof statusMessages>, release: string | undefined): string | undefined {
+  const lines = (entries ?? []).map((entry) => {
+    const messages = (entry?.messages ?? []).filter(Boolean).join("; ")
+    const title = entry?.title === release ? "" : (entry?.title ?? "")
+    return title && messages ? `${title}: ${messages}` : title || messages
+  })
+  const distinct = [...new Set(lines.filter((line) => line !== ""))]
+  return distinct.length > 0 ? distinct.join(" | ") : undefined
+}
+
+/** An absolute path (Unix, Windows or UNC) up to the first space, bracket, quote or bar. */
+const ABSOLUTE_PATH = /(?<=^|[\s[('"=])(?:[A-Za-z]:[\\/]|\\\\|\/)[^\s\]'"|]+/g
+
+/** `message` with each absolute path cut to its last part ("/data/downloads/tv/Show.S01" is "…/Show.S01"). */
+function withoutPaths(message: string): string {
+  return message.replace(ABSOLUTE_PATH, (path) => `…/${path.split(/[\\/]/).filter(Boolean).pop() ?? ""}`)
+}
+
+/**
+ * A queue item's release, progress, state and download client, with why it
+ * is stuck: `errorMessage` from the download client, `statusMessage` from the
+ * import. `pathless` (the Discord context, whose allowlist keeps both
+ * messages) cuts the paths they name to the last part, so no download path
+ * reaches Discord.
+ */
+export function queueOf(item: z.output<typeof queueShape>, pathless = false) {
+  const message = (value: string | undefined) => clip(pathless && value !== undefined ? withoutPaths(value) : value, MESSAGE_MAX)
   return {
     title: clip(item.title, RELEASE_MAX),
     quality: item.quality?.quality?.name,
@@ -93,8 +125,10 @@ export function queueOf(item: z.output<typeof queueShape>) {
     sizeleft: item.sizeleft,
     timeleft: item.timeleft,
     estimatedCompletionTime: item.estimatedCompletionTime,
-    errorMessage: clip(item.errorMessage, MESSAGE_MAX),
-    statusMessage: messages.length > 0 ? clip(messages.join(" | "), MESSAGE_MAX) : undefined,
+    added: item.added,
+    downloadClient: clip(item.downloadClient, TITLE_MAX),
+    errorMessage: message(item.errorMessage),
+    statusMessage: message(statusLine(item.statusMessages, item.title)),
   }
 }
 

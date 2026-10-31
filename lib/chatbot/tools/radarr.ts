@@ -112,8 +112,10 @@ export const RADARR_TOOLS: RegisteredTool[] = [
     // Server-wide download queue reflects what everyone on the server is
     // downloading — admin-only in the Discord context (Step 19).
     discordAdminOnly: true,
-    // Paged queue: keep title/status/progress/size + quality. Exclude
-    // downloadId, download client, indexer, and output/file paths.
+    // Paged queue: keep title/status/progress/size + quality, and why an item
+    // is stuck (errorMessage, statusMessage), whose paths the executor cuts to
+    // their last part in Discord. Exclude downloadId, download client,
+    // indexer, and output/file paths.
     discordFields: [
       "showing",
       "totalRecords",
@@ -127,12 +129,13 @@ export const RADARR_TOOLS: RegisteredTool[] = [
       "size",
       "sizeleft",
       "errorMessage",
+      "statusMessage",
       "quality",
     ],
     function: {
       name: "get_radarr_queue",
       description:
-        "Get the current download queue from Radarr, with each item's movie title, progress, state and any error or import problem (up to 50 items). Give a movie (movieId or movieName) to see only that movie's items: the latest 150 queue items are read and filtered to it. The reply's 'showing' line says how many items were returned out of the total.",
+        "Get the current download queue from Radarr, with each item's movie title, progress, state, download client, when it was added and any error or import problem (up to 50 items). Give a movie (movieId or movieName) to see only that movie's items: the latest 150 queue items are read and filtered to it. The reply's 'showing' line says how many items were returned out of the total.",
       parameters: { type: "object", properties: MOVIE_FILTER_PROPERTIES },
     },
   },
@@ -142,7 +145,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
     function: {
       name: "get_radarr_movies",
       description:
-        "List the movies in the Radarr library, sorted by title, 50 per page: each with its id (the movieId other Radarr tools take), tmdbId, status, whether it has a file and its size on disk. Pass search to find movies by title. The reply's 'showing' line gives the total and how to see the next page.",
+        "List the movies in the Radarr library, sorted by title, 50 per page: each with its id (the movieId other Radarr tools take), tmdbId, status, whether it has a file, the file's quality (such as Bluray-2160p) and its size on disk. Pass search to find movies by title. The reply's 'showing' line gives the total and how to see the next page.",
       parameters: {
         type: "object",
         properties: {
@@ -210,7 +213,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
     function: {
       name: "get_radarr_wanted_missing",
       description:
-        "Get missing movies that Radarr wants to download, latest release first, each with whether Radarr counts it as available yet and when it last searched for it. Give a movie (movieId or movieName) to check only that movie: the latest 150 missing movies are read and filtered to it. The reply's 'showing' line says how many movies were returned out of the total.",
+        "Get missing movies that Radarr wants to download, latest release first, each with whether Radarr counts it as available yet and when it last searched for it. Give a movie (movieId or movieName) to check only that movie: the latest 150 missing movies are read and filtered to it, and the reply says how to check a movie past them. The reply's 'showing' line says how many movies were returned out of the total.",
       parameters: {
         type: "object",
         properties: {

@@ -1,53 +1,26 @@
 import "server-only"
 
-import { getSonarrCalendar, getSonarrDiskSpace, getSonarrEpisodeById, getSonarrEpisodes, getSonarrHealth, getSonarrHistory, getSonarrQualityProfiles, getSonarrQueue, getSonarrRootFolders, getSonarrSeries, getSonarrSeriesById, getSonarrSystemStatus, getSonarrWantedMissing, searchSonarrSeries } from "@/lib/connections/sonarr"
-import { ARR_MAX_RECORDS } from "@/lib/connections/arr-client"
+import { getSonarrDiskSpace, getSonarrEpisodeById, getSonarrEpisodes, getSonarrHealth, getSonarrQualityProfiles, getSonarrQueue, getSonarrRootFolders, getSonarrSeries, getSonarrSeriesById, getSonarrSystemStatus, searchSonarrSeries } from "@/lib/connections/sonarr"
 import { getActiveService } from "@/lib/data/active-service"
-import { type SonarrParsed } from "@/lib/validations/sonarr"
 
-import { calendarRange, textArg, wholeArg, wholeOrNone } from "./arr-args"
-import { arrListOutput, arrLocalPage, arrPageOutput, arrSearchOutput, asList, byTitle, idForTitle, orElse, projectEach, titleMatches, type ArrFilter } from "./arr-output"
+import { optionalWhole, textArg, wholeArg, wholeOrNone } from "./arr-args"
+import { arrLocalPage, arrSearchOutput, asList, byTitle, projectEach, titleMatches } from "./arr-output"
 import { qualityProfile, rootFolder, trimDetails } from "./arr-projections"
-import { episodeRecord, episodesOutput, historyRecord, libraryIds, lookupItem, queueRecord, seriesItem, withSonarrId } from "./sonarr-projections"
+import { calendarOutput, historyOutput, queueOutput, wantedMissingOutput } from "./sonarr-lists"
+import { episodesOutput, libraryIds, lookupItem, seriesItem, withSonarrId } from "./sonarr-projections"
 
-/** Most records a reply holds, so it stays under the tool result limit (see arr-output). */
-const HISTORY_MAX = 50
-const QUEUE_MAX = 50
-const CALENDAR_MAX = 100
-const WANTED_MAX = 50
+/** Most series a page holds, so it stays under the tool result limit (see arr-output). */
 const SERIES_PAGE_SIZE = 50
-const SERIES_PAGE_SIZE_MAX = 100
+const SERIES_PAGE_SIZE_MAX = 75
 const PAGE_MAX = 10_000
 
 const NO_SERIES = "Error: 'seriesId' parameter is required and must be a number"
-const PASS_SERIES = "pass a series (seriesId or seriesName)"
-
-/**
- * The series a tool asks about: `seriesId`, or the library series whose title
- * matches `seriesName`. Neither given is every series; a name with no match
- * is an `error` to return as the tool output.
- */
-async function resolveSeries(config: SonarrParsed, args: Record<string, unknown>): Promise<{ seriesId?: number } | { error: string }> {
-  const seriesId = wholeOrNone(args.seriesId)
-  if (seriesId !== undefined) return { seriesId }
-  const name = textArg(args.seriesName)
-  if (name === undefined) return {}
-  const library = await getSonarrSeries(config)
-  if (!library.success) return { error: JSON.stringify({ error: library.error }) }
-  const id = idForTitle(library.data, name)
-  if (id === undefined) return { error: JSON.stringify({ error: `Series "${name}" not found in Sonarr library` }) }
-  return { seriesId: id }
-}
-
-function seriesFilter(seriesId: number | undefined): ArrFilter | undefined {
-  return seriesId === undefined ? undefined : { key: "seriesId", id: seriesId }
-}
 
 export async function executeSonarrTool(
   toolName: string,
   args: Record<string, unknown>,
   _userId?: string,
-  _context?: string
+  context?: string
 ): Promise<string> {
   const server = await getActiveService("sonarr")
   if (!server) return "Error: No active Sonarr server configured."
@@ -85,23 +58,10 @@ export async function executeSonarrTool(
       const results = projectEach(asList(lookup.data), lookupItem).map((result) => withSonarrId(result, ids))
       return arrSearchOutput(results, term, "tvdb:<tvdbId> for one series")
     }
-    case "get_sonarr_history": {
-      const pageSize = wholeArg(args.pageSize, 20, HISTORY_MAX)
-      const episodeId = wholeOrNone(args.episodeId)
-      const series = await resolveSeries(config, args)
-      if ("error" in series) return series.error
-      const more = orElse(pageSize < HISTORY_MAX && `pass a pageSize up to ${HISTORY_MAX}`, series.seriesId === undefined && episodeId === undefined && `${PASS_SERIES} or an episodeId`)
-      // A series reads /history/series and an episode /history?episodeId=, so Sonarr filters
-      return arrPageOutput(await getSonarrHistory(config, { pageSize, seriesId: series.seriesId, episodeId }), { project: historyRecord, limit: pageSize, more })
-    }
-    case "get_sonarr_queue": {
-      // The queue cannot filter by series on every Sonarr version: read up to the cap and filter here
-      const series = await resolveSeries(config, args)
-      if ("error" in series) return series.error
-      const limit = series.seriesId === undefined ? QUEUE_MAX : ARR_MAX_RECORDS
-      const more = series.seriesId === undefined ? `${PASS_SERIES} to see only its items` : undefined
-      return arrPageOutput(await getSonarrQueue(config, limit), { project: queueRecord, limit: QUEUE_MAX, more }, seriesFilter(series.seriesId))
-    }
+    case "get_sonarr_history":
+      return historyOutput(config, args)
+    case "get_sonarr_queue":
+      return queueOutput(config, args, context === "discord")
     case "get_sonarr_series": {
       const library = await getSonarrSeries(config)
       if (!library.success) return JSON.stringify({ error: library.error })
@@ -123,22 +83,10 @@ export async function executeSonarrTool(
       const result = await getSonarrSeriesById(config, seriesId)
       return JSON.stringify(result.success ? trimDetails(result.data) : { error: result.error })
     }
-    case "get_sonarr_calendar": {
-      const { start, end } = calendarRange(args)
-      const series = await resolveSeries(config, args)
-      if ("error" in series) return series.error
-      const more = `narrow the date range (startDate, endDate)${series.seriesId === undefined ? " or pass a series" : ""} to see the rest`
-      return arrListOutput(await getSonarrCalendar(config, start, end), { project: episodeRecord, limit: CALENDAR_MAX, more }, seriesFilter(series.seriesId))
-    }
-    case "get_sonarr_wanted_missing": {
-      const pageSize = wholeArg(args.pageSize, 20, WANTED_MAX)
-      // wanted/missing cannot filter by series: read up to the cap and filter here
-      const series = await resolveSeries(config, args)
-      if ("error" in series) return series.error
-      const limit = series.seriesId === undefined ? pageSize : ARR_MAX_RECORDS
-      const more = orElse(pageSize < WANTED_MAX && `pass a pageSize up to ${WANTED_MAX}`, series.seriesId === undefined && PASS_SERIES)
-      return arrPageOutput(await getSonarrWantedMissing(config, limit), { project: episodeRecord, limit: pageSize, more }, seriesFilter(series.seriesId))
-    }
+    case "get_sonarr_calendar":
+      return calendarOutput(config, args)
+    case "get_sonarr_wanted_missing":
+      return wantedMissingOutput(config, args)
     case "get_sonarr_root_folders": {
       const result = await getSonarrRootFolders(config)
       return JSON.stringify(result.success ? projectEach(asList(result.data), rootFolder) : { error: result.error })
@@ -150,10 +98,13 @@ export async function executeSonarrTool(
     case "get_sonarr_episodes": {
       const seriesId = wholeOrNone(args.seriesId)
       if (seriesId === undefined) return NO_SERIES
+      const season = optionalWhole(args, "seasonNumber", 0)
+      if ("error" in season) return season.error
+      const episode = optionalWhole(args, "episodeNumber", 0)
+      if ("error" in episode) return episode.error
       const result = await getSonarrEpisodes(config, seriesId)
       if (!result.success) return JSON.stringify({ error: result.error })
-      const query = { seasonNumber: wholeOrNone(args.seasonNumber, 0), episodeNumber: wholeOrNone(args.episodeNumber, 0), page: wholeArg(args.page, 1, PAGE_MAX) }
-      return episodesOutput(result.data, query)
+      return episodesOutput(result.data, { seasonNumber: season.value, episodeNumber: episode.value, page: wholeArg(args.page, 1, PAGE_MAX) })
     }
     case "get_sonarr_episode_details": {
       const episodeId = wholeOrNone(args.episodeId)

@@ -34,6 +34,10 @@
       "trackedDownloadState": "importBlocked",
       "statusMessages": [
         {
+          "title": "One or more movies expected in this release were not imported or missing",
+          "messages": []
+        },
+        {
           "title": "Dune.Part.Two.2024.1080p.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv",
           "messages": ["Not an upgrade for existing movie file. Existing quality: Bluray-1080p. New Quality WEBDL-1080p."]
         }

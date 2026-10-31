@@ -127,7 +127,33 @@ export function sonarrEpisode(i: number, { seriesIndex = i % 1500, season = 1 + 
   }
 }
 
-const statusMessages = [{ title: "One or more episodes expected in this release were not imported", messages: ["No files found are eligible for import in /data/downloads/complete/tv/release"] }]
+const IMPORT_SUMMARY = {
+  tv: "One or more episodes expected in this release were not imported or missing from the release",
+  movies: "One or more movies expected in this release were not imported or missing",
+}
+
+/**
+ * Why a download is stuck, as Sonarr's and Radarr's CompletedDownloadService
+ * words it. An import some files blocked (every 8th item) is a summary title
+ * with no messages, then each file not imported, titled with its name, with
+ * its errors; a warning about the whole download (every 8th, from the 4th) is
+ * titled with the release and names its folder.
+ */
+function importState(i: number, title: string, library: "tv" | "movies") {
+  const file = library === "tv" ? "episode file(s)" : "movie file"
+  if (i % 8 === 0) {
+    const statusMessages = [
+      { title: IMPORT_SUMMARY[library], messages: [] },
+      { title: `${title}.mkv`, messages: [`Not an upgrade for existing ${file}. Existing quality: WEBDL-2160p. New Quality WEBDL-2160p.`] },
+    ]
+    return { trackedDownloadStatus: "warning", trackedDownloadState: "importBlocked", statusMessages }
+  }
+  if (i % 8 === 4) {
+    const statusMessages = [{ title, messages: [`No files found are eligible for import in /data/downloads/complete/${library}/${title}`] }]
+    return { trackedDownloadStatus: "warning", trackedDownloadState: "importPending", statusMessages }
+  }
+  return { trackedDownloadStatus: "ok", trackedDownloadState: "downloading", statusMessages: [] }
+}
 
 /** A history record as `/api/v3/history` sends it with `includeSeries` and `includeEpisode`. */
 export function sonarrHistory(i: number) {
@@ -161,6 +187,7 @@ export function sonarrHistory(i: number) {
 /** A queue item as `/api/v3/queue` sends it with `includeSeries` and `includeEpisode`. */
 export function sonarrQueueItem(i: number) {
   const episode = sonarrEpisode(i, { withSeries: false })
+  const title = release(showTitle(i % 1500), `S0${episode.seasonNumber}E${episode.episodeNumber}`)
   return {
     id: 70000 + i,
     seriesId: episode.seriesId,
@@ -173,15 +200,13 @@ export function sonarrQueueItem(i: number) {
     customFormats,
     customFormatScore: 1500,
     size: 5368709120,
-    title: release(showTitle(i % 1500), `S0${episode.seasonNumber}E${episode.episodeNumber}`),
+    title,
     sizeleft: 2147483648,
     timeleft: "00:12:30",
     estimatedCompletionTime: "2026-10-31T15:12:30Z",
     added: "2026-10-31T14:00:00Z",
     status: "downloading",
-    trackedDownloadStatus: i % 4 === 0 ? "warning" : "ok",
-    trackedDownloadState: i % 4 === 0 ? "importBlocked" : "downloading",
-    statusMessages: i % 4 === 0 ? statusMessages : [],
+    ...importState(i, title, "tv"),
     errorMessage: i % 7 === 0 ? "The download is stalled with no connections" : undefined,
     downloadId: `SABnzbd_nzo_${i}abcdef`,
     protocol: "usenet",
@@ -199,9 +224,22 @@ export function sonarrLookup(i: number) {
   return { ...series, remotePoster: "https://artworks.thetvdb.com/banners/posters/1.jpg", folder: series.title }
 }
 
-/** A movie as `/api/v3/movie` sends it, with its file and media info. */
+/** A movie as `/api/v3/movie` sends it, with its file and media info when it has one (two in three do). */
 export function radarrMovie(i: number) {
   const title = movieTitle(i)
+  const movieFile = {
+    id: 80000 + i,
+    movieId: i + 1,
+    relativePath: `${title} (2024) WEBDL-2160p.mkv`,
+    path: `/data/media/movies/${title} (2024)/${title} (2024) WEBDL-2160p.mkv`,
+    size: 64424509440,
+    dateAdded: "2024-05-20T10:00:00Z",
+    languages: [{ id: 1, name: "English" }],
+    quality,
+    customFormats,
+    mediaInfo: { audioBitrate: 768000, audioChannels: 7.1, audioCodec: "EAC3 Atmos", audioLanguages: "eng/fre/ger/ita/spa", audioStreamCount: 5, videoBitDepth: 10, videoBitrate: 25000000, videoCodec: "x265", videoDynamicRangeType: "DV HDR10Plus", videoFps: 23.976, resolution: "3840x1600", runTime: "2:46:00", scanType: "Progressive", subtitles: "eng/fre/ger/ita/spa/por/dut/swe/nor/dan/fin" },
+    releaseGroup: "FLUX",
+  }
   return {
     id: i + 1,
     title,
@@ -242,19 +280,7 @@ export function radarrMovie(i: number) {
     tags: [3],
     added: "2024-05-20T09:30:00Z",
     ratings: { imdb: { votes: 500000, value: 8.6, type: "user" }, tmdb: { votes: 5000, value: 8.2, type: "user" }, rottenTomatoes: { votes: 0, value: 92, type: "user" } },
-    movieFile: {
-      id: 80000 + i,
-      movieId: i + 1,
-      relativePath: `${title} (2024) WEBDL-2160p.mkv`,
-      path: `/data/media/movies/${title} (2024)/${title} (2024) WEBDL-2160p.mkv`,
-      size: 64424509440,
-      dateAdded: "2024-05-20T10:00:00Z",
-      languages: [{ id: 1, name: "English" }],
-      quality,
-      customFormats,
-      mediaInfo: { audioBitrate: 768000, audioChannels: 7.1, audioCodec: "EAC3 Atmos", audioLanguages: "eng/fre/ger/ita/spa", audioStreamCount: 5, videoBitDepth: 10, videoBitrate: 25000000, videoCodec: "x265", videoDynamicRangeType: "DV HDR10Plus", videoFps: 23.976, resolution: "3840x1600", runTime: "2:46:00", scanType: "Progressive", subtitles: "eng/fre/ger/ita/spa/por/dut/swe/nor/dan/fin" },
-      releaseGroup: "FLUX",
-    },
+    ...(i % 3 !== 0 && { movieFile }),
     collection: { title: `${title} Collection`, tmdbId: 726871 },
     popularity: 250.5,
     statistics: { movieFileCount: i % 3 !== 0 ? 1 : 0, sizeOnDisk: 64424509440, releaseGroups: ["FLUX"] },
@@ -284,6 +310,7 @@ export function radarrHistory(i: number) {
 /** A queue item as `/api/v3/queue` sends it with `includeMovie`. */
 export function radarrQueueItem(i: number) {
   const movie = radarrMovie(i % 3000)
+  const title = release(movie.title, "2024")
   return {
     id: 40000 + i,
     movieId: movie.id,
@@ -293,15 +320,13 @@ export function radarrQueueItem(i: number) {
     customFormats,
     customFormatScore: 1500,
     size: 64424509440,
-    title: release(movie.title, "2024"),
+    title,
     sizeleft: 32212254720,
     timeleft: "01:40:00",
     estimatedCompletionTime: "2026-10-31T16:40:00Z",
     added: "2026-10-31T14:00:00Z",
     status: "downloading",
-    trackedDownloadStatus: i % 4 === 0 ? "warning" : "ok",
-    trackedDownloadState: i % 4 === 0 ? "importPending" : "downloading",
-    statusMessages: i % 4 === 0 ? statusMessages : [],
+    ...importState(i, title, "movies"),
     errorMessage: i % 7 === 0 ? "qBittorrent is reporting an error" : undefined,
     downloadId: `qbittorrent_${i}0123456789abcdef0123456789abcdef`,
     protocol: "torrent",

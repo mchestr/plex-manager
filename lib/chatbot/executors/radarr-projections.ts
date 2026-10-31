@@ -3,7 +3,7 @@ import "server-only"
 import { z } from "zod"
 
 import { asList, projectEach } from "./arr-output"
-import { clip, day, flag, historyFields, historyOf, known, num, OVERVIEW_MAX, queueFields, queueOf, text, TITLE_MAX } from "./arr-projections"
+import { clip, day, flag, historyFields, historyOf, known, num, OVERVIEW_MAX, quality, queueFields, queueOf, text, TITLE_MAX } from "./arr-projections"
 
 /**
  * Radarr records as the tools return them: ids the other tools take
@@ -20,7 +20,7 @@ function movieOf(movie: z.output<typeof movieRef>) {
   return movie && { title: clip(movie.title, TITLE_MAX), year: known(movie.year) }
 }
 
-/** A library movie: `id` is the movieId the other Radarr tools take. */
+/** A library movie: `id` is the movieId the other Radarr tools take; `quality` is its file's ("Bluray-2160p"). */
 export const movieItem = z
   .object({
     id: num,
@@ -32,18 +32,20 @@ export const movieItem = z
     status: text,
     monitored: flag,
     hasFile: flag,
+    movieFile: z.object({ quality }).optional().catch(undefined),
     sizeOnDisk: num,
     statistics: z.object({ sizeOnDisk: num }).optional().catch(undefined),
     added: text,
     qualityProfileId: num,
   })
-  .transform(({ statistics, ...movie }) => ({
+  .transform(({ statistics, movieFile, ...movie }) => ({
     ...movie,
     title: clip(movie.title, TITLE_MAX),
     year: known(movie.year),
     titleSlug: clip(movie.titleSlug, TITLE_MAX),
     tmdbId: known(movie.tmdbId),
     imdbId: movie.imdbId || undefined,
+    quality: movieFile?.quality?.quality?.name,
     sizeOnDisk: movie.sizeOnDisk ?? statistics?.sizeOnDisk,
   }))
 
@@ -88,10 +90,12 @@ export const historyRecord = z
   .object({ ...historyFields, movieId: num, movie: movieRef })
   .transform((record) => ({ ...historyOf(record), movieId: record.movieId, movie: movieOf(record.movie) }))
 
-/** A queue item: the release, its movie, progress and state. */
-export const queueRecord = z
-  .object({ ...queueFields, movieId: num, movie: movieRef })
-  .transform((item) => ({ movieId: item.movieId, movie: movieOf(item.movie), ...queueOf(item) }))
+const queueItem = z.object({ ...queueFields, movieId: num, movie: movieRef })
+
+/** A queue item: the release, its movie, progress and state; `pathless` in Discord (see `queueOf`). */
+export function queueRecord(pathless: boolean) {
+  return queueItem.transform((item) => ({ movieId: item.movieId, movie: movieOf(item.movie), ...queueOf(item, pathless) }))
+}
 
 /**
  * A calendar or wanted/missing movie: `id` is the movieId. Release dates are

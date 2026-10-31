@@ -28,9 +28,13 @@ function episodeOf(episode: z.output<typeof episodeRef>) {
 
 const statistics = z.object({ seasonCount: num, episodeFileCount: num, episodeCount: num, sizeOnDisk: num }).optional().catch(undefined)
 
-/** A library series: `id` is the seriesId; `episodeCount` counts the monitored aired episodes, `episodeFileCount` those on disk. */
+/**
+ * A library series: `id` is the seriesId; `seriesType` is standard, daily or
+ * anime; `episodeCount` counts the monitored aired episodes,
+ * `episodeFileCount` those on disk.
+ */
 export const seriesItem = z
-  .object({ id: num, title: text, year: num, titleSlug: text, tvdbId: num, tmdbId: num, status: text, monitored: flag, added: text, qualityProfileId: num, statistics })
+  .object({ id: num, title: text, year: num, titleSlug: text, tvdbId: num, tmdbId: num, status: text, seriesType: text, network: text, monitored: flag, added: text, qualityProfileId: num, statistics })
   .transform((series) => ({
     id: series.id,
     title: clip(series.title, TITLE_MAX),
@@ -39,6 +43,8 @@ export const seriesItem = z
     tvdbId: known(series.tvdbId),
     tmdbId: known(series.tmdbId),
     status: series.status,
+    seriesType: series.seriesType,
+    network: clip(series.network, TITLE_MAX),
     monitored: series.monitored,
     seasonCount: series.statistics?.seasonCount,
     episodeFileCount: series.statistics?.episodeFileCount,
@@ -96,10 +102,18 @@ export const historyRecord = z
     episode: episodeOf(record.episode),
   }))
 
-/** A queue item: the release, its series and episode, progress and state. */
-export const queueRecord = z
-  .object({ ...queueFields, seriesId: num, episodeId: num, series: seriesRef, episode: episodeRef })
-  .transform((item) => ({ seriesId: item.seriesId, episodeId: item.episodeId, series: seriesOf(item.series), episode: episodeOf(item.episode), ...queueOf(item) }))
+const queueItem = z.object({ ...queueFields, seriesId: num, episodeId: num, series: seriesRef, episode: episodeRef })
+
+/** A queue item: the release, its series and episode, progress and state; `pathless` in Discord (see `queueOf`). */
+export function queueRecord(pathless: boolean) {
+  return queueItem.transform((item) => ({
+    seriesId: item.seriesId,
+    episodeId: item.episodeId,
+    series: seriesOf(item.series),
+    episode: episodeOf(item.episode),
+    ...queueOf(item, pathless),
+  }))
+}
 
 /** A calendar or wanted/missing episode with its series: `id` is the episodeId. */
 export const episodeRecord = z

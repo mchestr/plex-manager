@@ -17,22 +17,27 @@ import { type ConnectionResult } from "@/types/connection"
  *
  * Endpoints that cannot filter by series or movie (queue, calendar, wanted)
  * are filtered here by `filter.key` (`seriesId`, `movieId`, or a movie's own
- * `id`), so a question about one title never reports another's records.
+ * `id`) and, for one season of a series, `filter.season`, so a question about
+ * one title never reports another's records.
  *
  * @module
  */
 
-/** Keep only records whose `key` field is `id`. */
+/** Keep only records whose `key` field is `id` and, given a `season`, whose season (their own, or their episode's) is it. */
 export interface ArrFilter {
   key: string
   id: number
+  season?: number
 }
 
 /** How a reply is cut: each record's projection, the most records it holds, and what to pass to see more. */
 interface ArrCut<T> {
   project: z.ZodType<T>
   limit: number
+  /** What to pass to see more, given when the reply does not show every record. */
   more?: string
+  /** With a filter, give `more` too when the records read stop short of the server's total, since matches may lie past them. */
+  morePastRead?: boolean
 }
 
 /** Most characters of records in one reply. */
@@ -42,8 +47,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
-function matching(records: unknown[], filter: ArrFilter): unknown[] {
-  return records.filter((record) => isRecord(record) && record[filter.key] === filter.id)
+function seasonOf(record: Record<string, unknown>): unknown {
+  return record.seasonNumber ?? (isRecord(record.episode) ? record.episode.seasonNumber : undefined)
+}
+
+function matching(records: unknown[], { key, id, season }: ArrFilter): unknown[] {
+  return records.filter((record) => isRecord(record) && record[key] === id && (season === undefined || seasonOf(record) === season))
 }
 
 /** `value` as a list of records; anything else is none. */
@@ -98,7 +107,8 @@ export function arrPageOutput<T>(result: ConnectionResult<ArrPage>, reply: ArrCu
   const line = filter
     ? `showing ${countOf(records.length, found.length)} for this title, from the latest ${read.length} of ${totalRecords}`
     : `showing ${records.length} of ${totalRecords}`
-  return JSON.stringify({ showing: showing(line, records.length < (filter ? found.length : totalRecords), reply.more), totalRecords, records })
+  const short = records.length < (filter ? found.length : totalRecords) || (filter !== undefined && reply.morePastRead === true && read.length < totalRecords)
+  return JSON.stringify({ showing: showing(line, short, reply.more), totalRecords, records })
 }
 
 /** An unpaged list (the calendar) as tool output, filtered to one title when `filter` is given. */

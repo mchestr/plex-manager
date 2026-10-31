@@ -120,8 +120,10 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     // Server-wide download queue reflects what everyone on the server is
     // downloading — admin-only in the Discord context (Step 19).
     discordAdminOnly: true,
-    // Paged queue: keep title/status/progress/size + quality. Exclude
-    // downloadId, download client, indexer, and output/file paths.
+    // Paged queue: keep title/status/progress/size + quality, and why an item
+    // is stuck (errorMessage, statusMessage), whose paths the executor cuts to
+    // their last part in Discord. Exclude downloadId, download client,
+    // indexer, and output/file paths.
     discordFields: [
       "showing",
       "totalRecords",
@@ -135,6 +137,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
       "size",
       "sizeleft",
       "errorMessage",
+      "statusMessage",
       "quality",
       "seasonNumber",
       "episodeNumber",
@@ -142,8 +145,17 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     function: {
       name: "get_sonarr_queue",
       description:
-        "Get the current download queue from Sonarr, with each item's series and episode titles, progress, state and any error or import problem (up to 50 items). Give a series (seriesId or seriesName) to see only that series' items: the latest 150 queue items are read and filtered to it. The reply's 'showing' line says how many items were returned out of the total.",
-      parameters: { type: "object", properties: SERIES_FILTER_PROPERTIES },
+        "Get the current download queue from Sonarr, with each item's series and episode titles, progress, state, download client, when it was added and any error or import problem (up to 50 items). Give a series (seriesId or seriesName) to see only that series' items, and a seasonNumber for one season's: the latest 150 queue items are read and every one of that series that fits in the reply is returned (a season pack is one item per episode). The reply's 'showing' line says how many items were returned out of the total.",
+      parameters: {
+        type: "object",
+        properties: {
+          ...SERIES_FILTER_PROPERTIES,
+          seasonNumber: {
+            type: "integer",
+            description: "Only this season of the series (0 is specials); needs seriesId or seriesName",
+          },
+        },
+      },
     },
   },
   {
@@ -152,7 +164,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     function: {
       name: "get_sonarr_series",
       description:
-        "List the TV series in the Sonarr library, sorted by title, 50 per page: each with its id (the seriesId other Sonarr tools take), tvdbId, status, episode counts and size on disk. Pass search to find series by title. The reply's 'showing' line gives the total and how to see the next page.",
+        "List the TV series in the Sonarr library, sorted by title, 50 per page: each with its id (the seriesId other Sonarr tools take), tvdbId, status, series type (standard, daily or anime), network, episode counts and size on disk. Pass search to find series by title. The reply's 'showing' line gives the total and how to see the next page.",
       parameters: {
         type: "object",
         properties: {
@@ -166,7 +178,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
           },
           pageSize: {
             type: "integer",
-            description: "Series per page (default 50, at most 100)",
+            description: "Series per page (default 50, at most 75)",
           },
         },
       },
@@ -270,14 +282,14 @@ export const SONARR_TOOLS: RegisteredTool[] = [
     function: {
       name: "get_sonarr_wanted_missing",
       description:
-        "Get missing episodes that Sonarr wants to download, latest air date first, each with its series title and when Sonarr last searched for it. Give a series (seriesId or seriesName) to see only that series' missing episodes: the latest 150 missing episodes are read and filtered to it. The reply's 'showing' line says how many episodes were returned out of the total.",
+        "Get missing episodes that Sonarr wants to download, latest air date first, each with its series title and when Sonarr last searched for it. Give a series (seriesId or seriesName) to see only that series' missing episodes: the latest 150 missing episodes are read and every one of that series is returned; its older missing episodes are found with get_sonarr_episodes. The reply's 'showing' line says how many episodes were returned out of the total.",
       parameters: {
         type: "object",
         properties: {
           ...SERIES_FILTER_PROPERTIES,
           pageSize: {
             type: "integer",
-            description: "Number of missing episodes to return (default 20, at most 50)",
+            description: "Number of missing episodes to return without a series (default 20, at most 50); with a series, all of its own among the latest 150 are returned",
           },
         },
       },

@@ -6,7 +6,7 @@
 
 import { z } from "zod"
 
-import { calendarRange, textArg, wholeArg, wholeOrNone } from "../arr-args"
+import { calendarRange, optionalText, optionalWhole, textArg, wholeArg, wholeOrNone } from "../arr-args"
 import { arrLocalPage, arrPageOutput, arrSearchOutput, idForTitle, orElse, titleMatches } from "../arr-output"
 import { clip, day, queueFields, queueOf, qualityProfile, rootFolder, trimDetails } from "../arr-projections"
 
@@ -37,6 +37,23 @@ describe("arguments from a model", () => {
     expect(textArg("   ")).toBeUndefined()
     expect(textArg(42)).toBeUndefined()
     expect(textArg("x".repeat(300))).toHaveLength(100)
+  })
+
+  it("tells an optional id left out from one given that cannot be read", () => {
+    expect(optionalWhole({ seriesId: "12" }, "seriesId")).toEqual({ value: 12 })
+    expect(optionalWhole({ seasonNumber: 0 }, "seasonNumber", 0)).toEqual({ value: 0 })
+    for (const left of [{}, { seriesId: null }, { seriesId: " " }]) expect(optionalWhole(left, "seriesId")).toEqual({})
+    for (const seriesId of [0, -1, 1.5, "twelve", true]) {
+      expect(optionalWhole({ seriesId }, "seriesId")).toEqual({ error: "Error: 'seriesId' must be a whole number of at least 1, or left out" })
+    }
+    expect(optionalWhole({ seasonNumber: -1 }, "seasonNumber", 0)).toEqual({ error: "Error: 'seasonNumber' must be a whole number of at least 0, or left out" })
+  })
+
+  it("reads an optional title, a number as text, and refuses anything else", () => {
+    expect(optionalText({ seriesName: " Severance " }, "seriesName")).toEqual({ value: "Severance" })
+    expect(optionalText({ seriesName: 1883 }, "seriesName")).toEqual({ value: "1883" })
+    expect(optionalText({ seriesName: null }, "seriesName")).toEqual({})
+    expect(optionalText({ seriesName: { title: "Severance" } }, "seriesName")).toEqual({ error: "Error: 'seriesName' must be text, or left out" })
   })
 
   it("ends the calendar 7 days after the start, or after now, unless an end is given", () => {
@@ -72,6 +89,32 @@ describe("replies", () => {
 
     expect(output.length).toBeLessThanOrEqual(40_000)
     expect(JSON.parse(output).showing).toMatch(/^showing 1\d of 900; pass a series$/)
+  })
+
+  it("filters to one season of a series, by the record's own season or its episode's", () => {
+    const records = [
+      { title: "a", seriesId: 1, seasonNumber: 2 },
+      { title: "b", seriesId: 1, episode: { seasonNumber: 2 } },
+      { title: "c", seriesId: 1, seasonNumber: 3 },
+      { title: "d", seriesId: 9, seasonNumber: 2 },
+    ]
+
+    const output = JSON.parse(arrPageOutput({ success: true, data: { records, totalRecords: 4 } }, { project: titled, limit: 50 }, { key: "seriesId", id: 1, season: 2 }))
+
+    expect(output.records).toEqual([{ title: "a" }, { title: "b" }])
+    expect(output.showing).toBe("showing 2 for this title, from the latest 4 of 4")
+  })
+
+  it("says how to see more of a filtered reply when matches may lie past the records read, if asked to", () => {
+    const records = [{ title: "a", seriesId: 1 }]
+    const reply = { project: titled, limit: 50, more: "list its episodes" }
+    const filter = { key: "seriesId", id: 1 }
+
+    expect(JSON.parse(arrPageOutput({ success: true, data: { records, totalRecords: 900 } }, { ...reply, morePastRead: true }, filter)).showing).toBe(
+      "showing 1 for this title, from the latest 1 of 900; list its episodes"
+    )
+    expect(JSON.parse(arrPageOutput({ success: true, data: { records, totalRecords: 900 } }, reply, filter)).showing).toBe("showing 1 for this title, from the latest 1 of 900")
+    expect(JSON.parse(arrPageOutput({ success: true, data: { records, totalRecords: 1 } }, { ...reply, morePastRead: true }, filter)).showing).toBe("showing 1 for this title, from the latest 1 of 1")
   })
 
   it("skips records that are not objects, and passes an error through", () => {
@@ -121,19 +164,58 @@ describe("shared projections", () => {
     expect(day("2027-01-16")).toBe("2027-01-16")
   })
 
-  it("joins a queue item's distinct status messages into one clipped line", () => {
-    const item = z.object(queueFields).parse({
-      title: "Release",
-      statusMessages: [
-        { title: "file 1", messages: ["Sample", "Not an upgrade"] },
-        { title: "file 2", messages: ["Sample", "x".repeat(400)] },
-      ],
-    })
+  const queueItem = (statusMessages: unknown, errorMessage?: string) => z.object(queueFields).parse({ title: "Show.S01.1080p.WEB-DL", statusMessages, errorMessage })
 
-    const { statusMessage } = queueOf(item)
+  it("reads a blocked import as Sonarr sends it: the summary title, then each file's name and errors", () => {
+    // CompletedDownloadService: a summary with no messages, then one entry per file not imported
+    const item = queueItem([
+      { title: "One or more episodes expected in this release were not imported or missing from the release", messages: [] },
+      { title: "Show.S01E03.1080p.WEB-DL.mkv", messages: ["Not an upgrade for existing episode file(s)", "Sample"] },
+      { title: "Show.S01E05.1080p.WEB-DL.mkv", messages: ["Sample"] },
+      { title: "Show.S01E05.1080p.WEB-DL.mkv", messages: ["Sample"] },
+    ])
 
-    expect(statusMessage).toMatch(/^Sample \| Not an upgrade \| x+…$/)
+    expect(queueOf(item).statusMessage).toBe(
+      "One or more episodes expected in this release were not imported or missing from the release | Show.S01E03.1080p.WEB-DL.mkv: Not an upgrade for existing episode file(s); Sample | Show.S01E05.1080p.WEB-DL.mkv: Sample"
+    )
+  })
+
+  it("keeps the reason when the summary is the only entry (a pack missing an episode)", () => {
+    const item = queueItem([{ title: "One or more episodes expected in this release were not imported or missing from the release", messages: [] }])
+
+    expect(queueOf(item).statusMessage).toBe("One or more episodes expected in this release were not imported or missing from the release")
+  })
+
+  it("gives a warning titled with the release as its message alone, and nothing for empty entries", () => {
+    const item = queueItem([{ title: "Show.S01.1080p.WEB-DL", messages: ["No files found are eligible for import in /data/downloads/tv/Show.S01.1080p.WEB-DL"] }, { messages: [] }, {}])
+
+    expect(queueOf(item).statusMessage).toBe("No files found are eligible for import in /data/downloads/tv/Show.S01.1080p.WEB-DL")
+    expect(queueOf(queueItem([{ title: "Show.S01.1080p.WEB-DL", messages: [] }])).statusMessage).toBeUndefined()
+  })
+
+  it("clips the line to 300 characters", () => {
+    const { statusMessage } = queueOf(queueItem([{ title: "file 1", messages: ["x".repeat(400)] }]))
+
+    expect(statusMessage).toMatch(/^file 1: x+…$/)
     expect(statusMessage).toHaveLength(300)
+  })
+
+  it("cuts every absolute path in the messages to its last part when pathless (Discord), and only then", () => {
+    const messages = [
+      "No files found are eligible for import in /data/downloads/complete/tv/Show.S01",
+      "[C:\\Downloads\\Complete\\Show.S02] is not a valid local path. You may need a Remote Path Mapping.",
+      "Couldn't read \\\\nas\\media\\tv\\Show (US)\\Season 1, see https://wiki.servarr.com/sonarr/faq and/or retry",
+    ]
+    const item = queueItem([{ title: "Show.S01.1080p.WEB-DL", messages }], "Error: [Errno 2] No such file or directory: '/downloads/incomplete/Show.S01'")
+
+    const discord = queueOf(item, true)
+
+    expect(discord.statusMessage).toBe(
+      "No files found are eligible for import in …/Show.S01; […/Show.S02] is not a valid local path. You may need a Remote Path Mapping.; Couldn't read …/Show (US)\\Season 1, see https://wiki.servarr.com/sonarr/faq and/or retry"
+    )
+    expect(discord.errorMessage).toBe("Error: [Errno 2] No such file or directory: '…/Show.S01'")
+    expect(queueOf(item).statusMessage).toContain("/data/downloads/complete/tv/Show.S01")
+    expect(queueOf(item).errorMessage).toContain("/downloads/incomplete/Show.S01")
   })
 
   it("names a quality profile's cutoff, or keeps its id when no item has it", () => {
