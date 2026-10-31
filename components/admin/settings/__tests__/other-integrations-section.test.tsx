@@ -68,6 +68,14 @@ describe("OtherIntegrationsSection", () => {
     expect(screen.queryByTestId("settings-other-save")).not.toBeInTheDocument()
   })
 
+  it("anchors each row by its service, so the overview's link to #sonarr reaches it", () => {
+    renderSection()
+
+    for (const type of ["sonarr", "radarr", "jellyfin"]) {
+      expect(screen.getByTestId(`settings-other-${type}`)).toHaveAttribute("id", type)
+    }
+  })
+
   it("keeps Allow Jellyfin sign-in live in the Jellyfin row, outside the Sheet", async () => {
     const user = userEvent.setup()
     jest.mocked(toggleJellyfinLogin).mockResolvedValue({ success: true, data: null })

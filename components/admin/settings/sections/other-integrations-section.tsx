@@ -63,7 +63,8 @@ export function OtherIntegrationsSection({ servers, jellyfinLogin, health, foote
           const server = servers[type]
           const label = SERVER_LABELS[type]
           return (
-            <li key={type} className="flex flex-wrap items-center gap-3 py-3" data-testid={`settings-other-${type}`}>
+            // The row's id is the anchor the overview's Services tile links to
+            <li key={type} id={type} className="flex scroll-mt-24 flex-wrap items-center gap-3 py-3" data-testid={`settings-other-${type}`}>
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="text-ui font-medium text-foreground">{label}</span>
                 <span className={server ? "truncate font-mono text-label text-muted-foreground" : "text-label text-muted-foreground"}>
