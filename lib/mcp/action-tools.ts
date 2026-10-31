@@ -49,6 +49,15 @@ export const EXCLUDED: Readonly<Record<string, string>> = {
   skipSetupStep: "the setup wizard's step order",
 }
 
+/**
+ * Actions whose result is one record that cannot be split, and the most
+ * characters it may have (`lib/mcp/result-limit.ts`): a member's whole Rewind.
+ */
+const LARGE_RESULTS: Readonly<Record<string, number>> = {
+  getUserPlexWrapped: 120_000,
+  getRewindDryRun: 120_000,
+}
+
 /** Actions that return an invite code: their result also carries the link to send. */
 const INVITE_RESULTS: ReadonlySet<string> = new Set(["createInvite", "createAffiliateInvite"])
 
@@ -116,6 +125,7 @@ function actionTool(exportName: string, value: unknown): McpTool | null {
     description: `${summary} ${audience}${link}`,
     inputSchema,
     annotations: readOnly ? { readOnlyHint: true } : { readOnlyHint: false, destructiveHint: startsWithAny(exportName, DESTRUCTIVE_PREFIXES) },
+    ...(LARGE_RESULTS[exportName] ? { maxResultChars: LARGE_RESULTS[exportName] } : {}),
     source: "action",
     allowed: (session) => meets(auth, session),
     run: async (args) => {

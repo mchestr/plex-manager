@@ -61,6 +61,9 @@ describe('initialize', () => {
     const { instructions } = (response as { result: { instructions: string } }).result
     expect(instructions).toContain('Northfield Plex')
     expect(instructions).toContain('acts as Mike')
+    expect(instructions).toContain('create_invite')
+    expect(instructions).toContain('RESULT_TOO_LARGE')
+    expect(instructions.length).toBeLessThan(4096)
   })
 
   it('answers an unknown version with the newest', async () => {
@@ -137,6 +140,27 @@ describe('tools/call', () => {
     const response = await call({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 't' } })
     expect(response).toMatchObject({ result: { isError: true } })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.MCP_TOOL_CALLED, 'admin-1', expect.objectContaining({ ok: false }))
+  })
+
+  it('refuses a result over the size limit, and audits it', async () => {
+    tools.set('big', tool('big', { run: jest.fn().mockResolvedValue({ text: 'x'.repeat(40_001), isError: false }) }))
+
+    const response = await call({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'big' } })
+
+    const result = (response as { result: { content: { text: string }[]; isError: boolean } }).result
+    expect(result.isError).toBe(true)
+    expect(JSON.parse(result.content[0].text)).toMatchObject({ success: false, code: 'RESULT_TOO_LARGE' })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.MCP_TOOL_CALLED, 'admin-1', expect.objectContaining({ ok: false, tooLarge: true }))
+  })
+
+  it("lets a tool's own limit through", async () => {
+    const text = 'x'.repeat(60_000)
+    tools.set('rewind', tool('rewind', { maxResultChars: 120_000, run: jest.fn().mockResolvedValue({ text, isError: false }) }))
+
+    const response = await call({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'rewind' } })
+
+    expect(response).toMatchObject({ result: { content: [{ text }], isError: false } })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.MCP_TOOL_CALLED, 'admin-1', { tool: 'rewind', source: 'action', credentialId: 'tok-1', ok: true })
   })
 
   it("hides a thrown error's text", async () => {

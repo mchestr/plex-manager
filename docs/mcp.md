@@ -38,12 +38,12 @@ header works the same way.
 
 ## Tools
 
-`tools/list` returns every tool the token's owner may use, about 185 for an admin:
+`tools/list` returns every tool the token's owner may use, about 190 for an admin:
 
 | Source | What | Module |
 |---|---|---|
 | Server Actions | every admin and member action, named in snake case (`createInvite` is `create_invite`), with its Zod input as JSON Schema and its JSDoc summary as the description | `lib/mcp/action-tools.ts` |
-| Admin reads | the lists and details the admin pages show (`list_users`, `list_invites`, `get_user`, `get_admin_settings`, ...), so a client can find the ids that actions take | `lib/mcp/read-tools.ts` |
+| Admin reads | the lists and details the admin pages show (`list_users`, `list_invites`, `get_user`, `get_admin_settings`, `list_llm_usage`, ...), so a client can find the ids that actions take | `lib/mcp/read-tools.ts`, `read-tools-llm.ts`, `read-tools-community.ts` |
 | Assistant tools | the admin assistant's Plex, Tautulli, Sonarr, Radarr, Overseerr, media marking, app data and knowledge base tools | `lib/mcp/assistant-tools.ts` |
 
 A tool call runs the action itself, inside the token owner's session
@@ -61,6 +61,31 @@ revoking tokens, so a token cannot mint another.
 
 Every call writes `MCP_TOOL_CALLED` with the tool, its source, the token's row
 id and whether it succeeded, never its arguments or output.
+
+## Context use
+
+Each connected client pays for the tool list and for every result it reads.
+
+- **The tool list.** Claude Code defers MCP tools by default (tool search):
+  a session starts with the tool names and the server's instructions, about
+  2.5k tokens for this server, and loads a tool's definition when Claude
+  searches for it. The instructions say what the tools cover, since Claude
+  finds them by searching names and descriptions. Run `/context` to see the
+  tools marked "(deferred)". All of them load up front (about 20-25k tokens)
+  with `ENABLE_TOOL_SEARCH=false`, with `ENABLE_TOOL_SEARCH=auto` on a 1M-token
+  window, or on models without tool search. In claude.ai and Claude Desktop,
+  choose **Auto** or **On demand** under Tool access.
+- **Results.** A result over 40,000 characters (about 10k tokens) is refused
+  with `RESULT_TOO_LARGE` and a hint to ask for less (`lib/mcp/result-limit.ts`).
+  List tools page (`page`, `pageSize`) and leave out long text: `list_users`
+  carries list rows (`get_user` has the rest), `list_llm_usage` gives the size
+  of each prompt and response (`get_llm_usage` reads one, clipped to 15,000
+  characters each), and `list_announcements` a preview (`get_announcement`
+  reads one). The Sonarr, Radarr, Overseerr, Tautulli and Plex lookups return
+  the fields an answer needs, with a search, filter or limit and a "showing N
+  of M" line. Only reads of one whole record that cannot be split
+  (`get_user_plex_wrapped`, `get_rewind_dry_run`) may return up to 120,000
+  characters.
 
 ## Limits and transport
 

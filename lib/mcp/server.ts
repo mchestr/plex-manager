@@ -19,7 +19,8 @@
  *
  * A call runs inside the token owner's session (`runAsPrincipal`) and a log
  * context with their id. A thrown error becomes `isError` with fixed text,
- * never the error's message. Every call writes `MCP_TOOL_CALLED` with the
+ * never the error's message. A result over the size cap (`lib/mcp/result-limit.ts`)
+ * becomes a `RESULT_TOO_LARGE` refusal. Every call writes `MCP_TOOL_CALLED` with the
  * tool, its source, the token's row id (`credentialId`) and the outcome, never arguments or output.
  *
  * @module lib/mcp/server
@@ -32,6 +33,7 @@ import { z } from "zod"
 import { serverName } from "@/lib/brand"
 import { toolFor, toolsFor } from "@/lib/mcp/catalog"
 import { runAsPrincipal } from "@/lib/mcp/principal"
+import { limitResult, MAX_RESULT_CHARS } from "@/lib/mcp/result-limit"
 import type { TokenPrincipal } from "@/lib/mcp/tokens"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { runWithRequestContext } from "@/lib/utils/log-context"
@@ -74,12 +76,23 @@ export function rpcError(id: JsonRpcId, code: number, message: string): JsonRpcR
   return { jsonrpc: "2.0", id, error: { code, message } }
 }
 
+/**
+ * What the client loads before any tool: Claude Code defers the tool
+ * definitions and finds them by searching names and descriptions, so this
+ * says what the tools cover and how to ask for less.
+ */
 async function instructions(principal: TokenPrincipal): Promise<string> {
   const name = principal.session.user.name ?? "the token's owner"
   return [
     `Plex Manager for ${await serverName()}. Every tool acts as ${name}, with their permissions, and is audited.`,
-    "Results are JSON: `{ success: true, data }` or `{ success: false, code, error }`.",
-    "Read tools (`list_*`, `get_*`) give the ids that the other tools take.",
+    "The tools cover invites (create_invite, list_invites, delete_invite), members and their access (list_users, get_user,",
+    "set_user_role, set_user_disabled, remove_member, subscriptions), settings and connections, announcements, affiliates,",
+    "Rewind (season, generation, sharing), job queues, LLM usage, Discord, and lookups in Plex, Tautulli, Sonarr, Radarr",
+    "and Overseerr. Search for a tool by what you want to do.",
+    "Read tools (`list_*`, `get_*`) give the ids that the other tools take; list tools take `page` and `pageSize`, and",
+    "lookups take a search, filter or limit.",
+    "Results are JSON, `{ success: true, data }` or `{ success: false, code, error }`, of at most",
+    `${MAX_RESULT_CHARS} characters: a larger result is refused with RESULT_TOO_LARGE, so ask for less.`,
     "An invite's `url` is the link to send to the invitee.",
   ].join(" ")
 }
@@ -100,12 +113,16 @@ async function callTool(id: JsonRpcId, principal: TokenPrincipal, requestIdValue
     logger.error("MCP tool failed", error, { tool: tool.name, credentialId: tokenId })
     outcome = { text: TOOL_FAILED, isError: true }
   }
+  const limited = limitResult(outcome, tool.maxResultChars)
+  if (limited.tooLarge) logger.warn("MCP tool result over the size limit", { tool: tool.name, chars: outcome.text.length })
+  outcome = limited
   logAuditEvent(AuditEventType.MCP_TOOL_CALLED, session.user.id, {
     tool: tool.name,
     source: tool.source,
     // "token" in a key is redacted from logs, so the row id goes by another name
     credentialId: tokenId,
     ok: !outcome.isError,
+    ...(limited.tooLarge ? { tooLarge: true } : {}),
   })
   return { jsonrpc: "2.0", id, result: { content: [{ type: "text", text: outcome.text }], isError: outcome.isError } }
 }

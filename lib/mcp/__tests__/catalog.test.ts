@@ -66,6 +66,22 @@ describe('the catalog', () => {
     expect(() => JSON.stringify(tool.inputSchema)).not.toThrow()
   })
 
+  it('offers the paged reads and their one-row reads', () => {
+    const names = tools.map((tool) => tool.name)
+    expect(names).toEqual(expect.arrayContaining(['get_llm_usage', 'get_announcement']))
+    for (const name of ['list_users', 'list_llm_usage', 'list_announcements', 'list_affiliates', 'get_affiliate_history']) {
+      expect(JSON.stringify(allTools().get(name)?.inputSchema)).toMatch(/pageSize/)
+    }
+  })
+
+  it('lets only whole-record reads past the default result limit', () => {
+    const raised = tools.filter((tool) => tool.maxResultChars !== undefined).map((tool) => [tool.name, tool.maxResultChars])
+    expect(raised).toEqual([
+      ['get_rewind_dry_run', 120_000],
+      ['get_user_plex_wrapped', 120_000],
+    ])
+  })
+
   it('marks reads read-only and deletes destructive', () => {
     const byName = allTools()
     expect(byName.get('list_invites')?.annotations).toEqual({ readOnlyHint: true })
