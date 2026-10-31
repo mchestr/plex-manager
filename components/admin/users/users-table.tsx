@@ -3,13 +3,13 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { SearchX, Users } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/ui/data-table/data-table"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FilterBar } from "@/components/ui/filter-bar"
 import { useReplaceParams } from "@/hooks/use-replace-params"
+import { SEEN_FILTER_LABELS, SEEN_FILTERS } from "@/lib/admin/last-seen"
 import { llmUsage } from "@/lib/admin/routes"
 import { listUserTarget } from "@/lib/admin/user-actions"
 import { useFormat } from "@/lib/format-context"
@@ -17,7 +17,7 @@ import type { TableSort } from "@/lib/ui/table-params"
 import type { AdminUserWithWrappedStats } from "@/types/admin"
 
 import { useUserActions } from "./actions/use-user-actions"
-import { MemberCell, PlexAccessCell, RewindCell, RoleCell, ServiceCell, SubscriptionCell } from "./user-cells"
+import { LastSeenCell, MemberCell, PlexAccessCell, RewindCell, RoleCell, ServiceCell, SubscriptionCell } from "./user-cells"
 import { ImportPlexUsersButton } from "./import-plex-users-button"
 
 type User = AdminUserWithWrappedStats
@@ -52,6 +52,11 @@ const FILTERS = [
     ],
   },
   {
+    param: "seen",
+    label: "Last seen",
+    options: SEEN_FILTERS.map((value) => ({ value, label: SEEN_FILTER_LABELS[value] })),
+  },
+  {
     param: "subscription",
     label: "Subscription",
     options: [
@@ -68,6 +73,8 @@ const FILTERS = [
 const CARD_SORTS = [
   { value: "-joined", label: "Joined, newest" },
   { value: "joined", label: "Joined, oldest" },
+  { value: "-lastSeen", label: "Last seen, newest" },
+  { value: "lastSeen", label: "Last seen, oldest" },
   { value: "name", label: "Name" },
   { value: "-cost", label: "LLM cost, highest" },
 ]
@@ -84,6 +91,8 @@ interface UsersTableProps {
   sort: TableSort
   /** The season year: the Rewind column, View Rewind and Regenerate. */
   year: number
+  /** Server time of the render (epoch milliseconds), so relative times and Stuck match on both sides. */
+  now: number
   stripeEnabled: boolean
   stripeDashboardBaseUrl: string | null
   estimateCopy: string
@@ -98,10 +107,9 @@ interface UsersTableProps {
  * the admin list pages. URL-driven filters and sort, a menu of every member
  * action headed with the member's name, and both EmptyState kinds.
  */
-export function UsersTable({ rows, total, memberCount, page, pageSize, sort, year, stripeEnabled, stripeDashboardBaseUrl, estimateCopy, unknownSub, readOnly = false }: UsersTableProps) {
+export function UsersTable({ rows, total, memberCount, page, pageSize, sort, year, now, stripeEnabled, stripeDashboardBaseUrl, estimateCopy, unknownSub, readOnly = false }: UsersTableProps) {
   const f = useFormat()
   const { replace } = useReplaceParams()
-  const [now] = useState(() => Date.now())
   const { actionsFor, dialogs } = useUserActions({ year, stripeEnabled, stripeDashboardBaseUrl, estimateCopy, inList: true })
 
   const columns: ColumnDef<User>[] = [
@@ -109,6 +117,13 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
     { id: "role", header: "Role", cell: ({ row }) => <RoleCell user={row.original} />, meta: { card: "field" } },
     { id: "service", header: "Service", cell: ({ row }) => <ServiceCell user={row.original} />, meta: { card: "field" } },
     { id: "plexAccess", header: "Plex access", cell: ({ row }) => <PlexAccessCell user={row.original} unknownSub={unknownSub} />, meta: { card: "field" } },
+    {
+      id: "lastSeen",
+      header: "Last seen",
+      enableSorting: true,
+      cell: ({ row }) => <LastSeenCell user={row.original} now={now} />,
+      meta: { card: "field", priority: 3 },
+    },
     { id: "subscription", header: "Subscription", cell: ({ row }) => <SubscriptionCell user={row.original} />, meta: { card: "field" } },
     { id: "rewind", header: `Rewind ${year}`, cell: ({ row }) => <RewindCell user={row.original} now={now} />, meta: { card: "field", priority: 3 } },
     {
@@ -136,7 +151,7 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
     },
   ]
 
-  const clearFilters = () => replace({ q: null, role: null, service: null, plexAccess: null, subscription: null, page: null })
+  const clearFilters = () => replace({ q: null, role: null, service: null, plexAccess: null, seen: null, subscription: null, page: null })
   const empty =
     memberCount === 0 ? (
       <EmptyState

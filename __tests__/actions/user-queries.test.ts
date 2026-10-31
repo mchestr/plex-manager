@@ -442,6 +442,26 @@ describe('getAllUsersWithWrapped', () => {
     await expect(getAllUsersWithWrapped(2024)).rejects.toThrow('Database error')
   })
 
+  it("passes each member's last seen and the read that found them through from their row", async () => {
+    const seenAt = new Date('2024-05-20T21:04:00Z')
+    const readAt = new Date('2024-06-01T02:17:00Z')
+    const row = (id: string, lastSeenAt: Date | null, lastSeenReadAt: Date | null) => ({
+      ...buildUser({ id, lastSeenAt, lastSeenReadAt }),
+      plexWrapped: [],
+      _count: { plexWrapped: 0 },
+    })
+    mockPrisma.plexWrapped.findMany.mockResolvedValue([])
+    mockPrisma.user.findMany.mockResolvedValue([row('seen', seenAt, readAt), row('never', null, readAt), row('unread', null, null)])
+
+    const { users } = await getAllUsersWithWrapped(2024)
+
+    expect(users.map((u) => [u.id, u.lastSeenAt, u.lastSeenReadAt])).toEqual([
+      ['seen', seenAt, readAt],
+      ['never', null, readAt],
+      ['unread', null, null],
+    ])
+  })
+
   describe('Plex access check (P10.18)', () => {
     const SERVER = buildPlexServer({ url: 'http://127.0.0.1:9', adminPlexUserId: 'plex-owner' })
     const member = (id: string, plexUserId: string | null, isAdmin = false) => ({
@@ -642,6 +662,29 @@ describe('unshareUserLibrary', () => {
     expect(stopSyncAndClearPlexToken).toHaveBeenCalledWith('member-1')
   })
 
+  it("unshares the member's Plex id on the active server", async () => {
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'removed' })
+
+    await unshareUserLibrary({ userId: 'member-1' })
+
+    expect(unshareUserFromPlexServer).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://plex.example.com:32400', token: 'server-token', machineIdentifier: null }),
+      'plex-member'
+    )
+  })
+
+  it('fails without its text, and keeps the sessions, when the clean-up after the unshare fails', async () => {
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'removed' })
+    ;(endAffiliateStatus as jest.Mock).mockRejectedValueOnce(new Error('could not serialize access'))
+
+    await expect(unshareUserLibrary({ userId: 'member-1' })).resolves.toEqual({
+      success: false,
+      code: 'INTERNAL',
+      error: 'Failed to unshare user library',
+    })
+    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['PLEX_AUTH', "Plex rejected Plex Manager's token. Reconnect Plex in settings."],
     ['PLEX_UNAVAILABLE', "Plex didn't respond. Try again in a few minutes."],
@@ -679,6 +722,22 @@ describe('unshareUserLibrary', () => {
     mockPrisma.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', plexUserId: 'plex-member', isAdmin: true }))
 
     await expect(unshareUserLibrary({ userId: 'member-1' })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+    expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['a missing user', () => mockPrisma.user.findUnique.mockResolvedValue(null), 'NOT_FOUND', 'User not found'],
+    [
+      'a user without a Plex account',
+      () => mockPrisma.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', plexUserId: null })),
+      'VALIDATION',
+      'User Plex ID is required to unshare library access',
+    ],
+    ['no active Plex server', () => mockPrisma.plexServer.findFirst.mockResolvedValue(null), 'NOT_FOUND', 'No active Plex server configured'],
+  ])('refuses %s before calling Plex', async (_name, arrange, code, error) => {
+    arrange()
+
+    await expect(unshareUserLibrary({ userId: 'member-1' })).resolves.toEqual({ success: false, code, error })
     expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
   })
 })

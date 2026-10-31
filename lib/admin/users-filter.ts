@@ -5,37 +5,41 @@
  * ## Filters
  *
  * `?q=` searches name and email, ignoring case. `?role=`, `?service=`,
- * `?plexAccess=` and `?subscription=` each default to `all` (UI-05), so a
- * fresh page lists everyone, even when Plex is down and every access is
- * `unknown`. Anything
- * unrecognised in the URL falls back to `all`.
+ * `?plexAccess=`, `?seen=` and `?subscription=` each default to `all`
+ * (UI-05), so a fresh page lists everyone, even when Plex is down and every
+ * access is `unknown`. Anything unrecognised in the URL falls back to `all`.
  *
- * | Param          | Values                                           |
- * |----------------|--------------------------------------------------|
- * | `role`         | `all`, `admin` (owner included), `member`        |
- * | `service`      | `all`, `plex`, `jellyfin` (a linked account)     |
- * | `plexAccess`   | `all`, `shared`, `notShared`, `unknown`          |
- * | `subscription` | `all`, `active`, `pastDue`, `canceled`, `none`   |
+ * | Param          | Values                                                                   |
+ * |----------------|--------------------------------------------------------------------------|
+ * | `role`         | `all`, `admin` (owner included), `member`                                |
+ * | `service`      | `all`, `plex`, `jellyfin` (a linked account)                             |
+ * | `plexAccess`   | `all`, `shared`, `notShared`, `unknown`                                  |
+ * | `seen`         | `all`, `recent`, `inactive90`, `inactive180`, `never`, `unknown`         |
+ * | `subscription` | `all`, `active`, `pastDue`, `canceled`, `none`                           |
  *
  * `pastDue` covers `PAST_DUE` and `UNPAID`; `none` is no row or `INCOMPLETE`.
+ * `seen` reads the last play from Tautulli at the page's `now`
+ * (`lib/admin/last-seen`).
  *
  * ## Sorts
  *
- * `name`, `joined` (the default, newest first) and `cost` (LLM spend across
- * every year), each with the user id as the tie-break so a page never
- * reshuffles.
+ * `name`, `joined` (the default, newest first), `cost` (LLM spend across
+ * every year) and `lastSeen` (the newest play), each with the user id as the
+ * tie-break so a page never reshuffles. `lastSeen` puts the members with no
+ * play last in both directions, Never before unknown.
  *
  * @module lib/admin/users-filter
  */
 
 import { z } from "zod"
 
+import { lastSeenRank, matchesSeen, SEEN_FILTERS } from "@/lib/admin/last-seen"
 import type { TableSort } from "@/lib/ui/table-params"
 import type { AdminUserWithWrappedStats, PlexAccessCheck } from "@/types/admin"
 
 export type PlexAccess = "shared" | "notShared" | "unknown"
 
-export const USERS_SORTS = ["name", "joined", "cost"] as const
+export const USERS_SORTS = ["name", "joined", "cost", "lastSeen"] as const
 export const USERS_DEFAULT_SORT: TableSort = { id: "joined", desc: true }
 
 const ROLES = ["all", "admin", "member"] as const
@@ -48,6 +52,7 @@ const usersFilterSchema = z.object({
   role: z.enum(ROLES).catch("all"),
   service: z.enum(SERVICES).catch("all"),
   plexAccess: z.enum(PLEX_ACCESS).catch("all"),
+  seen: z.enum(SEEN_FILTERS).catch("all"),
   subscription: z.enum(SUBSCRIPTIONS).catch("all"),
 })
 
@@ -66,6 +71,7 @@ export function parseUsersFilter(params: Params): UsersFilter {
     role: first("role"),
     service: first("service"),
     plexAccess: first("plexAccess"),
+    seen: first("seen"),
     subscription: first("subscription"),
   })
 }
@@ -90,30 +96,43 @@ function subscriptionOf(user: Pick<AdminUserWithWrappedStats, "subscriptionStatu
   }
 }
 
-/** The members that match every filter and the search. */
-export function filterUsers<T extends AdminUserWithWrappedStats>(users: T[], filter: UsersFilter): T[] {
+/** The members that match every filter and the search; `now` (epoch milliseconds) dates the `seen` filter. */
+export function filterUsers<T extends AdminUserWithWrappedStats>(users: T[], filter: UsersFilter, now: number): T[] {
   const q = filter.q.toLowerCase()
   return users.filter((user) => {
     if (q && !`${user.name ?? ""} ${user.email ?? ""}`.toLowerCase().includes(q)) return false
     if (filter.role !== "all" && (user.isAdmin ? "admin" : "member") !== filter.role) return false
     if (filter.service !== "all" && !user.services.includes(filter.service)) return false
     if (filter.plexAccess !== "all" && plexAccessOf(user) !== filter.plexAccess) return false
+    if (!matchesSeen(user, filter.seen, now)) return false
     if (filter.subscription !== "all" && subscriptionOf(user) !== filter.subscription) return false
     return true
   })
 }
 
-const COMPARE: Record<(typeof USERS_SORTS)[number], (a: AdminUserWithWrappedStats, b: AdminUserWithWrappedStats) => number> = {
+type UsersSortId = (typeof USERS_SORTS)[number]
+
+const isUsersSort = (id: string): id is UsersSortId => (USERS_SORTS as readonly string[]).includes(id)
+
+/** Each sort in ascending order; the direction flips it. */
+const COMPARE: Record<UsersSortId, (a: AdminUserWithWrappedStats, b: AdminUserWithWrappedStats) => number> = {
   name: (a, b) => (a.name ?? a.email ?? "").localeCompare(b.name ?? b.email ?? "", "en", { sensitivity: "base" }),
   joined: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   cost: (a, b) => (a.totalLlmUsage?.cost ?? 0) - (b.totalLlmUsage?.cost ?? 0),
+  lastSeen: (a, b) => (a.lastSeenAt?.getTime() ?? 0) - (b.lastSeenAt?.getTime() ?? 0),
+}
+
+/** A group compared before the direction applies, so the members without a value stay last both ways. */
+const MISSING_LAST: Partial<Record<UsersSortId, (user: AdminUserWithWrappedStats) => number>> = {
+  lastSeen: lastSeenRank,
 }
 
 /** A sorted copy; an unknown sort id falls back to the default. */
 export function sortUsers<T extends AdminUserWithWrappedStats>(users: T[], sort: TableSort): T[] {
-  const compare = COMPARE[sort.id as keyof typeof COMPARE] ?? COMPARE.joined
-  const direction = sort.id in COMPARE ? (sort.desc ? -1 : 1) : -1
-  return [...users].sort((a, b) => direction * compare(a, b) || a.id.localeCompare(b.id))
+  const id: UsersSortId = isUsersSort(sort.id) ? sort.id : "joined"
+  const direction = id === sort.id ? (sort.desc ? -1 : 1) : -1
+  const group = MISSING_LAST[id] ?? (() => 0)
+  return [...users].sort((a, b) => group(a) - group(b) || direction * COMPARE[id](a, b) || a.id.localeCompare(b.id))
 }
 
 export interface UsersStats {
@@ -121,19 +140,22 @@ export interface UsersStats {
   shared: number
   /** Members whose access is unknown: Plex didn't answer, or they have no Plex account. */
   notVerified: number
+  /** Members whose newest play is at least `INACTIVE_STAT_DAYS` old; a member with no play is not counted. */
+  inactive: number
   subscriptions: { active: number; pastDue: number }
   /** This season's Rewind LLM spend, regenerations included. */
   season: { costUsd: number; tokens: number; requests: number }
   plexDown: boolean
 }
 
-/** The figures for the StatGrid and the Plex-down Alert. */
-export function usersStats(users: AdminUserWithWrappedStats[], plexCheck: PlexAccessCheck): UsersStats {
+/** The figures for the StatGrid and the Plex-down Alert; `now` (epoch milliseconds) dates `inactive`. */
+export function usersStats(users: AdminUserWithWrappedStats[], plexCheck: PlexAccessCheck, now: number): UsersStats {
   const count = (test: (user: AdminUserWithWrappedStats) => boolean) => users.filter(test).length
   return {
     members: users.length,
     shared: count((user) => user.hasPlexAccess === true),
     notVerified: count((user) => user.hasPlexAccess === null),
+    inactive: count((user) => matchesSeen(user, "inactive180", now)),
     subscriptions: {
       active: count((user) => subscriptionOf(user) === "active"),
       pastDue: count((user) => subscriptionOf(user) === "pastDue"),

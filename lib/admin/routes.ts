@@ -11,7 +11,7 @@ import type { Route } from "next"
 const seg = encodeURIComponent
 
 /** The user detail page's tabs (P10.6); `overview` is the default and leaves the URL bare. */
-export const USER_DETAIL_TABS = ["overview", "rewind", "usage", "billing"] as const
+export const USER_DETAIL_TABS = ["overview", "rewind", "usage", "billing", "audit"] as const
 export type UserDetailTab = (typeof USER_DETAIL_TABS)[number]
 
 export function userDetail(id: string, { tab }: { tab?: UserDetailTab } = {}): Route {
@@ -82,6 +82,39 @@ export function rewindHistory(wrappedId: string, usageId: string): Route {
 /** Cost analysis for an inclusive day range (`YYYY-MM-DD` in the server zone). */
 export function costAnalysis({ from, to }: { from: string; to: string }): Route {
   return `/admin/cost-analysis?${new URLSearchParams({ from, to })}` as Route
+}
+
+/** The audit log's URL filters; each is left out when empty. */
+export interface AuditLogFilters {
+  /** An event category (lib/audit/events.ts). */
+  category?: string
+  /** One event type, such as `MEMBER_UNSHARED`. */
+  type?: string
+  /** Who did it: a user id, or `system` for a job. */
+  actor?: string
+  /** Whom it was about: a user id. */
+  member?: string
+  /** One inactivity run's events, by the run id. */
+  run?: string
+  /** An inclusive day range (`YYYY-MM-DD` in the server zone). */
+  from?: string
+  to?: string
+}
+
+/** The audit log, filtered when given. */
+export function auditLog(filters: AuditLogFilters = {}): Route {
+  const params = new URLSearchParams()
+  for (const key of ["category", "type", "actor", "member", "run", "from", "to"] as const) {
+    const value = filters[key]
+    if (value) params.set(key, value)
+  }
+  const query = params.toString()
+  return (query ? `/admin/audit?${query}` : "/admin/audit") as Route
+}
+
+/** One audit event with its stored details. */
+export function auditEvent(id: string): Route {
+  return `/admin/audit/${seg(id)}` as Route
 }
 
 /** One section of the settings page, by its anchor id. */

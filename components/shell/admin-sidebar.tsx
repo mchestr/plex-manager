@@ -150,14 +150,14 @@ export function AdminSidebar({ serverName, user, navCounts }: AdminSidebarProps)
         </RailTip>
       </div>
       <nav aria-label="Admin" className="flex-1 overflow-y-auto px-2 py-2">
-        <ul className="mb-4 flex flex-col gap-0.5 short:mb-3">
+        <ul className="mb-4 flex flex-col gap-0.5 short:mb-2">
           {itemsIn(null, items).map((item) => (
             <NavLink key={item.id} item={item} counts={navCounts} pathname={pathname} />
           ))}
         </ul>
         {ADMIN_NAV_GROUPS.filter((group) => itemsIn(group, items).length > 0).map((group) => (
-          <div key={group} className="mb-4 border-t border-sidebar-border pt-3 first:border-t-0 first:pt-0 short:mb-3 lg:border-t-0 lg:pt-0">
-            <h2 className="hidden px-2 pb-1 text-caption font-medium text-muted-foreground lg:block">{group}</h2>
+          <div key={group} className="mb-4 border-t border-sidebar-border pt-3 first:border-t-0 first:pt-0 short:mb-2 lg:border-t-0 lg:pt-0">
+            <h2 className="hidden px-2 pb-1 text-caption font-medium text-muted-foreground short:pb-0.5 lg:block">{group}</h2>
             <ul className="flex flex-col gap-0.5" aria-label={group}>
               {itemsIn(group, items).map((item) => (
                 <NavLink key={item.id} item={item} counts={navCounts} pathname={pathname} />

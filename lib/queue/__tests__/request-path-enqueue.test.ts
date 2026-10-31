@@ -7,13 +7,14 @@
  * fail-fast client, closed on shutdown; a job goes in under its policy id, a
  * second add with the same deduplication id gets the first job's id, and a
  * failing add answers QUEUE_UNAVAILABLE instead of throwing.
- * `request-path.test.ts` covers Redis down.
+ * `isDeduplicatedJobPending` reads the job holding a deduplication id and its
+ * state. `request-path.test.ts` covers Redis down.
  */
 
 import { Queue } from "bullmq"
 
 import { onShutdown } from "@/lib/instrumentation/shutdown"
-import { enqueueFromRequest, withRequestPathQueue } from "@/lib/queue/request-path"
+import { enqueueFromRequest, isDeduplicatedJobPending, withRequestPathQueue } from "@/lib/queue/request-path"
 import { JOB_TYPES } from "@/lib/queue/types"
 
 const mockLive = new Map<string, string>()
@@ -25,8 +26,18 @@ const mockAdd = jest.fn(async (_name: string, _data: unknown, opts: { jobId?: st
   return { id }
 })
 const mockClose = jest.fn(async () => {})
+const mockGetDeduplicationJobId = jest.fn(async (id: string): Promise<string | null> => mockLive.get(id) ?? null)
+const mockGetJobState = jest.fn(async (_jobId: string): Promise<string> => "waiting")
 
-jest.mock("bullmq", () => ({ Queue: jest.fn(() => ({ add: mockAdd, addBulk: jest.fn(), close: mockClose })) }))
+jest.mock("bullmq", () => ({
+  Queue: jest.fn(() => ({
+    add: mockAdd,
+    addBulk: jest.fn(),
+    close: mockClose,
+    getDeduplicationJobId: mockGetDeduplicationJobId,
+    getJobState: mockGetJobState,
+  })),
+}))
 jest.mock("@/lib/queue/connection", () => ({
   getRequestPathRedis: jest.fn(() => ({ status: "ready" })),
   readyWithin: jest.fn(async () => true),
@@ -82,5 +93,35 @@ describe("enqueueFromRequest with Redis up", () => {
 
   it("answers QUEUE_UNAVAILABLE when the work throws a non-Error", async () => {
     await expect(withRequestPathQueue("c", () => Promise.reject("nope"))).resolves.toEqual({ ok: false, code: "QUEUE_UNAVAILABLE" })
+  })
+})
+
+describe("isDeduplicatedJobPending with Redis up", () => {
+  it("is false when no job holds the deduplication id", async () => {
+    await expect(isDeduplicatedJobPending("members:activity")).resolves.toEqual({ ok: true, value: false })
+
+    expect(mockGetDeduplicationJobId).toHaveBeenCalledWith("members:activity")
+    expect(mockGetJobState).not.toHaveBeenCalled()
+  })
+
+  it.each(["waiting", "prioritized", "delayed", "active", "waiting-children"])("is true while the job holding it is %s", async (state) => {
+    await enqueueFromRequest(JOB_TYPES.MEMBER_ACTIVITY, { triggeredBy: "admin" })
+    mockGetJobState.mockResolvedValueOnce(state)
+
+    await expect(isDeduplicatedJobPending("members:activity")).resolves.toEqual({ ok: true, value: true })
+    expect(mockGetJobState).toHaveBeenCalledWith("job-1")
+  })
+
+  it.each(["completed", "failed", "unknown"])("is false once the job holding it is %s", async (state) => {
+    mockLive.set("members:activity", "job-9")
+    mockGetJobState.mockResolvedValueOnce(state)
+
+    await expect(isDeduplicatedJobPending("members:activity")).resolves.toEqual({ ok: true, value: false })
+  })
+
+  it("answers QUEUE_UNAVAILABLE when Redis fails the read", async () => {
+    mockGetDeduplicationJobId.mockRejectedValueOnce(new Error("Command timed out"))
+
+    await expect(isDeduplicatedJobPending("members:activity")).resolves.toEqual({ ok: false, code: "QUEUE_UNAVAILABLE" })
   })
 })

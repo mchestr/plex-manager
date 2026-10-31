@@ -4,9 +4,10 @@
 
 /**
  * Admin writes that change member data leave an audit event (P11.16, GAP-33):
- * unsharing, importing members and regenerating a member's Rewind. Of
- * GAP-33's five writes, P1.2 deleted `forceUserWatchlistSync` and P8.8
- * deleted `savePlaygroundWrapped`; they must stay gone.
+ * unsharing (by an admin or the inactivity sweep), importing members and
+ * regenerating a member's Rewind. Of GAP-33's five writes, P1.2 deleted
+ * `forceUserWatchlistSync` and P8.8 deleted `savePlaygroundWrapped`; they
+ * must stay gone.
  */
 
 import { readdirSync, readFileSync } from "fs"
@@ -20,7 +21,8 @@ import { asTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock
 import { importPlexUsers } from "@/actions/import-plex-users"
 import { adminRegenerateRewind } from "@/actions/rewind-generation"
 import { unshareUserLibrary } from "@/actions/user-queries"
-import { getAllPlexServerUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
+import { getAllPlexServerUsers, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
+import { runSweep } from "@/lib/inactivity/sweep"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
 import { AuditEventType, logAuditEvent, recordAuditEvent } from "@/lib/security/audit-log"
@@ -33,6 +35,7 @@ jest.mock("next/cache", () => ({ revalidatePath: jest.fn(), refresh: jest.fn() }
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/connections/plex", () => ({
   getAllPlexServerUsers: jest.fn(),
+  getPlexUsers: jest.fn(),
   unshareUserFromPlexServer: jest.fn(),
 }))
 jest.mock("@/lib/session-revocation", () => ({ endUserSessions: jest.fn() }))
@@ -85,6 +88,38 @@ describe("admin writes to member data", () => {
     expect(ended.map((call) => call.slice(0, 3))).toEqual([
       [AuditEventType.AFFILIATE_ENDED, ADMIN, { targetUserId: "member-1", applicationId: "application-1", cause: "UNSHARED", invitesCancelled: 1 }],
     ])
+  })
+
+  it("the inactivity sweep waits for one MEMBER_UNSHARED per removal, with the reason and its run", async () => {
+    const now = new Date("2026-10-31T02:17:00.000Z")
+    prismaMock.plexServer.findFirst.mockResolvedValue(buildPlexServer({ adminPlexUserId: "plex-owner", machineIdentifier: "machine-1" }))
+    const inactive = { ...buildUser({ id: "member-1", plexUserId: "plex-1", lastSeenReadAt: now }), subscription: null }
+    prismaMock.user.findMany.mockResolvedValue([inactive])
+    prismaMock.user.findUnique.mockResolvedValue(inactive)
+    jest.mocked(getPlexUsers).mockResolvedValue({
+      success: true,
+      data: [{ id: "plex-1", username: "m", title: "m", home: false, restricted: false, servers: [{ machineIdentifier: "machine-1", owned: false, pending: false }] }],
+    })
+    jest.mocked(unshareUserFromPlexServer).mockResolvedValue({ success: true, status: "removed" })
+
+    await runSweep({
+      runId: "run-1",
+      trigger: "admin",
+      actorId: ADMIN,
+      confirmedUserIds: ["member-1"],
+      settings: { enabled: true, thresholdDays: 180 },
+      now,
+      readSince: now,
+      newestPlayAt: now,
+      oldestPlayAt: new Date("2024-01-01T00:00:00.000Z"),
+    })
+
+    const written = jest.mocked(recordAuditEvent).mock.calls.filter(([type]) => type === AuditEventType.MEMBER_UNSHARED)
+    expect(written).toEqual([
+      [AuditEventType.MEMBER_UNSHARED, ADMIN, expect.objectContaining({ targetUserId: "member-1", status: "removed", reason: "inactivity", runId: "run-1" })],
+    ])
+    // Awaited, never fire-and-forget: the sweep stops when the row cannot be written
+    expect(events(AuditEventType.MEMBER_UNSHARED)).toHaveLength(0)
   })
 
   it("an unshare Plex refused writes nothing", async () => {

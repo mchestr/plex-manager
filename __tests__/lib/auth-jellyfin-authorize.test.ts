@@ -104,6 +104,19 @@ describe('Jellyfin authorize for Jellyfin members', () => {
     expect(prismaMock.user.update).toHaveBeenCalledWith({ where: { id: 'both' }, data: { name: 'jo', accessEndedAt: null } })
   })
 
+  it('stamps accessRestoredAt when the member signs in again after their access ended', async () => {
+    const row = buildUser({ id: 'back', plexUserId: 'plex-1', jellyfinUserId: 'jf-1', accessEndedAt: new Date('2026-05-01T00:00:00.000Z') })
+    prismaMock.user.findUnique.mockResolvedValue(row)
+    updated(row, { name: 'jo' })
+
+    await expect(signIn(false)).resolves.toMatchObject({ id: 'back' })
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'back' },
+      data: { name: 'jo', accessEndedAt: null, accessRestoredAt: expect.any(Date) },
+    })
+  })
+
   it('refuses a disabled account (P0.5)', async () => {
     prismaMock.user.findUnique.mockResolvedValue(buildUser({ jellyfinUserId: 'jf-1', disabledAt: new Date() }))
 

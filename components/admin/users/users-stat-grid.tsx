@@ -1,6 +1,10 @@
+import Link from "next/link"
+
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { StatusDot } from "@/components/ui/status-badge"
+import { INACTIVE_STAT_DAYS } from "@/lib/admin/last-seen"
 import { notVerifiedCopy, type UsersStats } from "@/lib/admin/users-filter"
+import { tableHref } from "@/lib/ui/table-params"
 import type { BoundFormat } from "@/lib/utils/format"
 
 interface UsersStatGridProps {
@@ -11,7 +15,10 @@ interface UsersStatGridProps {
   f: BoundFormat
 }
 
-/** The four figures above the users table (P10.18): members, Plex access, subscriptions and the season's LLM spend. */
+/**
+ * The four figures above the users table (P10.18): members, Plex access, subscriptions and the
+ * season's LLM spend. The Members tile links to the members not seen on Plex in 180 days.
+ */
 export function UsersStatGrid({ stats, year, stripeEnabled, f }: UsersStatGridProps) {
   const notVerified = notVerifiedCopy(stats)
   const { active, pastDue } = stats.subscriptions
@@ -19,7 +26,22 @@ export function UsersStatGrid({ stats, year, stripeEnabled, f }: UsersStatGridPr
 
   return (
     <StatGrid data-testid="admin-users-stats">
-      <StatTile label="Members" value={f.number(stats.members)} data-testid="admin-users-stat-members" />
+      <StatTile
+        label="Members"
+        value={f.number(stats.members)}
+        meta={
+          stats.inactive > 0 && (
+            <Link
+              href={tableHref("/admin/users", {}, { seen: "inactive180" })}
+              className="rounded-sm text-foreground underline underline-offset-3"
+              data-testid="admin-users-stat-inactive"
+            >
+              {f.number(stats.inactive)} not seen in {INACTIVE_STAT_DAYS} days
+            </Link>
+          )
+        }
+        data-testid="admin-users-stat-members"
+      />
       <StatTile
         label="Plex access"
         value={f.number(stats.shared)}

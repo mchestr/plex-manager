@@ -5,6 +5,7 @@ import Link from "next/link"
 import { RewindStateBadge } from "@/components/admin/users/detail/rewind-state-badge"
 import { StatusBadge, StatusDot } from "@/components/ui/status-badge"
 import { rewindRowState } from "@/lib/admin/can-regenerate"
+import { lastSeenState } from "@/lib/admin/last-seen"
 import { userDetail } from "@/lib/admin/routes"
 import { plexAccessOf } from "@/lib/admin/users-filter"
 import { useFormat } from "@/lib/format-context"
@@ -21,12 +22,13 @@ function initials(label: string): string {
 /**
  * Neutral initials, the name as a link to the detail page, then the email (6.3).
  * In the table a long email truncates (its full text in `title`), so the table fits its card;
- * a card gives it the full width.
+ * a card gives it the full width. The 12rem cap leaves room for every column, Last seen and
+ * Rewind included, in a 1440 window.
  */
 export function MemberCell({ user }: { user: User }) {
   const name = user.name || user.email || "Unknown member"
   return (
-    <div className="flex max-w-60 min-w-0 items-center gap-3 dt-cards:max-w-none">
+    <div className="flex max-w-48 min-w-0 items-center gap-3 dt-cards:max-w-none">
       <span
         aria-hidden="true"
         className="flex size-8 shrink-0 items-center justify-center rounded-full border bg-muted text-caption font-medium text-muted-foreground"
@@ -103,4 +105,32 @@ export function SubscriptionCell({ user }: { user: User }) {
 /** The season year's Rewind, "Stuck" past the 15-minute rule. */
 export function RewindCell({ user, now }: { user: User; now: number }) {
   return <RewindStateBadge state={rewindRowState(user.wrappedStatus, user.wrappedRunStartedAt, now)} />
+}
+
+/**
+ * How long ago the member's newest Plex play started, from the server's `now` so the server
+ * and the client render the same words, with the date and time in `title`. Never when
+ * Tautulli knows the member but has no play, a dash when it has not reported them.
+ */
+export function LastSeenCell({ user, now }: { user: User; now: number }) {
+  const f = useFormat()
+  const testId = `admin-users-last-seen-${user.id}`
+  if (user.lastSeenAt) {
+    return (
+      <time
+        dateTime={user.lastSeenAt.toISOString()}
+        title={f.dateTime(user.lastSeenAt, { zoneLabel: true })}
+        className="whitespace-nowrap"
+        data-testid={testId}
+      >
+        {f.relative(user.lastSeenAt, now)}
+      </time>
+    )
+  }
+  if (lastSeenState(user) === "never") return <span data-testid={testId}>Never</span>
+  return (
+    <span className="text-muted-foreground" data-testid={testId}>
+      –
+    </span>
+  )
 }

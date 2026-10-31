@@ -5,7 +5,7 @@
  */
 import type { EraseReport } from '@/lib/members/erase'
 import type { InventoryCounts } from '@/lib/members/erase-inventory'
-import { Prisma, type AffiliateApplication, type Config, type Invite, type JellyfinServer, type LLMUsage, type PlexServer, type PlexWrapped, type RewindShare, type Setup, type User } from '@/lib/generated/prisma/client'
+import { Prisma, type AffiliateApplication, type Config, type InactivityRun, type InactivitySettings, type Invite, type JellyfinServer, type LLMUsage, type PlexServer, type PlexWrapped, type RewindShare, type Setup, type User } from '@/lib/generated/prisma/client'
 
 // A fresh Date per row, so a test that mutates one cannot leak into another.
 const fixedDate = () => new Date('2026-01-01T00:00:00.000Z')
@@ -35,6 +35,10 @@ export function buildUser(overrides: Partial<User> = {}): User {
     watchHoursLast30Days: null,
     watchHoursReadAt: null,
     accessEndedAt: null,
+    accessRestoredAt: null,
+    lastSeenAt: null,
+    lastSeenReadAt: null,
+    inactivityExcluded: false,
     createdAt: fixedDate(),
     updatedAt: fixedDate(),
     ...overrides,
@@ -263,6 +267,38 @@ export function buildAffiliateApplication(overrides: Partial<AffiliateApplicatio
     tierIndex: null,
     tierRaisedAt: null,
     updatedAt: fixedDate(),
+    ...overrides,
+  }
+}
+
+/** The inactivity sweep's settings row, with the schema defaults (`lib/inactivity/settings`). */
+export function buildInactivitySettings(overrides: Partial<InactivitySettings> = {}): InactivitySettings {
+  return {
+    id: 'inactivity',
+    enabled: false,
+    thresholdDays: 180,
+    runStartedAt: null,
+    updatedAt: fixedDate(),
+    updatedBy: null,
+    ...overrides,
+  }
+}
+
+/** One member activity run with zero counts (`lib/inactivity/run`). */
+export function buildInactivityRun(overrides: Partial<InactivityRun> = {}): InactivityRun {
+  return {
+    id: 'inactivity-run-1',
+    startedAt: fixedDate(),
+    finishedAt: fixedDate(),
+    trigger: 'scheduled',
+    tautulliUsers: 0,
+    matched: 0,
+    qualified: 0,
+    removed: 0,
+    failed: 0,
+    blocked: null,
+    error: null,
+    entries: [],
     ...overrides,
   }
 }

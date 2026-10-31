@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import { z } from "zod"
 
+import { AuditTab } from "@/components/admin/users/detail/audit-tab"
 import { BillingTab } from "@/components/admin/users/detail/billing-tab"
 import { DetailTabs } from "@/components/admin/users/detail/detail-tabs"
 import { OverviewTab } from "@/components/admin/users/detail/overview-tab"
@@ -17,7 +18,7 @@ import { getSeasonYear } from "@/lib/wrapped/season"
 
 const searchSchema = z.object({ tab: z.enum(USER_DETAIL_TABS).catch("overview") })
 
-const LABELS: Record<UserDetailTab, string> = { overview: "Overview", rewind: "Rewind", usage: "Usage", billing: "Billing" }
+const LABELS: Record<UserDetailTab, string> = { overview: "Overview", rewind: "Rewind", usage: "Usage", billing: "Billing", audit: "Audit" }
 
 interface UserDetailPageProps {
   params: Promise<{ userId: string }>
@@ -52,6 +53,7 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
           {active === "rewind" && <RewindTab userId={header.id} name={header.name} seasonYear={seasonYear} f={f} now={now} />}
           {active === "usage" && <UsageTab userId={header.id} f={f} />}
           {active === "billing" && <BillingTab header={header} f={f} />}
+          {active === "audit" && <AuditTab userId={header.id} f={f} />}
         </DetailTabs>
       </div>
     </div>

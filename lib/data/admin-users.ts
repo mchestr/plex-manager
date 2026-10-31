@@ -70,6 +70,8 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUsersLi
       disabledAt: user.disabledAt,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      lastSeenAt: user.lastSeenAt,
+      lastSeenReadAt: user.lastSeenReadAt,
       wrappedStatus: wrapped?.status || null,
       wrappedGeneratedAt: wrapped?.generatedAt || null,
       wrappedRunStartedAt: runStarts.get(user.id) ?? null,

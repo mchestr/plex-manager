@@ -9,6 +9,7 @@ import { reencryptSecretsWithoutQueue } from "@/lib/queue/jobs/secrets"
 import { startWorker } from "@/lib/queue/worker"
 import { startRetentionFallback } from "@/lib/retention/fallback"
 import { ensureRetentionSchedule } from "@/lib/retention/schedule"
+import { ensureMemberActivitySchedule } from "@/lib/inactivity/schedule"
 import { issueSetupCode } from "@/lib/setup/claim"
 import { startWatchlistFallback } from "@/lib/watchlist/fallback"
 import { ensureWatchlistSchedule } from "@/lib/watchlist/schedule"
@@ -40,6 +41,9 @@ jest.mock("@/lib/watchlist/fallback", () => ({ startWatchlistFallback: jest.fn()
 jest.mock("@/lib/watchlist/schedule", () => ({ ensureWatchlistSchedule: jest.fn() }))
 jest.mock("@/lib/retention/fallback", () => ({ startRetentionFallback: jest.fn().mockResolvedValue(null) }))
 jest.mock("@/lib/retention/schedule", () => ({ ensureRetentionSchedule: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("@/lib/inactivity/schedule", () => ({
+  ensureMemberActivitySchedule: jest.fn().mockResolvedValue({ ok: true, state: "scheduled" }),
+}))
 jest.mock("@/lib/queue/jobs/secrets", () => ({
   enqueueSecretsReencrypt: jest.fn().mockResolvedValue("current"),
   reencryptSecretsWithoutQueue: jest.fn().mockResolvedValue("current"),
@@ -82,6 +86,7 @@ describe("startNodeInstrumentation() by PROCESS_ROLE", () => {
     expect(startWorker).not.toHaveBeenCalled()
     expect(ensureWatchlistSchedule).not.toHaveBeenCalled()
     expect(ensureRetentionSchedule).not.toHaveBeenCalled()
+    expect(ensureMemberActivitySchedule).not.toHaveBeenCalled()
     expect(LeasePoller).not.toHaveBeenCalled()
   })
 
@@ -105,6 +110,7 @@ describe("startNodeInstrumentation() by PROCESS_ROLE", () => {
     expect(startWorker).toHaveBeenCalledTimes(1)
     expect(ensureWatchlistSchedule).toHaveBeenCalledTimes(1)
     expect(ensureRetentionSchedule).toHaveBeenCalledTimes(1)
+    expect(ensureMemberActivitySchedule).toHaveBeenCalledTimes(1)
     expect(LeasePoller).toHaveBeenCalledTimes(1)
     expect(issueSetupCode).toHaveBeenCalledTimes(1)
   })
@@ -119,5 +125,6 @@ describe("startNodeInstrumentation() by PROCESS_ROLE", () => {
     expect(startRetentionFallback).toHaveBeenCalledTimes(1)
     expect(reencryptSecretsWithoutQueue).toHaveBeenCalledTimes(1)
     expect(startWorker).not.toHaveBeenCalled()
+    expect(ensureMemberActivitySchedule).not.toHaveBeenCalled()
   })
 })

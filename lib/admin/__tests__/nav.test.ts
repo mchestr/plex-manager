@@ -147,7 +147,7 @@ describe("Assistant", () => {
   })
 
   it("is in a Support user's nav beside Users, and in no one's without a role", () => {
-    expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).toEqual(["assistant", "users", "affiliates"])
+    expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).toEqual(["assistant", "users", "affiliates", "audit"])
     expect(navFor({ isAdmin: false, role: null })).toEqual([])
   })
 })

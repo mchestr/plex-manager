@@ -3,8 +3,8 @@
 #   docker compose -f docker-compose.workers.yml up -d --scale web=2
 #
 # - `worker` (PROCESS_ROLE=worker) runs the queue Workers, the schedulers
-#   (watchlist, Discord role check, retention, the Rewind runs) and the Discord
-#   bot. It applies the migrations at start, publishes no port, and answers 404
+#   (watchlist, Discord role check, retention, last seen and inactivity, the
+#   Rewind runs) and the Discord bot. It applies the migrations at start, publishes no port, and answers 404
 #   for everything but /api/health and /api/metrics.
 # - `web` (PROCESS_ROLE=web, SKIP_MIGRATIONS=true) only serves requests. It
 #   starts after the worker reports healthy, so the migrations have run, and

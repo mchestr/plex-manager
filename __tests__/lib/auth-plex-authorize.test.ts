@@ -163,6 +163,26 @@ describe('Plex authorize reads the PIN cookie', () => {
     expect(prismaMock.user.update.mock.calls[0]![0]!.data).not.toHaveProperty('accessEndedAt')
   })
 
+  it('stamps accessRestoredAt when access comes back after it ended, so the inactivity sweep counts from today', async () => {
+    await authorize(undefined, plexPinRequest())
+    expect(prismaMock.user.update.mock.calls[0]![0]!.data).not.toHaveProperty('accessRestoredAt')
+
+    prismaMock.user.update.mockClear()
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ ...MEMBER_ROW, accessEndedAt: new Date('2026-05-01T00:00:00.000Z') }))
+    const before = Date.now()
+    await authorize(undefined, plexPinRequest())
+    const data = prismaMock.user.update.mock.calls[0]![0]!.data
+    expect(data).toMatchObject({ accessEndedAt: null, accessRestoredAt: expect.any(Date) })
+    expect((data.accessRestoredAt as Date).getTime()).toBeGreaterThanOrEqual(before)
+
+    // Without access, nothing came back
+    prismaMock.user.update.mockClear()
+    mockCheckUserServerAccess.mockResolvedValue({ status: 'denied' })
+    prismaMock.config.findUnique.mockResolvedValue({ stripeEnabled: true } as never)
+    await authorize(undefined, plexPinRequest())
+    expect(prismaMock.user.update.mock.calls[0]![0]!.data).not.toHaveProperty('accessRestoredAt')
+  })
+
   it('ignores a token sent in the credentials', async () => {
     await authorize({ authToken: 'attacker-token' }, plexPinRequest())
 

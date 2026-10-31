@@ -88,8 +88,8 @@ export function SupportRoleDialog({ user, ...dialog }: UserDialogProps) {
       title={removing ? `Remove ${user.name}'s Support role?` : `Give ${user.name} the Support role?`}
       description={
         removing
-          ? "They are signed out and lose the assistant and the users list."
-          : "They can use the admin assistant's read-only tools and see the users list. They cannot change settings, read secrets or act on members."
+          ? "They are signed out and lose the assistant, the users list, affiliates and the audit log."
+          : "They can use the admin assistant's read-only tools and see the users list, affiliates and the audit log. They cannot change settings, read secrets or act on members."
       }
       confirmLabel={removing ? "Remove Support role" : "Give Support role"}
       pendingLabel="Saving"

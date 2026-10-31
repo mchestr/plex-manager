@@ -18,14 +18,29 @@ permission needs no schema change. An unknown stored role grants nothing.
 | `assistant:tools:admin` | no | Assistant tools over admin-only data and connections: app data (invites, members, failed jobs), the knowledge base and MCP servers |
 | `users:read` | yes | The users list, read-only |
 | `affiliates:read` | yes | The Affiliates page's Applications, Affiliates and Invite tree tabs, read-only: no invite codes or labels, no History tab (with its block list) and no affiliate settings |
+| `audit:read` | yes | The Audit log (`/admin/audit`) and its event pages: who did what, to whom and when, with a one-line summary. Not an event's stored details, and not a member's Audit tab |
 
-A Support user sees Users and the Assistant page in the admin area, can open Affiliates (`/admin/affiliates`), and the member
-app shows them the same Admin link an admin gets (`canEnterAdminArea`). Settings,
-connections, LLM providers, Stripe, invites, queues, usage and cost, a
-member's detail page, role management and every affiliate decision (approve,
+A Support user sees Users and the Assistant page in the admin area, can open Affiliates (`/admin/affiliates`) and the
+Audit log (`/admin/audit`), and the member app shows them the same Admin link an admin gets (`canEnterAdminArea`). Settings,
+connections, LLM providers, Stripe, invites, queues, usage and cost, inactive members, a
+member's detail page (with its Audit tab), role management and every affiliate decision (approve,
 refuse, revoke, overrides, unblock) are refused on the server (a page
 checks `assertAdmin()` or `assertPermission()`, and an action is built with
 `adminAction` or `permissionAction`), not only hidden from the navigation.
+
+### The audit log for a Support user
+
+- Support reads **Admin > Audit log**: each event's time, words, category, who
+  did it, whom it was about and a one-line summary. The summary is built only
+  from known keys and fixed words (`lib/audit/summary.ts`), never from free
+  text in the event's details.
+- An event's stored details stay with admins. The loader leaves them out of
+  every list row, and an event page read by Support carries none: the page
+  says "Only admins can see the stored details." (`lib/data/audit-log.ts`).
+- Names open the log scoped to that person, never the member's page, which
+  Support is refused.
+- Opening the log is audited too: one `AUDIT_LOG_VIEWED` row per viewer per
+  hour, with the filters' ids, never names.
 
 ### The assistant for a Support user
 

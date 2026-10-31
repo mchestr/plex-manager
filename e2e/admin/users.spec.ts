@@ -1,20 +1,23 @@
 import { axeFor } from '../a11y/scan';
-import { expect, test } from '../fixtures/auth';
+import { expect, test, TEST_USERS } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
 
 /**
  * The users list (P10.18), the reference admin list page: with Plex at a
  * dead address every member is still listed as Unknown under the Plex-down
- * Alert, a filter change lands in the URL with a chip, and Make admin and
- * Disable run from a row's action menu through their confirms (UI-46).
+ * Alert, a filter change lands in the URL with a chip, the member's last
+ * play from Tautulli shows as Last seen with its own filter, and Make admin
+ * and Disable run from a row's action menu through their confirms (UI-46).
  *
  * The layout follows the table's own width: cards of labelled fields up to
- * the 984px a 1280 window leaves it, then the table, with Rewind from 1440.
- * Neither the page nor the table scrolls sideways, before hydration either.
+ * the 984px a 1280 window leaves it, then the table, with Rewind and Last
+ * seen from 1440. Neither the page nor the table scrolls sideways, before
+ * hydration either.
  */
 
 const MEMBER = { id: 'users-list-e2e-id', plexUserId: 'users-list-e2e-plex', name: 'Aaa Users Member', email: 'users-list@example.com' };
 const DEAD_PLEX = 'http://127.0.0.1:9';
+const DAY_MS = 86_400_000;
 
 let plexUrl: { id: string; url: string } | null = null;
 
@@ -24,7 +27,9 @@ test.describe('Admin users list', () => {
   test.beforeAll(async () => {
     const prisma = createE2EPrismaClient();
     try {
-      const row = { ...MEMBER, isAdmin: false, disabledAt: null, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true, jellyfin: false } };
+      // Tautulli last saw them play 200 days ago, in yesterday's read
+      const lastSeen = { lastSeenAt: new Date(Date.now() - 200 * DAY_MS), lastSeenReadAt: new Date(Date.now() - DAY_MS) };
+      const row = { ...MEMBER, ...lastSeen, isAdmin: false, disabledAt: null, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true, jellyfin: false } };
       await prisma.user.upsert({ where: { id: MEMBER.id }, create: row, update: row });
       const server = await prisma.plexServer.findFirst({ where: { isActive: true }, select: { id: true, url: true } });
       if (server) {
@@ -64,6 +69,25 @@ test.describe('Admin users list', () => {
     await expect(adminPage).toHaveURL(/plexAccess=unknown/);
     await expect(adminPage.getByTestId('admin-users-filters-chip-plexAccess')).toContainText('Plex access: Unknown');
     await expect(adminPage.getByTestId(`admin-users-row-${MEMBER.id}`)).toBeVisible();
+  });
+
+  test('shows when a member was last seen, and the Last seen filter updates the URL and shows a chip', async ({ adminPage }) => {
+    // The Last seen column sits in the table from 1440
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await adminPage.goto('/admin/users');
+
+    await expect(adminPage.getByTestId(`admin-users-last-seen-${MEMBER.id}`)).toHaveText(/^\d+ months ago$/);
+    await expect(adminPage.getByTestId('admin-users-stat-inactive')).toContainText('not seen in 180 days');
+
+    await adminPage.getByTestId('admin-users-filters-filter-seen').click();
+    await adminPage.getByTestId('admin-users-filters-filter-seen-option-inactive180').click();
+
+    await expect(adminPage).toHaveURL(/seen=inactive180/);
+    await expect(adminPage.getByTestId('admin-users-filters-chip-seen')).toContainText('Last seen: Not seen in 180 days');
+    await expect(adminPage.getByTestId(`admin-users-row-${MEMBER.id}`)).toBeVisible();
+
+    // The seeded admin has no play from Tautulli, so the filter leaves them out
+    await expect(adminPage.getByTestId(`admin-users-row-${TEST_USERS.ADMIN.id}`)).toHaveCount(0);
   });
 
   test('makes a member an admin through the row menu and its confirm', async ({ adminPage }) => {
@@ -155,6 +179,7 @@ test.describe('Admin users list layout', () => {
         await expect(adminPage.getByTestId('admin-users-filters-filter-role')).toBeVisible();
         await expect(adminPage.getByTestId('admin-users-filters-sort')).toBeHidden();
         await expect(adminPage.getByTestId('admin-users-column-rewind')).toBeVisible({ visible: rewind });
+        await expect(adminPage.getByTestId('admin-users-column-lastSeen')).toBeVisible({ visible: rewind });
       }
 
       const overflow = await adminPage.evaluate(() => {

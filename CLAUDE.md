@@ -15,7 +15,7 @@ A Next.js-based Plex management platform that combines server management tools, 
 - **Styling**: Tailwind CSS v4 with utility-first approach; primitives in `components/ui/` are built on Base UI (`@base-ui/react`)
 - **Animation**: Motion (`motion/react`)
 - **Charts**: Recharts, through `ChartCard`
-- **Jobs**: BullMQ on Redis (Rewind generation, Stripe access, watchlist sync, retention)
+- **Jobs**: BullMQ on Redis (Rewind generation, Stripe access, watchlist sync, retention, last seen and the inactivity sweep)
 - **LLM**: Vercel AI SDK (OpenAI, Anthropic, Google and OpenAI-compatible servers)
 - **Validation**: Zod schemas for all inputs/responses
 - **Testing**: Jest + Testing Library + Playwright (E2E)
@@ -50,7 +50,7 @@ app/                     # Next.js App Router (pages, layouts, routes)
 │   ├── invites/        # Affiliate invites: apply, make, copy and cancel invites (a 404 while the switch is off)
 │   ├── membership/     # Stripe membership (when enabled)
 │   └── rewind/         # Rewind: /rewind, /rewind/[year] (story), /rewind/[year]/read (article), the scope layout
-├── admin/              # Admin pages: overview, assistant, users, invites, watchlist sync, settings, rewind, queues, LLM usage
+├── admin/              # Admin pages: overview, assistant, users, invites, watchlist sync, inactive members, settings, rewind, queues, LLM usage, audit log
 ├── api/                # API routes (webhooks, health, metrics, admin search, Rewind cards and posters)
 ├── auth/               # Plex sign-in callback, access denied and auth error pages (sign-in itself is on /)
 ├── dev/                # Development-only UI sheet
@@ -78,6 +78,7 @@ hooks/                  # Shared client hooks; query-keys.ts holds every TanStac
 lib/                    # Utilities, helpers, business logic
 ├── actions/           # The action helpers (define-action.ts), ActionResult, route handler helpers
 ├── affiliates/        # Affiliate invites: tiers, eligibility, the switch, end status, block list (docs/affiliate-invites.md)
+├── audit/             # Audit log event labels, categories, summaries and URL filters (Admin > Audit log)
 ├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
 ├── charts/            # Chart slot map (var(--chart-n)) and generated text summaries for ChartCard
 ├── chatbot/           # Admin assistant: tools, executors, prompts and the conversation loop (server-only)
@@ -88,6 +89,7 @@ lib/                    # Utilities, helpers, business logic
 ├── discord/           # Discord bot, commands, linking and stat channels (channel-stats/)
 ├── invites/           # Invite passes and redemption (Plex and Jellyfin)
 ├── llm/               # LLM facade (generateStructured, chatWithTools), provider registry, model table, usage
+├── inactivity/        # Last seen from Tautulli and the opt-in inactivity sweep: rules, run, schedule (docs/inactive-members.md)
 ├── locks/             # LeaseLock and LeasePoller (database or Redis leases)
 ├── members/           # Member service rule, access grant/revoke, offboarding and erase
 ├── permissions/       # Roles and permissions: isAdmin superuser, the Support role, hasPermission (docs/roles.md)
@@ -656,7 +658,8 @@ admin assistant's tools.
 **Commands the app calls** (`TautulliCommand`): `get_activity`, `get_children_metadata`,
 `get_history`, `get_home_stats`, `get_item_user_stats`, `get_libraries`,
 `get_libraries_table`, `get_library_names`, `get_metadata`, `get_server_info`,
-`get_tautulli_info`, `get_user_watch_time_stats`, `get_users`
+`get_tautulli_info`, `get_user_watch_time_stats`, `get_users`, `get_users_table`
+(the only one with `last_seen`; `lib/connections/tautulli-last-seen.ts` pages it)
 
 **Common Parameters**: `user_id`, `rating_key`, `section_id`, `start`, `length`, `order_column`, `order_dir`
 
@@ -965,6 +968,8 @@ The project includes custom slash commands in `.claude/commands/`:
 - Operations (backup, restore, upgrades, encryption keys, worker containers, metrics): See `docs/operations.md`
 - Roles and permissions (Support role, assistant tool gate): See `docs/roles.md`
 - Affiliate invites (tiers, slots, server cap, the switch): See `docs/affiliate-invites.md`
+- Inactive members (last seen from Tautulli, the inactivity sweep and its safety rules): See `docs/inactive-members.md`
+- Audit log (who can read it, categories, what Support sees): See `docs/roles.md` and `docs/privacy.md`
 - Privacy (personal data inventory, member removal, retention): See `docs/privacy.md`
 - Releases and the changelog: See `docs/releasing.md` and `CHANGELOG.md`
 - Rewind season runbook (flags, season open, roll back, season close): See `docs/rewind.md`

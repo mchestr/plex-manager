@@ -47,6 +47,12 @@ export interface UserDetailHeaderData {
   createdAt: Date
   isExempt: boolean
   exemptNote: string | null
+  /** Start of the member's newest play in Tautulli; null when none was ever read. */
+  lastSeenAt: Date | null
+  /** When the daily activity read last found the member in Tautulli; null when it never did. */
+  lastSeenReadAt: Date | null
+  /** The inactivity sweep never removes this member's Plex access. */
+  inactivityExcluded: boolean
   plexAccess: PlexAccess
   subscription: {
     status: SubscriptionStatus
@@ -117,6 +123,9 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
       createdAt: true,
       isExempt: true,
       exemptNote: true,
+      lastSeenAt: true,
+      lastSeenReadAt: true,
+      inactivityExcluded: true,
       subscription: {
         select: {
           status: true,
@@ -162,6 +171,9 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
     createdAt: user.createdAt,
     isExempt: user.isExempt,
     exemptNote: user.exemptNote,
+    lastSeenAt: user.lastSeenAt,
+    lastSeenReadAt: user.lastSeenReadAt,
+    inactivityExcluded: user.inactivityExcluded,
     plexAccess,
     subscription: user.subscription,
     stripeEnabled: Boolean(config?.stripeEnabled),

@@ -37,6 +37,8 @@ export const PERMISSIONS = [
   "users:read",
   /** The admin Affiliates page without codes, labels, the block list or settings; decides nothing. */
   "affiliates:read",
+  /** The admin Audit log: who did what and when. The stored details of an event stay admin-only. */
+  "audit:read",
 ] as const
 
 export type Permission = (typeof PERMISSIONS)[number]
@@ -47,16 +49,13 @@ interface RoleDefinition {
   permissions: readonly Permission[]
 }
 
-/**
- * The built-in roles. Admin is not a role: it is `User.isAdmin`.
- *
- * @internal
- */
+/** The built-in roles. Admin is not a role: it is `User.isAdmin`. */
 export const ROLES = {
   support: {
     label: "Support",
-    description: "Troubleshoots with the assistant's read-only tools and sees the users list and affiliates. No settings, secrets or changes.",
-    permissions: ["assistant:use", "assistant:tools:read", "users:read", "affiliates:read"],
+    description:
+      "Troubleshoots with the assistant's read-only tools and sees the users list, affiliates and the audit log. No settings, secrets or changes.",
+    permissions: ["assistant:use", "assistant:tools:read", "users:read", "affiliates:read", "audit:read"],
   },
 } as const satisfies Record<string, RoleDefinition>
 

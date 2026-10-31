@@ -9,7 +9,7 @@
  * BullMQ and ioredis against a port nothing listens on.
  */
 
-import { enqueueFromRequest, withRequestPathQueue } from "@/lib/queue/request-path"
+import { enqueueFromRequest, isDeduplicatedJobPending, withRequestPathQueue } from "@/lib/queue/request-path"
 import { JOB_TYPES } from "@/lib/queue/types"
 
 // Collect the close tasks, so the test closes the clients it opened
@@ -41,6 +41,13 @@ describe("enqueueFromRequest against a closed port", () => {
     const result = await enqueueFromRequest(JOB_TYPES.WATCHLIST_SYNC_ALL, { triggeredBy: "admin" })
 
     expect(result).toEqual({ ok: false, code: "QUEUE_UNAVAILABLE" })
+    expect(Date.now() - started).toBeLessThan(2500)
+  }, 10_000)
+
+  it("answers QUEUE_UNAVAILABLE for a pending check within 2.5 s", async () => {
+    const started = Date.now()
+
+    await expect(isDeduplicatedJobPending("members:activity")).resolves.toEqual({ ok: false, code: "QUEUE_UNAVAILABLE" })
     expect(Date.now() - started).toBeLessThan(2500)
   }, 10_000)
 

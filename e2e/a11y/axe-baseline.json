@@ -1,7 +1,9 @@
 {
   "admin /admin/announcements": {},
+  "admin /admin/audit": {},
   "admin /admin/cost-analysis": {},
   "admin /admin/discord": {},
+  "admin /admin/inactivity": {},
   "admin /admin/invites": {},
   "admin /admin/invites [confirm dialog open]": {},
   "admin /admin/invites [create dialog open]": {},
