@@ -96,10 +96,10 @@ describe('WatchlistSyncCard', () => {
 
   it('shows no skip reason after a failed sync', () => {
     render(
-      <WatchlistSyncCard initialSettings={settings('failed', 'Plex token expired - please log in again')} service="plex" />
+      <WatchlistSyncCard initialSettings={settings('failed', 'Your Plex sign-in expired. Sign in again.')} service="plex" />
     )
 
-    expect(screen.getByText('Plex token expired - please log in again')).toBeInTheDocument()
+    expect(screen.getByText('Your Plex sign-in expired. Sign in again.')).toBeInTheDocument()
     expect(screen.queryByTestId('watchlist-sync-skip-reason')).not.toBeInTheDocument()
   })
 
@@ -122,13 +122,13 @@ describe('WatchlistSyncCard', () => {
     render(<WatchlistSyncCard initialSettings={settings('success', null, { counts })} service="plex" />)
 
     expect(screen.getByTestId('watchlist-sync-counts')).toHaveTextContent(
-      'Requested 3, already on the server 12, already requested 4, skipped 2 (no TMDB match), not allowed 1'
+      "3 requested, 12 already on the server, 4 already requested, 2 couldn't be matched, 1 not allowed"
     )
-    expect(screen.getByTestId('watchlist-sync-result-requested')).toHaveTextContent('Requested 3')
-    expect(screen.getByTestId('watchlist-sync-result-available')).toHaveTextContent('already on the server 12')
-    expect(screen.getByTestId('watchlist-sync-result-already-requested')).toHaveTextContent('already requested 4')
-    expect(screen.getByTestId('watchlist-sync-result-skipped')).toHaveTextContent('skipped 2 (no TMDB match)')
-    expect(screen.getByTestId('watchlist-sync-result-not-permitted')).toHaveTextContent('not allowed 1')
+    expect(screen.getByTestId('watchlist-sync-result-requested')).toHaveTextContent('3 requested')
+    expect(screen.getByTestId('watchlist-sync-result-available')).toHaveTextContent('12 already on the server')
+    expect(screen.getByTestId('watchlist-sync-result-already-requested')).toHaveTextContent('4 already requested')
+    expect(screen.getByTestId('watchlist-sync-result-skipped')).toHaveTextContent("2 couldn't be matched")
+    expect(screen.getByTestId('watchlist-sync-result-not-permitted')).toHaveTextContent('1 not allowed')
   })
 
   it('shows no counts before anything was synced', () => {
@@ -142,7 +142,7 @@ describe('WatchlistSyncCard', () => {
     [
       'the run counts',
       { queued: false as const, counts: { requested: 2, available: 1, alreadyRequested: 0, skipped: 1, notPermitted: 0 } },
-      'Requested 2, already on the server 1, already requested 0, skipped 1 (no TMDB match), not allowed 0',
+      "2 requested, 1 already on the server, 0 already requested, 1 couldn't be matched, 0 not allowed",
     ],
     ['an unchanged watchlist', { queued: false as const, notModified: true }, 'Your watchlist has not changed since the last sync'],
   ])('tells the member %s after a direct sync, never "up to date"', async (_case, data, message) => {

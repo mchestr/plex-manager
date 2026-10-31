@@ -32,7 +32,7 @@ const ITEM_STATUS: Record<string, { label: string; variant: BadgeVariant }> = {
   ALREADY_REQUESTED: { label: "Already requested", variant: "neutral" },
   FAILED: { label: "Failed", variant: "destructive" },
   SYNCED: { label: "Synced", variant: "neutral" },
-  SKIPPED_NO_EXTERNAL_ID: { label: "No TMDB match", variant: "neutral" },
+  SKIPPED_NO_EXTERNAL_ID: { label: "Couldn't match", variant: "neutral" },
   NOT_PERMITTED: { label: "Not allowed", variant: "warning" },
 }
 

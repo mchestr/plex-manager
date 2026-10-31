@@ -29,8 +29,7 @@ export function NotifySwitch({ notify }: { notify: boolean }) {
       <div className="flex flex-col gap-1">
         <Label htmlFor="account-notify">Tell me when my Rewind is ready</Label>
         <p id="account-notify-hint" className="text-label text-muted-foreground">
-          Sends a Discord message if you linked Discord, and shows a notice on other pages. The Rewind card on Home
-          always shows when your Rewind is ready.
+          Sends a Discord message if you linked Discord, and shows a notice in the app.
         </p>
       </div>
       <Switch

@@ -7,8 +7,11 @@ import { limitCopy } from "@/lib/request-tiers/tiers"
 const hoursCopy = (hours: number) => `${Math.ceil(hours)} ${Math.ceil(hours) === 1 ? "hour" : "hours"}`
 const daysCopy = (days: number) => (days === 1 ? "day" : `${days} days`)
 
-/** "3 of 4 left" or "Unlimited", for the requests of one kind in this period. */
-function UsageRow({ label, usage, testId }: { label: string; usage: QuotaUsage; testId: string }) {
+/**
+ * "3 of 4 left" or "Unlimited", for the requests of one kind in this period.
+ * The period shows only when the tier line above doesn't give it.
+ */
+function UsageRow({ label, usage, tierDays, testId }: { label: string; usage: QuotaUsage; tierDays: number | null; testId: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3 text-ui" data-testid={testId}>
       <dt className="text-muted-foreground">{label}</dt>
@@ -17,7 +20,8 @@ function UsageRow({ label, usage, testId }: { label: string; usage: QuotaUsage; 
           "Unlimited"
         ) : (
           <>
-            {usage.remaining} left <span className="text-label text-muted-foreground">({usage.used} of {usage.limit} used, per {daysCopy(usage.days)})</span>
+            {usage.remaining} of {usage.limit} left
+            {usage.days !== tierDays && <span className="text-label text-muted-foreground"> (per {daysCopy(usage.days)})</span>}
           </>
         )}
       </dd>
@@ -28,6 +32,8 @@ function UsageRow({ label, usage, testId }: { label: string; usage: QuotaUsage; 
 /** Members see only their own tier and the next one; only admins see the full tier table. */
 export function RequestLimitsCard({ limits }: { limits: MemberRequestLimits }) {
   const { progress, usage, excluded, hours } = limits
+  // The tier line's period, when it shows
+  const tierDays = !excluded && progress ? progress.tier.days : null
 
   return (
     <Card aria-labelledby="home-request-limits-title" role="region" data-testid="home-request-limits-card">
@@ -52,8 +58,8 @@ export function RequestLimitsCard({ limits }: { limits: MemberRequestLimits }) {
         )}
         {usage && (
           <dl className="flex flex-col gap-1.5" aria-label="This period" data-testid="request-limits-usage">
-            <UsageRow label="Movies" usage={usage.movie} testId="request-limits-movies" />
-            <UsageRow label="Shows" usage={usage.tv} testId="request-limits-tv" />
+            <UsageRow label="Movies" usage={usage.movie} tierDays={tierDays} testId="request-limits-movies" />
+            <UsageRow label="Shows" usage={usage.tv} tierDays={tierDays} testId="request-limits-tv" />
           </dl>
         )}
         {!excluded && progress && (

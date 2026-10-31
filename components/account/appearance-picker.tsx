@@ -76,12 +76,9 @@ export function AppearancePicker({ variant = "inline", testId = "appearance" }: 
 
   return (
     <div className="flex items-center justify-between gap-4">
-      <div className="flex flex-col gap-1">
-        <span id={`${testId}-label`} className="text-ui font-medium text-foreground">
-          Theme
-        </span>
-        <p className="text-label text-muted-foreground">Rewind keeps its own colours in either theme.</p>
-      </div>
+      <span id={`${testId}-label`} className="text-ui font-medium text-foreground">
+        Theme
+      </span>
       <SegmentedControl
         aria-labelledby={`${testId}-label`}
         value={choice}

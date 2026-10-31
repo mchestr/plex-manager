@@ -13,8 +13,8 @@ import type { StagePrefs } from "@/lib/rewind/stage/prefs"
 
 type SwitchPref = "autoplay" | "slowerPacing" | "shortcuts"
 
-const ROWS: { pref: SwitchPref; label: string; hint: string; testId?: string }[] = [
-  { pref: "autoplay", label: "Autoplay", hint: "Go to the next page automatically." },
+const ROWS: { pref: SwitchPref; label: string; hint?: string; testId?: string }[] = [
+  { pref: "autoplay", label: "Autoplay" },
   { pref: "slowerPacing", label: "Slower pacing", hint: "Show each page 50% longer." },
   { pref: "shortcuts", label: "Keyboard shortcuts", hint: "K pauses, S shares, T opens the table and comma opens Settings.", testId: "rewind-shortcuts-switch" },
 ]
@@ -43,20 +43,22 @@ export function SettingsSheet({ open, onClose, prefs, onChange, articleHref, abo
       <SheetContent side="bottom" grabber data-testid="rewind-settings-sheet" className="font-display">
         <SheetHeader>
           <SheetTitle>Settings</SheetTitle>
-          <SheetDescription>These settings apply to this device only.</SheetDescription>
+          <SheetDescription>These switches apply to this device only.</SheetDescription>
         </SheetHeader>
         <ul className="flex flex-col gap-4">
           {ROWS.map(({ pref, label, hint, testId }) => (
             <li key={pref} className="flex items-start justify-between gap-4">
               <span className="flex flex-col gap-0.5">
                 <Label htmlFor={`${id}-${pref}`}>{label}</Label>
-                <span id={`${id}-${pref}-hint`} className="text-ui text-muted-foreground">
-                  {hint}
-                </span>
+                {hint && (
+                  <span id={`${id}-${pref}-hint`} className="text-ui text-muted-foreground">
+                    {hint}
+                  </span>
+                )}
               </span>
               <Switch
                 id={`${id}-${pref}`}
-                aria-describedby={`${id}-${pref}-hint`}
+                aria-describedby={hint ? `${id}-${pref}-hint` : undefined}
                 checked={prefs[pref]}
                 onCheckedChange={(checked) => onChange({ [pref]: checked })}
                 data-testid={testId}

@@ -11,9 +11,9 @@ describe("share sheet wording and addresses (JSDoc examples)", () => {
 
   it("names what a link will publish", () => {
     expect(confirmLine({ cards: 5, signed: false, expires: "31 January 2027" })).toBe(
-      "Anyone with the link will see these 5 cards. Your name: hidden. Expires 31 January 2027."
+      "Anyone with the link will see these 5 cards, without your name, until 31 January 2027."
     )
-    expect(confirmLine({ cards: 1, signed: true, expires: null })).toBe("Anyone with the link will see this card. Your name: shown. No expiry.")
+    expect(confirmLine({ cards: 1, signed: true, expires: null })).toBe("Anyone with the link will see this card, with your name, until you stop sharing.")
   })
 
   it("states the back cover's privacy line", () => {

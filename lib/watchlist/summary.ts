@@ -5,7 +5,7 @@
  * @example
  * ```ts
  * watchlistCountsText({ requested: 3, available: 12, alreadyRequested: 4, skipped: 2, notPermitted: 1 })
- * // "Requested 3, already on the server 12, already requested 4, skipped 2 (no TMDB match), not allowed 1"
+ * // "3 requested, 12 already on the server, 4 already requested, 2 couldn't be matched, 1 not allowed"
  * ```
  *
  * @module lib/watchlist/summary
@@ -24,11 +24,11 @@ export const WATCHLIST_COUNT_PARTS: ReadonlyArray<{
   testId: string
   text: (count: number) => string
 }> = [
-  { key: "requested", testId: "watchlist-sync-result-requested", text: (n) => `Requested ${n}` },
-  { key: "available", testId: "watchlist-sync-result-available", text: (n) => `already on the server ${n}` },
-  { key: "alreadyRequested", testId: "watchlist-sync-result-already-requested", text: (n) => `already requested ${n}` },
-  { key: "skipped", testId: "watchlist-sync-result-skipped", text: (n) => `skipped ${n} (no TMDB match)` },
-  { key: "notPermitted", testId: "watchlist-sync-result-not-permitted", text: (n) => `not allowed ${n}` },
+  { key: "requested", testId: "watchlist-sync-result-requested", text: (n) => `${n} requested` },
+  { key: "available", testId: "watchlist-sync-result-available", text: (n) => `${n} already on the server` },
+  { key: "alreadyRequested", testId: "watchlist-sync-result-already-requested", text: (n) => `${n} already requested` },
+  { key: "skipped", testId: "watchlist-sync-result-skipped", text: (n) => `${n} couldn't be matched` },
+  { key: "notPermitted", testId: "watchlist-sync-result-not-permitted", text: (n) => `${n} not allowed` },
 ]
 
 /** Every count as one sentence. */

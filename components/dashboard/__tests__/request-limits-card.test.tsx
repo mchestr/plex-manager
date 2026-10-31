@@ -18,9 +18,9 @@ describe("RequestLimitsCard", () => {
 
     expect(screen.getByTestId("request-limits-tier")).toHaveTextContent("Tier 2")
     expect(screen.getByTestId("request-limits-tier")).toHaveTextContent("4 movies and 2 shows every 7 days")
-    expect(screen.getByTestId("request-limits-movies")).toHaveTextContent("3 left")
-    expect(screen.getByTestId("request-limits-movies")).toHaveTextContent("1 of 4 used")
-    expect(screen.getByTestId("request-limits-tv")).toHaveTextContent("0 left")
+    // The tier line gives the period, so the rows don't repeat it
+    expect(screen.getByTestId("request-limits-movies")).toHaveTextContent(/^Movies3 of 4 left$/)
+    expect(screen.getByTestId("request-limits-tv")).toHaveTextContent(/^Shows0 of 2 left$/)
   })
 
   it("draws progress to the next tier", () => {
@@ -54,9 +54,9 @@ describe("RequestLimitsCard", () => {
         "Tier 2",
         "4 movies and 2 shows every 7 days",
         "Movies",
-        "3 left (1 of 4 used, per 7 days)",
+        "3 of 4 left",
         "Shows",
-        "0 left (2 of 2 used, per 7 days)",
+        "0 of 2 left",
         "Watch 13 hours more for Tier 3: 6 movies and 3 shows.",
       ].join(""),
     )
@@ -71,7 +71,7 @@ describe("RequestLimitsCard", () => {
     render(<RequestLimitsCard limits={limits(10, { progress: tierProgress(10, tiers), usage })} />)
 
     expect(screen.getByTestId("request-limits-tier")).toHaveTextContent("2 movies and 1 show every day")
-    expect(screen.getByTestId("request-limits-movies")).toHaveTextContent("(0 of 2 used, per day)")
+    expect(screen.getByTestId("request-limits-movies")).toHaveTextContent(/^Movies2 of 2 left$/)
     expect(screen.getByTestId("request-limits-progress")).toHaveTextContent("Watch 14 hours more for Tier 2: 8 movies and 4 shows every 30 days.")
   })
 
@@ -81,7 +81,8 @@ describe("RequestLimitsCard", () => {
     expect(screen.queryByTestId("request-limits-tier")).not.toBeInTheDocument()
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
     expect(screen.getByText("An admin set your limits, so watching more doesn't change them.")).toBeInTheDocument()
-    expect(screen.getByTestId("request-limits-movies")).toBeInTheDocument()
+    // With no tier line, each row says its period
+    expect(screen.getByTestId("request-limits-movies")).toHaveTextContent(/^Movies3 of 4 left \(per 7 days\)$/)
     expect(screen.queryByTestId("request-limits-unavailable")).not.toBeInTheDocument()
   })
 

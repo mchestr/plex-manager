@@ -127,7 +127,7 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
       logger.warn("User has no Plex auth token", { userId })
       await updateSyncSettings(userId, {
         lastSyncStatus: "failed",
-        lastSyncError: "No Plex auth token - please log in again",
+        lastSyncError: "No Plex sign-in. Sign in again.",
       })
       return { success: false, error: "No Plex auth token" }
     }
@@ -154,7 +154,7 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
       logger.warn("Could not read the Overseerr users", { userId, code: index.code, status: index.status })
       await updateSyncSettings(userId, {
         lastSyncStatus: "failed",
-        lastSyncError: "Could not reach Overseerr. Please try again later.",
+        lastSyncError: "Could not reach Overseerr. Try again later.",
       })
       return { success: false, error: "Could not read the Overseerr users" }
     }
@@ -176,7 +176,7 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
       logger.warn("Plex token is invalid or expired", { userId })
       await updateSyncSettings(userId, {
         lastSyncStatus: "failed",
-        lastSyncError: "Plex token expired - please log in again",
+        lastSyncError: "Your Plex sign-in expired. Sign in again.",
       })
       return { success: false, error: "Plex token is invalid or expired" }
     }
@@ -257,7 +257,7 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
     logger.error("Watchlist sync failed", error, { userId })
     await updateSyncSettings(userId, {
       lastSyncStatus: "failed",
-      lastSyncError: "Sync failed. Please try again later.",
+      lastSyncError: "Sync failed. Try again later.",
     })
     return { success: false, error: "Sync failed" }
   }

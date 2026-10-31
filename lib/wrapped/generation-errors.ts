@@ -203,7 +203,7 @@ function retryAfterPhrase(seconds: number): string {
  * refusalCopy("ALREADY_GENERATING") // "Your Rewind is already being made."
  * refusalCopy("RATE_LIMITED", 540)  // "You can try again in 9 minutes."
  * refusalCopy("RATE_LIMITED", 7200) // "You can try again in 2 hours."
- * refusalCopy("REWIND_NOT_ELIGIBLE") // "Rewind needs Plex watch history. Jellyfin support is planned."
+ * refusalCopy("REWIND_NOT_ELIGIBLE") // "Rewind needs Plex watch history, and this server has none for your account."
  * ```
  */
 export function refusalCopy(code: GenerationRefusalCode, retryAfterSec = 60): string {
@@ -215,6 +215,6 @@ export function refusalCopy(code: GenerationRefusalCode, retryAfterSec = 60): st
     case "NOT_ENTITLED":
       return "Rewind is part of an active membership. Renew your subscription to make yours."
     case "REWIND_NOT_ELIGIBLE":
-      return "Rewind needs Plex watch history. Jellyfin support is planned."
+      return "Rewind needs Plex watch history, and this server has none for your account."
   }
 }

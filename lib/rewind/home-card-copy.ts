@@ -78,16 +78,16 @@ export function cardCopy(state: RewindCardState, name: string, settings: FormatS
       }
     case "not-eligible":
       return state.reason === "jellyfin-only"
-        ? { title: "Rewind needs Plex watch history", lead: "Jellyfin support is planned.", badge: "Not eligible yet" }
+        ? { title: "Rewind needs Plex watch history", lead: "This server has none for your account.", badge: "Not eligible yet" }
         : {
             title: "Your first Rewind arrives next year",
-            lead: "Rewind needs a few months of watch history. You are not in this year's season.",
+            lead: "Rewind needs a few months of watch history.",
             badge: "Not eligible yet",
           }
     case "closed":
       return {
         title: `Your Rewind ${state.year}`,
-        lead: `The season closed on ${formatDate(lastCountedDay(state.closedOn), "day-month", settings)}. You can still open it.`,
+        lead: `The season closed on ${formatDate(lastCountedDay(state.closedOn), "day-month", settings)}.`,
         badge: null,
       }
     case "not-started":

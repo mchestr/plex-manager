@@ -67,7 +67,7 @@ export default async function Home({ searchParams }: HomeProps) {
         <StatusScreen
           icon={icons.plex}
           title="Sign-in isn't set up yet"
-          description="No media server is set up for sign-in. Tell the server owner."
+          description="Tell the server owner."
           primaryAction={
             inviteCode ? (
               <Button

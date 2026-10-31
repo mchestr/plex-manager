@@ -46,7 +46,8 @@ describe('TimezoneField', () => {
 
     expect(trigger()).toHaveTextContent('Europe/London')
     expect(screen.getByTestId('account-timezone-unsaved')).toHaveTextContent('Unsaved changes')
-    expect(screen.getByText(/comes from your browser\. A change applies to your next Rewind/)).toBeInTheDocument()
+    expect(screen.getByText('Changes apply to your next Rewind.')).toBeInTheDocument()
+    expect(screen.queryByText(/comes from your browser/)).not.toBeInTheDocument()
 
     await user.click(screen.getByTestId('account-timezone-save'))
 
