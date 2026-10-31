@@ -1,13 +1,14 @@
 -- Last seen and the inactivity sweep: each member's last play read from
--- Tautulli, a per-member exclusion, the sweep's settings row and its run
--- history. The audit log gets an index per actor and a per-member index
+-- Tautulli, when their access came back, a per-member exclusion, the sweep's
+-- settings row and its run history. The audit log gets an index per actor and a per-member index
 -- ordered by time for Admin > Audit log and the member Audit tab.
 
 -- DropIndex
 DROP INDEX "AuditLog_targetUserId_idx";
 
 -- AlterTable
-ALTER TABLE "User" ADD COLUMN     "inactivityExcluded" BOOLEAN NOT NULL DEFAULT false,
+ALTER TABLE "User" ADD COLUMN     "accessRestoredAt" TIMESTAMP(3),
+ADD COLUMN     "inactivityExcluded" BOOLEAN NOT NULL DEFAULT false,
 ADD COLUMN     "lastSeenAt" TIMESTAMP(3),
 ADD COLUMN     "lastSeenReadAt" TIMESTAMP(3);
 

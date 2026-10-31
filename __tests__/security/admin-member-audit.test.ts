@@ -106,11 +106,12 @@ describe("admin writes to member data", () => {
       runId: "run-1",
       trigger: "admin",
       actorId: ADMIN,
-      confirmedRemovals: 1,
+      confirmedUserIds: ["member-1"],
       settings: { enabled: true, thresholdDays: 180 },
       now,
       readSince: now,
       newestPlayAt: now,
+      oldestPlayAt: new Date("2024-01-01T00:00:00.000Z"),
     })
 
     const written = jest.mocked(recordAuditEvent).mock.calls.filter(([type]) => type === AuditEventType.MEMBER_UNSHARED)

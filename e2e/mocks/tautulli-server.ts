@@ -6,7 +6,7 @@ import { createServer, type Server, type ServerResponse } from 'node:http';
  * this on a free port and exports its URL as `E2E_TAUTULLI_URL`, and a spec
  * points an active `Tautulli.url` at it.
  *
- * Two commands answer, in Tautulli's `response` envelope; any other is an error:
+ * Three commands answer, in Tautulli's `response` envelope; any other is an error:
  *
  * - `get_user_watch_time_stats`, for the affiliate specs (Make reads the
  *   member's watch time live): every user has {@link MOCK_WATCH_HOURS} all
@@ -14,6 +14,8 @@ import { createServer, type Server, type ServerResponse } from 'node:http';
  * - `get_users_table`, for the inactive members spec (the daily last seen
  *   read): the users in {@link MOCK_USERS_TABLE}, paged by `start` and
  *   `length` as Tautulli's DataTables call is.
+ * - `get_history`, for the same read's oldest play: one row, the oldest of
+ *   {@link MOCK_OLDEST_PLAY}, as an ascending one-row page asks for.
  */
 
 /** Every user's all-time hours: over the first affiliate tier (50 h). */
@@ -30,6 +32,9 @@ export const MOCK_USERS_TABLE = {
   neverPlayed: { userId: 9300002 },
   noHistory: { userId: 9300003 },
 } as const;
+
+/** Tautulli's oldest recorded play: long enough ago to cover any threshold the specs set. */
+const MOCK_OLDEST_PLAY = new Date('2020-01-01T12:00:00Z');
 
 const USERS_TABLE_ROWS = [
   { user: MOCK_USERS_TABLE.played, name: 'Played', lastSeen: MOCK_USERS_TABLE.played.lastSeen.getTime() / 1000, keepHistory: 1 },
@@ -64,6 +69,10 @@ function answer(params: URLSearchParams): unknown {
       const length = Number(params.get('length') ?? 25);
       const total = USERS_TABLE_ROWS.length;
       return success({ recordsFiltered: total, recordsTotal: total, draw: 1, data: USERS_TABLE_ROWS.slice(start, start + length) });
+    }
+    case 'get_history': {
+      const date = MOCK_OLDEST_PLAY.getTime() / 1000;
+      return success({ recordsFiltered: 1, recordsTotal: 1, draw: 1, data: [{ date, started: date, user_id: MOCK_USERS_TABLE.played.userId }] });
     }
     default:
       return { response: { result: 'error', message: `No mock for ${params.get('cmd')}`, data: {} } };

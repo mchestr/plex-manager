@@ -35,6 +35,7 @@ export function buildUser(overrides: Partial<User> = {}): User {
     watchHoursLast30Days: null,
     watchHoursReadAt: null,
     accessEndedAt: null,
+    accessRestoredAt: null,
     lastSeenAt: null,
     lastSeenReadAt: null,
     inactivityExcluded: false,

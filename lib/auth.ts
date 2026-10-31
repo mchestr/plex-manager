@@ -284,6 +284,7 @@ export const authOptions: NextAuthOptions = {
 
             // Update existing user info; admin status only ever goes up
             const userId = dbUser.id
+            const accessHadEnded = dbUser.accessEndedAt !== null
             dbUser = await writeWithPlexEmail(plexUser, (email) =>
               prisma.user.update({
                 where: { id: userId },
@@ -293,8 +294,11 @@ export const authOptions: NextAuthOptions = {
                   ...email,
                   image: plexUser.thumb,
                   ...(promotesOwner && { isAdmin: true }),
-                  // Access is back, so the member is one again
-                  ...(accessCheck.status === "granted" && { accessEndedAt: null }),
+                  // Access is back, so the member is one again; the inactivity sweep counts from today
+                  ...(accessCheck.status === "granted" && {
+                    accessEndedAt: null,
+                    ...(accessHadEnded && { accessRestoredAt: new Date() }),
+                  }),
                 },
               })
             )
@@ -428,6 +432,7 @@ export const authOptions: NextAuthOptions = {
                 ...(promotes && { isAdmin: true }),
                 // Jellyfin signs in only an enabled account, so access is back
                 accessEndedAt: null,
+                ...(dbUser.accessEndedAt && { accessRestoredAt: new Date() }),
               },
             })
 

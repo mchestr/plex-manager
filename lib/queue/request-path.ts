@@ -9,12 +9,13 @@
  * answers `QUEUE_UNAVAILABLE` within about two seconds instead.
  *
  * Job ids come from `JOB_ID_POLICY` as in `addJob`, and jobs carry the
- * request id (`traceQueue`).
+ * request id (`traceQueue`). {@link isDeduplicatedJobPending} tells a caller,
+ * on the same client, that an add would join a job still waiting or running.
  *
  * @module
  */
 
-import { Queue, type JobsOptions } from "bullmq"
+import { Queue, type JobsOptions, type JobState } from "bullmq"
 
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { DEFAULT_JOB_OPTIONS, QUEUE_NAME } from "@/lib/queue/client"
@@ -31,6 +32,9 @@ const logger = createLogger("QUEUE_REQUEST_PATH")
 const REQUEST_PATH_TIMEOUT_MS = 2000
 
 type RequestPathResult<T> = { ok: true; value: T } | { ok: false; code: "QUEUE_UNAVAILABLE" }
+
+/** The states of a job that has not finished. */
+const PENDING_STATES: ReadonlySet<JobState | "unknown"> = new Set(["waiting", "prioritized", "delayed", "active", "waiting-children"])
 
 let queue: Queue | null = null
 
@@ -93,4 +97,17 @@ export async function enqueueFromRequest<T extends JobType>(
   if (!result.ok) return result
   logger.info("Job added to queue", { jobId: result.value.id, jobType })
   return { ok: true, jobId: result.value.id ?? "" }
+}
+
+/**
+ * Whether the job holding the deduplication id `deduplicationId` is still
+ * waiting, delayed or running. A job added with that id now would join it
+ * and lose its own data, so a caller whose data matters refuses instead.
+ * Answers `QUEUE_UNAVAILABLE` within about two seconds while Redis is down.
+ */
+export async function isDeduplicatedJobPending(deduplicationId: string): Promise<RequestPathResult<boolean>> {
+  return withRequestPathQueue(deduplicationId, async (q) => {
+    const jobId = await q.getDeduplicationJobId(deduplicationId)
+    return jobId !== null && PENDING_STATES.has(await q.getJobState(jobId))
+  })
 }

@@ -1,8 +1,8 @@
 /**
  * The inactive members page: its own admin check before any read, then the
  * settings card (with "Last saved" only after a first save, the newest run
- * and Run now confirming the preview's count), the preview and the runs, and
- * a warning with a way to Settings while Tautulli is not set up.
+ * and Run now confirming the members the preview lists), the preview and the
+ * runs, and a warning with a way to Settings while Tautulli is not set up.
  */
 
 import { render, screen, within } from "@testing-library/react"
@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event"
 import { connection } from "next/server"
 
 import { resetUrl } from "@/__tests__/helpers/url-router"
+import { runMemberActivityNow } from "@/actions/admin/inactivity"
 import InactivityPage from "@/app/admin/inactivity/page"
 import { assertAdmin } from "@/lib/admin"
 import { getInactivityPage, type InactivityPageData } from "@/lib/data/inactivity"
@@ -126,17 +127,20 @@ describe("Admin inactivity page", () => {
     expect(screen.getByTestId("admin-inactivity-member-u-sam")).toHaveAttribute("href", "/admin/users/u-sam")
     expect(screen.getByTestId("admin-inactivity-not-listed-admin")).toHaveTextContent("Admin1")
     expect(screen.getByRole("heading", { level: 2, name: "Recent runs" })).toBeInTheDocument()
-    expect(within(screen.getByTestId("admin-inactivity-runs-row-run-1")).getByText("More members qualified than the admin confirmed")).toBeInTheDocument()
+    expect(within(screen.getByTestId("admin-inactivity-runs-row-run-1")).getByText("A member who qualified was not confirmed")).toBeInTheDocument()
     expect(screen.queryByTestId("admin-inactivity-no-tautulli")).not.toBeInTheDocument()
   })
 
-  it("asks to confirm Run now for the members the preview lists", async () => {
+  it("asks to confirm Run now for the members the preview lists, and passes their ids on", async () => {
     const user = userEvent.setup()
+    jest.mocked(runMemberActivityNow).mockResolvedValue({ success: true, data: { queued: true } })
     await renderPage()
 
     await user.click(screen.getByTestId("admin-inactivity-run-now"))
-
     expect(await screen.findByRole("heading", { name: "Remove Plex access from 2 members now?" })).toBeInTheDocument()
+    await user.click(screen.getByTestId("admin-inactivity-run-confirm"))
+
+    expect(runMemberActivityNow).toHaveBeenCalledWith({ confirmedUserIds: ["u-nia", "u-sam"] })
   })
 
   it("says who saved last, and leaves the footer out before a first save", async () => {

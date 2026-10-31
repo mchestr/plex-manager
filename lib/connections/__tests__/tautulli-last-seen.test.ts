@@ -5,7 +5,7 @@
 import type { z } from "zod"
 
 import { tautulliCommand } from "@/lib/connections/tautulli"
-import { listTautulliLastSeen, MAX_PAGES, PAGE_LENGTH } from "@/lib/connections/tautulli-last-seen"
+import { getOldestPlay, listTautulliLastSeen, MAX_PAGES, PAGE_LENGTH } from "@/lib/connections/tautulli-last-seen"
 
 jest.mock("@/lib/connections/tautulli", () => ({ tautulliCommand: jest.fn() }))
 
@@ -86,19 +86,44 @@ describe("listTautulliLastSeen", () => {
     expect(result.ok && result.data.rows[0]!.lastSeen).toEqual(expected)
   })
 
+  // Tautulli 2.10 and later send 0 or 1; older versions send "Checked" or ""
   it.each<[unknown, boolean]>([
-    [0, false],
-    ["0", false],
-    [false, false],
     [1, true],
     ["1", true],
     [true, true],
-    [null, true],
-    [undefined, true],
+    ["Checked", true],
+    ["checked", true],
+    [" CHECKED ", true],
+    [0, false],
+    ["0", false],
+    [false, false],
+    ["", false],
+    [null, false],
+    [undefined, false],
+    [2, false],
+    ["yes", false],
   ])("reads keep_history %p as %p", async (keepHistory, expected) => {
     pages({ rows: [row(1, 1, { keep_history: keepHistory })] })
     const result = await listTautulliLastSeen(config)
     expect(result.ok && result.data.rows[0]!.keepHistory).toBe(expected)
+  })
+
+  it("reads a row without keep_history as not keeping history", async () => {
+    const { keep_history: _omitted, ...withoutKeepHistory } = row(1, 1_700_000_000)
+    pages({ rows: [withoutKeepHistory] })
+
+    const result = await listTautulliLastSeen(config)
+
+    expect(result).toEqual({ ok: true, data: { rows: [{ userId: 1, lastSeen: new Date(1_700_000_000_000), keepHistory: false }], dropped: 0 } })
+  })
+
+  it("drops a row without last_seen, so the member is not stamped as read", async () => {
+    const { last_seen: _omitted, ...withoutLastSeen } = row(1, 1_700_000_000)
+    pages({ rows: [withoutLastSeen, row(2, null)] })
+
+    const result = await listTautulliLastSeen(config)
+
+    expect(result).toEqual({ ok: true, data: { rows: [{ userId: 2, lastSeen: null, keepHistory: true }], dropped: 1 } })
   })
 
   it("reads a numeric string user id, and drops and counts rows that do not parse", async () => {
@@ -193,5 +218,63 @@ describe("listTautulliLastSeen", () => {
     })
 
     await expect(listTautulliLastSeen(config)).resolves.toEqual({ ok: false, code: "INVALID_RESPONSE" })
+  })
+})
+
+describe("getOldestPlay", () => {
+  /** Answers with one `get_history` page, parsed by the caller's schema as `tautulliCommand` does. */
+  function history(data: unknown) {
+    command.mockImplementationOnce(async (_config, _cmd, _params, schema) => {
+      const parsed = (schema as z.ZodType).safeParse({ recordsFiltered: 1, recordsTotal: 1, draw: 1, data })
+      return parsed.success ? { ok: true, data: parsed.data } : { ok: false, code: "INVALID_RESPONSE" }
+    })
+  }
+
+  /** A `get_history` row with the personal fields Tautulli sends. */
+  const play = (times: Record<string, unknown>) => ({ ...times, user: "Jane Doe", friendly_name: "Jane Doe", ip_address: "203.0.113.7", full_title: "A film" })
+
+  it("asks for the first play in date order, with a long timeout and one retry", async () => {
+    history([play({ date: 1_600_000_000, started: 1_600_000_000 })])
+    const signal = new AbortController().signal
+
+    await expect(getOldestPlay(config, { signal })).resolves.toEqual({ ok: true, data: new Date(1_600_000_000_000) })
+    expect(command).toHaveBeenCalledWith(
+      config,
+      "get_history",
+      { start: 0, length: 1, order_column: "date", order_dir: "asc" },
+      expect.anything(),
+      { signal, timeoutMs: 60_000, attempts: 2 }
+    )
+  })
+
+  it("is null when Tautulli has no history", async () => {
+    history([])
+    await expect(getOldestPlay(config)).resolves.toEqual({ ok: true, data: null })
+  })
+
+  it.each<[string, Record<string, unknown>, Date]>([
+    ["date over started", { date: 1_600_000_100, started: 1_600_000_000 }, new Date(1_600_000_100_000)],
+    ["date given as a numeric string", { date: "1600000000" }, new Date(1_600_000_000_000)],
+    ["started when date is blank", { date: "", started: 1_600_000_000 }, new Date(1_600_000_000_000)],
+    ["started when date is null", { date: null, started: "1600000000" }, new Date(1_600_000_000_000)],
+    ["started when there is no date", { started: 1_600_000_000 }, new Date(1_600_000_000_000)],
+  ])("reads %s", async (_name, times, expected) => {
+    history([play(times)])
+    await expect(getOldestPlay(config)).resolves.toEqual({ ok: true, data: expected })
+  })
+
+  it.each<[string, unknown]>([
+    ["a play with no time", [play({ date: null, started: "" })]],
+    ["a play dated zero", [play({ date: 0, started: 0 })]],
+    ["a play dated in words", [play({ date: "last year" })]],
+    ["Tautulli's failed query, whose data is the text null", "null"],
+  ])("fails the read on %s", async (_name, data) => {
+    history(data)
+    await expect(getOldestPlay(config)).resolves.toEqual({ ok: false, code: "INVALID_RESPONSE" })
+  })
+
+  it("passes a failed call on", async () => {
+    command.mockResolvedValueOnce({ ok: false, code: "TAUTULLI_ERROR" })
+    await expect(getOldestPlay(config)).resolves.toEqual({ ok: false, code: "TAUTULLI_ERROR" })
   })
 })

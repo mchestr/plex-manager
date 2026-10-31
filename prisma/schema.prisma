@@ -52,6 +52,7 @@ model User {
   watchHoursLast30Days  Float? // Tautulli watch hours in the last 30 days, from the last read
   watchHoursReadAt      DateTime? // When watchHours was last read
   accessEndedAt         DateTime? // When the member's media server access last ended
+  accessRestoredAt      DateTime? // When access came back after it ended (a sign-in with access, or a run that saw the share again); the inactivity sweep counts from it
   lastSeenAt            DateTime? // Start of the member's newest play in Tautulli (last_seen); never moves back (lib/inactivity/sync.ts)
   lastSeenReadAt        DateTime? // When the daily activity read last found the member in Tautulli
   inactivityExcluded    Boolean                @default(false) // The inactivity sweep never removes this member's Plex access
@@ -1041,7 +1042,7 @@ model InactivitySettings {
   id            String    @id @default("inactivity")
   enabled       Boolean   @default(false) // Remove Plex access from inactive members in the daily run
   thresholdDays Int       @default(180) // Days without a play (or since joining) before a member counts as inactive
-  runStartedAt  DateTime? // Claim of the run in progress; cleared when it ends, and stale after 30 minutes
+  runStartedAt  DateTime? // Claim of the run in progress: renewed every 5 minutes, cleared when it ends, stale after 30 minutes
   updatedAt     DateTime  @updatedAt
   updatedBy     String?
 }

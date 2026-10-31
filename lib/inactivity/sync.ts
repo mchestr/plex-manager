@@ -11,20 +11,26 @@
  * | Tautulli keeps no history for the member    | nothing, so the sweep sees them as not read   |
  * | No Tautulli row for the member              | nothing                                       |
  *
- * `lastSeenAt` never moves backwards, so a Tautulli that lost history cannot
- * make an active member look inactive. Members match by plex.tv account id
- * (`user_id` = the trimmed `plexUserId`), never by name.
+ * `lastSeenAt` never moves backwards, so a play an earlier read stored stays
+ * when Tautulli loses it. Members match by plex.tv account id (`user_id` =
+ * the trimmed `plexUserId`), never by name. A play dated after `now` (a
+ * wrong clock on the Tautulli host) is stored as `now`: a date in the future
+ * would never be replaced by later real plays.
  *
- * `newestPlayAt` is the newest play on the whole server, for the sweep's
- * freshness guard. A play dated after `now` (a wrong clock on the Tautulli
- * host) does not count: it cannot prove Tautulli is still recording.
+ * Two dates go to the sweep's guards:
+ *
+ * - `newestPlayAt`, the newest play on the whole server, shows that Tautulli
+ *   still records plays. A play dated after `now` does not count.
+ * - `oldestPlayAt`, when Tautulli's history starts (`getOldestPlay`), shows
+ *   how far back a missing play means anything. A failed read of it is
+ *   logged and gives null, which blocks removals but not the read.
  *
  * @module lib/inactivity/sync
  */
 
 import "server-only"
 
-import { listTautulliLastSeen } from "@/lib/connections/tautulli-last-seen"
+import { getOldestPlay, listTautulliLastSeen } from "@/lib/connections/tautulli-last-seen"
 import { getActiveService } from "@/lib/data/active-service"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
@@ -43,6 +49,8 @@ export type SyncLastSeenResult =
       matched: number
       /** The newest play on the whole server; null when Tautulli has none. */
       newestPlayAt: Date | null
+      /** When Tautulli's history starts; null when it has none or the read failed. */
+      oldestPlayAt: Date | null
     }
   | { ok: false; code: string }
 
@@ -59,6 +67,10 @@ export async function syncLastSeen({ now, signal }: { now: Date; signal?: AbortS
     return { ok: false, code: read.code }
   }
 
+  const oldest = await getOldestPlay(tautulli, { signal })
+  if (!oldest.ok) logger.warn("inactivity.oldest_play_failed", { code: oldest.code, status: oldest.status })
+  const oldestPlayAt = oldest.ok ? oldest.data : null
+
   const { rows, dropped } = read.data
   const byPlexUserId = new Map(rows.map((row) => [String(row.userId), row]))
   const newestPlayAt = rows.reduce<Date | null>((newest, row) => (row.lastSeen && row.lastSeen <= now ? later(newest, row.lastSeen) : newest), null)
@@ -70,11 +82,12 @@ export async function syncLastSeen({ now, signal }: { now: Date; signal?: AbortS
   const updates = members.flatMap((member) => {
     const row = byPlexUserId.get(member.plexUserId!.trim())
     if (!row?.keepHistory) return []
+    const played = row.lastSeen && row.lastSeen > now ? now : row.lastSeen
     // updateMany: a member removed since the read is skipped, not an error
     return [
       prisma.user.updateMany({
         where: { id: member.id },
-        data: { lastSeenAt: later(member.lastSeenAt, row.lastSeen), lastSeenReadAt: now },
+        data: { lastSeenAt: later(member.lastSeenAt, played), lastSeenReadAt: now },
       }),
     ]
   })
@@ -83,5 +96,5 @@ export async function syncLastSeen({ now, signal }: { now: Date; signal?: AbortS
   }
 
   logger.info("inactivity.synced", { tautulliUsers: rows.length, matched: updates.length, dropped })
-  return { ok: true, tautulliUsers: rows.length, matched: updates.length, newestPlayAt }
+  return { ok: true, tautulliUsers: rows.length, matched: updates.length, newestPlayAt, oldestPlayAt }
 }

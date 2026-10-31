@@ -10,8 +10,12 @@ import { MOCK_USERS_TABLE } from '../mocks/tautulli-server';
  * opens read-only and saves through Edit; Run now reads last seen from the
  * mock Tautulli (`e2e/mocks/tautulli-server.ts`, `get_users_table`) and each
  * member page shows what the read found; while automatic removal is on and
- * the preview lists a member, Run now first asks to confirm the count; and a
- * member page's switch keeps a member out of the sweep.
+ * the preview lists a member, Run now first asks to confirm the members it
+ * lists; and a member page's switch keeps a member out of the sweep.
+ *
+ * Run now and the switch are server-rendered, and a click before React
+ * hydrates them does nothing, so each click repeats until its effect shows,
+ * and only while that effect is still missing.
  *
  * Automatic removal stays off, except in the confirm test, which turns it on
  * in the settings row, closes the dialog without confirming and turns it off
@@ -139,8 +143,13 @@ test.describe('Admin inactive members', () => {
     const clickedAt = new Date();
     await page.goto('/admin/inactivity');
     await expect(page.getByTestId('admin-inactivity-last-run')).toBeVisible();
-    await page.getByTestId('admin-inactivity-run-now').click();
-    await expect(page.getByTestId('toast').filter({ hasText: /Run (queued|finished)/ })).toBeVisible({ timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
+    // Click until the run's toast shows, but never while a click's run is on its way (the button is busy then), so one run starts
+    const runNow = page.getByTestId('admin-inactivity-run-now');
+    const started = page.getByTestId('toast').filter({ hasText: /Run (queued|finished)/ });
+    await expect(async () => {
+      if (!(await started.isVisible()) && (await runNow.isEnabled())) await runNow.click();
+      await expect(started).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
     // The run is a job on the worker: wait for its row to finish
     const prisma = createE2EPrismaClient();
@@ -191,15 +200,19 @@ test.describe('Admin inactive members', () => {
       await expect(page.getByTestId(`admin-inactivity-member-${MEMBERS.inactive.id}`)).toHaveAttribute('href', `/admin/users/${MEMBERS.inactive.id}`);
 
       // Opening the confirm changes nothing, so a click before hydration is simply made again
+      const runNow = page.getByTestId('admin-inactivity-run-now');
       const dialog = page.getByTestId('admin-inactivity-run-dialog');
       await expect(async () => {
-        if (!(await dialog.isVisible())) await page.getByTestId('admin-inactivity-run-now').click();
+        if (!(await dialog.isVisible())) await runNow.click();
         await expect(dialog).toBeVisible({ timeout: 1000 });
       }).toPass();
+      // The run gets the listed members' ids, and removes no one if it would remove anyone else
       await expect(dialog).toContainText('Remove Plex access from 1 member now?');
+      await expect(dialog).toContainText('If it would then remove a member who is not in the list on this page, it removes no one.');
       await expect(page.getByTestId('admin-inactivity-run-confirm')).toBeVisible();
       await page.keyboard.press('Escape');
       await expect(dialog).toBeHidden();
+      await expect(runNow).toBeFocused();
 
       expect(await prisma.inactivityRun.count({ where: { startedAt: { gt: readAt } } })).toBe(0);
     } finally {
@@ -213,8 +226,12 @@ test.describe('Admin inactive members', () => {
     const toggle = page.getByTestId('admin-user-inactivity-excluded');
     await expect(toggle).toHaveAttribute('aria-checked', 'false', { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    // Click while it is still off, but never while a click's save is on its way (the switch is disabled then): a click
+    // after the save would turn it off again
+    await expect(async () => {
+      if ((await toggle.getAttribute('aria-checked')) === 'false' && (await toggle.isEnabled())) await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 1000 });
+    }).toPass({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
     await page.reload();
     await expect(page.getByTestId('admin-user-inactivity-excluded')).toHaveAttribute('aria-checked', 'true', { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 

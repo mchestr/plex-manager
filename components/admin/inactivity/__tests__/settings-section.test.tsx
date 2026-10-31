@@ -25,10 +25,10 @@ async function renderSection({
   saved = ON,
   scheduled = true,
   scheduledLimit = 3 as number | null,
-  removals = 0,
-}: { saved?: InactivitySettingsValues; scheduled?: boolean; scheduledLimit?: number | null; removals?: number } = {}) {
+  removalIds = [] as string[],
+}: { saved?: InactivitySettingsValues; scheduled?: boolean; scheduledLimit?: number | null; removalIds?: string[] } = {}) {
   await act(async () => {
-    render(<InactivitySettingsSection saved={saved} scheduled={scheduled} scheduledLimit={scheduledLimit} removals={removals} lastRun={null} />)
+    render(<InactivitySettingsSection saved={saved} scheduled={scheduled} scheduledLimit={scheduledLimit} removalIds={removalIds} lastRun={null} />)
   })
 }
 
@@ -78,14 +78,17 @@ describe("InactivitySettingsSection", () => {
       expect(summaryRow("limit")).toHaveTextContent("1 member per scheduled run")
     })
 
-    it("asks to confirm Run now while the saved switch is on and the preview lists members", async () => {
+    it("asks to confirm Run now while the saved switch is on and the preview lists members, then passes their ids on", async () => {
       const user = userEvent.setup()
       jest.mocked(runMemberActivityNow).mockResolvedValue({ success: true, data: { queued: false } })
-      await renderSection({ removals: 4 })
+      const removalIds = ["u-1", "u-2", "u-3", "u-4"]
+      await renderSection({ removalIds })
 
       await user.click(screen.getByTestId("admin-inactivity-run-now"))
-
       expect(await screen.findByRole("heading", { name: "Remove Plex access from 4 members now?" })).toBeInTheDocument()
+      await user.click(screen.getByTestId("admin-inactivity-run-confirm"))
+
+      expect(runMemberActivityNow).toHaveBeenCalledWith({ confirmedUserIds: removalIds })
     })
   })
 

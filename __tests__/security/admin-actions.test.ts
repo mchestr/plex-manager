@@ -32,7 +32,7 @@ jest.mock('next/cache', () => ({
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
 // The inactivity actions queue a job or run the sweep; a refused caller reaches neither.
-jest.mock('@/lib/queue/client', () => ({ addJob: jest.fn() }))
+jest.mock('@/lib/queue/request-path', () => ({ enqueueFromRequest: jest.fn(), isDeduplicatedJobPending: jest.fn() }))
 jest.mock('@/lib/inactivity/run', () => ({ runMemberActivity: jest.fn() }))
 
 beforeEach(() => mockReset(prismaMock))
@@ -611,7 +611,7 @@ describe('Roles', () => {
       asSupport()
 
       await expect(updateInactivitySettings({ enabled: true, thresholdDays: 90 })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
-      await expect(runMemberActivityNow({ confirmedRemovals: 1 })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      await expect(runMemberActivityNow({ confirmedUserIds: ['member-1'] })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
       await expect(setMemberInactivityExcluded({ userId: 'member-1', excluded: true })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
       expect(prismaMock.inactivitySettings.upsert).not.toHaveBeenCalled()
       expect(prismaMock.user.updateMany).not.toHaveBeenCalled()

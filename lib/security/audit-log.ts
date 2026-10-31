@@ -177,7 +177,8 @@ export enum AuditEventType {
   // An admin removed a member's share of the Plex server (P11.16, GAP-33).
   // Details carry whether the share was already gone. A removal by the
   // inactivity sweep (lib/inactivity/sweep.ts) also carries the reason
-  // "inactivity", the last seen date, the threshold in days and the run id.
+  // "inactivity", the last seen date, the threshold in days and the run id,
+  // and offboarded: false when the clean-up after the removal failed.
   MEMBER_UNSHARED = "MEMBER_UNSHARED",
   // An admin imported the Plex server's members (P11.16, GAP-33). Details carry
   // the counts and the created user ids.
@@ -200,10 +201,11 @@ export enum AuditEventType {
   SETUP_CLAIMED = "SETUP_CLAIMED",
   // An optional setup step was skipped (P10.24). Details carry the step id.
   SETUP_STEP_SKIPPED = "SETUP_STEP_SKIPPED",
-  // One run of the inactivity sweep (lib/inactivity/run.ts): every run while
-  // the sweep is on, and every run an admin starts. Details carry the run id,
-  // the trigger, the threshold in days, the counts, and why the sweep removed
-  // no one (blocked), if it did not act.
+  // One run of the inactivity sweep (lib/inactivity/run.ts): every stored
+  // run, and every Run now that found another run in progress (no run id,
+  // blocked "busy"). Details carry the run id, the trigger, the threshold in
+  // days, the counts, and why the sweep removed no one (blocked), if it did
+  // not act.
   INACTIVITY_SWEEP_RUN = "INACTIVITY_SWEEP_RUN",
   // An admin changed the inactivity sweep settings. Details carry the section
   // ("inactivity"), the changed field names, and the values before and after.

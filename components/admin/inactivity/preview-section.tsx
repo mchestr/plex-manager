@@ -17,7 +17,7 @@ interface PreviewSectionProps {
 /** Every member with a Plex account who is not in the list, by why: active, protected by a rule, or without access. */
 function NotListed({ preview, thresholdDays }: { preview: InactivityPreview; thresholdDays: number }) {
   const counts = [
-    { key: "active", label: `Played or joined in the last ${thresholdDays} days`, count: preview.active },
+    { key: "active", label: `Played, joined or got access back in the last ${thresholdDays} days`, count: preview.active },
     ...INACTIVITY_SKIPS.map((skip) => ({ key: skip, label: SKIP_LABELS[skip], count: preview.skips[skip] })),
     { key: "no-access", label: "No access to the server", count: preview.noAccess },
   ].filter((item) => item.count > 0)

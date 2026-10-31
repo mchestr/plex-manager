@@ -51,6 +51,8 @@ function member(id: string, patch: Partial<InactivityMember> = {}): InactivityMe
     createdAt: daysAgo(400),
     lastSeenAt: null,
     lastSeenReadAt: READ,
+    accessEndedAt: null,
+    accessRestoredAt: null,
     ...patch,
   }
 }
@@ -163,6 +165,32 @@ describe("getInactivityPreview", () => {
     expect(preview.active).toBe(2)
     expect(preview.noAccess).toBe(1)
     expect(preview.shareCheck).toBeNull()
+  })
+
+  it("counts a member given access back since it ended as active, as a run would, without writing anything", async () => {
+    // Removed 300 days ago and shared again in Plex: the run stamps the return, so it does not list them
+    const reshared = member("u-reshared", { lastSeenAt: daysAgo(400), accessEndedAt: daysAgo(300) })
+    // Removed and not shared again: still listed only by the share check, as no access
+    const removed = member("u-removed", { lastSeenAt: daysAgo(400), accessEndedAt: daysAgo(300) })
+    given([reshared, removed], ["u-removed"])
+
+    const preview = await getInactivityPreview(180, NOW)
+
+    expect(preview.rows).toEqual([])
+    expect(preview.active).toBe(1)
+    expect(preview.noAccess).toBe(1)
+    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+  })
+
+  it("does not count a return while the share list is unknown", async () => {
+    const removed = member("u-removed", { lastSeenAt: daysAgo(400), accessEndedAt: daysAgo(300) })
+    jest.mocked(listInactivityMembers).mockResolvedValue([removed])
+    jest.mocked(getPlexUsers).mockResolvedValue({ success: false, status: 503, error: "Unavailable" })
+
+    const preview = await getInactivityPreview(180, NOW)
+
+    expect(preview.shareCheck).toBe("plex_unavailable")
+    expect(preview.rows.map((row) => row.id)).toEqual(["u-removed"])
   })
 
   it("counts a pending invite as no access", async () => {

@@ -22,15 +22,26 @@
  * ## Inactive
  *
  * A member is inactive once `thresholdDays` days have passed since
- * {@link lastActiveAt}: the later of their newest play and the day they
- * joined, so a member who joined recently and has not played yet is not
- * inactive.
+ * {@link lastActiveAt}: the latest of their newest play, the day they joined
+ * and the day their access came back (`User.accessRestoredAt`). So a member who
+ * joined recently and has not played yet is not inactive, and nor is a member
+ * whose access ended and was given back: they get a full threshold from the
+ * day it came back. That day is stamped by a sign-in with access after it
+ * ended (`lib/auth.ts`), or by the first run that sees their share again while
+ * their access is recorded as ended ({@link returnUnrecorded}, so a re-share
+ * made in Plex itself counts too).
+ *
+ * The rules trust Tautulli's history only as far back as it goes. The sweep
+ * removes no one while Tautulli's oldest play is less than `thresholdDays`
+ * days old, or unknown (`history_short`): a member Tautulli never saw may
+ * have played before its history starts.
  *
  * ## Safety limit
  *
  * A scheduled run removes no one when more members qualify than
  * {@link scheduledRunLimit} allows (5% of the members with access, from 1 to
- * 10). An admin run removes no one when more qualify than the admin confirmed.
+ * 10). An admin run removes no one when any member who qualifies is not one
+ * the admin confirmed in the dialog.
  *
  * @module lib/inactivity/rules
  */
@@ -49,6 +60,9 @@ export interface InactivityMember {
   createdAt: Date
   lastSeenAt: Date | null
   lastSeenReadAt: Date | null
+  /** When the member's access last ended (the offboarding stamps it); cleared when they sign in with access again. */
+  accessEndedAt: Date | null
+  accessRestoredAt: Date | null
 }
 
 /** Every skip, in priority order. */
@@ -82,7 +96,8 @@ const PAYING: readonly SubscriptionStatus[] = ["ACTIVE", "PAST_DUE"]
  * @example
  * ```ts
  * const member = { id: "u1", plexUserId: "42", isAdmin: false, role: null, isExempt: false, inactivityExcluded: false,
- *   subscriptionStatus: null, createdAt: new Date("2025-01-01"), lastSeenAt: null, lastSeenReadAt: new Date("2026-10-31") }
+ *   subscriptionStatus: null, createdAt: new Date("2025-01-01"), lastSeenAt: null, lastSeenReadAt: new Date("2026-10-31"),
+ *   accessEndedAt: null, accessRestoredAt: null }
  * inactivitySkip(member, { ownerPlexUserId: "1", readSince: new Date("2026-10-31") }) // null
  * inactivitySkip({ ...member, plexUserId: " 1 " }, { ownerPlexUserId: "1", readSince: null }) // "owner"
  * ```
@@ -103,18 +118,31 @@ export function inactivitySkip(
   return null
 }
 
-/** The later of the member's newest play and the day they joined. */
-export function lastActiveAt(member: Pick<InactivityMember, "lastSeenAt" | "createdAt">): Date {
-  const { lastSeenAt, createdAt } = member
-  return lastSeenAt && lastSeenAt > createdAt ? lastSeenAt : createdAt
+/** The dates {@link lastActiveAt} counts from. */
+type ActivityDates = Pick<InactivityMember, "lastSeenAt" | "createdAt" | "accessRestoredAt">
+
+/** The latest of the member's newest play, the day they joined and the day their access came back. */
+export function lastActiveAt({ lastSeenAt, createdAt, accessRestoredAt }: ActivityDates): Date {
+  return [lastSeenAt, accessRestoredAt].reduce<Date>((latest, date) => (date && date > latest ? date : latest), createdAt)
+}
+
+/**
+ * Whether the member's access ended and no return has been stamped since, so
+ * a share of the server seen now means their access came back now.
+ *
+ * @internal
+ */
+export function returnUnrecorded({ accessEndedAt, accessRestoredAt }: Pick<InactivityMember, "accessEndedAt" | "accessRestoredAt">): boolean {
+  return accessEndedAt !== null && (accessRestoredAt === null || accessRestoredAt < accessEndedAt)
+}
+
+/** The member as a run sees them when they hold a share: a return not yet stamped counts from `now`. */
+export function withReturn(member: InactivityMember, hasShare: boolean, now: Date): InactivityMember {
+  return hasShare && returnUnrecorded(member) ? { ...member, accessRestoredAt: now } : member
 }
 
 /** Whether at least `thresholdDays` days have passed since {@link lastActiveAt}. */
-export function isInactive(
-  member: Pick<InactivityMember, "lastSeenAt" | "createdAt">,
-  thresholdDays: number,
-  now: Date
-): boolean {
+export function isInactive(member: ActivityDates, thresholdDays: number, now: Date): boolean {
   return now.getTime() - lastActiveAt(member).getTime() >= thresholdDays * DAY_MS
 }
 

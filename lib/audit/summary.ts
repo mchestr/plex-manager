@@ -5,25 +5,26 @@
  * an exemption note, never reaches the line, so it is safe to show to Support,
  * who never see the details themselves.
  *
- * | Event                          | Details read                                  | Summary                                                  |
- * |--------------------------------|-----------------------------------------------|----------------------------------------------------------|
- * | `MEMBER_UNSHARED`              | `status`, `reason`, `lastSeenAt`              | "Removed for inactivity, last seen Mar 3, 2026"          |
- * | `INACTIVITY_SWEEP_RUN`         | `qualified`, `removed`, `failed`, `blocked`   | "Removed 2 of 3 inactive members"                        |
- * | `INACTIVITY_SETTINGS_CHANGED`  | `changedFields`, `after`                      | "Turned on, 180 days", "Turned off", "Threshold 90 days" |
- * | `INACTIVITY_EXCLUSION_CHANGED` | `excluded`                                    | "Excluded from the inactivity sweep"                     |
- * | `ACTIVITY_SYNC_TRIGGERED`      | `queued`, `confirmedRemovals`                 | "Queued, 3 removals confirmed"                           |
- * | `CONFIG_CHANGED`               | `section`, `changedFields`, `secretChanged`   | "plex: url, a secret"                                    |
- * | `SESSIONS_REVOKED`             | `reason`                                      | "Reason: Account disabled"                               |
- * | `USER_ROLE_CHANGED`            | `previousRole`, `newRole`                     | "Given the Support role", "Support role removed"         |
- * | `MEMBER_CONTENT_VIEWED`        | `surface`                                     | "Activity timeline"                                      |
- * | `MEMBER_CONTENT_LISTED`        | `surface`                                     | "Watchlist sync page"                                    |
- * | `AUDIT_LOG_VIEWED`             | which `filters` are set, never their values   | "No filters", "Filters: category, member"                |
+ * | Event                          | Details read                                   | Summary                                                                          |
+ * |--------------------------------|------------------------------------------------|----------------------------------------------------------------------------------|
+ * | `MEMBER_UNSHARED`              | `status`, `reason`, `lastSeenAt`, `offboarded` | "Removed for inactivity, last seen Mar 3, 2026"                                  |
+ * | `INACTIVITY_SWEEP_RUN`         | `qualified`, `removed`, `failed`, `blocked`    | "Removed 2 of 3 inactive members", "Removed no one: Another run was in progress" |
+ * | `INACTIVITY_SETTINGS_CHANGED`  | `changedFields`, `after`                       | "Turned on, 180 days", "Turned off", "Threshold 90 days"                         |
+ * | `INACTIVITY_EXCLUSION_CHANGED` | `excluded`                                     | "Excluded from the inactivity sweep"                                             |
+ * | `ACTIVITY_SYNC_TRIGGERED`      | `queued`, `confirmedRemovals`                  | "Queued, 3 removals confirmed"                                                   |
+ * | `CONFIG_CHANGED`               | `section`, `changedFields`, `secretChanged`    | "plex: url, a secret"                                                            |
+ * | `SESSIONS_REVOKED`             | `reason`                                       | "Reason: Account disabled"                                                       |
+ * | `USER_ROLE_CHANGED`            | `previousRole`, `newRole`                      | "Given the Support role", "Support role removed"                                 |
+ * | `MEMBER_CONTENT_VIEWED`        | `surface`                                      | "Activity timeline"                                                              |
+ * | `MEMBER_CONTENT_LISTED`        | `surface`                                      | "Watchlist sync page"                                                            |
+ * | `AUDIT_LOG_VIEWED`             | which `filters` are set, never their values    | "No filters", "Filters: category, member"                                        |
  *
  * A section or field name shows only when it looks like code (`setup.plex`,
  * `apiKey`), a block code only when `lib/inactivity/blocks.ts` knows it, and a
- * date only formatted. An `AUDIT_LOG_VIEWED` row for one event page reads
- * "Opened one event". Any other type, or details that do not have the
- * expected shape, has no summary (null).
+ * date only formatted. A removal whose clean-up failed (`offboarded: false`)
+ * ends ", clean-up not finished". An `AUDIT_LOG_VIEWED` row for one event
+ * page reads "Opened one event". Any other type, or details that do not have
+ * the expected shape, has no summary (null).
  *
  * @module lib/audit/summary
  */
@@ -56,12 +57,17 @@ const isCodeName = (value: unknown): value is string => typeof value === "string
 
 const counted = (f: SummaryFormat, n: number, one: string, many: string) => `${f.number(n)} ${n === 1 ? one : many}`
 
-function memberUnshared(details: Details, f: SummaryFormat): string | null {
+function unshared(details: Details, f: SummaryFormat): string | null {
   if (details.status === "already_removed") return "Share was already gone"
   if (details.status !== "removed") return null
   if (details.reason !== "inactivity") return "Share removed"
   if (details.lastSeenAt === null) return "Removed for inactivity, never seen"
   return isInstant(details.lastSeenAt) ? `Removed for inactivity, last seen ${f.date(details.lastSeenAt)}` : "Removed for inactivity"
+}
+
+function memberUnshared(details: Details, f: SummaryFormat): string | null {
+  const line = unshared(details, f)
+  return line && details.offboarded === false ? `${line}, clean-up not finished` : line
 }
 
 function sweepRun({ qualified, removed, failed, blocked }: Details, f: SummaryFormat): string | null {

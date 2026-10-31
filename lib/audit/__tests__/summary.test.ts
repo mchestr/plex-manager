@@ -29,6 +29,18 @@ describe("MEMBER_UNSHARED", () => {
     expect(summary("MEMBER_UNSHARED", details)).toBe(expected)
   })
 
+  it.each([
+    [{ status: "removed", reason: "inactivity", lastSeenAt: "2026-03-04T18:00:00.000Z", offboarded: false }, "Removed for inactivity, last seen Mar 4, 2026, clean-up not finished"],
+    [{ status: "removed", reason: "inactivity", lastSeenAt: null, offboarded: false }, "Removed for inactivity, never seen, clean-up not finished"],
+    [{ status: "already_removed", reason: "inactivity", offboarded: false }, "Share was already gone, clean-up not finished"],
+    [{ status: "removed", offboarded: false }, "Share removed, clean-up not finished"],
+    [{ status: "removed", reason: "inactivity", lastSeenAt: null, offboarded: true }, "Removed for inactivity, never seen"],
+    [{ status: "removed", reason: "inactivity", lastSeenAt: null, offboarded: "false" }, "Removed for inactivity, never seen"],
+    [{ status: "pending", offboarded: false }, null],
+  ])("says when the clean-up after a removal did not finish, %o", (details, expected) => {
+    expect(summary("MEMBER_UNSHARED", details)).toBe(expected)
+  })
+
   it("dates the last play in the server zone", () => {
     // 03:00 UTC on 4 March is still 3 March in Chicago
     expect(summary("MEMBER_UNSHARED", { status: "removed", reason: "inactivity", lastSeenAt: "2026-03-04T03:00:00Z" })).toBe(
@@ -58,9 +70,21 @@ describe("INACTIVITY_SWEEP_RUN", () => {
     [run({ removed: 0, blocked: "disabled" }), "Removed no one: Automatic removal is off"],
     [run({ qualified: 0, removed: 0, blocked: "tautulli_stale" }), "Removed no one: Tautulli recorded no play in 14 days"],
     [run({ qualified: 40, removed: 0, blocked: "over_limit" }), "Removed no one: More members qualified than the safety limit allows"],
-    [run({ removed: 1, blocked: "stopped" }), "Removed 1 of 3 inactive members, then stopped: The server shut down during the run"],
+    [run({ qualified: 0, removed: 0, blocked: "history_short" }), "Removed no one: Tautulli's history does not cover the threshold yet"],
+    [run({ removed: 1, blocked: "stopped" }), "Removed 1 of 3 inactive members, then stopped: The server shut down or another run took over, so the run stopped"],
+    // A removal whose clean-up failed counts as removed, so the run agrees with its member's row
+    [
+      run({ qualified: 1, removed: 1, blocked: "offboard_failed" }),
+      "Removed 1 of 1 inactive member, then stopped: A removal's clean-up did not finish, so the run stopped",
+    ],
   ])("summarises %o", (details, expected) => {
     expect(summary("INACTIVITY_SWEEP_RUN", details)).toBe(expected)
+  })
+
+  it("summarises a Run now that found another run in progress, which has no run id", () => {
+    const busy = { runId: null, trigger: "admin", thresholdDays: 180, qualified: 0, removed: 0, failed: 0, blocked: "busy" }
+
+    expect(summary("INACTIVITY_SWEEP_RUN", busy)).toBe("Removed no one: Another run was in progress")
   })
 
   it("names no reason for a block code it does not know", () => {
@@ -197,7 +221,10 @@ describe("auditSummary", () => {
   it.each<[string, Record<string, unknown>]>([
     ["MEMBER_UNSHARED", { status: "removed", reason: "inactivity", lastSeenAt: NAME, name: NAME, email: EMAIL }],
     ["MEMBER_UNSHARED", { status: NAME, reason: EMAIL }],
+    ["MEMBER_UNSHARED", { status: "removed", reason: "inactivity", lastSeenAt: null, offboarded: NOTE, name: NAME }],
+    ["MEMBER_UNSHARED", { status: "already_removed", offboarded: false, note: NOTE, email: EMAIL }],
     ["INACTIVITY_SWEEP_RUN", { qualified: 1, removed: 0, failed: 0, blocked: NAME, runId: EMAIL, trigger: NOTE }],
+    ["INACTIVITY_SWEEP_RUN", { qualified: 0, removed: 0, failed: 0, blocked: "busy", runId: null, trigger: NAME, actor: EMAIL }],
     ["INACTIVITY_SETTINGS_CHANGED", { changedFields: ["enabled", NAME], after: { enabled: true, thresholdDays: NOTE } }],
     ["INACTIVITY_EXCLUSION_CHANGED", { excluded: NAME }],
     ["ACTIVITY_SYNC_TRIGGERED", { queued: true, confirmedRemovals: EMAIL }],

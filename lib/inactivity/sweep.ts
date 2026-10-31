@@ -7,34 +7,39 @@
  *
  * 1. Guards, each a block that removes no one (`lib/inactivity/blocks.ts`):
  *    the sweep is off (`disabled`); Tautulli recorded no play on the whole
- *    server in 14 days (`tautulli_stale`); no Plex server (`no_plex_server`);
- *    the server or plex.tv's share list does not answer (`plex_unavailable`,
- *    or `plex_auth` when plex.tv refuses the token). Without a share list,
- *    access is unknown, so no one is removed.
+ *    server in 14 days (`tautulli_stale`); Tautulli's oldest play is less than
+ *    `thresholdDays` days old, or unknown (`history_short`), so a member it
+ *    never saw may have played before its history starts; no Plex server
+ *    (`no_plex_server`); the server or plex.tv's share list does not answer
+ *    (`plex_unavailable`, or `plex_auth` when plex.tv refuses the token).
+ *    Without a share list, access is unknown, so no one is removed.
  * 2. Candidates: members with an accepted share of this server, no skip, and
  *    inactive; the longest inactive first.
  * 3. The limit: a scheduled run removes no one when more qualify than
- *    `scheduledRunLimit` allows (`over_limit`); an admin run, when more qualify
- *    than the admin confirmed (`not_confirmed`).
+ *    `scheduledRunLimit` allows (`over_limit`); an admin run, when any
+ *    candidate is not in `confirmedUserIds`, the members the admin confirmed
+ *    (`not_confirmed`). A confirmed member who no longer qualifies is left
+ *    alone.
  * 4. Each candidate, under the member's access lock when Redis is set up: read
  *    the member again and re-check the rules, remove the share and offboard
  *    them (`unshareMember`), then write `MEMBER_UNSHARED` and wait for the row.
  *
  * ## Each candidate
  *
- * | Case                                         | Entry                                  | Run                     |
- * |----------------------------------------------|----------------------------------------|-------------------------|
- * | The re-check protects the member             | `skipped`: the skip, `active` or `missing` | goes on             |
- * | Another access change holds the member's lock | `failed`: `busy`                      | goes on                 |
- * | plex.tv did not answer                       | `failed`: `PLEX_UNAVAILABLE`           | goes on                 |
- * | plex.tv refused the token                    | `failed`: `PLEX_AUTH`                  | stops: `plex_auth`      |
- * | Removed and audited                          | `removed` or `already_removed`         | goes on                 |
- * | Removed, the audit row failed                | `removed` or `already_removed`         | stops: `audit_failed`   |
- * | Removed, the clean-up failed                 | `failed`: `offboard_failed`            | stops: `offboard_failed` |
- * | The server shuts down                        | none                                   | stops: `stopped`        |
+ * | Case                                          | Entry                                             | Run                      |
+ * |-----------------------------------------------|---------------------------------------------------|--------------------------|
+ * | The re-check protects the member              | `skipped`: the skip, `active` or `missing`        | goes on                  |
+ * | Another access change holds the member's lock | `failed`: `busy`                                  | goes on                  |
+ * | plex.tv did not answer                        | `failed`: `PLEX_UNAVAILABLE`                      | goes on                  |
+ * | plex.tv refused the token                     | `failed`: `PLEX_AUTH`                             | stops: `plex_auth`       |
+ * | Removed and audited                           | `removed` or `already_removed`                    | goes on                  |
+ * | Removed, the audit row failed                 | `removed` or `already_removed`                    | stops: `audit_failed`    |
+ * | Removed, the clean-up failed                  | `removed` or `already_removed`: `offboard_failed` | stops: `offboard_failed` |
+ * | The server shuts down, or the claim is lost   | none                                              | stops: `stopped`         |
  *
- * A removal whose clean-up failed still gets its `MEMBER_UNSHARED` row, with
- * `offboarded: false`, when the row can be written.
+ * A removal whose clean-up failed counts as removed, since the share is
+ * gone, and still gets its `MEMBER_UNSHARED` row, with `offboarded: false`,
+ * when the row can be written.
  *
  * @module lib/inactivity/sweep
  */
@@ -45,7 +50,7 @@ import type { PlexUnshareResult } from "@/lib/connections/plex-invitations"
 import { getActiveService } from "@/lib/data/active-service"
 import { TAUTULLI_STALE_DAYS, type InactivityBlock } from "@/lib/inactivity/blocks"
 import type { InactivityEntry, InactivityOutcome } from "@/lib/inactivity/entries"
-import { listInactivityMembers, readInactivityMember } from "@/lib/inactivity/members"
+import { listInactivityMembers, readInactivityMember, recordReturns } from "@/lib/inactivity/members"
 import {
   byLongestInactive,
   inactivitySkip,
@@ -75,8 +80,8 @@ export interface SweepOptions {
   trigger: MemberActivityTrigger
   /** The admin who started the run, or `SYSTEM_ACTOR`. */
   actorId: string
-  /** An admin run's confirmed member count. */
-  confirmedRemovals?: number
+  /** The members an admin confirmed; none when absent. Only an admin run reads it. */
+  confirmedUserIds?: readonly string[]
   settings: InactivitySettingsValues
   now: Date
   signal?: AbortSignal
@@ -84,6 +89,8 @@ export interface SweepOptions {
   readSince: Date
   /** The newest play on the whole server, for the freshness guard. */
   newestPlayAt: Date | null
+  /** When Tautulli's history starts, for the history guard. */
+  oldestPlayAt: Date | null
 }
 
 export interface SweepResult {
@@ -117,10 +124,7 @@ function entryFor(member: InactivityMember, outcome: InactivityOutcome, code?: s
   }
 }
 
-const rulesFor = (ctx: Pick<RemovalContext, "server" | "readSince">) => ({
-  ownerPlexUserId: ctx.server.adminPlexUserId,
-  readSince: ctx.readSince,
-})
+const rulesFor = (ctx: Pick<RemovalContext, "server" | "readSince">) => ({ ownerPlexUserId: ctx.server.adminPlexUserId, readSince: ctx.readSince })
 
 /** Re-checks one candidate, removes their share, offboards them and writes the audit row. */
 async function remove(candidate: InactivityMember, ctx: RemovalContext): Promise<Removal> {
@@ -151,7 +155,7 @@ async function remove(candidate: InactivityMember, ctx: RemovalContext): Promise
     await audit(error.status, { offboarded: false }).catch((auditError: unknown) =>
       logger.error("inactivity.audit_failed", auditError, { userId: member.id, runId: ctx.runId })
     )
-    return { entry: entryFor(member, "failed", "offboard_failed"), stop: "offboard_failed" }
+    return { entry: entryFor(member, error.status, "offboard_failed"), stop: "offboard_failed" }
   }
   if (!result.success) {
     const entry = entryFor(member, "failed", result.code)
@@ -187,22 +191,25 @@ async function removeLocked(candidate: InactivityMember, ctx: RemovalContext): P
  * limit blocks the run. Throws only on a database or Redis error.
  */
 export async function runSweep(options: SweepOptions): Promise<SweepResult> {
-  const { settings, now, newestPlayAt, trigger } = options
+  const { settings, now, newestPlayAt, oldestPlayAt, trigger } = options
   if (!settings.enabled) return blocked("disabled")
   if (!newestPlayAt || now.getTime() - newestPlayAt.getTime() > TAUTULLI_STALE_DAYS * DAY_MS) return blocked("tautulli_stale")
+  if (!oldestPlayAt || now.getTime() - oldestPlayAt.getTime() < settings.thresholdDays * DAY_MS) return blocked("history_short")
 
   const shares = await readPlexShares(await getActiveService("plex"))
   if (!shares.ok) return blocked(shares.block)
 
-  const withAccess = (await listInactivityMembers()).filter((member) => hasShare(shares.ids, member.plexUserId))
+  const holdsShare = (member: InactivityMember) => hasShare(shares.ids, member.plexUserId)
+  const withAccess = (await recordReturns(await listInactivityMembers(), holdsShare, now)).filter(holdsShare)
   const ctx: RemovalContext = { ...options, server: shares.server }
   const candidates = withAccess
     .filter((member) => !inactivitySkip(member, rulesFor(ctx)) && isInactive(member, settings.thresholdDays, now))
     .sort(byLongestInactive)
   const qualified = candidates.length
 
+  const confirmed = new Set(options.confirmedUserIds)
   if (trigger === "scheduled" && qualified > scheduledRunLimit(withAccess.length)) return blocked("over_limit", qualified)
-  if (trigger === "admin" && qualified > (options.confirmedRemovals ?? 0)) return blocked("not_confirmed", qualified)
+  if (trigger === "admin" && candidates.some((member) => !confirmed.has(member.id))) return blocked("not_confirmed", qualified)
 
   const entries: InactivityEntry[] = []
   let stop: InactivityBlock | null = null

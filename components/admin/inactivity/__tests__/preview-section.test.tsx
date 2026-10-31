@@ -118,7 +118,7 @@ describe("PreviewSection", () => {
       .getAllByRole("term")
       .map((term) => `${term.textContent}: ${term.nextElementSibling?.textContent}`)
     expect(counts).toEqual([
-      "Played or joined in the last 180 days: 85",
+      "Played, joined or got access back in the last 180 days: 85",
       "Admin: 2",
       "Paying member: 5",
       "Not found in Tautulli: 12",

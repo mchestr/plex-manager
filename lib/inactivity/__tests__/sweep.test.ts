@@ -44,6 +44,8 @@ interface MemberRow {
   createdAt: Date
   lastSeenAt: Date | null
   lastSeenReadAt: Date | null
+  accessEndedAt: Date | null
+  accessRestoredAt: Date | null
   subscription: { status: "ACTIVE" | "PAST_DUE" | "CANCELED" } | null
 }
 
@@ -59,6 +61,8 @@ function member(id: string, plexUserId: string | null, patch: Partial<MemberRow>
     createdAt: daysAgo(1000),
     lastSeenAt: daysAgo(400),
     lastSeenReadAt: NOW,
+    accessEndedAt: null,
+    accessRestoredAt: null,
     subscription: null,
     ...patch,
   }
@@ -88,15 +92,17 @@ function shares(...ids: string[]) {
   jest.mocked(getPlexUsers).mockResolvedValue({ success: true, data: ids.map((id) => plexUser(id)) })
 }
 
+/** An admin run that confirmed every member the test set up, on a Tautulli with a year of history. */
 const options = (patch: Partial<SweepOptions> = {}): SweepOptions => ({
   runId: "run-1",
   trigger: "admin",
   actorId: "admin-1",
-  confirmedRemovals: 10,
+  confirmedUserIds: [...stored.keys()],
   settings: { enabled: true, thresholdDays: 180 },
   now: NOW,
   readSince: NOW,
   newestPlayAt: daysAgo(1),
+  oldestPlayAt: daysAgo(365),
   ...patch,
 })
 
@@ -136,6 +142,31 @@ describe("runSweep guards", () => {
 
   it("trusts a play exactly 14 days old", async () => {
     await expect(runSweep(options({ newestPlayAt: daysAgo(14) }))).resolves.toMatchObject({ blocked: null })
+  })
+
+  it.each([
+    ["has no history at all, or its read failed", null],
+    ["holds less history than the threshold", new Date(NOW.getTime() - 180 * DAY + 1)],
+    ["has a first play dated in the future", new Date(NOW.getTime() + DAY)],
+  ])("blocks a run when Tautulli %s, since a member it never saw may have played before it", async (_name, oldestPlayAt) => {
+    members(member("u1", "42", { lastSeenAt: null }))
+    shares("42")
+
+    await expect(runSweep(options({ oldestPlayAt }))).resolves.toEqual({ qualified: 0, removed: 0, failed: 0, entries: [], blocked: "history_short" })
+    expect(getActiveService).not.toHaveBeenCalled()
+    expect(getPlexUsers).not.toHaveBeenCalled()
+    expect(unshareMember).not.toHaveBeenCalled()
+  })
+
+  it("trusts a history exactly as long as the threshold, which is the threshold the run uses", async () => {
+    await expect(runSweep(options({ oldestPlayAt: daysAgo(180) }))).resolves.toMatchObject({ blocked: null })
+    await expect(runSweep(options({ oldestPlayAt: daysAgo(180), settings: { enabled: true, thresholdDays: 181 } }))).resolves.toMatchObject({
+      blocked: "history_short",
+    })
+  })
+
+  it("names a stale Tautulli before a short history", async () => {
+    await expect(runSweep(options({ newestPlayAt: null, oldestPlayAt: null }))).resolves.toMatchObject({ blocked: "tautulli_stale" })
   })
 
   it("blocks a run without a Plex server", async () => {
@@ -224,9 +255,41 @@ describe("runSweep candidates", () => {
     await expect(runSweep(options())).resolves.toMatchObject({ qualified: 0, removed: 0 })
   })
 
-  it("reads only members with a Plex account", async () => {
+  it("reads only members with a Plex account, with the dates the rules count from", async () => {
     await runSweep(options())
-    expect(prismaMock.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { plexUserId: { not: null } } }))
+    expect(prismaMock.user.findMany).toHaveBeenCalledWith({
+      where: { plexUserId: { not: null } },
+      select: expect.objectContaining({ createdAt: true, lastSeenAt: true, lastSeenReadAt: true, accessEndedAt: true, accessRestoredAt: true }),
+    })
+  })
+
+  it("stamps a return for a member with a share whose access is recorded as ended, and leaves them alone for a full threshold", async () => {
+    members(
+      // Removed 300 days ago and shared again in Plex since: the share is a return
+      member("reshared", "42", { lastSeenAt: daysAgo(400), accessEndedAt: daysAgo(300) }),
+      // Removed and not shared again: no share, nothing to stamp
+      member("removed", "43", { lastSeenAt: daysAgo(400), accessEndedAt: daysAgo(300) })
+    )
+    shares("42")
+
+    await expect(runSweep(options())).resolves.toMatchObject({ qualified: 0, removed: 0 })
+    expect(prismaMock.user.updateMany).toHaveBeenCalledWith({ where: { id: { in: ["reshared"] } }, data: { accessRestoredAt: NOW } })
+    expect(unshareMember).not.toHaveBeenCalled()
+  })
+
+  it("counts from a return already stamped, so a member back long ago who never played qualifies again", async () => {
+    members(
+      member("back-long-ago", "42", { lastSeenAt: daysAgo(400), accessEndedAt: daysAgo(300), accessRestoredAt: daysAgo(200) }),
+      member("back-lately", "43", { lastSeenAt: daysAgo(400), accessEndedAt: daysAgo(300), accessRestoredAt: daysAgo(14) })
+    )
+    shares("42", "43")
+
+    const result = await runSweep(options())
+
+    expect(result).toMatchObject({ qualified: 1, removed: 1 })
+    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+    expect(jest.mocked(unshareMember).mock.calls.map(([target]) => target.id)).toEqual(["back-long-ago"])
+    expect(result.entries[0]).toMatchObject({ userId: "back-long-ago", lastActiveAt: daysAgo(200).toISOString() })
   })
 })
 
@@ -262,19 +325,50 @@ describe("runSweep limits", () => {
     await expect(runSweep(options({ trigger: "scheduled" }))).resolves.toMatchObject({ qualified: 1, removed: 1, blocked: null })
   })
 
-  it.each([undefined, 1])("removes no one on an admin run when more qualify than the %p confirmed", async (confirmedRemovals) => {
+  it.each<[string, string[] | undefined]>([
+    ["no list", undefined],
+    ["an empty list", []],
+    ["only one of them", ["u1"]],
+    ["as many members, but not these", ["u1", "u3"]],
+  ])("removes no one on an admin run when a member who qualifies was not confirmed: %s", async (_name, confirmedUserIds) => {
     members(member("u1", "42"), member("u2", "43"))
     shares("42", "43")
 
-    await expect(runSweep(options({ confirmedRemovals }))).resolves.toMatchObject({ qualified: 2, removed: 0, entries: [], blocked: "not_confirmed" })
+    await expect(runSweep(options({ confirmedUserIds }))).resolves.toEqual({ qualified: 2, removed: 0, failed: 0, entries: [], blocked: "not_confirmed" })
     expect(unshareMember).not.toHaveBeenCalled()
   })
 
-  it("runs an admin run with nothing to remove even without a confirmed count", async () => {
+  it("removes no one when a member the dialog did not list qualifies in place of one who played since", async () => {
+    // The admin confirmed A and B; A played since, and C crossed the threshold
+    members(member("a", "41", { lastSeenAt: daysAgo(2) }), member("b", "42"), member("c", "43", { lastSeenAt: daysAgo(181) }))
+    shares("41", "42", "43")
+
+    await expect(runSweep(options({ confirmedUserIds: ["a", "b"] }))).resolves.toMatchObject({ qualified: 2, removed: 0, blocked: "not_confirmed" })
+    expect(unshareMember).not.toHaveBeenCalled()
+  })
+
+  it("leaves a confirmed member who no longer qualifies alone, and removes the rest", async () => {
+    members(member("u1", "42"), member("u2", "43", { lastSeenAt: daysAgo(1) }), member("u3", "44"))
+    shares("42", "43", "44")
+
+    const result = await runSweep(options({ confirmedUserIds: ["u1", "u2", "u3", "gone"] }))
+
+    expect(result).toMatchObject({ qualified: 2, removed: 2, blocked: null })
+    expect(jest.mocked(unshareMember).mock.calls.map(([target]) => target.id).sort()).toEqual(["u1", "u3"])
+  })
+
+  it("runs an admin run with nothing to remove even without a confirmation", async () => {
     members(member("u1", "42", { lastSeenAt: daysAgo(1) }))
     shares("42")
 
-    await expect(runSweep(options({ confirmedRemovals: undefined }))).resolves.toEqual({ qualified: 0, removed: 0, failed: 0, entries: [], blocked: null })
+    await expect(runSweep(options({ confirmedUserIds: undefined }))).resolves.toEqual({ qualified: 0, removed: 0, failed: 0, entries: [], blocked: null })
+  })
+
+  it("never needs a confirmation on a schedule", async () => {
+    members(member("u1", "42"), member("u2", "43", { lastSeenAt: daysAgo(1) }))
+    shares("42", "43")
+
+    await expect(runSweep(options({ trigger: "scheduled", confirmedUserIds: undefined }))).resolves.toMatchObject({ qualified: 1, removed: 1, blocked: null })
   })
 })
 
@@ -371,25 +465,39 @@ describe("runSweep removals", () => {
     expect(unshareMember).toHaveBeenCalledTimes(1)
   })
 
-  it("stops when a removal's clean-up fails, still recording the removal as not offboarded", async () => {
-    jest.mocked(unshareMember).mockRejectedValueOnce(new UnshareCleanupError("removed", { cause: new Error("database down") }))
+  it.each(["removed", "already_removed"] as const)(
+    "counts a %s share whose clean-up failed as removed, records it as not offboarded, and stops",
+    async (status) => {
+      jest.mocked(unshareMember).mockRejectedValueOnce(new UnshareCleanupError(status, { cause: new Error("database down") }))
 
-    const result = await runSweep(options())
+      const result = await runSweep(options())
 
-    expect(recordAuditEvent).toHaveBeenCalledWith(
-      AuditEventType.MEMBER_UNSHARED,
-      "admin-1",
-      expect.objectContaining({ targetUserId: "u1", status: "removed", reason: "inactivity", runId: "run-1", offboarded: false })
-    )
-    expect(result).toMatchObject({ removed: 0, failed: 1, blocked: "offboard_failed" })
-    expect(result.entries).toEqual([expect.objectContaining({ userId: "u1", outcome: "failed", code: "offboard_failed" })])
-  })
+      expect(recordAuditEvent).toHaveBeenCalledWith(AuditEventType.MEMBER_UNSHARED, "admin-1", {
+        targetUserId: "u1",
+        status,
+        reason: "inactivity",
+        lastSeenAt: "2025-11-01T10:00:00.000Z",
+        lastActiveAt: "2025-11-01T10:00:00.000Z",
+        thresholdDays: 180,
+        runId: "run-1",
+        offboarded: false,
+      })
+      expect(result).toEqual({
+        qualified: 2,
+        removed: 1,
+        failed: 0,
+        blocked: "offboard_failed",
+        entries: [{ userId: "u1", outcome: status, code: "offboard_failed", lastActiveAt: "2025-11-01T10:00:00.000Z", lastSeenAt: "2025-11-01T10:00:00.000Z" }],
+      })
+      expect(unshareMember).toHaveBeenCalledTimes(1)
+    }
+  )
 
   it("still stops on a failed clean-up when its audit row fails too", async () => {
     jest.mocked(unshareMember).mockRejectedValueOnce(new UnshareCleanupError("already_removed", { cause: new Error("down") }))
     jest.mocked(recordAuditEvent).mockRejectedValueOnce(new Error("database down"))
 
-    await expect(runSweep(options())).resolves.toMatchObject({ failed: 1, blocked: "offboard_failed" })
+    await expect(runSweep(options())).resolves.toMatchObject({ removed: 1, failed: 0, blocked: "offboard_failed" })
     expect(unshareMember).toHaveBeenCalledTimes(1)
   })
 

@@ -8,7 +8,10 @@
  * |-------------------|----------------------------------------------------------------|
  * | `removed`         | The sweep removed the member's share of the Plex server        |
  * | `already_removed` | The share was already gone; the clean-up still ran             |
- * | `failed`          | The removal did not happen or did not finish; `code` says why  |
+ * | `failed`          | The share was not removed; `code` says why                     |
+ *
+ * A `removed` or `already_removed` entry with `code: "offboard_failed"` lost
+ * its share, but the clean-up after it did not finish, so the run stopped.
  * | `skipped`         | A re-check just before the removal protected the member; `code` is the skip |
  *
  * @module lib/inactivity/entries
@@ -19,7 +22,7 @@ import { z } from "zod"
 const inactivityEntrySchema = z.object({
   userId: z.string().min(1),
   outcome: z.enum(["removed", "already_removed", "failed", "skipped"]),
-  /** The later of the newest play and the day the member joined (ISO). */
+  /** The latest of the newest play, the day the member joined and the day their access came back (ISO). */
   lastActiveAt: z.iso.datetime(),
   /** The newest play (ISO); null when Tautulli has none. */
   lastSeenAt: z.iso.datetime().nullable(),

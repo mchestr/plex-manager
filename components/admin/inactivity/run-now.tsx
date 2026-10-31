@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useTransition } from "react"
+import { useLayoutEffect, useRef, useState, useTransition } from "react"
 
 import { runMemberActivityNow } from "@/actions/admin/inactivity"
 import { memberCount, runOutcome } from "@/components/admin/inactivity/run-outcome"
@@ -50,6 +50,10 @@ export function RunNow({ enabled, removalIds, lastRun }: RunNowProps) {
   const [confirming, setConfirming] = useState(false)
   const button = useRef<HTMLButtonElement>(null)
   const done = (queued: boolean) => toast.showSuccess(queued ? DONE.queued : DONE.finished)
+
+  // The router keeps a page it leaves (Activity): an open confirm closes as the page hides, as ConfirmDialog's own
+  // open state does, rather than opening again over the page on the way back
+  useLayoutEffect(() => () => setConfirming(false), [])
 
   const runNow = () => {
     if (enabled && removalIds.length > 0) {

@@ -6,9 +6,10 @@
  * One admin member activity run on PostgreSQL: the last seen read, then the
  * inactivity sweep. Four members share the server: one inactive, one active
  * whose Tautulli lost history, one excluded and one admin. Only the inactive
- * member loses access; last seen never moves back; the run, its
- * `MEMBER_UNSHARED` and `INACTIVITY_SWEEP_RUN` rows are stored; the claim is
- * released.
+ * member, whom the admin confirmed, loses access; last seen never moves back;
+ * the run, its `MEMBER_UNSHARED` and `INACTIVITY_SWEEP_RUN` rows are stored;
+ * the claim is released. A Run now that finds another run's claim records
+ * `INACTIVITY_SWEEP_RUN` blocked `busy`, with no run id.
  *
  * Tautulli and Plex are mocked; the database work, the offboarding and the
  * audit rows are real. Gated by `describePg` and run only by
@@ -60,6 +61,9 @@ const MEMBERS = {
 const IDS = Object.values(MEMBERS).map((member) => member.id)
 const runIds: string[] = []
 
+/** Tautulli's history starts long before the 180-day threshold. */
+const HISTORY_PAGE = { recordsFiltered: 1, recordsTotal: 1, draw: 1, data: [{ date: seconds(daysAgo(2000)), started: seconds(daysAgo(2000)), user: "guest" }] }
+
 /** Tautulli's rows: the active member's play is older than the stored one; a guest played yesterday. */
 const TAUTULLI_ROWS = [
   { user_id: Number(plexId(1)), last_seen: seconds(daysAgo(400)), keep_history: 1, email: "inactive@example.com" },
@@ -92,9 +96,13 @@ describePg("member activity run", (databaseUrl) => {
       kind === "tautulli"
         ? { id: `${RUN}-tautulli`, url: "http://tautulli.local:8181", apiKey: "k" }
         : { id: `${RUN}-plex`, url: "https://plex.local:32400", token: "server-token", machineIdentifier: `${RUN}-machine`, adminPlexUserId: plexId(99) }) as never)
-    jest.mocked(tautulliCommand).mockImplementation(async (_config, _cmd, _params, schema) => ({
+    jest.mocked(tautulliCommand).mockImplementation(async (_config, cmd, _params, schema) => ({
       ok: true,
-      data: schema.parse({ recordsFiltered: TAUTULLI_ROWS.length, recordsTotal: TAUTULLI_ROWS.length, draw: 1, data: TAUTULLI_ROWS }),
+      data: schema.parse(
+        cmd === "get_history"
+          ? HISTORY_PAGE
+          : { recordsFiltered: TAUTULLI_ROWS.length, recordsTotal: TAUTULLI_ROWS.length, draw: 1, data: TAUTULLI_ROWS }
+      ),
     }))
     jest.mocked(getPlexUsers).mockResolvedValue({ success: true, data: [1, 2, 3, 4].map((n) => plexUser(plexId(n))) })
     jest.mocked(unshareUserFromPlexServer).mockResolvedValue({ success: true, status: "removed" })
@@ -115,7 +123,7 @@ describePg("member activity run", (databaseUrl) => {
   })
 
   it("removes only the inactive member, records the run and its audit rows, and releases the claim", async () => {
-    const result = await runMemberActivity("admin", { actorId: ADMIN, confirmedRemovals: 1 })
+    const result = await runMemberActivity("admin", { actorId: ADMIN, confirmedUserIds: [MEMBERS.inactive.id] })
 
     expect(result).toMatchObject({ busy: false, qualified: 1, removed: 1, failed: 0, blocked: null, error: null })
     const runId = result && !result.busy ? result.runId : ""
@@ -159,12 +167,33 @@ describePg("member activity run", (databaseUrl) => {
     jest.mocked(getPlexUsers).mockResolvedValue({ success: true, data: [2, 3, 4].map((n) => plexUser(plexId(n))) })
     jest.mocked(unshareUserFromPlexServer).mockClear()
 
-    const result = await runMemberActivity("admin", { actorId: ADMIN, confirmedRemovals: 0 })
+    const result = await runMemberActivity("admin", { actorId: ADMIN, confirmedUserIds: [] })
 
     expect(result).toMatchObject({ busy: false, qualified: 0, removed: 0, blocked: null })
     if (result && !result.busy) runIds.push(result.runId)
     expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
     const unshared = await mockDb.auditLog.count({ where: { type: AuditEventType.MEMBER_UNSHARED, targetUserId: { in: IDS } } })
     expect(unshared).toBe(1)
+  })
+
+  it("records a Run now that finds another run's claim as busy, with no run id, and leaves that claim alone", async () => {
+    const otherRun = new Date()
+    await mockDb.inactivitySettings.update({ where: { id: "inactivity" }, data: { runStartedAt: otherRun } })
+    jest.mocked(tautulliCommand).mockClear()
+
+    try {
+      await expect(runMemberActivity("admin", { actorId: ADMIN, confirmedUserIds: [MEMBERS.active.id] })).resolves.toEqual({ busy: true })
+
+      expect(tautulliCommand).not.toHaveBeenCalled()
+      const busy = await mockDb.auditLog.findMany({
+        where: { type: AuditEventType.INACTIVITY_SWEEP_RUN, actorUserId: ADMIN, details: { path: ["blocked"], equals: "busy" } },
+      })
+      expect(busy).toHaveLength(1)
+      expect(busy[0]!.details).toEqual({ runId: null, trigger: "admin", thresholdDays: 180, qualified: 0, removed: 0, failed: 0, blocked: "busy" })
+      const settings = await mockDb.inactivitySettings.findUniqueOrThrow({ where: { id: "inactivity" } })
+      expect(settings.runStartedAt).toEqual(otherRun)
+    } finally {
+      await mockDb.inactivitySettings.update({ where: { id: "inactivity" }, data: { runStartedAt: null } })
+    }
   })
 })

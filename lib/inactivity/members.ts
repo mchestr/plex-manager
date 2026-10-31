@@ -9,7 +9,7 @@
 import "server-only"
 
 import type { Prisma } from "@/lib/generated/prisma/client"
-import type { InactivityMember } from "@/lib/inactivity/rules"
+import { withReturn, type InactivityMember } from "@/lib/inactivity/rules"
 import { prisma } from "@/lib/prisma"
 
 const MEMBER_SELECT = {
@@ -22,6 +22,8 @@ const MEMBER_SELECT = {
   createdAt: true,
   lastSeenAt: true,
   lastSeenReadAt: true,
+  accessEndedAt: true,
+  accessRestoredAt: true,
   subscription: { select: { status: true } },
 } as const satisfies Prisma.UserSelect
 
@@ -41,4 +43,20 @@ export async function listInactivityMembers(): Promise<InactivityMember[]> {
 export async function readInactivityMember(id: string): Promise<InactivityMember | null> {
   const row = await prisma.user.findUnique({ where: { id }, select: MEMBER_SELECT })
   return row && toMember(row)
+}
+
+/**
+ * Stamps `accessRestoredAt = now` on each member who holds a share while
+ * their access is recorded as ended (a re-share made in Plex itself, say),
+ * and returns every member as stored after that. See `withReturn`.
+ */
+export async function recordReturns(
+  members: InactivityMember[],
+  hasShare: (member: InactivityMember) => boolean,
+  now: Date
+): Promise<InactivityMember[]> {
+  const seen = members.map((member) => withReturn(member, hasShare(member), now))
+  const returned = seen.filter((member, i) => member !== members[i]).map((member) => member.id)
+  if (returned.length > 0) await prisma.user.updateMany({ where: { id: { in: returned } }, data: { accessRestoredAt: now } })
+  return seen
 }

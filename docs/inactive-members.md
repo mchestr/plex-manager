@@ -17,8 +17,14 @@ plex.tv account id, never by name.
 - **Unknown:** Tautulli has not reported the member. Either they have no Plex
   account, Tautulli does not know them, Tautulli keeps no history for them
   ("Keep history" is off), or no read has run yet.
-- **It never moves back.** A Tautulli that lost its history cannot make an
-  active member look inactive.
+- **Keep history:** the app counts it as on only when Tautulli clearly says
+  so: `1` from Tautulli 2.10 and later, or `Checked` from older versions. Any
+  other value, an empty one included, counts as off.
+- **It never moves back.** A play the app has read stays, even when Tautulli
+  later loses it. The history guard (see Stale data guards) covers the plays
+  the app never read.
+- **A play dated in the future,** for example from a wrong clock, counts as a
+  play at the time of the read.
 
 ## The daily run
 
@@ -33,17 +39,28 @@ Each run does two things:
 2. When automatic removal is on, removes Plex access from the members who
    qualify (see the rules below).
 
+Only one run works at a time. A run holds a claim, and renews it every 5
+minutes while it works. Another run can take the claim only when no one
+renewed it for 30 minutes, for example because the worker stopped. A run that
+loses its claim stops.
+
 The page lists the newest 30 runs: when each started, who started it, the
 Tautulli users read, the members found, how many were removed, how many
-failed, and why a run removed no one. Open a run to see its events in the
-audit log.
+failed, and why a run removed no one. Each run in the list has an audit row,
+so you can open any run to see its events in the audit log.
 
 ## Who counts as inactive
 
 A member counts as inactive when no play has started for the set number of
-days (180 by default, from 30 to 3650). The count starts at the later of their
-newest play and the day they joined, so a member who joined recently and has
-not played yet is not inactive.
+days (180 by default, from 30 to 3650). The count starts at the latest of
+three days: their newest play, the day they joined, and the day their access
+came back after it ended. So:
+
+- A member who joined recently and has not played yet is not inactive.
+- A member who gets access back after it ended has the full number of days to
+  play from that day. The app records the day when they sign in with access
+  again, or, when you share the server with them again in Plex itself, at the
+  first run that sees their share.
 
 The run never removes these members, in this order:
 
@@ -78,8 +95,19 @@ longer have access. A run removes no one until Plex answers.
   one. So many at once more likely means stale data than a real drop in
   activity.
 - **Run now:** when removal is on and the page lists members to remove, Run
-  now first asks you to confirm how many. The run reads Tautulli again before
-  it removes anyone, and removes no one if more members qualify then.
+  now first asks you to confirm them, and the run gets that list. It reads
+  Tautulli again before it removes anyone. If it would then remove a member
+  who is not in the list, it removes no one. A member in the list who no
+  longer qualifies, for example because they played since, is left alone.
+- **A confirmation does not last.** Job queues cannot retry a Run now job: it
+  runs once, and leaves the queue when it ends. The job uses the confirmation
+  only when it starts within 15 minutes, and only while the admin who
+  confirmed is still an admin. Otherwise it removes no one if anyone
+  qualifies.
+- **One run at a time:** Run now says so when another run is in progress or
+  waiting, and when the job queue does not answer. If the job still finds
+  another run in progress when it starts, it stops there, and the audit log
+  records "Another run was in progress".
 
 ## Stale data guards
 
@@ -89,11 +117,17 @@ A run removes no one when:
 - The read from Tautulli failed.
 - Tautulli recorded no play on the whole server in 14 days, which usually
   means Tautulli stopped recording.
+- Tautulli's history does not go back the set number of days: its oldest
+  play is newer than that, it has no play at all, or the app could not read
+  it. A Tautulli that was added late, reset or emptied has no record of older
+  plays, so a member who played before then could look inactive.
 - No Plex server is set up, plex.tv does not answer, or plex.tv refuses the
   server token.
 
 A run that stops part way, for example when plex.tv starts refusing the token
 or the server shuts down, keeps the removals it made. Its counts say how many.
+When a share is removed but the clean-up after it fails, the member counts as
+removed, their audit row says the clean-up did not finish, and the run stops.
 
 ## What removal does
 
@@ -113,14 +147,15 @@ Each appears in Admin > Audit log under its name.
 
 | Event | When | Details |
 |---|---|---|
-| Plex access removed (`MEMBER_UNSHARED`) | Each removal | The reason `inactivity`, last seen, the days without a play and the run id |
-| Inactivity sweep ran (`INACTIVITY_SWEEP_RUN`) | Each run while removal is on, and each Run now | The counts, and why it removed no one |
+| Plex access removed (`MEMBER_UNSHARED`) | Each removal | The reason `inactivity`, last seen, the days without a play and the run id; `offboarded: false` when the clean-up did not finish |
+| Inactivity sweep ran (`INACTIVITY_SWEEP_RUN`) | Every run under Recent runs, and a Run now that found another run in progress | The counts, and why it removed no one |
 | Inactivity settings changed (`INACTIVITY_SETTINGS_CHANGED`) | An admin saves the settings | The fields that changed, before and after |
 | Inactivity exclusion changed (`INACTIVITY_EXCLUSION_CHANGED`) | An admin excludes a member, or ends the exclusion | Excluded or not |
-| Last seen check started (`ACTIVITY_SYNC_TRIGGERED`) | An admin presses Run now | Whether it was queued, and the confirmed count |
+| Last seen check started (`ACTIVITY_SYNC_TRIGGERED`) | Run now starts or queues a run | Whether it was queued, and how many members the admin confirmed |
 
-Removals made by the daily run name System as who did it; Run now names the
-admin. A run stores member ids only, never names.
+Removals made by the daily run name System as who did it. Run now names the
+admin, or System when that admin is no longer an admin as the job starts. A
+run stores member ids only, never names.
 
 ## Excluding a member
 

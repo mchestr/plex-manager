@@ -12,7 +12,7 @@
  * | Plex shares | No answer blocks the run               | No answer keeps every inactive member, and `shareCheck` says why        |
  *
  * Each member counts once: under the first rule that protects them (`skips`),
- * as active (played or joined within the threshold), as without access
+ * as active (played, joined or got access back within the threshold), as without access
  * (inactive, with no share of the server), or as a row. Rows sort like the
  * sweep's candidates, the longest inactive first. `scheduledLimit` is a
  * scheduled run's safety limit, from the members with a share.
@@ -34,6 +34,7 @@ import {
   scheduledRunLimit,
   type InactivityMember,
   type InactivitySkip,
+  withReturn,
 } from "@/lib/inactivity/rules"
 import { hasShare, readPlexShares, type ShareBlock } from "@/lib/inactivity/shares"
 import { prisma } from "@/lib/prisma"
@@ -43,7 +44,7 @@ export interface InactivityPreviewRow {
   id: string
   name: string
   lastSeenAt: Date | null
-  /** The later of the newest play and the day they joined. */
+  /** The latest of the newest play, the day they joined and the day their access came back. */
   lastActiveAt: Date
   createdAt: Date
 }
@@ -53,7 +54,7 @@ export interface InactivityPreview {
   rows: InactivityPreviewRow[]
   /** Members each rule protects, by the first rule that applies. */
   skips: Record<InactivitySkip, number>
-  /** Members who played or joined within the threshold. */
+  /** Members who played, joined or got access back within the threshold. */
   active: number
   /** Inactive members with no share of the server: nothing to remove. */
   noAccess: number
@@ -73,7 +74,7 @@ export interface InactivityPreview {
  */
 export async function getInactivityPreview(thresholdDays: number, now: Date): Promise<InactivityPreview> {
   await assertAdmin()
-  const [members, active, read] = await Promise.all([
+  const [stored, active, read] = await Promise.all([
     listInactivityMembers(),
     getActiveService("plex"),
     prisma.inactivityRun.findFirst({
@@ -87,6 +88,8 @@ export async function getInactivityPreview(thresholdDays: number, now: Date): Pr
   const rules = { ownerPlexUserId: active?.adminPlexUserId ?? null, readSince }
   // Without the share list every member may have access, so none is left out
   const withAccess = (member: InactivityMember) => !shares.ok || hasShare(shares.ids, member.plexUserId)
+  // A run stamps a return it sees (lib/inactivity/members.ts recordReturns); the preview only reads
+  const members = stored.map((member) => withReturn(member, shares.ok && hasShare(shares.ids, member.plexUserId), now))
 
   const skips = Object.fromEntries(INACTIVITY_SKIPS.map((skip) => [skip, 0])) as Record<InactivitySkip, number>
   const candidates: InactivityMember[] = []

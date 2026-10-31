@@ -382,9 +382,12 @@ interface JobPayloads {
   [JOB_TYPES.REQUEST_TIER_SYNC]: { triggeredBy: "scheduled" | "admin" }
   /**
    * An admin run names the admin (the audit actor) and, when the sweep is on,
-   * the member count they confirmed: the run removes no one if more qualify.
+   * the members they confirmed: the run removes no one if any other member
+   * qualifies. The worker honours the confirmation only on the job's first
+   * attempt, within 15 minutes, and while the admin still is one
+   * (`lib/queue/jobs/member-activity.ts`).
    */
-  [JOB_TYPES.MEMBER_ACTIVITY]: { triggeredBy: "scheduled" | "admin"; triggeredByUserId?: string; confirmedRemovals?: number }
+  [JOB_TYPES.MEMBER_ACTIVITY]: { triggeredBy: "scheduled" | "admin"; triggeredByUserId?: string; confirmedUserIds?: string[] }
   [JOB_TYPES.SECRETS_REENCRYPT]: { triggeredBy: "scheduled" }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
