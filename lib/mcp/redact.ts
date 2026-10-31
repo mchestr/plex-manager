@@ -13,7 +13,8 @@
  *   punctuation ignored: a key ending in `token` (`token`, `X-Plex-Token`,
  *   `shareToken`, `plexAuthToken`), one containing `apikey`, `secret`,
  *   `password`, `passkey`, `authorization`, `cookie`, `credential`,
- *   `sharekey` or `assetkey`, and every encrypted credential column
+ *   `sharekey`, `assetkey`, `privatekey`, `accesskey` or `sessionkey`, and
+ *   every encrypted credential column
  *   (`ENCRYPTED_FIELDS` less `FREE_TEXT_FIELDS`, such as `rewindSerialKey`);
  * - inside every string, free text included (a stored LLM prompt holds earlier
  *   tool results): a `name=value` pair whose name is a credential, as in a URL
@@ -36,7 +37,21 @@ export const REDACTED = "[redacted]"
 const normalise = (key: string) => key.toLowerCase().replace(/[^a-z0-9]/g, "")
 
 /** Normalised fragments that make a key a credential wherever they appear in it. */
-const SECRET_FRAGMENTS = ["apikey", "secret", "password", "passwd", "passkey", "authorization", "cookie", "credential", "sharekey", "assetkey"]
+const SECRET_FRAGMENTS = [
+  "apikey",
+  "secret",
+  "password",
+  "passwd",
+  "passkey",
+  "authorization",
+  "cookie",
+  "credential",
+  "sharekey",
+  "assetkey",
+  "privatekey",
+  "accesskey",
+  "sessionkey",
+]
 
 /** The encrypted credential columns, normalised: every encrypted field that is not free text. */
 const ENCRYPTED_CREDENTIALS: ReadonlySet<string> = new Set(
@@ -45,8 +60,9 @@ const ENCRYPTED_CREDENTIALS: ReadonlySet<string> = new Set(
 
 /** Credential names in `name=value` and `"name": "value"` pairs inside a string. */
 const SECRET_NAME = String.raw`[\w-]*(?:token|api[_-]?key|secret|password|passwd|passkey|authorization)[\w-]*`
-const SECRET_PAIR = new RegExp(String.raw`\b(${SECRET_NAME})=([^&\s"'<>]+)`, "gi")
-const SECRET_JSON_PAIR = new RegExp(String.raw`("${SECRET_NAME}"\s*:\s*")((?:[^"\\]|\\.)+)(")`, "gi")
+// A name ending in "tokens" is a count (max_tokens=4096), as in the key rule
+const SECRET_PAIR = new RegExp(String.raw`\b(${SECRET_NAME})(?<!tokens)=([^&\s"'<>]+)`, "gi")
+const SECRET_JSON_PAIR = new RegExp(String.raw`("${SECRET_NAME}(?<!tokens)"\s*:\s*")((?:[^"\\]|\\.)+)(")`, "gi")
 const AUTH_SCHEME = /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/g
 
 /**

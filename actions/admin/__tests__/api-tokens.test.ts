@@ -36,7 +36,7 @@ afterEach(() => jest.useRealTimers())
 
 describe("createApiToken", () => {
   it("stores the hash, returns the token once and audits without it", async () => {
-    const result = await createApiToken({ name: " Laptop ", expiresIn: "30d" })
+    const result = await createApiToken({ name: " Laptop ", expiresIn: "30d", scope: "full" })
 
     expect(result).toMatchObject({ success: true, data: { id: "tok-1" } })
     const { token } = (result as { data: { token: string } }).data
@@ -63,31 +63,36 @@ describe("createApiToken", () => {
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.API_TOKEN_CREATED, "admin-1", expect.objectContaining({ scope: "read" }))
   })
 
+  it("refuses a token with no scope, so none is full by omission", async () => {
+    await expect(createApiToken({ name: "x" } as never)).resolves.toMatchObject({ success: false, code: "VALIDATION" })
+    expect(prismaMock.apiToken.create).not.toHaveBeenCalled()
+  })
+
   it("refuses an unknown scope", async () => {
     await expect(createApiToken({ name: "x", scope: "admin" as never })).resolves.toMatchObject({ success: false, code: "VALIDATION" })
     expect(prismaMock.apiToken.create).not.toHaveBeenCalled()
   })
 
   it("lasts 90 days by default and forever when asked", async () => {
-    await createApiToken({ name: "a" })
+    await createApiToken({ name: "a", scope: "full" })
     expect(prismaMock.apiToken.create.mock.calls[0][0].data.expiresAt).toEqual(new Date("2027-01-29T12:00:00Z"))
-    await createApiToken({ name: "b", expiresIn: "never" })
+    await createApiToken({ name: "b", expiresIn: "never", scope: "full" })
     expect(prismaMock.apiToken.create.mock.calls[1][0].data.expiresAt).toBeNull()
   })
 
   it("refuses an eleventh live token", async () => {
     prismaMock.apiToken.count.mockResolvedValue(10)
-    await expect(createApiToken({ name: "x" })).resolves.toMatchObject({ success: false, code: "CONFLICT" })
+    await expect(createApiToken({ name: "x", scope: "full" })).resolves.toMatchObject({ success: false, code: "CONFLICT" })
     expect(prismaMock.apiToken.create).not.toHaveBeenCalled()
   })
 
   it("refuses a blank name", async () => {
-    await expect(createApiToken({ name: "  " })).resolves.toMatchObject({ success: false, code: "VALIDATION" })
+    await expect(createApiToken({ name: "  ", scope: "full" })).resolves.toMatchObject({ success: false, code: "VALIDATION" })
   })
 
   it("refuses anyone below admin", async () => {
     jest.mocked(getServerSession).mockResolvedValue({ user: { id: "support-1", isAdmin: false, role: "support" }, expires: "" })
-    await expect(createApiToken({ name: "x" })).resolves.toMatchObject({ success: false, code: "FORBIDDEN" })
+    await expect(createApiToken({ name: "x", scope: "full" })).resolves.toMatchObject({ success: false, code: "FORBIDDEN" })
     expect(prismaMock.apiToken.create).not.toHaveBeenCalled()
   })
 })

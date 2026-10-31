@@ -25,7 +25,8 @@ export const createApiToken = adminAction({
   input: z.object({
     name: z.string().trim().min(1, "Name the token").max(60),
     expiresIn: z.enum(API_TOKEN_EXPIRIES).default("90d"),
-    scope: z.enum(API_TOKEN_SCOPES).default("full"),
+    // Required, so no caller makes a full token by leaving it out
+    scope: z.enum(API_TOKEN_SCOPES),
   }),
   rateLimit: { name: "admin:api-tokens" },
   fallbackError: "Could not make the token",

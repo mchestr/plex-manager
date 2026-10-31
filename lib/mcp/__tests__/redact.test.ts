@@ -9,7 +9,7 @@ describe('isCredentialKey', () => {
   it.each([
     'apiKey', 'api_key', 'API-KEY', 'token', 'X-Plex-Token', 'plexAuthToken', 'shareToken', 'accessToken', 'server_token',
     'clientSecret', 'stripeWebhookSecret', 'password', 'passkey', 'authorization', 'cookie', 'credentials', 'assetKey',
-    'rewindSerialKey', 'affiliateBlockKey', 'authHeaderSecret',
+    'rewindSerialKey', 'affiliateBlockKey', 'authHeaderSecret', 'privateKey', 'accessKey', 'session_key',
   ])('%s is a credential', (key) => {
     expect(isCredentialKey(key)).toBe(true)
   })
@@ -46,6 +46,14 @@ describe('redactCredentials', () => {
     expect(out.prompt).toContain(`"apiKey":"${REDACTED}"`)
     expect(out.prompt).toContain(`Bearer ${REDACTED}`)
     expect(out.promptTokens).toBe(1200)
+  })
+
+  it('keeps counts named like tokens readable inside strings', () => {
+    const prompt = 'Called with max_tokens=4096 and {"promptTokens":"120"}; key at ?api_key=raw-key'
+    const out = redacted({ prompt })
+    expect(out.prompt).toContain('max_tokens=4096')
+    expect(out.prompt).toContain('"promptTokens":"120"')
+    expect(out.prompt).toContain(`api_key=${REDACTED}`)
   })
 
   it('leaves a masked description, a field error list, an empty value and counts alone', () => {

@@ -111,7 +111,9 @@ Each connected client pays for the tool list and for every result it reads.
 
 - 600 requests a minute per address (`mcp:ip`), counted before the token is
   looked up, then 120 a minute per token (`mcp`), on top of each action's own
-  limit. A body over 1 MB is a 413.
+  limit. A body over 1 MB is a 413. The address comes from `X-Forwarded-For`
+  as `TRUSTED_PROXY_HOPS` says to read it (`docs/environment.md`): set that for
+  your reverse proxy, or every caller shares one address and its limit.
 - One JSON-RPC message per POST, answered with JSON. The server keeps no
   session, so GET and DELETE are 405 and there is no `Mcp-Session-Id`.
 - Requests from a browser must come from the app's own origin (the transport's
