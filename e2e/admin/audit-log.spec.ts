@@ -1,3 +1,5 @@
+import type { Page } from '@playwright/test';
+
 import { expect, test, TEST_USERS } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
 import { WAIT_TIMEOUTS } from '../helpers/test-utils';
@@ -16,6 +18,18 @@ const UNSHARED_ID = `${PREFIX}-unshared`;
 const SETTINGS_ID = `${PREFIX}-settings`;
 
 const rowOf = (id: string) => `admin-audit-row-${id}`;
+
+/**
+ * Clicks a link in the server-rendered table until the URL matches. A click
+ * before React hydrates the table does nothing (see e2e/helpers/settings.ts).
+ */
+async function followLink(page: Page, testId: string, url: RegExp): Promise<void> {
+  await expect(async () => {
+    if (url.test(page.url())) return;
+    await page.getByTestId(testId).click();
+    await expect(page).toHaveURL(url, { timeout: 1000 });
+  }).toPass({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+}
 
 test.describe('Admin audit log', () => {
   test.beforeAll(async () => {
@@ -81,23 +95,21 @@ test.describe('Admin audit log', () => {
 
   test("a name scopes the log to that person, and the scope's link removes it", async ({ adminPage: page }) => {
     await page.goto(`/admin/audit?member=${MEMBER_ID}`);
-    await page.getByTestId(`admin-audit-actor-${SETTINGS_ID}`).click();
+    await followLink(page, `admin-audit-actor-${SETTINGS_ID}`, new RegExp(`actor=${MEMBER_ID}`));
 
-    await expect(page).toHaveURL(new RegExp(`actor=${MEMBER_ID}`));
     await expect(page.getByTestId('admin-audit-scope-actor')).toContainText('By Audit Log Member');
     await expect(page.getByTestId(rowOf(SETTINGS_ID))).toBeVisible();
     await expect(page.getByTestId(rowOf(UNSHARED_ID))).toHaveCount(0);
 
     await page.getByTestId('admin-audit-scope-actor-clear').click();
-    await expect(page).not.toHaveURL(/actor=/);
+    await expect(page).not.toHaveURL(/actor=/, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(page.getByTestId(rowOf(UNSHARED_ID))).toBeVisible();
   });
 
   test('opens an event with its stored details and the member', async ({ adminPage: page }) => {
     await page.goto(`/admin/audit?member=${MEMBER_ID}`);
-    await page.getByTestId(`admin-audit-link-${UNSHARED_ID}`).click();
+    await followLink(page, `admin-audit-link-${UNSHARED_ID}`, new RegExp(`/admin/audit/${UNSHARED_ID}$`));
 
-    await expect(page).toHaveURL(new RegExp(`/admin/audit/${UNSHARED_ID}$`));
     await expect(page.getByTestId('admin-audit-event-header')).toContainText('Plex access removed');
     await expect(page.getByTestId('admin-audit-event-type')).toContainText('MEMBER_UNSHARED');
     const details = page.getByTestId('admin-audit-event-details');
