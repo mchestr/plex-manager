@@ -84,7 +84,7 @@ export function AffiliateSettingsSection(props: AffiliateSettingsSectionProps) {
     <SettingsSection
       id="affiliates"
       title="Affiliate invites"
-      description="Approved affiliates can invite people to the Plex server. Each invite is for one person and expires after 48 hours."
+      description="Each invite is for one person and expires after 48 hours."
       form={state.form}
       view={<AffiliateSettingsSummary {...props} />}
     >

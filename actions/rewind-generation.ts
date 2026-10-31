@@ -113,7 +113,7 @@ export const requestRewindGeneration = memberAction({
       select: { status: true },
     })
     if (wrapped?.status === "completed" && !isAdmin) {
-      return fail("FORBIDDEN", "Only admins can regenerate wrapped data")
+      return fail("FORBIDDEN", "Only admins can regenerate a finished Rewind")
     }
     if (await hasActiveGeneration(userId, year)) return ok({ alreadyQueued: true })
 

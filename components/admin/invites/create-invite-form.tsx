@@ -6,7 +6,7 @@ import { createInvite } from "@/actions/admin/invites"
 import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { DialogClose, DialogFooter } from "@/components/ui/dialog"
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { Segment, SegmentedControl } from "@/components/ui/segmented-control"
@@ -105,7 +105,7 @@ export function CreateInviteForm({ plexLibraries, jellyfinLibraries, onCreated }
         </SegmentedControl>
         {!jellyfinListing.ok && (
           <p className="text-label text-muted-foreground" data-testid="invite-jellyfin-unavailable">
-            Jellyfin is unavailable. {jellyfinListing.reason}
+            {jellyfinListing.reason}
           </p>
         )}
       </div>
@@ -145,10 +145,7 @@ export function CreateInviteForm({ plexLibraries, jellyfinLibraries, onCreated }
       />
       {plex && (
         <Field className="flex-row items-start justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <FieldLabel>Allow downloads</FieldLabel>
-            <FieldDescription>Members who join can download from the server.</FieldDescription>
-          </div>
+          <FieldLabel>Allow downloads</FieldLabel>
           <Switch checked={allowDownloads} onCheckedChange={setAllowDownloads} data-testid="invite-allow-downloads" />
         </Field>
       )}

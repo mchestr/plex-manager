@@ -12,7 +12,7 @@ interface HistoricalVersionOption {
   id: string
   /** "Oct 12, 2026, 2:26 PM CDT", formatted on the server. */
   label: string
-  /** "openai/gpt-5 · $0.02" */
+  /** "openai/gpt-5, $0.02" */
   detail: string
   isCurrent: boolean
 }

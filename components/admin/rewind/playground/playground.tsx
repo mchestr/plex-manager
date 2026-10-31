@@ -72,8 +72,8 @@ export function Playground({ initialForm, options, children }: PlaygroundProps) 
     if (!result.success) return dispatch({ type: "failed", message: result.error })
     const stored = result.data
     if (stored.status === "pending") return
-    if (stored.status === "skipped") return dispatch({ type: "failed", message: `The dry run was skipped: ${stored.reason}` })
-    if (stored.status === "failed") return dispatch({ type: "failed", message: `The dry run failed: ${stored.code}` })
+    if (stored.status === "skipped") return dispatch({ type: "failed", message: `Skipped: ${stored.reason}` })
+    if (stored.status === "failed") return dispatch({ type: "failed", message: `Error code ${stored.code}` })
     dispatch({ type: "finished" })
     const params = new URLSearchParams(searchParams.toString())
     params.set("preview", runningId)
@@ -107,7 +107,7 @@ export function Playground({ initialForm, options, children }: PlaygroundProps) 
       {(phase.kind === "starting" || phase.kind === "running") && (
         <p className="flex items-center gap-2 text-ui text-muted-foreground" data-testid="playground-running">
           <Spinner />
-          The dry run is in progress. It can take up to 90 seconds.
+          This can take a few minutes.
         </p>
       )}
       {children}

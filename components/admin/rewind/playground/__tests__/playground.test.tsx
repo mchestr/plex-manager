@@ -111,6 +111,6 @@ describe("Playground", () => {
     start.mockResolvedValue({ success: true, data: { previewId: PREVIEW_ID } })
     poll.mockResolvedValue({ success: true, data: timedOut })
     await user.click(screen.getByTestId("playground-run"))
-    expect(await screen.findByTestId("playground-failed")).toHaveTextContent("The dry run failed: TIMEOUT")
+    expect(await screen.findByTestId("playground-failed")).toHaveTextContent(/^The dry run failed\s*Error code TIMEOUT$/)
   })
 })

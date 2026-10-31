@@ -159,7 +159,7 @@ export function AffiliateSettingsFields({ state, libraries, shareCount }: Fields
           testIdPrefix="settings-affiliates-library"
           error={errors.libraryIds}
         />
-        <p className="text-label text-muted-foreground">Each affiliate invite shares these libraries. Downloads are always off.</p>
+        <p className="text-label text-muted-foreground">Downloads are always off.</p>
       </div>
     </div>
   )

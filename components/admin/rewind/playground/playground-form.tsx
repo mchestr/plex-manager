@@ -162,7 +162,7 @@ export function PlaygroundForm({ form, options, busy, onChange, onRun }: Playgro
           {busy && <Spinner />}
           {busy ? "Running" : "Run dry run"}
         </Button>
-        <p className="text-label text-muted-foreground">Dry runs store nothing. You can start ten in ten minutes.</p>
+        <p className="text-label text-muted-foreground">Dry runs don&apos;t change any member&apos;s Rewind.</p>
       </div>
     </form>
   )

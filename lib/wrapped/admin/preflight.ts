@@ -87,14 +87,14 @@ async function optionalRows(): Promise<PreflightRow[]> {
       : { id: "overseerr", label: "Overseerr", status: "notConfigured", detail: "Optional: the Requests page uses it" },
     sonarr > 0
       ? { id: "sonarr", label: "Sonarr", status: "ok", detail: "Set up" }
-      : { id: "sonarr", label: "Sonarr", status: "notConfigured", detail: "Optional: Next year's show picks use it" },
+      : { id: "sonarr", label: "Sonarr", status: "notConfigured", detail: "Optional: Next year's returning shows use it" },
   ]
 }
 
 async function llmRow(config: { llmDisabled: boolean; rewindLlmMode: string } | null): Promise<PreflightRow> {
   const label = "AI copy"
   if (config?.llmDisabled || config?.rewindLlmMode === "off") {
-    return { id: "llm", label, status: "degraded", detail: "Template-only mode: Rewind writes template text" }
+    return { id: "llm", label, status: "degraded", detail: "Off in Settings" }
   }
   const provider = await prisma.lLMProvider.findFirst({
     where: { isActive: true, purpose: "wrapped" },
@@ -110,7 +110,7 @@ async function llmRow(config: { llmDisabled: boolean; rewindLlmMode: string } | 
     }
   }
   if (!frozen || !isLLMProviderId(frozen.provider)) {
-    return { id: "llm", label, status: "degraded", detail: "No AI provider: Rewind writes template text" }
+    return { id: "llm", label, status: "degraded", detail: "No AI provider set up" }
   }
   const info = lookupModel(frozen.provider, frozen.model)
   if (!info.pricing) {
@@ -119,7 +119,7 @@ async function llmRow(config: { llmDisabled: boolean; rewindLlmMode: string } | 
   if (info.retiresOn && info.retiresOn < MODEL_NEEDED_UNTIL) {
     return { id: "llm", label, status: "incomplete", detail: `${info.displayName} retires on ${info.retiresOn}, before the season ends` }
   }
-  return { id: "llm", label, status: "ok", detail: `${info.displayName}, priced${frozen.status === "frozen" ? `, frozen in ${REWIND_LOCK.version}` : ""}` }
+  return { id: "llm", label, status: "ok", detail: info.displayName }
 }
 
 async function entitlementRow(stripeEnabled: boolean): Promise<PreflightRow | null> {

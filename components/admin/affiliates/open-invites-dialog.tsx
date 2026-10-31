@@ -20,7 +20,7 @@ export function OpenInvitesDialog({ name, invites, testId }: { name: string; inv
       <DialogContent data-testid={`${testId}-dialog`}>
         <DialogHeader>
           <DialogTitle>{name}&apos;s open invites</DialogTitle>
-          <DialogDescription>{invites.length === 0 ? "None." : "Only the last 4 characters of each code show."}</DialogDescription>
+          {invites.length === 0 && <DialogDescription>None.</DialogDescription>}
         </DialogHeader>
         {invites.length > 0 && (
           <ul className="flex flex-col gap-2 text-ui">

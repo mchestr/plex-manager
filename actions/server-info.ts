@@ -21,7 +21,7 @@ export interface LibrarySection {
  * Returns libraries with their section keys (which are used as IDs in Plex API)
  */
 export const getAvailableLibraries = adminAction({
-  fallbackError: "Failed to fetch libraries",
+  fallbackError: "Could not list the Plex libraries.",
   handler: async () => {
     const plexServer = await prisma.plexServer.findFirst({
       where: { isActive: true },
@@ -29,7 +29,7 @@ export const getAvailableLibraries = adminAction({
     })
 
     if (!plexServer) {
-      return fail("NOT_FOUND", "No active Plex server configured")
+      return fail("NOT_FOUND", "No Plex server is set up.")
     }
 
     // Fetch library sections directly from the local Plex server
@@ -43,7 +43,7 @@ export const getAvailableLibraries = adminAction({
     if (!result.ok) {
       // The upstream status and URL stay in the log, never in the result
       logger.warn("Could not fetch Plex libraries", { error: serviceErrorMessage("Plex", result) })
-      return fail("UPSTREAM_UNAVAILABLE", "Could not reach the Plex server to list libraries")
+      return fail("UPSTREAM_UNAVAILABLE", "Could not reach the Plex server to list libraries.")
     }
 
     const data = result.data
@@ -52,7 +52,7 @@ export const getAvailableLibraries = adminAction({
 
     if (!Array.isArray(sections)) {
       logger.error("Invalid sections format", undefined, { sections })
-      return fail("UPSTREAM_UNAVAILABLE", "Invalid response format from Plex server")
+      return fail("UPSTREAM_UNAVAILABLE", "Could not read the Plex libraries.")
     }
 
     // Use local server section keys directly as IDs

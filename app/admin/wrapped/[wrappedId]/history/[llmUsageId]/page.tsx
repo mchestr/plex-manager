@@ -63,7 +63,7 @@ export default async function HistoricalWrappedPage({ params }: { params: Promis
             versions={versions.map((v) => ({
               id: v.id,
               label: f.dateTime(v.createdAt, { zoneLabel: true }),
-              detail: `${v.provider}/${v.model || "unknown"} · ${f.money(v.cost)}`,
+              detail: `${v.provider}/${v.model || "unknown"}, ${f.money(v.cost)}`,
               isCurrent: v.isCurrent,
             }))}
           />
@@ -71,7 +71,7 @@ export default async function HistoricalWrappedPage({ params }: { params: Promis
         data-testid="admin-wrapped-history-heading"
       />
       {historicalData.removed ? (
-        <LlmTextRemovedNotice title="Historical version" />
+        <LlmTextRemovedNotice title="Rewind text" />
       ) : (
         <RewindScope fontClassName={rewindFontVariables}>
           <ArchiveArticle legacy={historicalData.wrappedData} year={year} brand={brand} locale={settings.locale} />

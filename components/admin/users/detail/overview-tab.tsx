@@ -113,7 +113,7 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
               Danger zone
             </h2>
             <p className="text-ui text-muted-foreground">
-              This cancels their subscription, removes their server access and deletes their data in this app.
+              Ends their access and deletes their data in this app.
             </p>
           </div>
           <RemoveMemberDialog userId={header.id} name={header.name} invitedBy={header.invitedBy} hasPlexId={header.plexUserId !== null} />

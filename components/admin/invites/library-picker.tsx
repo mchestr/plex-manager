@@ -49,7 +49,7 @@ export function LibraryPicker({ listing, value, onChange, serverLabel, error, al
       )}
       {!listing.ok && (
         <Alert tone="warning" data-testid={`${testIdPrefix}-error`}>
-          Can&apos;t list the {serverLabel} libraries. {listing.reason}
+          {listing.reason}
           {allowAll && " The invite can still share all of them."}
         </Alert>
       )}

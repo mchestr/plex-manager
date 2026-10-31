@@ -69,6 +69,6 @@ describe('billing dialogs name the member\'s services (P11.11)', () => {
     render(<CancelSubscriptionDialog user={withServices(['jellyfin'])} trigger={<Button data-testid="cancel-subscription-button">Cancel</Button>} />)
 
     await user.click(screen.getByTestId('cancel-subscription-button'))
-    expect(await screen.findByTestId('admin-user-cancel-dialog')).toHaveTextContent('Then their Jellyfin access stops.')
+    expect(await screen.findByTestId('admin-user-cancel-dialog')).toHaveTextContent('They keep access until the paid period ends, then their Jellyfin access stops.')
   })
 })

@@ -17,19 +17,16 @@ const STATUS: Record<Exclude<MemberTierStatus, "not-connected">, { tone: "succes
   unknown: { tone: "warning", label: "Can't check" },
 }
 
-function statusCopy(status: MemberTierStatus, enabled: boolean): string {
-  switch (status) {
-    case "in-sync":
-      return "Overseerr has this tier's limits."
-    case "out-of-sync":
-      return enabled ? "Overseerr's limits differ from this tier's. The next daily sync sets them." : "Overseerr's limits differ from this tier's."
-    case "excluded":
-      return "The daily sync doesn't change this member's Overseerr limits."
-    case "bypass":
-      return "This member is an Overseerr admin or user manager, so Overseerr applies no request limits to them."
-    default:
-      return "Part of the check failed, so the tier can't be compared with Overseerr."
-  }
+/**
+ * What the badge leaves unsaid: the next step while the daily sync will fix a
+ * difference, and why an Overseerr admin has no limits. The badge, the tier
+ * and Overseerr's quota below, the exclusion switch's hint and the problems
+ * Alert say the rest.
+ */
+function statusNote(status: MemberTierStatus, enabled: boolean): string | null {
+  if (status === "out-of-sync" && enabled) return "The next daily sync updates Overseerr."
+  if (status === "bypass") return "They are an Overseerr admin or user manager."
+  return null
 }
 
 /** One side of a quota as Overseerr holds it: no limit set falls back to Overseerr's default. */
@@ -65,6 +62,7 @@ export async function RequestTierCheck({ userId, name, f }: { userId: string; na
   }
 
   const { status, progress, hours, overseerr, problems, tiers } = check
+  const note = statusNote(status, check.enabled)
   const hoursCopy = (value: number) => `${f.number(value, { maximumFractionDigits: 1 })} hours`
 
   return (
@@ -72,7 +70,11 @@ export async function RequestTierCheck({ userId, name, f }: { userId: string; na
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge tone={STATUS[status].tone} label={STATUS[status].label} data-testid="admin-user-tier-status" />
-          <span className="text-ui text-muted-foreground">{statusCopy(status, check.enabled)}</span>
+          {note && (
+            <span className="text-ui text-muted-foreground" data-testid="admin-user-tier-status-note">
+              {note}
+            </span>
+          )}
         </div>
         {status === "out-of-sync" && <RequestTierUpdate userId={userId} name={name} />}
       </div>
@@ -113,7 +115,7 @@ export async function RequestTierCheck({ userId, name, f }: { userId: string; na
 
       {!check.enabled && (
         <p className="text-label text-muted-foreground" data-testid="admin-user-tier-sync-off">
-          The daily sync is off, so only Update Overseerr changes this member's limits.
+          The daily sync is off.
         </p>
       )}
     </div>
