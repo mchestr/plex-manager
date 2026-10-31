@@ -7,8 +7,9 @@ import { bounded, displayName, mediaStatus, optNumber, optObject, optString, pro
 /**
  * The Overseerr list tools' replies: one page of requests, discovery results
  * or users, with the total, a "showing N of M" line and, when more follow,
- * how many and which page has them. A payload of another shape is
- * `undefined`, which the executor reports as an unexpected response.
+ * how many and which page has them. A page past the end says so and names the
+ * last page. A payload of another shape is `undefined`, which the executor
+ * reports as an unexpected response.
  *
  * @module
  */
@@ -18,27 +19,33 @@ interface Paging {
   total: number
   page: number
   pageSize: number
-  /** The last page the service serves, when it is short of what the total needs (TMDB stops at 500). */
-  lastPage?: number
+  /** The last page the service serves, when the total can run past it (TMDB stops at 500), and the `next` line there. */
+  cap?: { page: number; next: string }
   /** Added to the `next` line: other ways to narrow the list. */
   hint?: string
 }
 
 /** The total, what this page shows of it and how to see the rest. */
-function pageLines({ listed, total, page, pageSize, lastPage = Number.POSITIVE_INFINITY, hint = "" }: Paging) {
+function pageLines({ listed, total, page, pageSize, cap, hint = "" }: Paging) {
+  const lastPage = Math.min(Math.max(1, Math.ceil(total / pageSize)), cap?.page ?? Number.POSITIVE_INFINITY)
+  if (listed === 0 && page > lastPage) return { total, showing: `page ${page} is past the end (last page ${lastPage})` }
   const first = (page - 1) * pageSize
   const after = Math.max(0, total - first - listed)
+  const next = cap && page >= cap.page ? cap.next : `pass page ${page + 1} for the next ${Math.min(pageSize, after)}${hint}`
   return {
     total,
     showing: page === 1 || listed === 0 ? `showing ${listed} of ${total}` : `showing ${first + 1}-${first + listed} of ${total}`,
-    ...(after > 0 ? { more: `and ${after} more` } : {}),
-    ...(after > 0 && page < lastPage ? { next: `pass page ${page + 1} for the next ${Math.min(pageSize, after)}${hint}` } : {}),
+    ...(after > 0 ? { more: `and ${after} more`, next } : {}),
   }
 }
 
-/** At least what this page and the ones before it hold, when the reported total is missing or short. */
+/**
+ * The reported total, raised to what this page and the ones before it hold
+ * when it is missing or short. An empty page says nothing of the pages before
+ * it, so past the end the reported total stands.
+ */
 const totalOf = (reported: number | undefined, page: number, pageSize: number, listed: number) =>
-  Math.max(reported ?? 0, (page - 1) * pageSize + listed)
+  listed > 0 ? Math.max(reported ?? 0, (page - 1) * pageSize + listed) : (reported ?? 0)
 
 const requestPageSchema = z.object({
   pageInfo: optObject(z.looseObject({ results: optNumber })),
@@ -58,9 +65,9 @@ export function projectRequestPage(data: unknown, page: number, pageSize: number
 const TMDB_PAGE_SIZE = 20
 export const DISCOVER_LAST_PAGE = 500
 const DISCOVER_OVERVIEW_MAX = 200
+const DISCOVER_CAP = { page: DISCOVER_LAST_PAGE, next: `TMDB serves no page past ${DISCOVER_LAST_PAGE}; another sortBy lists other titles` }
 
 const discoverSchema = z.object({
-  totalPages: optNumber,
   totalResults: optNumber,
   results: z.array(
     z.looseObject({
@@ -76,15 +83,20 @@ const discoverSchema = z.object({
   ),
 })
 
-/** Page `page` of discovery: each title's TMDB id, name, date, a short overview, TMDB rating and availability. */
-export function projectDiscoverPage(data: unknown, page: number, kind: "movie" | "tv") {
+/**
+ * Page `page` of discovery: each title's TMDB id, name, date, a short
+ * overview, TMDB rating and availability. `asked` is the page the model asked
+ * for; past TMDB's last page the executor reads that last page, and the reply
+ * says so.
+ */
+export function projectDiscoverPage(data: unknown, page: number, kind: "movie" | "tv", asked = page) {
   const parsed = discoverSchema.safeParse(data)
   if (!parsed.success) return undefined
-  const { totalPages, totalResults, results } = parsed.data
-  const lastPage = Math.min(totalPages ?? DISCOVER_LAST_PAGE, DISCOVER_LAST_PAGE)
+  const { totalResults, results } = parsed.data
   const total = totalOf(totalResults, page, TMDB_PAGE_SIZE, results.length)
   return {
-    ...pageLines({ listed: results.length, total, page, pageSize: TMDB_PAGE_SIZE, lastPage }),
+    ...(asked > page ? { note: `page ${asked} is past the last page TMDB serves; this is page ${page}` } : {}),
+    ...pageLines({ listed: results.length, total, page, pageSize: TMDB_PAGE_SIZE, cap: DISCOVER_CAP }),
     results: results.map((item) => ({
       tmdbId: item.id,
       ...(kind === "movie" ? { title: item.title, releaseDate: item.releaseDate } : { name: item.name, firstAirDate: item.firstAirDate }),

@@ -31,9 +31,12 @@ const named = z.array(z.looseObject({ name: z.string() })).catch([])
 const episodeSchema = z.looseObject({ seasonNumber: optNumber, episodeNumber: optNumber, name: optString, airDate: optString })
 const seasonAvailability = z.looseObject({ seasonNumber: z.number(), status: optNumber, status4k: optNumber })
 
+// Overseerr names its Plex link plexUrl; Jellyseerr and Seerr name their Plex, Jellyfin or Emby link mediaUrl
 const mediaInfoSchema = mediaSchema.extend({
   plexUrl: optString,
   plexUrl4k: optString,
+  mediaUrl: optString,
+  mediaUrl4k: optString,
   serviceUrl: optString,
   serviceUrl4k: optString,
   seasons: z.array(seasonAvailability).catch([]),
@@ -91,7 +94,11 @@ function castOf(cast: Details["credits"]["cast"], limit: number) {
   }
 }
 
-/** Overseerr's own record of the title: availability, requests and links (without credentials). */
+/**
+ * Overseerr's own record of the title: availability, requests, and links
+ * (without credentials) to the title in the media server (`mediaUrl`) and in
+ * Sonarr or Radarr (`serviceUrl`).
+ */
 function mediaInfoOf(info: Details["mediaInfo"], mediaType: "movie" | "tv") {
   // Overseerr keeps no record of a title nobody requested and Plex does not have
   if (!info) return { status: mediaStatus(1), status4k: mediaStatus(1), requestCount: 0 }
@@ -101,8 +108,8 @@ function mediaInfoOf(info: Details["mediaInfo"], mediaType: "movie" | "tv") {
     requestCount: requests.length,
     requests: requests.slice(0, REQUESTS_MAX).map(requestBrief),
     ...(requests.length > REQUESTS_MAX ? { requestsShowing: `showing the newest ${REQUESTS_MAX} of ${requests.length}` } : {}),
-    plexUrl: safeLink(info.plexUrl),
-    plexUrl4k: safeLink(info.plexUrl4k),
+    mediaUrl: safeLink(info.plexUrl ?? info.mediaUrl),
+    mediaUrl4k: safeLink(info.plexUrl4k ?? info.mediaUrl4k),
     serviceUrl: safeLink(info.serviceUrl),
     serviceUrl4k: safeLink(info.serviceUrl4k),
   }

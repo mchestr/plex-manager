@@ -60,11 +60,18 @@ const EMAIL = /[^\s@]+@[^\s@]+\.[^\s@]+/
 
 const userSchema = z.looseObject({ id: z.number(), displayName: optString })
 
-/** A user's display name, bounded, or `user <id>` where Overseerr would show their email. */
+/**
+ * A user's display name, bounded, or `user <id>` where Overseerr would show
+ * their email. Control characters are dropped: JSON spells most as six
+ * characters, so a name of them would hold six times the bound.
+ */
 export function displayName(user: z.infer<typeof userSchema>): string {
-  const name = user.displayName?.trim()
+  const name = user.displayName?.replace(/\p{Cc}/gu, "").trim()
   return !name || EMAIL.test(name) ? `user ${user.id}` : name.slice(0, DISPLAY_NAME_MAX)
 }
+
+/** Who made or changed a request: their user id, which the request tools' `requestedBy` takes, and display name. */
+const userRef = (user: z.infer<typeof userSchema>) => ({ id: user.id, name: displayName(user) })
 
 /** A query parameter whose value is a credential. */
 const SECRET_PARAM = /token|api[_-]?key|secret|passw|auth|signature/i
@@ -162,16 +169,17 @@ export function requestBrief(request: OverseerrRequest) {
     status: requestStatus(request.status),
     is4k: request.is4k ?? false,
     seasons: seasonsByStatus(request.seasons),
-    requestedBy: request.requestedBy && displayName(request.requestedBy),
+    requestedBy: request.requestedBy && userRef(request.requestedBy),
     createdAt: request.createdAt,
   }
 }
 
 /**
  * A request with what an answer needs: its status, the title's ids and
- * availability, the seasons asked for and who asked. No emails, and none of
- * the profile, folder or server settings it was sent with. Overseerr keeps no
- * title on a request; the details tool looks one up by `media.tmdbId`.
+ * availability, the seasons asked for, and the id and name of who asked and
+ * who last changed it. No emails, and none of the profile, folder or server
+ * settings it was sent with. Overseerr keeps no title on a request; the
+ * details tool looks one up by `media.tmdbId`.
  */
 export function projectRequest(request: OverseerrRequest) {
   const type = request.type ?? request.media?.mediaType
@@ -190,7 +198,7 @@ export function projectRequest(request: OverseerrRequest) {
       ...mediaAvailability(request.media, type),
     },
     seasons: seasonsByStatus(request.seasons),
-    requestedBy: request.requestedBy && displayName(request.requestedBy),
-    modifiedBy: request.modifiedBy && displayName(request.modifiedBy),
+    requestedBy: request.requestedBy && userRef(request.requestedBy),
+    modifiedBy: request.modifiedBy && userRef(request.modifiedBy),
   }
 }

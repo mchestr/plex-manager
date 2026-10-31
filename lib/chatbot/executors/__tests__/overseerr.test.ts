@@ -13,7 +13,7 @@ import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import type { Overseerr } from "@/lib/generated/prisma/client"
 
 import { executeOverseerrTool } from "../overseerr"
-import { discoverPage, movieDetails, overseerrMedia, overseerrRequest, overseerrUser, requestPage, tvDetails } from "./overseerr-fixtures"
+import { discoverPage, largestRequest, movieDetails, overseerrMedia, overseerrRequest, overseerrUser, REQUESTS, requestPage, tvDetails } from "./overseerr-fixtures"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/utils/logger", () => ({
@@ -82,11 +82,12 @@ describe("request lists", () => {
       updatedAt: "2026-10-01T12:00:00.000Z",
       media: { tmdbId: 100_500, tvdbId: 300_500, imdbId: "tt9000500", status: "processing", status4k: "unknown", seriesId: 2_500, titleSlug: "a-title-slug-of-ordinary-length-500" },
       seasons: { "pending approval": "1, 4, 7, 10", approved: "2-3, 5-6, 8-9, 11-12" },
-      requestedBy: "Member 1 with a display name long enough to reach the cap!!!!!!!!".slice(0, 64),
+      // The user id is what requestedBy takes, and tells apart names that differ past the cap
+      requestedBy: { id: 1, name: "Member 1 with a display name long enough to reach the cap!!!!!!!!".slice(0, 64) },
     })
-    expect(json.requests[1]).toMatchObject({ id: 1_499, type: "movie", status: "failed", media: { movieId: 2_499 } })
+    expect(json.requests[1]).toMatchObject({ id: 1_499, type: "movie", status: "failed", media: { movieId: 2_499 }, requestedBy: { id: 500 } })
     expect(json.requests[1]).not.toHaveProperty("seasons")
-    expect(json.requests[3]).toMatchObject({ id: 1_497, status: "approved", modifiedBy: expect.stringMatching(/^Member 1 /) })
+    expect(json.requests[3]).toMatchObject({ id: 1_497, status: "approved", modifiedBy: { id: 1, name: expect.stringMatching(/^Member 1 /) } })
     expectNoPersonalData(text)
   })
 
@@ -132,6 +133,19 @@ describe("request lists", () => {
     expect(json).not.toHaveProperty("next")
   })
 
+  // A model reaches one by guessing, by changing limit between pages or after requests are deleted
+  it.each([
+    ["get_overseerr_all_requests", REQUESTS, { page: 100 }, "page 100 is past the end (last page 25)"],
+    ["get_overseerr_requests", REQUESTS, { page: 11, limit: 50 }, "page 11 is past the end (last page 10)"],
+    ["get_overseerr_requests", 0, { page: 2 }, "page 2 is past the end (last page 1)"],
+  ])("%s keeps Overseerr's total of %i on a page past the end and names the last page", async (tool, total, args, showing) => {
+    serve((url) => requestPage(url, total))
+
+    const { json } = await run(tool, args)
+
+    expect(json).toEqual({ total, showing, requests: [] })
+  })
+
   it("refuses a filter Overseerr does not have and a requester that is not a user id", async () => {
     serve((url) => requestPage(url))
 
@@ -150,8 +164,18 @@ describe("request lists", () => {
 
     const { text, json } = await run("get_overseerr_requests")
 
-    expect(json.requests[0].requestedBy).toBe("user 7")
+    expect(json.requests[0].requestedBy).toEqual({ id: 7, name: "user 7" })
     expectNoPersonalData(text)
+  })
+
+  it("drops control characters from display names", async () => {
+    const named = (id: number, displayName: string) => ({ ...overseerrUser(id), displayName })
+    const request = { ...overseerrRequest(1), requestedBy: named(7, "\u0007Sam\u001b Smith\n"), modifiedBy: named(8, "\u0001".repeat(70)) }
+    serve(() => ({ pageInfo: { results: 1 }, results: [request] }))
+
+    const { json } = await run("get_overseerr_all_requests")
+
+    expect(json.requests[0]).toMatchObject({ requestedBy: { id: 7, name: "Sam Smith" }, modifiedBy: { id: 8, name: "user 8" } })
   })
 
   it("reports an unexpected reply instead of passing it on", async () => {
@@ -194,7 +218,7 @@ describe("get_overseerr_media_details", () => {
       titleSlug: "a-title-slug-of-ordinary-length-693134",
       requestCount: 30,
       requestsShowing: "showing the newest 5 of 30",
-      plexUrl: expect.stringContaining("https://app.plex.tv/desktop#!/server/"),
+      mediaUrl: expect.stringContaining("https://app.plex.tv/desktop#!/server/"),
       serviceUrl: "http://radarr.lan:7878/movie/a-title-slug-of-ordinary-length-693134",
     })
     expect(json.mediaInfo.requests.map((request: { id: number }) => request.id)).toEqual([1_059, 1_057, 1_055, 1_053, 1_051])
@@ -202,7 +226,7 @@ describe("get_overseerr_media_details", () => {
       id: 1_059,
       status: "failed",
       is4k: false,
-      requestedBy: expect.stringMatching(/^Member 60 /),
+      requestedBy: { id: 60, name: expect.stringMatching(/^Member 60 /) },
       createdAt: "2026-10-01T12:00:00.000Z",
     })
     expectNoPersonalData(text)
@@ -261,8 +285,19 @@ describe("get_overseerr_media_details", () => {
     const { text, json } = await run("get_overseerr_media_details", { mediaId: 11, mediaType: "movie" })
 
     expect(json.mediaInfo.serviceUrl).toBe("https://radarr.example.invalid/movie/dune?view=full")
-    expect(json.mediaInfo).not.toHaveProperty("plexUrl4k")
+    expect(json.mediaInfo).not.toHaveProperty("mediaUrl4k")
     expect(text).not.toMatch(/hunter2|abc123/)
+  })
+
+  it("keeps the Jellyfin or Plex link that Jellyseerr and Seerr send as mediaUrl", async () => {
+    const jellyfin = (id: string) => `https://jellyfin.example.invalid/web/index.html#!/details?id=${id}&context=home&serverId=f00d`
+    // Their Media entity has no plexUrl
+    const mediaInfo = { ...overseerrMedia(11, "movie"), plexUrl: undefined, mediaUrl: jellyfin("abc"), mediaUrl4k: jellyfin("def"), requests: [] }
+    serve(() => ({ ...movieDetails(11), mediaInfo }))
+
+    const { json } = await run("get_overseerr_media_details", { mediaId: 11, mediaType: "movie" })
+
+    expect(json.mediaInfo).toMatchObject({ mediaUrl: jellyfin("abc"), mediaUrl4k: jellyfin("def") })
   })
 
   it("refuses an id that is not a positive whole number or a missing type", async () => {
@@ -289,18 +324,42 @@ describe("discovery", () => {
     expect(text).not.toMatch(/posterPath|genreIds|plexUrl/)
   })
 
-  it("names shows by their name and first air date, and keeps the page within TMDB's 500", async () => {
+  it("names shows by their name and first air date, and reads a page past TMDB's 500 as page 500, saying so", async () => {
     serve((url) => discoverPage(Number(url.searchParams.get("page")), "tv"))
 
     const { json } = await run("get_overseerr_discover_tv", { page: 9_999 })
 
     expect(called().searchParams.get("page")).toBe("500")
     expect(json.results[0]).toMatchObject({ tmdbId: 50_000, name: "Discovered Show 50000", firstAirDate: "2026-05-01" })
-    expect(json.showing).toBe("showing 9981-10000 of 10000")
+    expect(json).toMatchObject({ note: "page 9999 is past the last page TMDB serves; this is page 500", showing: "showing 9981-10000 of 10000" })
     expect(json).not.toHaveProperty("next")
 
-    await run("get_overseerr_discover_tv", { page: 0 })
+    const first = await run("get_overseerr_discover_tv", { page: 0 })
     expect(called(1).searchParams.get("page")).toBe("1")
+    expect(first.json).not.toHaveProperty("note")
+  })
+
+  it("says TMDB serves no page past 500 when its total runs further", async () => {
+    // TMDB reports every match of a popularity sort, but serves only its first 500 pages
+    serve((url) => ({ ...discoverPage(Number(url.searchParams.get("page")), "movie"), totalPages: 46_000, totalResults: 920_000 }))
+
+    const { json } = await run("get_overseerr_discover_movies", { page: 500 })
+
+    expect(json).toMatchObject({
+      total: 920_000,
+      showing: "showing 9981-10000 of 920000",
+      more: "and 910000 more",
+      next: "TMDB serves no page past 500; another sortBy lists other titles",
+    })
+    expect(json).not.toHaveProperty("note")
+  })
+
+  it("keeps TMDB's total on a page past the end and names the last page", async () => {
+    serve(() => ({ page: 10, totalPages: 3, totalResults: 45, results: [] }))
+
+    const { json } = await run("get_overseerr_discover_movies", { page: 10 })
+
+    expect(json).toEqual({ total: 45, showing: "page 10 is past the end (last page 3)", results: [] })
   })
 })
 
@@ -324,6 +383,19 @@ describe("on a large server (500 members, 500 requests, long-running shows) ever
 
     expect(text.length).toBeLessThanOrEqual(MCP_RESULT_MAX)
     expect(JSON.parse(text)).not.toHaveProperty("error")
+  })
+
+  // JSON spells most control characters as six characters: kept, names of them would hold six times the cap (about 70,000 in all)
+  it.each([
+    ["names at the cap", undefined],
+    ["names of control characters", "\u0001".repeat(70)],
+  ])("a page of 50 requests at their largest, with %s", async (_label, name) => {
+    serve(() => ({ pageInfo: { results: REQUESTS }, results: Array.from({ length: 50 }, (_, k) => largestRequest(k, name)) }))
+
+    const text = await executeOverseerrTool("get_overseerr_all_requests", { limit: 50 })
+
+    expect(text.length).toBeLessThanOrEqual(MCP_RESULT_MAX)
+    expect(JSON.parse(text).requests).toHaveLength(50)
   })
 
   it("while the raw replies are far larger", () => {

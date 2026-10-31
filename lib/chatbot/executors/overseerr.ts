@@ -93,11 +93,13 @@ export async function executeOverseerrTool(
     }
     case "get_overseerr_discover_movies":
     case "get_overseerr_discover_tv": {
-      const page = intArg(args.page, 1, 1, DISCOVER_LAST_PAGE)
+      // TMDB serves no page past 500 (Overseerr answers HTTP 500): a later one reads page 500, and the reply says so
+      const asked = intArg(args.page, 1, 1, PAGE_MAX)
+      const page = Math.min(asked, DISCOVER_LAST_PAGE)
       const sortBy = typeof args.sortBy === "string" && args.sortBy !== "" ? args.sortBy : "popularity.desc"
       const kind = toolName === "get_overseerr_discover_movies" ? "movie" : "tv"
       const result = await (kind === "movie" ? getOverseerrDiscoverMovies : getOverseerrDiscoverTV)(config, page, sortBy)
-      return output(result, (data) => projectDiscoverPage(data, page, kind))
+      return output(result, (data) => projectDiscoverPage(data, page, kind, asked))
     }
     case "get_overseerr_media_details": {
       const mediaId = idArg(args.mediaId)

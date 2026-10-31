@@ -7,10 +7,13 @@ export const OVERSEERR_REQUEST_FILTERS = ["all", "pending", "approved", "process
 
 const page = (unit: string) => ({ type: "integer", description: `Page of ${unit}, from 1 (default 1); the reply's 'next' line names the next page` })
 
-const requestedBy = { type: "integer", description: "Only this user's requests: an Overseerr user id from get_overseerr_users" }
+const requestedBy = {
+  type: "integer",
+  description: "Only this user's requests: an Overseerr user id, such as a request's requestedBy.id or one from get_overseerr_users",
+}
 
 const REQUEST_FIELDS =
-  "Each request has its id, type, status, 4K flag, dates, the seasons asked for, who asked, and the title's TMDB id and availability (with the Sonarr seriesId or Radarr movieId once sent there). Requests carry no titles: get_overseerr_media_details gives one from media.tmdbId."
+  "Each request has its id, type, status, 4K flag, dates, the seasons asked for, who asked and who last changed it (requestedBy and modifiedBy, each a user id and name), and the title's TMDB id and availability (with the Sonarr seriesId or Radarr movieId once sent there). Requests carry no titles: get_overseerr_media_details gives one from media.tmdbId."
 
 const discover = (name: string, what: string, sorts: string): RegisteredTool => ({
   type: "function",
@@ -65,7 +68,7 @@ export const OVERSEERR_TOOLS: RegisteredTool[] = [
     function: {
       name: "get_overseerr_media_details",
       description:
-        "Get one movie or TV show from Overseerr by TMDB id: its ids (TMDB, IMDb, TVDB), title, dates, status, overview, genres, runtime, rating, studios or networks, directors or creators, the top-billed cast, a show's seasons with episode counts and availability, and Overseerr's own record: availability in HD and 4K (unknown means nobody requested it and Plex does not have it), the Sonarr seriesId or Radarr movieId, the newest requests and who made them, and Plex and Sonarr/Radarr links",
+        "Get one movie or TV show from Overseerr by TMDB id: its ids (TMDB, IMDb, TVDB), title, dates, status, overview, genres, runtime, rating, studios or networks, directors or creators, the top-billed cast, a show's seasons with episode counts and availability, and Overseerr's own record: availability in HD and 4K (unknown means nobody requested it and Plex does not have it), the Sonarr seriesId or Radarr movieId, the newest requests and who made them (user id and name), and links to the title in Plex or Jellyfin (mediaUrl) and Sonarr/Radarr (serviceUrl)",
       parameters: {
         type: "object",
         properties: {

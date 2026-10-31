@@ -87,6 +87,14 @@ it("names the page that holds the rest, and pages through them", async () => {
   expect(second.users[0].id).toBe(101)
 })
 
+it("keeps Overseerr's total on a page past the end and names the last page", async () => {
+  serveUsers(MEMBERS)
+
+  const output = JSON.parse(await executeOverseerrTool("get_overseerr_users", { page: 9 }))
+
+  expect(output).toEqual({ total: MEMBERS, showing: "page 9 is past the end (last page 5)", users: [] })
+})
+
 it("never shows an email as a display name, which Overseerr does for a user with no username", async () => {
   serve({ pageInfo: { results: 1 }, results: [{ id: 3, email: "sam@example.invalid", displayName: "sam@example.invalid", requestCount: 1, permissions: 2 }] })
 

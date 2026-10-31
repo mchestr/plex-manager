@@ -93,6 +93,35 @@ export function overseerrRequest(i: number, seasons = 12) {
   }
 }
 
+/**
+ * Request `i` at its largest: a 4K TV request with six-digit ids, sent to both
+ * Sonarr instances under a 70-character slug, for 30 seasons of alternating
+ * status, made and last changed by users named `name` (the 64-character cap).
+ */
+export function largestRequest(i: number, name = "É".repeat(64)) {
+  const request = overseerrRequest(2 * i, 30)
+  const slug = "a-title-slug-long-enough-to-reach-seventy-characters".padEnd(70, "-x")
+  return {
+    ...request,
+    id: 900_000 + i,
+    is4k: true,
+    isAutoRequest: true,
+    media: {
+      ...request.media,
+      tmdbId: 1_200_000 + i,
+      tvdbId: 450_000 + i,
+      imdbId: `tt${12_000_000 + i}`,
+      externalServiceId: 800_000 + i,
+      externalServiceId4k: 810_000 + i,
+      externalServiceSlug: slug,
+      externalServiceSlug4k: slug,
+    },
+    seasons: request.seasons.map((season) => ({ ...season, status: (season.seasonNumber % 2) + 1 })),
+    requestedBy: { ...overseerrUser(100_000 + i), displayName: name },
+    modifiedBy: { ...overseerrUser(200_000 + i), displayName: name },
+  }
+}
+
 /** `GET /request?take=&skip=` on a server with `total` requests, newest first. */
 export function requestPage(url: URL, total = REQUESTS) {
   const take = Number(url.searchParams.get("take"))
