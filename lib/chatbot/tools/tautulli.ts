@@ -35,10 +35,12 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
     // from, bandwidth and the transcode detail as well as the fields below.
     // This allowlist drops all of that: keep ONLY non-identifying
     // media/player/quality/progress fields here; every identifier (user_id,
-    // friendly_name, player name...) is excluded.
+    // friendly_name, player name...) is excluded. A Jellyfin-only caller gets
+    // {"unavailable":"jellyfin-member"} instead, which the Discord prompt
+    // explains (P11.12); no session carries an "unavailable" field.
     discordFields: [
       // The reply and its sessions
-      "result", "stream_count", "session_count", "scope", "sessions",
+      "result", "stream_count", "session_count", "scope", "sessions", "unavailable",
       // What is playing
       "full_title", "title", "grandparent_title", "parent_title", "media_type", "year", "parent_media_index", "media_index", "library_name",
       // Progress, quality and player
@@ -49,7 +51,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
     function: {
       name: "get_tautulli_activity",
       description:
-        "Get the streams playing now from Tautulli: each one's title, progress, player, connection (location, relay, bandwidth in kbps), quality, transcode decisions and transcoder speed, with the server's stream and bandwidth totals. A Discord member sees only their own streams' title, progress, quality and player type",
+        "Get the streams playing now from Tautulli: who is watching each one (user_id, friendly_name), its title, progress, player, connection (location, relay, bandwidth in kbps), quality, transcode decisions and transcoder speed, with the server's stream and bandwidth totals. A Discord member sees only their own streams' title, progress, quality and player type",
       parameters: {
         type: "object",
         properties: {

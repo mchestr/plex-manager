@@ -10,14 +10,19 @@
  *
  * It also covers the Discord activity scoping, which maps the caller to their
  * Tautulli user through the shared findTautulliUser lookup (P0.9) and fails
- * closed on every other path (P4.19, SEC-50), and the
- * three tools that used to call commands Tautulli does not have (P2.3, RWP-10).
+ * closed on every other path (P4.19, SEC-50), the
+ * three tools that used to call commands Tautulli does not have (P2.3, RWP-10),
+ * and the admin prompt sending "who is watching" to the activity, which names
+ * the viewers.
  */
 
 import { executeTautulliTool } from "../tautulli"
 import {
+  ALL_TOOLS,
   DISCORD_SAFE_TOOLS,
   generateDiscordSystemPrompt,
+  generateSystemPrompt,
+  getRegisteredTool,
 } from "@/lib/chatbot/tools"
 import { DISCORD_SAFE_TOOL_NAMES } from "@/lib/chatbot/tools/registry"
 import {
@@ -374,6 +379,29 @@ describe("Discord tool gating - get_tautulli_users", () => {
     const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { format: UTC_PROMPT_FORMAT, now: new Date(), jellyfin: true })
     expect(prompt).toContain("Plex, Jellyfin, Tautulli")
     expect(prompt).toContain('"unavailable":"jellyfin-member"')
+  })
+})
+
+describe("the admin prompt sends 'who is watching' to the Tautulli activity, which names the viewers", () => {
+  const prompt = generateSystemPrompt(ALL_TOOLS, UTC_PROMPT_FORMAT, new Date())
+  const description = (name: string) => getRegisteredTool(name)?.function.description
+
+  it("routes the question to get_tautulli_activity, and to get_plex_sessions only without Tautulli", () => {
+    expect(prompt).toContain(
+      "Who is watching or streaming now (active sessions) → get_tautulli_activity, which names each viewer; if Tautulli is not configured, get_plex_sessions (viewers anonymised)"
+    )
+    expect(prompt).toContain("3. Call get_tautulli_activity for who is watching")
+    expect(prompt).not.toContain("get_plex_sessions for active viewers")
+  })
+
+  it("says which of the two tools names the viewers", () => {
+    expect(description("get_tautulli_activity")).toContain("who is watching each one (user_id, friendly_name)")
+    expect(description("get_plex_sessions")).toContain("Viewers are anonymised (Viewer 1, Viewer 2...): to name who is watching, use get_tautulli_activity")
+  })
+
+  it("names the parameter get_tautulli_user_watch_stats requires", () => {
+    expect(getRegisteredTool("get_tautulli_user_watch_stats")?.function.parameters.required).toEqual(["userId"])
+    expect(prompt).toContain("get_tautulli_user_watch_stats (pass their Tautulli user_id as userId)")
   })
 })
 

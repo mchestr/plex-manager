@@ -1,7 +1,7 @@
 import "server-only"
 
 /**
- * The Recently Added and On Deck tools' replies.
+ * The Recently Added, On Deck and sessions tools' replies.
  *
  * The PMS sends each library item with its summary, artwork, GUIDs, cast,
  * crew and media parts (file paths included), so one page of 50 On Deck
@@ -16,6 +16,7 @@ import "server-only"
 import { PLEX_PAGE_SIZE } from "@/lib/connections/plex-sessions"
 import { formatResolution } from "@/lib/utils/format"
 import { cutShort, firstIndex, isRecord, listOf, pick, rowRange, showing, ways, wholeNumber, withinBudget, type Paged, type Row } from "./plex-tautulli-reply"
+import { sanitizePlexSessionsPayload } from "./plex-sanitizer"
 import { PLEX_EPOCH_KEYS, withLocalTimestamps } from "./timestamps"
 
 /** Recently added items: the default count and the most the tool returns. */
@@ -94,4 +95,19 @@ export function onDeckReply(data: unknown, timeZone: string) {
   const line = total === undefined ? `showing ${items.length} On Deck items` : `showing ${items.length} of ${total} On Deck items`
   const capped = total === undefined ? items.length >= PLEX_PAGE_SIZE : items.length < total
   return { showing: showing(line, capped, `the tool reads the first ${PLEX_PAGE_SIZE} only`), ...(total !== undefined && { total }), items }
+}
+
+/**
+ * The streams playing now, with their viewers anonymised
+ * ({@link sanitizePlexSessionsPayload}), as many as the reply budget holds:
+ * about 75 with long titles, more with short ones. The PMS has no way to
+ * narrow them, so the rest are found through Tautulli's activity, which takes
+ * a search.
+ */
+export function sessionsReply(data: unknown) {
+  const { sessions: all, ...sanitized } = sanitizePlexSessionsPayload(data)
+  const sessions = withinBudget(all)
+  const line = `showing ${sessions.length} of ${all.length} streams`
+  const more = "use get_tautulli_activity with a search (a user or a title) to see the others, if Tautulli is configured"
+  return { ...sanitized, showing: showing(line, sessions.length < all.length, more), sessions }
 }

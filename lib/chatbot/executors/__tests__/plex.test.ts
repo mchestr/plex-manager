@@ -265,10 +265,11 @@ describe("executePlexTool get_plex_library_sections (P11.17)", () => {
 })
 
 /**
- * A large server (3,000 movies, 1,500 series, 25 streams), from synthetic
- * items as heavy as the PMS sends them (summary, cast, crew, media parts with
- * file paths): each result, with default and largest arguments, stays under
- * the 40,000 characters the MCP endpoint accepts.
+ * A large server (3,000 movies, 1,500 series, 25 streams, and up to 120 for
+ * the sessions' cap), from synthetic items as heavy as the PMS sends them
+ * (summary, cast, crew, media parts with file paths): each result, with
+ * default and largest arguments, stays under the 40,000 characters the MCP
+ * endpoint accepts.
  */
 describe("Plex tool results on a large server stay under the MCP limit", () => {
   const MCP_LIMIT = 40_000
@@ -347,6 +348,34 @@ describe("Plex tool results on a large server stay under the MCP limit", () => {
     ["get_plex_sessions", {}],
   ])("%s %j", async (tool, args) => {
     expect(await size(tool, args)).toBeLessThanOrEqual(MCP_LIMIT)
+  })
+
+  it("gives every one of 25 streams, without their viewers, and says so", async () => {
+    const { data } = JSON.parse(await executePlexTool("get_plex_sessions", {}))
+
+    expect(data.sessions).toHaveLength(25)
+    expect(data).toMatchObject({ totalSessions: 25, showing: "showing 25 of 25 streams" })
+    expect(JSON.stringify(data)).not.toMatch(/member\.username|Member \d+'s TV|10\.0\.0\.|session-\d/)
+  })
+
+  it.each([110, 120])("keeps %i streams under the limit, and says how to find the rest", async (streams) => {
+    jest.mocked(getPlexSessions).mockResolvedValue({
+      success: true,
+      data: { MediaContainer: { size: streams, Metadata: Array.from({ length: streams }, (_, i) => rawSession(i)) } },
+    })
+
+    const output = await executePlexTool("get_plex_sessions", {}, "admin-1", "default", LA)
+    const { data } = JSON.parse(output)
+
+    expect(output.length).toBeLessThanOrEqual(MCP_LIMIT)
+    expect(data.totalSessions).toBe(streams)
+    expect(data.sessions.length).toBeGreaterThan(50)
+    expect(data.sessions.length).toBeLessThan(streams)
+    // The streams kept are the first ones, labelled in order
+    expect(data.sessions.at(-1).viewerLabel).toBe(`Viewer ${data.sessions.length}`)
+    expect(data.showing).toBe(
+      `showing ${data.sessions.length} of ${streams} streams; use get_tautulli_activity with a search (a user or a title) to see the others, if Tautulli is configured`
+    )
   })
 
   it("lists 20 recently added by default and at most 100 a page, of the server's total, and pages back through the rest", async () => {

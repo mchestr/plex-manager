@@ -25,9 +25,12 @@ export const PLEX_TOOLS: RegisteredTool[] = [
     userScoped: true,
     // Output is sanitizePlexSessionsPayload(...) — viewer identifiers are already
     // stripped upstream. This allowlist is defence-in-depth: keep media/progress/
-    // player/quality fields, never any viewer/user/ip/session identifier.
+    // player/quality fields, never any viewer/user/ip/session identifier. A
+    // Jellyfin-only caller gets {"unavailable":"jellyfin-member"} instead, which
+    // the Discord prompt explains (P11.12); no session carries that field.
     discordFields: [
       "success",
+      "unavailable",
       "totalSessions",
       "privacy",
       "sessions",
@@ -48,7 +51,8 @@ export const PLEX_TOOLS: RegisteredTool[] = [
     ],
     function: {
       name: "get_plex_sessions",
-      description: "Get current active viewing sessions on Plex (who is watching what)",
+      description:
+        "Get the streams playing now from Plex: each one's title, library, progress, player, state, location (local or remote), bandwidth, stream decision and quality. Viewers are anonymised (Viewer 1, Viewer 2...): to name who is watching, use get_tautulli_activity. A Discord member sees only their own streams",
       parameters: { type: "object", properties: {} },
     },
   },

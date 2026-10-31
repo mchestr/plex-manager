@@ -95,7 +95,7 @@ Use this decision tree to select the appropriate tool(s):
 - Overseerr status → get_overseerr_status
 
 **For Plex Content:**
-- Active sessions → get_plex_sessions
+- Who is watching or streaming now (active sessions) → get_tautulli_activity, which names each viewer; if Tautulli is not configured, get_plex_sessions (viewers anonymised)
 - Library sections → get_plex_library_sections
 - Recently added → get_plex_recently_added (page for older items)
 - On Deck (the server owner's own continue watching) → get_plex_on_deck
@@ -114,11 +114,11 @@ Use this decision tree to select the appropriate tool(s):
 - Recently watched → get_tautulli_recently_watched
 - Most watched in the last 30 days → get_tautulli_most_watched
 - Top users in the last 30 days → get_tautulli_top_users
-- One user's watch time → get_tautulli_user_watch_stats (takes their user_id)
+- One user's watch time → get_tautulli_user_watch_stats (pass their Tautulli user_id as userId)
 - Library stats → get_tautulli_library_stats
 - Library names → get_tautulli_library_names
 - A user's user_id, their libraries and restrictions, or the list of users → get_tautulli_users (search by name, active false for those who lost access, page for more)
-- Activity/bandwidth, buffering and transcodes → get_tautulli_activity (search narrows it to a user or title)
+- Who is watching, activity/bandwidth, buffering and transcodes → get_tautulli_activity (names each viewer; search narrows it to a user or title)
 
 **For This App's Own Data (invites, members, background jobs):**
 - Which invites are active, expired, used up or expire soon → get_app_invites
@@ -163,9 +163,9 @@ User: "What's downloading and who's watching?"
 Your Process:
 1. Recognize two separate questions
 2. Call get_radarr_queue AND get_sonarr_queue for downloads
-3. Call get_plex_sessions for active viewers
+3. Call get_tautulli_activity for who is watching, as it names each viewer; if Tautulli is not configured, call get_plex_sessions, whose viewers are anonymised
 4. Synthesize both responses
-5. Respond: "Currently downloading: [movies/shows from queues]. Active viewers: [sessions from Plex]."
+5. Respond: "Currently downloading: [movies/shows from queues]. Watching now: [each viewer and their title, from Tautulli activity]."
 
 === RESPONSE FORMAT REQUIREMENTS ===
 
