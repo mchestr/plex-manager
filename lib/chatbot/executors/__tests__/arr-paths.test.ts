@@ -2,7 +2,8 @@
  * Paths in Sonarr and Radarr messages cut to their last part for the shared
  * Discord channel. A path used to be cut only up to its first space, so the
  * rest of a Windows profile, a share or a mount with a space in its name
- * reached Discord.
+ * reached Discord; and only where English puts one, so a translated message
+ * showed its paths, and an update check its account.
  */
 
 import { healthWithoutPaths, withoutPaths } from "../arr-paths"
@@ -80,6 +81,136 @@ describe("withoutPaths", () => {
   })
 })
 
+describe("withoutPaths in the server's UI language", () => {
+  // Sonarr v4 and Radarr v5 send messages in the server's UI language, which puts a path right after other characters
+  it.each([
+    [
+      "a drive after ב- (Hebrew)",
+      "לקוח ההורדות המרוחק SABnzbd ממקם הורדות ב-C:\\Users\\Sean O'Brien\\Downloads\\complete אך נראה שתיקייה זו אינה קיימת.",
+      "לקוח ההורדות המרוחק SABnzbd ממקם הורדות ב-…/complete אך נראה שתיקייה זו אינה קיימת.",
+    ],
+    [
+      "a Unix path after ב- (Hebrew)",
+      "לקוח ההורדות המרוחק SABnzbd ממקם הורדות ב-/home/jane doe/Downloads/complete אך נראה שתיקייה זו אינה קיימת.",
+      "לקוח ההורדות המרוחק SABnzbd ממקם הורדות ב-…/complete אך נראה שתיקייה זו אינה קיימת.",
+    ],
+    ["a path after the fullwidth colon (Japanese)", "ルートフォルダがありません：/mnt/user/Jane Doe/Movies", "ルートフォルダがありません：…/Movies"],
+    ["a path after the fullwidth colon (Chinese)", "缺少根目錄資料夾：\\\\JANE-NAS\\Media Share\\Movies", "缺少根目錄資料夾：…/Movies"],
+    [
+      "a path in typographic quotes (Chinese)",
+      "无法安装更新，因为启动文件夹 “C:\\Users\\Sean O'Brien\\AppData\\Local\\Radarr” 位于 App Translocation 文件夹中。",
+      "无法安装更新，因为启动文件夹 “…/Radarr” 位于 App Translocation 文件夹中。",
+    ],
+    [
+      "a drive right after a Han character",
+      "远程下载客户端SABnzbd将文件下载在C:\\Users\\Sean O'Brien\\Downloads中，但此目录似乎不存在。",
+      "远程下载客户端SABnzbd将文件下载在…/Downloads中，但此目录似乎不存在。",
+    ],
+    ["a Unix path right after a Han character", "远程下载客户端SABnzbd将文件下载在/home/jane/Downloads中，但此目录似乎不存在。", "远程下载客户端SABnzbd将文件下载在…/Downloads中，但此目录似乎不存在。"],
+    ["a share right after a Han character", "远程下载客户端SABnzbd将文件下载在\\\\JANE-NAS\\Media Share\\tv中", "远程下载客户端SABnzbd将文件下载在…/tv中"],
+    ["a path after a colon that follows a Han character", "无法写入配置的回收站文件夹:/home/jane doe/.Trash。确保此路径存在", "无法写入配置的回收站文件夹:…/.Trash。确保此路径存在"],
+    [
+      "a path in „“ (Bulgarian)",
+      "Не може да се инсталира актуализация, защото стартовата папка „C:\\Users\\Sean O'Brien\\AppData\\Local\\Radarr“ е в папка за преместване на приложения.",
+      "Не може да се инсталира актуализация, защото стартовата папка „…/Radarr“ е в папка за преместване на приложения.",
+    ],
+    [
+      "a path in „“ (Czech)",
+      "Aktualizaci nelze nainstalovat, protože spouštěcí složka „/home/jane doe/Radarr“ je ve složce Translocation aplikace.",
+      "Aktualizaci nelze nainstalovat, protože spouštěcí složka „…/Radarr“ je ve složce Translocation aplikace.",
+    ],
+    ["a path in „” (Hungarian)", "A(z) „/Volumes/Jane Doe/Movies/Heat (1995)” filmmappa és annak minden tartalma törlődik.", "A(z) „…/Heat (1995)” filmmappa és annak minden tartalma törlődik."],
+    [
+      "a path in „” (Polish)",
+      "Nie można zainstalować aktualizacji, ponieważ folder startowy „\\\\JANE-NAS\\Apps\\Radarr” znajduje się w folderze translokacji aplikacji.",
+      "Nie można zainstalować aktualizacji, ponieważ folder startowy „…/Radarr” znajduje się w folderze translokacji aplikacji.",
+    ],
+    ["a path in »« (Danish)", "Filmmappen »/home/jane doe/Movies/Heat (1995)« og alt dens indhold slettes.", "Filmmappen »…/Heat (1995)« og alt dens indhold slettes."],
+    ["a path in corner brackets", "ルートフォルダ「/mnt/user/Jane Doe/Movies」がありません", "ルートフォルダ「…/Movies」がありません"],
+    ["a path in backticks", "The series folder `/home/jane doe/tv/Show (2020)` and all of its content will be deleted.", "The series folder `…/Show (2020)` and all of its content will be deleted."],
+  ])("cuts %s to its last part", (_case, message, cut) => {
+    expect(withoutPaths(message)).toBe(cut)
+  })
+
+  it("leaves words joined by a slash as they are", () => {
+    for (const text of [
+      // A "-" opens a path only after a Hebrew letter
+      "Zeige Symbol für Serien-/Staffelfinale basierend auf verfügbaren Folgeninformationen",
+      // After CJK, a root needs a first name that starts in ASCII and ends at a separator
+      "端口、SSL、用户名/密码、代理、分析、更新",
+      "列表将每 {refreshInterval} （秒/分/时/天）刷新一次",
+      "导入集文件后导入匹配的额外文件(字幕/nfo等)",
+      "インポート/再スキャン時にファイルの日付を変更する",
+      "하드 링크/파일 복사",
+      // A root between two backticks is not a path
+      "Appending `+` (eg `:EN+`) will output `[EN]`/`[EN+--]`/`[--]` depending on excluded languages.",
+    ]) {
+      expect(withoutPaths(text)).toBe(text)
+    }
+  })
+})
+
+describe("withoutPaths with apostrophes in names", () => {
+  it.each([
+    ["an accented letter before an apostrophe", "Import failed: /Volumes/Zoë's Media/Downloads/complete/Show.S01E01", "Import failed: …/Show.S01E01"],
+    [
+      "an accented letter after an apostrophe",
+      "Cannot install update because startup folder 'C:\\Users\\Ana D'Ávila\\AppData\\Local\\Sonarr' is not writable",
+      "Cannot install update because startup folder '…/Sonarr' is not writable",
+    ],
+    ["a letter with a combining mark before an apostrophe", "Import failed: /Volumes/Zoe\u0308's Media/Downloads/Show.S01E01", "Import failed: …/Show.S01E01"],
+    ["an apostrophe that ends a name", "Import failed: /Volumes/James' Drive/Downloads/incomplete/Show.S01E01", "Import failed: …/Show.S01E01"],
+    ["an apostrophe that starts a name", "Missing root folder: /mnt/'90s Movies/HD", "Missing root folder: …/HD"],
+    ["an apostrophe that starts the last part", "Missing root folder: /mnt/'90s Movies", "Missing root folder: …/'90s Movies"],
+    [
+      "a closing quote after the path",
+      "Cannot install update because startup folder 'C:\\Users\\Sean O'Brien\\AppData\\Local\\Sonarr' is not writable by the user 'Sean'.",
+      "Cannot install update because startup folder '…/Sonarr' is not writable by the user 'Sean'.",
+    ],
+  ])("cuts a path with %s to its last part", (_case, message, cut) => {
+    expect(withoutPaths(message)).toBe(cut)
+  })
+
+  it("loses the text after a path up to a separator after a contraction, never showing a directory", () => {
+    // An apostrophe between letters stays in a name (the module's special cases)
+    expect(withoutPaths("Unpacking failed, write error in /data/usenet/Show.S01E01 (it's on a read-only mount; check the user/group)")).toBe(
+      "Unpacking failed, write error in …/group)"
+    )
+  })
+})
+
+describe("withoutPaths on 100,000 characters", () => {
+  const LENGTH = 100_000
+  const long = (unit: string, prefix = "") => (prefix + unit.repeat(Math.ceil(LENGTH / unit.length))).slice(0, LENGTH)
+
+  it.each([
+    ["one name after a root", long("a", "Import failed: /")],
+    ["paths back to back", long("Moving /a b/c.mkv to /d e/f.mkv failed. ")],
+    ["paths in typographic quotes", long("„/home/jane doe/tv“ ")],
+    ["roots after corner brackets", long("「/a")],
+    ["slashes after Han characters", long("在/")],
+    ["roots after Han characters with ASCII names", long("在/a")],
+    ["an ASCII name after a Han character with no separator", long("a", "下载在/")],
+    ["roots after a Hebrew hyphen", long("ב-/a ")],
+    ["drives back to back", long("C:\\")],
+    ["backticks around slashes", long("`/`")],
+    ["apostrophes between letters", long("a'", "Import failed: /x/")],
+    ["apostrophes far from a separator", long(`'${"a".repeat(999)}`, "Import failed: /x/")],
+    ["a sentence stop before a long word", long("c", "Import failed: /x/b. ")],
+  ])("cuts %s in well under 100 ms", (_case, message) => {
+    const start = performance.now()
+    withoutPaths(message)
+    expect(performance.now() - start).toBeLessThan(100)
+  })
+
+  it("cuts a known path in well under 100 ms", () => {
+    const known = "C:\\Users\\Jane Doe\\Downloads\\Show.S01"
+    const start = performance.now()
+    withoutPaths(long(`${known} `), known)
+    expect(performance.now() - start).toBeLessThan(100)
+  })
+})
+
 describe("healthWithoutPaths", () => {
   it("cuts the paths in each check's message and keeps the rest", () => {
     const checks = [
@@ -95,19 +226,68 @@ describe("healthWithoutPaths", () => {
     ])
   })
 
-  it("masks the account an update check names after its folder", () => {
+  it("gives an update check error fixed English by its wiki anchor, since it names the account in the server's language", () => {
+    const sonarr = "https://wiki.servarr.com/sonarr/system#"
+    const radarr = "https://wiki.servarr.com/radarr/system#"
     const checks = [
-      { source: "UpdateCheck", type: "error", message: "Cannot install update because startup folder 'C:\\Users\\Sean O'Brien\\AppData\\Sonarr' is not writable by the user 'Sean O'Brien'." },
-      { source: "UpdateCheck", type: "error", message: "Cannot install update because UI folder '/opt/Sonarr/UI' is not writable by the user  'sonarr'." },
+      {
+        id: 1,
+        source: "UpdateCheck",
+        type: "error",
+        message: 'Update kann nicht installiert werden, da der Startordner "C:\\Users\\Sean O\'Brien\\AppData\\Local\\Sonarr" für den Benutzer "Sean O\'Brien" nicht beschreibbar ist.',
+        wikiUrl: `${sonarr}cannot-install-update-because-startup-folder-is-not-writable-by-the-user`,
+      },
+      {
+        id: 2,
+        source: "UpdateCheck",
+        type: "error",
+        // Finnish does not quote the account
+        message: 'Päivityksen asennus ei onnistu, koska käyttäjällä Sean O\'Brien ei ole kirjoitusoikeutta käyttöliittymäkansioon "C:\\Users\\Sean O\'Brien\\AppData\\Local\\Radarr\\UI".',
+        wikiUrl: `${radarr}cannot-install-update-because-ui-folder-is-not-writable-by-the-user`,
+      },
+      {
+        id: 3,
+        source: "UpdateCheck",
+        type: "error",
+        message: "无法安装更新，因为启动文件夹 “/Users/sean/Downloads/Radarr.app/Contents/MacOS” 位于 App Translocation 文件夹中。",
+        wikiUrl: `${radarr}cannot-install-update-because-startup-folder-is-in-an-app-translocation-folder.`,
+      },
     ]
 
-    const [startup, ui] = healthWithoutPaths(checks) as { message: string }[]
-    expect(startup.message).not.toMatch(/Brien|Users/)
-    expect(startup.message).toContain("by the user '…'")
-    expect(ui.message).toBe("Cannot install update because UI folder '…/UI' is not writable by the user  '…'.")
+    expect(healthWithoutPaths(checks)).toEqual([
+      { ...checks[0], message: "Cannot install updates: the startup folder is not writable by the account the app runs as." },
+      { ...checks[1], message: "Cannot install updates: the UI folder is not writable by the account the app runs as." },
+      { ...checks[2], message: "Cannot install updates: the startup folder is in a macOS App Translocation folder." },
+    ])
+  })
+
+  it("gives an update check error with an unknown anchor, or none, a generic message", () => {
+    const message = "Update kann nicht installiert werden, da der Startordner '/home/sean/Sonarr' vom Benutzer 'Sean O'Brien' nicht beschreibbar ist."
+    const checks = [
+      { source: "UpdateCheck", type: "error", message, wikiUrl: "https://wiki.servarr.com/sonarr/system#a-check-from-a-later-version" },
+      { source: "UpdateCheck", type: "error", message, wikiUrl: "https://wiki.servarr.com/sonarr/system#constructor" },
+      { source: "UpdateCheck", type: "error", message },
+    ]
+
+    for (const check of healthWithoutPaths(checks) as { message: string }[]) {
+      expect(check.message).toBe("Cannot install updates; the wiki page for this check says why.")
+    }
+  })
+
+  it("keeps an update check's warning, a new version, as Sonarr sent it", () => {
+    const check = { source: "UpdateCheck", type: "warning", message: "Neue Version verfügbar: v4.0.15.2941", wikiUrl: "https://wiki.servarr.com/sonarr/system#new-update-is-available" }
+
+    expect(healthWithoutPaths([check])).toEqual([check])
   })
 
   it("gives none for anything but a list", () => {
     expect(healthWithoutPaths({ message: "Missing root folder: /home/jane doe/tv" })).toEqual([])
+  })
+
+  it("reads checks of 100,000 characters in well under 100 ms", () => {
+    const message = `Missing root folder: ${"„/home/jane doe/tv“ ".repeat(5_000)}`
+    const start = performance.now()
+    healthWithoutPaths([{ source: "RootFolderCheck", type: "error", message }, { source: "UpdateCheck", type: "error", message }])
+    expect(performance.now() - start).toBeLessThan(100)
   })
 })
