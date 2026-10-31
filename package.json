@@ -57,7 +57,7 @@
     "@ai-sdk/anthropic": "4.0.94",
     "@ai-sdk/google": "4.0.107",
     "@ai-sdk/openai": "4.0.104",
-    "@ai-sdk/openai-compatible": "3.0.80",
+    "@ai-sdk/openai-compatible": "3.0.82",
     "@base-ui/react": "1.9.0",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
