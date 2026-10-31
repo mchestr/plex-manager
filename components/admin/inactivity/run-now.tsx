@@ -1,6 +1,6 @@
 "use client"
 
-import { useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 
 import { runMemberActivityNow } from "@/actions/admin/inactivity"
 import { memberCount, runOutcome } from "@/components/admin/inactivity/run-outcome"
@@ -13,8 +13,8 @@ import type { InactivityRunRow } from "@/lib/data/inactivity"
 interface RunNowProps {
   /** Automatic removal is on, so a run can remove members. */
   enabled: boolean
-  /** Members the preview says a run would remove now. */
-  removals: number
+  /** The members the preview says a run would remove now, by id. */
+  removalIds: string[]
   lastRun: InactivityRunRow | null
 }
 
@@ -39,23 +39,32 @@ function LastRun({ run }: { run: InactivityRunRow | null }) {
 /**
  * The last run and "Run now", which reads last seen from Tautulli and, when
  * automatic removal is on, runs the sweep. While the preview lists members to
- * remove, it first asks to confirm their count; the run then removes no one
- * if more qualify after its fresh read. The action revalidates the page.
+ * remove, it first asks to confirm them and passes their ids on; the run then
+ * removes no one if its fresh read finds a member to remove who is not in the
+ * list. The action revalidates the page, which can change the list, so one
+ * button stays in place either way and focus comes back to it.
  */
-export function RunNow({ enabled, removals, lastRun }: RunNowProps) {
+export function RunNow({ enabled, removalIds, lastRun }: RunNowProps) {
   const toast = useToast()
   const [running, startRun] = useTransition()
+  const [confirming, setConfirming] = useState(false)
+  const button = useRef<HTMLButtonElement>(null)
   const done = (queued: boolean) => toast.showSuccess(queued ? DONE.queued : DONE.finished)
 
-  const runNow = () =>
+  const runNow = () => {
+    if (enabled && removalIds.length > 0) {
+      setConfirming(true)
+      return
+    }
     startRun(async () => {
       const result = await runMemberActivityNow({})
       if (!result.success) toast.showError(result.error)
       else done(result.data.queued)
     })
+  }
 
   const runConfirmed = async () => {
-    const result = await runMemberActivityNow({ confirmedRemovals: removals })
+    const result = await runMemberActivityNow({ confirmedUserIds: removalIds })
     if (!result.success) return { error: result.error }
     done(result.data.queued)
     return {}
@@ -65,27 +74,30 @@ export function RunNow({ enabled, removals, lastRun }: RunNowProps) {
     <div className="flex flex-col gap-3 border-t pt-6">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-h3">Last run</h3>
-        {enabled && removals > 0 ? (
-          <ConfirmDialog
-            trigger={
-              <Button type="button" variant="secondary" data-testid="admin-inactivity-run-now">
-                Run now
-              </Button>
-            }
-            title={`Remove Plex access from ${memberCount(removals)} now?`}
-            description="They lose access to the Plex server, as with Remove Plex access. The run reads Tautulli again first, and removes no one if more members are inactive then."
-            confirmLabel="Remove access"
-            pendingLabel="Running"
-            tone="destructive"
-            action={runConfirmed}
-            data-testid="admin-inactivity-run-dialog"
-            confirmTestId="admin-inactivity-run-confirm"
-          />
-        ) : (
-          <Button type="button" variant="secondary" onClick={runNow} loading={running} loadingLabel="Running" data-testid="admin-inactivity-run-now">
-            Run now
-          </Button>
-        )}
+        <Button
+          ref={button}
+          type="button"
+          variant="secondary"
+          onClick={runNow}
+          loading={running}
+          loadingLabel="Running"
+          data-testid="admin-inactivity-run-now"
+        >
+          Run now
+        </Button>
+        <ConfirmDialog
+          open={confirming}
+          onOpenChange={setConfirming}
+          title={`Remove Plex access from ${memberCount(removalIds.length)} now?`}
+          description="They lose access to the Plex server, as with Remove Plex access. The run reads Tautulli again first. If it would then remove a member who is not in the list on this page, it removes no one."
+          confirmLabel="Remove access"
+          pendingLabel="Running"
+          tone="destructive"
+          action={runConfirmed}
+          successFocus={button}
+          data-testid="admin-inactivity-run-dialog"
+          confirmTestId="admin-inactivity-run-confirm"
+        />
       </div>
       <LastRun run={lastRun} />
     </div>

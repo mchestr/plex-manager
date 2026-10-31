@@ -16,8 +16,8 @@ interface InactivitySettingsSectionProps {
   scheduled: boolean
   /** A scheduled run's safety limit; null while the Plex shares are unknown. */
   scheduledLimit: number | null
-  /** Members the preview says a run would remove now. */
-  removals: number
+  /** The members the preview says a run would remove now, by id. */
+  removalIds: string[]
   lastRun: InactivityRunRow | null
   /** "Last saved ... by ..." from the audit log. */
   footerMeta?: ReactNode
@@ -53,7 +53,7 @@ function InactivitySummary({ saved, scheduled, scheduledLimit }: Pick<Inactivity
  * the card here, so while it has unsaved changes it asks the browser to
  * confirm before the tab closes.
  */
-export function InactivitySettingsSection({ saved, scheduled, scheduledLimit, removals, lastRun, footerMeta }: InactivitySettingsSectionProps) {
+export function InactivitySettingsSection({ saved, scheduled, scheduledLimit, removalIds, lastRun, footerMeta }: InactivitySettingsSectionProps) {
   const inactivity = useInactivityForm(saved)
 
   const dirty = inactivity.form.isDirty
@@ -71,7 +71,7 @@ export function InactivitySettingsSection({ saved, scheduled, scheduledLimit, re
       description="Removes Plex access from members who have not played anything for a set number of days. Needs Tautulli."
       form={inactivity.form}
       view={<InactivitySummary saved={saved} scheduled={scheduled} scheduledLimit={scheduledLimit} />}
-      after={(editing) => !editing && <RunNow enabled={saved.enabled} removals={removals} lastRun={lastRun} />}
+      after={(editing) => !editing && <RunNow enabled={saved.enabled} removalIds={removalIds} lastRun={lastRun} />}
       footerMeta={footerMeta}
     >
       <InactivityFields state={inactivity} />

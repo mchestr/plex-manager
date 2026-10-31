@@ -52,7 +52,7 @@ export default async function InactivityPage() {
         saved={settings}
         scheduled={data.redisConfigured}
         scheduledLimit={preview.scheduledLimit}
-        removals={preview.rows.length}
+        removalIds={preview.rows.map((row) => row.id)}
         lastRun={data.runs[0] ?? null}
         // Nothing before a first save, so the card shows no empty footer
         footerMeta={data.lastSaved && <LastSaved id="inactivity" meta={data.lastSaved} />}
