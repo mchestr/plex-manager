@@ -72,20 +72,26 @@ included, what `lib/security/redact-text.ts` finds, the rules the assistant
 also applies for a Support user:
 
 - A credential pair: `apikey=` or `X-Plex-Token=` in a URL or query string,
-  percent-encoded too (`%3D`, `%253D`); `X-Api-Key: ...` or `password = ...`
-  in a header or config line; `"apiKey": "..."` in JSON or a dict written into
-  a string, escaped JSON included. After a quoted name only a quoted string
-  counts, so `"tokenCount": 42` stays, and a name ending in `tokens` is a count.
+  percent-encoded too (`%3D`, `%253D`, in either case); `X-Api-Key: ...`,
+  `password = ...` or `API key: ...` in a header, config line or message, when
+  the value is not a single word or a code in capitals (`Password: required`
+  and `secret: KEY_UNKNOWN` stay); `"apiKey": "..."` in JSON or a dict written
+  into a string, escaped JSON included. After a quoted name only a quoted
+  string counts, so `"tokenCount": 42` stays, and a name ending in `tokens` is
+  a count.
 - An `Authorization` header's credentials, in any letter case and after any
   prefix ending in `-` (`Proxy-Authorization`, `X-Emby-Authorization`). The
   header name and scheme stay and the credentials go: the token after
-  `Bearer`, `Basic`, `Bot` or `Token`, and after any other scheme a
-  token-shaped run or an auth-param list (`MediaBrowser Client="...",
-  Token="..."`).
+  `Bearer`, `Basic`, `Bot` or `Token`, an auth-param list (`MediaBrowser
+  Client="...", Token="..."`) after a scheme, and after any other word a
+  token-shaped run. After a space, only a scheme known by name or a quoted
+  first value starts a list, so "Authorization failed reason=expired, code=401"
+  stays.
 - A token after a bare `Bearer` or `Basic`, which runs on past `@ : % ! ,`. A
-  single word there is a title, such as "Basic Instinct", and is kept; written
-  in another case (`basic`, `BEARER`) only a token-shaped run counts, so
-  "basic 1080p/2160p" stays.
+  word there is a title, such as "Basic Instinct" or "Basic Instinct(1992)",
+  and is kept; written in another case (`basic`, `BEARER`) only a run shaped
+  like a token counts, so "basic 1080p/2160p" and "basic quality=1080p" stay.
+- A password in a URL, `scheme://user:password@host`.
 
 It matches names, so it backs up the loaders' own masking rather than replacing
 it.

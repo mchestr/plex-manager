@@ -57,8 +57,8 @@ checks `assertAdmin()` or `assertPermission()`, and an action is built with
   and credentials inside strings redacted by the rules MCP results use
   (`lib/security/redact-text.ts`, see `docs/mcp.md`): a `token=` or `apikey=`
   value in a URL, a header or JSON pair such as `X-Plex-Token: ...` or
-  `"apiKey": "..."`, an `Authorization` header's credentials, and a `Bearer`
-  or `Basic` token. A tool error
+  `"apiKey": "..."`, an `Authorization` header's credentials, a `Bearer` or
+  `Basic` token, and a password in a URL. A tool error
   returns a fixed line, never the upstream text. Other members' viewing
   history stays visible, minus those fields, because troubleshooting needs it.
 - Redaction is by key substring, so a future field such as `tokenCount` or `cookieConsent` is dropped too; name tool output fields with that in mind.

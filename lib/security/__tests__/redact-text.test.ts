@@ -30,6 +30,10 @@ describe("redactText: credential pairs", () => {
     ["password =hunter2hunter2", "password =[redacted]"],
     ["password= hunter2hunter2", "password= [redacted]"],
     ["password: correct-horse-battery", "password: [redacted]"],
+    ["password: hunter2", "password: [redacted]"],
+    // An API key named in words, as an admin writes one in a chat message
+    ["My Sonarr API key: 0123456789abcdef0123456789abcdef", "My Sonarr API key: [redacted]"],
+    ["Tautulli API Key = 0123456789abcdef0123456789abcdef", "Tautulli API Key = [redacted]"],
     ['client_secret: "correct horse battery"', 'client_secret: "[redacted]"'],
     [String.raw`password: \"hunter2\"`, String.raw`password: \"[redacted]\"`],
     ["password: 'hunter2'", "password: '[redacted]'"],
@@ -54,6 +58,9 @@ describe("redactText: credential pairs", () => {
     ],
     ["http://app/login?next=%2Fapi%3Fapikey%3D0123456789abcdef%26x%3D1", "http://app/login?next=%2Fapi%3Fapikey%3D[redacted]%26x%3D1"],
     ["http://app/login?next=%252Fapi%253Fapikey%253D0123456789abcdef%2526x%253D1", "http://app/login?next=%252Fapi%253Fapikey%253D[redacted]%2526x%253D1"],
+    // Percent-encoding's hex digits in lower case (RFC 3986 2.1)
+    ["announce.php%3fpasskey%3d0123456789abcdef", "announce.php%3fpasskey%3d[redacted]"],
+    ["next=%252fapi%253fapikey%253d0123456789abcdef%2526x", "next=%252fapi%253fapikey%253d[redacted]%2526x"],
     // A scheme after "=" goes with its credential
     ["token=Bearer abc123def456", "token=Bearer [redacted]"],
     ["token=bearer eyJhbGciOi.J9", "token=bearer [redacted]"],
@@ -77,6 +84,10 @@ describe("redactText: credential pairs", () => {
     "token=",
     '"apiKey": ""',
     "the token was revoked",
+    // An error code in capitals, an apostrophe that opens no quote, and a key named in words without one
+    "Cannot decrypt a stored secret: KEY_UNKNOWN (kid gone)",
+    "Secret: 'Tis the season, said the elf. Nothing else to report here.",
+    "API key: required",
   ])("keeps %s", (text) => {
     expect(redactText(text)).toBe(text)
   })
@@ -112,6 +123,12 @@ describe("redactText: Authorization headers", () => {
     ["Authorization Splunk AbCdEf0123456789xyz", "Authorization Splunk [redacted]"],
     // No scheme: after "=" whatever it is, after ":" when credential-shaped
     ["authorization=xyz", "authorization=[redacted]"],
+    // A token after "=" is no scheme, so the token goes and the next field stays
+    ["authorization=Zq9PlexTok3nXyz12 path=/library/sections", "authorization=[redacted] path=/library/sections"],
+    ["AUTHORIZATION=sk_live_0123456789abcdefABCDEF next=1", "AUTHORIZATION=[redacted] next=1"],
+    ['{"authorization":"Zq9PlexTok3nXyz12 expires 2026-11-30"}', '{"authorization":"[redacted]"}'],
+    // After a space, a known scheme reads its auth-params
+    ['Authorization Digest username="Mufasa", response="6629fae49393a05397450978507c4ef1"', "Authorization Digest [redacted]"],
     ["Authorization: 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b", "Authorization: [redacted]"],
     ["authorization%3DBearer%2520abc&x=1", "authorization%3D[redacted]&x=1"],
     // Quoted: JSON, escaped JSON and dict keys, or a quoted value
@@ -139,6 +156,7 @@ describe("redactText: Authorization headers", () => {
     "Authorization: basic training",
     "Authorization failed 2026-11-30T12:00:00Z for user",
     "Authorization failed reason=expired",
+    "Authorization failed reason=expired, code=401",
     "Authorization: Failed 0x80070005",
     "Error: Authorization failed (code 0x80070005)",
     "authorization code flow",
@@ -167,7 +185,7 @@ describe("redactText: a bare Bearer or Basic", () => {
     ["bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig", "bearer [redacted]"],
     ["BEARER eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0", "BEARER [redacted]"],
     ["bearer 0123456789abcdef0123456789abcdef", "bearer [redacted]"],
-    ["basic user=admin;x=1", "basic [redacted]"],
+    ["basic dXNlcjpwYXNzd29yZA==", "basic [redacted]"],
     ["with bearer\tpmk_AbCdEf0123456789xyz", "with bearer\t[redacted]"],
   ])("%s", (text, expected) => {
     expect(redactText(text)).toBe(expected)
@@ -193,10 +211,35 @@ describe("redactText: a bare Bearer or Basic", () => {
     "basic PlayStation-5 support",
     "bearer 2026-11-30",
     "Basic (non-premium) members",
+    // A word then no token character, after Basic or Bearer as HTTP writes them
+    "Basic Instinct(1992)",
+    "Basic Training:Week-1",
+    "Basic Instinct–Heat",
+    // Where "basic" is English, "=" is no sign of a token, and a run with "/" is a list
+    "basic user=admin;x=1",
+    "basic quality=1080p",
+    "Transcoder supports basic 4K/HDR10/DolbyVision",
     "Use HTTP Basic or Bearer authentication",
   ])("keeps %s", (text) => {
     expect(redactText(text)).toBe(text)
   })
+})
+
+describe("redactText: a password in a URL", () => {
+  it.each([
+    ["http://admin:hunter2pass@sonarr:8989/api/v3/series", "http://admin:[redacted]@sonarr:8989/api/v3/series"],
+    ["redis://:s3cretP4ssw0rd@redis:6379/0", "redis://:[redacted]@redis:6379/0"],
+    ["svn+ssh://jane:pa55@host/repo", "svn+ssh://jane:[redacted]@host/repo"],
+  ])("%s", (text, expected) => {
+    expect(redactText(text)).toBe(expected)
+  })
+
+  it.each(["https://sonarr.example.com:8989/api/v3/series", "ftp://user@host/file", "contact jane@example.com:22", "http://host:8080/path@v2"])(
+    "keeps %s",
+    (text) => {
+      expect(redactText(text)).toBe(text)
+    }
+  )
 })
 
 describe("redactText", () => {
@@ -246,6 +289,12 @@ describe("redactText time", () => {
     ["%26 after an encoded pair", long("%26", "token%3D")],
     ["%253D runs", long("%253D", "apikey")],
     ["a long name before =", `${long("a")}token=x`],
+    ["lists after loose pairs", long("token:a,")],
+    ["API keys in words", long("API key: a ")],
+    ["dotted words", long("a.")],
+    ["URLs without a password", long("http://a:b/")],
+    ["userinfo without an @", long("a", "http://user:")],
+    ["unclosed single quotes after a secret", long("x ", "secret: '")],
   ])("reads %s of 100,000 characters in one pass", (_label, text) => {
     const start = performance.now()
     redactText(text)

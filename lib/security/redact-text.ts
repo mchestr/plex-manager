@@ -7,7 +7,7 @@
  *
  * ## Rules
  *
- * {@link redactText} applies three rules in turn, each in one pass, and puts
+ * {@link redactText} applies four rules in turn, each in one pass, and puts
  * {@link REDACTED} where each credential was:
  *
  * 1. **Credential pairs.** A name that holds a secret word (`token`, `apikey`
@@ -15,11 +15,12 @@
  *    and its value:
  *    - `name=value`, whatever the value (as in a query string), `name="value"`
  *      and `name='value'`;
- *    - `name%3Dvalue` and `name%253Dvalue` (percent-encoded once or twice),
- *      whose value also ends at `%26` or `%2526`;
+ *    - `name%3Dvalue` and `name%253Dvalue` (percent-encoded once or twice, the
+ *      hex digits in either case), whose value also ends at `%26` or `%2526`;
  *    - `name: value` and `name = value` (header or config style), when the
  *      name ends in the secret word (`X-Plex-Token`, not `tokenCount`) and the
- *      value is quoted or credential-shaped (below);
+ *      value is quoted or a loose credential (below), and the same after "API
+ *      key" written as two words;
  *    - `"name": "value"`, the same escaped inside a string
  *      (`\"name\":\"value\"`, at any depth) and `'name': 'value'`, for a quoted
  *      string value only, so `"tokenCount": 42` keeps its number.
@@ -30,42 +31,63 @@
  *    after a prefix ending in `-` (`Proxy-Authorization`,
  *    `X-Emby-Authorization`), followed by `:`, `=` or a space, or as a JSON or
  *    dict key. The header name and the scheme word stay, and the credentials
- *    go: after any scheme, an auth-param list (`MediaBrowser Client="...",
- *    Token="..."`, RFC 9110 11.4) whose first value is quoted or that has two
- *    params or more, or a token-shaped run (below); any run of 8 or more
- *    characters after `Bearer` or `Basic` as HTTP writes them; a
- *    credential-shaped run after those in another case or after `Token`,
- *    `Bot`, `ApiKey`, `Negotiate`, `NTLM` or `DPoP`, and after any word with
- *    `=`. A quoted value loses everything after its first word. A value with
- *    no scheme goes whole after `=`, and when credential-shaped after `:`.
- * 3. **A bare Bearer or Basic**, in any letter case: the credential-shaped run
- *    after it. Written `Bearer` or `Basic`, the run must also start with 8
- *    token characters (as it always had to) or be token-shaped; written in
- *    another case (`basic`, `BEARER`), where the word is as often English, it
- *    must be token-shaped: hold an `=`, or 16 hex digits in a row, or have 16
- *    or more characters with lower case, capitals and a digit. So "basic
- *    1080p/2160p" and "basic H.264/AAC" stay.
+ *    go:
+ *    - a quoted value, all but a leading word of letters (its scheme);
+ *    - an auth-param list (`MediaBrowser Client="...", Token="..."`, RFC 9110
+ *      11.4) whose first value is quoted or that has two params or more,
+ *      after any scheme that follows `:` or `=`, and after a space only after
+ *      a scheme known by name (Bearer, Basic, Token, Bot, ApiKey, Negotiate,
+ *      NTLM, DPoP, Digest, MediaBrowser, Emby, HOBA, Mutual, VAPID, OAuth,
+ *      HMAC) or when the first value is quoted, so "Authorization failed
+ *      reason=expired, code=401" stays;
+ *    - any run of 8 or more characters after `Bearer` or `Basic` as HTTP
+ *      writes them, and a credential-shaped run (below) after a scheme of one
+ *      token (those two in another case, `Token`, `Bot`, `ApiKey`,
+ *      `Negotiate`, `NTLM`, `DPoP`);
+ *    - after any other word, a run shaped like a token: 16 hex digits in a
+ *      row, or 16 characters or more with lower case, capitals and a digit;
+ *    - with no scheme, the whole value after `=`, and a loose credential after
+ *      `:`. After `=`, only a word of letters and a space is a scheme, so
+ *      "authorization=Zq9PlexTok3nXyz12 path=/library" loses the token.
+ * 3. **A bare Bearer or Basic.** Written as HTTP writes them, the run after it
+ *    when it starts with 8 token characters (as it always had to) or holds an
+ *    `=` or is shaped like a token, and is not a title: a word of letters
+ *    alone or before punctuation, or of three letters or more before a
+ *    character no token holds ("Instinct(1992)", "Training:Week-1"). In
+ *    another case (`basic`, `BEARER`), where the word is as often English,
+ *    only a run with base64 padding at its end, 16 hex digits, a JWT, or one
+ *    shaped like a token with no "/" in it, so "basic quality=1080p" and
+ *    "basic 4K/HDR10/DolbyVision" stay.
+ * 4. **A password in a URL.** `scheme://user:password@host` loses the
+ *    password.
  *
  * A value ends where a query string's value would, at `&`, whitespace, a
  * quote or an angle bracket, never at `@ : % ! ,`: "Basic password=p@ssw0rd!"
- * loses the whole run. A quoted value ends at its closing quote, or at the end
- * of a text that was cut short.
+ * loses the whole run. A double-quoted value ends at its closing quote, or at
+ * the end of a text that was cut short; a single-quoted one at its closing
+ * quote on its line, or at the end of a cut text when it holds no space, so an
+ * apostrophe opens none ("Secret: 'Tis the season").
  *
  * ## Credential-shaped
  *
  * Where neither the name nor the scheme settles it, a run is a credential when
  * it has 8 or more characters and is not a single word of letters: a title
  * such as "Instinct", "Instinct.", "Instinct, then Heat" or "Instinct’s"
- * stays, and a run with digits, symbols or a `name=` in it goes. Pairs run
+ * stays, and a run with digits, symbols or a `name=` in it goes. After a
+ * header or config style separator, where prose and error codes go too, a
+ * loose credential has 6 or more characters and is neither a single word of
+ * letters nor a code in capitals and `_`: "password: hunter2" goes, and
+ * "Password: required" and "stored secret: KEY_UNKNOWN" stay. Pairs run
  * first, so a pair's value is gone before a scheme's run could reach it.
  *
  * ## Time
  *
  * Every string of every result passes through here, member-chosen text
  * included (a player's name), so each rule runs in time linear in its input. A
- * run of name characters is read once by a lookahead, which is never
- * backtracked into, so it is never re-split; a quoted value is read once to
- * its closing quote; the title test reads a run once.
+ * run of name characters, and a URL's scheme, is read once by a lookahead,
+ * which is never backtracked into, so it is never re-split; a quoted value is
+ * read once to its closing quote; the title test reads a run once, and every
+ * other test looks at most 64 characters ahead or to the end of its own run.
  *
  * @module
  *
@@ -92,7 +114,10 @@ const AUTHORIZATION = anyCase("authorization")
 const BEARER_OR_BASIC_WRITTEN = "(?:Bearer|Basic)"
 const BEARER_OR_BASIC = anyOf(["bearer", "basic"])
 /** Schemes whose credentials are one token, Bearer and Basic among them. */
-const TOKEN_SCHEME = anyOf(["bearer", "basic", "token", "bot", "apikey", "negotiate", "ntlm", "dpop"])
+const TOKEN_SCHEMES = ["bearer", "basic", "token", "bot", "apikey", "negotiate", "ntlm", "dpop"]
+const TOKEN_SCHEME = anyOf(TOKEN_SCHEMES)
+/** Every scheme known by name: those and the ones that take auth-params (Digest, Jellyfin's MediaBrowser and Emby). */
+const KNOWN_SCHEME = anyOf([...TOKEN_SCHEMES, "digest", "mediabrowser", "emby", "hoba", "mutual", "vapid", "oauth", "hmac"])
 const SCHEME = String.raw`[A-Za-z][\w.+-]*`
 
 let groupCount = 0
@@ -113,6 +138,8 @@ const ENDS_IN_SECRET = String.raw`(?<=${SECRET_WORD})`
 /** A header or config style separator: ":", or "=" with a space beside it. */
 const LOOSE = String.raw`(?:\s*:\s*|\s+=\s*|=\s+)`
 const ANY_SEPARATOR = String.raw`(?:\s*[:=]\s*|\s+)`
+/** Before a scheme kept as such: after "=" only a word of letters, so a token after "=" is never kept as a scheme. */
+const SCHEME_SEPARATOR = String.raw`(?:\s*:\s*|\s+|\s*=\s*(?=[A-Za-z]+\s))`
 
 /** A value's characters, as in a query string. */
 const VALUE_CHAR = String.raw`[^&\s"'<>]`
@@ -126,8 +153,15 @@ const LONG_RUN = String.raw`(?=[\w.~+/=-]${VALUE_CHAR}{7})${RUN}`
  * possessive, "Instinct’s"), then at most punctuation or a list: a title, not
  * a credential.
  */
-const WORD = String.raw`\p{Lu}?\p{Ll}+(?:’\p{Ll}+)?(?:[,;]${VALUE_CHAR}*|(?:(?![&"'<>])[\p{P}\p{S}])*)(?!${VALUE_CHAR})`
+const WORD = String.raw`\p{Lu}?\p{Ll}+(?:’\p{Ll}+)?(?:[,;]|(?:(?![&"'<>])[\p{P}\p{S}])*(?!${VALUE_CHAR}))`
 const CREDENTIAL = `(?!${WORD})${LONG_RUN}`
+/**
+ * A credential after a header or config style separator, where prose and
+ * error codes go too ("Password: required", "stored secret: KEY_UNKNOWN"): a
+ * run of 6 or more that is not a single word of letters or a code in capitals
+ * and "_" ("password: hunter2", "password: correct-horse-battery").
+ */
+const LOOSE_CREDENTIAL = String.raw`(?!${WORD})(?![\p{Lu}_]+(?!${VALUE_CHAR}))(?=[\w.~+/=-]${VALUE_CHAR}{5})${RUN}`
 /**
  * Shaped like a token rather than a date, version, format, error code or
  * product name ("2026-11-30", "1.21.0", "H.264/AAC", "0x80070005",
@@ -137,12 +171,21 @@ const CREDENTIAL = `(?!${WORD})${LONG_RUN}`
  */
 const STRONG_TOKEN = String.raw`(?:(?=${VALUE_CHAR}*?[\dA-Fa-f]{16})|(?=${VALUE_CHAR}{16})(?=${VALUE_CHAR}*?\p{Ll})(?=${VALUE_CHAR}*?\p{Lu})(?=${VALUE_CHAR}*?\d))`
 const TOKEN_SHAPE = String.raw`(?:(?=${VALUE_CHAR}*=)|${STRONG_TOKEN})`
+/**
+ * Token-shaped where "bearer" or "basic" is as often English: base64 padding
+ * at the end, 16 hex digits, a JWT, or a run {@link STRONG_TOKEN} counts that
+ * holds no "/" ("basic quality=1080p" and "basic 4K/HDR10/DolbyVision" stay).
+ */
+const CASELESS_TOKEN = String.raw`(?:(?=${VALUE_CHAR}*?[\w+/]={1,2}(?!${VALUE_CHAR}))|(?=${VALUE_CHAR}*?[\dA-Fa-f]{16})|(?=eyJ)|(?!${VALUE_CHAR}*\/)${STRONG_TOKEN})`
+/** A title after Bearer or Basic as HTTP writes them, as one has always read: a word of three letters or more, then no token character ("Instinct(1992)"). */
+const WRITTEN_TITLE = String.raw`\p{Lu}?\p{Ll}{2,}\.?(?![\w.~+/=-])`
 
 /** A JSON string's characters, escapes included, and its closing quote or the end of a cut text. */
 const JSON_CHAR = String.raw`(?:[^"\\]|\\[^])`
 const JSON_CLOSE = String.raw`(?:"|\\?$)`
-const DICT_CHAR = String.raw`(?:[^'\\]|\\[^])`
-const DICT_CLOSE = String.raw`(?:'|\\?$)`
+/** A single-quoted value ends at its closing quote on its line, or at the end of a cut text if it holds no space: else the quote is an apostrophe ("Secret: 'Tis the season"). */
+const DICT_CHAR = String.raw`(?:[^'\\\n]|\\[^])`
+const dictValue = (closeQuote: string) => String.raw`(?:${DICT_CHAR}+${closeQuote}|[^'\\\s]+\\?$)`
 /**
  * The characters of a string escaped once or more (`\"...\"`, JSON written
  * into a JSON string): its quote is the run of backslashes captured as
@@ -153,24 +196,24 @@ const escapedClose = (quote: string) => String.raw`(?:\k<${quote}>"|$)`
 
 /** A quoted value, JSON, escaped or dict style: its characters are the credential, less a leading scheme word when kept. */
 function quotedValue(keepScheme: boolean): string {
-  const scheme = keepScheme ? String.raw`(?:${SCHEME}\s+)?` : ""
+  const scheme = keepScheme ? String.raw`(?:[A-Za-z]+\s+)?` : ""
   const quote = ref()
   return [
     `${keep(`"${scheme}`)}${JSON_CHAR}+${close(JSON_CLOSE)}`,
     `${keep(String.raw`(?<!\\)(?<${quote}>\\+)"${scheme}`)}${escapedChar(quote)}+${close(escapedClose(quote))}`,
-    `${keep(`'${scheme}`)}${DICT_CHAR}+${close(DICT_CLOSE)}`,
+    `${keep(`'${scheme}`)}${dictValue(close("'"))}`,
   ].join("|")
 }
 
 /** A quoted name and value, `"name": "value"`, `\"name\": \"value\"` or `'name': 'value'`, the name passing `check`. */
 function quotedPair(check: string, keepScheme: boolean): string {
-  const scheme = keepScheme ? String.raw`(?:${SCHEME}\s+)?` : ""
+  const scheme = keepScheme ? String.raw`(?:[A-Za-z]+\s+)?` : ""
   const quote = ref()
   const escaped = String.raw`\k<${quote}>"`
   return [
     `${keep(String.raw`"${nameRun(ref())}${check}"\s*:\s*"${scheme}`)}${JSON_CHAR}+${close(JSON_CLOSE)}`,
     `${keep(String.raw`(?<!\\)(?<${quote}>\\+)"${nameRun(ref())}${check}${escaped}\s*:\s*${escaped}${scheme}`)}${escapedChar(quote)}+${close(escapedClose(quote))}`,
-    `${keep(String.raw`'${nameRun(ref())}${check}'\s*:\s*'${scheme}`)}${DICT_CHAR}+${close(DICT_CLOSE)}`,
+    `${keep(String.raw`'${nameRun(ref())}${check}'\s*:\s*'${scheme}`)}${dictValue(close("'"))}`,
   ].join("|")
 }
 
@@ -180,7 +223,7 @@ function authParam(): string {
   const quoted = [
     String.raw`"${JSON_CHAR}*${JSON_CLOSE}`,
     String.raw`(?<!\\)(?<${quote}>\\+)"${escapedChar(quote)}*${escapedClose(quote)}`,
-    String.raw`'${DICT_CHAR}*${DICT_CLOSE}`,
+    String.raw`'${DICT_CHAR}*(?:'|\\?$)`,
   ].join("|")
   return String.raw`[\w-]+\s*=\s*(?:${quoted}|[^\s,"'<>&]*)`
 }
@@ -192,28 +235,35 @@ function secretPair(): string {
     `${keep("=")}(?:${quotedValue(false)})`,
     `${keep(String.raw`=${BEARER_OR_BASIC}\s+`)}${CREDENTIAL}`,
     `${keep("=")}${VALUE}`,
-    `${keep("%(?:25)?3D")}${ENCODED_VALUE}`,
+    `${keep("%(?:25)?3[Dd]")}${ENCODED_VALUE}`,
     `${keep(loose)}(?:${quotedValue(false)})`,
-    `${keep(loose)}${CREDENTIAL}`,
+    `${keep(loose)}${LOOSE_CREDENTIAL}`,
   ]
-  return String.raw`${quotedPair(IS_SECRET, false)}|(?<![\w-])${keep(nameRun(ref()))}${IS_SECRET}(?:${forms.join("|")})`
+  // An API key named in words, as an admin writes one in a chat message ("My Sonarr API key: ...")
+  const apiKey = `${keep(String.raw`(?<![\w-])${anyCase("api")}\s+${anyCase("key")}${LOOSE}`)}(?:${quotedValue(false)}|${LOOSE_CREDENTIAL})`
+  return String.raw`${quotedPair(IS_SECRET, false)}|(?<![\w-])${keep(nameRun(ref()))}${IS_SECRET}(?:${forms.join("|")})|${apiKey}`
 }
 
 /** An Authorization header's credentials (rule 2). */
 function authHeader(): string {
   // A list that reads as auth-params, not "failed reason=expired": its first value quoted, or two params or more
   const list = String.raw`(?=[\w-]+\s*=\s*(?:["']|\\+"|[^\s,"'<>&]*\s*,\s*[\w-]+\s*=))`
-  const params = String.raw`${list}${authParam()}(?:\s*,\s*${authParam()})*${VALUE_CHAR}*`
+  // Built for each use, since an auth-param names its own groups
+  const params = () => String.raw`${list}${authParam()}(?:\s*,\s*${authParam()})*${VALUE_CHAR}*`
+  const quotedFirst = String.raw`(?=[\w-]+\s*=\s*(?:["']|\\+"))`
   const forms = [
     `${keep(String.raw`\s*[:=]\s*`)}(?:${quotedValue(true)})`,
-    `${keep(String.raw`${ANY_SEPARATOR}${SCHEME}\s+`)}${params}`,
+    // Any word after ":" or "=" is a scheme; after a space only a known one, or one whose first param is quoted ("failed reason=expired" is prose)
+    `${keep(String.raw`(?:\s*:\s*|\s*=\s*(?=[A-Za-z]+\s))${SCHEME}\s+`)}${params()}`,
+    `${keep(String.raw`\s+${KNOWN_SCHEME}\s+`)}${params()}`,
+    `${keep(String.raw`\s+${SCHEME}\s+`)}${quotedFirst}${params()}`,
     `${keep(String.raw`${ANY_SEPARATOR}${BEARER_OR_BASIC_WRITTEN}\s+`)}${LONG_RUN}`,
     `${keep(String.raw`${ANY_SEPARATOR}${TOKEN_SCHEME}\s+`)}${CREDENTIAL}`,
-    `${keep(String.raw`${ANY_SEPARATOR}${SCHEME}\s+`)}${STRONG_TOKEN}${CREDENTIAL}`,
-    `${keep(String.raw`=${SCHEME}\s+`)}${CREDENTIAL}`,
+    `${keep(String.raw`${SCHEME_SEPARATOR}${SCHEME}\s+`)}${STRONG_TOKEN}${CREDENTIAL}`,
+    `${keep(String.raw`=(?=[A-Za-z]+\s)${SCHEME}\s+`)}${CREDENTIAL}`,
     `${keep("=")}${VALUE}`,
-    `${keep("%(?:25)?3D")}${ENCODED_VALUE}`,
-    `${keep(LOOSE)}${CREDENTIAL}`,
+    `${keep("%(?:25)?3[Dd]")}${ENCODED_VALUE}`,
+    `${keep(LOOSE)}${LOOSE_CREDENTIAL}`,
   ]
   return String.raw`${quotedPair(IS_HEADER, true)}|(?<![\w-])${keep(nameRun(ref()))}${IS_HEADER}(?:${forms.join("|")})`
 }
@@ -224,8 +274,14 @@ function authHeader(): string {
  * run does, so "basic 1080p/2160p" stays.
  */
 function bareScheme(): string {
-  const written = String.raw`${keep(String.raw`${BEARER_OR_BASIC_WRITTEN}\s+`)}(?:(?=[\w.~+/=-]{8})|${TOKEN_SHAPE})`
-  return String.raw`\b(?:${written}|${keep(String.raw`${BEARER_OR_BASIC}\s+`)}${TOKEN_SHAPE})${CREDENTIAL}`
+  const written = String.raw`${keep(String.raw`${BEARER_OR_BASIC_WRITTEN}\s+`)}(?!${WRITTEN_TITLE})(?:(?=[\w.~+/=-]{8})|${TOKEN_SHAPE})`
+  return String.raw`\b(?:${written}|${keep(String.raw`${BEARER_OR_BASIC}\s+`)}${CASELESS_TOKEN})${CREDENTIAL}`
+}
+
+/** A password in a URL's userinfo, `scheme://user:password@host` (rule 4). The scheme is read once, as a name is. */
+function urlPassword(): string {
+  const scheme = ref()
+  return String.raw`${keep(String.raw`(?<![\w+.-])(?=(?<${scheme}>[A-Za-z][\w+.-]*))\k<${scheme}>://[^\s/:@"'<>]*:`)}[^\s/@"'<>]+(?=@)`
 }
 
 /**
@@ -240,7 +296,7 @@ function rule(source: string): [RegExp, string] {
   return [new RegExp(source, "gu"), `${groups("k")}${REDACTED}${groups("c")}`]
 }
 
-const RULES = [secretPair(), authHeader(), bareScheme()].map(rule)
+const RULES = [secretPair(), authHeader(), bareScheme(), urlPassword()].map(rule)
 
 /** `text` with every credential the rules find replaced by {@link REDACTED}. */
 export function redactText(text: string): string {
