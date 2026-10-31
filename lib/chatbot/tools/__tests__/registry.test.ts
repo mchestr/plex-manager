@@ -13,6 +13,7 @@ import {
   DISCORD_ADMIN_ONLY_TOOL_NAMES,
   DISCORD_SAFE_TOOLS,
   DISCORD_SAFE_TOOL_NAMES,
+  discordArguments,
 } from "@/lib/chatbot/tools/registry"
 
 /**
@@ -196,5 +197,45 @@ describe("Discord parameters", () => {
     for (const tool of DISCORD_SAFE_TOOLS.filter((candidate) => !hiding.has(candidate.function.name))) {
       expect(tool.function.parameters).toEqual(full(tool.function.name))
     }
+  })
+
+  // A property description that still named a hidden id ("needs seriesId or seriesName") told the
+  // Discord model to pass a parameter it is not shown, and which executeToolCall drops
+  const hiding = ALL_TOOLS.filter((tool) => tool.discordHiddenParameters?.length).map((tool) => [tool.function.name, tool.discordHiddenParameters ?? []] as const)
+
+  it.each(hiding)("names none of %s's hidden parameters %j in any text the Discord model reads", (name, hidden) => {
+    const tool = DISCORD_SAFE_TOOLS.find((candidate) => candidate.function.name === name)
+    const properties = Object.values((tool?.function.parameters.properties ?? {}) as Record<string, { description?: string }>)
+    const at = { format: { timeZone: "UTC", locale: "en-US" }, now: new Date("2026-10-31T12:00:00Z") }
+    const read = {
+      description: tool?.function.description,
+      properties: properties.map((property) => property.description).join("\n"),
+      parameters: JSON.stringify(tool?.function.parameters),
+      prompt: generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, at),
+      jellyfinPrompt: generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { ...at, jellyfin: true }),
+    }
+
+    expect(properties.length).toBeGreaterThan(0)
+    for (const parameter of hidden) {
+      for (const text of Object.values(read)) expect(text).not.toMatch(new RegExp(`\\b${parameter}\\b`))
+    }
+  })
+
+  it("drops only a tool's hidden parameters from a Discord call's arguments", () => {
+    const args = { seriesId: 31, episodeId: 4410, seriesName: "Severance", pageSize: 50 }
+
+    expect(discordArguments("get_sonarr_history", args)).toEqual({ seriesName: "Severance", pageSize: 50 })
+    expect(discordArguments("get_sonarr_queue", { ...args, seasonNumber: 2 })).toEqual({ episodeId: 4410, seriesName: "Severance", pageSize: 50, seasonNumber: 2 })
+    expect(discordArguments("get_radarr_queue", { movieId: 14, movieName: "Heat" })).toEqual({ movieName: "Heat" })
+    expect(discordArguments("get_tautulli_activity", { search: "Sam" })).toEqual({ search: "Sam" })
+  })
+
+  it("still tells the admin model which parameters name a series or a movie", () => {
+    const description = (name: string) => ALL_TOOLS.find((tool) => tool.function.name === name)?.function.description
+
+    expect(description("get_sonarr_queue")).toContain("Give a series (seriesId or seriesName)")
+    expect(description("get_sonarr_history")).toContain("With a series (seriesId or seriesName)")
+    expect(description("get_radarr_queue")).toContain("Give a movie (movieId or movieName)")
+    expect(description("get_radarr_history")).toContain("With a movie (movieId or movieName)")
   })
 })

@@ -5,7 +5,7 @@ import { type Permission } from "@/lib/permissions"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
-import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES, getRegisteredTool } from "../tools/registry"
+import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES, discordArguments, getRegisteredTool } from "../tools/registry"
 import { executeMcpTool, MCP_TOOL_PREFIX } from "../mcp/tools"
 import { executeAppDataTool } from "./app-data"
 import { executeKnowledgeTool } from "./knowledge"
@@ -238,7 +238,9 @@ export async function executeToolCall(
   })
 
   try {
-    const output = await executor(toolName, args, userId, context, format)
+    // A Discord call loses the parameters its model is not shown (discordHiddenParameters)
+    const toolArgs = context === "discord" ? discordArguments(toolName, args) : args
+    const output = await executor(toolName, toolArgs, userId, context, format)
     // Every instant the model reads is local wall time with its offset (P11.17)
     const result = format ? withLocalInstants(output, format.timeZone) : output
 

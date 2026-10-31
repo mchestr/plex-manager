@@ -132,6 +132,18 @@ export const DISCORD_SAFE_TOOL_NAMES = new Set<string>(
 )
 
 /**
+ * A Discord call's arguments without the tool's `discordHiddenParameters`.
+ * The Discord model is not shown them, but the AI SDK does not check
+ * arguments against the schema, so it can still pass one: a guessed seriesId
+ * would outrank the seriesName it gave and answer for another title.
+ */
+export function discordArguments(toolName: string, args: Record<string, unknown>): Record<string, unknown> {
+  const hidden = TOOLS_BY_NAME.get(toolName)?.discordHiddenParameters
+  if (!hidden?.length) return args
+  return Object.fromEntries(Object.entries(args).filter(([name]) => !hidden.includes(name)))
+}
+
+/**
  * Discord-safe tools that require the acting Discord user to be an app admin
  * (Step 19, FR-14). DERIVED from the `discordAdminOnly` metadata flag — these
  * are the whole-server download queue/history tools. Non-admin members are

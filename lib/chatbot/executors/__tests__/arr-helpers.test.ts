@@ -156,6 +156,30 @@ describe("titles", () => {
     expect(idForTitle(library, "  ")).toBeUndefined()
     expect(idForTitle({ records: library }, "the office")).toBeUndefined()
   })
+
+  it("falls back to a title that matches ignoring punctuation, the whole title before a longer one", () => {
+    const library = [
+      { id: 1, title: "Mission: Impossible - Dead Reckoning Part One", titleSlug: "575264" },
+      { id: 2, title: "Mission: Impossible", titleSlug: "954" },
+      { id: 3, title: "Spider-Man: Across the Spider-Verse", titleSlug: "569094" },
+    ]
+    expect(idForTitle(library, "Spiderman Across the Spider-Verse")).toBe(3)
+    expect(idForTitle(library, "mission impossible")).toBe(2)
+    expect(idForTitle(library, "Mission Impossible Dead Reckoning")).toBe(1)
+    // A name with no letters or digits would otherwise match every title
+    expect(idForTitle(library, "?!")).toBeUndefined()
+  })
+
+  it("keeps the exact title first, then a title or slug that contains the name", () => {
+    const library = [
+      { id: 1, title: "Heat!", titleSlug: "heat-2024" },
+      { id: 2, title: "Heat", titleSlug: "949" },
+      { id: 3, title: "Dune: Part Two", titleSlug: "693134" },
+    ]
+    expect(idForTitle(library, "heat")).toBe(2)
+    expect(idForTitle(library, "heat-2024")).toBe(1)
+    expect(idForTitle(library, "dune: part")).toBe(3)
+  })
 })
 
 describe("shared projections", () => {

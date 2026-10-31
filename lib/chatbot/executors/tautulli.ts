@@ -8,7 +8,7 @@ import { isJellyfinOnly } from "@/lib/discord/copy"
 import { memberServices } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import { type FormatSettings } from "@/lib/utils/format"
-import { countArg, flagArg, MAX_PAGE, textArg, userIdArg } from "./plex-tautulli-reply"
+import { countArg, flagArg, isRecord, MAX_PAGE, textArg, userIdArg } from "./plex-tautulli-reply"
 import { auditTautulliMemberReads, historyPage } from "./tautulli-history"
 import { activityReply, LIMITS, mostWatchedReply, recentPlaysReply, topUsersReply, watchHistoryReply, type HistoryQuery } from "./tautulli-lists"
 import { sessionOf } from "./tautulli-projections"
@@ -25,6 +25,15 @@ const activitySchema = z.object({
 
 /** What a Discord caller sees when their sessions cannot be picked out from everyone's. */
 const UNMAPPED_ACTIVITY = { session_count: 0, sessions: [], scope: "unmapped" } as const
+
+/**
+ * The activity's answer when Tautulli could not read Plex's sessions (Plex
+ * down or unreachable, an expired token): Tautulli still answers success,
+ * with no `sessions` at all, where an idle server sends `sessions: []`. As an
+ * error, every surface reports a failure rather than nobody watching, and the
+ * admin assistant turns to get_plex_sessions.
+ */
+const ACTIVITY_UNREAD = JSON.stringify({ error: "Tautulli could not read the current sessions from Plex" })
 
 /** The answer to a `userId` that is not a Tautulli user id (a name, say), instead of every user's data. */
 const NOT_A_USER_ID = JSON.stringify({ error: "userId must be a Tautulli user_id (a number); find it with get_tautulli_users." })
@@ -93,6 +102,7 @@ export async function executeTautulliTool(
     case "get_tautulli_activity": {
       const activity = await getTautulliActivity(config)
       if (!activity.success) return toToolOutput(activity)
+      if (!isRecord(activity.data) || !Array.isArray(activity.data.sessions)) return ACTIVITY_UNREAD
       if (context === "discord") return JSON.stringify(await scopeActivityToCaller(config, activity.data, userId))
       return JSON.stringify(activityReply(activity.data, textArg(args.search)))
     }

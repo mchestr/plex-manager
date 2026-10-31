@@ -252,21 +252,47 @@ describe("executeTautulliTool - Discord activity scoping", () => {
     expect(result).toEqual(UNMAPPED)
   })
 
-  it.each([
-    ["sessions is a single object", { stream_count: "1", sessions: { user_id: 501, title: "Mine" } }],
-    ["sessions is missing", { stream_count: "2" }],
-    ["a session has no user_id", { sessions: [{ user_id: 501, title: "Mine" }, { title: "Someone else's" }] }],
-    ["the payload is not an object", "<html>Bad Gateway</html>"],
-    ["the payload is null", null],
-  ])("returns no sessions when %s", async (_case, data) => {
+  it("returns no sessions when a session has no user_id", async () => {
     mockFindTautulliUser.mockResolvedValue({ ok: true, user: { user_id: 501, username: "lena_plex" } })
-    mockGetTautulliActivity.mockResolvedValue({ success: true, data })
+    mockGetTautulliActivity.mockResolvedValue({ success: true, data: { sessions: [{ user_id: 501, title: "Mine" }, { title: "Someone else's" }] } })
 
     const result = JSON.parse(
       await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord")
     )
 
     expect(result).toEqual(UNMAPPED)
+  })
+
+  // Tautulli answers success with `{}` when it cannot read Plex's sessions (Plex down, a timeout, an
+  // expired token): read as no sessions, it told the admin that nobody was watching
+  it.each([
+    ["Tautulli could not read Plex's sessions", {}],
+    ["sessions is a single object", { stream_count: "1", sessions: { user_id: 501, title: "Mine" } }],
+    ["sessions is missing", { stream_count: "2" }],
+    ["the payload is not an object", "<html>Bad Gateway</html>"],
+    ["the payload is null", null],
+  ])("returns an error, before the Discord branch, when %s", async (_case, data) => {
+    mockFindTautulliUser.mockResolvedValue({ ok: true, user: { user_id: 501, username: "lena_plex" } })
+    mockGetTautulliActivity.mockResolvedValue({ success: true, data })
+
+    for (const context of ["discord", "admin", undefined]) {
+      const result = JSON.parse(await executeTautulliTool("get_tautulli_activity", {}, "user-1", context))
+      expect(result).toEqual({ error: "Tautulli could not read the current sessions from Plex" })
+    }
+    expect(mockUserFindUnique).not.toHaveBeenCalled()
+    expect(mockFindTautulliUser).not.toHaveBeenCalled()
+  })
+
+  it("reads an idle server, whose sessions are an empty list, as no streams", async () => {
+    mockFindTautulliUser.mockResolvedValue({ ok: true, user: { user_id: 501, username: "lena_plex" } })
+    mockGetTautulliActivity.mockResolvedValue({ success: true, data: { stream_count: "0", sessions: [] } })
+
+    expect(JSON.parse(await executeTautulliTool("get_tautulli_activity", {}, "user-1", "admin"))).toEqual({
+      stream_count: "0",
+      showing: "showing 0 of 0 streams",
+      sessions: [],
+    })
+    expect(JSON.parse(await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord"))).toEqual({ session_count: 0, sessions: [], scope: "caller" })
   })
 
   it("never returns the unfiltered activity in the Discord context", async () => {

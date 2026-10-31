@@ -163,10 +163,12 @@ export function arrLocalPage<T>({ items, page, pageSize, what, more }: ArrLocalP
   return { showing: showing(line, records.length < items.length, next), totalRecords: items.length, records }
 }
 
+/** `value` in lower case with only its letters and digits: "Spider-Man: Across" is "spidermanacross". */
+const bare = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")
+
 /** True when `title` contains `search`, ignoring case and punctuation ("agents of shield" finds "Agents of S.H.I.E.L.D."). */
 export function titleMatches(title: string | undefined, search: string): boolean {
   if (title === undefined) return false
-  const bare = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")
   return title.toLowerCase().includes(search.toLowerCase()) || (bare(search) !== "" && bare(title).includes(bare(search)))
 }
 
@@ -177,15 +179,33 @@ export function byTitle<T extends { title?: string }>(items: T[]): T[] {
 
 /**
  * The id of the library item whose title is `name` (case-insensitive), or
- * else the first whose title or slug contains it, or `undefined`. An exact
- * title wins, so "The Office" never picks "The Office Christmas Special".
+ * else the first whose title or slug contains it, or else the same two
+ * ignoring punctuation, as {@link titleMatches} does ("Spiderman Across the
+ * Spider-Verse" finds "Spider-Man: Across the Spider-Verse"), or `undefined`.
+ * An exact title wins, so "The Office" never picks "The Office Christmas
+ * Special", and "Spiderman" picks "Spider-Man" over a longer title.
  */
 export function idForTitle(library: unknown, name: string): number | undefined {
   const needle = name.trim().toLowerCase()
   if (needle === "") return undefined
   const items = asList(library).filter((item): item is Record<string, unknown> => isRecord(item) && typeof item.id === "number")
-  const exact = items.find((item) => typeof item.title === "string" && item.title.toLowerCase() === needle)
+  const titled = (test: (title: string) => boolean) => items.find((item) => typeof item.title === "string" && test(item.title))
+  const unpunctuated = bare(needle)
   const match =
-    exact ?? items.find((item) => [item.title, item.titleSlug].some((value) => typeof value === "string" && value.toLowerCase().includes(needle)))
+    titled((title) => title.toLowerCase() === needle) ??
+    items.find((item) => [item.title, item.titleSlug].some((value) => typeof value === "string" && value.toLowerCase().includes(needle))) ??
+    // Then ignoring punctuation, never for a name with no letters or digits, which every title would contain
+    (unpunctuated === "" ? undefined : (titled((title) => bare(title) === unpunctuated) ?? titled((title) => bare(title).includes(unpunctuated))))
   return typeof match?.id === "number" ? match.id : undefined
+}
+
+/**
+ * Discord's answer to a series or movie name that no library title matches
+ * (`what`: "series in the Sonarr library"). Discord shows an error as "that
+ * tool isn't available right now", which reads as the service being down, so
+ * this is a reply its allowlists keep, asking for the exact title. The admin
+ * web and MCP get an error.
+ */
+export function noTitleMatch(what: string, name: string): string {
+  return JSON.stringify({ showing: `no ${what} has a title matching "${name}"; ask for the exact title`, totalRecords: 0, records: [] })
 }

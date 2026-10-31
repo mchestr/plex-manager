@@ -54,8 +54,12 @@ export interface RegisteredTool extends ChatTool {
   discordDescription?: string
   /**
    * Parameters the Discord model is not shown: ids it could only get from
-   * tools Discord cannot call (`search_sonarr_series`, `get_sonarr_episodes`).
-   * The executor still accepts them; Discord filters by name instead.
+   * tools Discord cannot call (`search_sonarr_series`, `get_sonarr_episodes`),
+   * so Discord filters by name instead. No text the Discord model reads (the
+   * tool's Discord description, its other parameters' descriptions, the
+   * prompt) names them, and `executeToolCall` drops them from a Discord call
+   * (`discordArguments`), so a guessed id never outranks the name. The admin
+   * web and MCP still pass them.
    */
   discordHiddenParameters?: readonly string[]
   /**

@@ -7,6 +7,10 @@
  * the scrub must keep that marker whole so the Discord prompt's Jellyfin rule
  * can tell them why: scrubbed to {}, it read as nothing playing. A Plex member
  * gets their own streams, without anyone's identifiers or the admin's hints.
+ *
+ * When Tautulli cannot read Plex's sessions it still answers success, with no
+ * sessions at all. Every surface reports that as a failure, not as nobody
+ * watching: Discord, the admin web, a Support caller and MCP.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -15,10 +19,14 @@ import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { findTautulliUser, getTautulliActivity } from "@/lib/connections/tautulli"
+import { permissionsFor } from "@/lib/permissions"
 
 import { executeToolCall } from ".."
+import { ROLE_TOOL_UNAVAILABLE } from "../role-scrub"
+import { isToolError } from "../tool-output"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
+jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), logAuditEvent: jest.fn() }))
 jest.mock("@/lib/connections/plex", () => ({ getPlexSessions: jest.fn() }))
 jest.mock("@/lib/connections/plex-config", () => ({ getActivePlexServerConfig: jest.fn() }))
 jest.mock("@/lib/connections/tautulli", () => ({ findTautulliUser: jest.fn(), getTautulliActivity: jest.fn() }))
@@ -127,5 +135,48 @@ describe("a Plex member's own streams in Discord", () => {
       sessions: [{ title: "Heat", state: "playing", product: "Plex Web" }],
       scope: "caller",
     })
+  })
+})
+
+describe("get_tautulli_activity when Tautulli cannot read Plex's sessions", () => {
+  const ADMIN = permissionsFor({ isAdmin: true })
+  const SUPPORT = permissionsFor({ isAdmin: false, role: "support" })
+  const activity = call("get_tautulli_activity")
+
+  beforeEach(() => {
+    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: "1001", jellyfinUserId: null } as never)
+    jest.mocked(findTautulliUser).mockResolvedValue({ ok: true, user: { user_id: 1001, username: "sam_plex" } })
+    // Tautulli's get_activity logs "Unable to retrieve data for get_activity." and returns {}
+    jest.mocked(getTautulliActivity).mockResolvedValue({ success: true, data: {} })
+  })
+
+  it("is the fixed unavailable line in Discord, not 'nothing playing'", async () => {
+    expect(await executeToolCall(activity, "user-1", "discord", false, MEMBER_ZONE)).toBe("Error: that tool isn't available right now.")
+  })
+
+  it("is an error on the admin web, so the assistant turns to get_plex_sessions, and in MCP, which marks it isError", async () => {
+    for (const context of ["default", undefined]) {
+      const output = await executeToolCall(activity, "admin-1", context, true, MEMBER_ZONE, ADMIN)
+
+      expect(JSON.parse(output)).toEqual({ error: "Tautulli could not read the current sessions from Plex" })
+      expect(isToolError(output)).toBe(true)
+    }
+  })
+
+  it("is the fixed unavailable line for a Support caller", async () => {
+    expect(await executeToolCall(activity, "support-1", "default", false, MEMBER_ZONE, SUPPORT)).toBe(ROLE_TOOL_UNAVAILABLE)
+  })
+
+  it("still reads an idle server, whose sessions are an empty list, as no streams on every surface", async () => {
+    jest.mocked(getTautulliActivity).mockResolvedValue({ success: true, data: { stream_count: "0", sessions: [] } })
+
+    expect(await ask("get_tautulli_activity")).toEqual({ session_count: 0, sessions: [], scope: "caller" })
+    for (const output of [
+      await executeToolCall(activity, "admin-1", "default", true, MEMBER_ZONE, ADMIN),
+      await executeToolCall(activity, "support-1", "default", false, MEMBER_ZONE, SUPPORT),
+    ]) {
+      expect(isToolError(output)).toBe(false)
+      expect(JSON.parse(output)).toEqual({ stream_count: "0", showing: "showing 0 of 0 streams", sessions: [] })
+    }
   })
 })

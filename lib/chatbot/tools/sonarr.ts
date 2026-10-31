@@ -161,9 +161,10 @@ export const SONARR_TOOLS: RegisteredTool[] = [
         type: "object",
         properties: {
           ...SERIES_FILTER_PROPERTIES,
+          // Discord shows this beside seriesName alone, so it names no parameter; each tool description says what names a series
           seasonNumber: {
             type: "integer",
-            description: "Only this season of the series (0 is specials); needs seriesId or seriesName",
+            description: "Only this season of the series (0 is specials); needs a series",
           },
         },
       },
