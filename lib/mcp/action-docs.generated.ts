@@ -17,7 +17,7 @@ export const ACTION_DOCS: Readonly<Record<string, string>> = {
   completeSetup: "Marks setup complete and ends the claim; from then on these saves are admin only.",
   createAffiliateInvite: "Makes a single-use, 48-hour invite for an approved affiliate, with an optional private label. The watch hours and the Plex share are read live, and the places and the server cap are checked in one Serializable transaction (`makeAffiliateInvite`).",
   createAnnouncement: "Create an announcement (admin only). Reads live in `lib/admin/announcements.ts`.",
-  createApiToken: "Makes a personal API token for the MCP endpoint (docs/mcp.md). The token is in this result only: the database keeps its hash. Not an MCP tool, so a token cannot mint another.",
+  createApiToken: "Makes a personal API token for the MCP endpoint (docs/mcp.md), able to do everything its owner can (`full`) or only to read (`read`). The token is in this result only: the database keeps its hash. Not an MCP tool, so a token cannot mint another.",
   createInvite: "Create an invite. The server type defaults to Plex; a Plex invite keeps only Plex library ids and Allow downloads, a Jellyfin invite only Jellyfin library ids. Audited and rate-limited.",
   deleteAnnouncement: "Delete an announcement (admin only).",
   deleteAssistantConversation: "Deletes one of the caller's conversations from their history: it ends, and its title and messages are removed (`lib/chatbot/history.ts`, \"Ending a conversation\"). The client refreshes or, when it deleted the conversation it shows, leaves its URL; refreshing here would first render that URL as not found.",
