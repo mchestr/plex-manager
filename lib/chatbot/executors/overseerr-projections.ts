@@ -101,24 +101,28 @@ export const mediaSchema = z.looseObject({
   imdbId: optString,
   status: optNumber,
   status4k: optNumber,
-  externalServiceId: optNumber,
-  externalServiceId4k: optNumber,
   externalServiceSlug: optString,
   externalServiceSlug4k: optString,
 })
 
 /**
  * A title's availability in HD and 4K and, once Overseerr sent it to Sonarr
- * or Radarr, the `seriesId` or `movieId` the Sonarr and Radarr tools take and
- * its `titleSlug`.
+ * or Radarr, its `titleSlug` there (taken from the title's metadata, so
+ * normally the same in every instance).
+ *
+ * No Sonarr or Radarr id. Overseerr's `externalServiceId` is the title's id
+ * in the server it sent the title to (`serviceId`; a 4K request's
+ * `externalServiceId4k` is in its 4K server), while the Sonarr and Radarr
+ * tools read the one server this app uses, where the same id can be another
+ * title. The request and details tools' descriptions, and the prompt, tell the
+ * model to find the title with `search_sonarr_series` `tvdb:<tvdbId>` or
+ * `search_radarr_movies` `tmdb:<tmdbId>`, which give this app's `sonarrId` or
+ * `radarrId`, before calling another Sonarr or Radarr tool.
  */
-export function mediaAvailability(media: z.infer<typeof mediaSchema>, type: string | undefined) {
-  const id = type === "tv" ? "seriesId" : type === "movie" ? "movieId" : "externalServiceId"
+export function mediaAvailability(media: z.infer<typeof mediaSchema>) {
   return {
     status: mediaStatus(media.status),
     status4k: mediaStatus(media.status4k),
-    [id]: media.externalServiceId,
-    [`${id}4k`]: media.externalServiceId4k,
     titleSlug: media.externalServiceSlug ?? media.externalServiceSlug4k,
   }
 }
@@ -175,11 +179,11 @@ export function requestBrief(request: OverseerrRequest) {
 }
 
 /**
- * A request with what an answer needs: its status, the title's ids and
- * availability, the seasons asked for, and the id and name of who asked and
- * who last changed it. No emails, and none of the profile, folder or server
- * settings it was sent with. Overseerr keeps no title on a request; the
- * details tool looks one up by `media.tmdbId`.
+ * A request with what an answer needs: its status, the title's TMDB, TVDB
+ * and IMDb ids and availability, the seasons asked for, and the id and name
+ * of who asked and who last changed it. No emails, and none of the profile,
+ * folder or server settings it was sent with. Overseerr keeps no title on a
+ * request; the details tool looks one up by `media.tmdbId`.
  */
 export function projectRequest(request: OverseerrRequest) {
   const type = request.type ?? request.media?.mediaType
@@ -195,7 +199,7 @@ export function projectRequest(request: OverseerrRequest) {
       tmdbId: request.media.tmdbId,
       tvdbId: request.media.tvdbId,
       imdbId: request.media.imdbId,
-      ...mediaAvailability(request.media, type),
+      ...mediaAvailability(request.media),
     },
     seasons: seasonsByStatus(request.seasons),
     requestedBy: request.requestedBy && userRef(request.requestedBy),

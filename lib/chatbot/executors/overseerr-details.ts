@@ -97,14 +97,15 @@ function castOf(cast: Details["credits"]["cast"], limit: number) {
 /**
  * Overseerr's own record of the title: availability, requests, and links
  * (without credentials) to the title in the media server (`mediaUrl`) and in
- * Sonarr or Radarr (`serviceUrl`).
+ * the Sonarr or Radarr server Overseerr sent it to (`serviceUrl`), with no id
+ * there (see `mediaAvailability`).
  */
-function mediaInfoOf(info: Details["mediaInfo"], mediaType: "movie" | "tv") {
+function mediaInfoOf(info: Details["mediaInfo"]) {
   // Overseerr keeps no record of a title nobody requested and Plex does not have
   if (!info) return { status: mediaStatus(1), status4k: mediaStatus(1), requestCount: 0 }
   const requests = [...info.requests].sort((a, b) => b.id - a.id)
   return {
-    ...mediaAvailability(info, mediaType),
+    ...mediaAvailability(info),
     requestCount: requests.length,
     requests: requests.slice(0, REQUESTS_MAX).map(requestBrief),
     ...(requests.length > REQUESTS_MAX ? { requestsShowing: `showing the newest ${REQUESTS_MAX} of ${requests.length}` } : {}),
@@ -145,7 +146,7 @@ export function projectMediaDetails(data: unknown, mediaType: "movie" | "tv", ca
     votes: details.voteCount,
     overview: bounded(details.overview, OVERVIEW_MAX),
   }
-  const tail = { ...castOf(details.credits.cast, castLimit), mediaInfo: mediaInfoOf(details.mediaInfo, mediaType) }
+  const tail = { ...castOf(details.credits.cast, castLimit), mediaInfo: mediaInfoOf(details.mediaInfo) }
   if (mediaType === "movie") {
     return {
       mediaType,

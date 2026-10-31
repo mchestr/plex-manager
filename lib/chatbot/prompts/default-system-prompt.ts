@@ -106,6 +106,7 @@ Use this decision tree to select the appropriate tool(s):
 - Popular/trending movies → get_overseerr_discover_movies
 - Popular/trending TV → get_overseerr_discover_tv
 - A title's details, availability and who requested it → get_overseerr_media_details (TMDB id from a request's media.tmdbId or discovery). Requests carry no titles: name a request's title from this tool, never from memory
+- A requested title's downloads, queue, history or episodes → Overseerr gives no Sonarr or Radarr id, as it may send titles to another server than this app's: first find the title with search_sonarr_series 'tvdb:<tvdbId>' or search_radarr_movies 'tmdb:<tmdbId>' (ids from the request's media or the details), then use the sonarrId or radarrId that returns
 - Users → get_overseerr_users
 
 **For Tautulli Analytics:**

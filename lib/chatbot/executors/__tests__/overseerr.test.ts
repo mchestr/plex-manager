@@ -10,6 +10,8 @@
 import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { generateSystemPrompt } from "@/lib/chatbot/prompts/default-system-prompt"
+import { OVERSEERR_TOOLS } from "@/lib/chatbot/tools/overseerr"
 import type { Overseerr } from "@/lib/generated/prisma/client"
 
 import { executeOverseerrTool } from "../overseerr"
@@ -80,12 +82,12 @@ describe("request lists", () => {
       isAutoRequest: true,
       createdAt: "2026-10-01T12:00:00.000Z",
       updatedAt: "2026-10-01T12:00:00.000Z",
-      media: { tmdbId: 100_500, tvdbId: 300_500, imdbId: "tt9000500", status: "processing", status4k: "unknown", seriesId: 2_500, titleSlug: "a-title-slug-of-ordinary-length-500" },
+      media: { tmdbId: 100_500, tvdbId: 300_500, imdbId: "tt9000500", status: "processing", status4k: "unknown", titleSlug: "a-title-slug-of-ordinary-length-500" },
       seasons: { "pending approval": "1, 4, 7, 10", approved: "2-3, 5-6, 8-9, 11-12" },
       // The user id is what requestedBy takes, and tells apart names that differ past the cap
       requestedBy: { id: 1, name: "Member 1 with a display name long enough to reach the cap!!!!!!!!".slice(0, 64) },
     })
-    expect(json.requests[1]).toMatchObject({ id: 1_499, type: "movie", status: "failed", media: { movieId: 2_499 }, requestedBy: { id: 500 } })
+    expect(json.requests[1]).toMatchObject({ id: 1_499, type: "movie", status: "failed", media: { tmdbId: 100_499 }, requestedBy: { id: 500 } })
     expect(json.requests[1]).not.toHaveProperty("seasons")
     expect(json.requests[3]).toMatchObject({ id: 1_497, status: "approved", modifiedBy: { id: 1, name: expect.stringMatching(/^Member 1 /) } })
     expectNoPersonalData(text)
@@ -214,7 +216,6 @@ describe("get_overseerr_media_details", () => {
     expect(json.mediaInfo).toMatchObject({
       status: "available",
       status4k: "unknown",
-      movieId: 2_000 + 693_134,
       titleSlug: "a-title-slug-of-ordinary-length-693134",
       requestCount: 30,
       requestsShowing: "showing the newest 5 of 30",
@@ -258,7 +259,7 @@ describe("get_overseerr_media_details", () => {
         { seasonNumber: 3, episodeCount: 22, airDate: "1969-01-01", status: "processing" },
       ],
       nextEpisodeToAir: { seasonNumber: 3, episodeNumber: 9, name: "An Episode Title", airDate: "2026-11-06" },
-      mediaInfo: { status: "partially available", seriesId: 2_000 + 1_396, requestCount: 40 },
+      mediaInfo: { status: "partially available", requestCount: 40 },
     })
     expect(json.cast).toHaveLength(30)
     expect(json).not.toHaveProperty("castShowing")
@@ -306,6 +307,53 @@ describe("get_overseerr_media_details", () => {
     )
     expect(await executeOverseerrTool("get_overseerr_media_details", { mediaId: 603 })).toBe("Error: 'mediaType' parameter must be 'movie' or 'tv'")
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+})
+
+// Overseerr's externalServiceId is an id in the Sonarr or Radarr server it sent the title to (a 4K request's, in its
+// 4K server), while this app's Sonarr and Radarr tools read the one server this app uses: there it can be another title
+describe("Sonarr and Radarr ids", () => {
+  const ID_KEY = /"(seriesId|movieId|externalServiceId)(4k)?"/
+
+  it("a request gives none, HD or 4K, only the TMDB, TVDB and IMDb ids that find the title in this app's Sonarr or Radarr", async () => {
+    const show = largestRequest(1)
+    serve(() => ({ pageInfo: { results: 2 }, results: [show, overseerrRequest(3)] }))
+
+    const { text, json } = await run("get_overseerr_all_requests")
+
+    expect(json.requests.map((request: { media: unknown }) => request.media)).toEqual([
+      { tmdbId: 1_200_001, tvdbId: 450_001, imdbId: "tt12000001", status: "processing", status4k: "unknown", titleSlug: show.media.externalServiceSlug },
+      { tmdbId: 100_003, imdbId: "tt9000003", status: "processing", status4k: "unknown", titleSlug: "a-title-slug-of-ordinary-length-3" },
+    ])
+    expect(text).not.toMatch(ID_KEY)
+    expect(text).not.toMatch(/\b(800001|810001|2003)\b/)
+  })
+
+  it("a title's details give none, and keep the links to it in the servers Overseerr sent it to", async () => {
+    const mediaInfo = { ...largestRequest(1).media, serviceUrl4k: "http://sonarr-4k.lan:8989/series/a-title", seasons: [], requests: [] }
+    serve(() => ({ ...tvDetails(1_396, { castSize: 3, seasons: 2 }), mediaInfo }))
+
+    const { text, json } = await run("get_overseerr_media_details", { mediaId: 1_396, mediaType: "tv" })
+
+    expect(json.mediaInfo).toMatchObject({
+      status: "processing",
+      serviceUrl: "http://sonarr.lan:8989/series/a-title-slug-of-ordinary-length-2",
+      serviceUrl4k: "http://sonarr-4k.lan:8989/series/a-title",
+    })
+    expect(text).not.toMatch(ID_KEY)
+    expect(text).not.toMatch(/\b(800001|810001)\b/)
+  })
+
+  it("the request and details tools, and the prompt, say how to find the title in this app's Sonarr or Radarr", () => {
+    const tools = OVERSEERR_TOOLS.filter((tool) => /requests|media_details/.test(tool.function.name))
+    const prompt = generateSystemPrompt([], { timeZone: "UTC", locale: "en-US" }, new Date())
+
+    expect(tools.map((tool) => tool.function.name)).toEqual(["get_overseerr_requests", "get_overseerr_media_details", "get_overseerr_all_requests"])
+    for (const text of [...tools.map((tool) => tool.function.description), prompt]) {
+      expect(text).toContain("search_sonarr_series 'tvdb:<tvdbId>'")
+      expect(text).toContain("search_radarr_movies 'tmdb:<tmdbId>'")
+    }
+    for (const tool of tools) expect(tool.function.description).not.toMatch(/seriesId|movieId/)
   })
 })
 

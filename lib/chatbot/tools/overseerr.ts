@@ -12,8 +12,15 @@ const requestedBy = {
   description: "Only this user's requests: an Overseerr user id, such as a request's requestedBy.id or one from get_overseerr_users",
 }
 
-const REQUEST_FIELDS =
-  "Each request has its id, type, status, 4K flag, dates, the seasons asked for, who asked and who last changed it (requestedBy and modifiedBy, each a user id and name), and the title's TMDB id and availability (with the Sonarr seriesId or Radarr movieId once sent there). Requests carry no titles: get_overseerr_media_details gives one from media.tmdbId."
+/**
+ * Why the request and details tools give no Sonarr or Radarr id, and how the
+ * model finds the one this app's Sonarr and Radarr tools take (see
+ * `mediaAvailability` in `executors/overseerr-projections.ts`).
+ */
+const ARR_LOOKUP =
+  "No Sonarr or Radarr id: Overseerr may send a title to another Sonarr or Radarr server than this app's, so to use a Sonarr or Radarr tool on it, first find it with search_sonarr_series 'tvdb:<tvdbId>' or search_radarr_movies 'tmdb:<tmdbId>' and use the sonarrId or radarrId that returns."
+
+const REQUEST_FIELDS = `Each request has its id, type, status, 4K flag, dates, the seasons asked for, who asked and who last changed it (requestedBy and modifiedBy, each a user id and name), and the title's TMDB, TVDB and IMDb ids and availability in HD and 4K. Requests carry no titles: get_overseerr_media_details gives one from media.tmdbId. ${ARR_LOOKUP}`
 
 const discover = (name: string, what: string, sorts: string): RegisteredTool => ({
   type: "function",
@@ -67,8 +74,7 @@ export const OVERSEERR_TOOLS: RegisteredTool[] = [
     permission: "assistant:tools:read",
     function: {
       name: "get_overseerr_media_details",
-      description:
-        "Get one movie or TV show from Overseerr by TMDB id: its ids (TMDB, IMDb, TVDB), title, dates, status, overview, genres, runtime, rating, studios or networks, directors or creators, the top-billed cast, a show's seasons with episode counts and availability, and Overseerr's own record: availability in HD and 4K (unknown means nobody requested it and Plex does not have it), the Sonarr seriesId or Radarr movieId, the newest requests and who made them (user id and name), and links to the title in Plex or Jellyfin (mediaUrl) and Sonarr/Radarr (serviceUrl)",
+      description: `Get one movie or TV show from Overseerr by TMDB id: its ids (TMDB, IMDb, TVDB), title, dates, status, overview, genres, runtime, rating, studios or networks, directors or creators, the top-billed cast, a show's seasons with episode counts and availability, and Overseerr's own record: availability in HD and 4K (unknown means nobody requested it and Plex does not have it), the newest requests and who made them (user id and name), and links to the title in Plex or Jellyfin (mediaUrl) and in the Sonarr or Radarr server Overseerr sent it to (serviceUrl). ${ARR_LOOKUP}`,
       parameters: {
         type: "object",
         properties: {
