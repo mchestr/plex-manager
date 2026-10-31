@@ -38,7 +38,7 @@ jobs:
     # The image the visual specs are compared in. Keep the tag equal to the
     # exact @playwright/test version in package-lock.json.
     container:
-      image: mcr.microsoft.com/playwright:v1.57.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
 
     services:
       postgres:
