@@ -7,15 +7,17 @@ import { mockLlmReply } from './mocks/llm-server';
 
 /**
  * The Support role's scoped admin area (RBAC): a non-admin with
- * `User.role = "support"` gets a trimmed shell with the assistant and the
- * users list, and every other admin page is refused server-side, not just
- * hidden from the navigation. The assistant page shows them only their own
- * conversations.
+ * `User.role = "support"` gets a trimmed shell with the assistant, the users
+ * list, affiliates and the audit log, and every other admin page is refused
+ * server-side, not just hidden from the navigation. The assistant page shows
+ * them only their own conversations, and an audit event never its stored
+ * details.
  */
 const SUPPORT_ID = 'e2e-support-user-id';
 const CHAT_PROVIDER_ID = 'e2e-support-role-chat';
 const ADMINS_CONVERSATION_ID = 'e2e-support-role-admins-chat';
 const APPLICANT_ID = 'e2e-support-role-applicant';
+const AUDIT_EVENT_ID = 'e2e-support-role-audit-event';
 
 const test = base.extend<{ supportPage: import('@playwright/test').Page }>({
   supportPage: async ({ browser, baseURL }, use) => {
@@ -39,6 +41,7 @@ const REFUSED_PATHS = [
   '/admin/shares',
   '/admin/announcements',
   '/admin/watchlist',
+  '/admin/inactivity',
 ];
 
 test.describe('Support role', () => {
@@ -79,6 +82,16 @@ test.describe('Support role', () => {
         affiliateApplications: { create: { openUserId: APPLICANT_ID, status: 'PENDING', hoursAtApply: 120 } },
       },
     });
+    await prisma.auditLog.deleteMany({ where: { id: AUDIT_EVENT_ID } });
+    await prisma.auditLog.create({
+      data: {
+        id: AUDIT_EVENT_ID,
+        type: 'SUBSCRIPTION_EXEMPT_CHANGED',
+        actorUserId: TEST_USERS.ADMIN.id,
+        targetUserId: APPLICANT_ID,
+        details: { isExempt: true, exemptNote: 'Family member' },
+      },
+    });
     await prisma.$disconnect();
   });
 
@@ -87,6 +100,7 @@ test.describe('Support role', () => {
     await prisma.lLMProvider.deleteMany({ where: { id: CHAT_PROVIDER_ID } });
     await prisma.chatConversation.deleteMany({ where: { OR: [{ id: ADMINS_CONVERSATION_ID }, { userId: SUPPORT_ID }] } });
     await prisma.user.deleteMany({ where: { id: { in: [SUPPORT_ID, APPLICANT_ID] } } });
+    await prisma.auditLog.deleteMany({ where: { id: AUDIT_EVENT_ID } });
     await prisma.$disconnect();
   });
 
@@ -146,6 +160,21 @@ test.describe('Support role', () => {
     await expect(page.getByTestId('admin-affiliates-panel-affiliates')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await page.getByTestId('admin-affiliates-tab-tree').click();
     await expect(page.getByTestId('admin-affiliates-panel-tree')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+  });
+
+  test("reads the audit log and an event, but never the event's stored details", async ({ supportPage: page }) => {
+    await page.goto('/admin/audit');
+    await expect(page.getByTestId('admin-audit-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('admin-sidebar').getByTestId('admin-nav-audit').first()).toBeVisible();
+
+    await page.goto(`/admin/audit/${AUDIT_EVENT_ID}`);
+    await expect(page.getByTestId('admin-audit-event-details-hidden')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('admin-audit-event-header')).toContainText('Exemption changed');
+    await expect(page.getByTestId('admin-audit-event-details')).toHaveCount(0);
+    await expect(page.getByText('Family member')).toHaveCount(0);
+    // Support is refused a member's page, so no name links to one
+    await expect(page.getByTestId('admin-audit-event-actor-profile')).toHaveCount(0);
+    await expect(page.getByTestId('admin-audit-event-member-profile')).toHaveCount(0);
   });
 
   test("is refused a member's detail page", async ({ supportPage: page }) => {

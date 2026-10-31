@@ -24,6 +24,7 @@ const mockShowSuccess = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: mockShowSuccess, showError: jest.fn() }) }))
 
 const NOW = Date.parse('2026-12-03T12:00:00Z')
+const DAY = 86_400_000
 
 const member = (id: string, name: string, overrides: Partial<AdminUserWithWrappedStats> = {}) =>
   makeAdminUserWithStats({ id, name, email: `${id}@example.com`, createdAt: new Date('2026-10-11T15:00:00Z'), ...overrides })
@@ -48,6 +49,7 @@ function renderTable(props: Partial<Parameters<typeof UsersTable>[0]> = {}) {
       pageSize={25}
       sort={{ id: 'joined', desc: true }}
       year={2026}
+      now={NOW}
       stripeEnabled={false}
       stripeDashboardBaseUrl={null}
       estimateCopy="It uses template text, so it costs nothing."
@@ -194,12 +196,13 @@ describe('UsersTable', () => {
     expect(screen.getByTestId('admin-users')).toHaveAttribute('data-table-size', 'wide')
     const sam = screen.getByTestId('admin-users-row-u-sam')
     const cells = within(sam).getAllByRole('cell')
-    expect(cells.map((cell) => cell.dataset.card)).toEqual(['title', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'actions'])
+    expect(cells.map((cell) => cell.dataset.card)).toEqual(['title', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'actions'])
     expect(cells[0].querySelector('[data-slot="cell-label"]')).toBeNull()
     expect([...sam.querySelectorAll('[data-slot="cell-label"]')].map((label) => label.textContent)).toEqual([
       'Role',
       'Service',
       'Plex access',
+      'Last seen',
       'Subscription',
       'Rewind 2026',
       'LLM cost',
@@ -222,6 +225,110 @@ describe('UsersTable', () => {
 
     renderTable({ rows: [], total: 0, memberCount: 0 })
     expect(screen.getByTestId('admin-users-empty')).toHaveTextContent('No members yet')
+  })
+
+  it('shows how long ago each member was last seen from the server now, never the client clock', () => {
+    // The client clock runs a year ahead of the render: the words still come from `now`
+    jest.setSystemTime(NOW + 365 * DAY)
+    renderTable({
+      rows: [
+        member('u-seen', 'Sam Seen', { lastSeenAt: new Date(NOW - 92 * DAY), lastSeenReadAt: new Date(NOW - DAY) }),
+        member('u-never', 'Nia Never', { lastSeenAt: null, lastSeenReadAt: new Date(NOW - DAY) }),
+        member('u-unknown', 'Uma Unknown', { lastSeenAt: null, lastSeenReadAt: null }),
+      ],
+    })
+
+    const seen = screen.getByTestId('admin-users-last-seen-u-seen')
+    expect(seen).toHaveTextContent(/^3 months ago$/)
+    expect(seen.tagName).toBe('TIME')
+    expect(seen).toHaveAttribute('dateTime', new Date(NOW - 92 * DAY).toISOString())
+    expect(seen).toHaveAttribute('title', 'Sep 2, 2026, 12:00 PM UTC')
+    expect(seen).toHaveClass('whitespace-nowrap')
+    expect(screen.getByTestId('admin-users-last-seen-u-never')).toHaveTextContent(/^Never$/)
+    const unknown = screen.getByTestId('admin-users-last-seen-u-unknown')
+    expect(unknown).toHaveTextContent(/^–$/)
+    expect(unknown).toHaveClass('text-muted-foreground')
+  })
+
+  it('gives a read-only role no actions and no links but the member pages, Last seen included', () => {
+    renderTable({
+      readOnly: true,
+      rows: [member('u-sam', 'Sam Rivera', { lastSeenAt: new Date(NOW - 3 * DAY), lastSeenReadAt: new Date(NOW - DAY), totalLlmUsage: makeLlmUsageStats({ cost: 0.031 }) })],
+    })
+
+    const sam = screen.getByTestId('admin-users-row-u-sam')
+    expect(within(sam).queryByRole('button', { name: 'Actions for Sam Rivera' })).not.toBeInTheDocument()
+    expect(within(sam).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/admin/users/u-sam'])
+    expect(sam).toHaveTextContent('$0.031')
+    expect(screen.getByTestId('admin-users-last-seen-u-sam')).toHaveTextContent('3 days ago')
+  })
+
+  it('reads a stuck Rewind run from the server now', () => {
+    renderTable({ rows: [member('u-run', 'Rae Run', { wrappedStatus: 'generating', wrappedRunStartedAt: new Date(NOW) })], now: NOW + 16 * 60_000 })
+    expect(screen.getByTestId('admin-users-row-u-run')).toHaveTextContent('Stuck')
+  })
+
+  it('sorts by last seen from its header, and offers it on cards', async () => {
+    renderTable()
+    const user = userEvent.setup()
+    await user.click(screen.getByTestId('admin-users-sort-lastSeen'))
+    expect(currentHref()).toBe('/admin/users?sort=lastSeen')
+
+    await user.click(screen.getByTestId('admin-users-filters-sort'))
+    expect((await screen.findAllByRole('option')).map((option) => option.textContent)).toEqual([
+      'Joined, newest',
+      'Joined, oldest',
+      'Last seen, newest',
+      'Last seen, oldest',
+      'Name',
+      'LLM cost, highest',
+    ])
+  })
+
+  it('keeps Role the first filter, its options in order, with Last seen after Plex access', async () => {
+    renderTable()
+    expect(screen.getAllByTestId(/^admin-users-filters-filter-\w+$/).map((select) => select.dataset.testid)).toEqual([
+      'admin-users-filters-filter-role',
+      'admin-users-filters-filter-service',
+      'admin-users-filters-filter-plexAccess',
+      'admin-users-filters-filter-seen',
+      'admin-users-filters-filter-subscription',
+    ])
+    await userEvent.setup().click(screen.getByTestId('admin-users-filters-filter-role'))
+    expect((await screen.findAllByRole('option')).map((option) => option.dataset.testid)).toEqual([
+      'admin-users-filters-filter-role-option-all',
+      'admin-users-filters-filter-role-option-admin',
+      'admin-users-filters-filter-role-option-member',
+    ])
+  })
+
+  it('writes the last seen filter into the URL, shows its chip, and the chip removes it', async () => {
+    renderTable()
+    const user = userEvent.setup()
+    await user.click(screen.getByTestId('admin-users-filters-filter-seen'))
+    expect((await screen.findAllByRole('option')).map((option) => option.textContent)).toEqual([
+      'All',
+      'Seen in the last 30 days',
+      'Not seen in 90 days',
+      'Not seen in 180 days',
+      'Never seen',
+      'Unknown',
+    ])
+    await user.click(screen.getByTestId('admin-users-filters-filter-seen-option-inactive180'))
+
+    expect(currentHref()).toBe('/admin/users?seen=inactive180')
+    expect(await screen.findByTestId('admin-users-filters-chip-seen')).toHaveTextContent('Last seen: Not seen in 180 days')
+
+    await user.click(screen.getByTestId('admin-users-filters-chip-seen-remove'))
+    expect(currentHref()).toBe('/admin/users')
+  })
+
+  it('clears the last seen filter with the others from the filtered EmptyState', async () => {
+    resetUrl('/admin/users?seen=never&plexAccess=shared&page=2')
+    renderTable({ rows: [], total: 0 })
+
+    await userEvent.setup().click(screen.getByTestId('admin-users-clear-filters'))
+    expect(currentHref()).toBe('/admin/users')
   })
 
   it('writes a filter change into the URL and shows its chip', async () => {

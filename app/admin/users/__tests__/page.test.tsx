@@ -13,6 +13,7 @@ import { buildConfig } from '@/__tests__/helpers/factories'
 import { makeAdminUserWithStats } from '@/__tests__/utils/test-builders'
 import UsersPage from '@/app/admin/users/page'
 import { getAllUsersWithWrapped } from '@/lib/data/admin-users'
+import { getSession } from '@/lib/data/session'
 import type { AdminUserWithWrappedStats, PlexAccessCheck } from '@/types/admin'
 
 jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').navigationModule)
@@ -119,6 +120,47 @@ describe('Admin users page', () => {
       'admin-users-row-u5',
     ])
     expect(screen.getByTestId('admin-users-filters-count')).toHaveTextContent('4 of 7 members')
+  })
+
+  it('filters last seen with the server clock, counts the inactive members, and words each time from it', async () => {
+    const DAY = 86_400_000
+    const lastSeen = [null, 200, 10, 400, null, 181, 179]
+    list(
+      'ok',
+      members().map((member, i) => {
+        const days = lastSeen[i]
+        return { ...member, lastSeenAt: days === null ? null : new Date(NOW.getTime() - days * DAY), lastSeenReadAt: i === 0 ? null : NOW }
+      })
+    )
+    resetUrl('/admin/users?seen=inactive180&sort=-lastSeen')
+    await renderPage({ seen: 'inactive180', sort: '-lastSeen' })
+
+    expect(screen.getAllByTestId(/^admin-users-row-/).map((row) => row.dataset.testid)).toEqual([
+      'admin-users-row-u5',
+      'admin-users-row-u1',
+      'admin-users-row-u3',
+    ])
+    expect(screen.getByTestId('admin-users-filters-count')).toHaveTextContent('3 of 7 members')
+    expect(screen.getByTestId('admin-users-filters-chip-seen')).toHaveTextContent('Last seen: Not seen in 180 days')
+    expect(screen.getByTestId('admin-users-last-seen-u1')).toHaveTextContent('6 months ago')
+    expect(screen.getByTestId('admin-users-last-seen-u3')).toHaveTextContent('last year')
+    const inactive = screen.getByTestId('admin-users-stat-inactive')
+    expect(inactive).toHaveTextContent('3 not seen in 180 days')
+    expect(inactive).toHaveAttribute('href', '/admin/users?seen=inactive180')
+  })
+
+  it('shows Support the list read-only, with Last seen and the inactive link to this same page', async () => {
+    jest.mocked(getSession).mockResolvedValueOnce({ user: { id: 'support-1', isAdmin: false, role: 'support' }, expires: '' })
+    list(
+      'ok',
+      members().map((member) => ({ ...member, lastSeenAt: new Date(NOW.getTime() - 200 * 86_400_000), lastSeenReadAt: NOW }))
+    )
+    await renderPage()
+
+    expect(screen.queryByRole('button', { name: /Import/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Actions for/ })).not.toBeInTheDocument()
+    expect(screen.getByTestId('admin-users-last-seen-u1')).toHaveTextContent('6 months ago')
+    expect(screen.getByTestId('admin-users-stat-inactive')).toHaveAttribute('href', '/admin/users?seen=inactive180')
   })
 
   it('clamps a page past the end to the last page', async () => {

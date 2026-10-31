@@ -49,11 +49,7 @@ interface RoleDefinition {
   permissions: readonly Permission[]
 }
 
-/**
- * The built-in roles. Admin is not a role: it is `User.isAdmin`.
- *
- * @internal
- */
+/** The built-in roles. Admin is not a role: it is `User.isAdmin`. */
 export const ROLES = {
   support: {
     label: "Support",

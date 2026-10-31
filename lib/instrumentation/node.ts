@@ -11,8 +11,9 @@
  * `PROCESS_ROLE` (P11.3) picks what starts: a `web` container issues only the
  * setup code, because web containers serve the wizard; `worker` and `all`
  * (the default) also start the queue Workers, their schedulers (watchlist,
- * role reconcile, retention and the Rewind runs), the Discord bot poller and,
- * without Redis, the database-lease fallbacks and the secret re-encryption.
+ * role reconcile, retention, the member activity run and the Rewind runs),
+ * the Discord bot poller and, without Redis, the database-lease fallbacks and
+ * the secret re-encryption.
  *
  * Imported dynamically from instrumentation.ts so the Edge runtime never
  * analyses its Node-only dependencies.
@@ -126,8 +127,10 @@ async function startQueueWorker() {
 
   const { ensureChannelStatsSchedule } = await import("@/lib/discord/channel-stats/schedule")
   const { ensureRequestTierSchedule } = await import("@/lib/request-tiers/schedule")
-  // The settings saves call these too, so a change applies without a restart.
-  await Promise.all([ensureChannelStatsSchedule(), ensureRequestTierSchedule()])
+  const { ensureMemberActivitySchedule } = await import("@/lib/inactivity/schedule")
+  // The settings saves call the first two too, so a change applies without a
+  // restart; the member activity run is always scheduled. None of them throws.
+  await Promise.all([ensureChannelStatsSchedule(), ensureRequestTierSchedule(), ensureMemberActivitySchedule()])
   await ensureWatchlistSchedule()
 }
 

@@ -40,6 +40,7 @@ export type TautulliCommand =
   | "get_tautulli_info"
   | "get_user_watch_time_stats"
   | "get_users"
+  | "get_users_table"
 
 type TautulliResult<T> = ServiceResult<T, ServiceErrorCode | "TAUTULLI_ERROR">
 

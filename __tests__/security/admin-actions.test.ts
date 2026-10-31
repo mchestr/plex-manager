@@ -5,6 +5,7 @@
  */
 
 import { setLLMDisabled } from '@/actions/admin/admin-config'
+import { runMemberActivityNow, setMemberInactivityExcluded, updateInactivitySettings } from '@/actions/admin/inactivity'
 import { getLLMUsageRecords, getLLMUsageById } from '@/lib/data/llm-usage'
 import { setUserDisabled, setUserRole, updateUserAdminStatus } from '@/actions/admin/admin-users'
 import { getConfig } from '@/lib/data/admin-settings'
@@ -29,6 +30,10 @@ jest.mock('next/cache', () => ({
 }))
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+// The inactivity actions queue a job or run the sweep; a refused caller reaches neither.
+jest.mock('@/lib/queue/client', () => ({ addJob: jest.fn() }))
+jest.mock('@/lib/inactivity/run', () => ({ runMemberActivity: jest.fn() }))
 
 beforeEach(() => mockReset(prismaMock))
 
@@ -600,6 +605,17 @@ describe('Roles', () => {
       await expect(setLLMDisabled(true)).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
       await expect(getConfig()).rejects.toMatchObject({ digest: expect.any(String) })
       await expect(getLLMUsageRecords()).rejects.toMatchObject({ digest: expect.any(String) })
+    })
+
+    it('refuse a Support user the inactivity sweep: its settings, Run now and the member exclusion', async () => {
+      asSupport()
+
+      await expect(updateInactivitySettings({ enabled: true, thresholdDays: 90 })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      await expect(runMemberActivityNow({ confirmedRemovals: 1 })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      await expect(setMemberInactivityExcluded({ userId: 'member-1', excluded: true })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      expect(prismaMock.inactivitySettings.upsert).not.toHaveBeenCalled()
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+      expect(logAuditEvent).not.toHaveBeenCalled()
     })
   })
 

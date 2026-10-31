@@ -73,4 +73,10 @@ describe('getJobProcessor dispatch', () => {
   it('resolves a processor for PLEX_ACCESS_REVOKE', () => {
     expect(getJobProcessor(JOB_TYPES.PLEX_ACCESS_REVOKE)).toEqual(expect.any(Function))
   })
+
+  it('registers and resolves the member activity job (last seen and the inactivity sweep)', () => {
+    expect(JOB_TYPES.MEMBER_ACTIVITY).toBe('members:activity')
+    expect(isRegisteredJobType(JOB_TYPES.MEMBER_ACTIVITY)).toBe(true)
+    expect(getJobProcessor(JOB_TYPES.MEMBER_ACTIVITY)).toEqual(expect.any(Function))
+  })
 })

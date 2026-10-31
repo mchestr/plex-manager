@@ -14,6 +14,7 @@ import { ensureWatchlistSchedule } from "@/lib/watchlist/schedule"
 import { issueSetupCode } from "@/lib/setup/claim"
 import { startRetentionFallback } from "@/lib/retention/fallback"
 import { ensureRetentionSchedule } from "@/lib/retention/schedule"
+import { ensureMemberActivitySchedule } from "@/lib/inactivity/schedule"
 import { assertEncryptionKey } from "@/lib/instrumentation/encryption-canary"
 import { enqueueSecretsReencrypt, reencryptSecretsWithoutQueue } from "@/lib/queue/jobs/secrets"
 
@@ -46,6 +47,9 @@ jest.mock("@/lib/watchlist/fallback", () => ({ startWatchlistFallback: jest.fn()
 jest.mock("@/lib/watchlist/schedule", () => ({ ensureWatchlistSchedule: jest.fn() }))
 jest.mock("@/lib/retention/fallback", () => ({ startRetentionFallback: jest.fn().mockResolvedValue(null) }))
 jest.mock("@/lib/retention/schedule", () => ({ ensureRetentionSchedule: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("@/lib/inactivity/schedule", () => ({
+  ensureMemberActivitySchedule: jest.fn().mockResolvedValue({ ok: true, state: "scheduled" }),
+}))
 jest.mock("@/lib/locks/lease-poller", () => ({
   DEFAULT_POLL_INTERVAL_MS: 10_000,
   LeasePoller: jest.fn().mockImplementation(() => ({
@@ -125,6 +129,7 @@ describe("startNodeInstrumentation() with Redis unreachable", () => {
     expect(startRetentionFallback).toHaveBeenCalledWith({ signal: shutdownSignal })
     expect(ensureWatchlistSchedule).not.toHaveBeenCalled()
     expect(ensureRetentionSchedule).not.toHaveBeenCalled()
+    expect(ensureMemberActivitySchedule).not.toHaveBeenCalled()
     expect(botPollerStarted()).toBe(true)
   })
 
@@ -138,6 +143,7 @@ describe("startNodeInstrumentation() with Redis unreachable", () => {
     expect(startRetentionFallback).not.toHaveBeenCalled()
     expect(ensureWatchlistSchedule).toHaveBeenCalledTimes(1)
     expect(ensureRetentionSchedule).toHaveBeenCalledTimes(1)
+    expect(ensureMemberActivitySchedule).toHaveBeenCalledTimes(1)
   })
 })
 

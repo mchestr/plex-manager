@@ -34,6 +34,10 @@ export interface AdminUserWithWrappedStats {
   disabledAt: Date | null
   createdAt: Date
   updatedAt: Date
+  /** The start of the member's newest play in Tautulli, or null when none is known (`lib/admin/last-seen`). */
+  lastSeenAt: Date | null
+  /** When the daily read last found the member in Tautulli, or null when it never has. */
+  lastSeenReadAt: Date | null
   wrappedStatus: string | null
   wrappedGeneratedAt: Date | null
   /** When the year's queued or running generation started, or null when none is active (`canRegenerate`). */

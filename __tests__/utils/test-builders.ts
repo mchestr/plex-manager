@@ -61,6 +61,8 @@ export const makeAdminUserWithStats = (
   disabledAt: null,
   createdAt: new Date('2024-01-01T00:00:00Z'),
   updatedAt: new Date('2024-01-01T00:00:00Z'),
+  lastSeenAt: null,
+  lastSeenReadAt: null,
   wrappedStatus: 'completed',
   wrappedGeneratedAt: new Date('2024-01-01T00:00:00Z'),
   wrappedRunStartedAt: null,
@@ -153,6 +155,8 @@ export const makePrismaUser = (overrides: any = {}) => ({
   isAdmin: false,
   createdAt: new Date('2024-01-01T00:00:00Z'),
   updatedAt: new Date('2024-01-01T00:00:00Z'),
+  lastSeenAt: null,
+  lastSeenReadAt: null,
   plexWrapped: [makePrismaWrapped()],
   llmUsage: [makePrismaLlmUsage()],
   _count: {

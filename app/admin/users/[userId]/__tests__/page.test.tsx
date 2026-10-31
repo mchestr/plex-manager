@@ -1,7 +1,7 @@
 /**
  * The user detail page (P10.6): it loads the header, then only the active
  * tab's panel, and shows Billing only when Stripe is on or the member has a
- * subscription row.
+ * subscription row. Audit is the last tab.
  */
 
 import { render, screen } from '@testing-library/react'
@@ -37,6 +37,9 @@ jest.mock('@/components/admin/users/detail/overview-tab', () => ({ OverviewTab: 
 jest.mock('@/components/admin/users/detail/rewind-tab', () => ({ RewindTab: () => <p>rewind panel</p> }))
 jest.mock('@/components/admin/users/detail/usage-tab', () => ({ UsageTab: () => <p>usage panel</p> }))
 jest.mock('@/components/admin/users/detail/billing-tab', () => ({ BillingTab: () => <p>billing panel</p> }))
+jest.mock('@/components/admin/users/detail/audit-tab', () => ({
+  AuditTab: ({ userId }: { userId: string }) => <p>audit panel for {userId}</p>,
+}))
 
 const mockHeader = getUserDetailHeader as jest.MockedFunction<typeof getUserDetailHeader>
 
@@ -106,6 +109,16 @@ describe('Admin user detail page', () => {
 
     expect(screen.getByTestId('tabs')).toHaveTextContent('Overview,Rewind,Usage,Billing')
     expect(screen.getByText('billing panel')).toBeInTheDocument()
+  })
+
+  it('ends the tabs with Audit, and opens it from the URL', async () => {
+    mockHeader.mockResolvedValue(header())
+    await renderPage('audit')
+
+    expect(screen.getByTestId('tabs')).toHaveAttribute('data-active', 'audit')
+    expect(screen.getByTestId('tabs').firstChild?.textContent).toMatch(/,Audit$/)
+    expect(screen.getByText('audit panel for u1')).toBeInTheDocument()
+    expect(screen.queryByText('overview panel')).not.toBeInTheDocument()
   })
 
   it('is a 404 for an unknown member', async () => {

@@ -5,6 +5,7 @@ import { getUserActivityTimeline } from "@/actions/user-queries"
 import { UserActivityTimeline } from "@/components/admin/users/user-activity-timeline"
 import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
+import { InactivityExclusion } from "@/components/admin/users/detail/inactivity-exclusion"
 import { RemoveMemberDialog } from "@/components/admin/users/detail/remove-member-dialog"
 import { RequestTiersExclusion } from "@/components/admin/users/detail/request-tiers-exclusion"
 import { userDetail } from "@/lib/admin/routes"
@@ -19,8 +20,36 @@ import { RequestTierCheck } from "./request-tier-check"
 const SERVICE_LABEL = { plex: "Plex", jellyfin: "Jellyfin" } as const
 
 /**
- * The member's account facts, their Jellyfin access (P11.10), their request
- * tier, their activity timeline (P10.6) and the danger zone (P11.13).
+ * When the member last played on Plex, from the daily Tautulli read
+ * (`lib/inactivity/sync.ts`): "Never" when Tautulli knows them with no play,
+ * "Unknown" when it has not reported them.
+ */
+function LastSeenOnPlex({ header, f }: { header: UserDetailHeaderData; f: BoundFormat }) {
+  if (header.lastSeenAt) {
+    return (
+      <DetailItem label="Last seen on Plex" testId="admin-user-last-seen-timestamp">
+        {f.dateTime(header.lastSeenAt, { zoneLabel: true })}
+      </DetailItem>
+    )
+  }
+  return (
+    <DetailItem label="Last seen on Plex" testId="admin-user-last-seen">
+      {header.lastSeenReadAt ? (
+        "Never"
+      ) : (
+        <>
+          Unknown
+          <span className="block text-caption text-muted-foreground">Tautulli has not reported this member.</span>
+        </>
+      )}
+    </DetailItem>
+  )
+}
+
+/**
+ * The member's account facts, when they last played on Plex and whether the
+ * inactivity sweep may remove them, their Jellyfin access (P11.10), their
+ * request tier, their activity timeline (P10.6) and the danger zone (P11.13).
  */
 export async function OverviewTab({ header, f }: { header: UserDetailHeaderData; f: BoundFormat }) {
   const [timeline, tiers] = await Promise.all([
@@ -48,6 +77,7 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
         <DetailItem label="Joined" testId="admin-user-created-timestamp">
           {f.dateTime(header.createdAt, { zoneLabel: true })}
         </DetailItem>
+        {header.plexUserId && <LastSeenOnPlex header={header} f={f} />}
         {header.invitedBy && (
           <DetailItem label="Invited by" testId="admin-user-invited-by">
             <Link href={userDetail(header.invitedBy.id)} className="font-medium hover:underline" data-testid="admin-user-invited-by-link">
@@ -76,6 +106,12 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
               <JellyfinAccess userId={header.id} name={header.name} status={header.jellyfinStatus ?? "unknown"} />
             </DetailItem>
           </>
+        )}
+        {/* The sweep never removes an admin or the server owner, so the switch would do nothing */}
+        {header.plexUserId && !header.isAdmin && !header.isOwner && (
+          <DetailItem label="Inactivity">
+            <InactivityExclusion userId={header.id} name={header.name} excluded={header.inactivityExcluded} />
+          </DetailItem>
         )}
       </dl>
 

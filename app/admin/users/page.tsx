@@ -24,6 +24,8 @@ type Params = Record<string, string | string[] | undefined>
 export default async function UsersPage({ searchParams }: { searchParams: Promise<Params> }) {
   // The season year reads the clock: render per request, never at build
   await connection()
+  // One clock for the filters, the stats and the table, so relative times match on server and client
+  const now = new Date().getTime()
   const [params, seasonYear, f, session] = await Promise.all([searchParams, getSeasonYear(), getFormat(), getSession()])
   const [{ users, plexCheck }, stripeDashboardBaseUrl, config, estimateCopy] = await Promise.all([
     getAllUsersWithWrapped(seasonYear),
@@ -35,12 +37,12 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
   const filter = parseUsersFilter(params)
   const table = parseTableParams(params, { sortable: USERS_SORTS, defaultSort: USERS_DEFAULT_SORT })
-  const matching = sortUsers(filterUsers(users, filter), table.sort)
+  const matching = sortUsers(filterUsers(users, filter, now), table.sort)
   const page = Math.min(table.page, Math.max(1, Math.ceil(matching.length / table.pageSize)))
   const rows = matching.slice((page - 1) * table.pageSize, page * table.pageSize)
 
-  const stats = usersStats(users, plexCheck)
-  const checkedAgo = f.relative(plexCheck.checkedAt, new Date())
+  const stats = usersStats(users, plexCheck, now)
+  const checkedAgo = f.relative(plexCheck.checkedAt, now)
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-users-page">
@@ -59,6 +61,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         pageSize={table.pageSize}
         sort={table.sort}
         year={seasonYear}
+        now={now}
         stripeEnabled={stripeEnabled}
         stripeDashboardBaseUrl={stripeDashboardBaseUrl}
         estimateCopy={estimateCopy}

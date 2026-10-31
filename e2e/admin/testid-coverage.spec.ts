@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import { expect, test, TEST_USERS } from '../fixtures/auth';
+import { createE2EPrismaClient } from '../helpers/prisma';
 import { clearVisualFixtures, seedVisualFixtures, VISUAL_INVITE_IDS } from '../helpers/seed-fixtures';
 import { WAIT_TIMEOUTS } from '../helpers/test-utils';
 import { ADMIN_NAV } from '../../lib/admin/nav';
@@ -14,7 +15,11 @@ import { ADMIN_NAV } from '../../lib/admin/nav';
  * Visits every admin route in `lib/admin/nav.ts` and one seeded detail route
  * per area. Popups that are closed are not in the DOM, and hidden inputs that
  * Base UI renders beside its controls are `aria-hidden`, so neither counts.
+ * The audit event is seeded here, by an admin about the regular member, so
+ * its page and the member's Audit tab both have a row with every link.
  */
+
+const AUDIT_EVENT_ID = 'e2e-testid-audit-event';
 
 const INTERACTIVE = [
   'button',
@@ -30,10 +35,12 @@ const INTERACTIVE = [
 
 const DETAIL_ROUTES = [
   `/admin/users/${TEST_USERS.REGULAR.id}`,
+  `/admin/users/${TEST_USERS.REGULAR.id}?tab=audit`,
   `/admin/invites/${VISUAL_INVITE_IDS.valid}`,
   '/admin/llm-usage/visual-llm-usage-1',
   '/admin/affiliates?tab=history',
   '/admin/affiliates?tab=settings',
+  `/admin/audit/${AUDIT_EVENT_ID}`,
 ];
 
 const ROUTES = [...new Set([...ADMIN_NAV.map((item) => item.href as string), ...DETAIL_ROUTES])];
@@ -61,10 +68,32 @@ test.describe('Admin test-id coverage', () => {
 
   test.beforeAll(async () => {
     await seedVisualFixtures();
+    const prisma = createE2EPrismaClient();
+    try {
+      await prisma.auditLog.upsert({
+        where: { id: AUDIT_EVENT_ID },
+        create: {
+          id: AUDIT_EVENT_ID,
+          type: 'USER_ROLE_CHANGED',
+          actorUserId: TEST_USERS.ADMIN.id,
+          targetUserId: TEST_USERS.REGULAR.id,
+          details: { previousRole: null, newRole: 'support' },
+        },
+        update: {},
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
   test.afterAll(async () => {
     await clearVisualFixtures();
+    const prisma = createE2EPrismaClient();
+    try {
+      await prisma.auditLog.deleteMany({ where: { id: AUDIT_EVENT_ID } });
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
   for (const route of ROUTES) {

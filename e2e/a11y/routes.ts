@@ -126,6 +126,8 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: `/admin/invites/${VISUAL_INVITE_IDS.valid}`, as: 'admin', ready: 'admin-invite-header' },
   { path: '/admin/announcements', as: 'admin', ready: 'admin-announcements-header' },
   { path: '/admin/watchlist', as: 'admin', ready: 'admin-watchlist-header' },
+  { path: '/admin/inactivity', as: 'admin', ready: 'admin-inactivity-header' },
+  { path: '/admin/audit', as: 'admin', ready: 'admin-audit-header' },
   { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-header' },
   { path: '/admin/discord', as: 'admin', ready: 'discord-status' },
   { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },

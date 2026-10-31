@@ -19,7 +19,7 @@ const logger = createLogger("ACCESS_LOCK")
 const LEASE_MS = 5 * 60_000
 const RENEW_EVERY_MS = 60_000
 
-/** Thrown when the other job still holds the member's lock after the wait; BullMQ retries the job. @internal */
+/** Thrown when the other job still holds the member's lock after the wait; BullMQ retries the job, and the inactivity sweep skips the member. */
 export class AccessLockBusyError extends Error {
   constructor(userId: string) {
     super(`Another access change for ${userId} is running`)
