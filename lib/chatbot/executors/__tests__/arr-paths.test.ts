@@ -128,6 +128,11 @@ describe("withoutPaths in the server's UI language", () => {
     ["a path in »« (Danish)", "Filmmappen »/home/jane doe/Movies/Heat (1995)« og alt dens indhold slettes.", "Filmmappen »…/Heat (1995)« og alt dens indhold slettes."],
     ["a path in corner brackets", "ルートフォルダ「/mnt/user/Jane Doe/Movies」がありません", "ルートフォルダ「…/Movies」がありません"],
     ["a path in backticks", "The series folder `/home/jane doe/tv/Show (2020)` and all of its content will be deleted.", "The series folder `…/Show (2020)` and all of its content will be deleted."],
+    // A typographic closing quote ends a name, so the last part before it stays
+    ["a folder in „“ that ends in a separator", "Der Ordner „/home/jane doe/tv/“ fehlt", "Der Ordner „…/tv/“ fehlt"],
+    ["a folder in corner brackets that ends in a separator", "フォルダ「/mnt/user/Jane Doe/Movies/」がありません", "フォルダ「…/Movies/」がありません"],
+    // A Korean particle after a closing quote is not part of the name
+    ["two quoted paths with Korean particles", "'/data/jane/Show'을 '/backup/jane/Show'로 이동할 수 없습니다", "'…/Show'을 '…/Show'로 이동할 수 없습니다"],
   ])("cuts %s to its last part", (_case, message, cut) => {
     expect(withoutPaths(message)).toBe(cut)
   })
@@ -142,8 +147,9 @@ describe("withoutPaths in the server's UI language", () => {
       "导入集文件后导入匹配的额外文件(字幕/nfo等)",
       "インポート/再スキャン時にファイルの日付を変更する",
       "하드 링크/파일 복사",
-      // A root between two backticks is not a path
+      // A root that no name follows is not a path
       "Appending `+` (eg `:EN+`) will output `[EN]`/`[EN+--]`/`[--]` depending on excluded languages.",
+      "Map the drive root `C:\\`, or `/`, in the remote path mapping",
     ]) {
       expect(withoutPaths(text)).toBe(text)
     }
@@ -162,6 +168,9 @@ describe("withoutPaths with apostrophes in names", () => {
     ["an apostrophe that ends a name", "Import failed: /Volumes/James' Drive/Downloads/incomplete/Show.S01E01", "Import failed: …/Show.S01E01"],
     ["an apostrophe that starts a name", "Missing root folder: /mnt/'90s Movies/HD", "Missing root folder: …/HD"],
     ["an apostrophe that starts the last part", "Missing root folder: /mnt/'90s Movies", "Missing root folder: …/'90s Movies"],
+    ["apostrophes beside '_' in one name", "Import failed: /data/Rock_'n'_Roll/Downloads/Show.S01", "Import failed: …/Show.S01"],
+    ["a quoted word in a name", "Import failed: C:\\Users\\Robert 'Bob' Smith\\Downloads\\Show.S01", "Import failed: …/Show.S01"],
+    ["a quoted word at a name's start", "Missing root folder: /Volumes/'Our' Media/Movies", "Missing root folder: …/Movies"],
     [
       "a closing quote after the path",
       "Cannot install update because startup folder 'C:\\Users\\Sean O'Brien\\AppData\\Local\\Sonarr' is not writable by the user 'Sean'.",
@@ -197,6 +206,10 @@ describe("withoutPaths on 100,000 characters", () => {
     ["apostrophes between letters", long("a'", "Import failed: /x/")],
     ["apostrophes far from a separator", long(`'${"a".repeat(999)}`, "Import failed: /x/")],
     ["a sentence stop before a long word", long("c", "Import failed: /x/b. ")],
+    // Each apostrophe fits one rule only: with two, a failed cut retried them both ways, 2^k times
+    ["contractions before separators after a path", long("it's/ ", "Unpacking failed in /data/usenet/Show.S01E01 ")],
+    ["quoted words before separators after a path", long("'a' b/ ", "Unpacking failed in /data/usenet/Show.S01E01 ")],
+    ["apostrophes between letters before separators", long("O'B/ ", "Import failed: /x/")],
   ])("cuts %s in well under 100 ms", (_case, message) => {
     const start = performance.now()
     withoutPaths(message)

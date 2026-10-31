@@ -20,24 +20,28 @@ import { isRecord } from "./arr-output"
  *    directory and its separator. Sonarr v4 and Radarr v5 send messages in
  *    the server's UI language, which puts a path right after other
  *    characters, so a path starts at the start or after a space, "[", "(",
- *    "=", a quote (', ", „, “, ”, ‘, ’, «, », 「, 」, 『, 』), the fullwidth
- *    colon "：", a colon after CJK ("文件夹:/home/…"), "-" after a Hebrew
- *    letter ("ב-/home/…"), or a backtick unless another backtick follows the
- *    root ("`/home/…`"). A drive also starts one after anything but an ASCII
- *    word character, ".", ":", "…" or a separator ("下载在C:\…"), and a root
- *    right after Han, Kana or Hangul does when its first name starts with an
- *    ASCII letter, digit, "_", "." or "-" and ends at a separator
- *    ("下载在/home/jane/Downloads中").
+ *    "=", a quote (', ", „, “, ”, ‘, ’, «, », 「, 」, 『, 』), a backtick, the
+ *    fullwidth colon "：", a colon after CJK ("文件夹:/home/…") or "-" after a
+ *    Hebrew letter ("ב-/home/…"). A drive also starts one after anything but
+ *    an ASCII word character, ".", ":", "…" or a separator ("下载在C:\…"),
+ *    and a root right after Han, Kana or Hangul does when its first name
+ *    starts with an ASCII letter, digit, "_", "." or "-" and ends at a
+ *    separator ("下载在/home/jane/Downloads中"). A root that no name follows
+ *    ("`C:\`", "5 MB / s") is no path.
  * 3. A directory name may hold spaces, so it ends only at what a name rarely
- *    holds: a double quote, a bar, "]", a line break, "://", a space before
- *    another root, ". " or ", " with a space after it before the next
- *    separator (a sentence goes on "...Show.S01. Ensure the path exists"; a
- *    name such as "J. Smith\" or "Smith, John\" does not), or an apostrophe
- *    with no separator after it before the next quote or line break, a
- *    closing quote ("'…/Sonarr' is not writable"). An apostrophe between two
- *    letters or digits in any script stays in a name ("Sean O'Brien", "Zoë's
- *    Media", "D'Ávila"), as does one at a name's start or end that a
- *    separator follows ("James' Drive\", "'90s Movies\").
+ *    holds: a double quote (", „, “, ”, «, », 「, 」, 『, 』), a backtick, a
+ *    bar, "]", a line break, "://", a space before another root, ". " or ", "
+ *    with a space after it before the next separator (a sentence goes on
+ *    "...Show.S01. Ensure the path exists"; a name such as "J. Smith\" or
+ *    "Smith, John\" does not), or an apostrophe that closes a quote
+ *    ("'…/Sonarr' is not writable"). An apostrophe stays in a name when a
+ *    separator follows it before the next quote or line break ("James'
+ *    Drive\", "'90s Movies\"), or past the quote that closes a quoted word
+ *    ("Robert 'Bob' Smith\"), and when it stands between two letters, digits
+ *    or "_" in any script ("Sean O'Brien", "Zoë's Media", "D'Ávila"), though
+ *    not before Han, Kana or Hangul, whose particles follow a closing quote
+ *    ("'…/Show'을"). Only one of those rules fits an apostrophe, so a name is
+ *    read one way only, and the cut takes time linear in the message.
  *
  * ## Special cases
  *
@@ -45,29 +49,29 @@ import { isRecord } from "./arr-output"
  *   ("...: /downloads/Show Ensure ... this file/folder") reads as part of the
  *   path and is cut with it, unless step 1 found the path: text is lost,
  *   never a directory shown.
- * - That includes a contraction after a path ("it's", "doesn't") and a
- *   closing quote with a separator after it, since their apostrophes stay in
- *   a name: "write error in /data/usenet/Show.S01E01 (it's on a read-only
- *   mount; check the user/group)" becomes "write error in …/group)". This
- *   is the trade-off for apostrophes in names: text is lost, never a
- *   directory shown.
+ * - That includes a contraction after a path ("it's", "doesn't"), a closing
+ *   quote with a separator after it, and two paths in typographic single
+ *   quotes, since their apostrophes stay in a name: "write error in
+ *   /data/usenet/Show.S01E01 (it's on a read-only mount; check the
+ *   user/group)" becomes "write error in …/group)". This is the trade-off
+ *   for apostrophes in names: text is lost, never a directory shown.
  * - A name with ". " and more words before its separator ("C:\Users\J. R.
  *   Smith\Downloads") reads by shape as a sentence after "C:\Users\", so it
  *   shows with what follows it ("…/J. R. Smith\Downloads"); step 1 still
  *   finds a queue item's own folder whole, whatever its names hold.
  * - A "/" alone ("5 MB / s") is not a path, and a separator that ends one
- *   stays with its last part ("…/tv/, …/anime/"), unless a typographic
- *   quote or a backtick follows it, which a last part may start with
- *   ("„/data/tv/“" becomes "„…/“").
- * - Words joined by "/" stay as they are: "Serien-/Staffelfinale" (a "-"
- *   opens a path only after a Hebrew letter), "用户名/密码" and "秒/分/时/天"
- *   (after CJK, a root needs a first name that starts in ASCII and ends at a
- *   separator), and "`[EN]`/`[EN+--]`" (a root between two backticks is not
- *   a path).
- * - So a root right after CJK whose first name does not start in ASCII
- *   ("下载在/影视/剧集中") reads as words joined by "/" and stays: folders at
- *   a root have ASCII names in practice (/home, /mnt, /volume1, \\NAS), and
- *   a drive is cut whatever its names hold.
+ *   stays with its last part ("…/tv/, …/anime/", "„…/tv/“").
+ * - Words joined by "/" mostly stay as they are: "Serien-/Staffelfinale" (a
+ *   "-" opens a path only after a Hebrew letter), "用户名/密码" and
+ *   "秒/分/时/天" (after CJK, a root needs a first name that starts in ASCII
+ *   and ends at a separator), and "`[EN]`/`[EN+--]`" (no name follows the
+ *   root). ASCII words joined by "/" right after CJK ("格式/HEVC/AV1") read
+ *   as a path and lose all but the last ("格式…/AV1").
+ * - A root right after CJK whose first name does not start in ASCII
+ *   ("下载在/影视/剧集中") reads as words joined by "/" and stays, so a folder
+ *   at the root with a CJK name shows, with the folders below it. Folders at
+ *   a root have ASCII names in practice (/home, /mnt, /volume1, \\NAS), and a
+ *   drive is cut whatever its names hold.
  *
  * @module
  */
@@ -80,18 +84,34 @@ const ROOT = String.raw`(?:[A-Za-z]:[\\/]|[\\/]{2}|\/)`
  * follow a word directly.
  */
 const CJK = String.raw`\p{scx=Han}\p{scx=Hiragana}\p{scx=Katakana}\p{scx=Hangul}`
-/** What a root follows where a path starts (step 2). */
-const OPENS = String.raw`^|[\s[('"=„“”‘’«»「」『』：]|[${CJK}]:|\p{Script=Hebrew}-`
 /** A backtick, which a template literal cannot hold as it is. */
 const BACKTICK = "`"
-/** A letter or digit in any script, or a combining mark on one ("Zoë" written with U+0308). */
-const ALNUM = String.raw`[\p{L}\p{M}\p{N}]`
+/** What a root follows where a path starts (step 2). */
+const OPENS = String.raw`^|[\s[('"=„“”‘’«»「」『』：${BACKTICK}]|[${CJK}]:|\p{Script=Hebrew}-`
+/** Quotes that close a path as `"` does: the typographic double quotes and the corner brackets. */
+const CLOSERS = "„“”«»「」『』"
+/** Where a name or a last part ends: a separator, a quote, a closer, a backtick, a bar or "]". */
+const ENDS = String.raw`\\/'"|\]${BACKTICK}${CLOSERS}`
+/** A letter, digit or "_" in any script, or a combining mark on one ("Zoë" written with U+0308). */
+const WORD_END = String.raw`[\p{L}\p{M}\p{N}_]`
+/** A letter, digit or "_" that starts a word, but not in CJK, whose particles follow a closing quote ("'…/Show'을"). */
+const WORD_START = String.raw`(?![${CJK}])[\p{L}\p{N}_]`
 /**
- * A character a directory name can hold (step 3): anything but a separator, a
- * quote, a bar, "]" or a line break; an apostrophe only between two letters
- * or digits, or with a separator after it before the next quote or line break.
+ * What follows an apostrophe that stays in a name wherever it stands: a
+ * separator before the next quote or line break ("James' Drive\"), or one
+ * past the quote that closes a quoted word, before any other ("Robert 'Bob'
+ * Smith\"). A quote after a space opens one ("'…/Show' and '/backup'"), so
+ * it closes no quoted word.
  */
-const NAME = String.raw`(?:[^\\/'"|\]\n]|(?<=${ALNUM})'(?=[\p{L}\p{N}])|'(?=[^'"\n\\/]*[\\/]))`
+const SEPARATOR_AHEAD = String.raw`[^'"\n\\/]*(?:(?<!\s)'[^'"\n\\/]*)?[\\/]`
+/**
+ * A character a directory name can hold (step 3): anything but those that end
+ * one and a line break; an apostrophe with a separator after it before the
+ * next quote or line break, or else one between two word characters. The two
+ * apostrophe rules never both match, so a name is read one way only: with
+ * both, a failed cut would retry every such apostrophe both ways.
+ */
+const NAME = String.raw`(?:[^${ENDS}\n]|'(?=${SEPARATOR_AHEAD})|(?<=${WORD_END})'(?=${WORD_START})(?!${SEPARATOR_AHEAD}))`
 /** Where a name ends although it could go on: ". " or ", " before more words, "://", or a space before another root. */
 const STOP = String.raw`[.,]\s(?=[^\\/\n]*?\s)|:\/\/|\s(?:[A-Za-z]:)?[\\/]`
 /**
@@ -99,15 +119,15 @@ const STOP = String.raw`[.,]\s(?=[^\\/\n]*?\s)|:\/\/|\s(?:[A-Za-z]:)?[\\/]`
  * an apostrophe and does not end a name, or an apostrophe before a letter or
  * digit ("'90s Movies").
  */
-const LAST = String.raw`(?!\.\s|,\s)(?:[^\s\\/'"|\]]|'(?=[\p{L}\p{N}]))`
+const LAST = String.raw`(?!\.\s|,\s)(?:[^\s${ENDS}]|'(?=[\p{L}\p{N}]))`
 /**
  * Where a path starts (step 2): a root after one of {@link OPENS}, a root
- * after a backtick that no backtick follows, a root right after CJK whose
- * first name starts with an ASCII letter, digit, "_", "." or "-" and ends at
- * a separator, or a drive after anything but an ASCII word character, ".",
- * ":", "…" or a separator.
+ * right after CJK whose first name starts with an ASCII letter, digit, "_",
+ * "." or "-" and ends at a separator, or a drive after anything but an ASCII
+ * word character, ".", ":", "…" or a separator. A root whose next character
+ * cannot start a name ("`C:\`", "`[EN]`/`[EN+--]`") is no path.
  */
-const START = String.raw`(?:(?<=${OPENS})${ROOT}|(?<=${BACKTICK})${ROOT}(?!${BACKTICK})|(?<=[${CJK}])${ROOT}(?=[\w.-](?:(?!${STOP})${NAME})*[\\/])|(?<![\w.:…\\/])[A-Za-z]:[\\/])`
+const START = String.raw`(?:(?<=${OPENS})${ROOT}|(?<=[${CJK}])${ROOT}(?=[\w.-](?:(?!${STOP})${NAME})*[\\/])|(?<![\w.:…\\/])[A-Za-z]:[\\/])`
 
 /** An absolute path's root and directories, up to its last part, where a path can start. */
 const PATH_DIRECTORIES = new RegExp(String.raw`${START}(?=${LAST})(?:(?:(?!${STOP})${NAME})*[\\/](?=${NAME}|${LAST}))*(?=${LAST})`, "gu")
