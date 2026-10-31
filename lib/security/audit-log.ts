@@ -175,7 +175,9 @@ export enum AuditEventType {
   // target user, the year, the source generation and the new one.
   REWIND_ROLLED_BACK = "REWIND_ROLLED_BACK",
   // An admin removed a member's share of the Plex server (P11.16, GAP-33).
-  // Details carry whether the share was already gone.
+  // Details carry whether the share was already gone. A removal by the
+  // inactivity sweep (lib/inactivity/sweep.ts) also carries the reason
+  // "inactivity", the last seen date, the threshold in days and the run id.
   MEMBER_UNSHARED = "MEMBER_UNSHARED",
   // An admin imported the Plex server's members (P11.16, GAP-33). Details carry
   // the counts and the created user ids.
@@ -198,6 +200,23 @@ export enum AuditEventType {
   SETUP_CLAIMED = "SETUP_CLAIMED",
   // An optional setup step was skipped (P10.24). Details carry the step id.
   SETUP_STEP_SKIPPED = "SETUP_STEP_SKIPPED",
+  // One run of the inactivity sweep (lib/inactivity/run.ts): every run while
+  // the sweep is on, and every run an admin starts. Details carry the run id,
+  // the trigger, the threshold in days, the counts, and why the sweep removed
+  // no one (blocked), if it did not act.
+  INACTIVITY_SWEEP_RUN = "INACTIVITY_SWEEP_RUN",
+  // An admin changed the inactivity sweep settings. Details carry the section
+  // ("inactivity"), the changed field names, and the values before and after.
+  INACTIVITY_SETTINGS_CHANGED = "INACTIVITY_SETTINGS_CHANGED",
+  // An admin excluded a member from the inactivity sweep or included them
+  // again. Details carry the target user and the new value.
+  INACTIVITY_EXCLUSION_CHANGED = "INACTIVITY_EXCLUSION_CHANGED",
+  // An admin started the last seen read (and the sweep, when on) by hand.
+  // Details carry whether it was queued and the member count they confirmed.
+  ACTIVITY_SYNC_TRIGGERED = "ACTIVITY_SYNC_TRIGGERED",
+  // An admin or a Support user opened the audit log: one row per viewer per
+  // hour. Details carry the filters (category, type and ids), never names.
+  AUDIT_LOG_VIEWED = "AUDIT_LOG_VIEWED",
 }
 
 type AuditDetails = {
@@ -321,4 +340,13 @@ export async function auditMemberListed(
 ): Promise<void> {
   if (!(await firstThisHour(`${actorUserId}:${surface}`))) return
   logAuditEvent(AuditEventType.MEMBER_CONTENT_LISTED, actorUserId, { surface, filters })
+}
+
+/**
+ * Record that `actorUserId` opened the audit log (`AUDIT_LOG_VIEWED`), with the
+ * page's filters. One row per viewer per hour, whatever the filters. Never throws.
+ */
+export async function auditLogViewed(actorUserId: string, filters: Record<string, unknown> = {}): Promise<void> {
+  if (!(await firstThisHour(`${actorUserId}:audit-log`))) return
+  logAuditEvent(AuditEventType.AUDIT_LOG_VIEWED, actorUserId, { filters })
 }

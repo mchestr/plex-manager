@@ -94,6 +94,7 @@ describe("addJob", () => {
   it.each([
     [JOB_TYPES.DISCORD_CHANNEL_STATS, "discord:channel-stats"],
     [JOB_TYPES.REQUEST_TIER_SYNC, "request-tiers:sync"],
+    [JOB_TYPES.MEMBER_ACTIVITY, "members:activity"],
   ] as const)("collapses repeated admin runs of %s into one", async (type, id) => {
     await addJob(type, { triggeredBy: "admin" })
     await addJob(type, { triggeredBy: "admin" })

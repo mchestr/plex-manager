@@ -17,7 +17,7 @@ import { getSeasonYear } from "@/lib/wrapped/season"
 
 const searchSchema = z.object({ tab: z.enum(USER_DETAIL_TABS).catch("overview") })
 
-const LABELS: Record<UserDetailTab, string> = { overview: "Overview", rewind: "Rewind", usage: "Usage", billing: "Billing" }
+const LABELS: Record<UserDetailTab, string> = { overview: "Overview", rewind: "Rewind", usage: "Usage", billing: "Billing", audit: "Audit" }
 
 interface UserDetailPageProps {
   params: Promise<{ userId: string }>

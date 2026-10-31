@@ -7,10 +7,10 @@
  *
  * ```
  * Overview, Assistant ungrouped, at the top (P10.8)
- * Community           Users, Invites, Affiliates, Announcements, Discord bot, Watchlist sync
+ * Community           Users, Invites, Affiliates, Announcements, Discord bot, Watchlist sync, Inactive members
  * Rewind              Season, Playground, Share analytics
  * Usage and cost      LLM usage, Cost analysis
- * System              Job queues, Settings
+ * System              Audit log, Job queues, Settings
  * ```
  *
  * `typedRoutes` rejects links to routes that do not exist yet, so the step
@@ -145,6 +145,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     mobile: "more",
   },
   {
+    id: "inactivity",
+    label: "Inactive members",
+    href: "/admin/inactivity",
+    icon: icons.inactivity,
+    group: "Community",
+    match: "prefix",
+    mobile: "more",
+  },
+  {
     id: "season",
     label: "Season",
     href: "/admin/rewind",
@@ -189,6 +198,16 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     group: "Usage and cost",
     match: "prefix",
     mobile: "more",
+  },
+  {
+    id: "audit",
+    label: "Audit log",
+    href: "/admin/audit",
+    icon: icons.audit,
+    group: "System",
+    match: "prefix",
+    mobile: "more",
+    permission: "audit:read",
   },
   {
     id: "queues",

@@ -30,6 +30,8 @@ export const JOB_TYPES = {
   // Server stats in Discord channel names, and request limits from watch time
   DISCORD_CHANNEL_STATS: "discord:channel-stats",
   REQUEST_TIER_SYNC: "request-tiers:sync",
+  // Each member's last seen from Tautulli, then the opt-in inactivity sweep
+  MEMBER_ACTIVITY: "members:activity",
   // Stored secrets under the primary key (P11.1)
   SECRETS_REENCRYPT: "secrets:reencrypt",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
@@ -65,6 +67,7 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.RETENTION_SWEEP]: "Retention sweep",
   [JOB_TYPES.DISCORD_CHANNEL_STATS]: "Discord channel stats",
   [JOB_TYPES.REQUEST_TIER_SYNC]: "Request limit tiers",
+  [JOB_TYPES.MEMBER_ACTIVITY]: "Last seen and inactivity",
   [JOB_TYPES.SECRETS_REENCRYPT]: "Secret re-encryption",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
@@ -91,6 +94,7 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.RETENTION_SWEEP,
   JOB_TYPES.DISCORD_CHANNEL_STATS,
   JOB_TYPES.REQUEST_TIER_SYNC,
+  JOB_TYPES.MEMBER_ACTIVITY,
   JOB_TYPES.SECRETS_REENCRYPT,
 ] as const satisfies readonly JobType[]
 
@@ -376,6 +380,11 @@ interface JobPayloads {
   [JOB_TYPES.RETENTION_SWEEP]: { triggeredBy: "scheduled" }
   [JOB_TYPES.DISCORD_CHANNEL_STATS]: { triggeredBy: "scheduled" | "admin" }
   [JOB_TYPES.REQUEST_TIER_SYNC]: { triggeredBy: "scheduled" | "admin" }
+  /**
+   * An admin run names the admin (the audit actor) and, when the sweep is on,
+   * the member count they confirmed: the run removes no one if more qualify.
+   */
+  [JOB_TYPES.MEMBER_ACTIVITY]: { triggeredBy: "scheduled" | "admin"; triggeredByUserId?: string; confirmedRemovals?: number }
   [JOB_TYPES.SECRETS_REENCRYPT]: { triggeredBy: "scheduled" }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
@@ -426,6 +435,7 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   [JOB_TYPES.RETENTION_SWEEP]: { deduplication: () => "retention:sweep" },
   [JOB_TYPES.DISCORD_CHANNEL_STATS]: { deduplication: () => "discord:channel-stats" },
   [JOB_TYPES.REQUEST_TIER_SYNC]: { deduplication: () => "request-tiers:sync" },
+  [JOB_TYPES.MEMBER_ACTIVITY]: { deduplication: () => "members:activity" },
   [JOB_TYPES.SECRETS_REENCRYPT]: { fromCaller: "secrets:reencrypt:<kid>:<fields hash>, from enqueueSecretsReencrypt" },
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
   [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },

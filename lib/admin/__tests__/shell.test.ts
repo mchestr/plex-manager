@@ -35,7 +35,7 @@ beforeEach(() => {
 
 it("lists Assistant while AI features are on and a chat model is active, without reading the history", async () => {
   expect((await getAdminShellData(admin)).navIds).toContain("assistant")
-  expect((await getAdminShellData(support)).navIds).toEqual(["assistant", "users", "affiliates"])
+  expect((await getAdminShellData(support)).navIds).toEqual(["assistant", "users", "affiliates", "audit"])
   expect(prismaMock.chatConversation.findFirst).not.toHaveBeenCalled()
 })
 
@@ -45,14 +45,14 @@ it.each([
 ])("while %s, lists Assistant only for a user with saved conversations", async (_label, arrange) => {
   arrange()
 
-  expect((await getAdminShellData(support)).navIds).toEqual(["users", "affiliates"])
+  expect((await getAdminShellData(support)).navIds).toEqual(["users", "affiliates", "audit"])
   expect(prismaMock.chatConversation.findFirst).toHaveBeenCalledWith({
     where: { userId: "support-1", endedAt: null, discordSessions: { none: {} }, lastMessageAt: { not: null } },
     select: { id: true },
   })
 
   prismaMock.chatConversation.findFirst.mockResolvedValue({ id: "c1" } as ChatConversation)
-  expect((await getAdminShellData(support)).navIds).toEqual(["assistant", "users", "affiliates"])
+  expect((await getAdminShellData(support)).navIds).toEqual(["assistant", "users", "affiliates", "audit"])
   expect((await getAdminShellData(admin)).navIds).toContain("assistant")
 })
 
