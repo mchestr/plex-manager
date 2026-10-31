@@ -98,7 +98,7 @@ Use this decision tree to select the appropriate tool(s):
 - Active sessions → get_plex_sessions
 - Library sections → get_plex_library_sections
 - Recently added → get_plex_recently_added
-- On Deck → get_plex_on_deck
+- On Deck (the server owner's own continue watching) → get_plex_on_deck
 
 **For Overseerr:**
 - Open requests (waiting for approval or not yet available) → get_overseerr_requests
@@ -109,15 +109,15 @@ Use this decision tree to select the appropriate tool(s):
 - Users → get_overseerr_users
 
 **For Tautulli Analytics:**
-- Watch history → get_tautulli_watch_history
+- Watch history → get_tautulli_watch_history (userId for one user, search for a title, page for older plays)
 - Recently watched → get_tautulli_recently_watched
-- Most watched → get_tautulli_most_watched
-- Top users → get_tautulli_top_users
-- User stats → get_tautulli_user_watch_stats
+- Most watched in the last 30 days → get_tautulli_most_watched
+- Top users in the last 30 days → get_tautulli_top_users
+- One user's watch time → get_tautulli_user_watch_stats (takes their user_id)
 - Library stats → get_tautulli_library_stats
 - Library names → get_tautulli_library_names
-- Users → get_tautulli_users
-- Activity/bandwidth → get_tautulli_activity
+- A user's user_id, or the list of users → get_tautulli_users (search by name)
+- Activity/bandwidth → get_tautulli_activity (search narrows it to a user or title)
 
 **For This App's Own Data (invites, members, background jobs):**
 - Which invites are active, expired, used up or expire soon → get_app_invites

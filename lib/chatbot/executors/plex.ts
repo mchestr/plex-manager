@@ -8,8 +8,33 @@ import { memberServices } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import { type FormatSettings } from "@/lib/utils/format"
 import { JELLYFIN_MEMBER } from "./tool-output"
+import { onDeckReply, RECENTLY_ADDED, recentlyAddedReply } from "./plex-projections"
 import { sanitizePlexSessionsPayload } from "./plex-sanitizer"
+import { countArg } from "./plex-tautulli-reply"
 import { PLEX_EPOCH_KEYS, UTC_FORMAT, withLocalTimestamps } from "./timestamps"
+
+/** `/status/sessions` as the PMS sends it: one session comes as an object, several as a list. */
+interface PlexSessionsData {
+  MediaContainer?: { Metadata?: PlexSessionUserRef | PlexSessionUserRef[] }
+}
+
+/**
+ * The Discord caller's own Plex sessions, sanitized. Fails closed (SEC-50): no
+ * caller, or a caller without a Plex user ID, sees none, and a Jellyfin-only
+ * member is told why (P11.12). The owner's own streams are PMS user 1 (GAP-08).
+ */
+async function callerSessions(data: PlexSessionsData, userId: string | undefined, adminPlexUserId: string | null) {
+  const user = userId
+    ? await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true, jellyfinUserId: true } })
+    : null
+  if (user && isJellyfinOnly(memberServices(user))) return JELLYFIN_MEMBER
+
+  const metadata = data.MediaContainer?.Metadata
+  const sessions = Array.isArray(metadata) ? metadata : metadata ? [metadata] : []
+  const plexUserId = user?.plexUserId
+  const own = plexUserId ? sessions.filter((session) => matchesSessionUser(session, { plexUserId, isOwner: plexUserId === adminPlexUserId })) : []
+  return { success: true, data: sanitizePlexSessionsPayload({ MediaContainer: { size: own.length, Metadata: own } }) }
+}
 
 export async function executePlexTool(
   toolName: string,
@@ -31,69 +56,29 @@ export async function executePlexTool(
       if (!sessions.success || !sessions.data) {
         return JSON.stringify(sessions)
       }
-
-      // In Discord context, scope sessions to the requesting user
-      let sessionsData = sessions.data
-      if (context === "discord" && userId) {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { plexUserId: true, jellyfinUserId: true },
-        })
-        // A Jellyfin-only member has no Plex streams to show; say why rather than "none" (P11.12)
-        if (user && isJellyfinOnly(memberServices(user))) return JSON.stringify(JELLYFIN_MEMBER)
-
-        if (user?.plexUserId && sessionsData?.MediaContainer?.Metadata) {
-          // Only the user's own sessions; the owner's are PMS user 1 (GAP-08)
-          const member = { plexUserId: user.plexUserId, isOwner: user.plexUserId === config.adminPlexUserId }
-          const metadata: PlexSessionUserRef[] = Array.isArray(sessionsData.MediaContainer.Metadata)
-            ? sessionsData.MediaContainer.Metadata
-            : [sessionsData.MediaContainer.Metadata]
-          const userSessions = metadata.filter((session) => matchesSessionUser(session, member))
-
-          sessionsData = {
-            ...sessionsData,
-            MediaContainer: {
-              ...sessionsData.MediaContainer,
-              size: userSessions.length,
-              Metadata: userSessions,
-            },
-          }
-        } else if (!user?.plexUserId) {
-          // User doesn't have a Plex user ID, return empty sessions
-          sessionsData = {
-            ...sessionsData,
-            MediaContainer: {
-              ...sessionsData.MediaContainer,
-              size: 0,
-              Metadata: [],
-            },
-          }
-        }
+      // In the Discord context, only the requesting user's own sessions
+      if (context === "discord") {
+        return JSON.stringify(await callerSessions(sessions.data, userId, config.adminPlexUserId))
       }
-
-      return JSON.stringify({
-        success: true,
-        data: sanitizePlexSessionsPayload(sessionsData),
-      })
+      return JSON.stringify({ success: true, data: sanitizePlexSessionsPayload(sessions.data) })
     }
     case "get_plex_library_sections": {
       const result = await getPlexLibrarySections(config)
-      if (!result.success) return result.error || "Error fetching library sections"
+      if (!result.success) return JSON.stringify({ error: result.error || "Error fetching library sections" })
       return JSON.stringify(withLocalTimestamps(result.data, PLEX_EPOCH_KEYS, format.timeZone))
     }
     case "get_plex_recently_added": {
-      const limit = typeof args.limit === "number" ? args.limit : 20
+      const limit = countArg(args.limit, RECENTLY_ADDED.fallback, RECENTLY_ADDED.max)
       const result = await getPlexRecentlyAdded(config, limit)
-      if (!result.success) return result.error || "Error fetching recently added"
-      return JSON.stringify(withLocalTimestamps(result.data, PLEX_EPOCH_KEYS, format.timeZone))
+      if (!result.success) return JSON.stringify({ error: result.error || "Error fetching recently added" })
+      return JSON.stringify(recentlyAddedReply(result.data, limit, format.timeZone))
     }
     case "get_plex_on_deck": {
       const result = await getPlexOnDeck(config)
-      if (!result.success) return result.error || "Error fetching on deck"
-      return JSON.stringify(withLocalTimestamps(result.data, PLEX_EPOCH_KEYS, format.timeZone))
+      if (!result.success) return JSON.stringify({ error: result.error || "Error fetching on deck" })
+      return JSON.stringify(onDeckReply(result.data, format.timeZone))
     }
     default:
       return "Error: Unknown Plex tool"
   }
 }
-

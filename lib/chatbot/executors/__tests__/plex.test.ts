@@ -15,7 +15,7 @@ import path from "path"
 import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { getPlexLibrarySections, getPlexRecentlyAdded, getPlexSessions } from "@/lib/connections/plex"
+import { getPlexLibrarySections, getPlexOnDeck, getPlexRecentlyAdded, getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 
 import { executePlexTool } from "../plex"
@@ -88,13 +88,140 @@ describe("executePlexTool get_plex_sessions for a Jellyfin-only member (P11.12)"
   })
 })
 
+describe("executePlexTool get_plex_sessions in Discord without a caller", () => {
+  it("returns no sessions rather than everyone's (fail closed)", async () => {
+    const result = JSON.parse(await executePlexTool("get_plex_sessions", {}, undefined, "discord"))
+
+    expect(prismaMock.user.findUnique).not.toHaveBeenCalled()
+    expect(result).toEqual({ success: true, data: expect.objectContaining({ totalSessions: 0, sessions: [] }) })
+  })
+})
+
 describe("executePlexTool get_plex_recently_added", () => {
+  const RECENTLY_ADDED = JSON.parse(readFileSync(path.join(__dirname, "../../../../lib/connections/__tests__/fixtures/pms/recently-added.json"), "utf8"))
+
   it("passes the requested count through", async () => {
     jest.mocked(getPlexRecentlyAdded).mockResolvedValue({ success: true, data: {} })
 
     await executePlexTool("get_plex_recently_added", { limit: 5 })
 
     expect(getPlexRecentlyAdded).toHaveBeenCalledWith(CONFIG, 5)
+  })
+
+  it.each([
+    [{ limit: 5000 }, 100],
+    [{ limit: "30" }, 30],
+    [{ limit: "many" }, 20],
+    [{}, 20],
+  ])("reads limit %j as %i", async (args, limit) => {
+    jest.mocked(getPlexRecentlyAdded).mockResolvedValue({ success: true, data: {} })
+
+    await executePlexTool("get_plex_recently_added", args)
+
+    expect(getPlexRecentlyAdded).toHaveBeenCalledWith(CONFIG, limit)
+  })
+
+  it("keeps what each item is, where, and when it was added, in the turn's zone", async () => {
+    jest.mocked(getPlexRecentlyAdded).mockResolvedValue({ success: true, data: RECENTLY_ADDED })
+
+    // 1760000200 is 2025-10-09T08:56:40Z
+    const result = JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 2 }, "admin-1", "default", { timeZone: "America/Los_Angeles", locale: "en-US" }))
+
+    expect(result).toEqual({
+      showing: "showing the 2 newest items; pass a larger limit (at most 100) to see more",
+      items: [
+        { type: "movie", title: "Dune: Part Two", year: 2024, librarySectionTitle: "Movies", addedAt: "2025-10-09T01:56:40-07:00" },
+        { type: "episode", title: "The Eightfold Fence", grandparentTitle: "Shogun", parentIndex: 1, index: 4, librarySectionTitle: "TV Shows", addedAt: "2025-10-09T01:55:00-07:00" },
+      ],
+    })
+  })
+
+  it("gives the server's total when it sends one", async () => {
+    jest.mocked(getPlexRecentlyAdded).mockResolvedValue({
+      success: true,
+      data: { MediaContainer: { ...RECENTLY_ADDED.MediaContainer, totalSize: 312, Metadata: [{ ...RECENTLY_ADDED.MediaContainer.Metadata[0], Media: [{ videoResolution: "4k" }] }] } },
+    })
+
+    const result = JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 1 }))
+
+    expect(result.showing).toBe("showing 1 of 312 items, newest first; pass a larger limit (at most 100) to see more")
+    expect(result.total).toBe(312)
+    expect(result.items[0].videoResolution).toBe("4K")
+  })
+
+  it("returns the client's error as an error", async () => {
+    jest.mocked(getPlexRecentlyAdded).mockResolvedValue({ success: false, error: "Plex did not respond in time" })
+
+    expect(JSON.parse(await executePlexTool("get_plex_recently_added", {}))).toEqual({ error: "Plex did not respond in time" })
+  })
+})
+
+describe("executePlexTool get_plex_on_deck", () => {
+  it("keeps what each item is, how far in the owner is and when they last watched", async () => {
+    jest.mocked(getPlexOnDeck).mockResolvedValue({
+      success: true,
+      data: {
+        MediaContainer: {
+          size: 1,
+          totalSize: 1,
+          Metadata: [
+            {
+              ratingKey: "5310",
+              key: "/library/metadata/5310",
+              type: "episode",
+              title: "In Perpetuity",
+              grandparentTitle: "Severance",
+              parentTitle: "Season 1",
+              parentIndex: 1,
+              index: 3,
+              librarySectionTitle: "TV Shows",
+              summary: "Mark is promoted.",
+              duration: 2_700_000,
+              viewOffset: 600_000,
+              lastViewedAt: 1793590200,
+              Media: [{ Part: [{ file: "/media/TV/Severance/S01E03.mkv" }] }],
+            },
+          ],
+        },
+      },
+    })
+
+    const result = JSON.parse(await executePlexTool("get_plex_on_deck", {}, "admin-1", "default", { timeZone: "America/Los_Angeles", locale: "en-US" }))
+
+    expect(result).toEqual({
+      showing: "showing 1 of 1 On Deck items",
+      total: 1,
+      items: [
+        {
+          type: "episode",
+          title: "In Perpetuity",
+          grandparentTitle: "Severance",
+          parentTitle: "Season 1",
+          parentIndex: 1,
+          index: 3,
+          librarySectionTitle: "TV Shows",
+          lastViewedAt: "2026-11-01T19:30:00-08:00",
+          progressPercent: 22,
+        },
+      ],
+    })
+  })
+
+  it("reads one item sent on its own rather than in a list", async () => {
+    jest.mocked(getPlexOnDeck).mockResolvedValue({ success: true, data: { MediaContainer: { size: 1, Metadata: { type: "movie", title: "Arrival", year: 2016 } } } })
+
+    const result = JSON.parse(await executePlexTool("get_plex_on_deck", {}))
+
+    expect(result).toEqual({ showing: "showing 1 On Deck items", items: [{ type: "movie", title: "Arrival", year: 2016 }] })
+  })
+
+  it("says when the owner has more On Deck than the page it reads", async () => {
+    const episode = { type: "episode", title: "Pilot", grandparentTitle: "Severance" }
+    jest.mocked(getPlexOnDeck).mockResolvedValue({ success: true, data: { MediaContainer: { size: 50, totalSize: 73, Metadata: Array(50).fill(episode) } } })
+
+    const result = JSON.parse(await executePlexTool("get_plex_on_deck", {}))
+
+    expect(result.showing).toBe("showing 50 of 73 On Deck items; the tool reads the first 50 only")
   })
 })
 
@@ -106,5 +233,100 @@ describe("executePlexTool get_plex_library_sections (P11.17)", () => {
     const result = JSON.parse(await executePlexTool("get_plex_library_sections", {}, "admin-1", "default", { timeZone: "America/Los_Angeles", locale: "en-US" }))
 
     expect(result).toEqual([{ title: "Movies", scannedAt: "2026-11-01T19:30:00-08:00", contentChangedAt: "2026-11-01T19:30:00-08:00" }])
+  })
+})
+
+/**
+ * A large server (3,000 movies, 1,500 series, 25 streams), from synthetic
+ * items as heavy as the PMS sends them (summary, cast, crew, media parts with
+ * file paths): each result, with default and largest arguments, stays under
+ * the 40,000 characters the MCP endpoint accepts.
+ */
+describe("Plex tool results on a large server stay under the MCP limit", () => {
+  const MCP_LIMIT = 40_000
+  const LA = { timeZone: "America/Los_Angeles", locale: "en-US" }
+
+  const heavyItem = (i: number) => ({
+    ratingKey: String(600_000 + i),
+    key: `/library/metadata/${600_000 + i}`,
+    guid: `plex://episode/${"0".repeat(20)}${i}`,
+    type: "episode",
+    title: `An Episode Whose Title Goes On For Quite A While ${i}`,
+    grandparentTitle: `A Series With An Unusually Long Name, Part ${i}`,
+    parentTitle: "Season 7",
+    parentIndex: 7,
+    index: i,
+    year: 2024,
+    librarySectionTitle: "TV Shows (4K and HDR)",
+    librarySectionID: 2,
+    contentRating: "TV-MA",
+    summary: "A summary of the episode. ".repeat(40),
+    rating: 7.8,
+    thumb: `/library/metadata/${600_000 + i}/thumb/1700000000`,
+    art: `/library/metadata/${600_000 + i}/art/1700000000`,
+    duration: 3_600_000,
+    viewOffset: 1_200_000,
+    lastViewedAt: 1_793_590_200 - i,
+    addedAt: 1_793_590_200 - i * 60,
+    updatedAt: 1_793_590_200,
+    originallyAvailableAt: "2024-03-01",
+    Media: [
+      {
+        videoResolution: "4k",
+        videoCodec: "hevc",
+        audioCodec: "truehd",
+        bitrate: 25_000,
+        Part: [{ key: `/library/parts/${i}/file.mkv`, file: `/media/TV/Series ${i}/Season 07/Series ${i} - S07E${i} - Remux-2160p.mkv`, size: 60_000_000_000 }],
+      },
+    ],
+    Genre: [{ tag: "Drama" }, { tag: "Science Fiction" }],
+    Director: [{ tag: "A Director With A Long Name" }],
+    Writer: [{ tag: "A Writer" }, { tag: "Another Writer" }],
+    Role: Array.from({ length: 30 }, (_, n) => ({ tag: `Actor With A Long Name ${n}`, role: `Character ${n}`, thumb: `https://metadata-static.plex.tv/${n}.jpg` })),
+    Guid: [{ id: "imdb://tt0000001" }, { id: "tmdb://1" }, { id: "tvdb://1" }],
+  })
+
+  const page = (count: number, totalSize: number) => ({
+    MediaContainer: { size: count, totalSize, Metadata: Array.from({ length: count }, (_, i) => heavyItem(i)) },
+  })
+
+  const rawSession = (i: number) => ({
+    ...heavyItem(i),
+    User: { id: String(1000 + i), title: `member.username.${i}`, thumb: "https://plex.tv/users/x/avatar" },
+    Player: { address: `10.0.0.${i}`, device: "Android TV", platform: "Android", product: "Plex for Android (TV)", state: "playing", title: `Member ${i}'s TV` },
+    Session: { id: `session-${i}`, bandwidth: 21_500, location: "wan" },
+    TranscodeSession: { videoDecision: "transcode", audioDecision: "transcode", throttled: false, speed: 1.2 },
+  })
+
+  async function size(tool: string, args: Record<string, unknown> = {}): Promise<number> {
+    const output = await executePlexTool(tool, args, "admin-1", "default", LA)
+    expect(JSON.parse(output).error).toBeUndefined()
+    return output.length
+  }
+
+  beforeEach(() => {
+    // The PMS returns as many items as the container size asks for
+    jest.mocked(getPlexRecentlyAdded).mockImplementation(async (_config, limit = 20) => ({ success: true, data: page(limit, 4500) }))
+    jest.mocked(getPlexOnDeck).mockResolvedValue({ success: true, data: page(50, 50) })
+    jest.mocked(getPlexSessions).mockResolvedValue({ success: true, data: { MediaContainer: { size: 25, Metadata: Array.from({ length: 25 }, (_, i) => rawSession(i)) } } })
+  })
+
+  it.each([
+    ["get_plex_recently_added", {}],
+    ["get_plex_recently_added", { limit: 100_000 }],
+    ["get_plex_on_deck", {}],
+    ["get_plex_sessions", {}],
+  ])("%s %j", async (tool, args) => {
+    expect(await size(tool, args)).toBeLessThanOrEqual(MCP_LIMIT)
+  })
+
+  it("lists 20 recently added by default and at most 100, of the server's total", async () => {
+    const byDefault = JSON.parse(await executePlexTool("get_plex_recently_added", {}))
+    const most = JSON.parse(await executePlexTool("get_plex_recently_added", { limit: 1000 }))
+
+    expect(byDefault.items).toHaveLength(20)
+    expect(byDefault.showing).toBe("showing 20 of 4500 items, newest first; pass a larger limit (at most 100) to see more")
+    expect(most.items).toHaveLength(100)
+    expect(most.showing).toBe("showing 100 of 4500 items, newest first")
   })
 })

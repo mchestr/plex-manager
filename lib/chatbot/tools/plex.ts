@@ -1,5 +1,6 @@
 import "server-only"
 
+import { RECENTLY_ADDED } from "../executors/plex-projections"
 import { type RegisteredTool } from "./types"
 
 export const PLEX_TOOLS: RegisteredTool[] = [
@@ -65,13 +66,13 @@ export const PLEX_TOOLS: RegisteredTool[] = [
     permission: "assistant:tools:read",
     function: {
       name: "get_plex_recently_added",
-      description: "Get recently added content from Plex library",
+      description: "Get the newest items added to the Plex libraries, newest first: type, title, show and episode, year, library, when added and resolution",
       parameters: {
         type: "object",
         properties: {
           limit: {
             type: "integer",
-            description: "Number of items to retrieve (default 20)",
+            description: `Number of items to retrieve (default ${RECENTLY_ADDED.fallback}, at most ${RECENTLY_ADDED.max})`,
           },
         },
       },
@@ -82,7 +83,8 @@ export const PLEX_TOOLS: RegisteredTool[] = [
     permission: "assistant:tools:read",
     function: {
       name: "get_plex_on_deck",
-      description: "Get 'On Deck' content from Plex (continue watching)",
+      description:
+        "Get 'On Deck' content from Plex (continue watching) for the server owner's account: what they are part-way through or watch next, with progress and when last watched",
       parameters: { type: "object", properties: {} },
     },
   },
