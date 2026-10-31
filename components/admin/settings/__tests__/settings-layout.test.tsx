@@ -26,7 +26,7 @@ function renderLayout() {
       </SettingsGroup>
       <SettingsGroup id="system">
         <section id="system">Runtime facts</section>
-        <a id="server-time-zone" href="#server-time-zone">
+        <a id="time-zone" href="#time-zone">
           zone
         </a>
       </SettingsGroup>
@@ -75,7 +75,7 @@ describe('SettingsLayout', () => {
     await user.click(screen.getByText('zone', { selector: 'a' }))
 
     expect(screen.getByText('Runtime facts')).toBeVisible()
-    expect(window.location.hash).toBe('#server-time-zone')
+    expect(window.location.hash).toBe('#time-zone')
   })
 
   it('ignores a malformed or unknown hash', () => {
