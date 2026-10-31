@@ -47,13 +47,25 @@ describe("createApiToken", () => {
         name: "Laptop",
         tokenHash: hashToken(token),
         prefix: token.slice(0, 10),
+        scope: "full",
         expiresAt: new Date("2026-11-30T12:00:00Z"),
       },
       select: { id: true },
     })
     expect(JSON.stringify(prismaMock.apiToken.create.mock.calls)).not.toContain(token)
-    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.API_TOKEN_CREATED, "admin-1", { credentialId: "tok-1", expiresIn: "30d" })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.API_TOKEN_CREATED, "admin-1", { credentialId: "tok-1", expiresIn: "30d", scope: "full" })
     expect(consume).toHaveBeenCalledWith("admin:api-tokens", "admin-1")
+  })
+
+  it("makes a read-only token when asked, and audits its scope", async () => {
+    await createApiToken({ name: "Lookups", scope: "read" })
+    expect(prismaMock.apiToken.create.mock.calls[0][0].data.scope).toBe("read")
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.API_TOKEN_CREATED, "admin-1", expect.objectContaining({ scope: "read" }))
+  })
+
+  it("refuses an unknown scope", async () => {
+    await expect(createApiToken({ name: "x", scope: "admin" as never })).resolves.toMatchObject({ success: false, code: "VALIDATION" })
+    expect(prismaMock.apiToken.create).not.toHaveBeenCalled()
   })
 
   it("lasts 90 days by default and forever when asked", async () => {

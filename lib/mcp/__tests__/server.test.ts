@@ -16,16 +16,19 @@ jest.mock('@/lib/security/audit-log', () => ({
 jest.mock('@/lib/brand', () => ({ serverName: jest.fn().mockResolvedValue('Northfield Plex') }))
 
 const tools = new Map<string, McpTool>()
+// The catalog's rule (lib/mcp/__tests__/catalog.test.ts): the session's tools, and with a read token only those that read
+const usable = (tool: McpTool, session: Session, scope: string) => tool.allowed(session) && (scope === 'full' || tool.annotations.readOnlyHint)
 jest.mock('@/lib/mcp/catalog', () => ({
-  toolsFor: (session: Session) => [...tools.values()].filter((tool) => tool.allowed(session)),
-  toolFor: (session: Session, name: string) => {
+  toolsFor: (session: Session, scope: string) => [...tools.values()].filter((tool) => usable(tool, session, scope)),
+  toolFor: (session: Session, name: string, scope: string) => {
     const tool = tools.get(name)
-    return tool && tool.allowed(session) ? tool : undefined
+    return tool && usable(tool, session, scope) ? tool : undefined
   },
 }))
 
 const session: Session = { user: { id: 'admin-1', name: 'Mike', isAdmin: true, role: null }, expires: '2026-10-31T12:05:00Z' }
-const principal = { tokenId: 'tok-1', session }
+const principal = { tokenId: 'tok-1', scope: 'full' as const, session }
+const readPrincipal = { ...principal, scope: 'read' as const }
 
 function tool(name: string, overrides: Partial<McpTool> = {}): McpTool {
   return {
@@ -153,6 +156,28 @@ describe('tools/call', () => {
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.MCP_TOOL_CALLED, 'admin-1', expect.objectContaining({ ok: false, tooLarge: true }))
   })
 
+  it("keeps a change's outcome when its result is too large, so a client does not retry it", async () => {
+    tools.set('import', tool('import', { annotations: { readOnlyHint: false }, run: jest.fn().mockResolvedValue({ text: 'x'.repeat(40_001), isError: false }) }))
+
+    const response = await call({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'import' } })
+
+    const result = (response as { result: { content: { text: string }[]; isError: boolean } }).result
+    expect(result.isError).toBe(false)
+    expect(JSON.parse(result.content[0].text)).toMatchObject({ success: true, resultOmitted: true })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.MCP_TOOL_CALLED, 'admin-1', expect.objectContaining({ ok: true, tooLarge: true }))
+  })
+
+  it('redacts a credential in a result', async () => {
+    const text = JSON.stringify({ success: true, data: { sonarr: { url: 'http://sonarr.lan', apiKey: 'raw-sonarr-key' } } })
+    tools.set('leaky', tool('leaky', { run: jest.fn().mockResolvedValue({ text, isError: false }) }))
+
+    const response = await call({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'leaky' } })
+
+    const result = (response as { result: { content: { text: string }[] } }).result
+    expect(result.content[0].text).not.toContain('raw-sonarr-key')
+    expect(JSON.parse(result.content[0].text).data.sonarr).toEqual({ url: 'http://sonarr.lan', apiKey: '[redacted]' })
+  })
+
   it("lets a tool's own limit through", async () => {
     const text = 'x'.repeat(60_000)
     tools.set('rewind', tool('rewind', { maxResultChars: 120_000, run: jest.fn().mockResolvedValue({ text, isError: false }) }))
@@ -182,5 +207,33 @@ describe('tools/call', () => {
     expect(response).toMatchObject({ error: { code: -32602 } })
     expect(hidden.run).not.toHaveBeenCalled()
     expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+})
+
+describe('a read-only token', () => {
+  const readCall = (body: unknown) => handleMessage(body, readPrincipal, 'req-1')
+
+  beforeEach(() => {
+    tools.set('list_users', tool('list_users'))
+    tools.set('create_invite', tool('create_invite', { annotations: { readOnlyHint: false, destructiveHint: false } }))
+  })
+
+  it('lists only the tools that read, and says so', async () => {
+    const list = await readCall({ jsonrpc: '2.0', id: 1, method: 'tools/list' })
+    expect((list as { result: { tools: { name: string }[] } }).result.tools.map((t) => t.name)).toEqual(['list_users'])
+
+    const init = await readCall({ jsonrpc: '2.0', id: 2, method: 'initialize', params: {} })
+    expect((init as { result: { instructions: string } }).result.instructions).toContain('This token is read-only')
+  })
+
+  it('refuses a tool that changes something without running it', async () => {
+    const response = await readCall({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'create_invite' } })
+    expect(response).toMatchObject({ error: { code: -32602, message: 'Unknown tool: create_invite' } })
+    expect(tools.get('create_invite')?.run).not.toHaveBeenCalled()
+  })
+
+  it('runs a tool that reads', async () => {
+    const response = await readCall({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'list_users' } })
+    expect(response).toMatchObject({ result: { isError: false } })
   })
 })

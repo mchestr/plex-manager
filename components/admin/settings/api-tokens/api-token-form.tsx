@@ -11,8 +11,10 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/toast"
 import { API_TOKEN_EXPIRIES, API_TOKEN_EXPIRY_LABELS, type ApiTokenExpiry } from "@/lib/mcp/token-expiry"
+import { API_TOKEN_SCOPES, API_TOKEN_SCOPE_LABELS, type ApiTokenScopeOption } from "@/lib/mcp/token-scope"
 
 const EXPIRY_ITEMS = API_TOKEN_EXPIRIES.map((value) => ({ value, label: API_TOKEN_EXPIRY_LABELS[value] }))
+const SCOPE_ITEMS = API_TOKEN_SCOPES.map((value) => ({ value, label: API_TOKEN_SCOPE_LABELS[value] }))
 
 /** The token once made, with the Claude Code command that adds the server. */
 function NewToken({ token, endpoint }: { token: string; endpoint: string }) {
@@ -65,9 +67,10 @@ function NewToken({ token, endpoint }: { token: string; endpoint: string }) {
   )
 }
 
-/** Makes a token: a name and an expiry, then the token, shown once. */
+/** Makes a token: a name, what it may do and an expiry, then the token, shown once. */
 export function ApiTokenForm({ endpoint }: { endpoint: string }) {
   const [name, setName] = useState("")
+  const [scope, setScope] = useState<ApiTokenScopeOption>("full")
   const [expiresIn, setExpiresIn] = useState<ApiTokenExpiry>("90d")
   const [error, setError] = useState<string | null>(null)
   const [token, setToken] = useState<string | null>(null)
@@ -77,7 +80,7 @@ export function ApiTokenForm({ endpoint }: { endpoint: string }) {
     event.preventDefault()
     setError(null)
     startTransition(async () => {
-      const result = await createApiToken({ name, expiresIn })
+      const result = await createApiToken({ name, expiresIn, scope })
       if (!result.success) {
         setError(result.error)
         return
@@ -102,6 +105,23 @@ export function ApiTokenForm({ endpoint }: { endpoint: string }) {
             data-testid="settings-api-token-name"
           />
         </div>
+        <Field name="scope">
+          <FieldLabel nativeLabel={false} render={<div />}>
+            Access
+          </FieldLabel>
+          <Select items={SCOPE_ITEMS} value={scope} onValueChange={(next) => next && setScope(next)}>
+            <SelectTrigger aria-label="Access" data-testid="settings-api-token-scope">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SCOPE_ITEMS.map((item) => (
+                <SelectItem key={item.value} value={item.value} label={item.label} data-testid={`settings-api-token-scope-${item.value}`}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
         <Field name="expiresIn">
           <FieldLabel nativeLabel={false} render={<div />}>
             Expires

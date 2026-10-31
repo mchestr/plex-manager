@@ -70,6 +70,8 @@ export const LIMITS = {
   "assistant:history": { points: 60, duration: HOUR },
   // MCP requests per API token (/api/mcp); each action's own limit still applies
   mcp: { points: 120, duration: MINUTE },
+  // MCP requests per address, counted before the token is looked up
+  "mcp:ip": { points: 600, duration: MINUTE },
   // API tokens made per admin
   "admin:api-tokens": { points: 10, duration: HOUR },
   "llm:discord:dm": { points: 20, duration: HOUR },

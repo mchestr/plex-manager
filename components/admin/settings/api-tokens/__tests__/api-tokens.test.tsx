@@ -37,7 +37,7 @@ describe("ApiTokenForm", () => {
     await user.type(screen.getByTestId("settings-api-token-name"), "Laptop")
     await user.click(screen.getByTestId("settings-api-token-create"))
 
-    expect(createApiToken).toHaveBeenCalledWith({ name: "Laptop", expiresIn: "90d" })
+    expect(createApiToken).toHaveBeenCalledWith({ name: "Laptop", expiresIn: "90d", scope: "full" })
     expect(await screen.findByTestId("settings-api-token-value")).toHaveValue(TOKEN)
     expect(screen.getByTestId("settings-api-token-command")).toHaveValue(
       `claude mcp add --transport http plex-manager ${ENDPOINT} --header "Authorization: Bearer ${TOKEN}"`
@@ -47,6 +47,19 @@ describe("ApiTokenForm", () => {
     await user.click(screen.getByTestId("settings-api-token-copy"))
     expect(writeText).toHaveBeenCalledWith(TOKEN)
     expect(mockShowSuccess).toHaveBeenCalledWith("Token copied")
+  })
+
+  it("makes a read-only token when Access is Read only", async () => {
+    const user = userEvent.setup()
+    jest.mocked(createApiToken).mockResolvedValue({ success: true, data: { id: "tok-2", token: TOKEN } })
+
+    render(<ApiTokenForm endpoint={ENDPOINT} />)
+    await user.type(screen.getByTestId("settings-api-token-name"), "Lookups")
+    await user.click(screen.getByTestId("settings-api-token-scope"))
+    await user.click(await screen.findByTestId("settings-api-token-scope-read"))
+    await user.click(screen.getByTestId("settings-api-token-create"))
+
+    await waitFor(() => expect(createApiToken).toHaveBeenCalledWith({ name: "Lookups", expiresIn: "90d", scope: "read" }))
   })
 
   it("says when copying fails", async () => {
@@ -80,6 +93,7 @@ describe("ApiTokenList", () => {
     id: "tok-1",
     name: "Laptop",
     prefix: "pmk_abcdef",
+    scope: "full" as const,
     createdAt: "2026-10-01T00:00:00.000Z",
     lastUsedAt: null,
     expiresAt: "2027-01-01T00:00:00.000Z",
@@ -90,8 +104,14 @@ describe("ApiTokenList", () => {
     expect(screen.getByText("No tokens yet.")).toBeInTheDocument()
   })
 
+  it("marks a read-only token", () => {
+    render(<ApiTokenList tokens={[{ ...token, scope: "read" }]} />)
+    expect(screen.getByTestId("settings-api-token-read-only")).toHaveTextContent("Read only")
+  })
+
   it("lists a token by name and prefix, never used", () => {
     render(<ApiTokenList tokens={[token]} />)
+    expect(screen.queryByTestId("settings-api-token-read-only")).not.toBeInTheDocument()
     const row = screen.getByTestId("settings-api-token-tok-1")
     expect(row).toHaveTextContent("Laptop")
     expect(row).toHaveTextContent("pmk_abcdef…")

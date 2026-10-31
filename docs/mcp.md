@@ -9,7 +9,8 @@ job. Every call goes through the same checks as the admin UI.
 ## Connect Claude Code
 
 1. In **Admin, Settings, API access**, name a token (for example "Claude Code
-   on my laptop"), choose when it expires and select **Make token**.
+   on my laptop"), choose what it may do and when it expires, and select
+   **Make token**.
 2. Copy the token, or the ready-made command shown with it. The token is shown
    once; the app keeps only its SHA-256.
 3. Run the command:
@@ -27,6 +28,10 @@ header works the same way.
 ## Tokens
 
 - A token is `pmk_` and 43 characters. Keep it secret: it acts as you.
+- **Access** is either everything you can do, or **Read only**: a read-only
+  token lists and calls only the tools that read (the admin reads, the
+  assistant's lookups and the actions on the reviewed read-only list in
+  `lib/mcp/action-tools.ts`), so a leaked one cannot change anything.
 - It works only while you are an admin and your account is enabled. Demoting
   or disabling you stops every token of yours at once, with no wait.
 - It expires after 30 days, 90 days (the default), a year, or never.
@@ -51,7 +56,10 @@ A tool call runs the action itself, inside the token owner's session
 audit entry all apply. Results are the action's own JSON,
 `{ "success": true, "data": ... }` or
 `{ "success": false, "code": "...", "error": "..." }`, with `isError` set on a
-refusal. Secrets in settings show only their last four, as on the settings page.
+refusal. Secrets in settings show only their last four, as on the settings page,
+and as a last guard the server redacts any string under a credential column's
+name (`apiKey`, `token`, `botToken` and the rest of `ENCRYPTED_FIELDS` that is
+not free text) before a result leaves it (`lib/mcp/redact.ts`).
 
 Left out, with the reasons in `lib/mcp/action-modules.ts` and
 `lib/mcp/action-tools.ts`: public actions and forms, actions that need a
@@ -75,8 +83,11 @@ Each connected client pays for the tool list and for every result it reads.
   with `ENABLE_TOOL_SEARCH=false`, with `ENABLE_TOOL_SEARCH=auto` on a 1M-token
   window, or on models without tool search. In claude.ai and Claude Desktop,
   choose **Auto** or **On demand** under Tool access.
-- **Results.** A result over 40,000 characters (about 10k tokens) is refused
-  with `RESULT_TOO_LARGE` and a hint to ask for less (`lib/mcp/result-limit.ts`).
+- **Results.** A read's result over 40,000 characters (about 10k tokens) is
+  refused with `RESULT_TOO_LARGE` and a hint to ask for less
+  (`lib/mcp/result-limit.ts`). A tool that changes something has already done
+  it, so its oversized result keeps the call's outcome and leaves the result
+  out (`resultOmitted`), and a client never retries a change that happened.
   List tools page (`page`, `pageSize`) and leave out long text: `list_users`
   carries list rows (`get_user` has the rest), `list_llm_usage` gives the size
   of each prompt and response (`get_llm_usage` reads one, clipped to 15,000
@@ -89,7 +100,9 @@ Each connected client pays for the tool list and for every result it reads.
 
 ## Limits and transport
 
-- 120 requests a minute per token (`mcp`), on top of each action's own limit.
+- 600 requests a minute per address (`mcp:ip`), counted before the token is
+  looked up, then 120 a minute per token (`mcp`), on top of each action's own
+  limit. A body over 1 MB is a 413.
 - One JSON-RPC message per POST, answered with JSON. The server keeps no
   session, so GET and DELETE are 405 and there is no `Mcp-Session-Id`.
 - Requests from a browser must come from the app's own origin (the transport's

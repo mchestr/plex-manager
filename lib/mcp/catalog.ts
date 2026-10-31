@@ -10,12 +10,18 @@
  * Names are unique across the three; the catalog throws at first use when
  * they are not, which `lib/mcp/__tests__/catalog.test.ts` catches first.
  *
+ * A caller sees the tools its session may use; a `read` token, only those of
+ * them that read (`readOnlyHint`: the admin reads, the reviewed read-only
+ * actions and the assistant's read tools).
+ *
  * @module lib/mcp/catalog
  */
 
 import "server-only"
 
 import type { Session } from "next-auth"
+
+import type { ApiTokenScope } from "@/lib/generated/prisma/client"
 
 import { actionTools } from "@/lib/mcp/action-tools"
 import { assistantTools } from "@/lib/mcp/assistant-tools"
@@ -40,13 +46,18 @@ export function allTools(): ReadonlyMap<string, McpTool> {
   return tools
 }
 
-/** The tools `session` may see and call. */
-export function toolsFor(session: Session): McpTool[] {
-  return [...allTools().values()].filter((tool) => tool.allowed(session))
+/** Whether a caller with `session` and a token of `scope` may see and call `tool`. */
+function usable(tool: McpTool, session: Session, scope: ApiTokenScope): boolean {
+  return tool.allowed(session) && (scope === "full" || tool.annotations.readOnlyHint)
 }
 
-/** The named tool when `session` may call it. */
-export function toolFor(session: Session, name: string): McpTool | undefined {
+/** The tools `session` may see and call with a token of `scope`. */
+export function toolsFor(session: Session, scope: ApiTokenScope): McpTool[] {
+  return [...allTools().values()].filter((tool) => usable(tool, session, scope))
+}
+
+/** The named tool when `session` may call it with a token of `scope`. */
+export function toolFor(session: Session, name: string, scope: ApiTokenScope): McpTool | undefined {
   const tool = allTools().get(name)
-  return tool && tool.allowed(session) ? tool : undefined
+  return tool && usable(tool, session, scope) ? tool : undefined
 }

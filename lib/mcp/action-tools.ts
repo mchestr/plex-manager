@@ -68,7 +68,33 @@ function withInviteUrl(result: ActionResult<unknown, string>): ActionResult<unkn
   return typeof code === "string" ? { ...result, data: { ...result.data, url: publicInviteUrl(code, getBaseUrl()) } } : result
 }
 
-const READ_PREFIXES = ["get", "list", "preview", "estimate", "discover"]
+/**
+ * The actions that only read: no state they change beyond an audit entry or a
+ * rate-limit point. They alone are `readOnlyHint` tools, which clients may run
+ * without asking and a `read` token may call (`lib/mcp/catalog.ts`), so this
+ * is a reviewed list, not a guess from names; the catalog test fails when an
+ * action named like a read (get, list, preview, estimate, discover) is missing.
+ *
+ * @internal Exported for the catalog test.
+ */
+export const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set([
+  "discoverMcpTools",
+  "estimateRewindDryRun",
+  "getActiveAnnouncements",
+  "getAvailableLibraries",
+  "getOnboardingStatus",
+  "getRewindDryRun",
+  "getRewindRollbackTarget",
+  "getRewindSeasonStatus",
+  "getRewindStatus",
+  "getSubscriptionProvisioning",
+  "getUserActivityTimeline",
+  "getUserPlexWrapped",
+  "getWatchlistSyncSettings",
+  "listLLMModels",
+  "previewMemberRemoval",
+])
+
 const DESTRUCTIVE_PREFIXES = ["delete", "remove", "revoke", "unshare", "rollback", "cancel", "disable", "adminCancel"]
 
 /**
@@ -89,6 +115,8 @@ function fallbackDescription(exportName: string): string {
   return `${words.charAt(0).toUpperCase()}${words.slice(1)}.`
 }
 
+// A setup action is admin only once setup is complete, and before that it needs
+// the browser's claim cookie, which an MCP call never has (`setupAction`)
 const AUDIENCE: Record<string, string> = {
   admin: "Admin only.",
   setup: "Admin only.",
@@ -116,7 +144,7 @@ function actionTool(exportName: string, value: unknown): McpTool | null {
   const { inputSchema, unwrap } = toolInputSchema(input)
   const summary = ACTION_DOCS[exportName] ?? fallbackDescription(exportName)
   const audience = AUDIENCE[auth] ?? `Needs the ${auth.slice("permission:".length)} permission.`
-  const readOnly = startsWithAny(exportName, READ_PREFIXES)
+  const readOnly = READ_ONLY_ACTIONS.has(exportName)
 
   const link = INVITE_RESULTS.has(exportName) ? " The result's `url` is the link to send." : ""
 

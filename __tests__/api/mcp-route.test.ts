@@ -13,7 +13,9 @@ import { NextRequest } from 'next/server'
 import { DELETE, GET, POST } from '@/app/api/mcp/route'
 import { handleMessage } from '@/lib/mcp/server'
 import { authenticateToken } from '@/lib/mcp/tokens'
-import { consume } from '@/lib/security/rate-limit'
+import { NextResponse } from 'next/server'
+
+import { consume, limitRequest } from '@/lib/security/rate-limit'
 
 jest.mock('@/lib/mcp/server', () => ({
   PARSE_ERROR: -32700,
@@ -25,12 +27,12 @@ jest.mock('@/lib/mcp/tokens', () => ({
   ...jest.requireActual('@/lib/mcp/tokens'),
   authenticateToken: jest.fn(),
 }))
-jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn() }))
+jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn(), limitRequest: jest.fn() }))
 jest.mock('@/lib/env', () => ({ ...jest.requireActual('@/lib/env'), getBaseUrl: () => 'https://plex.example.com' }))
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
 const TOKEN = `pmk_${'a'.repeat(43)}`
-const principal = { tokenId: 'tok-1', session: { user: { id: 'admin-1', isAdmin: true }, expires: '' } }
+const principal = { tokenId: 'tok-1', scope: 'full' as const, session: { user: { id: 'admin-1', isAdmin: true }, expires: '' } }
 
 function post(body: string, headers: Record<string, string> = {}) {
   return POST(
@@ -48,6 +50,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   jest.mocked(authenticateToken).mockResolvedValue(principal)
   jest.mocked(consume).mockResolvedValue({ ok: true })
+  jest.mocked(limitRequest).mockResolvedValue(null)
   jest.mocked(handleMessage).mockResolvedValue({ jsonrpc: '2.0', id: 1, result: {} })
 })
 
@@ -110,6 +113,29 @@ it('refuses a body over 1 MB', async () => {
   const response = await post(JSON.stringify({ pad: 'x'.repeat(1_000_001) }))
   expect(response.status).toBe(413)
   expect(handleMessage).not.toHaveBeenCalled()
+})
+
+it('refuses a body over 1 MB in bytes though under it in characters', async () => {
+  // 400,000 three-byte characters: 1.2 MB
+  const response = await post(JSON.stringify({ pad: '€'.repeat(400_000) }))
+  expect(response.status).toBe(413)
+  expect(handleMessage).not.toHaveBeenCalled()
+})
+
+it('refuses a declared Content-Length over 1 MB before reading the body', async () => {
+  const response = await post(ping, { 'Content-Length': '2000000' })
+  expect(response.status).toBe(413)
+  expect(handleMessage).not.toHaveBeenCalled()
+})
+
+it('limits each address before looking a token up', async () => {
+  jest.mocked(limitRequest).mockResolvedValue(NextResponse.json({ error: 'Too many requests' }, { status: 429 }))
+
+  const response = await post(ping)
+
+  expect(response.status).toBe(429)
+  expect(limitRequest).toHaveBeenCalledWith('mcp:ip', expect.any(Request))
+  expect(authenticateToken).not.toHaveBeenCalled()
 })
 
 it.each([

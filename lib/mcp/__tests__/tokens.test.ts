@@ -15,6 +15,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof prismaMock.apiToken.findUnique>
 function row(overrides: Record<string, unknown> = {}, user: Record<string, unknown> = {}): Row {
   return {
     id: 'tok-1',
+    scope: 'full',
     revokedAt: null,
     expiresAt: null,
     lastUsedAt: NOW,
@@ -73,6 +74,7 @@ describe('authenticateToken', () => {
 
     expect(principal).toEqual({
       tokenId: 'tok-1',
+      scope: 'full',
       session: {
         user: { id: 'admin-1', name: 'Mike', email: 'mike@example.com', image: null, isAdmin: true, role: 'support' },
         expires: '2026-10-31T12:05:00.000Z',
@@ -89,6 +91,17 @@ describe('authenticateToken', () => {
   ])('refuses a token that is %s', async (_label, found) => {
     prismaMock.apiToken.findUnique.mockResolvedValue(found)
     expect(await authenticateToken('pmk_x', NOW)).toBeNull()
+  })
+
+  it("carries a read-only token's scope", async () => {
+    prismaMock.apiToken.findUnique.mockResolvedValue(row({ scope: 'read' }))
+    expect(await authenticateToken('pmk_x', NOW)).toMatchObject({ scope: 'read' })
+  })
+
+  it('still accepts the token when its last use cannot be written', async () => {
+    prismaMock.apiToken.findUnique.mockResolvedValue(row({ lastUsedAt: null }))
+    prismaMock.apiToken.update.mockRejectedValue(new Error('database busy'))
+    expect(await authenticateToken('pmk_x', NOW)).toMatchObject({ tokenId: 'tok-1' })
   })
 
   it('accepts a token before its expiry', async () => {

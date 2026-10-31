@@ -1,6 +1,7 @@
 "use client"
 
 import { revokeApiToken } from "@/actions/admin/api-tokens"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Time } from "@/components/ui/time"
@@ -17,6 +18,11 @@ function TokenRow({ token }: { token: ApiTokenRow }) {
         <span className="text-ui font-medium text-foreground">{token.name}</span>
         <span className="font-mono text-label text-muted-foreground">{token.prefix}…</span>
       </div>
+      {token.scope === "read" && (
+        <Badge variant="neutral" data-testid="settings-api-token-read-only">
+          Read only
+        </Badge>
+      )}
       <dl className="flex flex-col text-label text-muted-foreground">
         <div className="flex gap-1">
           <dt>Last used</dt>

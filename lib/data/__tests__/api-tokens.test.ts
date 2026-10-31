@@ -20,11 +20,11 @@ beforeEach(() => {
 
 it("lists the caller's own live tokens without their hashes", async () => {
   prismaMock.apiToken.findMany.mockResolvedValue([
-    { id: "tok-1", name: "Laptop", prefix: "pmk_abcdef", createdAt: NOW, lastUsedAt: null, expiresAt: NOW },
+    { id: "tok-1", name: "Laptop", prefix: "pmk_abcdef", scope: "read", createdAt: NOW, lastUsedAt: null, expiresAt: NOW },
   ] as never)
 
   await expect(listOwnApiTokens(NOW)).resolves.toEqual([
-    { id: "tok-1", name: "Laptop", prefix: "pmk_abcdef", createdAt: NOW.toISOString(), lastUsedAt: null, expiresAt: NOW.toISOString() },
+    { id: "tok-1", name: "Laptop", prefix: "pmk_abcdef", scope: "read", createdAt: NOW.toISOString(), lastUsedAt: null, expiresAt: NOW.toISOString() },
   ])
   const query = prismaMock.apiToken.findMany.mock.calls[0][0]
   expect(query?.where).toEqual({ userId: "admin-1", revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: NOW } }] })

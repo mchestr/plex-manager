@@ -13,7 +13,7 @@ export function ApiAccessSection({ tokens, endpoint }: { tokens: ApiTokenRow[]; 
     <SettingsSection
       id="api-access"
       title="API access"
-      description={`Personal tokens for the MCP endpoint at ${endpoint}. A token can do anything you can do here, so keep it secret.`}
+      description={`Personal tokens for the MCP endpoint at ${endpoint}. A token can do anything you can do here, or only read if you choose, so keep it secret.`}
     >
       <div className="flex flex-col gap-6">
         <ApiTokenForm endpoint={endpoint} />

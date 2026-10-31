@@ -19,8 +19,11 @@
  *
  * A call runs inside the token owner's session (`runAsPrincipal`) and a log
  * context with their id. A thrown error becomes `isError` with fixed text,
- * never the error's message. A result over the size cap (`lib/mcp/result-limit.ts`)
- * becomes a `RESULT_TOO_LARGE` refusal. Every call writes `MCP_TOOL_CALLED` with the
+ * never the error's message. A credential string in the result is redacted
+ * (`lib/mcp/redact.ts`), and a result over the size cap (`lib/mcp/result-limit.ts`)
+ * becomes a `RESULT_TOO_LARGE` refusal, or for a tool that changes something,
+ * its outcome without the result. A `read` token lists and calls only the
+ * tools that read. Every call writes `MCP_TOOL_CALLED` with the
  * tool, its source, the token's row id (`credentialId`) and the outcome, never arguments or output.
  *
  * @module lib/mcp/server
@@ -33,6 +36,7 @@ import { z } from "zod"
 import { serverName } from "@/lib/brand"
 import { toolFor, toolsFor } from "@/lib/mcp/catalog"
 import { runAsPrincipal } from "@/lib/mcp/principal"
+import { redactCredentials } from "@/lib/mcp/redact"
 import { limitResult, MAX_RESULT_CHARS } from "@/lib/mcp/result-limit"
 import type { TokenPrincipal } from "@/lib/mcp/tokens"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
@@ -94,14 +98,15 @@ async function instructions(principal: TokenPrincipal): Promise<string> {
     "Results are JSON, `{ success: true, data }` or `{ success: false, code, error }`, of at most",
     `${MAX_RESULT_CHARS} characters: a larger result is refused with RESULT_TOO_LARGE, so ask for less.`,
     "An invite's `url` is the link to send to the invitee.",
+    ...(principal.scope === "read" ? ["This token is read-only: it lists and calls only the tools that read."] : []),
   ].join(" ")
 }
 
 async function callTool(id: JsonRpcId, principal: TokenPrincipal, requestIdValue: string, params: unknown): Promise<JsonRpcResponse> {
   const parsed = callParamsSchema.safeParse(params)
   if (!parsed.success) return rpcError(id, INVALID_PARAMS, "Invalid tool call")
-  const { session, tokenId } = principal
-  const tool = toolFor(session, parsed.data.name)
+  const { session, tokenId, scope } = principal
+  const tool = toolFor(session, parsed.data.name, scope)
   if (!tool) return rpcError(id, INVALID_PARAMS, `Unknown tool: ${parsed.data.name}`)
 
   let outcome: { text: string; isError: boolean }
@@ -113,8 +118,10 @@ async function callTool(id: JsonRpcId, principal: TokenPrincipal, requestIdValue
     logger.error("MCP tool failed", error, { tool: tool.name, credentialId: tokenId })
     outcome = { text: TOOL_FAILED, isError: true }
   }
-  const limited = limitResult(outcome, tool.maxResultChars)
-  if (limited.tooLarge) logger.warn("MCP tool result over the size limit", { tool: tool.name, chars: outcome.text.length })
+  const clean = redactCredentials(outcome.text)
+  if (clean.redacted) logger.warn("MCP tool result carried a credential; it was redacted", { tool: tool.name })
+  const limited = limitResult({ ...outcome, text: clean.text }, { readOnly: tool.annotations.readOnlyHint, limit: tool.maxResultChars })
+  if (limited.tooLarge) logger.warn("MCP tool result over the size limit", { tool: tool.name, chars: clean.text.length })
   outcome = limited
   logAuditEvent(AuditEventType.MCP_TOOL_CALLED, session.user.id, {
     tool: tool.name,
@@ -162,7 +169,7 @@ export async function handleMessage(body: unknown, principal: TokenPrincipal, re
         jsonrpc: "2.0",
         id,
         result: {
-          tools: toolsFor(principal.session).map(({ name, description, inputSchema, annotations }) => ({
+          tools: toolsFor(principal.session, principal.scope).map(({ name, description, inputSchema, annotations }) => ({
             name,
             description,
             inputSchema,

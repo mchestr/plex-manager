@@ -1,3 +1,6 @@
+-- CreateEnum
+CREATE TYPE "ApiTokenScope" AS ENUM ('full', 'read');
+
 -- CreateTable
 CREATE TABLE "ApiToken" (
     "id" TEXT NOT NULL,
@@ -5,6 +8,7 @@ CREATE TABLE "ApiToken" (
     "name" TEXT NOT NULL,
     "tokenHash" TEXT NOT NULL,
     "prefix" TEXT NOT NULL,
+    "scope" "ApiTokenScope" NOT NULL DEFAULT 'full',
     "lastUsedAt" TIMESTAMP(3),
     "expiresAt" TIMESTAMP(3),
     "revokedAt" TIMESTAMP(3),

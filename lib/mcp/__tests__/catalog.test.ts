@@ -7,7 +7,7 @@ import { join, relative } from 'node:path'
 import type { Session } from 'next-auth'
 
 import { ACTION_MODULES, EXCLUDED_MODULES } from '@/lib/mcp/action-modules'
-import { EXCLUDED, toolName } from '@/lib/mcp/action-tools'
+import { EXCLUDED, READ_ONLY_ACTIONS, toolName } from '@/lib/mcp/action-tools'
 import { allTools, toolsFor } from '@/lib/mcp/catalog'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
@@ -82,6 +82,16 @@ describe('the catalog', () => {
     ])
   })
 
+  it('marks as read-only exactly the reviewed actions, and every action named like a read is reviewed', () => {
+    const actions = Object.values(ACTION_MODULES).flatMap((module) => Object.keys(module))
+    const readNamed = actions.filter((name) => /^(get|list|preview|estimate|discover)[A-Z]/.test(name) && !EXCLUDED[name])
+    expect(readNamed.filter((name) => !READ_ONLY_ACTIONS.has(name))).toEqual([])
+    expect([...READ_ONLY_ACTIONS].filter((name) => !actions.includes(name))).toEqual([])
+
+    const readOnlyActionTools = tools.filter((tool) => tool.source === 'action' && tool.annotations.readOnlyHint).map((tool) => tool.name).sort()
+    expect(readOnlyActionTools).toEqual([...READ_ONLY_ACTIONS].map(toolName).sort())
+  })
+
   it('marks reads read-only and deletes destructive', () => {
     const byName = allTools()
     expect(byName.get('list_invites')?.annotations).toEqual({ readOnlyHint: true })
@@ -93,11 +103,11 @@ describe('the catalog', () => {
 
 describe('toolsFor', () => {
   it('gives an admin every tool', () => {
-    expect(toolsFor(admin)).toHaveLength(allTools().size)
+    expect(toolsFor(admin, 'full')).toHaveLength(allTools().size)
   })
 
   it("gives a role only its permissions' assistant tools and the member's own actions", () => {
-    const names = toolsFor(support).map((tool) => tool.name)
+    const names = toolsFor(support, 'full').map((tool) => tool.name)
     expect(names).toContain('get_plex_status')
     expect(names).toContain('delete_assistant_conversation')
     expect(names).not.toContain('create_invite')
@@ -106,10 +116,26 @@ describe('toolsFor', () => {
   })
 
   it('gives a member no admin tool', () => {
-    const tools = toolsFor(member)
+    const tools = toolsFor(member, 'full')
     expect(tools.map((tool) => tool.name)).toContain('request_rewind_generation')
     expect(tools.every((tool) => tool.source === 'action')).toBe(true)
     expect(tools.map((tool) => tool.name)).not.toContain('create_invite')
+  })
+})
+
+describe('a read-only token', () => {
+  const read = toolsFor(admin, 'read')
+  const names = read.map((tool) => tool.name)
+
+  it('gets only the tools that read', () => {
+    expect(read.every((tool) => tool.annotations.readOnlyHint)).toBe(true)
+    expect(names).toEqual(expect.arrayContaining(['list_users', 'list_invites', 'get_admin_settings', 'get_plex_status', 'get_rewind_status', 'preview_member_removal']))
+  })
+
+  it('gets no tool that changes something', () => {
+    for (const name of ['create_invite', 'delete_invite', 'remove_member', 'set_user_role', 'update_rewind_settings', 'mark_media_finished', 'save_plex_server']) {
+      expect(names).not.toContain(name)
+    }
   })
 })
 

@@ -8,7 +8,8 @@
  * Each request re-reads the owner: a token works only while its owner is an
  * admin and not disabled, and only until it is revoked or expires. The session
  * it yields carries the owner's current admin flag and role, so demoting or
- * disabling someone stops their tokens at once.
+ * disabling someone stops their tokens at once. A `read` token reaches only
+ * the tools that read; a `full` one, every tool its owner may use.
  *
  * @module lib/mcp/tokens
  */
@@ -18,6 +19,7 @@ import "server-only"
 import { createHash, randomBytes } from "node:crypto"
 import type { Session } from "next-auth"
 
+import type { ApiTokenScope } from "@/lib/generated/prisma/client"
 import { parseRole } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
@@ -58,6 +60,8 @@ export function bearerToken(header: string | null): string | null {
 
 export interface TokenPrincipal {
   tokenId: string
+  /** `read` limits the token to the tools that only read (`lib/mcp/catalog.ts`). */
+  scope: ApiTokenScope
   session: Session
 }
 
@@ -70,6 +74,7 @@ export async function authenticateToken(token: string, now = new Date()): Promis
     where: { tokenHash: hashToken(token) },
     select: {
       id: true,
+      scope: true,
       revokedAt: true,
       expiresAt: true,
       lastUsedAt: true,
@@ -81,13 +86,17 @@ export async function authenticateToken(token: string, now = new Date()): Promis
   if (!user.isAdmin || user.disabledAt) return null
 
   if (!row.lastUsedAt || now.getTime() - row.lastUsedAt.getTime() > LAST_USED_RESOLUTION_MS) {
-    prisma.apiToken
-      .update({ where: { id: row.id }, data: { lastUsedAt: now } })
-      .catch((error: unknown) => logger.warn("Could not record the token's last use", { tokenId: row.id, error }))
+    // Awaited, so a host that freezes the process after the response keeps it; a failure only logs
+    try {
+      await prisma.apiToken.update({ where: { id: row.id }, data: { lastUsedAt: now } })
+    } catch (error) {
+      logger.warn("Could not record the token's last use", { credentialId: row.id, error })
+    }
   }
 
   return {
     tokenId: row.id,
+    scope: row.scope,
     session: {
       user: {
         id: user.id,
