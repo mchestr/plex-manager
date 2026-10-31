@@ -206,6 +206,7 @@ The guides in `docs/` give the full details:
 | [Roles](docs/roles.md) | Admins, the Support role and permissions |
 | [Affiliate invites](docs/affiliate-invites.md) | Affiliates, their tiers and invites, the server cap and the switch |
 | [Assistant](docs/assistant.md) | The data, MCP servers and knowledge base that the admin assistant can use |
+| [MCP endpoint](docs/mcp.md) | API tokens, and connecting Claude Code or another MCP client to run admin actions |
 | [Request limits](docs/request-limits.md) | Request limits from watch time, and the Discord stat channels |
 | [Inactive members](docs/inactive-members.md) | Last seen from Tautulli, and removing Plex access from members who stopped watching |
 | [Stripe](docs/stripe.md) | Subscriptions, the webhook, and Plex and Jellyfin access |

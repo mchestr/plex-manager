@@ -27,6 +27,7 @@ model User {
   plexWrapped           PlexWrapped[]
   llmUsage              LLMUsage[]
   chatConversations     ChatConversation[]
+  apiTokens             ApiToken[]
   inviteUsages          InviteUsage[]
   discordConnection     DiscordConnection?
   discordOAuthStates    DiscordOAuthState[]
@@ -421,6 +422,26 @@ model ChatConversation {
 }
 
 /// One message of an admin assistant conversation, kept for its history page (lib/chatbot/history.ts)
+/// A personal token for the MCP endpoint (`/api/mcp`, docs/mcp.md). Only its SHA-256 is stored;
+/// the owner sees the token once, when it is made
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The owner's label, such as "Claude Code on my laptop"
+  name       String
+  /// SHA-256 of the token, hex
+  tokenHash  String    @unique
+  /// The token's first characters, so the owner can tell tokens apart
+  prefix     String
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
 model ChatConversationMessage {
   id             String           @id @default(cuid())
   conversationId String

@@ -11,6 +11,9 @@
  * Never call it inside `'use cache'`: the session is the viewer's, and a
  * cached scope is shared between viewers.
  *
+ * Inside an MCP tool call it returns the token owner's session
+ * (`lib/mcp/principal.ts`), so the same guards check an MCP caller.
+ *
  * @module lib/data/session
  */
 
@@ -20,5 +23,6 @@ import { getServerSession } from "next-auth"
 import { cache } from "react"
 
 import { authOptions } from "@/lib/auth"
+import { principalSession } from "@/lib/mcp/principal"
 
-export const getSession = cache(() => getServerSession(authOptions))
+export const getSession = cache(async () => principalSession() ?? getServerSession(authOptions))

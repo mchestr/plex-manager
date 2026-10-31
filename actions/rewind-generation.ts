@@ -6,9 +6,9 @@
  * check, enqueue and report status, and return at once.
  */
 
-import { refresh } from "next/cache"
 import { z } from "zod"
 
+import { refreshView } from "@/lib/actions/invalidate"
 import { getWrappedSettings } from "@/lib/wrapped/generation-settings"
 import { adminAction, memberAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
@@ -158,7 +158,7 @@ export const adminRegenerateRewind = adminAction({
       alreadyQueued: queued.alreadyQueued,
     })
     // The admin page that asked shows the queued run (P11.19: the action refreshes, not the client)
-    refresh()
+    refreshView()
     return ok({ alreadyQueued: queued.alreadyQueued })
   },
 })

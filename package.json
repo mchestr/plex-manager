@@ -12,6 +12,7 @@
     "build:e2e": "npm run build",
     "start": "next start",
     "start:prod": "NEXT_MANUAL_SIG_HANDLE=true node --env-file-if-exists=.env .next/standalone/server.js",
+    "mcp:docs": "tsx --tsconfig tsconfig.scripts.json scripts/gen-mcp-docs.ts",
     "env:docs": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/gen-env-reference.ts",
     "lint": "eslint .",
     "typecheck": "prisma generate && next typegen && tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",

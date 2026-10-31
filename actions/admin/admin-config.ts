@@ -1,5 +1,6 @@
 "use server"
 
+import { expireTag } from "@/lib/actions/invalidate"
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionResult } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
@@ -11,7 +12,7 @@ import { clearOfferedPricesCache, PLAN_NAMES_TAG } from "@/lib/stripe/prices"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
-import { revalidatePath, updateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 /**
@@ -31,7 +32,7 @@ export const setLLMDisabled = adminAction({
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("llm", before, { llmDisabled: disabled }))
     // The cached AI check reads the flag too (P10.19)
-    updateTag(CONNECTION_HEALTH_TAG)
+    expireTag(CONNECTION_HEALTH_TAG)
     return ok(null)
   },
 })
@@ -102,7 +103,7 @@ export const updateServerTimeZone = adminAction({
       to: zone,
     })
     // Every page that shows a time or the season reads the zone
-    updateTag(APP_SETTINGS_TAG)
+    expireTag(APP_SETTINGS_TAG)
     revalidatePath("/", "layout")
     return ok({ timezone: zone })
   },
@@ -188,7 +189,7 @@ export const updateStripeSettings = adminAction({
     // Invalidate the offered-prices cache so a price-id change is reflected on
     // /subscribe immediately rather than after the TTL.
     clearOfferedPricesCache()
-    updateTag(PLAN_NAMES_TAG)
+    expireTag(PLAN_NAMES_TAG)
     revalidatePath("/admin/settings")
     return ok(null)
   },
@@ -292,7 +293,7 @@ export const setStripeEnabled = adminAction({
     // /subscribe immediately (a stale cache could otherwise offer prices for up
     // to the TTL after disabling).
     clearOfferedPricesCache()
-    updateTag(PLAN_NAMES_TAG)
+    expireTag(PLAN_NAMES_TAG)
     revalidatePath("/admin/settings")
     revalidatePath("/")
     return ok({ status: "saved" })
