@@ -514,16 +514,18 @@ with the current encryption key. Enter it again."). To recover:
   so app admins demote members in the UI, and a Jellyfin lookup that fails (a
   timeout or a server error) keeps the stored role. The Plex server owner and
   the last admin cannot be demoted.
-- **Unsharing removes one server's share only**: Unshare in Admin → Users, and
-  the Stripe access removal, delete the member's share of the configured Plex
-  server and nothing else. The member stays your plex.tv friend and keeps any
+- **Unsharing removes one server's share only**: Unshare in Admin → Users, the
+  inactivity sweep (Admin → Inactive members, see
+  [inactive members](inactive-members.md)) and the Stripe access removal
+  delete the member's share of the configured Plex server and nothing else. The member stays your plex.tv friend and keeps any
   other servers you share with them; remove those in Plex itself. A share that
   is already gone counts as success ("already removed"), so a retry or a second
   click settles. Managed Plex Home users have no share to remove and report
   "already removed".
-- **Ending sessions**: unsharing a member, demoting an admin, disabling an
-  account (Admin → Users → a user → Disable account), removing a member and the
-  Stripe access removal end that user's sessions within five minutes, when the
+- **Ending sessions**: unsharing a member (also by the inactivity sweep),
+  demoting an admin, disabling an account (Admin → Users → a user → Disable
+  account), removing a member and the Stripe access removal end that user's
+  sessions within five minutes, when the
   session next checks the database. A disabled user cannot sign in with Plex or
   Jellyfin until an admin enables the account again. Removing a member is in
   [privacy](privacy.md#removing-a-member).

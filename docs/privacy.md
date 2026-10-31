@@ -42,11 +42,11 @@ If Stripe, Plex or Jellyfin fails, removal stops before the transaction with a c
 
 ### Losing access without removal
 
-Unsharing a member (`unshareUserLibrary`) and the Stripe revoke job (`PLEX_ACCESS_REVOKE`) also turn the member's watchlist sync off and clear their stored plex.tv token, then end their sessions. The watchlist sync refuses a member without access with the skip code `NO_ACCESS`. Unlinking Discord revokes the grant at Discord and deletes the member's assistant chat sessions for that Discord account.
+Unsharing a member (`unshareUserLibrary`), the inactivity sweep (`lib/inactivity/sweep.ts`, which unshares the same way) and the Stripe revoke job (`PLEX_ACCESS_REVOKE`) also turn the member's watchlist sync off and clear their stored plex.tv token, then end their sessions. The watchlist sync refuses a member without access with the skip code `NO_ACCESS`. Unlinking Discord revokes the grant at Discord and deletes the member's assistant chat sessions for that Discord account.
 
 ## Admin access
 
-Admins can see each member's watch activity and Rewind (and its past versions), the assistant conversations stored in `LLMUsage` (prompts, responses and tool results; the assistant page's own history shows each user only their own conversations), Discord command history (assistant messages as a length only), media marks and watchlist sync history. Opening one member's content writes `MEMBER_CONTENT_VIEWED` (once an hour per admin, member and page); pages that list every member's content write `MEMBER_CONTENT_LISTED`; unsharing, importing members and regenerating a Rewind are audited too. `AuditLog` rows are kept for 400 days (P11.14).
+Admins can see each member's watch activity and Rewind (and its past versions), the assistant conversations stored in `LLMUsage` (prompts, responses and tool results; the assistant page's own history shows each user only their own conversations), Discord command history (assistant messages as a length only), media marks and watchlist sync history. Opening one member's content writes `MEMBER_CONTENT_VIEWED` (once an hour per admin, member and page); pages that list every member's content write `MEMBER_CONTENT_LISTED`; unsharing, importing members and regenerating a Rewind are audited too. Admins and Support users read the audit trail in **Admin > Audit log**; only admins see an event's stored details, and opening the page writes `AUDIT_LOG_VIEWED` (once an hour per viewer). `AuditLog` rows are kept for 400 days (P11.14).
 
 ## Your data: single deletes
 
@@ -106,7 +106,7 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 
 | Model | Personal data | Readers | Removal does | Encrypted at rest |
 |---|---|---|---|---|
-| `User` | name, email, image, `plexUserId`, `jellyfinUserId`, `primaryAuthService`, `timezone`, exemption note, role, `disabledAt`, `accessEndedAt`; a Tautulli watch-hours snapshot (`watchHours`, `watchHoursLast30Days`, `watchHoursReadAt`); `plexAuthToken` (credential) | M own; A users list and detail; P name and image on a signed share | Deleted. Unshare and the Stripe revoke clear `plexAuthToken` | `plexAuthToken` |
+| `User` | name, email, image, `plexUserId`, `jellyfinUserId`, `primaryAuthService`, `timezone`, exemption note, role, `disabledAt`, `accessEndedAt`, `inactivityExcluded`; a Tautulli watch-hours snapshot (`watchHours`, `watchHoursLast30Days`, `watchHoursReadAt`); the start of their newest play in Tautulli (`lastSeenAt`, `lastSeenReadAt`); `plexAuthToken` (credential) | M own; A users list and detail; P name and image on a signed share | Deleted. Unshare and the Stripe revoke clear `plexAuthToken` | `plexAuthToken` |
 | `PlexWrapped` | the member's Rewind: viewing history facts, LLM copy, summary, archetype, legacy share token | M viewer; A Rewind pages; P published pages of a share | Cascade | No |
 | `RewindGeneration` | run status, error code, `previousData` (the replaced Rewind) | A Rewind history | Cascade | No |
 | `RewindShare` | published page list, card facts, token hash and asset key | M sharing panel; P the public link | Cascade (through `PlexWrapped`); the link returns 404 | Token stored as a SHA-256 hash only |
@@ -131,8 +131,9 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `AffiliateApplication` | one affiliate application: the member's note, watch hours when they applied, whether they shared their Plex email, the admin's decision and reason, end date and cause, invite override and tier | M own; A affiliate pages | Cascade | No |
 | `AffiliateBlock` | an HMAC-SHA256 of a blocked Plex id, no foreign key to `User`, and the admin id that made it | A affiliate pages | Not erased on removal: it holds no Plex id, and it stays until an admin unblocks it | Keyed hash only |
 | `Subscription` | Stripe customer and subscription ids, status, plan, period end, cancel date, Plex invite status, Jellyfin access status, access skip code | M status; A users list, billing tab | Stripe subscription cancelled at once, then cascade; the customer id goes to the audit row | No |
-| `AuditLog` | actor and target user ids, event details (ids and counts, never secrets) | none in the app; the operator | Kept (ids only) | No |
+| `AuditLog` | actor and target user ids, event details (ids and counts, never secrets) | A and Support in **Admin > Audit log** (Support sees who, what and when, never the stored details); the operator | Kept (ids only) | No |
 | `RequestTierRun` | per run, each member's Overseerr display name, watch hours, tier and request quota before and after (no foreign key to `User`) | A request limits in settings | Not erased on removal; the daily sync keeps only the newest 30 runs, so a removed member's name leaves within about a month | No |
+| `InactivityRun` | per daily member activity run, the ids of the members the inactivity sweep removed, skipped or failed on, with their last seen dates (no names, no foreign key to `User`) | A **Admin > Inactive members** | Not erased on removal; the daily run keeps only the newest 30 runs, so a removed member's id leaves within about a month | No |
 
 ### Server data with no member's personal data
 
@@ -152,6 +153,7 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `KnowledgeSource` | name, GitHub repository, branch, folder and an optional GitHub token | `token` |
 | `Config` | app settings, Stripe keys, Rewind settings, affiliate invite settings and the affiliate block key | `stripeSecretKey`, `stripeWebhookSecret`, `rewindSerialKey`, `affiliateBlockKey` |
 | `DiscordIntegration` | Discord app credentials and bot settings; `updatedBy` admin id | `clientSecret`, `botToken` |
+| `InactivitySettings` | whether the inactivity sweep is on, its days without a play, the claim of the run in progress; `updatedBy` admin id | No |
 | `LeaseLock` | which instance holds each lease (Discord bot, watchlist sync, retention) and until when | No |
 | `RewindServerAggregate` | server-wide yearly totals, no per-member rows | No |
 | `MediaMetadataCache` | Plex metadata per title | No |

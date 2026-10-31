@@ -1,0 +1,9 @@
+### Added
+
+- **Audit log:** **Admin > Audit log** lists every recorded event: who did it (a person or System), whom it was about, when, and a short summary. Filter by category, event, date range, person or member, and open an event to see its stored details. Support users can open the audit log too, but only admins see an event's stored details. Opening the audit log is itself recorded, at most once an hour for each viewer. A member's page has a new **Audit** tab with the events about or by that member.
+- **Last seen:** a daily job reads when each member last played something on Plex from Tautulli. The users list shows it in a new **Last seen** column, which you can sort and filter (for example "Not seen in 180 days"), and the member page shows it on the Overview tab. Last seen never moves back, so a Tautulli that loses history cannot make an active member look inactive.
+- **Inactive members:** **Admin > Inactive members** can remove Plex access from members who have not played anything for a number of days (180 by default). It is off until an admin turns it on. It never removes admins, the server owner, members with a role, exempt or paying members, or members that an admin excludes on their page. A scheduled run removes no one when more members qualify than its safety limit, or when Tautulli or Plex does not answer, or when Tautulli has recorded no play in 14 days. **Run now** asks you to confirm the number of members first. Each removal does the same as **Remove Plex access** and writes an audit row with the reason. See `docs/inactive-members.md`.
+
+### Changed
+
+- **Database for last seen and the audit log:** the database gets each member's last seen date and exclusion flag, the inactivity settings and run history tables, and two new audit log indexes (by person, and by member over time), so the audit log pages stay fast.

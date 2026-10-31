@@ -207,6 +207,7 @@ The guides in `docs/` give the full details:
 | [Affiliate invites](docs/affiliate-invites.md) | Affiliates, their tiers and invites, the server cap and the switch |
 | [Assistant](docs/assistant.md) | The data, MCP servers and knowledge base that the admin assistant can use |
 | [Request limits](docs/request-limits.md) | Request limits from watch time, and the Discord stat channels |
+| [Inactive members](docs/inactive-members.md) | Last seen from Tautulli, and removing Plex access from members who stopped watching |
 | [Stripe](docs/stripe.md) | Subscriptions, the webhook, and Plex and Jellyfin access |
 | [Discord bot](docs/discord-bot.md) | The bot, slash commands and linked roles |
 | [Releases](docs/releasing.md) and [CHANGELOG.md](CHANGELOG.md) | Versions, tags and the upgrade notes of each release |
