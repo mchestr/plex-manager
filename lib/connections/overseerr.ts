@@ -70,8 +70,27 @@ export async function testOverseerrConnection(config: OverseerrEndpoint): Promis
   return testServiceConnection("Overseerr", () => overseerrFetch(config, "/auth/me", authMeSchema))
 }
 
-export async function getOverseerrRequests(config: OverseerrEndpoint, limit = 10): Promise<ConnectionResult<unknown>> {
-  return overseerrGet(config, `/request?take=${limit}&sort=added&filter=processing`)
+/** One page of `GET /request`: `take` requests after `skip`, narrowed by Overseerr's `filter` and the requester's user id. */
+export interface OverseerrRequestQuery {
+  take: number
+  skip?: number
+  /** `pending`, `approved`, `processing`, `unavailable`, `available`, `failed`, ...; every request when left out. */
+  filter?: string
+  requestedBy?: number
+}
+
+/**
+ * One page of requests, newest first (`sort=added`), as raw JSON for the
+ * chatbot tools; `pageInfo.results` is how many match the query.
+ */
+export async function getOverseerrRequests(
+  config: OverseerrEndpoint,
+  { take, skip = 0, filter, requestedBy }: OverseerrRequestQuery
+): Promise<ConnectionResult<unknown>> {
+  const query = new URLSearchParams({ take: String(take), skip: String(skip), sort: "added" })
+  if (filter) query.set("filter", filter)
+  if (requestedBy !== undefined) query.set("requestedBy", String(requestedBy))
+  return overseerrGet(config, `/request?${query}`)
 }
 
 export async function getOverseerrStatus(config: OverseerrEndpoint): Promise<ConnectionResult<unknown>> {
@@ -106,19 +125,11 @@ export async function getOverseerrMediaDetails(
 }
 
 /**
- * The first page of users, 100 of them, as raw JSON; `pageInfo.results` is
- * the total. A bare `/user` returns only 10 (GAP-07).
+ * Page `page` (from 0) of users, 100 of them, as raw JSON; `pageInfo.results`
+ * is the total. A bare `/user` returns only 10 (GAP-07).
  */
-export async function getOverseerrUsers(config: OverseerrEndpoint): Promise<ConnectionResult<unknown>> {
-  return overseerrGet(config, userPagePath(0))
-}
-
-export async function getAllOverseerrRequests(
-  config: OverseerrEndpoint,
-  limit = 20,
-  sortBy = "added"
-): Promise<ConnectionResult<unknown>> {
-  return overseerrGet(config, `/request?take=${limit}&sort=${encodeURIComponent(sortBy)}`)
+export async function getOverseerrUsers(config: OverseerrEndpoint, page = 0): Promise<ConnectionResult<unknown>> {
+  return overseerrGet(config, userPagePath(page))
 }
 
 const MAX_USER_PAGES = 50

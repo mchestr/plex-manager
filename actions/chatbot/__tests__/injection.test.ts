@@ -119,6 +119,7 @@ describe("Overseerr request tools", () => {
 
     const result = await executeOverseerrTool("get_overseerr_requests", {})
 
-    expect(JSON.parse(result)).toEqual({ results: [{ id: 1, requestedBy: { id: 7, displayName: "Sam" } }] })
+    expect(result).not.toContain("sam@example.com")
+    expect(JSON.parse(result)).toEqual({ total: 1, showing: "showing 1 of 1", requests: [{ id: 1, is4k: false, requestedBy: "Sam" }] })
   })
 })

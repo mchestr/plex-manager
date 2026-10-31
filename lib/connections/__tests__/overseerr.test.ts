@@ -4,7 +4,6 @@
  */
 
 import {
-  getAllOverseerrRequests,
   getOverseerrDiscoverMovies,
   getOverseerrDiscoverTV,
   getOverseerrMediaDetails,
@@ -41,23 +40,25 @@ describe("chatbot reads", () => {
 
     const results = await Promise.all([
       getOverseerrStatus(config),
-      getOverseerrRequests(config, 5),
+      getOverseerrRequests(config, { take: 5, filter: "unavailable" }),
       getOverseerrDiscoverMovies(config, 2, "popularity.desc&take=999"),
       getOverseerrDiscoverTV(config),
       getOverseerrMediaDetails(config, 603, "movie"),
       getOverseerrUsers(config),
-      getAllOverseerrRequests(config, 10),
+      getOverseerrRequests(config, { take: 10, skip: 20, requestedBy: 7 }),
+      getOverseerrUsers(config, 2),
     ])
 
     for (const result of results) expect(result).toEqual({ success: true, data: { results: [] } })
     expect(calledUrls()).toEqual([
       "http://overseerr.local:5055/api/v1/settings/about",
-      "http://overseerr.local:5055/api/v1/request?take=5&sort=added&filter=processing",
+      "http://overseerr.local:5055/api/v1/request?take=5&skip=0&sort=added&filter=unavailable",
       "http://overseerr.local:5055/api/v1/discover/movies?page=2&sortBy=popularity.desc%26take%3D999",
       "http://overseerr.local:5055/api/v1/discover/tv?page=1&sortBy=popularity.desc",
       "http://overseerr.local:5055/api/v1/movie/603",
       "http://overseerr.local:5055/api/v1/user?take=100&skip=0",
-      "http://overseerr.local:5055/api/v1/request?take=10&sort=added",
+      "http://overseerr.local:5055/api/v1/request?take=10&skip=20&sort=added&requestedBy=7",
+      "http://overseerr.local:5055/api/v1/user?take=100&skip=200",
     ])
     for (const [, init] of mockFetch.mock.calls) {
       expect(init).toEqual(expect.objectContaining({ headers: expect.objectContaining({ "X-Api-Key": "overseerr-key" }) }))

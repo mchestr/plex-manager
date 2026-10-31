@@ -1,6 +1,7 @@
 /**
  * get_overseerr_users reports every user, not the first 10 (GAP-07): it asks
- * for a page of 100 and returns the total with "and N more".
+ * for a page of 100 and returns the total with "and N more", and `page`
+ * reaches the rest.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -9,6 +10,7 @@ import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import type { Overseerr } from "@/lib/generated/prisma/client"
 
 import { executeOverseerrTool } from "../overseerr"
+import { MEMBERS, userPage } from "./overseerr-fixtures"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/utils/logger", () => ({
@@ -66,4 +68,39 @@ it("leaves out 'more' when every user is listed", async () => {
   expect(output.total).toBe(7)
   expect(output.users).toHaveLength(7)
   expect(output).not.toHaveProperty("more")
+})
+
+/** Answers each `/user?take=&skip=` like a server with `total` users. */
+function serveUsers(total: number) {
+  mockFetch.mockImplementation(async (url: string) => ({ ok: true, status: 200, headers: new Headers(), json: async () => userPage(new URL(url), total) }))
+}
+
+it("names the page that holds the rest, and pages through them", async () => {
+  serveUsers(230)
+
+  const first = JSON.parse(await executeOverseerrTool("get_overseerr_users", {}))
+  const second = JSON.parse(await executeOverseerrTool("get_overseerr_users", { page: 2 }))
+
+  expect(first.next).toBe("pass page 2 for the next 100")
+  expect(Object.fromEntries(new URL(String(mockFetch.mock.calls[1][0])).searchParams)).toEqual({ take: "100", skip: "100" })
+  expect(second).toMatchObject({ total: 230, showing: "showing 101-200 of 230", more: "and 30 more", next: "pass page 3 for the next 30" })
+  expect(second.users[0].id).toBe(101)
+})
+
+it("never shows an email as a display name, which Overseerr does for a user with no username", async () => {
+  serve({ pageInfo: { results: 1 }, results: [{ id: 3, email: "sam@example.invalid", displayName: "sam@example.invalid", requestCount: 1, permissions: 2 }] })
+
+  const output = await executeOverseerrTool("get_overseerr_users", {})
+
+  expect(JSON.parse(output).users).toEqual([{ id: 3, displayName: "user 3", requestCount: 1, permissions: 2 }])
+  expect(output).not.toContain("@example.invalid")
+})
+
+it.each([1, 5])("keeps page %i of 500 members within an MCP result (40,000 characters)", async (page) => {
+  serveUsers(MEMBERS)
+
+  const output = await executeOverseerrTool("get_overseerr_users", { page })
+
+  expect(output.length).toBeLessThanOrEqual(40_000)
+  expect(JSON.parse(output).users).toHaveLength(100)
 })

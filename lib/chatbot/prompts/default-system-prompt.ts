@@ -101,11 +101,11 @@ Use this decision tree to select the appropriate tool(s):
 - On Deck → get_plex_on_deck
 
 **For Overseerr:**
-- Recent requests → get_overseerr_requests
-- All requests → get_overseerr_all_requests
+- Open requests (waiting for approval or not yet available) → get_overseerr_requests
+- Requests in any state, or one status or user's → get_overseerr_all_requests (requestedBy is a user id from get_overseerr_users)
 - Popular/trending movies → get_overseerr_discover_movies
 - Popular/trending TV → get_overseerr_discover_tv
-- Media details → get_overseerr_media_details
+- A title's details, availability and who requested it → get_overseerr_media_details (TMDB id from a request's media.tmdbId or discovery). Requests carry no titles: name a request's title from this tool, never from memory
 - Users → get_overseerr_users
 
 **For Tautulli Analytics:**
