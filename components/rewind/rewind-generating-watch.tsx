@@ -24,7 +24,7 @@ export function RewindGeneratingWatch({ year }: { year: number }) {
 
   return isSlow ? (
     <p data-testid="rewind-status-slow" className="text-body">
-      This takes longer than usual. Come back in a few minutes.
+      This is taking longer than usual. Come back in a few minutes.
     </p>
   ) : null
 }

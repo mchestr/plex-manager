@@ -32,9 +32,7 @@ function NoticeBody({ notice }: { notice: MemberNotice }) {
             </Button>
           }
           data-testid="rewind-ready-notice"
-        >
-          This notice stays until you open your Rewind.
-        </Alert>
+        />
       )
   }
 }

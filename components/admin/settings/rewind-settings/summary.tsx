@@ -90,7 +90,7 @@ export function RewindSettingsSummary({ saved, zone, llmDisabled, discordBotOn, 
       </Group>
 
       <Group title="Season">
-        <SettingsSummaryRow label="Season" wide data-testid={row("season")}>
+        <SettingsSummaryRow label="Dates" wide data-testid={row("season")}>
           <WithNote note={<TimeZoneNote zone={zone} />}>
             {monthDayLabel(saved.rewindSeasonOpens)} to {monthDayLabel(saved.rewindSeasonCloses)}
           </WithNote>
@@ -102,7 +102,7 @@ export function RewindSettingsSummary({ saved, zone, llmDisabled, discordBotOn, 
           <WithNote note={llmDisabled && "AI features are off. Rewind uses template text."}>{labelOf(LLM_MODES, saved.rewindLlmMode)}</WithNote>
         </SettingsSummaryRow>
         <SettingsSummaryRow label="Season budget" data-testid={row("budget")}>
-          <WithNote note={`Spent this season: ${spent}.`}>{budget}</WithNote>
+          <WithNote note={`${spent} spent so far.`}>{budget}</WithNote>
         </SettingsSummaryRow>
       </Group>
 
@@ -132,9 +132,9 @@ export function RewindSettingsSummary({ saved, zone, llmDisabled, discordBotOn, 
           {list(saved.rewindExcludedContentRatings, "None")}
         </SettingsSummaryRow>
         <SettingsSummaryRow label="Disabled pages" data-testid={row("pages")}>
-          {list(pages, "None. All pages show.")}
+          {list(pages, "None")}
         </SettingsSummaryRow>
-        <SettingsSummaryRow label="Features added in December" wide data-testid={row("features")}>
+        <SettingsSummaryRow label="Opt-in features" wide data-testid={row("features")}>
           {features.length > 0 ? (
             <ul className="flex flex-col gap-1">
               {features.map((feature) => (

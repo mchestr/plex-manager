@@ -25,7 +25,7 @@ function copyFor(standing: Standing, f: Format): { title: string; description: s
         description: `You had ${hours(standing.hours)} at the last check; you can apply at more than ${hours(standing.barHours)}. Apply checks your watch time again.`,
       }
     case "can_apply":
-      return { title: "Apply to send invites", description: "An admin reads each application. You can add a note for them." }
+      return { title: "Apply to send invites", description: "An admin reviews each application." }
     case "pending":
       return { title: "Application sent", description: `You applied on ${f.date(standing.appliedAt, "long")}. An admin will decide soon.` }
     case "approved":

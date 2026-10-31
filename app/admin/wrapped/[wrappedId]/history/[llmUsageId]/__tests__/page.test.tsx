@@ -65,7 +65,7 @@ describe('Admin historical Rewind version page', () => {
     await renderPage()
 
     expect(screen.getByTestId('llm-text-removed-notice')).toHaveTextContent(
-      'The October 2026 privacy clean-up removed this text.'
+      "For privacy, this text isn't kept."
     )
     expect(screen.queryByTestId('rewind-article-mode')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: "Mike's Rewind 2025" })).toBeInTheDocument()

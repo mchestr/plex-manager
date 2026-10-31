@@ -82,7 +82,7 @@ describe('member copy for stored codes (errorCopy)', () => {
     const copy = memberErrorCopy(readStoredError(LEGACY_ROSTER_ERROR))
     expect(copy).not.toContain('alice')
     expect(copy).not.toContain('@example.com')
-    expect(copy).toBe('An error stopped your Rewind. Try again.')
+    expect(copy).toBe('An error stopped your Rewind. The server admin can see what happened.')
   })
 })
 
@@ -125,7 +125,7 @@ describe('refusal codes (P0.12)', () => {
     expect(refusalCopy('ALREADY_GENERATING')).toBe('Your Rewind is already being made.')
     expect(refusalCopy('RATE_LIMITED', 540)).toBe('You can try again in 9 minutes.')
     expect(refusalCopy('RATE_LIMITED', 7200)).toBe('You can try again in 2 hours.')
-    expect(refusalCopy('REWIND_NOT_ELIGIBLE')).toBe('Rewind needs Plex watch history. Jellyfin support is planned.')
+    expect(refusalCopy('REWIND_NOT_ELIGIBLE')).toBe('Rewind needs Plex watch history, and this server has none for your account.')
   })
 
   it('rounds the wait up and never says zero', () => {

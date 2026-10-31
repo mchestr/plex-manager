@@ -214,7 +214,7 @@ describe('requestRewindGeneration', () => {
     expect(await requestRewindGeneration({ year: 2026 })).toEqual({
       success: false,
       code: 'FORBIDDEN',
-      error: 'Only admins can regenerate wrapped data',
+      error: 'Only admins can regenerate a finished Rewind',
     })
     expect(writes()).toBe(0)
   })

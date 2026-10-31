@@ -94,8 +94,8 @@ function PlexOptions({ serverName, jellyfin, callbackUrl }: Omit<MemberPassProps
         Continue with Plex
       </Button>
       <p className="mt-2 text-caption text-muted-foreground" data-testid="member-pass-token-copy">
-        Approve access on plex.tv. {serverName} keeps your Plex sign-in token. It uses the token to sync your
-        watchlist and accept invites.
+        Approve access on plex.tv. {serverName} keeps your Plex sign-in token to sync your watchlist, accept invites and
+        mark titles watched.
       </p>
       {error && (
         <Alert tone="destructive" className="mt-4" data-testid="sign-in-error">

@@ -1,7 +1,7 @@
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card"
 
 /** Home's membership card: the plan, renewal and billing live on `/membership` (UI-37). */
 export function MembershipLinkCard() {
@@ -9,7 +9,6 @@ export function MembershipLinkCard() {
     <Card data-testid="home-membership-card">
       <CardHeader>
         <CardTitle>Membership</CardTitle>
-        <CardDescription>Your plan, renewal date and billing.</CardDescription>
         <CardAction>
           <Button
             variant="secondary"

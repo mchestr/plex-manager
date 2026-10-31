@@ -61,15 +61,12 @@ type FlashTone = "success" | "error"
 
 export interface FlashToast {
   title: string
-  description: string
+  /** Left out where the title says it all ("Discord linked"). */
+  description?: string
   tone: FlashTone
 }
 
-const DISCORD_LINKED: FlashToast = {
-  title: "Discord linked",
-  description: "Your Discord account is connected.",
-  tone: "success",
-}
+const DISCORD_LINKED: FlashToast = { title: "Discord linked", tone: "success" }
 
 const MEMBER_REMOVED: FlashToast = {
   title: "Member removed",
@@ -77,7 +74,7 @@ const MEMBER_REMOVED: FlashToast = {
   tone: "success",
 }
 
-const errorToast = (code: FlashErrorCode): FlashToast => ({ ...errorCopy(code, { audience: "member" }), tone: "error" })
+const errorToast = (code: FlashErrorCode): Required<FlashToast> => ({ ...errorCopy(code, { audience: "member" }), tone: "error" })
 
 const FLASH: Record<FlashCode, FlashToast> = {
   discord_linked: DISCORD_LINKED,
@@ -89,7 +86,7 @@ const FLASH: Record<FlashCode, FlashToast> = {
   member_removed: MEMBER_REMOVED,
 }
 
-const NEXT_AUTH: Record<NextAuthErrorCode, FlashToast> = {
+const NEXT_AUTH: Record<NextAuthErrorCode, Required<FlashToast>> = {
   CredentialsSignin: errorToast("CredentialsSignin"),
   AccessDenied: errorToast("AccessDenied"),
   Configuration: errorToast("Configuration"),
@@ -144,7 +141,7 @@ export function readFlash(params: URLSearchParams): { toasts: FlashToast[]; quer
  * nextAuthError("<script>alert(1)</script>").code // "Default"
  * ```
  */
-export function nextAuthError(value: unknown): FlashToast & { code: NextAuthErrorCode } {
+export function nextAuthError(value: unknown): Required<FlashToast> & { code: NextAuthErrorCode } {
   const code: NextAuthErrorCode =
     typeof value === "string" && Object.hasOwn(NEXT_AUTH, value) ? (value as NextAuthErrorCode) : "Default"
   return { ...NEXT_AUTH[code], code }

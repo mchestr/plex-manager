@@ -54,7 +54,7 @@ const toDraft = (saved: RewindSettings): Draft => ({ ...saved, rewindLlmBudgetUs
 /** A `rewindDisabledPages` draft in its stored order, so a change undone reads as no change. */
 const storedOrder = (entries: readonly string[]) => REWIND_DISABLED_PAGE_ENTRIES.filter((entry) => entries.includes(entry))
 
-const NEXT_GENERATION = "Applies at the next generation."
+const NEXT_GENERATION = "Applies the next time Rewinds are generated."
 
 /** Options for the stored entries the lists no longer offer, so they can still be cleared. */
 function withStored(options: { value: string; label: string }[], stored: readonly string[], label: (value: string) => string) {
@@ -125,7 +125,6 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
     <SettingsSection
       id="rewind"
       title="Rewind"
-      description="Changes apply at once, except where a field says otherwise."
       status={health.status}
       checkedAt={health.checkedAt}
       footerMeta={footerMeta}
@@ -155,14 +154,13 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           <CheckboxField
             name="enabled"
             label="Rewind"
-            description="Shows /rewind and the home page card to the audience below."
+            description="Shows Rewind to the audience below."
             checked={draft.rewindEnabled}
             onChange={set("rewindEnabled")}
           />
           <SelectField
             name="audience"
             label="Audience"
-            description="Use Admins only to test. Change to Everyone when the season opens."
             items={AUDIENCES}
             value={draft.rewindAudience}
             onChange={(value) => set("rewindAudience")(value === "all" ? "all" : "admins")}
@@ -187,7 +185,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           <SelectField
             name="llm-mode"
             label="LLM mode"
-            description={llmDisabled ? "AI features are off. Rewind uses template text." : "Off uses templates for all text."}
+            description={llmDisabled ? "AI features are off. Rewind uses template text." : undefined}
             items={LLM_MODES}
             value={draft.rewindLlmMode}
             onChange={(value) => set("rewindLlmMode")(value === "economy" || value === "off" ? value : "standard")}
@@ -196,7 +194,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           <FormField
             name="budget"
             label="Season budget (USD)"
-            description={`Spent this season: ${spent}. When spend reaches the budget, Rewind uses template text.`}
+            description={`${spent} spent so far. Once spending reaches the budget, Rewind uses template text.`}
             error={budgetError}
           >
             <Input
@@ -216,7 +214,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           <CheckboxField
             name="public-links"
             label="Public links"
-            description="While this is off, members cannot make links and old links do not open. Turn it on again to restore old links."
+            description="While this is off, members cannot make links and existing links stop working until you turn it back on."
             checked={draft.rewindPublicLinks}
             onChange={set("rewindPublicLinks")}
           />
@@ -244,7 +242,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           <CheckboxField
             name="managed"
             label="Include managed accounts"
-            description={`Plex Home managed accounts get a Rewind too. ${NEXT_GENERATION}`}
+            description={NEXT_GENERATION}
             checked={draft.rewindIncludeManagedUsers}
             onChange={set("rewindIncludeManagedUsers")}
           />
@@ -271,7 +269,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
         <CheckboxList
           name="pages"
           legend="Disabled pages"
-          description="In cut-list order. The 10 core pages always show."
+          description="The 10 core pages always show."
           options={REWIND_CUT_PAGES.map((page) => ({ value: page.key, label: page.label }))}
           selected={draft.rewindDisabledPages}
           onChange={(pages) => set("rewindDisabledPages")(storedOrder([...pages, ...draft.rewindDisabledPages.filter(isFeatureEntry)]))}
@@ -279,8 +277,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
         {/* The December features (P8.3, P8.4) share the list: a checkbox writes or removes its `+key` entry. */}
         <CheckboxList
           name="features"
-          legend="Features added in December"
-          description="Each feature is off until you turn it on here. First test it on the heavy test member. Then record the change in ship-check.md."
+          legend="Opt-in features"
           options={REWIND_FEATURES.map((feature) => ({ value: enableEntry(feature.key), label: feature.label }))}
           selected={draft.rewindDisabledPages}
           onChange={(features) => set("rewindDisabledPages")(storedOrder([...draft.rewindDisabledPages.filter((entry) => !entry.startsWith("+")), ...features]))}

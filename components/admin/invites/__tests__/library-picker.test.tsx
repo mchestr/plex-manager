@@ -83,7 +83,7 @@ describe('LibraryPicker without All libraries', () => {
   it('does not offer all libraries when the listing fails', () => {
     render(<LibraryPicker listing={{ ok: false, reason: 'Plex is down.' }} value={[]} onChange={jest.fn()} serverLabel="Plex" allowAll={false} testIdPrefix="settings-affiliates-library" />)
 
-    expect(screen.getByTestId('settings-affiliates-library-error')).toHaveTextContent("Can't list the Plex libraries. Plex is down.")
+    expect(screen.getByTestId('settings-affiliates-library-error')).toHaveTextContent(/^Plex is down\.$/)
     expect(screen.getByTestId('settings-affiliates-library-error')).not.toHaveTextContent('all of them')
   })
 })

@@ -51,6 +51,7 @@ describe("DiscordStep", () => {
     render(<DiscordStep stored={STORED} devDefaults={DEV} />)
 
     expect(screen.getByRole("heading", { level: 1, name: "Connect Discord" })).toHaveFocus()
+    expect(screen.getByText("Answers slash commands and direct messages.")).toBeInTheDocument()
     expect(screen.getByLabelText("Client ID")).toHaveValue("1234")
     await user.click(screen.getByTestId("setup-discord-bot-toggle"))
     await user.click(screen.getByTestId("setup-form-submit"))

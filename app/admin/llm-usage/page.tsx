@@ -49,7 +49,7 @@ export default async function LLMUsagePage({ searchParams }: { searchParams: Pro
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-llm-usage-page">
       <PageHeader
         title="LLM usage"
-        meta={<span data-testid="admin-llm-usage-scope">{scope.join(" · ")}</span>}
+        meta={<span data-testid="admin-llm-usage-scope">{scope.join(", ")}</span>}
         data-testid="admin-llm-usage-header"
       />
       <StatGrid data-testid="llm-usage-stats">

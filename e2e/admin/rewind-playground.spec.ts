@@ -6,7 +6,7 @@ import { expect, test } from '../fixtures/auth';
  * preview whose iframe holds the stage.
  */
 
-/** A dry run can take 90 s on a shared runner. */
+/** A dry run can take a few minutes on a shared runner. */
 const RUN_TIMEOUT_MS = 240_000;
 
 test('the old playground address redirects', async ({ adminPage }) => {

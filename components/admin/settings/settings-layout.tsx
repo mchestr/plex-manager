@@ -2,7 +2,8 @@
 
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 
-import { SettingsJumpTo, SettingsNav, type SettingsGroupId, type SettingsNavItem } from "@/components/admin/settings/settings-nav"
+import type { SettingsGroupId, SettingsNavItem } from "@/components/admin/settings/settings-groups"
+import { SettingsJumpTo, SettingsNav } from "@/components/admin/settings/settings-nav"
 import { SettingsEditProvider } from "@/components/ui/settings-edit-context"
 
 /** The id of the topmost section in view, so the nav can mark it `aria-current`. */
@@ -63,7 +64,7 @@ interface SettingsLayoutProps {
  * The settings page layout (ui-design-system 6.4): a 200px sticky section nav
  * beside a 760px column showing one `SettingsGroup`, and below `md` a sticky
  * "Jump to" Select. A hash, a nav link or any in-page `#anchor` link (such as
- * `#server-time-zone`) reveals the group that holds its target.
+ * Rewind's `#time-zone`) reveals the group that holds its target.
  * Sections report their dirty state here for the nav's pip, and while any
  * section has unsaved changes the browser asks before the page is left.
  */
@@ -118,7 +119,7 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
     return () => window.removeEventListener("hashchange", fromHash)
   }, [reveal])
 
-  // An in-page `#anchor` link in the settings, such as `#server-time-zone`, reveals its group first
+  // An in-page `#anchor` link in the settings, such as Rewind's `#time-zone`, reveals its group first
   useEffect(() => {
     const body = bodyRef.current
     if (!body) return

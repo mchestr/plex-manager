@@ -34,6 +34,10 @@ describe("readFlash", () => {
     expect(read(query)?.toasts).toEqual([expect.objectContaining({ title, tone })])
   })
 
+  it("names a linked Discord account in the title alone", () => {
+    expect(read("flash=discord_linked")?.toasts[0]).toEqual({ title: "Discord linked", tone: "success" })
+  })
+
   it("drops unknown values without copy, and strips them with error_description", () => {
     const result = read("flash=<b>hi</b>&error=Call 555&error_description=more&page=2")
     expect(result?.toasts).toEqual([])

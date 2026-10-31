@@ -54,7 +54,7 @@ describe('JSDoc Documentation Examples', () => {
 
   it('errorCopy', () => {
     expect(errorCopy('TIMEOUT', { audience: 'member' }).description).toBe(
-      'Your Rewind took too long to make. Try again in a few minutes.'
+      'Your Rewind took too long to make. The server admin can see what happened.'
     )
     expect(errorCopy("Can't reach database server at db:5432", { audience: 'admin' }).title).toBe(
       'Something went wrong on the server'

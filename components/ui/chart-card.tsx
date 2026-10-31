@@ -109,8 +109,8 @@ export function ChartCard({
       <EmptyState
         kind="first-use"
         icon={BarChart3}
-        title={empty?.title ?? "Nothing to show"}
-        description={empty?.description ?? "No activity in this period."}
+        title={empty?.title ?? "No activity in this period"}
+        description={empty?.description}
         data-testid={`${testId}-empty`}
       />
     )

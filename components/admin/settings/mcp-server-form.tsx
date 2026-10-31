@@ -86,7 +86,7 @@ export function McpServerForm({ server, onDone, onCancel, onDirtyChange, onPendi
         <FormField name="mcp-url" label="MCP URL" description="Use a Streamable HTTP endpoint." error={errors.url}>
           <Input value={values.url} onValueChange={(url) => set({ url })} placeholder="https://mcp.example.com/mcp" required disabled={form.isPending} data-testid="settings-mcp-url" />
         </FormField>
-        <FormField name="mcp-header-name" label="Auth header" optional description="For example, Authorization." error={errors.authHeaderName}>
+        <FormField name="mcp-header-name" label="Auth header" optional error={errors.authHeaderName}>
           <Input value={values.authHeaderName} onValueChange={(authHeaderName) => set({ authHeaderName })} placeholder="Authorization" disabled={form.isPending} data-testid="settings-mcp-header-name" />
         </FormField>
         {values.authHeaderName.trim() !== "" && (

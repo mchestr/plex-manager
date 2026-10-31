@@ -42,7 +42,6 @@ export default async function CostAnalysisPage({ searchParams }: { searchParams:
       </StatGrid>
       <ChartCard
         title="Daily cost"
-        description={period}
         summary={`LLM cost per day, ${period}`}
         spec={{
           kind: "bar",

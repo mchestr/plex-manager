@@ -73,7 +73,7 @@ describe('Admin conversation LLM usage page', () => {
     })
     await renderPage()
 
-    expect(screen.getByTestId('llm-text-removed-notice')).toHaveTextContent('The October 2026 privacy clean-up removed this text.')
+    expect(screen.getByTestId('llm-text-removed-notice')).toHaveTextContent("For privacy, this text isn't kept.")
     expect(screen.getByRole('link', { name: /^Call 1,/ })).toHaveAttribute('href', '/admin/llm-usage/call-2')
     expect(screen.queryByText('User:')).not.toBeInTheDocument()
   })

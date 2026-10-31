@@ -101,12 +101,12 @@ export const cardFileName = (year: number, page: SharePageType) => `rewind-${yea
  * @example
  * ```ts
  * confirmLine({ cards: 5, signed: false, expires: "31 January 2027" })
- * // "Anyone with the link will see these 5 cards. Your name: hidden. Expires 31 January 2027."
+ * // "Anyone with the link will see these 5 cards, without your name, until 31 January 2027."
  * ```
  */
 export function confirmLine({ cards, signed, expires }: { cards: number; signed: boolean; expires: string | null }): string {
   const what = cards === 1 ? "this card" : `these ${cards} cards`
-  return `Anyone with the link will see ${what}. Your name: ${signed ? "shown" : "hidden"}. ${expires ? `Expires ${expires}.` : "No expiry."}`
+  return `Anyone with the link will see ${what}, ${signed ? "with" : "without"} your name, until ${expires ?? "you stop sharing"}.`
 }
 
 /** The back cover's status line: "Public link off. Cards unsigned, no artwork." */

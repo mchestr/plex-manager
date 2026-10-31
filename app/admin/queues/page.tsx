@@ -52,13 +52,13 @@ export default async function QueuesPage({ searchParams }: { searchParams: Promi
           data-testid="admin-queues-header"
         />
         {!dashboard.redisConfigured && (
-          <Alert tone="warning" title="Scheduled jobs and Rewind need Redis (REDIS_URL)" data-testid="queue-redis-alert">
-            Set REDIS_URL and restart the app to run background jobs.
+          <Alert tone="warning" title="Scheduled jobs and Rewind need Redis" data-testid="queue-redis-alert">
+            Set REDIS_URL and restart the app.
           </Alert>
         )}
         {dashboard.redisConfigured && !dashboard.redisConnected && (
           <Alert tone="destructive" title="Redis isn't answering" data-testid="queue-redis-alert">
-            Jobs can't start until Redis answers. This page checks again at each refresh.
+            Jobs can't start until Redis answers.
           </Alert>
         )}
         <QueueStatusRow

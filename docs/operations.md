@@ -534,7 +534,7 @@ with the current encryption key. Enter it again."). To recover:
   two separate accounts. A Plex sign-in or Plex invite whose email another
   account already holds still goes ahead, without storing the email. "Allow
   Jellyfin sign-in" (the switch in the Jellyfin row of Admin → Settings →
-  Other integrations, which takes effect at once) turns the Jellyfin provider off, not
+  Sonarr, Radarr, Jellyfin, which takes effect at once) turns the Jellyfin provider off, not
   just the button on the sign-in page; members already signed in with Jellyfin
   stay signed in until their session expires (at most 7 days).
 - **Jellyfin sign-in limits**: the app allows 10 Jellyfin sign-in attempts per

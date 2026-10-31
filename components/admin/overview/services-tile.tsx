@@ -14,7 +14,7 @@ const TEST_ID = "admin-overview-services"
 /** "Tautulli can't connect" for the worst service. @internal */
 export function serviceProblem({ label, status }: ServiceHealth): string {
   if (status === "unreachable") return `${label} can't connect`
-  if (status === "degraded") return `${label} uses template copy`
+  if (status === "degraded") return `${label} uses template text`
   return `${label} needs setup`
 }
 

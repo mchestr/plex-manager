@@ -39,7 +39,7 @@ export function ApproveDialog({ application }: { application: Target }) {
     <ConfirmDialog
       trigger={<Button size="sm" data-testid={`admin-affiliates-approve-${application.id}`}>Approve</Button>}
       title={`Approve ${application.name}?`}
-      description="We check their access and watch hours again first. They can make invites while the switch is on."
+      description="They can invite people while affiliate invites are on."
       confirmLabel="Approve"
       pendingLabel="Approving"
       action={() => run(application.id)}
@@ -120,7 +120,7 @@ export function OverrideDialog({ affiliate, current }: { affiliate: Target; curr
         </Button>
       }
       title={`Set ${affiliate.name}'s invites`}
-      description={`Invites per 30 days, from 0 to ${MAX_AFFILIATE_INVITES}, in place of their tier. 0 pauses them. Leave it empty to use the tiers.`}
+      description={`In place of their tier, from 0 to ${MAX_AFFILIATE_INVITES}. 0 pauses them. Leave it empty to use the tiers.`}
       confirmLabel="Save"
       pendingLabel="Saving"
       action={() => (valid ? run(affiliate.id, trimmed === "" ? null : Number(trimmed)) : Promise.resolve({ error: "Enter a number from 0 to 10." }))}

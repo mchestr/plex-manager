@@ -33,7 +33,6 @@ export async function HomePage({ userId, isAdmin }: HomePageProps) {
           <h1 className="text-display text-foreground" data-testid="home-greeting">
             {data.greeting}
           </h1>
-          <p className="text-body text-muted-foreground">{data.since}</p>
         </header>
 
         <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">

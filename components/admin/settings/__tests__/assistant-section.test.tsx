@@ -247,9 +247,9 @@ describe("AssistantSection", () => {
     expect(screen.queryByTestId("settings-knowledge-discard-dialog")).not.toBeInTheDocument()
     expect(screen.getByTestId("settings-knowledge-add-sheet")).toBeInTheDocument()
 
-    finish({ success: true, data: { id: "k2", docCount: 3 } })
+    finish({ success: true, data: { id: "k2", docCount: 1 } })
     await waitFor(() => expect(screen.queryByTestId("settings-knowledge-add-sheet")).not.toBeInTheDocument())
-    expect(mockShowSuccess).toHaveBeenCalledWith("Knowledge base saved. Found 3 documents.")
+    expect(mockShowSuccess).toHaveBeenCalledWith("Knowledge base saved. Found 1 document.")
   })
 
   it("asks before closing a new knowledge base with something typed", async () => {

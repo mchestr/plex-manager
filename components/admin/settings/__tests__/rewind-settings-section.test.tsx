@@ -89,11 +89,11 @@ describe('RewindSettingsSection', () => {
 
       expect(summaryRow('enabled')).toHaveTextContent('RewindOff')
       expect(summaryRow('audience')).toHaveTextContent('Admins only')
-      expect(summaryRow('season')).toHaveTextContent('December 1 to January 31')
+      expect(summaryRow('season')).toHaveTextContent(/^DatesDecember 1 to January 31/)
       expect(summaryRow('llm-mode')).toHaveTextContent('Standard')
       expect(summaryRow('llm-mode')).not.toHaveTextContent('AI features are off')
       expect(summaryRow('budget')).toHaveTextContent('$10.00')
-      expect(summaryRow('budget')).toHaveTextContent('Spent this season: $1.20.')
+      expect(summaryRow('budget')).toHaveTextContent('$1.20 spent so far.')
       expect(summaryRow('public-links')).toHaveTextContent('On')
       expect(summaryRow('public-counts')).toHaveTextContent('Off')
       expect(summaryRow('server-name')).toHaveTextContent('On')
@@ -101,8 +101,8 @@ describe('RewindSettingsSection', () => {
       expect(summaryRow('managed')).toHaveTextContent('Off')
       expect(summaryRow('libraries')).toHaveTextContent('None')
       expect(summaryRow('ratings')).toHaveTextContent('None')
-      expect(summaryRow('pages')).toHaveTextContent('None. All pages show.')
-      expect(summaryRow('features')).toHaveTextContent('None on')
+      expect(summaryRow('pages')).toHaveTextContent(/^Disabled pagesNone$/)
+      expect(summaryRow('features')).toHaveTextContent(/^Opt-in featuresNone on$/)
       expect(summaryRow('channels')).toHaveTextContent('Discord DM, Dashboard banner')
       expect(summaryRow('channels')).not.toHaveTextContent('Discord bot is off')
     })
@@ -119,7 +119,7 @@ describe('RewindSettingsSection', () => {
 
       expect(screen.getByTestId('rewind-settings-status')).toHaveTextContent('Redis ready')
       expect(within(summaryRow('season')).getByTestId('rewind-settings-zone')).toHaveTextContent('Dates are in America/Chicago.')
-      expect(screen.getByTestId('rewind-settings-time-zone-link')).toHaveAttribute('href', '#server-time-zone')
+      expect(screen.getByTestId('rewind-settings-time-zone-link')).toHaveAttribute('href', '#time-zone')
       expect(screen.getByTestId('rewind-season-data-prepared-at')).toBeInTheDocument()
       expect(screen.getByTestId('settings-rewind-last-saved')).toHaveTextContent('Last saved just now by Dana')
     })
@@ -175,15 +175,14 @@ describe('RewindSettingsSection', () => {
       expect(summaryRow('channels')).toHaveTextContent('The Discord bot is off. Turn it on to send DMs.')
     })
 
-    it('"Change the server time zone" opens the System section on its time zone field', async () => {
+    it('"Change the server time zone" opens the Time zone section on its field', async () => {
       const user = userEvent.setup()
       render(
         <SettingsEditProvider onDirtyChange={jest.fn()}>
           {section()}
           <SettingsSection
-            id="system"
-            title="System information"
-            description="Runtime"
+            id="time-zone"
+            title="Time zone"
             form={{ isDirty: false, isPending: false, onDiscard: jest.fn(), onSave: jest.fn(async () => true) }}
             view={<p>Pacific/Auckland</p>}
           >
@@ -195,7 +194,7 @@ describe('RewindSettingsSection', () => {
 
       await user.click(screen.getByTestId('rewind-settings-time-zone-link'))
 
-      expect(screen.getByTestId('settings-system-form')).toBeInTheDocument()
+      expect(screen.getByTestId('settings-time-zone-form')).toBeInTheDocument()
       await waitFor(() => expect(screen.getByTestId('server-time-zone-select')).toHaveFocus())
       expect(screen.getByTestId('settings-rewind-summary')).toBeInTheDocument()
     })

@@ -89,7 +89,7 @@ Plex login ─▶ member?  ──yes─▶ into app (unchanged)
 
 All Stripe settings are configured in the app — no redeploy or env vars needed.
 
-Go to **Admin → Settings → Stripe billing** (in Integrations). The section shows
+Go to **Admin → Settings → Stripe billing** (in Members). The section shows
 the saved settings; select **Set up** (or **Edit** once something is saved) and
 fill in:
 

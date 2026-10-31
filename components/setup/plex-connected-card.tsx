@@ -15,8 +15,8 @@ export async function PlexConnectedCard() {
 
   const counts =
     summary.libraries !== null && summary.titles !== null
-      ? `${summary.libraries} ${summary.libraries === 1 ? "library" : "libraries"} and ${f.number(summary.titles)} titles. Members will see these on their home page.`
-      : "Members will see its libraries on their home page."
+      ? `${summary.libraries} ${summary.libraries === 1 ? "library" : "libraries"} and ${f.number(summary.titles)} titles.`
+      : null
 
   return (
     <Card data-testid="setup-plex-connected">
@@ -25,7 +25,7 @@ export async function PlexConnectedCard() {
           <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-success" />
           {summary.name} is connected
         </p>
-        <p className="text-label text-muted-foreground">{counts}</p>
+        {counts && <p className="text-label text-muted-foreground">{counts}</p>}
         {summary.recent.length > 0 && (
           <div className="grid grid-cols-6 gap-1.5 lg:grid-cols-3" aria-hidden="true">
             {summary.recent.map((item) => (

@@ -124,10 +124,10 @@ describe("ShareSheet", () => {
     await user.click(screen.getByTestId("rewind-share-copy-link"))
     const confirm = screen.getByTestId("rewind-share-confirm")
     expect(within(confirm).getByTestId("rewind-share-confirm-line")).toHaveTextContent(
-      "Anyone with the link will see these 5 cards. Your name: hidden. Expires 31 January 2027."
+      "Anyone with the link will see these 5 cards, without your name, until 31 January 2027."
     )
     await user.click(within(confirm).getByTestId("rewind-share-no-expiry"))
-    expect(within(confirm).getByTestId("rewind-share-confirm-line")).toHaveTextContent("No expiry.")
+    expect(within(confirm).getByTestId("rewind-share-confirm-line")).toHaveTextContent("until you stop sharing.")
 
     await user.click(within(confirm).getByTestId("rewind-share-create"))
     expect(enableRewindShare).toHaveBeenCalledWith({

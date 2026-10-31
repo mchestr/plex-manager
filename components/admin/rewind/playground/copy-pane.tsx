@@ -89,7 +89,7 @@ export function CopyPane({ view }: { view: Pick<PlaygroundView, "raw" | "copy" |
           </pre>
         ) : (
           <p className="text-ui text-muted-foreground" data-testid="playground-raw-none">
-            No model ran, so there is no raw output.
+            No model output.
           </p>
         )}
       </div>

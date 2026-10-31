@@ -48,7 +48,7 @@ export function KnowledgeSourceForm({ source, onDone, onCancel, onDirtyChange, o
       setErrors({})
       const { docCount } = result.data
       if (docCount === null) toast.showError("Saved. Could not read the repository on GitHub. Check the repository, branch and token.")
-      else toast.showSuccess(`Knowledge base saved. Found ${docCount} documents.`)
+      else toast.showSuccess(`Knowledge base saved. Found ${docCount} ${docCount === 1 ? "document" : "documents"}.`)
       return { ok: true, keep: { ...current, token: "" } }
     }
   )
@@ -65,7 +65,7 @@ export function KnowledgeSourceForm({ source, onDone, onCancel, onDirtyChange, o
         <FormField name="kb-ref" label="Branch or tag" error={errors.ref}>
           <Input value={values.ref} onValueChange={(ref) => set({ ref })} placeholder="main" required disabled={form.isPending} data-testid="settings-knowledge-ref" />
         </FormField>
-        <FormField name="kb-path" label="Folder" optional description="The assistant uses only the Markdown files in this folder. Leave empty to use all of the repository." error={errors.path}>
+        <FormField name="kb-path" label="Folder" optional description="Leave empty to use the whole repository." error={errors.path}>
           <Input value={values.path} onValueChange={(path) => set({ path })} placeholder="docs" disabled={form.isPending} data-testid="settings-knowledge-path" />
         </FormField>
         <FormField name="kb-token" label="GitHub token" optional description="Needed only for a private repository. The app sends it only to api.github.com.">

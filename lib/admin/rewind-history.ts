@@ -40,9 +40,9 @@ export async function getHistoricalWrappedVersions(wrappedId: string) {
   const llmUsageRecords = await prisma.lLMUsage.findMany({
     where: {
       wrappedId,
-      // Exclude empty responses. A null response is a version whose text the
-      // October 2026 privacy clean-up removed (P0.20); it stays listed so the
-      // admin sees the clean-up notice instead of a missing version.
+      // Exclude empty responses. A null response is a version whose text isn't
+      // kept (`LlmTextRemovedNotice`); it stays listed so the admin sees the
+      // notice instead of a missing version.
       OR: [{ response: null }, { response: { not: "" } }],
     },
     include: {
@@ -108,8 +108,8 @@ function rebuildVersion(
 /**
  * Get a historical wrapped data from an LLM usage record (admin only).
  *
- * Returns `removed: true` when the October 2026 privacy clean-up removed the
- * record's response (P0.20); the page then shows the clean-up notice. Returns
+ * Returns `removed: true` when the record's response isn't kept; the page
+ * then shows `LlmTextRemovedNotice`. Returns
  * null when the record does not exist or its response cannot be rebuilt.
  */
 export async function getHistoricalWrappedData(llmUsageId: string, _wrappedId: string) {

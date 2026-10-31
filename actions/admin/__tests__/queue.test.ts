@@ -116,7 +116,7 @@ describe("pause and resume", () => {
     await expect(pauseJobQueue()).resolves.toEqual({
       success: false,
       code: "INTERNAL",
-      error: "Failed to pause queue. Please try again.",
+      error: "Could not pause the queue. Try again.",
     })
     expect(revalidatePath).not.toHaveBeenCalled()
   })

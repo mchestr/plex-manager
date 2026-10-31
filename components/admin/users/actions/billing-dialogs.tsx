@@ -63,7 +63,7 @@ export function CancelSubscriptionDialog({ user, ...dialog }: UserDialogProps) {
     <ConfirmDialog
       {...dialog}
       title={`Cancel ${user.name}'s subscription?`}
-      description={`It won't renew. They keep access until the paid period ends. Then ${removed}.`}
+      description={`They keep access until the paid period ends, then ${removed}.`}
       confirmLabel="Cancel subscription"
       cancelLabel="Keep subscription"
       pendingLabel="Canceling"

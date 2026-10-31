@@ -1,32 +1,16 @@
 "use client"
 
+import { SETTINGS_GROUPS, type SettingsGroupId, type SettingsNavItem } from "@/components/admin/settings/settings-groups"
 import { Icon } from "@/components/ui/icon"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { settingsCategory, type ConnectionStatus, type Tone } from "@/lib/ui/status"
 import { cn } from "@/lib/utils"
-
-export interface SettingsNavItem {
-  id: string
-  label: string
-  group: SettingsGroupId
-  /** Left out for a section with nothing to check (System information). */
-  status?: ConnectionStatus
-}
 
 const TONE_TEXT: Partial<Record<Tone, string>> = {
   success: "text-success",
   warning: "text-warning",
   destructive: "text-destructive",
 }
-
-export type SettingsGroupId = "media" | "integrations" | "rewind" | "system"
-
-const SETTINGS_GROUPS: readonly { id: SettingsGroupId; label: string }[] = [
-  { id: "media", label: "Media servers" },
-  { id: "integrations", label: "Integrations" },
-  { id: "rewind", label: "Rewind" },
-  { id: "system", label: "System & security" },
-]
 
 /** The 12px category glyph (5.6): a shape per category, with its name for screen readers. */
 function StatusGlyph({ status, decorative = false }: { status: ConnectionStatus; decorative?: boolean }) {

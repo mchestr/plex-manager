@@ -60,12 +60,20 @@ describe("OtherIntegrationsSection", () => {
     renderSection()
 
     expect(screen.getByTestId("settings-other-sonarr")).toHaveTextContent("sonarr.lan:8989")
-    expect(screen.getByTestId("settings-other-radarr")).toHaveTextContent("Movie library and viewing statistics")
+    expect(screen.getByTestId("settings-other-radarr")).toHaveTextContent(/^RadarrMovie libraryNot set up/)
     expect(screen.getByRole("button", { name: "Edit Sonarr" })).toHaveAttribute("data-testid", "settings-other-sonarr-edit")
     expect(screen.getByRole("button", { name: "Set up Radarr" })).toHaveAttribute("data-testid", "settings-other-radarr-edit")
     expect(screen.getByRole("button", { name: "Edit Jellyfin" })).toHaveAttribute("data-testid", "settings-other-jellyfin-edit")
     expect(screen.queryByTestId("settings-other-edit")).not.toBeInTheDocument()
     expect(screen.queryByTestId("settings-other-save")).not.toBeInTheDocument()
+  })
+
+  it("anchors each row by its service, so the overview's link to #sonarr reaches it", () => {
+    renderSection()
+
+    for (const type of ["sonarr", "radarr", "jellyfin"]) {
+      expect(screen.getByTestId(`settings-other-${type}`)).toHaveAttribute("id", type)
+    }
   })
 
   it("keeps Allow Jellyfin sign-in live in the Jellyfin row, outside the Sheet", async () => {

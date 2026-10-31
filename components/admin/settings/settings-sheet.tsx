@@ -16,7 +16,7 @@ interface SettingsSheetProps {
   /** What the guard names: "Discard changes to Sonarr?" */
   name: string
   title: string
-  description: string
+  description?: string
   /** "Edit", "Set up" or "Add". */
   trigger: string
   /** Ends the trigger's accessible name for screen readers: "Edit Memini". */
@@ -27,8 +27,8 @@ interface SettingsSheetProps {
 }
 
 /**
- * One row's edit mode in a list section (Assistant sources, Other
- * integrations): the row is the view, and its Edit, Set up or Add opens the
+ * One row's edit mode in a list section (Assistant sources; Sonarr, Radarr,
+ * Jellyfin): the row is the view, and its Edit, Set up or Add opens the
  * row's `SheetForm` in this Sheet (list-detail, NN/g "Progressive
  * disclosure"). A save closes it and focus returns to the trigger. Escape,
  * the backdrop, Close and Cancel close it too, but with unsaved changes they
@@ -86,7 +86,7 @@ export function SettingsSheet({ section, id, name, title, description, trigger, 
       <SheetContent side="right" className="max-w-[480px]" data-testid={sheetTestId}>
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>{description}</SheetDescription>
+          {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
         {children({ onDone: close, onCancel: cancel, onDirtyChange: setDirty, onPendingChange: setPending })}
         {/* Inside the Sheet, so it stacks above it and Escape closes only the question */}

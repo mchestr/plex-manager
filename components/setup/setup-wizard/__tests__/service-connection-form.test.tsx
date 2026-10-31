@@ -50,6 +50,17 @@ expect.extend(toHaveNoViolations)
 beforeEach(() => jest.clearAllMocks())
 
 describe("ServiceConnectionForm", () => {
+  it.each([
+    ["tautulli", "Find the API key in Tautulli under Settings, Web Interface."],
+    ["overseerr", "Find the API key in Overseerr under Settings, General."],
+    ["sonarr", "Find the API key in Sonarr under Settings, General."],
+    ["radarr", "Find the API key in Radarr under Settings, General."],
+  ] as const)("tells only where to find the %s key", (kind, line) => {
+    render(<ServiceConnectionForm kind={kind} stored={null} devDefaults={DEV} />)
+
+    expect(screen.getByText(line)).toBeInTheDocument()
+  })
+
   it("shows a revisited step's key as Saved, never as a value", async () => {
     const { container } = render(<ServiceConnectionForm kind="overseerr" stored={STORED} devDefaults={DEV} />)
 

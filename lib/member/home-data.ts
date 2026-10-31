@@ -29,7 +29,7 @@ import { prisma } from "@/lib/prisma"
 import { plexServerId } from "@/lib/rewind/item-links"
 import { getFormatSettings } from "@/lib/settings/app-settings"
 import { safeHref } from "@/lib/ui/markdown"
-import { formatDate, type FormatSettings } from "@/lib/utils/format"
+import type { FormatSettings } from "@/lib/utils/format"
 import { normalizeTimeZone, zonedParts } from "@/lib/utils/zoned-time"
 import type { AuthService } from "@/types/onboarding"
 import { getActiveService } from "@/lib/data/active-service"
@@ -41,8 +41,6 @@ export interface HomeData {
   serverName: string
   /** "Good evening, Morgan" */
   greeting: string
-  /** "You've been watching on Northfield Plex since March 2024." */
-  since: string
   service: AuthService
   announcements: AnnouncementData[]
   announcementsSeenAt: Date | null
@@ -108,7 +106,7 @@ export async function getHomeData(userId: string, now: Date = new Date()): Promi
     await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { name: true, timezone: true, createdAt: true, announcementsSeenAt: true, plexUserId: true, jellyfinUserId: true },
+        select: { name: true, timezone: true, announcementsSeenAt: true, plexUserId: true, jellyfinUserId: true },
       }),
       getHelpData(userId),
       getServerName(),
@@ -128,7 +126,6 @@ export async function getHomeData(userId: string, now: Date = new Date()): Promi
   return {
     serverName,
     greeting: greetingFor(now, zone, user?.name ?? null),
-    since: `You've been watching on ${media.serverName} since ${formatDate(user?.createdAt ?? now, "month-year", { ...format, timeZone: zone })}.`,
     service: help.service,
     announcements: announcementsResult.success ? announcementsResult.data.slice(0, HOME_ANNOUNCEMENTS) : [],
     announcementsSeenAt: user?.announcementsSeenAt ?? null,

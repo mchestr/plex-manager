@@ -50,7 +50,7 @@ function ChannelStatsSummary({ saved }: { saved: ChannelStatsSettingsData }) {
             <p>
               {chosen.length} of {STAT_KEYS.length} set
             </p>
-            <ul className="flex flex-col gap-2" aria-label="Channels the job renames">
+            <ul className="flex flex-col gap-2" aria-label="Channels the bot renames">
               {chosen.map((key) => (
                 <li key={key} className="flex flex-col gap-0.5" data-testid={row(`channel-${key}`)}>
                   <span className="flex flex-wrap items-baseline gap-x-3">
@@ -69,7 +69,7 @@ function ChannelStatsSummary({ saved }: { saved: ChannelStatsSettingsData }) {
 }
 
 /**
- * Discord stat channels: which channel shows which number, and how its name
+ * Channel stats (Discord group): which channel shows which number, and how its name
  * reads. The job renames a channel only when its name would change, and
  * Discord allows two renames per channel in ten minutes, so the interval stops
  * at ten.
@@ -127,7 +127,7 @@ export function ChannelStatsSection({ saved, footerMeta }: { saved: ChannelStats
   return (
     <SettingsSection
       id={SECTION_ID}
-      title="Discord channel stats"
+      title="Channel stats"
       description="Shows live Tautulli numbers in voice channel names, for example Current Streams: 3. The Discord bot needs the Manage Channels permission."
       form={{
         ...form,
@@ -156,21 +156,15 @@ export function ChannelStatsSection({ saved, footerMeta }: { saved: ChannelStats
             checked={values.enabled}
             onCheckedChange={(enabled) => set({ enabled })}
             disabled={form.isPending}
-            aria-describedby="channel-stats-enabled-hint"
             className="mt-0.5"
             data-testid="channel-stats-toggle"
           />
-          <div className="flex flex-col">
-            <Label htmlFor="channel-stats-enabled">Update the channels</Label>
-            <span id="channel-stats-enabled-hint" className="text-label text-muted-foreground">
-              The bot skips each stat that has no channel ID.
-            </span>
-          </div>
+          <Label htmlFor="channel-stats-enabled">Update the channels</Label>
         </div>
         <FormField
           name="intervalMinutes"
           label="Interval"
-          description="Minutes between updates, from 10 to 1440. Discord lets a bot rename a channel two times in 10 minutes."
+          description="Minutes between updates, from 10 to 1440."
           error={errors.intervalMinutes}
         >
           <Input

@@ -13,8 +13,8 @@ import { worstStatus, type SectionHealth } from "@/lib/settings/connection-statu
 type OtherService = "sonarr" | "radarr" | "jellyfin"
 
 const DESCRIPTIONS: Record<OtherService, string> = {
-  sonarr: "TV library and viewing statistics",
-  radarr: "Movie library and viewing statistics",
+  sonarr: "TV library",
+  radarr: "Movie library",
   jellyfin: "A second media server for members who do not use Plex",
 }
 
@@ -40,7 +40,7 @@ function rowDescription(type: OtherService, server: StoredServer | null) {
 }
 
 /**
- * Other integrations (6.4): Sonarr, Radarr and Jellyfin as one list card.
+ * Sonarr, Radarr and Jellyfin (6.4), in the Media group as one list card.
  * The rows are the view, each with its badge; Edit or Set up opens the
  * service's form in a Sheet, its edit mode. Allow Jellyfin sign-in saves at
  * once, so it stays live in the Jellyfin row rather than in the Sheet. The
@@ -53,8 +53,7 @@ export function OtherIntegrationsSection({ servers, jellyfinLogin, health, foote
   return (
     <SettingsSection
       id="other"
-      title="Other integrations"
-      description="These services are optional."
+      title="Sonarr, Radarr, Jellyfin"
       status={worstStatus(configured.map((type) => health[type].status))}
       checkedAt={checkedAt}
     >
@@ -63,7 +62,8 @@ export function OtherIntegrationsSection({ servers, jellyfinLogin, health, foote
           const server = servers[type]
           const label = SERVER_LABELS[type]
           return (
-            <li key={type} className="flex flex-wrap items-center gap-3 py-3" data-testid={`settings-other-${type}`}>
+            // The row's id is the anchor the overview's Services tile links to
+            <li key={type} id={type} className="flex scroll-mt-24 flex-wrap items-center gap-3 py-3" data-testid={`settings-other-${type}`}>
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="text-ui font-medium text-foreground">{label}</span>
                 <span className={server ? "truncate font-mono text-label text-muted-foreground" : "text-label text-muted-foreground"}>

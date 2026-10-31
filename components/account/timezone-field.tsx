@@ -4,7 +4,7 @@ import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
 import { setUserTimezone } from "@/actions/account"
 import { Button } from "@/components/ui/button"
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { Field, FieldDescription } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/toast"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
@@ -66,9 +66,6 @@ export function TimezoneField({ value, serverZone, options }: TimezoneFieldProps
   return (
     <div className="flex flex-col gap-4" data-testid="account-timezone" data-dirty={dirty || undefined}>
       <Field>
-        <FieldLabel nativeLabel={false} render={<div />}>
-          Time zone
-        </FieldLabel>
         <Select items={items} value={selected} onValueChange={(next) => next && setChoice(next)}>
           <SelectTrigger aria-label="Time zone" data-testid="account-timezone-trigger">
             <SelectValue />
@@ -86,9 +83,7 @@ export function TimezoneField({ value, serverZone, options }: TimezoneFieldProps
             ))}
           </SelectContent>
         </Select>
-        <FieldDescription>
-          Rewind shows times in this zone. The first value comes from your browser. A change applies to your next Rewind.
-        </FieldDescription>
+        <FieldDescription>Changes apply to your next Rewind.</FieldDescription>
       </Field>
       <div className="flex items-center justify-end gap-3">
         {dirty && (

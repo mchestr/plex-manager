@@ -131,8 +131,8 @@ export default async function RewindPlaygroundPage({ searchParams }: { searchPar
         <PreviewPane previewId={view.previewId} year={view.year} cards={cards} />
       </div>
     ) : (
-      <Alert tone="warning" title="This run's trail cannot be read" data-testid="playground-trail-unreadable">
-        Run it again to see its panes.
+      <Alert tone="warning" title="This run can't be shown" data-testid="playground-trail-unreadable">
+        Run it again.
       </Alert>
     )
   } else if (query.preview) {
@@ -147,7 +147,7 @@ export default async function RewindPlaygroundPage({ searchParams }: { searchPar
     <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 sm:p-6">
       <PageHeader
         title="Playground"
-        description="Dry runs of the real Rewind pipeline on a member or a golden fixture."
+        description="Dry runs of the Rewind pipeline."
         data-testid="admin-rewind-playground-header"
       />
       <Playground initialForm={initialForm} options={options}>

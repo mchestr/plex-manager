@@ -40,7 +40,7 @@ interface Step {
 
 function stepsFor({ plexAccount, connection, isOnServer }: DiscordLinkChecklistProps): Step[] {
   const roleDone = Boolean(connection?.metadataSyncedAt) && isOnServer !== false
-  let roleDetail = "You get it when you link Discord"
+  let roleDetail = "Not yet"
   if (roleDone) roleDetail = "You have the Member role"
   else if (connection && isOnServer === false) roleDetail = "Join the Discord server to get it"
   else if (connection) roleDetail = "Not synced. Resync the role to try again."

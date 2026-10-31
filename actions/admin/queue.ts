@@ -34,7 +34,7 @@ const jobIdInput = z.object({ jobId: z.string().min(1, "Invalid job ID").max(200
 export const retryQueueJob = adminAction({
   input: jobIdInput,
   rateLimit: QUEUE_LIMIT,
-  fallbackError: "Failed to retry job. Please try again.",
+  fallbackError: "Could not retry the job. Try again.",
   handler: async ({ jobId }, { userId: adminId }) => {
     if (!isRedisConfigured()) return NO_REDIS
 
@@ -52,7 +52,7 @@ export const retryQueueJob = adminAction({
 export const removeQueueJob = adminAction({
   input: jobIdInput,
   rateLimit: QUEUE_LIMIT,
-  fallbackError: "Failed to remove job. Please try again.",
+  fallbackError: "Could not remove the job. Try again.",
   handler: async ({ jobId }, { userId: adminId }) => {
     if (!isRedisConfigured()) return NO_REDIS
 
@@ -69,7 +69,7 @@ export const removeQueueJob = adminAction({
 /** Pause the queue, so it stops starting new jobs (admin only, audited). */
 export const pauseJobQueue = adminAction({
   rateLimit: QUEUE_LIMIT,
-  fallbackError: "Failed to pause queue. Please try again.",
+  fallbackError: "Could not pause the queue. Try again.",
   handler: async (_input, { userId: adminId }) => {
     if (!isRedisConfigured()) return NO_REDIS
 
@@ -86,7 +86,7 @@ export const pauseJobQueue = adminAction({
 /** Resume the queue (admin only, audited). */
 export const resumeJobQueue = adminAction({
   rateLimit: QUEUE_LIMIT,
-  fallbackError: "Failed to resume queue. Please try again.",
+  fallbackError: "Could not resume the queue. Try again.",
   handler: async (_input, { userId: adminId }) => {
     if (!isRedisConfigured()) return NO_REDIS
 
@@ -107,7 +107,7 @@ export const resumeJobQueue = adminAction({
 export const triggerWatchlistSyncJob = adminAction({
   input: z.object({ userId: userIdSchema.optional() }),
   rateLimit: QUEUE_LIMIT,
-  fallbackError: "Failed to trigger sync. Please try again.",
+  fallbackError: "Could not start the sync. Try again.",
   handler: async ({ userId }, { userId: adminId }) => {
     if (!isRedisConfigured()) return NO_REDIS
 

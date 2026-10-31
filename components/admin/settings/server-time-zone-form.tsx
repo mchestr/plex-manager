@@ -35,18 +35,15 @@ function zoneGroups() {
 }
 
 /**
- * The zone in effect and where it comes from, in both modes. While editing
- * a zone that was never set, it adds that saving one overrides it.
+ * The zone in use when it is not the one saved: with none saved, the app
+ * falls back to `TZ`, else UTC (`serverZone()`). Null when they match.
  */
-function effectiveNote({ configured, effective }: ServerTimeZone, editing: boolean) {
-  const uses = "Season dates, announcement expiry and Rewind times use it."
-  if (configured) return `In effect: ${zoneLabel(effective)}. ${uses}`
-  const override = editing ? " A zone that you save here replaces it." : ""
-  return `In effect: ${zoneLabel(effective)}, from the TZ environment variable or UTC.${override} ${uses}`
+function zoneInUse({ configured, effective }: ServerTimeZone) {
+  return configured === effective ? null : `Using ${zoneLabel(effective)}.`
 }
 
 /**
- * The server time zone as the System section's form, saved with the
+ * The server time zone as the Time zone section's form, saved with the
  * section's Save. A zone that was never set opens empty, since a clean Save
  * changes nothing: the browser's zone is offered as a one-click choice
  * (`suggested`), read only after hydration, and never shown as the setting.
@@ -90,36 +87,39 @@ export function useTimeZoneForm({ configured, effective }: ServerTimeZone) {
 }
 
 /**
- * The saved zone in view mode, with the same note the field gives on what
- * is in effect and where it comes from. Never the browser's zone, which is
- * not in effect.
+ * The saved zone in view mode, and the zone in use when it differs (none
+ * saved). Never the browser's zone, which is not in use.
  */
 export function ServerTimeZoneSummary({ timeZone }: { timeZone: ServerTimeZone }) {
+  const inUse = zoneInUse(timeZone)
   return (
-    <SettingsSummary data-testid="settings-system-summary">
-      <SettingsSummaryRow label="Server time zone" wide data-testid="settings-system-summary-time-zone">
+    <SettingsSummary data-testid="settings-time-zone-summary">
+      <SettingsSummaryRow label="Server time zone" wide data-testid="settings-time-zone-summary-time-zone">
         <span className="block">{timeZone.configured ? zoneLabel(timeZone.configured) : <NotSet />}</span>
-        <span className="mt-1 block text-label text-muted-foreground" data-testid="server-time-zone-effective">
-          {effectiveNote(timeZone, false)}
-        </span>
+        {inUse && (
+          <span className="mt-1 block text-label text-muted-foreground" data-testid="server-time-zone-effective">
+            {inUse}
+          </span>
+        )}
       </SettingsSummaryRow>
     </SettingsSummary>
   )
 }
 
-/** The zone picker, with what is in effect now and where it comes from. */
+/** The zone picker, with the zone in use when none is saved. */
 export function ServerTimeZoneField({ state }: { state: ReturnType<typeof useTimeZoneForm> }) {
   const groups = useMemo(() => zoneGroups(), [])
   const items = useMemo(() => groups.flatMap((group) => group.options), [groups])
   const triggerRef = useRef<HTMLButtonElement>(null)
   const { suggested } = state
+  const inUse = zoneInUse(state)
 
   return (
     <div className="flex flex-col gap-2" data-testid="server-time-zone-form">
       <FormField
         name="server-time-zone"
         label="Server time zone"
-        description={<span data-testid="server-time-zone-effective">{effectiveNote(state, true)}</span>}
+        description={inUse && <span data-testid="server-time-zone-effective">{inUse}</span>}
         error={state.error}
       >
         <Select

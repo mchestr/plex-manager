@@ -3,17 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 
 import { SettingsGroup, SettingsLayout } from '@/components/admin/settings/settings-layout'
-import type { SettingsNavItem } from '@/components/admin/settings/settings-nav'
+import type { SettingsNavItem } from '@/components/admin/settings/settings-groups'
 import { SettingsSection } from '@/components/ui/settings-section'
 
 const ITEMS: SettingsNavItem[] = [
   { id: 'plex', label: 'Plex server', group: 'media', status: 'ok' },
-  {
-    id: 'stripe',
-    label: 'Stripe billing',
-    group: 'integrations',
-    status: 'ok',
-  },
+  { id: 'stripe', label: 'Stripe billing', group: 'members', status: 'ok' },
   { id: 'system', label: 'System information', group: 'system' },
 ]
 
@@ -26,12 +21,12 @@ function renderLayout() {
           <input aria-label="Plex name" />
         </section>
       </SettingsGroup>
-      <SettingsGroup id="integrations">
+      <SettingsGroup id="members">
         <section id="stripe">Stripe</section>
       </SettingsGroup>
       <SettingsGroup id="system">
-        <section id="system">System</section>
-        <a id="server-time-zone" href="#server-time-zone">
+        <section id="system">Runtime facts</section>
+        <a id="time-zone" href="#time-zone">
           zone
         </a>
       </SettingsGroup>
@@ -50,7 +45,7 @@ describe('SettingsLayout', () => {
 
     expect(screen.getByText('Plex')).toBeVisible()
     expect(screen.getByText('Stripe')).not.toBeVisible()
-    expect(screen.getByText('System')).not.toBeVisible()
+    expect(screen.getByText('Runtime facts')).not.toBeVisible()
   })
 
   it('reveals the group of a nav link and scrolls to the section', async () => {
@@ -79,8 +74,8 @@ describe('SettingsLayout', () => {
 
     await user.click(screen.getByText('zone', { selector: 'a' }))
 
-    expect(screen.getByText('System')).toBeVisible()
-    expect(window.location.hash).toBe('#server-time-zone')
+    expect(screen.getByText('Runtime facts')).toBeVisible()
+    expect(window.location.hash).toBe('#time-zone')
   })
 
   it('ignores a malformed or unknown hash', () => {

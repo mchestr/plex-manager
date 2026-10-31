@@ -26,21 +26,20 @@ type SetupStepGroup = "Core" | "Requests" | "Automation" | "AI" | "Community"
 export interface SetupStep {
   id: SetupStepId
   title: string
-  description: string
   group: SetupStepGroup
   /** False only for Plex and Tautulli; an optional step offers Skip for now. */
   optional: boolean
 }
 
 export const SETUP_STEPS: readonly SetupStep[] = [
-  { id: "plex", title: "Plex server", description: "Connect your Plex server", group: "Core", optional: false },
-  { id: "tautulli", title: "Tautulli", description: "Connect Tautulli for watch history", group: "Core", optional: false },
-  { id: "overseerr", title: "Overseerr", description: "Connect Overseerr for requests", group: "Requests", optional: true },
-  { id: "sonarr", title: "Sonarr", description: "Connect Sonarr for series", group: "Automation", optional: true },
-  { id: "radarr", title: "Radarr", description: "Connect Radarr for movies", group: "Automation", optional: true },
-  { id: "llm-rewind", title: "Rewind writer", description: "The AI provider that writes each Rewind", group: "AI", optional: true },
-  { id: "llm-chat", title: "Admin assistant", description: "The AI provider for the admin assistant", group: "AI", optional: true },
-  { id: "discord", title: "Discord", description: "Linked roles and the Discord bot", group: "Community", optional: true },
+  { id: "plex", title: "Plex server", group: "Core", optional: false },
+  { id: "tautulli", title: "Tautulli", group: "Core", optional: false },
+  { id: "overseerr", title: "Overseerr", group: "Requests", optional: true },
+  { id: "sonarr", title: "Sonarr", group: "Automation", optional: true },
+  { id: "radarr", title: "Radarr", group: "Automation", optional: true },
+  { id: "llm-rewind", title: "Rewind writer", group: "AI", optional: true },
+  { id: "llm-chat", title: "Admin assistant", group: "AI", optional: true },
+  { id: "discord", title: "Discord", group: "Community", optional: true },
 ]
 
 /** The ids Skip for now accepts: every step but Plex and Tautulli. */

@@ -81,15 +81,20 @@ const RATE_LIMITED: CopyEntry = {
 const INTERNAL: CopyEntry = { member: GENERIC }
 
 const REWIND_TITLE = "Your Rewind couldn't be made"
-const INTERRUPTED = "Your Rewind stopped before it was complete. Try again."
+// Members can't start or retry a Rewind (actions/rewind-generation.ts), so failures point at the admin
+const ADMIN_CAN_SEE = "The server admin can see what happened."
+const INTERRUPTED = `Your Rewind stopped before it was complete. ${ADMIN_CAN_SEE}`
 
 const rewind = (description: string): CopyEntry => ({ member: { title: REWIND_TITLE, description } })
 
 const REWIND_UNAVAILABLE = "Rewind isn't available"
-const infra = (code: RewindInfraCode): CopyEntry => ({
-  member: { title: REWIND_UNAVAILABLE, description: rewindInfraMessage(code, "member") },
-  admin: { title: REWIND_UNAVAILABLE, description: rewindInfraMessage(code, "admin") },
-})
+const infra = (code: RewindInfraCode): CopyEntry =>
+  code === "REDIS_UNAVAILABLE"
+    ? { member: { title: REWIND_UNAVAILABLE, description: "Try again in a few minutes." } }
+    : {
+        member: { title: REWIND_UNAVAILABLE, description: "Ask the server admin when it will be available." },
+        admin: { title: REWIND_UNAVAILABLE, description: rewindInfraMessage(code, "admin") },
+      }
 
 const DISCORD_NOT_LINKED = "Discord wasn't linked"
 const discord = (description: string): CopyEntry => ({ member: { title: DISCORD_NOT_LINKED, description } })
@@ -159,16 +164,16 @@ const COPY = {
   TAUTULLI_USER_NOT_FOUND: rewind(
     "Tautulli does not have your account yet. Ask the server admin to refresh the Tautulli user list."
   ),
-  GENERATION_FAILED: rewind("An error stopped your Rewind. Try again."),
-  TIMEOUT: rewind("Your Rewind took too long to make. Try again in a few minutes."),
-  UPSTREAM_ERROR: rewind("The server could not read your watch history. Try again in a few minutes."),
-  LLM_FAILED: rewind("The AI could not write your Rewind. Try again."),
+  GENERATION_FAILED: rewind(`An error stopped your Rewind. ${ADMIN_CAN_SEE}`),
+  TIMEOUT: rewind(`Your Rewind took too long to make. ${ADMIN_CAN_SEE}`),
+  UPSTREAM_ERROR: rewind(`The server could not read your watch history. ${ADMIN_CAN_SEE}`),
+  LLM_FAILED: rewind(`Rewind could not write the words for your pages. ${ADMIN_CAN_SEE}`),
   NOT_CONFIGURED: rewind("Rewind isn't fully set up on this server yet. Ask the server admin."),
   WORKER_LOST: rewind(INTERRUPTED),
   JOB_LOST: rewind(INTERRUPTED),
   REWIND_DISABLED: rewind("Rewind isn't open on this server yet."),
   NOT_IN_AUDIENCE: rewind("Rewind isn't open to everyone on this server yet."),
-  NO_PLEX_IDENTITY: rewind("Rewind needs Plex watch history. Jellyfin support is planned."),
+  NO_PLEX_IDENTITY: rewind("Rewind needs Plex watch history."),
   MANAGED_ACCOUNT: rewind("Rewind isn't made for managed Plex accounts on this server."),
   JOINED_LATE: rewind("Your first Rewind arrives next year."),
 
@@ -186,7 +191,7 @@ const COPY = {
     member: { title: "No Rewind for this year", description: "Open another year from the Rewind page." },
   },
   REWIND_NOT_MADE: {
-    member: { title: "Your Rewind isn't made yet", description: "Start it from the home page. It takes a few minutes." },
+    member: { title: "Your Rewind isn't made yet", description: "The server makes it for you. Come back soon." },
   },
   REWIND_NOT_OPEN: {
     member: { title: "Your Rewind isn't open yet", description: "It opens when the season starts on this server." },
@@ -194,7 +199,7 @@ const COPY = {
   REWIND_NOT_ELIGIBLE: {
     member: {
       title: "Rewind isn't available for your account",
-      description: "Rewind needs Plex watch history. Jellyfin support is planned.",
+      description: "Rewind needs Plex watch history, and this server has none for your account.",
     },
   },
   REDIS_NOT_CONFIGURED: infra("REDIS_NOT_CONFIGURED"),

@@ -44,7 +44,6 @@ jest.mock('@/lib/member/home-data', () => ({
   getHomeData: jest.fn(async () => ({
     serverName: 'Test Plex',
     greeting: 'Good evening, Morgan',
-    since: "You've been watching on Test Plex since March 2024.",
     service: 'plex',
     announcements: [],
     announcementsSeenAt: null,

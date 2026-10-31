@@ -27,7 +27,7 @@ describe("SetupClaimStep", () => {
     expect(field).toHaveAttribute("autocomplete", "one-time-code")
     expect(field).toHaveAttribute("spellcheck", "false")
     expect(field).toHaveClass("font-mono")
-    expect(field).toHaveAccessibleDescription(/docker logs plex-manager/)
+    expect(field).toHaveAccessibleDescription("Run docker compose logs app | grep 'Setup code' and use the newest code. Each code works once.")
     expect(screen.getByRole("heading", { name: "Next steps" })).toBeInTheDocument()
   })
 

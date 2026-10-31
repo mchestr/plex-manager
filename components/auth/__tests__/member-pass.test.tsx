@@ -132,7 +132,7 @@ describe('MemberPass', () => {
     renderPass()
 
     expect(screen.getByTestId('member-pass-token-copy')).toHaveTextContent(
-      'Approve access on plex.tv. Northfield Plex keeps your Plex sign-in token. It uses the token to sync your watchlist and accept invites.'
+      'Approve access on plex.tv. Northfield Plex keeps your Plex sign-in token to sync your watchlist, accept invites and mark titles watched.'
     )
   })
 

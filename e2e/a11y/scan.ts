@@ -52,11 +52,32 @@ async function fillPopupBackdropCutouts(page: Page): Promise<void> {
 }
 
 /**
+ * Hides the page behind an open modal popup, which Base UI marks with
+ * `data-base-ui-inert` on every top-level element outside the popup.
+ *
+ * axe's contrast check takes one element stack per line of text and needs
+ * them all equal down to `<html>`, page content under an opaque popup
+ * included. A two-line dialog description then passed or failed by what
+ * scrolled under it: a page element under one line and not the other reads
+ * as `color-contrast` incomplete ("partially overlaps other elements"). The
+ * page behind is inert, and its own route scans it.
+ */
+async function hideInertPage(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (const element of document.querySelectorAll<HTMLElement>('body > [data-base-ui-inert]')) {
+      // Not visibility: a descendant can make itself visible again, and axe errors on it
+      element.style.display = 'none';
+    }
+  });
+}
+
+/**
  * Scans `page` and checks the counts against the baseline entry `name`, or
  * lowers that entry when `UPDATE_AXE_BASELINE=1`.
  */
 export async function scanAgainstBaseline(page: Page, name: string): Promise<void> {
   await fillPopupBackdropCutouts(page);
+  await hideInertPage(page);
   const results = await analyzeAtRest(page, axeFor(page));
   try {
     enforceBaseline({

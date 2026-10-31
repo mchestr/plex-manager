@@ -50,6 +50,7 @@ describe('getRewindPreflight', () => {
       ['sonarr', 'notConfigured'],
       ['llm', 'ok'],
     ])
+    expect(row(rows, 'sonarr')?.detail).toBe("Optional: Next year's returning shows use it")
   })
 
   it('says Rewind needs Redis when REDIS_URL is missing', async () => {
@@ -89,7 +90,7 @@ describe('getRewindPreflight', () => {
   it('reads the frozen model, and turns red when the provider is not the lock\'s (P8.1)', async () => {
     jest.replaceProperty(REWIND_LOCK, 'model', { provider: 'anthropic', modelId: 'claude-sonnet-5-5', budgetModelId: 'claude-haiku-5-5', effort: 'low', maxOutputTokens: 1800 })
     prismaMock.lLMProvider.findFirst.mockResolvedValue({ provider: 'anthropic', model: 'claude-opus-5-5' } as never)
-    expect(row(await getRewindPreflight(), 'llm')).toMatchObject({ status: 'ok', detail: expect.stringMatching(/Sonnet.*frozen in rewind-2026\.1/) })
+    expect(row(await getRewindPreflight(), 'llm')).toMatchObject({ status: 'ok', detail: expect.stringMatching(/^[^,]*Sonnet[^,]*$/) })
 
     prismaMock.lLMProvider.findFirst.mockResolvedValue({ provider: 'openai', model: 'gpt-6-sol' } as never)
     expect(row(await getRewindPreflight(), 'llm')).toMatchObject({
@@ -101,7 +102,13 @@ describe('getRewindPreflight', () => {
   it('reports template-only mode', async () => {
     prismaMock.config.findUnique.mockResolvedValue(buildConfig({ rewindLlmMode: 'off' }))
 
-    expect(row(await getRewindPreflight(), 'llm')?.status).toBe('degraded')
+    expect(row(await getRewindPreflight(), 'llm')).toMatchObject({ status: 'degraded', detail: 'Off in Settings' })
+  })
+
+  it('names a missing AI provider as the cause of template text', async () => {
+    prismaMock.lLMProvider.findFirst.mockResolvedValue(null)
+
+    expect(row(await getRewindPreflight(), 'llm')).toMatchObject({ status: 'degraded', detail: 'No AI provider set up' })
   })
 
   it('counts the members skipped for entitlement only with Stripe on', async () => {

@@ -7,7 +7,7 @@ import { AnnouncementItem } from "@/components/announcements/announcement-item"
 import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { SubmitButton } from "@/components/ui/submit-button"
@@ -111,7 +111,7 @@ function AnnouncementForm({ announcement, zone, onSaved }: AnnouncementFormProps
           name="expiresAt"
           label="Expires"
           optional
-          description={<span data-testid="announcement-expires-zone">Times are in {zone}. Leave it empty for no end date.</span>}
+          description={<span data-testid="announcement-expires-zone">Times are in {zone}.</span>}
           error={fieldError("expiresAt")}
         >
           <Input
@@ -122,10 +122,7 @@ function AnnouncementForm({ announcement, zone, onSaved }: AnnouncementFormProps
         </FormField>
       </div>
       <Field className="flex-row items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <FieldLabel>Visible on home page</FieldLabel>
-          <FieldDescription>Hidden announcements stay here until you show or delete them.</FieldDescription>
-        </div>
+        <FieldLabel>Visible to members</FieldLabel>
         <Switch checked={isActive} onCheckedChange={setIsActive} data-testid="announcement-active-checkbox" />
       </Field>
       <DialogFooter>

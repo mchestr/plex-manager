@@ -114,7 +114,8 @@ describe('getHomeData', () => {
     )
     const data = await getHomeData('user-1', now)
     expect(data.greeting).toBe('Good morning, Morgan')
-    expect(data.since).toBe("You've been watching on Northfield Plex since March 2024.")
+    // The account's creation date is not when the member started watching, so the home page claims no date
+    expect(data).not.toHaveProperty('since')
 
     prismaMock.user.findUnique.mockResolvedValue(buildUser({ name: 'Morgan Lee', timezone: null }))
     await expect(getHomeData('user-1', now)).resolves.toMatchObject({ greeting: 'Good evening, Morgan' })

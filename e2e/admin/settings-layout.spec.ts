@@ -3,13 +3,23 @@ import { createE2EPrismaClient } from '../helpers/prisma';
 import { editSection } from '../helpers/settings';
 
 /**
- * P10.19: the settings layout. The section nav reaches every section, Test
- * all connections re-checks them ("Checked just now"), a section being edited
- * marks itself in the nav, and at phone width the page does not scroll
- * sideways and Jump to reaches a section.
+ * P10.19: the settings layout. The section nav reaches every section, related
+ * sections share a group, Test all connections re-checks them ("Checked just
+ * now"), a section being edited marks itself in the nav, and at phone width
+ * the page does not scroll sideways and Jump to reaches a section.
  */
 
-const SECTIONS = ['plex', 'tautulli', 'overseerr', 'ai', 'discord', 'stripe', 'rewind', 'other', 'system'];
+/** Each group's sections, as the nav lists them. */
+const GROUPS: Record<string, string[]> = {
+  media: ['plex', 'tautulli', 'overseerr', 'other'],
+  members: ['stripe', 'request-tiers'],
+  ai: ['ai', 'assistant'],
+  discord: ['discord', 'channel-stats'],
+  rewind: ['rewind'],
+  system: ['time-zone', 'privacy', 'system'],
+};
+
+const SECTIONS = Object.values(GROUPS).flat();
 
 test.describe('Settings layout', () => {
   test('nav links reach their sections', async ({ adminPage: page }) => {
@@ -26,6 +36,20 @@ test.describe('Settings layout', () => {
     }
   });
 
+  test('shows the sections of a group together, and only that group', async ({ adminPage: page }) => {
+    await page.goto('/admin/settings');
+
+    for (const [group, ids] of Object.entries(GROUPS)) {
+      await expect(page.getByTestId(`settings-nav-group-${group}`).getByRole('link')).toHaveCount(ids.length);
+      await page.getByTestId(`settings-nav-${ids[0]}`).click();
+      for (const id of SECTIONS) {
+        const section = page.getByTestId(`settings-${id}-section`);
+        if (ids.includes(id)) await expect(section).toBeVisible();
+        else await expect(section).toBeHidden();
+      }
+    }
+  });
+
   test('shows one group at a time, and anchors reveal their group', async ({ adminPage: page }) => {
     await page.goto('/admin/settings');
     await expect(page.getByTestId('settings-plex-section')).toBeVisible();
@@ -35,11 +59,11 @@ test.describe('Settings layout', () => {
     await expect(page.getByTestId('settings-rewind-section')).toBeVisible();
     await expect(page.getByTestId('settings-plex-section')).toBeHidden();
 
-    // "Change the server time zone" opens the System section on its time zone field
+    // "Change the server time zone" opens the Time zone section on its field
     await page.getByTestId('rewind-settings-time-zone-link').click();
-    await expect(page.getByTestId('settings-system-section')).toBeVisible();
-    await expect(page).toHaveURL(/#server-time-zone$/);
-    await expect(page.locator('#server-time-zone')).toBeInViewport();
+    await expect(page.getByTestId('settings-time-zone-section')).toBeVisible();
+    await expect(page).toHaveURL(/#time-zone$/);
+    await expect(page.locator('#time-zone')).toBeInViewport();
     await expect(page.getByTestId('server-time-zone-select')).toBeFocused();
   });
 

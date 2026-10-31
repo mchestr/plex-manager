@@ -187,7 +187,7 @@ describe('AnnouncementDialog', () => {
 
   it('names the zone the expiry is typed in', () => {
     renderDialog()
-    expect(screen.getByTestId('announcement-expires-zone')).toHaveTextContent('Times are in America/Chicago.')
+    expect(screen.getByTestId('announcement-expires-zone')).toHaveTextContent(/^Times are in America\/Chicago\.$/)
   })
 })
 
@@ -212,6 +212,6 @@ describe('VisibilitySwitch', () => {
 
   it('has a stable name that does not carry the state', () => {
     render(<VisibilitySwitch id="a1" title="Storage upgrade" isActive={false} />)
-    expect(screen.getByRole('switch', { name: 'Visible on home page: Storage upgrade' })).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Visible to members: Storage upgrade' })).toBeInTheDocument()
   })
 })

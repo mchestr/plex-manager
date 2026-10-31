@@ -61,7 +61,7 @@ export function OwnerBanner(props: OwnerBannerProps) {
   if (newUrl) {
     return (
       <section aria-label="Your new link" className="flex flex-col gap-3 border-y border-current py-4" data-testid="rewind-share-owner-banner">
-        <p className="font-text text-body">The old link no longer works. Copy the new link now. It shows only one time:</p>
+        <p className="font-text text-body">Copy the new link now. It won&apos;t be shown again.</p>
         <p className="font-text text-ui break-all" data-testid="rewind-share-new-url">
           {newUrl}
         </p>

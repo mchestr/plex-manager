@@ -49,7 +49,6 @@ export function AnnouncementsManager({ rows, zone }: AnnouncementsManagerProps) 
     <>
       <PageHeader
         title="Announcements"
-        description="Members see announcements on their home page and on the Announcements page."
         actions={newButton("create-announcement-button")}
         data-testid="admin-announcements-header"
       />

@@ -145,7 +145,6 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
             <div className="grid gap-6 lg:grid-cols-2">
               <ChartCard
                 title="Commands per day"
-                description="Successful and failed"
                 summary={`Successful and failed commands per day, ${periodText}`}
                 spec={dailyCommandsSpec(keys, dashboard.dailyActivity ?? [])}
                 data-testid="discord-daily-chart"
@@ -276,7 +275,6 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
             <h2 id="discord-marked-heading" className="text-h3">
               Marked media
             </h2>
-            <p className="text-ui text-muted-foreground">Marks from Discord and the web in this period.</p>
           </div>
           <Card>
             <CardContent>

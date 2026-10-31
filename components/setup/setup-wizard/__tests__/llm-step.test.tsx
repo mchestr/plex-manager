@@ -47,6 +47,7 @@ describe("LLMStep", () => {
     render(<LLMStep purpose="wrapped" stored={null} devDefaults={DEV} />)
 
     expect(screen.getByRole("heading", { level: 1, name: "Choose the Rewind writer" })).toHaveFocus()
+    expect(screen.getByText("For another provider, skip this step and set it up in Admin, Settings.")).toBeInTheDocument()
     await user.type(screen.getByLabelText("OpenAI API key"), "sk-test")
     await user.type(screen.getByTestId("setup-llm-rewind-temperature"), "0.7")
     await user.click(screen.getByTestId("setup-form-submit"))

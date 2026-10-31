@@ -31,8 +31,8 @@ function Unavailable({ canConfigure }: { canConfigure: boolean }) {
       data-testid="admin-chat-unavailable"
     >
       {canConfigure
-        ? "Turn on AI features and select a chat model in Settings. You can still read past conversations."
-        : "An admin must turn on AI features and select a chat model. You can still read past conversations."}
+        ? "Turn on AI features and select a chat model."
+        : "An admin must turn on AI features and select a chat model."}
     </Alert>
   )
 }

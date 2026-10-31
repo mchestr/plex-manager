@@ -40,7 +40,7 @@ export default async function SharesDashboardPage({ searchParams }: { searchPara
           value={f.number(stats.visitsInPeriod)}
           meta={
             stats.legacyVisitsInPeriod > 0
-              ? `Plus ${f.number(stats.legacyVisitsInPeriod)} to older v2 links`
+              ? `Plus ${f.number(stats.legacyVisitsInPeriod)} to older links`
               : undefined
           }
           data-testid="shares-visits"
@@ -55,7 +55,6 @@ export default async function SharesDashboardPage({ searchParams }: { searchPara
       </StatGrid>
       <ChartCard
         title="Links and visits per day"
-        description={period}
         summary={`Share links created and visits per day, ${period}`}
         spec={{
           kind: "bar",

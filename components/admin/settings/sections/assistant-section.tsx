@@ -7,9 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { SettingsSection } from "@/components/ui/settings-section"
 import type { AssistantSources, KnowledgeSourceSettings, McpServerSettings } from "@/lib/data/assistant-sources"
 
-const MCP_DESCRIPTION = "Allow only the tools that the assistant can use."
-const KNOWLEDGE_DESCRIPTION = "The assistant searches this GitHub repository and cites it in answers."
-
 /** "1 tool on", "3 tools on" or "Off". */
 function toolCount(server: McpServerSettings) {
   if (!server.isActive) return "Off"
@@ -30,7 +27,6 @@ function McpRow({ server }: { server: McpServerSettings }) {
         id="mcp"
         name={server.name}
         title={server.name}
-        description={MCP_DESCRIPTION}
         trigger="Edit"
         triggerLabel={server.name}
         triggerTestId="settings-mcp-edit-open"
@@ -58,7 +54,6 @@ function KnowledgeRow({ source }: { source: KnowledgeSourceSettings }) {
         id="knowledge"
         name={source.name}
         title={source.name}
-        description={KNOWLEDGE_DESCRIPTION}
         trigger="Edit"
         triggerLabel={source.name}
         triggerTestId="settings-knowledge-edit-open"
@@ -82,7 +77,7 @@ export function AssistantSection({ sources }: { sources: AssistantSources }) {
     <SettingsSection
       id="assistant"
       title="Assistant sources"
-      description="Only the admin assistant uses these sources. The Discord assistant does not."
+      description="Only the admin assistant uses these, not the Discord assistant."
     >
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2" data-testid="settings-mcp-list">
@@ -93,7 +88,7 @@ export function AssistantSection({ sources }: { sources: AssistantSources }) {
               id="mcp"
               name="the new MCP server"
               title="Add an MCP server"
-              description="Save the server first. Then list its tools and allow the tools that the assistant can use."
+              description="After you save the server, edit it to choose its tools."
               trigger="Add"
               triggerLabel="MCP server"
               triggerTestId="settings-mcp-add-open"

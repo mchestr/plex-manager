@@ -35,8 +35,7 @@ export function SubscriptionBanners({ notice, jellyfinEnabled = false }: Subscri
           }
           data-testid="past-due-banner"
         >
-          Your last payment didn&apos;t go through. Update your payment method to
-          keep your access.
+          Update your payment method to keep your access.
         </Alert>
       ) : (
         <Alert

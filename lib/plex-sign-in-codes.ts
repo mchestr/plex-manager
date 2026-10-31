@@ -20,7 +20,7 @@
  * @module lib/plex-sign-in-codes
  */
 
-import { isRateLimitedSignInError, RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
+import { isRateLimitedSignInError } from "@/lib/security/rate-limit-messages"
 
 export type PlexSignInCode =
   | "plex_pin_expired"
@@ -37,7 +37,7 @@ export type ShownPlexSignInCode = Exclude<PlexSignInCode, "access_denied">
 export const PLEX_SIGN_IN_COPY: Record<ShownPlexSignInCode, { title: string; message: string }> = {
   plex_pin_expired: {
     title: "Sign-in didn't finish",
-    message: "The sign-in expired, or it started in a different browser. Try again to start a new sign-in.",
+    message: "The sign-in expired, or it started in a different browser.",
   },
   invite_invalid: {
     title: "This invite can't be used",
@@ -51,7 +51,7 @@ export const PLEX_SIGN_IN_COPY: Record<ShownPlexSignInCode, { title: string; mes
     title: "Plex is temporarily unavailable",
     message: "Plex did not answer. Try again in a minute.",
   },
-  rate_limited: { title: "Too many attempts", message: RATE_LIMITED_MESSAGE },
+  rate_limited: { title: "Too many attempts", message: "Wait a few minutes, then try again." },
   sign_in_failed: {
     title: "Sign-in didn't finish",
     message: "Could not sign you in with Plex. Try again.",

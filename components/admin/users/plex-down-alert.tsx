@@ -42,8 +42,7 @@ export function PlexDownAlert({ notVerified, checkedAgo }: PlexDownAlertProps) {
         </Button>
       }
     >
-      <strong className="font-semibold">{plexDownTitle(notVerified)}</strong> All members stay in the list. Their access
-      shows as Unknown until Plex responds. Last checked {checkedAgo}.
+      <strong className="font-semibold">{plexDownTitle(notVerified)}</strong> Last checked {checkedAgo}.
     </Alert>
   )
 }

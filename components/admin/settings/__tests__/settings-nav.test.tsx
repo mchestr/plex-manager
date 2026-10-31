@@ -1,16 +1,17 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { SettingsJumpTo, SettingsNav, type SettingsNavItem } from '@/components/admin/settings/settings-nav'
+import type { SettingsNavItem } from '@/components/admin/settings/settings-groups'
+import { SettingsJumpTo, SettingsNav } from '@/components/admin/settings/settings-nav'
 
 const ITEMS: SettingsNavItem[] = [
   { id: 'plex', label: 'Plex server', group: 'media', status: 'ok' },
   { id: 'tautulli', label: 'Tautulli', group: 'media', status: 'unreachable' },
   { id: 'overseerr', label: 'Overseerr', group: 'media', status: 'untested' },
-  { id: 'ai', label: 'AI provider', group: 'integrations', status: 'degraded' },
-  { id: 'discord', label: 'Discord', group: 'integrations', status: 'incomplete' },
-  { id: 'stripe', label: 'Stripe billing', group: 'integrations', status: 'disabled' },
-  { id: 'other', label: 'Other integrations', group: 'system', status: 'notConfigured' },
+  { id: 'other', label: 'Sonarr, Radarr, Jellyfin', group: 'media', status: 'notConfigured' },
+  { id: 'stripe', label: 'Stripe billing', group: 'members', status: 'disabled' },
+  { id: 'ai', label: 'AI provider', group: 'ai', status: 'degraded' },
+  { id: 'discord', label: 'Discord', group: 'discord', status: 'incomplete' },
   { id: 'system', label: 'System information', group: 'system' },
 ]
 
@@ -56,13 +57,28 @@ describe('SettingsNav', () => {
     )
   })
 
+  it('heads the sections with their groups, in order', () => {
+    render(<SettingsNav items={ITEMS} active="plex" activeGroup="media" dirty={new Set()} onSelect={jest.fn()} />)
+
+    const headings = ['media', 'members', 'ai', 'discord', 'rewind', 'system'].map(
+      (id) => screen.getByTestId(`settings-nav-group-${id}`).firstElementChild?.textContent
+    )
+    expect(headings).toEqual(['Media', 'Members', 'AI', 'Discord', 'Rewind', 'System'])
+    expect(within(screen.getByTestId('settings-nav-group-media')).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Plex server',
+      'Tautulli',
+      'Overseerr',
+      'Sonarr, Radarr, Jellyfin',
+    ])
+  })
+
   it('marks the active group and hands a clicked section to onSelect', async () => {
     const user = userEvent.setup()
     const onSelect = jest.fn()
-    render(<SettingsNav items={ITEMS} active="plex" activeGroup="integrations" dirty={new Set()} onSelect={onSelect} />)
+    render(<SettingsNav items={ITEMS} active="plex" activeGroup="members" dirty={new Set()} onSelect={onSelect} />)
 
-    expect(within(screen.getByTestId('settings-nav-group-integrations')).getByText('Integrations')).toHaveAttribute('data-active', 'true')
-    expect(within(screen.getByTestId('settings-nav-group-media')).getByText('Media servers')).not.toHaveAttribute('data-active')
+    expect(within(screen.getByTestId('settings-nav-group-members')).getByText('Members')).toHaveAttribute('data-active', 'true')
+    expect(within(screen.getByTestId('settings-nav-group-media')).getByText('Media')).not.toHaveAttribute('data-active')
 
     await user.click(screen.getByRole('link', { name: /Stripe billing/ }))
 

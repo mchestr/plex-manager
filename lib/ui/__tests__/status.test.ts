@@ -44,7 +44,7 @@ const TABLE: Row[] = [
   ["queueJob", "waiting", "Waiting", "neutral", undefined],
   ["queueJob", "completed", "Done", "success", icons.done],
   ["queueJob", "failed", "Failed", "destructive", undefined],
-  ["queueJob", "delayed", "Paused", "warning", icons.paused],
+  ["queueJob", "delayed", "Delayed", "warning", icons.scheduled],
   ["queueJob", "paused", "Paused", "warning", icons.paused],
   ["worker", "running", "Worker running", "success", "dot"],
   ["worker", "stopped", "Worker stopped", "destructive", "dot"],
@@ -140,10 +140,11 @@ describe("resolveStatus sub-lines", () => {
     expect(resolveStatus("subscription", "ACTIVE").sub).toBeUndefined()
     expect(resolveStatus("invite", "active", { usesLeft: 3 }).sub).toBeUndefined()
     expect(resolveStatus("connection", "ok", { date }).sub).toBeUndefined()
+    expect(resolveStatus("connection", "degraded").sub).toBeUndefined()
   })
 
   it("keeps a fixed sub-line", () => {
-    expect(resolveStatus("connection", "degraded").sub).toBe("Rewind uses template text while AI is off")
+    expect(resolveStatus("connection", "untested").sub).toBe("Test after saving")
   })
 })
 
@@ -176,7 +177,8 @@ describe("discordStatus", () => {
   it("reads both rows on when everything is set up and the lease is fresh", () => {
     const { linkedRoles, supportBot } = rows({})
     expect(linkedRoles.label).toBe("On")
-    expect(supportBot).toMatchObject({ label: "Online", tone: "success", sub: "Lease renewed 12 seconds ago" })
+    expect(supportBot).toMatchObject({ label: "Online", tone: "success" })
+    expect(supportBot.sub).toBeUndefined()
   })
 
   it.each([
@@ -206,6 +208,11 @@ describe("discordStatus", () => {
     const stale = rows({ lastRenewedAt: new Date("2026-10-20T14:14:00Z") }).supportBot
     expect(stale).toMatchObject({ label: "Offline", tone: "destructive", sub: "Since Oct 20, 2026, 9:14 AM CDT" })
     expect(rows({ lastRenewedAt: null }).supportBot.sub).toBeUndefined()
+  })
+
+  it("names what is wrong with a login without narrating the retries", () => {
+    expect(rows({ loginBlock: "backoff" }).supportBot.sub).toBeUndefined()
+    expect(rows({ loginBlock: "daily_cap" }).supportBot.sub).toBe("Too many logins in 24 hours")
   })
 
   it("keeps linked roles on while the bot is offline", () => {

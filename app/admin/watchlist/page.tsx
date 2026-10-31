@@ -36,7 +36,6 @@ export default async function WatchlistPage({ searchParams }: { searchParams: Pr
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-watchlist-page">
       <PageHeader
         title="Watchlist sync"
-        description="Titles from members' Plex watchlists and their Overseerr requests."
         data-testid="admin-watchlist-header"
       />
       <SyncSettingsSection

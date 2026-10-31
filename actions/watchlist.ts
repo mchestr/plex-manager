@@ -125,7 +125,7 @@ export const updateWatchlistSyncSettings = memberAction({
       })
 
       if (!user?.plexAuthToken) {
-        return fail("CONFLICT", "Please log in with Plex to enable watchlist sync")
+        return fail("CONFLICT", "Sign in with Plex to turn on watchlist sync.")
       }
 
       const overseerr = await prisma.overseerr.findFirst({
@@ -134,7 +134,7 @@ export const updateWatchlistSyncSettings = memberAction({
       })
 
       if (!overseerr) {
-        return fail("CONFLICT", "Overseerr is not configured. Please contact an administrator.")
+        return fail("CONFLICT", "Overseerr isn't set up. Ask the server admin.")
       }
 
       const config = await prisma.config.findUnique({
@@ -143,7 +143,7 @@ export const updateWatchlistSyncSettings = memberAction({
       })
 
       if (!config?.watchlistSyncEnabled) {
-        return fail("CONFLICT", "Watchlist sync is not enabled globally. Please contact an administrator.")
+        return fail("CONFLICT", "Watchlist sync is off on this server. Ask the server admin.")
       }
     }
 
@@ -216,7 +216,7 @@ export const triggerWatchlistSync = memberAction({
       return ok({
         queued: true,
         jobId,
-        message: "Sync job has been queued and will be processed shortly",
+        message: "Sync started",
       })
     }
 
@@ -225,7 +225,7 @@ export const triggerWatchlistSync = memberAction({
 
     if (!result.success) {
       logger.warn("Manual watchlist sync failed", { userId, error: result.error })
-      return fail("UPSTREAM_UNAVAILABLE", "Sync failed. Please try again later.")
+      return fail("UPSTREAM_UNAVAILABLE", "Sync failed. Try again later.")
     }
 
     const data = result.data

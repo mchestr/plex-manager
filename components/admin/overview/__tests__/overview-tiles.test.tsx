@@ -61,7 +61,7 @@ describe("ServicesTile", () => {
   })
 
   it("words each problem and sends Redis to the queues page", () => {
-    expect(serviceProblem({ id: "ai", label: "AI", status: "degraded" })).toBe("AI uses template copy")
+    expect(serviceProblem({ id: "ai", label: "AI", status: "degraded" })).toBe("AI uses template text")
     expect(serviceProblem({ id: "plex", label: "Plex", status: "incomplete" })).toBe("Plex needs setup")
     expect(serviceHref({ id: "redis", label: "Redis", status: "unreachable" })).toBe("/admin/queues")
     expect(serviceHref({ id: "database", label: "Database", status: "unreachable" })).toBe("/admin/settings")
@@ -146,6 +146,7 @@ describe("a failed source", () => {
 
     expect(screen.getByRole("img", { name: "Not available" })).toHaveTextContent("—")
     expect(tile(id)).toHaveTextContent("Couldn't load")
+    expect(tile(id)).not.toHaveTextContent("The next refresh")
     expect(tile(id)).not.toHaveTextContent(/\b0\b/)
     expect(tile(id)).toHaveAttribute("href", href)
   })

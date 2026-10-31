@@ -35,14 +35,14 @@ const FEATURES = [
     field: "isEnabled",
     status: "linkedRoles",
     label: "Linked roles",
-    description: "Members link Discord and get a role that shows their Plex access.",
+    description: "Members link Discord and get a role that shows their server access.",
   },
   {
     id: "support-bot",
     field: "botEnabled",
     status: "supportBot",
     label: "Support bot",
-    description: "The bot answers members in the support channel.",
+    description: "The bot answers slash commands and direct messages.",
   },
 ] as const
 
