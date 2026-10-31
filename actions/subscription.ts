@@ -63,7 +63,7 @@ export const startCheckout = memberAction({
   input: z.object({ priceId: z.string().min(1, "Invalid plan selected.").max(255) }),
   // Keyed by user id so a signed-in user cannot hammer Stripe.
   rateLimit: { name: "checkout" },
-  fallbackError: "Could not start checkout. Please try again.",
+  fallbackError: "Could not start checkout. Try again.",
   handler: async ({ priceId }, { userId }): Promise<ActionResult<{ url: string }, CheckoutCode>> => {
     // A second checkout would start a second, separately billed subscription.
     const user = await prisma.user.findUnique({
@@ -144,7 +144,7 @@ export const startCheckout = memberAction({
  */
 export const openBillingPortal = memberAction({
   rateLimit: { name: "portal" },
-  fallbackError: "Could not open the billing portal. Please try again.",
+  fallbackError: "Could not open the billing portal. Try again.",
   handler: async (_input, { userId }) => {
     const subscription = await prisma.subscription.findUnique({
       where: { userId },

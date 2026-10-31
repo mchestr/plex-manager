@@ -79,7 +79,7 @@ function ValidMain({ code, serverType, kind, serverName, inviter, libraries, pre
       </h1>
       <p className="mt-2.5 max-w-[46ch] text-body text-muted-foreground">
         {plex
-          ? "Accept the invite to watch its libraries and request titles."
+          ? "Accept the invite to watch its libraries."
           : "Choose a username and password for your new Jellyfin account."}
       </p>
       {libraries.length > 0 && (

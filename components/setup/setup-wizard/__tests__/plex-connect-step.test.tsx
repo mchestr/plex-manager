@@ -94,6 +94,7 @@ describe("PlexConnectStep", () => {
     expect(owned).not.toHaveAttribute("aria-disabled", "true")
     expect(shared).toHaveAttribute("aria-disabled", "true")
     expect(shared).toHaveTextContent("Only its owner can set it up")
+    expect(shared).not.toHaveTextContent("Shared with you")
     expect(offline).toHaveAttribute("aria-disabled", "true")
     expect(offline).toHaveTextContent(/Not reachable since Oct 14, 2026/)
     expect(screen.getByTestId("setup-plex-address")).toHaveTextContent("http://192.168.1.20:32400, Local, fastest")

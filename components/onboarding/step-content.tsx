@@ -66,7 +66,7 @@ function whatsNext(data: OnboardingData): Array<{ icon: (typeof icons)[keyof typ
     items.push({
       icon: icons.discord,
       title: "Discord",
-      text: data.discord.handle ? `Linked as ${data.discord.handle}.` : "Link your account any time at /discord/link.",
+      text: data.discord.handle ? `Linked as ${data.discord.handle}.` : "Link your account any time from the account menu.",
     })
   }
   return items

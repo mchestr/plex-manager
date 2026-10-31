@@ -112,7 +112,7 @@ describe("OnboardingWizard", () => {
     expect(screen.getByTestId("onboarding-final-heading")).toHaveTextContent("You are ready to watch")
     expect(screen.queryByText("Rewind")).not.toBeInTheDocument()
     expect(screen.queryByText("Requests")).not.toBeInTheDocument()
-    expect(screen.getByText("Link your account any time at /discord/link.")).toBeInTheDocument()
+    expect(screen.getByText("Link your account any time from the account menu.")).toBeInTheDocument()
     expect(screen.getByText("This guide is also on the Help page.")).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/Great!|Got it!|Perfect!|Admin\s*>/)
   })

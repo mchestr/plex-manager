@@ -6,7 +6,7 @@
 import { formatDuration } from "@/lib/utils/format"
 
 /** Shown when a sign-in, PIN or invite step is rate-limited. */
-export const RATE_LIMITED_MESSAGE = "Too many attempts. Please wait a few minutes and try again."
+export const RATE_LIMITED_MESSAGE = "Too many attempts. Wait a few minutes, then try again."
 
 /**
  * True for the `error` next-auth's `signIn()` returns when a sign-in was

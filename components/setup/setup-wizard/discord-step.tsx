@@ -37,7 +37,7 @@ function startValues(stored: StoredDiscordIntegration | null, devDefaults: DevDe
 
 const ROWS = [
   { key: "isEnabled", label: "Linked roles", hint: "Members link their Discord account and get a role while they have access." },
-  { key: "botEnabled", label: "Support bot", hint: "Answers member questions in your support channel." },
+  { key: "botEnabled", label: "Support bot", hint: "Answers slash commands and direct messages." },
 ] as const
 
 interface DiscordStepProps {

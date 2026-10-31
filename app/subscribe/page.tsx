@@ -53,7 +53,7 @@ function EntitledScreen({ billing }: { billing: boolean }) {
       <StatusScreen
         icon={icons.success}
         title="You already have access"
-        description="Your account is on the server. You do not need to subscribe."
+        description="You do not need to subscribe."
         primaryAction={
           billing ? (
             <Button size="lg" nativeButton={false} render={<Link href="/membership" />} data-testid="subscribe-manage-billing">

@@ -19,12 +19,12 @@ const COPY = {
   wrapped: {
     position: "llm-rewind",
     heading: "Choose the Rewind writer",
-    description: "Setup supports OpenAI only. You can choose another provider later in Admin settings.",
+    description: "For another provider, skip this step and set it up in Admin, Settings.",
   },
   chat: {
     position: "llm-chat",
     heading: "Choose the admin assistant",
-    description: "Setup supports OpenAI only. You can choose another provider later in Admin settings.",
+    description: "For another provider, skip this step and set it up in Admin, Settings.",
   },
 } as const
 

@@ -165,7 +165,7 @@ async function guard<A extends AuthLevel>(
     }
   }
   if (!session?.user?.id) {
-    return { ok: false, result: fail("UNAUTHENTICATED", "Please sign in to continue.") }
+    return { ok: false, result: fail("UNAUTHENTICATED", "Sign in to continue.") }
   }
   if ((auth === "admin" || auth === "setup") && !session.user.isAdmin) {
     return { ok: false, result: fail("FORBIDDEN", "Admins only.") }

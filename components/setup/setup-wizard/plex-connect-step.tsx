@@ -125,7 +125,7 @@ export function PlexConnectStep({ pending, stored, devDefaults }: PlexConnectSte
     <SetupStepFrame
       position="plex"
       heading="Connect your Plex server"
-      description="Sign in with the Plex account that owns the server. Then choose the server from the list."
+      description="Sign in with the Plex account that owns the server."
       onSubmit={() => (usingToken ? tokenForm.submit() : choose())}
       busy={busy}
       primary={

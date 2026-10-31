@@ -146,7 +146,7 @@ export function ProvisioningChecklist({ initial }: { initial: SubscriptionProvis
 
       {timedOut && !isSettled(data) && (
         <p className="text-ui text-muted-foreground" data-testid="subscribe-success-slow">
-          This is taking longer than usual. The setup continues. Look at Home again in a few minutes.
+          This is taking longer than usual. Check Home again in a few minutes.
         </p>
       )}
 

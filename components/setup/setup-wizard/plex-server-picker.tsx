@@ -37,7 +37,7 @@ export function PlexServerPicker({ servers, selected, onSelect, uri, onUriChange
   const items = (chosen?.connections ?? []).map((connection) => ({ value: connection.uri, label: connectionLabel(connection) }))
 
   const detail = (server: PickerServer) => {
-    if (!server.owned) return "Shared with you. Only its owner can set it up."
+    if (!server.owned) return "Only its owner can set it up."
     if (!server.online) return server.lastSeenAt ? `Not reachable since ${f.date(server.lastSeenAt)}. Start the server to choose it.` : "Not reachable. Start the server to choose it."
     return [server.version && `Plex Media Server ${server.version}`, server.platform && `on ${server.platform}`].filter(Boolean).join(" ") || "Plex Media Server"
   }
@@ -50,7 +50,7 @@ export function PlexServerPicker({ servers, selected, onSelect, uri, onUriChange
         </p>
         {servers.length === 0 ? (
           <p className="text-ui text-muted-foreground" data-testid="setup-plex-no-servers">
-            This Plex account has no servers. Sign in with the account that owns yours, or enter a token instead.
+            This Plex account has no servers. Sign in with the account that owns yours.
           </p>
         ) : (
           <RadioGroup value={selected} onValueChange={onSelect} aria-labelledby="setup-plex-servers-label" disabled={disabled} data-testid="setup-plex-servers">
@@ -80,7 +80,7 @@ export function PlexServerPicker({ servers, selected, onSelect, uri, onUriChange
         )}
       </div>
       {chosen && (
-        <FormField name="setup-plex-address" label="Address Plex Manager uses" description="From the server's addresses on plex.tv. Members never see it." error={uriError}>
+        <FormField name="setup-plex-address" label="Address Plex Manager uses" description="Members never see it." error={uriError}>
           <Select items={items} value={uri} onValueChange={(next) => next !== null && onUriChange(next)} disabled={disabled}>
             <SelectTrigger data-testid="setup-plex-address">
               <SelectValue className="font-mono" />

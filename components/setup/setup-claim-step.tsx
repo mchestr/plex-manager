@@ -62,8 +62,7 @@ export function SetupClaimStep() {
               Claim this server
             </h1>
             <p className="text-ui text-muted-foreground">
-              Paste the setup code from the server log, or the value of <span className="font-mono">SETUP_TOKEN</span> if you set one. The code
-              shows that you own the server.
+              Paste the setup code from the server log, or the value of <span className="font-mono">SETUP_TOKEN</span> if you set one.
             </p>
           </div>
           <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
@@ -72,7 +71,7 @@ export function SetupClaimStep() {
               label="Setup code"
               description={
                 <>
-                  Run <span className="font-mono">docker logs plex-manager</span> to find it. You can use it one time. It expires when setup is complete.
+                  Run <span className="font-mono">docker compose logs app | grep &apos;Setup code&apos;</span> and use the newest code. Each code works once.
                 </>
               }
             >

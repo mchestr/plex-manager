@@ -167,7 +167,8 @@ describe('PlexCallbackPageClient', () => {
     render(<PlexCallbackPageClient />)
 
     expect(await screen.findByTestId('plex-callback-error-rate_limited')).toBeInTheDocument()
-    expect(screen.getByText(RATE_LIMITED_MESSAGE)).toBeInTheDocument()
+    // The title says "Too many attempts", so the line under it says only what to do
+    expect(screen.getByText('Wait a few minutes, then try again.')).toBeInTheDocument()
   })
 
   it('shows the waiting state as the one "Finishing sign-in" spinner', () => {

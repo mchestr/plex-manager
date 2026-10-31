@@ -37,7 +37,7 @@ import { inviteCodeSchema } from "@/lib/validations/invite"
 
 const logger = createLogger("PLEX_AUTH")
 
-const START_FAILED = "We couldn't reach Plex. Please try again in a moment."
+const START_FAILED = "Could not reach Plex. Try again in a moment."
 
 export type PlexSignInStatus = "waiting" | "ready" | "expired"
 
@@ -117,7 +117,7 @@ export const finishPlexSignIn = publicAction({
     const userId = session?.user?.id
     logger.info("plex.sign_in_finished", { attemptId: pin?.attemptId ?? null, hasSession: Boolean(userId) })
     if (!userId) {
-      return fail("UNAUTHENTICATED", "Please sign in to continue.")
+      return fail("UNAUTHENTICATED", "Sign in to continue.")
     }
 
     const callbackPath = pin?.callbackPath
