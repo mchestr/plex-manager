@@ -36,7 +36,7 @@ services:
   # Postgres and Redis publish no ports: only the app, on the compose network,
   # reaches them. Both refuse to start without a password.
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       - POSTGRES_USER=postgres
