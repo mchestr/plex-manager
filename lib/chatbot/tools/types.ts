@@ -53,6 +53,12 @@ export interface RegisteredTool extends ChatTool {
    */
   discordDescription?: string
   /**
+   * Parameters the Discord model is not shown: ids it could only get from
+   * tools Discord cannot call (`search_sonarr_series`, `get_sonarr_episodes`).
+   * The executor still accepts them; Discord filters by name instead.
+   */
+  discordHiddenParameters?: readonly string[]
+  /**
    * True for `discordSafe` tools whose executor returns an already-safe,
    * caller-scoped human-readable STRING (not JSON) — e.g. the media-marking
    * tools, which only ever reference the requesting user's own media. Such

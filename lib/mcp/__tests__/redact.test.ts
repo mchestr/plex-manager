@@ -105,6 +105,16 @@ describe('redactCredentials', () => {
   })
 
   it.each([
+    ['Authorization=Bearer abcdefghijklmnop', 'abcdefghijklmnop'],
+    ['headers: authorization=Basic dXNlcjpwYXNzd29yZA== host=sonarr', 'dXNlcjpwYXNzd29yZA'],
+  ])('redacts the token after an "Authorization=" scheme in "%s"', (note, secret) => {
+    const { text, redacted } = redactCredentials(JSON.stringify({ note }))
+    expect(redacted).toBe(true)
+    expect(text).not.toContain(secret)
+    expect(redactCredentials(note).text).not.toContain(secret)
+  })
+
+  it.each([
     ['a "token-" run', 'token-'.repeat(3_400)],
     ['a "token_token-" run', 'token_token-'.repeat(1_700)],
     ['a quoted "token-" run', `"${'token-'.repeat(3_400)}`],

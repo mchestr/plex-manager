@@ -67,9 +67,10 @@ function isSecretKey(key: string): boolean {
 }
 
 function scrubString(value: string): string {
+  // The scheme rule first: the pair rule would otherwise take "Authorization=Bearer" and leave the token
   return value
-    .replace(SECRET_PAIR, `$1=${REDACTED}`)
     .replace(BEARER, (_match, header: string | undefined, scheme: string | undefined) => `${header ?? scheme} ${REDACTED}`)
+    .replace(SECRET_PAIR, `$1=${REDACTED}`)
 }
 
 function scrubValue(value: unknown): unknown {

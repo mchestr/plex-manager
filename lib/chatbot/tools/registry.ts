@@ -101,16 +101,31 @@ export const ALL_TOOLS: RegisteredTool[] = TOOL_ORDER.map((name) => {
   return tool
 })
 
+/** `parameters` without the properties in `hidden`, and without them in `required`. */
+function withoutParameters(parameters: Record<string, unknown>, hidden: readonly string[] | undefined): Record<string, unknown> {
+  if (!hidden?.length) return parameters
+  const properties = Object.fromEntries(Object.entries((parameters.properties ?? {}) as Record<string, unknown>).filter(([name]) => !hidden.includes(name)))
+  const required = Array.isArray(parameters.required) ? parameters.required.filter((name) => !hidden.includes(name)) : undefined
+  return { ...parameters, properties, ...(required ? { required } : {}) }
+}
+
 /**
  * Discord-safe tools, DERIVED from the `discordSafe` metadata flag. This is the
  * security keystone: adding a tool to Discord requires only tagging it. Each
  * carries its `discordDescription` in place of its description when it has
- * one, so the Discord model and prompt read what the tool returns there.
+ * one, and leaves out its `discordHiddenParameters`, so the Discord model and
+ * prompt read what the tool takes and returns there.
  */
-export const DISCORD_SAFE_TOOLS: ChatTool[] = ALL_TOOLS.filter((tool) => tool.discordSafe).map(({ type, function: fn, discordDescription }) => ({
-  type,
-  function: { ...fn, description: discordDescription ?? fn.description },
-}))
+export const DISCORD_SAFE_TOOLS: ChatTool[] = ALL_TOOLS.filter((tool) => tool.discordSafe).map(
+  ({ type, function: fn, discordDescription, discordHiddenParameters }) => ({
+    type,
+    function: {
+      ...fn,
+      description: discordDescription ?? fn.description,
+      parameters: withoutParameters(fn.parameters, discordHiddenParameters),
+    },
+  })
+)
 
 export const DISCORD_SAFE_TOOL_NAMES = new Set<string>(
   DISCORD_SAFE_TOOLS.map((tool) => tool.function.name)

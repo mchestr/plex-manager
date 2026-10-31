@@ -74,6 +74,16 @@ describe('scrubForRole', () => {
     expect(JSON.parse(result).note).toMatch(/(Bearer|Basic) \[redacted\]/)
   })
 
+  it.each([
+    ['Authorization=Bearer abcdefghijklmnop', 'abcdefghijklmnop'],
+    ['headers: authorization=Basic dXNlcjpwYXNzd29yZA== host=sonarr', 'dXNlcjpwYXNzd29yZA'],
+  ])('redacts the token after an "Authorization=" scheme in "%s"', (note, secret) => {
+    const result = scrubForRole(JSON.stringify({ note }))
+
+    expect(result).not.toContain(secret)
+    expect(JSON.parse(result).note).toContain(REDACTED)
+  })
+
   it('reads a 20,000-character "token-" run in one pass', () => {
     const run = 'token-'.repeat(3_400)
     const start = performance.now()

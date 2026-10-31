@@ -109,8 +109,9 @@ Each connected client pays for the tool list and for every result it reads.
   the fields an answer needs. Their list and search tools take a search,
   filter, page or limit, and a "showing N of M" line says how to see the
   rest: history, queues, calendars and wanted lists, the Sonarr and Radarr
-  libraries and searches, Overseerr requests, discovery and users, Tautulli
-  users, plays, top lists and activity, and Plex's recently added.
+  libraries and searches, a Sonarr series' episodes, Overseerr requests,
+  discovery and users, Tautulli users, plays, top lists and activity, and
+  Plex's recently added.
   `get_plex_sessions` and `get_plex_on_deck` take no arguments:
   `get_plex_sessions` holds the streams that fit, and its showing line points
   to `get_tautulli_activity`'s search when some are left out, and On Deck

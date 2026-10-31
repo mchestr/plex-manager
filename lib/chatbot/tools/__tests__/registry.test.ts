@@ -139,11 +139,10 @@ describe("chatbot tool registry drift guard", () => {
 describe("what the Discord model reads", () => {
   const byName = new Map(ALL_TOOLS.map((tool) => [tool.function.name, tool]))
 
-  it("is each tool's discordDescription when it has one, else its description, with the same name and parameters", () => {
+  it("is each tool's discordDescription when it has one, else its description, under the same name", () => {
     for (const tool of DISCORD_SAFE_TOOLS) {
       const registered = byName.get(tool.function.name)
       expect(tool.function.description).toBe(registered?.discordDescription ?? registered?.function.description)
-      expect(tool.function.parameters).toBe(registered?.function.parameters)
     }
     // The admin assistant and MCP keep the full description
     expect(byName.get("get_sonarr_history")?.function.description).toContain("IMPORTANT: Use seriesId or episodeId")
@@ -174,5 +173,28 @@ describe("what the Discord model reads", () => {
 
     expect(prompt).toContain(`- get_radarr_queue: ${byName.get("get_radarr_queue")?.discordDescription}`)
     expect(prompt).not.toMatch(/get_sonarr_episodes|search_sonarr_series|search_radarr_movies|download client, when it was added/)
+  })
+})
+
+describe("Discord parameters", () => {
+  const discord = (name: string) => DISCORD_SAFE_TOOLS.find((tool) => tool.function.name === name)?.function.parameters
+  const full = (name: string) => ALL_TOOLS.find((tool) => tool.function.name === name)?.function.parameters
+  const names = (parameters: Record<string, unknown> | undefined) => Object.keys((parameters?.properties ?? {}) as Record<string, unknown>).sort()
+
+  it.each([
+    ["get_sonarr_history", ["seriesId", "episodeId"]],
+    ["get_sonarr_queue", ["seriesId"]],
+    ["get_radarr_history", ["movieId"]],
+    ["get_radarr_queue", ["movieId"]],
+  ])("shows the Discord model %s without the ids it cannot look up", (name, hidden) => {
+    expect(names(discord(name))).toEqual(names(full(name)).filter((property) => !hidden.includes(property)))
+    for (const property of hidden) expect(names(full(name))).toContain(property)
+  })
+
+  it("leaves every other Discord tool's parameters as they are", () => {
+    const hiding = new Set(["get_sonarr_history", "get_sonarr_queue", "get_radarr_history", "get_radarr_queue"])
+    for (const tool of DISCORD_SAFE_TOOLS.filter((candidate) => !hiding.has(candidate.function.name))) {
+      expect(tool.function.parameters).toEqual(full(tool.function.name))
+    }
   })
 })

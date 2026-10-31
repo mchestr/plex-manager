@@ -386,11 +386,13 @@ describe("the admin prompt sends 'who is watching' to the Tautulli activity, whi
   const prompt = generateSystemPrompt(ALL_TOOLS, UTC_PROMPT_FORMAT, new Date())
   const description = (name: string) => getRegisteredTool(name)?.function.description
 
-  it("routes the question to get_tautulli_activity, and to get_plex_sessions only without Tautulli", () => {
+  it("routes the question to get_tautulli_activity, and to get_plex_sessions only without Tautulli or when it fails", () => {
     expect(prompt).toContain(
-      "Who is watching or streaming now (active sessions) → get_tautulli_activity, which names each viewer; if Tautulli is not configured, get_plex_sessions (viewers anonymised)"
+      "Who is watching or streaming now (active sessions) → get_tautulli_activity, which names each viewer; if Tautulli is not configured or get_tautulli_activity returns an error, get_plex_sessions (viewers anonymised)"
     )
-    expect(prompt).toContain("3. Call get_tautulli_activity for who is watching")
+    expect(prompt).toContain(
+      "3. Call get_tautulli_activity for who is watching, as it names each viewer; if Tautulli is not configured or the call fails, call get_plex_sessions"
+    )
     expect(prompt).not.toContain("get_plex_sessions for active viewers")
   })
 

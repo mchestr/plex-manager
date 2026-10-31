@@ -356,6 +356,15 @@ describe("Sonarr and Radarr ids", () => {
     }
     for (const tool of tools) expect(tool.function.description).not.toMatch(/seriesId|movieId/)
   })
+
+  it("the request and details tools say a 4K request's state comes from status4k, not this app's Sonarr or Radarr", () => {
+    const tools = OVERSEERR_TOOLS.filter((tool) => /requests|media_details/.test(tool.function.name))
+
+    for (const tool of tools) {
+      expect(tool.function.description).toContain("A 4K request (is4k) goes to Overseerr's 4K server")
+      expect(tool.function.description).toContain("give the 4K state from status4k")
+    }
+  })
 })
 
 describe("discovery", () => {

@@ -18,7 +18,7 @@ const requestedBy = {
  * `mediaAvailability` in `executors/overseerr-projections.ts`).
  */
 const ARR_LOOKUP =
-  "No Sonarr or Radarr id: Overseerr may send a title to another Sonarr or Radarr server than this app's, so to use a Sonarr or Radarr tool on it, first find it with search_sonarr_series 'tvdb:<tvdbId>' or search_radarr_movies 'tmdb:<tmdbId>' and use the sonarrId or radarrId that returns."
+  "No Sonarr or Radarr id: Overseerr may send a title to another Sonarr or Radarr server than this app's, so to use a Sonarr or Radarr tool on it, first find it with search_sonarr_series 'tvdb:<tvdbId>' or search_radarr_movies 'tmdb:<tmdbId>' and use the sonarrId or radarrId that returns. A 4K request (is4k) goes to Overseerr's 4K server, which may not be this app's: there the lookup can find the HD copy, so do not report its file, queue or history as the 4K request's; give the 4K state from status4k."
 
 const REQUEST_FIELDS = `Each request has its id, type, status, 4K flag, dates, the seasons asked for, who asked and who last changed it (requestedBy and modifiedBy, each a user id and name), and the title's TMDB, TVDB and IMDb ids and availability in HD and 4K. Requests carry no titles: get_overseerr_media_details gives one from media.tmdbId. ${ARR_LOOKUP}`
 

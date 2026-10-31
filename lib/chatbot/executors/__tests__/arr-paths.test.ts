@@ -34,6 +34,13 @@ describe("withoutPaths", () => {
     ["two paths in one message", "Moving /a b/c.mkv to /d e/f.mkv failed", "Moving …/c.mkv to …/f.mkv failed"],
     ["folders that end in a separator", "Missing root folders: /data/media/tv/, /data/media/anime/", "Missing root folders: …/tv/, …/anime/"],
     ["a path at the end", "Missing root folder: /data/media/tv", "Missing root folder: …/tv"],
+    [
+      "a Windows profile with an apostrophe",
+      "Import failed, path does not exist or is not accessible by Sonarr: C:\\Users\\Sean O'Brien\\Downloads\\Show.S01E01. Ensure the path exists",
+      "Import failed, path does not exist or is not accessible by Sonarr: …/Show.S01E01. Ensure the path exists",
+    ],
+    ["a share with an apostrophe", "Import failed: /Volumes/Jane's Media/movies/Heat.1995", "Import failed: …/Heat.1995"],
+    ["a home with an apostrophe", "Couldn't read /home/o'brien/tv/Show.S01", "Couldn't read …/Show.S01"],
   ])("cuts %s to its last part", (_case, message, cut) => {
     expect(withoutPaths(message)).toBe(cut)
   })
@@ -86,6 +93,18 @@ describe("healthWithoutPaths", () => {
       { source: "IndexerStatusCheck", type: "warning", message: "Indexers unavailable due to failures: NZBgeek" },
       "not a check",
     ])
+  })
+
+  it("masks the account an update check names after its folder", () => {
+    const checks = [
+      { source: "UpdateCheck", type: "error", message: "Cannot install update because startup folder 'C:\\Users\\Sean O'Brien\\AppData\\Sonarr' is not writable by the user 'Sean O'Brien'." },
+      { source: "UpdateCheck", type: "error", message: "Cannot install update because UI folder '/opt/Sonarr/UI' is not writable by the user  'sonarr'." },
+    ]
+
+    const [startup, ui] = healthWithoutPaths(checks) as { message: string }[]
+    expect(startup.message).not.toMatch(/Brien|Users/)
+    expect(startup.message).toContain("by the user '…'")
+    expect(ui.message).toBe("Cannot install update because UI folder '…/UI' is not writable by the user  '…'.")
   })
 
   it("gives none for anything but a list", () => {

@@ -42,8 +42,12 @@ import { isRecord } from "./arr-output"
 
 /** A root: a drive ("C:\" or "C:/"), a UNC or doubled root ("\\" or "//"), or "/". */
 const ROOT = String.raw`(?:[A-Za-z]:[\\/]|[\\/]{2}|\/)`
-/** A character a directory name can hold: anything but a separator, a quote, a bar, "]" or a line break. */
-const NAME = String.raw`[^\\/'"|\]\n]`
+/**
+ * A character a directory name can hold: anything but a separator, a quote, a
+ * bar, "]" or a line break, though an apostrophe between letters stays in a
+ * name ("Sean O'Brien", "Jane's Media").
+ */
+const NAME = String.raw`(?:[^\\/'"|\]\n]|(?<=\w)'(?=\w))`
 /** Where a name ends although it could go on: ". " or ", " before more words, "://", or a space before another root. */
 const STOP = String.raw`[.,]\s(?=[^\\/\n]*?\s)|:\/\/|\s(?:[A-Za-z]:)?[\\/]`
 /** The start of a path's last part: a name character that is not a space and does not end a name. */
@@ -74,5 +78,10 @@ export function withoutPaths(message: string, known?: string): string {
  */
 export function healthWithoutPaths(checks: unknown): unknown[] {
   if (!Array.isArray(checks)) return []
-  return checks.map((check) => (isRecord(check) && typeof check.message === "string" ? { ...check, message: withoutPaths(check.message) } : check))
+  return checks.map((check) =>
+    isRecord(check) && typeof check.message === "string"
+      ? // The update checks also quote the account the app runs as, often the same profile name a path holds
+        { ...check, message: withoutPaths(check.message).replace(/(\buser\s+)'(?:[^'\n]|'(?=\w))*'/g, "$1'…'") }
+      : check
+  )
 }

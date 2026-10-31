@@ -86,6 +86,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
       "message",
     ],
     // The allowlist drops the ids, and no Discord tool gives one: a movie by name only
+    discordHiddenParameters: ["movieId"],
     discordDescription:
       "Get recent download history from Radarr, newest first, with each record's event, release, quality and movie title, and why a download failed or a file was deleted (paths cut to their last part), to check for download issues or successes. Without a movie it is the whole server's history; give movieName, the movie's title, for only that movie's history. The reply's 'showing' line says how many records were returned out of the total.",
     function: {
@@ -139,6 +140,7 @@ export const RADARR_TOOLS: RegisteredTool[] = [
       "quality",
     ],
     // Without the download client and added time the allowlist drops, and a movie by name only
+    discordHiddenParameters: ["movieId"],
     discordDescription:
       "Get the current download queue from Radarr, with each item's release, movie title, quality, progress (size and time left), state, and any error or import problem (paths cut to their last part), up to 50 items. Give movieName, the movie's title, to see only that movie's items: the latest 150 queue items are read and filtered to it. The reply's 'showing' line says how many items were returned out of the total.",
     function: {

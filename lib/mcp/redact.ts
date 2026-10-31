@@ -96,10 +96,11 @@ export function isCredentialKey(key: string): boolean {
 }
 
 function redactString(value: string): string {
+  // The scheme rule first: the pair rule would otherwise take "Authorization=Bearer" and leave the token
   return value
+    .replace(AUTH_SCHEME, (_match, header: string | undefined, scheme: string | undefined) => `${header ?? scheme} ${REDACTED}`)
     .replace(SECRET_PAIR, `$1=${REDACTED}`)
     .replace(SECRET_JSON_PAIR, `"$1$2${REDACTED}"`)
-    .replace(AUTH_SCHEME, (_match, header: string | undefined, scheme: string | undefined) => `${header ?? scheme} ${REDACTED}`)
 }
 
 function redactValue(value: unknown): unknown {

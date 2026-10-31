@@ -90,6 +90,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
       "message",
     ],
     // The allowlist drops the ids, and no Discord tool gives one: a series by name only
+    discordHiddenParameters: ["seriesId", "episodeId"],
     discordDescription:
       "Get recent download history from Sonarr, newest first, with each record's event, release, quality, series and episode titles, and why a download failed or a file was deleted (paths cut to their last part), to check for download issues or successes. Without a series it is the whole server's history; give seriesName, the series' title, for only that series' history. The reply's 'showing' line says how many records were returned out of the total.",
     function: {
@@ -149,6 +150,7 @@ export const SONARR_TOOLS: RegisteredTool[] = [
       "episodeNumber",
     ],
     // Without the download client and added time the allowlist drops, and a series by name only
+    discordHiddenParameters: ["seriesId"],
     discordDescription:
       "Get the current download queue from Sonarr, with each item's release, series and episode, quality, progress (size and time left), state, and any error or import problem (paths cut to their last part), up to 50 items. Give seriesName, the series' title, to see only that series' items, and a seasonNumber for one season's: the latest 150 queue items are read and every one of that series that fits in the reply is returned (a season pack is one item per episode). The reply's 'showing' line says how many items were returned out of the total.",
     function: {
