@@ -38,7 +38,7 @@ The rename is independent of the judge, so it lands first as its own PR. That ke
 - **Calls** is the existing usage table. Assistant conversation rows get a `StatusBadge` reading *Not reviewed*, *No findings* or *N open*. `LLM_PURPOSES` gains `judge` (the same name as the provider purpose), so judge calls show up as their own rows.
 - **Findings** is a `DataTable` of findings across conversations, with columns for severity, type, claim (one line), tool, conversation (link), date and status. Its `FilterBar` filters by type, severity and status (default `open`) and uses the same date range as Calls. Its stat tiles are Open, Fixed (in range) and False alarm rate (false alarms ÷ triaged, in range; "—" when nothing is triaged). A **Seen** column shows how many reviews raised the same finding (see fingerprint, §3).
   - A `SegmentedControl` switches between **List** and **Group by type and tool**. The grouped view shows one row per `(type, tool)`, with open findings, conversations affected and the latest date, and a click filters the list to that group. This is what shows recurring gaps across conversations.
-  - A **Hide unverified** filter, on by default, hides findings with `evidence: unverified` (§4, step 5).
+  - A **Hide unverified** filter, on by default, hides findings with `evidenceCheck: unverified` (§4, step 5).
   - **Counts exclude unverified findings everywhere**: the "N open" badge on Calls rows, the Open tile, the grouped view and the MCP tool's default. The numbers then always match the default list. The filter shows the hidden count ("Hide unverified (4)").
 - All judge text (claim, evidence, suggestion, summary, note) is rendered as plain text, never Markdown, raw HTML or auto-linked, because it carries text from tool results and conversations that someone outside the app may control.
 
@@ -64,7 +64,7 @@ The rename is independent of the judge, so it lands first as its own PR. That ke
 
 - `ChatConversationMessage.toolLog String?` is added to `ENCRYPTED_FIELDS`. It holds JSON `[{ tool, args, result, ok, truncated? }]` for each tool call in the turn, set on assistant messages only.
 - `runConversationLoop` (`lib/chatbot/conversation.ts`) collects the calls and results it already has in memory and returns them with the message. `lib/chatbot/history.ts` stores them with the turn.
-- Results and args go through `lib/mcp/redact.ts` before they're stored, and truncation happens after redaction, so a cut can only shorten text that's already redacted. It redacts credentials at any depth: a key ending in `token` (`X-Plex-Token`), or one containing `apikey`, `secret`, `password`, `passkey`, `authorization`, `cookie` or `credential`. It also redacts `name=value` credential pairs inside strings, as in a Sonarr or Radarr download URL's `?apikey=`, and `Bearer` and `Basic` values. Member emails and usernames are kept on purpose: admins can already see them, and the judge needs them to check claims about members. Each result is capped at 8 KB and each turn at 32 KB, with `truncated: true` on anything cut.
+- Results and args go through `lib/mcp/redact.ts` before they're stored, and truncation happens after redaction, so a cut can only shorten text that's already redacted. It redacts credentials at any depth: a key ending in `token` (`X-Plex-Token`), or one containing `apikey`, `secret`, `password`, `passkey`, `authorization`, `cookie` or `credential`. It also redacts `name=value` credential pairs inside strings, as in a Sonarr or Radarr download URL's `?apikey=`, and `Bearer` and `Basic` values. Invite codes are not handled by `redact.ts`. The assistant's invite tool already masks them before returning (the same rule as `inviteForCaller` in `lib/mcp/read-tool.ts`), so a full code never reaches the tool log. A test feeds the invite executor's output through capture to confirm it. Member emails and usernames are kept on purpose: admins can already see them, and the judge needs them to check claims about members. Each result is capped at 8 KB and each turn at 32 KB, with `truncated: true` on anything cut.
 - The tool log is never part of the assistant's own context (`toChatMessages` does not read it).
 - Retention: the tool log lives and dies with its message, so it goes when the conversation ends, which includes the `chatConversations` rule's 180 idle days. There's no separate window.
 
@@ -106,7 +106,7 @@ model ConversationFinding {
   suggestion     String   // encrypted
   tool           String?
   evidenceSource EvidenceSource   // tool_result | earlier_message | catalog | none
-  evidence       EvidenceCheck @default(unverified) // verified | unverified | not_applicable (§4 step 5)
+  evidenceCheck  EvidenceCheck @default(unverified) // verified | unverified | not_applicable (§4 step 5)
   fingerprint    String           // sha256(type | tool | messageId), see below
   seenCount      Int      @default(1)
   lastSeenAt     DateTime @default(now())
@@ -116,7 +116,6 @@ model ConversationFinding {
   triagedAt      DateTime?
   createdAt      DateTime @default(now())
   @@index([status, createdAt])
-  @@index([conversationId])
   @@index([type, status])
   @@unique([conversationId, fingerprint])
 }
@@ -126,7 +125,7 @@ model ConversationFinding {
 - **Fingerprint.** `sha256(type | tool ?? '' | messageId)` uses structured fields only. There is at most one finding per key, enforced by `@@unique([conversationId, fingerprint])`. The prompt tells the judge to combine several issues of one type on one message into a single finding. `verify` merges any duplicates the judge still returns, joining their claims and keeping the higher severity. The fingerprint is because the judge words the same problem differently on each run. Stored messages are never edited, and are removed only when the conversation ends, which cascades. So a fingerprint stays stable for the conversation's lifetime, and so does each finding's transcript anchor. The same problem raised again keeps its row and history (see §4, step 6).
 - `messageId` is resolved from the judge's absolute `messageIndex` at insert time and is never null then. A finding with an index that doesn't resolve is dropped. It only becomes null if its message is deleted, and messages are deleted only when the conversation ends, which also deletes its reviews and findings (§5). So a null `messageId` never persists.
 
-- `LLMUsage.conversationReviewId String?` is set to null when its review is deleted. Judge rows never set `chatConversationId`, so `ASSISTANT_ROWS` in `lib/llm/budget.ts` doesn't count them against the assistant caps.
+- `LLMUsage.conversationReviewId String?` (`@@index([conversationReviewId, createdAt])` for the judge cap's daily sum) is set to null when its review is deleted. Judge rows never set `chatConversationId`. I checked both places spend is counted: the cap sums filter on `ASSISTANT_ROWS` (`chatConversationId` not null), and `recordUsage` calls `addSpend` only when `attribution.chatConversationId` is set (`lib/llm/usage.ts`). So a judge call never counts against the requesting admin's or the server's assistant caps. A test checks this. The user detail usage tab does show judge rows under the admin who asked, as their own spend, which is intended.
 - New `Config` fields: `judgeNightlyEnabled Boolean @default(false)`, `judgeSampleRate Int @default(100)`, `judgeMinTurns Int @default(2)` and `llmDailyCapJudgeUsd Float @default(1)`.
 - `LLMPurpose` (`lib/llm/registry.ts`) and the provider validation gain `judge`. The judge model is independent of the chat model and can be cheaper or stronger. Its cost per review is bounded by the prompt cap (§4).
 
@@ -162,11 +161,11 @@ model ConversationFinding {
    - "Today" is the server time zone day that `lib/llm/budget.ts` already uses (`spendDay`).
 5. `lib/judge/verify.ts` post-processes the result, using `norm(x)` = whitespace collapsed and trimmed, with case kept. For tool results, `norm` runs on each **parsed leaf value** of the stored result (strings as they are, numbers and booleans as `String(v)`), so a quote of a JSON string isn't defeated by `\"` or `\n` escaping. If no leaf matches, it also tries the whole serialised result, for quotes that span keys:
    - It drops a finding whose `messageIndex` isn't a sent message (logged).
-   - `tool_result`: `norm(evidence)` must be a substring of `norm` of some tool result in that turn's tool log, or of the turn just before it.
+   - `tool_result`: `norm(evidence)` must be a substring of a tool result in the `toolLog` of the assistant message the finding points at. Matching runs on the **same text the judge was sent**, cut to 2 KB for earlier turns, so a quote from text the judge never saw doesn't pass.
    - `earlier_message`: `norm(evidence)` must be a substring of a message with a lower index.
    - `catalog`: `tool` must name a catalog tool (for `wrong_tool`), or `type` must be `missing_capability` with no `tool`.
    - `none` is accepted (as `not_applicable`) only for `misread_question` and `unneeded_refusal`. For any other type it is `unverified`.
-   - If a check fails, the finding keeps its type, severity and claim with `evidence: unverified`, and otherwise gets `verified`. `misread_question` and `unneeded_refusal` with `evidenceSource: none` get `not_applicable`, and the UI labels them "No quote needed". An unverified finding is hidden by the Findings tab's default **Hide unverified** filter, so near-miss quotes don't fill the backlog, and an admin can still look. The prompt asks for verbatim quotes. `/api/metrics` reports the unverified rate, so the prompt can be tuned.
+   - If a check fails, the finding keeps its type, severity and claim with `evidenceCheck: unverified`, and otherwise gets `verified`. `misread_question` and `unneeded_refusal` with `evidenceSource: none` get `not_applicable`, and the UI labels them "No quote needed". An unverified finding is hidden by the Findings tab's default **Hide unverified** filter, so near-miss quotes don't fill the backlog, and an admin can still look. The prompt asks for verbatim quotes. `/api/metrics` reports findings by `type` and `evidenceCheck`, so the unverified rate and the volume of `not_applicable` findings (`misread_question`, `unneeded_refusal`, the most subjective types) can both be watched, and the prompt tuned. The prompt asks for `low` severity on those two types unless the transcript shows clear harm.
 6. One transaction then, for each new finding, looks up the conversation's existing finding with the same `fingerprint` (at most one, because of the unique constraint):
    - If it is `open`, the existing row is updated: new claim, evidence, suggestion, `reviewId`, `seenCount + 1` and `lastSeenAt`.
    - If it is `fixed`, `false_alarm` or `wont_fix`, no row is added, and the existing row's `seenCount` and `lastSeenAt` go up. A triaged finding is never reopened by a review. The fingerprint includes the message, and messages never change, so seeing it again means the judge looked at the same old message, not a regression. A regression happens on a new message and gets a new fingerprint.
@@ -177,7 +176,9 @@ model ConversationFinding {
 
 ### Stuck reviews
 
-- A `queued` review older than 30 minutes, or a `running` one older than 10 minutes (more than the lease wait plus the call timeout plus retries), counts as dead.
+- `ConversationReview` gets `startedAt DateTime?`, set by each attempt when it marks the review `running`. A BullMQ retry is a new attempt and resets it.
+- **`running` is dead** when `startedAt` is more than 10 minutes ago. One attempt is at most the 60 s lease wait plus the 3-minute call plus the write, about 4.5 minutes, so a healthy attempt never reaches 10. Backoff between retries happens while the review is back at `queued`, not `running`.
+- **`queued` is dead** only when its BullMQ job is gone or in the `failed` state (`queue.getJob(id)`), never because of its age. Queued nightly reviews waiting their turn behind the lease are healthy however long the queue is.
 - `reviewConversation` and the nightly sweep first mark dead reviews `failed` (`STALE`) in the same transaction as their dedupe check. A worker that died mid-run therefore never blocks the next review. The processor's own writes are conditional on `status: 'running'` and its review id, so a review marked stale that comes back late doesn't overwrite anything.
 
 ### Judge schema (`lib/judge/schema.ts`)
@@ -195,7 +196,8 @@ The prompt (`lib/judge/prompts/`, versioned) tells the judge to report a finding
 
 - `CONVERSATION_REVIEW_SWEEP` is a cron job at 03:17 in the server time zone. `lib/judge/schedule.ts` follows `lib/request-tiers/schedule.ts`: `scheduleCronJob` with a fixed scheduler id when the setting is on, and `removeScheduledJob` when it is off. It runs at worker start and from the settings action. BullMQ's scheduler id is idempotent, so several `worker` containers keep one schedule.
 - It selects conversations that are admin assistant conversations (`openConversationsOf`-style filter, without the user restriction), have a `lastMessageAt` newer than their latest `done` review's `reviewedThrough` (or no review), and have at least `judgeMinTurns` user messages. Tool calls happen inside assistant turns and don't count as turns.
-- **Failure backoff.** A conversation whose latest review failed with `BUDGET_EXCEEDED` is picked up again the next night. A conversation with three consecutive failed nightly reviews for any other reason (a schema failure, a refusal) is skipped until it gets a new message, so a review that can't succeed isn't paid for every night.
+- **Failure backoff.** A conversation whose latest review failed with `BUDGET_EXCEEDED` or `STALE` is picked up again the next night, because neither says anything about the conversation. A conversation with three consecutive failed nightly reviews for any other reason (a schema failure, a refusal) is skipped until it gets a new message, so a review that can't succeed isn't paid for every night.
+- One sweep queues at most 50 reviews. The cap usually stops it sooner, and the rest go to the next night.
 - Sampling: `hash(conversationId | lastMessageAt as an ISO date) mod 100 < judgeSampleRate`. It is stable within a night, so a retried sweep picks the same set. It changes with each new message, so at 10% the same conversations aren't left out every time. The settings help text says the rate is per changed conversation per night.
 - It queues reviews with `trigger: nightly`, oldest first, and stops queueing once today's judge spend reaches the cap. Anything left over goes to the next night.
 
@@ -230,7 +232,10 @@ The prompt (`lib/judge/prompts/`, versioned) tells the judge to report a finding
   - fingerprint matching: open updated, fixed, false alarm and won't fix all left closed, and a reworded claim on the same message still matching
   - redaction: a nested result with `apiKey`, `password`, `secret`, `X-Plex-Token` and a `?apikey=` URL, redacted before the 8 KB cut
   - the `judge-spend` lease: two concurrent reviews on separate workers with a mocked lease store never spend past the cap by more than one review
-  - nightly backoff: three consecutive failures skipped, `BUDGET_EXCEEDED` retried
+  - nightly backoff: three consecutive failures skipped, `BUDGET_EXCEEDED` and `STALE` retried, the 50-review cap
+  - stuck reviews: a long queue behind the lease is never marked stale while its jobs exist; a `running` review past 10 minutes is
+  - budget isolation: a judge call adds nothing to `checkSpend` for the requesting admin or the server
+  - verify window: a quote from beyond the 2 KB cut of an earlier turn fails
   - the triage race: a finding triaged while the run is in progress keeps its status
   - a review never deletes: a finding not raised again stays open, including one outside a truncated window
   - stuck reviews: a dead `running` review is marked `STALE` and doesn't block a new one; a late write from it is ignored
