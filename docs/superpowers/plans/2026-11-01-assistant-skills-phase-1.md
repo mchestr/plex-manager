@@ -39,10 +39,10 @@
 1. A `SKILL.md` saved with CRLF line endings or a UTF-8 BOM still parses (Task 3 test `parses CRLF and BOM frontmatter`).
 2. A YAML folded or quoted description (`description: >-` over several lines, or `"…: …"`) parses to one string (Task 3 test `parses folded and quoted descriptions`).
 3. A source whose `path` is `skills` with a `skills/SKILL.md` gives that skill `folder: "skills"`, and its files read back from GitHub at the right repo path (Task 3 test `keeps source.path in the folder`, Task 4 test `read_skill_file reads a root skill's file`).
-4. Hostile frontmatter (aliases, merge keys, unknown tags such as `!!js/function`, duplicate keys, a list, huge frontmatter) is reported as `invalid_frontmatter`, never thrown or executed, and prints no process warning (Task 3 test `reports hostile frontmatter`).
+4. Hostile frontmatter (aliases, merge keys, duplicate keys, a list, huge frontmatter) is reported as `invalid_frontmatter`, never thrown. Unknown tags such as `!!js/function` are inert: the value stays a plain string, nothing runs, and no process warning prints (Task 3 test `reports hostile frontmatter`).
 5. An admin edits a pinned source's folder or repo and the skills change at once (Task 2 test `a pinned source lists again when its folder or repo changes`).
 
-Accepted, not handled: a branch ref can move between the turn's catalogue load and a later `load_skill` in the same turn if the ten-minute ref cache expires in between. The next turn's prompt always reflects the current commit. The skill tools call `loadSkillCatalogWithin()` again on each call. Inside a turn, that second load is served from the reader's caches (ref for ten minutes, tree and files at the commit) and costs no GitHub request, and it is bounded by the same five seconds when it is not.
+Accepted, not handled: two catalogue loads in flight at once (a timed-out one and the next turn's) each run, but the reader shares every GitHub read by key, so they cost one request per key. A branch ref can move between the turn's catalogue load and a later `load_skill` in the same turn if the ten-minute ref cache expires in between. The next turn's prompt always reflects the current commit. The skill tools call `loadSkillCatalogWithin()` again on each call. Inside a turn, that second load is served from the reader's caches (ref for ten minutes, tree and files at the commit) and costs no GitHub request, and it is bounded by the same five seconds when it is not.
 
 ---
 
@@ -118,7 +118,7 @@ Accepted, not handled: a branch ref can move between the turn's catalogue load a
   - `cacheKey(source)` returns `isCommitSha(source.ref) ? `${source.id}:${source.repo}@${source.ref}:${source.path}` : `${source.id}:${source.updatedAt.getTime()}``. A hit is fresh when the ref is a SHA or the hit is younger than `CACHE_MS`.
   - `resolveRef` uses its own `refs` map (at most `MAX_TREES` entries).
   - Each of the three reads keeps a `pending` map of in-flight promises by key, deleted when the promise settles, so concurrent callers share one request.
-  - Failures are cached as `{ at, reason }` beside successes and expire after `FAILURE_TTL_MS = 60_000` (a private const).
+  - Failures are cached as `{ at, reason }` in the same bounded maps as successes (`remember`, so `MAX_TREES` and `MAX_FILES` bound them too) and expire after `FAILURE_TTL_MS = 60_000` (a private const). `onResponse` sees a failed response's headers too: `serviceFetch` calls it before its `!response.ok` branch.
   - Update the module JSDoc to describe the pinning, the reasons and the keys.
 - [ ] **Step 4:** Run the same command. Expected: PASS.
 - [ ] **Step 5:** Commit: `git commit -m "Pin GitHub reads to a commit and report why a read failed"`
@@ -361,7 +361,10 @@ Rule appended to `UNTRUSTED_DATA_RULES` as item 4:
   - `assistant-sources.test.ts`: add `prismaMock.skillSource.findMany.mockResolvedValue([])` to `beforeEach`. Assert that `skillSource.findMany` isn't called in "refuses a non-admin before reading". Add a test that `skillSources[0].token` comes from `describeSecret` (no raw value), and that `pinned` is `true` for a 40-hex lowercase ref and `false` for `main` and for `deadbeef`.
   - `summary.test.ts`: `{ kind: "skill", action: "refreshed", id: "s1" }` gives "Skill source refreshed". Every kind and action pair has a line. An unknown kind or action gives null. The "never echoes" table gains an `ASSISTANT_SOURCE_CHANGED` row.
 - [ ] **Step 3:** Run `npx jest actions/admin/__tests__/assistant-skills.test.ts lib/data lib/audit`. Expected: FAIL.
-- [ ] **Step 4:** Implement. Rate limit: `{ name: "admin" }`. Call `revalidatePath("/admin/settings")` after each change. `checkSkills` maps the catalogue to the shape above, so it never returns `source` objects (which carry the token).
+- [ ] **Step 4:** Implement. Rate limit: `{ name: "admin" }`. Call `revalidatePath("/admin/settings")` after each change.
+  - `checkSkills` maps the catalogue to the shape above, so it never returns `source` objects (which carry the token).
+  - It deliberately runs the full `loadSkillCatalog()`, not the five-second bound: an admin asking for a diagnosis wants every source's answer. Each GitHub read is still capped by `serviceFetch`'s ten seconds.
+  - Over `/api/mcp` it shows skill names, paths and problems while the skill tools stay off MCP. That is intended: it is source management, as the spec keeps it.
 - [ ] **Step 5:** Run `npm run mcp:docs`. Then run `npx jest actions/admin lib/data lib/audit lib/mcp components/admin/settings` and `npm run typecheck`. Expected: PASS.
 - [ ] **Step 6:** Commit: `git commit -m "Add skill source actions, loader and audit summary"`
 
