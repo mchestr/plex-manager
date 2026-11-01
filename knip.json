@@ -27,7 +27,10 @@
     // the share visit counter (P5.11); P7.5's share page is its first caller
     "lib/wrapped/share/visit-counter.ts!",
     // colour maths for the token and contrast tests; its last app caller, the Chart.js theme, went in P10.9
-    "lib/design/color.ts!"
+    "lib/design/color.ts!",
+    // the conversation judge's output schema and fingerprint; the review job is their first caller, drop these then
+    "lib/judge/schema.ts!",
+    "lib/judge/fingerprint.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",
