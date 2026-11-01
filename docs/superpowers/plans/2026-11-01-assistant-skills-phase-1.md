@@ -42,7 +42,7 @@
 4. Hostile frontmatter (aliases, merge keys, unknown tags such as `!!js/function`, duplicate keys, a list, huge frontmatter) is reported as `invalid_frontmatter`, never thrown or executed, and prints no process warning (Task 3 test `reports hostile frontmatter`).
 5. An admin edits a pinned source's folder or repo and the skills change at once (Task 2 test `a pinned source lists again when its folder or repo changes`).
 
-Accepted, not handled: a branch ref can move between the turn's catalogue load and a later `load_skill` in the same turn if the ten-minute ref cache expires in between. The next turn's prompt always reflects the current commit. The skill tools call `loadSkillCatalog()` again on each call. Inside a turn, that second load is served from the reader's caches (ref for ten minutes, tree and files at the commit) and costs no GitHub request.
+Accepted, not handled: a branch ref can move between the turn's catalogue load and a later `load_skill` in the same turn if the ten-minute ref cache expires in between. The next turn's prompt always reflects the current commit. The skill tools call `loadSkillCatalogWithin()` again on each call. Inside a turn, that second load is served from the reader's caches (ref for ten minutes, tree and files at the commit) and costs no GitHub request, and it is bounded by the same five seconds when it is not.
 
 ---
 
