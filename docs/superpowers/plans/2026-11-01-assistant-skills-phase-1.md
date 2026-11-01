@@ -133,6 +133,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - Create: `lib/chatbot/skills/prompt.ts`: the SKILLS section text, shared by the cap and the prompt
 - Create: `lib/chatbot/skills/folders.ts`: which docs belong to which skill
 - Create: `lib/chatbot/skills/catalog.ts`: `loadSkillCatalog`
+- Create: `lib/chatbot/skills/within.ts`: `loadSkillCatalogWithin`, its timeout and its failure memory (keeps `catalog.ts` near the 150-line guideline). Test: `within.test.ts`.
 - Create: `lib/chatbot/skills/pool.ts`: one module-level limiter of 8 slots, `withReadSlot(fn, signal?)`, shared by every catalogue load in the process, so overlapping loads (a timed-out one and the next turn's) still keep at most 8 `SKILL.md` reads in flight (keeps `catalog.ts` near the 150-line guideline). A queued task whose `signal` is already aborted when a slot frees is skipped (it resolves as not read), so a timed-out load stops adding to the queue; a read already started runs on and warms the cache. A comment in `pool.ts` says why a skipped task is not a bug: it only happens after a timeout, when the load's result is discarded. Test: `pool.test.ts` (never more than 8 in flight across two concurrent batches; each result reaches its caller; queued tasks of an aborted signal never start).
 - Test: `lib/chatbot/skills/__tests__/frontmatter.test.ts`, `prompt.test.ts`, `folders.test.ts`, `catalog.test.ts` (each `@jest-environment node`)
 
@@ -173,8 +174,10 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   /** @internal */ export const SKILL_PROMPT_BUDGET = 6_000
   /** @internal */ export const MAX_SKILL_READS = 50  // SKILL.md files read per load; also the most skills a catalogue can hold
   export function loadSkillCatalog(signal?: AbortSignal): Promise<SkillCatalog>
-  /** @internal */ export const SKILL_CATALOG_TIMEOUT_MS = 5_000  // read by catalog.ts and its tests
-  /** loadSkillCatalog, or null after SKILL_CATALOG_TIMEOUT_MS or on any error (logged as a warning with the reason). A null is remembered for 30 seconds, during which it returns null at once. */
+
+  // within.ts
+  /** @internal */ export const SKILL_CATALOG_TIMEOUT_MS = 5_000  // read by within.ts and its tests
+  /** loadSkillCatalog, or null after SKILL_CATALOG_TIMEOUT_MS or on any error (logged as a warning with the reason). A null is remembered for 30 seconds for the same set of active sources, during which it returns null at once. */
   export function loadSkillCatalogWithin(): Promise<SkillCatalog | null>
   ```
   `SKILLS_HEADER` (167 characters):
@@ -231,15 +234,18 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   - `reads at most 50 SKILL.md files per load`: two sources listing 30 and 25 give exactly 50 `readDocResult` calls: all 30 of the first source, then the first 20 of the second. The last 5 paths get `not_read`. A doc inside one of those unread skill folders is not given to a root skill. With `readDocResult` holding its promises open, no more than 8 are pending at once across both sources.
   - `holds at most 50 skills`: two sources with 30 short skills each keep the first 50 in source-then-path order; the other 10 get `not_read`. Since at most 50 files are read, `not_in_prompt` comes only from the character budget below.
   - `stops at the first skill over the prompt budget`: 25 skills with 280-character descriptions, then one with a one-word description. The kept skills satisfy `skillsSection(skills)!.length <= 6000`, and adding the next one would exceed it. The first skill that does not fit and every later one, the short last one included, get `not_in_prompt`.
-  - `loadSkillCatalogWithin remembers a failure for 30 seconds`: after one timed-out load, a call within 30 seconds (fake timers) resolves `null` at once without calling `resolveRef`, and a call after 30 seconds loads again.
-  - `loadSkillCatalogWithin gives up after five seconds`: with fake timers and the GitHub mocks never settling, `await jest.advanceTimersByTimeAsync(5000)` resolves it to `null`, and `jest.getTimerCount()` is 0 afterwards. A load that rejects resolves to `null`. A load that succeeds returns the catalogue and clears its timer (`jest.getTimerCount()` is 0).
+  - `loadSkillCatalogWithin remembers a failure for 30 seconds` (in `within.test.ts`, mocking `loadSkillCatalog`):
+    - after one timed-out load, a call within 30 seconds (fake timers) resolves `null` at once without calling `loadSkillCatalog`;
+    - a call after 30 seconds loads again;
+    - a call within 30 seconds after a source's `updatedAt` changed loads again.
+  - `loadSkillCatalogWithin gives up after five seconds` (in `within.test.ts`): with fake timers and `loadSkillCatalog` never settling, `await jest.advanceTimersByTimeAsync(5000)` resolves it to `null`, and `jest.getTimerCount()` is 0 afterwards. A load that rejects resolves to `null`. A load that succeeds returns the catalogue and clears its timer (`jest.getTimerCount()` is 0).
 - [ ] **Step 8:** Run `npx jest lib/chatbot/skills/__tests__/catalog.test.ts`. Expected: FAIL.
 - [ ] **Step 9:** Implement `loadSkillCatalog`:
   1. Read active sources, then sort them in JavaScript by `name` in code-point order (`a.name < b.name ? -1 : 1`), the same comparison as the path sort, so the database's collation never decides duplicate winners or the read cut. Leave a comment that the Prisma `orderBy` is only a convenience and the JavaScript sort is the one that counts.
   2. Per source, in parallel: resolve the ref and list the docs at `{ ...row, ref: sha }`. Then, across all sources in source-name order, take the `SKILL.md` paths (sorted within each source). Read the first 50 overall through `withReadSlot` (the process-wide limit of 8, no new dependency), and parse them. Assign files per source with `assignFiles` over every listed `SKILL.md`.
   3. Then, in order: dedupe by name, then apply the caps. A skill fits when `SKILLS_HEADER.length + [...keptLines, line].join("\n").length <= SKILL_PROMPT_BUDGET`, which is exactly the length `skillsSection` will render.
   4. Record each failure in `problems` as above.
-  5. `loadSkillCatalogWithin` first returns `null` at once if a load timed out or failed less than 30 seconds ago (a module-level `lastFailureAt`, `CATALOG_FAILURE_TTL_MS = 30_000`, private), so a slow or unreachable GitHub costs one five-second wait per 30 seconds, not one per turn; knowledge bases are untouched. Otherwise it creates an `AbortController`, races `loadSkillCatalog(controller.signal)` against a `setTimeout` of `SKILL_CATALOG_TIMEOUT_MS`, aborts the controller when the timer wins, and clears the timer in `finally`. (`loadSkillCatalog(signal?)` passes the signal to `withReadSlot`; the signal is internal, and `checkSkills` calls it with none.) On rejection or timeout it logs `logger.warn("Skill catalogue unavailable", { reason })` and resolves `null`. A timed-out load keeps running and warms the caches; the race already handles its later rejection.
+  5. In `within.ts`, `loadSkillCatalogWithin` first reads the active sources' `id` and `updatedAt` (one small query) and builds a key from them. If a load for that same key timed out or failed less than 30 seconds ago (a module-level `{ key, at }`, `CATALOG_FAILURE_TTL_MS = 30_000`, private), it returns `null` at once. So a slow or unreachable GitHub costs one five-second wait per 30 seconds, not one per turn, and saving or refreshing any source changes the key and tries again at once, in every web container. Knowledge bases are untouched. Otherwise it creates an `AbortController`, races `loadSkillCatalog(controller.signal)` against a `setTimeout` of `SKILL_CATALOG_TIMEOUT_MS`, aborts the controller when the timer wins, and clears the timer in `finally`. (`loadSkillCatalog(signal?)` passes the signal to `withReadSlot`; the signal is internal, and `checkSkills` calls it with none.) On rejection or timeout it logs `logger.warn("Skill catalogue unavailable", { reason })` and resolves `null`. A timed-out load keeps running and warms the caches; the race already handles its later rejection.
 - [ ] **Step 10:** Run `npx jest lib/chatbot/skills __tests__/security/server-only-modules.test.ts`. Expected: PASS.
 - [ ] **Step 11:** Commit: `git commit -m "Read assistant skills from GitHub at one commit"`
 
@@ -257,7 +263,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - Test: `lib/chatbot/executors/__tests__/skills.test.ts` (`@jest-environment node`). Also extend `role-gate.test.ts`, and add `jest.mock("../skills", () => ({ executeSkillTool: jest.fn() }))` beside the `../knowledge` mock in `role-gate.test.ts`, `discord-admin-tier.test.ts`, `dispatch-fail-closed.test.ts` and `dispatch-scrub.test.ts`.
 
 **Interfaces:**
-- Consumes: `loadSkillCatalogWithin`, `SkillEntry` (Task 3), so a tool call never waits on GitHub longer than the prompt does; `parseSkillMarkdown` (Task 3); `readDocResult`, `docUrl` (Task 2).
+- Consumes: `loadSkillCatalogWithin` (`within.ts`) and `SkillEntry` (`catalog.ts`) from Task 3, so a tool call never waits on GitHub longer than the prompt does; `parseSkillMarkdown` (Task 3); `readDocResult`, `docUrl` (Task 2).
 - Produces: `SKILL_TOOLS: RegisteredTool[]`, `SKILL_TOOL_NAMES: ReadonlySet<string>` (exported from `tools/skills.ts`, holding exactly `load_skill` and `read_skill_file`), and `executeSkillTool(toolName: string, args: Record<string, unknown>, userId?: string): Promise<string>`.
 - Tool descriptions:
   - `load_skill`: "Load one of the skills listed under SKILLS, by name, and follow its instructions. Call it before acting on a request that matches a skill."
@@ -267,7 +273,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   - `read_skill_file`: `{ skill, path, url, content, truncated }`.
   - Errors: `{ error: "The skills could not be read from GitHub right now. Try again." }` when `loadSkillCatalogWithin()` gives `null`; `{ error: "No skills are configured. Add a skill source in Settings, Assistant sources." }` when the catalogue has no sources; `{ error: "That skill was not found." }`; `{ error: "That file was not found in the skill." }`; `{ error: "Could not read that file from GitHub." }`; and `"Error: Invalid tool arguments"` for bad arguments.
 
-- [ ] **Step 1: Write the failing `skills.test.ts`.** Mock `@/lib/chatbot/skills/catalog`, `@/lib/chatbot/knowledge/github` (`readDocResult`, keeping the real `docUrl`), `@/lib/admin` and `logAuditEvent`, as `knowledge.test.ts` does. Use a 40-hex SHA.
+- [ ] **Step 1: Write the failing `skills.test.ts`.** Mock `@/lib/chatbot/skills/within` (`loadSkillCatalogWithin`), `@/lib/chatbot/knowledge/github` (`readDocResult`, keeping the real `docUrl`), `@/lib/admin` and `logAuditEvent`, as `knowledge.test.ts` does. Use a 40-hex SHA.
   - `load_skill returns the body and files`: the catalogue has skill `triage` (folder `triage`, files `["notes.md"]`), and its `SKILL.md` reads back as frontmatter plus `"# Do it"`. The parsed result equals `{ name: "triage", source: "Ops", url, content: "# Do it", truncated: false, files: ["notes.md"], filesTruncated: false }`. The audit gets `ASSISTANT_DATA_READ` with `{ toolName: "load_skill", skill: "triage", path: "triage/SKILL.md", commit: "octo/skills@<full sha>" }`, and the real `sanitizeValue` from `@/lib/utils/log-redaction` leaves those details unchanged.
   - `load_skill caps content`: a 13,000-character body gives `content.length === 12000` and `truncated: true`.
   - `never returns the token`: with a source token `ghp_secret`, `JSON.stringify` of every `load_skill` and `read_skill_file` result, errors included, contains no `ghp_secret` and no `token` key.
@@ -299,7 +305,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - Test: `lib/chatbot/__tests__/assistant.test.ts`, `__tests__/actions/chatbot.test.ts`, `actions/chatbot/__tests__/injection.test.ts`, `lib/chatbot/mcp/__tests__/tools.test.ts`
 
 **Interfaces:**
-- Consumes: `SKILL_TOOL_NAMES` (Task 4); `loadSkillCatalogWithin` (Task 3); `skillsSection` (Task 3).
+- Consumes: `SKILL_TOOL_NAMES` (Task 4); `loadSkillCatalogWithin` (Task 3, `within.ts`); `skillsSection` (Task 3, `prompt.ts`).
 
 `UNTRUSTED_DATA_RULES` stays as rules 1 to 3, because every context (Discord and Support included) gets it. A new `ADMIN_SKILL_RULE` is appended after it only when `wantsSkills` is true, so the member-facing Discord prompt and the Support prompt never mention `admin_skill`:
 
@@ -308,7 +314,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 ```
 
 - [ ] **Step 1: Set up the existing suites so every admin turn has a catalogue:**
-  - In `lib/chatbot/__tests__/assistant.test.ts`, add `jest.mock("@/lib/chatbot/skills/catalog", () => ({ loadSkillCatalogWithin: jest.fn() }))`. In `beforeEach`, add `jest.mocked(loadSkillCatalogWithin).mockReset().mockResolvedValue({ skills: [], problems: [], sources: [] })`. This way the existing admin test still runs, and no call history leaks between tests.
+  - In `lib/chatbot/__tests__/assistant.test.ts`, add `jest.mock("@/lib/chatbot/skills/within", () => ({ loadSkillCatalogWithin: jest.fn() }))`. In `beforeEach`, add `jest.mocked(loadSkillCatalogWithin).mockReset().mockResolvedValue({ skills: [], problems: [], sources: [] })`. This way the existing admin test still runs, and no call history leaks between tests.
   - In `__tests__/actions/chatbot.test.ts` and `actions/chatbot/__tests__/injection.test.ts`, add `prismaMock.skillSource.findMany.mockResolvedValue([])` next to the `mcpServer.findMany` stub (the real `loadSkillCatalogWithin` then returns an empty catalogue). In `chatbot.test.ts`, also add `jest.mock("@/lib/chatbot/executors/skills", () => ({ executeSkillTool: jest.fn() }))`.
 - [ ] **Step 2: Write the failing tests:**
   - `chatbot.test.ts`, `wraps skill tools as admin_skill`: a turn calling `load_skill`, with `executeSkillTool` resolving `'{"name":"triage","content":"x"}'`, gives the tool result `output.value === JSON.stringify({ admin_skill: { name: "triage", content: "x" } })`. A turn calling `mcp_x_load_skill` gives `untrusted_data`.
@@ -425,7 +431,7 @@ UI decisions:
   - An Off row's Check skills shows the off copy, and `checkSkills` isn't called.
   - When `checkSkills` resolves `{ success: false, error }`, the dialog drops its spinner and shows the error.
 - [ ] **Step 2:** Run `npx jest components/admin/settings`. Expected: the new tests FAIL; the existing section test passes.
-- [ ] **Step 3:** Split the section into `mcp-servers-block.tsx` and `knowledge-sources-block.tsx` with no behaviour change, and drop the section's `"use client"`. Run `npx jest components/admin/settings/__tests__/assistant-section.test.tsx && npm run design:check` (PASS). Then commit only the section and the two blocks (`git add` them by name). The section test is unchanged at this point; its two skill edits and the new `skill-sources-block.test.tsx` are made in Step 3b and committed in Step 5. Commit: `git commit -m "Split the assistant settings section into one component per block"`.
+- [ ] **Step 3:** Split the section into `mcp-servers-block.tsx` and `knowledge-sources-block.tsx` with no behaviour change, and drop the section's `"use client"`. Run `npx jest components/admin/settings/__tests__/assistant-section.test.tsx && npm run design:check` (PASS). Then commit only the section and the two blocks (`git add` them by name). The section test needs no change in this commit (its `skillSources: []` fixtures were committed in Task 6); its two skill edits and the new `skill-sources-block.test.tsx` are made in Step 3b and committed in Step 5. Commit: `git commit -m "Split the assistant settings section into one component per block"`.
 - [ ] **Step 3b:** Build the skills block, form and dialog. Each file stays under 300 lines (ESLint `max-lines`) and uses only `components/ui/` primitives.
 - [ ] **Step 4:** Run `npx jest components/admin/settings && npm run typecheck && npm run lint && npm run design:check`. Expected: PASS, with no new design-system counts.
 - [ ] **Step 5:** Commit: `git commit -m "Add skill sources to the assistant settings"`
