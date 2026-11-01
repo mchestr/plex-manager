@@ -76,7 +76,8 @@ export function getRedisConnection(): Redis {
  * Closes the Redis connection at shutdown: with QUIT while it is ready, so the
  * commands sent before it finish, and otherwise at once. QUIT waits behind
  * every queued command, and while Redis is unreachable those wait for a
- * reconnect (`maxRetriesPerRequest: null`) that shutdown cannot wait for.
+ * reconnect (`maxRetriesPerRequest: null`) that shutdown cannot wait for, so
+ * they are dropped on purpose.
  */
 export async function closeRedisConnection(): Promise<void> {
   const connection = redisConnection

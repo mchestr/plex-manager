@@ -19,7 +19,10 @@
  * Either held shutdown past its deadline in the image smoke test. So the close
  * is graceful only while both connections are ready, and forced otherwise: no
  * job could record its result anyway, and the stall check hands any active
- * job to the next worker.
+ * job to the next worker. The statuses are read and BullMQ's disconnect starts
+ * in the same tick, so neither connection can change state in between; Redis
+ * dropping during a graceful close is left to the shutdown deadline, which
+ * names the task.
  *
  * @module
  */

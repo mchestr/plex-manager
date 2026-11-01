@@ -52,12 +52,38 @@ describeRedis("Closing the queue connections while Redis reconnects", (redisUrl)
     return id
   }
 
-  it("forces the close of a Worker whose blocking connection reconnects while the shared one is ready", async () => {
+  /** A Worker on the shared connection, connected, on a queue of its own. */
+  async function startTestWorker(): Promise<Worker> {
     process.env = { ...originalEnv, REDIS_URL: redisUrl }
-    const name = `close-worker-test-${randomUUID()}`
-    const worker = new Worker(name, async () => undefined, { connection: getRedisConnection() })
+    const worker = new Worker(`close-worker-test-${randomUUID()}`, async () => undefined, {
+      connection: getRedisConnection(),
+    })
     worker.on("error", () => {})
     await worker.waitUntilReady()
+    return worker
+  }
+
+  async function obliterate(name: string): Promise<void> {
+    const queue = new Queue(name, { connection: admin })
+    await queue.obliterate({ force: true })
+    await queue.close()
+  }
+
+  it("closes a Worker gracefully while both of its connections are ready", async () => {
+    const worker = await startTestWorker()
+    const close = jest.spyOn(worker, "close")
+
+    await withTimeout(closeWorker(worker), 2000, "closeWorker")
+
+    // closeWorker reads both connections through BullMQ's backend, where a
+    // renamed property would read as not connected and force every close
+    expect(close).toHaveBeenCalledWith(false)
+    await obliterate(worker.name)
+  })
+
+  it("forces the close of a Worker whose blocking connection reconnects while the shared one is ready", async () => {
+    const worker = await startTestWorker()
+    const name = worker.name
     const blocking = await worker.getBackend().blockingClient
     if (!blocking) throw new Error("The Worker has no blocking connection")
 
@@ -71,9 +97,7 @@ describeRedis("Closing the queue connections while Redis reconnects", (redisUrl)
 
     await withTimeout(closeWorker(worker), 2000, "closeWorker")
 
-    const queue = new Queue(name, { connection: admin })
-    await queue.obliterate({ force: true })
-    await queue.close()
+    await obliterate(name)
   })
 
   it("disconnects the shared connection while Redis is unreachable, with a command waiting", async () => {
