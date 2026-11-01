@@ -248,6 +248,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - Modify: `lib/mcp/assistant-tools.ts` (`assistantTools()` maps `ALL_TOOLS.filter((tool) => !SKILL_TOOL_NAMES.has(tool.function.name))`; the module JSDoc says skills are web chat only)
 - Modify: `lib/mcp/__tests__/catalog.test.ts` (leave `SKILL_TOOL_NAMES` out of the admin-tier comparison and the `readOnlyHint` loop; add `skill tools are not MCP tools`: `allTools()` has neither name)
 - Modify: `lib/chatbot/tools/__tests__/permissions.test.ts` (add both names to the admin-only list, and rename the test "classifies the app data, knowledge base and skill tools as admin-only, held by no role")
+- Modify: `lib/chatbot/tools/__tests__/registry.test.ts` (a drift guard beside the knowledge one: "skill tools are admin-only: registered, never discordSafe")
 - Test: `lib/chatbot/executors/__tests__/skills.test.ts` (`@jest-environment node`). Also extend `role-gate.test.ts`, and add `jest.mock("../skills", () => ({ executeSkillTool: jest.fn() }))` beside the `../knowledge` mock in `role-gate.test.ts`, `discord-admin-tier.test.ts`, `dispatch-fail-closed.test.ts` and `dispatch-scrub.test.ts`.
 
 **Interfaces:**
@@ -266,6 +267,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   - `load_skill caps content`: a 13,000-character body gives `content.length === 12000` and `truncated: true`.
   - `audits a long skill name with its path intact`: for a 40-character skill name, `sanitizeValue(details)` may redact `skill`, but keeps `path` (it contains `/` and `.`) and `sha` (12 characters) unchanged.
   - `load_skill refuses unknown and unlisted skills`: an unknown name, and a skill only in `problems` as `not_in_prompt`, both give the not-found error.
+  - `load_skill reports a failed read`: `readDocResult` giving `{ ok: false, reason: "unreachable" }` returns the could-not-read error and writes no audit row.
   - `read_skill_file reads a listed file`: `{ skill: "triage", path: "notes.md" }` calls `readDocResult` with `ref: <sha>` and path `"triage/notes.md"`. It returns `{ skill, path: "notes.md", url, content, truncated }`, with `url` ending `/blob/<sha>/triage/notes.md`.
   - `read_skill_file reads a root skill's file`: a skill with `folder: ""` and `files: ["guide.md"]` reads path `"guide.md"`, and its `url` ends `/blob/<sha>/guide.md`.
   - `read_skill_file needs an exact listed path`: `"../x.md"`, `"Notes.md"`, `"./notes.md"` and `"triage/notes.md"` each give the file-not-found error, and `readDocResult` isn't called.
@@ -277,7 +279,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - [ ] **Step 3:** Run `npx jest lib/chatbot lib/mcp`. Expected: the new tests FAIL.
 - [ ] **Step 4:** Implement the two files, the registry and executor entries, and the MCP filter.
   - Arguments: `{ name: z.string().trim().min(1).max(64) }` and `{ skill: z.string().trim().min(1).max(64), path: z.string().min(1).max(300) }`.
-  - `load_skill` re-reads the `SKILL.md` through `readDocResult(entry.source, entry.path)` (served from the commit cache) and returns `parseSkillMarkdown(text).body`. This is chosen over carrying 50 bodies in every catalogue: if the file was evicted in between, it becomes one live read, and a failure returns the could-not-read error.
+  - `load_skill` re-reads the `SKILL.md` through `readDocResult(entry.source, entry.path)` (served from the commit cache). It narrows `parseSkillMarkdown(text)` (`ok: true`) before using `.body`. A failed read or a failed parse returns the could-not-read error, with no audit row. This is chosen over carrying 50 bodies in every catalogue: if the file was evicted in between, it becomes one live read.
   - `read_skill_file` builds the repo path as `entry.folder ? `${entry.folder}/${path}` : path` and passes it to both `readDocResult(entry.source, …)` and `docUrl(entry.source, …)`.
 - [ ] **Step 5:** Run `npx jest lib/chatbot lib/mcp`. Expected: PASS.
 - [ ] **Step 6:** Commit: `git commit -m "Add the load_skill and read_skill_file assistant tools"`
@@ -342,7 +344,7 @@ Rule appended to `UNTRUSTED_DATA_RULES` as item 4:
   /** Add or change a skill source. */            export const saveSkillSource     // input: name, repo, ref, path, token?, isActive, id?; ok({ id })
   /** Remove a skill source. */                   export const deleteSkillSource   // { id } -> ok(null)
   /** Read a skill source's ref again now. */     export const refreshSkillSource  // { id } -> ok(null); bumps updatedAt
-  /** List the skills found and any problems. */ export const checkSkills         // {} -> ok({ sources: { name: string; sha: string | null; pinned: boolean }[]; skills: { name: string; source: string; path: string }[]; problems: SkillProblem[] })
+  /** List the skills found and any problems. */ export const checkSkills         // {} -> ok({ sources: { name: string; sha: string | null; pinned: boolean }[]; skills: { name: string; source: string /* entry.source.name, never the object */; path: string }[]; problems: SkillProblem[] })
   ```
   `sourceChanged(details)` reads `kind` through `Record<"mcp" | "knowledge" | "skill", string>` (`MCP server`, `Knowledge base`, `Skill source`) and `action` through `Record<"saved" | "deleted" | "refreshed", string>` (`saved`, `removed`, `refreshed`). It returns null for anything else and never shows `id`. For example, "Skill source refreshed".
 
