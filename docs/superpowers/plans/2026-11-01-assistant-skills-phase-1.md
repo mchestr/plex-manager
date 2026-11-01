@@ -218,7 +218,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - [ ] **Step 6:** Run it again. Expected: PASS.
 - [ ] **Step 7: Write the failing `catalog.test.ts`**, with the Prisma mock and `buildSkillSource`. Mock `@/lib/chatbot/knowledge/github` with `resolveRef`, `listDocsResult` and `readDocResult` as `jest.fn()`, keeping the real `docUrl`, `isCommitSha` and `MAX_DOCS` through `jest.requireActual`. Use a 40-hex SHA fixture such as `"c".repeat(40)`.
   - `lists skills at one commit`: source `Ops` with `resolveRef` giving the SHA and docs `["triage/SKILL.md", "triage/notes.md", "other.md"]` yields one skill with `folder: "triage"`, `files: ["notes.md"]`, `source.ref` equal to the SHA, and `url` containing `/blob/<sha>/triage/SKILL.md`. Every list and read call received `ref: <sha>`. `sources[0]` is `{ id, name: "Ops", sha, pinned: false }` for ref `main`, and `pinned: true` for a 40-hex lowercase ref.
-  - `queries active sources by name`: `findMany` was called with `{ where: { isActive: true }, orderBy: { name: "asc" } }`.
+  - `queries active sources by name`: `findMany` was called with `{ where: { isActive: true }, orderBy: { name: "asc" } }`, and sources returned as `["b", "A"]` are processed as `A` then `b` (code-point order, whatever the database collation).
   - `caps supporting files at 50`: 60 docs in one folder give `files.length === 50` and `filesTruncated: true`.
   - `reports invalid frontmatter`: a bad `SKILL.md` gives no skill and `{ reason: "invalid_frontmatter", path, detail }`. Its folder still keeps its docs away from a root skill.
   - `warns about a long skill`: a `SKILL.md` whose body is over 12,000 characters is still listed, and adds `{ reason: "too_long", path }`.
@@ -234,7 +234,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   - `loadSkillCatalogWithin gives up after five seconds`: with fake timers and the GitHub mocks never settling, `await jest.advanceTimersByTimeAsync(5000)` resolves it to `null`, and `jest.getTimerCount()` is 0 afterwards. A load that rejects resolves to `null`. A load that succeeds returns the catalogue and clears its timer (`jest.getTimerCount()` is 0).
 - [ ] **Step 8:** Run `npx jest lib/chatbot/skills/__tests__/catalog.test.ts`. Expected: FAIL.
 - [ ] **Step 9:** Implement `loadSkillCatalog`:
-  1. Read active sources by name.
+  1. Read active sources, then sort them in JavaScript by `name` in code-point order (`a.name < b.name ? -1 : 1`), the same comparison as the path sort, so the database's collation never decides duplicate winners or the read cut.
   2. Per source, in parallel: resolve the ref and list the docs at `{ ...row, ref: sha }`. Then, across all sources in source-name order, take the `SKILL.md` paths (sorted within each source). Read the first 50 overall through `withReadSlot` (the process-wide limit of 8, no new dependency), and parse them. Assign files per source with `assignFiles` over every listed `SKILL.md`.
   3. Then, in order: dedupe by name, then apply the caps. A skill fits when `SKILLS_HEADER.length + [...keptLines, line].join("\n").length <= SKILL_PROMPT_BUDGET`, which is exactly the length `skillsSection` will render.
   4. Record each failure in `problems` as above.
