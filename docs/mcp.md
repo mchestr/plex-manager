@@ -93,8 +93,10 @@ also applies for a Support user:
   like a token counts, so "basic 1080p/2160p" and "basic quality=1080p" stay.
 - A password in a URL, `scheme://user:password@host`.
 
-It matches names, so it backs up the loaders' own masking rather than replacing
-it.
+It matches names and shapes, so it backs up the loaders' own masking rather
+than replacing it: a value it does not read as a credential passes, such as a
+single word after `password:` or a value under 8 characters after a bare
+`Basic`.
 
 Left out, with the reasons in `lib/mcp/action-modules.ts` and
 `lib/mcp/action-tools.ts`: public actions and forms, actions that need a

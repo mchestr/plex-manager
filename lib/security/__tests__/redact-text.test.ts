@@ -255,6 +255,68 @@ describe("redactText", () => {
   })
 })
 
+describe("redactText over generated shapes", () => {
+  // Credentials of several shapes; none is a real provider's key format
+  const SECRETS = ["Zq9PlexTok3nXyz12", "0123456789abcdef0123456789abcdef", "dXNlcjpwYXNzd29yZA==", "p@ssw0rd!x", "hunter2hunter2", "pmk_AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcd"]
+  /** Shaped like a token, as after a bare scheme, where a word of letters may be a title. */
+  const TOKENS = SECRETS.filter((secret) => !["p@ssw0rd!x", "hunter2hunter2"].includes(secret))
+  const NAMES = ["token", "X-Plex-Token", "x-plex-token", "apikey", "api_key", "X-Api-Key", "password", "passkey", "secret", "client_secret", "access_token"]
+  const HEADERS = ["Authorization", "authorization", "AUTHORIZATION", "Proxy-Authorization", "X-Emby-Authorization"]
+  const AROUND: Array<[string, string]> = [
+    ["", ""],
+    ["x ", " path=/library/sections"],
+    ["curl -H '", "' http://plex"],
+    ['{"note":"', '"}'],
+    ["level=info ", "&x=1"],
+    ["", ", next=1"],
+    ["", "\nhost=plex.local"],
+  ]
+
+  const pairs = (name: string, secret: string) => [
+    `${name}=${secret}`,
+    `${name}="${secret}"`,
+    `${name}='${secret}'`,
+    `${name}%3D${secret}`,
+    `${name}%3d${secret}`,
+    `${name}%253D${secret}`,
+    `${name}: ${secret}`,
+    `${name} = ${secret}`,
+    `"${name}": "${secret}"`,
+    String.raw`\"${name}\":\"${secret}\"`,
+    `'${name}': '${secret}'`,
+  ]
+  const headers = (header: string, secret: string) => [
+    `${header}: Bearer ${secret}`,
+    `${header}=Bearer ${secret}`,
+    `${header} Bearer ${secret}`,
+    `${header}: bearer ${secret}`,
+    `${header}: Basic ${secret}`,
+    `${header}: Token ${secret}`,
+    `${header}: Bot ${secret}`,
+    `${header}=${secret}`,
+    `${header}: ${secret}`,
+    `"${header}": "Bearer ${secret}"`,
+    `"${header}": "${secret}"`,
+    `${header}: MediaBrowser Client="Plex Manager", Token="${secret}"`,
+  ]
+
+  it("leaves no credential in any shape the rules name, in any of these contexts", () => {
+    const shapes = [
+      ...NAMES.flatMap((name) => SECRETS.flatMap((secret) => pairs(name, secret).map((text) => [text, secret]))),
+      ...HEADERS.flatMap((header) => SECRETS.flatMap((secret) => headers(header, secret).map((text) => [text, secret]))),
+      ...TOKENS.flatMap((token) => ["Bearer", "Basic", "bearer", "BASIC"].map((scheme) => [`${scheme} ${token}`, token])),
+      // A raw "@" ends a URL's userinfo, so a password holding one is percent-encoded there
+      ...SECRETS.filter((secret) => !secret.includes("@")).map((secret) => [`http://admin:${secret}@sonarr:8989/api/v3/series`, secret]),
+    ]
+    const leaks = shapes.flatMap(([shape, secret]) =>
+      AROUND.map(([before, after]) => `${before}${shape}${after}`).filter((text) => redactText(text).includes(secret.slice(0, 10)))
+    )
+
+    expect(shapes.length * AROUND.length).toBeGreaterThan(7_000)
+    expect(leaks).toEqual([])
+  })
+})
+
 describe("redactText time", () => {
   const LENGTH = 100_000
   /** `unit` repeated after `prefix` to 100,000 characters. */

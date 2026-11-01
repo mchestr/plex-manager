@@ -222,6 +222,13 @@ describe("withoutPaths on 100,000 characters", () => {
     withoutPaths(long(`${known} `), known)
     expect(performance.now() - start).toBeLessThan(100)
   })
+
+  it("reads a known path that ends in a long run of separators in well under 100 ms", () => {
+    // /[\\/]+$/ retried from every separator of the run: quadratic
+    const start = performance.now()
+    withoutPaths("Import failed", `${"/".repeat(LENGTH)}\u0000/`)
+    expect(performance.now() - start).toBeLessThan(100)
+  })
 })
 
 describe("healthWithoutPaths", () => {

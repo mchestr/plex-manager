@@ -55,8 +55,15 @@ export function bounded(text: string | undefined, max: number): string | undefin
 
 /** The longest display name the model sees; members choose it, so it is untrusted text (SEC-42). */
 const DISPLAY_NAME_MAX = 64
-/** Overseerr's display name is the email of a user with no username (`User.setDisplayName`). */
-const EMAIL = /[^\s@]+@[^\s@]+\.[^\s@]+/
+/**
+ * Overseerr's display name is the email of a user with no username
+ * (`User.setDisplayName`): a word with one "@" and a domain of labels joined
+ * by ".". No label holds a dot, so a word is read one way only; an unanchored
+ * /[^\s@]+@[^\s@]+\.[^\s@]+/ would retry from every character of a long name.
+ */
+const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/
+/** Whether any word of `name` is an email. */
+const holdsEmail = (name: string) => name.split(/\s+/).some((word) => EMAIL.test(word))
 
 const userSchema = z.looseObject({ id: z.number(), displayName: optString })
 
@@ -67,7 +74,7 @@ const userSchema = z.looseObject({ id: z.number(), displayName: optString })
  */
 export function displayName(user: z.infer<typeof userSchema>): string {
   const name = user.displayName?.replace(/\p{Cc}/gu, "").trim()
-  return !name || EMAIL.test(name) ? `user ${user.id}` : name.slice(0, DISPLAY_NAME_MAX)
+  return !name || holdsEmail(name) ? `user ${user.id}` : name.slice(0, DISPLAY_NAME_MAX)
 }
 
 /** Who made or changed a request: their user id, which the request tools' `requestedBy` takes, and display name. */

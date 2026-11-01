@@ -136,12 +136,23 @@ const PATH_DIRECTORIES = new RegExp(String.raw`${START}(?=${LAST})(?:(?:(?!${STO
 const BELOW_ROOT = new RegExp(String.raw`^${ROOT}[^\s\\/]`)
 
 /**
+ * `path` without the separators it ends in ("/data/tv/" is "/data/tv"), read
+ * once from the end: a pattern such as /[\\/]+$/ would retry from every
+ * separator of a long run of them.
+ */
+function withoutTrailingSeparators(path: string): string {
+  let end = path.length
+  while (end > 0 && (path[end - 1] === "/" || path[end - 1] === "\\")) end--
+  return path.slice(0, end)
+}
+
+/**
  * `message` with every absolute path cut to its last part ("…/Show.S01").
  * `known` is a path the message may name with spaces in it, a queue item's
  * `outputPath`; it is cut first, wherever it appears.
  */
 export function withoutPaths(message: string, known?: string): string {
-  const path = known?.replace(/[\\/]+$/, "")
+  const path = known === undefined ? undefined : withoutTrailingSeparators(known)
   const last = path !== undefined && BELOW_ROOT.test(path) ? path.split(/[\\/]/).pop() : undefined
   const named = path !== undefined && last !== undefined ? message.replaceAll(path, () => `…/${last}`) : message
   return named.replace(PATH_DIRECTORIES, "…/")

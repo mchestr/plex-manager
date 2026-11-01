@@ -58,7 +58,8 @@ checks `assertAdmin()` or `assertPermission()`, and an action is built with
   (`lib/security/redact-text.ts`, see `docs/mcp.md`): a `token=` or `apikey=`
   value in a URL, a header or JSON pair such as `X-Plex-Token: ...` or
   `"apiKey": "..."`, an `Authorization` header's credentials, a `Bearer` or
-  `Basic` token, and a password in a URL. A tool error
+  `Basic` token, and a password in a URL. Those string rules are a backstop:
+  the key rules and the loaders' own masking are the primary control. A tool error
   returns a fixed line, never the upstream text. Other members' viewing
   history stays visible, minus those fields, because troubleshooting needs it.
 - Redaction is by key substring, so a future field such as `tokenCount` or `cookieConsent` is dropped too; name tool output fields with that in mind.

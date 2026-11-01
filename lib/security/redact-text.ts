@@ -120,6 +120,12 @@ const TOKEN_SCHEME = anyOf(TOKEN_SCHEMES)
 const KNOWN_SCHEME = anyOf([...TOKEN_SCHEMES, "digest", "mediabrowser", "emby", "hoba", "mutual", "vapid", "oauth", "hmac"])
 const SCHEME = String.raw`[A-Za-z][\w.+-]*`
 
+/**
+ * Numbers the named groups. A name only ties a rule's pattern to the
+ * replacement {@link rule} builds from that same pattern, so building the
+ * rules in another order renames the groups and changes nothing outside this
+ * module.
+ */
 let groupCount = 0
 /** A fresh name for a group that is only matched against: a name's run, an escape's backslashes. */
 const ref = () => `r${++groupCount}`
