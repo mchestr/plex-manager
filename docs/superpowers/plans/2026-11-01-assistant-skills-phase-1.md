@@ -133,7 +133,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - Create: `lib/chatbot/skills/prompt.ts`: the SKILLS section text, shared by the cap and the prompt
 - Create: `lib/chatbot/skills/folders.ts`: which docs belong to which skill
 - Create: `lib/chatbot/skills/catalog.ts`: `loadSkillCatalog`
-- Create: `lib/chatbot/skills/pool.ts`: one module-level limiter of 8 slots, `withReadSlot(fn)`, shared by every catalogue load in the process, so overlapping loads (a timed-out one and the next turn's) still keep at most 8 `SKILL.md` reads in flight (keeps `catalog.ts` near the 150-line guideline). Test: `pool.test.ts` (never more than 8 in flight across two concurrent batches; each result reaches its caller).
+- Create: `lib/chatbot/skills/pool.ts`: one module-level limiter of 8 slots, `withReadSlot(fn, signal?)`, shared by every catalogue load in the process, so overlapping loads (a timed-out one and the next turn's) still keep at most 8 `SKILL.md` reads in flight (keeps `catalog.ts` near the 150-line guideline). A queued task whose `signal` is already aborted when a slot frees is skipped (it resolves as not read), so a timed-out load stops adding to the queue; a read already started runs on and warms the cache. Test: `pool.test.ts` (never more than 8 in flight across two concurrent batches; each result reaches its caller; queued tasks of an aborted signal never start).
 - Test: `lib/chatbot/skills/__tests__/frontmatter.test.ts`, `prompt.test.ts`, `folders.test.ts`, `catalog.test.ts` (each `@jest-environment node`)
 
 **Interfaces:**
@@ -172,7 +172,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   export interface SkillCatalog { skills: SkillEntry[]; problems: SkillProblem[]; sources: { id: string; name: string; sha: string | null; pinned: boolean }[] }  // pinned: isCommitSha(row.ref)
   /** @internal */ export const SKILL_PROMPT_BUDGET = 6_000
   /** @internal */ export const MAX_SKILL_READS = 50  // SKILL.md files read per load; also the most skills a catalogue can hold
-  export function loadSkillCatalog(): Promise<SkillCatalog>
+  export function loadSkillCatalog(signal?: AbortSignal): Promise<SkillCatalog>
   export const SKILL_CATALOG_TIMEOUT_MS = 5_000
   /** loadSkillCatalog, or null after SKILL_CATALOG_TIMEOUT_MS or on any error (logged as a warning with the reason). */
   export function loadSkillCatalogWithin(): Promise<SkillCatalog | null>
@@ -234,11 +234,11 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   - `loadSkillCatalogWithin gives up after five seconds`: with fake timers and the GitHub mocks never settling, `await jest.advanceTimersByTimeAsync(5000)` resolves it to `null`, and `jest.getTimerCount()` is 0 afterwards. A load that rejects resolves to `null`. A load that succeeds returns the catalogue and clears its timer (`jest.getTimerCount()` is 0).
 - [ ] **Step 8:** Run `npx jest lib/chatbot/skills/__tests__/catalog.test.ts`. Expected: FAIL.
 - [ ] **Step 9:** Implement `loadSkillCatalog`:
-  1. Read active sources, then sort them in JavaScript by `name` in code-point order (`a.name < b.name ? -1 : 1`), the same comparison as the path sort, so the database's collation never decides duplicate winners or the read cut.
+  1. Read active sources, then sort them in JavaScript by `name` in code-point order (`a.name < b.name ? -1 : 1`), the same comparison as the path sort, so the database's collation never decides duplicate winners or the read cut. Leave a comment that the Prisma `orderBy` is only a convenience and the JavaScript sort is the one that counts.
   2. Per source, in parallel: resolve the ref and list the docs at `{ ...row, ref: sha }`. Then, across all sources in source-name order, take the `SKILL.md` paths (sorted within each source). Read the first 50 overall through `withReadSlot` (the process-wide limit of 8, no new dependency), and parse them. Assign files per source with `assignFiles` over every listed `SKILL.md`.
   3. Then, in order: dedupe by name, then apply the caps. A skill fits when `SKILLS_HEADER.length + [...keptLines, line].join("\n").length <= SKILL_PROMPT_BUDGET`, which is exactly the length `skillsSection` will render.
   4. Record each failure in `problems` as above.
-  5. `loadSkillCatalogWithin` races `loadSkillCatalog()` against a `setTimeout` of `SKILL_CATALOG_TIMEOUT_MS` and clears the timer in `finally`. On rejection or timeout it logs `logger.warn("Skill catalogue unavailable", { reason })` and resolves `null`. A timed-out load keeps running and warms the caches; the race already handles its later rejection.
+  5. `loadSkillCatalogWithin` creates an `AbortController`, races `loadSkillCatalog(controller.signal)` against a `setTimeout` of `SKILL_CATALOG_TIMEOUT_MS`, aborts the controller when the timer wins, and clears the timer in `finally`. (`loadSkillCatalog(signal?)` passes the signal to `withReadSlot`; the signal is internal, and `checkSkills` calls it with none.) On rejection or timeout it logs `logger.warn("Skill catalogue unavailable", { reason })` and resolves `null`. A timed-out load keeps running and warms the caches; the race already handles its later rejection.
 - [ ] **Step 10:** Run `npx jest lib/chatbot/skills __tests__/security/server-only-modules.test.ts`. Expected: PASS.
 - [ ] **Step 11:** Commit: `git commit -m "Read assistant skills from GitHub at one commit"`
 
@@ -407,7 +407,7 @@ UI decisions:
   | invalid frontmatter | "Its SKILL.md frontmatter is not valid" |
   | duplicate | "Hidden by a skill with the same name in {detail}" |
   | unreachable | "Could not read the repository" |
-  | rate limited | "GitHub's rate limit was reached; add a token" |
+  | rate limited | "GitHub's rate limit was reached; add a token (it resets within the hour)" |
   | not read | "Not read: only the first 50 SKILL.md files are read. Remove skills or set a folder." |
   | not in prompt | "Left out: the skills list is full. Shorten descriptions or remove skills." |
   | too long | "Longer than 12,000 characters; the assistant reads only the start" |
@@ -420,7 +420,7 @@ UI decisions:
   - Clicking `settings-skill-refresh` calls `refreshSkillSource({ id })` and shows "Skill source refreshed", on a pinned row as on a branch row.
   - With rows Ops and Docs, and `checkSkills` resolving Ops (a SHA and skill `triage`) and Docs (`sha: null` and a `rate_limited` problem), scope each click with `within(getByTestId("settings-skill-<id>"))`:
     - Ops' dialog shows `triage` and Ops' full SHA, but not the rate-limit copy;
-    - Docs' dialog shows "Not read" and "GitHub's rate limit was reached; add a token".
+    - Docs' dialog shows "Not read" and "GitHub's rate limit was reached; add a token (it resets within the hour)".
   - An Off row's Check skills shows the off copy, and `checkSkills` isn't called.
   - When `checkSkills` resolves `{ success: false, error }`, the dialog drops its spinner and shows the error.
 - [ ] **Step 2:** Run `npx jest components/admin/settings`. Expected: the new tests FAIL; the existing section test passes.
@@ -440,7 +440,7 @@ UI decisions:
     - `load_skill` and `read_skill_file`, and the `admin_skill` rule;
     - the `ASSISTANT_DATA_READ` audit with tool, skill, path and `repo@commit`;
     - that a skill can direct the assistant to use any tool the admin has, including ones that change data, with no extra confirmation step: whoever can change the repository at the ref can steer the assistant that far, so pin a commit. Pinning a commit, the full commit SHA shown in Check skills, and the `ASSISTANT_DATA_READ` audit of every skill load are the controls; the form warning alone is not;
-    - that supporting files read with `read_skill_file` carry the same trust as `SKILL.md`, and that only the first 50 supporting files (in path order) are listed and readable;
+    - that supporting files read with `read_skill_file` carry the same trust as `SKILL.md`, and that only the first 50 supporting files (in path order) are listed and readable. Phase 1 lists only Markdown (`.md`, `.mdx`) of at most 200 KB, as knowledge bases do, so scripts, JSON, YAML or templates a skill bundles cannot be read. The skill file must be named exactly `SKILL.md`: `skill.md` is not a skill;
     - that when two sources define the same skill name, the source whose name sorts first wins, so renaming a source can change the winner (Check skills shows the hidden one). A hidden duplicate still uses one of the 50 reads;
     - that removing a token from a private source does not drop skills already read at a pinned commit until the cached entries are evicted or the process restarts;
     - in the Knowledge bases section: a knowledge base pinned to a commit is now cached at that commit too (a commit cannot change), so saving it again does not re-read it unless its repository or folder changed; and after GitHub rate-limits a read, the app waits a minute before asking again;
