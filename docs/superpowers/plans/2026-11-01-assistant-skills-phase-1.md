@@ -360,21 +360,26 @@ Rule appended to `UNTRUSTED_DATA_RULES` as item 4:
 ### Task 7: Settings UI
 
 **Files:**
-- Create: `components/admin/settings/assistant/mcp-servers-block.tsx`, `knowledge-sources-block.tsx`, `skill-sources-block.tsx`, `skill-source-form.tsx`, `check-skills-dialog.tsx`
-- Modify: `components/admin/settings/sections/assistant-section.tsx` (composes the three blocks; each block owns its list, row and Add sheet, moved verbatim for MCP and knowledge)
-- Test: `components/admin/settings/__tests__/assistant-section.test.tsx` (existing assertions still pass), and a new `components/admin/settings/__tests__/skill-sources-block.test.tsx`
+- Create: `components/admin/settings/assistant/mcp-servers-block.tsx`, `knowledge-sources-block.tsx`, `skill-sources-block.tsx`, `skill-source-form.tsx` (each starts with `"use client"`: the blocks pass a render function to `SettingsSheet`, which a Server Component cannot do), and `check-skills-dialog.tsx` (`"use client"` only if it holds a hook, an `on…=` prop or `render={`, since design:check's `client-marker` rule counts any other client file)
+- Modify: `components/admin/settings/sections/assistant-section.tsx`: delete its `"use client"` line. It now only renders `SettingsSection` around the three blocks, as `api-access-section.tsx` does. Each block owns its list, rows and Add sheet, moved verbatim for MCP and knowledge.
+- Modify: `components/admin/settings/__tests__/assistant-section.test.tsx`:
+  - add `jest.mock("@/actions/admin/assistant-skills", () => ({ saveSkillSource: jest.fn(), deleteSkillSource: jest.fn(), refreshSkillSource: jest.fn(), checkSkills: jest.fn() }))`;
+  - in "says none are set up yet", also expect `settings-skill-list` to contain "None yet.";
+  - the `skillSources: []` fixtures come from Task 6, and the existing assertions do not change.
+- Test: a new `components/admin/settings/__tests__/skill-sources-block.test.tsx`
 
 **Interfaces:**
 - Consumes: `SkillSourceSettings` and the four actions (Task 6); `SettingsSheet`, `SheetForm`, `useSettingsForm`, `SecretInput`, `Badge`, the dialog and alert primitives in `components/ui/`, and `useToast`.
 - Produces: `SkillSourcesBlock({ sources }: { sources: SkillSourceSettings[] })`.
 
 UI decisions:
-- The block heading is "Skills", and the Add sheet description is the form copy in Global Constraints.
+- The block heading is "Skills". The Add and Edit `SettingsSheet`s both take the form copy in Global Constraints as their `description`, so it shows where a pinned ref might be changed to a branch.
 - A row shows its name, `repo@ref/path`, an On/Off badge and a `Follows a moving ref` badge when `!pinned`. It also has Edit and Check skills buttons. A Refresh button appears only when `!pinned`, because a commit cannot move, so Refresh has nothing to re-read.
 - The form mirrors `KnowledgeSourceForm`:
   - the ref field label is "Commit, tag or branch", with the description "A commit keeps the skills fixed until you change it. With a branch or tag, anyone who can push to it changes what the assistant follows.";
   - the token description is "Needed for a private repository, and recommended for a branch."
-- Check skills opens a dialog. It lists each source's commit (first 7 characters, monospace) or "not read", with "Follows a moving ref" beside each source whose `pinned` is false. It also lists the skills found and the problems, with each reason mapped to plain copy:
+- A row's Check skills shows only that row: the `sources` entry, `skills` and `problems` whose source name equals the row's `name`. On a row that is Off, it shows "This source is off, so the assistant does not read it." and does not call `checkSkills`.
+- The dialog shows the row's full 40-character commit SHA (`font-mono break-all`), or "Not read" when `sha` is null. A 7-character prefix can be ground to collide by anyone who can push to the ref, so only the full SHA shows exactly what is live. It shows "Follows a moving ref" when `pinned` is false, then the skills found and the problems, with each reason mapped to plain copy:
 
   | Reason | Copy |
   |---|---|
@@ -384,16 +389,19 @@ UI decisions:
   | rate limited | "GitHub's rate limit was reached; add a token" |
   | not in prompt | "Left out: the skills list is full" |
   | listing truncated | "Only the first 300 Markdown files were read; set a folder" |
-- Test ids: `settings-skill-list`, `settings-skill-{id}`, `settings-skill-add-open`, `settings-skill-edit-open`, `settings-skill-refresh`, `settings-skill-check`, `settings-skill-check-dialog`, `settings-skill-moving-ref`, `settings-skill-form`, `settings-skill-name`, `settings-skill-repo`, `settings-skill-ref`, `settings-skill-path`, `settings-skill-token`, `settings-skill-active`, `settings-skill-delete`, `settings-skill-remove-confirm`.
+- Test ids: `settings-skill-list`, `settings-skill-{id}`, `settings-skill-add-open`, `settings-skill-edit-open`, `settings-skill-add-sheet` and `settings-skill-edit-sheet` (the `sheetTestId`s), `settings-skill-refresh`, `settings-skill-check`, `settings-skill-check-dialog`, `settings-skill-moving-ref`, `settings-skill-form`, `settings-skill-name`, `settings-skill-repo`, `settings-skill-ref`, `settings-skill-path`, `settings-skill-token`, `settings-skill-active`, `settings-skill-delete`, `settings-skill-remove` and `settings-skill-remove-confirm`. Both `SettingsSheet`s and the form's `SettingsFormFooter` take `id="skill"`, which gives `settings-skill-save`, `settings-skill-cancel` and `settings-skill-discard-dialog`.
 
 - [ ] **Step 1: Write the failing `skill-sources-block.test.tsx`:**
   - Renders "None yet." with no sources.
   - Shows `settings-skill-moving-ref` for `pinned: false`, and not for `pinned: true`.
   - Clicking `settings-skill-refresh` calls `refreshSkillSource({ id })` and shows a success toast. A `pinned: true` row has no `settings-skill-refresh`.
-  - Clicking `settings-skill-check`, with `checkSkills` resolving one skill and one `rate_limited` problem, shows the skill name, the first 7 characters of the commit, and "GitHub's rate limit was reached; add a token".
+  - With rows Ops and Docs, and `checkSkills` resolving Ops (a SHA and skill `triage`) and Docs (`sha: null` and a `rate_limited` problem), scope each click with `within(getByTestId("settings-skill-<id>"))`:
+    - Ops' dialog shows `triage` and Ops' full SHA, but not the rate-limit copy;
+    - Docs' dialog shows "Not read" and "GitHub's rate limit was reached; add a token".
+  - An Off row's Check skills shows the off copy, and `checkSkills` isn't called.
 - [ ] **Step 2:** Run `npx jest components/admin/settings`. Expected: the new tests FAIL; the existing section test passes.
 - [ ] **Step 3:** Split the section, then build the skills block, form and dialog. Each file stays under 300 lines (ESLint `max-lines`) and uses only `components/ui/` primitives.
-- [ ] **Step 4:** Run `npx jest components/admin/settings && npm run lint && npm run design:check`. Expected: PASS, with no new design-system counts.
+- [ ] **Step 4:** Run `npx jest components/admin/settings && npm run typecheck && npm run lint && npm run design:check`. Expected: PASS, with no new design-system counts.
 - [ ] **Step 5:** Commit: `git commit -m "Add skill sources to the assistant settings"`
 
 ### Task 8: Docs, end-to-end check and final gates
@@ -419,7 +427,7 @@ UI decisions:
 - [ ] **Step 1:** Update the docs.
 - [ ] **Step 2:** Write the spec, `admin adds, checks and removes a skill source`. On the assistant settings section:
   1. Open `settings-skill-add-open` and fill name `E2E skills`, repo `octo/skills` and ref `a` × 40.
-  2. Save. The `settings-skill-*` row appears with no `settings-skill-moving-ref`.
+  2. Click `settings-skill-save`. The `settings-skill-*` row appears with no `settings-skill-moving-ref` and no `settings-skill-refresh`.
   3. Click `settings-skill-check`; `settings-skill-check-dialog` is visible. Assert only its visibility, since GitHub is unreachable in E2E and the content will be a problem row.
   4. Close it, open Edit, then `settings-skill-delete`, then `settings-skill-remove-confirm`. The row is gone.
 - [ ] **Step 3:** Run `npx playwright test e2e/admin/settings-assistant-skills.spec.ts --project=chromium`. Expected: PASS.
