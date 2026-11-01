@@ -8,7 +8,7 @@ import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { buildConfig } from "@/__tests__/helpers/factories"
 import { chatWithTools } from "@/lib/llm/chat"
 import { permissionsFor } from "@/lib/permissions"
-import { runChatbotForUser } from "../assistant"
+import { getAdminAssistantContext, runChatbotForUser } from "../assistant"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/llm/chat", () => ({ chatWithTools: jest.fn() }))
@@ -16,6 +16,7 @@ jest.mock("@/lib/data/assistant-data", () => ({}))
 jest.mock("@/lib/chatbot/mcp/tools", () => ({ loadMcpTools: jest.fn().mockResolvedValue({ tools: [], routes: new Map() }) }))
 jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
 jest.mock("@/lib/admin/queues", () => ({ listQueueJobs: jest.fn() }))
+jest.mock("@/lib/settings/app-settings", () => ({ getFormatSettings: jest.fn().mockResolvedValue({ timeZone: "Europe/London", locale: "en-GB" }) }))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({ debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() })),
 }))
@@ -117,5 +118,41 @@ describe("runChatbotForUser tool scope", () => {
 
     expect(toolNames()).toEqual([])
     expect(mockChatWithTools.mock.calls[0][0].system).toContain("No tools are available")
+  })
+})
+
+describe("getAdminAssistantContext", () => {
+  const names = (tools: Awaited<ReturnType<typeof getAdminAssistantContext>>["tools"]) => tools.map((tool) => tool.function.name)
+
+  it("getAdminAssistantContext builds a Support owner's smaller toolset and scope section", async () => {
+    const admin = await getAdminAssistantContext({ isAdmin: true }, FORMAT)
+    const support = await getAdminAssistantContext({ isAdmin: false, role: "support" }, FORMAT)
+
+    expect(names(admin.tools)).toContain("mark_media_finished")
+    expect(admin.systemPrompt).not.toContain("YOUR CALLER'S ACCESS")
+    expect(names(support.tools)).toContain("get_plex_sessions")
+    expect(names(support.tools)).not.toContain("mark_media_finished")
+    expect(support.tools.length).toBeLessThan(admin.tools.length)
+    expect(support.systemPrompt).toContain("YOUR CALLER'S ACCESS")
+    expect(support.systemPrompt).toContain("get_plex_sessions")
+    expect(support.systemPrompt).not.toContain("mark_media_finished")
+  })
+
+  it("matches the prompt and tools the assistant sends that owner", async () => {
+    const owner = { isAdmin: false, role: "support" }
+    await runChatbotForUser({ userId: "support-1", messages, conversationId: "conv-1", format: FORMAT, isAdmin: false, permissions: permissionsFor(owner) })
+
+    const context = await getAdminAssistantContext(owner, FORMAT)
+
+    expect(context.tools).toEqual(mockChatWithTools.mock.calls[0][0].tools)
+    // The prompt states the current time, so compare it without that line
+    const withoutTime = (text: string) => text.replace(/^Local time now:.*$/m, "")
+    expect(withoutTime(context.systemPrompt)).toBe(withoutTime(mockChatWithTools.mock.calls[0][0].system as string))
+  })
+
+  it("uses the server zone and locale when no format is given", async () => {
+    const context = await getAdminAssistantContext({ isAdmin: true })
+
+    expect(context.systemPrompt).toContain("User time zone: Europe/London")
   })
 })

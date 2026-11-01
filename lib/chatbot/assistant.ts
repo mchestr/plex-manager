@@ -11,8 +11,9 @@ import { loadMcpTools } from "@/lib/chatbot/mcp/tools"
 import { type ChatMessage, type ChatResponse } from "@/lib/chatbot/types"
 import { type ToolLogEntry } from "@/lib/judge/tool-log"
 import { type ChatTool } from "@/lib/llm/chat"
-import { type Permission } from "@/lib/permissions"
+import { type Permission, permissionsFor, type PermissionSubject } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
+import { getFormatSettings } from "@/lib/settings/app-settings"
 import { type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -105,6 +106,23 @@ async function getSystemPrompt(
         })
       : generateSystemPrompt(toolset, format, now)
   return [base, scope ? scopeSection(toolset, scope) : null, UNTRUSTED_DATA_RULES].filter(Boolean).join("\n\n")
+}
+
+/**
+ * The admin assistant's system prompt and tools as `owner` gets them today, for
+ * the conversation judge: a Support owner's smaller toolset and scope section
+ * included. `format` defaults to the server zone and locale.
+ *
+ * @internal Only the tests call it until the judge's review job does; drop the tag then.
+ */
+export async function getAdminAssistantContext(
+  owner: PermissionSubject,
+  format?: FormatSettings
+): Promise<{ systemPrompt: string; tools: ChatTool[] }> {
+  const permissions = permissionsFor(owner)
+  const tools = await getToolsForContext("default", permissions)
+  const systemPrompt = await getSystemPrompt("default", tools, format ?? (await getFormatSettings()), owner.isAdmin ? null : permissions)
+  return { systemPrompt, tools }
 }
 
 export async function runChatbotForUser(options: RunChatbotOptions): Promise<ChatbotRun> {

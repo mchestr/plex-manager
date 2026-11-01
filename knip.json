@@ -30,7 +30,10 @@
     "lib/design/color.ts!",
     // the conversation judge's output schema and fingerprint; the review job is their first caller, drop these then
     "lib/judge/schema.ts!",
-    "lib/judge/fingerprint.ts!"
+    "lib/judge/fingerprint.ts!",
+    // the judge prompt builder and its prompt version; the review job is their first caller, drop these then
+    "lib/judge/build-prompt.ts!",
+    "lib/judge/prompts/v1.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",
