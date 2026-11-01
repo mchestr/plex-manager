@@ -73,12 +73,17 @@ its `KnowledgeRepo` shape. It gains one function and one change:
 
 - `resolveRef(source)`: one `GET /repos/{repo}/commits/{ref}` with
   `Accept: application/vnd.github.sha`, returning the commit SHA. Cached for
-  ten minutes per source, like the tree today.
+  ten minutes per source, like the tree today. A ref that is already a
+  40-character SHA is returned as is, with no request; the same check drives the
+  "moving ref" warning.
 - The ref-resolution cache is keyed on `id:ref:updatedAt`, so Refresh resolves
   again. Tree and file reads at a commit SHA are keyed on `id:sha:path`
   instead: their content cannot change, so a Refresh that resolves to the same
   SHA reuses them. The source id stays in the key so a source without a token is
-  never served content another source read with one. The caches stay bounded by the reader's existing entry limits
+  never served content another source read with one. Content read with a token
+  stays cached after the token is removed until it is evicted or the ref moves;
+  saving the source changes `updatedAt` but not these keys, which is accepted,
+  since the admin owns both the source and the content. The caches stay bounded by the reader's existing entry limits
   (`remember`), so frequent Refreshes cannot grow them.
 
 Every catalogue load resolves the ref once, then lists and reads at that SHA,
@@ -143,7 +148,8 @@ Admin web chat only (`assistant:tools:admin`, never `discordSafe`).
     (`url` is the github.com web link from `docUrl`, never an API URL or one
     carrying the token),
     where `content` is the body after the frontmatter (at most 12,000 characters,
-    with `truncated`) and `files` lists the supporting paths, relative to the
+    with `truncated`) and `files` lists at most 50 supporting paths (in path
+    order, with `filesTruncated`), relative to the
     skill's folder.
   - `read_skill_file({ skill, path })` returns one supporting file, with the
     same 12,000-character cap and `truncated`. The path must equal, exactly
@@ -180,7 +186,9 @@ if the model follows it, so:
   any `===` removed (so it cannot imitate a prompt section header), and is
   capped at 300 characters. The whole section is capped at 6,000 characters;
   skills are added in source-name order, then path order, and those past the cap
-  are left out of the prompt and listed in `problems`.
+  are left out of the prompt and listed in `problems` as "not in the prompt".
+  `load_skill` refuses them like an unknown name, so what the model can load is
+  exactly what it was shown.
 - Supporting files read with `read_skill_file` carry the same trust as
   `SKILL.md`: same repo, same commit (shown in Check skills), same wrapper.
 - The settings form says: "The assistant follows skills as instructions. Add
@@ -299,7 +307,11 @@ relations give real cascades when a secret or a server is deleted.
   receives nothing until an admin grants it again. Turning a server off and on
   does not touch grants. Deleting a server cascades to its grants. Both are
   audited.
-- Migration `add_assistant_secrets` (both tables); changelog fragment.
+- `McpServer` gains the back-relation `secretGrants AssistantSecretGrant[]`.
+- Migration `add_assistant_secrets` (both tables and the foreign key to
+  `McpServer`); changelog fragment.
+- Renaming a server changes the model-facing tool names but not the grants,
+  which key on the server id and the remote tool name.
 
 ### What the model sees
 
@@ -365,10 +377,18 @@ before `mcpCallTool`:
    anything logs, truncates or wraps it; tool results are not streamed.
 
 Redaction is best effort: a server can echo a value in a form not on that list
-(split across lines, wrapped base64, truncated, HTML entities), and a value that is also an
+(split across lines, wrapped base64, base64 of server-built text at a shifted
+alignment, truncated, HTML entities), and a value that is also an
 ordinary word would rewrite ordinary text. The argument binding in step 2 is the
 control; redaction only covers the common echo of a request in an error body or
 debug field.
+
+**Redirects.** `mcpCallTool` goes through `fetchWithSafeRedirects`, which drops
+auth headers on a cross-origin hop but re-sends the body on a 307 or 308. A call
+whose arguments carry a substituted secret therefore refuses any redirect to
+another origin (a new `crossOriginBody: "refuse"` option on
+`fetchWithSafeRedirects`, set by `mcpCallTool` when substitution happened) and
+returns the usual failure code. Same-origin redirects are still followed.
 
 Built-in tools never resolve placeholders; they read their credentials from
 Prisma as today. Discord never loads MCP tools, so it never resolves them.
@@ -414,6 +434,7 @@ A Secrets block in the assistant settings:
   composed string is redacted in its encoded forms; a server edited between the
   grant read and the call never receives the secret at its new URL; a
   placeholder inside a JSON-encoded string value; a placeholder in a key refuses;
+  number and boolean arguments are left alone;
   a refusal for an unknown name, a disallowed tool or a disallowed argument makes
   no call, even when the placeholder is in a branch the server would ignore;
   redaction of raw, JSON-escaped, URL-encoded, base64 and hex values, in results
@@ -432,8 +453,11 @@ A Secrets block in the assistant settings:
 - Conversation: after a call that used a secret, the stored messages contain
   only the placeholder, and no logger mock ever receives the value, on success
   or failure.
-- Prompt: the SECRETS section lists names and tools, never values, and is absent
-  for non-admins and in Discord.
+- Prompt: the SECRETS section lists names and tools, never values, leaves out
+  a grant whose tool is not loaded, and is absent for non-admins and in Discord.
+- Redirects: a 307 to another origin on a call with a substituted secret is not
+  followed and the body never reaches it; the same call without a secret, and a
+  same-origin 307 with one, behave as today.
 - Security: `use-cache-no-secrets` covers `AssistantSecret`.
 
 ### Process
