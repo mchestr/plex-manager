@@ -67,7 +67,7 @@ export const chatWithAdminBot = permissionAction({
 
     const question: ChatMessage = { role: "user", content: message, timestamp: Date.now() }
     const [messages, settings] = await Promise.all([contextFor(conversationId, question), getFormatSettings()])
-    const result = await runChatbotForUser({
+    const { response: result, toolLog } = await runChatbotForUser({
       userId,
       messages,
       conversationId,
@@ -89,6 +89,7 @@ export const chatWithAdminBot = permissionAction({
         answer: result.message,
         title: conversationId ? undefined : titleFrom(message),
         asAdmin: session.user.isAdmin,
+        toolLog,
       })
       if (!stored) return fail("NOT_FOUND", GONE)
       // The history lists the conversation first

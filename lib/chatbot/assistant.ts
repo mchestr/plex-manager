@@ -9,6 +9,7 @@ import {
 } from "@/lib/chatbot/tools"
 import { loadMcpTools } from "@/lib/chatbot/mcp/tools"
 import { type ChatMessage, type ChatResponse } from "@/lib/chatbot/types"
+import { type ToolLogEntry } from "@/lib/judge/tool-log"
 import { type ChatTool } from "@/lib/llm/chat"
 import { type Permission } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
@@ -49,6 +50,9 @@ interface RunChatbotOptions {
    */
   format: FormatSettings
 }
+
+/** A turn's reply and, apart from it, its tool log for the judge: the reply reaches the browser and Discord, the log never does. */
+type ChatbotRun = { response: ChatResponse; toolLog?: ToolLogEntry[] }
 
 /**
  * Discord gets the Discord-safe set only. The web chat gets the tools the caller's permissions cover, and an
@@ -103,11 +107,11 @@ async function getSystemPrompt(
   return [base, scope ? scopeSection(toolset, scope) : null, UNTRUSTED_DATA_RULES].filter(Boolean).join("\n\n")
 }
 
-export async function runChatbotForUser(options: RunChatbotOptions): Promise<ChatResponse> {
+export async function runChatbotForUser(options: RunChatbotOptions): Promise<ChatbotRun> {
   try {
     const lastMessage = options.messages[options.messages.length - 1]
     if (!lastMessage || lastMessage.role !== "user") {
-      return { success: false, error: "The assistant could not answer. Try again." }
+      return { response: { success: false, error: "The assistant could not answer. Try again." } }
     }
 
     const [config, llmProvider] = await Promise.all([
@@ -124,11 +128,13 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
     // Any provider row works: the registry builds the model, and a row it cannot build is reported by the loop
     if (config?.llmDisabled || !llmProvider) {
       return {
-        success: true,
-        message: {
-          role: "assistant",
-          content: "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
-          timestamp: Date.now(),
+        response: {
+          success: true,
+          message: {
+            role: "assistant",
+            content: "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
+            timestamp: Date.now(),
+          },
         },
       }
     }
@@ -145,7 +151,7 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
     const scope = options.context !== "discord" && options.isAdmin !== true ? (options.permissions ?? new Set<Permission>()) : null
     const systemPrompt = await getSystemPrompt(options.context, toolset, options.format, scope)
 
-    const result = await runConversationLoop(options.messages, {
+    const { toolLog, ...result } = await runConversationLoop(options.messages, {
       userId: options.userId,
       conversationId: activeConversationId,
       context: options.context,
@@ -158,16 +164,15 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
     })
 
     return {
-      ...result,
-      conversationId: activeConversationId,
+      response: { ...result, conversationId: activeConversationId },
+      ...(toolLog && { toolLog }),
     }
   } catch (error) {
     logger.error("Failed to run chatbot", error instanceof Error ? error : undefined, {
       userId: options.userId,
     })
     return {
-      success: false,
-      error: "The assistant could not answer. Try again.",
+      response: { success: false, error: "The assistant could not answer. Try again." },
     }
   }
 }

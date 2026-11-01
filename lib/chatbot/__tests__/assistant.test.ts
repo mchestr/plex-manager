@@ -46,9 +46,9 @@ const FORMAT = { timeZone: "UTC", locale: "en-US" }
 
 describe("runChatbotForUser output cap", () => {
   it("caps each Discord LLM call at 600 output tokens", async () => {
-    const result = await runChatbotForUser({ userId: "user-1", messages, conversationId: "conv-1", context: "discord", format: FORMAT })
+    const run = await runChatbotForUser({ userId: "user-1", messages, conversationId: "conv-1", context: "discord", format: FORMAT })
 
-    expect(result.success).toBe(true)
+    expect(run.response.success).toBe(true)
     expect(mockChatWithTools).toHaveBeenCalledWith(expect.objectContaining({ maxOutputTokens: 600 }))
   })
 
@@ -62,6 +62,25 @@ describe("runChatbotForUser output cap", () => {
     await runChatbotForUser({ userId: "user-1", messages, conversationId: "conv-1", context: "default", format: FORMAT })
 
     expect(mockChatWithTools).toHaveBeenCalledWith(expect.objectContaining({ maxOutputTokens: undefined }))
+  })
+})
+
+describe("runChatbotForUser result", () => {
+  it("returns the response with its conversation, and no tool log for a turn without tool calls", async () => {
+    const run = await runChatbotForUser({ userId: "user-1", messages, conversationId: "conv-1", format: FORMAT, isAdmin: true })
+
+    expect(run).toEqual({
+      response: { success: true, message: expect.objectContaining({ content: "All good." }), conversationId: "conv-1" },
+    })
+  })
+
+  it("answers that the assistant is off without a conversation or a tool log", async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: true }))
+
+    const run = await runChatbotForUser({ userId: "user-1", messages, format: FORMAT })
+
+    expect(run).toEqual({ response: { success: true, message: expect.objectContaining({ content: expect.stringContaining("The assistant is off") }) } })
+    expect(prismaMock.chatConversation.create).not.toHaveBeenCalled()
   })
 })
 

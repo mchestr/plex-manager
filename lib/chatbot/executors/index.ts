@@ -54,6 +54,11 @@ function isToolError(output: string): boolean {
   }
 }
 
+// A heuristic (an output beginning "Error", the executors' failure text) used only as a hint for the judge
+export function isToolSuccess(output: string): boolean {
+  return !output.startsWith("Error")
+}
+
 // Map tool names to their service executors
 type ToolExecutor = (
   toolName: string,

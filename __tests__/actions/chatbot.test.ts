@@ -12,6 +12,7 @@ import type { ChatConversationMessage, LLMProvider, Sonarr, PlexServer, ChatConv
 import { getServerSession, type Session } from "next-auth"
 import { refresh } from "next/cache"
 import { getFormatSettings } from "@/lib/settings/app-settings"
+import { getPlexServerIdentity } from "@/lib/connections/plex"
 import { mockReset } from "jest-mock-extended"
 import { asTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { buildConfig } from "@/__tests__/helpers/factories"
@@ -157,6 +158,7 @@ describe("chatbot sources tracking", () => {
       turn({ toolCalls: [toolCall("call-1", "get_plex_status"), toolCall("call-2", "get_sonarr_status")] })
     )
     prismaMock.plexServer.findFirst.mockResolvedValue({ id: "plex-1", isActive: true } as PlexServer)
+    jest.mocked(getPlexServerIdentity).mockResolvedValue({ success: true, machineIdentifier: "plex-machine-1" })
     prismaMock.sonarr.findFirst.mockResolvedValue(sonarrRow)
     mockChatWithTools.mockResolvedValueOnce(turn({ content: "Both Plex and Sonarr are running" }))
 

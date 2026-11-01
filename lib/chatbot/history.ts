@@ -30,6 +30,7 @@ import { z } from "zod"
 
 import type { ChatMessage } from "@/lib/chatbot/types"
 import type { Prisma } from "@/lib/generated/prisma/client"
+import { serializeToolLog, type ToolLogEntry } from "@/lib/judge/tool-log"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 
 /** What the model sees of a conversation: its newest 40 messages and 60,000 characters at most (SEC-42). @internal */
@@ -120,6 +121,8 @@ interface Turn {
    * after a demotion, and the role they keep must not read what it produced.
    */
   asAdmin?: boolean
+  /** The answer's tool calls, redacted and capped (`lib/judge/tool-log.ts`), stored on the answer for the judge only. */
+  toolLog?: ToolLogEntry[]
 }
 
 /**
@@ -127,7 +130,7 @@ interface Turn {
  * history. False, storing nothing, when the conversation was deleted while
  * the answer was being written, or an admin's turn outlived their admin role.
  */
-export async function saveTurn({ conversationId, question, answer, title, asAdmin }: Turn): Promise<boolean> {
+export async function saveTurn({ conversationId, question, answer, title, asAdmin, toolLog }: Turn): Promise<boolean> {
   return prisma.$transaction(async (tx) => {
     // The update locks the row, so a turn another tab stores at the same time waits for this one, or this one for
     // it, and a demotion's ending of the conversation (endConversationsOf) waits for the turn or sees it as gone
@@ -147,7 +150,14 @@ export async function saveTurn({ conversationId, question, answer, title, asAdmi
     await tx.chatConversationMessage.createMany({
       data: [
         { conversationId, role: "user", content: question.content, createdAt: new Date(askedAt) },
-        { conversationId, role: "assistant", content: answer.content, sources: answer.sources, createdAt: new Date(answeredAt) },
+        {
+          conversationId,
+          role: "assistant",
+          content: answer.content,
+          sources: answer.sources,
+          toolLog: serializeToolLog(toolLog),
+          createdAt: new Date(answeredAt),
+        },
       ],
     })
     return true
