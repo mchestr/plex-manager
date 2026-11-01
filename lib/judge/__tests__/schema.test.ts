@@ -5,8 +5,11 @@
 /**
  * The judge's output schema (spec §3, "Judge output limits"): at most 20
  * findings and a 600-character summary, with text caps well above the
- * 300-character quotes the prompt asks for.
+ * 300-character quotes the prompt asks for. The judge call sends it as an
+ * OpenAI strict structured output, so every key must be required.
  */
+
+import { z } from "zod"
 
 import { judgeOutputSchema } from "../schema"
 
@@ -39,5 +42,32 @@ describe("judgeOutputSchema", () => {
     const parse = (evidence: string) => judgeOutputSchema.safeParse({ summary: "", findings: [{ ...finding, evidence }] })
     expect(parse("e".repeat(4000)).success).toBe(true)
     expect(parse("e".repeat(4001)).success).toBe(false)
+  })
+})
+
+describe("judgeOutputSchema as JSON Schema (strict structured outputs)", () => {
+  function collectObjects(node: unknown, out: Record<string, unknown>[] = []) {
+    if (node && typeof node === "object") {
+      const obj = node as Record<string, unknown>
+      if (obj.type === "object") out.push(obj)
+      for (const value of Object.values(obj)) collectObjects(value, out)
+    }
+    return out
+  }
+
+  it("emits all-required objects with additionalProperties: false", () => {
+    const objects = collectObjects(z.toJSONSchema(judgeOutputSchema))
+
+    expect(objects).toHaveLength(2)
+    for (const obj of objects) {
+      const properties = Object.keys((obj.properties as Record<string, unknown>) ?? {})
+      expect(obj.additionalProperties).toBe(false)
+      expect((obj.required as string[]).sort()).toEqual(properties.sort())
+    }
+  })
+
+  it("accepts a null tool for a finding no tool applies to", () => {
+    const review = { summary: "", findings: [{ ...finding, tool: null }] }
+    expect(judgeOutputSchema.safeParse(review).success).toBe(true)
   })
 })
