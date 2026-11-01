@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Skill `name`: `^[a-z0-9][a-z0-9-]{0,63}$`. `description`: 1 to 1,024 characters after collapsing whitespace.
-- Catalogue: at most 50 skills, because at most 50 `SKILL.md` files are read (`MAX_SKILL_READS`, below); there is no second cap. Each prompt line is `- <name>: <promptDescription(description)>`, where `promptDescription` removes runs of three or more `=`, then collapses whitespace, trims, and caps at 300 characters, in that order: collapsing first would leave a double space where each `===` was. The whole SKILLS section (header plus lines) is capped at 6,000 characters (`SKILL_PROMPT_BUDGET`), measured exactly as `skillsSection` renders it: `SKILLS_HEADER.length + lines.join("\n").length`. Skills are taken in `SkillSource.name` order, then path order. At the first skill that does not fit, it and every later skill are cut, with no skipping ahead.
+- Catalogue: at most 50 skills, because at most 50 `SKILL.md` files are read (`MAX_SKILL_READS`, below); there is no second cap. Each prompt line is `- <name>: <promptDescription(description)>`, where `promptDescription` turns every whitespace or control character into a space and removes format characters (`\p{Cf}`, such as zero-width spaces), then removes runs of three or more `=`, then collapses whitespace, trims, and caps at 300 characters, in that order: collapsing first would leave a double space where each `===` was. The whole SKILLS section (header plus lines) is capped at 6,000 characters (`SKILL_PROMPT_BUDGET`), measured exactly as `skillsSection` renders it: `SKILLS_HEADER.length + lines.join("\n").length`. Skills are taken in `SkillSource.name` order, then path order. At the first skill that does not fit, it and every later skill are cut, with no skipping ahead.
 - At most 50 `SKILL.md` files are read per catalogue load, across all sources, in source-name then path order, with at most 8 `SKILL.md` reads in flight across the whole process, through one shared limiter (GitHub's secondary rate limit penalises bursts of concurrent requests; the one ref and one tree read per source run before them). Only 50 skills can be shown anyway, and this caps how many of the 400 shared file-cache entries one load adds. Later ones are listed in `problems` as `not_read` without being read.
 - `load_skill` content and `read_skill_file` content: at most 12,000 characters, with `truncated`. `files`: at most 50 paths, in path order, with `filesTruncated`.
 - Only active sources are read. On a duplicate name, the first wins and the shadowed one is in `problems` with the winning source's name.
@@ -174,7 +174,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   /** @internal */ export const MAX_SKILL_READS = 50  // SKILL.md files read per load; also the most skills a catalogue can hold
   export function loadSkillCatalog(signal?: AbortSignal): Promise<SkillCatalog>
   /** @internal */ export const SKILL_CATALOG_TIMEOUT_MS = 5_000  // read by catalog.ts and its tests
-  /** loadSkillCatalog, or null after SKILL_CATALOG_TIMEOUT_MS or on any error (logged as a warning with the reason). */
+  /** loadSkillCatalog, or null after SKILL_CATALOG_TIMEOUT_MS or on any error (logged as a warning with the reason). A null is remembered for 30 seconds, during which it returns null at once. */
   export function loadSkillCatalogWithin(): Promise<SkillCatalog | null>
   ```
   `SKILLS_HEADER` (167 characters):
@@ -201,7 +201,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
     A custom tag (`description: !!js/function "x"`) parses to the plain string `"x"`. `process.emitWarning` (spied on) is never called.
 - [ ] **Step 2:** Write the failing `prompt.test.ts`:
   - `SKILLS_HEADER` equals the text above and has length 167.
-  - `promptDescription("Do this\n=== ACCESS ===\nnow")` is `"Do this ACCESS now"`, and a 400-character input gives 300 characters.
+  - `promptDescription("Do this\n=== ACCESS ===\nnow")` is `"Do this ACCESS now"`, and a 400-character input gives 300 characters. `"a\u0085b\u200B=\u2060==c"` (a NEL control and zero-width characters splitting an `===` run) gives `"a b c"`.
   - `skillsSection([])` is `null`; two skills give `SKILLS_HEADER + "- a: one\n- b: two"`.
 - [ ] **Step 3:** Write the failing `folders.test.ts`:
   - `keeps nested skill folders apart`: docs `["a/SKILL.md", "a/x.md", "a/b/SKILL.md", "a/b/y.md"]` give `a -> ["x.md"]` and `a/b -> ["y.md"]`.
@@ -226,11 +226,12 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   - `reports failed reads`:
     - `resolveRef` giving `rate_limited` adds `{ source, path: null, reason: "rate_limited" }` and `sources[i].sha === null`;
     - `listDocsResult` giving `unreachable` adds that reason;
-    - one `SKILL.md` read giving `rate_limited` adds that reason with its path, while the source's other skills are still listed;
+    - one `SKILL.md` read giving `rate_limited` adds that reason with its path, while the source's other skills are still listed; one that throws (a bug, since the reader never rejects) adds `unreachable` the same way and does not fail the load;
     - a `truncated: true` listing adds `{ path: null, reason: "listing_truncated" }`.
   - `reads at most 50 SKILL.md files per load`: two sources listing 30 and 25 give exactly 50 `readDocResult` calls: all 30 of the first source, then the first 20 of the second. The last 5 paths get `not_read`. A doc inside one of those unread skill folders is not given to a root skill. With `readDocResult` holding its promises open, no more than 8 are pending at once across both sources.
   - `holds at most 50 skills`: two sources with 30 short skills each keep the first 50 in source-then-path order; the other 10 get `not_read`. Since at most 50 files are read, `not_in_prompt` comes only from the character budget below.
   - `stops at the first skill over the prompt budget`: 25 skills with 280-character descriptions, then one with a one-word description. The kept skills satisfy `skillsSection(skills)!.length <= 6000`, and adding the next one would exceed it. The first skill that does not fit and every later one, the short last one included, get `not_in_prompt`.
+  - `loadSkillCatalogWithin remembers a failure for 30 seconds`: after one timed-out load, a call within 30 seconds (fake timers) resolves `null` at once without calling `resolveRef`, and a call after 30 seconds loads again.
   - `loadSkillCatalogWithin gives up after five seconds`: with fake timers and the GitHub mocks never settling, `await jest.advanceTimersByTimeAsync(5000)` resolves it to `null`, and `jest.getTimerCount()` is 0 afterwards. A load that rejects resolves to `null`. A load that succeeds returns the catalogue and clears its timer (`jest.getTimerCount()` is 0).
 - [ ] **Step 8:** Run `npx jest lib/chatbot/skills/__tests__/catalog.test.ts`. Expected: FAIL.
 - [ ] **Step 9:** Implement `loadSkillCatalog`:
@@ -238,7 +239,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   2. Per source, in parallel: resolve the ref and list the docs at `{ ...row, ref: sha }`. Then, across all sources in source-name order, take the `SKILL.md` paths (sorted within each source). Read the first 50 overall through `withReadSlot` (the process-wide limit of 8, no new dependency), and parse them. Assign files per source with `assignFiles` over every listed `SKILL.md`.
   3. Then, in order: dedupe by name, then apply the caps. A skill fits when `SKILLS_HEADER.length + [...keptLines, line].join("\n").length <= SKILL_PROMPT_BUDGET`, which is exactly the length `skillsSection` will render.
   4. Record each failure in `problems` as above.
-  5. `loadSkillCatalogWithin` creates an `AbortController`, races `loadSkillCatalog(controller.signal)` against a `setTimeout` of `SKILL_CATALOG_TIMEOUT_MS`, aborts the controller when the timer wins, and clears the timer in `finally`. (`loadSkillCatalog(signal?)` passes the signal to `withReadSlot`; the signal is internal, and `checkSkills` calls it with none.) On rejection or timeout it logs `logger.warn("Skill catalogue unavailable", { reason })` and resolves `null`. A timed-out load keeps running and warms the caches; the race already handles its later rejection.
+  5. `loadSkillCatalogWithin` first returns `null` at once if a load timed out or failed less than 30 seconds ago (a module-level `lastFailureAt`, `CATALOG_FAILURE_TTL_MS = 30_000`, private), so a slow or unreachable GitHub costs one five-second wait per 30 seconds, not one per turn; knowledge bases are untouched. Otherwise it creates an `AbortController`, races `loadSkillCatalog(controller.signal)` against a `setTimeout` of `SKILL_CATALOG_TIMEOUT_MS`, aborts the controller when the timer wins, and clears the timer in `finally`. (`loadSkillCatalog(signal?)` passes the signal to `withReadSlot`; the signal is internal, and `checkSkills` calls it with none.) On rejection or timeout it logs `logger.warn("Skill catalogue unavailable", { reason })` and resolves `null`. A timed-out load keeps running and warms the caches; the race already handles its later rejection.
 - [ ] **Step 10:** Run `npx jest lib/chatbot/skills __tests__/security/server-only-modules.test.ts`. Expected: PASS.
 - [ ] **Step 11:** Commit: `git commit -m "Read assistant skills from GitHub at one commit"`
 
@@ -315,7 +316,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   - `assistant.test.ts`, `gives an admin the SKILLS section`: with `loadSkillCatalogWithin` resolving one skill once (`triage`, "Triage a failed Rewind"), the admin `system` contains `=== SKILLS ===` and `- triage: Triage a failed Rewind`, after the base prompt and before `=== TOOL DATA SAFETY ===` (assert the index order). Support (`permissionsFor({ isAdmin: false, role: "support" })`) and Discord (an admin included, `isAdmin: true`) get no SKILLS section, `loadSkillCatalogWithin` isn't called for them, and the `tools` passed to `chatWithTools` contain neither skill tool.
   - `assistant.test.ts`, `adds the admin_skill rule only for admins`: the admin `system` contains `inside "admin_skill" instead`. The `system` for Support (`permissionsFor({ isAdmin: false, role: "support" })`), for Discord (an admin included) and for a caller whose permission set lacks `assistant:tools:admin` does not contain `admin_skill`, and none of them gets a SKILLS section.
   - `assistant.test.ts`, `still answers without a catalogue`: with `loadSkillCatalogWithin` resolving `null` (timeout or failure, covered in Task 3), `chatWithTools` is called once and its `system` has no `=== SKILLS ===`.
-  - `assistant.test.ts`, `reads no catalogue while AI features are off`: with `llmDisabled: true`, `loadSkillCatalogWithin` isn't called.
+  - `assistant.test.ts`, `reads no catalogue while AI features are off`: with `llmDisabled: true`, `loadSkillCatalogWithin` isn't called. Nor is it called for a web caller with no `permissions` at all.
   - `tools.test.ts`, inside `describe("mcpToolName")`, `never returns a skill tool name`: for `load_skill` and `read_skill_file` used as server and as tool name, `mcpToolName(a, b)` starts with `mcp_`.
 - [ ] **Step 3:** Run `npx jest lib/chatbot __tests__/actions/chatbot.test.ts actions/chatbot`. Expected: the new tests FAIL, except `never returns a skill tool name`, which pins existing behaviour and already passes.
 - [ ] **Step 4:** Implement:
@@ -405,7 +406,7 @@ UI decisions:
   | Reason | Copy |
   |---|---|
   | invalid frontmatter | "Its SKILL.md frontmatter is not valid" |
-  | duplicate | "Hidden by a skill with the same name in {detail}" |
+  | duplicate | "Hidden by a skill with the same name in {detail} (the source whose name sorts first wins)" |
   | unreachable | "Could not read the repository" |
   | rate limited | "GitHub's rate limit was reached; add a token (it resets within the hour)" |
   | not read | "Not read: only the first 50 SKILL.md files are read. Remove skills or set a folder." |
@@ -444,7 +445,7 @@ UI decisions:
     - that when two sources define the same skill name, the source whose name sorts first wins, so renaming a source can change the winner (Check skills shows the hidden one). A hidden duplicate still uses one of the 50 reads;
     - that removing a token from a private source does not drop skills already read at a pinned commit until the cached entries are evicted or the process restarts;
     - in the Knowledge bases section: a knowledge base pinned to a commit is now cached at that commit too (a commit cannot change), so saving it again does not re-read it unless its repository or folder changed; and after GitHub rate-limits a read, the app waits a minute before asking again;
-    - that on a fresh process the first turn may run without the SKILLS section while the catalogue loads (the five-second bound), and the next turn has it;
+    - that on a fresh process the first turns may run without the SKILLS section while the catalogue loads (the five-second bound). Usually the next turn has it; on a slow GitHub with many skills, warming up can take a few turns. After a failed or slow load the assistant answers without skills for up to 30 seconds before trying again;
     - that the chat never says why a skill is missing: Check skills is where `not_read`, `not_in_prompt`, duplicates and read failures show;
     - cost: every read goes to `api.github.com`. A pinned commit costs one tree read and one read per `SKILL.md` once per process (each container and restart), then nothing until those entries are pushed out of the reader's 400-file cache, which knowledge-base reads share (oldest inserted first); each one pushed out costs one re-read; a branch costs one ref check every ten minutes, plus a re-read whenever it moves. A token raises GitHub's limit from 60 to 5,000 requests an hour;
   - change "like every other tool result" (line 37) to "like every tool result except `load_skill` and `read_skill_file`, which arrive as `admin_skill`".
