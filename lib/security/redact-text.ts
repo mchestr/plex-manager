@@ -80,6 +80,17 @@
  * "Password: required" and "stored secret: KEY_UNKNOWN" stay. Pairs run
  * first, so a pair's value is gone before a scheme's run could reach it.
  *
+ * ## Known misses and over-reach
+ *
+ * These rules back up the key rules and the loaders' own masking; they read
+ * shapes, so some credentials pass: a single word of letters after a header
+ * or config style separator ("password: hunter"), and a run under 8
+ * characters after a bare `Basic` or `Bearer`. The other way, `name=value`
+ * loses its value whenever the name holds a secret word, so `tokenCount=5`,
+ * `secretary=Jane` and `passwordless=true` are redacted too. That is the
+ * safe direction for a backstop, and a test row (`tokenCount=42`) pins it:
+ * narrowing it would let a credential through.
+ *
  * ## Time
  *
  * Every string of every result passes through here, member-chosen text

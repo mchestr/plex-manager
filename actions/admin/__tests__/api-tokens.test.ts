@@ -9,7 +9,6 @@ import { getServerSession } from "next-auth"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { createApiToken, revokeApiToken } from "@/actions/admin/api-tokens"
-import { hashToken } from "@/lib/mcp/tokens"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { consume } from "@/lib/security/rate-limit"
 
@@ -19,6 +18,13 @@ jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/security/rate-limit", () => ({ consume: jest.fn(), actionClientIp: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), logAuditEvent: jest.fn() }))
+// A fixed token, so this test never hashes one itself: tokens.test.ts checks that generateToken stores hashToken(token)
+jest.mock("@/lib/mcp/tokens", () => ({
+  ...jest.requireActual("@/lib/mcp/tokens"),
+  generateToken: () => ({ token: `pmk_${"A".repeat(43)}`, tokenHash: "stored-hash", prefix: "pmk_AAAAAA" }),
+}))
+
+const ISSUED = `pmk_${"A".repeat(43)}`
 
 const NOW = new Date("2026-10-31T12:00:00Z")
 
@@ -38,21 +44,19 @@ describe("createApiToken", () => {
   it("stores the hash, returns the token once and audits without it", async () => {
     const result = await createApiToken({ name: " Laptop ", expiresIn: "30d", scope: "full" })
 
-    expect(result).toMatchObject({ success: true, data: { id: "tok-1" } })
-    const { token } = (result as { data: { token: string } }).data
-    expect(token).toMatch(/^pmk_[A-Za-z0-9_-]{43}$/)
+    expect(result).toEqual({ success: true, data: { id: "tok-1", token: ISSUED } })
     expect(prismaMock.apiToken.create).toHaveBeenCalledWith({
       data: {
         userId: "admin-1",
         name: "Laptop",
-        tokenHash: hashToken(token),
-        prefix: token.slice(0, 10),
+        tokenHash: "stored-hash",
+        prefix: "pmk_AAAAAA",
         scope: "full",
         expiresAt: new Date("2026-11-30T12:00:00Z"),
       },
       select: { id: true },
     })
-    expect(JSON.stringify(prismaMock.apiToken.create.mock.calls)).not.toContain(token)
+    expect(JSON.stringify(prismaMock.apiToken.create.mock.calls)).not.toContain(ISSUED)
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.API_TOKEN_CREATED, "admin-1", { credentialId: "tok-1", expiresIn: "30d", scope: "full" })
     expect(consume).toHaveBeenCalledWith("admin:api-tokens", "admin-1")
   })
