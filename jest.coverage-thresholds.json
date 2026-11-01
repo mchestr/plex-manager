@@ -68,7 +68,7 @@
   "./lib/queue/connection.ts": {
     "statements": 100,
     "branches": 92,
-    "functions": 96,
+    "functions": 100,
     "lines": 100
   },
   "./lib/queue/worker.ts": {

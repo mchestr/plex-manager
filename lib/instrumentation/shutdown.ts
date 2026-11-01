@@ -12,12 +12,13 @@
  * ```
  *
  * Tasks inside a phase run together (`Promise.allSettled`). A task still
- * running at the deadline is abandoned: a BullMQ worker cut off that way leaves
- * its job locked, and BullMQ's stall check hands it to the next worker. (A
- * second `worker.close(true)` cannot help, because BullMQ returns the graceful
- * close already in progress.) The process exits last, so in-flight HTTP
- * requests get the grace window too: with `NEXT_MANUAL_SIG_HANDLE=true`, Next
- * no longer closes the HTTP server itself.
+ * running at the deadline is abandoned, and the deadline's log line names it
+ * and its phase. A BullMQ worker cut off that way leaves its job locked, and
+ * BullMQ's stall check hands it to the next worker. (A second
+ * `worker.close(true)` cannot help, because BullMQ returns the graceful close
+ * already in progress.) The process exits last, so in-flight HTTP requests get
+ * the grace window too: with `NEXT_MANUAL_SIG_HANDLE=true`, Next no longer
+ * closes the HTTP server itself.
  *
  * @module
  */
@@ -28,6 +29,7 @@ const logger = createLogger("SHUTDOWN")
 
 type Phase = "drain" | "close"
 type ShutdownTask = () => Promise<unknown>
+type RegisteredTask = { name: string; fn: ShutdownTask }
 
 const DEFAULT_GRACE_MS = 8000
 const PHASES: readonly Phase[] = ["drain", "close"]
@@ -37,7 +39,10 @@ const controller = new AbortController()
 /** Aborts as soon as shutdown begins: the `workerShutdownSignal` of the Rewind design (9.1). */
 export const shutdownSignal = controller.signal
 
-const tasks: Record<Phase, Array<{ name: string; fn: ShutdownTask }>> = { drain: [], close: [] }
+const tasks: Record<Phase, RegisteredTask[]> = { drain: [], close: [] }
+/** The tasks of `currentPhase` that have not settled, so the deadline can name them. */
+const running = new Set<RegisteredTask>()
+let currentPhase: Phase = "drain"
 let installed = false
 let started = false
 
@@ -52,14 +57,19 @@ function graceMs(): number {
 }
 
 async function runPhase(phase: Phase): Promise<void> {
+  currentPhase = phase
   await Promise.allSettled(
-    tasks[phase].map(async ({ name, fn }) => {
+    tasks[phase].map(async (task) => {
+      const { name, fn } = task
       const startedAt = Date.now()
+      running.add(task)
       try {
         await fn()
         logger.info(`shutdown.task ${name} done`, { task: name, phase, durationMs: Date.now() - startedAt })
       } catch (error) {
         logger.error(`shutdown.task ${name} failed`, error, { task: name, phase, durationMs: Date.now() - startedAt })
+      } finally {
+        running.delete(task)
       }
     })
   )
@@ -89,7 +99,12 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   const cutOff = await Promise.race([finished, timedOut])
   clearTimeout(timer)
   if (cutOff) {
-    logger.error("Shutdown deadline passed; exiting with tasks still running", undefined, { graceMs: grace })
+    const stillRunning = [...running].map(({ name }) => name)
+    logger.error(`Shutdown deadline passed; exiting with tasks still running: ${stillRunning.join(", ")}`, undefined, {
+      graceMs: grace,
+      phase: currentPhase,
+      tasks: stillRunning,
+    })
   } else {
     logger.info("Shutdown complete")
   }
