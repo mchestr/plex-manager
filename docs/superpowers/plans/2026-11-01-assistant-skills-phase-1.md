@@ -437,16 +437,21 @@ UI decisions:
 - Consumes: the test ids from Task 7, and `adminPage` from `e2e/fixtures/auth.ts`.
 
 - [ ] **Step 1:** Update the docs.
-- [ ] **Step 2:** Write the spec, `admin adds, checks and removes a skill source`. On the assistant settings section:
-  1. Open `settings-skill-add-open` and fill name `E2E skills`, repo `octo/skills` and ref `a` × 40.
-  2. Click `settings-skill-save`. The `settings-skill-*` row appears with no `settings-skill-moving-ref` and no `settings-skill-refresh`.
-  3. Click `settings-skill-check`; `settings-skill-check-dialog` is visible. Assert only its visibility, since GitHub is unreachable in E2E and the content will be a problem row.
-  4. Close it, open Edit, then `settings-skill-delete`, then `settings-skill-remove-confirm`. The row is gone.
-- [ ] **Step 3:** Run `npx playwright test e2e/admin/settings-assistant-skills.spec.ts --project=chromium`. Expected: PASS.
-- [ ] **Step 4:** Run the full local gates: `npm run typecheck && npm run lint && npm run knip && npm test && node scripts/check-migrations.mjs && npm run env:docs -- --check && npm run design:check`. Expected: all pass. If coverage rose, run `npm run test:coverage && node scripts/coverage-ratchet.mjs --update`.
-- [ ] **Step 5:** Commit: `git commit -m "Document skills and cover skill sources end to end"`
+- [ ] **Step 2:** Write the spec, `admin adds, checks and removes a skill source`, importing `test` and `expect` from `../fixtures/auth` and `createE2EPrismaClient` from `../helpers/prisma`.
+  - In both `test.beforeAll` and `test.afterAll`, run `await prisma.skillSource.deleteMany({ where: { name: "E2E skills" } })` inside `try`/`finally` with `await prisma.$disconnect()`, as `e2e/admin/invites.spec.ts` does. A failed run or a CI retry then never meets a leftover row: the unique name would refuse the next Save, and an active source would make later admin-chat specs read GitHub.
+  - The test:
+    1. `await adminPage.goto("/admin/settings#assistant")`. The hash reveals the AI group, which plain `/admin/settings` keeps hidden.
+    2. Open `settings-skill-add-open` and fill name `E2E skills`, repo `octo/skills` and ref `a` × 40.
+    3. Click `settings-skill-save`. Read the id with `skillSource.findUniqueOrThrow({ where: { name: "E2E skills" }, select: { id: true } })`, as `invites.spec.ts` does. Then set `row = adminPage.getByTestId(`settings-skill-${id}`)`: expect it to be visible, and expect `row.getByTestId("settings-skill-moving-ref")` and `row.getByTestId("settings-skill-refresh")` to have count 0.
+    4. Click `row.getByTestId("settings-skill-check")`, then expect `settings-skill-check-dialog` to be visible with `{ timeout: 15_000 }`. Assert only its visibility. CI can reach api.github.com, so the server makes one real tree request for a commit that does not exist, and the problem shown depends on the runner: "Could not read the repository" or the rate-limit copy.
+    5. Close it with `dialog-close`, open `row.getByTestId("settings-skill-edit-open")`, then `settings-skill-delete`, then `settings-skill-remove-confirm`. Finish with `await expect(row).toHaveCount(0)`.
+- [ ] **Step 3:** Apply the new migration to the E2E database first: `DATABASE_URL=$E2E_DATABASE_URL npx prisma migrate deploy`. Then run `E2E_SERVER=prod npx playwright test e2e/admin/settings-assistant-skills.spec.ts --project=chromium`, which builds as CI does. Expected: PASS.
+- [ ] **Step 4:** Run the full local gates: `npm run typecheck && npm run lint && npm run knip && npm run test:coverage && node scripts/coverage-ratchet.mjs --update && node scripts/check-migrations.mjs && npm run env:docs -- --check && npm run design:check && npm run build && node scripts/audit-gate.mjs`. Expected: all pass. `test:coverage` is what CI's Unit Tests job runs, and it fails below any floor in `jest.coverage-thresholds.json`, including `./actions/admin/`. The ratchet only ever raises floors.
+- [ ] **Step 5:** Commit: `git commit -m "Document skills and cover skill sources end to end"`, including `jest.coverage-thresholds.json` if the ratchet changed it.
 - [ ] **Step 6:** Run `/security-review` on the branch, since it adds the `admin_skill` trust class and a token-carrying read path, and fix what it confirms. Ask it to try specifically:
   - a skill file that tells the assistant to call a tool that changes data, or to reveal secrets;
   - a tool result that imitates `admin_skill`;
   - a description that imitates a prompt section;
-  - token exposure through `checkSkills` (also over `/api/mcp`), audit rows and logs. Then push to the open draft PR (mchestr/plex-manager#507). Leave it as a draft, update its body with the review's outcome, and tell the owner it's ready for their decision.
+  - token exposure through `checkSkills` (also over `/api/mcp`), audit rows and logs.
+
+  If the review changes anything, re-run Step 4 (and Step 3 if the settings UI or the actions changed), then commit (`git commit -m "Address the security review"`) before pushing. Then push to the open draft PR (mchestr/plex-manager#507). Leave it as a draft, update its body with the review's outcome, and tell the owner it's ready for their decision.
