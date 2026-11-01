@@ -7,7 +7,7 @@ import { notFound } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { getFormat } from "@/lib/settings/app-settings"
-import { aiActivityConversation, aiActivity, userDetail, userRewind } from "@/lib/admin/routes"
+import { aiActivity, aiActivityConversation, userDetail, userRewind } from "@/lib/admin/routes"
 import { assertAdmin } from "@/lib/admin"
 
 export default async function LLMUsageDetailPage({ params }: { params: Promise<{ usageId: string }> }) {
