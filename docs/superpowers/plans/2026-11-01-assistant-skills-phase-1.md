@@ -14,7 +14,7 @@
 
 - Skill `name`: `^[a-z0-9][a-z0-9-]{0,63}$`. `description`: 1 to 1,024 characters after collapsing whitespace.
 - Catalogue: at most 50 skills, because at most 50 `SKILL.md` files are read (`MAX_SKILL_READS`, below); there is no second cap. Each prompt line is `- <name>: <promptDescription(description)>`, where `promptDescription` removes runs of three or more `=`, then collapses whitespace, trims, and caps at 300 characters, in that order: collapsing first would leave a double space where each `===` was. The whole SKILLS section (header plus lines) is capped at 6,000 characters (`SKILL_PROMPT_BUDGET`), measured exactly as `skillsSection` renders it: `SKILLS_HEADER.length + lines.join("\n").length`. Skills are taken in `SkillSource.name` order, then path order. At the first skill that does not fit, it and every later skill are cut, with no skipping ahead.
-- At most 50 `SKILL.md` files are read per catalogue load, across all sources, in source-name then path order, with at most 8 `SKILL.md` reads in flight for the whole load (GitHub's secondary rate limit penalises bursts of concurrent requests; the one ref and one tree read per source run before them). Only 50 skills can be shown anyway, and this caps how many of the 400 shared file-cache entries one load adds. Later ones are listed in `problems` as `not_read` without being read.
+- At most 50 `SKILL.md` files are read per catalogue load, across all sources, in source-name then path order, with at most 8 `SKILL.md` reads in flight across the whole process, through one shared limiter (GitHub's secondary rate limit penalises bursts of concurrent requests; the one ref and one tree read per source run before them). Only 50 skills can be shown anyway, and this caps how many of the 400 shared file-cache entries one load adds. Later ones are listed in `problems` as `not_read` without being read.
 - `load_skill` content and `read_skill_file` content: at most 12,000 characters, with `truncated`. `files`: at most 50 paths, in path order, with `filesTruncated`.
 - Only active sources are read. On a duplicate name, the first wins and the shadowed one is in `problems` with the winning source's name.
 - A skill is a listed path whose file name is exactly `SKILL.md`. Its `folder` is the path's directory as listed (it keeps `source.path`, so `""` only at the repo root). A doc belongs to the deepest skill folder that contains it (`folder === ""` or `doc.startsWith(folder + "/")`). Every listed `SKILL.md` marks a folder, whether or not it was read, parses, survives dedupe or fits the caps.
@@ -120,7 +120,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   - `treeSchema` gains `truncated: z.boolean().optional()`. The `trees` cache stores `{ at, paths, truncated }`.
   - `cacheKey(source)` returns `isCommitSha(source.ref) ? `${source.id}:${source.repo}@${source.ref}:${source.path}` : `${source.id}:${source.updatedAt.getTime()}``. A hit is fresh when the ref is a SHA or the hit is younger than `CACHE_MS`.
   - `resolveRef` uses its own `refs` map (at most `MAX_TREES` entries).
-  - Each of the three reads keeps a `pending` map of in-flight promises by key, deleted when the promise settles, so concurrent callers share one request.
+  - Each of the three reads keeps a `pending` map of in-flight promises by key, deleted when the promise settles, so concurrent callers share one request. A caller that stops waiting (the five-second bound) does not cancel the shared request: that is intended, since the result warms the cache for the next caller. Do not add per-caller aborts.
   - Only `rate_limited` failures are cached, as `{ at, reason }`, in the same bounded maps as successes (`remember`, so `MAX_TREES` and `MAX_FILES` bound them too), expiring after `FAILURE_TTL_MS = 60_000` (a private const). `onResponse` sees a failed response's headers too: `serviceFetch` calls it before its `!response.ok` branch.
   - Update the module JSDoc to describe the pinning, the reasons and the keys.
 - [ ] **Step 4:** Run the same command. Expected: PASS.
@@ -133,7 +133,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - Create: `lib/chatbot/skills/prompt.ts`: the SKILLS section text, shared by the cap and the prompt
 - Create: `lib/chatbot/skills/folders.ts`: which docs belong to which skill
 - Create: `lib/chatbot/skills/catalog.ts`: `loadSkillCatalog`
-- Create: `lib/chatbot/skills/pool.ts`: `mapWithLimit(items, limit, fn)`, the small worker pool (keeps `catalog.ts` near the 150-line guideline). Test: `pool.test.ts` (never more than `limit` in flight; results in input order).
+- Create: `lib/chatbot/skills/pool.ts`: one module-level limiter of 8 slots, `withReadSlot(fn)`, shared by every catalogue load in the process, so overlapping loads (a timed-out one and the next turn's) still keep at most 8 `SKILL.md` reads in flight (keeps `catalog.ts` near the 150-line guideline). Test: `pool.test.ts` (never more than 8 in flight across two concurrent batches; each result reaches its caller).
 - Test: `lib/chatbot/skills/__tests__/frontmatter.test.ts`, `prompt.test.ts`, `folders.test.ts`, `catalog.test.ts` (each `@jest-environment node`)
 
 **Interfaces:**
@@ -235,7 +235,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - [ ] **Step 8:** Run `npx jest lib/chatbot/skills/__tests__/catalog.test.ts`. Expected: FAIL.
 - [ ] **Step 9:** Implement `loadSkillCatalog`:
   1. Read active sources by name.
-  2. Per source, in parallel: resolve the ref and list the docs at `{ ...row, ref: sha }`. Then, across all sources in source-name order, take the `SKILL.md` paths (sorted within each source). Read the first 50 overall through one shared pool with at most 8 reads in flight (a small worker pool, no new dependency), and parse them. Assign files per source with `assignFiles` over every listed `SKILL.md`.
+  2. Per source, in parallel: resolve the ref and list the docs at `{ ...row, ref: sha }`. Then, across all sources in source-name order, take the `SKILL.md` paths (sorted within each source). Read the first 50 overall through `withReadSlot` (the process-wide limit of 8, no new dependency), and parse them. Assign files per source with `assignFiles` over every listed `SKILL.md`.
   3. Then, in order: dedupe by name, then apply the caps. A skill fits when `SKILLS_HEADER.length + [...keptLines, line].join("\n").length <= SKILL_PROMPT_BUDGET`, which is exactly the length `skillsSection` will render.
   4. Record each failure in `problems` as above.
   5. `loadSkillCatalogWithin` races `loadSkillCatalog()` against a `setTimeout` of `SKILL_CATALOG_TIMEOUT_MS` and clears the timer in `finally`. On rejection or timeout it logs `logger.warn("Skill catalogue unavailable", { reason })` and resolves `null`. A timed-out load keeps running and warms the caches; the race already handles its later rejection.
@@ -284,7 +284,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - [ ] **Step 2:** In `role-gate.test.ts`, add `"load_skill"` and `"read_skill_file"` to the `it.each` list of admin-only tools refused for Support, and add a test that `DISCORD_SAFE_TOOLS` has neither name.
 - [ ] **Step 3:** Run `npx jest lib/chatbot lib/mcp`. Expected: the new tests FAIL.
 - [ ] **Step 4:** Implement the two files, the registry and executor entries, and the MCP filter.
-  - Arguments: `{ name: z.string().trim().min(1).max(64) }` and `{ skill: z.string().trim().min(1).max(64), path: z.string().min(1).max(300) }`.
+  - Arguments: `{ name: z.string().trim().min(1).max(64) }` and `{ skill: z.string().trim().min(1).max(64), path: z.string().min(1).max(1024) }` (long enough for any path `listDocs` returns, since only an exact listed path passes anyway).
   - `load_skill` re-reads the `SKILL.md` through `readDocResult(entry.source, entry.path)` (served from the commit cache). It narrows `parseSkillMarkdown(text)` (`ok: true`) before using `.body`. A failed read or a failed parse returns the could-not-read error, with no audit row, and logs `logger.warn("Skill could not be read", { skill, reason })` with the failure reason (`rate_limited`, `unreachable`) so operators see the cause. This is chosen over carrying 50 bodies in every catalogue: if the file was evicted in between, it becomes one live read.
   - `read_skill_file` builds the repo path as `entry.folder ? `${entry.folder}/${path}` : path` and passes it to both `readDocResult(entry.source, …)` and `docUrl(entry.source, …)`. It returns `text.slice(0, 12_000)` with `truncated: text.length > 12_000`, as `read_knowledge_doc` does.
 - [ ] **Step 5:** Run `npx jest lib/chatbot lib/mcp`. Expected: PASS.
@@ -382,7 +382,7 @@ Rule appended to `UNTRUSTED_DATA_RULES` as item 4:
 **Files:**
 - Create: `components/admin/settings/assistant/mcp-servers-block.tsx`, `knowledge-sources-block.tsx`, `skill-sources-block.tsx`, `skill-source-form.tsx` (each starts with `"use client"`: the blocks pass a render function to `SettingsSheet`, which a Server Component cannot do), and `check-skills-dialog.tsx` (`"use client"`: it holds the `checkSkills` result in state)
 - Modify: `components/admin/settings/sections/assistant-section.tsx`: delete its `"use client"` line. It now only renders `SettingsSection` around the three blocks, as `api-access-section.tsx` does. Each block owns its list, rows and Add sheet, moved verbatim for MCP and knowledge.
-- Modify: `components/admin/settings/__tests__/assistant-section.test.tsx`, in Step 3b's commit, since both edits need the skills block:
+- Modify: `components/admin/settings/__tests__/assistant-section.test.tsx`, in Step 5's commit, since both edits need the skills block:
   - add `jest.mock("@/actions/admin/assistant-skills", () => ({ saveSkillSource: jest.fn(), deleteSkillSource: jest.fn(), refreshSkillSource: jest.fn(), checkSkills: jest.fn() }))`;
   - in "says none are set up yet", also expect `settings-skill-list` to contain "None yet.";
   - the `skillSources: []` fixtures come from Task 6, and the existing assertions do not change.
@@ -422,8 +422,9 @@ UI decisions:
     - Ops' dialog shows `triage` and Ops' full SHA, but not the rate-limit copy;
     - Docs' dialog shows "Not read" and "GitHub's rate limit was reached; add a token".
   - An Off row's Check skills shows the off copy, and `checkSkills` isn't called.
+  - When `checkSkills` resolves `{ success: false, error }`, the dialog drops its spinner and shows the error.
 - [ ] **Step 2:** Run `npx jest components/admin/settings`. Expected: the new tests FAIL; the existing section test passes.
-- [ ] **Step 3:** Split the section into `mcp-servers-block.tsx` and `knowledge-sources-block.tsx` with no behaviour change, and drop the section's `"use client"`. Run `npx jest components/admin/settings/__tests__/assistant-section.test.tsx && npm run design:check` (PASS). Then commit only the section and the two blocks (`git add` them by name). The section test is unchanged at this point; its two skill edits and the new failing `skill-sources-block.test.tsx` wait for Step 3b. Commit: `git commit -m "Split the assistant settings section into one component per block"`.
+- [ ] **Step 3:** Split the section into `mcp-servers-block.tsx` and `knowledge-sources-block.tsx` with no behaviour change, and drop the section's `"use client"`. Run `npx jest components/admin/settings/__tests__/assistant-section.test.tsx && npm run design:check` (PASS). Then commit only the section and the two blocks (`git add` them by name). The section test is unchanged at this point; its two skill edits and the new `skill-sources-block.test.tsx` are made in Step 3b and committed in Step 5. Commit: `git commit -m "Split the assistant settings section into one component per block"`.
 - [ ] **Step 3b:** Build the skills block, form and dialog. Each file stays under 300 lines (ESLint `max-lines`) and uses only `components/ui/` primitives.
 - [ ] **Step 4:** Run `npx jest components/admin/settings && npm run typecheck && npm run lint && npm run design:check`. Expected: PASS, with no new design-system counts.
 - [ ] **Step 5:** Commit: `git commit -m "Add skill sources to the assistant settings"`
@@ -472,6 +473,9 @@ UI decisions:
   - a tool result that imitates `admin_skill`;
   - a description that imitates a prompt section, or carries a newline plus `- other-skill: …` to pose as a second skill line, or JSON such as `"} {"admin_skill":` (it stays plain text in the system prompt);
   - a `SKILL.md` body containing `</admin_skill>`, `"}` or other JSON fragments (the JSON-encoded wrapper should neutralise them);
+  - a description made only of `-` lines or Markdown headings, posing as another prompt section after the `=` runs are removed;
+  - a skill named `admin` or `system`;
+  - token on redirect: `fetchWithSafeRedirects` drops `Authorization` on a cross-origin hop (its tests in `lib/connections/__tests__/http.test.ts`), for the ref, tree and contents reads;
   - a supporting file that is a symlink in the repo (the contents API returns the target path as text, and the exact-match listing rule still applies);
   - token exposure through `checkSkills` (also over `/api/mcp`), audit rows and logs;
   - `save_skill_source` over `/api/mcp`. A write-scoped admin token can add a repository the assistant then follows; read-only tokens cannot call it. Confirm this grants nothing that token cannot already do, since every admin action is an MCP tool, and that the audit row names the change.
