@@ -42,7 +42,7 @@
 4. Hostile frontmatter (aliases, merge keys, unknown tags such as `!!js/function`, duplicate keys, a list, huge frontmatter) is reported as `invalid_frontmatter`, never thrown or executed, and prints no process warning (Task 3 test `reports hostile frontmatter`).
 5. An admin edits a pinned source's folder or repo and the skills change at once (Task 2 test `a pinned source lists again when its folder or repo changes`).
 
-Accepted, not handled: a branch ref can move between the turn's catalogue load and a later `load_skill` in the same turn if the ten-minute ref cache expires in between. The next turn's prompt always reflects the current commit.
+Accepted, not handled: a branch ref can move between the turn's catalogue load and a later `load_skill` in the same turn if the ten-minute ref cache expires in between. The next turn's prompt always reflects the current commit. The skill tools call `loadSkillCatalog()` again on each call. Inside a turn, that second load is served from the reader's caches (ref for ten minutes, tree and files at the commit) and costs no GitHub request.
 
 ---
 
@@ -160,7 +160,7 @@ Accepted, not handled: a branch ref can move between the turn's catalogue load a
     reason: "invalid_frontmatter" | "duplicate_name" | "unreachable" | "rate_limited" | "not_in_prompt" | "listing_truncated"
     detail?: string                            // the winning source for duplicate_name; the parse reason for invalid_frontmatter
   }
-  export interface SkillCatalog { skills: SkillEntry[]; problems: SkillProblem[]; sources: { id: string; name: string; sha: string | null }[] }
+  export interface SkillCatalog { skills: SkillEntry[]; problems: SkillProblem[]; sources: { id: string; name: string; sha: string | null; pinned: boolean }[] }  // pinned: isCommitSha(row.ref)
   /** @internal */ export const SKILL_PROMPT_BUDGET = 6_000
   /** @internal */ export const MAX_SKILLS = 50
   export function loadSkillCatalog(): Promise<SkillCatalog>
@@ -205,7 +205,7 @@ Accepted, not handled: a branch ref can move between the turn's catalogue load a
   - `assignFiles`: sort the skill folders by depth, deepest first, and give each non-`SKILL.md` doc to the first folder that contains it.
 - [ ] **Step 6:** Run it again. Expected: PASS.
 - [ ] **Step 7: Write the failing `catalog.test.ts`**, with the Prisma mock and `buildSkillSource`. Mock `@/lib/chatbot/knowledge/github` with `resolveRef`, `listDocsResult` and `readDocResult` as `jest.fn()`, keeping the real `docUrl`, `isCommitSha` and `MAX_DOCS` through `jest.requireActual`. Use a 40-hex SHA fixture such as `"c".repeat(40)`.
-  - `lists skills at one commit`: source `Ops` with `resolveRef` giving the SHA and docs `["triage/SKILL.md", "triage/notes.md", "other.md"]` yields one skill with `folder: "triage"`, `files: ["notes.md"]`, `source.ref` equal to the SHA, and `url` containing `/blob/<sha>/triage/SKILL.md`. Every list and read call received `ref: <sha>`.
+  - `lists skills at one commit`: source `Ops` with `resolveRef` giving the SHA and docs `["triage/SKILL.md", "triage/notes.md", "other.md"]` yields one skill with `folder: "triage"`, `files: ["notes.md"]`, `source.ref` equal to the SHA, and `url` containing `/blob/<sha>/triage/SKILL.md`. Every list and read call received `ref: <sha>`. `sources[0]` is `{ id, name: "Ops", sha, pinned: false }` for ref `main`, and `pinned: true` for a 40-hex lowercase ref.
   - `queries active sources by name`: `findMany` was called with `{ where: { isActive: true }, orderBy: { name: "asc" } }`.
   - `caps supporting files at 50`: 60 docs in one folder give `files.length === 50` and `filesTruncated: true`.
   - `reports invalid frontmatter`: a bad `SKILL.md` gives no skill and `{ reason: "invalid_frontmatter", path, detail }`. Its folder still keeps its docs away from a root skill.
@@ -215,7 +215,7 @@ Accepted, not handled: a branch ref can move between the turn's catalogue load a
     - `listDocsResult` giving `unreachable` adds that reason;
     - one `SKILL.md` read giving `rate_limited` adds that reason with its path, while the source's other skills are still listed;
     - a `truncated: true` listing adds `{ path: null, reason: "listing_truncated" }`.
-  - `reads at most 50 SKILL.md files per source`: 55 listed give exactly 50 `readDocResult` calls, and the last 5 paths get `not_in_prompt`.
+  - `reads at most 50 SKILL.md files per source`: 55 listed give exactly 50 `readDocResult` calls, and the last 5 paths get `not_in_prompt`. A doc inside one of those 5 unread skill folders is not given to a root skill.
   - `caps the catalogue at 50 skills`: two sources with 30 short skills each keep the first 50 in source-then-path order; the other 10 get `not_in_prompt`.
   - `stops at the first skill over the prompt budget`: 25 skills with 280-character descriptions, then one with a one-word description. The kept skills satisfy `skillsSection(skills)!.length <= 6000`. The first skill that does not fit and every later one, the short last one included, get `not_in_prompt`.
 - [ ] **Step 8:** Run `npx jest lib/chatbot/skills/__tests__/catalog.test.ts`. Expected: FAIL.
@@ -295,11 +295,14 @@ Rule appended to `UNTRUSTED_DATA_RULES` as item 4:
   - `assistant.test.ts`, `adds the admin_skill rule`: the admin `system` contains `inside "admin_skill" instead`.
   - `assistant.test.ts`, `still answers when the catalogue fails`: with `loadSkillCatalog` rejecting, `chatWithTools` is called once and its `system` has no `=== SKILLS ===`.
   - `assistant.test.ts`, `reads no catalogue while AI features are off`: with `llmDisabled: true`, `loadSkillCatalog` isn't called.
+  - `assistant.test.ts`, `does not wait more than five seconds for the catalogue`: with fake timers and `loadSkillCatalog` returning a promise that never settles, `await jest.advanceTimersByTimeAsync(5000)` lets the turn finish. `chatWithTools` is called with no `=== SKILLS ===`.
   - `tools.test.ts`, inside `describe("mcpToolName")`, `never returns a skill tool name`: for `load_skill` and `read_skill_file` used as server and as tool name, `mcpToolName(a, b)` starts with `mcp_`.
 - [ ] **Step 3:** Run `npx jest lib/chatbot __tests__/actions/chatbot.test.ts actions/chatbot`. Expected: the new tests FAIL, except `never returns a skill tool name`, which pins existing behaviour and already passes.
 - [ ] **Step 4:** Implement:
   - `wrapToolOutput` keys on `SKILL_TOOL_NAMES.has(toolName) ? "admin_skill" : "untrusted_data"` and keeps the JSON-or-string handling.
-  - In `runChatbotForUser`, after the "assistant is off" return (never in the `config`/`lLMProvider` `Promise.all`), replace `const toolset = await getToolsForContext(...)` with `const [toolset, catalog] = await Promise.all([getToolsForContext(...), wantsSkills ? loadSkillCatalog().catch(onCatalogError) : null])`. Here `wantsSkills = options.context !== "discord" && options.permissions?.has("assistant:tools:admin") === true`, and `onCatalogError` logs `logger.warn("Skill catalogue unavailable", …)` and returns `null`.
+  - In `runChatbotForUser`, after the "assistant is off" return (never in the `config`/`lLMProvider` `Promise.all`), replace `const toolset = await getToolsForContext(...)` with `const [toolset, catalog] = await Promise.all([getToolsForContext(...), wantsSkills ? catalogWithin(SKILL_CATALOG_TIMEOUT_MS) : null])`, where:
+    - `wantsSkills = options.context !== "discord" && options.permissions?.has("assistant:tools:admin") === true`;
+    - `catalogWithin` races `loadSkillCatalog()` against a timer of `SKILL_CATALOG_TIMEOUT_MS = 5_000`, and on rejection or timeout logs `logger.warn("Skill catalogue unavailable", { reason })` and resolves `null`. A cold catalogue can be several GitHub requests, so a slow GitHub can't stall the chat turn. The load keeps running and warms the caches for the next turn.
   - `getSystemPrompt` takes the section (`catalog ? skillsSection(catalog.skills) : null`) and places it after the base prompt, before the access section.
 - [ ] **Step 5:** Run it again. Expected: PASS.
 - [ ] **Step 6:** Commit: `git commit -m "Follow skills as admin instructions in the assistant prompt"`
@@ -329,7 +332,7 @@ Rule appended to `UNTRUSTED_DATA_RULES` as item 4:
   /** Add or change a skill source. */            export const saveSkillSource     // input: name, repo, ref, path, token?, isActive, id?; ok({ id })
   /** Remove a skill source. */                   export const deleteSkillSource   // { id } -> ok(null)
   /** Read a skill source's ref again now. */     export const refreshSkillSource  // { id } -> ok(null); bumps updatedAt
-  /** List the skills found and any problems. */ export const checkSkills         // {} -> ok({ sources: { name: string; sha: string | null }[]; skills: { name: string; source: string; path: string }[]; problems: SkillProblem[] })
+  /** List the skills found and any problems. */ export const checkSkills         // {} -> ok({ sources: { name: string; sha: string | null; pinned: boolean }[]; skills: { name: string; source: string; path: string }[]; problems: SkillProblem[] })
   ```
   `sourceChanged(details)` reads `kind` through `Record<"mcp" | "knowledge" | "skill", string>` (`MCP server`, `Knowledge base`, `Skill source`) and `action` through `Record<"saved" | "deleted" | "refreshed", string>` (`saved`, `removed`, `refreshed`). It returns null for anything else and never shows `id`. For example, "Skill source refreshed".
 
@@ -370,7 +373,7 @@ UI decisions:
 - The form mirrors `KnowledgeSourceForm`:
   - the ref field label is "Tag, commit or branch", with the description "A tag or commit keeps the skills fixed until you change it";
   - the token description is "Needed for a private repository, and recommended for a branch."
-- Check skills opens a dialog. It lists each source's commit (first 7 characters, monospace) or "not read", the skills found, and the problems, with each reason mapped to plain copy:
+- Check skills opens a dialog. It lists each source's commit (first 7 characters, monospace) or "not read", with "Follows a moving ref" beside each source whose `pinned` is false. It also lists the skills found and the problems, with each reason mapped to plain copy:
 
   | Reason | Copy |
   |---|---|
@@ -396,7 +399,13 @@ UI decisions:
 
 **Files:**
 - Modify: `docs/assistant.md`:
-  - add a `## Skills` section covering Settings, Assistant sources, Skills; pinning a tag or commit; the form warning; Check skills; `load_skill` and `read_skill_file`; the `admin_skill` rule; and the `ASSISTANT_DATA_READ` audit with tool, skill, path and commit;
+  - add a `## Skills` section covering:
+    - Settings, Assistant sources, Skills;
+    - pinning a tag or commit, and the form warning;
+    - Check skills;
+    - `load_skill` and `read_skill_file`, and the `admin_skill` rule;
+    - the `ASSISTANT_DATA_READ` audit with tool, skill, path and commit;
+    - that a skill can direct the assistant to use any tool the admin has, including ones that change data, with no extra confirmation step: whoever can change the repository at the ref can steer the assistant that far, so pin a commit;
   - change "like every other tool result" (line 37) to "like every tool result except `load_skill` and `read_skill_file`, which arrive as `admin_skill`".
 - Modify: `docs/roles.md` (`assistant:tools:admin` covers skills too) and `docs/mcp.md` (the assistant tools list: the skill tools are web chat only)
 - Create: `e2e/admin/settings-assistant-skills.spec.ts`
