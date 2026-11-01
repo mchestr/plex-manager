@@ -255,6 +255,7 @@ model AssistantSecretGrant {
   server    McpServer       @relation(fields: [serverId], references: [id], onDelete: Cascade)
   tool      String // The remote server's own tool name
   argument  String // A top-level argument of that tool
+  allowEmbedded Boolean     @default(false) // Allow the placeholder inside a longer string
   createdAt DateTime        @default(now())
 
   @@unique([secretId, serverId, tool, argument])
@@ -307,10 +308,11 @@ admin system prompt adds:
 ```
 === SECRETS ===
 
-To use a credential, put {{secret:NAME}} in a tool argument. The real value is
-filled in after you send the call and is never shown to you. Never ask for a
+To use a credential, make a tool argument exactly {{secret:NAME}}. Only where a
+grant is marked [inside text] may it sit inside a longer value. The real value
+is filled in after you send the call and is never shown to you. Never ask for a
 value, guess one or write one out.
-- NAME: <description> (allowed in: mcp_x_y.apiKey, ...)
+- NAME: <description> (allowed in: mcp_x_y.apiKey, mcp_x_z.headers [inside text], ...)
 ```
 
 A value never goes in the prompt. A public skill can say "call `mcp_sonarr2_api`
@@ -325,8 +327,11 @@ before `mcpCallTool`:
 1. Walk the whole argument tree and collect every `{{secret:NAME}}`:
    - Only string values are searched; a placeholder in an object key refuses the
      call.
-   - A placeholder may be part of a string (`Bearer {{secret:X}}`); it is
-     replaced in place.
+   - By default a placeholder must be a whole string value, exactly
+     `{{secret:X}}`. A placeholder inside a longer string (`Bearer {{secret:X}}`)
+     is allowed only when the matching grant has `allowEmbedded`; otherwise the
+     call is refused as in step 2. Whole-value-only stops injected text from
+     composing a URL or message around the secret inside a granted argument.
    - A string that itself holds JSON is not parsed: a placeholder inside it is
      found as text, under the top-level argument it sits in, like any other.
    - Every placeholder anywhere in the tree is checked, whichever branch the
@@ -336,7 +341,8 @@ before `mcpCallTool`:
    the server row, in one query, and send to the URL and auth from that same
    read; a server edited mid-call therefore either still has its grants and its
    old URL, or neither. If any name is unknown, or the secret has no grant for
-   `(serverId, tool, top-level argument)`, return
+   `(serverId, tool, top-level argument)`, or the placeholder is embedded in a
+   longer string and that grant does not have `allowEmbedded`, return
    `Error: secret NAME is not available in that argument.`, make no call, and
    log `ASSISTANT_SECRET_DENIED` with `{ secretName, serverId, tool, argument }`.
    The message is the same for an unknown and a disallowed name. `secretName`
@@ -389,7 +395,9 @@ A Secrets block in the assistant settings:
 - The list shows the name, the allowed tools, "Set" and the last-used time.
   The loader never returns `value`.
 - Fields gain an argument picker per allowed tool, from the tool's input
-  schema's top-level properties.
+  schema's top-level properties, and per grant an "Allow inside longer text"
+  checkbox (off by default) that sets `allowEmbedded`, with the hint "Needed
+  only for values like `Bearer {{secret:NAME}}`".
 - Actions live in `actions/admin/assistant-secrets.ts`: `saveAssistantSecret`
   and `deleteAssistantSecret`. They log `ASSISTANT_SOURCE_CHANGED` with
   `{ kind: "secret", action, id }`.
@@ -401,8 +409,9 @@ A Secrets block in the assistant settings:
 
 ### Tests
 
-- Resolve: a placeholder taken from an earlier tool result is checked like
-  any other; a placeholder nested inside a granted argument is allowed; a
+- Resolve: a whole-value placeholder is substituted; an embedded one is refused
+  without `allowEmbedded` and substituted with it, under the same argument; a
+  placeholder taken from an earlier tool result is checked like any other; a placeholder nested inside a granted argument is allowed; a
   composed string is redacted in its encoded forms; a server edited between the
   grant read and the call never receives the secret at its new URL; substitution in nested arguments and inside a longer string; a
   placeholder inside a JSON-encoded string value; a placeholder in a key refuses;
