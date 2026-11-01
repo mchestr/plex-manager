@@ -14,7 +14,7 @@
 
 - Skill `name`: `^[a-z0-9][a-z0-9-]{0,63}$`. `description`: 1 to 1,024 characters after collapsing whitespace.
 - Catalogue: at most 50 skills (`MAX_SKILLS`). Each prompt line is `- <name>: <promptDescription(description)>`, where `promptDescription` collapses whitespace, removes runs of three or more `=`, trims, and caps at 300 characters. The whole SKILLS section (header plus lines) is capped at 6,000 characters (`SKILL_PROMPT_BUDGET`), measured exactly as `skillsSection` renders it: `SKILLS_HEADER.length + lines.join("\n").length`. Skills are taken in `SkillSource.name` order, then path order. At the first skill that does not fit, it and every later skill are cut, with no skipping ahead.
-- At most 50 `SKILL.md` files are read per catalogue load, across all sources, in source-name then path order, with at most 8 reads in flight for the whole load (GitHub's secondary rate limit penalises bursts of concurrent requests). Only 50 skills can be shown anyway, and this keeps skills well inside the 400-file cache they share with knowledge bases. Later ones are listed in `problems` as `not_in_prompt` without being read.
+- At most 50 `SKILL.md` files are read per catalogue load, across all sources, in source-name then path order, with at most 8 reads in flight for the whole load (GitHub's secondary rate limit penalises bursts of concurrent requests). Only 50 skills can be shown anyway, and this keeps skills well inside the 400-file cache they share with knowledge bases. Later ones are listed in `problems` as `not_read` without being read.
 - `load_skill` content and `read_skill_file` content: at most 12,000 characters, with `truncated`. `files`: at most 50 paths, in path order, with `filesTruncated`.
 - Only active sources are read. On a duplicate name, the first wins and the shadowed one is in `problems` with the winning source's name.
 - A skill is a listed path whose file name is exactly `SKILL.md`. Its `folder` is the path's directory as listed (it keeps `source.path`, so `""` only at the repo root). A doc belongs to the deepest skill folder that contains it (`folder === ""` or `doc.startsWith(folder + "/")`). Every listed `SKILL.md` marks a folder, whether or not it was read, parses, survives dedupe or fits the caps.
@@ -153,7 +153,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   // catalog.ts
   export interface SkillEntry {
     name: string; description: string
-    source: KnowledgeRepo & { name: string }  // source.ref is the resolved SHA, so it passes to readDocResult/docUrl as is
+    source: KnowledgeRepo & { name: string }  // source.ref is the resolved SHA, so it passes to readDocResult/docUrl as is. Carries the decrypted token: never log, audit or return it
     sha: string                                // the same SHA, for the audit
     path: string                               // repo path of SKILL.md
     folder: string                             // repo path of its folder ("" only at the repo root)
@@ -163,7 +163,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   }
   export interface SkillProblem {
     source: string; path: string | null
-    reason: "invalid_frontmatter" | "duplicate_name" | "unreachable" | "rate_limited" | "not_in_prompt" | "listing_truncated"
+    reason: "invalid_frontmatter" | "duplicate_name" | "unreachable" | "rate_limited" | "not_read" | "not_in_prompt" | "listing_truncated"
     detail?: string                            // the winning source for duplicate_name; the parse reason for invalid_frontmatter
   }
   export interface SkillCatalog { skills: SkillEntry[]; problems: SkillProblem[]; sources: { id: string; name: string; sha: string | null; pinned: boolean }[] }  // pinned: isCommitSha(row.ref)
@@ -224,8 +224,8 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
     - `listDocsResult` giving `unreachable` adds that reason;
     - one `SKILL.md` read giving `rate_limited` adds that reason with its path, while the source's other skills are still listed;
     - a `truncated: true` listing adds `{ path: null, reason: "listing_truncated" }`.
-  - `reads at most 50 SKILL.md files per load`: two sources listing 30 and 25 give exactly 50 `readDocResult` calls: all 30 of the first source, then the first 20 of the second. The last 5 paths get `not_in_prompt`. A doc inside one of those unread skill folders is not given to a root skill. With `readDocResult` holding its promises open, no more than 8 are pending at once across both sources.
-  - `caps the catalogue at 50 skills`: two sources with 30 short skills each keep the first 50 in source-then-path order; the other 10 get `not_in_prompt` (unread, by the read limit).
+  - `reads at most 50 SKILL.md files per load`: two sources listing 30 and 25 give exactly 50 `readDocResult` calls: all 30 of the first source, then the first 20 of the second. The last 5 paths get `not_read`. A doc inside one of those unread skill folders is not given to a root skill. With `readDocResult` holding its promises open, no more than 8 are pending at once across both sources.
+  - `caps the catalogue at 50 skills`: two sources with 30 short skills each keep the first 50 in source-then-path order; the other 10 get `not_read`, by the read limit. Since at most 50 files are read, `not_in_prompt` comes only from the character budget below.
   - `stops at the first skill over the prompt budget`: 25 skills with 280-character descriptions, then one with a one-word description. The kept skills satisfy `skillsSection(skills)!.length <= 6000`, and adding the next one would exceed it. The first skill that does not fit and every later one, the short last one included, get `not_in_prompt`.
   - `loadSkillCatalogWithin gives up after five seconds`: with fake timers and the GitHub mocks never settling, `await jest.advanceTimersByTimeAsync(5000)` resolves it to `null`, and `jest.getTimerCount()` is 0 afterwards. A load that rejects resolves to `null`. A load that succeeds returns the catalogue and clears its timer (`jest.getTimerCount()` is 0).
 - [ ] **Step 8:** Run `npx jest lib/chatbot/skills/__tests__/catalog.test.ts`. Expected: FAIL.
@@ -402,6 +402,7 @@ UI decisions:
   | duplicate | "Hidden by a skill with the same name in {detail}" |
   | unreachable | "Could not read the repository" |
   | rate limited | "GitHub's rate limit was reached; add a token" |
+  | not read | "Not read: only the first 50 SKILL.md files are read. Remove skills or set a folder." |
   | not in prompt | "Left out: the skills list is full. Shorten descriptions or remove skills." |
   | listing truncated | "Only the first 300 Markdown files were read; set a folder" |
 - Test ids: `settings-skill-list`, `settings-skill-{id}`, `settings-skill-add-open`, `settings-skill-edit-open`, `settings-skill-add-sheet` and `settings-skill-edit-sheet` (the `sheetTestId`s), `settings-skill-refresh`, `settings-skill-check`, `settings-skill-check-dialog`, `settings-skill-moving-ref`, `settings-skill-form`, `settings-skill-name`, `settings-skill-repo`, `settings-skill-ref`, `settings-skill-path`, `settings-skill-token`, `settings-skill-active`, `settings-skill-delete`, `settings-skill-remove` and `settings-skill-remove-confirm`. Both `SettingsSheet`s and the form's `SettingsFormFooter` take `id="skill"`, which gives `settings-skill-save`, `settings-skill-cancel` and `settings-skill-discard-dialog`.
