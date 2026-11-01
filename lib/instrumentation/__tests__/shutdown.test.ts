@@ -7,9 +7,8 @@ import type * as Shutdown from "@/lib/instrumentation/shutdown"
 // The one SIGTERM/SIGINT coordinator (BP-15). Each test loads a fresh copy of
 // the module, whose handlers, tasks and signal are per-process state.
 
-jest.mock("@/lib/utils/logger", () => ({
-  createLogger: () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() }),
-}))
+const mockLogger = { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() }
+jest.mock("@/lib/utils/logger", () => ({ createLogger: () => mockLogger }))
 
 const originalEnv = process.env
 const SIGNALS = ["SIGTERM", "SIGINT"] as const
@@ -37,6 +36,7 @@ function send(signal: (typeof SIGNALS)[number]): void {
 }
 
 beforeEach(() => {
+  jest.clearAllMocks()
   jest.useFakeTimers()
   process.env = { ...originalEnv, NODE_ENV: "production" }
   delete process.env.SHUTDOWN_GRACE_MS
@@ -112,6 +112,44 @@ describe("installShutdownHandlers()", () => {
 
     await jest.advanceTimersByTimeAsync(10_000)
     expect(exit).toHaveBeenCalledTimes(1)
+  })
+
+  it("names the tasks still running when the deadline passes, and their phase", async () => {
+    process.env.SHUTDOWN_GRACE_MS = "500"
+    shutdown.onShutdown("discord-bot", "drain", () => Promise.resolve())
+    shutdown.onShutdown("queue-worker", "drain", () => new Promise(() => {}))
+    shutdown.onShutdown("rewind-workers", "drain", () => new Promise(() => {}))
+    shutdown.onShutdown("redis", "close", () => Promise.resolve())
+    shutdown.installShutdownHandlers()
+
+    send("SIGTERM")
+    await jest.advanceTimersByTimeAsync(500)
+
+    expect(mockLogger.error).toHaveBeenCalledTimes(1)
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "Shutdown deadline passed; exiting with tasks still running: queue-worker, rewind-workers",
+      undefined,
+      { graceMs: 500, phase: "drain", tasks: ["queue-worker", "rewind-workers"] }
+    )
+    expect(exit).toHaveBeenCalledWith(1)
+  })
+
+  it("names a close task that overruns, after the drain finished", async () => {
+    process.env.SHUTDOWN_GRACE_MS = "500"
+    shutdown.onShutdown("queue-worker", "drain", () => new Promise((resolve) => setTimeout(resolve, 100)))
+    shutdown.onShutdown("redis", "close", () => new Promise(() => {}))
+    shutdown.onShutdown("prisma", "close", () => Promise.resolve())
+    shutdown.installShutdownHandlers()
+
+    send("SIGTERM")
+    await jest.advanceTimersByTimeAsync(500)
+
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "Shutdown deadline passed; exiting with tasks still running: redis",
+      undefined,
+      { graceMs: 500, phase: "close", tasks: ["redis"] }
+    )
+    expect(exit).toHaveBeenCalledWith(1)
   })
 
   it("defaults the grace to 8000 ms", async () => {

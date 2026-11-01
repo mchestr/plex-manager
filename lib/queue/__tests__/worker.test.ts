@@ -12,7 +12,7 @@
 import { Worker, type Job } from "bullmq"
 
 import { onJobFailed } from "@/lib/observability/job-failures"
-import { closeWorker } from "@/lib/queue/connection"
+import { closeWorker } from "@/lib/queue/close-worker"
 import { getJobProcessor } from "@/lib/queue/jobs"
 import { startRewindWorkers, stopRewindWorkers } from "@/lib/queue/rewind-queues"
 import { startWorker, stopWorker } from "@/lib/queue/worker"
@@ -29,8 +29,8 @@ const mockWorker = {
 jest.mock("bullmq", () => ({ Worker: jest.fn(() => mockWorker) }))
 jest.mock("@/lib/queue/connection", () => ({
   getRedisConnection: jest.fn(() => ({ connection: "shared" })),
-  closeWorker: jest.fn(async () => {}),
 }))
+jest.mock("@/lib/queue/close-worker", () => ({ closeWorker: jest.fn(async () => {}) }))
 jest.mock("@/lib/queue/jobs", () => ({
   getJobProcessor: jest.fn(),
   getRegisteredJobTypes: jest.fn(() => ["watchlist:sync:all"]),

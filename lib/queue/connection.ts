@@ -5,7 +5,6 @@
  * Uses lazy initialization to avoid connecting during build.
  */
 
-import type { Worker } from "bullmq"
 import Redis, { RedisOptions } from "ioredis"
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { createLogger } from "@/lib/utils/logger"
@@ -74,13 +73,20 @@ export function getRedisConnection(): Redis {
 }
 
 /**
- * Close the Redis connection gracefully
- * Should be called during application shutdown
+ * Closes the Redis connection at shutdown: with QUIT while it is ready, so the
+ * commands sent before it finish, and otherwise at once. QUIT waits behind
+ * every queued command, and while Redis is unreachable those wait for a
+ * reconnect (`maxRetriesPerRequest: null`) that shutdown cannot wait for.
  */
 export async function closeRedisConnection(): Promise<void> {
   const connection = redisConnection
   if (connection) {
     redisConnection = null
+    if (connection.status !== "ready") {
+      connection.disconnect()
+      logger.info("Redis connection closed without QUIT: not connected", { status: connection.status })
+      return
+    }
     try {
       await connection.quit()
       logger.info("Redis connection closed gracefully")
@@ -91,19 +97,6 @@ export async function closeRedisConnection(): Promise<void> {
     }
   }
 }
-
-/**
- * Closes a BullMQ Worker on the shared connection at shutdown, letting its
- * active jobs finish while Redis is connected. While the connection is down or
- * reconnecting, BullMQ's graceful close waits on a job fetch that never
- * settles (it held shutdown past its deadline in the image smoke test), and no
- * job could record its result anyway, so the close is forced; the stall check
- * hands any active job to the next worker.
- */
-export function closeWorker(worker: Pick<Worker, "close">): Promise<void> {
-  return worker.close(redisConnection?.status !== "ready")
-}
-
 
 /**
  * A Redis client whose commands fail within about two seconds instead of

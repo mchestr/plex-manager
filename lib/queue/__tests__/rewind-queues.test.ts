@@ -26,6 +26,8 @@ jest.mock("bullmq", () => ({
 }))
 jest.mock("@/lib/queue/connection", () => ({
   getRedisConnection: jest.fn(() => ({ fake: "redis" })),
+}))
+jest.mock("@/lib/queue/close-worker", () => ({
   closeWorker: jest.fn((worker: { close: () => Promise<void> }) => worker.close()),
 }))
 jest.mock("@/lib/queue/client", () => ({ QUEUE_NAME: "plex-wrapped" }))
