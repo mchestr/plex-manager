@@ -106,8 +106,8 @@ test.describe('Admin screens', () => {
     });
   });
 
-  test('LLM usage', async ({ page }) => {
-    await capture(page, '/admin/llm-usage', 'admin-llm-usage');
+  test('AI activity', async ({ page }) => {
+    await capture(page, '/admin/ai', 'admin-ai-activity');
   });
 });
 

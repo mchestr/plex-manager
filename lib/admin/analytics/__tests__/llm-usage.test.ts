@@ -72,11 +72,11 @@ describe("listUsageGroups", () => {
   it("links a conversation to its calls and a call to its detail", async () => {
     const page = await listUsageGroups({ range: null }, "UTC", { page: 1, pageSize: 2 })
     expect(page.rows[0]).toMatchObject({
-      href: "/admin/llm-usage/conversation/conv-1",
+      href: "/admin/ai/conversation/conv-1",
       context: "Assistant conversation, 3 calls",
       startedAt: "2026-10-17T10:01:00.000Z",
     })
-    expect(page.rows[1]).toMatchObject({ href: "/admin/llm-usage/call-9", context: "Standalone call" })
+    expect(page.rows[1]).toMatchObject({ href: "/admin/ai/call-9", context: "Standalone call" })
   })
 })
 

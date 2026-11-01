@@ -50,7 +50,7 @@ app/                     # Next.js App Router (pages, layouts, routes)
 │   ├── invites/        # Affiliate invites: apply, make, copy and cancel invites (a 404 while the switch is off)
 │   ├── membership/     # Stripe membership (when enabled)
 │   └── rewind/         # Rewind: /rewind, /rewind/[year] (story), /rewind/[year]/read (article), the scope layout
-├── admin/              # Admin pages: overview, assistant, users, invites, watchlist sync, inactive members, settings, rewind, queues, LLM usage, audit log
+├── admin/              # Admin pages: overview, assistant, users, invites, watchlist sync, inactive members, settings, rewind, queues, AI activity, audit log
 ├── api/                # API routes (webhooks, health, metrics, admin search, Rewind cards and posters)
 ├── auth/               # Plex sign-in callback, access denied and auth error pages (sign-in itself is on /)
 ├── dev/                # Development-only UI sheet

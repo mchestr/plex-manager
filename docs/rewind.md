@@ -74,7 +74,7 @@ production image digest and the freeze exceptions) and `model-selection.md`
 | Eligibility and skip reasons | `lib/wrapped/pipeline/eligibility.ts`, `lib/wrapped/generation-errors.ts` |
 | Share page gate (404, 429, 503) | `lib/rewind/share/share-gate.ts`, `lib/rewind/share/status-html.ts` |
 | Audit entries | the `AuditLog` table (`REWIND_*` and `CONFIG_CHANGED` events) and the app log |
-| LLM spend | `/admin/llm-usage` and `/admin/cost-analysis`; the season total is the console's budget tile |
+| LLM spend | `/admin/ai` and `/admin/cost-analysis`; the season total is the console's budget tile |
 
 The Rewind queues (`rewind-batch`, `rewind-gen`, `rewind-aux`) are not on
 `/admin/queues`, which shows only the general queue. Read them from Redis with

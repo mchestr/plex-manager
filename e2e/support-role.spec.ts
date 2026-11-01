@@ -33,7 +33,7 @@ const test = base.extend<{ supportPage: import('@playwright/test').Page }>({
 const REFUSED_PATHS = [
   '/admin/settings',
   '/admin/invites',
-  '/admin/llm-usage',
+  '/admin/ai',
   '/admin/cost-analysis',
   '/admin/queues',
   '/admin/discord',
@@ -110,7 +110,7 @@ test.describe('Support role', () => {
     await expect(page.getByTestId('admin-users-page')).toBeVisible();
 
     await expect(page.getByTestId('admin-nav-users')).toBeVisible();
-    for (const hidden of ['overview', 'settings', 'invites', 'queues', 'llm-usage', 'cost-analysis']) {
+    for (const hidden of ['overview', 'settings', 'invites', 'queues', 'ai-activity', 'cost-analysis']) {
       await expect(page.getByTestId(`admin-nav-${hidden}`)).toHaveCount(0);
     }
   });

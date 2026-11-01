@@ -1,6 +1,6 @@
 import { SearchX } from "lucide-react"
 
-import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
+import { LlmTextRemovedNotice } from "@/components/admin/ai-activity/llm-text-removed-notice"
 import { HistoricalWrappedSelectorHeader } from "@/components/admin/wrapped/historical-wrapped-selector-header"
 import { ArchiveArticle } from "@/components/rewind/article/archive-article"
 import { RewindScope } from "@/components/rewind/stage/rewind-scope"

@@ -17,7 +17,7 @@
  * title and messages go, while its
  * `LLMUsage` rows keep their link. The day's spend caps (`lib/llm/budget.ts`)
  * count only rows with a conversation, so a removed row would hand back the
- * day's spend; and the LLM usage pages keep showing the calls until their own
+ * day's spend; and the AI activity pages keep showing the calls until their own
  * window clears the text. The `chatConversations` retention rule deletes the
  * ended row later.
  *

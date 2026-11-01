@@ -1,5 +1,5 @@
 /**
- * The LLM usage list's reads (P10.2), for server code only.
+ * The AI activity list's reads (P10.2), for server code only.
  *
  * ## Group before paginating (UI-23)
  *
@@ -17,7 +17,7 @@ import "server-only"
 
 import type { Route } from "next"
 
-import { llmConversation, llmUsageDetail } from "@/lib/admin/routes"
+import { aiActivityConversation, aiActivityRecord } from "@/lib/admin/routes"
 import { publicUserSelect } from "@/lib/dto/user"
 import type { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
@@ -147,7 +147,7 @@ export async function listUsageGroups(
       return [
         {
           key: group.groupKey,
-          href: first.chatConversationId ? llmConversation(first.chatConversationId) : llmUsageDetail(first.id),
+          href: first.chatConversationId ? aiActivityConversation(first.chatConversationId) : aiActivityRecord(first.id),
           userId: first.userId,
           memberName: first.user.name || first.user.email || "Unknown member",
           startedAt: first.createdAt.toISOString(),

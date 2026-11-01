@@ -1,13 +1,13 @@
 import { MessagesSquare } from "lucide-react"
 
 import { getLLMUsageRecords } from "@/lib/data/llm-usage"
-import { ConversationTranscript } from "@/components/admin/llm-usage/conversation-transcript"
-import { ConversationUsageRow } from "@/components/admin/llm-usage/conversation-usage-row"
-import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
+import { ConversationTranscript } from "@/components/admin/ai-activity/conversation-transcript"
+import { ConversationUsageRow } from "@/components/admin/ai-activity/conversation-usage-row"
+import { LlmTextRemovedNotice } from "@/components/admin/ai-activity/llm-text-removed-notice"
 import { EmptyState } from "@/components/ui/empty-state"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
-import { llmUsage } from "@/lib/admin/routes"
+import { aiActivity } from "@/lib/admin/routes"
 import { getFormat } from "@/lib/settings/app-settings"
 import { aggregateLlmUsage } from "@/lib/utils"
 import type { BoundFormat } from "@/lib/utils/format"
@@ -43,9 +43,9 @@ export default async function LLMConversationPage({ params }: { params: Promise<
     return (
       <div className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-6">
         <PageHeader
-          breadcrumbs={[{ label: "LLM usage", href: llmUsage() }, { label: "Conversation" }]}
+          breadcrumbs={[{ label: "AI activity", href: aiActivity() }, { label: "Conversation" }]}
           title="Conversation"
-          data-testid="admin-llm-conversation-heading"
+          data-testid="admin-ai-conversation-heading"
         />
         <EmptyState kind="first-use" icon={MessagesSquare} title="No calls" />
       </div>
@@ -63,17 +63,17 @@ export default async function LLMConversationPage({ params }: { params: Promise<
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-6">
       <PageHeader
-        breadcrumbs={[{ label: "LLM usage", href: llmUsage() }, { label: name, href: llmUsage({ userId: user.id }) }, { label: "Conversation" }]}
+        breadcrumbs={[{ label: "AI activity", href: aiActivity() }, { label: name, href: aiActivity({ userId: user.id }) }, { label: "Conversation" }]}
         title={`${name}'s conversation`}
-        data-testid="admin-llm-conversation-heading"
+        data-testid="admin-ai-conversation-heading"
       />
 
-      <StatGrid data-testid="admin-llm-conversation-summary">
+      <StatGrid data-testid="admin-ai-conversation-summary">
         <StatTile
           label="Calls"
           value={f.number(records.length)}
           meta={
-            <span data-testid="admin-llm-conversation-range">
+            <span data-testid="admin-ai-conversation-range">
               {formatTimeRange(startedAt, endedAt, f)} ({getDurationLabel(startedAt, endedAt)})
             </span>
           }

@@ -1,4 +1,4 @@
-import { ExpandablePrompt } from "@/components/admin/llm-usage/expandable-prompt"
+import { ExpandablePrompt } from "@/components/admin/ai-activity/expandable-prompt"
 import { MarkdownBody } from "@/components/ui/markdown-body"
 import { parseTranscript } from "@/lib/admin/conversation-transcript"
 

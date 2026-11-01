@@ -104,7 +104,7 @@ test.describe('Hydration across zones and locales', () => {
 
   test('LLM conversation', async ({ page }) => {
     const errors = collectHydrationErrors(page);
-    await page.goto(`/admin/llm-usage/conversation/${CONVERSATION_ID}`);
+    await page.goto(`/admin/ai/conversation/${CONVERSATION_ID}`);
     const row = page.getByTestId(`conversation-usage-row-${USAGE_IDS[0]}`);
     await expect(row).toBeVisible();
     // Grouped in the app locale (en-US), not the browser's de-DE.

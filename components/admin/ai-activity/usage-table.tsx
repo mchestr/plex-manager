@@ -28,7 +28,7 @@ function columns(f: BoundFormat): ColumnDef<LlmUsageGroupRow>[] {
       id: "member",
       header: "Member",
       cell: ({ row }) => (
-        <Link data-testid={`admin-llm-usage-member-${row.original.key}`} href={userDetail(row.original.userId)} className="rounded-sm underline-offset-4 hover:underline">
+        <Link data-testid={`admin-ai-activity-member-${row.original.key}`} href={userDetail(row.original.userId)} className="rounded-sm underline-offset-4 hover:underline">
           {row.original.memberName}
         </Link>
       ),
@@ -58,14 +58,14 @@ interface UsageTableProps {
 }
 
 /**
- * LLM usage by conversation or call (UI-23): the first cell opens the calls,
+ * AI activity by conversation or call (UI-23): the first cell opens the calls,
  * the member cell opens the member, and every filter and page lives in the URL.
  */
 export function UsageTable({ rows, total, page, pageSize, filtered, options, zone }: UsageTableProps) {
   const f = useFormat()
   return (
     <DataTable
-      label="LLM usage"
+      label="AI activity"
       noun="rows"
       columns={columns(f)}
       data={rows}
@@ -74,7 +74,7 @@ export function UsageTable({ rows, total, page, pageSize, filtered, options, zon
       pagination={{ page, pageSize, total }}
       toolbar={
         <div className="flex flex-col gap-3">
-          <DateRangeFilter zone={zone} data-testid="llm-usage-dates" />
+          <DateRangeFilter zone={zone} data-testid="ai-activity-dates" />
           <FilterBar
             filters={[
               {
@@ -90,7 +90,7 @@ export function UsageTable({ rows, total, page, pageSize, filtered, options, zon
               },
             ]}
             resultCount={{ shown: total, total, noun: "rows" }}
-            data-testid="llm-usage-filters"
+            data-testid="ai-activity-filters"
           />
         </div>
       }
@@ -99,14 +99,14 @@ export function UsageTable({ rows, total, page, pageSize, filtered, options, zon
           <EmptyState
             kind="filtered"
             icon={SearchX}
-            title="No LLM usage matches these filters"
+            title="No AI activity matches these filters"
             description="Clear the filters or select a longer period."
           />
         ) : (
-          <EmptyState kind="first-use" icon={Cpu} title="No LLM usage yet" description="Calls show here once Rewind or the assistant runs." />
+          <EmptyState kind="first-use" icon={Cpu} title="No AI activity yet" description="Calls show here once Rewind or the assistant runs." />
         )
       }
-      data-testid="llm-usage"
+      data-testid="ai-activity"
     />
   )
 }

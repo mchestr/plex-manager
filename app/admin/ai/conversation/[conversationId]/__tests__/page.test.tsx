@@ -6,7 +6,7 @@
 
 import { render, screen, within } from '@testing-library/react'
 
-import LLMConversationPage from '@/app/admin/llm-usage/conversation/[conversationId]/page'
+import LLMConversationPage from '@/app/admin/ai/conversation/[conversationId]/page'
 import { getLLMUsageRecords } from '@/lib/data/llm-usage'
 
 jest.mock('@/lib/admin', () => ({ assertAdmin: jest.fn() }))
@@ -14,7 +14,7 @@ jest.mock('@/lib/data/llm-usage', () => ({ getLLMUsageRecords: jest.fn() }))
 jest.mock('@/lib/settings/app-settings', () => ({
   getFormat: async () => (await import('@/lib/utils/format')).bindFormat({ timeZone: 'America/Chicago', locale: 'en-US' }),
 }))
-jest.mock('@/components/admin/llm-usage/expandable-prompt', () => ({
+jest.mock('@/components/admin/ai-activity/expandable-prompt', () => ({
   ExpandablePrompt: ({ title, content }: { title: string; content: string }) => <section data-testid={`expandable-${title}`}>{content}</section>,
 }))
 
@@ -44,16 +44,16 @@ async function renderPage() {
   return render(<>{ui}</>)
 }
 
-describe('Admin conversation LLM usage page', () => {
+describe('Admin AI activity conversation page', () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it('has breadcrumbs back to LLM usage and the member', async () => {
+  it('has breadcrumbs back to AI activity and the member', async () => {
     mockGetLLMUsageRecords.mockResolvedValue({ records: [call('call-1', '2026-10-12T19:26:00Z', null)] })
     await renderPage()
 
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' })
-    expect(crumbs).toHaveTextContent('LLM usage/Mike/Conversation')
-    expect(within(crumbs).getByRole('link', { name: 'Mike' })).toHaveAttribute('href', '/admin/llm-usage?userId=user-1')
+    expect(crumbs).toHaveTextContent('AI activity/Mike/Conversation')
+    expect(within(crumbs).getByRole('link', { name: 'Mike' })).toHaveAttribute('href', '/admin/ai?userId=user-1')
   })
 
   it('formats the summary and every row in the server zone with its name', async () => {
@@ -62,7 +62,7 @@ describe('Admin conversation LLM usage page', () => {
     })
     await renderPage()
 
-    expect(screen.getByTestId('admin-llm-conversation-range')).toHaveTextContent('Oct 12, 2026, 2:26 PM CDT to Jan 12, 2027, 2:26 PM CST')
+    expect(screen.getByTestId('admin-ai-conversation-range')).toHaveTextContent('Oct 12, 2026, 2:26 PM CDT to Jan 12, 2027, 2:26 PM CST')
     expect(screen.getByTestId('conversation-usage-time-call-oct')).toHaveTextContent('Oct 12, 2026, 2:26 PM CDT')
     expect(screen.getByTestId('conversation-usage-time-call-jan')).toHaveTextContent('Jan 12, 2027, 2:26 PM CST')
   })
@@ -74,7 +74,7 @@ describe('Admin conversation LLM usage page', () => {
     await renderPage()
 
     expect(screen.getByTestId('llm-text-removed-notice')).toHaveTextContent("For privacy, this text isn't kept.")
-    expect(screen.getByRole('link', { name: /^Call 1,/ })).toHaveAttribute('href', '/admin/llm-usage/call-2')
+    expect(screen.getByRole('link', { name: /^Call 1,/ })).toHaveAttribute('href', '/admin/ai/call-2')
     expect(screen.queryByText('User:')).not.toBeInTheDocument()
   })
 

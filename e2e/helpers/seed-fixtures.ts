@@ -203,7 +203,7 @@ export async function seedVisualFixtures(): Promise<void> {
         },
       });
 
-      // Rewind, LLM usage and the announcement
+      // Rewind, AI activity and the announcement
       await tx.plexWrapped.deleteMany();
       const rewindData = generateMockWrappedData({
         promptName: TEST_USERS.REGULAR.name,

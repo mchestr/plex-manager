@@ -1,13 +1,13 @@
 import { getLLMUsageById } from "@/lib/data/llm-usage"
-import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
-import { ExpandablePrompt } from "@/components/admin/llm-usage/expandable-prompt"
+import { LlmTextRemovedNotice } from "@/components/admin/ai-activity/llm-text-removed-notice"
+import { ExpandablePrompt } from "@/components/admin/ai-activity/expandable-prompt"
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { getFormat } from "@/lib/settings/app-settings"
-import { llmConversation, llmUsage, userDetail, userRewind } from "@/lib/admin/routes"
+import { aiActivityConversation, aiActivity, userDetail, userRewind } from "@/lib/admin/routes"
 import { assertAdmin } from "@/lib/admin"
 
 export default async function LLMUsageDetailPage({ params }: { params: Promise<{ usageId: string }> }) {
@@ -82,13 +82,13 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
             <Link
-              data-testid="admin-llm-usage-back"
-              href="/admin/llm-usage"
+              data-testid="admin-ai-activity-back"
+              href={aiActivity()}
               className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline mb-4 inline-block"
             >
-              Back to LLM usage
+              Back to AI activity
             </Link>
-            <h1 data-testid="admin-llm-usage-detail-heading" className="text-2xl sm:text-3xl font-bold text-foreground mb-2">LLM request</h1>
+            <h1 data-testid="admin-ai-activity-detail-heading" className="text-2xl sm:text-3xl font-bold text-foreground mb-2">LLM request</h1>
           </div>
 
         <StatGrid className="mb-6">
@@ -137,16 +137,16 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                   <div className="text-sm text-muted-foreground">{record.user.email}</div>
                 )}
                 <Link
-                  data-testid="admin-llm-usage-member"
+                  data-testid="admin-ai-activity-member"
                   href={userDetail(record.user.id)}
                   className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground mt-1 inline-block"
                 >
                   View member
                 </Link>
                 <Link
-                  href={llmUsage({ userId: record.userId, year: record.wrapped?.year })}
+                  href={aiActivity({ userId: record.userId, year: record.wrapped?.year })}
                   className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground mt-1 ml-4 inline-block"
-                  data-testid="llm-usage-detail-view-all"
+                  data-testid="ai-activity-detail-view-all"
                 >
                   View all their calls
                 </Link>
@@ -182,7 +182,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                       </div>
                     )}
                     <Link
-                      data-testid="admin-llm-usage-rewind"
+                      data-testid="admin-ai-activity-rewind"
                       href={userRewind(record.userId, record.wrapped.year)}
                       className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground inline-block mt-2"
                     >
@@ -197,8 +197,8 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                       Started {f.dateTime(record.chatConversation.createdAt, { zoneLabel: true })}
                     </div>
                     <Link
-                      data-testid="admin-llm-usage-conversation"
-                      href={llmConversation(record.chatConversation.id)}
+                      data-testid="admin-ai-activity-conversation"
+                      href={aiActivityConversation(record.chatConversation.id)}
                       className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground inline-block mt-2"
                     >
                       View conversation calls

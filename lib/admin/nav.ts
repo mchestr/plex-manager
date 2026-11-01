@@ -9,7 +9,7 @@
  * Overview, Assistant ungrouped, at the top (P10.8)
  * Community           Users, Invites, Affiliates, Announcements, Discord bot, Watchlist sync, Inactive members
  * Rewind              Season, Playground, Share analytics
- * Usage and cost      LLM usage, Cost analysis
+ * Usage and cost      AI activity, Cost analysis
  * System              Audit log, Job queues, Settings
  * ```
  *
@@ -182,9 +182,9 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     mobile: "more",
   },
   {
-    id: "llm-usage",
-    label: "LLM usage",
-    href: "/admin/llm-usage",
+    id: "ai-activity",
+    label: "AI activity",
+    href: "/admin/ai",
     icon: icons.llmUsage,
     group: "Usage and cost",
     match: "prefix",

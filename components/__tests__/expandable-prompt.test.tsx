@@ -1,4 +1,4 @@
-import { ExpandablePrompt } from '@/components/admin/llm-usage/expandable-prompt'
+import { ExpandablePrompt } from '@/components/admin/ai-activity/expandable-prompt'
 import { fireEvent, render, screen } from '@testing-library/react'
 
 describe('ExpandablePrompt', () => {

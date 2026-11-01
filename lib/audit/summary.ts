@@ -140,7 +140,7 @@ function roleChanged({ previousRole, newRole }: Details): string | null {
 
 const SURFACES: Record<MemberReadSurface | MemberListSurface, string> = {
   "activity-timeline": "Activity timeline",
-  "llm-usage-detail": "LLM request",
+  "llm-usage-detail": "AI request",
   "llm-conversation": "LLM conversation",
   "rewind-history": "Rewind history",
   "chatbot-tautulli": "Assistant Tautulli lookup",

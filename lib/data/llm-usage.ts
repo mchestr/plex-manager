@@ -1,5 +1,5 @@
 /**
- * The LLM usage pages' reads (P11.5, BP-06): server-only, each admin-checked
+ * The AI activity pages' reads (P11.5, BP-06): server-only, each admin-checked
  * next to its data. Reading one member's prompts (a record, a conversation)
  * is audited through `auditMemberRead` (P11.16).
  *
