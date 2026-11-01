@@ -19,13 +19,15 @@ import { createLogger } from "@/lib/utils/logger"
 const logger = createLogger("LEASE_LOCK")
 
 /**
- * The leases: the background roles on the database store, and the per-member
- * locks on the Redis store (a Rewind generation; a grant or revoke of access).
+ * The leases: the background roles on the database store, and on the Redis
+ * store the per-member locks (a Rewind generation; a grant or revoke of
+ * access) and the judge's spend lease (`judge-spend`, one review spending at a time).
  */
 export type LeaseName =
   | "discord-bot"
   | "watchlist-sync"
   | "retention"
+  | "judge-spend"
   | `rw:lock:gen:${number}:${string}`
   | `access:${string}`
 

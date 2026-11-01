@@ -27,7 +27,9 @@ export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   LLMProvider: ["apiKey"],
   LLMUsage: ["prompt", "response"],
   ChatConversation: ["title"],
-  ChatConversationMessage: ["content"],
+  ChatConversationMessage: ["content", "toolLog"],
+  ConversationReview: ["summary"],
+  ConversationFinding: ["claim", "evidence", "suggestion", "note"],
   DiscordIntegration: ["clientSecret", "botToken"],
   DiscordConnection: ["accessToken", "refreshToken"],
   McpServer: ["authHeaderSecret"],
@@ -45,5 +47,7 @@ export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
 export const FREE_TEXT_FIELDS: Record<string, readonly string[]> = {
   LLMUsage: ["prompt", "response"],
   ChatConversation: ["title"],
-  ChatConversationMessage: ["content"],
+  ChatConversationMessage: ["content", "toolLog"],
+  ConversationReview: ["summary"],
+  ConversationFinding: ["claim", "evidence", "suggestion", "note"],
 }

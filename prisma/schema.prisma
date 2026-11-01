@@ -27,6 +27,8 @@ model User {
   plexWrapped           PlexWrapped[]
   llmUsage              LLMUsage[]
   chatConversations     ChatConversation[]
+  reviewsRequested      ConversationReview[]   @relation("ReviewRequestedBy")
+  findingsTriaged       ConversationFinding[]  @relation("FindingTriagedBy")
   apiTokens             ApiToken[]
   inviteUsages          InviteUsage[]
   discordConnection     DiscordConnection?
@@ -176,7 +178,7 @@ model Radarr {
 model LLMProvider {
   id          String   @id @default(cuid())
   provider    String // Currently "openai", but extensible for other providers
-  purpose     String // "chat" or "wrapped" - distinguishes between chat assistant and wrapped generation configs
+  purpose     String // "chat", "wrapped" or "judge" - distinguishes between chat assistant, wrapped generation and conversation review configs
   apiKey      String
   model       String // Required - no default model allowed
   temperature Float? // Temperature setting (0.0-2.0), null uses model default
@@ -412,9 +414,13 @@ model ChatConversation {
   lastMessageAt   DateTime?
   createdAt       DateTime                  @default(now())
   endedAt         DateTime?
+  /// Written by enqueueReview and persistReview only to take this row's lock; nothing reads it.
+  reviewLockedAt  DateTime?
   usage           LLMUsage[]
   discordSessions DiscordChatSession[]
   messages        ChatConversationMessage[]
+  reviews         ConversationReview[]
+  findings        ConversationFinding[]
 
   @@index([userId, lastMessageAt])
   @@index([lastMessageAt])
@@ -450,15 +456,19 @@ enum ApiTokenScope {
 }
 
 model ChatConversationMessage {
-  id             String           @id @default(cuid())
+  id             String                @id @default(cuid())
   conversationId String
-  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation   ChatConversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   role           ChatMessageRole
   /// Encrypted at rest
   content        String
   /// The tools an answer used, as `[{ tool, description }]`
   sources        Json?
-  createdAt      DateTime         @default(now())
+  /// The turn's tool calls, redacted and capped, as JSON `[{ tool, args, result, ok, truncated? }]`;
+  /// assistant messages only, encrypted at rest
+  toolLog        String?
+  createdAt      DateTime              @default(now())
+  findings       ConversationFinding[]
 
   @@index([conversationId, createdAt])
 }
@@ -468,42 +478,151 @@ enum ChatMessageRole {
   assistant
 }
 
+/// One judge run over an admin assistant conversation
+model ConversationReview {
+  id              String                    @id @default(cuid())
+  conversationId  String
+  conversation    ChatConversation          @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  status          ConversationReviewStatus  @default(queued)
+  trigger         ConversationReviewTrigger
+  requestedById   String? // The admin, for a manual review
+  requestedBy     User?                     @relation("ReviewRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+  model           String?
+  promptVersion   String?
+  reviewedThrough DateTime? // createdAt of the newest message the judge saw
+  summary         String? // Encrypted at rest
+  errorCode       String? // generateStructured's code, never provider text
+  startedAt       DateTime?
+  /// Fencing token: incremented by every run start; a run's writes are conditional on it. Not a retry count.
+  runToken        Int                       @default(0)
+  createdAt       DateTime                  @default(now())
+  completedAt     DateTime?
+  findings        ConversationFinding[]
+  usage           LLMUsage[]
+
+  @@index([conversationId, createdAt])
+  @@index([status])
+}
+
+enum ConversationReviewStatus {
+  queued
+  running
+  done
+  failed
+}
+
+enum ConversationReviewTrigger {
+  manual
+  nightly
+}
+
+/// One problem the judge found in an admin assistant answer, kept across reviews by its fingerprint
+model ConversationFinding {
+  id             String                   @id @default(cuid())
+  reviewId       String
+  review         ConversationReview       @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  conversationId String
+  conversation   ChatConversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  messageId      String?
+  message        ChatConversationMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  type           FindingType
+  severity       FindingSeverity
+  claim          String // Encrypted at rest
+  evidence       String // Encrypted at rest
+  suggestion     String // Encrypted at rest
+  tool           String?
+  evidenceSource EvidenceSource
+  evidenceCheck  EvidenceCheck            @default(unverified)
+  fingerprint    String // sha256(type | tool ?? '' | messageId)
+  seenCount      Int                      @default(1)
+  lastSeenAt     DateTime                 @default(now())
+  status         FindingStatus            @default(open)
+  note           String? // Encrypted at rest
+  triagedById    String?
+  triagedBy      User?                    @relation("FindingTriagedBy", fields: [triagedById], references: [id], onDelete: SetNull)
+  triagedAt      DateTime?
+  createdAt      DateTime                 @default(now())
+
+  @@unique([conversationId, fingerprint])
+  @@index([status, createdAt])
+  @@index([type, status])
+}
+
+enum FindingType {
+  wrong_fact
+  unsupported_claim
+  missing_capability
+  wrong_tool
+  unneeded_refusal
+  misread_question
+}
+
+enum FindingSeverity {
+  low
+  medium
+  high
+}
+
+enum FindingStatus {
+  open
+  fixed
+  wont_fix
+  false_alarm
+}
+
+enum EvidenceSource {
+  tool_result
+  earlier_message
+  catalog
+  none
+}
+
+enum EvidenceCheck {
+  verified
+  unverified
+  not_applicable
+}
+
 // LLM Usage tracking for cost analysis
 // This model stores ALL LLM usage, including regenerations of wrapped content
 // wrappedId is optional to allow tracking LLM usage even without a wrapped
 model LLMUsage {
-  id                 String            @id @default(cuid())
-  wrappedId          String? // Optional - allows tracking usage without a wrapped
-  wrapped            PlexWrapped?      @relation(fields: [wrappedId], references: [id], onDelete: SetNull)
-  chatConversationId String?
-  chatConversation   ChatConversation? @relation(fields: [chatConversationId], references: [id], onDelete: SetNull)
-  userId             String
-  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider           String // Currently "openai", but extensible for other providers
-  model              String? // Model used (e.g., "gpt-4", "openai/gpt-4")
-  prompt             String? // The prompt sent to the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
-  response           String? // The full response from the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
-  promptTokens       Int // Number of tokens in the prompt
-  completionTokens   Int // Number of tokens in the completion
-  totalTokens        Int // Total tokens used
-  cost               Float // Estimated cost in USD
-  cachedInputTokens  Int               @default(0)
-  reasoningTokens    Int               @default(0)
-  serviceTier        String?
-  batchId            String?
-  promptVersion      String?
-  factsHash          String?
-  generationId       String?
-  generation         RewindGeneration? @relation(fields: [generationId], references: [id], onDelete: SetNull)
-  outcome            String            @default("ok") // "ok", or why a billed call failed
+  id                   String              @id @default(cuid())
+  wrappedId            String? // Optional - allows tracking usage without a wrapped
+  wrapped              PlexWrapped?        @relation(fields: [wrappedId], references: [id], onDelete: SetNull)
+  chatConversationId   String?
+  chatConversation     ChatConversation?   @relation(fields: [chatConversationId], references: [id], onDelete: SetNull)
+  // The judge review this call ran for; judge calls never set chatConversationId
+  conversationReviewId String?
+  conversationReview   ConversationReview? @relation(fields: [conversationReviewId], references: [id], onDelete: SetNull)
+  userId               String
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider             String // Currently "openai", but extensible for other providers
+  model                String? // Model used (e.g., "gpt-4", "openai/gpt-4")
+  prompt               String? // The prompt sent to the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
+  response             String? // The full response from the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
+  promptTokens         Int // Number of tokens in the prompt
+  completionTokens     Int // Number of tokens in the completion
+  totalTokens          Int // Total tokens used
+  cost                 Float // Estimated cost in USD
+  cachedInputTokens    Int                 @default(0)
+  reasoningTokens      Int                 @default(0)
+  serviceTier          String?
+  batchId              String?
+  promptVersion        String?
+  factsHash            String?
+  generationId         String?
+  generation           RewindGeneration?   @relation(fields: [generationId], references: [id], onDelete: SetNull)
+  outcome              String              @default("ok") // "ok", or why a billed call failed
   // The LLM usage list's row: the conversation id for assistant calls, else unique to the call (P10.2)
-  groupKey           String            @default(uuid())
-  createdAt          DateTime          @default(now())
+  groupKey             String              @default(uuid())
+  createdAt            DateTime            @default(now())
 
   @@index([userId])
   @@index([wrappedId])
   @@index([generationId])
   @@index([chatConversationId])
+  @@index([conversationReviewId, createdAt])
   @@index([groupKey, createdAt])
   @@index([provider])
   @@index([createdAt])
@@ -546,6 +665,10 @@ model Config {
   llmDailyCapPerUserUsd        Float     @default(0.5) // Daily assistant spend per member, server-zone day (P4.20)
   llmDailyCapAdminUsd          Float     @default(5) // Daily assistant spend per admin
   llmDailyCapServerUsd         Float     @default(5) // Daily assistant spend for the whole server
+  judgeNightlyEnabled          Boolean   @default(false) // Review sampled admin assistant conversations every night
+  judgeSampleRate              Int       @default(100) // Percent of changed conversations the nightly sweep reviews
+  judgeMinTurns                Int       @default(2) // Fewest user messages a conversation needs before the nightly sweep reviews it
+  llmDailyCapJudgeUsd          Float     @default(1) // Daily conversation review spend for the whole server
   lastRetentionRunAt           DateTime? // When the retention sweep last finished (P11.14)
   lastRetentionSummary         Json? // That run's per-rule counts (P11.14)
   discordStatsEnabled          Boolean   @default(false) // Rename Discord channels with live server stats

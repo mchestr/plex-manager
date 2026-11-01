@@ -12,7 +12,7 @@ import { isLLMProviderId } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
 import { frozenModelFor, REWIND_LOCK, type FrozenRewindModel } from "@/lib/wrapped/freeze/lock"
 
-export type LLMPurpose = "wrapped" | "chat"
+export type LLMPurpose = "wrapped" | "chat" | "judge"
 
 /** A provider row that cannot build a model, e.g. an OpenAI-compatible row with no base URL. */
 export class LLMConfigError extends Error {

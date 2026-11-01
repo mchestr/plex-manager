@@ -5,7 +5,7 @@
  */
 import type { EraseReport } from '@/lib/members/erase'
 import type { InventoryCounts } from '@/lib/members/erase-inventory'
-import { Prisma, type AffiliateApplication, type Config, type InactivityRun, type InactivitySettings, type Invite, type JellyfinServer, type LLMUsage, type PlexServer, type PlexWrapped, type RewindShare, type Setup, type User } from '@/lib/generated/prisma/client'
+import { Prisma, type AffiliateApplication, type Config, type ConversationFinding, type ConversationReview, type InactivityRun, type InactivitySettings, type Invite, type JellyfinServer, type LLMUsage, type PlexServer, type PlexWrapped, type RewindShare, type Setup, type User } from '@/lib/generated/prisma/client'
 
 // A fresh Date per row, so a test that mutates one cannot leak into another.
 const fixedDate = () => new Date('2026-01-01T00:00:00.000Z')
@@ -98,6 +98,7 @@ export function buildLLMUsage(overrides: Partial<LLMUsage> = {}): LLMUsage {
     id: 'llm-usage-1',
     wrappedId: null,
     chatConversationId: null,
+    conversationReviewId: null,
     userId: 'user-1',
     provider: 'openai',
     model: 'gpt-4',
@@ -158,6 +159,10 @@ export function buildConfig(overrides: Partial<Config> = {}): Config {
     llmDailyCapPerUserUsd: 0.5,
     llmDailyCapAdminUsd: 5,
     llmDailyCapServerUsd: 5,
+    judgeNightlyEnabled: false,
+    judgeSampleRate: 100,
+    judgeMinTurns: 2,
+    llmDailyCapJudgeUsd: 1,
     lastRetentionRunAt: null,
     lastRetentionSummary: null,
     discordStatsEnabled: false,
@@ -177,6 +182,54 @@ export function buildConfig(overrides: Partial<Config> = {}): Config {
     encryptionFieldsHash: null,
     updatedAt: fixedDate(),
     updatedBy: null,
+    ...overrides,
+  }
+}
+
+/** A queued manual judge review of `conversation-1`, with the schema defaults. */
+export function buildConversationReview(overrides: Partial<ConversationReview> = {}): ConversationReview {
+  return {
+    id: 'review-1',
+    conversationId: 'conversation-1',
+    status: 'queued',
+    trigger: 'manual',
+    requestedById: 'user-1',
+    model: null,
+    promptVersion: null,
+    reviewedThrough: null,
+    summary: null,
+    errorCode: null,
+    startedAt: null,
+    runToken: 0,
+    createdAt: fixedDate(),
+    completedAt: null,
+    ...overrides,
+  }
+}
+
+/** An open finding from `review-1` on message `message-1`, with the schema defaults. */
+export function buildConversationFinding(overrides: Partial<ConversationFinding> = {}): ConversationFinding {
+  return {
+    id: 'finding-1',
+    reviewId: 'review-1',
+    conversationId: 'conversation-1',
+    messageId: 'message-1',
+    type: 'wrong_fact',
+    severity: 'medium',
+    claim: 'The answer says the server has 12 libraries.',
+    evidence: 'get_libraries returned 9 libraries.',
+    suggestion: 'Count the libraries the tool returned.',
+    tool: 'get_libraries',
+    evidenceSource: 'tool_result',
+    evidenceCheck: 'unverified',
+    fingerprint: 'f'.repeat(64),
+    seenCount: 1,
+    lastSeenAt: fixedDate(),
+    status: 'open',
+    note: null,
+    triagedById: null,
+    triagedAt: null,
+    createdAt: fixedDate(),
     ...overrides,
   }
 }
