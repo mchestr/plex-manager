@@ -408,7 +408,7 @@ UI decisions:
     - the `ASSISTANT_DATA_READ` audit with tool, skill, path and commit;
     - that a skill can direct the assistant to use any tool the admin has, including ones that change data, with no extra confirmation step: whoever can change the repository at the ref can steer the assistant that far, so pin a commit;
     - that supporting files read with `read_skill_file` carry the same trust as `SKILL.md`, and that only the first 50 supporting files (in path order) are listed and readable;
-    - cost: every read goes to `api.github.com`. A pinned commit costs one tree read and one read per `SKILL.md` once, then nothing; a branch costs one ref check every ten minutes, plus a re-read whenever it moves. A token raises GitHub's limit from 60 to 5,000 requests an hour;
+    - cost: every read goes to `api.github.com`. A pinned commit costs one tree read and one read per `SKILL.md` once per process (each container and restart), then nothing; a branch costs one ref check every ten minutes, plus a re-read whenever it moves. A token raises GitHub's limit from 60 to 5,000 requests an hour;
   - change "like every other tool result" (line 37) to "like every tool result except `load_skill` and `read_skill_file`, which arrive as `admin_skill`".
 - Modify: `docs/roles.md` (`assistant:tools:admin` covers skills too) and `docs/mcp.md` (the assistant tools list: the skill tools are web chat only)
 - Create: `e2e/admin/settings-assistant-skills.spec.ts`
