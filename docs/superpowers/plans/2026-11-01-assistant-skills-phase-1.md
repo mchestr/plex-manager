@@ -23,9 +23,9 @@
 - Skill tools: permission `assistant:tools:admin`, never `discordSafe`, **not offered over `/api/mcp`** (the spec says admin web chat only). Each calls `assertAdmin()` and logs `ASSISTANT_DATA_READ` with `{ toolName, skill, path, sha }`. Here `path` is the repo path read, and `sha` is the commit's first 12 characters, because the audit redactor turns any 33-plus-character token-like string into `[REDACTED]` (`lib/utils/log-redaction.ts`, `RANDOM_LOOKING`).
 - Wrapper: `{ admin_skill: … }` for exactly `load_skill` and `read_skill_file` (`SKILL_TOOL_NAMES`, a fixed set in code); everything else stays `{ untrusted_data: … }`. Both are JSON-encoded.
 - `url` in results comes from `docUrl` at the commit (a github.com web link), never an API URL.
-- `resolveRef`: `GET https://api.github.com/repos/{repo}/commits/{ref}` with `Accept: application/vnd.github.sha` (and the token, when set), cached ten minutes per `id:repo@ref:updatedAt`. A ref matching `^[0-9a-f]{40}$` returns itself with no request.
+- `resolveRef`: `GET https://api.github.com/repos/{repo}/commits/{encodeURIComponent(ref)}` with `Accept: application/vnd.github.sha` (and the token, when set), cached ten minutes per `id:repo@ref:updatedAt`. A ref matching `^[0-9a-f]{40}$` returns itself with no request.
 - GitHub failure reasons (`resolveRef`, the tree and file reads): `rate_limited` for HTTP 429, or HTTP 403 with response header `x-ratelimit-remaining: 0` (seen through `onResponse`) or a failure `message` matching `/rate limit/i` (`readErrorMessage: true`). Any other failure is `unreachable`.
-- Cache keys: at a commit-SHA ref, the tree key is `id:repo@sha:folder` and the file key is `id:repo@sha:folder:file`. These have no expiry and are still bounded by `remember`; the source id, repo and folder stay in the key, so a folder or repo edit reads again. A branch ref keeps today's key, `id:updatedAt`, and the ten-minute expiry, which knowledge bases rely on. Content read with a token stays cached after the token is removed, as the spec accepts. Concurrent reads of the same key share one in-flight request. A failed ref, tree or file read is remembered for 60 seconds (`FAILURE_TTL_MS`), so a rate limit is not hit again on every turn.
+- Cache keys: at a commit-SHA ref, the tree key is `id:repo@sha:folder` and the file key is `id:repo@sha:folder:file`. These have no expiry and are still bounded by `remember`; the source id, repo and folder stay in the key, so a folder or repo edit reads again. A branch ref keeps today's key, `id:updatedAt`, and the ten-minute expiry, which knowledge bases rely on. Content read with a token stays cached after the token is removed, as the spec accepts. Concurrent reads of the same key share one in-flight request. A failed ref, tree or file read is remembered for 60 seconds (`FAILURE_TTL_MS`), so a rate limit is not hit again on every turn. The failure is keyed by its read's key plus `updatedAt`, so saving a source (a new token, say) clears its failures at once. The caches keep today's bounds, `MAX_TREES = 20` listings and `MAX_FILES = 400` files, shared with knowledge bases. When a cache is full, the oldest inserted entry goes first; this only costs a re-read, never a wrong answer.
 - The settings form copy: "The assistant follows skills as instructions. Add only repositories you control, and pin a tag or commit." A row whose ref is not a 40-character lowercase SHA shows "Follows a moving ref". A 40-hex ref is saved in lowercase.
 - Audit: `ASSISTANT_SOURCE_CHANGED` with `{ kind: "skill", action, id }`, where `action` is `saved`, `deleted` or `refreshed`. It has a summary line in `lib/audit/summary.ts`.
 - New action module `actions/admin/assistant-skills.ts` goes in `ACTION_MODULES`. `checkSkills` goes in `READ_ONLY_ACTIONS`. Run `npm run mcp:docs` and commit `lib/mcp/action-docs.generated.ts`.
@@ -109,7 +109,8 @@ Accepted, not handled: a branch ref can move between the turn's catalogue load a
   - `sources never share SHA reads`: two ids on the same repo and SHA make two tree requests.
   - `readDocResult refuses an unlisted path`: `{ ok: false, reason: "not_listed" }` with no file request.
   - `shares a read in flight`: two concurrent `listDocsResult` calls for one source make one tree request and both get its paths. The same holds for `resolveRef` and `readDocResult`.
-  - `remembers a failure for a minute`: a rate-limited tree read, then a second `listDocsResult` within 60 seconds (fake timers), makes no new request and gives the same reason. After 60 seconds it reads again.
+  - `remembers a failure for a minute`: a rate-limited tree read, then a second `listDocsResult` within 60 seconds (fake timers), makes no new request and gives the same reason. After 60 seconds it reads again. The same pinned source with a later `updatedAt` (a saved token) reads again at once.
+  - `encodes a ref with a slash`: `resolveRef(source({ ref: "feature/x" }))` requests `…/commits/feature%2Fx`.
 - [ ] **Step 2:** Run `npx jest lib/chatbot/knowledge/__tests__/github.test.ts`. Expected: the new tests FAIL (`resolveRef` is not exported); the existing ones PASS.
 - [ ] **Step 3:** Implement:
   - One private `classify(failure, remaining)` helper encoding the Global Constraints rule, used by all three calls. Each call passes `readErrorMessage: true` and an `onResponse` that records `x-ratelimit-remaining`.
@@ -395,7 +396,7 @@ UI decisions:
   | duplicate | "Hidden by a skill with the same name in {detail}" |
   | unreachable | "Could not read the repository" |
   | rate limited | "GitHub's rate limit was reached; add a token" |
-  | not in prompt | "Left out: the skills list is full" |
+  | not in prompt | "Left out: the skills list is full. Shorten descriptions or remove skills." |
   | listing truncated | "Only the first 300 Markdown files were read; set a folder" |
 - Test ids: `settings-skill-list`, `settings-skill-{id}`, `settings-skill-add-open`, `settings-skill-edit-open`, `settings-skill-add-sheet` and `settings-skill-edit-sheet` (the `sheetTestId`s), `settings-skill-refresh`, `settings-skill-check`, `settings-skill-check-dialog`, `settings-skill-moving-ref`, `settings-skill-form`, `settings-skill-name`, `settings-skill-repo`, `settings-skill-ref`, `settings-skill-path`, `settings-skill-token`, `settings-skill-active`, `settings-skill-delete`, `settings-skill-remove` and `settings-skill-remove-confirm`. Both `SettingsSheet`s and the form's `SettingsFormFooter` take `id="skill"`, which gives `settings-skill-save`, `settings-skill-cancel` and `settings-skill-discard-dialog`.
 
@@ -408,7 +409,8 @@ UI decisions:
     - Docs' dialog shows "Not read" and "GitHub's rate limit was reached; add a token".
   - An Off row's Check skills shows the off copy, and `checkSkills` isn't called.
 - [ ] **Step 2:** Run `npx jest components/admin/settings`. Expected: the new tests FAIL; the existing section test passes.
-- [ ] **Step 3:** Split the section, then build the skills block, form and dialog. Each file stays under 300 lines (ESLint `max-lines`) and uses only `components/ui/` primitives.
+- [ ] **Step 3:** Split the section into `mcp-servers-block.tsx` and `knowledge-sources-block.tsx` with no behaviour change, and drop the section's `"use client"`. Run `npx jest components/admin/settings/__tests__/assistant-section.test.tsx && npm run design:check` (PASS), then commit on its own: `git commit -m "Split the assistant settings section into one component per block"`.
+- [ ] **Step 3b:** Build the skills block, form and dialog. Each file stays under 300 lines (ESLint `max-lines`) and uses only `components/ui/` primitives.
 - [ ] **Step 4:** Run `npx jest components/admin/settings && npm run typecheck && npm run lint && npm run design:check`. Expected: PASS, with no new design-system counts.
 - [ ] **Step 5:** Commit: `git commit -m "Add skill sources to the assistant settings"`
 
@@ -425,6 +427,7 @@ UI decisions:
     - that a skill can direct the assistant to use any tool the admin has, including ones that change data, with no extra confirmation step: whoever can change the repository at the ref can steer the assistant that far, so pin a commit;
     - that supporting files read with `read_skill_file` carry the same trust as `SKILL.md`, and that only the first 50 supporting files (in path order) are listed and readable;
     - that when two sources define the same skill name, the source whose name sorts first wins, so renaming a source can change the winner (Check skills shows the hidden one);
+    - that removing a token from a private source does not drop skills already read at a pinned commit until the cached entries are evicted or the process restarts;
     - cost: every read goes to `api.github.com`. A pinned commit costs one tree read and one read per `SKILL.md` once per process (each container and restart), then nothing; a branch costs one ref check every ten minutes, plus a re-read whenever it moves. A token raises GitHub's limit from 60 to 5,000 requests an hour;
   - change "like every other tool result" (line 37) to "like every tool result except `load_skill` and `read_skill_file`, which arrive as `admin_skill`".
 - Modify: `docs/roles.md` (`assistant:tools:admin` covers skills too) and `docs/mcp.md` (the assistant tools list: the skill tools are web chat only)
@@ -442,4 +445,8 @@ UI decisions:
 - [ ] **Step 3:** Run `npx playwright test e2e/admin/settings-assistant-skills.spec.ts --project=chromium`. Expected: PASS.
 - [ ] **Step 4:** Run the full local gates: `npm run typecheck && npm run lint && npm run knip && npm test && node scripts/check-migrations.mjs && npm run env:docs -- --check && npm run design:check`. Expected: all pass. If coverage rose, run `npm run test:coverage && node scripts/coverage-ratchet.mjs --update`.
 - [ ] **Step 5:** Commit: `git commit -m "Document skills and cover skill sources end to end"`
-- [ ] **Step 6:** Run `/security-review` on the branch, since it adds the `admin_skill` trust class and a token-carrying read path, and fix what it confirms. Then push to the open draft PR (mchestr/plex-manager#507). Leave it as a draft, update its body with the review's outcome, and tell the owner it's ready for their decision.
+- [ ] **Step 6:** Run `/security-review` on the branch, since it adds the `admin_skill` trust class and a token-carrying read path, and fix what it confirms. Ask it to try specifically:
+  - a skill file that tells the assistant to call a tool that changes data, or to reveal secrets;
+  - a tool result that imitates `admin_skill`;
+  - a description that imitates a prompt section;
+  - token exposure through `checkSkills` (also over `/api/mcp`), audit rows and logs. Then push to the open draft PR (mchestr/plex-manager#507). Leave it as a draft, update its body with the review's outcome, and tell the owner it's ready for their decision.
