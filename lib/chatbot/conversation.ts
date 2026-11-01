@@ -60,7 +60,7 @@ interface ConversationResult {
   error?: string
   /** Set when a spend cap stopped the turn, or its check failed closed; `error` is then copy for the member. */
   refusal?: ChatResponse["refusal"]
-  /** The turn's tool calls, redacted and capped, for the judge; set on a success that called a tool. */
+  /** The turn's tool calls, redacted and capped, for the judge; set on every answered turn, empty when no tool ran. */
   toolLog?: ToolLogEntry[]
 }
 
@@ -131,7 +131,7 @@ export async function runConversationLoop(
           timestamp: Date.now(),
           sources: sources.length > 0 ? sources : undefined,
         },
-        ...(toolLog.length > 0 && { toolLog: capToolLog(toolLog) }),
+        toolLog: capToolLog(toolLog),
       }
     }
 
@@ -154,12 +154,11 @@ export async function runConversationLoop(
       output: { type: "text" as const, value: asUntrustedData(outputs[i]) },
     }))
     toolLog.push(
-      ...response.toolCalls.map((toolCall, i) => ({
-        tool: toolCall.function.name,
-        args: toolCall.function.arguments,
-        result: outputs[i],
-        ok: isToolSuccess(outputs[i]),
-      }))
+      ...response.toolCalls.map((toolCall, i) => {
+        // A side path: an executor output that is not a string must never fail the answer
+        const result = String(outputs[i] ?? "")
+        return { tool: toolCall.function.name, args: toolCall.function.arguments, result, ok: isToolSuccess(result) }
+      })
     )
     history.push({ role: "tool", content: toolResults })
     usagePrompt = toolResults.map((result) => ({ role: "tool", name: result.toolName, content: result.output.value }))

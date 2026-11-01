@@ -92,12 +92,30 @@ describe("runConversationLoop tool log", () => {
     expect(result.toolLog?.map((entry) => entry.tool)).toEqual(["get_plex_sessions", "get_tautulli_activity"])
   })
 
-  it("returns no tool log for a turn without tool calls", async () => {
+  it("returns an empty tool log for a turn without tool calls", async () => {
     jest.mocked(chatWithTools).mockResolvedValueOnce(turn({ content: "Hello." }))
 
     const result = await runConversationLoop([{ role: "user", content: "Hi", timestamp: 0 }], CONFIG)
 
     expect(result.success).toBe(true)
-    expect(result.toolLog).toBeUndefined()
+    expect(result.toolLog).toEqual([])
+  })
+
+  it("a non-string executor output does not break the turn", async () => {
+    jest
+      .mocked(chatWithTools)
+      .mockResolvedValueOnce(turn({ toolCalls: [toolCall("call-1", "get_plex_status", "{}"), toolCall("call-2", "get_plex_sessions", "{}")] }))
+      .mockResolvedValueOnce(turn({ content: "Plex is up." }))
+    // JSON.stringify(undefined) is undefined at runtime, whatever its type says
+    jest.mocked(executeToolCall).mockResolvedValueOnce(JSON.stringify(undefined)).mockResolvedValueOnce(JSON.stringify({ size: 0 }))
+
+    const result = await runConversationLoop([{ role: "user", content: "Is Plex up?", timestamp: 0 }], CONFIG)
+
+    expect(result.success).toBe(true)
+    expect(result.message?.content).toBe("Plex is up.")
+    expect(result.toolLog).toEqual([
+      { tool: "get_plex_status", args: "{}", result: "", ok: true },
+      { tool: "get_plex_sessions", args: "{}", result: '{"size":0}', ok: true },
+    ])
   })
 })

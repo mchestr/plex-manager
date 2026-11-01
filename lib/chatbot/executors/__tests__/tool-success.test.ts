@@ -1,11 +1,14 @@
 /**
- * `isToolSuccess`, the tool log's `ok` hint for the judge: the executors
- * report a failure only as text beginning "Error", so that is what it reads.
+ * `isToolSuccess`, the tool log's `ok` hint for the judge: it reuses the
+ * executors' failure classification, so text beginning "Error" and JSON with
+ * a non-null `error` or `success: false` (the role and Discord refusals) are
+ * failures.
  */
 
 import { permissionsFor } from "@/lib/permissions"
 
 import { executeToolCall, isToolSuccess } from ".."
+import { ROLE_TOOL_NOT_PERMITTED } from "../role-scrub"
 import { executeTautulliTool } from "../tautulli"
 
 jest.mock("../tautulli", () => ({ executeTautulliTool: jest.fn() }))
@@ -42,5 +45,19 @@ describe("isToolSuccess", () => {
   it('a successful output that begins "Error 404" is ok: false', () => {
     // The heuristic's known limit: a result whose text starts "Error" reads as a failure
     expect(isToolSuccess("Error 404 is the most-watched episode title this week")).toBe(false)
+  })
+
+  it('ROLE_TOOL_NOT_PERMITTED and {"success": false} outputs are ok: false, and a normal JSON result is ok: true', async () => {
+    expect(isToolSuccess(ROLE_TOOL_NOT_PERMITTED)).toBe(false)
+    expect(isToolSuccess(JSON.stringify({ success: false, message: "Sonarr is not configured" }))).toBe(false)
+    expect(isToolSuccess(JSON.stringify({ error: "Request failed" }))).toBe(false)
+
+    // The real refusal path: a caller without the tool's permission
+    const refused = await executeToolCall(call("get_tautulli_status"), "member-1", "default", false, undefined, permissionsFor({ isAdmin: false }))
+    expect(refused).toBe(ROLE_TOOL_NOT_PERMITTED)
+    expect(isToolSuccess(refused)).toBe(false)
+
+    expect(isToolSuccess(JSON.stringify({ success: true, error: null, data: [] }))).toBe(true)
+    expect(isToolSuccess(JSON.stringify([{ title: "Severance" }]))).toBe(true)
   })
 })

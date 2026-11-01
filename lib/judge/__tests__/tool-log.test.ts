@@ -84,6 +84,16 @@ describe("capToolLog", () => {
     ])
   })
 
+  it("a 300-character tool name is cut to 100 and redacted", () => {
+    // The model chooses the name, so it is treated like the text it returned
+    const [logged] = capToolLog([entry({ tool: `token=name-secret-1 ${"t".repeat(300)}` })])
+
+    expect(logged.tool).toHaveLength(100)
+    expect(logged.tool).not.toContain("name-secret-1")
+    expect(logged.tool.startsWith(`token=${REDACTED}`)).toBe(true)
+    expect(logged.truncated).toBe(true)
+  })
+
   it("invite codes arrive masked", async () => {
     prismaMock.invite.findMany.mockResolvedValue([buildInvite({ code: "FULLINVITECODE7Q2X" })])
 
@@ -96,9 +106,11 @@ describe("capToolLog", () => {
 })
 
 describe("serializeToolLog and parseToolLog", () => {
-  it("stores nothing for a turn without tool calls", () => {
+  it("a turn that called no tools stores '[]', and parseToolLog('[]') is []", () => {
+    expect(serializeToolLog([])).toBe("[]")
+    expect(parseToolLog("[]")).toEqual([])
+    // Null is kept for "no log was captured", a turn from before the tool log
     expect(serializeToolLog(undefined)).toBeNull()
-    expect(serializeToolLog([])).toBeNull()
   })
 
   it("reads back what it stored", () => {

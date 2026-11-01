@@ -66,11 +66,12 @@ describe("runChatbotForUser output cap", () => {
 })
 
 describe("runChatbotForUser result", () => {
-  it("returns the response with its conversation, and no tool log for a turn without tool calls", async () => {
+  it("returns the response with its conversation, and an empty tool log for a turn without tool calls", async () => {
     const run = await runChatbotForUser({ userId: "user-1", messages, conversationId: "conv-1", format: FORMAT, isAdmin: true })
 
     expect(run).toEqual({
       response: { success: true, message: expect.objectContaining({ content: "All good." }), conversationId: "conv-1" },
+      toolLog: [],
     })
   })
 

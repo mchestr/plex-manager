@@ -100,7 +100,14 @@ describe("saveTurn", () => {
     expect(answer).toMatchObject({ role: "assistant", toolLog: serializeToolLog(toolLog) })
   })
 
-  it("stores no tool log for a turn without tool calls", async () => {
+  it("a turn that called no tools stores '[]'", async () => {
+    await save([])
+
+    const [, answer] = storedRows()
+    expect(answer.toolLog).toBe("[]")
+  })
+
+  it("stores null when no tool log was captured", async () => {
     await save()
 
     const [, answer] = storedRows()
