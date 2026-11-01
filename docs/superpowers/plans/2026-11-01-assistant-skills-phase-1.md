@@ -14,7 +14,7 @@
 
 - Skill `name`: `^[a-z0-9][a-z0-9-]{0,63}$`. `description`: 1 to 1,024 characters after collapsing whitespace.
 - Catalogue: at most 50 skills (`MAX_SKILLS`). Each prompt line is `- <name>: <promptDescription(description)>`, where `promptDescription` collapses whitespace, removes runs of three or more `=`, trims, and caps at 300 characters. The whole SKILLS section (header plus lines) is capped at 6,000 characters (`SKILL_PROMPT_BUDGET`), measured exactly as `skillsSection` renders it: `SKILLS_HEADER.length + lines.join("\n").length`. Skills are taken in `SkillSource.name` order, then path order. At the first skill that does not fit, it and every later skill are cut, with no skipping ahead.
-- At most 50 `SKILL.md` files are read per source, in path order; later ones are listed in `problems` without being read.
+- At most 50 `SKILL.md` files are read per source, in path order, at most 8 at a time (GitHub's secondary rate limit penalises bursts of concurrent requests); later ones are listed in `problems` without being read.
 - `load_skill` content and `read_skill_file` content: at most 12,000 characters, with `truncated`. `files`: at most 50 paths, in path order, with `filesTruncated`.
 - Only active sources are read. On a duplicate name, the first wins and the shadowed one is in `problems` with the winning source's name.
 - A skill is a listed path whose file name is exactly `SKILL.md`. Its `folder` is the path's directory as listed (it keeps `source.path`, so `""` only at the repo root). A doc belongs to the deepest skill folder that contains it (`folder === ""` or `doc.startsWith(folder + "/")`). Every listed `SKILL.md` marks a folder, whether or not it was read, parses, survives dedupe or fits the caps.
@@ -223,14 +223,14 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
     - `listDocsResult` giving `unreachable` adds that reason;
     - one `SKILL.md` read giving `rate_limited` adds that reason with its path, while the source's other skills are still listed;
     - a `truncated: true` listing adds `{ path: null, reason: "listing_truncated" }`.
-  - `reads at most 50 SKILL.md files per source`: 55 listed give exactly 50 `readDocResult` calls, and the last 5 paths get `not_in_prompt`. A doc inside one of those 5 unread skill folders is not given to a root skill.
+  - `reads at most 50 SKILL.md files per source`: 55 listed give exactly 50 `readDocResult` calls, and the last 5 paths get `not_in_prompt`. A doc inside one of those 5 unread skill folders is not given to a root skill. With `readDocResult` holding its promises open, no more than 8 are pending at once.
   - `caps the catalogue at 50 skills`: two sources with 30 short skills each keep the first 50 in source-then-path order; the other 10 get `not_in_prompt`.
   - `stops at the first skill over the prompt budget`: 25 skills with 280-character descriptions, then one with a one-word description. The kept skills satisfy `skillsSection(skills)!.length <= 6000`, and adding the next one would exceed it. The first skill that does not fit and every later one, the short last one included, get `not_in_prompt`.
   - `loadSkillCatalogWithin gives up after five seconds`: with fake timers and the GitHub mocks never settling, `await jest.advanceTimersByTimeAsync(5000)` resolves it to `null`, and `jest.getTimerCount()` is 0 afterwards. A load that rejects resolves to `null`. A load that succeeds returns the catalogue and clears its timer (`jest.getTimerCount()` is 0).
 - [ ] **Step 8:** Run `npx jest lib/chatbot/skills/__tests__/catalog.test.ts`. Expected: FAIL.
 - [ ] **Step 9:** Implement `loadSkillCatalog`:
   1. Read active sources by name.
-  2. Per source, in parallel: resolve the ref, list the docs at `{ ...row, ref: sha }`, take the `SKILL.md` paths (sorted), read the first 50 in parallel, parse them, and assign files with `assignFiles` over every listed `SKILL.md`.
+  2. Per source, in parallel: resolve the ref, list the docs at `{ ...row, ref: sha }`, take the `SKILL.md` paths (sorted), read the first 50 with at most 8 reads in flight (a small worker pool, no new dependency), parse them, and assign files with `assignFiles` over every listed `SKILL.md`.
   3. Then, in order: dedupe by name, then apply the caps. A skill fits when `SKILLS_HEADER.length + [...keptLines, line].join("\n").length <= SKILL_PROMPT_BUDGET`, which is exactly the length `skillsSection` will render.
   4. Record each failure in `problems` as above.
   5. `loadSkillCatalogWithin` races `loadSkillCatalog()` against a `setTimeout` of `SKILL_CATALOG_TIMEOUT_MS` and clears the timer in `finally`. On rejection or timeout it logs `logger.warn("Skill catalogue unavailable", { reason })` and resolves `null`. A timed-out load keeps running and warms the caches; the race already handles its later rejection.
@@ -276,7 +276,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - [ ] **Step 3:** Run `npx jest lib/chatbot lib/mcp`. Expected: the new tests FAIL.
 - [ ] **Step 4:** Implement the two files, the registry and executor entries, and the MCP filter.
   - Arguments: `{ name: z.string().trim().min(1).max(64) }` and `{ skill: z.string().trim().min(1).max(64), path: z.string().min(1).max(300) }`.
-  - `load_skill` re-reads the `SKILL.md` through `readDocResult(entry.source, entry.path)` (served from the commit cache) and returns `parseSkillMarkdown(text).body`.
+  - `load_skill` re-reads the `SKILL.md` through `readDocResult(entry.source, entry.path)` (served from the commit cache) and returns `parseSkillMarkdown(text).body`. This is chosen over carrying 50 bodies in every catalogue: if the file was evicted in between, it becomes one live read, and a failure returns the could-not-read error.
   - `read_skill_file` builds the repo path as `entry.folder ? `${entry.folder}/${path}` : path` and passes it to both `readDocResult(entry.source, …)` and `docUrl(entry.source, …)`.
 - [ ] **Step 5:** Run `npx jest lib/chatbot lib/mcp`. Expected: PASS.
 - [ ] **Step 6:** Commit: `git commit -m "Add the load_skill and read_skill_file assistant tools"`
@@ -455,6 +455,8 @@ UI decisions:
   - a skill file that tells the assistant to call a tool that changes data, or to reveal secrets;
   - a tool result that imitates `admin_skill`;
   - a description that imitates a prompt section;
+  - a `SKILL.md` body containing `</admin_skill>`, `"}` or other JSON fragments (the JSON-encoded wrapper should neutralise them);
+  - a supporting file that is a symlink in the repo (the contents API returns the target path as text, and the exact-match listing rule still applies);
   - token exposure through `checkSkills` (also over `/api/mcp`), audit rows and logs.
 
   If the review changes anything, re-run Step 4 (and Step 3 if the settings UI or the actions changed), then commit (`git commit -m "Address the security review"`) before pushing. Then push to the open draft PR (mchestr/plex-manager#507). Leave it as a draft, update its body with the review's outcome, and tell the owner it's ready for their decision.
