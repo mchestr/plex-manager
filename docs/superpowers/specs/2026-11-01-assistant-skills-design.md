@@ -74,8 +74,10 @@ its `KnowledgeRepo` shape. It gains one function and one change:
 - `resolveRef(source)`: one `GET /repos/{repo}/commits/{ref}` with
   `Accept: application/vnd.github.sha`, returning the commit SHA. Cached for
   ten minutes per source, like the tree today.
-- The cache key becomes `id:ref:updatedAt`, so a read at a commit SHA is keyed
-  on that SHA. The caches stay bounded by the reader's existing entry limits
+- The ref-resolution cache is keyed on `id:ref:updatedAt`, so Refresh resolves
+  again. Tree and file reads at a commit SHA are keyed on `repo:sha:path`
+  instead: their content cannot change, so a Refresh that resolves to the same
+  SHA reuses them, and two sources on one repo share them. The caches stay bounded by the reader's existing entry limits
   (`remember`), so frequent Refreshes cannot grow them.
 
 Every catalogue load resolves the ref once, then lists and reads at that SHA,
@@ -176,7 +178,10 @@ if the model follows it, so:
   they are the part always in context, so each is collapsed to one line, has
   any `===` removed (so it cannot imitate a prompt section header), and is
   capped at 300 characters. The whole section is capped at 6,000 characters;
-  skills past the cap are left out of the prompt and listed in `problems`.
+  skills are added in source-name order, then path order, and those past the cap
+  are left out of the prompt and listed in `problems`.
+- Supporting files read with `read_skill_file` carry the same trust as
+  `SKILL.md`: same repo, same commit (shown in Check skills), same wrapper.
 - The settings form says: "The assistant follows skills as instructions. Add
   only repositories you control, and pin a tag or commit."
 - Threat model: whoever can change a skill repository's ref can direct the
@@ -266,7 +271,9 @@ relations give real cascades when a secret or a server is deleted.
   `ENCRYPTION_KEYS` like every encrypted field. With no key
   (`ALLOW_PLAINTEXT_SECRETS=true`) saving a secret is refused: the feature
   exists to keep values away from places they could leak, and a plaintext
-  column is one.
+  column is one. If the key is later removed, a secret that cannot be decrypted
+  is treated as unknown: the call is refused with the usual message and a log
+  line names the secret.
 - `name` matches `^[A-Z][A-Z0-9_]{0,63}$`. A `value` shorter than 8 characters
   is refused on create and on update, so redaction does not rewrite ordinary
   text. A real credential that short belongs in the MCP server's own auth
@@ -281,8 +288,9 @@ relations give real cascades when a secret or a server is deleted.
   a tool the server renames or adds inherits nothing.
 - A grant means "this tool may receive this secret in this argument", and the
   admin trusts what the tool does with it there. A tool that forwards the
-  argument anywhere (a `body` it posts) is trusted with the secret. The grant
-  picker says so in those words.
+  argument anywhere (a `body` it posts) is trusted with the secret, anywhere
+  inside that argument, nested fields included. The grant picker says so in
+  those words.
 - Keying on the server id survives a rename. Saving an MCP server with a
   changed `url`, `authHeaderName` or `authHeaderSecret` removes that server's
   entries from every secret, in the same transaction, so a repointed server
@@ -343,7 +351,9 @@ before `mcpCallTool`:
 4. Before returning, replace each substituted value in the result and in any
    error text with its placeholder: the raw value, its JSON-escaped form, its
    `encodeURIComponent` form, its standard and URL-safe base64 forms, and its
-   lowercase and uppercase hex. Longer values are replaced first, so one secret
+   lowercase and uppercase hex. When a placeholder sat inside a longer string,
+   the whole substituted string is redacted in the same forms too (so a server
+   echoing `base64("user:" + value)` is covered). Longer values are replaced first, so one secret
    inside another is fully covered. Redaction runs on the complete result, before
    anything logs, truncates or wraps it; tool results are not streamed.
 
@@ -392,7 +402,9 @@ A Secrets block in the assistant settings:
 ### Tests
 
 - Resolve: a placeholder taken from an earlier tool result is checked like
-  any other; substitution in nested arguments and inside a longer string; a
+  any other; a placeholder nested inside a granted argument is allowed; a
+  composed string is redacted in its encoded forms; a server edited between the
+  grant read and the call never receives the secret at its new URL; substitution in nested arguments and inside a longer string; a
   placeholder inside a JSON-encoded string value; a placeholder in a key refuses;
   a refusal for an unknown name, a disallowed tool or a disallowed argument makes
   no call, even when the placeholder is in a branch the server would ignore;
