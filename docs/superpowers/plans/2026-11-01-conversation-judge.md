@@ -17,8 +17,9 @@
 - **Tool log caps:** 8 KB per result and 32 KB per turn, applied after `lib/mcp/redact.ts` redaction, with `truncated: true` on anything cut.
 - **Prompt cap:** 120,000 characters total. The newest turn is kept whole, each earlier turn's tool results are cut to 2 KB, and the oldest turns are dropped last.
 - **Judge output limits:** at most 20 findings, and a summary of at most 600 characters.
-- **Lease:** `judge-spend` on the Redis store, with a 5-minute TTL renewed every 60 s, a 60 s wait to acquire it, and a 3-minute judge call timeout.
-- **Stuck reviews:** a `running` review whose `startedAt` is more than 10 minutes old is dead. A `queued` review is dead only when its BullMQ job is missing or failed. Dead reviews are marked `failed` with `STALE`.
+- **Lease:** `judge-spend` on the Redis store, with a 5-minute TTL renewed every 60 s, one acquire attempt (a taken lease re-delays the job 30–90 s without spending a BullMQ attempt), and a 3-minute judge call timeout.
+- **Stuck reviews:** a `running` review whose `startedAt` is more than 10 minutes old is dead. A `queued` review is dead only when its BullMQ job is missing or failed and the row is more than 2 minutes old. Dead reviews are marked `failed` with `STALE`.
+- **Job ids:** BullMQ 6.5.3 rejects a custom id containing `:`. `judge:review` gets the `JOB_ID_POLICY` entry `{ jobId: (data) => 'judge-review-' + data.reviewId }`, and `judge:sweep` `{ fromCaller: 'the judge-review-sweep scheduler' }`.
 - **Nightly sweep:** cron at 03:17 in the server time zone, at most 50 reviews per sweep. Sampling is `hash(conversationId|lastMessageAt ISO date) mod 100 < judgeSampleRate`. Three consecutive non-`BUDGET_EXCEEDED`/`STALE` failures skip a conversation until it gets a new message.
 - **Config defaults:** `judgeNightlyEnabled=false`, `judgeSampleRate=100`, `judgeMinTurns=2`, `llmDailyCapJudgeUsd=1`.
 - **Deletion:** a review never deletes findings. Only triage closes a finding.
@@ -48,6 +49,7 @@
 - Modify: `lib/admin/routes.ts` (`llmUsage()` becomes `aiActivity()`, same options), `lib/admin/nav.ts` (label "AI activity"), `lib/audit/summary.ts:143` (label "AI request"; the key `llm-usage-detail` stays), and every caller of `llmUsage(` (grep for it)
 - Modify: `e2e/admin/analytics.spec.ts`, `e2e/admin/testid-coverage.spec.ts`, `e2e/visual/admin.visual.spec.ts:110` (`/admin/ai`, `admin-ai-activity`) and `e2e/helpers/seed-fixtures.ts`, if it builds the path
 - Modify: `docs/rewind.md:77`, `docs/discord-bot.md:285`, and the CLAUDE.md admin pages line
+- Create: `changelog.d/ai-activity-rename.md` (format in `changelog.d/README.md`): under Changed, "LLM usage is now AI activity, at `/admin/ai`", and under Upgrade notes, "Bookmarks to `/admin/llm-usage` need updating; the old path has no redirect."
 
 **Interfaces:**
 - Produces: `aiActivity(opts?: { userId?: string; purpose?: string; view?: 'findings' }): string`, plus `aiActivityConversation(id)` and `aiActivityRecord(id)` if the existing helpers have conversation and record variants. Keep their shapes and change only the names.
@@ -67,7 +69,7 @@
 **Files:**
 - Modify: `prisma/schema.prisma`, adding:
   - `ChatConversationMessage.toolLog String?`
-  - `ConversationReview`, `ConversationFinding` and the enums `ConversationReviewStatus`, `ConversationReviewTrigger`, `FindingType`, `FindingSeverity`, `FindingStatus`, `EvidenceSource` and `EvidenceCheck`, exactly as in spec §3, plus `ConversationReview.startedAt DateTime?`
+  - `ConversationReview`, `ConversationFinding` and the enums `ConversationReviewStatus`, `ConversationReviewTrigger`, `FindingType`, `FindingSeverity`, `FindingStatus`, `EvidenceSource` and `EvidenceCheck`, exactly as in spec §3, plus `ConversationReview.startedAt DateTime?` and `ConversationReview.attempt Int @default(0)`
   - `LLMUsage.conversationReviewId` (relation `onDelete: SetNull`) with `@@index([conversationReviewId, createdAt])`
   - `ChatConversation.reviewedAt DateTime?`, which `persistReview` writes (Task 7) to take the conversation's row lock
   - the four `Config` fields
@@ -96,12 +98,13 @@
 **Interfaces:**
 - Produces:
   - `type ToolLogEntry = { tool: string; args: string; result: string; ok: boolean; truncated?: true }`
-  - `capToolLog(entries: ToolLogEntry[]): ToolLogEntry[]`, which redacts through `redactCredentials` and then cuts results to 8 KB and the turn to 32 KB
+  - `capToolLog(entries: ToolLogEntry[]): ToolLogEntry[]`, which redacts `args` and `result` through `redactCredentials`, then cuts `args` to 2 KB, each result to 8 KB, and the turn (args and results together) to 32 KB
   - `serializeToolLog(entries?: ToolLogEntry[]): string | null`, which returns null when there are no entries
   - `parseToolLog(text: string | null): ToolLogEntry[] | null`, which returns null for a missing or invalid log
 
 - [ ] **Step 1:** Write the failing tests:
   - `redacts before cutting`: a 20 KB result containing `{"apiKey":"abc","nested":{"password":"p","X-Plex-Token":"t"},"url":"http://s/x?apikey=k"}` has no `abc`, `p`, `t` or `k` values, its `result.length <= 8192`, and `truncated === true`.
+  - `redacts and caps args`: args `{"password":"p","note":"<3 KB of text>"}` come out without `p`, at most 2,048 characters long, with `truncated: true`.
   - `caps a turn at 32 KB`: five 8 KB results total at most 32,768 characters, and the later ones are marked `truncated`.
   - `invite codes arrive masked`: `getAssistantInvites` (`lib/data/assistant-data.ts:38`) already returns only `codeEnd`, the last four characters. Run it with a mocked invite row and pass its output through `capToolLog`. The full code must not appear.
   - `saveTurn stores the tool log on the assistant row only`.
@@ -205,9 +208,9 @@
 
 **Interfaces:**
 - Consumes: `VerifiedFinding` (Task 6) and `fingerprintOf` (Task 4).
-- Produces: `persistReview(tx: PrismaTransactionClient, input: { reviewId: string; conversationId: string; findings: VerifiedFinding[]; summary: string; model: string; promptVersion: string; reviewedThrough: Date }): Promise<{ inserted: number; updated: number; suppressed: number }>`.
-  - Its first statement is `tx.chatConversation.updateMany({ where: { id: conversationId, endedAt: null }, data: { reviewedAt: new Date() } })`. That takes the conversation's row lock the way `saveTurn` does (`lib/chatbot/history.ts`), so a review finishing and the conversation ending serialise. Its second is `tx.conversationReview.updateMany({ where: { id: reviewId, status: 'running' }, data: { status: 'done', … } })`.
-  - When either count is 0 it throws `ReviewSuperseded` (exported from `lib/judge/persist.ts`), which rolls the transaction back. The processor catches it, logs, and finishes the job without retrying. The return type is then `Promise<{ inserted: number; updated: number; suppressed: number }>`, never null.
+- Produces: `persistReview(tx: PrismaTransactionClient, input: { reviewId: string; conversationId: string; findings: VerifiedFinding[]; summary: string; model: string; promptVersion: string; reviewedThrough: Date; attempt: number }): Promise<{ inserted: number; updated: number; suppressed: number }>`.
+  - Its first statement is `tx.chatConversation.updateMany({ where: { id: conversationId, endedAt: null }, data: { reviewedAt: new Date() } })`. That takes the conversation's row lock the way `saveTurn` does (`lib/chatbot/history.ts`), so a review finishing and the conversation ending serialise. Its second is `tx.conversationReview.updateMany({ where: { id: reviewId, status: 'running', attempt }, data: { status: 'done', … } })`.
+  - When either count is 0 it throws `ReviewSuperseded` (exported from `lib/judge/persist.ts`), which rolls the transaction back. The processor catches it, logs, and finishes the job without retrying.
   - For each finding, it looks up the existing row by `(conversationId, fingerprint)`:
     - **open:** `updateMany({ where: { id, status: 'open' } })` with the new text, `reviewId`, `seenCount: { increment: 1 }` and `lastSeenAt`.
     - **any triaged status:** only `seenCount` and `lastSeenAt` change.
@@ -220,7 +223,7 @@
   - `fixed, false_alarm and wont_fix stay closed and count as seen`
   - `a finding triaged mid-run keeps its status`: the conditional update count is 0, then it is counted as seen
   - `never calls deleteMany`
-  - `throws ReviewSuperseded when the review is no longer running`
+  - `throws ReviewSuperseded when the review is no longer running, or its attempt has moved on`
   - `throws ReviewSuperseded and writes nothing when the conversation has ended` (Review Focus 3)
 - [ ] **Step 2:** Run them and confirm FAIL. Implement, then run again and confirm PASS.
 - [ ] **Step 3:** Commit with "Persist judge findings by fingerprint, never deleting".
@@ -235,13 +238,13 @@
 **Interfaces:**
 - Produces:
   - `checkJudgeSpend(now?: Date): Promise<{ ok: true } | { ok: false; code: 'BUDGET_EXCEEDED' | 'BUDGET_UNAVAILABLE' }>`, which sums `LLMUsage.cost` where `conversationReviewId` is not null and `createdAt >= (await spendDay(now)).start`, against `Config.llmDailyCapJudgeUsd`. `spendDay` is a private async function today (`lib/llm/budget.ts:69`); export it.
-  - `withJudgeLease<T>(fn: () => Promise<T>, deps?: { store?: LeaseStore; waitMs?: number }): Promise<{ ok: true; value: T } | { ok: false; code: 'LEASE_BUSY' }>`. It uses `new LeaseLock({ name: 'judge-spend', leaseDurationMs: 300_000, store })`, the Redis store as in `lib/locks/access-lock.ts`, polls `acquire()` for up to 60 s, renews every 60 s while `fn` runs, and always releases.
+  - `withJudgeLease<T>(fn: () => Promise<T>, deps?: { store?: LeaseStore }): Promise<{ ok: true; value: T } | { ok: false; code: 'LEASE_BUSY' }>`. It uses `new LeaseLock({ name: 'judge-spend', leaseDurationMs: 300_000, store })`, the Redis store as in `lib/locks/access-lock.ts`. It tries `acquire()` once and returns `LEASE_BUSY` at once when the lease is taken (the processor re-delays the job, Task 9). It renews every 60 s while `fn` runs, and always releases.
 
 - [ ] **Step 1:** Write the failing tests:
   - `under cap ok, at cap BUDGET_EXCEEDED, error BUDGET_UNAVAILABLE`
   - `judge rows do not count toward checkSpend`: seed a usage row with `conversationReviewId` and no `chatConversationId`, then assert that `checkSpend` from `lib/llm/budget.ts` sees 0 and that `recordUsage` does not call `addSpend`
   - `two concurrent withJudgeLease calls on one in-memory store run one at a time`
-  - `LEASE_BUSY after waitMs`
+  - `LEASE_BUSY at once when the lease is held`
   - `renews during a long fn`, using fake timers
 - [ ] **Step 2:** Run them and confirm FAIL. Implement, then run again and confirm PASS.
 - [ ] **Step 3:** Commit with "Add the judge spend cap and judge-spend lease".
@@ -250,23 +253,24 @@
 
 **Files:**
 - Create: `lib/queue/jobs/conversation-review.ts`, `lib/judge/stale.ts`
-- Modify: `lib/queue/types.ts` (`CONVERSATION_REVIEW: "judge:review"`, payload `{ reviewId: string }`, added to `MAIN_QUEUE_JOB_TYPES`), `lib/queue/jobs/index.ts` (register the processor), `lib/queue/worker.ts` (on the final failed attempt of `judge:review`, call `markReviewFailed(reviewId, 'JOB_FAILED')`)
+- Modify: `lib/queue/types.ts` (`CONVERSATION_REVIEW: "judge:review"`, payload `{ reviewId: string }`, added to `MAIN_QUEUE_JOB_TYPES`, with the `JOB_ID_POLICY` entry from the Global Constraints and its job metadata entry), `lib/queue/jobs/index.ts` (register the processor), `lib/queue/worker.ts` (pass the lock `token` through `processJob` to the processor, as `JobProcessor` already allows; let BullMQ's `DelayedError` through without logging it as a failure; on the final failed attempt of `judge:review`, call `markReviewFailed(reviewId, 'JOB_FAILED')`)
 - Test: `lib/queue/jobs/__tests__/conversation-review.test.ts`, `lib/judge/__tests__/stale.test.ts`
 
 **Interfaces:**
 - Consumes: Tasks 3–8, and `getAdminAssistantContext` (Task 5).
 - Produces:
-  - `processConversationReview(job: Job<{ reviewId: string }>, deps?): Promise<void>`
+  - `processConversationReview(job: Job<{ reviewId: string }>, token?: string, deps?): Promise<void>`
   - `markReviewFailed(reviewId: string, code: string): Promise<void>`, a conditional update from `queued` or `running`
   - `reapStaleReviews(tx: PrismaTransactionClient, conversationId: string | null, deps: { getJobState: (jobId: string) => Promise<string | null>; now?: Date }): Promise<number>`, which applies the spec's two rules and sets `failed`/`STALE`
 - Flow:
-  1. A conditional update of the review from `queued` to `running` with `startedAt: now`. A count of 0 means return.
+  1. A conditional update of the review from `queued` or `running` to `running`, with `startedAt: now` and `attempt: { increment: 1 }`, then read back `attempt`. Accepting `running` covers BullMQ redelivering a stalled job, whose previous holder lost its lock. A count of 0 (the review is `done`, `failed` or gone) means return. Every later write of this run is conditional on `{ id, status: 'running', attempt }`.
   2. Load the messages with `toolLog` in order.
   3. `buildJudgePrompt`
   4. `withJudgeLease(async () => { checkJudgeSpend; generateStructured({ purpose: 'judge', schema: judgeOutputSchema, system, prompt, signal: AbortSignal.timeout(180_000), attribution: { userId, conversationReviewId, promptVersion } }) })`
   5. `verifyFindings`
   6. `prisma.$transaction(tx => persistReview(tx, …))`
-  - Retry (throw for BullMQ) only on `LEASE_BUSY` and the `generateStructured` codes `PROVIDER` and `ABORTED` (the 3-minute timeout). Before throwing, set the review back to `queued` (conditional on `running` and its id), so backoff never counts toward the 10-minute `running` limit.
+  - On `LEASE_BUSY`: set the review back to `queued` (conditional on `running` and this attempt), then `await job.moveToDelayed(Date.now() + 30_000 + jitter, token)` with a jitter of up to 60 s, and throw BullMQ's `DelayedError`. The job waits without spending an attempt, so a 50-review night never exhausts attempts on the lease, and at most one judge call holds a worker slot at a time.
+  - On the `generateStructured` codes `PROVIDER` and `ABORTED` (the 3-minute timeout): set the review back to `queued` the same way and throw, for BullMQ's retry with backoff. Backoff never counts toward the 10-minute `running` limit.
   - Every other failure calls `markReviewFailed` with its code as is: `NOT_CONFIGURED`, `TRUNCATED`, `CONTENT_FILTER`, `REFUSAL`, `SCHEMA`, `BUDGET_EXCEEDED` or `BUDGET_UNAVAILABLE`. `ReviewSuperseded` (Task 7) is caught and the job ends quietly.
   - The job uses `DEFAULT_JOB_OPTIONS` (`attempts: 3`). The worker hook marks `JOB_FAILED` when a `judge:review` job fails with `job.attemptsMade >= (job.opts.attempts ?? 1)`.
 
@@ -277,9 +281,11 @@
   - `inactive judge provider fails with NOT_CONFIGURED` (Review Focus 4)
   - `PROVIDER failure puts the review back to queued and rethrows`
   - `over cap fails with BUDGET_EXCEEDED and makes no LLM call`
-  - `LEASE_BUSY rethrows for retry`
+  - `LEASE_BUSY re-delays the job with DelayedError and spends no attempt`
+  - `10 queued reviews all complete behind one lease that is held, then released`
+  - `a redelivered stalled job takes over a running review, and the old attempt's late write is superseded`
   - `stale: running with startedAt 11 min ago is reaped, 9 min is not`
-  - `stale: queued with a waiting job is never reaped however old, queued with a missing job is`
+  - `stale: queued with a waiting or delayed job is never reaped however old; queued with a missing job is reaped only once the row is over 2 minutes old`
   - `a late write from a reaped review changes nothing`
 - [ ] **Step 2:** Run `npx jest lib/queue/jobs/__tests__/conversation-review.test.ts lib/judge` and confirm FAIL. Implement, then run again and confirm PASS.
 - [ ] **Step 3:** Commit with "Run conversation reviews as a queued job".
@@ -298,13 +304,17 @@
   - `enqueueReview(input: { conversationId: string; trigger: 'manual' | 'nightly'; requestedById: string | null }, deps?: { addJob?: typeof addJob; getJobState?: (jobId: string) => Promise<string | null> }): Promise<{ ok: true; reviewId: string; status: 'queued' | 'running'; created: boolean } | { ok: false; code: 'NOT_FOUND' | 'CONFLICT' | 'UNAVAILABLE' }>` in `lib/judge/enqueue.ts`, shared by the action and the sweep (Task 11):
     1. `UNAVAILABLE` when there is no active `judge` provider.
     2. In one transaction: `NOT_FOUND` or `CONFLICT` unless the conversation is an open admin non-Discord one, then `reapStaleReviews`, then return the conversation's `queued` or `running` review (`created: false`) or create a `queued` one.
-    3. Only after commit, and only when `created`: `addJob(JOB_TYPES.CONVERSATION_REVIEW, { reviewId }, { jobId: 'conversation-review:' + reviewId })`. If `addJob` throws, the row is left `queued` with no job, which the next call reaps as `STALE`.
-  - `setFindingStatus = adminAction({ input: z.object({ findingId: z.string().min(1).max(100), status: z.enum(['open','fixed','wont_fix','false_alarm']), note: z.string().max(1000).optional() }) })`, returning `ActionResult<null>`. It sets `triagedById`, `triagedAt` and `note`, and calls `expireTag` if a tag is introduced, otherwise `revalidatePath(aiActivity…)`.
+    3. Only after commit, and only when `created`: `addJob(JOB_TYPES.CONVERSATION_REVIEW, { reviewId })`, whose id comes from `JOB_ID_POLICY` (`judge-review-<reviewId>`). If `addJob` throws, mark the review `failed` with `ENQUEUE_FAILED` and return `UNAVAILABLE`.
+  - `setFindingStatus = adminAction({ input: z.object({ findingId: z.string().min(1).max(100), status: z.enum(['open','fixed','wont_fix','false_alarm']), note: z.string().max(1000).optional() }) })`, returning `ActionResult<null>`. It returns `NOT_FOUND` for an unknown finding. A closing status sets `triagedById` and `triagedAt`; `open` clears both. `note` is replaced when given (an empty string clears it) and kept otherwise. It calls `refreshView()` from `@/lib/actions/invalidate`, and the triage UI also invalidates `queryKeys.conversationReview(id)` and the findings list key. No rate limit: it is admin-only, cheap and audited.
   - JSDoc on both, for `npm run mcp:docs`.
 
 - [ ] **Step 1:** Write the failing tests:
   - `queues a review and returns its id`
   - `enqueueReview adds the job only after commit and only when it created the review`
+  - `addJob failure marks the review ENQUEUE_FAILED and returns UNAVAILABLE`
+  - `a queued review younger than 2 minutes with no job yet is not reaped`
+  - `setFindingStatus returns NOT_FOUND for an unknown finding`
+  - `reopening clears triagedById and triagedAt and keeps the note`
   - `returns the existing queued review instead of adding a second`
   - `reaps a stale running review then queues`
   - `refuses Discord and ended conversations`
