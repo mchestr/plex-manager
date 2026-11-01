@@ -13,12 +13,18 @@
  *   punctuation ignored: a key ending in `token` (`token`, `X-Plex-Token`,
  *   `shareToken`, `plexAuthToken`), one containing `apikey`, `secret`,
  *   `password`, `passkey`, `authorization`, `cookie`, `credential`,
- *   `sharekey` or `assetkey`, and every encrypted credential column
+ *   `sharekey`, `assetkey`, `privatekey`, `accesskey` or `sessionkey`, and
+ *   every encrypted credential column
  *   (`ENCRYPTED_FIELDS` less `FREE_TEXT_FIELDS`, such as `rewindSerialKey`);
  * - inside every string, free text included (a stored LLM prompt holds earlier
- *   tool results): a `name=value` pair whose name is a credential, as in a URL
- *   or query string, a `"name": "value"` pair of JSON written into a string,
- *   and a `Bearer` or `Basic` value.
+ *   tool results, JSON-encoded), what `redactText` finds
+ *   (`lib/security/redact-text.ts`, shared with the Support role's scrubber):
+ *   a credential pair in a URL or query string, percent-encoded or not, in a
+ *   header or config line (`X-Plex-Token: ...`), or in JSON or a dict written
+ *   into a string, escaped or not; an `Authorization` header's credentials,
+ *   in any letter case (a Bearer, Basic, Bot or Token token, or another
+ *   scheme's token or auth-param list); and a token after a bare `Bearer` or
+ *   `Basic`.
  *
  * A non-string value under a credential key (a `{ last4 }` description, a
  * field error list) is kept and searched. Counts such as `promptTokens` are
@@ -29,25 +35,34 @@
  */
 
 import { ENCRYPTED_FIELDS, FREE_TEXT_FIELDS } from "@/lib/db/encrypted-fields"
+import { REDACTED as TEXT_REDACTED, redactText } from "@/lib/security/redact-text"
 
 /** @internal Exported for the redaction tests. */
-export const REDACTED = "[redacted]"
+export const REDACTED = TEXT_REDACTED
 
 const normalise = (key: string) => key.toLowerCase().replace(/[^a-z0-9]/g, "")
 
 /** Normalised fragments that make a key a credential wherever they appear in it. */
-const SECRET_FRAGMENTS = ["apikey", "secret", "password", "passwd", "passkey", "authorization", "cookie", "credential", "sharekey", "assetkey"]
+const SECRET_FRAGMENTS = [
+  "apikey",
+  "secret",
+  "password",
+  "passwd",
+  "passkey",
+  "authorization",
+  "cookie",
+  "credential",
+  "sharekey",
+  "assetkey",
+  "privatekey",
+  "accesskey",
+  "sessionkey",
+]
 
 /** The encrypted credential columns, normalised: every encrypted field that is not free text. */
 const ENCRYPTED_CREDENTIALS: ReadonlySet<string> = new Set(
   Object.entries(ENCRYPTED_FIELDS).flatMap(([model, fields]) => fields.filter((field) => !FREE_TEXT_FIELDS[model]?.includes(field)).map(normalise))
 )
-
-/** Credential names in `name=value` and `"name": "value"` pairs inside a string. */
-const SECRET_NAME = String.raw`[\w-]*(?:token|api[_-]?key|secret|password|passwd|passkey|authorization)[\w-]*`
-const SECRET_PAIR = new RegExp(String.raw`\b(${SECRET_NAME})=([^&\s"'<>]+)`, "gi")
-const SECRET_JSON_PAIR = new RegExp(String.raw`("${SECRET_NAME}"\s*:\s*")((?:[^"\\]|\\.)+)(")`, "gi")
-const AUTH_SCHEME = /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/g
 
 /**
  * Whether a key names a credential, with case and punctuation ignored.
@@ -59,15 +74,8 @@ export function isCredentialKey(key: string): boolean {
   return name.endsWith("token") || ENCRYPTED_CREDENTIALS.has(name) || SECRET_FRAGMENTS.some((fragment) => name.includes(fragment))
 }
 
-function redactString(value: string): string {
-  return value
-    .replace(SECRET_PAIR, `$1=${REDACTED}`)
-    .replace(SECRET_JSON_PAIR, `$1${REDACTED}$3`)
-    .replace(AUTH_SCHEME, `$1 ${REDACTED}`)
-}
-
 function redactValue(value: unknown): unknown {
-  if (typeof value === "string") return redactString(value)
+  if (typeof value === "string") return redactText(value)
   if (Array.isArray(value)) return value.map(redactValue)
   if (typeof value !== "object" || value === null) return value
   return Object.fromEntries(
@@ -81,7 +89,7 @@ export function redactCredentials(text: string): { text: string; redacted: boole
   try {
     parsed = JSON.parse(text)
   } catch {
-    const next = redactString(text)
+    const next = redactText(text)
     return { text: next, redacted: next !== text }
   }
   const next = JSON.stringify(redactValue(parsed))

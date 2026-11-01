@@ -2,24 +2,52 @@ import "server-only"
 
 import { getRadarrCalendar, getRadarrDiskSpace, getRadarrHealth, getRadarrHistory, getRadarrMovieById, getRadarrMovies, getRadarrQualityProfiles, getRadarrQueue, getRadarrRootFolders, getRadarrSystemStatus, getRadarrWantedMissing, searchRadarrMovies } from "@/lib/connections/radarr"
 import { ARR_MAX_RECORDS } from "@/lib/connections/arr-client"
+import { getActiveService } from "@/lib/data/active-service"
 import { type RadarrParsed } from "@/lib/validations/radarr"
 
-import { arrListOutput, arrPageOutput, idForTitle, type ArrFilter } from "./arr-output"
-import { getActiveService } from "@/lib/data/active-service"
+import { calendarRange, optionalText, optionalWhole, textArg, wholeArg, wholeOrNone } from "./arr-args"
+import { arrListOutput, arrLocalPage, arrPageOutput, arrSearchOutput, asList, byTitle, idForTitle, noTitleMatch, orElse, projectEach, titleMatches, type ArrFilter } from "./arr-output"
+import { healthWithoutPaths } from "./arr-paths"
+import { qualityProfile, rootFolder, trimDetails } from "./arr-projections"
+import { historyRecord, libraryMovies, lookupItem, movieItem, movieRecord, queueRecord, withRadarrId } from "./radarr-projections"
+
+/** Most records a reply holds, so it stays under the tool result limit (see arr-output). */
+const HISTORY_MAX = 50
+const QUEUE_MAX = 50
+const CALENDAR_MAX = 100
+const WANTED_MAX = 50
+const MOVIES_PAGE_SIZE = 50
+const MOVIES_PAGE_SIZE_MAX = 75
+const PAGE_MAX = 10_000
+
+const PASS_MOVIE = "pass a movie (movieId or movieName)"
+/** The wanted list is read to a cap, so a movie past it is checked on its own. */
+const CHECK_MOVIE = "if it is not among them, check the movie itself with get_radarr_movie_details (monitored, hasFile, isAvailable)"
+
+/** How to name a movie: in Discord only by its title, since no Discord tool gives a movieId. */
+function passMovie(discord: boolean): string {
+  return discord ? "pass a movieName" : PASS_MOVIE
+}
 
 /**
  * The movie a tool asks about: `movieId`, or the library movie whose title
- * matches `movieName`. Neither given is every movie; a name with no match is
- * an `error` to return as the tool output.
+ * matches `movieName`. Neither given is every movie. A movieId that cannot be
+ * read with no name to fall back on is an error `output` to return instead,
+ * and a name with no match a reply saying so (see noTitleMatch), which in
+ * Discord asks for the exact title.
  */
-async function resolveMovie(config: RadarrParsed, args: Record<string, unknown>): Promise<{ movieId?: number } | { error: string }> {
-  if (typeof args.movieId === "number") return { movieId: args.movieId }
-  if (typeof args.movieName !== "string") return {}
+async function resolveMovie(config: RadarrParsed, args: Record<string, unknown>, discord = false): Promise<{ movieId?: number } | { output: string }> {
+  const id = optionalWhole(args, "movieId")
+  if (!("error" in id) && id.value !== undefined) return { movieId: id.value }
+  const name = optionalText(args, "movieName")
+  if ("error" in name) return { output: name.error }
+  if (name.value === undefined) return "error" in id ? { output: id.error } : {}
   const library = await getRadarrMovies(config)
-  if (!library.success) return { error: JSON.stringify({ error: library.error }) }
-  const movieId = idForTitle(library.data, args.movieName)
-  if (movieId === undefined) return { error: JSON.stringify({ error: `Movie "${args.movieName}" not found in Radarr library` }) }
-  return { movieId }
+  if (!library.success) return { output: JSON.stringify({ error: library.error }) }
+  const movieId = idForTitle(library.data, name.value)
+  if (movieId !== undefined) return { movieId }
+  const next = discord ? "ask for the exact title" : "search_radarr_movies finds a movie by part of its title"
+  return { output: noTitleMatch("movie in the Radarr library", name.value, next) }
 }
 
 /** Queue records name their movie in `movieId`; calendar and wanted records are movies, so `id`. */
@@ -31,7 +59,7 @@ export async function executeRadarrTool(
   toolName: string,
   args: Record<string, unknown>,
   _userId?: string,
-  _context?: string
+  context?: string
 ): Promise<string> {
   const server = await getActiveService("radarr")
   if (!server) return "Error: No active Radarr server configured."
@@ -42,6 +70,9 @@ export async function executeRadarrTool(
     apiKey: server.apiKey,
     publicUrl: server.publicUrl || undefined,
   }
+
+  // Discord is a shared channel: its replies name no download folder's tree
+  const discord = context === "discord"
 
   switch (toolName) {
     case "get_radarr_status": {
@@ -54,103 +85,87 @@ export async function executeRadarrTool(
       return JSON.stringify({
         status: statusResult.success ? statusResult.data : { error: statusResult.error },
         queue: queueResult.success ? { totalRecords: queueResult.data.totalRecords } : { error: queueResult.error },
-        health: healthResult.success ? healthResult.data : { error: healthResult.error },
+        health: healthResult.success ? (discord ? healthWithoutPaths(healthResult.data) : healthResult.data) : { error: healthResult.error },
         disk: diskResult.success ? diskResult.data : { error: diskResult.error },
       })
     }
     case "search_radarr_movies": {
-      if (typeof args.term !== "string") {
-        return "Error: 'term' parameter is required and must be a string"
-      }
-      const lookupResult = await searchRadarrMovies(config, args.term)
-      if (!lookupResult.success) {
-        return JSON.stringify({ error: lookupResult.error })
-      }
-      const lookupResults = lookupResult.data
-
-      // Also check if any of these movies are already in the library
-      // This allows us to return Radarr internal IDs when available
-      const libraryResult = await getRadarrMovies(config)
-      const libraryArray = libraryResult.success && Array.isArray(libraryResult.data) ? libraryResult.data : []
-
-      // Match lookup results with library movies by TMDB ID
-      const enrichedResults = Array.isArray(lookupResults) ? lookupResults.map((lookup: any) => {
-        const inLibrary = libraryArray.find((lib: any) =>
-          lib.tmdbId === lookup.tmdbId ||
-          lib.title?.toLowerCase() === lookup.title?.toLowerCase()
-        )
-        return {
-          ...lookup,
-          // If found in library, include Radarr internal ID
-          radarrId: inLibrary?.id,
-          inLibrary: !!inLibrary,
-        }
-      }) : lookupResults
-
-      return JSON.stringify(enrichedResults)
+      const term = textArg(args.term, 200)
+      if (term === undefined) return "Error: 'term' parameter is required and must be a string"
+      const lookup = await searchRadarrMovies(config, term)
+      if (!lookup.success) return JSON.stringify({ error: lookup.error })
+      // Radarr gives a movie it holds its id; the library's TMDB ids cover a version that does not, and give its download state
+      const library = await getRadarrMovies(config)
+      const held = libraryMovies(library.success ? library.data : [])
+      const results = projectEach(asList(lookup.data), lookupItem).map((result) => withRadarrId(result, held))
+      return arrSearchOutput(results, term, "tmdb:<tmdbId> or imdb:<imdbId> for one movie")
     }
     case "get_radarr_history": {
-      const pageSize = typeof args.pageSize === "number" ? args.pageSize : 20
-      const movie = await resolveMovie(config, args)
-      if ("error" in movie) return movie.error
+      const pageSize = wholeArg(args.pageSize, 20, HISTORY_MAX)
+      const movie = await resolveMovie(config, args, discord)
+      if ("output" in movie) return movie.output
+      const more = orElse(pageSize < HISTORY_MAX && `pass a pageSize up to ${HISTORY_MAX}`, movie.movieId === undefined && passMovie(discord))
       // A movie reads /history/movie, so Radarr filters
-      return arrPageOutput(await getRadarrHistory(config, { pageSize, movieId: movie.movieId }))
+      return arrPageOutput(await getRadarrHistory(config, { pageSize, movieId: movie.movieId }), { project: historyRecord(discord), limit: pageSize, more })
     }
     case "get_radarr_queue": {
       // The queue cannot filter by movie: read up to the cap and filter here
-      const movie = await resolveMovie(config, args)
-      if ("error" in movie) return movie.error
-      const limit = movie.movieId === undefined ? 50 : ARR_MAX_RECORDS
-      return arrPageOutput(await getRadarrQueue(config, limit), movieFilter("movieId", movie.movieId))
+      const movie = await resolveMovie(config, args, discord)
+      if ("output" in movie) return movie.output
+      const limit = movie.movieId === undefined ? QUEUE_MAX : ARR_MAX_RECORDS
+      const more = movie.movieId === undefined ? `${passMovie(discord)} to see only its items` : undefined
+      const reply = { project: queueRecord(discord), limit: QUEUE_MAX, more }
+      return arrPageOutput(await getRadarrQueue(config, limit), reply, movieFilter("movieId", movie.movieId))
     }
     case "get_radarr_movies": {
-      const moviesResult = await getRadarrMovies(config)
-      if (!moviesResult.success) {
-        return JSON.stringify({ error: moviesResult.error })
-      }
-      return JSON.stringify(moviesResult.data)
+      const library = await getRadarrMovies(config)
+      if (!library.success) return JSON.stringify({ error: library.error })
+      const search = textArg(args.search)
+      const all = projectEach(asList(library.data), movieItem)
+      return JSON.stringify(
+        arrLocalPage({
+          items: byTitle(search === undefined ? all : all.filter((movie) => titleMatches(movie.title, search))),
+          page: wholeArg(args.page, 1, PAGE_MAX),
+          pageSize: wholeArg(args.pageSize, MOVIES_PAGE_SIZE, MOVIES_PAGE_SIZE_MAX),
+          what: search === undefined ? "movies, sorted by title" : `movies whose title contains "${search}", of ${all.length} in the library`,
+          more: search === undefined ? "pass search to find a title" : undefined,
+        })
+      )
     }
     case "get_radarr_movie_details": {
-      if (typeof args.movieId !== "number") {
-        return "Error: 'movieId' parameter is required and must be a number"
-      }
-      const movieResult = await getRadarrMovieById(config, args.movieId)
-      if (!movieResult.success) {
-        return JSON.stringify({ error: movieResult.error })
-      }
-      return JSON.stringify(movieResult.data)
+      const movieId = wholeOrNone(args.movieId)
+      if (movieId === undefined) return "Error: 'movieId' parameter is required and must be a number"
+      const result = await getRadarrMovieById(config, movieId)
+      return JSON.stringify(result.success ? trimDetails(result.data) : { error: result.error })
     }
     case "get_radarr_calendar": {
-      const startDate = typeof args.startDate === "string" ? args.startDate : undefined
-      const endDate = typeof args.endDate === "string" ? args.endDate : undefined
+      const { start, end } = calendarRange(args)
       const movie = await resolveMovie(config, args)
-      if ("error" in movie) return movie.error
-      return arrListOutput(await getRadarrCalendar(config, startDate, endDate), movieFilter("id", movie.movieId))
+      if ("output" in movie) return movie.output
+      const more = `narrow the date range (startDate, endDate)${movie.movieId === undefined ? " or pass a movie" : ""} to see the rest`
+      return arrListOutput(await getRadarrCalendar(config, start, end), { project: movieRecord, limit: CALENDAR_MAX, more }, movieFilter("id", movie.movieId))
     }
     case "get_radarr_wanted_missing": {
-      const pageSize = typeof args.pageSize === "number" ? args.pageSize : 20
-      // wanted/missing cannot filter by movie: read up to the cap and filter here
+      const pageSize = wholeArg(args.pageSize, 20, WANTED_MAX)
       const movie = await resolveMovie(config, args)
-      if ("error" in movie) return movie.error
-      const limit = movie.movieId === undefined ? pageSize : ARR_MAX_RECORDS
-      return arrPageOutput(await getRadarrWantedMissing(config, limit), movieFilter("id", movie.movieId))
+      if ("output" in movie) return movie.output
+      if (movie.movieId === undefined) {
+        const more = orElse(pageSize < WANTED_MAX && `pass a pageSize up to ${WANTED_MAX}`, PASS_MOVIE)
+        return arrPageOutput(await getRadarrWantedMissing(config, pageSize), { project: movieRecord, limit: pageSize, more })
+      }
+      // wanted/missing cannot filter by movie: read up to the cap and filter here
+      const reply = { project: movieRecord, limit: ARR_MAX_RECORDS, more: CHECK_MOVIE, morePastRead: true }
+      return arrPageOutput(await getRadarrWantedMissing(config, ARR_MAX_RECORDS), reply, movieFilter("id", movie.movieId))
     }
     case "get_radarr_root_folders": {
-      const foldersResult = await getRadarrRootFolders(config)
-      if (!foldersResult.success) {
-        return JSON.stringify({ error: foldersResult.error })
-      }
-      return JSON.stringify(foldersResult.data)
+      const result = await getRadarrRootFolders(config)
+      return JSON.stringify(result.success ? projectEach(asList(result.data), rootFolder) : { error: result.error })
     }
     case "get_radarr_quality_profiles": {
-      const profilesResult = await getRadarrQualityProfiles(config)
-      if (!profilesResult.success) {
-        return JSON.stringify({ error: profilesResult.error })
-      }
-      return JSON.stringify(profilesResult.data)
+      const result = await getRadarrQualityProfiles(config)
+      return JSON.stringify(result.success ? projectEach(asList(result.data), qualityProfile) : { error: result.error })
     }
     default:
       return "Error: Unknown Radarr tool"
   }
 }
-

@@ -5,7 +5,7 @@ import { type Permission } from "@/lib/permissions"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
-import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES, getRegisteredTool } from "../tools/registry"
+import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES, discordArguments, getRegisteredTool } from "../tools/registry"
 import { executeMcpTool, MCP_TOOL_PREFIX } from "../mcp/tools"
 import { executeAppDataTool } from "./app-data"
 import { executeKnowledgeTool } from "./knowledge"
@@ -18,6 +18,7 @@ import { executeMediaMarkingTool } from "./media-marking"
 import { ROLE_TOOL_NOT_PERMITTED, ROLE_TOOL_UNAVAILABLE, scrubForRole } from "./role-scrub"
 import { scrubForDiscord } from "./scrub"
 import { withLocalInstants } from "./timestamps"
+import { isToolError } from "./tool-output"
 
 const logger = createLogger("CHATBOT_EXECUTOR")
 
@@ -37,22 +38,6 @@ const DISCORD_TOOL_UNAVAILABLE = "Error: that tool isn't available right now."
 
 /** The admin context's message for a thrown executor: a code, never the error text (SEC-20). */
 const TOOL_EXECUTION_FAILED = "Error: tool execution failed (TOOL_EXECUTION_FAILED)."
-
-/**
- * True when an executor's output is an error: an `"Error..."` string, or JSON
- * with a non-null top-level `error` or `success: false`.
- */
-function isToolError(output: string): boolean {
-  if (output.startsWith("Error")) return true
-  try {
-    const parsed: unknown = JSON.parse(output)
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return false
-    const { error, success } = parsed as { error?: unknown; success?: unknown }
-    return (error !== undefined && error !== null) || success === false
-  } catch {
-    return false
-  }
-}
 
 // Map tool names to their service executors
 type ToolExecutor = (
@@ -253,7 +238,9 @@ export async function executeToolCall(
   })
 
   try {
-    const output = await executor(toolName, args, userId, context, format)
+    // A Discord call loses the parameters its model is not shown (discordHiddenParameters)
+    const toolArgs = context === "discord" ? discordArguments(toolName, args) : args
+    const output = await executor(toolName, toolArgs, userId, context, format)
     // Every instant the model reads is local wall time with its offset (P11.17)
     const result = format ? withLocalInstants(output, format.timeZone) : output
 
