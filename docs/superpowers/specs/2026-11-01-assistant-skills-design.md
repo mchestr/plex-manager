@@ -75,7 +75,8 @@ its `KnowledgeRepo` shape. It gains one function and one change:
   `Accept: application/vnd.github.sha`, returning the commit SHA. Cached for
   ten minutes per source, like the tree today.
 - The cache key becomes `id:ref:updatedAt`, so a read at a commit SHA is keyed
-  on that SHA.
+  on that SHA. The caches stay bounded by the reader's existing entry limits
+  (`remember`), so frequent Refreshes cannot grow them.
 
 Every catalogue load resolves the ref once, then lists and reads at that SHA,
 so the skills listed, loaded and shown in Check skills all come from one
@@ -135,7 +136,9 @@ Admin web chat only (`assistant:tools:admin`, never `discordSafe`).
   ```
 
 - **Tools** (`lib/chatbot/tools/skills.ts`, executor `lib/chatbot/executors/skills.ts`):
-  - `load_skill({ name })` returns `{ name, source, url, content, files[] }`,
+  - `load_skill({ name })` returns `{ name, source, url, content, files[] }`
+    (`url` is the github.com web link from `docUrl`, never an API URL or one
+    carrying the token),
     where `content` is the body after the frontmatter (at most 12,000 characters,
     with `truncated`) and `files` lists the supporting paths, relative to the
     skill's folder.
@@ -170,8 +173,10 @@ if the model follows it, so:
   skill cannot reach a tool its caller lacks.
 - The catalogue's descriptions sit in the system prompt outside any wrapper.
   They carry the same trust as the skill bodies (both come from the repo), and
-  they are the part always in context, so each is collapsed to one line and
-  capped at 300 characters.
+  they are the part always in context, so each is collapsed to one line, has
+  any `===` removed (so it cannot imitate a prompt section header), and is
+  capped at 300 characters. The whole section is capped at 6,000 characters;
+  skills past the cap are left out of the prompt and listed in `problems`.
 - The settings form says: "The assistant follows skills as instructions. Add
   only repositories you control, and pin a tag or commit."
 - Threat model: whoever can change a skill repository's ref can direct the
@@ -203,8 +208,8 @@ composes them.
 ### Tests
 
 - `catalog`: valid, invalid and duplicate frontmatter (the shadowed skill is in
-  `problems`); the 50-skill cap; a multi-line or overlong description collapsed
-  to one 300-character line; an unreachable or rate-limited source.
+  `problems`); the 50-skill and 6,000-character caps; a multi-line or overlong
+  description collapsed to one 300-character line with `===` removed; an unreachable or rate-limited source.
 - Executor: `load_skill`, `read_skill_file`, a path outside the skill's
   folder, not configured, `PM_FORBIDDEN` for a non-admin.
 - `conversation`: skill tools are wrapped as `admin_skill` and every other
@@ -230,12 +235,31 @@ model AssistantSecret {
   name         String    @unique // UPPER_SNAKE, used in {{secret:NAME}}
   description  String    @default("") // Shown to the model
   value        String // ENCRYPTED
-  allowedTools String[] // "<mcpServerId>:<mcp tool name>:<argument name>"
   lastUsedAt   DateTime?
+  grants       AssistantSecretGrant[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
+
+// One argument of one MCP tool that may receive a secret.
+model AssistantSecretGrant {
+  id        String          @id @default(cuid())
+  secretId  String
+  secret    AssistantSecret @relation(fields: [secretId], references: [id], onDelete: Cascade)
+  serverId  String
+  server    McpServer       @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  tool      String // The remote server's own tool name
+  argument  String // A top-level argument of that tool
+  createdAt DateTime        @default(now())
+
+  @@unique([secretId, serverId, tool, argument])
+  @@index([serverId])
+}
 ```
+
+A join table rather than a `"server:tool:argument"` string array: remote tool
+names are chosen by the server and may contain any separator, and the
+relations give real cascades when a secret or a server is deleted.
 
 - `value` goes in `ENCRYPTED_FIELDS`, and the model is covered by
   `__tests__/security/use-cache-no-secrets.test.ts`. It rotates with
@@ -251,7 +275,7 @@ model AssistantSecret {
   not enough: injected text could get the model to put the placeholder in a
   `url`, `query` or `body` argument of an allowed tool and send it to a host it
   chose. Per server is worse still.
-- `<mcp tool name>` is the remote server's own tool name (`route.tool` in
+- `tool` is the remote server's own tool name (`route.tool` in
   `executeMcpTool`), not the `mcp_<server>_<tool>` name the model sees; the
   prompt shows the model-facing name. A grant matches one exact remote name, so
   a tool the server renames or adds inherits nothing.
@@ -263,9 +287,9 @@ model AssistantSecret {
   changed `url`, `authHeaderName` or `authHeaderSecret` removes that server's
   entries from every secret, in the same transaction, so a repointed server
   receives nothing until an admin grants it again. Turning a server off and on
-  does not touch grants. Deleting a server removes its entries the same way.
-  Both are audited.
-- Migration `add_assistant_secrets`; changelog fragment.
+  does not touch grants. Deleting a server cascades to its grants. Both are
+  audited.
+- Migration `add_assistant_secrets` (both tables); changelog fragment.
 
 ### What the model sees
 
@@ -300,8 +324,11 @@ before `mcpCallTool`:
    - Every placeholder anywhere in the tree is checked, whichever branch the
      server would read.
    With none, the call runs exactly as today.
-2. If any name is unknown, or `"<serverId>:<tool>:<top-level argument>"` is not
-   in its `allowedTools`, return
+2. Read the secrets and their grants for this server and tool together with
+   the server row, in one query, and send to the URL and auth from that same
+   read; a server edited mid-call therefore either still has its grants and its
+   old URL, or neither. If any name is unknown, or the secret has no grant for
+   `(serverId, tool, top-level argument)`, return
    `Error: secret NAME is not available in that argument.`, make no call, and
    log `ASSISTANT_SECRET_DENIED` with `{ secretName, serverId, tool, argument }`.
    The message is the same for an unknown and a disallowed name. `secretName`
@@ -309,7 +336,8 @@ before `mcpCallTool`:
    match the name pattern (else `"invalid"`), capped at 64 characters.
 3. Otherwise substitute the values into a copy of the arguments, call the tool,
    and log `ASSISTANT_SECRET_USED` with `{ secretName, serverId, tool, argument }`
-   (never the value). `lastUsedAt` is written at most once a minute per secret,
+   (never the value). A denied call never touches `lastUsedAt`. It is written at
+   most once a minute per secret,
    with `updateMany({ where: { id, OR: [{ lastUsedAt: null }, { lastUsedAt: { lt: oneMinuteAgo } }] } })`,
    so several `web` containers do not race.
 4. Before returning, replace each substituted value in the result and in any
@@ -320,7 +348,7 @@ before `mcpCallTool`:
    anything logs, truncates or wraps it; tool results are not streamed.
 
 Redaction is best effort: a server can echo a value in a form not on that list
-(split across lines, truncated, HTML entities), and a value that is also an
+(split across lines, wrapped base64, truncated, HTML entities), and a value that is also an
 ordinary word would rewrite ordinary text. The argument binding in step 2 is the
 control; redaction only covers the common echo of a request in an error body or
 debug field.
@@ -332,7 +360,14 @@ Prisma as today. Discord never loads MCP tools, so it never resolves them.
 
 The conversation history, `LLMUsage` rows, logs and audit details hold only
 the placeholder: the model's arguments are recorded before substitution, and
-the result is redacted before it goes back into the conversation.
+the result is redacted before it goes back into the conversation. The
+substituted copy lives only inside `executeMcpTool`, is passed only to
+`mcpCallTool`, and never to a logger or into an error message; failures are
+reported by code (`result.code`), as today.
+
+A placeholder that comes back in a tool result, redacted or planted by the
+server, is only text. If the model copies it into a later call, step 2 checks
+it like any other.
 
 ### Settings
 
@@ -356,7 +391,8 @@ A Secrets block in the assistant settings:
 
 ### Tests
 
-- Resolve: substitution in nested arguments and inside a longer string; a
+- Resolve: a placeholder taken from an earlier tool result is checked like
+  any other; substitution in nested arguments and inside a longer string; a
   placeholder inside a JSON-encoded string value; a placeholder in a key refuses;
   a refusal for an unknown name, a disallowed tool or a disallowed argument makes
   no call, even when the placeholder is in a branch the server would ignore;
@@ -374,7 +410,8 @@ A Secrets block in the assistant settings:
 - E2E (`chromium`): add a secret with a grant and delete it, by `data-testid`.
 - Executor: `executeMcpTool` audits use and denial without the value.
 - Conversation: after a call that used a secret, the stored messages contain
-  only the placeholder.
+  only the placeholder, and no logger mock ever receives the value, on success
+  or failure.
 - Prompt: the SECRETS section lists names and tools, never values, and is absent
   for non-admins and in Discord.
 - Security: `use-cache-no-secrets` covers `AssistantSecret`.
