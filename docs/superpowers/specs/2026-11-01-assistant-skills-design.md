@@ -75,9 +75,10 @@ its `KnowledgeRepo` shape. It gains one function and one change:
   `Accept: application/vnd.github.sha`, returning the commit SHA. Cached for
   ten minutes per source, like the tree today.
 - The ref-resolution cache is keyed on `id:ref:updatedAt`, so Refresh resolves
-  again. Tree and file reads at a commit SHA are keyed on `repo:sha:path`
+  again. Tree and file reads at a commit SHA are keyed on `id:sha:path`
   instead: their content cannot change, so a Refresh that resolves to the same
-  SHA reuses them, and two sources on one repo share them. The caches stay bounded by the reader's existing entry limits
+  SHA reuses them. The source id stays in the key so a source without a token is
+  never served content another source read with one. The caches stay bounded by the reader's existing entry limits
   (`remember`), so frequent Refreshes cannot grow them.
 
 Every catalogue load resolves the ref once, then lists and reads at that SHA,
@@ -224,6 +225,7 @@ composes them.
 - `role-gate.test.ts` and the Discord tier tests: the skill tools are refused
   below admin and absent from `DISCORD_SAFE_TOOLS`.
 - Actions: validation, the audit event, `token` never returned.
+- Reader: two sources on one repo, one with a token, never share cached reads.
 - Audit: the `skill` kind of `ASSISTANT_SOURCE_CHANGED` has its label and
   summary in `lib/audit/` (no fallthrough).
 - E2E (`chromium`): add, check and delete a skill source, by `data-testid`.
@@ -347,7 +349,9 @@ before `mcpCallTool`:
    match the name pattern (else `"invalid"`), capped at 64 characters.
 3. Otherwise substitute the values into a copy of the arguments, call the tool,
    and log `ASSISTANT_SECRET_USED` with `{ secretName, serverId, tool, argument }`
-   (never the value). A denied call never touches `lastUsedAt`. It is written at
+   (never the value). The log and `lastUsedAt` are written once the value is
+   sent, whether or not the call then succeeds. A denied call never touches
+   `lastUsedAt`. It is written at
    most once a minute per secret,
    with `updateMany({ where: { id, OR: [{ lastUsedAt: null }, { lastUsedAt: { lt: oneMinuteAgo } }] } })`,
    so several `web` containers do not race.
@@ -405,10 +409,10 @@ A Secrets block in the assistant settings:
 ### Tests
 
 - Resolve: a whole-value placeholder and one inside a longer string are both
-  substituted; a
-  placeholder taken from an earlier tool result is checked like any other; a placeholder nested inside a granted argument is allowed; a
+  substituted; a placeholder nested inside a granted argument is allowed; a
+  placeholder taken from an earlier tool result is checked like any other; a
   composed string is redacted in its encoded forms; a server edited between the
-  grant read and the call never receives the secret at its new URL; substitution in nested arguments and inside a longer string; a
+  grant read and the call never receives the secret at its new URL; a
   placeholder inside a JSON-encoded string value; a placeholder in a key refuses;
   a refusal for an unknown name, a disallowed tool or a disallowed argument makes
   no call, even when the placeholder is in a branch the server would ignore;
