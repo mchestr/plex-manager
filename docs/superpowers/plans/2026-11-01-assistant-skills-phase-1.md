@@ -14,7 +14,7 @@
 
 - Skill `name`: `^[a-z0-9][a-z0-9-]{0,63}$`. `description`: 1 to 1,024 characters after collapsing whitespace.
 - Catalogue: at most 50 skills (`MAX_SKILLS`). Each prompt line is `- <name>: <promptDescription(description)>`, where `promptDescription` collapses whitespace, removes runs of three or more `=`, trims, and caps at 300 characters. The whole SKILLS section (header plus lines) is capped at 6,000 characters (`SKILL_PROMPT_BUDGET`), measured exactly as `skillsSection` renders it: `SKILLS_HEADER.length + lines.join("\n").length`. Skills are taken in `SkillSource.name` order, then path order. At the first skill that does not fit, it and every later skill are cut, with no skipping ahead.
-- At most 50 `SKILL.md` files are read per catalogue load, across all sources, in source-name then path order, with at most 8 reads in flight for the whole load (GitHub's secondary rate limit penalises bursts of concurrent requests). Only 50 skills can be shown anyway, and this keeps skills well inside the 400-file cache they share with knowledge bases. Later ones are listed in `problems` as `not_read` without being read.
+- At most 50 `SKILL.md` files are read per catalogue load, across all sources, in source-name then path order, with at most 8 `SKILL.md` reads in flight for the whole load (GitHub's secondary rate limit penalises bursts of concurrent requests; the one ref and one tree read per source run before them). Only 50 skills can be shown anyway, and this keeps skills well inside the 400-file cache they share with knowledge bases. Later ones are listed in `problems` as `not_read` without being read.
 - `load_skill` content and `read_skill_file` content: at most 12,000 characters, with `truncated`. `files`: at most 50 paths, in path order, with `filesTruncated`.
 - Only active sources are read. On a duplicate name, the first wins and the shadowed one is in `problems` with the winning source's name.
 - A skill is a listed path whose file name is exactly `SKILL.md`. Its `folder` is the path's directory as listed (it keeps `source.path`, so `""` only at the repo root). A doc belongs to the deepest skill folder that contains it (`folder === ""` or `doc.startsWith(folder + "/")`). Every listed `SKILL.md` marks a folder, whether or not it was read, parses, survives dedupe or fits the caps.
@@ -82,6 +82,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 
 **Files:**
 - Modify: `lib/chatbot/knowledge/github.ts`
+- Create: `lib/chatbot/knowledge/read-cache.ts` (`import "server-only"`): the shared-in-flight and remembered-failure helper the three reads use, so `github.ts` stays near the 150-line guideline for `lib/`
 - Test: `lib/chatbot/knowledge/__tests__/github.test.ts` (existing tests stay unchanged)
 
 **Interfaces:**
@@ -131,6 +132,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - Create: `lib/chatbot/skills/prompt.ts`: the SKILLS section text, shared by the cap and the prompt
 - Create: `lib/chatbot/skills/folders.ts`: which docs belong to which skill
 - Create: `lib/chatbot/skills/catalog.ts`: `loadSkillCatalog`
+- Create: `lib/chatbot/skills/pool.ts`: `mapWithLimit(items, limit, fn)`, the small worker pool (keeps `catalog.ts` near the 150-line guideline). Test: `pool.test.ts` (never more than `limit` in flight; results in input order).
 - Test: `lib/chatbot/skills/__tests__/frontmatter.test.ts`, `prompt.test.ts`, `folders.test.ts`, `catalog.test.ts` (each `@jest-environment node`)
 
 **Interfaces:**
@@ -163,7 +165,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   }
   export interface SkillProblem {
     source: string; path: string | null
-    reason: "invalid_frontmatter" | "duplicate_name" | "unreachable" | "rate_limited" | "not_read" | "not_in_prompt" | "listing_truncated"
+    reason: "invalid_frontmatter" | "duplicate_name" | "unreachable" | "rate_limited" | "not_read" | "not_in_prompt" | "listing_truncated" | "too_long"  // too_long is a warning: the skill is still listed
     detail?: string                            // the winning source for duplicate_name; the parse reason for invalid_frontmatter
   }
   export interface SkillCatalog { skills: SkillEntry[]; problems: SkillProblem[]; sources: { id: string; name: string; sha: string | null; pinned: boolean }[] }  // pinned: isCommitSha(row.ref)
@@ -218,6 +220,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
   - `queries active sources by name`: `findMany` was called with `{ where: { isActive: true }, orderBy: { name: "asc" } }`.
   - `caps supporting files at 50`: 60 docs in one folder give `files.length === 50` and `filesTruncated: true`.
   - `reports invalid frontmatter`: a bad `SKILL.md` gives no skill and `{ reason: "invalid_frontmatter", path, detail }`. Its folder still keeps its docs away from a root skill.
+  - `warns about a long skill`: a `SKILL.md` whose body is over 12,000 characters is still listed, and adds `{ reason: "too_long", path }`.
   - `first source wins a duplicate name`: sources `A` and `B` both define `deploy`. The skill's source is `A`, and `B` gets `{ source: "B", reason: "duplicate_name", detail: "A" }`.
   - `reports failed reads`:
     - `resolveRef` giving `rate_limited` adds `{ source, path: null, reason: "rate_limited" }` and `sources[i].sha === null`;
@@ -265,6 +268,7 @@ Accepted, not handled: two catalogue loads in flight at once (a timed-out one an
 - [ ] **Step 1: Write the failing `skills.test.ts`.** Mock `@/lib/chatbot/skills/catalog`, `@/lib/chatbot/knowledge/github` (`readDocResult`, keeping the real `docUrl`), `@/lib/admin` and `logAuditEvent`, as `knowledge.test.ts` does. Use a 40-hex SHA.
   - `load_skill returns the body and files`: the catalogue has skill `triage` (folder `triage`, files `["notes.md"]`), and its `SKILL.md` reads back as frontmatter plus `"# Do it"`. The parsed result equals `{ name: "triage", source: "Ops", url, content: "# Do it", truncated: false, files: ["notes.md"], filesTruncated: false }`. The audit gets `ASSISTANT_DATA_READ` with `{ toolName: "load_skill", skill: "triage", path: "triage/SKILL.md", sha: <first 12> }`, and `sanitizeValue` from `@/lib/utils/log-redaction` leaves those details unchanged.
   - `load_skill caps content`: a 13,000-character body gives `content.length === 12000` and `truncated: true`.
+  - `never returns the token`: with a source token `ghp_secret`, `JSON.stringify` of every `load_skill` and `read_skill_file` result, errors included, contains no `ghp_secret` and no `token` key.
   - `audits a long skill name with its path intact`: for a 40-character skill name, `sanitizeValue(details)` may redact `skill`, but keeps `path` (it contains `/` and `.`) and `sha` (12 characters) unchanged.
   - `load_skill refuses unknown and unlisted skills`: an unknown name, and a skill only in `problems` as `not_in_prompt`, both give the not-found error.
   - `load_skill reports a failed read`: `readDocResult` giving `{ ok: false, reason: "unreachable" }` returns the could-not-read error and writes no audit row.
@@ -404,6 +408,7 @@ UI decisions:
   | rate limited | "GitHub's rate limit was reached; add a token" |
   | not read | "Not read: only the first 50 SKILL.md files are read. Remove skills or set a folder." |
   | not in prompt | "Left out: the skills list is full. Shorten descriptions or remove skills." |
+  | too long | "Longer than 12,000 characters; the assistant reads only the start" |
   | listing truncated | "Only the first 300 Markdown files were read; set a folder" |
 - Test ids: `settings-skill-list`, `settings-skill-{id}`, `settings-skill-add-open`, `settings-skill-edit-open`, `settings-skill-add-sheet` and `settings-skill-edit-sheet` (the `sheetTestId`s), `settings-skill-refresh`, `settings-skill-check`, `settings-skill-check-dialog`, `settings-skill-moving-ref`, `settings-skill-form`, `settings-skill-name`, `settings-skill-repo`, `settings-skill-ref`, `settings-skill-path`, `settings-skill-token`, `settings-skill-active`, `settings-skill-delete`, `settings-skill-remove` and `settings-skill-remove-confirm`. Both `SettingsSheet`s and the form's `SettingsFormFooter` take `id="skill"`, which gives `settings-skill-save`, `settings-skill-cancel` and `settings-skill-discard-dialog`.
 
@@ -433,7 +438,7 @@ UI decisions:
     - the `ASSISTANT_DATA_READ` audit with tool, skill, path and commit;
     - that a skill can direct the assistant to use any tool the admin has, including ones that change data, with no extra confirmation step: whoever can change the repository at the ref can steer the assistant that far, so pin a commit;
     - that supporting files read with `read_skill_file` carry the same trust as `SKILL.md`, and that only the first 50 supporting files (in path order) are listed and readable;
-    - that when two sources define the same skill name, the source whose name sorts first wins, so renaming a source can change the winner (Check skills shows the hidden one);
+    - that when two sources define the same skill name, the source whose name sorts first wins, so renaming a source can change the winner (Check skills shows the hidden one). A hidden duplicate still uses one of the 50 reads;
     - that removing a token from a private source does not drop skills already read at a pinned commit until the cached entries are evicted or the process restarts;
     - that on a fresh process the first turn may run without the SKILLS section while the catalogue loads (the five-second bound), and the next turn has it;
     - cost: every read goes to `api.github.com`. A pinned commit costs one tree read and one read per `SKILL.md` once per process (each container and restart), then nothing; a branch costs one ref check every ten minutes, plus a re-read whenever it moves. A token raises GitHub's limit from 60 to 5,000 requests an hour;
