@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Skill `name`: `^[a-z0-9][a-z0-9-]{0,63}$`. `description`: 1 to 1,024 characters after collapsing whitespace.
-- Catalogue: at most 50 skills (`MAX_SKILLS`). Each prompt line is `- <name>: <promptDescription(description)>`, where `promptDescription` collapses whitespace, removes runs of three or more `=`, trims, and caps at 300 characters. The whole SKILLS section (header plus lines) is capped at 6,000 characters (`SKILL_PROMPT_BUDGET`). Skills are taken in `SkillSource.name` order, then path order. At the first skill that does not fit, it and every later skill are cut, with no skipping ahead.
+- Catalogue: at most 50 skills (`MAX_SKILLS`). Each prompt line is `- <name>: <promptDescription(description)>`, where `promptDescription` collapses whitespace, removes runs of three or more `=`, trims, and caps at 300 characters. The whole SKILLS section (header plus lines) is capped at 6,000 characters (`SKILL_PROMPT_BUDGET`), measured exactly as `skillsSection` renders it: `SKILLS_HEADER.length + lines.join("\n").length`. Skills are taken in `SkillSource.name` order, then path order. At the first skill that does not fit, it and every later skill are cut, with no skipping ahead.
 - At most 50 `SKILL.md` files are read per source, in path order; later ones are listed in `problems` without being read.
 - `load_skill` content and `read_skill_file` content: at most 12,000 characters, with `truncated`. `files`: at most 50 paths, in path order, with `filesTruncated`.
 - Only active sources are read. On a duplicate name, the first wins and the shadowed one is in `problems` with the winning source's name.
@@ -217,12 +217,12 @@ Accepted, not handled: a branch ref can move between the turn's catalogue load a
     - a `truncated: true` listing adds `{ path: null, reason: "listing_truncated" }`.
   - `reads at most 50 SKILL.md files per source`: 55 listed give exactly 50 `readDocResult` calls, and the last 5 paths get `not_in_prompt`. A doc inside one of those 5 unread skill folders is not given to a root skill.
   - `caps the catalogue at 50 skills`: two sources with 30 short skills each keep the first 50 in source-then-path order; the other 10 get `not_in_prompt`.
-  - `stops at the first skill over the prompt budget`: 25 skills with 280-character descriptions, then one with a one-word description. The kept skills satisfy `skillsSection(skills)!.length <= 6000`. The first skill that does not fit and every later one, the short last one included, get `not_in_prompt`.
+  - `stops at the first skill over the prompt budget`: 25 skills with 280-character descriptions, then one with a one-word description. The kept skills satisfy `skillsSection(skills)!.length <= 6000`, and adding the next one would exceed it. The first skill that does not fit and every later one, the short last one included, get `not_in_prompt`.
 - [ ] **Step 8:** Run `npx jest lib/chatbot/skills/__tests__/catalog.test.ts`. Expected: FAIL.
 - [ ] **Step 9:** Implement `loadSkillCatalog`:
   1. Read active sources by name.
   2. Per source, in parallel: resolve the ref, list the docs at `{ ...row, ref: sha }`, take the `SKILL.md` paths (sorted), read the first 50 in parallel, parse them, and assign files with `assignFiles` over every listed `SKILL.md`.
-  3. Then, in order: dedupe by name, then apply the caps, measuring `SKILLS_HEADER.length + Σ (skillLine(...).length + 1)` against `SKILL_PROMPT_BUDGET`.
+  3. Then, in order: dedupe by name, then apply the caps. A skill fits when `SKILLS_HEADER.length + [...keptLines, line].join("\n").length <= SKILL_PROMPT_BUDGET`, which is exactly the length `skillsSection` will render.
   4. Record each failure in `problems` as above.
 - [ ] **Step 10:** Run `npx jest lib/chatbot/skills __tests__/security/server-only-modules.test.ts`. Expected: PASS.
 - [ ] **Step 11:** Commit: `git commit -m "Read assistant skills from GitHub at one commit"`
@@ -253,6 +253,7 @@ Accepted, not handled: a branch ref can move between the turn's catalogue load a
 - [ ] **Step 1: Write the failing `skills.test.ts`.** Mock `@/lib/chatbot/skills/catalog`, `@/lib/chatbot/knowledge/github` (`readDocResult`, keeping the real `docUrl`), `@/lib/admin` and `logAuditEvent`, as `knowledge.test.ts` does. Use a 40-hex SHA.
   - `load_skill returns the body and files`: the catalogue has skill `triage` (folder `triage`, files `["notes.md"]`), and its `SKILL.md` reads back as frontmatter plus `"# Do it"`. The parsed result equals `{ name: "triage", source: "Ops", url, content: "# Do it", truncated: false, files: ["notes.md"], filesTruncated: false }`. The audit gets `ASSISTANT_DATA_READ` with `{ toolName: "load_skill", skill: "triage", path: "triage/SKILL.md", sha: <first 12> }`, and `sanitizeValue` from `@/lib/utils/log-redaction` leaves those details unchanged.
   - `load_skill caps content`: a 13,000-character body gives `content.length === 12000` and `truncated: true`.
+  - `audits a long skill name with its path intact`: for a 40-character skill name, `sanitizeValue(details)` may redact `skill`, but keeps `path` (it contains `/` and `.`) and `sha` (12 characters) unchanged.
   - `load_skill refuses unknown and unlisted skills`: an unknown name, and a skill only in `problems` as `not_in_prompt`, both give the not-found error.
   - `read_skill_file reads a listed file`: `{ skill: "triage", path: "notes.md" }` calls `readDocResult` with `ref: <sha>` and path `"triage/notes.md"`. It returns `{ skill, path: "notes.md", url, content, truncated }`, with `url` ending `/blob/<sha>/triage/notes.md`.
   - `read_skill_file reads a root skill's file`: a skill with `folder: ""` and `files: ["guide.md"]` reads path `"guide.md"`, and its `url` ends `/blob/<sha>/guide.md`.
@@ -369,9 +370,9 @@ Rule appended to `UNTRUSTED_DATA_RULES` as item 4:
 
 UI decisions:
 - The block heading is "Skills", and the Add sheet description is the form copy in Global Constraints.
-- A row shows its name, `repo@ref/path`, an On/Off badge and a `Follows a moving ref` badge when `!pinned`. It also has Edit, Refresh and Check skills buttons.
+- A row shows its name, `repo@ref/path`, an On/Off badge and a `Follows a moving ref` badge when `!pinned`. It also has Edit and Check skills buttons. A Refresh button appears only when `!pinned`, because a commit cannot move, so Refresh has nothing to re-read.
 - The form mirrors `KnowledgeSourceForm`:
-  - the ref field label is "Tag, commit or branch", with the description "A tag or commit keeps the skills fixed until you change it";
+  - the ref field label is "Commit, tag or branch", with the description "A commit keeps the skills fixed until you change it. With a branch or tag, anyone who can push to it changes what the assistant follows.";
   - the token description is "Needed for a private repository, and recommended for a branch."
 - Check skills opens a dialog. It lists each source's commit (first 7 characters, monospace) or "not read", with "Follows a moving ref" beside each source whose `pinned` is false. It also lists the skills found and the problems, with each reason mapped to plain copy:
 
@@ -388,7 +389,7 @@ UI decisions:
 - [ ] **Step 1: Write the failing `skill-sources-block.test.tsx`:**
   - Renders "None yet." with no sources.
   - Shows `settings-skill-moving-ref` for `pinned: false`, and not for `pinned: true`.
-  - Clicking `settings-skill-refresh` calls `refreshSkillSource({ id })` and shows a success toast.
+  - Clicking `settings-skill-refresh` calls `refreshSkillSource({ id })` and shows a success toast. A `pinned: true` row has no `settings-skill-refresh`.
   - Clicking `settings-skill-check`, with `checkSkills` resolving one skill and one `rate_limited` problem, shows the skill name, the first 7 characters of the commit, and "GitHub's rate limit was reached; add a token".
 - [ ] **Step 2:** Run `npx jest components/admin/settings`. Expected: the new tests FAIL; the existing section test passes.
 - [ ] **Step 3:** Split the section, then build the skills block, form and dialog. Each file stays under 300 lines (ESLint `max-lines`) and uses only `components/ui/` primitives.
@@ -406,6 +407,8 @@ UI decisions:
     - `load_skill` and `read_skill_file`, and the `admin_skill` rule;
     - the `ASSISTANT_DATA_READ` audit with tool, skill, path and commit;
     - that a skill can direct the assistant to use any tool the admin has, including ones that change data, with no extra confirmation step: whoever can change the repository at the ref can steer the assistant that far, so pin a commit;
+    - that supporting files read with `read_skill_file` carry the same trust as `SKILL.md`, and that only the first 50 supporting files (in path order) are listed and readable;
+    - cost: every read goes to `api.github.com`. A pinned commit costs one tree read and one read per `SKILL.md` once, then nothing; a branch costs one ref check every ten minutes, plus a re-read whenever it moves. A token raises GitHub's limit from 60 to 5,000 requests an hour;
   - change "like every other tool result" (line 37) to "like every tool result except `load_skill` and `read_skill_file`, which arrive as `admin_skill`".
 - Modify: `docs/roles.md` (`assistant:tools:admin` covers skills too) and `docs/mcp.md` (the assistant tools list: the skill tools are web chat only)
 - Create: `e2e/admin/settings-assistant-skills.spec.ts`
