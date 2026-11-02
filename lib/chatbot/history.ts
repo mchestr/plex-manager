@@ -19,7 +19,9 @@
  * count only rows with a conversation, so a removed row would hand back the
  * day's spend; and the AI activity pages keep showing the calls until their own
  * window clears the text. The `chatConversations` retention rule deletes the
- * ended row later.
+ * ended row later. Each ending also ends the conversation's judge rows in its
+ * transaction (`endReviewsOf`, `lib/judge/end.ts`): findings and summaries
+ * quote the text that goes.
  *
  * @module lib/chatbot/history
  */
@@ -30,6 +32,7 @@ import { z } from "zod"
 
 import type { ChatMessage } from "@/lib/chatbot/types"
 import type { Prisma } from "@/lib/generated/prisma/client"
+import { endReviewsOf } from "@/lib/judge/end"
 import { serializeToolLog, type ToolLogEntry } from "@/lib/judge/tool-log"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 
@@ -176,6 +179,7 @@ export async function endConversation(userId: string, conversationId: string, no
       data: { endedAt: now, title: null },
     })
     if (count === 0) return false
+    await endReviewsOf(tx, [conversationId])
     await tx.chatConversationMessage.deleteMany({ where: { conversationId } })
     return true
   })
@@ -187,7 +191,9 @@ export async function endConversation(userId: string, conversationId: string, no
  * admin may see.
  */
 export async function endConversationsOf(tx: PrismaTransactionClient, userId: string, now: Date = new Date()): Promise<number> {
+  const open = await tx.chatConversation.findMany({ where: openConversationsOf(userId), select: { id: true } })
   const { count } = await tx.chatConversation.updateMany({ where: openConversationsOf(userId), data: { endedAt: now, title: null } })
+  await endReviewsOf(tx, open.map((row) => row.id))
   await tx.chatConversationMessage.deleteMany({ where: { conversation: { userId, endedAt: { not: null } } } })
   return count
 }

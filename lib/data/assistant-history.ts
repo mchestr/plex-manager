@@ -28,7 +28,7 @@ const UNTITLED = "Untitled conversation"
 export interface AssistantPageData {
   /** False while AI features are off or no chat model is active: the history still opens, but nothing can be sent. */
   available: boolean
-  /** What admins can see, and who processes the messages (P11.16). */
+  /** What admins can see, and who processes the messages (P11.16), the judge's provider included. */
   disclosure: string
   /** How long admins can still read a deleted conversation's calls on the AI activity pages. */
   usageTextDays: number
@@ -45,9 +45,11 @@ export interface AssistantPageData {
 export async function getAssistantPage(conversationId: string | null): Promise<AssistantPageData> {
   const session = await assertPermission("assistant:use")
   const own = openConversationsOf(session.user.id)
-  const [config, provider, rows, open] = await Promise.all([
+  const [config, provider, judge, rows, open] = await Promise.all([
     prisma.config.findUnique({ where: { id: "config" }, select: { llmDisabled: true } }),
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "chat" }, select: { provider: true } }),
+    // The judge reviews these conversations, so this page's disclosure names its provider too
+    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "judge" }, select: { provider: true } }),
     prisma.chatConversation.findMany({
       where: { ...own, lastMessageAt: { not: null } },
       orderBy: { lastMessageAt: "desc" },
@@ -69,7 +71,7 @@ export async function getAssistantPage(conversationId: string | null): Promise<A
 
   return {
     available: !config?.llmDisabled && provider !== null,
-    disclosure: assistantDisclosure(provider?.provider ?? null),
+    disclosure: assistantDisclosure(provider?.provider ?? null, judge?.provider ?? null),
     usageTextDays: days.assistantLlmText,
     historyDays: days.assistantChats,
     history: rows.map((row) => ({ id: row.id, title: row.title ?? UNTITLED, lastMessageAt: row.lastMessageAt?.getTime() ?? 0 })),

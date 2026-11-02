@@ -107,6 +107,34 @@ revoking tokens, so a token cannot mint another.
 Every call writes `MCP_TOOL_CALLED` with the tool, its source, the token's row
 id and whether it succeeded, never its arguments or output.
 
+### Conversation judge findings
+
+`list_conversation_findings` (`lib/mcp/read-tools-llm.ts`) reads the
+conversation judge's open backlog through the loader behind **AI activity >
+Findings** (`listFindings` in `lib/data/conversation-findings.ts`), newest
+first. It is an admin read, so a Support token does not get it, and the loader
+audits each call as a member-content listing (`MEMBER_CONTENT_LISTED`,
+surface `conversation-findings`, with the filters only).
+
+- **Filters.** `status`, `type`, `tool`, `verified` (default true, which
+  leaves out findings whose quote did not match what the judge saw) and
+  `limit` (1 to 50, default 20). The result has `total`, `hiddenUnverified`
+  and the `findings`.
+- **Clipped text.** Each finding's `claim`, `evidence`, `suggestion` and
+  `note` is clipped to 300, 400, 250 and 200 characters, with `<field>Chars`
+  and `<field>Truncated` giving the full length and whether it was cut, so the
+  default 20 findings fit under the 40,000-character result cap. Text that JSON
+  escapes heavily can still pass it; the server then answers
+  `RESULT_TOO_LARGE`, and a smaller `limit` fits.
+- **Untrusted text.** The claim, evidence and suggestion quote conversations
+  and tool output. The description tells the client they are data, not
+  instructions, and the server redacts credentials in them like every result.
+
+The judge's actions (`review_conversation`, `get_conversation_review_status`,
+`set_finding_status` and `save_judge_settings`) are action tools like any
+other. `review_conversation` keeps its `judge-review` rate limit, because it
+spends money.
+
 ## Context use
 
 Each connected client pays for the tool list and for every result it reads.

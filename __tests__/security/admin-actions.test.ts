@@ -269,9 +269,17 @@ describe('Admin Actions Security', () => {
         if (open) transactional.push(`user.update in ${transaction}`)
         return buildUser({ id: 'member-1' })
       }) as never)
+      prismaMock.chatConversation.findMany.mockImplementation((async () => {
+        if (open) transactional.push(`chatConversation.findMany in ${transaction}`)
+        return [{ id: 'conversation-1' }, { id: 'conversation-2' }]
+      }) as never)
       prismaMock.chatConversation.updateMany.mockImplementation((async () => {
         if (open) transactional.push(`chatConversation.updateMany in ${transaction}`)
         return { count: 2 }
+      }) as never)
+      prismaMock.conversationFinding.deleteMany.mockImplementation((async () => {
+        if (open) transactional.push(`conversationFinding.deleteMany in ${transaction}`)
+        return { count: 1 }
       }) as never)
     })
 
@@ -348,8 +356,21 @@ describe('Admin Actions Security', () => {
       expect(prismaMock.chatConversationMessage.deleteMany).toHaveBeenCalledWith({
         where: { conversation: { userId: 'member-1', endedAt: { not: null } } },
       })
+      // Their judge findings quote the same answers, so they go with them (lib/judge/end.ts)
+      expect(prismaMock.chatConversation.findMany).toHaveBeenCalledWith({
+        where: { userId: 'member-1', endedAt: null, discordSessions: { none: {} } },
+        select: { id: true },
+      })
+      expect(prismaMock.conversationFinding.deleteMany).toHaveBeenCalledWith({
+        where: { conversationId: { in: ['conversation-1', 'conversation-2'] }, conversation: { endedAt: { not: null } } },
+      })
       // One transaction, so a failure ending them undoes the demotion and a retry does both
-      expect(transactional).toEqual(['user.update in 1', 'chatConversation.updateMany in 1'])
+      expect(transactional).toEqual([
+        'user.update in 1',
+        'chatConversation.findMany in 1',
+        'chatConversation.updateMany in 1',
+        'conversationFinding.deleteMany in 1',
+      ])
     })
 
     it('reports a failure ending the conversations without auditing the demotion or ending sessions', async () => {

@@ -4,8 +4,8 @@
 
 /**
  * The assistant page's loader: refused without `assistant:use`, the caller's
- * own open conversations only, newest first, and whether the assistant can
- * answer.
+ * own open conversations only, newest first, whether the assistant can
+ * answer, and a disclosure that names the judge provider too.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -14,6 +14,7 @@ import { buildConfig } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { assertPermission } from "@/lib/admin"
 import { getAssistantPage, HISTORY_LIMIT, TRANSCRIPT_LIMIT } from "@/lib/data/assistant-history"
+import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import type { ChatConversation, LLMProvider } from "@/lib/generated/prisma/client"
 
 jest.mock("@/lib/admin", () => ({ assertPermission: jest.fn() }))
@@ -112,6 +113,23 @@ it("names the provider and the retention windows, each from its own setting", as
   } finally {
     delete process.env.RETENTION_ASSISTANT_CHAT_DAYS
   }
+})
+
+it("the admin assistant page's disclosure names the judge provider, and getAssistantDisclosure does not", async () => {
+  const providers: Record<string, string> = { chat: "anthropic", judge: "openai" }
+  prismaMock.lLMProvider.findFirst.mockImplementation((async ({ where }: { where: { isActive: boolean; purpose: string } }) =>
+    where.isActive && providers[where.purpose] ? { provider: providers[where.purpose] } : null) as never)
+
+  const page = await getAssistantPage(null)
+
+  expect(prismaMock.lLMProvider.findFirst).toHaveBeenCalledWith({ where: { isActive: true, purpose: "judge" }, select: { provider: true } })
+  expect(page.disclosure).toBe(
+    "Server admins can read assistant conversations. The app sends messages to Anthropic, and to OpenAI for quality review."
+  )
+  // Members' chats are never reviewed, so their surfaces name the chat provider only
+  await expect(getAssistantDisclosure()).resolves.toBe(
+    "Server admins can read assistant conversations. The app sends messages to Anthropic."
+  )
 })
 
 it("says when the history reached its limit", async () => {

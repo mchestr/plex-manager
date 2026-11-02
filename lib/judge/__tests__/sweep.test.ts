@@ -76,7 +76,7 @@ function useConversations(rows: Array<Partial<Conversation> & { id: string }>) {
     assistantMessages: 2,
     ...row,
   }))
-  const reviewable = (row: Conversation) => row.endedAt === null && row.discordSessions === 0
+  const reviewable = (row: Conversation) => row.endedAt === null && row.discordSessions === 0 && row.lastMessageAt !== null
 
   prismaMock.chatConversation.findMany.mockImplementation((async (args: FindManyArgs) => {
     expect(args.orderBy).toEqual([{ lastMessageAt: "asc" }, { id: "asc" }])

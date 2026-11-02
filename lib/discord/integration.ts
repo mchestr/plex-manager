@@ -8,6 +8,7 @@ import {
 } from "@/lib/discord/api"
 import { getDiscordBotToken } from "@/lib/discord/config"
 import { computeRoleMetadata, type RoleMetadataOptions } from "@/lib/discord/role-metadata"
+import { endReviewsOf } from "@/lib/judge/end"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { safeRedirectPath } from "@/lib/security/safe-redirect"
@@ -400,8 +401,10 @@ async function revokeGrant(userId: string): Promise<boolean> {
  * Unlinks a member's Discord account: clears their linked role, revokes the
  * OAuth grant at Discord, then deletes the connection and the assistant chat
  * sessions of that Discord id, so a relinked account starts fresh (GAP-31).
- * The Discord calls are best effort; the local unlink always happens and is
- * audited as `DISCORD_ACCOUNT_UNLINKED`.
+ * In the same transaction it ends each conversation those deletes leave with
+ * no session, as the retention sweep's session delete does, along with its
+ * judge rows (`endReviewsOf`). The Discord calls are best effort; the local
+ * unlink always happens and is audited as `DISCORD_ACCOUNT_UNLINKED`.
  */
 export async function clearDiscordRoleForUser(userId: string): Promise<DiscordUnlinkResult> {
   const existing = await prisma.discordConnection.findUnique({ where: { userId }, select: { discordUserId: true } })
@@ -430,10 +433,19 @@ export async function clearDiscordRoleForUser(userId: string): Promise<DiscordUn
 
   const grantRevoked = await revokeGrant(userId)
 
-  await prisma.$transaction([
-    prisma.discordConnection.deleteMany({ where: { userId } }),
-    ...(existing ? [prisma.discordChatSession.deleteMany({ where: { discordUserId: existing.discordUserId } })] : []),
-  ])
+  await prisma.$transaction(async (tx) => {
+    await tx.discordConnection.deleteMany({ where: { userId } })
+    if (!existing) return
+    const sessions = { discordUserId: existing.discordUserId }
+    const rows = await tx.discordChatSession.findMany({ where: sessions, select: { chatConversationId: true } })
+    await tx.discordChatSession.deleteMany({ where: sessions })
+    const conversationIds = [...new Set(rows.map((row) => row.chatConversationId))]
+    await tx.chatConversation.updateMany({
+      where: { id: { in: conversationIds }, endedAt: null, discordSessions: { none: {} } },
+      data: { endedAt: new Date() },
+    })
+    await endReviewsOf(tx, conversationIds)
+  })
   logAuditEvent(AuditEventType.DISCORD_ACCOUNT_UNLINKED, userId, {
     source: "clear_role",
   })

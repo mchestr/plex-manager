@@ -37,8 +37,8 @@ const QUEUE_DOWN = { success: false, code: "UPSTREAM_UNAVAILABLE", error: "The j
 const NO_MODEL = { success: false, code: "UPSTREAM_UNAVAILABLE", error: "Set up a conversation review model first." }
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000)
 
-type Conversation = { userId: string; endedAt: Date | null; discordSessions: number }
-type ConversationWhere = { id: string; endedAt?: null; discordSessions?: { none: object } }
+type Conversation = { userId: string; endedAt: Date | null; discordSessions: number; lastMessageAt: Date | null }
+type ConversationWhere = { id: string; endedAt?: null; discordSessions?: { none: object }; lastMessageAt?: { not: null } }
 
 let conversations: Map<string, Conversation>
 let rows: Map<string, ConversationReview>
@@ -48,13 +48,16 @@ let created: number
 
 /** Backs `prismaMock.chatConversation` with `conversations`, applying the reviewable filter the way Postgres would. */
 function useConversationTable(seed: Record<string, Partial<Conversation>>) {
-  conversations = new Map(Object.entries(seed).map(([id, row]) => [id, { userId: "admin-1", endedAt: null, discordSessions: 0, ...row }]))
+  conversations = new Map(
+    Object.entries(seed).map(([id, row]) => [id, { userId: "admin-1", endedAt: null, discordSessions: 0, lastMessageAt: minutesAgo(1), ...row }])
+  )
   prismaMock.chatConversation.updateMany.mockImplementation((async ({ where }: { where: ConversationWhere }) => {
     const row = conversations.get(where.id)
     const hit =
       row !== undefined &&
       (where.endedAt !== null || row.endedAt === null) &&
-      (where.discordSessions === undefined || row.discordSessions === 0)
+      (where.discordSessions === undefined || row.discordSessions === 0) &&
+      (where.lastMessageAt === undefined || row.lastMessageAt !== null)
     return { count: hit ? 1 : 0 }
   }) as never)
   prismaMock.chatConversation.findUnique.mockImplementation((async ({ where }: { where: { id: string } }) =>
@@ -158,10 +161,10 @@ describe("reviewConversation", () => {
     expect(enqueueFromRequest).toHaveBeenCalledWith("judge:review", { reviewId: "review-new-1" })
   })
 
-  it("refuses Discord and ended conversations", async () => {
-    useConversationTable({ discord: { discordSessions: 1 }, ended: { endedAt: minutesAgo(5) } })
+  it("refuses Discord and ended conversations, and one that never stored a turn", async () => {
+    useConversationTable({ discord: { discordSessions: 1 }, ended: { endedAt: minutesAgo(5) }, "no-turn": { lastMessageAt: null } })
 
-    for (const conversationId of ["discord", "ended"]) {
+    for (const conversationId of ["discord", "ended", "no-turn"]) {
       await expect(reviewConversation({ conversationId })).resolves.toMatchObject({ success: false, code: "CONFLICT" })
     }
     expect(rows.size).toBe(0)
@@ -175,7 +178,7 @@ describe("reviewConversation", () => {
     await expect(reviewConversation({ conversationId: "conversation-support" })).resolves.toMatchObject({ success: true })
     // The lock filters on scope alone, never on the owner or their role
     expect(prismaMock.chatConversation.updateMany).toHaveBeenCalledWith({
-      where: { id: "conversation-support", endedAt: null, discordSessions: { none: {} } },
+      where: { id: "conversation-support", endedAt: null, discordSessions: { none: {} }, lastMessageAt: { not: null } },
       data: { reviewLockedAt: expect.any(Date) },
     })
   })

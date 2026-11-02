@@ -1,18 +1,23 @@
 /**
  * The metrics `/api/metrics` serves (BP-17, P11.4), in the Prometheus text
- * format, from five sources:
+ * format, from these sources:
  *
- * | Source         | Metric                                               |
- * |----------------|------------------------------------------------------|
- * | `queues`       | `plex_manager_queue_jobs{queue,state}`               |
- * | `job_failures` | `plex_manager_job_failures_total{queue,job}`         |
- * | `llm_spend`    | `plex_manager_llm_spend_usd{purpose,period}` (60 s cache) |
- * | `discord`      | `plex_manager_discord_*`: gateway logins (total, last 24 h), disconnects, last close code, health |
- * | the process    | `plex_manager_build_info`, `process_resident_memory_bytes`, `plex_manager_event_loop_delay_p99_seconds` |
+ * | Source           | Metric                                               |
+ * |------------------|------------------------------------------------------|
+ * | `queues`         | `plex_manager_queue_jobs{queue,state}`               |
+ * | `job_failures`   | `plex_manager_job_failures_total{queue,job}`         |
+ * | `llm_spend`      | `plex_manager_llm_spend_usd{purpose,period}`, purpose `wrapped`, `chat` or `judge` (60 s cache) |
+ * | `judge_reviews`  | `plex_manager_judge_reviews{status}`: conversation reviews by status |
+ * | `judge_findings` | `plex_manager_judge_findings{type,evidence_check}`: stored findings |
+ * | `judge_spend`    | `plex_manager_judge_spend_usd_today`: the judge cap's sum, since midnight in the server zone |
+ * | `discord`        | `plex_manager_discord_*`: gateway logins (total, last 24 h), disconnects, last close code, health |
+ * | the process      | `plex_manager_build_info`, `process_resident_memory_bytes`, `plex_manager_event_loop_delay_p99_seconds` |
  *
  * Each source has 2 s. One that fails or times out sets
  * `plex_manager_scrape_error{source}` to 1 and is left out; the body never
  * holds error text. The queue counts are the ones the admin queues page shows.
+ * The judge metrics carry enum labels and numbers only, never review or
+ * finding text. The database sources run without Redis.
  *
  * @module lib/observability/metrics
  */
@@ -22,10 +27,12 @@ import "server-only"
 import { monitorEventLoopDelay, type IntervalHistogram } from "node:perf_hooks"
 
 import { getEnv } from "@/lib/env"
+import { ConversationReviewStatus, EvidenceCheck, FindingType } from "@/lib/generated/prisma/client"
 import { llmSpendSince } from "@/lib/llm/usage-totals"
 import { readGatewayStats } from "@/lib/discord/login-ledger"
 import { readJobFailures } from "@/lib/observability/job-failures"
 import { renderMetrics, type Metric, type Sample } from "@/lib/observability/prometheus-text"
+import { prisma } from "@/lib/prisma"
 import { getQueueStats, QUEUE_NAME } from "@/lib/queue/client"
 import { getRequestPathRedis, isRedisConfigured, readyWithin } from "@/lib/queue/connection"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
@@ -38,7 +45,10 @@ const SPEND_CACHE_MS = 60_000
 const REWIND_QUEUES = ["rewind-batch", "rewind-gen", "rewind-aux"] as const
 const JOB_STATES = ["waiting", "active", "completed", "failed", "delayed", "prioritized"] as const
 
-type Source = "queues" | "job_failures" | "llm_spend"
+type Source = "queues" | "job_failures" | "llm_spend" | "judge_reviews" | "judge_findings" | "judge_spend"
+
+/** The sources that read only the database, so they run without Redis. */
+const DATABASE_SOURCES: ReadonlySet<Source> = new Set(["llm_spend", "judge_reviews", "judge_findings", "judge_spend"])
 
 function within<T>(promise: Promise<T>, ms: number): Promise<T> {
   let timer: NodeJS.Timeout | undefined
@@ -90,6 +100,30 @@ async function discordMetrics(): Promise<Metric[]> {
   ]
 }
 
+/** Conversation reviews by status, every status reported. */
+async function judgeReviewSamples(): Promise<Sample[]> {
+  const groups = await prisma.conversationReview.groupBy({ by: ["status"], _count: { _all: true } })
+  const counts = new Map(groups.map((group) => [group.status, group._count._all]))
+  return Object.values(ConversationReviewStatus).map((status) => ({ labels: { status }, value: counts.get(status) ?? 0 }))
+}
+
+/** Stored findings by type and evidence check, every pair reported, so the unverified rate can be watched. */
+async function judgeFindingSamples(): Promise<Sample[]> {
+  const groups = await prisma.conversationFinding.groupBy({ by: ["type", "evidenceCheck"], _count: { _all: true } })
+  const counts = new Map(groups.map((group) => [`${group.type}|${group.evidenceCheck}`, group._count._all]))
+  return Object.values(FindingType).flatMap((type) =>
+    Object.values(EvidenceCheck).map((check) => ({ labels: { type, evidence_check: check }, value: counts.get(`${type}|${check}`) ?? 0 }))
+  )
+}
+
+/** Today's judge spend: the rows the judge cap sums (`lib/judge/spend.ts`), since midnight in the server zone. */
+async function judgeSpendSamples(): Promise<Sample[]> {
+  const zone = await serverZone()
+  const since = wallTimeToInstant(`${dayKey(Date.now(), zone)}T00:00`, zone)
+  const { _sum } = await prisma.lLMUsage.aggregate({ _sum: { cost: true }, where: { conversationReviewId: { not: null }, createdAt: { gte: since } } })
+  return [{ value: _sum.cost ?? 0 }]
+}
+
 let spendCache: { samples: Sample[]; expiresAt: number } | null = null
 
 /** Today's and this month's spend, both from midnight in the server zone. */
@@ -130,9 +164,12 @@ export async function collectMetrics(): Promise<string> {
     queues: queueSamples,
     job_failures: failureSamples,
     llm_spend: spendSamples,
+    judge_reviews: judgeReviewSamples,
+    judge_findings: judgeFindingSamples,
+    judge_spend: judgeSpendSamples,
   }
   const sources = (Object.keys(reads) as Source[])
-    .filter((source) => isRedisConfigured() || source === "llm_spend")
+    .filter((source) => isRedisConfigured() || DATABASE_SOURCES.has(source))
     .map((source) => [source, reads[source]] as const)
   const results = await Promise.all(
     sources.map(async ([source, read]) => {
@@ -161,6 +198,19 @@ export async function collectMetrics(): Promise<string> {
       help: "LLM spend in USD for the server-zone day and month.",
       type: "gauge",
       samples: samplesOf("llm_spend"),
+    },
+    { name: "plex_manager_judge_reviews", help: "Conversation reviews by status.", type: "gauge", samples: samplesOf("judge_reviews") },
+    {
+      name: "plex_manager_judge_findings",
+      help: "Stored conversation judge findings by type and evidence check.",
+      type: "gauge",
+      samples: samplesOf("judge_findings"),
+    },
+    {
+      name: "plex_manager_judge_spend_usd_today",
+      help: "Conversation judge spend in USD since midnight in the server zone.",
+      type: "gauge",
+      samples: samplesOf("judge_spend"),
     },
     {
       name: "plex_manager_scrape_error",

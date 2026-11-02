@@ -3,7 +3,9 @@
  *
  * - completeDiscordLink → DISCORD_ACCOUNT_LINKED (actor userId + discordUserId).
  * - clearDiscordRoleForUser → DISCORD_ACCOUNT_UNLINKED, after revoking the
- *   grant at Discord and deleting the chat sessions of that Discord id (GAP-31).
+ *   grant at Discord and deleting the chat sessions of that Discord id (GAP-31),
+ *   and ending the conversations those deletes leave without a session, with
+ *   their judge reviews (`endReviewsOf`).
  */
 
 import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
@@ -29,11 +31,14 @@ jest.mock("@/lib/prisma", () => ({
       updateMany: jest.fn(),
       findUniqueOrThrow: jest.fn(),
     },
-    discordChatSession: { deleteMany: jest.fn() },
+    discordChatSession: { deleteMany: jest.fn(), findMany: jest.fn() },
+    chatConversation: { updateMany: jest.fn() },
     user: { findUnique: jest.fn() },
-    $transaction: jest.fn((operations: Promise<unknown>[]) => Promise.all(operations)),
+    $transaction: jest.fn(),
   },
 }))
+
+jest.mock("@/lib/judge/end", () => ({ endReviewsOf: jest.fn() }))
 
 jest.mock("@/lib/discord/api", () => ({
   exchangeDiscordCode: jest.fn(),
@@ -51,6 +56,7 @@ jest.mock("@/lib/utils/logger", () => ({
 }))
 
 import { completeDiscordLink, clearDiscordRoleForUser } from "@/lib/discord/integration"
+import { endReviewsOf } from "@/lib/judge/end"
 import { prisma } from "@/lib/prisma"
 import {
   exchangeDiscordCode,
@@ -64,12 +70,38 @@ const p = prisma as unknown as {
   discordIntegration: { findUnique: jest.Mock }
   discordConnection: { upsert: jest.Mock; update: jest.Mock; deleteMany: jest.Mock; findUnique: jest.Mock }
   discordOAuthState: { updateMany: jest.Mock; findUniqueOrThrow: jest.Mock }
-  discordChatSession: { deleteMany: jest.Mock }
+  discordChatSession: { deleteMany: jest.Mock; findMany: jest.Mock }
+  chatConversation: { updateMany: jest.Mock }
   user: { findUnique: jest.Mock }
+  $transaction: jest.Mock
 }
+
+/** What ran inside the unlink's transaction, in order. */
+let inTransaction: string[]
+let transacting = false
 
 beforeEach(() => {
   jest.clearAllMocks()
+  inTransaction = []
+  // The interactive transaction runs its callback on the same client
+  p.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+    transacting = true
+    try {
+      return await fn(p)
+    } finally {
+      transacting = false
+    }
+  })
+  const record = (name: string, mock: jest.Mock, value: unknown) =>
+    mock.mockImplementation(async () => {
+      if (transacting) inTransaction.push(name)
+      return value
+    })
+  record("discordConnection.deleteMany", p.discordConnection.deleteMany, { count: 1 })
+  record("discordChatSession.findMany", p.discordChatSession.findMany, [])
+  record("discordChatSession.deleteMany", p.discordChatSession.deleteMany, { count: 0 })
+  record("chatConversation.updateMany", p.chatConversation.updateMany, { count: 0 })
+  record("endReviewsOf", jest.mocked(endReviewsOf), undefined)
 })
 
 describe("completeDiscordLink audit", () => {
@@ -149,6 +181,34 @@ describe("clearDiscordRoleForUser audit", () => {
       "user-7",
       expect.any(Object)
     )
+  })
+
+  it("unlinking Discord ends the member's session-less conversations and their reviews", async () => {
+    p.discordIntegration.findUnique.mockResolvedValue(null)
+    p.discordConnection.findUnique.mockResolvedValue({ userId: "user-7", discordUserId: "discord-7" })
+    // Two of the deleted sessions share one conversation; the update's filter ends only a conversation left with none
+    p.discordChatSession.findMany.mockImplementation(async () => {
+      inTransaction.push("discordChatSession.findMany")
+      return [{ chatConversationId: "conversation-dm" }, { chatConversationId: "conversation-dm" }, { chatConversationId: "conversation-guild" }]
+    })
+
+    await expect(clearDiscordRoleForUser("user-7")).resolves.toMatchObject({ linked: true })
+
+    expect(p.discordChatSession.findMany).toHaveBeenCalledWith({ where: { discordUserId: "discord-7" }, select: { chatConversationId: true } })
+    expect(p.chatConversation.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["conversation-dm", "conversation-guild"] }, endedAt: null, discordSessions: { none: {} } },
+      data: { endedAt: expect.any(Date) },
+    })
+    expect(endReviewsOf).toHaveBeenCalledWith(p, ["conversation-dm", "conversation-guild"])
+    // One transaction: the sessions are read before they are deleted, and the ending follows the delete
+    expect(p.$transaction).toHaveBeenCalledTimes(1)
+    expect(inTransaction).toEqual([
+      "discordConnection.deleteMany",
+      "discordChatSession.findMany",
+      "discordChatSession.deleteMany",
+      "chatConversation.updateMany",
+      "endReviewsOf",
+    ])
   })
 
   it("still unlinks when Discord refuses the revoke", async () => {

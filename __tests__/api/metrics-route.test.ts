@@ -65,7 +65,7 @@ beforeEach(() => {
   })
   mockRewindCounts.mockResolvedValue({ waiting: 120, active: 4, completed: 0, failed: 1, delayed: 0, prioritized: 0 })
   mockHgetall.mockResolvedValue({ 'plex-wrapped:stripe:webhook': '5', 'rewind-gen:rewind:generate:user': '2' })
-  jest.mocked(llmSpendSince).mockResolvedValue({ wrapped: 1.25, chat: 0.5 })
+  jest.mocked(llmSpendSince).mockResolvedValue({ wrapped: 1.25, chat: 0.5, judge: 0.125 })
 })
 
 afterAll(() => {
@@ -102,6 +102,7 @@ describe('/api/metrics body', () => {
     expect(samples.get('plex_manager_job_failures_total{queue="rewind-gen",job="rewind:generate:user"}')).toBe(2)
     expect(samples.get('plex_manager_llm_spend_usd{purpose="wrapped",period="day"}')).toBe(1.25)
     expect(samples.get('plex_manager_llm_spend_usd{purpose="chat",period="month"}')).toBe(0.5)
+    expect(samples.get('plex_manager_llm_spend_usd{purpose="judge",period="day"}')).toBe(0.125)
     expect(samples.get('plex_manager_scrape_error{source="queues"}')).toBe(0)
     expect(samples.get('process_resident_memory_bytes')).toBeGreaterThan(0)
     expect(samples.has('plex_manager_event_loop_delay_p99_seconds')).toBe(true)
