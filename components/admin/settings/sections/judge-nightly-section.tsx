@@ -57,27 +57,34 @@ function invalidFields(values: Values): Partial<Record<FieldKey, string>> {
   }
 }
 
+/** Why a sweep that is on reviews nothing, and its link's test id. */
+const SWEEP_BLOCKED = {
+  LLM_DISABLED: { message: ", but AI features are turned off.", linkTestId: "settings-conversation-review-switch-link" },
+  NOT_CONFIGURED: { message: ", but no conversation review model is set up.", linkTestId: "settings-conversation-review-model-link" },
+}
+
 /**
  * The saved settings: the sweep on or off with its time, the rate, the
- * minimum turns and the budget. A sweep that is on without a conversation
- * review model reviews nothing, so it says so and links to where the model
- * is set (the AI provider section's Conversation review tab, which has no
- * link of its own), with the conversation page's link copy.
+ * minimum turns and the budget. A sweep that is on reviews nothing while AI
+ * features are off or without a conversation review model, so it says which,
+ * the master switch first as on the conversation page, and links to where
+ * to fix it with that page's link copy: the switch, or the model on the AI
+ * provider section's Conversation review tab, which has no link of its own.
  */
-function JudgeSettingsSummary({ saved, judgeConfigured }: { saved: JudgeSettings; judgeConfigured: boolean }) {
+function JudgeSettingsSummary({ saved, judgeConfigured, llmDisabled }: { saved: JudgeSettings; judgeConfigured: boolean; llmDisabled: boolean }) {
   const f = useFormat()
   const row = (key: string) => `settings-${SECTION_ID}-summary-${key}`
   const budget = saved.llmDailyCapJudgeUsd
-  const modelLink = REVIEW_BLOCKED_COPY.NOT_CONFIGURED.link
+  const blocked = llmDisabled ? "LLM_DISABLED" : judgeConfigured ? null : "NOT_CONFIGURED"
   return (
     <SettingsSummary data-testid={`settings-${SECTION_ID}-summary`}>
       <SettingsSummaryRow label="Nightly review" data-testid={row("nightly")}>
         {saved.judgeNightlyEnabled ? `On, at ${JUDGE_SWEEP_TIME} server time` : "Off"}
-        {saved.judgeNightlyEnabled && !judgeConfigured && (
+        {saved.judgeNightlyEnabled && blocked && (
           <>
-            , but no conversation review model is set up.{" "}
-            <Link href={modelLink.href} className="underline underline-offset-3" data-testid="settings-conversation-review-model-link">
-              {modelLink.label}
+            {SWEEP_BLOCKED[blocked].message}{" "}
+            <Link href={REVIEW_BLOCKED_COPY[blocked].link.href} className="underline underline-offset-3" data-testid={SWEEP_BLOCKED[blocked].linkTestId}>
+              {REVIEW_BLOCKED_COPY[blocked].link.label}
             </Link>
           </>
         )}
@@ -112,11 +119,14 @@ function JudgeSettingsSummary({ saved, judgeConfigured }: { saved: JudgeSettings
 export function JudgeNightlySection({
   saved,
   judgeConfigured,
+  llmDisabled,
   footerMeta,
 }: {
   saved: JudgeSettings
   /** An active `judge` provider exists. */
   judgeConfigured: boolean
+  /** `Config.llmDisabled`: while AI features are off the sweep queues nothing. */
+  llmDisabled: boolean
   footerMeta?: ReactNode
 }) {
   const toast = useToast()
@@ -182,7 +192,7 @@ export function JudgeNightlySection({
           setError(undefined)
         },
       }}
-      view={<JudgeSettingsSummary saved={saved} judgeConfigured={judgeConfigured} />}
+      view={<JudgeSettingsSummary saved={saved} judgeConfigured={judgeConfigured} llmDisabled={llmDisabled} />}
       footerMeta={footerMeta}
     >
       <div className="flex flex-col gap-6" data-testid="judge-settings">

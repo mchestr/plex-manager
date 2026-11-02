@@ -23,10 +23,10 @@ const mockSave = jest.mocked(saveJudgeSettings)
 
 const SAVED: JudgeSettings = { judgeNightlyEnabled: false, judgeSampleRate: 100, judgeMinTurns: 2, llmDailyCapJudgeUsd: 1 }
 
-function renderSection(saved: JudgeSettings = SAVED, judgeConfigured = true) {
+function renderSection(saved: JudgeSettings = SAVED, judgeConfigured = true, llmDisabled = false) {
   return render(
     <SettingsEditProvider onDirtyChange={jest.fn()}>
-      <JudgeNightlySection saved={saved} judgeConfigured={judgeConfigured} />
+      <JudgeNightlySection saved={saved} judgeConfigured={judgeConfigured} llmDisabled={llmDisabled} />
     </SettingsEditProvider>
   )
 }
@@ -86,6 +86,26 @@ describe("JudgeNightlySection", () => {
     expect(summaryRow("nightly")).toHaveTextContent(`On, at ${JUDGE_SWEEP_TIME} server time, but no conversation review model is set up.`)
     // The link names the AI provider section by its title
     expect(screen.getByRole("link", { name: "Set one up in AI provider settings, on the Conversation review tab" })).toHaveAttribute("href", "/admin/settings#ai")
+  })
+
+  it("warns when nightly reviews are on but AI features are off, before a missing model, with a link to the switch", () => {
+    renderSection({ ...SAVED, judgeNightlyEnabled: true }, false, true)
+
+    expect(summaryRow("nightly")).toHaveTextContent(
+      `On, at ${JUDGE_SWEEP_TIME} server time, but AI features are turned off. Turn them on in AI provider settings`
+    )
+    // The master switch comes first, as on the conversation page, so the missing model is not mentioned beside it
+    expect(summaryRow("nightly")).not.toHaveTextContent("model")
+    const link = screen.getByRole("link", { name: "Turn them on in AI provider settings" })
+    expect(link).toHaveAttribute("href", "/admin/settings#ai")
+    expect(link).toHaveAttribute("data-testid", "settings-conversation-review-switch-link")
+  })
+
+  it("gives no AI switch warning while nightly reviews are off", () => {
+    renderSection(SAVED, true, true)
+
+    expect(summaryRow("nightly")).toHaveTextContent(/Off$/)
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
   })
 
   it("gives no model warning while nightly reviews are off, or with a model", () => {
