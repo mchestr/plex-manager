@@ -143,6 +143,21 @@ describe("buildJudgePrompt", () => {
       expect(built.prompt).not.toContain(SECRET.slice(0, 4))
     })
 
+    it("are redacted from JSON nested too deep to walk, read as text, and the message keeps its index", () => {
+      // 4,000 nested arrays fit the assistant's 8,000-character input limit, and walking them overflows the stack
+      const deep = `{"password": "${SECRET}", "nested": ${"[".repeat(4_000)}${"]".repeat(4_000)}}`
+      const sent = deep.replace(SECRET, "[redacted]")
+
+      const built = build([message(0, deep), message(1, "That is a nested list.", [entry(deep, deep)])])
+
+      expect(built.window).toEqual(new Set([0, 1]))
+      expect(built.sentMessageText.get(0)).toBe(sent)
+      expect(built.prompt).toContain(`[#0 user]\n${sent}\n\n[#1 assistant]`)
+      expect(built.sentToolText.get(1)).toEqual([sent])
+      expect(built.prompt).toContain(`args: ${sent}\nresult: ${sent}\n</tool_result>`)
+      expect(built.prompt).not.toContain(SECRET)
+    })
+
     describe("split by an invisible character, which is removed before redacting", () => {
       const KEY = "f3a9c07e5b1d4e26a8c3"
       const PASSWORD = "Qv7pLx2mWn9k"

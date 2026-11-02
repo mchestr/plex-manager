@@ -147,6 +147,12 @@ describe("stripInvisible", () => {
     expect(stripInvisible(text)).toBe(text)
   })
 
+  it("reads JSON nested too deep to walk as text: what is written out is removed, an escape stays", () => {
+    const nested = (inner: string) => `${"[".repeat(4_000)}${inner}${"]".repeat(4_000)}`
+
+    expect(stripInvisible(nested('"pass\u00ADword\u0085\\u200b"'))).toBe(nested('"password \\u200b"'))
+  })
+
   it("changes nothing the second time", () => {
     for (const text of ["pass\u00ADword=x", '{"a": "pass\\u00adword=x", "b": "\u2060"}']) {
       const once = stripInvisible(text)

@@ -42,8 +42,9 @@
  * The prompt builder runs it on every piece it redacts, before
  * `redactCredentials`, so the redactor reads what the judge will get
  * (`lib/judge/build-prompt.ts`). JSON whose strings escape none keeps its
- * text as written. Text that does not parse, such as a cut tool result,
- * keeps an escape as the six characters the judge reads.
+ * text as written. Text that does not parse, such as a cut tool result, and
+ * JSON nested too deep for the walk (a `RangeError`) are read as text: an
+ * escape stays as the six characters the judge reads.
  *
  * ## Neutralising
  *
@@ -134,9 +135,15 @@ export function stripInvisible(text: string): string {
   } catch {
     return stripped
   }
-  const next = JSON.stringify(stripValue(parsed))
-  // JSON whose strings escape none keeps the text as written
-  return next === JSON.stringify(parsed) ? stripped : next
+  try {
+    const next = JSON.stringify(stripValue(parsed))
+    // JSON whose strings escape none keeps the text as written
+    return next === JSON.stringify(parsed) ? stripped : next
+  } catch (error) {
+    // Nested too deep for the walk: read as text, like text that does not parse
+    if (error instanceof RangeError) return stripped
+    throw error
+  }
 }
 
 /** The text with every tag, label, mark and note in it neutralised; see the module comment. */

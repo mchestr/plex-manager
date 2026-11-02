@@ -54,6 +54,11 @@
  * - what the redactor finds never reaches the judge, and a cut never keeps
  *   the start of a credential too short for it to find.
  *
+ * JSON nested too deep for either walk (a `RangeError`) is read as text:
+ * stripped as written, then redacted by `redactText`'s string rules
+ * (`lib/security/redact-text.ts`) over the whole of it, so the prompt still
+ * builds.
+ *
  * `sentMessageText` and `sentToolText` hold each piece exactly as the judge
  * got it (redacted, neutralised and cut), which `verify` matches quotes
  * against.
@@ -67,6 +72,7 @@ import { JUDGE_SYSTEM_PROMPT } from "@/lib/judge/prompts/v1"
 import { type ToolLogEntry } from "@/lib/judge/tool-log"
 import { type ChatTool } from "@/lib/llm/chat"
 import { redactCredentials } from "@/lib/mcp/redact"
+import { redactText } from "@/lib/security/redact-text"
 
 export type JudgeMessage = {
   id: string
@@ -114,8 +120,19 @@ const EARLIER_RESULT_LIMIT = 2_048
 type Drawn = { text: string; results: Map<number, string[]>; sent: Map<number, string> }
 
 const fenced = (tag: string, body: string) => `<${tag}>\n${body}\n</${tag}>`
+
+/** `redactCredentials`, or for JSON nested too deep for its walk, the string rules over the whole text. */
+function redact(text: string): string {
+  try {
+    return redactCredentials(text).text
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error
+    return redactText(text)
+  }
+}
+
 /** Text from the conversation or an earlier review, as the judge gets it before any cut; see "Redaction" in the module comment. */
-const forJudge = (text: string) => neutralise(redactCredentials(stripInvisible(text)).text)
+const forJudge = (text: string) => neutralise(redact(stripInvisible(text)))
 
 function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, reviewed: boolean) {
   const label = `[#${message.index} ${message.role}]${reviewed ? ` ${NOTES.reviewed}` : ""}`
