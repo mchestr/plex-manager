@@ -8,7 +8,7 @@ Date: 2026-11-01. Status: awaiting review.
 
 **Agreed during brainstorming:**
 
-- Scope is the admin assistant only (`lib/chatbot/`, conversations with no `DiscordChatSession`). Member Discord `/assistant` chats are out of scope: reviewing them would conflict with the member disclosure and with the admin tables hiding member message text. That is a separate decision for later.
+- Scope is the admin assistant only (`lib/chatbot/`, conversations with no `DiscordChatSession` that have stored a turn: `lastMessageAt` is set only by the admin assistant, and unlinking Discord ends a member's conversation once its last session goes). Member Discord `/assistant` chats are out of scope: reviewing them would conflict with the member disclosure and with the admin tables hiding member message text. That is a separate decision for later.
 - Fact checking needs evidence, so tool results are stored from now on. Conversations from before the change are reviewed transcript-only.
 - One structured judge call per conversation (`generateStructured`, new `judge` purpose). No tools for the judge, and no claim-extraction pipeline.
 - Automation is a nightly batch, off by default.
