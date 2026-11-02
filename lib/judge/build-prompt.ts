@@ -49,7 +49,8 @@
  *   is found, where redacting first would miss it and the neutralising would
  *   then join it back into a whole one;
  * - a tool log was redacted before it was stored, before anything was
- *   removed, so it is redacted again here, and stays JSON;
+ *   removed, so it is redacted again here, and a result that was JSON stays
+ *   JSON;
  * - what the redactor finds never reaches the judge, and a cut never keeps
  *   the start of a credential too short for it to find.
  *

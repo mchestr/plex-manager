@@ -30,7 +30,7 @@
  * {@link stripInvisible} removes them, and in a JSON text also the ones its
  * strings and keys escape (`\u200b`, as a server that escapes every non-ASCII
  * character writes them), which parsing turns into the characters themselves.
- * The prompt builder runs it on the conversation's pieces before
+ * The prompt builder runs it on every piece it redacts, before
  * `redactCredentials`, so the redactor reads what the judge will get
  * (`lib/judge/build-prompt.ts`). JSON whose strings escape none keeps its
  * text as written. Text that does not parse, such as a cut tool result,
