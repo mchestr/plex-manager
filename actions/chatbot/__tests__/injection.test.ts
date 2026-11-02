@@ -50,6 +50,7 @@ function turn(partial: Partial<Extract<ChatWithToolsResult, { ok: true }>>): Cha
 beforeEach(() => {
   mockReset(prismaMock)
   prismaMock.mcpServer.findMany.mockResolvedValue([])
+  prismaMock.skillSource.findMany.mockResolvedValue([])
   jest.mocked(getServerSession).mockResolvedValue(session)
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: false }))
   // Nothing spent today, so the spend caps let the calls through
