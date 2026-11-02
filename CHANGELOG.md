@@ -19,6 +19,30 @@ in `changelog.d/`. A pull request that touches `prisma/migrations/**`,
 the `breaking` label, must add one (the Changelog check); the `no-changelog`
 label skips it.
 
+## [0.9.0] - 2026-11-02
+
+### Upgrade notes
+
+- Take a `pg_dump -Fc` before you start the new release.
+- **AI activity:** Bookmarks to `/admin/llm-usage` need updating; the old path has no redirect.
+
+### Added
+
+- **Audit log:** **Admin > Audit log** lists every recorded event: who did it (a person or System), whom it was about, when, and a short summary. Filter by category, event, date range, person or member, and open an event to see its stored details. Support users can open the audit log too, but only admins see an event's stored details. Opening the audit log is itself recorded, at most once an hour for each viewer. A member's page has a new **Audit** tab with the events about or by that member.
+- **Last seen:** a daily job reads when each member last played something on Plex from Tautulli. The users list shows it in a new **Last seen** column, which you can sort and filter (for example "Not seen in 180 days"), and the member page shows it on the Overview tab. Last seen never moves back, so a Tautulli that loses history cannot make an active member look inactive.
+- **Inactive members:** **Admin > Inactive members** can remove Plex access from members who have not played anything for a number of days (180 by default). It is off until an admin turns it on. It never removes admins, the server owner, members with a role, exempt or paying members, or members that an admin excludes on their page. A scheduled run removes no one when more members qualify than its safety limit, or when Tautulli or Plex does not answer, or when Tautulli has recorded no play in 14 days. **Run now** asks you to confirm the number of members first. Each removal does the same as **Remove Plex access** and writes an audit row with the reason. See `docs/inactive-members.md`.
+- **Conversation judge:** a second model can review admin assistant conversations and record what the assistant got wrong: a wrong or unsupported fact, a wrong or missing tool, an unneeded refusal or a misread question. Admins start a review from a conversation's page, or turn on a nightly review of changed conversations (off by default). Each finding points at its message and can be marked fixed, won't fix or a false alarm. The judge has its own model and daily spend cap, and never reviews members' Discord chats. So the judge can check answers, the assistant now stores each answer's tool calls with the conversation, redacted and encrypted, and they go when the conversation does.
+- **MCP endpoint:** Plex Manager is now an MCP server at `/api/mcp`. Make a personal API token in Admin, Settings, API access, add it to Claude Code with the command shown, and Claude can run every admin action you can (make and send invites, look up members, change settings, retry jobs), with the same checks and audit entries as the admin UI. See `docs/mcp.md`.
+
+### Changed
+
+- **AI activity:** LLM usage is now AI activity, at `/admin/ai`.
+- **Database for last seen and the audit log:** the database gets each member's last seen date and exclusion flag, the inactivity settings and run history tables, and two new audit log indexes (by person, and by member over time), so the audit log pages stay fast.
+
+### Fixed
+
+- **Stopping after a Redis restart:** `docker stop` could take the whole grace period and exit with 1 when it came soon after Redis restarted, or while Redis was down. A queue worker waited on a Redis connection that was still reconnecting, and closing the Redis connection waited on commands queued for a Redis it could not reach. While a worker's Redis connections are not both connected, it now closes without waiting for its running jobs (BullMQ's stall check hands those to the next worker), and the Redis connection closes at once. When a stop does run out of time, the `Shutdown deadline passed` log line now names the tasks still running and their phase.
+
 ## [0.8.0] - 2026-10-29
 
 ### Upgrade notes
@@ -314,6 +338,7 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 - No account linking by email; the Jellyfin sign-in toggle is enforced; share routes serve a share-safe projection; a failed Tautulli match no longer shows emails; a Redis-backed rate limiter keys on the trusted proxy hop; generation is single-flight and rate-limited; the poster proxy checks access; `plexAuthToken` no longer reaches the admin browser.
 - The Discord bot no longer uses the Message Content intent, keeps its token encrypted in the database, and scrubs personal fields before the LLM.
 
+[0.9.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.9.0
 [0.8.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.8.0
 [0.7.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.7.0
 [0.6.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.6.0
