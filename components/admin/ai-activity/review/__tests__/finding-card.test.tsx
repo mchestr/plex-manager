@@ -80,6 +80,15 @@ describe('FindingCard', () => {
     }
   })
 
+  it('shows the focus ring while a link has focused it', () => {
+    render(<FindingCard finding={reviewFinding({ id: 'f1' })} />)
+
+    const card = screen.getByTestId('finding-card-f1')
+    // The ring tokens the app's focusable cards use, on :focus-visible only, so a click inside the card shows none
+    expect(card).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2', 'focus-visible:outline-ring')
+    expect(card).not.toHaveClass('outline-none')
+  })
+
   it('tells apart the triage controls of two findings of the same type by the message each points at', () => {
     render(
       <>

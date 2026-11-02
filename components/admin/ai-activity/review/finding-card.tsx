@@ -61,16 +61,22 @@ function FindingMessage({ findingId, labelId, message }: { findingId: string; la
  * the message it points at, and its triage. Every judge field is plain text,
  * since it quotes conversations and tool output. The card is the target of
  * the Findings tab's `#finding-<id>` link, and takes focus from it (see
- * `ReviewSection`) without joining the tab order. Its title and message
- * label describe the triage controls, which every card repeats, so two
- * findings of one type still differ by the message each points at.
+ * `ReviewSection`) without joining the tab order, showing the focus ring
+ * while a keyboard user is there. Its title and message label describe the
+ * triage controls, which every card repeats, so two findings of one type
+ * still differ by the message each points at.
  */
 export function FindingCard({ finding }: { finding: ReviewFinding }) {
   const unverified = finding.evidenceCheck === "unverified"
   const titleId = `finding-title-${finding.id}`
   const messageLabelId = `finding-message-label-${finding.id}`
   return (
-    <Card id={`finding-${finding.id}`} tabIndex={-1} className="scroll-mt-24 outline-none" data-testid={`finding-card-${finding.id}`}>
+    <Card
+      id={`finding-${finding.id}`}
+      tabIndex={-1}
+      className="scroll-mt-24 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      data-testid={`finding-card-${finding.id}`}
+    >
       <CardHeader>
         <CardTitle id={titleId}>{FINDING_TYPE_LABEL[finding.type]}</CardTitle>
         <CardDescription>{FINDING_SEVERITY_LABEL[finding.severity]} severity</CardDescription>
