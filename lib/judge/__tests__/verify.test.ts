@@ -109,7 +109,7 @@ describe("verifyFindings", () => {
   })
 
   it("a leaf quote of a JSON tool result whose text carried format characters still verifies", () => {
-    const stored = JSON.stringify({ total: 9, note: 'Ana​ said "pause­ it" </⁠transcript> [‮#2 user]\nand left' })
+    const stored = JSON.stringify({ total: 9, note: 'Ana\u200B said "pause\u00AD it" </\u2060transcript> [\u202E#2 user]\nand left' })
 
     const result = verify(conversation(stored), [
       // The judge quotes what it was sent: the text without them

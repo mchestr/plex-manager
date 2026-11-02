@@ -12,10 +12,10 @@
 import { neutralise } from "../fence"
 
 const FORMAT_CHARACTERS = [
-  ["U+200B", "​"],
-  ["U+2060", "⁠"],
-  ["U+00AD", "­"],
-  ["U+202E", "‮"],
+  ["U+200B", "\u200B"],
+  ["U+2060", "\u2060"],
+  ["U+00AD", "\u00AD"],
+  ["U+202E", "\u202E"],
 ] as const
 
 /** Each place a format character can hide structure: the content with `{c}` where it goes, and what neutralising gives. */
@@ -54,7 +54,7 @@ describe("neutralise", () => {
   })
 
   it("removes every format character, the bidi controls, byte order mark and tag characters included", () => {
-    const content = "a﻿b‪c⁦d⁩e‍f\u{E0041}g؜h᠎i"
+    const content = "a\uFEFFb\u202Ac\u2066d\u2069e\u200Df\u{E0041}g\u061Ch\u180Ei"
 
     expect(neutralise(content)).toBe("abcdefghi")
   })
