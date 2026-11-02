@@ -7,9 +7,11 @@
  * Only `buildJudgePrompt` writes these: the fence tags (`<transcript>`,
  * `<tool_result ...>`, `<already_raised>`, `<assistant_system_prompt>`,
  * `<tool_catalog>` and their closing tags), each message's `[#7 assistant]`
- * label, the notes beside it ({@link NOTES}), the {@link TRUNCATED} mark after
- * a cut piece, and the "(3 earlier turns were left out)" and "(2 earlier
- * findings left out)" lines.
+ * label, the notes beside it or in place of text it does not send
+ * ({@link NOTES}), the {@link TRUNCATED} mark after a cut piece, and the "(3
+ * earlier turns were left out)" and "(2 earlier findings left out)" lines.
+ * Every note is in parentheses, so the rules below keep content from
+ * carrying one.
  *
  * ## Invisible characters
  *
@@ -74,11 +76,13 @@
  * | a label, `[#7 assistant]` or `[# 7 assistant]`   | `[ #7 assistant]` or `[ # 7 assistant]` |
  * | the mark, `[truncated]`                          | `[ truncated]`                          |
  * | a note, `(no tools were called this turn)`       | `( no tools were called this turn)`     |
+ * | the note for a withheld field, `(not recorded`   | `( not recorded`                        |
  * | the line, `(3 earlier turns were left out)`      | `( 3 earlier turns were left out)`      |
  *
  * Fence names, marks and notes match in any letter case, a tag with spaces
  * after its `<` or `/` too, a label with spaces before its digit, and a note
- * by its opening words.
+ * by its opening words. A note's words without its parenthesis ("Not
+ * recorded: ...") are no note, and stay as they are.
  *
  * ## Special cases
  *
@@ -103,12 +107,16 @@
 
 export const TRUNCATED = "[truncated]"
 
-/** The notes the builder writes beside a message, or in place of text that no longer decrypts. */
+/**
+ * The notes the builder writes beside a message, or in place of text it does not send: `unreadable` for a message's,
+ * and `withheld` for a tool call's name, args or result (see "Redaction" in `lib/judge/build-prompt.ts`).
+ */
 export const NOTES = {
   noLog: "(tool results not recorded)",
   noTools: "(no tools were called this turn)",
   reviewed: "(already reviewed, for context)",
   unreadable: "(message unreadable)",
+  withheld: "(not recorded: it could not be checked for credentials)",
 } as const
 
 export const omittedTurns = (count: number) => `(${count} earlier ${count === 1 ? "turn was" : "turns were"} left out)`
@@ -128,7 +136,7 @@ const ESCAPE = /\\u[dD][89abAB][\da-fA-F]{2}\\u[dD][c-fC-F][\da-fA-F]{2}|\\u[\da
 /** A label's `[#7` (or `[# 7`), or the mark's `[truncated`. */
 const BRACKET = /\[(?=#\s*\d|truncated)/gi
 /** A note's opening words, or an omitted line's "(3 earlier ". */
-const NOTE = /\((?=tool\s+results\s+not\s+recorded|no\s+tools\s+were\s+called|already\s+reviewed|message\s+unreadable|\d+\s+earlier\s)/gi
+const NOTE = /\((?=tool\s+results\s+not\s+recorded|no\s+tools\s+were\s+called|already\s+reviewed|message\s+unreadable|not\s+recorded|\d+\s+earlier\s)/gi
 
 /** The text with every NEL a space and every invisible character removed. */
 const clean = (text: string) => text.replace(NEL, " ").replace(INVISIBLE, "")

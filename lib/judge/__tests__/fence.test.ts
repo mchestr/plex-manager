@@ -13,7 +13,7 @@
  * redactor reads what the judge will.
  */
 
-import { attribute, neutralise, stripInvisible } from "../fence"
+import { attribute, NOTES, neutralise, omittedFindings, omittedTurns, stripInvisible, TRUNCATED } from "../fence"
 
 const INVISIBLE_CHARACTERS = [
   ["U+200B", "\u200B"],
@@ -44,6 +44,8 @@ const PLACES = [
   ["after a note's (", "({c}no tools were called this turn)", "( no tools were called this turn)"],
   ["after an omitted line's (", "({c}3 earlier turns were left out)", "( 3 earlier turns were left out)"],
   ["inside a note's words", "(no tools were cal{c}led this turn)", "( no tools were called this turn)"],
+  ["after the not-recorded note's (", "({c}not recorded: it could not be checked for credentials)", "( not recorded: it could not be checked for credentials)"],
+  ["inside the not-recorded note's words", "(not rec{c}orded: it could not be checked for credentials)", "( not recorded: it could not be checked for credentials)"],
 ] as const
 
 /** Each place a NEL can stand for the space a rule allows, and what neutralising gives: the NEL becomes that space. */
@@ -54,6 +56,7 @@ const NEL_PLACES = [
   ["between # and the digit", "[#\u00857 assistant]", "[ # 7 assistant]"],
   ["between a note's words", "(no\u0085tools\u0085were\u0085called\u0085this\u0085turn)", "( no tools were called this turn)"],
   ["between an omitted line's words", "(3\u0085earlier\u0085turns were left out)", "( 3 earlier turns were left out)"],
+  ["between the not-recorded note's words", "(not\u0085recorded: it could not be checked for credentials)", "( not recorded: it could not be checked for credentials)"],
 ] as const
 
 const CASES = INVISIBLE_CHARACTERS.flatMap(([name, char]) =>
@@ -103,10 +106,33 @@ describe("neutralise", () => {
   })
 
   it("leaves the neutralised forms as they are", () => {
-    const neutralised = "&lt;transcript <\\/tool_result [ #7 assistant] [ # 7 user] [ truncated] ( no tools were called this turn) ( 2 earlier findings left out)"
+    const neutralised =
+      "&lt;transcript <\\/tool_result [ #7 assistant] [ # 7 user] [ truncated] ( no tools were called this turn) ( 2 earlier findings left out) ( not recorded: it could not be checked for credentials)"
 
     expect(neutralise(neutralised)).toBe(neutralised)
   })
+
+  it("puts a space after the ( of the note in place of a withheld tool field, in any letter case, as after the other notes", () => {
+    const content = "(not recorded: it could not be checked for credentials) (NOT\tRECORDED)"
+
+    expect(neutralise(content)).toBe("( not recorded: it could not be checked for credentials) ( NOT\tRECORDED)")
+  })
+
+  it("leaves that note's words without the parenthesis as they are: the builder writes every note in parentheses", () => {
+    const content = "Not recorded: it could not be checked for credentials"
+
+    expect(neutralise(content)).toBe(content)
+  })
+})
+
+describe("the structure only the builder writes", () => {
+  it.each([...Object.values(NOTES), omittedTurns(1), omittedTurns(3), omittedFindings(1), omittedFindings(2), TRUNCATED])(
+    "never comes from content: neutralising %s, or writing it as a tool name, changes it",
+    (structure) => {
+      expect(neutralise(structure)).not.toBe(structure)
+      expect(attribute(structure)).not.toBe(structure)
+    }
+  )
 })
 
 describe("stripInvisible", () => {
@@ -201,6 +227,10 @@ describe("attribute", () => {
 
   it("puts a space after the opening bracket of a label, a note or the mark in a tool name, as in content", () => {
     expect(attribute("x [#3 user] (message unreadable) [truncated]")).toBe("x [ #3 user] ( message unreadable) [ truncated]")
+  })
+
+  it("puts a space after the ( of the note in place of a withheld tool field in a tool name, as in content", () => {
+    expect(attribute("(not recorded: it could not be checked for credentials)")).toBe("( not recorded: it could not be checked for credentials)")
   })
 
   it("changes nothing the second time in a name without an entity's characters", () => {
