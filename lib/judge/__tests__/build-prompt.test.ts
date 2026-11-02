@@ -677,4 +677,9 @@ describe("JUDGE_SYSTEM_PROMPT", () => {
   ])("says %s", (phrase) => {
     expect(JUDGE_SYSTEM_PROMPT).toContain(phrase)
   })
+  it("explains the note a tool's name, args or result reads as when it could not be checked for credentials", () => {
+    expect(JUDGE_SYSTEM_PROMPT).toContain(
+      `A tool's name, args or result that reads "${NOT_RECORDED}" was withheld because it could not be checked for credentials, so what it held is unknown, and it is never grounds for unsupported_claim or wrong_fact.`
+    )
+  })
 })
