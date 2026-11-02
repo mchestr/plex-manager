@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { useTransition } from "react"
+import { useEffect, useTransition } from "react"
 
 import { getConversationReviewStatus, reviewConversation } from "@/actions/admin/conversation-review"
 import { FindingCard, type ReviewFinding } from "@/components/admin/ai-activity/review/finding-card"
@@ -29,10 +29,13 @@ const polling = (query: { state: { data?: ReviewStatus | null } }) => isPending(
  * the action, and only while the review is queued or running: the action
  * refreshes the page once it reads done or failed, so the poll stops there.
  * `enabled` is a function of the query, so `setQueryData` after Review starts
- * the poll without an immediate call.
+ * the poll without an immediate call. A failed call is not retried and stops
+ * the poll until the admin retries it. A refreshed page whose review is not
+ * the cached one (another admin or the nightly sweep started it) reseeds it.
  */
 function useReviewStatus(conversationId: string, review: ReviewView | null) {
-  return useQuery({
+  const queryClient = useQueryClient()
+  const query = useQuery({
     queryKey: queryKeys.conversationReview(conversationId),
     queryFn: async () => {
       const result = await getConversationReviewStatus({ conversationId })
@@ -42,27 +45,49 @@ function useReviewStatus(conversationId: string, review: ReviewView | null) {
     initialData: review ? { reviewId: review.id, status: review.status, errorCode: review.errorCode } : null,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
+    retry: false,
     enabled: polling,
-    refetchInterval: (query) => (polling(query) ? POLL_MS : false),
-  }).data
+    refetchInterval: (query) => (query.state.status !== "error" && polling(query) ? POLL_MS : false),
+  })
+
+  const reviewId = review?.id
+  const reviewStatus = review?.status
+  const reviewErrorCode = review?.errorCode ?? null
+  useEffect(() => {
+    if (reviewId === undefined || reviewStatus === undefined) return
+    const key = queryKeys.conversationReview(conversationId)
+    if (queryClient.getQueryData<ReviewStatus | null>(key)?.reviewId === reviewId) return
+    const seed: ReviewStatus = { reviewId, status: reviewStatus, errorCode: reviewErrorCode }
+    queryClient.setQueryData<ReviewStatus | null>(key, seed)
+  }, [queryClient, conversationId, reviewId, reviewStatus, reviewErrorCode])
+
+  return { status: query.data, failed: query.isError, retry: () => void query.refetch() }
 }
 
-/** A failure's fixed copy, with its settings link when it has one. */
+/** A failure's fixed copy, then its settings link when it has one. */
 function FailureCopy({ code }: { code: string | null }) {
   const copy = reviewErrorCopy(code)
   return (
     <>
       {copy.message}
-      {copy.href && (
+      {copy.link && (
         <>
           {" "}
-          <Link href={copy.href} className="underline underline-offset-3" data-testid="conversation-review-settings-link">
-            AI settings
+          <Link href={copy.link.href} className="underline underline-offset-3" data-testid="conversation-review-settings-link">
+            {copy.link.label}
           </Link>
         </>
       )}
     </>
   )
+}
+
+/** What the status region says: the review's progress, and its result once the page shows it. A failure is the Alert's to say. */
+function announcement(status: ReviewStatus | null | undefined, finished: boolean, findings: number): string {
+  if (status?.status === "queued") return "Review queued"
+  if (status?.status === "running") return "Reviewing the conversation"
+  if (!finished) return ""
+  return `Review finished, ${findings === 0 ? "no findings" : findings === 1 ? "1 finding" : `${findings} findings`}`
 }
 
 /** When the review finished, its model and cost, then its summary. */
@@ -102,8 +127,7 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
   const { showError } = useToast()
   const queryClient = useQueryClient()
   const [isStarting, startReview] = useTransition()
-  const status = useReviewStatus(conversationId, review)
-  const pending = isPending(status)
+  const { status, failed: statusFailed, retry: retryStatus } = useReviewStatus(conversationId, review)
   const current = review && status?.reviewId === review.id && status.status === "done" ? review : null
   // A queued review can carry the code of a failed attempt BullMQ is retrying, so only a failed one shows it
   const failure = status?.status === "failed" ? { code: status.errorCode } : null
@@ -139,7 +163,7 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
           size="sm"
           className="ml-auto"
           onClick={onReview}
-          disabled={blocked !== null || pending}
+          disabled={blocked !== null}
           loading={isStarting}
           loadingLabel="Starting"
           data-testid="conversation-review-button"
@@ -148,6 +172,17 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
         </Button>
       </div>
 
+      <p role="status" className="sr-only" data-testid="conversation-review-announcement">
+        {announcement(status, current !== null, findings.length)}
+      </p>
+      {statusFailed && (
+        <p className="text-ui text-muted-foreground" data-testid="conversation-review-status-error">
+          Could not check the review status.{" "}
+          <Button variant="link" size="sm" className="h-auto px-0" onClick={retryStatus} data-testid="conversation-review-status-retry">
+            Try again
+          </Button>
+        </p>
+      )}
       {blocked && failure?.code !== blocked && (
         <p className="text-ui text-muted-foreground">
           <FailureCopy code={blocked} />

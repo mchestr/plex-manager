@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { FindingRow } from "@/lib/data/conversation-findings"
-import { FINDING_SEVERITY_LABEL, FINDING_TYPE_LABEL } from "@/lib/ui/finding-labels"
+import { FINDING_SEVERITY_LABEL, FINDING_TYPE_LABEL, MESSAGE_ROLE_LABEL } from "@/lib/ui/finding-labels"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 
@@ -25,16 +25,16 @@ function Field({ label, children }: { label: string; children: string }) {
 }
 
 /**
- * The message the finding points at, labelled with the index and role the
- * judge's prompt gave it (`[#7 assistant]`), so a claim citing #7 matches.
- * Clamped to 6 lines until expanded.
+ * The message the finding points at, labelled "Message #7 · Assistant" with
+ * the index the judge's prompt gave it (`[#7 assistant]`), so a claim citing
+ * #7 matches. Clamped to 6 lines until expanded.
  */
 function FindingMessage({ findingId, message }: { findingId: string; message: ReviewFinding["message"] }) {
   const [expanded, setExpanded] = useState(false)
   return (
     <div className="flex flex-col gap-1 rounded-md border bg-muted/40 p-3">
       <p className="text-label text-muted-foreground">
-        Message #{message.index} ({message.role})
+        Message #{message.index} · {MESSAGE_ROLE_LABEL[message.role]}
       </p>
       <p
         className={cn("text-ui whitespace-pre-wrap wrap-anywhere text-foreground", !expanded && "line-clamp-6")}
@@ -59,14 +59,17 @@ function FindingMessage({ findingId, message }: { findingId: string; message: Re
 /**
  * One judge finding: type, severity, claim, evidence, suggestion and tool,
  * the message it points at, and its triage. Every judge field is plain text,
- * since it quotes conversations and tool output.
+ * since it quotes conversations and tool output. The card is the target of
+ * the Findings tab's `#finding-<id>` link, and its title describes the
+ * triage controls, which every card repeats.
  */
 export function FindingCard({ finding }: { finding: ReviewFinding }) {
   const unverified = finding.evidenceCheck === "unverified"
+  const titleId = `finding-title-${finding.id}`
   return (
-    <Card data-testid={`finding-card-${finding.id}`}>
+    <Card id={`finding-${finding.id}`} className="scroll-mt-24" data-testid={`finding-card-${finding.id}`}>
       <CardHeader>
-        <CardTitle>{FINDING_TYPE_LABEL[finding.type]}</CardTitle>
+        <CardTitle id={titleId}>{FINDING_TYPE_LABEL[finding.type]}</CardTitle>
         <CardDescription>{FINDING_SEVERITY_LABEL[finding.severity]} severity</CardDescription>
         {unverified && (
           <CardAction>
@@ -84,7 +87,7 @@ export function FindingCard({ finding }: { finding: ReviewFinding }) {
           {finding.tool && <Field label="Tool">{finding.tool}</Field>}
         </dl>
         <FindingMessage findingId={finding.id} message={finding.message} />
-        <FindingTriage findingId={finding.id} status={finding.status} note={finding.note} />
+        <FindingTriage findingId={finding.id} status={finding.status} note={finding.note} describedBy={titleId} />
       </CardContent>
     </Card>
   )

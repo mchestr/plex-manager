@@ -81,7 +81,8 @@ describe('ReviewSection states', () => {
     const badge = screen.getByTestId('conversation-review-status')
     expect(badge).toHaveTextContent(value === 'queued' ? 'Queued' : 'Reviewing')
     expect(badge.querySelector('[data-slot="spinner"]')).not.toBeNull()
-    expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
+    // Review stays enabled: it returns the open review, or reaps a dead one and queues anew
+    expect(screen.getByTestId('conversation-review-button')).toBeEnabled()
   })
 
   it('shows no failure copy for a queued review that carries a retried attempt\'s code', () => {
@@ -115,7 +116,11 @@ describe('ReviewSection states', () => {
     render({ review: view({ status: 'failed', errorCode: 'BUDGET_EXCEEDED', summary: null, completedAt: null }) })
 
     expect(screen.getByTestId('conversation-review-status')).toHaveTextContent('Failed')
-    expect(screen.getByRole('alert')).toHaveTextContent("Today's conversation review spending cap is reached.")
+    expect(screen.getByRole('alert')).toHaveTextContent('The Daily budget for conversation reviews is spent for today. Review again tomorrow.')
+    expect(within(screen.getByRole('alert')).getByRole('link', { name: 'Raise it in Conversation review settings' })).toHaveAttribute(
+      'href',
+      '/admin/settings#conversation-review'
+    )
     expect(screen.getByTestId('conversation-review-button')).toHaveTextContent('Review again')
     expect(screen.getByTestId('conversation-review-button')).toBeEnabled()
   })
@@ -124,7 +129,11 @@ describe('ReviewSection states', () => {
     render({ judgeConfigured: false })
 
     expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
-    expect(screen.getByRole('link', { name: 'AI settings' })).toHaveAttribute('href', '/admin/settings#ai')
+    // The message ends before the link, so its words are not read twice
+    expect(screen.getByTestId('conversation-review-section')).toHaveTextContent(
+      'No conversation review model is set up. Set one up in AI settings, on the Conversation review tab'
+    )
+    expect(screen.getByRole('link', { name: 'Set one up in AI settings, on the Conversation review tab' })).toHaveAttribute('href', '/admin/settings#ai')
   })
 
   it('disables the button while AI features are off and says so first, with a link to the AI settings', () => {
@@ -132,16 +141,16 @@ describe('ReviewSection states', () => {
 
     expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
     const section = screen.getByTestId('conversation-review-section')
-    expect(section).toHaveTextContent('AI features are turned off. Turn them on to review conversations.')
+    expect(section).toHaveTextContent('AI features are turned off. Turn them on in AI settings')
     // The master switch comes first, so the missing model is not mentioned beside it
     expect(section).not.toHaveTextContent('No conversation review model is set up')
-    expect(screen.getByRole('link', { name: 'AI settings' })).toHaveAttribute('href', '/admin/settings#ai')
+    expect(screen.getByRole('link', { name: 'Turn them on in AI settings' })).toHaveAttribute('href', '/admin/settings#ai')
   })
 
   it('a review that failed with LLM_DISABLED says so once while AI features are still off', () => {
     render({ llmDisabled: true, review: view({ status: 'failed', errorCode: 'LLM_DISABLED', summary: null, completedAt: null }) })
 
-    expect(screen.getByRole('alert')).toHaveTextContent('AI features are turned off. Turn them on to review conversations.')
+    expect(screen.getByRole('alert')).toHaveTextContent('AI features are turned off. Turn them on in AI settings')
     expect(screen.getAllByText(/AI features are turned off/)).toHaveLength(1)
     expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
   })
@@ -150,7 +159,7 @@ describe('ReviewSection states', () => {
     render({ review: view({ status: 'failed', errorCode: 'NOT_CONFIGURED', summary: null }) })
 
     const alert = screen.getByRole('alert')
-    expect(within(alert).getByRole('link', { name: 'AI settings' })).toHaveAttribute('href', '/admin/settings#ai')
+    expect(within(alert).getByRole('link', { name: 'Set one up in AI settings, on the Conversation review tab' })).toHaveAttribute('href', '/admin/settings#ai')
   })
 
   it('a review with no tool evidence shows conversation-review-no-tool-evidence', () => {
@@ -270,7 +279,76 @@ describe('ReviewSection polling', () => {
     expect(screen.queryByText('Could not read the review status')).not.toBeInTheDocument()
     expect(screen.getByTestId('finding-card-f1')).toBeInTheDocument()
 
-    await advance(4_000)
+    // No retry and no further poll: the page says the check failed and offers one
+    expect(screen.getByTestId('conversation-review-status-error')).toHaveTextContent('Could not check the review status.')
+    await advance(60_000)
+    expect(getStatus).toHaveBeenCalledTimes(1)
+
+    getStatus.mockResolvedValue({ success: true, data: { reviewId: 'review-2', status: 'running', errorCode: null } })
+    await user.click(screen.getByTestId('conversation-review-status-retry'))
+    await badgeReads('Reviewing')
     expect(getStatus).toHaveBeenCalledTimes(2)
+    expect(screen.queryByTestId('conversation-review-status-error')).not.toBeInTheDocument()
+    // Polling picks up again
+    await advance(5_000)
+    expect(getStatus).toHaveBeenCalledTimes(3)
+  })
+
+  it('a refreshed page with a different review than the cached one seeds the status from it and polls', async () => {
+    getStatus.mockResolvedValue({ success: true, data: { reviewId: 'review-2', status: 'running', errorCode: null } })
+
+    const { rerender } = render({ review: view() })
+    expect(screen.getByTestId('conversation-review-status')).toHaveTextContent('Reviewed')
+
+    // Another admin or the nightly sweep started review-2, and a refresh brought it
+    rerender(
+      <ReviewSection
+        conversationId="chat-1"
+        review={view({ id: 'review-2', status: 'queued', summary: null, completedAt: null })}
+        findings={[]}
+        hasToolEvidence
+        judgeConfigured
+        llmDisabled={false}
+      />
+    )
+    await badgeReads('Queued')
+    await advance(5_000)
+    expect(getStatus).toHaveBeenCalledTimes(1)
+    await badgeReads('Reviewing')
+  })
+
+  it('keeps focus on Review after it starts a review, and the button stays enabled', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    review.mockResolvedValue({ success: true, data: { reviewId: 'review-2', status: 'queued' } })
+
+    render()
+    const button = screen.getByTestId('conversation-review-button')
+    await user.click(button)
+    await badgeReads('Queued')
+    // The start has settled: the button is no longer busy
+    await waitFor(() => expect(button).not.toHaveAttribute('aria-busy'))
+
+    expect(button).toBeEnabled()
+    expect(document.activeElement).toBe(button)
+  })
+
+  it('announces the review\'s progress and its result in a status region', async () => {
+    const replies = [status('running'), status('done')]
+    getStatus.mockImplementation(async () => replies.shift() ?? status('done'))
+
+    const { rerender } = render({ review: view({ status: 'queued', summary: null, completedAt: null }) })
+    const region = screen.getByTestId('conversation-review-announcement')
+    expect(region).toHaveAttribute('role', 'status')
+    expect(region).toHaveTextContent('Review queued')
+
+    await advance(5_000)
+    await waitFor(() => expect(region).toHaveTextContent('Reviewing the conversation'))
+    await advance(5_000)
+    await badgeReads('Reviewed')
+
+    // The poll's refresh brings the done review and its findings
+    const findings = [reviewFinding({ id: 'f1' }), reviewFinding({ id: 'f2' }), reviewFinding({ id: 'f3' })]
+    rerender(<ReviewSection conversationId="chat-1" review={view()} findings={findings} hasToolEvidence judgeConfigured llmDisabled={false} />)
+    expect(region).toHaveTextContent('Review finished, 3 findings')
   })
 })

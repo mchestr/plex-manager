@@ -16,20 +16,33 @@ interface FindingTriageProps {
   findingId: string
   status: FindingStatus
   note: string | null
+  /** The id of the card's title, so each control says which finding it triages. */
+  describedBy: string
 }
 
 /**
  * A finding's status and note. Choosing a status saves it at once; the note
- * saves through its own button. `setFindingStatus` refreshes the page, so
- * nothing here invalidates a query. A failed save shows the action's error
- * in a toast and puts the status back.
+ * saves through its own button and sends no status, so it never re-triages
+ * the finding. `setFindingStatus` refreshes the page, so nothing here
+ * invalidates a query, and the stored status and note the refresh brings
+ * replace the local ones. A failed save shows the action's error in a toast
+ * and puts the status back. The Select stays enabled while it saves, so
+ * keyboard focus stays on it.
  */
-export function FindingTriage({ findingId, status, note }: FindingTriageProps) {
+export function FindingTriage({ findingId, status, note, describedBy }: FindingTriageProps) {
   const { showError } = useToast()
   const [value, setValue] = useState(status)
   const [draft, setDraft] = useState(note ?? "")
-  const [isSaving, startSaving] = useTransition()
+  const [stored, setStored] = useState({ status, note })
+  const [, startSaving] = useTransition()
   const [isSavingNote, startSavingNote] = useTransition()
+
+  // A refresh brought a different stored status or note: show it
+  if (stored.status !== status || stored.note !== note) {
+    setStored({ status, note })
+    setValue(status)
+    setDraft(note ?? "")
+  }
 
   const changeStatus = (next: FindingStatus | null) => {
     if (!next || next === value) return
@@ -45,17 +58,22 @@ export function FindingTriage({ findingId, status, note }: FindingTriageProps) {
   }
 
   const saveNote = () => {
+    const saved = draft.trim()
     startSavingNote(async () => {
-      const result = await setFindingStatus({ findingId, status: value, note: draft.trim() })
-      if (!result.success) showError(result.error)
+      const result = await setFindingStatus({ findingId, note: saved })
+      if (!result.success) {
+        showError(result.error)
+        return
+      }
+      setDraft(saved)
     })
   }
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
       <div className="sm:w-44">
-        <Select items={STATUS_ITEMS} value={value} onValueChange={changeStatus} disabled={isSaving}>
-          <SelectTrigger aria-label="Status" data-testid={`finding-status-select-${findingId}`}>
+        <Select items={STATUS_ITEMS} value={value} onValueChange={changeStatus}>
+          <SelectTrigger aria-label="Status" aria-describedby={describedBy} data-testid={`finding-status-select-${findingId}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -70,6 +88,7 @@ export function FindingTriage({ findingId, status, note }: FindingTriageProps) {
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <Textarea
           aria-label="Note"
+          aria-describedby={describedBy}
           placeholder="Add a note (optional)"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
@@ -84,6 +103,7 @@ export function FindingTriage({ findingId, status, note }: FindingTriageProps) {
           onClick={saveNote}
           loading={isSavingNote}
           loadingLabel="Saving"
+          aria-describedby={describedBy}
           data-testid={`finding-note-save-${findingId}`}
         >
           Save note

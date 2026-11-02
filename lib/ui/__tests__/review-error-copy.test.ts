@@ -32,13 +32,34 @@ describe("reviewErrorCopy", () => {
     expect(new Set(messages).size).toBe(CODES.length)
     expect(messages).not.toContain(fallback.message)
     expect(reviewErrorCopy(null)).toEqual(fallback)
-    expect(fallback.href).toBeUndefined()
+    expect(fallback.link).toBeUndefined()
   })
 
-  it("links NOT_CONFIGURED and LLM_DISABLED, and only them, to the AI settings", () => {
-    expect(reviewErrorCopy("NOT_CONFIGURED").href).toBe("/admin/settings#ai")
-    expect(reviewErrorCopy("LLM_DISABLED")).toEqual({ message: "AI features are turned off. Turn them on to review conversations.", href: "/admin/settings#ai" })
-    expect(CODES.filter((code) => reviewErrorCopy(code).href !== undefined)).toEqual(["NOT_CONFIGURED", "LLM_DISABLED"])
+  it("links the model, the switch and the budget to where each is set, and only them", () => {
+    expect(reviewErrorCopy("NOT_CONFIGURED")).toEqual({
+      message: "No conversation review model is set up.",
+      link: { href: "/admin/settings#ai", label: "Set one up in AI settings, on the Conversation review tab" },
+    })
+    expect(reviewErrorCopy("LLM_DISABLED")).toEqual({
+      message: "AI features are turned off.",
+      link: { href: "/admin/settings#ai", label: "Turn them on in AI settings" },
+    })
+    expect(reviewErrorCopy("BUDGET_EXCEEDED")).toEqual({
+      message: "The Daily budget for conversation reviews is spent for today. Review again tomorrow.",
+      link: { href: "/admin/settings#conversation-review", label: "Raise it in Conversation review settings" },
+    })
+    expect(CODES.filter((code) => reviewErrorCopy(code).link !== undefined)).toEqual(["NOT_CONFIGURED", "BUDGET_EXCEEDED", "LLM_DISABLED"])
+  })
+
+  it("ends each message before its link, and calls the cap the Daily budget", () => {
+    for (const code of CODES) {
+      const { message, link } = reviewErrorCopy(code)
+      expect(message).toMatch(/\.$/)
+      // The link carries its own words, so the message never repeats them
+      if (link) expect(message).not.toContain(link.label)
+      expect(message).not.toMatch(/spending cap|spend cap/i)
+    }
+    expect(reviewErrorCopy("BUDGET_UNAVAILABLE").message).toContain("Daily budget")
   })
 
   it("never echoes the code or other text it was given", () => {

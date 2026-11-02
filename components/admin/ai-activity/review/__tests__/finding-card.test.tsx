@@ -41,7 +41,7 @@ describe('FindingCard', () => {
     const content = 'Line one\n**not bold**\n<a href="https://evil.example">x</a>\nfour\nfive\nsix\nseven'
     render(<FindingCard finding={reviewFinding({ id: 'f1', message: { index: 7, role: 'assistant', content } })} />)
 
-    expect(screen.getByText('Message #7 (assistant)')).toBeInTheDocument()
+    expect(screen.getByText('Message #7 · Assistant')).toBeInTheDocument()
     const text = screen.getByTestId('finding-message-f1')
     expect(text.textContent).toBe(content)
     expect(text).toHaveClass('line-clamp-6')
@@ -60,7 +60,20 @@ describe('FindingCard', () => {
   it('labels a user message', () => {
     render(<FindingCard finding={reviewFinding({ id: 'f1', message: { index: 0, role: 'user', content: 'How many?' } })} />)
 
-    expect(screen.getByText('Message #0 (user)')).toBeInTheDocument()
+    expect(screen.getByText('Message #0 · User')).toBeInTheDocument()
+  })
+
+  it('is the target of a finding-<id> link, below the sticky header, and its triage controls name it', () => {
+    render(<FindingCard finding={reviewFinding({ id: 'f1' })} />)
+
+    const card = screen.getByTestId('finding-card-f1')
+    expect(card).toHaveAttribute('id', 'finding-f1')
+    expect(card).toHaveClass('scroll-mt-24')
+    const title = screen.getByRole('heading', { name: 'Wrong fact' })
+    expect(title).toHaveAttribute('id', 'finding-title-f1')
+    for (const testId of ['finding-status-select-f1', 'finding-note-f1', 'finding-note-save-f1']) {
+      expect(screen.getByTestId(testId)).toHaveAttribute('aria-describedby', 'finding-title-f1')
+    }
   })
 
   it('a not_applicable finding reads "No quote needed"', () => {
