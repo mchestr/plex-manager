@@ -19,6 +19,7 @@ import "server-only"
 import { assertAdmin } from "@/lib/admin"
 import { FINDING_SELECT, type FindingRow } from "@/lib/data/conversation-findings"
 import type { ConversationReviewStatus, ConversationReviewTrigger } from "@/lib/generated/prisma/client"
+import { isLlmDisabled } from "@/lib/judge/guards"
 import { REVIEWABLE_CONVERSATION } from "@/lib/judge/scope"
 import { prisma } from "@/lib/prisma"
 import { auditMemberRead } from "@/lib/security/audit-log"
@@ -50,16 +51,21 @@ export type ReviewBadge = { state: "none" | "clean" | "open" | "unverified_only"
  * such a log as not recorded (`parseToolLog` in `lib/judge/tool-log.ts` reads
  * it as null, which `lib/judge/build-prompt.ts` shows as "tool results not
  * recorded").
+ *
+ * `llmDisabled` is the master AI features switch (`isLlmDisabled`,
+ * `lib/judge/guards.ts`): while it is off no review can start, whatever
+ * `judgeConfigured` says, and the page says so.
  */
 export async function getConversationReview(conversationId: string): Promise<{
   review: ReviewView | null
   findings: Array<FindingRow & { message: { index: number; role: "user" | "assistant"; content: string } }>
   hasToolEvidence: boolean
   judgeConfigured: boolean
+  llmDisabled: boolean
   reviewable: boolean
 }> {
   const session = await assertAdmin()
-  const [owner, latest, order, findings, toolTurns, judge, conversation] = await Promise.all([
+  const [owner, latest, order, findings, toolTurns, judge, conversation, llmDisabled] = await Promise.all([
     prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { userId: true } }),
     prisma.conversationReview.findFirst({
       where: { conversationId },
@@ -72,6 +78,7 @@ export async function getConversationReview(conversationId: string): Promise<{
     prisma.chatConversationMessage.count({ where: { conversationId, role: "assistant", toolLog: { not: null } } }),
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "judge" }, select: { id: true } }),
     prisma.chatConversation.findFirst({ where: { id: conversationId, ...REVIEWABLE_CONVERSATION }, select: { id: true } }),
+    isLlmDisabled(),
   ])
   const messageIds = [...new Set(findings.flatMap((finding) => (finding.messageId ? [finding.messageId] : [])))]
   const [usage, messages] = await Promise.all([
@@ -98,6 +105,7 @@ export async function getConversationReview(conversationId: string): Promise<{
     findings: withMessages,
     hasToolEvidence: toolTurns > 0,
     judgeConfigured: judge !== null,
+    llmDisabled,
     reviewable: conversation !== null,
   }
 }

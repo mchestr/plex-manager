@@ -12,7 +12,7 @@
 
 import { mockReset } from "jest-mock-extended"
 
-import { buildConversationFinding, buildConversationReview } from "@/__tests__/helpers/factories"
+import { buildConfig, buildConversationFinding, buildConversationReview } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { selected } from "@/__tests__/helpers/prisma-select"
 import { assertAdmin } from "@/lib/admin"
@@ -117,6 +117,14 @@ describe("getConversationReview", () => {
 
     expect(prismaMock.lLMProvider.findFirst).toHaveBeenCalledWith({ where: { isActive: true, purpose: "judge" }, select: { id: true } })
     expect(prismaMock.chatConversation.findFirst).toHaveBeenCalledWith({ where: { id: "conversation-1", ...REVIEWABLE_CONVERSATION }, select: { id: true } })
+  })
+
+  it("llmDisabled reports the AI features switch, so the page can say AI features are off", async () => {
+    expect((await getConversationReview("conversation-1")).llmDisabled).toBe(false)
+
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: true }))
+    expect(await getConversationReview("conversation-1")).toMatchObject({ llmDisabled: true, judgeConfigured: true })
+    expect(prismaMock.config.findUnique).toHaveBeenCalledWith({ where: { id: "config" }, select: { llmDisabled: true } })
   })
 
   it("has tool evidence when an assistant message has a tool log, an empty one included", async () => {

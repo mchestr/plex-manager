@@ -87,6 +87,8 @@ interface ReviewSectionProps {
   findings: ReviewFinding[]
   hasToolEvidence: boolean
   judgeConfigured: boolean
+  /** `Config.llmDisabled`: while AI features are off no review can start. */
+  llmDisabled: boolean
 }
 
 /**
@@ -96,7 +98,7 @@ interface ReviewSectionProps {
  * the review the status describes, so a new review never shows the last
  * one's summary, model or cost.
  */
-export function ReviewSection({ conversationId, review, findings, hasToolEvidence, judgeConfigured }: ReviewSectionProps) {
+export function ReviewSection({ conversationId, review, findings, hasToolEvidence, judgeConfigured, llmDisabled }: ReviewSectionProps) {
   const { showError } = useToast()
   const queryClient = useQueryClient()
   const [isStarting, startReview] = useTransition()
@@ -105,6 +107,8 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
   const current = review && status?.reviewId === review.id && status.status === "done" ? review : null
   // A queued review can carry the code of a failed attempt BullMQ is retrying, so only a failed one shows it
   const failure = status?.status === "failed" ? { code: status.errorCode } : null
+  // Why no review can start, the master AI switch first; null when one can
+  const blocked = llmDisabled ? "LLM_DISABLED" : judgeConfigured ? null : "NOT_CONFIGURED"
 
   const onReview = () => {
     startReview(async () => {
@@ -135,7 +139,7 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
           size="sm"
           className="ml-auto"
           onClick={onReview}
-          disabled={!judgeConfigured || pending}
+          disabled={blocked !== null || pending}
           loading={isStarting}
           loadingLabel="Starting"
           data-testid="conversation-review-button"
@@ -144,9 +148,9 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
         </Button>
       </div>
 
-      {!judgeConfigured && failure?.code !== "NOT_CONFIGURED" && (
+      {blocked && failure?.code !== blocked && (
         <p className="text-ui text-muted-foreground">
-          <FailureCopy code="NOT_CONFIGURED" />
+          <FailureCopy code={blocked} />
         </p>
       )}
       {failure && (

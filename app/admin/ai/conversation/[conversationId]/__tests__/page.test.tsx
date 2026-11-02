@@ -18,9 +18,9 @@ jest.mock('@/lib/settings/app-settings', () => ({
 }))
 jest.mock('@/lib/data/conversation-review', () => ({ getConversationReview: jest.fn() }))
 jest.mock('@/components/admin/ai-activity/review/review-section', () => ({
-  ReviewSection: ({ conversationId, findings }: { conversationId: string; findings: unknown[] }) => (
+  ReviewSection: ({ conversationId, findings, llmDisabled }: { conversationId: string; findings: unknown[]; llmDisabled: boolean }) => (
     <section data-testid="conversation-review-section">
-      {conversationId}: {findings.length} findings
+      {conversationId}: {findings.length} findings{llmDisabled ? ', AI features off' : ''}
     </section>
   ),
 }))
@@ -31,8 +31,8 @@ jest.mock('@/components/admin/ai-activity/expandable-prompt', () => ({
 const mockGetLLMUsageRecords = getLLMUsageRecords as jest.Mock
 const mockGetConversationReview = jest.mocked(getConversationReview)
 
-function reviewData(reviewable: boolean) {
-  return { review: null, findings: [], hasToolEvidence: true, judgeConfigured: true, reviewable }
+function reviewData(reviewable: boolean, llmDisabled = false) {
+  return { review: null, findings: [], hasToolEvidence: true, judgeConfigured: true, llmDisabled, reviewable }
 }
 
 function call(id: string, createdAt: string, prompt: string | null) {
@@ -129,6 +129,14 @@ describe('Admin AI activity conversation page', () => {
 
     expect(screen.getByText('No calls')).toBeInTheDocument()
     expect(screen.getByTestId('conversation-review-section')).toHaveTextContent('chat-1: 0 findings')
+  })
+
+  it('tells the review section when AI features are off', async () => {
+    mockGetConversationReview.mockResolvedValue(reviewData(true, true))
+    mockGetLLMUsageRecords.mockResolvedValue({ records: [] })
+    await renderPage()
+
+    expect(screen.getByTestId('conversation-review-section')).toHaveTextContent('chat-1: 0 findings, AI features off')
   })
 
   it('leaves the review section out of a conversation that cannot be reviewed', async () => {

@@ -12,7 +12,9 @@
  * - `enqueueReview` refuses with `LLM_DISABLED`, before a review exists;
  * - the nightly sweep stops at `disabled` (`lib/judge/sweep.ts`);
  * - a review queued before the switch went off fails with `LLM_DISABLED`
- *   just before its call (below), so jobs already in the queue send nothing.
+ *   just before its call (below), so jobs already in the queue send nothing;
+ * - the conversation page says so and turns Review off
+ *   (`getConversationReview`'s `llmDisabled`).
  *
  * ## Before the call
  *

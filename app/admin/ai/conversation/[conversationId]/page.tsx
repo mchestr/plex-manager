@@ -57,6 +57,7 @@ export default async function LLMConversationPage({ params }: { params: Promise<
       findings={judged.findings}
       hasToolEvidence={judged.hasToolEvidence}
       judgeConfigured={judged.judgeConfigured}
+      llmDisabled={judged.llmDisabled}
     />
   )
 

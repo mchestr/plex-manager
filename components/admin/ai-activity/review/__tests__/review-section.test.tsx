@@ -45,7 +45,7 @@ type Props = Partial<Parameters<typeof ReviewSection>[0]>
 
 function render(props: Props = {}) {
   return rtlRender(
-    <ReviewSection conversationId="chat-1" review={null} findings={[]} hasToolEvidence judgeConfigured {...props} />,
+    <ReviewSection conversationId="chat-1" review={null} findings={[]} hasToolEvidence judgeConfigured llmDisabled={false} {...props} />,
     { wrapper: createQueryWrapper() }
   )
 }
@@ -125,6 +125,25 @@ describe('ReviewSection states', () => {
 
     expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
     expect(screen.getByRole('link', { name: 'AI settings' })).toHaveAttribute('href', '/admin/settings#ai')
+  })
+
+  it('disables the button while AI features are off and says so first, with a link to the AI settings', () => {
+    render({ llmDisabled: true, judgeConfigured: false })
+
+    expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
+    const section = screen.getByTestId('conversation-review-section')
+    expect(section).toHaveTextContent('AI features are turned off. Turn them on to review conversations.')
+    // The master switch comes first, so the missing model is not mentioned beside it
+    expect(section).not.toHaveTextContent('No conversation review model is set up')
+    expect(screen.getByRole('link', { name: 'AI settings' })).toHaveAttribute('href', '/admin/settings#ai')
+  })
+
+  it('a review that failed with LLM_DISABLED says so once while AI features are still off', () => {
+    render({ llmDisabled: true, review: view({ status: 'failed', errorCode: 'LLM_DISABLED', summary: null, completedAt: null }) })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('AI features are turned off. Turn them on to review conversations.')
+    expect(screen.getAllByText(/AI features are turned off/)).toHaveLength(1)
+    expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
   })
 
   it('NOT_CONFIGURED copy links to the LLM settings', () => {
