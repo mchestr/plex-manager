@@ -44,11 +44,12 @@
 
 export const TRUNCATED = "[truncated]"
 
-/** The notes the builder writes beside a message. */
+/** The notes the builder writes beside a message, or in place of text that no longer decrypts. */
 export const NOTES = {
   noLog: "(tool results not recorded)",
   noTools: "(no tools were called this turn)",
   reviewed: "(already reviewed, for context)",
+  unreadable: "(message unreadable)",
 } as const
 
 export const omittedTurns = (count: number) => `(${count} earlier ${count === 1 ? "turn was" : "turns were"} left out)`
@@ -59,7 +60,7 @@ const OPEN_TAG = new RegExp(`<(?=\\s*(?:${FENCES}))`, "gi")
 /** A label's `[#7` or the mark's `[truncated`. */
 const BRACKET = /\[(?=#\d|truncated)/gi
 /** A note's opening words, or the omitted line's "(3 earlier ". */
-const NOTE = /\((?=tool\s+results\s+not\s+recorded|no\s+tools\s+were\s+called|already\s+reviewed|\d+\s+earlier\s)/gi
+const NOTE = /\((?=tool\s+results\s+not\s+recorded|no\s+tools\s+were\s+called|already\s+reviewed|message\s+unreadable|\d+\s+earlier\s)/gi
 
 /** The text with every tag, label, mark and note in it neutralised; see the module comment. */
 export function neutralise(text: string): string {

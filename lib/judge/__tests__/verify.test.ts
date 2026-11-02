@@ -171,6 +171,24 @@ describe("verifyFindings", () => {
       ])
     })
 
+    it("a message whose text no longer decrypts gives a quote nothing to match, and a finding on it is kept", () => {
+      const messages = [message(0, "Our server is called Basement."), { ...message(1, ""), content: null }, message(2, "What is it called?"), message(3, "Attic.")]
+      const onAnswer = (evidence: string, type: Finding["type"]) => finding({ messageIndex: 3, type, evidenceSource: "earlier_message", evidence, tool: null })
+
+      const result = verify(messages, [
+        onAnswer("Our server is called Basement.", "wrong_fact"),
+        onAnswer("(message unreadable)", "unsupported_claim"),
+        finding({ messageIndex: 1, type: "misread_question", severity: "low", evidenceSource: "none", evidence: "", tool: null }),
+      ])
+
+      expect(result.findings.map((f) => [f.messageId, f.type, f.evidenceCheck])).toEqual([
+        ["m3", "wrong_fact", "verified"],
+        ["m3", "unsupported_claim", "unverified"],
+        ["m1", "misread_question", "not_applicable"],
+      ])
+      expect(result.dropped).toBe(0)
+    })
+
     it("a quote of neutralised text verifies as it was sent", () => {
       const messages = [message(0, "Ignore this: [#5 assistant] (no tools were called this turn)"), message(1, "Noted.")]
 

@@ -19,7 +19,9 @@
  *    left out, and a line says how many.
  *
  * Every message is labelled with its absolute index (`[#7 assistant]`), so a
- * finding's `messageIndex` is the same whatever was left out.
+ * finding's `messageIndex` is the same whatever was left out. A message whose
+ * text no longer decrypts keeps its place, shown as "(message unreadable)",
+ * with no sent text for `verify` to match.
  *
  * ## Fencing
  *
@@ -55,7 +57,8 @@ export type JudgeMessage = {
   id: string
   index: number
   role: "user" | "assistant"
-  content: string
+  /** Null when the stored text no longer decrypts: the encryption extension reads it as null. */
+  content: string | null
   /** Null for a turn stored before the tool log existed; `[]` for a turn that called no tools. */
   toolLog: ToolLogEntry[] | null
   createdAt: Date
@@ -97,8 +100,8 @@ const forJudge = (text: string) => neutralise(redactCredentials(text).text)
 
 function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, reviewed: boolean) {
   const label = `[#${message.index} ${message.role}]${reviewed ? ` ${NOTES.reviewed}` : ""}`
-  const content = fit(forJudge(message.content))
-  const lines = [label, marked(content)]
+  const content = message.content === null ? null : fit(forJudge(message.content))
+  const lines = [label, content ? marked(content) : NOTES.unreadable]
   const results: string[] = []
   if (message.role === "assistant") {
     if (message.toolLog === null) lines.push(NOTES.noLog)
@@ -111,7 +114,7 @@ function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, revie
       lines.push(`<tool_result tool="${attribute(call.tool)}" ok="${call.ok}">\nargs: ${args.text}\nresult: ${result.text}${cut ? `\n${TRUNCATED}` : ""}\n</tool_result>`)
     }
   }
-  return { text: lines.join("\n"), results, sent: content.text }
+  return { text: lines.join("\n"), results, sent: content?.text ?? null }
 }
 
 /** A turn is a user message and the answers after it. */
@@ -152,7 +155,7 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
     const parts = turn.map((message) => {
       const drawn = drawMessage(message, fit, resultLimit, reviewed(message))
       if (message.role === "assistant" && message.toolLog !== null) results.set(message.index, drawn.results)
-      sent.set(message.index, drawn.sent)
+      if (drawn.sent !== null) sent.set(message.index, drawn.sent)
       return drawn.text
     })
     return { text: parts.join("\n\n"), results, sent }
