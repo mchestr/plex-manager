@@ -5,7 +5,8 @@
  *
  * ## Process
  *
- * 1. No active `judge` provider: `UNAVAILABLE`.
+ * 1. AI features off (`Config.llmDisabled`): `LLM_DISABLED`. No active
+ *    `judge` provider: `UNAVAILABLE`. Neither creates a review.
  * 2. Read the BullMQ states of the conversation's `queued` reviews, before
  *    any transaction: a slow Redis never holds row locks.
  * 3. In one transaction, first take the conversation's row lock (writing
@@ -28,6 +29,7 @@
 
 import type { JobState } from "bullmq"
 
+import { isLlmDisabled } from "@/lib/judge/guards"
 import { REVIEWABLE_CONVERSATION } from "@/lib/judge/scope"
 import { markReviewFailed, readQueuedJobStates, reapStaleReviews } from "@/lib/judge/stale"
 import { prisma } from "@/lib/prisma"
@@ -44,7 +46,7 @@ type EnqueueReviewDeps = {
 }
 
 type OpenReview = { ok: true; reviewId: string; status: "queued" | "running"; created: boolean }
-type Refused = { ok: false; code: "NOT_FOUND" | "CONFLICT" | "UNAVAILABLE" | "QUEUE_UNAVAILABLE" }
+type Refused = { ok: false; code: "NOT_FOUND" | "CONFLICT" | "LLM_DISABLED" | "UNAVAILABLE" | "QUEUE_UNAVAILABLE" }
 
 async function addJob(deps: EnqueueReviewDeps, reviewId: string): Promise<boolean> {
   try {
@@ -58,7 +60,11 @@ async function addJob(deps: EnqueueReviewDeps, reviewId: string): Promise<boolea
 /** Queues a review of `conversationId`, or returns its open one; see the module docs. */
 export async function enqueueReview(input: EnqueueReviewInput, deps: EnqueueReviewDeps): Promise<OpenReview | Refused> {
   const { conversationId } = input
-  const provider = await prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "judge" }, select: { id: true } })
+  const [disabled, provider] = await Promise.all([
+    isLlmDisabled(),
+    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "judge" }, select: { id: true } }),
+  ])
+  if (disabled) return { ok: false, code: "LLM_DISABLED" }
   if (!provider) return { ok: false, code: "UNAVAILABLE" }
 
   const jobStates = await readQueuedJobStates(conversationId, deps.getJobState)

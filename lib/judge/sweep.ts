@@ -168,6 +168,8 @@ async function queueAll(candidates: string[], deps: Parameters<typeof enqueueRev
     if (!(await checkJudgeSpend()).ok) return { queued, skipped, stoppedBy: "cap" }
     const outcome = await enqueueReview({ conversationId, trigger: "nightly", requestedById: null }, deps)
     if (!outcome.ok && outcome.code === "UNAVAILABLE") return { queued, skipped, stoppedBy: "no-provider" }
+    // AI features were turned off after the sweep read its settings
+    if (!outcome.ok && outcome.code === "LLM_DISABLED") return { queued, skipped, stoppedBy: "disabled" }
     if (outcome.ok && outcome.created) queued += 1
     else skipped += 1
   }

@@ -13,7 +13,7 @@ import { getServerSession } from "next-auth"
 import { mockReset } from "jest-mock-extended"
 
 import { getConversationReviewStatus, reviewConversation, setFindingStatus } from "@/actions/admin/conversation-review"
-import { buildConversationFinding, buildConversationReview } from "@/__tests__/helpers/factories"
+import { buildConfig, buildConversationFinding, buildConversationReview } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { useReviewTable } from "@/__tests__/helpers/review-table"
 import { refreshView } from "@/lib/actions/invalidate"
@@ -41,6 +41,7 @@ const mockLogger = createLogger("conversation-review")
 const ADMIN = { user: { id: "admin-1", isAdmin: true } }
 const QUEUE_DOWN = { success: false, code: "UPSTREAM_UNAVAILABLE", error: "The job queue is unavailable. Try again shortly." }
 const NO_MODEL = { success: false, code: "UPSTREAM_UNAVAILABLE", error: "Set up a conversation review model first." }
+const AI_OFF = { success: false, code: "UPSTREAM_UNAVAILABLE", error: "AI features are turned off in settings. Turn them on to review conversations." }
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000)
 
 type Conversation = { userId: string; endedAt: Date | null; discordSessions: number; lastMessageAt: Date | null }
@@ -196,6 +197,19 @@ describe("reviewConversation", () => {
     expect(prismaMock.lLMProvider.findFirst).toHaveBeenCalledWith({ where: { isActive: true, purpose: "judge" }, select: { id: true } })
     expect(prismaMock.$transaction).not.toHaveBeenCalled()
     expect(withRequestPathQueue).not.toHaveBeenCalled()
+  })
+
+  it('UPSTREAM_UNAVAILABLE "AI features are turned off in settings." while AI features are off, before any review exists', async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: true }))
+
+    await expect(reviewConversation({ conversationId: "conversation-1" })).resolves.toEqual(AI_OFF)
+    await expect(enqueueReview(manual, deps())).resolves.toEqual({ ok: false, code: "LLM_DISABLED" })
+    expect(prismaMock.config.findUnique).toHaveBeenCalledWith({ where: { id: "config" }, select: { llmDisabled: true } })
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    expect(rows.size).toBe(0)
+    expect(withRequestPathQueue).not.toHaveBeenCalled()
+    expect(enqueueFromRequest).not.toHaveBeenCalled()
+    expect(logAuditEvent).not.toHaveBeenCalled()
   })
 
   it('a QUEUE_UNAVAILABLE enqueue marks the review failed with ENQUEUE_FAILED, and the action returns UPSTREAM_UNAVAILABLE "The job queue is unavailable. Try again shortly."', async () => {

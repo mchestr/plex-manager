@@ -62,7 +62,7 @@ export const ACTION_DOCS: Readonly<Record<string, string>> = {
   resumeJobQueue: "Resume the queue (admin only, audited).",
   retryFailedRewinds: "Retry failed: only members whose latest run failed (`WORKER_LOST` and `JOB_LOST` included).",
   retryQueueJob: "Retry a failed job (admin only, audited).",
-  reviewConversation: "Asks the judge to review an open admin assistant conversation, or returns the review already queued or running for it. Refuses a Discord or ended conversation (`CONFLICT`), and answers `UPSTREAM_UNAVAILABLE` without a conversation review model or while the job queue is down. Rate limited per admin, since each review spends money.",
+  reviewConversation: "Asks the judge to review an open admin assistant conversation, or returns the review already queued or running for it. Refuses a Discord or ended conversation (`CONFLICT`), and answers `UPSTREAM_UNAVAILABLE` while AI features are off, without a conversation review model or while the job queue is down. Rate limited per admin, since each review spends money.",
   revokeAffiliateStatus: "Revokes an affiliate's status with an optional reason the member sees (admin only). Their open invites are cancelled in the same transaction; the people they invited stay members. They may apply again after 30 days.",
   revokeApiToken: "Revokes one of the caller's own tokens; it stops working at once.",
   rollbackRewind: "Roll back: restores the member's previous Rewind in one audited transaction, under the member's generation lock. Refused while a run is queued or running, without an earlier version, or when that version does not parse. A second roll back undoes the first.",

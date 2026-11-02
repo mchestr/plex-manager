@@ -26,9 +26,9 @@ const conversationInput = z.object({ conversationId: z.string().min(1).max(100) 
 /**
  * Asks the judge to review an open admin assistant conversation, or returns
  * the review already queued or running for it. Refuses a Discord or ended
- * conversation (`CONFLICT`), and answers `UPSTREAM_UNAVAILABLE` without a
- * conversation review model or while the job queue is down. Rate limited per
- * admin, since each review spends money.
+ * conversation (`CONFLICT`), and answers `UPSTREAM_UNAVAILABLE` while AI
+ * features are off, without a conversation review model or while the job
+ * queue is down. Rate limited per admin, since each review spends money.
  */
 export const reviewConversation = adminAction({
   input: conversationInput,
@@ -48,6 +48,8 @@ export const reviewConversation = adminAction({
           return fail("NOT_FOUND", "Conversation not found.")
         case "CONFLICT":
           return fail("CONFLICT", "Only an open admin assistant conversation can be reviewed.")
+        case "LLM_DISABLED":
+          return fail("UPSTREAM_UNAVAILABLE", "AI features are turned off in settings. Turn them on to review conversations.")
         case "UNAVAILABLE":
           return fail("UPSTREAM_UNAVAILABLE", "Set up a conversation review model first.")
         case "QUEUE_UNAVAILABLE":

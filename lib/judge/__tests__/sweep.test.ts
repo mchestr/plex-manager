@@ -371,6 +371,16 @@ describe("processReviewSweep", () => {
     expect(reviews.size).toBe(0)
   })
 
+  it("AI features turned off while the sweep runs stop it at its next enqueue", async () => {
+    useConversations([{ id: "c1", lastMessageAt: minutesAgo(300) }, { id: "c2" }])
+    // On when the sweep read its settings, off by the time enqueueReview checks
+    prismaMock.config.findUnique.mockResolvedValueOnce(buildConfig({ judgeNightlyEnabled: true })).mockResolvedValue(buildConfig({ judgeNightlyEnabled: true, llmDisabled: true }))
+
+    await expect(processReviewSweep()).resolves.toEqual({ queued: 0, skipped: 0, stoppedBy: "disabled" })
+    expect(addJob).not.toHaveBeenCalled()
+    expect(reviews.size).toBe(0)
+  })
+
   it("without a Config row nightly reviews are off, the column default", async () => {
     useConversations([{ id: "c1" }])
     prismaMock.config.findUnique.mockResolvedValue(null)
