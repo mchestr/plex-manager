@@ -8,7 +8,8 @@
  * `<tool_result ...>`, `<already_raised>`, `<assistant_system_prompt>`,
  * `<tool_catalog>` and their closing tags), each message's `[#7 assistant]`
  * label, the notes beside it ({@link NOTES}), the {@link TRUNCATED} mark after
- * a cut piece and the "(3 earlier turns were left out)" line.
+ * a cut piece, and the "(3 earlier turns were left out)" and "(2 earlier
+ * findings left out)" lines.
  *
  * ## Neutralising
  *
@@ -53,13 +54,14 @@ export const NOTES = {
 } as const
 
 export const omittedTurns = (count: number) => `(${count} earlier ${count === 1 ? "turn was" : "turns were"} left out)`
+export const omittedFindings = (count: number) => `(${count} earlier ${count === 1 ? "finding" : "findings"} left out)`
 
 const FENCES = "transcript|tool_result|already_raised|assistant_system_prompt|tool_catalog"
 const CLOSE_TAG = new RegExp(`<\\s*/\\s*(?=(?:${FENCES})\\b)`, "gi")
 const OPEN_TAG = new RegExp(`<(?=\\s*(?:${FENCES}))`, "gi")
 /** A label's `[#7` or the mark's `[truncated`. */
 const BRACKET = /\[(?=#\d|truncated)/gi
-/** A note's opening words, or the omitted line's "(3 earlier ". */
+/** A note's opening words, or an omitted line's "(3 earlier ". */
 const NOTE = /\((?=tool\s+results\s+not\s+recorded|no\s+tools\s+were\s+called|already\s+reviewed|message\s+unreadable|\d+\s+earlier\s)/gi
 
 /** The text with every tag, label, mark and note in it neutralised; see the module comment. */

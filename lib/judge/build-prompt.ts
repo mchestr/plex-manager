@@ -13,7 +13,8 @@
  *    alone would pass the cap are its pieces (message text, tool args and
  *    results) cut: short ones stay whole and long ones are cut to one length
  *    (`fitSection`, `lib/judge/fit.ts`);
- * 3. the "Already raised" lines, while they fit;
+ * 3. the "Already raised" lines, while they fit with room kept for one more
+ *    line that says how many of the rest were left out;
  * 4. earlier turns, newest first, with message text whole and each tool
  *    result cut to 2 KB, until one does not fit. It and every older turn are
  *    left out, and a line says how many.
@@ -46,7 +47,7 @@
  * @module lib/judge/build-prompt
  */
 
-import { attribute, NOTES, neutralise, omittedTurns, TRUNCATED } from "@/lib/judge/fence"
+import { attribute, NOTES, neutralise, omittedFindings, omittedTurns, TRUNCATED } from "@/lib/judge/fence"
 import { type Fit, fitSection, fitWithin, marked } from "@/lib/judge/fit"
 import { JUDGE_SYSTEM_PROMPT } from "@/lib/judge/prompts/v1"
 import { type ToolLogEntry } from "@/lib/judge/tool-log"
@@ -175,11 +176,18 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
   }
 
   const raised: string[] = []
-  for (const finding of prior) {
+  for (const [i, finding] of prior.entries()) {
     const line = `- [#${finding.messageIndex}] ${finding.type} (${finding.status}): ${forJudge(finding.claim)}`
-    if (line.length + 1 > budget) break
+    const rest = prior.length - i - 1
+    if (line.length + 1 + (rest > 0 ? omittedFindings(rest).length + 1 : 0) > budget) break
     raised.push(line)
     budget -= line.length + 1
+  }
+  // Each line kept room for this one, so it fits unless the first line did not
+  const leftOut = omittedFindings(prior.length - raised.length)
+  if (raised.length < prior.length && leftOut.length + 1 <= budget) {
+    raised.push(leftOut)
+    budget -= leftOut.length + 1
   }
 
   for (const turn of kept.length > 0 ? turns.slice(0, -1).reverse() : []) {
