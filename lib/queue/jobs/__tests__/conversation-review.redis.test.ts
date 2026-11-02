@@ -21,6 +21,7 @@ import { describeRedis } from "@/__tests__/helpers/integration"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { useReviewTable } from "@/__tests__/helpers/review-table"
 import type { LLMProvider } from "@/lib/generated/prisma/client"
+import { reviewJobId } from "@/lib/judge/job-id"
 import type { StructuredDeps } from "@/lib/llm/generate-structured"
 import { lookupModel } from "@/lib/llm/models"
 import type { LeaseClaim, LeaseName, LeaseStore } from "@/lib/locks/lease-lock"
@@ -139,7 +140,7 @@ describeRedis("conversation review job on BullMQ", (redisUrl) => {
 
   it("a LEASE_BUSY re-delay leaves attemptsMade unchanged and the job runs again", async () => {
     const rows = useReviewTable([{ id: "review-1", status: "queued" }])
-    const added = await queue.add("judge:review", { reviewId: "review-1" }, { jobId: "judge-review-review-1", attempts: 3 })
+    const added = await queue.add("judge:review", { reviewId: "review-1" }, { jobId: reviewJobId("review-1"), attempts: 3 })
 
     await waitFor(() => queue.getJobState(added.id!), (state) => state === "delayed")
     const delayed = await queue.getJob(added.id!)

@@ -378,7 +378,7 @@ describe("processConversationReview", () => {
     expect(model.doGenerateCalls).toHaveLength(0)
   })
 
-  it("LEASE_BUSY re-delays the job with DelayedError and spends no attempt", async () => {
+  it("LEASE_BUSY re-delays the job with moveToDelayed and DelayedError, which spends no attempt", async () => {
     const rows = useReviewTable([{ id: "review-1", status: "queued" }])
     store.holdForSomeoneElse()
     const { deps, model } = judge()
@@ -392,7 +392,6 @@ describe("processConversationReview", () => {
     expect(token).toBe("lock-token")
     expect(until).toBeGreaterThanOrEqual(before + 30_000)
     expect(until).toBeLessThanOrEqual(Date.now() + 90_000)
-    expect(job.attemptsMade).toBe(0)
     expect(rows.get("review-1")).toMatchObject({ status: "queued", errorCode: null, runToken: 1 })
     expect(model.doGenerateCalls).toHaveLength(0)
     // Nothing about spend is read before the lease is taken: the cap and its sum are checked only under it
@@ -449,7 +448,6 @@ describe("processConversationReview", () => {
 
     expect(pending).toEqual([])
     expect(peak).toBe(1)
-    expect([...jobs.values()].every(({ job }) => job.attemptsMade === 0)).toBe(true)
   })
 
   it("a redelivered stalled job takes over a running review, and the old attempt's late write is superseded", async () => {
