@@ -27,15 +27,15 @@
  *
  * ## Failures
  *
- * | outcome                                | review                                      | job                  |
- * |----------------------------------------|---------------------------------------------|----------------------|
- * | newest turn does not fit the prompt    | `failed` with `PROMPT_TOO_LARGE`            | completes, no lease  |
- * | `LEASE_BUSY`                           | back to `queued`                            | re-delayed 30–90 s, no attempt spent |
- * | `PROVIDER`, `ABORTED`, earlier attempt | back to `queued` with the code              | throws, BullMQ retries |
- * | `PROVIDER`, `ABORTED`, last attempt    | `failed` with the code                      | throws               |
- * | any other code, `LLM_DISABLED` included | `failed` with the code                     | completes            |
- * | moved on before the call (`SUPERSEDED`) | as the ending, reap or new run left it     | completes, no call   |
- * | `ReviewSuperseded`                     | as the ending or the new run left it        | completes            |
+ * | outcome                                 | review                                 | job                                  |
+ * |-----------------------------------------|----------------------------------------|--------------------------------------|
+ * | newest turn does not fit the prompt     | `failed` with `PROMPT_TOO_LARGE`       | completes, before the lease          |
+ * | `LEASE_BUSY`                            | back to `queued`                       | re-delayed 30–90 s, no attempt spent |
+ * | moved on before the call (`SUPERSEDED`) | as the ending, reap or new run left it | completes, no call                   |
+ * | `PROVIDER`, `ABORTED`, earlier attempt  | back to `queued` with the code         | throws, BullMQ retries               |
+ * | `PROVIDER`, `ABORTED`, last attempt     | `failed` with the code                 | throws                               |
+ * | any other code, `LLM_DISABLED` included | `failed` with the code                 | completes                            |
+ * | `ReviewSuperseded`                      | as the ending or the new run left it   | completes                            |
  *
  * Only codes are stored or logged, never provider text, and the log lines
  * carry ids and counts, never finding or summary text.

@@ -4,12 +4,12 @@
  * The codes come from the judge call (`generateStructured`: `NOT_CONFIGURED`,
  * `TRUNCATED`, `CONTENT_FILTER`, `REFUSAL`, `SCHEMA`, `PROVIDER`, `ABORTED`),
  * the spend check (`BUDGET_EXCEEDED`, `BUDGET_UNAVAILABLE`), the processor
- * (`JOB_FAILED`, `PROMPT_TOO_LARGE`, and `LLM_DISABLED` while AI features are
- * off), the stuck-review reaper (`STALE`), enqueueing
- * (`ENQUEUE_FAILED`) and a conversation ending under a review (`ENDED`). The
- * copy is fixed: a review stores only a code, never provider text, and any
- * other value reads as the generic message. `lib/ui/error-copy.ts` is not
- * used because its `NOT_CONFIGURED` is Rewind copy.
+ * (`JOB_FAILED`, `PROMPT_TOO_LARGE`, and `LLM_DISABLED` while AI features
+ * are off), the stuck-review reaper (`STALE`), enqueueing (`ENQUEUE_FAILED`)
+ * and a conversation ending under a review (`ENDED`). The copy is fixed: a
+ * review stores only a code, never provider text, and any other value reads
+ * as the generic message. `lib/ui/error-copy.ts` is not used because its
+ * `NOT_CONFIGURED` is Rewind copy.
  *
  * @module lib/ui/review-error-copy
  */
