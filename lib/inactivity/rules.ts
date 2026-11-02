@@ -14,10 +14,12 @@
  * | `admin`    | An admin                                                               |
  * | `owner`    | The Plex server owner (`PlexServer.adminPlexUserId`)                   |
  * | `role`     | The member holds a role, such as Support                               |
- * | `exempt`   | Exempt from the subscription requirement                               |
  * | `paying`   | Subscription `ACTIVE` or `PAST_DUE`                                    |
  * | `excluded` | An admin excluded the member on their page                             |
  * | `not_read` | The latest read did not find them in Tautulli, or Tautulli keeps no history for them |
+ *
+ * An exemption from the subscription does not protect a member: it is about
+ * billing, not use, and most members who joined with an invite hold one.
  *
  * ## Inactive
  *
@@ -54,7 +56,6 @@ export interface InactivityMember {
   plexUserId: string | null
   isAdmin: boolean
   role: string | null
-  isExempt: boolean
   inactivityExcluded: boolean
   subscriptionStatus: SubscriptionStatus | null
   createdAt: Date
@@ -66,7 +67,7 @@ export interface InactivityMember {
 }
 
 /** Every skip, in priority order. */
-export const INACTIVITY_SKIPS = ["no_plex", "admin", "owner", "role", "exempt", "paying", "excluded", "not_read"] as const
+export const INACTIVITY_SKIPS = ["no_plex", "admin", "owner", "role", "paying", "excluded", "not_read"] as const
 
 /** Why the sweep leaves a member alone. */
 export type InactivitySkip = (typeof INACTIVITY_SKIPS)[number]
@@ -77,7 +78,6 @@ export const SKIP_LABELS: Record<InactivitySkip, string> = {
   admin: "Admin",
   owner: "Server owner",
   role: "Has a role",
-  exempt: "Exempt",
   paying: "Paying member",
   excluded: "Excluded by an admin",
   not_read: "Not found in Tautulli",
@@ -95,7 +95,7 @@ const PAYING: readonly SubscriptionStatus[] = ["ACTIVE", "PAST_DUE"]
  *
  * @example
  * ```ts
- * const member = { id: "u1", plexUserId: "42", isAdmin: false, role: null, isExempt: false, inactivityExcluded: false,
+ * const member = { id: "u1", plexUserId: "42", isAdmin: false, role: null, inactivityExcluded: false,
  *   subscriptionStatus: null, createdAt: new Date("2025-01-01"), lastSeenAt: null, lastSeenReadAt: new Date("2026-10-31"),
  *   accessEndedAt: null, accessRestoredAt: null }
  * inactivitySkip(member, { ownerPlexUserId: "1", readSince: new Date("2026-10-31") }) // null
@@ -111,7 +111,6 @@ export function inactivitySkip(
   if (member.isAdmin) return "admin"
   if (ownerPlexUserId && plexUserId === ownerPlexUserId.trim()) return "owner"
   if (member.role !== null) return "role"
-  if (member.isExempt) return "exempt"
   if (member.subscriptionStatus && PAYING.includes(member.subscriptionStatus)) return "paying"
   if (member.inactivityExcluded) return "excluded"
   if (!readSince || !member.lastSeenReadAt || member.lastSeenReadAt < readSince) return "not_read"

@@ -45,7 +45,6 @@ function member(id: string, patch: Partial<InactivityMember> = {}): InactivityMe
     plexUserId: String(plexId),
     isAdmin: false,
     role: null,
-    isExempt: false,
     inactivityExcluded: false,
     subscriptionStatus: null,
     createdAt: daysAgo(400),
@@ -142,10 +141,10 @@ describe("getInactivityPreview", () => {
         member("u-listed"),
         member("u-no-id", { plexUserId: null }),
         member("u-blank-id", { plexUserId: "  " }),
-        member("u-admin", { isAdmin: true, isExempt: true }),
+        member("u-admin", { isAdmin: true }),
         member("u-owner", { plexUserId: " 1 " }),
         member("u-support", { role: "support" }),
-        member("u-exempt", { isExempt: true }),
+        member("u-invited"),
         member("u-paying", { subscriptionStatus: "ACTIVE" }),
         member("u-past-due", { subscriptionStatus: "PAST_DUE" }),
         member("u-excluded", { inactivityExcluded: true }),
@@ -160,8 +159,8 @@ describe("getInactivityPreview", () => {
 
     const preview = await getInactivityPreview(180, NOW)
 
-    expect(preview.rows.map((row) => row.id)).toEqual(["u-canceled", "u-listed"])
-    expect(preview.skips).toEqual({ no_plex: 2, admin: 1, owner: 1, role: 1, exempt: 1, paying: 2, excluded: 1, not_read: 1 })
+    expect(preview.rows.map((row) => row.id)).toEqual(["u-canceled", "u-invited", "u-listed"])
+    expect(preview.skips).toEqual({ no_plex: 2, admin: 1, owner: 1, role: 1, paying: 2, excluded: 1, not_read: 1 })
     expect(preview.active).toBe(2)
     expect(preview.noAccess).toBe(1)
     expect(preview.shareCheck).toBeNull()

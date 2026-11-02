@@ -31,7 +31,7 @@ const SAVED_AT = new Date("2026-10-30T09:00:00Z")
 
 const PREVIEW: InactivityPreview = {
   rows: [],
-  skips: { no_plex: 0, admin: 1, owner: 0, role: 0, exempt: 0, paying: 0, excluded: 0, not_read: 0 },
+  skips: { no_plex: 0, admin: 1, owner: 0, role: 0, paying: 0, excluded: 0, not_read: 0 },
   active: 4,
   noAccess: 0,
   shareCheck: null,

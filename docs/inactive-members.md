@@ -70,10 +70,12 @@ The run never removes these members, in this order:
 | Admin | Admins |
 | Server owner | The Plex account that owns the server |
 | Has a role | Members with a role, such as Support |
-| Exempt | Members exempt from the subscription |
 | Paying member | Subscription active or past due |
 | Excluded by an admin | Members an admin excluded on their page |
 | Not found in Tautulli | The latest read did not find them, or Tautulli keeps no history for them |
+
+An exemption from the subscription does not protect a member, because it is
+about billing and not about use. To keep a member, exclude them on their page.
 
 Only members who still have an accepted share of the server can be removed.
 

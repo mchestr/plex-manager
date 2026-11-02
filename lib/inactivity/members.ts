@@ -17,7 +17,6 @@ const MEMBER_SELECT = {
   plexUserId: true,
   isAdmin: true,
   role: true,
-  isExempt: true,
   inactivityExcluded: true,
   createdAt: true,
   lastSeenAt: true,

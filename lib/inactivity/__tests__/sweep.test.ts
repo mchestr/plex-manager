@@ -39,8 +39,8 @@ interface MemberRow {
   plexUserId: string | null
   isAdmin: boolean
   role: string | null
-  isExempt: boolean
   inactivityExcluded: boolean
+  isExempt: boolean
   createdAt: Date
   lastSeenAt: Date | null
   lastSeenReadAt: Date | null
@@ -56,8 +56,8 @@ function member(id: string, plexUserId: string | null, patch: Partial<MemberRow>
     plexUserId,
     isAdmin: false,
     role: null,
-    isExempt: false,
     inactivityExcluded: false,
+    isExempt: false,
     createdAt: daysAgo(1000),
     lastSeenAt: daysAgo(400),
     lastSeenReadAt: NOW,
@@ -220,8 +220,8 @@ describe("runSweep candidates", () => {
 
     const result = await runSweep(options())
 
-    expect(result.qualified).toBe(2)
-    expect(jest.mocked(unshareMember).mock.calls.map(([target]) => target.id).sort()).toEqual(["lapsed", "shared"])
+    expect(result.qualified).toBe(3)
+    expect(jest.mocked(unshareMember).mock.calls.map(([target]) => target.id).sort()).toEqual(["exempt", "lapsed", "shared"])
   })
 
   it("removes the longest inactive first, counting a member who never played from the day they joined", async () => {
