@@ -177,8 +177,9 @@ describe("stripInvisible", () => {
     ["message text or a claim", {}],
     ["a tool's text", { tool: true }],
   ] as const)("throws the walk's RangeError for JSON nested too deep to walk, in %s, so none of it is read as text", (_piece, from) => {
-    // The builder sends none of it: read as text, its escapes and its keys' names would go unchecked
-    const nested = (inner: string) => `${"[".repeat(4_000)}${inner}${"]".repeat(4_000)}`
+    // The builder sends none of it: read as text, its escapes and its keys' names would go unchecked. 200,000 levels
+    // overflow the walk whatever the JIT or frame size, and JSON.parse, which does not recurse, still parses them
+    const nested = (inner: string) => `${"[".repeat(200_000)}${inner}${"]".repeat(200_000)}`
 
     expect(() => stripInvisible(nested('"pass\u00ADword\u0085\\u200b"'), from)).toThrow(RangeError)
   })

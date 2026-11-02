@@ -121,8 +121,9 @@ describe("runConversationLoop tool log", () => {
   })
 
   describe("a call nested too deep to redact", () => {
-    // 6,000 levels: walking them, or writing them out again, overflows the stack
-    const deep = (value: object) => `${"[".repeat(6_000)}${JSON.stringify(value)}${"]".repeat(6_000)}`
+    // 200,000 levels: walking them, or writing them out again, overflows the stack whatever the JIT or frame size,
+    // though JSON.parse, which does not recurse, still parses them
+    const deep = (value: object) => `${"[".repeat(200_000)}${JSON.stringify(value)}${"]".repeat(200_000)}`
 
     it("still answers when a tool result is, and logs the note in its place", async () => {
       jest

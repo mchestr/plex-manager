@@ -107,9 +107,10 @@ describe("capToolLog", () => {
   })
 
   describe("a field whose redaction throws", () => {
-    // Walking JSON nested 6,000 levels deep overflows the stack, so redactCredentials throws a RangeError
+    // Walking JSON nested 200,000 levels deep overflows the stack whatever the JIT or frame size, so redactCredentials
+    // throws a RangeError; JSON.parse, which does not recurse, still parses it
     const DEEP_VALUES = ["deep-key-1", "deep-title-1"]
-    const DEEP = `${"[".repeat(6_000)}${JSON.stringify({ apiKey: "deep-key-1", title: "deep-title-1" })}${"]".repeat(6_000)}`
+    const DEEP = `${"[".repeat(200_000)}${JSON.stringify({ apiKey: "deep-key-1", title: "deep-title-1" })}${"]".repeat(200_000)}`
 
     it.each([
       ["result", { result: DEEP }, { result: NOT_RECORDED }],

@@ -186,13 +186,15 @@ describe("buildJudgePrompt", () => {
     })
 
     describe("in JSON nested too deep to walk, which is never sent", () => {
-      // Only the walk finds these by their key's name, and 4,000 nested arrays, which fit the assistant's
-      // 8,000-character input limit, overflow it
+      // Only the walk finds these by their key's name. A message within the assistant's 8,000-character input
+      // limit can nest 4,000 arrays, which overflow a cold walk but not always a warm one, so these nest 200,000:
+      // the walk overflows whatever the JIT or frame size, and JSON.parse, which does not recurse, still parses them
+      const DEPTH = 200_000
       const VALUES = ["Zq9CookieVal12", "Zq9SessionKey34", "Zq9AccessKey56", "Zq9Credential78"]
       const KEYS = `{"cookie": "${VALUES[0]}", "sessionKey": "${VALUES[1]}", "accessKey": "${VALUES[2]}", "credential": "${VALUES[3]}"}`
       const SHAPES = [
-        ["inside the arrays", `${"[".repeat(4_000)}${KEYS}${"]".repeat(4_000)}`],
-        ["beside the arrays", `${KEYS.slice(0, -1)}, "nested": ${"[".repeat(4_000)}${"]".repeat(4_000)}}`],
+        ["inside the arrays", `${"[".repeat(DEPTH)}${KEYS}${"]".repeat(DEPTH)}`],
+        ["beside the arrays", `${KEYS.slice(0, -1)}, "nested": ${"[".repeat(DEPTH)}${"]".repeat(DEPTH)}}`],
       ] as const
       const leaked = (built: ReturnType<typeof build>) => VALUES.filter((value) => `${built.system}${built.prompt}`.includes(value))
 
