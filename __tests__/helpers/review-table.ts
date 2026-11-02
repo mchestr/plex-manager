@@ -4,9 +4,12 @@
  * where and data the way Postgres would, so a run start, a fenced write, a
  * re-queue and a reap all see each other's effects.
  *
- * It understands the filters those writes use: equality, `null`, `{ in }`
- * and `{ lt }`, and the data `{ increment }`. `findMany` and `findFirst`
- * filter the same way and order by one `desc` key; `findMany` also takes `take`.
+ * It understands the filters those writes use: equality, `null`, a `Date`,
+ * `{ in }` and `{ lt }`, and the data `{ increment }`. `findMany` and
+ * `findFirst` filter the same way and order by one `desc` key; `findMany` also
+ * takes `take`. Any other object condition (`{ not }`, `{ gte }`, a relation
+ * filter) or `orderBy` throws, so a test can never pass because a query it
+ * does not understand matched no row.
  */
 
 import type { ConversationReview } from '@/lib/generated/prisma/client'
@@ -17,17 +20,34 @@ import { prismaMock } from './prisma-mock'
 type Row = ConversationReview
 type Where = Record<string, unknown>
 type Data = Record<string, unknown>
-type Query = { where?: Where; orderBy?: Record<string, 'desc'>; take?: number; select?: Record<string, boolean> }
+type Query = { where?: Where; orderBy?: unknown; take?: number; select?: Record<string, boolean> }
+
+/** The one key of an object, or undefined when it has none or several. */
+function onlyKey(object: object): string | undefined {
+  const keys = Object.keys(object)
+  return keys.length === 1 ? keys[0] : undefined
+}
 
 function matchesField(value: unknown, condition: unknown): boolean {
   if (condition === null) return value === null
   if (condition instanceof Date) return value instanceof Date && value.getTime() === condition.getTime()
   if (typeof condition === 'object') {
-    const filter = condition as { in?: unknown[]; lt?: Date }
-    if (filter.in) return filter.in.includes(value)
-    if (filter.lt) return value instanceof Date && value.getTime() < filter.lt.getTime()
+    const filter = condition as { in?: unknown; lt?: unknown }
+    if (onlyKey(filter) === 'in' && Array.isArray(filter.in)) return filter.in.includes(value)
+    if (onlyKey(filter) === 'lt' && filter.lt instanceof Date) return value instanceof Date && value.getTime() < filter.lt.getTime()
+    throw new Error(`useReviewTable does not understand the condition ${JSON.stringify(condition)}`)
   }
   return value === condition
+}
+
+/** The field a query orders by, newest first, or undefined for none; anything but one `desc` key throws. */
+function orderKey(orderBy: unknown): keyof Row | undefined {
+  if (orderBy === undefined) return undefined
+  const key = typeof orderBy === 'object' && orderBy !== null && !Array.isArray(orderBy) ? onlyKey(orderBy) : undefined
+  if (key === undefined || (orderBy as Record<string, unknown>)[key] !== 'desc') {
+    throw new Error(`useReviewTable orders by one desc key only, not ${JSON.stringify(orderBy)}`)
+  }
+  return key as keyof Row
 }
 
 function matches(row: Row, where: Where = {}): boolean {
@@ -68,7 +88,7 @@ export function useReviewTable(seed: Array<Partial<Row>> = []): Map<string, Row>
     return row ? pick(row, args.select) : null
   }) as never)
   const ordered = (args: Query) => {
-    const [key] = Object.keys(args.orderBy ?? {}) as Array<keyof Row>
+    const key = orderKey(args.orderBy)
     const time = (row: Row) => (key ? ((row[key] as Date | null)?.getTime() ?? -Infinity) : 0)
     return [...rows.values()].filter((row) => matches(row, args.where)).sort((a, b) => time(b) - time(a))
   }
