@@ -5,7 +5,7 @@
 
 import { render, screen } from '@testing-library/react'
 
-import LLMUsageDetailPage from '@/app/admin/llm-usage/[usageId]/page'
+import LLMUsageDetailPage from '@/app/admin/ai/[usageId]/page'
 import { getLLMUsageById } from '@/lib/data/llm-usage'
 
 jest.mock('@/lib/admin', () => ({ assertAdmin: jest.fn() }))
@@ -15,7 +15,7 @@ jest.mock('next/navigation', () => ({
   notFound: jest.fn(),
 }))
 
-jest.mock('@/components/admin/llm-usage/expandable-prompt', () => ({
+jest.mock('@/components/admin/ai-activity/expandable-prompt', () => ({
   ExpandablePrompt: ({ title, content }: { title: string; content: string }) => (
     <section data-testid={`expandable-${title}`}>{content}</section>
   ),

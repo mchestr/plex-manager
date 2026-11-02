@@ -2,7 +2,7 @@
  * The assistant page's reads (`app/admin/assistant`): the caller's own
  * conversations, checked for `assistant:use` next to the data (P11.5). An
  * admin sees only their own history here too; everyone's calls stay on the
- * LLM usage pages.
+ * AI activity pages.
  *
  * @module lib/data/assistant-history
  */
@@ -30,7 +30,7 @@ export interface AssistantPageData {
   available: boolean
   /** What admins can see, and who processes the messages (P11.16). */
   disclosure: string
-  /** How long admins can still read a deleted conversation's calls on the LLM usage pages. */
+  /** How long admins can still read a deleted conversation's calls on the AI activity pages. */
   usageTextDays: number
   /** How long a conversation stays in the history after its last message. */
   historyDays: number

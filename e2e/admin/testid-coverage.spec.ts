@@ -37,7 +37,7 @@ const DETAIL_ROUTES = [
   `/admin/users/${TEST_USERS.REGULAR.id}`,
   `/admin/users/${TEST_USERS.REGULAR.id}?tab=audit`,
   `/admin/invites/${VISUAL_INVITE_IDS.valid}`,
-  '/admin/llm-usage/visual-llm-usage-1',
+  '/admin/ai/visual-llm-usage-1',
   '/admin/affiliates?tab=history',
   '/admin/affiliates?tab=settings',
   `/admin/audit/${AUDIT_EVENT_ID}`,

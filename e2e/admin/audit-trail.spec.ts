@@ -48,8 +48,8 @@ test.describe('Admin audit trail', () => {
   });
 
   test("opening a member's conversation adds a MEMBER_CONTENT_VIEWED row", async ({ adminPage }) => {
-    await adminPage.goto(`/admin/llm-usage/conversation/${CONVERSATION_ID}`);
-    await expect(adminPage.getByTestId('admin-llm-conversation-summary')).toBeVisible();
+    await adminPage.goto(`/admin/ai/conversation/${CONVERSATION_ID}`);
+    await expect(adminPage.getByTestId('admin-ai-conversation-summary')).toBeVisible();
 
     const prisma = createE2EPrismaClient();
     try {

@@ -45,11 +45,11 @@ test.describe('Admin Functionality', () => {
     await expect(adminPage.getByTestId('admin-cost-analysis-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
   });
 
-  test('should access admin LLM usage', async ({ adminPage }) => {
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-llm-usage').first().click();
+  test('should access admin AI activity', async ({ adminPage }) => {
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-ai-activity').first().click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
-    await expect(adminPage.getByTestId('admin-llm-usage-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    await expect(adminPage.getByTestId('admin-ai-activity-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
   });
 
   test('should access admin playground', async ({ adminPage }) => {

@@ -2,12 +2,12 @@
 
 import {
   affiliates,
+  aiActivity,
+  aiActivityConversation,
+  aiActivityRecord,
   auditEvent,
   auditLog,
   invite,
-  llmConversation,
-  llmUsage,
-  llmUsageDetail,
   playgroundFor,
   publicInviteUrl,
   rewindHistory,
@@ -32,12 +32,12 @@ describe("admin routes", () => {
     expect(playgroundFor("u 1")).toBe("/admin/rewind/playground?subject=u%201")
   })
 
-  it("filters LLM usage by member and year when given", () => {
-    expect(llmUsage()).toBe("/admin/llm-usage")
-    expect(llmUsage({ userId: "u1" })).toBe("/admin/llm-usage?userId=u1")
-    expect(llmUsage({ userId: "u1", year: 2025 })).toBe("/admin/llm-usage?userId=u1&year=2025")
-    expect(llmUsage({ from: "2026-10-01", to: "2026-10-31" })).toBe("/admin/llm-usage?from=2026-10-01&to=2026-10-31")
-    expect(llmConversation("c/1")).toBe("/admin/llm-usage/conversation/c%2F1")
+  it("filters AI activity by member and year when given", () => {
+    expect(aiActivity()).toBe("/admin/ai")
+    expect(aiActivity({ userId: "u1" })).toBe("/admin/ai?userId=u1")
+    expect(aiActivity({ userId: "u1", year: 2025 })).toBe("/admin/ai?userId=u1&year=2025")
+    expect(aiActivity({ from: "2026-10-01", to: "2026-10-31" })).toBe("/admin/ai?from=2026-10-01&to=2026-10-31")
+    expect(aiActivityConversation("c/1")).toBe("/admin/ai/conversation/c%2F1")
   })
 
   it("filters the audit log, leaving out each empty filter, in a fixed order", () => {
@@ -50,7 +50,7 @@ describe("admin routes", () => {
   })
 
   it("builds the detail pages", () => {
-    expect(llmUsageDetail("l1")).toBe("/admin/llm-usage/l1")
+    expect(aiActivityRecord("l1")).toBe("/admin/ai/l1")
     expect(invite("i1")).toBe("/admin/invites/i1")
     expect(rewindHistory("w1", "l1")).toBe("/admin/wrapped/w1/history/l1")
     expect(auditEvent("e1")).toBe("/admin/audit/e1")
@@ -59,10 +59,10 @@ describe("admin routes", () => {
   it("encodes ids", () => {
     expect(userDetail("a/b?c")).toBe("/admin/users/a%2Fb%3Fc")
     expect(userRewind("a b", 2025)).toBe("/admin/users/a%20b/rewind/2025")
-    expect(llmUsage({ userId: "a&b" })).toBe("/admin/llm-usage?userId=a%26b")
+    expect(aiActivity({ userId: "a&b" })).toBe("/admin/ai?userId=a%26b")
     expect(rewindHistory("w/1", "l#1")).toBe("/admin/wrapped/w%2F1/history/l%231")
     expect(invite("x/y")).toBe("/admin/invites/x%2Fy")
-    expect(llmUsageDetail("x y")).toBe("/admin/llm-usage/x%20y")
+    expect(aiActivityRecord("x y")).toBe("/admin/ai/x%20y")
     expect(auditEvent("e/1")).toBe("/admin/audit/e%2F1")
   })
 

@@ -65,7 +65,7 @@ function Row({ item, active, usageTextDays, testId, afterDelete, onLeave, onNew,
           </Button>
         }
         title="Delete this conversation?"
-        description={`You cannot restore “${item.title}”. Admins can read its messages on the LLM usage pages for up to ${usageTextDays} days after they were sent.`}
+        description={`You cannot restore “${item.title}”. Admins can read its messages on the AI activity pages for up to ${usageTextDays} days after they were sent.`}
         confirmLabel="Delete"
         pendingLabel="Deleting"
         tone="destructive"
@@ -98,7 +98,7 @@ interface AssistantHistoryProps {
   activeId: string | null
   /** The server's render time, for the date groups. */
   now: number
-  /** How long the LLM usage pages keep a deleted conversation's text, for the delete confirm. */
+  /** How long the AI activity pages keep a deleted conversation's text, for the delete confirm. */
   usageTextDays: number
   /** How long a conversation stays in the history after its last message. */
   historyDays: number

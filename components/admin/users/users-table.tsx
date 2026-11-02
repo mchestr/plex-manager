@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { FilterBar } from "@/components/ui/filter-bar"
 import { useReplaceParams } from "@/hooks/use-replace-params"
 import { SEEN_FILTER_LABELS, SEEN_FILTERS } from "@/lib/admin/last-seen"
-import { llmUsage } from "@/lib/admin/routes"
+import { aiActivity } from "@/lib/admin/routes"
 import { listUserTarget } from "@/lib/admin/user-actions"
 import { useFormat } from "@/lib/format-context"
 import type { TableSort } from "@/lib/ui/table-params"
@@ -135,7 +135,7 @@ export function UsersTable({ rows, total, memberCount, page, pageSize, sort, yea
         if (!usage) return <span className="text-muted-foreground">–</span>
         if (readOnly) return f.money(usage.cost, "table")
         return (
-          <Link data-testid={`admin-users-cost-${row.original.id}`} href={llmUsage({ userId: row.original.id })} className="rounded-sm text-foreground hover:underline">
+          <Link data-testid={`admin-users-cost-${row.original.id}`} href={aiActivity({ userId: row.original.id })} className="rounded-sm text-foreground hover:underline">
             {f.money(usage.cost, "table")}
           </Link>
         )

@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { UsageTable } from "@/components/admin/llm-usage/usage-table"
+import { UsageTable } from "@/components/admin/ai-activity/usage-table"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { getUsageFilterOptions, listUsageGroups, LLM_PURPOSES } from "@/lib/admin/analytics/llm-usage"
@@ -19,7 +19,7 @@ const filterSchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100).optional().catch(undefined),
 })
 
-export default async function LLMUsagePage({ searchParams }: { searchParams: Promise<Params> }) {
+export default async function AIActivityPage({ searchParams }: { searchParams: Promise<Params> }) {
   await assertAdmin()
   const params = await searchParams
   const single = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
@@ -46,13 +46,13 @@ export default async function LLMUsagePage({ searchParams }: { searchParams: Pro
   ].filter(Boolean)
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-llm-usage-page">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-ai-activity-page">
       <PageHeader
-        title="LLM usage"
-        meta={<span data-testid="admin-llm-usage-scope">{scope.join(", ")}</span>}
-        data-testid="admin-llm-usage-header"
+        title="AI activity"
+        meta={<span data-testid="admin-ai-activity-scope">{scope.join(", ")}</span>}
+        data-testid="admin-ai-activity-header"
       />
-      <StatGrid data-testid="llm-usage-stats">
+      <StatGrid data-testid="ai-activity-stats">
         <StatTile label="Calls" value={f.number(usage.totals.calls)} />
         <StatTile label="Rows" value={f.number(usage.total)} unit="conversations and calls" />
         <StatTile label="Tokens" value={f.number(usage.totals.tokens)} />

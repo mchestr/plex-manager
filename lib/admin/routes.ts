@@ -30,21 +30,21 @@ export function playgroundFor(userId: string): Route {
 }
 
 /**
- * LLM usage, filtered to a member, a Rewind year and an inclusive day range
+ * AI activity, filtered to a member, a Rewind year and an inclusive day range
  * (`YYYY-MM-DD` in the server zone) when given.
  */
-export function llmUsage({ userId, year, from, to }: { userId?: string; year?: number; from?: string; to?: string } = {}): Route {
+export function aiActivity({ userId, year, from, to }: { userId?: string; year?: number; from?: string; to?: string } = {}): Route {
   const params = new URLSearchParams()
   if (userId) params.set("userId", userId)
   if (year !== undefined) params.set("year", String(year))
   if (from) params.set("from", from)
   if (to) params.set("to", to)
   const query = params.toString()
-  return (query ? `/admin/llm-usage?${query}` : "/admin/llm-usage") as Route
+  return (query ? `/admin/ai?${query}` : "/admin/ai") as Route
 }
 
-export function llmUsageDetail(id: string): Route {
-  return `/admin/llm-usage/${seg(id)}` as Route
+export function aiActivityRecord(id: string): Route {
+  return `/admin/ai/${seg(id)}` as Route
 }
 
 /** The assistant page: a new conversation, or one of the caller's own. */
@@ -53,8 +53,8 @@ export function assistant(conversationId?: string): Route {
 }
 
 /** One assistant conversation's calls. */
-export function llmConversation(id: string): Route {
-  return `/admin/llm-usage/conversation/${seg(id)}` as Route
+export function aiActivityConversation(id: string): Route {
+  return `/admin/ai/conversation/${seg(id)}` as Route
 }
 
 /** The Affiliates page's tabs; `applications` is the default and leaves the URL bare. */

@@ -5,7 +5,7 @@ import { clearVisualFixtures, seedVisualFixtures, VISUAL_REWIND_ID } from '../he
 /**
  * The analytics pages (P10.2): cost analysis shows the period in the URL,
  * a shares row opens that member's Rewind for the link's year, and page 2 of
- * LLM usage keeps the member filter.
+ * AI activity keeps the member filter.
  */
 const SHARE_ID = 'e2e-analytics-share';
 const USAGE_PREFIX = 'visual-llm-usage-e2e-';
@@ -79,11 +79,11 @@ test.describe('Analytics pages', () => {
     await expect(adminPage).toHaveURL(new RegExp(`/admin/users/${rewind.userId}/rewind/${rewind.year}$`));
   });
 
-  test('page 2 of LLM usage keeps the member filter', async ({ adminPage }) => {
-    await adminPage.goto(`/admin/llm-usage?userId=${TEST_USERS.REGULAR.id}`);
-    await adminPage.getByTestId('llm-usage-pagination-next').click();
+  test('page 2 of AI activity keeps the member filter', async ({ adminPage }) => {
+    await adminPage.goto(`/admin/ai?userId=${TEST_USERS.REGULAR.id}`);
+    await adminPage.getByTestId('ai-activity-pagination-next').click();
     await expect(adminPage).toHaveURL(/page=2/);
     expect(new URL(adminPage.url()).searchParams.get('userId')).toBe(TEST_USERS.REGULAR.id);
-    await expect(adminPage.getByTestId(/^llm-usage-row-/).first()).toBeVisible();
+    await expect(adminPage.getByTestId(/^ai-activity-row-/).first()).toBeVisible();
   });
 });

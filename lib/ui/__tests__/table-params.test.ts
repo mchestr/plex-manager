@@ -49,13 +49,13 @@ describe("parseTableParams", () => {
 describe("tableHref", () => {
   it("keeps every param the patch does not name, such as conversationId", () => {
     const current = new URLSearchParams("conversationId=c_42&model=gpt&page=2")
-    expect(tableHref("/admin/llm-usage", current, { page: 3 })).toBe("/admin/llm-usage?conversationId=c_42&model=gpt&page=3")
+    expect(tableHref("/admin/ai", current, { page: 3 })).toBe("/admin/ai?conversationId=c_42&model=gpt&page=3")
   })
 
   it("removes params patched to null, undefined or empty", () => {
     const current = { conversationId: "c_42", page: "2", q: "sam", sort: "name" }
-    expect(tableHref("/admin/llm-usage", current, { page: null, q: "", sort: undefined })).toBe(
-      "/admin/llm-usage?conversationId=c_42"
+    expect(tableHref("/admin/ai", current, { page: null, q: "", sort: undefined })).toBe(
+      "/admin/ai?conversationId=c_42"
     )
   })
 

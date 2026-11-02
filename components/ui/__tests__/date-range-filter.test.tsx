@@ -14,7 +14,7 @@ jest.mock("next/navigation", () => require("@/__tests__/helpers/url-router").nav
 const NOW = Date.parse("2026-10-21T03:00:00Z")
 
 beforeEach(() => {
-  resetUrl("/admin/llm-usage?conversationId=c_42")
+  resetUrl("/admin/ai?conversationId=c_42")
   jest.spyOn(Date, "now").mockReturnValue(NOW)
 })
 afterEach(() => jest.restoreAllMocks())
@@ -27,7 +27,7 @@ describe("DateRangeFilter", () => {
 
     await user.click(screen.getByTestId("usage-dates-preset"))
     await user.click(await screen.findByRole("option", { name: "Last 7 days" }))
-    expect(currentHref()).toBe("/admin/llm-usage?conversationId=c_42&from=2026-10-14&to=2026-10-20")
+    expect(currentHref()).toBe("/admin/ai?conversationId=c_42&from=2026-10-14&to=2026-10-20")
     expect(screen.getByLabelText("From")).toHaveValue("2026-10-14")
     expect(screen.getByLabelText("To")).toHaveValue("2026-10-20")
   })
@@ -37,24 +37,24 @@ describe("DateRangeFilter", () => {
     render(<DateRangeFilter zone="UTC" season={{ from: "2026-01-01", to: "2026-11-30" }} data-testid="usage-dates" />)
     await user.click(screen.getByTestId("usage-dates-preset"))
     await user.click(await screen.findByRole("option", { name: "This season" }))
-    expect(currentHref()).toBe("/admin/llm-usage?conversationId=c_42&from=2026-01-01&to=2026-11-30")
+    expect(currentHref()).toBe("/admin/ai?conversationId=c_42&from=2026-01-01&to=2026-11-30")
   })
 
   it("refuses an end before the start and leaves the URL alone", () => {
-    resetUrl("/admin/llm-usage?from=2026-10-10&to=2026-10-12")
+    resetUrl("/admin/ai?from=2026-10-10&to=2026-10-12")
     render(<DateRangeFilter zone="UTC" data-testid="usage-dates" />)
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-10-01" } })
     expect(screen.getByTestId("usage-dates-error")).toHaveTextContent("The end date is before the start date.")
     expect(screen.getByLabelText("To")).toHaveAttribute("aria-invalid", "true")
-    expect(currentHref()).toBe("/admin/llm-usage?from=2026-10-10&to=2026-10-12")
+    expect(currentHref()).toBe("/admin/ai?from=2026-10-10&to=2026-10-12")
 
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-10-10" } })
     expect(screen.queryByTestId("usage-dates-error")).not.toBeInTheDocument()
-    expect(currentHref()).toBe("/admin/llm-usage?from=2026-10-10&to=2026-10-10")
+    expect(currentHref()).toBe("/admin/ai?from=2026-10-10&to=2026-10-10")
   })
 
   it("shows a range from the URL as Custom when it matches no preset", () => {
-    resetUrl("/admin/llm-usage?from=2026-03-02&to=2026-03-09")
+    resetUrl("/admin/ai?from=2026-03-02&to=2026-03-09")
     render(<DateRangeFilter zone="UTC" data-testid="usage-dates" />)
     expect(screen.getByTestId("usage-dates-preset")).toHaveTextContent("Custom")
   })

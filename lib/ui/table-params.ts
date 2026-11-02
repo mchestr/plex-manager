@@ -5,7 +5,7 @@
  *
  * `parseTableParams` reads them on the server with Zod and falls back to the
  * defaults on anything it does not recognise. `tableHref` builds the next URL
- * from the current one and a patch, keeping every other param (the LLM usage
+ * from the current one and a patch, keeping every other param (the AI activity
  * page lost `conversationId` on each page change).
  *
  * @module lib/ui/table-params

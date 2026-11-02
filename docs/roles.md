@@ -46,7 +46,7 @@ checks `assertAdmin()` or `assertPermission()`, and an action is built with
 
 - The assistant is a page, `/admin/assistant`, with the user's own conversation
   history. They can reopen and delete their own conversations and no one
-  else's; admins still review every conversation on the LLM usage pages
+  else's; admins still review every conversation on the AI activity pages
   (`docs/privacy.md`, "Assistant page history"). Demoting an admin ends their
   conversations there, so a Support user never reads answers an admin was given.
 - The tools sent to the model are those whose declared permission the user

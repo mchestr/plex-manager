@@ -32,7 +32,7 @@ describe("ADMIN_NAV", () => {
   })
 
   it("keeps the test ids the E2E specs use", () => {
-    for (const id of ["overview", "users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "watchlist", "queues", "season", "playground", "settings"]) {
+    for (const id of ["overview", "users", "invites", "share-analytics", "announcements", "ai-activity", "cost-analysis", "discord", "watchlist", "queues", "season", "playground", "settings"]) {
       expect(ADMIN_NAV.map(navTestId)).toContain(`admin-nav-${id}`)
     }
   })
@@ -91,7 +91,7 @@ describe("titleFor", () => {
     expect(titleFor("/admin/users/abc")).toBe("Users")
     expect(titleFor("/admin/shares")).toBe("Share analytics")
     expect(titleFor("/admin/wrapped/w1/history/u1")).toBe("Admin")
-    expect(activeItem("/admin/llm-usage/conversation/c1")?.id).toBe("llm-usage")
+    expect(activeItem("/admin/ai/conversation/c1")?.id).toBe("ai-activity")
   })
 })
 

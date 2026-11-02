@@ -282,7 +282,7 @@ channel/thread IDs remain configurable (informational only).
 - Every model call from Discord writes one `LLMUsage` row: the member, the
   model, token counts and cost, and the prompt and response text (the whole
   conversation so far, tool results included). Admins can read these at
-  `/admin/llm-usage`, where opening a member's record or conversation writes a
+  `/admin/ai` (AI activity), where opening a member's record or conversation writes a
   `MEMBER_CONTENT_VIEWED` audit row (once an hour per admin and member).
 - The command log (`DiscordCommandLog`) keeps only the length of what a member
   types to the assistant (`argsLength`), never the text; `/admin/discord`

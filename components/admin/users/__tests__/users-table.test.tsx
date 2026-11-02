@@ -85,7 +85,7 @@ describe('UsersTable', () => {
     expect(within(sam).getAllByRole('cell')[1]).toHaveTextContent('Member')
     expect(screen.getByTestId('admin-users-plex-u-sam')).toHaveTextContent('UnknownLast checked 2 minutes ago')
     expect(sam).toHaveTextContent('Past dueRetrying Oct 20')
-    expect(within(sam).getByRole('link', { name: '$0.031' })).toHaveAttribute('href', '/admin/llm-usage?userId=u-sam')
+    expect(within(sam).getByRole('link', { name: '$0.031' })).toHaveAttribute('href', '/admin/ai?userId=u-sam')
     expect(sam).toHaveTextContent('Oct 11, 2026')
 
     const dana = screen.getByTestId('admin-users-row-u-dana')

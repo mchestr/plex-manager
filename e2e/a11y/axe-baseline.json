@@ -1,4 +1,7 @@
 {
+  "admin /admin/ai": {},
+  "admin /admin/ai/conversation/a11y-conversation": {},
+  "admin /admin/ai/visual-llm-usage-1": {},
   "admin /admin/announcements": {},
   "admin /admin/audit": {},
   "admin /admin/cost-analysis": {},
@@ -8,9 +11,6 @@
   "admin /admin/invites [confirm dialog open]": {},
   "admin /admin/invites [create dialog open]": {},
   "admin /admin/invites/visual-invite-ok": {},
-  "admin /admin/llm-usage": {},
-  "admin /admin/llm-usage/conversation/a11y-conversation": {},
-  "admin /admin/llm-usage/visual-llm-usage-1": {},
   "admin /admin/queues": {},
   "admin /admin/rewind/playground": {},
   "admin /admin/settings": {},

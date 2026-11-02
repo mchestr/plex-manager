@@ -2,7 +2,7 @@ import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
-import { llmUsage, llmUsageDetail } from "@/lib/admin/routes"
+import { aiActivity, aiActivityRecord } from "@/lib/admin/routes"
 import { getUserUsage } from "@/lib/admin/user-detail-tabs"
 import type { BoundFormat } from "@/lib/utils/format"
 
@@ -23,8 +23,8 @@ export async function UsageTab({ userId, f }: { userId: string; f: BoundFormat }
           <h2 id="admin-user-usage-latest" className="text-h3">
             Latest requests
           </h2>
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={llmUsage({ userId })} />} data-testid="admin-user-usage-all">
-            View all in LLM usage
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={aiActivity({ userId })} />} data-testid="admin-user-usage-all">
+            View all in AI activity
           </Button>
         </div>
         {usage.latest.length === 0 ? (
@@ -45,7 +45,7 @@ export async function UsageTab({ userId, f }: { userId: string; f: BoundFormat }
                 {usage.latest.map((row) => (
                   <tr key={row.id} data-testid={`admin-user-usage-row-${row.id}`}>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Link data-testid={`admin-user-usage-${row.id}`} href={llmUsageDetail(row.id)} className="rounded-sm font-medium text-foreground hover:underline">
+                      <Link data-testid={`admin-user-usage-${row.id}`} href={aiActivityRecord(row.id)} className="rounded-sm font-medium text-foreground hover:underline">
                         {f.dateTime(row.createdAt, { zoneLabel: true })}
                       </Link>
                     </td>

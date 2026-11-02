@@ -92,12 +92,12 @@ async function instructions(principal: TokenPrincipal): Promise<string> {
       ? [
           "This token is read-only: it lists and calls only the tools that read. They cover invites (list_invites, get_invite,",
           "with each code's last four characters), members (list_users, get_user), settings, announcements, affiliates, Rewind,",
-          "job queues, LLM usage, Discord, and lookups in Plex, Tautulli, Sonarr, Radarr and Overseerr.",
+          "job queues, AI activity, Discord, and lookups in Plex, Tautulli, Sonarr, Radarr and Overseerr.",
         ]
       : [
           "The tools cover invites (create_invite, list_invites, delete_invite), members and their access (list_users, get_user,",
           "set_user_role, set_user_disabled, remove_member, subscriptions), settings and connections, announcements, affiliates,",
-          "Rewind (season, generation, sharing), job queues, LLM usage, Discord, and lookups in Plex, Tautulli, Sonarr, Radarr",
+          "Rewind (season, generation, sharing), job queues, AI activity, Discord, and lookups in Plex, Tautulli, Sonarr, Radarr",
           "and Overseerr.",
         ]
   return [
