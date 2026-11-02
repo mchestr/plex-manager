@@ -192,8 +192,10 @@ model ConversationFinding {
 { summary: string (≤ 600),
   findings: Array<{ messageIndex: int, type: FindingType, severity: FindingSeverity,
                     evidenceSource: EvidenceSource, claim: string, evidence: string,
-                    suggestion: string, tool?: string }> (≤ 20) }
+                    suggestion: string, tool: string | null }> (≤ 20) }
 ```
+
+Every key is required, because the judge call is a strict structured output: a finding no tool applies to carries `tool: null`.
 
 The prompt (`lib/judge/prompts/`, versioned) tells the judge to report a finding only with evidence it can point to: a quoted tool result, the absence of a matching tool in the catalog, or a contradiction with the assistant's own earlier message. It should prefer no finding to a guess.
 

@@ -144,7 +144,7 @@
 
 **Interfaces:**
 - Produces:
-  - `judgeOutputSchema`, a Zod object `{ summary: string().max(600), findings: array(findingSchema).max(20) }`, where `findingSchema = { messageIndex: int().min(0), type: enum FindingType, severity: enum FindingSeverity, evidenceSource: enum EvidenceSource, claim: string().min(1).max(2000), evidence: string().max(4000), suggestion: string().max(2000), tool: string().max(100).optional() }`. The prompt (Task 5) asks for quotes of at most 300 characters, so these caps sit well above anything valid.
+  - `judgeOutputSchema`, a Zod object `{ summary: string().max(600), findings: array(findingSchema).max(20) }`, where `findingSchema = { messageIndex: int().min(0), type: enum FindingType, severity: enum FindingSeverity, evidenceSource: enum EvidenceSource, claim: string().min(1).max(2000), evidence: string().max(4000), suggestion: string().max(2000), tool: string().max(100).nullable() }`. Every key is required: the judge call is a strict structured output, so a finding no tool applies to carries `tool: null` (`.nullable()`, never `.optional()`). The prompt (Task 5) asks for quotes of at most 300 characters, so these caps sit well above anything valid.
   - `type JudgeOutput = z.infer<typeof judgeOutputSchema>`
   - `fingerprintOf(f: { type: string; tool?: string | null; messageId: string }): string`, which returns hex sha256 of `${type}|${tool ?? ''}|${messageId}`
 
