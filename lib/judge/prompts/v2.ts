@@ -5,7 +5,8 @@
  * new version rather than an edit here.
  *
  * `judge-v1` is the wording #508 merged (5750328), which the images built
- * from `main` published; read it there, at `lib/judge/prompts/v1.ts`.
+ * from `main` and the v0.9.0 release published; read it there, at
+ * `lib/judge/prompts/v1.ts`.
  * `judge-v2` is the wording of the fix pass after it: a message that no
  * longer decrypts reads "(message unreadable)", content never carries the
  * prompt's own structure (its neutralised tags, labels, notes and marks),
