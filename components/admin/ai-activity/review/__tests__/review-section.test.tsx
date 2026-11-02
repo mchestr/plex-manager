@@ -234,6 +234,30 @@ describe('ReviewSection states', () => {
   })
 })
 
+describe('ReviewSection and a #finding-<id> link', () => {
+  afterEach(() => window.history.replaceState(null, '', '/'))
+
+  it('moves keyboard focus to the finding the link names, so the next Tab reaches that card', async () => {
+    const user = userEvent.setup()
+    // Next's client navigation scrolls to the card but leaves focus where it was
+    window.history.replaceState(null, '', '/#finding-f2')
+
+    render({ review: view(), findings: [reviewFinding({ id: 'f1' }), reviewFinding({ id: 'f2' })] })
+
+    expect(screen.getByTestId('finding-card-f2')).toHaveFocus()
+    await user.tab()
+    expect(screen.getByTestId('finding-message-toggle-f2')).toHaveFocus()
+  })
+
+  it.each(['/#conversation-review-heading', '/#finding-gone', '/'])('leaves focus alone at %s, which names no finding', (url) => {
+    window.history.replaceState(null, '', url)
+
+    render({ review: view(), findings: [reviewFinding({ id: 'f1' })] })
+
+    expect(document.body).toHaveFocus()
+  })
+})
+
 describe('ReviewSection polling', () => {
   beforeEach(() => jest.useFakeTimers())
   afterEach(() => jest.useRealTimers())

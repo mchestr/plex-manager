@@ -172,6 +172,13 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
   // write an audit row. Once a status check fails it is the way to recover, as it reaps a dead review
   const waiting = isPending(status) && !statusFailed
 
+  // Next's client navigation scrolls a #finding-<id> link's card into view but, unlike a native fragment link, leaves
+  // focus where it was. Focus moves to the card, so the next Tab reaches its triage controls
+  useEffect(() => {
+    const id = window.location.hash.slice(1)
+    if (id.startsWith("finding-")) document.getElementById(id)?.focus()
+  }, [])
+
   const onRetry = (event: MouseEvent<HTMLButtonElement>) => {
     const button = event.currentTarget
     void retryStatus().then((checked) => {

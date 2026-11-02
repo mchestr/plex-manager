@@ -70,6 +70,8 @@ describe('FindingCard', () => {
     const card = screen.getByTestId('finding-card-f1')
     expect(card).toHaveAttribute('id', 'finding-f1')
     expect(card).toHaveClass('scroll-mt-24')
+    // Focus can follow the link to it, while the card stays out of the tab order
+    expect(card).toHaveAttribute('tabindex', '-1')
     const title = screen.getByRole('heading', { name: 'Wrong fact' })
     expect(title).toHaveAttribute('id', 'finding-title-f1')
     expect(screen.getByText('Message #3 (Assistant)')).toHaveAttribute('id', 'finding-message-label-f1')
