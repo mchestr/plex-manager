@@ -218,10 +218,10 @@ describe("buildJudgePrompt", () => {
         expect(leaked(built)).toEqual([])
       })
 
-      it.each(SHAPES)("reads as not recorded in a tool's args and result holding the keys %s, as capture stores them", (_shape, deep) => {
-        const built = build([message(0, "what's playing?"), message(1, "Nothing.", [entry(deep, deep)])])
+      it.each(SHAPES)("reads as not recorded in a tool's name, args and result holding the keys %s, as capture stores them", (_shape, deep) => {
+        const built = build([message(0, "what's playing?"), message(1, "Nothing.", [{ tool: deep, args: deep, result: deep, ok: true }])])
 
-        expect(built.prompt).toContain(`args: ${NOT_RECORDED}\nresult: ${NOT_RECORDED}\n</tool_result>`)
+        expect(built.prompt).toContain(`<tool_result tool="${NOT_RECORDED}" ok="true">\nargs: ${NOT_RECORDED}\nresult: ${NOT_RECORDED}\n</tool_result>`)
         expect(built.sentToolText.get(1)).toEqual([NOT_RECORDED])
         expect(leaked(built)).toEqual([])
       })
@@ -290,6 +290,16 @@ describe("buildJudgePrompt", () => {
 
         expect(JSON.parse(built.sentToolText.get(1)?.[0] ?? "")).toEqual({ url: "https://indexer.example/api?apikey=[redacted]", note: "password=[redacted]" })
         expect([...partsIn(built.prompt, KEY), ...partsIn(built.prompt, PASSWORD)]).toEqual([])
+      })
+
+      it("is redacted from a tool's name, which the model chose and capture stored with the character hiding it", () => {
+        const [stored] = capToolLog([{ tool: `lookup api​key=${KEY}`, args: "{}", result: "{}", ok: true }])
+        expect(stored.tool).toContain(KEY)
+
+        const built = build([message(0, "what's playing?"), message(1, "Nothing.", [stored])])
+
+        expect(built.prompt).toContain('<tool_result tool="lookup apikey=[redacted]" ok="true">')
+        expect(partsIn(built.prompt, KEY)).toEqual([])
       })
     })
   })

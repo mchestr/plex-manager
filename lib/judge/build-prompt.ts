@@ -49,15 +49,17 @@
  * Message text, tool args and results, and the claims already raised lose
  * their invisible characters (`stripInvisible`, `lib/judge/fence.ts`), then
  * go through `redactCredentials` (`lib/mcp/redact.ts`), and only then are
- * neutralised and cut:
+ * neutralised and cut. A tool's name is stripped and redacted the same way,
+ * then written as an attribute (`attribute`):
  *
  * - a credential split by an invisible character (`pass`, U+00AD, `word=`)
  *   is found, where redacting first would miss it and the neutralising would
  *   then join it back into a whole one;
  * - a tool log was redacted before it was stored, before anything was
- *   removed, so it is redacted again here, and a result that was JSON stays
- *   JSON. A tool's args or result that does not parse also loses each
- *   escape of an invisible character (`\u200b`), which message text keeps;
+ *   removed, so it is redacted again here, its tool names too, and a result
+ *   that was JSON stays JSON. A tool's args or result that does not parse
+ *   also loses each escape of an invisible character (`\u200b`), which
+ *   message text keeps;
  * - what the redactor finds never reaches the judge, and a cut never keeps
  *   the start of a credential too short for it to find.
  *
@@ -65,8 +67,8 @@
  * as text, it would keep what only the walk redacts, such as a credential
  * under a `cookie` or `sessionKey` key. Message text shows "(message
  * unreadable)" and a claim is left out, as when either no longer decrypts,
- * and a tool's args or result reads as `NOT_RECORDED`, the note capture
- * stores in place of such a text (`lib/judge/tool-log.ts`).
+ * and a tool's name, args or result reads as `NOT_RECORDED`, the note
+ * capture stores in place of such a text (`lib/judge/tool-log.ts`).
  *
  * `sentMessageText` and `sentToolText` hold each piece exactly as the judge
  * got it (redacted, neutralised and cut), which `verify` matches quotes
@@ -133,17 +135,20 @@ type Drawn = { text: string; results: Map<number, string[]>; sent: Map<number, s
 
 const fenced = (tag: string, body: string) => `<${tag}>\n${body}\n</${tag}>`
 
-/**
- * Text from the conversation or an earlier review, as the judge gets it before any cut, or null for JSON nested too
- * deep to walk, which it never gets; see "Redaction" in the module comment.
- */
-function forJudge(text: string, from?: { tool: true }): string | null {
+/** The text stripped then redacted, or null for JSON nested too deep to walk, which the judge never gets; see "Redaction" in the module comment. */
+function redacted(text: string, from?: { tool: true }): string | null {
   try {
-    return neutralise(redactCredentials(stripInvisible(text, from)).text)
+    return redactCredentials(stripInvisible(text, from)).text
   } catch (error) {
     if (error instanceof RangeError) return null
     throw error
   }
+}
+
+/** Text from the conversation or an earlier review, as the judge gets it before any cut, or null when it is never sent. */
+function forJudge(text: string, from?: { tool: true }): string | null {
+  const kept = redacted(text, from)
+  return kept === null ? null : neutralise(kept)
 }
 
 function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, reviewed: boolean) {
@@ -160,7 +165,7 @@ function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, revie
       const result = fit(forJudge(call.result, { tool: true }) ?? NOT_RECORDED, resultLimit)
       results.push(result.text)
       const cut = call.truncated === true || args.cut || result.cut
-      lines.push(`<tool_result tool="${attribute(call.tool)}" ok="${call.ok}">\nargs: ${args.text}\nresult: ${result.text}${cut ? `\n${TRUNCATED}` : ""}\n</tool_result>`)
+      lines.push(`<tool_result tool="${attribute(redacted(call.tool) ?? NOT_RECORDED)}" ok="${call.ok}">\nargs: ${args.text}\nresult: ${result.text}${cut ? `\n${TRUNCATED}` : ""}\n</tool_result>`)
     }
   }
   const starved = text !== null && (content?.kept ?? 0) < Math.min(MESSAGE_FLOOR, text.length)
