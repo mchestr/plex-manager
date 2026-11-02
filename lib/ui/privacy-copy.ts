@@ -8,6 +8,14 @@
  * @module lib/ui/privacy-copy
  */
 
+import { llmKeyDestination } from "@/lib/llm/provider-presets"
+
+/** The parts of an active `LLMProvider` row that say where its requests go. */
+export interface ProviderEndpoint {
+  provider: string
+  baseUrl: string | null
+}
+
 /** How each chat provider id reads in the disclosure; anything else reads as the fallback. */
 const PROVIDER_NAMES: Record<string, string> = {
   openai: "OpenAI",
@@ -18,31 +26,46 @@ const PROVIDER_NAMES: Record<string, string> = {
 
 const FALLBACK_PROVIDER = "the server's AI provider"
 
-const providerName = (provider: string | null) => (provider && PROVIDER_NAMES[provider]) || FALLBACK_PROVIDER
+/** A second processor that reads like the first: another OpenAI-compatible server, or another unknown id. */
+const ANOTHER_SERVER = "another model server that the server admins selected"
+const ANOTHER_PROVIDER = "another AI provider"
+
+const providerName = (row: ProviderEndpoint | null) => (row && PROVIDER_NAMES[row.provider]) || FALLBACK_PROVIDER
+
+/** The two rows send requests to one place: the same provider at the same address. */
+const sameEndpoint = (a: ProviderEndpoint | null, b: ProviderEndpoint) => {
+  const address = (row: ProviderEndpoint) => llmKeyDestination(row.provider, row.baseUrl).replace(/\/+$/, "")
+  return a !== null && a.provider === b.provider && address(a) === address(b)
+}
 
 /**
  * The assistant disclosure: admins can review conversations, and who processes
- * the messages. `chatProvider` is the active chat `LLMProvider.provider`, or
- * null when none is configured.
+ * the messages. `chat` is the active chat `LLMProvider` row, or null when none
+ * is configured.
  *
- * `judgeProvider`, the active `judge` provider, is passed only by the admin
- * assistant page (`lib/data/assistant-history.ts`), whose conversations the
- * judge reviews; it is named too when it reads differently from the chat
- * provider. Member surfaces never pass it: their chats are never reviewed.
+ * `judge`, the active `judge` row, is passed only by the admin assistant page
+ * (`lib/data/assistant-history.ts`), whose conversations the judge reviews; it
+ * is named too when its requests go somewhere else. The rows are compared, not
+ * their names, so two different OpenAI-compatible servers are both named.
+ * Member surfaces never pass it: their chats are never reviewed.
  *
  * @example
  * ```ts
- * assistantDisclosure("anthropic")
+ * assistantDisclosure({ provider: "anthropic", baseUrl: null })
  * // "Server admins can read assistant conversations. The app sends messages to Anthropic."
- * assistantDisclosure("anthropic", "openai")
+ * assistantDisclosure({ provider: "anthropic", baseUrl: null }, { provider: "openai", baseUrl: null })
  * // "Server admins can read assistant conversations. The app sends messages to Anthropic, and to OpenAI for quality review."
  * ```
  */
-export function assistantDisclosure(chatProvider: string | null, judgeProvider?: string | null): string {
-  const chat = providerName(chatProvider)
-  const judge = judgeProvider ? providerName(judgeProvider) : chat
-  const review = judge === chat ? "" : `, and to ${judge} for quality review`
-  return `Server admins can read assistant conversations. The app sends messages to ${chat}${review}.`
+export function assistantDisclosure(chat: ProviderEndpoint | null, judge?: ProviderEndpoint | null): string {
+  const chatName = providerName(chat)
+  let review = ""
+  if (judge && !sameEndpoint(chat, judge)) {
+    const judgeName = providerName(judge)
+    const named = judgeName !== chatName ? judgeName : judge.provider === "openai-compatible" ? ANOTHER_SERVER : ANOTHER_PROVIDER
+    review = `, and to ${named} for quality review`
+  }
+  return `Server admins can read assistant conversations. The app sends messages to ${chatName}${review}.`
 }
 
 /**

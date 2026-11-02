@@ -122,13 +122,35 @@ it("the admin assistant page's disclosure names the judge provider, and getAssis
 
   const page = await getAssistantPage(null)
 
-  expect(prismaMock.lLMProvider.findFirst).toHaveBeenCalledWith({ where: { isActive: true, purpose: "judge" }, select: { provider: true } })
+  expect(prismaMock.lLMProvider.findFirst).toHaveBeenCalledWith({ where: { isActive: true, purpose: "judge" }, select: { provider: true, baseUrl: true } })
   expect(page.disclosure).toBe(
     "Server admins can read assistant conversations. The app sends messages to Anthropic, and to OpenAI for quality review."
   )
   // Members' chats are never reviewed, so their surfaces name the chat provider only
   await expect(getAssistantDisclosure()).resolves.toBe(
     "Server admins can read assistant conversations. The app sends messages to Anthropic."
+  )
+})
+
+it("names a judge on another OpenAI-compatible server, though both read the same", async () => {
+  const rows: Record<string, { provider: string; baseUrl: string }> = {
+    chat: { provider: "openai-compatible", baseUrl: "http://ollama.lan:11434/v1" },
+    judge: { provider: "openai-compatible", baseUrl: "https://openrouter.ai/api/v1" },
+  }
+  prismaMock.lLMProvider.findFirst.mockImplementation((async ({ where }: { where: { purpose: string } }) => rows[where.purpose] ?? null) as never)
+
+  const page = await getAssistantPage(null)
+
+  expect(prismaMock.lLMProvider.findFirst).toHaveBeenCalledWith({ where: { isActive: true, purpose: "chat" }, select: { provider: true, baseUrl: true } })
+  expect(page.disclosure).toBe(
+    "Server admins can read assistant conversations. The app sends messages to a model server that the server admins selected, " +
+      "and to another model server that the server admins selected for quality review."
+  )
+
+  // The same server for both is named once
+  rows.judge = { ...rows.chat }
+  expect((await getAssistantPage(null)).disclosure).toBe(
+    "Server admins can read assistant conversations. The app sends messages to a model server that the server admins selected."
   )
 })
 

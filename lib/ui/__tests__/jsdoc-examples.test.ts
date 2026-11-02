@@ -89,20 +89,20 @@ describe('safeHref', () => {
 
 describe('assistantDisclosure', () => {
   it('names the provider', () => {
-    expect(assistantDisclosure('anthropic')).toBe(
+    expect(assistantDisclosure({ provider: 'anthropic', baseUrl: null })).toBe(
       'Server admins can read assistant conversations. The app sends messages to Anthropic.'
     )
   })
 
   it('names a different judge provider for quality review', () => {
-    expect(assistantDisclosure('anthropic', 'openai')).toBe(
+    expect(assistantDisclosure({ provider: 'anthropic', baseUrl: null }, { provider: 'openai', baseUrl: null })).toBe(
       'Server admins can read assistant conversations. The app sends messages to Anthropic, and to OpenAI for quality review.'
     )
   })
 
   it('falls back without a known provider', () => {
     expect(assistantDisclosure(null)).toContain("sends messages to the server's AI provider.")
-    expect(assistantDisclosure('mystery')).toContain("sends messages to the server's AI provider.")
+    expect(assistantDisclosure({ provider: 'mystery', baseUrl: null })).toContain("sends messages to the server's AI provider.")
   })
 })
 

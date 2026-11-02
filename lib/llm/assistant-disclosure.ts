@@ -11,7 +11,7 @@ import { assistantDisclosure } from "@/lib/ui/privacy-copy"
 export async function getAssistantDisclosure(): Promise<string> {
   const row = await prisma.lLMProvider.findFirst({
     where: { isActive: true, purpose: "chat" },
-    select: { provider: true },
+    select: { provider: true, baseUrl: true },
   })
-  return assistantDisclosure(row?.provider ?? null)
+  return assistantDisclosure(row)
 }

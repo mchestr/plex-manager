@@ -22,6 +22,9 @@ export const HISTORY_LIMIT = 100
 /** How many of a conversation's newest messages the page shows. @internal */
 export const TRANSCRIPT_LIMIT = 200
 
+/** Where a provider row sends requests, which the disclosure compares between chat and judge. */
+const PROVIDER_ENDPOINT = { provider: true, baseUrl: true } as const
+
 /** A title that no longer decrypts reads as this. */
 const UNTITLED = "Untitled conversation"
 
@@ -47,9 +50,9 @@ export async function getAssistantPage(conversationId: string | null): Promise<A
   const own = openConversationsOf(session.user.id)
   const [config, provider, judge, rows, open] = await Promise.all([
     prisma.config.findUnique({ where: { id: "config" }, select: { llmDisabled: true } }),
-    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "chat" }, select: { provider: true } }),
+    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "chat" }, select: PROVIDER_ENDPOINT }),
     // The judge reviews these conversations, so this page's disclosure names its provider too
-    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "judge" }, select: { provider: true } }),
+    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "judge" }, select: PROVIDER_ENDPOINT }),
     prisma.chatConversation.findMany({
       where: { ...own, lastMessageAt: { not: null } },
       orderBy: { lastMessageAt: "desc" },
@@ -71,7 +74,7 @@ export async function getAssistantPage(conversationId: string | null): Promise<A
 
   return {
     available: !config?.llmDisabled && provider !== null,
-    disclosure: assistantDisclosure(provider?.provider ?? null, judge?.provider ?? null),
+    disclosure: assistantDisclosure(provider, judge),
     usageTextDays: days.assistantLlmText,
     historyDays: days.assistantChats,
     history: rows.map((row) => ({ id: row.id, title: row.title ?? UNTITLED, lastMessageAt: row.lastMessageAt?.getTime() ?? 0 })),
