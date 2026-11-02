@@ -181,7 +181,14 @@ describe("getConversationReview", () => {
 })
 
 describe("reviewBadgesFor", () => {
+  /** The conversations still reviewable, as the REVIEWABLE_CONVERSATION filter would find them. */
+  function reviewable(...ids: string[]) {
+    prismaMock.chatConversation.findMany.mockImplementation(((args: { where: { id: { in: string[] } } }) =>
+      Promise.resolve(args.where.id.in.filter((id) => ids.includes(id)).map((id) => ({ id })))) as never)
+  }
+
   it("reviewBadgesFor gives none, clean, open and unverified_only", async () => {
+    reviewable("none", "clean", "open", "unverified")
     reviewGroupBy.mockResolvedValue([{ conversationId: "clean" }, { conversationId: "open" }, { conversationId: "unverified" }])
     findingGroupBy.mockResolvedValue([
       { conversationId: "open", evidenceCheck: "verified", _count: { _all: 2 } },
@@ -201,6 +208,21 @@ describe("reviewBadgesFor", () => {
     const reviewArgs = reviewGroupBy.mock.calls[0]?.[0]
     expect(reviewArgs?.where).toEqual({ conversationId: { in: ["none", "clean", "open", "unverified"] }, status: "done" })
     expect(JSON.stringify(findingGroupBy.mock.calls[0]?.[0]?.where)).toContain('"status":"open"')
+  })
+
+  it("gives an ended conversation no badge, even with a done review", async () => {
+    // Ending keeps the done review and deletes its findings, so a badge would read "No findings"
+    reviewable("open-one")
+    reviewGroupBy.mockResolvedValue([{ conversationId: "ended" }, { conversationId: "open-one" }])
+    findingGroupBy.mockResolvedValue([])
+
+    const badges = await reviewBadgesFor(["ended", "open-one", "ended-unreviewed"])
+
+    expect(Object.fromEntries(badges)).toEqual({ "open-one": { state: "clean", open: 0 } })
+    expect(prismaMock.chatConversation.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["ended", "open-one", "ended-unreviewed"] }, ...REVIEWABLE_CONVERSATION },
+      select: { id: true },
+    })
   })
 
   it("reads nothing for no conversations", async () => {

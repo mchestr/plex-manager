@@ -111,14 +111,18 @@ export async function getConversationReview(conversationId: string): Promise<{
 }
 
 /**
- * The Calls badge for each conversation: `none` without a finished review,
- * `open` with open findings that are verified or need no quote (counted),
- * `unverified_only` when every open finding is unverified, else `clean`.
+ * The Calls badge for each conversation still in review scope
+ * (`REVIEWABLE_CONVERSATION`): `none` without a finished review, `open` with
+ * open findings that are verified or need no quote (counted),
+ * `unverified_only` when every open finding is unverified, else `clean`. An
+ * ended or Discord conversation gets no entry: ending keeps its done review
+ * but deletes the findings, so a badge would call it clean.
  */
 export async function reviewBadgesFor(conversationIds: string[]): Promise<Map<string, ReviewBadge>> {
   await assertAdmin()
   if (conversationIds.length === 0) return new Map()
-  const [reviewed, open] = await Promise.all([
+  const [reviewable, reviewed, open] = await Promise.all([
+    prisma.chatConversation.findMany({ where: { id: { in: conversationIds }, ...REVIEWABLE_CONVERSATION }, select: { id: true } }),
     prisma.conversationReview.groupBy({ by: ["conversationId"], where: { conversationId: { in: conversationIds }, status: "done" } }),
     prisma.conversationFinding.groupBy({
       by: ["conversationId", "evidenceCheck"],
@@ -127,8 +131,9 @@ export async function reviewBadgesFor(conversationIds: string[]): Promise<Map<st
     }),
   ])
   const done = new Set(reviewed.map((row) => row.conversationId))
+  const inScope = new Set(reviewable.map((row) => row.id))
   return new Map(
-    conversationIds.map((id): [string, ReviewBadge] => {
+    conversationIds.filter((id) => inScope.has(id)).map((id): [string, ReviewBadge] => {
       if (!done.has(id)) return [id, { state: "none", open: 0 }]
       const rows = open.filter((row) => row.conversationId === id)
       const counted = rows.filter((row) => row.evidenceCheck !== "unverified").reduce((sum, row) => sum + row._count._all, 0)

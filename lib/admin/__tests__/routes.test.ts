@@ -38,6 +38,7 @@ describe("admin routes", () => {
     expect(aiActivity({ userId: "u1", year: 2025 })).toBe("/admin/ai?userId=u1&year=2025")
     expect(aiActivity({ from: "2026-10-01", to: "2026-10-31" })).toBe("/admin/ai?from=2026-10-01&to=2026-10-31")
     expect(aiActivityConversation("c/1")).toBe("/admin/ai/conversation/c%2F1")
+    expect(aiActivityConversation("c/1", "f 1")).toBe("/admin/ai/conversation/c%2F1#finding-f%201")
   })
 
   it("aiActivity builds view=findings with the findings filters", () => {

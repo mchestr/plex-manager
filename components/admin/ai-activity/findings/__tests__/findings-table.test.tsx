@@ -27,7 +27,7 @@ describe('FindingsTable', () => {
 
     const row = screen.getByTestId('findings-table-row-f1')
     expect(within(row).getByTestId('findings-seen-f1')).toHaveTextContent('3')
-    expect(within(row).getByTestId('findings-conversation-f1')).toHaveAttribute('href', '/admin/ai/conversation/conv%2F1')
+    expect(within(row).getByTestId('findings-conversation-f1')).toHaveAttribute('href', '/admin/ai/conversation/conv%2F1#finding-f1')
     expect(row).toHaveTextContent('High')
     expect(row).toHaveTextContent('Wrong tool')
     expect(row).toHaveTextContent('get_users')
@@ -43,6 +43,17 @@ describe('FindingsTable', () => {
     expect(claim).toHaveTextContent('See <a href="https://x.test">this</a> and **bold**')
     expect(claim).toHaveClass('line-clamp-1')
     expect(within(claim).queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('marks an unverified row with a warning "Unverified quote" badge, and only that row', () => {
+    renderTable([findingRow({ id: 'f1', evidenceCheck: 'unverified' }), findingRow({ id: 'f2', evidenceCheck: 'verified' }), findingRow({ id: 'f3', evidenceCheck: 'not_applicable' })])
+
+    const badge = screen.getByTestId('findings-unverified-f1')
+    expect(badge).toHaveTextContent('Unverified quote')
+    expect(badge).toHaveClass('text-warning')
+    expect(within(screen.getByTestId('findings-table-row-f1')).getByTestId('findings-unverified-f1')).toBeInTheDocument()
+    expect(screen.queryByTestId('findings-unverified-f2')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('findings-unverified-f3')).not.toBeInTheDocument()
   })
 
   it('shows the empty node without rows', () => {

@@ -87,13 +87,25 @@ describe("listFindings", () => {
       status: "open",
       type: "wrong_fact",
       severity: "high",
-      tool: "get_users",
+      // Whether a tool filter was set, never the judge-written tool name itself
+      toolFilter: true,
       hideUnverified: true,
       from: "2026-10-01T00:00:00.000Z",
       to: "2026-11-01T00:00:00.000Z",
     })
     const audited = JSON.stringify(jest.mocked(auditMemberListed).mock.calls)
-    for (const text of ["CLAIM-TEXT", "EVIDENCE-TEXT", "SUGGESTION-TEXT", "NOTE-TEXT"]) expect(audited).not.toContain(text)
+    for (const text of ["CLAIM-TEXT", "EVIDENCE-TEXT", "SUGGESTION-TEXT", "NOTE-TEXT", "get_users"]) expect(audited).not.toContain(text)
+  })
+
+  it("records a no-tool filter as set and no filter as unset, never the value", async () => {
+    await listFindings({ tool: null }, ZONE, { page: 1, pageSize: 20 })
+    await listFindings({}, ZONE, { page: 1, pageSize: 20 })
+
+    expect(jest.mocked(auditMemberListed).mock.calls.map(([, , filters]) => filters)).toEqual([
+      expect.objectContaining({ toolFilter: true }),
+      expect.objectContaining({ toolFilter: false }),
+    ])
+    for (const [, , filters] of jest.mocked(auditMemberListed).mock.calls) expect(filters).not.toHaveProperty("tool")
   })
 })
 

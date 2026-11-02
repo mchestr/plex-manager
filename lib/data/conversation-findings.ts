@@ -22,7 +22,7 @@
  * Judge text (claim, evidence, suggestion, note) quotes conversations and tool
  * output, so its readers render it as plain text. No read here selects a
  * message's tool log. Listing findings is audited as `conversation-findings`,
- * with the filters only, never finding text.
+ * with the filters only (a tool filter as set or not), never finding text.
  *
  * @module lib/data/conversation-findings
  */
@@ -108,7 +108,8 @@ function inRange(field: "createdAt" | "triagedAt", range: DayRange | null | unde
 /**
  * One page of findings, newest first, with the count matching and the
  * unverified ones the other filters match. Audited with the filters (enums,
- * the flag, the tool name and the range's instants), never finding text.
+ * the flag, whether a tool was filtered on and the range's instants), never
+ * finding text or the tool name, which the judge wrote.
  */
 export async function listFindings(
   filters: FindingFilters,
@@ -122,7 +123,8 @@ export async function listFindings(
     status: filters.status,
     type: filters.type,
     severity: filters.severity,
-    tool: filters.tool,
+    // The tool name is judge-written text, so only whether one was filtered on
+    toolFilter: filters.tool !== undefined,
     hideUnverified,
     from: window?.gte.toISOString(),
     to: window?.lt.toISOString(),

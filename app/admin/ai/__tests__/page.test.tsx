@@ -130,6 +130,16 @@ describe('AI activity page', () => {
     expect(screen.getByTestId('findings-groups-row-wrong_tool-get_users')).toBeInTheDocument()
   })
 
+  it('a hidden status filter in the grouped view does not make its empty state claim filters', async () => {
+    const { unmount } = await renderPage('view=findings&group=type-tool&status=fixed')
+    // The groups count open findings and show no status filter, so there is nothing to clear
+    expect(screen.getByTestId('findings-empty')).toHaveTextContent('No open findings')
+    unmount()
+
+    await renderPage('view=findings&group=type-tool&severity=low')
+    expect(screen.getByTestId('findings-empty')).toHaveTextContent('No findings match these filters')
+  })
+
   it("the page passes reviewBadgesFor's badges for the Calls rows' conversationIds to UsageTable", async () => {
     jest.mocked(listUsageGroups).mockResolvedValue({
       rows: [usageRow('c1', 'c1'), usageRow('judge-1', null), usageRow('c2', 'c2')],

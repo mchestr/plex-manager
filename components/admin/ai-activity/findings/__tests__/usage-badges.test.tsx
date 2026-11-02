@@ -92,6 +92,8 @@ describe('Calls review badges', () => {
     const finding = buildConversationFinding({ id: 'f1', conversationId: 'conv-1', messageId: 'm2', evidenceCheck: 'unverified' })
     reviewGroupBy.mockResolvedValue([{ conversationId: 'conv-1' }])
     findingGroupBy.mockResolvedValue([{ conversationId: 'conv-1', evidenceCheck: 'unverified', _count: { _all: 1 } }])
+    // Still open, so still in review scope
+    prismaMock.chatConversation.findMany.mockResolvedValue([{ id: 'conv-1' }] as never)
     prismaMock.chatConversation.findUnique.mockResolvedValue({ userId: 'member-1' } as never)
     prismaMock.conversationReview.findFirst.mockResolvedValue({ id: 'review-1', status: 'done' } as never)
     prismaMock.chatConversationMessage.findMany.mockImplementation(((args: { where: { id?: unknown } }) =>

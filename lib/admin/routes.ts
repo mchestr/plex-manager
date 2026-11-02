@@ -78,9 +78,9 @@ export function assistant(conversationId?: string): Route {
   return (conversationId ? `/admin/assistant?conversation=${seg(conversationId)}` : "/admin/assistant") as Route
 }
 
-/** One assistant conversation's calls. */
-export function aiActivityConversation(id: string): Route {
-  return `/admin/ai/conversation/${seg(id)}` as Route
+/** One assistant conversation's calls, scrolled to one of its findings when `findingId` is given. */
+export function aiActivityConversation(id: string, findingId?: string): Route {
+  return `/admin/ai/conversation/${seg(id)}${findingId === undefined ? "" : `#finding-${seg(findingId)}`}` as Route
 }
 
 /** The Affiliates page's tabs; `applications` is the default and leaves the URL bare. */

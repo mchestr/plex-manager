@@ -88,7 +88,8 @@ async function findingsPanel(params: Params, range: DayRange | null, zone: strin
     range,
   }
   const grouped = single(params.group) === FINDINGS_GROUPED
-  const filtered = Boolean(parsed.type || parsed.severity || parsed.tool !== undefined || parsed.status !== "open" || range)
+  // The groups count open findings and show no status filter, so a status in the URL is not one of their filters
+  const filtered = Boolean(parsed.type || parsed.severity || parsed.tool !== undefined || (!grouped && parsed.status !== "open") || range)
 
   const [stats, view] = await Promise.all([
     findingStats(filters, zone),

@@ -2,11 +2,13 @@ import type { ColumnDef } from "@tanstack/react-table"
 import Link from "next/link"
 import type { ReactNode } from "react"
 
+import { Badge } from "@/components/ui/badge"
 import { DataTable } from "@/components/ui/data-table/data-table"
 import { Time } from "@/components/ui/time"
 import { aiActivityConversation } from "@/lib/admin/routes"
 import type { FindingRow } from "@/lib/data/conversation-findings"
 import { FINDING_SEVERITY_LABEL, FINDING_STATUS_LABEL, FINDING_TYPE_LABEL } from "@/lib/ui/finding-labels"
+import { icons } from "@/lib/ui/icons"
 
 const COLUMNS: ColumnDef<FindingRow>[] = [
   { id: "severity", header: "Severity", cell: ({ row }) => FINDING_SEVERITY_LABEL[row.original.severity], meta: { card: "field" } },
@@ -16,8 +18,15 @@ const COLUMNS: ColumnDef<FindingRow>[] = [
     header: "Claim",
     // Judge text quotes conversations and tool output: plain text, one line
     cell: ({ row }) => (
-      <span className="line-clamp-1 max-w-md wrap-anywhere" title={row.original.claim} data-testid={`findings-claim-${row.original.id}`}>
-        {row.original.claim}
+      <span className="flex max-w-md flex-col items-start gap-1">
+        <span className="line-clamp-1 wrap-anywhere" title={row.original.claim} data-testid={`findings-claim-${row.original.id}`}>
+          {row.original.claim}
+        </span>
+        {row.original.evidenceCheck === "unverified" && (
+          <Badge variant="warning" icon={icons.warning} data-testid={`findings-unverified-${row.original.id}`}>
+            Unverified quote
+          </Badge>
+        )}
       </span>
     ),
     meta: { card: "sub" },
@@ -33,7 +42,7 @@ const COLUMNS: ColumnDef<FindingRow>[] = [
     header: "Conversation",
     cell: ({ row }) => (
       <Link
-        href={aiActivityConversation(row.original.conversationId)}
+        href={aiActivityConversation(row.original.conversationId, row.original.id)}
         className="rounded-sm underline-offset-4 hover:underline"
         data-testid={`findings-conversation-${row.original.id}`}
       >
@@ -64,8 +73,10 @@ interface FindingsTableProps {
 }
 
 /**
- * Findings across conversations, newest first: one line of the claim, a link
- * to the conversation, and Seen, how many reviews raised the same finding.
+ * Findings across conversations, newest first: one line of the claim (with
+ * "Unverified quote" when the quote did not match), a link to the finding's
+ * card on its conversation page, and Seen, how many reviews raised the same
+ * finding.
  */
 export function FindingsTable({ rows, total, page, pageSize, toolbar, empty }: FindingsTableProps) {
   return (

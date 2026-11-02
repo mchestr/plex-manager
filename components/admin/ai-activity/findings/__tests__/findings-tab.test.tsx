@@ -67,6 +67,17 @@ describe('FindingsTab', () => {
     expect(screen.getByTestId('findings-stat-false-alarm')).toHaveTextContent('False alarm rate25.0%')
   })
 
+  it('says the Open tile is all time while a range is set, since it counts the whole backlog', () => {
+    renderTab({ range: { from: '2026-10-01', to: '2026-10-31' }, filtered: true })
+    expect(screen.getByTestId('findings-stat-open')).toHaveTextContent('Open (all time)7')
+    expect(screen.getByTestId('findings-stat-fixed')).toHaveTextContent('Fixed (in range)2')
+  })
+
+  it('the first-use empty state says findings show once conversations are reviewed', () => {
+    renderTab({ view: { ...list, rows: [], total: 0 } })
+    expect(screen.getByTestId('findings-empty')).toHaveTextContent('Findings show here once conversations are reviewed.')
+  })
+
   it('false alarm tile shows "—" when null', () => {
     renderTab({ stats: { open: 0, fixed: 0, falseAlarmRate: null } })
     expect(screen.getByTestId('findings-stat-false-alarm')).toHaveTextContent('False alarm rate—')

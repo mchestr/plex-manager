@@ -39,8 +39,9 @@ interface FindingsTabProps {
 }
 
 /**
- * AI activity's Findings tab (spec §2): Open, Fixed (in range) and False
- * alarm rate, the Calls date range, type, severity and status filters (open
+ * AI activity's Findings tab (spec §2): Open ("Open (all time)" while a
+ * range is set, since it counts the whole backlog), Fixed (in range) and
+ * False alarm rate, the Calls date range, type, severity and status filters (open
  * by default), Hide unverified with the hidden count, and List or Group by
  * type and tool. Every filter lives in the URL; a group's tool shows as a
  * chip, so the filter a group link sets can be seen and cleared.
@@ -87,13 +88,14 @@ export function FindingsTab({ stats, view, severity, range, filtered, zone }: Fi
   const empty = filtered ? (
     <EmptyState kind="filtered" icon={SearchX} title="No findings match these filters" description="Clear the filters or select a longer period." data-testid="findings-empty" />
   ) : (
-    <EmptyState kind="first-use" icon={ListChecks} title="No open findings" description="Findings show here once the judge reviews assistant conversations." data-testid="findings-empty" />
+    <EmptyState kind="first-use" icon={ListChecks} title="No open findings" description="Findings show here once conversations are reviewed." data-testid="findings-empty" />
   )
 
   return (
     <div className="flex flex-col gap-6">
       <StatGrid data-testid="findings-stats">
-        <StatTile label="Open" value={f.number(stats.open)} data-testid="findings-stat-open" />
+        {/* Open counts the whole backlog, whatever the range */}
+        <StatTile label={range ? "Open (all time)" : "Open"} value={f.number(stats.open)} data-testid="findings-stat-open" />
         <StatTile label="Fixed (in range)" value={f.number(stats.fixed)} data-testid="findings-stat-fixed" />
         <StatTile
           label="False alarm rate"
