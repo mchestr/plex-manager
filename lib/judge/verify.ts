@@ -6,12 +6,12 @@
  * `norm` collapses whitespace and trims, keeping case. A quote counts only
  * when it is non-empty after `norm`:
  *
- * | evidenceSource    | verified when                                                        |
- * |-------------------|----------------------------------------------------------------------|
- * | `tool_result`     | the quote is in a tool result sent for the message the finding names |
- * | `earlier_message` | the quote is in a sent message with a lower index                    |
- * | `catalog`         | a `wrong_tool` names a catalog tool, or a `missing_capability` names none |
- * | `none`            | never: `misread_question` and `unneeded_refusal` get `not_applicable` |
+ * | evidenceSource    | verified when                                                                                |
+ * |-------------------|----------------------------------------------------------------------------------------------|
+ * | `tool_result`     | the quote is in a tool result sent for the message the finding names                         |
+ * | `earlier_message` | the quote is in a sent message with a lower index                                            |
+ * | `catalog`         | a `wrong_tool` names a catalog tool, or a `missing_capability`'s raw `tool` is null or blank |
+ * | `none`            | never: `misread_question` and `unneeded_refusal` get `not_applicable`                        |
  *
  * A tool result is matched leaf by leaf (strings as they are, numbers and
  * booleans as `String(v)`), so JSON's `\"` and `\n` escapes do not defeat a
@@ -31,6 +31,12 @@
  * the built-in names (`get_plex_sessions`) and the MCP tools' names
  * (`mcp_<server>_<tool>`, `lib/chatbot/mcp/tools.ts`) are lower case letters,
  * digits and underscores, starting with a letter, at most 64 characters.
+ *
+ * The catalog check of a `missing_capability` reads the judge's raw `tool`
+ * (spec: "with no tool"): only null or blank names none. Text that is no
+ * tool's name (prose such as "get users", or markup) is stored as null, but
+ * the judge did name something, so the check stays `unverified`, as it does
+ * for a named tool.
  *
  * ## Special cases
  *
@@ -98,7 +104,7 @@ function inToolResult(quote: string, results: string[]): boolean {
   return results.some((text) => parsedLeaves(text).some((leaf) => norm(leaf).includes(quote)) || norm(text).includes(quote))
 }
 
-function check(finding: Finding, ctx: VerifyContext): EvidenceCheck {
+function check(finding: Finding, ctx: VerifyContext, rawTool: string | null): EvidenceCheck {
   const quote = norm(finding.evidence)
   switch (finding.evidenceSource) {
     case "tool_result":
@@ -109,7 +115,8 @@ function check(finding: Finding, ctx: VerifyContext): EvidenceCheck {
     }
     case "catalog": {
       const named = ctx.tools.some((tool) => tool.function.name === finding.tool)
-      const ok = (finding.type === "wrong_tool" && named) || (finding.type === "missing_capability" && finding.tool === null)
+      const namesNone = (rawTool ?? "").trim() === ""
+      const ok = (finding.type === "wrong_tool" && named) || (finding.type === "missing_capability" && namesNone)
       return ok ? "verified" : "unverified"
     }
     case "none":
@@ -138,7 +145,7 @@ export function verifyFindings(output: JudgeOutput, ctx: VerifyContext): { findi
       dropped += 1
       continue
     }
-    const verified: VerifiedFinding = { ...finding, messageId: message.id, evidenceCheck: check(finding, ctx) }
+    const verified: VerifiedFinding = { ...finding, messageId: message.id, evidenceCheck: check(finding, ctx, raw.tool) }
     const key = JSON.stringify([finding.type, finding.tool ?? "", finding.messageIndex])
     const kept = merged.get(key)
     if (kept) merge(kept, verified)

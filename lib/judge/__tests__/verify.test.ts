@@ -354,6 +354,20 @@ describe("verifyFindings", () => {
       ])
     })
 
+    it("a missing_capability names no tool only when its raw tool is null or blank: prose or markup is stored as null but unverified", () => {
+      const messages = Array.from({ length: 10 }, (_, i) => message(i, `message ${i}`))
+
+      const result = verify(messages, [missing("get users", 1), missing("<b>restart plex</b>", 3), missing(null, 5), missing("", 7), missing("  ", 9)])
+
+      expect(result.findings.map((f) => [f.messageIndex, f.tool, f.evidenceCheck])).toEqual([
+        [1, null, "unverified"],
+        [3, null, "unverified"],
+        [5, null, "verified"],
+        [7, null, "verified"],
+        [9, null, "verified"],
+      ])
+    })
+
     it('a tool of "  " merges with tool null on the same message', () => {
       const result = verify(conversation(), [missing("  "), missing(null)])
 
