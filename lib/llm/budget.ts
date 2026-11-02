@@ -65,8 +65,11 @@ const INCREMENT_IF_CACHED = `if redis.call("EXISTS", KEYS[1]) == 1 then return r
 
 export type SpendCheck = { ok: true } | { ok: false; scope: "user" | "server" | "unavailable" }
 
-/** The server-zone day of `now`: its `YYYY-MM-DD` key and the instant it started. */
-async function spendDay(now: Date): Promise<{ key: string; start: Date }> {
+/**
+ * The server-zone day of `now`: its `YYYY-MM-DD` key and the instant it
+ * started. The judge's cap (`lib/judge/spend.ts`) counts the same day.
+ */
+export async function spendDay(now: Date): Promise<{ key: string; start: Date }> {
   const zone = await serverZone()
   const key = dayKey(now.getTime(), zone)
   return { key, start: wallTimeToInstant(`${key}T00:00`, zone) }

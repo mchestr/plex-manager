@@ -19,6 +19,8 @@ export interface UsageAttribution {
   wrappedId?: string | null
   generationId?: string | null
   chatConversationId?: string | null
+  /** A conversation review's judge call; the judge cap (`lib/judge/spend.ts`) sums these rows. */
+  conversationReviewId?: string | null
   promptVersion?: string | null
   factsHash?: string | null
 }
@@ -41,7 +43,9 @@ export interface UsageRecord {
  * are. A failed write is logged, never thrown: losing a usage row must not
  * fail the generation that paid for it. An assistant call (one with a
  * `chatConversationId`) also adds its cost to today's cached spend, which the
- * caps in `lib/llm/budget.ts` read.
+ * caps in `lib/llm/budget.ts` read. A judge call carries a
+ * `conversationReviewId` and never a `chatConversationId`, so it counts only
+ * against the judge's own cap.
  */
 export async function recordUsage(record: UsageRecord): Promise<void> {
   const { attribution, usage } = record
@@ -52,6 +56,7 @@ export async function recordUsage(record: UsageRecord): Promise<void> {
         wrappedId: attribution.wrappedId ?? null,
         generationId: attribution.generationId ?? null,
         chatConversationId: attribution.chatConversationId ?? null,
+        conversationReviewId: attribution.conversationReviewId ?? null,
         // An assistant call joins its conversation's row on the AI activity list; any other call is its own.
         ...(attribution.chatConversationId ? { groupKey: attribution.chatConversationId } : {}),
         promptVersion: attribution.promptVersion ?? null,

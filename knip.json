@@ -37,7 +37,9 @@
     // the judge's evidence check; the review job is its first caller, drop this then
     "lib/judge/verify.ts!",
     // the judge's findings writer; the review job is its first caller, drop this then
-    "lib/judge/persist.ts!"
+    "lib/judge/persist.ts!",
+    // the judge spend cap and judge-spend lease; the review job is their first caller, drop this then
+    "lib/judge/spend.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",
