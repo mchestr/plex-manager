@@ -69,8 +69,10 @@ function withInviteUrl(result: ActionResult<unknown, string>): ActionResult<unkn
 }
 
 /**
- * The actions that only read: no state they change beyond an audit entry or a
- * rate-limit point. They alone are `readOnlyHint` tools, which clients may run
+ * The actions that only read: no state they change beyond an audit entry, a
+ * rate-limit point or the bookkeeping docs/mcp.md lists (such as
+ * `getConversationReviewStatus` failing a review stuck past its limit as
+ * `STALE`). They alone are `readOnlyHint` tools, which clients may run
  * without asking and a `read` token may call (`lib/mcp/catalog.ts`), so this
  * is a reviewed list, not a guess from names; the catalog test fails when an
  * action named like a read (get, list, preview, estimate, discover) is missing.

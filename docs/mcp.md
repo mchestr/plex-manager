@@ -36,7 +36,9 @@ header works the same way.
   each code only by its last four characters, with no link.
 - A few reads keep their usual bookkeeping: `get_admin_settings` creates the
   settings row on a fresh install, `get_affiliate_settings` records the Plex
-  server's machine id, and `get_discord_overview` prunes old sign-in records.
+  server's machine id, `get_discord_overview` prunes old sign-in records, and
+  `get_conversation_review_status` fails a review stuck past its limit as
+  `STALE`, as the conversation page's poll does.
 - It works only while you are an admin and your account is enabled. Demoting
   or disabling you stops every token of yours at once, with no wait.
 - It expires after 30 days, 90 days (the default), a year, or never.

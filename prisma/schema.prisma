@@ -414,7 +414,7 @@ model ChatConversation {
   lastMessageAt   DateTime?
   createdAt       DateTime                  @default(now())
   endedAt         DateTime?
-  /// Written by enqueueReview and persistReview only to take this row's lock; nothing reads it.
+  /// Written by enqueueReview, reapIfStuck and persistReview only to take this row's lock; nothing reads it.
   reviewLockedAt  DateTime?
   usage           LLMUsage[]
   discordSessions DiscordChatSession[]
