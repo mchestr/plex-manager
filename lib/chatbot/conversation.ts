@@ -42,7 +42,8 @@ interface ConversationConfig {
  * A tool's output as the model receives it: wrapped as `untrusted_data`, so
  * text that members and services control (display names, titles, error
  * bodies) reads as data and never as instructions (SEC-42). JSON output is
- * embedded as a value; anything else as a string.
+ * embedded as a value; anything else, and JSON nested too deep to write out
+ * again (a `RangeError`), as a string.
  */
 function asUntrustedData(output: string): string {
   let result: unknown = output
@@ -51,7 +52,11 @@ function asUntrustedData(output: string): string {
   } catch {
     // Plain text, such as an "Error: ..." line, stays a string
   }
-  return JSON.stringify({ untrusted_data: result })
+  try {
+    return JSON.stringify({ untrusted_data: result })
+  } catch {
+    return JSON.stringify({ untrusted_data: output })
+  }
 }
 
 interface ConversationResult {

@@ -11,6 +11,7 @@
 import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { NOT_RECORDED } from "@/lib/judge/tool-log"
 import { chatWithTools, type ChatToolCall, type ChatWithToolsResult } from "@/lib/llm/chat"
 
 import { runConversationLoop } from "../conversation"
@@ -117,5 +118,40 @@ describe("runConversationLoop tool log", () => {
       { tool: "get_plex_status", args: "{}", result: "", ok: true },
       { tool: "get_plex_sessions", args: "{}", result: '{"size":0}', ok: true },
     ])
+  })
+
+  describe("a call nested too deep to redact", () => {
+    // 6,000 levels: walking them, or writing them out again, overflows the stack
+    const deep = (value: object) => `${"[".repeat(6_000)}${JSON.stringify(value)}${"]".repeat(6_000)}`
+
+    it("still answers when a tool result is, and logs the note in its place", async () => {
+      jest
+        .mocked(chatWithTools)
+        .mockResolvedValueOnce(turn({ toolCalls: [toolCall("call-1", "mcp_files_read_file", '{"path":"keys.json"}')] }))
+        .mockResolvedValueOnce(turn({ content: "The file holds one key." }))
+      jest.mocked(executeToolCall).mockResolvedValueOnce(deep({ apiKey: "deep-key-1" }))
+
+      const result = await runConversationLoop([{ role: "user", content: "What is in keys.json?", timestamp: 0 }], CONFIG)
+
+      expect(result.success).toBe(true)
+      expect(result.message?.content).toBe("The file holds one key.")
+      expect(result.toolLog).toEqual([{ tool: "mcp_files_read_file", args: '{"path":"keys.json"}', result: NOT_RECORDED, ok: true }])
+      // The model still read the output
+      expect(JSON.stringify(jest.mocked(chatWithTools).mock.calls[1][0].messages)).toContain("deep-key-1")
+    })
+
+    it("still answers when the model's args are, and logs the note in their place", async () => {
+      jest
+        .mocked(chatWithTools)
+        .mockResolvedValueOnce(turn({ toolCalls: [toolCall("call-1", "get_plex_sessions", deep({ password: "deep-pass-1" }))] }))
+        .mockResolvedValueOnce(turn({ content: "Nothing is playing." }))
+      jest.mocked(executeToolCall).mockResolvedValueOnce('{"size":0}')
+
+      const result = await runConversationLoop([{ role: "user", content: "What's playing?", timestamp: 0 }], CONFIG)
+
+      expect(result.success).toBe(true)
+      expect(result.message?.content).toBe("Nothing is playing.")
+      expect(result.toolLog).toEqual([{ tool: "get_plex_sessions", args: NOT_RECORDED, result: '{"size":0}', ok: true }])
+    })
   })
 })

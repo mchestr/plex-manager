@@ -4,8 +4,9 @@
 
 /**
  * The stored tool log (spec §3, "Tool log"): credentials are redacted before
- * anything is cut, args are capped at 2 KB, each result at 8 KB and a turn at
- * 32 KB, and the serialized form reads back or reads as null.
+ * anything is cut, a field whose redaction throws is stored as a fixed note,
+ * args are capped at 2 KB, each result at 8 KB and a turn at 32 KB, and the
+ * serialized form reads back or reads as null.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -13,9 +14,10 @@ import { mockReset } from "jest-mock-extended"
 import { buildInvite } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { executeAppDataTool } from "@/lib/chatbot/executors/app-data"
+import { NOTES, neutralise, TRUNCATED } from "@/lib/judge/fence"
 import { REDACTED } from "@/lib/mcp/redact"
 
-import { capToolLog, parseToolLog, serializeToolLog, type ToolLogEntry } from "../tool-log"
+import { capToolLog, NOT_RECORDED, parseToolLog, serializeToolLog, type ToolLogEntry } from "../tool-log"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
@@ -102,6 +104,38 @@ describe("capToolLog", () => {
 
     expect(logged.result).not.toContain("FULLINVITECODE7Q2X")
     expect(JSON.parse(logged.result).invites[0].codeEnd).toBe("7Q2X")
+  })
+
+  describe("a field whose redaction throws", () => {
+    // Walking JSON nested 6,000 levels deep overflows the stack, so redactCredentials throws a RangeError
+    const DEEP_VALUES = ["deep-key-1", "deep-title-1"]
+    const DEEP = `${"[".repeat(6_000)}${JSON.stringify({ apiKey: "deep-key-1", title: "deep-title-1" })}${"]".repeat(6_000)}`
+
+    it.each([
+      ["result", { result: DEEP }, { result: NOT_RECORDED }],
+      ["args", { args: DEEP }, { args: NOT_RECORDED }],
+      ["tool name", { tool: DEEP }, { tool: NOT_RECORDED }],
+      // A runtime type its caller should never pass: redactText throws a TypeError on it
+      ["args that are not text", { args: JSON.stringify(undefined) }, { args: NOT_RECORDED }],
+    ] as const)("is stored as a fixed note in place of the %s, never as its text", (_field, given, stored) => {
+      const [logged] = capToolLog([entry(given)])
+
+      expect(logged).toEqual(entry(stored))
+      for (const value of DEEP_VALUES) expect(JSON.stringify(logged)).not.toContain(value)
+    })
+
+    it("leaves the turn's other calls as they are", () => {
+      const log = capToolLog([entry({ result: DEEP }), entry({ tool: "get_plex_sessions", args: '{"limit":5}', result: '{"size":2}' })])
+
+      expect(log).toEqual([entry({ result: NOT_RECORDED }), entry({ tool: "get_plex_sessions", args: '{"limit":5}', result: '{"size":2}' })])
+    })
+
+    it("is a note that cannot pass for the judge prompt's notes or marks, and that redaction and neutralising leave as it is", () => {
+      expect(NOT_RECORDED).not.toMatch(/^[([]/)
+      expect([...Object.values(NOTES), TRUNCATED, REDACTED]).not.toContain(NOT_RECORDED)
+      expect(neutralise(NOT_RECORDED)).toBe(NOT_RECORDED)
+      expect(capToolLog([entry({ result: NOT_RECORDED })])).toEqual([entry({ result: NOT_RECORDED })])
+    })
   })
 })
 
