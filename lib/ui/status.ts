@@ -170,6 +170,14 @@ export const STATUS = {
     PENDING: { label: "Running", tone: "info", mark: "spinner" },
     TIMEOUT: { label: "Timed out", ...warning },
   },
+  // The conversation page's Review section, one row per `ConversationReviewStatus` and `none` before the first review
+  conversationReview: {
+    none: { label: "Not reviewed", tone: "neutral" },
+    queued: { label: "Queued", tone: "info", mark: "spinner" },
+    running: { label: "Reviewing", tone: "info", mark: "spinner" },
+    done: { label: "Reviewed", tone: "success", mark: icons.done },
+    failed: { label: "Failed", tone: "destructive", mark: icons.error },
+  },
 } as const satisfies Record<string, Record<string, StatusEntry>>
 
 export type StatusDomain = keyof typeof STATUS

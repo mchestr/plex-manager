@@ -8,6 +8,7 @@
  */
 export const queryKeys = {
   adminSearch: (kind: string, q: string) => ["admin-search", kind, q] as const,
+  conversationReview: (conversationId: string) => ["conversation-review", conversationId] as const,
   removeMemberPreview: (userId: string) => ["remove-member-preview", userId] as const,
   rewindDryRun: (runId: string | null) => ["rewind-dry-run", runId] as const,
   rewindSeasonStatus: (year: number) => ["rewind-season-status", year] as const,

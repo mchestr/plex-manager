@@ -90,6 +90,11 @@ const TABLE: Row[] = [
   ["discordCommand", "FAILED", "Failed", "destructive", undefined],
   ["discordCommand", "PENDING", "Running", "info", "spinner"],
   ["discordCommand", "TIMEOUT", "Timed out", "warning", icons.warning],
+  ["conversationReview", "none", "Not reviewed", "neutral", undefined],
+  ["conversationReview", "queued", "Queued", "info", "spinner"],
+  ["conversationReview", "running", "Reviewing", "info", "spinner"],
+  ["conversationReview", "done", "Reviewed", "success", icons.done],
+  ["conversationReview", "failed", "Failed", "destructive", icons.error],
 ]
 
 describe("STATUS", () => {
