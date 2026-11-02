@@ -389,6 +389,18 @@ describe('ReviewSection polling', () => {
     // The poll's refresh brings the done review and its findings
     const findings = [reviewFinding({ id: 'f1' }), reviewFinding({ id: 'f2' }), reviewFinding({ id: 'f3' })]
     rerender(<ReviewSection conversationId="chat-1" review={view()} findings={findings} hasToolEvidence judgeConfigured llmDisabled={false} />)
-    expect(region).toHaveTextContent('Review finished, 3 findings')
+    expect(region).toHaveTextContent('Review finished, 3 open findings')
+  })
+
+  it.each([
+    [['open', 'fixed', 'wont_fix', 'false_alarm'], 'Review finished, 1 open finding'],
+    [['open', 'open', 'fixed'], 'Review finished, 2 open findings'],
+    [['fixed', 'false_alarm'], 'Review finished, no open findings'],
+    [[], 'Review finished, no open findings'],
+  ] as const)('counts only the open findings when a review finishes (%j)', (statuses, said) => {
+    // A review never deletes findings, so the page also shows the ones triaged before it
+    render({ review: view(), findings: statuses.map((value, index) => reviewFinding({ id: `f${index}`, status: value })) })
+
+    expect(screen.getByTestId('conversation-review-announcement')).toHaveTextContent(said)
   })
 })
