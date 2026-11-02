@@ -77,7 +77,7 @@ const DATA: InactivityPageData = {
         createdAt: new Date("2024-01-15T00:00:00Z"),
       },
     ],
-    skips: { no_plex: 0, admin: 1, owner: 0, role: 0, exempt: 0, paying: 0, excluded: 0, not_read: 0 },
+    skips: { no_plex: 0, admin: 1, owner: 0, role: 0, paying: 0, excluded: 0, not_read: 0 },
     active: 7,
     noAccess: 0,
     shareCheck: null,

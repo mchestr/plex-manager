@@ -17,7 +17,7 @@ jest.mock("next/navigation", () => require("@/__tests__/helpers/url-router").nav
 const f = bindFormat({ timeZone: "UTC", locale: "en-US" })
 const NOW = new Date("2026-10-31T12:00:00Z").getTime()
 const ON = { enabled: true, thresholdDays: 180 }
-const NO_SKIPS = { no_plex: 0, admin: 0, owner: 0, role: 0, exempt: 0, paying: 0, excluded: 0, not_read: 0 }
+const NO_SKIPS = { no_plex: 0, admin: 0, owner: 0, role: 0, paying: 0, excluded: 0, not_read: 0 }
 
 const PREVIEW: InactivityPreview = {
   rows: [
