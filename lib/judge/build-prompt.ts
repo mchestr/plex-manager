@@ -65,7 +65,8 @@ export type JudgeMessage = {
   createdAt: Date
 }
 
-export type PriorFinding = { type: string; messageIndex: number; claim: string; status: string }
+/** `claim` is null when it no longer decrypts; the line then names the finding without it. */
+export type PriorFinding = { type: string; messageIndex: number; claim: string | null; status: string }
 
 type JudgePromptInput = {
   messages: JudgeMessage[]
@@ -177,7 +178,7 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
 
   const raised: string[] = []
   for (const [i, finding] of prior.entries()) {
-    const line = `- [#${finding.messageIndex}] ${finding.type} (${finding.status}): ${forJudge(finding.claim)}`
+    const line = `- [#${finding.messageIndex}] ${finding.type} (${finding.status})${finding.claim === null ? "" : `: ${forJudge(finding.claim)}`}`
     const rest = prior.length - i - 1
     if (line.length + 1 + (rest > 0 ? omittedFindings(rest).length + 1 : 0) > budget) break
     raised.push(line)

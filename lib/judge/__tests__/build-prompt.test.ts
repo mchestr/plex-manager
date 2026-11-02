@@ -395,6 +395,17 @@ describe("buildJudgePrompt", () => {
     })
   })
 
+  it("a prior finding whose claim no longer decrypts is listed without it", () => {
+    const built = build([message(0, "hi"), message(1, "hello")], {
+      prior: [
+        { type: "wrong_fact", messageIndex: 1, claim: null, status: "fixed" },
+        { type: "missing_capability", messageIndex: 1, claim: "No tool for disk space", status: "open" },
+      ],
+    })
+
+    expect(built.prompt).toContain("<already_raised>\n- [#1] wrong_fact (fixed)\n- [#1] missing_capability (open): No tool for disk space\n</already_raised>")
+  })
+
   it("marks the reviewed boundary", () => {
     const messages = [0, 1, 2, 3].map((i) => message(i, `message ${i}`))
 

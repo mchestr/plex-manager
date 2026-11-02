@@ -275,15 +275,17 @@ describe("processConversationReview", () => {
     expect(rows.get("review-1")).toMatchObject({ status: "done", summary: "Nothing to check against." })
   })
 
-  it("a message whose text no longer decrypts does not fail the review", async () => {
+  it("a message or a prior claim whose text no longer decrypts does not fail the review", async () => {
     const rows = useReviewTable([{ id: "review-1", status: "queued" }])
     // The encryption extension reads a field it cannot decrypt as null
     prismaMock.chatConversationMessage.findMany.mockResolvedValue(MESSAGES.map((message) => (message.id === "m2" ? { ...message, content: null } : message)) as never)
+    prismaMock.conversationFinding.findMany.mockResolvedValue([{ ...buildConversationFinding({ messageId: "m3", type: "misread_question", status: "fixed" }), claim: null }] as never)
     const { deps, model } = judge()
 
     await expect(run(fakeJob().job, deps)).resolves.toBeUndefined()
 
     expect(sentPrompt(model)).toContain("[#2 user]\\n(message unreadable)\\n\\n[#3 assistant]")
+    expect(sentPrompt(model)).toContain("- [#3] misread_question (fixed)\\n</already_raised>")
     expect(rows.get("review-1")).toMatchObject({ status: "done", summary: "One wrong count." })
     expect(prismaMock.conversationFinding.create).toHaveBeenCalledTimes(1)
   })
