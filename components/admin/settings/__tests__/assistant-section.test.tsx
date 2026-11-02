@@ -33,10 +33,11 @@ const SERVER: McpServerSettings = {
   isActive: true,
   enabledTools: ["search"],
 }
-const EMPTY: AssistantSources = { mcpServers: [], knowledgeSources: [] }
+const EMPTY: AssistantSources = { mcpServers: [], knowledgeSources: [], skillSources: [] }
 const SOURCES: AssistantSources = {
   mcpServers: [SERVER],
   knowledgeSources: [{ id: "k1", name: "Runbooks", repo: "mchestr/knowledgebase", ref: "main", path: "docs", token: null, isActive: true }],
+  skillSources: [],
 }
 
 async function openServer(user: ReturnType<typeof userEvent.setup>) {
@@ -67,6 +68,7 @@ describe("AssistantSection", () => {
         { ...SERVER, id: "m2", name: "Idle", isActive: false },
       ],
       knowledgeSources: [],
+      skillSources: [],
     }
     render(<AssistantSection sources={sources} />)
     expect(screen.getByTestId("settings-mcp-m1")).toHaveTextContent("2 tools on")

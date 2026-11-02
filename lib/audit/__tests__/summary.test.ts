@@ -206,6 +206,37 @@ describe("the admin reads", () => {
   })
 })
 
+describe("ASSISTANT_SOURCE_CHANGED", () => {
+  it("names the kind of source and what happened to it", () => {
+    expect(summary("ASSISTANT_SOURCE_CHANGED", { kind: "skill", action: "refreshed", id: "s1" })).toBe("Skill source refreshed")
+  })
+
+  it.each([
+    ["mcp", "saved", "MCP server saved"],
+    ["mcp", "deleted", "MCP server removed"],
+    ["mcp", "refreshed", "MCP server refreshed"],
+    ["knowledge", "saved", "Knowledge base saved"],
+    ["knowledge", "deleted", "Knowledge base removed"],
+    ["knowledge", "refreshed", "Knowledge base refreshed"],
+    ["skill", "saved", "Skill source saved"],
+    ["skill", "deleted", "Skill source removed"],
+    ["skill", "refreshed", "Skill source refreshed"],
+  ])("has a line for a %s source %s", (kind, action, expected) => {
+    expect(summary("ASSISTANT_SOURCE_CHANGED", { kind, action, id: "row-1" })).toBe(expected)
+  })
+
+  it.each([
+    [{ kind: "webhook", action: "saved", id: "x" }],
+    [{ kind: "skill", action: "renamed", id: "x" }],
+    [{ kind: "toString", action: "saved" }],
+    [{ kind: "skill", action: "constructor" }],
+    [{ kind: "skill" }],
+    [{ action: "deleted" }],
+  ])("has none for an unknown kind or action, %o", (details) => {
+    expect(summary("ASSISTANT_SOURCE_CHANGED", details)).toBeNull()
+  })
+})
+
 describe("auditSummary", () => {
   it("has none for a type without a summary, a type the enum does not know, or details that are not an object", () => {
     expect(summary("INVITE_CREATED", { inviteId: "i1", uses: 1 })).toBeNull()
@@ -235,6 +266,7 @@ describe("auditSummary", () => {
     ["USER_ROLE_CHANGED", { previousRole: NAME, newRole: null }],
     ["MEMBER_CONTENT_LISTED", { surface: NAME, filters: { q: EMAIL } }],
     ["AUDIT_LOG_VIEWED", { filters: { member: NAME, category: EMAIL, type: NOTE } }],
+    ["ASSISTANT_SOURCE_CHANGED", { kind: "skill", action: "saved", id: NAME, name: EMAIL, repo: NOTE }],
     ["SUBSCRIPTION_EXEMPT_CHANGED", { isExempt: true, exemptNote: NOTE }],
   ])("never echoes a name, an email or a note from %s details", (type, details) => {
     const line = summary(type, details) ?? ""

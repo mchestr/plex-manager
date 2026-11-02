@@ -171,13 +171,18 @@ export enum AuditEventType {
   // target user, the year and the wrapped id.
   REWIND_ADMIN_VIEWED = "REWIND_ADMIN_VIEWED",
   // The admin assistant read app data for an admin through a tool. Details carry
-  // the tool name and the conversation, never the arguments' values or the result.
+  // the tool name, never the result. load_skill and read_skill_file also carry
+  // the skill, the repo path read and the commit (repo@sha), so the audit shows
+  // what was followed; every other tool carries only the tool name, never its
+  // arguments' values.
   ASSISTANT_DATA_READ = "ASSISTANT_DATA_READ",
   // The admin assistant called a tool on an MCP server. Details carry the server
   // id and the tool name, never the arguments or the result.
   ASSISTANT_MCP_CALL = "ASSISTANT_MCP_CALL",
-  // An admin added, changed or removed an MCP server or knowledge base source.
-  // Details carry the kind, the action and the row id, never a secret.
+  // An admin added, changed or removed an MCP server, knowledge base or skill
+  // source, or pressed Refresh on a skill source. Details carry the kind (mcp,
+  // knowledge or skill), the action (saved, deleted or refreshed) and the row
+  // id, never a secret.
   ASSISTANT_SOURCE_CHANGED = "ASSISTANT_SOURCE_CHANGED",
   // An admin asked the judge to review an assistant conversation. Details carry
   // the conversation and review ids and the review's status, never finding text.
