@@ -141,6 +141,28 @@ describe("getConversationReview", () => {
     for (const text of ["CLAIM-TEXT", "EVIDENCE-TEXT", "SUGGESTION-TEXT", "NOTE-TEXT", "Forty."]) expect(audited).not.toContain(text)
   })
 
+  it("audits nothing when there is no finding and no review summary to show", async () => {
+    await getConversationReview("conversation-1")
+
+    prismaMock.conversationReview.findFirst.mockResolvedValue({
+      id: "review-1", status: "running", errorCode: null, trigger: "manual", model: null, reviewedThrough: null, completedAt: null, summary: null,
+    } as never)
+    await getConversationReview("conversation-1")
+
+    expect(auditMemberRead).not.toHaveBeenCalled()
+  })
+
+  it("audits a review's summary even when it raised no finding", async () => {
+    prismaMock.conversationReview.findFirst.mockResolvedValue({
+      id: "review-1", status: "done", errorCode: null, trigger: "manual", model: "judge-model", reviewedThrough: at(2), completedAt: at(2), summary: "SUMMARY-TEXT",
+    } as never)
+
+    await getConversationReview("conversation-1")
+
+    expect(auditMemberRead).toHaveBeenCalledWith("conversation-review", "member-1", "admin-1")
+    expect(JSON.stringify(jest.mocked(auditMemberRead).mock.calls)).not.toContain("SUMMARY-TEXT")
+  })
+
   it("audits nothing for a conversation that does not exist", async () => {
     prismaMock.chatConversation.findUnique.mockResolvedValue(null)
 

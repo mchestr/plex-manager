@@ -5,7 +5,7 @@
  * filter lives in the URL.
  */
 
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 
@@ -16,6 +16,13 @@ import { FindingsTab } from '@/components/admin/ai-activity/findings/findings-ta
 jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').navigationModule)
 
 type Props = ComponentProps<typeof FindingsTab>
+
+/** Opens a filter's Select. Base UI keeps its popup inert (`pointer-events: none`) until it is open, so a click can't come sooner. */
+async function openFilter(user: ReturnType<typeof userEvent.setup>, testId: string) {
+  const trigger = screen.getByTestId(testId)
+  await user.click(trigger)
+  await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'true'))
+}
 
 const list: Props['view'] = {
   mode: 'list',
@@ -70,11 +77,11 @@ describe('FindingsTab', () => {
     const user = userEvent.setup()
     renderTab()
 
-    await user.click(screen.getByTestId('findings-filters-filter-severity'))
+    await openFilter(user, 'findings-filters-filter-severity')
     await user.click(await screen.findByTestId('findings-filters-filter-severity-option-high'))
     expect(currentHref()).toBe('/admin/ai?view=findings&severity=high')
 
-    await user.click(screen.getByTestId('findings-filters-filter-status'))
+    await openFilter(user, 'findings-filters-filter-status')
     await user.click(await screen.findByTestId('findings-filters-filter-status-option-all'))
     expect(currentHref()).toBe('/admin/ai?view=findings&severity=high&status=all')
   })

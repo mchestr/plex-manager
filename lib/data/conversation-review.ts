@@ -7,7 +7,8 @@
  * The conversation page shows every finding, unverified ones last, since it is
  * where an admin can still check a quote; the badges' "N open" leaves
  * unverified findings out, like every other count. Reading one conversation's
- * review is audited as `conversation-review` against the conversation's owner.
+ * review is audited as `conversation-review` against the conversation's owner,
+ * only when it returns their text (a finding with its message, or a summary).
  * No read here selects a message's tool log.
  *
  * @module lib/data/conversation-review
@@ -72,9 +73,6 @@ export async function getConversationReview(conversationId: string): Promise<{
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "judge" }, select: { id: true } }),
     prisma.chatConversation.findFirst({ where: { id: conversationId, ...REVIEWABLE_CONVERSATION }, select: { id: true } }),
   ])
-  // The conversation is one member's transcript
-  if (owner) await auditMemberRead("conversation-review", owner.userId, session.user.id)
-
   const messageIds = [...new Set(findings.flatMap((finding) => (finding.messageId ? [finding.messageId] : [])))]
   const [usage, messages] = await Promise.all([
     latest ? prisma.lLMUsage.aggregate({ where: { conversationReviewId: latest.id }, _sum: { cost: true } }) : null,
@@ -92,6 +90,8 @@ export async function getConversationReview(conversationId: string): Promise<{
   })
   const unverified = (finding: FindingRow) => (finding.evidenceCheck === "unverified" ? 1 : 0)
   withMessages.sort((a, b) => unverified(a) - unverified(b) || a.message.index - b.message.index)
+  // Audited only when it returns the member's text: a finding with its message, or the review's summary
+  if (owner && (withMessages.length > 0 || latest?.summary)) await auditMemberRead("conversation-review", owner.userId, session.user.id)
 
   return {
     review: latest ? { ...latest, cost: usage?._sum.cost ?? 0 } : null,
