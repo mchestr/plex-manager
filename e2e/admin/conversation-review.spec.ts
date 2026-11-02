@@ -11,7 +11,8 @@ import { JUDGE_MODEL, type JudgeRequest } from '../mocks/llm-server';
  * `evals/judge/fixtures/wrong-count.json`. The seeded conversation is that
  * fixture's, tool log included, so the finding verifies against it. Triage
  * then moves the Findings tab's false alarm rate, and the stub's request log
- * shows the prompt the judge was sent.
+ * shows the prompt the judge was sent. Any other active judge provider is
+ * turned off for the spec, so the stub is the judge, and turned back on after.
  */
 const JUDGE_PROVIDER_ID = 'e2e-conversation-review-judge';
 const CONVERSATION_ID = 'e2e-conversation-review';
@@ -31,6 +32,9 @@ async function clean() {
   await prisma.$disconnect();
 }
 
+/** Active judge providers the spec turned off in beforeAll, turned back on in afterAll. */
+let otherJudges: string[] = [];
+
 /** The judge requests the stub has answered in this run. */
 async function judgeRequests(): Promise<JudgeRequest[]> {
   const response = await fetch(new URL('/__judge-requests', process.env.E2E_LLM_URL));
@@ -41,6 +45,9 @@ test.describe('Conversation review', () => {
   test.beforeAll(async () => {
     await clean();
     const prisma = createE2EPrismaClient();
+    const active = await prisma.lLMProvider.findMany({ where: { isActive: true, purpose: 'judge' }, select: { id: true } });
+    otherJudges = active.map((row) => row.id);
+    await prisma.lLMProvider.updateMany({ where: { id: { in: otherJudges } }, data: { isActive: false } });
     await prisma.lLMProvider.create({
       data: {
         id: JUDGE_PROVIDER_ID,
@@ -90,7 +97,12 @@ test.describe('Conversation review', () => {
     await prisma.$disconnect();
   });
 
-  test.afterAll(clean);
+  test.afterAll(async () => {
+    await clean();
+    const prisma = createE2EPrismaClient();
+    await prisma.lLMProvider.updateMany({ where: { id: { in: otherJudges } }, data: { isActive: true } });
+    await prisma.$disconnect();
+  });
 
   test('reviews a conversation with the stubbed judge and triages its finding', async ({ adminPage: page }) => {
     test.setTimeout(120_000);
@@ -125,7 +137,8 @@ test.describe('Conversation review', () => {
     await page.goto('/admin/ai?view=findings');
     const rate = page.getByTestId('findings-stat-false-alarm');
     await expect(rate).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    await expect(rate).not.toContainText('—');
+    // The one triaged finding is a false alarm
+    await expect(rate).toContainText(/100[.,]0\s?%/);
 
     // The judge was sent one fenced prompt with the transcript and its tool log
     const requests = (await judgeRequests()).slice(earlierRequests);
