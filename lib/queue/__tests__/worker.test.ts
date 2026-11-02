@@ -168,25 +168,37 @@ describe("events", () => {
     expect(mockLogger.error).toHaveBeenCalledWith("Job failed", error, expect.objectContaining({ jobId: "j1", requestId: "job:j1", willRetry: true }))
   })
 
-  it("the final failed attempt of judge:review calls markReviewFailed(reviewId, 'JOB_FAILED'), using attempts ?? 3", () => {
-    const review = (attemptsMade: number, attempts?: number) =>
-      job("judge:review", { data: { reviewId: "review-1" }, attemptsMade, opts: attempts === undefined ? {} : { attempts } })
+  it("runs the judge:review crash fallback only when BullMQ failed the job for good (finishedOn set), and logs the same decision", () => {
+    const review = (extra: Partial<Job>) => job("judge:review", { data: { reviewId: "review-1" }, ...extra })
 
-    mockHandlers.get("failed")!(review(1, 2), new Error("boom"))
-    mockHandlers.get("failed")!(review(2), new Error("boom"))
-    mockHandlers.get("failed")!(job("watchlist:sync:all", { attemptsMade: 3 }), new Error("boom"))
+    // BullMQ moved these back for another attempt, so it set no finishedOn
+    mockHandlers.get("failed")!(review({ attemptsMade: 1 }), new Error("boom"))
+    mockHandlers.get("failed")!(review({ attemptsMade: 2, opts: {} }), new Error("boom"))
+    expect(mockLogger.error).toHaveBeenLastCalledWith("Job failed", expect.any(Error), expect.objectContaining({ willRetry: true }))
+    // Another job type, failed for good
+    mockHandlers.get("failed")!(job("watchlist:sync:all", { attemptsMade: 3, finishedOn: 1_700_000_000_000 }), new Error("boom"))
     expect(markReviewFailed).not.toHaveBeenCalled()
 
-    mockHandlers.get("failed")!(review(3), new Error("boom"))
-    mockHandlers.get("failed")!(review(2, 2), new Error("boom"))
-    expect(markReviewFailed).toHaveBeenCalledTimes(2)
+    mockHandlers.get("failed")!(review({ attemptsMade: 3, finishedOn: 1_700_000_000_000 }), new Error("boom"))
+    expect(markReviewFailed).toHaveBeenCalledTimes(1)
     expect(markReviewFailed).toHaveBeenCalledWith("review-1", "JOB_FAILED")
+    expect(mockLogger.error).toHaveBeenLastCalledWith("Job failed", expect.any(Error), expect.objectContaining({ willRetry: false }))
+  })
+
+  it("a judge:review job BullMQ failed for stalling on its first attempt still gets markReviewFailed(reviewId, 'JOB_FAILED')", () => {
+    // Past maxStalledCount BullMQ fails the job with an UnrecoverableError and never retries it: attemptsMade is 1 of 3, finishedOn is set
+    const stalled = Object.assign(new Error("job stalled more than allowable limit"), { name: "UnrecoverableError" })
+
+    mockHandlers.get("failed")!(job("judge:review", { data: { reviewId: "review-1" }, attemptsMade: 1, finishedOn: 1_700_000_000_000 }), stalled)
+
+    expect(markReviewFailed).toHaveBeenCalledWith("review-1", "JOB_FAILED")
+    expect(mockLogger.error).toHaveBeenCalledWith("Job failed", stalled, expect.objectContaining({ attempts: 1, maxAttempts: 3, willRetry: false }))
   })
 
   it("logs a crash fallback that could not be written", async () => {
     jest.mocked(markReviewFailed).mockRejectedValueOnce(new Error("db down"))
 
-    mockHandlers.get("failed")!(job("judge:review", { data: { reviewId: "review-1" }, attemptsMade: 3 }), new Error("boom"))
+    mockHandlers.get("failed")!(job("judge:review", { data: { reviewId: "review-1" }, attemptsMade: 3, finishedOn: 1_700_000_000_000 }), new Error("boom"))
     await new Promise((resolve) => setImmediate(resolve))
 
     expect(mockLogger.error).toHaveBeenCalledWith("Could not mark the review failed", expect.any(Error), { reviewId: "review-1" })

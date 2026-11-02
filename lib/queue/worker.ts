@@ -80,7 +80,9 @@ export async function startWorker(): Promise<void> {
 
   worker.on("failed", (job, error) => {
     onJobFailed(getRedisConnection(), QUEUE_NAME, job, error)
-    const willRetry = job && job.attemptsMade < (job.opts.attempts ?? 3)
+    // BullMQ's own decision: it sets finishedOn only when it failed the job for good, an UnrecoverableError
+    // (a job stalled past maxStalledCount) included, whatever attemptsMade says
+    const willRetry = job !== undefined && job.finishedOn === undefined
     logger.error("Job failed", error, {
       jobId: job?.id,
       jobType: job?.name,
