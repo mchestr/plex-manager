@@ -16,7 +16,8 @@
  *    or create a `queued` one.
  * 4. After commit, and only for a review it created, add the job. A queue
  *    that is down or throws fails that review with `ENQUEUE_FAILED` at once:
- *    `QUEUE_UNAVAILABLE`.
+ *    `QUEUE_UNAVAILABLE`. A throw is logged first, with the review id and
+ *    the error; the caller gets only the code.
  *
  * Under READ COMMITTED two concurrent calls would each see no open review
  * and each insert one; the row lock taken first makes the second wait and
@@ -30,6 +31,9 @@ import type { JobState } from "bullmq"
 import { REVIEWABLE_CONVERSATION } from "@/lib/judge/scope"
 import { markReviewFailed, readQueuedJobStates, reapStaleReviews } from "@/lib/judge/stale"
 import { prisma } from "@/lib/prisma"
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("conversation-review")
 
 type EnqueueReviewInput = { conversationId: string; trigger: "manual" | "nightly"; requestedById: string | null }
 
@@ -45,7 +49,8 @@ type Refused = { ok: false; code: "NOT_FOUND" | "CONFLICT" | "UNAVAILABLE" | "QU
 async function addJob(deps: EnqueueReviewDeps, reviewId: string): Promise<boolean> {
   try {
     return (await deps.enqueue({ reviewId })).ok
-  } catch {
+  } catch (error) {
+    logger.warn("Could not add the review's job; failing the review", { reviewId, error })
     return false
   }
 }

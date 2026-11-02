@@ -23,6 +23,7 @@ import { enqueueFromRequest, withRequestPathQueue } from "@/lib/queue/request-pa
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { consume } from "@/lib/security/rate-limit"
 import { LIMITS, type LimitName } from "@/lib/security/rate-limit-config"
+import { createLogger } from "@/lib/utils/logger"
 
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
@@ -31,6 +32,11 @@ jest.mock("@/lib/security/rate-limit", () => ({ consume: jest.fn(), actionClient
 jest.mock("@/lib/queue/request-path", () => ({ enqueueFromRequest: jest.fn(), withRequestPathQueue: jest.fn() }))
 jest.mock("@/lib/actions/invalidate", () => ({ refreshView: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), logAuditEvent: jest.fn() }))
+jest.mock("@/lib/utils/logger", () => {
+  const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+  return { createLogger: () => logger }
+})
+const mockLogger = createLogger("conversation-review")
 
 const ADMIN = { user: { id: "admin-1", isAdmin: true } }
 const QUEUE_DOWN = { success: false, code: "UPSTREAM_UNAVAILABLE", error: "The job queue is unavailable. Try again shortly." }
@@ -258,6 +264,26 @@ describe("enqueueReview", () => {
     })
     expect(events).toEqual(["redis:judge-review-review-new-1", "tx:start", "tx:commit"])
     expect(d.enqueue).toHaveBeenCalledTimes(1)
+  })
+
+  it("a thrown enqueue logs a warning with the review id and the error before the review is failed, and no caller sees its text", async () => {
+    const error = new Error("connection reset by 10.0.0.7")
+    const d = deps({ enqueue: jest.fn(async () => Promise.reject(error)) })
+
+    await expect(enqueueReview(manual, d)).resolves.toEqual({ ok: false, code: "QUEUE_UNAVAILABLE" })
+
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1)
+    expect(mockLogger.warn).toHaveBeenCalledWith(expect.any(String), { reviewId: "review-new-1", error })
+    // Logged while the review was still queued: the last review write is the ENQUEUE_FAILED mark
+    const [warned] = jest.mocked(mockLogger.warn).mock.invocationCallOrder
+    expect(warned).toBeLessThan(prismaMock.conversationReview.updateMany.mock.invocationCallOrder.at(-1)!)
+    expect(rows.get("review-new-1")).toMatchObject({ status: "failed", errorCode: "ENQUEUE_FAILED" })
+
+    // The action answers with fixed copy, never the error's text
+    jest.mocked(enqueueFromRequest).mockRejectedValue(error)
+    const result = await reviewConversation({ conversationId: "conversation-1" })
+    expect(result).toEqual(QUEUE_DOWN)
+    expect(JSON.stringify(result)).not.toContain("10.0.0.7")
   })
 
   it("enqueueReview reads job states before its transaction and makes no Redis call inside it", async () => {
