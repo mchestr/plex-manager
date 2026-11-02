@@ -16,7 +16,10 @@
  *    assistant's prompt and catalog, the prompt's window lacks the newest
  *    message: the review fails with `PROMPT_TOO_LARGE` before the lease, so
  *    no call judges an empty transcript and no review is marked `done`
- *    through messages the judge never saw.
+ *    through messages the judge never saw. Its warning logs, as numbers,
+ *    what the judge's rules and the assistant's prompt and catalog took of
+ *    the cap (`fixedChars`, as the builder measured it, and `promptCap`), so
+ *    a catalog that fills the budget shows apart from a long turn.
  * 3. Under the `judge-spend` lease: the last checks (`blockedBeforeCall`,
  *    `lib/judge/guards.ts`: the run still holds its review, the conversation
  *    has not ended, AI features are on), the judge cap, then the judge call
@@ -46,7 +49,7 @@
 import { DelayedError, type Job } from "bullmq"
 
 import { getAdminAssistantContext } from "@/lib/chatbot/assistant"
-import { buildJudgePrompt, type JudgeMessage, type PriorFinding } from "@/lib/judge/build-prompt"
+import { buildJudgePrompt, type JudgeMessage, PROMPT_CAP, type PriorFinding } from "@/lib/judge/build-prompt"
 import { blockedBeforeCall } from "@/lib/judge/guards"
 import { persistReview, ReviewSuperseded } from "@/lib/judge/persist"
 import { JUDGE_PROMPT_VERSION } from "@/lib/judge/prompts/v1"
@@ -142,7 +145,7 @@ export async function processConversationReview(job: Job<ReviewPayload>, token?:
   const { systemPrompt, tools } = await getAdminAssistantContext(loaded.owner)
   const prompt = buildJudgePrompt({ ...loaded, systemPrompt, tools })
   if (!prompt.window.has(newest.index)) {
-    logger.warn("The newest turn does not fit in the judge prompt", { reviewId })
+    logger.warn("The newest turn does not fit in the judge prompt", { reviewId, fixedChars: prompt.fixedChars, promptCap: PROMPT_CAP })
     return markReviewFailed(reviewId, "PROMPT_TOO_LARGE", run.runToken)
   }
   const called = await withJudgeLease(

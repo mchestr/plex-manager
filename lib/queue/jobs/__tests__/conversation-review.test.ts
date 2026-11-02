@@ -190,6 +190,10 @@ const run = (job: Job<Payload>, deps: StructuredDeps, leaseStore: LeaseStore = s
 /** The prompt text the judge was sent on its `n`th call. */
 const sentPrompt = (model: MockLanguageModelV4, n = 0) => JSON.stringify(model.doGenerateCalls[n].prompt)
 
+/** The fields the "does not fit" warning logged. */
+const tooLargeWarning = () =>
+  jest.mocked(mockLogger.warn).mock.calls.find(([message]) => message === "The newest turn does not fit in the judge prompt")?.[1]
+
 describe("processConversationReview", () => {
   it("happy path writes findings and a done review", async () => {
     const rows = useReviewTable([{ id: "review-1", status: "queued" }])
@@ -429,6 +433,25 @@ describe("processConversationReview", () => {
     expect(prismaMock.lLMUsage.aggregate).not.toHaveBeenCalled()
     expect(deps.resolve).not.toHaveBeenCalled()
     expect(model.doGenerateCalls).toHaveLength(0)
+    // Numbers only: the judge's rules and the assistant's prompt and catalog took nearly the whole cap
+    expect(tooLargeWarning()).toEqual({ reviewId: "review-1", fixedChars: expect.any(Number), promptCap: 120_000 })
+    expect(tooLargeWarning()?.fixedChars).toBeGreaterThan(119_000)
+    expect(tooLargeWarning()?.fixedChars).toBeLessThanOrEqual(120_000)
+  })
+
+  it("a newest turn too long beside a short catalog logs a small fixedChars, so the turn shows as the cause", async () => {
+    const rows = useReviewTable([{ id: "review-1", status: "queued" }])
+    // A thousand calls in one turn: their tags alone pass the cap, however the text is cut
+    const calls = Array.from({ length: 1_000 }, () => ({ tool: "t".repeat(100), args: "{}", result: "{}", ok: true }))
+    prismaMock.chatConversationMessage.findMany.mockResolvedValue([MESSAGES[0], { ...MESSAGES[1], toolLog: JSON.stringify(calls) }] as never)
+    const { deps, model } = judge()
+
+    await expect(run(fakeJob().job, deps)).resolves.toBeUndefined()
+
+    expect(rows.get("review-1")).toMatchObject({ status: "failed", errorCode: "PROMPT_TOO_LARGE" })
+    expect(model.doGenerateCalls).toHaveLength(0)
+    expect(tooLargeWarning()).toEqual({ reviewId: "review-1", fixedChars: expect.any(Number), promptCap: 120_000 })
+    expect(tooLargeWarning()?.fixedChars).toBeLessThan(10_000)
   })
 
   it("over cap fails with BUDGET_EXCEEDED and makes no LLM call", async () => {

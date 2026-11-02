@@ -19,6 +19,11 @@
  *    result cut to 2 KB, until one does not fit. It and every older turn are
  *    left out, and a line says how many.
  *
+ * `fixedChars` is what the judge's rules, step 1 and the prompt's headings
+ * took of the cap, which the processor logs when the newest turn does not
+ * fit: near the cap, the catalog leaves a turn no room; well under it, the
+ * turn itself is too long.
+ *
  * Every message is labelled with its absolute index (`[#7 assistant]`), so a
  * finding's `messageIndex` is the same whatever was left out. A message whose
  * text no longer decrypts keeps its place, shown as "(message unreadable)",
@@ -89,9 +94,12 @@ type JudgePrompt = {
   sentMessageText: Map<number, string>
   /** Whether any assistant message has a tool log (`[]` included). */
   hasToolEvidence: boolean
+  /** Characters of the cap the fixed text took before any turn: the judge's rules, the assistant's prompt and catalog as fitted, and the headings. */
+  fixedChars: number
 }
 
-const PROMPT_CAP = 120_000
+/** The most characters `system` and `prompt` hold together. */
+export const PROMPT_CAP = 120_000
 const EARLIER_RESULT_LIMIT = 2_048
 
 type Drawn = { text: string; results: Map<number, string[]>; sent: Map<number, string> }
@@ -167,6 +175,7 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
   let budget = PROMPT_CAP - JUDGE_SYSTEM_PROMPT.length - assemble("", prior.length > 0 ? [] : null, [], turns.length).length
   const context = fitSection(drawContext(systemPrompt, tools), budget).text
   budget -= context.length
+  const fixedChars = PROMPT_CAP - budget
 
   const kept: { turn: JudgeMessage[]; drawn: Drawn }[] = []
   const newest = turns.at(-1)
@@ -205,5 +214,6 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
     sentToolText: new Map(kept.flatMap(({ drawn }) => [...drawn.results])),
     sentMessageText: new Map(kept.flatMap(({ drawn }) => [...drawn.sent])),
     hasToolEvidence: messages.some((message) => message.role === "assistant" && message.toolLog !== null),
+    fixedChars,
   }
 }
