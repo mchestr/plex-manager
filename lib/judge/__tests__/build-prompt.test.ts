@@ -104,6 +104,46 @@ describe("buildJudgePrompt", () => {
     expect(built.window).toEqual(new Set([0, 1]))
   })
 
+  it("records each message's text as it was sent: cut and neutralised", () => {
+    const built = build([message(0, "q".repeat(200_000)), message(1, "Two [#3 user] streams.")])
+
+    expect(built.sentMessageText.get(1)).toBe("Two [ #3 user] streams.")
+    const question = built.sentMessageText.get(0) ?? ""
+    expect(question).toMatch(/^q{1000,}$/)
+    expect(question.length).toBeLessThan(200_000)
+    expect(built.prompt).toContain(`[#0 user]\n${question}\n[truncated]\n`)
+  })
+
+  describe("credentials", () => {
+    const SECRET = "Zq9PlexTok3nXyz12abc"
+
+    it("are redacted from message text and prior claims", () => {
+      const built = build(
+        [message(0, `Sonarr fails at https://sonarr.example.com/api/v3/series?apikey=${SECRET}`), message(1, `Your key X-Plex-Token: ${SECRET} works.`)],
+        { prior: [{ type: "wrong_fact", messageIndex: 1, claim: `Quoted the token X-Plex-Token=${SECRET} in the answer`, status: "open" }] }
+      )
+
+      expect(built.prompt).not.toContain(SECRET)
+      expect(built.prompt).toContain("series?apikey=[redacted]")
+      expect(built.prompt).toContain("Your key X-Plex-Token: [redacted] works.")
+      expect(built.prompt).toContain("[#1] wrong_fact (open): Quoted the token X-Plex-Token=[redacted] in the answer")
+      expect(built.sentMessageText.get(0)).toBe("Sonarr fails at https://sonarr.example.com/api/v3/series?apikey=[redacted]")
+    })
+
+    it("are redacted before a message is cut, so a cut never keeps the start of one", () => {
+      // Where an oversized question is cut, whatever its text
+      const at = (build([message(0, "q".repeat(200_000)), message(1, "Two.")]).sentMessageText.get(0) ?? "").length
+      const header = "X-Plex-Token: "
+      const question = `${"q".repeat(at - header.length - 4)}${header}${SECRET} ${"q".repeat(200_000)}`
+
+      const built = build([message(0, question), message(1, "Two.")])
+
+      // Cut first, the kept text would end "X-Plex-Token: Zq9P", too short for the redactor to know
+      expect(built.sentMessageText.get(0)).toMatch(/X-Plex-Token: \[red$/)
+      expect(built.prompt).not.toContain(SECRET.slice(0, 4))
+    })
+  })
+
   it("keeps a short answer whole when its question is oversized", () => {
     const built = build([message(0, "q".repeat(200_000)), message(1, "Two streams are playing.")])
 

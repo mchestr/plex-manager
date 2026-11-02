@@ -157,7 +157,7 @@ export async function processConversationReview(job: Job<ReviewPayload>, token?:
   if (!called.value.ok) return judgeFailed(job, run, called.value.error.code)
 
   const { output, modelId } = called.value.value
-  const verified = verifyFindings(output, { messages: loaded.messages, window: prompt.window, sentToolText: prompt.sentToolText, tools })
+  const verified = verifyFindings(output, { messages: loaded.messages, window: prompt.window, sentToolText: prompt.sentToolText, sentMessageText: prompt.sentMessageText, tools })
   if (verified.dropped > 0) logger.warn("Dropped judge findings outside the prompt's window", { reviewId, dropped: verified.dropped })
   try {
     const counts = await prisma.$transaction((tx) =>

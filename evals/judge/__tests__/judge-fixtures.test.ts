@@ -83,7 +83,13 @@ async function runFixture(name: string) {
   const messages = messagesOf(name, fixture)
   const tools = toolsOf(fixture)
   const built = buildJudgePrompt({ messages, systemPrompt: fixture.systemPrompt, tools, prior: [], previousReviewedThrough: null })
-  const verified = verifyFindings(fixture.judgeOutput, { messages, window: built.window, sentToolText: built.sentToolText, tools })
+  const verified = verifyFindings(fixture.judgeOutput, {
+    messages,
+    window: built.window,
+    sentToolText: built.sentToolText,
+    sentMessageText: built.sentMessageText,
+    tools,
+  })
   const counts = await persistReview(asAppTransactionClient(prismaMock), {
     reviewId: `${name}-review`,
     conversationId: `${name}-conversation`,

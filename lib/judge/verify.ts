@@ -16,8 +16,11 @@
  * A tool result is matched leaf by leaf (strings as they are, numbers and
  * booleans as `String(v)`), so JSON's `\"` and `\n` escapes do not defeat a
  * quote, then as its whole sent text, for a quote that spans keys or a result
- * cut so it no longer parses. Matching uses `sentToolText`, the text as cut
- * for the prompt, so a quote from past an earlier turn's 2 KB cut fails.
+ * cut so it no longer parses. Matching uses `sentToolText` and
+ * `sentMessageText`, the text exactly as the prompt sent it (redacted,
+ * neutralised and cut), so a quote from past an earlier turn's 2 KB cut, past
+ * the cut of an oversized message, or of a credential the judge never saw
+ * fails.
  *
  * ## The tool
  *
@@ -58,6 +61,8 @@ type VerifyContext = {
   window: Set<number>
   /** By message index, each tool result exactly as the judge was sent it. */
   sentToolText: Map<number, string[]>
+  /** By message index, each message's text exactly as the judge was sent it. */
+  sentMessageText: Map<number, string>
   tools: ChatTool[]
 }
 
@@ -99,8 +104,8 @@ function check(finding: Finding, ctx: VerifyContext): EvidenceCheck {
     case "tool_result":
       return quote !== "" && inToolResult(quote, ctx.sentToolText.get(finding.messageIndex) ?? []) ? "verified" : "unverified"
     case "earlier_message": {
-      const earlier = ctx.messages.filter((message) => message.index < finding.messageIndex && ctx.window.has(message.index))
-      return quote !== "" && earlier.some((message) => norm(message.content).includes(quote)) ? "verified" : "unverified"
+      const earlier = [...ctx.sentMessageText].filter(([index]) => index < finding.messageIndex && ctx.window.has(index))
+      return quote !== "" && earlier.some(([, text]) => norm(text).includes(quote)) ? "verified" : "unverified"
     }
     case "catalog": {
       const named = ctx.tools.some((tool) => tool.function.name === finding.tool)

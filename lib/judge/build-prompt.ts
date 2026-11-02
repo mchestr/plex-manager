@@ -30,6 +30,17 @@
  * the builder's own, and each block opens and closes exactly once. A tool
  * result stays JSON that parses.
  *
+ * ## Redaction
+ *
+ * Message text and the claims already raised go through `redactCredentials`
+ * (`lib/mcp/redact.ts`) before they are neutralised or cut, as a tool log is
+ * before it is stored, so the judge never gets a credential and a cut never
+ * keeps the start of one too short to recognise.
+ *
+ * `sentMessageText` and `sentToolText` hold each piece exactly as the judge
+ * got it (redacted, neutralised and cut), which `verify` matches quotes
+ * against.
+ *
  * @module lib/judge/build-prompt
  */
 
@@ -38,6 +49,7 @@ import { type Fit, fitSection, fitWithin, marked } from "@/lib/judge/fit"
 import { JUDGE_SYSTEM_PROMPT } from "@/lib/judge/prompts/v1"
 import { type ToolLogEntry } from "@/lib/judge/tool-log"
 import { type ChatTool } from "@/lib/llm/chat"
+import { redactCredentials } from "@/lib/mcp/redact"
 
 export type JudgeMessage = {
   id: string
@@ -68,6 +80,8 @@ type JudgePrompt = {
   window: Set<number>
   /** By message index, each tool result exactly as the judge was sent it. */
   sentToolText: Map<number, string[]>
+  /** By message index, each message's text exactly as the judge was sent it. */
+  sentMessageText: Map<number, string>
   /** Whether any assistant message has a tool log (`[]` included). */
   hasToolEvidence: boolean
 }
@@ -75,13 +89,16 @@ type JudgePrompt = {
 const PROMPT_CAP = 120_000
 const EARLIER_RESULT_LIMIT = 2_048
 
-type Drawn = { text: string; results: Map<number, string[]> }
+type Drawn = { text: string; results: Map<number, string[]>; sent: Map<number, string> }
 
 const fenced = (tag: string, body: string) => `<${tag}>\n${body}\n</${tag}>`
+/** Text from the conversation or an earlier review, as the judge gets it before any cut; see the module comment. */
+const forJudge = (text: string) => neutralise(redactCredentials(text).text)
 
 function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, reviewed: boolean) {
   const label = `[#${message.index} ${message.role}]${reviewed ? ` ${NOTES.reviewed}` : ""}`
-  const lines = [label, marked(fit(neutralise(message.content)))]
+  const content = fit(forJudge(message.content))
+  const lines = [label, marked(content)]
   const results: string[] = []
   if (message.role === "assistant") {
     if (message.toolLog === null) lines.push(NOTES.noLog)
@@ -94,7 +111,7 @@ function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, revie
       lines.push(`<tool_result tool="${attribute(call.tool)}" ok="${call.ok}">\nargs: ${args.text}\nresult: ${result.text}${cut ? `\n${TRUNCATED}` : ""}\n</tool_result>`)
     }
   }
-  return { text: lines.join("\n"), results }
+  return { text: lines.join("\n"), results, sent: content.text }
 }
 
 /** A turn is a user message and the answers after it. */
@@ -113,7 +130,7 @@ function drawContext(systemPrompt: string, tools: ChatTool[]) {
   return (fit: Fit): Drawn => {
     const prompt = fenced("assistant_system_prompt", marked(fit(neutralise(systemPrompt))))
     const toolList = fenced("tool_catalog", marked(fit(neutralise(catalog))))
-    return { text: `The assistant's system prompt, as it is today:\n${prompt}\n\nThe assistant's tool catalog, as it is today:\n${toolList}`, results: new Map() }
+    return { text: `The assistant's system prompt, as it is today:\n${prompt}\n\nThe assistant's tool catalog, as it is today:\n${toolList}`, results: new Map(), sent: new Map() }
   }
 }
 
@@ -131,12 +148,14 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
   const reviewed = (message: JudgeMessage) => previousReviewedThrough !== null && message.createdAt <= previousReviewedThrough
   const drawTurn = (turn: JudgeMessage[], resultLimit: number) => (fit: Fit): Drawn => {
     const results = new Map<number, string[]>()
+    const sent = new Map<number, string>()
     const parts = turn.map((message) => {
       const drawn = drawMessage(message, fit, resultLimit, reviewed(message))
       if (message.role === "assistant" && message.toolLog !== null) results.set(message.index, drawn.results)
+      sent.set(message.index, drawn.sent)
       return drawn.text
     })
-    return { text: parts.join("\n\n"), results }
+    return { text: parts.join("\n\n"), results, sent }
   }
 
   // The fixed text is charged first; each item below is charged with its separator ("\n\n" in the transcript, "\n" in the list)
@@ -154,7 +173,7 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
 
   const raised: string[] = []
   for (const finding of prior) {
-    const line = `- [#${finding.messageIndex}] ${finding.type} (${finding.status}): ${neutralise(finding.claim)}`
+    const line = `- [#${finding.messageIndex}] ${finding.type} (${finding.status}): ${forJudge(finding.claim)}`
     if (line.length + 1 > budget) break
     raised.push(line)
     budget -= line.length + 1
@@ -172,6 +191,7 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
     prompt: assemble(context, prior.length > 0 ? raised : null, kept.map(({ drawn }) => drawn.text), turns.length - kept.length),
     window: new Set(kept.flatMap(({ turn }) => turn.map((message) => message.index))),
     sentToolText: new Map(kept.flatMap(({ drawn }) => [...drawn.results])),
+    sentMessageText: new Map(kept.flatMap(({ drawn }) => [...drawn.sent])),
     hasToolEvidence: messages.some((message) => message.role === "assistant" && message.toolLog !== null),
   }
 }
