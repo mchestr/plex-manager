@@ -40,10 +40,18 @@
  *
  * ## Redaction
  *
- * Message text and the claims already raised go through `redactCredentials`
- * (`lib/mcp/redact.ts`) before they are neutralised or cut, as a tool log is
- * before it is stored: what the redactor finds never reaches the judge, and a
- * cut never keeps the start of a credential too short for it to find.
+ * Message text, tool args and results, and the claims already raised lose
+ * their invisible characters (`stripInvisible`, `lib/judge/fence.ts`), then
+ * go through `redactCredentials` (`lib/mcp/redact.ts`), and only then are
+ * neutralised and cut:
+ *
+ * - a credential split by an invisible character (`pass`, U+00AD, `word=`)
+ *   is found, where redacting first would miss it and the neutralising would
+ *   then join it back into a whole one;
+ * - a tool log was redacted before it was stored, before anything was
+ *   removed, so it is redacted again here, and stays JSON;
+ * - what the redactor finds never reaches the judge, and a cut never keeps
+ *   the start of a credential too short for it to find.
  *
  * `sentMessageText` and `sentToolText` hold each piece exactly as the judge
  * got it (redacted, neutralised and cut), which `verify` matches quotes
@@ -52,7 +60,7 @@
  * @module lib/judge/build-prompt
  */
 
-import { attribute, NOTES, neutralise, omittedFindings, omittedTurns, TRUNCATED } from "@/lib/judge/fence"
+import { attribute, NOTES, neutralise, omittedFindings, omittedTurns, stripInvisible, TRUNCATED } from "@/lib/judge/fence"
 import { type Fit, fitSection, fitWithin, marked } from "@/lib/judge/fit"
 import { JUDGE_SYSTEM_PROMPT } from "@/lib/judge/prompts/v1"
 import { type ToolLogEntry } from "@/lib/judge/tool-log"
@@ -105,8 +113,8 @@ const EARLIER_RESULT_LIMIT = 2_048
 type Drawn = { text: string; results: Map<number, string[]>; sent: Map<number, string> }
 
 const fenced = (tag: string, body: string) => `<${tag}>\n${body}\n</${tag}>`
-/** Text from the conversation or an earlier review, as the judge gets it before any cut; see the module comment. */
-const forJudge = (text: string) => neutralise(redactCredentials(text).text)
+/** Text from the conversation or an earlier review, as the judge gets it before any cut; see "Redaction" in the module comment. */
+const forJudge = (text: string) => neutralise(redactCredentials(stripInvisible(text)).text)
 
 function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, reviewed: boolean) {
   const label = `[#${message.index} ${message.role}]${reviewed ? ` ${NOTES.reviewed}` : ""}`
@@ -117,8 +125,8 @@ function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, revie
     if (message.toolLog === null) lines.push(NOTES.noLog)
     else if (message.toolLog.length === 0) lines.push(NOTES.noTools)
     for (const call of message.toolLog ?? []) {
-      const args = fit(neutralise(call.args))
-      const result = fit(neutralise(call.result), resultLimit)
+      const args = fit(forJudge(call.args))
+      const result = fit(forJudge(call.result), resultLimit)
       results.push(result.text)
       const cut = call.truncated === true || args.cut || result.cut
       lines.push(`<tool_result tool="${attribute(call.tool)}" ok="${call.ok}">\nargs: ${args.text}\nresult: ${result.text}${cut ? `\n${TRUNCATED}` : ""}\n</tool_result>`)

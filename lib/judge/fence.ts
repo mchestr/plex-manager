@@ -15,7 +15,8 @@
  *
  * A reader sees nothing of these, or a blank where there is no space, so one
  * inside a tag, label, mark or note (`</`, U+200B, `transcript`) would read as
- * the real thing yet slip past the rules below:
+ * the real thing yet slip past the rules below, and one inside a credential
+ * (`pass`, U+00AD, `word=`) would hide it from the redactor:
  *
  * - Unicode's format characters (`\p{Cf}`): U+200B, U+2060, U+00AD, U+FEFF,
  *   the bidi controls, the tag characters and the rest;
@@ -25,6 +26,15 @@
  *   U+180B, U+17B4 and the unassigned ones;
  * - U+2800, the braille blank, which is neither but reads as a space, so
  *   `<`, U+2800, `/transcript>` reads as a closing tag.
+ *
+ * {@link stripInvisible} removes them, and in a JSON text also the ones its
+ * strings and keys escape (`\u200b`, as a server that escapes every non-ASCII
+ * character writes them), which parsing turns into the characters themselves.
+ * The prompt builder runs it on the conversation's pieces before
+ * `redactCredentials`, so the redactor reads what the judge will get
+ * (`lib/judge/build-prompt.ts`). JSON whose strings escape none keeps its
+ * text as written. Text that does not parse, such as a cut tool result,
+ * keeps an escape as the six characters the judge reads.
  *
  * ## Neutralising
  *
@@ -89,6 +99,28 @@ const INVISIBLE = /[\p{Cf}\p{Default_Ignorable_Code_Point}\u2800]/gu
 const BRACKET = /\[(?=#\s*\d|truncated)/gi
 /** A note's opening words, or an omitted line's "(3 earlier ". */
 const NOTE = /\((?=tool\s+results\s+not\s+recorded|no\s+tools\s+were\s+called|already\s+reviewed|message\s+unreadable|\d+\s+earlier\s)/gi
+
+/** A parsed JSON value with every invisible character removed from its strings and keys. */
+function stripValue(value: unknown): unknown {
+  if (typeof value === "string") return value.replace(INVISIBLE, "")
+  if (Array.isArray(value)) return value.map(stripValue)
+  if (typeof value !== "object" || value === null) return value
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key.replace(INVISIBLE, ""), stripValue(item)]))
+}
+
+/** The text with every invisible character removed, a JSON text's escaped ones too; see the module comment. */
+export function stripInvisible(text: string): string {
+  const stripped = text.replace(INVISIBLE, "")
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(stripped)
+  } catch {
+    return stripped
+  }
+  const next = JSON.stringify(stripValue(parsed))
+  // JSON whose strings escape none keeps the text as written
+  return next === JSON.stringify(parsed) ? stripped : next
+}
 
 /** The text with every tag, label, mark and note in it neutralised; see the module comment. */
 export function neutralise(text: string): string {

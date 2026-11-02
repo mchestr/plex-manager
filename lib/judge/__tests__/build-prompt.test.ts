@@ -11,7 +11,7 @@
  */
 
 import { type ChatTool } from "@/lib/llm/chat"
-import { type ToolLogEntry } from "@/lib/judge/tool-log"
+import { capToolLog, type ToolLogEntry } from "@/lib/judge/tool-log"
 
 import { buildJudgePrompt, type JudgeMessage, type PriorFinding } from "../build-prompt"
 import { JUDGE_PROMPT_VERSION, JUDGE_SYSTEM_PROMPT } from "../prompts/v1"
@@ -141,6 +141,50 @@ describe("buildJudgePrompt", () => {
       // Cut first, the kept text would end "X-Plex-Token: Zq9P", too short for the redactor to know
       expect(built.sentMessageText.get(0)).toMatch(/X-Plex-Token: \[red$/)
       expect(built.prompt).not.toContain(SECRET.slice(0, 4))
+    })
+
+    describe("split by an invisible character, which is removed before redacting", () => {
+      const KEY = "f3a9c07e5b1d4e26a8c3"
+      const PASSWORD = "Qv7pLx2mWn9k"
+      const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0MiJ9.c2lnbmF0dXJlMTIz"
+      /** Each credential split inside its name or scheme, where the redactor cannot read it: the text, what the judge gets, and the secret. */
+      const SPLIT = [
+        ["api U+200B key=", `https://indexer.example/api?t=search&api\u200Bkey=${KEY}`, "https://indexer.example/api?t=search&apikey=[redacted]", KEY],
+        ["pass U+00AD word=", `Its pass\u00ADword=${PASSWORD} works`, "Its password=[redacted] works", PASSWORD],
+        ["Bearer U+200B", `Send Bearer\u200B ${TOKEN} with it`, "Send Bearer [redacted] with it", TOKEN],
+      ] as const
+      /** Every run of 5 of the secret's characters that `text` holds. */
+      const partsIn = (text: string, secret: string) => Array.from({ length: secret.length - 4 }, (_, i) => secret.slice(i, i + 5)).filter((part) => text.includes(part))
+
+      it.each(SPLIT)("%s is redacted from message text and a claim already raised", (_name, text, redacted, secret) => {
+        const built = build([message(0, text), message(1, "Done.")], { prior: [{ type: "wrong_fact", messageIndex: 1, claim: text, status: "open" }] })
+
+        expect(built.sentMessageText.get(0)).toBe(redacted)
+        expect(built.prompt).toContain(`- [#1] wrong_fact (open): ${redacted}\n`)
+        expect(partsIn(built.prompt, secret)).toEqual([])
+      })
+
+      it.each(SPLIT)("%s is redacted from a tool's args and result, which stay JSON", (_name, text, redacted, secret) => {
+        // Stored as the assistant's loop stores it: redacted then, but the invisible character hid this credential
+        const [stored] = capToolLog([{ tool: "get_plex_sessions", args: JSON.stringify({ query: text }), result: JSON.stringify({ title: text }), ok: true }])
+
+        const built = build([message(0, "what's playing?"), message(1, "Nothing.", [stored])])
+
+        expect(built.prompt).toContain(`args: ${JSON.stringify({ query: redacted })}\n`)
+        expect(JSON.parse(built.sentToolText.get(1)?.[0] ?? "")).toEqual({ title: redacted })
+        expect(partsIn(built.prompt, secret)).toEqual([])
+      })
+
+      it("is redacted from a JSON tool result that escapes the character, beside one written out", () => {
+        // A server that escapes every non-ASCII character (Python's json.dumps) writes U+200B as six characters, which parsing reads as the character
+        const result = `{"url": "https://indexer.example/api?api\\u200bkey=${KEY}", "note": "pass\u00ADword=${PASSWORD}"}`
+        const [stored] = capToolLog([{ tool: "get_plex_sessions", args: "{}", result, ok: true }])
+
+        const built = build([message(0, "what's playing?"), message(1, "Nothing.", [stored])])
+
+        expect(JSON.parse(built.sentToolText.get(1)?.[0] ?? "")).toEqual({ url: "https://indexer.example/api?apikey=[redacted]", note: "password=[redacted]" })
+        expect([...partsIn(built.prompt, KEY), ...partsIn(built.prompt, PASSWORD)]).toEqual([])
+      })
     })
   })
 

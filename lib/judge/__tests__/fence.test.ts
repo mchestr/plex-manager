@@ -7,10 +7,11 @@
  * format characters (`\p{Cf}`), its other default-ignorable code points and
  * U+2800 are removed before the rules run, so an invisible character cannot
  * hide a fence tag, label, mark or note from them, and neutralising twice
- * changes nothing.
+ * changes nothing. `stripInvisible` also removes the ones a JSON text
+ * escapes, so the redactor reads what the judge will.
  */
 
-import { neutralise } from "../fence"
+import { neutralise, stripInvisible } from "../fence"
 
 const INVISIBLE_CHARACTERS = [
   ["U+200B", "\u200B"],
@@ -75,5 +76,38 @@ describe("neutralise", () => {
     const neutralised = "&lt;transcript <\\/tool_result [ #7 assistant] [ # 7 user] [ truncated] ( no tools were called this turn) ( 2 earlier findings left out)"
 
     expect(neutralise(neutralised)).toBe(neutralised)
+  })
+})
+
+describe("stripInvisible", () => {
+  it("removes every invisible character written out", () => {
+    expect(stripInvisible("api\u200Bkey pass\u00ADword Bearer\u2800 x\uFE0F")).toBe("apikey password Bearer x")
+  })
+
+  it("removes the ones a JSON text escapes, in its strings and keys, and stays JSON", () => {
+    // As a server that escapes every non-ASCII character writes them (Python's json.dumps): six characters each, an astral one as a surrogate pair
+    const text = '{"url": "https://indexer.example/api?api\\u200bkey=x", "pass\\u00adword": "y", "title": "Arrival\\udb40\\udd00", "n": 9}'
+
+    expect(stripInvisible(text)).toBe('{"url":"https://indexer.example/api?apikey=x","password":"y","title":"Arrival","n":9}')
+  })
+
+  it("keeps a JSON text that escapes no invisible character as it was written", () => {
+    const text = '{ "title": "Caf\\u00e9 <\\/b>", "seen": [1, 2] }'
+
+    expect(stripInvisible(text)).toBe(text)
+  })
+
+  it("leaves an escape in text that is not JSON, where it is six characters the judge reads", () => {
+    const text = 'The title had "\\u200b" in it, and {"cut": "api\\u200bke'
+
+    expect(stripInvisible(text)).toBe(text)
+  })
+
+  it("changes nothing the second time", () => {
+    for (const text of ["pass\u00ADword=x", '{"a": "pass\\u00adword=x", "b": "\u2060"}']) {
+      const once = stripInvisible(text)
+
+      expect(stripInvisible(once)).toBe(once)
+    }
   })
 })
