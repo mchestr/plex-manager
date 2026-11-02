@@ -34,11 +34,11 @@
  * - The only backslash added is in `<\/`, JSON's own escape for `</`, so a
  *   tool result stays JSON (its strings change, never its shape) and `verify`
  *   can still match a quote leaf by leaf.
- * - Every rule but the closing tag's looks only for a fixed start, so a
- *   neutralised piece is left as it is when neutralised again. `fitWithin`
- *   neutralises a cut piece again, and the cut can only complete a closing
- *   tag at its end (`</transcripts` cut to `</transcript`): one character
- *   more, which the budget reserves.
+ * - Neutralising twice changes nothing. `fitWithin` neutralises a cut piece
+ *   again, and every rule but the closing tag's looks only for a fixed start,
+ *   so a cut cannot make a new match. Only the closing tag's word boundary
+ *   can (`</transcripts` cut to `</transcript`): one character more, which the
+ *   budget reserves.
  *
  * @module lib/judge/fence
  */

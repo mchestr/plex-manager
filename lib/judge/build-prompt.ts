@@ -37,8 +37,8 @@
  *
  * Message text and the claims already raised go through `redactCredentials`
  * (`lib/mcp/redact.ts`) before they are neutralised or cut, as a tool log is
- * before it is stored, so the judge never gets a credential and a cut never
- * keeps the start of one too short to recognise.
+ * before it is stored: what the redactor finds never reaches the judge, and a
+ * cut never keeps the start of a credential too short for it to find.
  *
  * `sentMessageText` and `sentToolText` hold each piece exactly as the judge
  * got it (redacted, neutralised and cut), which `verify` matches quotes
