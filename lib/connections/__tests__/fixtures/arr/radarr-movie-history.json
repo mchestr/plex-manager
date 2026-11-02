@@ -1,0 +1,32 @@
+[
+  {
+    "id": 501,
+    "movieId": 9,
+    "sourceTitle": "Heat.1995.REMASTERED.1080p.BluRay.x264-AMIABLE",
+    "languages": [{ "id": 1, "name": "English" }],
+    "quality": { "quality": { "id": 7, "name": "Bluray-1080p", "source": "bluray", "resolution": 1080 }, "revision": { "version": 1, "real": 0, "isRepack": false } },
+    "customFormats": [],
+    "customFormatScore": 0,
+    "qualityCutoffNotMet": false,
+    "date": "2027-01-12T21:04:11Z",
+    "downloadId": "0123456789ABCDEF0123456789ABCDEF01234567",
+    "eventType": "downloadFailed",
+    "data": { "message": "Import failed: not enough free space on /data/media/movies", "indexer": "TorrentLeech (Prowlarr)", "downloadClient": "qBittorrent" },
+    "movie": { "id": 9, "title": "Heat", "year": 1995, "tmdbId": 949, "titleSlug": "949", "images": [{ "coverType": "poster", "url": "/MediaCover/9/poster.jpg" }] }
+  },
+  {
+    "id": 500,
+    "movieId": 9,
+    "sourceTitle": "Heat.1995.REMASTERED.1080p.BluRay.x264-AMIABLE",
+    "languages": [{ "id": 1, "name": "English" }],
+    "quality": { "quality": { "id": 7, "name": "Bluray-1080p", "source": "bluray", "resolution": 1080 }, "revision": { "version": 1, "real": 0, "isRepack": false } },
+    "customFormats": [],
+    "customFormatScore": 0,
+    "qualityCutoffNotMet": false,
+    "date": "2027-01-12T18:55:30Z",
+    "downloadId": "0123456789ABCDEF0123456789ABCDEF01234567",
+    "eventType": "grabbed",
+    "data": { "indexer": "TorrentLeech (Prowlarr)", "releaseGroup": "AMIABLE", "downloadClient": "qBittorrent" },
+    "movie": { "id": 9, "title": "Heat", "year": 1995, "tmdbId": 949, "titleSlug": "949", "images": [{ "coverType": "poster", "url": "/MediaCover/9/poster.jpg" }] }
+  }
+]

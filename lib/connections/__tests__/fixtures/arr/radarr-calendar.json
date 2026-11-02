@@ -1,0 +1,34 @@
+[
+  {
+    "id": 14,
+    "title": "Dune: Part Two",
+    "year": 2024,
+    "tmdbId": 693134,
+    "imdbId": "tt15239678",
+    "titleSlug": "693134",
+    "status": "released",
+    "monitored": true,
+    "hasFile": false,
+    "isAvailable": true,
+    "minimumAvailability": "released",
+    "inCinemas": "2024-02-27T00:00:00Z",
+    "digitalRelease": "2027-01-16T00:00:00Z",
+    "physicalRelease": "2027-01-20T00:00:00Z",
+    "overview": "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.",
+    "images": [{ "coverType": "poster", "url": "/MediaCover/14/poster.jpg", "remoteUrl": "https://image.tmdb.org/t/p/original/poster.jpg" }]
+  },
+  {
+    "id": 22,
+    "title": "Heat 2",
+    "year": 2027,
+    "tmdbId": 1000001,
+    "titleSlug": "1000001",
+    "status": "announced",
+    "monitored": true,
+    "hasFile": false,
+    "isAvailable": false,
+    "minimumAvailability": "released",
+    "inCinemas": "2027-01-15T00:00:00Z",
+    "images": []
+  }
+]

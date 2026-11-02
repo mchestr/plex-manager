@@ -10,14 +10,19 @@
  *
  * It also covers the Discord activity scoping, which maps the caller to their
  * Tautulli user through the shared findTautulliUser lookup (P0.9) and fails
- * closed on every other path (P4.19, SEC-50), and the
- * three tools that used to call commands Tautulli does not have (P2.3, RWP-10).
+ * closed on every other path (P4.19, SEC-50), the
+ * three tools that used to call commands Tautulli does not have (P2.3, RWP-10),
+ * and the admin prompt sending "who is watching" to the activity, which names
+ * the viewers.
  */
 
 import { executeTautulliTool } from "../tautulli"
 import {
+  ALL_TOOLS,
   DISCORD_SAFE_TOOLS,
   generateDiscordSystemPrompt,
+  generateSystemPrompt,
+  getRegisteredTool,
 } from "@/lib/chatbot/tools"
 import { DISCORD_SAFE_TOOL_NAMES } from "@/lib/chatbot/tools/registry"
 import {
@@ -28,6 +33,8 @@ import {
   getTautulliLibraryNames,
   getTautulliLibraryStats,
   getTautulliUsers,
+  getTautulliUserWatchTimeStats,
+  tautulliCommand,
 } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { auditMemberRead } from "@/lib/security/audit-log"
@@ -46,6 +53,8 @@ jest.mock("@/lib/connections/tautulli", () => ({
   getTautulliLibraryNames: jest.fn(),
   getTautulliLibraryStats: jest.fn(),
   getTautulliUsers: jest.fn(),
+  getTautulliUserWatchTimeStats: jest.fn(),
+  tautulliCommand: jest.fn(),
 }))
 
 jest.mock("@/lib/security/audit-log", () => ({ auditMemberRead: jest.fn() }))
@@ -243,21 +252,47 @@ describe("executeTautulliTool - Discord activity scoping", () => {
     expect(result).toEqual(UNMAPPED)
   })
 
-  it.each([
-    ["sessions is a single object", { stream_count: "1", sessions: { user_id: 501, title: "Mine" } }],
-    ["sessions is missing", { stream_count: "2" }],
-    ["a session has no user_id", { sessions: [{ user_id: 501, title: "Mine" }, { title: "Someone else's" }] }],
-    ["the payload is not an object", "<html>Bad Gateway</html>"],
-    ["the payload is null", null],
-  ])("returns no sessions when %s", async (_case, data) => {
+  it("returns no sessions when a session has no user_id", async () => {
     mockFindTautulliUser.mockResolvedValue({ ok: true, user: { user_id: 501, username: "lena_plex" } })
-    mockGetTautulliActivity.mockResolvedValue({ success: true, data })
+    mockGetTautulliActivity.mockResolvedValue({ success: true, data: { sessions: [{ user_id: 501, title: "Mine" }, { title: "Someone else's" }] } })
 
     const result = JSON.parse(
       await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord")
     )
 
     expect(result).toEqual(UNMAPPED)
+  })
+
+  // Tautulli answers success with `{}` when it cannot read Plex's sessions (Plex down, a timeout, an
+  // expired token): read as no sessions, it told the admin that nobody was watching
+  it.each([
+    ["Tautulli could not read Plex's sessions", {}],
+    ["sessions is a single object", { stream_count: "1", sessions: { user_id: 501, title: "Mine" } }],
+    ["sessions is missing", { stream_count: "2" }],
+    ["the payload is not an object", "<html>Bad Gateway</html>"],
+    ["the payload is null", null],
+  ])("returns an error, before the Discord branch, when %s", async (_case, data) => {
+    mockFindTautulliUser.mockResolvedValue({ ok: true, user: { user_id: 501, username: "lena_plex" } })
+    mockGetTautulliActivity.mockResolvedValue({ success: true, data })
+
+    for (const context of ["discord", "admin", undefined]) {
+      const result = JSON.parse(await executeTautulliTool("get_tautulli_activity", {}, "user-1", context))
+      expect(result).toEqual({ error: "Tautulli could not read the current sessions from Plex" })
+    }
+    expect(mockUserFindUnique).not.toHaveBeenCalled()
+    expect(mockFindTautulliUser).not.toHaveBeenCalled()
+  })
+
+  it("reads an idle server, whose sessions are an empty list, as no streams", async () => {
+    mockFindTautulliUser.mockResolvedValue({ ok: true, user: { user_id: 501, username: "lena_plex" } })
+    mockGetTautulliActivity.mockResolvedValue({ success: true, data: { stream_count: "0", sessions: [] } })
+
+    expect(JSON.parse(await executeTautulliTool("get_tautulli_activity", {}, "user-1", "admin"))).toEqual({
+      stream_count: "0",
+      showing: "showing 0 of 0 streams",
+      sessions: [],
+    })
+    expect(JSON.parse(await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord"))).toEqual({ session_count: 0, sessions: [], scope: "caller" })
   })
 
   it("never returns the unfiltered activity in the Discord context", async () => {
@@ -269,10 +304,10 @@ describe("executeTautulliTool - Discord activity scoping", () => {
     expect(output).not.toContain("stream_count")
   })
 
-  it("returns the full activity outside the Discord context", async () => {
+  it("returns everyone's streams outside the Discord context", async () => {
     const result = JSON.parse(await executeTautulliTool("get_tautulli_activity", {}, "user-1", "admin"))
 
-    expect(result).toEqual(activity)
+    expect(result).toEqual({ ...activity, showing: "showing 2 of 2 streams" })
   })
 
   it("does not look the caller up outside the Discord context", async () => {
@@ -304,14 +339,24 @@ describe("executeTautulliTool - tools built on real Tautulli commands", () => {
   })
 
   it("get_tautulli_most_watched reads get_home_stats with stat_id top_movies and top_tv", async () => {
+    mockGetTautulliHomeStat.mockImplementation(async (_config, statId) => ({
+      success: true,
+      data: {
+        stat_id: statId,
+        stat_type: "total_plays",
+        rows: [{ title: statId === "top_movies" ? "Heat" : "Severance", year: 1995, total_plays: 4, total_duration: 28800, guid: "plex://movie/1", thumb: "/library/metadata/1/thumb", rating_key: 1 }],
+      },
+    }))
+
     const result = JSON.parse(await executeTautulliTool("get_tautulli_most_watched", { limit: 5 }))
 
     expect(mockGetTautulliHomeStat).toHaveBeenCalledTimes(2)
     expect(mockGetTautulliHomeStat).toHaveBeenCalledWith(expect.anything(), "top_movies", 5)
     expect(mockGetTautulliHomeStat).toHaveBeenCalledWith(expect.anything(), "top_tv", 5)
     expect(result).toEqual({
-      top_movies: { stat_id: "top_movies", rows: [] },
-      top_tv: { stat_id: "top_tv", rows: [] },
+      showing: "showing the top 1 movies and top 1 shows by plays in the last 30 days",
+      top_movies: [{ title: "Heat", year: 1995, total_plays: 4, total_duration: 28800 }],
+      top_tv: [{ title: "Severance", year: 1995, total_plays: 4, total_duration: 28800 }],
     })
   })
 
@@ -363,30 +408,95 @@ describe("Discord tool gating - get_tautulli_users", () => {
   })
 })
 
+describe("the admin prompt sends 'who is watching' to the Tautulli activity, which names the viewers", () => {
+  const prompt = generateSystemPrompt(ALL_TOOLS, UTC_PROMPT_FORMAT, new Date())
+  const description = (name: string) => getRegisteredTool(name)?.function.description
+
+  it("routes the question to get_tautulli_activity, and to get_plex_sessions only without Tautulli or when it fails", () => {
+    expect(prompt).toContain(
+      "Who is watching or streaming now (active sessions) → get_tautulli_activity, which names each viewer; if Tautulli is not configured or get_tautulli_activity returns an error, get_plex_sessions (viewers anonymised)"
+    )
+    expect(prompt).toContain(
+      "3. Call get_tautulli_activity for who is watching, as it names each viewer; if Tautulli is not configured or the call fails, call get_plex_sessions"
+    )
+    expect(prompt).not.toContain("get_plex_sessions for active viewers")
+  })
+
+  it("says which of the two tools names the viewers", () => {
+    expect(description("get_tautulli_activity")).toContain("who is watching each one (user_id, friendly_name)")
+    expect(description("get_plex_sessions")).toContain("Viewers are anonymised (Viewer 1, Viewer 2...): to name who is watching, use get_tautulli_activity")
+  })
+
+  it("names the parameter get_tautulli_user_watch_stats requires", () => {
+    expect(getRegisteredTool("get_tautulli_user_watch_stats")?.function.parameters.required).toEqual(["userId"])
+    expect(prompt).toContain("get_tautulli_user_watch_stats (pass their Tautulli user_id as userId)")
+  })
+})
+
 describe("per-member reads are audited (P11.16, GAP-33)", () => {
+  const plays = (...userIds: number[]) => ({ ok: true as const, data: { recordsFiltered: userIds.length, data: userIds.map((user_id) => ({ user_id, full_title: "Heat" })) } })
+
   beforeEach(() => {
     jest.clearAllMocks()
     mockTautulliFindFirst.mockResolvedValue({ id: "tautulli-1", name: "Tautulli", url: "http://t", apiKey: "k", publicUrl: null } as never)
-    jest.mocked(getTautulliHistory).mockResolvedValue({ success: true, data: { data: [] } })
+    jest.mocked(tautulliCommand).mockResolvedValue({ ok: true, data: { data: [] } })
+    prismaMock.user.findMany.mockResolvedValue([])
   })
 
   it("writes one read for the member whose Plex id the tool was given", async () => {
-    prismaMock.user.findFirst.mockResolvedValue({ id: "member-7" } as never)
+    prismaMock.user.findMany.mockResolvedValue([{ id: "member-7" }] as never)
 
     await executeTautulliTool("get_tautulli_watch_history", { userId: 7 }, "admin-1")
 
-    expect(prismaMock.user.findFirst).toHaveBeenCalledWith({ where: { plexUserId: "7" }, select: { id: true } })
+    expect(prismaMock.user.findMany).toHaveBeenCalledWith({ where: { plexUserId: { in: ["7"] } }, select: { id: true } })
+    expect(auditMemberRead).toHaveBeenCalledTimes(1)
     expect(auditMemberRead).toHaveBeenCalledWith("chatbot-tautulli", "member-7", "admin-1")
   })
 
+  it("writes a read for each member whose plays a search finds, such as by their name", async () => {
+    jest.mocked(tautulliCommand).mockResolvedValue(plays(7, 8, 7, 9))
+    prismaMock.user.findMany.mockResolvedValue([{ id: "member-7" }, { id: "member-8" }] as never)
+
+    await executeTautulliTool("get_tautulli_watch_history", { search: "Sam" }, "admin-1")
+
+    // Plex user 9 has no account here
+    expect(prismaMock.user.findMany).toHaveBeenCalledWith({ where: { plexUserId: { in: ["7", "8", "9"] } }, select: { id: true } })
+    expect(jest.mocked(auditMemberRead).mock.calls).toEqual([
+      ["chatbot-tautulli", "member-7", "admin-1"],
+      ["chatbot-tautulli", "member-8", "admin-1"],
+    ])
+  })
+
+  it("writes one read for the member asked for when a search narrows their plays", async () => {
+    jest.mocked(tautulliCommand).mockResolvedValue(plays(7, 7))
+    prismaMock.user.findMany.mockResolvedValue([{ id: "member-7" }] as never)
+
+    await executeTautulliTool("get_tautulli_watch_history", { userId: 7, search: "Heat" }, "admin-1")
+
+    expect(prismaMock.user.findMany).toHaveBeenCalledWith({ where: { plexUserId: { in: ["7"] } }, select: { id: true } })
+    expect(auditMemberRead).toHaveBeenCalledTimes(1)
+  })
+
   it("writes nothing for the server-wide history, an unknown Plex user or the admin's own", async () => {
+    jest.mocked(tautulliCommand).mockResolvedValue(plays(7, 8))
     await executeTautulliTool("get_tautulli_watch_history", {}, "admin-1")
-    prismaMock.user.findFirst.mockResolvedValueOnce(null)
+    expect(prismaMock.user.findMany).not.toHaveBeenCalled()
+
+    prismaMock.user.findMany.mockResolvedValueOnce([])
     await executeTautulliTool("get_tautulli_watch_history", { userId: 8 }, "admin-1")
-    prismaMock.user.findFirst.mockResolvedValueOnce({ id: "admin-1" } as never)
-    await executeTautulliTool("get_tautulli_watch_history", { userId: 9 }, "admin-1")
+    prismaMock.user.findMany.mockResolvedValueOnce([{ id: "admin-1" }] as never)
+    await executeTautulliTool("get_tautulli_watch_history", { search: "Heat" }, "admin-1")
 
     expect(auditMemberRead).not.toHaveBeenCalled()
+  })
+
+  it("writes a read for the member whose watch time stats were read", async () => {
+    jest.mocked(getTautulliUserWatchTimeStats).mockResolvedValue({ success: true, data: [] })
+    prismaMock.user.findMany.mockResolvedValue([{ id: "member-7" }] as never)
+
+    await executeTautulliTool("get_tautulli_user_watch_stats", { userId: 7 }, "admin-1")
+
+    expect(auditMemberRead).toHaveBeenCalledWith("chatbot-tautulli", "member-7", "admin-1")
   })
 })
 
@@ -408,13 +518,13 @@ describe("admin context drops emails, addresses and tokens (P4.15, SEC-42)", () 
   it("get_tautulli_users keeps names and ids only", async () => {
     jest.mocked(getTautulliUsers).mockResolvedValue({
       success: true,
-      data: [{ user_id: 7, friendly_name: "Sam", email: "sam@example.com", server_token: "tok" }],
+      data: [{ user_id: 7, friendly_name: "Sam", email: "sam@example.com", server_token: "tok", thumb: "https://plex.tv/users/x/avatar" }],
     })
 
     const result = await executeTautulliTool("get_tautulli_users", {})
 
     expect(result).not.toMatch(PERSONAL)
-    expect(JSON.parse(result)).toEqual([{ user_id: 7, friendly_name: "Sam" }])
+    expect(JSON.parse(result)).toEqual({ showing: "showing 1 of 1 users, by name", total: 1, active: 0, users: [{ user_id: 7, friendly_name: "Sam" }] })
   })
 
   it("get_tautulli_activity drops each session's addresses", async () => {
@@ -423,7 +533,7 @@ describe("admin context drops emails, addresses and tokens (P4.15, SEC-42)", () 
       data: {
         stream_count: "1",
         sessions: [
-          { user_id: 7, title: "Heat", ip_address: "203.0.113.7", ip_address_public: "203.0.113.8", email: "sam@example.com" },
+          { user_id: 7, title: "Heat", ip_address: "203.0.113.7", ip_address_public: "203.0.113.8", email: "sam@example.com", machine_id: "m-1" },
         ],
       },
     })
@@ -431,19 +541,18 @@ describe("admin context drops emails, addresses and tokens (P4.15, SEC-42)", () 
     const result = await executeTautulliTool("get_tautulli_activity", {})
 
     expect(result).not.toMatch(PERSONAL)
-    expect(JSON.parse(result)).toEqual({ stream_count: "1", sessions: [{ user_id: 7, title: "Heat" }] })
+    expect(JSON.parse(result)).toEqual({ stream_count: "1", showing: "showing 1 of 1 streams", sessions: [{ user_id: 7, title: "Heat" }] })
   })
 
   it("the history tools drop each row's address", async () => {
-    jest.mocked(getTautulliHistory).mockResolvedValue({
-      success: true,
-      data: { data: [{ title: "Heat", user: "Sam", ip_address: "203.0.113.7" }] },
-    })
+    const page = { recordsFiltered: 1, data: [{ full_title: "Heat", friendly_name: "Sam", user: "sam_plex", ip_address: "203.0.113.7", machine_id: "m-1" }] }
+    jest.mocked(getTautulliHistory).mockResolvedValue({ success: true, data: page })
+    jest.mocked(tautulliCommand).mockResolvedValue({ ok: true, data: page })
 
     for (const tool of ["get_tautulli_watch_history", "get_tautulli_recently_watched"]) {
       const result = await executeTautulliTool(tool, {})
       expect(result).not.toMatch(PERSONAL)
-      expect(JSON.parse(result)).toEqual({ data: [{ title: "Heat", user: "Sam" }] })
+      expect(JSON.parse(result)).toEqual({ showing: "showing 1 of 1 plays, newest first", total: 1, plays: [{ full_title: "Heat", friendly_name: "Sam" }] })
     }
   })
 })
@@ -456,9 +565,9 @@ describe("epochs reach the model as ISO strings with an offset (P11.17)", () => 
 
   it("converts history epochs into the turn's zone", async () => {
     // 1793590200 is 2026-11-02T03:30:00Z: 19:30 on 1 November in Los Angeles
-    jest.mocked(getTautulliHistory).mockResolvedValue({
-      success: true,
-      data: { data: [{ title: "Heat", date: 1793590200, started: "1793590200", stopped: 1793597400, duration: 7200 }] },
+    jest.mocked(tautulliCommand).mockResolvedValue({
+      ok: true,
+      data: { data: [{ full_title: "Heat", date: 1793590200, started: "1793590200", stopped: 1793597400, duration: 7200 }] },
     })
 
     const result = JSON.parse(
@@ -468,13 +577,16 @@ describe("epochs reach the model as ISO strings with an offset (P11.17)", () => 
       })
     )
 
-    expect(result.data[0]).toEqual({
-      title: "Heat",
-      date: "2026-11-01T19:30:00-08:00",
-      started: "2026-11-01T19:30:00-08:00",
-      stopped: "2026-11-01T21:30:00-08:00",
-      duration: 7200,
-    })
+    // `started` repeats `date`, and `stopped` is `date` plus `duration` and any pause, so neither is kept
+    expect(result.plays[0]).toEqual({ full_title: "Heat", date: "2026-11-01T19:30:00-08:00", duration: 7200 })
+  })
+
+  it("converts a user's last play sent as text", async () => {
+    jest.mocked(getTautulliUsers).mockResolvedValue({ success: true, data: [{ user_id: 7, friendly_name: "Sam", last_seen: "1793590200" }] })
+
+    const result = JSON.parse(await executeTautulliTool("get_tautulli_users", {}, "admin-1", "default", { timeZone: "America/Los_Angeles", locale: "en-US" }))
+
+    expect(result.users[0]).toEqual({ user_id: 7, friendly_name: "Sam", last_seen: "2026-11-01T19:30:00-08:00" })
   })
 
   it("converts the libraries table's last access, and keeps a numeric last-played title", async () => {
@@ -491,10 +603,13 @@ describe("epochs reach the model as ISO strings with an offset (P11.17)", () => 
   })
 
   it("writes UTC with an explicit offset when no zone is given", async () => {
-    jest.mocked(getTautulliHomeStat).mockResolvedValue({ success: true, data: [{ user: "Sam", last_play: 1793590200 }] })
+    jest.mocked(getTautulliHomeStat).mockResolvedValue({
+      success: true,
+      data: { stat_id: "top_users", rows: [{ user: "sam_plex", friendly_name: "Sam", user_thumb: "https://plex.tv/users/x/avatar", last_play: 1793590200 }] },
+    })
 
     const result = JSON.parse(await executeTautulliTool("get_tautulli_top_users", {}))
 
-    expect(result).toEqual([{ user: "Sam", last_play: "2026-11-02T03:30:00+00:00" }])
+    expect(result.users).toEqual([{ friendly_name: "Sam", last_play: "2026-11-02T03:30:00+00:00" }])
   })
 })

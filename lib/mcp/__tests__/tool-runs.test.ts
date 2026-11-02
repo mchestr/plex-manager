@@ -17,6 +17,8 @@ import { getRequestTierSettings } from '@/lib/data/community-stats'
 import { getLLMUsageById, getLLMUsageRecords } from '@/lib/data/llm-usage'
 import { allTools } from '@/lib/mcp/catalog'
 import { runAsPrincipal } from '@/lib/mcp/principal'
+import { handleMessage } from '@/lib/mcp/server'
+import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
@@ -244,5 +246,34 @@ describe('an assistant tool', () => {
   it('marks an executor error', async () => {
     jest.mocked(executeToolCall).mockResolvedValue('Error: Unknown tool')
     expect(await run('get_plex_status', {})).toEqual({ text: 'Error: Unknown tool', isError: true })
+  })
+
+  it.each(['{"error":"Plex request failed"}', '{"success":false,"error":"tool not permitted"}'])('marks an error reply in JSON, %s', async (reply) => {
+    jest.mocked(executeToolCall).mockResolvedValue(reply)
+    expect(await run('get_plex_recently_added', {})).toEqual({ text: reply, isError: true })
+  })
+
+  it('keeps a reply whose records carry an error field a success', async () => {
+    const reply = JSON.stringify({ showing: 'showing 1 of 1', records: [{ title: 'Show', errorMessage: 'stalled' }], error: null })
+    jest.mocked(executeToolCall).mockResolvedValue(reply)
+    expect(await run('get_sonarr_queue', {})).toEqual({ text: reply, isError: false })
+  })
+
+  it('audits an error reply in JSON as a failure', async () => {
+    jest.mocked(logAuditEvent).mockClear()
+    jest.mocked(executeToolCall).mockResolvedValue('{"error":"Plex request failed"}')
+
+    const response = await handleMessage(
+      { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'get_plex_recently_added', arguments: {} } },
+      { tokenId: 'tok-1', scope: 'full', session: admin },
+      'req-1'
+    )
+
+    expect(response).toMatchObject({ result: { content: [{ text: '{"error":"Plex request failed"}' }], isError: true } })
+    expect(logAuditEvent).toHaveBeenCalledWith(
+      AuditEventType.MCP_TOOL_CALLED,
+      'admin-1',
+      expect.objectContaining({ tool: 'get_plex_recently_added', source: 'assistant', ok: false })
+    )
   })
 })

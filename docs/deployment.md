@@ -259,7 +259,10 @@ npm run start:prod
 - On `docker stop` (SIGTERM) the app drains running jobs, stops the Discord bot
   and releases its lock, closes its connections, and exits with 0, or with 1
   if that takes longer than `SHUTDOWN_GRACE_MS` (default 8000 ms, below
-  Docker's 10 s stop timeout). The image and `npm run start:prod` set
+  Docker's 10 s stop timeout); the `Shutdown deadline passed` line then names
+  the tasks still running. While Redis is down or reconnecting, the queue
+  workers close without waiting for their running jobs, which BullMQ's stall
+  check hands to the next worker. The image and `npm run start:prod` set
   `NEXT_MANUAL_SIG_HANDLE=true` so the app handles the signal instead of Next;
   in-flight requests finish inside the same grace window because the process
   exits last.

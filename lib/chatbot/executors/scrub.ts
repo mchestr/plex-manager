@@ -18,20 +18,23 @@
  * `discordFields` for the tool, we walk the value recursively:
  *
  * ```
- * project(value):
- *   array  -> map project over elements, drop empty results
+ * project(value, allowed):           allowed = below an allowlisted key
+ *   array  -> project each object or array element; keep a scalar element
+ *             only when allowed; drop empty results
  *   object -> for each [key, v]:
- *               if key ∈ allowlist        keep project(v)      (safe leaf/subtree)
- *               else if v is a container   r = project(v)       (wrapper: recurse)
+ *               if key ∈ allowlist        keep project(v, true)   (safe leaf/subtree)
+ *               else if v is a container   r = project(v, false)  (wrapper: recurse)
  *                                          keep r if non-empty
- *               else                       DROP                 (unlisted scalar)
- *   scalar -> returned as-is (only reachable via an allowlisted key)
+ *               else                       DROP                   (unlisted scalar)
+ *   scalar -> returned as-is only when allowed
  * ```
  *
  * Allowlisting only LEAF field names (not wrapper keys like `response`, `data`,
  * `MediaContainer`, `records`, `status`, `queue`) is what lets a safe field
  * survive through arbitrary wrapper layers while sibling PII scalars at the same
- * or any deeper level are stripped.
+ * or any deeper level are stripped. A list of plain values is a scalar field
+ * too: it survives under an allowlisted key (Plex `notes`), and under any other
+ * key (a list of emails, IP addresses or paths) it is dropped.
  *
  * ## Fail closed (FR-8)
  *
@@ -80,13 +83,18 @@ function isEmptyProjection(value: unknown): boolean {
 }
 
 /**
- * Recursively project `value` down to the `allow` set of leaf keys.
+ * Recursively project `value` down to the `allow` set of leaf keys. `allowed`
+ * says whether `value` sits below an allowlisted key, the only place a scalar
+ * (an array's element included) survives.
  * @internal
  */
-function project(value: unknown, allow: Set<string>): unknown {
+function project(value: unknown, allow: Set<string>, allowed: boolean): unknown {
   if (Array.isArray(value)) {
-    const mapped = value.map((item) => project(item, allow)).filter((item) => !isEmptyProjection(item))
-    return mapped
+    // A scalar element of an unlisted array (emails, paths) is dropped like an unlisted scalar field
+    return value
+      .filter((item) => allowed || Array.isArray(item) || isPlainRecord(item))
+      .map((item) => project(item, allow, allowed))
+      .filter((item) => !isEmptyProjection(item))
   }
 
   if (isPlainRecord(value)) {
@@ -95,10 +103,10 @@ function project(value: unknown, allow: Set<string>): unknown {
       if (allow.has(key)) {
         // Allowlisted subtree: keep it, but still project INTO it so that a
         // nested unsafe field cannot ride along inside an otherwise-safe object.
-        out[key] = project(child, allow)
+        out[key] = project(child, allow, true)
       } else if (Array.isArray(child) || isPlainRecord(child)) {
         // Unlisted wrapper/container: recurse; keep only if something survived.
-        const projected = project(child, allow)
+        const projected = project(child, allow, false)
         if (!isEmptyProjection(projected)) {
           out[key] = projected
         }
@@ -108,8 +116,8 @@ function project(value: unknown, allow: Set<string>): unknown {
     return out
   }
 
-  // Scalar reached only via an allowlisted key — safe to return as-is.
-  return value
+  // A scalar: kept only below an allowlisted key
+  return allowed ? value : undefined
 }
 
 /**
@@ -187,7 +195,7 @@ export function scrubForDiscord(toolName: string, rawOutput: unknown): string {
   const allow = new Set<string>(tool.discordFields)
 
   try {
-    return JSON.stringify(project(parsed, allow))
+    return JSON.stringify(project(parsed, allow, false))
   } catch (error) {
     // Extremely defensive: JSON.stringify can throw on circular refs / BigInt.
     logger.error("Failed to serialize scrubbed tool output; failing closed", error, { toolName })

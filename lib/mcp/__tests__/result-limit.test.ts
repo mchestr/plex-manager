@@ -34,7 +34,7 @@ describe('limitResult for a tool that changes something', () => {
     expect(limited).toMatchObject({ isError: false, tooLarge: true })
     const body = JSON.parse(limited.text)
     expect(body).toMatchObject({ success: true, resultOmitted: true })
-    expect(body.note).toMatch(/^The tool ran, but its result was 40001 characters/)
+    expect(body.note).toMatch(new RegExp(`^The tool ran, but its result was ${MAX_RESULT_CHARS + 1} characters`))
     expect(body.note).toContain('Read the new state with a list_* or get_* tool.')
     expect(body).not.toHaveProperty('code')
   })

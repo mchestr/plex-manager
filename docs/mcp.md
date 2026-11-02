@@ -61,14 +61,42 @@ A tool call runs the action itself, inside the token owner's session
 audit entry all apply. Results are the action's own JSON,
 `{ "success": true, "data": ... }` or
 `{ "success": false, "code": "...", "error": "..." }`, with `isError` set on a
-refusal. Secrets in settings show only their last four, as on the settings page.
+refusal. An assistant tool's failure, an `Error: ...` line or JSON with `error`
+or `success: false`, sets `isError` too, and is audited as one.
+Secrets in settings show only their last four, as on the settings page.
 As a last guard, the server redacts credentials from every result before it
 leaves (`lib/mcp/redact.ts`): the string value of a key that names one (a key
 ending in `token`, or containing `apikey`, `secret`, `password` or `passkey`,
 and every encrypted credential column), and inside every string, free text
-included, a credential in a URL or query string (`apikey=`, `X-Plex-Token=`), in
-JSON written into a string, or after `Bearer`. It matches names, so it backs up
-the loaders' own masking rather than replacing it.
+included, what `lib/security/redact-text.ts` finds, the rules the assistant
+also applies for a Support user:
+
+- A credential pair: `apikey=` or `X-Plex-Token=` in a URL or query string,
+  percent-encoded too (`%3D`, `%253D`, in either case); `X-Api-Key: ...`,
+  `password = ...` or `API key: ...` in a header, config line or message, when
+  the value is not a single word or a code in capitals (`Password: required`
+  and `secret: KEY_UNKNOWN` stay); `"apiKey": "..."` in JSON or a dict written
+  into a string, escaped JSON included. After a quoted name only a quoted
+  string counts, so `"tokenCount": 42` stays, and a name ending in `tokens` is
+  a count.
+- An `Authorization` header's credentials, in any letter case and after any
+  prefix ending in `-` (`Proxy-Authorization`, `X-Emby-Authorization`). The
+  header name and scheme stay and the credentials go: the token after
+  `Bearer`, `Basic`, `Bot` or `Token`, an auth-param list (`MediaBrowser
+  Client="...", Token="..."`) after a scheme, and after any other word a
+  token-shaped run. After a space, only a scheme known by name or a quoted
+  first value starts a list, so "Authorization failed reason=expired, code=401"
+  stays.
+- A token after a bare `Bearer` or `Basic`, which runs on past `@ : % ! ,`. A
+  word there is a title, such as "Basic Instinct" or "Basic Instinct(1992)",
+  and is kept; written in another case (`basic`, `BEARER`) only a run shaped
+  like a token counts, so "basic 1080p/2160p" and "basic quality=1080p" stay.
+- A password in a URL, `scheme://user:password@host`.
+
+It matches names and shapes, so it backs up the loaders' own masking rather
+than replacing it: a value it does not read as a credential passes, such as a
+single word after `password:` or a value under 8 characters after a bare
+`Basic`.
 
 Left out, with the reasons in `lib/mcp/action-modules.ts` and
 `lib/mcp/action-tools.ts`: public actions and forms, actions that need a
@@ -88,7 +116,7 @@ Each connected client pays for the tool list and for every result it reads.
   2.5k tokens for this server, and loads a tool's definition when Claude
   searches for it. The instructions say what the tools cover, since Claude
   finds them by searching names and descriptions. Run `/context` to see the
-  tools marked "(deferred)". All of them load up front (about 20-25k tokens)
+  tools marked "(deferred)". All of them load up front (about 25-28k tokens)
   with `ENABLE_TOOL_SEARCH=false`, with `ENABLE_TOOL_SEARCH=auto` on a 1M-token
   window, or on models without tool search. In claude.ai and Claude Desktop,
   choose **Auto** or **On demand** under Tool access.
@@ -102,16 +130,28 @@ Each connected client pays for the tool list and for every result it reads.
   of each prompt and response (`get_llm_usage` reads one, clipped to 15,000
   characters each), and `list_announcements` a preview (`get_announcement`
   reads one). The Sonarr, Radarr, Overseerr, Tautulli and Plex lookups return
-  the fields an answer needs, with a search, filter or limit and a "showing N
-  of M" line. Only reads of one whole record that cannot be split
-  (`get_user_plex_wrapped`, `get_rewind_dry_run`) may return up to 120,000
-  characters.
+  the fields an answer needs. Their list and search tools take a search,
+  filter, page or limit, and a "showing N of M" line says how to see the
+  rest: history, queues, calendars and wanted lists, the Sonarr and Radarr
+  libraries and searches, a Sonarr series' episodes, Overseerr requests,
+  discovery and users, Tautulli users, plays, top lists and activity, and
+  Plex's recently added.
+  `get_plex_sessions` and `get_plex_on_deck` take no arguments:
+  `get_plex_sessions` holds the streams that fit, and its showing line points
+  to `get_tautulli_activity`'s search when some are left out, and On Deck
+  reads its first 50 items. Status and detail tools return one record; the
+  Plex and Tautulli library lists and the Sonarr and Radarr root folders and
+  quality profiles are short and return whole. Only reads of one whole record
+  that cannot be split (`get_user_plex_wrapped`, `get_rewind_dry_run`) may
+  return up to 120,000 characters.
 
 ## Limits and transport
 
 - 600 requests a minute per address (`mcp:ip`), counted before the token is
   looked up, then 120 a minute per token (`mcp`), on top of each action's own
-  limit. A body over 1 MB is a 413.
+  limit. A body over 1 MB is a 413. The address comes from `X-Forwarded-For`
+  as `TRUSTED_PROXY_HOPS` says to read it (`docs/environment.md`): set that for
+  your reverse proxy, or every caller shares one address and its limit.
 - One JSON-RPC message per POST, answered with JSON. The server keeps no
   session, so GET and DELETE are 405 and there is no `Mcp-Session-Id`.
 - Requests from a browser must come from the app's own origin (the transport's

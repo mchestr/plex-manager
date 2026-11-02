@@ -94,22 +94,37 @@ describe("getRedisConnection", () => {
 })
 
 describe("closeRedisConnection", () => {
-  it("quits, and the next use builds a new client", async () => {
+  it("quits while ready, and the next use builds a new client", async () => {
     getRedisConnection()
+    created(0).status = "ready"
 
     await closeRedisConnection()
     getRedisConnection()
 
     expect(created(0).quit).toHaveBeenCalledTimes(1)
+    expect(created(0).disconnect).not.toHaveBeenCalled()
     expect(RedisMock).toHaveBeenCalledTimes(2)
   })
 
   it("disconnects when QUIT fails", async () => {
     getRedisConnection()
+    created(0).status = "ready"
     created(0).quit.mockRejectedValueOnce(new Error("closed"))
 
     await closeRedisConnection()
 
+    expect(created(0).disconnect).toHaveBeenCalledTimes(1)
+  })
+
+  // QUIT waits behind the commands queued while Redis is unreachable, and
+  // those wait for a reconnect (maxRetriesPerRequest: null)
+  it.each(["reconnecting", "connecting", "wait", "end"])("disconnects without QUIT while the connection is %s", async (status) => {
+    getRedisConnection()
+    created(0).status = status
+
+    await closeRedisConnection()
+
+    expect(created(0).quit).not.toHaveBeenCalled()
     expect(created(0).disconnect).toHaveBeenCalledTimes(1)
   })
 
@@ -156,6 +171,18 @@ describe("readyWithin", () => {
     client.emit("ready")
 
     await expect(ready).resolves.toBe(true)
+    expect(client.listenerCount("ready")).toBe(0)
+  })
+
+  it("answers false at the deadline when connecting a waiting client fails", async () => {
+    const client = new FakeRedis("", {})
+    client.connect.mockRejectedValueOnce(new Error("refused"))
+    const ready = readyWithin(client as unknown as Redis, 1000)
+
+    await jest.advanceTimersByTimeAsync(1000)
+
+    await expect(ready).resolves.toBe(false)
+    expect(client.connect).toHaveBeenCalledTimes(1)
     expect(client.listenerCount("ready")).toBe(0)
   })
 

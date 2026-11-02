@@ -53,8 +53,13 @@ checks `assertAdmin()` or `assertPermission()`, and an action is built with
   holds. `executeToolCall` checks again on every call and fails closed, so a
   prompt-injected tool name is refused before any service is called.
 - Output has credential-like fields and personal contact details (email,
-  addresses, per-user tokens) removed, and URLs with a `token=` or `apikey=`
-  value are redacted (`lib/chatbot/executors/role-scrub.ts`). A tool error
+  addresses, per-user tokens) removed (`lib/chatbot/executors/role-scrub.ts`),
+  and credentials inside strings redacted by the rules MCP results use
+  (`lib/security/redact-text.ts`, see `docs/mcp.md`): a `token=` or `apikey=`
+  value in a URL, a header or JSON pair such as `X-Plex-Token: ...` or
+  `"apiKey": "..."`, an `Authorization` header's credentials, a `Bearer` or
+  `Basic` token, and a password in a URL. Those string rules are a backstop:
+  the key rules and the loaders' own masking are the primary control. A tool error
   returns a fixed line, never the upstream text. Other members' viewing
   history stays visible, minus those fields, because troubleshooting needs it.
 - Redaction is by key substring, so a future field such as `tokenCount` or `cookieConsent` is dropped too; name tool output fields with that in mind.

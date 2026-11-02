@@ -6,7 +6,8 @@
  */
 
 import { Worker, Job } from "bullmq"
-import { closeWorker, getRedisConnection } from "./connection"
+import { closeWorker } from "./close-worker"
+import { getRedisConnection } from "./connection"
 import { getJobProcessor, getRegisteredJobTypes } from "./jobs"
 import { QUEUE_NAME } from "./client"
 import { jobRequestId, runJobInContext } from "./job-meta"

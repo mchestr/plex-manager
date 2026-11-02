@@ -1,0 +1,3 @@
+### Fixed
+
+- **Stopping after a Redis restart:** `docker stop` could take the whole grace period and exit with 1 when it came soon after Redis restarted, or while Redis was down. A queue worker waited on a Redis connection that was still reconnecting, and closing the Redis connection waited on commands queued for a Redis it could not reach. While a worker's Redis connections are not both connected, it now closes without waiting for its running jobs (BullMQ's stall check hands those to the next worker), and the Redis connection closes at once. When a stop does run out of time, the `Shutdown deadline passed` log line now names the tasks still running and their phase.
