@@ -61,8 +61,6 @@ export async function markReviewFailed(reviewId: string, code: string, runToken?
  * The job state of each `queued` review, of one conversation or of all when
  * `conversationId` is null, keyed by review id. Call it before opening the
  * transaction that reaps.
- *
- * @internal Only the tests call it until Task 10's `enqueueReview` does; drop the tag then.
  */
 export async function readQueuedJobStates(
   conversationId: string | null,
@@ -75,11 +73,7 @@ export async function readQueuedJobStates(
   return new Map(await Promise.all(queued.map(async ({ id }) => [id, await getJobState(reviewJobId(id))] as const)))
 }
 
-/**
- * Marks the dead reviews of one conversation, or of all, `failed` with `STALE`; returns how many. Makes no Redis call.
- *
- * @internal Only the tests call it until Task 10's `enqueueReview` does; drop the tag then.
- */
+/** Marks the dead reviews of one conversation, or of all, `failed` with `STALE`; returns how many. Makes no Redis call. */
 export async function reapStaleReviews(
   tx: PrismaTransactionClient,
   conversationId: string | null,

@@ -17,6 +17,7 @@ import * as affiliateSettings from "@/actions/admin/affiliate-settings"
 import * as adminAffiliates from "@/actions/admin/affiliates"
 import * as assistantSources from "@/actions/admin/assistant-sources"
 import * as connectionHealth from "@/actions/admin/connection-health"
+import * as conversationReview from "@/actions/admin/conversation-review"
 import * as discordStats from "@/actions/admin/discord-stats"
 import * as inactivity from "@/actions/admin/inactivity"
 import * as invites from "@/actions/admin/invites"
@@ -58,6 +59,7 @@ export const ACTION_MODULES: Readonly<Record<string, Record<string, unknown>>> =
   "admin/affiliates": adminAffiliates,
   "admin/assistant-sources": assistantSources,
   "admin/connection-health": connectionHealth,
+  "admin/conversation-review": conversationReview,
   "admin/discord-stats": discordStats,
   "admin/inactivity": inactivity,
   "admin/invites": invites,

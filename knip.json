@@ -27,7 +27,9 @@
     // the share visit counter (P5.11); P7.5's share page is its first caller
     "lib/wrapped/share/visit-counter.ts!",
     // colour maths for the token and contrast tests; its last app caller, the Chart.js theme, went in P10.9
-    "lib/design/color.ts!"
+    "lib/design/color.ts!",
+    // the conversation review actions (MCP sees them only through a namespace import); the conversation page's review section is their first caller, drop this then
+    "actions/admin/conversation-review.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",

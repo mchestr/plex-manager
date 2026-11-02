@@ -120,6 +120,7 @@ describe("rate-limit", () => {
         "llm:assistant:admin": { points: 60, duration: 3600 },
         "llm:assistant:support": { points: 30, duration: 3600 },
         "assistant:history": { points: 60, duration: 3600 },
+        "judge-review": { points: 10, duration: 3600 },
         mcp: { points: 120, duration: 60 },
         "mcp:ip": { points: 600, duration: 60 },
         "admin:api-tokens": { points: 10, duration: 3600 },

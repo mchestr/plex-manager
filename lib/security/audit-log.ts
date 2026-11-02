@@ -179,6 +179,12 @@ export enum AuditEventType {
   // An admin added, changed or removed an MCP server or knowledge base source.
   // Details carry the kind, the action and the row id, never a secret.
   ASSISTANT_SOURCE_CHANGED = "ASSISTANT_SOURCE_CHANGED",
+  // An admin asked the judge to review an assistant conversation. Details carry
+  // the conversation and review ids and the review's status, never finding text.
+  CONVERSATION_REVIEW_REQUESTED = "CONVERSATION_REVIEW_REQUESTED",
+  // An admin triaged a judge finding. Details carry the finding and conversation
+  // ids and the status before and after, never the claim, evidence or note.
+  CONVERSATION_FINDING_TRIAGED = "CONVERSATION_FINDING_TRIAGED",
   // An admin restored a member's previous Rewind (P7.9). Details carry the
   // target user, the year, the source generation and the new one.
   REWIND_ROLLED_BACK = "REWIND_ROLLED_BACK",

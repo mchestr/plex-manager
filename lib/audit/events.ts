@@ -12,7 +12,7 @@
  * | `affiliates`    | Applications, decisions, blocks and affiliate invites                         |
  * | `billing`       | Subscriptions, exemptions and failed Stripe events                            |
  * | `rewind`        | Shares, hidden titles, prompts, regeneration and the season console           |
- * | `assistant`     | Assistant tool calls, refusals and sources                                    |
+ * | `assistant`     | Assistant tool calls, refusals, sources, conversation reviews and triage      |
  * | `api`           | Personal MCP tokens and the tool calls made with them                         |
  * | `discord`       | Discord links, refused commands and the bot settings                          |
  * | `announcements` | Announcements                                                                 |
@@ -142,6 +142,8 @@ const AUDIT_EVENTS: Record<AuditEventName, EventWords> = {
   ASSISTANT_TOOL_DENIED: { label: "Assistant tool refused", category: "assistant" },
   ASSISTANT_MCP_CALL: { label: "Assistant MCP tool used", category: "assistant" },
   ASSISTANT_SOURCE_CHANGED: { label: "Assistant source changed", category: "assistant" },
+  CONVERSATION_REVIEW_REQUESTED: { label: "Conversation review requested", category: "assistant" },
+  CONVERSATION_FINDING_TRIAGED: { label: "Finding triaged", category: "assistant" },
 
   API_TOKEN_CREATED: { label: "MCP token made", category: "api" },
   API_TOKEN_REVOKED: { label: "MCP token revoked", category: "api" },

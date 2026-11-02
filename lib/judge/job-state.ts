@@ -29,8 +29,6 @@ async function readOnRequestPath(jobId: string): Promise<JobState | "unknown"> {
  * The job's state, null when BullMQ has no such job, or `'unknown'` when
  * Redis cannot be asked (the read throws, or the queue is unavailable). The
  * reap never acts on `'unknown'`.
- *
- * @internal Only the tests call it until Task 10's `enqueueReview` does; drop the tag then.
  */
 export async function reviewJobState(jobId: string, read: ReadJobState = readOnRequestPath): Promise<JobState | null | "unknown"> {
   try {
