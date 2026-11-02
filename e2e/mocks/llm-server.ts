@@ -1,5 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
+import wrongCount from '../../evals/judge/fixtures/wrong-count.json';
+
 /**
  * A stand-in for an OpenAI-compatible chat model, so the assistant specs can
  * send messages without a provider. The app calls the model from the server,
@@ -10,7 +12,23 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
  * `POST .../chat/completions` answers every request with one text reply that
  * quotes the newest user message and counts the conversation's messages before
  * it, so a spec can tell the model saw the earlier turns. It never calls a tool.
+ *
+ * A request for {@link JUDGE_MODEL} is the conversation judge: it gets the
+ * recorded judge output of `evals/judge/fixtures/wrong-count.json` as its JSON
+ * reply, and is kept so a spec can read what the judge was sent from
+ * `GET /__judge-requests`. The stub never sees the call's `purpose`, so it keys
+ * on the model.
  */
+
+/** The model a spec gives its judge `LLMProvider`. */
+export const JUDGE_MODEL = 'judge-e2e';
+
+/** A judge request as `GET /__judge-requests` serves it. */
+export interface JudgeRequest {
+  model: string;
+  /** The user messages' text: the judge's prompt. */
+  prompt: string;
+}
 
 /** The reply to `question` after `earlier` messages of the conversation, so a spec can wait for it. */
 export function mockLlmReply(question: string, earlier = 0): string {
@@ -46,6 +64,14 @@ function lastQuestion(body: unknown): { question: string; earlier: number } {
   return { question: last === -1 ? '' : textOf(turns[last].content), earlier: Math.max(last, 0) };
 }
 
+/** The text of every message with `role`, in order. */
+function textWithRole(body: unknown, role: string): string {
+  return ((body as { messages?: MockMessage[] }).messages ?? [])
+    .filter((message) => message.role === role)
+    .map((message) => textOf(message.content))
+    .join('\n\n');
+}
+
 function send(res: ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(body));
@@ -53,23 +79,33 @@ function send(res: ServerResponse, status: number, body: unknown) {
 
 /** Starts the mock on a free port on 127.0.0.1; its base URL ends in `/v1`. */
 export async function startMockLlm(): Promise<{ url: string; server: Server }> {
+  const judgeRequests: JudgeRequest[] = [];
   const server = createServer((req, res) => {
     void handle(req, res).catch(() => send(res, 500, { error: { message: 'mock error' } }));
   });
 
   async function handle(req: IncomingMessage, res: ServerResponse) {
     const { pathname } = new URL(req.url ?? '/', 'http://mock');
+    if (req.method === 'GET' && pathname === '/__judge-requests') return send(res, 200, judgeRequests);
     if (req.method !== 'POST' || !pathname.endsWith('/chat/completions')) {
       return send(res, 404, { error: { message: `No mock for ${req.method} ${pathname}` } });
     }
     const body = await readJson(req);
-    const { question, earlier } = lastQuestion(body);
+    const model = (body as { model?: string }).model ?? 'gpt-e2e';
+    let content: string;
+    if (model === JUDGE_MODEL) {
+      judgeRequests.push({ model, prompt: textWithRole(body, 'user') });
+      content = JSON.stringify(wrongCount.judgeOutput);
+    } else {
+      const { question, earlier } = lastQuestion(body);
+      content = mockLlmReply(question, earlier);
+    }
     return send(res, 200, {
       id: 'chatcmpl-e2e',
       object: 'chat.completion',
       created: Math.floor(Date.now() / 1000),
-      model: (body as { model?: string }).model ?? 'gpt-e2e',
-      choices: [{ index: 0, message: { role: 'assistant', content: mockLlmReply(question, earlier) }, finish_reason: 'stop' }],
+      model,
+      choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }],
       usage: { prompt_tokens: 12, completion_tokens: 8, total_tokens: 20 },
     });
   }

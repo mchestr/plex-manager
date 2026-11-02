@@ -1,8 +1,8 @@
 {
   "global": {
-    "statements": 89,
+    "statements": 90,
     "branches": 81,
-    "functions": 88,
+    "functions": 89,
     "lines": 90
   },
   "./lib/affiliates/": {
@@ -42,9 +42,9 @@
     "lines": 99
   },
   "./lib/queue/": {
-    "statements": 88,
+    "statements": 89,
     "branches": 84,
-    "functions": 80,
+    "functions": 81,
     "lines": 90
   },
   "./lib/security/crypto.ts": {
@@ -73,7 +73,7 @@
   },
   "./lib/queue/worker.ts": {
     "statements": 100,
-    "branches": 93,
+    "branches": 97,
     "functions": 100,
     "lines": 100
   },
@@ -91,9 +91,9 @@
   },
   "./lib/locks/": {
     "statements": 96,
-    "branches": 89,
-    "functions": 96,
-    "lines": 96
+    "branches": 92,
+    "functions": 98,
+    "lines": 97
   },
   "./components/setup/": {
     "statements": 87,
