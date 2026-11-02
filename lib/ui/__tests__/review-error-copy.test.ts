@@ -21,6 +21,7 @@ const CODES = [
   "JOB_FAILED",
   "ENQUEUE_FAILED",
   "LLM_DISABLED",
+  "PROMPT_TOO_LARGE",
 ]
 
 describe("reviewErrorCopy", () => {

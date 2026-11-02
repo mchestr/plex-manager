@@ -4,8 +4,8 @@
  * The codes come from the judge call (`generateStructured`: `NOT_CONFIGURED`,
  * `TRUNCATED`, `CONTENT_FILTER`, `REFUSAL`, `SCHEMA`, `PROVIDER`, `ABORTED`),
  * the spend check (`BUDGET_EXCEEDED`, `BUDGET_UNAVAILABLE`), the processor
- * (`JOB_FAILED`, and `LLM_DISABLED` while AI features are off), the
- * stuck-review reaper (`STALE`), enqueueing
+ * (`JOB_FAILED`, `PROMPT_TOO_LARGE`, and `LLM_DISABLED` while AI features are
+ * off), the stuck-review reaper (`STALE`), enqueueing
  * (`ENQUEUE_FAILED`) and a conversation ending under a review (`ENDED`). The
  * copy is fixed: a review stores only a code, never provider text, and any
  * other value reads as the generic message. `lib/ui/error-copy.ts` is not
@@ -35,6 +35,7 @@ const COPY: Record<string, ReviewErrorCopy> = {
   JOB_FAILED: { message: "The review job failed. Try again." },
   ENQUEUE_FAILED: { message: "The review could not be queued. Try again shortly." },
   LLM_DISABLED: { message: "AI features are turned off. Turn them on to review conversations.", href: settingsSection("ai") },
+  PROMPT_TOO_LARGE: { message: "The newest turn, with the assistant's instructions and tools, is too long to fit in a review." },
 }
 
 const GENERIC: ReviewErrorCopy = { message: "The review failed. Try again." }

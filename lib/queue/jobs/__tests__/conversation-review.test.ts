@@ -414,6 +414,23 @@ describe("processConversationReview", () => {
     expect(prismaMock.chatConversation.findFirst).toHaveBeenCalledWith({ where: { id: "conversation-1", endedAt: null }, select: { id: true } })
   })
 
+  it("a newest turn that does not fit beside the assistant's prompt fails the review with PROMPT_TOO_LARGE, before the lease and the call", async () => {
+    const rows = useReviewTable([{ id: "review-1", status: "queued" }])
+    // A system prompt over the 120,000-character cap leaves the newest turn no room, so the prompt's window is empty
+    jest.mocked(getAdminAssistantContext).mockResolvedValueOnce({ systemPrompt: "x".repeat(130_000), tools: [] })
+    const acquire = jest.spyOn(store, "acquire")
+    const { deps, model } = judge()
+
+    await expect(run(fakeJob().job, deps)).resolves.toBeUndefined()
+
+    expect(rows.get("review-1")).toMatchObject({ status: "failed", errorCode: "PROMPT_TOO_LARGE", runToken: 1 })
+    expect(acquire).not.toHaveBeenCalled()
+    expect(prismaMock.config.findUnique).not.toHaveBeenCalled()
+    expect(prismaMock.lLMUsage.aggregate).not.toHaveBeenCalled()
+    expect(deps.resolve).not.toHaveBeenCalled()
+    expect(model.doGenerateCalls).toHaveLength(0)
+  })
+
   it("over cap fails with BUDGET_EXCEEDED and makes no LLM call", async () => {
     const rows = useReviewTable([{ id: "review-1", status: "queued" }])
     prismaMock.lLMUsage.aggregate.mockResolvedValue({ _sum: { cost: 1.2 } } as never)

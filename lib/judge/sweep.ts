@@ -22,10 +22,12 @@
  *
  * A conversation is parked while its three most recent `nightly` reviews by
  * `createdAt` all `failed` with a code that says something about the
- * conversation (`SCHEMA`, `TRUNCATED`, `REFUSAL`, `CONTENT_FILTER`) and its
+ * conversation (`SCHEMA`, `TRUNCATED`, `REFUSAL`, `CONTENT_FILTER`, and
+ * `PROMPT_TOO_LARGE` for a newest turn too long to review) and its
  * `lastMessageAt` is not after the newest of them. Any other code (budget,
- * queue, provider, staleness, ending), a `done` review among the three or a
- * newer message unparks it, so an outage never parks a night's conversations.
+ * queue, provider, staleness, ending, AI features off), a `done` review among
+ * the three or a newer message unparks it, so an outage never parks a night's
+ * conversations.
  *
  * ## Run
  *
@@ -58,7 +60,7 @@ const logger = createLogger("conversation-review-sweep")
 const SWEEP_LIMIT = 50
 const BATCH_SIZE = 200
 const PARKED_AFTER = 3
-const COUNTING_CODES = new Set(["SCHEMA", "TRUNCATED", "REFUSAL", "CONTENT_FILTER"])
+const COUNTING_CODES = new Set(["SCHEMA", "TRUNCATED", "REFUSAL", "CONTENT_FILTER", "PROMPT_TOO_LARGE"])
 
 type SweepConfig = { sampleRate: number; minTurns: number }
 type SweepResult = { queued: number; skipped: number; stoppedBy: "cap" | "limit" | "done" | "no-provider" | "disabled" }

@@ -11,7 +11,12 @@
  *    that lost the job, or a review marked stale, writes nothing.
  * 2. Load the messages (in stored order, each one's index its position), the
  *    owner's assistant prompt and tools as they are today, the findings
- *    already raised and the latest `done` review's `reviewedThrough`.
+ *    already raised and the latest `done` review's `reviewedThrough`, and
+ *    build the prompt. When the newest turn alone does not fit beside the
+ *    assistant's prompt and catalog, the prompt's window lacks the newest
+ *    message: the review fails with `PROMPT_TOO_LARGE` before the lease, so
+ *    no call judges an empty transcript and no review is marked `done`
+ *    through messages the judge never saw.
  * 3. Under the `judge-spend` lease: the last checks (`blockedBeforeCall`,
  *    `lib/judge/guards.ts`: the run still holds its review, the conversation
  *    has not ended, AI features are on), the judge cap, then the judge call
@@ -24,6 +29,7 @@
  *
  * | outcome                                | review                                      | job                  |
  * |----------------------------------------|---------------------------------------------|----------------------|
+ * | newest turn does not fit the prompt    | `failed` with `PROMPT_TOO_LARGE`            | completes, no lease  |
  * | `LEASE_BUSY`                           | back to `queued`                            | re-delayed 30–90 s, no attempt spent |
  * | `PROVIDER`, `ABORTED`, earlier attempt | back to `queued` with the code              | throws, BullMQ retries |
  * | `PROVIDER`, `ABORTED`, last attempt    | `failed` with the code                      | throws               |
@@ -135,6 +141,10 @@ export async function processConversationReview(job: Job<ReviewPayload>, token?:
 
   const { systemPrompt, tools } = await getAdminAssistantContext(loaded.owner)
   const prompt = buildJudgePrompt({ ...loaded, systemPrompt, tools })
+  if (!prompt.window.has(newest.index)) {
+    logger.warn("The newest turn does not fit in the judge prompt", { reviewId })
+    return markReviewFailed(reviewId, "PROMPT_TOO_LARGE", run.runToken)
+  }
   const called = await withJudgeLease(
     async () => {
       const blocked = await blockedBeforeCall(run, review.conversationId)

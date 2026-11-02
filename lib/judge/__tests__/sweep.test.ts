@@ -230,6 +230,13 @@ describe("selectSweepCandidates", () => {
     await expect(selectSweepCandidates(NOW, ALL)).resolves.toEqual(["open"])
   })
 
+  it("three PROMPT_TOO_LARGE failures are skipped: a newest turn too long to review says something about the conversation", async () => {
+    useConversations([{ id: "parked", lastMessageAt: minutesAgo(400) }, { id: "open", lastMessageAt: minutesAgo(350) }])
+    useReviews(nightly("parked", [[300, "failed", "PROMPT_TOO_LARGE"], [200, "failed", "SCHEMA"], [100, "failed", "PROMPT_TOO_LARGE"]]))
+
+    await expect(selectSweepCandidates(NOW, ALL)).resolves.toEqual(["open"])
+  })
+
   it("a message after three counting failures is picked up again", async () => {
     useConversations([{ id: "c1", lastMessageAt: minutesAgo(50) }])
     useReviews(nightly("c1", [[300, "failed", "SCHEMA"], [200, "failed", "REFUSAL"], [100, "failed", "CONTENT_FILTER"]]))
@@ -250,17 +257,19 @@ describe("selectSweepCandidates", () => {
     await expect(selectSweepCandidates(NOW, ALL)).resolves.toEqual(["budget", "stale"])
   })
 
-  it("ENQUEUE_FAILED and NOT_CONFIGURED failures never skip a conversation", async () => {
+  it("ENQUEUE_FAILED, NOT_CONFIGURED and LLM_DISABLED failures never skip a conversation", async () => {
     useConversations([
       { id: "enqueue", lastMessageAt: minutesAgo(400) },
       { id: "not-configured", lastMessageAt: minutesAgo(390) },
+      { id: "ai-off", lastMessageAt: minutesAgo(380) },
     ])
     useReviews([
       ...nightly("enqueue", [[300, "failed", "ENQUEUE_FAILED"], [200, "failed", "ENQUEUE_FAILED"], [100, "failed", "ENQUEUE_FAILED"]]),
       ...nightly("not-configured", [[300, "failed", "NOT_CONFIGURED"], [200, "failed", "NOT_CONFIGURED"], [100, "failed", "NOT_CONFIGURED"]]),
+      ...nightly("ai-off", [[300, "failed", "LLM_DISABLED"], [200, "failed", "LLM_DISABLED"], [100, "failed", "LLM_DISABLED"]]),
     ])
 
-    await expect(selectSweepCandidates(NOW, ALL)).resolves.toEqual(["enqueue", "not-configured"])
+    await expect(selectSweepCandidates(NOW, ALL)).resolves.toEqual(["enqueue", "not-configured", "ai-off"])
   })
 
   it("60 out-of-sample conversations ahead of 10 in-sample ones still select the 10", async () => {
