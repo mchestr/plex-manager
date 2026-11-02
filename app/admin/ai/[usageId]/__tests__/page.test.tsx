@@ -1,11 +1,11 @@
 /**
- * The LLM request page shows the clean-up notice for a prompt or response
+ * The AI request page shows the clean-up notice for a prompt or response
  * that the October 2026 privacy clean-up removed (P0.20).
  */
 
 import { render, screen } from '@testing-library/react'
 
-import LLMUsageDetailPage from '@/app/admin/ai/[usageId]/page'
+import AIActivityRecordPage from '@/app/admin/ai/[usageId]/page'
 import { getLLMUsageById } from '@/lib/data/llm-usage'
 
 jest.mock('@/lib/admin', () => ({ assertAdmin: jest.fn() }))
@@ -42,13 +42,21 @@ function usageRecord(text: { prompt: string | null; response: string | null }) {
 }
 
 async function renderPage() {
-  const ui = await LLMUsageDetailPage({ params: Promise.resolve({ usageId: 'usage-1' }) })
+  const ui = await AIActivityRecordPage({ params: Promise.resolve({ usageId: 'usage-1' }) })
   return render(<>{ui}</>)
 }
 
-describe('Admin LLM request page', () => {
+describe('Admin AI request page', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+  })
+
+  it('is headed AI request, the name the audit log uses', async () => {
+    mockGetLLMUsageById.mockResolvedValue(usageRecord({ prompt: null, response: null }))
+
+    await renderPage()
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^AI request$/)
   })
 
   it('shows the clean-up notice for a removed prompt and response', async () => {

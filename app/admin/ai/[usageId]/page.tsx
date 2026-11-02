@@ -10,7 +10,7 @@ import { getFormat } from "@/lib/settings/app-settings"
 import { aiActivity, aiActivityConversation, userDetail, userRewind } from "@/lib/admin/routes"
 import { assertAdmin } from "@/lib/admin"
 
-export default async function LLMUsageDetailPage({ params }: { params: Promise<{ usageId: string }> }) {
+export default async function AIActivityRecordPage({ params }: { params: Promise<{ usageId: string }> }) {
   await assertAdmin()
   const { usageId } = await params
   const [record, f] = await Promise.all([getLLMUsageById(usageId), getFormat()])
@@ -88,7 +88,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
             >
               Back to AI activity
             </Link>
-            <h1 data-testid="admin-ai-activity-detail-heading" className="text-2xl sm:text-3xl font-bold text-foreground mb-2">LLM request</h1>
+            <h1 data-testid="admin-ai-activity-detail-heading" className="text-2xl sm:text-3xl font-bold text-foreground mb-2">AI request</h1>
           </div>
 
         <StatGrid className="mb-6">

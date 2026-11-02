@@ -185,7 +185,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     id: "ai-activity",
     label: "AI activity",
     href: "/admin/ai",
-    icon: icons.llmUsage,
+    icon: icons.aiActivity,
     group: "Usage and cost",
     match: "prefix",
     mobile: "more",

@@ -88,7 +88,7 @@ export const icons = {
   users: Users,
   announcements: Megaphone,
   playground: FlaskConical,
-  llmUsage: Activity,
+  aiActivity: Activity,
   cost: Coins,
   queues: Layers,
   settings: Settings,

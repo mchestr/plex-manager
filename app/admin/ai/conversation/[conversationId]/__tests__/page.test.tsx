@@ -7,7 +7,7 @@
 
 import { render, screen, within } from '@testing-library/react'
 
-import LLMConversationPage from '@/app/admin/ai/conversation/[conversationId]/page'
+import AIActivityConversationPage from '@/app/admin/ai/conversation/[conversationId]/page'
 import { getConversationReview } from '@/lib/data/conversation-review'
 import { getLLMUsageRecords } from '@/lib/data/llm-usage'
 
@@ -55,7 +55,7 @@ function call(id: string, createdAt: string, prompt: string | null) {
 }
 
 async function renderPage() {
-  const ui = await LLMConversationPage({ params: Promise.resolve({ conversationId: 'chat-1' }) })
+  const ui = await AIActivityConversationPage({ params: Promise.resolve({ conversationId: 'chat-1' }) })
   return render(<>{ui}</>)
 }
 

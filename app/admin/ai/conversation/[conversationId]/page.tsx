@@ -41,7 +41,7 @@ const HEADINGS = ["#", "Time", "Model", "Tokens", "Cost"]
  * for a reviewable admin assistant conversation. The section belongs to the
  * `ChatConversation`, not its calls, so it shows on "No calls" too.
  */
-export default async function LLMConversationPage({ params }: { params: Promise<{ conversationId: string }> }) {
+export default async function AIActivityConversationPage({ params }: { params: Promise<{ conversationId: string }> }) {
   await assertAdmin()
   const { conversationId } = await params
   const [{ records }, f, judged] = await Promise.all([
