@@ -355,7 +355,7 @@ describe('ReviewSection polling', () => {
     expect(screen.getByTestId('finding-card-f1')).toBeInTheDocument()
 
     // No retry and no further poll: the page says the check failed and offers one
-    expect(screen.getByTestId('conversation-review-status-error')).toHaveTextContent('Could not check the review status.')
+    expect(screen.getByTestId('conversation-review-status-line')).toHaveTextContent('Could not check the review status. Try again')
     await advance(60_000)
     expect(getStatus).toHaveBeenCalledTimes(1)
 
@@ -363,7 +363,7 @@ describe('ReviewSection polling', () => {
     await user.click(screen.getByTestId('conversation-review-status-retry'))
     await badgeReads('Reviewing')
     expect(getStatus).toHaveBeenCalledTimes(2)
-    expect(screen.queryByTestId('conversation-review-status-error')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('conversation-review-status-retry')).not.toBeInTheDocument()
     // Polling picks up again
     await advance(5_000)
     expect(getStatus).toHaveBeenCalledTimes(3)
@@ -393,11 +393,38 @@ describe('ReviewSection polling', () => {
 
     getStatus.mockResolvedValueOnce(status('running'))
     await user.click(retry)
-    await waitFor(() => expect(screen.queryByTestId('conversation-review-status-error')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByTestId('conversation-review-status-retry')).not.toBeInTheDocument())
     // Try again went with the line
     expect(document.activeElement).not.toBe(document.body)
     expect(screen.getByRole('heading', { name: 'Review' })).toHaveFocus()
     expect(region).toHaveTextContent('Reviewing the conversation')
+  })
+
+  it('says once that the check failed, in the status region, which shows while it says so', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    getStatus.mockResolvedValueOnce({ success: false, code: 'INTERNAL', error: 'Could not read the review status' })
+
+    render({ review: view({ status: 'running', summary: null, completedAt: null }) })
+    const region = screen.getByTestId('conversation-review-announcement')
+    await advance(5_000)
+    await waitFor(() => expect(region).toHaveTextContent('Could not check the review status'))
+
+    // One element says it, both shown and announced, so browse mode reads it once, then Try again
+    expect(screen.getByTestId('conversation-review-section').textContent?.match(/Could not check the review status/g)).toHaveLength(1)
+    const line = screen.getByTestId('conversation-review-status-line')
+    expect(line).toContainElement(region)
+    expect(line).not.toHaveClass('sr-only')
+    expect(line).toHaveTextContent('Could not check the review status. Try again')
+    const retry = within(line).getByTestId('conversation-review-status-retry')
+    // Try again is beside the region, not in it, so its busy label is not announced as the status
+    expect(region).not.toContainElement(retry)
+
+    getStatus.mockResolvedValueOnce(status('running'))
+    await user.click(retry)
+    await waitFor(() => expect(region).toHaveTextContent('Reviewing the conversation'))
+    // Back to following the review's progress, for screen readers alone
+    expect(line).toHaveClass('sr-only')
+    expect(screen.queryByTestId('conversation-review-status-retry')).not.toBeInTheDocument()
   })
 
   it('leaves focus where the admin moved it while Try again checked', async () => {
@@ -405,7 +432,7 @@ describe('ReviewSection polling', () => {
     getStatus.mockResolvedValueOnce({ success: false, code: 'INTERNAL', error: 'Could not read the review status' })
     render({ review: view({ status: 'running', summary: null, completedAt: null }), findings: [reviewFinding({ id: 'f1' })] })
     await advance(5_000)
-    await waitFor(() => expect(screen.getByTestId('conversation-review-status-error')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByTestId('conversation-review-status-retry')).toBeInTheDocument())
 
     let settle: (result: StatusResult) => void = () => {}
     getStatus.mockReturnValueOnce(new Promise((resolve) => (settle = resolve)))
@@ -414,7 +441,7 @@ describe('ReviewSection polling', () => {
     const note = screen.getByTestId('finding-note-f1')
     await user.click(note)
     await act(async () => settle(status('running')))
-    await waitFor(() => expect(screen.queryByTestId('conversation-review-status-error')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByTestId('conversation-review-status-retry')).not.toBeInTheDocument())
 
     expect(note).toHaveFocus()
   })
@@ -465,11 +492,11 @@ describe('ReviewSection polling', () => {
       getStatus.mockResolvedValue({ success: false, code: 'INTERNAL', error: 'Could not read the review status' })
       const { rerender } = render({ review: running() })
       await advance(5_000)
-      await waitFor(() => expect(screen.getByTestId('conversation-review-status-error')).toBeInTheDocument())
+      await waitFor(() => expect(screen.getByTestId('conversation-review-status-retry')).toBeInTheDocument())
 
       refresh(rerender, view())
       await badgeReads('Reviewed')
-      expect(screen.queryByTestId('conversation-review-status-error')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('conversation-review-status-retry')).not.toBeInTheDocument()
       expect(getStatus).toHaveBeenCalledTimes(1)
     })
 
@@ -535,7 +562,7 @@ describe('ReviewSection polling', () => {
     expect(button).toHaveAttribute('aria-disabled', 'true')
     getStatus.mockResolvedValueOnce({ success: false, code: 'INTERNAL', error: 'Could not read the review status' })
     await advance(5_000)
-    await waitFor(() => expect(screen.getByTestId('conversation-review-status-error')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByTestId('conversation-review-status-retry')).toBeInTheDocument())
     expect(button).not.toHaveAttribute('aria-disabled')
     await user.click(button)
     expect(review).toHaveBeenCalledTimes(2)

@@ -106,13 +106,13 @@ interface AnnouncementState {
 }
 
 /**
- * What the status region says: that the status check failed, the review's progress, and its result once the page
- * shows it. A failure the Alert shows is the Alert's to say; one the blocked notice hides is said here, since the
- * notice is not a live region. The result counts open findings only: a review never deletes findings, so the page
- * also shows those triaged before it.
+ * What the status region says: that the status check failed, which is then its visible line, the review's progress,
+ * and its result once the page shows it. A failure the Alert shows is the Alert's to say; one the blocked notice hides
+ * is said here, since the notice is not a live region. The result counts open findings only: a review never deletes
+ * findings, so the page also shows those triaged before it.
  */
 function announcement({ status, checkFailed, finished, failureShown, openFindings }: AnnouncementState): string {
-  if (checkFailed) return "Could not check the review status"
+  if (checkFailed) return "Could not check the review status."
   if (status?.status === "queued") return "Review queued"
   if (status?.status === "running") return "Reviewing the conversation"
   if (status?.status === "failed") return failureShown ? "" : "Review failed"
@@ -226,31 +226,35 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
         </Button>
       </div>
 
-      <p role="status" className="sr-only" data-testid="conversation-review-announcement">
-        {announcement({
-          status,
-          checkFailed: statusFailed,
-          finished: current !== null,
-          failureShown: failure !== null,
-          openFindings: findings.filter((finding) => finding.status === "open").length,
-        })}
+      {/* The status region stays mounted, so each change is announced. A failed check is its one visible line, with Try
+          again beside the region rather than in it, so the button's busy label is not announced as the status */}
+      <p className={statusFailed ? "text-ui text-muted-foreground" : "sr-only"} data-testid="conversation-review-status-line">
+        <span role="status" data-testid="conversation-review-announcement">
+          {announcement({
+            status,
+            checkFailed: statusFailed,
+            finished: current !== null,
+            failureShown: failure !== null,
+            openFindings: findings.filter((finding) => finding.status === "open").length,
+          })}
+        </span>
+        {statusFailed && (
+          <>
+            {" "}
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto px-0"
+              onClick={onRetry}
+              loading={checking}
+              loadingLabel="Checking"
+              data-testid="conversation-review-status-retry"
+            >
+              Try again
+            </Button>
+          </>
+        )}
       </p>
-      {statusFailed && (
-        <p className="text-ui text-muted-foreground" data-testid="conversation-review-status-error">
-          Could not check the review status.{" "}
-          <Button
-            variant="link"
-            size="sm"
-            className="h-auto px-0"
-            onClick={onRetry}
-            loading={checking}
-            loadingLabel="Checking"
-            data-testid="conversation-review-status-retry"
-          >
-            Try again
-          </Button>
-        </p>
-      )}
       {blocked && (
         <p className="text-ui text-muted-foreground" data-testid="conversation-review-blocked">
           <CopyWithLink copy={REVIEW_BLOCKED_COPY[blocked]} linkTestId="conversation-review-blocked-link" />
