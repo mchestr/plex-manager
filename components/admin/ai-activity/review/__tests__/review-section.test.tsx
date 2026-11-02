@@ -261,6 +261,8 @@ describe('ReviewSection polling', () => {
 
     expect(getStatus).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('alert')).toHaveTextContent('The review stopped responding')
+    // The Alert says it, so the status region does not say it again
+    expect(screen.getByTestId('conversation-review-announcement')).toBeEmptyDOMElement()
   })
 
   it('a done review on mount makes no status call', async () => {
@@ -390,6 +392,24 @@ describe('ReviewSection polling', () => {
     const findings = [reviewFinding({ id: 'f1' }), reviewFinding({ id: 'f2' }), reviewFinding({ id: 'f3' })]
     rerender(<ReviewSection conversationId="chat-1" review={view()} findings={findings} hasToolEvidence judgeConfigured llmDisabled={false} />)
     expect(region).toHaveTextContent('Review finished, 3 open findings')
+  })
+
+  it.each([
+    ['LLM_DISABLED', { llmDisabled: true }],
+    ['NOT_CONFIGURED', { judgeConfigured: false }],
+  ] as const)('announces a review that failed with %s while that still blocks the section, as the notice hides its copy', async (code, blocking) => {
+    // The review was queued before the switch went off or the model was removed, and the processor failed it
+    getStatus.mockResolvedValue(status('failed', code))
+
+    render({ ...blocking, review: view({ status: 'queued', summary: null, completedAt: null }) })
+    const region = screen.getByTestId('conversation-review-announcement')
+    expect(region).toHaveTextContent('Review queued')
+    await advance(5_000)
+    await badgeReads('Failed')
+
+    // The notice was already on the page and is not a live region, and no Alert shows
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(region).toHaveTextContent('Review failed')
   })
 
   it.each([

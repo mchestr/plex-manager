@@ -81,14 +81,25 @@ function CopyWithLink({ copy, linkTestId }: { copy: ReviewErrorCopy; linkTestId:
   )
 }
 
+interface AnnouncementState {
+  status: ReviewStatus | null | undefined
+  /** The page shows the finished review's details. */
+  finished: boolean
+  /** The failure's Alert shows; the blocked notice hides one with its own code. */
+  failureShown: boolean
+  openFindings: number
+}
+
 /**
- * What the status region says: the review's progress, and its result once the page shows it. A failure is the
- * Alert's to say. The result counts open findings only: a review never deletes findings, so the page also shows
- * those triaged before it.
+ * What the status region says: the review's progress, and its result once the page shows it. A failure the Alert
+ * shows is the Alert's to say; one the blocked notice hides is said here, since the notice is not a live region.
+ * The result counts open findings only: a review never deletes findings, so the page also shows those triaged
+ * before it.
  */
-function announcement(status: ReviewStatus | null | undefined, finished: boolean, openFindings: number): string {
+function announcement({ status, finished, failureShown, openFindings }: AnnouncementState): string {
   if (status?.status === "queued") return "Review queued"
   if (status?.status === "running") return "Reviewing the conversation"
+  if (status?.status === "failed") return failureShown ? "" : "Review failed"
   if (!finished) return ""
   return `Review finished, ${openFindings === 0 ? "no open findings" : openFindings === 1 ? "1 open finding" : `${openFindings} open findings`}`
 }
@@ -178,7 +189,12 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
       </div>
 
       <p role="status" className="sr-only" data-testid="conversation-review-announcement">
-        {announcement(status, current !== null, findings.filter((finding) => finding.status === "open").length)}
+        {announcement({
+          status,
+          finished: current !== null,
+          failureShown: failure !== null,
+          openFindings: findings.filter((finding) => finding.status === "open").length,
+        })}
       </p>
       {statusFailed && (
         <p className="text-ui text-muted-foreground" data-testid="conversation-review-status-error">
