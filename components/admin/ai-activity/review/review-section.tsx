@@ -154,7 +154,7 @@ interface ReviewSectionProps {
  * one's summary, model or cost. While no review can start, a notice says why
  * in the present tense, and a failure with that same code is left to it.
  * While a review is queued or running, Review keeps focus but sends nothing,
- * until a status check fails.
+ * described by the status it waits on, until a status check fails.
  */
 export function ReviewSection({ conversationId, review, findings, hasToolEvidence, judgeConfigured, llmDisabled }: ReviewSectionProps) {
   const { showError } = useToast()
@@ -205,7 +205,7 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
         <h2 ref={heading} id="conversation-review-heading" tabIndex={-1} className="text-h3 text-foreground outline-none">
           Review
         </h2>
-        <StatusBadge domain="conversationReview" value={status?.status ?? "none"} data-testid="conversation-review-status" />
+        <StatusBadge domain="conversationReview" value={status?.status ?? "none"} id="conversation-review-status" data-testid="conversation-review-status" />
         {status && !hasToolEvidence && (
           <Badge variant="neutral" data-testid="conversation-review-no-tool-evidence">
             No tool evidence
@@ -218,6 +218,8 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
           onClick={onReview}
           disabled={blocked !== null || waiting}
           focusableWhenDisabled={waiting}
+          // A screen reader on the inert button hears the status it waits on
+          aria-describedby={waiting ? "conversation-review-status" : undefined}
           loading={isStarting}
           loadingLabel="Starting"
           data-testid="conversation-review-button"

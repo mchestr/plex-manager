@@ -94,6 +94,25 @@ describe('ReviewSection states', () => {
     expect(button).not.toHaveAttribute('disabled')
   })
 
+  it.each([
+    ['queued', 'Queued'],
+    ['running', 'Reviewing'],
+  ] as const)('describes Review by the status while a review is %s, so a screen reader hears why it does nothing', (value, word) => {
+    render({ review: view({ status: value, completedAt: null, summary: null, model: null }) })
+
+    expect(screen.getByTestId('conversation-review-button')).toHaveAccessibleDescription(word)
+  })
+
+  it.each([
+    ['with no review yet', {}],
+    ['once the review is done', { review: view() }],
+    ['while AI features are off', { llmDisabled: true }],
+  ] as const)('gives Review no description %s, as it waits on no review', (_when, props) => {
+    render(props)
+
+    expect(screen.getByTestId('conversation-review-button')).not.toHaveAttribute('aria-describedby')
+  })
+
   it('shows no failure copy for a queued review that carries a retried attempt\'s code', () => {
     render({ review: view({ status: 'queued', errorCode: 'PROVIDER', summary: null, completedAt: null }) })
 
@@ -551,19 +570,23 @@ describe('ReviewSection polling', () => {
     render({ review: view({ status: 'running', summary: null, completedAt: null }) })
     const button = screen.getByTestId('conversation-review-button')
     expect(button).toHaveAttribute('aria-disabled', 'true')
+    expect(button).toHaveAccessibleDescription('Reviewing')
     await advance(5_000)
     await badgeReads('Reviewed')
     expect(button).not.toHaveAttribute('aria-disabled')
+    expect(button).not.toHaveAttribute('aria-describedby')
     await user.click(button)
     expect(review).toHaveBeenCalledTimes(1)
 
     // It waits on review-2 until a status check fails, and then it is the way to recover
     await badgeReads('Queued')
     expect(button).toHaveAttribute('aria-disabled', 'true')
+    expect(button).toHaveAccessibleDescription('Queued')
     getStatus.mockResolvedValueOnce({ success: false, code: 'INTERNAL', error: 'Could not read the review status' })
     await advance(5_000)
     await waitFor(() => expect(screen.getByTestId('conversation-review-status-retry')).toBeInTheDocument())
     expect(button).not.toHaveAttribute('aria-disabled')
+    expect(button).not.toHaveAttribute('aria-describedby')
     await user.click(button)
     expect(review).toHaveBeenCalledTimes(2)
   })
