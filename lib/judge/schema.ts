@@ -16,12 +16,15 @@ import { z } from "zod"
 
 import { EvidenceSource, FindingSeverity, FindingType } from "@/lib/generated/prisma/client"
 
+/** A finding's longest claim, also the cap on claims merged by `verifyFindings`. */
+export const CLAIM_MAX_LENGTH = 2000
+
 const findingSchema = z.object({
   messageIndex: z.number().int().min(0),
   type: z.enum(FindingType),
   severity: z.enum(FindingSeverity),
   evidenceSource: z.enum(EvidenceSource),
-  claim: z.string().min(1).max(2000),
+  claim: z.string().min(1).max(CLAIM_MAX_LENGTH),
   evidence: z.string().max(4000),
   suggestion: z.string().max(2000),
   tool: z.string().max(100).nullable(),
