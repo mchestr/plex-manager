@@ -6,7 +6,7 @@ import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { SecretInput } from "@/components/ui/secret-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { LLMProviderFormState } from "@/hooks/use-llm-provider-form"
+import type { LLMProviderFormState, LLMProviderPurpose } from "@/hooks/use-llm-provider-form"
 import { LLM_PROVIDER_IDS, LLM_PROVIDER_LABELS } from "@/lib/llm/provider-presets"
 
 const PROVIDER_ITEMS = LLM_PROVIDER_IDS.map((id) => ({ value: id, label: LLM_PROVIDER_LABELS[id] }))
@@ -39,7 +39,7 @@ function OptionSelect<T extends string>({ items, value, onChange, disabled, test
 }
 
 interface LLMProviderFieldsProps {
-  purpose: "chat" | "wrapped"
+  purpose: LLMProviderPurpose
   /** `useLLMProviderForm(stored, purpose)`, held by the AI section. */
   state: LLMProviderFormState
   /** Locks the fields while another part of the section saves, so nothing typed then is lost. */

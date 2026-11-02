@@ -12,7 +12,7 @@ import { listLLMModels, updateWrappedLLMProvider } from '@/actions/admin/admin-l
 import { AiSection } from '@/components/admin/settings/sections/ai-section'
 import type { StoredLLMProvider } from '@/hooks/use-llm-provider-form'
 
-jest.mock('@/actions/admin/admin-llm-providers', () => ({ listLLMModels: jest.fn(), updateChatLLMProvider: jest.fn(), updateWrappedLLMProvider: jest.fn() }))
+jest.mock('@/actions/admin/admin-llm-providers', () => ({ listLLMModels: jest.fn(), updateChatLLMProvider: jest.fn(), updateWrappedLLMProvider: jest.fn(), updateJudgeLLMProvider: jest.fn() }))
 jest.mock('@/actions/admin/admin-config', () => ({ setLLMDisabled: jest.fn(), updateLlmCaps: jest.fn() }))
 
 const mockRefresh = jest.fn()
@@ -50,7 +50,7 @@ const HEALTH = { status: 'ok' as const, code: null, checkedAt: null }
 const CAPS = { perUserUsd: 1, adminUsd: 5, serverUsd: 20 }
 
 function renderSection(wrapped: StoredLLMProvider | null = null, chat: StoredLLMProvider | null = null) {
-  return render(<AiSection chat={chat} wrapped={wrapped} llmDisabled={false} caps={CAPS} health={HEALTH} />)
+  return render(<AiSection chat={chat} wrapped={wrapped} judge={null} llmDisabled={false} caps={CAPS} health={HEALTH} />)
 }
 
 function setup() {

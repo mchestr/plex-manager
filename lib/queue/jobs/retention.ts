@@ -7,7 +7,7 @@
  * |---|---|---|
  * | `rewindLlmText` | `LLMUsage` outside a conversation, or tied to a Rewind | text nulled |
  * | `assistantLlmText` | `LLMUsage` in a conversation | text nulled |
- * | `assistantChats` | open assistant page `ChatConversation` by `lastMessageAt`, or `createdAt` without one | ended, its title nulled and messages deleted |
+ * | `assistantChats` | open assistant page `ChatConversation` by `lastMessageAt`, or `createdAt` without one | ended, its title nulled and messages deleted; its judge findings deleted, review summaries nulled and open reviews failed (`ENDED`) |
  * | `chatConversations` | `ChatConversation` by `endedAt` | deleted (usage keeps cost, sessions and messages cascade) |
  * | `discordChatMessages` | `DiscordChatSession` by `lastMessageAt` | `messages` emptied |
  * | `discordChatSessions` | `DiscordChatSession` by `lastMessageAt` | row deleted, then its conversation ended once no session is left |
@@ -37,6 +37,7 @@
 import type { Job } from "bullmq"
 
 import { Prisma, WatchlistSyncStatus } from "@/lib/generated/prisma/client"
+import { endReviewsOf } from "@/lib/judge/end"
 import { shutdownSignal } from "@/lib/instrumentation/shutdown"
 import { prisma } from "@/lib/prisma"
 import { lastExpiredPreviousDataYear, RETENTION_RULES, retentionDays, type RetentionRule } from "@/lib/retention/policy"
@@ -165,7 +166,8 @@ async function endIdleChatSessions(ctx: Ctx, days: number): Promise<number> {
  * their history, as deleting one from the page does (`lib/chatbot/history.ts`).
  * One that never stored a turn (its first reply failed, or it is from the old
  * side panel) counts from when it started. A conversation that took a message
- * since the select is not ended, so its messages stay.
+ * since the select is not ended, so its messages, judge findings and open
+ * reviews stay (`endReviewsOf` acts only on ended conversations).
  */
 function endIdleAssistantChats(ctx: Ctx, days: number): Promise<number> {
   const before = ctx.before(days)
@@ -180,6 +182,7 @@ function endIdleAssistantChats(ctx: Ctx, days: number): Promise<number> {
     (batch) =>
       prisma.$transaction(async (tx) => {
         const ended = await tx.chatConversation.updateMany({ where: { AND: [where, { id: { in: batch } }] }, data: { endedAt: ctx.now, title: null } })
+        await endReviewsOf(tx, batch)
         await tx.chatConversationMessage.deleteMany({ where: { conversationId: { in: batch }, conversation: { endedAt: { not: null } } } })
         return ended
       })

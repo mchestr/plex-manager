@@ -1,7 +1,7 @@
 "use server"
 
 /**
- * LLM provider settings for the two purposes (chat assistant and Rewind).
+ * LLM provider settings for the three purposes (chat assistant, Rewind and conversation review).
  *
  * The base URL of an OpenAI-compatible server is an admin-only SSRF surface
  * (SEC-44), so only these admin actions accept one. A blank API key keeps the
@@ -36,7 +36,7 @@ import { EFFORT_LEVELS, llmProviderSchema } from "@/lib/validations/llm-provider
 import { normalizeBaseUrl } from "@/lib/validations/shared-schemas"
 import { getSeasonState } from "@/lib/wrapped/season"
 
-type LLMProviderPurpose = "chat" | "wrapped"
+type LLMProviderPurpose = "chat" | "wrapped" | "judge"
 
 const saveInputSchema = z.object({
   provider: z.enum(LLM_PROVIDER_IDS, { message: "Please select a provider" }),
@@ -51,7 +51,7 @@ const saveInputSchema = z.object({
 })
 
 const listInputSchema = z.object({
-  purpose: z.enum(["chat", "wrapped"]),
+  purpose: z.enum(["chat", "wrapped", "judge"]),
   /** Omitted: list the purpose's active provider with its stored settings. */
   provider: z.enum(LLM_PROVIDER_IDS).optional(),
   apiKey: z.string().max(500).optional(),
@@ -227,6 +227,17 @@ export const updateWrappedLLMProvider = adminAction({
   rateLimit: { name: "llm:models" },
   fallbackError: "Failed to update the wrapped LLM provider",
   handler: (input, { userId }) => updateLLMProviderForPurpose("wrapped", input, userId),
+})
+
+/**
+ * Update the conversation review (judge) LLM provider (admin only): the model
+ * that reviews admin assistant conversations, manually and nightly.
+ */
+export const updateJudgeLLMProvider = adminAction({
+  input: saveInputSchema,
+  rateLimit: { name: "llm:models" },
+  fallbackError: "Failed to update the conversation review LLM provider",
+  handler: (input, { userId }) => updateLLMProviderForPurpose("judge", input, userId),
 })
 
 /**

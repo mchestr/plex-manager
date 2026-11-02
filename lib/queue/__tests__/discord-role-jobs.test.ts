@@ -33,6 +33,7 @@ jest.mock("@/lib/queue/request-path", () => ({ enqueueFromRequest: jest.fn() }))
 jest.mock("@/lib/queue/redis-semaphore", () => ({ redisLimiter: { run: jest.fn() } }))
 jest.mock("@/lib/queue/jobs/watchlist-sync", () => ({ getWatchlistProcessor: jest.fn(() => null) }))
 jest.mock("@/lib/queue/jobs/stripe", () => ({ getStripeProcessor: jest.fn(() => null) }))
+jest.mock("@/lib/queue/jobs/conversation-review", () => ({ getConversationReviewProcessor: jest.fn(() => null) }))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
 }))

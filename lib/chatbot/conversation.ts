@@ -2,12 +2,13 @@ import "server-only"
 
 import type { ModelMessage } from "ai"
 
+import { capToolLog, type ToolLogEntry } from "@/lib/judge/tool-log"
 import { ASSISTANT_BUDGET_MESSAGE, ASSISTANT_BUDGET_UNAVAILABLE_MESSAGE, checkSpend } from "@/lib/llm/budget"
 import { chatWithTools, type ChatTool, type UsagePromptMessage } from "@/lib/llm/chat"
 import { type Permission } from "@/lib/permissions"
 import { type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
-import { executeToolCall } from "./executors"
+import { executeToolCall, isToolSuccess } from "./executors"
 import { ALL_TOOLS } from "./tools"
 import { type ChatMessage, type ChatResponse } from "./types"
 
@@ -59,6 +60,8 @@ interface ConversationResult {
   error?: string
   /** Set when a spend cap stopped the turn, or its check failed closed; `error` is then copy for the member. */
   refusal?: ChatResponse["refusal"]
+  /** The turn's tool calls, redacted and capped, for the judge; set on every answered turn, empty when no tool ran. */
+  toolLog?: ToolLogEntry[]
 }
 
 export async function runConversationLoop(
@@ -76,6 +79,8 @@ export async function runConversationLoop(
   const toolsUsed = new Set<string>() // Track which tools were called
   // What each call adds to the context, the only prompt text its usage row stores (SEC-45)
   let usagePrompt: UsagePromptMessage[] = [{ role: "user", content: messages.at(-1)?.content ?? "" }]
+  // Every call of the turn, in order; capToolLog redacts them before they leave the loop
+  const toolLog: ToolLogEntry[] = []
 
   while (loops < MAX_LOOPS) {
     loops++
@@ -126,6 +131,7 @@ export async function runConversationLoop(
           timestamp: Date.now(),
           sources: sources.length > 0 ? sources : undefined,
         },
+        toolLog: capToolLog(toolLog),
       }
     }
 
@@ -136,16 +142,23 @@ export async function runConversationLoop(
     // The assistant turn as the provider returned it (with its reasoning), then the results
     history.push(...response.responseMessages)
 
-    const toolResults = await Promise.all(
-      response.toolCalls.map(async (toolCall) => ({
-        type: "tool-result" as const,
-        toolCallId: toolCall.id,
-        toolName: toolCall.function.name,
-        output: {
-          type: "text" as const,
-          value: asUntrustedData(await executeToolCall(toolCall, config.userId, config.context, config.isAdmin, config.format, config.permissions)),
-        },
-      }))
+    const outputs = await Promise.all(
+      response.toolCalls.map((toolCall) =>
+        executeToolCall(toolCall, config.userId, config.context, config.isAdmin, config.format, config.permissions)
+      )
+    )
+    const toolResults = response.toolCalls.map((toolCall, i) => ({
+      type: "tool-result" as const,
+      toolCallId: toolCall.id,
+      toolName: toolCall.function.name,
+      output: { type: "text" as const, value: asUntrustedData(outputs[i]) },
+    }))
+    toolLog.push(
+      ...response.toolCalls.map((toolCall, i) => {
+        // A side path: an executor output that is not a string must never fail the answer
+        const result = String(outputs[i] ?? "")
+        return { tool: toolCall.function.name, args: toolCall.function.arguments, result, ok: isToolSuccess(result) }
+      })
     )
     history.push({ role: "tool", content: toolResults })
     usagePrompt = toolResults.map((result) => ({ role: "tool", name: result.toolName, content: result.output.value }))

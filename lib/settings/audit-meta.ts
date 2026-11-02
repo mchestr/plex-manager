@@ -9,7 +9,8 @@
  * | Settings section | Audit `details.section` |
  * |---|---|
  * | Plex, Tautulli, Overseerr | `plex`, `tautulli`, `overseerr` |
- * | AI provider | `llm`, `llm.chat`, `llm.wrapped`, `llm.caps` |
+ * | AI provider | `llm`, `llm.chat`, `llm.wrapped`, `llm.judge`, `llm.caps` |
+ * | Conversation review | `judge` |
  * | Discord | `discord` (`DISCORD_INTEGRATION_CONFIG_CHANGED`) |
  * | Stripe billing | `stripe`, `stripe.enabled` |
  * | Rewind | `rewind` |
@@ -35,7 +36,8 @@ const SECTIONS = {
   plex: ["plex"],
   tautulli: ["tautulli"],
   overseerr: ["overseerr"],
-  ai: ["llm", "llm.chat", "llm.wrapped", "llm.caps"],
+  ai: ["llm", "llm.chat", "llm.wrapped", "llm.judge", "llm.caps"],
+  judge: ["judge"],
   discord: ["discord"],
   stripe: ["stripe", "stripe.enabled"],
   channelStats: ["discord.stats"],

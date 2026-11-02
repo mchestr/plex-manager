@@ -36,8 +36,8 @@ describe('assertNoSecretKeys', () => {
 
   it('flags every column registered in ENCRYPTED_FIELDS', () => {
     // A new encrypted column whose name the pattern misses would let a leak pass silently.
-    // LLM text and the assistant's stored history are personal data, not credentials (P11.1)
-    const personal = ['LLMUsage', 'ChatConversation', 'ChatConversationMessage']
+    // LLM text, the assistant's stored history and the judge's reviews are personal data, not credentials (P11.1)
+    const personal = ['LLMUsage', 'ChatConversation', 'ChatConversationMessage', 'ConversationReview', 'ConversationFinding']
     const credentials = Object.entries(ENCRYPTED_FIELDS).filter(([model]) => !personal.includes(model))
     const columns = [...new Set(credentials.flatMap(([, fields]) => fields))]
 

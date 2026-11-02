@@ -5,7 +5,7 @@
  * All queue interactions should go through this module.
  */
 
-import { Queue, QueueEvents, JobsOptions, type Job } from "bullmq"
+import { Queue, QueueEvents, JobsOptions, type Job, type JobState } from "bullmq"
 import { getRedisConnection } from "./connection"
 import { jobIdOptions } from "./job-id"
 import { traceQueue } from "./job-meta"
@@ -149,6 +149,15 @@ export async function scheduleCronJob<T extends JobType>(
 export async function removeScheduledJob(schedulerId: string): Promise<boolean> {
   const q = getQueue()
   return q.removeJobScheduler(schedulerId)
+}
+
+/**
+ * A job's state on the main queue, or `unknown` when BullMQ has no such job.
+ * Like {@link addJob} it waits on the BullMQ connection, so it is for the
+ * worker; a request path reads through `withRequestPathQueue`.
+ */
+export async function getJobState(jobId: string): Promise<JobState | "unknown"> {
+  return getQueue().getJobState(jobId)
 }
 
 /**

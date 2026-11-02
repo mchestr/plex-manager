@@ -68,6 +68,8 @@ export const LIMITS = {
   "llm:assistant:support": { points: 30, duration: HOUR },
   // Deleting a conversation from the assistant page's history, per user
   "assistant:history": { points: 60, duration: HOUR },
+  // Conversation reviews asked for per admin; each one spends on the judge model
+  "judge-review": { points: 10, duration: HOUR },
   // MCP requests per API token (/api/mcp); each action's own limit still applies
   mcp: { points: 120, duration: MINUTE },
   // MCP requests per address, counted before the token is looked up

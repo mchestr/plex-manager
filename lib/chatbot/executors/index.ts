@@ -39,6 +39,11 @@ const DISCORD_TOOL_UNAVAILABLE = "Error: that tool isn't available right now."
 /** The admin context's message for a thrown executor: a code, never the error text (SEC-20). */
 const TOOL_EXECUTION_FAILED = "Error: tool execution failed (TOOL_EXECUTION_FAILED)."
 
+// Reuses the executors' failure classification (isToolError); only a hint for the judge, never an access decision
+export function isToolSuccess(output: string): boolean {
+  return !isToolError(output)
+}
+
 // Map tool names to their service executors
 type ToolExecutor = (
   toolName: string,

@@ -1,9 +1,11 @@
 import { MessagesSquare } from "lucide-react"
 
+import { getConversationReview } from "@/lib/data/conversation-review"
 import { getLLMUsageRecords } from "@/lib/data/llm-usage"
 import { ConversationTranscript } from "@/components/admin/ai-activity/conversation-transcript"
 import { ConversationUsageRow } from "@/components/admin/ai-activity/conversation-usage-row"
 import { LlmTextRemovedNotice } from "@/components/admin/ai-activity/llm-text-removed-notice"
+import { ReviewSection } from "@/components/admin/ai-activity/review/review-section"
 import { EmptyState } from "@/components/ui/empty-state"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
@@ -33,11 +35,30 @@ function getDurationLabel(start: Date, end: Date) {
 
 const HEADINGS = ["#", "Time", "Model", "Tokens", "Cost"]
 
-/** One chat conversation's LLM calls (P10.6): breadcrumbs, server-formatted zoned times and the transcript. */
+/**
+ * One chat conversation's LLM calls (P10.6): breadcrumbs, server-formatted
+ * zoned times and the transcript, with the judge's Review section above it
+ * for a reviewable admin assistant conversation. The section belongs to the
+ * `ChatConversation`, not its calls, so it shows on "No calls" too.
+ */
 export default async function LLMConversationPage({ params }: { params: Promise<{ conversationId: string }> }) {
   await assertAdmin()
   const { conversationId } = await params
-  const [{ records }, f] = await Promise.all([getLLMUsageRecords({ pageSize: 100, conversationId }), getFormat()])
+  const [{ records }, f, judged] = await Promise.all([
+    getLLMUsageRecords({ pageSize: 100, conversationId }),
+    getFormat(),
+    getConversationReview(conversationId),
+  ])
+  const reviewSection = judged.reviewable && (
+    <ReviewSection
+      key={conversationId}
+      conversationId={conversationId}
+      review={judged.review}
+      findings={judged.findings}
+      hasToolEvidence={judged.hasToolEvidence}
+      judgeConfigured={judged.judgeConfigured}
+    />
+  )
 
   if (!records.length) {
     return (
@@ -47,6 +68,7 @@ export default async function LLMConversationPage({ params }: { params: Promise<
           title="Conversation"
           data-testid="admin-ai-conversation-heading"
         />
+        {reviewSection}
         <EmptyState kind="first-use" icon={MessagesSquare} title="No calls" />
       </div>
     )
@@ -85,6 +107,8 @@ export default async function LLMConversationPage({ params }: { params: Promise<
           meta={`${f.number(summary?.promptTokens ?? 0)} prompt + ${f.number(summary?.completionTokens ?? 0)} completion`}
         />
       </StatGrid>
+
+      {reviewSection}
 
       {latestRecord.prompt === null ? (
         <LlmTextRemovedNotice title="Latest prompt" />

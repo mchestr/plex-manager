@@ -5,13 +5,13 @@ import { useState } from "react"
 import { priceLabel, retirementLabel } from "@/components/admin/settings/llm-model-picker"
 import { Badge } from "@/components/ui/badge"
 import { NotSet, SecretSummary, SettingsSummary, SettingsSummaryRow } from "@/components/ui/settings-summary"
-import type { StoredLLMProvider } from "@/hooks/use-llm-provider-form"
+import type { LLMProviderPurpose, StoredLLMProvider } from "@/hooks/use-llm-provider-form"
 import { useFormat } from "@/lib/format-context"
 import { listKnownModels, lookupModel, type ModelInfo } from "@/lib/llm/models"
 import { isLLMProviderId, LLM_PROVIDER_LABELS } from "@/lib/llm/provider-presets"
 
 interface LLMProviderSummaryProps {
-  purpose: "chat" | "wrapped"
+  purpose: LLMProviderPurpose
   /** The saved provider; null says "Not set up." (the form would default to OpenAI). */
   stored: StoredLLMProvider | null
   /** Opens the form on the API key, offered when the stored key can't be read. */

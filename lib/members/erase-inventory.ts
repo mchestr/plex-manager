@@ -3,7 +3,9 @@
  * `docs/privacy.md`: what it counts for the dry run, and the deletes that run
  * in its transaction before the `User` row goes and the rest cascades.
  *
- * Two kinds of row are not reached by the cascade and are handled here:
+ * The member's assistant conversations take their messages (with each
+ * answer's tool log), judge reviews and findings with them through the
+ * cascade. Two kinds of row are not reached by the cascade and are handled here:
  * rows keyed by the member's Discord id (command log, chat sessions, pending
  * selections), and LLM text that admins generated for the member under their
  * own user id (the admin regenerate path, P2.1), which is anonymised.
@@ -45,6 +47,8 @@ export type InventoryCounts = Record<
   | "llmUsageAnonymised"
   | "chatConversation"
   | "chatConversationMessage"
+  | "conversationReview"
+  | "conversationFinding"
   | "discordChatSession"
   | "discordCommandLog"
   | "discordPendingSelection"
@@ -97,6 +101,7 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
   const [
     user, plexWrapped, rewindGeneration, rewindShare, rewindShareVisitDay, rewindView, wrappedShareVisit,
     rewindPrefs, rewindExclusion, llmUsage, llmUsageAnonymised, chatConversation, chatConversationMessage,
+    conversationReview, conversationFinding,
     discordChatSession, discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState,
     userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, affiliates,
   ] = await Promise.all([
@@ -112,7 +117,10 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
     prisma.lLMUsage.count(byUser),
     prisma.lLMUsage.count({ where: anonymiseWhere(subject) }),
     prisma.chatConversation.count(byUser),
+    // The messages carry each answer's tool log (`toolLog`)
     prisma.chatConversationMessage.count({ where: { conversation: { userId } } }),
+    prisma.conversationReview.count({ where: { conversation: { userId } } }),
+    prisma.conversationFinding.count({ where: { conversation: { userId } } }),
     prisma.discordChatSession.count({
       where: { OR: [{ discordUserId: { in: discordUserIds } }, { chatConversation: { userId } }] },
     }),
@@ -130,6 +138,7 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
   return {
     user, plexWrapped, rewindGeneration, rewindShare, rewindShareVisitDay, rewindView, wrappedShareVisit,
     rewindPrefs, rewindExclusion, llmUsage, llmUsageAnonymised, chatConversation, chatConversationMessage,
+    conversationReview, conversationFinding,
     discordChatSession, discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState,
     userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, ...affiliates,
   }

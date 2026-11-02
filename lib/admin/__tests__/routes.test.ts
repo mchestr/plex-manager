@@ -40,6 +40,16 @@ describe("admin routes", () => {
     expect(aiActivityConversation("c/1")).toBe("/admin/ai/conversation/c%2F1")
   })
 
+  it("aiActivity builds view=findings with the findings filters", () => {
+    expect(aiActivity({ view: "findings" })).toBe("/admin/ai?view=findings")
+    expect(aiActivity({ purpose: "judge" })).toBe("/admin/ai?purpose=judge")
+    expect(
+      aiActivity({ view: "findings", type: "wrong_tool", severity: "high", tool: "get a&b", status: "fixed", from: "2026-10-01", to: "2026-10-31" })
+    ).toBe("/admin/ai?view=findings&type=wrong_tool&severity=high&tool=get+a%26b&status=fixed&from=2026-10-01&to=2026-10-31")
+    // A group with no tool links to findings that name none
+    expect(aiActivity({ view: "findings", type: "misread_question", tool: "" })).toBe("/admin/ai?view=findings&type=misread_question&tool=")
+  })
+
   it("filters the audit log, leaving out each empty filter, in a fixed order", () => {
     expect(auditLog()).toBe("/admin/audit")
     expect(auditLog({ member: "u1" })).toBe("/admin/audit?member=u1")

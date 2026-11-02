@@ -5,8 +5,8 @@
 /**
  * The main queue's operations (P11.22): one lazily built `plex-wrapped`
  * Queue on the shared connection with the default job options; stats, pages
- * of jobs newest first, retry and removal of one job, deduplicated removal,
- * schedulers, pause and resume, and close. BullMQ is a stand-in here;
+ * of jobs newest first, retry and removal of one job, a job's state,
+ * deduplicated removal, schedulers, pause and resume, and close. BullMQ is a stand-in here;
  * `job-id-policy.test.ts` covers `addJob`'s id policy.
  */
 
@@ -19,6 +19,7 @@ import {
   closeQueue,
   getJobPage,
   getJobSchedulers,
+  getJobState,
   getQueueStats,
   getWorkerCount,
   isQueuePaused,
@@ -44,6 +45,7 @@ const mockQueue = {
   getJobs: jest.fn(),
   getWorkers: jest.fn(),
   getJob: jest.fn(),
+  getJobState: jest.fn(),
   getDeduplicationJobId: jest.fn(),
   remove: jest.fn(),
   removeDeduplicationKey: jest.fn(),
@@ -191,6 +193,17 @@ describe("one job", () => {
 
     await expect(retryJob("404")).rejects.toThrow("Job 404 not found")
     await expect(removeJob("404")).rejects.toThrow("Job 404 not found")
+  })
+})
+
+describe("getJobState", () => {
+  it("reads a job's state on the main queue, and passes BullMQ's unknown through", async () => {
+    mockQueue.getJobState.mockResolvedValueOnce("delayed").mockResolvedValueOnce("unknown")
+
+    await expect(getJobState("judge-review-r1")).resolves.toBe("delayed")
+    await expect(getJobState("judge-review-gone")).resolves.toBe("unknown")
+    expect(mockQueue.getJobState).toHaveBeenNthCalledWith(1, "judge-review-r1")
+    expect(mockQueue.getJobState).toHaveBeenNthCalledWith(2, "judge-review-gone")
   })
 })
 

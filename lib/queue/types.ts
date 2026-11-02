@@ -5,6 +5,7 @@
  * Add new job types here as the system grows.
  */
 
+import { reviewJobId } from "@/lib/judge/job-id"
 import type { JobMeta } from "@/lib/queue/job-meta"
 import type { DryRunInput } from "@/lib/rewind/dry-run/input"
 import type { SessionRevocationReason } from "@/lib/session-revocation"
@@ -34,6 +35,10 @@ export const JOB_TYPES = {
   MEMBER_ACTIVITY: "members:activity",
   // Stored secrets under the primary key (P11.1)
   SECRETS_REENCRYPT: "secrets:reencrypt",
+  // One conversation judge review (lib/queue/jobs/conversation-review.ts)
+  CONVERSATION_REVIEW: "judge:review",
+  // The nightly sweep that queues them (lib/judge/sweep.ts)
+  CONVERSATION_REVIEW_SWEEP: "judge:sweep",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -69,6 +74,8 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.REQUEST_TIER_SYNC]: "Request limit tiers",
   [JOB_TYPES.MEMBER_ACTIVITY]: "Last seen and inactivity",
   [JOB_TYPES.SECRETS_REENCRYPT]: "Secret re-encryption",
+  [JOB_TYPES.CONVERSATION_REVIEW]: "Conversation review",
+  [JOB_TYPES.CONVERSATION_REVIEW_SWEEP]: "Conversation review sweep",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
   [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
@@ -96,6 +103,8 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.REQUEST_TIER_SYNC,
   JOB_TYPES.MEMBER_ACTIVITY,
   JOB_TYPES.SECRETS_REENCRYPT,
+  JOB_TYPES.CONVERSATION_REVIEW,
+  JOB_TYPES.CONVERSATION_REVIEW_SWEEP,
 ] as const satisfies readonly JobType[]
 
 /** A job's label, or its raw name for a type this build does not know. */
@@ -389,6 +398,8 @@ interface JobPayloads {
    */
   [JOB_TYPES.MEMBER_ACTIVITY]: { triggeredBy: "scheduled" | "admin"; triggeredByUserId?: string; confirmedUserIds?: string[] }
   [JOB_TYPES.SECRETS_REENCRYPT]: { triggeredBy: "scheduled" }
+  [JOB_TYPES.CONVERSATION_REVIEW]: { reviewId: string }
+  [JOB_TYPES.CONVERSATION_REVIEW_SWEEP]: { triggeredBy: "scheduled" }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
@@ -440,6 +451,9 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   [JOB_TYPES.REQUEST_TIER_SYNC]: { deduplication: () => "request-tiers:sync" },
   [JOB_TYPES.MEMBER_ACTIVITY]: { deduplication: () => "members:activity" },
   [JOB_TYPES.SECRETS_REENCRYPT]: { fromCaller: "secrets:reencrypt:<kid>:<fields hash>, from enqueueSecretsReencrypt" },
+  // Not deduplication: the review row dedupes, and a kept completed job would swallow a repeat id
+  [JOB_TYPES.CONVERSATION_REVIEW]: { jobId: (data) => reviewJobId(data.reviewId) },
+  [JOB_TYPES.CONVERSATION_REVIEW_SWEEP]: { fromCaller: "the judge-review-sweep scheduler" },
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
   [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },
   [JOB_TYPES.REWIND_GENERATE_USER]: { fromCaller: "the RewindGeneration id" },

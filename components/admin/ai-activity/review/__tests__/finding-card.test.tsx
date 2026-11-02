@@ -1,0 +1,85 @@
+/**
+ * One judge finding (spec §2, "Conversation page"): its type, severity,
+ * claim, evidence, suggestion and tool as plain text, then the message it
+ * points at, clamped to 6 lines with a toggle.
+ */
+
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+
+import { reviewFinding } from '@/components/admin/ai-activity/review/__tests__/review-fixtures'
+import { FindingCard } from '@/components/admin/ai-activity/review/finding-card'
+
+jest.mock('@/actions/admin/conversation-review', () => ({ setFindingStatus: jest.fn() }))
+jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showError: jest.fn(), showSuccess: jest.fn() }) }))
+
+describe('FindingCard', () => {
+  it('shows the type, severity, claim, evidence, suggestion and tool', () => {
+    render(<FindingCard finding={reviewFinding({ id: 'f1' })} />)
+
+    const card = screen.getByTestId('finding-card-f1')
+    expect(card).toHaveTextContent('Wrong fact')
+    expect(card).toHaveTextContent('Medium severity')
+    expect(card).toHaveTextContent('The answer says the server has 12 libraries.')
+    expect(card).toHaveTextContent('get_libraries returned 9 libraries.')
+    expect(card).toHaveTextContent('Count the libraries the tool returned.')
+    expect(card).toHaveTextContent('get_libraries')
+  })
+
+  it('renders claim text as plain text', () => {
+    const claim = 'See <a href="https://evil.example">this</a> and **bold**'
+    const { container } = render(<FindingCard finding={reviewFinding({ id: 'f1', claim, suggestion: '[click](https://evil.example)' })} />)
+
+    expect(screen.getByText(claim)).toBeInTheDocument()
+    expect(screen.getByText('[click](https://evil.example)')).toBeInTheDocument()
+    expect(container.querySelector('a')).toBeNull()
+    expect(container.querySelector('strong')).toBeNull()
+  })
+
+  it('finding card shows "Message #N · role" and the stored message as plain text clamped to 6 lines, and finding-message-toggle-<id> shows it in full', async () => {
+    const user = userEvent.setup()
+    const content = 'Line one\n**not bold**\n<a href="https://evil.example">x</a>\nfour\nfive\nsix\nseven'
+    render(<FindingCard finding={reviewFinding({ id: 'f1', message: { index: 7, role: 'assistant', content } })} />)
+
+    expect(screen.getByText('Message #7 (assistant)')).toBeInTheDocument()
+    const text = screen.getByTestId('finding-message-f1')
+    expect(text.textContent).toBe(content)
+    expect(text).toHaveClass('line-clamp-6')
+    expect(text.querySelector('a, strong')).toBeNull()
+
+    const toggle = screen.getByTestId('finding-message-toggle-f1')
+    expect(toggle).toHaveTextContent('Show full message')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await user.click(toggle)
+
+    expect(text).not.toHaveClass('line-clamp-6')
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle).toHaveTextContent('Show less')
+  })
+
+  it('labels a user message', () => {
+    render(<FindingCard finding={reviewFinding({ id: 'f1', message: { index: 0, role: 'user', content: 'How many?' } })} />)
+
+    expect(screen.getByText('Message #0 (user)')).toBeInTheDocument()
+  })
+
+  it('a not_applicable finding reads "No quote needed"', () => {
+    render(
+      <FindingCard
+        finding={reviewFinding({ id: 'f1', type: 'misread_question', evidenceCheck: 'not_applicable', evidenceSource: 'none', evidence: '', tool: null })}
+      />
+    )
+
+    expect(screen.getByTestId('finding-card-f1')).toHaveTextContent('No quote needed')
+    expect(screen.getByTestId('finding-card-f1')).toHaveTextContent('Misread question')
+  })
+
+  it('marks an unverified quote, and only an unverified one', () => {
+    const { unmount } = render(<FindingCard finding={reviewFinding({ id: 'f1', evidenceCheck: 'unverified' })} />)
+    expect(screen.getByTestId('finding-unverified-f1')).toHaveTextContent('Unverified quote')
+    unmount()
+
+    render(<FindingCard finding={reviewFinding({ id: 'f1', evidenceCheck: 'verified' })} />)
+    expect(screen.queryByTestId('finding-unverified-f1')).not.toBeInTheDocument()
+  })
+})

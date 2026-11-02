@@ -162,6 +162,18 @@ describe("encryption extension: free text", () => {
       expect([model, ENCRYPTED_FIELDS[model]]).toEqual([model, expect.arrayContaining([...fields])])
     }
   })
+
+  it("registers the judge text columns as encrypted free text", () => {
+    const judgeText = {
+      ChatConversationMessage: ["toolLog"],
+      ConversationReview: ["summary"],
+      ConversationFinding: ["claim", "evidence", "suggestion", "note"],
+    }
+    for (const [model, fields] of Object.entries(judgeText)) {
+      expect([model, ENCRYPTED_FIELDS[model]]).toEqual([model, expect.arrayContaining(fields)])
+      expect([model, FREE_TEXT_FIELDS[model]]).toEqual([model, expect.arrayContaining(fields)])
+    }
+  })
 })
 
 describe("encryption extension: fail soft", () => {

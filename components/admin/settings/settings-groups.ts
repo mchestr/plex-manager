@@ -37,6 +37,7 @@ export function settingsNavItems(status: SettingsNavStatuses): SettingsNavItem[]
     { id: "stripe", label: "Stripe billing", group: "members", status: status.stripe },
     { id: "request-tiers", label: "Request limits", group: "members" },
     { id: "ai", label: "AI provider", group: "ai", status: status.ai },
+    { id: "conversation-review", label: "Conversation review", group: "ai" },
     { id: "assistant", label: "Assistant sources", group: "ai" },
     { id: "discord", label: "Discord", group: "discord", status: status.discord },
     { id: "channel-stats", label: "Channel stats", group: "discord" },

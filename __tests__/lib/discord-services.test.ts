@@ -65,9 +65,11 @@ describe("handleDiscordChat: the assistant disclosure (P11.16)", () => {
     mockPrisma.lLMProvider.findFirst.mockResolvedValue({ provider: "anthropic" } as any)
     mockAppendTurn.mockResolvedValue(undefined)
     mockRunChatbotForUser.mockResolvedValue({
-      success: true,
-      message: { role: "assistant", content: "Plex is up.", timestamp: Date.now() },
-      conversationId: "conversation-1",
+      response: {
+        success: true,
+        message: { role: "assistant", content: "Plex is up.", timestamp: Date.now() },
+        conversationId: "conversation-1",
+      },
     })
   })
 
@@ -129,12 +131,14 @@ describe("handleDiscordChat", () => {
   describe("LLM disabled scenarios", () => {
     it("should return disabled message when LLM is disabled and not call OpenAI", async () => {
       mockRunChatbotForUser.mockResolvedValue({
-        success: true,
-        message: {
-          role: "assistant",
-          content:
-            "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
-          timestamp: Date.now(),
+        response: {
+          success: true,
+          message: {
+            role: "assistant",
+            content:
+              "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
+            timestamp: Date.now(),
+          },
         },
       })
 
@@ -173,14 +177,16 @@ describe("handleDiscordChat", () => {
       })
 
       mockRunChatbotForUser.mockResolvedValue({
-        success: true,
-        message: {
-          role: "assistant",
-          content:
-            "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
-          timestamp: Date.now(),
+        response: {
+          success: true,
+          message: {
+            role: "assistant",
+            content:
+              "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
+            timestamp: Date.now(),
+          },
+          conversationId: "new-conversation-1",
         },
-        conversationId: "new-conversation-1",
       })
 
       const result = await handleDiscordChat({
@@ -204,8 +210,10 @@ describe("handleDiscordChat", () => {
   describe("the member's zone and the app locale (P11.17)", () => {
     beforeEach(() => {
       mockRunChatbotForUser.mockResolvedValue({
-        success: true,
-        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+        response: {
+          success: true,
+          message: { role: "assistant", content: "ok", timestamp: Date.now() },
+        },
       })
     })
 
@@ -245,8 +253,10 @@ describe("handleDiscordChat", () => {
   describe("admin tier threading (Step 19, FR-14)", () => {
     it("threads the linked user's isAdmin=false into runChatbotForUser", async () => {
       mockRunChatbotForUser.mockResolvedValue({
-        success: true,
-        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+        response: {
+          success: true,
+          message: { role: "assistant", content: "ok", timestamp: Date.now() },
+        },
       })
 
       await handleDiscordChat({
@@ -266,8 +276,10 @@ describe("handleDiscordChat", () => {
         user: { ...mockConnection.user, isAdmin: true },
       } as any)
       mockRunChatbotForUser.mockResolvedValue({
-        success: true,
-        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+        response: {
+          success: true,
+          message: { role: "assistant", content: "ok", timestamp: Date.now() },
+        },
       })
 
       await handleDiscordChat({
@@ -318,8 +330,10 @@ describe("handleDiscordChat", () => {
 
     it("should return error when chatbot fails", async () => {
       mockRunChatbotForUser.mockResolvedValue({
-        success: false,
-        error: "Chatbot error",
+        response: {
+          success: false,
+          error: "Chatbot error",
+        },
       })
 
       const result = await handleDiscordChat({
@@ -385,8 +399,10 @@ describe("handleDiscordChat", () => {
         },
       } as any)
       mockRunChatbotForUser.mockResolvedValue({
-        success: true,
-        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+        response: {
+          success: true,
+          message: { role: "assistant", content: "ok", timestamp: Date.now() },
+        },
       })
 
       const result = await handleDiscordChat({
@@ -406,8 +422,10 @@ describe("handleDiscordChat", () => {
         user: { id: "user-1", isAdmin: false, isExempt: true, disabledAt: null, subscription: null },
       } as any)
       mockRunChatbotForUser.mockResolvedValue({
-        success: true,
-        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+        response: {
+          success: true,
+          message: { role: "assistant", content: "ok", timestamp: Date.now() },
+        },
       })
 
       const result = await handleDiscordChat({
@@ -454,7 +472,7 @@ describe("handleDiscordChat", () => {
 
     it("refuses the 21st message in an hour with the reset time, without an LLM call", async () => {
       connectionFor("chatty-member")
-      mockRunChatbotForUser.mockResolvedValue(answer)
+      mockRunChatbotForUser.mockResolvedValue({ response: answer })
 
       for (let i = 0; i < 20; i++) {
         expect((await chat()).success).toBe(true)
@@ -474,7 +492,7 @@ describe("handleDiscordChat", () => {
 
       for (let i = 0; i < 25; i++) await chat()
       mockPrisma.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: false }))
-      mockRunChatbotForUser.mockResolvedValue(answer)
+      mockRunChatbotForUser.mockResolvedValue({ response: answer })
 
       expect((await chat()).success).toBe(true)
     })
@@ -482,10 +500,12 @@ describe("handleDiscordChat", () => {
     it("passes a spend-cap refusal on as the reply", async () => {
       connectionFor("capped-member")
       mockRunChatbotForUser.mockResolvedValue({
-        success: false,
-        refusal: "BUDGET_EXCEEDED",
-        error: "The assistant reached its daily spend limit. The limit resets at midnight server time.",
-        conversationId: "conversation-1",
+        response: {
+          success: false,
+          refusal: "BUDGET_EXCEEDED",
+          error: "The assistant reached its daily spend limit. The limit resets at midnight server time.",
+          conversationId: "conversation-1",
+        },
       })
 
       const result = await chat()
@@ -552,7 +572,7 @@ describe("handleDiscordChat: the fallback reply names Jellyfin when it is config
     mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: false } as never)
     mockGetOrCreateSession.mockResolvedValue({ id: "session-1", chatConversationId: "conversation-1", history: [], created: false })
     mockAppendTurn.mockResolvedValue(undefined)
-    mockRunChatbotForUser.mockResolvedValue({ success: true, message: { role: "assistant", content: "  ", timestamp: 1 } })
+    mockRunChatbotForUser.mockResolvedValue({ response: { success: true, message: { role: "assistant", content: "  ", timestamp: 1 } } })
   })
 
   it.each([
@@ -583,7 +603,7 @@ describe("clearDiscordChat: a manual reset ends the conversation (P11.14)", () =
     }
     mockPrisma.discordChatSession.findUnique.mockResolvedValue(session)
     mockPrisma.chatConversation.updateMany.mockResolvedValue({ count: 1 })
-    mockPrisma.chatConversation.create.mockResolvedValue({ id: "conversation-new", userId: "user-1", title: null, lastMessageAt: null, createdAt: now, endedAt: null })
+    mockPrisma.chatConversation.create.mockResolvedValue({ id: "conversation-new", userId: "user-1", title: null, lastMessageAt: null, createdAt: now, endedAt: null, reviewLockedAt: null })
     mockPrisma.discordChatSession.update.mockResolvedValue({ ...session, chatConversationId: "conversation-new" })
 
     const result = await clearDiscordChat({ discordUserId: "discord-123", channelId: "channel-123" })

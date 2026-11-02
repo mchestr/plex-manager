@@ -46,6 +46,7 @@ describe('recordUsage', () => {
         wrappedId: 'wrapped-1',
         generationId: 'gen-1',
         chatConversationId: null,
+        conversationReviewId: null,
         promptVersion: 'rewind-2026.1',
         factsHash: 'abc123',
         provider: 'openai',
@@ -71,6 +72,8 @@ describe('recordUsage', () => {
     expect(prismaMock.lLMUsage.create.mock.calls[0][0].data).toMatchObject({
       wrappedId: null,
       generationId: null,
+      chatConversationId: null,
+      conversationReviewId: null,
       promptVersion: null,
       factsHash: null,
       prompt: null,
@@ -101,6 +104,27 @@ describe('recordUsage', () => {
 
     expect(prismaMock.lLMUsage.create.mock.calls[0][0].data).toMatchObject({ outcome: 'content-filter', cost: 0.004 })
     expect(addSpend).toHaveBeenCalledWith('user-1', 0.004)
+  })
+
+  it('writes a judge call\'s review and leaves the assistant spend alone', async () => {
+    prismaMock.lLMUsage.create.mockResolvedValue(buildLLMUsage())
+
+    await recordUsage({
+      attribution: { userId: 'user-1', conversationReviewId: 'review-1', promptVersion: 'judge-v1' },
+      provider: 'openai',
+      modelId: 'gpt-4o',
+      usage,
+      cost: 0.2,
+      outcome: 'ok',
+    })
+
+    expect(prismaMock.lLMUsage.create.mock.calls[0][0].data).toMatchObject({
+      conversationReviewId: 'review-1',
+      chatConversationId: null,
+      promptVersion: 'judge-v1',
+    })
+    expect(prismaMock.lLMUsage.create.mock.calls[0][0].data).not.toHaveProperty('groupKey')
+    expect(addSpend).not.toHaveBeenCalled()
   })
 
   it('leaves the assistant spend alone for Rewind calls and failed writes', async () => {

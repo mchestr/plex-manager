@@ -23,7 +23,7 @@ import type { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { dateRangeToInstants, type DayRange } from "@/lib/ui/date-range"
 
-export const LLM_PURPOSES = ["rewind", "assistant", "discord"] as const
+export const LLM_PURPOSES = ["rewind", "assistant", "discord", "judge"] as const
 type LlmPurpose = (typeof LLM_PURPOSES)[number]
 
 export interface LlmUsageFilters {
@@ -47,6 +47,8 @@ export interface LlmUsageGroupRow {
   tokens: number
   cost: number
   context: string
+  /** The admin assistant conversation (no Discord session) the row is, for its review badge; else null. */
+  conversationId: string | null
 }
 
 export interface LlmUsagePage {
@@ -60,6 +62,8 @@ const PURPOSE_WHERE: Record<LlmPurpose, Prisma.LLMUsageWhereInput> = {
   rewind: { OR: [{ wrappedId: { not: null } }, { generationId: { not: null } }] },
   assistant: { chatConversation: { is: { discordSessions: { none: {} } } } },
   discord: { chatConversation: { is: { discordSessions: { some: {} } } } },
+  // A review's calls; deleting the conversation deletes its reviews and nulls this, so those calls drop out
+  judge: { conversationReviewId: { not: null } },
 }
 
 /** The `where` for the filters; the range is in `zone`. @internal */
@@ -78,16 +82,16 @@ export function usageWhere(filters: LlmUsageFilters, zone: string): Prisma.LLMUs
   return and.length > 0 ? { AND: and } : {}
 }
 
-function contextLabel(row: {
+function contextLabel(row: Record<"wrapped" | "generation", { year: number } | null> & {
   chatConversationId: string | null
   chatConversation: { _count: { discordSessions: number } } | null
-  wrapped: { year: number } | null
-  generation: { year: number } | null
+  conversationReviewId: string | null
 }, calls: number): string {
   const callCount = `${calls} ${calls === 1 ? "call" : "calls"}`
   if (row.chatConversationId) {
     return `${row.chatConversation && row.chatConversation._count.discordSessions > 0 ? "Discord" : "Assistant"} conversation, ${callCount}`
   }
+  if (row.conversationReviewId) return "Conversation review"
   const year = row.wrapped?.year ?? row.generation?.year
   return year !== undefined ? `Rewind ${year}` : "Standalone call"
 }
@@ -126,6 +130,7 @@ export async function listUsageGroups(
           createdAt: true,
           chatConversationId: true,
           chatConversation: { select: { _count: { select: { discordSessions: true } } } },
+          conversationReviewId: true,
           wrapped: { select: { year: true } },
           generation: { select: { year: true } },
           user: { select: publicUserSelect },
@@ -156,6 +161,8 @@ export async function listUsageGroups(
           tokens: group._sum.totalTokens ?? 0,
           cost: group._sum.cost ?? 0,
           context: contextLabel(first, group._count._all),
+          // PURPOSE_WHERE.assistant's rule: an admin assistant conversation has no Discord session
+          conversationId: first.chatConversation?._count.discordSessions === 0 ? first.chatConversationId : null,
         },
       ]
     }),

@@ -27,7 +27,13 @@
     // the share visit counter (P5.11); P7.5's share page is its first caller
     "lib/wrapped/share/visit-counter.ts!",
     // colour maths for the token and contrast tests; its last app caller, the Chart.js theme, went in P10.9
-    "lib/design/color.ts!"
+    "lib/design/color.ts!",
+    // the conversation review settings save (MCP sees it only through a namespace import); the settings page's Conversation review section is its first caller, drop this then
+    "actions/admin/judge-settings.ts!",
+    // the judge's backlog loaders (MCP's list_conversation_findings uses listFindings); the Findings tab is the others' first caller, drop this then
+    "lib/data/conversation-findings.ts!",
+    // the judge's per-conversation loaders; the conversation page (getConversationReview) and the Calls badges (reviewBadgesFor) are their first callers, drop this then
+    "lib/data/conversation-review.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",

@@ -186,6 +186,8 @@ describe("the admin reads", () => {
     ["MEMBER_CONTENT_VIEWED", { surface: "activity-timeline" }, "Activity timeline"],
     ["MEMBER_CONTENT_VIEWED", { surface: "llm-conversation" }, "LLM conversation"],
     ["MEMBER_CONTENT_LISTED", { surface: "watchlist-history", filters: { q: "Jane" } }, "Watchlist sync page"],
+    ["MEMBER_CONTENT_VIEWED", { surface: "conversation-review" }, "Conversation review"],
+    ["MEMBER_CONTENT_LISTED", { surface: "conversation-findings", filters: { status: "open" } }, "Conversation findings"],
     ["MEMBER_CONTENT_VIEWED", { surface: "somewhere-new" }, null],
     ["MEMBER_CONTENT_LISTED", { surface: "constructor" }, null],
   ])("names the %s surface in %o", (type, details, expected) => {

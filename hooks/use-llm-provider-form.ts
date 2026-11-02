@@ -1,12 +1,21 @@
 import { useState } from "react"
 
-import { listLLMModels, updateChatLLMProvider, updateWrappedLLMProvider } from "@/actions/admin/admin-llm-providers"
+import { listLLMModels, updateChatLLMProvider, updateJudgeLLMProvider, updateWrappedLLMProvider } from "@/actions/admin/admin-llm-providers"
 import type { TestResult } from "@/components/ui/settings-section"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 import { listKnownModels, lookupModel, type EffortLevel, type LLMProviderId } from "@/lib/llm/models"
 import { isLLMProviderId, llmKeyDestination } from "@/lib/llm/provider-presets"
 import { needsSecretReentry, safeOrigin, type SavedSecret } from "@/lib/security/saved-secret"
+
+/** The purposes the AI section configures, one tab each. */
+export type LLMProviderPurpose = "chat" | "wrapped" | "judge"
+
+/** Each purpose's save action. */
+const SAVE_ACTIONS: Record<LLMProviderPurpose, typeof updateChatLLMProvider> = { chat: updateChatLLMProvider, wrapped: updateWrappedLLMProvider, judge: updateJudgeLLMProvider }
+
+/** What the success toast calls each purpose's model. */
+const SAVED_LABELS: Record<LLMProviderPurpose, string> = { chat: "Admin assistant", wrapped: "Rewind", judge: "Conversation review" }
 
 /** The active provider row as the settings page sends it, without the key. */
 export interface StoredLLMProvider {
@@ -70,7 +79,7 @@ const connection = (state: LLMFormState) => ({
  * Discard (Cancel) also clears the field errors, and the list when the
  * fields had changed, since it may be another provider's.
  */
-export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "chat" | "wrapped") {
+export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: LLMProviderPurpose) {
   const toast = useToast()
   const [liveModels, setLiveModels] = useState<string[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -83,8 +92,7 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
     }
     const info = lookupModel(form.provider, form.model)
     const levels = info?.capabilities.effortLevels ?? null
-    const action = purpose === "chat" ? updateChatLLMProvider : updateWrappedLLMProvider
-    const result = await action({
+    const result = await SAVE_ACTIONS[purpose]({
       ...connection(form),
       model: form.model.trim(),
       customModel: form.custom,
@@ -101,7 +109,7 @@ export function useLLMProviderForm(stored: StoredLLMProvider | null, purpose: "c
     }
     // The action revalidates the page, so the stored provider follows
     setErrors({})
-    toast.showSuccess(`${purpose === "chat" ? "Admin assistant" : "Rewind"} model saved`)
+    toast.showSuccess(`${SAVED_LABELS[purpose]} model saved`)
     return { ok: true, keep: { ...form, apiKey: "" } }
   })
   const form = settings.values

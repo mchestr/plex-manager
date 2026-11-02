@@ -19,7 +19,9 @@
  * count only rows with a conversation, so a removed row would hand back the
  * day's spend; and the AI activity pages keep showing the calls until their own
  * window clears the text. The `chatConversations` retention rule deletes the
- * ended row later.
+ * ended row later. Each ending also ends the conversation's judge rows in its
+ * transaction (`endReviewsOf`, `lib/judge/end.ts`): findings and summaries
+ * quote the text that goes.
  *
  * @module lib/chatbot/history
  */
@@ -30,6 +32,8 @@ import { z } from "zod"
 
 import type { ChatMessage } from "@/lib/chatbot/types"
 import type { Prisma } from "@/lib/generated/prisma/client"
+import { endReviewsOf } from "@/lib/judge/end"
+import { serializeToolLog, type ToolLogEntry } from "@/lib/judge/tool-log"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 
 /** What the model sees of a conversation: its newest 40 messages and 60,000 characters at most (SEC-42). @internal */
@@ -120,6 +124,8 @@ interface Turn {
    * after a demotion, and the role they keep must not read what it produced.
    */
   asAdmin?: boolean
+  /** The answer's tool calls, redacted and capped (`lib/judge/tool-log.ts`), stored on the answer for the judge only. */
+  toolLog?: ToolLogEntry[]
 }
 
 /**
@@ -127,7 +133,7 @@ interface Turn {
  * history. False, storing nothing, when the conversation was deleted while
  * the answer was being written, or an admin's turn outlived their admin role.
  */
-export async function saveTurn({ conversationId, question, answer, title, asAdmin }: Turn): Promise<boolean> {
+export async function saveTurn({ conversationId, question, answer, title, asAdmin, toolLog }: Turn): Promise<boolean> {
   return prisma.$transaction(async (tx) => {
     // The update locks the row, so a turn another tab stores at the same time waits for this one, or this one for
     // it, and a demotion's ending of the conversation (endConversationsOf) waits for the turn or sees it as gone
@@ -147,7 +153,14 @@ export async function saveTurn({ conversationId, question, answer, title, asAdmi
     await tx.chatConversationMessage.createMany({
       data: [
         { conversationId, role: "user", content: question.content, createdAt: new Date(askedAt) },
-        { conversationId, role: "assistant", content: answer.content, sources: answer.sources, createdAt: new Date(answeredAt) },
+        {
+          conversationId,
+          role: "assistant",
+          content: answer.content,
+          sources: answer.sources,
+          toolLog: serializeToolLog(toolLog),
+          createdAt: new Date(answeredAt),
+        },
       ],
     })
     return true
@@ -166,6 +179,7 @@ export async function endConversation(userId: string, conversationId: string, no
       data: { endedAt: now, title: null },
     })
     if (count === 0) return false
+    await endReviewsOf(tx, [conversationId])
     await tx.chatConversationMessage.deleteMany({ where: { conversationId } })
     return true
   })
@@ -177,7 +191,9 @@ export async function endConversation(userId: string, conversationId: string, no
  * admin may see.
  */
 export async function endConversationsOf(tx: PrismaTransactionClient, userId: string, now: Date = new Date()): Promise<number> {
+  const open = await tx.chatConversation.findMany({ where: openConversationsOf(userId), select: { id: true } })
   const { count } = await tx.chatConversation.updateMany({ where: openConversationsOf(userId), data: { endedAt: now, title: null } })
+  await endReviewsOf(tx, open.map((row) => row.id))
   await tx.chatConversationMessage.deleteMany({ where: { conversation: { userId, endedAt: { not: null } } } })
   return count
 }

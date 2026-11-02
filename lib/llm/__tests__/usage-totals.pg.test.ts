@@ -15,7 +15,7 @@ import { randomUUID } from 'node:crypto'
 import { PrismaPg } from '@prisma/adapter-pg'
 
 import { PrismaClient } from '@/lib/generated/prisma/client'
-import { getRewindSeasonSpend, latestModelByUser, usageTotalsByUser, usageTotalsForWrapped } from '@/lib/llm/usage-totals'
+import { getRewindSeasonSpend, latestModelByUser, llmSpendSince, usageTotalsByUser, usageTotalsForWrapped } from '@/lib/llm/usage-totals'
 import { describePg } from '@/__tests__/helpers/integration'
 
 let mockDb: PrismaClient
@@ -119,6 +119,27 @@ describePg('usage totals on PostgreSQL', (databaseUrl) => {
     const base = (globalThis as { __p78base?: PrismaClient }).__p78base!
     const rows = await base.lLMUsage.findMany({ where: { generation: { year: 2026 } }, select: { cost: true } })
     expect(await getRewindSeasonSpend(2026)).toBeCloseTo(rows.reduce((s, r) => s + r.cost, 0), 8)
+  })
+
+  it('judge spend counts under judge, not wrapped', async () => {
+    const base = (globalThis as { __p78base?: PrismaClient }).__p78base!
+    // Far in the future, so only this test's rows are counted
+    const since = new Date(Date.UTC(2099, 0, 1))
+    const at = new Date(Date.UTC(2099, 0, 2))
+    const conversation = await base.chatConversation.create({ data: { userId: users[0], lastMessageAt: at } })
+    const review = await base.conversationReview.create({ data: { conversationId: conversation.id, trigger: 'nightly' } })
+    const call = { userId: users[0], provider: 'openai', promptTokens: 1, completionTokens: 1, totalTokens: 2, createdAt: at }
+    await base.lLMUsage.create({ data: { ...call, cost: 0.5, wrappedId: wrappedA } })
+    await base.lLMUsage.create({ data: { ...call, cost: 0.25, chatConversationId: conversation.id } })
+    await base.lLMUsage.create({ data: { ...call, cost: 0.125, conversationReviewId: review.id } })
+
+    try {
+      const spend = await llmSpendSince(since)
+
+      expect(spend).toEqual({ wrapped: expect.closeTo(0.5, 10), chat: expect.closeTo(0.25, 10), judge: expect.closeTo(0.125, 10) })
+    } finally {
+      await base.lLMUsage.deleteMany({ where: { createdAt: at, userId: users[0] } })
+    }
   })
 
   it('never selects prompt or response', () => {

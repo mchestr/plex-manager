@@ -68,6 +68,21 @@ async function seedMember(db: PrismaClient) {
   const conversation = await db.chatConversation.create({
     data: { userId: MEMBER, title: 'Is Plex up?', lastMessageAt: new Date(), messages: { create: [{ role: 'user', content: 'Is Plex up?' }] } },
   })
+  // Support-owned assistant conversations are reviewed: the review and its finding quote the member's conversation
+  const review = await db.conversationReview.create({ data: { conversationId: conversation.id, trigger: 'nightly', status: 'done', summary: 'Fine.' } })
+  await db.conversationFinding.create({
+    data: {
+      reviewId: review.id,
+      conversationId: conversation.id,
+      fingerprint: `${RUN}-finding`,
+      type: 'misread_question',
+      severity: 'low',
+      claim: 'c',
+      evidence: 'e',
+      suggestion: 's',
+      evidenceSource: 'none',
+    },
+  })
   const usage = { provider: 'openai', promptTokens: 1, completionTokens: 1, totalTokens: 2, cost: 0.5, prompt: 'stats', response: 'copy' }
   await db.lLMUsage.create({ data: { ...usage, userId: MEMBER, chatConversationId: conversation.id } })
   // An admin regeneration: the row is the admin's, its text is about the member
@@ -173,6 +188,8 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
       mockDb.lLMUsage.count(byUser),
       mockDb.chatConversation.count(byUser),
       mockDb.chatConversationMessage.count({ where: { conversationId: ids.conversationId } }),
+      mockDb.conversationReview.count({ where: { conversationId: ids.conversationId } }),
+      mockDb.conversationFinding.count({ where: { conversationId: ids.conversationId } }),
       mockDb.discordChatSession.count(byDiscord),
       mockDb.discordCommandLog.count({ where: { OR: [{ userId: MEMBER }, { discordUserId: DISCORD }] } }),
       mockDb.discordPendingSelection.count(byDiscord),

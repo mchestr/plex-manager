@@ -218,7 +218,8 @@ export async function handleDiscordChat({
 
   const conversationMessages = [...session.history, userMessage]
 
-  const chatbotResponse = await runChatbotForUser({
+  // The run's tool log stays behind: the session stores its messages as plaintext JSON
+  const { response: chatbotResponse } = await runChatbotForUser({
     userId: connection.userId,
     messages: conversationMessages,
     conversationId: session.chatConversationId,

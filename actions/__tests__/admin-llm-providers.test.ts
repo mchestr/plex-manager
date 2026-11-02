@@ -6,7 +6,7 @@
 
 import { mockReset } from 'jest-mock-extended'
 
-import { listLLMModels, updateChatLLMProvider, updateWrappedLLMProvider } from '@/actions/admin/admin-llm-providers'
+import { listLLMModels, updateChatLLMProvider, updateJudgeLLMProvider, updateWrappedLLMProvider } from '@/actions/admin/admin-llm-providers'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { loadProviderModels, testLLMProviderConnection } from '@/lib/connections/llm-provider'
 import type { LLMProvider } from '@/lib/generated/prisma/client'
@@ -218,6 +218,31 @@ describe('admin only, audited, rate-limited', () => {
 
     expect(result).toMatchObject({ success: false, code: 'RATE_LIMITED' })
     expect(mockLoad).not.toHaveBeenCalled()
+  })
+})
+
+describe('updateJudgeLLMProvider', () => {
+  it('saves the conversation review provider under purpose judge, audited as llm.judge', async () => {
+    prismaMock.lLMProvider.findFirst.mockResolvedValue(null)
+
+    const result = await updateJudgeLLMProvider({ provider: 'anthropic', apiKey: 'ant-judge', model: 'claude-sonnet-5-5' })
+
+    expect(result).toEqual({ success: true, data: null })
+    expect(prismaMock.lLMProvider.findFirst).toHaveBeenCalledWith({ where: { isActive: true, purpose: 'judge' } })
+    expect(prismaMock.lLMProvider.updateMany).toHaveBeenCalledWith({ where: { isActive: true, purpose: 'judge' }, data: { isActive: false } })
+    expect(prismaMock.lLMProvider.create).toHaveBeenCalledWith({ data: expect.objectContaining({ purpose: 'judge', provider: 'anthropic', model: 'claude-sonnet-5-5' }) })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.CONFIG_CHANGED, 'admin-1', expect.objectContaining({ section: 'llm.judge' }))
+    expect(consume).toHaveBeenCalledWith('llm:models', expect.anything())
+  })
+
+  it('lists the judge purpose\'s active provider', async () => {
+    prismaMock.lLMProvider.findFirst.mockResolvedValue(storedRow({ purpose: 'judge', provider: 'openai', baseUrl: null, model: 'gpt-4o' }))
+    mockLoad.mockResolvedValue({ success: true, models: ['gpt-4o'] })
+
+    const result = await listLLMModels({ purpose: 'judge' })
+
+    expect(result).toMatchObject({ success: true, data: { configuredProvider: 'openai', configuredModel: 'gpt-4o' } })
+    expect(prismaMock.lLMProvider.findFirst).toHaveBeenCalledWith({ where: { isActive: true, purpose: 'judge' } })
   })
 })
 

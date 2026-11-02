@@ -88,6 +88,7 @@ lib/                    # Utilities, helpers, business logic
 ├── design/            # Token mirror of app/globals.css and colour contrast helpers
 ├── discord/           # Discord bot, commands, linking and stat channels (channel-stats/)
 ├── invites/           # Invite passes and redemption (Plex and Jellyfin)
+├── judge/             # Conversation judge: scope, tool log, prompt, verify, persist, spend cap, sweep, ending (docs/privacy.md, "Conversation judge")
 ├── llm/               # LLM facade (generateStructured, chatWithTools), provider registry, model table, usage
 ├── inactivity/        # Last seen from Tautulli and the opt-in inactivity sweep: rules, run, schedule (docs/inactive-members.md)
 ├── locks/             # LeaseLock and LeasePoller (database or Redis leases)

@@ -82,6 +82,7 @@ export const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set([
   "estimateRewindDryRun",
   "getActiveAnnouncements",
   "getAvailableLibraries",
+  "getConversationReviewStatus",
   "getOnboardingStatus",
   "getRewindDryRun",
   "getRewindRollbackTarget",

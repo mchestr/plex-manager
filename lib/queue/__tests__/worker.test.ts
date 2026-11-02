@@ -9,8 +9,9 @@
  * (P11.4's `onJobFailed`), and stops with the Rewind Workers.
  */
 
-import { Worker, type Job } from "bullmq"
+import { DelayedError, Worker, type Job } from "bullmq"
 
+import { markReviewFailed } from "@/lib/judge/stale"
 import { onJobFailed } from "@/lib/observability/job-failures"
 import { closeWorker } from "@/lib/queue/close-worker"
 import { getJobProcessor } from "@/lib/queue/jobs"
@@ -26,7 +27,13 @@ const mockWorker = {
   close: jest.fn(async () => {}),
 }
 
-jest.mock("bullmq", () => ({ Worker: jest.fn(() => mockWorker) }))
+jest.mock("bullmq", () => ({
+  Worker: jest.fn(() => mockWorker),
+  DelayedError: class DelayedError extends Error {
+    name = "DelayedError"
+  },
+}))
+jest.mock("@/lib/judge/stale", () => ({ markReviewFailed: jest.fn(async () => {}) }))
 jest.mock("@/lib/queue/connection", () => ({
   getRedisConnection: jest.fn(() => ({ connection: "shared" })),
 }))
@@ -51,8 +58,8 @@ function job(name: string, extra: Partial<Job> = {}): Job {
 }
 
 /** The processor function the Worker was built with. */
-function processor(): (job: Job) => Promise<unknown> {
-  return jest.mocked(Worker).mock.calls[0][1] as (job: Job) => Promise<unknown>
+function processor(): (job: Job, token?: string) => Promise<unknown> {
+  return jest.mocked(Worker).mock.calls[0][1] as (job: Job, token?: string) => Promise<unknown>
 }
 
 beforeEach(async () => {
@@ -112,6 +119,27 @@ describe("processing a job", () => {
     expect(mockLogger.error).toHaveBeenCalledWith("No processor found for job type", undefined, { jobType: "nope", jobId: "j1" })
   })
 
+  it("passes the lock token to the processor", async () => {
+    const run = jest.fn(async () => null)
+    jest.mocked(getJobProcessor).mockReturnValue(run)
+    await startWorker()
+    const queued = job("judge:review")
+
+    await processor()(queued, "lock-token")
+
+    expect(run).toHaveBeenCalledWith(queued, "lock-token")
+  })
+
+  it("a DelayedError is not logged or counted as a failure", async () => {
+    jest.mocked(getJobProcessor).mockReturnValue(jest.fn(async () => Promise.reject(new DelayedError())))
+    await startWorker()
+
+    await expect(processor()(job("judge:review"), "lock-token")).rejects.toBeInstanceOf(DelayedError)
+
+    expect(mockLogger.error).not.toHaveBeenCalled()
+    expect(onJobFailed).not.toHaveBeenCalled()
+  })
+
   it("logs and rethrows a processor's error", async () => {
     jest.mocked(getJobProcessor).mockReturnValue(jest.fn(async () => Promise.reject(new Error("upstream down"))))
     await startWorker()
@@ -138,6 +166,30 @@ describe("events", () => {
 
     expect(onJobFailed).toHaveBeenCalledWith({ connection: "shared" }, "plex-wrapped", failed, error)
     expect(mockLogger.error).toHaveBeenCalledWith("Job failed", error, expect.objectContaining({ jobId: "j1", requestId: "job:j1", willRetry: true }))
+  })
+
+  it("the final failed attempt of judge:review calls markReviewFailed(reviewId, 'JOB_FAILED'), using attempts ?? 3", () => {
+    const review = (attemptsMade: number, attempts?: number) =>
+      job("judge:review", { data: { reviewId: "review-1" }, attemptsMade, opts: attempts === undefined ? {} : { attempts } })
+
+    mockHandlers.get("failed")!(review(1, 2), new Error("boom"))
+    mockHandlers.get("failed")!(review(2), new Error("boom"))
+    mockHandlers.get("failed")!(job("watchlist:sync:all", { attemptsMade: 3 }), new Error("boom"))
+    expect(markReviewFailed).not.toHaveBeenCalled()
+
+    mockHandlers.get("failed")!(review(3), new Error("boom"))
+    mockHandlers.get("failed")!(review(2, 2), new Error("boom"))
+    expect(markReviewFailed).toHaveBeenCalledTimes(2)
+    expect(markReviewFailed).toHaveBeenCalledWith("review-1", "JOB_FAILED")
+  })
+
+  it("logs a crash fallback that could not be written", async () => {
+    jest.mocked(markReviewFailed).mockRejectedValueOnce(new Error("db down"))
+
+    mockHandlers.get("failed")!(job("judge:review", { data: { reviewId: "review-1" }, attemptsMade: 3 }), new Error("boom"))
+    await new Promise((resolve) => setImmediate(resolve))
+
+    expect(mockLogger.error).toHaveBeenCalledWith("Could not mark the review failed", expect.any(Error), { reviewId: "review-1" })
   })
 
   it("counts a failure that has no job", () => {

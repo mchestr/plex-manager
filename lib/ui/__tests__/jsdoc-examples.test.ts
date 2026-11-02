@@ -94,6 +94,12 @@ describe('assistantDisclosure', () => {
     )
   })
 
+  it('names a different judge provider for quality review', () => {
+    expect(assistantDisclosure('anthropic', 'openai')).toBe(
+      'Server admins can read assistant conversations. The app sends messages to Anthropic, and to OpenAI for quality review.'
+    )
+  })
+
   it('falls back without a known provider', () => {
     expect(assistantDisclosure(null)).toContain("sends messages to the server's AI provider.")
     expect(assistantDisclosure('mystery')).toContain("sends messages to the server's AI provider.")

@@ -325,9 +325,12 @@ sends `Authorization: Bearer <token>`. Without the variable the route answers
 |---|---|---|
 | `plex_manager_queue_jobs` | `queue`, `state` | Jobs in `plex-wrapped`, `rewind-batch`, `rewind-gen` and `rewind-aux` by state (the counts the admin queues page shows) |
 | `plex_manager_job_failures_total` | `queue`, `job` | Failed job attempts, retries included, counted in Redis (`pm:metrics:job_failures`) |
-| `plex_manager_llm_spend_usd` | `purpose` (`wrapped`, `chat`), `period` (`day`, `month`) | LLM spend since midnight, and since the 1st, in the server time zone (cached 60 s) |
+| `plex_manager_llm_spend_usd` | `purpose` (`wrapped`, `chat`, `judge`), `period` (`day`, `month`) | LLM spend since midnight, and since the 1st, in the server time zone (cached 60 s). `judge` is the conversation judge's calls, which do not count under `wrapped` |
+| `plex_manager_judge_reviews` | `status` (`queued`, `running`, `done`, `failed`) | Conversation judge reviews by status, every status reported |
+| `plex_manager_judge_findings` | `type`, `evidence_check` (`verified`, `unverified`, `not_applicable`) | Stored judge findings by type and evidence check, every pair reported, so the unverified rate and the volume of `not_applicable` findings can be watched while tuning the prompt |
+| `plex_manager_judge_spend_usd_today` | | Judge spend since midnight in the server time zone: the sum the judge's daily cap (`llmDailyCapJudgeUsd`) compares against, read on every scrape |
 | `plex_manager_discord_gateway_logins_total`, `_logins_24h`, `_disconnects_total`, `_last_close_code`, `plex_manager_discord_bot_healthy` | | Discord gateway logins (total and rolling 24 h; Discord resets the token near 1000), disconnects, the latest close code, and 0 while the bot is blocked (see `docs/discord-bot.md`) |
-| `plex_manager_scrape_error` | `source` | 1 when a source failed or took over 2 s this scrape |
+| `plex_manager_scrape_error` | `source` | 1 when a source failed or took over 2 s this scrape. The judge metrics are the sources `judge_reviews`, `judge_findings` and `judge_spend`; like `llm_spend` they read the database, so they report without Redis |
 | `plex_manager_build_info` | `version`, `commit` | The running build (`BUILD_COMMIT`) |
 | `process_resident_memory_bytes` | | Resident memory |
 | `plex_manager_event_loop_delay_p99_seconds` | | p99 event-loop delay since the previous scrape |

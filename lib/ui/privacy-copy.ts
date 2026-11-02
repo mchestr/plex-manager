@@ -18,20 +18,31 @@ const PROVIDER_NAMES: Record<string, string> = {
 
 const FALLBACK_PROVIDER = "the server's AI provider"
 
+const providerName = (provider: string | null) => (provider && PROVIDER_NAMES[provider]) || FALLBACK_PROVIDER
+
 /**
  * The assistant disclosure: admins can review conversations, and who processes
- * the messages. `provider` is the active chat `LLMProvider.provider`, or null
- * when none is configured.
+ * the messages. `chatProvider` is the active chat `LLMProvider.provider`, or
+ * null when none is configured.
+ *
+ * `judgeProvider`, the active `judge` provider, is passed only by the admin
+ * assistant page (`lib/data/assistant-history.ts`), whose conversations the
+ * judge reviews; it is named too when it reads differently from the chat
+ * provider. Member surfaces never pass it: their chats are never reviewed.
  *
  * @example
  * ```ts
  * assistantDisclosure("anthropic")
  * // "Server admins can read assistant conversations. The app sends messages to Anthropic."
+ * assistantDisclosure("anthropic", "openai")
+ * // "Server admins can read assistant conversations. The app sends messages to Anthropic, and to OpenAI for quality review."
  * ```
  */
-export function assistantDisclosure(provider: string | null): string {
-  const name = (provider && PROVIDER_NAMES[provider]) || FALLBACK_PROVIDER
-  return `Server admins can read assistant conversations. The app sends messages to ${name}.`
+export function assistantDisclosure(chatProvider: string | null, judgeProvider?: string | null): string {
+  const chat = providerName(chatProvider)
+  const judge = judgeProvider ? providerName(judgeProvider) : chat
+  const review = judge === chat ? "" : `, and to ${judge} for quality review`
+  return `Server admins can read assistant conversations. The app sends messages to ${chat}${review}.`
 }
 
 /**
