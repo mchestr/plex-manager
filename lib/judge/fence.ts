@@ -53,6 +53,9 @@
  * - in message text and a claim, an escape stays as the six characters the
  *   judge reads, so a `\u200b` an admin typed is kept as written.
  *
+ * A tool name goes in an attribute, not through the rules below, and
+ * {@link attribute} removes them from it too.
+ *
  * ## Neutralising
  *
  * {@link neutralise} runs on every piece of content before it is fenced:
@@ -172,5 +175,8 @@ export function neutralise(text: string): string {
   return clean(text).replace(CLOSE_TAG, "<\\/").replace(OPEN_TAG, "&lt;").replace(BRACKET, "[ ").replace(NOTE, "( ")
 }
 
-/** An attribute value on one line (a NEL too), as numeric entities, so a tool name cannot end the attribute or the tag, or start a line. */
-export const attribute = (text: string) => text.replace(/[\s\u0085]+/g, " ").replace(/[&"<>]/g, (char) => `&#${char.charCodeAt(0)};`)
+/**
+ * An attribute value: its invisible characters removed and a NEL a space, as in content, then on one line and with
+ * `& " < >` as numeric entities, so a tool name cannot end the attribute or the tag, or start a line.
+ */
+export const attribute = (text: string) => clean(text).replace(/\s+/g, " ").replace(/[&"<>]/g, (char) => `&#${char.charCodeAt(0)};`)

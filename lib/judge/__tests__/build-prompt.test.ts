@@ -363,6 +363,14 @@ describe("buildJudgePrompt", () => {
     expect(built.prompt).not.toContain("\u0085")
   })
 
+  it("removes invisible and control characters from the tool name attribute, as from content", () => {
+    // U+200B, a C0 control (U+0001) and a C1 control (U+009F), which a reader sees nothing of
+    const built = build([message(0, "hi"), message(1, "hello", [{ ...entry('{"total":9}'), tool: "get​_users\u0001 \u009Fnow" }])])
+
+    expect(built.prompt).toContain('<tool_result tool="get_users now" ok="true">')
+    expect(built.prompt).not.toMatch(/[​\u0001\u009F]/)
+  })
+
   describe("content cannot pass for the prompt's structure", () => {
     /** Builds with `planted` in every fenced piece: message text, tool args and results, a prior claim, the system prompt and the catalog. */
     function plant(planted: string) {
