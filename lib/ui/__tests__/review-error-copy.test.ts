@@ -37,14 +37,15 @@ describe("reviewErrorCopy", () => {
   })
 
   it("links the model, the switch and the budget to where each is set, and only them", () => {
-    // In the past: the page can show the failure after the switch is back on or a model is set up
+    // In the past: the page can show the failure after the switch is back on or a model is set up. The links name
+    // the AI provider section by its title
     expect(reviewErrorCopy("NOT_CONFIGURED")).toEqual({
       message: "No conversation review model was set up when this review ran.",
-      link: { href: "/admin/settings#ai", label: "Set one up in AI settings, on the Conversation review tab" },
+      link: { href: "/admin/settings#ai", label: "Set one up in AI provider settings, on the Conversation review tab" },
     })
     expect(reviewErrorCopy("LLM_DISABLED")).toEqual({
       message: "AI features were off when this review ran.",
-      link: { href: "/admin/settings#ai", label: "Turn them on in AI settings" },
+      link: { href: "/admin/settings#ai", label: "Turn them on in AI provider settings" },
     })
     expect(reviewErrorCopy("BUDGET_EXCEEDED")).toEqual({
       message: "The Daily budget for conversation reviews is spent for today. Review again tomorrow.",

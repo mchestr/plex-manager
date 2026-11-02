@@ -27,9 +27,10 @@ import { settingsSection } from "@/lib/admin/routes"
 /** A message that ends before its link, and the link's own words. */
 export type ReviewErrorCopy = { message: string; link?: { href: Route; label: string } }
 
-// The model is set on the AI provider section's Conversation review tab, which has no link of its own
-const MODEL_LINK = { href: settingsSection("ai"), label: "Set one up in AI settings, on the Conversation review tab" }
-const SWITCH_LINK = { href: settingsSection("ai"), label: "Turn them on in AI settings" }
+// Each link names the AI provider section by its title. The model is set on its Conversation review tab, which has
+// no link of its own
+const MODEL_LINK = { href: settingsSection("ai"), label: "Set one up in AI provider settings, on the Conversation review tab" }
+const SWITCH_LINK = { href: settingsSection("ai"), label: "Turn them on in AI provider settings" }
 
 const COPY: Record<string, ReviewErrorCopy> = {
   NOT_CONFIGURED: { message: "No conversation review model was set up when this review ran.", link: MODEL_LINK },

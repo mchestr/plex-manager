@@ -84,7 +84,8 @@ describe("JudgeNightlySection", () => {
     renderSection({ ...SAVED, judgeNightlyEnabled: true }, false)
 
     expect(summaryRow("nightly")).toHaveTextContent(`On, at ${JUDGE_SWEEP_TIME} server time, but no conversation review model is set up.`)
-    expect(screen.getByRole("link", { name: "Set one up in AI settings, on the Conversation review tab" })).toHaveAttribute("href", "/admin/settings#ai")
+    // The link names the AI provider section by its title
+    expect(screen.getByRole("link", { name: "Set one up in AI provider settings, on the Conversation review tab" })).toHaveAttribute("href", "/admin/settings#ai")
   })
 
   it("gives no model warning while nightly reviews are off, or with a model", () => {

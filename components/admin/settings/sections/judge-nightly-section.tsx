@@ -13,9 +13,9 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
-import { settingsSection } from "@/lib/admin/routes"
 import { useFormat } from "@/lib/format-context"
 import { JUDGE_SWEEP_TIME } from "@/lib/judge/sweep-time"
+import { REVIEW_BLOCKED_COPY } from "@/lib/ui/review-error-copy"
 
 const SECTION_ID = "conversation-review"
 
@@ -62,12 +62,13 @@ function invalidFields(values: Values): Partial<Record<FieldKey, string>> {
  * minimum turns and the budget. A sweep that is on without a conversation
  * review model reviews nothing, so it says so and links to where the model
  * is set (the AI provider section's Conversation review tab, which has no
- * link of its own).
+ * link of its own), with the conversation page's link copy.
  */
 function JudgeSettingsSummary({ saved, judgeConfigured }: { saved: JudgeSettings; judgeConfigured: boolean }) {
   const f = useFormat()
   const row = (key: string) => `settings-${SECTION_ID}-summary-${key}`
   const budget = saved.llmDailyCapJudgeUsd
+  const modelLink = REVIEW_BLOCKED_COPY.NOT_CONFIGURED.link
   return (
     <SettingsSummary data-testid={`settings-${SECTION_ID}-summary`}>
       <SettingsSummaryRow label="Nightly review" data-testid={row("nightly")}>
@@ -75,8 +76,8 @@ function JudgeSettingsSummary({ saved, judgeConfigured }: { saved: JudgeSettings
         {saved.judgeNightlyEnabled && !judgeConfigured && (
           <>
             , but no conversation review model is set up.{" "}
-            <Link href={settingsSection("ai")} className="underline underline-offset-3" data-testid="settings-conversation-review-model-link">
-              Set one up in AI settings, on the Conversation review tab
+            <Link href={modelLink.href} className="underline underline-offset-3" data-testid="settings-conversation-review-model-link">
+              {modelLink.label}
             </Link>
           </>
         )}

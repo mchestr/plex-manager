@@ -131,18 +131,18 @@ describe('ReviewSection states', () => {
     expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
     // The message ends before the link, so its words are not read twice
     expect(screen.getByTestId('conversation-review-blocked')).toHaveTextContent(
-      'No conversation review model is set up. Set one up in AI settings, on the Conversation review tab'
+      'No conversation review model is set up. Set one up in AI provider settings, on the Conversation review tab'
     )
-    const link = screen.getByRole('link', { name: 'Set one up in AI settings, on the Conversation review tab' })
+    const link = screen.getByRole('link', { name: 'Set one up in AI provider settings, on the Conversation review tab' })
     expect(link).toHaveAttribute('href', '/admin/settings#ai')
     expect(link).toHaveAttribute('data-testid', 'conversation-review-blocked-link')
   })
 
-  it('disables the button while AI features are off and says so first, with a link to the AI settings', () => {
+  it('disables the button while AI features are off and says so first, with a link to the AI provider settings', () => {
     render({ llmDisabled: true, judgeConfigured: false })
 
     expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
-    expect(screen.getByTestId('conversation-review-blocked')).toHaveTextContent('AI features are turned off. Turn them on in AI settings')
+    expect(screen.getByTestId('conversation-review-blocked')).toHaveTextContent('AI features are turned off. Turn them on in AI provider settings')
     // The master switch comes first, so the missing model is not mentioned beside it
     expect(screen.getByTestId('conversation-review-section')).not.toHaveTextContent('No conversation review model')
     expect(screen.getByTestId('conversation-review-blocked-link')).toHaveAttribute('href', '/admin/settings#ai')
@@ -159,13 +159,13 @@ describe('ReviewSection states', () => {
     const blockedBy = { LLM_DISABLED: { llmDisabled: true }, NOT_CONFIGURED: { judgeConfigured: false } } as const
     /** What blocks the section now, in the present tense. */
     const NOTICE = {
-      LLM_DISABLED: 'AI features are turned off. Turn them on in AI settings',
-      NOT_CONFIGURED: 'No conversation review model is set up. Set one up in AI settings, on the Conversation review tab',
+      LLM_DISABLED: 'AI features are turned off. Turn them on in AI provider settings',
+      NOT_CONFIGURED: 'No conversation review model is set up. Set one up in AI provider settings, on the Conversation review tab',
     }
     /** What a failure says, in the past. */
     const FAILED = {
-      LLM_DISABLED: 'AI features were off when this review ran. Turn them on in AI settings',
-      NOT_CONFIGURED: 'No conversation review model was set up when this review ran. Set one up in AI settings, on the Conversation review tab',
+      LLM_DISABLED: 'AI features were off when this review ran. Turn them on in AI provider settings',
+      NOT_CONFIGURED: 'No conversation review model was set up when this review ran. Set one up in AI provider settings, on the Conversation review tab',
       BUDGET_EXCEEDED: 'The Daily budget for conversation reviews is spent for today. Review again tomorrow. Raise it in Conversation review settings',
     }
 
