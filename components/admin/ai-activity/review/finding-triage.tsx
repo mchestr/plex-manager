@@ -27,12 +27,16 @@ interface FindingTriageProps {
  * invalidates a query. A stored status the refresh brings replaces the shown
  * one, and a stored note replaces the draft only while it has no unsaved
  * edits, so a refresh never wipes a note being typed. A failed save shows
- * the action's error in a toast and puts the status back. The Select stays
- * enabled while it saves, so keyboard focus stays on it.
+ * the action's error in a toast and the stored status again, unless a later
+ * choice is still saving: its own result decides. The Select stays enabled
+ * while it saves, so keyboard focus stays on it.
  */
 export function FindingTriage({ findingId, status, note, describedBy }: FindingTriageProps) {
   const { showError } = useToast()
-  const [value, setValue] = useState(status)
+  // The status chosen here, shown until a refresh brings a stored one or its save fails. Each choice is its own
+  // object, so a failed save can tell whether a later choice replaced it
+  const [choice, setChoice] = useState<{ status: FindingStatus } | null>(null)
+  const value = choice?.status ?? status
   const [draft, setDraft] = useState(note ?? "")
   // The note as stored: from the page, or as this card just saved it. A draft that differs has unsaved edits
   const [savedNote, setSavedNote] = useState(note ?? "")
@@ -43,7 +47,7 @@ export function FindingTriage({ findingId, status, note, describedBy }: FindingT
   // A refresh brought a different stored status or note: show what changed, and keep a draft with unsaved edits
   if (stored.status !== status || stored.note !== note) {
     setStored({ status, note })
-    if (stored.status !== status) setValue(status)
+    if (stored.status !== status) setChoice(null)
     if (stored.note !== note) {
       setSavedNote(note ?? "")
       if (draft === savedNote) setDraft(note ?? "")
@@ -52,12 +56,13 @@ export function FindingTriage({ findingId, status, note, describedBy }: FindingT
 
   const changeStatus = (next: FindingStatus | null) => {
     if (!next || next === value) return
-    const previous = value
-    setValue(next)
+    const chosen = { status: next }
+    setChoice(chosen)
     startSaving(async () => {
       const result = await setFindingStatus({ findingId, status: next })
       if (!result.success) {
-        setValue(previous)
+        // The stored status shows again, which is the one the server last confirmed, not the choice before this one
+        setChoice((current) => (current === chosen ? null : current))
         showError(result.error)
       }
     })

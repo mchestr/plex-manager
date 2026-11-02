@@ -27,6 +27,21 @@ async function openStatus(user: ReturnType<typeof userEvent.setup>) {
   await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'true'))
 }
 
+async function choose(user: ReturnType<typeof userEvent.setup>, value: string) {
+  await openStatus(user)
+  await user.click(await screen.findByTestId(`finding-status-option-${value}`))
+}
+
+type SaveResult = Awaited<ReturnType<typeof setFindingStatus>>
+const SAVE_FAILED: SaveResult = { success: false, code: 'INTERNAL', error: 'Could not save the finding' }
+
+/** Holds every save until the test settles it, in the order they were made. */
+function holdSaves() {
+  const pending: Array<(result: SaveResult) => void> = []
+  save.mockImplementation(() => new Promise((resolve) => pending.push(resolve)))
+  return pending
+}
+
 describe('FindingTriage', () => {
   it('shows the stored status and note', () => {
     render(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="wont_fix" note="Known gap" />)
@@ -176,5 +191,40 @@ describe('FindingTriage', () => {
 
     await user.click(screen.getByTestId('finding-note-save-f1'))
     await waitFor(() => expect(mockShowError).toHaveBeenCalledTimes(2))
+  })
+
+  it('goes back to the stored status when two overlapping saves both fail', async () => {
+    const user = userEvent.setup()
+    const saves = holdSaves()
+    render(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="open" note={null} />)
+
+    await choose(user, 'fixed')
+    await choose(user, 'false_alarm')
+    expect(save).toHaveBeenCalledTimes(2)
+
+    await act(async () => saves[0](SAVE_FAILED))
+    await act(async () => saves[1](SAVE_FAILED))
+
+    // Fixed was never stored: the Select shows what the server last confirmed
+    expect(screen.getByTestId('finding-status-select-f1')).toHaveTextContent('Open')
+    expect(mockShowError).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps a later choice while it saves when an earlier save fails', async () => {
+    const user = userEvent.setup()
+    const saves = holdSaves()
+    const { rerender } = render(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="open" note={null} />)
+
+    await choose(user, 'fixed')
+    await choose(user, 'false_alarm')
+    await act(async () => saves[0](SAVE_FAILED))
+
+    expect(mockShowError).toHaveBeenCalledWith('Could not save the finding')
+    expect(screen.getByTestId('finding-status-select-f1')).toHaveTextContent('False alarm')
+
+    // The later save stores it, and its refresh brings it
+    await act(async () => saves[1]({ success: true, data: null }))
+    rerender(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="false_alarm" note={null} />)
+    expect(screen.getByTestId('finding-status-select-f1')).toHaveTextContent('False alarm')
   })
 })
