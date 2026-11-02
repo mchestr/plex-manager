@@ -166,12 +166,6 @@ describe("stripInvisible", () => {
       expect(stripInvisible('api\\u20\u200B0bkey=x', { tool: true })).toBe("apikey=x")
     })
 
-    it("removes them from JSON nested too deep to walk, read as text", () => {
-      const nested = (inner: string) => `${"[".repeat(4_000)}${inner}${"]".repeat(4_000)}`
-
-      expect(stripInvisible(nested('"pass\\u00adword"'), { tool: true })).toBe(nested('"password"'))
-    })
-
     it("changes nothing the second time", () => {
       const once = stripInvisible('{"cut": "api\\u\\u200b200bkey \\ud83d\\ude00 \\u2060', { tool: true })
 
@@ -179,10 +173,14 @@ describe("stripInvisible", () => {
     })
   })
 
-  it("reads JSON nested too deep to walk as text: what is written out is removed, an escape stays", () => {
+  it.each([
+    ["message text or a claim", {}],
+    ["a tool's text", { tool: true }],
+  ] as const)("throws the walk's RangeError for JSON nested too deep to walk, in %s, so none of it is read as text", (_piece, from) => {
+    // The builder sends none of it: read as text, its escapes and its keys' names would go unchecked
     const nested = (inner: string) => `${"[".repeat(4_000)}${inner}${"]".repeat(4_000)}`
 
-    expect(stripInvisible(nested('"pass\u00ADword\u0085\\u200b"'))).toBe(nested('"password \\u200b"'))
+    expect(() => stripInvisible(nested('"pass\u00ADword\u0085\\u200b"'), from)).toThrow(RangeError)
   })
 
   it("changes nothing the second time", () => {

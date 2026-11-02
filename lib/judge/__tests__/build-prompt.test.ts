@@ -11,7 +11,8 @@
  */
 
 import { type ChatTool } from "@/lib/llm/chat"
-import { capToolLog, type ToolLogEntry } from "@/lib/judge/tool-log"
+import { NOTES } from "@/lib/judge/fence"
+import { capToolLog, NOT_RECORDED, type ToolLogEntry } from "@/lib/judge/tool-log"
 
 import { buildJudgePrompt, type JudgeMessage, type PriorFinding } from "../build-prompt"
 import { JUDGE_PROMPT_VERSION, JUDGE_SYSTEM_PROMPT } from "../prompts/v2"
@@ -184,19 +185,46 @@ describe("buildJudgePrompt", () => {
       expect(built.prompt).not.toContain(SECRET.slice(0, 4))
     })
 
-    it("are redacted from JSON nested too deep to walk, read as text, and the message keeps its index", () => {
-      // 4,000 nested arrays fit the assistant's 8,000-character input limit, and walking them overflows the stack
-      const deep = `{"password": "${SECRET}", "nested": ${"[".repeat(4_000)}${"]".repeat(4_000)}}`
-      const sent = deep.replace(SECRET, "[redacted]")
+    describe("in JSON nested too deep to walk, which is never sent", () => {
+      // Only the walk finds these by their key's name, and 4,000 nested arrays, which fit the assistant's
+      // 8,000-character input limit, overflow it
+      const VALUES = ["Zq9CookieVal12", "Zq9SessionKey34", "Zq9AccessKey56", "Zq9Credential78"]
+      const KEYS = `{"cookie": "${VALUES[0]}", "sessionKey": "${VALUES[1]}", "accessKey": "${VALUES[2]}", "credential": "${VALUES[3]}"}`
+      const SHAPES = [
+        ["inside the arrays", `${"[".repeat(4_000)}${KEYS}${"]".repeat(4_000)}`],
+        ["beside the arrays", `${KEYS.slice(0, -1)}, "nested": ${"[".repeat(4_000)}${"]".repeat(4_000)}}`],
+      ] as const
+      const leaked = (built: ReturnType<typeof build>) => VALUES.filter((value) => `${built.system}${built.prompt}`.includes(value))
 
-      const built = build([message(0, deep), message(1, "That is a nested list.", [entry(deep, deep)])])
+      it.each(SHAPES)("shows a message holding the keys %s as unreadable, at its index, with no sent text", (_shape, deep) => {
+        const built = build([message(0, deep), message(1, "That is a nested list.")])
 
-      expect(built.window).toEqual(new Set([0, 1]))
-      expect(built.sentMessageText.get(0)).toBe(sent)
-      expect(built.prompt).toContain(`[#0 user]\n${sent}\n\n[#1 assistant]`)
-      expect(built.sentToolText.get(1)).toEqual([sent])
-      expect(built.prompt).toContain(`args: ${sent}\nresult: ${sent}\n</tool_result>`)
-      expect(built.prompt).not.toContain(SECRET)
+        expect(built.window).toEqual(new Set([0, 1]))
+        expect(built.prompt).toContain(`[#0 user]\n${NOTES.unreadable}\n\n[#1 assistant]\nThat is a nested list.\n`)
+        expect(built.sentMessageText.has(0)).toBe(false)
+        expect(built.sentMessageText.get(1)).toBe("That is a nested list.")
+        expect(leaked(built)).toEqual([])
+      })
+
+      it.each(SHAPES)("leaves out the claim of a finding holding the keys %s, as one that no longer decrypts is", (_shape, deep) => {
+        const built = build([message(0, "how many streams?"), message(1, "Two.")], {
+          prior: [
+            { type: "wrong_fact", messageIndex: 1, claim: deep, status: "open" },
+            { type: "unsupported_claim", messageIndex: 1, claim: "Said two without a tool.", status: "fixed" },
+          ],
+        })
+
+        expect(built.prompt).toContain("<already_raised>\n- [#1] wrong_fact (open)\n- [#1] unsupported_claim (fixed): Said two without a tool.\n</already_raised>")
+        expect(leaked(built)).toEqual([])
+      })
+
+      it.each(SHAPES)("reads as not recorded in a tool's args and result holding the keys %s, as capture stores them", (_shape, deep) => {
+        const built = build([message(0, "what's playing?"), message(1, "Nothing.", [entry(deep, deep)])])
+
+        expect(built.prompt).toContain(`args: ${NOT_RECORDED}\nresult: ${NOT_RECORDED}\n</tool_result>`)
+        expect(built.sentToolText.get(1)).toEqual([NOT_RECORDED])
+        expect(leaked(built)).toEqual([])
+      })
     })
 
     describe("split by an invisible character, which is removed before redacting", () => {

@@ -42,8 +42,9 @@
  * The prompt builder runs it on every piece it redacts, before
  * `redactCredentials`, so the redactor reads what the judge will get
  * (`lib/judge/build-prompt.ts`). JSON whose strings escape none keeps its
- * text as written. Text that does not parse, such as a cut tool result, and
- * JSON nested too deep for the walk (a `RangeError`) are read as text:
+ * text as written. JSON nested too deep for the walk throws the walk's
+ * `RangeError`, and the builder sends none of it. Text that does not parse,
+ * such as a cut tool result, is read as text:
  *
  * - in a tool's args or result, a `\uXXXX` escape of one, or a surrogate pair
  *   of escapes, is removed too, until none is left (removing one can join
@@ -148,27 +149,22 @@ function stripEscapes(text: string): string {
 
 /**
  * The text with every NEL a space and every invisible character removed, a
- * JSON text's escaped ones too. A `tool` text (a tool's args or result) read
- * as text also loses each escape of one; see the module comment.
+ * JSON text's escaped ones too. A `tool` text (a tool's args or result) that
+ * does not parse also loses each escape of one; see the module comment.
+ *
+ * @throws RangeError for JSON nested too deep to walk.
  */
 export function stripInvisible(text: string, { tool = false }: { tool?: boolean } = {}): string {
   const stripped = clean(text)
-  const asText = () => (tool ? stripEscapes(stripped) : stripped)
   let parsed: unknown
   try {
     parsed = JSON.parse(stripped)
   } catch {
-    return asText()
+    return tool ? stripEscapes(stripped) : stripped
   }
-  try {
-    const next = JSON.stringify(stripValue(parsed))
-    // JSON whose strings escape none keeps the text as written
-    return next === JSON.stringify(parsed) ? stripped : next
-  } catch (error) {
-    // Nested too deep for the walk: read as text, like text that does not parse
-    if (error instanceof RangeError) return asText()
-    throw error
-  }
+  const next = JSON.stringify(stripValue(parsed))
+  // JSON whose strings escape none keeps the text as written
+  return next === JSON.stringify(parsed) ? stripped : next
 }
 
 /** The text with every tag, label, mark and note in it neutralised; see the module comment. */

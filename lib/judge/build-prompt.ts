@@ -31,8 +31,9 @@
  *
  * Every message is labelled with its absolute index (`[#7 assistant]`), so a
  * finding's `messageIndex` is the same whatever was left out. A message whose
- * text no longer decrypts keeps its place, shown as "(message unreadable)",
- * with no sent text for `verify` to match.
+ * text no longer decrypts, or is JSON nested too deep to redact, keeps its
+ * place, shown as "(message unreadable)", with no sent text for `verify` to
+ * match.
  *
  * ## Fencing
  *
@@ -60,10 +61,12 @@
  * - what the redactor finds never reaches the judge, and a cut never keeps
  *   the start of a credential too short for it to find.
  *
- * JSON nested too deep for either walk (a `RangeError`) is read as text:
- * stripped as written, then redacted by `redactText`'s string rules
- * (`lib/security/redact-text.ts`) over the whole of it, so the prompt still
- * builds.
+ * JSON nested too deep for either walk (a `RangeError`) is never sent: read
+ * as text, it would keep what only the walk redacts, such as a credential
+ * under a `cookie` or `sessionKey` key. Message text shows "(message
+ * unreadable)" and a claim is left out, as when either no longer decrypts,
+ * and a tool's args or result reads as `NOT_RECORDED`, the note capture
+ * stores in place of such a text (`lib/judge/tool-log.ts`).
  *
  * `sentMessageText` and `sentToolText` hold each piece exactly as the judge
  * got it (redacted, neutralised and cut), which `verify` matches quotes
@@ -75,10 +78,9 @@
 import { attribute, NOTES, neutralise, omittedFindings, omittedTurns, stripInvisible, TRUNCATED } from "@/lib/judge/fence"
 import { type Fit, fitSection, fitWithin, marked } from "@/lib/judge/fit"
 import { JUDGE_SYSTEM_PROMPT } from "@/lib/judge/prompts/v2"
-import { type ToolLogEntry } from "@/lib/judge/tool-log"
+import { NOT_RECORDED, type ToolLogEntry } from "@/lib/judge/tool-log"
 import { type ChatTool } from "@/lib/llm/chat"
 import { redactCredentials } from "@/lib/mcp/redact"
-import { redactText } from "@/lib/security/redact-text"
 
 export type JudgeMessage = {
   id: string
@@ -91,7 +93,7 @@ export type JudgeMessage = {
   createdAt: Date
 }
 
-/** `claim` is null when it no longer decrypts; the line then names the finding without it. */
+/** `claim` is null when it no longer decrypts; the line then names the finding without it, as for a claim too deeply nested to redact. */
 export type PriorFinding = { type: string; messageIndex: number; claim: string | null; status: string }
 
 type JudgePromptInput = {
@@ -131,18 +133,18 @@ type Drawn = { text: string; results: Map<number, string[]>; sent: Map<number, s
 
 const fenced = (tag: string, body: string) => `<${tag}>\n${body}\n</${tag}>`
 
-/** `redactCredentials`, or for JSON nested too deep for its walk, the string rules over the whole text. */
-function redact(text: string): string {
+/**
+ * Text from the conversation or an earlier review, as the judge gets it before any cut, or null for JSON nested too
+ * deep to walk, which it never gets; see "Redaction" in the module comment.
+ */
+function forJudge(text: string, from?: { tool: true }): string | null {
   try {
-    return redactCredentials(text).text
+    return neutralise(redactCredentials(stripInvisible(text, from)).text)
   } catch (error) {
-    if (!(error instanceof RangeError)) throw error
-    return redactText(text)
+    if (error instanceof RangeError) return null
+    throw error
   }
 }
-
-/** Text from the conversation or an earlier review, as the judge gets it before any cut; see "Redaction" in the module comment. */
-const forJudge = (text: string, from?: { tool: true }) => neutralise(redact(stripInvisible(text, from)))
 
 function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, reviewed: boolean) {
   const label = `[#${message.index} ${message.role}]${reviewed ? ` ${NOTES.reviewed}` : ""}`
@@ -154,8 +156,8 @@ function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, revie
     if (message.toolLog === null) lines.push(NOTES.noLog)
     else if (message.toolLog.length === 0) lines.push(NOTES.noTools)
     for (const call of message.toolLog ?? []) {
-      const args = fit(forJudge(call.args, { tool: true }))
-      const result = fit(forJudge(call.result, { tool: true }), resultLimit)
+      const args = fit(forJudge(call.args, { tool: true }) ?? NOT_RECORDED)
+      const result = fit(forJudge(call.result, { tool: true }) ?? NOT_RECORDED, resultLimit)
       results.push(result.text)
       const cut = call.truncated === true || args.cut || result.cut
       lines.push(`<tool_result tool="${attribute(call.tool)}" ok="${call.ok}">\nargs: ${args.text}\nresult: ${result.text}${cut ? `\n${TRUNCATED}` : ""}\n</tool_result>`)
@@ -225,7 +227,8 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
 
   const raised: string[] = []
   for (const [i, finding] of prior.entries()) {
-    const line = `- [#${finding.messageIndex}] ${finding.type} (${finding.status})${finding.claim === null ? "" : `: ${forJudge(finding.claim)}`}`
+    const claim = finding.claim === null ? null : forJudge(finding.claim)
+    const line = `- [#${finding.messageIndex}] ${finding.type} (${finding.status})${claim === null ? "" : `: ${claim}`}`
     const rest = prior.length - i - 1
     if (line.length + 1 + (rest > 0 ? omittedFindings(rest).length + 1 : 0) > budget) break
     raised.push(line)
