@@ -12,17 +12,19 @@
  *    transaction back.
  * 3. For each finding, by `(conversationId, fingerprint)`:
  *
- * | stored row     | write                                                         | counted as |
- * |----------------|---------------------------------------------------------------|------------|
- * | none           | create it                                                     | inserted   |
- * | `open`         | new evidence, `reviewId`, seen (conditional on still `open`)  | updated    |
- * | triaged        | seen only (`seenCount + 1`, `lastSeenAt`)                     | suppressed |
+ * | stored row                                                  | write                                                        | counted as |
+ * |-------------------------------------------------------------|--------------------------------------------------------------|------------|
+ * | none                                                        | create it                                                    | inserted   |
+ * | `open`                                                      | new evidence, `reviewId`, seen (conditional on still `open`) | updated    |
+ * | `open`, `verified` or `not_applicable`; repeat `unverified` | `reviewId` and seen only (conditional on still `open`)       | suppressed |
+ * | triaged                                                     | seen only (`seenCount + 1`, `lastSeenAt`)                    | suppressed |
  *
  * ## Special cases
  *
  * - A repeat never downgrades evidence: an `unverified` repeat of a `verified`
  *   or `not_applicable` open row keeps the stored claim, evidence, suggestion,
- *   `evidenceSource`, `evidenceCheck` and `severity`.
+ *   `evidenceSource`, `evidenceCheck` and `severity`, so `updated` always
+ *   means the evidence was refreshed.
  * - An open row triaged mid-run matches 0 on its conditional update, keeps its
  *   new status and only counts as seen.
  * - A review never deletes findings; only triage closes one.
@@ -97,7 +99,7 @@ async function persistFinding(tx: PrismaTransactionClient, input: PersistInput, 
       where: { id: stored.id, status: "open" },
       data: { reviewId: input.reviewId, ...seen, ...(downgrade ? {} : evidenceOf(finding)) },
     })
-    if (count > 0) return "updated"
+    if (count > 0) return downgrade ? "suppressed" : "updated"
   }
   await tx.conversationFinding.updateMany({ where: { id: stored.id }, data: seen })
   return "suppressed"
@@ -122,6 +124,8 @@ export async function persistReview(tx: PrismaTransactionClient, input: PersistI
   if (done.count === 0) throw new ReviewSuperseded()
 
   const counts: PersistCounts = { inserted: 0, updated: 0, suppressed: 0 }
+  // At most 20 findings (judgeOutputSchema) at 3 statements each (the findUnique, the conditional open
+  // update, the seen update): 60 here, 62 with the two above, all while the row lock is held
   for (const finding of input.findings) counts[await persistFinding(tx, input, finding, now)] += 1
   return counts
 }

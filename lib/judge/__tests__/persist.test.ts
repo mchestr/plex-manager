@@ -146,15 +146,16 @@ describe("persistReview", () => {
     expect(prismaMock.conversationFinding.create).not.toHaveBeenCalled()
   })
 
-  it("an unverified repeat of a verified open finding keeps the verified evidence and only counts as seen", async () => {
+  it("an unverified repeat of a verified open finding keeps the verified evidence and counts as suppressed", async () => {
     for (const stored of ["verified", "not_applicable"] as const) {
       prismaMock.conversationFinding.updateMany.mockClear()
       prismaMock.conversationFinding.findUnique.mockResolvedValue(buildConversationFinding({ id: "finding-1", fingerprint, status: "open", evidenceCheck: stored }))
 
+      // Only reviewId, seenCount and lastSeenAt change, so nothing was updated
       await expect(persistReview(tx, input([finding({ evidenceCheck: "unverified", claim: "A paraphrase." })]))).resolves.toEqual({
         inserted: 0,
-        updated: 1,
-        suppressed: 0,
+        updated: 0,
+        suppressed: 1,
       })
 
       expect(prismaMock.conversationFinding.updateMany).toHaveBeenCalledTimes(1)
