@@ -50,7 +50,8 @@
  *   then join it back into a whole one;
  * - a tool log was redacted before it was stored, before anything was
  *   removed, so it is redacted again here, and a result that was JSON stays
- *   JSON;
+ *   JSON. A tool's args or result that does not parse also loses each
+ *   escape of an invisible character (`\u200b`), which message text keeps;
  * - what the redactor finds never reaches the judge, and a cut never keeps
  *   the start of a credential too short for it to find.
  *
@@ -132,7 +133,7 @@ function redact(text: string): string {
 }
 
 /** Text from the conversation or an earlier review, as the judge gets it before any cut; see "Redaction" in the module comment. */
-const forJudge = (text: string) => neutralise(redact(stripInvisible(text)))
+const forJudge = (text: string, from?: { tool: true }) => neutralise(redact(stripInvisible(text, from)))
 
 function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, reviewed: boolean) {
   const label = `[#${message.index} ${message.role}]${reviewed ? ` ${NOTES.reviewed}` : ""}`
@@ -143,8 +144,8 @@ function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, revie
     if (message.toolLog === null) lines.push(NOTES.noLog)
     else if (message.toolLog.length === 0) lines.push(NOTES.noTools)
     for (const call of message.toolLog ?? []) {
-      const args = fit(forJudge(call.args))
-      const result = fit(forJudge(call.result), resultLimit)
+      const args = fit(forJudge(call.args, { tool: true }))
+      const result = fit(forJudge(call.result, { tool: true }), resultLimit)
       results.push(result.text)
       const cut = call.truncated === true || args.cut || result.cut
       lines.push(`<tool_result tool="${attribute(call.tool)}" ok="${call.ok}">\nargs: ${args.text}\nresult: ${result.text}${cut ? `\n${TRUNCATED}` : ""}\n</tool_result>`)

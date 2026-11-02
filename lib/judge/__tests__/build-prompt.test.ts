@@ -194,6 +194,24 @@ describe("buildJudgePrompt", () => {
         expect(partsIn(built.prompt, secret)).toEqual([])
       })
 
+      it("is redacted from a tool result cut at capture, where the character is escaped and the text no longer parses", () => {
+        // An escaping server writes U+200B as six characters; cut at 8 KB, the result is no longer JSON
+        const result = `{"url": "https://indexer.example/api?api\\u200bkey=${KEY}", "pad": "${"x".repeat(9_000)}"}`
+        const [stored] = capToolLog([{ tool: "get_plex_sessions", args: "{}", result, ok: true }])
+        expect(stored.truncated).toBe(true)
+
+        const built = build([message(0, "what's playing?"), message(1, "Nothing.", [stored])])
+
+        expect(built.sentToolText.get(1)?.[0]).toMatch(/^\{"url": "https:\/\/indexer\.example\/api\?apikey=\[redacted\]", "pad": "x+$/)
+        expect(partsIn(built.prompt, KEY)).toEqual([])
+      })
+
+      it("keeps an escape typed into message text, which is not a tool's text, as written", () => {
+        const built = build([message(0, 'What does "\\u200b" mean in a title?'), message(1, "It is a zero-width space.")])
+
+        expect(built.sentMessageText.get(0)).toBe('What does "\\u200b" mean in a title?')
+      })
+
       it("is redacted from a JSON tool result that escapes the character, beside one written out", () => {
         // A server that escapes every non-ASCII character (Python's json.dumps) writes U+200B as six characters, which parsing reads as the character
         const result = `{"url": "https://indexer.example/api?api\\u200bkey=${KEY}", "note": "pass\u00ADword=${PASSWORD}"}`

@@ -147,6 +147,38 @@ describe("stripInvisible", () => {
     expect(stripInvisible(text)).toBe(text)
   })
 
+  describe("in a tool's text", () => {
+    it("removes an escape of an invisible character, or a surrogate pair of them, from text that does not parse", () => {
+      // A result cut at capture, or an MCP server's own escapes: U+200B, U+00AD, U+0001, U+E0041 (a tag character) and U+E0100 (a variation selector)
+      const text = '{"url": "https://indexer.example/api?api\\u200Bkey=x", "note": "pass\\u00adword=y \\u0001\\udb40\\udc41\\uDB40\\uDD00", "cut": "ab'
+
+      expect(stripInvisible(text, { tool: true })).toBe('{"url": "https://indexer.example/api?apikey=x", "note": "password=y ", "cut": "ab')
+    })
+
+    it("keeps the escape of any other character (a letter, a tab, a NEL, an emoji, a lone surrogate) and what is no escape", () => {
+      const text = '{"cut": "\\u00e9 \\u0041 \\u0009 \\u0085 \\ud83d\\ude00 \\ud800 \\U200B \\u200 x'
+
+      expect(stripInvisible(text, { tool: true })).toBe(text)
+    })
+
+    it("removes an escape that removing another one joined, so none is left to hide a credential", () => {
+      expect(stripInvisible('{"cut": "api\\u\\u200b200bkey=x', { tool: true })).toBe('{"cut": "apikey=x')
+      expect(stripInvisible('api\\u20\u200B0bkey=x', { tool: true })).toBe("apikey=x")
+    })
+
+    it("removes them from JSON nested too deep to walk, read as text", () => {
+      const nested = (inner: string) => `${"[".repeat(4_000)}${inner}${"]".repeat(4_000)}`
+
+      expect(stripInvisible(nested('"pass\\u00adword"'), { tool: true })).toBe(nested('"password"'))
+    })
+
+    it("changes nothing the second time", () => {
+      const once = stripInvisible('{"cut": "api\\u\\u200b200bkey \\ud83d\\ude00 \\u2060', { tool: true })
+
+      expect(stripInvisible(once, { tool: true })).toBe(once)
+    })
+  })
+
   it("reads JSON nested too deep to walk as text: what is written out is removed, an escape stays", () => {
     const nested = (inner: string) => `${"[".repeat(4_000)}${inner}${"]".repeat(4_000)}`
 

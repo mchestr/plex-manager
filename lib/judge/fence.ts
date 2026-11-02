@@ -43,8 +43,14 @@
  * `redactCredentials`, so the redactor reads what the judge will get
  * (`lib/judge/build-prompt.ts`). JSON whose strings escape none keeps its
  * text as written. Text that does not parse, such as a cut tool result, and
- * JSON nested too deep for the walk (a `RangeError`) are read as text: an
- * escape stays as the six characters the judge reads.
+ * JSON nested too deep for the walk (a `RangeError`) are read as text:
+ *
+ * - in a tool's args or result, a `\uXXXX` escape of one, or a surrogate pair
+ *   of escapes, is removed too, until none is left (removing one can join
+ *   the text around it into another), since a result cut at capture or an
+ *   MCP server's own escapes would otherwise hide a credential split by one;
+ * - in message text and a claim, an escape stays as the six characters the
+ *   judge reads, so a `\u200b` an admin typed is kept as written.
  *
  * ## Neutralising
  *
@@ -110,6 +116,10 @@ const OPEN_TAG = new RegExp(`<(?=\\s*(?:${FENCES}))`, "gi")
 const INVISIBLE = /[\p{Cf}\p{Default_Ignorable_Code_Point}\u2800]|(?![\t\n\r\u0085])\p{Cc}/gu
 /** U+0085, a line break to many readers though not to JS's `\s`. */
 const NEL = /\u0085/g
+/** One character of {@link INVISIBLE}'s set, alone. */
+const ONE_INVISIBLE = new RegExp(`^(?:${INVISIBLE.source})$`, "u")
+/** A `\uXXXX` escape, or a surrogate pair of them, as JSON and JS write a character (a lower-case `u`, hex digits in either case). */
+const ESCAPE = /\\u[dD][89abAB][\da-fA-F]{2}\\u[dD][c-fC-F][\da-fA-F]{2}|\\u[\da-fA-F]{4}/g
 /** A label's `[#7` (or `[# 7`), or the mark's `[truncated`. */
 const BRACKET = /\[(?=#\s*\d|truncated)/gi
 /** A note's opening words, or an omitted line's "(3 earlier ". */
@@ -126,14 +136,29 @@ function stripValue(value: unknown): unknown {
   return Object.fromEntries(Object.entries(value).map(([key, item]) => [clean(key), stripValue(item)]))
 }
 
-/** The text with every NEL a space and every invisible character removed, a JSON text's escaped ones too; see the module comment. */
-export function stripInvisible(text: string): string {
+/** The text with every escape of an invisible character removed, again until removing one joins no other. */
+function stripEscapes(text: string): string {
+  let next = text
+  do {
+    text = next
+    next = text.replace(ESCAPE, (escape) => (ONE_INVISIBLE.test(JSON.parse(`"${escape}"`)) ? "" : escape))
+  } while (next !== text)
+  return next
+}
+
+/**
+ * The text with every NEL a space and every invisible character removed, a
+ * JSON text's escaped ones too. A `tool` text (a tool's args or result) read
+ * as text also loses each escape of one; see the module comment.
+ */
+export function stripInvisible(text: string, { tool = false }: { tool?: boolean } = {}): string {
   const stripped = clean(text)
+  const asText = () => (tool ? stripEscapes(stripped) : stripped)
   let parsed: unknown
   try {
     parsed = JSON.parse(stripped)
   } catch {
-    return stripped
+    return asText()
   }
   try {
     const next = JSON.stringify(stripValue(parsed))
@@ -141,7 +166,7 @@ export function stripInvisible(text: string): string {
     return next === JSON.stringify(parsed) ? stripped : next
   } catch (error) {
     // Nested too deep for the walk: read as text, like text that does not parse
-    if (error instanceof RangeError) return stripped
+    if (error instanceof RangeError) return asText()
     throw error
   }
 }
