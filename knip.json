@@ -33,7 +33,9 @@
     "lib/judge/fingerprint.ts!",
     // the judge prompt builder and its prompt version; the review job is their first caller, drop these then
     "lib/judge/build-prompt.ts!",
-    "lib/judge/prompts/v1.ts!"
+    "lib/judge/prompts/v1.ts!",
+    // the judge's evidence check; the review job is its first caller, drop this then
+    "lib/judge/verify.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",
