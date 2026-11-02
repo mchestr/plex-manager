@@ -192,8 +192,20 @@ describe("processConversationReview", () => {
   it("happy path writes findings and a done review", async () => {
     const rows = useReviewTable([{ id: "review-1", status: "queued" }])
     const { deps } = judge()
+    // The spend read and the usage record both happen while this run holds judge-spend (spec §4, step 4)
+    const held: string[] = []
+    prismaMock.lLMUsage.aggregate.mockImplementation((async () => {
+      held.push(`spend:${store.leases.has("judge-spend")}`)
+      return { _sum: { cost: 0 } }
+    }) as never)
+    jest.mocked(deps.record).mockImplementation(async () => {
+      held.push(`record:${store.leases.has("judge-spend")}`)
+    })
 
     await run(fakeJob().job, deps)
+
+    expect(held).toEqual(["spend:true", "record:true"])
+    expect(store.leases.has("judge-spend")).toBe(false)
 
     expect(rows.get("review-1")).toMatchObject({
       status: "done",
@@ -383,6 +395,9 @@ describe("processConversationReview", () => {
     expect(job.attemptsMade).toBe(0)
     expect(rows.get("review-1")).toMatchObject({ status: "queued", errorCode: null, runToken: 1 })
     expect(model.doGenerateCalls).toHaveLength(0)
+    // Nothing about spend is read before the lease is taken: the cap and its sum are checked only under it
+    expect(prismaMock.lLMUsage.aggregate).not.toHaveBeenCalled()
+    expect(prismaMock.config.findUnique).not.toHaveBeenCalled()
   })
 
   it("moveToDelayed rejects (the lock was lost): the review is left queued with no live job and is reaped as STALE after 2 minutes, not stuck", async () => {
