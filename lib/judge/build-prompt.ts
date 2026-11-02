@@ -74,7 +74,7 @@
 
 import { attribute, NOTES, neutralise, omittedFindings, omittedTurns, stripInvisible, TRUNCATED } from "@/lib/judge/fence"
 import { type Fit, fitSection, fitWithin, marked } from "@/lib/judge/fit"
-import { JUDGE_SYSTEM_PROMPT } from "@/lib/judge/prompts/v1"
+import { JUDGE_SYSTEM_PROMPT } from "@/lib/judge/prompts/v2"
 import { type ToolLogEntry } from "@/lib/judge/tool-log"
 import { type ChatTool } from "@/lib/llm/chat"
 import { redactCredentials } from "@/lib/mcp/redact"

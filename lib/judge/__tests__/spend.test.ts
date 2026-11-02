@@ -89,7 +89,7 @@ const usage = { inputTokens: 1000, cachedInputTokens: 0, outputTokens: 200, reas
 
 function recordJudgeCall(cost: number, reviewId: string) {
   return recordUsage({
-    attribution: { userId: "admin-1", conversationReviewId: reviewId, promptVersion: "judge-v1" },
+    attribution: { userId: "admin-1", conversationReviewId: reviewId, promptVersion: "judge-v2" },
     provider: "openai",
     modelId: "judge-model",
     usage,

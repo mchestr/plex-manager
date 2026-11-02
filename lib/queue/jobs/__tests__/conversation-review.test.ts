@@ -218,7 +218,7 @@ describe("processConversationReview", () => {
       runToken: 1,
       summary: "One wrong count.",
       model: "gpt-6-luna-2026-09-22",
-      promptVersion: "judge-v1",
+      promptVersion: "judge-v2",
       reviewedThrough: AT(3),
       errorCode: null,
     })
@@ -273,7 +273,7 @@ describe("processConversationReview", () => {
 
     const records = jest.mocked(deps.record).mock.calls.map(([record]) => record)
     expect(records[0]).toMatchObject({
-      attribution: { userId: "admin-1", conversationReviewId: "review-1", promptVersion: "judge-v1" },
+      attribution: { userId: "admin-1", conversationReviewId: "review-1", promptVersion: "judge-v2" },
       prompt: null,
       response: null,
     })

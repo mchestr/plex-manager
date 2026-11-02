@@ -110,7 +110,7 @@ describe('recordUsage', () => {
     prismaMock.lLMUsage.create.mockResolvedValue(buildLLMUsage())
 
     await recordUsage({
-      attribution: { userId: 'user-1', conversationReviewId: 'review-1', promptVersion: 'judge-v1' },
+      attribution: { userId: 'user-1', conversationReviewId: 'review-1', promptVersion: 'judge-v2' },
       provider: 'openai',
       modelId: 'gpt-4o',
       usage,
@@ -121,7 +121,7 @@ describe('recordUsage', () => {
     expect(prismaMock.lLMUsage.create.mock.calls[0][0].data).toMatchObject({
       conversationReviewId: 'review-1',
       chatConversationId: null,
-      promptVersion: 'judge-v1',
+      promptVersion: 'judge-v2',
     })
     expect(prismaMock.lLMUsage.create.mock.calls[0][0].data).not.toHaveProperty('groupKey')
     expect(addSpend).not.toHaveBeenCalled()

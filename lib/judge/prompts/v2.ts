@@ -1,12 +1,21 @@
 /**
- * The judge's system prompt, version 1. A review stores the version it ran
- * with (`ConversationReview.promptVersion`), so a change to the wording gets a
- * new file and a new version rather than an edit here.
+ * The judge's system prompt, version 2. A review and its usage row store the
+ * version they ran with (`ConversationReview.promptVersion`,
+ * `LLMUsage.promptVersion`), so a change to the wording gets a new file and a
+ * new version rather than an edit here.
  *
- * @module lib/judge/prompts/v1
+ * `judge-v1` is the wording #508 merged (5750328), which the images built
+ * from `main` published; read it there, at `lib/judge/prompts/v1.ts`.
+ * `judge-v2` is the wording of the fix pass after it: a message that no
+ * longer decrypts reads "(message unreadable)", content never carries the
+ * prompt's own structure (its neutralised tags, labels, notes and marks),
+ * and a new rule 2 says cut text is no evidence that a fact is absent, so
+ * the rules after it are one number later.
+ *
+ * @module lib/judge/prompts/v2
  */
 
-export const JUDGE_PROMPT_VERSION = "judge-v1"
+export const JUDGE_PROMPT_VERSION = "judge-v2"
 
 export const JUDGE_SYSTEM_PROMPT = `You review conversations between an admin and the admin assistant of a Plex management app, to find where the assistant gave wrong or unsupported information, used the wrong tool, lacked a tool it needed, refused without need, or misread the question. Your findings are used to improve the assistant's prompt, tools and knowledge.
 

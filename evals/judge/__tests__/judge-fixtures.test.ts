@@ -20,6 +20,7 @@ import { asAppTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-m
 import { EvidenceCheck } from "@/lib/generated/prisma/client"
 import { buildJudgePrompt, type JudgeMessage } from "@/lib/judge/build-prompt"
 import { persistReview } from "@/lib/judge/persist"
+import { JUDGE_PROMPT_VERSION } from "@/lib/judge/prompts/v2"
 import { judgeOutputSchema } from "@/lib/judge/schema"
 import { verifyFindings } from "@/lib/judge/verify"
 import { type ChatTool } from "@/lib/llm/chat"
@@ -96,7 +97,7 @@ async function runFixture(name: string) {
     findings: verified.findings,
     summary: fixture.judgeOutput.summary,
     model: "judge-recorded",
-    promptVersion: "judge-v1",
+    promptVersion: JUDGE_PROMPT_VERSION,
     reviewedThrough: messages.at(-1)?.createdAt ?? new Date(START),
     runToken: 1,
   })

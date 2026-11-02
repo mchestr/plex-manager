@@ -14,7 +14,7 @@ import { type ChatTool } from "@/lib/llm/chat"
 import { capToolLog, type ToolLogEntry } from "@/lib/judge/tool-log"
 
 import { buildJudgePrompt, type JudgeMessage, type PriorFinding } from "../build-prompt"
-import { JUDGE_PROMPT_VERSION, JUDGE_SYSTEM_PROMPT } from "../prompts/v1"
+import { JUDGE_PROMPT_VERSION, JUDGE_SYSTEM_PROMPT } from "../prompts/v2"
 
 const CAP = 120_000
 const START = Date.UTC(2026, 9, 1)
@@ -597,7 +597,7 @@ describe("buildJudgePrompt", () => {
     const built = build([message(0, "hi"), message(1, "hello")])
 
     expect(built.system).toBe(JUDGE_SYSTEM_PROMPT)
-    expect(JUDGE_PROMPT_VERSION).toBe("judge-v1")
+    expect(JUDGE_PROMPT_VERSION).toBe("judge-v2")
     expect(built.prompt).toContain("You are the admin assistant.")
     expect(built.prompt).toContain("- get_plex_sessions: What is playing now")
   })
