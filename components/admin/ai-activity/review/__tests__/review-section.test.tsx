@@ -62,7 +62,12 @@ const badgeReads = (text: string) => waitFor(() => expect(screen.getByTestId('co
 const status = (value: 'queued' | 'running' | 'done' | 'failed', errorCode: string | null = null) =>
   ({ success: true, data: { reviewId: 'review-1', status: value, errorCode } }) as const
 
-beforeEach(() => jest.clearAllMocks())
+beforeEach(() => {
+  jest.clearAllMocks()
+  // A reply one test queued and did not use (mockResolvedValueOnce) never answers the next one
+  getStatus.mockReset()
+  review.mockReset()
+})
 
 describe('ReviewSection states', () => {
   it('offers a first review when the conversation has none', () => {
@@ -81,8 +86,10 @@ describe('ReviewSection states', () => {
     const badge = screen.getByTestId('conversation-review-status')
     expect(badge).toHaveTextContent(value === 'queued' ? 'Queued' : 'Reviewing')
     expect(badge.querySelector('[data-slot="spinner"]')).not.toBeNull()
-    // Review stays enabled: it returns the open review, or reaps a dead one and queues anew
-    expect(screen.getByTestId('conversation-review-button')).toBeEnabled()
+    // Review waits on it: in the tab order, but inert
+    const button = screen.getByTestId('conversation-review-button')
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    expect(button).not.toHaveAttribute('disabled')
   })
 
   it('shows no failure copy for a queued review that carries a retried attempt\'s code', () => {
@@ -390,7 +397,7 @@ describe('ReviewSection polling', () => {
     await badgeReads('Reviewing')
   })
 
-  it('keeps focus on Review after it starts a review, and the button stays enabled', async () => {
+  it('keeps focus on Review after it starts a review, while it waits on that review', async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
     review.mockResolvedValue({ success: true, data: { reviewId: 'review-2', status: 'queued' } })
 
@@ -398,11 +405,51 @@ describe('ReviewSection polling', () => {
     const button = screen.getByTestId('conversation-review-button')
     await user.click(button)
     await badgeReads('Queued')
-    // The start has settled: the button is no longer busy
+    // The start has settled: the button is no longer busy, and waits on the queued review
     await waitFor(() => expect(button).not.toHaveAttribute('aria-busy'))
 
-    expect(button).toBeEnabled()
+    expect(button).toHaveAttribute('aria-disabled', 'true')
     expect(document.activeElement).toBe(button)
+  })
+
+  it('sends nothing while a review is queued or running, and Review keeps focus', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    render({ review: view({ status: 'queued', summary: null, completedAt: null }) })
+
+    const button = screen.getByTestId('conversation-review-button')
+    await user.tab()
+    expect(button).toHaveFocus()
+    await user.keyboard('{Enter}')
+    await user.click(button)
+
+    // No rate-limit point and no audit row for a review already on its way
+    expect(review).not.toHaveBeenCalled()
+    expect(button).toHaveFocus()
+  })
+
+  it('enables Review again once the review it waited on is done, and once a status check failed', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    review.mockResolvedValue({ success: true, data: { reviewId: 'review-2', status: 'queued' } })
+    getStatus.mockResolvedValueOnce(status('done'))
+
+    render({ review: view({ status: 'running', summary: null, completedAt: null }) })
+    const button = screen.getByTestId('conversation-review-button')
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    await advance(5_000)
+    await badgeReads('Reviewed')
+    expect(button).not.toHaveAttribute('aria-disabled')
+    await user.click(button)
+    expect(review).toHaveBeenCalledTimes(1)
+
+    // It waits on review-2 until a status check fails, and then it is the way to recover
+    await badgeReads('Queued')
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    getStatus.mockResolvedValueOnce({ success: false, code: 'INTERNAL', error: 'Could not read the review status' })
+    await advance(5_000)
+    await waitFor(() => expect(screen.getByTestId('conversation-review-status-error')).toBeInTheDocument())
+    expect(button).not.toHaveAttribute('aria-disabled')
+    await user.click(button)
+    expect(review).toHaveBeenCalledTimes(2)
   })
 
   it('announces the review\'s progress and its result in a status region', async () => {

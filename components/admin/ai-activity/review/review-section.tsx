@@ -146,6 +146,8 @@ interface ReviewSectionProps {
  * the review the status describes, so a new review never shows the last
  * one's summary, model or cost. While no review can start, a notice says why
  * in the present tense, and a failure with that same code is left to it.
+ * While a review is queued or running, Review keeps focus but sends nothing,
+ * until a status check fails.
  */
 export function ReviewSection({ conversationId, review, findings, hasToolEvidence, judgeConfigured, llmDisabled }: ReviewSectionProps) {
   const { showError } = useToast()
@@ -159,6 +161,9 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
   // A queued review can carry the code of a failed attempt BullMQ is retrying, so only a failed one shows it,
   // and not while the same code still blocks the section: the notice says so in the present tense
   const failure = status?.status === "failed" && (blocked === null || status.errorCode !== blocked) ? { code: status.errorCode } : null
+  // Review waits on a queued or running review: a press would only get it back, yet spend a rate-limit point and
+  // write an audit row. Once a status check fails it is the way to recover, as it reaps a dead review
+  const waiting = isPending(status) && !statusFailed
 
   const onRetry = (event: MouseEvent<HTMLButtonElement>) => {
     const button = event.currentTarget
@@ -197,7 +202,8 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
           size="sm"
           className="ml-auto"
           onClick={onReview}
-          disabled={blocked !== null}
+          disabled={blocked !== null || waiting}
+          focusableWhenDisabled={waiting}
           loading={isStarting}
           loadingLabel="Starting"
           data-testid="conversation-review-button"

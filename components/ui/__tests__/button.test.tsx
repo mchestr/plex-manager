@@ -102,6 +102,41 @@ describe("Button", () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
+  it("keeps a disabled button in the tab order with focusableWhenDisabled, ignoring clicks and keys", async () => {
+    const user = userEvent.setup()
+    const onClick = jest.fn()
+    render(
+      <Button disabled focusableWhenDisabled onClick={onClick}>
+        Go
+      </Button>
+    )
+
+    const button = screen.getByRole("button", { name: "Go" })
+    expect(button).not.toHaveAttribute("disabled")
+    expect(button).toHaveAttribute("aria-disabled", "true")
+    expect(button).not.toHaveAttribute("aria-busy")
+    await user.tab()
+    expect(button).toHaveFocus()
+
+    await user.keyboard("{Enter}")
+    await user.keyboard(" ")
+    await user.click(button)
+    expect(onClick).not.toHaveBeenCalled()
+    expect(button).toHaveFocus()
+  })
+
+  it("keeps a busy button focusable whatever focusableWhenDisabled says", () => {
+    render(
+      <Button loading loadingLabel="Saving" focusableWhenDisabled={false}>
+        Save
+      </Button>
+    )
+
+    const busy = screen.getByRole("button", { name: "Saving" })
+    expect(busy).not.toHaveAttribute("disabled")
+    expect(busy).toHaveAttribute("aria-disabled", "true")
+  })
+
   it("forwards data-testid and ref to the button", () => {
     const ref = createRef<HTMLButtonElement>()
     render(

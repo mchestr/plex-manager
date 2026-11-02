@@ -69,6 +69,13 @@ interface BaseButtonProps extends Omit<ButtonPrimitive.Props, "className"> {
   loading?: boolean
   /** The progressive label shown while loading, such as "Saving". */
   loadingLabel?: ReactNode
+  /**
+   * Keeps a disabled button in the tab order: it is `aria-disabled` and
+   * ignores clicks and keys but keeps focus, as a busy one does. For a button
+   * that is disabled only for a while, such as one waiting on a running job.
+   * Off by default; a busy button keeps focus either way.
+   */
+  focusableWhenDisabled?: boolean
 }
 
 /**
@@ -91,6 +98,7 @@ export function Button({
   icon,
   loading,
   loadingLabel,
+  focusableWhenDisabled = false,
   disabled,
   render,
   nativeButton,
@@ -108,7 +116,7 @@ export function Button({
       // Base UI gives a non-native button role="button"; a link stays a link.
       {...(nativeButton === false ? { role: undefined } : {})}
       disabled={disabled || busy}
-      focusableWhenDisabled={busy}
+      focusableWhenDisabled={busy || focusableWhenDisabled}
       aria-busy={busy || undefined}
       className={cn(buttonVariants({ variant, size }), className)}
       {...props}
