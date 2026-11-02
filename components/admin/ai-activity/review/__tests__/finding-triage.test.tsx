@@ -19,6 +19,13 @@ const save = jest.mocked(setFindingStatus)
 
 beforeEach(() => jest.clearAllMocks())
 
+/** Opens the status Select. Base UI keeps its popup inert (`pointer-events: none`) until it is open, so a click can't come sooner. */
+async function openStatus(user: ReturnType<typeof userEvent.setup>) {
+  const trigger = screen.getByTestId('finding-status-select-f1')
+  await user.click(trigger)
+  await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'true'))
+}
+
 describe('FindingTriage', () => {
   it('shows the stored status and note', () => {
     render(<FindingTriage findingId="f1" status="wont_fix" note="Known gap" />)
@@ -36,7 +43,7 @@ describe('FindingTriage', () => {
     save.mockResolvedValue({ success: true, data: null })
     render(<FindingTriage findingId="f1" status="open" note={null} />)
 
-    await user.click(screen.getByTestId('finding-status-select-f1'))
+    await openStatus(user)
     await user.click(await screen.findByTestId(`finding-status-option-${value}`))
 
     expect(save).toHaveBeenCalledTimes(1)
@@ -61,7 +68,7 @@ describe('FindingTriage', () => {
     save.mockResolvedValue({ success: false, code: 'NOT_FOUND', error: 'Finding not found.' })
     render(<FindingTriage findingId="f1" status="open" note={null} />)
 
-    await user.click(screen.getByTestId('finding-status-select-f1'))
+    await openStatus(user)
     await user.click(await screen.findByTestId('finding-status-option-fixed'))
 
     expect(save).toHaveBeenCalledWith({ findingId: 'f1', status: 'fixed' })
