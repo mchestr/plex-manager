@@ -21,7 +21,8 @@ const POLL_MS = 5_000
 
 type ReviewStatus = { reviewId: string; status: ConversationReviewStatus; errorCode: string | null }
 
-const isPending = (status: ReviewStatus | null | undefined) => status?.status === "queued" || status?.status === "running"
+const isPendingStatus = (value: ConversationReviewStatus | undefined) => value === "queued" || value === "running"
+const isPending = (status: ReviewStatus | null | undefined) => isPendingStatus(status?.status)
 const polling = (query: { state: { data?: ReviewStatus | null } }) => isPending(query.state.data)
 
 /**
@@ -31,7 +32,9 @@ const polling = (query: { state: { data?: ReviewStatus | null } }) => isPending(
  * `enabled` is a function of the query, so `setQueryData` after Review starts
  * the poll without an immediate call. A failed call is not retried and stops
  * the poll until the admin retries it. A refreshed page whose review is not
- * the cached one (another admin or the nightly sweep started it) reseeds it.
+ * the cached one (another admin or the nightly sweep started it) reseeds it,
+ * and so does one whose review finished while the cache still has it queued
+ * or running, as after a failed call or on a return to the page.
  */
 function useReviewStatus(conversationId: string, review: ReviewView | null) {
   const queryClient = useQueryClient()
@@ -56,7 +59,11 @@ function useReviewStatus(conversationId: string, review: ReviewView | null) {
   useEffect(() => {
     if (reviewId === undefined || reviewStatus === undefined) return
     const key = queryKeys.conversationReview(conversationId)
-    if (queryClient.getQueryData<ReviewStatus | null>(key)?.reviewId === reviewId) return
+    const cached = queryClient.getQueryData<ReviewStatus | null>(key)
+    // A finished review never goes back to pending, so the page's done or failed status is newer than a cached
+    // queued or running one for the same review, and a cached finished status is newer than a pending page
+    const newer = cached?.reviewId !== reviewId || (isPending(cached) && !isPendingStatus(reviewStatus))
+    if (!newer) return
     const seed: ReviewStatus = { reviewId, status: reviewStatus, errorCode: reviewErrorCode }
     queryClient.setQueryData<ReviewStatus | null>(key, seed)
   }, [queryClient, conversationId, reviewId, reviewStatus, reviewErrorCode])

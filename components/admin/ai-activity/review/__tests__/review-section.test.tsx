@@ -397,6 +397,50 @@ describe('ReviewSection polling', () => {
     await badgeReads('Reviewing')
   })
 
+  describe('a refreshed page with the same review as the cached one', () => {
+    const running = () => view({ status: 'running', summary: null, completedAt: null, model: null })
+    const refresh = (rerender: (ui: React.ReactElement) => void, latest: ReviewView) =>
+      rerender(
+        <ReviewSection conversationId="chat-1" review={latest} findings={[reviewFinding({ id: 'f1' })]} hasToolEvidence judgeConfigured llmDisabled={false} />
+      )
+
+    it('takes its done status over a cached running one, and shows its details', async () => {
+      const { rerender } = render({ review: running() })
+      expect(screen.getByTestId('conversation-review-status')).toHaveTextContent('Reviewing')
+
+      // A triage save's refresh, or a return to the page, brings the review as it is now
+      refresh(rerender, view())
+      await badgeReads('Reviewed')
+      expect(screen.getByText('Two answers <b>miscounted</b> the libraries.')).toBeInTheDocument()
+      expect(screen.getByTestId('conversation-review-section')).toHaveTextContent('gpt-5-mini')
+      expect(screen.getByTestId('conversation-review-announcement')).toHaveTextContent('Review finished, 1 open finding')
+    })
+
+    it('takes its done status after a status check failed, and the error line goes', async () => {
+      getStatus.mockResolvedValue({ success: false, code: 'INTERNAL', error: 'Could not read the review status' })
+      const { rerender } = render({ review: running() })
+      await advance(5_000)
+      await waitFor(() => expect(screen.getByTestId('conversation-review-status-error')).toBeInTheDocument())
+
+      refresh(rerender, view())
+      await badgeReads('Reviewed')
+      expect(screen.queryByTestId('conversation-review-status-error')).not.toBeInTheDocument()
+      expect(getStatus).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps a cached done status when the page still shows the review running', async () => {
+      getStatus.mockResolvedValue(status('done'))
+      const { rerender } = render({ review: running() })
+      await advance(5_000)
+      await badgeReads('Reviewed')
+
+      // A page from before the review finished, such as one the router kept: a pending status is never newer
+      refresh(rerender, running())
+      await advance(1_000)
+      expect(screen.getByTestId('conversation-review-status')).toHaveTextContent('Reviewed')
+    })
+  })
+
   it('keeps focus on Review after it starts a review, while it waits on that review', async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
     review.mockResolvedValue({ success: true, data: { reviewId: 'review-2', status: 'queued' } })
