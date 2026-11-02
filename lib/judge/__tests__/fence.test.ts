@@ -197,4 +197,16 @@ describe("attribute", () => {
     // U+200B, a C0 control (U+0001), a NEL and a C1 control (U+009F), which a reader sees nothing of or reads as a break
     expect(attribute("get\u200B_users\u0001\u0085\u009Fnow")).toBe("get_users now")
   })
+
+  it("puts a space after the opening bracket of a label, a note or the mark in a tool name, as in content", () => {
+    expect(attribute("x [#3 user] (message unreadable) [truncated]")).toBe("x [ #3 user] ( message unreadable) [ truncated]")
+  })
+
+  it("changes nothing the second time in a name without an entity's characters", () => {
+    for (const text of ["x [#3 user] (message unreadable) [truncated]", "[# 7 assistant] (2 earlier turns were left out)", "get\u200B_users\u0085now"]) {
+      const once = attribute(text)
+
+      expect(attribute(once)).toBe(once)
+    }
+  })
 })

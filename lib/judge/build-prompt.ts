@@ -50,7 +50,8 @@
  * their invisible characters (`stripInvisible`, `lib/judge/fence.ts`), then
  * go through `redactCredentials` (`lib/mcp/redact.ts`), and only then are
  * neutralised and cut. A tool's name is stripped and redacted the same way,
- * then written as an attribute (`attribute`):
+ * then written as an attribute (`attribute`), which applies the label, note
+ * and mark rules too:
  *
  * - a credential split by an invisible character (`pass`, U+00AD, `word=`)
  *   is found, where redacting first would miss it and the neutralising would
