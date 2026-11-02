@@ -8,5 +8,6 @@ describe("assistant source secrets", () => {
   it("are registered as encrypted at rest", () => {
     expect(ENCRYPTED_FIELDS.McpServer).toEqual(["authHeaderSecret"])
     expect(ENCRYPTED_FIELDS.KnowledgeSource).toEqual(["token"])
+    expect(ENCRYPTED_FIELDS.SkillSource).toEqual(["token"])
   })
 })
