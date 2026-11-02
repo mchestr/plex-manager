@@ -1,6 +1,6 @@
 /**
  * The BullMQ schedule of the nightly conversation review sweep: daily at
- * 03:17 in the server zone while `judgeNightlyEnabled` is on. Worker start
+ * `JUDGE_SWEEP_TIME` (03:17, `lib/judge/sweep-time.ts`) in the server zone while `judgeNightlyEnabled` is on. Worker start
  * and the settings save both call {@link ensureJudgeSchedule}; upserting the
  * same scheduler id keeps one schedule however many processes call it.
  * Without `REDIS_URL` there is no sweep, only manual reviews.
@@ -8,6 +8,7 @@
  * @module lib/judge/schedule
  */
 
+import { JUDGE_SWEEP_TIME } from "@/lib/judge/sweep-time"
 import { prisma } from "@/lib/prisma"
 import { removeScheduledJob, scheduleCronJob } from "@/lib/queue/client"
 import { JOB_TYPES } from "@/lib/queue/types"
@@ -19,7 +20,8 @@ const logger = createLogger("JUDGE_SCHEDULE")
 
 const SCHEDULER_ID = "judge-review-sweep"
 const SCHEDULER_TIMEOUT_MS = 5000
-const PATTERN = "17 3 * * *"
+const [SWEEP_HOUR, SWEEP_MINUTE] = JUDGE_SWEEP_TIME.split(":").map(Number)
+const PATTERN = `${SWEEP_MINUTE} ${SWEEP_HOUR} * * *`
 
 type JudgeScheduleResult = { ok: true; state: "scheduled" | "removed" | "no-redis" } | { ok: false; code: "TIMEOUT" | "FAILED" }
 

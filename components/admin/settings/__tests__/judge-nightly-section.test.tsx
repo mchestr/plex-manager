@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event"
 import { saveJudgeSettings } from "@/actions/admin/judge-settings"
 import { JudgeNightlySection, type JudgeSettings } from "@/components/admin/settings/sections/judge-nightly-section"
 import { SettingsEditProvider } from "@/components/ui/settings-edit-context"
+import { JUDGE_SWEEP_TIME } from "@/lib/judge/sweep-time"
 
 jest.mock("@/actions/admin/judge-settings", () => ({ saveJudgeSettings: jest.fn() }))
 
@@ -22,10 +23,10 @@ const mockSave = jest.mocked(saveJudgeSettings)
 
 const SAVED: JudgeSettings = { judgeNightlyEnabled: false, judgeSampleRate: 100, judgeMinTurns: 2, llmDailyCapJudgeUsd: 1 }
 
-function renderSection(saved: JudgeSettings = SAVED) {
+function renderSection(saved: JudgeSettings = SAVED, judgeConfigured = true) {
   return render(
     <SettingsEditProvider onDirtyChange={jest.fn()}>
-      <JudgeNightlySection saved={saved} />
+      <JudgeNightlySection saved={saved} judgeConfigured={judgeConfigured} />
     </SettingsEditProvider>
   )
 }
@@ -77,6 +78,53 @@ describe("JudgeNightlySection", () => {
 
     expect(screen.getByTestId("judge-daily-budget")).toHaveAccessibleDescription("Covers manual and nightly reviews. A review already running can finish past it.")
     expect(screen.getByTestId("judge-sample-rate")).toHaveTextContent("The sample rate applies to each changed conversation, each night.")
+  })
+
+  it("warns when nightly reviews are on but no conversation review model is set up, with a link to it", () => {
+    renderSection({ ...SAVED, judgeNightlyEnabled: true }, false)
+
+    expect(summaryRow("nightly")).toHaveTextContent(`On, at ${JUDGE_SWEEP_TIME} server time, but no conversation review model is set up.`)
+    expect(screen.getByRole("link", { name: "Set one up in AI settings, on the Conversation review tab" })).toHaveAttribute("href", "/admin/settings#ai")
+  })
+
+  it("gives no model warning while nightly reviews are off, or with a model", () => {
+    const { unmount } = renderSection(SAVED, false)
+    expect(summaryRow("nightly")).toHaveTextContent(/Off$/)
+    expect(summaryRow("nightly")).not.toHaveTextContent("model")
+    unmount()
+
+    renderSection({ ...SAVED, judgeNightlyEnabled: true }, true)
+    expect(summaryRow("nightly")).toHaveTextContent(/On, at 03:17 server time$/)
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+  })
+
+  it("says the sweep time from the schedule's one constant, in the summary and the toggle's hint", async () => {
+    const user = userEvent.setup()
+    renderSection({ ...SAVED, judgeNightlyEnabled: true })
+    expect(summaryRow("nightly")).toHaveTextContent(`On, at ${JUDGE_SWEEP_TIME} server time`)
+
+    await edit(user)
+    expect(screen.getByTestId("judge-nightly-toggle")).toHaveAccessibleDescription(
+      `At ${JUDGE_SWEEP_TIME}, server time, for conversations that changed since their last review.`
+    )
+  })
+
+  it("ties the sample rate's help text, and its error, to the Slider", async () => {
+    mockSave.mockResolvedValue({ success: false, code: "VALIDATION", error: "Invalid input", fieldErrors: { judgeSampleRate: ["Enter a whole percent"] } })
+    const user = userEvent.setup()
+    renderSection()
+
+    await edit(user)
+    const slider = screen.getByRole("slider", { name: "Sample rate" })
+    expect(slider).toHaveAccessibleDescription("The sample rate applies to each changed conversation, each night.")
+
+    slider.focus()
+    await user.keyboard("{ArrowLeft}")
+    await user.click(screen.getByTestId("settings-conversation-review-save"))
+    await screen.findByText("Enter a whole percent")
+    expect(screen.getByRole("slider", { name: "Sample rate" })).toHaveAccessibleDescription(
+      "The sample rate applies to each changed conversation, each night. Enter a whole percent"
+    )
   })
 
   it("rejects sample rate 101", async () => {

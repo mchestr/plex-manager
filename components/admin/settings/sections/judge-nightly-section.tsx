@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState, type ReactNode } from "react"
 
 import { saveJudgeSettings } from "@/actions/admin/judge-settings"
@@ -12,7 +13,9 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/toast"
 import { useSettingsForm } from "@/hooks/admin/use-settings-form"
+import { settingsSection } from "@/lib/admin/routes"
 import { useFormat } from "@/lib/format-context"
+import { JUDGE_SWEEP_TIME } from "@/lib/judge/sweep-time"
 
 const SECTION_ID = "conversation-review"
 
@@ -54,15 +57,29 @@ function invalidFields(values: Values): Partial<Record<FieldKey, string>> {
   }
 }
 
-/** The saved settings: the sweep on or off with its time, the rate, the minimum turns and the budget. */
-function JudgeSettingsSummary({ saved }: { saved: JudgeSettings }) {
+/**
+ * The saved settings: the sweep on or off with its time, the rate, the
+ * minimum turns and the budget. A sweep that is on without a conversation
+ * review model reviews nothing, so it says so and links to where the model
+ * is set (the AI provider section's Conversation review tab, which has no
+ * link of its own).
+ */
+function JudgeSettingsSummary({ saved, judgeConfigured }: { saved: JudgeSettings; judgeConfigured: boolean }) {
   const f = useFormat()
   const row = (key: string) => `settings-${SECTION_ID}-summary-${key}`
   const budget = saved.llmDailyCapJudgeUsd
   return (
     <SettingsSummary data-testid={`settings-${SECTION_ID}-summary`}>
       <SettingsSummaryRow label="Nightly review" data-testid={row("nightly")}>
-        {saved.judgeNightlyEnabled ? "On, at 03:17 server time" : "Off"}
+        {saved.judgeNightlyEnabled ? `On, at ${JUDGE_SWEEP_TIME} server time` : "Off"}
+        {saved.judgeNightlyEnabled && !judgeConfigured && (
+          <>
+            , but no conversation review model is set up.{" "}
+            <Link href={settingsSection("ai")} className="underline underline-offset-3" data-testid="settings-conversation-review-model-link">
+              Set one up in AI settings, on the Conversation review tab
+            </Link>
+          </>
+        )}
       </SettingsSummaryRow>
       <SettingsSummaryRow label="Sample rate" data-testid={row("sample-rate")}>
         {saved.judgeSampleRate}% of changed conversations a night
@@ -91,7 +108,16 @@ function JudgeSettingsSummary({ saved }: { saved: JudgeSettings }) {
  * the schedule, so that answer counts as saved: the section closes on the new
  * values and the toast says what is left to do.
  */
-export function JudgeNightlySection({ saved, footerMeta }: { saved: JudgeSettings; footerMeta?: ReactNode }) {
+export function JudgeNightlySection({
+  saved,
+  judgeConfigured,
+  footerMeta,
+}: {
+  saved: JudgeSettings
+  /** An active `judge` provider exists. */
+  judgeConfigured: boolean
+  footerMeta?: ReactNode
+}) {
   const toast = useToast()
   const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({})
   const [error, setError] = useState<string>()
@@ -155,7 +181,7 @@ export function JudgeNightlySection({ saved, footerMeta }: { saved: JudgeSetting
           setError(undefined)
         },
       }}
-      view={<JudgeSettingsSummary saved={saved} />}
+      view={<JudgeSettingsSummary saved={saved} judgeConfigured={judgeConfigured} />}
       footerMeta={footerMeta}
     >
       <div className="flex flex-col gap-6" data-testid="judge-settings">
@@ -172,7 +198,7 @@ export function JudgeNightlySection({ saved, footerMeta }: { saved: JudgeSetting
           <div className="flex flex-col">
             <Label htmlFor="judge-nightly">Review conversations every night</Label>
             <span id="judge-nightly-hint" className="text-label text-muted-foreground">
-              At 03:17, server time, for conversations that changed since their last review.
+              At {JUDGE_SWEEP_TIME}, server time, for conversations that changed since their last review.
             </span>
           </div>
         </div>
@@ -193,11 +219,18 @@ export function JudgeNightlySection({ saved, footerMeta }: { saved: JudgeSetting
             value={values.sampleRate}
             onValueChange={(value) => set({ sampleRate: Array.isArray(value) ? value[0] : value })}
             getAriaValueText={(_formatted, value) => `${value}%`}
+            aria-describedby={errors.sampleRate ? "judge-sample-rate-hint judge-sample-rate-error" : "judge-sample-rate-hint"}
             disabled={form.isPending}
             data-testid="judge-sample-rate-slider"
           />
-          <p className="text-label text-muted-foreground">The sample rate applies to each changed conversation, each night.</p>
-          {errors.sampleRate && <p className="text-ui text-destructive">{errors.sampleRate}</p>}
+          <p id="judge-sample-rate-hint" className="text-label text-muted-foreground">
+            The sample rate applies to each changed conversation, each night.
+          </p>
+          {errors.sampleRate && (
+            <p id="judge-sample-rate-error" className="text-ui text-destructive">
+              {errors.sampleRate}
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField name="judge-min-turns" label="Minimum turns" description="The fewest admin messages a conversation needs before a nightly review." error={errors.minTurns}>

@@ -161,6 +161,7 @@ export default async function SettingsPage() {
               judgeMinTurns: settings.config.judgeMinTurns,
               llmDailyCapJudgeUsd: settings.config.llmDailyCapJudgeUsd,
             }}
+            judgeConfigured={settings.judgeLLMProvider !== null}
             footerMeta={saved("judge")}
           />
           <AssistantSection sources={assistantSources} />

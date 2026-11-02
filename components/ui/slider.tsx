@@ -14,6 +14,8 @@ type SliderProps = Omit<SliderPrimitive.Root.Props<number>, "className" | "aria-
      * Required: a bare number rarely says what the value means.
      */
     getAriaValueText: (formattedValue: string, value: number) => string
+    /** Help text or an error for the thumb, by element id. */
+    "aria-describedby"?: string
     "data-testid"?: string
   }
 
@@ -29,6 +31,7 @@ export function Slider({
   getAriaValueText,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
   className,
   ...props
 }: SliderProps) {
@@ -47,6 +50,7 @@ export function Slider({
             data-slot="slider-thumb"
             aria-label={ariaLabel}
             aria-labelledby={ariaLabelledBy}
+            aria-describedby={ariaDescribedBy}
             getAriaValueText={(formatted, value) => getAriaValueText(formatted, value)}
             className={cn(
               "size-4.5 rounded-full border-2 border-primary-indicator bg-background",
