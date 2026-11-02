@@ -16,6 +16,7 @@ import { refreshView } from "@/lib/actions/invalidate"
 import { fail, ok } from "@/lib/actions/result"
 import { enqueueReview } from "@/lib/judge/enqueue"
 import { reviewJobState } from "@/lib/judge/job-state"
+import { reapIfStuck } from "@/lib/judge/stale"
 import { prisma } from "@/lib/prisma"
 import { enqueueFromRequest } from "@/lib/queue/request-path"
 import { JOB_TYPES } from "@/lib/queue/types"
@@ -64,18 +65,25 @@ export const reviewConversation = adminAction({
 
 /**
  * The status and error code of a conversation's latest review, or null when
- * it has none. Refreshes the page once the review is done or failed.
+ * it has none. A latest review past its limit (running for over 10 minutes,
+ * or queued for over 2 with its job lost) is reaped first and returned as
+ * failed with `STALE`, so a dead job never leaves the page waiting.
+ * Refreshes the page once the review is done or failed.
  */
 export const getConversationReviewStatus = adminAction({
   input: conversationInput,
   fallbackError: "Could not read the review status",
   handler: async ({ conversationId }) => {
-    const latest = await prisma.conversationReview.findFirst({
-      where: { conversationId },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, status: true, errorCode: true },
-    })
+    const readLatest = () =>
+      prisma.conversationReview.findFirst({
+        where: { conversationId },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, status: true, errorCode: true, startedAt: true, createdAt: true },
+      })
+    let latest = await readLatest()
     if (!latest) return ok(null)
+    if (await reapIfStuck(conversationId, latest, (jobId) => reviewJobState(jobId))) latest = (await readLatest()) ?? latest
+    // Only the conversation page's poller acts on this refresh: it stops at the first done or failed status, and MCP runs skip it (lib/actions/invalidate.ts)
     if (latest.status === "done" || latest.status === "failed") refreshView()
     return ok({ reviewId: latest.id, status: latest.status, errorCode: latest.errorCode })
   },
@@ -83,13 +91,15 @@ export const getConversationReviewStatus = adminAction({
 
 /**
  * Triages a finding: fixed, won't fix or false alarm records who closed it
- * and when; open clears both. A given note replaces the stored one (an empty
+ * and when; open clears both. Only a status change touches those fields and
+ * is audited, so a note saved without a status, or with the stored one, keeps
+ * who triaged it and when. A given note replaces the stored one (an empty
  * note clears it); without one the note is kept.
  */
 export const setFindingStatus = adminAction({
   input: z.object({
     findingId: z.string().min(1).max(100),
-    status: z.enum(["open", "fixed", "wont_fix", "false_alarm"]),
+    status: z.enum(["open", "fixed", "wont_fix", "false_alarm"]).optional(),
     note: z.string().max(1000).optional(),
   }),
   fallbackError: "Could not save the finding",
@@ -100,24 +110,25 @@ export const setFindingStatus = adminAction({
     })
     if (!finding) return fail("NOT_FOUND", "Finding not found.")
 
-    const closing = status !== "open"
-    const updated = await prisma.conversationFinding.updateMany({
-      where: { id: findingId },
-      data: {
-        status,
-        triagedById: closing ? userId : null,
-        triagedAt: closing ? new Date() : null,
-        ...(note !== undefined && { note: note === "" ? null : note }),
-      },
-    })
+    const triaged = status !== undefined && status !== finding.status ? status : undefined
+    const closing = triaged !== undefined && triaged !== "open"
+    const data = {
+      ...(triaged !== undefined && { status: triaged, triagedById: closing ? userId : null, triagedAt: closing ? new Date() : null }),
+      ...(note !== undefined && { note: note === "" ? null : note }),
+    }
+    if (Object.keys(data).length === 0) return ok(null)
+
+    const updated = await prisma.conversationFinding.updateMany({ where: { id: findingId }, data })
     if (updated.count === 0) return fail("NOT_FOUND", "Finding not found.")
 
-    logAuditEvent(AuditEventType.CONVERSATION_FINDING_TRIAGED, userId, {
-      findingId,
-      conversationId: finding.conversationId,
-      previousStatus: finding.status,
-      status,
-    })
+    if (triaged !== undefined) {
+      logAuditEvent(AuditEventType.CONVERSATION_FINDING_TRIAGED, userId, {
+        findingId,
+        conversationId: finding.conversationId,
+        previousStatus: finding.status,
+        status: triaged,
+      })
+    }
     refreshView()
     return ok(null)
   },

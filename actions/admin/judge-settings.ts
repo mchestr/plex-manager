@@ -22,7 +22,7 @@ import { configDiff } from "@/lib/security/config-diff"
  * Saves the conversation review settings: whether the nightly sweep runs
  * (at 03:17 in the server zone), the percent of changed conversations it
  * reviews each night (0 to 100), the fewest user messages a conversation
- * needs before it is reviewed (1 to 50), and the daily spend cap in USD for
+ * needs before it is reviewed (1 to 50), and the Daily budget in USD for
  * all judge reviews, manual and nightly (0 to 1000; 0 refuses every review).
  * Moves the nightly schedule, and answers `UPSTREAM_UNAVAILABLE` when the
  * settings saved but the job queue did not take the schedule.

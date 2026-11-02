@@ -23,6 +23,14 @@
  * never reaped. Every reap is a conditional `updateMany`, so a review that
  * moved on since the read is left alone.
  *
+ * ## The status poll
+ *
+ * The conversation page polls a pending review's status, and a dead one
+ * would keep it waiting. {@link reapIfStuck} lets the poll reap: only when
+ * the latest review is past its limit, after reading the job states, and in
+ * a short transaction that takes the conversation's row lock first, the
+ * order `enqueueReview` and `persistReview` keep.
+ *
  * @module lib/judge/stale
  */
 
@@ -92,4 +100,31 @@ export async function reapStaleReviews(
     reaped += queued.count
   }
   return reaped
+}
+
+type LatestReview = { status: string; startedAt: Date | null; createdAt: Date }
+
+/**
+ * Reaps a conversation's dead reviews when its latest one is past its limit
+ * (running for over 10 minutes, or queued for over 2 with its job missing or
+ * failed). Reads the job states before any transaction and opens one only
+ * when there is something to reap. True when it reaped.
+ */
+export async function reapIfStuck(
+  conversationId: string,
+  latest: LatestReview,
+  getJobState: (jobId: string) => Promise<ReadJobState>,
+  now = new Date()
+): Promise<boolean> {
+  const age = (since: Date | null) => (since === null ? 0 : now.getTime() - since.getTime())
+  const runningOver = latest.status === "running" && age(latest.startedAt) > RUNNING_LIMIT_MS
+  const queuedOver = latest.status === "queued" && age(latest.createdAt) > QUEUED_GRACE_MS
+  if (!runningOver && !queuedOver) return false
+  const jobStates = queuedOver ? await readQueuedJobStates(conversationId, getJobState) : new Map<string, ReadJobState>()
+  if (!runningOver && ![...jobStates.values()].some((state) => state === null || state === "failed")) return false
+  const reaped = await prisma.$transaction(async (tx) => {
+    await tx.chatConversation.updateMany({ where: { id: conversationId }, data: { reviewLockedAt: now } })
+    return reapStaleReviews(tx, conversationId, { jobStates, now })
+  })
+  return reaped > 0
 }

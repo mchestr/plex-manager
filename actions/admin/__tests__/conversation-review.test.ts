@@ -370,6 +370,70 @@ describe("getConversationReviewStatus", () => {
   })
 })
 
+describe("getConversationReviewStatus on a dead review", () => {
+  it("returns an 11-minute running review as failed STALE, and Review then queues a new review", async () => {
+    useReviews([{ id: "review-dead", status: "running", startedAt: minutesAgo(11), createdAt: minutesAgo(12) }])
+
+    await expect(getConversationReviewStatus({ conversationId: "conversation-1" })).resolves.toEqual({
+      success: true,
+      data: { reviewId: "review-dead", status: "failed", errorCode: "STALE" },
+    })
+    expect(rows.get("review-dead")).toMatchObject({ status: "failed", errorCode: "STALE" })
+    // The reap runs in a short transaction that takes the conversation's row lock first, as enqueueReview does
+    expect(events).toEqual(["tx:start", "tx:commit"])
+    const [lock] = prismaMock.chatConversation.updateMany.mock.invocationCallOrder
+    expect(lock).toBeLessThan(Math.min(...prismaMock.conversationReview.updateMany.mock.invocationCallOrder))
+    expect(refreshView).toHaveBeenCalledTimes(1)
+
+    await expect(reviewConversation({ conversationId: "conversation-1" })).resolves.toEqual({
+      success: true,
+      data: { reviewId: "review-new-1", status: "queued" },
+    })
+    expect(enqueueFromRequest).toHaveBeenCalledWith("judge:review", { reviewId: "review-new-1" })
+  })
+
+  it("reads a lost queued review's job state before the transaction and returns it failed STALE", async () => {
+    jest.mocked(withRequestPathQueue).mockImplementation((async (_label: string, fn: (queue: unknown) => Promise<unknown>) => {
+      const value = await fn({
+        getJobState: async (jobId: string) => {
+          events.push(`redis:${jobId}`)
+          // BullMQ's word for a job it does not have
+          return "unknown"
+        },
+      })
+      return { ok: true, value }
+    }) as never)
+    useReviews([{ id: "review-lost", status: "queued", createdAt: minutesAgo(3) }])
+
+    await expect(getConversationReviewStatus({ conversationId: "conversation-1" })).resolves.toEqual({
+      success: true,
+      data: { reviewId: "review-lost", status: "failed", errorCode: "STALE" },
+    })
+    expect(events).toEqual(["redis:judge-review-review-lost", "tx:start", "tx:commit"])
+  })
+
+  it("leaves a healthy review alone, with no Redis call and no transaction", async () => {
+    useReviews([
+      { id: "review-waiting", status: "queued", createdAt: minutesAgo(5), conversationId: "conversation-2" },
+      { id: "review-young", status: "queued", createdAt: minutesAgo(1) },
+    ])
+    await expect(getConversationReviewStatus({ conversationId: "conversation-1" })).resolves.toMatchObject({ data: { status: "queued" } })
+
+    useReviews([{ id: "review-running", status: "running", startedAt: minutesAgo(9), createdAt: minutesAgo(30) }])
+    await expect(getConversationReviewStatus({ conversationId: "conversation-1" })).resolves.toMatchObject({ data: { status: "running" } })
+
+    // A queued review past 2 minutes whose job is still waiting stays queued
+    useReviews([{ id: "review-waiting", status: "queued", createdAt: minutesAgo(5) }])
+    await expect(getConversationReviewStatus({ conversationId: "conversation-1" })).resolves.toMatchObject({
+      data: { reviewId: "review-waiting", status: "queued" },
+    })
+    // Its job state is read, and with nothing to reap no transaction opens
+    expect(events).toEqual(["redis:judge-review-review-waiting"])
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    expect(refreshView).not.toHaveBeenCalled()
+  })
+})
+
 describe("setFindingStatus", () => {
   const NOTE = "Checked the libraries by hand: there really are nine."
 
@@ -430,6 +494,63 @@ describe("setFindingStatus", () => {
       where: { id: "finding-1" },
       data: { status: "open", triagedById: null, triagedAt: null },
     })
+  })
+
+  it("a note save on a fixed finding keeps triagedAt and triagedById and writes no triage event", async () => {
+    prismaMock.conversationFinding.findUnique.mockResolvedValue(
+      buildConversationFinding({ status: "fixed", triagedById: "admin-2", triagedAt: minutesAgo(60 * 24 * 30) })
+    )
+
+    // No status at all, as the note's own button sends it
+    await expect(setFindingStatus({ findingId: "finding-1", note: NOTE })).resolves.toEqual({ success: true, data: null })
+    // The stored status again, as an MCP client might send it
+    await expect(setFindingStatus({ findingId: "finding-1", status: "fixed", note: "" })).resolves.toEqual({ success: true, data: null })
+
+    expect(prismaMock.conversationFinding.updateMany.mock.calls).toEqual([
+      [{ where: { id: "finding-1" }, data: { note: NOTE } }],
+      [{ where: { id: "finding-1" }, data: { note: null } }],
+    ])
+    expect(logAuditEvent).not.toHaveBeenCalled()
+    expect(refreshView).toHaveBeenCalledTimes(2)
+  })
+
+  it("a status change after a note-only save still records triage and audits it", async () => {
+    prismaMock.conversationFinding.findUnique.mockResolvedValue(buildConversationFinding({ status: "fixed", triagedById: "admin-2" }))
+
+    await setFindingStatus({ findingId: "finding-1", status: "false_alarm" })
+
+    expect(prismaMock.conversationFinding.updateMany).toHaveBeenCalledWith({
+      where: { id: "finding-1" },
+      data: { status: "false_alarm", triagedById: "admin-1", triagedAt: expect.any(Date) },
+    })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.CONVERSATION_FINDING_TRIAGED, "admin-1", {
+      findingId: "finding-1",
+      conversationId: "conversation-1",
+      previousStatus: "fixed",
+      status: "false_alarm",
+    })
+  })
+
+  it("the unchanged status with no note writes nothing", async () => {
+    prismaMock.conversationFinding.findUnique.mockResolvedValue(buildConversationFinding({ status: "wont_fix" }))
+
+    await expect(setFindingStatus({ findingId: "finding-1", status: "wont_fix" })).resolves.toEqual({ success: true, data: null })
+    expect(prismaMock.conversationFinding.updateMany).not.toHaveBeenCalled()
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
+  it("a finding deleted between the read and the write (updateMany matches 0) returns NOT_FOUND and writes no audit event", async () => {
+    prismaMock.conversationFinding.updateMany.mockResolvedValue({ count: 0 })
+
+    await expect(setFindingStatus({ findingId: "finding-1", status: "fixed" })).resolves.toEqual({
+      success: false,
+      code: "NOT_FOUND",
+      error: "Finding not found.",
+    })
+    expect(prismaMock.conversationFinding.findUnique).toHaveBeenCalledTimes(1)
+    expect(prismaMock.conversationFinding.updateMany).toHaveBeenCalledTimes(1)
+    expect(logAuditEvent).not.toHaveBeenCalled()
+    expect(refreshView).not.toHaveBeenCalled()
   })
 
   it("setFindingStatus calls refreshView and has no rate limit", async () => {
