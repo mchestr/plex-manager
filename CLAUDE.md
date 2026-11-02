@@ -15,7 +15,7 @@ A Next.js-based Plex management platform that combines server management tools, 
 - **Styling**: Tailwind CSS v4 with utility-first approach; primitives in `components/ui/` are built on Base UI (`@base-ui/react`)
 - **Animation**: Motion (`motion/react`)
 - **Charts**: Recharts, through `ChartCard`
-- **Jobs**: BullMQ on Redis (Rewind generation, Stripe access, watchlist sync, retention, last seen and the inactivity sweep)
+- **Jobs**: BullMQ on Redis (Rewind generation, Stripe access, watchlist sync, retention, last seen, the inactivity sweep, and conversation review with its nightly sweep)
 - **LLM**: Vercel AI SDK (OpenAI, Anthropic, Google and OpenAI-compatible servers)
 - **Validation**: Zod schemas for all inputs/responses
 - **Testing**: Jest + Testing Library + Playwright (E2E)
@@ -763,6 +763,10 @@ if (!result.ok) return { error: result.error.message } // TRUNCATED, REFUSAL, SC
   the same registry. Every surface that offers the assistant shows
   `getAssistantDisclosure()` (`lib/llm/assistant-disclosure.ts`): admins can
   review conversations, and the named provider processes them.
+- The conversation judge (`lib/judge/`) reviews admin assistant conversations
+  through `generateStructured` on the `judge` purpose's row, with its own daily
+  cap (`checkJudgeSpend` in `lib/judge/spend.ts`), apart from the assistant's
+  caps and the Rewind season spend.
 
 ### Stripe Subscriptions (Optional)
 
