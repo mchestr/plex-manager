@@ -12,8 +12,10 @@
  * 2. Load the messages (in stored order, each one's index its position), the
  *    owner's assistant prompt and tools as they are today, the findings
  *    already raised and the latest `done` review's `reviewedThrough`.
- * 3. Under the `judge-spend` lease: the judge cap, then the judge call (3
- *    minutes at most). `recordText` stays unset, so the usage row keeps no
+ * 3. Under the `judge-spend` lease: the last checks (`blockedBeforeCall`,
+ *    `lib/judge/guards.ts`: the run still holds its review, the conversation
+ *    has not ended, AI features are on), the judge cap, then the judge call
+ *    (3 minutes at most). `recordText` stays unset, so the usage row keeps no
  *    copy of the transcript.
  * 4. Verify the evidence, then persist (`persistReview`), with
  *    `reviewedThrough` the newest loaded message's `createdAt`.
@@ -25,7 +27,8 @@
  * | `LEASE_BUSY`                           | back to `queued`                            | re-delayed 30–90 s, no attempt spent |
  * | `PROVIDER`, `ABORTED`, earlier attempt | back to `queued` with the code              | throws, BullMQ retries |
  * | `PROVIDER`, `ABORTED`, last attempt    | `failed` with the code                      | throws               |
- * | any other code                         | `failed` with the code                      | completes            |
+ * | any other code, `LLM_DISABLED` included | `failed` with the code                     | completes            |
+ * | moved on before the call (`SUPERSEDED`) | as the ending, reap or new run left it     | completes, no call   |
  * | `ReviewSuperseded`                     | as the ending or the new run left it        | completes            |
  *
  * Only codes are stored or logged, never provider text, and the log lines
@@ -38,6 +41,7 @@ import { DelayedError, type Job } from "bullmq"
 
 import { getAdminAssistantContext } from "@/lib/chatbot/assistant"
 import { buildJudgePrompt, type JudgeMessage, type PriorFinding } from "@/lib/judge/build-prompt"
+import { blockedBeforeCall } from "@/lib/judge/guards"
 import { persistReview, ReviewSuperseded } from "@/lib/judge/persist"
 import { JUDGE_PROMPT_VERSION } from "@/lib/judge/prompts/v1"
 import { judgeOutputSchema } from "@/lib/judge/schema"
@@ -104,6 +108,8 @@ async function requeue(run: Run, errorCode?: string): Promise<void> {
 }
 
 async function judgeFailed(job: Job<ReviewPayload>, run: Run, code: string): Promise<void> {
+  // Whatever moved the review on has written it; this run writes nothing
+  if (code === "SUPERSEDED") return logger.info("Review moved on before its judge call; nothing was sent", { reviewId: run.id })
   logger.warn("Conversation review failed", { reviewId: run.id, code, attempt: job.attemptsMade + 1 })
   if (!RETRIED_CODES.has(code)) return markReviewFailed(run.id, code, run.runToken)
   const lastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 3)
@@ -131,6 +137,8 @@ export async function processConversationReview(job: Job<ReviewPayload>, token?:
   const prompt = buildJudgePrompt({ ...loaded, systemPrompt, tools })
   const called = await withJudgeLease(
     async () => {
+      const blocked = await blockedBeforeCall(run, review.conversationId)
+      if (blocked) return { ok: false as const, error: { code: blocked } }
       const spend = await checkJudgeSpend()
       if (!spend.ok) return { ok: false as const, error: { code: spend.code } }
       return generateStructured(

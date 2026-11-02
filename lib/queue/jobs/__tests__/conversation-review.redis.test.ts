@@ -133,6 +133,7 @@ describeRedis("conversation review job on BullMQ", (redisUrl) => {
     ] as never)
     prismaMock.chatConversation.findUnique.mockResolvedValue({ userId: "owner-1", user: { isAdmin: true, role: null } } as never)
     prismaMock.chatConversation.updateMany.mockResolvedValue({ count: 1 })
+    prismaMock.chatConversation.findFirst.mockResolvedValue({ id: "conversation-1" } as never)
     prismaMock.conversationFinding.findMany.mockResolvedValue([])
     prismaMock.config.findUnique.mockResolvedValue(buildConfig({ timezone: "UTC" }))
     prismaMock.lLMUsage.aggregate.mockResolvedValue({ _sum: { cost: 0 } } as never)

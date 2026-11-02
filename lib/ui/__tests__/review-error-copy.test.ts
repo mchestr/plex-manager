@@ -20,6 +20,7 @@ const CODES = [
   "ENDED",
   "JOB_FAILED",
   "ENQUEUE_FAILED",
+  "LLM_DISABLED",
 ]
 
 describe("reviewErrorCopy", () => {
@@ -33,9 +34,10 @@ describe("reviewErrorCopy", () => {
     expect(fallback.href).toBeUndefined()
   })
 
-  it("links NOT_CONFIGURED, and only it, to the AI settings", () => {
+  it("links NOT_CONFIGURED and LLM_DISABLED, and only them, to the AI settings", () => {
     expect(reviewErrorCopy("NOT_CONFIGURED").href).toBe("/admin/settings#ai")
-    expect(CODES.filter((code) => reviewErrorCopy(code).href !== undefined)).toEqual(["NOT_CONFIGURED"])
+    expect(reviewErrorCopy("LLM_DISABLED")).toEqual({ message: "AI features are turned off. Turn them on to review conversations.", href: "/admin/settings#ai" })
+    expect(CODES.filter((code) => reviewErrorCopy(code).href !== undefined)).toEqual(["NOT_CONFIGURED", "LLM_DISABLED"])
   })
 
   it("never echoes the code or other text it was given", () => {

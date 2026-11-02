@@ -17,7 +17,8 @@ import { mockReset } from "jest-mock-extended"
 import { buildConfig, buildConversationFinding } from "@/__tests__/helpers/factories"
 import { asAppTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { useReviewTable } from "@/__tests__/helpers/review-table"
-import type { LLMProvider } from "@/lib/generated/prisma/client"
+import { getAdminAssistantContext } from "@/lib/chatbot/assistant"
+import type { ConversationReview, LLMProvider } from "@/lib/generated/prisma/client"
 import { reapStaleReviews } from "@/lib/judge/stale"
 import type { StructuredDeps } from "@/lib/llm/generate-structured"
 import { lookupModel } from "@/lib/llm/models"
@@ -175,6 +176,7 @@ beforeEach(() => {
   prismaMock.chatConversationMessage.findMany.mockResolvedValue(MESSAGES as never)
   prismaMock.chatConversation.findUnique.mockResolvedValue({ userId: "owner-1", user: { isAdmin: true, role: null } } as never)
   prismaMock.chatConversation.updateMany.mockResolvedValue({ count: 1 })
+  prismaMock.chatConversation.findFirst.mockResolvedValue({ id: "conversation-1" } as never)
   prismaMock.conversationFinding.findMany.mockResolvedValue([])
   prismaMock.conversationFinding.findUnique.mockResolvedValue(null)
   prismaMock.conversationFinding.create.mockResolvedValue({} as never)
@@ -364,6 +366,52 @@ describe("processConversationReview", () => {
     await expect(run(fakeJob().job, deps)).resolves.toBeUndefined()
 
     expect(rows.get("review-1")).toMatchObject({ status: "failed", errorCode: "SCHEMA" })
+  })
+
+  it("AI features turned off after the review was queued fail it with LLM_DISABLED under the lease, before the spend check, and nothing is sent", async () => {
+    const rows = useReviewTable([{ id: "review-1", status: "queued" }])
+    const leaseHeldAtRead: boolean[] = []
+    prismaMock.config.findUnique.mockImplementation((async () => {
+      leaseHeldAtRead.push(store.leases.has("judge-spend"))
+      return buildConfig({ llmDisabled: true, llmDailyCapJudgeUsd: 1 })
+    }) as never)
+    const { deps, model } = judge()
+
+    await expect(run(fakeJob().job, deps)).resolves.toBeUndefined()
+
+    expect(rows.get("review-1")).toMatchObject({ status: "failed", errorCode: "LLM_DISABLED" })
+    // One Config read, the switch, while this run held judge-spend: the cap and its sum were never reached
+    expect(leaseHeldAtRead).toEqual([true])
+    expect(prismaMock.lLMUsage.aggregate).not.toHaveBeenCalled()
+    expect(deps.resolve).not.toHaveBeenCalled()
+    expect(model.doGenerateCalls).toHaveLength(0)
+  })
+
+  it.each([
+    ["an ending failed it with ENDED", (row: ConversationReview) => Object.assign(row, { status: "failed", errorCode: "ENDED" })],
+    ["a redelivered job took it over", (row: ConversationReview) => Object.assign(row, { runToken: row.runToken + 1 })],
+    ["its conversation ended", () => prismaMock.chatConversation.findFirst.mockResolvedValue(null)],
+  ])("a review that moved on before its judge call is not sent, and this run writes nothing: %s", async (_label, moveOn) => {
+    const rows = useReviewTable([{ id: "review-1", status: "queued" }])
+    let after: ConversationReview | undefined
+    // The context is read after the conversation and before the lease, so the change lands between the load and the call
+    jest.mocked(getAdminAssistantContext).mockImplementationOnce(async () => {
+      const row = rows.get("review-1")!
+      moveOn(row)
+      after = { ...row }
+      return { systemPrompt: "You are the admin assistant.", tools: [] }
+    })
+    const { deps, model } = judge()
+
+    await expect(run(fakeJob().job, deps)).resolves.toBeUndefined()
+
+    expect(model.doGenerateCalls).toHaveLength(0)
+    expect(deps.resolve).not.toHaveBeenCalled()
+    expect(prismaMock.lLMUsage.aggregate).not.toHaveBeenCalled()
+    expect(prismaMock.conversationFinding.create).not.toHaveBeenCalled()
+    expect(rows.get("review-1")).toEqual(after)
+    expect(prismaMock.conversationReview.findFirst).toHaveBeenCalledWith({ where: { id: "review-1", status: "running", runToken: 1 }, select: { id: true } })
+    expect(prismaMock.chatConversation.findFirst).toHaveBeenCalledWith({ where: { id: "conversation-1", endedAt: null }, select: { id: true } })
   })
 
   it("over cap fails with BUDGET_EXCEEDED and makes no LLM call", async () => {
