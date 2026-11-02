@@ -152,6 +152,8 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
             timestamp: Date.now(),
           },
         },
+        // No tool ran, so a stored null keeps meaning only "stored before the tool log existed"
+        toolLog: [],
       }
     }
 

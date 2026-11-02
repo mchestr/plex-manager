@@ -76,12 +76,16 @@ describe("runChatbotForUser result", () => {
     })
   })
 
-  it("answers that the assistant is off without a conversation or a tool log", async () => {
+  it("answers that the assistant is off without a conversation, with an empty tool log", async () => {
     prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: true }))
 
     const run = await runChatbotForUser({ userId: "user-1", messages, format: FORMAT })
 
-    expect(run).toEqual({ response: { success: true, message: expect.objectContaining({ content: expect.stringContaining("The assistant is off") }) } })
+    // No tool was called, so a stored copy would read "no tools", never "recorded before the tool log" (null)
+    expect(run).toEqual({
+      response: { success: true, message: expect.objectContaining({ content: expect.stringContaining("The assistant is off") }) },
+      toolLog: [],
+    })
     expect(prismaMock.chatConversation.create).not.toHaveBeenCalled()
   })
 })
