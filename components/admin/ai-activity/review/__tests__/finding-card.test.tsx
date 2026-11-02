@@ -72,8 +72,27 @@ describe('FindingCard', () => {
     expect(card).toHaveClass('scroll-mt-24')
     const title = screen.getByRole('heading', { name: 'Wrong fact' })
     expect(title).toHaveAttribute('id', 'finding-title-f1')
+    expect(screen.getByText('Message #3 (Assistant)')).toHaveAttribute('id', 'finding-message-label-f1')
     for (const testId of ['finding-status-select-f1', 'finding-note-f1', 'finding-note-save-f1']) {
-      expect(screen.getByTestId(testId)).toHaveAttribute('aria-describedby', 'finding-title-f1')
+      expect(screen.getByTestId(testId)).toHaveAttribute('aria-describedby', 'finding-title-f1 finding-message-label-f1')
+    }
+  })
+
+  it('tells apart the triage controls of two findings of the same type by the message each points at', () => {
+    render(
+      <>
+        <FindingCard finding={reviewFinding({ id: 'f1', message: { index: 3, role: 'assistant', content: 'You have 12 libraries.' } })} />
+        <FindingCard finding={reviewFinding({ id: 'f2', message: { index: 7, role: 'assistant', content: 'You have 4 users.' } })} />
+      </>
+    )
+
+    for (const [id, description] of [
+      ['f1', 'Wrong fact Message #3 (Assistant)'],
+      ['f2', 'Wrong fact Message #7 (Assistant)'],
+    ]) {
+      for (const testId of [`finding-status-select-${id}`, `finding-note-${id}`, `finding-note-save-${id}`]) {
+        expect(screen.getByTestId(testId)).toHaveAccessibleDescription(description)
+      }
     }
   })
 

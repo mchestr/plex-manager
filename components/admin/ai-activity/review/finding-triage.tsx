@@ -16,7 +16,7 @@ interface FindingTriageProps {
   findingId: string
   status: FindingStatus
   note: string | null
-  /** The id of the card's title, so each control says which finding it triages. */
+  /** The ids of the card's title and message label, so each control says which finding it triages. */
   describedBy: string
 }
 

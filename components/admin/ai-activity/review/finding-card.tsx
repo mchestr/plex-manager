@@ -29,11 +29,11 @@ function Field({ label, children }: { label: string; children: string }) {
  * the index the judge's prompt gave it (`[#7 assistant]`), so a claim citing
  * #7 matches. Clamped to 6 lines until expanded.
  */
-function FindingMessage({ findingId, message }: { findingId: string; message: ReviewFinding["message"] }) {
+function FindingMessage({ findingId, labelId, message }: { findingId: string; labelId: string; message: ReviewFinding["message"] }) {
   const [expanded, setExpanded] = useState(false)
   return (
     <div className="flex flex-col gap-1 rounded-md border bg-muted/40 p-3">
-      <p className="text-label text-muted-foreground">
+      <p id={labelId} className="text-label text-muted-foreground">
         Message #{message.index} ({MESSAGE_ROLE_LABEL[message.role]})
       </p>
       <p
@@ -60,12 +60,14 @@ function FindingMessage({ findingId, message }: { findingId: string; message: Re
  * One judge finding: type, severity, claim, evidence, suggestion and tool,
  * the message it points at, and its triage. Every judge field is plain text,
  * since it quotes conversations and tool output. The card is the target of
- * the Findings tab's `#finding-<id>` link, and its title describes the
- * triage controls, which every card repeats.
+ * the Findings tab's `#finding-<id>` link. Its title and message label
+ * describe the triage controls, which every card repeats, so two findings of
+ * one type still differ by the message each points at.
  */
 export function FindingCard({ finding }: { finding: ReviewFinding }) {
   const unverified = finding.evidenceCheck === "unverified"
   const titleId = `finding-title-${finding.id}`
+  const messageLabelId = `finding-message-label-${finding.id}`
   return (
     <Card id={`finding-${finding.id}`} className="scroll-mt-24" data-testid={`finding-card-${finding.id}`}>
       <CardHeader>
@@ -86,8 +88,8 @@ export function FindingCard({ finding }: { finding: ReviewFinding }) {
           <Field label="Suggestion">{finding.suggestion}</Field>
           {finding.tool && <Field label="Tool">{finding.tool}</Field>}
         </dl>
-        <FindingMessage findingId={finding.id} message={finding.message} />
-        <FindingTriage findingId={finding.id} status={finding.status} note={finding.note} describedBy={titleId} />
+        <FindingMessage findingId={finding.id} labelId={messageLabelId} message={finding.message} />
+        <FindingTriage findingId={finding.id} status={finding.status} note={finding.note} describedBy={`${titleId} ${messageLabelId}`} />
       </CardContent>
     </Card>
   )

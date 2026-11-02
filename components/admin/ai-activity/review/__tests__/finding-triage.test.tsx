@@ -168,12 +168,13 @@ describe('FindingTriage', () => {
     expect(trigger).toHaveFocus()
   })
 
-  it('ties the Select, the note and Save note to the card title', () => {
-    render(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="open" note={null} />)
+  it("ties the Select, the note and Save note to the card's title and message label", () => {
+    const describedBy = 'finding-title-f1 finding-message-label-f1'
+    render(<FindingTriage findingId="f1" describedBy={describedBy} status="open" note={null} />)
 
-    expect(screen.getByTestId('finding-status-select-f1')).toHaveAttribute('aria-describedby', 'finding-title-f1')
-    expect(screen.getByTestId('finding-note-f1')).toHaveAttribute('aria-describedby', 'finding-title-f1')
-    expect(screen.getByTestId('finding-note-save-f1')).toHaveAttribute('aria-describedby', 'finding-title-f1')
+    expect(screen.getByTestId('finding-status-select-f1')).toHaveAttribute('aria-describedby', describedBy)
+    expect(screen.getByTestId('finding-note-f1')).toHaveAttribute('aria-describedby', describedBy)
+    expect(screen.getByTestId('finding-note-save-f1')).toHaveAttribute('aria-describedby', describedBy)
   })
 
   it('triage calls setFindingStatus and shows the error toast on failure', async () => {
