@@ -30,12 +30,6 @@ export const ALLOWLIST = [
     rules: ['client-marker'],
     reason: 'Passes column cell renderers (functions) to DataTable, which the heuristic cannot see.',
   },
-  {
-    path: 'components/admin/ai-activity/review/finding-card.tsx',
-    rules: ['copy'],
-    reason:
-      'The conversation judge spec labels a finding\'s message "Message #N · <role>" (spec section 2); it goes when the spec changes that label.',
-  },
 ]
 
 /**

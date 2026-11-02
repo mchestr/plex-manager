@@ -25,7 +25,7 @@ function Field({ label, children }: { label: string; children: string }) {
 }
 
 /**
- * The message the finding points at, labelled "Message #7 · Assistant" with
+ * The message the finding points at, labelled "Message #7 (Assistant)" with
  * the index the judge's prompt gave it (`[#7 assistant]`), so a claim citing
  * #7 matches. Clamped to 6 lines until expanded.
  */
@@ -34,7 +34,7 @@ function FindingMessage({ findingId, message }: { findingId: string; message: Re
   return (
     <div className="flex flex-col gap-1 rounded-md border bg-muted/40 p-3">
       <p className="text-label text-muted-foreground">
-        Message #{message.index} · {MESSAGE_ROLE_LABEL[message.role]}
+        Message #{message.index} ({MESSAGE_ROLE_LABEL[message.role]})
       </p>
       <p
         className={cn("text-ui whitespace-pre-wrap wrap-anywhere text-foreground", !expanded && "line-clamp-6")}

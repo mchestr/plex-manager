@@ -36,12 +36,13 @@ describe('FindingCard', () => {
     expect(container.querySelector('strong')).toBeNull()
   })
 
-  it('finding card shows "Message #N · role" and the stored message as plain text clamped to 6 lines, and finding-message-toggle-<id> shows it in full', async () => {
+  it('finding card shows "Message #N (Role)" and the stored message as plain text clamped to 6 lines, and finding-message-toggle-<id> shows it in full', async () => {
     const user = userEvent.setup()
     const content = 'Line one\n**not bold**\n<a href="https://evil.example">x</a>\nfour\nfive\nsix\nseven'
     render(<FindingCard finding={reviewFinding({ id: 'f1', message: { index: 7, role: 'assistant', content } })} />)
 
-    expect(screen.getByText('Message #7 · Assistant')).toBeInTheDocument()
+    // The role in parentheses: the design system bans middots in copy
+    expect(screen.getByText('Message #7 (Assistant)')).toBeInTheDocument()
     const text = screen.getByTestId('finding-message-f1')
     expect(text.textContent).toBe(content)
     expect(text).toHaveClass('line-clamp-6')
@@ -60,7 +61,7 @@ describe('FindingCard', () => {
   it('labels a user message', () => {
     render(<FindingCard finding={reviewFinding({ id: 'f1', message: { index: 0, role: 'user', content: 'How many?' } })} />)
 
-    expect(screen.getByText('Message #0 · User')).toBeInTheDocument()
+    expect(screen.getByText('Message #0 (User)')).toBeInTheDocument()
   })
 
   it('is the target of a finding-<id> link, below the sticky header, and its triage controls name it', () => {

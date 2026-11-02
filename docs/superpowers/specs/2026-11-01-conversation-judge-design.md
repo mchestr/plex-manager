@@ -51,7 +51,7 @@ The rename is independent of the judge, so it lands first as its own PR. That ke
   - A review of a conversation with no recorded tool results (one from before the tool log) carries a "No tool evidence" badge.
   - With no active `judge` provider, the button is disabled and links to the LLM settings.
 - The page shows every finding of the conversation, unverified ones included, `verified` and `not_applicable` first. Each unverified card carries an "Unverified quote" badge. This is where an admin can still look at an unverified finding; counts everywhere else exclude them.
-- Each finding is a card: type, severity, claim, evidence, suggestion and tool, followed by the message it points at, shown inline: "Message #N · <role>" and the stored message text as plain text, clamped to 6 lines with a "Show full message" toggle. The page's transcript is the last LLM prompt (no message ids, cut to 4 KB, no answers), so it gets no markers or anchors. A `Select` sets the status (Open, Fixed, Won't fix, False alarm) and saves at once, with an optional `Textarea` note saved by its own button, both through `setFindingStatus`.
+- Each finding is a card: type, severity, claim, evidence, suggestion and tool, followed by the message it points at, shown inline: "Message #N (<role label>)" (a role in parentheses, since the design system bans middots in copy) and the stored message text as plain text, clamped to 6 lines with a "Show full message" toggle. The page's transcript is the last LLM prompt (no message ids, cut to 4 KB, no answers), so it gets no markers or anchors. A `Select` sets the status (Open, Fixed, Won't fix, False alarm) and saves at once, with an optional `Textarea` note saved by its own button, both through `setFindingStatus`.
 
 ### Settings
 
