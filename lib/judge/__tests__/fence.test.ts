@@ -3,22 +3,27 @@
  */
 
 /**
- * Neutralising content (`lib/judge/fence.ts`): format characters (`\p{Cf}`)
- * are removed before the rules run, so an invisible character cannot hide a
- * fence tag, label, mark or note from them, and neutralising twice changes
- * nothing.
+ * Invisible characters and neutralising (`lib/judge/fence.ts`): Unicode's
+ * format characters (`\p{Cf}`), its other default-ignorable code points and
+ * U+2800 are removed before the rules run, so an invisible character cannot
+ * hide a fence tag, label, mark or note from them, and neutralising twice
+ * changes nothing.
  */
 
 import { neutralise } from "../fence"
 
-const FORMAT_CHARACTERS = [
+const INVISIBLE_CHARACTERS = [
   ["U+200B", "\u200B"],
   ["U+2060", "\u2060"],
   ["U+00AD", "\u00AD"],
   ["U+202E", "\u202E"],
+  ["U+034F", "\u034F"],
+  ["U+FE0F", "\uFE0F"],
+  ["U+3164", "\u3164"],
+  ["U+2800", "\u2800"],
 ] as const
 
-/** Each place a format character can hide structure: the content with `{c}` where it goes, and what neutralising gives. */
+/** Each place an invisible character can hide structure: the content with `{c}` where it goes, and what neutralising gives. */
 const PLACES = [
   ["between < and a fence name", '<{c}tool_result tool="x">', '&lt;tool_result tool="x">'],
   ["between </ and a fence name", "</{c}transcript>", "<\\/transcript>"],
@@ -31,7 +36,7 @@ const PLACES = [
   ["after an omitted line's (", "({c}3 earlier turns were left out)", "( 3 earlier turns were left out)"],
 ] as const
 
-const CASES = FORMAT_CHARACTERS.flatMap(([name, char]) =>
+const CASES = INVISIBLE_CHARACTERS.flatMap(([name, char]) =>
   PLACES.map(([place, content, expected]) => [name, place, content.replaceAll("{c}", char), expected] as const)
 )
 
@@ -57,6 +62,13 @@ describe("neutralise", () => {
     const content = "a\uFEFFb\u202Ac\u2066d\u2069e\u200Df\u{E0041}g\u061Ch\u180Ei"
 
     expect(neutralise(content)).toBe("abcdefghi")
+  })
+
+  it("removes the other default-ignorable code points, and U+2800, the braille blank", () => {
+    // The combining grapheme joiner, variation selectors (one astral), Hangul fillers, Mongolian and Khmer ones, an unassigned one, then U+2800
+    const content = "a\u034Fb\uFE00c\u{E0100}d\u115Fe\u1160f\uFFA0g\u180Bh\u180Fi\u17B4j\u17B5k\u2065l\u2800m"
+
+    expect(neutralise(content)).toBe("abcdefghijklm")
   })
 
   it("leaves the neutralised forms as they are", () => {
