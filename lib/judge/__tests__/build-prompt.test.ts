@@ -104,6 +104,47 @@ describe("buildJudgePrompt", () => {
     expect(built.window).toEqual(new Set([0, 1]))
   })
 
+  describe("a newest turn its cut would leave too little of", () => {
+    // The whole review's probe: a question and an answer of about 1,800 characters, no tools
+    const QUESTION = "How many users are on the server right now? ".repeat(40)
+    const ANSWER = "There are nine users on the server right now. ".repeat(40)
+    const withPrompt = (turn: JudgeMessage[], length: number) =>
+      buildJudgePrompt({ messages: turn, systemPrompt: "x".repeat(length), tools: [], prior: [], previousReviewedThrough: null })
+    /** The longest system prompt the turn still fits beside. */
+    function longestFitting(turn: JudgeMessage[]) {
+      let low = 0
+      let high = CAP
+      while (low < high) {
+        const mid = Math.ceil((low + high) / 2)
+        if (withPrompt(turn, mid).window.has(1)) low = mid
+        else high = mid - 1
+      }
+      return low
+    }
+
+    it.each([115_773, 115_774, 115_775, 115_776, 115_777])("does not fit beside a system prompt of %i characters, which leaves each message a character or none", (length) => {
+      const built = withPrompt([message(0, QUESTION), message(1, ANSWER, [])], length)
+
+      expect(built.window.has(1)).toBe(false)
+      expect(built.sentMessageText.size).toBe(0)
+      expect(built.system.length + built.prompt.length).toBeLessThanOrEqual(CAP)
+    })
+
+    it.each([
+      ["both messages are long: each keeps 200 characters", QUESTION, [200, 200]],
+      ["a message is shorter than 200 characters: it stays whole, and the other keeps 200", "u".repeat(150), [150, 200]],
+    ])("fits until %s, and not one character of system prompt later", (_case, question, lengths) => {
+      const turn = [message(0, question), message(1, ANSWER, [])]
+      const longest = longestFitting(turn)
+
+      const kept = withPrompt(turn, longest)
+
+      expect([0, 1].map((index) => kept.sentMessageText.get(index)?.length)).toEqual(lengths)
+      expect(kept.prompt).toContain(`[#1 assistant]\n${ANSWER.slice(0, 200)}\n[truncated]\n`)
+      expect(withPrompt(turn, longest + 1).window.has(1)).toBe(false)
+    })
+  })
+
   it("records each message's text as it was sent: cut and neutralised", () => {
     const built = build([message(0, "q".repeat(200_000)), message(1, "Two [#3 user] streams.")])
 

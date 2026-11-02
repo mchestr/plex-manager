@@ -12,7 +12,12 @@
  * 2. the newest turn (a user message and its answers) whole. Only when it
  *    alone would pass the cap are its pieces (message text, tool args and
  *    results) cut: short ones stay whole and long ones are cut to one length
- *    (`fitSection`, `lib/judge/fit.ts`);
+ *    (`fitSection`, `lib/judge/fit.ts`). It fits only while each of its
+ *    messages keeps at least 200 characters, or all of a shorter one; its
+ *    tool args and results may be cut further. A newest turn that does not
+ *    fit is left out, and every earlier turn with it, so the window lacks
+ *    the newest message and the processor fails the review
+ *    (`PROMPT_TOO_LARGE`) rather than send a turn cut to nothing;
  * 3. the "Already raised" lines, while they fit with room kept for one more
  *    line that says how many of the rest were left out;
  * 4. earlier turns, newest first, with message text whole and each tool
@@ -118,7 +123,11 @@ type JudgePrompt = {
 export const PROMPT_CAP = 120_000
 const EARLIER_RESULT_LIMIT = 2_048
 
-type Drawn = { text: string; results: Map<number, string[]>; sent: Map<number, string> }
+/** The fewest characters each message of the newest turn keeps, or all of a shorter one; see "Budget" in the module comment. */
+const MESSAGE_FLOOR = 200
+
+/** A turn as drawn: `starved` when a message was cut below {@link MESSAGE_FLOOR}. */
+type Drawn = { text: string; results: Map<number, string[]>; sent: Map<number, string>; starved: boolean }
 
 const fenced = (tag: string, body: string) => `<${tag}>\n${body}\n</${tag}>`
 
@@ -137,7 +146,8 @@ const forJudge = (text: string, from?: { tool: true }) => neutralise(redact(stri
 
 function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, reviewed: boolean) {
   const label = `[#${message.index} ${message.role}]${reviewed ? ` ${NOTES.reviewed}` : ""}`
-  const content = message.content === null ? null : fit(forJudge(message.content))
+  const text = message.content === null ? null : forJudge(message.content)
+  const content = text === null ? null : fit(text)
   const lines = [label, content ? marked(content) : NOTES.unreadable]
   const results: string[] = []
   if (message.role === "assistant") {
@@ -151,7 +161,8 @@ function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, revie
       lines.push(`<tool_result tool="${attribute(call.tool)}" ok="${call.ok}">\nargs: ${args.text}\nresult: ${result.text}${cut ? `\n${TRUNCATED}` : ""}\n</tool_result>`)
     }
   }
-  return { text: lines.join("\n"), results, sent: content?.text ?? null }
+  const starved = text !== null && (content?.kept ?? 0) < Math.min(MESSAGE_FLOOR, text.length)
+  return { text: lines.join("\n"), results, sent: content?.text ?? null, starved }
 }
 
 /** A turn is a user message and the answers after it. */
@@ -167,10 +178,10 @@ function turnsOf(messages: JudgeMessage[]): JudgeMessage[][] {
 
 function drawContext(systemPrompt: string, tools: ChatTool[]) {
   const catalog = tools.map((tool) => `- ${tool.function.name}: ${tool.function.description}`).join("\n")
-  return (fit: Fit): Drawn => {
+  return (fit: Fit) => {
     const prompt = fenced("assistant_system_prompt", marked(fit(neutralise(systemPrompt))))
     const toolList = fenced("tool_catalog", marked(fit(neutralise(catalog))))
-    return { text: `The assistant's system prompt, as it is today:\n${prompt}\n\nThe assistant's tool catalog, as it is today:\n${toolList}`, results: new Map(), sent: new Map() }
+    return { text: `The assistant's system prompt, as it is today:\n${prompt}\n\nThe assistant's tool catalog, as it is today:\n${toolList}` }
   }
 }
 
@@ -189,13 +200,13 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
   const drawTurn = (turn: JudgeMessage[], resultLimit: number) => (fit: Fit): Drawn => {
     const results = new Map<number, string[]>()
     const sent = new Map<number, string>()
-    const parts = turn.map((message) => {
-      const drawn = drawMessage(message, fit, resultLimit, reviewed(message))
-      if (message.role === "assistant" && message.toolLog !== null) results.set(message.index, drawn.results)
-      if (drawn.sent !== null) sent.set(message.index, drawn.sent)
-      return drawn.text
+    const drawn = turn.map((message) => {
+      const one = drawMessage(message, fit, resultLimit, reviewed(message))
+      if (message.role === "assistant" && message.toolLog !== null) results.set(message.index, one.results)
+      if (one.sent !== null) sent.set(message.index, one.sent)
+      return one
     })
-    return { text: parts.join("\n\n"), results, sent }
+    return { text: drawn.map((one) => one.text).join("\n\n"), results, sent, starved: drawn.some((one) => one.starved) }
   }
 
   // The fixed text is charged first; each item below is charged with its separator ("\n\n" in the transcript, "\n" in the list)
@@ -207,7 +218,7 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
   const kept: { turn: JudgeMessage[]; drawn: Drawn }[] = []
   const newest = turns.at(-1)
   const newestDrawn = newest && fitSection(drawTurn(newest, Infinity), budget - 2)
-  if (newest && newestDrawn && newestDrawn.text.length + 2 <= budget) {
+  if (newest && newestDrawn && !newestDrawn.starved && newestDrawn.text.length + 2 <= budget) {
     kept.push({ turn: newest, drawn: newestDrawn })
     budget -= newestDrawn.text.length + 2
   }

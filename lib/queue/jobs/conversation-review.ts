@@ -12,11 +12,13 @@
  * 2. Load the messages (in stored order, each one's index its position), the
  *    owner's assistant prompt and tools as they are today, the findings
  *    already raised and the latest `done` review's `reviewedThrough`, and
- *    build the prompt. When the newest turn alone does not fit beside the
- *    assistant's prompt and catalog, the prompt's window lacks the newest
- *    message: the review fails with `PROMPT_TOO_LARGE` before the lease, so
- *    no call judges an empty transcript and no review is marked `done`
- *    through messages the judge never saw. Its warning logs, as numbers,
+ *    build the prompt. When the newest turn does not fit beside the
+ *    assistant's prompt and catalog, or fits only by cutting one of its
+ *    messages below 200 characters (or below its whole text, when shorter),
+ *    the prompt's window lacks the newest message: the review fails with
+ *    `PROMPT_TOO_LARGE` before the lease. So no call judges a newest turn
+ *    cut to nothing or nearly, and no review is marked `done` through
+ *    messages the judge saw too little of. Its warning logs, as numbers,
  *    what the judge's rules and the assistant's prompt and catalog took of
  *    the cap (`fixedChars`, as the builder measured it, and `promptCap`), so
  *    a catalog that fills the budget shows apart from a long turn.

@@ -7,21 +7,24 @@
  * draw (every piece empty and marked cut, plus a character each for the
  * neutralising after a cut) measures the section's fixed text, and the pieces
  * share the rest: short ones stay whole and long ones are cut to one length.
+ * Each piece says how many of its characters it kept, so the caller can turn
+ * down a section cut too far (the newest turn's floor,
+ * `lib/judge/build-prompt.ts`).
  *
  * @module lib/judge/fit
  */
 
 import { neutralise, TRUNCATED } from "@/lib/judge/fence"
 
-/** Takes a neutralised piece, cut to `limit` and to what is left of the section's budget. */
-export type Fit = (text: string, limit?: number) => { text: string; cut: boolean }
+/** Takes a neutralised piece, cut to `limit` and to what is left of the section's budget; `kept` is how many of its characters stayed. */
+export type Fit = (text: string, limit?: number) => { text: string; cut: boolean; kept: number }
 
 /** A cut can leave a partial closing tag at its end, so the kept text is neutralised again: at most one character longer. */
 export function fitWithin(budget: number, share = Infinity): Fit {
   return (text, limit = Infinity) => {
-    const room = Math.max(0, Math.min(limit, share, budget))
-    budget -= Math.min(text.length, room)
-    return text.length <= room ? { text, cut: false } : { text: neutralise(text.slice(0, room)), cut: true }
+    const kept = Math.min(text.length, Math.max(0, Math.min(limit, share, budget)))
+    budget -= kept
+    return kept === text.length ? { text, cut: false, kept } : { text: neutralise(text.slice(0, kept)), cut: true, kept }
   }
 }
 
@@ -43,7 +46,8 @@ function fairShare(sizes: number[], room: number): number {
 /**
  * Drawn whole when it fits in `budget`. Else a bare draw (every piece empty and
  * marked cut, plus a character each for the neutralising after a cut) measures
- * the fixed text, and the pieces share the rest. The caller checks it still fits.
+ * the fixed text, and the pieces share the rest. The caller checks it still
+ * fits, and whether its pieces kept enough.
  */
 export function fitSection<Drawn extends { text: string }>(draw: (fit: Fit) => Drawn, budget: number): Drawn {
   const whole = draw(fitWithin(Infinity))
@@ -51,7 +55,7 @@ export function fitSection<Drawn extends { text: string }>(draw: (fit: Fit) => D
   const sizes: number[] = []
   const bare = draw((text, limit = Infinity) => {
     sizes.push(Math.min(text.length, limit))
-    return { text: "", cut: true }
+    return { text: "", cut: true, kept: 0 }
   })
   const room = budget - bare.text.length - sizes.length
   return draw(fitWithin(room, fairShare(sizes, room)))

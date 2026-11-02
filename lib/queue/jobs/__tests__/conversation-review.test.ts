@@ -439,6 +439,29 @@ describe("processConversationReview", () => {
     expect(tooLargeWarning()?.fixedChars).toBeLessThanOrEqual(120_000)
   })
 
+  it.each([
+    ["about 100 characters", 115_575],
+    ["nothing", 115_775],
+  ])("a newest turn whose messages would each keep %s fails the review with PROMPT_TOO_LARGE, before the lease and the call", async (_kept, length) => {
+    const rows = useReviewTable([{ id: "review-1", status: "queued" }])
+    // The whole review's probe: two messages of about 1,800 characters beside a system prompt that leaves them less than 200 each
+    prismaMock.chatConversationMessage.findMany.mockResolvedValue([
+      { id: "m0", role: "user", content: "How many users are on the server right now? ".repeat(40), toolLog: null, createdAt: AT(0) },
+      { id: "m1", role: "assistant", content: "There are nine users on the server right now. ".repeat(40), toolLog: "[]", createdAt: AT(1) },
+    ] as never)
+    jest.mocked(getAdminAssistantContext).mockResolvedValueOnce({ systemPrompt: "x".repeat(length), tools: [] })
+    const acquire = jest.spyOn(store, "acquire")
+    const { deps, model } = judge()
+
+    await expect(run(fakeJob().job, deps)).resolves.toBeUndefined()
+
+    expect(rows.get("review-1")).toMatchObject({ status: "failed", errorCode: "PROMPT_TOO_LARGE", runToken: 1 })
+    expect(acquire).not.toHaveBeenCalled()
+    expect(deps.resolve).not.toHaveBeenCalled()
+    expect(model.doGenerateCalls).toHaveLength(0)
+    expect(prismaMock.conversationFinding.create).not.toHaveBeenCalled()
+  })
+
   it("a newest turn too long beside a short catalog logs a small fixedChars, so the turn shows as the cause", async () => {
     const rows = useReviewTable([{ id: "review-1", status: "queued" }])
     // A thousand calls in one turn: their tags alone pass the cap, however the text is cut
