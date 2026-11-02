@@ -13,7 +13,7 @@ import { AiSection } from "@/components/admin/settings/sections/ai-section"
 import type { SpendCaps } from "@/components/admin/settings/llm-spend-caps-form"
 import type { StoredLLMProvider } from "@/hooks/use-llm-provider-form"
 
-jest.mock("@/actions/admin/admin-llm-providers", () => ({ listLLMModels: jest.fn(), updateChatLLMProvider: jest.fn(), updateWrappedLLMProvider: jest.fn() }))
+jest.mock("@/actions/admin/admin-llm-providers", () => ({ listLLMModels: jest.fn(), updateChatLLMProvider: jest.fn(), updateWrappedLLMProvider: jest.fn(), updateJudgeLLMProvider: jest.fn() }))
 jest.mock("@/actions/admin/admin-config", () => ({ setLLMDisabled: jest.fn(), updateLlmCaps: jest.fn() }))
 
 const mockRefresh = jest.fn()
@@ -29,7 +29,7 @@ const mockUpdate = jest.mocked(updateLlmCaps)
 const CAPS: SpendCaps = { perUserUsd: 0.5, adminUsd: 5, serverUsd: 5 }
 
 function renderSection(caps: SpendCaps = CAPS, chat: StoredLLMProvider | null = null) {
-  return render(<AiSection chat={chat} wrapped={null} llmDisabled={false} caps={caps} health={{ status: "ok", code: null, checkedAt: null }} />)
+  return render(<AiSection chat={chat} wrapped={null} judge={null} llmDisabled={false} caps={caps} health={{ status: "ok", code: null, checkedAt: null }} />)
 }
 
 /** Lets a save, and the section's answer to it, finish. */

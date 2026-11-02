@@ -44,7 +44,8 @@ describe("getSettingsAuditMeta", () => {
     const calls = prismaMock.auditLog.findFirst.mock.calls.map(([args]) => args as unknown as FindFirstArgs)
     expect(calls.map(sectionsOf)).toEqual(
       expect.arrayContaining([
-        ["llm", "llm.chat", "llm.wrapped", "llm.caps"],
+        ["llm", "llm.chat", "llm.wrapped", "llm.judge", "llm.caps"],
+        ["judge"],
         ["discord"],
         ["stripe", "stripe.enabled"],
         ["sonarr", "radarr", "jellyfin", "jellyfin.login"],

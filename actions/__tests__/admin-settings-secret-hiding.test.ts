@@ -104,6 +104,23 @@ describe('getAdminSettings secret hiding', () => {
     expect(JSON.stringify(settings)).not.toContain('sk-wrapped-secret')
   })
 
+  it('strips the judge LLM API key and reads the judge provider by its purpose', async () => {
+    mockPrisma.lLMProvider.findFirst.mockImplementation(((args: { where: { purpose: string } }) =>
+      Promise.resolve(
+        args.where.purpose === 'judge'
+          ? { id: 'judge', provider: 'anthropic', purpose: 'judge', apiKey: 'sk-judge-secret-77ab', model: 'claude-sonnet-5-5', temperature: null, maxTokens: null, isActive: true }
+          : null
+      )) as never)
+
+    const settings = await getAdminSettings()
+
+    expect(mockPrisma.lLMProvider.findFirst).toHaveBeenCalledWith({ where: { isActive: true, purpose: 'judge' } })
+    expect(settings.judgeLLMProvider).not.toHaveProperty('apiKey')
+    expect(settings.judgeLLMProvider).toMatchObject({ secret: { last4: '77ab', origin: 'https://api.anthropic.com' }, model: 'claude-sonnet-5-5' })
+    expect(settings.chatLLMProvider).toBeNull()
+    expect(JSON.stringify(settings)).not.toContain('sk-judge-secret')
+  })
+
   it('strips the Plex token and server API keys, exposing last4 and the URL origin', async () => {
     mockPrisma.plexServer.findFirst.mockResolvedValue({ id: 'p', name: 'Plex', url: 'http://plex:32400', token: 'plex-token-secret', publicUrl: null, isActive: true })
     mockPrisma.tautulli.findFirst.mockResolvedValue({ id: 't', name: 'Tautulli', url: 'http://taut:8181', apiKey: 'taut-secret-0a91c', publicUrl: null, isActive: true })

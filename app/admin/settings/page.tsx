@@ -7,6 +7,7 @@ import { AssistantSection } from "@/components/admin/settings/sections/assistant
 import { AiSection } from "@/components/admin/settings/sections/ai-section"
 import { ChannelStatsSection } from "@/components/admin/settings/sections/channel-stats-section"
 import { DiscordSection } from "@/components/admin/settings/sections/discord-section"
+import { JudgeNightlySection } from "@/components/admin/settings/sections/judge-nightly-section"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
 import { PrivacySection } from "@/components/admin/settings/sections/privacy-section"
 import { RequestTiersSection } from "@/components/admin/settings/sections/request-tiers-section"
@@ -143,6 +144,7 @@ export default async function SettingsPage() {
           <AiSection
             chat={settings.chatLLMProvider}
             wrapped={settings.wrappedLLMProvider}
+            judge={settings.judgeLLMProvider}
             llmDisabled={settings.config.llmDisabled}
             caps={{
               perUserUsd: settings.config.llmDailyCapPerUserUsd,
@@ -151,6 +153,15 @@ export default async function SettingsPage() {
             }}
             health={health.ai}
             footerMeta={saved("ai")}
+          />
+          <JudgeNightlySection
+            saved={{
+              judgeNightlyEnabled: settings.config.judgeNightlyEnabled,
+              judgeSampleRate: settings.config.judgeSampleRate,
+              judgeMinTurns: settings.config.judgeMinTurns,
+              llmDailyCapJudgeUsd: settings.config.llmDailyCapJudgeUsd,
+            }}
+            footerMeta={saved("judge")}
           />
           <AssistantSection sources={assistantSources} />
         </SettingsGroup>

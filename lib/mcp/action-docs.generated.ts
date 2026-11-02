@@ -106,6 +106,7 @@ export const ACTION_DOCS: Readonly<Record<string, string>> = {
   updateDiscordIntegrationSettings: "Save the Discord integration (admin only). A blank client secret or bot token keeps the stored one: both go only to Discord, a fixed destination, so a kept secret cannot be redirected (P4.6's exception to SEC-31). The change is audited as `DISCORD_INTEGRATION_CONFIG_CHANGED` with `section: \"discord\"` and a redacted diff; secret values are never logged.",
   updateGlobalWatchlistSyncSettings: "Update global watchlist sync settings (admin only)",
   updateInactivitySettings: "Saves the switch and the threshold; audits the fields that changed.",
+  updateJudgeLLMProvider: "Update the conversation review (judge) LLM provider (admin only): the model that reviews admin assistant conversations, manually and nightly.",
   updateLlmCaps: "Set the assistant's daily spend caps (admin only): per member, per admin and for the whole server, in US dollars per server-zone day. `lib/llm/budget.ts` checks them before every assistant LLM call.",
   updateRewindSettings: "Saves the Rewind settings section (admin only, P7.12). The input is the whole section; only the fields that differ from the stored row are written, and one `CONFIG_CHANGED` entry (section `rewind`) lists them. A save with no change writes nothing.",
   updateRewindShare: "Changes what the member's live link publishes, keeping its URL.",
