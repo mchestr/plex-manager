@@ -13,6 +13,7 @@ import { QUEUE_NAME } from "./client"
 import { jobRequestId, runJobInContext } from "./job-meta"
 import { startRewindWorkers, stopRewindWorkers } from "./rewind-queues"
 import { JOB_TYPES } from "./types"
+import { willRetry } from "./will-retry"
 import { markReviewFailed } from "@/lib/judge/stale"
 import { onJobFailed } from "@/lib/observability/job-failures"
 import { createLogger } from "@/lib/utils/logger"
@@ -80,18 +81,16 @@ export async function startWorker(): Promise<void> {
 
   worker.on("failed", (job, error) => {
     onJobFailed(getRedisConnection(), QUEUE_NAME, job, error)
-    // BullMQ's own decision: it sets finishedOn only when it failed the job for good, an UnrecoverableError
-    // (a job stalled past maxStalledCount) included, whatever attemptsMade says
-    const willRetry = job !== undefined && job.finishedOn === undefined
     logger.error("Job failed", error, {
       jobId: job?.id,
       jobType: job?.name,
       requestId: job ? jobRequestId(job) : undefined,
       attempts: job?.attemptsMade,
       maxAttempts: job?.opts.attempts,
-      willRetry,
+      // BullMQ's own decision, whatever attemptsMade says (lib/queue/will-retry.ts)
+      willRetry: willRetry(job),
     })
-    if (job?.name === JOB_TYPES.CONVERSATION_REVIEW && !willRetry) failReviewAfterCrash(job)
+    if (job?.name === JOB_TYPES.CONVERSATION_REVIEW && !willRetry(job)) failReviewAfterCrash(job)
   })
 
   worker.on("error", (error) => {
