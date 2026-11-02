@@ -11,7 +11,8 @@
  * 1. the assistant's system prompt and catalog;
  * 2. the newest turn (a user message and its answers) whole. Only when it
  *    alone would pass the cap are its pieces (message text, tool args and
- *    results) cut: short ones stay whole and long ones are cut to one length;
+ *    results) cut: short ones stay whole and long ones are cut to one length
+ *    (`fitSection`, `lib/judge/fit.ts`);
  * 3. the "Already raised" lines, while they fit;
  * 4. earlier turns, newest first, with message text whole and each tool
  *    result cut to 2 KB, until one does not fit. It and every older turn are
@@ -33,6 +34,7 @@
  */
 
 import { attribute, NOTES, neutralise, omittedTurns, TRUNCATED } from "@/lib/judge/fence"
+import { type Fit, fitSection, fitWithin, marked } from "@/lib/judge/fit"
 import { JUDGE_SYSTEM_PROMPT } from "@/lib/judge/prompts/v1"
 import { type ToolLogEntry } from "@/lib/judge/tool-log"
 import { type ChatTool } from "@/lib/llm/chat"
@@ -73,50 +75,9 @@ type JudgePrompt = {
 const PROMPT_CAP = 120_000
 const EARLIER_RESULT_LIMIT = 2_048
 
-/** Takes a neutralised piece, cut to `limit` and to what is left of the section's budget. */
-type Fit = (text: string, limit?: number) => { text: string; cut: boolean }
 type Drawn = { text: string; results: Map<number, string[]> }
 
-/** A cut can leave a partial closing tag at its end, so the kept text is neutralised again: at most one character longer. */
-function fitWithin(budget: number, share = Infinity): Fit {
-  return (text, limit = Infinity) => {
-    const room = Math.max(0, Math.min(limit, share, budget))
-    budget -= Math.min(text.length, room)
-    return text.length <= room ? { text, cut: false } : { text: neutralise(text.slice(0, room)), cut: true }
-  }
-}
-
-const marked = ({ text, cut }: ReturnType<Fit>) => (cut ? `${text}\n${TRUNCATED}` : text)
 const fenced = (tag: string, body: string) => `<${tag}>\n${body}\n</${tag}>`
-
-/** The largest length to cut every piece to so that their sizes sum to at most `room`. */
-function fairShare(sizes: number[], room: number): number {
-  const sorted = [...sizes].sort((a, b) => a - b)
-  let left = room
-  for (const [i, size] of sorted.entries()) {
-    const share = Math.floor(left / (sorted.length - i))
-    if (size > share) return share
-    left -= size
-  }
-  return Infinity
-}
-
-/**
- * Drawn whole when it fits in `budget`. Else a bare draw (every piece empty and
- * marked cut, plus a character each for the escape after a cut) measures the
- * fixed text, and the pieces share the rest. The caller checks it still fits.
- */
-function fitSection(draw: (fit: Fit) => Drawn, budget: number): Drawn {
-  const whole = draw(fitWithin(Infinity))
-  if (whole.text.length <= budget) return whole
-  const sizes: number[] = []
-  const bare = draw((text, limit = Infinity) => {
-    sizes.push(Math.min(text.length, limit))
-    return { text: "", cut: true }
-  })
-  const room = budget - bare.text.length - sizes.length
-  return draw(fitWithin(room, fairShare(sizes, room)))
-}
 
 function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, reviewed: boolean) {
   const label = `[#${message.index} ${message.role}]${reviewed ? ` ${NOTES.reviewed}` : ""}`
