@@ -442,6 +442,10 @@ describe("JUDGE_SYSTEM_PROMPT", () => {
     "&lt;tool_result",
     "[ #7 assistant]",
     '"(message unreadable)"',
+    // Both neutralised tag forms (lib/judge/fence.ts), so a forged closing tag reads as content too
+    "an opening tag's < is shown as &lt;",
+    "a closing tag's </ as <\\/",
+    "<\\/transcript",
   ])("says %s", (phrase) => {
     expect(JUDGE_SYSTEM_PROMPT).toContain(phrase)
   })
