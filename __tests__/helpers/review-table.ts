@@ -6,7 +6,7 @@
  *
  * It understands the filters those writes use: equality, `null`, `{ in }`
  * and `{ lt }`, and the data `{ increment }`. `findMany` and `findFirst`
- * filter the same way; `findFirst` orders by one `desc` key.
+ * filter the same way and order by one `desc` key; `findMany` also takes `take`.
  */
 
 import type { ConversationReview } from '@/lib/generated/prisma/client'
@@ -17,6 +17,7 @@ import { prismaMock } from './prisma-mock'
 type Row = ConversationReview
 type Where = Record<string, unknown>
 type Data = Record<string, unknown>
+type Query = { where?: Where; orderBy?: Record<string, 'desc'>; take?: number; select?: Record<string, boolean> }
 
 function matchesField(value: unknown, condition: unknown): boolean {
   if (condition === null) return value === null
@@ -66,12 +67,17 @@ export function useReviewTable(seed: Array<Partial<Row>> = []): Map<string, Row>
     const row = rows.get(args.where.id)
     return row ? pick(row, args.select) : null
   }) as never)
-  delegate.findMany.mockImplementation((async (args: { where?: Where; select?: Record<string, boolean> } = {}) =>
-    [...rows.values()].filter((row) => matches(row, args.where)).map((row) => pick(row, args.select))) as never)
-  delegate.findFirst.mockImplementation((async (args: { where?: Where; orderBy?: Record<string, 'desc'>; select?: Record<string, boolean> } = {}) => {
+  const ordered = (args: Query) => {
     const [key] = Object.keys(args.orderBy ?? {}) as Array<keyof Row>
     const time = (row: Row) => (key ? ((row[key] as Date | null)?.getTime() ?? -Infinity) : 0)
-    const [first] = [...rows.values()].filter((row) => matches(row, args.where)).sort((a, b) => time(b) - time(a))
+    return [...rows.values()].filter((row) => matches(row, args.where)).sort((a, b) => time(b) - time(a))
+  }
+  delegate.findMany.mockImplementation((async (args: Query = {}) =>
+    ordered(args)
+      .slice(0, args.take)
+      .map((row) => pick(row, args.select))) as never)
+  delegate.findFirst.mockImplementation((async (args: Query = {}) => {
+    const [first] = ordered(args)
     return first ? pick(first, args.select) : null
   }) as never)
   return rows

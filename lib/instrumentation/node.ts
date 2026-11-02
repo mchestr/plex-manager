@@ -128,9 +128,11 @@ async function startQueueWorker() {
   const { ensureChannelStatsSchedule } = await import("@/lib/discord/channel-stats/schedule")
   const { ensureRequestTierSchedule } = await import("@/lib/request-tiers/schedule")
   const { ensureMemberActivitySchedule } = await import("@/lib/inactivity/schedule")
-  // The settings saves call the first two too, so a change applies without a
-  // restart; the member activity run is always scheduled. None of them throws.
-  await Promise.all([ensureChannelStatsSchedule(), ensureRequestTierSchedule(), ensureMemberActivitySchedule()])
+  const { ensureJudgeSchedule } = await import("@/lib/judge/schedule")
+  // The settings saves call all but the member activity one too, so a change
+  // applies without a restart; the member activity run is always scheduled.
+  // None of them throws.
+  await Promise.all([ensureChannelStatsSchedule(), ensureRequestTierSchedule(), ensureJudgeSchedule(), ensureMemberActivitySchedule()])
   await ensureWatchlistSchedule()
 }
 

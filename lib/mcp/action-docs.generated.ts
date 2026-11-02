@@ -70,6 +70,7 @@ export const ACTION_DOCS: Readonly<Record<string, string>> = {
   runMemberActivityNow: "Reads last seen from Tautulli now and, when the sweep is on, runs it. The run reads Tautulli again and removes no one when any member who qualifies then is not in `confirmedUserIds`, the members the admin confirmed in the dialog.",
   saveChatLLMProvider: "Saves the admin assistant's provider.",
   saveDiscordIntegration: "Saves the Discord integration. Its secrets go only to Discord, a fixed destination, so a blank field keeps the stored one (as in settings).",
+  saveJudgeSettings: "Saves the conversation review settings: whether the nightly sweep runs (at 03:17 in the server zone), the percent of changed conversations it reviews each night (0 to 100), the fewest user messages a conversation needs before it is reviewed (1 to 50), and the daily spend cap in USD for all judge reviews, manual and nightly (0 to 1000; 0 refuses every review). Moves the nightly schedule, and answers `UPSTREAM_UNAVAILABLE` when the settings saved but the job queue did not take the schedule.",
   saveKnowledgeSource: "Add or change a knowledge base source; the result says how many documents it found.",
   saveLLMProvider: "Saves the Rewind writer's provider.",
   saveMcpServer: "Add or change an MCP server.",
