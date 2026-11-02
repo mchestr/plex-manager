@@ -131,8 +131,8 @@ surface `conversation-findings`, with the filters only).
   instructions, and the server redacts credentials in them like every result.
 
 The judge's actions (`review_conversation`, `get_conversation_review_status`,
-`set_finding_status` and `save_judge_settings`) are action tools like any
-other. `review_conversation` keeps its `judge-review` rate limit, because it
+`set_finding_status`, `save_judge_settings` and `update_judge_llm_provider`)
+are action tools like any other. `review_conversation` keeps its `judge-review` rate limit, because it
 spends money.
 
 ## Context use
