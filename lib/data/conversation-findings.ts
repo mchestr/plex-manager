@@ -1,7 +1,8 @@
 /**
- * The conversation judge's reads, for the Findings tab, the conversation
- * page, the Calls badges and the `list_conversation_findings` MCP tool:
- * server-only, each admin-checked next to its data.
+ * The conversation judge's backlog reads, for the Findings tab and the
+ * `list_conversation_findings` MCP tool: server-only, each admin-checked next
+ * to its data. One conversation's review and the Calls badges are in
+ * `lib/data/conversation-review.ts`.
  *
  * ## Unverified findings
  *
@@ -9,12 +10,19 @@
  * (`lib/judge/verify.ts`). The list hides those by default (`hideUnverified`)
  * and says how many it hid; every count (the stat tiles, the grouped view and
  * the badges' "N open") leaves them out whatever that filter says, so the
- * numbers match the default list. Only the conversation page shows every
- * finding, unverified ones last.
+ * numbers match the default list.
  *
- * Judge text (claim, evidence, suggestion, note, summary) quotes conversations
- * and tool output, so its readers render it as plain text. No read here
- * selects a message's tool log.
+ * ## The range
+ *
+ * The list and the groups take the range on the finding's `createdAt`. The
+ * stat tiles read it as spec section 2 does ("Open, Fixed (in range) and
+ * False alarm rate"): Open is the whole open backlog, whatever the range, and
+ * Fixed and the false alarm rate count findings triaged (`triagedAt`) in it.
+ *
+ * Judge text (claim, evidence, suggestion, note) quotes conversations and tool
+ * output, so its readers render it as plain text. No read here selects a
+ * message's tool log. Listing findings is audited as `conversation-findings`,
+ * with the filters only, never finding text.
  *
  * @module lib/data/conversation-findings
  */
@@ -22,18 +30,9 @@
 import "server-only"
 
 import { assertAdmin } from "@/lib/admin"
-import type {
-  ConversationReviewStatus,
-  ConversationReviewTrigger,
-  EvidenceCheck,
-  EvidenceSource,
-  FindingSeverity,
-  FindingStatus,
-  FindingType,
-  Prisma,
-} from "@/lib/generated/prisma/client"
-import { REVIEWABLE_CONVERSATION } from "@/lib/judge/scope"
+import type { EvidenceCheck, EvidenceSource, FindingSeverity, FindingStatus, FindingType, Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import { auditMemberListed } from "@/lib/security/audit-log"
 import { dateRangeToInstants, type DayRange } from "@/lib/ui/date-range"
 
 export type FindingFilters = {
@@ -41,9 +40,9 @@ export type FindingFilters = {
   type?: FindingType
   severity?: FindingSeverity
   tool?: string
-  /** Default true: leave out `evidenceCheck: unverified` findings. */
+  /** Default true: leave out `evidenceCheck: unverified` findings. Counts leave them out whatever it says. */
   hideUnverified?: boolean
-  /** On the finding's `createdAt`, in the server zone. */
+  /** In the server zone: the finding's `createdAt`, except in {@link findingStats}. */
   range?: DayRange | null
 }
 
@@ -67,21 +66,8 @@ export type FindingRow = {
   triagedAt: Date | null
 }
 
-export type ReviewView = {
-  id: string
-  status: ConversationReviewStatus
-  errorCode: string | null
-  trigger: ConversationReviewTrigger
-  model: string | null
-  cost: number
-  reviewedThrough: Date | null
-  completedAt: Date | null
-  summary: string | null
-}
-
-export type ReviewBadge = { state: "none" | "clean" | "open" | "unverified_only"; open: number }
-
-const FINDING_SELECT = {
+/** Every column of a {@link FindingRow}, and nothing else. */
+export const FINDING_SELECT = {
   id: true,
   conversationId: true,
   messageId: true,
@@ -103,26 +89,46 @@ const FINDING_SELECT = {
 
 const VISIBLE = { evidenceCheck: { not: "unverified" } } satisfies Prisma.ConversationFindingWhereInput
 
-/** The filters other than `hideUnverified`; the range is in `zone`. */
-function filterWhere({ status, type, severity, tool, range }: FindingFilters, zone: string): Prisma.ConversationFindingWhereInput {
+/** The status, type, severity and tool filters (not `hideUnverified` or the range). */
+function filterWhere({ status, type, severity, tool }: FindingFilters): Prisma.ConversationFindingWhereInput {
   return {
     ...(status ? { status } : {}),
     ...(type ? { type } : {}),
     ...(severity ? { severity } : {}),
     ...(tool !== undefined ? { tool } : {}),
-    ...(range ? { createdAt: dateRangeToInstants(range, zone) } : {}),
   }
 }
 
-/** One page of findings, newest first, with the count matching and the unverified ones the other filters match. */
+/** The range on `field`, in `zone`; nothing without a range. */
+function inRange(field: "createdAt" | "triagedAt", range: DayRange | null | undefined, zone: string): Prisma.ConversationFindingWhereInput {
+  return range ? { [field]: dateRangeToInstants(range, zone) } : {}
+}
+
+/**
+ * One page of findings, newest first, with the count matching and the
+ * unverified ones the other filters match. Audited with the filters (enums,
+ * the flag, the tool name and the range's instants), never finding text.
+ */
 export async function listFindings(
   filters: FindingFilters,
   zone: string,
   { page, pageSize }: { page: number; pageSize: number }
 ): Promise<{ rows: FindingRow[]; total: number; hiddenUnverified: number }> {
-  await assertAdmin()
-  const base = filterWhere(filters, zone)
-  const where = (filters.hideUnverified ?? true) ? { AND: [base, VISIBLE] } : base
+  const session = await assertAdmin()
+  const hideUnverified = filters.hideUnverified ?? true
+  const window = filters.range ? dateRangeToInstants(filters.range, zone) : null
+  await auditMemberListed("conversation-findings", session.user.id, {
+    status: filters.status,
+    type: filters.type,
+    severity: filters.severity,
+    tool: filters.tool,
+    hideUnverified,
+    from: window?.gte.toISOString(),
+    to: window?.lt.toISOString(),
+  })
+
+  const base = { AND: [filterWhere(filters), inRange("createdAt", filters.range, zone)] }
+  const where = hideUnverified ? { AND: [base, VISIBLE] } : base
   const [rows, total, hiddenUnverified] = await Promise.all([
     prisma.conversationFinding.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: (page - 1) * pageSize, take: pageSize, select: FINDING_SELECT }),
     prisma.conversationFinding.count({ where }),
@@ -132,9 +138,10 @@ export async function listFindings(
 }
 
 /**
- * The open backlog by `(type, tool)`: open findings, the conversations they
- * are in and the newest, most open first. The status filter does not apply,
- * since every column counts open findings.
+ * The open backlog by `(type, tool)`: open findings created in the range, the
+ * conversations they are in and the newest, most open first. Every column
+ * counts open findings, so the status filter does not apply; unverified
+ * findings never count.
  */
 export async function groupFindings(
   filters: FindingFilters,
@@ -143,7 +150,7 @@ export async function groupFindings(
   await assertAdmin()
   const rows = await prisma.conversationFinding.groupBy({
     by: ["type", "tool", "conversationId"],
-    where: { AND: [filterWhere({ ...filters, status: "open" }, zone), VISIBLE] },
+    where: { AND: [filterWhere({ ...filters, status: "open" }), inRange("createdAt", filters.range, zone), VISIBLE] },
     _count: { _all: true },
     _max: { createdAt: true },
   })
@@ -158,99 +165,27 @@ export async function groupFindings(
   return [...groups.values()].sort((a, b) => b.open - a.open || b.latest.getTime() - a.latest.getTime())
 }
 
-/** The stat tiles: open and fixed findings, and false alarms over triaged ones (null with none triaged). The status filter does not apply. */
+/**
+ * The stat tiles, on the type, severity and tool filters (never the status
+ * filter, and never unverified findings):
+ *
+ * - `open`: every open finding, whatever the range.
+ * - `fixed`: findings fixed with `triagedAt` in the range, whenever created.
+ * - `falseAlarmRate`: false alarms over every triaged finding (fixed, won't
+ *   fix, false alarm) with `triagedAt` in the range; null with none.
+ */
 export async function findingStats(filters: FindingFilters, zone: string): Promise<{ open: number; fixed: number; falseAlarmRate: number | null }> {
   await assertAdmin()
-  const rows = await prisma.conversationFinding.groupBy({
-    by: ["status"],
-    where: { AND: [filterWhere({ ...filters, status: undefined }, zone), VISIBLE] },
-    _count: { _all: true },
-  })
-  const count = (status: FindingStatus) => rows.find((row) => row.status === status)?._count._all ?? 0
-  const triaged = count("fixed") + count("wont_fix") + count("false_alarm")
-  return { open: count("open"), fixed: count("fixed"), falseAlarmRate: triaged > 0 ? count("false_alarm") / triaged : null }
-}
-
-/**
- * A conversation's latest review (any status) with its cost, and every
- * finding with the stored message it points at (index, role and text),
- * unverified ones included and last. Messages go only when the conversation
- * ends, which deletes its findings too, so a finding without its message is
- * left out rather than shown without one.
- */
-export async function getConversationReview(conversationId: string): Promise<{
-  review: ReviewView | null
-  findings: Array<FindingRow & { message: { index: number; role: "user" | "assistant"; content: string } }>
-  hasToolEvidence: boolean
-  judgeConfigured: boolean
-  reviewable: boolean
-}> {
-  await assertAdmin()
-  const [latest, order, findings, toolTurns, judge, conversation] = await Promise.all([
-    prisma.conversationReview.findFirst({
-      where: { conversationId },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      select: { id: true, status: true, errorCode: true, trigger: true, model: true, reviewedThrough: true, completedAt: true, summary: true },
-    }),
-    // A message's index is its position in this order, the one the judge saw
-    prisma.chatConversationMessage.findMany({ where: { conversationId }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true } }),
-    prisma.conversationFinding.findMany({ where: { conversationId }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: FINDING_SELECT }),
-    prisma.chatConversationMessage.count({ where: { conversationId, role: "assistant", toolLog: { not: null } } }),
-    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "judge" }, select: { id: true } }),
-    prisma.chatConversation.findFirst({ where: { id: conversationId, ...REVIEWABLE_CONVERSATION }, select: { id: true } }),
-  ])
-
-  const messageIds = [...new Set(findings.flatMap((finding) => (finding.messageId ? [finding.messageId] : [])))]
-  const [usage, messages] = await Promise.all([
-    latest ? prisma.lLMUsage.aggregate({ where: { conversationReviewId: latest.id }, _sum: { cost: true } }) : null,
-    messageIds.length > 0
-      ? prisma.chatConversationMessage.findMany({ where: { conversationId, id: { in: messageIds } }, select: { id: true, role: true, content: true } })
-      : [],
-  ])
-
-  const indexOf = new Map(order.map((message, index) => [message.id, index]))
-  const byId = new Map(messages.map((message) => [message.id, message]))
-  const withMessages = findings.flatMap((finding) => {
-    const message = finding.messageId ? byId.get(finding.messageId) : undefined
-    const index = message ? indexOf.get(message.id) : undefined
-    return message && index !== undefined ? [{ ...finding, message: { index, role: message.role, content: message.content } }] : []
-  })
-  const unverified = (finding: FindingRow) => (finding.evidenceCheck === "unverified" ? 1 : 0)
-  withMessages.sort((a, b) => unverified(a) - unverified(b) || a.message.index - b.message.index)
-
-  return {
-    review: latest ? { ...latest, cost: usage?._sum.cost ?? 0 } : null,
-    findings: withMessages,
-    hasToolEvidence: toolTurns > 0,
-    judgeConfigured: judge !== null,
-    reviewable: conversation !== null,
-  }
-}
-
-/**
- * The Calls badge for each conversation: `none` without a finished review,
- * `open` with open findings that are verified or need no quote (counted),
- * `unverified_only` when every open finding is unverified, else `clean`.
- */
-export async function reviewBadgesFor(conversationIds: string[]): Promise<Map<string, ReviewBadge>> {
-  await assertAdmin()
-  if (conversationIds.length === 0) return new Map()
-  const [reviewed, open] = await Promise.all([
-    prisma.conversationReview.groupBy({ by: ["conversationId"], where: { conversationId: { in: conversationIds }, status: "done" } }),
+  const base = filterWhere({ ...filters, status: undefined })
+  const [open, triaged] = await Promise.all([
+    prisma.conversationFinding.count({ where: { AND: [base, { status: "open" }, VISIBLE] } }),
     prisma.conversationFinding.groupBy({
-      by: ["conversationId", "evidenceCheck"],
-      where: { conversationId: { in: conversationIds }, status: "open" },
+      by: ["status"],
+      where: { AND: [base, { status: { in: ["fixed", "wont_fix", "false_alarm"] } }, inRange("triagedAt", filters.range, zone), VISIBLE] },
       _count: { _all: true },
     }),
   ])
-  const done = new Set(reviewed.map((row) => row.conversationId))
-  return new Map(
-    conversationIds.map((id): [string, ReviewBadge] => {
-      if (!done.has(id)) return [id, { state: "none", open: 0 }]
-      const rows = open.filter((row) => row.conversationId === id)
-      const counted = rows.filter((row) => row.evidenceCheck !== "unverified").reduce((sum, row) => sum + row._count._all, 0)
-      if (counted > 0) return [id, { state: "open", open: counted }]
-      return [id, { state: rows.length > 0 ? "unverified_only" : "clean", open: 0 }]
-    })
-  )
+  const count = (status: FindingStatus) => triaged.find((row) => row.status === status)?._count._all ?? 0
+  const closed = count("fixed") + count("wont_fix") + count("false_alarm")
+  return { open, fixed: count("fixed"), falseAlarmRate: closed > 0 ? count("false_alarm") / closed : null }
 }

@@ -32,8 +32,10 @@
     "actions/admin/conversation-review.ts!",
     // the conversation review settings save (MCP sees it only through a namespace import); the settings page's Conversation review section is its first caller, drop this then
     "actions/admin/judge-settings.ts!",
-    // the judge's finding loaders (MCP's list_conversation_findings uses listFindings); the conversation page and the Findings tab are the others' first callers, drop this then
-    "lib/data/conversation-findings.ts!"
+    // the judge's backlog loaders (MCP's list_conversation_findings uses listFindings); the Findings tab is the others' first caller, drop this then
+    "lib/data/conversation-findings.ts!",
+    // the judge's per-conversation loaders; the conversation page (getConversationReview) and the Calls badges (reviewBadgesFor) are their first callers, drop this then
+    "lib/data/conversation-review.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",

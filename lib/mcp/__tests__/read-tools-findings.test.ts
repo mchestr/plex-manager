@@ -4,8 +4,9 @@
 
 /**
  * `list_conversation_findings`: admin only, unverified findings hidden by
- * default, a bounded limit, judge text returned as the same inert string,
- * credentials redacted on the way out, and never a tool log.
+ * default, a bounded limit, judge text returned as the same inert string and
+ * clipped so the default page fits the size cap, credentials redacted on the
+ * way out, and never a tool log.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -13,17 +14,24 @@ import type { Session } from "next-auth"
 
 import { buildConversationFinding } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { selected } from "@/__tests__/helpers/prisma-select"
 import { assertAdmin } from "@/lib/admin"
-import { getConversationReview } from "@/lib/data/conversation-findings"
+import { getConversationReview } from "@/lib/data/conversation-review"
 import type { ConversationFinding } from "@/lib/generated/prisma/client"
 import { REDACTED } from "@/lib/mcp/redact"
+import { MAX_RESULT_CHARS } from "@/lib/mcp/result-limit"
 import { llmReadTools } from "@/lib/mcp/read-tools-llm"
 import { handleMessage } from "@/lib/mcp/server"
 import type { McpTool } from "@/lib/mcp/types"
 
 jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
-jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), logAuditEvent: jest.fn() }))
+jest.mock("@/lib/security/audit-log", () => ({
+  ...jest.requireActual("@/lib/security/audit-log"),
+  logAuditEvent: jest.fn(),
+  auditMemberListed: jest.fn(),
+  auditMemberRead: jest.fn(),
+}))
 jest.mock("@/lib/brand", () => ({ serverName: jest.fn().mockResolvedValue("Northfield Plex") }))
 // The real tool behind the server's dispatch, under the catalog's admin rule
 jest.mock("@/lib/mcp/catalog", () => {
@@ -51,17 +59,14 @@ const stored = (overrides: Partial<ConversationFinding> = {}) => ({
   message: { id: "message-1", role: "assistant", content: "Twelve.", toolLog: JSON.stringify([{ tool: "get_libraries", args: "{}", result: SENTINEL, ok: true }]) },
 })
 
-/** What Prisma returns for a `select`: only the keys it names. */
-function selected<T extends Record<string, unknown>>(row: T, select: Record<string, unknown> | undefined): Partial<T> {
-  if (!select) return row
-  return Object.fromEntries(Object.entries(select).filter(([, on]) => on).map(([key]) => [key, row[key]])) as Partial<T>
-}
-
 function storeFindings(rows: ReturnType<typeof stored>[]) {
   prismaMock.conversationFinding.findMany.mockImplementation(((args: { select?: Record<string, unknown> }) =>
     Promise.resolve(rows.map((row) => selected(row, args.select)))) as never)
   prismaMock.conversationFinding.count.mockResolvedValue(rows.length)
 }
+
+const call = (args: Record<string, unknown> = {}) =>
+  handleMessage({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "list_conversation_findings", arguments: args } }, { tokenId: "tok-1", scope: "full", session: admin }, "req-1")
 
 const run = async (args: Record<string, unknown> = {}) => {
   const outcome = await tool().run(args, caller)
@@ -117,16 +122,53 @@ it("a finding claim containing </transcript> or a Markdown link passes through l
 it("list_conversation_findings output is redacted", async () => {
   storeFindings([stored({ evidence: "The grab used https://indexer.example/dl?apikey=0123456789abcdef0123 for the file." })])
 
-  const response = await handleMessage(
-    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "list_conversation_findings", arguments: {} } },
-    { tokenId: "tok-1", scope: "full", session: admin },
-    "req-1"
-  )
+  const response = await call()
 
   const text = JSON.stringify(response)
   expect(text).not.toContain("0123456789abcdef0123")
   expect(text).toContain(REDACTED)
   expect(text).toContain("https://indexer.example/dl?")
+})
+
+it("clips each text and reports its full length, so 20 findings at every field's cap fit the size cap", async () => {
+  // Prose, so nothing reads as a credential to redact
+  const prose = (chars: number) => "The tool said otherwise. ".repeat(Math.ceil(chars / 25)).slice(0, chars)
+  const atCap = Array.from({ length: 20 }, (_, n) =>
+    stored({
+      id: `cm${String(n).padStart(23, "0")}`,
+      conversationId: "c".repeat(25),
+      messageId: "m".repeat(25),
+      reviewId: "r".repeat(25),
+      claim: prose(2000),
+      evidence: prose(4000),
+      suggestion: prose(2000),
+      note: prose(1000),
+      tool: "t".repeat(100),
+      status: "false_alarm",
+      evidenceSource: "earlier_message",
+      seenCount: 99_999,
+      triagedAt: new Date(),
+    })
+  )
+  storeFindings(atCap)
+  prismaMock.conversationFinding.count.mockResolvedValue(99_999)
+
+  const response = await call()
+  const result = (response as { result: { content: Array<{ text: string }>; isError?: boolean } }).result
+  const text = result.content[0]?.text ?? ""
+
+  expect(text).not.toContain("RESULT_TOO_LARGE")
+  expect(text.length).toBeLessThanOrEqual(MAX_RESULT_CHARS)
+  const body = JSON.parse(text) as { success: boolean; data: { findings: Array<Record<string, unknown>> } }
+  expect(body.success).toBe(true)
+  expect(body.data.findings).toHaveLength(20)
+  expect(body.data.findings[0]).toMatchObject({ claimChars: 2000, claimTruncated: true, evidenceChars: 4000, evidenceTruncated: true, suggestionChars: 2000, suggestionTruncated: true, noteChars: 1000, noteTruncated: true })
+  expect(body.data.findings[0]?.claim).toBe(prose(2000).slice(0, (body.data.findings[0]?.claim as string).length))
+
+  // A short text comes back whole
+  storeFindings([stored({ claim: "Short.", note: null })])
+  const { body: short } = await run()
+  expect(short.data.findings[0]).toMatchObject({ claim: "Short.", claimChars: 6, claimTruncated: false, note: null, noteChars: 0, noteTruncated: false })
 })
 
 it("a tool log never reaches list_conversation_findings or getConversationReview", async () => {

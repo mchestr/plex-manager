@@ -316,9 +316,10 @@ export type MemberReadSurface =
   | "llm-conversation"
   | "rewind-history"
   | "chatbot-tautulli"
+  | "conversation-review"
 
 /** The admin pages that list many members' content. */
-export type MemberListSurface = "discord-activity" | "watchlist-history" | "affiliates"
+export type MemberListSurface = "discord-activity" | "watchlist-history" | "affiliates" | "conversation-findings"
 
 /** True the first time `key` is seen in the hour; a limiter failure counts as first, so a read is never lost. */
 async function firstThisHour(key: string): Promise<boolean> {

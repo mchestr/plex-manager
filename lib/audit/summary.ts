@@ -144,9 +144,11 @@ const SURFACES: Record<MemberReadSurface | MemberListSurface, string> = {
   "llm-conversation": "LLM conversation",
   "rewind-history": "Rewind history",
   "chatbot-tautulli": "Assistant Tautulli lookup",
+  "conversation-review": "Conversation review",
   "discord-activity": "Discord activity page",
   "watchlist-history": "Watchlist sync page",
   affiliates: "Affiliates page",
+  "conversation-findings": "Conversation findings",
 }
 
 function surface(details: Details): string | null {
