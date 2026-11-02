@@ -112,8 +112,6 @@ async function getSystemPrompt(
  * The admin assistant's system prompt and tools as `owner` gets them today, for
  * the conversation judge: a Support owner's smaller toolset and scope section
  * included. `format` defaults to the server zone and locale.
- *
- * @internal Only the tests call it until the judge's review job does; drop the tag then.
  */
 export async function getAdminAssistantContext(
   owner: PermissionSubject,

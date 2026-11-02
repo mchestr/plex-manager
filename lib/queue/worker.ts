@@ -5,13 +5,15 @@
  * Uses a dispatcher pattern to route jobs to appropriate handlers.
  */
 
-import { Worker, Job } from "bullmq"
+import { DelayedError, Worker, Job } from "bullmq"
 import { closeWorker } from "./close-worker"
 import { getRedisConnection } from "./connection"
 import { getJobProcessor, getRegisteredJobTypes } from "./jobs"
 import { QUEUE_NAME } from "./client"
 import { jobRequestId, runJobInContext } from "./job-meta"
 import { startRewindWorkers, stopRewindWorkers } from "./rewind-queues"
+import { JOB_TYPES } from "./types"
+import { markReviewFailed } from "@/lib/judge/stale"
 import { onJobFailed } from "@/lib/observability/job-failures"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -55,7 +57,7 @@ export async function startWorker(): Promise<void> {
   worker = new Worker(
     QUEUE_NAME,
     // Each job's log lines carry the id of the request that queued it
-    (job: Job) => runJobInContext(job, () => processJob(job)),
+    (job: Job, token?: string) => runJobInContext(job, () => processJob(job, token)),
     {
       connection: getRedisConnection(),
       concurrency,
@@ -87,6 +89,7 @@ export async function startWorker(): Promise<void> {
       maxAttempts: job?.opts.attempts,
       willRetry,
     })
+    if (job?.name === JOB_TYPES.CONVERSATION_REVIEW && !willRetry) failReviewAfterCrash(job)
   })
 
   worker.on("error", (error) => {
@@ -109,8 +112,20 @@ export async function startWorker(): Promise<void> {
   logger.info("Queue worker started", { concurrency })
 }
 
-/** Runs one `plex-wrapped` job through its registered processor. */
-async function processJob(job: Job): Promise<unknown> {
+/**
+ * The crash fallback for a review whose job failed its last attempt: a review
+ * still `queued` or `running` becomes `failed`, keeping a code the run stored
+ * and writing `JOB_FAILED` only when there is none.
+ */
+function failReviewAfterCrash(job: Job): void {
+  const { reviewId } = job.data as { reviewId: string }
+  markReviewFailed(reviewId, "JOB_FAILED").catch((error: unknown) => {
+    logger.error("Could not mark the review failed", error, { reviewId })
+  })
+}
+
+/** Runs one `plex-wrapped` job through its registered processor, with the lock token a re-delay needs. */
+async function processJob(job: Job, token?: string): Promise<unknown> {
   const startTime = Date.now()
   const processor = getJobProcessor(job.name)
 
@@ -129,7 +144,7 @@ async function processJob(job: Job): Promise<unknown> {
   })
 
   try {
-    const result = await processor(job)
+    const result = await processor(job, token)
     logger.debug("Job processed successfully", {
       jobId: job.id,
       jobType: job.name,
@@ -137,6 +152,8 @@ async function processJob(job: Job): Promise<unknown> {
     })
     return result
   } catch (error) {
+    // A re-delay (moveToDelayed), not a failure: BullMQ waits the job without spending an attempt
+    if (error instanceof DelayedError) throw error
     logger.error("Job processing failed", error, {
       jobId: job.id,
       jobType: job.name,

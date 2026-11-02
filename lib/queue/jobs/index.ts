@@ -14,6 +14,7 @@ import { getRetentionProcessor } from "./retention"
 import { getSecretsProcessor } from "./secrets"
 import { getCommunityStatsProcessor } from "./community-stats"
 import { getMemberActivityProcessor } from "./member-activity"
+import { getConversationReviewProcessor } from "./conversation-review"
 
 /**
  * Job processor function type
@@ -63,6 +64,11 @@ export function getJobProcessor(jobType: string): JobProcessor | null {
   const memberActivityProcessor = getMemberActivityProcessor(jobType)
   if (memberActivityProcessor) {
     return memberActivityProcessor
+  }
+
+  const conversationReviewProcessor = getConversationReviewProcessor(jobType)
+  if (conversationReviewProcessor) {
+    return conversationReviewProcessor
   }
 
   // Add more processor lookups here as new job types are added

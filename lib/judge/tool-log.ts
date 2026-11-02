@@ -60,11 +60,7 @@ export function serializeToolLog(entries?: ToolLogEntry[]): string | null {
   return entries === undefined ? null : JSON.stringify(entries)
 }
 
-/**
- * A stored log, or null when it is missing (a turn from before the tool log), no longer decrypts or is not a log.
- *
- * @internal Only the tests read it until the judge's review job does; drop the tag then.
- */
+/** A stored log, or null when it is missing (a turn from before the tool log), no longer decrypts or is not a log. */
 export function parseToolLog(text: string | null): ToolLogEntry[] | null {
   if (text === null) return null
   try {
