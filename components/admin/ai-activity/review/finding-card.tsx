@@ -7,23 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { FindingRow } from "@/lib/data/conversation-findings"
-import type { FindingSeverity, FindingType } from "@/lib/generated/prisma/client"
+import { FINDING_SEVERITY_LABEL, FINDING_TYPE_LABEL } from "@/lib/ui/finding-labels"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 
 /** A finding as `getConversationReview` returns it, with the stored message it points at. */
 export type ReviewFinding = FindingRow & { message: { index: number; role: "user" | "assistant"; content: string } }
-
-const TYPE_LABEL: Record<FindingType, string> = {
-  wrong_fact: "Wrong fact",
-  unsupported_claim: "Unsupported claim",
-  missing_capability: "Missing capability",
-  wrong_tool: "Wrong tool",
-  unneeded_refusal: "Unneeded refusal",
-  misread_question: "Misread question",
-}
-
-const SEVERITY_LABEL: Record<FindingSeverity, string> = { low: "Low", medium: "Medium", high: "High" }
 
 /** One labelled field of the finding, its text kept as written. */
 function Field({ label, children }: { label: string; children: string }) {
@@ -77,8 +66,8 @@ export function FindingCard({ finding }: { finding: ReviewFinding }) {
   return (
     <Card data-testid={`finding-card-${finding.id}`}>
       <CardHeader>
-        <CardTitle>{TYPE_LABEL[finding.type]}</CardTitle>
-        <CardDescription>{SEVERITY_LABEL[finding.severity]} severity</CardDescription>
+        <CardTitle>{FINDING_TYPE_LABEL[finding.type]}</CardTitle>
+        <CardDescription>{FINDING_SEVERITY_LABEL[finding.severity]} severity</CardDescription>
         {unverified && (
           <CardAction>
             <Badge variant="warning" icon={icons.warning} data-testid={`finding-unverified-${finding.id}`}>

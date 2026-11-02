@@ -39,7 +39,8 @@ export type FindingFilters = {
   status?: FindingStatus
   type?: FindingType
   severity?: FindingSeverity
-  tool?: string
+  /** A tool name, or null for findings that name no tool. */
+  tool?: string | null
   /** Default true: leave out `evidenceCheck: unverified` findings. Counts leave them out whatever it says. */
   hideUnverified?: boolean
   /** In the server zone: the finding's `createdAt`, except in {@link findingStats}. */

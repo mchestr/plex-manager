@@ -8,13 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/toast"
 import type { FindingStatus } from "@/lib/generated/prisma/client"
+import { FINDING_STATUS_LABEL, labelOptions } from "@/lib/ui/finding-labels"
 
-const STATUS_ITEMS: Array<{ value: FindingStatus; label: string }> = [
-  { value: "open", label: "Open" },
-  { value: "fixed", label: "Fixed" },
-  { value: "wont_fix", label: "Won't fix" },
-  { value: "false_alarm", label: "False alarm" },
-]
+const STATUS_ITEMS = labelOptions(FINDING_STATUS_LABEL)
 
 interface FindingTriageProps {
   findingId: string

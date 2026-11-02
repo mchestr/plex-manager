@@ -8,6 +8,8 @@
 
 import type { Route } from "next"
 
+import type { FindingSeverity, FindingStatus, FindingType } from "@/lib/generated/prisma/client"
+
 const seg = encodeURIComponent
 
 /** The user detail page's tabs (P10.6); `overview` is the default and leaves the URL bare. */
@@ -29,14 +31,38 @@ export function playgroundFor(userId: string): Route {
   return `/admin/rewind/playground?subject=${seg(userId)}` as Route
 }
 
-/**
- * AI activity, filtered to a member, a Rewind year and an inclusive day range
- * (`YYYY-MM-DD` in the server zone) when given.
- */
-export function aiActivity({ userId, year, from, to }: { userId?: string; year?: number; from?: string; to?: string } = {}): Route {
+/** The AI activity page's URL state: the Calls filters, the Findings tab and its filters, and the shared range. */
+export interface AiActivityFilters {
+  userId?: string
+  year?: number
+  /** A Calls purpose (`LLM_PURPOSES`), such as `judge`. */
+  purpose?: string
+  /** The Findings tab; Calls leaves the URL bare. */
+  view?: "findings"
+  type?: FindingType
+  severity?: FindingSeverity
+  /** A finding's tool; "" means findings that name no tool. */
+  tool?: string
+  status?: FindingStatus
+  /** An inclusive day range (`YYYY-MM-DD` in the server zone). */
+  from?: string
+  to?: string
+}
+
+/** `?group=` for the Findings tab's grouped view (Group by type and tool); the list leaves it out. */
+export const FINDINGS_GROUPED = "type-tool"
+
+/** AI activity, filtered when given; each filter is left out when empty, except a tool of "" (no tool). */
+export function aiActivity({ userId, year, purpose, view, type, severity, tool, status, from, to }: AiActivityFilters = {}): Route {
   const params = new URLSearchParams()
   if (userId) params.set("userId", userId)
   if (year !== undefined) params.set("year", String(year))
+  if (purpose) params.set("purpose", purpose)
+  if (view) params.set("view", view)
+  if (type) params.set("type", type)
+  if (severity) params.set("severity", severity)
+  if (tool !== undefined) params.set("tool", tool)
+  if (status) params.set("status", status)
   if (from) params.set("from", from)
   if (to) params.set("to", to)
   const query = params.toString()
