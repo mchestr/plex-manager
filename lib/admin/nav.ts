@@ -3,7 +3,11 @@
  * feeds the sidebar, the mobile tab bar and its More sheet, page titles
  * (`titleFor`, read by PageHeader) and later the command menu (P10.16).
  *
- * ## Groups
+ * ## Groups and section tabs
+ *
+ * The groups are being retired in favour of section tabs: an item with
+ * `children` gets a tab strip (`SectionTabs`, rendered by the layout of its
+ * route group) and `also` lights it on the sibling routes those tabs open.
  *
  * ```
  * Overview, Assistant ungrouped, at the top (P10.8)
@@ -45,6 +49,14 @@ interface AdminNavBadge {
   tone?: "destructive"
 }
 
+export interface AdminNavChild {
+  id: string
+  label: string
+  href: Route
+  /** Shows the tab to a non-admin role with this permission; without one, admins only. */
+  permission?: Permission
+}
+
 export interface AdminNavItem {
   id: string
   label: string
@@ -59,6 +71,10 @@ export interface AdminNavItem {
   badge?: (counts: NavCounts) => AdminNavBadge | null
   /** The permission that shows the item to a non-admin role; without one, only admins see it. */
   permission?: Permission
+  /** Extra path prefixes that light this item, for route-group siblings such as /admin/shares under Rewind. */
+  also?: readonly Route[]
+  /** The item's section tabs, in order. The item's `href` is its first child's `href`. */
+  children?: readonly AdminNavChild[]
 }
 
 export const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = ["Community", "Rewind", "Usage and cost", "System"]
@@ -240,15 +256,35 @@ export function navTestId(item: Pick<AdminNavItem, "id">): string {
 }
 
 /** Whether `item` is the current location, so it gets `aria-current="page"`. */
-export function isActive(item: Pick<AdminNavItem, "href" | "match">, pathname: string): boolean {
+export function isActive(item: Pick<AdminNavItem, "href" | "match" | "also">, pathname: string): boolean {
   if (pathname === item.href) return true
-  return item.match === "prefix" && pathname.startsWith(`${item.href}/`)
+  if (item.match === "prefix" && pathname.startsWith(`${item.href}/`)) return true
+  return item.also?.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) ?? false
 }
 
-/** The items the subject may open: all for an admin, else those whose permission they hold. */
-export function navFor(subject: PermissionSubject): readonly AdminNavItem[] {
-  if (subject.isAdmin) return ADMIN_NAV
-  return ADMIN_NAV.filter((item) => item.permission !== undefined && hasPermission(subject, item.permission))
+/** Whether the subject may open what `permission` gates; without one, only an admin may. */
+function mayOpen(subject: PermissionSubject, { permission }: Pick<AdminNavItem, "permission">): boolean {
+  return permission === undefined ? subject.isAdmin : hasPermission(subject, permission)
+}
+
+/**
+ * The items the subject may open: all for an admin; for a role, those whose
+ * permission it holds or that have a tab it may open. Such an item opens on
+ * its first permitted tab, so Members opens on Users for Support.
+ */
+export function navFor(subject: PermissionSubject, items: readonly AdminNavItem[] = ADMIN_NAV): readonly AdminNavItem[] {
+  if (subject.isAdmin) return items
+  return items.flatMap((item) => {
+    const first = item.children?.find((child) => mayOpen(subject, child))
+    if (!first && !mayOpen(subject, item)) return []
+    return [first ? { ...item, href: first.href } : item]
+  })
+}
+
+/** `item.children` the subject may open; `[]` for an item without children. */
+export function childrenOf(id: string, subject: PermissionSubject, items: readonly AdminNavItem[] = ADMIN_NAV): AdminNavChild[] {
+  const children = items.find((item) => item.id === id)?.children ?? []
+  return children.filter((child) => mayOpen(subject, child))
 }
 
 /** The items of one group, in config order (`null` for the ungrouped top). */

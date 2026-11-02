@@ -10,6 +10,7 @@ import {
   ADMIN_NAV,
   ADMIN_NAV_GROUPS,
   activeItem,
+  childrenOf,
   isActive,
   isImmersive,
   isTabActive,
@@ -20,6 +21,7 @@ import {
   type AdminNavItem,
   type MobileLinkTab,
 } from "@/lib/admin/nav"
+import { icons } from "@/lib/ui/icons"
 
 const byId = (id: string) => ADMIN_NAV.find((item) => item.id === id) as AdminNavItem
 
@@ -50,6 +52,13 @@ describe("ADMIN_NAV", () => {
     expect(ADMIN_NAV_GROUPS).toEqual(["Community", "Rewind", "Usage and cost", "System"])
     const order = ADMIN_NAV.map((item) => ADMIN_NAV_GROUPS.indexOf(item.group as never))
     expect(order).toEqual([...order].sort((a, b) => a - b))
+  })
+
+  it("opens an item with children on its first child, and gives its children unique ids", () => {
+    const sections = ADMIN_NAV.filter((item) => item.children)
+    for (const item of sections) expect(item.children?.[0].href).toBe(item.href)
+    const childIds = sections.flatMap((item) => item.children?.map((child) => child.id) ?? [])
+    expect(new Set(childIds).size).toBe(childIds.length)
   })
 
   it("badges members, active invites, pending applications and failed jobs", () => {
@@ -92,6 +101,87 @@ describe("titleFor", () => {
     expect(titleFor("/admin/shares")).toBe("Share analytics")
     expect(titleFor("/admin/wrapped/w1/history/u1")).toBe("Admin")
     expect(activeItem("/admin/ai/conversation/c1")?.id).toBe("ai-activity")
+  })
+})
+
+describe("children and also", () => {
+  const fixture: AdminNavItem = {
+    id: "x",
+    label: "X",
+    href: "/admin/x" as Route,
+    icon: icons.users,
+    group: null,
+    match: "prefix",
+    mobile: "more",
+    also: ["/admin/y" as Route],
+    children: [
+      { id: "x-a", label: "A", href: "/admin/x" as Route, permission: "users:read" },
+      { id: "x-b", label: "B", href: "/admin/y" as Route },
+    ],
+  }
+  const support = { isAdmin: false, role: "support" }
+
+  it("lights on an also prefix", () => {
+    expect(isActive(fixture, "/admin/y/123")).toBe(true)
+  })
+
+  it("lights on an also path itself, not on a longer name, and for an exact item too", () => {
+    expect(isActive(fixture, "/admin/y")).toBe(true)
+    expect(isActive(fixture, "/admin/yearly")).toBe(false)
+    expect(isActive({ ...fixture, match: "exact" }, "/admin/y/123")).toBe(true)
+    expect(isActive({ ...fixture, match: "exact" }, "/admin/x/123")).toBe(false)
+  })
+
+  it("activeItem is the parent for a sibling path", () => {
+    expect(activeItem("/admin/y/123", [fixture])?.id).toBe("x")
+  })
+
+  it("childrenOf filters by permission for a role and keeps all for an admin", () => {
+    expect(childrenOf("x", support, [fixture]).map((c) => c.id)).toEqual(["x-a"])
+    expect(childrenOf("x", { isAdmin: true }, [fixture]).map((c) => c.id)).toEqual(["x-a", "x-b"])
+    expect(childrenOf("nope", { isAdmin: true }, [fixture])).toEqual([])
+  })
+
+  it("childrenOf is empty for an item without children and for a subject with no role", () => {
+    const plain: AdminNavItem = { ...fixture, id: "plain", children: undefined }
+    expect(childrenOf("plain", { isAdmin: true }, [plain])).toEqual([])
+    expect(childrenOf("x", { isAdmin: false, role: null }, [fixture])).toEqual([])
+  })
+
+  it("navFor shows an item whose child the role may open, at that child's href", () => {
+    const only: AdminNavItem = {
+      ...fixture,
+      children: [
+        { id: "x-b", label: "B", href: "/admin/y" as Route },
+        { id: "x-a", label: "A", href: "/admin/x" as Route, permission: "users:read" },
+      ],
+    }
+    expect(navFor(support, [only]).map((i) => i.href)).toEqual(["/admin/x"])
+  })
+
+  it("navFor opens a role on its first permitted child, and leaves an admin and the config as they are", () => {
+    const opensElsewhere: AdminNavItem = {
+      ...fixture,
+      children: [
+        { id: "x-a", label: "A", href: "/admin/x" as Route },
+        { id: "x-b", label: "B", href: "/admin/y" as Route, permission: "users:read" },
+      ],
+    }
+    expect(navFor(support, [opensElsewhere]).map((i) => i.href)).toEqual(["/admin/y"])
+    expect(navFor({ isAdmin: true }, [opensElsewhere]).map((i) => i.href)).toEqual(["/admin/x"])
+    expect(opensElsewhere.href).toBe("/admin/x")
+  })
+
+  it("navFor keeps the item's own href when its permission shows it but no child opens, and hides it without either", () => {
+    const ownPermission: AdminNavItem = {
+      ...fixture,
+      permission: "users:read",
+      children: [{ id: "x-b", label: "B", href: "/admin/y" as Route }],
+    }
+    const adminOnly: AdminNavItem = { ...fixture, children: [{ id: "x-b", label: "B", href: "/admin/y" as Route }] }
+    expect(navFor(support, [ownPermission]).map((i) => i.href)).toEqual(["/admin/x"])
+    expect(navFor(support, [adminOnly])).toEqual([])
+    expect(navFor({ isAdmin: false, role: null }, [fixture, ownPermission])).toEqual([])
   })
 })
 
