@@ -25,7 +25,16 @@
  *   the variation selectors (U+FE0F), the Hangul fillers (U+3164, U+FFA0),
  *   U+180B, U+17B4 and the unassigned ones;
  * - U+2800, the braille blank, which is neither but reads as a space, so
- *   `<`, U+2800, `/transcript>` reads as a closing tag.
+ *   `<`, U+2800, `/transcript>` reads as a closing tag;
+ * - the control characters but tab, line feed, carriage return and U+0085:
+ *   the other C0 ones, DEL and the C1 ones, which `JSON.stringify` writes as
+ *   they are (all but the C0 ones) and a reader shows as nothing.
+ *
+ * U+0085 (NEL) is a line break to Unicode and to many readers, a tokenizer's
+ * pre-split included, but not to JS's `\s`, so `<`, NEL, `/transcript>` and
+ * `[#`, NEL, `9 user]` would read as a closing tag and a label yet slip past
+ * the rules below. It becomes a space before them, which a JSON string can
+ * hold as it is.
  *
  * {@link stripInvisible} removes them, and in a JSON text also the ones its
  * strings and keys escape (`\u200b`, as a server that escapes every non-ASCII
@@ -40,13 +49,14 @@
  *
  * {@link neutralise} runs on every piece of content before it is fenced:
  * message text, tool args and results, prior claims, the assistant's system
- * prompt and its catalog. It first removes every invisible character (a JSON
- * escape of one is six characters the judge reads, so it stays), then
- * applies the other rules:
+ * prompt and its catalog. It first removes every invisible character and
+ * turns a NEL into a space (a JSON escape of either is six characters the
+ * judge reads, so it stays), then applies the other rules:
  *
  * | in content                                       | becomes                                 |
  * |--------------------------------------------------|-----------------------------------------|
  * | an invisible character, such as U+200B or U+2800 | removed                                 |
+ * | a NEL, U+0085                                    | a space                                 |
  * | a closing fence tag, `</transcript`              | `<\/transcript`                         |
  * | an opening fence tag, `<tool_result`             | `&lt;tool_result`                       |
  * | a label, `[#7 assistant]` or `[# 7 assistant]`   | `[ #7 assistant]` or `[ # 7 assistant]` |
@@ -63,16 +73,18 @@
  * - The only backslash added is in `<\/`, JSON's own escape for `</`, so a
  *   tool result stays JSON (its strings change, never its shape) and `verify`
  *   can still match a quote leaf by leaf. Valid JSON holds an invisible
- *   character only inside a string, so removing one changes a string, never
+ *   character or a NEL only inside a string (a C0 control not even there),
+ *   so removing one, or writing a space for a NEL, changes a string, never
  *   the shape.
- * - Neutralising twice changes nothing: no invisible character is left, and
- *   no rule matches its own output (a space after `[` or `(` stops the label,
- *   mark and note rules). `fitWithin` neutralises a cut piece again, and
- *   every rule but the closing tag's looks only for a fixed start, so a cut
- *   cannot make a new match. Only the closing tag's word boundary can
- *   (`</transcripts` cut to `</transcript`): one character more, which the
- *   budget reserves. Removing characters only shortens text, and a cut piece
- *   has none left to remove, so that reserve still holds.
+ * - Neutralising twice changes nothing: no invisible character or NEL is
+ *   left, and no rule matches its own output (a space after `[` or `(` stops
+ *   the label, mark and note rules). `fitWithin` neutralises a cut piece
+ *   again, and every rule but the closing tag's looks only for a fixed start,
+ *   so a cut cannot make a new match. Only the closing tag's word boundary
+ *   can (`</transcripts` cut to `</transcript`): one character more, which
+ *   the budget reserves. Removing characters only shortens text, a space for
+ *   a NEL keeps its length, and a cut piece has neither left, so that reserve
+ *   still holds.
  *
  * @module lib/judge/fence
  */
@@ -93,24 +105,29 @@ export const omittedFindings = (count: number) => `(${count} earlier ${count ===
 const FENCES = "transcript|tool_result|already_raised|assistant_system_prompt|tool_catalog"
 const CLOSE_TAG = new RegExp(`<\\s*/\\s*(?=(?:${FENCES})\\b)`, "gi")
 const OPEN_TAG = new RegExp(`<(?=\\s*(?:${FENCES}))`, "gi")
-/** Characters that show nothing, or a space where there is none; see the module comment. */
-const INVISIBLE = /[\p{Cf}\p{Default_Ignorable_Code_Point}\u2800]/gu
+/** Characters that show nothing, or a space where there is none, and the controls but tab, line feed, carriage return and NEL; see the module comment. */
+const INVISIBLE = /[\p{Cf}\p{Default_Ignorable_Code_Point}\u2800]|(?![\t\n\r\u0085])\p{Cc}/gu
+/** U+0085, a line break to many readers though not to JS's `\s`. */
+const NEL = /\u0085/g
 /** A label's `[#7` (or `[# 7`), or the mark's `[truncated`. */
 const BRACKET = /\[(?=#\s*\d|truncated)/gi
 /** A note's opening words, or an omitted line's "(3 earlier ". */
 const NOTE = /\((?=tool\s+results\s+not\s+recorded|no\s+tools\s+were\s+called|already\s+reviewed|message\s+unreadable|\d+\s+earlier\s)/gi
 
-/** A parsed JSON value with every invisible character removed from its strings and keys. */
+/** The text with every NEL a space and every invisible character removed. */
+const clean = (text: string) => text.replace(NEL, " ").replace(INVISIBLE, "")
+
+/** A parsed JSON value with every NEL a space and every invisible character removed, in its strings and keys. */
 function stripValue(value: unknown): unknown {
-  if (typeof value === "string") return value.replace(INVISIBLE, "")
+  if (typeof value === "string") return clean(value)
   if (Array.isArray(value)) return value.map(stripValue)
   if (typeof value !== "object" || value === null) return value
-  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key.replace(INVISIBLE, ""), stripValue(item)]))
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [clean(key), stripValue(item)]))
 }
 
-/** The text with every invisible character removed, a JSON text's escaped ones too; see the module comment. */
+/** The text with every NEL a space and every invisible character removed, a JSON text's escaped ones too; see the module comment. */
 export function stripInvisible(text: string): string {
-  const stripped = text.replace(INVISIBLE, "")
+  const stripped = clean(text)
   let parsed: unknown
   try {
     parsed = JSON.parse(stripped)
@@ -124,8 +141,8 @@ export function stripInvisible(text: string): string {
 
 /** The text with every tag, label, mark and note in it neutralised; see the module comment. */
 export function neutralise(text: string): string {
-  return text.replace(INVISIBLE, "").replace(CLOSE_TAG, "<\\/").replace(OPEN_TAG, "&lt;").replace(BRACKET, "[ ").replace(NOTE, "( ")
+  return clean(text).replace(CLOSE_TAG, "<\\/").replace(OPEN_TAG, "&lt;").replace(BRACKET, "[ ").replace(NOTE, "( ")
 }
 
-/** An attribute value on one line, as numeric entities, so a tool name cannot end the attribute or the tag, or start a line. */
-export const attribute = (text: string) => text.replace(/\s+/g, " ").replace(/[&"<>]/g, (char) => `&#${char.charCodeAt(0)};`)
+/** An attribute value on one line (a NEL too), as numeric entities, so a tool name cannot end the attribute or the tag, or start a line. */
+export const attribute = (text: string) => text.replace(/[\s\u0085]+/g, " ").replace(/[&"<>]/g, (char) => `&#${char.charCodeAt(0)};`)
