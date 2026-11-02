@@ -13,7 +13,7 @@
  * redactor reads what the judge will.
  */
 
-import { neutralise, stripInvisible } from "../fence"
+import { attribute, neutralise, stripInvisible } from "../fence"
 
 const INVISIBLE_CHARACTERS = [
   ["U+200B", "\u200B"],
@@ -189,5 +189,12 @@ describe("stripInvisible", () => {
 
       expect(stripInvisible(once)).toBe(once)
     }
+  })
+})
+
+describe("attribute", () => {
+  it("removes invisible and control characters from a tool name, a NEL becoming a space, before it keeps it on one line", () => {
+    // U+200B, a C0 control (U+0001), a NEL and a C1 control (U+009F), which a reader sees nothing of or reads as a break
+    expect(attribute("get\u200B_users\u0001\u0085\u009Fnow")).toBe("get_users now")
   })
 })
