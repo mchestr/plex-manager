@@ -23,14 +23,16 @@
  * ## Fencing
  *
  * Every content block is fenced (`<transcript>`, `<tool_result>`,
- * `<already_raised>`, `<assistant_system_prompt>`, `<tool_catalog>`), and a
- * closing tag of any of them inside the content becomes `<\/tag`, so each
- * block closes exactly once. `<\/` is JSON's own escape for `</`, so an
- * escaped tool result still parses to the same values.
+ * `<already_raised>`, `<assistant_system_prompt>`, `<tool_catalog>`), and
+ * every piece of content is neutralised first (`lib/judge/fence.ts`): a tag,
+ * label, note or `[truncated]` mark inside it is changed so it cannot pass for
+ * the builder's own, and each block opens and closes exactly once. A tool
+ * result stays JSON that parses.
  *
  * @module lib/judge/build-prompt
  */
 
+import { attribute, NOTES, neutralise, omittedTurns, TRUNCATED } from "@/lib/judge/fence"
 import { JUDGE_SYSTEM_PROMPT } from "@/lib/judge/prompts/v1"
 import { type ToolLogEntry } from "@/lib/judge/tool-log"
 import { type ChatTool } from "@/lib/llm/chat"
@@ -70,24 +72,17 @@ type JudgePrompt = {
 
 const PROMPT_CAP = 120_000
 const EARLIER_RESULT_LIMIT = 2_048
-const TRUNCATED = "[truncated]"
-const FENCES = ["transcript", "tool_result", "already_raised", "assistant_system_prompt", "tool_catalog"]
-const CLOSE_TAG = new RegExp(`<\\s*/\\s*(?=(?:${FENCES.join("|")})\\b)`, "gi")
 
-const escapeFences = (text: string) => text.replace(CLOSE_TAG, "<\\/")
-/** An attribute value as numeric entities, so a quote or bracket in a tool name cannot end the attribute or the tag. */
-const attribute = (text: string) => text.replace(/[&"<>]/g, (char) => `&#${char.charCodeAt(0)};`)
-
-/** Takes an escaped piece, cut to `limit` and to what is left of the section's budget. */
+/** Takes a neutralised piece, cut to `limit` and to what is left of the section's budget. */
 type Fit = (text: string, limit?: number) => { text: string; cut: boolean }
 type Drawn = { text: string; results: Map<number, string[]> }
 
-/** A cut can leave a partial tag at its end, so the kept text is escaped again: at most one character longer. */
+/** A cut can leave a partial closing tag at its end, so the kept text is neutralised again: at most one character longer. */
 function fitWithin(budget: number, share = Infinity): Fit {
   return (text, limit = Infinity) => {
     const room = Math.max(0, Math.min(limit, share, budget))
     budget -= Math.min(text.length, room)
-    return text.length <= room ? { text, cut: false } : { text: escapeFences(text.slice(0, room)), cut: true }
+    return text.length <= room ? { text, cut: false } : { text: neutralise(text.slice(0, room)), cut: true }
   }
 }
 
@@ -124,15 +119,15 @@ function fitSection(draw: (fit: Fit) => Drawn, budget: number): Drawn {
 }
 
 function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, reviewed: boolean) {
-  const label = `[#${message.index} ${message.role}]${reviewed ? " (already reviewed, for context)" : ""}`
-  const lines = [label, marked(fit(escapeFences(message.content)))]
+  const label = `[#${message.index} ${message.role}]${reviewed ? ` ${NOTES.reviewed}` : ""}`
+  const lines = [label, marked(fit(neutralise(message.content)))]
   const results: string[] = []
   if (message.role === "assistant") {
-    if (message.toolLog === null) lines.push("(tool results not recorded)")
-    else if (message.toolLog.length === 0) lines.push("(no tools were called this turn)")
+    if (message.toolLog === null) lines.push(NOTES.noLog)
+    else if (message.toolLog.length === 0) lines.push(NOTES.noTools)
     for (const call of message.toolLog ?? []) {
-      const args = fit(escapeFences(call.args))
-      const result = fit(escapeFences(call.result), resultLimit)
+      const args = fit(neutralise(call.args))
+      const result = fit(neutralise(call.result), resultLimit)
       results.push(result.text)
       const cut = call.truncated === true || args.cut || result.cut
       lines.push(`<tool_result tool="${attribute(call.tool)}" ok="${call.ok}">\nargs: ${args.text}\nresult: ${result.text}${cut ? `\n${TRUNCATED}` : ""}\n</tool_result>`)
@@ -155,19 +150,17 @@ function turnsOf(messages: JudgeMessage[]): JudgeMessage[][] {
 function drawContext(systemPrompt: string, tools: ChatTool[]) {
   const catalog = tools.map((tool) => `- ${tool.function.name}: ${tool.function.description}`).join("\n")
   return (fit: Fit): Drawn => {
-    const prompt = fenced("assistant_system_prompt", marked(fit(escapeFences(systemPrompt))))
-    const toolList = fenced("tool_catalog", marked(fit(escapeFences(catalog))))
+    const prompt = fenced("assistant_system_prompt", marked(fit(neutralise(systemPrompt))))
+    const toolList = fenced("tool_catalog", marked(fit(neutralise(catalog))))
     return { text: `The assistant's system prompt, as it is today:\n${prompt}\n\nThe assistant's tool catalog, as it is today:\n${toolList}`, results: new Map() }
   }
 }
-
-const omittedLine = (count: number) => (count === 0 ? null : `(${count} earlier ${count === 1 ? "turn was" : "turns were"} left out)`)
 
 function assemble(context: string, raised: string[] | null, transcript: string[], omitted: number): string {
   return [
     context,
     raised && `Already raised, don't repeat:\n${fenced("already_raised", raised.join("\n"))}`,
-    `The conversation under review:\n${fenced("transcript", [omittedLine(omitted), ...transcript].filter(Boolean).join("\n\n"))}`,
+    `The conversation under review:\n${fenced("transcript", [omitted > 0 ? omittedTurns(omitted) : null, ...transcript].filter(Boolean).join("\n\n"))}`,
     "Review the messages in the transcript and return your findings.",
   ].filter((part) => part !== null).join("\n\n")
 }
@@ -200,7 +193,7 @@ export function buildJudgePrompt({ messages, systemPrompt, tools, prior, previou
 
   const raised: string[] = []
   for (const finding of prior) {
-    const line = escapeFences(`- [#${finding.messageIndex}] ${finding.type} (${finding.status}): ${finding.claim}`)
+    const line = `- [#${finding.messageIndex}] ${finding.type} (${finding.status}): ${neutralise(finding.claim)}`
     if (line.length + 1 > budget) break
     raised.push(line)
     budget -= line.length + 1
