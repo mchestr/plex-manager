@@ -11,7 +11,7 @@
 
 import { mockReset } from "jest-mock-extended"
 
-import { buildConversationReview } from "@/__tests__/helpers/factories"
+import { buildConfig, buildConversationReview } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { useReviewTable } from "@/__tests__/helpers/review-table"
 import type { ConversationReview } from "@/lib/generated/prisma/client"
@@ -151,7 +151,7 @@ beforeEach(() => {
   created = 0
   useConversations([])
   useReviews()
-  prismaMock.config.findUnique.mockResolvedValue({ judgeSampleRate: 100, judgeMinTurns: 2 } as never)
+  prismaMock.config.findUnique.mockResolvedValue(buildConfig({ judgeNightlyEnabled: true, judgeSampleRate: 100, judgeMinTurns: 2 }))
   prismaMock.lLMProvider.findFirst.mockResolvedValue({ id: "judge-row" } as never)
   prismaMock.$transaction.mockImplementation((async (fn: (tx: unknown) => Promise<unknown>) => fn(prismaMock)) as never)
   jest.mocked(checkJudgeSpend).mockResolvedValue({ ok: true })
@@ -300,7 +300,7 @@ describe("processReviewSweep", () => {
 
   it("reads the sample rate and minimum turns from Config", async () => {
     useConversations([{ id: "two-turns" }, { id: "three-turns", userMessages: 3 }])
-    prismaMock.config.findUnique.mockResolvedValue({ judgeSampleRate: 100, judgeMinTurns: 3 } as never)
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ judgeNightlyEnabled: true, judgeSampleRate: 100, judgeMinTurns: 3 }))
 
     await expect(processReviewSweep()).resolves.toEqual({ queued: 1, skipped: 0, stoppedBy: "done" })
     expect(reviews.get("review-new-1")).toMatchObject({ conversationId: "three-turns" })
@@ -353,6 +353,30 @@ describe("processReviewSweep", () => {
     useReviews()
     await expect(processReviewSweep()).resolves.toEqual({ queued: 0, skipped: 0, stoppedBy: "no-provider" })
     expect(reviews.size).toBe(0)
+  })
+
+  it.each([
+    ["nightly reviews are off", { judgeNightlyEnabled: false }],
+    ["AI features are off", { judgeNightlyEnabled: true, llmDisabled: true }],
+  ])("the scheduled job still fires while %s, and queues nothing", async (_label, settings) => {
+    // An "off" save that never reached the queue leaves the schedule in place, so the job checks the settings itself
+    useConversations([{ id: "c1" }, { id: "c2" }])
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig(settings))
+
+    await expect(getConversationReviewSweepProcessor("judge:sweep")!()).resolves.toEqual({ queued: 0, skipped: 0, stoppedBy: "disabled" })
+    expect(prismaMock.config.findUnique).toHaveBeenCalledWith({ where: { id: "config" }, select: expect.objectContaining({ judgeNightlyEnabled: true, llmDisabled: true }) })
+    expect(prismaMock.chatConversation.findMany).not.toHaveBeenCalled()
+    expect(checkJudgeSpend).not.toHaveBeenCalled()
+    expect(addJob).not.toHaveBeenCalled()
+    expect(reviews.size).toBe(0)
+  })
+
+  it("without a Config row nightly reviews are off, the column default", async () => {
+    useConversations([{ id: "c1" }])
+    prismaMock.config.findUnique.mockResolvedValue(null)
+
+    await expect(processReviewSweep()).resolves.toEqual({ queued: 0, skipped: 0, stoppedBy: "disabled" })
+    expect(addJob).not.toHaveBeenCalled()
   })
 
   it("is the processor for judge:sweep only", () => {

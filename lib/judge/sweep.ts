@@ -29,10 +29,15 @@
  *
  * ## Run
  *
- * {@link processReviewSweep} checks the judge cap before each enqueue and
- * stops at `cap`; `enqueueReview` reads the job states before its
- * transaction, so no Redis call runs inside one. A conversation whose open
- * review already exists, or whose job could not be added, counts as skipped.
+ * {@link processReviewSweep} first reads its settings: while nightly reviews
+ * (`judgeNightlyEnabled`) or AI features (`Config.llmDisabled`) are off it
+ * queues nothing and stops at `disabled`. The schedule follows the setting
+ * (`lib/judge/schedule.ts`), but an "off" save the queue never received
+ * leaves it in place, so the job checks for itself, as the request-tier sync
+ * does. It then checks the judge cap before each enqueue and stops at `cap`;
+ * `enqueueReview` reads the job states before its transaction, so no Redis
+ * call runs inside one. A conversation whose open review already exists, or
+ * whose job could not be added, counts as skipped.
  *
  * @module lib/judge/sweep
  */
@@ -54,11 +59,9 @@ const SWEEP_LIMIT = 50
 const BATCH_SIZE = 200
 const PARKED_AFTER = 3
 const COUNTING_CODES = new Set(["SCHEMA", "TRUNCATED", "REFUSAL", "CONTENT_FILTER"])
-/** The column defaults, for a missing `Config` row. */
-const DEFAULTS = { sampleRate: 100, minTurns: 2 }
 
 type SweepConfig = { sampleRate: number; minTurns: number }
-type SweepResult = { queued: number; skipped: number; stoppedBy: "cap" | "limit" | "done" | "no-provider" }
+type SweepResult = { queued: number; skipped: number; stoppedBy: "cap" | "limit" | "done" | "no-provider" | "disabled" }
 
 /**
  * Whether a conversation is in tonight's sample at `rate` percent. The key is
@@ -135,9 +138,16 @@ export async function selectSweepCandidates(now: Date, cfg: SweepConfig): Promis
 
 /** `CONVERSATION_REVIEW_SWEEP`: queues tonight's nightly reviews; see the module docs. */
 export async function processReviewSweep(): Promise<SweepResult> {
-  const config = await prisma.config.findUnique({ where: { id: "config" }, select: { judgeSampleRate: true, judgeMinTurns: true } })
-  const cfg = config ? { sampleRate: config.judgeSampleRate, minTurns: config.judgeMinTurns } : DEFAULTS
-  const candidates = await selectSweepCandidates(new Date(), cfg)
+  const config = await prisma.config.findUnique({
+    where: { id: "config" },
+    select: { judgeNightlyEnabled: true, llmDisabled: true, judgeSampleRate: true, judgeMinTurns: true },
+  })
+  // A missing row is off: judgeNightlyEnabled defaults to false
+  if (!config?.judgeNightlyEnabled || config.llmDisabled) {
+    logger.info("Conversation review sweep skipped: nightly reviews or AI features are off", { nightly: config?.judgeNightlyEnabled ?? false })
+    return { queued: 0, skipped: 0, stoppedBy: "disabled" }
+  }
+  const candidates = await selectSweepCandidates(new Date(), { sampleRate: config.judgeSampleRate, minTurns: config.judgeMinTurns })
   const deps = {
     enqueue: async (data: { reviewId: string }) => {
       await addJob(JOB_TYPES.CONVERSATION_REVIEW, data)
