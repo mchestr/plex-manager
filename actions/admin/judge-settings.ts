@@ -3,7 +3,7 @@
 /**
  * The conversation review settings (admin only, audited as `CONFIG_CHANGED`
  * section `judge`): the nightly sweep, its sample rate and minimum turns, and
- * the judge's daily spend cap.
+ * the judge's Daily budget.
  *
  * @module actions/admin/judge-settings
  */
