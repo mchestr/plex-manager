@@ -10,7 +10,9 @@ import { executeKnowledgeTool } from "../knowledge"
 import { executeMcpTool } from "../../mcp/tools"
 import { executeMediaMarkingTool } from "../media-marking"
 import { executePlexTool } from "../plex"
+import { executeSkillTool } from "../skills"
 import { executeTautulliTool } from "../tautulli"
+import { DISCORD_SAFE_TOOLS } from "../../tools/registry"
 import { permissionsFor } from "@/lib/permissions"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 
@@ -22,6 +24,7 @@ jest.mock("../overseerr", () => ({ executeOverseerrTool: jest.fn() }))
 jest.mock("../media-marking", () => ({ executeMediaMarkingTool: jest.fn() }))
 jest.mock("../app-data", () => ({ executeAppDataTool: jest.fn() }))
 jest.mock("../knowledge", () => ({ executeKnowledgeTool: jest.fn() }))
+jest.mock("../skills", () => ({ executeSkillTool: jest.fn() }))
 jest.mock("../../mcp/tools", () => ({ MCP_TOOL_PREFIX: "mcp_", executeMcpTool: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({
   ...jest.requireActual("@/lib/security/audit-log"),
@@ -75,7 +78,16 @@ describe("a Support caller", () => {
     )
   })
 
-  it.each(["get_app_member", "get_app_invites", "get_app_failed_jobs", "search_knowledge_base", "read_knowledge_doc", "mcp_memini_search"])(
+  it.each([
+    "get_app_member",
+    "get_app_invites",
+    "get_app_failed_jobs",
+    "search_knowledge_base",
+    "read_knowledge_doc",
+    "load_skill",
+    "read_skill_file",
+    "mcp_memini_search",
+  ])(
     "is refused the admin-only tool %s before any executor runs, and the refusal is audited",
     async (name) => {
       const result = await executeToolCall(call(name), "support-1", "default", false, undefined, SUPPORT)
@@ -83,6 +95,7 @@ describe("a Support caller", () => {
       expect(result).toBe(NOT_PERMITTED)
       expect(executeAppDataTool).not.toHaveBeenCalled()
       expect(executeKnowledgeTool).not.toHaveBeenCalled()
+      expect(executeSkillTool).not.toHaveBeenCalled()
       expect(executeMcpTool).not.toHaveBeenCalled()
       expect(denied).toHaveBeenCalledWith(AuditEventType.ASSISTANT_TOOL_DENIED, "support-1", expect.objectContaining({ toolName: name }))
     }
@@ -132,7 +145,31 @@ describe("an admin", () => {
     expect(await executeToolCall(call("mcp_memini_search"), "admin-1", "default", true, undefined, ADMIN)).toBe("mcp")
   })
 
+  it("runs the skill tools", async () => {
+    jest.mocked(executeSkillTool).mockResolvedValue("skill")
+
+    expect(await executeToolCall(call("load_skill"), "admin-1", "default", true, undefined, ADMIN)).toBe("skill")
+    expect(await executeToolCall(call("read_skill_file"), "admin-1", "default", true, undefined, ADMIN)).toBe("skill")
+    expect(executeSkillTool).toHaveBeenCalledWith("load_skill", {}, "admin-1", "default", undefined)
+    expect(executeSkillTool).toHaveBeenCalledWith("read_skill_file", {}, "admin-1", "default", undefined)
+  })
+
   it("still gets the old message for an unknown tool", async () => {
     expect(await executeToolCall(call("nope"), "admin-1", "default", true, undefined, ADMIN)).toBe("Error: Unknown tool")
+  })
+})
+
+describe("Discord", () => {
+  it("offers neither skill tool", () => {
+    const names = DISCORD_SAFE_TOOLS.map((tool) => tool.function.name)
+
+    expect(names).not.toContain("load_skill")
+    expect(names).not.toContain("read_skill_file")
+  })
+
+  it.each(["load_skill", "read_skill_file"])("refuses %s even to an admin, before the executor runs", async (name) => {
+    expect(await executeToolCall(call(name), "admin-1", "discord", true)).toBe(NOT_PERMITTED)
+    expect(executeSkillTool).not.toHaveBeenCalled()
+    expect(denied).toHaveBeenCalledWith(AuditEventType.DISCORD_COMMAND_DENIED, "admin-1", expect.objectContaining({ toolName: name }))
   })
 })

@@ -19,6 +19,7 @@ jest.mock("../overseerr", () => ({ executeOverseerrTool: jest.fn() }))
 jest.mock("../media-marking", () => ({ executeMediaMarkingTool: jest.fn() }))
 jest.mock("../app-data", () => ({ executeAppDataTool: jest.fn() }))
 jest.mock("../knowledge", () => ({ executeKnowledgeTool: jest.fn() }))
+jest.mock("../skills", () => ({ executeSkillTool: jest.fn() }))
 jest.mock("../../mcp/tools", () => ({ MCP_TOOL_PREFIX: "mcp_", executeMcpTool: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({ AuditEventType: {}, logAuditEvent: jest.fn() }))
 jest.mock("@/lib/utils/logger", () => ({

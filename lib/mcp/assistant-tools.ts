@@ -5,6 +5,10 @@
  * checks the caller's permissions again and audits a role's calls, exactly as
  * in the assistant.
  *
+ * The skill tools (`load_skill`, `read_skill_file`) are left out: skills are
+ * for the admin web chat only, whose prompt lists them and whose conversation
+ * takes their text as an administrator's instructions.
+ *
  * @module lib/mcp/assistant-tools
  */
 
@@ -15,6 +19,7 @@ import { randomUUID } from "node:crypto"
 import { executeToolCall } from "@/lib/chatbot/executors"
 import { isToolError } from "@/lib/chatbot/executors/tool-output"
 import { ALL_TOOLS } from "@/lib/chatbot/tools"
+import { SKILL_TOOL_NAMES } from "@/lib/chatbot/tools/skills"
 import type { McpTool } from "@/lib/mcp/types"
 import { permissionsFor } from "@/lib/permissions"
 import { getFormatSettings } from "@/lib/settings/app-settings"
@@ -40,9 +45,9 @@ function readsOnly(tool: (typeof ALL_TOOLS)[number]): boolean {
   return tool.permission === "assistant:tools:read" || ADMIN_READ_TOOLS.has(tool.function.name)
 }
 
-/** Every assistant tool. */
+/** Every assistant tool but the skill tools. */
 export function assistantTools(): McpTool[] {
-  return ALL_TOOLS.map((tool) => ({
+  return ALL_TOOLS.filter((tool) => !SKILL_TOOL_NAMES.has(tool.function.name)).map((tool) => ({
     name: tool.function.name,
     description: tool.function.description,
     inputSchema: { type: "object", properties: {}, ...tool.function.parameters },

@@ -31,7 +31,7 @@ export const PERMISSIONS = [
   "assistant:tools:read",
   /** Assistant tools that change data (media marking, anything that deletes or reconfigures). */
   "assistant:tools:write",
-  /** Assistant tools over admin-only data and connections (app data, the knowledge base, MCP servers). */
+  /** Assistant tools over admin-only data and connections (app data, the knowledge base, skills, MCP servers). */
   "assistant:tools:admin",
   /** The users list in the admin area. */
   "users:read",

@@ -8,6 +8,7 @@ import { MEDIA_MARKING_TOOLS } from "./media-marking"
 import { OVERSEERR_TOOLS } from "./overseerr"
 import { PLEX_TOOLS } from "./plex"
 import { RADARR_TOOLS } from "./radarr"
+import { SKILL_TOOLS } from "./skills"
 import { SONARR_TOOLS } from "./sonarr"
 import { TAUTULLI_TOOLS } from "./tautulli"
 import { type RegisteredTool } from "./types"
@@ -26,6 +27,7 @@ const REGISTERED_TOOLS: RegisteredTool[] = [
   ...MEDIA_MARKING_TOOLS,
   ...APP_DATA_TOOLS,
   ...KNOWLEDGE_TOOLS,
+  ...SKILL_TOOLS,
 ]
 
 /**
@@ -86,6 +88,8 @@ const TOOL_ORDER: readonly string[] = [
   "get_app_failed_jobs",
   "search_knowledge_base",
   "read_knowledge_doc",
+  "load_skill",
+  "read_skill_file",
 ]
 
 const TOOLS_BY_NAME = new Map(REGISTERED_TOOLS.map((tool) => [tool.function.name, tool]))
