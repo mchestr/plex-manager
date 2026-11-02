@@ -15,7 +15,7 @@ import { queryKeys } from "@/hooks/query-keys"
 import type { ReviewView } from "@/lib/data/conversation-review"
 import { useFormat } from "@/lib/format-context"
 import type { ConversationReviewStatus } from "@/lib/generated/prisma/client"
-import { reviewErrorCopy } from "@/lib/ui/review-error-copy"
+import { REVIEW_BLOCKED_COPY, reviewErrorCopy, type ReviewErrorCopy } from "@/lib/ui/review-error-copy"
 
 const POLL_MS = 5_000
 
@@ -64,16 +64,15 @@ function useReviewStatus(conversationId: string, review: ReviewView | null) {
   return { status: query.data, failed: query.isError, retry: () => void query.refetch() }
 }
 
-/** A failure's fixed copy, then its settings link when it has one. */
-function FailureCopy({ code }: { code: string | null }) {
-  const copy = reviewErrorCopy(code)
+/** Fixed copy, then its settings link when it has one, under the test id of the place that shows it. */
+function CopyWithLink({ copy, linkTestId }: { copy: ReviewErrorCopy; linkTestId: string }) {
   return (
     <>
       {copy.message}
       {copy.link && (
         <>
           {" "}
-          <Link href={copy.link.href} className="underline underline-offset-3" data-testid="conversation-review-settings-link">
+          <Link href={copy.link.href} className="underline underline-offset-3" data-testid={linkTestId}>
             {copy.link.label}
           </Link>
         </>
@@ -121,7 +120,8 @@ interface ReviewSectionProps {
  * review's status, details or coded failure, and every finding in the order
  * `getConversationReview` gives (unverified last). The details show only for
  * the review the status describes, so a new review never shows the last
- * one's summary, model or cost.
+ * one's summary, model or cost. While no review can start, a notice says why
+ * in the present tense, and a failure with that same code is left to it.
  */
 export function ReviewSection({ conversationId, review, findings, hasToolEvidence, judgeConfigured, llmDisabled }: ReviewSectionProps) {
   const { showError } = useToast()
@@ -129,10 +129,11 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
   const [isStarting, startReview] = useTransition()
   const { status, failed: statusFailed, retry: retryStatus } = useReviewStatus(conversationId, review)
   const current = review && status?.reviewId === review.id && status.status === "done" ? review : null
-  // A queued review can carry the code of a failed attempt BullMQ is retrying, so only a failed one shows it
-  const failure = status?.status === "failed" ? { code: status.errorCode } : null
   // Why no review can start, the master AI switch first; null when one can
   const blocked = llmDisabled ? "LLM_DISABLED" : judgeConfigured ? null : "NOT_CONFIGURED"
+  // A queued review can carry the code of a failed attempt BullMQ is retrying, so only a failed one shows it,
+  // and not while the same code still blocks the section: the notice says so in the present tense
+  const failure = status?.status === "failed" && (blocked === null || status.errorCode !== blocked) ? { code: status.errorCode } : null
 
   const onReview = () => {
     startReview(async () => {
@@ -183,14 +184,14 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
           </Button>
         </p>
       )}
-      {blocked && failure?.code !== blocked && (
-        <p className="text-ui text-muted-foreground">
-          <FailureCopy code={blocked} />
+      {blocked && (
+        <p className="text-ui text-muted-foreground" data-testid="conversation-review-blocked">
+          <CopyWithLink copy={REVIEW_BLOCKED_COPY[blocked]} linkTestId="conversation-review-blocked-link" />
         </p>
       )}
       {failure && (
         <Alert tone="destructive">
-          <FailureCopy code={failure.code} />
+          <CopyWithLink copy={reviewErrorCopy(failure.code)} linkTestId="conversation-review-failure-link" />
         </Alert>
       )}
       {current && <ReviewDetails review={current} />}

@@ -130,36 +130,76 @@ describe('ReviewSection states', () => {
 
     expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
     // The message ends before the link, so its words are not read twice
-    expect(screen.getByTestId('conversation-review-section')).toHaveTextContent(
+    expect(screen.getByTestId('conversation-review-blocked')).toHaveTextContent(
       'No conversation review model is set up. Set one up in AI settings, on the Conversation review tab'
     )
-    expect(screen.getByRole('link', { name: 'Set one up in AI settings, on the Conversation review tab' })).toHaveAttribute('href', '/admin/settings#ai')
+    const link = screen.getByRole('link', { name: 'Set one up in AI settings, on the Conversation review tab' })
+    expect(link).toHaveAttribute('href', '/admin/settings#ai')
+    expect(link).toHaveAttribute('data-testid', 'conversation-review-blocked-link')
   })
 
   it('disables the button while AI features are off and says so first, with a link to the AI settings', () => {
     render({ llmDisabled: true, judgeConfigured: false })
 
     expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
-    const section = screen.getByTestId('conversation-review-section')
-    expect(section).toHaveTextContent('AI features are turned off. Turn them on in AI settings')
+    expect(screen.getByTestId('conversation-review-blocked')).toHaveTextContent('AI features are turned off. Turn them on in AI settings')
     // The master switch comes first, so the missing model is not mentioned beside it
-    expect(section).not.toHaveTextContent('No conversation review model is set up')
-    expect(screen.getByRole('link', { name: 'Turn them on in AI settings' })).toHaveAttribute('href', '/admin/settings#ai')
+    expect(screen.getByTestId('conversation-review-section')).not.toHaveTextContent('No conversation review model')
+    expect(screen.getByTestId('conversation-review-blocked-link')).toHaveAttribute('href', '/admin/settings#ai')
   })
 
-  it('a review that failed with LLM_DISABLED says so once while AI features are still off', () => {
-    render({ llmDisabled: true, review: view({ status: 'failed', errorCode: 'LLM_DISABLED', summary: null, completedAt: null }) })
+  it('a failed review with no stored code shows the generic copy', () => {
+    render({ review: view({ status: 'failed', errorCode: null, summary: null, completedAt: null }) })
 
-    expect(screen.getByRole('alert')).toHaveTextContent('AI features are turned off. Turn them on in AI settings')
-    expect(screen.getAllByText(/AI features are turned off/)).toHaveLength(1)
-    expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
+    expect(screen.getByRole('alert')).toHaveTextContent('The review failed. Try again.')
   })
 
-  it('NOT_CONFIGURED copy links to the LLM settings', () => {
-    render({ review: view({ status: 'failed', errorCode: 'NOT_CONFIGURED', summary: null }) })
+  describe('a review that failed because it could not run', () => {
+    const failedWith = (errorCode: string) => view({ status: 'failed', errorCode, summary: null, completedAt: null })
+    const blockedBy = { LLM_DISABLED: { llmDisabled: true }, NOT_CONFIGURED: { judgeConfigured: false } } as const
+    /** What blocks the section now, in the present tense. */
+    const NOTICE = {
+      LLM_DISABLED: 'AI features are turned off. Turn them on in AI settings',
+      NOT_CONFIGURED: 'No conversation review model is set up. Set one up in AI settings, on the Conversation review tab',
+    }
+    /** What a failure says, in the past. */
+    const FAILED = {
+      LLM_DISABLED: 'AI features were off when this review ran. Turn them on in AI settings',
+      NOT_CONFIGURED: 'No conversation review model was set up when this review ran. Set one up in AI settings, on the Conversation review tab',
+      BUDGET_EXCEEDED: 'The Daily budget for conversation reviews is spent for today. Review again tomorrow. Raise it in Conversation review settings',
+    }
 
-    const alert = screen.getByRole('alert')
-    expect(within(alert).getByRole('link', { name: 'Set one up in AI settings, on the Conversation review tab' })).toHaveAttribute('href', '/admin/settings#ai')
+    it.each(['LLM_DISABLED', 'NOT_CONFIGURED'] as const)('shows only the notice while %s still blocks the section', (code) => {
+      render({ ...blockedBy[code], review: failedWith(code) })
+
+      expect(screen.getByTestId('conversation-review-status')).toHaveTextContent('Failed')
+      expect(screen.getByTestId('conversation-review-blocked')).toHaveTextContent(NOTICE[code])
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(screen.getByTestId('conversation-review-section')).not.toHaveTextContent('when this review ran')
+      expect(screen.getAllByRole('link').map((link) => link.dataset.testid)).toEqual(['conversation-review-blocked-link'])
+    })
+
+    it.each(['LLM_DISABLED', 'NOT_CONFIGURED'] as const)('shows only the past-tense copy, with its link, once %s no longer blocks it', (code) => {
+      render({ review: failedWith(code) })
+
+      expect(screen.getByRole('alert')).toHaveTextContent(FAILED[code])
+      expect(within(screen.getByRole('alert')).getByTestId('conversation-review-failure-link')).toHaveAttribute('href', '/admin/settings#ai')
+      expect(screen.queryByTestId('conversation-review-blocked')).not.toBeInTheDocument()
+      expect(screen.getByTestId('conversation-review-button')).toBeEnabled()
+    })
+
+    it.each([
+      ['LLM_DISABLED', 'NOT_CONFIGURED'],
+      ['NOT_CONFIGURED', 'LLM_DISABLED'],
+      ['LLM_DISABLED', 'BUDGET_EXCEEDED'],
+    ] as const)('shows both while %s blocks a review that failed with %s, each link with its own test id', (blocking, code) => {
+      render({ ...blockedBy[blocking], review: failedWith(code) })
+
+      expect(screen.getByTestId('conversation-review-blocked')).toHaveTextContent(NOTICE[blocking])
+      expect(screen.getByRole('alert')).toHaveTextContent(FAILED[code])
+      expect(screen.getAllByRole('link').map((link) => link.dataset.testid)).toEqual(['conversation-review-blocked-link', 'conversation-review-failure-link'])
+      expect(within(screen.getByRole('alert')).getByTestId('conversation-review-failure-link')).toBeInTheDocument()
+    })
   })
 
   it('a review with no tool evidence shows conversation-review-no-tool-evidence', () => {
