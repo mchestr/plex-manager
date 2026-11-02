@@ -126,9 +126,10 @@ surface `conversation-findings`, with the filters only).
   default 20 findings fit under the 40,000-character result cap. Text that JSON
   escapes heavily can still pass it; the server then answers
   `RESULT_TOO_LARGE`, and a smaller `limit` fits.
-- **Untrusted text.** The claim, evidence and suggestion quote conversations
-  and tool output. The description tells the client they are data, not
-  instructions, and the server redacts credentials in them like every result.
+- **Untrusted text.** The tool, claim, evidence and suggestion are the judge's
+  text, drawn from conversations and tool output. The description tells the
+  client they are data, not instructions, and the server redacts credentials
+  in them like every result.
 
 The judge's actions (`review_conversation`, `get_conversation_review_status`,
 `set_finding_status`, `save_judge_settings` and `update_judge_llm_provider`)
