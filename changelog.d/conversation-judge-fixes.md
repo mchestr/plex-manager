@@ -10,7 +10,7 @@
 - **Stuck reviews:** a review whose job died no longer leaves the conversation page waiting. Once it is past its time limit, the page's status check marks it failed, as a review that stopped responding, and it can be started again.
 - **Findings tab:** a finding whose quote did not match the conversation is marked **Unverified quote**, and **Open conversation** goes straight to the finding.
 - **Conversation reviews:** a conversation with a message that can no longer be read no longer fails its review: the judge is told that the message is unreadable. A conversation whose newest turn, with the assistant's instructions and tools, is too long to review now fails with that reason, instead of sending the judge an empty turn.
-- **Admin assistant:** a tool result, or a tool call's arguments, nested too deep to check for credentials no longer loses the assistant's answer to "The assistant could not answer. Try again." The conversation's tool log records it as not recorded.
+- **Admin assistant:** a tool result, or a tool call's arguments, nested too deep to check for credentials no longer loses the assistant's answer to "The assistant could not answer. Try again." The conversation's tool log stores that part empty and marks it as withheld.
 
 ### Security
 
