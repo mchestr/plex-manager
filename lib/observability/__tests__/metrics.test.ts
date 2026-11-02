@@ -100,9 +100,10 @@ it("metrics carry no text labels and use the plex_manager_ prefix", async () => 
   // The reads group by enum columns and sum cost: they never load text
   expect(prismaMock.conversationReview.groupBy).toHaveBeenCalledWith({ by: ["status"], _count: { _all: true } })
   expect(prismaMock.conversationFinding.groupBy).toHaveBeenCalledWith({ by: ["type", "evidenceCheck"], _count: { _all: true } })
+  // The rows the judge cap sums (JUDGE_USAGE_WHERE), never one with a conversation
   expect(prismaMock.lLMUsage.aggregate).toHaveBeenCalledWith({
     _sum: { cost: true },
-    where: { conversationReviewId: { not: null }, createdAt: { gte: expect.any(Date) } },
+    where: { conversationReviewId: { not: null }, chatConversationId: null, createdAt: { gte: expect.any(Date) } },
   })
 })
 

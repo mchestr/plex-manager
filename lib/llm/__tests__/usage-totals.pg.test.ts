@@ -121,7 +121,7 @@ describePg('usage totals on PostgreSQL', (databaseUrl) => {
     expect(await getRewindSeasonSpend(2026)).toBeCloseTo(rows.reduce((s, r) => s + r.cost, 0), 8)
   })
 
-  it('judge spend counts under judge, not wrapped', async () => {
+  it('judge spend counts under judge, not wrapped, and the buckets are disjoint', async () => {
     const base = (globalThis as { __p78base?: PrismaClient }).__p78base!
     // Far in the future, so only this test's rows are counted
     const since = new Date(Date.UTC(2099, 0, 1))
@@ -132,11 +132,13 @@ describePg('usage totals on PostgreSQL', (databaseUrl) => {
     await base.lLMUsage.create({ data: { ...call, cost: 0.5, wrappedId: wrappedA } })
     await base.lLMUsage.create({ data: { ...call, cost: 0.25, chatConversationId: conversation.id } })
     await base.lLMUsage.create({ data: { ...call, cost: 0.125, conversationReviewId: review.id } })
+    // A row with both links is the assistant's (JUDGE_USAGE_WHERE): counted once, under chat, and never taken from wrapped twice
+    await base.lLMUsage.create({ data: { ...call, cost: 0.0625, chatConversationId: conversation.id, conversationReviewId: review.id } })
 
     try {
       const spend = await llmSpendSince(since)
 
-      expect(spend).toEqual({ wrapped: expect.closeTo(0.5, 10), chat: expect.closeTo(0.25, 10), judge: expect.closeTo(0.125, 10) })
+      expect(spend).toEqual({ wrapped: expect.closeTo(0.5, 10), chat: expect.closeTo(0.3125, 10), judge: expect.closeTo(0.125, 10) })
     } finally {
       await base.lLMUsage.deleteMany({ where: { createdAt: at, userId: users[0] } })
     }

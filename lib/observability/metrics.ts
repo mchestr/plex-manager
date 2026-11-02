@@ -28,6 +28,7 @@ import { monitorEventLoopDelay, type IntervalHistogram } from "node:perf_hooks"
 
 import { getEnv } from "@/lib/env"
 import { ConversationReviewStatus, EvidenceCheck, FindingType } from "@/lib/generated/prisma/client"
+import { JUDGE_USAGE_WHERE } from "@/lib/judge/usage-rows"
 import { llmSpendSince } from "@/lib/llm/usage-totals"
 import { readGatewayStats } from "@/lib/discord/login-ledger"
 import { readJobFailures } from "@/lib/observability/job-failures"
@@ -116,11 +117,11 @@ async function judgeFindingSamples(): Promise<Sample[]> {
   )
 }
 
-/** Today's judge spend: the rows the judge cap sums (`lib/judge/spend.ts`), since midnight in the server zone. */
+/** Today's judge spend: the rows the judge cap sums (`JUDGE_USAGE_WHERE`), since midnight in the server zone. */
 async function judgeSpendSamples(): Promise<Sample[]> {
   const zone = await serverZone()
   const since = wallTimeToInstant(`${dayKey(Date.now(), zone)}T00:00`, zone)
-  const { _sum } = await prisma.lLMUsage.aggregate({ _sum: { cost: true }, where: { conversationReviewId: { not: null }, createdAt: { gte: since } } })
+  const { _sum } = await prisma.lLMUsage.aggregate({ _sum: { cost: true }, where: { ...JUDGE_USAGE_WHERE, createdAt: { gte: since } } })
   return [{ value: _sum.cost ?? 0 }]
 }
 

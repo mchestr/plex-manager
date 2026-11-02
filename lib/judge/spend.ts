@@ -3,8 +3,9 @@
  *
  * ## Cap
  *
- * {@link checkJudgeSpend} sums today's `LLMUsage.cost` over rows with a
- * `conversationReviewId` against `Config.llmDailyCapJudgeUsd`. "Today" is the
+ * {@link checkJudgeSpend} sums today's `LLMUsage.cost` over the judge's rows
+ * ({@link JUDGE_USAGE_WHERE}: a `conversationReviewId` and no
+ * `chatConversationId`) against `Config.llmDailyCapJudgeUsd`. "Today" is the
  * server-zone day the assistant caps use (`spendDay` in `lib/llm/budget.ts`).
  * Judge rows never carry a `chatConversationId`, so they never count against
  * the assistant caps, and assistant rows never count here.
@@ -44,6 +45,7 @@
 
 import "server-only"
 
+import { JUDGE_USAGE_WHERE } from "@/lib/judge/usage-rows"
 import { spendDay } from "@/lib/llm/budget"
 import { LeaseLock, type LeaseStore } from "@/lib/locks/lease-lock"
 import { RedisLeaseStore } from "@/lib/locks/redis-lease-store"
@@ -75,7 +77,7 @@ export async function checkJudgeSpend(now: Date = new Date()): Promise<JudgeSpen
     ])
     const { _sum } = await prisma.lLMUsage.aggregate({
       _sum: { cost: true },
-      where: { conversationReviewId: { not: null }, createdAt: { gte: day.start } },
+      where: { ...JUDGE_USAGE_WHERE, createdAt: { gte: day.start } },
     })
     const cap = config?.llmDailyCapJudgeUsd ?? DEFAULT_JUDGE_CAP_USD
     return (_sum.cost ?? 0) >= cap ? { ok: false, code: "BUDGET_EXCEEDED" } : { ok: true }

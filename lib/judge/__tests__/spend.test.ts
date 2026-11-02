@@ -17,6 +17,8 @@ import { addSpend, checkSpend } from "@/lib/llm/budget"
 import { recordUsage } from "@/lib/llm/usage"
 import type { LeaseClaim, LeaseName, LeaseStore } from "@/lib/locks/lease-lock"
 
+import { JUDGE_USAGE_WHERE } from "@/lib/judge/usage-rows"
+
 import { checkJudgeSpend, withJudgeLease } from "../spend"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -51,17 +53,21 @@ type Create = Awaited<ReturnType<typeof prismaMock.lLMUsage.create>>
 
 interface UsageWhere {
   userId?: string
-  chatConversationId?: { not: null }
+  chatConversationId?: { not: null } | null
   conversationReviewId?: { not: null }
   createdAt?: { gte: Date }
 }
+
+/** `null` matches a null column and `{ not: null }` a set one, as in Postgres. */
+const nullFilter = (value: string | null, filter: { not: null } | null | undefined) =>
+  filter === undefined || (filter === null ? value === null : value !== null)
 
 /** Sums the in-memory rows the way Postgres would for the filters the spend checks use. */
 function sumWhere(where: UsageWhere): number {
   return rows
     .filter((row) => where.userId === undefined || row.userId === where.userId)
-    .filter((row) => where.chatConversationId === undefined || row.chatConversationId !== null)
-    .filter((row) => where.conversationReviewId === undefined || row.conversationReviewId !== null)
+    .filter((row) => nullFilter(row.chatConversationId, where.chatConversationId))
+    .filter((row) => nullFilter(row.conversationReviewId, where.conversationReviewId))
     .filter((row) => where.createdAt === undefined || row.createdAt >= where.createdAt.gte)
     .reduce((total, row) => total + row.cost, 0)
 }
@@ -134,7 +140,7 @@ describe("checkJudgeSpend", () => {
     await expect(checkJudgeSpend(NOW)).resolves.toEqual({ ok: true })
     expect(prismaMock.lLMUsage.aggregate).toHaveBeenCalledWith({
       _sum: { cost: true },
-      where: { conversationReviewId: { not: null }, createdAt: { gte: new Date("2026-11-19T08:00:00Z") } },
+      where: { conversationReviewId: { not: null }, chatConversationId: null, createdAt: { gte: new Date("2026-11-19T08:00:00Z") } },
     })
 
     seed({ conversationReviewId: "review-3", cost: 0.01 })
@@ -142,6 +148,14 @@ describe("checkJudgeSpend", () => {
 
     prismaMock.lLMUsage.aggregate.mockRejectedValueOnce(new Error("connection refused"))
     await expect(checkJudgeSpend(NOW)).resolves.toEqual({ ok: false, code: "BUDGET_UNAVAILABLE" })
+  })
+
+  it("sums the rows JUDGE_USAGE_WHERE names: a row with a conversation as well as a review is the assistant's, never the judge's", async () => {
+    seed({ conversationReviewId: "review-1", cost: 0.5 })
+    seed({ conversationReviewId: "review-2", chatConversationId: "conversation-1", cost: 5 })
+
+    await expect(checkJudgeSpend(NOW)).resolves.toEqual({ ok: true })
+    expect(prismaMock.lLMUsage.aggregate.mock.calls[0]?.[0]?.where).toMatchObject(JUDGE_USAGE_WHERE)
   })
 
   it("judge rows do not count toward checkSpend", async () => {

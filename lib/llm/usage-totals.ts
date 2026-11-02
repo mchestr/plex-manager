@@ -17,6 +17,7 @@
 import "server-only"
 
 import type { Prisma } from "@/lib/generated/prisma/client"
+import { JUDGE_USAGE_WHERE } from "@/lib/judge/usage-rows"
 import { prisma } from "@/lib/prisma"
 
 /** The summed usage of a group of calls, the shape `aggregateLlmUsage` returned. */
@@ -45,9 +46,11 @@ export async function getRewindSeasonSpend(year: number): Promise<number> {
 
 /**
  * LLM spend since `since`, in USD, by purpose: assistant calls (`chat`, which
- * always attach a conversation), conversation judge calls (`judge`, which
- * attach a review and never a conversation) and everything else (`wrapped`).
- * Three `aggregate()`s; `/api/metrics` reads it (P11.4).
+ * always attach a conversation), conversation judge calls (`judge`, the rows
+ * the judge cap sums: a review and no conversation, `JUDGE_USAGE_WHERE`) and
+ * everything else (`wrapped`). `chat` and `judge` cannot overlap, so
+ * `wrapped` never subtracts a row twice. Three `aggregate()`s; `/api/metrics`
+ * reads it (P11.4).
  */
 export async function llmSpendSince(since: Date): Promise<{ wrapped: number; chat: number; judge: number }> {
   const sumWhere = (where: Prisma.LLMUsageWhereInput) =>
@@ -55,7 +58,7 @@ export async function llmSpendSince(since: Date): Promise<{ wrapped: number; cha
   const [all, chat, judge] = await Promise.all([
     sumWhere({}),
     sumWhere({ chatConversationId: { not: null } }),
-    sumWhere({ conversationReviewId: { not: null } }),
+    sumWhere(JUDGE_USAGE_WHERE),
   ])
   const chatCost = chat._sum.cost ?? 0
   const judgeCost = judge._sum.cost ?? 0
