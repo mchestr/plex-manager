@@ -24,24 +24,30 @@ interface FindingTriageProps {
  * A finding's status and note. Choosing a status saves it at once; the note
  * saves through its own button and sends no status, so it never re-triages
  * the finding. `setFindingStatus` refreshes the page, so nothing here
- * invalidates a query, and the stored status and note the refresh brings
- * replace the local ones. A failed save shows the action's error in a toast
- * and puts the status back. The Select stays enabled while it saves, so
- * keyboard focus stays on it.
+ * invalidates a query. A stored status the refresh brings replaces the shown
+ * one, and a stored note replaces the draft only while it has no unsaved
+ * edits, so a refresh never wipes a note being typed. A failed save shows
+ * the action's error in a toast and puts the status back. The Select stays
+ * enabled while it saves, so keyboard focus stays on it.
  */
 export function FindingTriage({ findingId, status, note, describedBy }: FindingTriageProps) {
   const { showError } = useToast()
   const [value, setValue] = useState(status)
   const [draft, setDraft] = useState(note ?? "")
+  // The note as stored: from the page, or as this card just saved it. A draft that differs has unsaved edits
+  const [savedNote, setSavedNote] = useState(note ?? "")
   const [stored, setStored] = useState({ status, note })
   const [, startSaving] = useTransition()
   const [isSavingNote, startSavingNote] = useTransition()
 
-  // A refresh brought a different stored status or note: show it
+  // A refresh brought a different stored status or note: show what changed, and keep a draft with unsaved edits
   if (stored.status !== status || stored.note !== note) {
     setStored({ status, note })
-    setValue(status)
-    setDraft(note ?? "")
+    if (stored.status !== status) setValue(status)
+    if (stored.note !== note) {
+      setSavedNote(note ?? "")
+      if (draft === savedNote) setDraft(note ?? "")
+    }
   }
 
   const changeStatus = (next: FindingStatus | null) => {
@@ -58,6 +64,7 @@ export function FindingTriage({ findingId, status, note, describedBy }: FindingT
   }
 
   const saveNote = () => {
+    const sent = draft
     const saved = draft.trim()
     startSavingNote(async () => {
       const result = await setFindingStatus({ findingId, note: saved })
@@ -65,7 +72,9 @@ export function FindingTriage({ findingId, status, note, describedBy }: FindingT
         showError(result.error)
         return
       }
-      setDraft(saved)
+      setSavedNote(saved)
+      // Show the note as saved (trimmed), unless more was typed while it saved
+      setDraft((current) => (current === sent ? saved : current))
     })
   }
 

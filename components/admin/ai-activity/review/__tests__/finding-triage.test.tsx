@@ -1,7 +1,8 @@
 /**
  * Triage on a finding card: the status Select saves at once and the note
  * saves through its own button, both through `setFindingStatus`, with the
- * action's error in a toast.
+ * action's error in a toast. A page refresh never replaces a note that has
+ * unsaved edits.
  */
 
 import { act, render, screen, waitFor } from '@testing-library/react'
@@ -78,6 +79,58 @@ describe('FindingTriage', () => {
     rerender(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="false_alarm" note="Not a bug" />)
     expect(screen.getByTestId('finding-status-select-f1')).toHaveTextContent('False alarm')
     expect(screen.getByTestId('finding-note-f1')).toHaveValue('Not a bug')
+  })
+
+  it('keeps an unsaved note when choosing a status refreshes the page', async () => {
+    const user = userEvent.setup()
+    save.mockResolvedValue({ success: true, data: null })
+    const { rerender } = render(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="open" note={null} />)
+
+    await user.type(screen.getByTestId('finding-note-f1'), 'unsaved words')
+    await openStatus(user)
+    await user.click(await screen.findByTestId('finding-status-option-fixed'))
+    expect(save).toHaveBeenCalledWith({ findingId: 'f1', status: 'fixed' })
+
+    // setFindingStatus's refresh brings the new stored status and the same stored note
+    rerender(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="fixed" note={null} />)
+    expect(screen.getByTestId('finding-status-select-f1')).toHaveTextContent('Fixed')
+    expect(screen.getByTestId('finding-note-f1')).toHaveValue('unsaved words')
+  })
+
+  it('a refreshed note replaces a note with no unsaved edits, never one being typed', async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="open" note="Known gap" />)
+
+    // Another admin saved a note, and nothing was typed here: each refresh shows the stored one
+    rerender(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="open" note="Not a bug" />)
+    expect(screen.getByTestId('finding-note-f1')).toHaveValue('Not a bug')
+    rerender(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="open" note="Not a bug, really" />)
+    expect(screen.getByTestId('finding-note-f1')).toHaveValue('Not a bug, really')
+
+    // Once something is typed here, a later refresh keeps it
+    await user.type(screen.getByTestId('finding-note-f1'), ', checked')
+    rerender(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="open" note="Changed again" />)
+    expect(screen.getByTestId('finding-note-f1')).toHaveValue('Not a bug, really, checked')
+  })
+
+  it('keeps what was typed while the note saved', async () => {
+    const user = userEvent.setup()
+    let settle: (value: { success: true; data: null }) => void = () => {}
+    save.mockReturnValue(new Promise((resolve) => (settle = resolve)))
+    const { rerender } = render(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="open" note={null} />)
+
+    const textarea = screen.getByTestId('finding-note-f1')
+    await user.type(textarea, 'Counted')
+    await user.click(screen.getByTestId('finding-note-save-f1'))
+    expect(save).toHaveBeenCalledWith({ findingId: 'f1', note: 'Counted' })
+    await user.type(textarea, ' by hand')
+
+    await act(async () => settle({ success: true, data: null }))
+    expect(textarea).toHaveValue('Counted by hand')
+
+    // The save's refresh brings the note it stored; the words typed since are still unsaved
+    rerender(<FindingTriage findingId="f1" describedBy="finding-title-f1" status="open" note="Counted" />)
+    expect(textarea).toHaveValue('Counted by hand')
   })
 
   it('keeps the Select enabled and focused while its save runs', async () => {
