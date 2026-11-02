@@ -59,6 +59,8 @@ async function advance(ms: number) {
 /** A settled poll reaches React a moment later; `waitFor` moves the fake clock in 50 ms steps until it has. */
 const badgeReads = (text: string) => waitFor(() => expect(screen.getByTestId('conversation-review-status')).toHaveTextContent(text))
 
+type StatusResult = Awaited<ReturnType<typeof getConversationReviewStatus>>
+
 const status = (value: 'queued' | 'running' | 'done' | 'failed', errorCode: string | null = null) =>
   ({ success: true, data: { reviewId: 'review-1', status: value, errorCode } }) as const
 
@@ -378,7 +380,7 @@ describe('ReviewSection polling', () => {
     await waitFor(() => expect(region).toHaveTextContent('Could not check the review status'))
 
     // A retry that fails too keeps the line, and focus on Try again
-    let settle: (result: Awaited<ReturnType<typeof getConversationReviewStatus>>) => void = () => {}
+    let settle: (result: StatusResult) => void = () => {}
     getStatus.mockReturnValueOnce(new Promise((resolve) => (settle = resolve)))
     const retry = screen.getByTestId('conversation-review-status-retry')
     await user.click(retry)
@@ -396,6 +398,25 @@ describe('ReviewSection polling', () => {
     expect(document.activeElement).not.toBe(document.body)
     expect(screen.getByRole('heading', { name: 'Review' })).toHaveFocus()
     expect(region).toHaveTextContent('Reviewing the conversation')
+  })
+
+  it('leaves focus where the admin moved it while Try again checked', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    getStatus.mockResolvedValueOnce({ success: false, code: 'INTERNAL', error: 'Could not read the review status' })
+    render({ review: view({ status: 'running', summary: null, completedAt: null }), findings: [reviewFinding({ id: 'f1' })] })
+    await advance(5_000)
+    await waitFor(() => expect(screen.getByTestId('conversation-review-status-error')).toBeInTheDocument())
+
+    let settle: (result: StatusResult) => void = () => {}
+    getStatus.mockReturnValueOnce(new Promise((resolve) => (settle = resolve)))
+    await user.click(screen.getByTestId('conversation-review-status-retry'))
+    // The admin starts a note while the check runs
+    const note = screen.getByTestId('finding-note-f1')
+    await user.click(note)
+    await act(async () => settle(status('running')))
+    await waitFor(() => expect(screen.queryByTestId('conversation-review-status-error')).not.toBeInTheDocument())
+
+    expect(note).toHaveFocus()
   })
 
   it('a refreshed page with a different review than the cached one seeds the status from it and polls', async () => {
