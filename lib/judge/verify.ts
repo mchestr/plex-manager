@@ -19,8 +19,8 @@
  * cut so it no longer parses. Matching uses `sentToolText` and
  * `sentMessageText`, the text exactly as the prompt sent it (redacted,
  * neutralised and cut), so a quote from past an earlier turn's 2 KB cut, past
- * the cut of an oversized message, or of a credential the judge never saw
- * fails.
+ * the cut of an oversized message, of a credential the judge never saw, or
+ * of a note the builder wrote in place of text it withheld fails.
  *
  * ## The tool
  *

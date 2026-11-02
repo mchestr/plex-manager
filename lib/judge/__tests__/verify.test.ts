@@ -281,6 +281,17 @@ describe("verifyFindings", () => {
     expect(result.findings[0].evidenceCheck).toBe("unverified")
   })
 
+  it("a quote of the note the builder writes in place of a withheld result is unverified: no tool returned it", () => {
+    // 200,000 levels overflow the builder's walk, so it withholds that result itself; capture withheld the other one
+    const deep = `${"[".repeat(200_000)}${membersResult}${"]".repeat(200_000)}`
+    const withheld: ToolLogEntry = { ...entry(""), withheld: ["result"] }
+    const messages = [message(0, "How many members do we have?"), message(1, "You have 12 members.", [entry(deep), withheld])]
+
+    const result = verify(messages, [finding({ evidence: "it could not be checked for credentials" })])
+
+    expect(result.findings[0].evidenceCheck).toBe("unverified")
+  })
+
   it("a tool quote counts only from the turn the finding points at", () => {
     const messages = [...conversation(), message(2, "And who is playing?"), message(3, "Nobody.", [entry('{"sessions":[]}', "get_plex_sessions")])]
 

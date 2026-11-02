@@ -68,12 +68,19 @@
  * as text, it would keep what only the walk redacts, such as a credential
  * under a `cookie` or `sessionKey` key. Message text shows "(message
  * unreadable)" and a claim is left out, as when either no longer decrypts,
- * and a tool's name, args or result reads as `NOT_RECORDED`, the note
- * capture stores in place of such a text (`lib/judge/tool-log.ts`).
+ * and a tool's name, args or result shows the note "(not recorded: it could
+ * not be checked for credentials)" (`NOTES.withheld`), as does each field a
+ * tool log entry lists as `withheld`, which capture stored empty
+ * (`lib/judge/tool-log.ts`). The builder writes the note itself, never from
+ * stored text, and whole: past `fit` and `attribute`, which would cut or
+ * neutralise it. Content cannot carry it, since neutralising puts a space
+ * after the "(" of any "(not recorded" (`lib/judge/fence.ts`).
  *
  * `sentMessageText` and `sentToolText` hold each piece exactly as the judge
  * got it (redacted, neutralised and cut), which `verify` matches quotes
- * against.
+ * against. A note in place of a message or a result is no text of theirs: an
+ * unreadable message has no sent text, and a withheld result is sent as
+ * empty text.
  *
  * @module lib/judge/build-prompt
  */
@@ -81,7 +88,7 @@
 import { attribute, NOTES, neutralise, omittedFindings, omittedTurns, stripInvisible, TRUNCATED } from "@/lib/judge/fence"
 import { type Fit, fitSection, fitWithin, marked } from "@/lib/judge/fit"
 import { JUDGE_SYSTEM_PROMPT } from "@/lib/judge/prompts/v2"
-import { NOT_RECORDED, type ToolLogEntry } from "@/lib/judge/tool-log"
+import { type ToolLogEntry, type ToolLogField } from "@/lib/judge/tool-log"
 import { type ChatTool } from "@/lib/llm/chat"
 import { redactCredentials } from "@/lib/mcp/redact"
 
@@ -152,6 +159,10 @@ function forJudge(text: string, from?: { tool: true }): string | null {
   return kept === null ? null : neutralise(kept)
 }
 
+/** A tool call's field as the judge gets it before any cut, or null for one capture withheld or nested too deep to walk, which shows {@link NOTES}.withheld. */
+const toolField = (call: ToolLogEntry, field: ToolLogField) =>
+  call.withheld?.includes(field) ? null : field === "tool" ? redacted(call.tool) : forJudge(call[field], { tool: true })
+
 function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, reviewed: boolean) {
   const label = `[#${message.index} ${message.role}]${reviewed ? ` ${NOTES.reviewed}` : ""}`
   const text = message.content === null ? null : forJudge(message.content)
@@ -162,11 +173,12 @@ function drawMessage(message: JudgeMessage, fit: Fit, resultLimit: number, revie
     if (message.toolLog === null) lines.push(NOTES.noLog)
     else if (message.toolLog.length === 0) lines.push(NOTES.noTools)
     for (const call of message.toolLog ?? []) {
-      const args = fit(forJudge(call.args, { tool: true }) ?? NOT_RECORDED)
-      const result = fit(forJudge(call.result, { tool: true }) ?? NOT_RECORDED, resultLimit)
-      results.push(result.text)
-      const cut = call.truncated === true || args.cut || result.cut
-      lines.push(`<tool_result tool="${attribute(redacted(call.tool) ?? NOT_RECORDED)}" ok="${call.ok}">\nargs: ${args.text}\nresult: ${result.text}${cut ? `\n${TRUNCATED}` : ""}\n</tool_result>`)
+      const [tool, args, result] = [toolField(call, "tool"), toolField(call, "args"), toolField(call, "result")]
+      // The builder's note is written whole, past fit and attribute, which would cut or neutralise it, and is sent as no result text
+      const [sentArgs, sentResult] = [args === null ? null : fit(args), result === null ? null : fit(result, resultLimit)]
+      results.push(sentResult?.text ?? "")
+      const cut = call.truncated === true || sentArgs?.cut || sentResult?.cut
+      lines.push(`<tool_result tool="${tool === null ? NOTES.withheld : attribute(tool)}" ok="${call.ok}">\nargs: ${sentArgs?.text ?? NOTES.withheld}\nresult: ${sentResult?.text ?? NOTES.withheld}${cut ? `\n${TRUNCATED}` : ""}\n</tool_result>`)
     }
   }
   const starved = text !== null && (content?.kept ?? 0) < Math.min(MESSAGE_FLOOR, text.length)

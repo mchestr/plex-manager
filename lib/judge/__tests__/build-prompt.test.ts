@@ -11,8 +11,8 @@
  */
 
 import { type ChatTool } from "@/lib/llm/chat"
-import { NOTES } from "@/lib/judge/fence"
-import { capToolLog, NOT_RECORDED, type ToolLogEntry } from "@/lib/judge/tool-log"
+import { NOTES, neutralise } from "@/lib/judge/fence"
+import { capToolLog, type ToolLogEntry } from "@/lib/judge/tool-log"
 
 import { buildJudgePrompt, type JudgeMessage, type PriorFinding } from "../build-prompt"
 import { JUDGE_PROMPT_VERSION, JUDGE_SYSTEM_PROMPT } from "../prompts/v2"
@@ -220,11 +220,22 @@ describe("buildJudgePrompt", () => {
         expect(leaked(built)).toEqual([])
       })
 
-      it.each(SHAPES)("reads as not recorded in a tool's name, args and result holding the keys %s, as capture stores them", (_shape, deep) => {
+      it.each(SHAPES)("shows the builder's note in place of a tool's name, args and result holding the keys %s, and sends no result text", (_shape, deep) => {
         const built = build([message(0, "what's playing?"), message(1, "Nothing.", [{ tool: deep, args: deep, result: deep, ok: true }])])
 
-        expect(built.prompt).toContain(`<tool_result tool="${NOT_RECORDED}" ok="true">\nargs: ${NOT_RECORDED}\nresult: ${NOT_RECORDED}\n</tool_result>`)
-        expect(built.sentToolText.get(1)).toEqual([NOT_RECORDED])
+        expect(built.prompt).toContain(`<tool_result tool="${NOTES.withheld}" ok="true">\nargs: ${NOTES.withheld}\nresult: ${NOTES.withheld}\n</tool_result>`)
+        expect(built.sentToolText.get(1)).toEqual([""])
+        expect(leaked(built)).toEqual([])
+      })
+
+      it.each(SHAPES)("shows the same note in place of the fields capture withheld from a call holding the keys %s", (_shape, deep) => {
+        const stored = capToolLog([{ tool: "get_plex_sessions", args: deep, result: deep, ok: true }])
+        expect(stored).toEqual([{ tool: "get_plex_sessions", args: "", result: "", ok: true, withheld: ["args", "result"] }])
+
+        const built = build([message(0, "what's playing?"), message(1, "Nothing.", stored)])
+
+        expect(built.prompt).toContain(`<tool_result tool="get_plex_sessions" ok="true">\nargs: ${NOTES.withheld}\nresult: ${NOTES.withheld}\n</tool_result>`)
+        expect(built.sentToolText.get(1)).toEqual([""])
         expect(leaked(built)).toEqual([])
       })
     })
@@ -398,6 +409,33 @@ describe("buildJudgePrompt", () => {
     const neutralised = "( not recorded: it could not be checked for credentials)"
     expect(built.prompt).toContain(`<tool_result tool="${neutralised}" ok="true">\nargs: ${neutralised}\nresult: ${neutralised}\n</tool_result>`)
     expect(built.sentToolText.get(1)).toEqual([neutralised])
+  })
+
+  describe("a tool call's withheld field", () => {
+    const WITHHELD: ToolLogEntry = { tool: "", args: "", result: "", ok: true, withheld: ["tool", "args", "result"] }
+    const NOTED = `<tool_result tool="${NOTES.withheld}" ok="true">\nargs: ${NOTES.withheld}\nresult: ${NOTES.withheld}\n</tool_result>`
+
+    it("shows the builder's note in place of each field a stored entry lists as withheld, never its stored text", () => {
+      const stored: ToolLogEntry = { ...WITHHELD, tool: "Zq9StoredName", args: "Zq9StoredArgs", result: "Zq9StoredResult" }
+
+      const built = build([message(0, "what's playing?"), message(1, "Nothing.", [stored])])
+
+      expect(built.prompt).toContain(NOTED)
+      expect(built.prompt).not.toContain("Zq9Stored")
+      expect(built.sentToolText.get(1)).toEqual([""])
+    })
+
+    it.each([
+      // The words capture once stored in place of a field it could not redact, which content can still hold
+      ["the words capture once stored in place of a field", "Not recorded: it could not be checked for credentials", "Not recorded: it could not be checked for credentials"],
+      ["the builder's note", NOTES.withheld, "( not recorded: it could not be checked for credentials)"],
+    ])("reaches the judge as content when a tool's name, args and result read %s, apart from a withheld call's note", (_case, text, shown) => {
+      const built = build([message(0, "what's playing?"), message(1, "Nothing.", [{ tool: text, args: text, result: text, ok: true }, WITHHELD])])
+
+      expect(built.prompt).toContain(`<tool_result tool="${shown}" ok="true">\nargs: ${shown}\nresult: ${shown}\n</tool_result>\n${NOTED}`)
+      expect(shown).not.toBe(NOTES.withheld)
+      expect(built.sentToolText.get(1)).toEqual([shown, ""])
+    })
   })
 
   describe("content cannot pass for the prompt's structure", () => {
@@ -698,9 +736,14 @@ describe("JUDGE_SYSTEM_PROMPT", () => {
   ])("says %s", (phrase) => {
     expect(JUDGE_SYSTEM_PROMPT).toContain(phrase)
   })
-  it("explains the note a tool's name, args or result reads as when it could not be checked for credentials", () => {
+  it("explains the note in place of a tool's name, args or result that could not be checked for credentials", () => {
     expect(JUDGE_SYSTEM_PROMPT).toContain(
-      `A tool's name, args or result that reads "${NOT_RECORDED}" was withheld because it could not be checked for credentials, so what it held is unknown, and it is never grounds for unsupported_claim or wrong_fact.`
+      `A tool's name, args or result that could not be checked for credentials was withheld and shows "${NOTES.withheld}" in its place: what it held is unknown, and it is never grounds for unsupported_claim or wrong_fact.`
     )
+  })
+
+  it("shows that note as content carries it, beside another note, and never calls its words without the parenthesis a note", () => {
+    expect(JUDGE_SYSTEM_PROMPT).toContain(`[ #7 assistant], ( message unreadable), ${neutralise(NOTES.withheld)} or [ truncated]`)
+    expect(JUDGE_SYSTEM_PROMPT).not.toMatch(/"Not recorded:/)
   })
 })

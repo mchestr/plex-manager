@@ -4,9 +4,9 @@
 
 /**
  * The stored tool log (spec §3, "Tool log"): credentials are redacted before
- * anything is cut, a field whose redaction throws is stored as a fixed note,
- * args are capped at 2 KB, each result at 8 KB and a turn at 32 KB, and the
- * serialized form reads back or reads as null.
+ * anything is cut, a field whose redaction throws is stored empty and listed
+ * as withheld, args are capped at 2 KB, each result at 8 KB and a turn at
+ * 32 KB, and the serialized form reads back or reads as null.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -14,10 +14,10 @@ import { mockReset } from "jest-mock-extended"
 import { buildInvite } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { executeAppDataTool } from "@/lib/chatbot/executors/app-data"
-import { NOTES, neutralise, TRUNCATED } from "@/lib/judge/fence"
+import { NOTES } from "@/lib/judge/fence"
 import { REDACTED } from "@/lib/mcp/redact"
 
-import { capToolLog, NOT_RECORDED, parseToolLog, serializeToolLog, type ToolLogEntry } from "../tool-log"
+import { capToolLog, parseToolLog, serializeToolLog, type ToolLogEntry } from "../tool-log"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
@@ -112,31 +112,37 @@ describe("capToolLog", () => {
     const DEEP_VALUES = ["deep-key-1", "deep-title-1"]
     const DEEP = `${"[".repeat(200_000)}${JSON.stringify({ apiKey: "deep-key-1", title: "deep-title-1" })}${"]".repeat(200_000)}`
 
-    it.each([
-      ["result", { result: DEEP }, { result: NOT_RECORDED }],
-      ["args", { args: DEEP }, { args: NOT_RECORDED }],
-      ["tool name", { tool: DEEP }, { tool: NOT_RECORDED }],
+    it.each<[string, Partial<ToolLogEntry>, Partial<ToolLogEntry>]>([
+      ["result", { result: DEEP }, { result: "", withheld: ["result"] }],
+      ["args", { args: DEEP }, { args: "", withheld: ["args"] }],
+      ["tool name", { tool: DEEP }, { tool: "", withheld: ["tool"] }],
       // A runtime type its caller should never pass: redactText throws a TypeError on it
-      ["args that are not text", { args: JSON.stringify(undefined) }, { args: NOT_RECORDED }],
-    ] as const)("is stored as a fixed note in place of the %s, never as its text", (_field, given, stored) => {
+      ["args that are not text", { args: JSON.stringify(undefined) }, { args: "", withheld: ["args"] }],
+    ])("stores the %s empty and lists it as withheld, never its text or a note in its place", (_field, given, stored) => {
       const [logged] = capToolLog([entry(given)])
 
       expect(logged).toEqual(entry(stored))
       for (const value of DEEP_VALUES) expect(JSON.stringify(logged)).not.toContain(value)
     })
 
+    it("lists every field it withheld, in the entry's order, and keeps the others", () => {
+      const [logged] = capToolLog([entry({ result: DEEP, args: '{"limit":5}', tool: DEEP })])
+
+      expect(logged).toEqual({ tool: "", args: '{"limit":5}', result: "", ok: true, withheld: ["tool", "result"] })
+    })
+
     it("leaves the turn's other calls as they are", () => {
       const log = capToolLog([entry({ result: DEEP }), entry({ tool: "get_plex_sessions", args: '{"limit":5}', result: '{"size":2}' })])
 
-      expect(log).toEqual([entry({ result: NOT_RECORDED }), entry({ tool: "get_plex_sessions", args: '{"limit":5}', result: '{"size":2}' })])
+      expect(log).toEqual([entry({ result: "", withheld: ["result"] }), entry({ tool: "get_plex_sessions", args: '{"limit":5}', result: '{"size":2}' })])
     })
+  })
 
-    it("is a note that cannot pass for the judge prompt's notes or marks, and that redaction and neutralising leave as it is", () => {
-      expect(NOT_RECORDED).not.toMatch(/^[([]/)
-      expect([...Object.values(NOTES), TRUNCATED, REDACTED]).not.toContain(NOT_RECORDED)
-      expect(neutralise(NOT_RECORDED)).toBe(NOT_RECORDED)
-      expect(capToolLog([entry({ result: NOT_RECORDED })])).toEqual([entry({ result: NOT_RECORDED })])
-    })
+  it("stores text that reads like the judge prompt's note, or the words capture once stored in place of a field, as the text it is", () => {
+    // Only the withheld list marks a field withheld: the judge prompt writes its own note there, and neutralises one in content
+    const words = "Not recorded: it could not be checked for credentials"
+
+    expect(capToolLog([entry({ tool: words, args: NOTES.withheld, result: words })])).toEqual([entry({ tool: words, args: NOTES.withheld, result: words })])
   })
 })
 
@@ -159,5 +165,17 @@ describe("serializeToolLog and parseToolLog", () => {
     expect(parseToolLog("not json")).toBeNull()
     expect(parseToolLog(JSON.stringify({ tool: "x" }))).toBeNull()
     expect(parseToolLog(JSON.stringify([{ tool: "x", args: "{}", result: "{}", ok: "yes" }]))).toBeNull()
+  })
+
+  it("reads back the fields an entry withheld, and an entry stored without the list as before", () => {
+    const log = [entry({ tool: "", result: "", withheld: ["tool", "result"] }), entry()]
+
+    expect(parseToolLog(serializeToolLog(log))).toEqual(log)
+    expect(parseToolLog('[{"tool":"x","args":"{}","result":"{}","ok":true}]')).toStrictEqual([{ tool: "x", args: "{}", result: "{}", ok: true }])
+  })
+
+  it("reads a log whose withheld list is not a list of an entry's text fields as null", () => {
+    expect(parseToolLog(JSON.stringify([{ ...entry(), withheld: ["content"] }]))).toBeNull()
+    expect(parseToolLog(JSON.stringify([{ ...entry(), withheld: "result" }]))).toBeNull()
   })
 })
