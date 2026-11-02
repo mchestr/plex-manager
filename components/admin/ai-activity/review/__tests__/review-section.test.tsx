@@ -336,6 +336,37 @@ describe('ReviewSection polling', () => {
     expect(getStatus).toHaveBeenCalledTimes(3)
   })
 
+  it('says in the status region that the check failed, shows Try again busy, and moves focus to the heading, not the body, once it succeeds', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    const checkFailed = { success: false, code: 'INTERNAL', error: 'Could not read the review status' } as const
+    getStatus.mockResolvedValueOnce(checkFailed)
+
+    render({ review: view({ status: 'running', summary: null, completedAt: null }) })
+    const region = screen.getByTestId('conversation-review-announcement')
+    await advance(5_000)
+    await waitFor(() => expect(region).toHaveTextContent('Could not check the review status'))
+
+    // A retry that fails too keeps the line, and focus on Try again
+    let settle: (result: Awaited<ReturnType<typeof getConversationReviewStatus>>) => void = () => {}
+    getStatus.mockReturnValueOnce(new Promise((resolve) => (settle = resolve)))
+    const retry = screen.getByTestId('conversation-review-status-retry')
+    await user.click(retry)
+    await waitFor(() => expect(retry).toHaveAttribute('aria-busy', 'true'))
+    expect(retry).toHaveFocus()
+    await act(async () => settle(checkFailed))
+    await waitFor(() => expect(retry).not.toHaveAttribute('aria-busy'))
+    expect(retry).toHaveFocus()
+    expect(region).toHaveTextContent('Could not check the review status')
+
+    getStatus.mockResolvedValueOnce(status('running'))
+    await user.click(retry)
+    await waitFor(() => expect(screen.queryByTestId('conversation-review-status-error')).not.toBeInTheDocument())
+    // Try again went with the line
+    expect(document.activeElement).not.toBe(document.body)
+    expect(screen.getByRole('heading', { name: 'Review' })).toHaveFocus()
+    expect(region).toHaveTextContent('Reviewing the conversation')
+  })
+
   it('a refreshed page with a different review than the cached one seeds the status from it and polls', async () => {
     getStatus.mockResolvedValue({ success: true, data: { reviewId: 'review-2', status: 'running', errorCode: null } })
 

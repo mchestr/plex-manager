@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { useEffect, useTransition } from "react"
+import { useEffect, useRef, useTransition, type MouseEvent } from "react"
 
 import { getConversationReviewStatus, reviewConversation } from "@/actions/admin/conversation-review"
 import { FindingCard, type ReviewFinding } from "@/components/admin/ai-activity/review/finding-card"
@@ -61,7 +61,13 @@ function useReviewStatus(conversationId: string, review: ReviewView | null) {
     queryClient.setQueryData<ReviewStatus | null>(key, seed)
   }, [queryClient, conversationId, reviewId, reviewStatus, reviewErrorCode])
 
-  return { status: query.data, failed: query.isError, retry: () => void query.refetch() }
+  return {
+    status: query.data,
+    failed: query.isError,
+    checking: query.isFetching,
+    /** Checks again, and says whether the status came back. */
+    retry: async () => (await query.refetch()).isSuccess,
+  }
 }
 
 /** Fixed copy, then its settings link when it has one, under the test id of the place that shows it. */
@@ -83,6 +89,8 @@ function CopyWithLink({ copy, linkTestId }: { copy: ReviewErrorCopy; linkTestId:
 
 interface AnnouncementState {
   status: ReviewStatus | null | undefined
+  /** The last status check failed, so the status shown may be out of date. */
+  checkFailed: boolean
   /** The page shows the finished review's details. */
   finished: boolean
   /** The failure's Alert shows; the blocked notice hides one with its own code. */
@@ -91,12 +99,13 @@ interface AnnouncementState {
 }
 
 /**
- * What the status region says: the review's progress, and its result once the page shows it. A failure the Alert
- * shows is the Alert's to say; one the blocked notice hides is said here, since the notice is not a live region.
- * The result counts open findings only: a review never deletes findings, so the page also shows those triaged
- * before it.
+ * What the status region says: that the status check failed, the review's progress, and its result once the page
+ * shows it. A failure the Alert shows is the Alert's to say; one the blocked notice hides is said here, since the
+ * notice is not a live region. The result counts open findings only: a review never deletes findings, so the page
+ * also shows those triaged before it.
  */
-function announcement({ status, finished, failureShown, openFindings }: AnnouncementState): string {
+function announcement({ status, checkFailed, finished, failureShown, openFindings }: AnnouncementState): string {
+  if (checkFailed) return "Could not check the review status"
   if (status?.status === "queued") return "Review queued"
   if (status?.status === "running") return "Reviewing the conversation"
   if (status?.status === "failed") return failureShown ? "" : "Review failed"
@@ -142,13 +151,22 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
   const { showError } = useToast()
   const queryClient = useQueryClient()
   const [isStarting, startReview] = useTransition()
-  const { status, failed: statusFailed, retry: retryStatus } = useReviewStatus(conversationId, review)
+  const heading = useRef<HTMLHeadingElement>(null)
+  const { status, failed: statusFailed, checking, retry: retryStatus } = useReviewStatus(conversationId, review)
   const current = review && status?.reviewId === review.id && status.status === "done" ? review : null
   // Why no review can start, the master AI switch first; null when one can
   const blocked = llmDisabled ? "LLM_DISABLED" : judgeConfigured ? null : "NOT_CONFIGURED"
   // A queued review can carry the code of a failed attempt BullMQ is retrying, so only a failed one shows it,
   // and not while the same code still blocks the section: the notice says so in the present tense
   const failure = status?.status === "failed" && (blocked === null || status.errorCode !== blocked) ? { code: status.errorCode } : null
+
+  const onRetry = (event: MouseEvent<HTMLButtonElement>) => {
+    const button = event.currentTarget
+    void retryStatus().then((checked) => {
+      // Try again goes with the error line once the check succeeds: focus moves to the heading, not the body
+      if (checked && (document.activeElement === button || document.activeElement === document.body)) heading.current?.focus()
+    })
+  }
 
   const onReview = () => {
     startReview(async () => {
@@ -165,7 +183,7 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
   return (
     <section aria-labelledby="conversation-review-heading" className="flex flex-col gap-4" data-testid="conversation-review-section">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 id="conversation-review-heading" className="text-h3 text-foreground">
+        <h2 ref={heading} id="conversation-review-heading" tabIndex={-1} className="text-h3 text-foreground outline-none">
           Review
         </h2>
         <StatusBadge domain="conversationReview" value={status?.status ?? "none"} data-testid="conversation-review-status" />
@@ -191,6 +209,7 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
       <p role="status" className="sr-only" data-testid="conversation-review-announcement">
         {announcement({
           status,
+          checkFailed: statusFailed,
           finished: current !== null,
           failureShown: failure !== null,
           openFindings: findings.filter((finding) => finding.status === "open").length,
@@ -199,7 +218,15 @@ export function ReviewSection({ conversationId, review, findings, hasToolEvidenc
       {statusFailed && (
         <p className="text-ui text-muted-foreground" data-testid="conversation-review-status-error">
           Could not check the review status.{" "}
-          <Button variant="link" size="sm" className="h-auto px-0" onClick={retryStatus} data-testid="conversation-review-status-retry">
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto px-0"
+            onClick={onRetry}
+            loading={checking}
+            loadingLabel="Checking"
+            data-testid="conversation-review-status-retry"
+          >
             Try again
           </Button>
         </p>
