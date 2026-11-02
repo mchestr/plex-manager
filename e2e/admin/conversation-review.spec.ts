@@ -12,7 +12,8 @@ import { JUDGE_MODEL, type JudgeRequest } from '../mocks/llm-server';
  * fixture's, tool log included, so the finding verifies against it. Triage
  * then moves the Findings tab's false alarm rate, and the stub's request log
  * shows the prompt the judge was sent. Any other active judge provider is
- * turned off for the spec, so the stub is the judge, and turned back on after.
+ * turned off for the spec, so the stub is the judge, and turned back on after,
+ * even when the cleanup fails.
  */
 const JUDGE_PROVIDER_ID = 'e2e-conversation-review-judge';
 const CONVERSATION_ID = 'e2e-conversation-review';
@@ -34,6 +35,17 @@ async function clean() {
 
 /** Active judge providers the spec turned off in beforeAll, turned back on in afterAll. */
 let otherJudges: string[] = [];
+
+/** Turns `otherJudges` back on. The stub goes off first: only one judge row can be active, and a failed clean() leaves it. */
+async function restoreOtherJudges() {
+  const prisma = createE2EPrismaClient();
+  try {
+    await prisma.lLMProvider.updateMany({ where: { id: JUDGE_PROVIDER_ID }, data: { isActive: false } });
+    await prisma.lLMProvider.updateMany({ where: { id: { in: otherJudges } }, data: { isActive: true } });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
 
 /** The judge requests the stub has answered in this run. */
 async function judgeRequests(): Promise<JudgeRequest[]> {
@@ -98,10 +110,11 @@ test.describe('Conversation review', () => {
   });
 
   test.afterAll(async () => {
-    await clean();
-    const prisma = createE2EPrismaClient();
-    await prisma.lLMProvider.updateMany({ where: { id: { in: otherJudges } }, data: { isActive: true } });
-    await prisma.$disconnect();
+    try {
+      await clean();
+    } finally {
+      await restoreOtherJudges();
+    }
   });
 
   test('reviews a conversation with the stubbed judge and triages its finding', async ({ adminPage: page }) => {
