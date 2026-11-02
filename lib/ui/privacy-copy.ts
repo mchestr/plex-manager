@@ -11,7 +11,7 @@
 import { llmKeyDestination } from "@/lib/llm/provider-presets"
 
 /** The parts of an active `LLMProvider` row that say where its requests go. */
-export interface ProviderEndpoint {
+interface ProviderEndpoint {
   provider: string
   baseUrl: string | null
 }
