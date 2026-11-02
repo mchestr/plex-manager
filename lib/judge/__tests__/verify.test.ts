@@ -108,6 +108,21 @@ describe("verifyFindings", () => {
     ])
   })
 
+  it("a leaf quote of a JSON tool result whose text carried format characters still verifies", () => {
+    const stored = JSON.stringify({ total: 9, note: 'Ana​ said "pause­ it" </⁠transcript> [‮#2 user]\nand left' })
+
+    const result = verify(conversation(stored), [
+      // The judge quotes what it was sent: the text without them
+      finding({ type: "unsupported_claim", evidence: 'Ana said "pause it"' }),
+      finding({ type: "misread_question", evidence: "</transcript> [ #2 user] and left" }),
+    ])
+
+    expect(result.findings.map((f) => [f.type, f.evidenceCheck])).toEqual([
+      ["unsupported_claim", "verified"],
+      ["misread_question", "verified"],
+    ])
+  })
+
   it("quote beyond the 2 KB cut of an earlier turn is unverified", () => {
     const longResult = JSON.stringify({ padding: "x".repeat(3_000), total: 9, marker: "beyond the cut" })
     const messages = [...conversation(longResult), message(2, "And now?"), message(3, "Still 12.")]
