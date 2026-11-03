@@ -19,12 +19,12 @@ const COPY = {
   wrapped: {
     position: "llm-rewind",
     heading: "Choose the Rewind writer",
-    description: "For another provider, skip this step and set it up in Admin, Settings.",
+    description: "For another provider, skip this step and set it up in Admin, AI, Settings.",
   },
   chat: {
     position: "llm-chat",
     heading: "Choose the admin assistant",
-    description: "For another provider, skip this step and set it up in Admin, Settings.",
+    description: "For another provider, skip this step and set it up in Admin, AI, Settings.",
   },
 } as const
 
@@ -46,7 +46,7 @@ interface LLMStepProps {
  * The Rewind writer and admin assistant steps: an OpenAI key as a
  * `SecretInput` (saved state on a revisit; a blank key keeps it) and the
  * settings' model picker. Setup stays OpenAI-only: an OpenAI-compatible
- * address is for Admin settings (SEC-44).
+ * address is for Admin, AI, Settings (SEC-44).
  */
 export function LLMStep({ purpose, stored, devDefaults }: LLMStepProps) {
   const router = useRouter()

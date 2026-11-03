@@ -86,7 +86,7 @@ export function SetupSummary({ configured }: { configured: Record<SetupStepId, b
                   </li>
                 ))}
               </ul>
-              <p className="text-label text-muted-foreground">Set them up in Admin, Settings.</p>
+              <p className="text-label text-muted-foreground">Set them up later in Admin.</p>
             </>
           )}
         </section>

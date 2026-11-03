@@ -1,7 +1,8 @@
 /**
- * The settings page's reads (P11.5, BP-06): server-only, each admin-checked
- * next to its data. None returns a stored secret: secrets come back as their
- * last four and the origin they may go to (`describeSecret`, SEC-31).
+ * The reads of the settings pages (P11.5, BP-06): Settings, and the Settings
+ * tabs of AI, Discord and Rewind. Server-only, each admin-checked next to its
+ * data. None returns a stored secret: secrets come back as their last four and
+ * the origin they may go to (`describeSecret`, SEC-31).
  *
  * @module lib/data/admin-settings
  */

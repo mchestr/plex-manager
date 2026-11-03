@@ -93,9 +93,9 @@ async function optionalRows(): Promise<PreflightRow[]> {
 
 async function llmRow(config: { llmDisabled: boolean; rewindLlmMode: string } | null): Promise<PreflightRow> {
   const label = "AI copy"
-  if (config?.llmDisabled || config?.rewindLlmMode === "off") {
-    return { id: "llm", label, status: "degraded", detail: "Off in Settings" }
-  }
+  // Two switches turn the copy off, and each lives on its own page
+  if (config?.llmDisabled) return { id: "llm", label, status: "degraded", detail: "AI features are off in AI settings" }
+  if (config?.rewindLlmMode === "off") return { id: "llm", label, status: "degraded", detail: "Off in Rewind settings" }
   const provider = await prisma.lLMProvider.findFirst({
     where: { isActive: true, purpose: "wrapped" },
     select: { provider: true, model: true },

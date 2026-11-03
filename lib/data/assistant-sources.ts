@@ -1,6 +1,6 @@
 /**
  * The MCP servers and knowledge base sources the admin assistant uses, for the
- * settings page: server-only and admin-checked. A secret never leaves with a
+ * AI settings tab: server-only and admin-checked. A secret never leaves with a
  * row; the form gets whether one is saved, its last four and its origin.
  *
  * @module lib/data/assistant-sources

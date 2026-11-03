@@ -53,7 +53,7 @@ function describeFreeze(frozenAt: string, formatDate: (date: Date) => string): s
 function describeSwitch(at: Date, now: number, server: string, autoOpen: boolean, formatDate: (date: Date) => string): string {
   if (at.getTime() <= now) return "Not scheduled: the season has opened"
   const time = `${instantToWallTime(at, server).slice(11)} in ${server} on ${formatDate(at)}`
-  return autoOpen ? time : "By hand in Settings"
+  return autoOpen ? time : "By hand in Rewind settings"
 }
 
 /** "02:15 in America/Chicago, which is 00:15 in America/Los_Angeles" for the season-open run. */

@@ -102,7 +102,13 @@ describe('getRewindPreflight', () => {
   it('reports template-only mode', async () => {
     prismaMock.config.findUnique.mockResolvedValue(buildConfig({ rewindLlmMode: 'off' }))
 
-    expect(row(await getRewindPreflight(), 'llm')).toMatchObject({ status: 'degraded', detail: 'Off in Settings' })
+    expect(row(await getRewindPreflight(), 'llm')).toMatchObject({ status: 'degraded', detail: 'Off in Rewind settings' })
+  })
+
+  it('names AI settings when the master AI switch is what turned the copy off', async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: true }))
+
+    expect(row(await getRewindPreflight(), 'llm')).toMatchObject({ status: 'degraded', detail: 'AI features are off in AI settings' })
   })
 
   it('names a missing AI provider as the cause of template text', async () => {
