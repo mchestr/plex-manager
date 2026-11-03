@@ -7,21 +7,21 @@ import type { SettingsNavItem } from '@/components/admin/settings/settings-group
 import { SettingsSection } from '@/components/ui/settings-section'
 
 const ITEMS: SettingsNavItem[] = [
-  { id: 'plex', label: 'Plex server', group: 'media', status: 'ok' },
-  { id: 'stripe', label: 'Stripe billing', group: 'members', status: 'ok' },
+  { id: 'plex', label: 'Plex server', group: 'connections', status: 'ok' },
+  { id: 'stripe', label: 'Stripe billing', group: 'billing', status: 'ok' },
   { id: 'system', label: 'System information', group: 'system' },
 ]
 
 function renderLayout() {
   return render(
     <SettingsLayout items={ITEMS}>
-      <SettingsGroup id="media">
+      <SettingsGroup id="connections">
         <section id="plex">
           Plex
           <input aria-label="Plex name" />
         </section>
       </SettingsGroup>
-      <SettingsGroup id="members">
+      <SettingsGroup id="billing">
         <section id="stripe">Stripe</section>
       </SettingsGroup>
       <SettingsGroup id="system">
@@ -114,7 +114,7 @@ describe('SettingsLayout', () => {
     }
     render(
       <SettingsLayout items={ITEMS}>
-        <SettingsGroup id="media">
+        <SettingsGroup id="connections">
           <PlexSection />
         </SettingsGroup>
       </SettingsLayout>

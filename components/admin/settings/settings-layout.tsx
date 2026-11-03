@@ -37,7 +37,7 @@ function useActiveSection(ids: string[]): [string | null, (id: string) => void] 
   return [active, setActive]
 }
 
-const ActiveGroupContext = createContext<SettingsGroupId>("media")
+const ActiveGroupContext = createContext<SettingsGroupId>("connections")
 
 /**
  * One group of sections. Every group stays mounted so an unsaved form keeps its
@@ -71,7 +71,7 @@ interface SettingsLayoutProps {
 export function SettingsLayout({ items, children }: SettingsLayoutProps) {
   const [active, setActive] = useActiveSection(items.map((item) => item.id))
   const bodyRef = useRef<HTMLDivElement>(null)
-  const [group, setGroup] = useState<SettingsGroupId>(items[0]?.group ?? "media")
+  const [group, setGroup] = useState<SettingsGroupId>(items[0]?.group ?? "connections")
   const [jump, setJump] = useState<{ id: string; n: number } | null>(null)
 
   const reveal = useCallback(
