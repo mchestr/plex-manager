@@ -159,5 +159,6 @@ const SETTINGS_HOMES: Partial<Record<string, Route>> = {
 
 /** One section of the settings, on the page it lives on: its feature's page once moved, else its anchor on the settings page. */
 export function settingsSection(id: string): Route {
-  return SETTINGS_HOMES[id] ?? (`/admin/settings#${seg(id)}` as Route)
+  // Own keys only: an id such as "constructor" is a section, not a member inherited from Object
+  return (Object.hasOwn(SETTINGS_HOMES, id) ? SETTINGS_HOMES[id] : undefined) ?? (`/admin/settings#${seg(id)}` as Route)
 }
