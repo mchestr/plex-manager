@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 
-import AffiliatesPage from '@/app/admin/affiliates/page'
+import AffiliatesPage from '@/app/admin/(members)/affiliates/page'
 import { assertPermission } from '@/lib/admin'
 import { getAffiliateHistory } from '@/lib/data/affiliate-history'
 import { getAffiliateSettingsView } from '@/lib/data/affiliate-settings'

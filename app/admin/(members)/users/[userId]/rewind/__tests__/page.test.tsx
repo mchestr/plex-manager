@@ -10,7 +10,7 @@ import { notFound } from "next/navigation"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { buildUser } from "@/__tests__/helpers/factories"
-import AdminUserRewindPage from "@/app/admin/users/[userId]/rewind/[year]/page"
+import AdminUserRewindPage from "@/app/admin/(members)/users/[userId]/rewind/[year]/page"
 import { stagePages, LLM_COPY } from "@/components/rewind/stage/__tests__/stage-fixture"
 import { StoryStage } from "@/components/rewind/stage/story-stage"
 import { getAdminGate } from "@/lib/admin"
