@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { DiscardChangesDialog } from "@/components/ui/discard-changes-dialog"
 import { useReportDirty } from "@/components/ui/settings-edit-context"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { useLeaveGuard } from "@/hooks/use-leave-guard"
 
 interface SettingsSheetProps {
   /** The list section it belongs to, whose nav item shows the "Unsaved changes" pip while the form is dirty. */
@@ -35,7 +36,9 @@ interface SettingsSheetProps {
  * ask first (Cloudscape, "Unsaved changes"): Keep editing stays, Discard
  * closes. While a save is in flight they do nothing, as in a section: the
  * save's outcome closes the Sheet or keeps it open. Its unsaved changes
- * count as its section's, for the nav pip and the browser's leave prompt.
+ * count as its section's, for the nav pip and the browser's leave prompt;
+ * on a page of its own, with no settings layout to report to, the Sheet
+ * asks the browser itself.
  */
 export function SettingsSheet({ section, id, name, title, description, trigger, triggerLabel, triggerTestId, sheetTestId, children }: SettingsSheetProps) {
   const [open, setOpen] = useState(false)
@@ -52,6 +55,8 @@ export function SettingsSheet({ section, id, name, title, description, trigger, 
       if (unsaved) reportDirty?.(section, false)
     }
   }, [reportDirty, section, unsaved])
+  // On a page of its own there is no settings layout to report to, so the Sheet guards the browser's leave prompt itself
+  useLeaveGuard(unsaved && !reportDirty)
 
   const close = () => {
     setOpen(false)

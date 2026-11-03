@@ -5,6 +5,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useL
 import type { SettingsGroupId, SettingsNavItem } from "@/components/admin/settings/settings-groups"
 import { SettingsJumpTo, SettingsNav } from "@/components/admin/settings/settings-nav"
 import { SettingsEditProvider } from "@/components/ui/settings-edit-context"
+import { useLeaveGuard } from "@/hooks/use-leave-guard"
 
 /** The id of the topmost section in view, so the nav can mark it `aria-current`. */
 function useActiveSection(ids: string[]): [string | null, (id: string) => void] {
@@ -147,12 +148,7 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
 
   // A backstop for unsaved changes: the browser asks before the tab closes or reloads (MDN, beforeunload)
   const anyDirty = dirty.size > 0
-  useEffect(() => {
-    if (!anyDirty) return
-    const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault()
-    window.addEventListener("beforeunload", onBeforeUnload)
-    return () => window.removeEventListener("beforeunload", onBeforeUnload)
-  }, [anyDirty])
+  useLeaveGuard(anyDirty)
 
   return (
     <div className="flex flex-col gap-6 md:grid md:grid-cols-[200px_minmax(0,760px)] md:items-start md:gap-8" data-testid="settings-layout">

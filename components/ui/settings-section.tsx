@@ -11,6 +11,7 @@ import { SettingsFormFooter, type TestResult } from "@/components/ui/settings-fo
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Time } from "@/components/ui/time"
 import type { SettingsFormState } from "@/hooks/admin/use-settings-form"
+import { useLeaveGuard } from "@/hooks/use-leave-guard"
 import { resolveStatus, type ConnectionStatus } from "@/lib/ui/status"
 import { cn } from "@/lib/utils"
 
@@ -152,14 +153,9 @@ export function SettingsSection({
   }, [reportDirty, id, dirty])
   useEffect(() => () => reportDirty?.(id, false), [reportDirty, id])
 
-  // Stand-alone, with no page to report to, the section is its own backstop: the browser asks before the
-  // tab closes or reloads (MDN, beforeunload). Under the settings page the layout owns that one prompt.
-  useEffect(() => {
-    if (!dirty || reportDirty) return
-    const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault()
-    window.addEventListener("beforeunload", onBeforeUnload)
-    return () => window.removeEventListener("beforeunload", onBeforeUnload)
-  }, [dirty, reportDirty])
+  // Stand-alone, with no page to report to, the section is its own backstop for the browser's leave prompt;
+  // under the settings page the layout owns that one prompt.
+  useLeaveGuard(dirty && !reportDirty)
 
   /** Focus may move here only while the admin is still in this section (or nowhere), never out of another one. */
   const focusIsHere = () => {
