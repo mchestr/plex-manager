@@ -68,7 +68,7 @@ export interface KnowledgeRepo {
   updatedAt: Date
 }
 
-export type GitHubReadFailure = "rate_limited" | "unreachable"
+type GitHubReadFailure = "rate_limited" | "unreachable"
 type Failed = { ok: false; reason: GitHubReadFailure }
 type RefResult = { ok: true; sha: string } | Failed
 type ListResult = { ok: true; paths: string[]; truncated: boolean } | Failed
