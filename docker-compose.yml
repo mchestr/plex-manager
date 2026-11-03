@@ -67,7 +67,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: plex-wrapped-redis
     ports:
       - "127.0.0.1:6379:6379"
