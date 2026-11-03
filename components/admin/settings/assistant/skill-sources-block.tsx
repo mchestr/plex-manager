@@ -40,35 +40,40 @@ function RefreshButton({ source }: { source: SkillSourceSettings }) {
 
 function SkillRow({ source }: { source: SkillSourceSettings }) {
   return (
+    // Three groups, so a narrow screen wraps the badges and the actions below the name instead of squeezing it
     <li className="flex flex-wrap items-center gap-3 py-3" data-testid={`settings-skill-${source.id}`}>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="text-ui font-medium text-foreground">{source.name}</span>
+      <div className="flex min-w-0 grow basis-48 flex-col">
+        <span className="truncate text-ui font-medium text-foreground">{source.name}</span>
         <span className="truncate font-mono text-label text-muted-foreground">
           {source.repo}@{source.ref}
           {source.path && `/${source.path}`}
         </span>
       </div>
-      <Badge variant={source.isActive ? "success" : "neutral"}>{source.isActive ? "On" : "Off"}</Badge>
-      {!source.pinned && (
-        <Badge variant="warning" data-testid="settings-skill-moving-ref">
-          Follows a moving ref
-        </Badge>
-      )}
-      <RefreshButton source={source} />
-      <CheckSkillsDialog source={source} />
-      <SettingsSheet
-        section="assistant"
-        id="skill"
-        name={source.name}
-        title={source.name}
-        description={SKILL_WARNING}
-        trigger="Edit"
-        triggerLabel={source.name}
-        triggerTestId="settings-skill-edit-open"
-        sheetTestId="settings-skill-edit-sheet"
-      >
-        {(sheet) => <SkillSourceForm source={source} onDone={sheet.onDone} onCancel={sheet.onCancel} onDirtyChange={sheet.onDirtyChange} onPendingChange={sheet.onPendingChange} />}
-      </SettingsSheet>
+      <div className="flex flex-wrap items-center gap-3">
+        <Badge variant={source.isActive ? "success" : "neutral"}>{source.isActive ? "On" : "Off"}</Badge>
+        {!source.pinned && (
+          <Badge variant="warning" data-testid="settings-skill-moving-ref">
+            Follows a moving ref
+          </Badge>
+        )}
+      </div>
+      <div className="flex items-center gap-3">
+        <RefreshButton source={source} />
+        <CheckSkillsDialog source={source} />
+        <SettingsSheet
+          section="assistant"
+          id="skill"
+          name={source.name}
+          title={source.name}
+          description={SKILL_WARNING}
+          trigger="Edit"
+          triggerLabel={source.name}
+          triggerTestId="settings-skill-edit-open"
+          sheetTestId="settings-skill-edit-sheet"
+        >
+          {(sheet) => <SkillSourceForm source={source} onDone={sheet.onDone} onCancel={sheet.onCancel} onDirtyChange={sheet.onDirtyChange} onPendingChange={sheet.onPendingChange} />}
+        </SettingsSheet>
+      </div>
     </li>
   )
 }
