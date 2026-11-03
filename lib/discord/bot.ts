@@ -38,7 +38,7 @@ export const defaultClientFactory: DiscordClientFactory = () =>
 const STABLE_READY_MS = 60 * 1000
 
 const HEALTH_MESSAGES = {
-  fatal: "Discord rejected the bot's token or intents. Save a new token in Admin, Settings, Discord.",
+  fatal: "Discord rejected the bot's token or intents. Save a new token in Admin, Discord, Settings.",
   backoff: "The bot could not log in to Discord and is retrying with a growing delay.",
   daily_cap: "The bot hit its daily login limit and will not log in again until the count falls.",
 } as const

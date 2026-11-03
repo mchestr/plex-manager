@@ -37,6 +37,7 @@ const REFUSED_PATHS = [
   '/admin/cost-analysis',
   '/admin/queues',
   '/admin/discord',
+  '/admin/discord/settings',
   '/admin/rewind',
   '/admin/shares',
   '/admin/announcements',

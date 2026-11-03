@@ -11,6 +11,7 @@ import {
   playgroundFor,
   publicInviteUrl,
   rewindHistory,
+  settingsSection,
   userDetail,
   userRewind,
 } from "@/lib/admin/routes"
@@ -80,5 +81,16 @@ describe("admin routes", () => {
     expect(publicInviteUrl("AUDIT2026", "https://plex.example.com")).toBe("https://plex.example.com/invite/AUDIT2026")
     expect(publicInviteUrl("AUDIT2026", "https://plex.example.com/")).toBe("https://plex.example.com/invite/AUDIT2026")
     expect(publicInviteUrl("A B", "http://localhost:3000")).toBe("http://localhost:3000/invite/A%20B")
+  })
+
+  it("sends the Discord settings sections to their own page", () => {
+    expect(settingsSection("discord")).toBe("/admin/discord/settings")
+    expect(settingsSection("channel-stats")).toBe("/admin/discord/settings")
+  })
+
+  it("keeps any other settings section on the Settings page, by its encoded anchor", () => {
+    expect(settingsSection("tautulli")).toBe("/admin/settings#tautulli")
+    expect(settingsSection("time-zone")).toBe("/admin/settings#time-zone")
+    expect(settingsSection("a b")).toBe("/admin/settings#a%20b")
   })
 })

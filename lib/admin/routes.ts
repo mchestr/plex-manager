@@ -143,7 +143,13 @@ export function auditEvent(id: string): Route {
   return `/admin/audit/${seg(id)}` as Route
 }
 
-/** One section of the settings page, by its anchor id. */
+/** The settings sections that moved to their feature's own page; every other id is still a section of Settings. */
+const SETTINGS_HOMES: Partial<Record<string, Route>> = {
+  "channel-stats": "/admin/discord/settings",
+  discord: "/admin/discord/settings",
+}
+
+/** One section of the settings: its own page when it moved there, else its anchor on the Settings page. */
 export function settingsSection(id: string): Route {
-  return `/admin/settings#${seg(id)}` as Route
+  return SETTINGS_HOMES[id] ?? (`/admin/settings#${seg(id)}` as Route)
 }

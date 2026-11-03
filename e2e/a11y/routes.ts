@@ -130,6 +130,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/admin/audit', as: 'admin', ready: 'admin-audit-header' },
   { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-header' },
   { path: '/admin/discord', as: 'admin', ready: 'discord-status' },
+  { path: '/admin/discord/settings', as: 'admin', ready: 'settings-discord-section' },
   { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },
   { path: '/admin/queues', as: 'admin', ready: 'queue-status' },
   { path: '/admin/settings', as: 'admin', ready: 'settings-plex-section' },

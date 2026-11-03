@@ -5,8 +5,6 @@ import { RewindSettingsSection } from "@/components/admin/settings/rewind-settin
 import { ApiAccessSection } from "@/components/admin/settings/sections/api-access-section"
 import { AssistantSection } from "@/components/admin/settings/sections/assistant-section"
 import { AiSection } from "@/components/admin/settings/sections/ai-section"
-import { ChannelStatsSection } from "@/components/admin/settings/sections/channel-stats-section"
-import { DiscordSection } from "@/components/admin/settings/sections/discord-section"
 import { JudgeNightlySection } from "@/components/admin/settings/sections/judge-nightly-section"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
 import { PrivacySection } from "@/components/admin/settings/sections/privacy-section"
@@ -19,9 +17,8 @@ import { settingsNavItems } from "@/components/admin/settings/settings-groups"
 import { SettingsGroup, SettingsLayout } from "@/components/admin/settings/settings-layout"
 import { SettingsPageActions } from "@/components/admin/settings/settings-page-actions"
 import { PageHeader } from "@/components/ui/page-header"
-import { getDiscordOverview } from "@/lib/admin/discord"
 import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
-import { getChannelStatsSettings, getRequestTierSettings } from "@/lib/data/community-stats"
+import { getRequestTierSettings } from "@/lib/data/community-stats"
 import { getAssistantSources } from "@/lib/data/assistant-sources"
 import { listOwnApiTokens } from "@/lib/data/api-tokens"
 import { getLastRetentionRun } from "@/lib/data/retention"
@@ -76,16 +73,14 @@ export default async function SettingsPage() {
     serverZone(),
     getFormat(),
   ])
-  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, lastRetentionRun, channelStats, requestTiers, assistantSources, apiTokens] = await Promise.all([
+  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, lastRetentionRun, requestTiers, assistantSources, apiTokens] = await Promise.all([
     getRewindSeasonDataPreparedAt(season.seasonYear),
     checkRewindInfra(),
     getRewindLibraries(),
     getRewindContentRatings(),
     getRewindSeasonSpend(season.seasonYear),
     getSettingsAuditMeta(),
-    getDiscordOverview(),
     getLastRetentionRun(),
-    getChannelStatsSettings(),
     getRequestTierSettings(),
     getAssistantSources(),
     listOwnApiTokens(),
@@ -109,7 +104,6 @@ export default async function SettingsPage() {
     other: otherStatus,
     stripe: health.stripe.status,
     ai: health.ai.status,
-    discord: health.discord.status,
     rewind: health.rewind.status,
   })
 
@@ -164,17 +158,6 @@ export default async function SettingsPage() {
             footerMeta={saved("judge")}
           />
           <AssistantSection sources={assistantSources} />
-        </SettingsGroup>
-        <SettingsGroup id="discord">
-          <DiscordSection
-            integration={settings.discordIntegration}
-            linkedCount={settings.discordLinkedCount}
-            portalUrl={`${baseUrl}/discord/link`}
-            state={discord.state}
-            now={new Date().toISOString()}
-            footerMeta={saved("discord")}
-          />
-          <ChannelStatsSection saved={channelStats} footerMeta={saved("channelStats")} />
         </SettingsGroup>
         <SettingsGroup id="rewind">
           <RewindSettingsSection

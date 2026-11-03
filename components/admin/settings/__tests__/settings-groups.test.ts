@@ -12,13 +12,12 @@ const STATUS: SettingsNavStatuses = {
   other: 'incomplete',
   stripe: 'disabled',
   ai: 'degraded',
-  discord: 'untested',
   rewind: 'ok',
 }
 
 describe('settings groups', () => {
-  it('lists the six groups in nav order', () => {
-    expect(SETTINGS_GROUPS.map((group) => group.label)).toEqual(['Media', 'Members', 'AI', 'Discord', 'Rewind', 'System'])
+  it('lists the five groups in nav order', () => {
+    expect(SETTINGS_GROUPS.map((group) => group.label)).toEqual(['Media', 'Members', 'AI', 'Rewind', 'System'])
   })
 
   it('puts each section in its group', () => {
@@ -29,7 +28,6 @@ describe('settings groups', () => {
       media: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr, Jellyfin'],
       members: ['Stripe billing', 'Request limits'],
       ai: ['AI provider', 'Conversation review', 'Assistant sources'],
-      discord: ['Discord', 'Channel stats'],
       rewind: ['Rewind'],
       system: ['Time zone', 'API access', 'Privacy', 'System information'],
     })
@@ -49,8 +47,6 @@ describe('settings groups', () => {
       'ai',
       'conversation-review',
       'assistant',
-      'discord',
-      'channel-stats',
       'rewind',
       'time-zone',
       'api-access',
@@ -74,8 +70,6 @@ describe('settings groups', () => {
       ai: 'degraded',
       'conversation-review': undefined,
       assistant: undefined,
-      discord: 'untested',
-      'channel-stats': undefined,
       rewind: 'ok',
       'time-zone': undefined,
       'api-access': undefined,
