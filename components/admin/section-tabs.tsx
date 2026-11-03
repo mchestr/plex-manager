@@ -28,19 +28,29 @@ export interface SectionTab {
  * (`sectionLayout`, `components/admin/section-layout.tsx`) renders it bare
  * above `{children}`, with the tabs the signed-in user may open.
  *
- * A strip wider than the screen scrolls inside its list, so the selected tab
- * is scrolled into view on mount and whenever the selection changes.
+ * A strip wider than the screen scrolls inside its list, so on mount and
+ * whenever the selection changes the list's own scroll offset moves to bring
+ * the selected tab into view. It never calls `scrollIntoView` on the tab: in
+ * Chromium that also moves the sequential-focus starting point, so the first
+ * Tab after a page load would land past the skip link.
  *
  * Test ids: `admin-section-tabs-<itemId>` on the list, `admin-section-tab-<tab.id>` on each tab.
  */
 export function SectionTabs({ itemId, label, tabs }: { itemId: string; label: string; tabs: SectionTab[] }): ReactNode {
   const pathname = usePathname()
   const current = tabs.find((tab) => tab.href === pathname)
-  // Typed as the primitive's button; rendered as a link, it is the anchor, and only `scrollIntoView` is used
+  const list = useRef<HTMLDivElement>(null)
+  // Typed as the primitive's button; rendered as a link, it is the anchor, and only its box is read
   const selectedTab = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    selectedTab.current?.scrollIntoView({ block: "nearest", inline: "nearest" })
+    const strip = list.current
+    const tab = selectedTab.current
+    if (!strip || !tab) return
+    const stripBox = strip.getBoundingClientRect()
+    const tabBox = tab.getBoundingClientRect()
+    if (tabBox.left < stripBox.left) strip.scrollLeft += tabBox.left - stripBox.left
+    else if (tabBox.right > stripBox.right) strip.scrollLeft += tabBox.right - stripBox.right
   }, [current?.id])
 
   if (!current) return null
@@ -48,7 +58,7 @@ export function SectionTabs({ itemId, label, tabs }: { itemId: string; label: st
   return (
     <div className="mx-auto w-full max-w-7xl px-4 pt-4 md:px-6">
       <Tabs value={current.id}>
-        <TabsList aria-label={label} data-testid={`admin-section-tabs-${itemId}`}>
+        <TabsList ref={list} aria-label={label} data-testid={`admin-section-tabs-${itemId}`}>
           {tabs.map((tab) => (
             <TabsTab
               key={tab.id}

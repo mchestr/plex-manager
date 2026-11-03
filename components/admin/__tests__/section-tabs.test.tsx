@@ -103,45 +103,73 @@ describe('SectionTabs', () => {
   })
 
   describe('the selected tab in view', () => {
-    // On a phone a long strip scrolls inside its list, so the selected tab can start off-screen
-    const original = Element.prototype.scrollIntoView
-    const scrolled = () => jest.mocked(Element.prototype.scrollIntoView)
+    // On a phone a long strip scrolls inside its list, so the selected tab can start off-screen. The
+    // list's own scroll offset moves; the tab is never scrollIntoView'd, which in Chromium would also
+    // move the sequential-focus starting point past the skip link.
+    const box = (left: number, right: number) => ({ left, right, top: 0, bottom: 40, width: right - left, height: 40, x: left, y: 0, toJSON: () => ({}) }) as DOMRect
+
+    /** Lays the strip out as a 358px-wide list holding tabs of `tabWidth`px each, scrolled by `scrollLeft`. */
+    function layOut({ scrollLeft = 0, tabWidth = 112 }: { scrollLeft?: number; tabWidth?: number } = {}) {
+      const list = screen.getByRole('tablist')
+      list.scrollLeft = scrollLeft
+      jest.spyOn(list, 'getBoundingClientRect').mockReturnValue(box(0, 358))
+      screen.getAllByRole('tab').forEach((tab, index) => {
+        const left = index * tabWidth - scrollLeft
+        jest.spyOn(tab, 'getBoundingClientRect').mockReturnValue(box(left, left + tabWidth))
+      })
+      return list
+    }
+
+    let scrollIntoView: jest.SpyInstance
 
     beforeEach(() => {
-      Element.prototype.scrollIntoView = jest.fn()
+      scrollIntoView = jest.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
     })
 
     afterEach(() => {
-      Element.prototype.scrollIntoView = original
+      jest.restoreAllMocks()
     })
 
-    it('scrolls the selected tab into view once on mount', () => {
-      renderAt('/admin/rewind/settings')
+    it('leaves the list alone when the selected tab is already in view', () => {
+      mockPathname.mockReturnValue('/admin/rewind/playground')
+      const { rerender } = render(strip())
+      const list = layOut()
 
-      expect(scrolled()).toHaveBeenCalledTimes(1)
-      expect(scrolled()).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
-      expect(scrolled().mock.contexts[0]).toBe(screen.getByTestId('admin-section-tab-rewind-settings'))
+      rerender(strip())
+
+      expect(list.scrollLeft).toBe(0)
     })
 
-    it('scrolls the newly selected tab when the page changes, and only then', () => {
-      const { rerender } = renderAt('/admin/rewind')
-      expect(scrolled()).toHaveBeenCalledTimes(1)
-      expect(scrolled().mock.contexts[0]).toBe(screen.getByTestId('admin-section-tab-season'))
+    it('scrolls the list right until a tab past its edge is in view, and never the tab itself', () => {
+      mockPathname.mockReturnValue('/admin/rewind')
+      const { rerender } = render(strip())
+      const list = layOut()
 
-      rerender(strip())
-      expect(scrolled()).toHaveBeenCalledTimes(1)
-
-      mockPathname.mockReturnValue('/admin/shares')
+      mockPathname.mockReturnValue('/admin/rewind/settings')
       rerender(strip())
 
-      expect(scrolled()).toHaveBeenCalledTimes(2)
-      expect(scrolled().mock.contexts[1]).toBe(screen.getByTestId('admin-section-tab-shares'))
+      // The fourth tab spans 336..448 against a list ending at 358
+      expect(list.scrollLeft).toBe(448 - 358)
+      expect(scrollIntoView).not.toHaveBeenCalled()
+    })
+
+    it('scrolls the list left when the selected tab starts before its edge', () => {
+      mockPathname.mockReturnValue('/admin/rewind/settings')
+      const { rerender } = render(strip())
+      const list = layOut({ scrollLeft: 200 })
+
+      mockPathname.mockReturnValue('/admin/rewind/playground')
+      rerender(strip())
+
+      // The second tab spans 112..224 before scrolling; scrolled by 200 it starts 88px left of the list
+      expect(list.scrollLeft).toBe(200 - 88)
     })
 
     it('scrolls nothing on a page that shows no strip', () => {
       renderAt('/admin/rewind/abc/history')
 
-      expect(scrolled()).not.toHaveBeenCalled()
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+      expect(scrollIntoView).not.toHaveBeenCalled()
     })
   })
 })
