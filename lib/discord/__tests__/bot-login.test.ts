@@ -94,7 +94,7 @@ describe("DiscordBot login", () => {
     const { bot, clients, loginResults, advance } = setup()
     loginResults.push(Object.assign(new Error("An invalid token was provided."), { code: "TokenInvalid" }))
     await bot.initialize()
-    expect(mockHealth).toHaveBeenCalledWith("fatal", expect.stringContaining("new token"))
+    expect(mockHealth).toHaveBeenCalledWith("fatal", expect.stringContaining("Save a new token in Admin, Discord, Settings."))
 
     advance(24 * 60 * 60 * 1000)
     await bot.initialize()

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { notFound } from "next/navigation"
 import type { ReactNode } from "react"
 
@@ -19,6 +20,7 @@ import {
   selectionSpec,
   topMarkedSpec,
 } from "@/components/admin/discord/specs"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartCard } from "@/components/ui/chart-card"
 import { DateRangeFilter } from "@/components/ui/date-range-filter"
@@ -27,6 +29,7 @@ import { LiveRefreshProvider, LiveRefreshStatus } from "@/components/ui/live-sta
 import { PageHeader } from "@/components/ui/page-header"
 import { getAdminGate } from "@/lib/admin"
 import { getDiscordOverview } from "@/lib/admin/discord"
+import { settingsSection } from "@/lib/admin/routes"
 import { getDiscordDashboardData } from "@/lib/data/discord-activity"
 import { getFormat } from "@/lib/settings/app-settings"
 import { parseDateRange, presetRange } from "@/lib/ui/date-range"
@@ -137,6 +140,11 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
               icon={icons.discordBot}
               title="No commands in this period"
               description="Select a longer period, or make sure that the support bot is online."
+              primaryAction={
+                <Button variant="outline" size="sm" nativeButton={false} render={<Link href={settingsSection("discord")} />} data-testid="admin-discord-open-settings">
+                  Open Discord settings
+                </Button>
+              }
               data-testid="discord-empty-period"
             />
           </Card>

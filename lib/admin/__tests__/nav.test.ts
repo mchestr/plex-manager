@@ -93,6 +93,7 @@ describe("isActive", () => {
     ["rewind", "/admin/users", false],
     ["invites", "/admin/invites/i1", true],
     ["watchlist", "/admin/watchlist", true],
+    ["discord", "/admin/discord/settings", true],
     ["settings", "/admin/users", false],
   ])("%s on %s is %s", (id, pathname, expected) => {
     expect(isActive(byId(id), pathname)).toBe(expected)
@@ -111,8 +112,19 @@ describe("titleFor", () => {
     expect(titleFor("/admin/shares")).toBe("Rewind")
     expect(titleFor("/admin/rewind/playground")).toBe("Rewind")
     expect(titleFor("/admin/rewind/settings")).toBe("Rewind")
+    expect(titleFor("/admin/discord/settings")).toBe("Discord")
     expect(titleFor("/admin/wrapped/w1/history/u1")).toBe("Admin")
     expect(activeItem("/admin/ai/conversation/c1")?.id).toBe("ai-activity")
+  })
+})
+
+describe("Discord", () => {
+  it("is one item that opens on Activity and has a Settings tab", () => {
+    expect(byId("discord")).toMatchObject({ label: "Discord", href: "/admin/discord", match: "prefix", mobile: "more" })
+    expect(byId("discord").children).toEqual([
+      { id: "discord-activity", label: "Activity", href: "/admin/discord" },
+      { id: "discord-settings", label: "Settings", href: "/admin/discord/settings" },
+    ])
   })
 })
 

@@ -143,8 +143,13 @@ export function auditEvent(id: string): Route {
   return `/admin/audit/${seg(id)}` as Route
 }
 
-/** The settings sections that moved to their feature's own page, by section id (one per line, in alphabetical order). */
+/**
+ * The settings sections that moved to their feature's own page, by section id (one per line, in alphabetical
+ * order); every other id is still a section of Settings.
+ */
 const SETTINGS_HOMES: Partial<Record<string, Route>> = {
+  "channel-stats": "/admin/discord/settings",
+  discord: "/admin/discord/settings",
   rewind: "/admin/rewind/settings",
 }
 

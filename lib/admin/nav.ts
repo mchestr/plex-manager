@@ -11,7 +11,7 @@
  *
  * ```
  * Overview, Assistant ungrouped, at the top (P10.8)
- * Community           Users, Invites, Affiliates, Announcements, Discord bot, Watchlist sync, Inactive members
+ * Community           Users, Invites, Affiliates, Announcements, Discord, Watchlist sync, Inactive members
  * Rewind              Rewind: Season, Playground, Shares and Settings tabs
  * Usage and cost      AI activity, Cost analysis
  * System              Audit log, Job queues, Settings
@@ -145,12 +145,16 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   },
   {
     id: "discord",
-    label: "Discord bot",
+    label: "Discord",
     href: "/admin/discord",
     icon: icons.discordBot,
     group: "Community",
     match: "prefix",
     mobile: "more",
+    children: [
+      { id: "discord-activity", label: "Activity", href: "/admin/discord" },
+      { id: "discord-settings", label: "Settings", href: "/admin/discord/settings" },
+    ],
   },
   {
     id: "watchlist",

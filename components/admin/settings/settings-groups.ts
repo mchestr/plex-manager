@@ -1,13 +1,12 @@
 import type { ConnectionStatus } from "@/lib/ui/status"
 
-export type SettingsGroupId = "media" | "members" | "ai" | "discord" | "system"
+export type SettingsGroupId = "media" | "members" | "ai" | "system"
 
 /** The settings page's groups, in nav order. The page shows one at a time. */
 export const SETTINGS_GROUPS: readonly { id: SettingsGroupId; label: string }[] = [
   { id: "media", label: "Media" },
   { id: "members", label: "Members" },
   { id: "ai", label: "AI" },
-  { id: "discord", label: "Discord" },
   { id: "system", label: "System" },
 ]
 
@@ -21,7 +20,7 @@ export interface SettingsNavItem {
 }
 
 /** The health of each section that has one. */
-export type SettingsNavStatuses = Record<"plex" | "tautulli" | "overseerr" | "other" | "stripe" | "ai" | "discord", ConnectionStatus>
+export type SettingsNavStatuses = Record<"plex" | "tautulli" | "overseerr" | "other" | "stripe" | "ai", ConnectionStatus>
 
 /**
  * Every section's nav entry, in the order the page renders its groups and
@@ -38,8 +37,6 @@ export function settingsNavItems(status: SettingsNavStatuses): SettingsNavItem[]
     { id: "ai", label: "AI provider", group: "ai", status: status.ai },
     { id: "conversation-review", label: "Conversation review", group: "ai" },
     { id: "assistant", label: "Assistant sources", group: "ai" },
-    { id: "discord", label: "Discord", group: "discord", status: status.discord },
-    { id: "channel-stats", label: "Channel stats", group: "discord" },
     { id: "time-zone", label: "Time zone", group: "system" },
     { id: "api-access", label: "API access", group: "system" },
     { id: "privacy", label: "Privacy", group: "system" },
