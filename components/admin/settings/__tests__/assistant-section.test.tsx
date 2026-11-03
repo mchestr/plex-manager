@@ -19,6 +19,7 @@ jest.mock("@/actions/admin/assistant-sources", () => ({
   saveKnowledgeSource: jest.fn(),
   deleteKnowledgeSource: jest.fn(),
 }))
+jest.mock("@/actions/admin/assistant-skills", () => ({ saveSkillSource: jest.fn(), deleteSkillSource: jest.fn(), refreshSkillSource: jest.fn(), checkSkills: jest.fn() }))
 
 const mockShowSuccess = jest.fn()
 const mockShowError = jest.fn()
@@ -33,10 +34,11 @@ const SERVER: McpServerSettings = {
   isActive: true,
   enabledTools: ["search"],
 }
-const EMPTY: AssistantSources = { mcpServers: [], knowledgeSources: [] }
+const EMPTY: AssistantSources = { mcpServers: [], knowledgeSources: [], skillSources: [] }
 const SOURCES: AssistantSources = {
   mcpServers: [SERVER],
   knowledgeSources: [{ id: "k1", name: "Runbooks", repo: "mchestr/knowledgebase", ref: "main", path: "docs", token: null, isActive: true }],
+  skillSources: [],
 }
 
 async function openServer(user: ReturnType<typeof userEvent.setup>) {
@@ -51,6 +53,7 @@ describe("AssistantSection", () => {
     render(<AssistantSection sources={EMPTY} />)
     expect(screen.getByTestId("settings-mcp-list")).toHaveTextContent("None yet.")
     expect(screen.getByTestId("settings-knowledge-list")).toHaveTextContent("None yet.")
+    expect(screen.getByTestId("settings-skill-list")).toHaveTextContent("None yet.")
   })
 
   it("lists each server with its tool count and each knowledge base with its repository", () => {
@@ -67,6 +70,7 @@ describe("AssistantSection", () => {
         { ...SERVER, id: "m2", name: "Idle", isActive: false },
       ],
       knowledgeSources: [],
+      skillSources: [],
     }
     render(<AssistantSection sources={sources} />)
     expect(screen.getByTestId("settings-mcp-m1")).toHaveTextContent("2 tools on")

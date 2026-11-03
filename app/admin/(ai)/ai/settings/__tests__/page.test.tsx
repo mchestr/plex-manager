@@ -41,7 +41,7 @@ const CHAT = { provider: "openai", model: "gpt-4o" }
 const WRAPPED = { provider: "anthropic", model: "claude-sonnet" }
 const JUDGE = { provider: "openai", model: "gpt-4o-mini" }
 const AI_HEALTH = { status: "degraded", code: "LLM_DISABLED", checkedAt: "2026-11-02T12:00:00.000Z" }
-const SOURCES: AssistantSources = { mcpServers: [], knowledgeSources: [] }
+const SOURCES: AssistantSources = { mcpServers: [], knowledgeSources: [], skillSources: [] }
 
 const NEVER_SAVED = { ai: null, judge: null }
 

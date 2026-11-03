@@ -5,7 +5,7 @@
  */
 import type { EraseReport } from '@/lib/members/erase'
 import type { InventoryCounts } from '@/lib/members/erase-inventory'
-import { Prisma, type AffiliateApplication, type Config, type ConversationFinding, type ConversationReview, type InactivityRun, type InactivitySettings, type Invite, type JellyfinServer, type LLMUsage, type PlexServer, type PlexWrapped, type RewindShare, type Setup, type User } from '@/lib/generated/prisma/client'
+import { Prisma, type AffiliateApplication, type Config, type ConversationFinding, type ConversationReview, type InactivityRun, type InactivitySettings, type Invite, type JellyfinServer, type LLMUsage, type PlexServer, type PlexWrapped, type RewindShare, type Setup, type SkillSource, type User } from '@/lib/generated/prisma/client'
 
 // A fresh Date per row, so a test that mutates one cannot leak into another.
 const fixedDate = () => new Date('2026-01-01T00:00:00.000Z')
@@ -182,6 +182,22 @@ export function buildConfig(overrides: Partial<Config> = {}): Config {
     encryptionFieldsHash: null,
     updatedAt: fixedDate(),
     updatedBy: null,
+    ...overrides,
+  }
+}
+
+/** An active skill source on `octo/skills` at `main`, with the schema defaults. */
+export function buildSkillSource(overrides: Partial<SkillSource> = {}): SkillSource {
+  return {
+    id: 'skill-source-1',
+    name: 'Ops',
+    repo: 'octo/skills',
+    ref: 'main',
+    path: '',
+    token: null,
+    isActive: true,
+    createdAt: fixedDate(),
+    updatedAt: fixedDate(),
     ...overrides,
   }
 }

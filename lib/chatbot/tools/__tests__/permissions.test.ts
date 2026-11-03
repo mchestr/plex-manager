@@ -16,10 +16,18 @@ describe('tool permissions', () => {
     expect(write.sort()).toEqual(['mark_media_finished', 'mark_media_keep'])
   })
 
-  it('classifies the app data and knowledge base tools as admin-only, held by no role', () => {
+  it('classifies the app data, knowledge base and skill tools as admin-only, held by no role', () => {
     const admin = ALL_TOOLS.filter((tool) => tool.permission === 'assistant:tools:admin').map((tool) => tool.function.name)
 
-    expect(admin.sort()).toEqual(['get_app_failed_jobs', 'get_app_invites', 'get_app_member', 'read_knowledge_doc', 'search_knowledge_base'])
+    expect(admin.sort()).toEqual([
+      'get_app_failed_jobs',
+      'get_app_invites',
+      'get_app_member',
+      'load_skill',
+      'read_knowledge_doc',
+      'read_skill_file',
+      'search_knowledge_base',
+    ])
     expect(toolsForPermissions(permissionsFor({ isAdmin: false, role: 'support' })).map((tool) => tool.function.name)).not.toEqual(expect.arrayContaining(admin))
     expect(permissionsFor({ isAdmin: false, role: 'support' }).has('assistant:tools:admin')).toBe(false)
   })

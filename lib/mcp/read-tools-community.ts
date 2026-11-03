@@ -81,7 +81,7 @@ export function communityReadTools(): McpTool[] {
       },
     }),
     readTool({ name: "get_affiliate_settings", description: "The affiliate switch, tiers, server cap and libraries.", read: () => getAffiliateSettingsView() }),
-    readTool({ name: "get_assistant_sources", description: "The admin assistant's MCP servers and knowledge bases, with their ids.", read: () => getAssistantSources() }),
+    readTool({ name: "get_assistant_sources", description: "The admin assistant's MCP servers, knowledge bases and skill sources, with their ids.", read: () => getAssistantSources() }),
     readTool({ name: "get_channel_stats_settings", description: "The Discord channel stats settings.", read: () => getChannelStatsSettings() }),
     readTool({
       name: "get_request_tier_settings",

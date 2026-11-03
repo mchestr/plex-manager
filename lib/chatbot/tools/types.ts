@@ -16,8 +16,8 @@ export interface RegisteredTool extends ChatTool {
    * one, so a new tool cannot ship without a classification: `read` for a tool
    * that only reads, `write` for one that changes data (media marking, anything
    * that deletes, restarts or reconfigures), `admin` for one over admin-only data
-   * or connections (app data, the knowledge base, MCP servers), which no role
-   * holds. Admins hold all three.
+   * or connections (app data, the knowledge base, skills, MCP servers), which no
+   * role holds. Admins hold all three.
    */
   permission: Extract<Permission, "assistant:tools:read" | "assistant:tools:write" | "assistant:tools:admin">
   /**

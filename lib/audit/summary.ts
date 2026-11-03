@@ -1,9 +1,9 @@
 /**
  * One line about an audit event, built only from known keys of its stored
  * details and from closed vocabularies (section and field names, reasons,
- * statuses, roles, surfaces, block codes). Free text in the details, such as
- * an exemption note, never reaches the line, so it is safe to show to Support,
- * who never see the details themselves.
+ * statuses, roles, surfaces, block codes, assistant source kinds and actions).
+ * Free text in the details, such as an exemption note, never reaches the line,
+ * so it is safe to show to Support, who never see the details themselves.
  *
  * | Event                          | Details read                                   | Summary                                                                          |
  * |--------------------------------|------------------------------------------------|----------------------------------------------------------------------------------|
@@ -18,6 +18,7 @@
  * | `MEMBER_CONTENT_VIEWED`        | `surface`                                      | "Activity timeline"                                                              |
  * | `MEMBER_CONTENT_LISTED`        | `surface`                                      | "Watchlist sync page"                                                            |
  * | `AUDIT_LOG_VIEWED`             | which `filters` are set, never their values    | "No filters", "Filters: category, member"                                        |
+ * | `ASSISTANT_SOURCE_CHANGED`     | `kind`, `action`                               | "Skill source refreshed", "MCP server removed"                                   |
  *
  * A section or field name shows only when it looks like code (`setup.plex`,
  * `apiKey`), a block code only when `lib/inactivity/blocks.ts` knows it, and a
@@ -50,6 +51,9 @@ const isInstant = (value: unknown): value is string =>
   typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value) && !Number.isNaN(Date.parse(value))
 
 const isBlock = (value: unknown): value is InactivityBlock => (INACTIVITY_BLOCKS as readonly unknown[]).includes(value)
+
+/** Whether `value` is one of `map`'s own keys, so neither free text nor `toString` matches. */
+const isKeyOf = <K extends string>(map: Record<K, string>, value: unknown): value is K => typeof value === "string" && Object.hasOwn(map, value)
 
 /** A section or field name as code writes it (`setup.plex`, `apiKey`); free text never matches. */
 const CODE_NAME = /^[A-Za-z][\w.-]{0,63}$/
@@ -157,6 +161,14 @@ function surface(details: Details): string | null {
     : null
 }
 
+const SOURCE_KINDS: Record<"mcp" | "knowledge" | "skill", string> = { mcp: "MCP server", knowledge: "Knowledge base", skill: "Skill source" }
+const SOURCE_ACTIONS: Record<"saved" | "deleted" | "refreshed", string> = { saved: "saved", deleted: "removed", refreshed: "refreshed" }
+
+/** "Skill source refreshed": the kind and the action, never the row id. */
+function sourceChanged({ kind, action }: Details): string | null {
+  return isKeyOf(SOURCE_KINDS, kind) && isKeyOf(SOURCE_ACTIONS, action) ? `${SOURCE_KINDS[kind]} ${SOURCE_ACTIONS[action]}` : null
+}
+
 /** The audit log's filters in words, by their `auditLogViewed` keys; `to` goes with `from`. */
 const FILTER_WORDS = { category: "category", type: "event", actor: "who did it", member: "member", run: "run", from: "dates" }
 
@@ -179,6 +191,7 @@ const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   MEMBER_CONTENT_VIEWED: surface,
   MEMBER_CONTENT_LISTED: surface,
   AUDIT_LOG_VIEWED: auditLogViewed,
+  ASSISTANT_SOURCE_CHANGED: sourceChanged,
 }
 
 /** The event's one-line summary, or null when its type has none or its details do not fit. */

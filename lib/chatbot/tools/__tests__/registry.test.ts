@@ -15,6 +15,7 @@ import {
   DISCORD_SAFE_TOOL_NAMES,
   discordArguments,
 } from "@/lib/chatbot/tools/registry"
+import { SKILL_TOOL_NAMES } from "@/lib/chatbot/tools/skills"
 
 /**
  * The exact 14-tool Discord safe set as it existed before the registry
@@ -69,6 +70,16 @@ describe("chatbot tool registry drift guard", () => {
   it("knowledge base tools are admin-only: registered, never discordSafe", () => {
     for (const name of ["search_knowledge_base", "read_knowledge_doc"]) {
       expect(ALL_TOOLS.find((t) => t.function.name === name)).toBeDefined()
+      expect(DISCORD_SAFE_TOOL_NAMES.has(name)).toBe(false)
+    }
+  })
+
+  it("skill tools are admin-only: registered, never discordSafe", () => {
+    expect([...SKILL_TOOL_NAMES].sort()).toEqual(["load_skill", "read_skill_file"])
+    for (const name of SKILL_TOOL_NAMES) {
+      const tool = ALL_TOOLS.find((t) => t.function.name === name)
+      expect(tool?.permission).toBe("assistant:tools:admin")
+      expect(tool?.discordSafe).toBeFalsy()
       expect(DISCORD_SAFE_TOOL_NAMES.has(name)).toBe(false)
     }
   })

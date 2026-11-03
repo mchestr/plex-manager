@@ -21,6 +21,7 @@ import { mcpListTools, RESERVED_HEADERS } from "@/lib/chatbot/mcp/client"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { resolveSecretForOrigin } from "@/lib/security/secret-reuse"
+import { githubPath, githubRef, githubRepo } from "@/lib/validations/github-source"
 import { normalizeBaseUrl } from "@/lib/validations/shared-schemas"
 
 const recordId = z.string().min(1).max(100)
@@ -47,13 +48,9 @@ const mcpInput = z.object({
 const knowledgeInput = z.object({
   id: recordId.optional(),
   name,
-  repo: z
-    .string()
-    .trim()
-    .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, "Use owner/name, for example mchestr/knowledgebase")
-    .refine((value) => value.split("/").every((part) => !/^\.+$/.test(part)), "Use owner/name, for example mchestr/knowledgebase"),
-  ref: z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9_./-]+$/, "Use a branch, tag or commit"),
-  path: z.string().trim().max(200).regex(/^[A-Za-z0-9_./ -]*$/, "Use a folder path"),
+  repo: githubRepo,
+  ref: githubRef,
+  path: githubPath,
   /** Blank keeps the stored token. */
   token: z.string().max(500).optional(),
   isActive: z.boolean(),

@@ -10,6 +10,7 @@ import { type FormatSettings } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import { executeToolCall, isToolSuccess } from "./executors"
 import { ALL_TOOLS } from "./tools"
+import { SKILL_TOOL_NAMES } from "./tools/skills"
 import { type ChatMessage, type ChatResponse } from "./types"
 
 const logger = createLogger("CHATBOT_CONVERSATION")
@@ -39,19 +40,25 @@ interface ConversationConfig {
 }
 
 /**
- * A tool's output as the model receives it: wrapped as `untrusted_data`, so
- * text that members and services control (display names, titles, error
- * bodies) reads as data and never as instructions (SEC-42). JSON output is
- * embedded as a value; anything else as a string.
+ * A tool's output as the model receives it. Every tool's is wrapped as
+ * `untrusted_data`, so text that members and services control (display
+ * names, titles, error bodies) reads as data and never as instructions
+ * (SEC-42). The exceptions are `load_skill` and `read_skill_file`
+ * (`SKILL_TOOL_NAMES`, matched by exact name, never by anything in the
+ * result), wrapped as `admin_skill`: an administrator's instructions, which
+ * the admin prompt says to follow. An MCP tool is always named `mcp_…`, so it
+ * can never take on that trust. JSON output is embedded as a value; anything
+ * else as a string. Either way the wrapper is JSON-encoded, so the output
+ * cannot close it.
  */
-function asUntrustedData(output: string): string {
+function wrapToolOutput(toolName: string, output: string): string {
   let result: unknown = output
   try {
     result = JSON.parse(output)
   } catch {
     // Plain text, such as an "Error: ..." line, stays a string
   }
-  return JSON.stringify({ untrusted_data: result })
+  return JSON.stringify({ [SKILL_TOOL_NAMES.has(toolName) ? "admin_skill" : "untrusted_data"]: result })
 }
 
 interface ConversationResult {
@@ -151,7 +158,7 @@ export async function runConversationLoop(
       type: "tool-result" as const,
       toolCallId: toolCall.id,
       toolName: toolCall.function.name,
-      output: { type: "text" as const, value: asUntrustedData(outputs[i]) },
+      output: { type: "text" as const, value: wrapToolOutput(toolCall.function.name, outputs[i]) },
     }))
     toolLog.push(
       ...response.toolCalls.map((toolCall, i) => {

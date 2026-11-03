@@ -78,6 +78,7 @@ function withInviteUrl(result: ActionResult<unknown, string>): ActionResult<unkn
  * @internal Exported for the catalog test.
  */
 export const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set([
+  "checkSkills",
   "discoverMcpTools",
   "estimateRewindDryRun",
   "getActiveAnnouncements",

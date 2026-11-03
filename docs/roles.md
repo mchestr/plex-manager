@@ -15,7 +15,7 @@ permission needs no schema change. An unknown stored role grants nothing.
 | `assistant:use` | yes | Open the admin assistant |
 | `assistant:tools:read` | yes | Assistant tools that only read (Plex, Tautulli, Sonarr, Radarr, Overseerr lookups) |
 | `assistant:tools:write` | no | Assistant tools that change data (media marking) |
-| `assistant:tools:admin` | no | Assistant tools over admin-only data and connections: app data (invites, members, failed jobs), the knowledge base and MCP servers |
+| `assistant:tools:admin` | no | Assistant tools over admin-only data and connections: app data (invites, members, failed jobs), the knowledge base, skills and MCP servers |
 | `users:read` | yes | The users list, read-only |
 | `affiliates:read` | yes | The Affiliates page's Applications, Affiliates and Invite tree tabs, read-only: no invite codes or labels, no History tab (with its block list) and no affiliate settings |
 | `audit:read` | yes | The Audit log (`/admin/audit`) and its event pages: who did what, to whom and when, with a one-line summary. Not an event's stored details, and not a member's Audit tab |
