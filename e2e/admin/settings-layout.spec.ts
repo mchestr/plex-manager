@@ -15,7 +15,6 @@ const GROUPS: Record<string, string[]> = {
   members: ['stripe', 'request-tiers'],
   ai: ['ai', 'conversation-review', 'assistant'],
   discord: ['discord', 'channel-stats'],
-  rewind: ['rewind'],
   system: ['time-zone', 'api-access', 'privacy', 'system'],
 };
 
@@ -55,16 +54,9 @@ test.describe('Settings layout', () => {
     await expect(page.getByTestId('settings-plex-section')).toBeVisible();
     await expect(page.getByTestId('settings-stripe-section')).toBeHidden();
 
-    await page.goto('/admin/settings#rewind');
-    await expect(page.getByTestId('settings-rewind-section')).toBeVisible();
+    await page.goto('/admin/settings#stripe');
+    await expect(page.getByTestId('settings-stripe-section')).toBeVisible();
     await expect(page.getByTestId('settings-plex-section')).toBeHidden();
-
-    // "Change the server time zone" opens the Time zone section on its field
-    await page.getByTestId('rewind-settings-time-zone-link').click();
-    await expect(page.getByTestId('settings-time-zone-section')).toBeVisible();
-    await expect(page).toHaveURL(/#time-zone$/);
-    await expect(page.locator('#time-zone')).toBeInViewport();
-    await expect(page.getByTestId('server-time-zone-select')).toBeFocused();
   });
 
   test('every nav glyph is labelled, with the legend below', async ({ adminPage: page }) => {

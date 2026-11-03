@@ -90,11 +90,7 @@ describe('AdminShell', () => {
     for (const group of ['Community', 'Rewind', 'Usage and cost', 'System']) {
       expect(within(sheet).getByRole('region', { name: group })).toBeInTheDocument()
     }
-    expect(within(within(sheet).getByRole('region', { name: 'Rewind' })).getAllByRole('link').map((a) => a.textContent)).toEqual([
-      'Season',
-      'Playground',
-      'Share analytics',
-    ])
+    expect(within(within(sheet).getByRole('region', { name: 'Rewind' })).getAllByRole('link').map((a) => a.textContent)).toEqual(['Rewind'])
     expect(within(sheet).getByTestId('admin-nav-users-mobile')).toHaveAttribute('aria-current', 'page')
     expect(await axe(document.body, noAxeRegion)).toHaveNoViolations()
 

@@ -43,7 +43,10 @@ const DETAIL_ROUTES = [
   `/admin/audit/${AUDIT_EVENT_ID}`,
 ];
 
-const ROUTES = [...new Set([...ADMIN_NAV.map((item) => item.href as string), ...DETAIL_ROUTES])];
+/** Each item's page and its section tabs' pages. */
+const NAV_ROUTES = ADMIN_NAV.flatMap((item) => [item.href, ...(item.children ?? []).map((child) => child.href)]);
+
+const ROUTES = [...new Set<string>([...NAV_ROUTES, ...DETAIL_ROUTES])];
 
 /** Each interactive element in the shell without a test id, as a short description. */
 async function untagged(page: Page): Promise<string[]> {

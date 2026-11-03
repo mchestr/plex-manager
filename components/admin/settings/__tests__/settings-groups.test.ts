@@ -13,12 +13,11 @@ const STATUS: SettingsNavStatuses = {
   stripe: 'disabled',
   ai: 'degraded',
   discord: 'untested',
-  rewind: 'ok',
 }
 
 describe('settings groups', () => {
-  it('lists the six groups in nav order', () => {
-    expect(SETTINGS_GROUPS.map((group) => group.label)).toEqual(['Media', 'Members', 'AI', 'Discord', 'Rewind', 'System'])
+  it('lists the five groups in nav order', () => {
+    expect(SETTINGS_GROUPS.map((group) => group.label)).toEqual(['Media', 'Members', 'AI', 'Discord', 'System'])
   })
 
   it('puts each section in its group', () => {
@@ -30,7 +29,6 @@ describe('settings groups', () => {
       members: ['Stripe billing', 'Request limits'],
       ai: ['AI provider', 'Conversation review', 'Assistant sources'],
       discord: ['Discord', 'Channel stats'],
-      rewind: ['Rewind'],
       system: ['Time zone', 'API access', 'Privacy', 'System information'],
     })
   })
@@ -51,7 +49,6 @@ describe('settings groups', () => {
       'assistant',
       'discord',
       'channel-stats',
-      'rewind',
       'time-zone',
       'api-access',
       'privacy',
@@ -76,7 +73,6 @@ describe('settings groups', () => {
       assistant: undefined,
       discord: 'untested',
       'channel-stats': undefined,
-      rewind: 'ok',
       'time-zone': undefined,
       'api-access': undefined,
       privacy: undefined,

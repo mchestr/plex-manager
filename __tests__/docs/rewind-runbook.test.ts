@@ -66,7 +66,7 @@ describe('docs/rewind.md', () => {
   const paths = repositoryPaths(runbook)
 
   it('finds the paths it is meant to check', () => {
-    expect(paths).toEqual(expect.arrayContaining(['app/admin/rewind/page.tsx', 'lib/validations/rewind-settings.ts']))
+    expect(paths).toEqual(expect.arrayContaining(['app/admin/(rewind)/rewind/page.tsx', 'lib/validations/rewind-settings.ts']))
   })
 
   it.each(paths)('%s exists', (repoPath) => {

@@ -12,14 +12,15 @@
  * ```
  * Overview, Assistant ungrouped, at the top (P10.8)
  * Community           Users, Invites, Affiliates, Announcements, Discord bot, Watchlist sync, Inactive members
- * Rewind              Season, Playground, Share analytics
+ * Rewind              Rewind: Season, Playground, Shares and Settings tabs
  * Usage and cost      AI activity, Cost analysis
  * System              Audit log, Job queues, Settings
  * ```
  *
  * `typedRoutes` rejects links to routes that do not exist yet, so the step
- * that ships a route adds its item: Season (P7.8, shipped), Playground (P8.8,
- * `/admin/rewind/playground`) and Overview (P10.8, shipped).
+ * that ships a route adds its item or tab: Season (P7.8, shipped), Playground
+ * (P8.8, `/admin/rewind/playground`), Rewind settings (`/admin/rewind/settings`)
+ * and Overview (P10.8, shipped).
  *
  * Labels are sentence case, equal the page titles (UI-21) and say Rewind,
  * never Wrapped (UI-32). Each item's test id is `admin-nav-<id>`.
@@ -170,32 +171,21 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     mobile: "more",
   },
   {
-    id: "season",
-    label: "Season",
+    id: "rewind",
+    label: "Rewind",
     href: "/admin/rewind",
     icon: icons.rewind,
     group: "Rewind",
-    // Exact: the Rewind page below it (Playground) lights its own item.
-    match: "exact",
-    mobile: "more",
-  },
-  {
-    id: "playground",
-    label: "Playground",
-    href: "/admin/rewind/playground",
-    icon: icons.playground,
-    group: "Rewind",
+    // Prefix: Playground and Settings sit below /admin/rewind; Shares sits beside it, so `also` lights it
     match: "prefix",
-    mobile: "more",
-  },
-  {
-    id: "share-analytics",
-    label: "Share analytics",
-    href: "/admin/shares",
-    icon: icons.shares,
-    group: "Rewind",
-    match: "prefix",
-    mobile: "more",
+    also: ["/admin/shares"],
+    mobile: "tab",
+    children: [
+      { id: "season", label: "Season", href: "/admin/rewind" },
+      { id: "playground", label: "Playground", href: "/admin/rewind/playground" },
+      { id: "shares", label: "Shares", href: "/admin/shares" },
+      { id: "rewind-settings", label: "Settings", href: "/admin/rewind/settings" },
+    ],
   },
   {
     id: "ai-activity",
@@ -315,21 +305,18 @@ function linkTab(item: AdminNavItem): MobileLinkTab {
 }
 
 /**
- * The mobile tab bar: Overview, Users, Rewind, Settings and More. The Rewind
- * tab opens Season and lights on every Rewind page; Invites opens from More.
+ * The mobile tab bar: Overview first, then every other `mobile: "tab"` item in
+ * nav order (Users, Rewind), then Settings and More. A tab opens its item's
+ * first child and lights on all of the item's pages, `also` included, so the
+ * Rewind tab is lit on /admin/shares; the other items open from More.
  */
 export function mobileTabs(items: readonly AdminNavItem[] = ADMIN_NAV): MobileTab[] {
   const byId = (id: string) => items.find((item) => item.id === id)
   const first = byId("overview")
-  const rewindItems = itemsIn("Rewind", items)
-  const rewindTarget = byId("season")
   const tabs: MobileTab[] = []
 
   if (first) tabs.push(linkTab(first))
   for (const item of items) if (item.mobile === "tab" && item.id !== "settings" && item !== first) tabs.push(linkTab(item))
-  if (rewindTarget) {
-    tabs.push({ kind: "link", id: "rewind", label: "Rewind", href: rewindTarget.href, icon: icons.rewind, covers: rewindItems })
-  }
   const settings = byId("settings")
   if (settings) tabs.push(linkTab(settings))
   tabs.push({ kind: "more", id: "more", label: "More" })

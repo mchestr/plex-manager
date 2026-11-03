@@ -3,9 +3,6 @@ import userEvent from '@testing-library/user-event'
 
 import { updateRewindSettings } from '@/actions/admin/rewind-settings'
 import { RewindSettingsSection } from '@/components/admin/settings/rewind-settings-section'
-import { Input } from '@/components/ui/input'
-import { SettingsEditProvider } from '@/components/ui/settings-edit-context'
-import { SettingsSection } from '@/components/ui/settings-section'
 import type { RewindSettings } from '@/lib/validations/rewind-settings'
 
 jest.mock('@/actions/admin/rewind-settings', () => ({ updateRewindSettings: jest.fn() }))
@@ -119,7 +116,7 @@ describe('RewindSettingsSection', () => {
 
       expect(screen.getByTestId('rewind-settings-status')).toHaveTextContent('Redis ready')
       expect(within(summaryRow('season')).getByTestId('rewind-settings-zone')).toHaveTextContent('Dates are in America/Chicago.')
-      expect(screen.getByTestId('rewind-settings-time-zone-link')).toHaveAttribute('href', '#time-zone')
+      expect(screen.getByTestId('rewind-settings-time-zone-link')).toHaveAttribute('href', '/admin/settings#time-zone')
       expect(screen.getByTestId('rewind-season-data-prepared-at')).toBeInTheDocument()
       expect(screen.getByTestId('settings-rewind-last-saved')).toHaveTextContent('Last saved just now by Dana')
     })
@@ -173,30 +170,6 @@ describe('RewindSettingsSection', () => {
       expect(summaryRow('llm-mode')).toHaveTextContent('AI features are off. Rewind uses template text.')
       expect(summaryRow('channels')).toHaveTextContent('Discord DM, Dashboard banner')
       expect(summaryRow('channels')).toHaveTextContent('The Discord bot is off. Turn it on to send DMs.')
-    })
-
-    it('"Change the server time zone" opens the Time zone section on its field', async () => {
-      const user = userEvent.setup()
-      render(
-        <SettingsEditProvider onDirtyChange={jest.fn()}>
-          {section()}
-          <SettingsSection
-            id="time-zone"
-            title="Time zone"
-            form={{ isDirty: false, isPending: false, onDiscard: jest.fn(), onSave: jest.fn(async () => true) }}
-            view={<p>Pacific/Auckland</p>}
-          >
-            <Input aria-label="Name" />
-            <Input aria-label="Server time zone" data-testid="server-time-zone-select" />
-          </SettingsSection>
-        </SettingsEditProvider>
-      )
-
-      await user.click(screen.getByTestId('rewind-settings-time-zone-link'))
-
-      expect(screen.getByTestId('settings-time-zone-form')).toBeInTheDocument()
-      await waitFor(() => expect(screen.getByTestId('server-time-zone-select')).toHaveFocus())
-      expect(screen.getByTestId('settings-rewind-summary')).toBeInTheDocument()
     })
   })
 
@@ -257,7 +230,7 @@ describe('RewindSettingsSection', () => {
       await user.click(screen.getByTestId('settings-rewind-save'))
       expect(updateRewindSettings).toHaveBeenCalledWith({ ...saved, rewindEnabled: true, rewindDisabledPages: ['people'] })
       expect(mockShowSuccess).toHaveBeenCalledWith('Rewind settings saved')
-      // The action revalidates /admin/settings, so no client refresh follows (P10.7)
+      // The action revalidates /admin/rewind/settings, so no client refresh follows (P10.7)
       expect(mockRefresh).not.toHaveBeenCalled()
 
       await waitFor(() => expect(screen.getByTestId('settings-rewind-summary')).toBeInTheDocument())

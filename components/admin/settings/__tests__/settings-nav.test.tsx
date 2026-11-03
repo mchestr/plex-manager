@@ -60,10 +60,10 @@ describe('SettingsNav', () => {
   it('heads the sections with their groups, in order', () => {
     render(<SettingsNav items={ITEMS} active="plex" activeGroup="media" dirty={new Set()} onSelect={jest.fn()} />)
 
-    const headings = ['media', 'members', 'ai', 'discord', 'rewind', 'system'].map(
+    const headings = ['media', 'members', 'ai', 'discord', 'system'].map(
       (id) => screen.getByTestId(`settings-nav-group-${id}`).firstElementChild?.textContent
     )
-    expect(headings).toEqual(['Media', 'Members', 'AI', 'Discord', 'Rewind', 'System'])
+    expect(headings).toEqual(['Media', 'Members', 'AI', 'Discord', 'System'])
     expect(within(screen.getByTestId('settings-nav-group-media')).getAllByRole('link').map((link) => link.textContent)).toEqual([
       'Plex server',
       'Tautulli',

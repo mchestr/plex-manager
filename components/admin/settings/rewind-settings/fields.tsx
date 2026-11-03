@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Label, labelClasses } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useSettingsEdit } from "@/components/ui/settings-edit-context"
+import { settingsSection } from "@/lib/admin/routes"
 import { cn } from "@/lib/utils"
 import { daysInMonth } from "@/lib/validations/rewind-settings"
 
@@ -118,24 +118,18 @@ export function monthDayLabel(value: string): string {
   return `${MONTHS[Number(month) - 1]} ${Number(day)}`
 }
 
-/** The Time zone section's control, which the zone note's link focuses. */
-const SERVER_TIME_ZONE_FIELD = '[data-testid="server-time-zone-select"]'
-
 /**
  * The zone the season dates are evaluated in, with "Change the server time
- * zone". The `#time-zone` href reveals the System group (`SettingsLayout`),
- * and the click also opens the Time zone section on its field, since
- * "Change" says the admin means to edit it (GOV.UK, "Check answers").
+ * zone": a link to the Time zone section, which is on the settings page
+ * (System), not on the Rewind settings page that shows this note.
  */
 export function TimeZoneNote({ zone }: { zone: string }) {
-  const requestEdit = useSettingsEdit()
   return (
     <p className="text-label text-muted-foreground" data-testid="rewind-settings-zone">
       Dates are in {zone}.{" "}
       <Link
         data-testid="rewind-settings-time-zone-link"
-        href="#time-zone"
-        onClick={() => requestEdit?.("time-zone", { focus: SERVER_TIME_ZONE_FIELD })}
+        href={settingsSection("time-zone")}
         className="text-foreground underline underline-offset-3"
       >
         Change the server time zone

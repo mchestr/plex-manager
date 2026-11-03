@@ -34,9 +34,15 @@ describe("ADMIN_NAV", () => {
   })
 
   it("keeps the test ids the E2E specs use", () => {
-    for (const id of ["overview", "users", "invites", "share-analytics", "announcements", "ai-activity", "cost-analysis", "discord", "watchlist", "queues", "season", "playground", "settings"]) {
+    for (const id of ["overview", "users", "invites", "announcements", "ai-activity", "cost-analysis", "discord", "watchlist", "queues", "rewind", "settings"]) {
       expect(ADMIN_NAV.map(navTestId)).toContain(`admin-nav-${id}`)
     }
+  })
+
+  it("folds Season, Playground and Share analytics into the one Rewind item", () => {
+    const ids = ADMIN_NAV.map((item) => item.id)
+    for (const folded of ["season", "playground", "share-analytics"]) expect(ids).not.toContain(folded)
+    expect(ids).toContain("rewind")
   })
 
   it("labels in sentence case, and never says Wrapped", () => {
@@ -79,8 +85,12 @@ describe("isActive", () => {
     ["users", "/admin/users", true],
     ["users", "/admin/users/abc", true],
     ["users", "/admin/users-archive", false],
-    ["playground", "/admin/rewind/playground", true],
-    ["season", "/admin/rewind/playground", false],
+    ["rewind", "/admin/rewind", true],
+    ["rewind", "/admin/rewind/playground", true],
+    ["rewind", "/admin/rewind/settings", true],
+    ["rewind", "/admin/shares", true],
+    ["rewind", "/admin/sharesheet", false],
+    ["rewind", "/admin/users", false],
     ["invites", "/admin/invites/i1", true],
     ["watchlist", "/admin/watchlist", true],
     ["settings", "/admin/users", false],
@@ -98,7 +108,9 @@ describe("isActive", () => {
 describe("titleFor", () => {
   it("is the nav label, the deepest match, or Admin off the nav", () => {
     expect(titleFor("/admin/users/abc")).toBe("Users")
-    expect(titleFor("/admin/shares")).toBe("Share analytics")
+    expect(titleFor("/admin/shares")).toBe("Rewind")
+    expect(titleFor("/admin/rewind/playground")).toBe("Rewind")
+    expect(titleFor("/admin/rewind/settings")).toBe("Rewind")
     expect(titleFor("/admin/wrapped/w1/history/u1")).toBe("Admin")
     expect(activeItem("/admin/ai/conversation/c1")?.id).toBe("ai-activity")
   })
@@ -185,16 +197,51 @@ describe("children and also", () => {
   })
 })
 
+describe("Rewind", () => {
+  it("is one item with the Season, Playground, Shares and Settings tabs, lit on /admin/shares too", () => {
+    expect(byId("rewind")).toMatchObject({
+      label: "Rewind",
+      href: "/admin/rewind",
+      group: "Rewind",
+      match: "prefix",
+      mobile: "tab",
+      also: ["/admin/shares"],
+    })
+    expect(byId("rewind").children).toEqual([
+      { id: "season", label: "Season", href: "/admin/rewind" },
+      { id: "playground", label: "Playground", href: "/admin/rewind/playground" },
+      { id: "shares", label: "Shares", href: "/admin/shares" },
+      { id: "rewind-settings", label: "Settings", href: "/admin/rewind/settings" },
+    ])
+  })
+
+  it("offers every tab to an admin and none to a role, and is lit on each tab's page", () => {
+    expect(childrenOf("rewind", { isAdmin: true }).map((tab) => tab.id)).toEqual(["season", "playground", "shares", "rewind-settings"])
+    expect(childrenOf("rewind", { isAdmin: false, role: "support" })).toEqual([])
+    expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).not.toContain("rewind")
+    for (const tab of byId("rewind").children ?? []) expect(activeItem(tab.href)?.id).toBe("rewind")
+  })
+})
+
 describe("mobileTabs", () => {
   it("shows Overview, Users, Rewind, Settings and More, with the Rewind tab on Season (P10.8)", () => {
     const tabs = mobileTabs()
+    expect(tabs.map((tab) => tab.id)).toEqual(["overview", "users", "rewind", "settings", "more"])
     expect(tabs.map((tab) => tab.label)).toEqual(["Overview", "Users", "Rewind", "Settings", "More"])
     const rewind = tabs.find((tab) => tab.id === "rewind") as MobileLinkTab
     expect(rewind.href).toBe("/admin/rewind")
+    expect(rewind.covers.map((item) => item.id)).toEqual(["rewind"])
     expect(isTabActive(rewind, "/admin/rewind")).toBe(true)
     expect(isTabActive(rewind, "/admin/rewind/playground")).toBe(true)
+    expect(isTabActive(rewind, "/admin/rewind/settings")).toBe(true)
     expect(isTabActive(rewind, "/admin/shares")).toBe(true)
     expect(isTabActive(rewind, "/admin/users")).toBe(false)
+  })
+
+  it("takes every other tab item in nav order, with Settings last before More", () => {
+    const extra: AdminNavItem = { ...byId("users"), id: "extra", label: "Extra", href: "/admin/extra" as Route }
+    const tabs = mobileTabs([...ADMIN_NAV, extra])
+    expect(tabs.map((tab) => tab.id)).toEqual(["overview", "users", "rewind", "extra", "settings", "more"])
   })
 
   it("lights the Overview tab only on /admin", () => {

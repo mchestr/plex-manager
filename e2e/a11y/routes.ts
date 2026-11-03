@@ -131,6 +131,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-header' },
   { path: '/admin/discord', as: 'admin', ready: 'discord-status' },
   { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },
+  { path: '/admin/rewind/settings', as: 'admin', ready: 'settings-rewind-section' },
   { path: '/admin/queues', as: 'admin', ready: 'queue-status' },
   { path: '/admin/settings', as: 'admin', ready: 'settings-plex-section' },
   // A section in edit mode: its form, Save and Cancel, beside the read-only sections

@@ -1,7 +1,4 @@
-import Link from "next/link"
-
 import { LastSaved } from "@/components/admin/settings/last-saved"
-import { RewindSettingsSection } from "@/components/admin/settings/rewind-settings-section"
 import { ApiAccessSection } from "@/components/admin/settings/sections/api-access-section"
 import { AssistantSection } from "@/components/admin/settings/sections/assistant-section"
 import { AiSection } from "@/components/admin/settings/sections/ai-section"
@@ -25,21 +22,14 @@ import { getChannelStatsSettings, getRequestTierSettings } from "@/lib/data/comm
 import { getAssistantSources } from "@/lib/data/assistant-sources"
 import { listOwnApiTokens } from "@/lib/data/api-tokens"
 import { getLastRetentionRun } from "@/lib/data/retention"
-import { getRewindSeasonDataPreparedAt } from "@/lib/data/rewind-season"
 import { plexLibraryListing } from "@/lib/admin/invites/libraries"
 import packageJson from "@/package.json"
 import { getBaseUrl, getEnv } from "@/lib/env"
-import { checkRewindInfra } from "@/lib/queue/rewind-infra"
-import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
-import { getRewindSeasonSpend } from "@/lib/llm/usage-totals"
 import { getFormat } from "@/lib/settings/app-settings"
 import { getSettingsAuditMeta } from "@/lib/settings/audit-meta"
 import { getSettingsHealth } from "@/lib/settings/connection-health"
 import { worstStatus } from "@/lib/settings/connection-status"
 import { serverZone } from "@/lib/utils/server-zone"
-import { getRewindContentRatings, getRewindLibraries } from "@/lib/wrapped/admin/settings-options"
-import { rewindSettingsFromConfig } from "@/lib/wrapped/config"
-import { getSeasonState } from "@/lib/wrapped/season"
 import { connection } from "next/server"
 import { assertAdmin } from "@/lib/admin"
 
@@ -68,20 +58,14 @@ export default async function SettingsPage() {
   await connection()
   // Started, not awaited: the section streams it in (P10.7)
   const plexLibraries = plexLibraryListing()
-  const [settings, stripeConfig, health, season, zone, f] = await Promise.all([
+  const [settings, stripeConfig, health, zone, f] = await Promise.all([
     getAdminSettings(),
     getStripeConfig(),
     getSettingsHealth(),
-    getSeasonState(),
     serverZone(),
     getFormat(),
   ])
-  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, lastRetentionRun, channelStats, requestTiers, assistantSources, apiTokens] = await Promise.all([
-    getRewindSeasonDataPreparedAt(season.seasonYear),
-    checkRewindInfra(),
-    getRewindLibraries(),
-    getRewindContentRatings(),
-    getRewindSeasonSpend(season.seasonYear),
+  const [audit, discord, lastRetentionRun, channelStats, requestTiers, assistantSources, apiTokens] = await Promise.all([
     getSettingsAuditMeta(),
     getDiscordOverview(),
     getLastRetentionRun(),
@@ -110,7 +94,6 @@ export default async function SettingsPage() {
     stripe: health.stripe.status,
     ai: health.ai.status,
     discord: health.discord.status,
-    rewind: health.rewind.status,
   })
 
   return (
@@ -175,28 +158,6 @@ export default async function SettingsPage() {
             footerMeta={saved("discord")}
           />
           <ChannelStatsSection saved={channelStats} footerMeta={saved("channelStats")} />
-        </SettingsGroup>
-        <SettingsGroup id="rewind">
-          <RewindSettingsSection
-            saved={rewindSettingsFromConfig(settings.config)}
-            zone={zone}
-            llmDisabled={settings.config.llmDisabled}
-            discordBotOn={Boolean(settings.discordIntegration?.isEnabled && settings.discordIntegration.botEnabled)}
-            spent={f.money(spentUsd, "prose")}
-            libraries={libraries.libraries}
-            ratings={ratings}
-            status={{ redis: rewindInfra.ok ? null : rewindInfraMessage(rewindInfra.code, "admin"), tautulli: libraries.status }}
-            health={health.rewind}
-            footerMeta={saved("rewind")}
-          >
-            {/* P7.8: Prepare season moved to the season console. */}
-            <p className="text-ui text-muted-foreground" data-testid="rewind-season-data-prepared-at">
-              {seasonDataPreparedAt ? `Season data last prepared ${f.dateTime(seasonDataPreparedAt)}. ` : "Season data not prepared yet. "}
-              <Link href="/admin/rewind" className="text-foreground underline underline-offset-3" data-testid="rewind-season-console-link">
-                Prepare the season on the Season page
-              </Link>
-            </p>
-          </RewindSettingsSection>
         </SettingsGroup>
         <SettingsGroup id="system">
           <TimeZoneSection timeZone={{ configured: settings.config.timezone, effective: zone }} footerMeta={saved("timeZone")} />

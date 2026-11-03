@@ -63,8 +63,9 @@ function withStored(options: { value: string; label: string }[], stored: readonl
 }
 
 /**
- * The Rewind section of the admin settings (P7.12, design 10.4 and 13.2):
- * every admin-facing Rewind flag, saved together with `updateRewindSettings`.
+ * Rewind settings (P7.12, design 10.4 and 13.2), the Settings tab of the admin
+ * Rewind section: every admin-facing Rewind flag, saved together with
+ * `updateRewindSettings`.
  * It opens on the saved settings ({@link RewindSettingsSummary}); Edit swaps
  * in the form, whose flags are checkboxes because they save with Save. The
  * Redis and Tautulli status line and the season console note show in both

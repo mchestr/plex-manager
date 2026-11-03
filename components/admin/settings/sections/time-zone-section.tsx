@@ -6,10 +6,8 @@ import { ServerTimeZoneField, ServerTimeZoneSummary, useTimeZoneForm, type Serve
 import { SettingsSection } from "@/components/ui/settings-section"
 
 /**
- * The server time zone (6.4). It opens read-only on the saved zone; Edit, or
- * Rewind's "Change the server time zone" (which focuses
- * `server-time-zone-select`), swaps in the picker, which saves through the
- * section footer.
+ * The server time zone (6.4). It opens read-only on the saved zone; Edit
+ * swaps in the picker, which saves through the section footer.
  */
 export function TimeZoneSection({ timeZone, footerMeta }: { timeZone: ServerTimeZone; footerMeta?: ReactNode }) {
   const zone = useTimeZoneForm(timeZone)

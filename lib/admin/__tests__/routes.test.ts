@@ -11,6 +11,7 @@ import {
   playgroundFor,
   publicInviteUrl,
   rewindHistory,
+  settingsSection,
   userDetail,
   userRewind,
 } from "@/lib/admin/routes"
@@ -74,6 +75,16 @@ describe("admin routes", () => {
     expect(invite("x/y")).toBe("/admin/invites/x%2Fy")
     expect(aiActivityRecord("x y")).toBe("/admin/ai/x%20y")
     expect(auditEvent("e/1")).toBe("/admin/audit/e%2F1")
+  })
+
+  it("sends a settings section to the page it lives on", () => {
+    expect(settingsSection("rewind")).toBe("/admin/rewind/settings")
+  })
+
+  it("anchors a settings section that is still on the settings page, encoding its id", () => {
+    expect(settingsSection("tautulli")).toBe("/admin/settings#tautulli")
+    expect(settingsSection("request-tiers")).toBe("/admin/settings#request-tiers")
+    expect(settingsSection("a b/c")).toBe("/admin/settings#a%20b%2Fc")
   })
 
   it("builds the public invite link on an origin", () => {

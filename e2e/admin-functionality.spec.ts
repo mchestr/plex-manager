@@ -53,7 +53,8 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin playground', async ({ adminPage }) => {
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-playground').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-rewind').first().click();
+    await adminPage.getByTestId('admin-section-tab-playground').click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
     await expect(adminPage.getByTestId('admin-rewind-playground-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
@@ -67,7 +68,8 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin shares', async ({ adminPage }) => {
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-share-analytics').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-rewind').first().click();
+    await adminPage.getByTestId('admin-section-tab-shares').click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
     await expect(adminPage.getByTestId('admin-shares-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });

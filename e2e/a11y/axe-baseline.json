@@ -13,6 +13,7 @@
   "admin /admin/invites/visual-invite-ok": {},
   "admin /admin/queues": {},
   "admin /admin/rewind/playground": {},
+  "admin /admin/rewind/settings": {},
   "admin /admin/settings": {},
   "admin /admin/settings [plex editing]": {},
   "admin /admin/shares": {},

@@ -144,7 +144,7 @@ export default async function RewindPlaygroundPage({ searchParams }: { searchPar
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 sm:p-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6">
       <PageHeader
         title="Playground"
         description="Dry runs of the Rewind pipeline."

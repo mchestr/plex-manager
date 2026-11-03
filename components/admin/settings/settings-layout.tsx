@@ -63,8 +63,8 @@ interface SettingsLayoutProps {
 /**
  * The settings page layout (ui-design-system 6.4): a 200px sticky section nav
  * beside a 760px column showing one `SettingsGroup`, and below `md` a sticky
- * "Jump to" Select. A hash, a nav link or any in-page `#anchor` link (such as
- * Rewind's `#time-zone`) reveals the group that holds its target.
+ * "Jump to" Select. A hash, a nav link or any in-page `#anchor` link reveals
+ * the group that holds its target.
  * Sections report their dirty state here for the nav's pip, and while any
  * section has unsaved changes the browser asks before the page is left.
  */
@@ -119,7 +119,7 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
     return () => window.removeEventListener("hashchange", fromHash)
   }, [reveal])
 
-  // An in-page `#anchor` link in the settings, such as Rewind's `#time-zone`, reveals its group first
+  // An in-page `#anchor` link in the settings reveals its group first
   useEffect(() => {
     const body = bodyRef.current
     if (!body) return

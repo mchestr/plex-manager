@@ -1,4 +1,8 @@
+import Link from "next/link"
 import type { ReactNode } from "react"
+
+import { Button } from "@/components/ui/button"
+import { settingsSection } from "@/lib/admin/routes"
 
 export interface SeasonFactsProps {
   opens: string
@@ -28,13 +32,27 @@ function Fact({ term, children, testId }: { term: string; children: ReactNode; t
   )
 }
 
-/** The season's dates, data window, model and its freeze (P8.1), prompt version, flags, the season-open run (P7.8) and the audience switch (P8.2). */
+/**
+ * The season's dates, data window, model and its freeze (P8.1), prompt version, flags, the season-open run (P7.8) and the audience switch (P8.2),
+ * read only: the link beside the heading opens Rewind settings, where the flags and dates are edited.
+ */
 export function SeasonFacts({ opens, closes, dataWindow, model, promptVersion, freeze, audienceSwitch, prepareRuns, dataPreparedAt, flags }: SeasonFactsProps) {
   return (
     <section aria-labelledby="season-facts-heading" className="flex flex-col gap-3" data-testid="admin-rewind-season-facts">
-      <h2 id="season-facts-heading" className="text-h3">
-        Season
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <h2 id="season-facts-heading" className="text-h3">
+          Season
+        </h2>
+        <Button
+          variant="link"
+          size="sm"
+          nativeButton={false}
+          render={<Link href={settingsSection("rewind")} />}
+          data-testid="admin-rewind-season-settings-link"
+        >
+          Edit in Rewind settings
+        </Button>
+      </div>
       <dl className="grid grid-cols-1 gap-4 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3">
         <Fact term="Opens">{opens}</Fact>
         <Fact term="Closes">{closes}</Fact>
