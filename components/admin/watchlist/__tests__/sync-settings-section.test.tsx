@@ -13,6 +13,7 @@ import { updateGlobalWatchlistSyncSettings } from "@/actions/admin/watchlist"
 import { SyncSettingsSection } from "@/components/admin/watchlist/sync-settings-section"
 
 jest.mock("@/actions/admin/watchlist", () => ({ updateGlobalWatchlistSyncSettings: jest.fn() }))
+jest.mock("@/actions/admin/queue", () => ({ triggerWatchlistSyncJob: jest.fn() }))
 
 const mockShowSuccess = jest.fn()
 const mockShowError = jest.fn()
@@ -22,9 +23,9 @@ const HEALTH = { status: "ok" as const, code: null, checkedAt: null }
 const ON = { enabled: true, intervalMinutes: 60 }
 const OFF = { enabled: false, intervalMinutes: 60 }
 
-async function renderSection(saved = ON) {
+async function renderSection(saved = ON, redisConfigured = true) {
   await act(async () => {
-    render(<SyncSettingsSection saved={saved} health={HEALTH} />)
+    render(<SyncSettingsSection saved={saved} health={HEALTH} redisConfigured={redisConfigured} />)
   })
 }
 
@@ -59,6 +60,21 @@ describe("SyncSettingsSection", () => {
       expect(summaryRow("enabled")).toHaveTextContent(/^Watchlist syncOff$/)
       expect(screen.queryByTestId("settings-watchlist-summary-interval")).not.toBeInTheDocument()
     })
+
+    it("offers Sync now on the saved settings while sync is on and Redis is set up", async () => {
+      await renderSection()
+      expect(screen.getByTestId("admin-watchlist-sync-now")).toBeEnabled()
+    })
+
+    it("holds Sync now back while sync is off", async () => {
+      await renderSection(OFF)
+      expect(screen.getByTestId("admin-watchlist-sync-now")).toBeDisabled()
+    })
+
+    it("holds Sync now back without Redis", async () => {
+      await renderSection(ON, false)
+      expect(screen.getByTestId("admin-watchlist-sync-now")).toBeDisabled()
+    })
   })
 
   describe("edit mode", () => {
@@ -76,6 +92,8 @@ describe("SyncSettingsSection", () => {
       expect(screen.queryByRole("switch")).not.toBeInTheDocument()
       expect(within(form).getByTestId("watchlist-sync-interval-input")).toHaveValue(60)
       expect(screen.queryByTestId("settings-watchlist-summary")).not.toBeInTheDocument()
+      // Sync now acts on the saved settings, so it leaves while the form is open
+      expect(screen.queryByTestId("admin-watchlist-sync-now")).not.toBeInTheDocument()
       await waitFor(() => expect(toggle).toHaveFocus())
     })
 

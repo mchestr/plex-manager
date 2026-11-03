@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header"
 import { assertAdmin } from "@/lib/admin"
 import { parseWatchlistFilter, WATCHLIST_DEFAULT_SORT, WATCHLIST_SORTS } from "@/lib/admin/watchlist-filter"
 import { getWatchlistPage } from "@/lib/data/watchlist"
+import { isRedisConfigured } from "@/lib/queue/connection"
 import { getFormat } from "@/lib/settings/app-settings"
 import { getWatchlistLastSaved } from "@/lib/settings/audit-meta"
 import { getWatchlistHealth } from "@/lib/settings/connection-health"
@@ -41,6 +42,7 @@ export default async function WatchlistPage({ searchParams }: { searchParams: Pr
       <SyncSettingsSection
         saved={settings}
         health={health}
+        redisConfigured={isRedisConfigured()}
         // Nothing before a first save, so the card shows no empty footer
         footerMeta={lastSaved && <LastSaved id="watchlist" meta={lastSaved} />}
       />
