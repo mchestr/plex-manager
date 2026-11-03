@@ -58,7 +58,8 @@ async function findSkill(name: string): Promise<{ skill: SkillEntry } | { error:
 
 /** The text cut to {@link MAX_CONTENT_CHARS}, and whether anything was cut. */
 function capped(text: string) {
-  return { content: text.slice(0, MAX_CONTENT_CHARS), truncated: text.length > MAX_CONTENT_CHARS }
+  // A high surrogate left last by the cut lost its pair; a lone surrogate is not valid Unicode for the provider
+  return { content: text.slice(0, MAX_CONTENT_CHARS).replace(/[\uD800-\uDBFF]$/, ""), truncated: text.length > MAX_CONTENT_CHARS }
 }
 
 /** The `/` and `@` in `commit` keep the redactor from taking the full SHA for a secret, so the row stores it as is. */

@@ -144,6 +144,16 @@ describe("read_skill_file", () => {
     expect(out.truncated).toBe(true)
   })
 
+  it("read_skill_file never ends its cut content on half a surrogate pair", async () => {
+    // The emoji's two UTF-16 units straddle the cap, so a plain cut keeps only the first
+    github({ "triage/notes.md": `${"y".repeat(11_999)}😀${"y".repeat(10)}` })
+
+    const out = await run("read_skill_file", { skill: "triage", path: "notes.md" })
+
+    expect(out.content).toBe("y".repeat(11_999))
+    expect(out.truncated).toBe(true)
+  })
+
   it("read_skill_file reads a root skill's file", async () => {
     const root = skill("root", "", { files: ["guide.md"] })
     // A source whose folder is skills/ keeps it in the skill's folder, so its files read at skills/...
