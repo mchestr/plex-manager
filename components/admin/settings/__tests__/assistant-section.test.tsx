@@ -19,6 +19,7 @@ jest.mock("@/actions/admin/assistant-sources", () => ({
   saveKnowledgeSource: jest.fn(),
   deleteKnowledgeSource: jest.fn(),
 }))
+jest.mock("@/actions/admin/assistant-skills", () => ({ saveSkillSource: jest.fn(), deleteSkillSource: jest.fn(), refreshSkillSource: jest.fn(), checkSkills: jest.fn() }))
 
 const mockShowSuccess = jest.fn()
 const mockShowError = jest.fn()
@@ -52,6 +53,7 @@ describe("AssistantSection", () => {
     render(<AssistantSection sources={EMPTY} />)
     expect(screen.getByTestId("settings-mcp-list")).toHaveTextContent("None yet.")
     expect(screen.getByTestId("settings-knowledge-list")).toHaveTextContent("None yet.")
+    expect(screen.getByTestId("settings-skill-list")).toHaveTextContent("None yet.")
   })
 
   it("lists each server with its tool count and each knowledge base with its repository", () => {
