@@ -12,6 +12,7 @@ import { executeKnowledgeTool } from "./knowledge"
 import { executeOverseerrTool } from "./overseerr"
 import { executePlexTool } from "./plex"
 import { executeRadarrTool } from "./radarr"
+import { executeSkillTool } from "./skills"
 import { executeSonarrTool } from "./sonarr"
 import { executeTautulliTool } from "./tautulli"
 import { executeMediaMarkingTool } from "./media-marking"
@@ -114,6 +115,9 @@ const TOOL_SERVICE_MAP: Record<string, ToolExecutor> = {
   // Knowledge base tools (admin only; not Discord-safe)
   search_knowledge_base: executeKnowledgeTool,
   read_knowledge_doc: executeKnowledgeTool,
+  // Skill tools (admin only; not Discord-safe, and not offered over /api/mcp)
+  load_skill: executeSkillTool,
+  read_skill_file: executeSkillTool,
 }
 
 export async function executeToolCall(

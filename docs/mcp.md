@@ -54,7 +54,13 @@ header works the same way.
 |---|---|---|
 | Server Actions | every admin and member action, named in snake case (`createInvite` is `create_invite`), with its Zod input as JSON Schema and its JSDoc summary as the description | `lib/mcp/action-tools.ts` |
 | Admin reads | the lists and details the admin pages show (`list_users`, `list_invites`, `get_user`, `get_admin_settings`, `list_llm_usage`, ...), so a client can find the ids that actions take | `lib/mcp/read-tools.ts`, `read-tools-llm.ts`, `read-tools-community.ts` |
-| Assistant tools | the admin assistant's Plex, Tautulli, Sonarr, Radarr, Overseerr, media marking, app data and knowledge base tools | `lib/mcp/assistant-tools.ts` |
+| Assistant tools | the admin assistant's Plex, Tautulli, Sonarr, Radarr, Overseerr, media marking, app data and knowledge base tools, but not its skill tools | `lib/mcp/assistant-tools.ts` |
+
+The skill tools, `load_skill` and `read_skill_file`, are web chat only: the
+admin assistant's prompt lists the skills, and its conversation takes their
+text as an administrator's instructions (`docs/assistant.md`, "Skills"). Skill
+sources are managed here like any other setting: `save_skill_source`,
+`refresh_skill_source`, `delete_skill_source` and the read-only `check_skills`.
 
 A tool call runs the action itself, inside the token owner's session
 (`lib/mcp/principal.ts`): its auth check, input validation, rate limit and

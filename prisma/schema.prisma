@@ -1247,3 +1247,19 @@ model KnowledgeSource {
 
   @@index([isActive])
 }
+
+// A GitHub repository of Agent Skills (folders holding a SKILL.md) the admin
+// assistant lists and follows.
+model SkillSource {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  repo      String // owner/name
+  ref       String   @default("main")
+  path      String   @default("") // Only skills under this folder; empty = the whole repo
+  token     String? // ENCRYPTED: a GitHub token for a private repository
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}

@@ -52,6 +52,16 @@ describe("mcpToolName", () => {
     expect(mcpToolName("My Server!", "do-it.now")).toBe("mcp_my_server_do_it_now")
     expect(mcpToolName("s", "t".repeat(100))).toHaveLength(64)
   })
+
+  // The conversation wraps load_skill and read_skill_file results as admin_skill, by exact name
+  it("never returns a skill tool name", () => {
+    for (const name of ["load_skill", "read_skill_file"]) {
+      for (const other of ["", "x", "load_skill", "read_skill_file"]) {
+        expect(mcpToolName(name, other)).toMatch(/^mcp_/)
+        expect(mcpToolName(other, name)).toMatch(/^mcp_/)
+      }
+    }
+  })
 })
 
 describe("loadMcpTools", () => {

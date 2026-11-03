@@ -11,6 +11,7 @@ import { EXCLUDED, READ_ONLY_ACTIONS, toolName, WRITES_DESPITE_READ_NAME } from 
 import { ADMIN_READ_TOOLS } from '@/lib/mcp/assistant-tools'
 import { allTools, blockedByScope, toolFor, toolsFor } from '@/lib/mcp/catalog'
 import { ALL_TOOLS } from '@/lib/chatbot/tools'
+import { SKILL_TOOL_NAMES } from '@/lib/chatbot/tools/skills'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
@@ -127,13 +128,21 @@ describe('toolsFor', () => {
 })
 
 describe('the assistant tools', () => {
+  // The skill tools are for the admin web chat only, so they are not MCP tools at all
+  const offered = ALL_TOOLS.filter((tool) => !SKILL_TOOL_NAMES.has(tool.function.name))
+
   it('marks as read-only the read tier and exactly the listed admin-tier reads, so a new admin tool is reviewed', () => {
-    const adminTier = ALL_TOOLS.filter((tool) => tool.permission === 'assistant:tools:admin').map((tool) => tool.function.name)
+    const adminTier = offered.filter((tool) => tool.permission === 'assistant:tools:admin').map((tool) => tool.function.name)
     expect(adminTier.sort()).toEqual([...ADMIN_READ_TOOLS].sort())
-    for (const tool of ALL_TOOLS) {
+    for (const tool of offered) {
       const readOnly = tool.permission === 'assistant:tools:read' || ADMIN_READ_TOOLS.has(tool.function.name)
       expect([tool.function.name, allTools().get(tool.function.name)?.annotations.readOnlyHint]).toEqual([tool.function.name, readOnly])
     }
+  })
+
+  it('skill tools are not MCP tools', () => {
+    expect(allTools().has('load_skill')).toBe(false)
+    expect(allTools().has('read_skill_file')).toBe(false)
   })
 })
 
