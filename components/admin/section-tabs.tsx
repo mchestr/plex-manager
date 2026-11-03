@@ -24,14 +24,9 @@ export interface SectionTab {
  * no empty box above its header.
  *
  * The strip draws its own container, in the width and gutters of an admin
- * page, so it lines up with the page header below it. A layout renders it
- * bare above `{children}`, with the tabs the signed-in user may open:
- *
- * ```tsx
- * const session = await getSession()
- * const tabs = session?.user ? childrenOf("rewind", session.user) : []
- * <SectionTabs itemId="rewind" label="Rewind" tabs={tabs} />
- * ```
+ * page, so it lines up with the page header below it. A section's layout
+ * (`sectionLayout`, `components/admin/section-layout.tsx`) renders it bare
+ * above `{children}`, with the tabs the signed-in user may open.
  *
  * Test ids: `admin-section-tabs-<itemId>` on the list, `admin-section-tab-<tab.id>` on each tab.
  */

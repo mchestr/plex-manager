@@ -65,7 +65,7 @@ async function search(query: string, sources: KnowledgeRepo[]) {
 export async function executeKnowledgeTool(toolName: string, args: Record<string, unknown>, userId?: string): Promise<string> {
   await assertAdmin()
   const sources = await activeSources()
-  if (sources.length === 0) return JSON.stringify({ error: "No knowledge base is configured. Add one in Settings, Assistant sources." })
+  if (sources.length === 0) return JSON.stringify({ error: "No knowledge base is configured. Add one in Admin, AI, Settings, Assistant sources." })
 
   if (toolName === "search_knowledge_base") {
     const parsed = searchArgs.safeParse(args)

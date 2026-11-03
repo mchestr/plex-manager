@@ -35,7 +35,7 @@ Each of these holds the old URL, and the app cannot change it for you.
    linking works on the new host.
 2. **Discord Linked Roles verification URL.** Same application → General
    Information → Linked Roles Verification URL: set it to the portal URL shown
-   in Admin → Settings → Discord, `https://new.example.com/discord/link` by
+   in Admin → Discord → Settings, `https://new.example.com/discord/link` by
    default. Without it, members who start linking from Discord land on the old
    host.
 3. **Stripe webhook endpoint.** In the Stripe Dashboard → Developers →

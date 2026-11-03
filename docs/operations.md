@@ -518,7 +518,7 @@ with the current encryption key. Enter it again."). To recover:
   timeout or a server error) keeps the stored role. The Plex server owner and
   the last admin cannot be demoted.
 - **Unsharing removes one server's share only**: Unshare in Admin → Members → Users, the
-  inactivity sweep (Admin → Inactive members, see
+  inactivity sweep (Admin → Automations → Inactive members, see
   [inactive members](inactive-members.md)) and the Stripe access removal
   delete the member's share of the configured Plex server and nothing else. The member stays your plex.tv friend and keeps any
   other servers you share with them; remove those in Plex itself. A share that
@@ -561,7 +561,7 @@ with the current encryption key. Enter it again."). To recover:
   Jellyfin server, listed under the client "Plex Wrapped" and the device ID
   `plex-wrapped-server` (or your `JELLYFIN_DEVICE_ID`); a Jellyfin
   administrator can delete them in Dashboard → Devices.
-- **Watchlist sync**: turn it on and set the interval in Admin → Settings →
+- **Watchlist sync**: turn it on and set the interval in Admin → Automations →
   Watchlist sync. Each member must also turn it on in the card on their home
   page; nothing syncs while either is off, whoever starts the run. Requests are
   filed as the member's own Overseerr user, matched by Plex account ID, so each

@@ -8,6 +8,7 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
+import { leaveIsGuarded } from "@/__tests__/helpers/leave-guard"
 import { runMemberActivityNow, updateInactivitySettings } from "@/actions/admin/inactivity"
 import { InactivitySettingsSection } from "@/components/admin/inactivity/settings-section"
 import type { InactivitySettingsValues } from "@/lib/inactivity/settings"
@@ -211,9 +212,6 @@ describe("InactivitySettingsSection", () => {
   })
 
   describe("unsaved changes", () => {
-    /** Whether the browser would ask before the tab closes. */
-    const leaveIsGuarded = () => !window.dispatchEvent(new Event("beforeunload", { cancelable: true }))
-
     it("asks before the tab closes only while the draft differs from the saved values", async () => {
       const user = userEvent.setup()
       await renderSection()

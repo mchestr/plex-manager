@@ -9,17 +9,11 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 
+import { leaveIsGuarded } from "@/__tests__/helpers/leave-guard"
 import { SettingsSheet } from "@/components/admin/settings/settings-sheet"
 import { SheetForm, type SheetFormControls } from "@/components/admin/settings/sheet-form"
 import { SettingsEditProvider } from "@/components/ui/settings-edit-context"
 import type { SettingsFormState } from "@/hooks/admin/use-settings-form"
-
-/** Whether the browser would ask before the tab closes or reloads: a `beforeunload` listener prevented the event. */
-const leaveIsGuarded = () => {
-  const event = new Event("beforeunload", { cancelable: true })
-  window.dispatchEvent(event)
-  return event.defaultPrevented
-}
 
 /** A form backed by real state, so dirtiness follows typing. */
 function NameForm(controls: Required<SheetFormControls>) {

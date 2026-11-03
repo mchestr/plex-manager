@@ -117,7 +117,7 @@ prisma/                # Database schema and migrations
 ```
 
 ### Admin navigation
-- `lib/admin/nav.ts` is the one list: the sidebar, the mobile tab bar, page titles and each item's tab strip (`children`, drawn by `SectionTabs` in the layout of the item's route group) all read it
+- `lib/admin/nav.ts` is the one list: the sidebar, the mobile tab bar, page titles, the command menu's "Go to" entries (each page, then each of its tabs as "Page › Tab") and each item's tab strip (`children`, drawn by `SectionTabs` in the layout of the item's route group, which is `export default sectionLayout("<id>")` from `components/admin/section-layout.tsx`) all read it
 - A feature's controls live on the feature's own page, as its `…/settings` tab; `/admin/settings` holds only connections, billing and system
 - The sidebar budget is ten items: a new feature adds a tab (`children`) or a row to an existing page before it adds an item
 - Sibling routes keep their URLs through a route group per section (`app/admin/(<section>)/`); `also` lights the item on their paths

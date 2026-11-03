@@ -115,4 +115,8 @@ describe("admin routes", () => {
     expect(settingsSection("time-zone")).toBe("/admin/settings#time-zone")
     expect(settingsSection("a b")).toBe("/admin/settings#a%20b")
   })
+
+  it.each(["constructor", "toString", "hasOwnProperty", "__proto__"])("treats %s as a section id, never as a member inherited from Object", (id) => {
+    expect(settingsSection(id)).toBe(`/admin/settings#${id}`)
+  })
 })

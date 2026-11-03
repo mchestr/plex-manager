@@ -124,6 +124,8 @@ export const A11Y_ROUTES: A11yRoute[] = [
     },
   },
   { path: `/admin/invites/${VISUAL_INVITE_IDS.valid}`, as: 'admin', ready: 'admin-invite-header' },
+  // The section strip (Users, Invites, Affiliates) above the page's own tabs: two tablists on one page
+  { path: '/admin/affiliates', as: 'admin', ready: 'admin-affiliates-header' },
   { path: '/admin/announcements', as: 'admin', ready: 'admin-announcements-header' },
   { path: '/admin/watchlist', as: 'admin', ready: 'admin-watchlist-header' },
   { path: '/admin/inactivity', as: 'admin', ready: 'admin-inactivity-header' },

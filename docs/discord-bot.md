@@ -6,7 +6,7 @@ process: the single container, or the `worker` container when you split roles
 It serves users through native **slash commands** and a **DM-based AI
 assistant**; it does **not** monitor or read channel messages.
 
-**Admin → Settings → Discord → "Bot enabled"** is the main control. Turn it on
+**Admin → Discord → Settings → "Bot enabled"** is the main control. Turn it on
 and save a bot token, and the bot comes online within one poll (10 s by
 default), with no restart; turn it off and it goes offline the same way.
 
@@ -78,7 +78,7 @@ and a Jellyfin account uses every command with their Plex account.
    with `npm run register-discord-metadata`. See *Linked-role refresh* for
    when they are pushed.
 3. **Configuration** — the bot token and support channel/thread IDs are now
-   **managed in the admin UI** (`Admin → Settings → Discord`) and stored
+   **managed in the admin UI** (`Admin → Discord → Settings`) and stored
    **encrypted** in the database. Environment variables act as a **fallback**
    when the corresponding DB fields are unset, so existing deployments keep
    working:
@@ -87,7 +87,7 @@ and a Jellyfin account uses every command with their Plex account.
    # The bot uses a distributed DB lock, so only one pod runs it.
    # ENABLE_DISCORD_BOT="false"
 
-   # Fallbacks only — prefer setting these in Admin → Settings → Discord.
+   # Fallbacks only — prefer setting these in Admin → Discord → Settings.
    DISCORD_BOT_TOKEN=...
    DISCORD_SUPPORT_CHANNEL_ID=...   # optional; informational (pinned-post/portal)
    DISCORD_SUPPORT_THREAD_IDS=...   # optional, comma-delimited
@@ -161,8 +161,8 @@ npm run register-discord-commands -- --dry-run
 
 The script reads `DISCORD_BOT_TOKEN` and `DISCORD_CLIENT_ID` (or
 `NEXT_PUBLIC_DISCORD_CLIENT_ID`) from the environment or `.env`. When either is
-missing, it uses the bot token and client ID saved in Admin → Settings →
-Discord, read through `DATABASE_URL`. Without `DISCORD_GUILD_ID` the commands
+missing, it uses the bot token and client ID saved in Admin → Discord →
+Settings, read through `DATABASE_URL`. Without `DISCORD_GUILD_ID` the commands
 are global and can take up to an hour to appear; with it they appear at once in
 that server, which suits development. It performs an idempotent bulk overwrite
 of the application's commands. `register-discord-metadata` runs the same two
@@ -234,7 +234,7 @@ Discord allows about 1000 gateway logins (IDENTIFY) per bot per 24 hours and
 - **Fatal errors stop.** A rejected token (close code 4004) or invalid or
   disallowed intents (4013, 4014) will fail every time, so the bot stops trying,
   logs `discord.login_fatal` at error and shows **Login rejected** under
-  Admin, Settings, Discord. It tries again when a different token is saved.
+  Admin, Discord, Settings. It tries again when a different token is saved.
 - **Daily cap.** At most 100 login attempts in a rolling 24 hours, counted in
   Redis when `REDIS_URL` is set (so restarts do not clear the count) and in
   memory otherwise. Above it the bot logs `discord.login_daily_cap` at error and
@@ -248,7 +248,7 @@ Discord allows about 1000 gateway logins (IDENTIFY) per bot per 24 hours and
   `ShardResume`); the bot does not destroy the client for that.
 
 **After Discord resets a token:** generate a new one in the Discord Developer
-Portal (Bot, Reset Token) and paste it under Admin, Settings, Discord (Edit,
+Portal (Bot, Reset Token) and paste it under Admin, Discord, Settings (Edit,
 then Save changes). The bot
 logs in within one poll. While it was reset, check `plex_manager_discord_gateway_logins_24h`
 and the `ShardDisconnect` warnings (`code`, `reason`) in the log to see what
@@ -324,7 +324,7 @@ A refused message is answered with when the member can ask again, for example
 "You can ask again in 42 minutes", and makes no LLM call.
 
 On top of the message limits, the assistant has **daily spend caps**, set under
-Settings, LLM Configuration, Chat Assistant: per member (default $0.50), per
+Admin, AI, Settings, AI provider, Admin assistant: per member (default $0.50), per
 admin (default $5) and for the whole server (default $5), in US dollars per day
 in the server time zone. They count only assistant calls, both on the web and in
 Discord; Rewind generation has its own budget. The caps are checked before every
