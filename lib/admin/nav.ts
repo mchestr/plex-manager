@@ -13,9 +13,7 @@
  * ```
  * Overview
  * Assistant
- * Users
- * Invites
- * Affiliates
+ * Members         Users, Invites, Affiliates
  * Announcements
  * Discord         Activity, Settings
  * Rewind          Season, Playground, Shares, Settings
@@ -103,33 +101,23 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "assistant:use",
   },
   {
-    id: "users",
-    label: "Users",
+    id: "members",
+    label: "Members",
     href: "/admin/users",
     icon: icons.users,
+    // Invites and Affiliates sit beside /admin/users, not below it, so `also` lights it on their paths
     match: "prefix",
+    also: ["/admin/invites", "/admin/affiliates"],
     mobile: "tab",
     permission: "users:read",
-    badge: ({ users }) => ({ text: String(users) }),
-  },
-  {
-    id: "invites",
-    label: "Invites",
-    href: "/admin/invites",
-    icon: icons.invites,
-    match: "prefix",
-    mobile: "more",
-    badge: ({ activeInvites }) => (activeInvites > 0 ? { text: `${activeInvites} active` } : null),
-  },
-  {
-    id: "affiliates",
-    label: "Affiliates",
-    href: "/admin/affiliates",
-    icon: icons.affiliates,
-    match: "prefix",
-    mobile: "more",
-    permission: "affiliates:read",
-    badge: ({ pendingAffiliates }) => (pendingAffiliates > 0 ? { text: `${pendingAffiliates} pending` } : null),
+    // Applications waiting for a decision outrank the member count
+    badge: ({ users, pendingAffiliates }) => (pendingAffiliates > 0 ? { text: `${pendingAffiliates} pending` } : { text: String(users) }),
+    // Invites has no permission, so only an admin gets its tab
+    children: [
+      { id: "users", label: "Users", href: "/admin/users", permission: "users:read" },
+      { id: "invites", label: "Invites", href: "/admin/invites" },
+      { id: "affiliates", label: "Affiliates", href: "/admin/affiliates", permission: "affiliates:read" },
+    ],
   },
   {
     id: "announcements",
@@ -282,7 +270,7 @@ const MAX_LINK_TABS = 4
 
 /**
  * The mobile tab bar: Overview first, then every other `mobile: "tab"` item in
- * nav order (Users, Rewind, Automations), four link tabs at most, then More. A
+ * nav order (Members, Rewind, Automations), four link tabs at most, then More. A
  * tab opens its item's first child and lights on all of the item's pages,
  * `also` included, so the Rewind tab is lit on /admin/shares. Every other
  * item, and any tab item past the cap, opens from More only.

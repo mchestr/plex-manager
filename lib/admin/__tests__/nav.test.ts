@@ -33,7 +33,7 @@ describe("ADMIN_NAV", () => {
   })
 
   it("keeps the test ids the E2E specs use", () => {
-    for (const id of ["overview", "users", "invites", "announcements", "ai", "discord", "automations", "rewind", "settings"]) {
+    for (const id of ["overview", "assistant", "members", "announcements", "ai", "discord", "automations", "rewind", "audit", "settings"]) {
       expect(ADMIN_NAV.map(navTestId)).toContain(`admin-nav-${id}`)
     }
   })
@@ -70,31 +70,31 @@ describe("ADMIN_NAV", () => {
     expect(new Set(childIds).size).toBe(childIds.length)
   })
 
-  it("badges members, active invites, pending applications and failed jobs", () => {
+  it("badges pending applications, else the member count, on Members, and failed jobs on Automations", () => {
     const counts = { users: 7, activeInvites: 3, pendingAffiliates: 2, failedJobs: 2 }
-    expect(byId("users").badge?.(counts)).toEqual({ text: "7" })
-    expect(byId("invites").badge?.(counts)).toEqual({ text: "3 active" })
+    expect(byId("members").badge?.(counts)).toEqual({ text: "2 pending" })
+    expect(byId("members").badge?.({ ...counts, pendingAffiliates: 0 })).toEqual({ text: "7" })
     expect(byId("automations").badge?.(counts)).toEqual({ text: "2 failed", tone: "destructive" })
-    expect(byId("invites").badge?.({ ...counts, activeInvites: 0 })).toBeNull()
     expect(byId("automations").badge?.({ ...counts, failedJobs: 0 })).toBeNull()
     expect(byId("automations").badge?.({ ...counts, failedJobs: null })).toBeNull()
-    expect(byId("affiliates").badge?.(counts)).toEqual({ text: "2 pending" })
-    expect(byId("affiliates").badge?.({ ...counts, pendingAffiliates: 0 })).toBeNull()
   })
 })
 
 describe("isActive", () => {
   it.each([
-    ["users", "/admin/users", true],
-    ["users", "/admin/users/abc", true],
-    ["users", "/admin/users-archive", false],
+    ["members", "/admin/users", true],
+    ["members", "/admin/users/abc", true],
+    ["members", "/admin/users-archive", false],
+    ["members", "/admin/invites", true],
+    ["members", "/admin/invites/i1", true],
+    ["members", "/admin/affiliates", true],
+    ["members", "/admin/affiliates-archive", false],
     ["rewind", "/admin/rewind", true],
     ["rewind", "/admin/rewind/playground", true],
     ["rewind", "/admin/rewind/settings", true],
     ["rewind", "/admin/shares", true],
     ["rewind", "/admin/sharesheet", false],
     ["rewind", "/admin/users", false],
-    ["invites", "/admin/invites/i1", true],
     ["discord", "/admin/discord/settings", true],
     ["automations", "/admin/watchlist", true],
     ["automations", "/admin/inactivity", true],
@@ -116,7 +116,7 @@ describe("isActive", () => {
 
 describe("titleFor", () => {
   it("is the nav label, the deepest match, or Admin off the nav", () => {
-    expect(titleFor("/admin/users/abc")).toBe("Users")
+    expect(titleFor("/admin/users/abc")).toBe("Members")
     expect(titleFor("/admin/shares")).toBe("Rewind")
     expect(titleFor("/admin/rewind/playground")).toBe("Rewind")
     expect(titleFor("/admin/rewind/settings")).toBe("Rewind")
@@ -124,6 +124,63 @@ describe("titleFor", () => {
     expect(titleFor("/admin/queues")).toBe("Automations")
     expect(titleFor("/admin/wrapped/w1/history/u1")).toBe("Admin")
     expect(activeItem("/admin/ai/conversation/c1")?.id).toBe("ai")
+  })
+})
+
+describe("Members", () => {
+  const members = byId("members")
+  const support = { isAdmin: false, role: "support" }
+
+  it("is one item after Assistant with the Users, Invites and Affiliates tabs, opening on Users", () => {
+    expect(ADMIN_NAV[2]).toBe(members)
+    expect(members).toMatchObject({
+      label: "Members",
+      href: "/admin/users",
+      icon: icons.users,
+      match: "prefix",
+      also: ["/admin/invites", "/admin/affiliates"],
+      mobile: "tab",
+      permission: "users:read",
+    })
+    expect(members.children).toEqual([
+      { id: "users", label: "Users", href: "/admin/users", permission: "users:read" },
+      { id: "invites", label: "Invites", href: "/admin/invites" },
+      { id: "affiliates", label: "Affiliates", href: "/admin/affiliates", permission: "affiliates:read" },
+    ])
+  })
+
+  it("replaces the Users, Invites and Affiliates items", () => {
+    const ids = ADMIN_NAV.map((item) => item.id)
+    for (const folded of ["users", "invites", "affiliates"]) expect(ids).not.toContain(folded)
+  })
+
+  it.each(["/admin/users", "/admin/users/abc", "/admin/users/abc/rewind/2026", "/admin/invites", "/admin/invites/i1", "/admin/affiliates"])(
+    "lights on %s, under the title Members",
+    (pathname) => {
+      expect(isActive(members, pathname)).toBe(true)
+      expect(activeItem(pathname)?.id).toBe("members")
+      expect(titleFor(pathname)).toBe("Members")
+    }
+  )
+
+  it("offers every tab to an admin and Users and Affiliates to Support, whose Members opens on Users", () => {
+    expect(childrenOf("members", { isAdmin: true }).map((tab) => tab.id)).toEqual(["users", "invites", "affiliates"])
+    expect(childrenOf("members", support).map((tab) => tab.id)).toEqual(["users", "affiliates"])
+    expect(childrenOf("members", { isAdmin: false, role: null })).toEqual([])
+    const nav = navFor(support)
+    expect(nav.map((item) => item.id)).toEqual(expect.arrayContaining(["assistant", "members"]))
+    expect(nav.find((item) => item.id === "members")?.href).toBe("/admin/users")
+  })
+
+  it("is the mobile tab after Overview, opening on Users and lit on every Members page", () => {
+    const tabs = mobileTabs()
+    const tab = tabs.find((t) => t.id === "members") as MobileLinkTab
+    expect(tabs.indexOf(tab)).toBe(1)
+    expect(tab.href).toBe("/admin/users")
+    for (const pathname of ["/admin/users", "/admin/users/abc", "/admin/invites", "/admin/affiliates"]) {
+      expect(isTabActive(tab, pathname)).toBe(true)
+    }
+    expect(isTabActive(tab, "/admin")).toBe(false)
   })
 })
 
@@ -300,10 +357,10 @@ describe("mobileTabs", () => {
   })
   const ids = (tabs: ReturnType<typeof mobileTabs>) => tabs.map((tab) => tab.id)
 
-  it("shows Overview, Users, Rewind, Automations and More, with the Rewind tab on Season (P10.8)", () => {
+  it("shows Overview, Members, Rewind, Automations and More, with the Rewind tab on Season (P10.8)", () => {
     const tabs = mobileTabs()
-    expect(tabs.map((tab) => tab.id)).toEqual(["overview", "users", "rewind", "automations", "more"])
-    expect(tabs.map((tab) => tab.label)).toEqual(["Overview", "Users", "Rewind", "Automations", "More"])
+    expect(tabs.map((tab) => tab.id)).toEqual(["overview", "members", "rewind", "automations", "more"])
+    expect(tabs.map((tab) => tab.label)).toEqual(["Overview", "Members", "Rewind", "Automations", "More"])
     const rewind = tabs.find((tab) => tab.id === "rewind") as MobileLinkTab
     expect(rewind.href).toBe("/admin/rewind")
     expect(rewind.covers.map((item) => item.id)).toEqual(["rewind"])
@@ -327,7 +384,7 @@ describe("mobileTabs", () => {
   it("holds four link tabs at most, Overview included, and opens the rest from More only", () => {
     const extra = bare("extra")
     const tabs = mobileTabs([...ADMIN_NAV, extra])
-    expect(ids(tabs)).toEqual(["overview", "users", "rewind", "automations", "more"])
+    expect(ids(tabs)).toEqual(["overview", "members", "rewind", "automations", "more"])
     expect(tabs.flatMap((tab) => (tab.kind === "link" ? tab.covers : []))).not.toContain(extra)
   })
 
@@ -356,10 +413,10 @@ describe("Overview (P10.8)", () => {
     expect(titleFor("/admin")).toBe("Overview")
   })
 
-  it("leaves Users unlit on /admin", () => {
-    expect(isActive(byId("users"), "/admin")).toBe(false)
+  it("leaves Members unlit on /admin", () => {
+    expect(isActive(byId("members"), "/admin")).toBe(false)
     expect(activeItem("/admin")?.id).toBe("overview")
-    expect(activeItem("/admin/users")?.id).toBe("users")
+    expect(activeItem("/admin/users")?.id).toBe("members")
   })
 })
 
@@ -380,8 +437,8 @@ describe("Assistant", () => {
     expect(titleFor("/admin/assistant")).toBe("Assistant")
   })
 
-  it("is in a Support user's nav beside Users, and in no one's without a role", () => {
-    expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).toEqual(["assistant", "users", "affiliates", "audit"])
+  it("is in a Support user's nav beside Members, and in no one's without a role", () => {
+    expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).toEqual(["assistant", "members", "audit"])
     expect(navFor({ isAdmin: false, role: null })).toEqual([])
   })
 })
