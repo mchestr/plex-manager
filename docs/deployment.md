@@ -27,8 +27,9 @@ in [the environment reference](environment.md). Backups and upgrades are in
   URLs are https (see `ALLOW_INSECURE_HTTP` for a LAN-only install).
 - A Plex server you own, and Tautulli: the setup wizard needs both.
   Overseerr, Sonarr, Radarr, OpenAI (for the Rewind writer and the admin
-  assistant) and Discord are optional wizard steps; Jellyfin, Stripe and the
-  other AI providers are set up later in Admin → Settings.
+  assistant) and Discord are optional wizard steps; Jellyfin and Stripe are
+  set up later in Admin → Settings, and the other AI providers in Admin → AI →
+  Settings.
 
 ## Install with Docker Compose
 
@@ -285,7 +286,7 @@ npm run start:prod
   `/api/health?probe=live`, which never touches either.
 - **Metrics.** Set `METRICS_TOKEN` to serve Prometheus metrics at `/api/metrics`
   ([operations](operations.md#request-ids-and-metrics)).
-- **Discord.** Turn the bot on in Admin → Settings → Discord; it starts within
+- **Discord.** Turn the bot on in Admin → Discord → Settings; it starts within
   10 s, with no restart. Register the slash commands with
   `docker compose exec app node scripts/dist/register-discord-commands.cjs`
   (from a checkout, `npm run register-discord-commands`), and the linked-role

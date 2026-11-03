@@ -1,8 +1,10 @@
 # Discord stat channels and request limits
 
 Two jobs that used to run in Windmill now run on the BullMQ queue. Both are off
-until an admin turns them on in Admin > Settings, both need Redis and a worker
-(`PROCESS_ROLE=worker` or `all`), and both leave a trail in Admin > Queues.
+until an admin turns them on (the stat channels in Admin > Discord > Settings,
+request limits in Admin > Automations > Request limits), both need Redis and a
+worker (`PROCESS_ROLE=worker` or `all`), and both leave a trail in
+Admin > Automations > Queues.
 
 ## Discord stat channels
 
@@ -20,7 +22,7 @@ Windmill flow `f/mflix/discord_channel_status`.
 | Episodes | `Episodes: N` | `child_count` of `show` libraries |
 
 - **Status:** both Tautulli calls succeed, 🟢 Online; one, 🟡 Degraded; none, 🔴 Offline.
-- **Channels:** paste each channel's ID in Admin > Settings > Discord > Channel stats (Edit, then Save changes). A stat with no ID is left alone. The bot needs the Manage Channels permission on those channels.
+- **Channels:** paste each channel's ID in Admin > Discord > Settings > Channel stats (Edit, then Save changes). A stat with no ID is left alone. The bot needs the Manage Channels permission on those channels.
 - **Name formats:** `{value}` is the number (an emoji for status) and `{server}` is the server name from the brand settings.
 - **Failures:** a failed `get_activity` skips the three activity channels, a failed `get_libraries` skips the three library channels, and a failed rename never stops the next channel.
 - **Rate limit:** Discord allows two renames per channel in ten minutes, so the interval is ten minutes or more. A channel is renamed only when its name changed since the last successful rename, and a `429` is left for the next run (a global `429` ends the run).

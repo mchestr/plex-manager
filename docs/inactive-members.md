@@ -1,6 +1,6 @@
 # Inactive members
 
-**Admin > Inactive members** shows when each member last played something on
+**Admin > Automations > Inactive members** shows when each member last played something on
 Plex, and can remove Plex access from members who stopped watching. Removal is
 off until an admin turns it on. Reading last seen is always on, because it
 changes no one's access.

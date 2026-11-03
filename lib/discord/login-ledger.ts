@@ -3,7 +3,7 @@
  * clear them: Redis when `REDIS_URL` is set (a sorted set of login times, plus
  * a hash of counters), else this process's memory.
  *
- * `/api/metrics` and Admin, Settings, Discord read it through
+ * `/api/metrics` and Admin, Discord, Settings read it through
  * {@link readGatewayStats}.
  *
  * @module lib/discord/login-ledger

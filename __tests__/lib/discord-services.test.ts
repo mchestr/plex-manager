@@ -136,7 +136,7 @@ describe("handleDiscordChat", () => {
           message: {
             role: "assistant",
             content:
-              "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
+              "The assistant is off. An admin must turn on AI features and select a chat model in Admin, AI, Settings.",
             timestamp: Date.now(),
           },
         },
@@ -182,7 +182,7 @@ describe("handleDiscordChat", () => {
           message: {
             role: "assistant",
             content:
-              "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
+              "The assistant is off. An admin must turn on AI features and select a chat model in Admin, AI, Settings.",
             timestamp: Date.now(),
           },
           conversationId: "new-conversation-1",
