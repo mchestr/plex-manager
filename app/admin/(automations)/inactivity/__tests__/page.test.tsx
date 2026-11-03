@@ -147,7 +147,7 @@ describe("Admin inactivity page", () => {
     await renderPage()
     expect(screen.queryByTestId("settings-inactivity-last-saved")).not.toBeInTheDocument()
 
-    jest.mocked(getInactivityPage).mockResolvedValue({ ...DATA, lastSaved: { at: new Date(), by: "Dana Whitfield" } })
+    jest.mocked(getInactivityPage).mockResolvedValue({ ...DATA, lastSaved: { at: new Date(), by: "Dana Whitfield", eventId: "audit-1" } })
     await renderPage()
     expect(screen.getByTestId("settings-inactivity-last-saved")).toHaveTextContent("by Dana Whitfield")
   })

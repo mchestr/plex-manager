@@ -65,11 +65,11 @@ async function lastSaved(): Promise<LastSaved | null> {
   const row = await prisma.auditLog.findFirst({
     where: { type: AuditEventType.INACTIVITY_SETTINGS_CHANGED },
     orderBy: { createdAt: "desc" },
-    select: { actorUserId: true, createdAt: true },
+    select: { id: true, actorUserId: true, createdAt: true },
   })
   if (!row) return null
   const actor = await prisma.user.findUnique({ where: { id: row.actorUserId }, select: { name: true, email: true } })
-  return { at: row.createdAt, by: actor?.name || actor?.email || "an admin" }
+  return { at: row.createdAt, by: actor?.name || actor?.email || "an admin", eventId: row.id }
 }
 
 async function recentRuns(): Promise<InactivityRunRow[]> {

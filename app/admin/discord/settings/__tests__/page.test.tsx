@@ -153,8 +153,8 @@ describe("Discord settings page", () => {
   it("puts each section's own save under it", async () => {
     jest.mocked(getSettingsAuditMeta).mockResolvedValue({
       ...NEVER_SAVED,
-      discord: { at: new Date(), by: "Dana Whitfield" },
-      channelStats: { at: new Date(), by: "Sam Rivera" },
+      discord: { at: new Date(), by: "Dana Whitfield", eventId: "audit-1" },
+      channelStats: { at: new Date(), by: "Sam Rivera", eventId: "audit-2" },
     })
     await renderPage()
 

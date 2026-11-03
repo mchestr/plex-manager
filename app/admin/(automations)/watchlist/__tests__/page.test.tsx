@@ -129,7 +129,7 @@ describe("Admin watchlist page", () => {
     await renderPage()
     expect(screen.queryByTestId("settings-watchlist-last-saved")).not.toBeInTheDocument()
 
-    jest.mocked(getWatchlistLastSaved).mockResolvedValue({ at: new Date(), by: "Dana Whitfield" })
+    jest.mocked(getWatchlistLastSaved).mockResolvedValue({ at: new Date(), by: "Dana Whitfield", eventId: "audit-1" })
     await renderPage()
     expect(screen.getByTestId("settings-watchlist-last-saved")).toHaveTextContent("by Dana Whitfield")
   })

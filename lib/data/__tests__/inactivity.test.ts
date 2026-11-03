@@ -89,16 +89,16 @@ describe("getInactivityPage", () => {
 
   describe("last saved", () => {
     it("reads the newest settings change and its admin's name", async () => {
-      prismaMock.auditLog.findFirst.mockResolvedValue({ actorUserId: "admin-2", createdAt: SAVED_AT } as never)
+      prismaMock.auditLog.findFirst.mockResolvedValue({ id: "audit-5", actorUserId: "admin-2", createdAt: SAVED_AT } as never)
       prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: "admin-2", name: "Dana Whitfield" }))
 
       const { lastSaved } = await getInactivityPage(NOW)
 
-      expect(lastSaved).toEqual({ at: SAVED_AT, by: "Dana Whitfield" })
+      expect(lastSaved).toEqual({ at: SAVED_AT, by: "Dana Whitfield", eventId: "audit-5" })
       expect(prismaMock.auditLog.findFirst).toHaveBeenCalledWith({
         where: { type: AuditEventType.INACTIVITY_SETTINGS_CHANGED },
         orderBy: { createdAt: "desc" },
-        select: { actorUserId: true, createdAt: true },
+        select: { id: true, actorUserId: true, createdAt: true },
       })
       expect(prismaMock.user.findUnique).toHaveBeenCalledWith({ where: { id: "admin-2" }, select: { name: true, email: true } })
     })
@@ -108,10 +108,10 @@ describe("getInactivityPage", () => {
       ["an admin when they have neither", buildUser({ name: null, email: null }), "an admin"],
       ["an admin when their row is gone", null, "an admin"],
     ])("names %s", async (_case, actor, by) => {
-      prismaMock.auditLog.findFirst.mockResolvedValue({ actorUserId: "admin-2", createdAt: SAVED_AT } as never)
+      prismaMock.auditLog.findFirst.mockResolvedValue({ id: "audit-6", actorUserId: "admin-2", createdAt: SAVED_AT } as never)
       prismaMock.user.findUnique.mockResolvedValue(actor)
 
-      await expect(getInactivityPage(NOW)).resolves.toMatchObject({ lastSaved: { at: SAVED_AT, by } })
+      await expect(getInactivityPage(NOW)).resolves.toMatchObject({ lastSaved: { at: SAVED_AT, by, eventId: "audit-6" } })
     })
   })
 
