@@ -66,6 +66,7 @@ import {
   Tv,
   TvMinimal,
   Users,
+  Workflow,
   X,
   type LucideIcon,
 } from "lucide-react"
@@ -91,6 +92,7 @@ export const icons = {
   llmUsage: Activity,
   cost: Coins,
   queues: Layers,
+  automations: Workflow,
   settings: Settings,
   overview: LayoutDashboard,
   shares: Share2,

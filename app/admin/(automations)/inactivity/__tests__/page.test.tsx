@@ -11,7 +11,7 @@ import { connection } from "next/server"
 
 import { resetUrl } from "@/__tests__/helpers/url-router"
 import { runMemberActivityNow } from "@/actions/admin/inactivity"
-import InactivityPage from "@/app/admin/inactivity/page"
+import InactivityPage from "@/app/admin/(automations)/inactivity/page"
 import { assertAdmin } from "@/lib/admin"
 import { getInactivityPage, type InactivityPageData } from "@/lib/data/inactivity"
 

@@ -32,7 +32,6 @@ export function settingsNavItems(status: SettingsNavStatuses): SettingsNavItem[]
     { id: "overseerr", label: "Overseerr", group: "media", status: status.overseerr },
     { id: "other", label: "Sonarr, Radarr, Jellyfin", group: "media", status: status.other },
     { id: "stripe", label: "Stripe billing", group: "members", status: status.stripe },
-    { id: "request-tiers", label: "Request limits", group: "members" },
     { id: "time-zone", label: "Time zone", group: "system" },
     { id: "api-access", label: "API access", group: "system" },
     { id: "privacy", label: "Privacy", group: "system" },

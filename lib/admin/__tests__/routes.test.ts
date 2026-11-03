@@ -81,9 +81,13 @@ describe("admin routes", () => {
     expect(settingsSection("rewind")).toBe("/admin/rewind/settings")
   })
 
+  it("sends Request limits to its own page under Automations", () => {
+    expect(settingsSection("request-tiers")).toBe("/admin/request-limits")
+  })
+
   it("anchors a settings section that is still on the settings page, encoding its id", () => {
     expect(settingsSection("tautulli")).toBe("/admin/settings#tautulli")
-    expect(settingsSection("request-tiers")).toBe("/admin/settings#request-tiers")
+    expect(settingsSection("stripe")).toBe("/admin/settings#stripe")
     expect(settingsSection("a b/c")).toBe("/admin/settings#a%20b%2Fc")
   })
 

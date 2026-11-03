@@ -2,7 +2,6 @@ import { LastSaved } from "@/components/admin/settings/last-saved"
 import { ApiAccessSection } from "@/components/admin/settings/sections/api-access-section"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
 import { PrivacySection } from "@/components/admin/settings/sections/privacy-section"
-import { RequestTiersSection } from "@/components/admin/settings/sections/request-tiers-section"
 import { ServiceSection } from "@/components/admin/settings/sections/service-section"
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 import { SystemSection } from "@/components/admin/settings/sections/system-section"
@@ -12,7 +11,6 @@ import { SettingsGroup, SettingsLayout } from "@/components/admin/settings/setti
 import { SettingsPageActions } from "@/components/admin/settings/settings-page-actions"
 import { PageHeader } from "@/components/ui/page-header"
 import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
-import { getRequestTierSettings } from "@/lib/data/community-stats"
 import { listOwnApiTokens } from "@/lib/data/api-tokens"
 import { getLastRetentionRun } from "@/lib/data/retention"
 import { plexLibraryListing } from "@/lib/admin/invites/libraries"
@@ -58,10 +56,9 @@ export default async function SettingsPage() {
     serverZone(),
     getFormat(),
   ])
-  const [audit, lastRetentionRun, requestTiers, apiTokens] = await Promise.all([
+  const [audit, lastRetentionRun, apiTokens] = await Promise.all([
     getSettingsAuditMeta(),
     getLastRetentionRun(),
-    getRequestTierSettings(),
     listOwnApiTokens(),
   ])
   // Nothing before a first save, so a read-only section shows no empty footer
@@ -105,11 +102,6 @@ export default async function SettingsPage() {
         </SettingsGroup>
         <SettingsGroup id="members">
           <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />
-          <RequestTiersSection
-            saved={requestTiers}
-            startedLabel={requestTiers.lastRun ? f.dateTime(requestTiers.lastRun.startedAt, { zoneLabel: true }) : null}
-            footerMeta={saved("requestTiers")}
-          />
         </SettingsGroup>
         <SettingsGroup id="system">
           <TimeZoneSection timeZone={{ configured: settings.config.timezone, effective: zone }} footerMeta={saved("timeZone")} />

@@ -153,6 +153,7 @@ const SETTINGS_HOMES: Partial<Record<string, Route>> = {
   "channel-stats": "/admin/discord/settings",
   "conversation-review": "/admin/ai/settings",
   discord: "/admin/discord/settings",
+  "request-tiers": "/admin/request-limits",
   rewind: "/admin/rewind/settings",
 }
 

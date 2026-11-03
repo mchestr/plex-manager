@@ -7,9 +7,10 @@
 import { render, screen, within } from "@testing-library/react"
 
 import { resetUrl } from "@/__tests__/helpers/url-router"
-import WatchlistPage from "@/app/admin/watchlist/page"
+import WatchlistPage from "@/app/admin/(automations)/watchlist/page"
 import { assertAdmin } from "@/lib/admin"
 import { getWatchlistPage, type WatchlistPage as WatchlistPageData } from "@/lib/data/watchlist"
+import { isRedisConfigured } from "@/lib/queue/connection"
 import { getWatchlistLastSaved } from "@/lib/settings/audit-meta"
 import { getWatchlistHealth } from "@/lib/settings/connection-health"
 
@@ -22,6 +23,8 @@ jest.mock("@/lib/settings/app-settings", () => ({
   getFormat: async () => (await import("@/lib/utils/format")).bindFormat({ timeZone: "America/Chicago", locale: "en-US" }),
 }))
 jest.mock("@/actions/admin/watchlist", () => ({ updateGlobalWatchlistSyncSettings: jest.fn() }))
+jest.mock("@/actions/admin/queue", () => ({ triggerWatchlistSyncJob: jest.fn() }))
+jest.mock("@/lib/queue/connection", () => ({ isRedisConfigured: jest.fn() }))
 jest.mock("@/components/ui/toast", () => ({ useToast: () => ({ showSuccess: jest.fn(), showError: jest.fn() }) }))
 
 const DATA: WatchlistPageData = {
@@ -53,6 +56,7 @@ beforeEach(() => {
   jest.mocked(getWatchlistPage).mockResolvedValue(DATA)
   jest.mocked(getWatchlistHealth).mockResolvedValue({ status: "ok", code: null, checkedAt: null })
   jest.mocked(getWatchlistLastSaved).mockResolvedValue(null)
+  jest.mocked(isRedisConfigured).mockReturnValue(true)
 })
 
 describe("Admin watchlist page", () => {
@@ -101,6 +105,17 @@ describe("Admin watchlist page", () => {
     expect(screen.getByTestId("admin-watchlist-stat-no-match")).toHaveTextContent("1")
     expect(within(screen.getByTestId("admin-watchlist-row-h1")).getByRole("link", { name: "Ana" })).toHaveAttribute("href", "/admin/users/u1")
     expect(screen.getByTestId("admin-watchlist-filters-count")).toHaveTextContent("3 of 12 titles")
+  })
+
+  it("offers Sync now on the settings card while sync is on and Redis is set up", async () => {
+    await renderPage()
+    expect(within(screen.getByTestId("settings-watchlist-section")).getByTestId("admin-watchlist-sync-now")).toBeEnabled()
+  })
+
+  it("holds Sync now back without Redis", async () => {
+    jest.mocked(isRedisConfigured).mockReturnValue(false)
+    await renderPage()
+    expect(screen.getByTestId("admin-watchlist-sync-now")).toBeDisabled()
   })
 
   it("shows the last page for a page past the end", async () => {

@@ -66,7 +66,14 @@ describe("updateRequestTierSettings", () => {
     )
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.CONFIG_CHANGED, "admin-1", expect.objectContaining({ section: "request-tiers" }))
     expect(ensureRequestTierSchedule).toHaveBeenCalled()
-    expect(revalidatePath).toHaveBeenCalledWith("/admin/settings")
+  })
+
+  it("refreshes the Request limits page, where the tiers are edited, and the home page, and not Settings", async () => {
+    await updateRequestTierSettings(settings)
+
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/request-limits")
+    expect(revalidatePath).toHaveBeenCalledWith("/")
+    expect(revalidatePath).not.toHaveBeenCalledWith("/admin/settings")
   })
 
   it("rejects tiers that do not rise, naming the field", async () => {
@@ -105,6 +112,13 @@ describe("runRequestTiersNow", () => {
     await expect(runRequestTiersNow()).resolves.toEqual({ success: true, data: { queued: false } })
     expect(runRequestTierSync).toHaveBeenCalledWith("admin", expect.objectContaining({ signal: expect.any(AbortSignal) }))
     expect(addJob).not.toHaveBeenCalled()
+  })
+
+  it("refreshes the Request limits page after running it in the request, and not Settings", async () => {
+    await runRequestTiersNow()
+
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/request-limits")
+    expect(revalidatePath).not.toHaveBeenCalledWith("/admin/settings")
   })
 })
 

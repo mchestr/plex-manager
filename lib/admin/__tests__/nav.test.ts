@@ -34,7 +34,7 @@ describe("ADMIN_NAV", () => {
   })
 
   it("keeps the test ids the E2E specs use", () => {
-    for (const id of ["overview", "users", "invites", "announcements", "ai", "discord", "watchlist", "queues", "rewind", "settings"]) {
+    for (const id of ["overview", "users", "invites", "announcements", "ai", "discord", "automations", "rewind", "settings"]) {
       expect(ADMIN_NAV.map(navTestId)).toContain(`admin-nav-${id}`)
     }
   })
@@ -43,6 +43,12 @@ describe("ADMIN_NAV", () => {
     const ids = ADMIN_NAV.map((item) => item.id)
     for (const folded of ["season", "playground", "share-analytics"]) expect(ids).not.toContain(folded)
     expect(ids).toContain("rewind")
+  })
+
+  it("folds Watchlist sync, Inactive members and Job queues into the one Automations item", () => {
+    const ids = ADMIN_NAV.map((item) => item.id)
+    for (const folded of ["watchlist", "inactivity", "queues"]) expect(ids).not.toContain(folded)
+    expect(ids).toContain("automations")
   })
 
   it("labels in sentence case, and never says Wrapped", () => {
@@ -71,10 +77,10 @@ describe("ADMIN_NAV", () => {
     const counts = { users: 7, activeInvites: 3, pendingAffiliates: 2, failedJobs: 2 }
     expect(byId("users").badge?.(counts)).toEqual({ text: "7" })
     expect(byId("invites").badge?.(counts)).toEqual({ text: "3 active" })
-    expect(byId("queues").badge?.(counts)).toEqual({ text: "2 failed", tone: "destructive" })
+    expect(byId("automations").badge?.(counts)).toEqual({ text: "2 failed", tone: "destructive" })
     expect(byId("invites").badge?.({ ...counts, activeInvites: 0 })).toBeNull()
-    expect(byId("queues").badge?.({ ...counts, failedJobs: 0 })).toBeNull()
-    expect(byId("queues").badge?.({ ...counts, failedJobs: null })).toBeNull()
+    expect(byId("automations").badge?.({ ...counts, failedJobs: 0 })).toBeNull()
+    expect(byId("automations").badge?.({ ...counts, failedJobs: null })).toBeNull()
     expect(byId("affiliates").badge?.(counts)).toEqual({ text: "2 pending" })
     expect(byId("affiliates").badge?.({ ...counts, pendingAffiliates: 0 })).toBeNull()
   })
@@ -92,8 +98,13 @@ describe("isActive", () => {
     ["rewind", "/admin/sharesheet", false],
     ["rewind", "/admin/users", false],
     ["invites", "/admin/invites/i1", true],
-    ["watchlist", "/admin/watchlist", true],
     ["discord", "/admin/discord/settings", true],
+    ["automations", "/admin/watchlist", true],
+    ["automations", "/admin/inactivity", true],
+    ["automations", "/admin/request-limits", true],
+    ["automations", "/admin/queues", true],
+    ["automations", "/admin/queues-archive", false],
+    ["automations", "/admin/settings", false],
     ["settings", "/admin/users", false],
   ])("%s on %s is %s", (id, pathname, expected) => {
     expect(isActive(byId(id), pathname)).toBe(expected)
@@ -113,6 +124,7 @@ describe("titleFor", () => {
     expect(titleFor("/admin/rewind/playground")).toBe("Rewind")
     expect(titleFor("/admin/rewind/settings")).toBe("Rewind")
     expect(titleFor("/admin/discord/settings")).toBe("Discord")
+    expect(titleFor("/admin/queues")).toBe("Automations")
     expect(titleFor("/admin/wrapped/w1/history/u1")).toBe("Admin")
     expect(activeItem("/admin/ai/conversation/c1")?.id).toBe("ai")
   })
@@ -235,11 +247,58 @@ describe("Rewind", () => {
   })
 })
 
+describe("Automations", () => {
+  const automations = byId("automations")
+
+  it("is one item with the Watchlist sync, Inactive members, Request limits and Queues tabs, opening on Watchlist sync", () => {
+    expect(automations).toMatchObject({
+      label: "Automations",
+      href: "/admin/watchlist",
+      group: "System",
+      match: "prefix",
+      mobile: "tab",
+      also: ["/admin/inactivity", "/admin/request-limits", "/admin/queues"],
+    })
+    expect(automations.children).toEqual([
+      { id: "watchlist", label: "Watchlist sync", href: "/admin/watchlist" },
+      { id: "inactivity", label: "Inactive members", href: "/admin/inactivity" },
+      { id: "request-limits", label: "Request limits", href: "/admin/request-limits" },
+      { id: "queues", label: "Queues", href: "/admin/queues" },
+    ])
+  })
+
+  it.each(["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues", "/admin/queues/job-1"])(
+    "lights on %s, under the title Automations",
+    (pathname) => {
+      expect(activeItem(pathname)?.id).toBe("automations")
+      expect(titleFor(pathname)).toBe("Automations")
+    }
+  )
+
+  it("offers every tab to an admin and none to a role", () => {
+    expect(childrenOf("automations", { isAdmin: true }).map((tab) => tab.id)).toEqual(["watchlist", "inactivity", "request-limits", "queues"])
+    expect(childrenOf("automations", { isAdmin: false, role: "support" })).toEqual([])
+    expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).not.toContain("automations")
+  })
+
+  it("is a mobile tab, before Settings", () => {
+    const ids = mobileTabs().map((tab) => tab.id)
+    expect(ids).toContain("automations")
+    expect(ids.indexOf("automations")).toBeLessThan(ids.indexOf("settings"))
+    const tab = mobileTabs().find((t) => t.id === "automations") as MobileLinkTab
+    expect(tab.href).toBe("/admin/watchlist")
+    for (const pathname of ["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues"]) {
+      expect(isTabActive(tab, pathname)).toBe(true)
+    }
+    expect(isTabActive(tab, "/admin/settings")).toBe(false)
+  })
+})
+
 describe("mobileTabs", () => {
-  it("shows Overview, Users, Rewind, Settings and More, with the Rewind tab on Season (P10.8)", () => {
+  it("shows Overview, Users, Rewind, Automations, Settings and More, with the Rewind tab on Season (P10.8)", () => {
     const tabs = mobileTabs()
-    expect(tabs.map((tab) => tab.id)).toEqual(["overview", "users", "rewind", "settings", "more"])
-    expect(tabs.map((tab) => tab.label)).toEqual(["Overview", "Users", "Rewind", "Settings", "More"])
+    expect(tabs.map((tab) => tab.id)).toEqual(["overview", "users", "rewind", "automations", "settings", "more"])
+    expect(tabs.map((tab) => tab.label)).toEqual(["Overview", "Users", "Rewind", "Automations", "Settings", "More"])
     const rewind = tabs.find((tab) => tab.id === "rewind") as MobileLinkTab
     expect(rewind.href).toBe("/admin/rewind")
     expect(rewind.covers.map((item) => item.id)).toEqual(["rewind"])
@@ -253,7 +312,7 @@ describe("mobileTabs", () => {
   it("takes every other tab item in nav order, with Settings last before More", () => {
     const extra: AdminNavItem = { ...byId("users"), id: "extra", label: "Extra", href: "/admin/extra" as Route }
     const tabs = mobileTabs([...ADMIN_NAV, extra])
-    expect(tabs.map((tab) => tab.id)).toEqual(["overview", "users", "rewind", "extra", "settings", "more"])
+    expect(tabs.map((tab) => tab.id)).toEqual(["overview", "users", "rewind", "automations", "extra", "settings", "more"])
   })
 
   it("lights the Overview tab only on /admin", () => {

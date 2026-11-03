@@ -14,6 +14,7 @@
   "admin /admin/invites [create dialog open]": {},
   "admin /admin/invites/visual-invite-ok": {},
   "admin /admin/queues": {},
+  "admin /admin/request-limits": {},
   "admin /admin/rewind/playground": {},
   "admin /admin/rewind/settings": {},
   "admin /admin/settings": {},

@@ -2,7 +2,7 @@
 
 import { render, screen } from "@testing-library/react"
 
-import Loading from "@/app/admin/inactivity/loading"
+import Loading from "@/app/admin/(automations)/inactivity/loading"
 
 it("announces the loading page and draws the card and both tables", () => {
   render(<Loading />)

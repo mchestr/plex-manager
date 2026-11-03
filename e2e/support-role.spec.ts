@@ -43,6 +43,7 @@ const REFUSED_PATHS = [
   '/admin/announcements',
   '/admin/watchlist',
   '/admin/inactivity',
+  '/admin/request-limits',
 ];
 
 test.describe('Support role', () => {
@@ -111,7 +112,7 @@ test.describe('Support role', () => {
     await expect(page.getByTestId('admin-users-page')).toBeVisible();
 
     await expect(page.getByTestId('admin-nav-users')).toBeVisible();
-    for (const hidden of ['overview', 'settings', 'invites', 'queues', 'ai']) {
+    for (const hidden of ['overview', 'settings', 'invites', 'automations', 'ai']) {
       await expect(page.getByTestId(`admin-nav-${hidden}`)).toHaveCount(0);
     }
   });

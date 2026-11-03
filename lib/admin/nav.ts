@@ -11,10 +11,10 @@
  *
  * ```
  * Overview, Assistant ungrouped, at the top (P10.8)
- * Community           Users, Invites, Affiliates, Announcements, Discord (Activity, Settings), Watchlist sync, Inactive members
+ * Community           Users, Invites, Affiliates, Announcements, Discord (Activity, Settings)
  * Rewind              Rewind (Season, Playground, Shares, Settings)
  * Usage and cost      AI (Activity, Cost, Settings)
- * System              Audit log, Job queues, Settings
+ * System              Automations (Watchlist sync, Inactive members, Request limits, Queues), Audit log, Settings
  * ```
  *
  * `typedRoutes` rejects links to routes that do not exist yet, so the step
@@ -157,24 +157,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     ],
   },
   {
-    id: "watchlist",
-    label: "Watchlist sync",
-    href: "/admin/watchlist",
-    icon: icons.watchlist,
-    group: "Community",
-    match: "prefix",
-    mobile: "more",
-  },
-  {
-    id: "inactivity",
-    label: "Inactive members",
-    href: "/admin/inactivity",
-    icon: icons.inactivity,
-    group: "Community",
-    match: "prefix",
-    mobile: "more",
-  },
-  {
     id: "rewind",
     label: "Rewind",
     href: "/admin/rewind",
@@ -208,6 +190,25 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     ],
   },
   {
+    id: "automations",
+    label: "Automations",
+    href: "/admin/watchlist",
+    icon: icons.automations,
+    // First in System, after the Rewind items, so the mobile tab bar (nav order) puts it after Rewind
+    group: "System",
+    // Its other tabs sit beside /admin/watchlist, not below it, so `also` lights it on their paths
+    match: "prefix",
+    also: ["/admin/inactivity", "/admin/request-limits", "/admin/queues"],
+    mobile: "tab",
+    badge: ({ failedJobs }) => (failedJobs ? { text: `${failedJobs} failed`, tone: "destructive" } : null),
+    children: [
+      { id: "watchlist", label: "Watchlist sync", href: "/admin/watchlist" },
+      { id: "inactivity", label: "Inactive members", href: "/admin/inactivity" },
+      { id: "request-limits", label: "Request limits", href: "/admin/request-limits" },
+      { id: "queues", label: "Queues", href: "/admin/queues" },
+    ],
+  },
+  {
     id: "audit",
     label: "Audit log",
     href: "/admin/audit",
@@ -216,16 +217,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     match: "prefix",
     mobile: "more",
     permission: "audit:read",
-  },
-  {
-    id: "queues",
-    label: "Job queues",
-    href: "/admin/queues",
-    icon: icons.queues,
-    group: "System",
-    match: "prefix",
-    mobile: "more",
-    badge: ({ failedJobs }) => (failedJobs ? { text: `${failedJobs} failed`, tone: "destructive" } : null),
   },
   {
     id: "settings",
