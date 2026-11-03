@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 
+import { leaveIsGuarded } from '@/__tests__/helpers/leave-guard'
 import { FormField } from '@/components/ui/form-field'
 import { Input } from '@/components/ui/input'
 import { SettingsEditProvider } from '@/components/ui/settings-edit-context'
@@ -248,7 +249,7 @@ describe('SettingsSection', () => {
     expect(await screen.findByTestId('settings-tautulli-discard-dialog')).toBeInTheDocument()
   })
 
-  it('a dirty form stays open and shows the pip and the reason, and still submits when blocked so the server can refuse it too', () => {
+  it('a dirty form stays open and shows the pip and the reason, and still submits when blocked so the server can refuse it too', async () => {
     const form = formState({ isDirty: true, blockedReason: 'Enter the API key to test or save' })
     renderSection(form, jest.fn())
 
@@ -258,7 +259,10 @@ describe('SettingsSection', () => {
     expect(screen.getByTestId('settings-tautulli-test')).toBeDisabled()
     expect(screen.getByTestId('settings-tautulli-save')).toBeDisabled()
 
-    screen.getByRole<HTMLFormElement>('form').requestSubmit()
+    // The save settles after the submit, and the section leaves edit mode when it does
+    await act(async () => {
+      screen.getByRole<HTMLFormElement>('form').requestSubmit()
+    })
 
     expect(form.onSave).toHaveBeenCalledTimes(1)
   })
@@ -478,13 +482,6 @@ describe('SettingsSection', () => {
   })
 
   describe('the browser leave prompt', () => {
-    /** Whether the browser would ask before the tab closes or reloads: a `beforeunload` listener prevented the event. */
-    const leaveIsGuarded = () => {
-      const event = new Event('beforeunload', { cancelable: true })
-      window.dispatchEvent(event)
-      return event.defaultPrevented
-    }
-
     it('stand-alone, asks while the form has unsaved changes', () => {
       renderSection(formState({ isDirty: true }))
 

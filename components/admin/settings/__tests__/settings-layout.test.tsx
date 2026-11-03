@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 
+import { leaveIsGuarded } from '@/__tests__/helpers/leave-guard'
 import { SettingsGroup, SettingsLayout } from '@/components/admin/settings/settings-layout'
 import type { SettingsNavItem } from '@/components/admin/settings/settings-groups'
 import { SettingsSection } from '@/components/ui/settings-section'
@@ -119,20 +120,18 @@ describe('SettingsLayout', () => {
         </SettingsGroup>
       </SettingsLayout>
     )
-    const leave = () => window.dispatchEvent(new Event('beforeunload', { cancelable: true }))
 
-    expect(leave()).toBe(true)
+    expect(leaveIsGuarded()).toBe(false)
 
     await user.click(screen.getByTestId('settings-plex-edit'))
-    expect(leave()).toBe(true)
+    expect(leaveIsGuarded()).toBe(false)
     await user.type(screen.getByRole('textbox', { name: 'Plex name' }), 'x')
-    // dispatchEvent returns false once a listener prevented it: the browser asks.
     // The listener follows the section's dirty report, an effect later, so wait for it
-    await waitFor(() => expect(leave()).toBe(false))
+    await waitFor(() => expect(leaveIsGuarded()).toBe(true))
 
     await user.click(screen.getByTestId('settings-plex-cancel'))
     await user.click(await screen.findByTestId('settings-plex-discard-dialog-confirm'))
     expect(await screen.findByText('Home')).toBeInTheDocument()
-    await waitFor(() => expect(leave()).toBe(true))
+    await waitFor(() => expect(leaveIsGuarded()).toBe(false))
   })
 })

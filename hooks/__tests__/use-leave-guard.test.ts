@@ -1,13 +1,7 @@
 import { renderHook } from '@testing-library/react'
 
+import { leaveIsGuarded } from '@/__tests__/helpers/leave-guard'
 import { useLeaveGuard } from '@/hooks/use-leave-guard'
-
-/** Whether the browser would ask before the tab closes or reloads: a `beforeunload` listener prevented the event. */
-const leaveIsGuarded = () => {
-  const event = new Event('beforeunload', { cancelable: true })
-  window.dispatchEvent(event)
-  return event.defaultPrevented
-}
 
 describe('useLeaveGuard', () => {
   it('asks the browser to confirm leaving while active', () => {

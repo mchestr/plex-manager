@@ -9,6 +9,7 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
+import { leaveIsGuarded } from "@/__tests__/helpers/leave-guard"
 import { updateGlobalWatchlistSyncSettings } from "@/actions/admin/watchlist"
 import { SyncSettingsSection } from "@/components/admin/watchlist/sync-settings-section"
 
@@ -235,9 +236,6 @@ describe("SyncSettingsSection", () => {
   })
 
   describe("unsaved changes", () => {
-    /** Whether the browser would ask before the tab closes. */
-    const leaveIsGuarded = () => !window.dispatchEvent(new Event("beforeunload", { cancelable: true }))
-
     it("asks before the tab closes only while the draft differs from the saved values", async () => {
       const user = userEvent.setup()
       await renderSection()
