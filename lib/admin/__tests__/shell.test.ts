@@ -4,15 +4,17 @@
 
 /**
  * The admin shell's data (`getAdminShellData`): the nav items the user may
- * open, with Assistant while AI features are on and a chat model is active,
- * and while they are off only to a user with saved conversations to read or
- * delete there; and the counts a role sees.
+ * open and the tabs they may open on each, with Assistant while AI features
+ * are on and a chat model is active, and while they are off only to a user
+ * with saved conversations to read or delete there; and the counts a role
+ * sees. How a role's folded items resolve is in `shell-nav.test.ts`.
  */
 
 import { mockReset } from "jest-mock-extended"
 
 import { buildConfig } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { ADMIN_NAV } from "@/lib/admin/nav"
 import { getAdminShellData } from "@/lib/admin/shell"
 import type { ChatConversation, LLMProvider } from "@/lib/generated/prisma/client"
 
@@ -26,6 +28,11 @@ const admin = { id: "admin-1", name: "Dana Whitfield", isAdmin: true }
 const support = { id: "support-1", name: "Sam Rivera", isAdmin: false, role: "support" }
 const member = { id: "member-1", name: "Ada", isAdmin: false, role: null }
 
+/** The ids of the nav entries the shell sends for `session`. */
+async function entryIds(session: Parameters<typeof getAdminShellData>[0]): Promise<string[]> {
+  return (await getAdminShellData(session)).nav.map((entry) => entry.id)
+}
+
 beforeEach(() => {
   mockReset(prismaMock)
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: false }))
@@ -34,9 +41,21 @@ beforeEach(() => {
 })
 
 it("lists Assistant while AI features are on and a chat model is active, without reading the history", async () => {
-  expect((await getAdminShellData(admin)).navIds).toContain("assistant")
-  expect((await getAdminShellData(support)).navIds).toEqual(["assistant", "users", "affiliates", "audit"])
+  expect(await entryIds(admin)).toContain("assistant")
+  expect(await entryIds(support)).toEqual(["assistant", "users", "affiliates", "audit"])
   expect(prismaMock.chatConversation.findFirst).not.toHaveBeenCalled()
+})
+
+it("sends an admin every item at its own href, with the ids of every tab it has", async () => {
+  const { nav } = await getAdminShellData(admin)
+
+  expect(nav).toEqual(ADMIN_NAV.map((item) => ({ id: item.id, href: item.href, childIds: item.children?.map((child) => child.id) ?? [] })))
+  expect(nav.find((entry) => entry.id === "automations")).toEqual({
+    id: "automations",
+    href: "/admin/watchlist",
+    childIds: ["watchlist", "inactivity", "request-limits", "queues"],
+  })
+  expect(nav.find((entry) => entry.id === "users")).toEqual({ id: "users", href: "/admin/users", childIds: [] })
 })
 
 it.each([
@@ -45,19 +64,19 @@ it.each([
 ])("while %s, lists Assistant only for a user with saved conversations", async (_label, arrange) => {
   arrange()
 
-  expect((await getAdminShellData(support)).navIds).toEqual(["users", "affiliates", "audit"])
+  expect(await entryIds(support)).toEqual(["users", "affiliates", "audit"])
   expect(prismaMock.chatConversation.findFirst).toHaveBeenCalledWith({
     where: { userId: "support-1", endedAt: null, discordSessions: { none: {} }, lastMessageAt: { not: null } },
     select: { id: true },
   })
 
   prismaMock.chatConversation.findFirst.mockResolvedValue({ id: "c1" } as ChatConversation)
-  expect((await getAdminShellData(support)).navIds).toEqual(["assistant", "users", "affiliates", "audit"])
-  expect((await getAdminShellData(admin)).navIds).toContain("assistant")
+  expect(await entryIds(support)).toEqual(["assistant", "users", "affiliates", "audit"])
+  expect(await entryIds(admin)).toContain("assistant")
 })
 
 it("reads nothing about the assistant for a member without assistant:use", async () => {
-  expect((await getAdminShellData(member)).navIds).toEqual([])
+  expect(await entryIds(member)).toEqual([])
   expect(prismaMock.config.findUnique).not.toHaveBeenCalled()
 })
 
