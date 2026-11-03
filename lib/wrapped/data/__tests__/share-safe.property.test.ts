@@ -23,12 +23,21 @@ beforeAll(async () => {
 
 const TITLE_FACTS = (Object.keys(FACTS) as FactId[]).filter((id) => FACTS[id].unit === "title")
 const titleText = fc.stringMatching(/^Zq[A-Za-z0-9 :'-]{4,60}$/)
+/**
+ * Random titles for a subset of the title facts. No title may contain another:
+ * the property checks that a hidden title appears in no published string, and
+ * a visible "ZqtoLocaa" would carry a hidden "ZqtoLoca" by substring alone.
+ */
+const titleFacts = fc.dictionary(fc.constantFrom(...TITLE_FACTS), titleText).filter((titles) => {
+  const values = Object.values(titles)
+  return values.every((title, i) => values.every((other, j) => i === j || !other.includes(title)))
+})
 
 /** A row built from the heavy fixture: a random subset of its facts and pages, random titles and bookend keys. */
 const rows = fc
   .record({
     keep: fc.array(fc.boolean(), { minLength: Object.keys(FACTS).length, maxLength: Object.keys(FACTS).length }),
-    titles: fc.dictionary(fc.constantFrom(...TITLE_FACTS), titleText),
+    titles: titleFacts,
     extraPages: fc.subarray([...SHARE_PAGE_TYPES]),
     firstKey: fc.integer({ min: 1, max: 9_999_999 }),
     lastKey: fc.integer({ min: 1, max: 9_999_999 }),
