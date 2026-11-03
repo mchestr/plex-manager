@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Request limits" }
 
 /**
  * Request limits, the Request limits tab of Automations (moved from the
- * Members group of `/admin/settings`): the daily sync of each member's
+ * `/admin/settings` page): the daily sync of each member's
  * Overseerr quota from their watch time, read-only until Edit, with the last
  * run and Run now. See `docs/request-limits.md`.
  */

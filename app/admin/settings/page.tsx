@@ -89,7 +89,7 @@ export default async function SettingsPage() {
         data-testid="admin-settings-header"
       />
       <SettingsLayout items={nav}>
-        <SettingsGroup id="media">
+        <SettingsGroup id="connections">
           <ServiceSection type="plex" server={settings.plexServer} health={health.plex} footerMeta={saved("plex")} />
           <ServiceSection type="tautulli" server={settings.tautulli} health={health.tautulli} footerMeta={saved("tautulli")} />
           <ServiceSection type="overseerr" server={settings.overseerr} health={health.overseerr} footerMeta={saved("overseerr")} />
@@ -100,7 +100,7 @@ export default async function SettingsPage() {
             footerMeta={saved("other")}
           />
         </SettingsGroup>
-        <SettingsGroup id="members">
+        <SettingsGroup id="billing">
           <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />
         </SettingsGroup>
         <SettingsGroup id="system">

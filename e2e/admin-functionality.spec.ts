@@ -92,7 +92,7 @@ test.describe('Admin Functionality', () => {
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
     await expect(adminPage.getByTestId('admin-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
-    // Sonarr, Radarr and Jellyfin sit in the Media group
+    // Sonarr, Radarr and Jellyfin sit in the Connections group
     await adminPage.getByTestId('settings-nav-other').click();
 
     // Look for the Jellyfin login toggle - it should only be visible if Jellyfin is configured

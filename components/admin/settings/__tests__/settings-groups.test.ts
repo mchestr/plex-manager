@@ -15,7 +15,8 @@ const STATUS: SettingsNavStatuses = {
 
 describe('settings groups', () => {
   it('lists the three groups in nav order', () => {
-    expect(SETTINGS_GROUPS.map((group) => group.label)).toEqual(['Media', 'Members', 'System'])
+    expect(SETTINGS_GROUPS.map((group) => group.id)).toEqual(['connections', 'billing', 'system'])
+    expect(SETTINGS_GROUPS.map((group) => group.label)).toEqual(['Connections', 'Billing', 'System'])
   })
 
   it('puts each section in its group', () => {
@@ -23,8 +24,8 @@ describe('settings groups', () => {
     const labelsIn = (group: string) => items.filter((item) => item.group === group).map((item) => item.label)
 
     expect(Object.fromEntries(SETTINGS_GROUPS.map((group) => [group.id, labelsIn(group.id)]))).toEqual({
-      media: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr, Jellyfin'],
-      members: ['Stripe billing'],
+      connections: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr, Jellyfin'],
+      billing: ['Stripe billing'],
       system: ['Time zone', 'API access', 'Privacy', 'System information'],
     })
   })

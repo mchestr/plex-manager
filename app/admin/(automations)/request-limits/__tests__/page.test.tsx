@@ -1,6 +1,6 @@
 /**
  * The Request limits page, the Request limits tab of Automations (moved from
- * the Members group of `/admin/settings`): its own admin check before any
+ * the `/admin/settings` page): its own admin check before any
  * read, per request, then the Request limits section with the saved tiers,
  * the last run's start in the server zone and "Last saved" after a first save.
  */

@@ -11,8 +11,8 @@ import { editSection } from '../helpers/settings';
 
 /** Each group's sections, as the nav lists them. */
 const GROUPS: Record<string, string[]> = {
-  media: ['plex', 'tautulli', 'overseerr', 'other'],
-  members: ['stripe'],
+  connections: ['plex', 'tautulli', 'overseerr', 'other'],
+  billing: ['stripe'],
   system: ['time-zone', 'api-access', 'privacy', 'system'],
 };
 
