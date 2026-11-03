@@ -101,6 +101,10 @@ interface SettingsSectionProps {
  * stays open on the first invalid field. Cancel and Escape close, asking
  * first when there are unsaved changes. The page opens one section at a
  * time, and a dirty one stays open, reporting itself to the section nav.
+ * A section on a page of its own (a feature's settings tab) has no nav to
+ * report to, so while it has unsaved changes it asks the browser to confirm
+ * before the tab closes or reloads; on the settings page the layout owns
+ * that one prompt.
  *
  * `form.blockedReason` disables Test and Save and says why; a submit that
  * gets past it still reaches the server, which refuses on the same rule
@@ -147,6 +151,15 @@ export function SettingsSection({
     reportDirty?.(id, dirty)
   }, [reportDirty, id, dirty])
   useEffect(() => () => reportDirty?.(id, false), [reportDirty, id])
+
+  // Stand-alone, with no page to report to, the section is its own backstop: the browser asks before the
+  // tab closes or reloads (MDN, beforeunload). Under the settings page the layout owns that one prompt.
+  useEffect(() => {
+    if (!dirty || reportDirty) return
+    const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault()
+    window.addEventListener("beforeunload", onBeforeUnload)
+    return () => window.removeEventListener("beforeunload", onBeforeUnload)
+  }, [dirty, reportDirty])
 
   /** Focus may move here only while the admin is still in this section (or nowhere), never out of another one. */
   const focusIsHere = () => {

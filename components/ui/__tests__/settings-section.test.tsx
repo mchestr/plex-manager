@@ -476,4 +476,65 @@ describe('SettingsSection', () => {
     expect(screen.queryByTestId('settings-tautulli-discard-dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('form')).toBeInTheDocument()
   })
+
+  describe('the browser leave prompt', () => {
+    /** Whether the browser would ask before the tab closes or reloads: a `beforeunload` listener prevented the event. */
+    const leaveIsGuarded = () => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+
+    it('stand-alone, asks while the form has unsaved changes', () => {
+      renderSection(formState({ isDirty: true }))
+
+      expect(leaveIsGuarded()).toBe(true)
+    })
+
+    it('stand-alone, does not ask while nothing is changed, read-only or open for editing', async () => {
+      const user = userEvent.setup()
+      renderSection(formState())
+      expect(leaveIsGuarded()).toBe(false)
+
+      await user.click(screen.getByTestId('settings-tautulli-edit'))
+
+      expect(screen.getByRole('form', { name: 'Tautulli' })).toBeInTheDocument()
+      expect(leaveIsGuarded()).toBe(false)
+    })
+
+    it('stand-alone, stops asking once the changes are typed away', async () => {
+      const user = userEvent.setup()
+      render(<LiveSection />)
+
+      await user.click(screen.getByTestId('settings-tautulli-edit'))
+      await user.type(screen.getByRole('textbox', { name: 'Tautulli name' }), 'x')
+      expect(leaveIsGuarded()).toBe(true)
+
+      await user.keyboard('{Backspace}')
+      expect(leaveIsGuarded()).toBe(false)
+    })
+
+    it('stand-alone, stops asking when the section unmounts with unsaved changes', () => {
+      const { unmount } = renderSection(formState({ isDirty: true }))
+      expect(leaveIsGuarded()).toBe(true)
+
+      unmount()
+
+      expect(leaveIsGuarded()).toBe(false)
+    })
+
+    it('inside the settings page provider, reports to the page and leaves the one listener to its layout', () => {
+      const onDirtyChange = jest.fn()
+      render(
+        <SettingsEditProvider onDirtyChange={onDirtyChange}>
+          <SettingsSection id="plex" title="Plex" description="Server" form={formState({ isDirty: true })}>
+            <span />
+          </SettingsSection>
+        </SettingsEditProvider>
+      )
+
+      expect(onDirtyChange).toHaveBeenLastCalledWith('plex', true)
+      expect(leaveIsGuarded()).toBe(false)
+    })
+  })
 })
