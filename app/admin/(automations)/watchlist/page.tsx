@@ -14,10 +14,10 @@ import { parseTableParams } from "@/lib/ui/table-params"
 type Params = Record<string, string | string[] | undefined>
 
 /**
- * Watchlist sync, under Community: its settings card (moved from Settings),
- * the figures, then every title members' watchlists synced, on the list page
- * pattern (ui-design-system 6.3): filters, sort and page come from the URL
- * and the rows load here.
+ * Watchlist sync, the first tab of Automations: its settings card (moved from
+ * Settings) with Sync now, the figures, then every title members' watchlists
+ * synced, on the list page pattern (ui-design-system 6.3): filters, sort and
+ * page come from the URL and the rows load here.
  */
 export default async function WatchlistPage({ searchParams }: { searchParams: Promise<Params> }) {
   await assertAdmin()

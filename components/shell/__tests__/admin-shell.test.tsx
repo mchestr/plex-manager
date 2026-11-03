@@ -71,10 +71,14 @@ describe('AdminShell', () => {
     const sidebar = screen.getByTestId('admin-sidebar')
     expect(within(sidebar).getByTestId('admin-nav-users')).toHaveTextContent('7')
     expect(within(sidebar).getByTestId('admin-nav-invites')).toHaveTextContent('3 active')
-    expect(within(sidebar).getByTestId('admin-nav-queues')).toHaveTextContent('2 failed')
+    expect(within(sidebar).getByTestId('admin-nav-automations-badge')).toHaveTextContent('2 failed')
     expect(within(sidebar).getByTestId('admin-nav-affiliates-badge')).toHaveTextContent('2 pending')
     const tabs = within(screen.getByTestId('admin-tab-bar')).getAllByRole('listitem')
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Users', 'Rewind', 'Settings', 'More, jobs have failed'])
+    const labels = tabs.map((tab) => tab.textContent)
+    // Automations is a tab too, somewhere before Settings
+    expect(labels.filter((label) => label !== 'Automations')).toEqual(['Overview', 'Users', 'Rewind', 'Settings', 'More, jobs have failed'])
+    expect(labels.indexOf('Automations')).toBeGreaterThan(-1)
+    expect(labels.indexOf('Automations')).toBeLessThan(labels.indexOf('Settings'))
     expect(screen.getByTestId('admin-tab-rewind')).toHaveAttribute('href', '/admin/rewind')
   })
 

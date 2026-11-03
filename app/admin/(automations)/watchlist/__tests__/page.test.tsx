@@ -7,7 +7,7 @@
 import { render, screen, within } from "@testing-library/react"
 
 import { resetUrl } from "@/__tests__/helpers/url-router"
-import WatchlistPage from "@/app/admin/watchlist/page"
+import WatchlistPage from "@/app/admin/(automations)/watchlist/page"
 import { assertAdmin } from "@/lib/admin"
 import { getWatchlistPage, type WatchlistPage as WatchlistPageData } from "@/lib/data/watchlist"
 import { getWatchlistLastSaved } from "@/lib/settings/audit-meta"

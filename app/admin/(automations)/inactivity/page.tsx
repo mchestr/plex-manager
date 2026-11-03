@@ -14,7 +14,7 @@ import { getInactivityPage } from "@/lib/data/inactivity"
 import { getFormat } from "@/lib/settings/app-settings"
 
 /**
- * Inactive members, under Community: the sweep's settings card with the last
+ * Inactive members, a tab of Automations: the sweep's settings card with the last
  * run and Run now, whom a run would remove now, and the newest runs. See
  * `docs/inactive-members.md`.
  */

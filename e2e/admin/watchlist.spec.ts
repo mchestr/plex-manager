@@ -3,8 +3,8 @@ import { createE2EPrismaClient } from '../helpers/prisma';
 import { editSection } from '../helpers/settings';
 
 /**
- * Watchlist sync's own page, under Community: the sidebar reaches it and
- * Settings no longer holds it, its settings card opens read-only with the
+ * Watchlist sync's own page, the first tab of Automations: the sidebar reaches
+ * it and Settings no longer holds it, its settings card opens read-only with the
  * form behind Edit, and the table lists every member's titles, narrowed on
  * the server by the search and the Status and Type filters in the URL.
  */
@@ -68,17 +68,18 @@ test.describe('Admin watchlist sync', () => {
     }
   });
 
-  test('the sidebar reaches it under Community, and Settings no longer holds it', async ({ adminPage: page }) => {
+  test('Automations opens on it, its tab selected, and Settings no longer holds it', async ({ adminPage: page }) => {
     await page.goto('/admin/settings');
     await expect(page.getByTestId('settings-stripe-section')).toHaveCount(1);
     await expect(page.getByTestId('settings-watchlist-section')).toHaveCount(0);
     await expect(page.getByTestId('settings-nav-watchlist')).toHaveCount(0);
 
-    const link = page.getByTestId('admin-sidebar').getByTestId('admin-nav-watchlist').first();
+    const link = page.getByTestId('admin-sidebar').getByTestId('admin-nav-automations').first();
     await link.click();
     await expect(page).toHaveURL(/\/admin\/watchlist$/);
     await expect(page.getByTestId('admin-watchlist-header')).toContainText('Watchlist sync');
     await expect(link).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByTestId('admin-section-tab-watchlist')).toHaveAttribute('aria-selected', 'true');
   });
 
   test('the settings card shows the saved setting, with its form behind Edit', async ({ adminPage: page }) => {

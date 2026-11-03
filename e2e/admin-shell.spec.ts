@@ -21,7 +21,7 @@ const SIDEBAR_LINKS: Array<[testId: string, path: RegExp]> = [
   ['admin-nav-share-analytics', /\/admin\/shares$/],
   ['admin-nav-ai-activity', /\/admin\/ai$/],
   ['admin-nav-cost-analysis', /\/admin\/cost-analysis$/],
-  ['admin-nav-queues', /\/admin\/queues$/],
+  ['admin-nav-automations', /\/admin\/watchlist$/],
   ['admin-nav-settings', /\/admin\/settings$/],
 ];
 
@@ -71,8 +71,8 @@ test.describe('Admin shell', () => {
 
     await page.getByTestId('admin-tab-more').click();
     await expect(page.getByTestId('admin-more-sheet')).toBeVisible();
-    await page.getByTestId('admin-nav-queues-mobile').click();
-    await expect(page).toHaveURL(/\/admin\/queues$/);
+    await page.getByTestId('admin-nav-audit-mobile').click();
+    await expect(page).toHaveURL(/\/admin\/audit$/);
     await expect(page.getByTestId('admin-more-sheet')).toBeHidden();
   });
 

@@ -32,6 +32,7 @@ describe("icons", () => {
     ["llmUsage", "Activity"],
     ["cost", "Coins"],
     ["queues", "Layers"],
+    ["automations", "Workflow"],
     ["settings", "Settings"],
     ["overview", "LayoutDashboard"],
     ["externalLink", "ArrowUpRight"],
