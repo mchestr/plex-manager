@@ -398,7 +398,7 @@ describe("AssistantWorkspace", () => {
     view({ available: false, conversation: conversation("a", "Is Plex up?", "Plex is up.") })
 
     expect(screen.getByTestId("admin-chat-unavailable")).toHaveTextContent("The assistant is offTurn on AI features and select a chat model.Open AI settings")
-    expect(screen.getByTestId("admin-chat-open-settings")).toHaveAttribute("href", "/admin/settings#ai")
+    expect(screen.getByTestId("admin-chat-open-settings")).toHaveAttribute("href", "/admin/ai/settings")
     expect(screen.getByText("Plex is up.")).toBeInTheDocument()
     expect(input()).toBeDisabled()
   })

@@ -34,7 +34,7 @@ describe("ADMIN_NAV", () => {
   })
 
   it("keeps the test ids the E2E specs use", () => {
-    for (const id of ["overview", "users", "invites", "announcements", "ai-activity", "cost-analysis", "discord", "watchlist", "queues", "rewind", "settings"]) {
+    for (const id of ["overview", "users", "invites", "announcements", "ai", "discord", "watchlist", "queues", "rewind", "settings"]) {
       expect(ADMIN_NAV.map(navTestId)).toContain(`admin-nav-${id}`)
     }
   })
@@ -114,7 +114,7 @@ describe("titleFor", () => {
     expect(titleFor("/admin/rewind/settings")).toBe("Rewind")
     expect(titleFor("/admin/discord/settings")).toBe("Discord")
     expect(titleFor("/admin/wrapped/w1/history/u1")).toBe("Admin")
-    expect(activeItem("/admin/ai/conversation/c1")?.id).toBe("ai-activity")
+    expect(activeItem("/admin/ai/conversation/c1")?.id).toBe("ai")
   })
 })
 
@@ -298,6 +298,42 @@ describe("Assistant", () => {
   it("is in a Support user's nav beside Users, and in no one's without a role", () => {
     expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).toEqual(["assistant", "users", "affiliates", "audit"])
     expect(navFor({ isAdmin: false, role: null })).toEqual([])
+  })
+})
+
+describe("AI", () => {
+  const ai = byId("ai")
+
+  it("is one item with Activity, Cost and Settings tabs, opening on Activity", () => {
+    expect(ai).toMatchObject({ id: "ai", label: "AI", href: "/admin/ai", group: "Usage and cost", match: "prefix", mobile: "more", also: ["/admin/cost-analysis"] })
+    expect(ai.children).toEqual([
+      { id: "ai-activity", label: "Activity", href: "/admin/ai" },
+      { id: "ai-cost", label: "Cost", href: "/admin/cost-analysis" },
+      { id: "ai-settings", label: "Settings", href: "/admin/ai/settings" },
+    ])
+  })
+
+  it("replaces the AI activity and Cost analysis items", () => {
+    const ids = ADMIN_NAV.map((item) => item.id)
+    expect(ids).not.toContain("ai-activity")
+    expect(ids).not.toContain("cost-analysis")
+  })
+
+  it.each(["/admin/ai", "/admin/ai/settings", "/admin/ai/abc", "/admin/ai/conversation/abc", "/admin/cost-analysis"])("lights on %s, under the title AI", (pathname) => {
+    expect(isActive(ai, pathname)).toBe(true)
+    expect(activeItem(pathname)?.id).toBe("ai")
+    expect(titleFor(pathname)).toBe("AI")
+  })
+
+  it("stays dark on a longer name that only starts the same", () => {
+    expect(isActive(ai, "/admin/aiming")).toBe(false)
+    expect(isActive(ai, "/admin/cost-analysis-archive")).toBe(false)
+  })
+
+  it("is for admins only, tabs included", () => {
+    expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).not.toContain("ai")
+    expect(childrenOf("ai", { isAdmin: true }).map((child) => child.id)).toEqual(["ai-activity", "ai-cost", "ai-settings"])
+    expect(childrenOf("ai", { isAdmin: false, role: "support" })).toEqual([])
   })
 })
 

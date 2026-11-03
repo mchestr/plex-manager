@@ -11,9 +11,9 @@
  *
  * ```
  * Overview, Assistant ungrouped, at the top (P10.8)
- * Community           Users, Invites, Affiliates, Announcements, Discord, Watchlist sync, Inactive members
- * Rewind              Rewind: Season, Playground, Shares and Settings tabs
- * Usage and cost      AI activity, Cost analysis
+ * Community           Users, Invites, Affiliates, Announcements, Discord (Activity, Settings), Watchlist sync, Inactive members
+ * Rewind              Rewind (Season, Playground, Shares, Settings)
+ * Usage and cost      AI (Activity, Cost, Settings)
  * System              Audit log, Job queues, Settings
  * ```
  *
@@ -192,22 +192,20 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     ],
   },
   {
-    id: "ai-activity",
-    label: "AI activity",
+    id: "ai",
+    label: "AI",
     href: "/admin/ai",
     icon: icons.llmUsage,
     group: "Usage and cost",
     match: "prefix",
+    // Cost sits beside Activity, not below it, so its path is not under /admin/ai
+    also: ["/admin/cost-analysis"],
     mobile: "more",
-  },
-  {
-    id: "cost-analysis",
-    label: "Cost analysis",
-    href: "/admin/cost-analysis",
-    icon: icons.cost,
-    group: "Usage and cost",
-    match: "prefix",
-    mobile: "more",
+    children: [
+      { id: "ai-activity", label: "Activity", href: "/admin/ai" },
+      { id: "ai-cost", label: "Cost", href: "/admin/cost-analysis" },
+      { id: "ai-settings", label: "Settings", href: "/admin/ai/settings" },
+    ],
   },
   {
     id: "audit",

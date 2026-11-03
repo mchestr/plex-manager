@@ -11,12 +11,11 @@ const STATUS: SettingsNavStatuses = {
   overseerr: 'notConfigured',
   other: 'incomplete',
   stripe: 'disabled',
-  ai: 'degraded',
 }
 
 describe('settings groups', () => {
-  it('lists the four groups in nav order', () => {
-    expect(SETTINGS_GROUPS.map((group) => group.label)).toEqual(['Media', 'Members', 'AI', 'System'])
+  it('lists the three groups in nav order', () => {
+    expect(SETTINGS_GROUPS.map((group) => group.label)).toEqual(['Media', 'Members', 'System'])
   })
 
   it('puts each section in its group', () => {
@@ -26,7 +25,6 @@ describe('settings groups', () => {
     expect(Object.fromEntries(SETTINGS_GROUPS.map((group) => [group.id, labelsIn(group.id)]))).toEqual({
       media: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr, Jellyfin'],
       members: ['Stripe billing', 'Request limits'],
-      ai: ['AI provider', 'Conversation review', 'Assistant sources'],
       system: ['Time zone', 'API access', 'Privacy', 'System information'],
     })
   })
@@ -42,9 +40,6 @@ describe('settings groups', () => {
       'other',
       'stripe',
       'request-tiers',
-      'ai',
-      'conversation-review',
-      'assistant',
       'time-zone',
       'api-access',
       'privacy',
@@ -64,9 +59,6 @@ describe('settings groups', () => {
       other: 'incomplete',
       stripe: 'disabled',
       'request-tiers': undefined,
-      ai: 'degraded',
-      'conversation-review': undefined,
-      assistant: undefined,
       'time-zone': undefined,
       'api-access': undefined,
       privacy: undefined,

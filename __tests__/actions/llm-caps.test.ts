@@ -5,6 +5,7 @@
 
 import { mockReset } from "jest-mock-extended"
 import { getServerSession } from "next-auth"
+import { revalidatePath } from "next/cache"
 
 import { updateLlmCaps } from "@/actions/admin/admin-config"
 import type { Config } from "@/lib/generated/prisma/client"
@@ -69,6 +70,12 @@ describe("updateLlmCaps", () => {
         secretChanged: false,
       })
     )
+  })
+
+  it("refreshes the AI settings page, where the caps are edited", async () => {
+    await updateLlmCaps(caps)
+
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/ai/settings")
   })
 
   it.each([

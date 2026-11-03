@@ -148,12 +148,15 @@ export function auditEvent(id: string): Route {
  * order); every other id is still a section of Settings.
  */
 const SETTINGS_HOMES: Partial<Record<string, Route>> = {
+  ai: "/admin/ai/settings",
+  assistant: "/admin/ai/settings",
   "channel-stats": "/admin/discord/settings",
+  "conversation-review": "/admin/ai/settings",
   discord: "/admin/discord/settings",
   rewind: "/admin/rewind/settings",
 }
 
-/** The page a settings section lives on: its feature's page, else its anchor on the settings page. */
+/** One section of the settings, on the page it lives on: its feature's page once moved, else its anchor on the settings page. */
 export function settingsSection(id: string): Route {
   return SETTINGS_HOMES[id] ?? (`/admin/settings#${seg(id)}` as Route)
 }

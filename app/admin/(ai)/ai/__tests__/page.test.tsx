@@ -11,7 +11,7 @@ import userEvent from '@testing-library/user-event'
 
 import { currentHref, resetUrl } from '@/__tests__/helpers/url-router'
 import { findingRow } from '@/components/admin/ai-activity/findings/__tests__/findings-fixtures'
-import AIActivityPage from '@/app/admin/ai/page'
+import AIActivityPage from '@/app/admin/(ai)/ai/page'
 import { getUsageFilterOptions, listUsageGroups, type LlmUsageGroupRow } from '@/lib/admin/analytics/llm-usage'
 import { findingStats, groupFindings, listFindings } from '@/lib/data/conversation-findings'
 import { reviewBadgesFor } from '@/lib/data/conversation-review'

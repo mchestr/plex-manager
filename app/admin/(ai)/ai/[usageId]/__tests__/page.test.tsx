@@ -5,7 +5,7 @@
 
 import { render, screen } from '@testing-library/react'
 
-import LLMUsageDetailPage from '@/app/admin/ai/[usageId]/page'
+import LLMUsageDetailPage from '@/app/admin/(ai)/ai/[usageId]/page'
 import { getLLMUsageById } from '@/lib/data/llm-usage'
 
 jest.mock('@/lib/admin', () => ({ assertAdmin: jest.fn() }))

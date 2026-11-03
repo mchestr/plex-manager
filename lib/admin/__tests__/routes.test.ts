@@ -87,6 +87,14 @@ describe("admin routes", () => {
     expect(settingsSection("a b/c")).toBe("/admin/settings#a%20b%2Fc")
   })
 
+  it("sends the AI sections to the AI settings page, and the rest to their anchor on Settings", () => {
+    expect(settingsSection("ai")).toBe("/admin/ai/settings")
+    expect(settingsSection("assistant")).toBe("/admin/ai/settings")
+    expect(settingsSection("conversation-review")).toBe("/admin/ai/settings")
+    expect(settingsSection("tautulli")).toBe("/admin/settings#tautulli")
+    expect(settingsSection("time zone")).toBe("/admin/settings#time%20zone")
+  })
+
   it("builds the public invite link on an origin", () => {
     expect(publicInviteUrl("AUDIT2026", "https://plex.example.com")).toBe("https://plex.example.com/invite/AUDIT2026")
     expect(publicInviteUrl("AUDIT2026", "https://plex.example.com/")).toBe("https://plex.example.com/invite/AUDIT2026")
