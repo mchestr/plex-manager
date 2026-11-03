@@ -47,7 +47,7 @@ export const saveJudgeSettings = adminAction({
     })
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("judge", before, values))
-    revalidatePath("/admin/settings")
+    revalidatePath("/admin/ai/settings")
 
     const schedule = await ensureJudgeSchedule()
     if (!schedule.ok) {

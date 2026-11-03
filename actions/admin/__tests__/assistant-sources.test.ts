@@ -71,7 +71,8 @@ describe("saveMcpServer", () => {
       data: expect.objectContaining({ url: "https://mcp.example.com/mcp", authHeaderSecret: "Bearer new", enabledTools: ["search"] }),
     })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.ASSISTANT_SOURCE_CHANGED, "admin-1", { kind: "mcp", action: "saved", id: "new" })
-    expect(revalidatePath).toHaveBeenCalledWith("/admin/settings")
+    // The sources live on the AI section's Settings tab now
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/ai/settings")
   })
 
   it("keeps the stored header value when it is left blank for the same origin", async () => {

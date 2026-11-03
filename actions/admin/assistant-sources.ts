@@ -61,7 +61,7 @@ const knowledgeInput = z.object({
 
 function audit(userId: string, kind: "mcp" | "knowledge", action: "saved" | "deleted", id: string) {
   logAuditEvent(AuditEventType.ASSISTANT_SOURCE_CHANGED, userId, { kind, action, id })
-  revalidatePath("/admin/settings")
+  revalidatePath("/admin/ai/settings")
 }
 
 /** Add or change an MCP server. */
