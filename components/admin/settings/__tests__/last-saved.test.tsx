@@ -17,6 +17,7 @@ describe("LastSaved", () => {
     expect(link).toHaveAttribute("href", "/admin/audit/audit-42")
     expect(link).toHaveTextContent("by Dana Whitfield")
     expect(screen.getByTestId("settings-plex-last-saved")).toContainElement(link)
+    expect(screen.getByTestId("settings-plex-last-saved")).toHaveTextContent(/^Last saved .+ by Dana Whitfield$/)
   })
 
   it("renders nothing before the first save", () => {
