@@ -5,7 +5,8 @@ import { WAIT_TIMEOUTS } from './helpers/test-utils';
 
 /**
  * The admin command menu (P10.16): Ctrl K opens it on any admin page, a
- * member's name finds their detail page, and an invite code finds its invite.
+ * member's name finds their detail page, an invite code finds its invite, and
+ * a page's section tab is a destination of its own.
  */
 let inviteId = '';
 let createdInvite = false;
@@ -57,6 +58,18 @@ test.describe('Admin command menu', () => {
     await item.click();
 
     await expect(page).toHaveURL(new RegExp(`/admin/invites/${inviteId}$`));
+  });
+
+  test('a section tab is a destination: "request" finds Automations › Request limits', async ({ adminPage: page }) => {
+    await page.goto('/admin/users');
+    await page.getByTestId('admin-command-trigger').click();
+
+    await page.getByTestId('admin-command-input').fill('request');
+    const item = page.getByTestId('admin-command-page-automations-request-limits');
+    await expect(item).toBeVisible();
+    await item.click();
+
+    await expect(page).toHaveURL(/\/admin\/request-limits$/);
   });
 
   test('Escape closes the menu and returns focus to the trigger', async ({ adminPage: page }) => {
