@@ -128,6 +128,11 @@ Each `load_skill` and `read_skill_file` call writes an `ASSISTANT_DATA_READ`
 audit event with the tool name, the skill, the repo path read and the commit as
 `owner/repo@<full SHA>`, so the audit shows exactly what was followed.
 
+On a branch or tag, each call reads the commit the ref points at then. If the
+ref moves and its ten minutes run out between a `load_skill` and a later
+`read_skill_file`, the file comes from the newer commit. Each audit event names
+the commit it read.
+
 ### What a skill can do
 
 A skill can direct the assistant to use any tool the admin has, including ones
