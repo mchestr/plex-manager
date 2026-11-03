@@ -11,8 +11,8 @@ Last seen is the start of the member's newest play, as Tautulli records it
 (`get_users_table`). The app matches a Tautulli user to a member by their
 plex.tv account id, never by name.
 
-- **Where it shows:** the **Last seen** column on Admin > Users, and **Last
-  seen on Plex** on a member's Overview tab.
+- **Where it shows:** the **Last seen** column on Admin > Members > Users,
+  and **Last seen on Plex** on a member's Overview tab.
 - **Never:** Tautulli knows the member but has no play for them.
 - **Unknown:** Tautulli has not reported the member. Either they have no Plex
   account, Tautulli does not know them, Tautulli keeps no history for them
@@ -133,7 +133,7 @@ removed, their audit row says the clean-up did not finish, and the run stops.
 
 ## What removal does
 
-Removal does the same as **Remove Plex access** on Admin > Users:
+Removal does the same as **Remove Plex access** on Admin > Members > Users:
 
 1. Removes the member's share of the configured Plex server. They stay your
    plex.tv friend, and keep any other server you share with them.
@@ -161,7 +161,7 @@ run stores member ids only, never names.
 
 ## Excluding a member
 
-Open the member's page in Admin > Users. On the Overview tab, turn on
+Open the member's page in Admin > Members > Users. On the Overview tab, turn on
 **Never remove for inactivity**. It saves at once. The run then never removes
 that member, however long they go without playing. Turn it off to let the run
 consider them again.

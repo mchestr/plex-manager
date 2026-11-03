@@ -330,7 +330,8 @@ test.describe('Stripe subscription gate & admin visibility', () => {
     test('users page shows the subscription column and filter', async ({ adminPage }) => {
       await setStripeEnabled(true, { configure: true });
 
-      await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-users').first().click();
+      // Members opens on its Users tab
+      await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first().click();
       await expect(adminPage.getByTestId('admin-users-header')).toBeVisible({
         timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION,
       });

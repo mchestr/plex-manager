@@ -72,15 +72,15 @@ beforeEach(() => {
 })
 
 describe('AdminShell', () => {
-  it('marks Users current on a user detail page, with no axe violations', async () => {
+  it('marks Members current on a user detail page, with no axe violations', async () => {
     mockPathname.mockReturnValue('/admin/users/u1')
     const { container } = renderShell()
 
     const sidebar = screen.getByTestId('admin-sidebar')
-    expect(within(sidebar).getByTestId('admin-nav-users')).toHaveAttribute('aria-current', 'page')
-    expect(within(sidebar).getByTestId('admin-nav-invites')).not.toHaveAttribute('aria-current')
+    expect(within(sidebar).getByTestId('admin-nav-members')).toHaveAttribute('aria-current', 'page')
+    expect(within(sidebar).getByTestId('admin-nav-overview')).not.toHaveAttribute('aria-current')
     expect(within(sidebar).getByRole('navigation', { name: 'Admin' })).toBeInTheDocument()
-    expect(screen.getByTestId('admin-tab-users')).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByTestId('admin-tab-members')).toHaveAttribute('aria-current', 'page')
     expect(screen.getByTestId('admin-tab-more')).not.toHaveClass('text-foreground')
     expect(container.querySelectorAll('main#main')).toHaveLength(1)
     expect(await axe(container)).toHaveNoViolations()
@@ -90,13 +90,13 @@ describe('AdminShell', () => {
     renderShell({ counts: { users: 7, activeInvites: 3, pendingAffiliates: 2, failedJobs: 2 } })
 
     const sidebar = screen.getByTestId('admin-sidebar')
-    expect(within(sidebar).getByTestId('admin-nav-users')).toHaveTextContent('7')
-    expect(within(sidebar).getByTestId('admin-nav-invites')).toHaveTextContent('3 active')
+    // Pending applications outrank the member count, and active invites have no badge
+    expect(within(sidebar).getByTestId('admin-nav-members-badge')).toHaveTextContent('2 pending')
+    expect(sidebar).not.toHaveTextContent('3 active')
     expect(within(sidebar).getByTestId('admin-nav-automations-badge')).toHaveTextContent('2 failed')
-    expect(within(sidebar).getByTestId('admin-nav-affiliates-badge')).toHaveTextContent('2 pending')
     const tabs = within(screen.getByTestId('admin-tab-bar')).getAllByRole('listitem')
     // Automations owns the failed-jobs dot, and Settings opens from More
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Users', 'Rewind', 'Automations, jobs have failed', 'More'])
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Members', 'Rewind', 'Automations, jobs have failed', 'More'])
     expect(screen.getByTestId('admin-tab-rewind')).toHaveAttribute('href', '/admin/rewind')
     expect(screen.queryByTestId('admin-tab-settings')).not.toBeInTheDocument()
   })
@@ -131,7 +131,7 @@ describe('AdminShell', () => {
     // No section headings: the sheet's own title is the only one
     expect(within(sheet).getAllByRole('heading').map((heading) => heading.textContent)).toEqual(['More'])
     expect(within(sheet).queryAllByRole('region')).toEqual([])
-    expect(within(sheet).getByTestId('admin-nav-users-mobile')).toHaveAttribute('aria-current', 'page')
+    expect(within(sheet).getByTestId('admin-nav-members-mobile')).toHaveAttribute('aria-current', 'page')
     expect(await axe(document.body, noAxeRegion)).toHaveNoViolations()
 
     await user.keyboard('{Escape}')
@@ -205,7 +205,7 @@ describe('AdminShell', () => {
     const sidebar = within(screen.getByTestId('admin-sidebar'))
     expect(sidebar.getByTestId('admin-nav-assistant')).toHaveAttribute('href', '/admin/assistant')
     const nav = within(sidebar.getByRole('navigation', { name: 'Admin' }))
-    expect(nav.getAllByRole('link').slice(0, 3).map((link) => link.textContent)).toEqual(['Overview', 'Assistant', 'Users7'])
+    expect(nav.getAllByRole('link').slice(0, 3).map((link) => link.textContent)).toEqual(['Overview', 'Assistant', 'Members2 pending'])
     expect(screen.getByTestId('admin-assistant-link-mobile')).toHaveAttribute('href', '/admin/assistant')
     expect(screen.getByTestId('admin-assistant-link-mobile')).not.toHaveAttribute('aria-current')
   })

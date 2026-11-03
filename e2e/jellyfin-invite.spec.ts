@@ -225,7 +225,9 @@ test.describe('Jellyfin Invite Flow', () => {
 
   test.describe('Admin Invite Management', () => {
     test('admin can access invites page', async ({ adminPage }) => {
-      await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
+      // Invites is a tab of Members
+      await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first().click();
+      await adminPage.getByTestId('admin-section-tab-invites').click();
       await waitForLoadingGone(adminPage);
 
       await expect(adminPage.getByTestId('admin-invites-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
@@ -233,7 +235,7 @@ test.describe('Jellyfin Invite Flow', () => {
     });
 
     test('admin can open create invite modal', async ({ adminPage }) => {
-      await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
+      await adminPage.goto('/admin/invites');
       await waitForLoadingGone(adminPage);
 
       await adminPage.getByTestId('generate-invite-button').click();

@@ -36,11 +36,11 @@ describe('AdminNavProvider', () => {
   it('gives the items the server listed, in nav order, with the labels and icons of the admin nav', () => {
     const { items } = renderNav([
       { id: 'automations', href: '/admin/watchlist', childIds: [] },
-      { id: 'users', href: '/admin/users', childIds: [] },
+      { id: 'announcements', href: '/admin/announcements', childIds: [] },
     ])
 
-    expect(items.map((item) => item.id)).toEqual(['users', 'automations'])
-    expect(items[0]).toMatchObject({ label: 'Users', icon: byId('users').icon })
+    expect(items.map((item) => item.id)).toEqual(['announcements', 'automations'])
+    expect(items[0]).toMatchObject({ label: 'Announcements', icon: byId('announcements').icon })
     expect(items[1]).toMatchObject({ label: 'Automations', icon: byId('automations').icon, match: 'prefix', mobile: 'tab' })
   })
 
@@ -65,7 +65,7 @@ describe('AdminNavProvider', () => {
   })
 
   it('leaves an item without tabs without, whatever ids the server sends', () => {
-    const { items } = renderNav([{ id: 'users', href: '/admin/users', childIds: ['users'] }])
+    const { items } = renderNav([{ id: 'announcements', href: '/admin/announcements', childIds: ['announcements'] }])
 
     expect(items[0].children).toBeUndefined()
   })

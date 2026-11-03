@@ -25,8 +25,10 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin users list', async ({ adminPage }) => {
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-users').first().click();
+    // Members opens on its Users tab
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first().click();
     await expect(adminPage.getByTestId('admin-users-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('admin-section-tab-users')).toHaveAttribute('aria-selected', 'true');
 
     // Every filter defaults to All (P10.18, UI-05), so both seeded users are listed.
     // Scoped to the rows: the admin sidebar shows the signed-in admin's name too
@@ -73,10 +75,22 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin invites', async ({ adminPage }) => {
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first().click();
+    await adminPage.getByTestId('admin-section-tab-invites').click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
     await expect(adminPage.getByTestId('admin-invites-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    // Invites sits beside Users, not below it, and still lights the Members item
+    await expect(adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first()).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('should access admin affiliates', async ({ adminPage }) => {
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first().click();
+    await adminPage.getByTestId('admin-section-tab-affiliates').click();
+    await expect(adminPage).toHaveURL(/\/admin\/affiliates$/, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('admin-affiliates-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    await expect(adminPage.getByTestId('admin-section-tab-affiliates')).toHaveAttribute('aria-selected', 'true');
+    await expect(adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first()).toHaveAttribute('aria-current', 'page');
   });
 
   test('should access admin shares', async ({ adminPage }) => {

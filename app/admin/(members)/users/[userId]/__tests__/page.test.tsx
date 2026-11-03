@@ -6,7 +6,7 @@
 
 import { render, screen } from '@testing-library/react'
 
-import UserDetailPage from '@/app/admin/users/[userId]/page'
+import UserDetailPage from '@/app/admin/(members)/users/[userId]/page'
 import { getUserDetailHeader, type UserDetailHeaderData } from '@/lib/admin/user-detail'
 
 jest.mock('server-only', () => ({}))

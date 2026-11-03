@@ -73,7 +73,7 @@ describe('CommandMenu', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Search or jump to' })
     expect(within(dialog).getByRole('combobox')).toHaveFocus()
-    expect(within(dialog).getByText('Users')).toBeInTheDocument()
+    expect(within(dialog).getByText('Members')).toBeInTheDocument()
     expect(within(dialog).getByText('Create invite')).toBeInTheDocument()
     expect(await axe(document.body)).toHaveNoViolations()
   })
@@ -97,7 +97,7 @@ describe('CommandMenu', () => {
     await user.keyboard('set')
 
     expect(within(dialog).getByTestId('admin-command-page-settings')).toBeInTheDocument()
-    expect(within(dialog).queryByTestId('admin-command-page-users')).not.toBeInTheDocument()
+    expect(within(dialog).queryByTestId('admin-command-page-members')).not.toBeInTheDocument()
     expect(within(dialog).queryByText('Create invite')).not.toBeInTheDocument()
   })
 
@@ -120,7 +120,7 @@ describe('CommandMenu', () => {
     await user.keyboard('{Control>}k{/Control}')
     const dialog = await screen.findByRole('dialog')
 
-    expect(within(dialog).getByTestId('admin-command-page-users')).toBeInTheDocument()
+    expect(within(dialog).getByTestId('admin-command-page-members')).toBeInTheDocument()
     for (const group of ['Community', 'Usage and cost', 'System']) {
       expect(within(dialog).queryByText(group)).not.toBeInTheDocument()
     }
@@ -128,7 +128,7 @@ describe('CommandMenu', () => {
     await user.keyboard('community')
 
     expect(await within(dialog).findByText('No matches')).toBeInTheDocument()
-    expect(within(dialog).queryByTestId('admin-command-page-users')).not.toBeInTheDocument()
+    expect(within(dialog).queryByTestId('admin-command-page-members')).not.toBeInTheDocument()
   })
 
   it('lists Overview first (P10.8)', async () => {

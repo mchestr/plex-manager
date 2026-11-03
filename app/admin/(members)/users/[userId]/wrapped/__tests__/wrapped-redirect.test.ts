@@ -10,7 +10,7 @@
 
 import { redirect } from "next/navigation"
 
-import UserWrappedRedirect from "@/app/admin/users/[userId]/wrapped/page"
+import UserWrappedRedirect from "@/app/admin/(members)/users/[userId]/wrapped/page"
 import { getAdminGate } from "@/lib/admin"
 import { getSeasonYear, listCompletedRewindYears } from "@/lib/wrapped/season"
 

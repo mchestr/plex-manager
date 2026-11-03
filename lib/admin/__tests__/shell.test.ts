@@ -42,7 +42,7 @@ beforeEach(() => {
 
 it("lists Assistant while AI features are on and a chat model is active, without reading the history", async () => {
   expect(await entryIds(admin)).toContain("assistant")
-  expect(await entryIds(support)).toEqual(["assistant", "users", "affiliates", "audit"])
+  expect(await entryIds(support)).toEqual(["assistant", "members", "audit"])
   expect(prismaMock.chatConversation.findFirst).not.toHaveBeenCalled()
 })
 
@@ -55,7 +55,13 @@ it("sends an admin every item at its own href, with the ids of every tab it has"
     href: "/admin/watchlist",
     childIds: ["watchlist", "inactivity", "request-limits", "queues"],
   })
-  expect(nav.find((entry) => entry.id === "users")).toEqual({ id: "users", href: "/admin/users", childIds: [] })
+  expect(nav.find((entry) => entry.id === "overview")).toEqual({ id: "overview", href: "/admin", childIds: [] })
+})
+
+it("sends Support the Members item at its first permitted tab, without the Invites tab", async () => {
+  const { nav } = await getAdminShellData(support)
+
+  expect(nav.find((entry) => entry.id === "members")).toEqual({ id: "members", href: "/admin/users", childIds: ["users", "affiliates"] })
 })
 
 it.each([
@@ -64,14 +70,14 @@ it.each([
 ])("while %s, lists Assistant only for a user with saved conversations", async (_label, arrange) => {
   arrange()
 
-  expect(await entryIds(support)).toEqual(["users", "affiliates", "audit"])
+  expect(await entryIds(support)).toEqual(["members", "audit"])
   expect(prismaMock.chatConversation.findFirst).toHaveBeenCalledWith({
     where: { userId: "support-1", endedAt: null, discordSessions: { none: {} }, lastMessageAt: { not: null } },
     select: { id: true },
   })
 
   prismaMock.chatConversation.findFirst.mockResolvedValue({ id: "c1" } as ChatConversation)
-  expect(await entryIds(support)).toEqual(["assistant", "users", "affiliates", "audit"])
+  expect(await entryIds(support)).toEqual(["assistant", "members", "audit"])
   expect(await entryIds(admin)).toContain("assistant")
 })
 

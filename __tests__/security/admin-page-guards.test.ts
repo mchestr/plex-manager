@@ -28,7 +28,7 @@ const GUARD = /\b(assertAdmin|assertPermission|getAdminGate)\(/
 /** Pages a role may open, with the check that stands in for a guard call. */
 const ROLE_PAGES: Record<string, RegExp> = {
   // The loader asserts users:read next to the data, and the page renders read-only for a non-admin
-  'app/admin/users/page.tsx': /getAllUsersWithWrapped\(/,
+  'app/admin/(members)/users/page.tsx': /getAllUsersWithWrapped\(/,
   // Sends everyone but an admin to the users list before reading any tile
   'app/admin/(overview)/page.tsx': /isAdmin\) redirect\(/,
 }

@@ -20,7 +20,7 @@ than copying numbers from here.
   (`components/rewind/stage/rewind-scope.tsx`): the member layout
   `app/(app)/rewind/layout.tsx`, the share page `app/rewind/s/[token]/page.tsx`
   (and its `error.tsx` and `not-found.tsx`), and the admin preview
-  `app/admin/users/[userId]/rewind/[year]/page.tsx`. The root carries
+  `app/admin/(members)/users/[userId]/rewind/[year]/page.tsx`. The root carries
   `data-theme="rewind"`, the font variables and the portal container
   (`PortalContainerProvider`), so sheets, popovers and toasts print on paper
   inside the scope. A portal to `body` leaves the scope and renders graphite.

@@ -12,8 +12,7 @@ const CHAT_PROVIDER_ID = 'e2e-admin-shell-chat';
 
 const SIDEBAR_LINKS: Array<[testId: string, path: RegExp]> = [
   ['admin-nav-assistant', /\/admin\/assistant$/],
-  ['admin-nav-users', /\/admin\/users$/],
-  ['admin-nav-invites', /\/admin\/invites$/],
+  ['admin-nav-members', /\/admin\/users$/],
   ['admin-nav-announcements', /\/admin\/announcements$/],
   ['admin-nav-discord', /\/admin\/discord$/],
   ['admin-nav-rewind', /\/admin\/rewind$/],
@@ -55,7 +54,7 @@ test.describe('Admin shell', () => {
     await page.goto('/admin/users');
     await expect(page.getByTestId('admin-tab-bar')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
-    for (const id of ['overview', 'users', 'rewind', 'automations', 'more']) {
+    for (const id of ['overview', 'members', 'rewind', 'automations', 'more']) {
       const tab = page.getByTestId(`admin-tab-${id}`);
       const box = await tab.boundingBox();
       expect(box, `admin-tab-${id} has a box`).not.toBeNull();
