@@ -65,11 +65,6 @@ export function SettingsEditProvider({ onDirtyChange, children }: { onDirtyChang
   return <SettingsEditContext.Provider value={value}>{children}</SettingsEditContext.Provider>
 }
 
-/** Opens a section for editing from elsewhere on the page, such as Rewind's "Change the server time zone". Null outside the settings page. */
-export function useSettingsEdit() {
-  return useContext(SettingsEditContext)?.requestEdit ?? null
-}
-
 /** Reports a Sheet's unsaved changes to the page (the nav pip, the browser's leave prompt). Null outside the settings page. */
 export function useReportDirty() {
   return useContext(SettingsEditContext)?.reportDirty ?? null

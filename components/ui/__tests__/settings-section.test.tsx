@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import { FormField } from '@/components/ui/form-field'
 import { Input } from '@/components/ui/input'
-import { SettingsEditProvider, useSettingsEdit } from '@/components/ui/settings-edit-context'
+import { SettingsEditProvider } from '@/components/ui/settings-edit-context'
 import { SettingsSection, type TestResult } from '@/components/ui/settings-section'
 import { useSettingsForm, type SettingsFormState } from '@/hooks/admin/use-settings-form'
 
@@ -415,27 +415,28 @@ describe('SettingsSection', () => {
     expect(screen.getByRole('form', { name: 'AI provider' })).toHaveFocus()
   })
 
-  it('opens from elsewhere on the page and focuses the requested control', async () => {
+  it('opens on the control a link in its view names', async () => {
     const user = userEvent.setup()
-    function Link() {
-      const requestEdit = useSettingsEdit()
-      return (
-        <a href="#zone" onClick={() => requestEdit?.('system', { focus: '[aria-label="Zone"]' })}>
-          Change the server time zone
-        </a>
-      )
-    }
     render(
       <SettingsEditProvider onDirtyChange={jest.fn()}>
-        <Link />
-        <SettingsSection id="system" title="System information" description="Runtime" form={formState()} view={<p>UTC</p>}>
+        <SettingsSection
+          id="system"
+          title="System information"
+          description="Runtime"
+          form={formState()}
+          view={(edit) => (
+            <a href="#zone" onClick={() => edit({ focus: '[aria-label="Zone"]' })}>
+              Re-enter the zone
+            </a>
+          )}
+        >
           <input aria-label="Other" />
           <input aria-label="Zone" />
         </SettingsSection>
       </SettingsEditProvider>
     )
 
-    await user.click(screen.getByRole('link', { name: 'Change the server time zone' }))
+    await user.click(screen.getByRole('link', { name: 'Re-enter the zone' }))
 
     expect(screen.getByRole('textbox', { name: 'Zone' })).toHaveFocus()
   })
