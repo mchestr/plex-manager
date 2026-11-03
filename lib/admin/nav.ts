@@ -111,7 +111,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     mobile: "tab",
     permission: "users:read",
     // Applications waiting for a decision outrank the member count
-    badge: ({ users, pendingAffiliates }) => (pendingAffiliates > 0 ? { text: `${pendingAffiliates} pending` } : { text: String(users) }),
+    badge: ({ users, pendingAffiliates }) => (pendingAffiliates > 0 ? { text: `${pendingAffiliates} to review` } : { text: String(users) }),
     // Invites has no permission, so only an admin gets its tab
     children: [
       { id: "users", label: "Users", href: "/admin/users", permission: "users:read" },

@@ -78,7 +78,7 @@ describe("ADMIN_NAV", () => {
 
   it("badges pending applications, else the member count, on Members, and failed jobs on Automations", () => {
     const counts = { users: 7, pendingAffiliates: 2, failedJobs: 2 }
-    expect(byId("members").badge?.(counts)).toEqual({ text: "2 pending" })
+    expect(byId("members").badge?.(counts)).toEqual({ text: "2 to review" })
     expect(byId("members").badge?.({ ...counts, pendingAffiliates: 0 })).toEqual({ text: "7" })
     expect(byId("automations").badge?.(counts)).toEqual({ text: "2 failed", tone: "destructive" })
     expect(byId("automations").badge?.({ ...counts, failedJobs: 0 })).toBeNull()
