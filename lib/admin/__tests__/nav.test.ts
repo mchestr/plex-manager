@@ -331,6 +331,11 @@ describe("mobileTabs", () => {
     expect(tabs.flatMap((tab) => (tab.kind === "link" ? tab.covers : []))).not.toContain(extra)
   })
 
+  it("has no more tab items than the bar holds", () => {
+    // A fifth tab item would be demoted to More by the cap, without any error
+    expect(ADMIN_NAV.filter((item) => item.mobile === "tab").length).toBeLessThanOrEqual(4)
+  })
+
   it("counts the cap from Overview, or from the first tab item when a role has no Overview", () => {
     const five = ["a", "b", "c", "d", "e"].map((id) => bare(id))
     expect(ids(mobileTabs([bare("overview"), ...five]))).toEqual(["overview", "a", "b", "c", "more"])

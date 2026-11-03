@@ -1,11 +1,12 @@
 /**
  * The admin tab bar's failed-jobs dot (ui-design-system 6.2): a link tab
  * carries it while an item the tab covers has a destructive badge, and More
- * carries it only for such an item that no link tab covers. The item list is
+ * carries it only for such an item that no link tab covers. A tab item past
+ * the four-tab cap opens from More, so its page lights More. The item list is
  * set here, because the real nav has no destructive badge outside a tab.
  */
 
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import type { Route } from 'next'
 import { usePathname } from 'next/navigation'
 
@@ -61,12 +62,18 @@ describe('AdminTabBar failed dot', () => {
     expect(screen.queryByTestId('admin-tab-people-failed')).not.toBeInTheDocument()
   })
 
-  it('sits on More for a tab item past the four-tab cap', () => {
+  it('sits on More, and its page lights More, for a tab item past the four-tab cap', () => {
     const tabs = ['overview', 'a', 'b', 'c'].map((id) => bare(id, 'tab'))
+    mockPathname.mockReturnValue('/admin/jobs')
     renderTabBar([...tabs, bare('jobs', 'tab', failedJobsBadge)], 2)
 
     expect(screen.queryByTestId('admin-tab-jobs')).not.toBeInTheDocument()
     expect(screen.getByTestId('admin-tab-more-failed')).toBeInTheDocument()
+    // The dropped item's page lights More and none of the four link tabs
+    const links = within(screen.getByTestId('admin-tab-bar')).getAllByRole('link')
+    expect(links).toHaveLength(4)
+    expect(links.filter((tab) => tab.getAttribute('aria-current') === 'page')).toEqual([])
+    expect(screen.getByTestId('admin-tab-more')).toHaveClass('text-foreground')
   })
 
   it.each([0, null])('is absent with %p failed jobs (null is Redis down)', (failedJobs) => {
