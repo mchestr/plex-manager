@@ -1,9 +1,10 @@
 /**
- * The admin shell (P6.1, ui-design-system 6.2): the current item, the More
- * sheet, the failed-jobs dot, sign out and when the assistant's links appear.
+ * The admin shell (P6.1, ui-design-system 6.2): the current item, the flat
+ * nav in the sidebar and the More sheet (the one phone menu), the failed-jobs
+ * dot, sign out and when the assistant's links appear.
  */
 
-import { ADMIN_NAV } from '@/lib/admin/nav'
+import { ADMIN_NAV, navTestId } from '@/lib/admin/nav'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe, toHaveNoViolations } from 'jest-axe'
@@ -18,6 +19,21 @@ expect.extend(toHaveNoViolations)
 
 jest.mock('next-auth/react', () => ({ signOut: jest.fn().mockResolvedValue(undefined) }))
 jest.mock('@/actions/appearance', () => ({ setAppearance: jest.fn() }))
+// The real Link prefetches on an IntersectionObserver timer, outside act(), and
+// a click on it makes jsdom log a navigation it does not implement.
+jest.mock('next/link', () => {
+  const MockLink = ({ href, onClick, ...props }: { href: string } & React.ComponentProps<'a'>) => (
+    <a
+      href={href}
+      onClick={(event) => {
+        onClick?.(event)
+        event.preventDefault()
+      }}
+      {...props}
+    />
+  )
+  return MockLink
+})
 
 const push = jest.fn()
 const refresh = jest.fn()
@@ -61,6 +77,7 @@ describe('AdminShell', () => {
     expect(within(sidebar).getByTestId('admin-nav-invites')).not.toHaveAttribute('aria-current')
     expect(within(sidebar).getByRole('navigation', { name: 'Admin' })).toBeInTheDocument()
     expect(screen.getByTestId('admin-tab-users')).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByTestId('admin-tab-more')).not.toHaveClass('text-foreground')
     expect(container.querySelectorAll('main#main')).toHaveLength(1)
     expect(await axe(container)).toHaveNoViolations()
   })
@@ -74,15 +91,23 @@ describe('AdminShell', () => {
     expect(within(sidebar).getByTestId('admin-nav-automations-badge')).toHaveTextContent('2 failed')
     expect(within(sidebar).getByTestId('admin-nav-affiliates-badge')).toHaveTextContent('2 pending')
     const tabs = within(screen.getByTestId('admin-tab-bar')).getAllByRole('listitem')
-    const labels = tabs.map((tab) => tab.textContent)
-    // Automations is a tab too, somewhere before Settings
-    expect(labels.filter((label) => label !== 'Automations')).toEqual(['Overview', 'Users', 'Rewind', 'Settings', 'More, jobs have failed'])
-    expect(labels.indexOf('Automations')).toBeGreaterThan(-1)
-    expect(labels.indexOf('Automations')).toBeLessThan(labels.indexOf('Settings'))
+    // Automations owns the failed-jobs dot, and Settings opens from More
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Users', 'Rewind', 'Automations, jobs have failed', 'More'])
     expect(screen.getByTestId('admin-tab-rewind')).toHaveAttribute('href', '/admin/rewind')
+    expect(screen.queryByTestId('admin-tab-settings')).not.toBeInTheDocument()
   })
 
-  it('opens the grouped More sheet, and Escape returns focus to More', async () => {
+  it('lists every item in the sidebar as one flat list, with no group headings', () => {
+    renderShell()
+
+    const nav = within(within(screen.getByTestId('admin-sidebar')).getByRole('navigation', { name: 'Admin' }))
+    const [list, ...others] = nav.getAllByRole('list')
+    expect(others).toEqual([])
+    expect(within(list).getAllByRole('link').map((link) => link.getAttribute('data-testid'))).toEqual(ADMIN_NAV.map(navTestId))
+    expect(nav.queryAllByRole('heading')).toEqual([])
+  })
+
+  it('opens the More sheet with every item in one flat list, and Escape returns focus to More', async () => {
     const user = userEvent.setup()
     renderShell()
 
@@ -91,10 +116,17 @@ describe('AdminShell', () => {
     const sheet = await screen.findByRole('dialog', { name: 'More' })
 
     expect(screen.getByTestId('admin-more-sheet')).toBe(sheet)
-    for (const group of ['Community', 'Rewind', 'Usage and cost', 'System']) {
-      expect(within(sheet).getByRole('region', { name: group })).toBeInTheDocument()
-    }
-    expect(within(within(sheet).getByRole('region', { name: 'Rewind' })).getAllByRole('link').map((a) => a.textContent)).toEqual(['Rewind'])
+    const nav = within(within(sheet).getByRole('navigation', { name: 'Admin' }))
+    const [items, account, ...others] = nav.getAllByRole('list')
+    expect(others).toEqual([])
+    expect(within(items).getAllByRole('link').map((link) => link.getAttribute('data-testid'))).toEqual(
+      ADMIN_NAV.map((item) => `${navTestId(item)}-mobile`)
+    )
+    expect(within(account).getByTestId('admin-back-home-mobile')).toHaveAttribute('href', '/')
+    expect(within(account).getByTestId('admin-sign-out-mobile')).toBeInTheDocument()
+    // No section headings: the sheet's own title is the only one
+    expect(within(sheet).getAllByRole('heading').map((heading) => heading.textContent)).toEqual(['More'])
+    expect(within(sheet).queryAllByRole('region')).toEqual([])
     expect(within(sheet).getByTestId('admin-nav-users-mobile')).toHaveAttribute('aria-current', 'page')
     expect(await axe(document.body, noAxeRegion)).toHaveNoViolations()
 
@@ -103,29 +135,53 @@ describe('AdminShell', () => {
     expect(screen.getByTestId('admin-tab-more')).toHaveFocus()
   })
 
-  it('puts a destructive dot on More while jobs have failed', () => {
+  it('puts the destructive dot on the Automations tab while jobs have failed, and none on More', () => {
     renderShell({ counts: { users: 1, activeInvites: 0, pendingAffiliates: 0, failedJobs: 4 } })
 
-    expect(screen.getByTestId('admin-tab-more-failed')).toBeInTheDocument()
-    expect(screen.getByTestId('admin-tab-more')).toHaveAccessibleName(/^More ?, jobs have failed$/)
-  })
-
-  it('draws no dot when Redis is down', () => {
-    renderShell({ counts: { users: 1, activeInvites: 0, pendingAffiliates: 0, failedJobs: null } })
-
+    expect(screen.getByTestId('admin-tab-automations-failed')).toBeInTheDocument()
+    expect(screen.getByTestId('admin-tab-automations')).toHaveAccessibleName(/^Automations ?, jobs have failed$/)
     expect(screen.queryByTestId('admin-tab-more-failed')).not.toBeInTheDocument()
+    expect(screen.getByTestId('admin-tab-more')).toHaveAccessibleName('More')
   })
 
-  it('opens the menu sheet from the mobile top bar', async () => {
+  it.each([0, null])('draws no dot with %p failed jobs (null is Redis down)', (failedJobs) => {
+    renderShell({ counts: { users: 1, activeInvites: 0, pendingAffiliates: 0, failedJobs } })
+
+    expect(screen.queryByTestId('admin-tab-automations-failed')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('admin-tab-more-failed')).not.toBeInTheDocument()
+    expect(screen.getByTestId('admin-tab-automations')).toHaveAccessibleName('Automations')
+  })
+
+  it('lights More, and no tab, on a page that only More opens', () => {
+    mockPathname.mockReturnValue('/admin/settings')
+    renderShell()
+
+    const tabs = within(screen.getByTestId('admin-tab-bar'))
+    expect(tabs.getAllByRole('link').filter((tab) => tab.hasAttribute('aria-current'))).toEqual([])
+    expect(screen.getByTestId('admin-tab-more')).toHaveClass('text-foreground')
+  })
+
+  it('has one phone menu: the top bar keeps the wordmark, search and assistant, with no menu button', () => {
+    renderShell()
+
+    const bar = within(screen.getByTestId('admin-mobile-bar'))
+    expect(bar.getByTestId('admin-mobile-home')).toHaveAttribute('href', '/admin')
+    expect(bar.getByTestId('admin-command-trigger-mobile')).toBeInTheDocument()
+    expect(bar.getByTestId('admin-assistant-link-mobile')).toHaveAttribute('href', '/admin/assistant')
+    expect(screen.queryByTestId('admin-menu-button')).not.toBeInTheDocument()
+    expect(bar.queryByRole('button', { name: 'Menu' })).not.toBeInTheDocument()
+  })
+
+  it('closes the More sheet once a link in it is chosen', async () => {
     const user = userEvent.setup()
     renderShell()
 
-    await user.click(screen.getByTestId('admin-menu-button'))
-    const sheet = await screen.findByRole('dialog', { name: 'Admin' })
-    expect(within(sheet).getByTestId('admin-back-home-mobile')).toHaveAttribute('href', '/')
+    await user.click(screen.getByTestId('admin-tab-more'))
+    const sheet = await screen.findByRole('dialog', { name: 'More' })
+    expect(within(sheet).getByTestId('admin-nav-settings-mobile')).toHaveAttribute('href', '/admin/settings')
 
     await user.click(within(sheet).getByTestId('admin-nav-settings-mobile'))
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Admin' })).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'More' })).not.toBeInTheDocument())
   })
 
   it('keeps Back to home and Sign out in the sidebar footer', async () => {

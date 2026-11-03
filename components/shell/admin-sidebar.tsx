@@ -13,14 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/compon
 import { Icon } from "@/components/ui/icon"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Wordmark } from "@/components/ui/wordmark"
-import {
-  ADMIN_NAV_GROUPS,
-  isActive,
-  itemsIn,
-  navTestId,
-  type AdminNavItem,
-  type NavCounts,
-} from "@/lib/admin/nav"
+import { isActive, navTestId, type AdminNavItem, type NavCounts } from "@/lib/admin/nav"
 import type { AdminShellUser } from "@/lib/admin/shell"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
@@ -110,8 +103,8 @@ interface AdminSidebarProps {
  * The admin sidebar (ui-design-system 6.2): 248px from `lg`, a 56px icon rail
  * with tooltips at `md`, hidden below. The current item gets
  * `aria-current="page"`, the accent fill and a 3px strip at the left edge.
- * In a window 800px tall or less (`short:`) the items and groups tighten, so
- * at 720px every item stays within the viewport while the nav scrolls.
+ * In a window 800px tall or less (`short:`) the items tighten, so at 720px
+ * every item stays within the viewport while the nav scrolls.
  */
 export function AdminSidebar({ serverName, user, navCounts }: AdminSidebarProps) {
   const pathname = usePathname() ?? "/admin"
@@ -150,21 +143,11 @@ export function AdminSidebar({ serverName, user, navCounts }: AdminSidebarProps)
         </RailTip>
       </div>
       <nav aria-label="Admin" className="flex-1 overflow-y-auto px-2 py-2">
-        <ul className="mb-4 flex flex-col gap-0.5 short:mb-2">
-          {itemsIn(null, items).map((item) => (
+        <ul className="flex flex-col gap-0.5">
+          {items.map((item) => (
             <NavLink key={item.id} item={item} counts={navCounts} pathname={pathname} />
           ))}
         </ul>
-        {ADMIN_NAV_GROUPS.filter((group) => itemsIn(group, items).length > 0).map((group) => (
-          <div key={group} className="mb-4 border-t border-sidebar-border pt-3 first:border-t-0 first:pt-0 short:mb-2 lg:border-t-0 lg:pt-0">
-            <h2 className="hidden px-2 pb-1 text-caption font-medium text-muted-foreground short:pb-0.5 lg:block">{group}</h2>
-            <ul className="flex flex-col gap-0.5" aria-label={group}>
-              {itemsIn(group, items).map((item) => (
-                <NavLink key={item.id} item={item} counts={navCounts} pathname={pathname} />
-              ))}
-            </ul>
-          </div>
-        ))}
       </nav>
       <div className="flex flex-col gap-1 border-t border-sidebar-border p-2">
         <RailTip label="Back to home">

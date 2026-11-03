@@ -157,8 +157,8 @@ export function CommandMenuKeyHint({ className }: { className?: string }) {
   )
 }
 
-function matches(term: string, ...texts: Array<string | null>): boolean {
-  return texts.some((text) => text?.toLowerCase().includes(term))
+function matches(term: string, text: string): boolean {
+  return text.toLowerCase().includes(term)
 }
 
 function ResultItem({ kind, result, icon, onSelect }: { kind: string; result: AdminSearchResult; icon: LucideIcon; onSelect: (href: Route) => void }) {
@@ -189,7 +189,7 @@ function CommandMenuBody({ onDone }: { onDone: () => void }) {
 
   const term = search.trim().toLowerCase()
   const searching = term.length > 0
-  const destinations = items.filter((item) => matches(term, item.label, item.group))
+  const destinations = items.filter((item) => matches(term, item.label))
   const actions = scoped ? [] : QUICK_ACTIONS.filter((action) => matches(term, action.label))
   const settled = users.q === search.trim().slice(0, ADMIN_SEARCH_MAX) && !users.isFetching && !invites.isFetching
 
@@ -215,7 +215,6 @@ function CommandMenuBody({ onDone }: { onDone: () => void }) {
               <CommandItem key={item.id} value={`page:${item.id}`} onSelect={() => go(item.href)} data-testid={`admin-command-page-${item.id}`}>
                 <Icon icon={item.icon} />
                 <span className="truncate">{item.label}</span>
-                {item.group && <CommandShortcut>{item.group}</CommandShortcut>}
               </CommandItem>
             ))}
           </CommandGroup>

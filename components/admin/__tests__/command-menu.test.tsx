@@ -88,9 +88,26 @@ describe('CommandMenu', () => {
 
     await user.keyboard('{ArrowDown}{Enter}')
 
-    // Overview, then Assistant: the ungrouped items lead the list
+    // Overview, then Assistant: the nav's own order
     expect(mockPush).toHaveBeenCalledWith('/admin/assistant')
     await waitFor(() => expect(dialog).not.toBeInTheDocument())
+  })
+
+  it('lists pages by their label alone: no group beside them, and a group name finds nothing', async () => {
+    const user = userEvent.setup()
+    renderMenu()
+    await user.keyboard('{Control>}k{/Control}')
+    const dialog = await screen.findByRole('dialog')
+
+    expect(within(dialog).getByTestId('admin-command-page-users')).toBeInTheDocument()
+    for (const group of ['Community', 'Usage and cost', 'System']) {
+      expect(within(dialog).queryByText(group)).not.toBeInTheDocument()
+    }
+
+    await user.keyboard('community')
+
+    expect(await within(dialog).findByText('No matches')).toBeInTheDocument()
+    expect(within(dialog).queryByTestId('admin-command-page-users')).not.toBeInTheDocument()
   })
 
   it('lists Overview first (P10.8)', async () => {
