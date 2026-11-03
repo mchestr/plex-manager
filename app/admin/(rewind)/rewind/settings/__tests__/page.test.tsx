@@ -119,7 +119,7 @@ describe('Rewind settings page', () => {
     expect(screen.getByTestId('stub-redis')).toHaveTextContent('ok')
     expect(screen.queryByTestId('last-saved-rewind')).not.toBeInTheDocument()
 
-    jest.mocked(getSettingsAuditMeta).mockResolvedValue({ rewind: { at: new Date('2026-10-20T12:00:00Z'), by: 'Ana' } } as never)
+    jest.mocked(getSettingsAuditMeta).mockResolvedValue({ rewind: { at: new Date('2026-10-20T12:00:00Z'), by: 'Ana', eventId: 'audit-1' } } as never)
     await renderPage()
 
     expect(screen.getByTestId('last-saved-rewind')).toBeInTheDocument()

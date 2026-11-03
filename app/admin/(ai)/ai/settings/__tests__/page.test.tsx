@@ -131,8 +131,8 @@ describe("AI settings page", () => {
 
   it("says who saved each section last, from the audit log", async () => {
     jest.mocked(getSettingsAuditMeta).mockResolvedValue({
-      ai: { at: new Date("2026-11-01T12:00:00Z"), by: "Dana Whitfield" },
-      judge: { at: new Date("2026-11-02T08:00:00Z"), by: "Sam Rivera" },
+      ai: { at: new Date("2026-11-01T12:00:00Z"), by: "Dana Whitfield", eventId: "audit-1" },
+      judge: { at: new Date("2026-11-02T08:00:00Z"), by: "Sam Rivera", eventId: "audit-2" },
     } as never)
     await renderPage()
 

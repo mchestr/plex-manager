@@ -116,7 +116,7 @@ describe('Request limits page', () => {
     await renderPage()
     expect(screen.queryByTestId('last-saved-requestTiers')).not.toBeInTheDocument()
 
-    jest.mocked(getSettingsAuditMeta).mockResolvedValue({ ...NEVER_SAVED, requestTiers: { at: new Date(), by: 'Dana Whitfield' } })
+    jest.mocked(getSettingsAuditMeta).mockResolvedValue({ ...NEVER_SAVED, requestTiers: { at: new Date(), by: 'Dana Whitfield', eventId: 'audit-1' } })
     await renderPage()
     expect(screen.getByTestId('last-saved-requestTiers')).toBeInTheDocument()
   })

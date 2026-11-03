@@ -137,7 +137,6 @@ export default async function RewindSeasonPage({ searchParams }: { searchParams:
             { label: "Server name on cards", value: onOff(config?.rewindShowServerNameOnCards ?? true) },
             { label: "Art on cards", value: onOff(config?.rewindAllowArtOnCards ?? true) },
             { label: "Managed accounts", value: onOff(config?.rewindIncludeManagedUsers ?? false) },
-            { label: "Sound", value: onOff(config?.rewindAudio ?? false) },
             { label: "Ready notices", value: listOf(config?.rewindNotifyChannels) || "None" },
             { label: "Turned-off pages", value: listOf(config?.rewindDisabledPages) || "None" },
           ]}
