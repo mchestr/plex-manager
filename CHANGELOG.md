@@ -19,6 +19,24 @@ in `changelog.d/`. A pull request that touches `prisma/migrations/**`,
 the `breaking` label, must add one (the Changelog check); the `no-changelog`
 label skips it.
 
+## [0.10.0] - 2026-11-03
+
+### Upgrade notes
+
+- Take a `pg_dump -Fc` before you start the new release.
+- **Inactive members:** the run can now remove members who are exempt from the subscription. If you turned on automatic removal, read the list under **Admin > Inactive members** before the next daily run. To keep a member, exclude them on their page.
+
+### Added
+
+- **Assistant skills:** add a GitHub repository of Agent Skills (`SKILL.md` folders) in Settings, Assistant sources, Skills. The admin assistant lists them and follows the one that matches a request. Pin a tag or commit. See `docs/assistant.md`.
+
+### Changed
+
+- **Admin navigation:** the sidebar has ten items and no group headings: Overview, Assistant, Members, Announcements, Rewind, Discord, AI, Automations, Audit log and Settings. Each feature's controls are a **Settings** tab on its own page (for example **Admin > Rewind > Settings**), and **Admin > Settings** keeps only Connections, Billing and System. URLs are unchanged, and old `/admin/settings#<section>` links open the section's new page. The command menu jumps to section tabs, and every section tab shows a loading skeleton.
+- **Database for assistant skills:** the database gets the `SkillSource` table. The next boot runs one automatic pass that re-encrypts the stored secrets, because a new secret column is added.
+- **Knowledge base reads:** when GitHub rate-limits a knowledge base or skill read, the app waits a minute before asking GitHub again, instead of retrying on every message. A knowledge base pinned to a commit is cached at that commit.
+- **Inactive members:** an exemption from the subscription no longer protects a member from the inactivity run, because it is about billing and not about use.
+
 ## [0.9.0] - 2026-11-02
 
 ### Upgrade notes
@@ -338,6 +356,7 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 - No account linking by email; the Jellyfin sign-in toggle is enforced; share routes serve a share-safe projection; a failed Tautulli match no longer shows emails; a Redis-backed rate limiter keys on the trusted proxy hop; generation is single-flight and rate-limited; the poster proxy checks access; `plexAuthToken` no longer reaches the admin browser.
 - The Discord bot no longer uses the Message Content intent, keeps its token encrypted in the database, and scrubs personal fields before the LLM.
 
+[0.10.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.10.0
 [0.9.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.9.0
 [0.8.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.8.0
 [0.7.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.7.0
