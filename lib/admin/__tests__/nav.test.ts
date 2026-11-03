@@ -38,6 +38,12 @@ describe("ADMIN_NAV", () => {
     }
   })
 
+  it("lists Rewind before Discord, as the plan does", () => {
+    const ids = ADMIN_NAV.map((item) => item.id)
+    expect(ids.indexOf("rewind")).toBeGreaterThan(-1)
+    expect(ids.indexOf("rewind")).toBeLessThan(ids.indexOf("discord"))
+  })
+
   it("folds Season, Playground and Share analytics into the one Rewind item", () => {
     const ids = ADMIN_NAV.map((item) => item.id)
     for (const folded of ["season", "playground", "share-analytics"]) expect(ids).not.toContain(folded)

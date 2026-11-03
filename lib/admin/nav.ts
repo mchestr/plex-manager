@@ -16,8 +16,8 @@
  * Assistant
  * Members         Users, Invites, Affiliates
  * Announcements
- * Discord         Activity, Settings
  * Rewind          Season, Playground, Shares, Settings
+ * Discord         Activity, Settings
  * AI              Activity, Cost, Settings
  * Automations     Watchlist sync, Inactive members, Request limits, Queues
  * Audit log
@@ -128,18 +128,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     mobile: "more",
   },
   {
-    id: "discord",
-    label: "Discord",
-    href: "/admin/discord",
-    icon: icons.discordBot,
-    match: "prefix",
-    mobile: "more",
-    children: [
-      { id: "discord-activity", label: "Activity", href: "/admin/discord" },
-      { id: "discord-settings", label: "Settings", href: "/admin/discord/settings" },
-    ],
-  },
-  {
     id: "rewind",
     label: "Rewind",
     href: "/admin/rewind",
@@ -153,6 +141,18 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
       { id: "playground", label: "Playground", href: "/admin/rewind/playground" },
       { id: "shares", label: "Shares", href: "/admin/shares" },
       { id: "rewind-settings", label: "Settings", href: "/admin/rewind/settings" },
+    ],
+  },
+  {
+    id: "discord",
+    label: "Discord",
+    href: "/admin/discord",
+    icon: icons.discordBot,
+    match: "prefix",
+    mobile: "more",
+    children: [
+      { id: "discord-activity", label: "Activity", href: "/admin/discord" },
+      { id: "discord-settings", label: "Settings", href: "/admin/discord/settings" },
     ],
   },
   {
