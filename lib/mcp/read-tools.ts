@@ -126,7 +126,8 @@ export function readTools(): McpTool[] {
     readTool({ name: "get_queue_dashboard", description: "The job queues: counts by state, whether each is paused, and recent failed jobs with their ids.", read: () => getQueueDashboard() }),
     readTool({
       name: "get_admin_settings",
-      description: "Every setting on the settings page: the service connections, AI providers, Discord, Rewind and server config. Secrets show only their last four.",
+      description:
+        "Every admin setting: the service connections, AI providers, Discord, Rewind and server config, from the Settings page and the Settings tabs of AI, Discord and Rewind. Secrets show only their last four.",
       read: () => getAdminSettings(),
     }),
     readTool({ name: "get_stripe_config", description: "Whether Stripe is on and configured, and its price ids. Never the keys.", read: () => getStripeConfig() }),

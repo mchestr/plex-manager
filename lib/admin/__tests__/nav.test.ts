@@ -38,6 +38,12 @@ describe("ADMIN_NAV", () => {
     }
   })
 
+  it("lists Rewind before Discord, as the plan does", () => {
+    const ids = ADMIN_NAV.map((item) => item.id)
+    expect(ids.indexOf("rewind")).toBeGreaterThan(-1)
+    expect(ids.indexOf("rewind")).toBeLessThan(ids.indexOf("discord"))
+  })
+
   it("folds Season, Playground and Share analytics into the one Rewind item", () => {
     const ids = ADMIN_NAV.map((item) => item.id)
     for (const folded of ["season", "playground", "share-analytics"]) expect(ids).not.toContain(folded)
@@ -72,7 +78,7 @@ describe("ADMIN_NAV", () => {
 
   it("badges pending applications, else the member count, on Members, and failed jobs on Automations", () => {
     const counts = { users: 7, pendingAffiliates: 2, failedJobs: 2 }
-    expect(byId("members").badge?.(counts)).toEqual({ text: "2 pending" })
+    expect(byId("members").badge?.(counts)).toEqual({ text: "2 to review" })
     expect(byId("members").badge?.({ ...counts, pendingAffiliates: 0 })).toEqual({ text: "7" })
     expect(byId("automations").badge?.(counts)).toEqual({ text: "2 failed", tone: "destructive" })
     expect(byId("automations").badge?.({ ...counts, failedJobs: 0 })).toBeNull()

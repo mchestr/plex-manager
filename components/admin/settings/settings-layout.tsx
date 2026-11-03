@@ -1,11 +1,13 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import type { SettingsGroupId, SettingsNavItem } from "@/components/admin/settings/settings-groups"
 import { SettingsJumpTo, SettingsNav } from "@/components/admin/settings/settings-nav"
 import { SettingsEditProvider } from "@/components/ui/settings-edit-context"
 import { useLeaveGuard } from "@/hooks/use-leave-guard"
+import { movedSettingsHome } from "@/lib/admin/routes"
 
 /** The id of the topmost section in view, so the nav can mark it `aria-current`. */
 function useActiveSection(ids: string[]): [string | null, (id: string) => void] {
@@ -66,11 +68,14 @@ interface SettingsLayoutProps {
  * beside a 760px column showing one `SettingsGroup`, and below `md` a sticky
  * "Jump to" Select. A hash in the URL (a link from another page arrives with
  * one, see `settingsSection`), a nav link or a bare `#anchor` link in a
- * section reveals the group that holds its target.
+ * section reveals the group that holds its target. An old hash for a section
+ * that has since moved (a bookmark to `#rewind`) opens the page it lives on
+ * now (`movedSettingsHome`).
  * Sections report their dirty state here for the nav's pip, and while any
  * section has unsaved changes the browser asks before the page is left.
  */
 export function SettingsLayout({ items, children }: SettingsLayoutProps) {
+  const { replace } = useRouter()
   const [active, setActive] = useActiveSection(items.map((item) => item.id))
   const bodyRef = useRef<HTMLDivElement>(null)
   const [group, setGroup] = useState<SettingsGroupId>(items[0]?.group ?? "connections")
@@ -111,7 +116,10 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
   useLayoutEffect(() => {
     const fromHash = () => {
       try {
-        reveal(decodeURIComponent(window.location.hash.slice(1)))
+        const id = decodeURIComponent(window.location.hash.slice(1))
+        const home = movedSettingsHome(id)
+        if (home) replace(home)
+        else reveal(id)
       } catch {
         // A malformed hash (`#%`) names no section
       }
@@ -119,7 +127,7 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
     fromHash()
     window.addEventListener("hashchange", fromHash)
     return () => window.removeEventListener("hashchange", fromHash)
-  }, [reveal])
+  }, [reveal, replace])
 
   // A bare `#anchor` link in a section reveals its group first
   useEffect(() => {

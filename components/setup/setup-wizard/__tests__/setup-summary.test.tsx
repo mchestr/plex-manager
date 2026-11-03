@@ -43,6 +43,8 @@ describe("SetupSummary", () => {
     expect(connected.queryByText("Sonarr")).not.toBeInTheDocument()
     const skipped = within(screen.getByTestId("setup-summary-skipped"))
     expect(skipped.getAllByRole("listitem").map((item) => item.textContent)).toEqual(["Sonarr", "Discord"])
+    // The skipped steps now live on different admin pages (Settings, Discord), so the hint names none of them
+    expect(screen.getByText("Set them up later in Admin.")).toBeInTheDocument()
     expect(screen.queryByTestId("setup-skip-step")).not.toBeInTheDocument()
   })
 
@@ -51,6 +53,7 @@ describe("SetupSummary", () => {
 
     expect(screen.queryByTestId("setup-summary-skipped")).not.toBeInTheDocument()
     expect(screen.getByText("None.")).toBeInTheDocument()
+    expect(screen.queryByText(/Set them up/)).not.toBeInTheDocument()
   })
 
   it("completes setup, then signs the owner in with Plex towards /admin", async () => {

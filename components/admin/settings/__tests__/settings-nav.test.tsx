@@ -30,6 +30,23 @@ describe('SettingsNav', () => {
     expect(glyph('tautulli')[0]).toHaveAttribute('data-category', 'broken')
   })
 
+  it('draws Needs attention for an incomplete or degraded section, apart from Not working', () => {
+    // The AI and Discord rows that used to cover this category left for their own pages
+    const items: SettingsNavItem[] = [
+      { id: 'plex', label: 'Plex server', group: 'connections', status: 'incomplete' },
+      { id: 'tautulli', label: 'Tautulli', group: 'connections', status: 'degraded' },
+      { id: 'overseerr', label: 'Overseerr', group: 'connections', status: 'unreachable' },
+    ]
+    render(<SettingsNav items={items} active="plex" activeGroup="connections" dirty={new Set()} onSelect={jest.fn()} />)
+
+    for (const id of ['plex', 'tautulli']) {
+      expect(glyph(id)[0]).toHaveAccessibleName('Needs attention')
+      expect(glyph(id)[0]).toHaveAttribute('data-category', 'attention')
+    }
+    expect(glyph('overseerr')[0]).toHaveAccessibleName('Not working')
+    expect(glyph('overseerr')[0]).toHaveAttribute('data-category', 'broken')
+  })
+
   it('marks the section in view with aria-current', () => {
     render(<SettingsNav items={ITEMS} active="tautulli" activeGroup="connections" dirty={new Set()} onSelect={jest.fn()} />)
 

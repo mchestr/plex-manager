@@ -1,7 +1,7 @@
 /**
  * The admin reads for the Discord stat channels and the request-limit tiers
- * (the settings page, and a member's tier on their user page): server-only,
- * each admin-checked (P11.5).
+ * (the Discord settings tab, the Request limits page, and a member's tier on
+ * their user page): server-only, each admin-checked (P11.5).
  *
  * @module lib/data/community-stats
  */

@@ -23,7 +23,7 @@ const props: SeasonFactsProps = {
   model: 'gpt-5-mini',
   promptVersion: 'rewind-2026.1',
   freeze: 'Frozen 1 December 2026',
-  audienceSwitch: 'By hand in Settings',
+  audienceSwitch: 'By hand in Rewind settings',
   prepareRuns: '02:15 in America/Chicago on 1 December 2026',
   dataPreparedAt: 'Not yet',
   flags: [
@@ -42,7 +42,7 @@ describe('SeasonFacts', () => {
     expect(within(panel).getByText('Closes').nextElementSibling).toHaveTextContent('31 January 2027')
     expect(screen.getByTestId('admin-rewind-freeze')).toHaveTextContent('Frozen 1 December 2026')
     expect(screen.getByTestId('admin-rewind-prepare-schedule')).toHaveTextContent('02:15 in America/Chicago on 1 December 2026')
-    expect(screen.getByTestId('admin-rewind-audience-switch')).toHaveTextContent('By hand in Settings')
+    expect(screen.getByTestId('admin-rewind-audience-switch')).toHaveTextContent('By hand in Rewind settings')
     expect(within(panel).getByText('Audience').nextElementSibling).toHaveTextContent('Admins')
     expect(await axe(container)).toHaveNoViolations()
   })

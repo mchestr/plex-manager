@@ -90,8 +90,8 @@ describe('AdminShell', () => {
     renderShell({ counts: { users: 7, pendingAffiliates: 2, failedJobs: 2 } })
 
     const sidebar = screen.getByTestId('admin-sidebar')
-    // Pending applications outrank the member count, and active invites have no badge
-    expect(within(sidebar).getByTestId('admin-nav-members-badge')).toHaveTextContent('2 pending')
+    // Applications to review outrank the member count, and active invites have no badge
+    expect(within(sidebar).getByTestId('admin-nav-members-badge')).toHaveTextContent('2 to review')
     expect(sidebar).not.toHaveTextContent('3 active')
     expect(within(sidebar).getByTestId('admin-nav-automations-badge')).toHaveTextContent('2 failed')
     const tabs = within(screen.getByTestId('admin-tab-bar')).getAllByRole('listitem')
@@ -205,7 +205,7 @@ describe('AdminShell', () => {
     const sidebar = within(screen.getByTestId('admin-sidebar'))
     expect(sidebar.getByTestId('admin-nav-assistant')).toHaveAttribute('href', '/admin/assistant')
     const nav = within(sidebar.getByRole('navigation', { name: 'Admin' }))
-    expect(nav.getAllByRole('link').slice(0, 3).map((link) => link.textContent)).toEqual(['Overview', 'Assistant', 'Members2 pending'])
+    expect(nav.getAllByRole('link').slice(0, 3).map((link) => link.textContent)).toEqual(['Overview', 'Assistant', 'Members2 to review'])
     expect(screen.getByTestId('admin-assistant-link-mobile')).toHaveAttribute('href', '/admin/assistant')
     expect(screen.getByTestId('admin-assistant-link-mobile')).not.toHaveAttribute('aria-current')
   })

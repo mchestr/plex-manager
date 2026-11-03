@@ -115,7 +115,9 @@ describe('RewindSettingsSection', () => {
       renderSection()
 
       expect(screen.getByTestId('rewind-settings-status')).toHaveTextContent('Redis ready')
-      expect(within(summaryRow('season')).getByTestId('rewind-settings-zone')).toHaveTextContent('Dates are in America/Chicago.')
+      const zoneNote = within(summaryRow('season')).getByTestId('rewind-settings-zone')
+      expect(zoneNote).toHaveTextContent('Dates are in America/Chicago.')
+      expect(within(zoneNote).getByRole('link', { name: 'Change the server time zone' })).toHaveAttribute('href', '/admin/settings#time-zone')
       expect(screen.getByTestId('rewind-settings-time-zone-link')).toHaveAttribute('href', '/admin/settings#time-zone')
       expect(screen.getByTestId('rewind-season-data-prepared-at')).toBeInTheDocument()
       expect(screen.getByTestId('settings-rewind-last-saved')).toHaveTextContent('Last saved just now by Dana')
@@ -184,11 +186,27 @@ describe('RewindSettingsSection', () => {
 
       expect(screen.getByTestId('rewind-settings-status')).toBeInTheDocument()
       expect(screen.getByTestId('rewind-season-data-prepared-at')).toBeInTheDocument()
-      // The form's own zone note replaces the summary's, so its test ids stay unique
+      // The form's own zone note replaces the summary's, so its test id stays unique
       expect(screen.getAllByTestId('rewind-settings-zone')).toHaveLength(1)
-      expect(screen.getAllByTestId('rewind-settings-time-zone-link')).toHaveLength(1)
       // Save is enabled while clean: a clean save just closes
       expect(screen.getByTestId('settings-rewind-save')).toBeEnabled()
+    })
+
+    it('names where to change the server time zone as plain text: a link would navigate away and drop the draft', async () => {
+      await renderEditing()
+
+      const zoneNote = screen.getByTestId('rewind-settings-zone')
+      expect(within(zoneNote).queryByRole('link')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('rewind-settings-time-zone-link')).not.toBeInTheDocument()
+      expect(zoneNote).toHaveTextContent('Dates are in America/Chicago. Change the server time zone in Settings, System.')
+    })
+
+    it('brings the time zone link back when the form closes', async () => {
+      const { user } = await renderEditing()
+
+      await user.click(screen.getByTestId('settings-rewind-cancel'))
+
+      expect(screen.getByTestId('rewind-settings-time-zone-link')).toHaveAttribute('href', '/admin/settings#time-zone')
     })
 
     it('makes every flag a checkbox that keeps its test id', async () => {
