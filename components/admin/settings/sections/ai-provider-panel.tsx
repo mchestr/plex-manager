@@ -24,14 +24,14 @@ interface LLMProviderPanelProps {
 /**
  * One purpose's tab body in the AI section: the saved provider until Edit,
  * then its fields, and below them whatever else that tab edits (the Admin
- * assistant's spend caps). Rewind's tab points to the Rewind section for its
- * LLM mode and season budget; the Conversation review tab holds only its
+ * assistant's spend caps). Rewind's tab points to the Rewind settings tab for
+ * its LLM mode and season budget; the Conversation review tab holds only its
  * provider, since the judge's cap is edited in the Conversation review section.
  */
 export function LLMProviderPanel({ purpose, stored, state, editing, disabled, onReenter = () => {}, extra }: LLMProviderPanelProps) {
   return (
     <>
-      {purpose === "wrapped" && <p className="text-label text-muted-foreground">Set the LLM mode and season budget in the Rewind section.</p>}
+      {purpose === "wrapped" && <p className="text-label text-muted-foreground">Set the LLM mode and season budget on the Rewind settings tab.</p>}
       {editing ? (
         <LLMProviderFields purpose={purpose} state={state} disabled={disabled} />
       ) : (

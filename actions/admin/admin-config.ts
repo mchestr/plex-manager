@@ -67,7 +67,7 @@ export const updateLlmCaps = adminAction({
     })
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("llm.caps", before, caps))
-    revalidatePath("/admin/settings")
+    revalidatePath("/admin/ai/settings")
     return ok(null)
   },
 })

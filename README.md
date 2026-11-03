@@ -41,7 +41,7 @@ their watch history.
   the steps to request titles, and the place to report a problem.
 - **Rewind.** Plex Manager can make a Rewind of the year for each Plex member,
   from Tautulli history. An AI provider writes the text, or Plex Manager uses
-  templates. Rewind is off until you enable it in **Admin > Settings**. There,
+  templates. Rewind is off until you enable it in **Admin > Rewind > Settings**. There,
   you also set the audience (admins only by default) and the season (1 December
   to 31 January by default). Until a member makes a share link, only that
   member and the admins can see their Rewind.
@@ -155,7 +155,8 @@ other ways to install, and all the details, refer to the
 
 7. Do the steps in the setup wizard. Plex and Tautulli are necessary. For each
    other service, you can select **Skip for now** and add it later in
-   **Admin > Settings**.
+   **Admin > Settings** (the AI provider in **Admin > AI > Settings**, Discord
+   in **Admin > Discord > Settings**).
 
 The Plex account that you connect in the wizard becomes the admin account.
 

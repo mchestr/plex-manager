@@ -48,7 +48,7 @@ function ServerSummary({ type, server, onReenter }: { type: ServiceType; server:
 }
 
 /**
- * A Media group section: Plex server, Tautulli or Overseerr, with its live
+ * A Connections group section: Plex server, Tautulli or Overseerr, with its live
  * health. It shows the saved service until Edit (or Set up, when none is
  * saved); Test connection tries the values in the form, which are the saved
  * ones until they are edited.

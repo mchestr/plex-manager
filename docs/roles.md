@@ -20,8 +20,9 @@ permission needs no schema change. An unknown stored role grants nothing.
 | `affiliates:read` | yes | The Affiliates page's Applications, Affiliates and Invite tree tabs, read-only: no invite codes or labels, no History tab (with its block list) and no affiliate settings |
 | `audit:read` | yes | The Audit log (`/admin/audit`) and its event pages: who did what, to whom and when, with a one-line summary. Not an event's stored details, and not a member's Audit tab |
 
-A Support user sees Users and the Assistant page in the admin area, can open Affiliates (`/admin/affiliates`) and the
-Audit log (`/admin/audit`), and the member app shows them the same Admin link an admin gets (`canEnterAdminArea`). Settings,
+In the admin area a Support user sees three sidebar items: Assistant, Members and Audit log. Members opens
+on Users and also has the Affiliates tab (`/admin/users`, `/admin/affiliates`), but no Invites tab; the Audit log
+is at `/admin/audit`. The member app shows them the same Admin link an admin gets (`canEnterAdminArea`). Settings,
 connections, LLM providers, Stripe, invites, queues, usage and cost, inactive members, a
 member's detail page (with its Audit tab), role management and every affiliate decision (approve,
 refuse, revoke, overrides, unblock) are refused on the server (a page

@@ -70,7 +70,8 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
  * LLM mode) and the Discord bot off (no DMs).
  *
  * The season row carries the zone note and its "Change the server time zone"
- * link; the form shows its own copy while editing, so only one is mounted.
+ * link; the form shows its own copy, with the place in plain text, while
+ * editing, so only one is mounted.
  */
 export function RewindSettingsSummary({ saved, zone, llmDisabled, discordBotOn, budget, spent, libraries }: RewindSettingsSummaryProps) {
   const libraryNames = saved.rewindExcludedSectionIds.map((id) => libraries?.find((library) => library.id === id)?.name ?? `Library ${id}`)

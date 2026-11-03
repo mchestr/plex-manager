@@ -103,12 +103,13 @@ describe("runChatbotForUser result", () => {
     })
   })
 
-  it("answers that the assistant is off without a conversation or a tool log", async () => {
+  it("answers that the assistant is off, and where an admin turns it on, without a conversation or a tool log", async () => {
     prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: true }))
 
     const run = await runChatbotForUser({ userId: "user-1", messages, format: FORMAT })
 
     expect(run).toEqual({ response: { success: true, message: expect.objectContaining({ content: expect.stringContaining("The assistant is off") }) } })
+    expect(run.response.message?.content).toContain("in Admin, AI, Settings.")
     expect(prismaMock.chatConversation.create).not.toHaveBeenCalled()
   })
 })

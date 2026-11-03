@@ -177,7 +177,7 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
           success: true,
           message: {
             role: "assistant",
-            content: "The assistant is off. An admin must turn on AI features and select a chat model in Settings.",
+            content: "The assistant is off. An admin must turn on AI features and select a chat model in Admin, AI, Settings.",
             timestamp: Date.now(),
           },
         },

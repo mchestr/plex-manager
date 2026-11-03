@@ -1,7 +1,8 @@
 /**
  * The AI section's third purpose: a Conversation review tab whose only part
  * is the judge's provider form, saved through its own action. The judge's
- * spend cap is edited in the Conversation review section, not here.
+ * spend cap is edited in the Conversation review section, not here. The
+ * Rewind generation tab points to the Rewind settings tab for the rest.
  */
 
 import { render, screen, waitFor } from '@testing-library/react'
@@ -107,7 +108,7 @@ describe('AI section, Conversation review tab', () => {
     expect(screen.queryByTestId('llm-spend-caps-form')).not.toBeInTheDocument()
     expect(screen.queryByTestId('llm-provider-form-chat')).not.toBeInTheDocument()
     expect(screen.queryByTestId('llm-provider-form-wrapped')).not.toBeInTheDocument()
-    expect(panel).not.toHaveTextContent('Set the LLM mode and season budget in the Rewind section.')
+    expect(panel).not.toHaveTextContent('Set the LLM mode and season budget on the Rewind settings tab.')
   })
 
   it('selecting settings-ai-tab-judge shows the judge provider form', async () => {
@@ -123,5 +124,16 @@ describe('AI section, Conversation review tab', () => {
     expect(screen.getByTestId('settings-ai-tab-judge')).toHaveAttribute('aria-selected', 'true')
     // The Admin assistant's panel leaves once its exit settles
     await waitFor(() => expect(screen.queryByTestId('llm-provider-form-chat')).not.toBeInTheDocument())
+  })
+})
+
+describe('AI section, Rewind generation tab', () => {
+  it('points to the Rewind settings tab for the LLM mode and season budget', async () => {
+    const user = userEvent.setup()
+    renderSection()
+
+    await user.click(screen.getByRole('tab', { name: 'Rewind generation' }))
+
+    expect(await screen.findByRole('tabpanel')).toHaveTextContent('Set the LLM mode and season budget on the Rewind settings tab.')
   })
 })

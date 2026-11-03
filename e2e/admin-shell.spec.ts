@@ -4,24 +4,20 @@ import { WAIT_TIMEOUTS } from './helpers/test-utils';
 
 /**
  * The AdminShell (P6.1, ui-design-system 6.2): on a phone the top bar opens
- * the assistant page, each tab is the element under its own centre, and
- * nothing scrolls sideways; on desktop every sidebar link opens its page and
- * marks itself current.
+ * the assistant page, each tab is the element under its own centre, nothing
+ * scrolls sideways and More is the one menu; on desktop every sidebar link
+ * opens its page and marks itself current.
  */
 const CHAT_PROVIDER_ID = 'e2e-admin-shell-chat';
 
 const SIDEBAR_LINKS: Array<[testId: string, path: RegExp]> = [
   ['admin-nav-assistant', /\/admin\/assistant$/],
-  ['admin-nav-users', /\/admin\/users$/],
-  ['admin-nav-invites', /\/admin\/invites$/],
+  ['admin-nav-members', /\/admin\/users$/],
   ['admin-nav-announcements', /\/admin\/announcements$/],
+  ['admin-nav-rewind', /\/admin\/rewind$/],
   ['admin-nav-discord', /\/admin\/discord$/],
-  ['admin-nav-season', /\/admin\/rewind$/],
-  ['admin-nav-playground', /\/admin\/rewind\/playground$/],
-  ['admin-nav-share-analytics', /\/admin\/shares$/],
-  ['admin-nav-ai-activity', /\/admin\/ai$/],
-  ['admin-nav-cost-analysis', /\/admin\/cost-analysis$/],
-  ['admin-nav-queues', /\/admin\/queues$/],
+  ['admin-nav-ai', /\/admin\/ai$/],
+  ['admin-nav-automations', /\/admin\/watchlist$/],
   ['admin-nav-settings', /\/admin\/settings$/],
 ];
 
@@ -48,6 +44,8 @@ test.describe('Admin shell', () => {
     await page.goto('/admin/users');
     await expect(page.getByTestId('admin-tab-bar')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(page.getByTestId('admin-sidebar')).toBeHidden();
+    // More is the one phone menu: the top bar has no menu button of its own
+    await expect(page.getByTestId('admin-menu-button')).toHaveCount(0);
 
     await page.getByTestId('admin-assistant-link-mobile').click();
     await expect(page).toHaveURL(/\/admin\/assistant$/);
@@ -56,7 +54,7 @@ test.describe('Admin shell', () => {
     await page.goto('/admin/users');
     await expect(page.getByTestId('admin-tab-bar')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
-    for (const id of ['overview', 'users', 'rewind', 'settings', 'more']) {
+    for (const id of ['overview', 'members', 'rewind', 'automations', 'more']) {
       const tab = page.getByTestId(`admin-tab-${id}`);
       const box = await tab.boundingBox();
       expect(box, `admin-tab-${id} has a box`).not.toBeNull();
@@ -69,10 +67,12 @@ test.describe('Admin shell', () => {
 
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 
+    // Settings is no tab: it opens from More, which lists every item
+    await expect(page.getByTestId('admin-tab-settings')).toHaveCount(0);
     await page.getByTestId('admin-tab-more').click();
     await expect(page.getByTestId('admin-more-sheet')).toBeVisible();
-    await page.getByTestId('admin-nav-queues-mobile').click();
-    await expect(page).toHaveURL(/\/admin\/queues$/);
+    await page.getByTestId('admin-nav-settings-mobile').click();
+    await expect(page).toHaveURL(/\/admin\/settings$/);
     await expect(page.getByTestId('admin-more-sheet')).toBeHidden();
   });
 

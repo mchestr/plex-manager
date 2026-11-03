@@ -143,7 +143,27 @@ export function auditEvent(id: string): Route {
   return `/admin/audit/${seg(id)}` as Route
 }
 
-/** One section of the settings page, by its anchor id. */
+/**
+ * The settings sections that moved to their feature's own page, by section id (one per line, in alphabetical
+ * order); every other id is still a section of Settings.
+ */
+const SETTINGS_HOMES: Partial<Record<string, Route>> = {
+  ai: "/admin/ai/settings",
+  assistant: "/admin/ai/settings",
+  "channel-stats": "/admin/discord/settings",
+  "conversation-review": "/admin/ai/settings",
+  discord: "/admin/discord/settings",
+  "request-tiers": "/admin/request-limits",
+  rewind: "/admin/rewind/settings",
+}
+
+/** The page a settings section moved to; `null` for a section still on the settings page, and for any other id. */
+export function movedSettingsHome(id: string): Route | null {
+  // Own keys only: an id such as "constructor" is a section, not a member inherited from Object
+  return (Object.hasOwn(SETTINGS_HOMES, id) ? SETTINGS_HOMES[id] : undefined) ?? null
+}
+
+/** One section of the settings, on the page it lives on: its feature's page once moved, else its anchor on the settings page. */
 export function settingsSection(id: string): Route {
-  return `/admin/settings#${seg(id)}` as Route
+  return movedSettingsHome(id) ?? (`/admin/settings#${seg(id)}` as Route)
 }

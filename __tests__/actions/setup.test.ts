@@ -321,6 +321,13 @@ describe('saveDiscordIntegration', () => {
     })
     expect(prismaMock.$transaction).not.toHaveBeenCalled()
   })
+
+  it('refreshes the Discord settings page, which holds the integration now, and not Settings', async () => {
+    await saveDiscordIntegration({ isEnabled: false })
+
+    expect(revalidatePath).toHaveBeenCalledWith('/admin/discord/settings')
+    expect(revalidatePath).not.toHaveBeenCalledWith('/admin/settings')
+  })
 })
 
 describe('completeSetup', () => {

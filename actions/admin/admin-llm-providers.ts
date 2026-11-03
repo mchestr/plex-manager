@@ -209,7 +209,7 @@ async function updateLLMProviderForPurpose(
     to: { provider: validated.provider, model: validated.model },
   })
 
-  revalidatePath("/admin/settings")
+  revalidatePath("/admin/ai/settings")
   return ok(null)
 }
 

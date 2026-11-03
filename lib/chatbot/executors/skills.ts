@@ -41,7 +41,7 @@ const fileArgs = z.object({ skill: z.string().trim().min(1).max(64), path: z.str
 const INVALID_ARGUMENTS = "Error: Invalid tool arguments"
 // "In a minute": a failed catalogue load is remembered for 30 seconds, and a rate-limited read for 60
 const UNAVAILABLE = JSON.stringify({ error: "The skills could not be read from GitHub right now. Try again in a minute." })
-const NOT_CONFIGURED = JSON.stringify({ error: "No skills are configured. Add a skill source in Settings, Assistant sources." })
+const NOT_CONFIGURED = JSON.stringify({ error: "No skills are configured. Add a skill source in Admin, AI, Settings, Assistant sources." })
 const SKILL_NOT_FOUND = JSON.stringify({ error: "That skill was not found." })
 const FILE_NOT_FOUND = JSON.stringify({ error: "That file was not found in the skill." })
 const FILE_UNREADABLE = JSON.stringify({ error: "Could not read that file from GitHub." })

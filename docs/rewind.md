@@ -62,8 +62,8 @@ production image digest and the freeze exceptions) and `model-selection.md`
 
 | What | Where |
 | --- | --- |
-| Season console: preflight, counts, budget, actions, member table | `/admin/rewind` (Admin nav, Rewind, Season); `app/admin/rewind/page.tsx` |
-| Rewind settings, every flag below | `/admin/settings#rewind`; `components/admin/settings/rewind-settings-section.tsx` |
+| Season console: preflight, counts, budget, actions, member table | `/admin/rewind` (Admin nav, Rewind, Season); `app/admin/(rewind)/rewind/page.tsx` |
+| Rewind settings, every flag below | `/admin/rewind/settings` (Admin nav, Rewind, Settings); `app/admin/(rewind)/rewind/settings/page.tsx`, `components/admin/settings/rewind-settings-section.tsx` |
 | The flags' rules | `lib/validations/rewind-settings.ts` |
 | Season dates, the season year | `lib/wrapped/season.ts` |
 | Preflight rows | `lib/wrapped/admin/preflight.ts` |
@@ -83,11 +83,11 @@ BullMQ's default `bull:` prefix, for example
 
 ## Flags
 
-Every flag is a field on `Config`, edited in the Rewind section of
-`/admin/settings`. A save writes only the changed fields, logs one
-`CONFIG_CHANGED` audit entry with a field-level diff, and takes effect on the
-next request. Fields marked "next generation" change no stored issue until it
-is generated again.
+Every flag is a field on `Config`, edited on the Settings tab of the Rewind
+section (`/admin/rewind/settings`). A save writes only the changed fields,
+logs one `CONFIG_CHANGED` audit entry with a field-level diff, and takes
+effect on the next request. Fields marked "next generation" change no stored
+issue until it is generated again.
 
 | Setting | Field | Default | Effect |
 | --- | --- | --- | --- |
@@ -117,7 +117,7 @@ install stored it off, the console's Regenerate is refused; set it back with
 and off on a fresh `Config`. They share `rewindDisabledPages`: a feature is on
 only while the list holds `+<key>` and not the plain `<key>` (the plain key
 beside it switches it off again), so a deploy never turns one on by itself.
-The "Opt-in features" checkboxes in the Rewind section (Edit, then
+The "Opt-in features" checkboxes in Rewind settings (Edit, then
 Save changes) write or remove the `+` entry, audited as `CONFIG_CHANGED`. Turn each on in production
 only after checking it on the heavy test member, and record the enable, with
 the date and the check, in `ship-check.md`. A flag that misbehaves stays off.

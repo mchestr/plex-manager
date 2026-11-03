@@ -1,8 +1,7 @@
 /**
- * The admin sidebar's invite badge counts admin invites that can still be
- * redeemed, never a member's affiliate invite; the affiliates badge counts
- * PENDING applications. The failed-job count asks Redis, and is null when
- * Redis is unset, not ready, slow or failing.
+ * The admin sidebar's counts: members and PENDING affiliate applications from
+ * the database (invites have no badge, so none are counted). The failed-job
+ * count asks Redis, and is null when Redis is unset, not ready, slow or failing.
  */
 
 import { mockReset } from 'jest-mock-extended'
@@ -26,14 +25,13 @@ beforeEach(() => {
   jest.mocked(isRedisConfigured).mockReturnValue(false)
   jest.mocked(readyWithin).mockResolvedValue(true)
   prismaMock.user.count.mockResolvedValue(7)
-  prismaMock.invite.count.mockResolvedValue(3)
   prismaMock.affiliateApplication.count.mockResolvedValue(2)
 })
 
-it('counts only active admin invites for the badge, and the pending applications', async () => {
-  await expect(getAdminNavCounts()).resolves.toEqual({ users: 7, activeInvites: 3, pendingAffiliates: 2, failedJobs: null })
-  expect(prismaMock.invite.count.mock.calls[0][0]?.where).toMatchObject({ kind: 'ADMIN' })
+it('counts the members and the pending applications, and no longer the invites', async () => {
+  await expect(getAdminNavCounts()).resolves.toStrictEqual({ users: 7, pendingAffiliates: 2, failedJobs: null })
   expect(prismaMock.affiliateApplication.count).toHaveBeenCalledWith({ where: { status: 'PENDING' } })
+  expect(prismaMock.invite.count).not.toHaveBeenCalled()
 })
 
 describe('failed jobs', () => {

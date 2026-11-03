@@ -2,9 +2,10 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 
+import { leaveIsGuarded } from '@/__tests__/helpers/leave-guard'
 import { FormField } from '@/components/ui/form-field'
 import { Input } from '@/components/ui/input'
-import { SettingsEditProvider, useSettingsEdit } from '@/components/ui/settings-edit-context'
+import { SettingsEditProvider } from '@/components/ui/settings-edit-context'
 import { SettingsSection, type TestResult } from '@/components/ui/settings-section'
 import { useSettingsForm, type SettingsFormState } from '@/hooks/admin/use-settings-form'
 
@@ -248,7 +249,7 @@ describe('SettingsSection', () => {
     expect(await screen.findByTestId('settings-tautulli-discard-dialog')).toBeInTheDocument()
   })
 
-  it('a dirty form stays open and shows the pip and the reason, and still submits when blocked so the server can refuse it too', () => {
+  it('a dirty form stays open and shows the pip and the reason, and still submits when blocked so the server can refuse it too', async () => {
     const form = formState({ isDirty: true, blockedReason: 'Enter the API key to test or save' })
     renderSection(form, jest.fn())
 
@@ -258,7 +259,10 @@ describe('SettingsSection', () => {
     expect(screen.getByTestId('settings-tautulli-test')).toBeDisabled()
     expect(screen.getByTestId('settings-tautulli-save')).toBeDisabled()
 
-    screen.getByRole<HTMLFormElement>('form').requestSubmit()
+    // The save settles after the submit, and the section leaves edit mode when it does
+    await act(async () => {
+      screen.getByRole<HTMLFormElement>('form').requestSubmit()
+    })
 
     expect(form.onSave).toHaveBeenCalledTimes(1)
   })
@@ -415,27 +419,28 @@ describe('SettingsSection', () => {
     expect(screen.getByRole('form', { name: 'AI provider' })).toHaveFocus()
   })
 
-  it('opens from elsewhere on the page and focuses the requested control', async () => {
+  it('opens on the control a link in its view names', async () => {
     const user = userEvent.setup()
-    function Link() {
-      const requestEdit = useSettingsEdit()
-      return (
-        <a href="#zone" onClick={() => requestEdit?.('system', { focus: '[aria-label="Zone"]' })}>
-          Change the server time zone
-        </a>
-      )
-    }
     render(
       <SettingsEditProvider onDirtyChange={jest.fn()}>
-        <Link />
-        <SettingsSection id="system" title="System information" description="Runtime" form={formState()} view={<p>UTC</p>}>
+        <SettingsSection
+          id="system"
+          title="System information"
+          description="Runtime"
+          form={formState()}
+          view={(edit) => (
+            <a href="#zone" onClick={() => edit({ focus: '[aria-label="Zone"]' })}>
+              Re-enter the zone
+            </a>
+          )}
+        >
           <input aria-label="Other" />
           <input aria-label="Zone" />
         </SettingsSection>
       </SettingsEditProvider>
     )
 
-    await user.click(screen.getByRole('link', { name: 'Change the server time zone' }))
+    await user.click(screen.getByRole('link', { name: 'Re-enter the zone' }))
 
     expect(screen.getByRole('textbox', { name: 'Zone' })).toHaveFocus()
   })
@@ -474,5 +479,59 @@ describe('SettingsSection', () => {
     })
     expect(screen.queryByTestId('settings-tautulli-discard-dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('form')).toBeInTheDocument()
+  })
+
+  describe('the browser leave prompt', () => {
+    it('stand-alone, asks while the form has unsaved changes', () => {
+      renderSection(formState({ isDirty: true }))
+
+      expect(leaveIsGuarded()).toBe(true)
+    })
+
+    it('stand-alone, does not ask while nothing is changed, read-only or open for editing', async () => {
+      const user = userEvent.setup()
+      renderSection(formState())
+      expect(leaveIsGuarded()).toBe(false)
+
+      await user.click(screen.getByTestId('settings-tautulli-edit'))
+
+      expect(screen.getByRole('form', { name: 'Tautulli' })).toBeInTheDocument()
+      expect(leaveIsGuarded()).toBe(false)
+    })
+
+    it('stand-alone, stops asking once the changes are typed away', async () => {
+      const user = userEvent.setup()
+      render(<LiveSection />)
+
+      await user.click(screen.getByTestId('settings-tautulli-edit'))
+      await user.type(screen.getByRole('textbox', { name: 'Tautulli name' }), 'x')
+      expect(leaveIsGuarded()).toBe(true)
+
+      await user.keyboard('{Backspace}')
+      expect(leaveIsGuarded()).toBe(false)
+    })
+
+    it('stand-alone, stops asking when the section unmounts with unsaved changes', () => {
+      const { unmount } = renderSection(formState({ isDirty: true }))
+      expect(leaveIsGuarded()).toBe(true)
+
+      unmount()
+
+      expect(leaveIsGuarded()).toBe(false)
+    })
+
+    it('inside the settings page provider, reports to the page and leaves the one listener to its layout', () => {
+      const onDirtyChange = jest.fn()
+      render(
+        <SettingsEditProvider onDirtyChange={onDirtyChange}>
+          <SettingsSection id="plex" title="Plex" description="Server" form={formState({ isDirty: true })}>
+            <span />
+          </SettingsSection>
+        </SettingsEditProvider>
+      )
+
+      expect(onDirtyChange).toHaveBeenLastCalledWith('plex', true)
+      expect(leaveIsGuarded()).toBe(false)
+    })
   })
 })

@@ -121,7 +121,7 @@ export const saveDiscordIntegration = setupAction({
     auditSetupSave(actor, "discord", row, ["clientSecret", "botToken"])
     revalidatePath("/setup")
     revalidatePath("/discord/link")
-    revalidatePath("/admin/settings")
+    revalidatePath("/admin/discord/settings")
     return ok(null)
   },
 })

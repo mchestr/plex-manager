@@ -13,6 +13,7 @@ import type { LLMProvider } from '@/lib/generated/prisma/client'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 import { consume } from '@/lib/security/rate-limit'
 import { getServerSession } from 'next-auth'
+import { revalidatePath } from 'next/cache'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
@@ -209,6 +210,19 @@ describe('admin only, audited, rate-limited', () => {
       to: { provider: 'openai', model: 'gpt-6-sol' },
     })
     expect(JSON.stringify((logAuditEvent as jest.Mock).mock.calls)).not.toContain('sk-new-secret')
+  })
+
+  it.each([
+    ['chat', updateChatLLMProvider],
+    ['Rewind', updateWrappedLLMProvider],
+    ['conversation review', updateJudgeLLMProvider],
+  ])('refreshes the AI settings page, where the %s provider is edited', async (_purpose, save) => {
+    prismaMock.lLMProvider.findFirst.mockResolvedValue(null)
+
+    const result = await save({ provider: 'anthropic', apiKey: 'ant-key', model: 'claude-sonnet-5-5' })
+
+    expect(result).toEqual({ success: true, data: null })
+    expect(revalidatePath).toHaveBeenCalledWith('/admin/ai/settings')
   })
 
   it('stops when the rate limit is spent', async () => {

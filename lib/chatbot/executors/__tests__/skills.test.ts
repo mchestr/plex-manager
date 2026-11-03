@@ -25,7 +25,7 @@ jest.mock("@/lib/utils/logger", () => ({
 
 const SHA = "c".repeat(40)
 const COULD_NOT_READ = { error: "The skills could not be read from GitHub right now. Try again in a minute." }
-const NOT_CONFIGURED = { error: "No skills are configured. Add a skill source in Settings, Assistant sources." }
+const NOT_CONFIGURED = { error: "No skills are configured. Add a skill source in Admin, AI, Settings, Assistant sources." }
 const SKILL_NOT_FOUND = { error: "That skill was not found." }
 const FILE_NOT_FOUND = { error: "That file was not found in the skill." }
 const FILE_UNREADABLE = { error: "Could not read that file from GitHub." }

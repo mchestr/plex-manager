@@ -9,8 +9,6 @@ import userEvent from '@testing-library/user-event'
 import { updateServerTimeZone } from '@/actions/admin/admin-config'
 import type { ServerTimeZone } from '@/components/admin/settings/server-time-zone-form'
 import { TimeZoneSection } from '@/components/admin/settings/sections/time-zone-section'
-import { Button } from '@/components/ui/button'
-import { SettingsEditProvider, useSettingsEdit } from '@/components/ui/settings-edit-context'
 
 jest.mock('@/actions/admin/admin-config', () => ({ updateServerTimeZone: jest.fn() }))
 // A short zone list: the picker renders every IANA zone, which takes seconds per test in jsdom
@@ -189,23 +187,5 @@ describe('TimeZoneSection', () => {
 
     await user.click(screen.getByTestId('settings-time-zone-save'))
     expect(updateServerTimeZone).toHaveBeenCalledWith('Europe/Berlin')
-  })
-
-  it("Rewind's link opens the section on the picker", async () => {
-    const user = userEvent.setup()
-    function RewindLink() {
-      const requestEdit = useSettingsEdit()
-      return <Button onClick={() => requestEdit?.('time-zone', { focus: '[data-testid="server-time-zone-select"]' })}>Change the server time zone</Button>
-    }
-    render(
-      <SettingsEditProvider onDirtyChange={jest.fn()}>
-        <RewindLink />
-        <TimeZone />
-      </SettingsEditProvider>
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Change the server time zone' }))
-
-    expect(screen.getByRole('combobox', { name: 'Server time zone' })).toHaveFocus()
   })
 })

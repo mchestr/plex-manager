@@ -1,5 +1,5 @@
 /**
- * The service form (P10.20, SEC-31) in its two homes. A Media section opens
+ * The service form (P10.20, SEC-31) in its two homes. A Plex, Tautulli or Overseerr section opens
  * read-only, with the saved key described and never shown, and Edit opens the
  * fields: there a changed origin blocks Test and Save until a key is typed,
  * the same origin with a new path does not, Test runs the typed values, and

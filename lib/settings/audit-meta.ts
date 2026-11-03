@@ -22,7 +22,8 @@
  * `watchlist` the same way through `getWatchlistLastSaved()`.
  *
  * The lookups go out as one batched transaction, then one read of the actors'
- * names. Details are never returned, only the time and the name.
+ * names. Details are never returned, only the time, the name and the audit
+ * event's id, which links the save to its event on the audit log.
  *
  * @module lib/settings/audit-meta
  */
@@ -53,6 +54,8 @@ type SettingsAuditSection = keyof typeof SECTIONS
 export interface LastSaved {
   at: Date
   by: string
+  /** The audit event that recorded the save, for `/admin/audit/<eventId>`. */
+  eventId: string
 }
 
 export type SettingsAuditMeta = Record<SettingsAuditSection, LastSaved | null>
@@ -70,7 +73,7 @@ async function newestSaves(groups: readonly (readonly string[])[]): Promise<(Las
           OR: sections.map((section) => ({ details: { path: ["section"], equals: section } })),
         },
         orderBy: { createdAt: "desc" },
-        select: { actorUserId: true, createdAt: true },
+        select: { id: true, actorUserId: true, createdAt: true },
       })
     )
   )
@@ -81,7 +84,7 @@ async function newestSaves(groups: readonly (readonly string[])[]): Promise<(Las
     : []
   const nameOf = new Map(actors.map((actor) => [actor.id, actor.name || actor.email || "an admin"]))
 
-  return rows.map((row) => (row ? { at: row.createdAt, by: nameOf.get(row.actorUserId) ?? "an admin" } : null))
+  return rows.map((row) => (row ? { at: row.createdAt, by: nameOf.get(row.actorUserId) ?? "an admin", eventId: row.id } : null))
 }
 
 /** The newest save of every settings section, or null for a section never saved. */

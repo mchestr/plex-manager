@@ -6,7 +6,7 @@ import { WAIT_TIMEOUTS } from '../helpers/test-utils';
 import { MOCK_USERS_TABLE } from '../mocks/tautulli-server';
 
 /**
- * Inactive members (`/admin/inactivity`), under Community: the settings card
+ * Inactive members (`/admin/inactivity`), a tab of Automations: the settings card
  * opens read-only and saves through Edit; Run now reads last seen from the
  * mock Tautulli (`e2e/mocks/tautulli-server.ts`, `get_users_table`) and each
  * member page shows what the read found; while automatic removal is on and
@@ -102,13 +102,16 @@ test.describe('Admin inactive members', () => {
     }
   });
 
-  test('the sidebar reaches it under Community', async ({ adminPage: page }) => {
+  test('Automations reaches it through its Inactive members tab', async ({ adminPage: page }) => {
     await page.goto('/admin');
-    const link = page.getByTestId('admin-sidebar').getByTestId('admin-nav-inactivity').first();
+    const link = page.getByTestId('admin-sidebar').getByTestId('admin-nav-automations').first();
     await link.click();
+    await expect(page).toHaveURL(/\/admin\/watchlist$/);
+    await page.getByTestId('admin-section-tab-inactivity').click();
     await expect(page).toHaveURL(/\/admin\/inactivity$/);
     await expect(page.getByTestId('admin-inactivity-header')).toContainText('Inactive members');
     await expect(link).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByTestId('admin-section-tab-inactivity')).toHaveAttribute('aria-selected', 'true');
   });
 
   test('the settings card shows the saved settings, and saves new days through Edit', async ({ adminPage: page }) => {

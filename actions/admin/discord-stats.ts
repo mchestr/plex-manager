@@ -43,7 +43,7 @@ export const updateChannelStatsSettings = adminAction({
     })
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("discord.stats", before, values))
-    revalidatePath("/admin/settings")
+    revalidatePath("/admin/discord/settings")
 
     const schedule = await ensureChannelStatsSchedule()
     if (!schedule.ok) {
@@ -65,7 +65,7 @@ export const runChannelStatsNow = adminAction({
       return ok({ queued: true })
     }
     await runChannelStats("admin", { signal: AbortSignal.timeout(20_000) })
-    revalidatePath("/admin/settings")
+    revalidatePath("/admin/discord/settings")
     return ok({ queued: false })
   },
 })

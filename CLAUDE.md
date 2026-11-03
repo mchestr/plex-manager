@@ -50,7 +50,14 @@ app/                     # Next.js App Router (pages, layouts, routes)
 │   ├── invites/        # Affiliate invites: apply, make, copy and cancel invites (a 404 while the switch is off)
 │   ├── membership/     # Stripe membership (when enabled)
 │   └── rewind/         # Rewind: /rewind, /rewind/[year] (story), /rewind/[year]/read (article), the scope layout
-├── admin/              # Admin pages: overview, assistant, users, invites, watchlist sync, inactive members, settings, rewind, queues, AI activity, audit log
+├── admin/              # Admin pages, one folder per item of lib/admin/nav.ts
+│   ├── (overview)/     # Overview
+│   ├── (members)/      # Members: users, invites, affiliates
+│   ├── (rewind)/       # Rewind: season, playground, shares, Rewind settings
+│   ├── discord/        # Discord: activity, settings (a segment, not a route group; its layout draws the tabs)
+│   ├── (ai)/           # AI: activity, cost analysis, AI settings
+│   ├── (automations)/  # Automations: watchlist sync, inactive members, request limits, queues
+│   └── …               # Single pages (assistant, announcements, audit, settings) and wrapped/, a stored Rewind's history
 ├── api/                # API routes (webhooks, health, metrics, admin search, Rewind cards and posters)
 ├── auth/               # Plex sign-in callback, access denied and auth error pages (sign-in itself is on /)
 ├── dev/                # Development-only UI sheet
@@ -115,6 +122,13 @@ evals/                  # Rewind golden fixtures and eval harness (evals/rewind/
 types/                  # TypeScript type definitions (admin.ts, onboarding.ts, setup.ts, wrapped.ts, ...)
 prisma/                # Database schema and migrations
 ```
+
+### Admin navigation
+- `lib/admin/nav.ts` is the one list: the sidebar, the mobile tab bar, page titles, the command menu's "Go to" entries (each page, then each of its tabs as "Page › Tab") and each item's tab strip (`children`, drawn by `SectionTabs` in the layout of the item's route group or segment, which is `export default sectionLayout("<id>")` from `components/admin/section-layout.tsx`) all read it
+- A feature's controls live on the feature's own page, as its `…/settings` tab; `/admin/settings` holds only connections, billing and system
+- The sidebar budget is ten items: a new feature adds a tab (`children`) or a row to an existing page before it adds an item
+- Sibling routes keep their URLs through a route group per section (`app/admin/(<section>)/`); `also` lights the item on their paths
+- `settingsSection(id)` in `lib/admin/routes.ts` maps a settings section id to the page it lives on; link to a section through it, never to `/admin/settings#…`
 
 ## Code Style & Conventions
 

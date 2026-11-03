@@ -49,7 +49,7 @@ interface AssistantWorkspaceProps {
   conversation: AssistantConversation | null
   /** The server's render time, for the history's date groups and which messages show their date. */
   now: number
-  /** An admin can turn the assistant on in Settings; a role has to ask one. */
+  /** An admin can turn the assistant on in AI settings; a role has to ask one. */
   canConfigure: boolean
 }
 

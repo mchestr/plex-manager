@@ -22,13 +22,13 @@ test.describe('Admin Functionality', () => {
     await expect(adminPage.getByTestId('settings-plex-section')).toBeVisible();
     await adminPage.getByTestId('settings-nav-system').click();
     await expect(adminPage.getByTestId('settings-system-section')).toBeVisible();
-    await adminPage.getByTestId('settings-nav-ai').click();
-    await expect(adminPage.getByTestId('settings-ai-section')).toBeVisible();
   });
 
   test('should access admin users list', async ({ adminPage }) => {
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-users').first().click();
+    // Members opens on its Users tab
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first().click();
     await expect(adminPage.getByTestId('admin-users-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('admin-section-tab-users')).toHaveAttribute('aria-selected', 'true');
 
     // Every filter defaults to All (P10.18, UI-05), so both seeded users are listed.
     // Scoped to the rows: the admin sidebar shows the signed-in admin's name too
@@ -41,33 +41,61 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin cost analysis', async ({ adminPage }) => {
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-cost-analysis').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-ai').first().click();
+    await adminPage.getByTestId('admin-section-tab-ai-cost').click();
     await expect(adminPage.getByTestId('admin-cost-analysis-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    // Cost analysis sits beside AI activity, not below it, and still lights the AI item
+    await expect(adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-ai').first()).toHaveAttribute('aria-current', 'page');
   });
 
   test('should access admin AI activity', async ({ adminPage }) => {
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-ai-activity').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-ai').first().click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
     await expect(adminPage.getByTestId('admin-ai-activity-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
   });
 
+  test('should access admin AI settings', async ({ adminPage }) => {
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-ai').first().click();
+    await adminPage.getByTestId('admin-section-tab-ai-settings').click();
+    await expect(adminPage).toHaveURL(/\/admin\/ai\/settings$/, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('admin-ai-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    // The three sections that were the settings page's AI group
+    await expect(adminPage.getByTestId('settings-ai-section')).toBeVisible();
+    await expect(adminPage.getByTestId('settings-conversation-review-section')).toBeVisible();
+    await expect(adminPage.getByTestId('settings-assistant-section')).toBeVisible();
+  });
+
   test('should access admin playground', async ({ adminPage }) => {
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-playground').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-rewind').first().click();
+    await adminPage.getByTestId('admin-section-tab-playground').click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
     await expect(adminPage.getByTestId('admin-rewind-playground-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
   });
 
   test('should access admin invites', async ({ adminPage }) => {
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-invites').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first().click();
+    await adminPage.getByTestId('admin-section-tab-invites').click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
     await expect(adminPage.getByTestId('admin-invites-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    // Invites sits beside Users, not below it, and still lights the Members item
+    await expect(adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first()).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('should access admin affiliates', async ({ adminPage }) => {
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first().click();
+    await adminPage.getByTestId('admin-section-tab-affiliates').click();
+    await expect(adminPage).toHaveURL(/\/admin\/affiliates$/, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('admin-affiliates-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    await expect(adminPage.getByTestId('admin-section-tab-affiliates')).toHaveAttribute('aria-selected', 'true');
+    await expect(adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first()).toHaveAttribute('aria-current', 'page');
   });
 
   test('should access admin shares', async ({ adminPage }) => {
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-share-analytics').first().click();
+    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-rewind').first().click();
+    await adminPage.getByTestId('admin-section-tab-shares').click();
     await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.EXTENDED_OPERATION);
     await verifyPageAccessible(adminPage);
     await expect(adminPage.getByTestId('admin-shares-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
@@ -78,7 +106,7 @@ test.describe('Admin Functionality', () => {
     await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
     await expect(adminPage.getByTestId('admin-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
-    // Sonarr, Radarr and Jellyfin sit in the Media group
+    // Sonarr, Radarr and Jellyfin sit in the Connections group
     await adminPage.getByTestId('settings-nav-other').click();
 
     // Look for the Jellyfin login toggle - it should only be visible if Jellyfin is configured

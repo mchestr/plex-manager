@@ -1,10 +1,13 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import type { SettingsGroupId, SettingsNavItem } from "@/components/admin/settings/settings-groups"
 import { SettingsJumpTo, SettingsNav } from "@/components/admin/settings/settings-nav"
 import { SettingsEditProvider } from "@/components/ui/settings-edit-context"
+import { useLeaveGuard } from "@/hooks/use-leave-guard"
+import { movedSettingsHome } from "@/lib/admin/routes"
 
 /** The id of the topmost section in view, so the nav can mark it `aria-current`. */
 function useActiveSection(ids: string[]): [string | null, (id: string) => void] {
@@ -37,7 +40,7 @@ function useActiveSection(ids: string[]): [string | null, (id: string) => void] 
   return [active, setActive]
 }
 
-const ActiveGroupContext = createContext<SettingsGroupId>("media")
+const ActiveGroupContext = createContext<SettingsGroupId>("connections")
 
 /**
  * One group of sections. Every group stays mounted so an unsaved form keeps its
@@ -63,15 +66,19 @@ interface SettingsLayoutProps {
 /**
  * The settings page layout (ui-design-system 6.4): a 200px sticky section nav
  * beside a 760px column showing one `SettingsGroup`, and below `md` a sticky
- * "Jump to" Select. A hash, a nav link or any in-page `#anchor` link (such as
- * Rewind's `#time-zone`) reveals the group that holds its target.
+ * "Jump to" Select. A hash in the URL (a link from another page arrives with
+ * one, see `settingsSection`), a nav link or a bare `#anchor` link in a
+ * section reveals the group that holds its target. An old hash for a section
+ * that has since moved (a bookmark to `#rewind`) opens the page it lives on
+ * now (`movedSettingsHome`).
  * Sections report their dirty state here for the nav's pip, and while any
  * section has unsaved changes the browser asks before the page is left.
  */
 export function SettingsLayout({ items, children }: SettingsLayoutProps) {
+  const { replace } = useRouter()
   const [active, setActive] = useActiveSection(items.map((item) => item.id))
   const bodyRef = useRef<HTMLDivElement>(null)
-  const [group, setGroup] = useState<SettingsGroupId>(items[0]?.group ?? "media")
+  const [group, setGroup] = useState<SettingsGroupId>(items[0]?.group ?? "connections")
   const [jump, setJump] = useState<{ id: string; n: number } | null>(null)
 
   const reveal = useCallback(
@@ -109,7 +116,10 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
   useLayoutEffect(() => {
     const fromHash = () => {
       try {
-        reveal(decodeURIComponent(window.location.hash.slice(1)))
+        const id = decodeURIComponent(window.location.hash.slice(1))
+        const home = movedSettingsHome(id)
+        if (home) replace(home)
+        else reveal(id)
       } catch {
         // A malformed hash (`#%`) names no section
       }
@@ -117,9 +127,9 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
     fromHash()
     window.addEventListener("hashchange", fromHash)
     return () => window.removeEventListener("hashchange", fromHash)
-  }, [reveal])
+  }, [reveal, replace])
 
-  // An in-page `#anchor` link in the settings, such as Rewind's `#time-zone`, reveals its group first
+  // A bare `#anchor` link in a section reveals its group first
   useEffect(() => {
     const body = bodyRef.current
     if (!body) return
@@ -147,12 +157,7 @@ export function SettingsLayout({ items, children }: SettingsLayoutProps) {
 
   // A backstop for unsaved changes: the browser asks before the tab closes or reloads (MDN, beforeunload)
   const anyDirty = dirty.size > 0
-  useEffect(() => {
-    if (!anyDirty) return
-    const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault()
-    window.addEventListener("beforeunload", onBeforeUnload)
-    return () => window.removeEventListener("beforeunload", onBeforeUnload)
-  }, [anyDirty])
+  useLeaveGuard(anyDirty)
 
   return (
     <div className="flex flex-col gap-6 md:grid md:grid-cols-[200px_minmax(0,760px)] md:items-start md:gap-8" data-testid="settings-layout">

@@ -26,6 +26,9 @@ import { configDiff } from "@/lib/security/config-diff"
 import { requestTierSettingsSchema } from "@/lib/validations/request-tiers"
 import { userIdSchema } from "@/lib/validations/shared-schemas"
 
+/** The page that edits the tiers and shows the last run, the Request limits tab of Automations. */
+const PAGE = "/admin/request-limits"
+
 export const updateRequestTierSettings = adminAction({
   input: requestTierSettingsSchema,
   fallbackError: "Failed to update the request limits",
@@ -49,7 +52,7 @@ export const updateRequestTierSettings = adminAction({
     })
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("request-tiers", before, values))
-    revalidatePath("/admin/settings")
+    revalidatePath(PAGE)
     revalidatePath("/")
 
     const schedule = await ensureRequestTierSchedule()
@@ -72,7 +75,7 @@ export const runRequestTiersNow = adminAction({
       return ok({ queued: true })
     }
     await runRequestTierSync("admin", { signal: AbortSignal.timeout(20_000) })
-    revalidatePath("/admin/settings")
+    revalidatePath(PAGE)
     return ok({ queued: false })
   },
 })

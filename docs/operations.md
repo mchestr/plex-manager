@@ -503,7 +503,8 @@ with the current encryption key. Enter it again."). To recover:
   password manager). Nothing else is needed.
 - **Or enter the secrets again.** Clear `Config.encryptionCanary`
   (`UPDATE "Config" SET "encryptionCanary" = NULL;`) so the next boot writes a
-  new one under the current key, then re-enter each service key in Settings.
+  new one under the current key, then re-enter each service key in Admin →
+  Settings and each AI provider key in Admin → AI → Settings.
   Member Plex tokens refresh at each member's next sign-in; Discord links must
   be linked again; the Stripe keys and the Discord client secret and bot token
   are entered again in their sections. AI prompt text that cannot be read stays
@@ -511,14 +512,14 @@ with the current encryption key. Enter it again."). To recover:
 
 ## Members, roles and Jellyfin
 
-- **Admin roles**: roles set in Admin → Users stick. A sign-in only ever
+- **Admin roles**: roles set in Admin → Members → Users stick. A sign-in only ever
   promotes: the Plex server owner is always an admin, and so is a Jellyfin
   administrator, because Jellyfin has no owner. A sign-in never demotes anyone,
   so app admins demote members in the UI, and a Jellyfin lookup that fails (a
   timeout or a server error) keeps the stored role. The Plex server owner and
   the last admin cannot be demoted.
-- **Unsharing removes one server's share only**: Unshare in Admin → Users, the
-  inactivity sweep (Admin → Inactive members, see
+- **Unsharing removes one server's share only**: Unshare in Admin → Members → Users, the
+  inactivity sweep (Admin → Automations → Inactive members, see
   [inactive members](inactive-members.md)) and the Stripe access removal
   delete the member's share of the configured Plex server and nothing else. The member stays your plex.tv friend and keeps any
   other servers you share with them; remove those in Plex itself. A share that
@@ -526,7 +527,7 @@ with the current encryption key. Enter it again."). To recover:
   click settles. Managed Plex Home users have no share to remove and report
   "already removed".
 - **Ending sessions**: unsharing a member (also by the inactivity sweep),
-  demoting an admin, disabling an account (Admin → Users → a user → Disable
+  demoting an admin, disabling an account (Admin → Members → Users → a user → Disable
   account), removing a member and the Stripe access removal end that user's
   sessions within five minutes, when the
   session next checks the database. A disabled user cannot sign in with Plex or
@@ -561,7 +562,7 @@ with the current encryption key. Enter it again."). To recover:
   Jellyfin server, listed under the client "Plex Wrapped" and the device ID
   `plex-wrapped-server` (or your `JELLYFIN_DEVICE_ID`); a Jellyfin
   administrator can delete them in Dashboard → Devices.
-- **Watchlist sync**: turn it on and set the interval in Admin → Settings →
+- **Watchlist sync**: turn it on and set the interval in Admin → Automations →
   Watchlist sync. Each member must also turn it on in the card on their home
   page; nothing syncs while either is off, whoever starts the run. Requests are
   filed as the member's own Overseerr user, matched by Plex account ID, so each

@@ -12,7 +12,7 @@
  *   ├─ Prepare or a generation still running ─────────► re-check every 10 minutes, until 12:00
  *   │                                                     then STILL_GENERATING
  *   ├─ the season-open Prepare did not complete ──────► NOT_PREPARED: the owner checks and switches
- *   ├─ a member's Rewind failed ──────────────────────► FAILURES: Retry failed, then switch in Settings
+ *   ├─ a member's Rewind failed ──────────────────────► FAILURES: Retry failed, then switch in Rewind settings
  *   └─ otherwise ──────────────────────────────────────► SWITCHED: audience all, CONFIG_CHANGED,
  *                                                         the ready notifications fan out (P7.14)
  * ```

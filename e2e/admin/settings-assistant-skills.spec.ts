@@ -5,7 +5,7 @@ import { createE2EPrismaClient } from '../helpers/prisma';
 import { WAIT_TIMEOUTS } from '../helpers/test-utils';
 
 /**
- * Settings, Assistant sources, Skills: add a skill source, open its Check
+ * AI, Settings, Assistant sources, Skills: add a skill source, open its Check
  * skills, then remove it through the Edit Sheet's confirm. The source is Off,
  * so nothing in the run reads GitHub for it: an Off row's Check skills shows
  * the off copy without calling `checkSkills`. `checkSkills` and the full-SHA
@@ -41,13 +41,13 @@ async function openSheet(trigger: Locator, sheet: Locator) {
   }).toPass();
 }
 
-test.describe('Settings: assistant skill sources', () => {
+test.describe('AI settings: assistant skill sources', () => {
   test.beforeAll(removeSource);
   test.afterAll(removeSource);
 
   test('admin adds, checks and removes a skill source', async ({ adminPage }) => {
-    // The hash reveals the AI group, which plain /admin/settings keeps hidden
-    await adminPage.goto('/admin/settings#assistant');
+    // Assistant sources live on the AI section's Settings tab
+    await adminPage.goto('/admin/ai/settings');
 
     // Add a source pinned to a commit, and Off
     const addSheet = adminPage.getByTestId('settings-skill-add-sheet');

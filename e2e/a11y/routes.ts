@@ -124,13 +124,18 @@ export const A11Y_ROUTES: A11yRoute[] = [
     },
   },
   { path: `/admin/invites/${VISUAL_INVITE_IDS.valid}`, as: 'admin', ready: 'admin-invite-header' },
+  // The section strip (Users, Invites, Affiliates) above the page's own tabs: two tablists on one page
+  { path: '/admin/affiliates', as: 'admin', ready: 'admin-affiliates-header' },
   { path: '/admin/announcements', as: 'admin', ready: 'admin-announcements-header' },
   { path: '/admin/watchlist', as: 'admin', ready: 'admin-watchlist-header' },
   { path: '/admin/inactivity', as: 'admin', ready: 'admin-inactivity-header' },
+  { path: '/admin/request-limits', as: 'admin', ready: 'admin-request-limits-header' },
   { path: '/admin/audit', as: 'admin', ready: 'admin-audit-header' },
   { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-header' },
   { path: '/admin/discord', as: 'admin', ready: 'discord-status' },
+  { path: '/admin/discord/settings', as: 'admin', ready: 'settings-discord-section' },
   { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },
+  { path: '/admin/rewind/settings', as: 'admin', ready: 'settings-rewind-section' },
   { path: '/admin/queues', as: 'admin', ready: 'queue-status' },
   { path: '/admin/settings', as: 'admin', ready: 'settings-plex-section' },
   // A section in edit mode: its form, Save and Cancel, beside the read-only sections
@@ -147,6 +152,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/admin/assistant', as: 'admin', ready: 'admin-chat-input' },
   { path: `/admin/assistant?conversation=${A11Y_CONVERSATION_ID}`, as: 'admin', ready: 'admin-chat-answer' },
   { path: '/admin/ai', as: 'admin', ready: 'admin-ai-activity-header' },
+  { path: '/admin/ai/settings', as: 'admin', ready: 'admin-ai-settings-header' },
   { path: '/admin/ai/visual-llm-usage-1', as: 'admin', ready: 'admin-ai-activity-detail-heading' },
   {
     path: `/admin/ai/conversation/${A11Y_CONVERSATION_ID}`,

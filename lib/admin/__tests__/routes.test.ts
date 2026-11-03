@@ -8,9 +8,11 @@ import {
   auditEvent,
   auditLog,
   invite,
+  movedSettingsHome,
   playgroundFor,
   publicInviteUrl,
   rewindHistory,
+  settingsSection,
   userDetail,
   userRewind,
 } from "@/lib/admin/routes"
@@ -76,9 +78,69 @@ describe("admin routes", () => {
     expect(auditEvent("e/1")).toBe("/admin/audit/e%2F1")
   })
 
+  it("sends a settings section to the page it lives on", () => {
+    expect(settingsSection("rewind")).toBe("/admin/rewind/settings")
+  })
+
+  it("sends Request limits to its own page under Automations", () => {
+    expect(settingsSection("request-tiers")).toBe("/admin/request-limits")
+  })
+
+  it("anchors a settings section that is still on the settings page, encoding its id", () => {
+    expect(settingsSection("tautulli")).toBe("/admin/settings#tautulli")
+    expect(settingsSection("stripe")).toBe("/admin/settings#stripe")
+    expect(settingsSection("a b/c")).toBe("/admin/settings#a%20b%2Fc")
+  })
+
+  it("sends the AI sections to the AI settings page, and the rest to their anchor on Settings", () => {
+    expect(settingsSection("ai")).toBe("/admin/ai/settings")
+    expect(settingsSection("assistant")).toBe("/admin/ai/settings")
+    expect(settingsSection("conversation-review")).toBe("/admin/ai/settings")
+    expect(settingsSection("tautulli")).toBe("/admin/settings#tautulli")
+    expect(settingsSection("time zone")).toBe("/admin/settings#time%20zone")
+  })
+
   it("builds the public invite link on an origin", () => {
     expect(publicInviteUrl("AUDIT2026", "https://plex.example.com")).toBe("https://plex.example.com/invite/AUDIT2026")
     expect(publicInviteUrl("AUDIT2026", "https://plex.example.com/")).toBe("https://plex.example.com/invite/AUDIT2026")
     expect(publicInviteUrl("A B", "http://localhost:3000")).toBe("http://localhost:3000/invite/A%20B")
+  })
+
+  it("sends the Discord settings sections to their own page", () => {
+    expect(settingsSection("discord")).toBe("/admin/discord/settings")
+    expect(settingsSection("channel-stats")).toBe("/admin/discord/settings")
+  })
+
+  it("keeps any other settings section on the Settings page, by its encoded anchor", () => {
+    expect(settingsSection("tautulli")).toBe("/admin/settings#tautulli")
+    expect(settingsSection("time-zone")).toBe("/admin/settings#time-zone")
+    expect(settingsSection("a b")).toBe("/admin/settings#a%20b")
+  })
+
+  it.each(["constructor", "toString", "hasOwnProperty", "__proto__"])("treats %s as a section id, never as a member inherited from Object", (id) => {
+    expect(settingsSection(id)).toBe(`/admin/settings#${id}`)
+  })
+})
+
+describe("movedSettingsHome", () => {
+  it.each([
+    ["ai", "/admin/ai/settings"],
+    ["assistant", "/admin/ai/settings"],
+    ["channel-stats", "/admin/discord/settings"],
+    ["conversation-review", "/admin/ai/settings"],
+    ["discord", "/admin/discord/settings"],
+    ["request-tiers", "/admin/request-limits"],
+    ["rewind", "/admin/rewind/settings"],
+  ])("sends the section %s that moved to %s", (id, home) => {
+    expect(movedSettingsHome(id)).toBe(home)
+    expect(settingsSection(id)).toBe(home)
+  })
+
+  it.each(["plex", "tautulli", "stripe", "time-zone", "system", "", "nowhere"])("has no new home for %j, which is a section of Settings or none", (id) => {
+    expect(movedSettingsHome(id)).toBeNull()
+  })
+
+  it.each(["constructor", "toString", "hasOwnProperty", "__proto__"])("has no new home for %s, which Object only inherits", (id) => {
+    expect(movedSettingsHome(id)).toBeNull()
   })
 })

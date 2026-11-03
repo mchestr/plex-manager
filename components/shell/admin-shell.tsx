@@ -14,16 +14,17 @@ export interface AdminShellProps extends AdminShellData {
 
 /**
  * The admin shell (ui-design-system 6.2, UI-04): the sidebar from `md`, the
- * mobile top bar and tab bar below it, the command menu (P10.16, mounted once
- * here) and the page's one `<main id="main">`. Below `md` the main pads past
- * the tab bar, so no content hides under it. The assistant is a page of its
- * own (`/admin/assistant`), reached from the nav.
+ * mobile top bar and tab bar below it (the tab bar's More is the phone's one
+ * nav menu), the command menu (P10.16, mounted once here) and the page's one
+ * `<main id="main">`. Below `md` the main pads past the tab bar, so no content
+ * hides under it. The assistant is a page of its own (`/admin/assistant`),
+ * reached from the nav.
  *
  * Immersive routes draw their own chrome, so the bars step aside there.
  */
-export function AdminShell({ serverName, user, navCounts, navIds, scoped, children }: AdminShellProps) {
+export function AdminShell({ serverName, user, navCounts, nav, scoped, children }: AdminShellProps) {
   return (
-    <AdminNavProvider ids={navIds} scoped={scoped}>
+    <AdminNavProvider nav={nav} scoped={scoped}>
       <CommandMenuProvider>
         <div className="flex min-h-dvh bg-background" data-testid="admin-shell">
           <AdminChrome>
@@ -31,7 +32,7 @@ export function AdminShell({ serverName, user, navCounts, navIds, scoped, childr
           </AdminChrome>
           <div className="flex min-w-0 flex-1 flex-col">
             <AdminChrome>
-              <AdminMobileBar serverName={serverName} navCounts={navCounts} />
+              <AdminMobileBar serverName={serverName} />
             </AdminChrome>
             {/* `main` fills the screen so a dialog over a short page sits on one stack of elements, which axe needs. */}
             <main

@@ -30,6 +30,7 @@ import {
 import { Icon } from "@/components/ui/icon"
 import { useAdminSearch } from "@/hooks/admin/use-admin-search"
 import { useIsClient } from "@/hooks/use-is-client"
+import type { AdminNavItem } from "@/lib/admin/nav"
 import { ADMIN_SEARCH_MAX, type AdminSearchResult } from "@/lib/admin/search"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
@@ -157,8 +158,44 @@ export function CommandMenuKeyHint({ className }: { className?: string }) {
   )
 }
 
-function matches(term: string, ...texts: Array<string | null>): boolean {
-  return texts.some((text) => text?.toLowerCase().includes(term))
+function matches(term: string, text: string): boolean {
+  return text.toLowerCase().includes(term)
+}
+
+/** A "Go to" entry: a page of the nav, or one of its section tabs. */
+interface Destination {
+  value: string
+  testId: string
+  label: string
+  href: Route
+  icon: LucideIcon
+}
+
+/**
+ * The "Go to" list: every page, then each page's section tabs as "Page › Tab"
+ * in nav order. Pages come first so that a page's name, "set" for Settings,
+ * still selects the page itself, ahead of tabs that share the word. Each tab
+ * opens at its own href, and a page lists only the tabs the nav context kept
+ * for this user.
+ */
+function destinationsOf(items: readonly AdminNavItem[]): Destination[] {
+  const pages = items.map((item) => ({
+    value: `page:${item.id}`,
+    testId: `admin-command-page-${item.id}`,
+    label: item.label,
+    href: item.href,
+    icon: item.icon,
+  }))
+  const tabs = items.flatMap((item) =>
+    (item.children ?? []).map((child) => ({
+      value: `page:${item.id}:${child.id}`,
+      testId: `admin-command-page-${item.id}-${child.id}`,
+      label: `${item.label} › ${child.label}`,
+      href: child.href,
+      icon: item.icon,
+    }))
+  )
+  return [...pages, ...tabs]
 }
 
 function ResultItem({ kind, result, icon, onSelect }: { kind: string; result: AdminSearchResult; icon: LucideIcon; onSelect: (href: Route) => void }) {
@@ -189,7 +226,7 @@ function CommandMenuBody({ onDone }: { onDone: () => void }) {
 
   const term = search.trim().toLowerCase()
   const searching = term.length > 0
-  const destinations = items.filter((item) => matches(term, item.label, item.group))
+  const destinations = destinationsOf(items).filter((destination) => matches(term, destination.label))
   const actions = scoped ? [] : QUICK_ACTIONS.filter((action) => matches(term, action.label))
   const settled = users.q === search.trim().slice(0, ADMIN_SEARCH_MAX) && !users.isFetching && !invites.isFetching
 
@@ -211,11 +248,10 @@ function CommandMenuBody({ onDone }: { onDone: () => void }) {
         <CommandEmpty>{searching && !settled ? "Searching" : "No matches"}</CommandEmpty>
         {destinations.length > 0 && (
           <CommandGroup heading="Go to">
-            {destinations.map((item) => (
-              <CommandItem key={item.id} value={`page:${item.id}`} onSelect={() => go(item.href)} data-testid={`admin-command-page-${item.id}`}>
-                <Icon icon={item.icon} />
-                <span className="truncate">{item.label}</span>
-                {item.group && <CommandShortcut>{item.group}</CommandShortcut>}
+            {destinations.map((destination) => (
+              <CommandItem key={destination.value} value={destination.value} onSelect={() => go(destination.href)} data-testid={destination.testId}>
+                <Icon icon={destination.icon} />
+                <span className="truncate">{destination.label}</span>
               </CommandItem>
             ))}
           </CommandGroup>

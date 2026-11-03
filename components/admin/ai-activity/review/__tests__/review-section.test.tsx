@@ -124,14 +124,14 @@ describe('ReviewSection states', () => {
     render({ judgeConfigured: false })
 
     expect(screen.getByTestId('conversation-review-button')).toBeDisabled()
-    expect(screen.getByRole('link', { name: 'AI settings' })).toHaveAttribute('href', '/admin/settings#ai')
+    expect(screen.getByRole('link', { name: 'AI settings' })).toHaveAttribute('href', '/admin/ai/settings')
   })
 
   it('NOT_CONFIGURED copy links to the LLM settings', () => {
     render({ review: view({ status: 'failed', errorCode: 'NOT_CONFIGURED', summary: null }) })
 
     const alert = screen.getByRole('alert')
-    expect(within(alert).getByRole('link', { name: 'AI settings' })).toHaveAttribute('href', '/admin/settings#ai')
+    expect(within(alert).getByRole('link', { name: 'AI settings' })).toHaveAttribute('href', '/admin/ai/settings')
   })
 
   it('a review with no tool evidence shows conversation-review-no-tool-evidence', () => {

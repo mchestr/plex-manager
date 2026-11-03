@@ -3,7 +3,12 @@
  * nav, the Jump to Select and the page's group order.
  */
 
-import { SETTINGS_GROUPS, settingsNavItems, type SettingsNavStatuses } from '@/components/admin/settings/settings-groups'
+import {
+  SECTION_HEALTH_KEYS,
+  SETTINGS_GROUPS,
+  settingsNavItems,
+  type SettingsNavStatuses,
+} from '@/components/admin/settings/settings-groups'
 
 const STATUS: SettingsNavStatuses = {
   plex: 'ok',
@@ -11,14 +16,12 @@ const STATUS: SettingsNavStatuses = {
   overseerr: 'notConfigured',
   other: 'incomplete',
   stripe: 'disabled',
-  ai: 'degraded',
-  discord: 'untested',
-  rewind: 'ok',
 }
 
 describe('settings groups', () => {
-  it('lists the six groups in nav order', () => {
-    expect(SETTINGS_GROUPS.map((group) => group.label)).toEqual(['Media', 'Members', 'AI', 'Discord', 'Rewind', 'System'])
+  it('lists the three groups in nav order', () => {
+    expect(SETTINGS_GROUPS.map((group) => group.id)).toEqual(['connections', 'billing', 'system'])
+    expect(SETTINGS_GROUPS.map((group) => group.label)).toEqual(['Connections', 'Billing', 'System'])
   })
 
   it('puts each section in its group', () => {
@@ -26,11 +29,8 @@ describe('settings groups', () => {
     const labelsIn = (group: string) => items.filter((item) => item.group === group).map((item) => item.label)
 
     expect(Object.fromEntries(SETTINGS_GROUPS.map((group) => [group.id, labelsIn(group.id)]))).toEqual({
-      media: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr, Jellyfin'],
-      members: ['Stripe billing', 'Request limits'],
-      ai: ['AI provider', 'Conversation review', 'Assistant sources'],
-      discord: ['Discord', 'Channel stats'],
-      rewind: ['Rewind'],
+      connections: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr, Jellyfin'],
+      billing: ['Stripe billing'],
       system: ['Time zone', 'API access', 'Privacy', 'System information'],
     })
   })
@@ -45,13 +45,6 @@ describe('settings groups', () => {
       'overseerr',
       'other',
       'stripe',
-      'request-tiers',
-      'ai',
-      'conversation-review',
-      'assistant',
-      'discord',
-      'channel-stats',
-      'rewind',
       'time-zone',
       'api-access',
       'privacy',
@@ -70,17 +63,19 @@ describe('settings groups', () => {
       overseerr: 'notConfigured',
       other: 'incomplete',
       stripe: 'disabled',
-      'request-tiers': undefined,
-      ai: 'degraded',
-      'conversation-review': undefined,
-      assistant: undefined,
-      discord: 'untested',
-      'channel-stats': undefined,
-      rewind: 'ok',
       'time-zone': undefined,
       'api-access': undefined,
       privacy: undefined,
       system: undefined,
     })
+  })
+
+  it('names the health checks behind exactly the sections that have a status', () => {
+    const checked = settingsNavItems(STATUS)
+      .filter((item) => item.status !== undefined)
+      .map((item) => item.id)
+
+    expect(Object.keys(SECTION_HEALTH_KEYS).sort()).toEqual(checked.sort())
+    expect(SECTION_HEALTH_KEYS.other).toEqual(['sonarr', 'radarr', 'jellyfin'])
   })
 })

@@ -2,26 +2,30 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 
+import { leaveIsGuarded } from '@/__tests__/helpers/leave-guard'
+import { replaceMock, resetUrl } from '@/__tests__/helpers/url-router'
 import { SettingsGroup, SettingsLayout } from '@/components/admin/settings/settings-layout'
 import type { SettingsNavItem } from '@/components/admin/settings/settings-groups'
 import { SettingsSection } from '@/components/ui/settings-section'
 
+jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').navigationModule)
+
 const ITEMS: SettingsNavItem[] = [
-  { id: 'plex', label: 'Plex server', group: 'media', status: 'ok' },
-  { id: 'stripe', label: 'Stripe billing', group: 'members', status: 'ok' },
+  { id: 'plex', label: 'Plex server', group: 'connections', status: 'ok' },
+  { id: 'stripe', label: 'Stripe billing', group: 'billing', status: 'ok' },
   { id: 'system', label: 'System information', group: 'system' },
 ]
 
 function renderLayout() {
   return render(
     <SettingsLayout items={ITEMS}>
-      <SettingsGroup id="media">
+      <SettingsGroup id="connections">
         <section id="plex">
           Plex
           <input aria-label="Plex name" />
         </section>
       </SettingsGroup>
-      <SettingsGroup id="members">
+      <SettingsGroup id="billing">
         <section id="stripe">Stripe</section>
       </SettingsGroup>
       <SettingsGroup id="system">
@@ -37,6 +41,7 @@ function renderLayout() {
 describe('SettingsLayout', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/')
+    resetUrl('/admin/settings')
     Element.prototype.scrollIntoView = jest.fn()
   })
 
@@ -88,6 +93,39 @@ describe('SettingsLayout', () => {
     expect(screen.getByText('Plex')).toBeVisible()
   })
 
+  describe('a hash from before its section moved to its feature page', () => {
+    it.each([
+      ['rewind', '/admin/rewind/settings'],
+      ['ai', '/admin/ai/settings'],
+      ['channel-stats', '/admin/discord/settings'],
+      ['request-tiers', '/admin/request-limits'],
+    ])('opens the page #%s moved to', (id, page) => {
+      window.history.replaceState(null, '', `/#${id}`)
+      renderLayout()
+
+      expect(replaceMock).toHaveBeenCalledTimes(1)
+      expect(replaceMock).toHaveBeenCalledWith(page)
+    })
+
+    it('follows a hash that arrives after the page has loaded', () => {
+      renderLayout()
+      expect(replaceMock).not.toHaveBeenCalled()
+
+      window.history.replaceState(null, '', '/#discord')
+      window.dispatchEvent(new HashChangeEvent('hashchange'))
+
+      expect(replaceMock).toHaveBeenCalledTimes(1)
+      expect(replaceMock).toHaveBeenCalledWith('/admin/discord/settings')
+    })
+
+    it.each(['', 'plex', 'stripe', 'time-zone', 'nowhere', 'constructor', '%'])('leaves #%s on the settings page', (id) => {
+      window.history.replaceState(null, '', `/#${id}`)
+      renderLayout()
+
+      expect(replaceMock).not.toHaveBeenCalled()
+    })
+  })
+
   it('keeps an unsaved edit in a hidden group', async () => {
     const user = userEvent.setup()
     renderLayout()
@@ -114,25 +152,23 @@ describe('SettingsLayout', () => {
     }
     render(
       <SettingsLayout items={ITEMS}>
-        <SettingsGroup id="media">
+        <SettingsGroup id="connections">
           <PlexSection />
         </SettingsGroup>
       </SettingsLayout>
     )
-    const leave = () => window.dispatchEvent(new Event('beforeunload', { cancelable: true }))
 
-    expect(leave()).toBe(true)
+    expect(leaveIsGuarded()).toBe(false)
 
     await user.click(screen.getByTestId('settings-plex-edit'))
-    expect(leave()).toBe(true)
+    expect(leaveIsGuarded()).toBe(false)
     await user.type(screen.getByRole('textbox', { name: 'Plex name' }), 'x')
-    // dispatchEvent returns false once a listener prevented it: the browser asks.
     // The listener follows the section's dirty report, an effect later, so wait for it
-    await waitFor(() => expect(leave()).toBe(false))
+    await waitFor(() => expect(leaveIsGuarded()).toBe(true))
 
     await user.click(screen.getByTestId('settings-plex-cancel'))
     await user.click(await screen.findByTestId('settings-plex-discard-dialog-confirm'))
     expect(await screen.findByText('Home')).toBeInTheDocument()
-    await waitFor(() => expect(leave()).toBe(true))
+    await waitFor(() => expect(leaveIsGuarded()).toBe(false))
   })
 })

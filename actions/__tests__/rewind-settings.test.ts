@@ -123,7 +123,8 @@ describe('updateRewindSettings', () => {
       secretChanged: false,
       origins: { before: {}, after: {} },
     })
-    expect(revalidatePath).toHaveBeenCalledWith('/admin/settings')
+    // The settings live on the Rewind section's Settings tab, and the Season tab shows the same flags
+    expect(revalidatePath).toHaveBeenCalledWith('/admin/rewind/settings')
     expect(revalidatePath).toHaveBeenCalledWith('/admin/rewind')
     expect(revalidatePath).toHaveBeenCalledWith('/')
   })

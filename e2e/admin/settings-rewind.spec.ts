@@ -7,10 +7,11 @@ import { clearRewindSeed, REWIND_MEMBERS, REWIND_YEAR, seedRewind } from '../hel
 import { editSection } from '../helpers/settings';
 
 /**
- * P7.12: the Rewind section of `/admin/settings`. Saving "Admins only" hides
- * the home RewindCard from members and keeps it for admins, and a disabled
- * page leaves the heavy member's issue, whose folios renumber. The section's
- * visual baseline is in `e2e/visual/admin.visual.spec.ts`.
+ * P7.12: Rewind settings, the Settings tab of the admin Rewind section
+ * (`/admin/rewind/settings`). Saving "Admins only" hides the home RewindCard
+ * from members and keeps it for admins, and a disabled page leaves the heavy
+ * member's issue, whose folios renumber. The section's visual baseline is in
+ * `e2e/visual/admin.visual.spec.ts`.
  */
 
 const FLAGS = {
@@ -79,7 +80,7 @@ test.describe('Rewind settings section', () => {
 
   test('the section renders with its status line', async ({ page, signIn }) => {
     await signIn(TEST_USERS.ADMIN.id);
-    await page.goto('/admin/settings#rewind');
+    await page.goto('/admin/rewind/settings');
 
     const section = page.getByTestId('settings-rewind-section');
     await expect(section).toBeVisible();
@@ -90,9 +91,20 @@ test.describe('Rewind settings section', () => {
     await expect(page.getByTestId('settings-rewind-save')).toHaveCount(0);
   });
 
+  test('"Change the server time zone" opens the Time zone section on the settings page', async ({ page, signIn }) => {
+    await signIn(TEST_USERS.ADMIN.id);
+    await page.goto('/admin/rewind/settings');
+
+    await page.getByTestId('rewind-settings-time-zone-link').click();
+
+    await expect(page).toHaveURL(/\/admin\/settings#time-zone$/);
+    await expect(page.getByTestId('settings-time-zone-section')).toBeVisible();
+    await expect(page.locator('#time-zone')).toBeInViewport();
+  });
+
   test('"Admins only" hides the home RewindCard from a member and keeps it for an admin', async ({ page, signIn }) => {
     await signIn(TEST_USERS.ADMIN.id);
-    await page.goto('/admin/settings#rewind');
+    await page.goto('/admin/rewind/settings');
 
     await editSection(page, 'rewind');
     await page.getByTestId('rewind-settings-audience-trigger').click();
@@ -110,7 +122,7 @@ test.describe('Rewind settings section', () => {
 
   test('disabling People removes it from the heavy member\'s folios', async ({ page, signIn }) => {
     await signIn(TEST_USERS.ADMIN.id);
-    await page.goto('/admin/settings#rewind');
+    await page.goto('/admin/rewind/settings');
 
     await editSection(page, 'rewind');
     await page.getByTestId('rewind-settings-pages-people').click();

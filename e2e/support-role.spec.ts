@@ -7,11 +7,11 @@ import { mockLlmReply } from './mocks/llm-server';
 
 /**
  * The Support role's scoped admin area (RBAC): a non-admin with
- * `User.role = "support"` gets a trimmed shell with the assistant, the users
- * list, affiliates and the audit log, and every other admin page is refused
- * server-side, not just hidden from the navigation. The assistant page shows
- * them only their own conversations, and an audit event never its stored
- * details.
+ * `User.role = "support"` gets a trimmed shell with the assistant, Members
+ * (the users list and affiliates, never invites) and the audit log, and every
+ * other admin page is refused server-side, not just hidden from the
+ * navigation. The assistant page shows them only their own conversations, and
+ * an audit event never its stored details.
  */
 const SUPPORT_ID = 'e2e-support-user-id';
 const CHAT_PROVIDER_ID = 'e2e-support-role-chat';
@@ -34,14 +34,18 @@ const REFUSED_PATHS = [
   '/admin/settings',
   '/admin/invites',
   '/admin/ai',
+  '/admin/ai/settings',
   '/admin/cost-analysis',
   '/admin/queues',
   '/admin/discord',
+  '/admin/discord/settings',
   '/admin/rewind',
+  '/admin/rewind/settings',
   '/admin/shares',
   '/admin/announcements',
   '/admin/watchlist',
   '/admin/inactivity',
+  '/admin/request-limits',
 ];
 
 test.describe('Support role', () => {
@@ -109,10 +113,14 @@ test.describe('Support role', () => {
     await expect(page).toHaveURL(/\/admin\/users$/, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(page.getByTestId('admin-users-page')).toBeVisible();
 
-    await expect(page.getByTestId('admin-nav-users')).toBeVisible();
-    for (const hidden of ['overview', 'settings', 'invites', 'queues', 'ai-activity', 'cost-analysis']) {
+    await expect(page.getByTestId('admin-nav-members')).toBeVisible();
+    for (const hidden of ['overview', 'settings', 'automations', 'ai']) {
       await expect(page.getByTestId(`admin-nav-${hidden}`)).toHaveCount(0);
     }
+    // Members gives Support its Users and Affiliates tabs, never Invites
+    await expect(page.getByTestId('admin-section-tab-users')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('admin-section-tab-affiliates')).toBeVisible();
+    await expect(page.getByTestId('admin-section-tab-invites')).toHaveCount(0);
   });
 
   test('has no member actions on the users list', async ({ supportPage: page }) => {
@@ -152,6 +160,8 @@ test.describe('Support role', () => {
   test('reads Affiliates without decisions or the History tab', async ({ supportPage: page }) => {
     await page.goto('/admin/affiliates?tab=history');
     await expect(page.getByTestId('admin-affiliates-panel-applications')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    // The page's own tabs change only the query, so the Members strip stays on Affiliates
+    await expect(page.getByTestId('admin-section-tab-affiliates')).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByTestId('admin-affiliates-panel-applications')).toContainText('Affiliate Applicant');
     await expect(page.getByTestId('admin-affiliates-tab-history')).toHaveCount(0);
     await expect(page.getByTestId(/^admin-affiliates-(approve|refuse)-/)).toHaveCount(0);

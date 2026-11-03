@@ -43,7 +43,7 @@ export async function processRewindSeasonOpen(job: Job<RewindSeasonOpenPayload>,
     return { outcome: "REWIND_OFF" }
   }
   if (!rewindFeatureOn(config, "season.auto-open")) {
-    logger.info("The scheduled audience switch is not turned on; switch the audience in Settings", { year })
+    logger.info("The scheduled audience switch is not turned on; switch the audience in Rewind settings", { year })
     return { outcome: "NOT_ENABLED" }
   }
 
@@ -56,15 +56,15 @@ export async function processRewindSeasonOpen(job: Job<RewindSeasonOpenPayload>,
       await job.moveToDelayed(now + RECHECK_MS, token)
       throw new DelayedError()
     }
-    logger.error("The season-open generation did not finish in time; switch the audience in Settings once it has", undefined, { year, ...readiness })
+    logger.error("The season-open generation did not finish in time; switch the audience in Rewind settings once it has", undefined, { year, ...readiness })
     return { outcome: "STILL_GENERATING" }
   }
   if (readiness.state === "not-prepared") {
-    logger.warn("The season-open Prepare did not complete; check /admin/rewind, then switch the audience in Settings", { year, prepare: readiness.prepare })
+    logger.warn("The season-open Prepare did not complete; check /admin/rewind, then switch the audience in Rewind settings", { year, prepare: readiness.prepare })
     return { outcome: "NOT_PREPARED" }
   }
   if (readiness.state === "failures") {
-    logger.warn("Some members' Rewinds failed; use Retry failed, then switch the audience in Settings", { year, failed: readiness.failed })
+    logger.warn("Some members' Rewinds failed; use Retry failed, then switch the audience in Rewind settings", { year, failed: readiness.failed })
     return { outcome: "FAILURES", failed: readiness.failed }
   }
 

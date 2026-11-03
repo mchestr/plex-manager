@@ -91,7 +91,7 @@ export const updateRewindSettings = adminAction({
       )
     }
 
-    revalidatePath("/admin/settings")
+    revalidatePath("/admin/rewind/settings")
     revalidatePath("/admin/rewind")
     revalidatePath("/")
     revalidatePath("/rewind", "layout")

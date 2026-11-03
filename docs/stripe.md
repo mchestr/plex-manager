@@ -89,7 +89,7 @@ Plex login ─▶ member?  ──yes─▶ into app (unchanged)
 
 All Stripe settings are configured in the app — no redeploy or env vars needed.
 
-Go to **Admin → Settings → Stripe billing** (in Members). The section shows
+Go to **Admin → Settings → Stripe billing** (in the Billing group). The section shows
 the saved settings; select **Set up** (or **Edit** once something is saved) and
 fill in:
 
@@ -163,7 +163,7 @@ Jellyfin only and are not exempt, the toggle first asks you to confirm, naming
 them ("Ask 3 Jellyfin members to subscribe?"). These accounts were
 usually made in Jellyfin itself rather than through an app invite, so they have
 no exemption: cancel, mark the ones who should keep free access exempt on
-**Admin → Users**, then turn it on. From that point:
+**Admin → Members → Users**, then turn it on. From that point:
 
 - Plex non-members can create a session and are gated to `/subscribe`, and so
   are Jellyfin members who are not exempt.
@@ -341,8 +341,8 @@ enabled user is an active member.
 
 ## Admin Management
 
-Subscription management is folded into the existing **Admin → Users** page (no
-separate page):
+Subscription management is folded into the existing **Admin → Members → Users**
+page (no separate page):
 
 - A **Subscription** column shows Active / Past due / Canceled / None plus an
   exempt marker and the renewal/end date.

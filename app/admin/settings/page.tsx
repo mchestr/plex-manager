@@ -1,45 +1,26 @@
-import Link from "next/link"
-
 import { LastSaved } from "@/components/admin/settings/last-saved"
-import { RewindSettingsSection } from "@/components/admin/settings/rewind-settings-section"
 import { ApiAccessSection } from "@/components/admin/settings/sections/api-access-section"
-import { AssistantSection } from "@/components/admin/settings/sections/assistant-section"
-import { AiSection } from "@/components/admin/settings/sections/ai-section"
-import { ChannelStatsSection } from "@/components/admin/settings/sections/channel-stats-section"
-import { DiscordSection } from "@/components/admin/settings/sections/discord-section"
-import { JudgeNightlySection } from "@/components/admin/settings/sections/judge-nightly-section"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
 import { PrivacySection } from "@/components/admin/settings/sections/privacy-section"
-import { RequestTiersSection } from "@/components/admin/settings/sections/request-tiers-section"
 import { ServiceSection } from "@/components/admin/settings/sections/service-section"
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 import { SystemSection } from "@/components/admin/settings/sections/system-section"
 import { TimeZoneSection } from "@/components/admin/settings/sections/time-zone-section"
-import { settingsNavItems } from "@/components/admin/settings/settings-groups"
+import { SECTION_HEALTH_KEYS, settingsNavItems } from "@/components/admin/settings/settings-groups"
 import { SettingsGroup, SettingsLayout } from "@/components/admin/settings/settings-layout"
 import { SettingsPageActions } from "@/components/admin/settings/settings-page-actions"
 import { PageHeader } from "@/components/ui/page-header"
-import { getDiscordOverview } from "@/lib/admin/discord"
 import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
-import { getChannelStatsSettings, getRequestTierSettings } from "@/lib/data/community-stats"
-import { getAssistantSources } from "@/lib/data/assistant-sources"
 import { listOwnApiTokens } from "@/lib/data/api-tokens"
 import { getLastRetentionRun } from "@/lib/data/retention"
-import { getRewindSeasonDataPreparedAt } from "@/lib/data/rewind-season"
 import { plexLibraryListing } from "@/lib/admin/invites/libraries"
 import packageJson from "@/package.json"
 import { getBaseUrl, getEnv } from "@/lib/env"
-import { checkRewindInfra } from "@/lib/queue/rewind-infra"
-import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
-import { getRewindSeasonSpend } from "@/lib/llm/usage-totals"
 import { getFormat } from "@/lib/settings/app-settings"
 import { getSettingsAuditMeta } from "@/lib/settings/audit-meta"
 import { getSettingsHealth } from "@/lib/settings/connection-health"
 import { worstStatus } from "@/lib/settings/connection-status"
 import { serverZone } from "@/lib/utils/server-zone"
-import { getRewindContentRatings, getRewindLibraries } from "@/lib/wrapped/admin/settings-options"
-import { rewindSettingsFromConfig } from "@/lib/wrapped/config"
-import { getSeasonState } from "@/lib/wrapped/season"
 import { connection } from "next/server"
 import { assertAdmin } from "@/lib/admin"
 
@@ -68,26 +49,16 @@ export default async function SettingsPage() {
   await connection()
   // Started, not awaited: the section streams it in (P10.7)
   const plexLibraries = plexLibraryListing()
-  const [settings, stripeConfig, health, season, zone, f] = await Promise.all([
+  const [settings, stripeConfig, health, zone, f] = await Promise.all([
     getAdminSettings(),
     getStripeConfig(),
     getSettingsHealth(),
-    getSeasonState(),
     serverZone(),
     getFormat(),
   ])
-  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, lastRetentionRun, channelStats, requestTiers, assistantSources, apiTokens] = await Promise.all([
-    getRewindSeasonDataPreparedAt(season.seasonYear),
-    checkRewindInfra(),
-    getRewindLibraries(),
-    getRewindContentRatings(),
-    getRewindSeasonSpend(season.seasonYear),
+  const [audit, lastRetentionRun, apiTokens] = await Promise.all([
     getSettingsAuditMeta(),
-    getDiscordOverview(),
     getLastRetentionRun(),
-    getChannelStatsSettings(),
-    getRequestTierSettings(),
-    getAssistantSources(),
     listOwnApiTokens(),
   ])
   // Nothing before a first save, so a read-only section shows no empty footer
@@ -98,9 +69,7 @@ export default async function SettingsPage() {
     radarr: settings.radarr,
     jellyfin: settings.jellyfinServer,
   }
-  const otherStatus = worstStatus(
-    (Object.keys(other) as (keyof typeof other)[]).filter((key) => other[key]).map((key) => health[key].status)
-  )
+  const otherStatus = worstStatus(SECTION_HEALTH_KEYS.other.filter((key) => other[key]).map((key) => health[key].status))
 
   const nav = settingsNavItems({
     plex: health.plex.status,
@@ -108,9 +77,6 @@ export default async function SettingsPage() {
     overseerr: health.overseerr.status,
     other: otherStatus,
     stripe: health.stripe.status,
-    ai: health.ai.status,
-    discord: health.discord.status,
-    rewind: health.rewind.status,
   })
 
   return (
@@ -121,7 +87,7 @@ export default async function SettingsPage() {
         data-testid="admin-settings-header"
       />
       <SettingsLayout items={nav}>
-        <SettingsGroup id="media">
+        <SettingsGroup id="connections">
           <ServiceSection type="plex" server={settings.plexServer} health={health.plex} footerMeta={saved("plex")} />
           <ServiceSection type="tautulli" server={settings.tautulli} health={health.tautulli} footerMeta={saved("tautulli")} />
           <ServiceSection type="overseerr" server={settings.overseerr} health={health.overseerr} footerMeta={saved("overseerr")} />
@@ -132,71 +98,8 @@ export default async function SettingsPage() {
             footerMeta={saved("other")}
           />
         </SettingsGroup>
-        <SettingsGroup id="members">
+        <SettingsGroup id="billing">
           <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />
-          <RequestTiersSection
-            saved={requestTiers}
-            startedLabel={requestTiers.lastRun ? f.dateTime(requestTiers.lastRun.startedAt, { zoneLabel: true }) : null}
-            footerMeta={saved("requestTiers")}
-          />
-        </SettingsGroup>
-        <SettingsGroup id="ai">
-          <AiSection
-            chat={settings.chatLLMProvider}
-            wrapped={settings.wrappedLLMProvider}
-            judge={settings.judgeLLMProvider}
-            llmDisabled={settings.config.llmDisabled}
-            caps={{
-              perUserUsd: settings.config.llmDailyCapPerUserUsd,
-              adminUsd: settings.config.llmDailyCapAdminUsd,
-              serverUsd: settings.config.llmDailyCapServerUsd,
-            }}
-            health={health.ai}
-            footerMeta={saved("ai")}
-          />
-          <JudgeNightlySection
-            saved={{
-              judgeNightlyEnabled: settings.config.judgeNightlyEnabled,
-              judgeSampleRate: settings.config.judgeSampleRate,
-              judgeMinTurns: settings.config.judgeMinTurns,
-              llmDailyCapJudgeUsd: settings.config.llmDailyCapJudgeUsd,
-            }}
-            footerMeta={saved("judge")}
-          />
-          <AssistantSection sources={assistantSources} />
-        </SettingsGroup>
-        <SettingsGroup id="discord">
-          <DiscordSection
-            integration={settings.discordIntegration}
-            linkedCount={settings.discordLinkedCount}
-            portalUrl={`${baseUrl}/discord/link`}
-            state={discord.state}
-            now={new Date().toISOString()}
-            footerMeta={saved("discord")}
-          />
-          <ChannelStatsSection saved={channelStats} footerMeta={saved("channelStats")} />
-        </SettingsGroup>
-        <SettingsGroup id="rewind">
-          <RewindSettingsSection
-            saved={rewindSettingsFromConfig(settings.config)}
-            zone={zone}
-            llmDisabled={settings.config.llmDisabled}
-            discordBotOn={Boolean(settings.discordIntegration?.isEnabled && settings.discordIntegration.botEnabled)}
-            spent={f.money(spentUsd, "prose")}
-            libraries={libraries.libraries}
-            ratings={ratings}
-            status={{ redis: rewindInfra.ok ? null : rewindInfraMessage(rewindInfra.code, "admin"), tautulli: libraries.status }}
-            health={health.rewind}
-            footerMeta={saved("rewind")}
-          >
-            {/* P7.8: Prepare season moved to the season console. */}
-            <p className="text-ui text-muted-foreground" data-testid="rewind-season-data-prepared-at">
-              {seasonDataPreparedAt ? `Season data last prepared ${f.dateTime(seasonDataPreparedAt)}. ` : "Season data not prepared yet. "}
-              <Link href="/admin/rewind" className="text-foreground underline underline-offset-3" data-testid="rewind-season-console-link">
-                Prepare the season on the Season page
-              </Link>
-            </p>
-          </RewindSettingsSection>
         </SettingsGroup>
         <SettingsGroup id="system">
           <TimeZoneSection timeZone={{ configured: settings.config.timezone, effective: zone }} footerMeta={saved("timeZone")} />

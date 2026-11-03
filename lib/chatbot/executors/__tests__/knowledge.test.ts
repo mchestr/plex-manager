@@ -48,9 +48,11 @@ describe("search_knowledge_base", () => {
     expect(logAuditEvent).toHaveBeenCalledWith("ASSISTANT_DATA_READ", "admin-1", { toolName: "search_knowledge_base" })
   })
 
-  it("says so when no knowledge base is configured", async () => {
+  it("says so when no knowledge base is configured, and where an admin adds one", async () => {
     prismaMock.knowledgeSource.findMany.mockResolvedValue([])
-    expect(await executeKnowledgeTool("search_knowledge_base", { query: "rewind" }, "a")).toContain("No knowledge base is configured")
+    const result = await executeKnowledgeTool("search_knowledge_base", { query: "rewind" }, "a")
+    expect(result).toContain("No knowledge base is configured")
+    expect(result).toContain("Add one in Admin, AI, Settings, Assistant sources.")
   })
 
   it("rejects a malformed query", async () => {

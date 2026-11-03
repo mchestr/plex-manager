@@ -54,7 +54,7 @@ const GONE = "That skill source no longer exists"
 
 function changed(userId: string, action: "saved" | "deleted" | "refreshed", id: string) {
   logAuditEvent(AuditEventType.ASSISTANT_SOURCE_CHANGED, userId, { kind: "skill", action, id })
-  revalidatePath("/admin/settings")
+  revalidatePath("/admin/ai/settings")
 }
 
 /** Add or change a skill source. */

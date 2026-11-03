@@ -61,7 +61,8 @@ describe("saveJudgeSettings", () => {
     expect(jest.mocked(prismaMock.config.upsert).mock.invocationCallOrder[0]).toBeLessThan(
       jest.mocked(ensureJudgeSchedule).mock.invocationCallOrder[0]!
     )
-    expect(revalidatePath).toHaveBeenCalledWith("/admin/settings")
+    // The settings live on the AI section's Settings tab now
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/ai/settings")
   })
 
   it("saveJudgeSettings writes CONFIG_CHANGED through configDiff", async () => {

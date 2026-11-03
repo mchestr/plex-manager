@@ -1,6 +1,6 @@
 "use client"
 
-import { type ReactNode, useEffect } from "react"
+import type { ReactNode } from "react"
 
 import { RunNow } from "@/components/admin/inactivity/run-now"
 import { memberCount } from "@/components/admin/inactivity/run-outcome"
@@ -49,20 +49,10 @@ function InactivitySummary({ saved, scheduled, scheduledLimit }: Pick<Inactivity
  * The inactivity sweep's settings card, at the top of its page (the watchlist
  * card's pattern): the saved values as a summary until Edit, then the form,
  * saved through the section footer. The last run and Run now act on the
- * saved values, so they show in view mode only. No settings layout watches
- * the card here, so while it has unsaved changes it asks the browser to
- * confirm before the tab closes.
+ * saved values, so they show in view mode only.
  */
 export function InactivitySettingsSection({ saved, scheduled, scheduledLimit, removalIds, lastRun, footerMeta }: InactivitySettingsSectionProps) {
   const inactivity = useInactivityForm(saved)
-
-  const dirty = inactivity.form.isDirty
-  useEffect(() => {
-    if (!dirty) return
-    const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault()
-    window.addEventListener("beforeunload", onBeforeUnload)
-    return () => window.removeEventListener("beforeunload", onBeforeUnload)
-  }, [dirty])
 
   return (
     <SettingsSection

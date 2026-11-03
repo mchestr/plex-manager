@@ -1,6 +1,6 @@
 /**
  * The MCP servers, knowledge base sources and skill sources the admin
- * assistant uses, for the settings page: server-only and admin-checked. A
+ * assistant uses, for the AI settings tab: server-only and admin-checked. A
  * secret never leaves with a row; the form gets whether one is saved, its last
  * four and its origin. A skill source also says whether its ref is pinned to a
  * commit.

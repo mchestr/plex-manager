@@ -20,7 +20,7 @@ Results carry no emails, tokens or Stripe ids. Each call writes an
 
 ## MCP servers
 
-Settings, Assistant sources, MCP servers, Add.
+Admin, AI, Settings, Assistant sources, MCP servers, Add.
 
 - **URL:** a Streamable HTTP MCP endpoint, `http` or `https`, no credentials or
   query string. The legacy SSE transport and stdio are not supported.
@@ -41,7 +41,7 @@ text. Only enable servers and tools you trust.
 
 ## Knowledge bases
 
-Settings, Assistant sources, Knowledge bases, Add. Give a GitHub repository
+Admin, AI, Settings, Assistant sources, Knowledge bases, Add. Give a GitHub repository
 (`mchestr/knowledgebase`), a branch or tag, an optional folder and, for a
 private repository, a token (encrypted, sent only to `api.github.com`).
 
@@ -61,7 +61,7 @@ saving the knowledge base asks again at once.
 
 ## Skills
 
-Settings, Assistant sources, Skills, Add. A skill source is a GitHub repository
+Admin, AI, Settings, Assistant sources, Skills, Add. A skill source is a GitHub repository
 of Agent Skills: folders that each hold a `SKILL.md`, whose frontmatter gives
 the skill's `name` and `description` and whose Markdown body is the
 instructions. Give the repository, a commit, tag or branch, an optional folder

@@ -64,8 +64,8 @@ test.describe('Admin screens', () => {
     await capture(page, '/admin/rewind', 'admin-rewind-season');
   });
 
-  test('settings, Rewind section', async ({ page }) => {
-    await page.goto('/admin/settings#rewind');
+  test('rewind settings', async ({ page }) => {
+    await page.goto('/admin/rewind/settings');
     await settlePage(page);
     // The status line reports this run's Redis and Tautulli
     await expect(page.getByTestId('settings-rewind-section')).toHaveScreenshot('admin-settings-rewind.png', {

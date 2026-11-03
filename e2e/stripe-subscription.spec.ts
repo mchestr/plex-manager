@@ -294,7 +294,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
       await expect(adminPage.getByTestId('admin-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
-      // Stripe sits in the Integrations group.
+      // Stripe sits in the Billing group.
       await adminPage.getByTestId('settings-nav-stripe').click();
 
       // The Stripe settings card and its form are present.
@@ -330,7 +330,8 @@ test.describe('Stripe subscription gate & admin visibility', () => {
     test('users page shows the subscription column and filter', async ({ adminPage }) => {
       await setStripeEnabled(true, { configure: true });
 
-      await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-users').first().click();
+      // Members opens on its Users tab
+      await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-members').first().click();
       await expect(adminPage.getByTestId('admin-users-header')).toBeVisible({
         timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION,
       });

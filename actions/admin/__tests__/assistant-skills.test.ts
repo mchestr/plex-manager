@@ -65,7 +65,7 @@ describe("saveSkillSource", () => {
       data: { name: "Ops", repo: "octo/skills", ref: "main", path: "skills", token: null, isActive: true },
     })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.ASSISTANT_SOURCE_CHANGED, "admin-1", { kind: "skill", action: "saved", id: "s1" })
-    expect(revalidatePath).toHaveBeenCalledWith("/admin/settings")
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/ai/settings")
   })
 
   it("saves a 40-hex ref in lowercase", async () => {
@@ -134,7 +134,7 @@ describe("refreshSkillSource", () => {
     expect(await refreshSkillSource({ id: "s1" })).toEqual({ success: true, data: null })
     expect(prismaMock.skillSource.update).toHaveBeenCalledWith({ where: { id: "s1" }, data: { updatedAt: expect.any(Date) } })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.ASSISTANT_SOURCE_CHANGED, "admin-1", { kind: "skill", action: "refreshed", id: "s1" })
-    expect(revalidatePath).toHaveBeenCalledWith("/admin/settings")
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/ai/settings")
 
     jest.clearAllMocks()
     prismaMock.skillSource.findUnique.mockResolvedValue(null)
@@ -152,7 +152,7 @@ describe("deleteSkillSource", () => {
     expect(await deleteSkillSource({ id: "s1" })).toEqual({ success: true, data: null })
     expect(prismaMock.skillSource.deleteMany).toHaveBeenCalledWith({ where: { id: "s1" } })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.ASSISTANT_SOURCE_CHANGED, "admin-1", { kind: "skill", action: "deleted", id: "s1" })
-    expect(revalidatePath).toHaveBeenCalledWith("/admin/settings")
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/ai/settings")
 
     jest.mocked(logAuditEvent).mockClear()
     prismaMock.skillSource.deleteMany.mockResolvedValue({ count: 0 })

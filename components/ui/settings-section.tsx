@@ -11,6 +11,7 @@ import { SettingsFormFooter, type TestResult } from "@/components/ui/settings-fo
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Time } from "@/components/ui/time"
 import type { SettingsFormState } from "@/hooks/admin/use-settings-form"
+import { useLeaveGuard } from "@/hooks/use-leave-guard"
 import { resolveStatus, type ConnectionStatus } from "@/lib/ui/status"
 import { cn } from "@/lib/utils"
 
@@ -101,6 +102,10 @@ interface SettingsSectionProps {
  * stays open on the first invalid field. Cancel and Escape close, asking
  * first when there are unsaved changes. The page opens one section at a
  * time, and a dirty one stays open, reporting itself to the section nav.
+ * A section on a page of its own (a feature's settings tab) has no nav to
+ * report to, so while it has unsaved changes it asks the browser to confirm
+ * before the tab closes or reloads; on the settings page the layout owns
+ * that one prompt.
  *
  * `form.blockedReason` disables Test and Save and says why; a submit that
  * gets past it still reaches the server, which refuses on the same rule
@@ -147,6 +152,10 @@ export function SettingsSection({
     reportDirty?.(id, dirty)
   }, [reportDirty, id, dirty])
   useEffect(() => () => reportDirty?.(id, false), [reportDirty, id])
+
+  // Stand-alone, with no page to report to, the section is its own backstop for the browser's leave prompt;
+  // under the settings page the layout owns that one prompt.
+  useLeaveGuard(dirty && !reportDirty)
 
   /** Focus may move here only while the admin is still in this section (or nowhere), never out of another one. */
   const focusIsHere = () => {

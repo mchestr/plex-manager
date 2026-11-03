@@ -33,7 +33,7 @@ test.describe('Rewind season console', () => {
 
   test('is reachable from the admin nav', async ({ adminPage }) => {
     await adminPage.goto('/admin/users');
-    await adminPage.getByTestId('admin-nav-season').first().click();
+    await adminPage.getByTestId('admin-nav-rewind').first().click();
     await expect(adminPage).toHaveURL(/\/admin\/rewind$/);
   });
 });

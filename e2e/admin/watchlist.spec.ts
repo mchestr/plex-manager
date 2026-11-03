@@ -3,10 +3,11 @@ import { createE2EPrismaClient } from '../helpers/prisma';
 import { editSection } from '../helpers/settings';
 
 /**
- * Watchlist sync's own page, under Community: the sidebar reaches it and
- * Settings no longer holds it, its settings card opens read-only with the
- * form behind Edit, and the table lists every member's titles, narrowed on
- * the server by the search and the Status and Type filters in the URL.
+ * Watchlist sync's own page, the first tab of Automations: the sidebar reaches
+ * it and Settings no longer holds it, its settings card opens read-only with the
+ * form behind Edit, Sync now queues the sync once sync is on, and the table
+ * lists every member's titles, narrowed on the server by the search and the
+ * Status and Type filters in the URL.
  */
 
 const PREFIX = 'e2e-watchlist-';
@@ -68,17 +69,18 @@ test.describe('Admin watchlist sync', () => {
     }
   });
 
-  test('the sidebar reaches it under Community, and Settings no longer holds it', async ({ adminPage: page }) => {
+  test('Automations opens on it, its tab selected, and Settings no longer holds it', async ({ adminPage: page }) => {
     await page.goto('/admin/settings');
     await expect(page.getByTestId('settings-stripe-section')).toHaveCount(1);
     await expect(page.getByTestId('settings-watchlist-section')).toHaveCount(0);
     await expect(page.getByTestId('settings-nav-watchlist')).toHaveCount(0);
 
-    const link = page.getByTestId('admin-sidebar').getByTestId('admin-nav-watchlist').first();
+    const link = page.getByTestId('admin-sidebar').getByTestId('admin-nav-automations').first();
     await link.click();
     await expect(page).toHaveURL(/\/admin\/watchlist$/);
     await expect(page.getByTestId('admin-watchlist-header')).toContainText('Watchlist sync');
     await expect(link).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByTestId('admin-section-tab-watchlist')).toHaveAttribute('aria-selected', 'true');
   });
 
   test('the settings card shows the saved setting, with its form behind Edit', async ({ adminPage: page }) => {
@@ -92,6 +94,31 @@ test.describe('Admin watchlist sync', () => {
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('settings-watchlist-summary')).toBeVisible();
     await expect(page.getByTestId('settings-watchlist-edit')).toBeFocused();
+  });
+
+  test('Sync now waits for sync to be on, then queues the sync from the settings card', async ({ adminPage: page }) => {
+    await page.goto('/admin/watchlist');
+    const syncNow = page.getByTestId('admin-watchlist-sync-now');
+    await expect(syncNow).toBeDisabled();
+    await expect(page.getByTestId('admin-watchlist-sync-now-reason')).toContainText('once watchlist sync is on');
+
+    // The seed has no Overseerr, which the settings save requires, so the flag is set on the row
+    const prisma = createE2EPrismaClient();
+    try {
+      await prisma.config.update({ where: { id: 'config' }, data: { watchlistSyncEnabled: true } });
+      await page.reload();
+      await expect(syncNow).toBeEnabled();
+      await expect(page.getByTestId('admin-watchlist-sync-now-reason')).toHaveCount(0);
+      // Click until the toast shows (the button is server-rendered before it hydrates), never while it is busy
+      const queued = page.getByTestId('toast').filter({ hasText: 'Watchlist sync queued' });
+      await expect(async () => {
+        if (!(await queued.isVisible()) && (await syncNow.isEnabled())) await syncNow.click();
+        await expect(queued).toBeVisible({ timeout: 1000 });
+      }).toPass();
+    } finally {
+      await prisma.config.update({ where: { id: 'config' }, data: { watchlistSyncEnabled: false } });
+      await prisma.$disconnect();
+    }
   });
 
   test("lists every member's titles with their status and member", async ({ adminPage: page }) => {
