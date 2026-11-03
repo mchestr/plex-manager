@@ -7,7 +7,7 @@
 
 import { render, screen, within } from '@testing-library/react'
 
-import LLMConversationPage from '@/app/admin/ai/conversation/[conversationId]/page'
+import LLMConversationPage from '@/app/admin/(ai)/ai/conversation/[conversationId]/page'
 import { getConversationReview } from '@/lib/data/conversation-review'
 import { getLLMUsageRecords } from '@/lib/data/llm-usage'
 

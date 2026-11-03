@@ -110,7 +110,7 @@ test.describe('Support role', () => {
     await expect(page.getByTestId('admin-users-page')).toBeVisible();
 
     await expect(page.getByTestId('admin-nav-users')).toBeVisible();
-    for (const hidden of ['overview', 'settings', 'invites', 'queues', 'ai-activity', 'cost-analysis']) {
+    for (const hidden of ['overview', 'settings', 'invites', 'queues', 'ai']) {
       await expect(page.getByTestId(`admin-nav-${hidden}`)).toHaveCount(0);
     }
   });

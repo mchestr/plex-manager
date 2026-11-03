@@ -3,11 +3,8 @@ import Link from "next/link"
 import { LastSaved } from "@/components/admin/settings/last-saved"
 import { RewindSettingsSection } from "@/components/admin/settings/rewind-settings-section"
 import { ApiAccessSection } from "@/components/admin/settings/sections/api-access-section"
-import { AssistantSection } from "@/components/admin/settings/sections/assistant-section"
-import { AiSection } from "@/components/admin/settings/sections/ai-section"
 import { ChannelStatsSection } from "@/components/admin/settings/sections/channel-stats-section"
 import { DiscordSection } from "@/components/admin/settings/sections/discord-section"
-import { JudgeNightlySection } from "@/components/admin/settings/sections/judge-nightly-section"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
 import { PrivacySection } from "@/components/admin/settings/sections/privacy-section"
 import { RequestTiersSection } from "@/components/admin/settings/sections/request-tiers-section"
@@ -22,7 +19,6 @@ import { PageHeader } from "@/components/ui/page-header"
 import { getDiscordOverview } from "@/lib/admin/discord"
 import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
 import { getChannelStatsSettings, getRequestTierSettings } from "@/lib/data/community-stats"
-import { getAssistantSources } from "@/lib/data/assistant-sources"
 import { listOwnApiTokens } from "@/lib/data/api-tokens"
 import { getLastRetentionRun } from "@/lib/data/retention"
 import { getRewindSeasonDataPreparedAt } from "@/lib/data/rewind-season"
@@ -76,7 +72,7 @@ export default async function SettingsPage() {
     serverZone(),
     getFormat(),
   ])
-  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, lastRetentionRun, channelStats, requestTiers, assistantSources, apiTokens] = await Promise.all([
+  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, lastRetentionRun, channelStats, requestTiers, apiTokens] = await Promise.all([
     getRewindSeasonDataPreparedAt(season.seasonYear),
     checkRewindInfra(),
     getRewindLibraries(),
@@ -87,7 +83,6 @@ export default async function SettingsPage() {
     getLastRetentionRun(),
     getChannelStatsSettings(),
     getRequestTierSettings(),
-    getAssistantSources(),
     listOwnApiTokens(),
   ])
   // Nothing before a first save, so a read-only section shows no empty footer
@@ -108,7 +103,6 @@ export default async function SettingsPage() {
     overseerr: health.overseerr.status,
     other: otherStatus,
     stripe: health.stripe.status,
-    ai: health.ai.status,
     discord: health.discord.status,
     rewind: health.rewind.status,
   })
@@ -139,31 +133,6 @@ export default async function SettingsPage() {
             startedLabel={requestTiers.lastRun ? f.dateTime(requestTiers.lastRun.startedAt, { zoneLabel: true }) : null}
             footerMeta={saved("requestTiers")}
           />
-        </SettingsGroup>
-        <SettingsGroup id="ai">
-          <AiSection
-            chat={settings.chatLLMProvider}
-            wrapped={settings.wrappedLLMProvider}
-            judge={settings.judgeLLMProvider}
-            llmDisabled={settings.config.llmDisabled}
-            caps={{
-              perUserUsd: settings.config.llmDailyCapPerUserUsd,
-              adminUsd: settings.config.llmDailyCapAdminUsd,
-              serverUsd: settings.config.llmDailyCapServerUsd,
-            }}
-            health={health.ai}
-            footerMeta={saved("ai")}
-          />
-          <JudgeNightlySection
-            saved={{
-              judgeNightlyEnabled: settings.config.judgeNightlyEnabled,
-              judgeSampleRate: settings.config.judgeSampleRate,
-              judgeMinTurns: settings.config.judgeMinTurns,
-              llmDailyCapJudgeUsd: settings.config.llmDailyCapJudgeUsd,
-            }}
-            footerMeta={saved("judge")}
-          />
-          <AssistantSection sources={assistantSources} />
         </SettingsGroup>
         <SettingsGroup id="discord">
           <DiscordSection

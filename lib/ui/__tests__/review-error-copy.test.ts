@@ -34,7 +34,7 @@ describe("reviewErrorCopy", () => {
   })
 
   it("links NOT_CONFIGURED, and only it, to the AI settings", () => {
-    expect(reviewErrorCopy("NOT_CONFIGURED").href).toBe("/admin/settings#ai")
+    expect(reviewErrorCopy("NOT_CONFIGURED").href).toBe("/admin/ai/settings")
     expect(CODES.filter((code) => reviewErrorCopy(code).href !== undefined)).toEqual(["NOT_CONFIGURED"])
   })
 

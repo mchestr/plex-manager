@@ -143,7 +143,14 @@ export function auditEvent(id: string): Route {
   return `/admin/audit/${seg(id)}` as Route
 }
 
-/** One section of the settings page, by its anchor id. */
+/** The page a settings section moved to, by its anchor id. A section not listed is still on the settings page. */
+const SETTINGS_HOMES: Partial<Record<string, Route>> = {
+  ai: "/admin/ai/settings",
+  assistant: "/admin/ai/settings",
+  "conversation-review": "/admin/ai/settings",
+}
+
+/** One section of the settings, on the page it lives on: its feature's page once moved, else its anchor on the settings page. */
 export function settingsSection(id: string): Route {
-  return `/admin/settings#${seg(id)}` as Route
+  return SETTINGS_HOMES[id] ?? (`/admin/settings#${seg(id)}` as Route)
 }

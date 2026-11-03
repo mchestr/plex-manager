@@ -10,7 +10,6 @@ const ITEMS: SettingsNavItem[] = [
   { id: 'overseerr', label: 'Overseerr', group: 'media', status: 'untested' },
   { id: 'other', label: 'Sonarr, Radarr, Jellyfin', group: 'media', status: 'notConfigured' },
   { id: 'stripe', label: 'Stripe billing', group: 'members', status: 'disabled' },
-  { id: 'ai', label: 'AI provider', group: 'ai', status: 'degraded' },
   { id: 'discord', label: 'Discord', group: 'discord', status: 'incomplete' },
   { id: 'system', label: 'System information', group: 'system' },
 ]
@@ -23,7 +22,6 @@ describe('SettingsNav', () => {
 
     expect(glyph('plex')[0]).toHaveAccessibleName('Working')
     expect(glyph('tautulli')[0]).toHaveAccessibleName('Not working')
-    expect(glyph('ai')[0]).toHaveAccessibleName('Needs attention')
     expect(glyph('discord')[0]).toHaveAccessibleName('Needs attention')
     for (const id of ['overseerr', 'stripe', 'other']) {
       expect(glyph(id)[0]).toHaveAccessibleName('Off, not set up or not checked')
@@ -60,10 +58,10 @@ describe('SettingsNav', () => {
   it('heads the sections with their groups, in order', () => {
     render(<SettingsNav items={ITEMS} active="plex" activeGroup="media" dirty={new Set()} onSelect={jest.fn()} />)
 
-    const headings = ['media', 'members', 'ai', 'discord', 'rewind', 'system'].map(
+    const headings = ['media', 'members', 'discord', 'rewind', 'system'].map(
       (id) => screen.getByTestId(`settings-nav-group-${id}`).firstElementChild?.textContent
     )
-    expect(headings).toEqual(['Media', 'Members', 'AI', 'Discord', 'Rewind', 'System'])
+    expect(headings).toEqual(['Media', 'Members', 'Discord', 'Rewind', 'System'])
     expect(within(screen.getByTestId('settings-nav-group-media')).getAllByRole('link').map((link) => link.textContent)).toEqual([
       'Plex server',
       'Tautulli',

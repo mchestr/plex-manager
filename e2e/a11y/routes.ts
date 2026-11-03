@@ -147,6 +147,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/admin/assistant', as: 'admin', ready: 'admin-chat-input' },
   { path: `/admin/assistant?conversation=${A11Y_CONVERSATION_ID}`, as: 'admin', ready: 'admin-chat-answer' },
   { path: '/admin/ai', as: 'admin', ready: 'admin-ai-activity-header' },
+  { path: '/admin/ai/settings', as: 'admin', ready: 'admin-ai-settings-header' },
   { path: '/admin/ai/visual-llm-usage-1', as: 'admin', ready: 'admin-ai-activity-detail-heading' },
   {
     path: `/admin/ai/conversation/${A11Y_CONVERSATION_ID}`,

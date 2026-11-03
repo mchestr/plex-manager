@@ -13,7 +13,6 @@ import { editSection } from '../helpers/settings';
 const GROUPS: Record<string, string[]> = {
   media: ['plex', 'tautulli', 'overseerr', 'other'],
   members: ['stripe', 'request-tiers'],
-  ai: ['ai', 'conversation-review', 'assistant'],
   discord: ['discord', 'channel-stats'],
   rewind: ['rewind'],
   system: ['time-zone', 'api-access', 'privacy', 'system'],

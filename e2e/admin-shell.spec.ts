@@ -19,8 +19,7 @@ const SIDEBAR_LINKS: Array<[testId: string, path: RegExp]> = [
   ['admin-nav-season', /\/admin\/rewind$/],
   ['admin-nav-playground', /\/admin\/rewind\/playground$/],
   ['admin-nav-share-analytics', /\/admin\/shares$/],
-  ['admin-nav-ai-activity', /\/admin\/ai$/],
-  ['admin-nav-cost-analysis', /\/admin\/cost-analysis$/],
+  ['admin-nav-ai', /\/admin\/ai$/],
   ['admin-nav-queues', /\/admin\/queues$/],
   ['admin-nav-settings', /\/admin\/settings$/],
 ];

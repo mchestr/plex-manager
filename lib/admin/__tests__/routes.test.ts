@@ -11,6 +11,7 @@ import {
   playgroundFor,
   publicInviteUrl,
   rewindHistory,
+  settingsSection,
   userDetail,
   userRewind,
 } from "@/lib/admin/routes"
@@ -74,6 +75,14 @@ describe("admin routes", () => {
     expect(invite("x/y")).toBe("/admin/invites/x%2Fy")
     expect(aiActivityRecord("x y")).toBe("/admin/ai/x%20y")
     expect(auditEvent("e/1")).toBe("/admin/audit/e%2F1")
+  })
+
+  it("sends the AI sections to the AI settings page, and the rest to their anchor on Settings", () => {
+    expect(settingsSection("ai")).toBe("/admin/ai/settings")
+    expect(settingsSection("assistant")).toBe("/admin/ai/settings")
+    expect(settingsSection("conversation-review")).toBe("/admin/ai/settings")
+    expect(settingsSection("tautulli")).toBe("/admin/settings#tautulli")
+    expect(settingsSection("time zone")).toBe("/admin/settings#time%20zone")
   })
 
   it("builds the public invite link on an origin", () => {
