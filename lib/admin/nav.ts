@@ -1,7 +1,7 @@
 /**
  * The admin navigation config (ui-design-system 5.5 and 6.2): one list that
  * feeds the sidebar, the mobile tab bar and its More sheet, page titles
- * (`titleFor`, read by PageHeader) and later the command menu (P10.16).
+ * (`titleFor`, read by PageHeader) and the command menu, which lists each item and its tabs.
  *
  * ## One flat list and its section tabs
  *

@@ -20,6 +20,7 @@ import {
   type AdminNavItem,
   type MobileLinkTab,
 } from "@/lib/admin/nav"
+import { ROLE_KEYS } from "@/lib/permissions"
 import { icons } from "@/lib/ui/icons"
 
 const byId = (id: string) => ADMIN_NAV.find((item) => item.id === id) as AdminNavItem
@@ -277,6 +278,21 @@ describe("children and also", () => {
     expect(navFor(support, [ownPermission]).map((i) => i.href)).toEqual(["/admin/x"])
     expect(navFor(support, [adminOnly])).toEqual([])
     expect(navFor({ isAdmin: false, role: null }, [fixture, ownPermission])).toEqual([])
+  })
+})
+
+describe("every role", () => {
+  // navFor opens a folded item at its first permitted tab. The rewritten href
+  // is also what isActive matches by prefix, so a role allowed only a later tab
+  // nested under the first tab's path would reach a page that never lights its
+  // item. No role has that shape today; this fails the moment one does.
+  it.each(ROLE_KEYS)("%s lights every tab it may open", (role) => {
+    const subject = { isAdmin: false, role }
+    for (const item of navFor(subject)) {
+      for (const child of childrenOf(item.id, subject)) {
+        expect(isActive(item, child.href)).toBe(true)
+      }
+    }
   })
 })
 
