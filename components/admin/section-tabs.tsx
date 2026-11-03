@@ -3,7 +3,7 @@
 import type { Route } from "next"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import type { ReactNode } from "react"
+import { useEffect, useRef, type ReactNode } from "react"
 
 import { Tabs, TabsList, TabsTab } from "@/components/ui/tabs"
 
@@ -28,11 +28,21 @@ export interface SectionTab {
  * (`sectionLayout`, `components/admin/section-layout.tsx`) renders it bare
  * above `{children}`, with the tabs the signed-in user may open.
  *
+ * A strip wider than the screen scrolls inside its list, so the selected tab
+ * is scrolled into view on mount and whenever the selection changes.
+ *
  * Test ids: `admin-section-tabs-<itemId>` on the list, `admin-section-tab-<tab.id>` on each tab.
  */
 export function SectionTabs({ itemId, label, tabs }: { itemId: string; label: string; tabs: SectionTab[] }): ReactNode {
   const pathname = usePathname()
   const current = tabs.find((tab) => tab.href === pathname)
+  // Typed as the primitive's button; rendered as a link, it is the anchor, and only `scrollIntoView` is used
+  const selectedTab = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    selectedTab.current?.scrollIntoView({ block: "nearest", inline: "nearest" })
+  }, [current?.id])
+
   if (!current) return null
 
   return (
@@ -42,6 +52,7 @@ export function SectionTabs({ itemId, label, tabs }: { itemId: string; label: st
           {tabs.map((tab) => (
             <TabsTab
               key={tab.id}
+              ref={tab.id === current.id ? selectedTab : undefined}
               value={tab.id}
               nativeButton={false}
               render={<Link href={tab.href} />}

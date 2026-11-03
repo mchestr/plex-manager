@@ -101,4 +101,47 @@ describe('SectionTabs', () => {
 
     expect(container).toBeEmptyDOMElement()
   })
+
+  describe('the selected tab in view', () => {
+    // On a phone a long strip scrolls inside its list, so the selected tab can start off-screen
+    const original = Element.prototype.scrollIntoView
+    const scrolled = () => jest.mocked(Element.prototype.scrollIntoView)
+
+    beforeEach(() => {
+      Element.prototype.scrollIntoView = jest.fn()
+    })
+
+    afterEach(() => {
+      Element.prototype.scrollIntoView = original
+    })
+
+    it('scrolls the selected tab into view once on mount', () => {
+      renderAt('/admin/rewind/settings')
+
+      expect(scrolled()).toHaveBeenCalledTimes(1)
+      expect(scrolled()).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+      expect(scrolled().mock.contexts[0]).toBe(screen.getByTestId('admin-section-tab-rewind-settings'))
+    })
+
+    it('scrolls the newly selected tab when the page changes, and only then', () => {
+      const { rerender } = renderAt('/admin/rewind')
+      expect(scrolled()).toHaveBeenCalledTimes(1)
+      expect(scrolled().mock.contexts[0]).toBe(screen.getByTestId('admin-section-tab-season'))
+
+      rerender(strip())
+      expect(scrolled()).toHaveBeenCalledTimes(1)
+
+      mockPathname.mockReturnValue('/admin/shares')
+      rerender(strip())
+
+      expect(scrolled()).toHaveBeenCalledTimes(2)
+      expect(scrolled().mock.contexts[1]).toBe(screen.getByTestId('admin-section-tab-shares'))
+    })
+
+    it('scrolls nothing on a page that shows no strip', () => {
+      renderAt('/admin/rewind/abc/history')
+
+      expect(scrolled()).not.toHaveBeenCalled()
+    })
+  })
 })
