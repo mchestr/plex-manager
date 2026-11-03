@@ -53,7 +53,11 @@ function renderShell({ counts = { users: 7, activeInvites: 3, pendingAffiliates:
         user={{ name: 'Dana Whitfield', initials: 'DW' }}
         navCounts={counts}
         // The server leaves Assistant out without assistant:use, or while AI is off and the user has no saved conversations (lib/admin/shell.ts)
-        navIds={ADMIN_NAV.map((item) => item.id).filter((id) => assistant || id !== 'assistant')}
+        nav={ADMIN_NAV.filter((item) => assistant || item.id !== 'assistant').map((item) => ({
+          id: item.id,
+          href: item.href,
+          childIds: item.children?.map((child) => child.id) ?? [],
+        }))}
         scoped={false}
       >
         <p>Page</p>

@@ -22,9 +22,9 @@ export interface AdminShellProps extends AdminShellData {
  *
  * Immersive routes draw their own chrome, so the bars step aside there.
  */
-export function AdminShell({ serverName, user, navCounts, navIds, scoped, children }: AdminShellProps) {
+export function AdminShell({ serverName, user, navCounts, nav, scoped, children }: AdminShellProps) {
   return (
-    <AdminNavProvider ids={navIds} scoped={scoped}>
+    <AdminNavProvider nav={nav} scoped={scoped}>
       <CommandMenuProvider>
         <div className="flex min-h-dvh bg-background" data-testid="admin-shell">
           <AdminChrome>
