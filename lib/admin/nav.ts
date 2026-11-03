@@ -7,8 +7,9 @@
  *
  * The nav is one list, with no groups: the sidebar and the More sheet show
  * every item in this order. An item with `children` gets a tab strip
- * (`SectionTabs`, rendered by the layout of its route group) and `also` lights
- * it on the sibling routes those tabs open.
+ * (`SectionTabs`, rendered by the layout of its route group, which is
+ * `sectionLayout(id)`) and `also` lights it on the sibling routes those tabs
+ * open.
  *
  * ```
  * Overview
