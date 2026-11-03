@@ -55,6 +55,12 @@ describe('SectionTabs', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 
+  it("sits in an admin page's width and gutters, so it lines up with the page header below it", () => {
+    const { container } = renderAt('/admin/rewind')
+
+    expect(container.firstElementChild).toHaveClass('mx-auto', 'w-full', 'max-w-7xl', 'px-4', 'md:px-6')
+  })
+
   it('selects the tab of the page it is on as the pathname changes', () => {
     const { rerender } = renderAt('/admin/rewind')
     expect(screen.getByTestId('admin-section-tab-season')).toHaveAttribute('aria-selected', 'true')
