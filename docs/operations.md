@@ -503,7 +503,8 @@ with the current encryption key. Enter it again."). To recover:
   password manager). Nothing else is needed.
 - **Or enter the secrets again.** Clear `Config.encryptionCanary`
   (`UPDATE "Config" SET "encryptionCanary" = NULL;`) so the next boot writes a
-  new one under the current key, then re-enter each service key in Settings.
+  new one under the current key, then re-enter each service key in Admin →
+  Settings and each AI provider key in Admin → AI → Settings.
   Member Plex tokens refresh at each member's next sign-in; Discord links must
   be linked again; the Stripe keys and the Discord client secret and bot token
   are entered again in their sections. AI prompt text that cannot be read stays
