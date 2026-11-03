@@ -22,7 +22,7 @@ test.describe('Admin Overview', () => {
       await expect(adminPage.getByTestId(`admin-overview-${id}`)).toBeVisible();
     }
     await expect(adminPage.getByTestId('admin-nav-overview')).toHaveAttribute('aria-current', 'page');
-    await expect(adminPage.getByTestId('admin-nav-users')).not.toHaveAttribute('aria-current');
+    await expect(adminPage.getByTestId('admin-nav-members')).not.toHaveAttribute('aria-current');
   });
 
   for (const { id, url } of TILES) {

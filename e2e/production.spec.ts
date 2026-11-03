@@ -41,7 +41,7 @@ test.describe('Production build', () => {
     await page.goto('/admin/users');
 
     await expect(page.getByTestId('admin-users-header')).toBeVisible();
-    await expect(page.getByTestId('admin-nav-users')).toBeVisible();
+    await expect(page.getByTestId('admin-nav-members')).toBeVisible();
   });
 
   // Until P4.3 (BP-27) a production build shows the generic error page rather
@@ -52,7 +52,7 @@ test.describe('Production build', () => {
     await page.waitForLoadState('networkidle');
 
     await expect(page).toHaveURL(/\/admin$/);
-    await expect(page.getByTestId('admin-nav-users')).toHaveCount(0);
+    await expect(page.getByTestId('admin-nav-members')).toHaveCount(0);
     await expect(page.getByTestId('admin-users-header')).toHaveCount(0);
   });
 

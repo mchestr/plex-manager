@@ -3,8 +3,8 @@
 An affiliate is a member who can invite people to your Plex server. A member
 applies on their **Invites** page. Only an admin can approve an application.
 
-The feature is off by default. To turn it on, go to **Admin > Affiliates >
-Settings**.
+The feature is off by default. To turn it on, go to **Admin > Members >
+Affiliates > Settings**.
 
 ## Who can apply
 
@@ -67,7 +67,7 @@ their places.
 - Empty: no cap.
 - 0: no new affiliate invites.
 
-Your own invites from **Admin > Invites** do not use places.
+Your own invites from **Admin > Members > Invites** do not use places.
 
 The Settings tab also shows how many users the Plex server shares with now.
 

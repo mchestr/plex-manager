@@ -511,13 +511,13 @@ with the current encryption key. Enter it again."). To recover:
 
 ## Members, roles and Jellyfin
 
-- **Admin roles**: roles set in Admin → Users stick. A sign-in only ever
+- **Admin roles**: roles set in Admin → Members → Users stick. A sign-in only ever
   promotes: the Plex server owner is always an admin, and so is a Jellyfin
   administrator, because Jellyfin has no owner. A sign-in never demotes anyone,
   so app admins demote members in the UI, and a Jellyfin lookup that fails (a
   timeout or a server error) keeps the stored role. The Plex server owner and
   the last admin cannot be demoted.
-- **Unsharing removes one server's share only**: Unshare in Admin → Users, the
+- **Unsharing removes one server's share only**: Unshare in Admin → Members → Users, the
   inactivity sweep (Admin → Inactive members, see
   [inactive members](inactive-members.md)) and the Stripe access removal
   delete the member's share of the configured Plex server and nothing else. The member stays your plex.tv friend and keeps any
@@ -526,7 +526,7 @@ with the current encryption key. Enter it again."). To recover:
   click settles. Managed Plex Home users have no share to remove and report
   "already removed".
 - **Ending sessions**: unsharing a member (also by the inactivity sweep),
-  demoting an admin, disabling an account (Admin → Users → a user → Disable
+  demoting an admin, disabling an account (Admin → Members → Users → a user → Disable
   account), removing a member and the Stripe access removal end that user's
   sessions within five minutes, when the
   session next checks the database. A disabled user cannot sign in with Plex or
