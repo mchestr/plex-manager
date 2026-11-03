@@ -120,7 +120,7 @@ export const updateDiscordIntegrationSettings = adminAction({
 
     // The Discord section's status follows the switches
     expireTag(CONNECTION_HEALTH_TAG)
-    revalidatePath("/admin/settings")
+    revalidatePath("/admin/discord/settings")
     revalidatePath("/discord/link")
     return ok(null)
   },

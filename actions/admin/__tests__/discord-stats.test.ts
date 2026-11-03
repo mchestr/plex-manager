@@ -6,6 +6,7 @@
  */
 
 import { getServerSession } from "next-auth"
+import { revalidatePath } from "next/cache"
 import { mockReset } from "jest-mock-extended"
 
 import { runChannelStatsNow, updateChannelStatsSettings } from "@/actions/admin/discord-stats"
@@ -65,6 +66,13 @@ describe("updateChannelStatsSettings", () => {
     expect(ensureChannelStatsSchedule).toHaveBeenCalled()
   })
 
+  it("refreshes the Discord settings page, where the channel stats are edited, and not Settings", async () => {
+    await updateChannelStatsSettings(settings)
+
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/discord/settings")
+    expect(revalidatePath).not.toHaveBeenCalledWith("/admin/settings")
+  })
+
   it("keeps the interval at ten minutes or more", async () => {
     await expect(updateChannelStatsSettings({ ...settings, intervalMinutes: 5 })).resolves.toMatchObject({
       success: false,
@@ -96,5 +104,12 @@ describe("runChannelStatsNow", () => {
   it("runs it in the request without Redis", async () => {
     await expect(runChannelStatsNow()).resolves.toEqual({ success: true, data: { queued: false } })
     expect(runChannelStats).toHaveBeenCalledWith("admin", expect.anything())
+  })
+
+  it("refreshes the Discord settings page after running it in the request, and not Settings", async () => {
+    await runChannelStatsNow()
+
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/discord/settings")
+    expect(revalidatePath).not.toHaveBeenCalledWith("/admin/settings")
   })
 })
