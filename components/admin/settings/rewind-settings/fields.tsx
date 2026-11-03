@@ -122,18 +122,26 @@ export function monthDayLabel(value: string): string {
  * The zone the season dates are evaluated in, with "Change the server time
  * zone": a link to the Time zone section, which is on the settings page
  * (System), not on the Rewind settings page that shows this note.
+ *
+ * While the form is open (`editing`) the note names that place in plain text
+ * instead: a client-side navigation fires no `beforeunload`, so a link there
+ * would drop the draft without asking.
  */
-export function TimeZoneNote({ zone }: { zone: string }) {
+export function TimeZoneNote({ zone, editing = false }: { zone: string; editing?: boolean }) {
   return (
     <p className="text-label text-muted-foreground" data-testid="rewind-settings-zone">
       Dates are in {zone}.{" "}
-      <Link
-        data-testid="rewind-settings-time-zone-link"
-        href={settingsSection("time-zone")}
-        className="text-foreground underline underline-offset-3"
-      >
-        Change the server time zone
-      </Link>
+      {editing ? (
+        "Change the server time zone in Settings, System."
+      ) : (
+        <Link
+          data-testid="rewind-settings-time-zone-link"
+          href={settingsSection("time-zone")}
+          className="text-foreground underline underline-offset-3"
+        >
+          Change the server time zone
+        </Link>
+      )}
     </p>
   )
 }

@@ -179,7 +179,7 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
               error={datesError}
             />
           </div>
-          <TimeZoneNote zone={zone} />
+          <TimeZoneNote zone={zone} editing />
         </div>
 
         <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
