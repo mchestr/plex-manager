@@ -3,7 +3,12 @@
  * nav, the Jump to Select and the page's group order.
  */
 
-import { SETTINGS_GROUPS, settingsNavItems, type SettingsNavStatuses } from '@/components/admin/settings/settings-groups'
+import {
+  SECTION_HEALTH_KEYS,
+  SETTINGS_GROUPS,
+  settingsNavItems,
+  type SettingsNavStatuses,
+} from '@/components/admin/settings/settings-groups'
 
 const STATUS: SettingsNavStatuses = {
   plex: 'ok',
@@ -63,5 +68,14 @@ describe('settings groups', () => {
       privacy: undefined,
       system: undefined,
     })
+  })
+
+  it('names the health checks behind exactly the sections that have a status', () => {
+    const checked = settingsNavItems(STATUS)
+      .filter((item) => item.status !== undefined)
+      .map((item) => item.id)
+
+    expect(Object.keys(SECTION_HEALTH_KEYS).sort()).toEqual(checked.sort())
+    expect(SECTION_HEALTH_KEYS.other).toEqual(['sonarr', 'radarr', 'jellyfin'])
   })
 })

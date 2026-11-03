@@ -1,3 +1,4 @@
+import type { SettingsHealth } from "@/lib/settings/connection-status"
 import type { ConnectionStatus } from "@/lib/ui/status"
 
 export type SettingsGroupId = "connections" | "billing" | "system"
@@ -20,6 +21,19 @@ export interface SettingsNavItem {
 
 /** The health of each section that has one. */
 export type SettingsNavStatuses = Record<"plex" | "tautulli" | "overseerr" | "other" | "stripe", ConnectionStatus>
+
+/**
+ * The `SettingsHealth` checks each of those sections shows (`other` is three
+ * services). The remaining checks (AI, Discord, Rewind) are shown on their
+ * own feature's page, so anything that counts what Settings shows reads this.
+ */
+export const SECTION_HEALTH_KEYS = {
+  plex: ["plex"],
+  tautulli: ["tautulli"],
+  overseerr: ["overseerr"],
+  other: ["sonarr", "radarr", "jellyfin"],
+  stripe: ["stripe"],
+} as const satisfies Record<keyof SettingsNavStatuses, readonly (keyof SettingsHealth)[]>
 
 /**
  * Every section's nav entry, in the order the page renders its groups and

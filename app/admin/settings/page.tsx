@@ -6,7 +6,7 @@ import { ServiceSection } from "@/components/admin/settings/sections/service-sec
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 import { SystemSection } from "@/components/admin/settings/sections/system-section"
 import { TimeZoneSection } from "@/components/admin/settings/sections/time-zone-section"
-import { settingsNavItems } from "@/components/admin/settings/settings-groups"
+import { SECTION_HEALTH_KEYS, settingsNavItems } from "@/components/admin/settings/settings-groups"
 import { SettingsGroup, SettingsLayout } from "@/components/admin/settings/settings-layout"
 import { SettingsPageActions } from "@/components/admin/settings/settings-page-actions"
 import { PageHeader } from "@/components/ui/page-header"
@@ -69,9 +69,7 @@ export default async function SettingsPage() {
     radarr: settings.radarr,
     jellyfin: settings.jellyfinServer,
   }
-  const otherStatus = worstStatus(
-    (Object.keys(other) as (keyof typeof other)[]).filter((key) => other[key]).map((key) => health[key].status)
-  )
+  const otherStatus = worstStatus(SECTION_HEALTH_KEYS.other.filter((key) => other[key]).map((key) => health[key].status))
 
   const nav = settingsNavItems({
     plex: health.plex.status,
