@@ -27,7 +27,7 @@ describe('settings groups', () => {
 
     expect(Object.fromEntries(SETTINGS_GROUPS.map((group) => [group.id, labelsIn(group.id)]))).toEqual({
       media: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr, Jellyfin'],
-      members: ['Stripe billing', 'Request limits'],
+      members: ['Stripe billing'],
       ai: ['AI provider', 'Conversation review', 'Assistant sources'],
       discord: ['Discord', 'Channel stats'],
       rewind: ['Rewind'],
@@ -45,7 +45,6 @@ describe('settings groups', () => {
       'overseerr',
       'other',
       'stripe',
-      'request-tiers',
       'ai',
       'conversation-review',
       'assistant',
@@ -70,7 +69,6 @@ describe('settings groups', () => {
       overseerr: 'notConfigured',
       other: 'incomplete',
       stripe: 'disabled',
-      'request-tiers': undefined,
       ai: 'degraded',
       'conversation-review': undefined,
       assistant: undefined,

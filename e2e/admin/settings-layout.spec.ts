@@ -12,7 +12,7 @@ import { editSection } from '../helpers/settings';
 /** Each group's sections, as the nav lists them. */
 const GROUPS: Record<string, string[]> = {
   media: ['plex', 'tautulli', 'overseerr', 'other'],
-  members: ['stripe', 'request-tiers'],
+  members: ['stripe'],
   ai: ['ai', 'conversation-review', 'assistant'],
   discord: ['discord', 'channel-stats'],
   rewind: ['rewind'],

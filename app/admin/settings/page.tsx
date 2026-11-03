@@ -10,7 +10,6 @@ import { DiscordSection } from "@/components/admin/settings/sections/discord-sec
 import { JudgeNightlySection } from "@/components/admin/settings/sections/judge-nightly-section"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
 import { PrivacySection } from "@/components/admin/settings/sections/privacy-section"
-import { RequestTiersSection } from "@/components/admin/settings/sections/request-tiers-section"
 import { ServiceSection } from "@/components/admin/settings/sections/service-section"
 import { StripeSection } from "@/components/admin/settings/sections/stripe-section"
 import { SystemSection } from "@/components/admin/settings/sections/system-section"
@@ -21,7 +20,7 @@ import { SettingsPageActions } from "@/components/admin/settings/settings-page-a
 import { PageHeader } from "@/components/ui/page-header"
 import { getDiscordOverview } from "@/lib/admin/discord"
 import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
-import { getChannelStatsSettings, getRequestTierSettings } from "@/lib/data/community-stats"
+import { getChannelStatsSettings } from "@/lib/data/community-stats"
 import { getAssistantSources } from "@/lib/data/assistant-sources"
 import { listOwnApiTokens } from "@/lib/data/api-tokens"
 import { getLastRetentionRun } from "@/lib/data/retention"
@@ -76,7 +75,7 @@ export default async function SettingsPage() {
     serverZone(),
     getFormat(),
   ])
-  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, lastRetentionRun, channelStats, requestTiers, assistantSources, apiTokens] = await Promise.all([
+  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd, audit, discord, lastRetentionRun, channelStats, assistantSources, apiTokens] = await Promise.all([
     getRewindSeasonDataPreparedAt(season.seasonYear),
     checkRewindInfra(),
     getRewindLibraries(),
@@ -86,7 +85,6 @@ export default async function SettingsPage() {
     getDiscordOverview(),
     getLastRetentionRun(),
     getChannelStatsSettings(),
-    getRequestTierSettings(),
     getAssistantSources(),
     listOwnApiTokens(),
   ])
@@ -134,11 +132,6 @@ export default async function SettingsPage() {
         </SettingsGroup>
         <SettingsGroup id="members">
           <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />
-          <RequestTiersSection
-            saved={requestTiers}
-            startedLabel={requestTiers.lastRun ? f.dateTime(requestTiers.lastRun.startedAt, { zoneLabel: true }) : null}
-            footerMeta={saved("requestTiers")}
-          />
         </SettingsGroup>
         <SettingsGroup id="ai">
           <AiSection
