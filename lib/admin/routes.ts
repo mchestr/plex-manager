@@ -157,8 +157,13 @@ const SETTINGS_HOMES: Partial<Record<string, Route>> = {
   rewind: "/admin/rewind/settings",
 }
 
+/** The page a settings section moved to; `null` for a section still on the settings page, and for any other id. */
+export function movedSettingsHome(id: string): Route | null {
+  // Own keys only: an id such as "constructor" is a section, not a member inherited from Object
+  return (Object.hasOwn(SETTINGS_HOMES, id) ? SETTINGS_HOMES[id] : undefined) ?? null
+}
+
 /** One section of the settings, on the page it lives on: its feature's page once moved, else its anchor on the settings page. */
 export function settingsSection(id: string): Route {
-  // Own keys only: an id such as "constructor" is a section, not a member inherited from Object
-  return (Object.hasOwn(SETTINGS_HOMES, id) ? SETTINGS_HOMES[id] : undefined) ?? (`/admin/settings#${seg(id)}` as Route)
+  return movedSettingsHome(id) ?? (`/admin/settings#${seg(id)}` as Route)
 }

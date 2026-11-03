@@ -8,6 +8,7 @@ import {
   auditEvent,
   auditLog,
   invite,
+  movedSettingsHome,
   playgroundFor,
   publicInviteUrl,
   rewindHistory,
@@ -118,5 +119,28 @@ describe("admin routes", () => {
 
   it.each(["constructor", "toString", "hasOwnProperty", "__proto__"])("treats %s as a section id, never as a member inherited from Object", (id) => {
     expect(settingsSection(id)).toBe(`/admin/settings#${id}`)
+  })
+})
+
+describe("movedSettingsHome", () => {
+  it.each([
+    ["ai", "/admin/ai/settings"],
+    ["assistant", "/admin/ai/settings"],
+    ["channel-stats", "/admin/discord/settings"],
+    ["conversation-review", "/admin/ai/settings"],
+    ["discord", "/admin/discord/settings"],
+    ["request-tiers", "/admin/request-limits"],
+    ["rewind", "/admin/rewind/settings"],
+  ])("sends the section %s that moved to %s", (id, home) => {
+    expect(movedSettingsHome(id)).toBe(home)
+    expect(settingsSection(id)).toBe(home)
+  })
+
+  it.each(["plex", "tautulli", "stripe", "time-zone", "system", "", "nowhere"])("has no new home for %j, which is a section of Settings or none", (id) => {
+    expect(movedSettingsHome(id)).toBeNull()
+  })
+
+  it.each(["constructor", "toString", "hasOwnProperty", "__proto__"])("has no new home for %s, which Object only inherits", (id) => {
+    expect(movedSettingsHome(id)).toBeNull()
   })
 })

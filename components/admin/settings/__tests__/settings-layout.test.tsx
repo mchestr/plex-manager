@@ -3,9 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 
 import { leaveIsGuarded } from '@/__tests__/helpers/leave-guard'
+import { replaceMock, resetUrl } from '@/__tests__/helpers/url-router'
 import { SettingsGroup, SettingsLayout } from '@/components/admin/settings/settings-layout'
 import type { SettingsNavItem } from '@/components/admin/settings/settings-groups'
 import { SettingsSection } from '@/components/ui/settings-section'
+
+jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').navigationModule)
 
 const ITEMS: SettingsNavItem[] = [
   { id: 'plex', label: 'Plex server', group: 'connections', status: 'ok' },
@@ -38,6 +41,7 @@ function renderLayout() {
 describe('SettingsLayout', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/')
+    resetUrl('/admin/settings')
     Element.prototype.scrollIntoView = jest.fn()
   })
 
@@ -87,6 +91,39 @@ describe('SettingsLayout', () => {
     window.history.replaceState(null, '', '/#nowhere')
     window.dispatchEvent(new HashChangeEvent('hashchange'))
     expect(screen.getByText('Plex')).toBeVisible()
+  })
+
+  describe('a hash from before its section moved to its feature page', () => {
+    it.each([
+      ['rewind', '/admin/rewind/settings'],
+      ['ai', '/admin/ai/settings'],
+      ['channel-stats', '/admin/discord/settings'],
+      ['request-tiers', '/admin/request-limits'],
+    ])('opens the page #%s moved to', (id, page) => {
+      window.history.replaceState(null, '', `/#${id}`)
+      renderLayout()
+
+      expect(replaceMock).toHaveBeenCalledTimes(1)
+      expect(replaceMock).toHaveBeenCalledWith(page)
+    })
+
+    it('follows a hash that arrives after the page has loaded', () => {
+      renderLayout()
+      expect(replaceMock).not.toHaveBeenCalled()
+
+      window.history.replaceState(null, '', '/#discord')
+      window.dispatchEvent(new HashChangeEvent('hashchange'))
+
+      expect(replaceMock).toHaveBeenCalledTimes(1)
+      expect(replaceMock).toHaveBeenCalledWith('/admin/discord/settings')
+    })
+
+    it.each(['', 'plex', 'stripe', 'time-zone', 'nowhere', 'constructor', '%'])('leaves #%s on the settings page', (id) => {
+      window.history.replaceState(null, '', `/#${id}`)
+      renderLayout()
+
+      expect(replaceMock).not.toHaveBeenCalled()
+    })
   })
 
   it('keeps an unsaved edit in a hidden group', async () => {
