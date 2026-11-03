@@ -1,4 +1,5 @@
 {
+  "admin /admin/affiliates": {},
   "admin /admin/ai": {},
   "admin /admin/ai/conversation/a11y-conversation": {},
   "admin /admin/ai/settings": {},
