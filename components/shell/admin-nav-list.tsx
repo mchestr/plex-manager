@@ -3,21 +3,12 @@
 import { useAdminNav } from "@/components/shell/admin-nav-context"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useId } from "react"
 
 import { useSignOut } from "@/components/shell/use-sign-out"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
-import {
-  ADMIN_NAV_GROUPS,
-  isActive,
-  itemsIn,
-  groupSlug,
-  navTestId,
-  type AdminNavItem,
-  type NavCounts,
-} from "@/lib/admin/nav"
+import { isActive, navTestId, type AdminNavItem, type NavCounts } from "@/lib/admin/nav"
 import { icons } from "@/lib/ui/icons"
 import { cn } from "@/lib/utils"
 
@@ -50,36 +41,20 @@ function Row({ item, counts, onNavigate }: { item: AdminNavItem; counts: NavCoun
 }
 
 /**
- * The full grouped admin nav for the mobile sheets (the top bar's menu and
- * the tab bar's More), with Back to home and Sign out at the end.
+ * The full admin nav for the tab bar's More sheet, the one phone menu: every
+ * item in nav order as one list, with Back to home and Sign out at the end.
  */
 export function AdminNavList({ counts, onNavigate }: { counts: NavCounts; onNavigate: () => void }) {
   const signOut = useSignOut()
-  const idPrefix = useId()
   const { items } = useAdminNav()
-  const top = itemsIn(null, items)
 
   return (
     <nav aria-label="Admin" className="flex flex-col gap-4">
-      {top.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {top.map((item) => (
-            <Row key={item.id} item={item} counts={counts} onNavigate={onNavigate} />
-          ))}
-        </ul>
-      )}
-      {ADMIN_NAV_GROUPS.filter((group) => itemsIn(group, items).length > 0).map((group) => (
-        <section key={group} aria-labelledby={`${idPrefix}-${groupSlug(group)}`}>
-          <h3 id={`${idPrefix}-${groupSlug(group)}`} className="mb-1 px-3 text-caption font-medium text-muted-foreground">
-            {group}
-          </h3>
-          <ul className="flex flex-col gap-1">
-            {itemsIn(group, items).map((item) => (
-              <Row key={item.id} item={item} counts={counts} onNavigate={onNavigate} />
-            ))}
-          </ul>
-        </section>
-      ))}
+      <ul className="flex flex-col gap-1">
+        {items.map((item) => (
+          <Row key={item.id} item={item} counts={counts} onNavigate={onNavigate} />
+        ))}
+      </ul>
       <ul className="flex flex-col gap-1 border-t border-border pt-3">
         <li>
           <Link href="/" onClick={onNavigate} className={rowClasses} data-testid="admin-back-home-mobile">

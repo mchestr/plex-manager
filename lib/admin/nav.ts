@@ -3,18 +3,26 @@
  * feeds the sidebar, the mobile tab bar and its More sheet, page titles
  * (`titleFor`, read by PageHeader) and later the command menu (P10.16).
  *
- * ## Groups and section tabs
+ * ## One flat list and its section tabs
  *
- * The groups are being retired in favour of section tabs: an item with
- * `children` gets a tab strip (`SectionTabs`, rendered by the layout of its
- * route group) and `also` lights it on the sibling routes those tabs open.
+ * The nav is one list, with no groups: the sidebar and the More sheet show
+ * every item in this order. An item with `children` gets a tab strip
+ * (`SectionTabs`, rendered by the layout of its route group) and `also` lights
+ * it on the sibling routes those tabs open.
  *
  * ```
- * Overview, Assistant ungrouped, at the top (P10.8)
- * Community           Users, Invites, Affiliates, Announcements, Discord (Activity, Settings)
- * Rewind              Rewind (Season, Playground, Shares, Settings)
- * Usage and cost      AI (Activity, Cost, Settings)
- * System              Automations (Watchlist sync, Inactive members, Request limits, Queues), Audit log, Settings
+ * Overview
+ * Assistant
+ * Users
+ * Invites
+ * Affiliates
+ * Announcements
+ * Discord         Activity, Settings
+ * Rewind          Season, Playground, Shares, Settings
+ * AI              Activity, Cost, Settings
+ * Automations     Watchlist sync, Inactive members, Request limits, Queues
+ * Audit log
+ * Settings
  * ```
  *
  * `typedRoutes` rejects links to routes that do not exist yet, so the step
@@ -33,8 +41,6 @@ import type { Route } from "next"
 
 import { hasPermission, type Permission, type PermissionSubject } from "@/lib/permissions"
 import { icons } from "@/lib/ui/icons"
-
-export type AdminNavGroup = "Community" | "Rewind" | "Usage and cost" | "System"
 
 /** The sidebar badges' numbers; `failedJobs` is `null` while Redis is down. */
 export interface NavCounts {
@@ -63,11 +69,9 @@ export interface AdminNavItem {
   label: string
   href: Route
   icon: LucideIcon
-  /** `null` for the ungrouped items at the top, Overview and Assistant. */
-  group: AdminNavGroup | null
   /** `exact` lights only on `href`; `prefix` also lights on its subpaths. */
   match: "exact" | "prefix"
-  /** `tab` items sit in the mobile tab bar; the rest open from More. */
+  /** `tab` items sit in the mobile tab bar, up to its four link tabs; the rest open from More. */
   mobile: "tab" | "more"
   badge?: (counts: NavCounts) => AdminNavBadge | null
   /** The permission that shows the item to a non-admin role; without one, only admins see it. */
@@ -78,15 +82,12 @@ export interface AdminNavItem {
   children?: readonly AdminNavChild[]
 }
 
-export const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = ["Community", "Rewind", "Usage and cost", "System"]
-
 export const ADMIN_NAV: readonly AdminNavItem[] = [
   {
     id: "overview",
     label: "Overview",
     href: "/admin",
     icon: icons.overview,
-    group: null,
     // Exact: every admin page sits under /admin and lights its own item.
     match: "exact",
     mobile: "tab",
@@ -96,7 +97,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Assistant",
     href: "/admin/assistant",
     icon: icons.assistant,
-    group: null,
     match: "prefix",
     // Below `md` the top bar's assistant button opens it too
     mobile: "more",
@@ -107,7 +107,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Users",
     href: "/admin/users",
     icon: icons.users,
-    group: "Community",
     match: "prefix",
     mobile: "tab",
     permission: "users:read",
@@ -118,7 +117,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Invites",
     href: "/admin/invites",
     icon: icons.invites,
-    group: "Community",
     match: "prefix",
     mobile: "more",
     badge: ({ activeInvites }) => (activeInvites > 0 ? { text: `${activeInvites} active` } : null),
@@ -128,7 +126,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Affiliates",
     href: "/admin/affiliates",
     icon: icons.affiliates,
-    group: "Community",
     match: "prefix",
     mobile: "more",
     permission: "affiliates:read",
@@ -139,7 +136,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Announcements",
     href: "/admin/announcements",
     icon: icons.announcements,
-    group: "Community",
     match: "prefix",
     mobile: "more",
   },
@@ -148,7 +144,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Discord",
     href: "/admin/discord",
     icon: icons.discordBot,
-    group: "Community",
     match: "prefix",
     mobile: "more",
     children: [
@@ -161,7 +156,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Rewind",
     href: "/admin/rewind",
     icon: icons.rewind,
-    group: "Rewind",
     // Prefix: Playground and Settings sit below /admin/rewind; Shares sits beside it, so `also` lights it
     match: "prefix",
     also: ["/admin/shares"],
@@ -178,7 +172,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "AI",
     href: "/admin/ai",
     icon: icons.llmUsage,
-    group: "Usage and cost",
     match: "prefix",
     // Cost sits beside Activity, not below it, so its path is not under /admin/ai
     also: ["/admin/cost-analysis"],
@@ -194,11 +187,10 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Automations",
     href: "/admin/watchlist",
     icon: icons.automations,
-    // First in System, after the Rewind items, so the mobile tab bar (nav order) puts it after Rewind
-    group: "System",
     // Its other tabs sit beside /admin/watchlist, not below it, so `also` lights it on their paths
     match: "prefix",
     also: ["/admin/inactivity", "/admin/request-limits", "/admin/queues"],
+    // The tab bar follows nav order, so Automations sits after Rewind
     mobile: "tab",
     badge: ({ failedJobs }) => (failedJobs ? { text: `${failedJobs} failed`, tone: "destructive" } : null),
     children: [
@@ -213,7 +205,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Audit log",
     href: "/admin/audit",
     icon: icons.audit,
-    group: "System",
     match: "prefix",
     mobile: "more",
     permission: "audit:read",
@@ -223,16 +214,10 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Settings",
     href: "/admin/settings",
     icon: icons.settings,
-    group: "System",
     match: "prefix",
-    mobile: "tab",
+    mobile: "more",
   },
 ]
-
-/** `Usage and cost` reads `usage-and-cost`, for ids. */
-export function groupSlug(group: AdminNavGroup): string {
-  return group.toLowerCase().replaceAll(" ", "-")
-}
 
 export function navTestId(item: Pick<AdminNavItem, "id">): string {
   return `admin-nav-${item.id}`
@@ -270,11 +255,6 @@ export function childrenOf(id: string, subject: PermissionSubject, items: readon
   return children.filter((child) => mayOpen(subject, child))
 }
 
-/** The items of one group, in config order (`null` for the ungrouped top). */
-export function itemsIn(group: AdminNavGroup | null, items: readonly AdminNavItem[] = ADMIN_NAV): AdminNavItem[] {
-  return items.filter((item) => item.group === group)
-}
-
 export interface MobileLinkTab {
   kind: "link"
   id: string
@@ -297,23 +277,21 @@ function linkTab(item: AdminNavItem): MobileLinkTab {
   return { kind: "link", id: item.id, label: item.label, href: item.href, icon: item.icon, covers: [item] }
 }
 
+/** The tab bar holds this many link tabs, Overview included, and More takes the last place. */
+const MAX_LINK_TABS = 4
+
 /**
  * The mobile tab bar: Overview first, then every other `mobile: "tab"` item in
- * nav order (Users, Rewind), then Settings and More. A tab opens its item's
- * first child and lights on all of the item's pages, `also` included, so the
- * Rewind tab is lit on /admin/shares; the other items open from More.
+ * nav order (Users, Rewind, Automations), four link tabs at most, then More. A
+ * tab opens its item's first child and lights on all of the item's pages,
+ * `also` included, so the Rewind tab is lit on /admin/shares. Every other
+ * item, and any tab item past the cap, opens from More only.
  */
 export function mobileTabs(items: readonly AdminNavItem[] = ADMIN_NAV): MobileTab[] {
-  const byId = (id: string) => items.find((item) => item.id === id)
-  const first = byId("overview")
-  const tabs: MobileTab[] = []
-
-  if (first) tabs.push(linkTab(first))
-  for (const item of items) if (item.mobile === "tab" && item.id !== "settings" && item !== first) tabs.push(linkTab(item))
-  const settings = byId("settings")
-  if (settings) tabs.push(linkTab(settings))
-  tabs.push({ kind: "more", id: "more", label: "More" })
-  return tabs
+  const overview = items.find((item) => item.id === "overview")
+  const others = items.filter((item) => item.mobile === "tab" && item !== overview)
+  const links = (overview ? [overview, ...others] : others).slice(0, MAX_LINK_TABS)
+  return [...links.map(linkTab), { kind: "more", id: "more", label: "More" }]
 }
 
 export function isTabActive(tab: MobileLinkTab, pathname: string): boolean {

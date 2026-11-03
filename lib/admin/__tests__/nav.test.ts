@@ -8,7 +8,6 @@ import type { Route } from "next"
 
 import {
   ADMIN_NAV,
-  ADMIN_NAV_GROUPS,
   activeItem,
   childrenOf,
   isActive,
@@ -60,10 +59,8 @@ describe("ADMIN_NAV", () => {
     }
   })
 
-  it("lists the groups in the 6.2 order", () => {
-    expect(ADMIN_NAV_GROUPS).toEqual(["Community", "Rewind", "Usage and cost", "System"])
-    const order = ADMIN_NAV.map((item) => ADMIN_NAV_GROUPS.indexOf(item.group as never))
-    expect(order).toEqual([...order].sort((a, b) => a - b))
+  it("is one flat list: no item belongs to a group", () => {
+    for (const item of ADMIN_NAV) expect(item).not.toHaveProperty("group")
   })
 
   it("opens an item with children on its first child, and gives its children unique ids", () => {
@@ -146,7 +143,6 @@ describe("children and also", () => {
     label: "X",
     href: "/admin/x" as Route,
     icon: icons.users,
-    group: null,
     match: "prefix",
     mobile: "more",
     also: ["/admin/y" as Route],
@@ -226,7 +222,6 @@ describe("Rewind", () => {
     expect(byId("rewind")).toMatchObject({
       label: "Rewind",
       href: "/admin/rewind",
-      group: "Rewind",
       match: "prefix",
       mobile: "tab",
       also: ["/admin/shares"],
@@ -254,7 +249,6 @@ describe("Automations", () => {
     expect(automations).toMatchObject({
       label: "Automations",
       href: "/admin/watchlist",
-      group: "System",
       match: "prefix",
       mobile: "tab",
       also: ["/admin/inactivity", "/admin/request-limits", "/admin/queues"],
@@ -281,10 +275,10 @@ describe("Automations", () => {
     expect(navFor({ isAdmin: false, role: "support" }).map((item) => item.id)).not.toContain("automations")
   })
 
-  it("is a mobile tab, before Settings", () => {
+  it("is a mobile tab, after Rewind", () => {
     const ids = mobileTabs().map((tab) => tab.id)
     expect(ids).toContain("automations")
-    expect(ids.indexOf("automations")).toBeLessThan(ids.indexOf("settings"))
+    expect(ids.indexOf("automations")).toBeGreaterThan(ids.indexOf("rewind"))
     const tab = mobileTabs().find((t) => t.id === "automations") as MobileLinkTab
     expect(tab.href).toBe("/admin/watchlist")
     for (const pathname of ["/admin/watchlist", "/admin/inactivity", "/admin/request-limits", "/admin/queues"]) {
@@ -295,10 +289,21 @@ describe("Automations", () => {
 })
 
 describe("mobileTabs", () => {
-  it("shows Overview, Users, Rewind, Automations, Settings and More, with the Rewind tab on Season (P10.8)", () => {
+  /** A bare item for the tab fixtures. */
+  const bare = (id: string, mobile: AdminNavItem["mobile"] = "tab"): AdminNavItem => ({
+    id,
+    label: id,
+    href: `/admin/${id}` as Route,
+    icon: icons.users,
+    match: "prefix",
+    mobile,
+  })
+  const ids = (tabs: ReturnType<typeof mobileTabs>) => tabs.map((tab) => tab.id)
+
+  it("shows Overview, Users, Rewind, Automations and More, with the Rewind tab on Season (P10.8)", () => {
     const tabs = mobileTabs()
-    expect(tabs.map((tab) => tab.id)).toEqual(["overview", "users", "rewind", "automations", "settings", "more"])
-    expect(tabs.map((tab) => tab.label)).toEqual(["Overview", "Users", "Rewind", "Automations", "Settings", "More"])
+    expect(tabs.map((tab) => tab.id)).toEqual(["overview", "users", "rewind", "automations", "more"])
+    expect(tabs.map((tab) => tab.label)).toEqual(["Overview", "Users", "Rewind", "Automations", "More"])
     const rewind = tabs.find((tab) => tab.id === "rewind") as MobileLinkTab
     expect(rewind.href).toBe("/admin/rewind")
     expect(rewind.covers.map((item) => item.id)).toEqual(["rewind"])
@@ -309,10 +314,27 @@ describe("mobileTabs", () => {
     expect(isTabActive(rewind, "/admin/users")).toBe(false)
   })
 
-  it("takes every other tab item in nav order, with Settings last before More", () => {
-    const extra: AdminNavItem = { ...byId("users"), id: "extra", label: "Extra", href: "/admin/extra" as Route }
+  it("leaves Settings to More", () => {
+    expect(byId("settings").mobile).toBe("more")
+    expect(ids(mobileTabs())).not.toContain("settings")
+  })
+
+  it("takes the tab items in nav order, Overview first, and ends with More", () => {
+    const tabs = mobileTabs([bare("users"), bare("overview"), bare("invites", "more"), bare("rewind")])
+    expect(ids(tabs)).toEqual(["overview", "users", "rewind", "more"])
+  })
+
+  it("holds four link tabs at most, Overview included, and opens the rest from More only", () => {
+    const extra = bare("extra")
     const tabs = mobileTabs([...ADMIN_NAV, extra])
-    expect(tabs.map((tab) => tab.id)).toEqual(["overview", "users", "rewind", "automations", "extra", "settings", "more"])
+    expect(ids(tabs)).toEqual(["overview", "users", "rewind", "automations", "more"])
+    expect(tabs.flatMap((tab) => (tab.kind === "link" ? tab.covers : []))).not.toContain(extra)
+  })
+
+  it("counts the cap from Overview, or from the first tab item when a role has no Overview", () => {
+    const five = ["a", "b", "c", "d", "e"].map((id) => bare(id))
+    expect(ids(mobileTabs([bare("overview"), ...five]))).toEqual(["overview", "a", "b", "c", "more"])
+    expect(ids(mobileTabs(five))).toEqual(["a", "b", "c", "d", "more"])
   })
 
   it("lights the Overview tab only on /admin", () => {
@@ -324,8 +346,8 @@ describe("mobileTabs", () => {
 })
 
 describe("Overview (P10.8)", () => {
-  it("is the first item, ungrouped, exact and a mobile tab", () => {
-    expect(ADMIN_NAV[0]).toMatchObject({ id: "overview", label: "Overview", href: "/admin", group: null, match: "exact", mobile: "tab" })
+  it("is the first item, exact and a mobile tab", () => {
+    expect(ADMIN_NAV[0]).toMatchObject({ id: "overview", label: "Overview", href: "/admin", match: "exact", mobile: "tab" })
     expect(titleFor("/admin")).toBe("Overview")
   })
 
@@ -337,12 +359,11 @@ describe("Overview (P10.8)", () => {
 })
 
 describe("Assistant", () => {
-  it("follows Overview, ungrouped, and opens from More on a phone", () => {
+  it("follows Overview and opens from More on a phone", () => {
     expect(ADMIN_NAV[1]).toMatchObject({
       id: "assistant",
       label: "Assistant",
       href: "/admin/assistant",
-      group: null,
       mobile: "more",
       permission: "assistant:use",
     })
@@ -364,7 +385,7 @@ describe("AI", () => {
   const ai = byId("ai")
 
   it("is one item with Activity, Cost and Settings tabs, opening on Activity", () => {
-    expect(ai).toMatchObject({ id: "ai", label: "AI", href: "/admin/ai", group: "Usage and cost", match: "prefix", mobile: "more", also: ["/admin/cost-analysis"] })
+    expect(ai).toMatchObject({ id: "ai", label: "AI", href: "/admin/ai", match: "prefix", mobile: "more", also: ["/admin/cost-analysis"] })
     expect(ai.children).toEqual([
       { id: "ai-activity", label: "Activity", href: "/admin/ai" },
       { id: "ai-cost", label: "Cost", href: "/admin/cost-analysis" },
