@@ -71,12 +71,11 @@ export async function getAdminShellData(session: ({ id: string; name?: string | 
   return {
     serverName: name,
     user: { name: displayName, initials: initialsFor(displayName) },
-    // A role sees the member count and, with affiliates:read, the pending applications; never invites or job health
+    // A role sees the member count and, with affiliates:read, the pending applications; never job health
     navCounts: session.isAdmin
       ? navCounts
       : {
           users: navCounts.users,
-          activeInvites: 0,
           pendingAffiliates: hasPermission(session, "affiliates:read") ? navCounts.pendingAffiliates : 0,
           failedJobs: null,
         },

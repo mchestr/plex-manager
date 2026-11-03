@@ -45,7 +45,7 @@ jest.mock('next/navigation', () => ({
 const mockPathname = usePathname as jest.Mock
 const noAxeRegion = { rules: { region: { enabled: false } } }
 
-function renderShell({ counts = { users: 7, activeInvites: 3, pendingAffiliates: 2, failedJobs: 0 }, assistant = true }: { counts?: NavCounts; assistant?: boolean } = {}) {
+function renderShell({ counts = { users: 7, pendingAffiliates: 2, failedJobs: 0 }, assistant = true }: { counts?: NavCounts; assistant?: boolean } = {}) {
   return render(
     <ToastProvider>
       <AdminShell
@@ -87,7 +87,7 @@ describe('AdminShell', () => {
   })
 
   it('shows the counts and labels the tab bar', () => {
-    renderShell({ counts: { users: 7, activeInvites: 3, pendingAffiliates: 2, failedJobs: 2 } })
+    renderShell({ counts: { users: 7, pendingAffiliates: 2, failedJobs: 2 } })
 
     const sidebar = screen.getByTestId('admin-sidebar')
     // Pending applications outrank the member count, and active invites have no badge
@@ -140,7 +140,7 @@ describe('AdminShell', () => {
   })
 
   it('puts the destructive dot on the Automations tab while jobs have failed, and none on More', () => {
-    renderShell({ counts: { users: 1, activeInvites: 0, pendingAffiliates: 0, failedJobs: 4 } })
+    renderShell({ counts: { users: 1, pendingAffiliates: 0, failedJobs: 4 } })
 
     expect(screen.getByTestId('admin-tab-automations-failed')).toBeInTheDocument()
     expect(screen.getByTestId('admin-tab-automations')).toHaveAccessibleName(/^Automations ?, jobs have failed$/)
@@ -149,7 +149,7 @@ describe('AdminShell', () => {
   })
 
   it.each([0, null])('draws no dot with %p failed jobs (null is Redis down)', (failedJobs) => {
-    renderShell({ counts: { users: 1, activeInvites: 0, pendingAffiliates: 0, failedJobs } })
+    renderShell({ counts: { users: 1, pendingAffiliates: 0, failedJobs } })
 
     expect(screen.queryByTestId('admin-tab-automations-failed')).not.toBeInTheDocument()
     expect(screen.queryByTestId('admin-tab-more-failed')).not.toBeInTheDocument()

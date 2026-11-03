@@ -3,7 +3,6 @@ import "server-only"
 import { Queue } from "bullmq"
 import { unstable_cache } from "next/cache"
 
-import { inviteStatusWhere } from "@/lib/admin/invites/queries"
 import type { NavCounts } from "@/lib/admin/nav"
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { prisma } from "@/lib/prisma"
@@ -58,21 +57,18 @@ async function failedJobs(): Promise<number | null> {
 }
 
 /**
- * The admin sidebar's badges: members, invites that can still be redeemed,
- * affiliate applications waiting for a decision, and failed jobs. Cached for
- * 30 seconds under `admin-nav-counts`, so every admin page render does not
- * count again.
+ * The admin sidebar's badges: members, affiliate applications waiting for a
+ * decision, and failed jobs. Cached for 30 seconds under `admin-nav-counts`,
+ * so every admin page render does not count again.
  */
 export const getAdminNavCounts = unstable_cache(
   async (): Promise<NavCounts> => {
-    const now = new Date()
-    const [users, activeInvites, pendingAffiliates, failed] = await Promise.all([
+    const [users, pendingAffiliates, failed] = await Promise.all([
       prisma.user.count(),
-      prisma.invite.count({ where: inviteStatusWhere("active", now) }),
       prisma.affiliateApplication.count({ where: { status: "PENDING" } }),
       failedJobs(),
     ])
-    return { users, activeInvites, pendingAffiliates, failedJobs: failed }
+    return { users, pendingAffiliates, failedJobs: failed }
   },
   [ADMIN_NAV_COUNTS_TAG],
   { tags: [ADMIN_NAV_COUNTS_TAG], revalidate: 30 }

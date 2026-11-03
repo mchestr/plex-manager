@@ -32,7 +32,7 @@ function bare(id: string, mobile: AdminNavItem['mobile'], badge?: AdminNavItem['
 }
 
 function renderTabBar(items: AdminNavItem[], failedJobs: number | null) {
-  const counts: NavCounts = { users: 3, activeInvites: 0, pendingAffiliates: 0, failedJobs }
+  const counts: NavCounts = { users: 3, pendingAffiliates: 0, failedJobs }
   mockNav.mockReturnValue({ items, scoped: false })
   return render(<AdminTabBar navCounts={counts} />)
 }

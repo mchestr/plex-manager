@@ -43,7 +43,6 @@ import { icons } from "@/lib/ui/icons"
 /** The sidebar badges' numbers; `failedJobs` is `null` while Redis is down. */
 export interface NavCounts {
   users: number
-  activeInvites: number
   /** Affiliate applications waiting for a decision. */
   pendingAffiliates: number
   failedJobs: number | null
