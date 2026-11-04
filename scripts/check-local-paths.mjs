@@ -10,7 +10,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { lstatSync, readFileSync } from "node:fs";
 
 import { findLeaks } from "./local-paths/rules.mjs";
 
@@ -36,10 +36,20 @@ const files = (
 let failed = 0;
 for (const file of files) {
   let text;
-  try {
-    text = staged ? git(["show", `:${file}`]) : readFileSync(file, "utf8");
-  } catch {
-    continue; // a deleted file, a symlink to nowhere or a submodule
+  if (staged) {
+    text = git(["show", `:${file}`]);
+  } else {
+    let stat;
+    try {
+      stat = lstatSync(file);
+    } catch (error) {
+      if (error.code === "ENOENT") continue; // deleted but not yet staged
+      throw error;
+    }
+    // A symlink's target is checked as its own file (CLAUDE.md -> AGENTS.md);
+    // a submodule is a folder.
+    if (!stat.isFile()) continue;
+    text = readFileSync(file, "utf8");
   }
   if (text.includes("\0")) continue; // binary
   for (const { line, label } of findLeaks(text)) {

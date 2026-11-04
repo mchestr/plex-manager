@@ -87,6 +87,7 @@ Do these checks before you send a pull request. CI also does them.
 | `npm run test:coverage` | The unit tests and the coverage floors |
 | `npm run knip` | Unused files, exports and dependencies |
 | `npm run design:check` | The rules of the design system |
+| `npm run check:local-paths` | That no file holds a local path to your checkout, an agent scratch or worktree folder or a session link. Type `npm run hooks:install` once to check staged files before each commit. |
 | `npm run env:docs -- --check` | That `docs/environment.md` and `example.env` show the variables of `lib/env.ts`. To change them, type `npm run env:docs`. |
 
 There are two more test suites:

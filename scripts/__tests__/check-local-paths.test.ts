@@ -20,6 +20,11 @@ describe("findLeaks", () => {
       "see /Users/jane/plex-manager",
       "absolute path to a plex-manager checkout",
     ],
+    // A copy of the checkout is still a local path.
+    [
+      "/home/jane/plex-manager-backup/app",
+      "absolute path to a plex-manager checkout",
+    ],
     [
       "C:\\Users\\Jane\\code\\plex-manager\\README.md",
       "Windows path to a plex-manager checkout",
