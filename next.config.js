@@ -17,8 +17,8 @@ module.exports = () => ({
   typedRoutes: true,
   output: 'standalone',
   poweredByHeader: false,
-  // Stops `next dev` from writing AGENTS.md into the repo; CLAUDE.md already
-  // holds the agent guidance.
+  // Stops `next dev` from writing AGENTS.md into the repo; AGENTS.md is a
+  // committed symlink to CLAUDE.md, which holds the agent guidance.
   agentRules: false,
   serverExternalPackages: ['discord.js', '@discordjs/ws', 'zlib-sync', 'bufferutil', 'utf-8-validate', 'subset-font'],
   // The optimizer would fetch and decode any URL an anonymous caller passes to

@@ -13,6 +13,7 @@
       "Skill(rewind-page)",
       "Skill(share-card)",
       "Skill(visual-qa)",
+      "Skill(pr-writing)",
       "Edit(./app/**)",
       "Edit(./components/**)",
       "Edit(./lib/**)",

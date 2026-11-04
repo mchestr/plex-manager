@@ -33,7 +33,7 @@ const ROOT = path.join(__dirname, "..", "..")
 const SKILLS_DIR = path.join(ROOT, ".claude", "skills")
 const THIRD_PARTY = path.join(SKILLS_DIR, "THIRD_PARTY.md")
 
-const PROJECT_SKILLS = ["rewind-design-system", "rewind-page", "share-card", "visual-qa"]
+const PROJECT_SKILLS = ["pr-writing", "rewind-design-system", "rewind-page", "share-card", "visual-qa"]
 
 /** Skill folders whose THIRD_PARTY.md row is pinned at "project-authored". */
 function projectAuthoredRows(): string[] {
@@ -123,7 +123,7 @@ function globMatches(glob: string, file: string): boolean {
 }
 
 describe("project-authored agent skills", () => {
-  it("are the four P11.27 skills, each marked project-authored in THIRD_PARTY.md", () => {
+  it("are the five project-authored skills, each marked project-authored in THIRD_PARTY.md", () => {
     expect(projectAuthoredRows()).toEqual([...PROJECT_SKILLS].sort())
   })
 

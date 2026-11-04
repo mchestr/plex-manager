@@ -72,8 +72,8 @@ describe("vendored agent skills", () => {
     ])
   })
 
-  it("holds the four project-authored skills", () => {
-    expect(projectSkills()).toEqual(["rewind-design-system", "rewind-page", "share-card", "visual-qa"])
+  it("holds the five project-authored skills", () => {
+    expect(projectSkills()).toEqual(["pr-writing", "rewind-design-system", "rewind-page", "share-card", "visual-qa"])
   })
 
   it.each(projectSkills())("%s is a single SKILL.md with no URLs or web fetches", (skill) => {
