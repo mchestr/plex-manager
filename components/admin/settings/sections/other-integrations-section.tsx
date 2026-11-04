@@ -3,6 +3,7 @@
 import type { ReactNode } from "react"
 
 import { JellyfinLoginToggle } from "@/components/admin/settings/jellyfin-login-toggle"
+import { RemoveArrServiceButton } from "@/components/admin/settings/remove-arr-service"
 import { ServerForm } from "@/components/admin/settings/server-form"
 import { SettingsSheet } from "@/components/admin/settings/settings-sheet"
 import { SettingsSection } from "@/components/ui/settings-section"
@@ -13,8 +14,8 @@ import { worstStatus, type SectionHealth } from "@/lib/settings/connection-statu
 type OtherService = "sonarr" | "radarr" | "jellyfin"
 
 const DESCRIPTIONS: Record<OtherService, string> = {
-  sonarr: "TV library",
-  radarr: "Movie library",
+  sonarr: "Lets the assistant look up shows, adds returning shows to Rewind and links Discord media marks",
+  radarr: "Lets the assistant look up movies and links Discord media marks",
   jellyfin: "A second media server for members who do not use Plex",
 }
 
@@ -42,7 +43,8 @@ function rowDescription(type: OtherService, server: StoredServer | null) {
 /**
  * Sonarr, Radarr and Jellyfin (6.4), in the Connections group as one list card.
  * The rows are the view, each with its badge; Edit or Set up opens the
- * service's form in a Sheet, its edit mode. Allow Jellyfin sign-in saves at
+ * service's form in a Sheet, its edit mode; a Sonarr or Radarr row that is
+ * set up also has Remove, since both are optional. Allow Jellyfin sign-in saves at
  * once, so it stays live in the Jellyfin row rather than in the Sheet. The
  * section takes the worst status among the services set up.
  */
@@ -94,6 +96,7 @@ export function OtherIntegrationsSection({ servers, jellyfinLogin, health, foote
                   />
                 )}
               </SettingsSheet>
+              {server && type !== "jellyfin" && <RemoveArrServiceButton service={type} />}
               {type === "jellyfin" && jellyfinLogin !== null && (
                 <div className="basis-full">
                   <JellyfinLoginToggle enabledForLogin={jellyfinLogin} />
