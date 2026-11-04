@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react"
 
+import { RemoveArrServiceButton } from "@/components/admin/settings/remove-arr-service"
 import { ServerForm } from "@/components/admin/settings/server-form"
 import { SettingsSheet } from "@/components/admin/settings/settings-sheet"
 import { SettingsSection } from "@/components/ui/settings-section"
@@ -12,8 +13,8 @@ import { worstStatus, type SectionHealth } from "@/lib/settings/connection-statu
 type OtherService = "sonarr" | "radarr"
 
 const DESCRIPTIONS: Record<OtherService, string> = {
-  sonarr: "TV library",
-  radarr: "Movie library",
+  sonarr: "Lets the assistant look up shows, adds returning shows to Rewind and links Discord media marks",
+  radarr: "Lets the assistant look up movies and links Discord media marks",
 }
 
 const ORDER: OtherService[] = ["sonarr", "radarr"]
@@ -38,8 +39,9 @@ function rowDescription(type: OtherService, server: StoredServer | null) {
 /**
  * Sonarr and Radarr (6.4), in the Connections group as one list card. The
  * rows are the view, each with its badge; Edit or Set up opens the service's
- * form in a Sheet, its edit mode. The section takes the worst status among
- * the services set up.
+ * form in a Sheet, its edit mode; a row that is set up also has Remove, since
+ * both are optional. The section takes the worst status among the services
+ * set up.
  */
 export function OtherIntegrationsSection({ servers, health, footerMeta }: OtherIntegrationsSectionProps) {
   const configured = ORDER.filter((type) => servers[type])
@@ -89,6 +91,7 @@ export function OtherIntegrationsSection({ servers, health, footerMeta }: OtherI
                   />
                 )}
               </SettingsSheet>
+              {server && <RemoveArrServiceButton service={type} />}
             </li>
           )
         })}

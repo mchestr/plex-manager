@@ -2,19 +2,20 @@
  * Other integrations: the rows are the view, with no section Edit, and each
  * row's Sheet is its edit mode. A save, or Save with nothing changed, closes
  * the Sheet; a failed one keeps it open; closing it with unsaved changes asks
- * first.
+ * first. A Sonarr or Radarr row that is set up has Remove, behind a confirm.
  */
 
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { updateRadarr, updateSonarr } from "@/actions/admin/admin-servers"
+import { removeArrService, updateRadarr, updateSonarr } from "@/actions/admin/admin-servers"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
 import { SettingsEditProvider } from "@/components/ui/settings-edit-context"
 import type { StoredServer } from "@/hooks/admin/use-server-form"
 import type { SectionHealth } from "@/lib/settings/connection-status"
 
 jest.mock("@/actions/admin/admin-servers", () => ({
+  removeArrService: jest.fn(),
   updateOverseerr: jest.fn(),
   updatePlexServer: jest.fn(),
   updateRadarr: jest.fn(),
@@ -22,6 +23,9 @@ jest.mock("@/actions/admin/admin-servers", () => ({
   updateTautulli: jest.fn(),
 }))
 jest.mock("@/actions/admin/test-connection", () => ({ testServiceConnection: jest.fn() }))
+
+const mockRefresh = jest.fn()
+jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mockRefresh }) }))
 
 const mockShowSuccess = jest.fn()
 const mockShowError = jest.fn()
@@ -56,11 +60,49 @@ describe("OtherIntegrationsSection", () => {
     renderSection()
 
     expect(screen.getByTestId("settings-other-sonarr")).toHaveTextContent("sonarr.lan:8989")
-    expect(screen.getByTestId("settings-other-radarr")).toHaveTextContent(/^RadarrMovie libraryNot set up/)
+    expect(screen.getByTestId("settings-other-radarr")).toHaveTextContent(/^RadarrLets the assistant look up movies and links Discord media marksNot set up/)
     expect(screen.getByRole("button", { name: "Edit Sonarr" })).toHaveAttribute("data-testid", "settings-other-sonarr-edit")
     expect(screen.getByRole("button", { name: "Set up Radarr" })).toHaveAttribute("data-testid", "settings-other-radarr-edit")
     expect(screen.queryByTestId("settings-other-edit")).not.toBeInTheDocument()
     expect(screen.queryByTestId("settings-other-save")).not.toBeInTheDocument()
+  })
+
+  it("offers Remove only for a row that is set up", () => {
+    renderSection()
+
+    expect(screen.getByRole("button", { name: "Remove Sonarr" })).toHaveAttribute("data-testid", "settings-other-sonarr-remove")
+    expect(screen.queryByTestId("settings-other-radarr-remove")).not.toBeInTheDocument()
+  })
+
+  it("removes Sonarr once confirmed, naming what stops working", async () => {
+    const user = userEvent.setup()
+    jest.mocked(removeArrService).mockResolvedValue({ success: true, data: null })
+    renderSection()
+
+    await user.click(screen.getByTestId("settings-other-sonarr-remove"))
+    const dialog = await screen.findByTestId("settings-other-sonarr-remove-dialog")
+    expect(dialog).toHaveTextContent("Remove Sonarr?")
+    expect(dialog).toHaveTextContent("Rewind leaves out returning shows")
+    expect(removeArrService).not.toHaveBeenCalled()
+
+    await user.click(within(dialog).getByTestId("settings-other-sonarr-remove-confirm"))
+
+    expect(removeArrService).toHaveBeenCalledWith({ service: "sonarr" })
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith("Sonarr removed"))
+    expect(mockRefresh).toHaveBeenCalled()
+  })
+
+  it("keeps the confirm open with the error when Remove fails", async () => {
+    const user = userEvent.setup()
+    jest.mocked(removeArrService).mockResolvedValue({ success: false, code: "INTERNAL", error: "Could not remove the service" })
+    renderSection()
+
+    await user.click(screen.getByTestId("settings-other-sonarr-remove"))
+    await user.click(await screen.findByTestId("settings-other-sonarr-remove-confirm"))
+
+    const dialog = screen.getByTestId("settings-other-sonarr-remove-dialog")
+    expect(await within(dialog).findByText("Could not remove the service")).toBeInTheDocument()
+    expect(mockShowSuccess).not.toHaveBeenCalled()
   })
 
   it("anchors each row by its service, so the overview's link to #sonarr reaches it", () => {

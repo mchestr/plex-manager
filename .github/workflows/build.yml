@@ -39,6 +39,10 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      # No local absolute paths, agent scratch folders or session links (scripts/local-paths/rules.mjs).
+      - name: Check for local paths
+        run: npm run check:local-paths
+
       # The release tarball is pinned by version and SHA-256.
       - name: Lint workflows
         env:
