@@ -19,6 +19,29 @@ in `changelog.d/`. A pull request that touches `prisma/migrations/**`,
 the `breaking` label, must add one (the Changelog check); the `no-changelog`
 label skips it.
 
+## [0.11.0] - 2026-11-04
+
+### Upgrade notes
+
+- Take a `pg_dump -Fc` before you start the new release.
+- **New migration:** `20270123110000_add_brand_appearance` adds `Config.loginSubtitle`, `Config.accentColor`, `Config.brandAssetVersions` and the `BrandAsset` table. The image runs it at start.
+- **Jellyfin removed (breaking):** Plex Manager is now Plex only. Keep the backup you take before the upgrade: the migration `20270123100000_remove_jellyfin` deletes data and cannot be undone. It deletes every Jellyfin invite and its usages, sets the joined-with service of each member who joined with Jellyfin to Plex when they also have a Plex account (else to none), and drops the `JellyfinServer` table, `User.jellyfinUserId`, `Invite.jellyfinLibraryIds` and `Subscription.jellyfinAccessStatus`. A member who has only a Jellyfin account keeps their row, Rewinds and history but can no longer sign in; remove them under **Admin > Members > Users** if they should go. The Jellyfin accounts and libraries on your Jellyfin server are not touched. The stored Jellyfin API key is dropped with its table but stays valid on the Jellyfin server: revoke it there, under **Dashboard > API Keys**.
+- **Before the upgrade, find Jellyfin-only subscribers:** a member with only a Jellyfin account and an active Stripe subscription stays billed but has no access after the upgrade. List them on the database as it is before the upgrade, then cancel or refund each in **Admin > Members > Users** or the Stripe dashboard: `SELECT u.id, u.name, s.status FROM "User" u JOIN "Subscription" s ON s."userId" = u.id WHERE u."jellyfinUserId" IS NOT NULL AND u."plexUserId" IS NULL AND s.status IN ('ACTIVE', 'PAST_DUE');`
+- **Variable no longer read:** `JELLYFIN_DEVICE_ID`. Remove it from `.env`.
+
+### Added
+
+- **Appearance settings:** Admin, Settings, System has an Appearance section for the server name, a login subtitle and an accent colour (`#RRGGBB`), which every button, link and focus ring takes in both themes, adjusted to stay readable. A Logos and images section uploads a wordmark, an icon, a favicon and a login background (PNG, JPEG, WebP or SVG by slot, up to 768 KB each), served from `/api/branding/<kind>/<version>`. The wordmark replaces the name in every shell, the icon replaces the monogram on the sign-in pass, the app icons and the link preview card, and the background fills the sign-in screen.
+- **Remove Sonarr or Radarr:** each Sonarr or Radarr row that is set up in **Admin > Settings** has a Remove button, behind a confirmation that says what stops working. Removal deletes every stored row of that service, including old ones that still hold API keys, and writes an audit event.
+
+### Changed
+
+- **Sonarr and Radarr descriptions:** the connection rows say what each service feeds. Sonarr feeds the assistant's show lookups, Rewind's returning shows and Discord media links. Radarr feeds the assistant's movie lookups and Discord media links.
+
+### Removed
+
+- **Jellyfin:** Jellyfin sign-in, Jellyfin invites, the Jellyfin connection in **Admin > Settings**, turning Jellyfin accounts on and off with a Stripe subscription, member removal disabling Jellyfin accounts, and the Jellyfin instructions in onboarding and the Discord bot.
+
 ## [0.10.0] - 2026-11-03
 
 ### Upgrade notes
@@ -356,6 +379,7 @@ The Phase 0 safety fixes of the 2026 refresh (#321) and the 2026-07 Discord enha
 - No account linking by email; the Jellyfin sign-in toggle is enforced; share routes serve a share-safe projection; a failed Tautulli match no longer shows emails; a Redis-backed rate limiter keys on the trusted proxy hop; generation is single-flight and rate-limited; the poster proxy checks access; `plexAuthToken` no longer reaches the admin browser.
 - The Discord bot no longer uses the Message Content intent, keeps its token encrypted in the database, and scrubs personal fields before the LLM.
 
+[0.11.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.11.0
 [0.10.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.10.0
 [0.9.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.9.0
 [0.8.0]: https://github.com/mchestr/plex-manager/releases/tag/v0.8.0
