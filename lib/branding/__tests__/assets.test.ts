@@ -37,7 +37,7 @@ describe("the slots", () => {
   })
 
   it("versions the URL with the hash", () => {
-    expect(brandAssetUrl("icon", "0123456789abcdef0123")).toBe("/api/branding/icon?v=0123456789abcdef")
+    expect(brandAssetUrl("icon", "0123456789abcdef0123")).toBe("/api/branding/icon/0123456789abcdef")
   })
 })
 

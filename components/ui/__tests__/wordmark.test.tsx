@@ -13,11 +13,11 @@ it('draws the pip and the name without an uploaded wordmark', () => {
 
 it('draws the uploaded wordmark, named for screen readers', () => {
   render(
-    <BrandAssetsProvider value={{ wordmark: '/api/branding/wordmark?v=abc' }}>
+    <BrandAssetsProvider value={{ wordmark: '/api/branding/wordmark/0123456789abcdef' }}>
       <Wordmark serverName="Mikeflix" size="sm" />
     </BrandAssetsProvider>
   )
   const image = screen.getByRole('img', { name: 'Mikeflix' })
-  expect(image).toHaveAttribute('src', '/api/branding/wordmark?v=abc')
+  expect(image).toHaveAttribute('src', '/api/branding/wordmark/0123456789abcdef')
   expect(image).toHaveClass('h-5')
 })

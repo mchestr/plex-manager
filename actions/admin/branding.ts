@@ -7,7 +7,6 @@ import { expireTag } from "@/lib/actions/invalidate"
 import { adminAction } from "@/lib/actions/define-action"
 import { ok } from "@/lib/actions/result"
 import { ACCENT_PATTERN } from "@/lib/branding/accent"
-import { BRANDING_TAG } from "@/lib/branding/settings"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
@@ -56,8 +55,7 @@ export const updateAppearance = adminAction({
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("branding", before, appearance))
     // The name is an app setting; the subtitle and accent are branding
     expireTag(APP_SETTINGS_TAG)
-    expireTag(BRANDING_TAG)
-    revalidatePath("/", "layout")
+    revalidatePath("/admin/settings")
     return ok(appearance)
   },
 })

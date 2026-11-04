@@ -15,11 +15,11 @@ jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: mock
 beforeEach(() => jest.clearAllMocks())
 
 it('lists every slot, with a preview only where an image is uploaded', () => {
-  render(<BrandImagesSection assets={{ icon: '/api/branding/icon?v=abc' }} />)
+  render(<BrandImagesSection assets={{ icon: '/api/branding/icon/0123456789abcdef' }} />)
   for (const kind of ['wordmark', 'icon', 'favicon', 'login-background']) {
     expect(screen.getByTestId(`brand-image-${kind}`)).toBeInTheDocument()
   }
-  expect(screen.getByTestId('brand-image-icon-preview')).toHaveAttribute('src', '/api/branding/icon?v=abc')
+  expect(screen.getByTestId('brand-image-icon-preview')).toHaveAttribute('src', '/api/branding/icon/0123456789abcdef')
   expect(screen.getByTestId('brand-image-icon-upload')).toHaveTextContent('Replace')
   expect(screen.queryByTestId('brand-image-wordmark-preview')).not.toBeInTheDocument()
   expect(screen.queryByTestId('brand-image-wordmark-remove')).not.toBeInTheDocument()
@@ -59,7 +59,7 @@ it('refuses a file over the limit before it uploads', async () => {
 it('removes an uploaded image', async () => {
   const user = userEvent.setup()
   jest.mocked(removeBrandAsset).mockResolvedValue({ success: true, data: { kind: 'icon' } })
-  render(<BrandImagesSection assets={{ icon: '/api/branding/icon?v=abc' }} />)
+  render(<BrandImagesSection assets={{ icon: '/api/branding/icon/0123456789abcdef' }} />)
 
   await user.click(screen.getByTestId('brand-image-icon-remove'))
   await waitFor(() => expect(removeBrandAsset).toHaveBeenCalledWith('icon'))

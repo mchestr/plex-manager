@@ -647,6 +647,7 @@ model Config {
   serverName                   String? // Brand name; null falls back to the Plex server's name
   loginSubtitle                String? // A line under the name on the sign-in screen (Settings, Appearance)
   accentColor                  String? // "#RRGGBB" the primary tokens derive from; null keeps the default amber
+  brandAssetVersions           Json? // { [BrandAsset.kind]: sha256 } for each uploaded image, so the layout never reads BrandAsset
   rewindSeasonOpens            String    @default("12-01") // month-day, in the server zone
   rewindSeasonCloses           String    @default("01-31") // month-day, in the server zone
   rewindEnabled                Boolean   @default(false)

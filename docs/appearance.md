@@ -33,10 +33,13 @@ Files can be up to 768 KB. ICO files are not accepted: upload a 64 px PNG or an
 SVG favicon instead.
 
 Images are stored in the database (`BrandAsset`) and served publicly from
-`/api/branding/<kind>`, since the sign-in screen shows them before anyone signs
-in. Links carry the image's hash (`?v=`), so browsers cache them for good and a
-new upload shows at once. An uploaded SVG is served under a sandboxing Content
-Security Policy, so opened on its own it runs no script.
+`/api/branding/<kind>/<version>`. They are public because the sign-in screen
+shows them before anyone signs in. The version is the start of the image's hash, so browsers
+cache a link for good and a new upload shows at once. Each image's version is
+also kept on `Config`, so pages read one row and never the image table. Images
+are served with `nosniff` and under the app's strict Content Security Policy,
+so an uploaded SVG opened on its own runs no script. Pages only ever show them
+through `<img>`.
 
 ## Example: Mikeflix
 

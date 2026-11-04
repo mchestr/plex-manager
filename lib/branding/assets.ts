@@ -18,7 +18,7 @@
  * ```ts
  * sniffImageType(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) // "image/png"
  * acceptsType("favicon", "image/webp") // false
- * brandAssetUrl("icon", "0123456789abcdef0123") // "/api/branding/icon?v=0123456789abcdef"
+ * brandAssetUrl("icon", "0123456789abcdef0123") // "/api/branding/icon/0123456789abcdef"
  * ```
  *
  * @module lib/branding/assets
@@ -112,12 +112,12 @@ export function sniffImageType(bytes: Uint8Array): BrandImageType | null {
   return opensSvg(head) ? "image/svg+xml" : null
 }
 
-/** The `?v=` an asset's links carry: the first 16 hex digits of its hash. */
+/** The version an asset's links carry: the first 16 hex digits of its hash. */
 export function brandAssetVersion(sha256: string): string {
   return sha256.slice(0, 16)
 }
 
 /** The asset's URL, versioned by its hash so a browser may keep it for good. */
 export function brandAssetUrl(kind: BrandAssetKind, sha256: string): string {
-  return `/api/branding/${kind}?v=${brandAssetVersion(sha256)}`
+  return `/api/branding/${kind}/${brandAssetVersion(sha256)}`
 }

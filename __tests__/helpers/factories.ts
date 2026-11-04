@@ -141,6 +141,7 @@ export function buildConfig(overrides: Partial<Config> = {}): Config {
     serverName: null,
     loginSubtitle: null,
     accentColor: null,
+    brandAssetVersions: null,
     rewindSeasonOpens: '12-01',
     rewindSeasonCloses: '01-31',
     rewindEnabled: false,

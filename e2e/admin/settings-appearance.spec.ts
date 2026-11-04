@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 
+import { Prisma } from '../../lib/generated/prisma/client';
 import { expect, test, TEST_USERS } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
 import { editSection } from '../helpers/settings';
@@ -42,7 +43,12 @@ test.describe('Settings: Appearance', () => {
     await prisma.brandAsset.deleteMany({});
     await prisma.config.updateMany({
       where: { id: 'config' },
-      data: { serverName: before?.serverName ?? null, loginSubtitle: before?.loginSubtitle ?? null, accentColor: before?.accentColor ?? null },
+      data: {
+        serverName: before?.serverName ?? null,
+        loginSubtitle: before?.loginSubtitle ?? null,
+        accentColor: before?.accentColor ?? null,
+        brandAssetVersions: Prisma.DbNull,
+      },
     });
     await prisma.$disconnect();
   });
@@ -103,7 +109,7 @@ test.describe('Settings: Appearance', () => {
       await page.goto('/');
       await expect(page.getByTestId('member-pass-subtitle')).toHaveText('Movies and shows for the family');
       await expect(page.getByTestId('brand-icon')).toBeVisible();
-      await expect(page.getByTestId('public-shell')).toHaveAttribute('style', /\/api\/branding\/login-background\?v=/);
+      await expect(page.getByTestId('public-shell')).toHaveAttribute('style', /\/api\/branding\/login-background\/[0-9a-f]{16}/);
     } finally {
       await context.close();
     }

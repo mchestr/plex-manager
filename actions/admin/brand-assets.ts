@@ -5,7 +5,6 @@ import { createHash } from "node:crypto"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-import { expireTag } from "@/lib/actions/invalidate"
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import {
@@ -17,8 +16,8 @@ import {
   formatList,
   sniffImageType,
 } from "@/lib/branding/assets"
-import { BRANDING_TAG } from "@/lib/branding/settings"
-import { canDrawIcon } from "@/lib/og/brand-images"
+import { canDrawIcon } from "@/lib/og/uploaded-image"
+import { setBrandAssetVersion } from "@/lib/branding/settings"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 
@@ -31,8 +30,7 @@ const uploadSchema = z.object({
 })
 
 function changed() {
-  expireTag(BRANDING_TAG)
-  revalidatePath("/", "layout")
+  revalidatePath("/admin/settings")
 }
 
 /**
@@ -57,7 +55,10 @@ export const uploadBrandAsset = adminAction({
     }
     const sha256 = createHash("sha256").update(data).digest("hex")
     const row = { contentType, data, sha256, size: data.byteLength, updatedBy: userId }
-    await prisma.brandAsset.upsert({ where: { kind }, update: row, create: { kind, ...row }, select: { kind: true } })
+    await prisma.$transaction(async (tx) => {
+      await tx.brandAsset.upsert({ where: { kind }, update: row, create: { kind, ...row }, select: { kind: true } })
+      await setBrandAssetVersion(tx, kind, sha256)
+    })
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, {
       section: "branding.assets",
@@ -75,7 +76,11 @@ export const removeBrandAsset = adminAction({
   rateLimit: { name: "admin" },
   fallbackError: "Could not remove the image",
   handler: async (kind, { userId }) => {
-    const { count } = await prisma.brandAsset.deleteMany({ where: { kind } })
+    const count = await prisma.$transaction(async (tx) => {
+      const deleted = await tx.brandAsset.deleteMany({ where: { kind } })
+      await setBrandAssetVersion(tx, kind, null)
+      return deleted.count
+    })
     if (count > 0) {
       logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, {
         section: "branding.assets",

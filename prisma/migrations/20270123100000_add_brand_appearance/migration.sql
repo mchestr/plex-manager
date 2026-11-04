@@ -1,5 +1,6 @@
 -- AlterTable
 ALTER TABLE "Config" ADD COLUMN     "accentColor" TEXT,
+ADD COLUMN     "brandAssetVersions" JSONB,
 ADD COLUMN     "loginSubtitle" TEXT;
 
 -- CreateTable

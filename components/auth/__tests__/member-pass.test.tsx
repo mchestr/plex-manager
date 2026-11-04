@@ -146,9 +146,9 @@ describe('MemberPass', () => {
 
 describe('MemberPass branding', () => {
   it('shows the login subtitle and the uploaded icon in place of the monogram', () => {
-    renderPass({ subtitle: 'Movies and shows for the family', iconSrc: '/api/branding/icon?v=abc' })
+    renderPass({ subtitle: 'Movies and shows for the family', iconSrc: '/api/branding/icon/0123456789abcdef' })
     expect(screen.getByTestId('member-pass-subtitle')).toHaveTextContent('Movies and shows for the family')
-    expect(screen.getByTestId('brand-icon')).toHaveAttribute('src', '/api/branding/icon?v=abc')
+    expect(screen.getByTestId('brand-icon')).toHaveAttribute('src', '/api/branding/icon/0123456789abcdef')
   })
 
   it('shows no subtitle when none is set', () => {

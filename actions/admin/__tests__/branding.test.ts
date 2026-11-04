@@ -6,12 +6,14 @@
 
 import { mockReset } from "jest-mock-extended"
 import { getServerSession } from "next-auth"
+import { revalidatePath } from "next/cache"
 
 import { removeBrandAsset, uploadBrandAsset } from "@/actions/admin/brand-assets"
 import { updateAppearance } from "@/actions/admin/branding"
-import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { buildConfig } from "@/__tests__/helpers/factories"
+import { asTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { expireTag } from "@/lib/actions/invalidate"
-import { canDrawIcon } from "@/lib/og/brand-images"
+import { canDrawIcon } from "@/lib/og/uploaded-image"
 import { consume } from "@/lib/security/rate-limit"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -20,7 +22,7 @@ jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/actions/invalidate", () => ({ expireTag: jest.fn() }))
 jest.mock("@/lib/security/rate-limit", () => ({ consume: jest.fn(), actionClientIp: jest.fn() }))
-jest.mock("@/lib/og/brand-images", () => ({ canDrawIcon: jest.fn() }))
+jest.mock("@/lib/og/uploaded-image", () => ({ canDrawIcon: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({
   ...jest.requireActual("@/lib/security/audit-log"),
   logAuditEvent: jest.fn(),
@@ -34,6 +36,7 @@ beforeEach(() => {
   jest.mocked(getServerSession).mockResolvedValue({ user: { id: "admin-1", isAdmin: true }, expires: "" })
   jest.mocked(consume).mockResolvedValue({ ok: true })
   jest.mocked(canDrawIcon).mockResolvedValue(true)
+  prismaMock.$transaction.mockImplementation((async (fn: (tx: unknown) => Promise<unknown>) => fn(asTransactionClient(prismaMock))) as never)
 })
 
 describe("updateAppearance", () => {
@@ -47,7 +50,7 @@ describe("updateAppearance", () => {
     )
     expect(consume).toHaveBeenCalledWith("admin", "admin-1")
     expect(expireTag).toHaveBeenCalledWith("app-settings")
-    expect(expireTag).toHaveBeenCalledWith("branding")
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/settings")
   })
 
   it("refuses a colour that is not #RRGGBB", async () => {
@@ -66,15 +69,19 @@ describe("uploadBrandAsset", () => {
   it("stores the sniffed type and the hash, never the claimed type", async () => {
     const file = new File([new Uint8Array(PNG)], "logo.svg", { type: "image/svg+xml" })
     const result = await uploadBrandAsset({ kind: "icon", file })
-    expect(result).toMatchObject({ success: true, data: { kind: "icon", url: expect.stringMatching(/^\/api\/branding\/icon\?v=[0-9a-f]{16}$/) } })
+    expect(result).toMatchObject({ success: true, data: { kind: "icon", url: expect.stringMatching(/^\/api\/branding\/icon\/[0-9a-f]{16}$/) } })
     expect(prismaMock.brandAsset.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { kind: "icon" },
         update: expect.objectContaining({ contentType: "image/png", size: PNG.length, updatedBy: "admin-1" }),
       })
     )
+    // The version goes on Config in the same transaction, so the layout reads one row
+    expect(prismaMock.config.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: { brandAssetVersions: { icon: expect.stringMatching(/^[0-9a-f]{64}$/) } } })
+    )
     expect(consume).toHaveBeenCalledWith("admin", "admin-1")
-    expect(expireTag).toHaveBeenCalledWith("branding")
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/settings")
   })
 
   it("refuses a type the slot does not take", async () => {
@@ -105,9 +112,15 @@ describe("uploadBrandAsset", () => {
 })
 
 describe("removeBrandAsset", () => {
-  it("deletes the slot's image", async () => {
+  it("deletes the slot's image and its version, keeping the others", async () => {
     prismaMock.brandAsset.deleteMany.mockResolvedValue({ count: 1 })
+    prismaMock.config.findUnique.mockResolvedValue(
+      buildConfig({ brandAssetVersions: { wordmark: "a".repeat(64), icon: "b".repeat(64) } })
+    )
     await expect(removeBrandAsset("wordmark")).resolves.toEqual({ success: true, data: { kind: "wordmark" } })
     expect(prismaMock.brandAsset.deleteMany).toHaveBeenCalledWith({ where: { kind: "wordmark" } })
+    expect(prismaMock.config.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: { brandAssetVersions: { icon: "b".repeat(64) } } })
+    )
   })
 })
