@@ -13,6 +13,9 @@
  *                               └────────────────────────────────────┘
  * ```
  *
+ * An uploaded icon (Settings, Appearance) replaces the monogram tile, and an
+ * uploaded favicon replaces it at 64 px and below.
+ *
  * Only text the fonts cover is drawn, so `next/og` never fetches a font: the
  * monogram falls back through `monogramFor()`, a name the fonts cannot draw
  * becomes the product name, and an uncovered host is left out.
@@ -25,6 +28,8 @@ import "server-only"
 import { ImageResponse } from "next/og"
 
 import { monogramFor, productName, serverName } from "@/lib/brand"
+import type { BrandAssetKind } from "@/lib/branding/assets"
+import { readBrandAsset } from "@/lib/branding/settings"
 import { themes } from "@/lib/design/tokens"
 import { getEnv } from "@/lib/env"
 import { covers } from "@/lib/og/coverage"
@@ -79,13 +84,49 @@ function MonogramTile({ letter, size, radius }: { letter: string | null; size: n
   )
 }
 
+/** The largest size the favicon is drawn at; above it, the icon. */
+const FAVICON_MAX = 64
+
+/**
+ * The first uploaded image among `kinds` as a data URI, which `next/og`
+ * draws without a fetch. Null when none is uploaded or the read fails, so
+ * the monogram stands in.
+ */
+async function uploadedImage(kinds: readonly BrandAssetKind[]): Promise<string | null> {
+  try {
+    for (const kind of kinds) {
+      const asset = await readBrandAsset(kind)
+      if (asset) return `data:${asset.contentType};base64,${Buffer.from(asset.data).toString("base64")}`
+    }
+  } catch {
+    // The monogram needs no database
+  }
+  return null
+}
+
+/** The uploaded image at `size` px, square. */
+function UploadedTile({ src, size }: { src: string; size: number }) {
+  // next/og draws a plain <img>
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} width={size} height={size} alt="" style={{ objectFit: "contain" }} />
+}
+
 /**
  * A square app icon at `size` px. `radius` is a fraction of the size; the
  * Apple icon passes 0, because iOS rounds it.
  */
 export async function renderIcon(size: number, radius = 0.22): Promise<ImageResponse> {
-  const [name, fonts] = await Promise.all([serverName(), loadOgFonts()])
-  return new ImageResponse(<MonogramTile letter={monogramFor(name)} size={size} radius={Math.round(size * radius)} />, {
+  const [name, fonts, uploaded] = await Promise.all([
+    serverName(),
+    loadOgFonts(),
+    uploadedImage(size <= FAVICON_MAX ? ["favicon", "icon"] : ["icon"]),
+  ])
+  const tile = uploaded ? (
+    <UploadedTile src={uploaded} size={size} />
+  ) : (
+    <MonogramTile letter={monogramFor(name)} size={size} radius={Math.round(size * radius)} />
+  )
+  return new ImageResponse(tile, {
     width: size,
     height: size,
     fonts,
@@ -109,7 +150,7 @@ function publicHost(): string | null {
 
 /** The default OG card: the monogram tile, the server name and the public host. */
 export async function renderOgCard(): Promise<ImageResponse> {
-  const [name, fonts] = await Promise.all([serverName(), loadOgFonts()])
+  const [name, fonts, uploaded] = await Promise.all([serverName(), loadOgFonts(), uploadedImage(["icon"])])
   const title = covers(name, "OgSans-600") ? name : productName
   const host = publicHost()
   return new ImageResponse(
@@ -124,7 +165,7 @@ export async function renderOgCard(): Promise<ImageResponse> {
         background: dark.background.hex,
       }}
     >
-      <MonogramTile letter={monogramFor(name)} size={168} radius={24} />
+      {uploaded ? <UploadedTile src={uploaded} size={168} /> : <MonogramTile letter={monogramFor(name)} size={168} radius={24} />}
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div
           style={{

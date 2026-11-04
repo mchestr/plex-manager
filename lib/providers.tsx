@@ -3,6 +3,8 @@
 import { ToastProvider } from '@/components/ui/toast'
 import { AppearanceProvider, type Appearance } from '@/lib/appearance-context'
 import { ServerNameProvider } from '@/lib/brand-context'
+import { BrandAssetsProvider } from '@/lib/branding-context'
+import type { Branding } from '@/lib/branding/settings'
 import { FormatProvider } from '@/lib/format-context'
 import type { FormatSettings } from '@/lib/utils/format'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -14,11 +16,14 @@ export function Providers({
   format,
   serverName,
   appearance,
+  brandAssets = {},
 }: {
   children: React.ReactNode
   format: FormatSettings
   serverName: string
   appearance: Appearance
+  /** `getBranding().assets`: the uploaded images the shells draw. */
+  brandAssets?: Branding['assets']
 }) {
   const [queryClient] = useState(
     () =>
@@ -42,11 +47,13 @@ export function Providers({
       <MotionConfig reducedMotion="user">
         <FormatProvider value={format}>
           <ServerNameProvider value={serverName}>
-            <AppearanceProvider value={appearance}>
-              <ToastProvider>
-                {children}
-              </ToastProvider>
-            </AppearanceProvider>
+            <BrandAssetsProvider value={brandAssets}>
+              <AppearanceProvider value={appearance}>
+                <ToastProvider>
+                  {children}
+                </ToastProvider>
+              </AppearanceProvider>
+            </BrandAssetsProvider>
           </ServerNameProvider>
         </FormatProvider>
       </MotionConfig>

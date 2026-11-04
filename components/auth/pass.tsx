@@ -35,9 +35,19 @@ const monogramSizes = {
   sm: { tile: "size-8 rounded-md text-ui font-semibold", pip: "top-1 right-1 size-1.5 rounded-[1.5px]" },
 }
 
-/** The server's letter on the secondary tile with the primary pip; `null` draws the pip alone. */
-export function Monogram({ letter, size = "lg" }: { letter: string | null; size?: keyof typeof monogramSizes }) {
+/**
+ * The server's letter on the secondary tile with the primary pip; `null` draws
+ * the pip alone. With `src`, the uploaded icon (Settings, Appearance) instead.
+ */
+export function Monogram({ letter, size = "lg", src }: { letter: string | null; size?: keyof typeof monogramSizes; src?: string }) {
   const { tile, pip } = monogramSizes[size]
+  if (src) {
+    return (
+      // A plain <img>: images are unoptimized (next.config.js)
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt="" aria-hidden="true" data-testid="brand-icon" className={cn("shrink-0 object-cover", tile)} />
+    )
+  }
   return (
     <span
       aria-hidden="true"

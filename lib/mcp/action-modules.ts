@@ -17,6 +17,7 @@ import * as affiliateSettings from "@/actions/admin/affiliate-settings"
 import * as adminAffiliates from "@/actions/admin/affiliates"
 import * as assistantSkills from "@/actions/admin/assistant-skills"
 import * as assistantSources from "@/actions/admin/assistant-sources"
+import * as branding from "@/actions/admin/branding"
 import * as connectionHealth from "@/actions/admin/connection-health"
 import * as conversationReview from "@/actions/admin/conversation-review"
 import * as discordStats from "@/actions/admin/discord-stats"
@@ -61,6 +62,7 @@ export const ACTION_MODULES: Readonly<Record<string, Record<string, unknown>>> =
   "admin/affiliates": adminAffiliates,
   "admin/assistant-skills": assistantSkills,
   "admin/assistant-sources": assistantSources,
+  "admin/branding": branding,
   "admin/connection-health": connectionHealth,
   "admin/conversation-review": conversationReview,
   "admin/discord-stats": discordStats,
@@ -103,6 +105,7 @@ export const ACTION_MODULES: Readonly<Record<string, Record<string, unknown>>> =
  */
 export const EXCLUDED_MODULES: Readonly<Record<string, string>> = {
   "admin/api-tokens": "makes and revokes MCP tokens",
+  "admin/brand-assets": "takes an uploaded image file",
   "announcements-seen": "records what a browser showed",
   appearance: "sets a browser cookie",
   invite: "public invite redemption",

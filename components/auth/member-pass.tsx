@@ -17,6 +17,10 @@ interface MemberPassProps {
   serverName: string
   /** `monogramFor(serverName)`; null draws the pip-only tile. */
   monogram: string | null
+  /** The uploaded icon (Settings, Appearance), drawn in place of the monogram. */
+  iconSrc?: string
+  /** The login subtitle (Settings, Appearance), under the heading. */
+  subtitle?: string | null
   /** An active Plex server: "Continue with Plex" is the primary action. */
   plex: boolean
   /** A Jellyfin server enabled for login: "Use Jellyfin instead", or the only option without Plex. */
@@ -31,15 +35,20 @@ interface MemberPassProps {
  * straight to plex.tv, with no forced wait. Jellyfin is the secondary option,
  * revealed in place. The copy says the Plex token is kept (GAP-34).
  */
-export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }: MemberPassProps) {
+export function MemberPass({ serverName, monogram, iconSrc, subtitle, plex, jellyfin, callbackUrl }: MemberPassProps) {
   const headingId = useId()
   return (
     <Pass aria-labelledby={headingId} data-testid="member-pass">
       <div className="flex flex-col p-6 sm:p-7">
-        <Monogram letter={monogram} />
+        <Monogram letter={monogram} src={iconSrc} />
         <h1 id={headingId} className="mt-5 text-display text-foreground">
           Sign in to {serverName}
         </h1>
+        {subtitle && (
+          <p className="mt-2 text-body text-muted-foreground" data-testid="member-pass-subtitle">
+            {subtitle}
+          </p>
+        )}
         {plex ? (
           <PlexOptions serverName={serverName} jellyfin={jellyfin} callbackUrl={callbackUrl} />
         ) : (
@@ -56,7 +65,7 @@ export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }
   )
 }
 
-function PlexOptions({ serverName, jellyfin, callbackUrl }: Omit<MemberPassProps, "monogram" | "plex">) {
+function PlexOptions({ serverName, jellyfin, callbackUrl }: Pick<MemberPassProps, "serverName" | "jellyfin" | "callbackUrl">) {
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [jellyfinOpen, setJellyfinOpen] = useState(false)

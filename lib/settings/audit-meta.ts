@@ -17,6 +17,7 @@
  * | Channel stats, Request limits | `discord.stats`, `request-tiers` |
  * | Sonarr, Radarr, Jellyfin | `sonarr`, `radarr`, `jellyfin`, `jellyfin.login` |
  * | Time zone | `appearance`, `timezone` (`SERVER_TIMEZONE_CHANGED`) |
+ * | Appearance | `branding`, `branding.assets` |
  *
  * Watchlist sync's settings card, on its own page (`/admin/watchlist`), reads
  * `watchlist` the same way through `getWatchlistLastSaved()`.
@@ -46,6 +47,7 @@ const SECTIONS = {
   rewind: ["rewind"],
   other: ["sonarr", "radarr", "jellyfin", "jellyfin.login"],
   timeZone: ["appearance", "timezone"],
+  branding: ["branding", "branding.assets"],
 } as const satisfies Record<string, readonly string[]>
 
 type SettingsAuditSection = keyof typeof SECTIONS

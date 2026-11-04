@@ -204,6 +204,7 @@ The guides in `docs/` give the full details:
 | [Domain move](docs/domain-move.md) | How to move Plex Manager to a new host name |
 | [Rewind runbook](docs/rewind.md) | The Rewind season: its settings, its start and end, and the daily checks |
 | [Privacy](docs/privacy.md) | The personal data that Plex Manager keeps, how to remove it, and retention |
+| [Appearance](docs/appearance.md) | The server name, login subtitle and accent colour, and uploading a logo, icon, favicon and login background |
 | [Roles](docs/roles.md) | Admins, the Support role and permissions |
 | [Affiliate invites](docs/affiliate-invites.md) | Affiliates, their tiers and invites, the server cap and the switch |
 | [Assistant](docs/assistant.md) | The data, MCP servers and knowledge base that the admin assistant can use |
