@@ -41,25 +41,6 @@ of the member's Tautulli history for their year, through the shared Tautulli
 limit, and keeps the result for 15 minutes (with Redis). The year is the
 member's current year in their own time zone, else the server's.
 
-### Jellyfin members
-
-A member whose account is on Jellyfin can link Discord and use `/help`,
-`/mymarks` and the assistant, and their linked role follows their Jellyfin
-account. The commands that read Plex answer with the reason instead of an
-empty result:
-
-| Command | Reply for a Jellyfin-only member |
-|---|---|
-| `/mystats` | "Stats use Plex watch history. Your account is on Jellyfin, so stats are not available yet." |
-| `/watching` | "This command shows Plex streams only. Your account is on Jellyfin." |
-| `/mark` | "`/mark` works with the Plex library only. Your account is on Jellyfin." |
-
-The assistant's Plex and Tautulli session tools return
-`{"unavailable":"jellyfin-member"}` for them, and the Discord system prompt
-names Jellyfin when a Jellyfin server is active, so the assistant explains
-this rather than reporting that nothing is playing. A member with both a Plex
-and a Jellyfin account uses every command with their Plex account.
-
 ## Prerequisites
 
 1. **Discord Application**
@@ -73,7 +54,7 @@ and a Jellyfin account uses every command with their Plex account.
      and `Send Messages` permission.
 2. **Linked Roles** — configure Discord Linked Roles in the admin UI. The bot
    exposes two role-connection metadata fields, `is_subscribed` (an entitled
-   member with access on Plex or Jellyfin) and `watched_hours` (this year's
+   member with access on Plex) and `watched_hours` (this year's
    hours, as `/mystats` reads them). Register them
    with `npm run register-discord-metadata`. See *Linked-role refresh* for
    when they are pushed.
@@ -105,10 +86,8 @@ and a Jellyfin account uses every command with their Plex account.
 A member's linked role follows their access:
 
 - `is_subscribed` is true only when the member is entitled (not disabled and,
-  with Stripe on, paying, exempt or an admin) **and** has access on one of
-  their services: Plex reports a share of the server, or their Jellyfin
-  account on the active server exists and is not disabled. When no service
-  grants access and one cannot answer, nothing is pushed and Discord keeps the
+  with Stripe on, paying, exempt or an admin) **and** Plex reports a share of
+  the server. When Plex cannot answer, nothing is pushed and Discord keeps the
   stored role. `platform_username` is the member's display name, never their
   email.
 - **Within minutes of an access change** — an unshare, demotion, disable or

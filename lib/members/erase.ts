@@ -9,7 +9,7 @@
  *                │
  *                ▼
  * 1. external effects, each recorded in the result
- *    Stripe cancel ─► Plex unshare / Jellyfin disable ─► Discord role, grant
+ *    Stripe cancel ─► Plex unshare ─► Discord role, grant
  *    and link ─► end sessions ─► remove queued jobs
  * 2. one $transaction: Discord-keyed rows, admin LLM text about the member,
  *    unused affiliate invites, the User row (the rest cascades), the
@@ -78,8 +78,6 @@ const ERASE_ERROR_COPY: Record<EraseCode, string> = {
   STRIPE_FAILED: "Stripe didn't cancel the subscription. Nothing was removed; try again.",
   PLEX_AUTH: "Plex rejected Plex Manager's token. Reconnect Plex in settings, then try again.",
   PLEX_UNAVAILABLE: "Plex didn't respond, so their access is unchanged. Try again in a few minutes.",
-  JELLYFIN_ADMIN: "Their Jellyfin account is a Jellyfin administrator. Remove that role in Jellyfin first.",
-  JELLYFIN_UNAVAILABLE: "Jellyfin didn't respond, so their account is unchanged. Try again in a few minutes.",
 }
 
 const failure = (code: EraseCode) => ({ success: false as const, code, error: ERASE_ERROR_COPY[code] })
@@ -101,7 +99,6 @@ export async function eraseMember(
     where: { id: userId },
     select: {
       plexUserId: true,
-      jellyfinUserId: true,
       isAdmin: true,
       subscription: { select: { status: true, stripeSubscriptionId: true, stripeCustomerId: true } },
       discordConnection: { select: { discordUserId: true } },
@@ -135,7 +132,7 @@ export async function eraseMember(
   }
   const revoked = await revokeServiceAccess(user)
   if (!revoked.success) return failure(revoked.code)
-  const access = { plex: revoked.plex, jellyfin: revoked.jellyfin }
+  const access = { plex: revoked.plex }
   const discord = plan.discordLinked ? await clearDiscordRoleForUser(userId) : null
   await endUserSessions(userId, "removed", actorId)
   const jobsRemoved = await removeMemberJobs(userId)

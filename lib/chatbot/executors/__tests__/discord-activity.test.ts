@@ -3,10 +3,7 @@
  * as: the real Plex and Tautulli executors, through executeToolCall and the
  * Discord scrub, with the services and the database mocked.
  *
- * A Jellyfin-only member (P11.12) gets {"unavailable":"jellyfin-member"}, and
- * the scrub must keep that marker whole so the Discord prompt's Jellyfin rule
- * can tell them why: scrubbed to {}, it read as nothing playing. A Plex member
- * gets their own streams, without anyone's identifiers or the admin's hints.
+ * A Plex member gets their own streams, without anyone's identifiers or the admin's hints.
  *
  * When Tautulli cannot read Plex's sessions it still answers success, with no
  * sessions at all. Every surface reports that as a failure, not as nobody
@@ -90,20 +87,9 @@ beforeEach(() => {
   })
 })
 
-describe("a Jellyfin-only member's streams in Discord (P11.12)", () => {
-  beforeEach(() => {
-    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: null, jellyfinUserId: "jf-1" } as never)
-  })
-
-  it.each(["get_plex_sessions", "get_tautulli_activity"])("%s tells the model the member is on Jellyfin", async (tool) => {
-    expect(await ask(tool)).toEqual({ unavailable: "jellyfin-member" })
-    expect(findTautulliUser).not.toHaveBeenCalled()
-  })
-})
-
 describe("a Plex member's own streams in Discord", () => {
   beforeEach(() => {
-    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: "1001", jellyfinUserId: null } as never)
+    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: "1001" } as never)
     jest.mocked(findTautulliUser).mockResolvedValue({ ok: true, user: { user_id: 1001, username: "sam_plex" } })
   })
 
@@ -145,7 +131,7 @@ describe("get_tautulli_activity when Tautulli cannot read Plex's sessions", () =
   const activity = call("get_tautulli_activity")
 
   beforeEach(() => {
-    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: "1001", jellyfinUserId: null } as never)
+    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: "1001" } as never)
     jest.mocked(findTautulliUser).mockResolvedValue({ ok: true, user: { user_id: 1001, username: "sam_plex" } })
     // Tautulli's get_activity logs "Unable to retrieve data for get_activity." and returns {}
     jest.mocked(getTautulliActivity).mockResolvedValue({ success: true, data: {} })

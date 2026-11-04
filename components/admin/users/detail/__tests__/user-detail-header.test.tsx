@@ -21,10 +21,8 @@ function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeader
     name: 'Morgan Lee',
     email: 'morgan@example.com',
     plexUserId: 'plex-1',
-    jellyfinUserId: null,
     services: ['plex'],
     primaryService: 'plex',
-    jellyfinStatus: null,
     isAdmin: false,
     role: null,
     isOwner: false,
@@ -65,7 +63,7 @@ describe('UserDetailHeader', () => {
 
     rerender(
       <UserDetailHeader
-        header={header({ isAdmin: true, isOwner: true, plexAccess: 'unknown', stripeEnabled: true, subscription: { status: 'PAST_DUE', currentPeriodEnd: null, cancelAtPeriodEnd: false, stripeCustomerId: null, plexInviteStatus: null, jellyfinAccessStatus: null } })}
+        header={header({ isAdmin: true, isOwner: true, plexAccess: 'unknown', stripeEnabled: true, subscription: { status: 'PAST_DUE', currentPeriodEnd: null, cancelAtPeriodEnd: false, stripeCustomerId: null, plexInviteStatus: null } })}
         stripeDashboardBaseUrl={null}
         estimateCopy=""
         now={NOW}

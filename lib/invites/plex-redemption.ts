@@ -1,7 +1,7 @@
 /**
  * Redeeming a Plex invite for a Plex account: the invite is consumed in one
- * serializable transaction (a Jellyfin code is refused before its use is
- * counted, SEC-29), the user row and `InviteUsage` are recorded, and only then
+ * serializable transaction (a code for another service is refused before
+ * its use is counted, SEC-29), the user row and `InviteUsage` are recorded, and only then
  * is the account shared and auto-accepted. A failed record restores the use
  * and shares nothing; a failed share undoes the record, then restores the use.
  * An affiliate invite first screens the account (`screenAffiliateRedeemer`)

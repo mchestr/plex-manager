@@ -15,7 +15,6 @@ expect.extend(toHaveNoViolations)
 
 jest.mock("@/lib/plex-auth", () => ({ startPlexSignIn: jest.fn() }))
 jest.mock("@/lib/utils/navigation", () => ({ redirectTo: jest.fn() }))
-jest.mock("@/actions/invite", () => ({ redeemJellyfinInviteForm: jest.fn() }))
 
 const VALID: InvitePassProps = {
   state: "valid",
@@ -75,15 +74,6 @@ describe("InvitePass, valid", () => {
 
     expect(startPlexSignIn).toHaveBeenCalledWith({ inviteCode: "NORTH7Q2" })
     expect(redirectTo).toHaveBeenCalledWith("https://app.plex.tv/auth#?code=X")
-  })
-
-  it("shows the Jellyfin account form under the Jellyfin server's name", () => {
-    renderPass({ serverType: "JELLYFIN", serverName: "Northfield Jellyfin" })
-
-    expect(screen.getByTestId("valid-invite-heading")).toHaveTextContent("You're invited to Northfield Jellyfin")
-    expect(screen.getByTestId("jellyfin-invite-form")).toBeInTheDocument()
-    expect(screen.queryByTestId("plex-invite-sign-in")).not.toBeInTheDocument()
-    expect(screen.getByText("For one Jellyfin account")).toBeInTheDocument()
   })
 
   it("puts the affiliate in the headline of an affiliate invite, with no separate inviter line", async () => {

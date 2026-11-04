@@ -14,7 +14,7 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 
 type Subscription = Awaited<ReturnType<typeof prismaMock.subscription.findUnique>>
 
-function stripe(enabled: boolean, subscription: { status: string; plexInviteStatus: string | null; jellyfinAccessStatus?: string } | null) {
+function stripe(enabled: boolean, subscription: { status: string; plexInviteStatus: string | null } | null) {
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: enabled }))
   prismaMock.subscription.findUnique.mockResolvedValue(subscription as Subscription)
 }
@@ -58,12 +58,6 @@ describe('getMemberNotice', () => {
     stripe(true, { status: 'ACTIVE', plexInviteStatus: 'pending' })
 
     await expect(getMemberNotice('u1')).resolves.toEqual({ kind: 'pending-invite' })
-  })
-
-  it('notes an enabled Jellyfin account on the pending invite of a member with both (P11.11)', async () => {
-    stripe(true, { status: 'ACTIVE', plexInviteStatus: 'pending', jellyfinAccessStatus: 'enabled' })
-
-    await expect(getMemberNotice('u1')).resolves.toEqual({ kind: 'pending-invite', jellyfinEnabled: true })
   })
 
   it('shows nothing from the subscription while Stripe is off', async () => {

@@ -1,12 +1,11 @@
 # Stripe Subscriptions
 
 This repository ships with an **optional, admin-controlled Stripe subscription**
-capability. When enabled, Plex and Jellyfin members who are not exempt can
+capability. When enabled, Plex members who are not exempt can
 still authenticate but are gated to a `/subscribe` page. A successful
-subscription automatically gives them access on the service they use (a Plex
-share, or their Jellyfin account turned on); a cancellation (at period end) or
-final payment failure automatically removes it (see
-[Plex and Jellyfin Members](#plex-and-jellyfin-members)).
+subscription automatically gives them a Plex share; a cancellation (at period
+end) or final payment failure automatically removes it (see
+[Plex Access](#plex-access)).
 
 The entire feature is behind a master toggle (`Config.stripeEnabled`). **When
 disabled — the default — the application behaves exactly as it does today:**
@@ -25,7 +24,7 @@ feature safe to ship dark and enable per-deployment.
 - [Registering the Webhook](#registering-the-webhook)
 - [Enabling the Feature](#enabling-the-feature)
 - [Exempting Existing Members](#exempting-existing-members)
-- [Plex and Jellyfin Members](#plex-and-jellyfin-members)
+- [Plex Access](#plex-access)
 - [Subscription Lifecycle](#subscription-lifecycle)
 - [What a Lapsed Member Can Do](#what-a-lapsed-member-can-do)
 - [Admin Management](#admin-management)
@@ -47,7 +46,7 @@ Plex login ─▶ member?  ──yes─▶ into app (unchanged)
                                     │
                        checkout.session.completed webhook
                                     │
-                BullMQ: Plex invite + auto-accept, or Jellyfin account on
+                       BullMQ: Plex invite + auto-accept
                                     │
                              user is in the app
 ```
@@ -64,12 +63,11 @@ Plex login ─▶ member?  ──yes─▶ into app (unchanged)
   job with retries. Each job re-reads the subscription from Stripe and never
   applies an older event over a newer one (see
   [Event Ordering and Recovery](#event-ordering-and-recovery)).
-- **Provisioning:** on a completed checkout the app acts on each service the
-  member uses. A Plex member is invited to the active Plex server and
-  auto-accepted using their stored Plex token; if auto-accept can't run
-  (missing/expired token), the invite is left pending and the member is shown
-  an in-app "We've sent a Plex invite to your email" notice. A Jellyfin
-  member's account is turned on. The subscription is active regardless.
+- **Provisioning:** on a completed checkout the member is invited to the
+  active Plex server and auto-accepted using their stored Plex token; if
+  auto-accept can't run (missing/expired token), the invite is left pending and
+  the member is shown an in-app "We've sent a Plex invite to your email"
+  notice. The subscription is active regardless.
 
 ## Prerequisites
 
@@ -158,24 +156,17 @@ of the following are present:
 - the job queue (`REDIS_URL` set on the server).
 
 Once all four are in place, flip the switch on. It takes effect at once, without
-Edit or Save changes. If any members sign in with
-Jellyfin only and are not exempt, the toggle first asks you to confirm, naming
-them ("Ask 3 Jellyfin members to subscribe?"). These accounts were
-usually made in Jellyfin itself rather than through an app invite, so they have
-no exemption: cancel, mark the ones who should keep free access exempt on
-**Admin → Members → Users**, then turn it on. From that point:
+Edit or Save changes. From that point:
 
-- Plex non-members can create a session and are gated to `/subscribe`, and so
-  are Jellyfin members who are not exempt.
+- Plex non-members can create a session and are gated to `/subscribe`.
 - The `/subscribe` page lists your configured prices (fetched live from Stripe)
   as plan cards: the product's name, the price, and up to three benefit lines
   from the product's **Marketing features** (Products → your product → Marketing
   feature list). One plan gets the primary button: the price whose metadata has
   `recommended` = `true`, else the first configured price.
 - After Checkout, `/subscribe/success` ("You're in") polls a live checklist
-  every 3 seconds for up to 2 minutes: Payment confirmed, then one line per
-  service: the Plex share or "We've sent a Plex invite to your email", and
-  "Your Jellyfin account is enabled". A member with both sees both.
+  every 3 seconds for up to 2 minutes: Payment confirmed, then the Plex share
+  or "We've sent a Plex invite to your email".
 - Successful subscriptions provision access automatically.
 
 ## Exempting Existing Members
@@ -192,7 +183,7 @@ to `isExempt = false` and are subject to the gate. There is no runtime backfill
 and no Plex token is needed at gate time — the gate is a pure DB read.
 
 **Invite codes are exempt membership.** Redeeming an admin-created invite code
-(Plex or Jellyfin) marks the user `isExempt = true` with
+marks the user `isExempt = true` with
 and the note `Joined by invite` — the same semantics as the admin "Grant access
 and exempt" action, since the invite already grants server access outside of Stripe. An
 invited user therefore never lands on `/subscribe`. An existing exemption
@@ -200,35 +191,25 @@ and its note are never overwritten. Admins can revoke the
 exemption per-user from the admin users page if an invited user should later be
 subject to the gate.
 
-## Plex and Jellyfin Members
+## Plex Access
 
-Grant and revoke follow the services a member has an account on
-(`memberServices` in `lib/members/service.ts`: a `plexUserId`, a
-`jellyfinUserId`, or both), through `grantServiceAccess` and
+Grant and revoke act on the member's Plex account (`memberServices` in
+`lib/members/service.ts`: a `plexUserId`), through `grantServiceAccess` and
 `revokeServiceAccess` in `lib/members/access-actions.ts`:
 
 | Service | Grant (checkout, resubscribe, admin grant) | Revoke (period end, unpaid) |
 | --- | --- | --- |
 | Plex | Invite the member's Plex email to the subscriber libraries and auto-accept; an existing share counts as accepted | Remove the member's share of the active server |
-| Jellyfin | Turn the account on (`IsDisabled: false`), keeping every other policy field | Turn the account off (`IsDisabled: true`); the account and its history stay |
 
-- A member with both services gets both. Jellyfin goes first, because turning
-  an account on is safe to repeat, so a retry after a Plex failure never
-  invites twice.
 - The Plex invite goes only to the email of a member with a `plexUserId`, which
-  came from plex.tv. A Jellyfin username is never used as an address.
+  came from plex.tv.
 - A member with no usable identity (no linked service, or a Plex account with
   no email) is skipped with the code `NO_MEMBER_SERVICE`, stored in
   `Subscription.accessSkipCode` and logged. The job succeeds, so it is not
   retried.
-- What each run did is stored on the subscription: `plexInviteStatus`
-  (`accepted`, `pending`, `revoked`) and `jellyfinAccessStatus` (`enabled`,
-  `disabled`, or `skipped` when Jellyfin no longer has the account). The
-  Billing tab of a member's admin page shows both.
-- **A Jellyfin administrator is never disabled.** Before the revoke changes
-  anything it asks Jellyfin whether the member administers the server; an
-  administrator, or a check that cannot answer, skips the whole revoke with a
-  logged reason.
+- What each run did is stored on the subscription as `plexInviteStatus`
+  (`accepted`, `pending`, `revoked`). The Billing tab of a member's admin page
+  shows it.
 - The job names stay `PLEX_ACCESS_GRANT` and `PLEX_ACCESS_REVOKE`, so jobs
   queued before this change still run; the processors are `processAccessGrant`
   and `processAccessRevoke`.
@@ -244,7 +225,7 @@ snapshot from when it was created and is used only for its ids and time.
 | `checkout.session.completed`, `checkout.session.async_payment_succeeded` | Create or update the member's `Subscription` from the live subscription; store customer/subscription/price/period-end | Enqueue **grant** when the row moves into `ACTIVE` |
 | `checkout.session.async_payment_failed` | None (logged) | None |
 | `customer.subscription.updated` | Sync the live status, period end, and `cancelAtPeriodEnd` | Keeps access for `cancel_at_period_end` and `past_due`; enqueues **grant** on a move into `ACTIVE` from `UNPAID`, `CANCELED` or `INCOMPLETE`, and **revoke** on `UNPAID` or `CANCELED` |
-| `customer.subscription.deleted` | Status → `CANCELED` (fires **at period end**) | Enqueue **revoke**: unshare from Plex, turn the Jellyfin account off |
+| `customer.subscription.deleted` | Status → `CANCELED` (fires **at period end**) | Enqueue **revoke**: unshare from Plex |
 | `invoice.payment_failed` | Sync the live status: `PAST_DUE` during dunning | None while `PAST_DUE` — access retained during dunning |
 
 A checkout is ignored, with no row and no grant, unless it is a subscription
@@ -268,10 +249,9 @@ paid time and the "Cancels on `<date>`" state is shown. Removal is driven by
 `customer.subscription.deleted`, which fires when the period actually ends.
 
 **Removal safety invariant (FR-19):** automatic removal
-(`evaluateRevokeGuard` in `lib/queue/jobs/stripe.ts`) never unshares or
-disables an admin, a Jellyfin administrator (or a member whose Jellyfin admin
-check cannot answer), an exempt user, a non-Stripe-managed user, or a
-`PAST_DUE` subscriber. The revoke
+(`evaluateRevokeGuard` in `lib/queue/jobs/stripe.ts`) never unshares an
+admin, an exempt user, a non-Stripe-managed user, or a `PAST_DUE`
+subscriber. The revoke
 job re-reads live DB state before acting, requires the stored status to be
 `CANCELED` or `UNPAID`, and asks Stripe: unless the live status is `canceled`,
 `unpaid` or `incomplete_expired`, it skips with "subscription is active again".
@@ -349,8 +329,7 @@ page (no separate page):
 - A **subscription-state filter**.
 - Per-user row actions: **Cancel subscription** (cancels at period end via
   Stripe; the dialog names the services whose access goes then), **Grant
-  access and exempt** (Plex invite and auto-accept, or the Jellyfin account turned
-  on, plus mark exempt, independent of Stripe; the dialog says "They will get
+  access and exempt** (Plex invite and auto-accept, plus mark exempt, independent of Stripe; the dialog says "They will get
   access to {services}"), and **Mark exempt** / **Remove exemption**.
 - A per-user deep link to view the customer/subscription in the Stripe Dashboard.
 
@@ -359,16 +338,16 @@ page (no separate page):
 Turning the master toggle **off** is safe and reversible (FR-4):
 
 - It does **not** cancel any Stripe subscriptions.
-- It does **not** remove any Plex access or disable any Jellyfin account.
+- It does **not** remove any Plex access.
 - Existing subscribers simply fall back to normal Plex-access rules.
 
 While disabled, the webhook **still** verifies signatures and records
-subscription **status**, but performs **no** Plex or Jellyfin grant/revoke side
+subscription **status**, but performs **no** Plex grant/revoke side
 effects (FR-29). This keeps the app's view of Stripe accurate without touching
-Plex or Jellyfin, so re-enabling later is seamless.
+Plex, so re-enabling later is seamless.
 
 Disabling is a single `Config.stripeEnabled = false` write — it makes no calls to
-Stripe, Plex or Jellyfin.
+Stripe or Plex.
 
 ## Environment & Config Notes
 
@@ -422,10 +401,9 @@ re-verified against the **installed** `stripe` SDK:
   If the user's Plex token was missing/expired, the invite is left **pending** and
   the user must accept it from their email — this is expected (FR-13).
 - **A user wasn't removed after cancelling.** Removal happens at **period end**
-  (`customer.subscription.deleted`), not immediately. Admins, Jellyfin
-  administrators, exempt users, non-Stripe-managed users, and `PAST_DUE`
+  (`customer.subscription.deleted`), not immediately. Admins, exempt users, non-Stripe-managed users, and `PAST_DUE`
   subscribers are never auto-removed by design.
 - **Subscribed but nothing happened, `accessSkipCode` is `NO_MEMBER_SERVICE`.**
-  The member has no Plex or Jellyfin account the app knows, or a Plex account
-  with no email. Have them sign in again with their media server account, then
+  The member has no Plex account the app knows, or a Plex account
+  with no email. Have them sign in again with their Plex account, then
   grant access from the admin page.

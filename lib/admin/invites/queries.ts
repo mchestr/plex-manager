@@ -28,7 +28,6 @@ import { inviteStatus, type InviteFilter, type InviteStatus } from "./filter"
 export interface AdminInviteRow {
   id: string
   code: string
-  serverType: "PLEX" | "JELLYFIN"
   useCount: number
   maxUses: number
   expiresAt: Date | null
@@ -63,9 +62,8 @@ export function inviteStatusWhere(status: InviteFilter["status"], now: Date): Pr
   }
 }
 
-function listWhere({ status, server, q }: InviteFilter, now: Date): Prisma.InviteWhereInput {
+function listWhere({ status, q }: InviteFilter, now: Date): Prisma.InviteWhereInput {
   const and: Prisma.InviteWhereInput[] = [inviteStatusWhere(status, now)]
-  if (server !== "all") and.push({ serverType: server === "jellyfin" ? "JELLYFIN" : "PLEX" })
   // Codes are stored upper case (SEC-56)
   if (q) and.push({ code: { contains: q.toUpperCase() } })
   return { AND: and }
@@ -88,7 +86,6 @@ function listOrder(sort: TableSort): Prisma.InviteOrderByWithRelationInput[] {
 const rowSelect = {
   id: true,
   code: true,
-  serverType: true,
   useCount: true,
   maxUses: true,
   expiresAt: true,

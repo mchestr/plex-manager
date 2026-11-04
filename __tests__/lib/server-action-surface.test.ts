@@ -10,7 +10,7 @@
  * `actions/`, `app/`, `components/`, `hooks/` and `lib/` with the TypeScript
  * compiler and checks that:
  *
- * - the Jellyfin sign-in helpers and the connection clients are not actions;
+ * - the connection clients are not actions;
  * - no exported action outside the admin and setup actions takes a target.
  *   An action takes one when, matching names case-insensitively against
  *   `TARGET_NAME` (a name ending in url, uri, host, endpoint, apiKey or token):
@@ -283,17 +283,7 @@ describe('Server Action surface (SEC-35)', () => {
 
   it('finds the Server Action modules', () => {
     const files = serverActionFiles.map(relative)
-    expect(files).toEqual(expect.arrayContaining(['actions/invite.ts', 'actions/setup.ts', 'lib/plex-auth.ts']))
-  })
-
-  it('keeps lib/jellyfin-auth.ts server-only and out of the actions', () => {
-    const sourceFile = parse(path.join(ROOT, 'lib/jellyfin-auth.ts'))
-    const imports = sourceFile.statements
-      .filter(ts.isImportDeclaration)
-      .map((statement) => (statement.moduleSpecifier as ts.StringLiteral).text)
-
-    expect(hasUseServerDirective(sourceFile)).toBe(false)
-    expect(imports).toContain('server-only')
+    expect(files).toEqual(expect.arrayContaining(['actions/setup.ts', 'lib/plex-auth.ts']))
   })
 
   it('has no "use server" module under lib/connections', () => {
@@ -323,8 +313,8 @@ describe('Server Action surface (SEC-35)', () => {
       expect.arrayContaining([
         expect.stringContaining('namedParameter(serverURL: string)'),
         expect.stringContaining('formDataKey(formData.get("publicUrl"))'),
-        expect.stringContaining('parsedUnknownInput(safeParse(...) -> jellyfinEndpoint)'),
-        expect.stringContaining('wrappedParsedInput(parse(...) -> jellyfinEndpoint)'),
+        expect.stringContaining('parsedUnknownInput(safeParse(...) -> mediaEndpoint)'),
+        expect.stringContaining('wrappedParsedInput(parse(...) -> mediaEndpoint)'),
       ])
     )
   })

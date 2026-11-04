@@ -11,7 +11,6 @@ import "server-only"
 
 import { activeRunStarts } from "@/lib/admin/active-runs"
 import { INVITED_BY_SELECT, invitedByOf, type InvitedBy, type UserActionTarget } from "@/lib/admin/user-actions"
-import { getJellyfinUserById } from "@/lib/connections/jellyfin-users"
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { memberServices, primaryService } from "@/lib/members/service"
@@ -21,24 +20,15 @@ import { getActiveService } from "@/lib/data/active-service"
 
 type PlexAccess = "shared" | "notShared" | "unknown"
 
-/**
- * The member's Jellyfin account, read live (P11.10): `missing` when Jellyfin
- * has no such user, `unknown` when no server is active or it didn't answer.
- */
-export type JellyfinStatus = "enabled" | "disabled" | "missing" | "unknown"
-
 export interface UserDetailHeaderData {
   id: string
   /** The member's name, else their email. */
   name: string
   email: string | null
   plexUserId: string | null
-  jellyfinUserId: string | null
-  /** Every linked media server, Plex first. */
+  /** Every linked media server. */
   services: AuthService[]
   primaryService: AuthService
-  /** Null when the member has no Jellyfin account. */
-  jellyfinStatus: JellyfinStatus | null
   isAdmin: boolean
   role: RoleKey | null
   /** The Plex account that set the server up. */
@@ -59,9 +49,8 @@ export interface UserDetailHeaderData {
     currentPeriodEnd: Date | null
     cancelAtPeriodEnd: boolean
     stripeCustomerId: string | null
-    /** What the last grant or revoke did on Plex (`accepted`, `pending`, `revoked`) and Jellyfin (`enabled`, `disabled`, `skipped`). */
+    /** What the last grant or revoke did on Plex (`accepted`, `pending`, `revoked`). */
     plexInviteStatus: string | null
-    jellyfinAccessStatus: string | null
   } | null
   stripeEnabled: boolean
   season: {
@@ -93,19 +82,6 @@ async function plexAccessOf(plexUserId: string | null, server: ActivePlexServer)
   return result.status === "granted" ? "shared" : "notShared"
 }
 
-type ActiveJellyfinServer = { url: string; apiKey: string } | null
-
-async function jellyfinStatusOf(jellyfinUserId: string | null, server: ActiveJellyfinServer): Promise<JellyfinStatus | null> {
-  if (!jellyfinUserId) return null
-  if (!server) return "unknown"
-  // getJellyfinUserById gives up after 5 s, so a slow Jellyfin never holds the page long
-  const result = await getJellyfinUserById(server, jellyfinUserId)
-  if (result.notFound) return "missing"
-  const disabled = result.data?.Policy?.IsDisabled
-  if (!result.success || typeof disabled !== "boolean") return "unknown"
-  return disabled ? "disabled" : "enabled"
-}
-
 /** The header, or null when there is no such user. */
 export async function getUserDetailHeader(userId: string, seasonYear: number): Promise<UserDetailHeaderData | null> {
   const user = await prisma.user.findUnique({
@@ -115,7 +91,6 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
       name: true,
       email: true,
       plexUserId: true,
-      jellyfinUserId: true,
       primaryAuthService: true,
       isAdmin: true,
       role: true,
@@ -133,7 +108,6 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
           cancelAtPeriodEnd: true,
           stripeCustomerId: true,
           plexInviteStatus: true,
-          jellyfinAccessStatus: true,
         },
       },
       plexWrapped: { where: { year: seasonYear }, select: { status: true } },
@@ -143,16 +117,12 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
   })
   if (!user) return null
 
-  const [server, jellyfinServer, config, runs] = await Promise.all([
+  const [server, config, runs] = await Promise.all([
     getActiveService("plex"),
-    user.jellyfinUserId ? getActiveService("jellyfin") : null,
     prisma.config.findUnique({ where: { id: "config" }, select: { stripeEnabled: true } }),
     activeRunStarts([user.id], seasonYear),
   ])
-  const [plexAccess, jellyfinStatus] = await Promise.all([
-    plexAccessOf(user.plexUserId, server),
-    jellyfinStatusOf(user.jellyfinUserId, jellyfinServer),
-  ])
+  const plexAccess = await plexAccessOf(user.plexUserId, server)
   const discord = user.discordConnection
 
   return {
@@ -160,10 +130,8 @@ export async function getUserDetailHeader(userId: string, seasonYear: number): P
     name: user.name ?? user.email ?? "Unknown member",
     email: user.email,
     plexUserId: user.plexUserId,
-    jellyfinUserId: user.jellyfinUserId,
     services: memberServices(user),
     primaryService: primaryService(user),
-    jellyfinStatus,
     isAdmin: user.isAdmin,
     role: parseRole(user.role),
     isOwner: Boolean(user.plexUserId && server?.adminPlexUserId === user.plexUserId),

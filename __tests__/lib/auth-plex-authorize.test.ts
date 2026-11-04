@@ -218,7 +218,7 @@ describe('Plex authorize redeems the invite in the cookie', () => {
   })
 
   it.each(['INVITE_INVALID', 'INVITE_WRONG_SERVICE'] as const)('throws invite_invalid for %s', async (code) => {
-    mockRedeemPlexInvite.mockResolvedValue({ success: false, code, error: 'This invite is for Jellyfin' })
+    mockRedeemPlexInvite.mockResolvedValue({ success: false, code, error: 'This invite is for another service' })
 
     await expect(authorize(undefined, plexPinRequest({ inviteCode: 'JELLY123' }))).rejects.toThrow('invite_invalid')
     expect(mockGetPlexUserInfo).not.toHaveBeenCalled()

@@ -92,7 +92,6 @@ describe('Home page RewindCard', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({ name: 'Test Plex', url: 'https://plex.example.com' })
-    ;(prisma.jellyfinServer.findFirst as jest.Mock).mockResolvedValue(null)
     ;(prisma.discordIntegration.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
     ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)
@@ -134,7 +133,6 @@ describe('Home page signed out', () => {
     jest.clearAllMocks()
     ;(getServerSession as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({ name: 'Test Plex', url: 'https://plex.example.com' })
-    ;(prisma.jellyfinServer.findFirst as jest.Mock).mockResolvedValue(null)
     ;(prisma.discordIntegration.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
     ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)
@@ -146,7 +144,7 @@ describe('Home page signed out', () => {
     render(await Home(props()))
 
     expect(screen.getByTestId('member-pass-stub')).toBeInTheDocument()
-    expect(passProps()).toMatchObject({ plex: true, jellyfin: false, callbackUrl: undefined })
+    expect(passProps()).toMatchObject({ serverName: expect.any(String), callbackUrl: undefined })
   })
 
   it('hands a same-origin callbackUrl to the pass', async () => {
@@ -179,7 +177,6 @@ describe('Home page callbackUrl when signed in', () => {
     jest.clearAllMocks()
     signIn(true)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({ name: 'Test Plex', url: 'https://plex.example.com' })
-    ;(prisma.jellyfinServer.findFirst as jest.Mock).mockResolvedValue(null)
     ;(prisma.discordIntegration.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
     ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)

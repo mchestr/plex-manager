@@ -40,7 +40,6 @@ jest.mock('@/lib/connections/plex', () => ({
   getPlexUserInfo: jest.fn(),
   getPlexServerIdentity: jest.fn().mockResolvedValue({ success: true, machineIdentifier: 'machine-abc' }),
 }))
-jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn() }))
 jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn() }))
 jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
 jest.mock('@/lib/connections/sonarr', () => ({ testSonarrConnection: jest.fn() }))

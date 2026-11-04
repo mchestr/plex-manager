@@ -15,12 +15,11 @@ import "server-only"
 
 import { cache } from "react"
 
-import type { JellyfinServer, Overseerr, PlexServer, Radarr, Sonarr, Tautulli } from "@/lib/generated/prisma/client"
+import type { Overseerr, PlexServer, Radarr, Sonarr, Tautulli } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 
 interface ActiveRows {
   plex: PlexServer
-  jellyfin: JellyfinServer
   tautulli: Tautulli
   overseerr: Overseerr
   sonarr: Sonarr
@@ -33,7 +32,6 @@ const ACTIVE = { where: { isActive: true }, orderBy: { updatedAt: "desc" } } as 
 
 const loaders: { [K in ActiveServiceKind]: () => Promise<ActiveRows[K] | null> } = {
   plex: cache(() => prisma.plexServer.findFirst(ACTIVE)),
-  jellyfin: cache(() => prisma.jellyfinServer.findFirst(ACTIVE)),
   tautulli: cache(() => prisma.tautulli.findFirst(ACTIVE)),
   overseerr: cache(() => prisma.overseerr.findFirst(ACTIVE)),
   sonarr: cache(() => prisma.sonarr.findFirst(ACTIVE)),

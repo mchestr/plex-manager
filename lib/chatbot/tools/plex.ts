@@ -25,12 +25,9 @@ export const PLEX_TOOLS: RegisteredTool[] = [
     userScoped: true,
     // Output is sanitizePlexSessionsPayload(...) — viewer identifiers are already
     // stripped upstream. This allowlist is defence-in-depth: keep media/progress/
-    // player/quality fields, never any viewer/user/ip/session identifier. A
-    // Jellyfin-only caller gets {"unavailable":"jellyfin-member"} instead, which
-    // the Discord prompt explains (P11.12); no session carries that field.
+    // player/quality fields, never any viewer/user/ip/session identifier.
     discordFields: [
       "success",
-      "unavailable",
       "totalSessions",
       "privacy",
       "sessions",

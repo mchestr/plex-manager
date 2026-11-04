@@ -3,7 +3,7 @@
  *
  * Read once per request (React `cache()`) over a `'use cache'` entry tagged
  * `app-settings` (`cacheLife("minutes")`, P11.19); saving the zone or the
- * Plex or Jellyfin server calls `updateTag("app-settings")`.
+ * Plex server calls `updateTag("app-settings")`.
  * The entry holds no secret: the server rows are read for their names only.
  *
  * @module lib/settings/app-settings
@@ -27,8 +27,8 @@ export const APP_SETTINGS_TAG = "app-settings"
 
 export interface AppSettings extends FormatSettings {
   /**
-   * `Config.serverName`, else the active Plex server's name, else the active
-   * Jellyfin server's; `null` when none is set. Read it through `serverName()`
+   * `Config.serverName`, else the active Plex server's name; `null` when none
+   * is set. Read it through `serverName()`
    * in `lib/brand.ts`, which falls back to the product name.
    */
   serverName: string | null
@@ -38,13 +38,12 @@ export interface AppSettings extends FormatSettings {
 const activeServer = { where: { isActive: true }, orderBy: { updatedAt: "desc" }, select: { name: true } } as const
 
 async function readAppSettings(): Promise<AppSettings> {
-  const [timeZone, config, plex, jellyfin] = await Promise.all([
+  const [timeZone, config, plex] = await Promise.all([
     serverZone(),
     prisma.config.findUnique({ where: { id: "config" }, select: { locale: true, serverName: true } }),
     prisma.plexServer.findFirst(activeServer),
-    prisma.jellyfinServer.findFirst(activeServer),
   ])
-  const serverName = [config?.serverName, plex?.name, jellyfin?.name].map((name) => name?.trim()).find(Boolean)
+  const serverName = [config?.serverName, plex?.name].map((name) => name?.trim()).find(Boolean)
   return {
     timeZone,
     locale: canonicalLocale(config?.locale),

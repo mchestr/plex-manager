@@ -6,7 +6,7 @@ import { REDACTED, redactText } from "@/lib/security/redact-text"
 /** Discord's documented example bot token, built from its parts so secret scanning does not take it for a leak. */
 const DISCORD_BOT_TOKEN = ["MTk4NjIyNDgzNDcxOTI1MjQ4", "Cl2FMQ", "ZnCjm1XVW7vRze4b7Cq4se7kKWs"].join(".")
 
-const JELLYFIN_PARAMS =
+const MEDIABROWSER_PARAMS =
   'Client="Plex Manager", Device="Server", DeviceId="plex-manager-0123456789abcdef", Version="1.2.3", Token="0123456789abcdef0123456789abcdef"'
 
 describe("redactText: credential pairs", () => {
@@ -109,10 +109,10 @@ describe("redactText: Authorization headers", () => {
     ["Authorization=Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b", "Authorization=Token [redacted]"],
     ["authorization: token ghp_16C7e42F292c6912E7710c838347Ae178B4a", "authorization: token [redacted]"],
     ['Authorization: MediaBrowser Token="0123456789abcdef0123456789abcdef"', "Authorization: MediaBrowser [redacted]"],
-    [`Authorization: MediaBrowser ${JELLYFIN_PARAMS}`, "Authorization: MediaBrowser [redacted]"],
-    [`X-Emby-Authorization: MediaBrowser ${JELLYFIN_PARAMS}`, "X-Emby-Authorization: MediaBrowser [redacted]"],
+    [`Authorization: MediaBrowser ${MEDIABROWSER_PARAMS}`, "Authorization: MediaBrowser [redacted]"],
+    [`X-Emby-Authorization: MediaBrowser ${MEDIABROWSER_PARAMS}`, "X-Emby-Authorization: MediaBrowser [redacted]"],
     ['Authorization: Digest username="Mufasa", realm="x@host.com", response="6629fae49393a05397450978507c4ef1"', "Authorization: Digest [redacted]"],
-    [String.raw`sent Authorization: MediaBrowser Client=\"Plex Manager\", Token=\"0123abcd\" to jellyfin`, "sent Authorization: MediaBrowser [redacted] to jellyfin"],
+    [String.raw`sent Authorization: MediaBrowser Client=\"Plex Manager\", Token=\"0123abcd\" to the server`, "sent Authorization: MediaBrowser [redacted] to the server"],
     ["Authorization: Custom key='0123abcd', other=x", "Authorization: Custom [redacted]"],
     ["Authorization: Signature keyId=abc,signature=def123", "Authorization: Signature [redacted]"],
     ["Authorization: Custom token=ab,cd", "Authorization: Custom token=[redacted]"],

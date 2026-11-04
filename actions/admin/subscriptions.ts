@@ -38,8 +38,7 @@ async function revalidateUsers(userId: string): Promise<void> {
  * Setting `cancel_at_period_end: true` (rather than deleting immediately) keeps
  * the single source of truth in the webhook: Stripe fires
  * `customer.subscription.deleted` at the end of the paid period, and the normal
- * webhook path is what removes access (the Plex share, the Jellyfin account, or
- * both). This action therefore performs **no** immediate removal — it only
+ * webhook path is what removes access (the Plex share). This action therefore performs **no** immediate removal — it only
  * tells Stripe to stop renewing.
  *
  * @param input - `{ userId }`: the app user whose subscription should be canceled.
@@ -94,8 +93,8 @@ export const adminCancelSubscription = adminAction({
  * 2. Marks the user `isExempt = true` (keeping any note) so the
  *    subscription gate treats them as covered independent of Stripe.
  * 3. Enqueues the shared {@link JOB_TYPES.PLEX_ACCESS_GRANT} job, which invites
- *    a Plex member to (and auto-accepts them onto) the active Plex server and
- *    turns a Jellyfin member's account on (P11.11) — the exact same grant
+ *    a Plex member to (and auto-accepts them onto) the active Plex server
+ *    (P11.11) — the exact same grant
  *    path as a paid checkout. If the enqueue fails, the exemption is put back
  *    as it was.
  *

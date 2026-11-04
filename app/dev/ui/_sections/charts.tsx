@@ -25,7 +25,7 @@ const stacked: ChartSpec = {
   format: "number",
 }
 
-const SERIES = ["Plex", "Tautulli", "Overseerr", "Sonarr", "Radarr", "Discord", "Jellyfin"]
+const SERIES = ["Plex", "Tautulli", "Overseerr", "Sonarr", "Radarr", "Discord", "Stripe"]
 
 /** Seven series, so the sixth and seventh fold into a muted "Other". */
 const line: ChartSpec = {

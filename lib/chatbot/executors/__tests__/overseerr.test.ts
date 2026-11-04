@@ -291,15 +291,15 @@ describe("get_overseerr_media_details", () => {
     expect(text).not.toMatch(/hunter2|abc123/)
   })
 
-  it("keeps the Jellyfin or Plex link that Jellyseerr and Seerr send as mediaUrl", async () => {
-    const jellyfin = (id: string) => `https://jellyfin.example.invalid/web/index.html#!/details?id=${id}&context=home&serverId=f00d`
+  it("keeps the Plex link that Jellyseerr and Seerr send as mediaUrl", async () => {
+    const plexLink = (id: string) => `https://app.plex.tv/desktop#!/server/f00d/details?key=%2Flibrary%2Fmetadata%2F${id}`
     // Their Media entity has no plexUrl
-    const mediaInfo = { ...overseerrMedia(11, "movie"), plexUrl: undefined, mediaUrl: jellyfin("abc"), mediaUrl4k: jellyfin("def"), requests: [] }
+    const mediaInfo = { ...overseerrMedia(11, "movie"), plexUrl: undefined, mediaUrl: plexLink("abc"), mediaUrl4k: plexLink("def"), requests: [] }
     serve(() => ({ ...movieDetails(11), mediaInfo }))
 
     const { json } = await run("get_overseerr_media_details", { mediaId: 11, mediaType: "movie" })
 
-    expect(json.mediaInfo).toMatchObject({ mediaUrl: jellyfin("abc"), mediaUrl4k: jellyfin("def") })
+    expect(json.mediaInfo).toMatchObject({ mediaUrl: plexLink("abc"), mediaUrl4k: plexLink("def") })
   })
 
   it("refuses an id that is not a positive whole number or a missing type", async () => {

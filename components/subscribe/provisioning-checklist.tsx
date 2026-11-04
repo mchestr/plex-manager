@@ -19,16 +19,11 @@ const isPaid = (data: SubscriptionProvisioning) => data.status === "ACTIVE" || d
 
 /** The Plex step shows for a Plex member, and for a row that names no service yet. */
 const showsPlex = (data: SubscriptionProvisioning) => data.services.length === 0 || data.services.includes("plex")
-const showsJellyfin = (data: SubscriptionProvisioning) => data.services.includes("jellyfin")
 
-/**
- * Payment confirmed, the Plex invite settled (accepted or waiting on the
- * member's email) and the Jellyfin account turned on, for each service shown.
- */
+/** Payment confirmed and the Plex invite settled (accepted or waiting on the member's email). */
 const isSettled = (data: SubscriptionProvisioning) =>
   isPaid(data) &&
-  (!showsPlex(data) || data.plexInviteStatus === "accepted" || data.plexInviteStatus === "pending") &&
-  (!showsJellyfin(data) || data.jellyfinAccessStatus === "enabled" || data.jellyfinAccessStatus === "skipped")
+  (!showsPlex(data) || data.plexInviteStatus === "accepted" || data.plexInviteStatus === "pending")
 
 function sharingLabel(libraryCount: number | null): string {
   if (libraryCount === null) return "Sharing every library with your Plex account"
@@ -77,33 +72,9 @@ function PlexStep({ data, paid }: { data: SubscriptionProvisioning; paid: boolea
   )
 }
 
-/** The Jellyfin line: the account turned on, or not found on the server. */
-function JellyfinStep({ data, paid }: { data: SubscriptionProvisioning; paid: boolean }) {
-  if (paid && data.jellyfinAccessStatus === "enabled") {
-    return (
-      <Step icon={icons.success} tone="done" data-testid="subscribe-success-jellyfin-enabled">
-        Your Jellyfin account is enabled
-      </Step>
-    )
-  }
-  if (paid && data.jellyfinAccessStatus === "skipped") {
-    return (
-      <Step icon={icons.info} tone="action" data-testid="subscribe-success-jellyfin-skipped">
-        We could not find your Jellyfin account. Ask the server owner to check it.
-      </Step>
-    )
-  }
-  return (
-    <Step icon={icons.pending} tone="waiting" data-testid="subscribe-success-jellyfin-provisioning">
-      Turning on your Jellyfin account
-    </Step>
-  )
-}
-
 /**
- * The success page's live checklist (UI-40): Payment confirmed, then one line
- * per service the member uses (P11.11): the Plex share or "We sent a Plex
- * invite to your email", and "Your Jellyfin account is enabled". Polled
+ * The success page's live checklist (UI-40): Payment confirmed, then the Plex
+ * share or "We sent a Plex invite to your email" (P11.11). Polled
  * through `getSubscriptionProvisioning` until all settle or 2 minutes pass.
  * Below it, the member-since and renewal dates once the subscription row has
  * them.
@@ -141,7 +112,6 @@ export function ProvisioningChecklist({ initial }: { initial: SubscriptionProvis
           {paid ? "Payment confirmed" : "Confirming your payment"}
         </Step>
         {showsPlex(data) && <PlexStep data={data} paid={paid} />}
-        {showsJellyfin(data) && <JellyfinStep data={data} paid={paid} />}
       </ul>
 
       {timedOut && !isSettled(data) && (

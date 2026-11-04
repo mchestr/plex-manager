@@ -8,13 +8,11 @@
  * wiring that enqueues revoke on deletion/unpaid.
  *
  * The safety guards are the highest-value tests in the whole feature: automatic
- * removal must NEVER unshare or disable an admin, a Jellyfin administrator, an
- * exempt user, a non-Stripe-managed user, or a PAST_DUE subscriber. Every
- * protected case is asserted explicitly, for Plex and for Jellyfin (P11.11).
+ * removal must NEVER unshare an admin, an exempt user, a non-Stripe-managed
+ * user, or a PAST_DUE subscriber. Every protected case is asserted explicitly.
  *
  * The processor is invoked directly with a fixture `Job`; BullMQ/Redis are not
- * touched. The Plex unshare helper, the Jellyfin account and admin calls, and
- * Prisma are mocked.
+ * touched. The Plex unshare helper and Prisma are mocked.
  */
 
 import { UnrecoverableError, type Job } from 'bullmq'
@@ -37,8 +35,6 @@ import type Stripe from 'stripe'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { stopSyncAndClearPlexToken } from '@/lib/members/offboard'
 import { endAffiliateStatus } from '@/lib/affiliates/end-status'
-import { setJellyfinAccountDisabled } from '@/lib/connections/jellyfin-users'
-import { isJellyfinAdmin } from '@/lib/jellyfin-auth'
 import { buildConfig } from '@/__tests__/helpers/factories'
 import {
   createFakeStripe,
@@ -64,11 +60,6 @@ jest.mock('@/lib/connections/plex-invitations', () => ({
 
 jest.mock('@/lib/members/offboard', () => ({ stopSyncAndClearPlexToken: jest.fn() }))
 jest.mock('@/lib/affiliates/end-status', () => ({ endAffiliateStatus: jest.fn() }))
-jest.mock('@/lib/connections/jellyfin-users', () => ({
-  ...jest.requireActual('@/lib/connections/jellyfin-users'),
-  setJellyfinAccountDisabled: jest.fn(),
-}))
-jest.mock('@/lib/jellyfin-auth', () => ({ isJellyfinAdmin: jest.fn() }))
 
 jest.mock('@/lib/locks/access-lock', () => ({ withAccessLock: jest.fn() }))
 jest.mock('@/lib/queue/connection', () => ({
@@ -113,8 +104,6 @@ const PLEX_SERVER = {
   machineIdentifier: 'this-server-machine-id',
 }
 
-const JELLYFIN_SERVER = { url: 'https://jellyfin.example.com', apiKey: 'jf-key' }
-
 /** Build a minimal fixture Job for the revoke processor. */
 function makeRevokeJob(userId: string): Job {
   return {
@@ -132,7 +121,6 @@ function makeUser(overrides: {
   isAdmin?: boolean
   isExempt?: boolean
   plexUserId?: string | null
-  jellyfinUserId?: string | null
   stripeSubscriptionId?: string | null
   status?: SubscriptionStatus
 } = {}) {
@@ -145,7 +133,6 @@ function makeUser(overrides: {
     // so `?? 'plex-user-1'` would wrongly override it.
     plexUserId:
       overrides.plexUserId === undefined ? 'plex-user-1' : overrides.plexUserId,
-    jellyfinUserId: overrides.jellyfinUserId ?? null,
     subscription: {
       stripeSubscriptionId:
         overrides.stripeSubscriptionId === undefined
@@ -159,7 +146,6 @@ function makeUser(overrides: {
 describe('evaluateRevokeGuard', () => {
   const eligible = {
     isAdmin: false,
-    jellyfinAdmin: false,
     isExempt: false,
     stripeSubscriptionId: 'sub_1',
     status: SubscriptionStatus.CANCELED,
@@ -170,12 +156,6 @@ describe('evaluateRevokeGuard', () => {
     expect(evaluateRevokeGuard({ ...eligible, isAdmin: true })).toBe(
       'user is an admin'
     )
-  })
-
-  it('protects Jellyfin administrators, after admins (P11.11)', () => {
-    expect(evaluateRevokeGuard({ ...eligible, jellyfinAdmin: true })).toBe('user is a Jellyfin administrator')
-    expect(evaluateRevokeGuard({ ...eligible, jellyfinAdmin: true, isAdmin: true })).toBe('user is an admin')
-    expect(evaluateRevokeGuard({ ...eligible, jellyfinAdmin: true, isExempt: true })).toBe('user is a Jellyfin administrator')
   })
 
   it('protects exempt users', () => {
@@ -202,7 +182,6 @@ describe('evaluateRevokeGuard', () => {
     expect(
       evaluateRevokeGuard({
         isAdmin: true,
-        jellyfinAdmin: true,
         isExempt: true,
         stripeSubscriptionId: null,
         status: SubscriptionStatus.PAST_DUE,
@@ -376,7 +355,7 @@ describe('processAccessRevoke', () => {
     expect(result.revoked).toBe(true)
   })
 
-  it('records NO_MEMBER_SERVICE, and calls nothing, when the user has no linked service (GAP-23)', async () => {
+  it('records NO_MEMBER_SERVICE, and calls nothing, when the user has no Plex account (GAP-23)', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(
       makeUser({ plexUserId: null })
     )
@@ -384,7 +363,6 @@ describe('processAccessRevoke', () => {
     const result = await processAccessRevoke(makeRevokeJob('user-1'))
 
     expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
-    expect(setJellyfinAccountDisabled).not.toHaveBeenCalled()
     expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
       where: { userId: 'user-1' },
       data: { accessSkipCode: 'NO_MEMBER_SERVICE' },
@@ -475,124 +453,6 @@ describe('processAccessRevoke', () => {
       processAccessRevoke(makeRevokeJob('user-1'))
     ).rejects.toThrow('NO_PLEX_SERVER')
     expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
-  })
-})
-
-// =============================================================================
-// Jellyfin members (P11.11): disable the account, never a Jellyfin administrator
-// =============================================================================
-
-describe('processAccessRevoke for Jellyfin members', () => {
-  const jellyfinOnly = (overrides: Parameters<typeof makeUser>[0] = {}) =>
-    makeUser({ plexUserId: null, jellyfinUserId: 'jf-1', ...overrides })
-
-  beforeEach(() => {
-    jest.clearAllMocks()
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(PLEX_SERVER)
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue(JELLYFIN_SERVER as never)
-    ;(prisma.subscription.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
-    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'removed' })
-    jest.mocked(setJellyfinAccountDisabled).mockResolvedValue({ success: true, status: 'changed' })
-    jest.mocked(isJellyfinAdmin).mockResolvedValue('not-admin')
-    prismaMock.user.updateMany.mockResolvedValue({ count: 1 })
-    ;(getStripe as jest.Mock).mockResolvedValue(null)
-  })
-
-  it('disables a Jellyfin-only member, with no Plex call', async () => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(jellyfinOnly())
-
-    const result = await processAccessRevoke(makeRevokeJob('user-1'))
-
-    expect(isJellyfinAdmin).toHaveBeenCalledWith(JELLYFIN_SERVER, 'jf-1')
-    expect(setJellyfinAccountDisabled).toHaveBeenCalledWith(JELLYFIN_SERVER, 'jf-1', true)
-    expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
-    expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
-      where: {
-        userId: 'user-1',
-        OR: [{ jellyfinAccessStatus: null }, { jellyfinAccessStatus: { not: 'disabled' } }],
-      },
-      data: { jellyfinAccessStatus: 'disabled', accessSkipCode: null },
-    })
-    expect(prismaMock.user.updateMany).toHaveBeenCalledTimes(1)
-    expect(result).toEqual({ userId: 'user-1', revoked: true })
-  })
-
-  it('unshares Plex and disables Jellyfin for a member with both', async () => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ jellyfinUserId: 'jf-1' }))
-
-    await expect(processAccessRevoke(makeRevokeJob('user-1'))).resolves.toEqual({ userId: 'user-1', revoked: true })
-
-    expect(unshareUserFromPlexServer).toHaveBeenCalled()
-    expect(setJellyfinAccountDisabled).toHaveBeenCalledWith(JELLYFIN_SERVER, 'jf-1', true)
-    expect(prisma.subscription.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { plexInviteStatus: 'revoked', jellyfinAccessStatus: 'disabled', accessSkipCode: null } })
-    )
-  })
-
-  it.each(['admin', 'unknown'] as const)('NEVER disables a member whose Jellyfin admin check is %s', async (status) => {
-    jest.mocked(isJellyfinAdmin).mockResolvedValue(status)
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ jellyfinUserId: 'jf-1' }))
-
-    const result = await processAccessRevoke(makeRevokeJob('user-1'))
-
-    expect(setJellyfinAccountDisabled).not.toHaveBeenCalled()
-    expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
-    expect(prisma.subscription.updateMany).not.toHaveBeenCalled()
-    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
-    expect(result).toEqual({ userId: 'user-1', revoked: false })
-  })
-
-  it('skips when the member became a Jellyfin administrator after the guard ran', async () => {
-    jest.mocked(setJellyfinAccountDisabled).mockResolvedValue({ success: false, code: 'JELLYFIN_ADMIN' })
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(jellyfinOnly())
-
-    await expect(processAccessRevoke(makeRevokeJob('user-1'))).resolves.toEqual({ userId: 'user-1', revoked: false })
-    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
-  })
-
-  it.each([
-    ['an admin', { isAdmin: true }],
-    ['an exempt member', { isExempt: true }],
-    ['a PAST_DUE subscriber', { status: SubscriptionStatus.PAST_DUE }],
-    ['a non-Stripe-managed member', { stripeSubscriptionId: null }],
-  ])('NEVER disables %s on Jellyfin', async (_label, overrides) => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(jellyfinOnly(overrides))
-
-    const result = await processAccessRevoke(makeRevokeJob('user-1'))
-
-    expect(isJellyfinAdmin).not.toHaveBeenCalled()
-    expect(setJellyfinAccountDisabled).not.toHaveBeenCalled()
-    expect(result).toEqual({ userId: 'user-1', revoked: false })
-  })
-
-  it('skips a Jellyfin member whom Stripe reports active again (SEC-38)', async () => {
-    const stripe = createFakeStripe()
-    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'active' }))
-    ;(getStripe as jest.Mock).mockResolvedValue(stripe.client)
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(jellyfinOnly())
-
-    await expect(processAccessRevoke(makeRevokeJob('user-1'))).resolves.toEqual({ userId: 'user-1', revoked: false })
-    expect(setJellyfinAccountDisabled).not.toHaveBeenCalled()
-  })
-
-  it('retries when Jellyfin is unavailable or has no active server', async () => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(jellyfinOnly())
-    jest.mocked(setJellyfinAccountDisabled).mockResolvedValueOnce({ success: false, code: 'JELLYFIN_UNAVAILABLE' })
-
-    await expect(processAccessRevoke(makeRevokeJob('user-1'))).rejects.toThrow('JELLYFIN_UNAVAILABLE')
-
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue(null)
-    await expect(processAccessRevoke(makeRevokeJob('user-1'))).rejects.toThrow('NO_JELLYFIN_SERVER')
-    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
-  })
-
-  it('settles a rerun as a no-op once the account is already disabled and recorded', async () => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(jellyfinOnly())
-    jest.mocked(setJellyfinAccountDisabled).mockResolvedValue({ success: true, status: 'unchanged' })
-    ;(prisma.subscription.updateMany as jest.Mock).mockResolvedValue({ count: 0 })
-
-    await expect(processAccessRevoke(makeRevokeJob('user-1'))).resolves.toEqual({ userId: 'user-1', revoked: false })
-    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
   })
 })
 

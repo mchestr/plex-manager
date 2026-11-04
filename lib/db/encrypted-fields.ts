@@ -19,7 +19,6 @@
 export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   User: ["plexAuthToken"],
   PlexServer: ["token"],
-  JellyfinServer: ["apiKey"],
   Tautulli: ["apiKey"],
   Overseerr: ["apiKey"],
   Sonarr: ["apiKey"],

@@ -3,11 +3,8 @@ import "server-only"
 import { getPlexLibrarySections, getPlexOnDeck, getPlexRecentlyAdded, getPlexServerIdentity, getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { matchesSessionUser, type PlexSessionUserRef } from "@/lib/connections/plex-sessions"
-import { isJellyfinOnly } from "@/lib/discord/copy"
-import { memberServices } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import { type FormatSettings } from "@/lib/utils/format"
-import { JELLYFIN_MEMBER } from "./tool-output"
 import { onDeckReply, RECENTLY_ADDED, recentlyAddedReply, sessionsReply } from "./plex-projections"
 import { countArg, firstIndex, MAX_PAGE } from "./plex-tautulli-reply"
 import { PLEX_EPOCH_KEYS, UTC_FORMAT, withLocalTimestamps } from "./timestamps"
@@ -19,15 +16,13 @@ interface PlexSessionsData {
 
 /**
  * The Discord caller's own Plex sessions, sanitized. Fails closed (SEC-50): no
- * caller, or a caller without a Plex user ID, sees none, and a Jellyfin-only
- * member is told why (P11.12). The owner's own streams are PMS user 1 (GAP-08).
+ * caller, or a caller without a Plex user ID, sees none. The owner's own streams are PMS user 1 (GAP-08).
  * The Discord allowlist drops the reply's `showing` line, whose hint is for an admin.
  */
 async function callerSessions(data: PlexSessionsData, userId: string | undefined, adminPlexUserId: string | null) {
   const user = userId
-    ? await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true, jellyfinUserId: true } })
+    ? await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } })
     : null
-  if (user && isJellyfinOnly(memberServices(user))) return JELLYFIN_MEMBER
 
   const metadata = data.MediaContainer?.Metadata
   const sessions = Array.isArray(metadata) ? metadata : metadata ? [metadata] : []

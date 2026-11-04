@@ -38,7 +38,7 @@ describeRedis("clearRateLimits", (testRedisUrl) => {
   it("deletes the counters under every limit prefix and leaves other keys alone", async () => {
     await redis.set("share:203.0.113.7", "3")
     await redis.set("invite:validate:2001:db8:1:2::/64", "14")
-    await redis.set("auth:jellyfin:user:abc123", "2")
+    await redis.set("auth:plex:user:abc123", "2")
     await redis.set("bull:queue:job-1", "job")
     await redis.set("unrelated:share:1", "x")
     await redis.set("sharepoint:1", "x")
@@ -46,7 +46,7 @@ describeRedis("clearRateLimits", (testRedisUrl) => {
     const deleted = await clearRateLimits(redisUrl)
 
     expect(deleted).toBe(3)
-    expect(await redis.exists("share:203.0.113.7", "invite:validate:2001:db8:1:2::/64", "auth:jellyfin:user:abc123")).toBe(0)
+    expect(await redis.exists("share:203.0.113.7", "invite:validate:2001:db8:1:2::/64", "auth:plex:user:abc123")).toBe(0)
     expect(await redis.exists("bull:queue:job-1", "unrelated:share:1", "sharepoint:1")).toBe(3)
   })
 

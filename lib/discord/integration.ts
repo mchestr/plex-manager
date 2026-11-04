@@ -316,7 +316,6 @@ export async function syncDiscordRoleConnection(
       id: true,
       name: true,
       plexUserId: true,
-      jellyfinUserId: true,
       timezone: true,
     },
   })
@@ -336,7 +335,6 @@ export async function syncDiscordRoleConnection(
     {
       id: user.id,
       plexUserId: user.plexUserId,
-      jellyfinUserId: user.jellyfinUserId,
       timezone: user.timezone,
       lastWatchedHours: connection.lastWatchedHours,
     },

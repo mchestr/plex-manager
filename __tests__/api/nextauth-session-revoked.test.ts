@@ -27,9 +27,6 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 
 beforeEach(() => mockReset(prismaMock))
 
-jest.mock('@/lib/jellyfin-auth', () => ({
-  authenticateJellyfin: jest.fn(),
-}))
 
 jest.mock('@/lib/connections/plex', () => ({
   checkUserServerAccess: jest.fn(),

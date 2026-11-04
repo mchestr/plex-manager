@@ -62,15 +62,10 @@ describe('filterUsers', () => {
     expect(filterUsers(MEMBERS, parseUsersFilter({ role: 'member' }), NOW)).toHaveLength(6)
   })
 
-  it('filters by service, a member with both accounts matching either', () => {
-    const members = [
-      user('Plex only'),
-      user('Jellyfin only', { plexUserId: null, jellyfinUserId: 'jf-1', services: ['jellyfin'], primaryService: 'jellyfin' }),
-      user('Both', { jellyfinUserId: 'jf-2', services: ['plex', 'jellyfin'] }),
-    ]
-    expect(ids(filterUsers(members, parseUsersFilter({ service: 'jellyfin' }), NOW))).toEqual(['Jellyfin only', 'Both'])
-    expect(ids(filterUsers(members, parseUsersFilter({ service: 'plex' }), NOW))).toEqual(['Plex only', 'Both'])
-    expect(filterUsers(members, parseUsersFilter({}), NOW)).toHaveLength(3)
+  it('filters by service, a member with no Plex account matching only all', () => {
+    const members = [user('Plex member'), user('No account', { plexUserId: null, services: [] })]
+    expect(ids(filterUsers(members, parseUsersFilter({ service: 'plex' }), NOW))).toEqual(['Plex member'])
+    expect(filterUsers(members, parseUsersFilter({}), NOW)).toHaveLength(2)
   })
 
   it.each([

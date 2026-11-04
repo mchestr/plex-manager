@@ -22,7 +22,6 @@ describe("icons", () => {
     ["tautulli", "ChartLine"],
     ["sonarr", "TvMinimal"],
     ["radarr", "Film"],
-    ["jellyfin", "Server"],
     ["rewind", "Rewind"],
     ["rewindOpen", "Play"],
     ["invites", "Ticket"],

@@ -101,7 +101,6 @@ export async function seedVisualFixtures(): Promise<void> {
       await tx.sonarr.deleteMany();
       await tx.radarr.deleteMany();
       await tx.lLMProvider.deleteMany();
-      await tx.jellyfinServer.deleteMany();
       await tx.plexServer.deleteMany();
       await tx.plexServer.create({
         data: {
@@ -168,7 +167,7 @@ export async function seedVisualFixtures(): Promise<void> {
         email: VISUAL_ONBOARDING_USER.email,
         isAdmin: false,
         primaryAuthService: 'plex' as const,
-        onboardingStatus: { plex: false, jellyfin: false },
+        onboardingStatus: { plex: false },
         createdAt: daysAgo(shown, 3),
       };
       await tx.user.upsert({

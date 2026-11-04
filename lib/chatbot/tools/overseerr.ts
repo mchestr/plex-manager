@@ -74,7 +74,7 @@ export const OVERSEERR_TOOLS: RegisteredTool[] = [
     permission: "assistant:tools:read",
     function: {
       name: "get_overseerr_media_details",
-      description: `Get one movie or TV show from Overseerr by TMDB id: its ids (TMDB, IMDb, TVDB), title, dates, status, overview, genres, runtime, rating, studios or networks, directors or creators, the top-billed cast, a show's seasons with episode counts and availability, and Overseerr's own record: availability in HD and 4K (unknown means nobody requested it and Plex does not have it), the newest requests and who made them (user id and name), and links to the title in Plex or Jellyfin (mediaUrl) and in the Sonarr or Radarr server Overseerr sent it to (serviceUrl). ${ARR_LOOKUP}`,
+      description: `Get one movie or TV show from Overseerr by TMDB id: its ids (TMDB, IMDb, TVDB), title, dates, status, overview, genres, runtime, rating, studios or networks, directors or creators, the top-billed cast, a show's seasons with episode counts and availability, and Overseerr's own record: availability in HD and 4K (unknown means nobody requested it and Plex does not have it), the newest requests and who made them (user id and name), and links to the title in Plex (mediaUrl) and in the Sonarr or Radarr server Overseerr sent it to (serviceUrl). ${ARR_LOOKUP}`,
       parameters: {
         type: "object",
         properties: {

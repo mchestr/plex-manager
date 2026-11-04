@@ -56,7 +56,7 @@ describe('createInvite', () => {
     expect(result).toMatchObject({ success: true, data: { id: 'invite-1', code: 'NEWCODE1' } })
     expect(prismaMock.invite.create.mock.calls[0][0].select).toEqual({ id: true, code: true })
     const { data } = prismaMock.invite.create.mock.calls[0][0]
-    expect(data).toMatchObject({ serverType: 'PLEX', createdBy: 'admin-1', maxUses: 5, librarySectionIds: null, jellyfinLibraryIds: null })
+    expect(data).toMatchObject({ serverType: 'PLEX', createdBy: 'admin-1', maxUses: 5, librarySectionIds: null })
     expect(data.code).toMatch(/^[A-HJ-NP-Z2-9]{8}$/)
     expect(revalidatePath).toHaveBeenCalledWith('/admin/invites')
     expect(revalidatePath).toHaveBeenCalledWith('/admin/invites/invite-1')
@@ -84,15 +84,14 @@ describe('createInvite', () => {
     expect(logAuditEvent).not.toHaveBeenCalled()
   })
 
-  it('upper-cases a custom code and keeps only the libraries of its server type', async () => {
-    await createInvite({ code: ' friends2 ', serverType: 'JELLYFIN', jellyfinLibraryIds: ['abc'], librarySectionIds: [1], allowDownloads: true })
+  it('upper-cases a custom code and keeps its libraries and downloads', async () => {
+    await createInvite({ code: ' friends2 ', librarySectionIds: [1], allowDownloads: true })
 
     expect(prismaMock.invite.create.mock.calls[0][0].data).toMatchObject({
       code: 'FRIENDS2',
-      serverType: 'JELLYFIN',
-      jellyfinLibraryIds: '["abc"]',
-      librarySectionIds: null,
-      allowDownloads: false,
+      serverType: 'PLEX',
+      librarySectionIds: '[1]',
+      allowDownloads: true,
     })
   })
 
@@ -128,7 +127,6 @@ describe('createInvite', () => {
     ['too many uses', { maxUses: 1001 }],
     ['fractional uses', { maxUses: 1.5 }],
     ['an unknown expiry', { expiresIn: '999y' }],
-    ['an unknown server type', { serverType: 'EMBY' }],
     ['more than 100 libraries', { librarySectionIds: Array.from({ length: 101 }, (_, i) => i) }],
     ['a library id that is not an integer', { librarySectionIds: [1.5] }],
   ])('refuses %s (SEC-56)', async (_label, input) => {
@@ -146,7 +144,7 @@ describe('deleteInvite', () => {
   })
 
   it('deletes the invite, audits it and revalidates the list and the detail page', async () => {
-    prismaMock.invite.delete.mockResolvedValue(buildInvite({ id: 'invite-1', serverType: 'JELLYFIN', useCount: 2 }))
+    prismaMock.invite.delete.mockResolvedValue(buildInvite({ id: 'invite-1', serverType: 'PLEX', useCount: 2 }))
 
     await expect(deleteInvite({ id: 'invite-1' })).resolves.toEqual({ success: true, data: null })
     expect(prismaMock.invite.delete).toHaveBeenCalledWith({
@@ -156,7 +154,7 @@ describe('deleteInvite', () => {
     expect(consume).toHaveBeenCalledWith('admin:invites', 'admin-1')
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.INVITE_DELETED, 'admin-1', {
       inviteId: 'invite-1',
-      serverType: 'JELLYFIN',
+      serverType: 'PLEX',
       useCount: 2,
     })
     expect(revalidatePath).toHaveBeenCalledWith('/admin/invites')

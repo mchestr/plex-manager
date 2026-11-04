@@ -15,10 +15,10 @@ export interface InvitePassData {
   state: InviteState
   /** The code as stored; empty when the link's code is not a code at all. */
   code: string
-  serverType: "PLEX" | "JELLYFIN"
+  serverType: "PLEX"
   /** An admin's invite, or a member's affiliate invite (its headline names the affiliate). */
   kind: "ADMIN" | "AFFILIATE"
-  /** The brand for Plex invites, the active Jellyfin row's name for Jellyfin ones. */
+  /** The brand (`serverName()`). */
   serverName: string
   /** `monogramFor(serverName)`; null draws the pip-only tile. */
   monogram: string | null

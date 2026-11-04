@@ -23,7 +23,7 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `NEXTAUTH_URL` | yes |  | The app's URL, for NextAuth callbacks and session cookies. https in production; cookies are Secure exactly when it is https. |
 | `NEXT_PUBLIC_APP_URL` |  | `NEXTAUTH_URL` | Public URL for share links and OG images; same origin as NEXTAUTH_URL. A bare-metal install rebuilds after changing it, because Next inlines it at build time. |
 | `NEXTAUTH_SECRET` | yes (boot check) |  | Signs session cookies. At least 32 random characters: openssl rand -base64 32. |
-| `PLEX_CLIENT_IDENTIFIER` | yes (boot check) |  | Unique id this install reports to Plex: openssl rand -hex 16. Keep it stable; Jellyfin's default device id is derived from it. |
+| `PLEX_CLIENT_IDENTIFIER` | yes (boot check) |  | Unique id this install reports to Plex: openssl rand -hex 16. Keep it stable. |
 | `ENCRYPTION_KEYS` | yes (boot check) |  | Keyring for secrets stored at rest: comma-separated kid:base64 entries of 32 bytes each (openssl rand -base64 32). The first encrypts new writes; the others only read. Production also starts with ENCRYPTION_KEY alone, or with ALLOW_PLAINTEXT_SECRETS=true. Keep every key in a password manager, never beside a database dump; rotation and lost-key recovery are in docs/operations.md. |
 | `ENCRYPTION_KEY` |  |  | Older single key for stored secrets, at least 32 characters: openssl rand -hex 32. Never reuse NEXTAUTH_SECRET. It still reads what it wrote. Without ENCRYPTION_KEYS, it encrypts new writes as kid legacy. To move to ENCRYPTION_KEYS, see docs/operations.md. |
 | `ALLOW_PLAINTEXT_SECRETS` |  | `false` | UNSAFE. "true" lets production start without a strong encryption key; every boot warns and secrets are stored as plain text. |
@@ -99,7 +99,6 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `DISCORD_SUPPORT_THREAD_IDS` |  |  | Comma-separated support thread ids, used when none are stored in Admin settings. |
 | `DISCORD_PORTAL_URL` |  | `<base>/discord/link` | Account-linking URL in Discord nudges. |
 | `PLEX_WRAPPED_BASE_URL` |  |  | First choice for the Discord portal base URL, before NEXT_PUBLIC_APP_URL and NEXTAUTH_URL. |
-| `JELLYFIN_DEVICE_ID` |  | `plex-manager-<16 hex characters>` | DeviceId reported to Jellyfin at sign-in. Leave unset: the default is derived from PLEX_CLIENT_IDENTIFIER. |
 | `LLM_REQUEST_TIMEOUT_MS` |  | `300000` | LLM request timeout in milliseconds. |
 
 ## Rewind

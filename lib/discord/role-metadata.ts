@@ -14,10 +14,8 @@
  *
  * - `is_subscribed` (boolean) — whether the user is entitled
  *   (`getAccessLevel(userId) === "full"`: not disabled and, with Stripe on, a
- *   paying, exempt or admin member) **and** currently has access on one of
- *   their services (P11.12): a Plex share on the active server, checked live
- *   through the Plex.tv API (SEC-47), or a Jellyfin account on the active
- *   server that exists and is not disabled.
+ *   paying, exempt or admin member) **and** currently has a Plex share on the
+ *   active server, checked live through the Plex.tv API (SEC-47).
  * - `watched_hours` (integer) — hours watched in the member's current year,
  *   from their stored v3 Rewind or a bounded read of their history
  *   (`getMemberYearStats`, RWP-17).
@@ -32,11 +30,10 @@
  * ## Special Cases
  *
  * - **Not entitled** → `is_subscribed` is `false`, and no service is asked.
- * - **No service** → `is_subscribed` is `false` when the member has no
- *   account on an active server.
- * - **Access unknown** → when no service grants access and one could not
- *   answer (plex.tv or the PMS gives `unknown`, Jellyfin fails, or a check
- *   throws), `metadata` is `null`: the caller pushes nothing and Discord keeps
+ * - **No Plex account** → `is_subscribed` is `false` when the member has no
+ *   Plex user ID or no Plex server is active.
+ * - **Access unknown** → when Plex could not answer (plex.tv or the PMS gives
+ *   `unknown`, or the check throws), `metadata` is `null`: the caller pushes nothing and Discord keeps
  *   the stored values, so a timeout never removes a role (GAP-05).
  * - **Stats unavailable** → the stored hours are reused; with none stored,
  *   `watched_hours` is omitted (never emitted as `0` on failure).
@@ -46,14 +43,12 @@
  */
 
 import { getAccessLevel } from "@/lib/access"
-import { getJellyfinUserById } from "@/lib/connections/jellyfin-users"
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { getMemberYearStats, memberStatsYear } from "@/lib/discord/stats/member-stats"
 import { hoursOf } from "@/lib/discord/stats/year-stats"
 import { createLogger } from "@/lib/utils/logger"
 import { directLimiter, type UpstreamLimiter } from "@/lib/wrapped/sources/watch-history-source"
-import { getActiveService } from "@/lib/data/active-service"
 
 const logger = createLogger("DISCORD_ROLE_METADATA")
 
@@ -80,7 +75,6 @@ export const WATCHED_HOURS_KEY = "watched_hours"
 export interface RoleMetadataUser {
   id: string
   plexUserId: string | null
-  jellyfinUserId: string | null
   /** `User.timezone`: the hours are for the member's current year in it. */
   timezone: string | null
   /** `DiscordConnection.lastWatchedHours`, reused unless the hours are refreshed. */
@@ -139,34 +133,8 @@ async function resolvePlexAccess(userId: string, plexUserId: string): Promise<bo
 }
 
 /**
- * Resolves whether the member's Jellyfin account on the active server exists
- * and is not disabled; `null` when Jellyfin could not answer.
- *
- * @internal
- */
-async function resolveJellyfinAccess(userId: string, jellyfinUserId: string): Promise<boolean | null> {
-  try {
-    const server = await getActiveService("jellyfin")
-    if (!server) return false
-    const result = await getJellyfinUserById(server, jellyfinUserId)
-    if (result.notFound) return false
-    const disabled = result.data?.Policy?.IsDisabled
-    if (!result.success || typeof disabled !== "boolean") {
-      logger.warn("Jellyfin access unknown; keeping the stored Discord metadata", { userId })
-      return null
-    }
-    return !disabled
-  } catch (error) {
-    logger.warn("Failed to determine Jellyfin access for Discord metadata", {
-      error: error instanceof Error ? error.message : "unknown",
-    })
-    return null
-  }
-}
-
-/**
- * Access counts only for an entitled member (SEC-47), and then on any of
- * their services. Null when none grants it and one could not answer.
+ * Access counts only for an entitled member (SEC-47) with a Plex share. Null
+ * when Plex could not answer.
  *
  * @internal
  */
@@ -174,12 +142,7 @@ async function resolveSubscribed(user: RoleMetadataUser): Promise<boolean | null
   if ((await getAccessLevel(user.id)) !== "full") {
     return false
   }
-  const access = await Promise.all([
-    user.plexUserId ? resolvePlexAccess(user.id, user.plexUserId) : false,
-    user.jellyfinUserId ? resolveJellyfinAccess(user.id, user.jellyfinUserId) : false,
-  ])
-  if (access.includes(true)) return true
-  return access.includes(null) ? null : false
+  return user.plexUserId ? resolvePlexAccess(user.id, user.plexUserId) : false
 }
 
 /**
@@ -223,7 +186,7 @@ async function resolveWatchedHours(
  * ```ts
  * // An event-driven sync: no Tautulli call, the stored hours are pushed.
  * const { metadata } = await computeRoleMetadata(
- *   { id: "user-1", plexUserId: "123", jellyfinUserId: null, timezone: null, lastWatchedHours: 42 },
+ *   { id: "user-1", plexUserId: "123", timezone: null, lastWatchedHours: 42 },
  *   { refreshHours: false }
  * )
  * // { is_subscribed: true, watched_hours: 42 }

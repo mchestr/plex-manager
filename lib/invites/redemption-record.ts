@@ -44,9 +44,8 @@ type Exemption = typeof INVITE_EXEMPTION
 /**
  * Find or create the user for a Plex identity, matched by `plexUserId` only.
  *
- * Matching by email would let a row that claimed the address first (a
- * Jellyfin user can rename themselves to any address) absorb this Plex
- * identity. `email` is the address to store, or null when another row already
+ * Matching by email would let a row that claimed the address first absorb
+ * this Plex identity. `email` is the address to store, or null when another row already
  * holds it: a new row is then created without one, and an existing row keeps
  * the email it has.
  */

@@ -6,7 +6,7 @@
  * The Plex provider in lib/auth.ts signs a member in even when another row
  * already holds their Plex email (SEC-08).
  *
- * Old releases stored Jellyfin usernames as emails, so a row can hold someone
+ * Old releases stored non-Plex usernames as emails, so a row can hold someone
  * else's address. The unique email would otherwise refuse that person's Plex
  * sign-in on every attempt, right after their invite redemption succeeded.
  */
@@ -29,9 +29,6 @@ jest.mock('@/lib/connections/plex', () => ({
   getPlexUserInfo: jest.fn(),
 }))
 
-jest.mock('@/lib/jellyfin-auth', () => ({
-  authenticateJellyfin: jest.fn(),
-}))
 
 jest.mock('@/lib/security/rate-limit', () => ({
   consume: jest.fn(async () => ({ ok: true })),
@@ -90,8 +87,8 @@ const PLEX_SERVER = {
 
 const VICTIM = { id: 'plex-victim', username: 'victim', email: 'victim@example.com' }
 
-/** The row that holds the victim's address: an old Jellyfin username stored as its email. */
-const HOLDER_ROW = { id: 'jellyfin-row', email: VICTIM.email, plexUserId: null, jellyfinUserId: 'jf-eve' }
+/** The row that holds the victim's address: an old username stored as its email. */
+const HOLDER_ROW = { id: 'holder-row', email: VICTIM.email, plexUserId: null }
 
 /** The victim's own row, created without an email by an invite redemption that hit the conflict. */
 const VICTIM_ROW = {

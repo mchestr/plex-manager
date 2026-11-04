@@ -15,7 +15,6 @@ jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showSuccess: mock
 const row = (id: string, code: string, overrides: Partial<AdminInviteRow> = {}): AdminInviteRow => ({
   id,
   code,
-  serverType: 'PLEX',
   useCount: 3,
   maxUses: 5,
   expiresAt: new Date('2027-02-01T12:00:00Z'),
@@ -26,7 +25,7 @@ const row = (id: string, code: string, overrides: Partial<AdminInviteRow> = {}):
 
 const ROWS = [
   row('i-audit', 'AUDIT2026'),
-  row('i-old', 'OLDCODE', { serverType: 'JELLYFIN', status: 'expired', expiresAt: new Date('2026-01-01T12:00:00Z'), useCount: 0, maxUses: 1 }),
+  row('i-old', 'OLDCODE', { status: 'expired', expiresAt: new Date('2026-01-01T12:00:00Z'), useCount: 0, maxUses: 1 }),
 ]
 
 function renderTable(props: Partial<Parameters<typeof InvitesTable>[0]> = {}) {
@@ -50,17 +49,15 @@ beforeEach(() => {
 })
 
 describe('InvitesTable', () => {
-  it('links the code to the detail page and shows uses, server and status', () => {
+  it('links the code to the detail page and shows uses and status', () => {
     renderTable()
 
     const audit = screen.getByTestId('admin-invites-row-i-audit')
     expect(within(audit).getByRole('link', { name: 'AUDIT2026' })).toHaveAttribute('href', '/admin/invites/i-audit')
     expect(audit).toHaveTextContent('3 of 5')
-    expect(audit).toHaveTextContent('Plex')
     expect(audit).toHaveTextContent('Active')
 
     const old = screen.getByTestId('admin-invites-row-i-old')
-    expect(old).toHaveTextContent('Jellyfin')
     expect(old).toHaveTextContent('Expired')
   })
 
@@ -105,7 +102,7 @@ describe('InvitesTable', () => {
   })
 
   it('shows the filtered empty state, and Clear filters drops every filter', async () => {
-    resetUrl('/admin/invites?status=expired&server=plex&q=ZZZ&page=2')
+    resetUrl('/admin/invites?status=expired&q=ZZZ&page=2')
     renderTable({ rows: [], total: 0, all: 4 })
 
     const empty = screen.getByTestId('admin-invites-empty-filtered')

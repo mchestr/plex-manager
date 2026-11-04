@@ -1,7 +1,7 @@
 /**
  * Pairs Overseerr users with Tautulli users. Both name a member by the plex.tv
  * account id: Overseerr's `plexId` is Tautulli's `user_id`. An Overseerr user
- * without a `plexId` (a local or Jellyfin account) is skipped.
+ * without a `plexId` (a local account) is skipped.
  *
  * @module lib/request-tiers/match
  */

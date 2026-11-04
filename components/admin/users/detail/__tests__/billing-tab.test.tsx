@@ -22,7 +22,6 @@ const SUBSCRIPTION = {
   cancelAtPeriodEnd: false,
   stripeCustomerId: 'cus_1',
   plexInviteStatus: 'revoked',
-  jellyfinAccessStatus: 'disabled',
 }
 
 function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeaderData {
@@ -30,11 +29,9 @@ function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeader
     id: 'u1',
     name: 'Morgan Lee',
     email: null,
-    plexUserId: null,
-    jellyfinUserId: 'jf-1',
-    services: ['jellyfin'],
-    primaryService: 'jellyfin',
-    jellyfinStatus: 'disabled',
+    plexUserId: 'plex-1',
+    services: ['plex'],
+    primaryService: 'plex',
     isAdmin: false,
     role: null,
     isOwner: false,
@@ -56,23 +53,21 @@ function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeader
 }
 
 describe('BillingTab access statuses (P11.11)', () => {
-  it('shows the Jellyfin access status, and no Plex invite, for a Jellyfin-only member', () => {
+  it('shows the Plex invite status for a Plex member', () => {
     render(<BillingTab header={header()} f={f} />)
 
-    expect(screen.getByTestId('admin-user-jellyfin-access-status')).toHaveTextContent('Jellyfin accessDisabled')
+    expect(screen.getByTestId('admin-user-plex-invite-status')).toHaveTextContent('Plex inviteRemoved')
+  })
+
+  it('shows no invite status for a member with no Plex account', () => {
+    render(<BillingTab header={header({ plexUserId: null, services: [] })} f={f} />)
+
     expect(screen.queryByTestId('admin-user-plex-invite-status')).not.toBeInTheDocument()
   })
 
-  it('shows both for a member with both services', () => {
-    render(<BillingTab header={header({ services: ['plex', 'jellyfin'], plexUserId: 'plex-1' })} f={f} />)
-
-    expect(screen.getByTestId('admin-user-plex-invite-status')).toHaveTextContent('Plex inviteRemoved')
-    expect(screen.getByTestId('admin-user-jellyfin-access-status')).toBeInTheDocument()
-  })
-
-  it('shows neither without a subscription row', () => {
+  it('shows none without a subscription row', () => {
     render(<BillingTab header={header({ subscription: null })} f={f} />)
 
-    expect(screen.queryByTestId('admin-user-jellyfin-access-status')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('admin-user-plex-invite-status')).not.toBeInTheDocument()
   })
 })

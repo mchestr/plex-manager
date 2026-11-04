@@ -12,7 +12,7 @@
  * | Param          | Values                                                                   |
  * |----------------|--------------------------------------------------------------------------|
  * | `role`         | `all`, `admin` (owner included), `member`                                |
- * | `service`      | `all`, `plex`, `jellyfin` (a linked account)                             |
+ * | `service`      | `all`, `plex` (a linked account)                                         |
  * | `plexAccess`   | `all`, `shared`, `notShared`, `unknown`                                  |
  * | `seen`         | `all`, `recent`, `inactive90`, `inactive180`, `never`, `unknown`         |
  * | `subscription` | `all`, `active`, `pastDue`, `canceled`, `none`                           |
@@ -43,7 +43,7 @@ export const USERS_SORTS = ["name", "joined", "cost", "lastSeen"] as const
 export const USERS_DEFAULT_SORT: TableSort = { id: "joined", desc: true }
 
 const ROLES = ["all", "admin", "member"] as const
-const SERVICES = ["all", "plex", "jellyfin"] as const
+const SERVICES = ["all", "plex"] as const
 const PLEX_ACCESS = ["all", "shared", "notShared", "unknown"] as const
 const SUBSCRIPTIONS = ["all", "active", "pastDue", "canceled", "none"] as const
 

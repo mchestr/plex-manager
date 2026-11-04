@@ -28,7 +28,6 @@ const health = (overrides: Partial<SettingsHealth> = {}): SettingsHealth => ({
   rewind: ok,
   sonarr: ok,
   radarr: ok,
-  jellyfin: ok,
   ...overrides,
 })
 
@@ -61,10 +60,10 @@ describe('SettingsPageActions: Test all connections', () => {
     expect(mockShowSuccess).not.toHaveBeenCalled()
   })
 
-  it('counts each shown connection that did not answer, including the three behind "Sonarr, Radarr, Jellyfin"', async () => {
-    await testAll(health({ plex: down, sonarr: down, radarr: down, jellyfin: down, stripe: down, discord: down }))
+  it('counts each shown connection that did not answer, including the two behind "Sonarr, Radarr"', async () => {
+    await testAll(health({ plex: down, sonarr: down, radarr: down, stripe: down, discord: down }))
 
-    expect(mockShowError).toHaveBeenCalledWith('5 connections are not working')
+    expect(mockShowError).toHaveBeenCalledWith('4 connections are not working')
   })
 
   it('ignores statuses that are not a failure to answer', async () => {

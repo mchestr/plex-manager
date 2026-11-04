@@ -115,10 +115,10 @@ const ACTION_AUTH = Symbol.for("__pmActionAuth")
 const ACTION_INPUT = Symbol.for("__pmActionInput")
 
 /**
- * Brands `fn` with a non-enumerable {@link ACTION_BRAND}; `formAction` brands its adapters too.
+ * Brands `fn` with a non-enumerable {@link ACTION_BRAND}.
  * `auth` records the requirement, which `actionAuthOf` reads back.
  */
-export function brandAction<F extends (...args: never[]) => unknown>(fn: F, auth?: string): F {
+function brandAction<F extends (...args: never[]) => unknown>(fn: F, auth?: string): F {
   Object.defineProperty(fn, ACTION_BRAND, { value: true, enumerable: false })
   if (auth) Object.defineProperty(fn, ACTION_AUTH, { value: auth, enumerable: false })
   return fn
@@ -146,7 +146,7 @@ export function actionInputOf(value: unknown): z.ZodType | null | undefined {
 }
 
 /**
- * Whether `value` was built by {@link defineAction} or `formAction`.
+ * Whether `value` was built by {@link defineAction}.
  *
  * @internal
  */

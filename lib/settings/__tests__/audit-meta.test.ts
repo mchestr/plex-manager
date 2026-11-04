@@ -49,7 +49,7 @@ describe("getSettingsAuditMeta", () => {
         ["judge"],
         ["discord"],
         ["stripe", "stripe.enabled"],
-        ["sonarr", "radarr", "jellyfin", "jellyfin.login"],
+        ["sonarr", "radarr"],
         ["appearance", "timezone"],
       ])
     )

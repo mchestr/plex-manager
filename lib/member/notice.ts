@@ -14,12 +14,10 @@ async function subscriptionNotice(userId: string): Promise<MemberNotice | null> 
 
   const subscription = await prisma.subscription.findUnique({
     where: { userId },
-    select: { status: true, plexInviteStatus: true, jellyfinAccessStatus: true },
+    select: { status: true, plexInviteStatus: true },
   })
   if (subscription?.status === "PAST_DUE") return { kind: "past-due" }
-  if (subscription?.plexInviteStatus === "pending") {
-    return subscription.jellyfinAccessStatus === "enabled" ? { kind: "pending-invite", jellyfinEnabled: true } : { kind: "pending-invite" }
-  }
+  if (subscription?.plexInviteStatus === "pending") return { kind: "pending-invite" }
   return null
 }
 

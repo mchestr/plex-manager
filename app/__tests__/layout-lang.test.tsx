@@ -25,7 +25,6 @@ jest.mock("@/components/ui/flash-from-query", () => ({ FlashFromQuery: () => nul
 beforeEach(() => {
   mockReset(prismaMock)
   prismaMock.plexServer.findFirst.mockResolvedValue(null)
-  prismaMock.jellyfinServer.findFirst.mockResolvedValue(null)
 })
 
 async function htmlLang(locale: string): Promise<unknown> {

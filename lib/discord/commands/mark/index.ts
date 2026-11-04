@@ -56,7 +56,6 @@ import {
   getActivePlexServerConfig,
   type PlexServerConfig,
 } from "@/lib/connections/plex-config"
-import { isJellyfinOnly, JELLYFIN_COPY } from "@/lib/discord/copy"
 import { applyMark } from "@/lib/discord/media/mark-media"
 import { getMarkTypeLabel, watchStatusNote, type WatchStatusSync } from "@/lib/discord/media/mark-labels"
 import { createLogger } from "@/lib/utils/logger"
@@ -176,11 +175,6 @@ async function handleMark(ctx: InteractionContext): Promise<void> {
 
   const user = await requireLinkedUser(ctx, { action: "mark titles" })
   if (!user) return
-
-  if (isJellyfinOnly(user.services)) {
-    await interaction.reply({ content: JELLYFIN_COPY.mark, flags: MessageFlags.Ephemeral })
-    return
-  }
 
   const subcommand = interaction.options.getSubcommand()
   const markType = MARK_SUBCOMMANDS[subcommand]

@@ -223,7 +223,6 @@ describe("Discord parameters", () => {
       properties: properties.map((property) => property.description).join("\n"),
       parameters: JSON.stringify(tool?.function.parameters),
       prompt: generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, at),
-      jellyfinPrompt: generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS, { ...at, jellyfin: true }),
     }
 
     expect(properties.length).toBeGreaterThan(0)

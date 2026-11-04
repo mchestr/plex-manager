@@ -31,7 +31,7 @@ const named = z.array(z.looseObject({ name: z.string() })).catch([])
 const episodeSchema = z.looseObject({ seasonNumber: optNumber, episodeNumber: optNumber, name: optString, airDate: optString })
 const seasonAvailability = z.looseObject({ seasonNumber: z.number(), status: optNumber, status4k: optNumber })
 
-// Overseerr names its Plex link plexUrl; Jellyseerr and Seerr name their Plex, Jellyfin or Emby link mediaUrl
+// Overseerr names its Plex link plexUrl; Jellyseerr and Seerr name it mediaUrl
 const mediaInfoSchema = mediaSchema.extend({
   plexUrl: optString,
   plexUrl4k: optString,

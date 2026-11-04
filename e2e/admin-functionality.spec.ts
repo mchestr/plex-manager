@@ -101,30 +101,6 @@ test.describe('Admin Functionality', () => {
     await expect(adminPage.getByTestId('admin-shares-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
   });
 
-  test('should toggle Jellyfin login visibility in settings', async ({ adminPage }) => {
-    // Navigate to settings
-    await adminPage.getByTestId('admin-sidebar').getByTestId('admin-nav-settings').first().click();
-    await expect(adminPage.getByTestId('admin-settings-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-
-    // Sonarr, Radarr and Jellyfin sit in the Connections group
-    await adminPage.getByTestId('settings-nav-other').click();
-
-    // Look for the Jellyfin login toggle - it should only be visible if Jellyfin is configured
-    const jellyfinToggle = adminPage.getByTestId('jellyfin-login-toggle');
-
-    // If Jellyfin is configured, its row carries the switch, which saves at once
-    if (await jellyfinToggle.isVisible({ timeout: 5000 }).catch(() => false)) {
-      const checked = (await jellyfinToggle.getAttribute('aria-checked')) ?? 'false';
-
-      await jellyfinToggle.click();
-      await expect(jellyfinToggle).not.toHaveAttribute('aria-checked', checked, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-
-      // Restore the original state
-      await jellyfinToggle.click();
-      await expect(jellyfinToggle).toHaveAttribute('aria-checked', checked, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-    }
-  });
-
   // P4.7 (SEC-10): disabling a member ends their session at the next recheck.
   // A member of its own, so the shared seeded users stay enabled.
   test('disabling a member signs them out on their next navigation', async ({ adminPage, browser, baseURL }) => {
@@ -136,7 +112,7 @@ test.describe('Admin Functionality', () => {
         name: 'Disabled Member',
         email: `${memberId}@example.com`,
         primaryAuthService: 'plex',
-        onboardingStatus: { plex: true, jellyfin: false },
+        onboardingStatus: { plex: true },
       },
     });
 

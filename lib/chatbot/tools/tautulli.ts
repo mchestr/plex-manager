@@ -35,12 +35,10 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
     // from, bandwidth and the transcode detail as well as the fields below.
     // This allowlist drops all of that: keep ONLY non-identifying
     // media/player/quality/progress fields here; every identifier (user_id,
-    // friendly_name, player name...) is excluded. A Jellyfin-only caller gets
-    // {"unavailable":"jellyfin-member"} instead, which the Discord prompt
-    // explains (P11.12); no session carries an "unavailable" field.
+    // friendly_name, player name...) is excluded.
     discordFields: [
       // The reply and its sessions
-      "result", "stream_count", "session_count", "scope", "sessions", "unavailable",
+      "result", "stream_count", "session_count", "scope", "sessions",
       // What is playing
       "full_title", "title", "grandparent_title", "parent_title", "media_type", "year", "parent_media_index", "media_index", "library_name",
       // Progress, quality and player

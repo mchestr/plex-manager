@@ -20,7 +20,6 @@ export interface AdminUserWithWrappedStats {
   email: string | null
   image: string | null
   plexUserId: string | null
-  jellyfinUserId: string | null
   /** Every linked media server, Plex first (`memberServices`, P11.10). */
   services: AuthService[]
   /** The member's own service (`primaryService`). */

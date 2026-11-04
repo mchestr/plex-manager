@@ -28,11 +28,9 @@ their watch history.
 
 ## Features
 
-- **Sign-in and invites.** Members sign in with their Plex account. If you
-  enable Jellyfin sign-in, members can also sign in with a Jellyfin account.
-  Invites share your Plex libraries or make a Jellyfin account. Each invite has
-  a code, the libraries to share, a maximum number of members and, if you set
-  one, an end date.
+- **Sign-in and invites.** Members sign in with their Plex account. Invites
+  share your Plex libraries. Each invite has a code, the libraries to share, a
+  maximum number of members and, if you set one, an end date.
 - **Affiliate invites.** Members who watch a lot can apply to be affiliates.
   When an admin approves them, they can make single-use Plex invites, from a
   number of invites per 30 days that their watch hours set. This feature is
@@ -85,7 +83,6 @@ You can also connect these services:
 - Overseerr, for requests and watchlist sync.
 - Sonarr and Radarr, for the admin assistant. Rewind also shows the next
   seasons from the Sonarr calendar.
-- Jellyfin, for Jellyfin sign-in and Jellyfin invites.
 - An AI provider (OpenAI, Anthropic, Google, or a server with an
   OpenAI-compatible API), for the Rewind text and the assistants.
 - A Discord bot, for linked roles and slash commands.
@@ -210,7 +207,7 @@ The guides in `docs/` give the full details:
 | [MCP endpoint](docs/mcp.md) | API tokens, and connecting Claude Code or another MCP client to run admin actions |
 | [Request limits](docs/request-limits.md) | Request limits from watch time, and the Discord stat channels |
 | [Inactive members](docs/inactive-members.md) | Last seen from Tautulli, and removing Plex access from members who stopped watching |
-| [Stripe](docs/stripe.md) | Subscriptions, the webhook, and Plex and Jellyfin access |
+| [Stripe](docs/stripe.md) | Subscriptions, the webhook, and Plex access |
 | [Discord bot](docs/discord-bot.md) | The bot, slash commands and linked roles |
 | [Releases](docs/releasing.md) and [CHANGELOG.md](CHANGELOG.md) | Versions, tags and the upgrade notes of each release |
 

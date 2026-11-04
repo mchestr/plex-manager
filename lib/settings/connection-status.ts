@@ -24,7 +24,6 @@ const HEALTH_KEYS = [
   "rewind",
   "sonarr",
   "radarr",
-  "jellyfin",
 ] as const
 
 type HealthKey = (typeof HEALTH_KEYS)[number]

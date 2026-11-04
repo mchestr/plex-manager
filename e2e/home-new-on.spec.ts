@@ -1,14 +1,14 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-import { expect, test, TEST_USERS } from './fixtures/auth';
+import { expect, test } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
 
 /**
  * Home's "New on" row (P10.12) against a stub Plex server: the row and its
  * Plex web links render for a Plex member (the seeded admin owns the server,
- * so every section is theirs), and a Jellyfin member gets no row.
+ * so every section is theirs).
  */
 
 const MACHINE_ID = 'e2e-new-on-machine';
@@ -126,25 +126,5 @@ test.describe('Home: New on row', () => {
     expect(await list.evaluate((row) => row.scrollWidth > row.clientWidth)).toBe(true);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
-  });
-
-  test('a Jellyfin member sees no row', async ({ regularUserPage: page }) => {
-    const prisma = createE2EPrismaClient();
-    try {
-      await prisma.user.update({
-        where: { id: TEST_USERS.REGULAR.id },
-        data: { primaryAuthService: 'jellyfin', onboardingStatus: { plex: true, jellyfin: true } },
-      });
-      await page.goto('/');
-      await expect(page.getByTestId('home-page')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-      await expect(page.getByTestId('home-new-on-row')).toHaveCount(0);
-      await expect(page.getByTestId('home-new-on-skeleton')).toHaveCount(0);
-    } finally {
-      await prisma.user.update({
-        where: { id: TEST_USERS.REGULAR.id },
-        data: { primaryAuthService: TEST_USERS.REGULAR.primaryAuthService, onboardingStatus: TEST_USERS.REGULAR.onboardingStatus },
-      });
-      await prisma.$disconnect();
-    }
   });
 });

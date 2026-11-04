@@ -22,7 +22,6 @@ jest.mock("next/cache", () => ({ unstable_cache: jest.fn((fn: () => unknown) => 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/connections/plex-connection", () => ({ testPlexConnection: jest.fn() }))
 jest.mock("@/lib/connections/tautulli", () => ({ testTautulliConnection: jest.fn() }))
-jest.mock("@/lib/connections/jellyfin-connection", () => ({ testJellyfinConnection: jest.fn() }))
 jest.mock("@/lib/connections/overseerr", () => ({ testOverseerrConnection: jest.fn() }))
 jest.mock("@/lib/connections/sonarr", () => ({ testSonarrConnection: jest.fn() }))
 jest.mock("@/lib/connections/radarr", () => ({ testRadarrConnection: jest.fn() }))
@@ -64,7 +63,7 @@ describe("checkConnections", () => {
     expect(health.checkedAt).toBe(NOW.toISOString())
     expect(statusOf(health, "plex")).toBe("ok")
     expect(statusOf(health, "tautulli")).toBe("unreachable")
-    for (const id of ["jellyfin", "overseerr", "sonarr", "radarr"]) expect(statusOf(health, id)).toBe("notConfigured")
+    for (const id of ["overseerr", "sonarr", "radarr"]) expect(statusOf(health, id)).toBe("notConfigured")
     expect(testPlexConnection).toHaveBeenCalledWith(expect.objectContaining({ url: "http://plex:32400", token: "t", publicUrl: undefined }))
   })
 

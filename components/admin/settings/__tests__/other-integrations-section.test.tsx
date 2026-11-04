@@ -2,21 +2,19 @@
  * Other integrations: the rows are the view, with no section Edit, and each
  * row's Sheet is its edit mode. A save, or Save with nothing changed, closes
  * the Sheet; a failed one keeps it open; closing it with unsaved changes asks
- * first. Allow Jellyfin sign-in saves at once, so it is live in the row.
+ * first.
  */
 
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { toggleJellyfinLogin, updateRadarr, updateSonarr } from "@/actions/admin/admin-servers"
+import { updateRadarr, updateSonarr } from "@/actions/admin/admin-servers"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
 import { SettingsEditProvider } from "@/components/ui/settings-edit-context"
 import type { StoredServer } from "@/hooks/admin/use-server-form"
 import type { SectionHealth } from "@/lib/settings/connection-status"
 
 jest.mock("@/actions/admin/admin-servers", () => ({
-  toggleJellyfinLogin: jest.fn(),
-  updateJellyfinServer: jest.fn(),
   updateOverseerr: jest.fn(),
   updatePlexServer: jest.fn(),
   updateRadarr: jest.fn(),
@@ -30,19 +28,17 @@ const mockShowError = jest.fn()
 jest.mock("@/components/ui/toast", () => ({ useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }) }))
 
 const SONARR: StoredServer = { name: "TV", url: "http://sonarr.lan:8989", publicUrl: null, secret: { last4: "5678", origin: "http://sonarr.lan:8989" } }
-const JELLYFIN: StoredServer = { name: "Jelly", url: "http://jellyfin.lan:8096", publicUrl: null, secret: { last4: "9012", origin: "http://jellyfin.lan:8096" } }
 const OK: SectionHealth = { status: "ok", code: null, checkedAt: null }
 const UNSET: SectionHealth = { status: "notConfigured", code: null, checkedAt: null }
-const HEALTH = { sonarr: OK, radarr: UNSET, jellyfin: OK }
+const HEALTH = { sonarr: OK, radarr: UNSET }
 
 type User = ReturnType<typeof userEvent.setup>
 
-function renderSection(jellyfinLogin: boolean | null = true) {
+function renderSection() {
   return render(
     <OtherIntegrationsSection
-      servers={{ sonarr: SONARR, radarr: null, jellyfin: jellyfinLogin === null ? null : JELLYFIN }}
-      jellyfinLogin={jellyfinLogin}
-      health={jellyfinLogin === null ? { ...HEALTH, jellyfin: UNSET } : HEALTH}
+      servers={{ sonarr: SONARR, radarr: null }}
+      health={HEALTH}
       footerMeta={<span data-testid="settings-other-last-saved">Last saved 2 minutes ago by Dana</span>}
     />
   )
@@ -63,7 +59,6 @@ describe("OtherIntegrationsSection", () => {
     expect(screen.getByTestId("settings-other-radarr")).toHaveTextContent(/^RadarrMovie libraryNot set up/)
     expect(screen.getByRole("button", { name: "Edit Sonarr" })).toHaveAttribute("data-testid", "settings-other-sonarr-edit")
     expect(screen.getByRole("button", { name: "Set up Radarr" })).toHaveAttribute("data-testid", "settings-other-radarr-edit")
-    expect(screen.getByRole("button", { name: "Edit Jellyfin" })).toHaveAttribute("data-testid", "settings-other-jellyfin-edit")
     expect(screen.queryByTestId("settings-other-edit")).not.toBeInTheDocument()
     expect(screen.queryByTestId("settings-other-save")).not.toBeInTheDocument()
   })
@@ -71,32 +66,9 @@ describe("OtherIntegrationsSection", () => {
   it("anchors each row by its service, so the overview's link to #sonarr reaches it", () => {
     renderSection()
 
-    for (const type of ["sonarr", "radarr", "jellyfin"]) {
+    for (const type of ["sonarr", "radarr"]) {
       expect(screen.getByTestId(`settings-other-${type}`)).toHaveAttribute("id", type)
     }
-  })
-
-  it("keeps Allow Jellyfin sign-in live in the Jellyfin row, outside the Sheet", async () => {
-    const user = userEvent.setup()
-    jest.mocked(toggleJellyfinLogin).mockResolvedValue({ success: true, data: null })
-    renderSection(true)
-
-    const toggle = within(screen.getByTestId("settings-other-jellyfin")).getByRole("switch", { name: "Allow Jellyfin sign-in" })
-    expect(toggle).toHaveAttribute("data-testid", "jellyfin-login-toggle")
-    expect(toggle).toHaveAttribute("aria-checked", "true")
-
-    await user.click(toggle)
-    expect(toggleJellyfinLogin).toHaveBeenCalledWith(false)
-
-    await user.click(screen.getByTestId("settings-other-jellyfin-edit"))
-    expect(within(screen.getByTestId("settings-other-jellyfin-sheet")).queryByTestId("jellyfin-login-toggle")).not.toBeInTheDocument()
-  })
-
-  it("has no Jellyfin sign-in switch until Jellyfin is set up", () => {
-    renderSection(null)
-
-    expect(screen.queryByTestId("jellyfin-login-toggle")).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Set up Jellyfin" })).toBeInTheDocument()
   })
 
   it("opens the service's form in its Sheet, with Last saved in the footer", async () => {
@@ -218,7 +190,7 @@ describe("OtherIntegrationsSection", () => {
     const onDirtyChange = jest.fn()
     render(
       <SettingsEditProvider onDirtyChange={onDirtyChange}>
-        <OtherIntegrationsSection servers={{ sonarr: SONARR, radarr: null, jellyfin: null }} jellyfinLogin={null} health={HEALTH} />
+        <OtherIntegrationsSection servers={{ sonarr: SONARR, radarr: null }} health={HEALTH} />
       </SettingsEditProvider>
     )
 

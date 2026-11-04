@@ -286,7 +286,7 @@ test.describe('Shared Rewind page', () => {
     try {
       await prisma.user.update({
         where: { id: TEST_USERS.REGULAR.id },
-        data: { onboardingStatus: { plex: false, jellyfin: false } },
+        data: { onboardingStatus: { plex: false } },
       });
 
       // The (app) guards now send this member to onboarding...

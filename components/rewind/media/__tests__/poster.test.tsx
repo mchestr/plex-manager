@@ -35,7 +35,7 @@ describe("RewindPoster", () => {
     expect(card).toHaveTextContent("Rings of Power")
   })
 
-  it("prints only the first word on a narrow card, and a Jellyfin key goes straight to the card", () => {
+  it("prints only the first word on a narrow card, and a key that is not a Plex rating key goes straight to the card", () => {
     render(<RewindPoster titleKey="series:abc-def" title="Andor: A Star Wars Story" width={32} colour="duo" tone={TONE} />)
     expect(screen.getByTestId("rewind-title-card")).toHaveTextContent(/^Andor:$/)
   })

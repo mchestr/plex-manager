@@ -51,7 +51,7 @@ const STATES: Array<{ label: string; state: RewindCardState; archive: RewindArch
     state: { kind: "before-season", year: 2026, opensOn: new Date("2026-12-01T06:00:00Z"), lastYear: 2025 },
     archive: [],
   },
-  { label: "not-eligible", state: { kind: "not-eligible", reason: "jellyfin-only" }, archive: [] },
+  { label: "not-eligible", state: { kind: "not-eligible", reason: "no-plex-history" }, archive: [] },
   {
     label: "closed",
     state: { kind: "closed", year: 2026, closedOn: new Date("2027-02-01T06:00:00Z"), ink: "forest", soundtrack: strip },

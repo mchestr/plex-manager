@@ -3,7 +3,6 @@ import type { BoundFormat } from "@/lib/utils/format"
 
 interface InviteFactsProps {
   invite: {
-    serverType: "PLEX" | "JELLYFIN"
     useCount: number
     maxUses: number
     expiresAt: Date | null
@@ -17,14 +16,12 @@ interface InviteFactsProps {
 
 /** An invite's settings on its detail page (P10.1), as a definition list. */
 export function InviteFacts({ invite, libraries, f }: InviteFactsProps) {
-  const plex = invite.serverType === "PLEX"
   const facts: [string, string][] = [
-    ["Server", plex ? "Plex" : "Jellyfin"],
     ["Uses", `${f.number(invite.useCount)} of ${f.number(invite.maxUses)}`],
     ["Expires", invite.expiresAt ? f.dateTime(invite.expiresAt, { zoneLabel: true }) : "Never"],
     ["Created", f.dateTime(invite.createdAt, { zoneLabel: true })],
     ["Libraries", libraries.join(", ")],
-    ...(plex ? [["Downloads", invite.allowDownloads ? "Allowed" : "Not allowed"] as [string, string]] : []),
+    ["Downloads", invite.allowDownloads ? "Allowed" : "Not allowed"],
   ]
 
   return (

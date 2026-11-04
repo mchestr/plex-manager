@@ -15,7 +15,7 @@
  * | Stripe billing | `stripe`, `stripe.enabled` |
  * | Rewind | `rewind` |
  * | Channel stats, Request limits | `discord.stats`, `request-tiers` |
- * | Sonarr, Radarr, Jellyfin | `sonarr`, `radarr`, `jellyfin`, `jellyfin.login` |
+ * | Sonarr, Radarr | `sonarr`, `radarr` |
  * | Time zone | `appearance`, `timezone` (`SERVER_TIMEZONE_CHANGED`) |
  *
  * Watchlist sync's settings card, on its own page (`/admin/watchlist`), reads
@@ -44,7 +44,7 @@ const SECTIONS = {
   channelStats: ["discord.stats"],
   requestTiers: ["request-tiers"],
   rewind: ["rewind"],
-  other: ["sonarr", "radarr", "jellyfin", "jellyfin.login"],
+  other: ["sonarr", "radarr"],
   timeZone: ["appearance", "timezone"],
 } as const satisfies Record<string, readonly string[]>
 

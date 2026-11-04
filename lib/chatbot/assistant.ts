@@ -118,11 +118,7 @@ async function getSystemPrompt(
   const now = new Date()
   const base =
     context === "discord"
-      ? generateDiscordSystemPrompt(toolset, {
-          format,
-          now,
-          jellyfin: (await prisma.jellyfinServer.count({ where: { isActive: true } })) > 0,
-        })
+      ? generateDiscordSystemPrompt(toolset, { format, now })
       : generateSystemPrompt(toolset, format, now)
   const rules = wantsSkills ? `${UNTRUSTED_DATA_RULES}\n${ADMIN_SKILL_RULE}` : UNTRUSTED_DATA_RULES
   return [base, skills, scope ? scopeSection(toolset, scope) : null, rules].filter(Boolean).join("\n\n")

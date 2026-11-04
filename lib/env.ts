@@ -73,7 +73,7 @@ export const envSchema = z.object({
     requiredInProduction: true,
     example: "",
   }),
-  PLEX_CLIENT_IDENTIFIER: text("Unique id this install reports to Plex: openssl rand -hex 16. Keep it stable; Jellyfin's default device id is derived from it.", {
+  PLEX_CLIENT_IDENTIFIER: text("Unique id this install reports to Plex: openssl rand -hex 16. Keep it stable.", {
     group: "Core",
     requiredInProduction: true,
     example: "",
@@ -213,10 +213,6 @@ export const envSchema = z.object({
   DISCORD_SUPPORT_THREAD_IDS: text("Comma-separated support thread ids, used when none are stored in Admin settings.", { group: "Integrations" }),
   DISCORD_PORTAL_URL: text("Account-linking URL in Discord nudges.", { group: "Integrations", default: "<base>/discord/link" }),
   PLEX_WRAPPED_BASE_URL: text("First choice for the Discord portal base URL, before NEXT_PUBLIC_APP_URL and NEXTAUTH_URL.", { group: "Integrations" }),
-  JELLYFIN_DEVICE_ID: text("DeviceId reported to Jellyfin at sign-in. Leave unset: the default is derived from PLEX_CLIENT_IDENTIFIER.", {
-    group: "Integrations",
-    default: "plex-manager-<16 hex characters>",
-  }),
   LLM_REQUEST_TIMEOUT_MS: text("LLM request timeout in milliseconds.", { group: "Integrations", default: "300000" }),
   REWIND_STAGING: text('Staging only: "1" lets the season-open rehearsal run (npm run rewind:season-open -- --rehearse). Never set in production.', {
     group: "Rewind",
