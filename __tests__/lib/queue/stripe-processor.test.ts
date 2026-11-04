@@ -22,7 +22,7 @@ import { getStripe } from '@/lib/stripe/client'
 import { addJob } from '@/lib/queue/client'
 import { withAccessLock } from '@/lib/locks/access-lock'
 import { logAuditEvent } from '@/lib/security/audit-log'
-import { SubscriptionStatus } from '@/lib/generated/prisma/client'
+import { Prisma, SubscriptionStatus } from '@/lib/generated/prisma/client'
 import { JOB_TYPES } from '@/lib/queue/types'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -167,6 +167,26 @@ describe('processStripeWebhook: recording (SEC-40)', () => {
     await expect(deliver(stripeEvent('evt_s', 'customer.subscription.updated', { id: 'sub_1' }, T0))).rejects.toThrow()
 
     expect(store.events.get('evt_s')?.lastError).toBe('StripeConnectionError')
+  })
+
+  it.each([
+    ['a known Prisma error as DB_<code>', new Prisma.PrismaClientKnownRequestError('deadlock', { code: 'P2034', clientVersion: '7' }), 'DB_P2034'],
+    ['an unreachable database as DB_UNAVAILABLE', new Prisma.PrismaClientInitializationError("Can't reach database server", '7'), 'DB_UNAVAILABLE'],
+  ])('stores %s', async (_label, error, code) => {
+    store.subscriptions.push(subscriptionRow())
+    stripe.failSubscriptionReads(error)
+
+    await expect(deliver(stripeEvent('evt_db', 'customer.subscription.updated', { id: 'sub_1' }, T0))).rejects.toBe(error)
+
+    expect(store.events.get('evt_db')?.lastError).toBe(code)
+  })
+
+  it('still rethrows the handler error when recording the failure fails', async () => {
+    store.subscriptions.push(subscriptionRow())
+    stripe.failSubscriptionReads(new Error('boom'))
+    prismaMock.stripeEvent.updateMany.mockRejectedValueOnce(new Error('database busy'))
+
+    await expect(deliver(stripeEvent('evt_rec', 'customer.subscription.updated', { id: 'sub_1' }, T0))).rejects.toThrow('boom')
   })
 
   it('audits STRIPE_EVENT_FAILED after the last attempt', async () => {
