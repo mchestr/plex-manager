@@ -12,7 +12,7 @@ interface LibraryPickerProps {
   listing: LibraryListing
   value: LibrarySelection
   onChange: (value: LibrarySelection) => void
-  /** "Plex" or "Jellyfin", for the failure copy. */
+  /** The server's name, for the failure copy. */
   serverLabel: string
   error?: string
   /** Offers "All libraries"; the affiliate settings leave it out, since their list is never all. */
@@ -22,7 +22,7 @@ interface LibraryPickerProps {
 }
 
 /**
- * One library picker for both server types (P10.1): "All libraries" is the
+ * One library picker (P10.1): "All libraries" is the
  * default; clearing it lists each library as a Checkbox. A failed listing
  * keeps "All libraries" and says why. Without `allowAll` the list always
  * shows, and a failed listing only says why.

@@ -273,7 +273,7 @@ describe("finishPlexSignIn", () => {
     mockGetAccessLevel.mockResolvedValue("full")
     mockGetOnboardingStatus.mockResolvedValue({
       success: true,
-      data: { isComplete: true, service: "plex", allStatuses: { plex: true, jellyfin: false } },
+      data: { isComplete: true, service: "plex", allStatuses: { plex: true } },
     })
   })
 
@@ -303,7 +303,7 @@ describe("finishPlexSignIn", () => {
   it("sends a member who has not finished onboarding to /onboarding", async () => {
     mockGetOnboardingStatus.mockResolvedValue({
       success: true,
-      data: { isComplete: false, service: "plex", allStatuses: { plex: false, jellyfin: false } },
+      data: { isComplete: false, service: "plex", allStatuses: { plex: false } },
     })
 
     await expect(finishPlexSignIn()).resolves.toEqual({ success: true, data: { next: "/onboarding" } })

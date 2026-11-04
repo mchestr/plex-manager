@@ -29,7 +29,7 @@ describe('settings groups', () => {
     const labelsIn = (group: string) => items.filter((item) => item.group === group).map((item) => item.label)
 
     expect(Object.fromEntries(SETTINGS_GROUPS.map((group) => [group.id, labelsIn(group.id)]))).toEqual({
-      connections: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr, Jellyfin'],
+      connections: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr'],
       billing: ['Stripe billing'],
       system: ['Time zone', 'API access', 'Privacy', 'System information'],
     })
@@ -76,6 +76,6 @@ describe('settings groups', () => {
       .map((item) => item.id)
 
     expect(Object.keys(SECTION_HEALTH_KEYS).sort()).toEqual(checked.sort())
-    expect(SECTION_HEALTH_KEYS.other).toEqual(['sonarr', 'radarr', 'jellyfin'])
+    expect(SECTION_HEALTH_KEYS.other).toEqual(['sonarr', 'radarr'])
   })
 })

@@ -48,7 +48,6 @@ import {
   ScrollText,
   Search,
   SendHorizontal,
-  Server,
   Settings,
   Shield,
   SlidersHorizontal,
@@ -75,7 +74,6 @@ export const icons = {
   tautulli: ChartLine,
   sonarr: TvMinimal,
   radarr: Film,
-  jellyfin: Server,
   // Areas
   rewind: Rewind,
   rewindOpen: Play,

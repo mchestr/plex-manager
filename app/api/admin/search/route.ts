@@ -32,15 +32,14 @@ async function searchInvites(q: string): Promise<AdminSearchResult[]> {
     // New codes are stored uppercase (SEC-56); older ones may not be
     // Admin invites only: a member's affiliate invite is not shown in Admin → Invites
     where: { kind: "ADMIN", code: { startsWith: q, mode: "insensitive" } },
-    select: { id: true, code: true, serverType: true, useCount: true, maxUses: true, expiresAt: true },
+    select: { id: true, code: true, useCount: true, maxUses: true, expiresAt: true },
     orderBy: { code: "asc" },
     take: TAKE,
   })
   const now = Date.now()
   return invites.map((invite) => {
-    const server = invite.serverType === "JELLYFIN" ? "Jellyfin" : "Plex"
     const state = invite.expiresAt && invite.expiresAt.getTime() <= now ? "expired" : `${invite.useCount} of ${invite.maxUses} used`
-    return { id: invite.id, label: invite.code, sub: `${server}, ${state}`, href: inviteRoute(invite.id) }
+    return { id: invite.id, label: invite.code, sub: state, href: inviteRoute(invite.id) }
   })
 }
 

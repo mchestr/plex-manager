@@ -34,7 +34,6 @@ const MODULES = [
   'lib/admin.ts',
   'lib/guards.ts',
   'lib/access.ts',
-  'lib/jellyfin-auth.ts',
   'lib/setup/status.ts',
   ...filesIn('lib/chatbot', true).filter((path) => !TYPE_ONLY.has(path)),
   ...filesIn('lib/affiliates').filter((path) => !AFFILIATE_CLIENT_SAFE.has(path)),

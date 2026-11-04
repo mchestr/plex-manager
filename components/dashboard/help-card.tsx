@@ -6,10 +6,8 @@ import type { ReactNode } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Icon } from "@/components/ui/icon"
 import { icons } from "@/lib/ui/icons"
-import type { AuthService } from "@/types/onboarding"
 
 interface HelpCardProps {
-  service: AuthService
   /** The Discord support channel, when the bot watches one; else the card links Help's support section. */
   supportChannelUrl: string | null
 }
@@ -28,16 +26,14 @@ function Row({ icon, end, children }: { icon: LucideIcon; end: LucideIcon; child
 }
 
 /** Home's help card: the playback guide on `/help`, and where to ask for help. */
-export function HelpCard({ service, supportChannelUrl }: HelpCardProps) {
-  const app = service === "jellyfin" ? "Jellyfin" : "Plex"
-
+export function HelpCard({ supportChannelUrl }: HelpCardProps) {
   return (
     <Card aria-labelledby="home-help-title" role="region" data-testid="home-help-card">
       <CardHeader>
         <CardTitle as="h2" id="home-help-title">
           Playback trouble?
         </CardTitle>
-        <CardDescription>Buffering or a soft picture usually means your {app} app is limiting quality.</CardDescription>
+        <CardDescription>Buffering or a soft picture usually means your Plex app is limiting quality.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col pt-2.5 pb-4">
         <Link href={"/help#playback" as Route} className={rowClass} data-testid="home-help-playback">

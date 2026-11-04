@@ -57,7 +57,7 @@ Each of these holds the old URL, and the app cannot change it for you.
 ## 3. Service URLs in settings
 
 If your other services moved too, update their public URLs in Admin → Settings:
-Overseerr, Jellyfin, Tautulli, Sonarr, Radarr and the Plex web link (each
+Overseerr, Tautulli, Sonarr, Radarr and the Plex web link (each
 service's public URL, used for links members click). Plex sign-in needs no
 change: the PIN flow's forward URL is computed from each request.
 

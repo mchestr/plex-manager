@@ -23,14 +23,11 @@ const createInviteSchema = z.object({
     .toUpperCase()
     .regex(/^[A-Z2-9]{6,32}$/, "Custom codes are 6 to 32 letters and digits 2-9")
     .optional(),
-  serverType: z.enum(["PLEX", "JELLYFIN"]).optional(),
   maxUses: z.number().int().min(1).max(1000).optional(),
   expiresIn: z.enum(EXPIRES_IN_OPTIONS).optional(),
-  // Plex-specific: undefined shares every library
+  // Undefined shares every library
   librarySectionIds: z.array(z.number().int().nonnegative()).max(100).optional(),
   allowDownloads: z.boolean().optional(),
-  // Jellyfin-specific: undefined grants every library
-  jellyfinLibraryIds: z.array(z.string().min(1).max(64)).max(100).optional(),
 })
 
 /** The expiry for an option; 48 hours when none is given, never for `never`. */
@@ -40,7 +37,7 @@ function expiresAtFor(expiresIn: ExpiresIn = "48h"): Date | null {
 }
 
 /** Stores a library id list as JSON, or null for "every library". */
-function libraryIds(ids: readonly (string | number)[] | undefined): string | null {
+function libraryIds(ids: readonly number[] | undefined): string | null {
   return ids && ids.length > 0 ? JSON.stringify(ids) : null
 }
 
@@ -48,9 +45,8 @@ function libraryIds(ids: readonly (string | number)[] | undefined): string | nul
 const INVITES_LIMIT = { name: "admin:invites" } as const
 
 /**
- * Create an invite (P10.1, BP-30). The server type defaults to Plex; a Plex
- * invite keeps only Plex library ids and Allow downloads, a Jellyfin invite
- * only Jellyfin library ids. Audited and rate-limited (P11.5).
+ * Create a Plex invite (P10.1, BP-30) with its library section ids and Allow
+ * downloads. Audited and rate-limited (P11.5).
  */
 export const createInvite = adminAction({
   input: createInviteSchema,
@@ -63,8 +59,7 @@ export const createInvite = adminAction({
       return fail("CONFLICT", "That code is already in use", { fieldErrors: { code: ["That code is already in use"] } })
     }
 
-    const jellyfin = options.serverType === "JELLYFIN"
-    const serverType = jellyfin ? ServerType.JELLYFIN : ServerType.PLEX
+    const serverType = ServerType.PLEX
     const maxUses = options.maxUses ?? 1
     const expiresAt = expiresAtFor(options.expiresIn)
     const invite = await prisma.invite.create({
@@ -74,9 +69,8 @@ export const createInvite = adminAction({
         createdBy: userId,
         maxUses,
         expiresAt,
-        librarySectionIds: jellyfin ? null : libraryIds(options.librarySectionIds),
-        allowDownloads: jellyfin ? false : (options.allowDownloads ?? false),
-        jellyfinLibraryIds: jellyfin ? libraryIds(options.jellyfinLibraryIds) : null,
+        librarySectionIds: libraryIds(options.librarySectionIds),
+        allowDownloads: options.allowDownloads ?? false,
       },
       select: { id: true, code: true },
     })

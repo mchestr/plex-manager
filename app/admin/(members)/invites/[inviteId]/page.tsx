@@ -5,7 +5,6 @@ import { InviteDetailActions } from "@/components/admin/invites/invite-detail-ac
 import { InviteFacts } from "@/components/admin/invites/invite-facts"
 import { InviteUsageTable } from "@/components/admin/invites/invite-usage-table"
 import { InvitePass } from "@/components/invite/invite-pass"
-import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { getInviteDetail } from "@/lib/admin/invites/queries"
@@ -36,15 +35,12 @@ export default async function InviteDetailPage({ params }: { params: Promise<{ i
         title={invite.code}
         breadcrumbs={[{ label: "Invites", href: "/admin/invites" }, { label: invite.code }]}
         meta={
-          <>
-            <StatusBadge
-              domain="invite"
-              value={invite.status}
-              sub={resolveStatus("invite", invite.status, { usesLeft: left, usesTotal: invite.maxUses }).sub}
-              data-testid="admin-invite-status"
-            />
-            <Badge variant="outline">{invite.serverType === "JELLYFIN" ? "Jellyfin" : "Plex"}</Badge>
-          </>
+          <StatusBadge
+            domain="invite"
+            value={invite.status}
+            sub={resolveStatus("invite", invite.status, { usesLeft: left, usesTotal: invite.maxUses }).sub}
+            data-testid="admin-invite-status"
+          />
         }
         actions={<InviteDetailActions invite={{ id: invite.id, code: invite.code }} />}
         data-testid="admin-invite-header"

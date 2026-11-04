@@ -6,7 +6,6 @@
  * |----------|-----------------------------------------|
  * | `q`      | part of a code, any case                |
  * | `status` | `all`, `active`, `expired`, `usedUp`    |
- * | `server` | `all`, `plex`, `jellyfin`               |
  *
  * Each defaults to `all` (UI-05); anything unrecognised falls back to it.
  * Sorts are `created` (the default, newest first), `code` and `expires`.
@@ -27,7 +26,6 @@ export const INVITES_DEFAULT_SORT: TableSort = { id: "created", desc: true }
 const inviteFilterSchema = z.object({
   q: z.string().trim().max(32).catch(""),
   status: z.enum(["all", "active", "expired", "usedUp"]).catch("all"),
-  server: z.enum(["all", "plex", "jellyfin"]).catch("all"),
 })
 
 export type InviteFilter = z.infer<typeof inviteFilterSchema>
@@ -40,7 +38,7 @@ export function parseInviteFilter(params: Params): InviteFilter {
     const value = params[key]
     return Array.isArray(value) ? value[0] : value
   }
-  return inviteFilterSchema.parse({ q: first("q") ?? "", status: first("status"), server: first("server") })
+  return inviteFilterSchema.parse({ q: first("q") ?? "", status: first("status") })
 }
 
 /** Expired first, then used up, else active: the order the status filters use. */

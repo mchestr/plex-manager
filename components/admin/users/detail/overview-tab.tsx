@@ -14,10 +14,9 @@ import { prisma } from "@/lib/prisma"
 import type { BoundFormat } from "@/lib/utils/format"
 
 import { DetailItem } from "./detail-item"
-import { JellyfinAccess } from "./jellyfin-access"
 import { RequestTierCheck } from "./request-tier-check"
 
-const SERVICE_LABEL = { plex: "Plex", jellyfin: "Jellyfin" } as const
+const SERVICE_LABEL = { plex: "Plex" } as const
 
 /**
  * When the member last played on Plex, from the daily Tautulli read
@@ -48,8 +47,7 @@ function LastSeenOnPlex({ header, f }: { header: UserDetailHeaderData; f: BoundF
 
 /**
  * The member's account facts, when they last played on Plex and whether the
- * inactivity sweep may remove them, their Jellyfin access (P11.10), their
- * request tier, their activity timeline (P10.6) and the danger zone (P11.13).
+ * inactivity sweep may remove them, their request tier, their activity timeline (P10.6) and the danger zone (P11.13).
  */
 export async function OverviewTab({ header, f }: { header: UserDetailHeaderData; f: BoundFormat }) {
   const [timeline, tiers] = await Promise.all([
@@ -66,13 +64,6 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
         <DetailItem label="Email">{header.email ?? "Not set"}</DetailItem>
         <DetailItem label="Service" testId="admin-user-service">
           {SERVICE_LABEL[header.primaryService]}
-          {header.services
-            .filter((service) => service !== header.primaryService)
-            .map((service) => (
-              <span key={service} className="block text-caption text-muted-foreground">
-                Also on {SERVICE_LABEL[service]}
-              </span>
-            ))}
         </DetailItem>
         <DetailItem label="Joined" testId="admin-user-created-timestamp">
           {f.dateTime(header.createdAt, { zoneLabel: true })}
@@ -97,16 +88,6 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
             "Not linked"
           )}
         </DetailItem>
-        {header.jellyfinUserId && (
-          <>
-            <DetailItem label="Jellyfin ID" testId="admin-user-jellyfin-id">
-              <span className="font-mono text-label break-all">{header.jellyfinUserId}</span>
-            </DetailItem>
-            <DetailItem label="Jellyfin access">
-              <JellyfinAccess userId={header.id} name={header.name} status={header.jellyfinStatus ?? "unknown"} />
-            </DetailItem>
-          </>
-        )}
         {/* The sweep never removes an admin or the server owner, so the switch would do nothing */}
         {header.plexUserId && !header.isAdmin && !header.isOwner && (
           <DetailItem label="Inactivity">

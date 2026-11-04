@@ -12,16 +12,14 @@ import "server-only"
 import { z } from "zod"
 
 import type { ActionFailure } from "@/lib/actions/result"
-import { testJellyfinConnection } from "@/lib/connections/jellyfin"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { getPlexServerIdentity, getPlexUserInfo, testPlexConnection } from "@/lib/connections/plex"
 import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
-import type { JellyfinServer, PlexServer } from "@/lib/generated/prisma/client"
+import type { PlexServer, Tautulli } from "@/lib/generated/prisma/client"
 import type { PrismaTransactionClient } from "@/lib/prisma"
 import { connectionTestCopy } from "@/lib/ui/error-copy"
-import { jellyfinServerSchema } from "@/lib/validations/jellyfin"
 import { overseerrSchema } from "@/lib/validations/overseerr"
 import { plexServerSchema, type PlexServerParsed } from "@/lib/validations/plex"
 import { radarrSchema } from "@/lib/validations/radarr"
@@ -29,9 +27,9 @@ import type { ServiceParsed } from "@/lib/validations/shared-schemas"
 import { sonarrSchema } from "@/lib/validations/sonarr"
 import { tautulliSchema } from "@/lib/validations/tautulli"
 
-export type ServiceKind = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr"
+export type ServiceKind = "plex" | "tautulli" | "overseerr" | "sonarr" | "radarr"
 type ApiKeyKind = Exclude<ServiceKind, "plex">
-type ApiKeyRow = Omit<JellyfinServer, "adminUserId" | "enabledForLogin">
+type ApiKeyRow = Tautulli
 
 /** A form as sent: its secret may be blank, to keep the stored one for the same address. */
 const SECRET_INPUT = z.string().max(500).optional()
@@ -118,7 +116,6 @@ export const SERVICE_DESCRIPTORS: { [K in ServiceKind]: ServiceDescriptor<K> } =
     },
     delegate: (db) => db.plexServer,
   },
-  jellyfin: apiKeyService("Jellyfin", jellyfinServerSchema, testJellyfinConnection, (db) => db.jellyfinServer),
   tautulli: apiKeyService("Tautulli", tautulliSchema, testTautulliConnection, (db) => db.tautulli),
   overseerr: apiKeyService("Overseerr", overseerrSchema, testOverseerrConnection, (db) => db.overseerr),
   sonarr: apiKeyService("Sonarr", sonarrSchema, testSonarrConnection, (db) => db.sonarr),

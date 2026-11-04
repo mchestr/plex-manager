@@ -11,8 +11,8 @@ interface TestUser {
   name: string;
   plexUserId: string;
   isAdmin: boolean;
-  primaryAuthService: 'plex' | 'jellyfin';
-  onboardingStatus: { plex: boolean; jellyfin: boolean };
+  primaryAuthService: 'plex';
+  onboardingStatus: { plex: boolean };
 }
 
 /**
@@ -26,7 +26,7 @@ export const TEST_USERS = {
     plexUserId: 'admin-plex-id',
     isAdmin: true,
     primaryAuthService: 'plex',
-    onboardingStatus: { plex: true, jellyfin: false },
+    onboardingStatus: { plex: true },
   },
   REGULAR: {
     id: 'regular-user-id',
@@ -35,7 +35,7 @@ export const TEST_USERS = {
     plexUserId: 'regular-plex-id',
     isAdmin: false,
     primaryAuthService: 'plex',
-    onboardingStatus: { plex: true, jellyfin: false },
+    onboardingStatus: { plex: true },
   },
 } as const satisfies Record<string, TestUser>;
 

@@ -28,9 +28,8 @@ const PLEX: OnboardingData = {
   rewind: true,
 }
 
-const JELLYFIN: OnboardingData = {
+const MINIMAL: OnboardingData = {
   ...PLEX,
-  service: "jellyfin",
   serverName: "Basement Media",
   requestsUrl: null,
   rewind: false,
@@ -82,30 +81,19 @@ describe("OnboardingWizard", () => {
     expect(stepper.querySelector('[aria-current="step"]')).toHaveTextContent("Playback")
   })
 
-  it("never says Plex to a Jellyfin member and skips Requests without a public URL", async () => {
+  it("skips Requests without a public URL", async () => {
     const user = userEvent.setup()
-    const { container } = renderWizard(JELLYFIN)
+    renderWizard(MINIMAL)
 
-    const seen: string[] = [container.textContent ?? ""]
-    await continueTo(user, ["welcome"])
-    seen.push(container.textContent ?? "")
-    expect(screen.getByTestId("playback-guide")).toHaveTextContent("Jellyfin")
-
-    await continueTo(user, ["playback"])
+    await continueTo(user, ["welcome", "playback"])
     expect(screen.getByTestId("onboarding-support-heading")).toBeInTheDocument()
     expect(screen.getByTestId("onboarding-stepper")).toHaveTextContent("Step 3 of 4")
     expect(screen.queryByText("Requests")).not.toBeInTheDocument()
-    seen.push(container.textContent ?? "")
-
-    await continueTo(user, ["support"])
-    seen.push(container.textContent ?? "")
-
-    for (const text of seen) expect(text).not.toMatch(/plex/i)
   })
 
   it("promises only configured features on Done", async () => {
     const user = userEvent.setup()
-    renderWizard(JELLYFIN)
+    renderWizard(MINIMAL)
 
     await continueTo(user, ["welcome", "playback", "support"])
 

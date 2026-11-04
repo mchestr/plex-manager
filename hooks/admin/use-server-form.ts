@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import { updateJellyfinServer, updateOverseerr, updatePlexServer, updateRadarr, updateSonarr, updateTautulli } from "@/actions/admin/admin-servers"
+import { updateOverseerr, updatePlexServer, updateRadarr, updateSonarr, updateTautulli } from "@/actions/admin/admin-servers"
 import { testServiceConnection } from "@/actions/admin/test-connection"
 import type { TestResult } from "@/components/ui/settings-section"
 import { useToast } from "@/components/ui/toast"
@@ -10,7 +10,7 @@ import { useSettingsForm } from "@/hooks/admin/use-settings-form"
 import { needsSecretReentry, safeOrigin, type SavedSecret } from "@/lib/security/saved-secret"
 import { connectionTestCopy, errorCopy, type ConnectionTestCode } from "@/lib/ui/error-copy"
 
-export type ServerType = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr"
+export type ServerType = "plex" | "tautulli" | "overseerr" | "sonarr" | "radarr"
 
 /**
  * The active server config, with its secret replaced by `{ last4, origin }`
@@ -36,7 +36,6 @@ export type ServerFormErrors = Partial<Record<Field, string>>
 
 export const SERVER_LABELS: Record<ServerType, string> = {
   plex: "Plex",
-  jellyfin: "Jellyfin",
   tautulli: "Tautulli",
   overseerr: "Overseerr",
   sonarr: "Sonarr",
@@ -47,7 +46,6 @@ export const SERVER_LABELS: Record<ServerType, string> = {
 export const secretNoun = (type: ServerType) => (type === "plex" ? "Plex token" : "API key")
 
 const API_KEY_ACTIONS = {
-  jellyfin: updateJellyfinServer,
   tautulli: updateTautulli,
   overseerr: updateOverseerr,
   sonarr: updateSonarr,

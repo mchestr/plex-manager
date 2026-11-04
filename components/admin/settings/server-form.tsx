@@ -20,7 +20,6 @@ import type { SavedSecret } from "@/lib/security/saved-secret"
 
 const PLACEHOLDERS: Record<ServerType, string> = {
   plex: "https://example.com:32400",
-  jellyfin: "http://example.com:8096",
   tautulli: "http://example.com:8181",
   overseerr: "http://example.com:5055",
   sonarr: "http://example.com:8989",
@@ -88,7 +87,7 @@ interface ServerFormProps extends SheetFormControls {
 }
 
 /**
- * A service's form on its own: the edit mode of a Sonarr, Radarr or Jellyfin row,
+ * A service's form on its own: the edit mode of a Sonarr or Radarr row,
  * in its Sheet. Test connection tries the typed values; Save with nothing
  * changed, or a save that works, calls `onDone`, and a failed one keeps the
  * form open with the errors on their fields.

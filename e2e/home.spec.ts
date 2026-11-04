@@ -79,7 +79,6 @@ test.describe('Home page', () => {
     if (await requests.count()) {
       await expect(requests).toHaveAttribute('href', /^https?:\/\//);
     }
-    await expect(page.locator('a[href*="jellyfin.org"]')).toHaveCount(0);
   });
 
   test('a new announcement pip disappears after a reload', async ({ regularUserPage: page }) => {

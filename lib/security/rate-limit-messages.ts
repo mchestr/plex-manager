@@ -10,11 +10,10 @@ export const RATE_LIMITED_MESSAGE = "Too many attempts. Wait a few minutes, then
 
 /**
  * True for the `error` next-auth's `signIn()` returns when a sign-in was
- * rate-limited: `RateLimited` from the per-IP limit on the callback route, or
- * `RATE_LIMITED` from the Jellyfin per-username limit in `authorize`.
+ * rate-limited: `RateLimited` from the per-IP limit on the callback route.
  */
 export function isRateLimitedSignInError(error: string | null | undefined): boolean {
-  return error === "RateLimited" || error === "RATE_LIMITED"
+  return error === "RateLimited"
 }
 
 /**

@@ -11,7 +11,6 @@ import { sessionCookieName } from "@/lib/env"
 jest.mock("@/e2e/helpers/prisma", () => ({ createE2EPrismaClient: jest.fn() }))
 jest.mock("@/lib/prisma", () => ({ prisma: {} }))
 jest.mock("@/lib/connections/plex", () => ({ checkUserServerAccess: jest.fn(), getPlexUserInfo: jest.fn() }))
-jest.mock("@/lib/jellyfin-auth", () => ({ authenticateJellyfin: jest.fn() }))
 jest.mock("@/lib/security/rate-limit", () => ({ consume: jest.fn(), reward: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({ AuditEventType: {}, logAuditEvent: jest.fn() }))
 

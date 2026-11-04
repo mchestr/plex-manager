@@ -33,7 +33,6 @@ jest.mock("@/lib/prisma", () => ({
   prisma: {
     config: { findUnique: jest.fn(), upsert: jest.fn() },
     plexServer: { findFirst: jest.fn() },
-    jellyfinServer: { findFirst: jest.fn() },
   },
 }))
 
@@ -41,7 +40,6 @@ jest.mock("@/lib/utils/server-zone", () => ({ serverZone: jest.fn() }))
 
 const findUnique = prisma.config.findUnique as jest.Mock
 const findPlex = prisma.plexServer.findFirst as jest.Mock
-const findJellyfin = prisma.jellyfinServer.findFirst as jest.Mock
 const zone = serverZone as jest.Mock
 
 describe("getAppSettings", () => {
@@ -50,7 +48,6 @@ describe("getAppSettings", () => {
   beforeEach(() => {
     findUnique.mockReset()
     findPlex.mockReset().mockResolvedValue(null)
-    findJellyfin.mockReset().mockResolvedValue(null)
     zone.mockReset()
   })
 
@@ -117,7 +114,6 @@ describe("getAppSettings", () => {
     it("falls back to the newest active Plex server's name, reading only the name", async () => {
       findUnique.mockResolvedValue({ locale: "en-US", serverName: "  " })
       findPlex.mockResolvedValue({ name: "Basement Plex" })
-      findJellyfin.mockResolvedValue({ name: "Attic Jellyfin" })
 
       await expect(getAppSettings()).resolves.toMatchObject({ serverName: "Basement Plex" })
       expect(findPlex).toHaveBeenCalledWith({
@@ -125,13 +121,6 @@ describe("getAppSettings", () => {
         orderBy: { updatedAt: "desc" },
         select: { name: true },
       })
-    })
-
-    it("then to the active Jellyfin server's name", async () => {
-      findUnique.mockResolvedValue(null)
-      findJellyfin.mockResolvedValue({ name: "Attic Jellyfin" })
-
-      await expect(getAppSettings()).resolves.toMatchObject({ serverName: "Attic Jellyfin" })
     })
   })
 

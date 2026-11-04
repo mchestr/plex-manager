@@ -33,12 +33,11 @@ import "server-only"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 import { testService, type TESTABLE_SERVICES } from "@/lib/settings/test-service"
 
-export const SERVICE_TABLES = ["PlexServer", "JellyfinServer", "Tautulli", "Overseerr", "Sonarr", "Radarr"] as const
+export const SERVICE_TABLES = ["PlexServer", "Tautulli", "Overseerr", "Sonarr", "Radarr"] as const
 export type ServiceTable = (typeof SERVICE_TABLES)[number]
 
 const KIND: Record<ServiceTable, (typeof TESTABLE_SERVICES)[number]> = {
   PlexServer: "plex",
-  JellyfinServer: "jellyfin",
   Tautulli: "tautulli",
   Overseerr: "overseerr",
   Sonarr: "sonarr",
@@ -65,7 +64,6 @@ export interface ServiceTableDelegate {
 export function tableDelegate(db: PrismaTransactionClient, table: ServiceTable): ServiceTableDelegate {
   const delegates: Record<ServiceTable, ServiceTableDelegate> = {
     PlexServer: db.plexServer,
-    JellyfinServer: db.jellyfinServer,
     Tautulli: db.tautulli,
     Overseerr: db.overseerr,
     Sonarr: db.sonarr,

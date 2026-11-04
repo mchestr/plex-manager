@@ -5,9 +5,8 @@ import { detailUserTarget, type UserDetailHeaderData } from "@/lib/admin/user-de
 import { resolveStatus } from "@/lib/ui/status"
 import type { BoundFormat } from "@/lib/utils/format"
 
-/** What the last grant or revoke left on each service (P11.11). */
+/** What the last grant or revoke left on Plex (P11.11). */
 const PLEX_INVITE_LABELS: Record<string, string> = { accepted: "Shared", pending: "Invite pending", revoked: "Removed" }
-const JELLYFIN_ACCESS_LABELS: Record<string, string> = { enabled: "Enabled", disabled: "Disabled", skipped: "Account not found" }
 
 function AccessRow({ label, value, labels, testId }: { label: string; value: string | null; labels: Record<string, string>; testId: string }) {
   return (
@@ -21,9 +20,8 @@ function AccessRow({ label, value, labels, testId }: { label: string; value: str
 }
 
 /**
- * The subscription, the exemption, what the grant left on each linked service
- * (the Plex invite and the Jellyfin account), and the Grant, Toggle exempt and
- * Cancel confirms (P10.6).
+ * The subscription, the exemption, what the grant left on Plex (the invite),
+ * and the Grant, Toggle exempt and Cancel confirms (P10.6).
  */
 export function BillingTab({ header, f }: { header: UserDetailHeaderData; f: BoundFormat }) {
   const { subscription } = header
@@ -61,14 +59,6 @@ export function BillingTab({ header, f }: { header: UserDetailHeaderData; f: Bou
         </div>
         {subscription && header.services.includes("plex") && (
           <AccessRow label="Plex invite" value={subscription.plexInviteStatus} labels={PLEX_INVITE_LABELS} testId="admin-user-plex-invite-status" />
-        )}
-        {subscription && header.services.includes("jellyfin") && (
-          <AccessRow
-            label="Jellyfin access"
-            value={subscription.jellyfinAccessStatus}
-            labels={JELLYFIN_ACCESS_LABELS}
-            testId="admin-user-jellyfin-access-status"
-          />
         )}
       </dl>
 

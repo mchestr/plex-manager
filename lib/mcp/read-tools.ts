@@ -21,7 +21,7 @@ import { z } from "zod"
 
 import { getDiscordOverview } from "@/lib/admin/discord"
 import { INVITES_DEFAULT_SORT, INVITES_SORTS } from "@/lib/admin/invites/filter"
-import { jellyfinLibraryListing, plexLibraryListing } from "@/lib/admin/invites/libraries"
+import { plexLibraryListing } from "@/lib/admin/invites/libraries"
 import { getInviteDetail, listInvites } from "@/lib/admin/invites/queries"
 import { getAdminOverview } from "@/lib/admin/overview"
 import { getQueueDashboard } from "@/lib/admin/queues"
@@ -37,7 +37,6 @@ import type { AdminUserWithWrappedStats } from "@/types/admin"
 
 const listInvitesInput = z.object({
   status: z.enum(["all", "active", "expired", "usedUp"]).default("active"),
-  server: z.enum(["all", "plex", "jellyfin"]).default("all"),
   q: z.string().trim().max(32).default("").describe("Part of a code"),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(25),
@@ -78,7 +77,7 @@ export function readTools(): McpTool[] {
     readTool({
       name: "list_invites",
       description:
-        "Admin invites by status and server, newest first, with each invite's code, uses, expiry and `url`, the link to send (a read-only token sees only the code's last four characters). Pages with page and pageSize.",
+        "Admin invites by status, newest first, with each invite's code, uses, expiry and `url`, the link to send (a read-only token sees only the code's last four characters). Pages with page and pageSize.",
       input: listInvitesInput,
       read: async ({ sort, desc, ...rest }, caller) => {
         const list = await listInvites({ ...rest, sort: { id: sort, desc } })
@@ -99,11 +98,6 @@ export function readTools(): McpTool[] {
       name: "list_plex_libraries",
       description: "The Plex server's libraries, with the section ids `create_invite` takes as `librarySectionIds`.",
       read: () => plexLibraryListing(),
-    }),
-    readTool({
-      name: "list_jellyfin_libraries",
-      description: "The Jellyfin server's libraries, with the ids `create_invite` takes as `jellyfinLibraryIds`.",
-      read: () => jellyfinLibraryListing(),
     }),
     readTool({
       name: "list_users",

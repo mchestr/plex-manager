@@ -109,9 +109,9 @@ export interface RewindUser {
   plexUserId: string
 }
 
-/** A history backend. For 2026 only Tautulli exists; Jellyfin is a 2027 item. */
+/** A history backend. Tautulli is the only one. */
 export interface WatchHistorySource {
-  readonly kind: "tautulli" | "jellyfin-playback-reporting"
+  readonly kind: "tautulli"
   fetchYear(user: RewindUser, window: TimeWindow, ctx: SourceContext): Promise<SourceResult<PlayEvent[]>>
 }
 

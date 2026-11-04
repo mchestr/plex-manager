@@ -11,7 +11,7 @@ import { getActiveService } from "@/lib/data/active-service"
 /** What `/help` (and the onboarding guides, P10.23) need for one member. */
 export interface HelpData {
   service: AuthService
-  /** The Jellyfin server's own name for Jellyfin members, else the app's server name. */
+  /** The app's server name. */
   serverName: string
   /** The request site's public URL, or null, which hides the requests guide. */
   requestsUrl: string | null
@@ -28,7 +28,7 @@ export async function getHelpData(userId: string): Promise<HelpData> {
   const [user, overseerr, integration, connection] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { primaryAuthService: true, plexUserId: true, jellyfinUserId: true },
+      select: { primaryAuthService: true, plexUserId: true },
     }),
     getActiveService("overseerr"),
     prisma.discordIntegration.findUnique({
@@ -47,11 +47,7 @@ export async function getHelpData(userId: string): Promise<HelpData> {
   ])
 
   const service: AuthService = user ? primaryService(user) : "plex"
-  const serverName =
-    service === "jellyfin"
-      ? ((await getActiveService("jellyfin"))?.name ??
-        (await getServerName()))
-      : await getServerName()
+  const serverName = await getServerName()
 
   return {
     service,

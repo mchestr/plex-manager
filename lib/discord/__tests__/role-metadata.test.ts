@@ -3,11 +3,11 @@
  *
  * `computeRoleMetadata` reports exactly two Discord Linked-Roles fields:
  *   - is_subscribed: an entitled member (getAccessLevel "full") with live
- *     access on a service: a Plex share, or an enabled Jellyfin account.
+ *     Plex share on the active server.
  *   - watched_hours: the member's year stats in whole hours, recomputed only
  *     with `refreshHours`, otherwise the stored `lastWatchedHours`.
  *
- * The external service calls (Plex access check, Jellyfin user, year stats)
+ * The external service calls (Plex access check, year stats)
  * and the active-server lookups are mocked; the access level runs for real
  * against the typed Prisma mock.
  */
@@ -17,7 +17,6 @@ import {
   IS_SUBSCRIBED_KEY,
   WATCHED_HOURS_KEY,
 } from "@/lib/discord/role-metadata"
-import { getJellyfinUserById } from "@/lib/connections/jellyfin-users"
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { getMemberYearStats, memberStatsYear } from "@/lib/discord/stats/member-stats"
@@ -45,10 +44,6 @@ jest.mock("@/lib/connections/plex-config", () => ({
   getActivePlexServerConfig: jest.fn(),
 }))
 
-jest.mock("@/lib/connections/jellyfin-users", () => ({
-  getJellyfinUserById: jest.fn(),
-}))
-
 jest.mock("@/lib/discord/stats/member-stats", () => ({
   getMemberYearStats: jest.fn(),
   memberStatsYear: jest.fn(),
@@ -58,7 +53,6 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 
 const mockCheckAccess = checkUserServerAccess as jest.Mock
 const mockGetPlexConfig = getActivePlexServerConfig as jest.Mock
-const mockGetJellyfinUser = getJellyfinUserById as jest.Mock
 const mockFetchStats = getMemberYearStats as jest.Mock
 const mockStatsYear = memberStatsYear as jest.Mock
 
@@ -71,10 +65,7 @@ const PLEX_SERVER = {
   machineIdentifier: "this-server-machine-id",
 }
 
-const JELLYFIN_SERVER = { url: "https://jellyfin.example.com", apiKey: "jf-key" }
-
-const USER = { id: "user-1", plexUserId: "user-42", jellyfinUserId: null, timezone: null, lastWatchedHours: null }
-const JELLYFIN_MEMBER = { ...USER, plexUserId: null, jellyfinUserId: "jf-1" }
+const USER = { id: "user-1", plexUserId: "user-42", timezone: null, lastWatchedHours: null }
 
 /** Year stats with `totalMinutes` watched. */
 function statsOf(totalMinutes: number): { ok: true; stats: MemberYearStats } {
@@ -112,7 +103,6 @@ beforeEach(() => {
   // Sensible defaults: Stripe off, an enabled member, no Plex server, no Tautulli.
   givenMember(false)
   mockGetPlexConfig.mockResolvedValue(null)
-  prismaMock.jellyfinServer.findFirst.mockResolvedValue(null)
   mockStatsYear.mockResolvedValue({ year: 2026, zone: "America/Chicago" })
   mockFetchStats.mockResolvedValue({ ok: false, code: "NO_TAUTULLI" })
 })
@@ -213,67 +203,6 @@ describe("computeRoleMetadata - is_subscribed", () => {
     const { metadata } = await computeRoleMetadata(USER, REFRESH)
 
     expect(metadata).toBeNull()
-  })
-})
-
-describe("computeRoleMetadata - Jellyfin access", () => {
-  beforeEach(() => {
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue(JELLYFIN_SERVER as never)
-  })
-
-  it("counts an enabled Jellyfin account as subscribed", async () => {
-    mockGetJellyfinUser.mockResolvedValue({ success: true, data: { Id: "jf-1", Policy: { IsDisabled: false } } })
-
-    const { metadata } = await computeRoleMetadata(JELLYFIN_MEMBER, REFRESH)
-
-    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(true)
-    expect(mockGetJellyfinUser).toHaveBeenCalledWith(JELLYFIN_SERVER, "jf-1")
-    expect(mockCheckAccess).not.toHaveBeenCalled()
-  })
-
-  it("does not count a disabled Jellyfin account", async () => {
-    mockGetJellyfinUser.mockResolvedValue({ success: true, data: { Id: "jf-1", Policy: { IsDisabled: true } } })
-
-    const { metadata } = await computeRoleMetadata(JELLYFIN_MEMBER, REFRESH)
-
-    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(false)
-  })
-
-  it("does not count an account Jellyfin no longer has", async () => {
-    mockGetJellyfinUser.mockResolvedValue({ success: false, notFound: true, error: "User not found" })
-
-    const { metadata } = await computeRoleMetadata(JELLYFIN_MEMBER, REFRESH)
-
-    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(false)
-  })
-
-  it("pushes no update when Jellyfin cannot answer", async () => {
-    mockGetJellyfinUser.mockResolvedValue({ success: false, error: "Failed to fetch user" })
-
-    expect(await computeRoleMetadata({ ...JELLYFIN_MEMBER, lastWatchedHours: 5 }, REFRESH)).toEqual({
-      metadata: null,
-      watchedHours: 5,
-    })
-  })
-
-  it("a member with both services is subscribed when Plex is unknown but Jellyfin is enabled", async () => {
-    mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
-    mockCheckAccess.mockResolvedValue({ status: "unknown", reason: "plex_unavailable" })
-    mockGetJellyfinUser.mockResolvedValue({ success: true, data: { Id: "jf-1", Policy: { IsDisabled: false } } })
-
-    const { metadata } = await computeRoleMetadata({ ...USER, jellyfinUserId: "jf-1" }, REFRESH)
-
-    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(true)
-  })
-
-  it("a member with both services is not subscribed when Plex denies and Jellyfin is disabled", async () => {
-    mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
-    mockCheckAccess.mockResolvedValue({ status: "denied" })
-    mockGetJellyfinUser.mockResolvedValue({ success: true, data: { Id: "jf-1", Policy: { IsDisabled: true } } })
-
-    const { metadata } = await computeRoleMetadata({ ...USER, jellyfinUserId: "jf-1" }, REFRESH)
-
-    expect(metadata?.[IS_SUBSCRIBED_KEY]).toBe(false)
   })
 })
 
@@ -389,7 +318,7 @@ describe("computeRoleMetadata - combined", () => {
     mockCheckAccess.mockResolvedValue({ status: "granted" })
 
     const { metadata } = await computeRoleMetadata(
-      { id: "user-1", plexUserId: "123", jellyfinUserId: null, timezone: null, lastWatchedHours: 42 },
+      { id: "user-1", plexUserId: "123", timezone: null, lastWatchedHours: 42 },
       { refreshHours: false }
     )
 

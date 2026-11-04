@@ -38,7 +38,6 @@ describe("serverName", () => {
   it("then the product name", async () => {
     prismaMock.config.findUnique.mockResolvedValue(null)
     prismaMock.plexServer.findFirst.mockResolvedValue(null)
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue(null)
 
     await expect(serverName()).resolves.toBe(productName)
     expect(productName).toBe("Plex Manager")

@@ -127,7 +127,7 @@ const BEARER_OR_BASIC = anyOf(["bearer", "basic"])
 /** Schemes whose credentials are one token, Bearer and Basic among them. */
 const TOKEN_SCHEMES = ["bearer", "basic", "token", "bot", "apikey", "negotiate", "ntlm", "dpop"]
 const TOKEN_SCHEME = anyOf(TOKEN_SCHEMES)
-/** Every scheme known by name: those and the ones that take auth-params (Digest, Jellyfin's MediaBrowser and Emby). */
+/** Every scheme known by name: those and the ones that take auth-params (Digest, MediaBrowser and Emby). */
 const KNOWN_SCHEME = anyOf([...TOKEN_SCHEMES, "digest", "mediabrowser", "emby", "hoba", "mutual", "vapid", "oauth", "hmac"])
 const SCHEME = String.raw`[A-Za-z][\w.+-]*`
 

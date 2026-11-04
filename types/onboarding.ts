@@ -1,4 +1,4 @@
-export type AuthService = "plex" | "jellyfin"
+export type AuthService = "plex"
 
 /** The onboarding steps (ui-design-system 6.5); `final` is the Done step. */
 export type OnboardingStepId = "welcome" | "playback" | "requests" | "support" | "final"

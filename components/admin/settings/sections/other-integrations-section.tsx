@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react"
 
-import { JellyfinLoginToggle } from "@/components/admin/settings/jellyfin-login-toggle"
 import { RemoveArrServiceButton } from "@/components/admin/settings/remove-arr-service"
 import { ServerForm } from "@/components/admin/settings/server-form"
 import { SettingsSheet } from "@/components/admin/settings/settings-sheet"
@@ -11,20 +10,17 @@ import { StatusBadge } from "@/components/ui/status-badge"
 import { SERVER_LABELS, type StoredServer } from "@/hooks/admin/use-server-form"
 import { worstStatus, type SectionHealth } from "@/lib/settings/connection-status"
 
-type OtherService = "sonarr" | "radarr" | "jellyfin"
+type OtherService = "sonarr" | "radarr"
 
 const DESCRIPTIONS: Record<OtherService, string> = {
   sonarr: "Lets the assistant look up shows, adds returning shows to Rewind and links Discord media marks",
   radarr: "Lets the assistant look up movies and links Discord media marks",
-  jellyfin: "A second media server for members who do not use Plex",
 }
 
-const ORDER: OtherService[] = ["sonarr", "radarr", "jellyfin"]
+const ORDER: OtherService[] = ["sonarr", "radarr"]
 
 interface OtherIntegrationsSectionProps {
   servers: Record<OtherService, StoredServer | null>
-  /** Jellyfin's "sign in with Jellyfin" flag, when Jellyfin is set up. */
-  jellyfinLogin: boolean | null
   health: Record<OtherService, SectionHealth>
   /** "Last saved ... by ..." from the audit log, shown in each Sheet's footer. */
   footerMeta?: ReactNode
@@ -41,21 +37,20 @@ function rowDescription(type: OtherService, server: StoredServer | null) {
 }
 
 /**
- * Sonarr, Radarr and Jellyfin (6.4), in the Connections group as one list card.
- * The rows are the view, each with its badge; Edit or Set up opens the
- * service's form in a Sheet, its edit mode; a Sonarr or Radarr row that is
- * set up also has Remove, since both are optional. Allow Jellyfin sign-in saves at
- * once, so it stays live in the Jellyfin row rather than in the Sheet. The
- * section takes the worst status among the services set up.
+ * Sonarr and Radarr (6.4), in the Connections group as one list card. The
+ * rows are the view, each with its badge; Edit or Set up opens the service's
+ * form in a Sheet, its edit mode; a row that is set up also has Remove, since
+ * both are optional. The section takes the worst status among the services
+ * set up.
  */
-export function OtherIntegrationsSection({ servers, jellyfinLogin, health, footerMeta }: OtherIntegrationsSectionProps) {
+export function OtherIntegrationsSection({ servers, health, footerMeta }: OtherIntegrationsSectionProps) {
   const configured = ORDER.filter((type) => servers[type])
   const checkedAt = configured.map((type) => health[type].checkedAt).find(Boolean) ?? null
 
   return (
     <SettingsSection
       id="other"
-      title="Sonarr, Radarr, Jellyfin"
+      title="Sonarr, Radarr"
       status={worstStatus(configured.map((type) => health[type].status))}
       checkedAt={checkedAt}
     >
@@ -96,12 +91,7 @@ export function OtherIntegrationsSection({ servers, jellyfinLogin, health, foote
                   />
                 )}
               </SettingsSheet>
-              {server && type !== "jellyfin" && <RemoveArrServiceButton service={type} />}
-              {type === "jellyfin" && jellyfinLogin !== null && (
-                <div className="basis-full">
-                  <JellyfinLoginToggle enabledForLogin={jellyfinLogin} />
-                </div>
-              )}
+              {server && <RemoveArrServiceButton service={type} />}
             </li>
           )
         })}

@@ -65,7 +65,6 @@ import { mockReset } from "jest-mock-extended"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { tautulliCommand } from "@/lib/connections/tautulli"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
-import { JELLYFIN_COPY } from "@/lib/discord/copy"
 import type { VerifyDiscordUserResult } from "@/lib/discord/services"
 import { MAX_HISTORY_PAGES } from "@/lib/discord/stats/member-stats"
 import { getMemberRequestLimits, type MemberRequestLimits } from "@/lib/request-tiers/member-limits"
@@ -85,9 +84,7 @@ const linkedUser: LinkedUser = {
   name: "Test User",
   email: "t@example.com",
   plexUserId: "plex-1",
-  jellyfinUserId: null,
   primaryAuthService: "plex",
-  services: ["plex"],
   timezone: null,
   isAdmin: false,
 }
@@ -221,18 +218,6 @@ describe("myStatsCommand.handle", () => {
     expect(reply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining("Link your account"), flags: 64 }))
     expect(deferReply).not.toHaveBeenCalled()
     expect(mockCommand).not.toHaveBeenCalled()
-  })
-
-  it("tells a Jellyfin-only member why stats are unavailable", async () => {
-    const { ctx, reply, deferReply } = createMockContext({
-      user: { plexUserId: null, jellyfinUserId: "jf-1", primaryAuthService: "jellyfin", services: ["jellyfin"] },
-    })
-
-    await myStatsCommand.handle(ctx)
-
-    expect(reply).toHaveBeenCalledWith({ content: JELLYFIN_COPY.mystats, flags: 64 })
-    expect(deferReply).not.toHaveBeenCalled()
-    expect(prismaMock.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 
   it("defers ephemerally before the slow read (3s ack rule)", async () => {

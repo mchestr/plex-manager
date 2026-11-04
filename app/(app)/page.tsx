@@ -38,7 +38,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const callbackPath = safeCallbackPath((await searchParams).callbackUrl);
 
   if (session?.user?.id) {
-    // Signed in already (or back from Jellyfin): go where the sign-in link pointed
+    // Signed in already: go where the sign-in link pointed
     if (callbackPath && callbackPath !== "/" && !callbackPath.startsWith("/?")) {
       redirect(callbackPath as Route);
     }
@@ -50,17 +50,13 @@ export default async function Home({ searchParams }: HomeProps) {
     );
   }
 
-  const [plexServer, jellyfinServer, discordIntegration, serverName] = await Promise.all([
+  const [plexServer, discordIntegration, serverName] = await Promise.all([
     getActiveService("plex"),
-    prisma.jellyfinServer.findFirst({ where: { isActive: true, enabledForLogin: true }, orderBy: { updatedAt: "desc" } }),
     prisma.discordIntegration.findUnique({ where: { id: "discord" }, select: { serverInviteCode: true } }),
     getServerName(),
   ]);
 
-  const hasPlex = !!plexServer;
-  const hasJellyfin = !!jellyfinServer;
-
-  if (!hasPlex && !hasJellyfin) {
+  if (!plexServer) {
     const inviteCode = discordIntegration?.serverInviteCode;
     return (
       <PublicShell serverName={serverName}>
@@ -95,8 +91,6 @@ export default async function Home({ searchParams }: HomeProps) {
       <MemberPass
         serverName={serverName}
         monogram={monogramFor(serverName)}
-        plex={hasPlex}
-        jellyfin={hasJellyfin}
         callbackUrl={callbackPath ?? undefined}
       />
     </PublicShell>

@@ -13,7 +13,7 @@ jest.mock("@/lib/member/help", () => ({ getHelpData: jest.fn() }))
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 
 const HELP: HelpData = {
-  service: "jellyfin",
+  service: "plex",
   serverName: "Basement Media",
   requestsUrl: null,
   discord: null,

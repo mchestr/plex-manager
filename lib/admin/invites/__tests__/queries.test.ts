@@ -1,6 +1,6 @@
 /**
  * The admin invites reads (P10.1): each status filter's `where` (a field
- * reference for used up), the search and server filters, the sorts, and no
+ * reference for used up), the search filter, the sorts, and no
  * token in what the detail read returns (P0.18, SEC-18).
  */
 
@@ -52,9 +52,9 @@ describe('inviteStatusWhere', () => {
 
 describe('parseInviteFilter and inviteStatus', () => {
   it('defaults every filter to all and drops unknown values', () => {
-    expect(parseInviteFilter({})).toEqual({ q: '', status: 'all', server: 'all' })
-    expect(parseInviteFilter({ status: 'revoked', server: 'emby', q: '  audit ' })).toEqual({ q: 'audit', status: 'all', server: 'all' })
-    expect(parseInviteFilter({ status: 'usedUp', server: ['jellyfin', 'plex'] })).toMatchObject({ status: 'usedUp', server: 'jellyfin' })
+    expect(parseInviteFilter({})).toEqual({ q: '', status: 'all' })
+    expect(parseInviteFilter({ status: 'revoked', q: '  audit ' })).toEqual({ q: 'audit', status: 'all' })
+    expect(parseInviteFilter({ status: ['usedUp', 'active'] })).toEqual({ q: '', status: 'usedUp' })
   })
 
   it('reads expired before used up', () => {
@@ -70,9 +70,9 @@ describe('listInvites', () => {
     prismaMock.invite.count.mockResolvedValueOnce(30).mockResolvedValueOnce(42)
     prismaMock.invite.findMany.mockResolvedValue([])
 
-    const result = await listInvites({ q: 'audit', status: 'expired', server: 'jellyfin', page: 2, pageSize: 25, sort: { id: 'code', desc: false } })
+    const result = await listInvites({ q: 'audit', status: 'expired', page: 2, pageSize: 25, sort: { id: 'code', desc: false } })
 
-    const where = { AND: [{ kind: 'ADMIN', expiresAt: { lt: NOW } }, { serverType: 'JELLYFIN' }, { code: { contains: 'AUDIT' } }] }
+    const where = { AND: [{ kind: 'ADMIN', expiresAt: { lt: NOW } }, { code: { contains: 'AUDIT' } }] }
     expect(prismaMock.invite.count).toHaveBeenNthCalledWith(1, { where })
     expect(prismaMock.invite.count).toHaveBeenNthCalledWith(2, { where: { kind: 'ADMIN' } })
     expect(prismaMock.invite.findMany).toHaveBeenCalledWith(
@@ -85,7 +85,7 @@ describe('listInvites', () => {
     prismaMock.invite.count.mockResolvedValue(3)
     prismaMock.invite.findMany.mockResolvedValue([])
 
-    await listInvites({ q: '', status: 'all', server: 'all', page: 9, pageSize: 25, sort: { id: 'expires', desc: false } })
+    await listInvites({ q: '', status: 'all', page: 9, pageSize: 25, sort: { id: 'expires', desc: false } })
 
     expect(prismaMock.invite.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: [{ expiresAt: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }], skip: 0 })
@@ -97,13 +97,12 @@ describe('listInvites', () => {
     prismaMock.invite.findMany.mockImplementation(((args: Parameters<typeof applyPrismaShape>[1]) =>
       Promise.resolve([applyPrismaShape(makePrismaInviteWithUsages({ useCount: 5 }), args)])) as never)
 
-    const { rows } = await listInvites({ q: '', status: 'all', server: 'all', page: 1, pageSize: 25, sort: { id: 'created', desc: true } })
+    const { rows } = await listInvites({ q: '', status: 'all', page: 1, pageSize: 25, sort: { id: 'created', desc: true } })
 
     expect(rows).toEqual([
       {
         id: 'invite-1',
         code: 'TESTCODE',
-        serverType: 'PLEX',
         useCount: 5,
         maxUses: 5,
         expiresAt: new Date('2099-12-31T00:00:00Z'),

@@ -102,7 +102,7 @@ describe("resolveCardState", () => {
     ["no Plex identity", "NO_PLEX_IDENTITY"],
     ["no Tautulli match", "NO_TAUTULLI_MATCH"],
   ] as const)("explains a member with %s that Rewind needs Plex history (FR-48)", (_, reason) => {
-    expect(resolveCardState(input({ eligibility: { eligible: false, reason } }))).toEqual({ kind: "not-eligible", reason: "jellyfin-only" })
+    expect(resolveCardState(input({ eligibility: { eligible: false, reason } }))).toEqual({ kind: "not-eligible", reason: "no-plex-history" })
   })
 
   it("counts a member who joined on 30 September, and not one who joined on 1 October (P7.3)", () => {
@@ -151,7 +151,7 @@ describe("resolveCardState", () => {
 describe("rewindNavYear", () => {
   it("opens the card's year when there is something there, else the newest archived year", () => {
     expect(rewindNavYear({ kind: "generating", year: 2026 }, [])).toBe(2026)
-    expect(rewindNavYear({ kind: "not-eligible", reason: "jellyfin-only" }, [])).toBeNull()
+    expect(rewindNavYear({ kind: "not-eligible", reason: "no-plex-history" }, [])).toBeNull()
     expect(rewindNavYear({ kind: "before-season", year: 2026, opensOn: OPENS, lastYear: 2025 }, [{ year: 2025, ink: "marigold", status: "watched" }])).toBe(2025)
     expect(rewindNavYear(null, [])).toBeNull()
   })

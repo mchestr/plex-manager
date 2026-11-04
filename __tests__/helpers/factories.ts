@@ -5,7 +5,7 @@
  */
 import type { EraseReport } from '@/lib/members/erase'
 import type { InventoryCounts } from '@/lib/members/erase-inventory'
-import { Prisma, type AffiliateApplication, type Config, type ConversationFinding, type ConversationReview, type InactivityRun, type InactivitySettings, type Invite, type JellyfinServer, type LLMUsage, type PlexServer, type PlexWrapped, type RewindShare, type Setup, type SkillSource, type User } from '@/lib/generated/prisma/client'
+import { Prisma, type AffiliateApplication, type Config, type ConversationFinding, type ConversationReview, type InactivityRun, type InactivitySettings, type Invite, type LLMUsage, type PlexServer, type PlexWrapped, type RewindShare, type Setup, type SkillSource, type User } from '@/lib/generated/prisma/client'
 
 // A fresh Date per row, so a test that mutates one cannot leak into another.
 const fixedDate = () => new Date('2026-01-01T00:00:00.000Z')
@@ -19,11 +19,10 @@ export function buildUser(overrides: Partial<User> = {}): User {
     image: null,
     plexUserId: 'plex-1',
     plexAuthToken: null,
-    jellyfinUserId: null,
     primaryAuthService: 'plex',
     isAdmin: false,
     role: null,
-    onboardingStatus: { plex: false, jellyfin: false },
+    onboardingStatus: { plex: false },
     isExempt: false,
     exemptNote: null,
     timezone: null,
@@ -82,7 +81,6 @@ export function buildInvite(overrides: Partial<Invite> = {}): Invite {
     createdBy: null,
     librarySectionIds: null,
     allowDownloads: false,
-    jellyfinLibraryIds: null,
     kind: 'ADMIN',
     affiliateUserId: null,
     label: null,
@@ -260,22 +258,6 @@ export function buildPlexServer(overrides: Partial<PlexServer> = {}): PlexServer
     adminPlexUserId: null,
     machineIdentifier: null,
     isActive: true,
-    createdAt: fixedDate(),
-    updatedAt: fixedDate(),
-    ...overrides,
-  }
-}
-
-export function buildJellyfinServer(overrides: Partial<JellyfinServer> = {}): JellyfinServer {
-  return {
-    id: 'jellyfin-server-1',
-    name: 'Test Jellyfin',
-    url: 'http://jellyfin.example.com:8096',
-    publicUrl: null,
-    apiKey: 'jellyfin-api-key',
-    adminUserId: null,
-    isActive: true,
-    enabledForLogin: true,
     createdAt: fixedDate(),
     updatedAt: fixedDate(),
     ...overrides,

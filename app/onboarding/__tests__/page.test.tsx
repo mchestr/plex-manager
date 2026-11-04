@@ -1,14 +1,12 @@
 /**
- * /onboarding follows the member's own service (P11.10): a Jellyfin member
- * gets the Jellyfin guides, whatever a stale stored value says, and a member
- * with both accounts gets the one they joined with.
+ * /onboarding gives a member the Plex guides, named after the server.
  */
 
 import { render, screen } from '@testing-library/react'
 import { mockReset } from 'jest-mock-extended'
 import { getServerSession } from 'next-auth'
 
-import { buildConfig, buildJellyfinServer, buildUser } from '@/__tests__/helpers/factories'
+import { buildConfig, buildUser } from '@/__tests__/helpers/factories'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import OnboardingPage from '@/app/onboarding/page'
 import type { User } from '@/lib/generated/prisma/client'
@@ -38,31 +36,12 @@ beforeEach(() => {
   prismaMock.overseerr.findFirst.mockResolvedValue(null)
   prismaMock.discordIntegration.findUnique.mockResolvedValue(null)
   prismaMock.discordConnection.findUnique.mockResolvedValue(null)
-  prismaMock.jellyfinServer.findFirst.mockResolvedValue(buildJellyfinServer({ name: 'Basement Jellyfin' }))
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ rewindEnabled: false }))
 })
 
 describe('OnboardingPage', () => {
-  it('gives a Jellyfin member the Jellyfin guides, named after the Jellyfin server', async () => {
-    await renderFor({ plexUserId: null, jellyfinUserId: 'jf-1', primaryAuthService: 'jellyfin' })
-
-    expect(screen.getByTestId('onboarding-service-jellyfin')).toBeInTheDocument()
-    expect(screen.getByTestId('onboarding-wizard-subheading')).toHaveTextContent('Basement Jellyfin')
-  })
-
-  it('follows the linked account over a stale stored value', async () => {
-    await renderFor({ plexUserId: null, jellyfinUserId: 'jf-1', primaryAuthService: 'plex' })
-
-    expect(screen.getByTestId('onboarding-service-jellyfin')).toBeInTheDocument()
-  })
-
-  it('gives a member with both accounts the service they joined with', async () => {
-    await renderFor({ plexUserId: 'plex-1', jellyfinUserId: 'jf-1', primaryAuthService: 'jellyfin' })
-    expect(screen.getByTestId('onboarding-service-jellyfin')).toBeInTheDocument()
-  })
-
   it('gives a Plex member the Plex guides', async () => {
-    await renderFor({ plexUserId: 'plex-1', jellyfinUserId: null, primaryAuthService: 'plex' })
+    await renderFor({ plexUserId: 'plex-1', primaryAuthService: 'plex' })
 
     expect(screen.getByTestId('onboarding-service-plex')).toBeInTheDocument()
     expect(screen.getByTestId('onboarding-wizard-subheading')).toHaveTextContent('Northfield Plex')

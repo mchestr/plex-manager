@@ -8,7 +8,7 @@
 
 import { z } from "zod"
 
-const targetSchema = z.object({ name: z.string(), jellyfinEndpoint: z.string() })
+const targetSchema = z.object({ name: z.string(), mediaEndpoint: z.string() })
 
 function wrap<T>(handler: (input: unknown) => Promise<T>) {
   return (input: unknown) => handler(input)

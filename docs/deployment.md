@@ -27,7 +27,7 @@ in [the environment reference](environment.md). Backups and upgrades are in
   URLs are https (see `ALLOW_INSECURE_HTTP` for a LAN-only install).
 - A Plex server you own, and Tautulli: the setup wizard needs both.
   Overseerr, Sonarr, Radarr, OpenAI (for the Rewind writer and the admin
-  assistant) and Discord are optional wizard steps; Jellyfin and Stripe are
+  assistant) and Discord are optional wizard steps; Stripe is
   set up later in Admin → Settings, and the other AI providers in Admin → AI →
   Settings.
 
@@ -175,7 +175,7 @@ docker compose logs app | grep 'Setup code'
 Open `https://plex.example.com/setup`, enter the code, and follow the wizard: it
 connects your Plex server and the optional services, and the Plex server owner
 becomes the admin. The claim lasts 12 hours in that browser and ends when setup
-completes. Jellyfin is added afterwards in Admin → Settings. To use a fixed
+completes. To use a fixed
 value instead of the printed code, set `SETUP_TOKEN` (at least 16 characters,
 `openssl rand -hex 16`) in `.env` and run `docker compose up -d` (a plain
 restart does not read `.env` again); it stays valid while it is set, so remove

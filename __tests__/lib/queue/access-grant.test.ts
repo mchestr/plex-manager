@@ -7,13 +7,12 @@
  * lib/queue/jobs/stripe.ts; job name PLEX_ACCESS_GRANT, kept for queued jobs).
  *
  * The processor is invoked directly with a fixture `Job`; BullMQ/Redis are not
- * touched. The Plex invite/accept helpers, the Jellyfin account call and
- * Prisma are mocked. Each Plex path (token present: accepted; token
+ * touched. The Plex invite/accept helpers and Prisma are mocked. Each Plex path (token present: accepted; token
  * missing or accept failure: pending; invite failure or no active server:
  * throw) is asserted, and so is the live re-check (SEC-38): a canceled member
  * is skipped, existing access is recorded as accepted, and an exempt comp
- * grant proceeds. P11.11 adds Jellyfin-only and dual members, and members
- * with no usable identity, who are skipped with a code (GAP-23).
+ * grant proceeds. A member with no usable identity is skipped with a code
+ * (GAP-23).
  */
 
 import type { Job } from 'bullmq'
@@ -25,7 +24,6 @@ import {
   acceptPlexInvite,
 } from '@/lib/connections/plex-invitations'
 import { checkUserServerAccess } from '@/lib/connections/plex-user-access'
-import { setJellyfinAccountDisabled } from '@/lib/connections/jellyfin-users'
 import { getAccessLevel } from '@/lib/access'
 import { getStripe } from '@/lib/stripe/client'
 import { SubscriptionStatus } from '@/lib/generated/prisma/client'
@@ -58,10 +56,6 @@ jest.mock('@/lib/connections/plex-user-access', () => ({
   checkUserServerAccess: jest.fn(),
 }))
 
-jest.mock('@/lib/connections/jellyfin-users', () => ({
-  ...jest.requireActual('@/lib/connections/jellyfin-users'),
-  setJellyfinAccountDisabled: jest.fn(),
-}))
 
 jest.mock('@/lib/access', () => ({
   getAccessLevel: jest.fn(),
@@ -76,7 +70,6 @@ jest.mock('@/lib/utils/logger', () => ({
   }),
 }))
 
-const JELLYFIN_SERVER = { url: 'https://jellyfin.example.com', apiKey: 'jf-key' }
 
 const PLEX_SERVER = {
   id: 'ps_1',
@@ -93,7 +86,6 @@ function makeUser(overrides: Record<string, unknown> = {}) {
     email: 'user@example.com',
     plexAuthToken: 'user-token',
     plexUserId: 'plex-7',
-    jellyfinUserId: null,
     isExempt: false,
     subscription: { status: SubscriptionStatus.ACTIVE, stripeSubscriptionId: 'sub_1' },
     ...overrides,
@@ -416,105 +408,29 @@ describe('processAccessGrant', () => {
   })
 })
 
-describe('processAccessGrant per service (P11.11)', () => {
+describe('processAccessGrant without a Plex identity (GAP-23)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(PLEX_SERVER)
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue(JELLYFIN_SERVER as never)
     ;(prisma.subscription.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
     ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)
     ;(getAccessLevel as jest.Mock).mockResolvedValue('full')
     ;(getStripe as jest.Mock).mockResolvedValue(null)
     ;(checkUserServerAccess as jest.Mock).mockResolvedValue({ status: 'denied' })
-    jest.mocked(setJellyfinAccountDisabled).mockResolvedValue({ success: true, status: 'changed' })
     ;(inviteUserToPlexServer as jest.Mock).mockResolvedValue({ success: true, inviteID: 5 })
     ;(acceptPlexInvite as jest.Mock).mockResolvedValue({ success: true })
   })
 
-  it('enables a Jellyfin-only member through the merged policy, with no Plex call', async () => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(
-      makeUser({ email: null, plexUserId: null, plexAuthToken: null, jellyfinUserId: 'jf-1' })
-    )
-
-    const result = await processAccessGrant(makeJob('user-1'))
-
-    expect(setJellyfinAccountDisabled).toHaveBeenCalledWith(JELLYFIN_SERVER, 'jf-1', false)
-    expect(prisma.plexServer.findFirst).not.toHaveBeenCalled()
-    expect(inviteUserToPlexServer).not.toHaveBeenCalled()
-    expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
-      where: { userId: 'user-1' },
-      data: { accessSkipCode: null, jellyfinAccessStatus: 'enabled' },
-    })
-    expect(result).toEqual({ userId: 'user-1', granted: true })
-  })
-
-  it('never uses a Jellyfin member\'s email or username as a Plex address', async () => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(
-      makeUser({ email: 'jfuser', plexUserId: null, jellyfinUserId: 'jf-1' })
-    )
-
-    await processAccessGrant(makeJob('user-1'))
-
-    expect(inviteUserToPlexServer).not.toHaveBeenCalled()
-  })
-
-  it('grants both to a member with both, turning Jellyfin on before the Plex invite', async () => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ jellyfinUserId: 'jf-1' }))
-
-    const result = await processAccessGrant(makeJob('user-1'))
-
-    expect(setJellyfinAccountDisabled).toHaveBeenCalledWith(JELLYFIN_SERVER, 'jf-1', false)
-    expect(inviteUserToPlexServer).toHaveBeenCalledWith(expect.anything(), 'user@example.com', undefined)
-    expect(jest.mocked(setJellyfinAccountDisabled).mock.invocationCallOrder[0]).toBeLessThan(
-      (inviteUserToPlexServer as jest.Mock).mock.invocationCallOrder[0]
-    )
-    expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
-      where: { userId: 'user-1' },
-      data: { accessSkipCode: null, plexInviteStatus: 'accepted', jellyfinAccessStatus: 'enabled' },
-    })
-    expect(result).toEqual({ userId: 'user-1', granted: true })
-  })
-
-  it('skips a member with no linked service with NO_MEMBER_SERVICE, and nothing throws', async () => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ plexUserId: null, jellyfinUserId: null }))
+  it('skips a member with no Plex account with NO_MEMBER_SERVICE, and nothing throws', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ email: 'someone@example.com', plexUserId: null }))
 
     const result = await processAccessGrant(makeJob('user-1'))
 
     expect(result).toEqual({ userId: 'user-1', granted: false, skipped: 'NO_MEMBER_SERVICE' })
-    expect(setJellyfinAccountDisabled).not.toHaveBeenCalled()
     expect(inviteUserToPlexServer).not.toHaveBeenCalled()
     expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
       where: { userId: 'user-1' },
       data: { accessSkipCode: 'NO_MEMBER_SERVICE' },
     })
-  })
-
-  it('records a Jellyfin account the server no longer has as skipped', async () => {
-    jest.mocked(setJellyfinAccountDisabled).mockResolvedValue({ success: true, status: 'not_found' })
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ plexUserId: null, jellyfinUserId: 'jf-gone' }))
-
-    const result = await processAccessGrant(makeJob('user-1'))
-
-    expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
-      where: { userId: 'user-1' },
-      data: { accessSkipCode: null, jellyfinAccessStatus: 'skipped' },
-    })
-    expect(result).toEqual({ userId: 'user-1', granted: false })
-  })
-
-  it('retries when Jellyfin is unavailable, before any Plex invite', async () => {
-    jest.mocked(setJellyfinAccountDisabled).mockResolvedValue({ success: false, code: 'JELLYFIN_UNAVAILABLE' })
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ jellyfinUserId: 'jf-1' }))
-
-    await expect(processAccessGrant(makeJob('user-1'))).rejects.toThrow('JELLYFIN_UNAVAILABLE')
-    expect(inviteUserToPlexServer).not.toHaveBeenCalled()
-    expect(prisma.subscription.updateMany).not.toHaveBeenCalled()
-  })
-
-  it('retries when no Jellyfin server is active', async () => {
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue(null)
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ plexUserId: null, jellyfinUserId: 'jf-1' }))
-
-    await expect(processAccessGrant(makeJob('user-1'))).rejects.toThrow('NO_JELLYFIN_SERVER')
   })
 })

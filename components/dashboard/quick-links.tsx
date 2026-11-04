@@ -32,12 +32,11 @@ function quickLinksFor({ media, requestsUrl, discord }: QuickLinksProps): QuickL
   const links: QuickLink[] = []
   for (const server of media) {
     if (!server.url) continue
-    const plex = server.service === "plex"
     links.push({
       id: server.service,
-      icon: plex ? icons.plex : icons.jellyfin,
-      title: plex ? "Watch on Plex" : "Watch on Jellyfin",
-      description: plex ? `Open ${server.serverName} in Plex Web` : `Open ${server.serverName}`,
+      icon: icons.plex,
+      title: "Watch on Plex",
+      description: `Open ${server.serverName} in Plex Web`,
       href: server.url,
       external: true,
     })

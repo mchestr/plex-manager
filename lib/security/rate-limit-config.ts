@@ -7,7 +7,7 @@
  * Playwright global setup can read the names to clear stale counters. The
  * limiter itself is `lib/security/rate-limit.ts`.
  *
- * Names are `feature` or `feature:scope`, such as `auth:jellyfin:user`.
+ * Names are `feature` or `feature:scope`, such as `invite:validate`.
  * Rewind limits start with `rw:`.
  *
  * @module lib/security/rate-limit-config
@@ -53,10 +53,7 @@ export const LIMITS = {
   // Setup-code guesses per address before first-run setup completes (P11.32)
   "setup:claim": { points: 5, duration: MINUTE },
   "auth:plex": { points: 20, duration: 15 * MINUTE },
-  "auth:jellyfin:ip": { points: 10, duration: 15 * MINUTE },
-  "auth:jellyfin:user": { points: 5, duration: 15 * MINUTE },
   "invite:validate": { points: 20, duration: 15 * MINUTE },
-  "invite:redeem": { points: 10, duration: 15 * MINUTE },
   "plex:pin:create": { points: 30, duration: 10 * MINUTE },
   "plex:pin:poll": { points: 300, duration: 10 * MINUTE },
   // Setup's server choice per address (P10.25): each one calls plex.tv and probes the server

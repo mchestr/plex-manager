@@ -4,8 +4,6 @@ import { z } from "zod"
 
 import { findTautulliUser, getTautulliActivity, getTautulliHistory, getTautulliHomeStat, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliServerInfo, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
 import { getActiveService } from "@/lib/data/active-service"
-import { isJellyfinOnly } from "@/lib/discord/copy"
-import { memberServices } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import { type FormatSettings } from "@/lib/utils/format"
 import { countArg, flagArg, isRecord, MAX_PAGE, textArg, userIdArg } from "./plex-tautulli-reply"
@@ -14,7 +12,7 @@ import { activityReply, LIMITS, mostWatchedReply, recentPlaysReply, topUsersRepl
 import { sessionOf } from "./tautulli-projections"
 import { usersReply } from "./tautulli-users"
 import { TAUTULLI_EPOCH_KEYS, UTC_FORMAT, withLocalTimestamps } from "./timestamps"
-import { JELLYFIN_MEMBER, toToolOutput } from "./tool-output"
+import { toToolOutput } from "./tool-output"
 
 type TautulliConfig = Parameters<typeof findTautulliUser>[0]
 
@@ -42,8 +40,7 @@ const NOT_A_USER_ID = JSON.stringify({ error: "userId must be a Tautulli user_id
  * Activity scoped to the Discord caller. Fails closed (SEC-50): only a caller
  * positively mapped to a Tautulli user sees sessions, and only their own. No
  * caller, no Plex user ID, a failed or empty lookup, or an activity payload of
- * an unexpected shape all return no sessions; a Jellyfin-only member is told
- * why (P11.12). Sessions are projected as for an admin, and the Discord
+ * an unexpected shape all return no sessions. Sessions are projected as for an admin, and the Discord
  * allowlist then drops the viewer fields. A search is not applied: it could
  * only hide the caller's own streams, and a search for someone else would
  * read as "not watching".
@@ -52,8 +49,7 @@ async function scopeActivityToCaller(config: TautulliConfig, data: unknown, user
   const activity = activitySchema.safeParse(data)
   if (!activity.success || !userId) return UNMAPPED_ACTIVITY
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true, jellyfinUserId: true } })
-  if (user && isJellyfinOnly(memberServices(user))) return JELLYFIN_MEMBER
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } })
   if (!user?.plexUserId) return UNMAPPED_ACTIVITY
 
   const lookup = await findTautulliUser(config, { plexUserId: user.plexUserId })

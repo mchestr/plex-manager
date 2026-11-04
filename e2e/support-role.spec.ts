@@ -61,7 +61,7 @@ test.describe('Support role', () => {
         isAdmin: false,
         role: 'support',
         primaryAuthService: 'plex',
-        onboardingStatus: { plex: true, jellyfin: false },
+        onboardingStatus: { plex: true },
       },
       update: { role: 'support', isAdmin: false, disabledAt: null },
     });
@@ -82,7 +82,7 @@ test.describe('Support role', () => {
         name: 'Affiliate Applicant',
         plexUserId: 'e2e-support-role-applicant-plex',
         primaryAuthService: 'plex',
-        onboardingStatus: { plex: true, jellyfin: false },
+        onboardingStatus: { plex: true },
         affiliateApplications: { create: { openUserId: APPLICANT_ID, status: 'PENDING', hoursAtApply: 120 } },
       },
     });

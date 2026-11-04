@@ -2,7 +2,7 @@ import { CreateInviteDialog } from "@/components/admin/invites/create-invite-dia
 import { InvitesTable } from "@/components/admin/invites/invites-table"
 import { PageHeader } from "@/components/ui/page-header"
 import { INVITES_DEFAULT_SORT, INVITES_SORTS, parseInviteFilter } from "@/lib/admin/invites/filter"
-import { jellyfinLibraryListing, plexLibraryListing } from "@/lib/admin/invites/libraries"
+import { plexLibraryListing } from "@/lib/admin/invites/libraries"
 import { listInvites } from "@/lib/admin/invites/queries"
 import { parseTableParams } from "@/lib/ui/table-params"
 import { assertAdmin } from "@/lib/admin"
@@ -13,13 +13,12 @@ type Params = Record<string, string | string[] | undefined>
  * The admin invites list (P10.1), on the users page's pattern: filters, sort
  * and page come from the URL and the rows load here. The library listings
  * start without being awaited and reach the dialog as promises, so the list
- * never waits for Plex or Jellyfin.
+ * never waits for Plex.
  */
 export default async function InvitesPage({ searchParams }: { searchParams: Promise<Params> }) {
   await assertAdmin()
   const params = await searchParams
   const plexLibraries = plexLibraryListing()
-  const jellyfinLibraries = jellyfinLibraryListing()
 
   const filter = parseInviteFilter(params)
   const table = parseTableParams(params, { sortable: INVITES_SORTS, defaultSort: INVITES_DEFAULT_SORT })
@@ -29,7 +28,6 @@ export default async function InvitesPage({ searchParams }: { searchParams: Prom
   const create = (testId: string, openFromParam = false) => (
     <CreateInviteDialog
       plexLibraries={plexLibraries}
-      jellyfinLibraries={jellyfinLibraries}
       openFromParam={openFromParam}
       data-testid={testId}
     />

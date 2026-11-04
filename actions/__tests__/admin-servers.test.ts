@@ -1,10 +1,9 @@
 /**
  * Tests for actions/admin/admin-servers.ts
  *
- * - The six secret-holding services (P4.6, SEC-31): a blank key is reused only
+ * - The five secret-holding services (P4.6, SEC-31): a blank key is reused only
  *   for the stored row's origin, the connection test never receives the stored
  *   key for a new address, and every save is audited with origins only.
- * - toggleJellyfinLogin: allow Jellyfin sign-in or turn it off.
  * - removeArrService: delete every Sonarr or Radarr row, audited with origins only.
  */
 
@@ -14,8 +13,6 @@ import { revalidatePath } from 'next/cache'
 
 import {
   removeArrService,
-  toggleJellyfinLogin,
-  updateJellyfinServer,
   updateOverseerr,
   updatePlexServer,
   updateRadarr,
@@ -23,7 +20,6 @@ import {
   updateTautulli,
 } from '@/actions/admin/admin-servers'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
-import { testJellyfinConnection } from '@/lib/connections/jellyfin'
 import { testOverseerrConnection } from '@/lib/connections/overseerr'
 import { getPlexServerIdentity, getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
 import { testRadarrConnection } from '@/lib/connections/radarr'
@@ -55,15 +51,14 @@ jest.mock('@/lib/connections/plex', () => ({
   getPlexServerIdentity: jest.fn(),
 }))
 jest.mock('@/lib/affiliates/switch', () => ({ turnOffForServerChange: jest.fn().mockResolvedValue(false) }))
-jest.mock('@/lib/connections/jellyfin', () => ({ testJellyfinConnection: jest.fn() }))
 jest.mock('@/lib/connections/tautulli', () => ({ testTautulliConnection: jest.fn() }))
 jest.mock('@/lib/connections/overseerr', () => ({ testOverseerrConnection: jest.fn() }))
 jest.mock('@/lib/connections/sonarr', () => ({ testSonarrConnection: jest.fn() }))
 jest.mock('@/lib/connections/radarr', () => ({ testRadarrConnection: jest.fn() }))
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
-const mockRevalidatePath = revalidatePath as jest.MockedFunction<typeof revalidatePath>
 const mockAudit = logAuditEvent as jest.Mock
+const mockRevalidatePath = revalidatePath as jest.MockedFunction<typeof revalidatePath>
 const mockFetch = jest.fn()
 
 const mockAdminSession = {
@@ -108,13 +103,6 @@ const SERVICES: Array<{
     save: (input) => updatePlexServer(input),
     delegate: () => prismaMock.plexServer as unknown as ReturnType<(typeof SERVICES)[number]['delegate']>,
     test: testPlexConnection as jest.Mock,
-  },
-  {
-    name: 'jellyfin',
-    secretField: 'apiKey',
-    save: (input) => updateJellyfinServer(input),
-    delegate: () => prismaMock.jellyfinServer as unknown as ReturnType<(typeof SERVICES)[number]['delegate']>,
-    test: testJellyfinConnection as jest.Mock,
   },
   {
     name: 'tautulli',
@@ -270,77 +258,6 @@ describe.each(SERVICES)('$name: a stored secret never goes to a new address', (s
     })
     expect(service.delegate().create).not.toHaveBeenCalled()
     expect(mockAudit).not.toHaveBeenCalled()
-  })
-})
-
-describe('toggleJellyfinLogin', () => {
-  it('should enable Jellyfin login when passed true, and audit the change', async () => {
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue({ enabledForLogin: false } as never)
-    prismaMock.jellyfinServer.updateMany.mockResolvedValue({ count: 1 })
-
-    const result = await toggleJellyfinLogin(true)
-
-    expect(result).toEqual({ success: true, data: null })
-    expect(prismaMock.jellyfinServer.updateMany).toHaveBeenCalledWith({
-      where: { isActive: true },
-      data: { enabledForLogin: true },
-    })
-    expect(mockAudit).toHaveBeenCalledWith(
-      AuditEventType.CONFIG_CHANGED,
-      'admin-123',
-      expect.objectContaining({ section: 'jellyfin.login', changedFields: ['enabledForLogin'] })
-    )
-    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/settings')
-    expect(mockRevalidatePath).toHaveBeenCalledWith('/')
-  })
-
-  it('should disable Jellyfin login when passed false', async () => {
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue(null)
-    prismaMock.jellyfinServer.updateMany.mockResolvedValue({ count: 1 })
-
-    const result = await toggleJellyfinLogin(false)
-
-    expect(result).toEqual({ success: true, data: null })
-    expect(prismaMock.jellyfinServer.updateMany).toHaveBeenCalledWith({
-      where: { isActive: true },
-      data: { enabledForLogin: false },
-    })
-  })
-
-  it('should refuse non-admin users', async () => {
-    mockGetServerSession.mockResolvedValue(mockNonAdminSession)
-
-    await expect(toggleJellyfinLogin(true)).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
-  })
-
-  it('should refuse unauthenticated users', async () => {
-    mockGetServerSession.mockResolvedValue(null)
-
-    await expect(toggleJellyfinLogin(true)).resolves.toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
-  })
-
-  it('should return error for invalid input', async () => {
-    // TypeScript would normally catch this, but testing runtime validation
-    const result = await toggleJellyfinLogin('invalid' as unknown as boolean)
-
-    expect(result).toMatchObject({
-      success: false,
-      code: 'VALIDATION',
-      error: 'Invalid input: enabled must be a boolean',
-    })
-    expect(prismaMock.jellyfinServer.updateMany).not.toHaveBeenCalled()
-  })
-
-  it('should not echo database errors', async () => {
-    prismaMock.jellyfinServer.updateMany.mockRejectedValue(new Error('Database error at db:5432'))
-
-    const result = await toggleJellyfinLogin(true)
-
-    expect(result).toEqual({
-      success: false,
-      code: 'INTERNAL',
-      error: 'Failed to toggle Jellyfin login setting',
-    })
   })
 })
 

@@ -8,7 +8,7 @@ const ITEMS: SettingsNavItem[] = [
   { id: 'plex', label: 'Plex server', group: 'connections', status: 'ok' },
   { id: 'tautulli', label: 'Tautulli', group: 'connections', status: 'unreachable' },
   { id: 'overseerr', label: 'Overseerr', group: 'connections', status: 'untested' },
-  { id: 'other', label: 'Sonarr, Radarr, Jellyfin', group: 'connections', status: 'notConfigured' },
+  { id: 'other', label: 'Sonarr, Radarr', group: 'connections', status: 'notConfigured' },
   { id: 'stripe', label: 'Stripe billing', group: 'billing', status: 'disabled' },
   { id: 'system', label: 'System information', group: 'system' },
 ]
@@ -81,7 +81,7 @@ describe('SettingsNav', () => {
       'Plex server',
       'Tautulli',
       'Overseerr',
-      'Sonarr, Radarr, Jellyfin',
+      'Sonarr, Radarr',
     ])
   })
 

@@ -38,7 +38,6 @@ describe("recheckConnections", () => {
       rewind: ok,
       sonarr: off,
       radarr: off,
-      jellyfin: off,
     }
     jest.mocked(getSettingsHealth).mockImplementation(async () => {
       expect(updateTag).toHaveBeenCalledWith(CONNECTION_HEALTH_TAG)

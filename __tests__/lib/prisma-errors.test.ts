@@ -32,7 +32,7 @@ describe('isUniqueEmailConflict', () => {
 
   it.each([
     ['another adapter constraint', adapterMeta({ index: 'User_plexUserId_key' })],
-    ['another adapter column', adapterMeta({ fields: ['jellyfinUserId'] })],
+    ['another adapter column', adapterMeta({ fields: ['plexUserId'] })],
     ['another classic target column', { target: ['plexUserId'] }],
     ['another classic target constraint', { target: 'User_plexUserId_key' }],
     ['a meta with neither shape', { modelName: 'User' }],

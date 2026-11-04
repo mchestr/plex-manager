@@ -66,7 +66,7 @@ describe("Admin audit event page", () => {
     expect(within(screen.getByTestId("admin-audit-event-header")).getByRole("link", { name: "Audit log" })).toHaveAttribute("href", "/admin/audit")
     expect(screen.getByTestId("admin-audit-event-timestamp")).toHaveTextContent("Oct 30, 2026, 10:00 AM CDT")
     expect(screen.getByTestId("admin-audit-event-type")).toHaveTextContent("Plex access removedMEMBER_UNSHARED")
-    expect(screen.getByTestId("admin-audit-event-category")).toHaveTextContent("Plex and Jellyfin access")
+    expect(screen.getByTestId("admin-audit-event-category")).toHaveTextContent("Plex access")
     expect(screen.getByTestId("admin-audit-event-summary")).toHaveTextContent("Removed for inactivity, never seen")
   })
 

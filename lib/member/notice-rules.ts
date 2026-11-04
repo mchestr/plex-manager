@@ -8,8 +8,7 @@
 
 export type MemberNotice =
   | { kind: "past-due" }
-  /** `jellyfinEnabled`: a member with both services, whose Jellyfin account is already on (P11.11). */
-  | { kind: "pending-invite"; jellyfinEnabled?: true }
+  | { kind: "pending-invite" }
   | { kind: "rewind-ready"; year: number }
 
 /** Highest first. P7.14 produces `rewind-ready`. */

@@ -17,7 +17,6 @@ jest.mock('@/lib/prisma', () => ({
   prisma: {
     lLMProvider: { findFirst: jest.fn() },
     plexServer: { findFirst: jest.fn() },
-    jellyfinServer: { findFirst: jest.fn() },
     tautulli: { findFirst: jest.fn() },
     overseerr: { findFirst: jest.fn() },
     sonarr: { findFirst: jest.fn() },
@@ -39,7 +38,6 @@ jest.mock('@/lib/auth', () => ({
 const mockPrisma = prisma as unknown as {
   lLMProvider: { findFirst: jest.Mock }
   plexServer: { findFirst: jest.Mock }
-  jellyfinServer: { findFirst: jest.Mock }
   tautulli: { findFirst: jest.Mock }
   overseerr: { findFirst: jest.Mock }
   sonarr: { findFirst: jest.Mock }
@@ -76,7 +74,6 @@ describe('getAdminSettings secret hiding', () => {
 
     mockPrisma.lLMProvider.findFirst.mockResolvedValue(null)
     mockPrisma.plexServer.findFirst.mockResolvedValue(null)
-    mockPrisma.jellyfinServer.findFirst.mockResolvedValue(null)
     mockPrisma.tautulli.findFirst.mockResolvedValue(null)
     mockPrisma.overseerr.findFirst.mockResolvedValue(null)
     mockPrisma.sonarr.findFirst.mockResolvedValue(null)

@@ -29,7 +29,7 @@ test.describe('Admin users list', () => {
     try {
       // Tautulli last saw them play 200 days ago, in yesterday's read
       const lastSeen = { lastSeenAt: new Date(Date.now() - 200 * DAY_MS), lastSeenReadAt: new Date(Date.now() - DAY_MS) };
-      const row = { ...MEMBER, ...lastSeen, isAdmin: false, disabledAt: null, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true, jellyfin: false } };
+      const row = { ...MEMBER, ...lastSeen, isAdmin: false, disabledAt: null, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true } };
       await prisma.user.upsert({ where: { id: MEMBER.id }, create: row, update: row });
       const server = await prisma.plexServer.findFirst({ where: { isActive: true }, select: { id: true, url: true } });
       if (server) {
@@ -148,7 +148,7 @@ test.describe('Admin users list layout', () => {
   test.beforeAll(async () => {
     const prisma = createE2EPrismaClient();
     try {
-      const row = { ...LONG, isAdmin: false, disabledAt: null, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true, jellyfin: false } };
+      const row = { ...LONG, isAdmin: false, disabledAt: null, primaryAuthService: 'plex' as const, onboardingStatus: { plex: true } };
       await prisma.user.upsert({ where: { id: LONG.id }, create: row, update: row });
     } finally {
       await prisma.$disconnect();

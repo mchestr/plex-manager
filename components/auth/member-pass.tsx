@@ -2,7 +2,6 @@
 
 import { useId, useState } from "react"
 
-import { JellyfinSignInButton } from "@/components/auth/jellyfin-sign-in-button"
 import { Monogram, Pass, PassStub } from "@/components/auth/pass"
 import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -17,10 +16,6 @@ interface MemberPassProps {
   serverName: string
   /** `monogramFor(serverName)`; null draws the pip-only tile. */
   monogram: string | null
-  /** An active Plex server: "Continue with Plex" is the primary action. */
-  plex: boolean
-  /** A Jellyfin server enabled for login: "Use Jellyfin instead", or the only option without Plex. */
-  jellyfin: boolean
   /** A same-origin path (`safeCallbackPath`) to land on after signing in. */
   callbackUrl?: string
 }
@@ -28,10 +23,9 @@ interface MemberPassProps {
 /**
  * The signed-out `/` (ui-design-system 6.6, UI-35): the member pass. One
  * click on "Continue with Plex" starts the PIN on the server and goes
- * straight to plex.tv, with no forced wait. Jellyfin is the secondary option,
- * revealed in place. The copy says the Plex token is kept (GAP-34).
+ * straight to plex.tv, with no forced wait. The copy says the Plex token is kept (GAP-34).
  */
-export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }: MemberPassProps) {
+export function MemberPass({ serverName, monogram, callbackUrl }: MemberPassProps) {
   const headingId = useId()
   return (
     <Pass aria-labelledby={headingId} data-testid="member-pass">
@@ -40,13 +34,7 @@ export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }
         <h1 id={headingId} className="mt-5 text-display text-foreground">
           Sign in to {serverName}
         </h1>
-        {plex ? (
-          <PlexOptions serverName={serverName} jellyfin={jellyfin} callbackUrl={callbackUrl} />
-        ) : (
-          <div className="mt-6">
-            <JellyfinSignInButton serverName={serverName} showDisclaimer={false} callbackUrl={callbackUrl} />
-          </div>
-        )}
+        <PlexOptions serverName={serverName} callbackUrl={callbackUrl} />
       </div>
       <PassStub>
         <p className="text-label text-muted-foreground">Member pass</p>
@@ -56,11 +44,9 @@ export function MemberPass({ serverName, monogram, plex, jellyfin, callbackUrl }
   )
 }
 
-function PlexOptions({ serverName, jellyfin, callbackUrl }: Omit<MemberPassProps, "monogram" | "plex">) {
+function PlexOptions({ serverName, callbackUrl }: Omit<MemberPassProps, "monogram">) {
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [jellyfinOpen, setJellyfinOpen] = useState(false)
-  const jellyfinId = useId()
 
   const continueWithPlex = async () => {
     setStarting(true)
@@ -101,32 +87,6 @@ function PlexOptions({ serverName, jellyfin, callbackUrl }: Omit<MemberPassProps
         <Alert tone="destructive" className="mt-4" data-testid="sign-in-error">
           {error}
         </Alert>
-      )}
-      {jellyfin && (
-        <>
-          <div className="my-5 flex items-center gap-3 text-caption text-muted-foreground">
-            <span aria-hidden="true" className="h-px flex-1 bg-border" />
-            or
-            <span aria-hidden="true" className="h-px flex-1 bg-border" />
-          </div>
-          <Button
-            size="lg"
-            variant="secondary"
-            className="w-full"
-            icon={<Icon icon={icons.jellyfin} />}
-            aria-expanded={jellyfinOpen}
-            aria-controls={jellyfinId}
-            onClick={() => setJellyfinOpen((open) => !open)}
-            data-testid="toggle-jellyfin"
-          >
-            Use Jellyfin instead
-          </Button>
-          <div id={jellyfinId} hidden={!jellyfinOpen} className="mt-4">
-            {jellyfinOpen && (
-              <JellyfinSignInButton serverName={serverName} showDisclaimer={false} callbackUrl={callbackUrl} />
-            )}
-          </div>
-        </>
       )}
     </>
   )

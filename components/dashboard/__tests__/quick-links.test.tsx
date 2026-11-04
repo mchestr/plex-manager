@@ -1,7 +1,6 @@
 /**
  * QuickLinks (P10.21, UI-38): only the tiles that go somewhere, the Plex Web
- * URL by machine id, Jellyfin by its own name, no jellyfin.org fallback, and
- * each Discord state on `/discord/link`.
+ * URL by machine id, and each Discord state on `/discord/link`.
  */
 
 import { render, screen, within } from '@testing-library/react'
@@ -31,34 +30,10 @@ describe('QuickLinks', () => {
     expect(tile).toHaveTextContent('Open Northfield Plex in Plex Web')
   })
 
-  it('names the Jellyfin server and never falls back to jellyfin.org', () => {
-    const { container, rerender } = render(
-      <QuickLinks {...props({ media: [{ service: 'jellyfin', serverName: 'Basement Jelly', url: 'https://jf.example.com' }] })} />
-    )
+  it('hides the Plex tile without a URL', () => {
+    render(<QuickLinks {...props({ media: [{ service: 'plex', serverName: 'Northfield Plex', url: null }] })} />)
 
-    expect(screen.getByTestId('home-quick-link-jellyfin')).toHaveAttribute('href', 'https://jf.example.com')
-    expect(screen.getByTestId('home-quick-link-jellyfin')).toHaveTextContent('Open Basement Jelly')
-
-    rerender(<QuickLinks {...props({ media: [{ service: 'jellyfin', serverName: 'Basement Jelly', url: null }] })} />)
-
-    expect(screen.queryByTestId('home-quick-link-jellyfin')).not.toBeInTheDocument()
-    expect(container.innerHTML).not.toMatch(/jellyfin\.org/)
-  })
-
-  it('shows one media tile per linked service, in the order given', () => {
-    render(
-      <QuickLinks
-        {...props({
-          media: [
-            { service: 'jellyfin', serverName: 'Basement Jelly', url: 'https://jf.example.com' },
-            { service: 'plex', serverName: 'Northfield Plex', url: PLEX_WEB },
-          ],
-        })}
-      />
-    )
-
-    const tiles = screen.getAllByTestId(/^home-quick-link-(plex|jellyfin)$/)
-    expect(tiles.map((tile) => tile.dataset.testid)).toEqual(['home-quick-link-jellyfin', 'home-quick-link-plex'])
+    expect(screen.queryByTestId('home-quick-link-plex')).not.toBeInTheDocument()
   })
 
   it('never names Overseerr on the requests tile', () => {

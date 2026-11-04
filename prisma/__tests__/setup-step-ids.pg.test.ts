@@ -35,7 +35,7 @@ function statements(): string[] {
 
 class Rollback extends Error {}
 
-const SERVICE_TABLES = ["PlexServer", "JellyfinServer", "Tautulli", "Overseerr", "Sonarr", "Radarr"]
+const SERVICE_TABLES = ["PlexServer", "Tautulli", "Overseerr", "Sonarr", "Radarr"]
 
 describePg("setup_step_ids migration", (databaseUrl) => {
   let db: PrismaClient
