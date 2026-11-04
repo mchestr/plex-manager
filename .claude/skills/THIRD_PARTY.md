@@ -21,7 +21,7 @@ checks this table against the folders.
 
 ## Project-authored skills
 
-These four are written in this repository (P11.27), not vendored, so they have
+These five are written in this repository (P11.27), not vendored, so they have
 no upstream pin and fall under the repository's own `LICENSE`. They point at
 the source files they describe instead of copying values, and
 `scripts/__tests__/project-skills.test.ts` fails when a path, export, npm
@@ -34,6 +34,7 @@ same pull request as the code it describes.
 | `rewind-page` | This repository, `.claude/skills/rewind-page` | project-authored | The repository's `LICENSE` | 2026-10-23 | Claude Code agent, P11.27 | Not applicable. |
 | `share-card` | This repository, `.claude/skills/share-card` | project-authored | The repository's `LICENSE` | 2026-10-23 | Claude Code agent, P11.27 | Not applicable. |
 | `visual-qa` | This repository, `.claude/skills/visual-qa` | project-authored | The repository's `LICENSE` | 2026-10-23 | Claude Code agent, P11.27 | Not applicable. |
+| `pr-writing` | This repository, `.claude/skills/pr-writing` | project-authored | The repository's `LICENSE` | 2026-11-04 | Claude Code agent | Not applicable. Modelled on the `unslop` skill in `Silo-Server/silo-server` (AGPL-3.0), written fresh rather than copied so no AGPL text enters this MIT repository. |
 
 The Vercel folders are renamed to their skill names (`react-best-practices`
 becomes `vercel-react-best-practices`, and so on). None of the upstream `*.zip`

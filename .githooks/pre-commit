@@ -1,0 +1,3 @@
+#!/bin/sh
+# Turned on by `npm run hooks:install` (git config core.hooksPath .githooks).
+exec node "$(git rev-parse --show-toplevel)/scripts/check-local-paths.mjs" --staged

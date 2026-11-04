@@ -5,6 +5,7 @@
  *   for the stored row's origin, the connection test never receives the stored
  *   key for a new address, and every save is audited with origins only.
  * - toggleJellyfinLogin: allow Jellyfin sign-in or turn it off.
+ * - removeArrService: delete every Sonarr or Radarr row, audited with origins only.
  */
 
 import { mockReset } from 'jest-mock-extended'
@@ -12,6 +13,7 @@ import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
 
 import {
+  removeArrService,
   toggleJellyfinLogin,
   updateJellyfinServer,
   updateOverseerr,
@@ -338,6 +340,84 @@ describe('toggleJellyfinLogin', () => {
       success: false,
       code: 'INTERNAL',
       error: 'Failed to toggle Jellyfin login setting',
+    })
+  })
+})
+
+describe('removeArrService', () => {
+  const SONARR_ROW = {
+    id: 'sonarr-1',
+    name: 'TV',
+    url: 'http://sonarr.lan:8989/base',
+    publicUrl: 'https://tv.example.com',
+    apiKey: STORED_SECRET,
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  it('deletes every Sonarr row and audits the removal without the key', async () => {
+    prismaMock.sonarr.findFirst.mockResolvedValue(SONARR_ROW)
+    prismaMock.sonarr.deleteMany.mockResolvedValue({ count: 2 })
+
+    const result = await removeArrService({ service: 'sonarr' })
+
+    expect(result).toEqual({ success: true, data: null })
+    expect(prismaMock.sonarr.deleteMany).toHaveBeenCalledWith()
+    expect(prismaMock.radarr.deleteMany).not.toHaveBeenCalled()
+    expect(mockAudit).toHaveBeenCalledWith(AuditEventType.CONFIG_CHANGED, 'admin-123', {
+      section: 'sonarr',
+      changedFields: ['name', 'publicUrl', 'url'],
+      secretChanged: true,
+      origins: {
+        before: { url: 'http://sonarr.lan:8989', publicUrl: 'https://tv.example.com' },
+        after: { url: null, publicUrl: null },
+      },
+    })
+    expect(JSON.stringify(mockAudit.mock.calls)).not.toContain(STORED_SECRET)
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/settings')
+  })
+
+  it('removes Radarr from its own table', async () => {
+    prismaMock.radarr.findFirst.mockResolvedValue({ ...SONARR_ROW, id: 'radarr-1', url: 'http://radarr.lan:7878' })
+    prismaMock.radarr.deleteMany.mockResolvedValue({ count: 1 })
+
+    await expect(removeArrService({ service: 'radarr' })).resolves.toEqual({ success: true, data: null })
+    expect(prismaMock.radarr.deleteMany).toHaveBeenCalled()
+    expect(prismaMock.sonarr.deleteMany).not.toHaveBeenCalled()
+    expect(mockAudit).toHaveBeenCalledWith(AuditEventType.CONFIG_CHANGED, 'admin-123', expect.objectContaining({ section: 'radarr' }))
+  })
+
+  it('succeeds without an audit entry when nothing was set up', async () => {
+    prismaMock.sonarr.findFirst.mockResolvedValue(null)
+    prismaMock.sonarr.deleteMany.mockResolvedValue({ count: 0 })
+
+    await expect(removeArrService({ service: 'sonarr' })).resolves.toEqual({ success: true, data: null })
+    expect(mockAudit).not.toHaveBeenCalled()
+  })
+
+  it('refuses any other service', async () => {
+    const result = await removeArrService({ service: 'plex' } as unknown as { service: 'sonarr' })
+
+    expect(result).toMatchObject({ success: false, code: 'VALIDATION' })
+    expect(prismaMock.plexServer.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it('refuses non-admin users', async () => {
+    mockGetServerSession.mockResolvedValue(mockNonAdminSession)
+
+    await expect(removeArrService({ service: 'sonarr' })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+    expect(prismaMock.sonarr.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it('does not echo database errors', async () => {
+    prismaMock.sonarr.findFirst.mockResolvedValue(null)
+    prismaMock.sonarr.deleteMany.mockRejectedValue(new Error('Database error at db:5432'))
+
+    await expect(removeArrService({ service: 'sonarr' })).resolves.toEqual({
+      success: false,
+      code: 'INTERNAL',
+      error: 'Could not remove the service',
     })
   })
 })
