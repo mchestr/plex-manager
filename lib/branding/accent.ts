@@ -9,7 +9,8 @@
  * │        │         indicator/ring darkened until 4.5:1 on the light background
  * │        └─ dark:  primary lightened until 3:1 on the dark background,
  * │                  hover 4% lighter, indicator/ring = primary
- * └─ every "-foreground" is near-black or near-white, whichever contrasts more
+ * └─ every "-foreground" is near-black or near-white, whichever contrasts more;
+ *    where neither reaches 4.5:1, the fill moves away from its ink until it does
  * ```
  *
  * The root layout writes the result as one `<style>` (`accentStyleSheet`),
@@ -18,7 +19,7 @@
  *
  * @example
  * ```ts
- * accentTokens("#E4202B").light["primary-foreground"] // "#fafafa"
+ * accentTokens("#E4202B").light["primary-foreground"] // "#fafafa" (on a slightly darker red)
  * accentStyleSheet("not a colour") // ""
  * ```
  *
@@ -72,21 +73,32 @@ function inkOn(fill: Rgb): string {
   return hex(contrast(fill, INK_DARK) >= contrast(fill, INK_LIGHT) ? INK_DARK : INK_LIGHT)
 }
 
+/**
+ * The fill moved away from its ink until the ink's text reads at 4.5:1:
+ * darker under near-white text, lighter under near-black. A mid-tone such as
+ * `#E4202B` gives white text only 4.3:1, so it darkens a few steps.
+ */
+function readableFill(lch: Lch): Lch {
+  const light = contrast(rgbOf(lch), INK_LIGHT) > contrast(rgbOf(lch), INK_DARK)
+  return reach(lch, light ? INK_LIGHT : INK_DARK, 4.5, light ? -1 : 1)
+}
+
 /** The primary family for each theme, as hex. @internal Tests check its contrast. */
 export function accentTokens(accent: string): AccentTokens {
   const base = toLch(hexToRgb(accent).rgb)
   const lightBg = hexToRgb(themes.light.background.hex).rgb
   const darkBg = hexToRgb(themes.dark.background.hex).rgb
 
-  const lightPrimary = rgbOf(base)
+  const lightLch = readableFill(base)
+  const lightPrimary = rgbOf(lightLch)
   const lightIndicator = rgbOf(reach(base, lightBg, 4.5, -1))
-  const darkLch = reach(base, darkBg, 3, 1)
+  const darkLch = readableFill(reach(base, darkBg, 3, 1))
   const darkPrimary = rgbOf(darkLch)
 
   return {
     light: {
       primary: hex(lightPrimary),
-      "primary-hover": hex(rgbOf(shift(base, -0.04))),
+      "primary-hover": hex(rgbOf(shift(lightLch, -0.04))),
       "primary-foreground": inkOn(lightPrimary),
       "primary-indicator": hex(lightIndicator),
       "primary-indicator-foreground": inkOn(lightIndicator),

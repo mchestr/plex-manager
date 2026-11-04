@@ -18,6 +18,11 @@ describe.each(["#E4202B", "#F4AA2C", "#1E3A8A", "#FFEB3B", "#000000", "#FFFFFF"]
     expect(contrast(rgb(dark.primary), darkBg)).toBeGreaterThanOrEqual(3)
   })
 
+  it("keeps button text at 4.5:1 on the primary in both themes", () => {
+    expect(contrast(rgb(light.primary), rgb(light["primary-foreground"]))).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(rgb(dark.primary), rgb(dark["primary-foreground"]))).toBeGreaterThanOrEqual(4.5)
+  })
+
   it("picks the more readable ink for every fill", () => {
     for (const [fill, ink] of [
       [light.primary, light["primary-foreground"]],
@@ -29,15 +34,21 @@ describe.each(["#E4202B", "#F4AA2C", "#1E3A8A", "#FFEB3B", "#000000", "#FFFFFF"]
   })
 })
 
-it("keeps the picked colour as the light primary", () => {
-  expect(accentTokens("#E4202B").light.primary).toBe("#e4202b")
-  expect(accentTokens("#E4202B").light["primary-foreground"]).toBe("#fafafa")
+it("keeps a colour that already reads as the light primary", () => {
+  expect(accentTokens("#1E3A8A").light.primary).toBe("#1e3a8a")
+})
+
+it("darkens a mid-tone red just enough for white text", () => {
+  const { light } = accentTokens("#E4202B")
+  expect(light["primary-foreground"]).toBe("#fafafa")
+  expect(light.primary).not.toBe("#e4202b")
+  expect(contrast(rgb(light.primary), rgb("#fafafa"))).toBeLessThan(4.8)
 })
 
 describe("accentStyleSheet", () => {
   it("scopes each theme above the defaults", () => {
     const sheet = accentStyleSheet("#E4202B")
-    expect(sheet).toMatch(/^html:root\{--primary:#e4202b;.*\}html\.dark\{--primary:#[0-9a-f]{6};.*\}$/)
+    expect(sheet).toMatch(/^html:root\{--primary:#[0-9a-f]{6};.*\}html\.dark\{--primary:#[0-9a-f]{6};.*\}$/)
   })
 
   it("writes nothing for no colour or anything but #rrggbb", () => {

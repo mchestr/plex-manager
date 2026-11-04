@@ -12,8 +12,9 @@ Admin > Settings > System holds the server's look, in two sections.
 
 The accent is not used as-is everywhere: `lib/branding/accent.ts` keeps the
 light theme's indicator and focus ring at 4.5:1 on the background and the dark
-theme's primary at 3:1, and picks black or white text on each fill. Rewind
-keeps its own inks.
+theme's primary at 3:1, and picks black or white text on each fill. Where
+neither reaches 4.5:1, it darkens or lightens the fill a few steps until one
+does: `#E4202B` becomes `#E01A28` behind white text. Rewind keeps its own inks.
 
 ## Logos and images
 
