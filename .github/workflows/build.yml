@@ -337,6 +337,26 @@ jobs:
             exit 1
           fi
 
+      # setup-trivy, which trivy-action calls, downloads the binary from
+      # get.trivy.dev, and that host stopped resolving on 2026-11-03
+      # (aquasecurity/setup-trivy#42). Until the action falls back to GitHub,
+      # install the release asset the action would pick (its default version),
+      # check it against the release's checksums, and skip the action's setup.
+      - name: Install Trivy
+        env:
+          TRIVY_VERSION: 0.70.0
+        run: |
+          set -euo pipefail
+          base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
+          tarball="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          cd "$RUNNER_TEMP"
+          curl -fsSL --retry 3 -o "$tarball" "${base}/${tarball}"
+          curl -fsSL --retry 3 -o trivy_checksums.txt "${base}/trivy_${TRIVY_VERSION}_checksums.txt"
+          grep " ${tarball}$" trivy_checksums.txt | sha256sum -c -
+          mkdir -p trivy-bin
+          tar -xzf "$tarball" -C trivy-bin trivy
+          echo "$RUNNER_TEMP/trivy-bin" >> "$GITHUB_PATH"
+
       - name: Scan the image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -344,6 +364,7 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'
+          skip-setup-trivy: true
 
       - name: Container logs
         if: failure()
