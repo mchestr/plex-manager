@@ -59,3 +59,6 @@ dump.rdb
 
 # Claude Code worktrees: full copies of the repository
 /.claude/worktrees/
+
+# Agent plans and specs (superpowers): working files; the plan goes in the PR description
+/docs/superpowers/

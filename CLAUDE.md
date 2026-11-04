@@ -2,6 +2,8 @@
 
 ## Project Overview
 
+`AGENTS.md` is a symlink to this file, so Codex, Cursor and other agents read the same guidance. Edit `CLAUDE.md`.
+
 A Next.js-based Plex management platform that combines server management tools, member onboarding and invites, and Rewind, each member's personal year in review (formerly "Wrapped"). Integrates with Plex, Tautulli and Overseerr, with optional Jellyfin sign-in, Sonarr/Radarr, Stripe subscriptions, Discord and LLM providers.
 
 ## Tech Stack
@@ -914,6 +916,8 @@ The project includes custom slash commands in `.claude/commands/`:
 
 ### Opening Pull Requests
 
+- Before creating or updating a pull request or issue, apply the `pr-writing` skill (`.claude/skills/pr-writing/SKILL.md`) to the title and body. Pull requests, issues, comments and commit messages are public: no private hostnames, IP addresses, local absolute paths, member names or tokens.
+- Plans and specs are working files, not documentation. The superpowers skills write them under `docs/superpowers/`, which is gitignored: put the plan in the PR description, and before merge move anything durable (an invariant, a protocol, a security rule) into the doc for that feature under `docs/`.
 - Security-related fixes (auth, permissions, secrets, encryption, injection, CSP, dependency advisories, anything that would carry `freeze:security`): push the branch, then stop and wait for Mike to ask before opening the PR.
 - Everything else: open the PR as soon as the work is done and checks pass locally; no need to ask.
 
@@ -953,7 +957,7 @@ The project includes custom slash commands in `.claude/commands/`:
 
 ### Agent Skills
 
-`.claude/skills/` holds third-party skills vendored at pinned commits, so every session, including cloud sessions, gets the same reviewed copies, plus four project-authored skills that describe this codebase's Rewind and visual QA conventions. Each loads on its own when you work on files matching its `paths:`, or by name:
+`.claude/skills/` holds third-party skills vendored at pinned commits, so every session, including cloud sessions, gets the same reviewed copies, plus five project-authored skills that describe this codebase's Rewind, visual QA and pull request writing conventions. Each loads on its own when you work on files matching its `paths:`, or by name:
 
 | Skill | Loads for | Use it for |
 |---|---|---|
@@ -968,6 +972,7 @@ The project includes custom slash commands in `.claude/commands/`:
 | `rewind-page` (project) | `components/rewind/pages/**`, `lib/rewind/pages/**`, `lib/rewind/registry.ts`, `lib/rewind/page-meta.ts` | Checklist for adding or changing a Rewind page |
 | `share-card` (project) | `lib/rewind/cards/**`, `app/api/rewind/card/**` | Satori-safe share cards drawn from the share-safe projection |
 | `visual-qa` (project) | `e2e/**` | Running, reading and updating the visual, axe and performance projects |
+| `pr-writing` (project) | `.github/**`, `changelog.d/**`, `docs/**` | The prose pass for pull requests, issues, changelog fragments and docs, and what must stay out of public text |
 
 - Where a skill's advice conflicts with this file (for example SWR instead of TanStack Query, or throwing from Server Actions), this file wins.
 - Shell execution from skills is off (`disableSkillShellExecution` in `.claude/settings.json`).
