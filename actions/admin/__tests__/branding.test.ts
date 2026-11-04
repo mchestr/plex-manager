@@ -11,6 +11,7 @@ import { removeBrandAsset, uploadBrandAsset } from "@/actions/admin/brand-assets
 import { updateAppearance } from "@/actions/admin/branding"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { expireTag } from "@/lib/actions/invalidate"
+import { canDrawIcon } from "@/lib/og/brand-images"
 import { consume } from "@/lib/security/rate-limit"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -19,6 +20,7 @@ jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/actions/invalidate", () => ({ expireTag: jest.fn() }))
 jest.mock("@/lib/security/rate-limit", () => ({ consume: jest.fn(), actionClientIp: jest.fn() }))
+jest.mock("@/lib/og/brand-images", () => ({ canDrawIcon: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({
   ...jest.requireActual("@/lib/security/audit-log"),
   logAuditEvent: jest.fn(),
@@ -31,6 +33,7 @@ beforeEach(() => {
   mockReset(prismaMock)
   jest.mocked(getServerSession).mockResolvedValue({ user: { id: "admin-1", isAdmin: true }, expires: "" })
   jest.mocked(consume).mockResolvedValue({ ok: true })
+  jest.mocked(canDrawIcon).mockResolvedValue(true)
 })
 
 describe("updateAppearance", () => {
@@ -78,6 +81,21 @@ describe("uploadBrandAsset", () => {
     const result = await uploadBrandAsset({ kind: "favicon", file: new File([webp], "f.webp") })
     expect(result).toEqual({ success: false, code: "VALIDATION", error: "Favicon must be a PNG, JPEG or SVG image" })
     expect(prismaMock.brandAsset.upsert).not.toHaveBeenCalled()
+  })
+
+  it("refuses an icon the icon renderer cannot draw", async () => {
+    jest.mocked(canDrawIcon).mockResolvedValue(false)
+    const svg = new File(['<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>'], "icon.svg")
+    const result = await uploadBrandAsset({ kind: "icon", file: svg })
+    expect(result).toEqual({ success: false, code: "VALIDATION", error: "Logo (icon) could not be drawn. Use a PNG, or an SVG with a viewBox" })
+    expect(canDrawIcon).toHaveBeenCalledWith("image/svg+xml", expect.any(Uint8Array))
+    expect(prismaMock.brandAsset.upsert).not.toHaveBeenCalled()
+  })
+
+  it("does not draw-check a wordmark", async () => {
+    const svg = new File(['<svg xmlns="http://www.w3.org/2000/svg"/>'], "w.svg")
+    await expect(uploadBrandAsset({ kind: "wordmark", file: svg })).resolves.toMatchObject({ success: true })
+    expect(canDrawIcon).not.toHaveBeenCalled()
   })
 
   it("refuses an empty file", async () => {

@@ -695,7 +695,7 @@ model Config {
 // The uploaded brand images (Settings, Appearance), one row per kind
 // (lib/branding/assets.ts). Served by /api/branding/[kind]; never secret.
 model BrandAsset {
-  kind        String   @id // "wordmark", "icon", "favicon", "loginBackground"
+  kind        String   @id // "wordmark", "icon", "favicon", "login-background"
   contentType String // Sniffed from the bytes, never taken from the upload
   data        Bytes
   sha256      String // The version in each asset URL (?v=), so browsers can cache it for good

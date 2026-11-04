@@ -112,6 +112,21 @@ function UploadedTile({ src, size }: { src: string; size: number }) {
 }
 
 /**
+ * Whether `next/og` can draw the image as an icon. An SVG without a
+ * `viewBox` or size, say, fails only once the response is read, which
+ * would break every icon and the OG card; the upload checks it first.
+ */
+export async function canDrawIcon(contentType: string, data: Uint8Array): Promise<boolean> {
+  const src = `data:${contentType};base64,${Buffer.from(data).toString("base64")}`
+  try {
+    await new ImageResponse(<UploadedTile src={src} size={32} />, { width: 32, height: 32 }).arrayBuffer()
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * A square app icon at `size` px. `radius` is a fraction of the size; the
  * Apple icon passes 0, because iOS rounds it.
  */

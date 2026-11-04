@@ -121,5 +121,5 @@ export const ACTION_DOCS: Readonly<Record<string, string>> = {
   updateUserAdminStatus: "Update user admin status (admin only, audited).",
   updateWatchlistSyncSettings: "Update user's watchlist sync settings",
   updateWrappedLLMProvider: "Update the Rewind LLM provider (admin only).",
-  uploadBrandAsset: "Upload one brand image (admin only): the wordmark, the icon, the favicon or the login background. The type comes from the file's bytes, never its name; a type the slot does not take is refused. It replaces the slot's image.",
+  uploadBrandAsset: "Upload one brand image (admin only): the wordmark, the icon, the favicon or the login background. The type comes from the file's bytes, never its name; a type the slot does not take is refused, and so is an icon or favicon the icon renderer cannot draw. It replaces the slot's image.",
 }

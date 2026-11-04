@@ -18,6 +18,7 @@ import {
   sniffImageType,
 } from "@/lib/branding/assets"
 import { BRANDING_TAG } from "@/lib/branding/settings"
+import { canDrawIcon } from "@/lib/og/brand-images"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 
@@ -38,7 +39,8 @@ function changed(kind: string) {
 /**
  * Upload one brand image (admin only): the wordmark, the icon, the favicon or
  * the login background. The type comes from the file's bytes, never its name;
- * a type the slot does not take is refused. It replaces the slot's image.
+ * a type the slot does not take is refused, and so is an icon or favicon the
+ * icon renderer cannot draw. It replaces the slot's image.
  */
 export const uploadBrandAsset = adminAction({
   input: uploadSchema,
@@ -49,6 +51,10 @@ export const uploadBrandAsset = adminAction({
     const contentType = sniffImageType(data)
     if (!contentType || !acceptsType(kind, contentType)) {
       return fail("VALIDATION", `${BRAND_ASSETS[kind].label} must be a ${formatList(kind)} image`)
+    }
+    // The icon and favicon are drawn with next/og; one it cannot draw would break every icon
+    if ((kind === "icon" || kind === "favicon") && !(await canDrawIcon(contentType, data))) {
+      return fail("VALIDATION", `${BRAND_ASSETS[kind].label} could not be drawn. Use a PNG, or an SVG with a viewBox`)
     }
     const sha256 = createHash("sha256").update(data).digest("hex")
     const row = { contentType, data, sha256, size: data.byteLength, updatedBy: userId }
