@@ -84,8 +84,24 @@ export function acceptsType(kind: BrandAssetKind, type: BrandImageType): boolean
 const startsWith = (bytes: Uint8Array, signature: readonly number[], offset = 0) =>
   signature.every((byte, i) => bytes[offset + i] === byte)
 
-/** An SVG document: optional BOM, XML declaration, comments or doctype, then `<svg`. */
-const SVG_START = /^\uFEFF?\s*(?:<\?xml[^>]*\?>\s*)?(?:<!--[\s\S]*?-->\s*|<!DOCTYPE[^>]*>\s*)*<svg[\s>]/i
+/**
+ * Whether the text opens an SVG document: optional BOM, XML declaration,
+ * comments and doctype, then `<svg`. A linear scan, not a regex, so a run of
+ * comments cannot make it backtrack.
+ */
+function opensSvg(text: string): boolean {
+  let rest = text.replace(/^\uFEFF/, "").trimStart()
+  const skip = (open: string, close: string) => {
+    if (!rest.startsWith(open)) return false
+    const at = rest.indexOf(close, open.length)
+    if (at === -1) return false
+    rest = rest.slice(at + close.length).trimStart()
+    return true
+  }
+  skip("<?xml", "?>")
+  while (skip("<!--", "-->") || skip("<!DOCTYPE", ">") || skip("<!doctype", ">"));
+  return /^<svg[\s>/]/i.test(rest)
+}
 
 /** The image type the bytes start with, or null for anything else. */
 export function sniffImageType(bytes: Uint8Array): BrandImageType | null {
@@ -93,7 +109,7 @@ export function sniffImageType(bytes: Uint8Array): BrandImageType | null {
   if (startsWith(bytes, [0xff, 0xd8, 0xff])) return "image/jpeg"
   if (startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8)) return "image/webp"
   const head = new TextDecoder("utf-8", { fatal: false }).decode(bytes.subarray(0, 1024))
-  return SVG_START.test(head) ? "image/svg+xml" : null
+  return opensSvg(head) ? "image/svg+xml" : null
 }
 
 /** The asset's URL, versioned by its hash so a browser may keep it for good. */

@@ -40,3 +40,17 @@ describe("the slots", () => {
     expect(brandAssetUrl("icon", "0123456789abcdef0123")).toBe("/api/branding/icon?v=0123456789abcdef")
   })
 })
+
+describe("sniffImageType on hostile text", () => {
+  it("scans a long run of comments in linear time", () => {
+    const hostile = text("<!--" + "--><!--".repeat(50_000))
+    const started = Date.now()
+    expect(sniffImageType(hostile)).toBeNull()
+    expect(Date.now() - started).toBeLessThan(500)
+  })
+
+  it("reads an SVG after a doctype and a self-closing root", () => {
+    expect(sniffImageType(text('<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"><svg/>'))).toBe("image/svg+xml")
+    expect(sniffImageType(text("<svgx>"))).toBeNull()
+  })
+})
