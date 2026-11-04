@@ -30,15 +30,6 @@ const FILTERS = [
       { value: "usedUp", label: "Used up" },
     ],
   },
-  {
-    param: "server",
-    label: "Server",
-    options: [
-      { value: "all", label: "All" },
-      { value: "plex", label: "Plex" },
-      { value: "jellyfin", label: "Jellyfin" },
-    ],
-  },
 ]
 
 const MOBILE_SORTS = [
@@ -81,7 +72,6 @@ export function InvitesTable({ rows, total, all, page, pageSize, sort, createAct
       cell: ({ row }) => <span className="font-mono font-medium tracking-wider">{row.original.code}</span>,
       meta: { card: "title" },
     },
-    { id: "server", header: "Server", cell: ({ row }) => (row.original.serverType === "JELLYFIN" ? "Jellyfin" : "Plex"), meta: { card: "sub" } },
     {
       id: "uses",
       header: "Uses",
@@ -124,7 +114,7 @@ export function InvitesTable({ rows, total, all, page, pageSize, sort, createAct
         icon={SearchX}
         title="No invites match these filters"
         primaryAction={
-          <Button data-testid="admin-invites-clear-filters" variant="secondary" onClick={() => replace({ q: null, status: null, server: null, page: null })}>
+          <Button data-testid="admin-invites-clear-filters" variant="secondary" onClick={() => replace({ q: null, status: null, page: null })}>
             Clear filters
           </Button>
         }

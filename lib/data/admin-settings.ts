@@ -227,7 +227,6 @@ export async function getAdminSettings() {
     wrappedLLMProvider,
     judgeLLMProvider,
     plexServer,
-    jellyfinServer,
     tautulli,
     overseerr,
     sonarr,
@@ -240,7 +239,6 @@ export async function getAdminSettings() {
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" } }),
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "judge" } }),
     getActiveService("plex"),
-    getActiveService("jellyfin"),
     getActiveService("tautulli"),
     getActiveService("overseerr"),
     getActiveService("sonarr"),
@@ -276,7 +274,6 @@ export async function getAdminSettings() {
     // Keep llmProvider for backward compatibility (returns wrapped provider)
     llmProvider: sanitizedWrappedLLMProvider,
     plexServer: omitSecret("PlexServer", plexServer, "token", serverUrl),
-    jellyfinServer: omitSecret("JellyfinServer", jellyfinServer, "apiKey", serverUrl),
     tautulli: omitSecret("Tautulli", tautulli, "apiKey", serverUrl),
     overseerr: omitSecret("Overseerr", overseerr, "apiKey", serverUrl),
     sonarr: omitSecret("Sonarr", sonarr, "apiKey", serverUrl),

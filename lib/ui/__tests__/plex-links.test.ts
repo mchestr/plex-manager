@@ -8,7 +8,7 @@ describe("plex-links", () => {
 
   it("links nothing without a server id, or for a key that is not Plex's", () => {
     expect(plexItemHref(null, "5114")).toBeNull()
-    expect(plexItemHref("abc123", "jellyfin-9f2c")).toBeNull()
+    expect(plexItemHref("abc123", "guid-9f2c")).toBeNull()
     expect(plexItemHref("abc/../evil", "5114")).toBeNull()
   })
 

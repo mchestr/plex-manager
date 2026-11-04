@@ -29,7 +29,6 @@ const mockProvisioning = jest.mocked(getSubscriptionProvisioning)
 const WAITING: SubscriptionProvisioning = {
   status: null,
   plexInviteStatus: null,
-  jellyfinAccessStatus: null,
   services: ['plex'],
   libraryCount: 4,
   memberSince: null,
@@ -118,46 +117,6 @@ describe('ProvisioningChecklist', () => {
     expect(screen.getByTestId('subscribe-success-pending')).toHaveTextContent('We sent a Plex invite to your email')
     await tick(30_000)
     expect(mockProvisioning).not.toHaveBeenCalled()
-  })
-
-  describe('per service (P11.11)', () => {
-    const JELLYFIN_ONLY: SubscriptionProvisioning = { ...PAID, services: ['jellyfin'] }
-
-    it('says the Jellyfin account is enabled, with no Plex line, and stops polling', async () => {
-      render(withQuery(<ProvisioningChecklist initial={{ ...JELLYFIN_ONLY, jellyfinAccessStatus: 'enabled' }} />))
-
-      expect(screen.getByTestId('subscribe-success-jellyfin-enabled')).toHaveTextContent('Your Jellyfin account is enabled')
-      expect(screen.queryByTestId('subscribe-success-provisioning')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('subscribe-success-accepted')).not.toBeInTheDocument()
-      await tick(30_000)
-      expect(mockProvisioning).not.toHaveBeenCalled()
-    })
-
-    it('keeps polling while the Jellyfin account is being turned on', async () => {
-      mockProvisioning.mockResolvedValue({ success: true, data: { ...JELLYFIN_ONLY, jellyfinAccessStatus: 'enabled' } })
-      render(withQuery(<ProvisioningChecklist initial={JELLYFIN_ONLY} />))
-
-      expect(screen.getByTestId('subscribe-success-jellyfin-provisioning')).toBeInTheDocument()
-      await tick(3_000)
-      expect(screen.getByTestId('subscribe-success-jellyfin-enabled')).toBeInTheDocument()
-    })
-
-    it('shows both lines for a member with both services, and waits for both', async () => {
-      mockProvisioning.mockResolvedValue({
-        success: true,
-        data: { ...PAID, services: ['plex', 'jellyfin'], plexInviteStatus: 'pending', jellyfinAccessStatus: 'enabled' },
-      })
-      render(withQuery(<ProvisioningChecklist initial={{ ...PAID, services: ['plex', 'jellyfin'], plexInviteStatus: 'pending' }} />))
-
-      expect(screen.getByTestId('subscribe-success-pending')).toHaveTextContent('We sent a Plex invite to your email')
-      expect(screen.getByTestId('subscribe-success-jellyfin-provisioning')).toBeInTheDocument()
-      await tick(3_000)
-      expect(screen.getByTestId('subscribe-success-pending')).toBeInTheDocument()
-      expect(screen.getByTestId('subscribe-success-jellyfin-enabled')).toBeInTheDocument()
-      const calls = mockProvisioning.mock.calls.length
-      await tick(30_000)
-      expect(mockProvisioning).toHaveBeenCalledTimes(calls)
-    })
   })
 
   it('stops polling at 2 minutes', async () => {

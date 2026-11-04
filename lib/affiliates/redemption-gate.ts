@@ -12,8 +12,7 @@
  * | - | (Plex cannot answer step 4) | `UPSTREAM_UNAVAILABLE` (`plex_unavailable`) |
  *
  * A row with none of these passes: for example a prospect who only signed in
- * to look at /subscribe. A Jellyfin-only row has no Plex id, so it is never
- * found here.
+ * to look at /subscribe.
  *
  * @module lib/affiliates/redemption-gate
  */

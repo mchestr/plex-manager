@@ -28,7 +28,7 @@ describe("the event table", () => {
 
   it("gives each event its own short, sentence-case label", () => {
     const labels = AUDIT_EVENT_NAMES.map(eventLabel)
-    const properNouns = /\b(?:Plex|Jellyfin|Rewinds?|Discord|Stripe|LLM|MCP)\b/g
+    const properNouns = /\b(?:Plex|Rewinds?|Discord|Stripe|LLM|MCP)\b/g
 
     expect(new Set(labels).size).toBe(labels.length)
     for (const label of labels) {
@@ -83,8 +83,6 @@ describe("typesIn", () => {
   it("lists the inactivity sweep's events with access", () => {
     expect(typesIn("access")).toEqual([
       "MEMBER_UNSHARED",
-      "JELLYFIN_ACCESS_DISABLED",
-      "JELLYFIN_ACCESS_ENABLED",
       "INACTIVITY_SWEEP_RUN",
       "INACTIVITY_EXCLUSION_CHANGED",
       "ACTIVITY_SYNC_TRIGGERED",

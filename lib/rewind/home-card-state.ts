@@ -73,7 +73,7 @@ export type RewindCardState =
   | { kind: "generating"; year: number }
   | { kind: "failed"; year: number; code: RewindErrorCode }
   | { kind: "before-season"; year: number; opensOn: Date; lastYear: number | null }
-  | { kind: "not-eligible"; reason: "jellyfin-only" | "joined-late"; firstYear?: number }
+  | { kind: "not-eligible"; reason: "no-plex-history" | "joined-late"; firstYear?: number }
   | { kind: "closed"; year: number; closedOn: Date; ink: InkName; soundtrack: SoundtrackGeometry | null }
   | { kind: "not-started"; year: number }
   | { kind: "unavailable"; year: number; viewerIsAdmin: boolean; code: RewindInfraCode }
@@ -147,7 +147,7 @@ export function resolveCardState(input: CardStateInput): RewindCardState | null 
     if (status.state === "unavailable" && status.errorCode) {
       return { kind: "unavailable", year, viewerIsAdmin: viewer.isAdmin, code: status.errorCode as RewindInfraCode }
     }
-    if (!input.eligibility.eligible) return { kind: "not-eligible", reason: "jellyfin-only" }
+    if (!input.eligibility.eligible) return { kind: "not-eligible", reason: "no-plex-history" }
     if (joinedLate(viewer.joinedAt, year, zone)) return { kind: "not-eligible", reason: "joined-late", firstYear: year + 1 }
   }
 

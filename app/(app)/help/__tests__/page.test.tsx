@@ -23,14 +23,10 @@ jest.mock('next/navigation', () => ({
 
 type Overseerr = Awaited<ReturnType<typeof prismaMock.overseerr.findFirst>>
 type Integration = Awaited<ReturnType<typeof prismaMock.discordIntegration.findUnique>>
-type Jellyfin = Awaited<ReturnType<typeof prismaMock.jellyfinServer.findFirst>>
 
-function setup({ service = 'plex' as 'plex' | 'jellyfin', publicUrl = null as string | null, discord = false } = {}) {
-  prismaMock.user.findUnique.mockResolvedValue(
-    buildUser(service === 'jellyfin' ? { primaryAuthService: 'jellyfin', plexUserId: null, jellyfinUserId: 'jf-1' } : {})
-  )
+function setup({ publicUrl = null as string | null, discord = false } = {}) {
+  prismaMock.user.findUnique.mockResolvedValue(buildUser())
   prismaMock.overseerr.findFirst.mockResolvedValue({ publicUrl } as Overseerr)
-  prismaMock.jellyfinServer.findFirst.mockResolvedValue({ name: 'Basement Jellyfin' } as Jellyfin)
   prismaMock.discordIntegration.findUnique.mockResolvedValue(
     (discord
       ? {
@@ -54,16 +50,6 @@ beforeEach(() => {
 })
 
 describe('HelpPage', () => {
-  it('gives a Jellyfin member Jellyfin steps that never say Plex', async () => {
-    setup({ service: 'jellyfin', publicUrl: 'https://requests.example.com', discord: true })
-
-    const { container } = render(await HelpPage())
-
-    expect(screen.getByTestId('playback-guide')).toHaveTextContent('Jellyfin')
-    expect(container).toHaveTextContent('Basement Jellyfin')
-    expect(container.textContent).not.toMatch(/plex/i)
-  })
-
   it('renders the sections at their anchors, with the support channel and invite', async () => {
     setup({ publicUrl: 'https://requests.example.com', discord: true })
 

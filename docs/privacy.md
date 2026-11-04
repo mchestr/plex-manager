@@ -19,7 +19,7 @@ Removal runs in this order:
 
 1. **Outside the database**, each recorded in the result:
    - an `ACTIVE` or `PAST_DUE` Stripe subscription is cancelled at once (not at period end);
-   - the Plex share of the active server is removed, and the Jellyfin account is disabled. A Jellyfin administrator is never disabled, so removal stops and asks the admin to remove that role in Jellyfin first;
+   - the Plex share of the active server is removed;
    - the Discord linked role is cleared, and the Discord OAuth grant is revoked at Discord (`POST /oauth2/token/revoke`);
    - every session ends, and the member's waiting jobs (watchlist sync, Discord role sync) are removed.
 2. **One database transaction:**
@@ -29,13 +29,13 @@ Removal runs in this order:
    - the `User` row is deleted, and the rest cascades;
    - one `MEMBER_ERASED` audit row is written.
 
-If Stripe, Plex or Jellyfin fails, removal stops before the transaction with a code and nothing in the database changes. Every step is idempotent, so running the removal again finishes it.
+If Stripe or Plex fails, removal stops before the transaction with a code and nothing in the database changes. Every step is idempotent, so running the removal again finishes it.
 
 ### What removal keeps
 
 - **Audit entries.** `AuditLog` rows keep user ids only. `MEMBER_ERASED` holds the member's id, the row counts, the outcome of each external step and the Stripe customer id, so the owner can still find the billing record in Stripe. It holds no name or email.
 - **Stripe's own records.** Stripe keeps the customer, invoices and the cancelled subscription; delete those in the Stripe dashboard if the member asks.
-- **Media server history.** Plex, Jellyfin and Tautulli keep their own accounts and watch history, outside this app. Removal unshares Plex and disables Jellyfin; it does not delete accounts or history there.
+- **Media server history.** Plex and Tautulli keep their own accounts and watch history, outside this app. Removal unshares Plex; it does not delete accounts or history there.
 - **Server logs.** Lines already written to stdout stay until the operator's log rotation removes them.
 - **Used affiliate invites.** An affiliate invite that someone joined with is that member's join record, so it stays. When the affiliate is removed, its `affiliateUserId` is set to null. When the invitee is removed, its `joinedUserId` is set to null, so only the join date is left. Its label is already gone, since it is nulled on use.
 - **Admin ids on server content.** An admin's id on invites, announcements and prompt templates (`createdBy`, `updatedBy`) stays after that admin is removed. It is no longer linked to a person.
@@ -105,7 +105,7 @@ Every other row in the member tables below is kept while the member is, and goes
 - **Invite codes** (`Invite.code`): kept until the invite is deleted. Admins see them to share them, so they are not hashed.
 - **Rewind share tokens**: stored only as SHA-256 hashes (`RewindShare.tokenHash`); the token itself is never stored.
 - **Affiliate blocks**: a blocked Plex account is stored only as an HMAC-SHA256 of its Plex id (`AffiliateBlock.plexIdHash`), keyed by `Config.affiliateBlockKey` (encrypted at rest). The Plex id itself is not stored. A block is kept until an admin unblocks it.
-- **Service keys** (Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr, LLM providers, Stripe, Discord app): kept until an admin replaces them.
+- **Service keys** (Plex, Tautulli, Overseerr, Sonarr, Radarr, LLM providers, Stripe, Discord app): kept until an admin replaces them.
 - Every secret column, and the AI prompt and reply text, is encrypted at rest under the keyring in `ENCRYPTION_KEYS` (the last column of the tables below); production refuses to start without a key ([operations](operations.md#encryption-keys)).
 
 ## Inventory
@@ -116,7 +116,7 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 
 | Model | Personal data | Readers | Removal does | Encrypted at rest |
 |---|---|---|---|---|
-| `User` | name, email, image, `plexUserId`, `jellyfinUserId`, `primaryAuthService`, `timezone`, exemption note, role, `disabledAt`, `accessEndedAt`, `accessRestoredAt`, `inactivityExcluded`; a Tautulli watch-hours snapshot (`watchHours`, `watchHoursLast30Days`, `watchHoursReadAt`); the start of their newest play in Tautulli (`lastSeenAt`, `lastSeenReadAt`); `plexAuthToken` (credential) | M own; A users list and detail; P name and image on a signed share | Deleted. Unshare and the Stripe revoke clear `plexAuthToken` | `plexAuthToken` |
+| `User` | name, email, image, `plexUserId`, `primaryAuthService`, `timezone`, exemption note, role, `disabledAt`, `accessEndedAt`, `accessRestoredAt`, `inactivityExcluded`; a Tautulli watch-hours snapshot (`watchHours`, `watchHoursLast30Days`, `watchHoursReadAt`); the start of their newest play in Tautulli (`lastSeenAt`, `lastSeenReadAt`); `plexAuthToken` (credential) | M own; A users list and detail; P name and image on a signed share | Deleted. Unshare and the Stripe revoke clear `plexAuthToken` | `plexAuthToken` |
 | `PlexWrapped` | the member's Rewind: viewing history facts, LLM copy, summary, archetype, legacy share token | M viewer; A Rewind pages; P published pages of a share | Cascade | No |
 | `RewindGeneration` | run status, error code, `previousData` (the replaced Rewind) | A Rewind history | Cascade | No |
 | `RewindShare` | published page list, card facts, token hash and asset key | M sharing panel; P the public link | Cascade (through `PlexWrapped`); the link returns 404 | Token stored as a SHA-256 hash only |
@@ -143,7 +143,7 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `Invite` | admin invites: codes and library settings, `createdBy` admin id. An affiliate invite also holds the affiliate's user id (`affiliateUserId`), a private label for the affiliate, and the invitee's user id and join date (`joinedUserId`, `joinedAt`) | A Admin → Members → Invites (admin invites only); M the affiliate's own invites | Unused affiliate invites the member made are deleted. A used one stays, and the foreign key sets `affiliateUserId` to null. The invite the member joined with stays, and the foreign key sets `joinedUserId` to null | No |
 | `AffiliateApplication` | one affiliate application: the member's note, watch hours when they applied, whether they shared their Plex email, the admin's decision and reason, end date and cause, invite override and tier | M own; A affiliate pages | Cascade | No |
 | `AffiliateBlock` | an HMAC-SHA256 of a blocked Plex id, no foreign key to `User`, and the admin id that made it | A affiliate pages | Not erased on removal: it holds no Plex id, and it stays until an admin unblocks it | Keyed hash only |
-| `Subscription` | Stripe customer and subscription ids, status, plan, period end, cancel date, Plex invite status, Jellyfin access status, access skip code | M status; A users list, billing tab | Stripe subscription cancelled at once, then cascade; the customer id goes to the audit row | No |
+| `Subscription` | Stripe customer and subscription ids, status, plan, period end, cancel date, Plex invite status, access skip code | M status; A users list, billing tab | Stripe subscription cancelled at once, then cascade; the customer id goes to the audit row | No |
 | `AuditLog` | actor and target user ids, event details (ids and counts, never secrets) | A and Support in **Admin > Audit log** (Support sees who, what and when, never the stored details); the operator | Kept (ids only) | No |
 | `RequestTierRun` | per run, each member's Overseerr display name, watch hours, tier and request quota before and after (no foreign key to `User`) | A **Admin > Automations > Request limits** | Not erased on removal; the daily sync keeps only the newest 30 runs, so a removed member's name leaves within about a month | No |
 | `InactivityRun` | per daily member activity run, the ids of the members the inactivity sweep removed, skipped or failed on, with their last seen dates (no names, no foreign key to `User`) | A **Admin > Automations > Inactive members** | Not erased on removal; the daily run keeps only the newest 30 runs, so a removed member's id leaves within about a month | No |
@@ -156,7 +156,6 @@ These hold configuration, credentials for the services the app talks to, cached 
 |---|---|---|
 | `Setup` | first-run wizard progress | No |
 | `PlexServer` | server URL, owner token, owner's Plex id (`adminPlexUserId`) | `token` |
-| `JellyfinServer` | server URL, API key, admin's Jellyfin id | `apiKey` |
 | `Tautulli` | URL and API key | `apiKey` |
 | `Overseerr` | URL and API key | `apiKey` |
 | `Sonarr` | URL and API key | `apiKey` |

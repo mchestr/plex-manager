@@ -1,6 +1,6 @@
 /**
- * `getInvitePass` (P10.26, UI-36): every state, the Jellyfin rule, the
- * inviter and library names, and one limiter point per request.
+ * `getInvitePass` (P10.26, UI-36): every state, the inviter and library
+ * names, and one limiter point per request.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -8,7 +8,6 @@ import { mockReset } from "jest-mock-extended"
 import { buildInvite, buildUser } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { affiliateInviteRefusal } from "@/lib/affiliates/invite-state"
-import { getJellyfinLibraries } from "@/lib/connections/jellyfin-connection"
 import { serviceFetch } from "@/lib/connections/http"
 import { getInvitePass } from "@/lib/invites/pass"
 import { consume } from "@/lib/security/rate-limit"
@@ -29,7 +28,6 @@ jest.mock("@/lib/connections/plex-config", () => ({
   getActivePlexServerConfig: jest.fn().mockResolvedValue({ name: "Plex", url: "http://plex.local:32400", token: "t" }),
 }))
 jest.mock("@/lib/connections/http", () => ({ serviceFetch: jest.fn(), serviceErrorMessage: () => "Plex failed" }))
-jest.mock("@/lib/connections/jellyfin-connection", () => ({ getJellyfinLibraries: jest.fn() }))
 jest.mock("@/lib/affiliates/invite-state", () => ({ affiliateInviteRefusal: jest.fn() }))
 jest.mock("next/cache", () => ({ unstable_cache: (fn: () => unknown) => fn }))
 // The page test covers what the page draws; here only its lookups count.
@@ -114,17 +112,6 @@ describe("getInvitePass states", () => {
     expect(prismaMock.invite.findUnique).not.toHaveBeenCalled()
   })
 
-  it("names the Jellyfin server for a Jellyfin invite", async () => {
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue({ name: "Northfield Jellyfin" } as never)
-    const pass = await passFor({ serverType: "JELLYFIN" })
-    expect(pass).toMatchObject({ state: "valid", serverType: "JELLYFIN", serverName: "Northfield Jellyfin", monogram: "N" })
-  })
-
-  it("reads a Jellyfin invite as unknown while no Jellyfin server is active", async () => {
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue(null)
-    const pass = await passFor({ serverType: "JELLYFIN" })
-    expect(pass).toMatchObject({ state: "unknown", serverName: "Northfield Plex", inviter: null })
-  })
 })
 
 describe("getInvitePass inviter and libraries", () => {
@@ -154,16 +141,6 @@ describe("getInvitePass inviter and libraries", () => {
     mockServiceFetch.mockResolvedValue({ ok: false, code: "NETWORK" } as never)
     const pass = await passFor({ librarySectionIds: "[1,2]" })
     expect(pass.libraries).toEqual(["2 libraries"])
-  })
-
-  it("resolves Jellyfin library ids to their names", async () => {
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue({ name: "Northfield Jellyfin", url: "http://jf", apiKey: "k" } as never)
-    jest.mocked(getJellyfinLibraries).mockResolvedValue({
-      success: true,
-      data: [{ ItemId: "a".repeat(32), Name: "Films", Locations: [] }],
-    })
-    const pass = await passFor({ serverType: "JELLYFIN", jellyfinLibraryIds: JSON.stringify(["a".repeat(32), "b".repeat(32)]) })
-    expect(pass.libraries).toEqual(["Films", "1 more"])
   })
 })
 

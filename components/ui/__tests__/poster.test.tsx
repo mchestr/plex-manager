@@ -35,9 +35,9 @@ describe("Poster", () => {
   })
 
   it("shows the palette title card without a rating key, and hides decorative art", () => {
-    const { container } = render(<Poster ratingKey={null} title="Jellyfin title" size="xs" decorative />)
+    const { container } = render(<Poster ratingKey={null} title="Untitled art" size="xs" decorative />)
     expect(screen.queryByRole("img")).not.toBeInTheDocument()
     expect(container.querySelector('[data-slot="poster"]')).toHaveAttribute("aria-hidden", "true")
-    expect(container).toHaveTextContent("Jellyfin title")
+    expect(container).toHaveTextContent("Untitled art")
   })
 })

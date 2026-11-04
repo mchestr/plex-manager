@@ -11,7 +11,6 @@ expect.extend(toHaveNoViolations)
 jest.mock('@/lib/plex-auth', () => ({ startPlexSignIn: jest.fn() }))
 // jsdom locks window.location, so the redirect goes through this seam
 jest.mock('@/lib/utils/navigation', () => ({ redirectTo: jest.fn() }))
-jest.mock('next-auth/react', () => ({ signIn: jest.fn() }))
 
 const mockStart = jest.mocked(startPlexSignIn)
 const mockRedirectTo = jest.mocked(redirectTo)
@@ -23,8 +22,6 @@ function renderPass(props: Partial<Parameters<typeof MemberPass>[0]> = {}) {
       <MemberPass
         serverName="Northfield Plex"
         monogram="N"
-        plex
-        jellyfin={false}
         {...props}
       />
     </main>
@@ -43,7 +40,7 @@ afterEach(() => {
 describe('MemberPass', () => {
   it('has one h1 that names the server, and no axe violations', async () => {
     jest.useRealTimers()
-    const { container } = renderPass({ jellyfin: true })
+    const { container } = renderPass()
 
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Sign in to Northfield Plex')
@@ -100,32 +97,6 @@ describe('MemberPass', () => {
 
     expect(screen.getByTestId('sign-in-error')).toHaveTextContent('Could not connect to Plex')
     expect(screen.queryByText(/db:5432/)).not.toBeInTheDocument()
-  })
-
-  it('offers Jellyfin only when it is enabled, revealed in place with aria-expanded', () => {
-    const { unmount } = renderPass()
-    expect(screen.queryByTestId('toggle-jellyfin')).not.toBeInTheDocument()
-    unmount()
-
-    renderPass({ jellyfin: true })
-    const toggle = screen.getByTestId('toggle-jellyfin')
-    expect(toggle).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByTestId('jellyfin-sign-in-form')).not.toBeInTheDocument()
-
-    fireEvent.click(toggle)
-
-    expect(toggle).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByTestId('jellyfin-sign-in-form')).toBeInTheDocument()
-    expect(document.getElementById(toggle.getAttribute('aria-controls') ?? '')).toContainElement(
-      screen.getByTestId('jellyfin-sign-in-form')
-    )
-  })
-
-  it('shows the Jellyfin form as the only option without Plex', () => {
-    renderPass({ plex: false, jellyfin: true })
-
-    expect(screen.queryByTestId('sign-in-button')).not.toBeInTheDocument()
-    expect(screen.getByTestId('jellyfin-sign-in-form')).toBeInTheDocument()
   })
 
   it('says the Plex token is kept (GAP-34)', () => {

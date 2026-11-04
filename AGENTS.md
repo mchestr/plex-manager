@@ -4,13 +4,13 @@
 
 This file is `AGENTS.md`; `CLAUDE.md` is a symlink to it, so Claude Code, Codex, Cursor and other agents read the same guidance. Edit `AGENTS.md`.
 
-A Next.js-based Plex management platform that combines server management tools, member onboarding and invites, and Rewind, each member's personal year in review (formerly "Wrapped"). Integrates with Plex, Tautulli and Overseerr, with optional Jellyfin sign-in, Sonarr/Radarr, Stripe subscriptions, Discord and LLM providers.
+A Next.js-based Plex management platform that combines server management tools, member onboarding and invites, and Rewind, each member's personal year in review (formerly "Wrapped"). Integrates with Plex, Tautulli and Overseerr, with optional Sonarr/Radarr, Stripe subscriptions, Discord and LLM providers.
 
 ## Glossary
 
 - **Member vs admin vs Support** - a member is anyone with a `User` row who signs in to the member app. `User.isAdmin` is the superuser and holds every permission; Support is the one built-in non-admin role (`User.role`), for troubleshooting with the assistant without changing the install (`docs/roles.md`). Say which one you mean; "user" alone is ambiguous.
-- **Service** - the media server a member is shared on: Plex, Jellyfin or both. `getActiveService(kind)` reads the active row for one.
-- **Ids per system** - a member has a different id in each system: `plexUserId` (Plex account), `jellyfinUserId`, the Tautulli `user_id` (history and last seen) and the Overseerr user id (requests, found through `findOverseerrUserId`). Never pass one where another is expected.
+- **Service** - the media server a member is shared on, which is Plex. `getActiveService(kind)` reads the active row for one.
+- **Ids per system** - a member has a different id in each system: `plexUserId` (Plex account), the Tautulli `user_id` (history and last seen) and the Overseerr user id (requests, found through `findOverseerrUserId`). Never pass one where another is expected.
 - **Rewind vs Wrapped** - Rewind is the product name for a member's year in review. "Wrapped" is the old name and survives only in code (`lib/wrapped/`, the `PlexWrapped` model, the `wrapped` LLM purpose, `/wrapped/*` redirects); never use it in copy.
 - **Season** - one year's Rewind run: its switches, open, roll back and close (`docs/rewind.md`).
 - **Invite vs affiliate invite** - an invite is an admin-made code that onboards a new member; an affiliate invite is one a qualifying member makes from their own slots (`docs/affiliate-invites.md`).
@@ -24,7 +24,7 @@ These are decided. Do not write code against them; if a task asks for one, say s
 
 - **No card handling in the app.** Payments go through Stripe-hosted Checkout and the Billing Portal only (`docs/stripe.md`).
 - **No guessed Plex emails.** No path invites a username-derived email to Plex.
-- **Turning a feature off never punishes members.** Disabling Stripe never cancels a subscription or removes Plex or Jellyfin access, and automatic removal never unshares an admin, an exempt user, a non-Stripe-managed user or a `PAST_DUE` subscriber (`evaluateRevokeGuard`).
+- **Turning a feature off never punishes members.** Disabling Stripe never cancels a subscription or removes Plex access, and automatic removal never unshares an admin, an exempt user, a non-Stripe-managed user or a `PAST_DUE` subscriber (`evaluateRevokeGuard`).
 - **Member assistant chats are not reviewed.** The conversation judge never reads member Discord `/assistant` chats (`docs/privacy.md`, "Conversation judge").
 - **Assistant skills are instructions only.** Nothing in a skill runs (`docs/assistant.md`, "Skills").
 - **PostgreSQL only.** SQLite is no longer supported, and no code writes raw SQL.
@@ -36,7 +36,7 @@ These are decided. Do not write code against them; if a task asks for one, say s
 - **Language**: TypeScript 7 (strict mode with exhaustive checks). `tsc` is TypeScript 7 (`@typescript/native`); the `typescript` package is the TypeScript 6 API that typescript-eslint, `next build` and the codemods load
 - **Lint**: ESLint 10 (flat config, `eslint.config.mjs`)
 - **Database**: Prisma v7 + PostgreSQL (SQLite no longer supported)
-- **Auth**: NextAuth.js 4 (Plex PIN sign-in, plus Jellyfin username and password when enabled)
+- **Auth**: NextAuth.js 4 (Plex PIN sign-in)
 - **State**: TanStack Query (React Query) for client-side data fetching
 - **Styling**: Tailwind CSS v4 with utility-first approach; primitives in `components/ui/` are built on Base UI (`@base-ui/react`)
 - **Animation**: Motion (`motion/react`)
@@ -87,7 +87,7 @@ app/                     # Next.js App Router (pages, layouts, routes)
 ├── api/                # API routes (webhooks, health, metrics, admin search, Rewind cards and posters)
 ├── auth/               # Plex sign-in callback, access denied and auth error pages (sign-in itself is on /)
 ├── dev/                # Development-only UI sheet
-├── invite/             # Invite redemption (Plex and Jellyfin)
+├── invite/             # Invite redemption
 ├── onboarding/         # Member onboarding flow
 ├── rewind/s/           # Public Rewind share links (/wrapped/* redirects to /rewind/*)
 ├── setup/              # First-run setup claim and wizard
@@ -116,12 +116,12 @@ lib/                    # Utilities, helpers, business logic
 ├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
 ├── charts/            # Chart slot map (var(--chart-n)) and generated text summaries for ChartCard
 ├── chatbot/           # Admin assistant: tools, executors, prompts and the conversation loop (server-only)
-├── connections/       # External API clients (Plex, Jellyfin, Tautulli, Overseerr, Sonarr, Radarr)
+├── connections/       # External API clients (Plex, Tautulli, Overseerr, Sonarr, Radarr)
 ├── data/              # Server-only admin loaders, each checking assertAdmin() next to its data
 ├── db/                # Encrypted fields and the ?schema= parameter
 ├── design/            # Token mirror of app/globals.css and colour contrast helpers
 ├── discord/           # Discord bot, commands, linking and stat channels (channel-stats/)
-├── invites/           # Invite passes and redemption (Plex and Jellyfin)
+├── invites/           # Invite passes and redemption
 ├── judge/             # Conversation judge: scope, tool log, prompt, verify, persist, spend cap, sweep, ending (docs/privacy.md, "Conversation judge")
 ├── llm/               # LLM facade (generateStructured, chatWithTools), provider registry, model table, usage
 ├── inactivity/        # Last seen from Tautulli and the opt-in inactivity sweep: rules, run, schedule (docs/inactive-members.md)
@@ -227,7 +227,7 @@ export const renameThing = memberAction({
 
 - Never return `error.message`; ESLint bans `error instanceof Error ? error.message : ...` in `actions/` and `app/api/`.
 - Route handlers validate params with `parseRouteParams` / `parseSearchParams` (`@/lib/actions/route`) and the schemas in `@/lib/validations/params`.
-- Every export of a `'use server'` module is an endpoint, so each is built by the helper (or `formAction`), which brands it; `__tests__/security/use-server-exports.test.ts` fails on a raw export. The admin and users action barrels are gone (ESLint bans them): import from the defining module.
+- Every export of a `'use server'` module is an endpoint, so each is built by the helper, which brands it; `__tests__/security/use-server-exports.test.ts` fails on a raw export. The admin and users action barrels are gone (ESLint bans them): import from the defining module.
 - Every action is also an MCP tool (`lib/mcp/action-tools.ts`, docs/mcp.md): a new file under `actions/` goes in `ACTION_MODULES` or `EXCLUDED_MODULES` (`lib/mcp/action-modules.ts`), and `npm run mcp:docs` refreshes the tool descriptions from the actions' JSDoc.
 - Server-side reads are loaders, not actions: `lib/data/*` (`import 'server-only'`) start with `assertAdmin()` from `@/lib/admin`, which throws the `PM_FORBIDDEN` / `PM_UNAUTHENTICATED` digests the error boundaries render. A layout is not an authorisation boundary.
 
@@ -610,9 +610,8 @@ Most routes render `ErrorState` or `StatusScreen` from `components/ui/` instead 
 
 ### Form Handling
 ```typescript
-// A form: renameThingForm = formAction(renameThing, { schema, toInput }) (@/lib/actions/form-action);
-// idleFormState() comes from @/lib/actions/form-state
-const [state, submit] = useActionState(renameThingForm, idleFormState())
+// A form: useActionState over a local adapter that calls the action
+const [state, submit] = useActionState(async (_previous: FormState, form: FormData) => { /* await renameThing(...) */ }, initialState)
 
 <form action={submit}>
   <Input name="name" required />
@@ -836,9 +835,6 @@ if (!stripe) return { error: 'Stripe is not configured' }
 - **Settings form**: the keys are `SecretInput`s in the saved state only
   (`getStripeConfig().saved` carries `{ last4 }`, never a key). Both go only to
   Stripe, so a blank field keeps the stored key and never asks for re-entry.
-- **Jellyfin members**: a Jellyfin-only member checks out without an email;
-  their grant turns the Jellyfin account on and a revoke turns it off (see
-  `docs/stripe.md`, "Plex and Jellyfin Members").
 - **Hosted UI**: no in-app card handling — Checkout (subscribe) and Billing
   Portal (manage/cancel) are Stripe-hosted.
 - **API version**: `apiVersion` is intentionally NOT hard-pinned in
@@ -857,7 +853,7 @@ if (!stripe) return { error: 'Stripe is not configured' }
   for a bad signature; 503 while the queue is unavailable, so Stripe retries).
 - `lib/queue/jobs/stripe.ts` — BullMQ processors (`STRIPE_WEBHOOK`,
   `PLEX_ACCESS_GRANT`, `PLEX_ACCESS_REVOKE`; the access jobs keep their legacy
-  names and act on Plex, Jellyfin or both through `grantServiceAccess` /
+  names and act on Plex through `grantServiceAccess` /
   `revokeServiceAccess` in `lib/members/access-actions.ts`).
 
 **Handled webhook events**: `checkout.session.completed`,
@@ -870,12 +866,11 @@ if (!stripe) return { error: 'Stripe is not configured' }
 recovers a failed event.
 
 **⚠️ CRITICAL — disabled-state safety**: the webhook still verifies signatures and
-records subscription **status** while disabled, but performs **no** Plex or
-Jellyfin grant/revoke side effects (FR-29). Disabling the toggle never cancels
-Stripe subscriptions or removes Plex or Jellyfin access (FR-4). Automatic
+records subscription **status** while disabled, but performs **no** Plex
+grant/revoke side effects (FR-29). Disabling the toggle never cancels
+Stripe subscriptions or removes Plex access (FR-4). Automatic
 removal never unshares an admin, an exempt user, a non-Stripe-managed user, or
-a `PAST_DUE` subscriber, and never disables a Jellyfin administrator (FR-19,
-`evaluateRevokeGuard`). No path invites a username-derived email to Plex.
+a `PAST_DUE` subscriber (FR-19, `evaluateRevokeGuard`).
 
 ## Avoid Over-Engineering
 

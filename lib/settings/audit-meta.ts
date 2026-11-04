@@ -15,7 +15,7 @@
  * | Stripe billing | `stripe`, `stripe.enabled` |
  * | Rewind | `rewind` |
  * | Channel stats, Request limits | `discord.stats`, `request-tiers` |
- * | Sonarr, Radarr, Jellyfin | `sonarr`, `radarr`, `jellyfin`, `jellyfin.login` |
+ * | Sonarr, Radarr | `sonarr`, `radarr` |
  * | Time zone | `appearance`, `timezone` (`SERVER_TIMEZONE_CHANGED`) |
  * | Appearance | `branding`, `branding.assets` |
  *
@@ -45,7 +45,7 @@ const SECTIONS = {
   channelStats: ["discord.stats"],
   requestTiers: ["request-tiers"],
   rewind: ["rewind"],
-  other: ["sonarr", "radarr", "jellyfin", "jellyfin.login"],
+  other: ["sonarr", "radarr"],
   timeZone: ["appearance", "timezone"],
   branding: ["branding", "branding.assets"],
 } as const satisfies Record<string, readonly string[]>

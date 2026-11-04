@@ -54,7 +54,7 @@ describe("AuditTable", () => {
     expect(within(unshared).getByTestId("admin-audit-link-e1")).toHaveAttribute("href", "/admin/audit/e1")
     expect(within(unshared).getByTestId("admin-audit-time-e1-timestamp")).toHaveAttribute("dateTime", "2026-10-30T15:00:00.000Z")
     expect(unshared).toHaveTextContent("Plex access removed")
-    expect(unshared).toHaveTextContent("Plex and Jellyfin access")
+    expect(unshared).toHaveTextContent("Plex access")
     expect(unshared).toHaveTextContent("Share removed")
     expect(within(unshared).getByTestId("admin-audit-actor-e1")).toHaveAccessibleName("Events by Alex Admin")
     expect(within(unshared).getByTestId("admin-audit-member-e1")).toHaveAccessibleName("Events involving Jane Doe")
@@ -93,7 +93,7 @@ describe("AuditTable", () => {
     expect(options.map((option) => option.textContent)).toEqual([
       "All",
       "Members and roles",
-      "Plex and Jellyfin access",
+      "Plex access",
       "Sign-in sessions",
       "Invites",
       "Affiliates",
@@ -111,7 +111,7 @@ describe("AuditTable", () => {
     await user.click(screen.getByTestId("admin-audit-filters-filter-category-option-access"))
 
     expect(currentHref()).toBe("/admin/audit?category=access")
-    expect(await screen.findByTestId("admin-audit-filters-chip-category")).toHaveTextContent("Category: Plex and Jellyfin access")
+    expect(await screen.findByTestId("admin-audit-filters-chip-category")).toHaveTextContent("Category: Plex access")
   })
 
   it("offers every event by label, or only the chosen category's", async () => {

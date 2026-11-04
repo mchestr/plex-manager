@@ -122,7 +122,7 @@ Use this decision tree to select the appropriate tool(s):
 
 **For This App's Own Data (invites, members, background jobs):**
 - Which invites are active, expired, used up or expire soon → get_app_invites
-- A member's Plex/Jellyfin access, subscription state and Rewind failures ("why did user X's Rewind fail?") → get_app_member (by name, email or user id)
+- A member's Plex access, subscription state and Rewind failures ("why did user X's Rewind fail?") → get_app_member (by name, email or user id)
 - Failed background jobs (Rewind generation, Stripe access, watchlist sync) → get_app_failed_jobs
 
 **For Operator Questions and Known Fixes:**

@@ -52,7 +52,6 @@ export const makeAdminUserWithStats = (
   email: 'test@example.com',
   image: 'https://example.com/avatar.jpg',
   plexUserId: 'plex-123',
-  jellyfinUserId: null,
   services: ['plex'],
   primaryService: 'plex',
   isAdmin: false,
@@ -191,7 +190,6 @@ export const makePrismaInviteWithUsages = (overrides: Record<string, unknown> = 
   createdBy: 'admin-1',
   librarySectionIds: null,
   allowDownloads: false,
-  jellyfinLibraryIds: null,
   usages: [
     {
       id: 'usage-1',
@@ -206,8 +204,7 @@ export const makePrismaInviteWithUsages = (overrides: Record<string, unknown> = 
         image: 'https://plex.tv/users/member/avatar',
         plexUserId: 'plex-1',
         plexAuthToken: INVITEE_PLEX_AUTH_TOKEN,
-        jellyfinUserId: null,
-        primaryAuthService: 'plex',
+              primaryAuthService: 'plex',
         isAdmin: false,
         onboardingStatus: null,
         isExempt: true,
@@ -382,35 +379,6 @@ export const makePrismaTautulli = (overrides: any = {}) => ({
 export const makeOverseerrConfig = (overrides: any = {}) => ({
   url: 'https://overseerr.example.com:5055',
   apiKey: 'overseerr-key',
-  ...overrides,
-})
-
-/**
- * Creates a mock Jellyfin server configuration
- * @param overrides - Partial properties to override defaults
- * @returns Jellyfin server config object
- */
-export const makeJellyfinServerConfig = (overrides: any = {}) => ({
-  url: 'https://jellyfin.example.com:8096',
-  apiKey: 'jellyfin-api-key',
-  ...overrides,
-})
-
-/**
- * Creates a mock Prisma Jellyfin server record
- * @param overrides - Partial properties to override defaults
- * @returns Prisma JellyfinServer object
- */
-export const makePrismaJellyfinServer = (overrides: any = {}) => ({
-  id: 'jellyfin-server-1',
-  url: 'https://jellyfin.example.com:8096',
-  apiKey: 'jellyfin-api-key',
-  name: 'Test Jellyfin Server',
-  isActive: true,
-  publicUrl: null,
-  adminUserId: null,
-  createdAt: new Date('2024-01-01T00:00:00Z'),
-  updatedAt: new Date('2024-01-01T00:00:00Z'),
   ...overrides,
 })
 

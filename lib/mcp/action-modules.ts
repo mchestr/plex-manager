@@ -108,7 +108,6 @@ export const EXCLUDED_MODULES: Readonly<Record<string, string>> = {
   "admin/brand-assets": "takes an uploaded image file",
   "announcements-seen": "records what a browser showed",
   appearance: "sets a browser cookie",
-  invite: "public invite redemption",
   "rewind-views": "records what a browser showed",
   "setup-claim": "the first-run claim cookie",
   "setup-plex": "the setup Plex PIN, kept in a browser cookie",

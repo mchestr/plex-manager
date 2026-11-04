@@ -8,8 +8,10 @@
  * TEXT to the `AuthService` enum.
  *
  * The test database is already migrated, so each run first puts the column
- * back to TEXT and drops the enum, seeds a row of every shape, runs the
- * migration and reads the rows, all inside a transaction that is rolled back.
+ * back to TEXT, drops the enum and restores `jellyfinUserId` (which
+ * `remove_jellyfin` later dropped), seeds a row of every shape, runs the
+ * migration and reads the rows with SQL (the client's enum is now `plex`
+ * only), all inside a transaction that is rolled back.
  * Gated by `describePg`; run with `npm run test:integration`.
  */
 
@@ -70,6 +72,7 @@ describePg("primary_auth_service_enum migration", (databaseUrl) => {
         // Back to the column as it was before this migration
         await tx.$executeRawUnsafe(`ALTER TABLE "User" ALTER COLUMN "primaryAuthService" TYPE TEXT`)
         await tx.$executeRawUnsafe(`DROP TYPE "AuthService"`)
+        await tx.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "jellyfinUserId" TEXT`)
         for (const [id, [plex, jellyfin, stored]] of Object.entries(SHAPES)) {
           await tx.$executeRawUnsafe(
             `INSERT INTO "User" (id, "plexUserId", "jellyfinUserId", "primaryAuthService", "updatedAt")
@@ -78,10 +81,9 @@ describePg("primary_auth_service_enum migration", (databaseUrl) => {
         }
         for (const statement of statements()) await tx.$executeRawUnsafe(statement)
 
-        const rows = await tx.user.findMany({
-          where: { id: { startsWith: "p1110-" } },
-          select: { id: true, primaryAuthService: true },
-        })
+        const rows = await tx.$queryRawUnsafe<{ id: string; primaryAuthService: string | null }[]>(
+          `SELECT id, "primaryAuthService"::text AS "primaryAuthService" FROM "User" WHERE id LIKE 'p1110-%'`
+        )
         result = Object.fromEntries(rows.map((row) => [row.id, row.primaryAuthService]))
         const [column] = await tx.$queryRawUnsafe<{ udt_name: string }[]>(
           `SELECT udt_name FROM information_schema.columns WHERE table_name = 'User' AND column_name = 'primaryAuthService'`

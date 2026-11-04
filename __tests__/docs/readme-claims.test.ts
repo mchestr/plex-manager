@@ -25,7 +25,7 @@ describe('README claims', () => {
     },
   )
 
-  it.each(['Rewind', 'Stripe', 'Jellyfin', 'Invites', 'Watchlist sync', 'Assistants'])('the feature list names %s', (feature) => {
+  it.each(['Rewind', 'Stripe', 'Invites', 'Watchlist sync', 'Assistants'])('the feature list names %s', (feature) => {
     expect(features(readme).toLowerCase()).toContain(feature.toLowerCase())
   })
 

@@ -43,7 +43,6 @@ import { unstable_cache } from "next/cache"
 
 import { getDiscordBotStatus } from "@/lib/admin/discord"
 import { getStripeConfig } from "@/lib/data/admin-settings"
-import { testJellyfinConnection } from "@/lib/connections/jellyfin-connection"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { testPlexConnection } from "@/lib/connections/plex-connection"
 import { testRadarrConnection } from "@/lib/connections/radarr"
@@ -55,7 +54,7 @@ import { probeConnection, type Tester } from "@/lib/settings/probe"
 import { CONNECTION_HEALTH_TAG, worstStatus, type HealthCode, type SectionHealth, type SettingsHealth } from "@/lib/settings/connection-status"
 import { discordStatus, type ConnectionStatus } from "@/lib/ui/status"
 
-type ConnectionId = "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "ai"
+type ConnectionId = "plex" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "ai"
 
 interface ConnectionHealthEntry {
   id: ConnectionId
@@ -75,9 +74,8 @@ const SERVICE = { where: { isActive: true }, orderBy: { updatedAt: "desc" }, sel
 
 /** Runs every tester now, without the cache. @internal */
 export async function checkConnections(now: Date = new Date()): Promise<ConnectionHealth> {
-  const [plex, jellyfin, tautulli, overseerr, sonarr, radarr, config, llmProviders] = await Promise.all([
+  const [plex, tautulli, overseerr, sonarr, radarr, config, llmProviders] = await Promise.all([
     prisma.plexServer.findFirst({ ...SERVICE, select: { ...SERVICE.select, token: true } }),
-    prisma.jellyfinServer.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
     prisma.tautulli.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
     prisma.overseerr.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
     prisma.sonarr.findFirst({ ...SERVICE, select: { ...SERVICE.select, apiKey: true } }),
@@ -89,7 +87,6 @@ export async function checkConnections(now: Date = new Date()): Promise<Connecti
 
   const tests: [ConnectionId, string, Tester | null][] = [
     ["plex", "Plex", plex && (() => testPlexConnection({ ...plex, publicUrl: publicUrl(plex) }))],
-    ["jellyfin", "Jellyfin", jellyfin && (() => testJellyfinConnection({ ...jellyfin, publicUrl: publicUrl(jellyfin) }))],
     ["tautulli", "Tautulli", tautulli && (() => testTautulliConnection(tautulli))],
     ["overseerr", "Overseerr", overseerr && (() => testOverseerrConnection(overseerr))],
     ["sonarr", "Sonarr", sonarr && (() => testSonarrConnection({ ...sonarr, publicUrl: publicUrl(sonarr) }))],
@@ -204,7 +201,6 @@ export async function getSettingsHealth(now: Date = new Date()): Promise<Setting
     rewind: await rewindHealth(service("tautulli"), now),
     sonarr: service("sonarr"),
     radarr: service("radarr"),
-    jellyfin: service("jellyfin"),
   }
 }
 

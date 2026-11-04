@@ -98,13 +98,13 @@ describe('UsersTable', () => {
   it("shows each member's services as badges (P11.10)", () => {
     renderTable({
       rows: [
-        member('u-jf', 'Jo Fin', { plexUserId: null, jellyfinUserId: 'jf-1', services: ['jellyfin'], primaryService: 'jellyfin' }),
-        member('u-both', 'Bo Th', { jellyfinUserId: 'jf-2', services: ['plex', 'jellyfin'] }),
+        member('u-plex', 'Pat Lex', { services: ['plex'] }),
+        member('u-none', 'No One', { plexUserId: null, services: [] }),
       ],
     })
 
-    expect(within(screen.getByTestId('admin-users-row-u-jf')).getByTestId('admin-user-service-badge')).toHaveTextContent('Jellyfin')
-    expect(within(screen.getByTestId('admin-users-row-u-both')).getByTestId('admin-user-service-badge')).toHaveTextContent('PlexJellyfin')
+    expect(within(screen.getByTestId('admin-users-row-u-plex')).getByTestId('admin-user-service-badge')).toHaveTextContent('Plex')
+    expect(within(screen.getByTestId('admin-users-row-u-none')).queryByTestId('admin-user-service-badge')).not.toBeInTheDocument()
   })
 
   it('heads the menu with the member and puts Remove Plex access last', async () => {

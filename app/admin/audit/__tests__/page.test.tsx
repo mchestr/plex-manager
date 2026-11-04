@@ -84,7 +84,7 @@ describe("Admin audit log page", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Audit log" })).toBeInTheDocument()
     const row = screen.getByTestId("admin-audit-row-e1")
     expect(row).toHaveTextContent("Plex access removed")
-    expect(row).toHaveTextContent("Plex and Jellyfin access")
+    expect(row).toHaveTextContent("Plex access")
     expect(row).toHaveTextContent("Removed for inactivity, never seen")
     expect(within(row).getByTestId("admin-audit-link-e1")).toHaveAttribute("href", "/admin/audit/e1")
     expect(within(row).getByTestId("admin-audit-actor-e1")).toHaveAttribute("href", "/admin/audit?actor=system")

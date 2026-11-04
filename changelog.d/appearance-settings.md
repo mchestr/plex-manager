@@ -1,6 +1,6 @@
 ### Upgrade notes
 
-- **New migration:** `20270123100000_add_brand_appearance` adds `Config.loginSubtitle`, `Config.accentColor` and the `BrandAsset` table. The image runs it at start.
+- **New migration:** `20270123110000_add_brand_appearance` adds `Config.loginSubtitle`, `Config.accentColor`, `Config.brandAssetVersions` and the `BrandAsset` table. The image runs it at start.
 
 ### Added
 

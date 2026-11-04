@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto"
-
 import { getAccessLevel, type AccessLevel } from "@/lib/access"
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
 import { withMachineIdentifier } from "@/lib/connections/plex-machine-id"
@@ -7,11 +5,9 @@ import { waitForInvitedAccess } from "@/lib/connections/plex-access-wait"
 import { readPin } from "@/lib/connections/plex-pin"
 import { getEnv, usesSecureCookies } from "@/lib/env"
 import { redeemPlexInvite } from "@/lib/invites/plex-redemption"
-import { authenticateJellyfin } from "@/lib/jellyfin-auth"
 import { PLEX_PIN_COOKIE, readPinCookie } from "@/lib/plex-pin-cookie"
 import { prisma } from "@/lib/prisma"
 import { isUniqueEmailConflict } from "@/lib/prisma-errors"
-import { consume, reward } from "@/lib/security/rate-limit"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { readCookie } from "@/lib/security/signed-cookie"
 import { SessionRevokedError } from "@/lib/session-revocation"
@@ -47,24 +43,11 @@ async function readAccessLevel(userId: string): Promise<AccessLevel | undefined>
 }
 
 /**
- * The `auth:jellyfin:user` subject for a submitted username.
- *
- * Jellyfin matches usernames case-insensitively by upper-casing them (.NET
- * `OrdinalIgnoreCase`), so the name is upper-cased before it is lower-cased:
- * "admın" (dotless i) and "ſam" (long s) reach the same accounts as "admin"
- * and "sam" and must share their budget. The hash keeps the Redis key short
- * however long the submitted name is.
- */
-function jellyfinUsernameSubject(username: string): string {
-  return createHash("sha256").update(username.trim().toUpperCase().toLowerCase()).digest("hex")
-}
-
-/**
  * Runs a Plex sign-in's `User` write with the member's Plex email, and once
  * more without it when another row already holds that address (SEC-08).
  *
  * Rows are matched by `plexUserId`, so a row holding the address is someone
- * else's: an old release stored Jellyfin usernames as emails, and a Plex email
+ * else's: an old release stored non-Plex usernames as emails, and a Plex email
  * can go stale after a change on plex.tv. Without the retry the unique email
  * would refuse the sign-in every time. On the retry a new row gets no email and
  * an existing row keeps the one it has.
@@ -267,7 +250,7 @@ export const authOptions: NextAuthOptions = {
                   isAdmin,
                   primaryAuthService: "plex",
                   // The owner set the server up, so member onboarding is done: "Open admin" lands on /admin (UI-03)
-                  ...(isOwner && { onboardingStatus: { plex: true, jellyfin: false } }),
+                  ...(isOwner && { onboardingStatus: { plex: true } }),
                 },
               })
             )
@@ -329,135 +312,6 @@ export const authOptions: NextAuthOptions = {
           if (error instanceof Error && PLEX_SIGN_IN_ERRORS.has(error.message)) {
             throw error
           }
-          return null
-        }
-      },
-    }),
-    CredentialsProvider({
-      id: "jellyfin",
-      name: "Jellyfin",
-      credentials: {
-        username: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) {
-          return null
-        }
-
-        const { username, password } = credentials
-
-        // Per-username limit, checked before Jellyfin sees the attempt, so
-        // password guessing spread over many addresses still stops here. A
-        // correct password refunds its point, so only failures count.
-        const usernameSubject = jellyfinUsernameSubject(username)
-        const limit = await consume("auth:jellyfin:user", usernameSubject)
-        if (!limit.ok) {
-          logger.warn("Jellyfin sign-in rate-limited", { username })
-          throw new Error("RATE_LIMITED")
-        }
-
-        try {
-          // authenticateJellyfin refuses before Jellyfin sees the password
-          // when no server is active or "Allow Jellyfin sign-in" is off
-          // (hiding the button alone would leave this callback open), and
-          // checks the password and the admin status against one read of the
-          // stored server.
-          const authResult = await authenticateJellyfin(username, password)
-
-          if (!authResult.success || !authResult.data) {
-            logger.warn("Jellyfin authentication failed", {
-              username,
-              error: authResult.error,
-            })
-            return null
-          }
-
-          await reward("auth:jellyfin:user", usernameSubject)
-
-          const jellyfinUser = authResult.data
-          // Jellyfin has no server owner, so its administrators stay the
-          // promotion source. Login promotes on "admin" and never demotes: app
-          // admins demote members in the UI, and a failed lookup ("unknown")
-          // keeps the stored role (GAP-26).
-          const isJellyfinAdmin = jellyfinUser.adminStatus === "admin"
-
-          // Match only by Jellyfin user ID. Jellyfin users can rename
-          // themselves to any string, an email address included, so the
-          // username never links to, or is stored as the email of, any row.
-          let dbUser = await prisma.user.findUnique({
-            where: { jellyfinUserId: jellyfinUser.id },
-          })
-
-          if (dbUser?.disabledAt) {
-            logger.warn("auth.disabled", { userId: dbUser.id, provider: "jellyfin" })
-            return null
-          }
-
-          if (!dbUser) {
-            const isAdmin = isJellyfinAdmin
-            dbUser = await prisma.user.create({
-              data: {
-                jellyfinUserId: jellyfinUser.id,
-                name: jellyfinUser.username,
-                isAdmin,
-                primaryAuthService: "jellyfin",
-                onboardingStatus: { plex: false, jellyfin: false },
-              },
-            })
-
-            logger.info("Created new Jellyfin user", {
-              userId: dbUser.id,
-              jellyfinUserId: jellyfinUser.id,
-              username: jellyfinUser.username,
-              isAdmin,
-            })
-
-            // Audit log: New user created
-            if (isAdmin) {
-              logAuditEvent(AuditEventType.USER_CREATED, dbUser.id, {
-                isAdmin: true,
-                jellyfinUserId: jellyfinUser.id,
-                authService: "jellyfin",
-              })
-            }
-          } else {
-            const promotes = isJellyfinAdmin && !dbUser.isAdmin
-
-            // Update existing user; admin status only ever goes up
-            dbUser = await prisma.user.update({
-              where: { id: dbUser.id },
-              data: {
-                name: jellyfinUser.username,
-                ...(promotes && { isAdmin: true }),
-                // Jellyfin signs in only an enabled account, so access is back
-                accessEndedAt: null,
-                ...(dbUser.accessEndedAt && { accessRestoredAt: new Date() }),
-              },
-            })
-
-            if (promotes) {
-              logAuditEvent(AuditEventType.ADMIN_PRIVILEGE_GRANTED, dbUser.id, {
-                targetUserId: dbUser.id,
-                previousAdminStatus: false,
-                newAdminStatus: true,
-                jellyfinUserId: jellyfinUser.id,
-                authService: "jellyfin",
-              })
-            }
-          }
-
-          return {
-            id: dbUser.id,
-            email: dbUser.email,
-            name: dbUser.name,
-            image: dbUser.image,
-            isAdmin: dbUser.isAdmin,
-            role: parseRole(dbUser.role),
-            sessionVersion: dbUser.sessionVersion,
-          }
-        } catch (error) {
-          logger.error("Error authenticating Jellyfin user", error)
           return null
         }
       },

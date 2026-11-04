@@ -88,7 +88,7 @@ test.describe('Admin audit log', () => {
     await page.getByTestId('admin-audit-filters-filter-category').click();
     await page.getByTestId('admin-audit-filters-filter-category-option-access').click();
     await expect(page).toHaveURL(/category=access/);
-    await expect(page.getByTestId('admin-audit-filters-chip-category')).toContainText('Category: Plex and Jellyfin access');
+    await expect(page.getByTestId('admin-audit-filters-chip-category')).toContainText('Category: Plex access');
     await expect(page.getByTestId(rowOf(UNSHARED_ID))).toBeVisible();
     await expect(page.getByTestId(rowOf(SETTINGS_ID))).toHaveCount(0);
   });

@@ -16,7 +16,6 @@ const logger = createLogger("ONBOARDING")
  */
 const OnboardingStatusSchema = z.object({
   plex: z.boolean(),
-  jellyfin: z.boolean(),
 })
 
 /**
@@ -24,17 +23,16 @@ const OnboardingStatusSchema = z.object({
  * used as an object key written to the DB, since the AuthService TypeScript
  * type is erased at runtime.
  */
-const AuthServiceSchema = z.enum(["plex", "jellyfin"])
+const AuthServiceSchema = z.enum(["plex"])
 
 interface OnboardingStatusRecord {
   plex: boolean
-  jellyfin: boolean
 }
 
 /**
  * Whether the signed-in user has completed onboarding for a service.
  *
- * @param input - `{ service }`, the auth service ("plex" or "jellyfin"); when
+ * @param input - `{ service }`, the auth service ("plex"); when
  *   omitted, the member's own service (`primaryService`)
  */
 export const getOnboardingStatus = memberAction({
@@ -47,14 +45,13 @@ export const getOnboardingStatus = memberAction({
         onboardingStatus: true,
         primaryAuthService: true,
         plexUserId: true,
-        jellyfinUserId: true,
       },
     })
 
     const validation = OnboardingStatusSchema.safeParse(user?.onboardingStatus)
     const status: OnboardingStatusRecord = validation.success
       ? validation.data
-      : { plex: false, jellyfin: false }
+      : { plex: false }
 
     // If no service specified, use the member's own service
     const targetService: AuthService = input?.service ?? (user ? primaryService(user) : "plex")
@@ -70,7 +67,7 @@ export const getOnboardingStatus = memberAction({
 /**
  * Mark onboarding as complete for a specific service
  *
- * @param input - `{ service }`, the auth service ("plex" or "jellyfin")
+ * @param input - `{ service }`, the auth service ("plex")
  */
 export const completeOnboarding = memberAction({
   // Validated before it is used as a persisted object key
@@ -85,7 +82,7 @@ export const completeOnboarding = memberAction({
     const validation = OnboardingStatusSchema.safeParse(user?.onboardingStatus)
     const currentStatus: OnboardingStatusRecord = validation.success
       ? validation.data
-      : { plex: false, jellyfin: false }
+      : { plex: false }
 
     await prisma.user.update({
       where: { id: userId },

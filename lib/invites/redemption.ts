@@ -1,7 +1,6 @@
 /**
- * The redemption steps the Plex and Jellyfin invite paths share: the atomic
- * validate-and-use transaction, its conflict retry, and the compensating
- * rollback of a use.
+ * The invite redemption steps: the atomic validate-and-use transaction, its
+ * conflict retry, and the compensating rollback of a use.
  *
  * @module lib/invites/redemption
  */
@@ -38,8 +37,6 @@ interface InviteData {
   // Plex-specific
   librarySectionIds: string | null
   allowDownloads: boolean
-  // Jellyfin-specific
-  jellyfinLibraryIds: string | null
 }
 
 /** Typed error codes a redemption returns, all of them `ActionErrorCode`s. */
@@ -58,7 +55,6 @@ interface AffiliateRefused {
 
 const SERVER_LABELS: Record<ServerType, string> = {
   [ServerType.PLEX]: "Plex",
-  [ServerType.JELLYFIN]: "Jellyfin",
 }
 
 /**
@@ -118,8 +114,8 @@ export async function rollbackInviteUsage(
  * Atomically validate and use an invite within a single transaction.
  * Uses Serializable isolation level to prevent TOCTOU race conditions.
  * This ensures that concurrent requests cannot both pass validation.
- * An invite for another service is rejected before its use is counted, so a
- * Jellyfin code never reaches the Plex share or the invite exemption (SEC-29).
+ * An invite for another service is rejected before its use is counted, so it
+ * never reaches the Plex share or the invite exemption (SEC-29).
  * An affiliate invite must also pass `affiliateInviteRefusal`, read inside the
  * transaction; its use sets the join record (`joinedAt`) and clears its label.
  * The label is cleared when the use is counted, and a rollback does not bring it back.
@@ -194,7 +190,6 @@ export async function validateAndUseInvite(
             expiresAt: updatedInvite.expiresAt,
             librarySectionIds: updatedInvite.librarySectionIds,
             allowDownloads: updatedInvite.allowDownloads,
-            jellyfinLibraryIds: updatedInvite.jellyfinLibraryIds,
           },
         }
       },

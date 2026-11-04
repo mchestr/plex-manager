@@ -16,7 +16,7 @@ import { ServiceSection } from "@/components/admin/settings/sections/service-sec
 import { ServerForm } from "@/components/admin/settings/server-form"
 import type { StoredServer } from "@/hooks/admin/use-server-form"
 
-jest.mock("@/actions/admin/admin-servers", () => ({ updateJellyfinServer: jest.fn(), updateOverseerr: jest.fn(), updatePlexServer: jest.fn(), updateRadarr: jest.fn(), updateSonarr: jest.fn(), updateTautulli: jest.fn() }))
+jest.mock("@/actions/admin/admin-servers", () => ({ updateOverseerr: jest.fn(), updatePlexServer: jest.fn(), updateRadarr: jest.fn(), updateSonarr: jest.fn(), updateTautulli: jest.fn() }))
 jest.mock("@/actions/admin/test-connection", () => ({ testServiceConnection: jest.fn() }))
 
 const mockRefresh = jest.fn()

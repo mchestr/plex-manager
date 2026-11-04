@@ -6,7 +6,7 @@
  * | Category        | Covers                                                                        |
  * |-----------------|-------------------------------------------------------------------------------|
  * | `members`       | Accounts, admin rights, roles, removal and import                             |
- * | `access`        | Plex share removals, Jellyfin access and the inactivity sweep                 |
+ * | `access`        | Plex share removals and the inactivity sweep                                  |
  * | `sessions`      | Every session of a user ended                                                 |
  * | `invites`       | Admin invites and their redemption                                            |
  * | `affiliates`    | Applications, decisions, blocks and affiliate invites                         |
@@ -56,7 +56,7 @@ export type AuditEventName = `${AuditEventType}`
 
 export const CATEGORY_LABELS: Record<AuditCategory, string> = {
   members: "Members and roles",
-  access: "Plex and Jellyfin access",
+  access: "Plex access",
   sessions: "Sign-in sessions",
   invites: "Invites",
   affiliates: "Affiliates",
@@ -88,8 +88,6 @@ const AUDIT_EVENTS: Record<AuditEventName, EventWords> = {
   MEMBERS_IMPORTED: { label: "Members imported from Plex", category: "members" },
 
   MEMBER_UNSHARED: { label: "Plex access removed", category: "access" },
-  JELLYFIN_ACCESS_DISABLED: { label: "Jellyfin access turned off", category: "access" },
-  JELLYFIN_ACCESS_ENABLED: { label: "Jellyfin access turned on", category: "access" },
   INACTIVITY_SWEEP_RUN: { label: "Inactivity sweep ran", category: "access" },
   INACTIVITY_EXCLUSION_CHANGED: { label: "Inactivity exclusion changed", category: "access" },
   ACTIVITY_SYNC_TRIGGERED: { label: "Last seen check started", category: "access" },
@@ -100,7 +98,6 @@ const AUDIT_EVENTS: Record<AuditEventName, EventWords> = {
   INVITE_DELETED: { label: "Invite deleted", category: "invites" },
   INVITE_CONSUMED: { label: "Invite used", category: "invites" },
   INVITE_PLEX_FAILURE: { label: "Invite failed on Plex", category: "invites" },
-  INVITE_JELLYFIN_FAILURE: { label: "Invite failed on Jellyfin", category: "invites" },
   INVITE_ROLLBACK: { label: "Invite use undone", category: "invites" },
   INVITE_ROLLBACK_FAILED: { label: "Invite use not undone", category: "invites" },
   INVITE_TRANSACTION_CONFLICT: { label: "Invite used twice at once", category: "invites" },

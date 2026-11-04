@@ -17,7 +17,6 @@
  * /mystats
  *   │
  *   ├─ not linked ─────────────► ephemeral "link your account" nudge
- *   ├─ Jellyfin only ──────────► ephemeral explicit reason (GAP-25)
  *   ├─ over 5 an hour ─────────► ephemeral "try again in …" (no Tautulli call)
  *   └─ linked ─────────────────► deferReply (ephemeral; a history read is slow,
  *                                 must ack < 3s)
@@ -41,7 +40,6 @@
 import { EmbedBuilder, MessageFlags } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
-import { isJellyfinOnly, JELLYFIN_COPY } from "@/lib/discord/copy"
 import { getMemberYearStats, memberStatsYear } from "@/lib/discord/stats/member-stats"
 import { hoursOf, type MemberYearStats } from "@/lib/discord/stats/year-stats"
 import type { MemberRequestLimits } from "@/lib/request-tiers/member-limits"
@@ -133,11 +131,6 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
 
   const user = await requireLinkedUser(ctx, { action: "see your stats" })
   if (!user) return
-
-  if (isJellyfinOnly(user.services)) {
-    await interaction.reply({ content: JELLYFIN_COPY.mystats, flags: MessageFlags.Ephemeral })
-    return
-  }
 
   // A history read takes up to 20 pages, so it is limited per member (SEC-23)
   const limit = await consume("discord:mystats", user.id)

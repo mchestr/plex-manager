@@ -21,7 +21,6 @@ jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').nav
 jest.mock('@/actions/user-queries', () => ({ getUserActivityTimeline: jest.fn() }))
 jest.mock('@/actions/admin/inactivity', () => ({ setMemberInactivityExcluded: jest.fn() }))
 jest.mock('@/actions/admin/request-tiers', () => ({ setMemberTiersExcluded: jest.fn() }))
-jest.mock('@/actions/admin/member-access', () => ({ setMemberJellyfinAccess: jest.fn() }))
 jest.mock('@/components/admin/users/user-activity-timeline', () => ({ UserActivityTimeline: () => null }))
 jest.mock('@/components/admin/users/detail/request-tier-check', () => ({ RequestTierCheck: () => null }))
 jest.mock('@/components/admin/users/detail/remove-member-dialog', () => ({ RemoveMemberDialog: () => null }))
@@ -35,10 +34,8 @@ function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeader
     name: 'Sam Rivera',
     email: 'sam@example.com',
     plexUserId: 'plex-1',
-    jellyfinUserId: null,
     services: ['plex'],
     primaryService: 'plex',
-    jellyfinStatus: null,
     isAdmin: false,
     role: null,
     isOwner: false,
@@ -90,7 +87,7 @@ describe('OverviewTab, Plex activity', () => {
   })
 
   it('leaves both out for a member without a Plex account', async () => {
-    await renderTab({ plexUserId: null, services: ['jellyfin'], primaryService: 'jellyfin', lastSeenAt: new Date('2026-03-03T20:00:00Z') })
+    await renderTab({ plexUserId: null, services: [], lastSeenAt: new Date('2026-03-03T20:00:00Z') })
 
     expect(screen.queryByText('Last seen on Plex')).not.toBeInTheDocument()
     expect(screen.queryByTestId('admin-user-inactivity-excluded')).not.toBeInTheDocument()
@@ -115,20 +112,16 @@ describe('OverviewTab, Plex activity', () => {
 })
 
 describe('OverviewTab, account facts', () => {
-  it('lists the other service, who invited them, and their Discord link', async () => {
+  it('lists the service, who invited them, and their Discord link', async () => {
     jest.mocked(getUserActivityTimeline).mockResolvedValue({ success: true, data: { items: [], total: 0, nextCursor: null } })
     await renderTab({
-      services: ['plex', 'jellyfin'],
-      jellyfinUserId: 'jf-1',
-      jellyfinStatus: 'enabled',
       invitedBy: { id: 'u-aff', name: 'Ana Affiliate', approved: true },
       discord: { displayName: 'sam#1', discordUserId: 'd-1', linkedAt: new Date('2026-01-05T18:00:00Z'), revokedAt: null },
     })
 
-    expect(screen.getByTestId('admin-user-service')).toHaveTextContent('PlexAlso on Jellyfin')
+    expect(screen.getByTestId('admin-user-service')).toHaveTextContent('Plex')
     expect(screen.getByTestId('admin-user-invited-by-link')).toHaveAttribute('href', '/admin/users/u-aff')
     expect(screen.getByText('Linked Jan 5, 2026, 12:00 PM CST')).toBeInTheDocument()
-    expect(screen.getByTestId('admin-user-jellyfin-id')).toHaveTextContent('jf-1')
     expect(screen.queryByText('Could not load the activity')).not.toBeInTheDocument()
   })
 })

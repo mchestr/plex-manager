@@ -1,7 +1,6 @@
 /**
  * Home's loaders (P10.21): the Plex Web link by the cached machine id with
- * its `{publicUrl}/web` fallback, the Jellyfin tile without the
- * `enabledForLogin` filter, the public-only Requests URL, and the greeting
+ * its `{publicUrl}/web` fallback, the public-only Requests URL, and the greeting
  * by the member's zone.
  */
 
@@ -9,11 +8,11 @@ import { mockReset } from 'jest-mock-extended'
 import { unstable_cache } from 'next/cache'
 
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
-import { buildJellyfinServer, buildPlexServer, buildUser } from '@/__tests__/helpers/factories'
+import { buildPlexServer, buildUser } from '@/__tests__/helpers/factories'
 import { getActiveAnnouncements } from '@/actions/announcements'
 import { getPlexServerIdentity } from '@/lib/connections/plex-connection'
 import { getHelpData, type HelpData } from '@/lib/member/help'
-import { getHomeData, greetingFor, jellyfinLink, plexWebUrl } from '@/lib/member/home-data'
+import { getHomeData, greetingFor, plexWebUrl } from '@/lib/member/home-data'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('next/cache', () => ({ unstable_cache: jest.fn((fn: () => unknown) => fn) }))
@@ -72,23 +71,6 @@ describe('plexWebUrl', () => {
   })
 })
 
-describe('jellyfinLink', () => {
-  it("reads the active row's name and public URL without the enabledForLogin filter", async () => {
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue(buildJellyfinServer({ name: 'Basement Jelly', url: 'http://jellyfin:8096', publicUrl: 'https://jf.example.com' }))
-
-    await expect(jellyfinLink()).resolves.toEqual({ name: 'Basement Jelly', url: 'https://jf.example.com/' })
-    expect(prismaMock.jellyfinServer.findFirst.mock.calls[0][0]?.where).toEqual({ isActive: true })
-  })
-
-  it('uses the internal URL without a public one, and nothing without a row', async () => {
-    prismaMock.jellyfinServer.findFirst.mockResolvedValueOnce(buildJellyfinServer({ name: 'Basement Jelly', url: 'http://jellyfin:8096', publicUrl: null }))
-    await expect(jellyfinLink()).resolves.toEqual({ name: 'Basement Jelly', url: 'http://jellyfin:8096/' })
-
-    prismaMock.jellyfinServer.findFirst.mockResolvedValueOnce(null)
-    await expect(jellyfinLink()).resolves.toBeNull()
-  })
-})
-
 describe('greetingFor', () => {
   // 23:00 UTC is 7 pm in New York and 8 am the next day in Tokyo
   const now = new Date('2026-10-21T23:00:00.000Z')
@@ -143,30 +125,13 @@ describe('getHomeData', () => {
     expect(data.watchlist).toBeNull()
   })
 
-  it("names a Jellyfin member's tile after the Jellyfin server", async () => {
-    prismaMock.user.findUnique.mockResolvedValue(buildUser({ plexUserId: null, jellyfinUserId: 'jf-1', primaryAuthService: 'jellyfin' }))
-    jest.mocked(getHelpData).mockResolvedValue({ ...HELP, service: 'jellyfin' })
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue(buildJellyfinServer({ name: 'Basement Jelly', url: 'http://jellyfin:8096', publicUrl: 'https://jf.example.com' }))
-
-    const data = await getHomeData('user-1', now)
-
-    expect(data.quickLinks.media).toEqual([
-      { service: 'jellyfin', serverName: 'Basement Jelly', url: 'https://jf.example.com/' },
-    ])
-  })
-
-  it('gives a member with both accounts both tiles, their own service first', async () => {
-    prismaMock.user.findUnique.mockResolvedValue(buildUser({ plexUserId: 'plex-1', jellyfinUserId: 'jf-1', primaryAuthService: 'jellyfin' }))
-    jest.mocked(getHelpData).mockResolvedValue({ ...HELP, service: 'jellyfin' })
-    prismaMock.jellyfinServer.findFirst.mockResolvedValue(buildJellyfinServer({ name: 'Basement Jelly', url: 'http://jellyfin:8096', publicUrl: 'https://jf.example.com' }))
+  it('gives the Plex tile, by its Plex Web fallback', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(buildUser())
     prismaMock.plexServer.findFirst.mockResolvedValue(buildPlexServer({ publicUrl: 'https://plex.example.com' }))
     jest.mocked(getPlexServerIdentity).mockResolvedValue({ success: false, error: 'down' })
 
     const data = await getHomeData('user-1', now)
 
-    expect(data.quickLinks.media.map((server) => [server.service, server.url])).toEqual([
-      ['jellyfin', 'https://jf.example.com/'],
-      ['plex', 'https://plex.example.com/web'],
-    ])
+    expect(data.quickLinks.media).toEqual([{ service: 'plex', serverName: 'Northfield Plex', url: 'https://plex.example.com/web' }])
   })
 })

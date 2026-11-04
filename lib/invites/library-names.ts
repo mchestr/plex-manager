@@ -3,10 +3,8 @@ import "server-only"
 import { unstable_cache } from "next/cache"
 import { z } from "zod"
 
-import { getJellyfinLibraries } from "@/lib/connections/jellyfin-connection"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { serviceErrorMessage, serviceFetch } from "@/lib/connections/http"
-import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("invite-libraries")
@@ -41,23 +39,6 @@ const plexSectionNames = unstable_cache(
   { revalidate: SECTION_LISTING_TTL },
 )
 
-/** The active Jellyfin server's virtual folders by id. Throws on failure, so a failure is never cached. */
-const jellyfinLibraryNames = unstable_cache(
-  async (): Promise<Record<string, string>> => {
-    const server = await prisma.jellyfinServer.findFirst({
-      where: { isActive: true },
-      orderBy: { updatedAt: "desc" },
-      select: { url: true, apiKey: true },
-    })
-    if (!server) return {}
-    const result = await getJellyfinLibraries(server)
-    if (!result.success) throw new Error("Jellyfin libraries unavailable")
-    return Object.fromEntries((result.data ?? []).map((library) => [library.ItemId, library.Name]))
-  },
-  ["invite-jellyfin-library-names"],
-  { revalidate: SECTION_LISTING_TTL },
-)
-
 const storedIdsSchema = z.array(z.union([z.string(), z.number()]))
 
 function storedIds(raw: string | null): string[] {
@@ -75,27 +56,22 @@ function countLabel(n: number): string {
 }
 
 /**
- * The names behind an invite's `librarySectionIds` (Plex) or
- * `jellyfinLibraryIds` (Jellyfin), from a cached section listing.
+ * The names behind an invite's `librarySectionIds`, from a cached Plex section
+ * listing.
  *
  * - No stored ids: `["All libraries"]`.
  * - A name the listing does not have, or a listing that fails, falls back to
  *   a count ("2 more", "3 libraries"), never an id.
  */
-export async function inviteLibraryNames(invite: {
-  serverType: "PLEX" | "JELLYFIN"
-  librarySectionIds: string | null
-  jellyfinLibraryIds: string | null
-}): Promise<string[]> {
-  const jellyfin = invite.serverType === "JELLYFIN"
-  const ids = storedIds(jellyfin ? invite.jellyfinLibraryIds : invite.librarySectionIds)
+export async function inviteLibraryNames(invite: { librarySectionIds: string | null }): Promise<string[]> {
+  const ids = storedIds(invite.librarySectionIds)
   if (ids.length === 0) return [ALL_LIBRARIES]
 
   let names: Record<string, string> = {}
   try {
-    names = jellyfin ? await jellyfinLibraryNames() : await plexSectionNames()
+    names = await plexSectionNames()
   } catch (error) {
-    logger.warn("Could not list libraries for an invite", { error, serverType: invite.serverType })
+    logger.warn("Could not list libraries for an invite", { error })
   }
 
   const resolved = ids.flatMap((id) => (names[id] ? [names[id]] : []))

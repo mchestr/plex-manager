@@ -25,7 +25,7 @@ Installing is in [deployment](deployment.md), every variable is in the
 - [Security headers and CSP](#security-headers-and-csp)
 - [Locale](#locale)
 - [Encryption keys](#encryption-keys)
-- [Members, roles and Jellyfin](#members-roles-and-jellyfin)
+- [Members and roles](#members-and-roles)
 
 ## What holds state
 
@@ -285,7 +285,7 @@ These came with the 0.1.0 release (`CHANGELOG.md`). Read them when you upgrade a
 install from a release before it.
 
 - **Upgrading to a release with `TRUSTED_PROXY_HOPS`**: earlier releases keyed rate limits on the leftmost `X-Forwarded-For` entry, which the client controls; the app now reads the entry the outermost trusted proxy wrote. Check `TRUSTED_PROXY_HOPS` against your proxy chain when you upgrade (see `example.env`). Behind a CDN and a proxy, leaving it at `1` keys every visitor by the CDN's edge address, so visitors who share an edge share the sign-in, invite, share-page and poster limits and get false "Too many attempts" errors.
-- **Upgrading to the release that stops email linking**: earlier releases linked a Jellyfin sign-in to any account whose email matched the Jellyfin username, so a Jellyfin user could take over an account, the admin's included, by renaming themselves to its email. The upgrade keeps those links, and the sessions they produced, so every server that allowed Jellyfin sign-in should check them:
+- **Upgrading to the release that stops email linking**: earlier releases linked a Jellyfin sign-in to any account whose email matched the Jellyfin username, so a Jellyfin user could take over an account, the admin's included, by renaming themselves to its email. The upgrade keeps those links, and the sessions they produced, so every server that allowed Jellyfin sign-in should check them, on the database as it is before the upgrade (the release that removes Jellyfin drops the Jellyfin IDs):
   1. Take a database dump before deploying, and store it encrypted. The release runs a migration that clears data and cannot be undone.
   2. Before deploying, list the accounts that hold both a Plex and a Jellyfin ID, and keep the output. Each row is a link an earlier release made by email: either a Jellyfin sign-in onto a Plex account, which the server logs record as "Linked Jellyfin account to existing user" with the Jellyfin username, or a Plex invite redeemed onto a Jellyfin account, which was not logged.
      ```sql
@@ -510,13 +510,11 @@ with the current encryption key. Enter it again."). To recover:
   are entered again in their sections. AI prompt text that cannot be read stays
   unreadable until retention clears it.
 
-## Members, roles and Jellyfin
+## Members and roles
 
 - **Admin roles**: roles set in Admin → Members → Users stick. A sign-in only ever
-  promotes: the Plex server owner is always an admin, and so is a Jellyfin
-  administrator, because Jellyfin has no owner. A sign-in never demotes anyone,
-  so app admins demote members in the UI, and a Jellyfin lookup that fails (a
-  timeout or a server error) keeps the stored role. The Plex server owner and
+  promotes: the Plex server owner is always an admin. A sign-in never demotes
+  anyone, so app admins demote members in the UI. The Plex server owner and
   the last admin cannot be demoted.
 - **Unsharing removes one server's share only**: Unshare in Admin → Members → Users, the
   inactivity sweep (Admin → Automations → Inactive members, see
@@ -530,38 +528,11 @@ with the current encryption key. Enter it again."). To recover:
   demoting an admin, disabling an account (Admin → Members → Users → a user → Disable
   account), removing a member and the Stripe access removal end that user's
   sessions within five minutes, when the
-  session next checks the database. A disabled user cannot sign in with Plex or
-  Jellyfin until an admin enables the account again. Removing a member is in
+  session next checks the database. A disabled user cannot sign in with Plex
+  until an admin enables the account again. Removing a member is in
   [privacy](privacy.md#removing-a-member).
-- **Jellyfin accounts are never linked by email**: a Jellyfin sign-in matches
-  only the Jellyfin user ID, and the Jellyfin username is never stored as an
-  email address, because any Jellyfin user can rename themselves to someone
-  else's address. A new member who signs in with both Plex and Jellyfin gets
-  two separate accounts. A Plex sign-in or Plex invite whose email another
-  account already holds still goes ahead, without storing the email. "Allow
-  Jellyfin sign-in" (the switch in the Jellyfin row of Admin → Settings →
-  Sonarr, Radarr, Jellyfin, which takes effect at once) turns the Jellyfin provider off, not
-  just the button on the sign-in page; members already signed in with Jellyfin
-  stay signed in until their session expires (at most 7 days).
-- **Jellyfin sign-in limits**: the app allows 10 Jellyfin sign-in attempts per
-  15 minutes from one client address and 5 failed attempts per 15 minutes for
-  one username. Jellyfin's own lockout still applies, and the app's limits do
-  not prevent it: by default Jellyfin disables a user after 3 failed sign-ins
-  (5 for administrators), configurable per user as "Failed login tries before
-  user is locked out". Anyone who knows a username can still lock that account
-  through the sign-in page; the app's limits only slow password guessing. An
-  administrator re-enables a locked user in the Jellyfin dashboard.
-- **Jellyfin 12**: the app identifies itself in the `Authorization` header,
-  which Jellyfin 12.0 and later require (they ignore the legacy
-  `X-Emby-Authorization` header unless legacy authorization is turned on), and
-  it retries once with the legacy header only if the server answers 400. Each
-  sign-in's Jellyfin session is logged out straight away, because the app
-  keeps only the Jellyfin user ID; a logout that fails or takes longer than 3
-  seconds is logged as `jellyfin.auth.logout_failed` at warn and leaves that
-  session on the server. Earlier releases left one session per member on the
-  Jellyfin server, listed under the client "Plex Wrapped" and the device ID
-  `plex-wrapped-server` (or your `JELLYFIN_DEVICE_ID`); a Jellyfin
-  administrator can delete them in Dashboard → Devices.
+- **Emails are never shared**: a Plex sign-in or Plex invite whose email
+  another account already holds still goes ahead, without storing the email.
 - **Watchlist sync**: turn it on and set the interval in Admin → Automations →
   Watchlist sync. Each member must also turn it on in the card on their home
   page; nothing syncs while either is off, whoever starts the run. Requests are

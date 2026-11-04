@@ -14,7 +14,7 @@ function NoticeBody({ notice }: { notice: MemberNotice }) {
     case "past-due":
       return <SubscriptionBanners notice="past-due" />
     case "pending-invite":
-      return <SubscriptionBanners notice="pending-invite" jellyfinEnabled={notice.jellyfinEnabled} />
+      return <SubscriptionBanners notice="pending-invite" />
     case "rewind-ready":
       return (
         <Alert

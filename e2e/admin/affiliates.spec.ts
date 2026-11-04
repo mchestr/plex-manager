@@ -28,7 +28,7 @@ test.describe.serial('Admin affiliates', () => {
             ...member,
             plexUserId: `${RUN}-plex-${index}`,
             primaryAuthService: 'plex',
-            onboardingStatus: { plex: true, jellyfin: false },
+            onboardingStatus: { plex: true },
             watchHours: 250,
             watchHoursLast30Days: 20,
             watchHoursReadAt: new Date(),

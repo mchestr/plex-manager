@@ -46,9 +46,9 @@ const PORTAL_RETURN_PATH = "/"
  * 3. Validates `priceId` against {@link getOfferedPrices} so a client cannot
  *    check out against an arbitrary/un-offered price. This also returns an empty
  *    list (→ `{error}`) when Stripe is disabled/unconfigured.
- * 4. Returns `{error}` when the grant would have nothing to act on: no
- *    Jellyfin account, and no Plex account with a stored email (the Plex
- *    grant invites by email), so the payment could never grant access.
+ * 4. Returns `{error}` when the grant would have nothing to act on: no Plex
+ *    account with a stored email (the Plex grant invites by email), so the
+ *    payment could never grant access.
  * 5. Builds the Checkout session, as the member's existing Stripe customer when
  *    they have one, and returns its `url`, or `{error}` when Stripe
  *    is unconfigured or the session has no URL.
@@ -68,7 +68,7 @@ export const startCheckout = memberAction({
     // A second checkout would start a second, separately billed subscription.
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, plexUserId: true, jellyfinUserId: true, subscription: { select: { status: true } } },
+      select: { email: true, plexUserId: true, subscription: { select: { status: true } } },
     })
     const status = user?.subscription?.status
     if (status === "ACTIVE" || status === "PAST_DUE") {
@@ -93,15 +93,15 @@ export const startCheckout = memberAction({
       return fail("VALIDATION", "Invalid plan selected.")
     }
 
-    // The grant turns a Jellyfin account on, or invites a Plex account by email,
-    // so a member with neither would pay and never get access. A Plex sign-in
+    // The grant invites a Plex account by email, so a member without one would
+    // pay and never get access. A Plex sign-in
     // whose email another account already holds stores none (lib/auth.ts,
     // auth.email_conflict).
-    if (!user?.jellyfinUserId && !(user?.plexUserId && user.email)) {
+    if (!(user?.plexUserId && user.email)) {
       logger.warn("Rejected checkout for a user with no service to grant", { userId })
       return fail(
         "CONFLICT",
-        "Your account has no email address for a Plex invite and no Jellyfin account, so a subscription could not give you access. Sign out and sign in with Plex or Jellyfin again; if this message stays, ask the server admin."
+        "Your account has no email address for a Plex invite, so a subscription could not give you access. Sign out and sign in with Plex again; if this message stays, ask the server admin."
       )
     }
 
@@ -185,9 +185,7 @@ export interface SubscriptionProvisioning {
   status: SubscriptionStatus | null
   /** `accepted`, `pending` (accept the invite by email), or null while the grant runs. */
   plexInviteStatus: string | null
-  /** `enabled` once the grant turned the Jellyfin account on, `skipped` when it has none; null while it runs. */
-  jellyfinAccessStatus: string | null
-  /** The services the grant acts on (`memberServices`), Plex first. */
+  /** The services the grant acts on (`memberServices`). */
   services: AuthService[]
   /** How many libraries subscribers get; null means every library. */
   libraryCount: number | null
@@ -197,8 +195,7 @@ export interface SubscriptionProvisioning {
 
 /**
  * The success page's live checklist (UI-40): the caller's own subscription
- * status, Plex invite and Jellyfin account status per linked service, and
- * period, and how many libraries subscribers get. Requires a session; reads only the caller's row.
+ * status, Plex invite status and period, and how many libraries subscribers get. Requires a session; reads only the caller's row.
  */
 export const getSubscriptionProvisioning = memberAction({
   fallbackError: "Could not check your subscription.",
@@ -206,17 +203,16 @@ export const getSubscriptionProvisioning = memberAction({
     const [subscription, config, user] = await Promise.all([
       prisma.subscription.findUnique({
         where: { userId },
-        select: { status: true, plexInviteStatus: true, jellyfinAccessStatus: true, createdAt: true, currentPeriodEnd: true },
+        select: { status: true, plexInviteStatus: true, createdAt: true, currentPeriodEnd: true },
       }),
       prisma.config.findUnique({ where: { id: "config" }, select: { stripeLibrarySectionIds: true } }),
-      prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true, jellyfinUserId: true } }),
+      prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } }),
     ])
     const libraries = parseStripeLibrarySectionIds(config?.stripeLibrarySectionIds)
 
     return ok({
       status: subscription?.status ?? null,
       plexInviteStatus: subscription?.plexInviteStatus ?? null,
-      jellyfinAccessStatus: subscription?.jellyfinAccessStatus ?? null,
       services: user ? memberServices(user) : [],
       libraryCount: libraries.length > 0 ? libraries.length : null,
       memberSince: subscription?.createdAt ?? null,

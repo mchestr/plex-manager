@@ -56,8 +56,7 @@ describe('WatchlistSyncCard', () => {
     expect(getWatchlistSyncSettings).not.toHaveBeenCalled()
   })
 
-  it.each<[string, WatchlistSyncSettings | null, 'plex' | 'jellyfin']>([
-    ['a Jellyfin member', settings('success', null), 'jellyfin'],
+  it.each<[string, WatchlistSyncSettings | null, 'plex']>([
     ['the admin switch off', settings('success', null, { globalSyncEnabled: false }), 'plex'],
     ['no Overseerr', settings('success', null, { hasOverseerr: false }), 'plex'],
     ['no stored Plex token', settings('success', null, { hasPlexToken: false }), 'plex'],

@@ -4,13 +4,12 @@
  * ## Overview
  *
  * A Rewind is built from Tautulli's Plex watch history, so a member without a
- * Plex identity (a Jellyfin-only sign-in) or without a row in Tautulli's user
+ * Plex identity or without a row in Tautulli's user
  * list can never get one. The dashboard card used to offer them a Generate
  * button that always failed and left a failed row behind. The card and
  * `requestRewindGeneration` now ask this module first.
  *
- * Eligibility is keyed on `plexUserId`, never on `primaryAuthService`, so a
- * member who signs in with Jellyfin but has a linked Plex identity is eligible.
+ * Eligibility is keyed on `plexUserId`, never on `primaryAuthService`.
  *
  * ## Process
  *
@@ -150,7 +149,7 @@ export async function checkRewindEligibility(user: {
  *
  * @example
  * ```ts
- * await getRewindEligibility({ id: "jellyfin-member", plexUserId: null })
+ * await getRewindEligibility({ id: "no-plex-member", plexUserId: null })
  * // { eligible: false, reason: "NO_PLEX_IDENTITY" }, without asking Tautulli
  * ```
  */

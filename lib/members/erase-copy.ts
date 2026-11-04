@@ -53,7 +53,6 @@ export function planLines(plan: ErasePlan): string[] {
   const lines: string[] = []
   if (plan.cancelStripe) lines.push("Cancels their Stripe subscription now.")
   if (plan.services.includes("plex")) lines.push("Removes their access to the Plex server.")
-  if (plan.services.includes("jellyfin")) lines.push("Disables their Jellyfin account.")
   if (plan.discordLinked) lines.push("Clears their Discord role and revokes the Discord link.")
   lines.push("Signs them out everywhere.")
   return lines

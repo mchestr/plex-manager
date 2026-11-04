@@ -72,7 +72,7 @@ test.describe('Admin inactive members', () => {
             ...member,
             email: `${member.id}@example.com`,
             primaryAuthService: 'plex',
-            onboardingStatus: { plex: true, jellyfin: false },
+            onboardingStatus: { plex: true },
             createdAt: new Date(Date.now() - 400 * DAY),
           },
         });

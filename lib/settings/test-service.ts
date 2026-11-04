@@ -22,7 +22,6 @@ import "server-only"
 
 import type { z } from "zod"
 
-import { testJellyfinConnection } from "@/lib/connections/jellyfin-connection"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { testPlexConnection } from "@/lib/connections/plex-connection"
 import { testRadarrConnection } from "@/lib/connections/radarr"
@@ -31,14 +30,13 @@ import { testTautulliConnection } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { resolveSecretForOrigin } from "@/lib/security/secret-reuse"
 import { probeConnection, type Probe } from "@/lib/settings/probe"
-import { jellyfinServerSchema } from "@/lib/validations/jellyfin"
 import { overseerrSchema } from "@/lib/validations/overseerr"
 import { plexServerSchema } from "@/lib/validations/plex"
 import { radarrSchema } from "@/lib/validations/radarr"
 import { sonarrSchema } from "@/lib/validations/sonarr"
 import { tautulliSchema } from "@/lib/validations/tautulli"
 
-export const TESTABLE_SERVICES = ["plex", "jellyfin", "tautulli", "overseerr", "sonarr", "radarr"] as const
+export const TESTABLE_SERVICES = ["plex", "tautulli", "overseerr", "sonarr", "radarr"] as const
 type TestableService = (typeof TESTABLE_SERVICES)[number]
 
 export interface ServiceTestInput {
@@ -69,8 +67,6 @@ function storedRow(service: TestableService): Promise<StoredSecret | null> {
   switch (service) {
     case "plex":
       return prisma.plexServer.findFirst({ ...where, select: { url: true, token: true } }).then((row) => row && { url: row.url, secret: row.token })
-    case "jellyfin":
-      return prisma.jellyfinServer.findFirst({ ...where, select: { url: true, apiKey: true } }).then(apiKeyRow)
     case "tautulli":
       return prisma.tautulli.findFirst({ ...where, select: { url: true, apiKey: true } }).then(apiKeyRow)
     case "overseerr":
@@ -101,8 +97,6 @@ function testerFor(service: TestableService, url: string, secret: string): Teste
   switch (service) {
     case "plex":
       return parsed(plexServerSchema, { ...base, token: secret }, (config) => () => testPlexConnection(config))
-    case "jellyfin":
-      return parsed(jellyfinServerSchema, { ...base, apiKey: secret }, (config) => () => testJellyfinConnection(config))
     case "tautulli":
       return parsed(tautulliSchema, { ...base, apiKey: secret }, (config) => () => testTautulliConnection(config))
     case "overseerr":

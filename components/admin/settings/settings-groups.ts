@@ -31,7 +31,7 @@ export const SECTION_HEALTH_KEYS = {
   plex: ["plex"],
   tautulli: ["tautulli"],
   overseerr: ["overseerr"],
-  other: ["sonarr", "radarr", "jellyfin"],
+  other: ["sonarr", "radarr"],
   stripe: ["stripe"],
 } as const satisfies Record<keyof SettingsNavStatuses, readonly (keyof SettingsHealth)[]>
 
@@ -44,7 +44,7 @@ export function settingsNavItems(status: SettingsNavStatuses): SettingsNavItem[]
     { id: "plex", label: "Plex server", group: "connections", status: status.plex },
     { id: "tautulli", label: "Tautulli", group: "connections", status: status.tautulli },
     { id: "overseerr", label: "Overseerr", group: "connections", status: status.overseerr },
-    { id: "other", label: "Sonarr, Radarr, Jellyfin", group: "connections", status: status.other },
+    { id: "other", label: "Sonarr, Radarr", group: "connections", status: status.other },
     { id: "stripe", label: "Stripe billing", group: "billing", status: status.stripe },
     { id: "appearance", label: "Appearance", group: "system" },
     { id: "brand-images", label: "Logos and images", group: "system" },

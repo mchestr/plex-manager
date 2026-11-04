@@ -11,14 +11,6 @@ const LABELS: Record<AuthService, { app: string; path: string[]; quality: string
     auto: "Adjust automatically",
     home: "Home streaming",
   },
-  jellyfin: {
-    app: "Jellyfin app",
-    path: ["Settings", "Playback"],
-    quality: "Internet streaming quality",
-    qualityHint: "Some apps call it Maximum streaming bitrate",
-    auto: "Auto adjust quality",
-    home: "Home network quality",
-  },
 }
 
 /**

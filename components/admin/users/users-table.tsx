@@ -38,7 +38,6 @@ const FILTERS = [
     options: [
       { value: "all", label: "All" },
       { value: "plex", label: "Plex" },
-      { value: "jellyfin", label: "Jellyfin" },
     ],
   },
   {

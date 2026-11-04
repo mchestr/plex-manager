@@ -50,7 +50,7 @@ const TX = asTransactionClient({})
 
 function memberRow(overrides: Record<string, unknown> = {}) {
   return {
-    ...buildUser({ id: 'member-1', plexUserId: 'plex-1', jellyfinUserId: null, isAdmin: false }),
+    ...buildUser({ id: 'member-1', plexUserId: 'plex-1', isAdmin: false }),
     subscription: { status: 'ACTIVE', stripeSubscriptionId: 'sub_1', stripeCustomerId: 'cus_1' },
     discordConnection: { discordUserId: 'discord-1' },
     ...overrides,
@@ -86,7 +86,7 @@ describe('eraseMember', () => {
 
   it('blocks nothing on a dry run or for a member without a Plex id', async () => {
     await eraseMember('member-1', { actorId: 'admin-1', dryRun: true, block: true })
-    prismaMock.user.findUnique.mockResolvedValue(memberRow({ plexUserId: null, jellyfinUserId: 'jf-1' }) as never)
+    prismaMock.user.findUnique.mockResolvedValue(memberRow({ plexUserId: null }) as never)
     await eraseMember('member-1', { actorId: 'admin-1', dryRun: false, block: true })
     expect(blockPlexAccount).not.toHaveBeenCalled()
   })
@@ -102,7 +102,7 @@ describe('eraseMember', () => {
         counts: COUNTS,
         outcome: {
           stripe: 'canceled',
-          access: { plex: 'removed', jellyfin: undefined },
+          access: { plex: 'removed' },
           discord: { linked: true, roleCleared: true, grantRevoked: true },
           jobsRemoved: 1,
         },

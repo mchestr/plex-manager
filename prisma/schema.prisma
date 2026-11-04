@@ -19,11 +19,10 @@ model User {
   image                 String?
   plexUserId            String?                @unique
   plexAuthToken         String? // Plex auth token (stored during login for watchlist API access)
-  jellyfinUserId        String?                @unique // Jellyfin user ID (if user was created via Jellyfin invite)
   primaryAuthService    AuthService? // The service the member joined with; written at invite, sign-in and import (P11.10)
   isAdmin               Boolean                @default(false)
   role                  String? // A built-in non-admin role key (lib/permissions); null = none. An unknown value grants nothing
-  onboardingStatus      Json?                  @default("{\"plex\": false, \"jellyfin\": false}") // Track onboarding completion per service
+  onboardingStatus      Json?                  @default("{\"plex\": false}") // Track onboarding completion per service
   plexWrapped           PlexWrapped[]
   llmUsage              LLMUsage[]
   chatConversations     ChatConversation[]
@@ -70,7 +69,6 @@ model User {
 /// A member's media server (P11.10). `lib/member/service.ts` reads it with the linked identifiers.
 enum AuthService {
   plex
-  jellyfin
 }
 
 // Setup and Configuration models
@@ -105,22 +103,6 @@ model PlexServer {
 
   @@index([isActive])
   @@index([adminPlexUserId])
-}
-
-model JellyfinServer {
-  id              String   @id @default(cuid())
-  name            String
-  url             String // Full URL including protocol, hostname, and port (e.g. http://jellyfin.example.com:8096)
-  publicUrl       String? // Public facing URL (e.g. https://jellyfin.example.com)
-  apiKey          String // Jellyfin API key for admin operations
-  adminUserId     String? // Jellyfin user ID of the admin who configured this server
-  isActive        Boolean  @default(true)
-  enabledForLogin Boolean  @default(true) // "Allow Jellyfin sign-in": when false, Jellyfin sign-in is refused and hidden from the login page
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([isActive])
-  @@index([adminUserId])
 }
 
 model Tautulli {
@@ -843,9 +825,6 @@ model Invite {
   librarySectionIds String? // JSON array of Plex library section IDs to share (null = all libraries)
   allowDownloads    Boolean @default(false) // Allow downloads (Plex allowSync)
 
-  // Jellyfin-specific library access settings
-  jellyfinLibraryIds String? // JSON array of Jellyfin library IDs to grant access (null = all libraries)
-
   usages InviteUsage[]
 
   // Affiliate invites: a member's single-use Plex invite. Admin invites keep the defaults
@@ -980,7 +959,6 @@ enum MediaType {
 
 enum ServerType {
   PLEX
-  JELLYFIN
 }
 
 enum MarkType {
@@ -1136,7 +1114,6 @@ model Subscription {
   cancelAtPeriodEnd    Boolean            @default(false)
   canceledAt           DateTime? // When the subscription was canceled
   plexInviteStatus     String? // Tracks Plex invite lifecycle (e.g. "invited", "accepted")
-  jellyfinAccessStatus String? // The Jellyfin account the grant or revoke left: "enabled", "disabled" or "skipped" (P11.11)
   accessSkipCode       String? // Why the last grant or revoke changed nothing, e.g. "NO_MEMBER_SERVICE"; null after one that acted
   stripeEventAt        DateTime? // `created` of the newest Stripe event applied; older events are skipped (SEC-37)
   createdAt            DateTime           @default(now())

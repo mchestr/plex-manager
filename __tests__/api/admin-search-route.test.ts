@@ -94,11 +94,11 @@ describe('GET /api/admin/search', () => {
     ])
 
     const body = adminSearchResponseSchema.parse(await (await search('q=visual&kind=invites')).json())
-    expect(body.results).toEqual([{ id: 'inv-1', label: 'VISUALOK', sub: 'Plex, 0 of 1 used', href: '/admin/invites/inv-1' }])
+    expect(body.results).toEqual([{ id: 'inv-1', label: 'VISUALOK', sub: '0 of 1 used', href: '/admin/invites/inv-1' }])
 
     const args = prismaMock.invite.findMany.mock.calls[0][0]
     expect(args?.where).toEqual({ kind: 'ADMIN', code: { startsWith: 'visual', mode: 'insensitive' } })
-    expect(args?.select).toEqual({ id: true, code: true, serverType: true, useCount: true, maxUses: true, expiresAt: true })
+    expect(args?.select).toEqual({ id: true, code: true, useCount: true, maxUses: true, expiresAt: true })
   })
 
   it('returns a code, not the error text, when the query fails', async () => {

@@ -61,7 +61,7 @@ describe("checkAffiliateEligibility", () => {
     await expect(approve()).resolves.toMatchObject({ ok: true })
   })
 
-  it("refuses a Jellyfin-only member and a disabled one", async () => {
+  it("refuses a member without a Plex id and a disabled one", async () => {
     prismaMock.user.findUnique.mockResolvedValue(member({ plexUserId: null }))
     await expect(approve()).resolves.toMatchObject({ ok: false, code: "NO_PLEX_ID", message: "This member has no Plex account." })
     prismaMock.user.findUnique.mockResolvedValue(member({ disabledAt: new Date() }))

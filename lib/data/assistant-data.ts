@@ -83,7 +83,6 @@ export async function getAssistantMember(raw: z.input<typeof memberInput>) {
       id: true,
       name: true,
       plexUserId: true,
-      jellyfinUserId: true,
       isAdmin: true,
       isExempt: true,
       exemptNote: true,
@@ -95,7 +94,6 @@ export async function getAssistantMember(raw: z.input<typeof memberInput>) {
           currentPeriodEnd: true,
           cancelAtPeriodEnd: true,
           plexInviteStatus: true,
-          jellyfinAccessStatus: true,
           accessSkipCode: true,
         },
       },
@@ -113,7 +111,7 @@ export async function getAssistantMember(raw: z.input<typeof memberInput>) {
   })
   if (!user) return { found: false as const }
 
-  const { plexUserId, jellyfinUserId, exemptNote, plexWrapped, rewindGenerations, ...rest } = user
+  const { plexUserId, exemptNote, plexWrapped, rewindGenerations, ...rest } = user
   return {
     found: true as const,
     member: {
@@ -121,9 +119,8 @@ export async function getAssistantMember(raw: z.input<typeof memberInput>) {
       exemptNote: redact(exemptNote),
       plexWrapped: plexWrapped.map((wrapped) => ({ ...wrapped, error: redact(wrapped.error) })),
       rewindGenerations: rewindGenerations.map((run) => ({ ...run, error: redact(run.error === null ? null : JSON.stringify(run.error)) })),
-      services: memberServices({ plexUserId, jellyfinUserId }),
+      services: memberServices({ plexUserId }),
       hasPlexAccount: plexUserId !== null,
-      hasJellyfinAccount: jellyfinUserId !== null,
     },
   }
 }

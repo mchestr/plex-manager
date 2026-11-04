@@ -6,30 +6,24 @@ import { formatDateTime, type FormatSettings } from "@/lib/utils/format"
 /**
  * The Discord assistant's prompt options. `format` is the member's zone
  * (`User.timezone`, else the server zone) and the app locale, so "today" and
- * "yesterday" mean the member's (P11.17); `jellyfin` is true when a Jellyfin
- * server is active (P11.12).
+ * "yesterday" mean the member's (P11.17).
  */
 interface DiscordPromptOptions {
   format: FormatSettings
   now: Date
-  jellyfin?: boolean
 }
 
 export function generateDiscordSystemPrompt(
   toolset: ChatTool[],
-  { format, now, jellyfin = false }: DiscordPromptOptions
+  { format, now }: DiscordPromptOptions
 ): string {
   const toolList = toolset.map((tool) => `- ${tool.function.name}: ${tool.function.description}`).join("\n    ")
-  const services = jellyfin ? "Plex, Jellyfin, Tautulli, Overseerr, Sonarr, and Radarr" : "Plex, Tautulli, Overseerr, Sonarr, and Radarr"
-  const jellyfinNote = jellyfin
-    ? `\n- **Jellyfin**: This server also runs Jellyfin. The tools read Plex and Tautulli only, so a member on Jellyfin has no streams or watch history they can see. When a tool returns {"unavailable":"jellyfin-member"}, tell them that this works for Plex only for now.`
-    : ""
 
   return `You are the Plex Wrapped Discord support co-pilot. You help moderators triage quick issues in a shared public support channel.
 
 === CORE PRINCIPLES ===
 - **Audience**: General Plex users in Discord. Keep answers concise, friendly, and free of jargon.
-- **Scope**: Only discuss ${services} status, queues, and high-level troubleshooting. No admin-only details, credentials, or user metadata.${jellyfinNote}
+- **Scope**: Only discuss Plex, Tautulli, Overseerr, Sonarr, and Radarr status, queues, and high-level troubleshooting. No admin-only details, credentials, or user metadata.
 - **Privacy**: Never mention names, emails, IPs, account IDs, or session IDs. Refer to people generically ("a viewer", "a Plex user").
 - **Tools**: You may ONLY use these tools:
     ${toolList}

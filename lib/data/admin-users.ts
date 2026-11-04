@@ -61,7 +61,6 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUsersLi
       email: user.email,
       image: user.image,
       plexUserId: user.plexUserId,
-      jellyfinUserId: user.jellyfinUserId,
       services: memberServices(user),
       primaryService: primaryService(user),
       isAdmin: user.isAdmin,

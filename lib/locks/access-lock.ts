@@ -15,7 +15,7 @@ import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("ACCESS_LOCK")
 
-/** Long enough for a Plex share and a Jellyfin call; renewed while the work runs. */
+/** Long enough for a Plex share; renewed while the work runs. */
 const LEASE_MS = 5 * 60_000
 const RENEW_EVERY_MS = 60_000
 

@@ -20,7 +20,7 @@ export const JOB_TYPES = {
   WATCHLIST_SYNC_USER: "watchlist:sync:user",
   WATCHLIST_SYNC_ALL: "watchlist:sync:all",
   STRIPE_WEBHOOK: "stripe:webhook",
-  // Plex or Jellyfin access (P11.11); the names stay so jobs already queued still run
+  // Plex access (P11.11)
   PLEX_ACCESS_GRANT: "plex:access:grant",
   PLEX_ACCESS_REVOKE: "plex:access:revoke",
   // Discord linked-role metadata (P4.18)
@@ -178,17 +178,15 @@ export interface StripeWebhookPayload {
 
 /**
  * Payload for granting a member access after a successful checkout or a comp
- * grant: a Plex share, a Jellyfin account turned on, or both (P11.11; the
- * Plex name is legacy). Keyed by the app user id; the processor reads the
- * member's linked services at run time.
+ * grant: a Plex share (P11.11). Keyed by the app user id; the processor reads
+ * the member's Plex identity at run time.
  */
 export interface PlexAccessGrantPayload {
   userId: string
 }
 
 /**
- * Payload for removing a member's access after cancellation: the Plex share,
- * the Jellyfin account, or both (P11.11; the Plex name is legacy).
+ * Payload for removing a member's Plex share after cancellation (P11.11).
  */
 export interface PlexAccessRevokePayload {
   userId: string

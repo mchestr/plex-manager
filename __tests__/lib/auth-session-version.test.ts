@@ -39,9 +39,6 @@ jest.mock('@/lib/connections/plex', () => ({
   getPlexUserInfo: jest.fn(),
 }))
 
-jest.mock('@/lib/jellyfin-auth', () => ({
-  authenticateJellyfin: jest.fn(),
-}))
 
 const mockError = jest.fn()
 jest.mock('@/lib/utils/logger', () => ({

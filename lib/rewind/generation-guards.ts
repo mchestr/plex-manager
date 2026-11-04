@@ -16,7 +16,7 @@ import { getActiveService } from "@/lib/data/active-service"
 /**
  * Why a member's Rewind cannot be made, or null when it can. A member without
  * a Plex identity is refused before the configuration is read, so a direct
- * call on a Jellyfin-only server gets the same answer as the card (FR-48).
+ * call gets the same answer as the card (FR-48).
  */
 export async function generationBlocker(user: {
   id: string

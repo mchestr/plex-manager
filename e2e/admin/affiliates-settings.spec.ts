@@ -33,7 +33,7 @@ test.describe.serial('Admin affiliate settings', () => {
         select: { affiliateInvitesEnabled: true, affiliateLibrarySectionIds: true, affiliatePlexMachineId: true },
       });
       await prisma.user.create({
-        data: { id: AFFILIATE_ID, name: 'Aaa Settings Affiliate', plexUserId: `${RUN}-plex`, primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } },
+        data: { id: AFFILIATE_ID, name: 'Aaa Settings Affiliate', plexUserId: `${RUN}-plex`, primaryAuthService: 'plex', onboardingStatus: { plex: true } },
       });
     } finally {
       await prisma.$disconnect();

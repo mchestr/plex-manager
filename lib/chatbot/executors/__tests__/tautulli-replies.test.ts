@@ -491,7 +491,7 @@ describe("get_tautulli_activity", () => {
   })
 
   it("shows a Discord member the same fields of their own stream as before, and nothing that identifies them", async () => {
-    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: "7", jellyfinUserId: null } as never)
+    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: "7" } as never)
     jest.mocked(findTautulliUser).mockResolvedValue({ ok: true, user: { user_id: 7, username: "sam_plex" } })
 
     const scrubbed = JSON.parse(scrubForDiscord("get_tautulli_activity", await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord")))
@@ -507,7 +507,7 @@ describe("get_tautulli_activity", () => {
   })
 
   it.each(["Ana", "Heat", "8", "Severance"])("ignores a search in Discord, so a member always sees their own streams (%s)", async (search) => {
-    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: "7", jellyfinUserId: null } as never)
+    prismaMock.user.findUnique.mockResolvedValue({ plexUserId: "7" } as never)
     jest.mocked(findTautulliUser).mockResolvedValue({ ok: true, user: { user_id: 7, username: "sam_plex" } })
 
     const output = await executeTautulliTool("get_tautulli_activity", { search }, "user-1", "discord")

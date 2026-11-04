@@ -9,8 +9,7 @@
  *    request, so a visit costs one point and one lookup.
  * 2. Parse the code with `inviteCodeSchema`; a code that is not one reads as
  *    `unknown`.
- * 3. Read the row. A missing row, or a Jellyfin invite while no Jellyfin
- *    server is active, reads as `unknown`.
+ * 3. Read the row. A missing row reads as `unknown`.
  * 4. Otherwise the state is `expired` (past `expiresAt`), `used-up`
  *    (`useCount >= maxUses`) or `valid`, with the inviter's name, the library
  *    names and the stub fields. An affiliate invite is `valid` only while
@@ -53,7 +52,6 @@ export const invitePassSelect = {
   cancelledAt: true,
   joinedAt: true,
   librarySectionIds: true,
-  jellyfinLibraryIds: true,
 } as const satisfies Prisma.InviteSelect
 
 function stateOf(invite: { expiresAt: Date | null; useCount: number; maxUses: number }, now: Date): InviteState {
@@ -82,16 +80,6 @@ async function inviterName(userId: string | null): Promise<string | null> {
   if (!userId) return null
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } })
   return inviterDisplayName(user?.name)
-}
-
-/** The active Jellyfin server's name, or null when none is active. */
-async function activeJellyfinName(): Promise<string | null> {
-  const server = await prisma.jellyfinServer.findFirst({
-    where: { isActive: true },
-    orderBy: { updatedAt: "desc" },
-    select: { name: true },
-  })
-  return server?.name ?? null
 }
 
 /**
@@ -123,13 +111,7 @@ type InvitePassSource = Prisma.InviteGetPayload<{ select: typeof invitePassSelec
  * @param brand - `serverName()`, when the caller already read it
  */
 export async function invitePassFor(invite: InvitePassSource, brand?: string): Promise<InvitePassData> {
-  const plexName = brand ?? (await brandServerName())
-  let serverName = plexName
-  if (invite.serverType === "JELLYFIN") {
-    const jellyfinName = await activeJellyfinName()
-    if (!jellyfinName) return unknownPass(invite.code, plexName)
-    serverName = jellyfinName
-  }
+  const serverName = brand ?? (await brandServerName())
 
   const now = new Date()
   const affiliate = invite.kind === "AFFILIATE"

@@ -4,7 +4,7 @@
  *
  * - Members see the owner's server name (`serverName()`), never "Plex Manager".
  * - "Plex Manager" (`productName`) appears only in setup, the admin footer,
- *   `<title>` fallbacks and docs, and names this app to plex.tv and Jellyfin.
+ *   `<title>` fallbacks and docs, and names this app to plex.tv.
  * - The annual recap is "{server name} Rewind {year}" (`rewindName()`).
  *
  * @example
@@ -30,12 +30,9 @@ export const productName = "Plex Manager"
  */
 export const plexProduct = "Plex Manager"
 
-/** The `Client` that Jellyfin records for this app's sign-ins. */
-export const jellyfinClientName = "Plex Manager"
-
 /**
  * The brand members see: `Config.serverName`, else the active Plex server's
- * name, else the active Jellyfin server's, else `productName`. The only
+ * name, else `productName`. The only
  * reader of `Config.serverName`.
  */
 export async function serverName(): Promise<string> {

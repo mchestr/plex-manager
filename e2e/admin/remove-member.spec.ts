@@ -7,7 +7,7 @@ import { createE2EPrismaClient } from '../helpers/prisma';
  * name keeps the destructive button disabled; the right name removes the
  * member, their session ends, and their row is gone from the users list.
  *
- * The member has no Plex or Jellyfin identity, subscription or Discord link,
+ * The member has no Plex identity, subscription or Discord link,
  * so removal makes no call to a media server or Stripe.
  */
 
@@ -18,7 +18,7 @@ test.describe('Admin removes a member', () => {
     const prisma = createE2EPrismaClient();
     try {
       await prisma.user.create({
-        data: { ...MEMBER, primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } },
+        data: { ...MEMBER, primaryAuthService: 'plex', onboardingStatus: { plex: true } },
       });
       await prisma.userMediaMark.create({
         data: { userId: MEMBER.id, mediaType: 'MOVIE', plexRatingKey: 'p1113-1', title: 'Marked', markType: 'FINISHED_WATCHING', markedVia: 'discord' },
@@ -82,7 +82,7 @@ test.describe('Admin removes a member an affiliate invited', () => {
     const prisma = createE2EPrismaClient();
     try {
       for (const member of [INVITER, INVITEE]) {
-        await prisma.user.create({ data: { ...member, primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } } });
+        await prisma.user.create({ data: { ...member, primaryAuthService: 'plex', onboardingStatus: { plex: true } } });
       }
       await prisma.affiliateApplication.create({ data: { userId: INVITER.id, openUserId: INVITER.id, status: 'APPROVED', hoursAtApply: 100 } });
       await prisma.invite.create({

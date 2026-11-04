@@ -109,10 +109,7 @@ describe("rate-limit", () => {
         "discord-link": { points: 5, duration: 300 },
         'setup:claim': { points: 5, duration: 60 },
         "auth:plex": { points: 20, duration: 900 },
-        "auth:jellyfin:ip": { points: 10, duration: 900 },
-        "auth:jellyfin:user": { points: 5, duration: 900 },
         "invite:validate": { points: 20, duration: 900 },
-        "invite:redeem": { points: 10, duration: 900 },
         "plex:pin:create": { points: 30, duration: 600 },
         "plex:pin:poll": { points: 300, duration: 600 },
         "setup:plex:choose": { points: 10, duration: 600 },
@@ -188,10 +185,10 @@ describe("rate-limit", () => {
     it("keeps subjects apart within one limit", async () => {
       const mod = await loadRateLimit()
 
-      await consumeTimes(mod, "auth:jellyfin:user", "alice", 5)
+      await consumeTimes(mod, "discord-link", "alice", 5)
 
-      expect(await mod.consume("auth:jellyfin:user", "alice")).toMatchObject({ ok: false })
-      expect(await mod.consume("auth:jellyfin:user", "bob")).toEqual({ ok: true })
+      expect(await mod.consume("discord-link", "alice")).toMatchObject({ ok: false })
+      expect(await mod.consume("discord-link", "bob")).toEqual({ ok: true })
     })
 
     it("reports whole seconds until the window frees up", async () => {

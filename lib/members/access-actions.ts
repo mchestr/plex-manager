@@ -1,18 +1,13 @@
 /**
- * Granting and removing a member's access on each service they use
- * (`memberServices`, P11.11, GAP-23):
- *
- * | Service  | Grant                                         | Revoke                     |
- * |----------|-----------------------------------------------|----------------------------|
- * | Plex     | invite the member's Plex email, auto-accept   | unshare the active server  |
- * | Jellyfin | turn the account on (`IsDisabled: false`)     | turn the account off       |
+ * Granting and removing a member's Plex access (P11.11, GAP-23): a grant
+ * invites the member's Plex email and auto-accepts it, a revoke unshares the
+ * active server.
  *
  * The Stripe grant and revoke jobs and admin grants call these; member removal
  * (P11.13) calls the revoke before any database change. A Plex invite goes
- * only to the email on a row with a `plexUserId`, which came from plex.tv; a
- * Jellyfin username is never used as an address. A member with no usable
- * identity is skipped with `NO_MEMBER_SERVICE` rather than failing, so the
- * job does not retry forever.
+ * only to the email on a row with a `plexUserId`, which came from plex.tv. A
+ * member with no usable identity is skipped with `NO_MEMBER_SERVICE` rather
+ * than failing, so the job does not retry forever.
  *
  * @module lib/members/access-actions
  */
@@ -21,10 +16,8 @@ import "server-only"
 
 import { unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { acceptPlexInvite, inviteUserToPlexServer } from "@/lib/connections/plex-invitations"
-import { setJellyfinAccountDisabled } from "@/lib/connections/jellyfin-users"
 import { withMachineIdentifier } from "@/lib/connections/plex-machine-id"
 import { checkUserServerAccess } from "@/lib/connections/plex-user-access"
-import { memberServices } from "@/lib/members/service"
 import { prisma } from "@/lib/prisma"
 import { parseStripeLibrarySectionIds } from "@/lib/stripe/config"
 import { createLogger } from "@/lib/utils/logger"
@@ -36,12 +29,11 @@ const logger = createLogger("MEMBER_ACCESS")
 export const NO_MEMBER_SERVICE = "NO_MEMBER_SERVICE"
 
 type PlexGrantStatus = "accepted" | "pending" | "skipped"
-type JellyfinGrantStatus = "enabled" | "skipped"
 
-type GrantAccessFailure = "NO_PLEX_SERVER" | "NO_JELLYFIN_SERVER" | "PLEX_INVITE_FAILED" | "JELLYFIN_UNAVAILABLE"
+type GrantAccessFailure = "NO_PLEX_SERVER" | "PLEX_INVITE_FAILED"
 
 export type GrantAccessResult =
-  | { success: true; plex?: PlexGrantStatus; jellyfin?: JellyfinGrantStatus; skipCode?: typeof NO_MEMBER_SERVICE }
+  | { success: true; plex?: PlexGrantStatus; skipCode?: typeof NO_MEMBER_SERVICE }
   | { success: false; code: GrantAccessFailure }
 
 interface GrantTarget {
@@ -49,7 +41,6 @@ interface GrantTarget {
   email: string | null
   plexUserId: string | null
   plexAuthToken: string | null
-  jellyfinUserId: string | null
 }
 
 type PlexGrant = { status: PlexGrantStatus } | { code: GrantAccessFailure }
@@ -98,91 +89,43 @@ async function grantPlex(user: GrantTarget & { plexUserId: string }): Promise<Pl
 }
 
 /**
- * Gives the member access on every service they have an account on: Jellyfin
- * first, because turning an account on is safe to repeat, then the Plex
- * invite, so a retry after a Plex failure does not invite twice.
+ * Gives the member access on Plex.
  *
- * @param user - The member's identifiers, email and stored Plex token.
- * @returns Each service's outcome, `skipCode` when any had no usable
- *   identity, or a failure code the caller retries on.
+ * @param user - The member's Plex identifier, email and stored Plex token.
+ * @returns The Plex outcome, `skipCode` when there was no usable identity,
+ *   or a failure code the caller retries on.
  */
 export async function grantServiceAccess(user: GrantTarget): Promise<GrantAccessResult> {
-  const services = memberServices(user)
-  if (services.length === 0) {
+  if (!user.plexUserId) {
     logger.warn("access.grant.skipped", { userId: user.id, code: NO_MEMBER_SERVICE })
     return { success: true, skipCode: NO_MEMBER_SERVICE }
   }
 
-  const result: { plex?: PlexGrantStatus; jellyfin?: JellyfinGrantStatus } = {}
-
-  if (user.jellyfinUserId) {
-    const server = await getActiveService("jellyfin")
-    if (!server) return { success: false, code: "NO_JELLYFIN_SERVER" }
-    const enabled = await setJellyfinAccountDisabled(server, user.jellyfinUserId, false)
-    if (!enabled.success) return { success: false, code: "JELLYFIN_UNAVAILABLE" }
-    if (enabled.status === "not_found") {
-      logger.warn("access.grant.skipped", { userId: user.id, service: "jellyfin", reason: "account not found" })
-    }
-    result.jellyfin = enabled.status === "not_found" ? "skipped" : "enabled"
-  }
-
-  if (user.plexUserId) {
-    const plex = await grantPlex({ ...user, plexUserId: user.plexUserId })
-    if ("code" in plex) return { success: false, code: plex.code }
-    result.plex = plex.status
-  }
-
-  return { success: true, ...result, ...(result.plex === "skipped" && { skipCode: NO_MEMBER_SERVICE }) }
+  const plex = await grantPlex({ ...user, plexUserId: user.plexUserId })
+  if ("code" in plex) return { success: false, code: plex.code }
+  return { success: true, plex: plex.status, ...(plex.status === "skipped" && { skipCode: NO_MEMBER_SERVICE }) }
 }
 
-/** What happened on one service; `no_server` means none is configured. */
+/** What happened on Plex; `no_server` means none is configured. */
 type PlexRevokeStatus = "removed" | "already_removed" | "no_server"
-type JellyfinRevokeStatus = "disabled" | "already_disabled" | "not_found" | "no_server"
 
-export type RevokeAccessFailure = "PLEX_AUTH" | "PLEX_UNAVAILABLE" | "JELLYFIN_ADMIN" | "JELLYFIN_UNAVAILABLE"
+export type RevokeAccessFailure = "PLEX_AUTH" | "PLEX_UNAVAILABLE"
 
-export type RevokeAccessResult =
-  | { success: true; plex?: PlexRevokeStatus; jellyfin?: JellyfinRevokeStatus }
-  | { success: false; code: RevokeAccessFailure }
-
-const JELLYFIN_STATUS = { changed: "disabled", unchanged: "already_disabled", not_found: "not_found" } as const
+export type RevokeAccessResult = { success: true; plex?: PlexRevokeStatus } | { success: false; code: RevokeAccessFailure }
 
 /**
- * Unshares the member from Plex and disables their Jellyfin account, for each
- * service they have an identity on. Idempotent: an access already gone
- * reports `already_removed` or `already_disabled`.
+ * Unshares the member from the active Plex server when they have a Plex
+ * identity. Idempotent: an access already gone reports `already_removed`.
  *
  * @param user - The member's identifiers.
  */
-export async function revokeServiceAccess(user: {
-  plexUserId: string | null
-  jellyfinUserId: string | null
-}): Promise<RevokeAccessResult> {
-  const result: { plex?: PlexRevokeStatus; jellyfin?: JellyfinRevokeStatus } = {}
-  const services = memberServices(user)
+export async function revokeServiceAccess(user: { plexUserId: string | null }): Promise<RevokeAccessResult> {
+  if (!user.plexUserId) return { success: true }
 
-  if (services.includes("plex") && user.plexUserId) {
-    const server = await getActiveService("plex")
-    if (!server) {
-      result.plex = "no_server"
-    } else {
-      const { url, token, machineIdentifier } = await withMachineIdentifier(server)
-      const unshared = await unshareUserFromPlexServer({ url, token, machineIdentifier }, user.plexUserId)
-      if (!unshared.success) return { success: false, code: unshared.code }
-      result.plex = unshared.status
-    }
-  }
-
-  if (services.includes("jellyfin") && user.jellyfinUserId) {
-    const server = await getActiveService("jellyfin")
-    if (!server) {
-      result.jellyfin = "no_server"
-    } else {
-      const disabled = await setJellyfinAccountDisabled(server, user.jellyfinUserId, true)
-      if (!disabled.success) return { success: false, code: disabled.code }
-      result.jellyfin = JELLYFIN_STATUS[disabled.status]
-    }
-  }
-
-  return { success: true, ...result }
+  const server = await getActiveService("plex")
+  if (!server) return { success: true, plex: "no_server" }
+  const { url, token, machineIdentifier } = await withMachineIdentifier(server)
+  const unshared = await unshareUserFromPlexServer({ url, token, machineIdentifier }, user.plexUserId)
+  if (!unshared.success) return { success: false, code: unshared.code }
+  return { success: true, plex: unshared.status }
 }

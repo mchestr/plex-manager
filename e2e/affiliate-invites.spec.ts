@@ -62,7 +62,7 @@ const member = (id: string, extra: Partial<Prisma.UserUncheckedCreateInput> = {}
   name: id,
   email: `${id}@example.com`,
   primaryAuthService: 'plex',
-  onboardingStatus: { plex: true, jellyfin: false },
+  onboardingStatus: { plex: true },
   ...extra,
 });
 

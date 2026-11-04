@@ -55,7 +55,7 @@ describe("RewindCard", () => {
       "Your Rewind arrives on December 1",
       "Everything you watch until November 30 counts.",
     ],
-    [{ kind: "not-eligible", reason: "jellyfin-only" }, "Rewind needs Plex watch history", "This server has none for your account."],
+    [{ kind: "not-eligible", reason: "no-plex-history" }, "Rewind needs Plex watch history", "This server has none for your account."],
     [{ kind: "not-eligible", reason: "joined-late", firstYear: 2027 }, "Your first Rewind arrives next year", "Rewind needs a few months of watch history."],
     [
       { kind: "closed", year: 2026, closedOn: new Date("2027-02-01T06:00:00Z"), ink: "forest", soundtrack: null },

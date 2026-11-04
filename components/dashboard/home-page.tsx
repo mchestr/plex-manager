@@ -80,7 +80,7 @@ export async function HomePage({ userId, isAdmin }: HomePageProps) {
               </div>
             )}
             <div className="order-7 lg:order-none">
-              <HelpCard service={data.service} supportChannelUrl={data.supportChannelUrl} />
+              <HelpCard supportChannelUrl={data.supportChannelUrl} />
             </div>
           </div>
         </div>

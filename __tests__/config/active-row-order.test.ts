@@ -15,7 +15,7 @@ import path from 'path'
 const ROOT = path.resolve(__dirname, '../..')
 const DIRS = ['app', 'actions', 'components', 'evals', 'hooks', 'lib', 'scripts']
 const SKIP = new Set(['__tests__', 'generated', 'node_modules', 'dist'])
-const CALL = /\.(plexServer|jellyfinServer|tautulli|overseerr|sonarr|radarr)\s*\.\s*findFirst(?:OrThrow)?\s*\(/g
+const CALL = /\.(plexServer|tautulli|overseerr|sonarr|radarr)\s*\.\s*findFirst(?:OrThrow)?\s*\(/g
 const MARKER = 'active-row-order: unordered'
 
 function sourceFiles(dir: string): string[] {

@@ -17,7 +17,6 @@ import { type CreatedInvite, CreateInviteForm } from "./create-invite-form"
 
 interface CreateInviteDialogProps {
   plexLibraries: Promise<LibraryListing>
-  jellyfinLibraries: Promise<LibraryListing>
   /** Opens from `?create=1`, the command menu's Create invite (P10.16). Set it on one trigger per page. */
   openFromParam?: boolean
   /** The trigger's test id. */
@@ -29,7 +28,7 @@ interface CreateInviteDialogProps {
  * the new code with Copy link; the list refreshes through the action's
  * `revalidatePath`.
  */
-export function CreateInviteDialog({ plexLibraries, jellyfinLibraries, openFromParam = false, ...props }: CreateInviteDialogProps) {
+export function CreateInviteDialog({ plexLibraries, openFromParam = false, ...props }: CreateInviteDialogProps) {
   const [open, setOpen] = useState(false)
   const [created, setCreated] = useState<CreatedInvite | null>(null)
 
@@ -54,7 +53,7 @@ export function CreateInviteDialog({ plexLibraries, jellyfinLibraries, openFromP
             <CreatedInviteView invite={created} />
           ) : (
             <Suspense fallback={<FormSkeleton />}>
-              <CreateInviteForm plexLibraries={plexLibraries} jellyfinLibraries={jellyfinLibraries} onCreated={setCreated} />
+              <CreateInviteForm plexLibraries={plexLibraries} onCreated={setCreated} />
             </Suspense>
           )}
         </DialogContent>

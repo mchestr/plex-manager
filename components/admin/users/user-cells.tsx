@@ -58,9 +58,9 @@ export function RoleCell({ user }: { user: User }) {
   return <StatusBadge domain="role" value={user.isOwner ? "owner" : user.isAdmin ? "admin" : (user.role ?? "user")} />
 }
 
-const SERVICE_LABEL = { plex: "Plex", jellyfin: "Jellyfin" } as const
+const SERVICE_LABEL = { plex: "Plex" } as const
 
-/** One neutral badge per linked media server (P11.10), or "None" for a row with neither. */
+/** One neutral badge per linked media server (P11.10), or "None" for a row without one. */
 export function ServiceCell({ user }: { user: User }) {
   if (user.services.length === 0) return <span className="text-muted-foreground">None</span>
   return (

@@ -17,15 +17,6 @@ const STEPS: Record<AuthService, { app: string; steps: string[] }> = {
       "Turn off Adjust Automatically.",
     ],
   },
-  jellyfin: {
-    app: "Jellyfin",
-    steps: [
-      "Open Settings in the Jellyfin app on your device.",
-      "Go to Playback, then Quality.",
-      "Set Internet streaming quality to Maximum.",
-      "Turn off Auto adjust quality.",
-    ],
-  },
 }
 
 /**

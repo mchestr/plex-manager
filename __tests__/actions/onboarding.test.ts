@@ -3,7 +3,6 @@ import { completeOnboarding, getOnboardingStatus } from '@/actions/onboarding'
 import { getServerSession } from 'next-auth'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
-import { buildUser } from '@/__tests__/helpers/factories'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
@@ -35,23 +34,13 @@ describe('Onboarding Actions', () => {
     it('should return status when authenticated', async () => {
       mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } } as any)
       mockPrisma.user.findUnique.mockResolvedValue({
-        onboardingStatus: { plex: false, jellyfin: false },
+        onboardingStatus: { plex: false },
         primaryAuthService: 'plex'
       } as any)
 
       const result = await getOnboardingStatus()
 
       expect(result).toMatchObject({ success: true, data: { isComplete: false, service: 'plex' } })
-    })
-
-    it("checks a Jellyfin member's Jellyfin onboarding, even with a stale stored service (P11.10)", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(
-        buildUser({ plexUserId: null, jellyfinUserId: 'jf-1', primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } })
-      )
-
-      const result = await getOnboardingStatus()
-
-      expect(result).toMatchObject({ success: true, data: { isComplete: false, service: 'jellyfin' } })
     })
 
     it('refuses an unauthenticated caller with a code', async () => {
@@ -73,7 +62,7 @@ describe('Onboarding Actions', () => {
     it('should mark user as complete for plex service', async () => {
       mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } } as any)
       mockPrisma.user.findUnique.mockResolvedValue({
-        onboardingStatus: { plex: false, jellyfin: false }
+        onboardingStatus: { plex: false }
       } as any)
 
       const result = await completeOnboarding({ service: 'plex' })
@@ -81,37 +70,7 @@ describe('Onboarding Actions', () => {
       expect(result.success).toBe(true)
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        data: { onboardingStatus: { plex: true, jellyfin: false } },
-      })
-    })
-
-    it('should mark user as complete for jellyfin service', async () => {
-      mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } } as any)
-      mockPrisma.user.findUnique.mockResolvedValue({
-        onboardingStatus: { plex: false, jellyfin: false }
-      } as any)
-
-      const result = await completeOnboarding({ service: 'jellyfin' })
-
-      expect(result.success).toBe(true)
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-1' },
-        data: { onboardingStatus: { plex: false, jellyfin: true } },
-      })
-    })
-
-    it('should preserve existing service completion status', async () => {
-      mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } } as any)
-      mockPrisma.user.findUnique.mockResolvedValue({
-        onboardingStatus: { plex: true, jellyfin: false }
-      } as any)
-
-      const result = await completeOnboarding({ service: 'jellyfin' })
-
-      expect(result.success).toBe(true)
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-1' },
-        data: { onboardingStatus: { plex: true, jellyfin: true } },
+        data: { onboardingStatus: { plex: true } },
       })
     })
 

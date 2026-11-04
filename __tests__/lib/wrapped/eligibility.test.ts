@@ -65,7 +65,7 @@ describe('getRewindEligibility', () => {
   })
 
   it('returns NO_PLEX_IDENTITY without asking the database or Tautulli', async () => {
-    const result = await getRewindEligibility({ id: 'jellyfin-member', plexUserId: null })
+    const result = await getRewindEligibility({ id: 'no-plex-member', plexUserId: null })
 
     expect(result).toEqual({ eligible: false, reason: 'NO_PLEX_IDENTITY' })
     expect(mockFetch).not.toHaveBeenCalled()
@@ -171,24 +171,8 @@ describe('getRewindEligibility', () => {
     expect(mockFetch).not.toHaveBeenCalled()
   })
 
-  it('makes a Jellyfin-primary member with a linked Plex identity eligible', async () => {
-    const member = makePrismaUser({
-      id: 'member-jellyfin-linked',
-      primaryAuthService: 'jellyfin',
-      jellyfinUserId: 'jf-1',
-      plexUserId: '101',
-    })
-
-    expect(await getRewindEligibility(member)).toEqual({ eligible: true })
-  })
-
-  it('makes a Jellyfin-only member ineligible', async () => {
-    const member = makePrismaUser({
-      id: 'member-jellyfin-only',
-      primaryAuthService: 'jellyfin',
-      jellyfinUserId: 'jf-2',
-      plexUserId: null,
-    })
+  it('makes a member without a Plex identity ineligible', async () => {
+    const member = makePrismaUser({ id: 'member-no-plex', plexUserId: null })
 
     expect(await getRewindEligibility(member)).toEqual({ eligible: false, reason: 'NO_PLEX_IDENTITY' })
     expect(mockFetch).not.toHaveBeenCalled()

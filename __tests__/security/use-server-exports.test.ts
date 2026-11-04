@@ -4,7 +4,7 @@
 
 /**
  * Every export of a `'use server'` module is a public endpoint, so each one
- * must be built by `defineAction` (or `formAction`) and carry its brand
+ * must be built by `defineAction` and carry its brand
  * (P11.5, BP-06). A raw read helper exported from such a module fails here.
  */
 

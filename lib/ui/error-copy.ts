@@ -141,7 +141,7 @@ const COPY = {
   INVITE_WRONG_SERVICE: {
     member: {
       title: "This invite is for the other media server",
-      description: "Sign in with the service the invite names, Plex or Jellyfin, to use it.",
+      description: "Sign in with the service the invite names to use it.",
     },
   },
   SETUP_UNCLAIMED: {
