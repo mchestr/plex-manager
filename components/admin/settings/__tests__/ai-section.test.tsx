@@ -70,6 +70,15 @@ describe('AI section, Conversation review tab', () => {
     await choose(user, 'llm-provider-select', 'anthropic')
     await choose(user, 'llm-model-select', 'claude-sonnet-5-5')
     await user.type(screen.getByTestId('llm-api-key-input'), 'ant-judge-key')
+
+    // Test connection on the judge tab lists the judge purpose's models, with the typed values.
+    // It runs before Save: a successful save leaves edit mode and discards the draft, and with no
+    // saved judge there is then nothing to test.
+    jest.mocked(listLLMModels).mockResolvedValue({ success: true, data: { models: ['claude-sonnet-5-5'], configuredProvider: null, configuredModel: null } })
+    await user.click(screen.getByTestId('settings-ai-test'))
+    await waitFor(() => expect(screen.getByTestId('settings-ai-test-result')).toHaveTextContent('Connected: 1 models available'))
+    expect(listLLMModels).toHaveBeenCalledWith({ purpose: 'judge', provider: 'anthropic', apiKey: 'ant-judge-key', baseUrl: undefined })
+
     await user.click(screen.getByTestId('settings-ai-save'))
 
     await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith('Conversation review model saved'))
@@ -85,10 +94,6 @@ describe('AI section, Conversation review tab', () => {
     })
     expect(updateChatLLMProvider).not.toHaveBeenCalled()
     expect(updateWrappedLLMProvider).not.toHaveBeenCalled()
-
-    // Test connection on the judge tab lists the judge purpose's models
-    await user.click(screen.getByTestId('settings-ai-test'))
-    await waitFor(() => expect(listLLMModels).toHaveBeenCalledWith(expect.objectContaining({ purpose: 'judge' })))
   })
 
   it('the judge tab holds only the provider form', async () => {
