@@ -24,6 +24,7 @@
       "Edit(./README.md)",
       "Edit(./e2e/**)",
       "Edit(./.claude/**)",
+      "Edit(./AGENTS.md)",
       "Edit(./CLAUDE.md)",
       "Bash(npm run dev)",
       "Bash(npm run build)",
