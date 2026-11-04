@@ -13,6 +13,9 @@
  *                               └────────────────────────────────────┘
  * ```
  *
+ * An uploaded icon (Settings, Appearance) replaces the monogram tile, and an
+ * uploaded favicon replaces it at 64 px and below.
+ *
  * Only text the fonts cover is drawn, so `next/og` never fetches a font: the
  * monogram falls back through `monogramFor()`, a name the fonts cannot draw
  * becomes the product name, and an uncovered host is left out.
@@ -29,6 +32,7 @@ import { themes } from "@/lib/design/tokens"
 import { getEnv } from "@/lib/env"
 import { covers } from "@/lib/og/coverage"
 import { loadOgFonts, OG_MONO, OG_SANS } from "@/lib/og/fonts"
+import { FAVICON_MAX, UploadedTile, uploadedImage } from "@/lib/og/uploaded-image"
 
 const dark = themes.dark
 
@@ -84,8 +88,17 @@ function MonogramTile({ letter, size, radius }: { letter: string | null; size: n
  * Apple icon passes 0, because iOS rounds it.
  */
 export async function renderIcon(size: number, radius = 0.22): Promise<ImageResponse> {
-  const [name, fonts] = await Promise.all([serverName(), loadOgFonts()])
-  return new ImageResponse(<MonogramTile letter={monogramFor(name)} size={size} radius={Math.round(size * radius)} />, {
+  const [name, fonts, uploaded] = await Promise.all([
+    serverName(),
+    loadOgFonts(),
+    uploadedImage(size <= FAVICON_MAX ? ["favicon", "icon"] : ["icon"]),
+  ])
+  const tile = uploaded ? (
+    <UploadedTile src={uploaded} size={size} />
+  ) : (
+    <MonogramTile letter={monogramFor(name)} size={size} radius={Math.round(size * radius)} />
+  )
+  return new ImageResponse(tile, {
     width: size,
     height: size,
     fonts,
@@ -109,7 +122,7 @@ function publicHost(): string | null {
 
 /** The default OG card: the monogram tile, the server name and the public host. */
 export async function renderOgCard(): Promise<ImageResponse> {
-  const [name, fonts] = await Promise.all([serverName(), loadOgFonts()])
+  const [name, fonts, uploaded] = await Promise.all([serverName(), loadOgFonts(), uploadedImage(["icon"])])
   const title = covers(name, "OgSans-600") ? name : productName
   const host = publicHost()
   return new ImageResponse(
@@ -124,7 +137,7 @@ export async function renderOgCard(): Promise<ImageResponse> {
         background: dark.background.hex,
       }}
     >
-      <MonogramTile letter={monogramFor(name)} size={168} radius={24} />
+      {uploaded ? <UploadedTile src={uploaded} size={168} /> : <MonogramTile letter={monogramFor(name)} size={168} radius={24} />}
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div
           style={{

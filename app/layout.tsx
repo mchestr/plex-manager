@@ -2,6 +2,8 @@ import "@/app/globals.css";
 import { plexFontClassNames } from "@/app/fonts";
 import { FlashFromQuery } from "@/components/ui/flash-from-query";
 import { serverName } from "@/lib/brand";
+import { accentStyleSheet } from "@/lib/branding/accent";
+import { getBranding } from "@/lib/branding/settings";
 import { resolveAppearance, resolveTheme, THEME_COLOR } from "@/lib/design/theme";
 import { getEnv } from "@/lib/env";
 import { getFormatSettings } from "@/lib/settings/app-settings";
@@ -52,11 +54,18 @@ export default async function RootLayout({
   // Every page formats in the stored zone and locale, so none prerenders at
   // build time, when there is no database.
   await connection();
-  const [format, name, appearance] = await Promise.all([getFormatSettings(), serverName(), resolveAppearance()]);
+  const [format, name, appearance, branding] = await Promise.all([getFormatSettings(), serverName(), resolveAppearance(), getBranding()]);
+  const accent = accentStyleSheet(branding.accentColor);
 
   // Light is the :root block, with no class; dark adds `.dark` (ui-design-system 4.1).
   return (
     <html lang={format.locale} className={cn(appearance.theme === "dark" && "dark", plexFontClassNames)} suppressHydrationWarning>
+      {/* The accent colour from Settings, Appearance: the primary tokens for both themes (lib/branding/accent.ts) */}
+      {accent && (
+        <head>
+          <style data-testid="brand-accent">{accent}</style>
+        </head>
+      )}
       <body className="min-h-dvh bg-background text-foreground">
         {/* Each segment layout renders the one <main id="main" tabIndex={-1}> this skips to. */}
         <a
@@ -66,7 +75,7 @@ export default async function RootLayout({
         >
           Skip to content
         </a>
-        <Providers format={format} serverName={name} appearance={appearance}>
+        <Providers format={format} serverName={name} appearance={appearance} brandAssets={branding.assets}>
           {children}
           <Suspense fallback={null}>
             <FlashFromQuery />

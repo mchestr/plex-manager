@@ -58,6 +58,7 @@ export const ACTION_DOCS: Readonly<Record<string, string>> = {
   refreshSkillSource: "Read a skill source's ref again now.",
   refuseAffiliate: "Refuses a PENDING application with an optional reason the member sees (admin only). They may apply again after 30 days.",
   removeArrService: "Removes the Sonarr or Radarr connection (admin only): every stored row of that service, including old inactive rows and their API keys, is deleted. The assistant's tools, Rewind's returning shows and Discord's media links work without it. Audited as `CONFIG_CHANGED`; removing a service that is not set up succeeds and writes no audit entry.",
+  removeBrandAsset: "Remove one brand image (admin only); the app goes back to its default for that slot.",
   removeMember: "Removes a member and their data (admin only, audited as `MEMBER_ERASED`; P11.13, GAP-31). `confirmName` must be the member's display name, typed (case and outer spaces ignored), or the action refuses with `VALIDATION`. Limited to 10 per hour per admin. See `lib/members/erase.ts` for the order and the refusals. `block` also blocks their Plex account from affiliate invites, in the removal's transaction; `revokeInviter` revokes the status of the affiliate who invited them, once the removal succeeded; `inviterRevoked` says how that went (`true`, `false` when it failed, `null` when not asked or nothing to revoke).",
   removeQueueJob: "Remove a job from the queue (admin only, audited).",
   requestRewindGeneration: "Asks for the signed-in member's Rewind for the season year.",
@@ -103,6 +104,7 @@ export const ACTION_DOCS: Readonly<Record<string, string>> = {
   unshareUserLibrary: "Removes a user's share of the configured Plex server (admin only), leaving their plex.tv friendship and the owner's other servers alone. A share that is already gone succeeds as `already_removed`. Either success also stops their watchlist sync, clears their stored Plex token, ends their affiliate status and ends the user's sessions: `unshareMember` (`lib/members/unshare.ts`), which the inactivity sweep shares.",
   updateAffiliateSettings: "Saves the affiliate settings (admin only): the switch, the tiers, the server cap and the library list. The switch refuses to go on without a library list, Tautulli and the Plex server's machine id (`VALIDATION`); turning it off cancels every open affiliate invite and returns the count.",
   updateAnnouncement: "Update an announcement (admin only); a missing row is `NOT_FOUND`.",
+  updateAppearance: "Set the server's identity and colour (admin only): the server name members see, the line under it on the sign-in screen and the accent colour the buttons, links and focus rings take. A blank field clears it: the name falls back to the Plex server's, the subtitle goes and the accent returns to amber.",
   updateChatLLMProvider: "Update the chat assistant's LLM provider (admin only).",
   updateDiscordIntegrationSettings: "Save the Discord integration (admin only). A blank client secret or bot token keeps the stored one: both go only to Discord, a fixed destination, so a kept secret cannot be redirected (P4.6's exception to SEC-31). The change is audited as `DISCORD_INTEGRATION_CONFIG_CHANGED` with `section: \"discord\"` and a redacted diff; secret values are never logged.",
   updateGlobalWatchlistSyncSettings: "Update global watchlist sync settings (admin only)",
@@ -116,4 +118,5 @@ export const ACTION_DOCS: Readonly<Record<string, string>> = {
   updateUserAdminStatus: "Update user admin status (admin only, audited).",
   updateWatchlistSyncSettings: "Update user's watchlist sync settings",
   updateWrappedLLMProvider: "Update the Rewind LLM provider (admin only).",
+  uploadBrandAsset: "Upload one brand image (admin only): the wordmark, the icon, the favicon or the login background. The type comes from the file's bytes, never its name; a type the slot does not take is refused, and so is an icon or favicon the icon renderer cannot draw. It replaces the slot's image.",
 }

@@ -16,6 +16,10 @@ interface MemberPassProps {
   serverName: string
   /** `monogramFor(serverName)`; null draws the pip-only tile. */
   monogram: string | null
+  /** The uploaded icon (Settings, Appearance), drawn in place of the monogram. */
+  iconSrc?: string
+  /** The login subtitle (Settings, Appearance), under the heading. */
+  subtitle?: string | null
   /** A same-origin path (`safeCallbackPath`) to land on after signing in. */
   callbackUrl?: string
 }
@@ -25,15 +29,20 @@ interface MemberPassProps {
  * click on "Continue with Plex" starts the PIN on the server and goes
  * straight to plex.tv, with no forced wait. The copy says the Plex token is kept (GAP-34).
  */
-export function MemberPass({ serverName, monogram, callbackUrl }: MemberPassProps) {
+export function MemberPass({ serverName, monogram, iconSrc, subtitle, callbackUrl }: MemberPassProps) {
   const headingId = useId()
   return (
     <Pass aria-labelledby={headingId} data-testid="member-pass">
       <div className="flex flex-col p-6 sm:p-7">
-        <Monogram letter={monogram} />
+        <Monogram letter={monogram} src={iconSrc} />
         <h1 id={headingId} className="mt-5 text-display text-foreground">
           Sign in to {serverName}
         </h1>
+        {subtitle && (
+          <p className="mt-2 text-body text-muted-foreground" data-testid="member-pass-subtitle">
+            {subtitle}
+          </p>
+        )}
         <PlexOptions serverName={serverName} callbackUrl={callbackUrl} />
       </div>
       <PassStub>
@@ -44,7 +53,7 @@ export function MemberPass({ serverName, monogram, callbackUrl }: MemberPassProp
   )
 }
 
-function PlexOptions({ serverName, callbackUrl }: Omit<MemberPassProps, "monogram">) {
+function PlexOptions({ serverName, callbackUrl }: Pick<MemberPassProps, "serverName" | "callbackUrl">) {
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

@@ -1,3 +1,5 @@
+import { AppearanceSection } from "@/components/admin/settings/appearance/appearance-section"
+import { BrandImagesSection } from "@/components/admin/settings/appearance/brand-images-section"
 import { LastSaved } from "@/components/admin/settings/last-saved"
 import { ApiAccessSection } from "@/components/admin/settings/sections/api-access-section"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
@@ -16,7 +18,9 @@ import { getLastRetentionRun } from "@/lib/data/retention"
 import { plexLibraryListing } from "@/lib/admin/invites/libraries"
 import packageJson from "@/package.json"
 import { getBaseUrl, getEnv } from "@/lib/env"
-import { getFormat } from "@/lib/settings/app-settings"
+import { getAppSettings, getFormat } from "@/lib/settings/app-settings"
+import { getBranding } from "@/lib/branding/settings"
+import { productName } from "@/lib/brand"
 import { getSettingsAuditMeta } from "@/lib/settings/audit-meta"
 import { getSettingsHealth } from "@/lib/settings/connection-health"
 import { worstStatus } from "@/lib/settings/connection-status"
@@ -56,11 +60,16 @@ export default async function SettingsPage() {
     serverZone(),
     getFormat(),
   ])
-  const [audit, lastRetentionRun, apiTokens] = await Promise.all([
+  const [audit, lastRetentionRun, apiTokens, branding, appSettings] = await Promise.all([
     getSettingsAuditMeta(),
     getLastRetentionRun(),
     listOwnApiTokens(),
+    getBranding(),
+    getAppSettings(),
   ])
+  const { serverName: savedName, loginSubtitle, accentColor } = settings.config
+  // The name in use with none saved: what the active Plex or Jellyfin server is called
+  const fallbackName = (savedName ? null : appSettings.serverName) ?? settings.plexServer?.name ?? productName
   // Nothing before a first save, so a read-only section shows no empty footer
   const saved = (id: keyof typeof audit) => audit[id] && <LastSaved id={id} meta={audit[id]} />
   const baseUrl = getBaseUrl()
@@ -100,6 +109,12 @@ export default async function SettingsPage() {
           <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />
         </SettingsGroup>
         <SettingsGroup id="system">
+          <AppearanceSection
+            saved={{ serverName: savedName ?? "", loginSubtitle: loginSubtitle ?? "", accentColor: accentColor ?? "" }}
+            fallbackName={fallbackName}
+            footerMeta={saved("branding")}
+          />
+          <BrandImagesSection assets={branding.assets} />
           <TimeZoneSection timeZone={{ configured: settings.config.timezone, effective: zone }} footerMeta={saved("timeZone")} />
           <ApiAccessSection tokens={apiTokens} endpoint={`${baseUrl}/api/mcp`} />
           <PrivacySection lastRun={lastRetentionRun} />

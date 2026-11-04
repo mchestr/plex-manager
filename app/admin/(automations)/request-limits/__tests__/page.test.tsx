@@ -54,6 +54,7 @@ const NEVER_SAVED = {
   rewind: null,
   other: null,
   timeZone: null,
+  branding: null,
 } satisfies SettingsAuditMeta
 
 async function renderPage() {

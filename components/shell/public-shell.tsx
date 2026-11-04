@@ -10,6 +10,8 @@ interface PublicShellProps {
   width?: "narrow" | "wide"
   /** The signed-in member: shows their name and a Sign out escape. */
   account?: { name: string }
+  /** The uploaded login background (Settings, Appearance), covering the page behind the column. */
+  background?: string
   children: ReactNode
   "data-testid"?: string
 }
@@ -21,9 +23,13 @@ interface PublicShellProps {
  * and Sign out, so a gated member can always leave (UI-37); onboarding's
  * minimal variant uses the same prop (P10.23).
  */
-export function PublicShell({ serverName, width = "narrow", account, children, ...props }: PublicShellProps) {
+export function PublicShell({ serverName, width = "narrow", account, background, children, ...props }: PublicShellProps) {
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground" data-testid="public-shell">
+    <div
+      className={cn("flex min-h-dvh flex-col bg-background text-foreground", background && "bg-cover bg-center bg-no-repeat")}
+      style={background ? { backgroundImage: `url("${background}")` } : undefined}
+      data-testid="public-shell"
+    >
       <header className="flex h-14 items-center gap-3 px-4 sm:px-6">
         <Wordmark serverName={serverName} className="mr-auto" />
         {account && (

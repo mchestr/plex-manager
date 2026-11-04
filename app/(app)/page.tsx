@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { StatusScreen } from "@/components/ui/status-screen";
 import { monogramFor, serverName as getServerName } from "@/lib/brand";
+import { getBranding } from "@/lib/branding/settings";
 import { prisma } from "@/lib/prisma";
 import { icons } from "@/lib/ui/icons";
 import { safeCallbackPath } from "@/lib/validations/callback-path";
@@ -50,10 +51,11 @@ export default async function Home({ searchParams }: HomeProps) {
     );
   }
 
-  const [plexServer, discordIntegration, serverName] = await Promise.all([
+  const [plexServer, discordIntegration, serverName, branding] = await Promise.all([
     getActiveService("plex"),
     prisma.discordIntegration.findUnique({ where: { id: "discord" }, select: { serverInviteCode: true } }),
     getServerName(),
+    getBranding(),
   ]);
 
   if (!plexServer) {
@@ -87,10 +89,12 @@ export default async function Home({ searchParams }: HomeProps) {
   }
 
   return (
-    <PublicShell serverName={serverName}>
+    <PublicShell serverName={serverName} background={branding.assets["login-background"]}>
       <MemberPass
         serverName={serverName}
         monogram={monogramFor(serverName)}
+        iconSrc={branding.assets.icon}
+        subtitle={branding.loginSubtitle}
         callbackUrl={callbackPath ?? undefined}
       />
     </PublicShell>

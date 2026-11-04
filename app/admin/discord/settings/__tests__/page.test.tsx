@@ -80,6 +80,7 @@ const NEVER_SAVED: SettingsAuditMeta = {
   rewind: null,
   other: null,
   timeZone: null,
+  branding: null,
 }
 
 async function renderPage() {

@@ -164,6 +164,7 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `McpServer` | name, URL, auth header name and value, and the tools the admin turned on | `authHeaderSecret` |
 | `KnowledgeSource` | name, GitHub repository, branch, folder and an optional GitHub token | `token` |
 | `SkillSource` | name, GitHub repository, tag, commit or branch, folder and an optional GitHub token | `token` |
+| `BrandAsset` | the uploaded wordmark, icon, favicon and login background (Settings, Appearance), with who uploaded each | none |
 | `Config` | app settings, Stripe keys, Rewind settings, affiliate invite settings and the affiliate block key | `stripeSecretKey`, `stripeWebhookSecret`, `rewindSerialKey`, `affiliateBlockKey` |
 | `DiscordIntegration` | Discord app credentials and bot settings; `updatedBy` admin id | `clientSecret`, `botToken` |
 | `InactivitySettings` | whether the inactivity sweep is on, its days without a play, the claim of the run in progress; `updatedBy` admin id | No |

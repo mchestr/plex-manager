@@ -111,6 +111,7 @@ hooks/                  # Shared client hooks; query-keys.ts holds every TanStac
 lib/                    # Utilities, helpers, business logic
 ├── actions/           # The action helpers (define-action.ts), ActionResult, route handler helpers
 ├── affiliates/        # Affiliate invites: tiers, eligibility, the switch, end status, block list (docs/affiliate-invites.md)
+├── branding/          # Appearance: uploaded brand images (assets), the accent colour as tokens, the per-request branding read (docs/appearance.md)
 ├── audit/             # Audit log event labels, categories, summaries and URL filters (Admin > Audit log)
 ├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
 ├── charts/            # Chart slot map (var(--chart-n)) and generated text summaries for ChartCard
@@ -1014,6 +1015,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - Affiliate invites (tiers, slots, server cap, the switch): See `docs/affiliate-invites.md`
 - Inactive members (last seen from Tautulli, the inactivity sweep and its safety rules): See `docs/inactive-members.md`
 - Audit log (who can read it, categories, what Support sees): See `docs/roles.md` and `docs/privacy.md`
+- Appearance (server name, login subtitle, accent colour, uploaded logos and images): See `docs/appearance.md`
 - Privacy (personal data inventory, member removal, retention): See `docs/privacy.md`
 - Releases and the changelog: See `docs/releasing.md` and `CHANGELOG.md`
 - Rewind season runbook (flags, season open, roll back, season close): See `docs/rewind.md`

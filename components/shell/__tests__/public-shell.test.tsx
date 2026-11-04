@@ -54,3 +54,14 @@ describe('PublicShell', () => {
     expect(wordmark).toHaveClass('font-stretch-85%', 'truncate')
   })
 })
+
+describe('PublicShell background', () => {
+  it('covers the page with the login background when one is given', () => {
+    render(
+      <PublicShell serverName="Mikeflix" background="/api/branding/login-background/0123456789abcdef">
+        <p>Body</p>
+      </PublicShell>
+    )
+    expect(screen.getByTestId('public-shell')).toHaveStyle({ backgroundImage: 'url("/api/branding/login-background/0123456789abcdef")' })
+  })
+})

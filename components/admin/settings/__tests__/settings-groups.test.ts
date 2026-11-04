@@ -31,7 +31,7 @@ describe('settings groups', () => {
     expect(Object.fromEntries(SETTINGS_GROUPS.map((group) => [group.id, labelsIn(group.id)]))).toEqual({
       connections: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr'],
       billing: ['Stripe billing'],
-      system: ['Time zone', 'API access', 'Privacy', 'System information'],
+      system: ['Appearance', 'Logos and images', 'Time zone', 'API access', 'Privacy', 'System information'],
     })
   })
 
@@ -45,6 +45,8 @@ describe('settings groups', () => {
       'overseerr',
       'other',
       'stripe',
+      'appearance',
+      'brand-images',
       'time-zone',
       'api-access',
       'privacy',
@@ -63,6 +65,8 @@ describe('settings groups', () => {
       overseerr: 'notConfigured',
       other: 'incomplete',
       stripe: 'disabled',
+      appearance: undefined,
+      'brand-images': undefined,
       'time-zone': undefined,
       'api-access': undefined,
       privacy: undefined,
