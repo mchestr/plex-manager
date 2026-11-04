@@ -30,10 +30,9 @@ const uploadSchema = z.object({
     .refine((file) => file.size <= BRAND_ASSET_MAX_BYTES, `Images can be at most ${BRAND_ASSET_MAX_BYTES / 1024} KB`),
 })
 
-function changed(kind: string) {
+function changed() {
   expireTag(BRANDING_TAG)
   revalidatePath("/", "layout")
-  return kind
 }
 
 /**
@@ -65,7 +64,7 @@ export const uploadBrandAsset = adminAction({
       changedFields: [kind],
       secretChanged: false,
     })
-    changed(kind)
+    changed()
     return ok({ kind, url: brandAssetUrl(kind, sha256) })
   },
 })
@@ -73,6 +72,7 @@ export const uploadBrandAsset = adminAction({
 /** Remove one brand image (admin only); the app goes back to its default for that slot. */
 export const removeBrandAsset = adminAction({
   input: brandAssetKindSchema,
+  rateLimit: { name: "admin" },
   fallbackError: "Could not remove the image",
   handler: async (kind, { userId }) => {
     const { count } = await prisma.brandAsset.deleteMany({ where: { kind } })
@@ -83,7 +83,7 @@ export const removeBrandAsset = adminAction({
         secretChanged: false,
       })
     }
-    changed(kind)
+    changed()
     return ok({ kind })
   },
 })

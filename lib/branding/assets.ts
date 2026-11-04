@@ -112,7 +112,12 @@ export function sniffImageType(bytes: Uint8Array): BrandImageType | null {
   return opensSvg(head) ? "image/svg+xml" : null
 }
 
+/** The `?v=` an asset's links carry: the first 16 hex digits of its hash. */
+export function brandAssetVersion(sha256: string): string {
+  return sha256.slice(0, 16)
+}
+
 /** The asset's URL, versioned by its hash so a browser may keep it for good. */
 export function brandAssetUrl(kind: BrandAssetKind, sha256: string): string {
-  return `/api/branding/${kind}?v=${sha256.slice(0, 16)}`
+  return `/api/branding/${kind}?v=${brandAssetVersion(sha256)}`
 }

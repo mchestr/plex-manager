@@ -39,6 +39,7 @@ const appearanceSchema = z.object({
  */
 export const updateAppearance = adminAction({
   input: appearanceSchema,
+  rateLimit: { name: "admin" },
   fallbackError: "Failed to update the appearance",
   handler: async (appearance, { userId }) => {
     const before = await prisma.config.findUnique({

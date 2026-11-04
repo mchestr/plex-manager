@@ -18,7 +18,8 @@ keeps its own inks.
 ## Logos and images
 
 Each slot saves when you choose a file and goes back to the default when you
-remove it. The type is read from the file's bytes, never its name.
+remove it. The type is read from the file's bytes, never its name. An SVG whose
+DOCTYPE declares entities is refused; remove the DOCTYPE and upload it again.
 
 | Slot | Where it shows | Formats |
 |---|---|---|

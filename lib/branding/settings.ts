@@ -67,3 +67,8 @@ export const getBranding = cache(async (): Promise<Branding> => {
 export async function readBrandAsset(kind: BrandAssetKind) {
   return prisma.brandAsset.findUnique({ where: { kind }, select: { contentType: true, data: true, sha256: true } })
 }
+
+/** One image's hash alone, so the asset route answers a revalidation without reading the bytes. */
+export async function readBrandAssetHash(kind: BrandAssetKind) {
+  return (await prisma.brandAsset.findUnique({ where: { kind }, select: { sha256: true } }))?.sha256 ?? null
+}

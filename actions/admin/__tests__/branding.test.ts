@@ -45,6 +45,7 @@ describe("updateAppearance", () => {
     expect(prismaMock.config.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ update: { ...saved, updatedBy: "admin-1" } })
     )
+    expect(consume).toHaveBeenCalledWith("admin", "admin-1")
     expect(expireTag).toHaveBeenCalledWith("app-settings")
     expect(expireTag).toHaveBeenCalledWith("branding")
   })
