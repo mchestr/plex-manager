@@ -13,7 +13,7 @@ import { editSection } from '../helpers/settings';
 const GROUPS: Record<string, string[]> = {
   connections: ['plex', 'tautulli', 'overseerr', 'other'],
   billing: ['stripe'],
-  system: ['time-zone', 'api-access', 'privacy', 'system'],
+  system: ['appearance', 'brand-images', 'time-zone', 'api-access', 'privacy', 'system'],
 };
 
 const SECTIONS = Object.values(GROUPS).flat();
