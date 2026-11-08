@@ -7,6 +7,7 @@ import {
   assertTestDatabaseUrl,
   isE2ETestMode,
   maskDatabaseUrl,
+  plexTvBaseUrl,
   resolveSeedTarget,
 } from "@/lib/security/test-mode"
 
@@ -298,5 +299,76 @@ describe("isE2ETestMode", () => {
     env.E2E_TEST_MODE = "true"
     expect(isE2ETestMode({ NODE_ENV: "development" })).toBe(false)
     expect(isE2ETestMode({ NODE_ENV: "development", E2E_TEST_MODE: "true" })).toBe(true)
+  })
+})
+
+describe("plexTvBaseUrl", () => {
+  const REAL = { plexTv: "https://plex.tv", clients: "https://clients.plex.tv" }
+  const mock = (origin: string) => ({ plexTv: origin, clients: origin })
+
+  it("returns the real hosts with no E2E settings", () => {
+    expect(plexTvBaseUrl({})).toEqual(REAL)
+  })
+
+  it("returns the real hosts for a mock URL without E2E_TEST_MODE", () => {
+    expect(plexTvBaseUrl({ E2E_PLEX_TV_URL: "http://localhost:4010" })).toEqual(REAL)
+    expect(plexTvBaseUrl({ E2E_TEST_MODE: "1", E2E_PLEX_TV_URL: "http://localhost:4010" })).toEqual(REAL)
+    expect(plexTvBaseUrl({ E2E_TEST_MODE: "TRUE", E2E_PLEX_TV_URL: "http://localhost:4010" })).toEqual(REAL)
+  })
+
+  it("returns the real hosts in E2E mode when no mock URL is set", () => {
+    expect(plexTvBaseUrl({ E2E_TEST_MODE: "true" })).toEqual(REAL)
+    expect(plexTvBaseUrl({ E2E_TEST_MODE: "true", E2E_PLEX_TV_URL: "" })).toEqual(REAL)
+  })
+
+  it.each(["http://localhost:4010", "http://localhost:4010/", "http://127.0.0.1:4010"])(
+    "sends both hosts to the local mock %s in E2E mode",
+    (url) => {
+      expect(plexTvBaseUrl({ E2E_TEST_MODE: "true", E2E_PLEX_TV_URL: url })).toEqual(mock(new URL(url).origin))
+    }
+  )
+
+  it("reads the flag raw, so the E2E production build gets the mock too", () => {
+    const env = { NODE_ENV: "production", E2E_TEST_MODE: "true", E2E_PLEX_TV_URL: "http://localhost:4010" }
+
+    expect(isE2ETestMode(env)).toBe(false)
+    expect(plexTvBaseUrl(env)).toEqual(mock("http://localhost:4010"))
+  })
+
+  it.each([
+    "http://plex.example.com:4010",
+    "http://localhost.example.com:4010",
+    "http://[::1]:4010",
+    "https://localhost:4010",
+    "http://localhost",
+    "http://localhost:4010/api",
+    "http://user:pw@localhost:4010",
+    "http://localhost:4010/?next=https://plex.tv",
+    "http://localhost:4010/#a",
+    "localhost:4010",
+    "not a url",
+  ])("refuses the override %p and returns the real hosts", (url) => {
+    expect(plexTvBaseUrl({ E2E_TEST_MODE: "true", E2E_PLEX_TV_URL: url })).toEqual(REAL)
+  })
+
+  describe("from process.env", () => {
+    const env = process.env as Record<string, string | undefined>
+    const saved = { flag: env.E2E_TEST_MODE, url: env.E2E_PLEX_TV_URL }
+
+    afterEach(() => {
+      for (const [key, value] of [["E2E_TEST_MODE", saved.flag], ["E2E_PLEX_TV_URL", saved.url]] as const) {
+        if (value === undefined) delete env[key]
+        else env[key] = value
+      }
+    })
+
+    it("reads process.env by default", () => {
+      env.E2E_TEST_MODE = "true"
+      env.E2E_PLEX_TV_URL = "http://127.0.0.1:4011"
+      expect(plexTvBaseUrl()).toEqual(mock("http://127.0.0.1:4011"))
+
+      delete env.E2E_TEST_MODE
+      expect(plexTvBaseUrl()).toEqual(REAL)
+    })
   })
 })

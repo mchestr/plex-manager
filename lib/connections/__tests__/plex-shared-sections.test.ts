@@ -9,12 +9,18 @@ import path from 'path'
 import {
   clearPlexSharedSectionCaches,
   getItemSectionKey,
+  getSharedSectionFilters,
   getSharedSectionKeys,
   rememberItemSectionKey,
 } from '@/lib/connections/plex-shared-sections'
 
 const SHARED_SERVERS_XML = readFileSync(
   path.join(__dirname, 'fixtures', 'plex-tv-shared-servers.xml'),
+  'utf8'
+)
+
+const FILTERED_XML = readFileSync(
+  path.join(__dirname, '..', '..', 'cleanup', '__tests__', 'fixtures', 'plex-shared-servers-filtered.xml'),
   'utf8'
 )
 
@@ -47,11 +53,15 @@ function abortError() {
   return error
 }
 
-/** A response whose body never arrives: reading it only ends when the request is aborted. */
-function stalledBody(init: RequestInit) {
+/**
+ * A response whose body never arrives: reading it only ends when the request
+ * is aborted, or when the test calls `release`.
+ */
+function stalledBody(init: RequestInit, onRead: (release: () => void) => void = () => undefined) {
   const stall = () =>
     new Promise((_, reject) => {
       init.signal?.addEventListener('abort', () => reject(abortError()))
+      onRead(() => reject(abortError()))
     })
   return { ok: true, status: 200, statusText: 'OK', text: stall, json: stall }
 }
@@ -61,11 +71,11 @@ function later<T>(value: T, ms = 10): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms))
 }
 
-/** Routes fetch by URL: identity on the server, shared_servers on plex.tv. */
+/** Routes fetch by URL: identity on the server, shared_servers on plex.tv (or its E2E mock). */
 function mockPlexTv(sharedServers: () => Promise<unknown>) {
   ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
     if (url.includes('/identity')) return Promise.resolve(textResponse(IDENTITY_XML))
-    if (url.includes('plex.tv/api/servers/')) return sharedServers()
+    if (url.includes('/api/servers/')) return sharedServers()
     return Promise.reject(new Error(`unexpected fetch ${url}`))
   })
 }
@@ -167,7 +177,7 @@ describe('plex-shared-sections', () => {
       expect(await getSharedSectionKeys(SERVER, '1001')).toEqual(new Set(['1', '3']))
     })
 
-    it('spends one timeout across the identity and shared_servers calls', async () => {
+    it('spends a fixed 3 s across the identity and shared_servers calls, whatever the caller waits (E29)', async () => {
       const now = Date.now()
       const clock = jest.spyOn(Date, 'now').mockReturnValue(now)
       const timers = jest.spyOn(global, 'setTimeout')
@@ -179,22 +189,51 @@ describe('plex-shared-sections', () => {
         return Promise.resolve(textResponse(SHARED_SERVERS_XML))
       })
 
-      await getSharedSectionKeys(SERVER, '1001', { timeoutMs: 3000 })
+      await getSharedSectionKeys(SERVER, '1001', { timeoutMs: 300 })
 
       const delays = timers.mock.calls.map(([, ms]) => ms)
       expect(delays).toContain(3000) // identity
-      expect(delays).toContain(2000) // shared_servers: what is left
+      expect(delays).toContain(2000) // shared_servers: what is left of the 3 s
+      expect(delays).toContain(300) // how long this caller waits
     })
 
-    it('times out a shared_servers body that stalls', async () => {
+    it('stops waiting at the caller\'s timeout while a stalled load runs on', async () => {
+      let release: () => void = () => undefined
+      let loadSignal: AbortSignal | null | undefined
       ;(global.fetch as jest.Mock).mockImplementation((url: string, init: RequestInit) => {
         if (url.includes('/identity')) return Promise.resolve(textResponse(IDENTITY_XML))
-        return Promise.resolve(stalledBody(init))
+        loadSignal = init.signal
+        return Promise.resolve(stalledBody(init, (r) => (release = r)))
       })
 
       const started = Date.now()
       expect(await getSharedSectionKeys(SERVER, '1001', { timeoutMs: 50 })).toBeNull()
       expect(Date.now() - started).toBeLessThan(1000)
+      // The load keeps its own 3 s budget, so the short caller did not cut it.
+      expect(loadSignal?.aborted).toBe(false)
+
+      release()
+      await later(null, 0)
+      mockPlexTv(() => Promise.resolve(textResponse(SHARED_SERVERS_XML)))
+      expect(await getSharedSectionKeys(SERVER, '1001')).toEqual(new Set(['1', '3']))
+    })
+
+    it('reads shared_servers from the E2E plex.tv mock in E2E mode (TS E27)', async () => {
+      const env = process.env as Record<string, string | undefined>
+      const saved = { flag: env.E2E_TEST_MODE, url: env.E2E_PLEX_TV_URL }
+      env.E2E_TEST_MODE = 'true'
+      env.E2E_PLEX_TV_URL = 'http://localhost:4010'
+      try {
+        mockPlexTv(() => Promise.resolve(textResponse(SHARED_SERVERS_XML)))
+
+        expect(await getSharedSectionKeys(SERVER, '1001')).toEqual(new Set(['1', '3']))
+        expect(sharedServersCalls()[0][0]).toBe('http://localhost:4010/api/servers/abc123machine/shared_servers')
+      } finally {
+        if (saved.flag === undefined) delete env.E2E_TEST_MODE
+        else env.E2E_TEST_MODE = saved.flag
+        if (saved.url === undefined) delete env.E2E_PLEX_TV_URL
+        else env.E2E_PLEX_TV_URL = saved.url
+      }
     })
 
     it.each([
@@ -223,6 +262,91 @@ describe('plex-shared-sections', () => {
       mockPlexTv(() => Promise.resolve(textResponse(SHARED_SERVERS_XML)))
 
       expect(await getSharedSectionKeys(SERVER, '1001')).toBeNull()
+    })
+  })
+
+  describe('getSharedSectionFilters', () => {
+    it('keeps a filtered section with its filter text', async () => {
+      mockPlexTv(() => Promise.resolve(textResponse(FILTERED_XML)))
+
+      expect(await getSharedSectionFilters(SERVER, '2001')).toEqual(
+        new Map([
+          ['1', 'label!=Untranscodable'],
+          ['2', null],
+        ])
+      )
+      expect(await getSharedSectionFilters(SERVER, '2003')).toEqual(
+        new Map([
+          ['1', 'contentRating=G'],
+          ['2', 'label!=Kids%2CAnime'],
+        ])
+      )
+      expect(await getSharedSectionFilters(SERVER, '2002')).toEqual(
+        new Map([
+          ['1', null],
+          ['2', null],
+        ])
+      )
+    })
+
+    it("returns 'all' for the server owner without asking plex.tv", async () => {
+      expect(await getSharedSectionFilters(SERVER, 'owner-1')).toBe('all')
+      expect(global.fetch).not.toHaveBeenCalled()
+    })
+
+    it('returns an empty map for a user without a share', async () => {
+      mockPlexTv(() => Promise.resolve(textResponse(FILTERED_XML)))
+
+      expect(await getSharedSectionFilters(SERVER, '9999')).toEqual(new Map())
+    })
+
+    it('shares one cached load with getSharedSectionKeys', async () => {
+      mockPlexTv(() => Promise.resolve(textResponse(FILTERED_XML)))
+
+      await getSharedSectionKeys(SERVER, '2001')
+      await getSharedSectionFilters(SERVER, '2001')
+
+      expect(sharedServersCalls()).toHaveLength(1)
+      expect(await getSharedSectionKeys(SERVER, '2001')).toEqual(new Set(['2']))
+    })
+
+    it('returns null when plex.tv fails, and does not cache the failure', async () => {
+      mockPlexTv(() => Promise.resolve(textResponse('Bad gateway', 502)))
+
+      expect(await getSharedSectionFilters(SERVER, '2001')).toBeNull()
+
+      mockPlexTv(() => Promise.resolve(textResponse(FILTERED_XML)))
+      expect(await getSharedSectionFilters(SERVER, '2001')).toEqual(
+        new Map([
+          ['1', 'label!=Untranscodable'],
+          ['2', null],
+        ])
+      )
+    })
+
+    it('E29: a 300 ms and a 1500 ms caller on a cold cache, a 600 ms plex.tv, then a cached third call', async () => {
+      ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
+        if (url.includes('/identity')) return Promise.resolve(textResponse(IDENTITY_XML))
+        return later(textResponse(FILTERED_XML), 600)
+      })
+
+      const [shell, page] = await Promise.all([
+        getSharedSectionFilters(SERVER, '2001', { timeoutMs: 300 }),
+        getSharedSectionFilters(SERVER, '2001', { timeoutMs: 1500 }),
+      ])
+
+      expect(shell).toBeNull()
+      expect(page).toEqual(
+        new Map([
+          ['1', 'label!=Untranscodable'],
+          ['2', null],
+        ])
+      )
+      expect(sharedServersCalls()).toHaveLength(1)
+
+      expect(await getSharedSectionFilters(SERVER, '2001', { timeoutMs: 300 })).toEqual(page)
+      expect(await getSharedSectionKeys(SERVER, '2001', { timeoutMs: 300 })).toEqual(new Set(['2']))
+      expect(sharedServersCalls()).toHaveLength(1)
     })
   })
 

@@ -224,6 +224,9 @@ export const envSchema = z.object({
   }),
   E2E_PORT: text("Test only: the Playwright web server port.", { group: "Test only", default: "3100" }),
   SKIP_CONNECTION_TESTS: text('Test only: "true" skips live Plex checks.', { group: "Test only" }),
+  E2E_PLEX_TV_URL: text('Test only: the URL of the E2E plex.tv mock, on localhost with a port. Used only while E2E_TEST_MODE is "true"; Playwright sets it.', {
+    group: "Test only",
+  }),
   ENABLE_DEV_UI: text('Development only: "1" serves the /dev/ui primitives sheet (Playwright sets it).', { group: "Test only" }),
 })
 

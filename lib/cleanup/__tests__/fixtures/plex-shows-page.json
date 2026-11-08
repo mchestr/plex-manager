@@ -1,0 +1,108 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "totalSize": 2,
+    "offset": 0,
+    "allowSync": true,
+    "librarySectionID": 2,
+    "librarySectionTitle": "TV Shows",
+    "Metadata": [
+      {
+        "ratingKey": "201",
+        "key": "/library/metadata/201/children",
+        "guid": "plex://show/5d9c086fe9d5a1001f4d0201",
+        "slug": "paper-moon-station",
+        "studio": "Invented Network",
+        "type": "show",
+        "title": "Paper Moon Station",
+        "librarySectionTitle": "TV Shows",
+        "librarySectionID": 2,
+        "librarySectionKey": "/library/sections/2",
+        "contentRating": "TV-14",
+        "summary": "An invented series for the cleanup fixtures.",
+        "index": 1,
+        "audienceRating": 8.0,
+        "viewCount": 12,
+        "leafCount": 3,
+        "viewedLeafCount": 2,
+        "childCount": 2,
+        "year": 2016,
+        "thumb": "/library/metadata/201/thumb/1735689600",
+        "duration": 2700000,
+        "originallyAvailableAt": "2016-09-01",
+        "addedAt": 1690000000,
+        "updatedAt": 1735689600,
+        "Genre": [
+          {
+            "tag": "Comedy"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Invented Actor"
+          }
+        ],
+        "Guid": [
+          {
+            "id": "imdb://tt9900201"
+          },
+          {
+            "id": "tmdb://880201"
+          },
+          {
+            "id": "tvdb://770201"
+          }
+        ],
+        "Label": [
+          {
+            "tag": "Kids"
+          }
+        ]
+      },
+      {
+        "ratingKey": "202",
+        "key": "/library/metadata/202/children",
+        "guid": "plex://show/5d9c086fe9d5a1001f4d0202",
+        "slug": "the-copper-valley",
+        "studio": "Invented Network",
+        "type": "show",
+        "title": "The Copper Valley",
+        "librarySectionTitle": "TV Shows",
+        "librarySectionID": 2,
+        "librarySectionKey": "/library/sections/2",
+        "contentRating": "TV-14",
+        "summary": "An invented series for the cleanup fixtures.",
+        "index": 1,
+        "audienceRating": 8.0,
+        "viewCount": 12,
+        "leafCount": 3,
+        "viewedLeafCount": 2,
+        "childCount": 2,
+        "year": 2021,
+        "thumb": "/library/metadata/202/thumb/1735689600",
+        "duration": 2700000,
+        "originallyAvailableAt": "2021-09-01",
+        "addedAt": 1710000000,
+        "updatedAt": 1735689600,
+        "Genre": [
+          {
+            "tag": "Comedy"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Invented Actor"
+          }
+        ],
+        "Guid": [
+          {
+            "id": "tmdb://880202"
+          },
+          {
+            "id": "tvdb://770202"
+          }
+        ]
+      }
+    ]
+  }
+}
