@@ -35,6 +35,7 @@ const LABELS: Record<keyof InventoryCounts, string> = {
   watchlistSyncHistory: "Watchlist history items",
   inviteUsage: "Invite redemptions",
   subscription: "Subscription record",
+  inactivityNotice: "Inactivity emails",
   affiliateApplication: "Affiliate applications",
   affiliateInvite: "Unused affiliate invites",
   affiliateInviteKept: "Used affiliate invites (kept, without their name)",

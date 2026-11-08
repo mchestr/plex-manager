@@ -131,6 +131,9 @@ async function seedMember(db: PrismaClient) {
   await db.subscription.create({
     data: { userId: MEMBER, stripeCustomerId: `${RUN}-cus`, stripeSubscriptionId: `${RUN}-sub`, status: 'ACTIVE' },
   })
+  await db.inactivityNotice.create({
+    data: { userId: MEMBER, cycleAt: new Date('2026-05-01T20:00:00Z'), leadDays: 30, removeAfter: new Date('2026-10-28T04:00:00Z'), zone: 'America/Toronto' },
+  })
   return { wrappedId: wrapped.id, generationId: generation.id, shareId: share.id, conversationId: conversation.id }
 }
 
@@ -200,6 +203,7 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
       mockDb.watchlistSyncHistory.count(byUser),
       mockDb.inviteUsage.count(byUser),
       mockDb.subscription.count(byUser),
+      mockDb.inactivityNotice.count(byUser),
       mockDb.affiliateApplication.count(byUser),
       mockDb.invite.count({ where: { OR: [{ affiliateUserId: MEMBER }, { joinedUserId: MEMBER }] } }),
     ])

@@ -116,7 +116,7 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 
 | Model | Personal data | Readers | Removal does | Encrypted at rest |
 |---|---|---|---|---|
-| `User` | name, email, image, `plexUserId`, `primaryAuthService`, `timezone`, exemption note, role, `disabledAt`, `accessEndedAt`, `accessRestoredAt`, `inactivityExcluded`; a Tautulli watch-hours snapshot (`watchHours`, `watchHoursLast30Days`, `watchHoursReadAt`); the start of their newest play in Tautulli (`lastSeenAt`, `lastSeenReadAt`); `plexAuthToken` (credential) | M own; A users list and detail; P name and image on a signed share | Deleted. Unshare and the Stripe revoke clear `plexAuthToken` | `plexAuthToken` |
+| `User` | name, email (also the address of the inactivity warning emails, while they are on), image, `plexUserId`, `primaryAuthService`, `timezone`, exemption note, role, `disabledAt`, `accessEndedAt`, `accessRestoredAt`, `inactivityExcluded`, `inactivityEmailsOff` (the member turned off the inactivity warning emails); a Tautulli watch-hours snapshot (`watchHours`, `watchHoursLast30Days`, `watchHoursReadAt`); the start of their newest play in Tautulli (`lastSeenAt`, `lastSeenReadAt`); `plexAuthToken` (credential) | M own; A users list and detail; P name and image on a signed share | Deleted. Unshare and the Stripe revoke clear `plexAuthToken` | `plexAuthToken` |
 | `PlexWrapped` | the member's Rewind: viewing history facts, LLM copy, summary, archetype, legacy share token | M viewer; A Rewind pages; P published pages of a share | Cascade | No |
 | `RewindGeneration` | run status, error code, `previousData` (the replaced Rewind) | A Rewind history | Cascade | No |
 | `RewindShare` | published page list, card facts, token hash and asset key | M sharing panel; P the public link | Cascade (through `PlexWrapped`); the link returns 404 | Token stored as a SHA-256 hash only |
@@ -146,7 +146,8 @@ Readers: M is the member, A is admins, P is the public. "Cascade" means the row 
 | `Subscription` | Stripe customer and subscription ids, status, plan, period end, cancel date, Plex invite status, access skip code | M status; A users list, billing tab | Stripe subscription cancelled at once, then cascade; the customer id goes to the audit row | No |
 | `AuditLog` | actor and target user ids, event details (ids and counts, never secrets) | A and Support in **Admin > Audit log** (Support sees who, what and when, never the stored details); the operator | Kept (ids only) | No |
 | `RequestTierRun` | per run, each member's Overseerr display name, watch hours, tier and request quota before and after (no foreign key to `User`) | A **Admin > Automations > Request limits** | Not erased on removal; the daily sync keeps only the newest 30 runs, so a removed member's name leaves within about a month | No |
-| `InactivityRun` | per daily member activity run, the ids of the members the inactivity sweep removed, skipped or failed on, with their last seen dates (no names, no foreign key to `User`) | A **Admin > Automations > Inactive members** | Not erased on removal; the daily run keeps only the newest 30 runs, so a removed member's id leaves within about a month | No |
+| `InactivityRun` | per daily member activity run, the ids of the members the inactivity sweep removed, skipped or failed on, with their last seen dates (no names, no foreign key to `User`); the number of warning emails it planned (`warned`) and the newest play on the server that it read (`newestPlayAt`) | A **Admin > Automations > Inactive members** | Not erased on removal; the daily run keeps only the newest 30 runs, so a removed member's id leaves within about a month | No |
+| `InactivityNotice` | one warning email that the inactivity sweep planned for the member before removal: the stage (`leadDays`), the cycle and removal dates (`cycleAt`, `removeAfter`), the member zone, the status, a result code, the send attempts and the run that planned it. No address and no email text | A **Admin > Automations > Inactive members** | Cascade | No |
 
 ### Server data with no member's personal data
 
@@ -167,7 +168,7 @@ These hold configuration, credentials for the services the app talks to, cached 
 | `BrandAsset` | the uploaded wordmark, icon, favicon and login background (Settings, Appearance), with who uploaded each | none |
 | `Config` | app settings, Stripe keys, Rewind settings, affiliate invite settings and the affiliate block key | `stripeSecretKey`, `stripeWebhookSecret`, `rewindSerialKey`, `affiliateBlockKey` |
 | `DiscordIntegration` | Discord app credentials and bot settings; `updatedBy` admin id | `clientSecret`, `botToken` |
-| `InactivitySettings` | whether the inactivity sweep is on, its days without a play, the claim of the run in progress; `updatedBy` admin id | No |
+| `InactivitySettings` | whether the inactivity sweep is on, its days without a play, the claim of the run in progress, whether warning emails are on and the days before removal that they go out (`warningsEnabled`, `warningDays`); `updatedBy` admin id | No |
 | `LeaseLock` | which instance holds each lease (Discord bot, watchlist sync, retention) and until when | No |
 | `RewindServerAggregate` | server-wide yearly totals, no per-member rows | No |
 | `MediaMetadataCache` | Plex metadata per title | No |

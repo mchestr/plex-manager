@@ -58,6 +58,8 @@ model User {
   lastSeenAt            DateTime? // Start of the member's newest play in Tautulli (last_seen); never moves back (lib/inactivity/sync.ts)
   lastSeenReadAt        DateTime? // When the daily activity read last found the member in Tautulli
   inactivityExcluded    Boolean                @default(false) // The inactivity sweep never removes this member's Plex access
+  inactivityEmailsOff   Boolean                @default(false) // The member turned off the warning emails before removal for inactivity
+  inactivityNotices     InactivityNotice[]
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
 
@@ -1182,12 +1184,14 @@ model RequestTierRun {
 
 /// Settings of the inactivity sweep (lib/inactivity/settings.ts): one row, id "inactivity".
 model InactivitySettings {
-  id            String    @id @default("inactivity")
-  enabled       Boolean   @default(false) // Remove Plex access from inactive members in the daily run
-  thresholdDays Int       @default(180) // Days without a play (or since joining) before a member counts as inactive
-  runStartedAt  DateTime? // Claim of the run in progress: renewed every 5 minutes, cleared when it ends, stale after 30 minutes
-  updatedAt     DateTime  @updatedAt
-  updatedBy     String?
+  id              String    @id @default("inactivity")
+  enabled         Boolean   @default(false) // Remove Plex access from inactive members in the daily run
+  thresholdDays   Int       @default(180) // Days without a play (or since joining) before a member counts as inactive
+  runStartedAt    DateTime? // Claim of the run in progress: renewed every 5 minutes, cleared when it ends, stale after 30 minutes
+  warningsEnabled Boolean   @default(false) // Email members before the run removes them. Removal waits for the last warning
+  warningDays     Int[]     @default([30, 7, 1]) // Days before the removal date that a warning goes out, largest first
+  updatedAt       DateTime  @updatedAt
+  updatedBy       String?
 }
 
 /// One daily member activity run (lib/inactivity/run.ts): the last seen read from Tautulli, then the inactivity sweep when it is on.
@@ -1204,8 +1208,34 @@ model InactivityRun {
   blocked       String? // Why the sweep removed no one (InactivityBlock), when it did not act
   error         String? // Why the last seen read failed
   entries       Json // InactivityEntry[]: member ids, outcomes and last seen dates, never names
+  warned        Int       @default(0) // Warning emails this run planned
+  newestPlayAt  DateTime? // The newest play on the whole server that this run read; the preview's removal gate uses it
 
   @@index([startedAt])
+}
+
+/// One warning email that the inactivity sweep plans for a member before removal
+/// (lib/inactivity/notices.ts): the outbox row, its dedupe key and its result.
+/// Ids, dates and codes only, never an address or the email text.
+model InactivityNotice {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cycleAt     DateTime // The last active time of the cycle. A play or a return starts a new cycle
+  leadDays    Int // The stage: days before the removal date (30, 7 or 1 with the default leads)
+  removeAfter DateTime // Start of the removal date in the cycle's zone. The sweep never removes the member before it
+  status      String    @default("pending") // pending, sending, sent, skipped, failed or cancelled
+  code        String? // Why it was skipped, failed or cancelled, from a closed list
+  attempts    Int       @default(0) // Send attempts that claimed the row
+  runId       String? // The InactivityRun that planned it. No relation: runs are pruned to 30
+  zone        String // The member zone of the cycle. Every date of the cycle uses it
+  handledAt   DateTime? // When it was sent or skipped
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, cycleAt, removeAfter, leadDays])
+  @@index([status, updatedAt])
+  @@index([createdAt])
 }
 
 // An MCP server the admin assistant can call (Streamable HTTP). A tool is off
