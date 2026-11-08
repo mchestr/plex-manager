@@ -1,0 +1,28 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "Metadata": [
+      {
+        "ratingKey": "90001",
+        "key": "/library/collections/90001/children",
+        "guid": "collection://4f1e2d3c-0b9a-4c8d-9e7f-6a5b4c3d2e1f",
+        "type": "collection",
+        "title": "Movies leaving soon",
+        "librarySectionTitle": "Movies",
+        "librarySectionID": 1,
+        "librarySectionKey": "/library/sections/1",
+        "contentRating": "",
+        "subtype": "movie",
+        "summary": "",
+        "index": 90001,
+        "ratingCount": 0,
+        "thumb": "/library/collections/90001/composite/1767225600",
+        "addedAt": 1767225600,
+        "updatedAt": 1767225600,
+        "childCount": "0",
+        "maxYear": "",
+        "minYear": ""
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "Hub": [
+      {
+        "identifier": "custom.collection.1.90001",
+        "title": "Movies leaving soon",
+        "recommendationsVisibility": "all",
+        "homeVisibility": "admin",
+        "promotedToRecommended": true,
+        "promotedToOwnHome": true,
+        "promotedToSharedHome": false,
+        "deletable": true
+      }
+    ]
+  }
+}
