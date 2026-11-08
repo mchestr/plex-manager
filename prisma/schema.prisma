@@ -33,6 +33,7 @@ model User {
   discordConnection     DiscordConnection?
   discordOAuthStates    DiscordOAuthState[]
   userMediaMarks        UserMediaMark[]
+  cleanupKeeps          CleanupProtection[]
   watchlistSyncSettings WatchlistSyncSettings?
   watchlistSyncHistory  WatchlistSyncHistory[]
   subscription          Subscription?
@@ -1206,6 +1207,207 @@ model InactivityRun {
   entries       Json // InactivityEntry[]: member ids, outcomes and last seen dates, never names
 
   @@index([startedAt])
+}
+
+/// Media cleanup: one row, id "cleanup" (lib/cleanup/settings.ts). Off until an admin turns it on.
+model CleanupSettings {
+  id                 String    @id @default("cleanup")
+  enabled            Boolean   @default(false) // Runs may change Leaving soon and delete through Radarr and Sonarr
+  enabledAt          DateTime? // When the feature was last turned on
+  pausedAt           DateTime? // "Pause all cleanup": every change stops until Resume
+  pausedBy           String? // Admin user id
+  holdUntil          String? // Day key (server zone): nothing is deleted before it (turn on, resume)
+  runClaimAt         DateTime? // Claim of a live run or an act run: renewed every 5 minutes, stale after 30
+  readClaimAt        DateTime? // Claim of a library read: renewed every 5 minutes, stale after 30
+  collectionsClaimAt DateTime? // Claim of a Plex collection sync: renewed every 5 minutes, stale after 30
+  collectionsDirtyAt DateTime? // Leaving soon changed after the last Plex collection sync started
+  options            Json      @default("{}") // CleanupOptions (lib/validations/cleanup-options.ts)
+  runtime            Json      @default("{}") // CleanupRuntime: Plex collection ids, notices (lib/cleanup/schema/runtime.ts)
+  updatedAt          DateTime  @updatedAt
+  updatedBy          String? // Admin user id of the last options change
+}
+
+/// One media cleanup rule (lib/cleanup/rules.ts): level, libraries, conditions, protections and Then in definition.
+model CleanupRule {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  mode          String    @default("dryRun") // dryRun | reviewFirst | automatic
+  revision      Int       @default(1) // Raised by every save, mode change and rename (compare-and-set). Runs never change it
+  definition    Json // RuleDefinition (lib/validations/cleanup-rule.ts)
+  schemaVersion Int       @default(1) // RuleDefinition.schemaVersion, copied for queries
+  origin        Json? // { kind: "recipe", recipeId, recipeVersion, values } | { kind: "duplicate", ruleId } | { kind: "blank" }
+  stats         Json      @default("{}") // RuleStats: newest evaluation, dry-run history (lib/cleanup/schema/stats.ts)
+  turnedOnAt    DateTime? // When the rule last left Dry run
+  lastDryRunAt  DateTime?
+  createdAt     DateTime  @default(now())
+  createdBy     String // Admin user id
+  updatedAt     DateTime  @updatedAt
+  updatedBy     String? // Admin user id
+
+  @@index([mode])
+}
+
+/// A title in Leaving soon, or held by the entry check (lib/cleanup/run/*). An exit moves it to CleanupOutcome.
+model CleanupItem {
+  id                  String    @id @default(cuid())
+  itemKey             String    @unique // "movie:tmdb:753342", "show:tvdb:121361", "season:tvdb:121361:4"
+  level               String // movie | show | season
+  titleKey            String // "tmdb:753342", "tvdb:121361" (the show's key for a season)
+  sectionId           String // Plex library section of the managed copy
+  ratingKey           String // Plex rating key of the managed copy (poster, collection)
+  title               String // Movie or show title
+  year                Int?
+  seasonNumber        Int?
+  episodeCount        Int? // Seasons: episodes on disk
+  seasonCount         Int? // Shows: seasons on disk
+  sizeBytes           BigInt // 0 when the snapshot size is unknown: the act step then holds it (holdCode "noValue:size")
+  arr                 Json // ArrRef: service, id, titleSlug, path, unmonitored?
+  state               String // held | leaving | approved | deleting
+  ruleIds             String[] // Live rules that hold the item
+  action              String // ActionId: the most careful action of the holding rules
+  importListExclusion Boolean   @default(false)
+  needsApproval       Boolean   @default(false) // A holding rule is in Review first
+  heldAt              DateTime? // Set while state is held
+  enteredAt           DateTime? // Joined Leaving soon; null while held
+  leaveOn             String? // Day key; null while held. Never moves earlier
+  firstLeaveOn        String? // The first leave date members saw
+  postponedAt         DateTime?
+  postponedBy         String? // Admin user id
+  approvedAt          DateTime?
+  approvedBy          String? // Admin user id
+  holdCode            String? // Why it cannot go now (a needed value is unknown)
+  deferredAt          DateTime? // Somebody played it during the last act run
+  failCode            String? // Last deletion failure
+  failCount           Int       @default(0)
+  why                 Json // WhySnapshot of the last check, no member ids
+  lastRunId           String?
+  checkedAt           DateTime
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([state, leaveOn])
+  @@index([sectionId, state])
+  @@index([titleKey])
+  @@index([ruleIds], type: Gin)
+}
+
+/// What happened to a title that left Leaving soon: deleted, failed, rescued or released (history).
+model CleanupOutcome {
+  id           String    @id @default(cuid())
+  itemKey      String
+  level        String
+  titleKey     String
+  sectionId    String
+  ratingKey    String
+  title        String
+  year         Int?
+  seasonNumber Int?
+  kind         String // deleted | failed | rescued | released
+  reason       String // OutcomeReason (lib/cleanup/outcomes.ts)
+  detail       Json? // { conditionId?, protectionId?, code?, service? }
+  ruleIds      String[]
+  action       String?
+  sizeBytes    BigInt    @default(0) // Size when it left
+  freedBytes   BigInt    @default(0) // Deleted only, "up to"; 0 when the record was already gone
+  alreadyGone  Boolean   @default(false)
+  approvedBy   String? // "automatic", or the admin user id who approved the batch
+  enteredAt    DateTime?
+  leaveOn      String?
+  why          Json? // WhySnapshot the run saw, no member ids
+  runId        String?
+  actedAt      DateTime  @default(now())
+
+  @@index([kind, actedAt])
+  @@index([actedAt])
+  @@index([itemKey, actedAt])
+}
+
+/// A member Keep or an admin exclusion of one title (lib/cleanup/protections.ts).
+model CleanupProtection {
+  id            String    @id @default(cuid())
+  kind          String // memberKeep | adminExclude
+  itemKey       String
+  level         String
+  titleKey      String
+  title         String
+  year          Int?
+  seasonNumber  Int?
+  sectionId     String?
+  ratingKey     String?
+  externalIds   Json? // { tmdb?, tvdb?, imdb? } of the title at creation, so a later release can match a protection by any shared id
+  memberId      String? // The member who kept it; null for an exclusion
+  member        User?     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdBy     String // The member, or the admin who excluded it
+  note          String? // Exclusions only; admins only
+  expiresAt     DateTime? // Keeps always; exclusions when an end date is set
+  status        String    @default("active") // active | ended
+  endedAt       DateTime?
+  endedBy       String? // self | admin | expired
+  endedByUserId String?
+  activeKey     String?   @unique // "keep:<itemKey>:<memberId>" or "exclude:<itemKey>" while active; null once ended
+  restore       Json? // RestoreItem: the CleanupItem a Keep took out, for Undo
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([memberId, status])
+  @@index([kind, status])
+  @@index([itemKey])
+  @@index([titleKey])
+}
+
+/// One media cleanup run: a dry run, a live run (evaluate, Leaving soon, deletions) or an act run (deletions).
+model CleanupRun {
+  id         String    @id @default(cuid())
+  kind       String // dryRun | run | act
+  trigger    String // scheduled | admin | create | approval
+  actorId    String? // Admin user id; null for the schedule
+  snapshotId String?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ruleIds    String[]
+  checked    Int       @default(0)
+  matched    Int       @default(0)
+  joined     Int       @default(0)
+  held       Int       @default(0)
+  rescued    Int       @default(0)
+  deleted    Int       @default(0)
+  failed     Int       @default(0)
+  deferred   Int       @default(0)
+  freedBytes BigInt    @default(0)
+  outcome    String? // RunOutcome (lib/cleanup/blocks.ts)
+  blocks     Json      @default("[]") // Block[]
+  error      String? // An error code, never a message
+  entries    Json      @default("[]") // RunRuleEntry[]: counts per rule, ids only
+
+  @@index([startedAt])
+  @@index([kind, startedAt])
+}
+
+/// One read of the library data (lib/cleanup/snapshot/read.ts): source results and server-wide facts.
+model CleanupSnapshot {
+  id         String                @id @default(cuid())
+  status     String // reading | complete | failed
+  trigger    String // scheduled | admin | system
+  actorId    String?
+  startedAt  DateTime              @default(now())
+  finishedAt DateTime?
+  sources    Json                  @default("[]") // SourceStatus[]
+  facts      Json                  @default("{}") // SnapshotFacts: history start, users, libraries, disk, collections
+  parts      CleanupSnapshotPart[]
+
+  @@index([status, finishedAt])
+}
+
+/// The items of one level in one library read: SnapshotItem[] in one Json document.
+model CleanupSnapshotPart {
+  id         String          @id @default(cuid())
+  snapshotId String
+  snapshot   CleanupSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  level      String // movie | show | season
+  itemCount  Int
+  items      Json // SnapshotItem[] (lib/cleanup/schema/snapshot.ts)
+
+  @@unique([snapshotId, level])
 }
 
 // An MCP server the admin assistant can call (Streamable HTTP). A tool is off

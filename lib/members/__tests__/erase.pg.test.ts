@@ -9,7 +9,8 @@
  * row about the member keeps its cost but loses its text, and the single
  * `MEMBER_ERASED` row holds no name or email. The member's unused affiliate
  * invite goes; their used one and the one they joined with stay, without
- * their id.
+ * their id. The member's Leaving soon Keep goes through the cascade; the
+ * admin exclusion of the same title has no member and stays.
  *
  * Stripe and the media servers are mocked; everything else is real. Gated by
  * `describePg` and run only by `npm run test:integration`. The suite touches
@@ -46,6 +47,7 @@ const ADMIN = `${RUN}-admin`
 const DISCORD = `${RUN}-discord`
 const EMAIL = `${RUN}@example.com`
 const NAME = `Erase Fixture ${RUN}`
+const KEPT_ITEM = `movie:tmdb:${RUN}`
 
 /** One row in every inventory table that can reference the member. */
 async function seedMember(db: PrismaClient) {
@@ -131,6 +133,21 @@ async function seedMember(db: PrismaClient) {
   await db.subscription.create({
     data: { userId: MEMBER, stripeCustomerId: `${RUN}-cus`, stripeSubscriptionId: `${RUN}-sub`, status: 'ACTIVE' },
   })
+  // A Keep from Leaving soon, and an admin exclusion of the same title, which has no member
+  const kept = { itemKey: KEPT_ITEM, level: 'movie', titleKey: `tmdb:${RUN}`, title: 'Kept' }
+  await db.cleanupProtection.create({
+    data: {
+      ...kept,
+      kind: 'memberKeep',
+      memberId: MEMBER,
+      createdBy: MEMBER,
+      expiresAt: new Date(Date.now() + 30 * 86_400_000),
+      activeKey: `keep:${KEPT_ITEM}:${MEMBER}`,
+    },
+  })
+  await db.cleanupProtection.create({
+    data: { ...kept, kind: 'adminExclude', createdBy: ADMIN, note: 'Owner favourite', activeKey: `exclude:${KEPT_ITEM}` },
+  })
   return { wrappedId: wrapped.id, generationId: generation.id, shareId: share.id, conversationId: conversation.id }
 }
 
@@ -149,6 +166,7 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
 
   afterAll(async () => {
     await mockDb.lLMUsage.deleteMany({ where: { userId: ADMIN } })
+    await mockDb.cleanupProtection.deleteMany({ where: { itemKey: KEPT_ITEM } })
     await mockDb.invite.deleteMany({ where: { code: { startsWith: RUN } } })
     await mockDb.user.deleteMany({ where: { id: { in: [ADMIN, MEMBER] } } })
     await mockDb.auditLog.deleteMany({ where: { OR: [{ actorUserId: { in: [ADMIN, MEMBER] } }, { targetUserId: MEMBER }] } })
@@ -202,8 +220,12 @@ describePg('eraseMember on PostgreSQL', (databaseUrl) => {
       mockDb.subscription.count(byUser),
       mockDb.affiliateApplication.count(byUser),
       mockDb.invite.count({ where: { OR: [{ affiliateUserId: MEMBER }, { joinedUserId: MEMBER }] } }),
+      mockDb.cleanupProtection.count({ where: { memberId: MEMBER } }),
     ])
     expect(remaining.every((count) => count === 0)).toBe(true)
+
+    const protections = await mockDb.cleanupProtection.findMany({ where: { itemKey: KEPT_ITEM }, select: { kind: true, memberId: true } })
+    expect(protections).toEqual([{ kind: 'adminExclude', memberId: null }])
 
     const kept = await mockDb.invite.findMany({ where: { code: { startsWith: RUN } }, select: { code: true, affiliateUserId: true, joinedUserId: true } })
     expect(kept.sort((a, b) => a.code.localeCompare(b.code))).toEqual([

@@ -9,7 +9,9 @@
  * rows keyed by the member's Discord id (command log, chat sessions, pending
  * selections), and LLM text that admins generated for the member under their
  * own user id (the admin regenerate path, P2.1), which is anonymised.
- * Affiliate invites are in `lib/members/erase-affiliates`.
+ * Affiliate invites are in `lib/members/erase-affiliates`. The member's
+ * media cleanup Keeps (`CleanupProtection`) go through the cascade; admin
+ * exclusions have no member and stay.
  *
  * @module lib/members/erase-inventory
  */
@@ -58,7 +60,8 @@ export type InventoryCounts = Record<
   | "watchlistSyncSettings"
   | "watchlistSyncHistory"
   | "inviteUsage"
-  | "subscription",
+  | "subscription"
+  | "cleanupProtection",
   number
 > &
   AffiliateCounts
@@ -103,7 +106,7 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
     rewindPrefs, rewindExclusion, llmUsage, llmUsageAnonymised, chatConversation, chatConversationMessage,
     conversationReview, conversationFinding,
     discordChatSession, discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState,
-    userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, affiliates,
+    userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, cleanupProtection, affiliates,
   ] = await Promise.all([
     prisma.user.count({ where: { id: userId } }),
     prisma.plexWrapped.count(byUser),
@@ -133,6 +136,7 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
     prisma.watchlistSyncHistory.count(byUser),
     prisma.inviteUsage.count(byUser),
     prisma.subscription.count(byUser),
+    prisma.cleanupProtection.count({ where: { memberId: userId } }),
     countAffiliateRows(userId),
   ])
   return {
@@ -140,7 +144,7 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
     rewindPrefs, rewindExclusion, llmUsage, llmUsageAnonymised, chatConversation, chatConversationMessage,
     conversationReview, conversationFinding,
     discordChatSession, discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState,
-    userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, ...affiliates,
+    userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, cleanupProtection, ...affiliates,
   }
 }
 
