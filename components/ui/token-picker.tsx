@@ -5,9 +5,8 @@ import { X } from "lucide-react"
 import { useId, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react"
 
 import { Button } from "@/components/ui/button"
-import { popupSurface } from "@/components/ui/dropdown-menu"
 import { Icon } from "@/components/ui/icon"
-import { usePopupLayer, usePortalContainer } from "@/components/ui/portal-container"
+import { Popover, PopoverContent } from "@/components/ui/popover"
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
@@ -93,8 +92,6 @@ export function TokenPicker({
   if (opened.open !== open) setOpened({ open, shell: open ? (wide ? "popover" : "sheet") : opened.shell })
   const shell = opened.shell
 
-  const { container, popupProps } = usePortalContainer()
-  const layer = usePopupLayer()
   const captionId = useId()
   const titleId = useId()
 
@@ -184,40 +181,32 @@ export function TokenPicker({
     onOpenChange(false, { cancel: false })
   }
 
-  const { className: popupClassName, ...popupAttributes } = popupProps
   return (
-    <PopoverPrimitive.Root open={open} onOpenChange={changeOpen}>
-      <PopoverPrimitive.Portal container={container}>
-        <PopoverPrimitive.Positioner className={layer} anchor={anchor} side="bottom" align="start" sideOffset={4}>
-          <PopoverPrimitive.Popup
-            data-slot="popover-content"
-            data-token-picker=""
-            data-shell="popover"
-            data-testid={testId}
-            {...popupAttributes}
-            aria-labelledby={labelledBy}
-            initialFocus={initialFocus}
-            finalFocus={returnFocus}
-            onKeyDown={tabOut}
-            className={cn(
-              popupSurface,
-              "flex w-[25rem] max-w-(--available-width) max-h-(--available-height) flex-col gap-4 overflow-y-auto p-4 pb-0 text-ui",
-              popupClassName
-            )}
-          >
-            <div className="flex flex-col gap-0.5">
-              {captionNode}
-              <PopoverPrimitive.Title id={titleId} className="text-h3 text-foreground">
-                {title}
-              </PopoverPrimitive.Title>
-            </div>
-            <div className="flex flex-col gap-4">{children}</div>
-            <div data-slot="token-picker-footer" className={cn(footerClass, "-mx-4 mt-auto px-4 py-3")}>
-              {footerNode}
-            </div>
-          </PopoverPrimitive.Popup>
-        </PopoverPrimitive.Positioner>
-      </PopoverPrimitive.Portal>
-    </PopoverPrimitive.Root>
+    <Popover open={open} onOpenChange={changeOpen}>
+      <PopoverContent
+        anchor={anchor}
+        side="bottom"
+        align="start"
+        data-token-picker=""
+        data-shell="popover"
+        data-testid={testId}
+        aria-labelledby={labelledBy}
+        initialFocus={initialFocus}
+        finalFocus={returnFocus}
+        onKeyDown={tabOut}
+        className="w-[25rem] max-h-(--available-height) gap-4 overflow-y-auto pb-0"
+      >
+        <div className="flex flex-col gap-0.5">
+          {captionNode}
+          <PopoverPrimitive.Title id={titleId} className="text-h3 text-foreground">
+            {title}
+          </PopoverPrimitive.Title>
+        </div>
+        <div className="flex flex-col gap-4">{children}</div>
+        <div data-slot="token-picker-footer" className={cn(footerClass, "-mx-4 mt-auto px-4 py-3")}>
+          {footerNode}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }

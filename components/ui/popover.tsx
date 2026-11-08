@@ -16,14 +16,15 @@ export function PopoverTrigger(props: PopoverPrimitive.Trigger.Props) {
 }
 
 type ContentProps = Omit<PopoverPrimitive.Popup.Props, "className"> &
-  Pick<PopoverPrimitive.Positioner.Props, "align" | "side" | "sideOffset"> & { className?: string }
+  Pick<PopoverPrimitive.Positioner.Props, "align" | "side" | "sideOffset" | "anchor"> & { className?: string }
 
-export function PopoverContent({ align = "center", side = "bottom", sideOffset = 4, className, ...props }: ContentProps) {
+/** `anchor` places the panel at another element than its trigger, as the token picker does. */
+export function PopoverContent({ align = "center", side = "bottom", sideOffset = 4, anchor, className, ...props }: ContentProps) {
   const { container, popupProps } = usePortalContainer()
   const layer = usePopupLayer()
   return (
     <PopoverPrimitive.Portal container={container}>
-      <PopoverPrimitive.Positioner className={layer} align={align} side={side} sideOffset={sideOffset}>
+      <PopoverPrimitive.Positioner className={layer} anchor={anchor} align={align} side={side} sideOffset={sideOffset}>
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           {...popupProps}
