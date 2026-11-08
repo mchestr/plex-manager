@@ -294,6 +294,8 @@ if (!result.success) {
   - `lib/queue/types.ts` (360): the one registry of every job type, label, payload and id policy
   - `lib/utils/format.ts` (220): every zone and locale formatter, covered by `npm run test:tz`
   - `lib/ui/status.ts` (300): one table holds every status word, with its resolver and the Discord status rows
+  - `lib/security/audit-log.ts` (220): the one enum of every audit event type, beside the writers that take it
+  - `lib/audit/events.ts` (175): a Record over every audit event type, so a new type does not compile without its words
 
 ### Testability First
 - Components should be independently testable

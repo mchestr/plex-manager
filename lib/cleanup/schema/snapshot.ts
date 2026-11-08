@@ -96,7 +96,7 @@ export const snapshotItemSchema = z.object({
   plays: z.object({ lastCountedAt: epoch.nullable(), countedAt: z.array(epoch), viewers: z.array(viewerSchema) }).nullable(), // null: Tautulli failed
   requests: z.array(requestFactSchema).nullable(), // null: Overseerr failed or not set up
   collections: z.array(z.string()), // titles of the Plex collections the snapshot read members of (G13)
-  labels: z.array(z.string()), // Plex Label tags of the managed copy, lower case (movie, show). Seasons: []. For share filters (13.1)
+  labels: z.array(z.string()), // the union of the Label tags of every copy, lower case (movie, show). Seasons: []. For share filters (13.1)
 })
 export type SnapshotItem = z.infer<typeof snapshotItemSchema>
 
