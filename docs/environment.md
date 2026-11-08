@@ -86,6 +86,7 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `RETENTION_DISCORD_OAUTH_STATE_DAYS` |  | `1` | Days an expired Discord link attempt is kept. |
 | `RETENTION_AUDIT_LOG_DAYS` |  | `400` | Days audit log rows are kept. |
 | `RETENTION_AFFILIATE_DAYS` |  | `365` | Days refused, revoked and closed affiliate applications and unused affiliate invites are kept. |
+| `RETENTION_INACTIVITY_NOTICE_DAYS` |  | `180` | Days after it is made that an inactivity warning email record may be deleted, once its inactive period is over. |
 
 ## Integrations
 

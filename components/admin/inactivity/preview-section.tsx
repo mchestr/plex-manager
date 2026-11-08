@@ -14,12 +14,16 @@ interface PreviewSectionProps {
   now: number
 }
 
-/** Every member with a Plex account who is not in the list, by why: active, protected by a rule, or without access. */
+/**
+ * Every member with a Plex account who is not in the list, by why: active,
+ * protected by a rule, without access, or held for their warning emails.
+ */
 function NotListed({ preview, thresholdDays }: { preview: InactivityPreview; thresholdDays: number }) {
   const counts = [
     { key: "active", label: `Played, joined or got access back in the last ${thresholdDays} days`, count: preview.active },
     ...INACTIVITY_SKIPS.map((skip) => ({ key: skip, label: SKIP_LABELS[skip], count: preview.skips[skip] })),
     { key: "no-access", label: "No access to the server", count: preview.noAccess },
+    { key: "held", label: "Waiting for a warning email or their removal date", count: preview.held },
   ].filter((item) => item.count > 0)
   if (counts.length === 0) return null
 

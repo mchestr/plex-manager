@@ -20,9 +20,11 @@
  *    the sweep is off records nothing and returns null.
  * 4. Sweep, with `readSince` = this run's start: only members this read found
  *    count as read.
- * 5. Store the counts and entries, keep the newest {@link KEPT_RUNS} runs, and
- *    write `INACTIVITY_SWEEP_RUN` for the stored run, so every run listed on
- *    the admin page has its audit row.
+ * 5. Store the counts and entries, the warnings the sweep planned (`warned`)
+ *    and the newest play on the server that the read found (`newestPlayAt`,
+ *    which the admin page's preview gates with), keep the newest
+ *    {@link KEPT_RUNS} runs, and write `INACTIVITY_SWEEP_RUN` for the stored
+ *    run, so every run listed on the admin page has its audit row.
  * 6. Stop renewing and release the claim, whatever happened.
  *
  * ```
@@ -42,9 +44,10 @@
 import "server-only"
 
 import type { InactivityBlock } from "@/lib/inactivity/blocks"
-import { getInactivitySettings, INACTIVITY_SETTINGS_ID } from "@/lib/inactivity/settings"
+import { getInactivitySettings, getInactivityWarnings, INACTIVITY_SETTINGS_ID } from "@/lib/inactivity/settings"
 import { runSweep, type MemberActivityTrigger, type SweepResult } from "@/lib/inactivity/sweep"
 import { syncLastSeen } from "@/lib/inactivity/sync"
+import type { NoticeEnqueuer } from "@/lib/inactivity/warn"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
@@ -68,6 +71,8 @@ export type MemberActivityResult =
       qualified: number
       removed: number
       failed: number
+      /** Warning rows the run planned. */
+      warned: number
       blocked: InactivityBlock | null
       /** Why the last seen read failed. */
       error: string | null
@@ -78,6 +83,8 @@ interface RunOptions {
   actorId: string
   /** The members the admin confirmed; an admin run removes no one when any other member qualifies. */
   confirmedUserIds?: readonly string[]
+  /** Hands pending warning rows to their job; without it the run plans no warnings. */
+  enqueueNotices?: NoticeEnqueuer
   signal?: AbortSignal
   now?: Date
 }
@@ -154,9 +161,10 @@ async function auditBusy(actorId: string) {
 
 async function claimedRun(
   trigger: MemberActivityTrigger,
-  { actorId, confirmedUserIds, signal, now }: RunOptions & { now: Date }
+  { actorId, confirmedUserIds, enqueueNotices, signal, now }: RunOptions & { now: Date }
 ): Promise<MemberActivityResult | null> {
   const settings = await getInactivitySettings()
+  const warnings = await getInactivityWarnings()
   // startedAt is the instant the read stamps on lastSeenReadAt, so the admin
   // page's preview can tell which members this run's read found
   const { id: runId } = await prisma.inactivityRun.create({
@@ -172,34 +180,26 @@ async function claimedRun(
 
   const sweep: SweepResult = sync.ok
     ? await runSweep({
-        runId,
-        trigger,
-        actorId,
-        confirmedUserIds,
-        settings,
-        now,
-        signal,
-        readSince: now,
-        newestPlayAt: sync.newestPlayAt,
-        oldestPlayAt: sync.oldestPlayAt,
+        runId, trigger, actorId, confirmedUserIds, settings, warnings, enqueueNotices, now, signal,
+        readSince: now, newestPlayAt: sync.newestPlayAt, oldestPlayAt: sync.oldestPlayAt,
       })
-    : { qualified: 0, removed: 0, failed: 0, entries: [], blocked: "sync_failed" }
-  const { qualified, removed, failed, blocked } = sweep
-  const { tautulliUsers, matched } = sync.ok ? sync : { tautulliUsers: 0, matched: 0 }
+    : { qualified: 0, removed: 0, failed: 0, warned: 0, entries: [], blocked: "sync_failed" }
+  const { qualified, removed, failed, warned, blocked } = sweep
+  const { tautulliUsers, matched, newestPlayAt } = sync.ok ? sync : { tautulliUsers: 0, matched: 0, newestPlayAt: null }
   const error = sync.ok ? null : sync.code
 
   await prisma.inactivityRun.update({
     where: { id: runId },
-    data: { finishedAt: new Date(), tautulliUsers, matched, qualified, removed, failed, blocked, error, entries: sweep.entries },
+    data: { finishedAt: new Date(), tautulliUsers, matched, qualified, removed, failed, warned, newestPlayAt, blocked, error, entries: sweep.entries },
   })
   await prune()
 
-  const details = { runId, trigger, thresholdDays: settings.thresholdDays, qualified, removed, failed, blocked }
+  const details = { runId, trigger, thresholdDays: settings.thresholdDays, qualified, removed, failed, warned, blocked }
   await recordAuditEvent(AuditEventType.INACTIVITY_SWEEP_RUN, actorId, details).catch((auditError: unknown) =>
     logger.error("inactivity.run_audit_failed", auditError, { runId })
   )
-  logger.info("inactivity.run_finished", { runId, trigger, qualified, removed, failed, blocked, error })
-  return { busy: false, runId, matched, qualified, removed, failed, blocked, error }
+  logger.info("inactivity.run_finished", { runId, trigger, qualified, removed, failed, warned, blocked, error })
+  return { busy: false, runId, matched, qualified, removed, failed, warned, blocked, error }
 }
 
 /** Whether a run holds the claim now: taken or renewed less than 30 minutes before `now`. */

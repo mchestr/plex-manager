@@ -28,7 +28,7 @@ import { JOB_TYPES, type JobPayloadMap } from "../../types"
 import { CONFIRMATION_TTL_MS, getMemberActivityProcessor } from "../member-activity"
 
 const processor = getMemberActivityProcessor(JOB_TYPES.MEMBER_ACTIVITY)!
-const finished = { busy: false as const, runId: "run-1", matched: 3, qualified: 1, removed: 1, failed: 0, blocked: null, error: null }
+const finished = { busy: false as const, runId: "run-1", matched: 3, qualified: 1, removed: 1, failed: 0, warned: 0, blocked: null, error: null }
 const NOW = Date.parse("2026-10-31T12:00:00.000Z")
 
 type Payload = JobPayloadMap[typeof JOB_TYPES.MEMBER_ACTIVITY]

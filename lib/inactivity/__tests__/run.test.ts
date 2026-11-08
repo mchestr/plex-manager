@@ -13,7 +13,11 @@ jest.mock("@/lib/utils/logger", () => ({
     warn: (...args: unknown[]) => mockWarn(...args),
   }),
 }))
-jest.mock("@/lib/inactivity/settings", () => ({ ...jest.requireActual("@/lib/inactivity/settings"), getInactivitySettings: jest.fn() }))
+jest.mock("@/lib/inactivity/settings", () => ({
+  ...jest.requireActual("@/lib/inactivity/settings"),
+  getInactivitySettings: jest.fn(),
+  getInactivityWarnings: jest.fn(),
+}))
 jest.mock("@/lib/inactivity/sync", () => ({ syncLastSeen: jest.fn() }))
 jest.mock("@/lib/inactivity/sweep", () => ({ runSweep: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), recordAuditEvent: jest.fn() }))
@@ -23,7 +27,7 @@ import { mockReset } from "jest-mock-extended"
 import { buildInactivityRun, buildInactivitySettings } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { CLAIM_RENEW_MS, CLAIM_STALE_MS, isRunInProgress, KEPT_RUNS, runMemberActivity } from "@/lib/inactivity/run"
-import { getInactivitySettings } from "@/lib/inactivity/settings"
+import { getInactivitySettings, getInactivityWarnings } from "@/lib/inactivity/settings"
 import { runSweep, type SweepResult } from "@/lib/inactivity/sweep"
 import { syncLastSeen } from "@/lib/inactivity/sync"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
@@ -35,10 +39,12 @@ const swept: SweepResult = {
   qualified: 2,
   removed: 1,
   failed: 1,
+  warned: 3,
   blocked: null,
   entries: [{ userId: "u1", outcome: "removed", lastActiveAt: "2026-01-01T00:00:00.000Z", lastSeenAt: null }],
 }
 const CLAIM = { id: "inactivity" }
+const WARNINGS_OFF = { warningsEnabled: false, warningDays: [30, 7, 1] }
 
 function settings(enabled: boolean, thresholdDays = 180) {
   jest.mocked(getInactivitySettings).mockResolvedValue({ enabled, thresholdDays })
@@ -60,11 +66,12 @@ beforeEach(() => {
   mockReset(prismaMock)
   jest.clearAllMocks()
   settings(false)
+  jest.mocked(getInactivityWarnings).mockResolvedValue(WARNINGS_OFF)
   prismaMock.inactivitySettings.updateMany.mockResolvedValue({ count: 1 })
   prismaMock.inactivityRun.create.mockResolvedValue(buildInactivityRun({ id: "run-1" }))
   prismaMock.inactivityRun.findMany.mockResolvedValue([])
   jest.mocked(syncLastSeen).mockResolvedValue({ ok: true, tautulliUsers: 12, matched: 9, newestPlayAt, oldestPlayAt })
-  jest.mocked(runSweep).mockResolvedValue({ qualified: 0, removed: 0, failed: 0, entries: [], blocked: "disabled" })
+  jest.mocked(runSweep).mockResolvedValue({ qualified: 0, removed: 0, failed: 0, warned: 0, entries: [], blocked: "disabled" })
   jest.mocked(recordAuditEvent).mockResolvedValue(undefined)
 })
 
@@ -282,12 +289,23 @@ describe("runMemberActivity", () => {
       actorId: "admin-1",
       confirmedUserIds: ["u1", "u2"],
       settings: { enabled: true, thresholdDays: 90 },
+      warnings: WARNINGS_OFF,
       now,
       signal: expect.any(AbortSignal),
       readSince: now,
       newestPlayAt,
       oldestPlayAt,
     })
+  })
+
+  it("passes the warning settings and the caller's enqueuer on to the sweep", async () => {
+    const warnings = { warningsEnabled: true, warningDays: [21, 3] }
+    jest.mocked(getInactivityWarnings).mockResolvedValue(warnings)
+    const enqueueNotices = jest.fn(async () => undefined)
+
+    await runMemberActivity("scheduled", { actorId: "system", enqueueNotices, now })
+
+    expect(runSweep).toHaveBeenCalledWith(expect.objectContaining({ warnings, enqueueNotices }))
   })
 
   it("passes the caller's signal on to the read and the sweep", async () => {
@@ -318,12 +336,14 @@ describe("runMemberActivity", () => {
       qualified: 2,
       removed: 1,
       failed: 1,
+      warned: 3,
+      newestPlayAt,
       blocked: null,
       error: null,
       entries: swept.entries,
     })
     expect(prismaMock.inactivityRun.update.mock.calls[0]![0].where).toEqual({ id: "run-1" })
-    expect(result).toEqual({ busy: false, runId: "run-1", matched: 9, qualified: 2, removed: 1, failed: 1, blocked: null, error: null })
+    expect(result).toEqual({ busy: false, runId: "run-1", matched: 9, qualified: 2, removed: 1, failed: 1, warned: 3, blocked: null, error: null })
   })
 
   it("keeps the newest 30 runs", async () => {
@@ -348,7 +368,17 @@ describe("runMemberActivity", () => {
     const result = await runMemberActivity("scheduled", { actorId: "system", now })
 
     expect(runSweep).not.toHaveBeenCalled()
-    expect(finished()).toMatchObject({ tautulliUsers: 0, matched: 0, qualified: 0, removed: 0, blocked: "sync_failed", error: "TIMEOUT", entries: [] })
+    expect(finished()).toMatchObject({
+      tautulliUsers: 0,
+      matched: 0,
+      qualified: 0,
+      removed: 0,
+      warned: 0,
+      newestPlayAt: null,
+      blocked: "sync_failed",
+      error: "TIMEOUT",
+      entries: [],
+    })
     expect(result).toMatchObject({ matched: 0, blocked: "sync_failed", error: "TIMEOUT" })
   })
 
@@ -390,6 +420,7 @@ describe("runMemberActivity audit", () => {
       qualified: 2,
       removed: 1,
       failed: 1,
+      warned: 3,
       blocked: "over_limit",
     })
   })

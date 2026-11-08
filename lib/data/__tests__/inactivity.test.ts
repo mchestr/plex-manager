@@ -34,6 +34,7 @@ const PREVIEW: InactivityPreview = {
   skips: { no_plex: 0, admin: 1, owner: 0, role: 0, paying: 0, excluded: 0, not_read: 0 },
   active: 4,
   noAccess: 0,
+  held: 0,
   shareCheck: null,
   scheduledLimit: 1,
   readSince: null,

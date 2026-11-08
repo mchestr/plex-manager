@@ -95,6 +95,7 @@ A daily sweep (`lib/queue/jobs/retention.ts`) removes personal data once it is o
 | Ended affiliate applications (`AffiliateApplication`: refused, revoked, ended or closed) | 365 days after their last date, and never less than 30 days, so a refusal stays for its 30-day wait before the member can apply again | Deleted. Pending and approved applications stay | `RETENTION_AFFILIATE_DAYS` |
 | Unused affiliate invites (`Invite` of kind `AFFILIATE` that nobody joined with) | 365 days after it is cancelled or expires | Deleted. Used affiliate invites and admin invites stay | `RETENTION_AFFILIATE_DAYS` |
 | Affiliate invite labels (`Invite.label`) | until the invite is used, cancelled or expires | Set to null | none |
+| Inactivity warning emails (`InactivityNotice`) | 180 days after the row was made, and only once its inactive period is over: the member played or got access back, or their access ended after the row was made | Deleted. Rows of an inactive period that is still open stay at any age, because the sweep reads them before it removes anyone | `RETENTION_INACTIVITY_NOTICE_DAYS` |
 
 Every other row in the member tables below is kept while the member is, and goes when they are removed. `WrappedShareVisit` (v2 share visits) is deleted with its Rewind. Server logs are kept for as long as the operator's log rotation keeps them.
 

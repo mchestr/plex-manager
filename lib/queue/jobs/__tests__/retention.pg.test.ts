@@ -9,6 +9,8 @@
  * audit rows at 399 days stay while those at 401 go. Affiliate applications
  * and unused affiliate invites go after 365 days; admin invites and used
  * affiliate invites stay, and expired affiliate invites lose their label.
+ * Inactivity warning email rows go after 180 days once their cycle is
+ * closed; a row of an open cycle stays at any age.
  *
  * The sweep reads the whole database, so a first run at the suite's clock
  * clears whatever earlier suites left behind before the fixture is seeded.
@@ -131,7 +133,18 @@ async function seed(db: PrismaClient) {
   await db.auditLog.create({ data: { type: "TEST", actorUserId: RUN, createdAt: ago(399) } })
   await db.auditLog.create({ data: { type: "TEST", actorUserId: RUN, createdAt: ago(401) } })
 
+  // Warning email rows: 180 days, and only once their cycle is closed. The member never played,
+  // so their cycle is the one keyed by the day they joined.
+  const { createdAt: joined } = await db.user.findUniqueOrThrow({ where: { id: MEMBER }, select: { createdAt: true } })
+  const notice = { userId: MEMBER, removeAfter: ago(300), zone: "UTC", status: "sent" }
+  const notices = {
+    closedOld: await db.inactivityNotice.create({ data: { ...notice, cycleAt: ago(500), leadDays: 30, createdAt: ago(181) } }),
+    closedYoung: await db.inactivityNotice.create({ data: { ...notice, cycleAt: ago(500), leadDays: 7, createdAt: ago(179) } }),
+    openOld: await db.inactivityNotice.create({ data: { ...notice, cycleAt: joined, leadDays: 30, createdAt: ago(400) } }),
+  }
+
   return {
+    notices,
     generation,
     rewind,
     assistant,
@@ -190,6 +203,7 @@ describePg("the retention sweep on PostgreSQL", (databaseUrl) => {
       affiliateApplications: 1,
       affiliateInvites: 2,
       affiliateInviteLabels: 1,
+      inactivityNotices: 1,
     })
 
     const second = await runRetentionSweep({ now: NOW, signal })
@@ -198,6 +212,11 @@ describePg("the retention sweep on PostgreSQL", (databaseUrl) => {
     const config = await mockDb.config.findUnique({ where: { id: "config" } })
     expect(config?.lastRetentionRunAt).toBeInstanceOf(Date)
     expect(config?.lastRetentionSummary).toEqual(second.counts)
+  })
+
+  it("deletes old warning email rows of a closed cycle only", async () => {
+    const left = await mockDb.inactivityNotice.findMany({ where: { userId: MEMBER }, select: { id: true } })
+    expect(left.map((row) => row.id).sort()).toEqual([fixture.notices.closedYoung.id, fixture.notices.openOld.id].sort())
   })
 
   it("splits Rewind and assistant text, keeping tokens and cost", async () => {

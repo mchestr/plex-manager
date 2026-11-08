@@ -64,6 +64,8 @@ export interface InactivityMember {
   /** When the member's access last ended (the offboarding stamps it); cleared when they sign in with access again. */
   accessEndedAt: Date | null
   accessRestoredAt: Date | null
+  /** The member's own zone (`User.timezone`), for the dates of their warning emails; null uses the server zone. */
+  timezone: string | null
 }
 
 /** Every skip, in priority order. */
@@ -97,7 +99,7 @@ const PAYING: readonly SubscriptionStatus[] = ["ACTIVE", "PAST_DUE"]
  * ```ts
  * const member = { id: "u1", plexUserId: "42", isAdmin: false, role: null, inactivityExcluded: false,
  *   subscriptionStatus: null, createdAt: new Date("2025-01-01"), lastSeenAt: null, lastSeenReadAt: new Date("2026-10-31"),
- *   accessEndedAt: null, accessRestoredAt: null }
+ *   accessEndedAt: null, accessRestoredAt: null, timezone: null }
  * inactivitySkip(member, { ownerPlexUserId: "1", readSince: new Date("2026-10-31") }) // null
  * inactivitySkip({ ...member, plexUserId: " 1 " }, { ownerPlexUserId: "1", readSince: null }) // "owner"
  * ```

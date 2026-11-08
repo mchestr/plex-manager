@@ -12,7 +12,7 @@
 
 import { mockReset } from "jest-mock-extended"
 
-import { buildPlexServer, buildUser } from "@/__tests__/helpers/factories"
+import { buildInactivitySettings, buildPlexServer, buildUser } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { assertAdmin } from "@/lib/admin"
 import { getPlexUsers } from "@/lib/connections/plex"
@@ -21,6 +21,7 @@ import type { PlexTvUser } from "@/lib/connections/plex-tv-users"
 import { getActiveService } from "@/lib/data/active-service"
 import { getInactivityPreview } from "@/lib/data/inactivity-preview"
 import { listInactivityMembers } from "@/lib/inactivity/members"
+import type { NoticeRow } from "@/lib/inactivity/notices"
 import type { InactivityMember } from "@/lib/inactivity/rules"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -29,6 +30,10 @@ jest.mock("@/lib/connections/plex", () => ({ getPlexUsers: jest.fn() }))
 jest.mock("@/lib/connections/plex-machine-id", () => ({ withMachineIdentifier: jest.fn() }))
 jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
 jest.mock("@/lib/inactivity/members", () => ({ listInactivityMembers: jest.fn() }))
+jest.mock("@/lib/utils/server-zone", () => ({ serverZone: jest.fn(async () => "America/Toronto") }))
+
+/** The notice rows the sweep and the preview read. */
+const noticeRows = (rows: NoticeRow[]) => prismaMock.inactivityNotice.findMany.mockResolvedValue(rows as never)
 
 const DAY = 24 * 60 * 60 * 1000
 const NOW = new Date("2026-10-31T12:00:00Z")
@@ -52,6 +57,7 @@ function member(id: string, patch: Partial<InactivityMember> = {}): InactivityMe
     lastSeenReadAt: READ,
     accessEndedAt: null,
     accessRestoredAt: null,
+    timezone: null,
     ...patch,
   }
 }
@@ -81,7 +87,8 @@ beforeEach(() => {
   jest.mocked(assertAdmin).mockResolvedValue({ user: { id: "admin-1", isAdmin: true }, expires: "" } as never)
   jest.mocked(getActiveService).mockResolvedValue(buildPlexServer({ machineIdentifier: "machine-1", adminPlexUserId: "1" }) as never)
   jest.mocked(withMachineIdentifier).mockImplementation(async (server) => server)
-  prismaMock.inactivityRun.findFirst.mockResolvedValue({ startedAt: READ } as never)
+  prismaMock.inactivityRun.findFirst.mockResolvedValue({ startedAt: READ, newestPlayAt: READ } as never)
+  prismaMock.inactivityNotice.findMany.mockResolvedValue([] as never)
   prismaMock.user.findMany.mockImplementation((async ({ where }: { where: { id: { in: string[] } } }) =>
     where.id.in.map((id) => buildUser({ id, name: `Name of ${id}` }))) as never)
   given([])
@@ -212,7 +219,7 @@ describe("getInactivityPreview", () => {
     expect(prismaMock.inactivityRun.findFirst).toHaveBeenCalledWith({
       where: { error: null, finishedAt: { not: null } },
       orderBy: { startedAt: "desc" },
-      select: { startedAt: true },
+      select: { startedAt: true, newestPlayAt: true },
     })
   })
 
@@ -274,6 +281,52 @@ describe("getInactivityPreview", () => {
       jest.mocked(listInactivityMembers).mockResolvedValue([member("u-1", { plexUserId: "1" })])
 
       await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ rows: [{ id: "u-1" }], skips: expect.objectContaining({ owner: 0 }) })
+    })
+  })
+  describe("the removal gate", () => {
+    const notice = (userId: string, patch: Partial<NoticeRow>): NoticeRow => ({
+      id: `n-${userId}-${patch.leadDays ?? 30}`,
+      userId,
+      cycleAt: daysAgo(400),
+      leadDays: 30,
+      removeAfter: daysAgo(2),
+      status: "sent",
+      attempts: 1,
+      zone: "America/Toronto",
+      handledAt: daysAgo(30),
+      ...patch,
+    })
+
+    it("holds a member before a date a handled warning named, with warnings off", async () => {
+      given([member("u-1", { lastSeenAt: daysAgo(400) }), member("u-2")])
+      noticeRows([notice("u-1", { removeAfter: new Date(NOW.getTime() + DAY) })])
+
+      const preview = await getInactivityPreview(180, NOW)
+
+      expect(preview).toMatchObject({ rows: [{ id: "u-2" }], held: 1 })
+      expect(prismaMock.inactivityNotice.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: { in: ["u-1", "u-2"] } } }))
+    })
+
+    it("lists only fully warned members with warnings on, gated on the stored run's newest play", async () => {
+      prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ warningsEnabled: true }))
+      given([member("warned", { lastSeenAt: daysAgo(400) }), member("unwarned", { lastSeenAt: daysAgo(400) })])
+      noticeRows([
+        notice("warned", { leadDays: 30 }),
+        notice("warned", { leadDays: 1, handledAt: new Date(READ.getTime() - 20 * 60 * 60 * 1000) }),
+      ])
+
+      await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ rows: [{ id: "warned" }], held: 1 })
+
+      // No play on the server after the last warning, by the stored run's read
+      prismaMock.inactivityRun.findFirst.mockResolvedValue({ startedAt: READ, newestPlayAt: daysAgo(3) } as never)
+      await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ rows: [], held: 2 })
+    })
+
+    it("reads no rows when no one is inactive with a share", async () => {
+      given([member("u-1", { lastSeenAt: daysAgo(1) })])
+
+      await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ rows: [], held: 0 })
+      expect(prismaMock.inactivityNotice.findMany).not.toHaveBeenCalled()
     })
   })
 })
