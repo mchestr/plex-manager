@@ -7,6 +7,11 @@ import {
   aiActivityRecord,
   auditEvent,
   auditLog,
+  cleanup,
+  CLEANUP_TABS,
+  cleanupNewRule,
+  cleanupRule,
+  cleanupTurnOn,
   invite,
   movedSettingsHome,
   playgroundFor,
@@ -119,6 +124,57 @@ describe("admin routes", () => {
 
   it.each(["constructor", "toString", "hasOwnProperty", "__proto__"])("treats %s as a section id, never as a member inherited from Object", (id) => {
     expect(settingsSection(id)).toBe(`/admin/settings#${id}`)
+  })
+})
+
+describe("media cleanup routes (UX 3.1)", () => {
+  it("builds the page tabs, with the Rules tab left out", () => {
+    expect(CLEANUP_TABS).toEqual(["rules", "leaving-soon", "kept", "history", "settings"])
+    expect(cleanup()).toBe("/admin/cleanup")
+    expect(cleanup({ tab: "rules" })).toBe("/admin/cleanup")
+    expect(cleanup({ tab: "leaving-soon" })).toBe("/admin/cleanup?tab=leaving-soon")
+    expect(cleanup({ tab: "kept" })).toBe("/admin/cleanup?tab=kept")
+    expect(cleanup({ tab: "history" })).toBe("/admin/cleanup?tab=history")
+  })
+
+  it("opens a Settings section, with the turn-on page to go back to", () => {
+    expect(cleanup({ tab: "settings", section: "cleanup-feature" })).toBe("/admin/cleanup?tab=settings&section=cleanup-feature")
+    expect(cleanup({ tab: "settings", section: "cleanup-feature", returnTo: "/admin/cleanup/rules/r-1/turn-on" })).toBe(
+      "/admin/cleanup?tab=settings&section=cleanup-feature&returnTo=%2Fadmin%2Fcleanup%2Frules%2Fr-1%2Fturn-on"
+    )
+  })
+
+  it("builds the rule editor and encodes the id", () => {
+    expect(cleanupRule("ckx1a2b3c")).toBe("/admin/cleanup/rules/ckx1a2b3c")
+    expect(cleanupRule("a11y-cleanup-rule-live")).toBe("/admin/cleanup/rules/a11y-cleanup-rule-live")
+    expect(cleanupRule("a/b c")).toBe("/admin/cleanup/rules/a%2Fb%20c")
+  })
+
+  it("builds the new-rule editor for a blank rule and for a recipe with key values", () => {
+    expect(cleanupNewRule()).toBe("/admin/cleanup/rules/new")
+    expect(cleanupNewRule({ level: "movie" })).toBe("/admin/cleanup/rules/new?level=movie")
+    expect(cleanupNewRule({ recipe: "big-shows-nobody-plays", values: { size: "100", lastPlayed: "365" } })).toBe(
+      "/admin/cleanup/rules/new?recipe=big-shows-nobody-plays&size=100&lastPlayed=365"
+    )
+    expect(cleanupNewRule({ recipe: "former-members", level: "show", values: { added: "90 days" } })).toBe(
+      "/admin/cleanup/rules/new?recipe=former-members&level=show&added=90+days"
+    )
+  })
+
+  it("leaves out a key value that would replace the recipe or the level", () => {
+    expect(cleanupNewRule({ recipe: "old-seasons", values: { recipe: "x", level: "movie", keepNewest: "2" } })).toBe(
+      "/admin/cleanup/rules/new?recipe=old-seasons&keepNewest=2"
+    )
+  })
+
+  it("builds the turn-on page, with Automatic preselected when asked", () => {
+    expect(cleanupTurnOn("r-1")).toBe("/admin/cleanup/rules/r-1/turn-on")
+    expect(cleanupTurnOn("r-1", "automatic")).toBe("/admin/cleanup/rules/r-1/turn-on?mode=automatic")
+    expect(cleanupTurnOn("a b")).toBe("/admin/cleanup/rules/a%20b/turn-on")
+  })
+
+  it("links the audit log to one cleanup run", () => {
+    expect(auditLog({ run: "run-1" })).toBe("/admin/audit?run=run-1")
   })
 })
 
