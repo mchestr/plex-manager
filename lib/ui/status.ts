@@ -1,3 +1,4 @@
+/* eslint max-lines: ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }] -- cohesive: one table holds every status word, so a domain never moves without its tests */
 /**
  * The status vocabulary (ui-design-system 5.6): one word, one tone and one
  * mark per domain state, for `StatusBadge`, `StatusDot`, the settings nav
@@ -177,6 +178,37 @@ export const STATUS = {
     running: { label: "Reviewing", tone: "info", mark: "spinner" },
     done: { label: "Reviewed", tone: "success", mark: icons.done },
     failed: { label: "Failed", tone: "destructive", mark: icons.error },
+  },
+  // Media cleanup (UX 4.12.6): a rule's mode. Automatic deletes without approval, so it warns.
+  cleanupMode: {
+    dryRun: { label: "Dry run", tone: "neutral", mark: "dot" },
+    reviewFirst: { label: "Review first", tone: "info", mark: "dot" },
+    automatic: { label: "Automatic", tone: "warning", mark: "dot" },
+  },
+  // How a rule classes one title in the preview and the Why panel
+  cleanupMatch: {
+    match: { label: "Match", tone: "info", mark: "dot" },
+    nearMiss: { label: "Near miss", tone: "outline" },
+    protected: { label: "Protected", tone: "success", mark: icons.keep },
+    missing: { label: "Missing data", ...warning },
+    cannotDelete: { label: "Cannot delete", tone: "neutral", mark: icons.cannotDelete },
+  },
+  // A title in Leaving soon, Kept and excluded, and History. `{note}` is the cause, or who postponed it.
+  cleanupItem: {
+    leaving: { label: "Leaving soon", tone: "info", mark: "dot" },
+    waitsForYou: { label: "Waits for you", tone: "warning", mark: icons.pending },
+    deletesOn: { label: "Deletes on {day}", tone: "destructive", mark: "dot" },
+    waitsForBudget: { label: "Waits for budget", tone: "neutral", mark: "dot", sub: "Then {day}" },
+    onHold: { label: "On hold", ...warning, sub: "{note}" },
+    deferred: { label: "Deferred: playing now", tone: "neutral", mark: icons.playing },
+    postponed: { label: "Postponed", tone: "outline", sub: "To {day} by {note}" },
+    paused: { label: "Paused", tone: "neutral", mark: icons.paused },
+    deleting: { label: "Deleting", tone: "info", mark: "spinner" },
+    deleted: { label: "Deleted", tone: "neutral", mark: "dot", sub: "{date}" },
+    failed: { label: "Failed", tone: "destructive", mark: icons.error, sub: "{note}" },
+    rescued: { label: "Rescued", tone: "success", mark: "dot", sub: "{note}" },
+    kept: { label: "Kept", tone: "success", mark: icons.keep, sub: "Until {date}" },
+    excluded: { label: "Excluded", tone: "outline", sub: "Until {date}" },
   },
 } as const satisfies Record<string, Record<string, StatusEntry>>
 

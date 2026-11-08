@@ -95,6 +95,29 @@ const TABLE: Row[] = [
   ["conversationReview", "running", "Reviewing", "info", "spinner"],
   ["conversationReview", "done", "Reviewed", "success", icons.done],
   ["conversationReview", "failed", "Failed", "destructive", icons.error],
+  // Media cleanup, UX 4.12.6
+  ["cleanupMode", "dryRun", "Dry run", "neutral", "dot"],
+  ["cleanupMode", "reviewFirst", "Review first", "info", "dot"],
+  ["cleanupMode", "automatic", "Automatic", "warning", "dot"],
+  ["cleanupMatch", "match", "Match", "info", "dot"],
+  ["cleanupMatch", "nearMiss", "Near miss", "outline", undefined],
+  ["cleanupMatch", "protected", "Protected", "success", icons.keep],
+  ["cleanupMatch", "missing", "Missing data", "warning", icons.warning],
+  ["cleanupMatch", "cannotDelete", "Cannot delete", "neutral", icons.cannotDelete],
+  ["cleanupItem", "leaving", "Leaving soon", "info", "dot"],
+  ["cleanupItem", "waitsForYou", "Waits for you", "warning", icons.pending],
+  ["cleanupItem", "deletesOn", "Deletes on", "destructive", "dot"],
+  ["cleanupItem", "waitsForBudget", "Waits for budget", "neutral", "dot"],
+  ["cleanupItem", "onHold", "On hold", "warning", icons.warning],
+  ["cleanupItem", "deferred", "Deferred: playing now", "neutral", icons.playing],
+  ["cleanupItem", "postponed", "Postponed", "outline", undefined],
+  ["cleanupItem", "paused", "Paused", "neutral", icons.paused],
+  ["cleanupItem", "deleting", "Deleting", "info", "spinner"],
+  ["cleanupItem", "deleted", "Deleted", "neutral", "dot"],
+  ["cleanupItem", "failed", "Failed", "destructive", icons.error],
+  ["cleanupItem", "rescued", "Rescued", "success", "dot"],
+  ["cleanupItem", "kept", "Kept", "success", icons.keep],
+  ["cleanupItem", "excluded", "Excluded", "outline", undefined],
 ]
 
 describe("STATUS", () => {
@@ -150,6 +173,41 @@ describe("resolveStatus sub-lines", () => {
 
   it("keeps a fixed sub-line", () => {
     expect(resolveStatus("connection", "untested").sub).toBe("Test after saving")
+  })
+})
+
+describe("cleanup statuses", () => {
+  const day = new Date("2026-11-19T15:00:00Z")
+
+  it("names the leave day in the label", () => {
+    expect(resolveStatus("cleanupItem", "deletesOn", { date: day }).label).toBe("Deletes on Nov 19")
+    expect(resolveStatus("cleanupItem", "deletesOn", { date: day, settings: { timeZone: "Europe/Berlin", locale: "en-GB" } }).label).toBe(
+      "Deletes on 19 Nov",
+    )
+  })
+
+  it("fills each sub-line from its day, date and note", () => {
+    expect(resolveStatus("cleanupItem", "waitsForBudget", { date: new Date("2026-12-04T12:00:00Z") }).sub).toBe("Then Dec 4")
+    expect(resolveStatus("cleanupItem", "onHold", { note: "Sonarr did not answer at 3:07 AM" }).sub).toBe("Sonarr did not answer at 3:07 AM")
+    expect(resolveStatus("cleanupItem", "postponed", { date: new Date("2026-12-02T12:00:00Z"), note: "you" }).sub).toBe("To Dec 2 by you")
+    expect(resolveStatus("cleanupItem", "deleted", { date: day }).sub).toBe("Nov 19, 2026")
+    expect(resolveStatus("cleanupItem", "failed", { note: "Radarr refused the delete" }).sub).toBe("Radarr refused the delete")
+    expect(resolveStatus("cleanupItem", "rescued", { note: "Played" }).sub).toBe("Played")
+    expect(resolveStatus("cleanupItem", "kept", { date: new Date("2027-02-06T12:00:00Z") }).sub).toBe("Until Feb 6, 2027")
+    expect(resolveStatus("cleanupItem", "excluded", { date: new Date("2027-06-01T12:00:00Z") }).sub).toBe("Until Jun 1, 2027")
+  })
+
+  it("leaves out a sub-line that misses its day or note", () => {
+    expect(resolveStatus("cleanupItem", "postponed", { date: day }).sub).toBeUndefined()
+    expect(resolveStatus("cleanupItem", "postponed", { note: "you" }).sub).toBeUndefined()
+    expect(resolveStatus("cleanupItem", "onHold").sub).toBeUndefined()
+    expect(resolveStatus("cleanupItem", "kept").sub).toBeUndefined()
+  })
+
+  it("has no sub-line for the states without one", () => {
+    for (const value of ["leaving", "waitsForYou", "deferred", "paused", "deleting"] as const) {
+      expect(resolveStatus("cleanupItem", value, { date: day, note: "x" }).sub).toBeUndefined()
+    }
   })
 })
 
