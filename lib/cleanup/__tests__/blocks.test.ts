@@ -46,14 +46,15 @@ const CASES: [Block, string, string][] = [
   [{ code: "auditFailed" }, "Stopped: the app did not write an audit row", "The app did not write an audit row."],
   [{ code: "stopped" }, "Stopped: the server shut down", "The server shut down."],
   [{ code: "arrRefused", service: "radarr" }, "Stopped: Radarr refused the API key", "Radarr refused the API key."],
+  [{ code: "invalid", ruleId: "r1" }, "Skipped: the saved rule could not be read", "The saved rule could not be read."],
 ]
 
 beforeEach(() => mockWarn.mockClear())
 
 describe("block codes", () => {
-  it("hold the codes and outcomes of TS 8.2", () => {
+  it("hold the codes and outcomes of TS 8.2, and invalid of TS 8.3 step 6", () => {
     expect(BLOCK_CODES).toEqual(["off", "paused", "redis", "noData", "dataStale", "sourceFailed", "tautulliStale",
-      "historyShort", "sourceShrank", "readFailed", "busy", "auditFailed", "stopped", "arrRefused"])
+      "historyShort", "sourceShrank", "readFailed", "busy", "auditFailed", "stopped", "arrRefused", "invalid"])
     expect(RUN_OUTCOMES).toEqual(["finished", "dryRun", "blocked", "held", "paused", "busy", "stopped", "auditFailed", "arrRefused", "noData"])
   })
 
@@ -95,7 +96,7 @@ describe("blockLabel and blockCause", () => {
   })
 
   it("shows an unknown stored code raw", () => {
-    expect(blockLabel({ code: "invalid" }, words)).toBe("invalid")
+    expect(blockLabel({ code: "fromANewerBuild" }, words)).toBe("fromANewerBuild")
     expect(blockCause({ code: "fromANewerBuild" }, words)).toBe("fromANewerBuild")
   })
 })

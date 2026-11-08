@@ -20,8 +20,9 @@ import { parseStoredRows, ROW_COUNTERS, type RowCounter } from "@/lib/cleanup/sc
 import { TAUTULLI_STALE_DAYS } from "@/lib/inactivity/blocks"
 import { SERVICES, type Service } from "@/lib/validations/cleanup-vocabulary"
 
+/** TS 8.2, plus `invalid`: a stored rule definition that does not parse, so the run skips the rule (TS 8.3 step 6). */
 export const BLOCK_CODES = ["off", "paused", "redis", "noData", "dataStale", "sourceFailed", "tautulliStale",
-  "historyShort", "sourceShrank", "readFailed", "busy", "auditFailed", "stopped", "arrRefused"] as const
+  "historyShort", "sourceShrank", "readFailed", "busy", "auditFailed", "stopped", "arrRefused", "invalid"] as const
 export type BlockCode = (typeof BLOCK_CODES)[number]
 
 export const blockSchema = z.object({
@@ -108,6 +109,8 @@ export function blockLabel(block: Block, words: BlockWords): string {
       return "Stopped: the server shut down"
     case "arrRefused":
       return `Stopped: ${serviceOf(block, words)} refused the API key`
+    case "invalid":
+      return "Skipped: the saved rule could not be read"
     default:
       return block.code
   }
@@ -149,6 +152,8 @@ export function blockCause(block: Block, words: BlockCauseWords): string {
       return "The server shut down."
     case "arrRefused":
       return `${serviceOf(block, words)} refused the API key.`
+    case "invalid":
+      return "The saved rule could not be read."
     default:
       return block.code
   }
