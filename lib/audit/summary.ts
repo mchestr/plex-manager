@@ -19,6 +19,7 @@
  * | `MEMBER_CONTENT_LISTED`        | `surface`                                      | "Watchlist sync page"                                                            |
  * | `AUDIT_LOG_VIEWED`             | which `filters` are set, never their values    | "No filters", "Filters: category, member"                                        |
  * | `ASSISTANT_SOURCE_CHANGED`     | `kind`, `action`                               | "Skill source refreshed", "MCP server removed"                                   |
+ * | `EMAIL_TEST_SENT`              | `status`, `smtpCode`                           | "Sent", "Not sent, the mail server did not take it (554)"                        |
  *
  * A section or field name shows only when it looks like code (`setup.plex`,
  * `apiKey`), a block code only when `lib/inactivity/blocks.ts` knows it, and a
@@ -179,6 +180,20 @@ function auditLogViewed({ filters }: Details): string | null {
   return used.length > 0 ? `Filters: ${used.join(", ")}` : "No filters"
 }
 
+const TEST_EMAIL_STATUSES: Record<"sent" | "failed" | "not_configured" | "no_address", string> = {
+  sent: "Sent",
+  failed: "Not sent, the mail server did not take it",
+  not_configured: "Not sent, email is not set up",
+  no_address: "Not sent, no email address on file",
+}
+
+/** "Sent", or why the test email was not sent, with the reply code when there is one. */
+function emailTest({ status, smtpCode }: Details): string | null {
+  if (!isKeyOf(TEST_EMAIL_STATUSES, status)) return null
+  const code = status === "failed" && typeof smtpCode === "number" && Number.isInteger(smtpCode) ? ` (${smtpCode})` : ""
+  return `${TEST_EMAIL_STATUSES[status]}${code}`
+}
+
 const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   MEMBER_UNSHARED: memberUnshared,
   INACTIVITY_SWEEP_RUN: sweepRun,
@@ -192,6 +207,7 @@ const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   MEMBER_CONTENT_LISTED: surface,
   AUDIT_LOG_VIEWED: auditLogViewed,
   ASSISTANT_SOURCE_CHANGED: sourceChanged,
+  EMAIL_TEST_SENT: emailTest,
 }
 
 /** The event's one-line summary, or null when its type has none or its details do not fit. */

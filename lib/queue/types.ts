@@ -39,6 +39,8 @@ export const JOB_TYPES = {
   CONVERSATION_REVIEW: "judge:review",
   // The nightly sweep that queues them (lib/judge/sweep.ts)
   CONVERSATION_REVIEW_SWEEP: "judge:sweep",
+  // An admin's test email (lib/email/send-test-email.ts)
+  EMAIL_TEST: "email:test",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -76,6 +78,7 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.SECRETS_REENCRYPT]: "Secret re-encryption",
   [JOB_TYPES.CONVERSATION_REVIEW]: "Conversation review",
   [JOB_TYPES.CONVERSATION_REVIEW_SWEEP]: "Conversation review sweep",
+  [JOB_TYPES.EMAIL_TEST]: "Test email",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
   [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
@@ -105,6 +108,7 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.SECRETS_REENCRYPT,
   JOB_TYPES.CONVERSATION_REVIEW,
   JOB_TYPES.CONVERSATION_REVIEW_SWEEP,
+  JOB_TYPES.EMAIL_TEST,
 ] as const satisfies readonly JobType[]
 
 /** A job's label, or its raw name for a type this build does not know. */
@@ -398,6 +402,8 @@ interface JobPayloads {
   [JOB_TYPES.SECRETS_REENCRYPT]: { triggeredBy: "scheduled" }
   [JOB_TYPES.CONVERSATION_REVIEW]: { reviewId: string }
   [JOB_TYPES.CONVERSATION_REVIEW_SWEEP]: { triggeredBy: "scheduled" }
+  /** The admin who asked; the job reads their address when it runs. */
+  [JOB_TYPES.EMAIL_TEST]: { userId: string }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
@@ -452,6 +458,7 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   // Not deduplication: the review row dedupes, and a kept completed job would swallow a repeat id
   [JOB_TYPES.CONVERSATION_REVIEW]: { jobId: (data) => reviewJobId(data.reviewId) },
   [JOB_TYPES.CONVERSATION_REVIEW_SWEEP]: { fromCaller: "the judge-review-sweep scheduler" },
+  [JOB_TYPES.EMAIL_TEST]: { deduplication: (data) => `email:test:${data.userId}` },
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
   [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },
   [JOB_TYPES.REWIND_GENERATE_USER]: { fromCaller: "the RewindGeneration id" },

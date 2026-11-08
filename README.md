@@ -210,6 +210,7 @@ The guides in `docs/` give the full details:
 | [Inactive members](docs/inactive-members.md) | Last seen from Tautulli, and removing Plex access from members who stopped watching |
 | [Stripe](docs/stripe.md) | Subscriptions, the webhook, and Plex access |
 | [Discord bot](docs/discord-bot.md) | The bot, slash commands and linked roles |
+| [Email](docs/email.md) | The mail server, its environment variables, and the test email |
 | [Releases](docs/releasing.md) and [CHANGELOG.md](CHANGELOG.md) | Versions, tags and the upgrade notes of each release |
 
 ## Bugs and questions

@@ -230,6 +230,10 @@ export enum AuditEventType {
   // An admin started the last seen read (and the sweep, when on) by hand.
   // Details carry whether it was queued and the member count they confirmed.
   ACTIVITY_SYNC_TRIGGERED = "ACTIVITY_SYNC_TRIGGERED",
+  // An admin's test email from Admin > Settings > Email finished (lib/email/send-test-email.ts).
+  // Details carry the status, the SMTP reply code and the failure class, never
+  // the address or the server's reply text.
+  EMAIL_TEST_SENT = "EMAIL_TEST_SENT",
   // An admin or a Support user opened the audit log: one row per viewer per
   // hour. Details carry the filters (category, type and ids), never names.
   AUDIT_LOG_VIEWED = "AUDIT_LOG_VIEWED",

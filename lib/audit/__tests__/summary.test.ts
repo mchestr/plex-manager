@@ -274,3 +274,19 @@ describe("auditSummary", () => {
     for (const text of [NAME, EMAIL, NOTE]) expect(line).not.toContain(text)
   })
 })
+
+describe("EMAIL_TEST_SENT", () => {
+  it.each([
+    [{ status: "sent", smtpCode: 250 }, "Sent"],
+    [{ status: "failed", smtpCode: 554, failure: "refused" }, "Not sent, the mail server did not take it (554)"],
+    [{ status: "failed", smtpCode: null, failure: "timeout" }, "Not sent, the mail server did not take it"],
+    [{ status: "not_configured" }, "Not sent, email is not set up"],
+    [{ status: "no_address" }, "Not sent, no email address on file"],
+  ])("says how the test went, %o", (details, expected) => {
+    expect(summary("EMAIL_TEST_SENT", details)).toBe(expected)
+  })
+
+  it("has none for an unknown status", () => {
+    expect(summary("EMAIL_TEST_SENT", { status: "constructor" })).toBeNull()
+  })
+})

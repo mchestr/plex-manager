@@ -17,7 +17,7 @@
  * | `discord`       | Discord links, refused commands and the bot settings                          |
  * | `announcements` | Announcements                                                                 |
  * | `jobs`          | The job queues                                                                |
- * | `settings`      | Settings, the time zone, LLM providers and the inactivity settings            |
+ * | `settings`      | Settings, the time zone, LLM providers, the inactivity settings, test emails  |
  * | `setup`         | First-run setup                                                               |
  * | `reads`         | Reads of member content and Rewinds, the assistant's app data reads, this log |
  *
@@ -168,6 +168,7 @@ const AUDIT_EVENTS: Record<AuditEventName, EventWords> = {
   LLM_PROVIDER_CHANGED: { label: "LLM provider changed", category: "settings" },
   SERVICE_ROWS_DEDUPED: { label: "Duplicate services turned off", category: "settings" },
   INACTIVITY_SETTINGS_CHANGED: { label: "Inactivity settings changed", category: "settings" },
+  EMAIL_TEST_SENT: { label: "Test email sent", category: "settings" },
 
   SETUP_CLAIMED: { label: "Setup claimed", category: "setup" },
   SETUP_STEP_SKIPPED: { label: "Setup step skipped", category: "setup" },

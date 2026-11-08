@@ -37,6 +37,8 @@ const MODULES = [
   'lib/setup/status.ts',
   ...filesIn('lib/chatbot', true).filter((path) => !TYPE_ONLY.has(path)),
   ...filesIn('lib/affiliates').filter((path) => !AFFILIATE_CLIENT_SAFE.has(path)),
+  // The mail code reads the environment or the database; env-rules is pure, but only server code needs it
+  ...filesIn('lib/email', true),
 ].sort()
 
 it('covers the loaders, the chatbot and the affiliate modules', () => {
@@ -46,6 +48,7 @@ it('covers the loaders, the chatbot and the affiliate modules', () => {
       'lib/data/admin-users.ts',
       'lib/chatbot/executors/sonarr.ts',
       'lib/affiliates/settings.ts',
+      'lib/email/transport.ts',
     ])
   )
 })

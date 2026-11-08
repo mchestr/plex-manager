@@ -1,6 +1,7 @@
 import { createE2EPrismaClient } from './helpers/prisma';
 import { clearRateLimits, redisAnswers } from './helpers/rate-limits';
 import { startMockLlm } from './mocks/llm-server';
+import { startSmtpSink } from './mocks/smtp-server';
 import { startMockTautulli } from './mocks/tautulli-server';
 
 /**
@@ -132,9 +133,13 @@ async function globalSetup() {
   const tautulli = await startMockTautulli();
   process.env.E2E_TAUTULLI_URL = tautulli.url;
   console.log(`[E2E Setup] Mock Tautulli listening at ${tautulli.url}`);
+  // And a mail server: the web server's SMTP_URL names its fixed port (playwright.config.ts)
+  const smtp = await startSmtpSink();
+  process.env.E2E_SMTP_INBOX_URL = smtp.inboxUrl;
+  console.log(`[E2E Setup] SMTP sink listening, inbox at ${smtp.inboxUrl}`);
   return async () => {
     await Promise.all(
-      [llm.server, tautulli.server].map((server) => new Promise<void>((resolve) => server.close(() => resolve())))
+      [llm.server, tautulli.server, smtp.smtp, smtp.http].map((server) => new Promise<void>((resolve) => server.close(() => resolve())))
     );
   };
 }

@@ -89,6 +89,7 @@ describe("admin routes", () => {
   it("anchors a settings section that is still on the settings page, encoding its id", () => {
     expect(settingsSection("tautulli")).toBe("/admin/settings#tautulli")
     expect(settingsSection("stripe")).toBe("/admin/settings#stripe")
+    expect(settingsSection("email")).toBe("/admin/settings#email")
     expect(settingsSection("a b/c")).toBe("/admin/settings#a%20b%2Fc")
   })
 

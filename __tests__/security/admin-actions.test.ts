@@ -5,6 +5,7 @@
  */
 
 import { setLLMDisabled } from '@/actions/admin/admin-config'
+import { sendTestEmail } from '@/actions/admin/email'
 import { runMemberActivityNow, setMemberInactivityExcluded, updateInactivitySettings } from '@/actions/admin/inactivity'
 import { getLLMUsageRecords, getLLMUsageById } from '@/lib/data/llm-usage'
 import { setUserDisabled, setUserRole, updateUserAdminStatus } from '@/actions/admin/admin-users'
@@ -14,6 +15,7 @@ import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 import { assertPermission } from '@/lib/admin'
 import { authErrorKind } from '@/lib/auth-errors'
 import { getServerSession } from 'next-auth'
+import { enqueueFromRequest } from '@/lib/queue/request-path'
 import { mockReset } from 'jest-mock-extended'
 import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { buildUser } from '@/__tests__/helpers/factories'
@@ -34,6 +36,8 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 // The inactivity actions queue a job or run the sweep; a refused caller reaches neither.
 jest.mock('@/lib/queue/request-path', () => ({ enqueueFromRequest: jest.fn(), isDeduplicatedJobPending: jest.fn() }))
 jest.mock('@/lib/inactivity/run', () => ({ runMemberActivity: jest.fn() }))
+// The test email action reads the address only once email is set up; a set-up here makes its guard the only thing that stops a caller.
+jest.mock('@/lib/email/config', () => ({ ...jest.requireActual('@/lib/email/config'), emailConfigured: jest.fn(() => true) }))
 
 beforeEach(() => mockReset(prismaMock))
 
@@ -637,6 +641,33 @@ describe('Roles', () => {
       expect(prismaMock.inactivitySettings.upsert).not.toHaveBeenCalled()
       expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
       expect(logAuditEvent).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('the test email', () => {
+    it('refuses signed-out callers, members and Support users before it reads, queues, sends or audits anything', async () => {
+      jest.clearAllMocks()
+      signedOut()
+      await expect(sendTestEmail()).resolves.toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
+
+      asMember()
+      await expect(sendTestEmail()).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+
+      asSupport()
+      await expect(sendTestEmail()).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      expect(prismaMock.user.findUnique).not.toHaveBeenCalledWith(expect.objectContaining({ select: { email: true } }))
+      expect(enqueueFromRequest).not.toHaveBeenCalled()
+      expect(prismaMock.auditLog.create).not.toHaveBeenCalled()
+      expect(logAuditEvent).not.toHaveBeenCalled()
+    })
+
+    it('lets an admin through to the address read, so the checks above can fail', async () => {
+      jest.clearAllMocks()
+      asAdmin()
+      prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'admin-user-id', email: null }))
+
+      await expect(sendTestEmail()).resolves.toMatchObject({ success: false, code: 'VALIDATION' })
+      expect(prismaMock.user.findUnique).toHaveBeenCalledWith(expect.objectContaining({ select: { email: true } }))
     })
   })
 

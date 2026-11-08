@@ -45,6 +45,7 @@ export function settingsNavItems(status: SettingsNavStatuses): SettingsNavItem[]
     { id: "tautulli", label: "Tautulli", group: "connections", status: status.tautulli },
     { id: "overseerr", label: "Overseerr", group: "connections", status: status.overseerr },
     { id: "other", label: "Sonarr, Radarr", group: "connections", status: status.other },
+    { id: "email", label: "Email", group: "connections" },
     { id: "stripe", label: "Stripe billing", group: "billing", status: status.stripe },
     { id: "appearance", label: "Appearance", group: "system" },
     { id: "brand-images", label: "Logos and images", group: "system" },
