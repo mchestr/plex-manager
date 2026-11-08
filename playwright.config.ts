@@ -24,6 +24,13 @@ const baseURL = `http://localhost:${port}`;
 const prodServer = process.env.E2E_SERVER === 'prod';
 console.log(`Running tests on ${baseURL} (${prodServer ? 'production build' : 'next dev'})`);
 
+// The plex.tv mock (e2e/mocks/plex-tv-server.ts, TS E27). The web server starts
+// before the global setup, so the mock gets a fixed port, 1000 above the web
+// server's (a second run on another port does not collide), and the web server
+// gets its URL below. The global setup reads the same variable to listen on it.
+const plexTvUrl = `http://127.0.0.1:${Number(port) + 1000}`;
+process.env.E2E_PLEX_TV_URL = plexTvUrl;
+
 const VISUAL_SPECS = /visual\/(member|admin|primitives)\.visual\.spec\.ts$/;
 const VISUAL_SETUP_SPEC = /visual\/setup\.visual\.spec\.ts$/;
 /*
@@ -243,6 +250,8 @@ export default defineConfig({
       SKIP_CONNECTION_TESTS: 'true',
       ENABLE_DEV_UI: '1',
       FAST_REFRESH: 'false',
+      // plex.tv calls go to the mock, which refuses every token but the cleanup one
+      E2E_PLEX_TV_URL: plexTvUrl,
     },
   },
 });

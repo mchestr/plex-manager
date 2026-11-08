@@ -1,4 +1,6 @@
-import { createServer, type Server, type ServerResponse } from 'node:http';
+import { buildCleanupWorld, type WorldPlay } from '../helpers/cleanup-fixtures';
+import { dayKey, normalizeTimeZone } from '../../lib/utils/zoned-time';
+import { json, startMockServer, type MockServer } from './request-log';
 
 /**
  * A stand-in for Tautulli. The app calls Tautulli from the server, so
@@ -14,8 +16,18 @@ import { createServer, type Server, type ServerResponse } from 'node:http';
  * - `get_users_table`, for the inactive members spec (the daily last seen
  *   read): the users in {@link MOCK_USERS_TABLE}, paged by `start` and
  *   `length` as Tautulli's DataTables call is.
- * - `get_history`, for the same read's oldest play: one row, the oldest of
- *   {@link MOCK_OLDEST_PLAY}, as an ascending one-row page asks for.
+ * - `get_history`. With `length=1` (the inactivity read's oldest play, and a
+ *   member's first watch): one row, the oldest of {@link MOCK_OLDEST_PLAY}, as
+ *   before. Any other call pages {@link MOCK_CLEANUP_HISTORY}, the history of
+ *   `buildCleanupWorld(now)` for media cleanup (TS 16.4). It applies `after`,
+ *   `before`, `rating_key`, `parent_rating_key`, `grandparent_rating_key`,
+ *   `user_id`, `order_column`, `order_dir` and `include_activity` as Tautulli
+ *   does, so a row of another title never rescues the item under test.
+ *
+ * Like the other mocks (`./request-log.ts`), it records each call, and
+ * `POST /__reset` builds the cleanup history again at the seed's `now`. A
+ * spec sets live sessions, which `include_activity=1` adds with
+ * `row_id: null`, through `POST /__activity` with `{ "rows": [...] }`.
  */
 
 /** Every user's all-time hours: over the first affiliate tier (50 h). */
@@ -36,6 +48,16 @@ export const MOCK_USERS_TABLE = {
 /** Tautulli's oldest recorded play: long enough ago to cover any threshold the specs set. */
 const MOCK_OLDEST_PLAY = new Date('2020-01-01T12:00:00Z');
 
+/**
+ * The cleanup history the mock pages, oldest first. It lives in the global
+ * setup process: `POST /__reset` fills it again in place. A spec reads the
+ * same rows from `buildCleanupWorld(now).answers.tautulli.history`.
+ */
+export const MOCK_CLEANUP_HISTORY: WorldPlay[] = [];
+
+/** Live session rows that `include_activity=1` adds, set by `POST /__activity`. */
+const ACTIVITY: Record<string, unknown>[] = [];
+
 const USERS_TABLE_ROWS = [
   { user: MOCK_USERS_TABLE.played, name: 'Played', lastSeen: MOCK_USERS_TABLE.played.lastSeen.getTime() / 1000, keepHistory: 1 },
   { user: MOCK_USERS_TABLE.neverPlayed, name: 'Never played', lastSeen: null, keepHistory: 1 },
@@ -50,12 +72,36 @@ const USERS_TABLE_ROWS = [
   is_active: 1,
 }));
 
-function send(res: ServerResponse, status: number, body: unknown) {
-  res.writeHead(status, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify(body));
-}
-
 const success = (data: unknown) => ({ response: { result: 'success', message: null, data } });
+
+/** Tautulli reads `after` and `before` as days of its own zone: the mock's process zone. */
+const ZONE = normalizeTimeZone(process.env.TZ) ?? 'UTC';
+const KEY_COLUMNS = ['rating_key', 'parent_rating_key', 'grandparent_rating_key'] as const;
+
+function cleanupHistory(params: URLSearchParams) {
+  const after = params.get('after');
+  const before = params.get('before');
+  const user = params.get('user_id');
+  const keys = KEY_COLUMNS.flatMap((column) => {
+    const value = params.get(column);
+    return value ? [{ column, wanted: new Set(value.split(',').map((key) => key.trim())) }] : [];
+  });
+  const keep = (row: Record<string, unknown>) => {
+    const day = typeof row.started === 'number' ? dayKey(row.started * 1000, ZONE) : null;
+    if (after && (day === null || day < after)) return false;
+    if (before && (day === null || day > before)) return false;
+    if (user && String(row.user_id) !== user) return false;
+    return keys.every(({ column, wanted }) => wanted.has(String(row[column])));
+  };
+  const asc = params.get('order_dir') === 'asc';
+  const stored = MOCK_CLEANUP_HISTORY.map((row): Record<string, unknown> => ({ ...row })).filter(keep)
+    .sort((a, b) => (Number(a.started) - Number(b.started)) * (asc ? 1 : -1));
+  // Tautulli adds the sessions first, with NULL AS row_id (plexpy/datafactory.py)
+  const rows = params.get('include_activity') === '1' ? [...ACTIVITY.filter(keep).map((row) => ({ ...row, row_id: null })), ...stored] : stored;
+  const start = Number(params.get('start') ?? 0);
+  const length = Number(params.get('length') ?? 25);
+  return { recordsFiltered: rows.length, recordsTotal: MOCK_CLEANUP_HISTORY.length, draw: 1, data: rows.slice(start, start + length) };
+}
 
 function answer(params: URLSearchParams): unknown {
   switch (params.get('cmd')) {
@@ -71,6 +117,7 @@ function answer(params: URLSearchParams): unknown {
       return success({ recordsFiltered: total, recordsTotal: total, draw: 1, data: USERS_TABLE_ROWS.slice(start, start + length) });
     }
     case 'get_history': {
+      if (params.get('length') !== '1') return success(cleanupHistory(params));
       const date = MOCK_OLDEST_PLAY.getTime() / 1000;
       return success({ recordsFiltered: 1, recordsTotal: 1, draw: 1, data: [{ date, started: date, user_id: MOCK_USERS_TABLE.played.userId }] });
     }
@@ -79,17 +126,29 @@ function answer(params: URLSearchParams): unknown {
   }
 }
 
-/** Starts the mock on a free port on 127.0.0.1. */
-export async function startMockTautulli(): Promise<{ url: string; server: Server }> {
-  const server = createServer((req, res) => {
-    const url = new URL(req.url ?? '/', 'http://mock');
-    if (req.method !== 'GET' || url.pathname !== '/api/v2') {
-      return send(res, 200, { response: { result: 'error', message: `No mock for ${url.pathname}`, data: {} } });
-    }
-    return send(res, 200, answer(url.searchParams));
-  });
+function reset(now: number): void {
+  MOCK_CLEANUP_HISTORY.splice(0, MOCK_CLEANUP_HISTORY.length, ...buildCleanupWorld(now).answers.tautulli.history);
+  ACTIVITY.length = 0;
+}
 
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address() as { port: number };
-  return { url: `http://127.0.0.1:${port}`, server };
+/** Starts the mock on a free port on 127.0.0.1. */
+export async function startMockTautulli(): Promise<MockServer> {
+  reset(Date.now());
+  return startMockServer({
+    mock: 'tautulli',
+    handle: ({ method, url }) => {
+      if (method !== 'GET' || url.pathname !== '/api/v2') {
+        return json({ response: { result: 'error', message: `No mock for ${url.pathname}`, data: {} } });
+      }
+      return json(answer(url.searchParams));
+    },
+    reset,
+    control: (call) => {
+      if (call.url.pathname !== '/__activity' || call.method !== 'POST') return undefined;
+      const body = call.body as { rows?: unknown } | null;
+      if (!body || !Array.isArray(body.rows)) return json({ message: 'POST /__activity needs { rows: [...] }' }, 400);
+      ACTIVITY.splice(0, ACTIVITY.length, ...body.rows.filter((row): row is Record<string, unknown> => row !== null && typeof row === 'object'));
+      return json({ rows: ACTIVITY.length });
+    },
+  });
 }
