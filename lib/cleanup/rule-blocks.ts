@@ -14,8 +14,10 @@
 
 import type { Block } from "@/lib/cleanup/blocks"
 import { NEVER_WINDOW_DAYS, STALE_DATA_HOURS, TAUTULLI_STALE_DAYS } from "@/lib/cleanup/constants"
+import { GLOBAL_LEVELS } from "@/lib/cleanup/engine/protections"
 import type { CompiledRule } from "@/lib/cleanup/engine/types"
 import type { RowCounter, SnapshotFacts, SourceStatus } from "@/lib/cleanup/schema/snapshot"
+import { isShrink } from "@/lib/cleanup/snapshot/baseline"
 import type { CleanupOptions } from "@/lib/validations/cleanup-options"
 import { type Condition, durationDays, type RuleDefinition } from "@/lib/validations/cleanup-rule"
 import { FIELD_SOURCES, LEVEL_ARR, type Level, SERVICES, type Service } from "@/lib/validations/cleanup-vocabulary"
@@ -43,11 +45,11 @@ export interface BlockContext {
 const GLOBAL_NEEDS = [["g4", "tautulli"], ["g5", "tautulli"], ["g7", "overseerr"], ["g8", "plex"], ["g9", "arr"], ["g11", "sonarr"],
   ["g12", "tautulli"], ["g13", "plex"]] as const
 type NeedId = (typeof GLOBAL_NEEDS)[number][0]
-const SEASONS_ONLY: readonly NeedId[] = ["g11", "g12"]
 const WINDOW_GLOBALS = ["g4", "g5", "g7", "g12"] as const // their days count in `windowDays` (TS 8.2)
 
 const time = (value: Date | string) => (typeof value === "string" ? Date.parse(value) : value.getTime())
-const inLevel = (id: NeedId, level: Level) => level === "season" || !SEASONS_ONLY.includes(id)
+/** The levels of each global protection come from the evaluators (TS 5.3), so both sides agree. */
+const inLevel = (id: NeedId, level: Level) => GLOBAL_LEVELS[id].includes(level)
 
 /** The level and every condition of a rule: top-level, group members and rule protections. */
 function partsOf(rule: BlockRule): { level: Level; conditions: Condition[] } {
@@ -104,9 +106,6 @@ export function windowDays(rule: BlockRule, options: CleanupOptions): number {
   return Math.max(0, ...conditions.map(conditionWindow), ...globals)
 }
 
-/** The shrink test (TS 8.2 step 6): more than 10 % below the baseline, or 0 with a baseline above 0. */
-export const countShrank = (rows: number, baseline: number) => rows * 10 < baseline * 9
-
 const statusOf = (snapshot: BlockSnapshot, service: Service) => snapshot.sources.find((s) => s.service === service)
 const failedStatus = (snapshot: BlockSnapshot, service: Service) => snapshot.sources.find((s) => s.service === service && s.state === "failed")
 const COUNTERS: { counter: RowCounter; service: "overseerr" | "tautulli"; rows: (s: BlockSnapshot) => number | undefined }[] = [
@@ -121,7 +120,7 @@ export function sourceShrank(snapshot: BlockSnapshot, services: readonly Service
     const rows = read(snapshot)
     const baseline = snapshot.facts.rowBaseline[counter]
     if (!services.includes(service) || failedStatus(snapshot, service) || rows === undefined || baseline === undefined) return []
-    return countShrank(rows, baseline) ? [{ code: "sourceShrank", service, counter, rows, previousRows: baseline }] : []
+    return isShrink(rows, baseline) ? [{ code: "sourceShrank", service, counter, rows, previousRows: baseline }] : []
   })
 }
 

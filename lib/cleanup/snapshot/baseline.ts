@@ -63,8 +63,8 @@ export function counterValue(snapshot: Pick<BaselineSnapshot, "sources" | "facts
 
 /**
  * Whether `count` is more than 10 % below `baseline`, or 0 with a baseline
- * above 0 (TS 8.2 step 6). Whole-number arithmetic, as `countShrank` of
- * `rule-blocks.ts` does, so both sides agree at the edge.
+ * above 0 (TS 8.2 step 6). Whole-number arithmetic. `sourceShrank()` of
+ * `rule-blocks.ts` uses this test too, so one shrink test exists.
  */
 export function isShrink(count: number, baseline: number | undefined): boolean {
   return baseline !== undefined && count * 10 < baseline * 9

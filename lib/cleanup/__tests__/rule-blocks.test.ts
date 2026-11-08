@@ -10,7 +10,8 @@ import {
   NOW,
 } from "@/lib/cleanup/__tests__/helpers/builders"
 import type { CompiledRule } from "@/lib/cleanup/engine/types"
-import { type BlockSnapshot, countShrank, ruleBlocks, ruleSources, sourceShrank, windowDays } from "@/lib/cleanup/rule-blocks"
+import { type BlockSnapshot, ruleBlocks, ruleSources, sourceShrank, windowDays } from "@/lib/cleanup/rule-blocks"
+import { isShrink } from "@/lib/cleanup/snapshot/baseline"
 import type { SnapshotFacts, SourceStatus } from "@/lib/cleanup/schema/snapshot"
 import type { Condition, RuleDefinition } from "@/lib/validations/cleanup-rule"
 import type { Service } from "@/lib/validations/cleanup-vocabulary"
@@ -134,7 +135,7 @@ describe("sourceShrank against rowBaseline (TS 8.2 step 6)", () => {
     ["0 against a baseline of 0", 0, 0, false],
     ["a rise", 400, 300, false],
   ])("%s", (_name, rows, baseline, shrank) => {
-    expect(countShrank(rows, baseline)).toBe(shrank)
+    expect(isShrink(rows, baseline)).toBe(shrank)
     const blocks = sourceShrank(snap({ overseerr: rows, tautulli: 5000 }, 12, { overseerrRequests: baseline, tautulliRows: 5000, usersWithPlay: 12 }), all)
     expect(blocks).toEqual(shrank ? [{ code: "sourceShrank", service: "overseerr", counter: "overseerrRequests", rows, previousRows: baseline }] : [])
   })
