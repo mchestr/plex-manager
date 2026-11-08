@@ -15,6 +15,9 @@ import { createRedisSemaphore, type RedisSemaphore, type SemaphoreHolder } from 
 import { describeRedis } from "@/__tests__/helpers/integration"
 
 const KEY = "rw:sem:tautulli"
+// Media cleanup's services (TS 7.2.1 item 3)
+const RADARR_KEY = "rw:sem:radarr"
+const SONARR_KEY = "rw:sem:sonarr"
 
 describeRedis("redis semaphore", (redisUrl) => {
   let inspector: Redis
@@ -33,11 +36,11 @@ describeRedis("redis semaphore", (redisUrl) => {
   })
 
   beforeEach(async () => {
-    await inspector.del(KEY)
+    await inspector.del(KEY, RADARR_KEY, SONARR_KEY)
   })
 
   afterAll(async () => {
-    await inspector.del(KEY)
+    await inspector.del(KEY, RADARR_KEY, SONARR_KEY)
     await Promise.all([inspector.quit(), clientA.quit(), clientB.quit()])
   })
 
@@ -120,5 +123,40 @@ describeRedis("redis semaphore", (redisUrl) => {
       })
     ).rejects.toThrow("upstream down")
     expect(await inspector.zcard(KEY)).toBe(0)
+  })
+
+  it("holds a Radarr permit under its own key, apart from the Rewind services", async () => {
+    const tautulli = await fill()
+
+    const radarr = await processA.acquire("radarr")
+
+    expect(await inspector.zcard(RADARR_KEY)).toBe(1)
+    expect(await inspector.zcard(KEY)).toBe(4)
+    expect(await inspector.exists(SONARR_KEY)).toBe(0)
+    await radarr.release()
+    expect(await inspector.zcard(RADARR_KEY)).toBe(0)
+    await Promise.all(tautulli.map((h) => h.release()))
+  })
+
+  it("caps Radarr and Sonarr at four calls each across two processes", async () => {
+    const running = { radarr: 0, sonarr: 0 }
+    const peak = { radarr: 0, sonarr: 0 }
+    const call = (service: "radarr" | "sonarr") => async () => {
+      running[service]++
+      peak[service] = Math.max(peak[service], running[service])
+      await new Promise((resolve) => setTimeout(resolve, 30))
+      running[service]--
+    }
+
+    await Promise.all(
+      Array.from({ length: 12 }, (_, i) => {
+        const service = i % 2 === 0 ? "radarr" : "sonarr"
+        return (i % 3 === 0 ? processA : processB).run(service, call(service))
+      })
+    )
+
+    expect(peak).toEqual({ radarr: 4, sonarr: 4 })
+    expect(await inspector.zcard(RADARR_KEY)).toBe(0)
+    expect(await inspector.zcard(SONARR_KEY)).toBe(0)
   })
 })

@@ -1,3 +1,4 @@
+/* eslint max-lines: ["error", { "max": 360, "skipBlankLines": true, "skipComments": true }] -- cohesive: the one registry of every job type, label, payload and id policy, so the policy test sees each type */
 /**
  * Queue Type Definitions
  *
@@ -39,6 +40,11 @@ export const JOB_TYPES = {
   CONVERSATION_REVIEW: "judge:review",
   // The nightly sweep that queues them (lib/judge/sweep.ts)
   CONVERSATION_REVIEW_SWEEP: "judge:sweep",
+  // Media cleanup (lib/queue/jobs/cleanup.ts): the library read, the run, the act step and the Plex collections
+  CLEANUP_READ: "cleanup:read",
+  CLEANUP_RUN: "cleanup:run",
+  CLEANUP_ACT: "cleanup:act",
+  CLEANUP_COLLECTIONS: "cleanup:collections",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -76,6 +82,10 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.SECRETS_REENCRYPT]: "Secret re-encryption",
   [JOB_TYPES.CONVERSATION_REVIEW]: "Conversation review",
   [JOB_TYPES.CONVERSATION_REVIEW_SWEEP]: "Conversation review sweep",
+  [JOB_TYPES.CLEANUP_READ]: "Media cleanup library read",
+  [JOB_TYPES.CLEANUP_RUN]: "Media cleanup run",
+  [JOB_TYPES.CLEANUP_ACT]: "Media cleanup deletions",
+  [JOB_TYPES.CLEANUP_COLLECTIONS]: "Media cleanup Plex collections",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
   [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
@@ -105,6 +115,10 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.SECRETS_REENCRYPT,
   JOB_TYPES.CONVERSATION_REVIEW,
   JOB_TYPES.CONVERSATION_REVIEW_SWEEP,
+  JOB_TYPES.CLEANUP_READ,
+  JOB_TYPES.CLEANUP_RUN,
+  JOB_TYPES.CLEANUP_ACT,
+  JOB_TYPES.CLEANUP_COLLECTIONS,
 ] as const satisfies readonly JobType[]
 
 /** A job's label, or its raw name for a type this build does not know. */
@@ -264,6 +278,67 @@ export interface DiscordRoleReconcileResult {
 }
 
 // =============================================================================
+// Media Cleanup Job Types (lib/queue/jobs/cleanup.ts)
+// =============================================================================
+
+/**
+ * One library read into a new snapshot. The nightly read sets `chain`, so a
+ * `cleanup:run` follows it (also after a failed or busy read); a rule save
+ * sets `thenDryRunRuleIds`, so a dry run of those rules follows it.
+ */
+export interface CleanupReadPayload {
+  trigger: "scheduled" | "admin" | "system"
+  actorId?: string
+  chain: boolean
+  thenDryRunRuleIds?: string[]
+}
+
+/**
+ * One run over the rules. `dryRunRuleIds` limits it to a dry run of those
+ * rules; `dryRunRevision` is the rule revision of a single-rule dry run, so a
+ * dry run of a newer definition never joins one of an older definition.
+ */
+export interface CleanupRunPayload {
+  trigger: "scheduled" | "admin" | "create"
+  actorId?: string
+  dryRunRuleIds?: string[]
+  dryRunRevision?: number
+  act: boolean
+  /** Whether the run puts new matches in Leaving soon; true when absent. */
+  entries?: boolean
+  /** How the library read before a chained run ended. */
+  readStatus?: "complete" | "failed" | "busy"
+  /** How many times the run has waited for a busy claim. */
+  waits?: number
+}
+
+/** The act step: it deletes the approved titles. The approval lives in the database, not here. */
+export interface CleanupActPayload {
+  trigger: "approval"
+  actorId: string
+  /** How many times the step has waited for the run claim; each retry gets its own id. */
+  waits?: number
+}
+
+/** One sync of the Plex collections, on the hourly schedule or after a change. */
+export interface CleanupCollectionsPayload {
+  reason: "scheduled" | "change"
+}
+
+/**
+ * The `cleanup:run` deduplication id. A dry run is keyed by its sorted rule
+ * ids and, for one rule, its revision. The nightly run has its own id per
+ * busy retry, so a pending admin run never swallows the night's act step.
+ */
+function cleanupRunId(data: CleanupRunPayload): string {
+  if (data.dryRunRuleIds) {
+    const revision = data.dryRunRevision ? `:${data.dryRunRevision}` : ""
+    return `cleanup:dry-run:${[...data.dryRunRuleIds].sort().join("+")}${revision}`
+  }
+  return data.trigger === "scheduled" ? `cleanup:run:nightly:${data.waits ?? 0}` : "cleanup:run"
+}
+
+// =============================================================================
 // Rewind Batch Job Types (P2.6)
 // =============================================================================
 
@@ -398,6 +473,10 @@ interface JobPayloads {
   [JOB_TYPES.SECRETS_REENCRYPT]: { triggeredBy: "scheduled" }
   [JOB_TYPES.CONVERSATION_REVIEW]: { reviewId: string }
   [JOB_TYPES.CONVERSATION_REVIEW_SWEEP]: { triggeredBy: "scheduled" }
+  [JOB_TYPES.CLEANUP_READ]: CleanupReadPayload
+  [JOB_TYPES.CLEANUP_RUN]: CleanupRunPayload
+  [JOB_TYPES.CLEANUP_ACT]: CleanupActPayload
+  [JOB_TYPES.CLEANUP_COLLECTIONS]: CleanupCollectionsPayload
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
@@ -452,6 +531,11 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   // Not deduplication: the review row dedupes, and a kept completed job would swallow a repeat id
   [JOB_TYPES.CONVERSATION_REVIEW]: { jobId: (data) => reviewJobId(data.reviewId) },
   [JOB_TYPES.CONVERSATION_REVIEW_SWEEP]: { fromCaller: "the judge-review-sweep scheduler" },
+  [JOB_TYPES.CLEANUP_READ]: { deduplication: () => "cleanup:read" },
+  [JOB_TYPES.CLEANUP_RUN]: { deduplication: cleanupRunId },
+  // A deduplication id holds while its job waits or runs, so each retry needs its own
+  [JOB_TYPES.CLEANUP_ACT]: { deduplication: (data) => (data.waits ? `cleanup:act:retry:${data.waits}` : "cleanup:act") },
+  [JOB_TYPES.CLEANUP_COLLECTIONS]: { deduplication: () => "cleanup:collections" },
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
   [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },
   [JOB_TYPES.REWIND_GENERATE_USER]: { fromCaller: "the RewindGeneration id" },
