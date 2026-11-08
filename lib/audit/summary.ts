@@ -19,6 +19,10 @@
  * | `MEMBER_CONTENT_LISTED`        | `surface`                                      | "Watchlist sync page"                                                            |
  * | `AUDIT_LOG_VIEWED`             | which `filters` are set, never their values    | "No filters", "Filters: category, member"                                        |
  * | `ASSISTANT_SOURCE_CHANGED`     | `kind`, `action`                               | "Skill source refreshed", "MCP server removed"                                   |
+ * | `CLEANUP_SETTINGS_CHANGED`     | as `CONFIG_CHANGED`                            | "cleanup-budget: items, bytes"                                                   |
+ *
+ * The other media cleanup events (`CLEANUP_*`) have their summaries in
+ * `lib/audit/summary-cleanup.ts` (TS 11.3), spread into `SUMMARIES`.
  *
  * A section or field name shows only when it looks like code (`setup.plex`,
  * `apiKey`), a block code only when `lib/inactivity/blocks.ts` knows it, and a
@@ -31,6 +35,7 @@
  */
 
 import { type AuditEventName, isKnownEventType } from "@/lib/audit/events"
+import { CLEANUP_SUMMARIES } from "@/lib/audit/summary-cleanup"
 import { type InactivityBlock, INACTIVITY_BLOCKS, inactivityBlockLabel } from "@/lib/inactivity/blocks"
 import { parseRole, ROLES } from "@/lib/permissions"
 import type { MemberListSurface, MemberReadSurface } from "@/lib/security/audit-log"
@@ -38,10 +43,11 @@ import type { SessionRevocationReason } from "@/lib/session-revocation"
 import type { BoundFormat } from "@/lib/utils/format"
 
 /** The formatters a summary uses; `bindFormat`'s result fits. */
-type SummaryFormat = Pick<BoundFormat, "date" | "number">
+export type SummaryFormat = Pick<BoundFormat, "date" | "number" | "dayKey">
 
 type Details = Record<string, unknown>
-type Summarize = (details: Details, f: SummaryFormat) => string | null
+/** One event type's summary, from its stored details. */
+export type Summarize = (details: Details, f: SummaryFormat) => string | null
 
 const isRecord = (value: unknown): value is Details => typeof value === "object" && value !== null && !Array.isArray(value)
 
@@ -153,6 +159,8 @@ const SURFACES: Record<MemberReadSurface | MemberListSurface, string> = {
   "watchlist-history": "Watchlist sync page",
   affiliates: "Affiliates page",
   "conversation-findings": "Conversation findings",
+  "cleanup-requesters": "Media cleanup requesters",
+  "cleanup-keeps": "Media cleanup Keeps",
 }
 
 function surface(details: Details): string | null {
@@ -192,6 +200,9 @@ const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   MEMBER_CONTENT_LISTED: surface,
   AUDIT_LOG_VIEWED: auditLogViewed,
   ASSISTANT_SOURCE_CHANGED: sourceChanged,
+  ...CLEANUP_SUMMARIES,
+  // Section and field names, as CONFIG_CHANGED (TS 11.3)
+  CLEANUP_SETTINGS_CHANGED: configChanged,
 }
 
 /** The event's one-line summary, or null when its type has none or its details do not fit. */

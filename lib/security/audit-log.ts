@@ -1,3 +1,4 @@
+/* eslint max-lines: ["error", { "max": 220, "skipBlankLines": true, "skipComments": true }] -- cohesive: the one enum of every audit event type, beside the writers that take it */
 /**
  * Audit logging for security-sensitive operations (SEC-55).
  *
@@ -233,6 +234,90 @@ export enum AuditEventType {
   // An admin or a Support user opened the audit log: one row per viewer per
   // hour. Details carry the filters (category, type and ids), never names.
   AUDIT_LOG_VIEWED = "AUDIT_LOG_VIEWED",
+  // Media cleanup (TS 11.1). Details hold ids, codes, counts and dates, never a
+  // title, a rule name or a member name. The per-item events are awaited
+  // (recordAuditEvent); the others go through logAuditEvent.
+  //
+  // An admin created a rule. Details carry the rule id, its level, the origin
+  // (recipe, duplicate or blank), the recipe id and version or the source rule
+  // id, and the count of conditions.
+  CLEANUP_RULE_CREATED = "CLEANUP_RULE_CREATED",
+  // An admin saved a rule. Details carry the rule id, level and mode, the
+  // changed parts (a subset of name, scope, conditions, protections and then),
+  // the condition ids added, removed and edited, the definitions before and
+  // after, and the impact (how many titles leave and join), when known.
+  CLEANUP_RULE_CHANGED = "CLEANUP_RULE_CHANGED",
+  // An admin deleted a rule. Details carry the rule id, level and mode, and how
+  // many titles it released from Leaving soon.
+  CLEANUP_RULE_DELETED = "CLEANUP_RULE_DELETED",
+  // An admin changed a rule's mode. Details carry the rule id, the modes before
+  // and after (from, to), how many titles joined or were released, and whether
+  // the admin typed the confirmation (typed).
+  CLEANUP_RULE_MODE_CHANGED = "CLEANUP_RULE_MODE_CHANGED",
+  // An admin saved a section of the media cleanup settings. Details carry the
+  // section, the changed field names, and the values before and after.
+  CLEANUP_SETTINGS_CHANGED = "CLEANUP_SETTINGS_CHANGED",
+  // An admin paused all cleanup. Details carry how many approved titles went
+  // back to waiting (unapproved).
+  CLEANUP_PAUSED = "CLEANUP_PAUSED",
+  // An admin resumed cleanup. Details carry the day before which nothing is
+  // deleted (holdUntil) and how many leave dates moved (moved).
+  CLEANUP_RESUMED = "CLEANUP_RESUMED",
+  // An admin started a run, a library read or a dry run. Details carry the kind
+  // (run, read or dryRun), whether it was queued, and a dry run's rule id.
+  CLEANUP_RUN_STARTED = "CLEANUP_RUN_STARTED",
+  // One media cleanup run, by the schedule or an admin. Details carry the run
+  // id (null for a run that found another in progress), the kind, trigger and
+  // outcome, the counts (checked, matched, joined, held, rescued, deleted,
+  // failed, deferred), freedBytes as a string, and the block codes.
+  CLEANUP_RUN = "CLEANUP_RUN",
+  // Titles joined Leaving soon. Details carry the run id (none for a turn-on),
+  // the rule id, the count, at most 500 item keys and how many more (more).
+  CLEANUP_ITEMS_ENTERED = "CLEANUP_ITEMS_ENTERED",
+  // A run held new matches for review. Details carry the run id, the rule id,
+  // the count, at most 500 item keys and how many more.
+  CLEANUP_ITEMS_HELD = "CLEANUP_ITEMS_HELD",
+  // Titles left Leaving soon because their rule left it (reason ruleOff) or
+  // their library left the rule (libraryRemoved): one row per rule and reason.
+  // Details carry the rule id, the reason, the count, the item keys and more.
+  CLEANUP_ITEMS_RELEASED = "CLEANUP_ITEMS_RELEASED",
+  // An admin approved a deletion batch or a batch of new matches. Details carry
+  // the kind (deletion or entry), the rule id, the count, the bytes, how many
+  // unticked rows are in the batch (excluded), the keys hash and typed.
+  CLEANUP_BATCH_APPROVED = "CLEANUP_BATCH_APPROVED",
+  // An admin postponed leave dates. Details carry the count, the days, at most
+  // 500 item keys, more and the skipped count. The batch form adds the batch
+  // id and how many unticked rows are in the batch (excluded).
+  CLEANUP_ITEMS_POSTPONED = "CLEANUP_ITEMS_POSTPONED",
+  // An admin excluded titles from cleanup. Details carry the count, the end day
+  // (until, null for none), whether a note was given (hasNote, never the
+  // note), the rescued and skipped counts, at most 500 item keys and more. The
+  // batch form adds the batch id and excluded.
+  CLEANUP_ITEMS_EXCLUDED = "CLEANUP_ITEMS_EXCLUDED",
+  // An admin removed an exclusion or changed its end day. Details carry the
+  // exclusion id, the item key, the change (removed or endChanged) and until.
+  CLEANUP_EXCLUSION_CHANGED = "CLEANUP_EXCLUSION_CHANGED",
+  // A member kept a title; the target is the member. Details carry the keep
+  // id, the item key and when the Keep ends (until).
+  CLEANUP_KEEP_ADDED = "CLEANUP_KEEP_ADDED",
+  // A Keep ended; the target is the member. Details carry the keep id, the
+  // item key, who ended it (endedBy: self or admin) and whether the title went
+  // back to Leaving soon (restored).
+  CLEANUP_KEEP_ENDED = "CLEANUP_KEEP_ENDED",
+  // A title left Leaving soon because it no longer qualifies. Details carry the
+  // run id (when a run found it), the item key, the level, the reason
+  // (lib/cleanup/outcomes.ts), the rule ids and the outcome detail (ids and codes).
+  CLEANUP_ITEM_RESCUED = "CLEANUP_ITEM_RESCUED",
+  // Cleanup deleted a title; the actor is the system or the approving admin.
+  // Details carry the run id, item key, level, action, service, arr id, rule
+  // ids, freedBytes, alreadyGone, importListExclusion and the approval
+  // (automatic or admin).
+  CLEANUP_ITEM_DELETED = "CLEANUP_ITEM_DELETED",
+  // A deletion failed or a season check stopped it. Details carry the run id,
+  // item key, level, action, service, the failure code (a ServiceErrorCode of
+  // lib/connections/http.ts or a season check code), the HTTP status of an
+  // HTTP failure (status) and failCount.
+  CLEANUP_ITEM_FAILED = "CLEANUP_ITEM_FAILED",
 }
 
 type AuditDetails = {
@@ -318,8 +403,18 @@ export type MemberReadSurface =
   | "chatbot-tautulli"
   | "conversation-review"
 
-/** The admin pages that list many members' content. */
-export type MemberListSurface = "discord-activity" | "watchlist-history" | "affiliates" | "conversation-findings"
+/**
+ * The admin pages that list many members' content. Media cleanup (TS 10.4):
+ * `cleanup-requesters` for the requester names of the rule editor and the
+ * turn-on page, `cleanup-keeps` for the Kept and excluded tab.
+ */
+export type MemberListSurface =
+  | "discord-activity"
+  | "watchlist-history"
+  | "affiliates"
+  | "conversation-findings"
+  | "cleanup-requesters"
+  | "cleanup-keeps"
 
 /** True the first time `key` is seen in the hour; a limiter failure counts as first, so a read is never lost. */
 async function firstThisHour(key: string): Promise<boolean> {

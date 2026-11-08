@@ -9,7 +9,7 @@
  * | `type`       | an event type the enum knows                 | that type                                                           |
  * | `actor`      | a user id, or `system`, `setup` or `unknown` | events by them (`actorUserId`)                                      |
  * | `member`     | a user id                                    | events involving them: by them or about them (`targetUserId`)       |
- * | `run`        | an inactivity run id                         | that run's `INACTIVITY_SWEEP_RUN` and `MEMBER_UNSHARED` rows        |
+ * | `run`        | an inactivity or media cleanup run id        | that run's rows, each with the id in `details.runId` (`RUN_TYPES`)  |
  * | `from`, `to` | an inclusive day range in the server zone    | events from the first midnight to the midnight after the last day   |
  *
  * Anything a param does not accept reads as unset. The filters combine with
@@ -37,8 +37,20 @@ export interface AuditFilters {
 
 type Params = Record<string, string | string[] | undefined>
 
-/** The rows an inactivity run writes, each with its id in `details.runId`. */
-const RUN_TYPES: AuditEventName[] = ["INACTIVITY_SWEEP_RUN", "MEMBER_UNSHARED"]
+/**
+ * The rows a run writes, each with its id in `details.runId`: an inactivity run,
+ * and a media cleanup run (TS 11.5, the History "Audit" link).
+ */
+const RUN_TYPES: AuditEventName[] = [
+  "INACTIVITY_SWEEP_RUN",
+  "MEMBER_UNSHARED",
+  "CLEANUP_RUN",
+  "CLEANUP_ITEMS_ENTERED",
+  "CLEANUP_ITEMS_HELD",
+  "CLEANUP_ITEM_RESCUED",
+  "CLEANUP_ITEM_DELETED",
+  "CLEANUP_ITEM_FAILED",
+]
 
 const filterSchema = z.object({
   category: z.enum(AUDIT_CATEGORIES).optional().catch(undefined),

@@ -1,3 +1,4 @@
+/* eslint max-lines: ["error", { "max": 175, "skipBlankLines": true, "skipComments": true }] -- cohesive: a Record over every audit event type, so a new type does not compile without its words */
 /**
  * The words the audit log shows for each stored event type: a short label and
  * the category it is filed under. Client-safe: the event type enum is read as
@@ -7,6 +8,7 @@
  * |-----------------|-------------------------------------------------------------------------------|
  * | `members`       | Accounts, admin rights, roles, removal and import                             |
  * | `access`        | Plex share removals and the inactivity sweep                                  |
+ * | `cleanup`       | Rules, runs, Leaving soon, deletions, Keeps and exclusions                    |
  * | `sessions`      | Every session of a user ended                                                 |
  * | `invites`       | Admin invites and their redemption                                            |
  * | `affiliates`    | Applications, decisions, blocks and affiliate invites                         |
@@ -34,6 +36,7 @@ import type { AuditEventType } from "@/lib/security/audit-log"
 export const AUDIT_CATEGORIES = [
   "members",
   "access",
+  "cleanup",
   "sessions",
   "invites",
   "affiliates",
@@ -57,6 +60,7 @@ export type AuditEventName = `${AuditEventType}`
 export const CATEGORY_LABELS: Record<AuditCategory, string> = {
   members: "Members and roles",
   access: "Plex access",
+  cleanup: "Media cleanup",
   sessions: "Sign-in sessions",
   invites: "Invites",
   affiliates: "Affiliates",
@@ -91,6 +95,28 @@ const AUDIT_EVENTS: Record<AuditEventName, EventWords> = {
   INACTIVITY_SWEEP_RUN: { label: "Inactivity sweep ran", category: "access" },
   INACTIVITY_EXCLUSION_CHANGED: { label: "Inactivity exclusion changed", category: "access" },
   ACTIVITY_SYNC_TRIGGERED: { label: "Last seen check started", category: "access" },
+
+  CLEANUP_RULE_CREATED: { label: "Cleanup rule created", category: "cleanup" },
+  CLEANUP_RULE_CHANGED: { label: "Cleanup rule changed", category: "cleanup" },
+  CLEANUP_RULE_DELETED: { label: "Cleanup rule deleted", category: "cleanup" },
+  CLEANUP_RULE_MODE_CHANGED: { label: "Cleanup rule mode changed", category: "cleanup" },
+  CLEANUP_SETTINGS_CHANGED: { label: "Media cleanup settings changed", category: "cleanup" },
+  CLEANUP_PAUSED: { label: "Media cleanup paused", category: "cleanup" },
+  CLEANUP_RESUMED: { label: "Media cleanup resumed", category: "cleanup" },
+  CLEANUP_RUN_STARTED: { label: "Media cleanup run started", category: "cleanup" },
+  CLEANUP_RUN: { label: "Media cleanup ran", category: "cleanup" },
+  CLEANUP_ITEMS_ENTERED: { label: "Titles joined Leaving soon", category: "cleanup" },
+  CLEANUP_ITEMS_HELD: { label: "New matches held for review", category: "cleanup" },
+  CLEANUP_ITEMS_RELEASED: { label: "Titles released from Leaving soon", category: "cleanup" },
+  CLEANUP_BATCH_APPROVED: { label: "Cleanup batch approved", category: "cleanup" },
+  CLEANUP_ITEMS_POSTPONED: { label: "Leave dates postponed", category: "cleanup" },
+  CLEANUP_ITEMS_EXCLUDED: { label: "Titles excluded from cleanup", category: "cleanup" },
+  CLEANUP_EXCLUSION_CHANGED: { label: "Cleanup exclusion changed", category: "cleanup" },
+  CLEANUP_KEEP_ADDED: { label: "Title kept by a member", category: "cleanup" },
+  CLEANUP_KEEP_ENDED: { label: "Keep ended", category: "cleanup" },
+  CLEANUP_ITEM_RESCUED: { label: "Title rescued from Leaving soon", category: "cleanup" },
+  CLEANUP_ITEM_DELETED: { label: "Title deleted by cleanup", category: "cleanup" },
+  CLEANUP_ITEM_FAILED: { label: "Cleanup deletion failed", category: "cleanup" },
 
   SESSIONS_REVOKED: { label: "Signed out everywhere", category: "sessions" },
 

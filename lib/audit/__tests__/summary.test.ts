@@ -188,6 +188,8 @@ describe("the admin reads", () => {
     ["MEMBER_CONTENT_LISTED", { surface: "watchlist-history", filters: { q: "Jane" } }, "Watchlist sync page"],
     ["MEMBER_CONTENT_VIEWED", { surface: "conversation-review" }, "Conversation review"],
     ["MEMBER_CONTENT_LISTED", { surface: "conversation-findings", filters: { status: "open" } }, "Conversation findings"],
+    ["MEMBER_CONTENT_LISTED", { surface: "cleanup-requesters", filters: { ruleId: "r1" } }, "Media cleanup requesters"],
+    ["MEMBER_CONTENT_LISTED", { surface: "cleanup-keeps", filters: { q: "Jane", kind: "keep" } }, "Media cleanup Keeps"],
     ["MEMBER_CONTENT_VIEWED", { surface: "somewhere-new" }, null],
     ["MEMBER_CONTENT_LISTED", { surface: "constructor" }, null],
   ])("names the %s surface in %o", (type, details, expected) => {
@@ -238,6 +240,11 @@ describe("ASSISTANT_SOURCE_CHANGED", () => {
 })
 
 describe("auditSummary", () => {
+  it("spreads in the media cleanup summaries", () => {
+    expect(summary("CLEANUP_RULE_CREATED", { level: "movie", origin: "recipe" })).toBe("Movies rule, from a recipe")
+    expect(summary("CLEANUP_SETTINGS_CHANGED", { section: "cleanup-budget", changedFields: ["items", "bytes"] })).toBe("cleanup-budget: items, bytes")
+  })
+
   it("has none for a type without a summary, a type the enum does not know, or details that are not an object", () => {
     expect(summary("INVITE_CREATED", { inviteId: "i1", uses: 1 })).toBeNull()
     expect(summary("TEST", { status: "removed" })).toBeNull()
@@ -265,6 +272,7 @@ describe("auditSummary", () => {
     ["SESSIONS_REVOKED", { reason: NOTE }],
     ["USER_ROLE_CHANGED", { previousRole: NAME, newRole: null }],
     ["MEMBER_CONTENT_LISTED", { surface: NAME, filters: { q: EMAIL } }],
+    ["MEMBER_CONTENT_LISTED", { surface: "cleanup-keeps", filters: { q: NAME, member: EMAIL } }],
     ["AUDIT_LOG_VIEWED", { filters: { member: NAME, category: EMAIL, type: NOTE } }],
     ["ASSISTANT_SOURCE_CHANGED", { kind: "skill", action: "saved", id: NAME, name: EMAIL, repo: NOTE }],
     ["SUBSCRIPTION_EXEMPT_CHANGED", { isExempt: true, exemptNote: NOTE }],
