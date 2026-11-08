@@ -133,13 +133,19 @@ async function globalSetup() {
   const tautulli = await startMockTautulli();
   process.env.E2E_TAUTULLI_URL = tautulli.url;
   console.log(`[E2E Setup] Mock Tautulli listening at ${tautulli.url}`);
-  // And a mail server: the web server's SMTP_URL names its fixed port (playwright.config.ts)
-  const smtp = await startSmtpSink();
-  process.env.E2E_SMTP_INBOX_URL = smtp.inboxUrl;
-  console.log(`[E2E Setup] SMTP sink listening, inbox at ${smtp.inboxUrl}`);
+  // And a mail server: the web server's SMTP_URL names its fixed port (playwright.config.ts).
+  // The setup specs run this setup again in a worker, where the runner's sink still holds
+  // that port and E2E_SMTP_INBOX_URL is already set, so only the first run starts it.
+  const smtp = process.env.E2E_SMTP_INBOX_URL ? null : await startSmtpSink();
+  if (smtp) {
+    process.env.E2E_SMTP_INBOX_URL = smtp.inboxUrl;
+    console.log(`[E2E Setup] SMTP sink listening, inbox at ${smtp.inboxUrl}`);
+  }
   return async () => {
     await Promise.all(
-      [llm.server, tautulli.server, smtp.smtp, smtp.http].map((server) => new Promise<void>((resolve) => server.close(() => resolve())))
+      [llm.server, tautulli.server, ...(smtp ? [smtp.smtp, smtp.http] : [])].map(
+        (server) => new Promise<void>((resolve) => server.close(() => resolve()))
+      )
     );
   };
 }

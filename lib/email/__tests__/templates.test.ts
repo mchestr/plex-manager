@@ -99,7 +99,7 @@ describe("renderEmailHtml", () => {
       { title: "<title>", serverName: "<script>alert(1)</script>", accent: { fill: "#000000", ink: "#ffffff" } }
     )
 
-    expect(html).not.toMatch(/<script|<b>|<i>|<footer>|<Open>|"onmouseover/)
+    expect(html).not.toMatch(/<script|<b>|<i>|<footer>|<Open>|"onmouseover/i)
     expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;")
     expect(html).toContain('href="https://x.example.com/?a=1&amp;b=2"')
   })
@@ -128,7 +128,7 @@ describe("testEmail", () => {
   it("escapes a server name and an admin name with markup", () => {
     const email = testEmail(context({ serverName: "<script>x</script>" }), "<img src=x>")
 
-    expect(email.html).not.toMatch(/<script>|<img/)
+    expect(email.html).not.toMatch(/<script|<img/i)
     expect(email.text).toContain("Hi <img src=x>,")
   })
 
