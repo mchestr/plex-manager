@@ -29,6 +29,17 @@ const AFFILIATE_CLIENT_SAFE = new Set([
   'lib/affiliates/tiers.ts',
 ])
 
+/** Media cleanup modules that read the database, Redis or member ids. The pure engine and snapshot files stay client-safe. */
+const CLEANUP_SERVER_ONLY = [
+  'lib/cleanup/settings.ts',
+  'lib/cleanup/claims.ts',
+  'lib/cleanup/live-facts.ts',
+  'lib/cleanup/protections.ts',
+  'lib/cleanup/schedule.ts',
+  'lib/cleanup/snapshot/store.ts',
+  'lib/cleanup/snapshot/cache.ts',
+]
+
 const MODULES = [
   ...filesIn('lib/data'),
   'lib/admin.ts',
@@ -37,15 +48,18 @@ const MODULES = [
   'lib/setup/status.ts',
   ...filesIn('lib/chatbot', true).filter((path) => !TYPE_ONLY.has(path)),
   ...filesIn('lib/affiliates').filter((path) => !AFFILIATE_CLIENT_SAFE.has(path)),
+  ...CLEANUP_SERVER_ONLY,
 ].sort()
 
-it('covers the loaders, the chatbot and the affiliate modules', () => {
+it('covers the loaders, the chatbot, the affiliate and the media cleanup modules', () => {
   expect(MODULES).toEqual(
     expect.arrayContaining([
       'lib/data/discord-activity.ts',
       'lib/data/admin-users.ts',
       'lib/chatbot/executors/sonarr.ts',
       'lib/affiliates/settings.ts',
+      'lib/cleanup/protections.ts',
+      'lib/cleanup/snapshot/cache.ts',
     ])
   )
 })
