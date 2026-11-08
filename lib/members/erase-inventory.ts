@@ -58,7 +58,8 @@ export type InventoryCounts = Record<
   | "watchlistSyncSettings"
   | "watchlistSyncHistory"
   | "inviteUsage"
-  | "subscription",
+  | "subscription"
+  | "inactivityNotice",
   number
 > &
   AffiliateCounts
@@ -103,7 +104,7 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
     rewindPrefs, rewindExclusion, llmUsage, llmUsageAnonymised, chatConversation, chatConversationMessage,
     conversationReview, conversationFinding,
     discordChatSession, discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState,
-    userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, affiliates,
+    userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, inactivityNotice, affiliates,
   ] = await Promise.all([
     prisma.user.count({ where: { id: userId } }),
     prisma.plexWrapped.count(byUser),
@@ -133,6 +134,7 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
     prisma.watchlistSyncHistory.count(byUser),
     prisma.inviteUsage.count(byUser),
     prisma.subscription.count(byUser),
+    prisma.inactivityNotice.count(byUser),
     countAffiliateRows(userId),
   ])
   return {
@@ -140,7 +142,8 @@ export async function countInventory(subject: EraseSubject): Promise<InventoryCo
     rewindPrefs, rewindExclusion, llmUsage, llmUsageAnonymised, chatConversation, chatConversationMessage,
     conversationReview, conversationFinding,
     discordChatSession, discordCommandLog, discordPendingSelection, discordConnection, discordOAuthState,
-    userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, ...affiliates,
+    userMediaMark, watchlistSyncSettings, watchlistSyncHistory, inviteUsage, subscription, inactivityNotice,
+    ...affiliates,
   }
 }
 

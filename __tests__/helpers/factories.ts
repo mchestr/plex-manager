@@ -38,6 +38,7 @@ export function buildUser(overrides: Partial<User> = {}): User {
     lastSeenAt: null,
     lastSeenReadAt: null,
     inactivityExcluded: false,
+    inactivityEmailsOff: false,
     createdAt: fixedDate(),
     updatedAt: fixedDate(),
     ...overrides,
@@ -332,6 +333,8 @@ export function buildInactivitySettings(overrides: Partial<InactivitySettings> =
     enabled: false,
     thresholdDays: 180,
     runStartedAt: null,
+    warningsEnabled: false,
+    warningDays: [30, 7, 1],
     updatedAt: fixedDate(),
     updatedBy: null,
     ...overrides,
@@ -353,6 +356,8 @@ export function buildInactivityRun(overrides: Partial<InactivityRun> = {}): Inac
     blocked: null,
     error: null,
     entries: [],
+    warned: 0,
+    newestPlayAt: null,
     ...overrides,
   }
 }
