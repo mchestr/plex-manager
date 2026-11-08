@@ -9,24 +9,31 @@
  * member, whom the admin confirmed, loses access; last seen never moves back;
  * the run, its `MEMBER_UNSHARED` and `INACTIVITY_SWEEP_RUN` rows are stored;
  * the claim is released. A Run now that finds another run's claim records
- * `INACTIVITY_SWEEP_RUN` blocked `busy`, with no run id.
+ * `INACTIVITY_SWEEP_RUN` blocked `busy`, with no run id. A Grant access after
+ * the removal counts as a return: the grant job stamps `accessRestoredAt`, so
+ * the next run, which sees the share again, removes no one.
  *
- * Tautulli and Plex are mocked; the database work, the offboarding and the
- * audit rows are real. Gated by `describePg` and run only by
- * `npm run test:integration`. The suite touches only rows it created, keyed
- * by its own run prefix, and puts the shared settings row back as it found it.
+ * Tautulli, Plex, Stripe and the Discord role sync are mocked; the database
+ * work, the offboarding and the audit rows are real. Gated by `describePg`
+ * and run only by `npm run test:integration`. The suite touches only rows it
+ * created, keyed by its own run prefix, and puts the shared settings row back
+ * as it found it.
  */
 
 import { randomUUID } from "node:crypto"
 import { PrismaPg } from "@prisma/adapter-pg"
+import type { Job } from "bullmq"
 
 import { describePg } from "@/__tests__/helpers/integration"
 import { getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
 import type { PlexTvUser } from "@/lib/connections/plex-tv-users"
 import { tautulliCommand } from "@/lib/connections/tautulli"
+import { checkUserServerAccess } from "@/lib/connections/plex-user-access"
 import { getActiveService } from "@/lib/data/active-service"
 import { PrismaClient, type InactivitySettings } from "@/lib/generated/prisma/client"
 import { runMemberActivity } from "@/lib/inactivity/run"
+import { processAccessGrant } from "@/lib/queue/jobs/stripe"
+import type { PlexAccessGrantPayload, PlexAccessGrantResult } from "@/lib/queue/types"
 import { AuditEventType } from "@/lib/security/audit-log"
 
 let mockDb: PrismaClient
@@ -41,6 +48,9 @@ jest.mock("@/lib/utils/logger", () => ({
 jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
 jest.mock("@/lib/connections/tautulli", () => ({ tautulliCommand: jest.fn() }))
 jest.mock("@/lib/connections/plex", () => ({ getPlexUsers: jest.fn(), unshareUserFromPlexServer: jest.fn() }))
+jest.mock("@/lib/connections/plex-user-access", () => ({ checkUserServerAccess: jest.fn() }))
+jest.mock("@/lib/stripe/client", () => ({ getStripe: jest.fn(async () => null) }))
+jest.mock("@/lib/discord/role-sync", () => ({ enqueueRoleSync: jest.fn() }))
 
 const RUN = `inact-${randomUUID().slice(0, 8)}`
 const ADMIN = `${RUN}-admin`
@@ -72,6 +82,11 @@ const TAUTULLI_ROWS = [
   { user_id: Number(plexId(4)), last_seen: seconds(daysAgo(600)), keep_history: 1 },
   { user_id: Number(plexId(9)), last_seen: seconds(daysAgo(1)), keep_history: 1 },
 ]
+
+/** A grant job as the queue hands it to the processor. */
+function grantJob(userId: string): Job<PlexAccessGrantPayload, PlexAccessGrantResult> {
+  return { id: `${RUN}-grant-${userId}`, data: { userId }, attemptsMade: 0 } as unknown as Job<PlexAccessGrantPayload, PlexAccessGrantResult>
+}
 
 function plexUser(id: string): PlexTvUser {
   return { id, username: id, title: id, home: false, restricted: false, servers: [{ machineIdentifier: `${RUN}-machine`, shareId: `share-${id}`, owned: false, pending: false }] }
@@ -195,5 +210,34 @@ describePg("member activity run", (databaseUrl) => {
     } finally {
       await mockDb.inactivitySettings.update({ where: { id: "inactivity" }, data: { runStartedAt: null } })
     }
+  })
+
+  it("counts a Grant access after the removal as a return: the next run removes no one", async () => {
+    // Grant access marks the member exempt, then queues the grant job; Plex already shows the share
+    await mockDb.user.updateMany({ where: { id: { in: [MEMBERS.inactive.id, MEMBERS.active.id] } }, data: { isExempt: true } })
+    jest.mocked(checkUserServerAccess).mockResolvedValue({ status: "granted" })
+    const ended = await mockDb.user.findUniqueOrThrow({ where: { id: MEMBERS.inactive.id }, select: { accessEndedAt: true } })
+    expect(ended.accessEndedAt).toEqual(expect.any(Date))
+
+    const before = new Date()
+    await expect(processAccessGrant(grantJob(MEMBERS.inactive.id))).resolves.toEqual({ userId: MEMBERS.inactive.id, granted: true })
+    // A member whose access never ended gets no return stamp
+    await expect(processAccessGrant(grantJob(MEMBERS.active.id))).resolves.toEqual({ userId: MEMBERS.active.id, granted: true })
+
+    const users = await mockDb.user.findMany({ where: { id: { in: [MEMBERS.inactive.id, MEMBERS.active.id] } }, select: { id: true, accessEndedAt: true, accessRestoredAt: true } })
+    const byId = Object.fromEntries(users.map((user) => [user.id, user]))
+    expect(byId[MEMBERS.inactive.id]!.accessEndedAt).toBeNull()
+    expect(byId[MEMBERS.inactive.id]!.accessRestoredAt!.getTime()).toBeGreaterThanOrEqual(before.getTime())
+    expect(byId[MEMBERS.active.id]).toMatchObject({ accessEndedAt: null, accessRestoredAt: null })
+
+    // The share is back, and the admin would confirm the member again: the full threshold counts from the grant
+    jest.mocked(getPlexUsers).mockResolvedValue({ success: true, data: [1, 2, 3, 4].map((n) => plexUser(plexId(n))) })
+    jest.mocked(unshareUserFromPlexServer).mockClear()
+
+    const result = await runMemberActivity("admin", { actorId: ADMIN, confirmedUserIds: [MEMBERS.inactive.id] })
+
+    expect(result).toMatchObject({ busy: false, qualified: 0, removed: 0, failed: 0, blocked: null })
+    if (result && !result.busy) runIds.push(result.runId)
+    expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
   })
 })

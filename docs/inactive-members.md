@@ -58,9 +58,12 @@ came back after it ended. So:
 
 - A member who joined recently and has not played yet is not inactive.
 - A member who gets access back after it ended has the full number of days to
-  play from that day. The app records the day when they sign in with access
-  again, or, when you share the server with them again in Plex itself, at the
-  first run that sees their share.
+  play from that day. The app records that day in three cases:
+  - They sign in with access again.
+  - Grant access, or a new Stripe subscription, shares the server with them
+    again.
+  - You share the server with them again in Plex itself. The first run that
+    sees their share records the day.
 
 The run never removes these members, in this order:
 

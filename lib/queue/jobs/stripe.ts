@@ -455,6 +455,9 @@ async function grantSkipReason(user: {
  * 4. Record `plexInviteStatus`, and, once the member has access, re-sync their Discord linked role
  *    (P4.18). A pending Plex invite alone gives no access yet; the daily
  *    reconcile picks it up after the member accepts.
+ * 5. Once the member has access after it ended (`accessEndedAt`), clear the
+ *    end and stamp `accessRestoredAt`, so the inactivity sweep gives them the
+ *    full threshold from today (`lastActiveAt` in `lib/inactivity/rules.ts`).
  *
  * @internal
  */
@@ -491,7 +494,11 @@ export async function processAccessGrant(
 
   const granted = grant.plex === "accepted"
   if (granted) {
-    await prisma.user.updateMany({ where: { id: userId }, data: { accessEndedAt: null } })
+    // A return after an end of access: the inactivity sweep counts from now, as at sign-in (lib/auth.ts)
+    await prisma.user.updateMany({
+      where: { id: userId, accessEndedAt: { not: null } },
+      data: { accessEndedAt: null, accessRestoredAt: new Date() },
+    })
   }
 
   await prisma.subscription.updateMany({
