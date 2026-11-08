@@ -290,7 +290,10 @@ if (!result.success) {
 - **Utility modules**: Max ~150 lines per file
 - If a file exceeds these limits, it's a signal to refactor
 - ESLint's `max-lines` (blank lines and comments skipped, tests excluded) fails a file in `components/` or `actions/` above 300 lines and warns for `lib/` and `hooks/` above 150. Split along responsibilities; a `'use server'` file can export only async functions, so shared helpers move to `lib/`
-- Deliberate exceptions carry a file-level `/* eslint max-lines: ["error", N] -- cohesive: <reason> */` and a line here. None today
+- Deliberate exceptions carry a file-level `/* eslint max-lines: ["error", N] -- cohesive: <reason> */` and a line here:
+  - `lib/queue/types.ts` (360): the one registry of every job type, label, payload and id policy
+  - `lib/utils/format.ts` (220): every zone and locale formatter, covered by `npm run test:tz`
+  - `lib/ui/status.ts` (300): one table holds every status word, with its resolver and the Discord status rows
 
 ### Testability First
 - Components should be independently testable
