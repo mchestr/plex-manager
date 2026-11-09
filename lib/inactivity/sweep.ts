@@ -212,6 +212,9 @@ export async function runSweep(options: SweepOptions): Promise<SweepResult> {
   const { enqueueNotices } = options
   const step = { ...options, members: eligible, sharedMembers: withAccess.length, plexEmails: shares.emails }
   const warned = warnings && enqueueNotices ? await runWarningStep({ ...step, warnings, enqueueNotices }) : 0
+  // A shutdown or a lost claim during the warning step: stop before the gate, so the page can tell the
+  // run never warned anyone (BEFORE_WARNINGS_BLOCKS). A shutdown during the removals stops in the loop.
+  if (options.signal?.aborted) return blocked("stopped", 0, warned)
   const gate = await readRemovalGate(eligible, { thresholdDays: settings.thresholdDays, now, newestPlayAt, warnings })
   const ctx: RemovalContext = { ...options, server: shares.server, gate }
   const candidates = eligible.filter((member) => gate(member) === null).sort(byLongestInactive)

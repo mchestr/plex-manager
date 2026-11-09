@@ -539,7 +539,8 @@ describe("runSweep removals", () => {
     const controller = new AbortController()
     controller.abort()
 
-    await expect(runSweep(options({ signal: controller.signal }))).resolves.toMatchObject({ qualified: 2, removed: 0, entries: [], blocked: "stopped" })
+    // It stops before the gate, so it counts no one: the page can tell it never reached the warnings
+    await expect(runSweep(options({ signal: controller.signal }))).resolves.toMatchObject({ qualified: 0, removed: 0, entries: [], blocked: "stopped" })
     expect(unshareMember).not.toHaveBeenCalled()
   })
 })
@@ -688,6 +689,19 @@ describe("runSweep warnings", () => {
     await runSweep(options({ warnings: WARNINGS_ON, enqueueNotices, signal: controller.signal }))
 
     expect(jest.mocked(runWarningStep).mock.calls[0][0].signal).toBe(controller.signal)
+  })
+
+  it("stops before the gate when the server shuts down during the step, and keeps what it planned", async () => {
+    const controller = new AbortController()
+    jest.mocked(runWarningStep).mockImplementationOnce(async () => {
+      controller.abort()
+      return 1
+    })
+
+    const result = await runSweep(options({ warnings: WARNINGS_ON, enqueueNotices, signal: controller.signal }))
+
+    expect(result).toMatchObject({ qualified: 0, removed: 0, warned: 1, entries: [], blocked: "stopped" })
+    expect(unshareMember).not.toHaveBeenCalled()
   })
 
   it("re-checks the gate before each removal, with the member as stored then", async () => {

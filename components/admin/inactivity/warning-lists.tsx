@@ -81,7 +81,7 @@ export function WarningLists({ preview, removalOn, now }: { preview: InactivityP
       <List
         id="cannot-email"
         title="Cannot email"
-        description="Members of the two lists above whom the app cannot email. Their warnings are skipped, and their removal date still applies."
+        description="Members of the two lists above whom the app cannot email. While email is set up, their warnings are skipped and their removal date still applies. While email is not set up, they wait with everyone else."
         none="The app can email every member in the two lists above."
         count={preview.cannotEmail.length}
       >

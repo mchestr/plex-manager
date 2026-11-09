@@ -1,8 +1,8 @@
 /**
  * The Warning emails card: the saved switch, the days before removal, the
  * mail server and the removal rule as a summary, until Edit swaps in the
- * form. The days must be whole numbers of 1 or more, each once, at most
- * five, and the largest at most half the threshold. While email or Redis is
+ * form. The days must be whole numbers from 1 to 90, each once, at most
+ * four, and the largest at most half the threshold. While email or Redis is
  * not set up, the switch cannot be turned on, and the card says why. The
  * switch's hint says that turning it off can remove unwarned members.
  */

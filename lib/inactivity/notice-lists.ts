@@ -30,7 +30,9 @@
  * job check: no address, not one address, not the address plex.tv holds for
  * them (only when this read of plex.tv worked), disabled by an admin, turned
  * off by the member, or refused by the mail server for good (from the last
- * row). The timeline goes on for them: the row is skipped, never held.
+ * row). While email is set up, the timeline goes on for them: the row is
+ * skipped, never held. While it is not, the run plans no row for an
+ * unconfirmed address and the job fails the others, so they wait.
  *
  * @module lib/inactivity/notice-lists
  */

@@ -135,7 +135,13 @@ describe("WarningAlerts", () => {
       expect(screen.getByTestId("admin-inactivity-alert-unwarned")).toHaveTextContent(/^The newest run sent no first warnings1 member past the days without a play has no warning yet\. /)
     })
 
+    it("shows when a shutdown stopped the newest run before its warning step", () => {
+      expect(shown({ preview, runs: [run({ blocked: "stopped" })] })).toEqual(["unwarned"])
+      expect(screen.getByTestId("admin-inactivity-alert-unwarned")).toHaveTextContent("The server shut down or another run took over, so the run stopped")
+    })
+
     it.each<[string, Partial<Props>]>([
+      ["a shutdown stopped the newest run during its removals", { runs: [run({ blocked: "stopped", qualified: 2, removed: 1 })] }],
       // An exclusion that ended or a subscription that lapsed after a run that reached its warning step: the next run warns them
       ["the newest run reached its warning step", { runs: [run(), run({ id: "older", blocked: "sync_failed" })] }],
       ["the newest run stopped after its warning step", { runs: [run({ blocked: "over_limit" })] }],

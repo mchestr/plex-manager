@@ -1,6 +1,6 @@
 /**
  * The inactivity settings schemas: the threshold, and the warning emails'
- * leads (whole days of 1 or more, each once, at most five, saved largest
+ * leads (whole days from 1 to 90, each once, at most four, saved largest
  * first).
  */
 

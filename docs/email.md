@@ -134,7 +134,8 @@ email.
 The inactivity sweep can email a member before it removes their access
 (`docs/inactive-members.md`, "Warning emails"). An admin turns the emails on
 in the **Warning emails** card on Inactive members, which needs email and
-Redis set up. That page also has the launch checklist. Each planned email is one notice row, and the
+Redis set up. The launch checklist is in `docs/inactive-members.md`
+("Launch checklist"). Each planned email is one notice row, and the
 `INACTIVITY_NOTICE` job (`members:notice`, "Inactivity email" on the Job
 queues page) sends one row. The job needs Redis and the worker. The payload
 holds the row id only, and a second add of the same row joins the first
