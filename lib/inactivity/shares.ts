@@ -10,10 +10,14 @@
  * | The server's machine identifier cannot be read    | `plex_unavailable`        |
  * | plex.tv refuses the server token (401)            | `plex_auth`               |
  * | plex.tv does not answer                           | `plex_unavailable`        |
- * | Otherwise                                         | the share ids, and the server to unshare from |
+ * | Otherwise                                         | the share ids, their plex.tv emails, and the server to unshare from |
  *
  * A pending invite is not access: only `activeShareFor` (accepted shares)
  * counts. Without a share list, access is unknown, so the sweep removes no one.
+ *
+ * `emails` maps each shared account's plex.tv id to its plex.tv email in lower
+ * case, for the warning step's address check. The run never writes it to
+ * `User.email`.
  *
  * @module lib/inactivity/shares
  */
@@ -37,7 +41,9 @@ export interface ShareServer {
   adminPlexUserId: string | null
 }
 
-export type PlexShares = { ok: true; ids: ReadonlySet<string>; server: ShareServer } | { ok: false; block: ShareBlock }
+export type PlexShares =
+  | { ok: true; ids: ReadonlySet<string>; emails: ReadonlyMap<string, string>; server: ShareServer }
+  | { ok: false; block: ShareBlock }
 
 /** Reads plex.tv's member list once and keeps the accounts with an accepted share of `active`. */
 export async function readPlexShares(active: PlexServer | null): Promise<PlexShares> {
@@ -47,9 +53,11 @@ export async function readPlexShares(active: PlexServer | null): Promise<PlexSha
   if (!machineIdentifier) return { ok: false, block: "plex_unavailable" }
   const users = await getPlexUsers(server.token)
   if (!users.success || !users.data) return { ok: false, block: users.status === 401 ? "plex_auth" : "plex_unavailable" }
+  const shared = users.data.filter((user) => activeShareFor(user, machineIdentifier))
   return {
     ok: true,
-    ids: new Set(users.data.filter((user) => activeShareFor(user, machineIdentifier)).map((user) => user.id)),
+    ids: new Set(shared.map((user) => user.id)),
+    emails: new Map(shared.flatMap((user) => (user.email ? [[user.id, user.email.trim().toLowerCase()] as const] : []))),
     server: { url: server.url, token: server.token, machineIdentifier, adminPlexUserId: server.adminPlexUserId },
   }
 }

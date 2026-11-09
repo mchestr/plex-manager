@@ -39,6 +39,7 @@ const PREVIEW: InactivityPreview = {
   skips: NO_SKIPS,
   active: 0,
   noAccess: 0,
+  held: 0,
   shareCheck: null,
   scheduledLimit: 1,
   readSince: new Date("2026-10-31T02:17:00Z"),
@@ -110,7 +111,7 @@ describe("PreviewSection", () => {
   })
 
   it("counts everyone left out by why, leaving out the reasons no one has", () => {
-    renderSection({ active: 85, noAccess: 3, skips: { ...NO_SKIPS, admin: 2, paying: 5, not_read: 12 } })
+    renderSection({ active: 85, noAccess: 3, held: 4, skips: { ...NO_SKIPS, admin: 2, paying: 5, not_read: 12 } })
 
     const notListed = screen.getByTestId("admin-inactivity-not-listed")
     expect(within(notListed).getByRole("heading", { level: 3, name: "Not in this list" })).toBeInTheDocument()
@@ -123,6 +124,7 @@ describe("PreviewSection", () => {
       "Paying member: 5",
       "Not found in Tautulli: 12",
       "No access to the server: 3",
+      "Waiting for a warning email or their removal date: 4",
     ])
     expect(screen.getByTestId("admin-inactivity-not-listed-not_read")).toHaveTextContent("12")
   })

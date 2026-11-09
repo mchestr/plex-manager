@@ -12,6 +12,7 @@
 
 import "server-only"
 
+import { DAILY_RUN } from "@/lib/inactivity/notices"
 import { prisma } from "@/lib/prisma"
 import { scheduleCronJob } from "@/lib/queue/client"
 import { JOB_TYPES } from "@/lib/queue/types"
@@ -24,7 +25,7 @@ const logger = createLogger("INACTIVITY_SCHEDULE")
 /** The scheduler id and cron pattern of the daily run. @internal */
 export const MEMBER_ACTIVITY_SCHEDULER_ID = "member-activity"
 /** Off the hour, so the run does not start with every job scheduled at 02:00. @internal */
-export const MEMBER_ACTIVITY_PATTERN = "17 2 * * *"
+export const MEMBER_ACTIVITY_PATTERN = `${DAILY_RUN.minute} ${DAILY_RUN.hour} * * *`
 
 const SCHEDULER_TIMEOUT_MS = 5000
 

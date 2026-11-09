@@ -34,7 +34,7 @@ jest.mock("@/lib/queue/connection", () => ({ isRedisConfigured: jest.fn() }))
 jest.mock("@/lib/inactivity/run", () => ({ isRunInProgress: jest.fn(), runMemberActivity: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), logAuditEvent: jest.fn() }))
 
-const ran = { busy: false as const, runId: "run-1", matched: 4, qualified: 1, removed: 1, failed: 0, blocked: null, error: null }
+const ran = { busy: false as const, runId: "run-1", matched: 4, qualified: 1, removed: 1, failed: 0, warned: 0, blocked: null, error: null }
 
 beforeEach(() => {
   mockReset(prismaMock)

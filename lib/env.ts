@@ -206,6 +206,10 @@ export const envSchema = z.object({
     group: "Data retention",
     default: "365",
   }),
+  RETENTION_INACTIVITY_NOTICE_DAYS: text("Days after it is made that an inactivity warning email record may be deleted, once its inactive period is over.", {
+    group: "Data retention",
+    default: "180",
+  }),
   DISCORD_BOT_TOKEN: text("Discord bot token, used when none is stored in Admin settings.", { group: "Integrations" }),
   DISCORD_CLIENT_ID: text("Discord application id for the slash-command and metadata scripts.", { group: "Integrations" }),
   NEXT_PUBLIC_DISCORD_CLIENT_ID: text("Discord application id the scripts fall back to.", { group: "Integrations" }),

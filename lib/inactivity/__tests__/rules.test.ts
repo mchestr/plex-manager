@@ -27,6 +27,7 @@ function member(patch: Partial<InactivityMember> = {}): InactivityMember {
     lastSeenReadAt: READ,
     accessEndedAt: null,
     accessRestoredAt: null,
+    timezone: null,
     ...patch,
   }
 }

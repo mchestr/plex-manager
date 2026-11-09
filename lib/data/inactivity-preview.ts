@@ -9,11 +9,15 @@
  * | Input       | Sweep                                  | Preview                                                                 |
  * |-------------|----------------------------------------|-------------------------------------------------------------------------|
  * | `readSince` | The start of its own read, just before | The start of the newest finished run whose read worked; null before one |
+ * | `newestPlayAt` | Its own read's                      | That same run's, for the removal gate                                    |
  * | Plex shares | No answer blocks the run               | No answer keeps every inactive member, and `shareCheck` says why        |
  *
  * Each member counts once: under the first rule that protects them (`skips`),
  * as active (played, joined or got access back within the threshold), as without access
- * (inactive, with no share of the server), or as a row. Rows sort like the
+ * (inactive, with no share of the server), as held by the sweep's removal gate
+ * (`removalGate`, `lib/inactivity/notices.ts`: waiting for a removal date or a
+ * warning email), or as a row. So the rows, and the Run now dialog's
+ * confirmed members, are the members a run would remove. Rows sort like the
  * sweep's candidates, the longest inactive first. `scheduledLimit` is a
  * scheduled run's safety limit, from the members with a share.
  *
@@ -25,6 +29,7 @@ import "server-only"
 import { assertAdmin } from "@/lib/admin"
 import { getActiveService } from "@/lib/data/active-service"
 import { listInactivityMembers } from "@/lib/inactivity/members"
+import { readRemovalGate, warningRules } from "@/lib/inactivity/notice-store"
 import {
   byLongestInactive,
   INACTIVITY_SKIPS,
@@ -36,6 +41,7 @@ import {
   type InactivitySkip,
   withReturn,
 } from "@/lib/inactivity/rules"
+import { getInactivityWarnings } from "@/lib/inactivity/settings"
 import { hasShare, readPlexShares, type ShareBlock } from "@/lib/inactivity/shares"
 import { prisma } from "@/lib/prisma"
 
@@ -58,6 +64,8 @@ export interface InactivityPreview {
   active: number
   /** Inactive members with no share of the server: nothing to remove. */
   noAccess: number
+  /** Inactive members the removal gate holds back for their removal date or their warning emails. */
+  held: number
   /** Set when the shares could not be read, so the rows can hold members without access. */
   shareCheck: ShareBlock | null
   /** The most members a scheduled run may remove now; null while the shares are unknown. */
@@ -74,14 +82,15 @@ export interface InactivityPreview {
  */
 export async function getInactivityPreview(thresholdDays: number, now: Date): Promise<InactivityPreview> {
   await assertAdmin()
-  const [stored, active, read] = await Promise.all([
+  const [stored, active, read, warnings] = await Promise.all([
     listInactivityMembers(),
     getActiveService("plex"),
     prisma.inactivityRun.findFirst({
       where: { error: null, finishedAt: { not: null } },
       orderBy: { startedAt: "desc" },
-      select: { startedAt: true },
+      select: { startedAt: true, newestPlayAt: true },
     }),
+    getInactivityWarnings(),
   ])
   const shares = await readPlexShares(active)
   const readSince = read?.startedAt ?? null
@@ -92,7 +101,7 @@ export async function getInactivityPreview(thresholdDays: number, now: Date): Pr
   const members = stored.map((member) => withReturn(member, shares.ok && hasShare(shares.ids, member.plexUserId), now))
 
   const skips = Object.fromEntries(INACTIVITY_SKIPS.map((skip) => [skip, 0])) as Record<InactivitySkip, number>
-  const candidates: InactivityMember[] = []
+  const inactive: InactivityMember[] = []
   let recent = 0
   let noAccess = 0
   for (const member of members) {
@@ -100,9 +109,11 @@ export async function getInactivityPreview(thresholdDays: number, now: Date): Pr
     if (skip) skips[skip] += 1
     else if (!isInactive(member, thresholdDays, now)) recent += 1
     else if (!withAccess(member)) noAccess += 1
-    else candidates.push(member)
+    else inactive.push(member)
   }
-  candidates.sort(byLongestInactive)
+
+  const gate = await readRemovalGate(inactive, { thresholdDays, now, newestPlayAt: read?.newestPlayAt ?? null, warnings: await warningRules(warnings) })
+  const candidates = inactive.filter((member) => gate(member) === null).sort(byLongestInactive)
 
   const users = candidates.length
     ? await prisma.user.findMany({ where: { id: { in: candidates.map((member) => member.id) } }, select: { id: true, name: true, email: true } })
@@ -119,6 +130,7 @@ export async function getInactivityPreview(thresholdDays: number, now: Date): Pr
     skips,
     active: recent,
     noAccess,
+    held: inactive.length - candidates.length,
     shareCheck: shares.ok ? null : shares.block,
     scheduledLimit: shares.ok ? scheduledRunLimit(members.filter(withAccess).length) : null,
     readSince,

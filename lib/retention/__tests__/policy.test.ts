@@ -30,6 +30,7 @@ describe("retentionDays", () => {
       auditLog: 400,
       affiliateApplications: 365,
       affiliateInvites: 365,
+      inactivityNotices: 180,
     })
   })
 
