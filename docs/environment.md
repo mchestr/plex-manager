@@ -105,7 +105,7 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `SMTP_USER` |  |  | The mail server login, if it needs one. With a login, the app sends only over TLS. |
 | `SMTP_PASSWORD` |  |  | The mail server password. A secret: set it from a secret store, never in a committed file. Pages never show it. |
 | `EMAIL_FROM` |  |  | The sender address, such as noreply@example.com. The display name is the server name. |
-| `EMAIL_REPLY_TO` |  |  | Where replies go. It is also the envelope sender, so the mail server sends bounce notices here. Without it, emails have no Reply-To. |
+| `EMAIL_REPLY_TO` |  |  | Where replies go. It is also the envelope sender, so the mail server sends bounce notices here, and the mail provider must accept it as a sender. Without it, emails have no Reply-To. |
 | `EMAIL_POSTAL_ADDRESS` |  |  | The sender's postal address, in the footer of every email. |
 
 ## Rewind

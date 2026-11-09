@@ -45,6 +45,7 @@ const notice = (patch: Partial<NoticeRow & { createdAt: Date; updatedAt: Date }>
   leadDays: 30,
   removeAfter: REMOVE_AFTER,
   status: "pending",
+  code: null,
   attempts: 0,
   zone: TORONTO,
   handledAt: null,

@@ -45,6 +45,22 @@ export const INACTIVITY_BLOCKS = [
 
 export type InactivityBlock = (typeof INACTIVITY_BLOCKS)[number]
 
+/**
+ * The blocks with which a run can stop before its warning step (`runSweep`),
+ * so it plans no warning email for anyone. `plex_auth` can also stop a run
+ * part way through its removals, after the step; such a run has members
+ * that qualified.
+ */
+export const BEFORE_WARNINGS_BLOCKS: ReadonlySet<string> = new Set<InactivityBlock>([
+  "disabled",
+  "sync_failed",
+  "tautulli_stale",
+  "history_short",
+  "no_plex_server",
+  "plex_unavailable",
+  "plex_auth",
+])
+
 /** Days without a play on the whole server after which Tautulli counts as not recording. */
 export const TAUTULLI_STALE_DAYS = 14
 

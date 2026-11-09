@@ -40,6 +40,7 @@ const PREVIEW: InactivityPreview = {
   active: 0,
   noAccess: 0,
   held: 0,
+  unwarned: 0,
   shareCheck: null,
   scheduledLimit: 1,
   readSince: new Date("2026-10-31T02:17:00Z"),
@@ -47,6 +48,7 @@ const PREVIEW: InactivityPreview = {
   waiting: [],
   firstWarnings: [],
   cannotEmail: [],
+  failedWarnings: [],
 }
 
 function renderSection(preview: Partial<InactivityPreview> = {}, settings = ON) {

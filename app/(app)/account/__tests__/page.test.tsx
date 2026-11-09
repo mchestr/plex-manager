@@ -12,7 +12,7 @@ import { redirect } from 'next/navigation'
 import { buildUser } from '@/__tests__/helpers/factories'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import AccountPage from '@/app/(app)/account/page'
-import { accessRemindersOffered } from '@/lib/email/access-reminders'
+import { accessRemindersOffered } from '@/lib/inactivity/settings'
 import { discordHandleFor } from '@/lib/member/shell'
 import { getYourData } from '@/lib/member/your-data'
 
@@ -42,7 +42,7 @@ jest.mock('@/components/account/timezone-field', () => ({
     return <div data-testid="account-timezone" />
   },
 }))
-jest.mock('@/lib/email/access-reminders', () => ({ accessRemindersOffered: jest.fn() }))
+jest.mock('@/lib/inactivity/settings', () => ({ accessRemindersOffered: jest.fn() }))
 jest.mock('@/components/account/access-reminders', () => ({
   AccessRemindersSwitch: ({ enabled }: { enabled: boolean }) => <div data-testid="account-access-reminders-switch" data-on={String(enabled)} />,
 }))

@@ -4,9 +4,15 @@ The app can send email through an SMTP mail server. Email is off until an
 operator sets `SMTP_URL` and `EMAIL_FROM`. While it is off, the app sends
 nothing and no page changes for members.
 
-Today the app sends one kind of email: the test email that an admin sends to
-themselves from **Admin > Settings > Email**. Every email to a member also
-carries an unsubscribe link (see [Unsubscribe](#unsubscribe)).
+The app sends two kinds of email:
+
+- The test email that an admin sends to themselves from **Admin > Settings >
+  Email**.
+- The warning emails to a member before the inactivity sweep removes their
+  access, after an admin turns them on (see [Warning emails](#warning-emails)).
+
+Every email to a member also carries an unsubscribe link (see
+[Unsubscribe](#unsubscribe)).
 
 ## Set up
 
@@ -21,13 +27,16 @@ email without Redis, and with Redis only the worker connects to the server.
 | `EMAIL_FROM` | Yes | The sender address, such as `noreply@example.com`. The display name is the server name. |
 | `SMTP_USER` | With a login | The login of the mail server |
 | `SMTP_PASSWORD` | With a login | The password. Set it from a secret store, never in a committed file. |
-| `EMAIL_REPLY_TO` | No | Where replies go. It is also the envelope sender, so bounce notices go here. |
+| `EMAIL_REPLY_TO` | No | Where replies go. It is also the envelope sender, so bounce notices go here, and the provider must accept it as a sender. |
 | `EMAIL_POSTAL_ADDRESS` | No | The sender's postal address, in the footer of every email |
 
 1. Get an SMTP login from your mail provider. Use a login for this app only.
-2. Make sure that the provider lets you send from the `EMAIL_FROM` address.
-   Many providers send only from an address or a domain that you verified.
-3. Set the variables on every container.
+2. Make sure that the provider lets you send from the `EMAIL_FROM` address,
+   and from the `EMAIL_REPLY_TO` address if you set it. Many providers send
+   only from an address or a domain that you verified. For example, Amazon
+   SES refuses every email whose envelope sender is not verified.
+3. Set the variables on every container. Set `EMAIL_REPLY_TO` before the
+   test email, so the test uses the same envelope sender as the warnings.
 4. Restart the containers.
 5. Open **Admin > Settings > Email** and check the status.
 6. Click **Send a test email**, and look for it in your inbox.
@@ -123,7 +132,9 @@ email.
 ## Warning emails
 
 The inactivity sweep can email a member before it removes their access
-(`docs/inactive-members.md`). Each planned email is one notice row, and the
+(`docs/inactive-members.md`, "Warning emails"). An admin turns the emails on
+in the **Warning emails** card on Inactive members, which needs email and
+Redis set up. That page also has the launch checklist. Each planned email is one notice row, and the
 `INACTIVITY_NOTICE` job (`members:notice`, "Inactivity email" on the Job
 queues page) sends one row. The job needs Redis and the worker. The payload
 holds the row id only, and a second add of the same row joins the first
@@ -150,6 +161,8 @@ older stale run is still the newest finished run at that time.
 A member that the app cannot email gets the row `skipped`, and the timeline
 goes on: `no_email`, `invalid_email` (not exactly one address), `disabled`
 and `unsubscribed`. With no mail set-up, the row fails with `no_transport`.
+While email is not set up, the run plans no row for a member whose address
+plex.tv does not confirm (`email_unconfirmed`), so that member waits too.
 
 The job then claims the row, so two jobs never send one email, and sends
 it. The result sets the row:

@@ -227,7 +227,7 @@ export const envSchema = z.object({
     group: "Integrations",
   }),
   EMAIL_FROM: text("The sender address, such as noreply@example.com. The display name is the server name.", { group: "Integrations" }),
-  EMAIL_REPLY_TO: text("Where replies go. It is also the envelope sender, so the mail server sends bounce notices here. Without it, emails have no Reply-To.", {
+  EMAIL_REPLY_TO: text("Where replies go. It is also the envelope sender, so the mail server sends bounce notices here, and the mail provider must accept it as a sender. Without it, emails have no Reply-To.", {
     group: "Integrations",
   }),
   EMAIL_POSTAL_ADDRESS: text("The sender's postal address, in the footer of every email.", { group: "Integrations" }),

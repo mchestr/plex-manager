@@ -592,6 +592,7 @@ describe("runSweep warnings", () => {
     leadDays: 30,
     removeAfter: daysAgo(1),
     status: "sent",
+    code: null,
     attempts: 1,
     zone: "America/Toronto",
     handledAt: daysAgo(30),

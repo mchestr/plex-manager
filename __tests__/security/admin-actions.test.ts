@@ -6,7 +6,7 @@
 
 import { setLLMDisabled } from '@/actions/admin/admin-config'
 import { sendTestEmail } from '@/actions/admin/email'
-import { runMemberActivityNow, setMemberInactivityExcluded, updateInactivitySettings } from '@/actions/admin/inactivity'
+import { runMemberActivityNow, setMemberInactivityExcluded, updateInactivitySettings, updateInactivityWarnings } from '@/actions/admin/inactivity'
 import { getLLMUsageRecords, getLLMUsageById } from '@/lib/data/llm-usage'
 import { setUserDisabled, setUserRole, updateUserAdminStatus } from '@/actions/admin/admin-users'
 import { getConfig } from '@/lib/data/admin-settings'
@@ -632,14 +632,32 @@ describe('Roles', () => {
       await expect(getLLMUsageRecords()).rejects.toMatchObject({ digest: expect.any(String) })
     })
 
-    it('refuse a Support user the inactivity sweep: its settings, Run now and the member exclusion', async () => {
+    it('refuse a Support user the inactivity sweep: its settings, the warning emails, Run now and the member exclusion', async () => {
       asSupport()
 
       await expect(updateInactivitySettings({ enabled: true, thresholdDays: 90 })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      await expect(updateInactivityWarnings({ warningsEnabled: true, warningDays: [30, 7, 1] })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
       await expect(runMemberActivityNow({ confirmedUserIds: ['member-1'] })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
       await expect(setMemberInactivityExcluded({ userId: 'member-1', excluded: true })).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
       expect(prismaMock.inactivitySettings.upsert).not.toHaveBeenCalled()
       expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+      expect(logAuditEvent).not.toHaveBeenCalled()
+    })
+
+    it('refuse signed-out callers, members and Support users the warning emails, before any read, write or audit row', async () => {
+      const input = { warningsEnabled: true, warningDays: [30, 7, 1] }
+      signedOut()
+      await expect(updateInactivityWarnings(input)).resolves.toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
+
+      asMember()
+      await expect(updateInactivityWarnings(input)).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+
+      asSupport()
+      await expect(updateInactivityWarnings(input)).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      expect(prismaMock.$transaction).not.toHaveBeenCalled()
+      expect(prismaMock.inactivitySettings.findUnique).not.toHaveBeenCalled()
+      expect(prismaMock.inactivitySettings.upsert).not.toHaveBeenCalled()
+      expect(prismaMock.auditLog.create).not.toHaveBeenCalled()
       expect(logAuditEvent).not.toHaveBeenCalled()
     })
   })

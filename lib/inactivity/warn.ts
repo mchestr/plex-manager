@@ -18,7 +18,10 @@
  * 3. Stop when the run's signal aborted.
  * 4. Store the plans. A member whose stored address is one address that
  *    differs from their plex.tv email gets the row `skipped`, code
- *    `email_unconfirmed`, so the timeline goes on without an email.
+ *    `email_unconfirmed`, so the timeline goes on without an email. While
+ *    email is not set up, such a member gets no row at all: the job fails
+ *    every other member's row (`no_transport`), so every member waits for
+ *    email, and none moves on without it.
  * 5. Hand every `pending` row of the members' current cycles, new or old, to
  *    the enqueuer.
  *
@@ -31,6 +34,7 @@ import "server-only"
 
 import { planWarnings } from "@/lib/inactivity/notice-plan"
 import { failStalledNotices, pendingNoticeIds, readNotices, writeNotices, type NoticeWrite } from "@/lib/inactivity/notice-store"
+import { emailConfigured } from "@/lib/email/config"
 import { emailUnconfirmed, type WarningRules } from "@/lib/inactivity/notices"
 import type { InactivityMember } from "@/lib/inactivity/rules"
 import type { InactivitySettingsValues } from "@/lib/inactivity/settings"
@@ -79,9 +83,11 @@ export async function runWarningStep(options: WarningStepOptions): Promise<numbe
     : []
   const emailOf = new Map(stored.map((user) => [user.id, user.email]))
   const plexIdOf = new Map(members.map((member) => [member.id, member.plexUserId?.trim() ?? ""]))
-  const writes = plans.map((plan): NoticeWrite => {
+  const mailReady = emailConfigured()
+  const writes = plans.flatMap((plan): NoticeWrite[] => {
     const unconfirmed = emailUnconfirmed(emailOf.get(plan.userId) ?? null, options.plexEmails.get(plexIdOf.get(plan.userId)!))
-    return { ...plan, status: unconfirmed ? "skipped" : "pending", code: unconfirmed ? "email_unconfirmed" : null }
+    if (unconfirmed && !mailReady) return []
+    return [{ ...plan, status: unconfirmed ? "skipped" : "pending", code: unconfirmed ? "email_unconfirmed" : null }]
   })
   const warned = await writeNotices(writes, { runId, now })
 

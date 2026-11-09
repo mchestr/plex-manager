@@ -220,7 +220,12 @@ describe("getInactivityPreview", () => {
     expect(prismaMock.inactivityRun.findFirst).toHaveBeenCalledWith({
       where: { error: null, finishedAt: { not: null } },
       orderBy: { startedAt: "desc" },
-      select: { startedAt: true, newestPlayAt: true },
+      select: { startedAt: true },
+    })
+    expect(prismaMock.inactivityRun.findFirst).toHaveBeenCalledWith({
+      where: { finishedAt: { not: null }, newestPlayAt: { not: null } },
+      orderBy: { startedAt: "desc" },
+      select: { newestPlayAt: true },
     })
   })
 
@@ -292,6 +297,7 @@ describe("getInactivityPreview", () => {
       leadDays: 30,
       removeAfter: daysAgo(2),
       status: "sent",
+      code: null,
       attempts: 1,
       zone: "America/Toronto",
       handledAt: daysAgo(30),
@@ -321,6 +327,77 @@ describe("getInactivityPreview", () => {
       // No play on the server after the last warning, by the stored run's read
       prismaMock.inactivityRun.findFirst.mockResolvedValue({ startedAt: READ, newestPlayAt: daysAgo(3) } as never)
       await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ rows: [], held: 2 })
+    })
+
+    it("gates on the newest play of the newest run that found one, when a later run stored none", async () => {
+      prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ warningsEnabled: true }))
+      given([member("warned", { lastSeenAt: daysAgo(400) })])
+      noticeRows([
+        notice("warned", { leadDays: 30 }),
+        notice("warned", { leadDays: 1, handledAt: new Date(READ.getTime() - 20 * 60 * 60 * 1000) }),
+      ])
+      // The newest read stored no play; the run before it found one after the last warning
+      prismaMock.inactivityRun.findFirst.mockImplementation((async ({ where }: { where: { newestPlayAt?: unknown } }) =>
+        where.newestPlayAt ? { newestPlayAt: READ } : { startedAt: READ }) as never)
+
+      await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ rows: [{ id: "warned" }], held: 0 })
+    })
+
+    it("counts the inactive members held for having no warning yet, with warnings on", async () => {
+      prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ warningsEnabled: true }))
+      given([member("u-1", { lastSeenAt: daysAgo(400) }), member("u-2", { lastSeenAt: daysAgo(400) }), member("dated", { lastSeenAt: daysAgo(400) })])
+      noticeRows([notice("dated", { removeAfter: new Date(NOW.getTime() + DAY), status: "pending", handledAt: null })])
+
+      await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ rows: [], held: 3, unwarned: 2 })
+    })
+
+    describe("failed warnings", () => {
+      const on = () => prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ warningsEnabled: true }))
+
+      it("lists the members whose newest warning of the cycle failed, and which no run tries again", async () => {
+        on()
+        given([member("retry"), member("stuck"), member("replaced"), member("old-cycle", { lastSeenAt: daysAgo(300) })])
+        const later = new Date(NOW.getTime() + 5 * DAY)
+        noticeRows([
+          notice("retry", { status: "failed", attempts: 3, handledAt: null }),
+          notice("stuck", { status: "failed", attempts: 9, handledAt: null }),
+          // A later stage for the same date went out
+          notice("replaced", { leadDays: 30, removeAfter: later, status: "failed", attempts: 3, handledAt: null }),
+          notice("replaced", { leadDays: 7, removeAfter: later }),
+          // A row of an earlier cycle: the member played since
+          notice("old-cycle", { status: "failed", attempts: 9, handledAt: null }),
+        ])
+
+        const preview = await getInactivityPreview(180, NOW)
+
+        expect(preview.failedWarnings).toEqual([
+          { id: "retry", name: "Name of retry", stuck: false },
+          { id: "stuck", name: "Name of stuck", stuck: true },
+        ])
+      })
+
+      it("lists a failed last warning, but not a failed reminder, which does not hold the removal", async () => {
+        on()
+        given([member("reminder"), member("last")])
+        noticeRows([
+          notice("reminder", { leadDays: 30 }),
+          notice("reminder", { leadDays: 7, status: "failed", attempts: 9, handledAt: null }),
+          notice("last", { leadDays: 30 }),
+          notice("last", { leadDays: 7 }),
+          notice("last", { leadDays: 1, status: "failed", attempts: 9, handledAt: null }),
+        ])
+
+        const preview = await getInactivityPreview(180, NOW)
+
+        expect(preview.failedWarnings).toEqual([{ id: "last", name: "Name of last", stuck: true }])
+      })
+
+      it("lists none while warnings are off", async () => {
+        given([member("stuck")])
+        noticeRows([notice("stuck", { status: "failed", attempts: 9, handledAt: null })])
+
+        await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ failedWarnings: [] })
+      })
     })
 
     it("reads no rows when no member with a share is free of a skip", async () => {

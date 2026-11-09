@@ -54,7 +54,7 @@ export function WarningLists({ preview, removalOn, now }: { preview: InactivityP
     <section aria-labelledby="admin-inactivity-warnings-heading" className="flex flex-col gap-4" data-testid="admin-inactivity-warnings">
       <div className="flex flex-col gap-1">
         <h2 id="admin-inactivity-warnings-heading" className="text-h3">
-          Warning emails
+          Warned members
         </h2>
         <p className="text-ui text-muted-foreground" data-testid="admin-inactivity-warnings-state">
           {stateText({ warningsOn: preview.warningsOn, removalOn, shareCheck: preview.shareCheck !== null })}

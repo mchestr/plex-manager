@@ -58,6 +58,7 @@ const stored = (id: string, userId: string, cycleAt = CYCLE) => ({
   leadDays: 30,
   removeAfter: DATE,
   status: "pending",
+  code: null,
   attempts: 0,
   zone: "America/Toronto",
   handledAt: null,
@@ -72,7 +73,7 @@ describe("readNotices", () => {
     await expect(readNotices(["u1", "u2"])).resolves.toEqual([stored("n1", "u1")])
     expect(prismaMock.inactivityNotice.findMany).toHaveBeenCalledWith({
       where: { userId: { in: ["u1", "u2"] } },
-      select: { id: true, userId: true, cycleAt: true, leadDays: true, removeAfter: true, status: true, attempts: true, zone: true, handledAt: true },
+      select: { id: true, userId: true, cycleAt: true, leadDays: true, removeAfter: true, status: true, code: true, attempts: true, zone: true, handledAt: true },
     })
   })
 
