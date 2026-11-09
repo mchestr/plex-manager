@@ -19,6 +19,8 @@ jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prism
 jest.mock("@/lib/email/config", () => ({ getEmailConfig: jest.fn() }))
 jest.mock("@/lib/email/context", () => ({ loadEmailContext: jest.fn() }))
 jest.mock("@/lib/email/transport", () => ({ sendEmail: jest.fn() }))
+jest.mock("@/lib/settings/app-settings", () => ({ getAppSettings: jest.fn(async () => ({ timeZone: "America/Toronto", locale: "en-US", serverName: null })) }))
+jest.mock("@/lib/utils/server-zone", () => ({ serverZone: jest.fn(async () => "America/Toronto") }))
 jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), recordAuditEvent: jest.fn() }))
 jest.mock("@/lib/utils/logger", () => {
   const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }
@@ -35,9 +37,13 @@ const config: EmailConfig = {
   postalAddress: null,
 }
 
+/** 10:00 on November 8 in Toronto. */
+const NOW = new Date("2026-11-08T15:00:00Z")
+
 beforeEach(() => {
   mockReset(prismaMock)
   jest.clearAllMocks()
+  jest.useFakeTimers({ now: NOW, doNotFake: ["setTimeout", "clearTimeout", "setImmediate", "nextTick", "queueMicrotask"] })
   jest.mocked(getEmailConfig).mockReturnValue(config)
   jest.mocked(loadEmailContext).mockResolvedValue({
     serverName: "Northfield Plex",
@@ -47,7 +53,11 @@ beforeEach(() => {
     postalAddress: null,
   })
   jest.mocked(recordAuditEvent).mockResolvedValue(undefined)
-  prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: "admin-1", name: "Sam", email: "sam@example.com" }))
+  prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: "admin-1", name: "Sam", email: "sam@example.com", timezone: null }))
+})
+
+afterEach(() => {
+  jest.useRealTimers()
 })
 
 describe("deliverTestEmail", () => {
@@ -63,10 +73,26 @@ describe("deliverTestEmail", () => {
     expect(message).toMatchObject({
       from: { name: "Northfield Plex", address: "noreply@example.com" },
       to: { name: "", address: "sam@example.com" },
-      subject: "[Test] Email from Northfield Plex",
+      subject: "[Test] Keep your Northfield Plex access: watch something before December 8, 2026",
     })
     expect(recordAuditEvent).toHaveBeenCalledWith(AuditEventType.EMAIL_TEST_SENT, "admin-1", { status: "sent", smtpCode: 250 })
     expect(logger.info).toHaveBeenCalledWith("email_test.sent", { userId: "admin-1", smtpCode: 250 })
+  })
+
+  it("shows the first warning with example dates: the largest lead from today in the admin's zone, a threshold after the last play", async () => {
+    jest.mocked(sendEmail).mockResolvedValue({ ok: true, smtpCode: 250 })
+    prismaMock.inactivitySettings.findUnique.mockImplementation((async (args: { select: Record<string, boolean> }) =>
+      args.select.thresholdDays ? { enabled: false, thresholdDays: 90 } : { warningsEnabled: false, warningDays: [14, 3] }) as never)
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: "admin-1", name: "Sam", email: "sam@example.com", timezone: "Asia/Tokyo" }))
+
+    await deliverTestEmail("admin-1")
+
+    const [, message] = jest.mocked(sendEmail).mock.calls[0]
+    expect(message.subject).toBe("[Test] Keep your Northfield Plex access: watch something before November 23, 2026")
+    expect(message.text).toContain("This is a test email from Northfield Plex. The dates are examples.\n\nHi Sam,")
+    expect(message.text).toContain("Nothing has played on your Northfield Plex account since August 25, 2026.")
+    expect(message.text).toContain("do not watch anything for 90 days.")
+    expect(message.text).toContain("That is 14 days from now.")
   })
 
   it("carries the admin's own one-click unsubscribe headers, and no List-Id", async () => {

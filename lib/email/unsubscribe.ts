@@ -50,6 +50,8 @@ export function unsubscribeHeaders(links: UnsubscribeLinks): Record<string, stri
  * printable ASCII kept and no quote or backslash, so the header needs no
  * encoding; with nothing left it is "Access reminders".
  *
+ * @internal {@link accessReminderHeaders} is its caller; tests check the description rules.
+ *
  * @example
  * ```ts
  * accessRemindersListId("Northfield Plex", "noreply@example.com")

@@ -71,9 +71,14 @@ and the result. It links to the audit event.
 ## The test email
 
 **Send a test email** sends one email to your own address on file. The
-subject starts with `[Test]`. The footer is the same as the footer of every
-other email: the server name, the postal address, a way to contact you and
-your own unsubscribe link. The email also carries the `List-Unsubscribe` and
+subject starts with `[Test]`, and the first line says "This is a test email
+from {server}. The dates are examples." The rest is the first warning email
+that a member gets before the inactivity sweep removes them (see "Warning
+emails" below). It uses example values: the saved threshold, a removal date
+the largest lead from today in your zone, and a last play one threshold
+before that date. The footer is the same as the footer of every other email:
+the server name, the postal address, a way to contact you and your own
+unsubscribe link. The email also carries the `List-Unsubscribe` and
 `List-Unsubscribe-Post` headers, so you can try the one-click unsubscribe
 with it. It has no `List-Id` header, because it is not an access reminder.
 Admins never get access reminders, so the link changes nothing that you
@@ -104,6 +109,7 @@ and the RFC 3463 status code:
 | --- | --- |
 | `5xx` to `RCPT TO` with a mailbox code (`5.1.1`, `5.1.2`, `5.1.10`, `5.2.1`) | `rejected`: the address cannot receive mail |
 | Any other `5xx`, a refused login, or no TLS where the login needs it | `refused`: fix the set-up |
+| A server certificate that fails the check (expired, self-signed, or for another host) | `refused`: fix the certificate or `SMTP_URL` |
 | `4xx`, or a refused or dropped connection | `temporary`: try again later |
 | No answer within the time limit | `timeout` |
 
@@ -113,6 +119,52 @@ of the message. If the whole message went out and only the last reply is
 late, the server can still have taken it. SMTP has no way to tell, so a
 `timeout` or `temporary` result can, in rare cases, still mean a delivered
 email.
+
+## Warning emails
+
+The inactivity sweep can email a member before it removes their access
+(`docs/inactive-members.md`). Each planned email is one notice row, and the
+`INACTIVITY_NOTICE` job (`members:notice`, "Inactivity email" on the Job
+queues page) sends one row. The job needs Redis and the worker. The payload
+holds the row id only, and a second add of the same row joins the first
+job.
+
+The job sends between 09:00 and 20:00 in the member's zone. Outside that
+window it waits for the next 09:00. Then it reads the member and the
+settings again, and cancels the email when one of these is true:
+
+| Code | When |
+| --- | --- |
+| `removal_off`, `warnings_off` | Automatic removal or the warning emails are off |
+| `cycle_changed` | The member played, or got their access back, after the run planned the email |
+| `protected` | A skip protects the member now, for example an admin or a paying member |
+| `access_ended` | The member's access ended after the run planned the email |
+| `stale_data` | The newest finished run stopped because the Tautulli data was stale, and it finished after the run that planned the email |
+| `superseded` | A higher threshold moved the removal date later |
+| `late` | The removal date has come, or a first warning is more than one day late |
+
+A stale run before the run that planned the email does not cancel it. The
+run that plans the emails is still in progress while their jobs run, so the
+older stale run is still the newest finished run at that time.
+
+A member that the app cannot email gets the row `skipped`, and the timeline
+goes on: `no_email`, `invalid_email` (not exactly one address), `disabled`
+and `unsubscribed`. With no mail set-up, the row fails with `no_transport`.
+
+The job then claims the row, so two jobs never send one email, and sends
+it. The result sets the row:
+
+| Send result | Row | Job |
+| --- | --- | --- |
+| Sent | `sent` | Done |
+| `rejected` | `skipped`, code `rejected` | Done |
+| `refused` | `failed`, code `smtp_refused` | Done. A later run plans it again. |
+| `temporary` or `timeout` | `pending` again | Throws `smtp_temporary` or `smtp_timeout` with the reply code, and the queue tries again after a minute. The job has 3 attempts. |
+| `temporary` or `timeout`, on the last attempt | `failed`, code `smtp` or `timeout` | Done. A later run plans it again. |
+
+The thrown error holds the class and the reply code only, so the Job queues
+page never shows an address. Each failed row logs `inactivity_notice.failed`
+at error level, with the code. Point an alert at that event.
 
 ## Unsubscribe
 
@@ -185,8 +237,9 @@ changes the address on plex.tv and then signs in again.
 
 ## Logs
 
-The mail code logs under `EMAIL`. A line holds the user id, the class, the
-SMTP reply code, the status code and the SMTP step. It never holds an
+The mail code logs under `EMAIL`, and the warning email job under
+`INACTIVITY_NOTICE`. A line holds the user id, the notice id, the code, the
+class, the SMTP reply code, the status code and the SMTP step. It never holds an
 address, the server's reply text or the login.
 
 | Event | Level | When |
@@ -197,6 +250,10 @@ address, the server's reply text or the login.
 | `email_test.not_sent` | warn | A test email was not sent, with the status |
 | `email.unsubscribed` | info | A POST to the one-click address turned the emails off, or found them off, with `via` |
 | `email.unsubscribe_refused` | warn | A POST to the one-click address was refused, with `via` and the reason (`bad_token`, `not_one_click`, ...) |
+| `inactivity_notice.sent` | info | A warning email was sent |
+| `inactivity_notice.skipped`, `inactivity_notice.cancelled` | info | A warning email was skipped or cancelled, with the code |
+| `inactivity_notice.retry` | warn | A warning email failed for now, and the queue tries again |
+| `inactivity_notice.failed` | error | A warning email failed, with the code. The warning step of a run also logs it, with a count, for the rows that it marks `stalled`. |
 
 No line holds the token. The logger masks the `token=` value of a URL. A
 reverse proxy in front of the app can still log the full URL, and with it

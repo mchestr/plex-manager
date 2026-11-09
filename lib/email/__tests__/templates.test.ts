@@ -4,6 +4,7 @@
 
 import { escapeHtml, renderEmailHtml } from "@/lib/email/html"
 import { greeting, renderEmail, senderLines, type EmailContext } from "@/lib/email/templates/parts"
+import { warningEmail, warningStage, type WarningEmailInput } from "@/lib/email/templates/inactivity"
 import { testEmail } from "@/lib/email/templates/test-email"
 
 const context = (overrides: Partial<EmailContext> = {}): EmailContext => ({
@@ -107,46 +108,134 @@ describe("renderEmailHtml", () => {
 
 const UNSUBSCRIBE = "https://plex.example.com/email/unsubscribe?token=abc.def"
 
-describe("testEmail", () => {
-  it("is marked as a test, greets the admin and links to the app", () => {
-    const email = testEmail(context(), "Sam", UNSUBSCRIBE)
+const example = (): Omit<WarningEmailInput, "stage"> => ({
+  name: "Sam",
+  thresholdDays: 180,
+  daysLeft: 30,
+  removalDate: "October 28, 2026",
+  lastActiveDate: "May 1, 2026",
+  discordInviteCode: null,
+  unsubscribeUrl: UNSUBSCRIBE,
+})
 
-    expect(email.subject).toBe("[Test] Email from Northfield Plex")
-    expect(email.text).toContain("Hi Sam,")
-    expect(email.text).toContain("This is a test email from Northfield Plex.")
-    expect(email.text).toContain("Open Northfield Plex: https://plex.example.com")
-    expect(email.html).toContain('href="https://plex.example.com"')
+const input = (overrides: Partial<WarningEmailInput> = {}): WarningEmailInput => ({ stage: "first", ...example(), ...overrides })
+
+/** The rules every email to a member keeps. */
+function expectSafeEmail({ subject, text, html }: { subject: string; text: string; html: string }) {
+  expect(`${subject}\n${text}\n${html}`).not.toMatch(/Plex Manager|Wrapped|membership|subscription/i)
+  expect(html).not.toMatch(/\ssrc=|background=|url\(/i)
+  for (const [, href] of html.matchAll(/href="([^"]*)"/g)) expect(href).toMatch(/^https:\/\//)
+  expect(text.trimEnd().endsWith(`Stop these emails: ${UNSUBSCRIBE}`)).toBe(true)
+  expect(html).toContain(`href="${UNSUBSCRIBE}"`)
+}
+
+describe("warningStage", () => {
+  it("names the largest lead first, the smallest or less last, and the rest reminders", () => {
+    expect(warningStage(30, [30, 7, 1])).toBe("first")
+    expect(warningStage(7, [30, 7, 1])).toBe("reminder")
+    expect(warningStage(1, [30, 7, 1])).toBe("last")
+    expect(warningStage(2, [30, 7, 3])).toBe("last")
+    expect(warningStage(40, [30, 7, 1])).toBe("first")
+  })
+
+  it("makes every warning the first email when there is one lead", () => {
+    expect(warningStage(3, [3])).toBe("first")
+  })
+})
+
+describe("warningEmail", () => {
+  it("writes the first warning with the date, the days left and the threshold", () => {
+    const email = warningEmail(context(), input())
+
+    expect(email.subject).toBe("Keep your Northfield Plex access: watch something before October 28, 2026")
+    expect(email.text).toBe(
+      [
+        "Hi Sam,",
+        "Nothing has played on your Northfield Plex account since May 1, 2026.",
+        "Northfield Plex removes access from members who do not watch anything for 180 days.\nWe will remove your access on or after October 28, 2026. That is 30 days from now.",
+        "To keep your access, watch anything on Plex for a few minutes before October 28, 2026.\nYou do not need to do anything else.",
+        "Open Northfield Plex: https://plex.example.com",
+        "If your access ends, you can come back later. Ask the server owner for a new invite.",
+        `You get this email because you are a member of Northfield Plex.\nNorthfield Plex.\nTo contact us, open https://plex.example.com\nStop these emails: ${UNSUBSCRIBE}`,
+      ].join("\n\n") + "\n"
+    )
+    expectSafeEmail(email)
+  })
+
+  it("names the real number of days of a later date, and one day in the singular", () => {
+    expect(warningEmail(context(), input({ daysLeft: 32 })).text).toContain("That is 32 days from now.")
+    expect(warningEmail(context(), input({ daysLeft: 1 })).text).toContain("That is 1 day from now.")
+  })
+
+  it("writes the reminder with the days left in the subject", () => {
+    const email = warningEmail(context(), input({ stage: "reminder", daysLeft: 7 }))
+
+    expect(email.subject).toBe("7 days left to keep your Northfield Plex access")
+    expect(email.text).toContain("This is a reminder. We will remove your access to Northfield Plex on or after October 28, 2026.\nNothing has played on your account since May 1, 2026.")
+    expect(email.text).toContain("watch anything on Plex for a few minutes before October 28, 2026.")
+    expect(email.text).not.toContain("You get this email because")
+    expect(warningEmail(context(), input({ stage: "reminder", daysLeft: 1 })).subject).toBe("1 day left to keep your Northfield Plex access")
+    expectSafeEmail(email)
+  })
+
+  it("writes the last warning with on or after in the subject, and today only with one day left", () => {
+    const tomorrow = warningEmail(context(), input({ stage: "last", daysLeft: 1 }))
+    expect(tomorrow.subject).toBe("Last reminder: your Northfield Plex access ends on or after October 28, 2026")
+    expect(tomorrow.text).toContain("This is the last reminder. We will remove your access to Northfield Plex on or after October 28, 2026.")
+    expect(tomorrow.text).toContain("watch anything on Plex for a few minutes today.")
+    expectSafeEmail(tomorrow)
+
+    const later = warningEmail(context(), input({ stage: "last", daysLeft: 2 }))
+    expect(later.text).toContain("watch anything on Plex for a few minutes before October 28, 2026.")
+    expect(later.text).not.toContain("today")
+  })
+
+  it.each(["first", "reminder", "last"] as const)("says on or after in the body of the %s email", (stage) => {
+    expect(warningEmail(context(), input({ stage, daysLeft: 3 })).text).toContain("on or after October 28, 2026")
+  })
+
+  it("points to the Discord invite first, then a reply, then the server owner", () => {
+    const discord = warningEmail(context({ replyTo: "help@example.com" }), input({ discordInviteCode: "abc 123" }))
+    expect(discord.text).toContain("If your access ends, you can come back later. Ask for a new invite in our Discord: https://discord.gg/abc%20123")
+    expect(discord.html).toContain('href="https://discord.gg/abc%20123"')
+
+    expect(warningEmail(context({ replyTo: "help@example.com" }), input()).text).toContain(
+      "If your access ends, you can come back later. Reply to this email to ask for a new invite."
+    )
+    expect(warningEmail(context(), input()).text).toContain("Ask the server owner for a new invite.")
   })
 
   it("has the footer with and without EMAIL_REPLY_TO and EMAIL_POSTAL_ADDRESS", () => {
-    const plain = testEmail(context(), null, UNSUBSCRIBE).text
-    expect(plain).toContain("Northfield Plex.\nTo contact us, open https://plex.example.com\nStop these emails: " + UNSUBSCRIBE + "\n")
-
-    const full = testEmail(context({ replyTo: "help@example.com", postalAddress: "1 Main Street" }), null, UNSUBSCRIBE)
-    expect(full.text).toContain("Northfield Plex. 1 Main Street\nTo contact us, reply to this email.\nStop these emails: ")
+    const full = warningEmail(context({ replyTo: "help@example.com", postalAddress: "1 Main Street" }), input({ stage: "last", daysLeft: 1 }))
+    expect(full.text).toContain(`Northfield Plex. 1 Main Street\nTo contact us, reply to this email.\nStop these emails: ${UNSUBSCRIBE}`)
     expect(full.html).toContain("1 Main Street")
   })
 
-  it("ends the footer with the unsubscribe link in both parts", () => {
-    const email = testEmail(context(), "Sam", UNSUBSCRIBE)
+  it("greets a member with no name with Hi, and escapes markup in the names", () => {
+    expect(warningEmail(context(), input({ name: null })).text.startsWith("Hi,\n\n")).toBe(true)
 
-    expect(email.text.trimEnd().endsWith(`Stop these emails: ${UNSUBSCRIBE}`)).toBe(true)
-    expect(email.html).toContain(`href="${UNSUBSCRIBE}"`)
+    const email = warningEmail(context({ serverName: "<script>x</script>" }), input({ name: "<img src=x>" }))
+    expect(email.html).not.toMatch(/<script|<img/i)
+    expect(email.html).toContain("&lt;script&gt;x&lt;/script&gt;")
+    expect(email.text).toContain("Hi <img src=x>,")
+  })
+})
+
+describe("testEmail", () => {
+  it("is the first warning, marked as a test, with a first line that says the dates are examples", () => {
+    const email = testEmail(context(), example())
+
+    expect(email.subject).toBe("[Test] Keep your Northfield Plex access: watch something before October 28, 2026")
+    expect(email.text.startsWith("This is a test email from Northfield Plex. The dates are examples.\n\nHi Sam,\n\n")).toBe(true)
+    expect(email.text).toContain(warningEmail(context(), input()).text)
+    expect(email.html).toContain('href="https://plex.example.com"')
+    expectSafeEmail(email)
   })
 
   it("escapes a server name and an admin name with markup", () => {
-    const email = testEmail(context({ serverName: "<script>x</script>" }), "<img src=x>", UNSUBSCRIBE)
+    const email = testEmail(context({ serverName: "<script>x</script>" }), { ...example(), name: "<img src=x>" })
 
     expect(email.html).not.toMatch(/<script|<img/i)
     expect(email.text).toContain("Hi <img src=x>,")
-  })
-
-  it("never names the app, uses only absolute links and loads nothing remote", () => {
-    const { subject, text, html } = testEmail(context(), "Sam", UNSUBSCRIBE)
-    const all = `${subject}\n${text}\n${html}`
-
-    expect(all).not.toMatch(/Plex Manager|Wrapped/i)
-    expect(html).not.toMatch(/\ssrc=|background=|url\(/i)
-    for (const [, href] of html.matchAll(/href="([^"]*)"/g)) expect(href).toMatch(/^https:\/\//)
   })
 })

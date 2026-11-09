@@ -29,6 +29,7 @@
  * |--------------------------------------------------------------|-------------|
  * | 5xx to `RCPT TO` with a mailbox code (5.1.1, 5.1.2, 5.1.10, 5.2.1) | `rejected`  |
  * | Any other 5xx, a refused login, no TLS where a login needs it | `refused`   |
+ * | A server certificate that does not check out (expired, self-signed, wrong host) | `refused` |
  * | 4xx, a dropped or refused connection, a DNS failure          | `temporary` |
  * | No answer within the time limit                              | `timeout`   |
  *
@@ -55,7 +56,7 @@ const SEND_LIMIT_MS = 60_000
 
 export type SmtpFailureKind = "rejected" | "refused" | "temporary" | "timeout"
 
-/** @internal The warning email job reads it to set the row's status. */
+/** A failed send, as the warning email job (`lib/queue/jobs/inactivity-notice.ts`) reads it to set the row's status. */
 export interface SmtpFailure {
   kind: SmtpFailureKind
   /** The server's reply code, such as 550; null without a reply. */
@@ -75,6 +76,28 @@ const MAILBOX_STATUSES = new Set(["5.1.1", "5.1.2", "5.1.10", "5.2.1"])
 const PERMANENT_CODES = new Set(["EAUTH", "ENOAUTH", "ETLS", "EREQUIRETLS", "ECONFIG", "EENVELOPE"])
 
 const TIMEOUT_CODES = new Set(["ETIMEDOUT", "ETIME", "ABORT_ERR"])
+
+/**
+ * Node's TLS codes for a server certificate that does not check out. nodemailer
+ * reports them as `ESOCKET`, its code for a dropped connection, and keeps the
+ * TLS code as `originalCode`. A retry meets the same certificate, so the send
+ * is refused rather than tried again until the attempts run out.
+ */
+const CERTIFICATE_CODES = new Set([
+  "CERT_HAS_EXPIRED",
+  "CERT_NOT_YET_VALID",
+  "CERT_REVOKED",
+  "CERT_UNTRUSTED",
+  "CERT_REJECTED",
+  "CERT_SIGNATURE_FAILURE",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "UNABLE_TO_GET_ISSUER_CERT",
+  "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+  "HOSTNAME_MISMATCH",
+])
 
 /** The nodemailer options for `config`. @internal Tests check the TLS rules. */
 export function transportOptions(config: EmailConfig): SMTPTransportOptions {
@@ -120,7 +143,7 @@ function asNodemailerError(error: unknown): Partial<NodemailerError> {
 
 /** The class of a failed send; see the module comment. @internal Tests check each class. */
 export function classifySmtpError(error: unknown): SmtpFailure {
-  const { code, command, response, responseCode } = asNodemailerError(error)
+  const { code, originalCode, command, response, responseCode } = asNodemailerError(error)
   const smtpCode = typeof responseCode === "number" ? responseCode : replyCode(response)
   const status = statusCode(response)
   const step = stepOf(command)
@@ -132,14 +155,14 @@ export function classifySmtpError(error: unknown): SmtpFailure {
   if (smtpCode !== null && smtpCode >= 400) return failure("temporary")
   if (typeof code === "string" && TIMEOUT_CODES.has(code)) return failure("timeout")
   if (typeof code === "string" && PERMANENT_CODES.has(code)) return failure("refused")
+  if ([code, originalCode].some((value) => typeof value === "string" && CERTIFICATE_CODES.has(value))) return failure("refused")
   return failure("temporary")
 }
 
 /**
  * The error a caller throws for `failure`: the class and the reply code only,
  * such as `smtp_temporary 451`, so a queue's stored reason holds no address.
- *
- * @internal The warning email job throws it to retry a temporary failure.
+ * The warning email job throws it to retry a temporary failure.
  */
 export function failureError(failure: SmtpFailure): Error {
   return new Error(`smtp_${failure.kind}${failure.smtpCode === null ? "" : ` ${failure.smtpCode}`}`)

@@ -55,7 +55,7 @@ test.describe('Settings, Email', () => {
     const [message] = await readInbox();
     expect(message.from).toBe('noreply@example.test');
     expect(message.to).toEqual([TEST_USERS.ADMIN.email]);
-    expect(message.raw).toMatch(/^Subject: \[Test\] Email from /m);
+    expect(message.raw).toMatch(/^Subject: \[Test\] Keep your /m);
     expect(message.raw).toMatch(/^From: .*<noreply@example\.test>/m);
     expect(message.raw).toMatch(/^To: admin@example\.com/m);
     expect(message.raw).toMatch(/^Auto-Submitted: auto-generated/m);
