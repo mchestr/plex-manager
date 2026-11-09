@@ -9,6 +9,7 @@
  */
 
 import { auditSummary } from "@/lib/audit/summary"
+import { INACTIVITY_SUMMARIES } from "@/lib/audit/summary-inactivity"
 import { bindFormat } from "@/lib/utils/format"
 
 const f = bindFormat({ timeZone: "America/Chicago", locale: "en-US" })
@@ -261,6 +262,21 @@ describe("ASSISTANT_SOURCE_CHANGED", () => {
 })
 
 describe("auditSummary", () => {
+  it("spreads in the inactivity sweep summaries of summary-inactivity.ts", () => {
+    expect(Object.keys(INACTIVITY_SUMMARIES).sort()).toEqual([
+      "ACTIVITY_SYNC_TRIGGERED",
+      "INACTIVITY_EXCLUSION_CHANGED",
+      "INACTIVITY_SETTINGS_CHANGED",
+      "INACTIVITY_SWEEP_RUN",
+      "MEMBER_UNSHARED",
+    ])
+    for (const [type, summarize] of Object.entries(INACTIVITY_SUMMARIES)) {
+      const details = { status: "removed", qualified: 0, removed: 0, failed: 0, changedFields: ["enabled"], after: { enabled: false }, excluded: true, queued: true }
+      expect(summary(type, details)).toBe(summarize(details, f))
+      expect(summary(type, details)).not.toBeNull()
+    }
+  })
+
   it("spreads in the media cleanup summaries", () => {
     expect(summary("CLEANUP_RULE_CREATED", { level: "movie", origin: "recipe" })).toBe("Movies rule, from a recipe")
     expect(summary("CLEANUP_SETTINGS_CHANGED", { section: "cleanup-budget", changedFields: ["items", "bytes"] })).toBe("cleanup-budget: items, bytes")

@@ -7,11 +7,6 @@
  *
  * | Event                          | Details read                                   | Summary                                                                          |
  * |--------------------------------|------------------------------------------------|----------------------------------------------------------------------------------|
- * | `MEMBER_UNSHARED`              | `status`, `reason`, `lastSeenAt`, `offboarded` | "Removed for inactivity, last seen Mar 3, 2026"                                  |
- * | `INACTIVITY_SWEEP_RUN`         | `qualified`, `removed`, `failed`, `blocked`    | "Removed 2 of 3 inactive members", "Removed no one: Another run was in progress" |
- * | `INACTIVITY_SETTINGS_CHANGED`  | `section`, `changedFields`, `after`            | "Turned on, 180 days", "Threshold 90 days", "Warning emails turned on, 30, 7 and 1 days before removal" |
- * | `INACTIVITY_EXCLUSION_CHANGED` | `excluded`                                     | "Excluded from the inactivity sweep"                                             |
- * | `ACTIVITY_SYNC_TRIGGERED`      | `queued`, `confirmedRemovals`                  | "Queued, 3 removals confirmed"                                                   |
  * | `CONFIG_CHANGED`               | `section`, `changedFields`, `secretChanged`    | "plex: url, a secret"                                                            |
  * | `SESSIONS_REVOKED`             | `reason`                                       | "Reason: Account disabled"                                                       |
  * | `USER_ROLE_CHANGED`            | `previousRole`, `newRole`                      | "Given the Support role", "Support role removed"                                 |
@@ -23,22 +18,24 @@
  * | `EMAIL_TEST_SENT`              | `status`, `smtpCode`                           | "Sent", "Not sent, the mail server did not take it (554)"                        |
  * | `EMAIL_PREFERENCE_CHANGED`     | `enabled`, `via`                               | "Access reminders turned off, with the link in an email"                         |
  *
- * The other media cleanup events (`CLEANUP_*`) have their summaries in
- * `lib/audit/summary-cleanup.ts` (TS 11.3), spread into `SUMMARIES`.
+ * The inactivity sweep events (`MEMBER_UNSHARED`, `INACTIVITY_*` and
+ * `ACTIVITY_SYNC_TRIGGERED`) have their summaries in
+ * `lib/audit/summary-inactivity.ts`. The media cleanup events (`CLEANUP_*`)
+ * other than `CLEANUP_SETTINGS_CHANGED` have theirs in
+ * `lib/audit/summary-cleanup.ts` (TS 11.3). Both tables are spread into
+ * `SUMMARIES`.
  *
  * A section or field name shows only when it looks like code (`setup.plex`,
- * `apiKey`), a block code only when `lib/inactivity/blocks.ts` knows it, and a
- * date only formatted. A removal whose clean-up failed (`offboarded: false`)
- * ends ", clean-up not finished". An `AUDIT_LOG_VIEWED` row for one event
- * page reads "Opened one event". Any other type, or details that do not have
- * the expected shape, has no summary (null).
+ * `apiKey`). An `AUDIT_LOG_VIEWED` row for one event page reads "Opened one
+ * event". Any other type, or details that do not have the expected shape, has
+ * no summary (null).
  *
  * @module lib/audit/summary
  */
 
 import { type AuditEventName, isKnownEventType } from "@/lib/audit/events"
 import { CLEANUP_SUMMARIES } from "@/lib/audit/summary-cleanup"
-import { type InactivityBlock, INACTIVITY_BLOCKS, inactivityBlockLabel } from "@/lib/inactivity/blocks"
+import { INACTIVITY_SUMMARIES } from "@/lib/audit/summary-inactivity"
 import { parseRole, ROLES } from "@/lib/permissions"
 import type { MemberListSurface, MemberReadSurface } from "@/lib/security/audit-log"
 import type { SessionRevocationReason } from "@/lib/session-revocation"
@@ -53,86 +50,12 @@ export type Summarize = (details: Details, f: SummaryFormat) => string | null
 
 const isRecord = (value: unknown): value is Details => typeof value === "object" && value !== null && !Array.isArray(value)
 
-const isCount = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0
-
-const isInstant = (value: unknown): value is string =>
-  typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value) && !Number.isNaN(Date.parse(value))
-
-const isBlock = (value: unknown): value is InactivityBlock => (INACTIVITY_BLOCKS as readonly unknown[]).includes(value)
-
 /** Whether `value` is one of `map`'s own keys, so neither free text nor `toString` matches. */
 const isKeyOf = <K extends string>(map: Record<K, string>, value: unknown): value is K => typeof value === "string" && Object.hasOwn(map, value)
 
 /** A section or field name as code writes it (`setup.plex`, `apiKey`); free text never matches. */
 const CODE_NAME = /^[A-Za-z][\w.-]{0,63}$/
 const isCodeName = (value: unknown): value is string => typeof value === "string" && CODE_NAME.test(value)
-
-const counted = (f: SummaryFormat, n: number, one: string, many: string) => `${f.number(n)} ${n === 1 ? one : many}`
-
-function unshared(details: Details, f: SummaryFormat): string | null {
-  if (details.status === "already_removed") return "Share was already gone"
-  if (details.status !== "removed") return null
-  if (details.reason !== "inactivity") return "Share removed"
-  if (details.lastSeenAt === null) return "Removed for inactivity, never seen"
-  return isInstant(details.lastSeenAt) ? `Removed for inactivity, last seen ${f.date(details.lastSeenAt)}` : "Removed for inactivity"
-}
-
-function memberUnshared(details: Details, f: SummaryFormat): string | null {
-  const line = unshared(details, f)
-  return line && details.offboarded === false ? `${line}, clean-up not finished` : line
-}
-
-function sweepRun({ qualified, removed, failed, blocked }: Details, f: SummaryFormat): string | null {
-  if (!isCount(qualified) || !isCount(removed) || !isCount(failed)) return null
-  const reason = isBlock(blocked) ? `: ${inactivityBlockLabel(blocked)}` : ""
-  const blockedRun = blocked !== null && blocked !== undefined
-  if (blockedRun && removed === 0) return `Removed no one${reason}`
-  if (qualified === 0) return "Found no inactive members"
-  const done = `Removed ${f.number(removed)} of ${counted(f, qualified, "inactive member", "inactive members")}`
-  if (blockedRun) return `${done}, then stopped${reason}`
-  return failed > 0 ? `${done}, ${f.number(failed)} failed` : done
-}
-
-/** "30, 7 and 1 days" from whole counts, or null for anything else. */
-function leadDays(value: unknown, f: SummaryFormat): string | null {
-  if (!Array.isArray(value) || value.length === 0 || !value.every(isCount)) return null
-  const shown = value.map((n) => f.number(n))
-  const list = shown.length === 1 ? shown[0] : `${shown.slice(0, -1).join(", ")} and ${shown[shown.length - 1]}`
-  return `${list} ${value.length === 1 && value[0] === 1 ? "day" : "days"}`
-}
-
-function warningSettings(changedFields: unknown[], after: Details, f: SummaryFormat): string | null {
-  const days = leadDays(after.warningDays, f)
-  if (changedFields.includes("warningsEnabled") && typeof after.warningsEnabled === "boolean") {
-    if (!after.warningsEnabled) return "Warning emails turned off"
-    return days ? `Warning emails turned on, ${days} before removal` : "Warning emails turned on"
-  }
-  return changedFields.includes("warningDays") && days ? `Warning emails ${days} before removal` : null
-}
-
-function inactivitySettings({ section, changedFields, after }: Details, f: SummaryFormat): string | null {
-  if (!Array.isArray(changedFields) || !isRecord(after)) return null
-  if (section === "inactivity-warnings") return warningSettings(changedFields, after, f)
-  const days = isCount(after.thresholdDays) ? counted(f, after.thresholdDays, "day", "days") : null
-  if (changedFields.includes("enabled") && typeof after.enabled === "boolean") {
-    if (!after.enabled) return "Turned off"
-    return days ? `Turned on, ${days}` : "Turned on"
-  }
-  return changedFields.includes("thresholdDays") && days ? `Threshold ${days}` : null
-}
-
-function inactivityExclusion({ excluded }: Details): string | null {
-  if (typeof excluded !== "boolean") return null
-  return excluded ? "Excluded from the inactivity sweep" : "Included in the inactivity sweep again"
-}
-
-function activitySync({ queued, confirmedRemovals }: Details, f: SummaryFormat): string | null {
-  if (typeof queued !== "boolean") return null
-  const start = queued ? "Queued" : "Ran at once"
-  return isCount(confirmedRemovals) && confirmedRemovals > 0
-    ? `${start}, ${counted(f, confirmedRemovals, "removal", "removals")} confirmed`
-    : start
-}
 
 /** Field names shown before the rest are counted. */
 const MAX_FIELDS = 5
@@ -228,11 +151,7 @@ const emailPreference: Summarize = ({ enabled, via }) =>
   typeof enabled === "boolean" && isKeyOf(PREFERENCE_VIA, via) ? `Access reminders turned ${enabled ? "on" : "off"}, ${PREFERENCE_VIA[via]}` : null
 
 const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
-  MEMBER_UNSHARED: memberUnshared,
-  INACTIVITY_SWEEP_RUN: sweepRun,
-  INACTIVITY_SETTINGS_CHANGED: inactivitySettings,
-  INACTIVITY_EXCLUSION_CHANGED: inactivityExclusion,
-  ACTIVITY_SYNC_TRIGGERED: activitySync,
+  ...INACTIVITY_SUMMARIES,
   CONFIG_CHANGED: configChanged,
   SESSIONS_REVOKED: sessionsRevoked,
   USER_ROLE_CHANGED: roleChanged,
