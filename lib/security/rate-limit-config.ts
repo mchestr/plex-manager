@@ -54,6 +54,8 @@ export const LIMITS = {
   "setup:claim": { points: 5, duration: MINUTE },
   "auth:plex": { points: 20, duration: 15 * MINUTE },
   "invite:validate": { points: 20, duration: 15 * MINUTE },
+  // Unsubscribe link checks per address: the page's button and the mail providers' one-click POST
+  "email:unsubscribe": { points: 20, duration: 15 * MINUTE },
   "plex:pin:create": { points: 30, duration: 10 * MINUTE },
   "plex:pin:poll": { points: 300, duration: 10 * MINUTE },
   // Setup's server choice per address (P10.25): each one calls plex.tv and probes the server

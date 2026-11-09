@@ -1,6 +1,7 @@
 /**
- * The /account page (P6.11, ui-design-system 6.1): Discord, Notifications and
- * Time zone and Appearance sections.
+ * The /account page (P6.11, ui-design-system 6.1): Discord, Notifications,
+ * Email (only while email is set up and the warning emails are on), Time
+ * zone and Appearance sections.
  */
 
 import { render, screen, within } from '@testing-library/react'
@@ -11,6 +12,7 @@ import { redirect } from 'next/navigation'
 import { buildUser } from '@/__tests__/helpers/factories'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import AccountPage from '@/app/(app)/account/page'
+import { accessRemindersOffered } from '@/lib/email/access-reminders'
 import { discordHandleFor } from '@/lib/member/shell'
 import { getYourData } from '@/lib/member/your-data'
 
@@ -40,6 +42,10 @@ jest.mock('@/components/account/timezone-field', () => ({
     return <div data-testid="account-timezone" />
   },
 }))
+jest.mock('@/lib/email/access-reminders', () => ({ accessRemindersOffered: jest.fn() }))
+jest.mock('@/components/account/access-reminders', () => ({
+  AccessRemindersSwitch: ({ enabled }: { enabled: boolean }) => <div data-testid="account-access-reminders-switch" data-on={String(enabled)} />,
+}))
 jest.mock('@/components/account/notify-switch', () => ({
   NotifySwitch: ({ notify }: { notify: boolean }) => <div data-testid="account-notify-switch" data-on={String(notify)} />,
 }))
@@ -50,6 +56,7 @@ beforeEach(() => {
   fieldProps.length = 0
   jest.mocked(getServerSession).mockResolvedValue({ user: { id: 'member-1' } })
   jest.mocked(discordHandleFor).mockResolvedValue(null)
+  jest.mocked(accessRemindersOffered).mockResolvedValue(false)
   prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', timezone: 'Europe/London' }))
   prismaMock.rewindPrefs.findUnique.mockResolvedValue(null)
   jest.mocked(getYourData).mockResolvedValue({
@@ -123,6 +130,31 @@ describe('AccountPage', () => {
     render(await AccountPage(props()))
 
     expect(screen.queryByTestId('account-discord')).not.toBeInTheDocument()
+  })
+})
+
+describe('AccountPage, Email', () => {
+  it('leaves the Email card out while email or the warning emails are off', async () => {
+    render(await AccountPage(props()))
+
+    expect(screen.queryByTestId('account-email')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 2, name: 'Email' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    [false, 'true'],
+    [true, 'false'],
+  ])('with inactivityEmailsOff %s, shows the card with the switch %s', async (off, on) => {
+    jest.mocked(accessRemindersOffered).mockResolvedValue(true)
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', inactivityEmailsOff: off }))
+
+    render(await AccountPage(props()))
+
+    const card = screen.getByTestId('account-email')
+    expect(within(card).getByRole('heading', { level: 2, name: 'Email' })).toBeInTheDocument()
+    expect(card).toHaveTextContent('We send these emails to the address on your Plex account.')
+    expect(within(card).getByTestId('account-access-reminders-switch')).toHaveAttribute('data-on', on)
+    expect(card).not.toHaveTextContent('@')
   })
 })
 

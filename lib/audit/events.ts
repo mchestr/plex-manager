@@ -5,7 +5,7 @@
  *
  * | Category        | Covers                                                                        |
  * |-----------------|-------------------------------------------------------------------------------|
- * | `members`       | Accounts, admin rights, roles, removal and import                             |
+ * | `members`       | Accounts, admin rights, roles, removal, import and email preferences          |
  * | `access`        | Plex share removals and the inactivity sweep                                  |
  * | `sessions`      | Every session of a user ended                                                 |
  * | `invites`       | Admin invites and their redemption                                            |
@@ -86,6 +86,7 @@ const AUDIT_EVENTS: Record<AuditEventName, EventWords> = {
   USER_ENABLED: { label: "Account enabled", category: "members" },
   MEMBER_ERASED: { label: "Member and their data removed", category: "members" },
   MEMBERS_IMPORTED: { label: "Members imported from Plex", category: "members" },
+  EMAIL_PREFERENCE_CHANGED: { label: "Email preference changed", category: "members" },
 
   MEMBER_UNSHARED: { label: "Plex access removed", category: "access" },
   INACTIVITY_SWEEP_RUN: { label: "Inactivity sweep ran", category: "access" },

@@ -74,7 +74,7 @@ The conversation judge (`lib/judge/`, **Admin > AI > Settings > Conversation rev
 
 ## Email
 
-The app sends email only after an operator sets `SMTP_URL` and `EMAIL_FROM` (`docs/email.md`). Each email gives the mail provider the recipient's address, their name and the text of the email. Today the only email is the test email, which goes to the admin who asks for it. The app's logs and audit rows hold the user id and the SMTP reply codes, never the address or the server's reply text.
+The app sends email only after an operator sets `SMTP_URL` and `EMAIL_FROM` (`docs/email.md`). Each email gives the mail provider the recipient's address, their name and the text of the email. Today the only email is the test email, which goes to the admin who asks for it. The app's logs and audit rows hold the user id and the SMTP reply codes, never the address or the server's reply text. Each email holds an unsubscribe link with a token, and the token holds the member's id. The app's logger masks the token, but a reverse proxy in front of the app can log the unsubscribe URL with its token, and so the member id, for as long as it keeps its logs.
 
 ## Retention
 
@@ -109,6 +109,7 @@ Every other row in the member tables below is kept while the member is, and goes
 - **`DiscordConnection` access and refresh tokens**: kept until the member unlinks, and revoked at Discord on unlink and on removal.
 - **Invite codes** (`Invite.code`): kept until the invite is deleted. Admins see them to share them, so they are not hashed.
 - **Rewind share tokens**: stored only as SHA-256 hashes (`RewindShare.tokenHash`); the token itself is never stored.
+- **Unsubscribe links**: signed with a key derived from `NEXTAUTH_SECRET`, not stored. Each holds the member id and expires after 365 days. A new `NEXTAUTH_SECRET` stops every link already sent.
 - **Affiliate blocks**: a blocked Plex account is stored only as an HMAC-SHA256 of its Plex id (`AffiliateBlock.plexIdHash`), keyed by `Config.affiliateBlockKey` (encrypted at rest). The Plex id itself is not stored. A block is kept until an admin unblocks it.
 - **Service keys** (Plex, Tautulli, Overseerr, Sonarr, Radarr, LLM providers, Stripe, Discord app): kept until an admin replaces them.
 - Every secret column, and the AI prompt and reply text, is encrypted at rest under the keyring in `ENCRYPTION_KEYS` (the last column of the tables below); production refuses to start without a key ([operations](operations.md#encryption-keys)).

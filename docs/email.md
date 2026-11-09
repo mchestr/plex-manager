@@ -5,7 +5,8 @@ operator sets `SMTP_URL` and `EMAIL_FROM`. While it is off, the app sends
 nothing and no page changes for members.
 
 Today the app sends one kind of email: the test email that an admin sends to
-themselves from **Admin > Settings > Email**.
+themselves from **Admin > Settings > Email**. Every email to a member also
+carries an unsubscribe link (see [Unsubscribe](#unsubscribe)).
 
 ## Set up
 
@@ -71,7 +72,12 @@ and the result. It links to the audit event.
 
 **Send a test email** sends one email to your own address on file. The
 subject starts with `[Test]`. The footer is the same as the footer of every
-other email: the server name, the postal address and a way to contact you.
+other email: the server name, the postal address, a way to contact you and
+your own unsubscribe link. The email also carries the `List-Unsubscribe` and
+`List-Unsubscribe-Post` headers, so you can try the one-click unsubscribe
+with it. It has no `List-Id` header, because it is not an access reminder.
+Admins never get access reminders, so the link changes nothing that you
+receive.
 
 - With Redis, the action adds an `EMAIL_TEST` job, and the worker sends the
   email. Refresh the page after a moment to see the result in **Last test**.
@@ -108,6 +114,75 @@ late, the server can still have taken it. SMTP has no way to tell, so a
 `timeout` or `temporary` result can, in rare cases, still mean a delivered
 email.
 
+## Unsubscribe
+
+A member can stop the access reminders, the warning emails before their
+access ends for inactivity, with one click and no sign-in. Each such email
+has two links with the same token:
+
+| Where | Address | What it does |
+| --- | --- | --- |
+| The body | `/email/unsubscribe?token=...` | A page that asks first. The member presses **Stop these emails**. |
+| `List-Unsubscribe` | `/api/email/unsubscribe?token=...` | The mail app's own unsubscribe button posts `List-Unsubscribe=One-Click` here (RFC 8058). |
+
+The warning emails also carry
+`List-Unsubscribe-Post: List-Unsubscribe=One-Click` and
+`List-Id: "{server} access reminders" <access-reminders.{domain}>`, where
+the domain is the domain of `EMAIL_FROM`.
+
+### The token
+
+- The token holds the member's id and nothing else. It expires 365 days
+  after the send.
+- The app signs it with a key that it derives from `NEXTAUTH_SECRET`, with
+  a label for this use only. The app stores nothing for it.
+- A new `NEXTAUTH_SECRET` stops every link already sent. A member who still
+  wants to stop the emails then signs in and uses the Email card on
+  **Account**.
+- The token can only turn the emails off. Only the member, signed in on
+  **Account**, can turn them on again. So a forwarded email or a logged
+  link can never start them again.
+
+### The page and the one-click address
+
+- A `GET` changes nothing. A link scanner or a mail preview only sees the
+  page, and a `GET` of the one-click address sends the browser to the page.
+- The page never shows an address or a name. It reads no database row on
+  load: the signature shows that the app made the link.
+- The page works without JavaScript, for example when a network blocks the
+  app's scripts. The button then posts the one-click form to
+  `/api/email/unsubscribe?token=...&source=page`, and the answer is a short
+  text. The audit row then says `link`, as for the button with JavaScript.
+- A changed, expired or old link shows "This link no longer works", and
+  tells the member to sign in and open **Account**.
+- The one-click address reads at most 1 KB of a form body. It answers
+  `200` when the emails are off, also when they were off already, and
+  `400` with no detail for a bad token or body.
+- Both paths send `Cache-Control: no-store`, `Referrer-Policy: no-referrer`
+  and `X-Robots-Tag: noindex, nofollow`.
+- The page's button and the one-click address share one limit: 20 tries in
+  15 minutes per address (`email:unsubscribe`).
+- Each change writes one `EMAIL_PREFERENCE_CHANGED` audit row (category
+  Members and roles), with `via` set to `link` (the page's button),
+  `one_click` (the mail app's button) or `account`. A click that changes
+  nothing writes no row. The `source=page` field only names the button. It
+  proves nothing: the token is still the only proof.
+
+Mail providers post to the one-click address from their own servers, with
+no browser user agent and no cookie. If a CDN or a firewall in front of the
+app blocks countries or challenges bots, let both paths through:
+`/api/email/unsubscribe` (`POST` and `GET`) and `/email/unsubscribe`.
+Otherwise the mail app tells the member that they unsubscribed, but the
+emails go on. A member behind the same block also needs the page, and a
+`GET` of the one-click address sends the browser there.
+
+### The Email card on Account
+
+**Account** has an **Email** card with one switch, **Access reminders**.
+The card shows only while email is set up and the warning emails are on.
+The emails go to the address on the member's Plex account, so a member
+changes the address on plex.tv and then signs in again.
+
 ## Logs
 
 The mail code logs under `EMAIL`. A line holds the user id, the class, the
@@ -120,3 +195,9 @@ address, the server's reply text or the login.
 | `email.send_failed` | warn | A send failed |
 | `email_test.sent` | info | A test email was sent |
 | `email_test.not_sent` | warn | A test email was not sent, with the status |
+| `email.unsubscribed` | info | A POST to the one-click address turned the emails off, or found them off, with `via` |
+| `email.unsubscribe_refused` | warn | A POST to the one-click address was refused, with `via` and the reason (`bad_token`, `not_one_click`, ...) |
+
+No line holds the token. The logger masks the `token=` value of a URL. A
+reverse proxy in front of the app can still log the full URL, and with it
+the member's id, for as long as it keeps its logs.

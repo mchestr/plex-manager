@@ -2,6 +2,8 @@
  * @jest-environment node
  */
 
+import { createTransport } from "nodemailer"
+
 import type { EmailConfig } from "@/lib/email/env-rules"
 import { buildMessage, type OutgoingEmail } from "@/lib/email/message"
 
@@ -47,7 +49,21 @@ describe("buildMessage", () => {
   it("adds a kind of email's own headers, which cannot replace Auto-Submitted", () => {
     const message = buildMessage(config(), { ...email, headers: { "List-Id": "<reminders.example.com>", "Auto-Submitted": "no" } })
 
-    expect(message.headers).toEqual({ "List-Id": "<reminders.example.com>", "Auto-Submitted": "auto-generated" })
+    expect(message.headers).toEqual({ "List-Id": { prepared: true, value: "<reminders.example.com>" }, "Auto-Submitted": "auto-generated" })
+  })
+
+  it("sends a printable ASCII value as written, and leaves any other value to nodemailer's encoding", () => {
+    const message = buildMessage(config(), {
+      ...email,
+      headers: { "List-Id": '"Northfield Plex access reminders" <access-reminders.example.com>', "X-Name": "Caf\u00e9", "X-Long": "a".repeat(901) },
+    })
+
+    expect(message.headers).toEqual({
+      "List-Id": { prepared: true, value: '"Northfield Plex access reminders" <access-reminders.example.com>' },
+      "X-Name": "Caf\u00e9",
+      "X-Long": "a".repeat(901),
+      "Auto-Submitted": "auto-generated",
+    })
   })
 
   it("keeps the subject, the sender name and each header on one line", () => {
@@ -60,6 +76,27 @@ describe("buildMessage", () => {
 
     expect(message.subject).toBe("Hi Bcc: someone@example.com")
     expect(message.from).toEqual({ name: "Evil Bcc: someone@example.com", address: "noreply@example.com" })
-    expect(message.headers).toMatchObject({ "X-Test": "a b" })
+    expect(message.headers).toMatchObject({ "X-Test": { prepared: true, value: "a b" } })
+  })
+
+  it("writes the list headers into the raw message unencoded and unbroken", async () => {
+    const url = `https://plex.example.com/api/email/unsubscribe?token=${"a".repeat(60)}.${"b".repeat(43)}`
+    const message = buildMessage(config(), {
+      ...email,
+      headers: {
+        "List-Unsubscribe": `<${url}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        "List-Id": '"Northfield Plex access reminders" <access-reminders.example.com>',
+      },
+    })
+
+    const info = await createTransport({ streamTransport: true, buffer: true }).sendMail(message)
+    const head = `\r\n${info.message.toString().split("\r\n\r\n")[0]}\r\n`
+
+    expect(head).toContain(`\r\nList-Unsubscribe: <${url}>\r\n`)
+    expect(head).toContain("\r\nList-Unsubscribe-Post: List-Unsubscribe=One-Click\r\n")
+    // nodemailer writes the name as List-ID; header names are case-insensitive
+    expect(head).toMatch(/\r\nList-Id: "Northfield Plex access reminders" <access-reminders\.example\.com>\r\n/i)
+    expect(head).not.toContain("=?")
   })
 })
