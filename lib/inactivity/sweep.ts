@@ -13,22 +13,28 @@
  *    (`no_plex_server`); the server or plex.tv's share list does not answer
  *    (`plex_unavailable`, or `plex_auth` when plex.tv refuses the token).
  *    Without a share list, access is unknown, so no one is removed.
- * 2. Candidates: members with an accepted share of this server, no skip, and
- *    inactive; the longest inactive first.
- * 3. The limit: a scheduled run removes no one when more qualify than
+ * 2. The warning step (`lib/inactivity/warn.ts`), while warning emails are on
+ *    and the caller passed an enqueuer: plans the warnings that are due for
+ *    the members with a share and no skip.
+ * 3. Candidates: members with an accepted share of this server, no skip, and
+ *    removable by the removal gate (`removalGate`, `lib/inactivity/notices.ts`):
+ *    inactive, and, while warnings are on, fully warned for their removal
+ *    date. With warnings off the gate only keeps a removal date that a
+ *    handled warning named. The longest inactive first.
+ * 4. The limit: a scheduled run removes no one when more qualify than
  *    `scheduledRunLimit` allows (`over_limit`); an admin run, when any
  *    candidate is not in `confirmedUserIds`, the members the admin confirmed
  *    (`not_confirmed`). A confirmed member who no longer qualifies is left
  *    alone.
- * 4. Each candidate, under the member's access lock when Redis is set up: read
- *    the member again and re-check the rules, remove the share and offboard
+ * 5. Each candidate, under the member's access lock when Redis is set up: read
+ *    the member again and re-check the rules and the gate, remove the share and offboard
  *    them (`unshareMember`), then write `MEMBER_UNSHARED` and wait for the row.
  *
  * ## Each candidate
  *
  * | Case                                          | Entry                                             | Run                      |
  * |-----------------------------------------------|---------------------------------------------------|--------------------------|
- * | The re-check protects the member              | `skipped`: the skip, `active` or `missing`        | goes on                  |
+ * | The re-check protects the member              | `skipped`: the skip, `active`, `held` or `missing` | goes on                  |
  * | Another access change holds the member's lock | `failed`: `busy`                                  | goes on                  |
  * | plex.tv did not answer                        | `failed`: `PLEX_UNAVAILABLE`                      | goes on                  |
  * | plex.tv refused the token                     | `failed`: `PLEX_AUTH`                             | stops: `plex_auth`       |
@@ -49,18 +55,13 @@ import "server-only"
 import type { PlexUnshareResult } from "@/lib/connections/plex-invitations"
 import { getActiveService } from "@/lib/data/active-service"
 import { TAUTULLI_STALE_DAYS, type InactivityBlock } from "@/lib/inactivity/blocks"
-import type { InactivityEntry, InactivityOutcome } from "@/lib/inactivity/entries"
+import { entryFor, type InactivityEntry, type InactivityOutcome } from "@/lib/inactivity/entries"
 import { listInactivityMembers, readInactivityMember, recordReturns } from "@/lib/inactivity/members"
-import {
-  byLongestInactive,
-  inactivitySkip,
-  isInactive,
-  lastActiveAt,
-  scheduledRunLimit,
-  type InactivityMember,
-} from "@/lib/inactivity/rules"
-import type { InactivitySettingsValues } from "@/lib/inactivity/settings"
+import { readRemovalGate, warningRules, type RemovalGate } from "@/lib/inactivity/notice-store"
+import { byLongestInactive, inactivitySkip, lastActiveAt, scheduledRunLimit, type InactivityMember } from "@/lib/inactivity/rules"
+import type { InactivitySettingsValues, InactivityWarningSettings } from "@/lib/inactivity/settings"
 import { hasShare, readPlexShares, type ShareServer } from "@/lib/inactivity/shares"
+import { runWarningStep, type NoticeEnqueuer } from "@/lib/inactivity/warn"
 import { AccessLockBusyError, withAccessLock } from "@/lib/locks/access-lock"
 import { UnshareCleanupError, unshareMember } from "@/lib/members/unshare"
 import { getRedisConnection, isRedisConfigured } from "@/lib/queue/connection"
@@ -83,6 +84,15 @@ export interface SweepOptions {
   /** The members an admin confirmed; none when absent. Only an admin run reads it. */
   confirmedUserIds?: readonly string[]
   settings: InactivitySettingsValues
+  warnings: InactivityWarningSettings
+  /**
+   * Hands pending warning rows to their job. Without it the warning step does
+   * not run, but the gate still applies: with warnings on, every member
+   * without a warning is held (`unwarned`) and no warning is planned. An
+   * inline Run now passes none on purpose; the member activity job must pass
+   * one for both of its runs once the warning email job exists.
+   */
+  enqueueNotices?: NoticeEnqueuer
   now: Date
   signal?: AbortSignal
   /** A member whose `lastSeenReadAt` is before this was not found by the latest read. */
@@ -98,6 +108,8 @@ export interface SweepResult {
   /** Removed or already removed. */
   removed: number
   failed: number
+  /** Warning rows the warning step planned. */
+  warned: number
   entries: InactivityEntry[]
   blocked: InactivityBlock | null
 }
@@ -110,19 +122,11 @@ interface Removal {
 
 interface RemovalContext extends SweepOptions {
   server: ShareServer
+  /** What holds a member back from removal, or null (`removalGate` over the rows read for this run). */
+  gate: RemovalGate
 }
 
-const blocked = (block: InactivityBlock, qualified = 0): SweepResult => ({ qualified, removed: 0, failed: 0, entries: [], blocked: block })
-
-function entryFor(member: InactivityMember, outcome: InactivityOutcome, code?: string): InactivityEntry {
-  return {
-    userId: member.id,
-    outcome,
-    lastActiveAt: lastActiveAt(member).toISOString(),
-    lastSeenAt: member.lastSeenAt?.toISOString() ?? null,
-    ...(code ? { code } : {}),
-  }
-}
+const blocked = (block: InactivityBlock, qualified = 0, warned = 0): SweepResult => ({ qualified, removed: 0, failed: 0, warned, entries: [], blocked: block })
 
 const rulesFor = (ctx: Pick<RemovalContext, "server" | "readSince">) => ({ ownerPlexUserId: ctx.server.adminPlexUserId, readSince: ctx.readSince })
 
@@ -132,7 +136,8 @@ async function remove(candidate: InactivityMember, ctx: RemovalContext): Promise
   if (!member) return { entry: entryFor(candidate, "skipped", "missing") }
   const skip = inactivitySkip(member, rulesFor(ctx))
   if (skip) return { entry: entryFor(member, "skipped", skip) }
-  if (!isInactive(member, ctx.settings.thresholdDays, ctx.now)) return { entry: entryFor(member, "skipped", "active") }
+  const hold = ctx.gate(member)
+  if (hold) return { entry: entryFor(member, "skipped", hold === "active" ? "active" : "held") }
 
   const audit = (status: "removed" | "already_removed", extra: { offboarded?: false } = {}) =>
     recordAuditEvent(AuditEventType.MEMBER_UNSHARED, ctx.actorId, {
@@ -201,15 +206,20 @@ export async function runSweep(options: SweepOptions): Promise<SweepResult> {
 
   const holdsShare = (member: InactivityMember) => hasShare(shares.ids, member.plexUserId)
   const withAccess = (await recordReturns(await listInactivityMembers(), holdsShare, now)).filter(holdsShare)
-  const ctx: RemovalContext = { ...options, server: shares.server }
-  const candidates = withAccess
-    .filter((member) => !inactivitySkip(member, rulesFor(ctx)) && isInactive(member, settings.thresholdDays, now))
-    .sort(byLongestInactive)
+  const rules = rulesFor({ server: shares.server, readSince: options.readSince })
+  const eligible = withAccess.filter((member) => !inactivitySkip(member, rules))
+  const warnings = await warningRules(options.warnings)
+  const { enqueueNotices } = options
+  const step = { ...options, members: eligible, sharedMembers: withAccess.length, plexEmails: shares.emails }
+  const warned = warnings && enqueueNotices ? await runWarningStep({ ...step, warnings, enqueueNotices }) : 0
+  const gate = await readRemovalGate(eligible, { thresholdDays: settings.thresholdDays, now, newestPlayAt, warnings })
+  const ctx: RemovalContext = { ...options, server: shares.server, gate }
+  const candidates = eligible.filter((member) => gate(member) === null).sort(byLongestInactive)
   const qualified = candidates.length
 
   const confirmed = new Set(options.confirmedUserIds)
-  if (trigger === "scheduled" && qualified > scheduledRunLimit(withAccess.length)) return blocked("over_limit", qualified)
-  if (trigger === "admin" && candidates.some((member) => !confirmed.has(member.id))) return blocked("not_confirmed", qualified)
+  if (trigger === "scheduled" && qualified > scheduledRunLimit(withAccess.length)) return blocked("over_limit", qualified, warned)
+  if (trigger === "admin" && candidates.some((member) => !confirmed.has(member.id))) return blocked("not_confirmed", qualified, warned)
 
   const entries: InactivityEntry[] = []
   let stop: InactivityBlock | null = null
@@ -227,6 +237,6 @@ export async function runSweep(options: SweepOptions): Promise<SweepResult> {
   }
 
   const count = (...outcomes: InactivityOutcome[]) => entries.filter((entry) => outcomes.includes(entry.outcome)).length
-  logger.info("inactivity.swept", { runId: options.runId, trigger, qualified, entries: entries.length, blocked: stop })
-  return { qualified, removed: count("removed", "already_removed"), failed: count("failed"), entries, blocked: stop }
+  logger.info("inactivity.swept", { runId: options.runId, trigger, qualified, warned, entries: entries.length, blocked: stop })
+  return { qualified, removed: count("removed", "already_removed"), failed: count("failed"), warned, entries, blocked: stop }
 }

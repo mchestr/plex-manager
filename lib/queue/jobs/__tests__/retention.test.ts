@@ -39,6 +39,7 @@ beforeEach(() => {
     prismaMock.rewindShareVisitDay,
     prismaMock.affiliateApplication,
     prismaMock.invite,
+    prismaMock.inactivityNotice,
   ]) {
     model.findMany.mockResolvedValue([])
   }
@@ -243,6 +244,84 @@ describe("affiliate rows", () => {
     expect(prismaMock.invite.findMany).toHaveBeenNthCalledWith(2, { where, select: { id: true }, take: 1000 })
     expect(prismaMock.invite.updateMany).toHaveBeenCalledWith({ where: { AND: [where, { id: { in: ["invite-1"] } }] }, data: { label: null } })
     expect(result.counts.affiliateInviteLabels).toBe(1)
+  })
+})
+
+describe("inactivity warning email rows", () => {
+  const user: { lastSeenAt: Date; createdAt: Date; accessRestoredAt: Date | null; accessEndedAt: Date | null } = {
+    lastSeenAt: daysAgo(400),
+    createdAt: daysAgo(1000),
+    accessRestoredAt: null,
+    accessEndedAt: null,
+  }
+  const notice = (id: string, patch: Partial<{ cycleAt: Date; createdAt: Date }> = {}, member = user) => ({
+    id,
+    cycleAt: daysAgo(400),
+    createdAt: daysAgo(200),
+    user: member,
+    ...patch,
+  })
+
+  it("deletes rows older than 180 days only once their cycle is closed", async () => {
+    prismaMock.inactivityNotice.findMany.mockResolvedValueOnce([
+      notice("open"),
+      notice("played", {}, { ...user, lastSeenAt: daysAgo(10) }),
+      notice("returned", {}, { ...user, accessRestoredAt: daysAgo(20) }),
+      notice("ended", {}, { ...user, accessEndedAt: daysAgo(190) }),
+      notice("ended-before", {}, { ...user, accessEndedAt: daysAgo(300) }),
+    ] as never)
+    prismaMock.inactivityNotice.deleteMany.mockResolvedValue({ count: 3 })
+
+    const result = await runRetentionSweep({ now: NOW })
+
+    const where = prismaMock.inactivityNotice.findMany.mock.calls[0][0]?.where as { createdAt: { lt: Date } }
+    expect(daysAgo(179) < where.createdAt.lt).toBe(false)
+    expect(daysAgo(181) < where.createdAt.lt).toBe(true)
+    expect(prismaMock.inactivityNotice.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { id: "asc" }, take: 1000, where: { createdAt: { lt: where.createdAt.lt }, id: { gt: "" } } })
+    )
+    expect(prismaMock.inactivityNotice.deleteMany).toHaveBeenCalledWith({
+      where: { AND: [{ createdAt: { lt: where.createdAt.lt } }, { id: { in: ["played", "returned", "ended"] } }] },
+    })
+    expect(result.counts.inactivityNotices).toBe(3)
+  })
+
+  it("pages past a full batch of open rows by id, and deletes nothing from it", async () => {
+    prismaMock.inactivityNotice.findMany
+      .mockResolvedValueOnce([notice("a"), notice("b")] as never)
+      .mockResolvedValueOnce([notice("c", {}, { ...user, lastSeenAt: daysAgo(1) })] as never)
+    prismaMock.inactivityNotice.deleteMany.mockResolvedValue({ count: 1 })
+
+    const result = await runRetentionSweep({ now: NOW, batchSize: 2 })
+
+    expect(prismaMock.inactivityNotice.findMany).toHaveBeenCalledTimes(2)
+    expect(prismaMock.inactivityNotice.findMany.mock.calls[1][0]?.where).toMatchObject({ id: { gt: "b" } })
+    expect(prismaMock.inactivityNotice.deleteMany).toHaveBeenCalledTimes(1)
+    expect(result.counts.inactivityNotices).toBe(1)
+  })
+
+  it("stops between pages when the signal aborts", async () => {
+    const controller = new AbortController()
+    prismaMock.inactivityNotice.findMany.mockImplementationOnce((async () => {
+      controller.abort()
+      return [notice("a"), notice("b")]
+    }) as never)
+
+    const result = await runRetentionSweep({ now: NOW, batchSize: 2, signal: controller.signal })
+
+    expect(result.aborted).toBe(true)
+    expect(prismaMock.inactivityNotice.findMany).toHaveBeenCalledTimes(1)
+  })
+
+  it("applies RETENTION_INACTIVITY_NOTICE_DAYS", async () => {
+    process.env.RETENTION_INACTIVITY_NOTICE_DAYS = "30"
+    try {
+      await runRetentionSweep({ now: NOW })
+      const where = prismaMock.inactivityNotice.findMany.mock.calls[0][0]?.where as { createdAt: { lt: Date } }
+      expect(where.createdAt.lt).toEqual(daysAgo(30))
+    } finally {
+      delete process.env.RETENTION_INACTIVITY_NOTICE_DAYS
+    }
   })
 })
 

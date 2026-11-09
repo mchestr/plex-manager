@@ -23,6 +23,7 @@ const MEMBER_SELECT = {
   lastSeenReadAt: true,
   accessEndedAt: true,
   accessRestoredAt: true,
+  timezone: true,
   subscription: { select: { status: true } },
 } as const satisfies Prisma.UserSelect
 

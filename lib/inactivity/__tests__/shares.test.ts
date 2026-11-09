@@ -14,11 +14,12 @@ import { hasShare, readPlexShares } from "@/lib/inactivity/shares"
 const MACHINE = "machine-1"
 const server = buildPlexServer({ machineIdentifier: MACHINE, adminPlexUserId: "1" })
 
-function plexUser(id: string, share: { machineIdentifier?: string; pending?: boolean } = {}): PlexTvUser {
+function plexUser(id: string, share: { machineIdentifier?: string; pending?: boolean; email?: string } = {}): PlexTvUser {
   return {
     id,
     username: `user${id}`,
     title: `user${id}`,
+    ...(share.email ? { email: share.email } : {}),
     home: false,
     restricted: false,
     servers: [{ machineIdentifier: share.machineIdentifier ?? MACHINE, shareId: `share-${id}`, owned: false, pending: share.pending ?? false }],
@@ -42,10 +43,26 @@ describe("readPlexShares", () => {
     expect(shares).toEqual({
       ok: true,
       ids: new Set(["10"]),
+      emails: new Map(),
       server: { url: server.url, token: server.token, machineIdentifier: MACHINE, adminPlexUserId: "1" },
     })
     expect(getPlexUsers).toHaveBeenCalledTimes(1)
     expect(getPlexUsers).toHaveBeenCalledWith(server.token)
+  })
+
+  it("maps each shared account to its plex.tv email in lower case, and leaves out accounts without a share", async () => {
+    jest.mocked(getPlexUsers).mockResolvedValue({
+      success: true,
+      data: [
+        plexUser("10", { email: " Member@Example.COM " }),
+        plexUser("11"),
+        plexUser("12", { email: "pending@example.com", pending: true }),
+      ],
+    })
+
+    const shares = await readPlexShares(server)
+
+    expect(shares.ok && [...shares.emails]).toEqual([["10", "member@example.com"]])
   })
 
   it("reads the machine identifier when the server has none stored", async () => {

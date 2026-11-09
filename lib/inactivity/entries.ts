@@ -19,6 +19,8 @@
 
 import { z } from "zod"
 
+import { lastActiveAt, type InactivityMember } from "@/lib/inactivity/rules"
+
 const inactivityEntrySchema = z.object({
   userId: z.string().min(1),
   outcome: z.enum(["removed", "already_removed", "failed", "skipped"]),
@@ -41,4 +43,15 @@ export function parseInactivityEntries(stored: unknown): InactivityEntry[] {
     const parsed = inactivityEntrySchema.safeParse(row)
     return parsed.success ? [parsed.data] : []
   })
+}
+
+/** The entry for one member the sweep acted on: the outcome, the dates the decision used and an optional code. */
+export function entryFor(member: InactivityMember, outcome: InactivityOutcome, code?: string): InactivityEntry {
+  return {
+    userId: member.id,
+    outcome,
+    lastActiveAt: lastActiveAt(member).toISOString(),
+    lastSeenAt: member.lastSeenAt?.toISOString() ?? null,
+    ...(code ? { code } : {}),
+  }
 }

@@ -21,9 +21,11 @@
  * | `affiliateApplications` | refused, revoked, ended and closed `AffiliateApplication` by their last date, never inside 30 days | deleted |
  * | `affiliateInvites` | unused affiliate `Invite` by `cancelledAt` or `expiresAt` | deleted |
  * | `affiliateInviteLabels` | expired affiliate `Invite` | `label` nulled |
+ * | `inactivityNotices` | `InactivityNotice` by `createdAt`, only once its cycle is closed (`noticeCycleClosed`) | deleted |
  *
  * Admin invites and used affiliate invites (an invitee's join record) are
- * never touched.
+ * never touched. A warning email row of an open inactive period stays at any
+ * age: the removal gate reads it, so deleting it could make a removal sooner.
  *
  * Each rule selects up to {@link RETENTION_BATCH_SIZE} ids and then updates or
  * deletes by id under the same filter, so transactions stay short and a row
@@ -37,6 +39,7 @@
 import type { Job } from "bullmq"
 
 import { Prisma, WatchlistSyncStatus } from "@/lib/generated/prisma/client"
+import { noticeCycleClosed } from "@/lib/inactivity/notices"
 import { endReviewsOf } from "@/lib/judge/end"
 import { shutdownSignal } from "@/lib/instrumentation/shutdown"
 import { prisma } from "@/lib/prisma"
@@ -202,6 +205,34 @@ async function deleteShareVisitDays(ctx: Ctx, days: number): Promise<number> {
   )
 }
 
+/**
+ * Deletes old warning email rows whose cycle is closed. It pages by id, since
+ * a batch can hold rows of open cycles that stay; the cycle check runs in
+ * TypeScript on the member's dates.
+ */
+async function deleteClosedNotices(ctx: Ctx, days: number): Promise<number> {
+  const where = { createdAt: { lt: ctx.before(days) } } satisfies Prisma.InactivityNoticeWhereInput
+  const user = { select: { lastSeenAt: true, createdAt: true, accessRestoredAt: true, accessEndedAt: true } }
+  let after = ""
+  let total = 0
+  for (;;) {
+    if (ctx.signal.aborted) {
+      ctx.aborted = true
+      return total
+    }
+    const rows = await prisma.inactivityNotice.findMany({
+      where: { ...where, id: { gt: after } },
+      orderBy: { id: "asc" },
+      take: ctx.batchSize,
+      select: { id: true, cycleAt: true, createdAt: true, user },
+    })
+    const closed = ids(rows.filter((row) => noticeCycleClosed(row, row.user)))
+    if (closed.length > 0) total += (await prisma.inactivityNotice.deleteMany({ where: { AND: [where, { id: { in: closed } }] } })).count
+    if (rows.length < ctx.batchSize) return total
+    after = rows[rows.length - 1].id
+  }
+}
+
 type RuleRunners = Record<RetentionRule, (ctx: Ctx) => Promise<number>>
 
 function ruleRunners(days: ReturnType<typeof retentionDays>): RuleRunners {
@@ -276,6 +307,7 @@ function ruleRunners(days: ReturnType<typeof retentionDays>): RuleRunners {
         (batch) => prisma.invite.updateMany({ where: { AND: [where, { id: { in: batch } }] }, data: { label: null } })
       )
     },
+    inactivityNotices: (ctx) => deleteClosedNotices(ctx, days.inactivityNotices),
   }
 }
 
