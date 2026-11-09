@@ -29,7 +29,7 @@ describe('settings groups', () => {
     const labelsIn = (group: string) => items.filter((item) => item.group === group).map((item) => item.label)
 
     expect(Object.fromEntries(SETTINGS_GROUPS.map((group) => [group.id, labelsIn(group.id)]))).toEqual({
-      connections: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr'],
+      connections: ['Plex server', 'Tautulli', 'Overseerr', 'Sonarr, Radarr', 'Email'],
       billing: ['Stripe billing'],
       system: ['Appearance', 'Logos and images', 'Time zone', 'API access', 'Privacy', 'System information'],
     })
@@ -44,6 +44,7 @@ describe('settings groups', () => {
       'tautulli',
       'overseerr',
       'other',
+      'email',
       'stripe',
       'appearance',
       'brand-images',
@@ -64,6 +65,7 @@ describe('settings groups', () => {
       tautulli: 'unreachable',
       overseerr: 'notConfigured',
       other: 'incomplete',
+      email: undefined,
       stripe: 'disabled',
       appearance: undefined,
       'brand-images': undefined,

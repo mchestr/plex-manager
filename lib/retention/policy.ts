@@ -44,6 +44,7 @@ export const RETENTION_WINDOWS = {
   auditLog: { env: "RETENTION_AUDIT_LOG_DAYS", days: 400 },
   affiliateApplications: { env: "RETENTION_AFFILIATE_DAYS", days: 365 },
   affiliateInvites: { env: "RETENTION_AFFILIATE_DAYS", days: 365 },
+  inactivityNotices: { env: "RETENTION_INACTIVITY_NOTICE_DAYS", days: 180 },
 } as const satisfies Record<string, WindowDef>
 
 export type RetentionWindow = keyof typeof RETENTION_WINDOWS

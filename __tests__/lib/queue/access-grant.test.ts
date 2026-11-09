@@ -140,8 +140,55 @@ describe('processAccessGrant', () => {
       data: { accessSkipCode: null, plexInviteStatus: 'accepted' },
     })
     // A member again: the admin affiliate tables stop showing "No longer a member"
-    expect(prisma.user.updateMany).toHaveBeenCalledWith({ where: { id: 'user-1' }, data: { accessEndedAt: null } })
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'user-1', accessEndedAt: { not: null } },
+      data: { accessEndedAt: null, accessRestoredAt: expect.any(Date) },
+    })
     expect(result).toEqual({ userId: 'user-1', granted: true })
+  })
+
+  describe('a return after an end of access', () => {
+    const NOW = new Date('2026-11-08T12:00:00Z')
+
+    beforeEach(() => {
+      jest.useFakeTimers({ now: NOW, doNotFake: ['nextTick', 'setImmediate'] })
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser())
+      ;(inviteUserToPlexServer as jest.Mock).mockResolvedValue({ success: true, inviteID: 42 })
+      ;(acceptPlexInvite as jest.Mock).mockResolvedValue({ success: true })
+    })
+
+    afterEach(() => jest.useRealTimers())
+
+    it('stamps accessRestoredAt when accessEndedAt was set, so the inactivity sweep counts from now', async () => {
+      ;(prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
+
+      await processAccessGrant(makeJob('user-1'))
+
+      expect(prisma.user.updateMany).toHaveBeenCalledTimes(1)
+      expect(prisma.user.updateMany).toHaveBeenCalledWith({
+        where: { id: 'user-1', accessEndedAt: { not: null } },
+        data: { accessEndedAt: null, accessRestoredAt: NOW },
+      })
+    })
+
+    it('stamps nothing when accessEndedAt is null: the filter matches no row', async () => {
+      // The database applies the filter: a member whose access never ended is not matched
+      ;(prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 0 })
+
+      const result = await processAccessGrant(makeJob('user-1'))
+
+      const [args] = (prisma.user.updateMany as jest.Mock).mock.calls[0]
+      expect(args.where).toEqual({ id: 'user-1', accessEndedAt: { not: null } })
+      expect(result).toEqual({ userId: 'user-1', granted: true })
+    })
+
+    it('stamps nothing while the Plex invite is still pending', async () => {
+      ;(acceptPlexInvite as jest.Mock).mockResolvedValue({ success: false, error: 'token expired' })
+
+      await processAccessGrant(makeJob('user-1'))
+
+      expect(prisma.user.updateMany).not.toHaveBeenCalled()
+    })
   })
 
   it('restricts the invite to the configured subscriber libraries', async () => {

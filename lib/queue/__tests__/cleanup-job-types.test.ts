@@ -77,7 +77,7 @@ describe("registration", () => {
   it("lists them on the main queue right after the conversation review sweep", () => {
     const sweep = MAIN_QUEUE_JOB_TYPES.indexOf(JOB_TYPES.CONVERSATION_REVIEW_SWEEP)
 
-    expect(MAIN_QUEUE_JOB_TYPES.slice(sweep + 1)).toEqual([...CLEANUP_TYPES])
+    expect(MAIN_QUEUE_JOB_TYPES.slice(sweep + 1, sweep + 1 + CLEANUP_TYPES.length)).toEqual([...CLEANUP_TYPES])
   })
 
   it("gives every one a deduplication id, never a caller's or the clock's", () => {

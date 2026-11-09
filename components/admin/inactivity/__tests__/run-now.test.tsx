@@ -37,6 +37,7 @@ const RUN: InactivityRunRow = {
   matched: 10,
   qualified: 3,
   removed: 2,
+  warned: 4,
   failed: 1,
   blocked: null,
   error: null,

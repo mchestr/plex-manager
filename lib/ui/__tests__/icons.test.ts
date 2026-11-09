@@ -27,6 +27,7 @@ describe("icons", () => {
     ["invites", "Ticket"],
     ["users", "Users"],
     ["announcements", "Megaphone"],
+    ["email", "Mail"],
     ["llmUsage", "Activity"],
     ["automations", "Workflow"],
     ["settings", "Settings"],

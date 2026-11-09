@@ -12,6 +12,7 @@
 const mockWarn = jest.fn()
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/inactivity/run", () => ({ runMemberActivity: jest.fn() }))
+jest.mock("@/lib/queue/client", () => ({ addJob: jest.fn() }))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), error: jest.fn(), warn: (...args: unknown[]) => mockWarn(...args) }),
 }))
@@ -25,10 +26,11 @@ import { shutdownSignal } from "@/lib/instrumentation/shutdown"
 import { SYSTEM_ACTOR } from "@/lib/session-revocation"
 
 import { JOB_TYPES, type JobPayloadMap } from "../../types"
+import { enqueueInactivityNotices } from "../inactivity-notice"
 import { CONFIRMATION_TTL_MS, getMemberActivityProcessor } from "../member-activity"
 
 const processor = getMemberActivityProcessor(JOB_TYPES.MEMBER_ACTIVITY)!
-const finished = { busy: false as const, runId: "run-1", matched: 3, qualified: 1, removed: 1, failed: 0, blocked: null, error: null }
+const finished = { busy: false as const, runId: "run-1", matched: 3, qualified: 1, removed: 1, failed: 0, warned: 0, blocked: null, error: null }
 const NOW = Date.parse("2026-10-31T12:00:00.000Z")
 
 type Payload = JobPayloadMap[typeof JOB_TYPES.MEMBER_ACTIVITY]
@@ -54,7 +56,7 @@ describe("member activity processor", () => {
   it("runs a scheduled run as the system, with no confirmation even if the data holds one", async () => {
     await expect(processor(job({ triggeredBy: "scheduled", confirmedUserIds: ["u1"] }))).resolves.toEqual(finished)
 
-    expect(runMemberActivity).toHaveBeenCalledWith("scheduled", { actorId: SYSTEM_ACTOR, signal: shutdownSignal })
+    expect(runMemberActivity).toHaveBeenCalledWith("scheduled", { actorId: SYSTEM_ACTOR, enqueueNotices: enqueueInactivityNotices, signal: shutdownSignal })
     expect(prismaMock.user.findUnique).not.toHaveBeenCalled()
   })
 
@@ -62,7 +64,7 @@ describe("member activity processor", () => {
     await processor(job(adminRun))
 
     expect(prismaMock.user.findUnique).toHaveBeenCalledWith({ where: { id: "admin-1" }, select: { isAdmin: true } })
-    expect(runMemberActivity).toHaveBeenCalledWith("admin", { actorId: "admin-1", confirmedUserIds: ["u1", "u2"], signal: shutdownSignal })
+    expect(runMemberActivity).toHaveBeenCalledWith("admin", { actorId: "admin-1", confirmedUserIds: ["u1", "u2"], enqueueNotices: enqueueInactivityNotices, signal: shutdownSignal })
     expect(mockWarn).not.toHaveBeenCalled()
   })
 
@@ -80,7 +82,7 @@ describe("member activity processor", () => {
   ])("drops the confirmation of an admin job %s, so a run with members to remove removes no one", async (_name, at) => {
     await processor(job(adminRun, at))
 
-    expect(runMemberActivity).toHaveBeenCalledWith("admin", { actorId: "admin-1", confirmedUserIds: undefined, signal: shutdownSignal })
+    expect(runMemberActivity).toHaveBeenCalledWith("admin", { actorId: "admin-1", confirmedUserIds: undefined, enqueueNotices: enqueueInactivityNotices, signal: shutdownSignal })
     expect(mockWarn).toHaveBeenCalledWith("inactivity.confirmation_dropped", expect.objectContaining({ stillAdmin: true }))
   })
 
@@ -92,7 +94,7 @@ describe("member activity processor", () => {
 
     await processor(job(adminRun))
 
-    expect(runMemberActivity).toHaveBeenCalledWith("admin", { actorId: SYSTEM_ACTOR, confirmedUserIds: undefined, signal: shutdownSignal })
+    expect(runMemberActivity).toHaveBeenCalledWith("admin", { actorId: SYSTEM_ACTOR, confirmedUserIds: undefined, enqueueNotices: enqueueInactivityNotices, signal: shutdownSignal })
     expect(mockWarn).toHaveBeenCalledWith("inactivity.confirmation_dropped", { stillAdmin: false, attemptsMade: 0, ageMs: 1_000 })
   })
 
@@ -100,7 +102,7 @@ describe("member activity processor", () => {
     await processor(job({ triggeredBy: "admin" }))
 
     expect(prismaMock.user.findUnique).not.toHaveBeenCalled()
-    expect(runMemberActivity).toHaveBeenCalledWith("admin", { actorId: SYSTEM_ACTOR, confirmedUserIds: undefined, signal: shutdownSignal })
+    expect(runMemberActivity).toHaveBeenCalledWith("admin", { actorId: SYSTEM_ACTOR, confirmedUserIds: undefined, enqueueNotices: enqueueInactivityNotices, signal: shutdownSignal })
     expect(mockWarn).not.toHaveBeenCalled()
   })
 
@@ -108,6 +110,16 @@ describe("member activity processor", () => {
     jest.mocked(runMemberActivity).mockResolvedValueOnce({ busy: true }).mockResolvedValueOnce(null)
     await expect(processor(job({ triggeredBy: "scheduled" }))).resolves.toEqual({ busy: true })
     await expect(processor(job({ triggeredBy: "scheduled" }))).resolves.toEqual({ skipped: true })
+  })
+
+  it.each([
+    ["a scheduled run", { triggeredBy: "scheduled" } as Payload],
+    ["a queued admin run", adminRun],
+  ])("hands %s the warning email enqueuer, so warnings on plan and send emails", async (_name, data) => {
+    await processor(job(data))
+
+    const [, options] = jest.mocked(runMemberActivity).mock.calls[0]
+    expect(options.enqueueNotices).toBe(enqueueInactivityNotices)
   })
 
   it("has no processor for another type", () => {

@@ -8,7 +8,7 @@ import { json, startMockServer, type MockServer } from './request-log';
  * this on a free port and exports its URL as `E2E_TAUTULLI_URL`, and a spec
  * points an active `Tautulli.url` at it.
  *
- * Three commands answer, in Tautulli's `response` envelope; any other is an error:
+ * Four commands answer, in Tautulli's `response` envelope; any other is an error:
  *
  * - `get_user_watch_time_stats`, for the affiliate specs (Make reads the
  *   member's watch time live): every user has {@link MOCK_WATCH_HOURS} all
@@ -23,6 +23,8 @@ import { json, startMockServer, type MockServer } from './request-log';
  *   `before`, `rating_key`, `parent_rating_key`, `grandparent_rating_key`,
  *   `user_id`, `order_column`, `order_dir` and `include_activity` as Tautulli
  *   does, so a row of another title never rescues the item under test.
+ * - `get_activity`, for the inactivity read's open plays: an idle server, with no
+ *   sessions, so last seen comes from `get_users_table` alone.
  *
  * Like the other mocks (`./request-log.ts`), it records each call, and
  * `POST /__reset` builds the cleanup history again at the seed's `now`. A
@@ -121,6 +123,8 @@ function answer(params: URLSearchParams): unknown {
       const date = MOCK_OLDEST_PLAY.getTime() / 1000;
       return success({ recordsFiltered: 1, recordsTotal: 1, draw: 1, data: [{ date, started: date, user_id: MOCK_USERS_TABLE.played.userId }] });
     }
+    case 'get_activity':
+      return success({ stream_count: '0', sessions: [] });
     default:
       return { response: { result: 'error', message: `No mock for ${params.get('cmd')}`, data: {} } };
   }

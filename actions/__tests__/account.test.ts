@@ -3,7 +3,8 @@
  *
  * Tests for actions/account.ts (P6.11): the Rewind ready switch is the
  * season year's `RewindPrefs.notify`, the time zone is stored under its
- * canonical IANA name, and the browser's zone fills only an empty one.
+ * canonical IANA name, the browser's zone fills only an empty one, and the
+ * Access reminders switch is `User.inactivityEmailsOff`, audited on a change.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -12,7 +13,8 @@ import { revalidatePath } from "next/cache"
 
 import { buildUser } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { adoptBrowserTimezone, setRewindNotify, setUserTimezone } from "@/actions/account"
+import { adoptBrowserTimezone, setAccessReminders, setRewindNotify, setUserTimezone } from "@/actions/account"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { getSeasonState } from "@/lib/wrapped/season"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -20,6 +22,7 @@ jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/wrapped/season", () => ({ getSeasonState: jest.fn() }))
+jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), logAuditEvent: jest.fn() }))
 
 const SEASON = {
   seasonYear: 2026,
@@ -129,5 +132,50 @@ describe("setRewindNotify", () => {
 
     expect(result).toMatchObject({ success: false, code: "UNAUTHENTICATED" })
     expect(prismaMock.rewindPrefs.upsert).not.toHaveBeenCalled()
+  })
+})
+
+describe("setAccessReminders", () => {
+  it.each([
+    [false, true],
+    [true, false],
+  ])("with enabled %s, stores inactivityEmailsOff %s for the caller and audits it", async (enabled, off) => {
+    prismaMock.user.updateMany.mockResolvedValue({ count: 1 })
+
+    const result = await setAccessReminders({ enabled })
+
+    expect(result).toEqual({ success: true, data: { enabled } })
+    expect(prismaMock.user.updateMany).toHaveBeenCalledWith({
+      where: { id: "member-1", inactivityEmailsOff: !off },
+      data: { inactivityEmailsOff: off },
+    })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.EMAIL_PREFERENCE_CHANGED, "member-1", {
+      targetUserId: "member-1",
+      enabled,
+      via: "account",
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/account")
+  })
+
+  it("writes no audit row when nothing changes", async () => {
+    prismaMock.user.updateMany.mockResolvedValue({ count: 0 })
+    prismaMock.user.findUnique.mockResolvedValue(buildUser({ id: "member-1", inactivityEmailsOff: true }))
+
+    await expect(setAccessReminders({ enabled: false })).resolves.toEqual({ success: true, data: { enabled: false } })
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
+  it("touches only the caller's row, whatever the input carries", async () => {
+    const result = await setAccessReminders({ enabled: true, userId: "member-2" } as { enabled: boolean })
+
+    expect(result).toMatchObject({ success: false, code: "VALIDATION" })
+    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+  })
+
+  it("refuses a call without a session", async () => {
+    jest.mocked(getServerSession).mockResolvedValue(null)
+
+    await expect(setAccessReminders({ enabled: true })).resolves.toMatchObject({ success: false, code: "UNAUTHENTICATED" })
+    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
   })
 })

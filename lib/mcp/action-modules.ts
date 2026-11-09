@@ -21,6 +21,7 @@ import * as branding from "@/actions/admin/branding"
 import * as connectionHealth from "@/actions/admin/connection-health"
 import * as conversationReview from "@/actions/admin/conversation-review"
 import * as discordStats from "@/actions/admin/discord-stats"
+import * as adminEmail from "@/actions/admin/email"
 import * as inactivity from "@/actions/admin/inactivity"
 import * as invites from "@/actions/admin/invites"
 import * as judgeSettings from "@/actions/admin/judge-settings"
@@ -66,6 +67,7 @@ export const ACTION_MODULES: Readonly<Record<string, Record<string, unknown>>> =
   "admin/connection-health": connectionHealth,
   "admin/conversation-review": conversationReview,
   "admin/discord-stats": discordStats,
+  "admin/email": adminEmail,
   "admin/inactivity": inactivity,
   "admin/invites": invites,
   "admin/judge-settings": judgeSettings,
@@ -108,6 +110,7 @@ export const EXCLUDED_MODULES: Readonly<Record<string, string>> = {
   "admin/brand-assets": "takes an uploaded image file",
   "announcements-seen": "records what a browser showed",
   appearance: "sets a browser cookie",
+  "email-unsubscribe": "a link from an email, checked by its token",
   "rewind-views": "records what a browser showed",
   "setup-claim": "the first-run claim cookie",
   "setup-plex": "the setup Plex PIN, kept in a browser cookie",

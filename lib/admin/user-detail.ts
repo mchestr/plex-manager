@@ -37,7 +37,7 @@ export interface UserDetailHeaderData {
   createdAt: Date
   isExempt: boolean
   exemptNote: string | null
-  /** Start of the member's newest play in Tautulli; null when none was ever read. */
+  /** Start of the member's newest play in Tautulli, or the time of a read that found a play still open; null when none was ever read. */
   lastSeenAt: Date | null
   /** When the daily activity read last found the member in Tautulli; null when it never did. */
   lastSeenReadAt: Date | null

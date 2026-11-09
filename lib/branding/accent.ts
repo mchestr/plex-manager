@@ -83,7 +83,7 @@ function readableFill(lch: Lch): Lch {
   return reach(lch, light ? INK_LIGHT : INK_DARK, 4.5, light ? -1 : 1)
 }
 
-/** The primary family for each theme, as hex. @internal Tests check its contrast. */
+/** The primary family for each theme, as hex. Tests check its contrast; emails read the light theme's button colours. */
 export function accentTokens(accent: string): AccentTokens {
   const base = toLch(hexToRgb(accent).rgb)
   const lightBg = hexToRgb(themes.light.background.hex).rgb

@@ -6,7 +6,7 @@
  *
  * | Category        | Covers                                                                        |
  * |-----------------|-------------------------------------------------------------------------------|
- * | `members`       | Accounts, admin rights, roles, removal and import                             |
+ * | `members`       | Accounts, admin rights, roles, removal, import and email preferences          |
  * | `access`        | Plex share removals and the inactivity sweep                                  |
  * | `cleanup`       | Rules, runs, Leaving soon, deletions, Keeps and exclusions                    |
  * | `sessions`      | Every session of a user ended                                                 |
@@ -19,7 +19,7 @@
  * | `discord`       | Discord links, refused commands and the bot settings                          |
  * | `announcements` | Announcements                                                                 |
  * | `jobs`          | The job queues                                                                |
- * | `settings`      | Settings, the time zone, LLM providers and the inactivity settings            |
+ * | `settings`      | Settings, the time zone, LLM providers, the inactivity settings, test emails  |
  * | `setup`         | First-run setup                                                               |
  * | `reads`         | Reads of member content and Rewinds, the assistant's app data reads, this log |
  *
@@ -90,6 +90,7 @@ const AUDIT_EVENTS: Record<AuditEventName, EventWords> = {
   USER_ENABLED: { label: "Account enabled", category: "members" },
   MEMBER_ERASED: { label: "Member and their data removed", category: "members" },
   MEMBERS_IMPORTED: { label: "Members imported from Plex", category: "members" },
+  EMAIL_PREFERENCE_CHANGED: { label: "Email preference changed", category: "members" },
 
   MEMBER_UNSHARED: { label: "Plex access removed", category: "access" },
   INACTIVITY_SWEEP_RUN: { label: "Inactivity sweep ran", category: "access" },
@@ -194,6 +195,7 @@ const AUDIT_EVENTS: Record<AuditEventName, EventWords> = {
   LLM_PROVIDER_CHANGED: { label: "LLM provider changed", category: "settings" },
   SERVICE_ROWS_DEDUPED: { label: "Duplicate services turned off", category: "settings" },
   INACTIVITY_SETTINGS_CHANGED: { label: "Inactivity settings changed", category: "settings" },
+  EMAIL_TEST_SENT: { label: "Test email sent", category: "settings" },
 
   SETUP_CLAIMED: { label: "Setup claimed", category: "setup" },
   SETUP_STEP_SKIPPED: { label: "Setup step skipped", category: "setup" },

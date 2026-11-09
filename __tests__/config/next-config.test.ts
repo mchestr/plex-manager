@@ -84,3 +84,21 @@ describe("next.config.js share page headers (P7.5, UI-39)", () => {
     ])
   })
 })
+
+describe("next.config.js unsubscribe headers", () => {
+  it.each(["/email/unsubscribe", "/api/email/unsubscribe"])(
+    "keeps %s out of caches, Referers and search results, after the catch-all",
+    async (source) => {
+      const config = loadConfig(PHASE_PRODUCTION_SERVER, "production")
+      if (!config.headers) throw new Error("next.config.js has no headers()")
+      const routes = await config.headers()
+      const index = routes.findIndex((route) => route.source === source)
+      expect(index).toBeGreaterThan(routes.findIndex((route) => route.source === "/:path*"))
+      expect(routes[index].headers).toEqual([
+        { key: "Cache-Control", value: "no-store" },
+        { key: "Referrer-Policy", value: "no-referrer" },
+        { key: "X-Robots-Tag", value: "noindex, nofollow" },
+      ])
+    }
+  )
+})

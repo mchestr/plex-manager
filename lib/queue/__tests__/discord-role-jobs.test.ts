@@ -1,4 +1,8 @@
 /**
+ * @jest-environment node
+ */
+
+/**
  * Tests for the Discord role jobs (P4.18): `enqueueRoleSync`
  * (lib/discord/role-sync.ts) and the `DISCORD_ROLE_SYNC` and
  * `DISCORD_ROLE_RECONCILE` processors (lib/queue/jobs/discord-role.ts).

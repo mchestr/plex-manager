@@ -88,4 +88,24 @@ describe("request context", () => {
       ["outside", undefined, undefined],
     ])
   })
+
+  it("keeps the caller's userId when the context has none, as in a queue job", () => {
+    const { createLogger, lines, loaded } = captureProductionLogs(
+      () => require("@/lib/utils/log-context") as typeof import("@/lib/utils/log-context")
+    )
+    const logger = createLogger("ctx-test")
+
+    loaded.runWithRequestContext("job:42", undefined, () => {
+      logger.error("inactivity_notice.failed", undefined, { noticeId: "n1", userId: "member-1", code: "smtp" })
+      logger.info("no user")
+    })
+    loaded.runWithRequestContext("demo-1234abcd", "admin-1", () => logger.info("admin wins", { userId: "member-1" }))
+
+    expect(lines.map((line) => [line.message, line.metadata?.requestId, line.metadata?.userId])).toEqual([
+      ["inactivity_notice.failed", "job:42", "member-1"],
+      ["no user", "job:42", undefined],
+      ["admin wins", "demo-1234abcd", "admin-1"],
+    ])
+    expect(lines[1].metadata).not.toHaveProperty("userId")
+  })
 })

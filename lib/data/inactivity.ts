@@ -1,7 +1,8 @@
 /**
- * `/admin/inactivity`'s reads (admin only): the sweep's settings and who saved
- * them last, the newest runs, whether Tautulli and Redis are set up, and the
- * preview of whom a run would remove now (`lib/data/inactivity-preview.ts`).
+ * `/admin/inactivity`'s reads (admin only): the sweep's settings and the
+ * warning email settings, who saved each card last, the newest runs, whether
+ * Tautulli, Redis and email are set up, and the preview of whom a run would
+ * remove now (`lib/data/inactivity-preview.ts`).
  *
  * A run stores member ids, never names (`lib/inactivity/entries.ts`); the
  * names of the members whose removal failed are read here, in one query for
@@ -15,9 +16,15 @@ import "server-only"
 import { assertAdmin } from "@/lib/admin"
 import { getActiveService } from "@/lib/data/active-service"
 import { getInactivityPreview, type InactivityPreview } from "@/lib/data/inactivity-preview"
+import { emailStatus } from "@/lib/email/config"
 import type { Prisma } from "@/lib/generated/prisma/client"
 import { parseInactivityEntries } from "@/lib/inactivity/entries"
-import { getInactivitySettings, type InactivitySettingsValues } from "@/lib/inactivity/settings"
+import {
+  getInactivitySettings,
+  getInactivityWarnings,
+  type InactivitySettingsValues,
+  type InactivityWarningSettings,
+} from "@/lib/inactivity/settings"
 import { prisma } from "@/lib/prisma"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { AuditEventType } from "@/lib/security/audit-log"
@@ -35,6 +42,7 @@ const RUN_SELECT = {
   matched: true,
   qualified: true,
   removed: true,
+  warned: true,
   failed: true,
   blocked: true,
   error: true,
@@ -49,10 +57,22 @@ export interface InactivityRunRow extends Omit<StoredRun, "entries"> {
   failedMembers: string[]
 }
 
+/** The mail set-up as the Warning emails card shows it: whether email can go out, and the sender. */
+export interface InactivityMail {
+  /** `SMTP_URL` and `EMAIL_FROM` are set and every mail variable is usable. */
+  ready: boolean
+  /** The `EMAIL_FROM` address while ready. */
+  from: string | null
+}
+
 export interface InactivityPageData {
   settings: InactivitySettingsValues
-  /** The newest settings save, or null before the first one. */
+  /** The newest save of the removal card, or null before the first one. */
   lastSaved: LastSaved | null
+  warnings: InactivityWarningSettings
+  /** The newest save of the Warning emails card, or null before the first one. */
+  warningsLastSaved: LastSaved | null
+  mail: InactivityMail
   /** Newest first. */
   runs: InactivityRunRow[]
   tautulliConfigured: boolean
@@ -61,9 +81,12 @@ export interface InactivityPageData {
   preview: InactivityPreview
 }
 
-async function lastSaved(): Promise<LastSaved | null> {
+/** The audit `section` of each settings card: `inactivity` for removal, `inactivity-warnings` for the warning emails. */
+type SettingsCard = "inactivity" | "inactivity-warnings"
+
+async function lastSaved(section: SettingsCard): Promise<LastSaved | null> {
   const row = await prisma.auditLog.findFirst({
-    where: { type: AuditEventType.INACTIVITY_SETTINGS_CHANGED },
+    where: { type: AuditEventType.INACTIVITY_SETTINGS_CHANGED, details: { path: ["section"], equals: section } },
     orderBy: { createdAt: "desc" },
     select: { id: true, actorUserId: true, createdAt: true },
   })
@@ -93,16 +116,21 @@ async function recentRuns(): Promise<InactivityRunRow[]> {
  */
 export async function getInactivityPage(now: Date): Promise<InactivityPageData> {
   await assertAdmin()
-  const settings = await getInactivitySettings()
-  const [saved, runs, tautulli, preview] = await Promise.all([
-    lastSaved(),
+  const [settings, warnings] = await Promise.all([getInactivitySettings(), getInactivityWarnings()])
+  const [saved, warningsSaved, runs, tautulli, preview] = await Promise.all([
+    lastSaved("inactivity"),
+    lastSaved("inactivity-warnings"),
     recentRuns(),
     getActiveService("tautulli"),
     getInactivityPreview(settings.thresholdDays, now),
   ])
+  const mail = emailStatus()
   return {
     settings,
     lastSaved: saved,
+    warnings,
+    warningsLastSaved: warningsSaved,
+    mail: mail.state === "ready" ? { ready: true, from: mail.from } : { ready: false, from: null },
     runs,
     tautulliConfigured: tautulli !== null,
     redisConfigured: isRedisConfigured(),

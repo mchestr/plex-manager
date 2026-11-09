@@ -84,9 +84,10 @@ app/                     # Next.js App Router (pages, layouts, routes)
 │   ├── (ai)/           # AI: activity, cost analysis, AI settings
 │   ├── (automations)/  # Automations: watchlist sync, inactive members, request limits, queues
 │   └── …               # Single pages (assistant, announcements, audit, settings) and wrapped/, a stored Rewind's history
-├── api/                # API routes (webhooks, health, metrics, admin search, Rewind cards and posters)
+├── api/                # API routes (webhooks, health, metrics, admin search, Rewind cards and posters, one-click unsubscribe)
 ├── auth/               # Plex sign-in callback, access denied and auth error pages (sign-in itself is on /)
 ├── dev/                # Development-only UI sheet
+├── email/              # The unsubscribe page that email links open (public)
 ├── invite/             # Invite redemption
 ├── onboarding/         # Member onboarding flow
 ├── rewind/s/           # Public Rewind share links (/wrapped/* redirects to /rewind/*)
@@ -1019,6 +1020,7 @@ The project includes custom slash commands in `.claude/commands/`:
 - MCP endpoint (API tokens, connecting Claude Code, the tool catalog): See `docs/mcp.md`
 - Affiliate invites (tiers, slots, server cap, the switch): See `docs/affiliate-invites.md`
 - Inactive members (last seen from Tautulli, the inactivity sweep and its safety rules): See `docs/inactive-members.md`
+- Email (the SMTP variables, the transport in `lib/email/`, the test email, unsubscribe links): See `docs/email.md`
 - Audit log (who can read it, categories, what Support sees): See `docs/roles.md` and `docs/privacy.md`
 - Appearance (server name, login subtitle, accent colour, uploaded logos and images): See `docs/appearance.md`
 - Privacy (personal data inventory, member removal, retention): See `docs/privacy.md`

@@ -3,8 +3,9 @@
  */
 
 /**
- * `getInactivityPage`: the admin check before any read, the settings (or the
- * defaults) with who saved them last, the newest runs with the names of the
+ * `getInactivityPage`: the admin check before any read, the settings and the
+ * warning email settings (or the defaults) with who saved each card last,
+ * the mail set-up without its secrets, the newest runs with the names of the
  * members whose removal failed, whether Tautulli and Redis are set up, and
  * the preview for the saved threshold.
  */
@@ -17,6 +18,7 @@ import { assertAdmin } from "@/lib/admin"
 import { getActiveService } from "@/lib/data/active-service"
 import { getInactivityPage } from "@/lib/data/inactivity"
 import { getInactivityPreview, type InactivityPreview } from "@/lib/data/inactivity-preview"
+import { emailStatus } from "@/lib/email/config"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { AuditEventType } from "@/lib/security/audit-log"
 
@@ -25,6 +27,7 @@ jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
 jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
 jest.mock("@/lib/data/inactivity-preview", () => ({ getInactivityPreview: jest.fn() }))
 jest.mock("@/lib/queue/connection", () => ({ isRedisConfigured: jest.fn() }))
+jest.mock("@/lib/email/config", () => ({ emailStatus: jest.fn() }))
 
 const NOW = new Date("2026-10-31T12:00:00Z")
 const SAVED_AT = new Date("2026-10-30T09:00:00Z")
@@ -34,9 +37,16 @@ const PREVIEW: InactivityPreview = {
   skips: { no_plex: 0, admin: 1, owner: 0, role: 0, paying: 0, excluded: 0, not_read: 0 },
   active: 4,
   noAccess: 0,
+  held: 0,
+  unwarned: 0,
   shareCheck: null,
   scheduledLimit: 1,
   readSince: null,
+  warningsOn: false,
+  waiting: [],
+  firstWarnings: [],
+  cannotEmail: [],
+  failedWarnings: [],
 }
 
 const failed = (userId: string) => ({ userId, outcome: "failed", lastActiveAt: "2026-01-01T00:00:00.000Z", lastSeenAt: null, code: "busy" })
@@ -51,6 +61,7 @@ beforeEach(() => {
   prismaMock.inactivitySettings.findUnique.mockResolvedValue(null)
   prismaMock.auditLog.findFirst.mockResolvedValue(null)
   prismaMock.inactivityRun.findMany.mockResolvedValue([])
+  jest.mocked(emailStatus).mockReturnValue({ state: "off" })
 })
 
 describe("getInactivityPage", () => {
@@ -67,6 +78,9 @@ describe("getInactivityPage", () => {
     await expect(getInactivityPage(NOW)).resolves.toEqual({
       settings: { enabled: false, thresholdDays: 180 },
       lastSaved: null,
+      warnings: { warningsEnabled: false, warningDays: [30, 7, 1] },
+      warningsLastSaved: null,
+      mail: { ready: false, from: null },
       runs: [],
       tautulliConfigured: false,
       redisConfigured: false,
@@ -87,6 +101,31 @@ describe("getInactivityPage", () => {
     expect(getInactivityPreview).toHaveBeenCalledWith(90, NOW)
   })
 
+  it("reads the warning email settings and the sender while email is set up, never the login", async () => {
+    prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ warningsEnabled: true, warningDays: [14, 2] }))
+    jest.mocked(emailStatus).mockReturnValue({
+      state: "ready",
+      warnings: [],
+      host: "smtp.example.com",
+      port: 587,
+      security: "starttls_required",
+      from: "noreply@example.com",
+      replyTo: null,
+      hasLogin: true,
+      hasPostalAddress: false,
+    })
+
+    const page = await getInactivityPage(NOW)
+
+    expect(page.warnings).toEqual({ warningsEnabled: true, warningDays: [14, 2] })
+    expect(page.mail).toEqual({ ready: true, from: "noreply@example.com" })
+  })
+
+  it("reads email as not ready while a variable is wrong", async () => {
+    jest.mocked(emailStatus).mockReturnValue({ state: "invalid", problems: [], warnings: [] })
+    await expect(getInactivityPage(NOW)).resolves.toMatchObject({ mail: { ready: false, from: null } })
+  })
+
   describe("last saved", () => {
     it("reads the newest settings change and its admin's name", async () => {
       prismaMock.auditLog.findFirst.mockResolvedValue({ id: "audit-5", actorUserId: "admin-2", createdAt: SAVED_AT } as never)
@@ -95,11 +134,13 @@ describe("getInactivityPage", () => {
       const { lastSaved } = await getInactivityPage(NOW)
 
       expect(lastSaved).toEqual({ at: SAVED_AT, by: "Dana Whitfield", eventId: "audit-5" })
-      expect(prismaMock.auditLog.findFirst).toHaveBeenCalledWith({
-        where: { type: AuditEventType.INACTIVITY_SETTINGS_CHANGED },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, actorUserId: true, createdAt: true },
-      })
+      for (const section of ["inactivity", "inactivity-warnings"]) {
+        expect(prismaMock.auditLog.findFirst).toHaveBeenCalledWith({
+          where: { type: AuditEventType.INACTIVITY_SETTINGS_CHANGED, details: { path: ["section"], equals: section } },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, actorUserId: true, createdAt: true },
+        })
+      }
       expect(prismaMock.user.findUnique).toHaveBeenCalledWith({ where: { id: "admin-2" }, select: { name: true, email: true } })
     })
 

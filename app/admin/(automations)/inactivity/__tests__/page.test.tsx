@@ -1,8 +1,9 @@
 /**
  * The inactive members page: its own admin check before any read, then the
  * settings card (with "Last saved" only after a first save, the newest run
- * and Run now confirming the members the preview lists), the preview and the
- * runs, and a warning with a way to Settings while Tautulli is not set up.
+ * and Run now confirming the members the preview lists), the Warning emails
+ * card, the preview and the runs, a warning with a way to Settings while
+ * Tautulli is not set up, and the warning email alerts while warnings are on.
  */
 
 import { render, screen, within } from "@testing-library/react"
@@ -22,12 +23,19 @@ jest.mock("@/lib/data/inactivity", () => ({ getInactivityPage: jest.fn() }))
 jest.mock("@/lib/settings/app-settings", () => ({
   getFormat: async () => (await import("@/lib/utils/format")).bindFormat({ timeZone: "America/Chicago", locale: "en-US" }),
 }))
-jest.mock("@/actions/admin/inactivity", () => ({ updateInactivitySettings: jest.fn(), runMemberActivityNow: jest.fn() }))
+jest.mock("@/actions/admin/inactivity", () => ({
+  updateInactivitySettings: jest.fn(),
+  updateInactivityWarnings: jest.fn(),
+  runMemberActivityNow: jest.fn(),
+}))
 jest.mock("@/components/ui/toast", () => ({ useToast: () => ({ showSuccess: jest.fn(), showError: jest.fn() }) }))
 
 const DATA: InactivityPageData = {
   settings: { enabled: true, thresholdDays: 180 },
   lastSaved: null,
+  warnings: { warningsEnabled: false, warningDays: [30, 7, 1] },
+  warningsLastSaved: null,
+  mail: { ready: true, from: "noreply@example.com" },
   runs: [
     {
       id: "run-2",
@@ -38,6 +46,7 @@ const DATA: InactivityPageData = {
       matched: 10,
       qualified: 0,
       removed: 0,
+      warned: 0,
       failed: 0,
       blocked: null,
       error: null,
@@ -52,6 +61,7 @@ const DATA: InactivityPageData = {
       matched: 10,
       qualified: 30,
       removed: 0,
+      warned: 0,
       failed: 0,
       blocked: "not_confirmed",
       error: null,
@@ -80,9 +90,16 @@ const DATA: InactivityPageData = {
     skips: { no_plex: 0, admin: 1, owner: 0, role: 0, paying: 0, excluded: 0, not_read: 0 },
     active: 7,
     noAccess: 0,
+    held: 0,
+    unwarned: 0,
     shareCheck: null,
     scheduledLimit: 1,
     readSince: new Date("2026-10-31T07:17:00Z"),
+    warningsOn: false,
+    waiting: [],
+    firstWarnings: [],
+    cannotEmail: [],
+    failedWarnings: [],
   },
 }
 
@@ -115,7 +132,7 @@ describe("Admin inactivity page", () => {
     expect(now.getTime()).toBeLessThanOrEqual(Date.now())
   })
 
-  it("shows the header, the settings card with the newest run, the preview and the runs", async () => {
+  it("shows the header, the settings card with the newest run, the preview, the warning lists and the runs", async () => {
     await renderPage()
 
     expect(screen.getByRole("heading", { level: 1, name: "Inactive members" })).toBeInTheDocument()
@@ -126,6 +143,12 @@ describe("Admin inactivity page", () => {
     expect(screen.getByTestId("admin-inactivity-read-timestamp")).toHaveTextContent("Oct 31, 2026, 2:17 AM CDT")
     expect(screen.getByTestId("admin-inactivity-member-u-sam")).toHaveAttribute("href", "/admin/users/u-sam")
     expect(screen.getByTestId("admin-inactivity-not-listed-admin")).toHaveTextContent("Admin1")
+    expect(screen.getByRole("heading", { level: 2, name: "Warning emails" })).toBeInTheDocument()
+    expect(screen.getByTestId("settings-inactivity-warnings-summary-enabled")).toHaveTextContent("Off")
+    expect(screen.getByTestId("settings-inactivity-warnings-summary-days")).toHaveTextContent("30, 7 and 1")
+    expect(screen.getByRole("heading", { level: 2, name: "Warned members" })).toBeInTheDocument()
+    expect(screen.getByTestId("admin-inactivity-waiting-none")).toBeInTheDocument()
+    expect(screen.getByTestId("admin-inactivity-warnings-state")).not.toHaveTextContent("Automatic removal is off")
     expect(screen.getByRole("heading", { level: 2, name: "Recent runs" })).toBeInTheDocument()
     expect(within(screen.getByTestId("admin-inactivity-runs-row-run-1")).getByText("A member who qualified was not confirmed")).toBeInTheDocument()
     expect(screen.queryByTestId("admin-inactivity-no-tautulli")).not.toBeInTheDocument()
@@ -141,6 +164,58 @@ describe("Admin inactivity page", () => {
     await user.click(screen.getByTestId("admin-inactivity-run-confirm"))
 
     expect(runMemberActivityNow).toHaveBeenCalledWith({ confirmedUserIds: ["u-nia", "u-sam"] })
+  })
+
+  it("says in the Run now confirm that the run also sends warnings, while they are on", async () => {
+    const user = userEvent.setup()
+    jest.mocked(getInactivityPage).mockResolvedValue({ ...DATA, warnings: { warningsEnabled: true, warningDays: [30, 7, 1] } })
+    await renderPage()
+
+    await user.click(screen.getByTestId("admin-inactivity-run-now"))
+    expect(await screen.findByText(/This run also sends any warnings that are due\./)).toBeInTheDocument()
+  })
+
+  it("promises no warnings in the Run now confirm without Redis, since a run in the request sends none", async () => {
+    const user = userEvent.setup()
+    jest.mocked(getInactivityPage).mockResolvedValue({ ...DATA, redisConfigured: false, warnings: { warningsEnabled: true, warningDays: [30, 7, 1] } })
+    await renderPage()
+
+    await user.click(screen.getByTestId("admin-inactivity-run-now"))
+    expect(await screen.findByText(/If it would then remove a member who is not in the list/)).toBeInTheDocument()
+    expect(screen.queryByText(/This run also sends any warnings that are due\./)).not.toBeInTheDocument()
+  })
+
+  it("shows no warning email alert while warnings are off, even without email or Redis", async () => {
+    jest.mocked(getInactivityPage).mockResolvedValue({ ...DATA, mail: { ready: false, from: null }, redisConfigured: false })
+    await renderPage()
+
+    expect(screen.queryByTestId("admin-inactivity-alert-no-email")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("admin-inactivity-alert-no-queue")).not.toBeInTheDocument()
+  })
+
+  it("alerts while warnings are on and email is not set up, and the newest save is the later of the two cards", async () => {
+    const at = (iso: string) => ({ at: new Date(iso), by: "Dana Whitfield", eventId: "audit-1" })
+    jest.mocked(getInactivityPage).mockResolvedValue({
+      ...DATA,
+      warnings: { warningsEnabled: true, warningDays: [30, 7, 1] },
+      mail: { ready: false, from: null },
+      // Saved after the newest run, so its empty warned count is no alert
+      lastSaved: at("2026-10-30T00:00:00Z"),
+      warningsLastSaved: at("2026-10-31T12:00:00Z"),
+      preview: { ...DATA.preview, unwarned: 3 },
+    })
+    await renderPage()
+
+    expect(screen.getByTestId("admin-inactivity-alert-no-email")).toHaveTextContent("No one new is removed until email works")
+    expect(screen.queryByTestId("admin-inactivity-alert-unwarned")).not.toBeInTheDocument()
+    expect(screen.getByTestId("settings-inactivity-warnings-last-saved")).toHaveTextContent("by Dana Whitfield")
+  })
+
+  it("tells the warning lists that automatic removal is off", async () => {
+    jest.mocked(getInactivityPage).mockResolvedValue({ ...DATA, settings: { ...DATA.settings, enabled: false } })
+    await renderPage()
+
+    expect(screen.getByTestId("admin-inactivity-warnings-state")).toHaveTextContent("Automatic removal is off too, so no run sends warnings")
   })
 
   it("says who saved last, and leaves the footer out before a first save", async () => {

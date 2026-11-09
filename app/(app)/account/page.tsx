@@ -2,12 +2,14 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
+import { AccessRemindersSwitch } from "@/components/account/access-reminders"
 import { AppearancePicker } from "@/components/account/appearance-picker"
 import { NotifySwitch } from "@/components/account/notify-switch"
 import { TimezoneField } from "@/components/account/timezone-field"
 import { YourDataSection } from "@/components/account/your-data-section"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { accessRemindersOffered } from "@/lib/inactivity/settings"
 import { getAssistantDisclosure } from "@/lib/llm/assistant-disclosure"
 import { discordHandleFor } from "@/lib/member/shell"
 import { getYourData } from "@/lib/member/your-data"
@@ -32,7 +34,8 @@ async function rewindNotify(userId: string): Promise<boolean> {
 
 /**
  * The member's account settings (ui-design-system 6.1, UI-30): Discord,
- * the Rewind ready notification, the time zone, Appearance while the
+ * the Rewind ready notification, Email (the access reminders, only while
+ * email is set up and the warning emails are on), the time zone, Appearance while the
  * light theme's flag is on (P10.10), and Your data: what admins can see
  * (P11.16) and single-item deletes (P11.15). `?page=` pages the
  * marks table.
@@ -43,13 +46,14 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const userId = session.user.id
   const { page } = parseTableParams(await searchParams, { sortable: [], defaultSort: { id: "markedAt", desc: true } })
 
-  const [user, discordHandle, notify, zone, assistantDisclosure, yourData] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
+  const [user, discordHandle, notify, zone, assistantDisclosure, yourData, remindersOffered] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { timezone: true, inactivityEmailsOff: true } }),
     discordHandleFor(userId),
     rewindNotify(userId),
     serverZone(),
     getAssistantDisclosure(),
     getYourData(userId, page),
+    accessRemindersOffered(),
   ])
 
   return (
@@ -87,6 +91,21 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             <NotifySwitch notify={notify} />
           </CardContent>
         </Card>
+
+        {remindersOffered && (
+          <Card data-testid="account-email">
+            <CardHeader>
+              <CardTitle as="h2">Email</CardTitle>
+              <CardDescription>
+                We send these emails to the address on your Plex account. To change it, change it on plex.tv, then sign in here
+                again.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AccessRemindersSwitch enabled={!user?.inactivityEmailsOff} />
+            </CardContent>
+          </Card>
+        )}
 
         <Card data-testid="account-timezone-section">
           <CardHeader>

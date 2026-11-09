@@ -4,6 +4,7 @@ import path from "node:path"
 import { z } from "zod"
 
 import { isValidSchemaName, schemaParamOf } from "@/lib/db/schema-param"
+import { readEmailEnv } from "@/lib/email/env-rules"
 import { parseKeyringEntries } from "@/lib/security/crypto"
 import { isValidHstsMaxAge } from "@/lib/security/hsts"
 import { createLogger } from "@/lib/utils/logger"
@@ -205,6 +206,10 @@ export const envSchema = z.object({
     group: "Data retention",
     default: "365",
   }),
+  RETENTION_INACTIVITY_NOTICE_DAYS: text("Days after it is made that an inactivity warning email record may be deleted, once its inactive period is over.", {
+    group: "Data retention",
+    default: "180",
+  }),
   DISCORD_BOT_TOKEN: text("Discord bot token, used when none is stored in Admin settings.", { group: "Integrations" }),
   DISCORD_CLIENT_ID: text("Discord application id for the slash-command and metadata scripts.", { group: "Integrations" }),
   NEXT_PUBLIC_DISCORD_CLIENT_ID: text("Discord application id the scripts fall back to.", { group: "Integrations" }),
@@ -214,6 +219,18 @@ export const envSchema = z.object({
   DISCORD_PORTAL_URL: text("Account-linking URL in Discord nudges.", { group: "Integrations", default: "<base>/discord/link" }),
   PLEX_WRAPPED_BASE_URL: text("First choice for the Discord portal base URL, before NEXT_PUBLIC_APP_URL and NEXTAUTH_URL.", { group: "Integrations" }),
   LLM_REQUEST_TIMEOUT_MS: text("LLM request timeout in milliseconds.", { group: "Integrations", default: "300000" }),
+  SMTP_URL: text("The mail server, with no login in it: smtp://smtp.example.com:587 (STARTTLS when the server offers it) or smtps://smtp.example.com:465 (TLS from the start). With EMAIL_FROM, the app can send email; the web and worker containers both need it. See docs/email.md.", {
+    group: "Integrations",
+  }),
+  SMTP_USER: text("The mail server login, if it needs one. With a login, the app sends only over TLS.", { group: "Integrations" }),
+  SMTP_PASSWORD: text("The mail server password. A secret: set it from a secret store, never in a committed file. Pages never show it.", {
+    group: "Integrations",
+  }),
+  EMAIL_FROM: text("The sender address, such as noreply@example.com. The display name is the server name.", { group: "Integrations" }),
+  EMAIL_REPLY_TO: text("Where replies go. It is also the envelope sender, so the mail server sends bounce notices here, and the mail provider must accept it as a sender. Without it, emails have no Reply-To.", {
+    group: "Integrations",
+  }),
+  EMAIL_POSTAL_ADDRESS: text("The sender's postal address, in the footer of every email.", { group: "Integrations" }),
   REWIND_STAGING: text('Staging only: "1" lets the season-open rehearsal run (npm run rewind:season-open -- --rehearse). Never set in production.', {
     group: "Rewind",
   }),
@@ -223,6 +240,7 @@ export const envSchema = z.object({
     example: "postgresql://postgres:your-postgres-password@localhost:5433/plex_manager_test?schema=public",
   }),
   E2E_PORT: text("Test only: the Playwright web server port.", { group: "Test only", default: "3100" }),
+  E2E_SMTP_PORT: text("Test only: the port of the Playwright SMTP sink, which the web server's SMTP_URL names.", { group: "Test only", default: "2526" }),
   SKIP_CONNECTION_TESTS: text('Test only: "true" skips live Plex checks.', { group: "Test only" }),
   E2E_PLEX_TV_URL: text('Test only: the URL of the E2E plex.tv mock, on localhost with a port. Used only while E2E_TEST_MODE is "true"; Playwright sets it.', {
     group: "Test only",
@@ -372,6 +390,13 @@ function checkHttps(variable: string, url: string | undefined, allowInsecure: bo
     : { variable, code: "not_https", severity: "error", hint: "must be https (or set ALLOW_INSECURE_HTTP=true on a LAN-only install)" }
 }
 
+/** The mail variables' problems (`lib/email/env-rules.ts`), as warnings: email is optional, so none stops the boot. */
+function checkEmailEnv(env: Env): EnvIssue[] {
+  const result = readEmailEnv(env)
+  if (result.state === "off") return []
+  return result.problems.map((problem) => ({ variable: problem.variable, code: problem.code, severity: "warning", hint: problem.hint }))
+}
+
 /**
  * The production problems in `env`, as variable names and codes, never values.
  *
@@ -416,6 +441,7 @@ export function checkProductionEnv(env: Env): EnvIssue[] {
       hint: "?schema= must be a letter or _ followed by up to 62 letters, digits or _",
     })
   }
+  issues.push(...checkEmailEnv(env))
   if (env.NEXTAUTH_URL && env.NEXT_PUBLIC_APP_URL && originOf(env.NEXTAUTH_URL) !== originOf(env.NEXT_PUBLIC_APP_URL)) {
     issues.push({ variable: "NEXT_PUBLIC_APP_URL", code: "origin_mismatch", severity: "warning", hint: "has a different origin from NEXTAUTH_URL" })
   }

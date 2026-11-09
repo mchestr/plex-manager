@@ -49,6 +49,8 @@ const MODULES = [
   ...filesIn('lib/chatbot', true).filter((path) => !TYPE_ONLY.has(path)),
   ...filesIn('lib/affiliates').filter((path) => !AFFILIATE_CLIENT_SAFE.has(path)),
   ...CLEANUP_SERVER_ONLY,
+  // The mail code reads the environment or the database; env-rules is pure, but only server code needs it
+  ...filesIn('lib/email', true),
 ].sort()
 
 it('covers the loaders, the chatbot, the affiliate and the media cleanup modules', () => {
@@ -60,6 +62,7 @@ it('covers the loaders, the chatbot, the affiliate and the media cleanup modules
       'lib/affiliates/settings.ts',
       'lib/cleanup/protections.ts',
       'lib/cleanup/snapshot/cache.ts',
+      'lib/email/transport.ts',
     ])
   )
 })

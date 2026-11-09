@@ -6,6 +6,7 @@ import { startMockPlex } from './mocks/plex-server';
 import { startMockPlexTv } from './mocks/plex-tv-server';
 import { startMockRadarr } from './mocks/radarr-server';
 import { MOCK_URL_ENV } from './mocks/request-log';
+import { startSmtpSink } from './mocks/smtp-server';
 import { startMockSonarr } from './mocks/sonarr-server';
 import { startMockTautulli } from './mocks/tautulli-server';
 
@@ -164,15 +165,29 @@ async function globalSetup() {
   // Media cleanup (TS 16.4): the library services and plex.tv, all in this
   // process, so one counter orders the calls of every mock (e2e/mocks/request-log.ts).
   // Specs point the service rows at them (e2e/helpers/seed-cleanup.ts); this
-  // setup changes no Plex row.
-  const cleanupMocks = await Promise.all([startMockPlex(), startMockRadarr(), startMockSonarr(), startMockOverseerr(), startMockPlexTv(plexTvPort())]);
+  // setup changes no Plex row. The setup specs run this setup again in a
+  // worker, where the runner's mocks already hold plex.tv's fixed port and the
+  // mock URLs are already set, so only the first run starts them.
+  const cleanupMocks = process.env[MOCK_URL_ENV.plex]
+    ? []
+    : await Promise.all([startMockPlex(), startMockRadarr(), startMockSonarr(), startMockOverseerr(), startMockPlexTv(plexTvPort())]);
   for (const mock of cleanupMocks) {
     if (mock.mock !== 'plexTv') process.env[MOCK_URL_ENV[mock.mock]] = mock.url;
     console.log(`[E2E Setup] Mock ${mock.mock} listening at ${mock.url}`);
   }
+  // And a mail server: the web server's SMTP_URL names its fixed port (playwright.config.ts).
+  // The setup specs run this setup again in a worker, where the runner's sink still holds
+  // that port and E2E_SMTP_INBOX_URL is already set, so only the first run starts it.
+  const smtp = process.env.E2E_SMTP_INBOX_URL ? null : await startSmtpSink();
+  if (smtp) {
+    process.env.E2E_SMTP_INBOX_URL = smtp.inboxUrl;
+    console.log(`[E2E Setup] SMTP sink listening, inbox at ${smtp.inboxUrl}`);
+  }
   return async () => {
     await Promise.all([
-      ...[llm.server, tautulli.server].map((server) => new Promise<void>((resolve) => server.close(() => resolve()))),
+      ...[llm.server, tautulli.server, ...(smtp ? [smtp.smtp, smtp.http] : [])].map(
+        (server) => new Promise<void>((resolve) => server.close(() => resolve()))
+      ),
       ...cleanupMocks.map((mock) => mock.close()),
     ]);
   };

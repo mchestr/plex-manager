@@ -113,6 +113,7 @@ describe("rate-limit", () => {
         'setup:claim': { points: 5, duration: 60 },
         "auth:plex": { points: 20, duration: 900 },
         "invite:validate": { points: 20, duration: 900 },
+        "email:unsubscribe": { points: 20, duration: 900 },
         "plex:pin:create": { points: 30, duration: 600 },
         "plex:pin:poll": { points: 300, duration: 600 },
         "setup:plex:choose": { points: 10, duration: 600 },

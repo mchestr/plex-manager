@@ -2,9 +2,10 @@
  * When a member last played something on Plex, as the admin users list shows,
  * filters and sorts it. Pure and client-safe.
  *
- * `lastSeenAt` is the start of the member's newest play in Tautulli and never
- * moves backwards; `lastSeenReadAt` is when the daily read last found the
- * member in Tautulli (`lib/inactivity/sync.ts`).
+ * `lastSeenAt` is the start of the member's newest play in Tautulli, or the
+ * time of a daily read that found a play of theirs still open, whichever is
+ * later, and never moves backwards; `lastSeenReadAt` is when the daily read
+ * last found the member in Tautulli (`lib/inactivity/sync.ts`).
  *
  * ## States
  *

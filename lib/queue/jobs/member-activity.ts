@@ -14,7 +14,10 @@
  * | The user is gone or no longer an admin                      | `SYSTEM_ACTOR` | dropped      |
  *
  * Without a confirmation, an admin run with members to remove removes no one
- * (`not_confirmed`). The run stops between removals when the server shuts
+ * (`not_confirmed`). Both runs hand the pending warning emails to the warning
+ * email job (`enqueueInactivityNotices`), so with warnings on they plan and
+ * send them; an inline Run now without Redis passes no enqueuer and plans
+ * none. The run stops between removals when the server shuts
  * down. The result holds counts, ids and codes only.
  *
  * @module lib/queue/jobs/member-activity
@@ -29,6 +32,7 @@ import { SYSTEM_ACTOR } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
 
 import { JOB_TYPES, type JobPayloadMap } from "../types"
+import { enqueueInactivityNotices } from "./inactivity-notice"
 
 const logger = createLogger("MEMBER_ACTIVITY_JOB")
 
@@ -58,8 +62,8 @@ async function adminRun({ data, attemptsMade, timestamp }: MemberActivityJob) {
 async function processMemberActivity(job: MemberActivityJob) {
   const result =
     job.data.triggeredBy === "admin"
-      ? await runMemberActivity("admin", { ...(await adminRun(job)), signal: shutdownSignal })
-      : await runMemberActivity("scheduled", { actorId: SYSTEM_ACTOR, signal: shutdownSignal })
+      ? await runMemberActivity("admin", { ...(await adminRun(job)), enqueueNotices: enqueueInactivityNotices, signal: shutdownSignal })
+      : await runMemberActivity("scheduled", { actorId: SYSTEM_ACTOR, enqueueNotices: enqueueInactivityNotices, signal: shutdownSignal })
   return result ?? { skipped: true }
 }
 

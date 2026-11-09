@@ -119,6 +119,27 @@ describe("INACTIVITY_SETTINGS_CHANGED", () => {
   ])("summarises %o", (details, expected) => {
     expect(summary("INACTIVITY_SETTINGS_CHANGED", details)).toBe(expected)
   })
+
+  const warnings = (changedFields: string[], after: Record<string, unknown>) => ({
+    section: "inactivity-warnings",
+    changedFields,
+    before: { warningsEnabled: false, warningDays: [30, 7, 1] },
+    after,
+  })
+
+  it.each([
+    [warnings(["warningsEnabled"], { warningsEnabled: true, warningDays: [30, 7, 1] }), "Warning emails turned on, 30, 7 and 1 days before removal"],
+    [warnings(["warningsEnabled", "warningDays"], { warningsEnabled: true, warningDays: [14, 2] }), "Warning emails turned on, 14 and 2 days before removal"],
+    [warnings(["warningsEnabled"], { warningsEnabled: true, warningDays: "30" }), "Warning emails turned on"],
+    [warnings(["warningsEnabled"], { warningsEnabled: false, warningDays: [30, 7, 1] }), "Warning emails turned off"],
+    [warnings(["warningDays"], { warningsEnabled: true, warningDays: [1] }), "Warning emails 1 day before removal"],
+    [warnings(["warningDays"], { warningsEnabled: true, warningDays: [10] }), "Warning emails 10 days before removal"],
+    [warnings(["warningDays"], { warningsEnabled: true, warningDays: [] }), null],
+    [warnings(["warningDays"], { warningsEnabled: true, warningDays: [7, -1] }), null],
+    [warnings([], { warningsEnabled: true, warningDays: [30, 7, 1] }), null],
+  ])("summarises the warning emails %o", (details, expected) => {
+    expect(summary("INACTIVITY_SETTINGS_CHANGED", details)).toBe(expected)
+  })
 })
 
 describe("the other inactivity events", () => {
@@ -266,6 +287,7 @@ describe("auditSummary", () => {
     ["INACTIVITY_SWEEP_RUN", { qualified: 1, removed: 0, failed: 0, blocked: NAME, runId: EMAIL, trigger: NOTE }],
     ["INACTIVITY_SWEEP_RUN", { qualified: 0, removed: 0, failed: 0, blocked: "busy", runId: null, trigger: NAME, actor: EMAIL }],
     ["INACTIVITY_SETTINGS_CHANGED", { changedFields: ["enabled", NAME], after: { enabled: true, thresholdDays: NOTE } }],
+    ["INACTIVITY_SETTINGS_CHANGED", { section: "inactivity-warnings", changedFields: ["warningsEnabled", NAME], after: { warningsEnabled: true, warningDays: [EMAIL, NOTE] } }],
     ["INACTIVITY_EXCLUSION_CHANGED", { excluded: NAME }],
     ["ACTIVITY_SYNC_TRIGGERED", { queued: true, confirmedRemovals: EMAIL }],
     ["CONFIG_CHANGED", { section: "plex", changedFields: [NAME, EMAIL, NOTE], origins: { after: { url: EMAIL } } }],
@@ -280,5 +302,39 @@ describe("auditSummary", () => {
     const line = summary(type, details) ?? ""
 
     for (const text of [NAME, EMAIL, NOTE]) expect(line).not.toContain(text)
+  })
+})
+
+describe("EMAIL_TEST_SENT", () => {
+  it.each([
+    [{ status: "sent", smtpCode: 250 }, "Sent"],
+    [{ status: "failed", smtpCode: 554, failure: "refused" }, "Not sent, the mail server did not take it (554)"],
+    [{ status: "failed", smtpCode: null, failure: "timeout" }, "Not sent, the mail server did not take it"],
+    [{ status: "not_configured" }, "Not sent, email is not set up"],
+    [{ status: "no_address" }, "Not sent, no email address on file"],
+  ])("says how the test went, %o", (details, expected) => {
+    expect(summary("EMAIL_TEST_SENT", details)).toBe(expected)
+  })
+
+  it("has none for an unknown status", () => {
+    expect(summary("EMAIL_TEST_SENT", { status: "constructor" })).toBeNull()
+  })
+})
+
+describe("EMAIL_PREFERENCE_CHANGED", () => {
+  it.each([
+    [{ enabled: false, via: "one_click" }, "Access reminders turned off, with the mail app's unsubscribe button"],
+    [{ enabled: false, via: "link" }, "Access reminders turned off, with the link in an email"],
+    [{ enabled: true, via: "account" }, "Access reminders turned on, on Account"],
+  ])("says what changed and where, %o", (details, expected) => {
+    expect(summary("EMAIL_PREFERENCE_CHANGED", details)).toBe(expected)
+  })
+
+  it.each([
+    [{ enabled: "no", via: "account" }],
+    [{ enabled: true, via: "toString" }],
+    [{ enabled: true }],
+  ])("has none for details that do not fit, %o", (details) => {
+    expect(summary("EMAIL_PREFERENCE_CHANGED", details)).toBeNull()
   })
 })

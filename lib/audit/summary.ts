@@ -9,7 +9,7 @@
  * |--------------------------------|------------------------------------------------|----------------------------------------------------------------------------------|
  * | `MEMBER_UNSHARED`              | `status`, `reason`, `lastSeenAt`, `offboarded` | "Removed for inactivity, last seen Mar 3, 2026"                                  |
  * | `INACTIVITY_SWEEP_RUN`         | `qualified`, `removed`, `failed`, `blocked`    | "Removed 2 of 3 inactive members", "Removed no one: Another run was in progress" |
- * | `INACTIVITY_SETTINGS_CHANGED`  | `changedFields`, `after`                       | "Turned on, 180 days", "Turned off", "Threshold 90 days"                         |
+ * | `INACTIVITY_SETTINGS_CHANGED`  | `section`, `changedFields`, `after`            | "Turned on, 180 days", "Threshold 90 days", "Warning emails turned on, 30, 7 and 1 days before removal" |
  * | `INACTIVITY_EXCLUSION_CHANGED` | `excluded`                                     | "Excluded from the inactivity sweep"                                             |
  * | `ACTIVITY_SYNC_TRIGGERED`      | `queued`, `confirmedRemovals`                  | "Queued, 3 removals confirmed"                                                   |
  * | `CONFIG_CHANGED`               | `section`, `changedFields`, `secretChanged`    | "plex: url, a secret"                                                            |
@@ -20,6 +20,8 @@
  * | `AUDIT_LOG_VIEWED`             | which `filters` are set, never their values    | "No filters", "Filters: category, member"                                        |
  * | `ASSISTANT_SOURCE_CHANGED`     | `kind`, `action`                               | "Skill source refreshed", "MCP server removed"                                   |
  * | `CLEANUP_SETTINGS_CHANGED`     | as `CONFIG_CHANGED`                            | "cleanup-budget: items, bytes"                                                   |
+ * | `EMAIL_TEST_SENT`              | `status`, `smtpCode`                           | "Sent", "Not sent, the mail server did not take it (554)"                        |
+ * | `EMAIL_PREFERENCE_CHANGED`     | `enabled`, `via`                               | "Access reminders turned off, with the link in an email"                         |
  *
  * The other media cleanup events (`CLEANUP_*`) have their summaries in
  * `lib/audit/summary-cleanup.ts` (TS 11.3), spread into `SUMMARIES`.
@@ -91,8 +93,26 @@ function sweepRun({ qualified, removed, failed, blocked }: Details, f: SummaryFo
   return failed > 0 ? `${done}, ${f.number(failed)} failed` : done
 }
 
-function inactivitySettings({ changedFields, after }: Details, f: SummaryFormat): string | null {
+/** "30, 7 and 1 days" from whole counts, or null for anything else. */
+function leadDays(value: unknown, f: SummaryFormat): string | null {
+  if (!Array.isArray(value) || value.length === 0 || !value.every(isCount)) return null
+  const shown = value.map((n) => f.number(n))
+  const list = shown.length === 1 ? shown[0] : `${shown.slice(0, -1).join(", ")} and ${shown[shown.length - 1]}`
+  return `${list} ${value.length === 1 && value[0] === 1 ? "day" : "days"}`
+}
+
+function warningSettings(changedFields: unknown[], after: Details, f: SummaryFormat): string | null {
+  const days = leadDays(after.warningDays, f)
+  if (changedFields.includes("warningsEnabled") && typeof after.warningsEnabled === "boolean") {
+    if (!after.warningsEnabled) return "Warning emails turned off"
+    return days ? `Warning emails turned on, ${days} before removal` : "Warning emails turned on"
+  }
+  return changedFields.includes("warningDays") && days ? `Warning emails ${days} before removal` : null
+}
+
+function inactivitySettings({ section, changedFields, after }: Details, f: SummaryFormat): string | null {
   if (!Array.isArray(changedFields) || !isRecord(after)) return null
+  if (section === "inactivity-warnings") return warningSettings(changedFields, after, f)
   const days = isCount(after.thresholdDays) ? counted(f, after.thresholdDays, "day", "days") : null
   if (changedFields.includes("enabled") && typeof after.enabled === "boolean") {
     if (!after.enabled) return "Turned off"
@@ -187,6 +207,26 @@ function auditLogViewed({ filters }: Details): string | null {
   return used.length > 0 ? `Filters: ${used.join(", ")}` : "No filters"
 }
 
+const TEST_EMAIL_STATUSES: Record<"sent" | "failed" | "not_configured" | "no_address", string> = {
+  sent: "Sent",
+  failed: "Not sent, the mail server did not take it",
+  not_configured: "Not sent, email is not set up",
+  no_address: "Not sent, no email address on file",
+}
+
+/** "Sent", or why the test email was not sent, with the reply code when there is one. */
+function emailTest({ status, smtpCode }: Details): string | null {
+  if (!isKeyOf(TEST_EMAIL_STATUSES, status)) return null
+  const code = status === "failed" && typeof smtpCode === "number" && Number.isInteger(smtpCode) ? ` (${smtpCode})` : ""
+  return `${TEST_EMAIL_STATUSES[status]}${code}`
+}
+
+const PREFERENCE_VIA = { account: "on Account", link: "with the link in an email", one_click: "with the mail app's unsubscribe button" }
+
+/** "Access reminders turned off, on Account": the new value and where it changed. */
+const emailPreference: Summarize = ({ enabled, via }) =>
+  typeof enabled === "boolean" && isKeyOf(PREFERENCE_VIA, via) ? `Access reminders turned ${enabled ? "on" : "off"}, ${PREFERENCE_VIA[via]}` : null
+
 const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   MEMBER_UNSHARED: memberUnshared,
   INACTIVITY_SWEEP_RUN: sweepRun,
@@ -203,6 +243,8 @@ const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   ...CLEANUP_SUMMARIES,
   // Section and field names, as CONFIG_CHANGED (TS 11.3)
   CLEANUP_SETTINGS_CHANGED: configChanged,
+  EMAIL_TEST_SENT: emailTest,
+  EMAIL_PREFERENCE_CHANGED: emailPreference,
 }
 
 /** The event's one-line summary, or null when its type has none or its details do not fit. */

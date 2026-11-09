@@ -101,6 +101,7 @@ describe("admin writes to member data", () => {
       data: [{ id: "plex-1", username: "m", title: "m", home: false, restricted: false, servers: [{ machineIdentifier: "machine-1", owned: false, pending: false }] }],
     })
     jest.mocked(unshareUserFromPlexServer).mockResolvedValue({ success: true, status: "removed" })
+    prismaMock.inactivityNotice.findMany.mockResolvedValue([])
 
     await runSweep({
       runId: "run-1",
@@ -108,10 +109,12 @@ describe("admin writes to member data", () => {
       actorId: ADMIN,
       confirmedUserIds: ["member-1"],
       settings: { enabled: true, thresholdDays: 180 },
+      warnings: { warningsEnabled: false, warningDays: [30, 7, 1] },
       now,
       readSince: now,
       newestPlayAt: now,
       oldestPlayAt: new Date("2024-01-01T00:00:00.000Z"),
+      activityRead: true,
     })
 
     const written = jest.mocked(recordAuditEvent).mock.calls.filter(([type]) => type === AuditEventType.MEMBER_UNSHARED)

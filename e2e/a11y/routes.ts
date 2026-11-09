@@ -8,6 +8,7 @@ import {
   VISUAL_REWIND_YEAR,
 } from '../helpers/seed-fixtures';
 import { editSection } from '../helpers/settings';
+import { FAR_FUTURE, LONG_AGO, unsubscribePath } from '../helpers/unsubscribe-token';
 import { A11Y_CONVERSATION_ID, A11Y_SHARE_TOKEN, clearA11yShareVisits } from './seed';
 
 /**
@@ -20,6 +21,8 @@ export type A11yAudience = 'public' | 'member' | 'admin';
 
 export interface A11yRoute {
   path: string;
+  /** Names the route in the baseline key instead of `path`, for a path that holds a token. */
+  name?: string;
   as: A11yAudience;
   /** Test id that marks the page as loaded. */
   ready: string;
@@ -48,7 +51,7 @@ export interface A11ySetupRoute {
 
 /** The baseline key of a route. */
 export function routeName(route: A11yRoute): string {
-  return `${route.as} ${route.path}${route.state ? ` [${route.state}]` : ''}`;
+  return `${route.as} ${route.name ?? route.path}${route.state ? ` [${route.state}]` : ''}`;
 }
 
 export function setupRouteName(route: A11ySetupRoute): string {
@@ -82,6 +85,16 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/auth/callback/plex', as: 'public', ready: 'plex-callback-error-heading' },
   { path: `/rewind/s/${A11Y_SHARE_TOKEN}`, as: 'public', ready: 'rewind-share-v2' },
   { path: '/a11y-missing-page', as: 'public', ready: 'status-screen' },
+  // The link in an email: a good token asks first, an expired one shows the dead-link screen.
+  // Fixed expiry dates keep the paths, and the test titles of the specs that name them, the same in every worker.
+  { path: unsubscribePath(regularId, FAR_FUTURE), name: '/email/unsubscribe', as: 'public', ready: 'unsubscribe-question' },
+  {
+    path: unsubscribePath(regularId, LONG_AGO),
+    name: '/email/unsubscribe',
+    state: 'dead link',
+    as: 'public',
+    ready: 'unsubscribe-dead-link',
+  },
 
   // Member
   { path: '/', as: 'member', ready: 'home-greeting' },

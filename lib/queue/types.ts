@@ -45,6 +45,10 @@ export const JOB_TYPES = {
   CLEANUP_RUN: "cleanup:run",
   CLEANUP_ACT: "cleanup:act",
   CLEANUP_COLLECTIONS: "cleanup:collections",
+  // An admin's test email (lib/email/send-test-email.ts)
+  EMAIL_TEST: "email:test",
+  // One warning email before the inactivity sweep removes a member (lib/queue/jobs/inactivity-notice.ts)
+  INACTIVITY_NOTICE: "members:notice",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -86,6 +90,8 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   [JOB_TYPES.CLEANUP_RUN]: "Media cleanup run",
   [JOB_TYPES.CLEANUP_ACT]: "Media cleanup deletions",
   [JOB_TYPES.CLEANUP_COLLECTIONS]: "Media cleanup Plex collections",
+  [JOB_TYPES.EMAIL_TEST]: "Test email",
+  [JOB_TYPES.INACTIVITY_NOTICE]: "Inactivity email",
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: "Rewind server totals",
   [JOB_TYPES.REWIND_METADATA_WARM]: "Rewind metadata warm-up",
   [JOB_TYPES.REWIND_GENERATE_USER]: "Rewind generation",
@@ -119,6 +125,8 @@ export const MAIN_QUEUE_JOB_TYPES = [
   JOB_TYPES.CLEANUP_RUN,
   JOB_TYPES.CLEANUP_ACT,
   JOB_TYPES.CLEANUP_COLLECTIONS,
+  JOB_TYPES.EMAIL_TEST,
+  JOB_TYPES.INACTIVITY_NOTICE,
 ] as const satisfies readonly JobType[]
 
 /** A job's label, or its raw name for a type this build does not know. */
@@ -477,6 +485,10 @@ interface JobPayloads {
   [JOB_TYPES.CLEANUP_RUN]: CleanupRunPayload
   [JOB_TYPES.CLEANUP_ACT]: CleanupActPayload
   [JOB_TYPES.CLEANUP_COLLECTIONS]: CleanupCollectionsPayload
+  /** The admin who asked; the job reads their address when it runs. */
+  [JOB_TYPES.EMAIL_TEST]: { userId: string }
+  /** The notice row (`InactivityNotice`) to send; the job reads everything else when it runs. */
+  [JOB_TYPES.INACTIVITY_NOTICE]: { noticeId: string }
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
@@ -536,6 +548,8 @@ export const JOB_ID_POLICY: { [K in JobType]: JobIdPolicy<JobPayloadMap[K]> } = 
   // A deduplication id holds while its job waits or runs, so each retry needs its own
   [JOB_TYPES.CLEANUP_ACT]: { deduplication: (data) => (data.waits ? `cleanup:act:retry:${data.waits}` : "cleanup:act") },
   [JOB_TYPES.CLEANUP_COLLECTIONS]: { deduplication: () => "cleanup:collections" },
+  [JOB_TYPES.EMAIL_TEST]: { deduplication: (data) => `email:test:${data.userId}` },
+  [JOB_TYPES.INACTIVITY_NOTICE]: { deduplication: (data) => `members:notice:${data.noticeId}` },
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: { fromCaller: "the parent run's step id" },
   [JOB_TYPES.REWIND_METADATA_WARM]: { deduplication: (data) => `rewind:meta:${data.batch}` },
   [JOB_TYPES.REWIND_GENERATE_USER]: { fromCaller: "the RewindGeneration id" },

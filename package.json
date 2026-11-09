@@ -79,6 +79,7 @@
     "motion": "14.7.1",
     "next": "^16.4.2",
     "next-auth": "^4.24.15",
+    "nodemailer": "^10.3.1",
     "rate-limiter-flexible": "11.2.3",
     "react": "19.3.1",
     "react-dom": "19.3.1",
@@ -141,6 +142,9 @@
     },
     "eslint-plugin-react": {
       "eslint": "$eslint"
+    },
+    "next-auth": {
+      "nodemailer": "$nodemailer"
     }
   }
 }
