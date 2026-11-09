@@ -80,6 +80,7 @@ export const ACTION_DOCS: Readonly<Record<string, string>> = {
   savePlexServer: "Saves the Plex server and records its owner as the admin.",
   saveRewindSharePrefs: "Saves the share sheet's choices for the member's Rewind of `year` (`RewindPrefs`): what the next card or link starts from, and what the back cover's privacy line reads.",
   saveSkillSource: "Add or change a skill source.",
+  sendTestEmail: "Sends a test email to your own address on file, through the mail server that SMTP_URL names. With Redis the worker sends it, so the result shows as \"Last test\" a moment later; without Redis it is sent now and a failure comes back as `UPSTREAM_UNAVAILABLE`. Refused with `VALIDATION` while email is not set up or your account has no email address. Every send is audited as `EMAIL_TEST_SENT`, with the status and the reply code only.",
   setAffiliateOverride: "Sets an affiliate's invites per 30 days (0 to 10) in place of their tier, or clears it with `null` (admin only). 0 pauses them without a revoke.",
   setAnnouncementActive: "Show or hide an announcement on home (admin only). Takes the wanted state, not a toggle, so two quick clicks never race a read-modify-write.",
   setAppearance: "Sets the theme cookie; the client then calls `router.refresh()`.",

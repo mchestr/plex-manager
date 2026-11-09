@@ -101,6 +101,12 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `DISCORD_PORTAL_URL` |  | `<base>/discord/link` | Account-linking URL in Discord nudges. |
 | `PLEX_WRAPPED_BASE_URL` |  |  | First choice for the Discord portal base URL, before NEXT_PUBLIC_APP_URL and NEXTAUTH_URL. |
 | `LLM_REQUEST_TIMEOUT_MS` |  | `300000` | LLM request timeout in milliseconds. |
+| `SMTP_URL` |  |  | The mail server, with no login in it: smtp://smtp.example.com:587 (STARTTLS when the server offers it) or smtps://smtp.example.com:465 (TLS from the start). With EMAIL_FROM, the app can send email; the web and worker containers both need it. See docs/email.md. |
+| `SMTP_USER` |  |  | The mail server login, if it needs one. With a login, the app sends only over TLS. |
+| `SMTP_PASSWORD` |  |  | The mail server password. A secret: set it from a secret store, never in a committed file. Pages never show it. |
+| `EMAIL_FROM` |  |  | The sender address, such as noreply@example.com. The display name is the server name. |
+| `EMAIL_REPLY_TO` |  |  | Where replies go. It is also the envelope sender, so the mail server sends bounce notices here. Without it, emails have no Reply-To. |
+| `EMAIL_POSTAL_ADDRESS` |  |  | The sender's postal address, in the footer of every email. |
 
 ## Rewind
 
@@ -116,5 +122,6 @@ See [deployment](deployment.md) for an install and [domain move](domain-move.md)
 | `E2E_TEST_MODE` |  |  | Test only: "true" arms the seed outside production. Never set it in .env; pass it inline. |
 | `E2E_DATABASE_URL` |  |  | Test only: the Playwright database; its name must end in _test, and the suite wipes it. |
 | `E2E_PORT` |  | `3100` | Test only: the Playwright web server port. |
+| `E2E_SMTP_PORT` |  | `2526` | Test only: the port of the Playwright SMTP sink, which the web server's SMTP_URL names. |
 | `SKIP_CONNECTION_TESTS` |  |  | Test only: "true" skips live Plex checks. |
 | `ENABLE_DEV_UI` |  |  | Development only: "1" serves the /dev/ui primitives sheet (Playwright sets it). |

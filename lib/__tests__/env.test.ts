@@ -135,6 +135,29 @@ describe("checkProductionEnv", () => {
     })
   })
 
+  describe("mail variables", () => {
+    const mail = { SMTP_URL: "smtp://smtp.example.com:587", EMAIL_FROM: "noreply@example.com" }
+
+    it("checks nothing while SMTP_URL is unset, and passes a complete set-up", () => {
+      expect(issues({ EMAIL_FROM: "not an address", SMTP_USER: "u" })).toEqual([])
+      expect(issues(mail)).toEqual([])
+      expect(issues({ ...mail, SMTP_USER: "u", SMTP_PASSWORD: "p", EMAIL_REPLY_TO: "help@example.com" })).toEqual([])
+    })
+
+    it("warns, without stopping the boot, for each problem", () => {
+      expect(codes({ SMTP_URL: "smtp://smtp.example.com" })).toEqual(["warning EMAIL_FROM missing"])
+      expect(codes({ ...mail, SMTP_URL: "smtp://user:secret@smtp.example.com" })).toEqual(["warning SMTP_URL invalid"])
+      expect(codes({ ...mail, SMTP_USER: "u" })).toEqual(["warning SMTP_PASSWORD missing"])
+      expect(codes({ ...mail, SMTP_URL: "imap://smtp.example.com" })).toEqual(["warning SMTP_URL invalid"])
+    })
+
+    it("tells the operator where the login goes, and never prints it", () => {
+      const output = issues({ ...mail, SMTP_URL: "smtp://login-name:hunter2@smtp.example.com" })
+      expect(output[0].hint).toContain("SMTP_USER and SMTP_PASSWORD")
+      expect(JSON.stringify(output)).not.toMatch(/login-name|hunter2/)
+    })
+  })
+
   it("never puts a secret value in its output", () => {
     for (const secret of [...KNOWN_PLACEHOLDER_SECRETS, "short-secret-value", "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"]) {
       const output = JSON.stringify(issues({ NEXTAUTH_SECRET: secret, NEXTAUTH_URL: "http://plex.example.com" }))

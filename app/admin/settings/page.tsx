@@ -2,6 +2,7 @@ import { AppearanceSection } from "@/components/admin/settings/appearance/appear
 import { BrandImagesSection } from "@/components/admin/settings/appearance/brand-images-section"
 import { LastSaved } from "@/components/admin/settings/last-saved"
 import { ApiAccessSection } from "@/components/admin/settings/sections/api-access-section"
+import { EmailSection } from "@/components/admin/settings/sections/email-section"
 import { OtherIntegrationsSection } from "@/components/admin/settings/sections/other-integrations-section"
 import { PrivacySection } from "@/components/admin/settings/sections/privacy-section"
 import { ServiceSection } from "@/components/admin/settings/sections/service-section"
@@ -14,6 +15,7 @@ import { SettingsPageActions } from "@/components/admin/settings/settings-page-a
 import { PageHeader } from "@/components/ui/page-header"
 import { getAdminSettings, getStripeConfig } from "@/lib/data/admin-settings"
 import { listOwnApiTokens } from "@/lib/data/api-tokens"
+import { getEmailSettings } from "@/lib/data/email"
 import { getLastRetentionRun } from "@/lib/data/retention"
 import { plexLibraryListing } from "@/lib/admin/invites/libraries"
 import packageJson from "@/package.json"
@@ -60,12 +62,13 @@ export default async function SettingsPage() {
     serverZone(),
     getFormat(),
   ])
-  const [audit, lastRetentionRun, apiTokens, branding, appSettings] = await Promise.all([
+  const [audit, lastRetentionRun, apiTokens, branding, appSettings, email] = await Promise.all([
     getSettingsAuditMeta(),
     getLastRetentionRun(),
     listOwnApiTokens(),
     getBranding(),
     getAppSettings(),
+    getEmailSettings(),
   ])
   const { serverName: savedName, loginSubtitle, accentColor } = settings.config
   // The name in use with none saved: what the active Plex or Jellyfin server is called
@@ -104,6 +107,7 @@ export default async function SettingsPage() {
             health={{ sonarr: health.sonarr, radarr: health.radarr }}
             footerMeta={saved("other")}
           />
+          <EmailSection settings={email} />
         </SettingsGroup>
         <SettingsGroup id="billing">
           <StripeSection config={stripeConfig} libraries={plexLibraries} health={health.stripe} footerMeta={saved("stripe")} />

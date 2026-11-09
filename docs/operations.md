@@ -192,6 +192,10 @@ the worker applies the migrations and the web containers start with
 worker or `all` container nothing processes jobs: Stripe events, watchlist
 syncs and Rewind generations wait in Redis.
 
+With Redis, the worker sends the email (`docs/email.md`), so it needs the
+mail variables (`SMTP_URL`, `EMAIL_FROM` and the login). Set them on the web
+containers too: the web shows the mail status in Admin > Settings > Email.
+
 Requests never wait on Redis for more than about two seconds: while it is
 down, enqueues answer "the queue is unavailable" and the Stripe webhook
 answers `503`, so Stripe retries the delivery.
