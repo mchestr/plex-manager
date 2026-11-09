@@ -219,7 +219,7 @@ describe("InactivityWarningsSection", () => {
       const form = screen.getByTestId("settings-inactivity-warnings-form")
       const box = within(form).getByRole("checkbox", { name: "Email members before the run removes their access" })
       expect(box).toHaveAttribute("data-disabled")
-      expect(box).toHaveAccessibleDescription(new RegExp(reason.replace(/\./g, "\\.")))
+      expect(box).toHaveAccessibleDescription(expect.stringContaining(reason))
       const blocked = screen.getByTestId("admin-inactivity-warnings-blocked")
       expect(blocked).toHaveTextContent(reason)
       expect(within(blocked).queryByRole("link", { name: "Set up email" }) !== null).toBe(emailLink)
