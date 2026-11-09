@@ -45,8 +45,9 @@ const toggle = () => screen.getByTestId("admin-inactivity-warnings-toggle")
 const days = () => screen.getByTestId("admin-inactivity-warning-days-input")
 const save = () => screen.getByTestId("settings-inactivity-warnings-save")
 
+/** Waits for Edit: after Cancel or a save, the card leaves edit mode once the dialog or the action settles. */
 async function edit(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByTestId("settings-inactivity-warnings-edit"))
+  await user.click(await screen.findByTestId("settings-inactivity-warnings-edit"))
 }
 
 async function typeDays(user: ReturnType<typeof userEvent.setup>, value: string) {
