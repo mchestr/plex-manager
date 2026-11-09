@@ -14,6 +14,7 @@
 import "server-only"
 
 import type { Prisma } from "@/lib/generated/prisma/client"
+import type { NoticeDetail } from "@/lib/inactivity/notice-lists"
 import type { NoticePlan } from "@/lib/inactivity/notice-plan"
 import {
   currentCycle,
@@ -54,6 +55,15 @@ export interface NoticeWrite extends NoticePlan {
 export async function readNotices(userIds: readonly string[]): Promise<NoticeRow[]> {
   if (userIds.length === 0) return []
   return prisma.inactivityNotice.findMany({ where: { userId: { in: [...userIds] } }, select: NOTICE_SELECT })
+}
+
+/** Every notice row of `userIds`, with its code and when it last changed, for the admin lists. */
+export async function readNoticeDetails(userIds: readonly string[]): Promise<NoticeDetail[]> {
+  if (userIds.length === 0) return []
+  return prisma.inactivityNotice.findMany({
+    where: { userId: { in: [...userIds] } },
+    select: { ...NOTICE_SELECT, code: true, updatedAt: true },
+  })
 }
 
 /** The warning rules a run or the preview applies: null while warnings are off. */

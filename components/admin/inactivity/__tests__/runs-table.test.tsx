@@ -1,6 +1,6 @@
 /**
  * The newest runs: each opens its audit events from its start time, and
- * reads who started it, its counts and its outcome, with the read's failure
+ * reads who started it, its counts (the warnings it planned too) and its outcome, with the read's failure
  * code and the members whose removal failed under the outcome.
  */
 
@@ -21,6 +21,7 @@ const RUN: InactivityRunRow = {
   matched: 1200,
   qualified: 3,
   removed: 2,
+  warned: 4,
   failed: 1,
   blocked: null,
   error: null,
@@ -46,13 +47,14 @@ describe("RunsTable", () => {
       "Tautulli users",
       "Members found",
       "Removed",
+      "Warned",
       "Failed",
       "Outcome",
     ])
     const link = screen.getByTestId("admin-inactivity-run-run-1")
     expect(link).toHaveAttribute("href", "/admin/audit?run=run-1")
     expect(within(link).getByTestId("admin-inactivity-run-run-1-timestamp")).toHaveAttribute("dateTime", "2026-10-31T02:17:00.000Z")
-    expect(cells("run-1").slice(1)).toEqual(["The schedule", "1,250", "1,200", "2", "1", "Removed 2 of 3 membersNot removed: Ana Lopez"])
+    expect(cells("run-1").slice(1)).toEqual(["The schedule", "1,250", "1,200", "2", "4", "1", "Removed 2 of 3 membersNot removed: Ana Lopez"])
     expect(cells("run-0").slice(1, 2)).toEqual(["An admin"])
     expect(screen.getByTestId("admin-inactivity-runs-pagination-info")).toHaveTextContent("Showing all 2 runs")
   })
