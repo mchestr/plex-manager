@@ -11,7 +11,9 @@
  *
  * ## Steps
  *
- * 1. Mark rows left `sending` for over an hour `failed`, code `stalled`.
+ * 1. Mark rows left `sending` for over an hour `failed`, code `stalled`, and
+ *    log `inactivity_notice.failed` for them, as the job does for each
+ *    failed row.
  * 2. Read the members' rows and plan (`planWarnings`).
  * 3. Stop when the run's signal aborted.
  * 4. Store the plans. A member whose stored address is one address that
@@ -60,7 +62,8 @@ export interface WarningStepOptions {
 export async function runWarningStep(options: WarningStepOptions): Promise<number> {
   const { runId, members, now, signal } = options
   if (signal?.aborted) return 0
-  await failStalledNotices(now)
+  const stalled = await failStalledNotices(now)
+  if (stalled > 0) logger.error("inactivity_notice.failed", undefined, { runId, code: "stalled", count: stalled })
 
   const rows = await readNotices(members.map((member) => member.id))
   const byUser = Map.groupBy(rows, (row) => row.userId)

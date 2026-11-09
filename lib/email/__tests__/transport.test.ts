@@ -119,6 +119,21 @@ describe("classifySmtpError", () => {
     expect(classifySmtpError(Object.assign(new Error("No STARTTLS"), { code: "ETLS" })).kind).toBe("refused")
   })
 
+  it.each(["CERT_HAS_EXPIRED", "ERR_TLS_CERT_ALTNAME_INVALID", "DEPTH_ZERO_SELF_SIGNED_CERT", "UNABLE_TO_VERIFY_LEAF_SIGNATURE", "SELF_SIGNED_CERT_IN_CHAIN"])(
+    "counts a server certificate that fails with %s as refused, since a retry meets the same certificate",
+    (tlsCode) => {
+      // nodemailer reports a TLS socket error as ESOCKET and keeps the TLS code as originalCode
+      const error = Object.assign(new Error("certificate check failed"), { code: "ESOCKET", originalCode: tlsCode, command: "CONN" })
+      expect(classifySmtpError(error)).toEqual({ kind: "refused", smtpCode: null, status: null, step: "CONN" })
+      expect(classifySmtpError(Object.assign(new Error("certificate check failed"), { code: tlsCode })).kind).toBe("refused")
+    }
+  )
+
+  it("still counts a dropped connection with another system code as temporary", () => {
+    const error = Object.assign(new Error("socket hang up"), { code: "ESOCKET", originalCode: "ECONNRESET", command: "CONN" })
+    expect(classifySmtpError(error).kind).toBe("temporary")
+  })
+
   it("never keeps the reply text or an address from the command", () => {
     const failure = classifySmtpError(smtpError({ command: "RCPT TO:<someone@example.com>", responseCode: 550, response: "550 5.1.1 <someone@example.com>" }))
     expect(failure.step).toBe("RCPT TO")

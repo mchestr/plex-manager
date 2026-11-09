@@ -3,9 +3,10 @@
  */
 
 const mockInfo = jest.fn()
+const mockError = jest.fn()
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/utils/logger", () => ({
-  createLogger: () => ({ debug: jest.fn(), info: (...args: unknown[]) => mockInfo(...args), warn: jest.fn(), error: jest.fn() }),
+  createLogger: () => ({ debug: jest.fn(), info: (...args: unknown[]) => mockInfo(...args), warn: jest.fn(), error: (...args: unknown[]) => mockError(...args) }),
 }))
 
 import { mockReset } from "jest-mock-extended"
@@ -80,6 +81,16 @@ describe("runWarningStep", () => {
     ])
     expect(enqueue).toHaveBeenCalledWith(["n1"])
     expect(mockInfo).toHaveBeenCalledWith("inactivity.warnings_planned", { runId: "run-1", warned: 2, pending: 1 })
+  })
+
+  it("logs the rows it marks stalled as failed rows, which the failure alert matches", async () => {
+    await runWarningStep(options())
+    expect(mockError).not.toHaveBeenCalled()
+
+    prismaMock.inactivityNotice.updateMany.mockResolvedValue({ count: 2 })
+    prismaMock.inactivityNotice.findMany.mockReset().mockResolvedValue([])
+    await runWarningStep(options())
+    expect(mockError).toHaveBeenCalledWith("inactivity_notice.failed", undefined, { runId: "run-1", code: "stalled", count: 2 })
   })
 
   it("reads no address and enqueues nothing when nothing is due", async () => {
