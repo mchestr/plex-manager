@@ -11,6 +11,19 @@ Last seen is the start of the member's newest play, as Tautulli records it
 (`get_users_table`). The app matches a Tautulli user to a member by their
 plex.tv account id, never by name.
 
+Tautulli records a play only when it stops. So each read also asks Tautulli
+for the plays open right now (`get_activity`), before it reads the recorded
+plays. A member with an open play, playing or paused, counts as seen at the
+time of the read, unless an earlier read stored a later time. This keeps a
+member who is still watching during the daily run from looking inactive. An
+open play counts only for a member whose history Tautulli keeps. Without
+"Keep history", the member stays unknown, and the run never removes them.
+
+When Tautulli cannot list its open plays, the read logs
+`inactivity.activity_failed` and stores the recorded plays alone. The run
+then removes no one (see Stale data guards), but it still plans the warning
+emails. An open play does not count for the 14-day guard.
+
 - **Where it shows:** the **Last seen** column on Admin > Members > Users,
   and **Last seen on Plex** on a member's Overview tab.
 - **Never:** Tautulli knows the member but has no play for them.
@@ -145,6 +158,8 @@ A run removes no one when:
   play is newer than that, it has no play at all, or the app could not read
   it. A Tautulli that was added late, reset or emptied has no record of older
   plays, so a member who played before then could look inactive.
+- Tautulli could not list the plays open right now. A member who is still
+  watching could then look inactive. The read and the warning emails go on.
 - No Plex server is set up, plex.tv does not answer, or plex.tv refuses the
   server token.
 

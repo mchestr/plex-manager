@@ -5,7 +5,7 @@
 import type { z } from "zod"
 
 import { tautulliCommand } from "@/lib/connections/tautulli"
-import { getOldestPlay, listTautulliLastSeen, MAX_PAGES, PAGE_LENGTH } from "@/lib/connections/tautulli-last-seen"
+import { getOldestPlay, listTautulliLastSeen, listTautulliPlayingUsers, MAX_PAGES, PAGE_LENGTH } from "@/lib/connections/tautulli-last-seen"
 
 jest.mock("@/lib/connections/tautulli", () => ({ tautulliCommand: jest.fn() }))
 
@@ -276,5 +276,71 @@ describe("getOldestPlay", () => {
   it("passes a failed call on", async () => {
     command.mockResolvedValueOnce({ ok: false, code: "TAUTULLI_ERROR" })
     await expect(getOldestPlay(config)).resolves.toEqual({ ok: false, code: "TAUTULLI_ERROR" })
+  })
+})
+
+describe("listTautulliPlayingUsers", () => {
+  /** Answers with one `get_activity` payload, parsed by the caller's schema as `tautulliCommand` does. */
+  function activity(data: unknown) {
+    command.mockImplementationOnce(async (_config, _cmd, _params, schema) => {
+      const parsed = (schema as z.ZodType).safeParse(data)
+      return parsed.success ? { ok: true, data: parsed.data } : { ok: false, code: "INVALID_RESPONSE" }
+    })
+  }
+
+  /** A `get_activity` session with the personal fields Tautulli sends. */
+  const session = (userId: unknown, state = "playing") => ({
+    user_id: userId,
+    state,
+    user: "Jane Doe",
+    friendly_name: "Jane Doe",
+    email: "jane@example.com",
+    ip_address: "203.0.113.7",
+    full_title: "A film",
+  })
+
+  it("asks for the current activity with the caller's signal and one retry", async () => {
+    activity({ stream_count: "0", sessions: [] })
+    const signal = new AbortController().signal
+
+    await expect(listTautulliPlayingUsers(config, { signal })).resolves.toEqual({ ok: true, data: { userIds: [], dropped: 0 } })
+    expect(command).toHaveBeenCalledWith(config, "get_activity", {}, expect.anything(), { signal, timeoutMs: 30_000, attempts: 2 })
+  })
+
+  it("keeps only the plex.tv account id of every open session, whatever its state, each id once", async () => {
+    activity({
+      stream_count: "4",
+      sessions: [session(7, "playing"), session("8", "paused"), session(9, "buffering"), session(7, "playing")],
+    })
+
+    const result = await listTautulliPlayingUsers(config)
+
+    expect(result).toEqual({ ok: true, data: { userIds: [7, 8, 9], dropped: 0 } })
+    expect(JSON.stringify(result)).not.toMatch(/Jane|example\.com|203\.0|film/)
+  })
+
+  it.each<[string, unknown]>([
+    ["a name for an id", "Jane"],
+    ["no id", undefined],
+    ["a negative id", -1],
+    ["a fractional id", 1.5],
+  ])("leaves out and counts a session with %s", async (_name, userId) => {
+    activity({ sessions: [session(userId), session(5)] })
+
+    await expect(listTautulliPlayingUsers(config)).resolves.toEqual({ ok: true, data: { userIds: [5], dropped: 1 } })
+  })
+
+  it.each<[string, unknown]>([
+    ["no sessions list, as when Tautulli cannot read Plex", { stream_count: 0 }],
+    ["an empty object", {}],
+    ["a sessions value that is not a list", { sessions: "none" }],
+  ])("fails the read on %s, so it never passes as nobody playing", async (_name, data) => {
+    activity(data)
+    await expect(listTautulliPlayingUsers(config)).resolves.toEqual({ ok: false, code: "INVALID_RESPONSE" })
+  })
+
+  it("passes a failed call on", async () => {
+    command.mockResolvedValueOnce({ ok: false, code: "TIMEOUT" })
+    await expect(listTautulliPlayingUsers(config)).resolves.toEqual({ ok: false, code: "TIMEOUT" })
   })
 })

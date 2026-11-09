@@ -111,6 +111,7 @@ const options = (patch: Partial<SweepOptions> = {}): SweepOptions => ({
   readSince: NOW,
   newestPlayAt: daysAgo(1),
   oldestPlayAt: daysAgo(365),
+  activityRead: true,
   ...patch,
 })
 
@@ -301,6 +302,49 @@ describe("runSweep candidates", () => {
     expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
     expect(jest.mocked(unshareMember).mock.calls.map(([target]) => target.id)).toEqual(["back-long-ago"])
     expect(result.entries[0]).toMatchObject({ userId: "back-long-ago", lastActiveAt: daysAgo(200).toISOString() })
+  })
+})
+
+describe("runSweep open plays", () => {
+  it("removes no one when the read could not list the open plays, and counts who qualified", async () => {
+    members(member("u1", "42"), member("u2", "43", { lastSeenAt: daysAgo(1) }))
+    shares("42", "43")
+
+    await expect(runSweep(options({ activityRead: false }))).resolves.toEqual({
+      qualified: 1,
+      removed: 0,
+      failed: 0,
+      warned: 0,
+      entries: [],
+      blocked: "activity_failed",
+    })
+    expect(unshareMember).not.toHaveBeenCalled()
+  })
+
+  it("still plans the warnings", async () => {
+    jest.mocked(runWarningStep).mockResolvedValue(1)
+    members(member("u1", "42"))
+    shares("42")
+
+    const run = options({ activityRead: false, warnings: { warningsEnabled: true, warningDays: [30, 7, 1] }, enqueueNotices: jest.fn(async () => undefined) })
+    await expect(runSweep(run)).resolves.toMatchObject({ removed: 0, warned: 1, blocked: "activity_failed" })
+    expect(runWarningStep).toHaveBeenCalledWith(expect.objectContaining({ members: [expect.objectContaining({ id: "u1" })] }))
+  })
+
+  it("names the open plays before the safety limit", async () => {
+    const shared = Array.from({ length: 40 }, (_, index) => member(`u${index}`, String(100 + index), { lastSeenAt: index < 3 ? daysAgo(400) : daysAgo(1) }))
+    members(...shared)
+    shares(...shared.map((row) => row.plexUserId!))
+
+    await expect(runSweep(options({ trigger: "scheduled", activityRead: false }))).resolves.toMatchObject({ qualified: 3, blocked: "activity_failed" })
+    expect(unshareMember).not.toHaveBeenCalled()
+  })
+
+  it("removes no one on a run with no one to remove either", async () => {
+    members(member("u1", "42", { lastSeenAt: daysAgo(1) }))
+    shares("42")
+
+    await expect(runSweep(options({ activityRead: false }))).resolves.toMatchObject({ qualified: 0, blocked: "activity_failed" })
   })
 })
 
