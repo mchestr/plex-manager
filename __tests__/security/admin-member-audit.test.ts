@@ -114,6 +114,7 @@ describe("admin writes to member data", () => {
       readSince: now,
       newestPlayAt: now,
       oldestPlayAt: new Date("2024-01-01T00:00:00.000Z"),
+      activityRead: true,
     })
 
     const written = jest.mocked(recordAuditEvent).mock.calls.filter(([type]) => type === AuditEventType.MEMBER_UNSHARED)

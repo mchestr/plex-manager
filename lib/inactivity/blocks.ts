@@ -12,6 +12,7 @@
  * | `no_plex_server`  | No active Plex server                                             |
  * | `plex_unavailable`| plex.tv did not answer the share list read                       |
  * | `plex_auth`       | plex.tv refused the server token                                  |
+ * | `activity_failed` | Tautulli did not list its open plays (a member may be playing)    |
  * | `over_limit`      | A scheduled run found more inactive members than its safety limit |
  * | `not_confirmed`   | An admin run found an inactive member the admin did not confirm   |
  * | `audit_failed`    | An audit row could not be written, so the run stopped             |
@@ -35,6 +36,7 @@ export const INACTIVITY_BLOCKS = [
   "no_plex_server",
   "plex_unavailable",
   "plex_auth",
+  "activity_failed",
   "over_limit",
   "not_confirmed",
   "audit_failed",
@@ -73,6 +75,7 @@ const BLOCK_LABELS: Record<InactivityBlock, string> = {
   no_plex_server: "No Plex server is set up",
   plex_unavailable: "Plex did not answer",
   plex_auth: "Plex refused the server token",
+  activity_failed: "Tautulli did not list the plays in progress",
   over_limit: "More members qualified than the safety limit allows",
   not_confirmed: "A member who qualified was not confirmed",
   audit_failed: "An audit row could not be written, so the run stopped",

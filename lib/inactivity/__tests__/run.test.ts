@@ -70,7 +70,7 @@ beforeEach(() => {
   prismaMock.inactivitySettings.updateMany.mockResolvedValue({ count: 1 })
   prismaMock.inactivityRun.create.mockResolvedValue(buildInactivityRun({ id: "run-1" }))
   prismaMock.inactivityRun.findMany.mockResolvedValue([])
-  jest.mocked(syncLastSeen).mockResolvedValue({ ok: true, tautulliUsers: 12, matched: 9, newestPlayAt, oldestPlayAt })
+  jest.mocked(syncLastSeen).mockResolvedValue({ ok: true, tautulliUsers: 12, matched: 9, newestPlayAt, oldestPlayAt, activityRead: true })
   jest.mocked(runSweep).mockResolvedValue({ qualified: 0, removed: 0, failed: 0, warned: 0, entries: [], blocked: "disabled" })
   jest.mocked(recordAuditEvent).mockResolvedValue(undefined)
 })
@@ -295,7 +295,17 @@ describe("runMemberActivity", () => {
       readSince: now,
       newestPlayAt,
       oldestPlayAt,
+      activityRead: true,
     })
+  })
+
+  it("passes a failed open-play read on to the sweep", async () => {
+    settings(true, 90)
+    jest.mocked(syncLastSeen).mockResolvedValue({ ok: true, tautulliUsers: 12, matched: 9, newestPlayAt, oldestPlayAt, activityRead: false })
+
+    await runMemberActivity("scheduled", { actorId: "system", now })
+
+    expect(runSweep).toHaveBeenCalledWith(expect.objectContaining({ activityRead: false }))
   })
 
   it("passes the warning settings and the caller's enqueuer on to the sweep", async () => {
@@ -426,9 +436,9 @@ describe("runMemberActivity audit", () => {
   })
 
   it.each([
-    ["the daily read while the sweep is off", "scheduled", { ok: true, tautulliUsers: 12, matched: 9, newestPlayAt, oldestPlayAt }, "disabled"],
+    ["the daily read while the sweep is off", "scheduled", { ok: true, tautulliUsers: 12, matched: 9, newestPlayAt, oldestPlayAt, activityRead: true }, "disabled"],
     ["a daily read that failed", "scheduled", { ok: false, code: "TIMEOUT" }, "sync_failed"],
-    ["an admin run while the sweep is off", "admin", { ok: true, tautulliUsers: 12, matched: 9, newestPlayAt, oldestPlayAt }, "disabled"],
+    ["an admin run while the sweep is off", "admin", { ok: true, tautulliUsers: 12, matched: 9, newestPlayAt, oldestPlayAt, activityRead: true }, "disabled"],
   ] as const)("writes it for every stored run, also %s, so its audit log link is never empty", async (_name, trigger, sync, blocked) => {
     jest.mocked(syncLastSeen).mockResolvedValue(sync)
 

@@ -37,6 +37,17 @@
  * carries `date` and `started` (epoch seconds); `date` is used, else
  * `started`, and a row with neither fails the read.
  *
+ * ## Playing now
+ *
+ * {@link listTautulliPlayingUsers} reads `get_activity`: the plex.tv account
+ * ids of the users with a session open right now, whatever its state
+ * (playing, paused or buffering). Tautulli records a play in its history only
+ * when the session stops, so `get_users_table` does not show a play that is
+ * still open. When Tautulli cannot read Plex's sessions it still answers
+ * success, with no `sessions` list at all; that fails the read, so it does not
+ * pass as nobody playing. A session that does not parse is left out and
+ * counted.
+ *
  * @module lib/connections/tautulli-last-seen
  */
 
@@ -85,9 +96,12 @@ function keepsHistory(value: unknown): boolean {
   return value === 1 || value === true
 }
 
+/** A plex.tv account id, as Tautulli sends it: a number or a numeric string. */
+const userIdSchema = z.union([z.number(), numeric]).pipe(z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER))
+
 const rowSchema = z
   .object({
-    user_id: z.union([z.number(), numeric]).pipe(z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)),
+    user_id: userIdSchema,
     last_seen: epochSeconds,
     keep_history: z.union([z.number(), z.string(), z.boolean(), z.null()]).optional(),
   })
@@ -116,6 +130,18 @@ const oldestPageSchema = z
     ),
   })
   .transform((page) => page.data[0] ?? null)
+
+/** `get_activity`'s `data`; the `sessions` list is required (see Playing now). */
+const activitySchema = z.object({ sessions: z.array(z.unknown()) })
+
+const sessionSchema = z.object({ user_id: userIdSchema })
+
+export interface TautulliPlayingUsers {
+  /** The plex.tv account ids with an open session, each once. */
+  userIds: number[]
+  /** Sessions left out because they did not parse. */
+  dropped: number
+}
 
 function toDate(seconds: number | "" | null | undefined): Date | null {
   if (typeof seconds !== "number") return null
@@ -172,4 +198,26 @@ export async function getOldestPlay(
 ): Promise<ServiceResult<Date | null, ServiceErrorCode | "TAUTULLI_ERROR">> {
   const params = { start: 0, length: 1, order_column: "date", order_dir: "asc" }
   return tautulliCommand(config, "get_history", params, oldestPageSchema, { signal, timeoutMs: 60_000, attempts: 2 })
+}
+
+/**
+ * The users with a session open on the server right now, from
+ * `get_activity`. The daily read counts each one as seen at the time of the
+ * read, so a play that has not stopped yet still counts.
+ */
+export async function listTautulliPlayingUsers(
+  config: Endpoint,
+  { signal }: { signal?: AbortSignal } = {}
+): Promise<ServiceResult<TautulliPlayingUsers, ServiceErrorCode | "TAUTULLI_ERROR">> {
+  const result = await tautulliCommand(config, "get_activity", {}, activitySchema, { signal, timeoutMs: 30_000, attempts: 2 })
+  if (!result.ok) return result
+
+  const userIds = new Set<number>()
+  let dropped = 0
+  for (const raw of result.data.sessions) {
+    const session = sessionSchema.safeParse(raw)
+    if (session.success) userIds.add(session.data.user_id)
+    else dropped++
+  }
+  return { ok: true, data: { userIds: [...userIds], dropped } }
 }
