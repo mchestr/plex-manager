@@ -38,6 +38,7 @@ const DATA: InactivityPageData = {
       matched: 10,
       qualified: 0,
       removed: 0,
+      warned: 0,
       failed: 0,
       blocked: null,
       error: null,
@@ -52,6 +53,7 @@ const DATA: InactivityPageData = {
       matched: 10,
       qualified: 30,
       removed: 0,
+      warned: 0,
       failed: 0,
       blocked: "not_confirmed",
       error: null,
@@ -84,6 +86,10 @@ const DATA: InactivityPageData = {
     shareCheck: null,
     scheduledLimit: 1,
     readSince: new Date("2026-10-31T07:17:00Z"),
+    warningsOn: false,
+    waiting: [],
+    firstWarnings: [],
+    cannotEmail: [],
   },
 }
 
@@ -116,7 +122,7 @@ describe("Admin inactivity page", () => {
     expect(now.getTime()).toBeLessThanOrEqual(Date.now())
   })
 
-  it("shows the header, the settings card with the newest run, the preview and the runs", async () => {
+  it("shows the header, the settings card with the newest run, the preview, the warning lists and the runs", async () => {
     await renderPage()
 
     expect(screen.getByRole("heading", { level: 1, name: "Inactive members" })).toBeInTheDocument()
@@ -127,6 +133,9 @@ describe("Admin inactivity page", () => {
     expect(screen.getByTestId("admin-inactivity-read-timestamp")).toHaveTextContent("Oct 31, 2026, 2:17 AM CDT")
     expect(screen.getByTestId("admin-inactivity-member-u-sam")).toHaveAttribute("href", "/admin/users/u-sam")
     expect(screen.getByTestId("admin-inactivity-not-listed-admin")).toHaveTextContent("Admin1")
+    expect(screen.getByRole("heading", { level: 2, name: "Warning emails" })).toBeInTheDocument()
+    expect(screen.getByTestId("admin-inactivity-waiting-none")).toBeInTheDocument()
+    expect(screen.getByTestId("admin-inactivity-warnings-state")).not.toHaveTextContent("Automatic removal is off")
     expect(screen.getByRole("heading", { level: 2, name: "Recent runs" })).toBeInTheDocument()
     expect(within(screen.getByTestId("admin-inactivity-runs-row-run-1")).getByText("A member who qualified was not confirmed")).toBeInTheDocument()
     expect(screen.queryByTestId("admin-inactivity-no-tautulli")).not.toBeInTheDocument()
@@ -142,6 +151,13 @@ describe("Admin inactivity page", () => {
     await user.click(screen.getByTestId("admin-inactivity-run-confirm"))
 
     expect(runMemberActivityNow).toHaveBeenCalledWith({ confirmedUserIds: ["u-nia", "u-sam"] })
+  })
+
+  it("tells the warning lists that automatic removal is off", async () => {
+    jest.mocked(getInactivityPage).mockResolvedValue({ ...DATA, settings: { ...DATA.settings, enabled: false } })
+    await renderPage()
+
+    expect(screen.getByTestId("admin-inactivity-warnings-state")).toHaveTextContent("Automatic removal is off too, so no run sends warnings")
   })
 
   it("says who saved last, and leaves the footer out before a first save", async () => {

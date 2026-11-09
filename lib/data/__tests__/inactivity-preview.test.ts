@@ -6,8 +6,9 @@
  * `getInactivityPreview`: the admin check before any read, the sweep's rules
  * over the sweep's member rows (each member counted once: protected, active,
  * without access or listed), the longest inactive first, the read the
- * preview stands on, the safety limit from the shares, and every way the
- * share list can fail to load.
+ * preview stands on, the safety limit from the shares, every way the share
+ * list can fail to load, and the warning lists: who waits for a date, who
+ * the next run warns first, and who of them the app cannot email.
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -122,7 +123,7 @@ describe("getInactivityPreview", () => {
     ])
     expect(prismaMock.user.findMany).toHaveBeenCalledWith({
       where: { id: { in: ["u-oldest", "u-a", "u-b", "u-recent-play"] } },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, disabledAt: true, inactivityEmailsOff: true },
     })
   })
 
@@ -322,11 +323,138 @@ describe("getInactivityPreview", () => {
       await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ rows: [], held: 2 })
     })
 
-    it("reads no rows when no one is inactive with a share", async () => {
-      given([member("u-1", { lastSeenAt: daysAgo(1) })])
+    it("reads no rows when no member with a share is free of a skip", async () => {
+      given([member("u-admin", { isAdmin: true }), member("u-no-share")], ["u-no-share"])
 
-      await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ rows: [], held: 0 })
+      await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ rows: [], held: 0, waiting: [], firstWarnings: [] })
       expect(prismaMock.inactivityNotice.findMany).not.toHaveBeenCalled()
+      expect(prismaMock.user.findMany).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("the warning lists", () => {
+    // 2026-10-31 12:00 UTC is 08:00 in Toronto: the next run is Nov 1 at 02:17, which sends at 09:00 that day
+    const TORONTO_DAY = (day: string) => new Date(`${day}T05:00:00Z`)
+    const detail = (userId: string, cycleAt: Date, patch: Record<string, unknown> = {}) => ({
+      id: `n-${userId}`,
+      userId,
+      cycleAt,
+      leadDays: 30,
+      removeAfter: TORONTO_DAY("2026-11-20"),
+      status: "sent",
+      code: null,
+      attempts: 1,
+      zone: "America/Toronto",
+      handledAt: daysAgo(20),
+      updatedAt: daysAgo(20),
+      ...patch,
+    })
+    const plexWithEmails = (members: InactivityMember[], emails: Record<string, string>) =>
+      jest.mocked(getPlexUsers).mockResolvedValue({
+        success: true,
+        data: members.map((m) => ({ ...plexUser(m.plexUserId!), email: emails[m.id] })),
+      })
+
+    it("projects the first warnings of a switch-on while warnings are off, the longest inactive first, spread over the runs", async () => {
+      given([member("u-new", { createdAt: daysAgo(300) }), member("u-old", { createdAt: daysAgo(500) }), member("u-recent", { lastSeenAt: daysAgo(10) })])
+
+      const preview = await getInactivityPreview(180, NOW)
+
+      expect(preview.warningsOn).toBe(false)
+      // Three members with a share: a scheduled run may remove one, so the second gets the next day
+      expect(preview.firstWarnings).toEqual([
+        { id: "u-old", name: "Name of u-old", removalDay: "2026-12-01", lastActiveAt: daysAgo(500) },
+        { id: "u-new", name: "Name of u-new", removalDay: "2026-12-02", lastActiveAt: daysAgo(300) },
+      ])
+      expect(preview.waiting).toEqual([])
+    })
+
+    it("lists a member with an open warning as waiting, with the newest warning, before they are inactive", async () => {
+      const warned = member("u-warned", { lastSeenAt: daysAgo(170) })
+      given([warned])
+      noticeRows([detail("u-warned", daysAgo(170))] as never)
+
+      const preview = await getInactivityPreview(180, NOW)
+
+      expect(preview.waiting).toEqual([
+        {
+          id: "u-warned",
+          name: "Name of u-warned",
+          removalDay: "2026-11-20",
+          last: { leadDays: 30, lastWarning: false, status: "sent", code: null, at: daysAgo(20) },
+        },
+      ])
+      expect(preview).toMatchObject({ rows: [], firstWarnings: [], active: 1 })
+    })
+
+    it("names each member of the lists the app cannot email by code, never by address", async () => {
+      const refused = member("u-refused", { lastSeenAt: daysAgo(170) })
+      const members = [member("u-none"), member("u-off"), member("u-ok"), member("u-other"), member("u-disabled"), refused]
+      given(members)
+      plexWithEmails(members, {
+        "u-off": "off@example.com",
+        "u-ok": "ok@example.com",
+        "u-other": "new@example.com",
+        "u-disabled": "disabled@example.com",
+        "u-refused": "refused@example.com",
+      })
+      noticeRows([detail("u-refused", daysAgo(170), { status: "skipped", code: "rejected" })] as never)
+      prismaMock.user.findMany.mockResolvedValue([
+        buildUser({ id: "u-none", name: "None", email: null }),
+        buildUser({ id: "u-off", name: "Off", email: "off@example.com", inactivityEmailsOff: true }),
+        buildUser({ id: "u-ok", name: "Ok", email: "OK@example.com" }),
+        buildUser({ id: "u-other", name: "Other", email: "old@example.com" }),
+        buildUser({ id: "u-disabled", name: "Disabled", email: "disabled@example.com", disabledAt: daysAgo(5) }),
+        buildUser({ id: "u-refused", name: "Refused", email: "refused@example.com" }),
+      ])
+
+      const preview = await getInactivityPreview(180, NOW)
+
+      expect(preview.cannotEmail).toEqual([
+        { id: "u-refused", name: "Refused", code: "rejected", list: "waiting" },
+        { id: "u-disabled", name: "Disabled", code: "disabled", list: "first" },
+        { id: "u-none", name: "None", code: "no_email", list: "first" },
+        { id: "u-off", name: "Off", code: "unsubscribed", list: "first" },
+        { id: "u-other", name: "Other", code: "email_unconfirmed", list: "first" },
+      ])
+      expect(JSON.stringify(preview.cannotEmail)).not.toContain("@")
+    })
+
+    it("names a member without a name as Unknown member in the warning lists, never by their address", async () => {
+      const members = [member("u-noname"), member("u-waiting", { lastSeenAt: daysAgo(170) })]
+      given(members)
+      plexWithEmails(members, { "u-waiting": "waiting@example.com" })
+      noticeRows([detail("u-waiting", daysAgo(170))] as never)
+      prismaMock.user.findMany.mockResolvedValue([
+        buildUser({ id: "u-noname", name: null, email: "member" }),
+        buildUser({ id: "u-waiting", name: "", email: "waiting@example.com" }),
+      ])
+
+      const preview = await getInactivityPreview(180, NOW)
+
+      expect(preview.firstWarnings).toEqual([expect.objectContaining({ id: "u-noname", name: "Unknown member" })])
+      expect(preview.waiting).toEqual([expect.objectContaining({ id: "u-waiting", name: "Unknown member" })])
+      expect(preview.cannotEmail).toEqual([{ id: "u-noname", name: "Unknown member", code: "invalid_email", list: "first" }])
+      // The list of whom a run would remove keeps its fallback to the stored value
+      expect(preview.rows).toEqual([expect.objectContaining({ id: "u-noname", name: "member" })])
+      expect(JSON.stringify([preview.waiting, preview.firstWarnings, preview.cannotEmail])).not.toMatch(/@|"member"/)
+    })
+
+    it("does not check addresses against plex.tv when its list could not be read", async () => {
+      jest.mocked(listInactivityMembers).mockResolvedValue([member("u-1")])
+      jest.mocked(getPlexUsers).mockResolvedValue({ success: false, status: 503, error: "Unavailable" })
+
+      const preview = await getInactivityPreview(180, NOW)
+
+      expect(preview.firstWarnings.map((row) => row.id)).toEqual(["u-1"])
+      expect(preview.cannotEmail).toEqual([])
+    })
+
+    it("says when warnings are on", async () => {
+      prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ warningsEnabled: true }))
+      given([member("u-1")])
+
+      await expect(getInactivityPreview(180, NOW)).resolves.toMatchObject({ warningsOn: true, rows: [], held: 1, firstWarnings: [{ id: "u-1" }] })
     })
   })
 })

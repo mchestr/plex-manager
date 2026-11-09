@@ -147,9 +147,24 @@ export function noticeSendDay(now: Date, zone: string): string {
  * ```
  */
 export function removalRunDay(at: Date, serverZone: string): string {
+  return dayIn(nextDailyRun(at, serverZone), serverZone)
+}
+
+const dailyRunOn = (day: string, serverZone: string): Date =>
+  wallTimeToInstant(`${day}T${String(DAILY_RUN.hour).padStart(2, "0")}:${String(DAILY_RUN.minute).padStart(2, "0")}`, serverZone)
+
+/**
+ * The start of the first daily run at or after `at`, in the server zone.
+ *
+ * @example
+ * ```ts
+ * nextDailyRun(new Date("2026-12-11T15:00:00Z"), "America/Toronto") // 2026-12-12T07:17:00.000Z (02:17 the next day)
+ * ```
+ */
+export function nextDailyRun(at: Date, serverZone: string): Date {
   const day = dayIn(at, serverZone)
-  const wall = `${day}T${String(DAILY_RUN.hour).padStart(2, "0")}:${String(DAILY_RUN.minute).padStart(2, "0")}`
-  return wallTimeToInstant(wall, serverZone) >= at ? day : addDays(day, 1)
+  const today = dailyRunOn(day, serverZone)
+  return today >= at ? today : dailyRunOn(addDays(day, 1), serverZone)
 }
 
 type HandledRow = NoticeRow & { handledAt: Date }

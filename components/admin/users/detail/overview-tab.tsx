@@ -5,11 +5,13 @@ import { getUserActivityTimeline } from "@/actions/user-queries"
 import { UserActivityTimeline } from "@/components/admin/users/user-activity-timeline"
 import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
+import { InactivityEmails } from "@/components/admin/users/detail/inactivity-emails"
 import { InactivityExclusion } from "@/components/admin/users/detail/inactivity-exclusion"
 import { RemoveMemberDialog } from "@/components/admin/users/detail/remove-member-dialog"
 import { RequestTiersExclusion } from "@/components/admin/users/detail/request-tiers-exclusion"
 import { userDetail } from "@/lib/admin/routes"
 import type { UserDetailHeaderData } from "@/lib/admin/user-detail"
+import { getMemberInactivityEmails } from "@/lib/data/member-inactivity"
 import { prisma } from "@/lib/prisma"
 import type { BoundFormat } from "@/lib/utils/format"
 
@@ -46,15 +48,18 @@ function LastSeenOnPlex({ header, f }: { header: UserDetailHeaderData; f: BoundF
 }
 
 /**
- * The member's account facts, when they last played on Plex and whether the
- * inactivity sweep may remove them, their request tier, their activity timeline (P10.6) and the danger zone (P11.13).
+ * The member's account facts, when they last played on Plex, whether the
+ * inactivity sweep may remove them and their warning emails, their request tier, their activity timeline (P10.6) and the danger zone (P11.13).
  */
 export async function OverviewTab({ header, f }: { header: UserDetailHeaderData; f: BoundFormat }) {
-  const [timeline, tiers] = await Promise.all([
+  // The sweep never removes an admin or the server owner, so its switch and its emails would say nothing
+  const sweepApplies = Boolean(header.plexUserId) && !header.isAdmin && !header.isOwner
+  const [timeline, tiers, inactivityEmails] = await Promise.all([
     getUserActivityTimeline({ userId: header.id, pageSize: 10 }),
     header.plexUserId
       ? prisma.user.findUnique({ where: { id: header.id }, select: { requestTiersExcluded: true } })
       : null,
+    sweepApplies ? getMemberInactivityEmails(header.id) : null,
   ])
   const { discord } = header
 
@@ -88,12 +93,12 @@ export async function OverviewTab({ header, f }: { header: UserDetailHeaderData;
             "Not linked"
           )}
         </DetailItem>
-        {/* The sweep never removes an admin or the server owner, so the switch would do nothing */}
-        {header.plexUserId && !header.isAdmin && !header.isOwner && (
+        {sweepApplies && (
           <DetailItem label="Inactivity">
             <InactivityExclusion userId={header.id} name={header.name} excluded={header.inactivityExcluded} />
           </DetailItem>
         )}
+        {inactivityEmails && <InactivityEmails emails={inactivityEmails} f={f} />}
       </dl>
 
       {tiers && (

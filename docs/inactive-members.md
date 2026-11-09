@@ -46,7 +46,7 @@ loses its claim stops.
 
 The page lists the newest 30 runs: when each started, who started it, the
 Tautulli users read, the members found, how many were removed, how many
-failed, and why a run removed no one. Each run in the list has an audit row,
+warning emails it planned, how many failed, and why a run removed no one. Each run in the list has an audit row,
 so you can open any run to see its events in the audit log.
 
 ## Who counts as inactive
@@ -89,9 +89,28 @@ first, with the same rules as the run. It uses the newest read of Tautulli,
 so a member who played since then can still be on the list until the next
 read. Under the list, the page counts everyone else and why they are left out.
 
+Under **Warning emails**, the page has three more lists:
+
+- **Waiting for their date**: members with an open warning. Each row shows
+  the removal date, the newest email and its status. While warning emails
+  are off, only a warning that went out or was skipped holds a date, so only
+  those members are here.
+- **First warning at the next run**: members with no warning yet whom the
+  next daily run warns, the longest inactive first. Each row shows the
+  removal date that the warning would name.
+- **Cannot email**: the members of the two lists above whom the app cannot
+  email, with the reason: no address, not one address, not the address on
+  plex.tv, disabled, unsubscribed or refused by the mail server. The three
+  lists show a member's name, never their address.
+
+While warning emails or automatic removal are off, no run sends a warning.
+The second and third lists then show what the first run after you turn them
+on would do.
+
 When Plex does not answer, the page cannot check the shares. It then lists
 every inactive member, and says that the list can include members who no
-longer have access. A run removes no one until Plex answers.
+longer have access. A run removes no one and sends no warning until Plex
+answers.
 
 ## Safety limits
 
@@ -168,3 +187,9 @@ Open the member's page in Admin > Members > Users. On the Overview tab, turn on
 **Never remove for inactivity**. It saves at once. The run then never removes
 that member, however long they go without playing. Turn it off to let the run
 consider them again.
+
+The same tab shows the member's warning emails: the newest one, with its
+status and the removal date of their open warning, whether an address is on
+file, and **Access reminders**, which is Off when the member turned the emails
+off. With warning emails on, a removal date more than 7 days past does not
+show, because the next run starts the warnings again.

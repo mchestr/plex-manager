@@ -11,6 +11,7 @@ import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import {
   failStalledNotices,
   pendingNoticeIds,
+  readNoticeDetails,
   readNotices,
   readRemovalGate,
   warningRules,
@@ -77,6 +78,24 @@ describe("readNotices", () => {
 
   it("reads nothing for no members", async () => {
     await expect(readNotices([])).resolves.toEqual([])
+    expect(prismaMock.inactivityNotice.findMany).not.toHaveBeenCalled()
+  })
+})
+
+describe("readNoticeDetails", () => {
+  it("reads every row of the members with its code and when it last changed", async () => {
+    const detail = { ...stored("n1", "u1"), code: null, updatedAt: NOW }
+    prismaMock.inactivityNotice.findMany.mockResolvedValue([detail] as never)
+
+    await expect(readNoticeDetails(["u1"])).resolves.toEqual([detail])
+    expect(prismaMock.inactivityNotice.findMany).toHaveBeenCalledWith({
+      where: { userId: { in: ["u1"] } },
+      select: expect.objectContaining({ id: true, removeAfter: true, handledAt: true, code: true, updatedAt: true }),
+    })
+  })
+
+  it("reads nothing for no members", async () => {
+    await expect(readNoticeDetails([])).resolves.toEqual([])
     expect(prismaMock.inactivityNotice.findMany).not.toHaveBeenCalled()
   })
 })

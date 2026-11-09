@@ -51,6 +51,7 @@ function columns(f: BoundFormat): ColumnDef<InactivityRunRow>[] {
     { id: "tautulliUsers", header: "Tautulli users", cell: ({ row }) => f.number(row.original.tautulliUsers), meta: { align: "end", priority: 3 } },
     { id: "matched", header: "Members found", cell: ({ row }) => f.number(row.original.matched), meta: { align: "end", card: "field" } },
     { id: "removed", header: "Removed", cell: ({ row }) => f.number(row.original.removed), meta: { align: "end", card: "field" } },
+    { id: "warned", header: "Warned", cell: ({ row }) => f.number(row.original.warned), meta: { align: "end", card: "field" } },
     { id: "failed", header: "Failed", cell: ({ row }) => f.number(row.original.failed), meta: { align: "end", card: "field" } },
     { id: "outcome", header: "Outcome", cell: ({ row }) => <Outcome run={row.original} />, meta: { card: "field" } },
   ]
@@ -58,7 +59,8 @@ function columns(f: BoundFormat): ColumnDef<InactivityRunRow>[] {
 
 /**
  * The newest runs: when and how each started, the members read from
- * Tautulli, what the sweep did, and why it removed no one when it did not.
+ * Tautulli, what the sweep did (the warning emails it planned too), and why
+ * it removed no one when it did not.
  * Each opens the run's audit events (`/admin/audit?run=`).
  */
 export function RunsTable({ runs }: { runs: InactivityRunRow[] }) {

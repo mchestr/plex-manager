@@ -11,7 +11,8 @@ import { MOCK_USERS_TABLE } from '../mocks/tautulli-server';
  * mock Tautulli (`e2e/mocks/tautulli-server.ts`, `get_users_table`) and each
  * member page shows what the read found; while automatic removal is on and
  * the preview lists a member, Run now first asks to confirm the members it
- * lists; and a member page's switch keeps a member out of the sweep.
+ * lists; the warning lists show a projection while warnings are off, and a
+ * stored warning; and a member page's switch keeps a member out of the sweep.
  *
  * Run now and the switch are server-rendered, and a click before React
  * hydrates them does nothing, so each click repeats until its effect shows,
@@ -220,6 +221,41 @@ test.describe('Admin inactive members', () => {
       expect(await prisma.inactivityRun.count({ where: { startedAt: { gt: readAt } } })).toBe(0);
     } finally {
       await setRemoval(false);
+      await prisma.$disconnect();
+    }
+  });
+
+  test('the warning lists show who a switch-on warns first, who waits for a date and who the app cannot email', async ({ adminPage: page }) => {
+    const { id } = MEMBERS.inactive;
+    const prisma = createE2EPrismaClient();
+    try {
+      // The confirm test's read found this member, who never played. Without an address the app cannot email them
+      await prisma.user.update({ where: { id }, data: { email: null } });
+      await page.goto('/admin/inactivity');
+      await expect(page.getByTestId('admin-inactivity-warnings-state')).toContainText('Warning emails are off');
+      await expect(page.getByTestId(`admin-inactivity-first-member-${id}`)).toHaveAttribute('href', `/admin/users/${id}`);
+      await expect(page.getByTestId(`admin-inactivity-cannot-email-reason-${id}`)).toHaveText('No address');
+
+      // A sent warning that named a later date: the member waits for it, and no run removes them before it
+      const { createdAt } = await prisma.user.findUniqueOrThrow({ where: { id }, select: { createdAt: true } });
+      await prisma.inactivityNotice.create({
+        data: { userId: id, cycleAt: createdAt, leadDays: 30, removeAfter: new Date(Date.now() + 10 * DAY), status: 'sent', attempts: 1, zone: 'UTC', handledAt: new Date() },
+      });
+      await page.reload();
+      const waiting = page.getByTestId(`admin-inactivity-waiting-row-${id}`);
+      await expect(waiting).toContainText('30-day warning');
+      await expect(waiting).toContainText('Sent');
+      await expect(page.getByTestId(`admin-inactivity-first-member-${id}`)).toHaveCount(0);
+      await expect(page.getByTestId(`admin-inactivity-member-${id}`)).toHaveCount(0);
+
+      await page.goto(`/admin/users/${id}`);
+      await expect(page.getByTestId('admin-user-inactivity-emails')).toContainText('30-day warning', { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      await expect(page.getByTestId('admin-user-inactivity-removal-date')).toContainText('Removal on or after');
+      await expect(page.getByTestId('admin-user-email-on-file')).toHaveText('No');
+      await expect(page.getByTestId('admin-user-access-reminders')).toHaveText('On');
+    } finally {
+      await prisma.inactivityNotice.deleteMany({ where: { userId: id } });
+      await prisma.user.update({ where: { id }, data: { email: `${id}@example.com` } });
       await prisma.$disconnect();
     }
   });

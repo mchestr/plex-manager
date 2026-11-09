@@ -38,6 +38,10 @@ const PREVIEW: InactivityPreview = {
   shareCheck: null,
   scheduledLimit: 1,
   readSince: null,
+  warningsOn: false,
+  waiting: [],
+  firstWarnings: [],
+  cannotEmail: [],
 }
 
 const failed = (userId: string) => ({ userId, outcome: "failed", lastActiveAt: "2026-01-01T00:00:00.000Z", lastSeenAt: null, code: "busy" })
