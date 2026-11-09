@@ -105,9 +105,11 @@ describe("renderEmailHtml", () => {
   })
 })
 
+const UNSUBSCRIBE = "https://plex.example.com/email/unsubscribe?token=abc.def"
+
 describe("testEmail", () => {
   it("is marked as a test, greets the admin and links to the app", () => {
-    const email = testEmail(context(), "Sam")
+    const email = testEmail(context(), "Sam", UNSUBSCRIBE)
 
     expect(email.subject).toBe("[Test] Email from Northfield Plex")
     expect(email.text).toContain("Hi Sam,")
@@ -117,23 +119,30 @@ describe("testEmail", () => {
   })
 
   it("has the footer with and without EMAIL_REPLY_TO and EMAIL_POSTAL_ADDRESS", () => {
-    const plain = testEmail(context(), null).text
-    expect(plain).toContain("Northfield Plex.\nTo contact us, open https://plex.example.com\n")
+    const plain = testEmail(context(), null, UNSUBSCRIBE).text
+    expect(plain).toContain("Northfield Plex.\nTo contact us, open https://plex.example.com\nStop these emails: " + UNSUBSCRIBE + "\n")
 
-    const full = testEmail(context({ replyTo: "help@example.com", postalAddress: "1 Main Street" }), null)
-    expect(full.text).toContain("Northfield Plex. 1 Main Street\nTo contact us, reply to this email.\n")
+    const full = testEmail(context({ replyTo: "help@example.com", postalAddress: "1 Main Street" }), null, UNSUBSCRIBE)
+    expect(full.text).toContain("Northfield Plex. 1 Main Street\nTo contact us, reply to this email.\nStop these emails: ")
     expect(full.html).toContain("1 Main Street")
   })
 
+  it("ends the footer with the unsubscribe link in both parts", () => {
+    const email = testEmail(context(), "Sam", UNSUBSCRIBE)
+
+    expect(email.text.trimEnd().endsWith(`Stop these emails: ${UNSUBSCRIBE}`)).toBe(true)
+    expect(email.html).toContain(`href="${UNSUBSCRIBE}"`)
+  })
+
   it("escapes a server name and an admin name with markup", () => {
-    const email = testEmail(context({ serverName: "<script>x</script>" }), "<img src=x>")
+    const email = testEmail(context({ serverName: "<script>x</script>" }), "<img src=x>", UNSUBSCRIBE)
 
     expect(email.html).not.toMatch(/<script|<img/i)
     expect(email.text).toContain("Hi <img src=x>,")
   })
 
   it("never names the app, uses only absolute links and loads nothing remote", () => {
-    const { subject, text, html } = testEmail(context(), "Sam")
+    const { subject, text, html } = testEmail(context(), "Sam", UNSUBSCRIBE)
     const all = `${subject}\n${text}\n${html}`
 
     expect(all).not.toMatch(/Plex Manager|Wrapped/i)

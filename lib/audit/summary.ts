@@ -20,6 +20,7 @@
  * | `AUDIT_LOG_VIEWED`             | which `filters` are set, never their values    | "No filters", "Filters: category, member"                                        |
  * | `ASSISTANT_SOURCE_CHANGED`     | `kind`, `action`                               | "Skill source refreshed", "MCP server removed"                                   |
  * | `EMAIL_TEST_SENT`              | `status`, `smtpCode`                           | "Sent", "Not sent, the mail server did not take it (554)"                        |
+ * | `EMAIL_PREFERENCE_CHANGED`     | `enabled`, `via`                               | "Access reminders turned off, with the link in an email"                         |
  *
  * A section or field name shows only when it looks like code (`setup.plex`,
  * `apiKey`), a block code only when `lib/inactivity/blocks.ts` knows it, and a
@@ -194,6 +195,12 @@ function emailTest({ status, smtpCode }: Details): string | null {
   return `${TEST_EMAIL_STATUSES[status]}${code}`
 }
 
+const PREFERENCE_VIA = { account: "on Account", link: "with the link in an email", one_click: "with the mail app's unsubscribe button" }
+
+/** "Access reminders turned off, on Account": the new value and where it changed. */
+const emailPreference: Summarize = ({ enabled, via }) =>
+  typeof enabled === "boolean" && isKeyOf(PREFERENCE_VIA, via) ? `Access reminders turned ${enabled ? "on" : "off"}, ${PREFERENCE_VIA[via]}` : null
+
 const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   MEMBER_UNSHARED: memberUnshared,
   INACTIVITY_SWEEP_RUN: sweepRun,
@@ -208,6 +215,7 @@ const SUMMARIES: Partial<Record<AuditEventName, Summarize>> = {
   AUDIT_LOG_VIEWED: auditLogViewed,
   ASSISTANT_SOURCE_CHANGED: sourceChanged,
   EMAIL_TEST_SENT: emailTest,
+  EMAIL_PREFERENCE_CHANGED: emailPreference,
 }
 
 /** The event's one-line summary, or null when its type has none or its details do not fit. */

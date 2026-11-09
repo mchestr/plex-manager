@@ -2,8 +2,9 @@
 
 /**
  * The member's own settings on `/account` (ui-design-system 6.1): the Rewind
- * ready notification (Rewind 9.7) and the time zone Rewind reads (7.7), which
- * the member layout first takes from the browser.
+ * ready notification (Rewind 9.7), the time zone Rewind reads (7.7), which
+ * the member layout first takes from the browser, and the access reminders
+ * (the warning emails before removal for inactivity).
  *
  * None needs an active membership, so a lapsed member can still change them.
  *
@@ -15,6 +16,7 @@ import { z } from "zod"
 
 import { memberAction } from "@/lib/actions/define-action"
 import { ok } from "@/lib/actions/result"
+import { saveAccessReminders } from "@/lib/email/access-reminders"
 import { prisma } from "@/lib/prisma"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
 import { getSeasonState } from "@/lib/wrapped/season"
@@ -35,6 +37,22 @@ export const setRewindNotify = memberAction({
     })
     revalidatePath("/account")
     return ok({ notify })
+  },
+})
+
+/**
+ * "Access reminders": whether the member gets the warning emails before the
+ * inactivity sweep removes their access, stored as `User.inactivityEmailsOff`.
+ * The only way to turn them on again after an unsubscribe link. Audited as
+ * `EMAIL_PREFERENCE_CHANGED` with `via: "account"` when the value changes.
+ */
+export const setAccessReminders = memberAction({
+  input: z.strictObject({ enabled: z.boolean() }),
+  fallbackError: "Could not save the email setting",
+  handler: async ({ enabled }, { userId }) => {
+    await saveAccessReminders(userId, { enabled, via: "account" })
+    revalidatePath("/account")
+    return ok({ enabled })
   },
 })
 

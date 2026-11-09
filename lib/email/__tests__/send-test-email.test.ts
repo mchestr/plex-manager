@@ -11,6 +11,7 @@ import { loadEmailContext } from "@/lib/email/context"
 import type { EmailConfig } from "@/lib/email/env-rules"
 import { deliverTestEmail } from "@/lib/email/send-test-email"
 import { sendEmail } from "@/lib/email/transport"
+import { verifyUnsubscribeToken } from "@/lib/security/unsubscribe-token"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -66,6 +67,25 @@ describe("deliverTestEmail", () => {
     })
     expect(recordAuditEvent).toHaveBeenCalledWith(AuditEventType.EMAIL_TEST_SENT, "admin-1", { status: "sent", smtpCode: 250 })
     expect(logger.info).toHaveBeenCalledWith("email_test.sent", { userId: "admin-1", smtpCode: 250 })
+  })
+
+  it("carries the admin's own one-click unsubscribe headers, and no List-Id", async () => {
+    jest.mocked(sendEmail).mockResolvedValue({ ok: true, smtpCode: 250 })
+
+    await deliverTestEmail("admin-1")
+
+    const [, message] = jest.mocked(sendEmail).mock.calls[0]
+    const headers = message.headers as Record<string, string | { value: string }>
+    const value = (name: string) => {
+      const header = headers[name]
+      return typeof header === "string" ? header : header.value
+    }
+    expect(Object.keys(headers).sort()).toEqual(["Auto-Submitted", "List-Unsubscribe", "List-Unsubscribe-Post"])
+    expect(value("List-Unsubscribe-Post")).toBe("List-Unsubscribe=One-Click")
+    const oneClick = /^<(https:\/\/plex\.example\.com\/api\/email\/unsubscribe\?token=([^>]+))>$/.exec(value("List-Unsubscribe"))
+    expect(oneClick).not.toBeNull()
+    expect(verifyUnsubscribeToken(decodeURIComponent(oneClick?.[2] ?? ""))).toBe("admin-1")
+    expect(message.text).toContain("Stop these emails: https://plex.example.com/email/unsubscribe?token=")
   })
 
   it("audits a failed send with its class and code, never the address", async () => {

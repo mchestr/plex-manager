@@ -57,6 +57,17 @@ describe("query keys", () => {
     )
   })
 
+  it("masks the token of an unsubscribe link, dot and all", () => {
+    const token = "eyJ1IjoibWVtYmVyLTEiLCJleHAiOjE3OTQ0ODAwMDB9.c2lnbmF0dXJlLWJ5dGVzLWhlcmUtYW5kLW1vcmU"
+    const { text, line } = printed(() =>
+      logger.info(`POST /api/email/unsubscribe?token=${token}`, { url: `https://plex.example.com/email/unsubscribe?token=${token}` })
+    )
+
+    expect(text).not.toContain(token.split(".")[0])
+    expect(text).not.toContain(token.split(".")[1])
+    expect(line.metadata?.url).toBe("https://plex.example.com/email/unsubscribe?token=[REDACTED]")
+  })
+
   it("masks credentials in a URL", () => {
     const { text } = printed(() => logger.info(`Connecting to https://admin:${SECRET}@db.example.com/x`))
     expect(text).not.toContain(SECRET)

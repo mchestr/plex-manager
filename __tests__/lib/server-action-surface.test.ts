@@ -48,6 +48,8 @@ const PARSE_METHODS = new Set(['parse', 'safeParse', 'parseAsync', 'safeParseAsy
 const REVIEWED_CREDENTIAL_INPUTS: Record<string, string> = {
   'actions/discord.ts updateDiscordIntegrationSettings(input: { clientId?: string | undefined; clientSecret?: string | undefined; botToken?: string | undefined; supportChannelId?: string | undefined; supportThreadIds?: string | string[] | undefined; ... 5 more ...; botEnabled?: boolean | undefined; })':
     'adminAction (P10.20); stores the Discord bot token, which the bot sends only to Discord',
+  'actions/email-unsubscribe.ts unsubscribeWithToken(input: { token: string; })':
+    'publicAction; the token is the signed unsubscribe token from an email, checked here and never sent to any host',
 }
 
 const FIXTURE = path.join(__dirname, 'fixtures/server-action-surface/target-inputs.ts')

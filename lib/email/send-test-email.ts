@@ -4,6 +4,10 @@
  * job calls it with Redis; without Redis, `sendTestEmail`
  * (`actions/admin/email.ts`) calls it in the request.
  *
+ * The email carries the admin's own unsubscribe link and the
+ * `List-Unsubscribe` headers (`lib/email/unsubscribe.ts`), so a manual check
+ * can try the one-click POST. It has no `List-Id`: it is not an access reminder.
+ *
  * The audit row and the log carry the admin's id and the codes only, never
  * the address or the server's reply text.
  *
@@ -18,6 +22,7 @@ import { isMailAddress } from "@/lib/email/env-rules"
 import { buildMessage } from "@/lib/email/message"
 import { testEmail } from "@/lib/email/templates/test-email"
 import { sendEmail, type SmtpFailureKind } from "@/lib/email/transport"
+import { unsubscribeHeaders, unsubscribeLinks } from "@/lib/email/unsubscribe"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
@@ -50,7 +55,13 @@ export async function deliverTestEmail(userId: string, signal?: AbortSignal): Pr
   if (!user || !isMailAddress(user.email)) return finish(userId, { status: "no_address" })
 
   const context = await loadEmailContext(config)
-  const message = buildMessage(config, { ...testEmail(context, user.name), to: user.email, senderName: context.serverName })
+  const links = unsubscribeLinks(context.appUrl, userId)
+  const message = buildMessage(config, {
+    ...testEmail(context, user.name, links.page),
+    to: user.email,
+    senderName: context.serverName,
+    headers: unsubscribeHeaders(links),
+  })
   const sent = await sendEmail(config, message, signal)
   return finish(
     userId,

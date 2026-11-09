@@ -6,7 +6,8 @@ import { clearInbox, readInbox, smtpSinkPort } from '../mocks/smtp-server';
  * Admin > Settings > Email: the web server runs with `SMTP_URL` on the SMTP
  * sink (`e2e/mocks/smtp-server.ts`) and `EMAIL_FROM` set, so the section is
  * set up. It shows the host, the port and the sender, never a login, and
- * "Send a test email" puts one message in the sink for the admin. With Redis
+ * "Send a test email" puts one message in the sink for the admin, with the
+ * admin's own one-click unsubscribe headers and no List-Id. With Redis
  * the worker sends it, so the spec waits for the sink and for Last test.
  *
  * The button is server-rendered, and a click before React hydrates it does
@@ -60,6 +61,9 @@ test.describe('Settings, Email', () => {
     expect(message.raw).toMatch(/^Auto-Submitted: auto-generated/m);
     expect(message.raw).toMatch(/^Content-Type: multipart\/alternative/m);
     expect(message.raw).not.toMatch(/Wrapped/);
+    expect(message.raw).toMatch(/^List-Unsubscribe: <http:\/\/localhost:\d+\/api\/email\/unsubscribe\?token=[\w-]+\.[\w-]+>\r?$/m);
+    expect(message.raw).toMatch(/^List-Unsubscribe-Post: List-Unsubscribe=One-Click\r?$/m);
+    expect(message.raw).not.toMatch(/^List-Id:/im);
 
     // The worker writes the audit row after the sink answers
     await expect(async () => {

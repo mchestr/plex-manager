@@ -11,7 +11,10 @@
  * | Envelope sender  | `EMAIL_REPLY_TO`, else `EMAIL_FROM`: bounce notices go there |
  *
  * `headers` adds a kind of email's own headers (the unsubscribe headers, for
- * one). nodemailer makes the `Message-ID`, and encodes every header.
+ * one). A value of printable ASCII goes out as written: nodemailer would
+ * turn the quoted phrase of `List-Id` into encoded words, which no mail
+ * client reads as a list id. Any other value nodemailer encodes. nodemailer
+ * makes the `Message-ID`.
  *
  * @module lib/email/message
  */
@@ -43,9 +46,18 @@ function oneLine(value: string): string {
   return value.replace(/\s+/g, " ").trim()
 }
 
+/** Printable ASCII short enough for one header line (RFC 5322 allows 998 characters). */
+const PLAIN_HEADER = /^[\x20-\x7e]{0,900}$/
+
+/** An extra header on one line; printable ASCII goes out as written, anything else nodemailer encodes. */
+function extraHeader(value: string): string | { prepared: true; value: string } {
+  const line = oneLine(value)
+  return PLAIN_HEADER.test(line) ? { prepared: true, value: line } : line
+}
+
 /** The message for `email`, sent with `config`. */
 export function buildMessage(config: EmailConfig, email: OutgoingEmail): SendMailOptions {
-  const headers = Object.fromEntries(Object.entries(email.headers ?? {}).map(([name, value]) => [name, oneLine(value)]))
+  const headers = Object.fromEntries(Object.entries(email.headers ?? {}).map(([name, value]) => [name, extraHeader(value)]))
   return {
     from: { name: oneLine(email.senderName), address: config.from },
     ...(config.replyTo ? { replyTo: config.replyTo } : {}),

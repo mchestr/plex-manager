@@ -14,6 +14,7 @@ import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { validatePagesOnRead } from "@/lib/rewind/select-pages"
 import { loadRewindYearView } from "@/lib/rewind/year-view"
 import { getAppSettings } from "@/lib/settings/app-settings"
+import { NO_SCRIPT_STREAM } from "@/lib/ui/no-script-stream"
 import { yearParamSchema } from "@/lib/validations/params"
 import { windowLine } from "@/lib/wrapped/copy/templates"
 import { listCompletedRewindYears } from "@/lib/wrapped/season"
@@ -26,17 +27,9 @@ type ReadPageProps = {
 
 const DisabledPagesSchema = z.array(z.string()).catch([])
 
-/**
- * With JavaScript off, `app/loading.tsx` leaves the streamed page in a hidden
- * `S:` segment behind its fallback. Show the segment and hide the fallback, so
- * the article reads without any script. The story's skeleton sits in
- * `[year]/(story)/`, so this route has no second boundary and the segment
- * holds the whole page in order. The rules sit in Tailwind's `base` layer:
- * its preflight hides `[hidden]` with a layered `!important`, which beats any
- * unlayered one.
- */
-const NO_SCRIPT_STREAM =
-  "@layer base{div[hidden][id^=S]{display:block!important}template[id^=B]+*{display:none!important}}"
+// The story's skeleton sits in `[year]/(story)/`, so this route has no second
+// Suspense boundary and NO_SCRIPT_STREAM shows the whole article without JavaScript.
+
 
 /** "{server name} Rewind {year}, article", absolute: the root template would add the server name again. */
 export async function generateMetadata({ params }: ReadPageProps): Promise<Metadata> {

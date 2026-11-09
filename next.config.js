@@ -74,6 +74,17 @@ module.exports = () => ({
           { key: 'Referrer-Policy', value: 'no-referrer' },
         ],
       },
+      // The unsubscribe page and the one-click POST: their URL holds the
+      // member's token, so it never leaves in a Referer, no cache keeps the
+      // answer and no search engine lists the page.
+      ...['/email/unsubscribe', '/api/email/unsubscribe'].map((source) => ({
+        source,
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      })),
     ]
   },
 })

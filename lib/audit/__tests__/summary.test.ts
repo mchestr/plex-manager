@@ -290,3 +290,21 @@ describe("EMAIL_TEST_SENT", () => {
     expect(summary("EMAIL_TEST_SENT", { status: "constructor" })).toBeNull()
   })
 })
+
+describe("EMAIL_PREFERENCE_CHANGED", () => {
+  it.each([
+    [{ enabled: false, via: "one_click" }, "Access reminders turned off, with the mail app's unsubscribe button"],
+    [{ enabled: false, via: "link" }, "Access reminders turned off, with the link in an email"],
+    [{ enabled: true, via: "account" }, "Access reminders turned on, on Account"],
+  ])("says what changed and where, %o", (details, expected) => {
+    expect(summary("EMAIL_PREFERENCE_CHANGED", details)).toBe(expected)
+  })
+
+  it.each([
+    [{ enabled: "no", via: "account" }],
+    [{ enabled: true, via: "toString" }],
+    [{ enabled: true }],
+  ])("has none for details that do not fit, %o", (details) => {
+    expect(summary("EMAIL_PREFERENCE_CHANGED", details)).toBeNull()
+  })
+})
