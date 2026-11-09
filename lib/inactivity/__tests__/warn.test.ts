@@ -5,6 +5,7 @@
 const mockInfo = jest.fn()
 const mockError = jest.fn()
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
+jest.mock("@/lib/email/config", () => ({ emailConfigured: jest.fn() }))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: (...args: unknown[]) => mockInfo(...args), warn: jest.fn(), error: (...args: unknown[]) => mockError(...args) }),
 }))
@@ -12,6 +13,7 @@ jest.mock("@/lib/utils/logger", () => ({
 import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { emailConfigured } from "@/lib/email/config"
 import type { InactivityMember } from "@/lib/inactivity/rules"
 import { runWarningStep, type WarningStepOptions } from "@/lib/inactivity/warn"
 
@@ -57,9 +59,10 @@ beforeEach(() => {
   mockReset(prismaMock)
   jest.clearAllMocks()
   enqueue.mockResolvedValue(undefined)
+  jest.mocked(emailConfigured).mockReturnValue(true)
   prismaMock.inactivityNotice.updateMany.mockResolvedValue({ count: 0 })
   prismaMock.inactivityNotice.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([
-    { id: "n1", userId: "u1", cycleAt: new Date(NOW.getTime() - 300 * DAY), leadDays: 30, removeAfter: new Date("2026-12-11T05:00:00Z"), status: "pending", attempts: 0, zone: TORONTO, handledAt: null },
+    { id: "n1", userId: "u1", cycleAt: new Date(NOW.getTime() - 300 * DAY), leadDays: 30, removeAfter: new Date("2026-12-11T05:00:00Z"), status: "pending", code: null, attempts: 0, zone: TORONTO, handledAt: null },
   ] as never)
   prismaMock.inactivityNotice.createMany.mockResolvedValue({ count: 2 })
   prismaMock.user.findMany.mockResolvedValue([
@@ -81,6 +84,15 @@ describe("runWarningStep", () => {
     ])
     expect(enqueue).toHaveBeenCalledWith(["n1"])
     expect(mockInfo).toHaveBeenCalledWith("inactivity.warnings_planned", { runId: "run-1", warned: 2, pending: 1 })
+  })
+
+  it("plans no row for an address plex.tv does not confirm while email is not set up, so that member waits too", async () => {
+    jest.mocked(emailConfigured).mockReturnValue(false)
+    prismaMock.inactivityNotice.createMany.mockResolvedValue({ count: 1 })
+
+    await expect(runWarningStep(options())).resolves.toBe(1)
+    const data = prismaMock.inactivityNotice.createMany.mock.calls[0][0]?.data as { userId: string; status: string }[]
+    expect(data.map(({ userId, status }) => ({ userId, status }))).toEqual([{ userId: "u1", status: "pending" }])
   })
 
   it("logs the rows it marks stalled as failed rows, which the failure alert matches", async () => {
@@ -126,7 +138,7 @@ describe("runWarningStep", () => {
   it("checks a member with no Plex email against nothing, so a stored address is unconfirmed", async () => {
     await runWarningStep(options({ members: [member("u1")], plexEmails: new Map() }))
 
-    const data = prismaMock.inactivityNotice.createMany.mock.calls[0][0]?.data as { status: string }[]
-    expect(data.map((row) => row.status)).toEqual(["skipped"])
+    const data = prismaMock.inactivityNotice.createMany.mock.calls[0][0]?.data as { status: string; code: string | null }[]
+    expect(data.map(({ status, code }) => ({ status, code }))).toEqual([{ status: "skipped", code: "email_unconfirmed" }])
   })
 })

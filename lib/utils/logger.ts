@@ -97,10 +97,15 @@ export function sanitizeUrlForLogging(url: string): string {
   return sanitizeText(url)
 }
 
-/** The entry's metadata with the request context's ids, which win over the caller's. */
+/**
+ * The entry's metadata with the request context's ids, which win over the
+ * caller's. A context without a user id (a queue job, a public route) keeps
+ * the caller's `userId`.
+ */
 function withContext(metadata: LogMetadata | undefined): LogMetadata {
   const ctx = getLogContext()
-  return { ...metadata, ...(ctx && { requestId: ctx.requestId, userId: ctx.userId }) }
+  if (!ctx) return { ...metadata }
+  return { ...metadata, requestId: ctx.requestId, ...(ctx.userId !== undefined && { userId: ctx.userId }) }
 }
 
 const CONSOLE: Record<Level, (...args: unknown[]) => void> = {

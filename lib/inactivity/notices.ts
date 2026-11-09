@@ -32,7 +32,7 @@
  *
  * | Warnings | Removable when |
  * |----------|----------------|
- * | On       | Inactive, `D` started at most {@link NOTICE_GRACE_DAYS} calendar days before the run's date, the last warning for `D` was handled at least {@link MIN_NOTICE_MS} before the run, and someone played on the server after it |
+ * | On       | Inactive, `D` started at most {@link NOTICE_GRACE_DAYS} calendar days before the run's date, the last warning for `D` was handled at least {@link MIN_NOTICE_MS} before the run, someone played on the server after it, and no later last warning failed or was cancelled ({@link unsentLaterLastWarning}) |
  * | Off      | Inactive, and the run starts on or after the latest date of the cycle's handled rows, if any |
  *
  * With warnings off and no handled row, the gate is the sweep's own rule
@@ -92,6 +92,8 @@ export interface NoticeRow {
   leadDays: number
   removeAfter: Date
   status: string
+  /** Why it was skipped, failed or cancelled; null otherwise. */
+  code: string | null
   attempts: number
   zone: string
   handledAt: Date | null
@@ -231,6 +233,23 @@ export function lastWarningHandledAt(state: CycleState, warningDays: readonly nu
 }
 
 /**
+ * Whether a last warning of the cycle with a date later than `D` failed or
+ * was cancelled: a new last warning (R6, R7) that did not go out. It holds
+ * the removal like a failed last warning for `D` (R6), since a mail server
+ * that timed out may still have delivered its later date. A `superseded`
+ * cancel does not count: a later date replaced it.
+ */
+export function unsentLaterLastWarning(state: CycleState, warningDays: readonly number[]): boolean {
+  const smallest = warningDays[warningDays.length - 1]
+  return state.rows.some(
+    (row) =>
+      row.leadDays <= smallest &&
+      row.removeAfter > state.removeAfter &&
+      (row.status === "failed" || (row.status === "cancelled" && row.code !== "superseded"))
+  )
+}
+
+/**
  * What the removal gate holds a member back for.
  *
  * | Hold           | Why                                                                    |
@@ -239,7 +258,7 @@ export function lastWarningHandledAt(state: CycleState, warningDays: readonly nu
  * | `unwarned`     | Warnings on, and the cycle has no warning yet                          |
  * | `date`         | The removal date has not started                                       |
  * | `expired`      | The removal date was more than 7 days ago: the warnings start again    |
- * | `last_warning` | The last warning for the date is not handled                           |
+ * | `last_warning` | The last warning for the date is not handled, or a later one did not go out |
  * | `notice`       | The last warning was handled less than 12 hours before the run         |
  * | `idle`         | No one played on the server after the last warning                     |
  */
@@ -270,7 +289,7 @@ export function removalGate(member: InactivityMember, rows: readonly NoticeRow[]
   if (now < state.removeAfter) return "date"
   if (graceOver(state, now)) return "expired"
   const handledAt = lastWarningHandledAt(state, warnings.warningDays)
-  if (!handledAt) return "last_warning"
+  if (!handledAt || unsentLaterLastWarning(state, warnings.warningDays)) return "last_warning"
   if (now.getTime() - handledAt.getTime() < MIN_NOTICE_MS) return "notice"
   if (!newestPlayAt || newestPlayAt <= handledAt) return "idle"
   return null

@@ -74,7 +74,7 @@ The conversation judge (`lib/judge/`, **Admin > AI > Settings > Conversation rev
 
 ## Email
 
-The app sends email only after an operator sets `SMTP_URL` and `EMAIL_FROM` (`docs/email.md`). Each email gives the mail provider the recipient's address, their name and the text of the email. Today the only email is the test email, which goes to the admin who asks for it. The app's logs and audit rows hold the user id and the SMTP reply codes, never the address or the server's reply text. Each email holds an unsubscribe link with a token, and the token holds the member's id. The app's logger masks the token, but a reverse proxy in front of the app can log the unsubscribe URL with its token, and so the member id, for as long as it keeps its logs.
+The app sends email only after an operator sets `SMTP_URL` and `EMAIL_FROM` (`docs/email.md`). Each email gives the mail provider the recipient's address, their name and the text of the email. The app sends the test email to the admin who asks for it. After an admin turns them on, it also sends warning emails to members before the inactivity sweep removes their access (`docs/inactive-members.md`, "Warning emails"). The app's logs and audit rows hold the user id and the SMTP reply codes, never the address or the server's reply text. Each email holds an unsubscribe link with a token, and the token holds the member's id. The app's logger masks the token, but a reverse proxy in front of the app can log the unsubscribe URL with its token, and so the member id, for as long as it keeps its logs.
 
 ## Retention
 

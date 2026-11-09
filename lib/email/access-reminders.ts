@@ -13,15 +13,14 @@
  *
  * The type of {@link saveAccessReminders} lets only `account` turn the
  * emails on, so a forwarded email or a logged link can never start them
- * again. A save that changes nothing writes no audit row.
+ * again. A save that changes nothing writes no audit row. Whether Account
+ * offers the switch is `accessRemindersOffered` in `lib/inactivity/settings.ts`.
  *
  * @module lib/email/access-reminders
  */
 
 import "server-only"
 
-import { emailConfigured } from "@/lib/email/config"
-import { INACTIVITY_SETTINGS_ID } from "@/lib/inactivity/settings"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 
@@ -44,14 +43,4 @@ export async function saveAccessReminders(userId: string, change: AccessReminder
   }
   logAuditEvent(AuditEventType.EMAIL_PREFERENCE_CHANGED, userId, { targetUserId: userId, enabled: change.enabled, via: change.via })
   return "changed"
-}
-
-/**
- * Whether Account shows the Email card: email is set up and the warning
- * emails are on. While either is off, members see nothing new.
- */
-export async function accessRemindersOffered(): Promise<boolean> {
-  if (!emailConfigured()) return false
-  const settings = await prisma.inactivitySettings.findUnique({ where: { id: INACTIVITY_SETTINGS_ID }, select: { warningsEnabled: true } })
-  return settings?.warningsEnabled ?? false
 }

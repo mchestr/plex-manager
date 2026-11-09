@@ -30,7 +30,9 @@
  * job check: no address, not one address, not the address plex.tv holds for
  * them (only when this read of plex.tv worked), disabled by an admin, turned
  * off by the member, or refused by the mail server for good (from the last
- * row). The timeline goes on for them: the row is skipped, never held.
+ * row). While email is set up, the timeline goes on for them: the row is
+ * skipped, never held. While it is not, the run plans no row for an
+ * unconfirmed address and the job fails the others, so they wait.
  *
  * @module lib/inactivity/notice-lists
  */
@@ -54,7 +56,6 @@ import { dayKey } from "@/lib/utils/zoned-time"
 
 /** A notice row with what the lists show besides the rules' fields. */
 export interface NoticeDetail extends NoticeRow {
-  code: string | null
   /** When a run planned, revived or cancelled it, or the job last tried it. */
   updatedAt: Date
 }
@@ -73,15 +74,17 @@ export interface NoticeSummary {
   at: Date
 }
 
-/**
- * The newest stage of `rows`: the latest removal date, then the smallest
- * lead. Null without rows.
- */
-export function latestNotice(rows: readonly NoticeDetail[], warningDays: readonly number[]): NoticeSummary | null {
-  const newest = rows.reduce<NoticeDetail | null>((best, row) => {
+/** The newest stage of `rows`: the latest removal date, then the smallest lead. Null without rows. */
+export function newestNotice<T extends NoticeRow>(rows: readonly T[]): T | null {
+  return rows.reduce<T | null>((best, row) => {
     if (!best || row.removeAfter > best.removeAfter) return row
     return row.removeAfter.getTime() === best.removeAfter.getTime() && row.leadDays < best.leadDays ? row : best
   }, null)
+}
+
+/** {@link newestNotice} as the lists show it. */
+export function latestNotice(rows: readonly NoticeDetail[], warningDays: readonly number[]): NoticeSummary | null {
+  const newest = newestNotice(rows)
   if (!newest) return null
   return {
     leadDays: newest.leadDays,

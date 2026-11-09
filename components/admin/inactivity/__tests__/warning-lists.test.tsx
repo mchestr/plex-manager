@@ -22,6 +22,7 @@ const PREVIEW: InactivityPreview = {
   active: 0,
   noAccess: 0,
   held: 0,
+  unwarned: 0,
   shareCheck: null,
   scheduledLimit: 1,
   readSince: new Date("2026-10-31T02:17:00Z"),
@@ -46,6 +47,7 @@ const PREVIEW: InactivityPreview = {
     { id: "u-skip", name: "Sky Skipped", code: "rejected", list: "waiting" },
     { id: "u-first", name: "Fay First", code: "email_unconfirmed", list: "first" },
   ],
+  failedWarnings: [],
 }
 
 /** Each cell's value, without the label a card shows above it. */
@@ -60,7 +62,7 @@ describe("WarningLists", () => {
   it("lists the waiting members with their date, newest email and its status", () => {
     render(<WarningLists preview={PREVIEW} removalOn now={NOW} />)
 
-    expect(screen.getByRole("heading", { level: 2, name: "Warning emails" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 2, name: "Warned members" })).toBeInTheDocument()
     expect(screen.getByRole("table", { name: "Members waiting for their removal date" })).toBeInTheDocument()
     expect(screen.getByTestId("admin-inactivity-waiting-member-u-wait")).toHaveAttribute("href", "/admin/users/u-wait")
     expect(cells("waiting", "u-wait")).toEqual(["Wes Waiting", "Nov 20, 2026", "7-day warningNov 13, 2026", "Sent"])

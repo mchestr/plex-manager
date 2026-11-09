@@ -40,6 +40,7 @@ const NOTICE_SELECT = {
   leadDays: true,
   removeAfter: true,
   status: true,
+  code: true,
   attempts: true,
   zone: true,
   handledAt: true,
@@ -57,12 +58,12 @@ export async function readNotices(userIds: readonly string[]): Promise<NoticeRow
   return prisma.inactivityNotice.findMany({ where: { userId: { in: [...userIds] } }, select: NOTICE_SELECT })
 }
 
-/** Every notice row of `userIds`, with its code and when it last changed, for the admin lists. */
+/** Every notice row of `userIds`, with when it last changed, for the admin lists. */
 export async function readNoticeDetails(userIds: readonly string[]): Promise<NoticeDetail[]> {
   if (userIds.length === 0) return []
   return prisma.inactivityNotice.findMany({
     where: { userId: { in: [...userIds] } },
-    select: { ...NOTICE_SELECT, code: true, updatedAt: true },
+    select: { ...NOTICE_SELECT, updatedAt: true },
   })
 }
 

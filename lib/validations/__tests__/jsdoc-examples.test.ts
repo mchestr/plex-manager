@@ -1,9 +1,15 @@
 import { safeCallbackPath } from '@/lib/validations/callback-path'
+import { maxWarningLead } from '@/lib/validations/inactivity'
 import { yearParamSchema } from '@/lib/validations/params'
 import { createServiceSchema } from '@/lib/validations/shared-schemas'
 import { readYearParam } from '@/lib/validations/year-range'
 
 describe('JSDoc Documentation Examples', () => {
+  it('maxWarningLead: half the threshold, rounded down', () => {
+    expect(maxWarningLead(180)).toBe(90)
+    expect(maxWarningLead(45)).toBe(22)
+  })
+
   it('readYearParam: four digits in range read as a year', () => {
     expect(readYearParam('2026')).toBe(2026)
     expect(readYearParam('26')).toBeNull()

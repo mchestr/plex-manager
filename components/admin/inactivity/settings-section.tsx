@@ -19,6 +19,8 @@ interface InactivitySettingsSectionProps {
   /** The members the preview says a run would remove now, by id. */
   removalIds: string[]
   lastRun: InactivityRunRow | null
+  /** Warning emails are on and Redis is set up: Run now's confirm says the run also sends the warnings that are due. */
+  warningsOn?: boolean
   /** "Last saved ... by ..." from the audit log. */
   footerMeta?: ReactNode
 }
@@ -51,7 +53,7 @@ function InactivitySummary({ saved, scheduled, scheduledLimit }: Pick<Inactivity
  * saved through the section footer. The last run and Run now act on the
  * saved values, so they show in view mode only.
  */
-export function InactivitySettingsSection({ saved, scheduled, scheduledLimit, removalIds, lastRun, footerMeta }: InactivitySettingsSectionProps) {
+export function InactivitySettingsSection({ saved, scheduled, scheduledLimit, removalIds, lastRun, warningsOn, footerMeta }: InactivitySettingsSectionProps) {
   const inactivity = useInactivityForm(saved)
 
   return (
@@ -61,7 +63,7 @@ export function InactivitySettingsSection({ saved, scheduled, scheduledLimit, re
       description="Removes Plex access from members who have not played anything for a set number of days. Needs Tautulli."
       form={inactivity.form}
       view={<InactivitySummary saved={saved} scheduled={scheduled} scheduledLimit={scheduledLimit} />}
-      after={(editing) => !editing && <RunNow enabled={saved.enabled} removalIds={removalIds} lastRun={lastRun} />}
+      after={(editing) => !editing && <RunNow enabled={saved.enabled} removalIds={removalIds} lastRun={lastRun} warningsOn={warningsOn} />}
       footerMeta={footerMeta}
     >
       <InactivityFields state={inactivity} />

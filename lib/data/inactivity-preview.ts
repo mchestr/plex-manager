@@ -9,7 +9,7 @@
  * | Input       | Sweep                                  | Preview                                                                 |
  * |-------------|----------------------------------------|-------------------------------------------------------------------------|
  * | `readSince` | The start of its own read, just before | The start of the newest finished run whose read worked; null before one |
- * | `newestPlayAt` | Its own read's                      | That same run's, for the removal gate                                    |
+ * | `newestPlayAt` | Its own read's                      | The newest finished run's that found a play, for the removal gate        |
  * | Plex shares | No answer blocks the run               | No answer keeps every inactive member, and `shareCheck` says why        |
  *
  * Each member counts once: under the first rule that protects them (`skips`),
@@ -37,9 +37,9 @@ import "server-only"
 import { assertAdmin } from "@/lib/admin"
 import { getActiveService } from "@/lib/data/active-service"
 import { listInactivityMembers } from "@/lib/inactivity/members"
-import { cannotEmail, warningLists, type CannotEmailCode, type NoticeSummary } from "@/lib/inactivity/notice-lists"
+import { cannotEmail, newestNotice, warningLists, type CannotEmailCode, type NoticeSummary } from "@/lib/inactivity/notice-lists"
 import { readNoticeDetails } from "@/lib/inactivity/notice-store"
-import { removalGate } from "@/lib/inactivity/notices"
+import { cycleState, MAX_NOTICE_ATTEMPTS, removalGate } from "@/lib/inactivity/notices"
 import {
   byLongestInactive,
   INACTIVITY_SKIPS,
@@ -85,6 +85,18 @@ export interface FirstWarningRow {
   lastActiveAt: Date
 }
 
+/**
+ * A member whose newest warning of the cycle failed and holds the removal (a
+ * first warning with none sent, or a last warning): the removal waits until a
+ * run sends a new one. A failed reminder is not one.
+ */
+interface FailedWarningRow {
+  id: string
+  name: string
+  /** It failed {@link MAX_NOTICE_ATTEMPTS} times, so no run tries it again. */
+  stuck: boolean
+}
+
 /** A member of either list whom the app cannot email. */
 export interface CannotEmailRow {
   id: string
@@ -104,6 +116,8 @@ export interface InactivityPreview {
   noAccess: number
   /** Inactive members the removal gate holds back for their removal date or their warning emails. */
   held: number
+  /** Of {@link held}, those with no warning yet in their cycle, while warnings are on: the next run warns them first. */
+  unwarned: number
   /** Set when the shares could not be read, so the rows can hold members without access. */
   shareCheck: ShareBlock | null
   /** The most members a scheduled run may remove now; null while the shares are unknown. */
@@ -118,6 +132,8 @@ export interface InactivityPreview {
   firstWarnings: FirstWarningRow[]
   /** Waiting first, then the first warnings, each in their list's order. */
   cannotEmail: CannotEmailRow[]
+  /** While warnings are on, the members whose newest warning failed. */
+  failedWarnings: FailedWarningRow[]
 }
 
 /**
@@ -128,20 +144,22 @@ export interface InactivityPreview {
  */
 export async function getInactivityPreview(thresholdDays: number, now: Date): Promise<InactivityPreview> {
   await assertAdmin()
-  const [stored, active, read, warnings, zone] = await Promise.all([
+  const [stored, active, read, played, warnings, zone] = await Promise.all([
     listInactivityMembers(),
     getActiveService("plex"),
+    prisma.inactivityRun.findFirst({ where: { error: null, finishedAt: { not: null } }, orderBy: { startedAt: "desc" }, select: { startedAt: true } }),
+    // A run whose read found no play stores none; an older play is earlier, so the gate holds more, never less
     prisma.inactivityRun.findFirst({
-      where: { error: null, finishedAt: { not: null } },
+      where: { finishedAt: { not: null }, newestPlayAt: { not: null } },
       orderBy: { startedAt: "desc" },
-      select: { startedAt: true, newestPlayAt: true },
+      select: { newestPlayAt: true },
     }),
     getInactivityWarnings(),
     serverZone(),
   ])
   const shares = await readPlexShares(active)
   const readSince = read?.startedAt ?? null
-  const newestPlayAt = read?.newestPlayAt ?? null
+  const newestPlayAt = played?.newestPlayAt ?? null
   const rules = { ownerPlexUserId: active?.adminPlexUserId ?? null, readSince }
   // Without the share list every member may have access, so none is left out
   const withAccess = (member: InactivityMember) => !shares.ok || hasShare(shares.ids, member.plexUserId)
@@ -167,13 +185,31 @@ export async function getInactivityPreview(thresholdDays: number, now: Date): Pr
   const rowsOf = (member: InactivityMember) => notices.get(member.id) ?? []
   const warningsOn = warnings.warningsEnabled
   const gate = { thresholdDays, now, newestPlayAt, warnings: warningsOn ? { warningDays: warnings.warningDays, serverZone: zone } : null }
-  const candidates = inactive.filter((member) => removalGate(member, rowsOf(member), gate) === null).sort(byLongestInactive)
+  const holds = inactive.map((member) => ({ member, hold: removalGate(member, rowsOf(member), gate) }))
+  const candidates = holds.flatMap(({ member, hold }) => (hold === null ? [member] : [])).sort(byLongestInactive)
+  // The newest warning of the cycle failed and holds the removal: a first warning with none sent, or a last
+  // warning (rule 6). A later stage or a new last warning would have replaced it. A failed reminder holds
+  // nothing, since the member still gets the last warning, so it is not listed.
+  const smallestLead = warnings.warningDays[warnings.warningDays.length - 1]
+  const failed = warningsOn
+    ? eligible.flatMap((member) => {
+        const state = cycleState(member, rowsOf(member), { thresholdDays, serverZone: zone })
+        const newest = newestNotice(state.rows)
+        const holds = newest?.status === "failed" && (newest.leadDays <= smallestLead || state.active.length === 0)
+        return holds ? [{ id: member.id, stuck: newest.attempts >= MAX_NOTICE_ATTEMPTS }] : []
+      })
+    : []
   const lists = warningLists(
     eligible.map((member) => ({ member, rows: rowsOf(member) })),
     { now, thresholdDays, newestPlayAt, warningsOn, warningDays: warnings.warningDays, serverZone: zone, sharedMembers: shared.length }
   )
 
-  const ids = [...new Set([...candidates, ...lists.waiting.map((entry) => entry.member), ...lists.firstWarnings.map((entry) => entry.member)].map((member) => member.id))]
+  const ids = [
+    ...new Set([
+      ...[...candidates, ...lists.waiting.map((entry) => entry.member), ...lists.firstWarnings.map((entry) => entry.member)].map((member) => member.id),
+      ...failed.map((row) => row.id),
+    ]),
+  ]
   const users = ids.length
     ? await prisma.user.findMany({
         where: { id: { in: ids } },
@@ -209,6 +245,7 @@ export async function getInactivityPreview(thresholdDays: number, now: Date): Pr
     active: recent,
     noAccess,
     held: inactive.length - candidates.length,
+    unwarned: holds.filter(({ hold }) => hold === "unwarned").length,
     shareCheck: shares.ok ? null : shares.block,
     scheduledLimit: shares.ok ? scheduledRunLimit(shared.length) : null,
     readSince,
@@ -221,5 +258,6 @@ export async function getInactivityPreview(thresholdDays: number, now: Date): Pr
       lastActiveAt: lastActiveAt(member),
     })),
     cannotEmail: unreachable,
+    failedWarnings: failed.map(({ id, stuck }) => ({ id, name: listName(id), stuck })),
   }
 }

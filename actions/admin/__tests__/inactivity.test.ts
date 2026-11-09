@@ -2,7 +2,10 @@
  * @jest-environment node
  *
  * The inactivity sweep actions: the settings save (audited only when a value
- * changed), "Run now" (queued with Redis on the fail-fast request path, else
+ * changed, and a new threshold refused below twice the largest lead while
+ * warnings are on), the warning email save (leads checked against the
+ * threshold, a switch-on only with email and Redis set up), both saves in one
+ * Serializable transaction each, "Run now" (queued with Redis on the fail-fast request path, else
  * run in the request; refused while a run or a queued Run now is pending) and
  * the per-member exclusion.
  */
@@ -11,10 +14,13 @@ import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 import { mockReset } from "jest-mock-extended"
 
-import { runMemberActivityNow, setMemberInactivityExcluded, updateInactivitySettings } from "@/actions/admin/inactivity"
+import { runMemberActivityNow, setMemberInactivityExcluded, updateInactivitySettings, updateInactivityWarnings } from "@/actions/admin/inactivity"
 import { buildInactivitySettings } from "@/__tests__/helpers/factories"
-import { prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { asAppTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { getActiveService } from "@/lib/data/active-service"
+import { inSerializable } from "@/lib/db/serializable"
+import { Prisma } from "@/lib/generated/prisma/client"
+import { emailConfigured } from "@/lib/email/config"
 import { isRunInProgress, runMemberActivity } from "@/lib/inactivity/run"
 import { isRedisConfigured } from "@/lib/queue/connection"
 import { jobIdOptions } from "@/lib/queue/job-id"
@@ -31,6 +37,8 @@ jest.mock("@/lib/security/rate-limit", () => ({ consume: jest.fn(), actionClient
 jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
 jest.mock("@/lib/queue/request-path", () => ({ enqueueFromRequest: jest.fn(), isDeduplicatedJobPending: jest.fn() }))
 jest.mock("@/lib/queue/connection", () => ({ isRedisConfigured: jest.fn() }))
+jest.mock("@/lib/email/config", () => ({ emailConfigured: jest.fn() }))
+jest.mock("@/lib/db/serializable", () => ({ ...jest.requireActual("@/lib/db/serializable"), inSerializable: jest.fn() }))
 jest.mock("@/lib/inactivity/run", () => ({ isRunInProgress: jest.fn(), runMemberActivity: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({ ...jest.requireActual("@/lib/security/audit-log"), logAuditEvent: jest.fn() }))
 
@@ -49,7 +57,13 @@ beforeEach(() => {
   // The queue adds the job under the id it was given
   jest.mocked(enqueueFromRequest).mockImplementation(async (_type, _data, options) => ({ ok: true, jobId: String(options?.jobId) }))
   prismaMock.inactivitySettings.findUnique.mockResolvedValue(null)
+  jest.mocked(emailConfigured).mockReturnValue(true)
+  // The transaction body runs on the mock client, as one attempt
+  jest.mocked(inSerializable).mockImplementation((body) => body(asAppTransactionClient(prismaMock)))
 })
+
+const conflict = () => new Prisma.PrismaClientKnownRequestError("conflict", { code: "P2034", clientVersion: "7" })
+const SAVE_CONFLICT = "The inactivity settings changed while you saved. Reload the page and try again."
 
 describe("updateInactivitySettings", () => {
   it("refuses a member and a Support user", async () => {
@@ -109,6 +123,194 @@ describe("updateInactivitySettings", () => {
       success: false,
       code: "INTERNAL",
       error: "Could not save the inactivity settings",
+    })
+  })
+
+  describe("while warning emails are on", () => {
+    beforeEach(() => {
+      prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ warningsEnabled: true, warningDays: [30, 7, 1] }))
+    })
+
+    it("refuses a threshold below twice the largest lead, on the threshold field", async () => {
+      const error = "With warning emails on, use at least 60 days: twice the 30 days before removal of the first warning."
+
+      await expect(updateInactivitySettings({ enabled: true, thresholdDays: 59 })).resolves.toEqual({
+        success: false,
+        code: "VALIDATION",
+        error,
+        fieldErrors: { thresholdDays: [error] },
+      })
+      expect(prismaMock.inactivitySettings.upsert).not.toHaveBeenCalled()
+      expect(logAuditEvent).not.toHaveBeenCalled()
+    })
+
+    it("saves a threshold of exactly twice the largest lead", async () => {
+      await expect(updateInactivitySettings({ enabled: true, thresholdDays: 60 })).resolves.toMatchObject({ success: true })
+      expect(prismaMock.inactivitySettings.upsert).toHaveBeenCalled()
+    })
+
+    it("turns removal off with the threshold unchanged, even when the saved leads break the rule", async () => {
+      prismaMock.inactivitySettings.findUnique.mockResolvedValue(
+        buildInactivitySettings({ enabled: true, thresholdDays: 100, warningsEnabled: true, warningDays: [90] })
+      )
+
+      await expect(updateInactivitySettings({ enabled: false, thresholdDays: 100 })).resolves.toEqual({ success: true, data: null })
+      expect(prismaMock.inactivitySettings.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { enabled: false, thresholdDays: 100, updatedBy: "admin-1" } }))
+    })
+  })
+
+  it("reads, checks and writes in one Serializable transaction", async () => {
+    await updateInactivitySettings({ enabled: true, thresholdDays: 90 })
+
+    expect(inSerializable).toHaveBeenCalledTimes(1)
+  })
+
+  it("refuses a save that lost a race with another save, without an audit row", async () => {
+    jest.mocked(inSerializable).mockRejectedValue(conflict())
+
+    await expect(updateInactivitySettings({ enabled: true, thresholdDays: 90 })).resolves.toEqual({ success: false, code: "CONFLICT", error: SAVE_CONFLICT })
+    expect(logAuditEvent).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("saves a short threshold while warning emails are off, whatever the leads", async () => {
+    prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ warningsEnabled: false, warningDays: [30, 7, 1] }))
+
+    await expect(updateInactivitySettings({ enabled: true, thresholdDays: 30 })).resolves.toMatchObject({ success: true })
+  })
+})
+
+describe("updateInactivityWarnings", () => {
+  const ON = { warningsEnabled: true, warningDays: [30, 7, 1] }
+
+  beforeEach(() => jest.mocked(isRedisConfigured).mockReturnValue(true))
+
+  it("refuses a signed-out caller, a member and a Support user, with no write and no audit row", async () => {
+    jest.mocked(getServerSession).mockResolvedValueOnce(null)
+    await expect(updateInactivityWarnings(ON)).resolves.toMatchObject({ success: false, code: "UNAUTHENTICATED" })
+
+    jest.mocked(getServerSession).mockResolvedValueOnce({ user: { id: "m1", isAdmin: false } })
+    await expect(updateInactivityWarnings(ON)).resolves.toMatchObject({ success: false, code: "FORBIDDEN" })
+
+    jest.mocked(getServerSession).mockResolvedValueOnce({ user: { id: "s1", isAdmin: false, role: "support" } })
+    await expect(updateInactivityWarnings(ON)).resolves.toMatchObject({ success: false, code: "FORBIDDEN" })
+    expect(prismaMock.inactivitySettings.upsert).not.toHaveBeenCalled()
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
+  it("turns warnings on, saves the leads largest first with who saved them, and audits the change", async () => {
+    await expect(updateInactivityWarnings({ warningsEnabled: true, warningDays: [7, 1, 30] })).resolves.toEqual({ success: true, data: null })
+
+    expect(prismaMock.inactivitySettings.upsert).toHaveBeenCalledWith({
+      where: { id: "inactivity" },
+      create: { id: "inactivity", warningsEnabled: true, warningDays: [30, 7, 1], updatedBy: "admin-1" },
+      update: { warningsEnabled: true, warningDays: [30, 7, 1], updatedBy: "admin-1" },
+    })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.INACTIVITY_SETTINGS_CHANGED, "admin-1", {
+      section: "inactivity-warnings",
+      changedFields: ["warningsEnabled"],
+      before: { warningsEnabled: false, warningDays: [30, 7, 1] },
+      after: { warningsEnabled: true, warningDays: [30, 7, 1] },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/inactivity")
+    expect(revalidatePath).toHaveBeenCalledWith("/account")
+  })
+
+  it("audits new leads, and saves without an audit row when nothing changed", async () => {
+    prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ warningsEnabled: true, warningDays: [30, 7, 1] }))
+
+    await updateInactivityWarnings({ warningsEnabled: true, warningDays: [14, 3] })
+    expect(logAuditEvent).toHaveBeenCalledWith(
+      AuditEventType.INACTIVITY_SETTINGS_CHANGED,
+      "admin-1",
+      expect.objectContaining({ section: "inactivity-warnings", changedFields: ["warningDays"], after: { warningsEnabled: true, warningDays: [14, 3] } })
+    )
+
+    jest.mocked(logAuditEvent).mockClear()
+    await expect(updateInactivityWarnings(ON)).resolves.toMatchObject({ success: true })
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["no lead", []],
+    ["a lead of zero", [30, 0]],
+    ["a part day", [7.5]],
+    ["the same lead twice", [7, 7]],
+    ["more than four leads", [30, 14, 7, 3, 1]],
+    ["a lead above 90 days", [91, 7]],
+  ])("refuses %s", async (_case, warningDays) => {
+    await expect(updateInactivityWarnings({ warningsEnabled: true, warningDays })).resolves.toMatchObject({ success: false, code: "VALIDATION" })
+    expect(prismaMock.inactivitySettings.upsert).not.toHaveBeenCalled()
+  })
+
+  it("saves four leads", async () => {
+    await expect(updateInactivityWarnings({ warningsEnabled: false, warningDays: [1, 3, 14, 30] })).resolves.toMatchObject({ success: true })
+    expect(prismaMock.inactivitySettings.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: expect.objectContaining({ warningDays: [30, 14, 3, 1] }) }))
+  })
+
+  it("refuses a largest lead above half the saved threshold, naming both numbers, with warnings off too", async () => {
+    prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ thresholdDays: 45 }))
+    const error = "Use at most 22 days, half of the 45 days without a play. 30 is too many."
+
+    await expect(updateInactivityWarnings({ warningsEnabled: false, warningDays: [30, 7] })).resolves.toEqual({
+      success: false,
+      code: "VALIDATION",
+      error,
+      fieldErrors: { warningDays: [error] },
+    })
+    await expect(updateInactivityWarnings({ warningsEnabled: false, warningDays: [22, 7] })).resolves.toMatchObject({ success: true })
+  })
+
+  it.each([
+    ["email is not set up", false, true, "Set up email first. Warning emails need SMTP_URL and EMAIL_FROM."],
+    ["Redis is not set up", true, false, "Set up Redis first. Warning emails go out through the job queue."],
+  ])("refuses to turn warnings on while %s, on the switch", async (_case, email, redis, error) => {
+    jest.mocked(emailConfigured).mockReturnValue(email)
+    jest.mocked(isRedisConfigured).mockReturnValue(redis)
+
+    await expect(updateInactivityWarnings(ON)).resolves.toEqual({ success: false, code: "VALIDATION", error, fieldErrors: { warningsEnabled: [error] } })
+    expect(prismaMock.inactivitySettings.upsert).not.toHaveBeenCalled()
+  })
+
+  it("turns warnings off with the days unchanged, even when they break the rule", async () => {
+    prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ thresholdDays: 100, warningsEnabled: true, warningDays: [90] }))
+
+    await expect(updateInactivityWarnings({ warningsEnabled: false, warningDays: [90] })).resolves.toEqual({ success: true, data: null })
+    expect(prismaMock.inactivitySettings.upsert).toHaveBeenCalled()
+  })
+
+  it("refuses to turn warnings on with unchanged days above half the saved threshold", async () => {
+    prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ thresholdDays: 45 }))
+
+    await expect(updateInactivityWarnings(ON)).resolves.toMatchObject({
+      success: false,
+      code: "VALIDATION",
+      fieldErrors: { warningDays: ["Use at most 22 days, half of the 45 days without a play. 30 is too many."] },
+    })
+    expect(prismaMock.inactivitySettings.upsert).not.toHaveBeenCalled()
+  })
+
+  it("refuses a save that lost a race with another save, without an audit row", async () => {
+    jest.mocked(inSerializable).mockRejectedValue(conflict())
+
+    await expect(updateInactivityWarnings(ON)).resolves.toEqual({ success: false, code: "CONFLICT", error: SAVE_CONFLICT })
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
+  it("lets warnings that are on stay on, or turn off, while email is not set up", async () => {
+    jest.mocked(emailConfigured).mockReturnValue(false)
+    prismaMock.inactivitySettings.findUnique.mockResolvedValue(buildInactivitySettings({ warningsEnabled: true }))
+
+    await expect(updateInactivityWarnings({ warningsEnabled: true, warningDays: [14, 1] })).resolves.toMatchObject({ success: true })
+    await expect(updateInactivityWarnings({ warningsEnabled: false, warningDays: [30, 7, 1] })).resolves.toMatchObject({ success: true })
+  })
+
+  it("never returns a database error's text", async () => {
+    prismaMock.inactivitySettings.upsert.mockRejectedValue(new Error("connection to db:5432 refused"))
+    await expect(updateInactivityWarnings({ warningsEnabled: false, warningDays: [30, 7, 1] })).resolves.toEqual({
+      success: false,
+      code: "INTERNAL",
+      error: "Could not save the warning email settings",
     })
   })
 })

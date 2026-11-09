@@ -119,7 +119,7 @@ async function readFacts(userId: string) {
 async function processInactivityNotice(job: NoticeJob, token?: string): Promise<NoticeJobResult> {
   const notice = await prisma.inactivityNotice.findUnique({
     where: { id: job.data.noticeId },
-    select: { id: true, userId: true, cycleAt: true, leadDays: true, removeAfter: true, status: true, attempts: true, zone: true, handledAt: true, createdAt: true, updatedAt: true },
+    select: { id: true, userId: true, cycleAt: true, leadDays: true, removeAfter: true, status: true, code: true, attempts: true, zone: true, handledAt: true, createdAt: true, updatedAt: true },
   })
   if (notice?.status !== "pending") return NOT_PENDING
 

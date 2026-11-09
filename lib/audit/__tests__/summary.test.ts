@@ -119,6 +119,27 @@ describe("INACTIVITY_SETTINGS_CHANGED", () => {
   ])("summarises %o", (details, expected) => {
     expect(summary("INACTIVITY_SETTINGS_CHANGED", details)).toBe(expected)
   })
+
+  const warnings = (changedFields: string[], after: Record<string, unknown>) => ({
+    section: "inactivity-warnings",
+    changedFields,
+    before: { warningsEnabled: false, warningDays: [30, 7, 1] },
+    after,
+  })
+
+  it.each([
+    [warnings(["warningsEnabled"], { warningsEnabled: true, warningDays: [30, 7, 1] }), "Warning emails turned on, 30, 7 and 1 days before removal"],
+    [warnings(["warningsEnabled", "warningDays"], { warningsEnabled: true, warningDays: [14, 2] }), "Warning emails turned on, 14 and 2 days before removal"],
+    [warnings(["warningsEnabled"], { warningsEnabled: true, warningDays: "30" }), "Warning emails turned on"],
+    [warnings(["warningsEnabled"], { warningsEnabled: false, warningDays: [30, 7, 1] }), "Warning emails turned off"],
+    [warnings(["warningDays"], { warningsEnabled: true, warningDays: [1] }), "Warning emails 1 day before removal"],
+    [warnings(["warningDays"], { warningsEnabled: true, warningDays: [10] }), "Warning emails 10 days before removal"],
+    [warnings(["warningDays"], { warningsEnabled: true, warningDays: [] }), null],
+    [warnings(["warningDays"], { warningsEnabled: true, warningDays: [7, -1] }), null],
+    [warnings([], { warningsEnabled: true, warningDays: [30, 7, 1] }), null],
+  ])("summarises the warning emails %o", (details, expected) => {
+    expect(summary("INACTIVITY_SETTINGS_CHANGED", details)).toBe(expected)
+  })
 })
 
 describe("the other inactivity events", () => {
@@ -259,6 +280,7 @@ describe("auditSummary", () => {
     ["INACTIVITY_SWEEP_RUN", { qualified: 1, removed: 0, failed: 0, blocked: NAME, runId: EMAIL, trigger: NOTE }],
     ["INACTIVITY_SWEEP_RUN", { qualified: 0, removed: 0, failed: 0, blocked: "busy", runId: null, trigger: NAME, actor: EMAIL }],
     ["INACTIVITY_SETTINGS_CHANGED", { changedFields: ["enabled", NAME], after: { enabled: true, thresholdDays: NOTE } }],
+    ["INACTIVITY_SETTINGS_CHANGED", { section: "inactivity-warnings", changedFields: ["warningsEnabled", NAME], after: { warningsEnabled: true, warningDays: [EMAIL, NOTE] } }],
     ["INACTIVITY_EXCLUSION_CHANGED", { excluded: NAME }],
     ["ACTIVITY_SYNC_TRIGGERED", { queued: true, confirmedRemovals: EMAIL }],
     ["CONFIG_CHANGED", { section: "plex", changedFields: [NAME, EMAIL, NOTE], origins: { after: { url: EMAIL } } }],

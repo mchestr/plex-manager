@@ -90,6 +90,7 @@ const row = {
   leadDays: 30,
   removeAfter: new Date("2026-10-28T04:00:00Z"),
   status: "pending",
+  code: null,
   attempts: 0,
   zone: TORONTO,
   handledAt: null,

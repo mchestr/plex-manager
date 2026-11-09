@@ -16,6 +16,8 @@ interface RunNowProps {
   /** The members the preview says a run would remove now, by id. */
   removalIds: string[]
   lastRun: InactivityRunRow | null
+  /** Warning emails are on and the run is queued, so it also sends the warnings that are due. */
+  warningsOn?: boolean
 }
 
 const DONE = { queued: "Run queued. Reload the page in a minute to see the result.", finished: "Run finished" }
@@ -41,10 +43,11 @@ function LastRun({ run }: { run: InactivityRunRow | null }) {
  * automatic removal is on, runs the sweep. While the preview lists members to
  * remove, it first asks to confirm them and passes their ids on; the run then
  * removes no one if its fresh read finds a member to remove who is not in the
- * list. The action revalidates the page, which can change the list, so one
+ * list. With warning emails on, the dialog says that the run also sends the
+ * warnings that are due. The action revalidates the page, which can change the list, so one
  * button stays in place either way and focus comes back to it.
  */
-export function RunNow({ enabled, removalIds, lastRun }: RunNowProps) {
+export function RunNow({ enabled, removalIds, lastRun, warningsOn = false }: RunNowProps) {
   const toast = useToast()
   const [running, startRun] = useTransition()
   const [confirming, setConfirming] = useState(false)
@@ -93,7 +96,7 @@ export function RunNow({ enabled, removalIds, lastRun }: RunNowProps) {
           open={confirming}
           onOpenChange={setConfirming}
           title={`Remove Plex access from ${memberCount(removalIds.length)} now?`}
-          description="They lose access to the Plex server, as with Remove Plex access. The run reads Tautulli again first. If it would then remove a member who is not in the list on this page, it removes no one."
+          description={`They lose access to the Plex server, as with Remove Plex access. The run reads Tautulli again first. If it would then remove a member who is not in the list on this page, it removes no one.${warningsOn ? " This run also sends any warnings that are due." : ""}`}
           confirmLabel="Remove access"
           pendingLabel="Running"
           tone="destructive"

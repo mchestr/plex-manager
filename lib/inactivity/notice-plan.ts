@@ -12,7 +12,8 @@
  *    first warning (lead `Lmax`), dated as below.
  * 2. `D` was more than 7 days before the run's date: a new first warning
  *    (the warnings start again with the full lead).
- * 3. `D - s <= 0`: when the last warning for `D` is not handled, a new last
+ * 3. `D - s <= 0`: when the last warning for `D` is not handled, or a later
+ *    last warning failed or was cancelled (not superseded), a new last
  *    warning (lead `Lmin`, date `s + Lmin`); when it was handled 12 hours ago
  *    or more and no one played on the server since, the same, once a cycle.
  *    Otherwise it is the sweep's turn.
@@ -55,6 +56,7 @@ import {
   startOfDay,
   type CycleState,
   type NoticeRow,
+  unsentLaterLastWarning,
   type WarningRules,
 } from "@/lib/inactivity/notices"
 import { byLongestInactive, scheduledRunLimit, type InactivityMember } from "@/lib/inactivity/rules"
@@ -99,7 +101,7 @@ function decide(state: CycleState, sendDay: string, ctx: PlanContext): Decision 
   const newLastWarning: Decision = { kind: "date", leadDays: smallest, day: addDays(sendDay, smallest) }
   if (left <= 0) {
     const handledAt = lastWarningHandledAt(state, leads)
-    if (!handledAt) return newLastWarning
+    if (!handledAt || unsentLaterLastWarning(state, leads)) return newLastWarning
     const idle = ctx.now.getTime() - handledAt.getTime() >= MIN_NOTICE_MS && (!ctx.newestPlayAt || ctx.newestPlayAt <= handledAt)
     return idle && handledLastWarnings(state, leads).length < 2 ? newLastWarning : NONE
   }

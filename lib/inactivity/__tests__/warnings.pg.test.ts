@@ -7,7 +7,8 @@
  * notice rows once (a second run on the same day adds none) and hand the
  * pending ones to the enqueuer; two planners at once store one row per key;
  * the removal gate holds a member until the last warning is 12 hours old and
- * then removes them; with warnings off, a date a sent warning named still
+ * then removes them; a member whose plex.tv account shows no email gets
+ * every warning skipped and is removed on the same timeline; with warnings off, a date a sent warning named still
  * holds; and the retention sweep deletes old rows of closed cycles only.
  *
  * Tautulli, Plex, Stripe and the Discord role sync are mocked; the runs, the
@@ -42,6 +43,7 @@ jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }))
 jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
+jest.mock("@/lib/email/config", () => ({ ...jest.requireActual("@/lib/email/config"), emailConfigured: jest.fn(() => true) }))
 jest.mock("@/lib/connections/tautulli", () => ({ tautulliCommand: jest.fn() }))
 jest.mock("@/lib/connections/plex", () => ({ getPlexUsers: jest.fn(), unshareUserFromPlexServer: jest.fn() }))
 jest.mock("@/lib/connections/plex-user-access", () => ({ checkUserServerAccess: jest.fn() }))
@@ -159,6 +161,29 @@ describePg("inactivity warning emails", (databaseUrl) => {
     expect(second.result).toMatchObject({ warned: 0 })
     expect(second.enqueueNotices).toHaveBeenCalledWith([confirmed!.id])
     await expect(mockDb.inactivityNotice.count({ where: { userId: { in: IDS } } })).resolves.toBe(2)
+  })
+
+  it("skips every warning of a member whose plex.tv account shows no email, and removes them on the same timeline", async () => {
+    jest.mocked(getPlexUsers).mockResolvedValue({ success: true, data: [{ ...plexUser(MEMBERS.unconfirmed.plexUserId, ""), email: undefined }] })
+    const first = await run(new Date(realNow))
+    expect(first.result).toMatchObject({ warned: 1, removed: 0 })
+    const [planned] = await notices(MEMBERS.unconfirmed.id)
+    expect(planned).toMatchObject({ status: "skipped", code: "email_unconfirmed", leadDays: 30 })
+    expect(first.enqueueNotices).not.toHaveBeenCalled()
+
+    const date = planned!.removeAfter
+    await run(new Date(date.getTime() - 7 * DAY + 3 * HOUR))
+    await run(new Date(date.getTime() - DAY + 3 * HOUR))
+    const removal = await run(new Date(date.getTime() + 3 * HOUR), [MEMBERS.unconfirmed.id])
+
+    const rows = await notices(MEMBERS.unconfirmed.id)
+    expect(rows.map(({ leadDays, status, code }) => ({ leadDays, status, code }))).toEqual(
+      [30, 7, 1].map((leadDays) => ({ leadDays, status: "skipped", code: "email_unconfirmed" }))
+    )
+    expect(removal.result).toMatchObject({ qualified: 1, removed: 1, blocked: null })
+    expect(unshareUserFromPlexServer).toHaveBeenCalledWith(expect.anything(), MEMBERS.unconfirmed.plexUserId)
+    // Back for the other tests: shared again, with access
+    await mockDb.user.update({ where: { id: MEMBERS.unconfirmed.id }, data: { accessEndedAt: null } })
   })
 
   it("stores one row per key when two planners run at once", async () => {

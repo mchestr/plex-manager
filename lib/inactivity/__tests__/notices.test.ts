@@ -32,6 +32,7 @@ const TORONTO = "America/Toronto"
 const VANCOUVER = "America/Vancouver"
 const TOKYO = "Asia/Tokyo"
 const HONOLULU = "Pacific/Honolulu"
+const LOS_ANGELES = "America/Los_Angeles"
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
 const LEADS = [30, 7, 1]
@@ -67,6 +68,7 @@ function row(owner: InactivityMember, patch: Partial<NoticeRow> & Pick<NoticeRow
     userId: owner.id,
     cycleAt: owner.lastSeenAt ?? owner.createdAt,
     status: "sent",
+    code: null,
     attempts: 1,
     zone: TORONTO,
     handledAt: null,
@@ -240,6 +242,22 @@ describe("removalGate with warnings on", () => {
     expect(removalGate(m, [sent(30, at("2026-09-28", "09:00")), sent(7, at("2026-10-21", "09:00"))], gateContext(runAt("2026-10-29")))).toBe("last_warning")
   })
 
+  it.each<[string, Partial<NoticeRow>, ReturnType<typeof removalGate>]>([
+    ["failed", { status: "failed", code: "timeout" }, "last_warning"],
+    ["left sending, then marked stalled", { status: "failed", code: "stalled" }, "last_warning"],
+    ["cancelled", { status: "cancelled", code: "late" }, "last_warning"],
+    ["superseded", { status: "cancelled", code: "superseded" }, null],
+  ])("holds a member whose later last warning was %s, after a play (R6)", (_name, patch, hold) => {
+    // The Oct 29 run found no play after the Oct 27 last warning and planned one for Oct 30 (R7)
+    const later = row(m, { leadDays: 1, removeAfter: startOfDay("2026-10-30", TORONTO), handledAt: null, ...patch })
+    expect(removalGate(m, [...warned(), later], gateContext(runAt("2026-10-30")))).toBe(hold)
+  })
+
+  it("does not hold a member for a later earlier stage that failed", () => {
+    const later = row(m, { leadDays: 7, removeAfter: startOfDay("2026-10-30", TORONTO), status: "failed", code: "smtp", handledAt: null })
+    expect(removalGate(m, [...warned(), later], gateContext(runAt("2026-10-30")))).toBeNull()
+  })
+
   it("needs the last warning for the current date, not an older one", () => {
     const rows = [...warned(), row(m, { leadDays: 7, removeAfter: startOfDay("2026-11-27", TORONTO), status: "pending" })]
     expect(removalGate(m, rows, gateContext(runAt("2026-11-28"), { thresholdDays: 210 }))).toBe("last_warning")
@@ -292,6 +310,20 @@ describe("planWarnings steps", () => {
 
     const again = [...rows, row(m, { leadDays: 1, removeAfter: startOfDay("2026-10-30", TORONTO), handledAt: at("2026-10-29", "09:00") })]
     expect(plan(m, again, context(runAt("2026-10-31"), idle))).toEqual([])
+  })
+
+  it("plans a new last warning when a later last warning failed or was cancelled, after a play (R6)", () => {
+    const D = startOfDay("2026-10-28", TORONTO)
+    const rows = [row(m, { leadDays: 30, removeAfter: D, handledAt: at("2026-09-28", "09:00") }), row(m, { leadDays: 1, removeAfter: D, handledAt: at("2026-10-27", "09:00") })]
+    const r7 = (patch: Partial<NoticeRow>) => row(m, { leadDays: 1, removeAfter: startOfDay("2026-10-30", TORONTO), handledAt: null, ...patch })
+    const next = [{ lead: 1, date: startOfDay("2026-10-31", TORONTO).toISOString(), revive: null }]
+    expect(summary(plan(m, [...rows, r7({ status: "failed", code: "stalled" })], context(runAt("2026-10-30"))))).toEqual(next)
+    expect(summary(plan(m, [...rows, r7({ status: "cancelled", code: "stale_data" })], context(runAt("2026-10-30"))))).toEqual(next)
+    // A superseded one gave way to a later date: it is the sweep's turn
+    expect(plan(m, [...rows, r7({ status: "cancelled", code: "superseded" })], context(runAt("2026-10-30")))).toEqual([])
+    // On the day it was planned, the same key: the failed row goes back to work
+    const failed = r7({ status: "failed", code: "smtp", attempts: 3 })
+    expect(summary(plan(m, [...rows, failed], context(at("2026-10-29", "15:00"))))).toEqual([{ lead: 1, date: failed.removeAfter.toISOString(), revive: failed.id }])
   })
 
   it("starts the warnings again when the date started more than 7 days ago (R5)", () => {
@@ -530,7 +562,7 @@ function simulate(sims: SimMember[], config: SimConfig): SimResult {
         // Only the most urgent stage: a later warning never claims more days than its lead
         if (!first && daysBetween(sendDay, named) > planned.leadDays) fail(`${day} ${planned.userId}: lead ${planned.leadDays} for ${named}`)
         const unconfirmed = emailUnconfirmed(sim.email, sim.plexEmail ?? sim.email?.toLowerCase())
-        const outcome = { status: unconfirmed ? "skipped" : "pending", handledAt: unconfirmed ? now : null }
+        const outcome = { status: unconfirmed ? "skipped" : "pending", code: unconfirmed ? "email_unconfirmed" : null, handledAt: unconfirmed ? now : null }
         if (planned.reviveId) {
           Object.assign(result.rows.find((r) => r.id === planned.reviveId)!, outcome)
         } else if (!result.rows.some((r) => r.userId === planned.userId && r.cycleAt.getTime() === planned.cycleAt.getTime() && r.leadDays === planned.leadDays && r.removeAfter.getTime() === planned.removeAfter.getTime())) {
@@ -558,6 +590,11 @@ function simulate(sims: SimMember[], config: SimConfig): SimResult {
           // R1: a handled last warning for the date, 12 hours before, with a play on the server after it
           if (!lastWarning.some((r) => now.getTime() - r.handledAt!.getTime() >= 12 * HOUR && serverPlay! > r.handledAt!)) fail(`${day} ${m.id}: no last warning`)
           if (now < D.removeAfter) fail(`${day} ${m.id}: removed before its date`)
+          // R6: the newest last warning was handled, and no failed one named a later date (a timeout may have delivered it)
+          const lastWarnings = cycle.filter((r) => r.leadDays <= smallest && r.code !== "superseded")
+          const newest = latest(...lastWarnings.map((r) => r.removeAfter))
+          if (newest && !lastWarnings.some((r) => r.removeAfter.getTime() === newest.getTime() && handled.includes(r))) fail(`${day} ${m.id}: newest last warning not handled`)
+          if (lastWarnings.some((r) => r.status === "failed" && now < r.removeAfter)) fail(`${day} ${m.id}: removed before a failed last warning's date`)
           // R2: the cycle had a first warning with the full lead
           if (!handled.some((r) => r.leadDays === largest && daysBetween(dayKeyOf(r.handledAt!, r.zone), dayKeyOf(r.removeAfter, r.zone)) >= largest)) fail(`${day} ${m.id}: no full first warning`)
         }
@@ -573,8 +610,8 @@ function simulate(sims: SimMember[], config: SimConfig): SimResult {
       const sendDay = dayKeyOf(sendAt, r.zone)
       const current = cycleState(m, rowsOf(m.id), { thresholdDays, serverZone: zone })
       const cancel = removed.has(m.id) || !warningsOn || r.cycleAt.getTime() !== current.cycleAt.getTime() || r.removeAfter < current.removeAfter || sendDay >= dayKeyOf(r.removeAfter, r.zone)
-      if (cancel) r.status = "cancelled"
-      else if (config.sendFails?.(r, day)) Object.assign(r, { status: "failed", attempts: r.attempts + 3 })
+      if (cancel) Object.assign(r, { status: "cancelled", code: r.removeAfter < current.removeAfter ? "superseded" : "late" })
+      else if (config.sendFails?.(r, day)) Object.assign(r, { status: "failed", code: "timeout", attempts: r.attempts + 3 })
       else {
         Object.assign(r, { status: "sent", handledAt: config.sentAt?.(r, day) ?? sendAt, attempts: r.attempts + 1 })
         result.sent.push({ id: r.userId, lead: r.leadDays, date: dayKeyOf(r.removeAfter, r.zone), sendDay, daysLeft: daysBetween(sendDay, dayKeyOf(r.removeAfter, r.zone)) })
@@ -706,6 +743,22 @@ describe("the plan's worked examples", () => {
     const result = simulate(sims, { start: "2026-11-11", days: 40 })
     expect(result.sent).toEqual([])
     expect(result.removals.map((removal) => removal.day)).toEqual(["2026-12-11"])
+    expect(result.violations).toEqual([])
+  })
+
+  it("a new last warning fails after an idle night, then someone plays: the member waits for a newer one (R6)", () => {
+    // Los Angeles: the Dec 11 run falls at 23:17 on Dec 10 there, before the date starts
+    const result = simulate([simMember("m1", at("2026-05-01", "20:00"), LOS_ANGELES)], {
+      start: "2026-11-11",
+      days: 40,
+      serverPlays: (day) => day !== "2026-12-11",
+      sendFails: (r, day) => day === "2026-12-11" && r.leadDays === 1,
+    })
+    // The Dec 11 run plans a last warning for Dec 12 (R7). It fails, so the Dec 12 run plans one for Dec 13
+    expect(result.rows.filter((r) => r.status === "failed").map((r) => dayKeyOf(r.removeAfter, r.zone))).toEqual(["2026-12-12"])
+    expect(emails(result)).toEqual(["2026-11-11 30 2026-12-11", "2026-12-04 7 2026-12-11", "2026-12-10 1 2026-12-11", "2026-12-12 1 2026-12-13"])
+    // The old gate removed them at the Dec 12 run, 23:17 on Dec 11 there, while the Dec 12 email had failed
+    expect(result.removals.map((removal) => removal.day)).toEqual(["2026-12-14"])
     expect(result.violations).toEqual([])
   })
 
