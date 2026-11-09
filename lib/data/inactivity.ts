@@ -35,6 +35,7 @@ const RUN_SELECT = {
   matched: true,
   qualified: true,
   removed: true,
+  warned: true,
   failed: true,
   blocked: true,
   error: true,

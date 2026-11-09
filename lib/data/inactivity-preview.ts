@@ -21,6 +21,14 @@
  * sweep's candidates, the longest inactive first. `scheduledLimit` is a
  * scheduled run's safety limit, from the members with a share.
  *
+ * The warning lists (`lib/inactivity/notice-lists.ts`) cover every member
+ * with a share and no skip, active ones too, since a first warning goes out
+ * before the due day: who waits for a date a warning named, who the next
+ * daily run warns first, and who of them the app cannot email, by code.
+ * These lists name a member by name only, never by address. While
+ * warnings are off, the first warnings and the cannot-email list are what a
+ * switch-on would do.
+ *
  * @module lib/data/inactivity-preview
  */
 
@@ -29,7 +37,9 @@ import "server-only"
 import { assertAdmin } from "@/lib/admin"
 import { getActiveService } from "@/lib/data/active-service"
 import { listInactivityMembers } from "@/lib/inactivity/members"
-import { readRemovalGate, warningRules } from "@/lib/inactivity/notice-store"
+import { cannotEmail, warningLists, type CannotEmailCode, type NoticeSummary } from "@/lib/inactivity/notice-lists"
+import { readNoticeDetails } from "@/lib/inactivity/notice-store"
+import { removalGate } from "@/lib/inactivity/notices"
 import {
   byLongestInactive,
   INACTIVITY_SKIPS,
@@ -44,6 +54,7 @@ import {
 import { getInactivityWarnings } from "@/lib/inactivity/settings"
 import { hasShare, readPlexShares, type ShareBlock } from "@/lib/inactivity/shares"
 import { prisma } from "@/lib/prisma"
+import { serverZone } from "@/lib/utils/server-zone"
 
 /** A member a run would remove now. */
 export interface InactivityPreviewRow {
@@ -53,6 +64,33 @@ export interface InactivityPreviewRow {
   /** The latest of the newest play, the day they joined and the day their access came back. */
   lastActiveAt: Date
   createdAt: Date
+}
+
+/** A member with an open warning, waiting for its removal date. */
+export interface WaitingRow {
+  id: string
+  name: string
+  /** The removal date, `YYYY-MM-DD` in the member's zone. */
+  removalDay: string
+  /** The newest warning of the cycle. */
+  last: NoticeSummary | null
+}
+
+/** A member the next daily run warns first. */
+export interface FirstWarningRow {
+  id: string
+  name: string
+  /** The removal date the first warning would name, `YYYY-MM-DD` in the member's zone. */
+  removalDay: string
+  lastActiveAt: Date
+}
+
+/** A member of either list whom the app cannot email. */
+export interface CannotEmailRow {
+  id: string
+  name: string
+  code: CannotEmailCode
+  list: "waiting" | "first"
 }
 
 export interface InactivityPreview {
@@ -72,6 +110,14 @@ export interface InactivityPreview {
   scheduledLimit: number | null
   /** When the read the preview uses started; null before the first read worked. */
   readSince: Date | null
+  /** Warning emails are on; while off, the first warnings and cannot-email list are a projection. */
+  warningsOn: boolean
+  /** The soonest removal date first. */
+  waiting: WaitingRow[]
+  /** The longest inactive first. */
+  firstWarnings: FirstWarningRow[]
+  /** Waiting first, then the first warnings, each in their list's order. */
+  cannotEmail: CannotEmailRow[]
 }
 
 /**
@@ -82,7 +128,7 @@ export interface InactivityPreview {
  */
 export async function getInactivityPreview(thresholdDays: number, now: Date): Promise<InactivityPreview> {
   await assertAdmin()
-  const [stored, active, read, warnings] = await Promise.all([
+  const [stored, active, read, warnings, zone] = await Promise.all([
     listInactivityMembers(),
     getActiveService("plex"),
     prisma.inactivityRun.findFirst({
@@ -91,9 +137,11 @@ export async function getInactivityPreview(thresholdDays: number, now: Date): Pr
       select: { startedAt: true, newestPlayAt: true },
     }),
     getInactivityWarnings(),
+    serverZone(),
   ])
   const shares = await readPlexShares(active)
   const readSince = read?.startedAt ?? null
+  const newestPlayAt = read?.newestPlayAt ?? null
   const rules = { ownerPlexUserId: active?.adminPlexUserId ?? null, readSince }
   // Without the share list every member may have access, so none is left out
   const withAccess = (member: InactivityMember) => !shares.ok || hasShare(shares.ids, member.plexUserId)
@@ -112,17 +160,47 @@ export async function getInactivityPreview(thresholdDays: number, now: Date): Pr
     else inactive.push(member)
   }
 
-  const gate = await readRemovalGate(inactive, { thresholdDays, now, newestPlayAt: read?.newestPlayAt ?? null, warnings: await warningRules(warnings) })
-  const candidates = inactive.filter((member) => gate(member) === null).sort(byLongestInactive)
+  // The members a run warns or removes: a share and no skip, as the sweep picks them
+  const shared = members.filter(withAccess)
+  const eligible = shared.filter((member) => !inactivitySkip(member, rules))
+  const notices = Map.groupBy(await readNoticeDetails(eligible.map((member) => member.id)), (row) => row.userId)
+  const rowsOf = (member: InactivityMember) => notices.get(member.id) ?? []
+  const warningsOn = warnings.warningsEnabled
+  const gate = { thresholdDays, now, newestPlayAt, warnings: warningsOn ? { warningDays: warnings.warningDays, serverZone: zone } : null }
+  const candidates = inactive.filter((member) => removalGate(member, rowsOf(member), gate) === null).sort(byLongestInactive)
+  const lists = warningLists(
+    eligible.map((member) => ({ member, rows: rowsOf(member) })),
+    { now, thresholdDays, newestPlayAt, warningsOn, warningDays: warnings.warningDays, serverZone: zone, sharedMembers: shared.length }
+  )
 
-  const users = candidates.length
-    ? await prisma.user.findMany({ where: { id: { in: candidates.map((member) => member.id) } }, select: { id: true, name: true, email: true } })
+  const ids = [...new Set([...candidates, ...lists.waiting.map((entry) => entry.member), ...lists.firstWarnings.map((entry) => entry.member)].map((member) => member.id))]
+  const users = ids.length
+    ? await prisma.user.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, name: true, email: true, disabledAt: true, inactivityEmailsOff: true },
+      })
     : []
-  const nameOf = new Map(users.map((user) => [user.id, user.name || user.email || "Unknown member"]))
+  const userOf = new Map(users.map((user) => [user.id, user]))
+  const nameOf = (id: string) => {
+    const user = userOf.get(id)
+    return user?.name || user?.email || "Unknown member"
+  }
+  // The warning lists name a member without their address, since "Cannot email" is about that address
+  const listName = (id: string) => userOf.get(id)?.name || "Unknown member"
+  const reasonFor = (member: InactivityMember, last: NoticeSummary | null = null) => {
+    const user = userOf.get(member.id)
+    const plexEmail = shares.ok ? shares.emails.get(member.plexUserId?.trim() ?? "") : undefined
+    return cannotEmail({ email: user?.email ?? null, disabledAt: user?.disabledAt ?? null, inactivityEmailsOff: user?.inactivityEmailsOff ?? false, plexEmail, plexRead: shares.ok }, last)
+  }
+  const unreachable = [
+    ...lists.waiting.map((entry) => ({ member: entry.member, code: reasonFor(entry.member, entry.last), list: "waiting" as const })),
+    ...lists.firstWarnings.map((entry) => ({ member: entry.member, code: reasonFor(entry.member), list: "first" as const })),
+  ].flatMap(({ member, code, list }) => (code ? [{ id: member.id, name: listName(member.id), code, list }] : []))
+
   return {
     rows: candidates.map((member) => ({
       id: member.id,
-      name: nameOf.get(member.id) ?? "Unknown member",
+      name: nameOf(member.id),
       lastSeenAt: member.lastSeenAt,
       lastActiveAt: lastActiveAt(member),
       createdAt: member.createdAt,
@@ -132,7 +210,16 @@ export async function getInactivityPreview(thresholdDays: number, now: Date): Pr
     noAccess,
     held: inactive.length - candidates.length,
     shareCheck: shares.ok ? null : shares.block,
-    scheduledLimit: shares.ok ? scheduledRunLimit(members.filter(withAccess).length) : null,
+    scheduledLimit: shares.ok ? scheduledRunLimit(shared.length) : null,
     readSince,
+    warningsOn,
+    waiting: lists.waiting.map(({ member, removalDay, last }) => ({ id: member.id, name: listName(member.id), removalDay, last })),
+    firstWarnings: lists.firstWarnings.map(({ member, removalDay }) => ({
+      id: member.id,
+      name: listName(member.id),
+      removalDay,
+      lastActiveAt: lastActiveAt(member),
+    })),
+    cannotEmail: unreachable,
   }
 }

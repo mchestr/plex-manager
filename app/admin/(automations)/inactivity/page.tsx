@@ -4,6 +4,7 @@ import { connection } from "next/server"
 import { PreviewSection } from "@/components/admin/inactivity/preview-section"
 import { RunsTable } from "@/components/admin/inactivity/runs-table"
 import { InactivitySettingsSection } from "@/components/admin/inactivity/settings-section"
+import { WarningLists } from "@/components/admin/inactivity/warning-lists"
 import { LastSaved } from "@/components/admin/settings/last-saved"
 import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -15,7 +16,8 @@ import { getFormat } from "@/lib/settings/app-settings"
 
 /**
  * Inactive members, a tab of Automations: the sweep's settings card with the last
- * run and Run now, whom a run would remove now, and the newest runs. See
+ * run and Run now, whom a run would remove now, the warning email lists, and
+ * the newest runs. See
  * `docs/inactive-members.md`.
  */
 export default async function InactivityPage() {
@@ -58,6 +60,7 @@ export default async function InactivityPage() {
         footerMeta={data.lastSaved && <LastSaved id="inactivity" meta={data.lastSaved} />}
       />
       <PreviewSection preview={preview} settings={settings} f={f} now={now.getTime()} />
+      <WarningLists preview={preview} removalOn={settings.enabled} now={now.getTime()} />
       <section aria-labelledby="admin-inactivity-runs-heading" className="flex flex-col gap-3">
         <h2 id="admin-inactivity-runs-heading" className="text-h3">
           Recent runs

@@ -2,8 +2,8 @@
  * The member page's Overview facts: the account (services, who invited them,
  * Discord), when a Plex member last played ("Never" when Tautulli knows them
  * with no play, "Unknown" before it reported them), and the inactivity switch
- * for a Plex member the sweep could remove, never for an admin or the server
- * owner.
+ * and the warning emails for a Plex member the sweep could remove, never for
+ * an admin or the server owner.
  */
 
 import { render, screen } from '@testing-library/react'
@@ -14,12 +14,14 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { getUserActivityTimeline } from '@/actions/user-queries'
 import { OverviewTab } from '@/components/admin/users/detail/overview-tab'
 import type { UserDetailHeaderData } from '@/lib/admin/user-detail'
+import { getMemberInactivityEmails } from '@/lib/data/member-inactivity'
 import { bindFormat } from '@/lib/utils/format'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('next/navigation', () => require('@/__tests__/helpers/url-router').navigationModule)
 jest.mock('@/actions/user-queries', () => ({ getUserActivityTimeline: jest.fn() }))
 jest.mock('@/actions/admin/inactivity', () => ({ setMemberInactivityExcluded: jest.fn() }))
+jest.mock('@/lib/data/member-inactivity', () => ({ getMemberInactivityEmails: jest.fn() }))
 jest.mock('@/actions/admin/request-tiers', () => ({ setMemberTiersExcluded: jest.fn() }))
 jest.mock('@/components/admin/users/user-activity-timeline', () => ({ UserActivityTimeline: () => null }))
 jest.mock('@/components/admin/users/detail/request-tier-check', () => ({ RequestTierCheck: () => null }))
@@ -61,9 +63,11 @@ async function renderTab(overrides: Partial<UserDetailHeaderData> = {}) {
 }
 
 beforeEach(() => {
+  jest.clearAllMocks()
   mockReset(prismaMock)
   jest.mocked(getUserActivityTimeline).mockResolvedValue({ success: false, code: 'INTERNAL', error: 'Could not load the activity' })
   prismaMock.user.findUnique.mockResolvedValue(buildUser({ requestTiersExcluded: false }))
+  jest.mocked(getMemberInactivityEmails).mockResolvedValue({ last: null, removalDay: null, emailOnFile: true, remindersOn: true })
 })
 
 describe('OverviewTab, Plex activity', () => {
@@ -100,6 +104,15 @@ describe('OverviewTab, Plex activity', () => {
     expect(screen.getByTestId('admin-user-inactivity-excluded')).toHaveAttribute('aria-checked', 'true')
   })
 
+  it('shows the warning emails beside the switch', async () => {
+    await renderTab()
+
+    expect(getMemberInactivityEmails).toHaveBeenCalledWith('u1')
+    expect(screen.getByTestId('admin-user-inactivity-emails')).toHaveTextContent(/^None$/)
+    expect(screen.getByTestId('admin-user-email-on-file')).toHaveTextContent('Yes')
+    expect(screen.getByTestId('admin-user-access-reminders')).toHaveTextContent('On')
+  })
+
   it.each([
     ['an admin', { isAdmin: true }],
     ['the server owner', { isOwner: true }],
@@ -108,6 +121,8 @@ describe('OverviewTab, Plex activity', () => {
 
     expect(screen.getByTestId('admin-user-last-seen')).toBeInTheDocument()
     expect(screen.queryByTestId('admin-user-inactivity-excluded')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('admin-user-inactivity-emails')).not.toBeInTheDocument()
+    expect(getMemberInactivityEmails).not.toHaveBeenCalled()
   })
 })
 
