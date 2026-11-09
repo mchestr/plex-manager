@@ -40,6 +40,9 @@ export {
 // Search functionality
 export { searchPlexMedia } from "./plex-search"
 
+// One item's ids, section and files
+export { getPlexItemMetadata, type PlexItemMetadata } from "./plex-metadata"
+
 // Mark watched/unwatched
 export {
   markPlexItemWatched,

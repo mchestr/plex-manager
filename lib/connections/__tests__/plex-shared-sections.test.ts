@@ -234,7 +234,7 @@ describe('plex-shared-sections', () => {
             size: 1,
             librarySectionID: 3,
             librarySectionTitle: 'Kids',
-            Metadata: [{ ratingKey: '555', librarySectionID: 3 }],
+            Metadata: [{ ratingKey: '555', type: 'movie', title: 'Up', librarySectionID: 3 }],
           },
         })
       )
@@ -243,7 +243,7 @@ describe('plex-shared-sections', () => {
 
       expect(lookup).toEqual({ status: 'found', sectionKey: '3' })
       const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
-      expect(url).toBe('http://plex.local:32400/library/metadata/555')
+      expect(url).toBe('http://plex.local:32400/library/metadata/555?includeGuids=1')
       expect(url).not.toContain('owner-token')
       expect(init.headers.Accept).toBe('application/json')
       expect(init.headers['X-Plex-Token']).toBe('owner-token')
@@ -258,7 +258,7 @@ describe('plex-shared-sections', () => {
 
     it("falls back to the first item's librarySectionID", async () => {
       ;(global.fetch as jest.Mock).mockResolvedValue(
-        jsonResponse({ MediaContainer: { size: 1, Metadata: [{ ratingKey: '555', librarySectionID: 4 }] } })
+        jsonResponse({ MediaContainer: { size: 1, Metadata: [{ ratingKey: '555', type: 'movie', title: 'Up', librarySectionID: 4 }] } })
       )
 
       expect(await getItemSectionKey(SERVER, '555')).toEqual({ status: 'found', sectionKey: '4' })
@@ -284,7 +284,7 @@ describe('plex-shared-sections', () => {
       const now = Date.now()
       const clock = jest.spyOn(Date, 'now').mockReturnValue(now)
       ;(global.fetch as jest.Mock).mockResolvedValue(
-        jsonResponse({ MediaContainer: { librarySectionID: '2' } })
+        jsonResponse({ MediaContainer: { librarySectionID: '2', Metadata: [{ ratingKey: '555', type: 'movie', title: 'Up' }] } })
       )
 
       await getItemSectionKey(SERVER, '555')

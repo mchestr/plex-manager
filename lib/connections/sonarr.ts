@@ -1,7 +1,8 @@
 import { z } from "zod"
 
 import { type SonarrParsed } from "@/lib/validations/sonarr";
-import { arrGet, arrGetList, arrGetPaged, arrQuery, invalidArrParams, testArrConnection, type ArrPage } from "@/lib/connections/arr-client";
+import { arrFind, arrGet, arrGetList, arrGetPaged, arrQuery, invalidArrParams, testArrConnection, type ArrPage } from "@/lib/connections/arr-client";
+import { type PlexExternalIds } from "@/lib/connections/plex-guids";
 import { type ConnectionResult } from "@/types/connection";
 
 /*
@@ -15,6 +16,16 @@ const seriesHistoryParams = z.strictObject({ ...withSeriesAndEpisode, seriesId: 
 const queueParams = z.strictObject(withSeriesAndEpisode)
 const calendarParams = z.strictObject({ start: z.string().optional(), end: z.string().optional(), includeSeries: z.literal(true) })
 const missingParams = z.strictObject({ includeSeries: z.literal(true), sortKey: z.literal("airDateUtc") })
+const seriesParams = z.strictObject({ tvdbId: z.number().int().positive() })
+
+/** The `SeriesResource` fields a link to the series needs. */
+const seriesSchema = z.looseObject({
+  id: z.number().int(),
+  titleSlug: z.string(),
+  tvdbId: z.number().int(),
+  tmdbId: z.number().int().nullish(),
+  imdbId: z.string().nullish(),
+})
 
 export async function testSonarrConnection(config: SonarrParsed): Promise<{ success: boolean; error?: string }> {
   return testArrConnection("Sonarr", config)
@@ -62,6 +73,27 @@ export async function getSonarrHistory(
 
 export async function getSonarrSeries(config: SonarrParsed): Promise<ConnectionResult<unknown>> {
   return arrGet("Sonarr", config, "/api/v3/series")
+}
+
+/**
+ * The library series with a TVDB, TMDB or IMDb id, or `null`. Sonarr filters
+ * a TVDB id itself (`GET /api/v3/series?tvdbId=`); without one, or when it
+ * finds nothing, the TMDB or IMDb id is looked for across the whole library.
+ */
+export async function findSonarrSeries(
+  config: SonarrParsed,
+  { tvdb, tmdb, imdb }: PlexExternalIds
+): Promise<ConnectionResult<z.infer<typeof seriesSchema> | null>> {
+  const hasOtherIds = tmdb !== undefined || imdb !== undefined
+  if (tvdb !== undefined) {
+    const query = arrQuery(seriesParams, { tvdbId: tvdb })
+    const byTvdb = await arrFind("Sonarr", config, "/api/v3/series", query, seriesSchema, (series) => series.tvdbId === tvdb)
+    if (!byTvdb.success || byTvdb.data || !hasOtherIds) return byTvdb
+  }
+  if (!hasOtherIds) return { success: true, data: null }
+  return arrFind("Sonarr", config, "/api/v3/series", "", seriesSchema, (series) =>
+    (tmdb !== undefined && series.tmdbId === tmdb) || (imdb !== undefined && series.imdbId === imdb)
+  )
 }
 
 export async function getSonarrSeriesById(config: SonarrParsed, seriesId: number): Promise<ConnectionResult<unknown>> {
