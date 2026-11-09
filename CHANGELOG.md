@@ -27,16 +27,16 @@ label skips it.
 - **Email (optional):** set `SMTP_URL` and `EMAIL_FROM` on the web and worker containers to send email. A server with a login also needs `SMTP_USER` and `SMTP_PASSWORD`. See `docs/email.md`.
 - **Unsubscribe links:** mail providers post to `/api/email/unsubscribe` from their own servers, and members open `/email/unsubscribe` from the email. If a CDN or a firewall in front of the app blocks countries or challenges bots, let both paths through. A new `NEXTAUTH_SECRET` stops every unsubscribe link already sent. See `docs/email.md`.
 - **New optional variable:** `RETENTION_INACTIVITY_NOTICE_DAYS` (default 180) sets the age in days after which the app deletes a warning email record, once the member's inactive period is over. Records of an open inactive period stay at any age. See `docs/privacy.md`.
-- **Inactive members:** this release adds the `InactivityNotice` table and new columns on `User`, `InactivitySettings` and `InactivityRun`, for the coming warning emails before removal. The migration only adds, so it needs no other step. Nothing reads the new fields yet, and removal works as before.
+- **Inactive members:** this release adds the `InactivityNotice` table and new columns on `User`, `InactivitySettings` and `InactivityRun`, for the warning emails before removal. The migration only adds, so it needs no other step.
 - **Warning emails:** `EMAIL_REPLY_TO` is also the envelope sender, so your mail provider must accept it as a sender. Set it before you send the test email.
 - **Warning emails:** before you go back to a release older than the removal gate, turn automatic removal off. An older release ignores the removal dates the emails named and removes overdue members at once. Before you turn the emails on, follow the launch checklist in `docs/inactive-members.md`.
 
 ### Added
 
 - **Email:** Admin > Settings > Email shows the mail server and sends a test email to you.
-- **Email:** one-click unsubscribe (RFC 8058) for the access reminders, the coming warning emails before removal for inactivity. A link only turns the emails off and needs no sign-in. The test email now carries the unsubscribe link and the `List-Unsubscribe` headers, so you can try them.
+- **Email:** one-click unsubscribe (RFC 8058) for the access reminders, the warning emails before removal for inactivity. A link only turns the emails off and needs no sign-in. The test email now carries the unsubscribe link and the `List-Unsubscribe` headers, so you can try them.
 - **Account:** an Email card with an Access reminders switch. It shows only while email is set up and the warning emails are on.
-- **Email:** the warning emails before the inactivity sweep removes a member: a first warning, reminders and a last warning, each sent between 09:00 and 20:00 in the member's zone. Warnings stay off, so no member gets one yet. A failed warning logs `inactivity_notice.failed`. See `docs/email.md`.
+- **Email:** the warning emails before the inactivity sweep removes a member: a first warning, reminders and a last warning, each sent between 09:00 and 20:00 in the member's zone. No member gets one until an admin turns the warning emails on. A failed warning logs `inactivity_notice.failed`. See `docs/email.md`.
 - **Email:** the test email now shows the first warning, with example dates.
 - **Inactive members:** the page lists the members who wait for the removal date a warning named, the members the next run warns for the first time, and the members the app cannot email, with the reason. While warning emails are off, the last two lists show what turning them on would do. Recent runs show how many warnings each run planned, and a member's Overview tab shows their warning emails.
 - **Inactive members:** warning emails before removal, 30, 7 and 1 days before by default, in a new Warning emails card. They are off until an admin turns them on, and they need email and Redis set up. The page alerts when warnings cannot go out, when warnings failed, and when the safety limit holds back members who wait.
@@ -44,8 +44,7 @@ label skips it.
 ### Changed
 
 - **Email:** a mail server certificate that fails the check (expired, self-signed, or for another host) now counts as `refused`, not `temporary`, so a send is not tried again with the same certificate.
-- **Inactive members:** the sweep now plans warning emails and holds a removal until the member's warnings are done. Warning emails stay off, and nothing can turn them on yet, so removals work as before.
-- **Inactive members:** with warning emails on, the run removes a member only after their last warning. A member with no warning yet gets 30 days first. While they are on, a new number of days without a play must be at least twice the largest number of days before removal. Turning the emails off lets the next run remove members who have no sent warning yet, so turn automatic removal off first to stop removals.
+- **Inactive members:** with warning emails on, the run plans the warnings and removes a member only after their last warning. With them off, removals work as before. A member with no warning yet gets 30 days first. While they are on, a new number of days without a play must be at least twice the largest number of days before removal. Turning the emails off lets the next run remove members who have no sent warning yet, so turn automatic removal off first to stop removals.
 
 ### Fixed
 
