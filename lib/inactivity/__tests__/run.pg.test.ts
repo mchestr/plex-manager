@@ -67,6 +67,8 @@ const MEMBERS = {
   active: { id: `${RUN}-active`, plexUserId: plexId(2), lastSeenAt: daysAgo(3) },
   excluded: { id: `${RUN}-excluded`, plexUserId: plexId(3), lastSeenAt: null, inactivityExcluded: true },
   admin: { id: ADMIN, plexUserId: plexId(4), lastSeenAt: null, isAdmin: true },
+  // Inactive by the history, but a play is open (paused) during the run
+  playing: { id: `${RUN}-playing`, plexUserId: plexId(5), lastSeenAt: daysAgo(400) },
 }
 const IDS = Object.values(MEMBERS).map((member) => member.id)
 const runIds: string[] = []
@@ -80,8 +82,18 @@ const TAUTULLI_ROWS = [
   { user_id: Number(plexId(2)), last_seen: seconds(daysAgo(300)), keep_history: 1 },
   { user_id: Number(plexId(3)), last_seen: seconds(daysAgo(500)), keep_history: 1 },
   { user_id: Number(plexId(4)), last_seen: seconds(daysAgo(600)), keep_history: 1 },
+  { user_id: Number(plexId(5)), last_seen: seconds(daysAgo(400)), keep_history: 1 },
   { user_id: Number(plexId(9)), last_seen: seconds(daysAgo(1)), keep_history: 1 },
 ]
+
+/** Tautulli's open sessions: the playing member's paused play and the guest's. */
+const ACTIVITY = {
+  stream_count: "2",
+  sessions: [
+    { user_id: Number(plexId(5)), state: "paused", friendly_name: "playing" },
+    { user_id: Number(plexId(9)), state: "playing", friendly_name: "guest" },
+  ],
+}
 
 /** A grant job as the queue hands it to the processor. */
 function grantJob(userId: string): Job<PlexAccessGrantPayload, PlexAccessGrantResult> {
@@ -116,10 +128,12 @@ describePg("member activity run", (databaseUrl) => {
       data: schema.parse(
         cmd === "get_history"
           ? HISTORY_PAGE
-          : { recordsFiltered: TAUTULLI_ROWS.length, recordsTotal: TAUTULLI_ROWS.length, draw: 1, data: TAUTULLI_ROWS }
+          : cmd === "get_activity"
+            ? ACTIVITY
+            : { recordsFiltered: TAUTULLI_ROWS.length, recordsTotal: TAUTULLI_ROWS.length, draw: 1, data: TAUTULLI_ROWS }
       ),
     }))
-    jest.mocked(getPlexUsers).mockResolvedValue({ success: true, data: [1, 2, 3, 4].map((n) => plexUser(plexId(n))) })
+    jest.mocked(getPlexUsers).mockResolvedValue({ success: true, data: [1, 2, 3, 4, 5].map((n) => plexUser(plexId(n))) })
     jest.mocked(unshareUserFromPlexServer).mockResolvedValue({ success: true, status: "removed" })
   })
 
@@ -138,7 +152,9 @@ describePg("member activity run", (databaseUrl) => {
   })
 
   it("removes only the inactive member, records the run and its audit rows, and releases the claim", async () => {
-    const result = await runMemberActivity("admin", { actorId: ADMIN, confirmedUserIds: [MEMBERS.inactive.id] })
+    const before = new Date()
+    // The admin also confirms the playing member, whom the preview listed before the play started
+    const result = await runMemberActivity("admin", { actorId: ADMIN, confirmedUserIds: [MEMBERS.inactive.id, MEMBERS.playing.id] })
 
     expect(result).toMatchObject({ busy: false, qualified: 1, removed: 1, failed: 0, blocked: null, error: null })
     const runId = result && !result.busy ? result.runId : ""
@@ -155,10 +171,13 @@ describePg("member activity run", (databaseUrl) => {
     // Last seen never moves back: Tautulli's older play did not replace the stored one
     expect(byId[MEMBERS.active.id]!.lastSeenAt).toEqual(MEMBERS.active.lastSeenAt)
     expect(byId[MEMBERS.excluded.id]!.lastSeenAt).toEqual(new Date(seconds(daysAgo(500)) * 1000))
+    // The open play counts as seen at the read, so the member keeps access
+    expect(byId[MEMBERS.playing.id]!.lastSeenAt!.getTime()).toBeGreaterThanOrEqual(before.getTime())
+    expect(byId[MEMBERS.playing.id]).toMatchObject({ plexAuthToken: "member-token", sessionVersion: 0 })
     for (const user of users) expect(user.lastSeenReadAt).toEqual(expect.any(Date))
 
     const run = await mockDb.inactivityRun.findUniqueOrThrow({ where: { id: runId } })
-    expect(run).toMatchObject({ trigger: "admin", matched: 4, qualified: 1, removed: 1, failed: 0, blocked: null, error: null, finishedAt: expect.any(Date) })
+    expect(run).toMatchObject({ trigger: "admin", matched: 5, qualified: 1, removed: 1, failed: 0, blocked: null, error: null, finishedAt: expect.any(Date) })
     expect(run.tautulliUsers).toBe(TAUTULLI_ROWS.length)
     expect(run.entries).toEqual([
       { userId: MEMBERS.inactive.id, outcome: "removed", lastActiveAt: MEMBERS.inactive.lastSeenAt.toISOString(), lastSeenAt: MEMBERS.inactive.lastSeenAt.toISOString() },
@@ -179,7 +198,7 @@ describePg("member activity run", (databaseUrl) => {
   })
 
   it("removes no one on a second run: the removed member no longer has a share", async () => {
-    jest.mocked(getPlexUsers).mockResolvedValue({ success: true, data: [2, 3, 4].map((n) => plexUser(plexId(n))) })
+    jest.mocked(getPlexUsers).mockResolvedValue({ success: true, data: [2, 3, 4, 5].map((n) => plexUser(plexId(n))) })
     jest.mocked(unshareUserFromPlexServer).mockClear()
 
     const result = await runMemberActivity("admin", { actorId: ADMIN, confirmedUserIds: [] })
@@ -231,7 +250,7 @@ describePg("member activity run", (databaseUrl) => {
     expect(byId[MEMBERS.active.id]).toMatchObject({ accessEndedAt: null, accessRestoredAt: null })
 
     // The share is back, and the admin would confirm the member again: the full threshold counts from the grant
-    jest.mocked(getPlexUsers).mockResolvedValue({ success: true, data: [1, 2, 3, 4].map((n) => plexUser(plexId(n))) })
+    jest.mocked(getPlexUsers).mockResolvedValue({ success: true, data: [1, 2, 3, 4, 5].map((n) => plexUser(plexId(n))) })
     jest.mocked(unshareUserFromPlexServer).mockClear()
 
     const result = await runMemberActivity("admin", { actorId: ADMIN, confirmedUserIds: [MEMBERS.inactive.id] })

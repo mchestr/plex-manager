@@ -21,12 +21,16 @@
  *    inactive, and, while warnings are on, fully warned for their removal
  *    date. With warnings off the gate only keeps a removal date that a
  *    handled warning named. The longest inactive first.
- * 4. The limit: a scheduled run removes no one when more qualify than
+ * 4. The open plays: when the last seen read could not list the plays open
+ *    right now (`activityRead` false), the run removes no one
+ *    (`activity_failed`), since a member still playing would look inactive.
+ *    The warnings of step 2 still go out.
+ * 5. The limit: a scheduled run removes no one when more qualify than
  *    `scheduledRunLimit` allows (`over_limit`); an admin run, when any
  *    candidate is not in `confirmedUserIds`, the members the admin confirmed
  *    (`not_confirmed`). A confirmed member who no longer qualifies is left
  *    alone.
- * 5. Each candidate, under the member's access lock when Redis is set up: read
+ * 6. Each candidate, under the member's access lock when Redis is set up: read
  *    the member again and re-check the rules and the gate, remove the share and offboard
  *    them (`unshareMember`), then write `MEMBER_UNSHARED` and wait for the row.
  *
@@ -101,6 +105,8 @@ export interface SweepOptions {
   newestPlayAt: Date | null
   /** When Tautulli's history starts, for the history guard. */
   oldestPlayAt: Date | null
+  /** Whether the read listed Tautulli's open plays; when false the run removes no one. */
+  activityRead: boolean
 }
 
 export interface SweepResult {
@@ -217,6 +223,7 @@ export async function runSweep(options: SweepOptions): Promise<SweepResult> {
   const candidates = eligible.filter((member) => gate(member) === null).sort(byLongestInactive)
   const qualified = candidates.length
 
+  if (!options.activityRead) return blocked("activity_failed", qualified, warned)
   const confirmed = new Set(options.confirmedUserIds)
   if (trigger === "scheduled" && qualified > scheduledRunLimit(withAccess.length)) return blocked("over_limit", qualified, warned)
   if (trigger === "admin" && candidates.some((member) => !confirmed.has(member.id))) return blocked("not_confirmed", qualified, warned)

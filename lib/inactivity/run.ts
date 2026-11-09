@@ -181,7 +181,7 @@ async function claimedRun(
   const sweep: SweepResult = sync.ok
     ? await runSweep({
         runId, trigger, actorId, confirmedUserIds, settings, warnings, enqueueNotices, now, signal,
-        readSince: now, newestPlayAt: sync.newestPlayAt, oldestPlayAt: sync.oldestPlayAt,
+        readSince: now, newestPlayAt: sync.newestPlayAt, oldestPlayAt: sync.oldestPlayAt, activityRead: sync.activityRead,
       })
     : { qualified: 0, removed: 0, failed: 0, warned: 0, entries: [], blocked: "sync_failed" }
   const { qualified, removed, failed, warned, blocked } = sweep

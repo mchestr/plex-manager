@@ -3,17 +3,27 @@
  */
 
 const mockWarn = jest.fn()
+const mockInfo = jest.fn()
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("@/lib/utils/logger", () => ({
-  createLogger: () => ({ debug: jest.fn(), info: jest.fn(), error: jest.fn(), warn: (...args: unknown[]) => mockWarn(...args) }),
+  createLogger: () => ({
+    debug: jest.fn(),
+    info: (...args: unknown[]) => mockInfo(...args),
+    error: jest.fn(),
+    warn: (...args: unknown[]) => mockWarn(...args),
+  }),
 }))
 jest.mock("@/lib/data/active-service", () => ({ getActiveService: jest.fn() }))
-jest.mock("@/lib/connections/tautulli-last-seen", () => ({ listTautulliLastSeen: jest.fn(), getOldestPlay: jest.fn() }))
+jest.mock("@/lib/connections/tautulli-last-seen", () => ({
+  listTautulliLastSeen: jest.fn(),
+  getOldestPlay: jest.fn(),
+  listTautulliPlayingUsers: jest.fn(),
+}))
 
 import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { getOldestPlay, listTautulliLastSeen, type TautulliLastSeen } from "@/lib/connections/tautulli-last-seen"
+import { getOldestPlay, listTautulliLastSeen, listTautulliPlayingUsers, type TautulliLastSeen } from "@/lib/connections/tautulli-last-seen"
 import { getActiveService } from "@/lib/data/active-service"
 import { SYNC_CHUNK, syncLastSeen } from "@/lib/inactivity/sync"
 
@@ -24,6 +34,10 @@ const historyStart = day("2024-02-01")
 
 function read(rows: TautulliLastSeen["rows"], dropped = 0) {
   jest.mocked(listTautulliLastSeen).mockResolvedValue({ ok: true, data: { rows, dropped } })
+}
+
+function playing(userIds: number[], dropped = 0) {
+  jest.mocked(listTautulliPlayingUsers).mockResolvedValue({ ok: true, data: { userIds, dropped } })
 }
 
 function members(rows: { id: string; plexUserId: string; lastSeenAt: Date | null }[]) {
@@ -38,9 +52,11 @@ function written() {
 beforeEach(() => {
   mockReset(prismaMock)
   mockWarn.mockReset()
+  mockInfo.mockReset()
   jest.mocked(getActiveService).mockResolvedValue(tautulli as never)
   jest.mocked(getOldestPlay).mockReset().mockResolvedValue({ ok: true, data: historyStart })
   read([])
+  playing([])
   members([])
 })
 
@@ -53,13 +69,33 @@ describe("syncLastSeen", () => {
     expect(prismaMock.user.findMany).not.toHaveBeenCalled()
   })
 
-  it("passes a failed read on and writes nothing", async () => {
+  it("passes a failed history read on and writes nothing", async () => {
     jest.mocked(listTautulliLastSeen).mockResolvedValue({ ok: false, code: "TIMEOUT" })
 
     await expect(syncLastSeen({ now })).resolves.toEqual({ ok: false, code: "TIMEOUT" })
     expect(getOldestPlay).not.toHaveBeenCalled()
     expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
     expect(prismaMock.$transaction).not.toHaveBeenCalled()
+  })
+
+  it("reads the open plays before the history, so a play that stops between the two reads is in the history", async () => {
+    const order: string[] = []
+    jest.mocked(listTautulliPlayingUsers).mockImplementation(async () => {
+      order.push("activity")
+      return { ok: true, data: { userIds: [], dropped: 0 } }
+    })
+    jest.mocked(listTautulliLastSeen).mockImplementation(async () => {
+      order.push("history")
+      return { ok: true, data: { rows: [], dropped: 0 } }
+    })
+    jest.mocked(getOldestPlay).mockImplementation(async () => {
+      order.push("oldest")
+      return { ok: true, data: historyStart }
+    })
+
+    await syncLastSeen({ now })
+
+    expect(order).toEqual(["activity", "history", "oldest"])
   })
 
   it("reads the active Tautulli with the caller's signal, and only members with a Plex account", async () => {
@@ -69,6 +105,7 @@ describe("syncLastSeen", () => {
     expect(getActiveService).toHaveBeenCalledWith("tautulli")
     expect(listTautulliLastSeen).toHaveBeenCalledWith(tautulli, { signal })
     expect(getOldestPlay).toHaveBeenCalledWith(tautulli, { signal })
+    expect(listTautulliPlayingUsers).toHaveBeenCalledWith(tautulli, { signal })
     expect(prismaMock.user.findMany).toHaveBeenCalledWith({
       where: { plexUserId: { not: null } },
       select: { id: true, plexUserId: true, lastSeenAt: true },
@@ -95,7 +132,7 @@ describe("syncLastSeen", () => {
       u1: { lastSeenAt: day("2026-10-01"), lastSeenReadAt: now },
       u2: { lastSeenAt: null, lastSeenReadAt: now },
     })
-    expect(result).toEqual({ ok: true, tautulliUsers: 4, matched: 2, newestPlayAt: day("2026-10-03"), oldestPlayAt: historyStart })
+    expect(result).toEqual({ ok: true, tautulliUsers: 4, matched: 2, newestPlayAt: day("2026-10-03"), oldestPlayAt: historyStart, activityRead: true })
   })
 
   it("never moves last seen backwards", async () => {
@@ -162,7 +199,7 @@ describe("syncLastSeen", () => {
   it("has no newest play when Tautulli has none", async () => {
     read([{ userId: 1, lastSeen: null, keepHistory: true }])
 
-    await expect(syncLastSeen({ now })).resolves.toEqual({ ok: true, tautulliUsers: 1, matched: 0, newestPlayAt: null, oldestPlayAt: historyStart })
+    await expect(syncLastSeen({ now })).resolves.toEqual({ ok: true, tautulliUsers: 1, matched: 0, newestPlayAt: null, oldestPlayAt: historyStart, activityRead: true })
   })
 
   it("passes on when Tautulli's history starts, or null when it has none", async () => {
@@ -177,9 +214,104 @@ describe("syncLastSeen", () => {
     read([{ userId: 1, lastSeen: day("2026-10-01"), keepHistory: true }])
     members([{ id: "u1", plexUserId: "1", lastSeenAt: null }])
 
-    await expect(syncLastSeen({ now })).resolves.toEqual({ ok: true, tautulliUsers: 1, matched: 1, newestPlayAt: day("2026-10-01"), oldestPlayAt: null })
+    await expect(syncLastSeen({ now })).resolves.toEqual({ ok: true, tautulliUsers: 1, matched: 1, newestPlayAt: day("2026-10-01"), oldestPlayAt: null, activityRead: true })
     expect(written()).toEqual({ u1: { lastSeenAt: day("2026-10-01"), lastSeenReadAt: now } })
     expect(mockWarn).toHaveBeenCalledWith("inactivity.oldest_play_failed", { code: "TIMEOUT", status: undefined })
+  })
+
+  describe("a play that is still open", () => {
+    it("counts a member with an open session as seen at the time of the read", async () => {
+      read([
+        { userId: 1, lastSeen: day("2026-05-01"), keepHistory: true },
+        { userId: 2, lastSeen: null, keepHistory: true },
+        { userId: 3, lastSeen: day("2026-05-01"), keepHistory: true },
+      ])
+      playing([1, 2])
+      members([
+        { id: "u1", plexUserId: "1", lastSeenAt: day("2026-05-01") },
+        { id: "u2", plexUserId: " 2 ", lastSeenAt: null },
+        { id: "u3", plexUserId: "3", lastSeenAt: day("2026-05-01") },
+      ])
+
+      await syncLastSeen({ now })
+
+      expect(written()).toEqual({
+        u1: { lastSeenAt: now, lastSeenReadAt: now },
+        u2: { lastSeenAt: now, lastSeenReadAt: now },
+        u3: { lastSeenAt: day("2026-05-01"), lastSeenReadAt: now },
+      })
+      expect(mockInfo).toHaveBeenCalledWith("inactivity.synced", { tautulliUsers: 3, matched: 3, dropped: 0, playing: 2, sessionsDropped: 0 })
+    })
+
+    it("matches the session by plex.tv id only, so a session of a user who is no member changes no one", async () => {
+      read([
+        { userId: 1, lastSeen: day("2026-05-01"), keepHistory: true },
+        { userId: 12, lastSeen: day("2026-10-30"), keepHistory: true },
+      ])
+      playing([12, 0], 1)
+      members([{ id: "u1", plexUserId: "1", lastSeenAt: null }])
+
+      await syncLastSeen({ now })
+
+      expect(written()).toEqual({ u1: { lastSeenAt: day("2026-05-01"), lastSeenReadAt: now } })
+      expect(mockInfo).toHaveBeenCalledWith("inactivity.synced", expect.objectContaining({ playing: 0, sessionsDropped: 1 }))
+    })
+
+    it("never moves last seen back, even when the stored play is after the read", async () => {
+      read([{ userId: 1, lastSeen: day("2026-05-01"), keepHistory: true }])
+      playing([1])
+      members([{ id: "u1", plexUserId: "1", lastSeenAt: day("2028-01-01") }])
+
+      await syncLastSeen({ now })
+
+      expect(written()).toEqual({ u1: { lastSeenAt: day("2028-01-01"), lastSeenReadAt: now } })
+    })
+
+    it("leaves a member whose history Tautulli does not keep, or who has no Tautulli row, as not read", async () => {
+      read([{ userId: 3, lastSeen: day("2026-05-01"), keepHistory: false }])
+      playing([3, 4])
+      members([
+        { id: "u3", plexUserId: "3", lastSeenAt: null },
+        { id: "u4", plexUserId: "4", lastSeenAt: null },
+      ])
+
+      await syncLastSeen({ now })
+
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+    })
+
+    it("does not count an open session as the newest play on the server", async () => {
+      read([{ userId: 1, lastSeen: day("2026-05-01"), keepHistory: true }])
+      playing([1])
+      members([{ id: "u1", plexUserId: "1", lastSeenAt: null }])
+
+      await expect(syncLastSeen({ now })).resolves.toEqual({
+        ok: true,
+        tautulliUsers: 1,
+        matched: 1,
+        newestPlayAt: day("2026-05-01"),
+        oldestPlayAt: historyStart,
+        activityRead: true,
+      })
+    })
+
+    it("writes the history alone when the activity read fails, logs it and reports it, so the sweep removes no one", async () => {
+      jest.mocked(listTautulliPlayingUsers).mockResolvedValue({ ok: false, code: "INVALID_RESPONSE" })
+      read([{ userId: 1, lastSeen: day("2026-05-01"), keepHistory: true }])
+      members([{ id: "u1", plexUserId: "1", lastSeenAt: null }])
+
+      await expect(syncLastSeen({ now })).resolves.toEqual({
+        ok: true,
+        tautulliUsers: 1,
+        matched: 1,
+        newestPlayAt: day("2026-05-01"),
+        oldestPlayAt: historyStart,
+        activityRead: false,
+      })
+      expect(written()).toEqual({ u1: { lastSeenAt: day("2026-05-01"), lastSeenReadAt: now } })
+      expect(mockWarn).toHaveBeenCalledWith("inactivity.activity_failed", { code: "INVALID_RESPONSE", status: undefined })
+      expect(mockInfo).toHaveBeenCalledWith("inactivity.synced", expect.objectContaining({ playing: 0, sessionsDropped: null }))
+    })
   })
 
   it("writes in transactions of at most one chunk", async () => {

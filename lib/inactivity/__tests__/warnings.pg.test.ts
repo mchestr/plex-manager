@@ -115,6 +115,7 @@ describePg("inactivity warning emails", (databaseUrl) => {
         { user_id: Number(plexId(8)), last_seen: seconds(new Date(clock.getTime() - HOUR)), keep_history: 1 },
       ]
       const history = { recordsFiltered: 1, recordsTotal: 1, draw: 1, data: [{ date: seconds(daysAgo(2000)), started: seconds(daysAgo(2000)), user: "guest" }] }
+      if (cmd === "get_activity") return { ok: true, data: schema.parse({ stream_count: "0", sessions: [] }) }
       return { ok: true, data: schema.parse(cmd === "get_history" ? history : { recordsFiltered: rows.length, recordsTotal: rows.length, draw: 1, data: rows }) }
     })
     jest.mocked(unshareUserFromPlexServer).mockResolvedValue({ success: true, status: "removed" })
