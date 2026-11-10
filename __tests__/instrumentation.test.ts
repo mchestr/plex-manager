@@ -118,3 +118,69 @@ describe("register()", () => {
     expect(exit).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * The queue worker's boot schedules (TS 9.4 item 2): `startQueueWorker()`
+ * calls `ensureCleanupSchedule()` in the same `Promise.all` as the other
+ * schedules once Redis answers, and not without `REDIS_URL`. The real
+ * `lib/instrumentation/node.ts` loads here with its dependencies mocked.
+ */
+describe("startNodeInstrumentation() and the media cleanup schedule", () => {
+  const schedules = { cleanup: jest.fn(), member: jest.fn(), judge: jest.fn(), tiers: jest.fn(), stats: jest.fn() }
+  const ok = { ok: true, state: "scheduled" }
+
+  function loadNode(): () => Promise<void> {
+    let start: () => Promise<void> = async () => undefined
+    jest.isolateModules(() => {
+      jest.doMock("@/lib/instrumentation/shutdown", () => ({ installShutdownHandlers: jest.fn(), onShutdown: jest.fn(), shutdownSignal: new AbortController().signal }))
+      jest.doMock("@/lib/db/pool-config", () => ({ processRole: () => "worker" }))
+      jest.doMock("@/lib/instrumentation/encryption-canary", () => ({ assertEncryptionKey: jest.fn().mockResolvedValue(undefined) }))
+      jest.doMock("@/lib/setup/claim", () => ({ issueSetupCode: jest.fn().mockResolvedValue(undefined) }))
+      jest.doMock("@/lib/instrumentation/discord-start", () => ({ startDiscordBotPolling: jest.fn().mockResolvedValue(undefined) }))
+      jest.doMock("@/lib/queue/worker", () => ({ startWorker: jest.fn().mockResolvedValue(undefined), stopWorker: jest.fn() }))
+      jest.doMock("@/lib/queue/client", () => ({ closeQueue: jest.fn(), scheduleCronJob: jest.fn(), removeScheduledJob: jest.fn() }))
+      jest.doMock("@/lib/queue/connection", () => ({ closeRedisConnection: jest.fn(), createFailFastRedis: () => ({ disconnect: jest.fn() }),
+        waitForRedis: jest.fn().mockResolvedValue(true) }))
+      jest.doMock("@/lib/queue/jobs/secrets", () => ({ enqueueSecretsReencrypt: jest.fn().mockResolvedValue("current"),
+        reencryptSecretsWithoutQueue: jest.fn().mockResolvedValue("current") }))
+      jest.doMock("@/lib/discord/integration", () => ({ getDiscordIntegration: jest.fn().mockResolvedValue(null) }))
+      jest.doMock("@/lib/queue/jobs/discord-role", () => ({ ROLE_RECONCILE_PATTERN: "0 4 * * *", ROLE_RECONCILE_SCHEDULER_ID: "discord-role-reconcile",
+        reconcileTimeZone: jest.fn().mockResolvedValue("UTC") }))
+      jest.doMock("@/lib/watchlist/schedule", () => ({ ensureWatchlistSchedule: jest.fn().mockResolvedValue(undefined) }))
+      jest.doMock("@/lib/watchlist/fallback", () => ({ startWatchlistFallback: jest.fn().mockResolvedValue(undefined) }))
+      jest.doMock("@/lib/retention/schedule", () => ({ ensureRetentionSchedule: jest.fn().mockResolvedValue(undefined) }))
+      jest.doMock("@/lib/retention/fallback", () => ({ startRetentionFallback: jest.fn().mockResolvedValue(null) }))
+      jest.doMock("@/lib/discord/channel-stats/schedule", () => ({ ensureChannelStatsSchedule: schedules.stats }))
+      jest.doMock("@/lib/request-tiers/schedule", () => ({ ensureRequestTierSchedule: schedules.tiers }))
+      jest.doMock("@/lib/inactivity/schedule", () => ({ ensureMemberActivitySchedule: schedules.member }))
+      jest.doMock("@/lib/judge/schedule", () => ({ ensureJudgeSchedule: schedules.judge }))
+      jest.doMock("@/lib/cleanup/schedule", () => ({ ensureCleanupSchedule: schedules.cleanup }))
+      start = jest.requireActual("@/lib/instrumentation/node").startNodeInstrumentation
+    })
+    return start
+  }
+
+  beforeEach(() => {
+    for (const fn of Object.values(schedules)) fn.mockReset().mockResolvedValue(ok)
+    process.env.REDIS_URL = "redis://localhost:6390"
+    delete process.env.ENABLE_QUEUE_WORKER
+  })
+
+  it("ensures the cleanup schedule with the other schedules once Redis answers", async () => {
+    let release: () => void = () => undefined
+    schedules.member.mockReturnValue(new Promise((resolve) => (release = () => resolve(ok))))
+    const started = loadNode()()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(schedules.cleanup).toHaveBeenCalledTimes(1)
+    expect(schedules.judge).toHaveBeenCalledTimes(1)
+    release()
+    await started
+  })
+
+  it("schedules no cleanup without REDIS_URL", async () => {
+    delete process.env.REDIS_URL
+    await loadNode()()
+    expect(schedules.cleanup).not.toHaveBeenCalled()
+  })
+})
+
