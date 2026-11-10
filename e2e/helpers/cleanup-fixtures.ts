@@ -35,7 +35,7 @@ import { GiB, TiB, UNIT_DAYS, type Level, type Mode } from '../../lib/validation
  *   miss and each Cannot delete cause keep out.
  * - 8 shows with 1 to 4 seasons each, for the show rule, the season rule, an
  *   entry batch, an exclusion and the season protections G11 and G12.
- * - Tautulli history from about 660 days ago to 1 day ago. Overseerr holds 6
+ * - Tautulli history from about 760 days ago to 1 day ago. Overseerr holds 6
  *   requests. plex.tv shares the server with `e2e-cleanup-member` (no
  *   filter) and `e2e-cleanup-filtered` (`label!=Untranscodable`).
  *
@@ -154,8 +154,9 @@ interface ShowSpec {
 const NAMED_MOVIES: MovieSpec[] = [
   // Pipeline step 1: due, waits for approval, plays older than the seed, and it still matches
   { role: 'pipeline', title: 'Lanterns over Quill Bay', year: 2011, added: 700, gib: 9, plays: [{ who: 'member', days: 500 }] },
-  // Matches the Review first rule, and a member Keep protects it (G1)
-  { role: 'kept', title: 'The Orchard Ledger', year: 2009, added: 820, gib: 14, plays: [{ who: 'former', days: 610 }] },
+  // Matches the Review first rule, and a member Keep protects it (G1). Its play is the oldest Tautulli row,
+  // older than the 2 years of the Dry run rules, so their history check passes (TS 8.2)
+  { role: 'kept', title: 'The Orchard Ledger', year: 2009, added: 820, gib: 14, plays: [{ who: 'former', days: 760 }] },
   { role: 'approved-a', title: 'Copper Tide', year: 2013, added: 640, gib: 6 },
   { role: 'approved-b', title: 'The Ninth Lighthouse', year: 2006, added: 900, gib: 11, plays: [{ who: 'owner', days: 650 }] },
   { role: 'deleting', title: 'Saltmarsh Requiem', year: 2004, added: 990, gib: 18 },
