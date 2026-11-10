@@ -86,6 +86,21 @@ describe("findBadCopy", () => {
     await expect(findBadCopy(MOVIE)).resolves.toEqual({ titles: ["Heat.1995.1080p.BluRay.x264-BAD"], infoHash: null, grab: null })
   })
 
+  it("passes over the imported release when its grab has left the history, with no grab to mark", async () => {
+    jest.mocked(listTitleHistory).mockResolvedValue({
+      success: true,
+      data: [record({ id: 40, eventType: "downloadFolderImported", downloadId: "ABC", sourceTitle: "Heat.1995.1080p.BluRay.x264-BAD.Folder", fileId: 77 })],
+    })
+
+    await expect(findBadCopy(MOVIE)).resolves.toEqual({ titles: ["Heat.1995.1080p.BluRay.x264-BAD.Folder", "Heat.1995.1080p.BluRay.x264-BAD"], infoHash: null, grab: null })
+  })
+
+  it("has nothing to pass over for a file added by hand without a scene name", async () => {
+    jest.mocked(listTitleHistory).mockResolvedValue({ success: true, data: [] })
+
+    await expect(findBadCopy({ ...MOVIE, file: { ...FILE, sceneName: null } })).resolves.toEqual({ titles: [], infoHash: null, grab: null })
+  })
+
   it("is null when the history can't be read", async () => {
     jest.mocked(listTitleHistory).mockResolvedValue({ success: false, error: "down" })
 
