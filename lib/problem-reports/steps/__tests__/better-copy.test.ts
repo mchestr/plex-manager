@@ -155,6 +155,13 @@ describe("the wait", () => {
     expect(getArrCommandState).not.toHaveBeenCalled()
   })
 
+  it("counts a grab Radarr dates up to a minute before the search, for a clock a little behind the worker's", async () => {
+    jest.mocked(listTitleHistory).mockResolvedValue({ success: true, data: [{ eventType: "grabbed", at: SINCE - 30_000, downloadId: "ABC", episodeId: null }] })
+
+    await expect(runBetterCopy(REPORT, waiting(), NOW)).resolves.toEqual(later)
+    expect(getArrCommandState).not.toHaveBeenCalled()
+  })
+
   it("hands the report back when the grab's download failed", async () => {
     jest.mocked(listTitleHistory).mockResolvedValue({
       success: true,

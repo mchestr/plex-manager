@@ -45,6 +45,8 @@ import type { BetterCopyWatch, ProblemReportFixPayload } from "@/lib/queue/types
 const MINUTE_MS = 60 * 1000
 const CHECK_MS = 10 * MINUTE_MS
 const WAIT_MS = 24 * 60 * MINUTE_MS
+/** History up to this long before the search counts too: Radarr's or Sonarr's clock may be a little behind the worker's. */
+const CLOCK_SLACK_MS = MINUTE_MS
 
 /** Tracked states of a download that won't import without the server admin. */
 const STUCK = new Set(["importBlocked", "importFailed", "failedPending", "failed"])
@@ -122,7 +124,7 @@ async function downloads(config: ArrConfig, watch: BetterCopyWatch): Promise<{ q
   const title = { service: watch.service, id: watch.titleId }
   const [queue, history] = await Promise.all([listTitleQueue(config, title), listTitleHistory(config, title)])
   if (!queue.success || !history.success) return null
-  const since = history.data.filter((record) => ours(watch)(record) && record.at >= watch.since).sort((a, b) => b.at - a.at)
+  const since = history.data.filter((record) => ours(watch)(record) && record.at >= watch.since - CLOCK_SLACK_MS).sort((a, b) => b.at - a.at)
   return { queue: queue.data.filter(ours(watch)), latest: since[0] ?? null }
 }
 

@@ -155,7 +155,7 @@ async function resolveEpisode(server: PlexServer, item: PlexItemMetadata, file: 
   if (inFile.some((episode) => !episode.monitored)) return refuse("UNMONITORED")
   return {
     ok: true,
-    resolved: { service: "sonarr", config, titleId: seriesId, qualityProfileId: series.data.qualityProfileId, file: sonarrFile, episodeIds: inFile.map((episode) => episode.id), plex: plexSide(item, file) },
+    resolved: { service: "sonarr", config, titleId: seriesId, qualityProfileId: series.data.qualityProfileId, file: sonarrFile, episodeIds: inFile.map((episode) => episode.id).sort((a, b) => a - b), plex: plexSide(item, file) },
   }
 }
 
