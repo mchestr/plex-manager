@@ -16,16 +16,15 @@ describe("WhyThen", () => {
     )
   })
 
-  it("starts with the Dry run words for a rule in Dry run", () => {
-    render(<WhyThen then={{ text: [{ text: "Sonarr stops monitoring the season and deletes its 4 GB of files.", strong: true }], dryRun: true }} />)
-    const then = screen.getByTestId("admin-cleanup-why-then")
-    expect(then).toHaveTextContent("ThenIf the rule is turned on, Sonarr stops monitoring the season and deletes its 4 GB of files.")
-    expect(screen.getByText("Sonarr stops monitoring the season and deletes its 4 GB of files.").tagName).toBe("STRONG")
+  it("shows the server's Dry run sentence once, with its strong parts", () => {
+    render(<WhyThen then={{ text: [{ text: "If the rule is turned on, " }, { text: "Sonarr stops monitoring the season.", strong: true }], dryRun: true }} />)
+    expect(screen.getByTestId("admin-cleanup-why-then")).toHaveTextContent(/^ThenIf the rule is turned on, Sonarr stops monitoring the season\.$/)
+    expect(screen.getByText("Sonarr stops monitoring the season.").tagName).toBe("STRONG")
   })
 
-  it("says the Dry run words once when the server already put them in the text", () => {
-    render(<WhyThen then={{ text: [{ text: "If the rule is turned on, Radarr deletes the movie and its file." }], dryRun: true }} />)
-    expect(screen.getByTestId("admin-cleanup-why-then")).toHaveTextContent(/^ThenIf the rule is turned on, Radarr deletes the movie and its file\.$/)
+  it("adds no words of its own: the server owns the Dry run words", () => {
+    render(<WhyThen then={{ text: [{ text: "Radarr deletes the movie and its file." }], dryRun: true }} />)
+    expect(screen.getByTestId("admin-cleanup-why-then")).toHaveTextContent(/^ThenRadarr deletes the movie and its file\.$/)
   })
 
   it("renders nothing for a title with no Then line", () => {

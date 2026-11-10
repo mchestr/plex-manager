@@ -167,7 +167,11 @@ export interface WhySheetData {
   tryValue?: { conditionId: string; value: unknown; label: string; addsCount: number; addsBytes: string }
   hints: { kind: "seasonalCollection"; collection: string }[]
   protections: { id: string; label: string; verdict: "clear" | "protects" | "unknown"; value: WhyPart[] }[]
-  /** The Then line from `actionWords()`. */
+  /**
+   * The Then line from `actionWords()`. For a Dry run rule or a draft, `text`
+   * already starts with "If the rule is turned on, " (`whyThen()` owns the
+   * words); `dryRun` is information only, and no reader adds the words again.
+   */
   then?: { text: WhyPart[]; dryRun: boolean }
   otherRules: { ruleId: string; name: string; mode: Mode; enteredAt?: string; leaveOn?: string }[]
   leaving?: { enteredAt: string; leaveOn: string; status: string }
