@@ -150,7 +150,9 @@ describe("RulesTab normal use", () => {
     expect(alert).toHaveTextContent(
       "5 titles wait for your approval" +
         "Big shows nobody plays has titles that reached their leave date between Nov 3 and Nov 5: 40 GB. " +
-        "Movies nobody watches has titles that reached their leave date on Nov 6: 10 GB. Nothing is deleted until you approve."
+        "Movies nobody watches has titles that reached their leave date on Nov 6: 10 GB. Nothing is deleted until you approve. " +
+        // The entry batch that waits with them is named too (UX 4.1.2, UX review UX-12)
+        "Old seasons nobody plays found 52 new seasons last night. They wait to join Leaving soon."
     )
     expect(screen.getByTestId("admin-cleanup-alert-batch-review")).toHaveTextContent("Review the batch")
   })

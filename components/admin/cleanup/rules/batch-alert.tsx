@@ -27,16 +27,22 @@ function deletionSentence(batch: OverviewBatch, f: BoundFormat, today: string): 
   return `${batch.ruleName} has titles that reached their leave date between ${dayWords(f, batch.dueSince, today)} and ${dayWords(f, batch.dueAt, today)}: ${size}.`
 }
 
+/** One sentence per entry batch (UX 8.2): "{Rule} found {N} new {items} last night." */
+const entrySentences = (batches: readonly OverviewBatch[], f: BoundFormat) =>
+  batches.map((batch) => `${batch.ruleName} found ${f.number(batch.count)} new ${nounWord(batch.count, batch.level)} last night.`).join(" ")
+
 /**
  * The batch alert of the Rules tab (UX 4.1.2, 8.2), shown only while a batch
  * waits. Deletion batches come first: "6 shows wait for your approval", one
- * sentence per batch, and "Review the batch". With only entry batches: "52
- * new matches wait to join Leaving soon" and "Review the matches". Both open
- * the Leaving soon tab.
+ * sentence per batch, and "Review the batch". An entry batch that waits with
+ * them gets its sentence too, so no batch goes unnamed (UX review UX-12).
+ * With only entry batches: "52 new matches wait to join Leaving soon" and
+ * "Review the matches". Both open the Leaving soon tab.
  */
 export function BatchAlert({ batches, today }: { batches: readonly OverviewBatch[]; today: string }) {
   const f = useFormat()
   const deletion = batches.filter((batch) => batch.kind === "deletion")
+  const entry = batches.filter((batch) => batch.kind === "entry")
   const shown = deletion.length > 0 ? deletion : batches
   if (shown.length === 0) return null
   const count = shown.reduce((sum, batch) => sum + batch.count, 0)
@@ -44,9 +50,10 @@ export function BatchAlert({ batches, today }: { batches: readonly OverviewBatch
   const title = isDeletion
     ? `${f.number(count)} ${nounWord(count, nounOf(shown))} ${count === 1 ? "waits" : "wait"} for your approval`
     : `${f.number(count)} new ${count === 1 ? "match waits" : "matches wait"} to join Leaving soon`
+  const alsoEntry = isDeletion && entry.length > 0 ? ` ${entrySentences(entry, f)} They wait to join Leaving soon.` : ""
   const body = isDeletion
-    ? `${shown.map((batch) => deletionSentence(batch, f, today)).join(" ")} Nothing is deleted until you approve.`
-    : `${shown.map((batch) => `${batch.ruleName} found ${f.number(batch.count)} new ${nounWord(batch.count, batch.level)} last night.`).join(" ")} Nothing changes until you approve.`
+    ? `${shown.map((batch) => deletionSentence(batch, f, today)).join(" ")} Nothing is deleted until you approve.${alsoEntry}`
+    : `${entrySentences(shown, f)} Nothing changes until you approve.`
   return (
     <Alert
       tone="warning"
