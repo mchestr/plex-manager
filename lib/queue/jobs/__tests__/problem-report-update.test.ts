@@ -25,10 +25,12 @@ jest.mock("@/lib/utils/server-zone", () => ({ serverZone: async () => "UTC" }))
 const DAY = new Date("2026-11-09T15:00:00Z")
 const NIGHT = new Date("2026-11-09T23:00:00Z")
 const moveToDelayed = jest.fn(async () => undefined)
-const job = (data: { reportId: string; userId: string; status: "FIXED" | "CLOSED" } = { reportId: "report-1", userId: "member-1", status: "FIXED" }) =>
-  ({ data, moveToDelayed }) as unknown as Job<{ reportId: string; userId: string; status: "FIXED" | "CLOSED" }>
+type Update = { reportId: string; userId: string; status: "FIXED" | "CLOSED"; resolvedAt: string }
+const RESOLVED = new Date("2026-11-09T14:00:00Z")
+const job = (data: Update = { reportId: "report-1", userId: "member-1", status: "FIXED", resolvedAt: RESOLVED.toISOString() }) => ({ data, moveToDelayed }) as unknown as Job<Update>
 const REPORT = {
   status: "FIXED",
+  resolvedAt: RESOLVED,
   reporterId: "member-1",
   memberNote: null,
   title: "The Office",
@@ -73,12 +75,13 @@ describe("processProblemReportUpdate", () => {
   it("tells a follower the member who made it cancelled it", async () => {
     prismaMock.problemReport.findUnique.mockResolvedValue({ ...REPORT, status: "CLOSED", events: [{ kind: "CLOSED", data: { reason: "cancelled" } }] } as never)
 
-    await processProblemReportUpdate(job({ reportId: "report-1", userId: "member-2", status: "CLOSED" }))
+    await processProblemReportUpdate(job({ reportId: "report-1", userId: "member-2", status: "CLOSED", resolvedAt: RESOLVED.toISOString() }))
     expect(jest.mocked(sendDiscordDirectMessage).mock.calls[0][1]).toMatch(/^The report you follow about The Office \\\(2005\\\) was cancelled by the member who made it\./)
   })
 
   it.each([
     ["the report changed again", () => prismaMock.problemReport.findUnique.mockResolvedValue({ ...REPORT, status: "WITH_ADMIN" } as never), "CHANGED"],
+    ["it's from an earlier fix of a report fixed again since", () => prismaMock.problemReport.findUnique.mockResolvedValue({ ...REPORT, resolvedAt: new Date("2026-11-09T14:30:00Z") } as never), "CHANGED"],
     ["the bot is off", () => jest.mocked(isDiscordBotEnabled).mockResolvedValue(false), "BOT_DISABLED"],
     ["the member has no Discord", () => prismaMock.user.findUnique.mockResolvedValue({ timezone: null, disabledAt: null, discordConnection: null } as never), "NOT_LINKED"],
     ["their DMs are closed", () => jest.mocked(sendDiscordDirectMessage).mockRejectedValue(new DiscordApiError(403, DISCORD_DMS_CLOSED)), "DMS_CLOSED"],

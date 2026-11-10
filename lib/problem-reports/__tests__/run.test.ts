@@ -85,6 +85,8 @@ describe("runFixStep", () => {
     await expect(runFixStep(DATA, NOW)).resolves.toEqual({ done: true })
     expect(runLookForMissing).not.toHaveBeenCalled()
     expect(prismaMock.problemReport.updateMany).not.toHaveBeenCalled()
+    // A job delivered again after the report was fixed tells no one: the DMs it didn't queue are lost
+    expect(queueMemberUpdates).not.toHaveBeenCalled()
   })
 
   it("hands the report back before its next step when problem reports are off", async () => {

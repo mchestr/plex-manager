@@ -1,13 +1,15 @@
 /**
  * `PROBLEM_REPORT_UPDATE`: one member's DM when a report they made or follow
  * is fixed or closed (docs/problem-reports.md), queued by
- * `queueMemberUpdates` with a job id per member and state, so each change
- * is told once.
+ * `queueMemberUpdates` with a job id per member, state and when the report
+ * ended, so each change is told once, and a report that reopens and ends
+ * again is told again.
  *
  * It goes out between 09:00 and 20:00 in the member's zone (the server's when
  * they have none), and the job delays itself until then. It is skipped when
- * the report has changed again, the bot is off, or the member has no linked
- * Discord; closed DMs (50007) are not retried.
+ * the report has changed again (including a later end than its own, which
+ * has its own DM), the bot is off, or the member has no linked Discord;
+ * closed DMs (50007) are not retried.
  *
  * @module lib/queue/jobs/problem-report-update
  */
@@ -42,15 +44,15 @@ function endedBy(event: { kind: string; data: unknown } | undefined): MemberUpda
 
 /** Sends one member's update; see the module comment. @internal */
 export async function processProblemReportUpdate(job: UpdateJob, token?: string): Promise<{ sent: true } | { skipped: UpdateSkip }> {
-  const { reportId, userId, status } = job.data
+  const { reportId, userId, status, resolvedAt } = job.data
   const report = await prisma.problemReport.findUnique({
     where: { id: reportId },
     select: {
-      status: true, reporterId: true, memberNote: true, title: true, year: true, showTitle: true, seasonNumber: true, episodeNumber: true,
+      status: true, resolvedAt: true, reporterId: true, memberNote: true, title: true, year: true, showTitle: true, seasonNumber: true, episodeNumber: true,
       events: { where: { kind: { in: ["FIXED", "CLOSED"] } }, orderBy: { createdAt: "desc" }, take: 1, select: { kind: true, data: true } },
     },
   })
-  if (!report || report.status !== status) return { skipped: "CHANGED" }
+  if (!report || report.status !== status || report.resolvedAt?.toISOString() !== resolvedAt) return { skipped: "CHANGED" }
   if (!(await isDiscordBotEnabled())) return { skipped: "BOT_DISABLED" }
   const member = await prisma.user.findUnique({
     where: { id: userId },
