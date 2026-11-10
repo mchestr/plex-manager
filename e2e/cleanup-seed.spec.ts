@@ -81,6 +81,17 @@ async function activePlexRow() {
   }
 }
 
+/** Writes the active Plex row's URL. `restorePlex()` still puts back the row that `useCleanupPlex()` saved first. */
+async function setActivePlexUrl(url: string): Promise<void> {
+  const prisma = createE2EPrismaClient();
+  try {
+    const row = await prisma.plexServer.findFirstOrThrow({ where: { isActive: true }, orderBy: { updatedAt: 'desc' }, select: { id: true } });
+    await prisma.plexServer.update({ where: { id: row.id }, data: { url } });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 async function setCollectionsClaim(at: Date | null): Promise<void> {
   const prisma = createE2EPrismaClient();
   try {
@@ -235,6 +246,10 @@ test.describe('Media cleanup seed and mocks', () => {
       const pointed = await activePlexRow();
       expect(pointed).toEqual(expect.objectContaining({ url: mockUrl('plex'), token: CLEANUP_PLEX.token, machineIdentifier: CLEANUP_PLEX.machineIdentifier }));
       expect(pointed.adminPlexUserId).toMatch(/^\d+$/);
+      // The web server keeps a share list for 10 minutes per server URL (TS E29), and an earlier spec or repeat of the
+      // run can have loaded it for the mock. "/<new segment>/.." names the same address under a new key, so plex.tv
+      // answers this case
+      await setActivePlexUrl(`${mockUrl('plex')}/seed-${Date.now()}/..`);
       expect(await poster('member', movie)).toBe(200);
       expect(await poster('member', show)).toBe(200);
       expect(await poster('noshare', movie)).toBe(404);
