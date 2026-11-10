@@ -46,7 +46,7 @@ it("sets collectionsDirtyAt before it enqueues the sync", async () => {
   expect(prismaMock.cleanupSettings.upsert).toHaveBeenCalledWith({
     where: { id: "cleanup" }, create: { id: "cleanup", collectionsDirtyAt: NOW }, update: { collectionsDirtyAt: NOW },
   })
-  expect(mockEnqueue).toHaveBeenCalledWith("cleanup:collections", { reason: "change" })
+  expect(mockEnqueue).toHaveBeenCalledWith("cleanup:collections", { reason: "change" }, { attempts: 1, removeOnComplete: true, removeOnFail: { age: 604800 } })
 })
 
 it("logs a queue failure and does not throw", async () => {

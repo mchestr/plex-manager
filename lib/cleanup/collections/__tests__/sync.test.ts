@@ -769,7 +769,7 @@ describe("claim and rounds", () => {
 
     expect(result.rounds).toBe(2)
     expect(plex.items.get("90001")!.members).toEqual(["201", "202"])
-    expect(mockEnqueue).toHaveBeenCalledWith("cleanup:collections", { reason: "change" })
+    expect(mockEnqueue).toHaveBeenCalledWith("cleanup:collections", { reason: "change" }, { attempts: 1, removeOnComplete: true, removeOnFail: { age: 604800 } })
     expect(settings.collectionsDirtyAt).toBeNull()
   })
 

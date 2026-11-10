@@ -16,6 +16,7 @@
 
 import "server-only"
 
+import { CLEANUP_JOB_OPTIONS } from "@/lib/cleanup/constants"
 import { CLEANUP_SETTINGS_ID } from "@/lib/cleanup/settings"
 import { prisma } from "@/lib/prisma"
 import { isRedisConfigured } from "@/lib/queue/connection"
@@ -48,7 +49,7 @@ export async function requestCollectionSync(reason = "change"): Promise<Collecti
     logger.error("cleanup.collections_flag_failed", error, { reason })
   }
   if (!isRedisConfigured()) return { flagged, queued: false }
-  const queued = await enqueueFromRequest(JOB_TYPES.CLEANUP_COLLECTIONS, { reason: "change" })
+  const queued = await enqueueFromRequest(JOB_TYPES.CLEANUP_COLLECTIONS, { reason: "change" }, CLEANUP_JOB_OPTIONS)
   if (!queued.ok) logger.warn("cleanup.collections_enqueue_failed", { reason, code: queued.code })
   return { flagged, queued: queued.ok }
 }

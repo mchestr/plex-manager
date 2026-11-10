@@ -6,6 +6,7 @@ import { adminAction } from "@/lib/actions/define-action"
 import { ok } from "@/lib/actions/result"
 import { cleanup } from "@/lib/admin/routes"
 import { approveDeletionBatch } from "@/lib/cleanup/actions/items/approve"
+import { CLEANUP_JOB_OPTIONS } from "@/lib/cleanup/constants"
 import { batchSelection } from "@/lib/cleanup/actions/items/batch"
 import { approveEntryBatch } from "@/lib/cleanup/actions/items/entry"
 import { excludeItems } from "@/lib/cleanup/actions/items/exclude"
@@ -36,7 +37,8 @@ function revalidated<T>(result: ItemsResult<T>): ItemsResult<T> {
 /** Enqueues the act step for an approval. False without Redis or when the queue does not answer. */
 async function enqueueAct(actorId: string): Promise<boolean> {
   if (!isRedisConfigured()) return false
-  const queued = await enqueueFromRequest(JOB_TYPES.CLEANUP_ACT, { trigger: "approval", actorId })
+  // One attempt (TS 9.2): a failed act job waits for an admin's Retry, never for an automatic one
+  const queued = await enqueueFromRequest(JOB_TYPES.CLEANUP_ACT, { trigger: "approval", actorId }, CLEANUP_JOB_OPTIONS)
   return queued.ok
 }
 

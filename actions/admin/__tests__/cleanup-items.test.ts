@@ -270,7 +270,7 @@ describe("deleteCleanupBatch", () => {
     expect(row(rows[0].itemKey)).toMatchObject({ approvedBy: "admin-1", approvedAt: expect.any(Date), failCode: null })
     expect(audits(AuditEventType.CLEANUP_BATCH_APPROVED)).toEqual([{ kind: "deletion", ruleId: RULE, count: 3, bytes: String(9n * GB), excluded: 1,
       keysHash: batchHash(rows), typed: false }])
-    expect(enqueueFromRequest).toHaveBeenCalledWith("cleanup:act", { trigger: "approval", actorId: "admin-1" })
+    expect(enqueueFromRequest).toHaveBeenCalledWith("cleanup:act", { trigger: "approval", actorId: "admin-1" }, { attempts: 1, removeOnComplete: true, removeOnFail: { age: 604800 } })
     expect(revalidatePath).toHaveBeenCalledWith("/admin/cleanup")
   })
 
