@@ -1,6 +1,6 @@
 /**
  * Invented preview data for the preview, Results and Why part tests. Titles
- * and names are made up.
+ * and names are made up. Sizes are whole numbers of bytes, as the server sends them.
  */
 
 import type { ClauseLabel } from "@/components/admin/cleanup/preview/clause-labels"
@@ -21,7 +21,7 @@ export function buildRef(overrides: Partial<ItemRef> = {}): ItemRef {
     seasonCount: null,
     posterKey: null,
     sectionId: "1",
-    sizeBytes: String(22.4 * 1024 ** 3),
+    sizeBytes: String(Math.round(22.4 * 1024 ** 3)),
     ...overrides,
   }
 }
@@ -78,7 +78,7 @@ export function buildPreview(overrides: Partial<PreviewResponse> = {}): PreviewR
         itemKey: "movie-1002",
         title: "Paper Crowns",
         year: 2023,
-        sizeBytes: String(17.1 * 1024 ** 3),
+        sizeBytes: String(Math.round(17.1 * 1024 ** 3)),
         requestedBy: [{ name: "Avery Lark", status: "former", at: "2024-03-03T00:00:00.000Z" }],
       }),
     ],

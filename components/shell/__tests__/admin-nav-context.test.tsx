@@ -61,7 +61,7 @@ describe('AdminNavProvider', () => {
     expect(automations?.children?.map((child) => child.id)).toEqual(['watchlist', 'queues'])
     expect(automations?.children?.[1]).toEqual({ id: 'queues', label: 'Queues', href: '/admin/queues' })
     expect(items.find((item) => item.id === 'ai')?.children).toEqual([])
-    expect(byId('automations').children).toHaveLength(4)
+    expect(byId('automations').children).toHaveLength(5)
   })
 
   it('leaves an item without tabs without, whatever ids the server sends', () => {
