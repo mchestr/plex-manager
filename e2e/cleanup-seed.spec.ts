@@ -15,6 +15,7 @@ import {
   worldItem,
 } from './helpers/cleanup-fixtures';
 import { createE2EPrismaClient } from './helpers/prisma';
+import { clearRateLimits } from './helpers/rate-limits';
 import {
   clearCleanup,
   restorePlex,
@@ -229,6 +230,8 @@ test.describe('Media cleanup seed and mocks', () => {
   });
 
   test('the four-call Plex helper sequence leaves the Plex row as it was, and plex.tv decides what each member sees', async () => {
+    // The poster limits count per client address, and every earlier spec's posters came from this one: start them fresh
+    if (process.env.REDIS_URL) await clearRateLimits(process.env.REDIS_URL, ['poster', 'poster:access']);
     const { world } = await seedCleanup(PREFIX);
     const before = await activePlexRow();
     const movie = worldItem(world, movieKey(world, 'batch-01')).ratingKey;
