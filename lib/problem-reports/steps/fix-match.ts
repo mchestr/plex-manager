@@ -19,10 +19,14 @@
  * ```
  *
  * A result whose legacy guid names the expected id is taken first; the
- * current agents' guids name no id, so their first result is taken, and the
- * wait is what tells whether it was the right one. A step that runs again
- * after a crash finds its ledger row and goes to the wait without matching
- * again.
+ * current agents' guids name no id, so a result with the expected title and
+ * year comes next, then the first, and the wait is what tells whether it was
+ * the right one. A step that runs again after a crash finds its ledger row:
+ * when Plex already has the right title, the match took and the report is
+ * fixed; otherwise it goes to the wait without matching again. The wait
+ * reads Plex once more before it matches back, so one failed read doesn't
+ * undo a match that took. Matching back undoes the run's own change, so it
+ * isn't gated or recorded again.
  *
  * @module lib/problem-reports/steps/fix-match
  */
@@ -35,7 +39,7 @@ import { findPlexItemByGuid } from "@/lib/connections/plex-file-state"
 import { parsePlexExternalIds } from "@/lib/connections/plex-guids"
 import { getPlexSectionAgent, matchPlexItem, searchPlexMatches, type PlexMatchResult } from "@/lib/connections/plex-match"
 import { fixTraits } from "@/lib/problem-reports/fixes"
-import { gateAndRecord } from "@/lib/problem-reports/ledger"
+import { gateAndRecord, hasRunRecord } from "@/lib/problem-reports/ledger"
 import { checkMatch, idsFit, type ExpectedTitle, type MatchTarget } from "@/lib/problem-reports/match"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import type { ProblemReportFixPayload } from "@/lib/queue/types"
@@ -55,15 +59,20 @@ async function search(server: PlexServer, target: MatchTarget, expected: Expecte
   return byId === null || byId.length > 0 ? byId : searchPlexMatches(server, target.ratingKey, byTitle)
 }
 
+/** A result with the expected title and year, for agents whose guids name no id. */
+const sameTitle = (result: PlexMatchResult, expected: ExpectedTitle) =>
+  result.name.toLowerCase() === expected.title.toLowerCase() && (expected.year === null || result.year === expected.year)
+
 async function start(server: PlexServer, report: StepReport, data: ProblemReportFixPayload, now: Date): Promise<StepOutcome> {
   const check = await checkMatch(server, report.plexRatingKey)
-  if (check.verdict === "AGREES") return { toAdmin: "IDS_AGREE" }
+  // A run that matched before a crash finds Plex agreeing: its match took
+  if (check.verdict === "AGREES") return (await hasRunRecord(report.id, report.runToken)) ? { fixed: true } : { toAdmin: "IDS_AGREE" }
   if (check.verdict === "UNKNOWN") return { toAdmin: check.reason }
   const { target, expected } = check
 
   const results = await search(server, target, expected)
   if (results === null) return { toAdmin: "UNAVAILABLE" }
-  const pick = results.find((result) => idsFit(parsePlexExternalIds(result.guid, []), expected.ids)) ?? results[0]
+  const pick = results.find((result) => idsFit(parsePlexExternalIds(result.guid, []), expected.ids)) ?? results.find((result) => sameTitle(result, expected)) ?? results[0]
   if (!pick) return { toAdmin: "NO_MATCH" }
   const holder = await findPlexItemByGuid(server, target.sectionId, pick.guid)
   if (holder.status === "unknown") return { toAdmin: "UNAVAILABLE" }
@@ -96,9 +105,12 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
 async function wait(server: PlexServer, data: ProblemReportFixPayload, now: Date): Promise<StepOutcome> {
   const { match } = data
   if (!match) return { toAdmin: "UNAVAILABLE" }
-  const item = await getPlexItemMetadata(server, match.ratingKey)
+  const due = now.getTime() >= (data.deadline ?? 0)
+  let item = await getPlexItemMetadata(server, match.ratingKey)
+  // One failed read never undoes a match that may have taken
+  if (due && item.status === "unknown") item = await getPlexItemMetadata(server, match.ratingKey)
   if (item.status === "found" && idsFit(item.item.ids, match.expected)) return { fixed: true }
-  if (now.getTime() < (data.deadline ?? 0)) return { next: { at: now.getTime() + CHECK_MS, data: {} } }
+  if (!due) return { next: { at: now.getTime() + CHECK_MS, data: {} } }
 
   // An item that was never matched has nothing to go back to
   const { before } = match

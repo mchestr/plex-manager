@@ -153,6 +153,11 @@ export async function gateReplace(run: { reportId: string; runToken: number }, n
 }
 
 /** Ends a run's row with its outcome; a run that never reached the gate has no row. */
+/** Whether the run recorded its row: it acted, or was about to, before a step ran again. */
+export async function hasRunRecord(reportId: string, runToken: number): Promise<boolean> {
+  return (await prisma.problemFixLedger.count({ where: { id: ledgerId(reportId, runToken) } })) > 0
+}
+
 export async function endLedgerRow(reportId: string, runToken: number, outcome: string, now: Date): Promise<void> {
   await prisma.problemFixLedger.updateMany({ where: { id: ledgerId(reportId, runToken), endedAt: null }, data: { outcome, endedAt: now } })
 }

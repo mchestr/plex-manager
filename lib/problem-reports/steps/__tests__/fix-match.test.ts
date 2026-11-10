@@ -8,7 +8,7 @@ import { getPlexItemMetadata } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { findPlexItemByGuid } from "@/lib/connections/plex-file-state"
 import { getPlexSectionAgent, matchPlexItem, searchPlexMatches } from "@/lib/connections/plex-match"
-import { gateAndRecord } from "@/lib/problem-reports/ledger"
+import { gateAndRecord, hasRunRecord } from "@/lib/problem-reports/ledger"
 import { checkMatch, type MatchCheck } from "@/lib/problem-reports/match"
 import { runFixMatch } from "@/lib/problem-reports/steps/fix-match"
 import type { MatchWatch, ProblemReportFixPayload } from "@/lib/queue/types"
@@ -17,7 +17,7 @@ jest.mock("@/lib/connections/plex", () => ({ getPlexItemMetadata: jest.fn() }))
 jest.mock("@/lib/connections/plex-config", () => ({ getActivePlexServerConfig: jest.fn() }))
 jest.mock("@/lib/connections/plex-file-state", () => ({ findPlexItemByGuid: jest.fn() }))
 jest.mock("@/lib/connections/plex-match", () => ({ getPlexSectionAgent: jest.fn(), matchPlexItem: jest.fn(), searchPlexMatches: jest.fn() }))
-jest.mock("@/lib/problem-reports/ledger", () => ({ gateAndRecord: jest.fn() }))
+jest.mock("@/lib/problem-reports/ledger", () => ({ gateAndRecord: jest.fn(), hasRunRecord: jest.fn() }))
 jest.mock("@/lib/problem-reports/match", () => ({ ...jest.requireActual("@/lib/problem-reports/match"), checkMatch: jest.fn() }))
 
 const NOW = new Date("2026-11-09T20:00:00Z")
@@ -45,6 +45,7 @@ beforeEach(() => {
   jest.mocked(searchPlexMatches).mockResolvedValue([HEAT])
   jest.mocked(findPlexItemByGuid).mockResolvedValue({ status: "missing" })
   jest.mocked(gateAndRecord).mockResolvedValue(null)
+  jest.mocked(hasRunRecord).mockResolvedValue(false)
   jest.mocked(matchPlexItem).mockResolvedValue(true)
 })
 
@@ -84,6 +85,18 @@ describe("the start", () => {
     expect(matchPlexItem).toHaveBeenCalledWith(SERVER, "555", legacy)
   })
 
+  it("takes the result with the expected title and year over the first when no guid names the id", async () => {
+    const remake = { guid: "plex://movie/heat-remake", name: "Heat", year: 1986 }
+    jest.mocked(searchPlexMatches).mockResolvedValue([remake, HEAT])
+
+    await runFixMatch(REPORT, START, NOW)
+    expect(matchPlexItem).toHaveBeenCalledWith(SERVER, "555", HEAT)
+
+    jest.mocked(searchPlexMatches).mockResolvedValue([remake])
+    await runFixMatch(REPORT, START, NOW)
+    expect(matchPlexItem).toHaveBeenLastCalledWith(SERVER, "555", remake)
+  })
+
   it("leaves Plex alone when another item already has the match, since matching would merge the two", async () => {
     jest.mocked(findPlexItemByGuid).mockResolvedValueOnce({ status: "found", ratingKey: "9001" }).mockResolvedValueOnce({ status: "unknown" })
 
@@ -105,6 +118,15 @@ describe("the start", () => {
     arrange()
 
     await expect(runFixMatch(REPORT, START, NOW)).resolves.toEqual({ toAdmin: reason })
+  })
+
+  it("is fixed when the step runs again after a crash and Plex already has the right title", async () => {
+    jest.mocked(checkMatch).mockResolvedValue({ verdict: "AGREES" })
+    jest.mocked(hasRunRecord).mockResolvedValue(true)
+
+    await expect(runFixMatch(REPORT, START, NOW)).resolves.toEqual({ fixed: true })
+    expect(hasRunRecord).toHaveBeenCalledWith("report-1", 2)
+    expect(matchPlexItem).not.toHaveBeenCalled()
   })
 
   it("doesn't match twice when the step runs again after its row was recorded", async () => {
@@ -135,13 +157,23 @@ describe("the wait", () => {
   })
 
   it("matches back to what Plex had after a minute without the right ids", async () => {
-    jest.mocked(getPlexItemMetadata).mockResolvedValueOnce(item({ tmdb: 11111 })).mockResolvedValueOnce({ status: "unknown" })
+    jest.mocked(getPlexItemMetadata).mockResolvedValue(item({ tmdb: 11111 }))
 
     await expect(runFixMatch(REPORT, waiting(NOW.getTime()), NOW)).resolves.toEqual({ toAdmin: "MATCH_WRONG" })
     expect(matchPlexItem).toHaveBeenCalledWith(SERVER, "555", { guid: "plex://movie/wrong", name: "Heap" })
 
     jest.mocked(matchPlexItem).mockResolvedValue(false)
     await expect(runFixMatch(REPORT, waiting(NOW.getTime()), NOW)).resolves.toEqual({ toAdmin: "MATCH_STUCK" })
+  })
+
+  it("reads Plex once more before matching back when the last read failed", async () => {
+    jest.mocked(getPlexItemMetadata).mockResolvedValueOnce({ status: "unknown" }).mockResolvedValueOnce(item({ tmdb: 949 }))
+    await expect(runFixMatch(REPORT, waiting(NOW.getTime()), NOW)).resolves.toEqual({ fixed: true })
+    expect(matchPlexItem).not.toHaveBeenCalled()
+
+    jest.mocked(getPlexItemMetadata).mockResolvedValue({ status: "unknown" })
+    await expect(runFixMatch(REPORT, waiting(NOW.getTime()), NOW)).resolves.toEqual({ toAdmin: "MATCH_WRONG" })
+    expect(getPlexItemMetadata).toHaveBeenCalledTimes(4)
   })
 
   it("has nothing to match back to for an item that was never matched", async () => {
