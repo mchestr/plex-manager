@@ -1,8 +1,9 @@
 /**
- * Fix the Plex match (admins only): when Plex matched a movie or show to
- * another title than the one Radarr or Sonarr has for its file, match it to
- * that title, and check that it took (docs/problem-reports.md, "Fix the Plex
- * match"). An episode's report matches its show.
+ * Fix the Plex match (an admin's tap, or a member's report while members'
+ * swaps are On): when Plex matched a movie or show to another title than
+ * the one Radarr or Sonarr has for its file, match it to that title, and
+ * check that it took (docs/problem-reports.md, "Fix the Plex match"). An
+ * episode's report matches its show.
  *
  * ```
  * start ─ check the match (checkMatch)
@@ -37,6 +38,7 @@ import { getPlexSectionAgent, matchPlexItem, searchPlexMatches, type PlexMatchRe
 import { fixTraits } from "@/lib/problem-reports/fixes"
 import { gateAndRecord } from "@/lib/problem-reports/ledger"
 import { checkMatch, idsFit, type ExpectedTitle, type MatchTarget } from "@/lib/problem-reports/match"
+import { runOf } from "@/lib/problem-reports/steps/run-record"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import type { ProblemReportFixPayload } from "@/lib/queue/types"
 
@@ -71,11 +73,7 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
 
   const gate = await gateAndRecord(
     {
-      reportId: report.id,
-      runToken: report.runToken,
-      reporterId: report.reporterId,
-      actorUserId: data.actorUserId,
-      trigger: data.trigger,
+      ...runOf(report, data),
       target: `plex:${target.guid ?? report.titleKey}`,
       action: "FIX_MATCH",
       traits: fixTraits("FIX_MATCH"),

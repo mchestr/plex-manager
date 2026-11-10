@@ -27,6 +27,7 @@ export function latestWords(event: { kind: string; data: unknown } | undefined, 
     return { words: fixed?.reason === "fix" && fixed.action ? FIXED_WORDS[fixed.action] : "The server admin fixed it", statusSub: null }
   }
   if (event?.kind === "REOPENED") return { words: own ? "You sent it to the server admin" : "It's with the server admin now", statusSub: null }
+  if (event?.kind === "PLAYS") return { words: own ? "You said it plays" : "It plays now", statusSub: null }
   const closed = event?.kind === "CLOSED" ? closedEventDataSchema.safeParse(event.data) : null
   if (closed?.success && closed.data.reason === "admin") return { words: "The server admin closed it", statusSub: "By the server admin" }
   if (closed?.success && closed.data.reason === "no_better_copy") return { words: "We looked, but there's no better copy right now", statusSub: "No better copy right now" }

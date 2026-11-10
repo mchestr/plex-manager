@@ -25,6 +25,8 @@ export interface SentRequest {
   problem: ProblemCode
   note: string
   device?: DeviceAnswer
+  /** The member chose Swap the copy. */
+  swap?: boolean
 }
 
 /** "Nov 14", in the member's own zone and language. */
@@ -42,6 +44,11 @@ const FIXING: Record<MemberFixAction, { heading: string; line: string }> = {
   },
   LOOK_FOR_MISSING: { heading: "Looking for them", line: "We'll look for the missing episodes now. Nothing is removed. We'll message you when they're on the server." },
   REFRESH: { heading: "Refreshing the details", line: "We'll check the details and ask Plex to read them again. We'll message you when it's done." },
+  SWAP: {
+    heading: "Swapping the copy",
+    line: "We'll find a different copy and swap it in. The one you have keeps playing until the new one is ready. We'll message you when it's done.",
+  },
+  FIX_MATCH: { heading: "Fixing the details", line: "We'll fix the title and poster in Plex. The file stays the same. We'll message you when it's done." },
 }
 
 const ANSWER_HEADINGS: Record<ReportAnswer["kind"], string> = { NOT_AIRED: "Not out yet", NOT_ON_SERVER: "Not on the server", BEST_COPY: "Already the best copy" }

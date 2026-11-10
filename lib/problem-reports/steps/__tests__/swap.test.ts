@@ -4,10 +4,12 @@
  * wait (the shared check, then the end once the new copy is in).
  */
 
+import { getAccessLevel } from "@/lib/access"
 import { getArrQualityProfile } from "@/lib/connections/arr-upgrade"
 import { searchArrReleases, type ArrRelease } from "@/lib/connections/arr-swap"
 import { grabArrRelease } from "@/lib/connections/arr-writes"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
+import { readMemberItem } from "@/lib/problem-reports/access"
 import { findBadCopy } from "@/lib/problem-reports/bad-copy"
 import { gateAndRecord, gateReplace } from "@/lib/problem-reports/ledger"
 import type { ResolvedFile } from "@/lib/problem-reports/resolve"
@@ -16,6 +18,8 @@ import { finishReplace, readyToReplace } from "@/lib/problem-reports/steps/repla
 import { runSwap } from "@/lib/problem-reports/steps/swap"
 import type { CopyWatch, ProblemReportFixPayload, ReplaceWatch } from "@/lib/queue/types"
 
+jest.mock("@/lib/access", () => ({ getAccessLevel: jest.fn() }))
+jest.mock("@/lib/problem-reports/access", () => ({ readMemberItem: jest.fn() }))
 jest.mock("@/lib/connections/arr-upgrade", () => ({ ...jest.requireActual("@/lib/connections/arr-upgrade"), getArrQualityProfile: jest.fn() }))
 jest.mock("@/lib/connections/arr-swap", () => ({ searchArrReleases: jest.fn() }))
 jest.mock("@/lib/connections/arr-writes", () => ({ grabArrRelease: jest.fn() }))
@@ -31,7 +35,8 @@ const DAY = 24 * 60 * MINUTE
 const SERVER = { name: "Home", url: "http://plex.local:32400", token: "owner-token", adminPlexUserId: "owner", machineIdentifier: "m" }
 const RADARR = { name: "Radarr", url: "http://radarr.local:7878", apiKey: "radarr-key" }
 const REPORT = { id: "report-1", runToken: 3, action: "SWAP" as const, reporterId: "member-1", plexRatingKey: "555", titleKey: "plex://movie/heat" }
-const START: ProblemReportFixPayload = { reportId: "report-1", runToken: 3, step: "start", trigger: "web", actorUserId: "admin-1" }
+const START: ProblemReportFixPayload = { reportId: "report-1", runToken: 3, step: "start", trigger: "web", actorUserId: "admin-1", claimedAt: NOW.getTime() - MINUTE }
+const MEMBER_START: ProblemReportFixPayload = { ...START, trigger: "automatic", actorUserId: "member-1" }
 const QUALITY = { id: 7, name: "Bluray-1080p", version: 1, real: 0 }
 const FILE = {
   id: 77,
@@ -76,6 +81,8 @@ beforeEach(() => {
   jest.mocked(searchArrReleases).mockResolvedValue({ success: true, data: [release(BAD.titles[0]), GOOD] })
   jest.mocked(gateReplace).mockResolvedValue(null)
   jest.mocked(grabArrRelease).mockResolvedValue({ success: true, data: null })
+  jest.mocked(getAccessLevel).mockResolvedValue("full")
+  jest.mocked(readMemberItem).mockResolvedValue({ ok: true } as never)
 })
 
 describe("the start", () => {
@@ -103,7 +110,21 @@ describe("the start", () => {
       NOW
     )
     expect(searchArrReleases).toHaveBeenCalledWith(RADARR, { service: "radarr", movieId: 5 })
-    expect(gateReplace).toHaveBeenCalledWith({ reportId: "report-1", runToken: 3 }, NOW)
+    expect(gateReplace).toHaveBeenCalledWith(
+      {
+        reportId: "report-1",
+        runToken: 3,
+        action: "SWAP",
+        trigger: "web",
+        reporterId: "member-1",
+        actorUserId: "admin-1",
+        titleKey: "plex://movie/heat",
+        claimedAt: NOW.getTime() - MINUTE,
+        dryRun: false,
+      },
+      NOW
+    )
+    expect(getAccessLevel).not.toHaveBeenCalled()
     expect(grabArrRelease).toHaveBeenCalledWith("Radarr", RADARR, GOOD)
   })
 
@@ -142,6 +163,7 @@ describe("the start", () => {
     ["the breaker is tripped before the search", () => jest.mocked(gateAndRecord).mockResolvedValue("BREAKER"), "BREAKER"],
     ["the interactive search fails", () => jest.mocked(searchArrReleases).mockResolvedValue({ success: false, error: "timeout" }), "UNAVAILABLE"],
     ["the breaker trips at the grab", () => jest.mocked(gateReplace).mockResolvedValue("BREAKER"), "BREAKER"],
+    ["the check before the grab refuses it", () => jest.mocked(gateReplace).mockResolvedValue("OUT_OF_SWAPS"), "OUT_OF_SWAPS"],
     ["the run's row is gone", () => jest.mocked(gateReplace).mockResolvedValue("NO_RUN"), "UNAVAILABLE"],
     ["Radarr doesn't take the grab", () => jest.mocked(grabArrRelease).mockResolvedValue({ success: false, error: "not in cache" }), "GRAB_FAILED"],
     ["no Plex server is active", () => jest.mocked(getActivePlexServerConfig).mockResolvedValue(null), "UNAVAILABLE"],
@@ -158,6 +180,31 @@ describe("the start", () => {
 
     jest.mocked(gateReplace).mockResolvedValueOnce("BREAKER")
     await runSwap(REPORT, START, NOW)
+    expect(grabArrRelease).not.toHaveBeenCalled()
+  })
+
+  it("runs a member's swap while they're entitled and it's in their libraries", async () => {
+    await expect(runSwap(REPORT, MEMBER_START, NOW)).resolves.toMatchObject({ next: { data: { step: "wait" } } })
+    expect(getAccessLevel).toHaveBeenCalledWith("member-1")
+    expect(readMemberItem).toHaveBeenCalledWith("member-1", "555")
+    expect(gateReplace).toHaveBeenCalledWith(expect.objectContaining({ trigger: "automatic", actorUserId: "member-1" }), NOW)
+  })
+
+  it.each([
+    ["their membership lapsed", () => jest.mocked(getAccessLevel).mockResolvedValue("lapsed"), "NO_ACCESS"],
+    ["the title left their libraries", () => jest.mocked(readMemberItem).mockResolvedValue({ ok: false, reason: "NOT_FOUND" }), "NO_ACCESS"],
+    ["Plex can't say", () => jest.mocked(readMemberItem).mockResolvedValue({ ok: false, reason: "UNAVAILABLE" }), "UNAVAILABLE"],
+  ])("touches nothing for a member's swap when %s", async (_label, arrange, reason) => {
+    arrange()
+
+    await expect(runSwap(REPORT, MEMBER_START, NOW)).resolves.toEqual({ toAdmin: reason })
+    expect(gateAndRecord).not.toHaveBeenCalled()
+  })
+
+  it("stops a dry run at the pick, with the release it would grab", async () => {
+    await expect(runSwap(REPORT, { ...MEMBER_START, dryRun: true }, NOW)).resolves.toEqual({ wouldSwap: { release: GOOD.title } })
+    expect(gateAndRecord).toHaveBeenCalledWith(expect.objectContaining({ action: "SWAP", dryRun: true }), NOW)
+    expect(gateReplace).not.toHaveBeenCalled()
     expect(grabArrRelease).not.toHaveBeenCalled()
   })
 

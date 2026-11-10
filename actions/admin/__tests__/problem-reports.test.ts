@@ -22,6 +22,7 @@ import {
   updateProblemReportSettings,
 } from "@/actions/admin/problem-reports"
 import { principalSession } from "@/lib/mcp/principal"
+import { servicesWithoutRecycleBin } from "@/lib/problem-reports/recycle-bins"
 import { startFix } from "@/lib/problem-reports/run"
 import { queueMemberUpdates } from "@/lib/problem-reports/updates"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
@@ -31,6 +32,7 @@ jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/problem-reports/run", () => ({ startFix: jest.fn() }))
+jest.mock("@/lib/problem-reports/recycle-bins", () => ({ servicesWithoutRecycleBin: jest.fn() }))
 jest.mock("@/lib/problem-reports/updates", () => ({ queueMemberUpdates: jest.fn() }))
 jest.mock("@/lib/mcp/principal", () => ({ principalSession: jest.fn() }))
 jest.mock("@/lib/security/audit-log", () => ({
@@ -112,21 +114,44 @@ describe("updateProblemReportSettings", () => {
 
     await expect(updateProblemReportSettings({ enabled: true })).resolves.toEqual({ success: true, data: null })
 
-    expect(prismaMock.problemReportSettings.upsert).toHaveBeenCalledWith({
-      where: { id: "problem-reports" },
-      create: { id: "problem-reports", enabled: true, updatedBy: "admin-1" },
-      update: { enabled: true, updatedBy: "admin-1" },
-    })
+    const saved = { enabled: true, automatic: "OFF", weeklySwaps: 3, titleCooldownDays: 14, dailySwapCap: 10, updatedBy: "admin-1" }
+    expect(prismaMock.problemReportSettings.upsert).toHaveBeenCalledWith({ where: { id: "problem-reports" }, create: { id: "problem-reports", ...saved }, update: saved })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.PROBLEM_REPORT_SETTINGS_CHANGED, "admin-1", {
       changedFields: ["enabled"],
-      before: { enabled: false },
-      after: { enabled: true },
+      before: { enabled: false, automatic: "OFF", weeklySwaps: 3, titleCooldownDays: 14, dailySwapCap: 10 },
+      after: { enabled: true, automatic: "OFF", weeklySwaps: 3, titleCooldownDays: 14, dailySwapCap: 10 },
     })
+    expect(servicesWithoutRecycleBin).not.toHaveBeenCalled()
     for (const path of ["/admin/problem-reports", "/report", "/help", "/"]) expect(revalidatePath).toHaveBeenCalledWith(path)
   })
 
+  it("sets members' swaps to Dry run with their limits, and times the change so no backlog runs", async () => {
+    prismaMock.problemReportSettings.findUnique.mockResolvedValue(null)
+
+    await expect(updateProblemReportSettings({ enabled: true, automatic: "DRY_RUN", weeklySwaps: 2 })).resolves.toEqual({ success: true, data: null })
+
+    expect(prismaMock.problemReportSettings.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: expect.objectContaining({ automatic: "DRY_RUN", weeklySwaps: 2, automaticSince: expect.any(Date) }) })
+    )
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.PROBLEM_REPORT_SETTINGS_CHANGED, "admin-1", expect.objectContaining({ changedFields: ["enabled", "automatic", "weeklySwaps"] }))
+  })
+
+  it("turns members' swaps On only with a recycle bin in each of Radarr and Sonarr that is set up", async () => {
+    prismaMock.problemReportSettings.findUnique.mockResolvedValue(null)
+    jest.mocked(servicesWithoutRecycleBin).mockResolvedValueOnce(["Sonarr"]).mockResolvedValueOnce([])
+
+    await expect(updateProblemReportSettings({ enabled: true, automatic: "ON" })).resolves.toEqual({
+      success: false,
+      code: "VALIDATION",
+      error: "Set a recycle bin in Sonarr first, so a bad swap can be undone",
+    })
+    expect(prismaMock.problemReportSettings.upsert).not.toHaveBeenCalled()
+
+    await expect(updateProblemReportSettings({ enabled: true, automatic: "ON" })).resolves.toEqual({ success: true, data: null })
+  })
+
   it("writes no audit row when nothing changed", async () => {
-    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: "problem-reports", breakerTrippedAt: null, enabled: true, updatedAt: new Date(), updatedBy: null })
+    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: "problem-reports", breakerTrippedAt: null, enabled: true, updatedAt: new Date(), updatedBy: null, automatic: "OFF", automaticSince: null, weeklySwaps: 3, titleCooldownDays: 14, dailySwapCap: 10 })
 
     await updateProblemReportSettings({ enabled: true })
 

@@ -29,6 +29,16 @@ describe("isPlexItemPlaying", () => {
     expect(init.headers["X-Plex-Token"]).toBe("owner-token")
   })
 
+  it("counts only the viewer's own sessions when asked about one member", async () => {
+    const sessions = { MediaContainer: { size: 2, Metadata: [{ ratingKey: "555", User: { id: "42" } }, { ratingKey: "556", User: { id: 1 } }] } }
+    mockFetch.mockResolvedValue(respond(200, sessions))
+
+    expect(await isPlexItemPlaying(SERVER, "555", { plexUserId: "42", isOwner: false })).toBe(true)
+    expect(await isPlexItemPlaying(SERVER, "555", { plexUserId: "43", isOwner: false })).toBe(false)
+    // Plex reports the owner's own sessions as user 1
+    expect(await isPlexItemPlaying(SERVER, "556", { plexUserId: "9000", isOwner: true })).toBe(true)
+  })
+
   it("is false with no sessions, and null when Plex can't be read", async () => {
     mockFetch.mockResolvedValueOnce(respond(200, { MediaContainer: { size: 0 } })).mockResolvedValueOnce(respond(500))
 

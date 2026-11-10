@@ -4,9 +4,9 @@
 
 /**
  * The admin Problem reports loaders: admin only, each filter's statuses and
- * order, the reporter counts, the detail page's timeline and Plex link, the
- * settings card, and the audited reads (the list once per filter, the detail
- * once per member whose words it shows).
+ * order, the reporter counts, the detail page's timeline and Plex link, and
+ * the audited reads (the list once per filter, the detail once per member
+ * whose words it shows).
  */
 
 import { mockReset } from "jest-mock-extended"
@@ -14,7 +14,7 @@ import { mockReset } from "jest-mock-extended"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { assertAdmin } from "@/lib/admin"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
-import { getProblemBreaker, getProblemReport, getProblemReportSettingsView, listProblemReports } from "@/lib/data/problem-reports"
+import { getProblemReport, listProblemReports } from "@/lib/data/problem-reports"
 import { auditMemberListed, auditMemberRead } from "@/lib/security/audit-log"
 
 jest.mock("@/lib/admin", () => ({ assertAdmin: jest.fn() }))
@@ -181,33 +181,5 @@ describe("getProblemReport", () => {
       "Fixed: the missing episodes are on the server",
       "Sent to the server admin",
     ])
-  })
-})
-
-describe("getProblemBreaker", () => {
-  it("is when the breaker tripped, or null", async () => {
-    prismaMock.problemReportSettings.findUnique.mockResolvedValueOnce({ breakerTrippedAt: AT } as never).mockResolvedValueOnce(null)
-
-    expect(await getProblemBreaker()).toEqual(AT)
-    expect(await getProblemBreaker()).toBeNull()
-    expect(assertAdmin).toHaveBeenCalled()
-  })
-})
-
-describe("getProblemReportSettingsView", () => {
-  it("reads the switch and the newest audited save", async () => {
-    prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: "problem-reports", breakerTrippedAt: null, enabled: true, updatedAt: AT, updatedBy: "admin-1" })
-    prismaMock.auditLog.findFirst.mockResolvedValue({ id: "audit-1", actorUserId: "admin-1", createdAt: AT } as never)
-    prismaMock.user.findUnique.mockResolvedValue({ name: "Dana", email: null } as never)
-
-    expect(await getProblemReportSettingsView()).toEqual({ enabled: true, lastSaved: { at: AT, by: "Dana", eventId: "audit-1" } })
-    expect(prismaMock.auditLog.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { type: "PROBLEM_REPORT_SETTINGS_CHANGED" } }))
-  })
-
-  it("is off, never saved, without a row", async () => {
-    prismaMock.problemReportSettings.findUnique.mockResolvedValue(null)
-    prismaMock.auditLog.findFirst.mockResolvedValue(null)
-
-    expect(await getProblemReportSettingsView()).toEqual({ enabled: false, lastSaved: null })
   })
 })

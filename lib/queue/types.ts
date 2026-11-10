@@ -210,6 +210,10 @@ export interface ProblemReportFixPayload {
   trigger: "automatic" | "web" | "mcp"
   /** Who asked: the reporter for an automatic run, else the admin. */
   actorUserId: string | null
+  /** When the run was claimed, in epoch milliseconds: an admin's tap holds 15 minutes, and a member's swap stops once the mode changed after it. */
+  claimedAt?: number
+  /** A member's swap in Dry run: it finds the copy it would swap in, then hands the report to the server admin. */
+  dryRun?: boolean
   /** The Sonarr episode ids the run waits for, once it has started. */
   targets?: number[]
   /** When the run gives up waiting, in epoch milliseconds. */

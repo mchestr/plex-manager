@@ -10,7 +10,7 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { buildUser } from '@/__tests__/helpers/factories'
 import { readHistory, type HistoryRow } from '@/lib/connections/tautulli-history'
 import { getActiveService } from '@/lib/data/active-service'
-import { memberLastPlay, readEvidence, tautulliUserIdOf } from '@/lib/problem-reports/evidence'
+import { readEvidence, tautulliUserIdOf } from '@/lib/problem-reports/evidence'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/connections/tautulli-history', () => ({ readHistory: jest.fn() }))
@@ -84,35 +84,6 @@ describe('readEvidence', () => {
     jest.mocked(readHistory).mockResolvedValue(null)
 
     expect(await readEvidence('member-1', { ratingKey: '555', type: 'movie' })).toEqual({ lastPlay: null, playedToEnd: null })
-  })
-})
-
-describe('memberLastPlay', () => {
-  it("reads the member's last play of a title", async () => {
-    jest.mocked(readHistory).mockResolvedValue([play({ player: 'Phone' })])
-
-    expect(await memberLastPlay('42', { ratingKey: '555', type: 'movie' })).toEqual({ player: 'Phone', transcoded: false, at: '2026-11-08T20:00:00.000Z' })
-    expect(readHistory).toHaveBeenCalledWith(TAUTULLI, { user_id: 42, rating_key: '555', length: 1 }, ONCE)
-  })
-
-  it("reads a show's last play from its episodes", async () => {
-    jest.mocked(readHistory).mockResolvedValue([play({ ratingKey: '7001', mediaType: 'episode' })])
-
-    expect(await memberLastPlay('42', { ratingKey: '6999', type: 'show' })).not.toBeNull()
-    expect(readHistory).toHaveBeenCalledWith(TAUTULLI, { user_id: 42, grandparent_rating_key: '6999', length: 1 }, ONCE)
-  })
-
-  it('is null for a member without a Plex account', async () => {
-    expect(await memberLastPlay(null, { ratingKey: '555', type: 'movie' })).toBeNull()
-    expect(readHistory).not.toHaveBeenCalled()
-  })
-
-  it('is null without Tautulli, or when reading it fails', async () => {
-    jest.mocked(getActiveService).mockResolvedValueOnce(null)
-    expect(await memberLastPlay('42', { ratingKey: '555', type: 'movie' })).toBeNull()
-
-    jest.mocked(getActiveService).mockRejectedValueOnce(new Error('connection lost'))
-    expect(await memberLastPlay('42', { ratingKey: '555', type: 'movie' })).toBeNull()
   })
 })
 

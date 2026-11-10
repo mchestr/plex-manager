@@ -13,6 +13,7 @@ import { Prisma } from '@/lib/generated/prisma/client'
 import { readMemberItem } from '@/lib/problem-reports/access'
 import { queueReportAlert } from '@/lib/problem-reports/alerts'
 import { readEvidence } from '@/lib/problem-reports/evidence'
+import { decideMatchForMember, decideSwapForMember } from '@/lib/problem-reports/member-swap'
 import { decideBetterCopyForMember } from '@/lib/problem-reports/report-better-copy'
 import { decideDetailsForMember } from '@/lib/problem-reports/report-details'
 import { decideMissingForMember } from '@/lib/problem-reports/report-missing'
@@ -26,6 +27,7 @@ jest.mock('@/lib/problem-reports/access', () => ({ readMemberItem: jest.fn() }))
 jest.mock('@/lib/problem-reports/evidence', () => ({ readEvidence: jest.fn() }))
 jest.mock('@/lib/problem-reports/alerts', () => ({ queueReportAlert: jest.fn() }))
 jest.mock('@/lib/problem-reports/report-better-copy', () => ({ decideBetterCopyForMember: jest.fn() }))
+jest.mock('@/lib/problem-reports/member-swap', () => ({ decideSwapForMember: jest.fn(), decideMatchForMember: jest.fn() }))
 jest.mock('@/lib/problem-reports/report-details', () => ({ decideDetailsForMember: jest.fn() }))
 jest.mock('@/lib/problem-reports/report-missing', () => ({ decideMissingForMember: jest.fn() }))
 jest.mock('@/lib/problem-reports/run', () => ({ startFix: jest.fn() }))
@@ -63,7 +65,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockReset(prismaMock)
   prismaMock.$transaction.mockImplementation((async (fn: (tx: unknown) => Promise<unknown>) => fn(asTransactionClient(prismaMock))) as never)
-  prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: 'problem-reports', breakerTrippedAt: null, enabled: true, updatedAt: new Date(), updatedBy: null })
+  prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: 'problem-reports', breakerTrippedAt: null, enabled: true, automatic: 'OFF', automaticSince: null, weeklySwaps: 3, titleCooldownDays: 14, dailySwapCap: 10, updatedAt: new Date(), updatedBy: null })
   jest.mocked(hasEntitlement).mockResolvedValue(true)
   jest.mocked(consume).mockResolvedValue({ ok: true })
   jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: EPISODE, server: SERVER })
@@ -314,7 +316,7 @@ describe('reportProblem for missing episodes', () => {
     expect(readMemberItem).toHaveBeenLastCalledWith('member-1', '6999')
     expect(decideMissingForMember).toHaveBeenCalledWith(SERVER, SHOW, expect.any(Date))
     expect(prismaMock.problemReport.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ plexRatingKey: '6999', titleKey: 'plex://show/office' }) }))
-    expect(startFix).toHaveBeenCalledWith({ reportId: 'report-1', action: 'LOOK_FOR_MISSING', trigger: 'automatic', actorUserId: 'member-1' })
+    expect(startFix).toHaveBeenCalledWith({ reportId: 'report-1', action: 'LOOK_FOR_MISSING', trigger: 'automatic', actorUserId: 'member-1', dryRun: false })
     expect(queueReportAlert).not.toHaveBeenCalled()
   })
 
@@ -362,7 +364,7 @@ describe('reportProblem for a blurry title', () => {
 
     expect(await blurry()).toEqual({ ok: true, outcome: 'fixing', reportId: 'report-1', action: 'BETTER_COPY' })
     expect(decideBetterCopyForMember).toHaveBeenCalledWith(SERVER, '555', EVIDENCE)
-    expect(startFix).toHaveBeenCalledWith({ reportId: 'report-1', action: 'BETTER_COPY', trigger: 'automatic', actorUserId: 'member-1' })
+    expect(startFix).toHaveBeenCalledWith({ reportId: 'report-1', action: 'BETTER_COPY', trigger: 'automatic', actorUserId: 'member-1', dryRun: false })
     expect(queueReportAlert).not.toHaveBeenCalled()
   })
 
@@ -406,7 +408,7 @@ describe('reportProblem for wrong details', () => {
 
     expect(await details()).toEqual({ ok: true, outcome: 'fixing', reportId: 'report-1', action: 'REFRESH' })
     expect(decideDetailsForMember).toHaveBeenCalledWith('movie')
-    expect(startFix).toHaveBeenCalledWith({ reportId: 'report-1', action: 'REFRESH', trigger: 'automatic', actorUserId: 'member-1' })
+    expect(startFix).toHaveBeenCalledWith({ reportId: 'report-1', action: 'REFRESH', trigger: 'automatic', actorUserId: 'member-1', dryRun: false })
     expect(queueReportAlert).not.toHaveBeenCalled()
   })
 
@@ -420,6 +422,66 @@ describe('reportProblem for wrong details', () => {
     expect(await details({ toAdmin: true })).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
     expect(decideDetailsForMember).not.toHaveBeenCalled()
     expect(startFix).not.toHaveBeenCalled()
+  })
+})
+
+describe("reportProblem for a swap's problem", () => {
+  const report = (overrides: Partial<Parameters<typeof reportProblem>[0]> = {}) =>
+    reportProblem({ userId: 'member-1', ratingKey: '555', problem: 'wont_start', note: null, device: 'others_play', swap: true, ...overrides })
+
+  beforeEach(() => {
+    jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: MOVIE, server: SERVER })
+    jest.mocked(startFix).mockResolvedValue({ ok: true, runToken: 1 })
+    jest.mocked(decideSwapForMember).mockResolvedValue({ startsFix: true, dryRun: false })
+  })
+
+  it('starts Swap the copy the member chose, with the answer about their player', async () => {
+    expect(await report()).toEqual({ ok: true, outcome: 'fixing', reportId: 'report-1', action: 'SWAP' })
+    expect(decideSwapForMember).toHaveBeenCalledWith(
+      { userId: 'member-1', item: MOVIE, server: SERVER, problem: 'wont_start', device: 'others_play', evidence: EVIDENCE, chose: true },
+      expect.any(Date)
+    )
+    expect(startFix).toHaveBeenCalledWith({ reportId: 'report-1', action: 'SWAP', trigger: 'automatic', actorUserId: 'member-1', dryRun: false })
+    expect(queueReportAlert).not.toHaveBeenCalled()
+  })
+
+  it("starts a dry run as the server admin's report, whose job alerts the admins", async () => {
+    jest.mocked(decideSwapForMember).mockResolvedValue({ startsFix: true, dryRun: true })
+
+    expect(await report({ swap: false })).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
+    expect(decideSwapForMember).toHaveBeenCalledWith(expect.objectContaining({ chose: false }), expect.any(Date))
+    expect(startFix).toHaveBeenCalledWith(expect.objectContaining({ action: 'SWAP', dryRun: true }))
+    expect(queueReportAlert).not.toHaveBeenCalled()
+  })
+
+  it('sends it to the admins with the reason a swap was refused', async () => {
+    jest.mocked(decideSwapForMember).mockResolvedValue({ startsFix: false, reason: 'OUT_OF_SWAPS' })
+
+    expect(await report()).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({ data: { reportId: 'report-1', kind: 'TO_ADMIN', data: { reason: 'OUT_OF_SWAPS' } } })
+    expect(queueReportAlert).toHaveBeenCalledWith('report-1')
+  })
+
+  it('checks nothing for a member who sends it to the server admin', async () => {
+    await report({ toAdmin: true })
+    expect(decideSwapForMember).not.toHaveBeenCalled()
+  })
+})
+
+describe('reportProblem for a different title playing', () => {
+  beforeEach(() => {
+    jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: MOVIE, server: SERVER })
+    jest.mocked(startFix).mockResolvedValue({ ok: true, runToken: 1 })
+  })
+
+  it('starts Fix the Plex match when the match differs, or tells the admins what the check found', async () => {
+    jest.mocked(decideMatchForMember).mockResolvedValueOnce({ startsFix: true }).mockResolvedValueOnce({ startsFix: false, reason: 'IDS_AGREE' })
+    const report = () => reportProblem({ userId: 'member-1', ratingKey: '555', problem: 'different_title', note: null })
+
+    expect(await report()).toEqual({ ok: true, outcome: 'fixing', reportId: 'report-1', action: 'FIX_MATCH' })
+    expect(decideMatchForMember).toHaveBeenCalledWith(SERVER, MOVIE)
+    expect(await report()).toEqual({ ok: true, outcome: 'reported', reportId: 'report-1' })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({ data: { reportId: 'report-1', kind: 'TO_ADMIN', data: { reason: 'IDS_AGREE' } } })
   })
 })
 

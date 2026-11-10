@@ -1350,13 +1350,25 @@ model ProblemReportEvent {
   @@index([actorUserId])
 }
 
+/// Whether members' own swaps of the copy run (docs/problem-reports.md, "Members' swaps"): not at all, as a dry run, or for real.
+enum ProblemAutomaticMode {
+  OFF
+  DRY_RUN
+  ON
+}
+
 /// Problem reports settings (lib/problem-reports/settings.ts): one row, id "problem-reports". Without a row the feature is off.
 model ProblemReportSettings {
-  id               String    @id @default("problem-reports")
-  enabled          Boolean   @default(false) // Members can report problems on /report
-  breakerTrippedAt DateTime? // Set when file replacements pass the breaker's limits; fixes that replace files wait until an admin resumes them
-  updatedAt        DateTime  @updatedAt
-  updatedBy        String?
+  id                String               @id @default("problem-reports")
+  enabled           Boolean              @default(false) // Members can report problems on /report
+  breakerTrippedAt  DateTime? // Set when file replacements pass the breaker's limits; fixes that replace files wait until an admin resumes them
+  automatic         ProblemAutomaticMode @default(OFF) // Members' own swaps of the copy
+  automaticSince    DateTime? // When `automatic` last changed: a run claimed before that never acts on its own
+  weeklySwaps       Int                  @default(3) // Swaps a member may spend in any 7 days
+  titleCooldownDays Int                  @default(14) // Days after a member's swap of a title before another
+  dailySwapCap      Int                  @default(10) // Members' swaps a day, server-wide
+  updatedAt         DateTime             @updatedAt
+  updatedBy         String?
 }
 
 /// Every fix run, kept for the limits, which read only this table. Members can't delete it, and member removal only sets its person ids to null.
@@ -1371,13 +1383,16 @@ model ProblemFixLedger {
   actor       User?          @relation("ProblemFixActor", fields: [actorUserId], references: [id], onDelete: SetNull)
   reportId    String?
   report      ProblemReport? @relation(fields: [reportId], references: [id], onDelete: SetNull)
-  outcome     String? // FIXED, NOT_FOUND, TO_ADMIN, ...
+  /// The report's title (its Plex guid), kept here so a title's limits hold after its reports are deleted.
+  titleKey    String?
+  outcome     String? // FIXED, NOT_FOUND, TO_ADMIN, DRY_RUN, ...
   startedAt   DateTime       @default(now())
   /// When the run began replacing the file: a swap's grab, or a removal's delete. The breaker counts these.
   replacedAt  DateTime?
   endedAt     DateTime?
 
   @@index([target, startedAt])
+  @@index([titleKey, startedAt])
   @@index([reporterId, startedAt])
   @@index([startedAt])
   @@index([replacedAt])

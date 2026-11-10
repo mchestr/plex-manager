@@ -71,6 +71,22 @@ describe("timelineStep", () => {
     expect(timelineStep(event("TO_ADMIN", { reason: "NO_UPGRADE", action: "BETTER_COPY" }, null)).words).toBe("The quality profile doesn't want a better copy of this file")
   })
 
+  it("says whether the member's new copy plays, with what's still wrong when it doesn't", () => {
+    expect(timelineStep(event("PLAYS", null))).toMatchObject({ words: "Said the new copy plays", actor: MEMBER })
+    expect(timelineStep(event("REOPENED", { reason: "still_broken", note: "Still no sound" }))).toMatchObject({
+      words: "Said it's still broken after the new copy came in",
+      note: "Still no sound",
+    })
+  })
+
+  it("says what a dry run would swap in, naming the release", () => {
+    expect(timelineStep(event("FIX_STARTED", { action: "SWAP", trigger: "automatic", dryRun: true })).words).toBe("Started a dry run of swapping the copy for the member")
+    expect(timelineStep(event("TO_ADMIN", { reason: "DRY_RUN", action: "SWAP", release: "Heat.1995.1080p.BluRay-GOOD" }, null)).words).toBe(
+      "Dry run: a swap would bring in Heat.1995.1080p.BluRay-GOOD. Swap the copy to run it"
+    )
+    expect(timelineStep(event("TO_ADMIN", { reason: "OUT_OF_SWAPS", action: "SWAP" }, null)).words).toBe("The member is out of swaps for now")
+  })
+
   it("says which copy a swap or a removal brought in, and whether the old release is on the blocklist", () => {
     const swapped = { reason: "fix", action: "SWAP", release: "Heat.1995.1080p.BluRay-GOOD" }
     expect(timelineStep(event("FIXED", { ...swapped, blocklisted: true })).words).toBe("Fixed: a different copy is on the server (Heat.1995.1080p.BluRay-GOOD). The old release is on the blocklist")

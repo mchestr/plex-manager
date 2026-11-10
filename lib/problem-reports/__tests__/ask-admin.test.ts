@@ -12,7 +12,7 @@ import type { PlexItemMetadata } from '@/lib/connections/plex'
 import { Prisma } from '@/lib/generated/prisma/client'
 import { readMemberItem } from '@/lib/problem-reports/access'
 import { queueReportAlert } from '@/lib/problem-reports/alerts'
-import { askServerAdmin } from '@/lib/problem-reports/ask-admin'
+import { answerDoesItPlay, askServerAdmin } from '@/lib/problem-reports/ask-admin'
 import { consume } from '@/lib/security/rate-limit'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
@@ -34,7 +34,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockReset(prismaMock)
   prismaMock.$transaction.mockImplementation((async (fn: (tx: unknown) => Promise<unknown>) => fn(asTransactionClient(prismaMock))) as never)
-  prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: 'problem-reports', breakerTrippedAt: null, enabled: true, updatedAt: new Date(), updatedBy: null })
+  prismaMock.problemReportSettings.findUnique.mockResolvedValue({ id: 'problem-reports', breakerTrippedAt: null, enabled: true, automatic: 'OFF', automaticSince: null, weeklySwaps: 3, titleCooldownDays: 14, dailySwapCap: 10, updatedAt: new Date(), updatedBy: null })
   jest.mocked(hasEntitlement).mockResolvedValue(true)
   jest.mocked(consume).mockResolvedValue({ ok: true })
 })
@@ -101,5 +101,65 @@ describe('askServerAdmin', () => {
     prismaMock.problemReportSettings.findUnique.mockResolvedValue(null)
     expect(await ask()).toEqual({ ok: false, refusal: 'OFF' })
     expect(prismaMock.problemReport.updateMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('answerDoesItPlay', () => {
+  const NOW = new Date('2026-11-09T20:00:00Z')
+  const DAY = 24 * 60 * 60 * 1000
+  const fixed = (daysAgo: number, kind = 'FIXED') => ({
+    titleKey: 'plex://movie/heat',
+    problem: 'wont_start',
+    plexRatingKey: '555',
+    events: [{ kind, createdAt: new Date(NOW.getTime() - daysAgo * DAY) }],
+  })
+  const answer = (plays: boolean, note: string | null = null) => answerDoesItPlay({ userId: 'member-1', reportId: 'report-1', plays, note }, NOW)
+
+  beforeEach(() => {
+    jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: MOVIE, server: SERVER })
+    prismaMock.problemReport.findFirst.mockResolvedValue(fixed(2) as never)
+    prismaMock.problemReport.updateMany.mockResolvedValue({ count: 1 })
+  })
+
+  it("records that the member's swapped copy plays, and changes nothing else", async () => {
+    expect(await answer(true)).toEqual({ ok: true, reportId: 'report-1' })
+
+    expect(prismaMock.problemReport.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'report-1', reporterId: 'member-1', status: 'FIXED', action: { in: ['SWAP', 'REMOVE_AND_SEARCH'] } } })
+    )
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({ data: { reportId: 'report-1', kind: 'PLAYS', actorUserId: 'member-1' } })
+    expect(prismaMock.problemReport.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('puts a copy that is still broken back with the admins, with what is still wrong, and never starts another swap', async () => {
+    expect(await answer(false, 'Still no sound')).toEqual({ ok: true, reportId: 'report-1' })
+
+    expect(prismaMock.problemReport.updateMany).toHaveBeenCalledWith({
+      where: { id: 'report-1', reporterId: 'member-1', status: 'FIXED', activeKey: null },
+      data: { status: 'WITH_ADMIN', activeKey: 'plex://movie/heat', resolvedAt: null, alertedAt: null },
+    })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
+      data: { reportId: 'report-1', kind: 'REOPENED', actorUserId: 'member-1', data: { reason: 'still_broken', note: 'Still no sound' } },
+    })
+    expect(queueReportAlert).toHaveBeenCalledWith('report-1')
+  })
+
+  it("joins the title's newer open report when one opened since", async () => {
+    prismaMock.problemReport.updateMany.mockRejectedValue(conflict())
+    prismaMock.problemReport.findFirst
+      .mockResolvedValueOnce(fixed(2) as never)
+      .mockResolvedValueOnce({ id: 'report-2', reporterId: 'member-2', problem: 'glitches', note: null, events: [] } as never)
+
+    expect(await answer(false, 'Still no sound')).toEqual({ ok: true, reportId: 'report-2' })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
+      data: { reportId: 'report-2', kind: 'ALSO_REPORTED', actorUserId: 'member-1', data: { problem: 'wont_start', note: 'Still no sound' } },
+    })
+  })
+
+  it('asks only within 7 days of the fix, and only once', async () => {
+    prismaMock.problemReport.findFirst.mockResolvedValueOnce(fixed(8) as never).mockResolvedValueOnce(fixed(1, 'PLAYS') as never).mockResolvedValueOnce(null)
+
+    for (let tries = 0; tries < 3; tries++) expect(await answer(true)).toEqual({ ok: false, refusal: 'NOT_FOUND' })
+    expect(prismaMock.problemReportEvent.create).not.toHaveBeenCalled()
   })
 })

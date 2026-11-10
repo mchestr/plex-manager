@@ -47,6 +47,8 @@ export const reportProblemInputSchema = z.object({
   note: problemNoteSchema,
   device: z.enum(DEVICE_ANSWERS).optional(),
   toAdmin: z.boolean().optional(),
+  /** The member chose Swap the copy, on what the sheet said it would spend. */
+  swap: z.boolean().optional(),
 })
 
 /** An `ALSO_REPORTED` event's data: a second member's problem and note, or nothing for a follow. */
@@ -54,6 +56,12 @@ export const alsoReportedDataSchema = z.looseObject({ problem: z.string().option
 
 /** A `CLOSED` event's data: why the report closed. `no_better_copy` is a member's Look for a better copy that found none. */
 export const closedEventDataSchema = z.object({ reason: z.enum(["cancelled", "admin", "no_better_copy"]) })
+
+/** A `REOPENED` event's data after "Still broken": what the member says is still wrong. Ask the server admin writes none. */
+export const reopenedEventDataSchema = z.object({ reason: z.literal("still_broken"), note: z.string().max(PROBLEM_NOTE_MAX).nullable() })
+
+/** "Does it play now?" on a report that a swap or a removal fixed: It plays, or Still broken with what's still wrong. */
+export const answerDoesItPlaySchema = z.object({ reportId: problemReportIdSchema, plays: z.boolean(), note: problemNoteSchema })
 
 const fixActionSchema = z.enum(FIX_ACTIONS)
 
@@ -69,8 +77,8 @@ export const fixedEventDataSchema = z.object({
   blocklisted: z.boolean().nullable().optional(),
 })
 
-/** A `FIX_STARTED` event's data: the fix and who started it. */
-export const fixStartedDataSchema = z.object({ action: fixActionSchema, trigger: z.enum(["automatic", "web", "mcp"]) })
+/** A `FIX_STARTED` event's data: the fix, who started it, and whether it's a member's swap in Dry run. */
+export const fixStartedDataSchema = z.object({ action: fixActionSchema, trigger: z.enum(["automatic", "web", "mcp"]), dryRun: z.boolean().optional() })
 
 /** Why a fix handed a report back to the server admin (`lib/problem-reports/run.ts`). */
 const TO_ADMIN_REASONS = [
@@ -121,11 +129,22 @@ const TO_ADMIN_REASONS = [
   "MATCH_FAILED",
   "MATCH_WRONG",
   "MATCH_STUCK",
+  "AUTO_CHANGED",
+  "PAUSED",
+  "NEEDS_APPROVAL",
+  "NOT_PLAYED",
+  "TITLE_RECENT",
+  "OUT_OF_SWAPS",
+  "NOT_ADMIN",
+  "APPROVAL_EXPIRED",
+  "DRY_RUN",
+  "NO_ACCESS",
+  "PLAYED_TO_END",
 ] as const
 export type ToAdminReason = (typeof TO_ADMIN_REASONS)[number]
 
-/** A `TO_ADMIN` event's data: why the fix handed the report to the server admin. */
-export const toAdminDataSchema = z.object({ reason: z.enum(TO_ADMIN_REASONS), action: fixActionSchema.optional() })
+/** A `TO_ADMIN` event's data: why the fix handed the report to the server admin, and for a dry run the release it would grab. */
+export const toAdminDataSchema = z.object({ reason: z.enum(TO_ADMIN_REASONS), action: fixActionSchema.optional(), release: z.string().max(500).optional() })
 
 /** An admin's one-tap fix on a report; the fixes that replace the file have their own actions. */
 export const runProblemFixSchema = z.object({ reportId: problemReportIdSchema, action: fixActionSchema.exclude(FILE_FIXES) })
@@ -159,7 +178,17 @@ export const resolveProblemReportSchema = z.object({
 })
 
 /** The admin's settings card. */
-export const problemReportSettingsSchema = z.object({ enabled: z.boolean() })
+/**
+ * The settings card: the switch, and members' swaps (Off, Dry run or On) with
+ * their limits. A field left out keeps its saved value.
+ */
+export const problemReportSettingsSchema = z.object({
+  enabled: z.boolean(),
+  automatic: z.enum(["OFF", "DRY_RUN", "ON"]).optional(),
+  weeklySwaps: z.number().int().min(1).max(20).optional(),
+  titleCooldownDays: z.number().int().min(1).max(90).optional(),
+  dailySwapCap: z.number().int().min(1).max(100).optional(),
+})
 
 /** `/report`'s search parameters: a title search, and the title whose sheet is open. */
 export const reportSearchParamsSchema = z.object({

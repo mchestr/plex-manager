@@ -35,6 +35,7 @@ import { fixTraits } from "@/lib/problem-reports/fixes"
 import { gateAndRecord } from "@/lib/problem-reports/ledger"
 import { resolveFile } from "@/lib/problem-reports/resolve"
 import { checkAgain, checkCopy, fileTarget, searchEnded, searchForFile, WAIT_MS, watchFor } from "@/lib/problem-reports/steps/copy-wait"
+import { runOf } from "@/lib/problem-reports/steps/run-record"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import { readUpgrade } from "@/lib/problem-reports/upgrade"
 import type { ProblemReportFixPayload } from "@/lib/queue/types"
@@ -51,11 +52,7 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
 
   const gate = await gateAndRecord(
     {
-      reportId: report.id,
-      runToken: report.runToken,
-      reporterId: report.reporterId,
-      actorUserId: data.actorUserId,
-      trigger: data.trigger,
+      ...runOf(report, data),
       target: fileTarget(resolved),
       action: "BETTER_COPY",
       traits: fixTraits("BETTER_COPY"),

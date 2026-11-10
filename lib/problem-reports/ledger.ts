@@ -22,6 +22,7 @@ import { inSerializable } from "@/lib/db/serializable"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 import { queueBreakerAlert } from "@/lib/problem-reports/breaker-alert"
 import { gateFix, type FixTraits, type FixTrigger, type GateRefusal } from "@/lib/problem-reports/fixes"
+import { recheckRun, type RecheckRefusal } from "@/lib/problem-reports/recheck"
 import { PROBLEM_REPORT_SETTINGS_ID } from "@/lib/problem-reports/settings"
 import { AuditEventType, recordAuditEvent } from "@/lib/security/audit-log"
 
@@ -48,8 +49,14 @@ export interface RunRecord {
   trigger: FixTrigger
   /** What it acts on: `sonarr:series:<id>`, `radarr:movie:<id>`, `sonarr:episode:<ids>`, `plex:<rating key>`. */
   target: string
+  /** The report's title, which a title's swap limits count by. */
+  titleKey: string
   action: LedgerAction
   traits: FixTraits
+  /** When the run was claimed (`ProblemReportFixPayload.claimedAt`), for the checks in `./recheck.ts`. */
+  claimedAt: number | undefined
+  /** A member's swap in Dry run. */
+  dryRun?: boolean
   /** The run replaces the file as soon as it is recorded: a removal. */
   replaces?: boolean
   /** The file it acts on and the release it replaces, for the audit row. */
@@ -93,10 +100,12 @@ async function afterGate<T>(result: { value: T; tripped: boolean }, now: Date): 
  * Gates the run and records it. `null` when it may act now, the refusal when
  * it may not, or `ALREADY_RAN` when this run's row is there already.
  */
-export async function gateAndRecord(run: RunRecord, now: Date): Promise<GateRefusal | "ALREADY_RAN" | null> {
+export async function gateAndRecord(run: RunRecord, now: Date): Promise<GateRefusal | RecheckRefusal | "ALREADY_RAN" | null> {
   const id = ledgerId(run.reportId, run.runToken)
-  const result = await inSerializable(async (tx): Promise<{ value: GateRefusal | "ALREADY_RAN" | null; tripped: boolean }> => {
+  const result = await inSerializable(async (tx): Promise<{ value: GateRefusal | RecheckRefusal | "ALREADY_RAN" | null; tripped: boolean }> => {
     if (await tx.problemFixLedger.findUnique({ where: { id }, select: { id: true } })) return { value: "ALREADY_RAN", tripped: false }
+    const rechecked = await recheckRun(tx, { ...run, id, dryRun: run.dryRun ?? false }, now, "record")
+    if (rechecked) return { value: rechecked, tripped: false }
     const { refusal, tripped } = await gate(tx, run.traits, now)
     if (refusal) return { value: refusal, tripped }
 
@@ -104,6 +113,7 @@ export async function gateAndRecord(run: RunRecord, now: Date): Promise<GateRefu
       data: {
         id,
         target: run.target,
+        titleKey: run.titleKey,
         action: run.action,
         trigger: run.trigger,
         reporterId: run.reporterId,
@@ -123,7 +133,7 @@ export async function gateAndRecord(run: RunRecord, now: Date): Promise<GateRefu
         trigger: run.trigger,
         askedBy: run.actorUserId ?? run.reporterId,
         approvedBy: run.trigger === "automatic" ? null : run.actorUserId,
-        dryRun: false,
+        dryRun: run.dryRun ?? false,
         ...(run.file ? { fileId: run.file.id, replacedRelease: run.file.release } : {}),
       },
       tx
@@ -133,17 +143,23 @@ export async function gateAndRecord(run: RunRecord, now: Date): Promise<GateRefu
   return afterGate(result, now)
 }
 
+/** What a swap's second gate needs of its run. */
+export type ReplacingRun = Pick<RunRecord, "reportId" | "runToken" | "action" | "trigger" | "reporterId" | "actorUserId" | "titleKey" | "claimedAt" | "dryRun">
+
 /**
- * Gates a swap's replacement of the file once it has a release, and marks
- * its row. `ALREADY_REPLACED` when the row is marked already, so a step
- * delivered again grabs once; `NO_RUN` without the run's row.
+ * Gates a swap's replacement of the file once it has a release, checks the
+ * run again (`./recheck.ts`) and marks its row. `ALREADY_REPLACED` when the
+ * row is marked already, so a step delivered again grabs once; `NO_RUN`
+ * without the run's row.
  */
-export async function gateReplace(run: { reportId: string; runToken: number }, now: Date): Promise<"BREAKER" | "ALREADY_REPLACED" | "NO_RUN" | null> {
+export async function gateReplace(run: ReplacingRun, now: Date): Promise<"BREAKER" | RecheckRefusal | "ALREADY_REPLACED" | "NO_RUN" | null> {
   const id = ledgerId(run.reportId, run.runToken)
-  const result = await inSerializable(async (tx): Promise<{ value: "BREAKER" | "ALREADY_REPLACED" | "NO_RUN" | null; tripped: boolean }> => {
+  const result = await inSerializable(async (tx): Promise<{ value: "BREAKER" | RecheckRefusal | "ALREADY_REPLACED" | "NO_RUN" | null; tripped: boolean }> => {
     const row = await tx.problemFixLedger.findUnique({ where: { id }, select: { replacedAt: true } })
     if (!row) return { value: "NO_RUN", tripped: false }
     if (row.replacedAt) return { value: "ALREADY_REPLACED", tripped: false }
+    const rechecked = await recheckRun(tx, { ...run, id, dryRun: run.dryRun ?? false }, now, "replace")
+    if (rechecked) return { value: rechecked, tripped: false }
     const { refusal, tripped } = await gate(tx, { searches: false, replacesFile: true, changesPlex: false }, now)
     if (refusal) return { value: "BREAKER", tripped }
     await tx.problemFixLedger.update({ where: { id }, data: { replacedAt: now } })

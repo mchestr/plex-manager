@@ -44,6 +44,7 @@ import { gateAndRecord } from "@/lib/problem-reports/ledger"
 import type { ArrConfig } from "@/lib/problem-reports/resolve"
 import { checkAgain, checkCopy, fileTarget, searchEnded, searchForFile, WAIT_MS, watchFor } from "@/lib/problem-reports/steps/copy-wait"
 import { finishReplace, readyToReplace } from "@/lib/problem-reports/steps/replace"
+import { runOf } from "@/lib/problem-reports/steps/run-record"
 import type { StepOutcome, StepReport } from "@/lib/problem-reports/steps/types"
 import type { CopyWatch, ProblemReportFixPayload } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
@@ -64,11 +65,7 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
 
   const gate = await gateAndRecord(
     {
-      reportId: report.id,
-      runToken: report.runToken,
-      reporterId: report.reporterId,
-      actorUserId: data.actorUserId,
-      trigger: data.trigger,
+      ...runOf(report, data),
       target: fileTarget(resolved),
       action: "REMOVE_AND_SEARCH",
       traits: fixTraits("REMOVE_AND_SEARCH"),
