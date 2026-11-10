@@ -107,7 +107,7 @@ function overview(rules: number): CleanupOverviewData {
     feature, sources: [{ service: "plex", state: "ok", readAt: AT, rows: 9000 }, { service: "tautulli", state: "ok", readAt: AT, rows: 120_000 }],
     snapshot: { id: "snapshot-1", takenAt: AT, finishedAt: AT, reading: false },
     blocks: [{ code: "dataStale", hours: 41 }],
-    library: { movies: { count: 4100, bytes: "41234567890123" }, shows: { count: 640, bytes: "141234567890123", seasons: 2000 },
+    library: { movies: { count: 4100, bytes: "41234567890123", libraries: ["Films"], outOfScope: [] }, shows: { count: 640, bytes: "141234567890123", seasons: 2000, libraries: ["Series"], outOfScope: [] },
       freeBytes: "9000000000000", totalBytes: "200000000000000", growthBytesPerMonth: "900000000000" },
     stats: { leaving: { count: 120, bytes: "2000000000000", nextLeaveAt: AT }, waiting: { count: 6, bytes: "300000000000", dueAt: AT, dueToday: true, level: "movie" },
       freed30d: { count: 30, bytes: "900000000000", level: null } },
@@ -157,7 +157,8 @@ function deletionBatch(i: number, rows = 50): BatchData {
 }
 
 const entryBatch: BatchData = { kind: "entry", id: "entry-cleanup-rule-9", ruleId: "cleanup-rule-9", ruleName: named(9).name, level: "movie", count: 52,
-  bytes: "1", keysHash: "c".repeat(64), reviewedAt: AT, heldBy: { trigger: "scheduled", at: AT }, limit: 50 }
+  bytes: "1", keysHash: "c".repeat(64), reviewedAt: AT, heldBy: { trigger: "scheduled", at: AT }, limit: 50, mode: "reviewFirst", leaveOn: "2026-12-08",
+  leavingCount: 0 }
 
 function leaving(total: number, page = 1, batches: BatchData[] = [deletionBatch(1), entryBatch]): CleanupLeavingData {
   const start = (page - 1) * 50
@@ -198,12 +199,12 @@ const history = (total: number, page = 1): CleanupHistoryData => ({
 const settings = (): CleanupSettingsData => ({
   options: buildOptions(), feature: { ...feature, holdUntil: "2026-11-15" }, schedule: { nextRunAt: AT, zone: "America/Vancouver" },
   libraryData: { startedAt: AT, finishedAt: AT, sources: [], historyStart: AT, reading: false },
-  lastRun: { id: "run-1", startedAt: AT, outcome: "finished", blocks: [] },
+  lastRun: { id: "run-1", startedAt: AT, trigger: "scheduled", rules: 3, joined: 3, rescued: 1, deleted: 0, outcome: "finished", blocks: [] },
   protections: GLOBAL_PROTECTION_IDS.map((id, i) => ({ id, sentence: "Played by anyone in the last 30 days", alwaysOn: i < 3,
     protects: 120, unit: "titles" as const, needsMissing: [], seasonsOnly: false })),
   tagOptions: Array.from({ length: 100 }, (_, i) => `invented-tag-${i}`),
   collectionOptions: Array.from({ length: 300 }, (_, i) => `Invented Collection Number ${i}`),
-  kometaSuggestion: { names: ["Christmas", "Halloween"], library: "Films" }, watchlistMembers: 12,
+  kometaSuggestion: { names: ["Christmas", "Halloween"], library: "Films" }, watchlistMembers: 12, rules: Array.from({ length: 50 }, (_, i) => named(i)),
   plex: { working: true, checkedAt: AT, collections: [{ level: "movie", sectionId: "1", title: "Movies leaving soon", count: 40 }],
     summary: "These titles leave the server soon, the soonest first.", notices: [] },
 })

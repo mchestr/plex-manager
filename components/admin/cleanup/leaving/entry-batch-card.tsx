@@ -22,8 +22,6 @@ export interface EntryBatchCardProps {
   batch: EntryBatchData
   /** Cleanup is off or paused: "Put {N} {items} in Leaving soon..." waits, with its reason. */
   paused: boolean
-  /** The rule's titles in Leaving soon now, for the Dry run dialog. */
-  leavingCount: number
 }
 
 /** "last night" for the schedule, "in the run at {time}" for a run that an admin started (X3). */
@@ -36,10 +34,10 @@ function heldWhen(batch: EntryBatchData, f: BoundFormat): string {
  * the entry check held, so members see nothing yet. "Review the {N}
  * {items}" opens the rule, "Move the rule back to Dry run..." opens the
  * rule dialog, and "Put {N} {items} in Leaving soon..." asks once, then
- * gives them a full grace period. It has no selection table. An entry
- * batch never expires.
+ * gives them the leave date of the batch. It has no selection table. An
+ * entry batch never expires.
  */
-export function EntryBatchCard({ batch, paused, leavingCount }: EntryBatchCardProps) {
+export function EntryBatchCard({ batch, paused }: EntryBatchCardProps) {
   const f = useFormat()
   const toast = useToast()
   const reasonId = useId()
@@ -47,7 +45,7 @@ export function EntryBatchCard({ batch, paused, leavingCount }: EntryBatchCardPr
   useLayoutEffect(() => () => setDialog(null), [])
   const base = `admin-cleanup-batch-${batch.id}`
   const items = plural(batch.count, batch.level)
-  const rule = { id: batch.ruleId, name: batch.ruleName, level: batch.level, mode: "reviewFirst" as const }
+  const rule = { id: batch.ruleId, name: batch.ruleName, level: batch.level, mode: batch.mode }
 
   const put = async () => {
     const result = await approveCleanupEntryBatch({ batchId: batch.id, count: batch.count, keysHash: batch.keysHash, excludeKeys: [],
@@ -94,12 +92,12 @@ export function EntryBatchCard({ batch, paused, leavingCount }: EntryBatchCardPr
           </span>
         )}
       </div>
-      <MoveToDryRunDialog rule={rule} leavingCount={leavingCount} open={dialog === "dryRun"} onOpenChange={(open) => setDialog(open ? "dryRun" : null)} />
+      <MoveToDryRunDialog rule={rule} leavingCount={batch.leavingCount} open={dialog === "dryRun"} onOpenChange={(open) => setDialog(open ? "dryRun" : null)} />
       <ConfirmDialog
         open={dialog === "put"}
         onOpenChange={(open) => setDialog(open ? "put" : null)}
         title={`Put ${items} in Leaving soon?`}
-        description={`The entry check held these new matches of ${batch.ruleName}. They get a full grace period, and members can see and keep them. Nothing is deleted now.`}
+        description={`The entry check held these new matches of ${batch.ruleName}. They get a leave date of ${f.dayKey(batch.leaveOn, "day-month-short")}, and members can see and keep them. Nothing is deleted now.`}
         confirmLabel={`Put ${items} in Leaving soon`}
         pendingLabel="Putting"
         action={put}

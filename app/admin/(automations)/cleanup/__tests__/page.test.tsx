@@ -53,7 +53,7 @@ function overview(overrides: Partial<CleanupOverviewData> = {}): CleanupOverview
     sources: [],
     snapshot: { id: "snap-1", takenAt: "2026-11-08T03:07:00.000Z", finishedAt: "2026-11-08T03:09:00.000Z", reading: false },
     blocks: [],
-    library: { movies: { count: 0, bytes: "0" }, shows: { count: 0, bytes: "0", seasons: 0 }, freeBytes: null, totalBytes: null, growthBytesPerMonth: null },
+    library: { movies: { count: 0, bytes: "0", libraries: [], outOfScope: [] }, shows: { count: 0, bytes: "0", seasons: 0, libraries: [], outOfScope: [] }, freeBytes: null, totalBytes: null, growthBytesPerMonth: null },
     stats: { leaving: { count: 0, bytes: "0", nextLeaveAt: null }, waiting: null, freed30d: { count: 0, bytes: "0", level: null } },
     batches: [],
     rules: [{ id: "rule-1" } as RuleCardData],

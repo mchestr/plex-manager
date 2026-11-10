@@ -46,7 +46,7 @@ describe("SettingsTab", () => {
 
     expect(screen.getByTestId("settings-cleanup-feature-form")).toBeInTheDocument()
     await waitFor(() => expect(screen.getByTestId("cleanup-feature-enabled")).toHaveFocus())
-    expect(previewCleanupProtectionImpact).toHaveBeenCalledTimes(1)
+    expect(previewCleanupProtectionImpact).not.toHaveBeenCalled()
   })
 
   it("ignores an unknown section and a returnTo that is not a turn-on page", async () => {

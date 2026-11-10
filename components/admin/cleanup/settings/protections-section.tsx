@@ -41,13 +41,12 @@ function readSub(protection: SettingsProtection, options: ProtectionsOptions, su
   return words === "Off" ? null : words
 }
 
-/** The read view (UX 4.10, `shots/10-settings.png`): "{N} on", then two columns of each protection, its state and "Protects N". */
+/** The read view (UX 4.10, `shots/10-settings.png`): two columns of each protection, its state and "Protects N". The header shows "{N} on". */
 function ProtectionsSummary({ data }: { data: CleanupSettingsData }) {
   const options = data.options.protections
   const byId = new Map(data.protections.map((p) => [p.id, p]))
   return (
     <div className="flex flex-col gap-4">
-      <SectionState badge={<Badge>{onCount(draftOf(options))} on</Badge>} testId="settings-cleanup-protections-state" />
       <SettingsSummary className="gap-y-0 md:gap-y-0" data-testid="settings-cleanup-protections-summary">
         {SETTINGS_ORDER.flatMap((id) => {
           const protection = byId.get(id)
@@ -101,6 +100,7 @@ export function ProtectionsSection({ data }: { data: CleanupSettingsData }) {
       title={PROTECTIONS_WORDS.title}
       description={PROTECTIONS_WORDS.description}
       form={state.form}
+      badge={<SectionState badge={<Badge>{onCount(draftOf(saved))} on</Badge>} testId="settings-cleanup-protections-state" />}
       view={<ProtectionsSummary data={data} />}
       after={(editing) =>
         editing && <ProtectionImpact impact={impact} unreadCollections={hasUnreadCollection(draft, saved, data.collectionOptions)} />

@@ -190,12 +190,12 @@ export function NumberInputField({ id, label, value, onValueChange, unit, hint, 
   )
 }
 
-/** A badge and a muted line beside it: the state of a section ("On", "Read at 3:07 AM today"). */
+/** A badge with a muted line under it: the state of a section in its header ("On", "Read at 3:07 AM today"). */
 export function SectionState({ badge, line, testId }: { badge: ReactNode; line?: ReactNode; testId: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1" data-testid={testId}>
+    <span className="flex flex-col items-start gap-0.5 sm:items-end" data-testid={testId}>
       {badge}
-      {line && <span className="text-caption text-muted-foreground">{line}</span>}
-    </div>
+      {line && <span className="text-caption whitespace-nowrap text-muted-foreground">{line}</span>}
+    </span>
   )
 }

@@ -38,7 +38,7 @@ function data(overrides: Partial<CleanupOverviewData> = {}): CleanupOverviewData
     sources: [],
     snapshot: NO_DATA,
     blocks: [],
-    library: { movies: { count: 0, bytes: "0" }, shows: { count: 0, bytes: "0", seasons: 0 }, freeBytes: null, totalBytes: null, growthBytesPerMonth: null },
+    library: { movies: { count: 0, bytes: "0", libraries: [], outOfScope: [] }, shows: { count: 0, bytes: "0", seasons: 0, libraries: [], outOfScope: [] }, freeBytes: null, totalBytes: null, growthBytesPerMonth: null },
     stats: { leaving: { count: 0, bytes: "0", nextLeaveAt: null }, waiting: null, freed30d: { count: 0, bytes: "0", level: null } },
     batches: [],
     rules: [],

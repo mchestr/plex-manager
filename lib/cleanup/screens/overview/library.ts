@@ -26,12 +26,17 @@ const text = (value: number | bigint | null | undefined): string | null => (valu
 
 /** The movie and TV tiles, the free space and the growth (TS 12.7 item 3). Zero and null before the first read. */
 export function libraryTiles(facts: SnapshotFacts | null): CleanupOverviewData["library"] {
-  const inScope = (facts?.libraries ?? []).filter((l) => l.arr !== null && !l.noIds)
+  const all = facts?.libraries ?? []
+  const inScope = all.filter((l) => l.arr !== null && !l.noIds)
   const sum = (type: "movie" | "show", key: "items" | "bytes" | "seasons") =>
     inScope.filter((l) => l.type === type).reduce((total, l) => total + l[key], 0)
+  const titles = (type: "movie" | "show") => ({
+    libraries: inScope.filter((l) => l.type === type).map((l) => l.title),
+    outOfScope: all.filter((l) => l.type === type && !inScope.includes(l)).map((l) => l.title),
+  })
   return {
-    movies: { count: sum("movie", "items"), bytes: String(sum("movie", "bytes")) },
-    shows: { count: sum("show", "items"), bytes: String(sum("show", "bytes")), seasons: sum("show", "seasons") },
+    movies: { count: sum("movie", "items"), bytes: String(sum("movie", "bytes")), ...titles("movie") },
+    shows: { count: sum("show", "items"), bytes: String(sum("show", "bytes")), seasons: sum("show", "seasons"), ...titles("show") },
     freeBytes: text(facts?.disk?.freeBytes),
     totalBytes: text(facts?.disk?.totalBytes),
     growthBytesPerMonth: text(facts?.growthBytesPerMonth),

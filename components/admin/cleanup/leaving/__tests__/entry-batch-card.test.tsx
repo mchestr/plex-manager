@@ -25,7 +25,7 @@ beforeEach(() => {
 
 describe("EntryBatchCard", () => {
   it("names the held matches of last night's run, with the badge and the three buttons", () => {
-    render(<EntryBatchCard batch={entryBatch()} paused={false} leavingCount={4} />)
+    render(<EntryBatchCard batch={entryBatch()} paused={false} />)
     const card = screen.getByTestId(BASE)
     expect(within(card).getByRole("heading", { name: "52 new matches wait to join Leaving soon" })).toBeInTheDocument()
     expect(card).toHaveTextContent("Held by the entry check")
@@ -37,19 +37,18 @@ describe("EntryBatchCard", () => {
   })
 
   it("names the time of a run that an admin started, and one match in the singular", () => {
-    render(<EntryBatchCard batch={entryBatch({ count: 1, level: "movie", heldBy: { trigger: "admin", at: "2026-11-08T21:42:00.000Z" } })} paused={false}
-      leavingCount={0} />)
+    render(<EntryBatchCard batch={entryBatch({ count: 1, level: "movie", heldBy: { trigger: "admin", at: "2026-11-08T21:42:00.000Z" } })} paused={false} />)
     expect(screen.getByRole("heading", { name: "1 new match waits to join Leaving soon" })).toBeInTheDocument()
     expect(screen.getByTestId(BASE)).toHaveTextContent("found 1 new movie in the run at 9:42 PM.")
   })
 
   it("puts the batch in Leaving soon after one confirm, with the numbers that the card showed", async () => {
     const user = userEvent.setup()
-    render(<EntryBatchCard batch={entryBatch()} paused={false} leavingCount={0} />)
+    render(<EntryBatchCard batch={entryBatch()} paused={false} />)
     await user.click(screen.getByTestId(`${BASE}-put`))
     const dialog = await screen.findByTestId("admin-cleanup-entry-dialog")
     expect(within(dialog).getByRole("heading", { name: "Put 52 seasons in Leaving soon?" })).toBeInTheDocument()
-    expect(dialog).toHaveTextContent("The entry check held these new matches of Old seasons nobody plays.")
+    expect(dialog).toHaveTextContent("The entry check held these new matches of Old seasons nobody plays. They get a leave date of Dec 8, and members can see and keep them.")
     expect(dialog).toHaveTextContent("Nothing is deleted now.")
     await user.click(screen.getByTestId("admin-cleanup-entry-confirm"))
     expect(approveCleanupEntryBatch).toHaveBeenCalledWith({ batchId: "entry-rule-2", count: 52, keysHash: HASH_B, excludeKeys: [], reviewedAt: REVIEWED_AT })
@@ -60,7 +59,7 @@ describe("EntryBatchCard", () => {
   it("keeps the dialog open with the error of a refused approval", async () => {
     const user = userEvent.setup()
     jest.mocked(approveCleanupEntryBatch).mockResolvedValue({ success: false, code: "CLEANUP_REVIEW_STALE", error: "The numbers changed. Check them again." })
-    render(<EntryBatchCard batch={entryBatch()} paused={false} leavingCount={0} />)
+    render(<EntryBatchCard batch={entryBatch()} paused={false} />)
     await user.click(screen.getByTestId(`${BASE}-put`))
     await user.click(await screen.findByTestId("admin-cleanup-entry-confirm"))
     expect(await screen.findByTestId("admin-cleanup-entry-dialog")).toHaveTextContent("The numbers changed. Check them again.")
@@ -68,7 +67,7 @@ describe("EntryBatchCard", () => {
 
   it("opens the Dry run dialog of the rule with its titles in Leaving soon", async () => {
     const user = userEvent.setup()
-    render(<EntryBatchCard batch={entryBatch()} paused={false} leavingCount={4} />)
+    render(<EntryBatchCard batch={entryBatch({ leavingCount: 4 })} paused={false} />)
     await user.click(screen.getByTestId(`${BASE}-dry-run`))
     const dialog = await screen.findByTestId("admin-cleanup-dry-run-mode-dialog")
     expect(dialog).toHaveTextContent("Move Old seasons nobody plays back to Dry run?")
@@ -76,7 +75,7 @@ describe("EntryBatchCard", () => {
   })
 
   it("holds the Put button while cleanup is paused, focusable with the reason", () => {
-    render(<EntryBatchCard batch={entryBatch()} paused leavingCount={0} />)
+    render(<EntryBatchCard batch={entryBatch()} paused />)
     const put = screen.getByTestId(`${BASE}-put`)
     expect(put).toHaveAttribute("aria-disabled", "true")
     expect(document.getElementById(put.getAttribute("aria-describedby") ?? "")).toHaveTextContent("Cleanup is paused. Resume it first.")

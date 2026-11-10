@@ -109,7 +109,19 @@ export function FeatureSummary({ data, now }: { data: CleanupSettingsData; now: 
   )
 }
 
-/** "Last run" and its time and outcome (UX 4.10), with the timestamp id that visual tests mask. */
+/** "3 rules, 3 joined, 1 rescued, 0 deleted.", then the outcome unless the run finished. */
+function lastRunCounts(f: BoundFormat, run: NonNullable<CleanupSettingsData["lastRun"]>): string {
+  const counts = `${f.number(run.rules)} ${run.rules === 1 ? "rule" : "rules"}, ${f.number(run.joined)} joined, ${f.number(run.rescued)} rescued, ` +
+    `${f.number(run.deleted)} deleted.`
+  return run.outcome === "finished" ? counts : `${counts} ${lastRunOutcome(run)}.`
+}
+
+/**
+ * "Last run" (UX 4.10, `shots/10-settings.png`): who started it, its time,
+ * the rules and counts, and the outcome when it did not finish. "Scheduled,
+ * 3:07 AM today. 3 rules, 3 joined, 1 rescued, 0 deleted." The time has the
+ * timestamp id that visual tests mask.
+ */
 export function LastRunLine({ lastRun, now }: { lastRun: CleanupSettingsData["lastRun"]; now: number }) {
   const f = useFormat()
   return (
@@ -118,7 +130,8 @@ export function LastRunLine({ lastRun, now }: { lastRun: CleanupSettingsData["la
       <span className="text-label text-muted-foreground" data-testid="admin-cleanup-settings-last-run">
         {lastRun ? (
           <>
-            <span data-testid="admin-cleanup-settings-last-run-timestamp">{readTimeText(f, lastRun.startedAt, now)}</span>. {lastRunOutcome(lastRun)}.
+            {lastRun.trigger === "scheduled" ? "Scheduled" : "Started by an admin"},{" "}
+            <span data-testid="admin-cleanup-settings-last-run-timestamp">{readTimeText(f, lastRun.startedAt, now)}</span>. {lastRunCounts(f, lastRun)}
           </>
         ) : (
           "No run yet."

@@ -14,7 +14,7 @@ import { buildOptions, buildSnapshotFacts, daysAgo, NOW } from "@/lib/cleanup/__
 import type { Batch } from "@/lib/cleanup/run/batches"
 import { overviewBatches } from "@/lib/cleanup/screens/overview/batches"
 import { evaluateDefinition, posterKeys } from "@/lib/cleanup/screens/overview/evaluate"
-import { levelOf, nextLeave } from "@/lib/cleanup/screens/overview/library"
+import { levelOf, libraryTiles, nextLeave } from "@/lib/cleanup/screens/overview/library"
 import { kometaNotice, pageBlocks } from "@/lib/cleanup/screens/overview/page-blocks"
 import { rescueReason, ruleFooter, titleWords } from "@/lib/cleanup/screens/overview/rule-footer"
 import { realContext } from "@/lib/cleanup/preview/__tests__/helpers/preview-data"
@@ -82,6 +82,25 @@ describe("the next leave date and the level words", () => {
     expect(levelOf(["movie", "show"])).toBeNull()
     expect(levelOf([])).toBeNull()
     expect(levelOf(["film"])).toBeNull()
+  })
+})
+
+describe("libraryTiles", () => {
+  it("counts the libraries in scope and names them, and names the libraries of each type that are never in scope", () => {
+    const facts = buildSnapshotFacts()
+    const [movies, shows] = facts.libraries
+    const tiles = libraryTiles(buildSnapshotFacts({
+      libraries: [
+        movies,
+        { ...movies, sectionId: "4", title: "Movies 4K", arr: null, items: 90, bytes: 5 },
+        { ...movies, sectionId: "5", title: "Keepsakes", noIds: true, items: 40, bytes: 7 },
+        shows,
+      ],
+    }))
+
+    expect(tiles.movies).toEqual({ count: 780, bytes: String(movies.bytes), libraries: ["Movies"], outOfScope: ["Movies 4K", "Keepsakes"] })
+    expect(tiles.shows).toEqual({ count: 636, bytes: String(shows.bytes), seasons: 2000, libraries: ["TV Shows"], outOfScope: [] })
+    expect(libraryTiles(null).movies).toEqual({ count: 0, bytes: "0", libraries: [], outOfScope: [] })
   })
 })
 

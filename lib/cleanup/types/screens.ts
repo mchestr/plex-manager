@@ -51,9 +51,14 @@ export interface CleanupOverviewData {
   /** Page-level stops, for the page alerts (UX 4.1.4). */
   blocks: Block[]
   kometa?: { collection: string; removedAt: string; recreatedAt: string | null }
+  /**
+   * The library tiles. `libraries` names the libraries in scope (TS 5.5), and
+   * `outOfScope` the libraries of that type that are not (no Radarr or Sonarr
+   * root folder, or no external ids): "780 in Movies", "Keepsakes is never in scope".
+   */
   library: {
-    movies: CountBytes
-    shows: CountBytes & { seasons: number }
+    movies: CountBytes & { libraries: string[]; outOfScope: string[] }
+    shows: CountBytes & { seasons: number; libraries: string[]; outOfScope: string[] }
     freeBytes: string | null
     totalBytes: string | null
     growthBytesPerMonth: string | null
@@ -191,7 +196,8 @@ export interface CleanupSettingsData {
   feature: CleanupFeatureState & { holdUntil: string | null }
   schedule: { nextRunAt: string | null; zone: string }
   libraryData: { startedAt: string | null; finishedAt: string | null; sources: SourceStatus[]; historyStart: string | null; reading: boolean }
-  lastRun: { id: string; startedAt: string; outcome: string | null; blocks: Block[] } | null
+  /** The newest run: who started it, how many rules it ran, its counts and its outcome (UX 4.10 "Last run"). */
+  lastRun: (Pick<HistoryRun, "id" | "startedAt" | "trigger" | "joined" | "rescued" | "deleted" | "outcome"> & { rules: number; blocks: Block[] }) | null
   protections: SettingsProtection[]
   /** Arr tags for G9, without the Overseerr requester tags (UX 4.10 rule 2). */
   tagOptions: string[]
@@ -201,5 +207,7 @@ export interface CleanupSettingsData {
   kometaSuggestion: { names: string[]; library: string } | null
   /** The members who use watchlist sync (the G8 hint). */
   watchlistMembers: number
+  /** Every rule by name: "Back to Turn on {rule}" names the rule of `returnTo` (TS 12.7 item 10). */
+  rules: NamedRule[]
   plex: { working: boolean; checkedAt: string | null; collections: SettingsCollection[]; summary: string; notices: RuntimeNotice[] }
 }

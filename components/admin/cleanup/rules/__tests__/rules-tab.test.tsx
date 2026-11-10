@@ -51,7 +51,7 @@ function overview(overrides: Partial<CleanupOverviewData> = {}): CleanupOverview
     sources: buildSourceStatuses(),
     snapshot: { id: "snap-1", takenAt: "2026-11-08T03:07:00.000Z", finishedAt: "2026-11-08T03:09:00.000Z", reading: false },
     blocks: [],
-    library: { movies: { count: 780, bytes: String(5000 * GB) }, shows: { count: 636, bytes: String(52000 * GB), seasons: 2000 }, freeBytes: null, totalBytes: null,
+    library: { movies: { count: 780, bytes: String(5000 * GB), libraries: ["Movies"], outOfScope: [] }, shows: { count: 636, bytes: String(52000 * GB), seasons: 2000, libraries: ["TV Shows"], outOfScope: [] }, freeBytes: null, totalBytes: null,
       growthBytesPerMonth: null },
     stats: { leaving: { count: 0, bytes: "0", nextLeaveAt: null }, waiting: null, freed30d: { count: 0, bytes: "0", level: null } },
     batches: [],
@@ -86,7 +86,7 @@ describe("RulesTab first use", () => {
       "2Step 2: Watch a dry runEach night records the matches of the rule. Check the matches and why each one matched.",
       "3Step 3: Turn it onMatches wait in Leaving soon for 30 days. Members can keep them. Then Radarr or Sonarr deletes them.",
     ])
-    expect(screen.getByTestId("admin-cleanup-library-tiles")).toHaveTextContent("780movies")
+    expect(screen.getByTestId("admin-cleanup-library-tiles")).toHaveTextContent("780in Movies")
     expect(screen.getByRole("heading", { level: 2, name: "Start with a recipe" })).toBeInTheDocument()
     expect(screen.getByText("Each recipe makes a normal rule that you can change. Counts are for this server today.")).toBeInTheDocument()
     expect(screen.getByTestId("admin-cleanup-data-timestamp")).toHaveTextContent("3:07 AM today")

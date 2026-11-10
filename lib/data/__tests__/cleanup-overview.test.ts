@@ -84,7 +84,8 @@ describe("first use", () => {
     expect(data.snapshot).toEqual({ id: null, takenAt: null, finishedAt: null, reading: true })
     expect(data).toMatchObject({ sources: [], blocks: [], batches: [], rules: [] })
     expect(data.kometa).toBeUndefined()
-    expect(data.library).toEqual({ movies: { count: 0, bytes: "0" }, shows: { count: 0, bytes: "0", seasons: 0 }, freeBytes: null, totalBytes: null,
+    expect(data.library).toEqual({ movies: { count: 0, bytes: "0", libraries: [], outOfScope: [] },
+      shows: { count: 0, bytes: "0", seasons: 0, libraries: [], outOfScope: [] }, freeBytes: null, totalBytes: null,
       growthBytesPerMonth: null })
     expect(data.stats).toEqual({ leaving: { count: 0, bytes: "0", nextLeaveAt: null }, waiting: null, freed30d: { count: 0, bytes: "0", level: null } })
     expect(data.recipes.map((r) => r.id)).toEqual([...RECIPE_IDS])
@@ -242,7 +243,8 @@ describe("rule cards", () => {
       waiting: { count: 1, bytes: String(50 * GiB), dueAt: "2026-11-01", dueToday: false, level: "movie" },
       freed30d: { count: 1, bytes: String(7 * GiB), level: "show" },
     })
-    expect(data.library).toEqual({ movies: { count: 780, bytes: String(9 * 1024 * GiB) }, shows: { count: 636, bytes: String(40 * 1024 * GiB), seasons: 2000 },
+    expect(data.library).toEqual({ movies: { count: 780, bytes: String(9 * 1024 * GiB), libraries: ["Movies"], outOfScope: [] },
+      shows: { count: 636, bytes: String(40 * 1024 * GiB), seasons: 2000, libraries: ["TV Shows"], outOfScope: [] },
       freeBytes: String(25 * 1024 * GiB), totalBytes: String(84 * 1024 * GiB), growthBytesPerMonth: String(1400 * GiB) })
     expect(data.snapshot).toEqual({ id: "snapshot-1", takenAt: AT.toISOString(), finishedAt: AT.toISOString(), reading: false })
   })

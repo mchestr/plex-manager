@@ -19,8 +19,8 @@ const TB = 1024 * GB
 const b = (n: number) => String(Math.round(n))
 
 const LIBRARY: CleanupOverviewData["library"] = {
-  movies: { count: 780, bytes: b(4.88 * TB) },
-  shows: { count: 636, bytes: b(51.3 * TB), seasons: 2000 },
+  movies: { count: 780, bytes: b(4.88 * TB), libraries: ["Movies"], outOfScope: ["Movies 4K", "Keepsakes"] },
+  shows: { count: 636, bytes: b(51.3 * TB), seasons: 2000, libraries: ["TV Shows"], outOfScope: [] },
   freeBytes: b(25.6 * TB),
   totalBytes: b(84 * TB),
   growthBytesPerMonth: b(1.4 * TB),
@@ -75,12 +75,13 @@ describe("StatTiles", () => {
 })
 
 describe("LibraryTiles", () => {
-  it("shows the movies, the shows with their seasons, the free space with its months, and the growth", () => {
+  it("shows the movies and shows with their libraries, the libraries never in scope, the free space with its months, and the growth", () => {
     render(<LibraryTiles library={LIBRARY} />)
 
     const tiles = screen.getByTestId("admin-cleanup-library-tiles")
-    expect(tiles).toHaveTextContent("Movies780movies4.88 TB")
-    expect(tiles).toHaveTextContent("TV shows636shows51.3 TB in 2,000 seasons")
+    expect(tiles).toHaveTextContent("Movies780in Movies4.88 TB. Movies 4K and Keepsakes are never in scope")
+    expect(tiles).toHaveTextContent("TV shows636in TV Shows51.3 TB in 2,000 seasons")
+    expect(tiles).not.toHaveTextContent("TV Shows51.3 TB in 2,000 seasons.")
     expect(tile("free")).toHaveTextContent("Free space25.6TB of 84 TBAbout 18 months of space at this growth")
     expect(tiles).toHaveTextContent("Growth1.4TB a monthAverage of the last 6 months")
   })
@@ -88,13 +89,19 @@ describe("LibraryTiles", () => {
   it("shows zeros and dashes before the first library read", () => {
     render(
       <LibraryTiles
-        library={{ movies: { count: 1, bytes: "0" }, shows: { count: 1, bytes: "0", seasons: 1 }, freeBytes: null, totalBytes: null, growthBytesPerMonth: null }}
+        library={{
+          movies: { count: 1, bytes: "0", libraries: [], outOfScope: [] },
+          shows: { count: 1, bytes: "0", seasons: 1, libraries: [], outOfScope: ["Home videos"] },
+          freeBytes: null,
+          totalBytes: null,
+          growthBytesPerMonth: null,
+        }}
       />
     )
 
     const tiles = screen.getByTestId("admin-cleanup-library-tiles")
     expect(tiles).toHaveTextContent("Movies1movie0 GB")
-    expect(tiles).toHaveTextContent("TV shows1show0 GB in 1 season")
+    expect(tiles).toHaveTextContent("TV shows1show0 GB in 1 season. Home videos is never in scope")
     expect(screen.getAllByRole("img", { name: "Not available" })).toHaveLength(2)
   })
 })

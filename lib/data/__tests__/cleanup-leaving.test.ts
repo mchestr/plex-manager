@@ -146,13 +146,13 @@ describe("getCleanupLeavingSoon", () => {
     ])
   })
 
-  it("returns the entry batch with the run that held it and the entry check count (X3)", async () => {
+  it("returns the entry batch with the run that held it, the entry check count (X3) and the leave date of an approval", async () => {
     const data = await load()
 
     expect(data.batches[1]).toEqual({
       kind: "entry", id: "entry-r-held", ruleId: "r-held", ruleName: "Movies nobody watches", level: "movie", count: 1, bytes: String(20n * GIB),
       keysHash: expect.stringMatching(/^[a-f0-9]{64}$/), reviewedAt: NOW.toISOString(),
-      heldBy: { trigger: "admin", at: "2026-11-08T03:08:00.000Z" }, limit: 0,
+      heldBy: { trigger: "admin", at: "2026-11-08T03:08:00.000Z" }, limit: 0, mode: "reviewFirst", leaveOn: "2026-11-22", leavingCount: 0,
     })
     expect(prismaMock.cleanupRun.findFirst.mock.calls[0][0]).toMatchObject({ where: { kind: "run", held: { gt: 0 } } })
   })

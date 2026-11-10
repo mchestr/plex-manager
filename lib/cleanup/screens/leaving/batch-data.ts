@@ -7,20 +7,25 @@
  * A deletion card carries `reviewedAt` (the render time), the `batchHash()`
  * of its items, the least careful action, the counts per action and with the
  * exclusion, the budget plan, the oversize titles and one page of rows,
- * largest first. An entry card names the run that held it and the entry
- * check count that its matches passed.
+ * largest first. An entry card names the run that held it, the entry
+ * check count that its matches passed, and the leave date that an approval
+ * gives.
  *
  * @module lib/cleanup/screens/leaving/batch-data
  */
 
 import "server-only"
 
+import { entryLeaveOn } from "@/lib/cleanup/engine/overlap"
 import { type Batch, batchPage } from "@/lib/cleanup/run/batches"
 import { itemName, itemRefOf, lastPlayedOf, levelOf } from "@/lib/cleanup/screens/leaving/item-ref"
+import { IN_LEAVING_SOON } from "@/lib/cleanup/screens/overview/library"
 import type { BatchData, DeletionBatchData, EntryBatchData } from "@/lib/cleanup/types/list-parts"
 import { prisma } from "@/lib/prisma"
+import type { CleanupItem } from "@/lib/generated/prisma/client"
 import type { CleanupOptions } from "@/lib/validations/cleanup-options"
-import type { ActionId } from "@/lib/validations/cleanup-vocabulary"
+import { parseRuleDefinition } from "@/lib/validations/cleanup-draft"
+import type { ActionId, Mode } from "@/lib/validations/cleanup-vocabulary"
 
 /** The run that held an entry batch started at most this long after the hold time (TS 8.3 steps 1 and 5). */
 const HELD_RUN_SLACK_MS = 15 * 60_000
@@ -74,11 +79,30 @@ export function entryLimit(count: number, entryCheck: CleanupOptions["entryCheck
   return Math.floor((checked * entryCheck.percent) / 100)
 }
 
+/** The parts of an entry batch card that the loader reads: the run that held it, the entry check count, the rule's mode, leave date and Leaving soon count. */
+export type EntryCardParts = Pick<EntryBatchData, "heldBy" | "limit" | "mode" | "leaveOn" | "leavingCount">
+
+/**
+ * The rule parts of an entry card: its mode, the leave date that an approval
+ * gives (`entryLeaveOn()` of the rule's grace period, as
+ * `approveCleanupEntryBatch` writes it before a show floor), and its titles
+ * in Leaving soon now.
+ */
+export function entryRuleParts(rule: { mode: string; definition: unknown }, rows: readonly Pick<CleanupItem, "ruleIds" | "state">[], ruleId: string,
+  day: { today: string; holdUntil: string | null }): Pick<EntryBatchData, "mode" | "leaveOn" | "leavingCount"> {
+  const parsed = parseRuleDefinition(rule.definition)
+  return {
+    mode: rule.mode as Mode,
+    leaveOn: entryLeaveOn(parsed.ok ? [parsed.definition] : [], day.today, day.holdUntil),
+    leavingCount: rows.filter((row) => IN_LEAVING_SOON.includes(row.state) && row.ruleIds.includes(ruleId)).length,
+  }
+}
+
 /** An entry batch card. */
-export function entryCard(batch: Batch, input: CardInput, heldBy: EntryBatchData["heldBy"], limit: number): EntryBatchData {
+export function entryCard(batch: Batch, input: CardInput, parts: EntryCardParts): EntryBatchData {
   return {
     kind: "entry", id: batch.id, ruleId: batch.ruleId, ruleName: input.ruleName(batch.ruleId), level: levelOf(batch.items[0].level),
-    count: batch.count, bytes: batch.bytes.toString(), keysHash: batch.keysHash, reviewedAt: iso(input.now), heldBy, limit,
+    count: batch.count, bytes: batch.bytes.toString(), keysHash: batch.keysHash, reviewedAt: iso(input.now), ...parts,
   }
 }
 

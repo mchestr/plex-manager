@@ -1,9 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 
-import { previewCleanupProtectionImpact } from "@/actions/admin/cleanup-preview"
 import { RefreshDataButton } from "@/components/admin/cleanup/page/refresh-data-button"
 import { RunAllButton } from "@/components/admin/cleanup/page/run-all-dialog"
 import { FeatureState, FeatureSummary, LastRunLine } from "@/components/admin/cleanup/settings/feature-summary"
@@ -24,29 +23,6 @@ const FEATURE_WORDS = {
 
 /** The rule id of a parsed `returnTo` (`/admin/cleanup/rules/{id}/turn-on`). */
 const ruleIdOf = (returnTo: string): string => returnTo.split("/")[4] ?? ""
-
-/**
- * The name of the rule that `returnTo` points at, for "Back to Turn on
- * {rule}". The Settings data names no rule, so it reads the names that the
- * protection preview lists, once. Null until then, and for a gone rule.
- */
-function useReturnRuleName(returnTo: string | null, protections: CleanupSettingsData["options"]["protections"]): string | null {
-  const [name, setName] = useState<{ returnTo: string; name: string } | null>(null)
-  const saved = useRef(protections)
-  useEffect(() => {
-    if (!returnTo) return
-    const id = ruleIdOf(returnTo)
-    let current = true
-    void previewCleanupProtectionImpact({ protections: saved.current }).then((result) => {
-      const rule = result.success ? result.data.rules.find((r) => r.ruleId === id) : undefined
-      if (current && rule) setName({ returnTo, name: rule.name })
-    })
-    return () => {
-      current = false
-    }
-  }, [returnTo])
-  return name && name.returnTo === returnTo ? name.name : null
-}
 
 /** "Back to Turn on {rule}" (UX 4.10 rule 7, TS 12.7 item 10): the way back after a saved section. */
 function ReturnLink({ returnTo, name }: { returnTo: string; name: string | null }) {
@@ -84,7 +60,8 @@ interface FeatureSectionProps {
 export function FeatureSection({ data, returnTo, now }: FeatureSectionProps) {
   const enabled = data.feature.enabled
   const [savedOnce, setSavedOnce] = useState(false)
-  const ruleName = useReturnRuleName(returnTo, data.options.protections)
+  // The rule that `returnTo` points at; null for a rule that is gone
+  const ruleName = returnTo ? (data.rules.find((rule) => rule.id === ruleIdOf(returnTo))?.name ?? null) : null
   const feature = useCleanupSettingsForm(
     { enabled },
     (values) => ({ input: { section: "cleanup-feature", values: { enabled: values.enabled } } }),
@@ -97,7 +74,7 @@ export function FeatureSection({ data, returnTo, now }: FeatureSectionProps) {
       title={FEATURE_WORDS.title}
       description={FEATURE_WORDS.description}
       form={feature.form}
-      live={<FeatureState data={data} now={now} />}
+      badge={<FeatureState data={data} now={now} />}
       view={<FeatureSummary data={data} now={now} />}
       after={(editing) =>
         !editing && (

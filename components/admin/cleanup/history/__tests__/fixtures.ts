@@ -41,7 +41,8 @@ export function deletionBatch(rows: BatchRow[], overrides: Partial<DeletionBatch
 
 export const entryBatch = (overrides: Partial<EntryBatchData> = {}): EntryBatchData => ({
   kind: "entry", id: "entry-rule-2", ruleId: "rule-2", ruleName: "Old seasons nobody plays", level: "season", count: 52, bytes: String(800 * GB),
-  keysHash: HASH_B, reviewedAt: REVIEWED_AT, heldBy: { trigger: "scheduled", at: "2026-11-08T03:07:00.000Z" }, limit: 50, ...overrides,
+  keysHash: HASH_B, reviewedAt: REVIEWED_AT, heldBy: { trigger: "scheduled", at: "2026-11-08T03:07:00.000Z" }, limit: 50, mode: "reviewFirst",
+  leaveOn: "2026-12-08", leavingCount: 0, ...overrides,
 })
 
 /** A list row: season `n` of an invented show, leaving on Nov 19. */

@@ -13,9 +13,9 @@ import { mockReset } from "jest-mock-extended"
 import { buildCleanupItem } from "@/__tests__/helpers/cleanup-factories"
 import { buildUser } from "@/__tests__/helpers/factories"
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { buildWhySnapshot } from "@/lib/cleanup/__tests__/helpers/builders"
+import { buildDefinition, buildWhySnapshot } from "@/lib/cleanup/__tests__/helpers/builders"
 import type { Batch } from "@/lib/cleanup/run/batches"
-import { deletionCard, entryLimit, heldAtOf, readHeldBy, sortCards } from "@/lib/cleanup/screens/leaving/batch-data"
+import { deletionCard, entryLimit, entryRuleParts, heldAtOf, readHeldBy, sortCards } from "@/lib/cleanup/screens/leaving/batch-data"
 import { itemName, itemRefOf, lastPlayedOf, levelOf } from "@/lib/cleanup/screens/leaving/item-ref"
 import { batchPageOf, parseHistoryParams, parseLeavingParams, parseListParams, parseProtectionsParams } from "@/lib/cleanup/screens/leaving/params"
 import { readPeople } from "@/lib/cleanup/screens/leaving/people"
@@ -157,6 +157,19 @@ describe("batch cards", () => {
     expect(entryLimit(52, check, 400)).toBe(50)
     expect(entryLimit(45, check, 400)).toBe(40)
     expect(entryLimit(45, check, null)).toBe(50)
+  })
+
+  it("gives an entry card the rule's mode, today plus its grace period (not before the hold) and its titles in Leaving soon", () => {
+    const definition = buildDefinition({ then: { ...buildDefinition().then, graceDays: 30 } })
+    const rows = [
+      buildCleanupItem({ state: "leaving", ruleIds: ["r1"] }), buildCleanupItem({ state: "approved", ruleIds: ["r2", "r1"] }),
+      buildCleanupItem({ state: "deleting", ruleIds: ["r1"] }), buildCleanupItem({ state: "held", ruleIds: ["r1"] }),
+      buildCleanupItem({ state: "leaving", ruleIds: ["r2"] }),
+    ]
+    const rule = { mode: "automatic", definition }
+
+    expect(entryRuleParts(rule, rows, "r1", { today: "2026-11-08", holdUntil: null })).toEqual({ mode: "automatic", leaveOn: "2026-12-08", leavingCount: 3 })
+    expect(entryRuleParts(rule, rows, "r1", { today: "2026-11-08", holdUntil: "2026-12-20" }).leaveOn).toBe("2026-12-20")
   })
 
   it("reads 'last night' when no admin run held the batch", async () => {

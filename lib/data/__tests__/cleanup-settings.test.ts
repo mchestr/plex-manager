@@ -51,6 +51,7 @@ beforeEach(() => {
   snapshotMock.mockResolvedValue(null)
   mockStoredDefaults()
   prismaMock.watchlistSyncSettings.count.mockResolvedValue(4)
+  prismaMock.cleanupRule.findMany.mockResolvedValue([])
 })
 
 it("refuses before any read", async () => {
@@ -111,7 +112,9 @@ describe("with library data", () => {
         count: 5 }, "3:movie": { ...buildRuntime().collections["1:movie"], count: 1 }, "bad": buildRuntime().collections["1:movie"] }, notices: [{ kind: "collectionRemoved", key: "2:show", title: "Shows leaving soon",
         sectionId: "2", detectedAt: AT.toISOString(), recreatedAt: null }] }),
     })
-    prismaMock.cleanupRun.findFirst.mockResolvedValue(buildCleanupRun({ id: "run-9", startedAt: AT, outcome: "blocked", blocks: [buildBlock(), { bad: 1 }] }))
+    prismaMock.cleanupRun.findFirst.mockResolvedValue(buildCleanupRun({ id: "run-9", startedAt: AT, trigger: "admin", ruleIds: ["r1", "r2"], joined: 3, rescued: 1,
+      deleted: 2, outcome: "blocked", blocks: [buildBlock(), { bad: 1 }] }))
+    prismaMock.cleanupRule.findMany.mockResolvedValue([{ id: "r1", name: "Old movies" }, { id: "r2", name: "Big shows" }] as never)
   })
 
   it("counts what each protection keeps safe, seasons for G11 and G12, and none while off", async () => {
@@ -126,7 +129,7 @@ describe("with library data", () => {
     expect(protections.find((p) => p.id === "g13")?.sentence).toBe("In the Plex collection Christmas Movies or Classics")
   })
 
-  it("reads the feature, the schedule, the library data and the last run", async () => {
+  it("reads the feature, the schedule, the library data, the last run and the rule names", async () => {
     const data = await getCleanupSettings(AT)
 
     expect(data.feature).toMatchObject({ enabled: true, redis: true, holdUntil: "2026-11-12" })
@@ -134,7 +137,10 @@ describe("with library data", () => {
     expect((await getCleanupSettings(new Date("2026-11-08T01:00:00Z"))).schedule.nextRunAt).toBe("2026-11-08T03:07:00.000Z")
     expect(data.libraryData).toEqual({ startedAt: AT.toISOString(), finishedAt: AT.toISOString(), sources: SOURCES,
       historyStart: new Date((history.startAt ?? 0) * 1000).toISOString(), reading: true })
-    expect(data.lastRun).toEqual({ id: "run-9", startedAt: AT.toISOString(), outcome: "blocked", blocks: [buildBlock()] })
+    expect(data.lastRun).toEqual({ id: "run-9", startedAt: AT.toISOString(), trigger: "admin", rules: 2, joined: 3, rescued: 1, deleted: 2, outcome: "blocked",
+      blocks: [buildBlock()] })
+    expect(data.rules).toEqual([{ id: "r1", name: "Old movies" }, { id: "r2", name: "Big shows" }])
+    expect(prismaMock.cleanupRule.findMany).toHaveBeenCalledWith({ select: { id: true, name: true }, orderBy: { name: "asc" } })
     expect(prismaMock.cleanupRun.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { kind: "run" }, orderBy: { startedAt: "desc" } }))
   })
 

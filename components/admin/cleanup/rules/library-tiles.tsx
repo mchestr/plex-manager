@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 
 import { sizeText } from "@/components/admin/cleanup/preview/sizes"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
+import { joinAnd } from "@/lib/cleanup/fields/words"
 import type { CleanupOverviewData } from "@/lib/cleanup/types/screens"
 import { useFormat } from "@/lib/format-context"
 import type { BoundFormat } from "@/lib/utils/format"
@@ -64,24 +65,41 @@ export function monthsOfSpace(library: Pick<Library, "freeBytes" | "growthBytesP
   return `About ${f.number(months)} ${months === 1 ? "month" : "months"} of space at this growth`
 }
 
+/** "in Movies", or the noun while no library is in scope. */
+function inLibraries(libraries: readonly string[], noun: string): string {
+  return libraries.length > 0 ? `in ${joinAnd(libraries)}` : noun
+}
+
+/** "5 TB. Movies 4K and Keepsakes are never in scope", or the size alone. */
+function withOutOfScope(meta: string, outOfScope: readonly string[]): string {
+  if (outOfScope.length === 0) return meta
+  return `${meta}. ${joinAnd(outOfScope)} ${outOfScope.length === 1 ? "is" : "are"} never in scope`
+}
+
 /**
  * The library tiles of the first-use state (UX 4.1.1, 8.2): the movies and
- * the shows in scope with their sizes, the free space, and the growth a
- * month. Before the first library read the counts are 0 and the disk tiles
- * show a dash.
+ * the shows in scope with their libraries and sizes, the libraries that are
+ * never in scope, the free space, and the growth a month. Before the first
+ * library read the counts are 0 and the disk tiles show a dash.
  */
 export function LibraryTiles({ library }: { library: Library }) {
   const f = useFormat()
   const growth = library.growthBytesPerMonth === null ? null : sizeParts(library.growthBytesPerMonth)
   const { movies, shows } = library
+  const seasons = `${sizeText(shows.bytes)} in ${f.number(shows.seasons)} ${shows.seasons === 1 ? "season" : "seasons"}`
   return (
     <StatGrid data-testid="admin-cleanup-library-tiles">
-      <StatTile label="Movies" value={f.number(movies.count)} unit={movies.count === 1 ? "movie" : "movies"} meta={sizeText(movies.bytes)} />
+      <StatTile
+        label="Movies"
+        value={f.number(movies.count)}
+        unit={inLibraries(movies.libraries, movies.count === 1 ? "movie" : "movies")}
+        meta={withOutOfScope(sizeText(movies.bytes), movies.outOfScope)}
+      />
       <StatTile
         label="TV shows"
         value={f.number(shows.count)}
-        unit={shows.count === 1 ? "show" : "shows"}
-        meta={`${sizeText(shows.bytes)} in ${f.number(shows.seasons)} ${shows.seasons === 1 ? "season" : "seasons"}`}
+        unit={inLibraries(shows.libraries, shows.count === 1 ? "show" : "shows")}
+        meta={withOutOfScope(seasons, shows.outOfScope)}
       />
       <FreeSpaceTile library={library} meta={monthsOfSpace(library, f)} />
       <StatTile

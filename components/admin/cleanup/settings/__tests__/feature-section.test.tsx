@@ -54,7 +54,7 @@ describe("FeatureSection read view", () => {
     expect(summary("nightly")).toHaveTextContent("3:07 AM, server time (UTC)")
     expect(summary("library")).toHaveTextContent("Read at 3:07 AM today in 2 m 14 s. All 5 sources answered.")
     expect(summary("history")).toHaveTextContent('Jun 14, 2022. "Never played" means since then.')
-    expect(screen.getByTestId("admin-cleanup-settings-last-run")).toHaveTextContent("3:07 AM today. Finished.")
+    expect(screen.getByTestId("admin-cleanup-settings-last-run")).toHaveTextContent("Scheduled, 3:07 AM today. 3 rules, 3 joined, 1 rescued, 0 deleted.")
     expect(screen.getByTestId("admin-cleanup-settings-last-run-timestamp")).toHaveTextContent("3:07 AM today")
     expect(screen.getByTestId("admin-cleanup-settings-refresh-data")).toBeEnabled()
     expect(screen.getByTestId("admin-cleanup-settings-run-all")).toBeEnabled()
@@ -87,6 +87,15 @@ describe("FeatureSection read view", () => {
     expect(screen.getByTestId("admin-cleanup-settings-last-run")).toHaveTextContent("No run yet.")
     expect(screen.getByTestId("admin-cleanup-settings-refresh-data")).toHaveAttribute("aria-disabled", "true")
     expect(screen.getByTestId("admin-cleanup-settings-run-all")).toHaveAttribute("aria-disabled", "true")
+  })
+
+  it("names a run that an admin started, one rule, and an outcome that is not Finished", async () => {
+    const data = buildSettingsData()
+    await renderSection({ ...data, lastRun: { ...data.lastRun!, trigger: "admin", rules: 1, joined: 0, rescued: 0, outcome: "held" } })
+
+    expect(screen.getByTestId("admin-cleanup-settings-last-run")).toHaveTextContent(
+      "Started by an admin, 3:07 AM today. 1 rule, 0 joined, 0 rescued, 0 deleted. Held: new matches wait for your approval."
+    )
   })
 
   it("names the sources that did not answer, a read in progress and On with no date", async () => {
@@ -187,7 +196,7 @@ describe("FeatureSection returnTo", () => {
     const user = userEvent.setup()
     await renderSection(buildSettingsData({ feature: { ...buildSettingsData().feature, enabled: false } }), parseReturnTo(LIVE_RETURN))
 
-    expect(previewCleanupProtectionImpact).toHaveBeenCalledWith({ protections: buildSettingsData().options.protections })
+    expect(previewCleanupProtectionImpact).not.toHaveBeenCalled()
     expect(screen.queryByTestId("admin-cleanup-settings-return")).not.toBeInTheDocument()
     await user.click(screen.getByTestId("settings-cleanup-feature-edit"))
     await user.click(checkbox())
@@ -198,10 +207,9 @@ describe("FeatureSection returnTo", () => {
     expect(back).toHaveAttribute("href", LIVE_RETURN)
   })
 
-  it("names no rule while the name is unknown", async () => {
+  it("names no rule when the rule is gone", async () => {
     const user = userEvent.setup()
-    jest.mocked(previewCleanupProtectionImpact).mockResolvedValue({ success: false, code: "RATE_LIMITED", error: "Too many requests." })
-    const data = buildSettingsData()
+    const data = buildSettingsData({ rules: [] })
     await renderSection({ ...data, protections: buildProtections(data.options) }, parseReturnTo(LIVE_RETURN))
 
     await user.click(screen.getByTestId("settings-cleanup-feature-edit"))

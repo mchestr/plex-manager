@@ -13,7 +13,7 @@ import type { GlobalProtectionId } from "@/lib/cleanup/engine/types"
 import type { OutcomeKind } from "@/lib/cleanup/outcomes"
 import type { ItemRef } from "@/lib/cleanup/types/preview"
 import type { CountBytes, NamedRule, PersonRef } from "@/lib/cleanup/types/rule-parts"
-import type { ActionId, Level, Service } from "@/lib/validations/cleanup-vocabulary"
+import type { ActionId, Level, Mode, Service } from "@/lib/validations/cleanup-vocabulary"
 
 /** A batch row. Each row carries its own merged action and exclusion (E35). */
 export interface BatchRow extends ItemRef {
@@ -65,6 +65,12 @@ export interface EntryBatchData extends CountBytes {
   heldBy: { trigger: "scheduled" | "admin"; at: string }
   /** The entry check count that the run passed ("more than {limit}"). */
   limit: number
+  /** The rule's mode, for the Dry run dialog. */
+  mode: Mode
+  /** The leave date that "Put {N} {items} in Leaving soon" gives (TS 10.3): today plus the rule's grace period, not before the hold date. A day key. */
+  leaveOn: string
+  /** The rule's titles in Leaving soon now (`leaving`, `approved` or `deleting`), for the Dry run dialog. */
+  leavingCount: number
 }
 
 export type BatchData = DeletionBatchData | EntryBatchData

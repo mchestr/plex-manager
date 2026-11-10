@@ -60,12 +60,7 @@ export function LeavingTab({ data }: { data: CleanupLeavingData }) {
             batch.kind === "deletion" ? (
               <DeletionBatchCard key={batch.id} batch={batch} budget={data.budget} paused={paused} focus={focus} />
             ) : (
-              <EntryBatchCard
-                key={batch.id}
-                batch={batch}
-                paused={paused}
-                leavingCount={data.rows.filter((row) => row.rules.some((rule) => rule.id === batch.ruleId)).length}
-              />
+              <EntryBatchCard key={batch.id} batch={batch} paused={paused} />
             )
           )}
         </div>

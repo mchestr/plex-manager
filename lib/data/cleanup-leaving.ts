@@ -25,7 +25,7 @@ import { failureWords } from "@/lib/cleanup/failure-words"
 import { exitBucket, type ExitCounts } from "@/lib/cleanup/outcomes"
 import { batchPage, groupBatches, readUsedToday } from "@/lib/cleanup/run/batches"
 import { parseRuleStats } from "@/lib/cleanup/schema/stats"
-import { deletionCard, entryCard, entryLimit, readHeldBy, sortCards } from "@/lib/cleanup/screens/leaving/batch-data"
+import { deletionCard, entryCard, entryLimit, entryRuleParts, readHeldBy, sortCards } from "@/lib/cleanup/screens/leaving/batch-data"
 import { buildList } from "@/lib/cleanup/screens/leaving/list"
 import { batchPageOf, parseLeavingParams } from "@/lib/cleanup/screens/leaving/params"
 import { readPeople } from "@/lib/cleanup/screens/leaving/people"
@@ -71,7 +71,7 @@ export async function getCleanupLeavingSoon(params: SearchParamsInput, now: Date
   const [settings, zone, rules, header, rows, exits7d] = await Promise.all([
     readCleanupSettingsRow(),
     serverZone(),
-    prisma.cleanupRule.findMany({ select: { id: true, name: true, mode: true, createdAt: true, stats: true }, orderBy: { name: "asc" } }),
+    prisma.cleanupRule.findMany({ select: { id: true, name: true, mode: true, createdAt: true, stats: true, definition: true }, orderBy: { name: "asc" } }),
     loadPreviousCompleteHeader(),
     prisma.cleanupItem.findMany({ where: { state: { in: ["held", ...LIST_STATES] } }, omit: { why: true } }),
     readExits(now),
@@ -92,10 +92,12 @@ export async function getCleanupLeavingSoon(params: SearchParamsInput, now: Date
   ])
   const card = { now, today, ruleName: (id: string) => ruleOf(id).name, page: (id: string) => batchPageOf(input, id),
     whys: new Map(whys.map((row) => [row.itemKey, row.why])) }
-  const checkedOf = (ruleId: string) => parseRuleStats(rules.find((rule) => rule.id === ruleId)?.stats).lastEval?.checked ?? null
+  const ruleRow = (ruleId: string) => rules.find((rule) => rule.id === ruleId)
+  const checkedOf = (ruleId: string) => parseRuleStats(ruleRow(ruleId)?.stats).lastEval?.checked ?? null
   const batches: BatchData[] = sortCards([
     ...grouped.deletion.map((batch) => deletionCard(batch, card)).filter((batch) => batch !== null),
-    ...grouped.entry.map((batch, i) => entryCard(batch, card, heldBy[i], entryLimit(batch.count, options.entryCheck, checkedOf(batch.ruleId)))),
+    ...grouped.entry.map((batch, i) => entryCard(batch, card, { heldBy: heldBy[i], limit: entryLimit(batch.count, options.entryCheck, checkedOf(batch.ruleId)),
+      ...entryRuleParts(ruleRow(batch.ruleId) ?? { mode: "reviewFirst", definition: null }, rows, batch.ruleId, { today, holdUntil }) })),
   ])
   const facts = header?.facts ?? null
   const libraries = (facts?.libraries ?? []).map(({ sectionId, title }) => ({ sectionId, title }))

@@ -107,7 +107,7 @@ export function PlexSection({ data, now }: { data: CleanupSettingsData; now: num
       title={PLEX_WORDS.title}
       description={PLEX_WORDS.description}
       form={form}
-      live={
+      badge={
         <SectionState
           badge={working ? <StatusBadge tone="success" label="Working" /> : <StatusBadge tone="warning" label="Needs attention" />}
           line={checkedAt ? `Checked ${readTimeText(f, checkedAt, now)}` : undefined}
