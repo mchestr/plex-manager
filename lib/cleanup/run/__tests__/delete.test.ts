@@ -216,6 +216,14 @@ describe("the movie actions", () => {
     expect(itemWrites()[1].data).not.toHaveProperty("arr")
   })
 
+  it("names a partial unmonitor when the unmonitor write got no answer, and none after a refused one (safety review S-4)", async () => {
+    respond({ "PUT /api/v3/movie/editor": [{ ok: false, code: "TIMEOUT" }], getRadarrMovie: [{ ok: true, data: { id: 11, hasFile: true, movieFileId: 77 } }] })
+    await expect(deleteItem(movie({ action: "movie.unmonitorDeleteFiles" }), MOVIE_ARR, env)).resolves.toEqual({ kind: "failed", code: "TIMEOUT" })
+    expect(mockCalls).not.toContain("DELETE /api/v3/moviefile/77")
+    expect(itemWrites()[1].data).toMatchObject({ arr: { ...MOVIE_ARR, unmonitored: true } })
+    expect(prismaMock.cleanupOutcome.create.mock.calls[0][0].data.detail).toMatchObject({ stillUnmonitored: "radarr" })
+  })
+
   it("is gone when the movie has no file after the unmonitor, and keeps the record unmonitored after a failed file delete", async () => {
     respond({ getRadarrMovie: [{ ok: true, data: { id: 11, hasFile: false, movieFileId: 0 } }, is404, { ok: true, data: { id: 11, hasFile: true, movieFileId: 77 } },
       { ok: false, code: "TIMEOUT" }] })
@@ -430,6 +438,26 @@ describe("the season action (season.unmonitorDeleteFiles, E22)", () => {
     expect(itemWrites()[1].data).toEqual({ state: "leaving", failCode: "HTTP", failCount: { increment: 1 }, arr: { ...SHOW_ARR, unmonitored: true } })
     expect(prismaMock.cleanupOutcome.create.mock.calls[0][0].data.detail).toEqual({ code: "HTTP", service: "sonarr", stillUnmonitored: "sonarr" })
     expect(sonarrWrites().filter((w) => JSON.stringify(w.body).includes('"monitored":true'))).toEqual([])
+  })
+
+  it("names no unmonitor after a failed bulk delete when the season and its episodes were unmonitored already (safety review S-4)", async () => {
+    const unmonitoredEpisodes = { ok: true, data: [{ id: 31, seriesId: 22, seasonNumber: 2, episodeNumber: 1, hasFile: true, monitored: false }] }
+    seasonReads({ listSonarrEpisodes: [unmonitoredEpisodes], "DELETE /api/v3/episodefile/bulk": [{ ok: false, code: "HTTP", status: 500 }],
+      getSonarrSeries: [{ ok: true, data: { id: 22 } }] })
+    await expect(deleteItem(season(2), SHOW_ARR, env)).resolves.toEqual({ kind: "failed", code: "HTTP", status: 500 })
+    expect(sonarrWrites().map((w) => w.path)).toEqual(["/api/v3/episodefile/bulk"])
+    expect(itemWrites()[1].data).not.toHaveProperty("arr")
+    expect(prismaMock.cleanupOutcome.create.mock.calls[0][0].data.detail).toEqual({ code: "HTTP", service: "sonarr" })
+  })
+
+  it.each([
+    ["the season flag write", { "PUT /api/v3/series/22": [{ ok: false, code: "TIMEOUT" }] }, 1],
+    ["the episode unmonitor", { "PUT /api/v3/episode/monitor": [{ ok: false, code: "NETWORK" }] }, 2],
+  ])("names a partial unmonitor when %s got no answer: Sonarr may have applied it (safety review S-4)", async (_case, extra, n) => {
+    seasonReads({ ...(n === 1 ? { listPlexSeasonFiles: [plexFiles(1, [1])] } : {}), ...extra, getSonarrSeries: [{ ok: true, data: { id: 22 } }] })
+    await expect(deleteItem(season(n), SHOW_ARR, env)).resolves.toMatchObject({ kind: "failed" })
+    expect(itemWrites()[1].data).toMatchObject({ arr: { ...SHOW_ARR, unmonitored: true } })
+    expect(prismaMock.cleanupOutcome.create.mock.calls[0][0].data.detail).toMatchObject({ stillUnmonitored: "sonarr" })
   })
 
   it("exits the season item and the seasons before their show: a season is deleted while its show row waits", async () => {

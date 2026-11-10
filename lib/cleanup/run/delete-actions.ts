@@ -13,8 +13,11 @@
  * | `season.unmonitorDeleteFiles` | season number, series, files of the season (none: gone), files inside the series path, Plex season files equal (E22), episodes; then the season flag, the monitored episodes, bulk file deletes |
  *
  * A failed write after an unmonitor write that succeeded carries
- * `unmonitored: true`, so the row gets `arr.unmonitored`. Nothing monitors
- * the record again.
+ * `unmonitored: true`, so the row gets `arr.unmonitored`. So does an
+ * unmonitor write that failed with no answer (`TIMEOUT`, `ABORTED`,
+ * `NETWORK`): the app may have applied it. A file delete after no unmonitor
+ * write (a season that was unmonitored already) carries none. Nothing
+ * monitors the record again.
  *
  * WARNING: Never call Sonarr's season pass route, an Overseerr `DELETE`, a
  * Plex delete, or a bulk file delete with an empty list or two series.
@@ -47,6 +50,8 @@ const is404 = (r: { ok: boolean; code?: string; status?: number }) => !r.ok && r
 const fail = (r: ServiceFailure<string>, unmonitored = false): Action => ({ kind: "fail", code: r.code, ...(r.status ? { status: r.status } : {}), unmonitored })
 const stop = (code: string): Action => ({ kind: "fail", code })
 const signalOf = ({ env }: Calls) => ({ signal: env.signal })
+/** A failed write with no answer may still have been applied (`radarr-write.ts`). */
+const mayHaveApplied = (r: ServiceFailure<string>) => r.code === "TIMEOUT" || r.code === "ABORTED" || r.code === "NETWORK"
 
 /** Step 6: a failed write reads the record once. A 404 is gone. */
 async function goneOr(calls: Calls, failure: ServiceFailure<string>, unmonitored: boolean): Promise<Action> {
@@ -55,15 +60,15 @@ async function goneOr(calls: Calls, failure: ServiceFailure<string>, unmonitored
   return is404(again) ? GONE : fail(failure, unmonitored)
 }
 
-/** Bulk deletes of one series' files, 50 a call. After a timeout, no file left means done. */
-async function bulkDelete(calls: Calls, ids: number[]): Promise<Action> {
+/** Bulk deletes of one series' files, 50 a call. After a timeout, no file left means done. `unmonitored`: an unmonitor write came first. */
+async function bulkDelete(calls: Calls, ids: number[], unmonitored: boolean): Promise<Action> {
   const result = await deleteSonarrEpisodeFiles(calls.c, ids, signalOf(calls))
   if (result.ok) return DONE
   if (result.code === "TIMEOUT") {
     const left = await listSonarrEpisodeFiles(calls.c, calls.arr.id, signalOf(calls))
     if (left.ok && !left.data.some((file) => ids.includes(file.id))) return DONE
   }
-  return goneOr(calls, result, true)
+  return goneOr(calls, result, unmonitored)
 }
 
 async function movieDelete(calls: Calls): Promise<Action> {
@@ -73,7 +78,7 @@ async function movieDelete(calls: Calls): Promise<Action> {
 
 async function movieUnmonitor(calls: Calls): Promise<Action> {
   const unmonitor = await unmonitorRadarrMovie(calls.c, calls.arr.id, signalOf(calls))
-  if (!unmonitor.ok) return goneOr(calls, unmonitor, false)
+  if (!unmonitor.ok) return goneOr(calls, unmonitor, mayHaveApplied(unmonitor))
   const movie = await getRadarrMovie(calls.c, calls.arr.id, signalOf(calls))
   if (!movie.ok) return is404(movie) ? GONE : fail(movie, true)
   if (!movie.data.hasFile || !movie.data.movieFileId) return GONE
@@ -94,7 +99,7 @@ async function showUnmonitor(calls: Calls): Promise<Action> {
   if (files.data.length === 0) return GONE
   const body = { ...series.data, monitored: false, seasons: series.data.seasons.map((season) => ({ ...season, monitored: false })) }
   const put = await putSonarrSeries(calls.c, body, signalOf(calls))
-  return put.ok ? bulkDelete(calls, files.data.map((file) => file.id)) : goneOr(calls, put, false)
+  return put.ok ? bulkDelete(calls, files.data.map((file) => file.id), true) : goneOr(calls, put, mayHaveApplied(put))
 }
 
 async function seasonUnmonitor(calls: Calls): Promise<Action> {
@@ -121,13 +126,13 @@ async function seasonUnmonitor(calls: Calls): Promise<Action> {
   if (season.monitored) {
     const body = { ...series.data, seasons: series.data.seasons.map((s) => (s.seasonNumber === n ? { ...s, monitored: false } : s)) }
     const put = await putSonarrSeries(c, body, signalOf(calls))
-    if (!put.ok) return goneOr(calls, put, false)
+    if (!put.ok) return goneOr(calls, put, mayHaveApplied(put))
     wrote = true
   }
   const monitored = episodes.data.filter((episode) => episode.monitored).map((episode) => episode.id)
   const unmonitor = monitored.length > 0 ? await unmonitorSonarrEpisodes(c, monitored, signalOf(calls)) : null
-  if (unmonitor && !unmonitor.ok) return fail(unmonitor, wrote)
-  return bulkDelete(calls, files.map((file) => file.id))
+  if (unmonitor && !unmonitor.ok) return fail(unmonitor, wrote || mayHaveApplied(unmonitor))
+  return bulkDelete(calls, files.map((file) => file.id), wrote || monitored.length > 0)
 }
 
 /** The calls of each action id. */
