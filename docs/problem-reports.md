@@ -99,4 +99,4 @@ The member actions (`reportProblem`, `followProblemReport`, `cancelProblemReport
 
 ## Testing
 
-The E2E specs sign in as a member who doesn't own the server; the share list comes from the plex.tv mock (`e2e/README.md`, "Library access for a member"). One spec has the admin close a report with a note and the member read it on `/report`.
+The E2E specs sign in as a member who doesn't own the server; the share list comes from the plex.tv mock (`e2e/README.md`, "Library access for a member"). One spec has the admin close a report with a note and the member read it on `/report`. `e2e/problem-reports-missing.spec.ts` reports missing episodes against the Sonarr mock (`e2e/mocks/sonarr-server.ts`): the answers for an episode that hasn't aired and a season that isn't monitored, a member's report starting Look for the episodes, and an admin starting it from a report.

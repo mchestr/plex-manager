@@ -337,6 +337,16 @@ for 10 minutes per server, and an item's section for 24 hours
 shares gives the member its own Plex account in `MOCK_SHARED_SECTIONS`, and
 uses rating keys no other spec uses.
 
+## Sonarr for a spec
+
+`e2e/mocks/sonarr-server.ts` is a Sonarr stand-in a spec starts itself
+(`startMockSonarr()`), pointing an active `Sonarr.url` at it with the API key
+`e2e-sonarr-key`. It knows one series (`MOCK_SERIES`, TVDB id 95001): a test
+sets its episodes and files in `state`, and reads the commands it was sent
+(Sonarr's `EpisodeSearch`, say) from `commands`.
+`e2e/problem-reports-missing.spec.ts` shows it, with the fix job running in
+the web server's worker, so the spec needs Redis.
+
 ## Writing New Tests
 
 ### Example: Testing Admin Functionality
