@@ -17,6 +17,9 @@
  *   actions that need a browser (cookies, the setup claim, a Plex PIN), that
  *   only record what a browser showed, or that would let a token reach
  *   further than its owner's own session (making tokens, the assistant itself).
+ *   Turning a media cleanup rule on and approving a deletion batch are left
+ *   out too: typed approval is a check in the admin UI, and it proves nothing
+ *   about a person behind an MCP client (TS E24).
  *
  * A new action is a tool as soon as its module is in `ACTION_MODULES`.
  *
@@ -46,16 +49,22 @@ export const EXCLUDED: Readonly<Record<string, string>> = {
   adoptBrowserTimezone: "reads the browser's zone",
   chatWithAdminBot: "the assistant itself; the MCP client is the assistant",
   completeSetup: "the setup wizard's last step",
+  deleteCleanupBatch: "a deletion needs a person on the review page",
   skipSetupStep: "the setup wizard's step order",
+  turnOnCleanupRule: "a deletion needs a person on the review page",
 }
 
 /**
  * Actions whose result is one record that cannot be split, and the most
- * characters it may have (`lib/mcp/result-limit.ts`): a member's whole Rewind.
+ * characters it may have (`lib/mcp/result-limit.ts`): a member's whole
+ * Rewind, a media cleanup preview (one page of 50 rows with its counts and
+ * impact) and the Why of one title.
  */
 const LARGE_RESULTS: Readonly<Record<string, number>> = {
   getUserPlexWrapped: 120_000,
   getRewindDryRun: 120_000,
+  previewCleanupRule: 120_000,
+  getCleanupItemWhy: 60_000,
 }
 
 /** Actions that return an invite code: their result also carries the link to send. */
@@ -83,6 +92,8 @@ export const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set([
   "estimateRewindDryRun",
   "getActiveAnnouncements",
   "getAvailableLibraries",
+  "getCleanupBatchSelection",
+  "getCleanupItemWhy",
   "getConversationReviewStatus",
   "getOnboardingStatus",
   "getRewindDryRun",
@@ -94,6 +105,9 @@ export const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set([
   "getUserPlexWrapped",
   "getWatchlistSyncSettings",
   "listLLMModels",
+  "previewCleanupProtectionImpact",
+  "previewCleanupRecipe",
+  "previewCleanupRule",
   "previewMemberRemoval",
 ])
 
@@ -107,6 +121,25 @@ export const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set([
 export const WRITES_DESPITE_READ_NAME: ReadonlySet<string> = new Set<string>()
 
 const DESTRUCTIVE_PREFIXES = ["delete", "remove", "revoke", "unshare", "rollback", "cancel", "disable", "adminCancel"]
+
+/**
+ * Actions that start or widen deletions without a delete name, so their
+ * tools carry `destructiveHint` beside the {@link DESTRUCTIVE_PREFIXES}
+ * matches. A reviewed list, like {@link READ_ONLY_ACTIONS} (TS E24): a save
+ * of a live cleanup rule can put titles in Leaving soon or make their action
+ * less careful, an entry batch approval puts titles in Leaving soon, a
+ * settings save can turn cleanup on or weaken a protection, a resume restarts
+ * deletions, and a new exclusion end lets rules match the title again.
+ *
+ * @internal Exported for the catalog test.
+ */
+export const DESTRUCTIVE_ACTIONS: ReadonlySet<string> = new Set([
+  "saveCleanupRule",
+  "approveCleanupEntryBatch",
+  "updateCleanupSettings",
+  "resumeCleanup",
+  "setCleanupExclusionEnd",
+])
 
 /**
  * `createInvite` -> `create_invite`, `saveLLMProvider` -> `save_llm_provider`.
@@ -146,6 +179,9 @@ function startsWithAny(name: string, prefixes: readonly string[]): boolean {
   return prefixes.some((prefix) => name.startsWith(prefix) && /[A-Z]/.test(name.charAt(prefix.length)))
 }
 
+/** Whether an action's tool carries `destructiveHint`: a name prefix or a reviewed set member. */
+const isDestructive = (exportName: string) => startsWithAny(exportName, DESTRUCTIVE_PREFIXES) || DESTRUCTIVE_ACTIONS.has(exportName)
+
 /** One action as a tool, or null when it is not one. */
 function actionTool(exportName: string, value: unknown): McpTool | null {
   const auth = actionAuthOf(value)
@@ -163,7 +199,7 @@ function actionTool(exportName: string, value: unknown): McpTool | null {
     name: toolName(exportName),
     description: `${summary} ${audience}${link}`,
     inputSchema,
-    annotations: readOnly ? { readOnlyHint: true } : { readOnlyHint: false, destructiveHint: startsWithAny(exportName, DESTRUCTIVE_PREFIXES) },
+    annotations: readOnly ? { readOnlyHint: true } : { readOnlyHint: false, destructiveHint: isDestructive(exportName) },
     ...(LARGE_RESULTS[exportName] ? { maxResultChars: LARGE_RESULTS[exportName] } : {}),
     source: "action",
     allowed: (session) => meets(auth, session),

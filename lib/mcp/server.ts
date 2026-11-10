@@ -51,6 +51,16 @@ const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26"] as const
 
 const TOOL_FAILED = "The tool failed. Check the server log for its request id."
 
+/**
+ * The two media cleanup steps that stay with a person (TS E24, 10.8): typed
+ * approval is a check in the admin UI, and it proves nothing about a person
+ * behind an MCP client.
+ */
+const CLEANUP_HUMAN_STEPS = [
+  "Turning a cleanup rule on and approving a deletion batch need a person on the admin pages: no tool does them.",
+  "Ask a person to check each cleanup change that a tool marks destructive.",
+]
+
 const requestId = z.union([z.string(), z.number()])
 
 const messageSchema = z.object({
@@ -92,17 +102,19 @@ async function instructions(principal: TokenPrincipal): Promise<string> {
       ? [
           "This token is read-only: it lists and calls only the tools that read. They cover invites (list_invites, get_invite,",
           "with each code's last four characters), members (list_users, get_user), settings, announcements, affiliates, Rewind,",
-          "job queues, AI activity, Discord, and lookups in Plex, Tautulli, Sonarr, Radarr and Overseerr.",
+          "job queues, AI activity, Discord, media cleanup (rules, previews, Leaving soon, Keeps, runs), and lookups in Plex,",
+          "Tautulli, Sonarr, Radarr and Overseerr.",
         ]
       : [
           "The tools cover invites (create_invite, list_invites, delete_invite), members and their access (list_users, get_user,",
           "set_user_role, set_user_disabled, remove_member, subscriptions), settings and connections, announcements, affiliates,",
-          "Rewind (season, generation, sharing), job queues, AI activity, Discord, and lookups in Plex, Tautulli, Sonarr, Radarr",
-          "and Overseerr.",
+          "Rewind (season, generation, sharing), job queues, AI activity, Discord, media cleanup (rules, previews, Leaving soon,",
+          "Keeps, runs), and lookups in Plex, Tautulli, Sonarr, Radarr and Overseerr.",
         ]
   return [
     `Plex Manager for ${await serverName()}. Every tool acts as ${name}, with their permissions, and is audited.`,
     ...coverage,
+    ...CLEANUP_HUMAN_STEPS,
     "Search for a tool by what you want to do.",
     "Read tools (`list_*`, `get_*`) give the ids that the other tools take; list tools take `page` and `pageSize`, and",
     "lookups take a search, filter or limit.",
