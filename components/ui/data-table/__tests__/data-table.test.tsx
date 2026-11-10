@@ -287,7 +287,37 @@ function SelectablePage({
   )
 }
 
+const rowLabel = (member: Member) => member.name
+
+/** A selectable table whose columns and row label are stable, as callers that memoize them pass. */
+function StableTable({ selected }: { selected: string[] }) {
+  return (
+    <DataTable
+      label="Members"
+      noun="members"
+      columns={columns}
+      data={members.slice(0, 3)}
+      getRowId={(member) => member.id}
+      pagination={{ page: 1, pageSize: 25, total: 3 }}
+      empty={null}
+      selectable={{ selected, onSelectedChange: jest.fn(), getRowLabel: rowLabel }}
+      data-testid="admin-users"
+    />
+  )
+}
+
 describe("DataTable selection, groups and bulk bar", () => {
+  it("keeps the cells mounted across renders while the columns and the row label stay the same, so a focused checkbox keeps focus", () => {
+    const { rerender } = render(<StableTable selected={[]} />)
+    const box = screen.getByRole("checkbox", { name: `Select ${members[0].name}` })
+    box.focus()
+
+    rerender(<StableTable selected={[members[0].id]} />)
+
+    expect(screen.getByRole("checkbox", { name: `Select ${members[0].name}` })).toBe(box)
+    expect(box).toHaveFocus()
+  })
+
   it("adds none of them without the new props", () => {
     const { container } = render(<Page />)
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()

@@ -47,17 +47,13 @@ export function ModeChoice({ data, mode, onModeChange, labelId, day }: ModeChoic
         const nameId = `${id}-${value}-name`
         const badgeId = `${id}-${value}-badge`
         const textId = `${id}-${value}-text`
-        // RadioCard spreads unknown props onto the radio: the name, the description and the focusable disabled state
-        const aria = {
-          "aria-labelledby": value === "reviewFirst" ? `${nameId} ${badgeId}` : nameId,
-          "aria-describedby": textId,
-          ...(allowed ? {} : { "aria-disabled": true }),
-        }
         return (
           <RadioCard
             key={value}
             value={value}
-            {...aria}
+            aria-labelledby={value === "reviewFirst" ? `${nameId} ${badgeId}` : nameId}
+            aria-describedby={textId}
+            aria-disabled={allowed ? undefined : true}
             className={cn(!allowed && "cursor-not-allowed bg-muted hover:border-border")}
             data-testid={TEST_IDS[value]}
           >

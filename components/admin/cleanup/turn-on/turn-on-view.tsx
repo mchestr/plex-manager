@@ -40,15 +40,12 @@ export interface TurnOnViewProps {
 export function TurnOnView({ data, redis }: TurnOnViewProps) {
   const f = useFormat()
   const idBase = useId()
-  const header = useRef<HTMLDivElement>(null)
+  const title = useRef<HTMLHeadingElement>(null)
   const state = useTurnOn(data)
 
   // Also when a kept route shows again: each visit starts on the title
   useEffect(() => {
-    const title = header.current?.querySelector("h1")
-    if (!title) return
-    title.tabIndex = -1
-    title.focus({ preventScroll: true })
+    title.current?.focus({ preventScroll: true })
   }, [])
 
   const ctx: CheckContext = { ruleId: data.rule.id, level: data.rule.level, f, now: Date.parse(data.reviewedAt) }
@@ -56,19 +53,18 @@ export function TurnOnView({ data, redis }: TurnOnViewProps) {
   return (
     <div className="flex flex-col gap-6">
       {/* The title takes focus at each visit as a starting point, not as a control: no focus ring */}
-      <div ref={header} className="[&_h1]:outline-none">
-        <PageHeader
-          title={titleText(data)}
-          description={TURN_ON_DESCRIPTION}
-          breadcrumbs={[
-            { label: "Media cleanup", href: cleanup() },
-            { label: "Rules", href: cleanup({ tab: "rules" }) },
-            { label: data.rule.name, href: cleanupRule(data.rule.id) },
-            { label: "Turn on" },
-          ]}
-          data-testid="admin-cleanup-turn-on-header"
-        />
-      </div>
+      <PageHeader
+        title={titleText(data)}
+        titleRef={title}
+        description={TURN_ON_DESCRIPTION}
+        breadcrumbs={[
+          { label: "Media cleanup", href: cleanup() },
+          { label: "Rules", href: cleanup({ tab: "rules" }) },
+          { label: data.rule.name, href: cleanupRule(data.rule.id) },
+          { label: "Turn on" },
+        ]}
+        data-testid="admin-cleanup-turn-on-header"
+      />
       <TopChecks checks={stoppingChecks(data, state.mode)} ctx={ctx} />
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6">
         <div className="flex min-w-0 flex-col gap-4">

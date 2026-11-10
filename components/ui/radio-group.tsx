@@ -43,6 +43,15 @@ interface RadioCardProps {
   /** Trailing content such as a status badge. */
   trailing?: ReactNode
   className?: string
+  /** Names the radio from parts of its content, in place of all of its text. */
+  "aria-labelledby"?: string
+  /** The card's description, or the reason a card that is not allowed gives (UX 11.1 item 8). */
+  "aria-describedby"?: string
+  /**
+   * Marks a card that cannot be chosen while it stays readable. The group must
+   * ignore its value in `onValueChange`. Base UI's arrow keys skip such a radio.
+   */
+  "aria-disabled"?: boolean
   "data-testid"?: string
 }
 

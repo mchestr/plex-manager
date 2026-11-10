@@ -4,7 +4,7 @@ import { type ColumnDef, flexRender, getCoreRowModel, type Header, type Row, use
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react"
 import type { Route } from "next"
 import Link from "next/link"
-import type { ReactNode } from "react"
+import { type ReactNode, useMemo } from "react"
 
 import { Icon } from "@/components/ui/icon"
 import { TableSkeleton } from "@/components/ui/skeleton"
@@ -131,9 +131,12 @@ export function DataTable<T>({
   const testId = props["data-testid"] ?? "data-table"
   const { replace } = useReplaceParams()
   const selection = selectionOptions(selectable)
-  const tableColumns = selectable
-    ? [selectionColumn(selectable.getRowLabel, { testId, selectAllLabel: `Select all ${noun} on this page` }), ...columns]
-    : columns
+  // Stable while the caller's columns and row label are: a new column list rebuilds every Column and remounts the cells
+  const getRowLabel = selectable?.getRowLabel
+  const tableColumns = useMemo(
+    () => (getRowLabel ? [selectionColumn(getRowLabel, { testId, selectAllLabel: `Select all ${noun} on this page` }), ...columns] : columns),
+    [getRowLabel, columns, testId, noun]
+  )
   // The selection column comes first; the caller's first column still heads the card and carries the link
   const offset = selectable ? 1 : 0
 
