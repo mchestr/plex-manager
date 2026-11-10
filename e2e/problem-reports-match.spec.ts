@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net';
 
 import { expect, test } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
+import { clearReportLimits } from './helpers/rate-limits';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
 import { MOCK_MOVIE, startMockRadarr, type MockRadarr } from './mocks/radarr-server';
 
@@ -118,6 +119,7 @@ test.describe('Problem reports: the Plex match', () => {
   test.beforeAll(async () => {
     [plex, radarr] = await Promise.all([startStubPlex(), startMockRadarr(MOVIE.folder)]);
     await clearReports();
+    await clearReportLimits();
     await withDb(async (prisma) => {
       originalUrl = (await prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true } }))?.url ?? null;
       await prisma.plexServer.updateMany({ where: { isActive: true }, data: { url: `http://127.0.0.1:${(plex.server.address() as AddressInfo).port}` } });
