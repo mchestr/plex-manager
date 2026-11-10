@@ -923,7 +923,8 @@ model UserMediaMark {
   mediaType     MediaType
   plexRatingKey String
 
-  // Radarr/Sonarr IDs (if available)
+  // The Radarr movie or Sonarr series found by the item's ids when the mark was saved, for links only:
+  // they can go stale, so code that changes a title looks it up again
   radarrId        Int?
   radarrTitleSlug String?
   sonarrId        Int?

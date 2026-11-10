@@ -6,13 +6,14 @@
  * @module lib/problem-reports/refusals
  */
 
+import { NOT_ENTITLED_MESSAGE } from "@/lib/actions/entitlement"
 import type { ActionErrorCode } from "@/lib/actions/result"
 import type { ReportRefusal } from "@/lib/problem-reports/service"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
 
 export const REFUSALS = {
   OFF: ["NOT_FOUND", "Problem reports are off."],
-  NOT_ENTITLED: ["NOT_ENTITLED", "This needs an active membership."],
+  NOT_ENTITLED: ["NOT_ENTITLED", NOT_ENTITLED_MESSAGE],
   RATE_LIMITED: ["RATE_LIMITED", "You've sent a lot of reports."],
   NOT_FOUND: ["NOT_FOUND", "We couldn't find that title in your libraries."],
   UNAVAILABLE: ["UPSTREAM_UNAVAILABLE", "We can't reach the server right now. Try again in a few minutes."],

@@ -163,15 +163,18 @@ function createMockContext(options: MockChatOptions = {}): {
 }
 
 function createMockSelectInteraction(options: { customId?: string; values?: string[] } = {}) {
+  const deferUpdate = jest.fn().mockResolvedValue(undefined)
   const update = jest.fn().mockResolvedValue(undefined)
   const interaction = {
     customId: options.customId ?? `${MARK_SELECT_PREFIX}uuid-1234`,
     values: options.values ?? ["0"],
     channelId: "channel-1",
     user: { id: "discord-user-1", tag: "testuser#1234" },
-    update,
+    deferUpdate,
+    // After deferUpdate, the menu's message changes through editReply
+    editReply: update,
   }
-  return { interaction: interaction as never, update }
+  return { interaction: interaction as never, update, deferUpdate }
 }
 
 beforeEach(() => {
@@ -352,10 +355,12 @@ describe("select-menu component handler", () => {
       expiresAt: new Date(Date.now() + 60_000),
     })
     mockApplyMark.mockResolvedValue({ ok: true, mediaType: "TV_SERIES" as never, watched: "not_applicable" })
-    const { interaction, update } = createMockSelectInteraction({ values: ["0"] })
+    const { interaction, update, deferUpdate } = createMockSelectInteraction({ values: ["0"] })
 
     await handleSelect()(interaction)
 
+    // Saving the mark reads Plex and Radarr or Sonarr first, which can take longer than Discord's 3 seconds
+    expect(deferUpdate.mock.invocationCallOrder[0]).toBeLessThan(mockApplyMark.mock.invocationCallOrder[0])
     expect(mockFindByCustomId).toHaveBeenCalledWith(`${MARK_SELECT_PREFIX}uuid-1234`)
     expect(mockApplyMark).toHaveBeenCalledWith(
       expect.objectContaining({

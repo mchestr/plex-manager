@@ -23,8 +23,8 @@
  *                                 StringSelectMenu (ephemeral)
  *                                    │
  *                                    └─ user picks ─► component handler:
- *                                         findByCustomId → applyMark →
- *                                         interaction.update() confirmation →
+ *                                         deferUpdate → findByCustomId →
+ *                                         applyMark → editReply confirmation →
  *                                         deleteById
  * ```
  *
@@ -260,18 +260,20 @@ async function handleMark(ctx: InteractionContext): Promise<void> {
 /**
  * Handle a select-menu response for a parked `/mark` disambiguation.
  *
- * Resolves the pending selection by the interaction's `custom_id`, applies the
- * mark for the chosen item, collapses the menu into a confirmation via
- * `interaction.update()`, and deletes the pending row. An expired or missing
- * selection is handled gracefully with an ephemeral notice.
+ * Acknowledges at once (`deferUpdate`), since saving the mark reads Plex and
+ * Radarr or Sonarr first and can pass Discord's 3 seconds. Then resolves the
+ * pending selection by the interaction's `custom_id`, applies the mark for the
+ * chosen item, turns the menu into a confirmation (`editReply`), and deletes
+ * the pending row. An expired or missing selection gets a notice instead.
  * @internal
  */
 async function handleSelect(interaction: MessageComponentInteraction): Promise<void> {
   const select = interaction as StringSelectMenuInteraction
+  await select.deferUpdate()
 
   const pending = await findByCustomId(select.customId)
   if (!pending) {
-    await select.update({
+    await select.editReply({
       content: "That choice expired. Run the command again.",
       components: [],
     })
@@ -284,7 +286,7 @@ async function handleSelect(interaction: MessageComponentInteraction): Promise<v
   // authorization check first removes the gap entirely.
   const verification = await verifyPendingOwner(pending.discordUserId, select.user.id)
   if (!verification.ok) {
-    await select.update({
+    await select.editReply({
       content: verification.message,
       components: [],
     })
@@ -294,7 +296,7 @@ async function handleSelect(interaction: MessageComponentInteraction): Promise<v
   const index = Number(select.values[0])
   const item = pending.results[index]
   if (!item) {
-    await select.update({
+    await select.editReply({
       content: "That choice is no longer valid. Run the command again.",
       components: [],
     })
@@ -304,7 +306,7 @@ async function handleSelect(interaction: MessageComponentInteraction): Promise<v
 
   const plexConfig = await getActivePlexServerConfig()
   if (!plexConfig) {
-    await select.update({
+    await select.editReply({
       content: "This server has no Plex connection. Tell an admin.",
       components: [],
     })
@@ -325,7 +327,7 @@ async function handleSelect(interaction: MessageComponentInteraction): Promise<v
     ? buildConfirmation(item, pending.markType, result.watched)
     : unsupportedType(result.mediaType)
 
-  await select.update({ content, components: [] })
+  await select.editReply({ content, components: [] })
   await deleteById(pending.id)
 }
 
