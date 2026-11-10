@@ -20,6 +20,8 @@ jest.mock("@/lib/utils/logger", () => ({ createLogger: () => ({ info: jest.fn(),
 
 const mockRedis = jest.fn(() => true)
 const OPTIONS = { attempts: 3, backoff: { type: "exponential", delay: 60_000 } }
+const RESOLVED = new Date("2026-11-09T20:00:00Z")
+const AT = RESOLVED.toISOString()
 
 beforeEach(() => {
   mockReset(prismaMock)
@@ -27,6 +29,7 @@ beforeEach(() => {
   mockRedis.mockReturnValue(true)
   prismaMock.problemReport.findUnique.mockResolvedValue({
     reporterId: "member-1",
+    resolvedAt: RESOLVED,
     events: [{ actorUserId: "member-2" }, { actorUserId: "member-2" }, { actorUserId: "member-3" }],
   } as never)
   jest.mocked(enqueueFromRequest).mockResolvedValue({ ok: true, jobId: "job" })
@@ -37,9 +40,9 @@ describe("queueMemberUpdates", () => {
     await queueMemberUpdates("report-1", "FIXED", { from: "request" })
 
     expect(jest.mocked(enqueueFromRequest).mock.calls.map(([, data]) => data)).toEqual([
-      { reportId: "report-1", userId: "member-1", status: "FIXED" },
-      { reportId: "report-1", userId: "member-2", status: "FIXED" },
-      { reportId: "report-1", userId: "member-3", status: "FIXED" },
+      { reportId: "report-1", userId: "member-1", status: "FIXED", resolvedAt: AT },
+      { reportId: "report-1", userId: "member-2", status: "FIXED", resolvedAt: AT },
+      { reportId: "report-1", userId: "member-3", status: "FIXED", resolvedAt: AT },
     ])
     expect(enqueueFromRequest).toHaveBeenCalledWith(JOB_TYPES.PROBLEM_REPORT_UPDATE, expect.anything(), OPTIONS)
   })
@@ -48,10 +51,17 @@ describe("queueMemberUpdates", () => {
     await queueMemberUpdates("report-1", "CLOSED", { from: "worker", except: "member-1" })
 
     expect(jest.mocked(addJob).mock.calls.map(([, data]) => data)).toEqual([
-      { reportId: "report-1", userId: "member-2", status: "CLOSED" },
-      { reportId: "report-1", userId: "member-3", status: "CLOSED" },
+      { reportId: "report-1", userId: "member-2", status: "CLOSED", resolvedAt: AT },
+      { reportId: "report-1", userId: "member-3", status: "CLOSED", resolvedAt: AT },
     ])
     expect(enqueueFromRequest).not.toHaveBeenCalled()
+  })
+
+  it("queues nothing for a report that opened again before its DMs were queued", async () => {
+    prismaMock.problemReport.findUnique.mockResolvedValue({ reporterId: "member-1", resolvedAt: null, events: [] } as never)
+
+    await queueMemberUpdates("report-1", "FIXED", { from: "worker" })
+    expect(addJob).not.toHaveBeenCalled()
   })
 
   it("queues nothing without Redis, and never throws", async () => {

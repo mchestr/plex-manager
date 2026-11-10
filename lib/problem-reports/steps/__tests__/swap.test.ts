@@ -173,6 +173,13 @@ describe("the start", () => {
     await expect(runSwap(REPORT, START, NOW)).resolves.toEqual({ toAdmin: reason })
   })
 
+  it.each(["BREAKER", "NO_RUN"] as const)("grabs nothing when the replacement's gate answers %s", async (answer) => {
+    jest.mocked(gateReplace).mockResolvedValue(answer)
+
+    await runSwap(REPORT, START, NOW)
+    expect(grabArrRelease).not.toHaveBeenCalled()
+  })
+
   it("searches only once the gate allows it, and grabs only once the breaker does", async () => {
     jest.mocked(gateAndRecord).mockResolvedValueOnce("SEARCH_CAP")
     await runSwap(REPORT, START, NOW)

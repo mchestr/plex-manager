@@ -129,11 +129,12 @@ describe("the start", () => {
     expect(matchPlexItem).not.toHaveBeenCalled()
   })
 
-  it("doesn't match twice when the step runs again after its row was recorded", async () => {
+  it("matches again when the step runs again after its row was recorded and Plex still has the other title, since the first may never have gone out", async () => {
     jest.mocked(gateAndRecord).mockResolvedValue("ALREADY_RAN")
 
     await expect(runFixMatch(REPORT, START, NOW)).resolves.toMatchObject({ next: { data: { step: "wait" } } })
-    expect(matchPlexItem).not.toHaveBeenCalled()
+    expect(matchPlexItem).toHaveBeenCalledTimes(1)
+    expect(matchPlexItem).toHaveBeenCalledWith(SERVER, "555", HEAT)
   })
 })
 

@@ -11,7 +11,9 @@
  * release: {@link gateReplace} gates that second step in its own
  * serializable transaction and marks the row `replacedAt`, which is what the
  * breaker counts. A removal deletes at once, so its row is created replacing.
- * A gate that trips the breaker queues the admins' alert.
+ * A row counts whatever follows: a grab Radarr or Sonarr refuses, or a
+ * removal that stops before deleting, still uses a replacement. A gate that
+ * trips the breaker queues the admins' alert.
  *
  * @module lib/problem-reports/ledger
  */
@@ -168,12 +170,12 @@ export async function gateReplace(run: ReplacingRun, now: Date): Promise<"BREAKE
   return afterGate(result, now)
 }
 
-/** Ends a run's row with its outcome; a run that never reached the gate has no row. */
 /** Whether the run recorded its row: it acted, or was about to, before a step ran again. */
 export async function hasRunRecord(reportId: string, runToken: number): Promise<boolean> {
   return (await prisma.problemFixLedger.count({ where: { id: ledgerId(reportId, runToken) } })) > 0
 }
 
+/** Ends a run's row with its outcome; a run that never reached the gate has no row. */
 export async function endLedgerRow(reportId: string, runToken: number, outcome: string, now: Date): Promise<void> {
   await prisma.problemFixLedger.updateMany({ where: { id: ledgerId(reportId, runToken), endedAt: null }, data: { outcome, endedAt: now } })
 }
