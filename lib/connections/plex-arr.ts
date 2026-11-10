@@ -34,6 +34,9 @@ interface PlexServer {
   token: string
 }
 
+/** A Radarr movie or Sonarr series, with the `titleSlug` its web links use. */
+type ArrTitleLink = { service: "radarr" | "sonarr"; id: number; titleSlug: string }
+
 /** The movie or show behind an item: the item itself, or an episode's show. */
 async function readTitle(server: PlexServer, ratingKey: string): Promise<PlexItemMetadata | null> {
   const lookup = await getPlexItemMetadata(server, ratingKey)
@@ -64,8 +67,6 @@ export async function findArrTitle(server: PlexServer, ratingKey: string): Promi
     return null
   }
 }
-
-type ArrTitleLink = { service: "radarr" | "sonarr"; id: number; titleSlug: string }
 
 async function lookUp(server: PlexServer, ratingKey: string): Promise<ArrTitleLink | null> {
   const title = await readTitle(server, ratingKey)
