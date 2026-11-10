@@ -21,9 +21,10 @@
  *
  * A result whose legacy guid names the expected id is taken first; the
  * current agents' guids name no id, so a result with the expected title and
- * year comes next, then the first from the expected year (with none from it,
- * the server admin), and the wait is what tells whether it was the right
- * one. A step that runs again after a crash finds its ledger row:
+ * year comes next, then one from the expected year under another name
+ * (Sonarr's "The Office (US)" is the agent's "The Office"). With none of
+ * those, the report goes to the server admin, and the wait is what tells
+ * whether a pick was the right one. A step that runs again after a crash finds its ledger row:
  * when Plex already has the right title, the match took and the report is
  * fixed; otherwise it matches again, since the first match may never have
  * gone out, and the cap counts the run once. Matching back then goes to
@@ -64,11 +65,12 @@ async function search(server: PlexServer, target: MatchTarget, expected: Expecte
   return byId === null || byId.length > 0 ? byId : searchPlexMatches(server, target.ratingKey, byTitle)
 }
 
-/** A result from the expected year, when Radarr or Sonarr has one: a result from another year is another title. */
-const sameYear = (result: PlexMatchResult, expected: ExpectedTitle) => expected.year === null || result.year === expected.year
+/** A result with the expected title, and its year when Radarr or Sonarr has one, for agents whose guids name no id. */
+const sameTitle = (result: PlexMatchResult, expected: ExpectedTitle) =>
+  result.name.toLowerCase() === expected.title.toLowerCase() && (expected.year === null || result.year === expected.year)
 
-/** A result with the expected title and year, for agents whose guids name no id. */
-const sameTitle = (result: PlexMatchResult, expected: ExpectedTitle) => result.name.toLowerCase() === expected.title.toLowerCase() && sameYear(result, expected)
+/** A result from the expected year under another name: Sonarr's titles often carry a country or a year, and an agent may answer in another language. */
+const fromYear = (result: PlexMatchResult, expected: ExpectedTitle) => expected.year !== null && result.year === expected.year
 
 async function start(server: PlexServer, report: StepReport, data: ProblemReportFixPayload, now: Date): Promise<StepOutcome> {
   const check = await checkMatch(server, report.plexRatingKey)
@@ -82,7 +84,7 @@ async function start(server: PlexServer, report: StepReport, data: ProblemReport
   const pick =
     results.find((result) => idsFit(parsePlexExternalIds(result.guid, []), expected.ids)) ??
     results.find((result) => sameTitle(result, expected)) ??
-    results.find((result) => sameYear(result, expected))
+    results.find((result) => fromYear(result, expected))
   if (!pick) return { toAdmin: "NO_MATCH" }
   const holder = await findPlexItemByGuid(server, target.sectionId, pick.guid)
   if (holder.status === "unknown") return { toAdmin: "UNAVAILABLE" }

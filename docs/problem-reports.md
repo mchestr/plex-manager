@@ -94,7 +94,7 @@ The confirm says the title is unavailable to everyone until a new copy downloads
 6. It waits as a better copy does, without counting the bad download's failure in the history. A search that finished and grabbed nothing goes back to the server admin: "The file was removed, and the search found nothing to replace it".
 7. It ends as a swap does, without marking the grab failed again.
 
-A step that runs again after a crash finds its ledger row and hands the report back without acting ("The fix was interrupted part way"). The file may be deleted already, and a copy that came in since would read as the bad one, so nothing is ever deleted twice; the server admin checks the title and runs the fix again if it's needed.
+A first step that runs again after a crash finds its ledger row and hands the report back without acting ("The fix was interrupted part way"). The file may be deleted already, and a copy that came in since would read as the bad one, so nothing is ever deleted twice; the server admin checks the title and runs the fix again if it's needed. The search step can run twice after a crash, which searches twice and deletes nothing.
 
 ### Fix the Plex match
 
@@ -106,10 +106,10 @@ Plex matches movies and shows, so a report about an episode matches its show. Th
 
 When the match differs, the fix:
 
-1. asks the library section's agent (`GET /library/metadata/<ratingKey>/matches?manual=1` with the section's agent and language) for `tmdb-<id>` for a movie, then its title and year when that finds nothing, or Sonarr's title and year for a show. A result whose legacy guid names the expected id is taken first; otherwise one with the expected title and year, then the first from the expected year. When Radarr or Sonarr has a year for the title and no result is from it, the report goes to the server admin ("Plex's agent found nothing for the title Radarr or Sonarr has"), since a result from another year is another title;
+1. asks the library section's agent (`GET /library/metadata/<ratingKey>/matches?manual=1` with the section's agent and language) for `tmdb-<id>` for a movie, then its title and year when that finds nothing, or Sonarr's title and year for a show. A result whose legacy guid names the expected id is taken first; otherwise one with the expected title and year, then one from the expected year under another name, since Sonarr's titles often carry a country or a year ("The Office (US)" is the agent's "The Office") and an agent may answer in another language. With none of those, the report goes to the server admin ("Plex's agent found nothing for the title Radarr or Sonarr has");
 2. leaves Plex alone when another item in the section already has that match, since matching would merge the two items ("Another item in the library already has the right match");
 3. gates (the hourly cap on Plex changes) and records the run against the old guid, then matches (`PUT /library/metadata/<ratingKey>/match?guid=&name=`), which Plex does in the background;
-4. reads the item every 5 seconds for a minute: once it has Radarr's TMDB id (or IMDb id) or Sonarr's TVDB id, the report is fixed. Otherwise the item is matched back to what it had, and the report goes to the server admin; an item that was never matched has nothing to go back to, and the report says to check it in Plex. When the last read fails, Plex is read once more first, so one failed read doesn't undo a match that took. Matching back undoes the run's own change, so it isn't gated or counted against the cap again.
+4. reads the item every 5 seconds for a minute: once it has Radarr's TMDB id (or IMDb id) or Sonarr's TVDB id, the report is fixed. Otherwise Plex is asked to match it back to what it had, and the report goes to the server admin; an item that was never matched has nothing to go back to, and the report says to check it in Plex. When the last read fails, Plex is read once more first, so one failed read doesn't undo a match that took. Matching back undoes the run's own change, so it isn't gated or counted against the cap again.
 
 A step that runs again after a crash finds its ledger row: when Plex already has the right title, the match took and the report is fixed. Otherwise it matches again, since the first match may never have gone out, and the cap counts the run once; matching back then goes to what Plex had when the step ran again.
 

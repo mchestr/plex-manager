@@ -184,6 +184,18 @@ describe("checkMatch: a show", () => {
     expect(resolveFile).not.toHaveBeenCalled()
   })
 
+  it("can't tell when two series in Sonarr have the show's folder name", async () => {
+    jest.mocked(listSonarrSeriesFolders).mockResolvedValue({
+      success: true,
+      data: [
+        { id: 42, tvdbId: 73244, title: "The Office (US)", year: 2005, path: "/tv/The Office (US)" },
+        { id: 43, tvdbId: 99999, title: "The Office (US)", year: 2005, path: "/archive/The Office (US)" },
+      ],
+    })
+
+    await expect(checkMatch(SERVER, "6999")).resolves.toEqual({ verdict: "UNKNOWN", reason: "NOT_IN_SONARR" })
+  })
+
   it("can't tell when no series has one of the show's folders", async () => {
     plexHas({ ...SHOW, locations: ["/data/tv/Unknown Show"] })
 

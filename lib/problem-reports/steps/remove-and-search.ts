@@ -25,10 +25,11 @@
  * the bad copy's download doesn't count while waiting, since marking it
  * failed writes a failed download there.
  *
- * A step that runs again after a crash finds its ledger row and hands the
- * report back without acting (INTERRUPTED): the file may be deleted already,
- * and a copy that came in since would read as the bad one, so nothing is
- * ever deleted twice.
+ * A start step that runs again after a crash finds its ledger row and hands
+ * the report back without acting (INTERRUPTED): the file may be deleted
+ * already, and a copy that came in since would read as the bad one, so
+ * nothing is ever deleted twice. The search step, run again, monitors the
+ * title and searches a second time, which deletes nothing.
  *
  * @module lib/problem-reports/steps/remove-and-search
  */
