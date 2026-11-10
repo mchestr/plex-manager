@@ -139,6 +139,22 @@ test.describe('Media cleanup rule editor', () => {
     await expect(tid(page, 'admin-cleanup-undo-c4')).toHaveCount(0);
   });
 
+  test('opens the condition editor under its token at 1440 x 900, never beside it over the header (UX 4.4)', async ({ adminPage: page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openEditor(page, `/admin/cleanup/rules/${IDS.rules.dry}`);
+    const token = tid(page, 'admin-cleanup-condition-c2-value');
+    await token.click();
+    const editor = tid(page, 'admin-cleanup-condition-editor');
+    await expect(editor).toBeVisible();
+    const [at, box] = [await token.boundingBox(), await editor.boundingBox()];
+    if (!at || !box) throw new Error('The token or the condition editor has no box');
+    // Below the token, or flipped above it: never on its right with the header under it
+    expect(box.y >= at.y + at.height - 1 || box.y + box.height <= at.y + 1).toBe(true);
+    expect(box.x).toBeLessThan(at.x + at.width);
+    await page.keyboard.press('Escape');
+    await expect(editor).toHaveCount(0);
+  });
+
   test('adds an any-of group and a rule protection', async ({ adminPage: page }) => {
     await openEditor(page, `/admin/cleanup/rules/${IDS.rules.dry}`);
     await tid(page, 'admin-cleanup-add-group').click();

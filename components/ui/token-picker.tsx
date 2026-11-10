@@ -57,6 +57,14 @@ function tabbables(root: ParentNode, skip?: Element): HTMLElement[] {
   )
 }
 
+
+/**
+ * A panel taller than the room under its token flips above it, or stays
+ * below and scrolls (`max-h-(--available-height)`), but never moves beside
+ * the token, where it would cover the page header (UX 4.4 item 4).
+ */
+const STAY_ON_AXIS = { side: "flip", align: "flip", fallbackAxisSide: "none" } as const
+
 /**
  * The condition editor's popup (UX 4.4, 4.12.2). From `md` it is a non-modal
  * Popover under the pressed token, 25rem wide, as tall as the room under it,
@@ -187,6 +195,7 @@ export function TokenPicker({
         anchor={anchor}
         side="bottom"
         align="start"
+        collisionAvoidance={STAY_ON_AXIS}
         data-token-picker=""
         data-shell="popover"
         data-testid={testId}

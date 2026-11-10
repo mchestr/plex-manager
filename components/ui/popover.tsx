@@ -16,15 +16,19 @@ export function PopoverTrigger(props: PopoverPrimitive.Trigger.Props) {
 }
 
 type ContentProps = Omit<PopoverPrimitive.Popup.Props, "className"> &
-  Pick<PopoverPrimitive.Positioner.Props, "align" | "side" | "sideOffset" | "anchor"> & { className?: string }
+  Pick<PopoverPrimitive.Positioner.Props, "align" | "side" | "sideOffset" | "anchor" | "collisionAvoidance"> & { className?: string }
 
-/** `anchor` places the panel at another element than its trigger, as the token picker does. */
-export function PopoverContent({ align = "center", side = "bottom", sideOffset = 4, anchor, className, ...props }: ContentProps) {
+/**
+ * `anchor` places the panel at another element than its trigger, as the
+ * token picker does. `collisionAvoidance` goes to the Positioner: the token
+ * picker keeps a tall panel above or below its token, never beside it.
+ */
+export function PopoverContent({ align = "center", side = "bottom", sideOffset = 4, anchor, collisionAvoidance, className, ...props }: ContentProps) {
   const { container, popupProps } = usePortalContainer()
   const layer = usePopupLayer()
   return (
     <PopoverPrimitive.Portal container={container}>
-      <PopoverPrimitive.Positioner className={layer} anchor={anchor} align={align} side={side} sideOffset={sideOffset}>
+      <PopoverPrimitive.Positioner className={layer} anchor={anchor} align={align} side={side} sideOffset={sideOffset} collisionAvoidance={collisionAvoidance}>
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           {...popupProps}
