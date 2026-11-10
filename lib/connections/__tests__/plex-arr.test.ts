@@ -103,6 +103,13 @@ describe('findArrTitle', () => {
     expect(requested()).toEqual([plexItem('999')])
   })
 
+  it('finds nothing, without throwing, when the database read fails', async () => {
+    responses[plexItem('555')] = PLEX.movie
+    jest.mocked(getActiveService).mockRejectedValue(new Error('connection lost'))
+
+    await expect(findArrTitle(SERVER, '555')).resolves.toBeNull()
+  })
+
   it('finds nothing when Radarr fails', async () => {
     responses[plexItem('555')] = PLEX.movie
 

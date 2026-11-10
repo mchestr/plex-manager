@@ -320,6 +320,8 @@ describe('plex-shared-sections', () => {
       ['a timeout', () => Promise.reject(abortError())],
       ['a network error', () => Promise.reject(new TypeError('fetch failed'))],
       ['a body without librarySectionID', () => Promise.resolve(jsonResponse({ MediaContainer: { size: 0 } }))],
+      // A container's section without the item is not enough: the check denies
+      ['a section without an item', () => Promise.resolve(jsonResponse({ MediaContainer: { librarySectionID: 2 } }))],
     ])('reports %s as unknown and does not cache it', async (_label, failure) => {
       ;(global.fetch as jest.Mock).mockImplementation(failure)
 

@@ -22,6 +22,7 @@ describe('parsePlexExternalIds', () => {
     ['com.plexapp.agents.thetvdb://73244?lang=en', { tvdb: 73244 }],
     ['com.plexapp.agents.thetvdb://73244/1/1?lang=en', { tvdb: 73244 }],
     ['com.plexapp.agents.thetvdbdvdorder://73244?lang=en', { tvdb: 73244 }],
+    ['com.plexapp.agents.thetvdbdvdorder://73244/1/1?lang=en', { tvdb: 73244 }],
   ])('reads the legacy agent guid %s', (guid, expected) => {
     expect(parsePlexExternalIds(guid, [])).toEqual(expected)
   })
