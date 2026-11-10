@@ -139,6 +139,8 @@ export interface CleanupLeavingData {
   feature: CleanupFeatureState
   /** Every deletion and entry batch. The list filters never hide one (TS 10.4). */
   batches: BatchData[]
+  /** The daily deletion budget (Settings): at most `items` titles and `bytes` (a decimal string) a day. The approve dialog and the batch footer name it (UX 8.6). */
+  budget: { items: number; bytes: string }
   exits7d: ExitCounts
   filters: { rules: NamedRule[]; libraries: { sectionId: string; title: string }[]; statuses: ItemStatus[] }
   groups: LeavingGroup[]

@@ -283,6 +283,14 @@ describe("getCleanupLeavingSoon", () => {
       pausedBy: { id: "admin-2", name: "Sam Admin", isYou: false }, redis: true })
   })
 
+  it("gives the daily budget of Settings for the approve dialog and the batch footer", async () => {
+    seed({ settings: { options: { version: 1, budget: { items: 12, bytes: Number(300n * GIB) } } } })
+
+    const data = await load()
+
+    expect(data.budget).toEqual({ items: 12, bytes: String(300n * GIB) })
+  })
+
   it("reads a pausing admin whose user row is gone as Unknown member, as the other tabs do", async () => {
     seed({ settings: { pausedAt: NOW, pausedBy: "admin-gone" } })
 

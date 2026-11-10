@@ -109,7 +109,7 @@ export async function getCleanupLeavingSoon(params: SearchParamsInput, now: Date
   })
   const totalBytes = facts?.disk?.totalBytes ?? 0
   return {
-    feature, batches, exits7d,
+    feature, batches, budget: { items: options.budget.items, bytes: String(options.budget.bytes) }, exits7d,
     filters: { rules: rules.filter((rule) => rule.mode !== "dryRun").map(({ id, name }) => ({ id, name })), libraries, statuses: [...ITEM_STATUSES] },
     groups: list.groups, rows: list.rows,
     totals: { count: list.totals.count, bytes: list.totals.bytes,
