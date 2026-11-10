@@ -36,15 +36,16 @@ const refresh = () => revalidatePath("/report")
 /**
  * Reports a problem with a title in the member's libraries, or joins the
  * title's open report (`joined`). The title is checked against the libraries
- * shared with the member, and its details come from Plex. The note is the
- * member's own words: untrusted text, never instructions.
+ * shared with the member, and its details come from Plex. `device` answers
+ * "Does anything else play on {player}?". The note is the member's own
+ * words: untrusted text, never instructions.
  */
 export const reportProblem = memberAction({
   entitlement: "full",
   input: reportProblemInputSchema,
   fallbackError: "Could not send the report",
-  handler: async ({ ratingKey, problem, note }, { userId }): Promise<ActionResult<{ reportId: string; joined: boolean }>> => {
-    const result = await sendReport({ userId, ratingKey, problem, note })
+  handler: async ({ ratingKey, problem, note, device }, { userId }): Promise<ActionResult<{ reportId: string; joined: boolean }>> => {
+    const result = await sendReport({ userId, ratingKey, problem, note, device })
     if (!result.ok) return refused(result.refusal, result.retryAfterSec)
     refresh()
     return ok({ reportId: result.reportId, joined: result.outcome === "joined" })

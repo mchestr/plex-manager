@@ -1,14 +1,12 @@
 import type { Route } from "next"
 import Form from "next/form"
-import Link from "next/link"
 
+import { TitleList } from "@/components/problem-reports/title-list"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { Input } from "@/components/ui/input"
 import type { ReportPageData } from "@/lib/member/problem-reports"
 import { icons } from "@/lib/ui/icons"
-
-const TYPE_WORDS = { movie: "Movie", show: "Show", episode: "Episode" } as const
 
 interface ReportSearchProps {
   query: string
@@ -39,24 +37,7 @@ export function ReportSearch({ query, search }: ReportSearchProps) {
           No titles in your libraries match "{query}".
         </p>
       )}
-      {search && search.results.length > 0 && (
-        <ul className="flex flex-col" data-testid="report-results">
-          {search.results.map((result) => (
-            <li key={result.ratingKey}>
-              <Link
-                href={`/report?q=${encodeURIComponent(query)}&item=${result.ratingKey}` as Route}
-                scroll={false}
-                className="-mx-2 flex min-h-11 items-center gap-3 rounded-md px-2 py-2 text-ui text-foreground hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring"
-                data-testid={`report-result-${result.ratingKey}`}
-              >
-                <span className="min-w-0 flex-1 truncate">{result.title}</span>
-                <span className="text-label text-muted-foreground">{TYPE_WORDS[result.type]}</span>
-                <Icon icon={icons.chevronRight} className="text-muted-foreground" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      {search && search.results.length > 0 && <TitleList titles={search.results} query={query} testId="report-result" />}
     </section>
   )
 }

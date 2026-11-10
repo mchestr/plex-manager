@@ -19,7 +19,7 @@ import { prisma } from "@/lib/prisma"
 import { REPORTABLE_MEDIA_TYPES } from "@/lib/problem-reports/taxonomy"
 
 /** Which sections a member may browse: all of them, or a set of section keys. */
-type LibraryAccess = { all: true } | { all: false; sections: ReadonlySet<string> }
+export type LibraryAccess = { all: true } | { all: false; sections: ReadonlySet<string> }
 
 /** `NOT_FOUND` when the member may not report it (or it doesn't exist); `UNAVAILABLE` when Plex or plex.tv can't say. */
 export type MemberItem =

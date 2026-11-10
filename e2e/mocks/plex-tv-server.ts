@@ -1,6 +1,7 @@
 import { createServer, type Server } from 'node:http';
 
 import { TEST_USERS } from '../fixtures/auth';
+import { MOCK_HISTORY_MEMBER } from './tautulli-server';
 
 /**
  * A stand-in for plex.tv's share list, so member specs can pass the SEC-21
@@ -15,9 +16,10 @@ import { TEST_USERS } from '../fixtures/auth';
  * plex.tv's XML. Any other path is a 404.
  */
 
-/** Section keys shared with each Plex account. The regular member gets section 1, never section 2. */
+/** Section keys shared with each Plex account. The regular member and the history member get section 1, never section 2. */
 export const MOCK_SHARED_SECTIONS: Readonly<Record<string, readonly string[]>> = {
   [TEST_USERS.REGULAR.plexUserId]: ['1'],
+  [String(MOCK_HISTORY_MEMBER.userId)]: ['1'],
 };
 
 /** The fixed port the web server's `E2E_PLEX_TV_URL` names. */

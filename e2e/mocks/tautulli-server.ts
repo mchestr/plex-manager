@@ -18,6 +18,10 @@ import { createServer, type Server, type ServerResponse } from 'node:http';
  *   {@link MOCK_OLDEST_PLAY}, as an ascending one-row page asks for.
  * - `get_activity`, for the same read's open plays: an idle server, with no
  *   sessions, so last seen comes from `get_users_table` alone.
+ *
+ * `get_history` for {@link MOCK_HISTORY_MEMBER}'s `user_id`, or for one of
+ * their plays' `rating_key`, answers with those plays instead, for the
+ * problem reports spec's Recently watched.
  */
 
 /** Every user's all-time hours: over the first affiliate tier (50 h). */
@@ -34,6 +38,44 @@ export const MOCK_USERS_TABLE = {
   neverPlayed: { userId: 9300002 },
   noHistory: { userId: 9300003 },
 } as const;
+
+/**
+ * A member with recent plays, newest first: a movie in section 1, which the
+ * plex.tv mock shares with them, then one in section 2, which it doesn't.
+ * Their Tautulli `user_id` is their Plex account id.
+ */
+export const MOCK_HISTORY_MEMBER = {
+  userId: 9300101,
+  plays: [
+    { ratingKey: 93001, title: 'Harbour Lights', sectionId: 1, at: Date.parse('2026-11-08T20:00:00Z') },
+    { ratingKey: 94001, title: 'Harbour Nights', sectionId: 2, at: Date.parse('2026-11-07T20:00:00Z') },
+  ],
+} as const;
+
+const HISTORY_ROWS = MOCK_HISTORY_MEMBER.plays.map((play) => ({
+  rating_key: play.ratingKey,
+  media_type: 'movie',
+  title: play.title,
+  year: 2024,
+  section_id: play.sectionId,
+  started: play.at / 1000,
+  date: play.at / 1000,
+  user_id: MOCK_HISTORY_MEMBER.userId,
+  player: 'Living Room',
+  transcode_decision: 'direct play',
+  watched_status: 0,
+  ip_address: '10.0.0.9',
+}));
+
+/** The history member's plays for a `get_history` call that asks for them, or null. */
+function memberHistory(params: URLSearchParams) {
+  const ratingKey = params.get('rating_key');
+  const forMember = params.get('user_id') === String(MOCK_HISTORY_MEMBER.userId);
+  const forPlay = HISTORY_ROWS.some((row) => String(row.rating_key) === ratingKey);
+  if (!forMember && !forPlay) return null;
+  const rows = HISTORY_ROWS.filter((row) => !ratingKey || String(row.rating_key) === ratingKey).slice(0, Number(params.get('length') ?? 25));
+  return success({ recordsFiltered: rows.length, recordsTotal: rows.length, draw: 1, data: rows });
+}
 
 /** Tautulli's oldest recorded play: long enough ago to cover any threshold the specs set. */
 const MOCK_OLDEST_PLAY = new Date('2020-01-01T12:00:00Z');
@@ -73,6 +115,8 @@ function answer(params: URLSearchParams): unknown {
       return success({ recordsFiltered: total, recordsTotal: total, draw: 1, data: USERS_TABLE_ROWS.slice(start, start + length) });
     }
     case 'get_history': {
+      const history = memberHistory(params);
+      if (history) return history;
       const date = MOCK_OLDEST_PLAY.getTime() / 1000;
       return success({ recordsFiltered: 1, recordsTotal: 1, draw: 1, data: [{ date, started: date, user_id: MOCK_USERS_TABLE.played.userId }] });
     }

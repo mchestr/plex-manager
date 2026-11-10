@@ -21,8 +21,14 @@
  * in one serializable transaction, so a double tap writes one event.
  * Following checks the title against the member's libraries too.
  *
- * A second member's problem and note go on their `ALSO_REPORTED` event for
- * the server admin; they never change the open report. Followers see status
+ * Each report records what the member answered to "Does anything else play
+ * on {player}?" and the evidence from Tautulli (`readEvidence`: their last
+ * play, and whether the title has played to the end since its file was
+ * added) on its `REPORTED` event, or on its `ALSO_REPORTED` event when it
+ * joins an open report. The answer is kept only when the evidence names the
+ * player of that last play, which is the player the question asked about.
+ * A second member's problem and note go on that event
+ * for the server admin; they never change the open report. Followers see status
  * words only, never who else reported.
  *
  * ## Cancel
@@ -45,11 +51,12 @@ import { inSerializable } from "@/lib/db/serializable"
 import { prisma } from "@/lib/prisma"
 import { isUniqueConflict } from "@/lib/prisma-errors"
 import { readMemberItem } from "@/lib/problem-reports/access"
+import { readEvidence, type Evidence } from "@/lib/problem-reports/evidence"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
-import { needsNote, PROBLEMS, REPORTABLE_MEDIA_TYPES, type ProblemCode, type ReportableType } from "@/lib/problem-reports/taxonomy"
+import { asksDevice, needsNote, PROBLEMS, REPORTABLE_MEDIA_TYPES, type ProblemCode, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { titleKeyOf } from "@/lib/problem-reports/title"
 import { consume } from "@/lib/security/rate-limit"
-import { alsoReportedDataSchema } from "@/lib/validations/problem-reports"
+import { alsoReportedDataSchema, type DeviceAnswer } from "@/lib/validations/problem-reports"
 
 /** Why a report, follow or cancel was refused. */
 export type ReportRefusal =
@@ -95,8 +102,8 @@ function titleFields(item: PlexItemMetadata) {
   }
 }
 
-/** What a member adds to an open report: a problem and note, or nothing when they only follow it. */
-type AlsoReported = { problem?: ProblemCode; note?: string | null }
+/** What a member adds to an open report: a problem, note, device answer and evidence, or nothing when they only follow it. */
+type AlsoReported = { problem?: ProblemCode; note?: string | null; device?: DeviceAnswer; evidence?: Evidence }
 
 /** Whether the member already said this on the report: as its reporter, or in an `ALSO_REPORTED` event. */
 function alreadySaid(
@@ -141,8 +148,9 @@ export async function reportProblem(input: {
   ratingKey: string
   problem: ProblemCode
   note: string | null
+  device?: DeviceAnswer
 }): Promise<{ ok: true; outcome: "reported" | "joined"; reportId: string } | Refused> {
-  const { userId, problem, note } = input
+  const { userId, problem, note, device } = input
   // Before the rate limits, so a missing note doesn't spend them
   if (needsNote(problem) && !note) return refuse("NOTE_REQUIRED")
   const refused = await admit(userId)
@@ -153,6 +161,11 @@ export async function reportProblem(input: {
   if (PROBLEMS[problem].kind === "episodes" && member.item.type === "movie") return refuse("WRONG_KIND")
 
   const { titleKey, ...title } = titleFields(member.item)
+  const evidence = await readEvidence(userId, member.item)
+  // The player question is asked only for some playback problems, about the player of the member's last play of
+  // the title. An answer is kept only then, so it is about the player in this event's evidence, unless the member
+  // started the title on another player between opening the sheet and sending it.
+  const answers = device && asksDevice(problem) && evidence.lastPlay?.player ? { device, evidence } : { evidence }
   for (let attempt = 1; attempt <= CREATE_ATTEMPTS; attempt++) {
     try {
       const report = await prisma.$transaction(async (tx) => {
@@ -160,7 +173,9 @@ export async function reportProblem(input: {
           data: { reporterId: userId, problem, note, ...title, titleKey, activeKey: titleKey, status: "WITH_ADMIN" },
           select: { id: true },
         })
-        await tx.problemReportEvent.create({ data: { reportId: created.id, kind: "REPORTED", actorUserId: userId, data: { problem } } })
+        await tx.problemReportEvent.create({
+          data: { reportId: created.id, kind: "REPORTED", actorUserId: userId, data: { problem, ...answers } },
+        })
         return created
       })
       return { ok: true, outcome: "reported", reportId: report.id }
@@ -168,7 +183,7 @@ export async function reportProblem(input: {
       if (!isUniqueConflict(error, { index: "ProblemReport_activeKey_key", field: "activeKey" })) throw error
     }
 
-    const joined = await joinOpenReport({ activeKey: titleKey }, userId, { problem, note })
+    const joined = await joinOpenReport({ activeKey: titleKey }, userId, { problem, note, ...answers })
     if (joined) return { ok: true, outcome: "joined", reportId: joined }
     // The open report closed between the failed insert and the join, which frees the title: insert again
   }
