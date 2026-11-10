@@ -299,6 +299,7 @@ if (!result.success) {
   - `lib/ui/status.ts` (300): one table holds every status word, with its resolver and the Discord status rows
   - `lib/security/audit-log.ts` (220): the one enum of every audit event type, beside the writers that take it
   - `lib/audit/events.ts` (175): a Record over every audit event type, so a new type does not compile without its words
+  - `lib/admin/nav.ts` (230): one table feeds the sidebar, the tab bar, the command menu and the page titles, beside the rules that read it
 
 ### Testability First
 - Components should be independently testable

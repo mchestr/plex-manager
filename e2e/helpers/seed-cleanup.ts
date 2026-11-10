@@ -368,6 +368,11 @@ export async function useUnreachablePlex(): Promise<void> {
  * Puts back the four fields (and `updatedAt`) that the first
  * `useCleanupPlex()` or `useUnreachablePlex()` saved, then forgets them.
  * Safe to call twice, and without a saved row.
+ *
+ * It cannot clear the web server's caches. A member page that loaded while
+ * the mock was active keeps the mock's machine id in the `plex-identity`
+ * cache (24 hours), so later "Watch on Plex" links can name it. No spec
+ * asserts that id.
  */
 export async function restorePlex(): Promise<void> {
   if (!saved) return;
