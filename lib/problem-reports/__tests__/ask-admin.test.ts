@@ -76,6 +76,17 @@ describe('askServerAdmin', () => {
     expect(queueReportAlert).not.toHaveBeenCalled()
   })
 
+  it('adds nothing when the member asks again after their problem joined the open report', async () => {
+    prismaMock.problemReport.updateMany.mockRejectedValue(conflict())
+    prismaMock.problemReport.findFirst
+      .mockResolvedValueOnce(closed('CLOSED', { reason: 'no_better_copy' }) as never)
+      .mockResolvedValueOnce({ id: 'report-2', reporterId: 'member-2', problem: 'glitches', note: null, events: [{ data: { problem: 'blurry', note: 'Soft all through' } }] } as never)
+
+    expect(await ask()).toEqual({ ok: true, reportId: 'report-2' })
+    expect(prismaMock.problemReportEvent.create).not.toHaveBeenCalled()
+    expect(queueReportAlert).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['the server admin closed it', closed('CLOSED', { reason: 'admin' })],
     ['the member cancelled it', closed('CLOSED', { reason: 'cancelled' })],

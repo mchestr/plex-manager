@@ -3,7 +3,8 @@
  * Swap the copy, and Remove the file and search (docs/problem-reports.md,
  * "Fixes"). They record against the same target, search the same way, and
  * wait with the same check, which reads the file, then the queue, then the
- * history since the run acted:
+ * history since the run acted (from a minute before, for a clock a little
+ * behind the worker's):
  *
  * ```
  * a new file ─► imported: the step finishes the run
@@ -35,6 +36,9 @@ const CHECK_MS = 10 * MINUTE_MS
 
 /** How long a run waits for its new copy, or to start. */
 export const WAIT_MS = 24 * 60 * MINUTE_MS
+
+/** History up to this long before the run acted counts too: Radarr's or Sonarr's clock may be a little behind the worker's. */
+const CLOCK_SLACK_MS = MINUTE_MS
 
 /** Tracked states of a download that won't import without the server admin. */
 const STUCK = new Set(["importBlocked", "importFailed", "failedPending", "failed"])
@@ -88,7 +92,7 @@ async function downloads(config: ArrConfig, watch: CopyWatch): Promise<{ queue: 
   const title = { service: watch.service, id: watch.titleId }
   const [queue, history] = await Promise.all([listTitleQueue(config, title), listTitleHistory(config, title)])
   if (!queue.success || !history.success) return null
-  const counts = (record: ArrHistoryRecord) => ours(watch)(record) && record.at >= watch.since && !(watch.skipDownloadId && record.downloadId === watch.skipDownloadId)
+  const counts = (record: ArrHistoryRecord) => ours(watch)(record) && record.at >= watch.since - CLOCK_SLACK_MS && !(watch.skipDownloadId && record.downloadId === watch.skipDownloadId)
   const since = history.data.filter(counts).sort((a, b) => b.at - a.at)
   return { queue: queue.data.filter(ours(watch)), latest: since[0] ?? null }
 }
