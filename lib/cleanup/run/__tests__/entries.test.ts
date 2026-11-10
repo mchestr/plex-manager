@@ -113,6 +113,8 @@ beforeEach(() => {
   prismaMock.$transaction.mockImplementation(((fn: (client: unknown) => unknown) => fn(prismaMock)) as never)
   prismaMock.cleanupItem.createMany.mockImplementation(((args: { data: unknown[] }) => Promise.resolve({ count: args.data.length })) as never)
   prismaMock.cleanupItem.updateMany.mockResolvedValue({ count: 1 })
+
+  prismaMock.cleanupOutcome.findMany.mockResolvedValue([])
 })
 
 describe("addNewMatches: the entry check", () => {
@@ -173,6 +175,19 @@ describe("addNewMatches: the entry check", () => {
     expect(created().map((r) => r.itemKey)).toEqual(["movie:tmdb:2"])
     // movie 7 is a match with no arr record: a candidate that gets no row
     expect(result.rules[0]).toEqual(expect.objectContaining({ candidates: 2, checked: 4, held: false }))
+  })
+})
+
+describe("addNewMatches: titles that left after the snapshot (correctness review C-03)", () => {
+  it("never adds back a title deleted or rescued after the snapshot was taken, and adds one that left before it", async () => {
+    database({})
+    const ctx = contextOf([rule("rule-a")], [movie(1), movie(2), movie(3)])
+    const takenAt = ctx.snapshot?.header.facts.takenAt
+    prismaMock.cleanupOutcome.findMany.mockResolvedValue([{ itemKey: "movie:tmdb:1" }, { itemKey: "movie:tmdb:2" }] as never)
+    await addNewMatches(ctx)
+    expect(created().map((r) => r.itemKey)).toEqual(["movie:tmdb:3"])
+    expect(prismaMock.cleanupOutcome.findMany).toHaveBeenCalledWith({ where: { kind: { in: ["deleted", "rescued"] }, actedAt: { gt: new Date(takenAt ?? "") } },
+      select: { itemKey: true }, distinct: ["itemKey"] })
   })
 })
 

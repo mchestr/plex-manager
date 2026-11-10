@@ -6,7 +6,8 @@
  * Server-only.
  *
  * The compared set: from Dry run, the rule's matches on the newest complete
- * snapshot. From a live mode (Change mode), its items in Leaving soon
+ * snapshot, without the titles deleted or rescued after that snapshot
+ * (`exitedSince`, correctness review C-03). From a live mode (Change mode), its items in Leaving soon
  * (`leaving` or `approved`). The page sends back its `count` and
  * `keysHash` (the SHA-256 of the sorted keys) with the rule `revision` it
  * read, never the keys. The review also holds the counts, the turn-on
@@ -30,6 +31,7 @@ import { evaluateRule } from "@/lib/cleanup/engine/evaluate"
 import { entryLeaveOn } from "@/lib/cleanup/engine/overlap"
 import type { ItemClass, ItemResult } from "@/lib/cleanup/engine/types"
 import { keysHash } from "@/lib/cleanup/keys-hash"
+import { exitedSince } from "@/lib/cleanup/run/entries"
 import type { LiveRule, ReconcileContext } from "@/lib/cleanup/run/reconcile"
 import { loadReconcileContext } from "@/lib/cleanup/run/run-claim"
 import { parseRuleStats } from "@/lib/cleanup/schema/stats"
@@ -91,14 +93,15 @@ export async function computeTurnOnReview(ruleId: string, mode: "reviewFirst" | 
   const { settings, snapshot, evaluation, today } = ctx
   const results = evaluation ? evaluateRule(compiled, snapshot?.levels[definition.level]?.items ?? [], evaluation) : []
   const counts = { checked: results.length, matches: 0, protected: 0, missing: 0, cannotDelete: 0, due: 0 }
+  const fromDryRun = row.mode === "dryRun"
+  const exited = fromDryRun ? await exitedSince(snapshot?.header.facts.takenAt) : new Set<string>()
   const matches: ReviewItem[] = []
   for (const result of results) {
     const kind = classify(result).class
     const key = CLASS_COUNTS[kind]
     if (key) counts[key] += 1
-    if (kind === "match") matches.push({ itemKey: result.item.key, sizeBytes: result.item.sizeBytes ?? 0, leaveOn: null, result })
+    if (kind === "match" && !exited.has(result.item.key)) matches.push({ itemKey: result.item.key, sizeBytes: result.item.sizeBytes ?? 0, leaveOn: null, result })
   }
-  const fromDryRun = row.mode === "dryRun"
   const byKey = new Map(results.map((result) => [result.item.key, result]))
   const rows = fromDryRun ? [] : await prisma.cleanupItem.findMany({ where: { ruleIds: { has: ruleId }, state: { in: ["leaving", "approved"] } } })
   const set = (fromDryRun ? matches : rows.map((item) => ({ itemKey: item.itemKey, sizeBytes: Number(item.sizeBytes), leaveOn: item.leaveOn,

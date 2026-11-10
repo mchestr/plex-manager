@@ -67,6 +67,8 @@ beforeEach(() => {
   mockReset(prismaMock)
   mockContext.mockReset()
   mockContext.mockResolvedValue(contextOf())
+
+  prismaMock.cleanupOutcome.findMany.mockResolvedValue([])
 })
 
 describe("definitionHash", () => {
@@ -102,6 +104,13 @@ describe("computeTurnOnReview from Dry run", () => {
     expect(review?.rule).toEqual({ id: "rule-1", name: "Movies nobody watches", mode: "dryRun", revision: 4, definition: DEFINITION })
     expect(review?.joinRule).toEqual(expect.objectContaining({ id: "rule-1", mode: "reviewFirst", revision: 5, blocks: [], definition: DEFINITION }))
     expect(review?.set[0].result?.item.key).toBe("movie:tmdb:2")
+  })
+
+  it("leaves out a match that was deleted or rescued after the snapshot, so the turn-on never adds it back (correctness review C-03)", async () => {
+    prismaMock.cleanupRule.findUnique.mockResolvedValue(dryRule())
+    prismaMock.cleanupOutcome.findMany.mockResolvedValue([{ itemKey: "movie:tmdb:2" }] as never)
+    const review = await computeTurnOnReview("rule-1", "reviewFirst", new Date(NOW))
+    expect(review).toEqual(expect.objectContaining({ count: 2, keysHash: keysHash(["movie:tmdb:1", "movie:tmdb:3"]), bytes: 40 * GiB }))
   })
 
   it("plans the Automatic pace from the leave date inside the budget, and names the titles larger than the space budget (E17)", async () => {

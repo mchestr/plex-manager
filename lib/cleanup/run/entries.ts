@@ -5,7 +5,11 @@
  *
  * `addNewMatches(ctx)`, for each live rule without blocks:
  *
- * 1. Candidates: its `match` items with no `CleanupItem` row.
+ * 1. Candidates: its `match` items with no `CleanupItem` row, and with no
+ *    `deleted` or `rescued` outcome after the snapshot was taken
+ *    (`exitedSince`): a title that the act step deleted, or rescued on fresh
+ *    reads, never enters again from an older snapshot (correctness review
+ *    C-03). The next read decides.
  * 2. A waiting entry batch (a `held` row of the rule) skips the rule: the
  *    run adds no new item for it while the batch waits (`waitingBatch`).
  * 3. Above `entryCheck.count`, or above `entryCheck.percent` of the items it
@@ -87,13 +91,27 @@ function newRow(item: SnapshotItem, holders: readonly Holder[], joining: readonl
   } satisfies Prisma.CleanupItemCreateManyInput
 }
 
+/**
+ * The item keys that left Leaving soon as `deleted` or `rescued` after
+ * `takenAt`, the time of the snapshot that a run or a turn-on reads. That
+ * snapshot does not know the exit, so its match of such a title is stale.
+ */
+export async function exitedSince(takenAt: string | null | undefined): Promise<Set<string>> {
+  const at = takenAt ? new Date(takenAt) : null
+  if (!at || Number.isNaN(at.getTime())) return new Set()
+  const rows = await prisma.cleanupOutcome.findMany({ where: { kind: { in: ["deleted", "rescued"] }, actedAt: { gt: at } }, select: { itemKey: true },
+    distinct: ["itemKey"] })
+  return new Set(rows.map((row) => row.itemKey))
+}
+
 /** The candidates of each live rule without blocks, the entry check, and the rows (TS 8.5). */
 export async function addNewMatches(ctx: ReconcileContext): Promise<EntriesResult> {
   const result: EntriesResult = { rules: [], joined: 0, held: 0, protectedNow: 0 }
   const { snapshot, evaluation } = ctx
   if (!snapshot || !evaluation) return result
-  const existing = await prisma.cleanupItem.findMany({ select: { itemKey: true, state: true, ruleIds: true } })
-  const keys = new Set(existing.map((row) => row.itemKey))
+  const [existing, exited] = await Promise.all([prisma.cleanupItem.findMany({ select: { itemKey: true, state: true, ruleIds: true } }),
+    exitedSince(snapshot.header.facts.takenAt)])
+  const keys = new Set([...existing.map((row) => row.itemKey), ...exited])
   const waiting = new Set(existing.flatMap((row) => (row.state === "held" ? row.ruleIds : [])))
   const { count, percent } = ctx.settings.options.entryCheck
   const entries = new Map<string, RuleEntry>()

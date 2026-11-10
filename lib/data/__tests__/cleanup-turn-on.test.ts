@@ -81,6 +81,7 @@ beforeEach(() => {
   accessMock.mockResolvedValue(new Map([["1", null]]))
   contextMock.mockResolvedValue(contextOf(ITEMS))
   prismaMock.cleanupRule.findUnique.mockResolvedValue(DRY)
+  prismaMock.cleanupOutcome.findMany.mockResolvedValue([])
   prismaMock.cleanupRule.findMany.mockResolvedValue([{ id: "rule-2", name: "Big shows nobody plays" }] as never)
   prismaMock.cleanupItem.findMany.mockResolvedValue([])
   prismaMock.user.findMany.mockResolvedValue([])
