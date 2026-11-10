@@ -6,6 +6,7 @@ import { sizeText } from "@/components/admin/cleanup/preview/sizes"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import type { CleanupOverviewData } from "@/lib/cleanup/types/screens"
 import { useFormat } from "@/lib/format-context"
+import type { BoundFormat } from "@/lib/utils/format"
 
 type Library = CleanupOverviewData["library"]
 
@@ -55,12 +56,12 @@ export function FreeSpaceTile({ library, leavingBytes, meta }: FreeSpaceTileProp
 }
 
 /** "About 18 months of space at this growth" (TS 12.7 item 3): the free space over the growth, rounded down. */
-export function monthsOfSpace(library: Pick<Library, "freeBytes" | "growthBytesPerMonth">): string | null {
+export function monthsOfSpace(library: Pick<Library, "freeBytes" | "growthBytesPerMonth">, f: BoundFormat): string | null {
   const free = num(library.freeBytes)
   const growth = num(library.growthBytesPerMonth)
   if (free === null || growth === null || growth <= 0) return null
   const months = Math.floor(free / growth)
-  return `About ${months} ${months === 1 ? "month" : "months"} of space at this growth`
+  return `About ${f.number(months)} ${months === 1 ? "month" : "months"} of space at this growth`
 }
 
 /**
@@ -82,7 +83,7 @@ export function LibraryTiles({ library }: { library: Library }) {
         unit={shows.count === 1 ? "show" : "shows"}
         meta={`${sizeText(shows.bytes)} in ${f.number(shows.seasons)} ${shows.seasons === 1 ? "season" : "seasons"}`}
       />
-      <FreeSpaceTile library={library} meta={monthsOfSpace(library)} />
+      <FreeSpaceTile library={library} meta={monthsOfSpace(library, f)} />
       <StatTile
         label="Growth"
         value={growth?.value ?? null}

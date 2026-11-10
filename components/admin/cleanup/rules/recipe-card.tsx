@@ -10,6 +10,7 @@ import { Poster } from "@/components/ui/poster"
 import { Skeleton } from "@/components/ui/skeleton"
 import { settingsSection } from "@/lib/admin/routes"
 import type { RecipeId } from "@/lib/cleanup/constants"
+import type { WhyPart } from "@/lib/cleanup/engine/types"
 import { joinAnd, nounWord, SERVICE_NAMES } from "@/lib/cleanup/fields/words"
 import type { RecipeCardData } from "@/lib/cleanup/types/rule-parts"
 import { useFormat } from "@/lib/format-context"
@@ -26,23 +27,48 @@ export function recipeCount(recipe: Pick<RecipeCardData, "level" | "today">, f: 
   return `${f.number(today.count)} ${nounWord(today.count, level)}, ${sizeText(today.bytes)}`
 }
 
-/** The sentence of a recipe: its key values as value chips (UX 4.1.1), the other values in bold. */
-function RecipeSentence({ recipe }: { recipe: RecipeCardData }) {
-  const keys = new Set(recipe.keyValues)
+/**
+ * The first sentence of a rule: what it matches. The protections and the
+ * Then part read the same in every recipe, and the recipe step shows them.
+ */
+export function firstSentence(parts: readonly WhyPart[]): WhyPart[] {
+  const sentence: WhyPart[] = []
+  for (const part of parts) {
+    const end = part.strong ? -1 : part.text.search(/\.(\s|$)/)
+    if (end >= 0) return [...sentence, { ...part, text: part.text.slice(0, end + 1) }]
+    sentence.push(part)
+  }
+  return sentence
+}
+
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+/** A bold value with each key value in it as a value chip: "were added more than [180 days] ago". */
+function StrongWithChips({ text, keys }: { text: string; keys: readonly string[] }) {
+  const pattern = keys.length > 0 ? new RegExp(`(${[...keys].sort((a, b) => b.length - a.length).map(escape).join("|")})`) : null
+  const pieces = pattern ? text.split(pattern) : [text]
   return (
-    <p className="text-ui leading-7 text-muted-foreground">
-      {recipe.sentence.map((part, i) => {
-        if (!part.strong) return <span key={i}>{part.text}</span>
-        return keys.has(part.text) ? (
-          <strong key={i} className="rounded-sm border border-border-strong bg-secondary px-1.5 py-0.5 font-semibold whitespace-nowrap text-foreground">
-            {part.text}
-          </strong>
+    <strong className="font-semibold text-foreground">
+      {pieces.map((piece, i) =>
+        i % 2 === 1 ? (
+          <span key={i} className="rounded-sm border border-border-strong bg-secondary px-1.5 py-0.5 whitespace-nowrap" data-slot="value-chip">
+            {piece}
+          </span>
         ) : (
-          <strong key={i} className="font-semibold text-foreground">
-            {part.text}
-          </strong>
+          piece
         )
-      })}
+      )}
+    </strong>
+  )
+}
+
+/** The sentence of a recipe (UX 4.1.1): what it matches, its key values as value chips and the other values in bold. */
+function RecipeSentence({ recipe }: { recipe: RecipeCardData }) {
+  return (
+    <p className="text-ui leading-7 text-muted-foreground" data-testid={`admin-cleanup-recipe-${recipe.id}-sentence`}>
+      {firstSentence(recipe.sentence).map((part, i) =>
+        part.strong ? <StrongWithChips key={i} text={part.text} keys={recipe.keyValues} /> : <span key={i}>{part.text}</span>
+      )}
     </p>
   )
 }
