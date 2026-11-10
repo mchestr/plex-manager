@@ -106,6 +106,23 @@ describe('plex-shared-sections', () => {
       expect(init.headers['X-Plex-Client-Identifier']).toBe('test-client-id')
     })
 
+    it('asks the E2E plex.tv mock only while E2E_TEST_MODE is on', async () => {
+      process.env.E2E_TEST_MODE = 'true'
+      process.env.E2E_PLEX_TV_URL = 'http://127.0.0.1:2527'
+      ;(global.fetch as jest.Mock).mockImplementation((url: string) =>
+        Promise.resolve(textResponse(url.includes('/identity') ? IDENTITY_XML : SHARED_SERVERS_XML))
+      )
+
+      try {
+        expect(await getSharedSectionKeys(SERVER, '1001')).toEqual(new Set(['1', '3']))
+        const [[url]] = sharedServersCalls()
+        expect(url).toBe('http://127.0.0.1:2527/api/servers/abc123machine/shared_servers')
+      } finally {
+        delete process.env.E2E_TEST_MODE
+        delete process.env.E2E_PLEX_TV_URL
+      }
+    })
+
     it("returns 'all' for the server owner without asking plex.tv", async () => {
       expect(await getSharedSectionKeys(SERVER, 'owner-1')).toBe('all')
       expect(global.fetch).not.toHaveBeenCalled()

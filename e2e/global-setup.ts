@@ -1,6 +1,7 @@
 import { createE2EPrismaClient } from './helpers/prisma';
 import { clearRateLimits, redisAnswers } from './helpers/rate-limits';
 import { startMockLlm } from './mocks/llm-server';
+import { startMockPlexTv } from './mocks/plex-tv-server';
 import { startSmtpSink } from './mocks/smtp-server';
 import { startMockTautulli } from './mocks/tautulli-server';
 
@@ -141,9 +142,16 @@ async function globalSetup() {
     process.env.E2E_SMTP_INBOX_URL = smtp.inboxUrl;
     console.log(`[E2E Setup] SMTP sink listening, inbox at ${smtp.inboxUrl}`);
   }
+  // And plex.tv's share list, at the fixed port the web server's E2E_PLEX_TV_URL names.
+  // Like the sink, only the first run starts it; E2E_PLEX_TV_MOCK marks that it runs.
+  const plexTv = process.env.E2E_PLEX_TV_MOCK ? null : await startMockPlexTv();
+  if (plexTv) {
+    process.env.E2E_PLEX_TV_MOCK = '1';
+    console.log('[E2E Setup] Mock plex.tv listening');
+  }
   return async () => {
     await Promise.all(
-      [llm.server, tautulli.server, ...(smtp ? [smtp.smtp, smtp.http] : [])].map(
+      [llm.server, tautulli.server, ...(smtp ? [smtp.smtp, smtp.http] : []), ...(plexTv ? [plexTv] : [])].map(
         (server) => new Promise<void>((resolve) => server.close(() => resolve()))
       )
     );

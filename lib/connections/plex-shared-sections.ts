@@ -9,7 +9,8 @@
  *
  * 1. {@link getSharedSectionKeys} reads the owner's share list from plex.tv
  *    (`GET https://plex.tv/api/servers/<machineIdentifier>/shared_servers`,
- *    owner token; parsed by `./plex-shared-servers-xml`).
+ *    owner token; parsed by `./plex-shared-servers-xml`). The E2E suite
+ *    points this at a local mock (`./plex-tv-origin`).
  * 2. {@link getItemSectionKey} reads an item's section from its metadata
  *    (`getPlexItemMetadata` in `./plex-metadata`, the same read that gives
  *    the item's ids and files).
@@ -38,6 +39,7 @@ import { getPlexServerIdentity } from "./plex-connection"
 import { getClientIdentifier, logger } from "./plex-core"
 import { getPlexItemMetadata } from "./plex-metadata"
 import { parseSharedServersXml, type SharedSectionKeys } from "./plex-shared-servers-xml"
+import { plexTvOrigin } from "./plex-tv-origin"
 
 export type { SharedSectionKeys } from "./plex-shared-servers-xml"
 
@@ -95,7 +97,7 @@ async function loadSharedServers(
       return null
     }
 
-    const url = `https://plex.tv/api/servers/${encodeURIComponent(identity.machineIdentifier)}/shared_servers`
+    const url = `${plexTvOrigin()}/api/servers/${encodeURIComponent(identity.machineIdentifier)}/shared_servers`
     const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {

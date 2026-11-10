@@ -317,6 +317,26 @@ spec folder that the `chromium` project ignores:
   VoiceOver and TalkBack scripts and their results table, the manual release
   gate before the soft launch (P7.15, P7.16).
 
+## Library access for a member
+
+The SEC-21 library check (the poster route, and anything else that checks a
+rating key against a member's shared libraries) reads the server's share list
+from plex.tv. Global setup starts a plex.tv mock (`e2e/mocks/plex-tv-server.ts`)
+on `E2E_PLEX_TV_PORT` (default 2527), and the web server's `E2E_PLEX_TV_URL`
+points the share list at it. The app uses the mock only while `E2E_TEST_MODE`
+is `true` and at a loopback address (`lib/connections/plex-tv-origin.ts`).
+
+The regular user has section 1 shared and section 2 not
+(`MOCK_SHARED_SECTIONS`). A spec still needs a stub Plex server that answers
+`/identity` and the item's `/library/metadata/{ratingKey}`;
+`e2e/poster-library-access.spec.ts` shows both.
+
+The web server keeps what it reads for the whole run: a member's share list
+for 10 minutes per server, and an item's section for 24 hours
+(`lib/connections/plex-shared-sections.ts`). A spec that needs different
+shares gives the member its own Plex account in `MOCK_SHARED_SECTIONS`, and
+uses rating keys no other spec uses.
+
 ## Writing New Tests
 
 ### Example: Testing Admin Functionality

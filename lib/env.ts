@@ -241,6 +241,10 @@ export const envSchema = z.object({
   }),
   E2E_PORT: text("Test only: the Playwright web server port.", { group: "Test only", default: "3100" }),
   E2E_SMTP_PORT: text("Test only: the port of the Playwright SMTP sink, which the web server's SMTP_URL names.", { group: "Test only", default: "2526" }),
+  E2E_PLEX_TV_PORT: text("Test only: the port of the Playwright plex.tv mock, which the web server's E2E_PLEX_TV_URL names.", { group: "Test only", default: "2527" }),
+  E2E_PLEX_TV_URL: text('Test only: a local plex.tv mock that the library share list is read from instead of plex.tv. Used only with E2E_TEST_MODE="true" and a loopback http:// address; playwright.config.ts sets it. Never set it in .env.', {
+    group: "Test only",
+  }),
   SKIP_CONNECTION_TESTS: text('Test only: "true" skips live Plex checks.', { group: "Test only" }),
   ENABLE_DEV_UI: text('Development only: "1" serves the /dev/ui primitives sheet (Playwright sets it).', { group: "Test only" }),
 })
