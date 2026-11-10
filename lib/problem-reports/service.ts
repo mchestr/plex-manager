@@ -51,7 +51,7 @@ import { isUniqueConflict } from "@/lib/prisma-errors"
 import { readMemberItem } from "@/lib/problem-reports/access"
 import { readEvidence, type Evidence } from "@/lib/problem-reports/evidence"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
-import { needsNote, PROBLEMS, REPORTABLE_MEDIA_TYPES, type ProblemCode, type ReportableType } from "@/lib/problem-reports/taxonomy"
+import { asksDevice, needsNote, PROBLEMS, REPORTABLE_MEDIA_TYPES, type ProblemCode, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { titleKeyOf } from "@/lib/problem-reports/title"
 import { consume } from "@/lib/security/rate-limit"
 import { alsoReportedDataSchema, type DeviceAnswer } from "@/lib/validations/problem-reports"
@@ -160,7 +160,8 @@ export async function reportProblem(input: {
 
   const { titleKey, ...title } = titleFields(member.item)
   const evidence = await readEvidence(userId, member.item)
-  const answers = device ? { device, evidence } : { evidence }
+  // The player question is asked only for some playback problems; an answer sent for any other is dropped
+  const answers = device && asksDevice(problem) ? { device, evidence } : { evidence }
   for (let attempt = 1; attempt <= CREATE_ATTEMPTS; attempt++) {
     try {
       const report = await prisma.$transaction(async (tx) => {

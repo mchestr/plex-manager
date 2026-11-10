@@ -26,7 +26,11 @@ import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("PROBLEM_REPORT_TITLES")
 
-/** Plays read for Recently watched, and rows shown. */
+/**
+ * Plays read for Recently watched, and rows shown. Plays outside the
+ * member's libraries, and a binge of one show, use up the window, so it can
+ * show fewer rows than the limit.
+ */
 const HISTORY_PLAYS = 100
 const RECENT_LIMIT = 12
 
@@ -55,23 +59,21 @@ const sessionsSchema = z.looseObject({ MediaContainer: z.looseObject({ Metadata:
 
 const isReportable = (type: string): type is ReportableType => type === "movie" || type === "show" || type === "episode"
 
-/** The member's own streams on the server now. */
-export async function watchingNow(
-  server: PlexServerConfig,
-  member: { plexUserId: string | null; isOwner: boolean },
-  access: LibraryAccess
-): Promise<TitleResult[] | null> {
-  if (!member.plexUserId) return []
+type Session = z.infer<typeof sessionSchema>
+
+/** The session's Plex user, in the shape `matchesSessionUser` reads. */
+const sessionUser = (session: Session) => ({ User: session.User ? { id: session.User.id === undefined ? undefined : String(session.User.id) } : undefined })
+
+async function readWatching(server: PlexServerConfig, viewer: { plexUserId: string; isOwner: boolean }, access: LibraryAccess): Promise<TitleResult[] | null> {
   const result = await getPlexSessions(server)
   const parsed = sessionsSchema.safeParse(result.data)
   if (!result.success || !parsed.success) return null
-  const viewer = { plexUserId: member.plexUserId, isOwner: member.isOwner }
   const titles = new Map<string, TitleResult>()
   for (const raw of parsed.data.MediaContainer?.Metadata ?? []) {
     const session = sessionSchema.safeParse(raw)
     if (!session.success) continue
     const s = session.data
-    if (!isReportable(s.type) || !matchesSessionUser({ User: s.User ? { id: s.User.id === undefined ? undefined : String(s.User.id) } : undefined }, viewer)) continue
+    if (!isReportable(s.type) || !matchesSessionUser(sessionUser(s), viewer)) continue
     if (!inLibraries(access, s.librarySectionID) || titles.has(s.ratingKey)) continue
     titles.set(s.ratingKey, {
       ratingKey: s.ratingKey,
@@ -83,14 +85,34 @@ export async function watchingNow(
   return [...titles.values()]
 }
 
-/** The member's recent plays, newest first: one row per movie, and one per show (its newest episode). */
-export async function recentlyWatched(userId: string, access: LibraryAccess): Promise<TitleResult[] | null> {
+/** The member's own streams on the server now. */
+export async function watchingNow(
+  server: PlexServerConfig,
+  member: { plexUserId: string | null; isOwner: boolean },
+  access: LibraryAccess
+): Promise<TitleResult[] | null> {
+  if (!member.plexUserId) return []
+  try {
+    return await readWatching(server, { plexUserId: member.plexUserId, isOwner: member.isOwner }, access)
+  } catch (error) {
+    logger.error("Could not read the member's streams", error)
+    return null
+  }
+}
+
+/**
+ * The member's recent plays, newest first: one row per movie, and one per
+ * show (its newest episode).
+ *
+ * @param plexUserId - The member's Plex account id, which Tautulli keys them by
+ */
+export async function recentlyWatched(plexUserId: string | null, access: LibraryAccess): Promise<TitleResult[] | null> {
+  const tautulliUserId = tautulliUserIdOf(plexUserId)
+  if (tautulliUserId === null) return []
   try {
     const row = await getActiveService("tautulli")
     if (!row) return null
     const config = { url: row.url, apiKey: row.apiKey }
-    const tautulliUserId = await tautulliUserIdOf(userId)
-    if (tautulliUserId === null) return []
     const plays = await readHistory(config, { user_id: tautulliUserId, length: HISTORY_PLAYS })
     if (!plays) return null
     const titles = new Map<string, TitleResult>()

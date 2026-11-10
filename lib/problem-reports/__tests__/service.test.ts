@@ -91,6 +91,18 @@ describe('reportProblem', () => {
     expect(consume).toHaveBeenCalledWith('problem-report:create:day', 'member-1')
   })
 
+  it("keeps the player answer only for a problem that asks it", async () => {
+    await report({ problem: 'no_sound', device: 'nothing_plays' })
+    await report({ problem: 'blurry', device: 'nothing_plays' })
+
+    expect(prismaMock.problemReportEvent.create).toHaveBeenNthCalledWith(1, {
+      data: expect.objectContaining({ data: { problem: 'no_sound', device: 'nothing_plays', evidence: EVIDENCE } }),
+    })
+    expect(prismaMock.problemReportEvent.create).toHaveBeenNthCalledWith(2, {
+      data: expect.objectContaining({ data: { problem: 'blurry', evidence: EVIDENCE } }),
+    })
+  })
+
   it("keys a title without a guid by its rating key", async () => {
     jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: { ...MOVIE, guid: undefined }, server: SERVER })
 

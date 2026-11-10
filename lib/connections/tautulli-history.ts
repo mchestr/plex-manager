@@ -66,12 +66,16 @@ export interface HistoryRow {
 /**
  * Plays from `get_history`, newest first; a row that doesn't parse is
  * skipped. `null` when Tautulli can't be read.
+ *
+ * @param params - `rating_key` matches the played item, so a show's plays are read by `grandparent_rating_key`
+ * @param opts - `tautulliCommand`'s timeout and attempts, for a read someone waits on
  */
 export async function readHistory(
   config: { url: string; apiKey: string },
-  params: { user_id?: number; rating_key?: string; length: number }
+  params: { user_id?: number; rating_key?: string; grandparent_rating_key?: string; length: number },
+  opts?: { timeoutMs?: number; attempts?: number }
 ): Promise<HistoryRow[] | null> {
-  const result = await tautulliCommand(config, "get_history", params, pageSchema)
+  const result = await tautulliCommand(config, "get_history", params, pageSchema, opts)
   if (!result.ok) return null
   return result.data.flatMap((raw) => {
     const row = rowSchema.safeParse(raw)

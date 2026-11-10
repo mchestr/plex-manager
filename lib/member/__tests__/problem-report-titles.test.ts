@@ -7,12 +7,10 @@ import { getPlexSessions } from '@/lib/connections/plex'
 import { readHistory, type HistoryRow } from '@/lib/connections/tautulli-history'
 import { getActiveService } from '@/lib/data/active-service'
 import { recentlyWatched, watchingNow } from '@/lib/member/problem-report-titles'
-import { tautulliUserIdOf } from '@/lib/problem-reports/evidence'
 
 jest.mock('@/lib/connections/plex', () => ({ getPlexSessions: jest.fn() }))
 jest.mock('@/lib/connections/tautulli-history', () => ({ readHistory: jest.fn() }))
 jest.mock('@/lib/data/active-service', () => ({ getActiveService: jest.fn() }))
-jest.mock('@/lib/problem-reports/evidence', () => ({ tautulliUserIdOf: jest.fn() }))
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
 }))
@@ -32,7 +30,6 @@ const play = (overrides: Partial<HistoryRow>): HistoryRow => ({
 beforeEach(() => {
   jest.clearAllMocks()
   jest.mocked(getActiveService).mockResolvedValue({ url: 'http://tautulli.lan:8181', apiKey: 'key' } as never)
-  jest.mocked(tautulliUserIdOf).mockResolvedValue(42)
 })
 
 describe('watchingNow', () => {
@@ -63,6 +60,12 @@ describe('watchingNow', () => {
     expect(await watchingNow(SERVER, { plexUserId: 'owner', isOwner: true }, { all: true })).toHaveLength(1)
   })
 
+  it('is null when reading the sessions throws', async () => {
+    jest.mocked(getPlexSessions).mockRejectedValue(new Error('socket hang up'))
+
+    expect(await watchingNow(SERVER, MEMBER, SECTION_1)).toBeNull()
+  })
+
   it('is null when Plex cannot be read, and empty without a Plex account', async () => {
     jest.mocked(getPlexSessions).mockResolvedValue({ success: false, error: 'Plex returned HTTP 500' })
 
@@ -81,26 +84,34 @@ describe('recentlyWatched', () => {
       play({ ratingKey: '556', title: 'Unshared', sectionId: '9' }),
     ])
 
-    expect(await recentlyWatched('member-1', SECTION_1)).toEqual([
+    expect(await recentlyWatched('42', SECTION_1)).toEqual([
       { ratingKey: '7012', type: 'episode', title: 'The Office S1E2: Diversity Day', posterKey: '6999' },
       { ratingKey: '555', type: 'movie', title: 'Heat (1995)', posterKey: '555' },
     ])
     expect(readHistory).toHaveBeenCalledWith({ url: 'http://tautulli.lan:8181', apiKey: 'key' }, { user_id: 42, length: 100 })
   })
 
-  it('is empty for a member Tautulli does not know, and null without Tautulli', async () => {
-    jest.mocked(tautulliUserIdOf).mockResolvedValue(null)
-    expect(await recentlyWatched('member-1', SECTION_1)).toEqual([])
+  it('leaves out a play Tautulli names no library for, unless the member sees every library', async () => {
+    jest.mocked(readHistory).mockResolvedValue([play({ sectionId: undefined })])
+
+    expect(await recentlyWatched('42', SECTION_1)).toEqual([])
+    expect(await recentlyWatched('42', { all: true })).toHaveLength(1)
+  })
+
+  it('is empty for a member without a numeric Plex id, and null without Tautulli', async () => {
+    expect(await recentlyWatched('not-a-plex-id', SECTION_1)).toEqual([])
+    expect(await recentlyWatched(null, SECTION_1)).toEqual([])
+    expect(readHistory).not.toHaveBeenCalled()
 
     jest.mocked(getActiveService).mockResolvedValue(null)
-    expect(await recentlyWatched('member-1', SECTION_1)).toBeNull()
+    expect(await recentlyWatched('42', SECTION_1)).toBeNull()
   })
 
   it('is null when Tautulli fails', async () => {
     jest.mocked(readHistory).mockResolvedValue(null)
-    expect(await recentlyWatched('member-1', SECTION_1)).toBeNull()
+    expect(await recentlyWatched('42', SECTION_1)).toBeNull()
 
     jest.mocked(getActiveService).mockRejectedValue(new Error('connection lost'))
-    expect(await recentlyWatched('member-1', SECTION_1)).toBeNull()
+    expect(await recentlyWatched('42', SECTION_1)).toBeNull()
   })
 })
