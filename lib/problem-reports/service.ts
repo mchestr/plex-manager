@@ -25,7 +25,9 @@
  * on {player}?" and the evidence from Tautulli (`readEvidence`: their last
  * play, and whether the title has played to the end since its file was
  * added) on its `REPORTED` event, or on its `ALSO_REPORTED` event when it
- * joins an open report. A second member's problem and note go on that event
+ * joins an open report. The answer is kept only when the evidence names the
+ * player of that last play, which is the player the question asked about.
+ * A second member's problem and note go on that event
  * for the server admin; they never change the open report. Followers see status
  * words only, never who else reported. A new report also queues the admins'
  * Discord alert (`queueReportAlert`); a join adds to a report they know of.
@@ -162,8 +164,9 @@ export async function reportProblem(input: {
 
   const { titleKey, ...title } = titleFields(member.item)
   const evidence = await readEvidence(userId, member.item)
-  // The player question is asked only for some playback problems; an answer sent for any other is dropped
-  const answers = device && asksDevice(problem) ? { device, evidence } : { evidence }
+  // The player question is asked only for some playback problems, about the player of the member's last play of
+  // the title. An answer is kept only then, so it is always about the player in this event's evidence.
+  const answers = device && asksDevice(problem) && evidence.lastPlay?.player ? { device, evidence } : { evidence }
   for (let attempt = 1; attempt <= CREATE_ATTEMPTS; attempt++) {
     try {
       const report = await prisma.$transaction(async (tx) => {

@@ -27,8 +27,15 @@ describe("plainDiscordText", () => {
     expect(plainDiscordText("Pla\u200by\u202e evil\u2066 \n\n next\tline", 100)).toBe("Play evil next line")
   })
 
-  it("cuts it to the cap before escaping, with an ellipsis", () => {
+  it("drops bidi and zero-width characters inside a masked link too", () => {
+    expect(plainDiscordText("[He\u202eat](https://ev\u2066il.exa\u200bmple)", 100)).toBe("\\[Heat\\]\\(https\\://evil.example\\)")
+  })
+
+  it("cuts it to the cap, backslashes included, with an ellipsis and never half an escape", () => {
     expect(plainDiscordText("A very long title indeed", 10)).toBe("A very lo…")
+    expect(plainDiscordText("a*b*c*d", 6)).toBe("a\\*b…")
+    expect(plainDiscordText("a*b", 4)).toBe("a\\*b")
+    expect(plainDiscordText("*".repeat(300), 120).length).toBeLessThanOrEqual(120)
     expect(plainDiscordText("   ", 10)).toBe("")
   })
 })

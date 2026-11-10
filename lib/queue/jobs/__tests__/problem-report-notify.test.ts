@@ -23,8 +23,9 @@ jest.mock('@/lib/db/serializable', () => ({
 jest.mock('@/lib/discord/config', () => ({ isDiscordBotEnabled: jest.fn() }))
 jest.mock('@/lib/discord/api', () => ({ ...jest.requireActual('@/lib/discord/api'), sendDiscordDirectMessage: jest.fn() }))
 jest.mock('@/lib/env', () => ({ getBaseUrl: () => 'https://plex.example.com' }))
+const mockInfo = jest.fn()
 jest.mock('@/lib/utils/logger', () => ({
-  createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+  createLogger: () => ({ debug: jest.fn(), info: (...args: unknown[]) => mockInfo(...args), warn: jest.fn(), error: jest.fn() }),
 }))
 
 const NOW = new Date('2026-11-09T20:00:00Z')
@@ -90,14 +91,42 @@ describe('processProblemReportNotify', () => {
     expect(sendDiscordDirectMessage).not.toHaveBeenCalled()
   })
 
-  it('sends nothing while the bot is off, or when no admin linked Discord', async () => {
+  it('sends nothing while the bot is off, or when no admin linked Discord, and logs why', async () => {
     jest.mocked(isDiscordBotEnabled).mockResolvedValue(false)
     await expect(processProblemReportNotify(job())).resolves.toEqual({ skipped: 'BOT_DISABLED' })
+    expect(mockInfo).toHaveBeenLastCalledWith('Skipped a problem report alert', { reportId: 'r1', reason: 'BOT_DISABLED' })
 
     jest.mocked(isDiscordBotEnabled).mockResolvedValue(true)
     prismaMock.user.findMany.mockResolvedValue([{ id: 'admin-1', discordConnection: null }] as never)
     await expect(processProblemReportNotify(job())).resolves.toEqual({ skipped: 'NO_ADMINS' })
+    expect(mockInfo).toHaveBeenLastCalledWith('Skipped a problem report alert', { reportId: 'r1', reason: 'NO_ADMINS' })
     expect(prismaMock.problemReport.updateMany).not.toHaveBeenCalled()
+  })
+
+  it("claims nothing when the member's name can't be read, so a retry can still send", async () => {
+    const down = new Error('database is down')
+    prismaMock.user.findUnique.mockRejectedValue(down)
+
+    await expect(processProblemReportNotify(job())).rejects.toBe(down)
+
+    expect(prismaMock.problemReport.updateMany).not.toHaveBeenCalled()
+    expect(sendDiscordDirectMessage).not.toHaveBeenCalled()
+  })
+
+  it("lists the member's waiting reports in one DM per admin", async () => {
+    prismaMock.problemReport.findMany.mockResolvedValue([
+      ...PENDING,
+      { id: 'r2', problem: 'blurry', title: 'Pilot', year: 2005, showTitle: 'The Office', seasonNumber: 1, episodeNumber: 1 },
+    ] as never)
+
+    await expect(processProblemReportNotify(job())).resolves.toEqual({ sent: 2 })
+
+    expect(prismaMock.problemReport.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['r1', 'r2'] }, alertedAt: null }, data: { alertedAt: NOW } })
+    expect(sendDiscordDirectMessage).toHaveBeenCalledTimes(2)
+    const content = jest.mocked(sendDiscordDirectMessage).mock.calls[0][1]
+    expect(content).toMatch(/^Jane reported 2 problems:\n/)
+    expect(content).toContain('/admin/problem-reports/r1>')
+    expect(content).toContain('/admin/problem-reports/r2>')
   })
 
   it('sends nothing when another job claimed the reports first', async () => {
