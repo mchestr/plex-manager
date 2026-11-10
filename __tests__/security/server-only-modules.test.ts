@@ -38,6 +38,40 @@ const CLEANUP_SERVER_ONLY = [
   'lib/cleanup/schedule.ts',
   'lib/cleanup/snapshot/store.ts',
   'lib/cleanup/snapshot/cache.ts',
+  'lib/cleanup/snapshot/read.ts',
+  'lib/cleanup/snapshot/access.ts',
+  // The collection sync: plan.ts and text.ts are pure
+  'lib/cleanup/collections/adopt.ts',
+  'lib/cleanup/collections/collection.ts',
+  'lib/cleanup/collections/context.ts',
+  'lib/cleanup/collections/read-members.ts',
+  'lib/cleanup/collections/request.ts',
+  'lib/cleanup/collections/sync.ts',
+  // The preview: the pure parts (compute, results, words, why text) stay client-safe
+  'lib/cleanup/preview/load.ts',
+  'lib/cleanup/preview/protection-impact.ts',
+  'lib/cleanup/preview/recipe-preview.ts',
+  'lib/cleanup/preview/rules.ts',
+  'lib/cleanup/preview/run-preview.ts',
+  'lib/cleanup/preview/why-load.ts',
+  'lib/cleanup/preview/why-sheet.ts',
+  // Member data: label-filter.ts, reasons.ts and groups.ts are pure
+  'lib/cleanup/member/access.ts',
+  'lib/cleanup/member/gate.ts',
+  'lib/cleanup/member/items.ts',
+  'lib/cleanup/member/keeps.ts',
+  'lib/cleanup/member/list.ts',
+  // The run: each file reads or writes the item rows
+  'lib/cleanup/run/batches.ts',
+  'lib/cleanup/run/entries.ts',
+  'lib/cleanup/run/exit.ts',
+  'lib/cleanup/run/prune.ts',
+  'lib/cleanup/run/reconcile.ts',
+  'lib/cleanup/run/recover.ts',
+  'lib/cleanup/run/release.ts',
+  'lib/cleanup/run/run-claim.ts',
+  'lib/cleanup/run/show-raise.ts',
+  'lib/cleanup/run/turn-on-review.ts',
 ]
 
 const MODULES = [
@@ -62,6 +96,11 @@ it('covers the loaders, the chatbot, the affiliate and the media cleanup modules
       'lib/affiliates/settings.ts',
       'lib/cleanup/protections.ts',
       'lib/cleanup/snapshot/cache.ts',
+      'lib/cleanup/snapshot/read.ts',
+      'lib/cleanup/collections/sync.ts',
+      'lib/cleanup/preview/run-preview.ts',
+      'lib/cleanup/member/gate.ts',
+      'lib/cleanup/run/reconcile.ts',
       'lib/email/transport.ts',
     ])
   )
