@@ -77,6 +77,12 @@ export const PROBLEMS = {
 
 export type ProblemCode = keyof typeof PROBLEMS
 
+/** Playback problems that ask "Does anything else play on {player}?" when the member's last player is known. */
+const ASKS_DEVICE: ReadonlySet<ProblemCode> = new Set(["wont_start", "stops", "glitches", "out_of_sync", "no_sound"])
+
+/** Picture problems that first say a converted play lowers quality, when the member's last play was converted. */
+const TRANSCODE_TIP: ReadonlySet<ProblemCode> = new Set(["blurry", "glitches"])
+
 /** Every code, for `z.enum`. */
 export const PROBLEM_CODES = Object.keys(PROBLEMS) as [ProblemCode, ...ProblemCode[]]
 
@@ -88,6 +94,16 @@ export function problemsOf(kind: ProblemKind): { code: ProblemCode; label: strin
 /** Step 1's rows for a title: episode problems only for shows and episodes. */
 export function kindsFor(type: ReportableType): readonly { id: ProblemKind; label: string }[] {
   return type === "movie" ? PROBLEM_KINDS.filter((kind) => kind.id !== "episodes") : PROBLEM_KINDS
+}
+
+/** Whether the sheet asks if anything else plays on the member's player. */
+export function asksDevice(code: ProblemCode): boolean {
+  return ASKS_DEVICE.has(code)
+}
+
+/** Whether the sheet explains a converted play before sending. */
+export function showsTranscodeTip(code: ProblemCode): boolean {
+  return TRANSCODE_TIP.has(code)
 }
 
 /** Whether the member must say what's wrong in a note. */

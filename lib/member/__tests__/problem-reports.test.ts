@@ -9,12 +9,16 @@ import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { getPlexShowEpisodes, searchPlexMedia, type PlexItemMetadata } from '@/lib/connections/plex'
 import { getActivePlexServerConfig } from '@/lib/connections/plex-config'
+import { recentlyWatched, watchingNow } from '@/lib/member/problem-report-titles'
 import { getReportPageData } from '@/lib/member/problem-reports'
 import { memberLibraryAccess, readMemberItem } from '@/lib/problem-reports/access'
+import { memberLastPlay } from '@/lib/problem-reports/evidence'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/connections/plex', () => ({ getPlexShowEpisodes: jest.fn(), searchPlexMedia: jest.fn() }))
 jest.mock('@/lib/connections/plex-config', () => ({ getActivePlexServerConfig: jest.fn() }))
+jest.mock('@/lib/member/problem-report-titles', () => ({ watchingNow: jest.fn(), recentlyWatched: jest.fn() }))
+jest.mock('@/lib/problem-reports/evidence', () => ({ memberLastPlay: jest.fn() }))
 jest.mock('@/lib/problem-reports/access', () => ({
   ...jest.requireActual('@/lib/problem-reports/access'),
   memberLibraryAccess: jest.fn(),
@@ -29,7 +33,12 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockReset(prismaMock)
   prismaMock.problemReport.findMany.mockResolvedValue([])
+  prismaMock.user.findUnique.mockResolvedValue({ plexUserId: 'member-plex' } as never)
   jest.mocked(getActivePlexServerConfig).mockResolvedValue(SERVER)
+  jest.mocked(memberLibraryAccess).mockResolvedValue({ all: false, sections: new Set(['1']) })
+  jest.mocked(watchingNow).mockResolvedValue([])
+  jest.mocked(recentlyWatched).mockResolvedValue([])
+  jest.mocked(memberLastPlay).mockResolvedValue(null)
 })
 
 describe('getReportPageData', () => {
@@ -67,8 +76,8 @@ describe('getReportPageData', () => {
     expect(search).toEqual({
       error: null,
       results: [
-        { ratingKey: '1', type: 'movie', title: 'Shared (2001)' },
-        { ratingKey: '3', type: 'episode', title: 'The Office S1E1: Pilot' },
+        { ratingKey: '1', type: 'movie', title: 'Shared (2001)', posterKey: '1' },
+        { ratingKey: '3', type: 'episode', title: 'The Office S1E1: Pilot', posterKey: '3' },
       ],
     })
   })
@@ -97,8 +106,30 @@ describe('getReportPageData', () => {
       title: 'The Office (2005)',
       episodes: [{ ratingKey: '7001', label: 'S1E1: Pilot' }],
       openReport: { id: 'open', problem: 'Episodes are missing', status: 'WITH_ADMIN', since: AT.toISOString(), yours: false },
+      lastPlay: null,
     })
+    expect(memberLastPlay).toHaveBeenCalledWith('member-1', '6999')
     expect(prismaMock.problemReport.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { activeKey: 'plex://show/office' } }))
+  })
+
+  it('reads Watching now and Recently watched with the libraries read once', async () => {
+    const watching = [{ ratingKey: '7001', type: 'episode' as const, title: 'The Office S1E1: Pilot', posterKey: '6999' }]
+    jest.mocked(watchingNow).mockResolvedValue(watching)
+
+    const data = await getReportPageData('member-1', {})
+
+    expect(data.watching).toEqual(watching)
+    expect(data.recent).toEqual([])
+    expect(memberLibraryAccess).toHaveBeenCalledTimes(1)
+    expect(watchingNow).toHaveBeenCalledWith(SERVER, { plexUserId: 'member-plex', isOwner: false }, { all: false, sections: new Set(['1']) })
+  })
+
+  it('loads the rest of the page while Plex is down', async () => {
+    jest.mocked(getActivePlexServerConfig).mockResolvedValue(null)
+
+    const data = await getReportPageData('member-1', { q: 'heat' })
+
+    expect(data).toMatchObject({ watching: null, recent: null, reports: [], search: { results: [], error: expect.any(String) } })
   })
 
   it('says why a title cannot be reported', async () => {

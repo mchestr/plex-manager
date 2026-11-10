@@ -29,11 +29,16 @@ const problemCodeSchema = z.enum(PROBLEM_CODES)
 
 export const problemReportIdSchema = z.string().min(1).max(100)
 
+/** The answers to "Does anything else play on {player}?". */
+const DEVICE_ANSWERS = ["others_play", "nothing_plays", "not_tried"] as const
+export type DeviceAnswer = (typeof DEVICE_ANSWERS)[number]
+
 /** `reportProblem`'s input. */
 export const reportProblemInputSchema = z.object({
   ratingKey: ratingKeySchema,
   problem: problemCodeSchema,
   note: problemNoteSchema,
+  device: z.enum(DEVICE_ANSWERS).optional(),
 })
 
 /** A `CLOSED` event's data: why the report closed. */

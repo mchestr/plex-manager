@@ -15,8 +15,12 @@
  *    title fails that index and joins the open one with an `ALSO_REPORTED`
  *    event, written after the failed transaction, not inside it.
  *
- * A second member's problem and note go on their `ALSO_REPORTED` event for
- * the server admin; they never change the open report. Followers see status
+ * Each report records what the member answered to "Does anything else play
+ * on {player}?" and the evidence from Tautulli (`readEvidence`: their last
+ * play, and whether the title has played to the end since its file was
+ * added) on its `REPORTED` event, or on its `ALSO_REPORTED` event when it
+ * joins an open report. A second member's problem and note go on that event
+ * for the server admin; they never change the open report. Followers see status
  * words only, never who else reported.
  *
  * ## Cancel
@@ -35,10 +39,12 @@ import type { MediaType } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { isUniqueConflict } from "@/lib/prisma-errors"
 import { readMemberItem } from "@/lib/problem-reports/access"
+import { readEvidence } from "@/lib/problem-reports/evidence"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
 import { needsNote, PROBLEMS, type ProblemCode } from "@/lib/problem-reports/taxonomy"
 import { titleKeyOf } from "@/lib/problem-reports/title"
 import { consume } from "@/lib/security/rate-limit"
+import type { DeviceAnswer } from "@/lib/validations/problem-reports"
 
 /** Why a report, follow or cancel was refused. */
 export type ReportRefusal =
@@ -93,8 +99,9 @@ export async function reportProblem(input: {
   ratingKey: string
   problem: ProblemCode
   note: string | null
+  device?: DeviceAnswer
 }): Promise<{ ok: true; outcome: "reported" | "joined"; reportId: string } | Refused> {
-  const { userId, problem, note } = input
+  const { userId, problem, note, device } = input
   const refused = await admit(userId)
   if (refused) return refused
   if (needsNote(problem) && !note) return refuse("NOTE_REQUIRED")
@@ -104,13 +111,17 @@ export async function reportProblem(input: {
   if (PROBLEMS[problem].kind === "episodes" && member.item.type === "movie") return refuse("WRONG_KIND")
 
   const { titleKey, ...title } = titleFields(member.item)
+  const evidence = await readEvidence(userId, member.item)
+  const answers = device ? { device, evidence } : { evidence }
   try {
     const report = await prisma.$transaction(async (tx) => {
       const created = await tx.problemReport.create({
         data: { reporterId: userId, problem, note, ...title, titleKey, activeKey: titleKey, status: "WITH_ADMIN" },
         select: { id: true },
       })
-      await tx.problemReportEvent.create({ data: { reportId: created.id, kind: "REPORTED", actorUserId: userId, data: { problem } } })
+      await tx.problemReportEvent.create({
+        data: { reportId: created.id, kind: "REPORTED", actorUserId: userId, data: { problem, ...answers } },
+      })
       return created
     })
     return { ok: true, outcome: "reported", reportId: report.id }
@@ -122,7 +133,7 @@ export async function reportProblem(input: {
   // It closed between the failed insert and this read; the member can send it again
   if (!open) return refuse("UNAVAILABLE")
   await prisma.problemReportEvent.create({
-    data: { reportId: open.id, kind: "ALSO_REPORTED", actorUserId: userId, data: { problem, note } },
+    data: { reportId: open.id, kind: "ALSO_REPORTED", actorUserId: userId, data: { problem, note, ...answers } },
   })
   return { ok: true, outcome: "joined", reportId: open.id }
 }

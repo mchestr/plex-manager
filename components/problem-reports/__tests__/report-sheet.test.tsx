@@ -17,13 +17,14 @@ jest.mock('@/actions/problem-reports', () => ({ reportProblem: jest.fn(), follow
 const mockShowError = jest.fn()
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ showError: mockShowError, showSuccess: jest.fn() }) }))
 
-const MOVIE: SelectedTitle = { ratingKey: '555', type: 'movie', title: 'Heat (1995)', episodes: null, openReport: null }
+const MOVIE: SelectedTitle = { ratingKey: '555', type: 'movie', title: 'Heat (1995)', episodes: null, openReport: null, lastPlay: null }
 const SHOW: SelectedTitle = {
   ratingKey: '6999',
   type: 'show',
   title: 'The Office (2005)',
   episodes: [{ ratingKey: '7001', label: 'S1E1: Pilot' }],
   openReport: null,
+  lastPlay: null,
 }
 
 beforeEach(() => {
@@ -85,6 +86,33 @@ describe('ReportSheet', () => {
 
     expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '7001', problem: 'wont_start', note: '' })
     expect(await screen.findByTestId('report-sent')).toHaveTextContent('we added yours to it')
+  })
+
+  it("asks whether anything else plays on the member's player, and sends the answer", async () => {
+    const user = userEvent.setup()
+    jest.mocked(reportProblem).mockResolvedValue({ success: true, data: { reportId: 'report-3', joined: false } })
+    render(<ReportSheet selected={{ ...MOVIE, lastPlay: { player: 'Living Room', transcoded: false, at: '2026-11-08T20:00:00.000Z' } }} closeHref="/report" />)
+
+    await user.click(screen.getByTestId('report-kind-playback'))
+    await user.click(within(screen.getByTestId('report-problem-wont_start')).getByText("Won't start"))
+    expect(screen.getByTestId('report-device')).toBeInTheDocument()
+    expect(screen.getByText('Does anything else play on Living Room?')).toBeInTheDocument()
+    await user.click(within(screen.getByTestId('report-device-nothing_plays')).getByText('No, nothing plays'))
+    expect(screen.getByTestId('report-device-guide')).toHaveAttribute('href', '/help#playback')
+    await user.click(screen.getByTestId('report-send'))
+
+    expect(reportProblem).toHaveBeenCalledWith({ ratingKey: '555', problem: 'wont_start', note: '', device: 'nothing_plays' })
+  })
+
+  it('explains a converted play for a blurry picture, and asks nothing about the device', async () => {
+    const user = userEvent.setup()
+    render(<ReportSheet selected={{ ...MOVIE, lastPlay: { player: 'Phone', transcoded: true, at: '2026-11-08T20:00:00.000Z' } }} closeHref="/report" />)
+
+    await user.click(screen.getByTestId('report-kind-picture'))
+    await user.click(within(screen.getByTestId('report-problem-blurry')).getByText('Blurry or low quality'))
+
+    expect(screen.getByTestId('report-transcode-tip')).toHaveTextContent('Your Plex app converted this video while you watched')
+    expect(screen.queryByTestId('report-device')).not.toBeInTheDocument()
   })
 
   it('shows a refusal and stays on the step', async () => {

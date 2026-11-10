@@ -11,11 +11,13 @@ import type { PlexItemMetadata } from '@/lib/connections/plex'
 import { hasEntitlement } from '@/lib/actions/entitlement'
 import { Prisma } from '@/lib/generated/prisma/client'
 import { readMemberItem } from '@/lib/problem-reports/access'
+import { readEvidence } from '@/lib/problem-reports/evidence'
 import { cancelProblemReport, followProblemReport, reportProblem } from '@/lib/problem-reports/service'
 import { consume } from '@/lib/security/rate-limit'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/problem-reports/access', () => ({ readMemberItem: jest.fn() }))
+jest.mock('@/lib/problem-reports/evidence', () => ({ readEvidence: jest.fn() }))
 jest.mock('@/lib/actions/entitlement', () => ({ hasEntitlement: jest.fn() }))
 jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn() }))
 
@@ -37,6 +39,8 @@ const EPISODE: PlexItemMetadata = {
 }
 const MOVIE: PlexItemMetadata = { ...EPISODE, ratingKey: '555', type: 'movie', title: 'Heat', year: 1995, guid: 'plex://movie/heat', showTitle: undefined, seasonNumber: undefined, episodeNumber: undefined }
 
+const EVIDENCE = { lastPlay: { player: 'Living Room', transcoded: false, at: '2026-11-08T20:00:00.000Z' }, playedToEnd: true }
+
 const conflict = () =>
   new Prisma.PrismaClientKnownRequestError('Unique constraint failed', { code: 'P2002', clientVersion: '7', meta: { target: ['activeKey'] } })
 
@@ -49,6 +53,7 @@ beforeEach(() => {
   jest.mocked(consume).mockResolvedValue({ ok: true })
   jest.mocked(readMemberItem).mockResolvedValue({ ok: true, item: EPISODE, server: SERVER })
   prismaMock.problemReport.create.mockResolvedValue({ id: 'report-1' } as never)
+  jest.mocked(readEvidence).mockResolvedValue(EVIDENCE)
 })
 
 describe('reportProblem', () => {
@@ -77,7 +82,7 @@ describe('reportProblem', () => {
       select: { id: true },
     })
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
-      data: { reportId: 'report-1', kind: 'REPORTED', actorUserId: 'member-1', data: { problem: 'out_of_sync' } },
+      data: { reportId: 'report-1', kind: 'REPORTED', actorUserId: 'member-1', data: { problem: 'out_of_sync', evidence: EVIDENCE } },
     })
     expect(consume).toHaveBeenCalledWith('problem-report:create', 'member-1')
     expect(consume).toHaveBeenCalledWith('problem-report:create:day', 'member-1')
@@ -97,12 +102,21 @@ describe('reportProblem', () => {
     prismaMock.problemReport.create.mockRejectedValue(conflict())
     prismaMock.problemReport.findUnique.mockResolvedValue({ id: 'report-open' } as never)
 
-    expect(await report({ problem: 'no_sound', note: 'Cuts out at 10 min' })).toEqual({ ok: true, outcome: 'joined', reportId: 'report-open' })
+    expect(await report({ problem: 'no_sound', note: 'Cuts out at 10 min', device: 'others_play' })).toEqual({
+      ok: true,
+      outcome: 'joined',
+      reportId: 'report-open',
+    })
 
     expect(prismaMock.problemReport.findUnique).toHaveBeenCalledWith({ where: { activeKey: 'plex://episode/pilot' }, select: { id: true } })
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledTimes(1)
     expect(prismaMock.problemReportEvent.create).toHaveBeenCalledWith({
-      data: { reportId: 'report-open', kind: 'ALSO_REPORTED', actorUserId: 'member-1', data: { problem: 'no_sound', note: 'Cuts out at 10 min' } },
+      data: {
+        reportId: 'report-open',
+        kind: 'ALSO_REPORTED',
+        actorUserId: 'member-1',
+        data: { problem: 'no_sound', note: 'Cuts out at 10 min', device: 'others_play', evidence: EVIDENCE },
+      },
     })
   })
 
