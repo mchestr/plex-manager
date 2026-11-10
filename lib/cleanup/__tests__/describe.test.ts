@@ -45,6 +45,11 @@ describe("describeRule", () => {
       "30 days",
     ])
     expect(parts[0]).toEqual({ text: "Movies in the " })
+
+    // The rule card bolds only the values, with the same words (UX 4.1.3 item 1, UX review UX-13)
+    const card = describeRule(definition, { ...ctx, valuesOnly: true })
+    expect(plainText(card)).toBe(plainText(parts))
+    expect(card.filter((p) => p.strong).map((p) => p.text)).toEqual(["Movies", "365 days", "365 days", "no", "former members", "3", "30 days"])
   })
 
   it("names the scope by level and libraries (TS 4.4 item 1)", () => {

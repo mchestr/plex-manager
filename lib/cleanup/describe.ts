@@ -9,7 +9,7 @@
 
 import { ACTION_PHRASES } from "@/lib/cleanup/action-words"
 import type { DescribeWords, WhyPart } from "@/lib/cleanup/engine/types"
-import { describeCondition } from "@/lib/cleanup/fields/catalog"
+import { describeCondition, visit } from "@/lib/cleanup/fields/catalog"
 import { durationWords, LEVEL_NAMES } from "@/lib/cleanup/fields/words"
 import type { RuleDraft } from "@/lib/validations/cleanup-draft"
 import { type Condition, conditionSchema } from "@/lib/validations/cleanup-rule"
@@ -21,6 +21,12 @@ export interface DescribeContext extends DescribeWords {
   libraryTitle(sectionId: string): string | null
   /** The rule's mode. Omit it where no mode sentence belongs (a recipe). */
   mode?: Mode | null
+  /**
+   * Bold only the value inside each condition ("365 days"), not the whole
+   * phrase: the rule card (UX 4.1.3 item 1). The editor's In plain words
+   * bolds the phrases.
+   */
+  valuesOnly?: boolean
 }
 
 /** The mode sentence (UX 5.8 item 7). */
@@ -70,9 +76,21 @@ function scope(o: Out, def: RuleDraft, ctx: DescribeContext): void {
   o.text(def.libraries.length === 1 ? " library" : " libraries")
 }
 
+/** A condition's phrase: all strong, or with `valuesOnly` only its value token where the phrase holds it. */
+function predicate(o: Out, c: Condition, level: Level, ctx: DescribeContext, form: "plural" | "singular"): void {
+  const text = describeCondition(c, level, ctx, form)
+  if (!ctx.valuesOnly) return o.strong(text)
+  const value = visit(c, (meta, condition) => meta.tokens(condition, ctx)).value
+  const at = value ? text.indexOf(value) : -1
+  if (!value || at < 0) return o.text(text)
+  o.text(text.slice(0, at))
+  o.strong(value)
+  o.text(text.slice(at + value.length))
+}
+
 function clause(o: Out, members: Condition[], level: Level, ctx: DescribeContext): void {
   if (members.length > 1) o.text("either ")
-  list(o, members, " or ", (c) => o.strong(describeCondition(c, level, ctx, "plural")))
+  list(o, members, " or ", (c) => predicate(o, c, level, ctx, "plural"))
 }
 
 /**
@@ -90,7 +108,7 @@ export function describeRule(def: RuleDraft, ctx: DescribeContext): WhyPart[] {
   if (protections.length > 0) o.text(", or that ")
   protections.forEach((p, i) => {
     if (i > 0) o.text(" or ")
-    o.strong(describeCondition(p, def.level, ctx, "singular"))
+    predicate(o, p, def.level, ctx, "singular")
   })
   o.text(".")
   const { graceDays, action, importListExclusion } = def.then

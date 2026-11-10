@@ -100,7 +100,8 @@ export function ruleCards({ screen, rows, batches }: RuleCardsInput): RuleCardDa
       words: { definition, protections: settings.options.protections, names: memberWords(live) } })
     return {
       id: rule.id, name: rule.name, mode: rule.mode, level: rule.level, revision: rule.revision,
-      sentence: definition ? describeRule(definition, describeContext(libraries, live, rule.mode)) : [{ text: UNREADABLE_SENTENCE }],
+      // The card bolds the values only (UX 4.1.3 item 1, shots/02-rules-normal.png)
+      sentence: definition ? describeRule(definition, { ...describeContext(libraries, live, rule.mode), valuesOnly: true }) : [{ text: UNREADABLE_SENTENCE }],
       posters: posterKeys(evaluation, RULE_POSTERS),
       facts: ruleFacts({ rule, evaluation, rows: rows.items.filter((row) => row.ruleIds.includes(rule.id)), batch,
         deleted: rows.deleted.filter((o) => o.ruleIds.includes(rule.id)), runs, today, zone, holdUntil: settings.holdUntil,

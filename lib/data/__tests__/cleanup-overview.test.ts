@@ -156,6 +156,9 @@ describe("rule cards", () => {
     prismaMock.cleanupRule.findMany.mockResolvedValue([storedRule("rule-req", "Requested movies", { definition: requested })])
     const { rules } = await getCleanupOverview(AT)
     expect(JSON.stringify(rules[0].sentence)).toContain("Avery Example")
+    // The card bolds the values only (UX 4.1.3 item 1)
+    expect(rules[0].sentence.filter((p) => p.strong).map((p) => p.text)).toEqual(expect.arrayContaining(["365 days", "Avery Example"]))
+    expect(rules[0].sentence.filter((p) => p.strong).map((p) => p.text)).not.toContain("had no play in the last 365 days")
     expect(auditMemberListed).toHaveBeenCalledWith("cleanup-requesters", ADMIN.user.id)
   })
 
