@@ -16,9 +16,9 @@ import { getPlexItemMetadata, type PlexItemMetadata } from "@/lib/connections/pl
 import { getActivePlexServerConfig, type PlexServerConfig } from "@/lib/connections/plex-config"
 import { getSharedSectionKeys, rememberItemSectionKey } from "@/lib/connections/plex-shared-sections"
 import { prisma } from "@/lib/prisma"
+import { REPORTABLE_MEDIA_TYPES } from "@/lib/problem-reports/taxonomy"
 
-/** The types a report can be about. */
-const REPORTABLE_TYPES = new Set(["movie", "show", "episode"])
+
 
 /** Which sections a member may browse: all of them, or a set of section keys. */
 export type LibraryAccess = { all: true } | { all: false; sections: ReadonlySet<string> }
@@ -61,7 +61,7 @@ export async function readMemberItem(userId: string, ratingKey: string): Promise
   if (lookup.status === "missing") return { ok: false, reason: "NOT_FOUND" }
   if (lookup.status === "unknown") return { ok: false, reason: "UNAVAILABLE" }
   const { item } = lookup
-  if (!REPORTABLE_TYPES.has(item.type)) return { ok: false, reason: "NOT_FOUND" }
+  if (!Object.hasOwn(REPORTABLE_MEDIA_TYPES, item.type)) return { ok: false, reason: "NOT_FOUND" }
 
   const access = await memberLibraryAccess(userId, server)
   if (access === null) return { ok: false, reason: "UNAVAILABLE" }

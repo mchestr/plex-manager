@@ -41,6 +41,9 @@ export const reportProblemInputSchema = z.object({
   device: z.enum(DEVICE_ANSWERS).optional(),
 })
 
+/** An `ALSO_REPORTED` event's data: a second member's problem and note, or nothing for a follow. */
+export const alsoReportedDataSchema = z.looseObject({ problem: z.string().optional(), note: z.string().nullable().optional() })
+
 /** A `CLOSED` event's data: why the report closed. */
 export const closedEventDataSchema = z.object({ reason: z.enum(["cancelled"]) })
 

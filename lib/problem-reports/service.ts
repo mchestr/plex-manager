@@ -13,7 +13,13 @@
  * 4. One open report per title: `activeKey` holds the title's Plex guid
  *    until the report closes, under a unique index. A second report of the
  *    title fails that index and joins the open one with an `ALSO_REPORTED`
- *    event, written after the failed transaction, not inside it.
+ *    event, written after the failed transaction, not inside it. A report
+ *    that closes in between is tried once more as a new one.
+ *
+ * A member's `ALSO_REPORTED` event is written once: the same problem and
+ * note again, or a second follow, writes nothing. The join reads and writes
+ * in one serializable transaction, so a double tap writes one event.
+ * Following checks the title against the member's libraries too.
  *
  * Each report records what the member answered to "Does anything else play
  * on {player}?" and the evidence from Tautulli (`readEvidence`: their last
@@ -26,7 +32,11 @@
  * ## Cancel
  *
  * Only the reporter, and only while nothing has run on the report (status
- * `SENT` or `WITH_ADMIN`). Every way of closing a report clears `activeKey`.
+ * `SENT` or `WITH_ADMIN`). Every way of closing a report clears `activeKey`,
+ * and closes it for the members who followed it too. Cancel checks neither
+ * the switch nor entitlement, on purpose: turning the feature off, or a
+ * lapsed membership, never leaves a member unable to withdraw their own
+ * report.
  *
  * @module
  */
@@ -35,16 +45,16 @@ import "server-only"
 
 import { hasEntitlement } from "@/lib/actions/entitlement"
 import type { PlexItemMetadata } from "@/lib/connections/plex"
-import type { MediaType } from "@/lib/generated/prisma/client"
+import { inSerializable } from "@/lib/db/serializable"
 import { prisma } from "@/lib/prisma"
 import { isUniqueConflict } from "@/lib/prisma-errors"
 import { readMemberItem } from "@/lib/problem-reports/access"
-import { readEvidence } from "@/lib/problem-reports/evidence"
+import { readEvidence, type Evidence } from "@/lib/problem-reports/evidence"
 import { getProblemReportSettings } from "@/lib/problem-reports/settings"
-import { needsNote, PROBLEMS, type ProblemCode } from "@/lib/problem-reports/taxonomy"
+import { needsNote, PROBLEMS, REPORTABLE_MEDIA_TYPES, type ProblemCode, type ReportableType } from "@/lib/problem-reports/taxonomy"
 import { titleKeyOf } from "@/lib/problem-reports/title"
 import { consume } from "@/lib/security/rate-limit"
-import type { DeviceAnswer } from "@/lib/validations/problem-reports"
+import { alsoReportedDataSchema, type DeviceAnswer } from "@/lib/validations/problem-reports"
 
 /** Why a report, follow or cancel was refused. */
 export type ReportRefusal =
@@ -60,7 +70,6 @@ type Refused = { ok: false; refusal: ReportRefusal; retryAfterSec?: number }
 
 const LIMITS = ["problem-report:create", "problem-report:create:day"] as const
 const CANCELLABLE = ["SENT", "WITH_ADMIN"] as const
-const MEDIA_TYPES: Record<string, MediaType> = { movie: "MOVIE", show: "TV_SERIES", episode: "EPISODE" }
 
 const refuse = (refusal: ReportRefusal): Refused => ({ ok: false, refusal })
 
@@ -78,7 +87,7 @@ async function admit(userId: string): Promise<Refused | null> {
 /** The report's title fields, from Plex. */
 function titleFields(item: PlexItemMetadata) {
   return {
-    mediaType: MEDIA_TYPES[item.type],
+    mediaType: REPORTABLE_MEDIA_TYPES[item.type as ReportableType],
     plexRatingKey: item.ratingKey,
     titleKey: titleKeyOf(item),
     title: item.title,
@@ -87,6 +96,42 @@ function titleFields(item: PlexItemMetadata) {
     seasonNumber: item.seasonNumber ?? null,
     episodeNumber: item.episodeNumber ?? null,
   }
+}
+
+/** What a member adds to an open report: a problem, note, device answer and evidence, or nothing when they only follow it. */
+type AlsoReported = { problem?: ProblemCode; note?: string | null; device?: DeviceAnswer; evidence?: Evidence }
+
+/** Whether the member already said this on the report: as its reporter, or in an `ALSO_REPORTED` event. */
+function alreadySaid(
+  report: { reporterId: string; problem: string; note: string | null; events: { data: unknown }[] },
+  userId: string,
+  said: AlsoReported
+): boolean {
+  if (said.problem === undefined) return report.reporterId === userId || report.events.length > 0
+  const same = (problem: string | undefined, note: string | null | undefined) => problem === said.problem && (note ?? null) === (said.note ?? null)
+  if (report.reporterId === userId && same(report.problem, report.note)) return true
+  return report.events.some((event) => {
+    const data = alsoReportedDataSchema.safeParse(event.data)
+    return data.success && same(data.data.problem, data.data.note)
+  })
+}
+
+/**
+ * Adds an `ALSO_REPORTED` event to an open report, once, in one serializable
+ * transaction. The report's id, or null when it isn't open.
+ */
+async function joinOpenReport(where: { activeKey: string } | { id: string }, userId: string, said: AlsoReported): Promise<string | null> {
+  return inSerializable(async (tx) => {
+    const report = await tx.problemReport.findFirst({
+      where: { ...where, activeKey: "activeKey" in where ? where.activeKey : { not: null } },
+      select: { id: true, reporterId: true, problem: true, note: true, events: { where: { kind: "ALSO_REPORTED", actorUserId: userId }, select: { data: true } } },
+    })
+    if (!report) return null
+    if (!alreadySaid(report, userId, said)) {
+      await tx.problemReportEvent.create({ data: { reportId: report.id, kind: "ALSO_REPORTED", actorUserId: userId, data: said } })
+    }
+    return report.id
+  })
 }
 
 /**
@@ -102,9 +147,10 @@ export async function reportProblem(input: {
   device?: DeviceAnswer
 }): Promise<{ ok: true; outcome: "reported" | "joined"; reportId: string } | Refused> {
   const { userId, problem, note, device } = input
+  // Before the rate limits, so a missing note doesn't spend them
+  if (needsNote(problem) && !note) return refuse("NOTE_REQUIRED")
   const refused = await admit(userId)
   if (refused) return refused
-  if (needsNote(problem) && !note) return refuse("NOTE_REQUIRED")
 
   const member = await readMemberItem(userId, input.ratingKey)
   if (!member.ok) return refuse(member.reason)
@@ -113,45 +159,41 @@ export async function reportProblem(input: {
   const { titleKey, ...title } = titleFields(member.item)
   const evidence = await readEvidence(userId, member.item)
   const answers = device ? { device, evidence } : { evidence }
-  try {
-    const report = await prisma.$transaction(async (tx) => {
-      const created = await tx.problemReport.create({
-        data: { reporterId: userId, problem, note, ...title, titleKey, activeKey: titleKey, status: "WITH_ADMIN" },
-        select: { id: true },
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const report = await prisma.$transaction(async (tx) => {
+        const created = await tx.problemReport.create({
+          data: { reporterId: userId, problem, note, ...title, titleKey, activeKey: titleKey, status: "WITH_ADMIN" },
+          select: { id: true },
+        })
+        await tx.problemReportEvent.create({
+          data: { reportId: created.id, kind: "REPORTED", actorUserId: userId, data: { problem, ...answers } },
+        })
+        return created
       })
-      await tx.problemReportEvent.create({
-        data: { reportId: created.id, kind: "REPORTED", actorUserId: userId, data: { problem, ...answers } },
-      })
-      return created
-    })
-    return { ok: true, outcome: "reported", reportId: report.id }
-  } catch (error) {
-    if (!isUniqueConflict(error, { index: "ProblemReport_activeKey_key", field: "activeKey" })) throw error
-  }
+      return { ok: true, outcome: "reported", reportId: report.id }
+    } catch (error) {
+      if (!isUniqueConflict(error, { index: "ProblemReport_activeKey_key", field: "activeKey" })) throw error
+    }
 
-  const open = await prisma.problemReport.findUnique({ where: { activeKey: titleKey }, select: { id: true } })
-  // It closed between the failed insert and this read; the member can send it again
-  if (!open) return refuse("UNAVAILABLE")
-  await prisma.problemReportEvent.create({
-    data: { reportId: open.id, kind: "ALSO_REPORTED", actorUserId: userId, data: { problem, note, ...answers } },
-  })
-  return { ok: true, outcome: "joined", reportId: open.id }
+    const joined = await joinOpenReport({ activeKey: titleKey }, userId, { problem, note, ...answers })
+    if (joined) return { ok: true, outcome: "joined", reportId: joined }
+    // The open report closed between the failed insert and the join: try once more as a new report
+    if (attempt === 2) return refuse("UNAVAILABLE")
+  }
 }
 
-/** "Same problem, tell me when it's fixed": follows an open report, once. */
+/** "Same problem, tell me when it's fixed": follows an open report on a title in the member's libraries, once. */
 export async function followProblemReport({ userId, reportId }: { userId: string; reportId: string }): Promise<{ ok: true } | Refused> {
   const refused = await admit(userId)
   if (refused) return refused
 
-  const report = await prisma.problemReport.findFirst({
-    where: { id: reportId, activeKey: { not: null } },
-    select: { id: true, reporterId: true, events: { where: { kind: "ALSO_REPORTED", actorUserId: userId }, select: { id: true }, take: 1 } },
-  })
+  const report = await prisma.problemReport.findFirst({ where: { id: reportId, activeKey: { not: null } }, select: { plexRatingKey: true } })
   if (!report) return refuse("NOT_FOUND")
-  if (report.reporterId === userId || report.events.length > 0) return { ok: true }
+  const member = await readMemberItem(userId, report.plexRatingKey)
+  if (!member.ok) return refuse(member.reason)
 
-  await prisma.problemReportEvent.create({ data: { reportId: report.id, kind: "ALSO_REPORTED", actorUserId: userId, data: {} } })
-  return { ok: true }
+  return (await joinOpenReport({ id: reportId }, userId, {})) ? { ok: true } : refuse("NOT_FOUND")
 }
 
 /** Cancels the member's own report while nothing has run on it. */

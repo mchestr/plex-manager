@@ -35,8 +35,11 @@ export type ProblemKind = "playback" | "picture" | "language" | "wrong_title" | 
 /** Where a problem leads once the checks have run. */
 type SuggestedFix = "SWAP" | "BETTER_COPY" | "LOOK_FOR_MISSING" | "FIX_MATCH" | "REFRESH" | "ADMIN"
 
+/** The Plex types a report can be about, and the `MediaType` each is stored as. */
+export const REPORTABLE_MEDIA_TYPES = { movie: "MOVIE", show: "TV_SERIES", episode: "EPISODE" } as const
+
 /** The type of title a report is about, as Plex names it. */
-export type ReportableType = "movie" | "show" | "episode"
+export type ReportableType = keyof typeof REPORTABLE_MEDIA_TYPES
 
 interface Problem {
   kind: ProblemKind

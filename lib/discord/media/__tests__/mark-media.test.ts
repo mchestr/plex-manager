@@ -230,6 +230,25 @@ describe("applyMark", () => {
     )
   })
 
+  it('replaces an older link when the mark is made again, and never clears one', async () => {
+    mockFindArrTitle.mockResolvedValueOnce({ service: "radarr", id: 42, titleSlug: "27205" }).mockResolvedValueOnce(null)
+    const mark = () =>
+      applyMark({ userId: "user-1", item: makeItem({ ratingKey: "movie-1", type: "movie" }), markType: MarkType.KEEP_FOREVER, markedVia: "discord", plexConfig })
+
+    await mark()
+    await mark()
+
+    expect(mockUpsert.mock.calls[0][0].update).toEqual({
+      markedAt: expect.any(Date),
+      discordChannelId: undefined,
+      radarrId: 42,
+      radarrTitleSlug: "27205",
+      sonarrId: null,
+      sonarrTitleSlug: null,
+    })
+    expect(mockUpsert.mock.calls[1][0].update).toEqual({ markedAt: expect.any(Date), discordChannelId: undefined })
+  })
+
   it("saves a mark without a link when the title isn't in Radarr or Sonarr", async () => {
     await applyMark({
       userId: "user-1",
