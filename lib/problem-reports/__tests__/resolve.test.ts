@@ -152,8 +152,8 @@ describe("resolveFile: an episode", () => {
     expect(findSonarrSeries).toHaveBeenCalledWith(SONARR, { tvdb: 73244 })
   })
 
-  it("keeps both episodes of a double-episode file", async () => {
-    jest.mocked(listSonarrEpisodes).mockResolvedValue({ success: true, data: [episode(11), episode(12)] })
+  it("keeps both episodes of a double-episode file, in id order whatever order Sonarr lists them", async () => {
+    jest.mocked(listSonarrEpisodes).mockResolvedValue({ success: true, data: [episode(12), episode(11)] })
 
     await expect(resolveFile(SERVER, "7001")).resolves.toMatchObject({ ok: true, resolved: { episodeIds: [11, 12] } })
   })
