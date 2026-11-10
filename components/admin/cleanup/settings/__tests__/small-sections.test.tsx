@@ -5,7 +5,7 @@
  * a members save (UX 8.9).
  */
 
-import { act, render, screen } from "@testing-library/react"
+import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { updateCleanupSettings } from "@/actions/admin/cleanup-settings"
@@ -64,10 +64,12 @@ describe("DefaultsSection", () => {
     expect(screen.getByText("Changed from 30 days.")).toBeInTheDocument()
     await user.click(screen.getByRole("checkbox", { name: "Add an import list exclusion" }))
     expect(screen.getByText("Changed from on.")).toBeInTheDocument()
+    // Save is disabled until the first save's transition ends, which a loaded CI runner ends late
+    await waitFor(() => expect(screen.getByTestId("settings-cleanup-defaults-save")).toBeEnabled())
     await user.click(screen.getByTestId("settings-cleanup-defaults-save"))
 
-    expect(updateCleanupSettings).toHaveBeenCalledWith({ section: "cleanup-defaults", values: { graceDays: 14, importListExclusion: false } })
-    expect(mockShowSuccess).toHaveBeenCalledWith("Settings saved")
+    await waitFor(() => expect(updateCleanupSettings).toHaveBeenCalledWith({ section: "cleanup-defaults", values: { graceDays: 14, importListExclusion: false } }))
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith("Settings saved"))
   })
 
   it("checks the grace period alone", () => {

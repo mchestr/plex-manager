@@ -126,6 +126,12 @@ function setup(data: CleanupEditorData = editorData(), { redis = true } = {}) {
 
 const tid = (id: string) => screen.getByTestId(id)
 const maybe = (id: string) => screen.queryByTestId(id)
+/** Waits until a control can take a press again: the transition of its last action has ended (a loaded CI runner ends it late). */
+const ready = (id: string) => waitFor(() => {
+  const el = tid(id)
+  expect(el).toBeEnabled()
+  expect(el).not.toHaveAttribute("aria-busy", "true")
+})
 const editor = () => maybe("admin-cleanup-condition-editor")
 const editRegion = () => document.querySelector<HTMLElement>('[data-slot="edit-region"]')
 const lastSave = () => save.mock.calls.at(-1)?.[0]
@@ -382,6 +388,7 @@ describe("RuleEditor", () => {
     await user.click(tid("admin-cleanup-editor-turn-on"))
     await waitFor(() => expect(tid("admin-cleanup-error-summary")).toHaveTextContent("Clean up: choose at least one library."))
     expect(push).not.toHaveBeenCalled()
+    await ready("admin-cleanup-editor-turn-on")
     await user.click(tid("admin-cleanup-editor-turn-on"))
     await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/cleanup/rules/rule-1/turn-on"))
   })
@@ -434,6 +441,7 @@ describe("RuleEditor", () => {
     const { user, unmount } = setup()
     await user.click(tid("admin-cleanup-preview-refresh"))
     await waitFor(() => expect(toast.showSuccess).toHaveBeenCalledWith("Library read started"))
+    await ready("admin-cleanup-preview-refresh")
     await user.click(tid("admin-cleanup-preview-refresh"))
     await waitFor(() => expect(toast.showError).toHaveBeenCalledWith("A read is in progress."))
     unmount()

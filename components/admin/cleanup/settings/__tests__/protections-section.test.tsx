@@ -226,6 +226,8 @@ describe("ProtectionsSection edit", () => {
     await user.click(screen.getByTestId("settings-cleanup-protections-save"))
     expect(mockShowError).toHaveBeenCalledWith("Someone else saved settings at the same time. Try again.")
 
+    // Cancel is disabled until the save's transition ends, which a loaded CI runner ends late
+    await waitFor(() => expect(screen.getByTestId("settings-cleanup-protections-cancel")).toBeEnabled())
     await user.click(screen.getByTestId("settings-cleanup-protections-cancel"))
     await user.click(await screen.findByRole("button", { name: /^Discard/ }))
     expect(screen.queryByTestId("settings-cleanup-protections-form")).not.toBeInTheDocument()
