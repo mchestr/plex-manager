@@ -89,7 +89,6 @@ export function BuilderForm(props: BuilderFormProps) {
   const openEditor = (id: string, anchor: Anchor, focus?: EditorFocusPart, from = draft) => {
     const condition = findCondition(from, id)
     if (!condition) return
-    ownsFocus.current = false
     setEditing({ id, anchor, focus: focus ?? editorFocusPart(condition, anchor), original: condition, open: true })
     setFocusNext(null)
   }
@@ -128,6 +127,10 @@ export function BuilderForm(props: BuilderFormProps) {
   }, [focusNext, formId])
 
   const openId = editing?.open ? editing.id : null
+  // The next editor that opens gives focus back on close itself again
+  useEffect(() => {
+    if (openId !== null) ownsFocus.current = false
+  }, [openId])
   const notify = useRef(onEditingChange)
   useEffect(() => {
     notify.current = onEditingChange
