@@ -65,6 +65,8 @@ type Refused = { ok: false; refusal: ReportRefusal; retryAfterSec?: number }
 
 const LIMITS = ["problem-report:create", "problem-report:create:day"] as const
 const CANCELLABLE = ["SENT", "WITH_ADMIN"] as const
+/** Inserts tried: one, and one more when the open report it collided with closed before the join. */
+const CREATE_ATTEMPTS = 2
 
 const refuse = (refusal: ReportRefusal): Refused => ({ ok: false, refusal })
 
@@ -151,7 +153,7 @@ export async function reportProblem(input: {
   if (PROBLEMS[problem].kind === "episodes" && member.item.type === "movie") return refuse("WRONG_KIND")
 
   const { titleKey, ...title } = titleFields(member.item)
-  for (let attempt = 1; ; attempt++) {
+  for (let attempt = 1; attempt <= CREATE_ATTEMPTS; attempt++) {
     try {
       const report = await prisma.$transaction(async (tx) => {
         const created = await tx.problemReport.create({
@@ -168,9 +170,10 @@ export async function reportProblem(input: {
 
     const joined = await joinOpenReport({ activeKey: titleKey }, userId, { problem, note })
     if (joined) return { ok: true, outcome: "joined", reportId: joined }
-    // The open report closed between the failed insert and the join: try once more as a new report
-    if (attempt === 2) return refuse("UNAVAILABLE")
+    // The open report closed between the failed insert and the join, which frees the title: insert again
   }
+  // The title's report closed between insert and join on every attempt: refuse rather than loop
+  return refuse("UNAVAILABLE")
 }
 
 /** "Same problem, tell me when it's fixed": follows an open report on a title in the member's libraries, once. */
